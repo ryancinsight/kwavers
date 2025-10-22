@@ -6,7 +6,7 @@
 // Core structure definition
 pub mod core;
 
-// Specialized trait implementations  
+// Specialized trait implementations
 pub mod traits;
 
 // Interpolation utilities

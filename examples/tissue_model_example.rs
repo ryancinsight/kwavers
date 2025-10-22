@@ -116,59 +116,61 @@ fn create_tissue_model_comprehensive(grid: &Grid) -> KwaversResult<Arc<Homogeneo
     // For this example, use averaged soft tissue properties
     // The values represent a weighted average of skin, fat, and muscle
     // based on typical ultrasound imaging depths
-    
+
     // Weighted average calculation:
     // - Skin contributes 10% (2mm of 20mm typical imaging depth)
     // - Fat contributes 25% (5mm of 20mm)
     // - Muscle contributes 65% (13mm of 20mm)
-    
+
     let skin_weight = 0.10;
     let fat_weight = 0.25;
     let muscle_weight = 0.65;
-    
+
     // Individual tissue properties (Duck 1990)
     let (rho_skin, c_skin, alpha_skin, ba_skin) = (1109.0, 1595.0, 1.2, 6.0);
     let (rho_fat, c_fat, alpha_fat, ba_fat) = (950.0, 1478.0, 0.6, 10.0);
     let (rho_muscle, c_muscle, alpha_muscle, ba_muscle) = (1050.0, 1547.0, 1.0, 7.4);
-    
+
     // Compute weighted averages
     let density = skin_weight * rho_skin + fat_weight * rho_fat + muscle_weight * rho_muscle;
     let sound_speed = skin_weight * c_skin + fat_weight * c_fat + muscle_weight * c_muscle;
     let alpha0 = skin_weight * alpha_skin + fat_weight * alpha_fat + muscle_weight * alpha_muscle;
     let b_a = skin_weight * ba_skin + fat_weight * ba_fat + muscle_weight * ba_muscle;
-    
+
     // Convert attenuation from dB/(cm·MHz) to Nepers/m at 1 MHz
     // Conversion: 1 dB/cm = 0.1151 Np/m
     let absorption = alpha0 * 0.1151 * 1e4; // Np/m at 1 MHz
-    
+
     println!("\nTissue Model (Literature-Validated):");
     println!("  Type: Weighted soft tissue composite");
-    println!("  Composition: {}% skin, {}% fat, {}% muscle",
+    println!(
+        "  Composition: {}% skin, {}% fat, {}% muscle",
         (skin_weight * 100.0) as i32,
         (fat_weight * 100.0) as i32,
-        (muscle_weight * 100.0) as i32);
+        (muscle_weight * 100.0) as i32
+    );
     println!("\nAcoustic Properties:");
     println!("  Density: {:.0} kg/m³", density);
     println!("  Sound speed: {:.0} m/s", sound_speed);
     println!("  Attenuation: {:.2} dB/(cm·MHz)", alpha0);
     println!("  Nonlinearity (B/A): {:.1}", b_a);
-    
+
     // Calculate and display acoustic impedance
     let impedance = density * sound_speed / 1e6; // Convert to MRayl
     println!("  Acoustic impedance: {:.2} MRayl", impedance);
-    
+
     println!("\nReference Tissue Properties (Duck 1990):");
     println!("  Skin:   ρ=1109 kg/m³, c=1595 m/s, α=1.2 dB/(cm·MHz), Z=1.77 MRayl");
     println!("  Fat:    ρ=950 kg/m³,  c=1478 m/s, α=0.6 dB/(cm·MHz), Z=1.40 MRayl");
     println!("  Muscle: ρ=1050 kg/m³, c=1547 m/s, α=1.0 dB/(cm·MHz), Z=1.62 MRayl");
     println!("  Bone:   ρ=1900 kg/m³, c=2800 m/s, α=10 dB/(cm·MHz),  Z=5.32 MRayl");
-    
+
     println!("\nPhysical Insights:");
     println!("  • Fat has lowest impedance (→ strong reflections at interfaces)");
     println!("  • Bone has highest impedance (→ ~80% reflection coefficient)");
     println!("  • Muscle impedance close to water (→ good acoustic coupling)");
     println!("  • Attenuation increases with frequency: α(f) = α₀·f^δ");
-    
+
     // Create medium with calculated properties
     let medium = HomogeneousMedium::new(
         density,
@@ -177,7 +179,7 @@ fn create_tissue_model_comprehensive(grid: &Grid) -> KwaversResult<Arc<Homogeneo
         b_a,
         grid,
     );
-    
+
     Ok(Arc::new(medium))
 }
 
@@ -185,7 +187,7 @@ fn create_tissue_model_comprehensive(grid: &Grid) -> KwaversResult<Arc<Homogeneo
 ///
 /// This function demonstrates how tissue layers would be structured
 /// in a full heterogeneous medium implementation.
-/// 
+///
 /// Typical ultrasound imaging scenario:
 /// - Skin layer (2mm): Epidermis + dermis
 /// - Fat layer (5mm): Subcutaneous adipose tissue

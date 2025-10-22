@@ -9,9 +9,7 @@ use approx::assert_relative_eq;
 use kwavers::{
     grid::Grid,
     medium::{thermal::ThermalField, ElasticProperties},
-    physics::{
-        plugin::{elastic_wave_plugin::ElasticWavePlugin, Plugin, PluginContext},
-    },
+    physics::plugin::{elastic_wave_plugin::ElasticWavePlugin, Plugin, PluginContext},
 };
 use ndarray::Array4;
 

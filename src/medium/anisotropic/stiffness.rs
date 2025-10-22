@@ -147,16 +147,16 @@ impl StiffnessTensor {
     /// - Golub & Van Loan (2013): "Matrix Computations", Algorithm 3.4.1
     fn determinant_2d(matrix: &Array2<f64>) -> f64 {
         use nalgebra::DMatrix;
-        
+
         let n = matrix.shape()[0];
-        
+
         // Fast path for small matrices
         if n == 1 {
             return matrix[[0, 0]];
         } else if n == 2 {
             return matrix[[0, 0]] * matrix[[1, 1]] - matrix[[0, 1]] * matrix[[1, 0]];
         }
-        
+
         // For larger matrices (3x3 and above), use nalgebra's LU decomposition
         // Convert ndarray to nalgebra DMatrix
         let mut na_matrix = DMatrix::zeros(n, n);
@@ -165,7 +165,7 @@ impl StiffnessTensor {
                 na_matrix[(i, j)] = matrix[[i, j]];
             }
         }
-        
+
         // Compute LU decomposition with partial pivoting
         // det(A) = det(P) * det(L) * det(U) = (-1)^p * ∏ u_ii
         // where p is the number of permutations in P

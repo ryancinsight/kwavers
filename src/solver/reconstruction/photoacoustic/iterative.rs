@@ -216,11 +216,9 @@ impl IterativeMethods {
 
             if row_norm_sq > 0.0 {
                 let update_factor = self.relaxation_factor * residual / row_norm_sq;
-                Zip::from(&mut x_next)
-                    .and(&row)
-                    .for_each(|x_val, &a_val| {
-                        *x_val += update_factor * a_val;
-                    });
+                Zip::from(&mut x_next).and(&row).for_each(|x_val, &a_val| {
+                    *x_val += update_factor * a_val;
+                });
             }
         }
 

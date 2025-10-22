@@ -3,11 +3,11 @@
 //! This module owns divergence computation knowledge following GRASP principles.
 //! Single responsibility: Computing vector field divergence.
 
+use super::coefficients::{FDCoefficients, SpatialOrder};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::{Array3, ArrayView3};
 use num_traits::Float;
-use super::coefficients::{FDCoefficients, SpatialOrder};
 
 /// Compute divergence of a vector field
 ///
@@ -50,7 +50,12 @@ where
         return Err(crate::error::KwaversError::Grid(
             crate::error::GridError::DimensionMismatch {
                 expected: "Vector field components must have same dimensions".to_string(),
-                actual: format!("vx: {:?}, vy: {:?}, vz: {:?}", vx.shape(), vy.shape(), vz.shape()),
+                actual: format!(
+                    "vx: {:?}, vy: {:?}, vz: {:?}",
+                    vx.shape(),
+                    vy.shape(),
+                    vz.shape()
+                ),
             },
         ));
     }
@@ -110,7 +115,13 @@ mod tests {
         let vy = Array3::<f64>::ones((5, 5, 5));
         let vz = Array3::<f64>::ones((5, 5, 5));
 
-        let div = divergence(&vx.view(), &vy.view(), &vz.view(), &grid, SpatialOrder::Second)?;
+        let div = divergence(
+            &vx.view(),
+            &vy.view(),
+            &vz.view(),
+            &grid,
+            SpatialOrder::Second,
+        )?;
 
         // Divergence of constant field should be zero in interior
         assert_relative_eq!(div[[2, 2, 2]], 0.0, epsilon = 1e-10);
@@ -137,7 +148,13 @@ mod tests {
             }
         }
 
-        let div = divergence(&vx.view(), &vy.view(), &vz.view(), &grid, SpatialOrder::Second)?;
+        let div = divergence(
+            &vx.view(),
+            &vy.view(),
+            &vz.view(),
+            &grid,
+            SpatialOrder::Second,
+        )?;
 
         // Check interior point
         assert_relative_eq!(div[[2, 2, 2]], 6.0, epsilon = 1e-10);

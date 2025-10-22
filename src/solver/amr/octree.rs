@@ -131,7 +131,7 @@ impl Octree {
     pub fn bounds(&self) -> &Bounds {
         &self.root.bounds
     }
-    
+
     /// Get a reference to the root node
     #[must_use]
     pub fn root(&self) -> &OctreeNode {
@@ -174,30 +174,30 @@ impl Octree {
     }
 
     /// Check if node should be refined based on marker array
-    /// 
+    ///
     /// A node is marked for refinement if any cell within its bounds
     /// has a positive marker value (1 = refine)
-    /// 
+    ///
     /// References:
     /// - Berger & Oliger (1984): "Adaptive mesh refinement for hyperbolic PDEs"
     /// - Lohner (1987): "Adaptive remeshing for transient problems"
     fn check_refinement_marker(node: &OctreeNode, markers: &Array3<i8>) -> bool {
         let (mx, my, mz) = markers.dim();
         let bounds = &node.bounds;
-        
+
         // Extract bounds components
         let (x_min, y_min, z_min) = (bounds.min[0], bounds.min[1], bounds.min[2]);
         let (x_max, y_max, z_max) = (bounds.max[0], bounds.max[1], bounds.max[2]);
-        
+
         // Compute domain extent for normalization
         let domain_x = x_max - x_min;
         let domain_y = y_max - y_min;
         let domain_z = z_max - z_min;
-        
+
         if domain_x <= 0.0 || domain_y <= 0.0 || domain_z <= 0.0 {
             return false;
         }
-        
+
         // Map spatial bounds to grid indices
         let i_min = ((x_min / domain_x) * mx as f64).max(0.0) as usize;
         let i_max = ((x_max / domain_x) * mx as f64).min(mx as f64) as usize;
@@ -205,7 +205,7 @@ impl Octree {
         let j_max = ((y_max / domain_y) * my as f64).min(my as f64) as usize;
         let k_min = ((z_min / domain_z) * mz as f64).max(0.0) as usize;
         let k_max = ((z_max / domain_z) * mz as f64).min(mz as f64) as usize;
-        
+
         // Check if any cell in region is marked for refinement (> 0)
         for i in i_min..i_max.min(mx) {
             for j in j_min..j_max.min(my) {
@@ -216,35 +216,35 @@ impl Octree {
                 }
             }
         }
-        
+
         false
     }
 
     /// Check if node can be coarsened based on marker array
-    /// 
+    ///
     /// A node can be coarsened if all cells within its bounds
     /// have non-positive markers (≤ 0) and all children (if any)
     /// can also be coarsened
-    /// 
+    ///
     /// References:
     /// - Berger & Colella (1989): "Local adaptive mesh refinement for shock hydrodynamics"
     fn check_coarsening(node: &OctreeNode, markers: &Array3<i8>) -> bool {
         let (mx, my, mz) = markers.dim();
         let bounds = &node.bounds;
-        
+
         // Extract bounds components
         let (x_min, y_min, z_min) = (bounds.min[0], bounds.min[1], bounds.min[2]);
         let (x_max, y_max, z_max) = (bounds.max[0], bounds.max[1], bounds.max[2]);
-        
+
         // Compute domain extent
         let domain_x = x_max - x_min;
         let domain_y = y_max - y_min;
         let domain_z = z_max - z_min;
-        
+
         if domain_x <= 0.0 || domain_y <= 0.0 || domain_z <= 0.0 {
             return true; // Empty domain can be coarsened
         }
-        
+
         // Map spatial bounds to grid indices
         let i_min = ((x_min / domain_x) * mx as f64).max(0.0) as usize;
         let i_max = ((x_max / domain_x) * mx as f64).min(mx as f64) as usize;
@@ -252,7 +252,7 @@ impl Octree {
         let j_max = ((y_max / domain_y) * my as f64).min(my as f64) as usize;
         let k_min = ((z_min / domain_z) * mz as f64).max(0.0) as usize;
         let k_max = ((z_max / domain_z) * mz as f64).min(mz as f64) as usize;
-        
+
         // Check if all cells in region are marked for coarsening (< 0) or unchanged (0)
         // A positive marker anywhere prevents coarsening
         for i in i_min..i_max.min(mx) {
@@ -264,7 +264,7 @@ impl Octree {
                 }
             }
         }
-        
+
         // Additionally, check that children are all leaves if they exist
         if let Some(ref children) = node.children {
             for child in children.iter() {
@@ -273,7 +273,7 @@ impl Octree {
                 }
             }
         }
-        
+
         true
     }
 

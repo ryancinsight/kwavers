@@ -25,9 +25,7 @@ pub use self::sparse_matrix::CompressedSparseRowMatrix;
 pub use self::stencil::{Stencil, StencilValue};
 
 // Export differential operators from modular structure
-pub use self::differential_operators::{
-    curl, divergence, gradient, FDCoefficients, SpatialOrder,
-};
+pub use self::differential_operators::{curl, divergence, gradient, FDCoefficients, SpatialOrder};
 
 // Export unified laplacian from dedicated module
 pub use self::laplacian::laplacian;

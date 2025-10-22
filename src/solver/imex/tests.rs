@@ -160,8 +160,7 @@ fn test_implicit_solver_linear() {
 
     // Solve: y - 0.5 = 0, which means y = 0.5
     // For linear solver, residual = y - G(y), so G(y) = 0.5
-    let residual_fn =
-        |y: &Array3<f64>| -> KwaversResult<Array3<f64>> { Ok(y.mapv(|yi| yi - 0.5)) };
+    let residual_fn = |y: &Array3<f64>| -> KwaversResult<Array3<f64>> { Ok(y.mapv(|yi| yi - 0.5)) };
 
     let solution = solver.solve(&initial, residual_fn).unwrap();
 

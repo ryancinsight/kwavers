@@ -95,7 +95,7 @@ impl Default for LocalizationConfig {
             tolerance: 1e-6,
             use_gpu: false,
             method: LocalizationMethod::TDOA,
-            frequency: 1e6, // 1 MHz default
+            frequency: 1e6,      // 1 MHz default
             search_radius: None, // Auto-determined
         }
     }

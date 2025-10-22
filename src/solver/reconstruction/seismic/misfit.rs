@@ -8,15 +8,15 @@
 //!
 //! # References
 //!
-//! - Bozdağ et al. (2011): "Misfit functions for full waveform inversion based on 
+//! - Bozdağ et al. (2011): "Misfit functions for full waveform inversion based on
 //!   instantaneous phase and envelope measurements", *Geophysical Journal International*
-//! - Fichtner et al. (2008): "The adjoint method in seismology", *Physics of the Earth 
+//! - Fichtner et al. (2008): "The adjoint method in seismology", *Physics of the Earth
 //!   and Planetary Interiors*
 //! - Tarantola (1984): "Inversion of seismic reflection data in the acoustic approximation"
 
 use crate::error::KwaversResult;
 use crate::utils::signal_processing::{
-    hilbert_transform, instantaneous_envelope_2d, instantaneous_phase_2d
+    hilbert_transform, instantaneous_envelope_2d, instantaneous_phase_2d,
 };
 use ndarray::Array2;
 use num_complex::Complex;
@@ -153,15 +153,15 @@ impl MisfitFunction {
     }
 
     /// Wasserstein distance with optimal transport
-    /// 
+    ///
     /// Computes W₁ (1-Wasserstein) distance between seismograms as probability distributions.
     /// Uses the 1D optimal transport solution which has a closed form via sorting.
-    /// 
+    ///
     /// For 1D distributions: W₁(μ,ν) = ∫|F_μ^(-1)(u) - F_ν^(-1)(u)|du
     /// where F^(-1) is the quantile function (inverse CDF).
-    /// 
+    ///
     /// This is equivalent to the L1 distance between sorted samples.
-    /// 
+    ///
     /// References:
     /// - Villani (2003): "Topics in Optimal Transportation"
     /// - Engquist & Froese (2014): "Application of Wasserstein metric to seismic signals"
@@ -181,10 +181,10 @@ impl MisfitFunction {
             // Shift to non-negative and normalize to probability distributions
             let obs_min = obs_trace.iter().fold(f64::INFINITY, |min, &x| min.min(x));
             let syn_min = syn_trace.iter().fold(f64::INFINITY, |min, &x| min.min(x));
-            
+
             let obs_shifted = obs_trace.mapv(|x| (x - obs_min).max(0.0));
             let syn_shifted = syn_trace.mapv(|x| (x - syn_min).max(0.0));
-            
+
             let obs_sum = obs_shifted.sum();
             let syn_sum = syn_shifted.sum();
 
@@ -201,10 +201,10 @@ impl MisfitFunction {
             let n = obs_prob.len();
             let mut obs_cdf = Vec::with_capacity(n);
             let mut syn_cdf = Vec::with_capacity(n);
-            
+
             let mut obs_cumsum = 0.0;
             let mut syn_cumsum = 0.0;
-            
+
             for j in 0..n {
                 obs_cumsum += obs_prob[j];
                 syn_cumsum += syn_prob[j];
@@ -217,10 +217,10 @@ impl MisfitFunction {
             for j in 0..n {
                 trace_distance += (obs_cdf[j] - syn_cdf[j]).abs();
             }
-            
+
             // Normalize by number of samples for scale invariance
             trace_distance /= n as f64;
-            
+
             total_distance += trace_distance;
         }
 
@@ -274,15 +274,15 @@ impl MisfitFunction {
         // For each trace, compute proper envelope adjoint
         for i in 0..ntraces {
             let syn_trace = synthetic.row(i).to_owned();
-            
+
             // Compute analytic signal: z = s + i*H(s)
             let analytic = hilbert_transform(&syn_trace);
-            
+
             // Compute envelope difference
             for j in 0..nsamples {
                 let env_diff = env_syn[[i, j]] - env_obs[[i, j]];
                 let envelope_syn = env_syn[[i, j]];
-                
+
                 // Avoid division by zero at signal nulls
                 if envelope_syn > 1e-12 {
                     // Adjoint = (E_syn - E_obs) * Re[analytic / E_syn]
@@ -315,7 +315,7 @@ impl MisfitFunction {
     /// - Im[·] = imaginary part
     ///
     /// Analytical simplification of general formula
-    /// 
+    ///
     /// For acoustic media with constant velocity, the Fréchet derivative
     /// simplifies to this expression (see Tarantola 1984, Eq. 6.97).
     /// ```text
@@ -344,30 +344,30 @@ impl MisfitFunction {
         // For each trace, compute proper phase adjoint
         for i in 0..ntraces {
             let syn_trace = synthetic.row(i).to_owned();
-            
+
             // Compute analytic signal: z = s + i*H(s)
             let analytic = hilbert_transform(&syn_trace);
-            
+
             // Compute time derivative of analytic signal using central differences
             let mut dz_dt = vec![Complex::new(0.0, 0.0); nsamples];
             if nsamples >= 3 {
                 // Forward difference for first point
                 dz_dt[0] = analytic[1] - analytic[0];
-                
+
                 // Central difference for interior points
-                for j in 1..nsamples-1 {
-                    dz_dt[j] = (analytic[j+1] - analytic[j-1]) * 0.5;
+                for j in 1..nsamples - 1 {
+                    dz_dt[j] = (analytic[j + 1] - analytic[j - 1]) * 0.5;
                 }
-                
+
                 // Backward difference for last point
-                dz_dt[nsamples-1] = analytic[nsamples-1] - analytic[nsamples-2];
+                dz_dt[nsamples - 1] = analytic[nsamples - 1] - analytic[nsamples - 2];
             }
-            
+
             // Compute phase adjoint
             for j in 0..nsamples {
                 // Phase difference (handle wrapping)
                 let mut phase_diff = phase_syn[[i, j]] - phase_obs[[i, j]];
-                
+
                 // Unwrap phase difference to [-π, π]
                 while phase_diff > std::f64::consts::PI {
                     phase_diff -= 2.0 * std::f64::consts::PI;
@@ -375,10 +375,10 @@ impl MisfitFunction {
                 while phase_diff < -std::f64::consts::PI {
                     phase_diff += 2.0 * std::f64::consts::PI;
                 }
-                
+
                 // Envelope squared: |z|²
                 let envelope_sq = analytic[j].norm_sqr();
-                
+
                 // Avoid division by zero at signal nulls
                 if envelope_sq > 1e-12 {
                     // Adjoint = (φ_syn - φ_obs) * [-Im(dz/dt) / |z|²]
@@ -424,13 +424,13 @@ impl MisfitFunction {
     }
 
     /// Wasserstein adjoint source for gradient computation
-    /// 
+    ///
     /// Computes the adjoint source (Fréchet derivative) for the Wasserstein distance.
     /// The adjoint source is the optimal transport map between distributions.
-    /// 
+    ///
     /// For 1D case: adjoint = sign(F_syn - F_obs) where F are CDFs
     /// This gives the direction of transport to minimize the distance.
-    /// 
+    ///
     /// References:
     /// - Engquist et al. (2016): "Optimal transport for seismic FWI"
     /// - Métivier et al. (2016): "An optimal transport approach for seismic tomography"
@@ -449,7 +449,7 @@ impl MisfitFunction {
             // Shift to non-negative
             let obs_min = obs_trace.iter().fold(f64::INFINITY, |min, &x| min.min(x));
             let syn_min = syn_trace.iter().fold(f64::INFINITY, |min, &x| min.min(x));
-            
+
             let obs_shifted = obs_trace.mapv(|x| (x - obs_min).max(0.0));
             let syn_shifted = syn_trace.mapv(|x| (x - syn_min).max(0.0));
 
@@ -467,10 +467,10 @@ impl MisfitFunction {
             // Compute CDFs
             let mut obs_cdf = Vec::with_capacity(nsamples);
             let mut syn_cdf = Vec::with_capacity(nsamples);
-            
+
             let mut obs_cumsum = 0.0;
             let mut syn_cumsum = 0.0;
-            
+
             for j in 0..nsamples {
                 obs_cumsum += obs_prob[j];
                 syn_cumsum += syn_prob[j];
@@ -482,10 +482,10 @@ impl MisfitFunction {
             // This represents the optimal transport direction
             for j in 0..nsamples {
                 let cdf_diff = syn_cdf[j] - obs_cdf[j];
-                
+
                 // Weight by original amplitude for proper scaling
                 let weight = syn_prob[j].max(1e-10);
-                
+
                 // Adjoint source: derivative of Wasserstein w.r.t. synthetic data
                 adjoint[[i, j]] = cdf_diff.signum() * weight;
             }
@@ -495,46 +495,44 @@ impl MisfitFunction {
     }
 
     /// Compute envelope using Hilbert transform
-    /// 
+    ///
     /// The analytic signal is z(t) = x(t) + i*H[x(t)] where H is Hilbert transform.
     /// The envelope is |z(t)| = sqrt(x(t)² + H[x(t)]²)
-    /// 
+    ///
     /// Implementation via FFT:
     /// 1. X(f) = FFT[x(t)]
     /// 2. H[X(f)] = -i*sgn(f)*X(f)
     /// 3. h(t) = IFFT[H[X(f)]]
     /// 4. envelope = sqrt(x² + h²)
-    /// 
+    ///
     /// References:
     /// - Marple (1999): "Computing the discrete-time analytic signal via FFT"
     /// - Oppenheim & Schafer (2009): "Discrete-Time Signal Processing", Ch. 12
     fn compute_envelope(&self, signal: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         use rustfft::{num_complex::Complex, FftPlanner};
-        
+
         let (ntraces, nsamples) = signal.dim();
         let mut envelope = Array2::zeros((ntraces, nsamples));
-        
+
         // Process each trace independently
         for i in 0..ntraces {
             let trace = signal.row(i);
-            
+
             // Step 1: FFT of real signal
             let mut fft_planner = FftPlanner::new();
             let fft = fft_planner.plan_fft_forward(nsamples);
-            
-            let mut buffer: Vec<Complex<f64>> = trace
-                .iter()
-                .map(|&x| Complex::new(x, 0.0))
-                .collect();
-            
+
+            let mut buffer: Vec<Complex<f64>> =
+                trace.iter().map(|&x| Complex::new(x, 0.0)).collect();
+
             fft.process(&mut buffer);
-            
+
             // Step 2: Apply Hilbert transform in frequency domain
             // H[X(f)] = -i*sgn(f)*X(f)
             // For positive frequencies: multiply by 2
             // For negative frequencies: zero out
             // DC and Nyquist: keep as is
-            
+
             // Zero out negative frequencies, double positive frequencies
             for sample in buffer.iter_mut().take(nsamples / 2).skip(1) {
                 *sample *= Complex::new(2.0, 0.0);
@@ -542,55 +540,53 @@ impl MisfitFunction {
             for sample in buffer.iter_mut().skip(nsamples / 2 + 1) {
                 *sample = Complex::new(0.0, 0.0);
             }
-            
+
             // Step 3: IFFT to get analytic signal
             let ifft = fft_planner.plan_fft_inverse(nsamples);
             ifft.process(&mut buffer);
-            
+
             // Normalize IFFT
             let norm = 1.0 / nsamples as f64;
             for sample in &mut buffer {
                 *sample *= norm;
             }
-            
+
             // Step 4: Compute envelope as magnitude of analytic signal
             for (j, sample) in buffer.iter().enumerate() {
                 envelope[[i, j]] = sample.norm();
             }
         }
-        
+
         Ok(envelope)
     }
 
     /// Compute instantaneous phase using Hilbert transform
-    /// 
+    ///
     /// The instantaneous phase is φ(t) = atan2(H[x(t)], x(t))
     /// where H[x] is the Hilbert transform of x.
-    /// 
+    ///
     /// References:
     /// - Taner et al. (1979): "Complex seismic trace analysis"
     /// - Barnes (2007): "A tutorial on complex seismic trace analysis"
     fn compute_instantaneous_phase(&self, signal: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         use rustfft::{num_complex::Complex, FftPlanner};
-        
+
         let (ntraces, nsamples) = signal.dim();
         let mut phase = Array2::zeros((ntraces, nsamples));
-        
+
         // Process each trace
         for i in 0..ntraces {
             let trace = signal.row(i);
-            
+
             // Compute analytic signal via Hilbert transform
             let mut fft_planner = FftPlanner::new();
             let fft = fft_planner.plan_fft_forward(nsamples);
-            
-            let mut buffer: Vec<Complex<f64>> = trace
-                .iter()
-                .map(|&x| Complex::new(x, 0.0))
-                .collect();
-            
+
+            let mut buffer: Vec<Complex<f64>> =
+                trace.iter().map(|&x| Complex::new(x, 0.0)).collect();
+
             fft.process(&mut buffer);
-            
+
             // Apply Hilbert transform in frequency domain
             for sample in buffer.iter_mut().take(nsamples / 2).skip(1) {
                 *sample *= Complex::new(2.0, 0.0);
@@ -598,22 +594,22 @@ impl MisfitFunction {
             for sample in buffer.iter_mut().skip(nsamples / 2 + 1) {
                 *sample = Complex::new(0.0, 0.0);
             }
-            
+
             let ifft = fft_planner.plan_fft_inverse(nsamples);
             ifft.process(&mut buffer);
-            
+
             let norm = 1.0 / nsamples as f64;
-            
+
             // Compute instantaneous phase
             for (j, sample) in buffer.iter().enumerate() {
                 let real = trace[j];
                 let imag = sample.im * norm;
-                
+
                 // Phase = atan2(imaginary, real)
                 phase[[i, j]] = imag.atan2(real);
             }
         }
-        
+
         Ok(phase)
     }
 }

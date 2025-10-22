@@ -84,11 +84,9 @@ impl LineSearch {
 
         // Compute directional derivative: ∇f·p
         let mut directional_derivative = 0.0;
-        Zip::from(gradient)
-            .and(direction)
-            .for_each(|&g, &d| {
-                directional_derivative += g * d;
-            });
+        Zip::from(gradient).and(direction).for_each(|&g, &d| {
+            directional_derivative += g * d;
+        });
 
         // If directional derivative is non-negative, we're not going downhill
         // Return small step size to prevent divergence
@@ -100,19 +98,19 @@ impl LineSearch {
         // Since we don't have the objective function, we use a heuristic:
         // Accept step if gradient magnitude decreases or after conservative shrinkage
         let gradient_norm = gradient.iter().map(|x| x * x).sum::<f64>().sqrt();
-        
+
         for i in 0..max_iterations {
             // Heuristic check: if step is becoming very small, accept it
             if alpha < 1e-8 {
                 break;
             }
-            
+
             // Apply Armijo-inspired shrinkage
             // In practice, this provides stable convergence for FWI
             if i > 0 && alpha * (-directional_derivative) < c1 * gradient_norm * alpha {
                 break;
             }
-            
+
             alpha *= shrink_factor;
         }
 

@@ -3,9 +3,9 @@
 //! This module provides the main Filters struct and frequency-domain
 //! filtering operations (bandpass, envelope detection, FBP filters).
 
+use super::spatial;
 use crate::error::KwaversResult;
 use crate::solver::reconstruction::FilterType;
-use super::spatial;
 use ndarray::{Array1, Array2, Array3};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
@@ -371,7 +371,8 @@ impl Filters {
         const INTENSITY_SIGMA: f64 = 0.1; // Relative to data range
 
         // Apply Gaussian filtering using separable implementation
-        let gaussian_filtered = spatial::apply_gaussian_filter(image, GAUSSIAN_SIGMA, KERNEL_RADIUS)?;
+        let gaussian_filtered =
+            spatial::apply_gaussian_filter(image, GAUSSIAN_SIGMA, KERNEL_RADIUS)?;
 
         // Apply edge-preserving bilateral filter for better feature preservation
         let bilateral_filtered = spatial::apply_bilateral_filter(
@@ -384,4 +385,3 @@ impl Filters {
         Ok(bilateral_filtered)
     }
 }
-

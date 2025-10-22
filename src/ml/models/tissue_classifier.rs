@@ -14,12 +14,12 @@ pub struct TissueClassifierModel {
 
 impl TissueClassifierModel {
     /// Load model from path
-    /// 
+    ///
     /// **Implementation Status**: Template model with random initialization
     /// **Rationale**: Full neural network loading requires ML framework selection (burn/candle).
     /// Template provides functional inference API for integration testing and development.
     /// Production ML models would deserialize trained weights from checkpoint files.
-    /// 
+    ///
     /// **Future**: Sprint 127+ ML infrastructure with proper model serialization
     pub fn load(_path: &std::path::Path) -> KwaversResult<Self> {
         Ok(Self::with_random_weights(128, 10))

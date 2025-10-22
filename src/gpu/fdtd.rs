@@ -187,9 +187,10 @@ impl FdtdGpu {
         });
 
         device.poll(wgpu::Maintain::Wait);
-        let result = rx.recv_async().await.map_err(|e| {
-            KwaversError::GpuError(format!("Channel receive error: {}", e))
-        })?;
+        let result = rx
+            .recv_async()
+            .await
+            .map_err(|e| KwaversError::GpuError(format!("Channel receive error: {}", e)))?;
         result?;
 
         let data = buffer_slice.get_mapped_range();

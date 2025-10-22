@@ -89,7 +89,7 @@ impl GpuBuffer {
                 reason: format!("Failed: {}", e),
             })
         })?;
-        
+
         result?;
 
         let data = buffer_slice.get_mapped_range();

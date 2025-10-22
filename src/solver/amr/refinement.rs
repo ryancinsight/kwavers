@@ -162,12 +162,12 @@ impl RefinementManager {
         let (nx, ny, nz) = markers.dim();
         let mut iteration = 0;
         const MAX_ITERATIONS: usize = 100;
-        
+
         loop {
             let old_markers = markers.clone();
             let mut changed = false;
             iteration += 1;
-            
+
             if iteration > MAX_ITERATIONS {
                 log::warn!("AMR nesting enforcement exceeded max iterations");
                 break;
@@ -180,32 +180,39 @@ impl RefinementManager {
                         if old_markers[[i, j, k]] != -1 {
                             continue; // Only process cells marked for coarsening
                         }
-                        
+
                         // Check all 26 neighbors (6 faces + 12 edges + 8 corners)
                         let mut has_refined_neighbor = false;
-                        
+
                         for di in -1..=1 {
                             for dj in -1..=1 {
                                 for dk in -1..=1 {
                                     if di == 0 && dj == 0 && dk == 0 {
                                         continue; // Skip self
                                     }
-                                    
+
                                     let ni = (i as i32 + di) as usize;
                                     let nj = (j as i32 + dj) as usize;
                                     let nk = (k as i32 + dk) as usize;
-                                    
-                                    if ni < nx && nj < ny && nk < nz
-                                        && old_markers[[ni, nj, nk]] == 1 {
-                                            has_refined_neighbor = true;
-                                            break;
-                                        }
+
+                                    if ni < nx
+                                        && nj < ny
+                                        && nk < nz
+                                        && old_markers[[ni, nj, nk]] == 1
+                                    {
+                                        has_refined_neighbor = true;
+                                        break;
+                                    }
                                 }
-                                if has_refined_neighbor { break; }
+                                if has_refined_neighbor {
+                                    break;
+                                }
                             }
-                            if has_refined_neighbor { break; }
+                            if has_refined_neighbor {
+                                break;
+                            }
                         }
-                        
+
                         // If has refined neighbor, cancel coarsening
                         if has_refined_neighbor {
                             markers[[i, j, k]] = 0;
@@ -214,7 +221,7 @@ impl RefinementManager {
                     }
                 }
             }
-            
+
             // Pass 2: Handle refinement constraints
             for i in 1..nx - 1 {
                 for j in 1..ny - 1 {
@@ -222,7 +229,7 @@ impl RefinementManager {
                         if old_markers[[i, j, k]] != 1 {
                             continue; // Only process cells marked for refinement
                         }
-                        
+
                         // Check face neighbors (6 directions)
                         let face_neighbors = [
                             (i.wrapping_sub(1), j, k),
@@ -232,7 +239,7 @@ impl RefinementManager {
                             (i, j, k.wrapping_sub(1)),
                             (i, j, k + 1),
                         ];
-                        
+
                         for &(ni, nj, nk) in &face_neighbors {
                             if ni < nx && nj < ny && nk < nz {
                                 // If face neighbor wants to coarsen, prevent it

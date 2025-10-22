@@ -62,10 +62,7 @@ impl ControlPanel {
 
         for (name, state) in states {
             let group = state.definition.group.clone();
-            self.groups
-                .entry(group.clone())
-                .or_default()
-                .push(name);
+            self.groups.entry(group.clone()).or_default().push(name);
 
             // Initialize expanded state for group
             self.expanded_groups.entry(group).or_insert(true);
@@ -75,10 +72,10 @@ impl ControlPanel {
     }
 
     /// Render the control panel
-    /// 
+    ///
     /// **Implementation**: Full egui-based UI control panel with collapsible groups
     /// Provides interactive parameter adjustment for visualization pipeline
-    /// 
+    ///
     /// **Reference**: egui documentation (immediate mode GUI paradigm)
     #[cfg(feature = "gpu-visualization")]
     pub fn render(&mut self, ctx: &egui::Context) {
@@ -92,8 +89,12 @@ impl ControlPanel {
             .show(ctx, |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
                     // Collect groups to avoid borrow conflict
-                    let groups: Vec<_> = self.groups.iter().map(|(name, params)| (name.clone(), params.clone())).collect();
-                    
+                    let groups: Vec<_> = self
+                        .groups
+                        .iter()
+                        .map(|(name, params)| (name.clone(), params.clone()))
+                        .collect();
+
                     // Render groups
                     for (group_name, params) in groups {
                         CollapsingHeader::new(&group_name)
@@ -172,7 +173,7 @@ impl ControlPanel {
     }
 
     /// Render without GPU features (conditional compilation stub)
-    /// 
+    ///
     /// Note: This is a proper conditional compilation stub for non-GPU builds.
     /// GPU visualization requires the `gpu-visualization` feature flag.
     #[cfg(not(feature = "gpu-visualization"))]

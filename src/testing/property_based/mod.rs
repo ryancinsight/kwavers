@@ -6,4 +6,4 @@
 pub mod acoustic;
 
 // Re-export key testing utilities
-pub use acoustic::{acoustic_properties, medium_properties, grid_properties};
+pub use acoustic::{acoustic_properties, grid_properties, medium_properties};

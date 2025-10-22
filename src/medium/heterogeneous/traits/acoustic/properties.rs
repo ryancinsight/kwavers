@@ -5,13 +5,12 @@
 
 use crate::error::{KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
+use crate::medium::heterogeneous::{
+    core::HeterogeneousMedium, interpolation::TrilinearInterpolator,
+};
 use crate::medium::{
     acoustic::AcousticProperties,
     core::{ArrayAccess, CoreMedium, MIN_PHYSICAL_DENSITY, MIN_PHYSICAL_SOUND_SPEED},
-};
-use crate::medium::heterogeneous::{
-    core::HeterogeneousMedium,
-    interpolation::TrilinearInterpolator,
 };
 
 impl CoreMedium for HeterogeneousMedium {
@@ -102,11 +101,13 @@ impl AcousticProperties for HeterogeneousMedium {
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
         let base_absorption = TrilinearInterpolator::get_field_value(
             &self.absorption,
-            x, y, z,
+            x,
+            y,
+            z,
             grid,
-            self.use_trilinear_interpolation
+            self.use_trilinear_interpolation,
         );
-        
+
         // Frequency-dependent scaling
         let freq_ratio = frequency / self.reference_frequency;
         base_absorption * freq_ratio.powf(1.0) // Power law with exponent 1.0
@@ -116,17 +117,21 @@ impl AcousticProperties for HeterogeneousMedium {
     fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let sound_speed = TrilinearInterpolator::get_field_value(
             &self.sound_speed,
-            x, y, z,
+            x,
+            y,
+            z,
             grid,
-            self.use_trilinear_interpolation
+            self.use_trilinear_interpolation,
         );
         let density = TrilinearInterpolator::get_field_value(
             &self.density,
-            x, y, z,
+            x,
+            y,
+            z,
             grid,
-            self.use_trilinear_interpolation
+            self.use_trilinear_interpolation,
         );
-        
+
         // Acoustic diffusivity: D = c²/ρ (classical fluid mechanics formula)
         // Exact for homogeneous fluids, per Morse & Ingard (1968) "Theoretical Acoustics"
         sound_speed * sound_speed / density

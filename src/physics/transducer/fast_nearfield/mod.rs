@@ -57,8 +57,8 @@ pub struct FnmConfiguration {
 impl Default for FnmConfiguration {
     fn default() -> Self {
         Self {
-            frequency: 5.0e6,           // 5 MHz
-            num_basis_functions: 64,     // Typical for good accuracy
+            frequency: 5.0e6,        // 5 MHz
+            num_basis_functions: 64, // Typical for good accuracy
             enable_caching: true,
             singularity_tolerance: 1e-10,
         }
@@ -134,7 +134,8 @@ impl FastNearfieldMethod {
         grid: &Grid,
         frequency: f64,
     ) -> KwaversResult<Array3<Complex<f64>>> {
-        self.calculator.compute_pressure(grid, frequency, &self.basis)
+        self.calculator
+            .compute_pressure(grid, frequency, &self.basis)
     }
 
     /// Compute pressure field with FFT-based k-space convolution (O(n log n))
@@ -161,7 +162,8 @@ impl FastNearfieldMethod {
         grid: &Grid,
         frequency: f64,
     ) -> KwaversResult<Array3<Complex<f64>>> {
-        self.calculator.compute_pressure_fft(grid, frequency, &self.basis)
+        self.calculator
+            .compute_pressure_fft(grid, frequency, &self.basis)
     }
 
     /// Compute spatial impulse response using FNM
@@ -178,10 +180,7 @@ impl FastNearfieldMethod {
     ///
     /// Kelly & McGough (2006): FNM extends to transient calculations through
     /// temporal convolution of basis responses.
-    pub fn compute_spatial_impulse_response(
-        &self,
-        grid: &Grid,
-    ) -> KwaversResult<Array3<f64>> {
+    pub fn compute_spatial_impulse_response(&self, grid: &Grid) -> KwaversResult<Array3<f64>> {
         self.calculator.compute_sir(grid, &self.basis)
     }
 
@@ -243,15 +242,22 @@ mod tests {
         let grid = Grid::new(30, 30, 30, 0.001, 0.001, 0.001).unwrap();
 
         let result = fnm.compute_pressure_field_fft(&grid, 5.0e6);
-        assert!(result.is_ok(), "FFT pressure field computation should succeed");
+        assert!(
+            result.is_ok(),
+            "FFT pressure field computation should succeed"
+        );
 
         let pressure = result.unwrap();
         assert_eq!(pressure.dim(), (30, 30, 30));
-        
+
         // Check that field has non-zero values
-        let max_magnitude = pressure.iter()
+        let max_magnitude = pressure
+            .iter()
             .map(|c| c.norm())
             .fold(f64::NEG_INFINITY, f64::max);
-        assert!(max_magnitude > 0.0, "Pressure field should have non-zero values");
+        assert!(
+            max_magnitude > 0.0,
+            "Pressure field should have non-zero values"
+        );
     }
 }

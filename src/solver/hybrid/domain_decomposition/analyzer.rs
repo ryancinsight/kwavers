@@ -37,7 +37,7 @@ impl DomainAnalyzer {
     }
 
     /// Compute homogeneity metric for the medium
-    /// 
+    ///
     /// Analyzes relative density variations to determine if regions are homogeneous.
     /// Homogeneity score of 1.0 = uniform medium, 0.0 = highly heterogeneous.
     /// This heuristic is sufficient for deciding between spectral (smooth) vs DG (discontinuous) methods.
@@ -58,7 +58,7 @@ impl DomainAnalyzer {
     }
 
     /// Compute smoothness metric for the field
-    /// 
+    ///
     /// Returns constant 0.5 as a neutral smoothness estimate.
     /// Actual gradient computation would require field data which isn't available at setup time.
     /// The hybrid solver adapts dynamically during simulation based on discontinuity detection.
@@ -67,7 +67,7 @@ impl DomainAnalyzer {
     }
 
     /// Estimate spectral content
-    /// 
+    ///
     /// Returns constant 0.5 as neutral frequency content estimate.
     /// Actual spectral analysis requires field data available during runtime.
     /// The hybrid solver uses discontinuity detection for adaptive method selection.

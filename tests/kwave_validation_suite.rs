@@ -139,7 +139,7 @@ fn test_point_source_spherical_wave() -> KwaversResult<()> {
             expected_amplitude > 0.0,
             "Point source amplitude must be positive"
         );
-        
+
         // Only check decay if beyond reference distance
         if r > reference_distance {
             assert!(
@@ -409,7 +409,10 @@ fn test_power_law_absorption() -> KwaversResult<()> {
     let attenuation = f64::exp(-alpha_f * distance);
 
     // Verify attenuation is physical
-    assert!(attenuation > 0.0 && attenuation < 1.0, "Attenuation out of bounds");
+    assert!(
+        attenuation > 0.0 && attenuation < 1.0,
+        "Attenuation out of bounds"
+    );
 
     // Verify power law exponent is in typical range
     assert!(

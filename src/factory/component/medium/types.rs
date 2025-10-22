@@ -2,8 +2,8 @@
 //!
 //! Comprehensive type system for acoustic media following domain principles
 
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Medium configuration with comprehensive type safety
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,8 +19,8 @@ pub enum MediumType {
     Homogeneous {
         density: f64,
         sound_speed: f64,
-        mu_a: f64,        // Absorption coefficient
-        mu_s_prime: f64,  // Reduced scattering coefficient
+        mu_a: f64,       // Absorption coefficient
+        mu_s_prime: f64, // Reduced scattering coefficient
     },
     /// Heterogeneous medium with spatial property variation
     Heterogeneous {
@@ -28,9 +28,7 @@ pub enum MediumType {
         property_maps: HashMap<String, String>,
     },
     /// Layered medium with discrete layers
-    Layered {
-        layers: Vec<LayerProperties>,
-    },
+    Layered { layers: Vec<LayerProperties> },
     /// Anisotropic medium with directional properties
     Anisotropic {
         tensor_file: String,
@@ -39,7 +37,7 @@ pub enum MediumType {
 }
 
 /// Layer properties for layered media
-#[derive(Debug, Clone, Serialize, Deserialize)]  
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LayerProperties {
     pub thickness: f64,
     pub density: f64,
@@ -51,9 +49,9 @@ pub struct LayerProperties {
 /// Interface types between layers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum InterfaceType {
-    Sharp,           // Discontinuous interface
-    Smooth(f64),     // Smooth transition with width
-    Gradient(f64),   // Linear gradient over distance
+    Sharp,         // Discontinuous interface
+    Smooth(f64),   // Smooth transition with width
+    Gradient(f64), // Linear gradient over distance
 }
 
 impl MediumConfig {
@@ -69,7 +67,7 @@ impl MediumConfig {
             properties: HashMap::new(),
         }
     }
-    
+
     /// Create heterogeneous medium from file
     pub fn heterogeneous(tissue_file: String) -> Self {
         Self {
@@ -80,7 +78,7 @@ impl MediumConfig {
             properties: HashMap::new(),
         }
     }
-    
+
     /// Validate configuration - maintains backward compatibility
     pub fn validate(&self) -> crate::error::KwaversResult<()> {
         super::validation::MediumValidator::validate(self)

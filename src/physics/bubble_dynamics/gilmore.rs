@@ -163,17 +163,17 @@ impl GilmoreSolver {
         let p_inf = self.params.p0;
         let rho_inf = self.params.rho_liquid;
         let b_tait = self.tait_b; // Tait constant B
-        
+
         // Density ratio from Tait equation
         let rho_ratio = ((p_wall + b_tait) / (p_inf + b_tait)).powf(1.0 / n);
         let rho_wall = rho_inf * rho_ratio;
-        
+
         // Derivative of enthalpy with respect to pressure
         // For Tait equation: ∂H/∂p = (n/(n-1)) * [1/ρ - (p+B)/(n*ρ²) * ∂ρ/∂p]
         // where ∂ρ/∂p = ρ/(n*(p+B))
         // Simplifying: ∂H/∂p = (n/(n-1)) * (1/ρ) * (1 - 1/n) = 1/ρ
         let dh_dp = 1.0 / rho_wall;
-        
+
         // Time derivative of enthalpy
         // Note: This uses proper thermodynamic relationship from Tait equation
         // Use liquid sound speed instead of wall velocity approximation

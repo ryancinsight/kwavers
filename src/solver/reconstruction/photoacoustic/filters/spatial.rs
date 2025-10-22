@@ -26,7 +26,7 @@ pub fn apply_gaussian_filter(
     radius: usize,
 ) -> KwaversResult<Array3<f64>> {
     let (nx, ny, nz) = image.dim();
-    
+
     // Generate 1D Gaussian kernel
     let kernel = create_gaussian_kernel(radius, sigma);
 

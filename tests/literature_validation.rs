@@ -15,7 +15,7 @@ use std::f64::consts::PI;
 /// the collapse of a spherical cavity." The London, Edinburgh, and Dublin
 /// Philosophical Magazine and Journal of Science 34.200: 94-98.
 #[test]
-fn test_rayleigh_collapse_time() {
+fn test_rayleigh_collapse_time() -> Result<(), kwavers::KwaversError> {
     // Rayleigh collapse time: τ = 0.915 * R₀ * sqrt(ρ/Δp)
     let mut params = BubbleParameters::default();
     params.r0 = 100e-6; // 100 μm bubble
@@ -36,7 +36,7 @@ fn test_rayleigh_collapse_time() {
 
     // Simulate collapse
     while t < 100e-6 && state.radius > params.r0 * 0.01 {
-        let accel = model.calculate_acceleration(&mut state, p_acoustic, 0.0, t);
+        let accel = model.calculate_acceleration(&mut state, p_acoustic, 0.0, t)?;
         state.wall_velocity += accel * dt;
         state.radius += state.wall_velocity * dt;
 
@@ -59,6 +59,8 @@ fn test_rayleigh_collapse_time() {
         "Rayleigh collapse time error: {:.2}%",
         error * 100.0
     );
+
+    Ok(())
 }
 
 /// Test dispersion relation for acoustic waves
@@ -67,7 +69,7 @@ fn test_rayleigh_collapse_time() {
 #[test]
 fn test_acoustic_dispersion_relation() {
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::water(&grid);
+    let _medium = HomogeneousMedium::water(&grid);
     let c = 1500.0; // Sound speed in water
 
     // Generate k-space

@@ -17,7 +17,7 @@ mod tests {
 
     /// Test linear wave propagation (nonlinearity = 0, diffusivity = 0)
     /// Should match standard linear acoustic wave equation
-    /// 
+    ///
     /// Fast version with reduced grid (16³) and 20 steps for CI/CD (<1s execution).
     #[test]
     fn test_linear_propagation() {
@@ -89,7 +89,7 @@ mod tests {
     }
 
     /// Test energy conservation in linear regime (COMPREHENSIVE - Tier 3)
-    /// 
+    ///
     /// This test runs 200 iterations on a 64³ grid for thorough validation.
     /// Execution time: >30s, classified as Tier 3 comprehensive validation.
     /// Use `cargo test -- --ignored` for full validation suite.
@@ -153,10 +153,10 @@ mod tests {
     }
 
     /// Test energy conservation in linear regime (FAST - Tier 1)
-    /// 
+    ///
     /// Fast version with reduced grid (16³) and fewer steps (20) for CI/CD.
     /// Execution time: <1s, classified as Tier 1 fast validation.
-    /// 
+    ///
     /// Note: This is a smoke test to verify basic solver functionality.
     /// Comprehensive energy conservation validation is in the ignored test.
     #[test]
@@ -216,11 +216,14 @@ mod tests {
         // Verify solver ran without panicking and energy is in reasonable range
         // For fast test with reduced grid, we just check energy didn't explode or vanish
         assert!(final_energy > 0.0, "Energy should be positive");
-        assert!(final_energy < 100.0 * initial_energy, "Energy shouldn't explode");
+        assert!(
+            final_energy < 100.0 * initial_energy,
+            "Energy shouldn't explode"
+        );
     }
 
     /// Test that nonlinear effects produce expected harmonic generation (COMPREHENSIVE - Tier 3)
-    /// 
+    ///
     /// This test runs 1000 iterations on a 128×64×64 grid for thorough validation.
     /// Execution time: >60s, classified as Tier 3 comprehensive validation.
     /// Use `cargo test -- --ignored` for full validation suite.
@@ -232,7 +235,7 @@ mod tests {
 
         let config = KuznetsovConfig {
             equation_mode: AcousticEquationMode::Westervelt, // Nonlinear, no diffusion
-            nonlinearity_coefficient: 5.2, // Water B/A parameter
+            nonlinearity_coefficient: 5.2,                   // Water B/A parameter
             acoustic_diffusivity: 0.0,
             ..Default::default()
         };
@@ -274,7 +277,7 @@ mod tests {
     }
 
     /// Test that nonlinear effects produce expected harmonic generation (FAST - Tier 1)
-    /// 
+    ///
     /// Fast version with reduced grid (32×16×16) and fewer steps (50) for CI/CD.
     /// Execution time: <2s, classified as Tier 1 fast validation.
     #[test]
@@ -284,7 +287,7 @@ mod tests {
 
         let config = KuznetsovConfig {
             equation_mode: AcousticEquationMode::Westervelt, // Nonlinear, no diffusion
-            nonlinearity_coefficient: 5.2, // Water B/A parameter
+            nonlinearity_coefficient: 5.2,                   // Water B/A parameter
             acoustic_diffusivity: 0.0,
             ..Default::default()
         };

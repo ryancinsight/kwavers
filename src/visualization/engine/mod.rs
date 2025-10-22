@@ -3,8 +3,8 @@
 //! Core engine for managing visualization pipeline.
 
 use crate::{
-    error::{KwaversError, KwaversResult}, 
-    grid::Grid, 
+    error::{KwaversError, KwaversResult},
+    grid::Grid,
     physics::field_mapping::UnifiedFieldType as FieldType,
 };
 use log::{debug, info, warn};
@@ -80,8 +80,7 @@ impl VisualizationEngine {
             let gpu_context = Arc::new(crate::gpu::GpuContext::new().await?);
 
             // Initialize renderer with GPU context
-            self.renderer =
-                Some(renderer::Renderer3D::create(self.config.clone())?);
+            self.renderer = Some(renderer::Renderer3D::create(self.config.clone())?);
 
             // Initialize data pipeline for efficient GPU transfers
             self.data_pipeline = Some(data_pipeline::DataPipeline::new(gpu_context).await?);
@@ -124,9 +123,7 @@ impl VisualizationEngine {
 
                 debug!(
                     "Rendered {:?} field: {:.2}ms render, {:.2}ms transfer",
-                    field_type,
-                    render_time,
-                    transfer_time
+                    field_type, render_time, transfer_time
                 );
             } else {
                 warn!("GPU visualization not initialized. Call initialize_gpu() first.");

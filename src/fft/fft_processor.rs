@@ -103,9 +103,7 @@ impl Fft3d {
         // Transform along X axis (axis 0)
         for j in 0..self.ny {
             for k in 0..self.nz {
-                let mut line: Vec<Complex64> = (0..self.nx)
-                    .map(|i| result[[i, j, k]])
-                    .collect();
+                let mut line: Vec<Complex64> = (0..self.nx).map(|i| result[[i, j, k]]).collect();
                 fft_x.process(&mut line);
                 for (i, &val) in line.iter().enumerate() {
                     result[[i, j, k]] = val;
@@ -116,9 +114,7 @@ impl Fft3d {
         // Transform along Y axis (axis 1)
         for i in 0..self.nx {
             for k in 0..self.nz {
-                let mut line: Vec<Complex64> = (0..self.ny)
-                    .map(|j| result[[i, j, k]])
-                    .collect();
+                let mut line: Vec<Complex64> = (0..self.ny).map(|j| result[[i, j, k]]).collect();
                 fft_y.process(&mut line);
                 for (j, &val) in line.iter().enumerate() {
                     result[[i, j, k]] = val;
@@ -129,9 +125,7 @@ impl Fft3d {
         // Transform along Z axis (axis 2)
         for i in 0..self.nx {
             for j in 0..self.ny {
-                let mut line: Vec<Complex64> = (0..self.nz)
-                    .map(|k| result[[i, j, k]])
-                    .collect();
+                let mut line: Vec<Complex64> = (0..self.nz).map(|k| result[[i, j, k]]).collect();
                 fft_z.process(&mut line);
                 for (k, &val) in line.iter().enumerate() {
                     result[[i, j, k]] = val;
@@ -401,7 +395,7 @@ mod tests {
         let spectrum = fft3d.forward(&data);
         let reconstructed = fft3d.inverse(&spectrum);
 
-        // Debug output to understand the problem  
+        // Debug output to understand the problem
         println!("Original[0,0,0]: {}", original[[0, 0, 0]]);
         println!("Original[1,0,0]: {}", original[[1, 0, 0]]);
         println!("Original[0,1,0]: {}", original[[0, 1, 0]]);

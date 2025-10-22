@@ -423,7 +423,7 @@ impl FwiProcessor {
     fn calculate_stable_timestep(&self, model: &Array3<f64>, grid: &Grid) -> f64 {
         let c_max = model.iter().cloned().fold(0.0, f64::max);
         let min_spacing = grid.dx.min(grid.dy).min(grid.dz);
-        
+
         // CFL condition with safety factor
         let cfl_number = 0.3; // Safety factor (matches config)
         cfl_number * min_spacing / (c_max * 3.0_f64.sqrt())

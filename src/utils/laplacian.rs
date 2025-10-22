@@ -278,7 +278,9 @@ impl LaplacianOperator {
                 for i in 0..radius.min(nx) {
                     if i < nx - 2 {
                         // Second-order forward difference: f''(x) ≈ (f(x) - 2f(x+h) + f(x+2h)) / h²
-                        let d2_dx2 = (input[[i, j, k]] - 2.0 * input[[i + 1, j, k]] + input[[i + 2, j, k]]) * self.dx2_inv;
+                        let d2_dx2 = (input[[i, j, k]] - 2.0 * input[[i + 1, j, k]]
+                            + input[[i + 2, j, k]])
+                            * self.dx2_inv;
                         output[[i, j, k]] = d2_dx2;
                     } else {
                         output[[i, j, k]] = 0.0;
@@ -287,7 +289,9 @@ impl LaplacianOperator {
                 // Right boundary: backward difference
                 for i in (nx - radius).max(0)..nx {
                     if i >= 2 {
-                        let d2_dx2 = (input[[i, j, k]] - 2.0 * input[[i - 1, j, k]] + input[[i - 2, j, k]]) * self.dx2_inv;
+                        let d2_dx2 = (input[[i, j, k]] - 2.0 * input[[i - 1, j, k]]
+                            + input[[i - 2, j, k]])
+                            * self.dx2_inv;
                         output[[i, j, k]] = d2_dx2;
                     } else {
                         output[[i, j, k]] = 0.0;

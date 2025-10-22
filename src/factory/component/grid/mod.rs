@@ -24,7 +24,7 @@ impl GridFactory {
     pub fn create_grid(config: &GridConfig) -> crate::error::KwaversResult<crate::grid::Grid> {
         // Validate through specialized validator
         GridValidator::validate(config)?;
-        
+
         // Create through specialized creator
         GridCreator::create(config)
     }

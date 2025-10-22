@@ -366,11 +366,11 @@ mod tests {
     #[test]
     fn test_gll_nodes_n2() {
         let (nodes, weights) = gauss_lobatto_legendre_nodes(2).unwrap();
-        
+
         // Check endpoints
         assert_relative_eq!(nodes[0], -1.0, epsilon = 1e-14);
         assert_relative_eq!(nodes[1], 1.0, epsilon = 1e-14);
-        
+
         // Check weights
         assert_relative_eq!(weights[0], 1.0, epsilon = 1e-14);
         assert_relative_eq!(weights[1], 1.0, epsilon = 1e-14);
@@ -379,14 +379,14 @@ mod tests {
     #[test]
     fn test_gll_nodes_n3() {
         let (nodes, weights) = gauss_lobatto_legendre_nodes(3).unwrap();
-        
+
         // Check endpoints
         assert_relative_eq!(nodes[0], -1.0, epsilon = 1e-14);
         assert_relative_eq!(nodes[2], 1.0, epsilon = 1e-14);
-        
+
         // Middle node should be 0
         assert_relative_eq!(nodes[1], 0.0, epsilon = 1e-14);
-        
+
         // Check weights sum to 2 (integral over [-1,1])
         let sum: f64 = weights.iter().sum();
         assert_relative_eq!(sum, 2.0, epsilon = 1e-12);
@@ -433,7 +433,8 @@ mod tests {
     fn test_stiffness_matrix() {
         let n = 3;
         let (nodes, weights) = gauss_lobatto_legendre_nodes(n).unwrap();
-        let stiffness = build_stiffness_matrix(&nodes, &weights, n - 1, BasisType::Legendre).unwrap();
+        let stiffness =
+            build_stiffness_matrix(&nodes, &weights, n - 1, BasisType::Legendre).unwrap();
 
         // Stiffness matrix exists and is finite
         for i in 0..n {
@@ -444,7 +445,10 @@ mod tests {
 
         // Stiffness matrix should have non-zero elements
         let has_nonzero = (0..n).any(|i| (0..n).any(|j| stiffness[(i, j)].abs() > 1e-12));
-        assert!(has_nonzero, "Stiffness matrix should have non-zero elements");
+        assert!(
+            has_nonzero,
+            "Stiffness matrix should have non-zero elements"
+        );
     }
 
     #[test]
@@ -456,7 +460,7 @@ mod tests {
         // Test differentiation of a linear function: f(x) = x
         let f = nodes.clone();
         let df = diff.dot(&f);
-        
+
         // Derivative should be 1 everywhere
         for i in 0..n {
             assert_relative_eq!(df[i], 1.0, epsilon = 1e-10);
@@ -472,7 +476,7 @@ mod tests {
         // Test differentiation of quadratic: f(x) = x²
         let f: Array1<f64> = nodes.iter().map(|&x| x * x).collect();
         let df = diff.dot(&f);
-        
+
         // Derivative should be 2x
         for i in 0..n {
             let expected = 2.0 * nodes[i];

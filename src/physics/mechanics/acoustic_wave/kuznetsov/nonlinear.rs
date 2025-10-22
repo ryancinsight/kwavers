@@ -12,7 +12,7 @@ use ndarray::{Array3, Zip};
 /// The nonlinear term -(β/ρ₀c₀⁴)∂²p²/∂t² represents the convective derivative (u·∇)u
 /// where u = p/(ρc) is the particle velocity. Second-order finite difference in time used
 /// for temporal derivative approximation.
-/// 
+///
 /// **References**:
 /// - Kuznetsov (1971) "Equations of nonlinear acoustics" Soviet Physics - Acoustics 16:467-470
 /// - Hamilton & Blackstock (1998) "Nonlinear Acoustics" Chapter 3

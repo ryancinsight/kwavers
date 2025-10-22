@@ -122,7 +122,7 @@ mod tests {
     }
 
     /// Test multi-bowl array with phase shifts (COMPREHENSIVE - Tier 3)
-    /// 
+    ///
     /// This test generates sources on a 32³ grid with phase shifts.
     /// Execution time: >60s, classified as Tier 3 comprehensive validation.
     #[test]
@@ -166,7 +166,7 @@ mod tests {
     }
 
     /// Test multi-bowl array with phase shifts (FAST - Tier 1)
-    /// 
+    ///
     /// Fast version with reduced grid (8³) for CI/CD smoke test.
     /// Execution time: <1s, classified as Tier 1 fast validation.
     #[test]

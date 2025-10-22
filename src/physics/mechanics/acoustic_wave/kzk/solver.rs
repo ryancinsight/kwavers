@@ -272,7 +272,7 @@ mod tests {
     }
 
     /// Test Gaussian beam propagation (COMPREHENSIVE - Tier 3)
-    /// 
+    ///
     /// This test uses a 64×64×128 grid for thorough validation.
     /// Execution time: >30s, classified as Tier 3 comprehensive validation.
     #[test]
@@ -319,7 +319,7 @@ mod tests {
     }
 
     /// Test Gaussian beam propagation (FAST - Tier 1)
-    /// 
+    ///
     /// Fast version with reduced grid (16×16×32) for CI/CD.
     /// Execution time: <2s, classified as Tier 1 fast validation.
     #[test]

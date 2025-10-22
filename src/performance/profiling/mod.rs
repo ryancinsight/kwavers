@@ -15,8 +15,8 @@ pub use memory::{MemoryEvent, MemoryEventType, MemoryProfile, MemoryProfiler};
 pub use timing::{TimingProfiler, TimingScope, TimingSummary};
 
 use crate::grid::Grid;
-use std::time::Duration;
 use std::fmt;
+use std::time::Duration;
 
 /// Comprehensive performance profiler
 #[derive(Debug)]

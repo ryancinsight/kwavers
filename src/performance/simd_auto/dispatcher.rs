@@ -94,9 +94,12 @@ impl SimdAuto {
 
     // Fallback implementations using standard operations
     fn fallback_add(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
-        ndarray::Zip::from(out).and(a).and(b).for_each(|out, &a, &b| {
-            *out = a + b;
-        });
+        ndarray::Zip::from(out)
+            .and(a)
+            .and(b)
+            .for_each(|out, &a, &b| {
+                *out = a + b;
+            });
     }
 
     fn fallback_scale(&self, array: &mut Array3<f64>, scalar: f64) {
@@ -127,11 +130,11 @@ mod tests {
         // Should create successfully with any detected capability
         assert!(matches!(
             simd.capability,
-            SimdCapability::Avx512 | 
-            SimdCapability::Avx2 | 
-            SimdCapability::Sse42 | 
-            SimdCapability::Neon | 
-            SimdCapability::Swar
+            SimdCapability::Avx512
+                | SimdCapability::Avx2
+                | SimdCapability::Sse42
+                | SimdCapability::Neon
+                | SimdCapability::Swar
         ));
     }
 

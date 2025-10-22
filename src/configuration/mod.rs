@@ -202,9 +202,7 @@ impl Configuration {
 mod tests {
     use super::*;
     use crate::configuration::{
-        grid::GridParameters,
-        medium::MediumParameters,
-        simulation::SimulationParameters,
+        grid::GridParameters, medium::MediumParameters, simulation::SimulationParameters,
     };
 
     #[test]
@@ -229,7 +227,7 @@ mod tests {
             },
             validation: ValidationParameters::default(),
         };
-        
+
         // Test basic functionality without full validation that may hang
         assert!(config.simulation.duration > 0.0);
         assert!(config.grid.dimensions[0] > 0);

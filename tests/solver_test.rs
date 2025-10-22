@@ -81,23 +81,32 @@ fn test_fdtd_solver() {
     // Check that wave has propagated with proper validation
     let pressure_field = fields.slice(s![0, .., .., ..]);
     let max_pressure = pressure_field.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
-    
+
     // Comprehensive edge case validation per SRS requirements
     assert!(!max_pressure.is_nan(), "FDTD produced NaN pressure values");
-    assert!(!max_pressure.is_infinite(), "FDTD produced infinite pressure values");
+    assert!(
+        !max_pressure.is_infinite(),
+        "FDTD produced infinite pressure values"
+    );
     assert!(max_pressure.is_finite(), "FDTD pressure must be finite");
-    
+
     // Physics-based validation: pressure should be within expected range
     // Point source with amplitude TEST_PRESSURE_AMPLITUDE should decay but remain measurable
     let min_expected = TEST_PRESSURE_AMPLITUDE * 1e-6; // Account for geometric decay
-    let max_expected = TEST_PRESSURE_AMPLITUDE * 2.0;   // Allow for numerical overshoot
-    
-    assert!(max_pressure >= min_expected, 
-           "FDTD pressure {:.2e} below minimum expected {:.2e} - indicates solver failure", 
-           max_pressure, min_expected);
-    assert!(max_pressure <= max_expected,
-           "FDTD pressure {:.2e} exceeds maximum expected {:.2e} - indicates instability",
-           max_pressure, max_expected);
+    let max_expected = TEST_PRESSURE_AMPLITUDE * 2.0; // Allow for numerical overshoot
+
+    assert!(
+        max_pressure >= min_expected,
+        "FDTD pressure {:.2e} below minimum expected {:.2e} - indicates solver failure",
+        max_pressure,
+        min_expected
+    );
+    assert!(
+        max_pressure <= max_expected,
+        "FDTD pressure {:.2e} exceeds maximum expected {:.2e} - indicates instability",
+        max_pressure,
+        max_expected
+    );
     println!(
         "FDTD max pressure after {} steps: {}",
         TEST_STEPS_SHORT, max_pressure
@@ -165,23 +174,32 @@ fn test_pstd_solver() {
     // Check that wave has propagated with proper validation
     let pressure_field = fields.slice(s![0, .., .., ..]);
     let max_pressure = pressure_field.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
-    
+
     // Comprehensive edge case validation per SRS requirements
     assert!(!max_pressure.is_nan(), "PSTD produced NaN pressure values");
-    assert!(!max_pressure.is_infinite(), "PSTD produced infinite pressure values");
+    assert!(
+        !max_pressure.is_infinite(),
+        "PSTD produced infinite pressure values"
+    );
     assert!(max_pressure.is_finite(), "PSTD pressure must be finite");
-    
+
     // Physics-based validation: pressure should be within expected range
     // Point source with amplitude TEST_PRESSURE_AMPLITUDE should decay but remain measurable
     let min_expected = TEST_PRESSURE_AMPLITUDE * 1e-6; // Account for geometric decay
-    let max_expected = TEST_PRESSURE_AMPLITUDE * 2.0;   // Allow for numerical overshoot
-    
-    assert!(max_pressure >= min_expected, 
-           "PSTD pressure {:.2e} below minimum expected {:.2e} - indicates solver failure", 
-           max_pressure, min_expected);
-    assert!(max_pressure <= max_expected,
-           "PSTD pressure {:.2e} exceeds maximum expected {:.2e} - indicates instability",
-           max_pressure, max_expected);
+    let max_expected = TEST_PRESSURE_AMPLITUDE * 2.0; // Allow for numerical overshoot
+
+    assert!(
+        max_pressure >= min_expected,
+        "PSTD pressure {:.2e} below minimum expected {:.2e} - indicates solver failure",
+        max_pressure,
+        min_expected
+    );
+    assert!(
+        max_pressure <= max_expected,
+        "PSTD pressure {:.2e} exceeds maximum expected {:.2e} - indicates instability",
+        max_pressure,
+        max_expected
+    );
     println!(
         "PSTD max pressure after {} steps: {}",
         TEST_STEPS_SHORT, max_pressure

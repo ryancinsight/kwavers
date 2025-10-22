@@ -22,7 +22,7 @@ fn medium_validation_benchmark(c: &mut Criterion) {
 
     c.bench_function("medium_validation", |b| {
         b.iter(|| {
-            let density = medium.density(0, 0, 0);  // Use usize indices, not f64
+            let density = medium.density(0, 0, 0); // Use usize indices, not f64
             black_box(density)
         })
     });

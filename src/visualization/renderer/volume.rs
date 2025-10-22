@@ -196,6 +196,7 @@ impl TransferFunction {
 
     /// Turbo colormap (Google's improved rainbow, high dynamic range)
     /// Reference: Anton Mikhailov (2019) "Turbo, An Improved Rainbow Colormap"
+    #[allow(clippy::approx_constant)] // False positive: RGB values, not math constants
     fn turbo_colormap() -> Vec<[f32; 4]> {
         // Turbo: improved rainbow with better perceptual uniformity
         // High dynamic range, reduces rainbow artifacts
@@ -238,10 +239,10 @@ impl RayMarcher {
     }
 
     /// March a ray through the volume
-    /// 
+    ///
     /// Note: This method is reserved for future volume rendering implementation.
     /// It implements basic ray marching for 3D volume visualization per Levoy (1988).
-    /// 
+    ///
     /// **Reference**: Levoy (1988) "Display of Surfaces from Volume Data" IEEE CG&A
     #[allow(dead_code)]
     fn march_ray(&self, origin: [f32; 3], direction: [f32; 3], volume: &Array3<f64>) -> f32 {

@@ -3,11 +3,11 @@
 //! This module owns curl computation knowledge following GRASP principles.
 //! Single responsibility: Computing vector field curl.
 
+use super::coefficients::{FDCoefficients, SpatialOrder};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::{Array3, ArrayView3};
 use num_traits::Float;
-use super::coefficients::{FDCoefficients, SpatialOrder};
 
 /// Compute curl of a vector field
 ///
@@ -53,7 +53,12 @@ where
         return Err(crate::error::KwaversError::Grid(
             crate::error::GridError::DimensionMismatch {
                 expected: "Vector field components must have same dimensions".to_string(),
-                actual: format!("vx: {:?}, vy: {:?}, vz: {:?}", vx.shape(), vy.shape(), vz.shape()),
+                actual: format!(
+                    "vx: {:?}, vy: {:?}, vz: {:?}",
+                    vx.shape(),
+                    vy.shape(),
+                    vz.shape()
+                ),
             },
         ));
     }
@@ -82,15 +87,15 @@ where
 
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    
+
                     // For curl_x = ∂vz/∂y - ∂vy/∂z
                     dvz_dy = dvz_dy + coeff * (vz[[i, j + offset, k]] - vz[[i, j - offset, k]]);
                     dvy_dz = dvy_dz + coeff * (vy[[i, j, k + offset]] - vy[[i, j, k - offset]]);
-                    
+
                     // For curl_y = ∂vx/∂z - ∂vz/∂x
                     dvx_dz = dvx_dz + coeff * (vx[[i, j, k + offset]] - vx[[i, j, k - offset]]);
                     dvz_dx = dvz_dx + coeff * (vz[[i + offset, j, k]] - vz[[i - offset, j, k]]);
-                    
+
                     // For curl_z = ∂vy/∂x - ∂vx/∂y
                     dvy_dx = dvy_dx + coeff * (vy[[i + offset, j, k]] - vy[[i - offset, j, k]]);
                     dvx_dy = dvx_dy + coeff * (vx[[i, j + offset, k]] - vx[[i, j - offset, k]]);
@@ -119,7 +124,13 @@ mod tests {
         let vy = Array3::<f64>::ones((5, 5, 5));
         let vz = Array3::<f64>::ones((5, 5, 5));
 
-        let (curl_x, curl_y, curl_z) = curl(&vx.view(), &vy.view(), &vz.view(), &grid, SpatialOrder::Second)?;
+        let (curl_x, curl_y, curl_z) = curl(
+            &vx.view(),
+            &vy.view(),
+            &vz.view(),
+            &grid,
+            SpatialOrder::Second,
+        )?;
 
         // Curl of constant field should be zero
         assert_relative_eq!(curl_x[[2, 2, 2]], 0.0, epsilon = 1e-10);
@@ -147,7 +158,13 @@ mod tests {
             }
         }
 
-        let (curl_x, curl_y, curl_z) = curl(&vx.view(), &vy.view(), &vz.view(), &grid, SpatialOrder::Second)?;
+        let (curl_x, curl_y, curl_z) = curl(
+            &vx.view(),
+            &vy.view(),
+            &vz.view(),
+            &grid,
+            SpatialOrder::Second,
+        )?;
 
         // Check interior point - should have curl_z = 2
         assert_relative_eq!(curl_x[[2, 2, 2]], 0.0, epsilon = 1e-10);

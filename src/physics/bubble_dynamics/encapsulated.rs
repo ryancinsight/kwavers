@@ -49,14 +49,14 @@ impl Default for ShellProperties {
         // Typical lipid shell properties (SonoVue/Definity-like)
         // Based on Gorce et al. (2000) and Stride & Coussios (2010)
         Self {
-            thickness: 3.0e-9,      // 3 nm (typical lipid shell)
-            shear_modulus: 50.0e6,  // 50 MPa (lipid)
-            shear_viscosity: 0.5,   // 0.5 Pa·s (lipid)
-            density: 1100.0,        // 1100 kg/m³ (lipid)
-            sigma_initial: 0.04,    // 40 mN/m (initial tension)
-            r_buckling: 0.0,        // Computed from equilibrium
-            r_rupture: 0.0,         // Computed based on shell strain
-            elastic_modulus: 0.5,   // 0.5 N/m (Church model)
+            thickness: 3.0e-9,     // 3 nm (typical lipid shell)
+            shear_modulus: 50.0e6, // 50 MPa (lipid)
+            shear_viscosity: 0.5,  // 0.5 Pa·s (lipid)
+            density: 1100.0,       // 1100 kg/m³ (lipid)
+            sigma_initial: 0.04,   // 40 mN/m (initial tension)
+            r_buckling: 0.0,       // Computed from equilibrium
+            r_rupture: 0.0,        // Computed based on shell strain
+            elastic_modulus: 0.5,  // 0.5 N/m (Church model)
         }
     }
 }
@@ -85,12 +85,12 @@ impl ShellProperties {
     #[must_use]
     pub fn polymer_shell() -> Self {
         Self {
-            thickness: 200.0e-9,     // 200 nm (much thicker)
-            shear_modulus: 500.0e6,  // 500 MPa (very stiff)
-            shear_viscosity: 5.0,    // 5 Pa·s (highly viscous)
-            density: 1050.0,         // 1050 kg/m³
-            sigma_initial: 0.072,    // 72 mN/m
-            elastic_modulus: 5.0,    // 5 N/m (stiffer)
+            thickness: 200.0e-9,    // 200 nm (much thicker)
+            shear_modulus: 500.0e6, // 500 MPa (very stiff)
+            shear_viscosity: 5.0,   // 5 Pa·s (highly viscous)
+            density: 1050.0,        // 1050 kg/m³
+            sigma_initial: 0.072,   // 72 mN/m
+            elastic_modulus: 5.0,   // 5 N/m (stiffer)
             ..Self::default()
         }
     }
@@ -201,8 +201,8 @@ impl ChurchModel {
         let shell_viscous = 12.0 * mu_s * (d / r) * v / r;
 
         // Net pressure difference
-        let net_pressure = p_gas - p_inf - surface_tension - viscous_stress 
-                          - shell_elastic - shell_viscous;
+        let net_pressure =
+            p_gas - p_inf - surface_tension - viscous_stress - shell_elastic - shell_viscous;
 
         // Solve for R̈ from Rayleigh-Plesset equation
         let accel = (net_pressure / (self.params.rho_liquid * r)) - (1.5 * v * v / r);
@@ -261,11 +261,7 @@ impl MarmottantModel {
         // Compute critical radii for the shell
         shell.compute_critical_radii(params.r0, params.p0);
 
-        Self {
-            params,
-            shell,
-            chi,
-        }
+        Self { params, shell, chi }
     }
 
     /// Calculate effective surface tension based on Marmottant model
@@ -374,8 +370,8 @@ impl MarmottantModel {
         let viscous_shell = 12.0 * mu_s * (d / r) * v / r;
 
         // Net pressure difference
-        let net_pressure = p_gas - p_inf - surface_term - surface_rate_term
-                          - viscous_liquid - viscous_shell;
+        let net_pressure =
+            p_gas - p_inf - surface_term - surface_rate_term - viscous_liquid - viscous_shell;
 
         // Solve for R̈ from modified Rayleigh-Plesset equation
         let accel = (net_pressure / (self.params.rho_liquid * r)) - (1.5 * v * v / r);
@@ -496,16 +492,25 @@ mod tests {
 
         // Test buckled state (σ = 0)
         let sigma_buckled = model.surface_tension(0.8 * r_b);
-        assert_eq!(sigma_buckled, 0.0, "Buckled state should have zero surface tension");
+        assert_eq!(
+            sigma_buckled, 0.0,
+            "Buckled state should have zero surface tension"
+        );
 
         // Test elastic regime (σ > 0)
         let r_elastic = (r_b + r_r) / 2.0;
         let sigma_elastic = model.surface_tension(r_elastic);
-        assert!(sigma_elastic > 0.0, "Elastic regime should have positive surface tension");
+        assert!(
+            sigma_elastic > 0.0,
+            "Elastic regime should have positive surface tension"
+        );
 
         // Test ruptured state (σ = σ_water)
         let sigma_ruptured = model.surface_tension(1.5 * r_r);
-        assert!(sigma_ruptured > 0.05, "Ruptured state should have water surface tension");
+        assert!(
+            sigma_ruptured > 0.05,
+            "Ruptured state should have water surface tension"
+        );
     }
 
     #[test]
@@ -543,15 +548,19 @@ mod tests {
         // Both models should give similar results at equilibrium for elastic regime
         let params = BubbleParameters::default();
         let shell = ShellProperties::lipid_shell();
-        
+
         let church = ChurchModel::new(params.clone(), shell.clone());
         let marmottant = MarmottantModel::new(params.clone(), shell, 0.5);
 
         let mut state_church = BubbleState::new(&params);
         let mut state_marmottant = BubbleState::new(&params);
 
-        let accel_church = church.calculate_acceleration(&mut state_church, 0.0, 0.0).unwrap();
-        let accel_marmottant = marmottant.calculate_acceleration(&mut state_marmottant, 0.0, 0.0).unwrap();
+        let accel_church = church
+            .calculate_acceleration(&mut state_church, 0.0, 0.0)
+            .unwrap();
+        let accel_marmottant = marmottant
+            .calculate_acceleration(&mut state_marmottant, 0.0, 0.0)
+            .unwrap();
 
         // Both should give finite accelerations at equilibrium
         assert!(accel_church.is_finite());
@@ -566,13 +575,13 @@ mod tests {
         let model = ChurchModel::new(params.clone(), shell);
 
         let mut state = BubbleState::new(&params);
-        
+
         // Compress bubble (R < R₀)
         state.radius = 0.8 * params.r0;
         state.wall_velocity = -10.0; // Inward velocity
-        
+
         let accel_compressed = model.calculate_acceleration(&mut state, 0.0, 0.0).unwrap();
-        
+
         // Shell elasticity should resist compression (though other forces may dominate)
         assert!(accel_compressed.is_finite());
     }

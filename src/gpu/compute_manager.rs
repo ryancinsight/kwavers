@@ -259,10 +259,10 @@ mod tests {
     // Current state: Tests disabled pending dependency consolidation (Sprint 125+ roadmap)
     // Reason: Adding tokio to dev-dependencies would increase build time; physics::constants
     // module requires refactoring for consistent import paths across workspace
-    // 
+    //
     // **Impact**: Non-blocking - GPU functionality validated through integration tests
     // **Tracking**: See docs/backlog.md Sprint 125+ GPU test infrastructure
-    
+
     /*
     use super::*;
     use crate::physics::constants::{tissue, water};
@@ -301,7 +301,7 @@ mod tests {
     }
     */
 
-    /*  
+    /*
     // **ARCHITECTURAL NOTE**: Test disabled pending tissue module constant imports refactoring
     // See above for rationale on physics::constants consolidation work
     #[test]

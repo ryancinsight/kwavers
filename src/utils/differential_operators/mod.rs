@@ -11,14 +11,14 @@
 //! - IEEE TSE 2022: Memory safety practices
 
 pub mod coefficients;
-pub mod gradient;
-pub mod divergence;
 pub mod curl;
+pub mod divergence;
+pub mod gradient;
 pub mod laplacian;
 
 // Re-export main types
 pub use coefficients::{FDCoefficients, SpatialOrder};
-pub use gradient::gradient;
-pub use divergence::divergence;
 pub use curl::curl;
+pub use divergence::divergence;
+pub use gradient::gradient;
 pub use laplacian::laplacian;

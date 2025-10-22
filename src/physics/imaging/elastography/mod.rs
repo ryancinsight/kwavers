@@ -1,7 +1,7 @@
 //! Shear Wave Elastography (SWE) Module
 //!
 //! Implements clinical shear wave elastography for tissue characterization.
-//! 
+//!
 //! ## Overview
 //!
 //! Shear wave elastography measures tissue stiffness by:
@@ -11,11 +11,11 @@
 //!
 //! ## Literature References
 //!
-//! - Sarvazyan, A. P., et al. (1998). "Shear wave elasticity imaging: a new ultrasonic 
+//! - Sarvazyan, A. P., et al. (1998). "Shear wave elasticity imaging: a new ultrasonic
 //!   technology of medical diagnostics." *Ultrasound in Medicine & Biology*, 24(9), 1419-1435.
-//! - Bercoff, J., et al. (2004). "Supersonic shear imaging: a new technique for soft tissue 
+//! - Bercoff, J., et al. (2004). "Supersonic shear imaging: a new technique for soft tissue
 //!   elasticity mapping." *IEEE TUFFC*, 51(4), 396-409.
-//! - Deffieux, T., et al. (2009). "Shear wave spectroscopy for in vivo quantification of 
+//! - Deffieux, T., et al. (2009). "Shear wave spectroscopy for in vivo quantification of
 //!   human soft tissues visco-elasticity." *IEEE TMI*, 28(3), 313-322.
 //!
 //! ## Clinical Applications
@@ -25,13 +25,13 @@
 //! - Prostate cancer detection
 //! - Thyroid nodule characterization
 
-pub mod radiation_force;
 pub mod displacement;
 pub mod inversion;
+pub mod radiation_force;
 
-pub use radiation_force::{AcousticRadiationForce, PushPulseParameters};
 pub use displacement::{DisplacementEstimator, DisplacementField};
 pub use inversion::{ElasticityMap, InversionMethod, ShearWaveInversion};
+pub use radiation_force::{AcousticRadiationForce, PushPulseParameters};
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
@@ -115,10 +115,7 @@ impl ShearWaveElastography {
     ///
     /// Sarvazyan et al. (1998): Acoustic radiation force generates shear waves
     /// perpendicular to ultrasound beam propagation direction.
-    pub fn generate_shear_wave(
-        &self,
-        push_location: [f64; 3],
-    ) -> KwaversResult<Array3<f64>> {
+    pub fn generate_shear_wave(&self, push_location: [f64; 3]) -> KwaversResult<Array3<f64>> {
         self.radiation_force.apply_push_pulse(push_location)
     }
 
@@ -142,9 +139,10 @@ impl ShearWaveElastography {
     ) -> KwaversResult<ElasticityMap> {
         // Estimate displacement from tracked data
         let tracked_displacement = self.displacement_estimator.estimate(displacement_field)?;
-        
+
         // Reconstruct elasticity using selected inversion method
-        self.inversion.reconstruct(&tracked_displacement, &self.grid)
+        self.inversion
+            .reconstruct(&tracked_displacement, &self.grid)
     }
 
     /// Get current push pulse parameters
@@ -170,11 +168,7 @@ mod tests {
         let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
-        let result = ShearWaveElastography::new(
-            &grid,
-            &medium,
-            InversionMethod::TimeOfFlight,
-        );
+        let result = ShearWaveElastography::new(&grid, &medium, InversionMethod::TimeOfFlight);
 
         assert!(result.is_ok(), "SWE creation should succeed");
     }
@@ -183,17 +177,14 @@ mod tests {
     fn test_shear_wave_generation() {
         let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-        let swe = ShearWaveElastography::new(
-            &grid,
-            &medium,
-            InversionMethod::TimeOfFlight,
-        ).unwrap();
+        let swe =
+            ShearWaveElastography::new(&grid, &medium, InversionMethod::TimeOfFlight).unwrap();
 
         let push_location = [0.025, 0.025, 0.025]; // Center of grid
         let result = swe.generate_shear_wave(push_location);
 
         assert!(result.is_ok(), "Shear wave generation should succeed");
-        
+
         let displacement = result.unwrap();
         let (nx, ny, nz) = displacement.dim();
         assert_eq!(nx, 50);

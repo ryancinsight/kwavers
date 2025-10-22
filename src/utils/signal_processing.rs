@@ -7,16 +7,16 @@
 //!
 //! # References
 //!
-//! - Bozdağ et al. (2011): "Misfit functions for full waveform inversion based on 
+//! - Bozdağ et al. (2011): "Misfit functions for full waveform inversion based on
 //!   instantaneous phase and envelope measurements", *Geophysical Journal International*
-//! - Fichtner et al. (2008): "The adjoint method in seismology", *Physics of the Earth 
+//! - Fichtner et al. (2008): "The adjoint method in seismology", *Physics of the Earth
 //!   and Planetary Interiors*
-//! - Marple (1999): "Computing the discrete-time analytic signal via FFT", *IEEE Transactions 
+//! - Marple (1999): "Computing the discrete-time analytic signal via FFT", *IEEE Transactions
 //!   on Signal Processing*
 
 use ndarray::{Array1, Array2};
 use num_complex::Complex;
-use rustfft::{FftPlanner, num_complex};
+use rustfft::{num_complex, FftPlanner};
 
 /// Compute the Hilbert transform of a real signal using FFT
 ///
@@ -48,12 +48,12 @@ use rustfft::{FftPlanner, num_complex};
 #[must_use]
 pub fn hilbert_transform(signal: &Array1<f64>) -> Array1<Complex<f64>> {
     let n = signal.len();
-    
+
     // Edge case: empty or single-sample signal
     if n <= 1 {
         return signal.iter().map(|&x| Complex::new(x, 0.0)).collect();
     }
-    
+
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(n);
     let ifft = planner.plan_fft_inverse(n);
@@ -86,7 +86,10 @@ pub fn hilbert_transform(signal: &Array1<f64>) -> Array1<Complex<f64>> {
 
     // Normalize by 1/N (FFT convention)
     let norm_factor = 1.0 / n as f64;
-    complex_signal.iter().map(|&val| val * norm_factor).collect()
+    complex_signal
+        .iter()
+        .map(|&val| val * norm_factor)
+        .collect()
 }
 
 /// Compute instantaneous envelope from analytic signal
@@ -158,21 +161,21 @@ pub fn instantaneous_phase(signal: &Array1<f64>) -> Array1<f64> {
 pub fn instantaneous_frequency(signal: &Array1<f64>, dt: f64) -> Array1<f64> {
     let phase = instantaneous_phase(signal);
     let n = phase.len();
-    
+
     if n < 3 {
         return Array1::zeros(n);
     }
-    
+
     let mut freq = Array1::zeros(n);
     let factor = 1.0 / (2.0 * std::f64::consts::PI * dt);
-    
+
     // Forward difference for first point
     freq[0] = (phase[1] - phase[0]) * factor;
-    
+
     // Central difference for interior points
-    for i in 1..n-1 {
+    for i in 1..n - 1 {
         // Handle phase wrapping
-        let mut dphi = phase[i+1] - phase[i-1];
+        let mut dphi = phase[i + 1] - phase[i - 1];
         while dphi > std::f64::consts::PI {
             dphi -= 2.0 * std::f64::consts::PI;
         }
@@ -181,10 +184,10 @@ pub fn instantaneous_frequency(signal: &Array1<f64>, dt: f64) -> Array1<f64> {
         }
         freq[i] = dphi / (2.0 * dt) * factor;
     }
-    
+
     // Backward difference for last point
-    freq[n-1] = (phase[n-1] - phase[n-2]) * factor;
-    
+    freq[n - 1] = (phase[n - 1] - phase[n - 2]) * factor;
+
     freq
 }
 
@@ -202,14 +205,14 @@ pub fn instantaneous_frequency(signal: &Array1<f64>, dt: f64) -> Array1<f64> {
 pub fn hilbert_transform_2d(data: &Array2<f64>) -> Array2<Complex<f64>> {
     let (nrows, ncols) = data.dim();
     let mut result = Array2::from_elem((nrows, ncols), Complex::new(0.0, 0.0));
-    
+
     for (i, row) in data.outer_iter().enumerate() {
         let analytic = hilbert_transform(&row.to_owned());
         for (j, &val) in analytic.iter().enumerate() {
             result[[i, j]] = val;
         }
     }
-    
+
     result
 }
 
@@ -218,14 +221,14 @@ pub fn hilbert_transform_2d(data: &Array2<f64>) -> Array2<Complex<f64>> {
 pub fn instantaneous_envelope_2d(data: &Array2<f64>) -> Array2<f64> {
     let (nrows, ncols) = data.dim();
     let mut result = Array2::zeros((nrows, ncols));
-    
+
     for (i, row) in data.outer_iter().enumerate() {
         let envelope = instantaneous_envelope(&row.to_owned());
         for (j, &val) in envelope.iter().enumerate() {
             result[[i, j]] = val;
         }
     }
-    
+
     result
 }
 
@@ -234,14 +237,14 @@ pub fn instantaneous_envelope_2d(data: &Array2<f64>) -> Array2<f64> {
 pub fn instantaneous_phase_2d(data: &Array2<f64>) -> Array2<f64> {
     let (nrows, ncols) = data.dim();
     let mut result = Array2::zeros((nrows, ncols));
-    
+
     for (i, row) in data.outer_iter().enumerate() {
         let phase = instantaneous_phase(&row.to_owned());
         for (j, &val) in phase.iter().enumerate() {
             result[[i, j]] = val;
         }
     }
-    
+
     result
 }
 
@@ -256,11 +259,11 @@ mod tests {
         let n = 128;
         let t: Vec<f64> = (0..n).map(|i| i as f64 * 0.1).collect();
         let signal: Array1<f64> = t.iter().map(|&ti| (ti).sin()).collect();
-        
+
         let analytic = hilbert_transform(&signal);
-        
+
         // Check that imaginary part ≈ -cos(t) in interior (avoiding edge effects)
-        for i in 10..n-10 {
+        for i in 10..n - 10 {
             let ti = t[i];
             let expected_imag = -(ti).cos();
             assert_relative_eq!(analytic[i].im, expected_imag, epsilon = 0.15);
@@ -273,11 +276,11 @@ mod tests {
         let n = 128;
         let t: Vec<f64> = (0..n).map(|i| i as f64 * 0.1).collect();
         let signal: Array1<f64> = t.iter().map(|&ti| (ti).cos()).collect();
-        
+
         let analytic = hilbert_transform(&signal);
-        
+
         // Check that imaginary part ≈ sin(t) in interior (avoiding edge effects)
-        for i in 10..n-10 {
+        for i in 10..n - 10 {
             let ti = t[i];
             let expected_imag = (ti).sin();
             assert_relative_eq!(analytic[i].im, expected_imag, epsilon = 0.15);
@@ -292,11 +295,11 @@ mod tests {
         let omega = 0.5;
         let t: Vec<f64> = (0..n).map(|i| i as f64 * 0.05).collect();
         let signal: Array1<f64> = t.iter().map(|&ti| amplitude * (omega * ti).cos()).collect();
-        
+
         let envelope = instantaneous_envelope(&signal);
-        
+
         // Envelope should be close to amplitude (allowing for edge effects)
-        for i in 10..n-10 {
+        for i in 10..n - 10 {
             assert_relative_eq!(envelope[i], amplitude, epsilon = 0.2);
         }
     }
@@ -308,9 +311,9 @@ mod tests {
         let omega = 0.5;
         let t: Vec<f64> = (0..n).map(|i| i as f64 * 0.1).collect();
         let signal: Array1<f64> = t.iter().map(|&ti| (omega * ti).cos()).collect();
-        
+
         let phase = instantaneous_phase(&signal);
-        
+
         // Phase derivative should be approximately constant (allowing for wrapping)
         // This is a basic sanity check
         assert!(phase.len() == n);

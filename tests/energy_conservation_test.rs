@@ -47,7 +47,8 @@ where
         .and(velocity_z)
         .fold(T::default(), |energy, &p, &vx, &vy, &vz| {
             let kinetic = half * params.density * (vx * vx + vy * vy + vz * vz);
-            let potential = half * p * p / (params.density * params.sound_speed * params.sound_speed);
+            let potential =
+                half * p * p / (params.density * params.sound_speed * params.sound_speed);
             energy + (kinetic + potential) * dv
         })
 }
@@ -89,13 +90,8 @@ fn test_energy_conservation_in_closed_domain() {
         dy: grid.dy,
         dz: grid.dz,
     };
-    let initial_energy = calculate_acoustic_energy(
-        &pressure,
-        &velocity_x,
-        &velocity_y,
-        &velocity_z,
-        &params,
-    );
+    let initial_energy =
+        calculate_acoustic_energy(&pressure, &velocity_x, &velocity_y, &velocity_z, &params);
 
     assert!(initial_energy > 0.0, "Initial energy must be positive");
 

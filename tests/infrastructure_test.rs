@@ -14,7 +14,7 @@ fn test_basic_math() {
     assert_eq!(result, 499500);
 }
 
-#[test] 
+#[test]
 fn test_memory_allocation() {
     // Verify memory allocation works without hanging
     let vec: Vec<i32> = (0..10000).collect();

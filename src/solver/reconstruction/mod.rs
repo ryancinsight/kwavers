@@ -282,8 +282,8 @@ fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult
 /// - Kak & Slaney (1988): "Principles of Computerized Tomographic Imaging", Chapter 3
 /// - Shepp & Logan (1974): "The Fourier reconstruction of a head section"
 fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
-    use rustfft::FftPlanner;
     use num_complex::Complex;
+    use rustfft::FftPlanner;
     use std::f64::consts::PI;
 
     let mut planner = FftPlanner::new();
@@ -340,8 +340,8 @@ fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversRe
 /// # References
 /// - Kak & Slaney (1988): "Principles of Computerized Tomographic Imaging", Chapter 3
 fn apply_cosine_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
-    use rustfft::FftPlanner;
     use num_complex::Complex;
+    use rustfft::FftPlanner;
     use std::f64::consts::PI;
 
     let mut planner = FftPlanner::new();

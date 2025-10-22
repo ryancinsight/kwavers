@@ -13,7 +13,7 @@ pub struct AnomalyDetectorModel {
 
 impl AnomalyDetectorModel {
     /// Load model from path
-    /// 
+    ///
     /// **Implementation Status**: Statistical threshold model (non-ML baseline)
     /// Returns standard 3-sigma anomaly detector suitable for Gaussian-distributed acoustic data.
     /// Full neural network loading deferred to Sprint 125+ ML infrastructure enhancement.
@@ -22,7 +22,7 @@ impl AnomalyDetectorModel {
     }
 
     /// Create model from weights
-    /// 
+    ///
     /// **Implementation Status**: Statistical threshold model (non-ML baseline)
     /// Neural network implementation deferred pending ML framework selection (burn/candle).
     /// Current implementation provides functional anomaly detection via statistical methods.

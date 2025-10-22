@@ -184,7 +184,7 @@ impl Beamformer {
 
         // Convert to nalgebra for matrix inversion
         use nalgebra::{DMatrix, DVector};
-        
+
         let mut na_cov = DMatrix::zeros(n_elements, n_elements);
         for i in 0..n_elements {
             for j in 0..n_elements {
@@ -208,7 +208,7 @@ impl Beamformer {
         // Apply MVDR beamforming: w = R^(-1)a / (a^H R^(-1) a)
         // Reference: Capon (1969) "High-resolution frequency-wavenumber spectrum analysis"
         // This is the standard MVDR formula, not a simplification
-        
+
         // Compute uniform steering vector (appropriate for omnidirectional PAM)
         // Reference: Van Trees (2002) "Optimum Array Processing" §6.6
         let steering = DVector::from_element(n_elements, 1.0 / (n_elements as f64).sqrt());
@@ -229,7 +229,7 @@ impl Beamformer {
                 // Store in first element (channel reduction)
                 output[[0, 0, t]] = beamformed_value.abs();
             }
-            
+
             // Zero out other channels
             for i in 1..n_elements {
                 for t in 0..n_samples {
@@ -242,12 +242,12 @@ impl Beamformer {
     }
 
     /// MUSIC algorithm for source localization
-    /// 
+    ///
     /// **Implementation Status**: Placeholder - returns delay-and-sum beamforming result
     /// **Rationale**: MUSIC (Multiple Signal Classification) requires eigendecomposition
     /// of sensor covariance matrix and subspace projection (Schmidt 1986). Full implementation
     /// deferred pending advanced beamforming feature set (Sprint 125+ roadmap).
-    /// 
+    ///
     /// **References**:
     /// - Schmidt (1986) "Multiple Emitter Location and Signal Parameter Estimation"
     /// - Van Trees (2002) "Optimum Array Processing" Chapter 8
@@ -262,11 +262,11 @@ impl Beamformer {
     }
 
     /// Eigenspace-based minimum variance beamforming
-    /// 
+    ///
     /// **Implementation Status**: Placeholder - returns delay-and-sum beamforming result
     /// **Rationale**: Eigenspace MV requires eigendecomposition and adaptive weight computation
     /// (Carlson 1988). Full implementation deferred pending advanced beamforming feature set.
-    /// 
+    ///
     /// **References**:
     /// - Carlson (1988) "Covariance Matrix Estimation Errors and Diagonal Loading"
     /// - Van Trees (2002) "Optimum Array Processing" Chapter 6
@@ -365,22 +365,22 @@ impl Default for BeamformingConfig {
 fn modified_bessel_i0(x: f64) -> f64 {
     const MAX_ITERATIONS: usize = 50;
     const TOLERANCE: f64 = 1e-12;
-    
+
     let x_abs = x.abs();
     let x_half = x_abs / 2.0;
-    
+
     let mut term = 1.0;
     let mut sum = 1.0;
-    
+
     for k in 1..MAX_ITERATIONS {
         // term_{k} = term_{k-1} * (x/2)^2 / k^2
         term *= (x_half * x_half) / ((k * k) as f64);
         sum += term;
-        
+
         if term < TOLERANCE * sum {
             break;
         }
     }
-    
+
     sum
 }

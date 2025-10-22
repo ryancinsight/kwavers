@@ -2,7 +2,7 @@
 //!
 //! Re-exports hierarchical implementation with additional convenience methods
 
-pub use super::component::grid::{GridConfig, GridFactory, GridValidator, GridCreator};
+pub use super::component::grid::{GridConfig, GridCreator, GridFactory, GridValidator};
 
 // Additional convenience methods for the factory
 use crate::error::KwaversResult;

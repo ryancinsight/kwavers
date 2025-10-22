@@ -4,6 +4,7 @@
 //! including linear and nonlinear wave equations.
 
 // Submodules
+pub mod hybrid_angular_spectrum; // Sprint 139: HAS for efficient nonlinear propagation
 pub mod kuznetsov;
 pub mod kzk;
 pub mod nonlinear;

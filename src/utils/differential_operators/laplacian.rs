@@ -3,11 +3,11 @@
 //! This module owns Laplacian computation knowledge following GRASP principles.
 //! Single responsibility: Computing scalar field Laplacian.
 
+use super::coefficients::{FDCoefficients, SpatialOrder};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::{Array3, ArrayView3};
 use num_traits::Float;
-use super::coefficients::{FDCoefficients, SpatialOrder};
 
 /// Compute Laplacian of a scalar field
 ///
@@ -45,7 +45,7 @@ where
     }
 
     let mut laplacian = Array3::<T>::zeros((nx, ny, nz));
-    
+
     let pairs = FDCoefficients::second_derivative_pairs::<T>(order);
     let center = FDCoefficients::second_derivative_center::<T>(order);
     let stencil_radius = pairs.len();
@@ -65,15 +65,18 @@ where
                 // Add symmetric pair contributions
                 for (n, &coeff) in pairs.iter().enumerate() {
                     let offset = n + 1;
-                    
+
                     // Second derivative in x
-                    d2f_dx2 = d2f_dx2 + coeff * (field[[i + offset, j, k]] + field[[i - offset, j, k]]);
-                    
+                    d2f_dx2 =
+                        d2f_dx2 + coeff * (field[[i + offset, j, k]] + field[[i - offset, j, k]]);
+
                     // Second derivative in y
-                    d2f_dy2 = d2f_dy2 + coeff * (field[[i, j + offset, k]] + field[[i, j - offset, k]]);
-                    
+                    d2f_dy2 =
+                        d2f_dy2 + coeff * (field[[i, j + offset, k]] + field[[i, j - offset, k]]);
+
                     // Second derivative in z
-                    d2f_dz2 = d2f_dz2 + coeff * (field[[i, j, k + offset]] + field[[i, j, k - offset]]);
+                    d2f_dz2 =
+                        d2f_dz2 + coeff * (field[[i, j, k + offset]] + field[[i, j, k - offset]]);
                 }
 
                 laplacian[[i, j, k]] = d2f_dx2 * dx2_inv + d2f_dy2 * dy2_inv + d2f_dz2 * dz2_inv;

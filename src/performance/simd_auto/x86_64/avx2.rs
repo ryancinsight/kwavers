@@ -23,9 +23,12 @@ pub fn add_arrays(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
     // Explicit AVX2 intrinsics deferred to Sprint 126+ (requires unsafe blocks + safety proof)
     // Current approach: Compiler generates AVX2 instructions with -C target-cpu=native
     // Benefits: Zero unsafe code, cross-platform compatibility, LLVM optimization
-    ndarray::Zip::from(out).and(a).and(b).for_each(|out, &a, &b| {
-        *out = a + b;
-    });
+    ndarray::Zip::from(out)
+        .and(a)
+        .and(b)
+        .for_each(|out, &a, &b| {
+            *out = a + b;
+        });
 }
 
 /// Scale array using AVX2 instructions
