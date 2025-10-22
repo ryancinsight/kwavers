@@ -87,10 +87,7 @@ impl DiffractionOperator {
 
     fn propagate_2d_plane(&self, plane: &Array3<f64>, dz: f64) -> KwaversResult<Array3<f64>> {
         // Convert to complex
-        let mut field: Vec<Complex64> = plane
-            .iter()
-            .map(|&v| Complex64::new(v, 0.0))
-            .collect();
+        let mut field: Vec<Complex64> = plane.iter().map(|&v| Complex64::new(v, 0.0)).collect();
 
         // 2D FFT
         self.fft_2d_forward(&mut field)?;

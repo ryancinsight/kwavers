@@ -32,11 +32,7 @@ impl<'a> AberrationCorrection<'a> {
 
         // Simplified phase aberration model
         // In practice, this would use ray tracing or full wave simulation
-        let center = (
-            self.grid.nx / 2,
-            self.grid.ny / 2,
-            self.grid.nz / 2,
-        );
+        let center = (self.grid.nx / 2, self.grid.ny / 2, self.grid.nz / 2);
 
         for i in 0..self.grid.nx {
             for j in 0..self.grid.ny {

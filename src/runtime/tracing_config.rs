@@ -22,14 +22,14 @@
 //! use kwavers::runtime::tracing_config::init_tracing;
 //!
 //! #[cfg(feature = "structured-logging")]
-//! fn main() {
-//!     // Initialize tracing with RUST_LOG support
-//!     init_tracing();
+//! # fn example() {
+//! // Initialize tracing with RUST_LOG support
+//! init_tracing();
 //!  
-//!     // Use tracing macros
-//!     tracing::info!("Starting simulation");
-//!     tracing::debug!(grid_size = 256, "Created computational grid");
-//! }
+//! // Use tracing macros
+//! tracing::info!("Starting simulation");
+//! tracing::debug!(grid_size = 256, "Created computational grid");
+//! # }
 //! ```
 
 #[cfg(feature = "structured-logging")]
@@ -58,8 +58,8 @@ mod tracing_impl {
     /// # }
     /// ```
     pub fn init_tracing() {
-        let filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new("kwavers=info"));
+        let filter =
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("kwavers=info"));
 
         tracing_subscriber::registry()
             .with(filter)
@@ -74,8 +74,8 @@ mod tracing_impl {
     /// - Compact formatting
     /// - Minimal overhead
     pub fn init_tracing_production() {
-        let filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new("kwavers=warn"));
+        let filter =
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("kwavers=warn"));
 
         tracing_subscriber::registry()
             .with(filter)
@@ -114,9 +114,7 @@ mod tracing_impl {
         #[test]
         fn test_tracing_initialization() {
             // Initialize tracing for tests
-            let _ = tracing_subscriber::fmt()
-                .with_test_writer()
-                .try_init();
+            let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
             info!("Test logging initialized");
             debug!(value = 42, "Debug value");
@@ -125,9 +123,7 @@ mod tracing_impl {
 
         #[test]
         fn test_timed_span() {
-            let _ = tracing_subscriber::fmt()
-                .with_test_writer()
-                .try_init();
+            let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
             let _span = timed_span("test_operation");
             // Simulate work

@@ -66,10 +66,10 @@ impl Default for SkullProperties {
     fn default() -> Self {
         // Typical adult skull properties
         Self {
-            sound_speed: 3100.0,      // m/s (cortical bone)
-            density: 1900.0,          // kg/m³
-            attenuation_coeff: 60.0,  // Np/m/MHz
-            thickness: 0.007,         // 7 mm average
+            sound_speed: 3100.0,       // m/s (cortical bone)
+            density: 1900.0,           // kg/m³
+            attenuation_coeff: 60.0,   // Np/m/MHz
+            thickness: 0.007,          // 7 mm average
             shear_speed: Some(1600.0), // m/s
         }
     }
@@ -230,9 +230,10 @@ impl TranscranialSimulation {
     ///
     /// Reference: Aubry et al. (2003) IEEE TUFFC
     pub fn compute_aberration_correction(&self, frequency: f64) -> KwaversResult<Array3<f64>> {
-        let heterogeneous = self.heterogeneous.as_ref().ok_or_else(|| {
-            KwaversError::InvalidInput("Skull geometry not loaded".to_string())
-        })?;
+        let heterogeneous = self
+            .heterogeneous
+            .as_ref()
+            .ok_or_else(|| KwaversError::InvalidInput("Skull geometry not loaded".to_string()))?;
 
         let correction = AberrationCorrection::new(&self.grid, heterogeneous);
         correction.compute_time_reversal_phases(frequency)

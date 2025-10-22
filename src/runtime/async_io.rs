@@ -73,9 +73,9 @@ mod tokio_impl {
         ///
         /// Returns error if file cannot be read or data format is invalid
         pub async fn read_array3_f64(&self) -> KwaversResult<Array3<f64>> {
-            let mut file = File::open(&self.path).await.map_err(|e| {
-                KwaversError::InvalidInput(format!("Failed to open file: {}", e))
-            })?;
+            let mut file = File::open(&self.path)
+                .await
+                .map_err(|e| KwaversError::InvalidInput(format!("Failed to open file: {}", e)))?;
 
             // Read dimensions (3 x usize)
             let mut dim_buf = [0u8; 24]; // 3 * 8 bytes
@@ -90,9 +90,9 @@ mod tokio_impl {
             // Read data
             let len = nx * ny * nz;
             let mut data_buf = vec![0u8; len * 8];
-            file.read_exact(&mut data_buf).await.map_err(|e| {
-                KwaversError::InvalidInput(format!("Failed to read data: {}", e))
-            })?;
+            file.read_exact(&mut data_buf)
+                .await
+                .map_err(|e| KwaversError::InvalidInput(format!("Failed to read data: {}", e)))?;
 
             // Convert bytes to f64 values
             let data: Vec<f64> = data_buf
@@ -100,9 +100,8 @@ mod tokio_impl {
                 .map(|chunk| f64::from_le_bytes(chunk.try_into().unwrap()))
                 .collect();
 
-            Array3::from_shape_vec((nx, ny, nz), data).map_err(|e| {
-                KwaversError::InvalidInput(format!("Failed to create array: {}", e))
-            })
+            Array3::from_shape_vec((nx, ny, nz), data)
+                .map_err(|e| KwaversError::InvalidInput(format!("Failed to create array: {}", e)))
         }
     }
 
@@ -128,9 +127,9 @@ mod tokio_impl {
         ///
         /// Returns error if file cannot be written
         pub async fn write_array3_f64(&self, array: &Array3<f64>) -> KwaversResult<()> {
-            let mut file = File::create(&self.path).await.map_err(|e| {
-                KwaversError::InvalidInput(format!("Failed to create file: {}", e))
-            })?;
+            let mut file = File::create(&self.path)
+                .await
+                .map_err(|e| KwaversError::InvalidInput(format!("Failed to create file: {}", e)))?;
 
             // Write dimensions
             let shape = array.shape();
@@ -149,13 +148,13 @@ mod tokio_impl {
                 data_buf.extend_from_slice(&value.to_le_bytes());
             }
 
-            file.write_all(&data_buf).await.map_err(|e| {
-                KwaversError::InvalidInput(format!("Failed to write data: {}", e))
-            })?;
+            file.write_all(&data_buf)
+                .await
+                .map_err(|e| KwaversError::InvalidInput(format!("Failed to write data: {}", e)))?;
 
-            file.sync_all().await.map_err(|e| {
-                KwaversError::InvalidInput(format!("Failed to sync file: {}", e))
-            })?;
+            file.sync_all()
+                .await
+                .map_err(|e| KwaversError::InvalidInput(format!("Failed to sync file: {}", e)))?;
 
             Ok(())
         }
@@ -197,9 +196,8 @@ mod tokio_impl {
             let temp_path = "/tmp/test_async_array.dat";
 
             // Create test array
-            let original = Array3::from_shape_fn((10, 20, 30), |(i, j, k)| {
-                (i * 600 + j * 30 + k) as f64
-            });
+            let original =
+                Array3::from_shape_fn((10, 20, 30), |(i, j, k)| (i * 600 + j * 30 + k) as f64);
 
             // Write asynchronously
             let writer = AsyncFileWriter::new(temp_path).unwrap();
