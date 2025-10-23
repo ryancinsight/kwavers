@@ -21,6 +21,13 @@
 //!        PDE Residual: ∂²u/∂t² - c²∂²u/∂x²
 //! ```
 //!
+//! ## Sprint 143 Enhancements
+//!
+//! - FDTD reference solution generator for validation
+//! - Comprehensive validation framework comparing PINN vs FDTD
+//! - Burn 0.18 integration (bincode compatibility resolved)
+//! - Performance benchmarking with speedup measurements
+//!
 //! ## Literature References
 //!
 //! - Raissi et al. (2019): "Physics-informed neural networks: A deep learning framework"
@@ -34,6 +41,8 @@
 //! # #[cfg(feature = "pinn")]
 //! # {
 //! use kwavers::ml::pinn::{PINN1DWave, PINNConfig};
+//! use kwavers::ml::pinn::fdtd_reference::FDTDConfig;
+//! use kwavers::ml::pinn::validation::validate_pinn_vs_fdtd;
 //!
 //! // Create 1D wave equation PINN
 //! let config = PINNConfig::default();
@@ -42,6 +51,11 @@
 //! // Train on reference data
 //! let metrics = pinn.train(&reference_data, 1000)?;
 //!
+//! // Validate against FDTD
+//! let fdtd_config = FDTDConfig::default();
+//! let report = validate_pinn_vs_fdtd(&pinn, fdtd_config)?;
+//! println!("{}", report.summary());
+//!
 //! // Fast inference (1000× speedup)
 //! let prediction = pinn.predict(&x_points, &t_points);
 //! # Ok::<(), kwavers::error::KwaversError>(())
@@ -49,10 +63,16 @@
 //! ```
 
 #[cfg(feature = "pinn")]
+pub mod fdtd_reference;
+
+#[cfg(feature = "pinn")]
+pub mod validation;
+
+#[cfg(feature = "pinn")]
 pub mod wave_equation_1d;
 
 #[cfg(feature = "pinn")]
-pub use wave_equation_1d::{PINN1DWave, PINNConfig, LossWeights, TrainingMetrics, ValidationMetrics};
+pub use wave_equation_1d::{LossWeights, PINNConfig, TrainingMetrics, ValidationMetrics, PINN1DWave};
 
 // Placeholder when pinn feature is not enabled
 #[cfg(not(feature = "pinn"))]
