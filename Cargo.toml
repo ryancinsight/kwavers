@@ -69,6 +69,11 @@ wgpu = { version = "22.0", features = ["wgsl"], optional = true }
 bytemuck = { version = "1.19", features = ["derive"], optional = true }
 pollster = { version = "0.4", optional = true }
 
+# Machine Learning (Sprint 142 - PINNs)
+# Note: Deferred burn integration to Sprint 143 due to bincode compatibility
+# Sprint 142 uses pure ndarray with manual autodiff for foundation
+# burn = { version = "0.13", features = ["ndarray", "autodiff"], optional = true }
+
 # Visualization (optional)
 plotly = { version = "0.8", optional = true }
 egui = { version = "0.25", optional = true }
@@ -98,7 +103,10 @@ vr-support = []        # VR headset support (future)
 async-runtime = ["dep:tokio"]        # Async I/O with tokio
 structured-logging = ["dep:tracing", "dep:tracing-subscriber"]  # Tracing infrastructure
 zero-copy = ["dep:rkyv"]             # Zero-copy serialization
-full = ["gpu", "plotting", "parallel", "nifti", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy"]
+# Sprint 142 - Physics-Informed Neural Networks
+# Note: Foundation implementation without burn (deferred to Sprint 143)
+pinn = []                            # Physics-informed neural networks (pure ndarray)
+full = ["gpu", "plotting", "parallel", "nifti", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn"]
 
 [profile.dev]
 # Fast development builds
