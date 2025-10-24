@@ -73,10 +73,12 @@ impl BiotTheory {
         let speeds = self.compute_wave_speeds(frequency)?;
 
         // Fast wave: lower attenuation
-        let alpha_fast = (b * omega * omega) / (2.0 * self.material.bulk_density() * speeds.fast_wave.powi(3));
+        let alpha_fast =
+            (b * omega * omega) / (2.0 * self.material.bulk_density() * speeds.fast_wave.powi(3));
 
         // Slow wave: much higher attenuation
-        let alpha_slow = (b * omega * omega) / (2.0 * self.material.fluid_density * speeds.slow_wave.powi(3));
+        let alpha_slow =
+            (b * omega * omega) / (2.0 * self.material.fluid_density * speeds.slow_wave.powi(3));
 
         Ok((alpha_fast, alpha_slow))
     }

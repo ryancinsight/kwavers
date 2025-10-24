@@ -105,7 +105,7 @@ impl HASConfig {
                 "Step size must be positive".to_string(),
             ));
         }
-        if power_law_exponent < 0.0 || power_law_exponent > 3.0 {
+        if !(0.0..=3.0).contains(&power_law_exponent) {
             return Err(KwaversError::InvalidInput(
                 "Power law exponent should be between 0 and 3".to_string(),
             ));
@@ -165,6 +165,7 @@ impl HASConfig {
 /// ```
 #[derive(Debug)]
 pub struct HybridAngularSpectrum {
+    #[allow(dead_code)]
     grid: Grid,
     config: HASConfig,
     solver: HybridAngularSpectrumSolver,
@@ -192,11 +193,7 @@ impl HybridAngularSpectrum {
     /// # Returns
     ///
     /// Final pressure field after propagation
-    pub fn propagate(
-        &self,
-        pressure: &Array3<f64>,
-        distance: f64,
-    ) -> KwaversResult<Array3<f64>> {
+    pub fn propagate(&self, pressure: &Array3<f64>, distance: f64) -> KwaversResult<Array3<f64>> {
         if distance < 0.0 {
             return Err(KwaversError::InvalidInput(
                 "Propagation distance must be non-negative".to_string(),
@@ -224,8 +221,7 @@ impl HybridAngularSpectrum {
 
     /// Get diffraction distance (Rayleigh distance)
     pub fn rayleigh_distance(&self, aperture_radius: f64) -> f64 {
-        let wavelength =
-            self.config.sound_speed / self.config.reference_frequency;
+        let wavelength = self.config.sound_speed / self.config.reference_frequency;
         aperture_radius * aperture_radius / wavelength
     }
 }
