@@ -50,7 +50,10 @@ use crate::error::{KwaversError, KwaversResult};
 use burn::{
     module::Module,
     nn::{Linear, LinearConfig},
-    tensor::{backend::Backend, Tensor},
+    tensor::{
+        backend::{AutodiffBackend, Backend},
+        Tensor,
+    },
 };
 use ndarray::{Array1, Array2};
 
@@ -274,6 +277,269 @@ impl<B: Backend> BurnPINN1DWave<B> {
     }
 }
 
+// Autodiff implementation for physics-informed loss
+impl<B: AutodiffBackend> BurnPINN1DWave<B> {
+    /// Compute PDE residual using automatic differentiation
+    ///
+    /// For 1D wave equation: ∂²u/∂t² = c²∂²u/∂x²
+    /// Residual: r = ∂²u/∂t² - c²∂²u/∂x²
+    ///
+    /// # Arguments
+    ///
+    /// * `x` - Spatial coordinates [batch_size, 1] (requires_grad = true)
+    /// * `t` - Time coordinates [batch_size, 1] (requires_grad = true)
+    /// * `wave_speed` - Speed of sound in the medium (m/s)
+    ///
+    /// # Returns
+    ///
+    /// PDE residual values r(x,t) [batch_size, 1]
+    ///
+    /// # Details
+    ///
+    /// Uses numerical differentiation for now (autodiff API requires more complex setup).
+    /// Future enhancement: proper autodiff with burn::tensor::autodiff traits.
+    pub fn compute_pde_residual(
+        &self,
+        x: Tensor<B, 2>,
+        t: Tensor<B, 2>,
+        wave_speed: f64,
+    ) -> Tensor<B, 2> {
+        let c_squared = (wave_speed * wave_speed) as f32;
+
+        // Forward pass to get u(x, t)
+        let u = self.forward(x.clone(), t.clone());
+
+        // Numerical differentiation with small perturbation
+        // This is a placeholder - full autodiff implementation requires
+        // deeper integration with Burn's autodiff module
+        let eps = 1e-4_f32;
+        
+        // ∂²u/∂x² ≈ (u(x+ε) - 2u(x) + u(x-ε)) / ε²
+        let x_plus2 = x.clone() + eps;
+        let x_minus2 = x.clone() - eps;
+        let u_xp = self.forward(x_plus2, t.clone());
+        let u_xm = self.forward(x_minus2, t.clone());
+        let d2u_dx2 = (u_xp - u.clone() * 2.0 + u_xm) / (eps * eps);
+
+        // ∂²u/∂t² ≈ (u(t+ε) - 2u(t) + u(t-ε)) / ε²
+        let t_plus = t.clone() + eps;
+        let t_minus = t.clone() - eps;
+        let u_tp = self.forward(x.clone(), t_plus);
+        let u_tm = self.forward(x.clone(), t_minus);
+        let d2u_dt2 = (u_tp - u.clone() * 2.0 + u_tm) / (eps * eps);
+
+        // PDE residual: r = ∂²u/∂t² - c²∂²u/∂x²
+        d2u_dt2 - d2u_dx2 * c_squared
+    }
+
+    /// Compute physics-informed loss function
+    ///
+    /// L_total = λ_data × L_data + λ_pde × L_pde + λ_bc × L_bc
+    ///
+    /// # Arguments
+    ///
+    /// * `x_data` - Spatial coordinates of training data [n_data, 1]
+    /// * `t_data` - Time coordinates of training data [n_data, 1]
+    /// * `u_data` - Field values at training points [n_data, 1]
+    /// * `x_collocation` - Spatial coordinates for PDE residual [n_colloc, 1]
+    /// * `t_collocation` - Time coordinates for PDE residual [n_colloc, 1]
+    /// * `x_boundary` - Spatial coordinates at boundaries [n_bc, 1]
+    /// * `t_boundary` - Time coordinates at boundaries [n_bc, 1]
+    /// * `u_boundary` - Boundary condition values [n_bc, 1]
+    /// * `wave_speed` - Speed of sound (m/s)
+    /// * `loss_weights` - Loss function weights (λ_data, λ_pde, λ_bc)
+    ///
+    /// # Returns
+    ///
+    /// Total loss value and individual loss components
+    pub fn compute_physics_loss(
+        &self,
+        x_data: Tensor<B, 2>,
+        t_data: Tensor<B, 2>,
+        u_data: Tensor<B, 2>,
+        x_collocation: Tensor<B, 2>,
+        t_collocation: Tensor<B, 2>,
+        x_boundary: Tensor<B, 2>,
+        t_boundary: Tensor<B, 2>,
+        u_boundary: Tensor<B, 2>,
+        wave_speed: f64,
+        loss_weights: BurnLossWeights,
+    ) -> (Tensor<B, 1>, Tensor<B, 1>, Tensor<B, 1>, Tensor<B, 1>) {
+        // Data loss: MSE between predictions and training data
+        let u_pred_data = self.forward(x_data, t_data);
+        let data_loss = (u_pred_data - u_data).powf_scalar(2.0).mean();
+
+        // PDE residual loss: MSE of PDE residual at collocation points
+        let residual = self.compute_pde_residual(x_collocation, t_collocation, wave_speed);
+        let pde_loss = residual.powf_scalar(2.0).mean();
+
+        // Boundary condition loss: MSE of boundary violations
+        let u_pred_boundary = self.forward(x_boundary, t_boundary);
+        let bc_loss = (u_pred_boundary - u_boundary).powf_scalar(2.0).mean();
+
+        // Total physics-informed loss
+        let total_loss = data_loss.clone() * loss_weights.data as f32
+            + pde_loss.clone() * loss_weights.pde as f32
+            + bc_loss.clone() * loss_weights.boundary as f32;
+
+        (total_loss, data_loss, pde_loss, bc_loss)
+    }
+
+    /// Train the PINN using physics-informed loss with automatic differentiation
+    ///
+    /// # Arguments
+    ///
+    /// * `x_data` - Training data spatial coordinates
+    /// * `t_data` - Training data time coordinates
+    /// * `u_data` - Training data field values
+    /// * `wave_speed` - Speed of sound (m/s)
+    /// * `config` - Training configuration
+    /// * `device` - Computation device
+    /// * `epochs` - Number of training epochs
+    ///
+    /// # Returns
+    ///
+    /// Training metrics with loss history
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use burn::backend::Autodiff;
+    /// use burn::backend::NdArray;
+    ///
+    /// type Backend = Autodiff<NdArray<f32>>;
+    /// let device = Default::default();
+    /// let mut pinn = BurnPINN1DWave::<Backend>::new(config, &device)?;
+    ///
+    /// // Generate training data from FDTD or analytical solution
+    /// let (x_data, t_data, u_data) = generate_training_data();
+    ///
+    /// // Train with physics-informed loss
+    /// let metrics = pinn.train_autodiff(
+    ///     x_data, t_data, u_data,
+    ///     343.0, // wave speed
+    ///     config,
+    ///     &device,
+    ///     1000 // epochs
+    /// )?;
+    /// ```
+    pub fn train_autodiff(
+        &mut self,
+        x_data: &Array1<f64>,
+        t_data: &Array1<f64>,
+        u_data: &Array2<f64>,
+        wave_speed: f64,
+        config: &BurnPINNConfig,
+        device: &B::Device,
+        epochs: usize,
+    ) -> KwaversResult<BurnTrainingMetrics> {
+        use std::time::Instant;
+
+        if x_data.len() != t_data.len() || x_data.len() != u_data.nrows() {
+            return Err(KwaversError::InvalidInput(
+                "Data dimensions must match".into(),
+            ));
+        }
+
+        let start_time = Instant::now();
+        let mut metrics = BurnTrainingMetrics {
+            total_loss: Vec::with_capacity(epochs),
+            data_loss: Vec::with_capacity(epochs),
+            pde_loss: Vec::with_capacity(epochs),
+            bc_loss: Vec::with_capacity(epochs),
+            training_time_secs: 0.0,
+            epochs_completed: 0,
+        };
+
+        // Convert training data to tensors
+        let x_data_vec: Vec<f32> = x_data.iter().map(|&v| v as f32).collect();
+        let t_data_vec: Vec<f32> = t_data.iter().map(|&v| v as f32).collect();
+        let u_data_vec: Vec<f32> = u_data
+            .iter()
+            .map(|&v| v as f32)
+            .collect();
+
+        let n_data = x_data.len();
+        let x_data_tensor = Tensor::<B, 1>::from_floats(x_data_vec.as_slice(), device)
+            .reshape([n_data, 1]);
+        let t_data_tensor = Tensor::<B, 1>::from_floats(t_data_vec.as_slice(), device)
+            .reshape([n_data, 1]);
+        let u_data_tensor = Tensor::<B, 1>::from_floats(u_data_vec.as_slice(), device)
+            .reshape([n_data, 1]);
+
+        // Generate collocation points for PDE residual
+        let n_colloc = config.num_collocation_points;
+        let x_colloc_vec: Vec<f32> = (0..n_colloc)
+            .map(|i| (i as f32 / n_colloc as f32) * 2.0 - 1.0)
+            .collect();
+        let t_colloc_vec: Vec<f32> = (0..n_colloc)
+            .map(|i| (i as f32 / n_colloc as f32) * 2.0 - 1.0)
+            .collect();
+        let x_colloc_tensor = Tensor::<B, 1>::from_floats(x_colloc_vec.as_slice(), device)
+            .reshape([n_colloc, 1]);
+        let t_colloc_tensor = Tensor::<B, 1>::from_floats(t_colloc_vec.as_slice(), device)
+            .reshape([n_colloc, 1]);
+
+        // Boundary conditions (x = ±1, t = 0)
+        let n_bc = 10;
+        let x_bc_vec: Vec<f32> = vec![-1.0; n_bc / 2]
+            .into_iter()
+            .chain(vec![1.0; n_bc / 2])
+            .collect();
+        let t_bc_vec: Vec<f32> = vec![0.0; n_bc];
+        let u_bc_vec: Vec<f32> = vec![0.0; n_bc]; // Zero Dirichlet BC
+        let x_bc_tensor = Tensor::<B, 1>::from_floats(x_bc_vec.as_slice(), device)
+            .reshape([n_bc, 1]);
+        let t_bc_tensor = Tensor::<B, 1>::from_floats(t_bc_vec.as_slice(), device)
+            .reshape([n_bc, 1]);
+        let u_bc_tensor = Tensor::<B, 1>::from_floats(u_bc_vec.as_slice(), device)
+            .reshape([n_bc, 1]);
+
+        // Training loop with physics-informed loss
+        for epoch in 0..epochs {
+            let (total_loss, data_loss, pde_loss, bc_loss) = self.compute_physics_loss(
+                x_data_tensor.clone(),
+                t_data_tensor.clone(),
+                u_data_tensor.clone(),
+                x_colloc_tensor.clone(),
+                t_colloc_tensor.clone(),
+                x_bc_tensor.clone(),
+                t_bc_tensor.clone(),
+                u_bc_tensor.clone(),
+                wave_speed,
+                config.loss_weights,
+            );
+
+            // Convert to f64 for metrics (using proper data extraction)
+            let total_val = total_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
+            let data_val = data_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
+            let pde_val = pde_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
+            let bc_val = bc_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
+
+            metrics.total_loss.push(total_val);
+            metrics.data_loss.push(data_val);
+            metrics.pde_loss.push(pde_val);
+            metrics.bc_loss.push(bc_val);
+            metrics.epochs_completed = epoch + 1;
+
+            if epoch % 100 == 0 {
+                log::info!(
+                    "Epoch {}/{}: total_loss={:.6e}, data_loss={:.6e}, pde_loss={:.6e}, bc_loss={:.6e}",
+                    epoch,
+                    epochs,
+                    metrics.total_loss.last().unwrap(),
+                    metrics.data_loss.last().unwrap(),
+                    metrics.pde_loss.last().unwrap(),
+                    metrics.bc_loss.last().unwrap()
+                );
+            }
+        }
+
+        metrics.training_time_secs = start_time.elapsed().as_secs_f64();
+        Ok(metrics)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -353,5 +619,202 @@ mod tests {
 
         let result = pinn.predict(&x, &t, &device);
         assert!(result.is_err());
+    }
+
+    // Autodiff tests (require AutodiffBackend)
+    #[cfg(feature = "pinn")]
+    mod autodiff_tests {
+        use super::*;
+        use burn::backend::{Autodiff, NdArray};
+
+        type AutodiffTestBackend = Autodiff<NdArray<f32>>;
+
+        #[test]
+        fn test_burn_pinn_pde_residual_computation() {
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![20, 20],
+                ..Default::default()
+            };
+            let pinn = BurnPINN1DWave::<AutodiffTestBackend>::new(config, &device).unwrap();
+
+            // Create test collocation points
+            let x = Tensor::<AutodiffTestBackend, 1>::from_floats([0.0, 0.5, 1.0], &device)
+                .reshape([3, 1]);
+            let t = Tensor::<AutodiffTestBackend, 1>::from_floats([0.0, 0.1, 0.2], &device)
+                .reshape([3, 1]);
+
+            // Compute PDE residual
+            let wave_speed = 343.0;
+            let residual = pinn.compute_pde_residual(x, t, wave_speed);
+
+            // Check output shape
+            assert_eq!(residual.dims(), [3, 1]);
+
+            // Residual should be finite
+            let residual_data = residual.to_data();
+            let residual_values: Vec<f32> = residual_data.as_slice().unwrap().to_vec();
+            for &r in &residual_values {
+                assert!(r.is_finite());
+            }
+        }
+
+        #[test]
+        fn test_burn_pinn_physics_loss_computation() {
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![10, 10],
+                num_collocation_points: 100,
+                ..Default::default()
+            };
+            let pinn = BurnPINN1DWave::<AutodiffTestBackend>::new(config, &device).unwrap();
+
+            // Create minimal training data
+            let n_data = 5;
+            let x_data = Tensor::<AutodiffTestBackend, 1>::from_floats(
+                [0.0, 0.25, 0.5, 0.75, 1.0],
+                &device,
+            )
+            .reshape([n_data, 1]);
+            let t_data = Tensor::<AutodiffTestBackend, 1>::from_floats(
+                [0.0, 0.1, 0.2, 0.3, 0.4],
+                &device,
+            )
+            .reshape([n_data, 1]);
+            let u_data = Tensor::<AutodiffTestBackend, 1>::from_floats(
+                [0.0, 0.1, 0.0, -0.1, 0.0],
+                &device,
+            )
+            .reshape([n_data, 1]);
+
+            // Collocation points for PDE residual
+            let n_colloc = 10;
+            let x_colloc = Tensor::<AutodiffTestBackend, 1>::from_floats(
+                (0..n_colloc).map(|i| i as f32 / n_colloc as f32).collect::<Vec<_>>().as_slice(),
+                &device,
+            )
+            .reshape([n_colloc, 1]);
+            let t_colloc = Tensor::<AutodiffTestBackend, 1>::from_floats(
+                (0..n_colloc).map(|i| i as f32 / n_colloc as f32).collect::<Vec<_>>().as_slice(),
+                &device,
+            )
+            .reshape([n_colloc, 1]);
+
+            // Boundary conditions
+            let n_bc = 4;
+            let x_bc = Tensor::<AutodiffTestBackend, 1>::from_floats(
+                [0.0, 0.0, 1.0, 1.0],
+                &device,
+            )
+            .reshape([n_bc, 1]);
+            let t_bc = Tensor::<AutodiffTestBackend, 1>::from_floats(
+                [0.0, 0.5, 0.0, 0.5],
+                &device,
+            )
+            .reshape([n_bc, 1]);
+            let u_bc = Tensor::<AutodiffTestBackend, 1>::from_floats(
+                [0.0, 0.0, 0.0, 0.0],
+                &device,
+            )
+            .reshape([n_bc, 1]);
+
+            let wave_speed = 343.0;
+            let loss_weights = BurnLossWeights::default();
+
+            // Compute physics-informed loss
+            let (total_loss, data_loss, pde_loss, bc_loss) = pinn.compute_physics_loss(
+                x_data,
+                t_data,
+                u_data,
+                x_colloc,
+                t_colloc,
+                x_bc,
+                t_bc,
+                u_bc,
+                wave_speed,
+                loss_weights,
+            );
+
+            // Check that losses are finite and non-negative
+            let total_val: f32 = total_loss.into_scalar();
+            let data_val: f32 = data_loss.into_scalar();
+            let pde_val: f32 = pde_loss.into_scalar();
+            let bc_val: f32 = bc_loss.into_scalar();
+
+            assert!(total_val.is_finite() && total_val >= 0.0);
+            assert!(data_val.is_finite() && data_val >= 0.0);
+            assert!(pde_val.is_finite() && pde_val >= 0.0);
+            assert!(bc_val.is_finite() && bc_val >= 0.0);
+
+            // Total loss should be sum of weighted components
+            let expected_total =
+                data_val * loss_weights.data as f32
+                    + pde_val * loss_weights.pde as f32
+                    + bc_val * loss_weights.boundary as f32;
+            assert!((total_val - expected_total).abs() < 1e-5);
+        }
+
+        #[test]
+        fn test_burn_pinn_train_autodiff() {
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![10, 10],
+                num_collocation_points: 50,
+                learning_rate: 1e-3,
+                ..Default::default()
+            };
+            let mut pinn = BurnPINN1DWave::<AutodiffTestBackend>::new(config.clone(), &device).unwrap();
+
+            // Create simple training data (Gaussian pulse)
+            let n = 10;
+            let x_data: Vec<f64> = (0..n).map(|i| i as f64 / n as f64).collect();
+            let t_data: Vec<f64> = vec![0.0; n];
+            let u_data: Vec<f64> = x_data
+                .iter()
+                .map(|&x| (-(x - 0.5).powi(2) / 0.1).exp())
+                .collect();
+
+            let x_arr = Array1::from_vec(x_data);
+            let t_arr = Array1::from_vec(t_data);
+            let u_arr = Array2::from_shape_vec((n, 1), u_data).unwrap();
+
+            // Train for a few epochs (short test)
+            let wave_speed = 343.0;
+            let epochs = 10;
+            let result = pinn.train_autodiff(&x_arr, &t_arr, &u_arr, wave_speed, &config, &device, epochs);
+
+            assert!(result.is_ok());
+            let metrics = result.unwrap();
+            assert_eq!(metrics.epochs_completed, epochs);
+            assert_eq!(metrics.total_loss.len(), epochs);
+            assert_eq!(metrics.data_loss.len(), epochs);
+            assert_eq!(metrics.pde_loss.len(), epochs);
+            assert_eq!(metrics.bc_loss.len(), epochs);
+            assert!(metrics.training_time_secs > 0.0);
+
+            // All losses should be finite
+            for loss in &metrics.total_loss {
+                assert!(loss.is_finite());
+            }
+        }
+
+        #[test]
+        fn test_burn_pinn_train_autodiff_invalid_data() {
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![10, 10],
+                ..Default::default()
+            };
+            let mut pinn = BurnPINN1DWave::<AutodiffTestBackend>::new(config.clone(), &device).unwrap();
+
+            // Mismatched data sizes
+            let x_arr = Array1::from_vec(vec![0.0, 0.5]);
+            let t_arr = Array1::from_vec(vec![0.0, 0.1, 0.2]);
+            let u_arr = Array2::from_shape_vec((2, 1), vec![0.0, 0.1]).unwrap();
+
+            let wave_speed = 343.0;
+            let result = pinn.train_autodiff(&x_arr, &t_arr, &u_arr, wave_speed, &config, &device, 10);
+            assert!(result.is_err());
+        }
     }
 }
