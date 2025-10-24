@@ -71,8 +71,15 @@ pub mod validation;
 #[cfg(feature = "pinn")]
 pub mod wave_equation_1d;
 
+// Sprint 143 Phase 2: Burn-based PINN with automatic differentiation
+#[cfg(feature = "pinn")]
+pub mod burn_wave_equation_1d;
+
 #[cfg(feature = "pinn")]
 pub use wave_equation_1d::{LossWeights, PINNConfig, TrainingMetrics, ValidationMetrics, PINN1DWave};
+
+#[cfg(feature = "pinn")]
+pub use burn_wave_equation_1d::{BurnLossWeights, BurnPINNConfig, BurnPINN1DWave, BurnTrainingMetrics};
 
 // Placeholder when pinn feature is not enabled
 #[cfg(not(feature = "pinn"))]
