@@ -168,8 +168,13 @@ impl ComputeBackend for Backend {
                     });
 
                     // Copy input data to GPU
+                    // Safety: f32 is Pod and bytemuck::cast_slice is safe for f32
                     let input_data: Vec<f32> = data.iter().map(|&x| x.into()).collect();
-                    queue.write_buffer(&input_buffer, 0, bytemuck::cast_slice(&input_data));
+                    queue.write_buffer(
+                        &input_buffer,
+                        0,
+                        bytemuck::cast_slice(&input_data),
+                    );
 
                     // Create bind group
                     let bind_group_layout = compute_pipeline.get_bind_group_layout(0);
@@ -215,10 +220,15 @@ impl ComputeBackend for Backend {
 
                     // Read back results from staging buffer
                     let staging_slice = staging_buffer.slice(..);
-                    staging_slice.map_async(MapMode::Read, |_| {});
+                    staging_slice.map_async(MapMode::Read, |result| {
+                        if let Err(e) = result {
+                            eprintln!("Buffer mapping failed: {:?}", e);
+                        }
+                    });
                     device.poll(Maintain::Wait);
 
                     let staging_data = staging_slice.get_mapped_range();
+                    // Safety: f32 is Pod and bytemuck::cast_slice is safe for f32
                     let result: Vec<f32> = bytemuck::cast_slice(&staging_data).to_vec();
                     drop(staging_data);
                     staging_buffer.unmap();
