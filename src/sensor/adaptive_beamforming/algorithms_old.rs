@@ -12,6 +12,9 @@
 //! - Van Trees (2002), "Optimum Array Processing"
 //! - Stoica & Nehorai (1990), "MUSIC, maximum likelihood, and Cramer-Rao bound"
 
+// This file is being refactored into submodules - allow uppercase acronyms temporarily
+#![allow(clippy::upper_case_acronyms)]
+
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 use num_traits::Zero;
