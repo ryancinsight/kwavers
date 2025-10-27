@@ -1,6 +1,8 @@
 // sensor/adaptive_beamforming/mod.rs - Unified adaptive beamforming
 
 pub mod algorithms;
+#[allow(dead_code)] // Temporary: contains code being refactored
+pub(crate) mod algorithms_old;
 pub mod array_geometry;
 pub mod beamformer;
 pub mod steering;
