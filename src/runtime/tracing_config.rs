@@ -67,11 +67,11 @@ mod tracing_impl {
             .init();
     }
 
-    /// Initialize tracing for production with JSON formatting
+    /// Initialize tracing for production with compact formatting
     ///
     /// Configures logging optimized for production environments:
-    /// - JSON output for log aggregation
-    /// - Compact formatting
+    /// - Compact output for efficiency
+    /// - Warning level by default
     /// - Minimal overhead
     pub fn init_tracing_production() {
         let filter =
@@ -79,7 +79,7 @@ mod tracing_impl {
 
         tracing_subscriber::registry()
             .with(filter)
-            .with(fmt::layer().json())
+            .with(fmt::layer().compact())
             .init();
     }
 
@@ -98,7 +98,7 @@ mod tracing_impl {
     /// ```
     #[must_use]
     pub fn timed_span(name: &'static str) -> tracing::span::EnteredSpan {
-        tracing::info_span!(name).entered()
+        tracing::info_span!("{}", name).entered()
     }
 
     /// Macro for instrumenting functions with tracing

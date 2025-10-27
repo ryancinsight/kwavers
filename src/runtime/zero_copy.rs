@@ -43,9 +43,9 @@ mod rkyv_impl {
     use crate::error::{KwaversError, KwaversResult};
     use crate::grid::Grid;
     use rkyv::{
-        archived_root,
-        ser::{serializers::AllocSerializer, Serializer},
-        Archive, Deserialize, Serialize,
+        access::archived_root,
+        ser::serializers::AllocSerializer,
+        Archive, Deserialize, Infallible, Serialize,
     };
 
     /// Serializable grid data for zero-copy transfer
@@ -71,12 +71,12 @@ mod rkyv_impl {
     impl From<&Grid> for SerializableGrid {
         fn from(grid: &Grid) -> Self {
             Self {
-                nx: grid.nx(),
-                ny: grid.ny(),
-                nz: grid.nz(),
-                dx: grid.dx(),
-                dy: grid.dy(),
-                dz: grid.dz(),
+                nx: grid.nx,
+                ny: grid.ny,
+                nz: grid.nz,
+                dx: grid.dx,
+                dy: grid.dy,
+                dz: grid.dz,
             }
         }
     }
@@ -86,6 +86,7 @@ mod rkyv_impl {
 
         fn try_from(value: SerializableGrid) -> Result<Self, Self::Error> {
             Grid::new(value.nx, value.ny, value.nz, value.dx, value.dy, value.dz)
+                .map_err(|e| KwaversError::InvalidInput(format!("Failed to create grid: {:?}", e)))
         }
     }
 
@@ -143,7 +144,7 @@ mod rkyv_impl {
         let archived = unsafe { archived_root::<SerializableGrid>(bytes) };
 
         let deserialized: SerializableGrid = archived
-            .deserialize(&mut rkyv::Infallible)
+            .deserialize(&mut Infallible)
             .map_err(|_| KwaversError::InvalidInput("Deserialization failed".to_string()))?;
 
         Grid::try_from(deserialized)
@@ -200,7 +201,7 @@ mod rkyv_impl {
             let archived = unsafe { archived_root::<SimulationData>(bytes) };
 
             archived
-                .deserialize(&mut rkyv::Infallible)
+                .deserialize(&mut Infallible)
                 .map_err(|_| KwaversError::InvalidInput("Deserialization failed".to_string()))
         }
     }
