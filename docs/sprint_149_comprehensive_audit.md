@@ -42,7 +42,7 @@ Comprehensive audit of Kwavers codebase following senior Rust engineer persona r
 
 3. **Test Infrastructure**: Comprehensive
    - 505/505 tests passing (100% pass rate)
-   - 9.00s execution (70% faster than 30s SRS target)
+   - 9.00s execution (70% faster than 30s SRS target, runs in 30% of target time)
    - Property-based testing with proptest
    - Concurrency testing with loom
    - Literature/physics validation
@@ -148,7 +148,7 @@ Status: Success, 0 errors
 cargo test --lib: 9.00s
 Results: 505 passed, 0 failed, 14 ignored
 Pass Rate: 100%
-Performance: 70% faster than 30s SRS target
+Performance: 70% faster than 30s SRS target (30% of target time)
 ```
 
 ### Code Quality ✅
@@ -177,7 +177,7 @@ All blocks documented: 24/24
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
 | Test Pass Rate | 100% (505/505) | 100% | ✅ |
-| Test Execution | 9.00s | <30s | ✅ (70% faster) |
+| Test Execution | 9.00s | <30s | ✅ (70% faster, 30% of target) |
 | Clippy Warnings | 0 | 0 | ✅ |
 | Build Time | 2.22s | <10s | ✅ |
 | Unsafe Documentation | 100% | 100% | ✅ |
