@@ -11,6 +11,7 @@ use ndarray::Array3;
 #[derive(Debug)]
 pub struct PoroelasticSolver {
     grid: Grid,
+    #[allow(dead_code)]
     material: PoroelasticMaterial,
     biot: BiotTheory,
 }

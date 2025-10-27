@@ -75,15 +75,15 @@ impl Default for PoroelasticMaterial {
     fn default() -> Self {
         // Typical trabecular bone properties
         Self {
-            porosity: 0.3,                  // 30% porosity
-            solid_density: 2000.0,          // kg/m³
-            fluid_density: 1000.0,          // Water
-            solid_bulk_modulus: 10e9,       // 10 GPa
-            fluid_bulk_modulus: 2.25e9,     // 2.25 GPa
-            shear_modulus: 3.5e9,           // 3.5 GPa
-            permeability: 1e-9,             // 1 nm² (Darcy)
-            fluid_viscosity: 1e-3,          // Water at 20°C
-            tortuosity: 1.5,                // Typical for bone
+            porosity: 0.3,              // 30% porosity
+            solid_density: 2000.0,      // kg/m³
+            fluid_density: 1000.0,      // Water
+            solid_bulk_modulus: 10e9,   // 10 GPa
+            fluid_bulk_modulus: 2.25e9, // 2.25 GPa
+            shear_modulus: 3.5e9,       // 3.5 GPa
+            permeability: 1e-9,         // 1 nm² (Darcy)
+            fluid_viscosity: 1e-3,      // Water at 20°C
+            tortuosity: 1.5,            // Typical for bone
         }
     }
 }
@@ -145,23 +145,23 @@ impl PoroelasticMaterial {
         match tissue {
             "trabecular_bone" => Ok(Self::default()),
             "cortical_bone" => Ok(Self {
-                porosity: 0.05,          // 5% porosity
+                porosity: 0.05, // 5% porosity
                 solid_density: 2000.0,
                 fluid_density: 1000.0,
                 solid_bulk_modulus: 20e9, // 20 GPa
                 fluid_bulk_modulus: 2.25e9,
-                shear_modulus: 7e9,       // 7 GPa
-                permeability: 1e-12,      // Very low
+                shear_modulus: 7e9,  // 7 GPa
+                permeability: 1e-12, // Very low
                 fluid_viscosity: 1e-3,
                 tortuosity: 1.2,
             }),
             "liver" => Ok(Self {
-                porosity: 0.15,           // 15% vascular space
+                porosity: 0.15, // 15% vascular space
                 solid_density: 1050.0,
                 fluid_density: 1000.0,
                 solid_bulk_modulus: 2.5e9, // 2.5 GPa
                 fluid_bulk_modulus: 2.25e9,
-                shear_modulus: 5e3,        // 5 kPa (soft)
+                shear_modulus: 5e3, // 5 kPa (soft)
                 permeability: 1e-11,
                 fluid_viscosity: 1e-3,
                 tortuosity: 1.3,
@@ -285,14 +285,12 @@ mod tests {
 
     #[test]
     fn test_material_validation() {
-        let result = PoroelasticMaterial::new(
-            1.5, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5,
-        );
+        let result =
+            PoroelasticMaterial::new(1.5, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5);
         assert!(result.is_err()); // Porosity > 1
 
-        let result = PoroelasticMaterial::new(
-            0.3, -1.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5,
-        );
+        let result =
+            PoroelasticMaterial::new(0.3, -1.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5);
         assert!(result.is_err()); // Negative density
     }
 

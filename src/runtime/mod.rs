@@ -29,7 +29,7 @@ pub mod zero_copy;
 
 // Re-export key types explicitly to avoid ambiguous glob imports
 #[cfg(feature = "async-runtime")]
-pub use async_io::{AsyncFileReader, AsyncFileWriter, spawn_task};
+pub use async_io::{spawn_task, AsyncFileReader, AsyncFileWriter};
 
 #[cfg(feature = "structured-logging")]
 pub use tracing_config::{init_tracing, init_tracing_production, timed_span};

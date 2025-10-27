@@ -11,6 +11,8 @@ pub mod engine;
 pub mod inference;
 pub mod models;
 pub mod optimization;
+#[cfg(feature = "pinn")]
+pub mod pinn;
 pub mod training;
 pub mod types;
 
