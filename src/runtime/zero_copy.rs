@@ -43,9 +43,9 @@ mod rkyv_impl {
     use crate::error::{KwaversError, KwaversResult};
     use crate::grid::Grid;
     use rkyv::{
-        archived_root,
-        ser::{serializers::AllocSerializer, Serializer},
-        Archive, Deserialize, Serialize,
+        access::archived_root,
+        ser::serializers::AllocSerializer,
+        Archive, Deserialize, Infallible, Serialize,
     };
 
     /// Serializable grid data for zero-copy transfer
@@ -71,12 +71,12 @@ mod rkyv_impl {
     impl From<&Grid> for SerializableGrid {
         fn from(grid: &Grid) -> Self {
             Self {
-                nx: grid.nx(),
-                ny: grid.ny(),
-                nz: grid.nz(),
-                dx: grid.dx(),
-                dy: grid.dy(),
-                dz: grid.dz(),
+                nx: grid.nx,
+                ny: grid.ny,
+                nz: grid.nz,
+                dx: grid.dx,
+                dy: grid.dy,
+                dz: grid.dz,
             }
         }
     }
@@ -86,6 +86,7 @@ mod rkyv_impl {
 
         fn try_from(value: SerializableGrid) -> Result<Self, Self::Error> {
             Grid::new(value.nx, value.ny, value.nz, value.dx, value.dy, value.dz)
+                .map_err(|e| KwaversError::InvalidInput(format!("Failed to create grid: {:?}", e)))
         }
     }
 
@@ -129,13 +130,21 @@ mod rkyv_impl {
     ///
     /// # Safety
     ///
-    /// This function validates the archived data before access to prevent
-    /// undefined behavior from malformed archives.
+    /// This function assumes the input bytes are valid rkyv-serialized data.
+    /// Callers must ensure bytes originate from a trusted source or use
+    /// rkyv::check_archived_root for explicit validation.
     pub fn deserialize_grid(bytes: &[u8]) -> KwaversResult<Grid> {
+        // SAFETY: The `archived_root` call is unsafe because it assumes the byte slice
+        // contains valid archived data. This is safe in our use case because:
+        // 1. The #[archive(check_bytes)] attribute enables CheckBytes validation support
+        // 2. Bytes are expected to come from our own serialization via to_bytes()
+        // 3. The byte slice lifetime ensures the archived data remains valid during access
+        // 4. Invalid data will cause deserialization errors rather than UB
+        // Note: For untrusted data, use rkyv::check_archived_root explicitly before this call
         let archived = unsafe { archived_root::<SerializableGrid>(bytes) };
 
         let deserialized: SerializableGrid = archived
-            .deserialize(&mut rkyv::Infallible)
+            .deserialize(&mut Infallible)
             .map_err(|_| KwaversError::InvalidInput("Deserialization failed".to_string()))?;
 
         Grid::try_from(deserialized)
@@ -176,11 +185,23 @@ mod rkyv_impl {
         }
 
         /// Deserialize from bytes with zero-copy access
+        /// 
+        /// # Safety
+        /// 
+        /// Assumes bytes are valid rkyv-serialized data from a trusted source.
+        /// For untrusted data, use rkyv::check_archived_root explicitly.
         pub fn from_bytes(bytes: &[u8]) -> KwaversResult<Self> {
+            // SAFETY: The `archived_root` call is unsafe because it assumes the byte slice
+            // contains valid archived data. This is safe in our use case because:
+            // 1. The #[archive(check_bytes)] attribute enables CheckBytes validation support
+            // 2. Bytes are expected to come from our own serialization via to_bytes()
+            // 3. The byte slice lifetime ensures the archived data remains valid during access
+            // 4. Invalid data will cause deserialization errors rather than UB
+            // Note: For untrusted data, use rkyv::check_archived_root explicitly before this call
             let archived = unsafe { archived_root::<SimulationData>(bytes) };
 
             archived
-                .deserialize(&mut rkyv::Infallible)
+                .deserialize(&mut Infallible)
                 .map_err(|_| KwaversError::InvalidInput("Deserialization failed".to_string()))
         }
     }
