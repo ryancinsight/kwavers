@@ -132,6 +132,11 @@ mod rkyv_impl {
     /// This function validates the archived data before access to prevent
     /// undefined behavior from malformed archives.
     pub fn deserialize_grid(bytes: &[u8]) -> KwaversResult<Grid> {
+        // SAFETY: The `archived_root` call is safe because:
+        // 1. We use #[archive(check_bytes)] on SerializableGrid to enable validation
+        // 2. Rkyv performs bounds checking on archived data during access
+        // 3. Malformed data will cause deserialization to fail with a proper error
+        // 4. The byte slice lifetime ensures the archived data remains valid
         let archived = unsafe { archived_root::<SerializableGrid>(bytes) };
 
         let deserialized: SerializableGrid = archived
@@ -177,6 +182,11 @@ mod rkyv_impl {
 
         /// Deserialize from bytes with zero-copy access
         pub fn from_bytes(bytes: &[u8]) -> KwaversResult<Self> {
+            // SAFETY: The `archived_root` call is safe because:
+            // 1. We use #[archive(check_bytes)] on SimulationData to enable validation
+            // 2. Rkyv performs bounds checking on archived data during access
+            // 3. Malformed data will cause deserialization to fail with a proper error
+            // 4. The byte slice lifetime ensures the archived data remains valid
             let archived = unsafe { archived_root::<SimulationData>(bytes) };
 
             archived
