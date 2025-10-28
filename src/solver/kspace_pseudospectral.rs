@@ -82,7 +82,7 @@ impl KSpaceOperator {
 
         // Precompute dispersion correction
         let dispersion_correction =
-            Self::compute_dispersion_correction(&kx, &ky, &kz, c0, alpha_power, dt);
+            Self::compute_dispersion_correction(&kx, &ky, &kz, c0, alpha_coeff, alpha_power, dt);
 
         Self {
             kx,
@@ -212,20 +212,19 @@ impl KSpaceOperator {
                 (kx[[i, j, k]].powi(2) + ky[[i, j, k]].powi(2) + kz[[i, j, k]].powi(2)).sqrt();
             let omega = c0 * k_mag;
 
-            if omega > 1e-10 {
-                // Avoid division by zero for DC component
+            if omega > 1e-16 {
                 // Power-law absorption: α(ω) = α₀ · |ω|^y
                 // Convert from dB/(MHz^y cm) to Nepers/m for proper units
-                let freq_mhz = omega / (2.0 * PI * 1e6); // Convert to MHz
+                let freq_mhz = omega / (2.0 * PI * 1e6);
                 let alpha_db_per_cm = alpha_coeff * freq_mhz.powf(alpha_power);
 
-                // Convert dB/cm to Nepers/m: 1 dB = ln(10)/20 Nepers, 1 cm = 0.01 m
+                // Convert dB/cm to Nepers/m
                 let alpha_np_per_m = alpha_db_per_cm * (10.0_f64.ln() / 20.0) * 100.0;
 
                 *abs_val = Complex::new((-alpha_np_per_m * dt).exp(), 0.0);
             } else {
-                // DC component - minimal absorption
-                *abs_val = Complex::new(0.999, 0.0);
+                // DC component (ω=0) has zero absorption
+                *abs_val = Complex::new(1.0, 0.0);
             }
         }
 
@@ -237,6 +236,7 @@ impl KSpaceOperator {
         ky: &Array3<f64>,
         kz: &Array3<f64>,
         c0: f64,
+        alpha_coeff: f64,
         alpha_power: f64,
         dt: f64,
     ) -> Array3<Complex<f64>> {
@@ -247,22 +247,23 @@ impl KSpaceOperator {
             let k_mag =
                 (kx[[i, j, k]].powi(2) + ky[[i, j, k]].powi(2) + kz[[i, j, k]].powi(2)).sqrt();
 
-            if k_mag > 0.0 {
+            if k_mag > 1e-16 {
+                let omega = c0 * k_mag;
+
                 // Phase correction for power-law dispersion
                 let phase_correction = match alpha_power {
+                    // y = 1 case: Hilbert transform of sgn(ω) -> log(|ω|)
                     y if (y - 1.0).abs() < f64::EPSILON => {
-                        // y = 1 case (special handling to avoid singularity)
-                        0.0
+                        let alpha_coeff_np = alpha_coeff * (10.0_f64.ln() / 20.0) * 100.0 / 1e6;
+                        -c0 * alpha_coeff_np * (2.0 / PI) * omega * dt * omega.ln()
                     }
-                    y => {
-                        // General case: tan(πy/2) correction
-                        let omega = c0 * k_mag;
-                        -omega * dt * (PI * y / 2.0).tan()
-                    }
+                    // General case y != 1
+                    y => -c0 * dt * (PI * y / 2.0).tan() * k_mag,
                 };
 
                 *disp_val = Complex::new(0.0, phase_correction).exp();
             } else {
+                // No dispersion at DC
                 *disp_val = Complex::new(1.0, 0.0);
             }
         }
@@ -340,16 +341,7 @@ mod tests {
             "Should have significant non-zero absorption values"
         );
 
-        // DC component should have minimal absorption (modified to avoid exactly 1.0)
-        let dc_abs = operator.absorption_operator[[0, 0, 0]];
-        assert!(
-            dc_abs.norm() < 1.0,
-            "DC component should have some absorption applied"
-        );
-        assert!(
-            dc_abs.norm() > 0.9,
-            "DC component should not be heavily absorbed"
-        );
+        // DC component is now handled in a separate test
     }
 
     #[test]
@@ -383,5 +375,60 @@ mod tests {
         // y and z gradients should be zero for this k-mode
         assert_relative_eq!(grad_y[[1, 0, 0]].norm(), 0.0, epsilon = 1e-10);
         assert_relative_eq!(grad_z[[1, 0, 0]].norm(), 0.0, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_dispersion_correction_y_equals_1() {
+        let operator =
+            KSpaceOperator::new((32, 32, 32), (1e-4, 1e-4, 1e-4), 1500.0, 0.75, 1.0, 1e-8);
+
+        // Check a non-DC component
+        let dispersion_val = operator.dispersion_correction[[1, 1, 1]];
+        assert!(
+            (dispersion_val.re - 1.0).abs() > 1e-10,
+            "Dispersion correction for y=1 should not be identity"
+        );
+        assert!(
+            dispersion_val.im.abs() > 1e-10,
+            "Dispersion correction for y=1 should have a non-zero imaginary part"
+        );
+
+        // DC component should have no dispersion
+        let dc_disp = operator.dispersion_correction[[0, 0, 0]];
+        assert_relative_eq!(dc_disp.re, 1.0, epsilon = 1e-10);
+        assert_relative_eq!(dc_disp.im, 0.0, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_dispersion_correction_general_case() {
+        let operator =
+            KSpaceOperator::new((32, 32, 32), (1e-4, 1e-4, 1e-4), 1500.0, 0.75, 1.5, 1e-8);
+
+        // Check a non-DC component
+        let dispersion_val = operator.dispersion_correction[[1, 1, 1]];
+        assert!(
+            (dispersion_val.re - 1.0).abs() > 1e-10,
+            "Dispersion correction for y=1.5 should not be identity"
+        );
+        assert!(
+            dispersion_val.im.abs() > 1e-10,
+            "Dispersion correction for y=1.5 should have a non-zero imaginary part"
+        );
+
+        // DC component should have no dispersion
+        let dc_disp = operator.dispersion_correction[[0, 0, 0]];
+        assert_relative_eq!(dc_disp.re, 1.0, epsilon = 1e-10);
+        assert_relative_eq!(dc_disp.im, 0.0, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_absorption_dc_component() {
+        let operator =
+            KSpaceOperator::new((32, 32, 32), (1e-4, 1e-4, 1e-4), 1500.0, 0.75, 1.5, 1e-8);
+
+        // DC component should have no absorption
+        let dc_abs = operator.absorption_operator[[0, 0, 0]];
+        assert_relative_eq!(dc_abs.re, 1.0, epsilon = 1e-10);
+        assert_relative_eq!(dc_abs.im, 0.0, epsilon = 1e-10);
     }
 }
