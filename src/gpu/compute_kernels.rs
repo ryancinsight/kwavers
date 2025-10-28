@@ -44,6 +44,7 @@ impl AcousticFieldKernel {
                     label: Some("Acoustic Field Device"),
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
+                    memory_hints: wgpu::MemoryHints::default(),
                 },
                 None,
             )
@@ -56,7 +57,7 @@ impl AcousticFieldKernel {
         
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Acoustic Field Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/acoustic_field.wgsl")),
+            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/acoustic_field.wgsl").into()),
         });
         
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -227,9 +228,9 @@ impl AcousticFieldKernel {
             
             // Dispatch with 8x8x8 workgroups
             let workgroup_size = 8;
-            let dispatch_x = (nx + workgroup_size - 1) / workgroup_size;
-            let dispatch_y = (ny + workgroup_size - 1) / workgroup_size;
-            let dispatch_z = (nz + workgroup_size - 1) / workgroup_size;
+            let dispatch_x = nx.div_ceil(workgroup_size);
+            let dispatch_y = ny.div_ceil(workgroup_size);
+            let dispatch_z = nz.div_ceil(workgroup_size);
             
             compute_pass.dispatch_workgroups(dispatch_x as u32, dispatch_y as u32, dispatch_z as u32);
         }
@@ -254,16 +255,16 @@ impl AcousticFieldKernel {
         
         // Read back results
         let buffer_slice = staging_buffer.slice(..);
-        let (sender, receiver) = futures::channel::oneshot::channel();
+        let (sender, receiver) = flume::bounded(1);
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
-            let _ = sender.send(result); // Ignore send errors on channel closure
+            let _ = sender.send(result);
         });
         
         self.device.poll(wgpu::Maintain::Wait);
         
-        futures::executor::block_on(receiver)
+        receiver.recv()
             .map_err(|_| KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: "GPU buffer mapping".to_string(),
+                resource: "GPU buffer mapping channel".to_string(),
             }))?
             .map_err(|_| KwaversError::System(crate::error::SystemError::ResourceUnavailable {
                 resource: "GPU buffer mapping".to_string(),
@@ -347,11 +348,12 @@ impl WaveEquationGpu {
         
         // Update velocity components: v_new = v - dt/ρ * ∇p
         let mut new_velocity = velocity.clone();
+        use ndarray::Zip;
         Zip::from(&mut new_velocity)
             .and(&grad_p_x)
             .and(&grad_p_y)
             .and(&grad_p_z)
-            .par_for_each(|v, &dpx, &dpy, &dpz| {
+            .for_each(|v, &dpx, &dpy, &dpz| {
                 // Velocity update using gradient magnitude
                 // In full 3D vector implementation, each component would be updated separately
                 let grad_magnitude = (dpx * dpx + dpy * dpy + dpz * dpz).sqrt();

@@ -93,7 +93,7 @@ impl GpuDevice {
 
     /// Get device limits
     pub fn limits(&self) -> &wgpu::Limits {
-        self.limits.clone()
+        &self.limits
     }
 
     /// Check if device supports feature

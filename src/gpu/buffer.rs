@@ -1,10 +1,10 @@
 //! GPU buffer management
 
 use crate::KwaversResult;
-use std::marker::PhantomData;
 use wgpu::util::DeviceExt;
 
 /// Buffer usage flags
+#[derive(Debug)]
 pub struct BufferUsage;
 
 impl BufferUsage {
@@ -19,6 +19,7 @@ impl BufferUsage {
 pub struct GpuBuffer {
     buffer: wgpu::Buffer,
     size: usize,
+    #[allow(dead_code)]
     usage: wgpu::BufferUsages,
 }
 
@@ -100,8 +101,7 @@ impl GpuBuffer {
         device.poll(wgpu::Maintain::Wait);
 
         receiver.recv().map_err(|e| {
-            crate::KwaversError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
+            crate::KwaversError::Io(std::io::Error::other(
                 format!("Failed to map buffer: {}", e),
             ))
         })??;
