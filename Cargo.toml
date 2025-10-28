@@ -82,6 +82,9 @@ egui = { version = "0.25", optional = true }
 criterion = "0.4"
 proptest = "1.2"
 
+# Async testing support
+tokio = { version = "1.42", features = ["rt-multi-thread", "macros"] }
+
 # Concurrency testing (Sprint 138 - Persona Requirements)
 loom = "0.7"
 

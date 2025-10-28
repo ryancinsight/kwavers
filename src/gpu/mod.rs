@@ -4,9 +4,12 @@
 //! using wgpu-rs for cross-platform GPU compute.
 
 pub mod backend;
+pub mod buffer;
 pub mod buffers;
 pub mod compute;
+pub mod compute_kernels;
 pub mod compute_manager;
+pub mod device;
 pub mod fdtd;
 pub mod kernels;
 pub mod kspace;
@@ -14,8 +17,11 @@ pub mod pipeline;
 pub mod shaders;
 
 pub use backend::GpuBackend;
+pub use buffer::{BufferUsage, GpuBuffer as GpuBufferV2};
 pub use buffers::{BufferManager, GpuBuffer};
 pub use compute::GpuCompute;
+pub use compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
+pub use device::{DeviceInfo, GpuDevice};
 pub use fdtd::FdtdGpu;
 pub use kspace::KSpaceGpu;
 pub use pipeline::{ComputePipeline, PipelineLayout};
