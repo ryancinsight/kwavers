@@ -18,6 +18,17 @@ pub struct Interface {
     pub position: [f64; 3],
     /// Interface type
     pub interface_type: InterfaceType,
+    /// Wave type
+    pub wave_type: WaveType,
+}
+
+/// Wave type
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum WaveType {
+    /// Acoustic wave
+    Acoustic,
+    /// Optical wave
+    Optical,
 }
 
 /// Interface type between media

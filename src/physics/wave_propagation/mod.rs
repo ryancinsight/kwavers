@@ -41,7 +41,7 @@ pub use attenuation::AttenuationCalculator;
 pub use calculator::WavePropagationCalculator;
 pub use coefficients::PropagationCoefficients;
 pub use fresnel::{FresnelCalculator, FresnelCoefficients};
-pub use interface::{Interface, InterfaceProperties, InterfaceType};
+pub use interface::{Interface, InterfaceProperties, InterfaceType, WaveType};
 pub use medium::MediumProperties;
 pub use reflection::{ReflectionCalculator, ReflectionCoefficients};
 pub use refraction::{RefractionAngles, RefractionCalculator};
