@@ -2,7 +2,7 @@
 //!
 //! Implements Snell's law of refraction: n₁sin(θ₁) = n₂sin(θ₂)
 
-use super::Interface;
+use super::{Interface, WaveType};
 use crate::error::{KwaversError, KwaversResult, PhysicsError};
 use std::f64::consts::PI;
 
@@ -49,10 +49,14 @@ impl<'a> SnellLawCalculator<'a> {
             }));
         }
 
-        // Apply Snell's law: n₁sin(θ₁) = n₂sin(θ₂)
-        let n1 = self.interface.medium1.refractive_index;
-        let n2 = self.interface.medium2.refractive_index;
-        let sin_transmitted = (n1 / n2) * incident_angle.sin();
+        let sin_transmitted = match self.interface.wave_type {
+            WaveType::Optical => {
+                let n1 = self.interface.medium1.refractive_index;
+                let n2 = self.interface.medium2.refractive_index;
+                (n1 / n2) * incident_angle.sin()
+            }
+            WaveType::Acoustic => incident_angle.sin() / self.speed_ratio,
+        };
 
         // Check for total internal reflection
         if sin_transmitted > 1.0 {
@@ -67,28 +71,44 @@ impl<'a> SnellLawCalculator<'a> {
     /// Calculate critical angle for total internal reflection
     #[must_use]
     pub fn critical_angle(&self) -> Option<f64> {
-        let n1 = self.interface.medium1.refractive_index;
-        let n2 = self.interface.medium2.refractive_index;
+        match self.interface.wave_type {
+            WaveType::Optical => {
+                let n1 = self.interface.medium1.refractive_index;
+                let n2 = self.interface.medium2.refractive_index;
 
-        // Critical angle exists only when n1 > n2
-        if n1 > n2 {
-            Some((n2 / n1).asin())
-        } else {
-            None
+                // Critical angle exists only when n1 > n2
+                if n1 > n2 {
+                    Some((n2 / n1).asin())
+                } else {
+                    None
+                }
+            }
+            WaveType::Acoustic => {
+                if self.speed_ratio > 1.0 {
+                    Some((1.0 / self.speed_ratio).asin())
+                } else {
+                    None
+                }
+            }
         }
     }
 
     /// Calculate Brewster's angle (polarization angle)
     #[must_use]
     pub fn brewster_angle(&self) -> Option<f64> {
-        // For optical waves: tan(θB) = n₂/n₁
-        let n1 = self.interface.medium1.refractive_index;
-        let n2 = self.interface.medium2.refractive_index;
+        match self.interface.wave_type {
+            WaveType::Optical => {
+                // For optical waves: tan(θB) = n₂/n₁
+                let n1 = self.interface.medium1.refractive_index;
+                let n2 = self.interface.medium2.refractive_index;
 
-        if n1 > 0.0 && n2 > 0.0 {
-            Some((n2 / n1).atan())
-        } else {
-            None
+                if n1 > 0.0 && n2 > 0.0 {
+                    Some((n2 / n1).atan())
+                } else {
+                    None
+                }
+            }
+            WaveType::Acoustic => None,
         }
     }
 
@@ -118,6 +138,10 @@ impl<'a> SnellLawCalculator<'a> {
             return None;
         }
 
+        if self.interface.wave_type == WaveType::Acoustic {
+            return None; // Evanescent waves for acoustics are handled differently
+        }
+
         // Calculate decay constant κ = (2π/λ) * √(n₁²sin²θ - n₂²)
         let n1 = self.interface.medium1.refractive_index;
         let n2 = self.interface.medium2.refractive_index;
@@ -139,7 +163,7 @@ mod tests {
     const WATER_REFRACTIVE_INDEX: f64 = 1.333;
     const GLASS_REFRACTIVE_INDEX: f64 = 1.5;
     const SPEED_OF_LIGHT: f64 = 3e8;
-    use crate::physics::wave_propagation::{InterfaceType, MediumProperties};
+    use crate::physics::wave_propagation::{InterfaceType, MediumProperties, WaveType};
 
     #[test]
     fn test_snells_law_water_to_glass() {
@@ -157,6 +181,7 @@ mod tests {
             normal: [0.0, 0.0, 1.0],
             position: [0.0, 0.0, 0.0],
             interface_type: InterfaceType::Planar,
+            wave_type: WaveType::Optical,
         };
 
         let calc = SnellLawCalculator::new(&interface);
@@ -191,6 +216,7 @@ mod tests {
             normal: [0.0, 0.0, 1.0],
             position: [0.0, 0.0, 0.0],
             interface_type: InterfaceType::Planar,
+            wave_type: WaveType::Optical,
         };
 
         let calc = SnellLawCalculator::new(&interface);
@@ -219,6 +245,7 @@ mod tests {
             normal: [0.0, 0.0, 1.0],
             position: [0.0, 0.0, 0.0],
             interface_type: InterfaceType::Planar,
+            wave_type: WaveType::Optical,
         };
 
         let calc = SnellLawCalculator::new(&interface);
@@ -227,5 +254,36 @@ mod tests {
         let brewster = calc.brewster_angle().unwrap();
         let expected = 1.5_f64.atan();
         assert!((brewster - expected).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_snells_law_acoustic() {
+        let mut medium1 = MediumProperties::water();
+        medium1.wave_speed = 1500.0;
+
+        let mut medium2 = MediumProperties::water();
+        medium2.wave_speed = 343.0; // Air
+
+        let interface = Interface {
+            medium1,
+            medium2,
+            normal: [0.0, 0.0, 1.0],
+            position: [0.0, 0.0, 0.0],
+            interface_type: InterfaceType::Planar,
+            wave_type: WaveType::Acoustic,
+        };
+
+        let calc = SnellLawCalculator::new(&interface);
+
+        // Test 30 degree incidence
+        let incident = PI / 6.0;
+        let transmitted = calc.calculate_transmitted_angle(incident).unwrap();
+
+        // Verify Snell's law for acoustic waves
+        let c1 = interface.medium1.wave_speed;
+        let c2 = interface.medium2.wave_speed;
+        let sin_t = transmitted.sin();
+        let sin_i = incident.sin();
+        assert!((sin_i / c1 - sin_t / c2).abs() < 1e-10);
     }
 }

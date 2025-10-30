@@ -193,7 +193,7 @@ impl WavePropagationCalculator {
 mod tests {
     use super::*;
     use crate::physics::wave_propagation::{
-        interface::{Interface, InterfaceType},
+        interface::{Interface, InterfaceType, WaveType},
         medium::MediumProperties,
     };
 
@@ -210,6 +210,7 @@ mod tests {
             normal: [0.0, 0.0, 1.0],
             position: [0.0, 0.0, 0.0],
             interface_type: InterfaceType::Planar,
+            wave_type: WaveType::Acoustic,
         }
     }
 
