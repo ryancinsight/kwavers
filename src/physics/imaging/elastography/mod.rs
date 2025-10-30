@@ -47,8 +47,8 @@ use ndarray::Array3;
 /// use kwavers::physics::imaging::elastography::InversionMethod;
 ///
 /// # fn example() -> kwavers::error::KwaversResult<()> {
-/// # let grid = kwavers::grid::Grid::new(100, 100, 100, 0.001, 0.001, 0.001);
-/// # let medium = kwavers::medium::HomogeneousMedium::new(1500.0, 1000.0);
+/// # let grid = kwavers::grid::Grid::new(100, 100, 100, 0.001, 0.001, 0.001).unwrap();
+/// # let medium = kwavers::medium::HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 /// let swe = ShearWaveElastography::new(
 ///     &grid,
 ///     &medium,
