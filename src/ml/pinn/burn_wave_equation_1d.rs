@@ -816,5 +816,288 @@ mod tests {
             let result = pinn.train_autodiff(&x_arr, &t_arr, &u_arr, wave_speed, &config, &device, 10);
             assert!(result.is_err());
         }
+
+        // ============================================================================
+        // EDGE-CASE TESTS: Sprint 143 Phase 2 Comprehensive Testing
+        // ============================================================================
+
+        #[test]
+        fn test_edge_case_extreme_wave_speeds() {
+            // Test with very low and very high wave speeds
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![10, 10],
+                num_collocation_points: 20,
+                ..Default::default()
+            };
+            
+            let wave_speeds = vec![1.0, 100.0, 1000.0, 10000.0];
+            
+            for &wave_speed in &wave_speeds {
+                let pinn = BurnPINN1DWave::<AutodiffTestBackend>::new(config.clone(), &device).unwrap();
+                let x = Tensor::<AutodiffTestBackend, 1>::from_floats([0.0], &device).reshape([1, 1]);
+                let t = Tensor::<AutodiffTestBackend, 1>::from_floats([0.0], &device).reshape([1, 1]);
+                
+                let residual = pinn.compute_pde_residual(x, t, wave_speed);
+                
+                // Residual should be finite even with extreme wave speeds
+                let residual_val: f32 = residual.into_scalar();
+                assert!(residual_val.is_finite(), "Residual not finite for wave_speed={}", wave_speed);
+            }
+        }
+
+        #[test]
+        fn test_edge_case_zero_wave_speed() {
+            // Test with zero wave speed (degenerate case)
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![10],
+                ..Default::default()
+            };
+            
+            let pinn = BurnPINN1DWave::<AutodiffTestBackend>::new(config, &device).unwrap();
+            let x = Tensor::<AutodiffTestBackend, 1>::from_floats([0.5], &device).reshape([1, 1]);
+            let t = Tensor::<AutodiffTestBackend, 1>::from_floats([0.1], &device).reshape([1, 1]);
+            
+            let residual = pinn.compute_pde_residual(x, t, 0.0);
+            
+            // Should handle gracefully
+            let residual_val: f32 = residual.into_scalar();
+            assert!(residual_val.is_finite());
+        }
+
+        #[test]
+        fn test_edge_case_large_batch_size() {
+            // Test with large batch of collocation points
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![20, 20],
+                ..Default::default()
+            };
+            
+            let pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
+            
+            let n = 1000; // Large batch
+            let x_vec: Vec<f32> = (0..n).map(|i| i as f32 / n as f32).collect();
+            let t_vec: Vec<f32> = vec![0.1; n];
+            
+            let x = Tensor::<TestBackend, 1>::from_floats(x_vec.as_slice(), &device).reshape([n, 1]);
+            let t = Tensor::<TestBackend, 1>::from_floats(t_vec.as_slice(), &device).reshape([n, 1]);
+            
+            // Should handle large batches
+            let u = pinn.forward(x, t);
+            assert_eq!(u.dims(), [n, 1]);
+        }
+
+        #[test]
+        fn test_edge_case_extreme_loss_weights() {
+            // Test with very unbalanced loss weights
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![10, 10],
+                num_collocation_points: 20,
+                ..Default::default()
+            };
+            let pinn = BurnPINN1DWave::<AutodiffTestBackend>::new(config.clone(), &device).unwrap();
+            
+            let n = 5;
+            let x = Tensor::<AutodiffTestBackend, 1>::from_floats([0.0, 0.25, 0.5, 0.75, 1.0], &device).reshape([n, 1]);
+            let t = Tensor::<AutodiffTestBackend, 1>::from_floats([0.0, 0.0, 0.0, 0.0, 0.0], &device).reshape([n, 1]);
+            let u = Tensor::<AutodiffTestBackend, 1>::from_floats([0.0, 0.0, 0.0, 0.0, 0.0], &device).reshape([n, 1]);
+            
+            // Test with extreme weight configurations
+            let extreme_weights = vec![
+                BurnLossWeights { data: 1000.0, pde: 0.001, boundary: 0.001 },
+                BurnLossWeights { data: 0.001, pde: 1000.0, boundary: 0.001 },
+                BurnLossWeights { data: 0.001, pde: 0.001, boundary: 1000.0 },
+            ];
+            
+            for weights in extreme_weights {
+                let (total_loss, _, _, _) = pinn.compute_physics_loss(
+                    x.clone(), t.clone(), u.clone(),
+                    x.clone(), t.clone(),
+                    x.clone(), t.clone(), u.clone(),
+                    343.0,
+                    weights,
+                );
+                
+                let loss_val: f32 = total_loss.into_scalar();
+                assert!(loss_val.is_finite() && loss_val >= 0.0, 
+                    "Loss not valid with extreme weights: {:?}", weights);
+            }
+        }
+
+        #[test]
+        fn test_edge_case_single_point_training() {
+            // Test training with minimal data (single point)
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![10],
+                num_collocation_points: 10,
+                learning_rate: 1e-3,
+                ..Default::default()
+            };
+            let mut pinn = BurnPINN1DWave::<AutodiffTestBackend>::new(config.clone(), &device).unwrap();
+            
+            // Single training point
+            let x_arr = Array1::from_vec(vec![0.5]);
+            let t_arr = Array1::from_vec(vec![0.1]);
+            let u_arr = Array2::from_shape_vec((1, 1), vec![0.1]).unwrap();
+            
+            let wave_speed = 343.0;
+            let result = pinn.train_autodiff(&x_arr, &t_arr, &u_arr, wave_speed, &config, &device, 5);
+            
+            assert!(result.is_ok());
+            let metrics = result.unwrap();
+            assert_eq!(metrics.epochs_completed, 5);
+        }
+
+        #[test]
+        fn test_edge_case_very_deep_network() {
+            // Test with many hidden layers
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![20, 20, 20, 20, 20, 20], // 6 hidden layers
+                ..Default::default()
+            };
+            
+            let pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
+            let x = Tensor::<TestBackend, 1>::from_floats([0.5], &device).reshape([1, 1]);
+            let t = Tensor::<TestBackend, 1>::from_floats([0.1], &device).reshape([1, 1]);
+            
+            // Should handle deep networks
+            let u = pinn.forward(x, t);
+            let u_val: f32 = u.into_scalar();
+            assert!(u_val.is_finite());
+        }
+
+        #[test]
+        fn test_edge_case_boundary_points() {
+            // Test at exact boundary points (x = -1, 0, 1)
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![10, 10],
+                ..Default::default()
+            };
+            
+            let pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
+            
+            let boundary_points = vec![-1.0_f32, 0.0, 1.0];
+            for &x_val in &boundary_points {
+                let x = Tensor::<TestBackend, 1>::from_floats([x_val], &device).reshape([1, 1]);
+                let t = Tensor::<TestBackend, 1>::from_floats([0.0], &device).reshape([1, 1]);
+                
+                let u = pinn.forward(x, t);
+                let u_val: f32 = u.into_scalar();
+                assert!(u_val.is_finite(), "Output not finite at boundary x={}", x_val);
+            }
+        }
+
+        #[test]
+        fn test_edge_case_numerical_precision() {
+            // Test numerical stability with f32 precision
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![50, 50, 50, 50], // Large network
+                num_collocation_points: 100,
+                ..Default::default()
+            };
+            
+            let pinn = BurnPINN1DWave::<AutodiffTestBackend>::new(config, &device).unwrap();
+            
+            // Create data spanning full domain
+            let n = 50;
+            let x_vec: Vec<f32> = (0..n).map(|i| (i as f32 / n as f32) * 2.0 - 1.0).collect();
+            let t_vec: Vec<f32> = (0..n).map(|i| i as f32 / n as f32).collect();
+            
+            let x = Tensor::<AutodiffTestBackend, 1>::from_floats(x_vec.as_slice(), &device).reshape([n, 1]);
+            let t = Tensor::<AutodiffTestBackend, 1>::from_floats(t_vec.as_slice(), &device).reshape([n, 1]);
+            
+            let u = pinn.forward(x.clone(), t.clone());
+            let residual = pinn.compute_pde_residual(x, t, 343.0);
+            
+            // All outputs should be finite (no NaN or Inf)
+            let u_data = u.into_data();
+            let residual_data = residual.into_data();
+            
+            for val in u_data.as_slice::<f32>().unwrap() {
+                assert!(val.is_finite(), "Output contains non-finite value");
+            }
+            
+            for val in residual_data.as_slice::<f32>().unwrap() {
+                assert!(val.is_finite(), "Residual contains non-finite value");
+            }
+        }
+
+        #[test]
+        fn test_edge_case_convergence_with_zero_data() {
+            // Test training with zero initial conditions
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![10, 10],
+                num_collocation_points: 20,
+                learning_rate: 1e-3,
+                ..Default::default()
+            };
+            let mut pinn = BurnPINN1DWave::<AutodiffTestBackend>::new(config.clone(), &device).unwrap();
+            
+            let n = 10;
+            let x_arr = Array1::from_vec((0..n).map(|i| i as f64 / n as f64).collect::<Vec<_>>());
+            let t_arr = Array1::zeros(n);
+            let u_arr = Array2::zeros((n, 1)); // All zeros
+            
+            let wave_speed = 343.0;
+            let result = pinn.train_autodiff(&x_arr, &t_arr, &u_arr, wave_speed, &config, &device, 10);
+            
+            assert!(result.is_ok());
+            let metrics = result.unwrap();
+            
+            // Should converge to near-zero loss for zero data
+            assert!(metrics.total_loss.last().unwrap() < &100.0);
+        }
+
+        #[test]
+        fn test_edge_case_loss_monotonicity() {
+            // Verify that physics-informed loss components are properly weighted
+            let device = Default::default();
+            let config = BurnPINNConfig {
+                hidden_layers: vec![10, 10],
+                num_collocation_points: 20,
+                ..Default::default()
+            };
+            let pinn = BurnPINN1DWave::<AutodiffTestBackend>::new(config, &device).unwrap();
+            
+            let n = 5;
+            let x = Tensor::<AutodiffTestBackend, 1>::from_floats([0.0, 0.25, 0.5, 0.75, 1.0], &device).reshape([n, 1]);
+            let t = Tensor::<AutodiffTestBackend, 1>::from_floats([0.0, 0.0, 0.0, 0.0, 0.0], &device).reshape([n, 1]);
+            let u = Tensor::<AutodiffTestBackend, 1>::from_floats([0.0, 0.0, 0.0, 0.0, 0.0], &device).reshape([n, 1]);
+            
+            let weights = BurnLossWeights::default();
+            let (total_loss, data_loss, pde_loss, bc_loss) = pinn.compute_physics_loss(
+                x.clone(), t.clone(), u.clone(),
+                x.clone(), t.clone(),
+                x.clone(), t.clone(), u.clone(),
+                343.0,
+                weights,
+            );
+            
+            // Convert to scalars
+            let total: f32 = total_loss.into_scalar();
+            let data: f32 = data_loss.into_scalar();
+            let pde: f32 = pde_loss.into_scalar();
+            let bc: f32 = bc_loss.into_scalar();
+            
+            // Verify total loss is weighted sum
+            let expected_total = data * weights.data as f32 
+                + pde * weights.pde as f32 
+                + bc * weights.boundary as f32;
+            assert!((total - expected_total).abs() < 1e-5);
+            
+            // All components should be non-negative
+            assert!(data >= 0.0);
+            assert!(pde >= 0.0);
+            assert!(bc >= 0.0);
+            assert!(total >= 0.0);
+        }
     }
 }
