@@ -150,6 +150,9 @@ pub mod electromagnetic;
 pub mod universal_solver;
 
 #[cfg(feature = "pinn")]
+pub mod gpu_accelerator;
+
+#[cfg(feature = "pinn")]
 pub use multi_gpu_manager::{
     MultiGpuManager, GpuDeviceInfo, DecompositionStrategy, LoadBalancingAlgorithm,
     WorkUnit, CommunicationChannel, DataTransfer, TransferStatus, PerformanceMonitor,
@@ -219,6 +222,12 @@ pub use universal_solver::{
     UniversalPINNSolver, UniversalTrainingConfig, UniversalSolverStats,
     PhysicsSolution, Geometry2D, GeometricFeature, DomainInfo,
     LearningRateSchedule, EarlyStoppingConfig, ConvergenceInfo, MemoryStats,
+};
+
+#[cfg(feature = "pinn")]
+pub use gpu_accelerator::{
+    GpuMemoryManager, CudaBuffer, CudaStream, MemoryPoolType, MemoryStats,
+    CudaKernelManager, BatchedPINNTrainer, TrainingStep, TrainingStats,
 };
 
 #[cfg(feature = "pinn")]
