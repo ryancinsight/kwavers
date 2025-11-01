@@ -1,0 +1,185 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pinn-deployment
+  labels:
+    app: pinn
+    component: physics-ml
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: pinn
+      component: physics-ml
+  template:
+    metadata:
+      labels:
+        app: pinn
+        component: physics-ml
+    spec:
+      containers:
+      - name: pinn-container
+        image: kwavers/pinn:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: RUST_LOG
+          value: "info"
+        - name: PINN_GPU_ENABLED
+          value: "true"
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+          requests:
+            nvidia.com/gpu: 1
+            memory: "4Gi"
+            cpu: "2"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        # GPU tolerations for Kubernetes
+        tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      # Node affinity for GPU nodes
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: "accelerator"
+                operator: In
+                values:
+                - "nvidia-tesla-k80"
+                - "nvidia-tesla-p100"
+                - "nvidia-tesla-v100"
+                - "nvidia-tesla-t4"
+                - "nvidia-tesla-a100"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pinn-service
+  labels:
+    app: pinn
+    component: physics-ml
+spec:
+  selector:
+    app: pinn
+    component: physics-ml
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  type: LoadBalancer
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pinn-hpa
+  labels:
+    app: pinn
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pinn-deployment
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: pinn_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "100"
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pinn-config
+  labels:
+    app: pinn
+data:
+  config.yaml: |
+    pinn:
+      gpu_enabled: true
+      max_batch_size: 32
+      cache_size: 1000
+    server:
+      host: "0.0.0.0"
+      port: 8080
+      workers: 4
+    monitoring:
+      enabled: true
+      metrics_interval: 30
+      log_level: "info"
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pinn-ingress
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - pinn-api.example.com
+    secretName: pinn-tls
+  rules:
+  - host: pinn-api.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: pinn-service
+            port:
+              number: 80
