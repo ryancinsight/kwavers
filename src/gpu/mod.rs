@@ -13,6 +13,7 @@ pub mod device;
 pub mod fdtd;
 pub mod kernels;
 pub mod kspace;
+pub mod multi_gpu;
 pub mod pipeline;
 pub mod shaders;
 
@@ -24,6 +25,7 @@ pub use compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
 pub use device::{DeviceInfo, GpuDevice};
 pub use fdtd::FdtdGpu;
 pub use kspace::KSpaceGpu;
+pub use multi_gpu::{MultiGpuContext, GpuAffinity};
 pub use pipeline::{ComputePipeline, PipelineLayout};
 
 use crate::error::{KwaversError, KwaversResult};

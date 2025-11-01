@@ -109,6 +109,25 @@ pub use gpu_accelerator::{
     PinnGpuAccelerator, GpuMemoryManager, TrainingStats, gpu_optimizations
 };
 
+// Sprint 152: Multi-GPU Support & Distributed Training
+#[cfg(feature = "pinn")]
+pub mod multi_gpu_manager;
+
+#[cfg(feature = "pinn")]
+pub mod distributed_training;
+
+#[cfg(feature = "pinn")]
+pub use multi_gpu_manager::{
+    MultiGpuManager, GpuDeviceInfo, DecompositionStrategy, LoadBalancingAlgorithm,
+    WorkUnit, CommunicationChannel, DataTransfer, TransferStatus, PerformanceMonitor,
+    FaultTolerance, PerformanceSummary
+};
+
+#[cfg(feature = "pinn")]
+pub use distributed_training::{
+    DistributedPinnTrainer, GradientAggregation, CheckpointManager, TrainingCoordinator
+};
+
 // #[cfg(feature = "pinn")]
 // pub use advanced_architectures::{
 //     ResNetPINN1D, ResNetPINN2D, FourierFeatures, MultiScaleFeatures, PhysicsAttention, ResNetPINNConfig
