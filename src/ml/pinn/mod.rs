@@ -79,6 +79,10 @@ pub mod burn_wave_equation_1d;
 #[cfg(feature = "pinn")]
 pub mod burn_wave_equation_2d;
 
+// Sprint 151: GPU Acceleration & Advanced Geometries
+#[cfg(feature = "pinn")]
+pub mod gpu_accelerator;
+
 // Sprint 150: Advanced neural architectures for improved PINN convergence
 // Temporarily disabled due to Burn API compatibility issues
 // #[cfg(feature = "pinn")]
@@ -96,7 +100,13 @@ pub use burn_wave_equation_1d::{BurnLossWeights, BurnPINNConfig, BurnPINN1DWave,
 
 #[cfg(feature = "pinn")]
 pub use burn_wave_equation_2d::{
-    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, BurnTrainingMetrics2D, BoundaryCondition2D, Geometry2D
+    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, BurnTrainingMetrics2D, BoundaryCondition2D, Geometry2D, InterfaceCondition
+};
+
+// Sprint 151: GPU Acceleration & Advanced Geometries
+#[cfg(feature = "pinn")]
+pub use gpu_accelerator::{
+    PinnGpuAccelerator, GpuMemoryManager, TrainingStats, gpu_optimizations
 };
 
 // #[cfg(feature = "pinn")]

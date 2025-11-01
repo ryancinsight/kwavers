@@ -119,8 +119,30 @@ use burn::{
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
+/// Interface conditions between regions in multi-region domains
+pub enum InterfaceCondition {
+    /// Continuity of solution and normal derivative (u and ∂u/∂n continuous)
+    Continuity,
+    /// Continuity of solution only (u continuous, ∂u/∂n discontinuous)
+    SolutionContinuity,
+    /// Custom interface condition with user-defined function
+    Custom {
+        /// Boundary condition function: f(u_left, u_right, normal_left, normal_right) -> residual
+        condition: Box<dyn Fn(f64, f64, (f64, f64), (f64, f64)) -> f64 + Send + Sync>,
+    },
+}
+
+impl std::fmt::Debug for InterfaceCondition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InterfaceCondition::Continuity => write!(f, "Continuity"),
+            InterfaceCondition::SolutionContinuity => write!(f, "SolutionContinuity"),
+            InterfaceCondition::Custom { .. } => write!(f, "Custom{{condition: <function>}}"),
+        }
+    }
+}
+
 /// 2D geometry definitions for PINN domains
-#[derive(Debug, Clone)]
 pub enum Geometry2D {
     /// Rectangular domain: [x_min, x_max] × [y_min, y_max]
     Rectangular {
@@ -143,6 +165,39 @@ pub enum Geometry2D {
         y_max: f64,
         notch_x: f64,
         notch_y: f64,
+    },
+    /// Polygonal domain with arbitrary boundary
+    Polygonal {
+        /// List of (x, y) vertices in counter-clockwise order
+        vertices: Vec<(f64, f64)>,
+        /// Optional holes in the polygon
+        holes: Vec<Vec<(f64, f64)>>,
+    },
+    /// Parametric curve boundary domain
+    ParametricCurve {
+        /// Parametric functions (x(t), y(t)) where t ∈ [t_min, t_max]
+        x_func: Box<dyn Fn(f64) -> f64 + Send + Sync>,
+        y_func: Box<dyn Fn(f64) -> f64 + Send + Sync>,
+        t_min: f64,
+        t_max: f64,
+        /// Interior sampling region bounds
+        bounds: (f64, f64, f64, f64), // (x_min, x_max, y_min, y_max)
+    },
+    /// Adaptive mesh refinement domain
+    AdaptiveMesh {
+        /// Base geometry
+        base_geometry: Box<Geometry2D>,
+        /// Refinement criteria based on solution gradients
+        refinement_threshold: f64,
+        /// Maximum refinement level
+        max_level: usize,
+    },
+    /// Multi-region composite domain
+    MultiRegion {
+        /// List of sub-regions with their geometries
+        regions: Vec<(Geometry2D, usize)>, // (geometry, region_id)
+        /// Interface conditions between regions
+        interfaces: Vec<InterfaceCondition>,
     },
 }
 
@@ -185,6 +240,86 @@ impl Geometry2D {
         }
     }
 
+    /// Create a polygonal geometry
+    pub fn polygonal(vertices: Vec<(f64, f64)>, holes: Vec<Vec<(f64, f64)>>) -> Self {
+        Self::Polygonal { vertices, holes }
+    }
+
+    /// Create a parametric curve geometry
+    pub fn parametric_curve(
+        x_func: Box<dyn Fn(f64) -> f64 + Send + Sync>,
+        y_func: Box<dyn Fn(f64) -> f64 + Send + Sync>,
+        t_min: f64,
+        t_max: f64,
+        bounds: (f64, f64, f64, f64),
+    ) -> Self {
+        Self::ParametricCurve {
+            x_func,
+            y_func,
+            t_min,
+            t_max,
+            bounds,
+        }
+    }
+
+    /// Create an adaptive mesh geometry
+    pub fn adaptive_mesh(
+        base_geometry: Geometry2D,
+        refinement_threshold: f64,
+        max_level: usize,
+    ) -> Self {
+        Self::AdaptiveMesh {
+            base_geometry: Box::new(base_geometry),
+            refinement_threshold,
+            max_level,
+        }
+    }
+
+    /// Create a multi-region geometry
+    pub fn multi_region(
+        regions: Vec<(Geometry2D, usize)>,
+        interfaces: Vec<InterfaceCondition>,
+    ) -> Self {
+        Self::MultiRegion { regions, interfaces }
+    }
+}
+
+impl std::fmt::Debug for Geometry2D {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Geometry2D::Rectangular { x_min, x_max, y_min, y_max } => {
+                write!(f, "Rectangular {{ x_min: {}, x_max: {}, y_min: {}, y_max: {} }}",
+                       x_min, x_max, y_min, y_max)
+            }
+            Geometry2D::Circular { x_center, y_center, radius } => {
+                write!(f, "Circular {{ center: ({}, {}), radius: {} }}",
+                       x_center, y_center, radius)
+            }
+            Geometry2D::LShaped { x_min, x_max, y_min, y_max, notch_x, notch_y } => {
+                write!(f, "LShaped {{ bounds: [{}, {}]×[{}, {}], notch: ({}, {}) }}",
+                       x_min, x_max, y_min, y_max, notch_x, notch_y)
+            }
+            Geometry2D::Polygonal { vertices, holes } => {
+                write!(f, "Polygonal {{ vertices: {}, holes: {} }}",
+                       vertices.len(), holes.len())
+            }
+            Geometry2D::ParametricCurve { t_min, t_max, bounds, .. } => {
+                write!(f, "ParametricCurve {{ t: [{}, {}], bounds: {:?} }}",
+                       t_min, t_max, bounds)
+            }
+            Geometry2D::AdaptiveMesh { base_geometry, refinement_threshold, max_level } => {
+                write!(f, "AdaptiveMesh {{ threshold: {}, max_level: {}, base: {:?} }}",
+                       refinement_threshold, max_level, base_geometry)
+            }
+            Geometry2D::MultiRegion { regions, interfaces } => {
+                write!(f, "MultiRegion {{ regions: {}, interfaces: {} }}",
+                       regions.len(), interfaces.len())
+            }
+        }
+    }
+}
+
+impl Geometry2D {
     /// Check if a point (x, y) is inside the geometry
     pub fn contains(&self, x: f64, y: f64) -> bool {
         match self {
@@ -216,6 +351,87 @@ impl Geometry2D {
                 let in_notch = x >= *notch_x && y >= *notch_y;
                 in_full_rect && !in_notch
             }
+            Geometry2D::Polygonal { vertices, holes } => {
+                // Point-in-polygon test using ray casting algorithm
+                let mut inside = false;
+                let n = vertices.len();
+
+                // Test main polygon
+                let mut j = n - 1;
+                for i in 0..n {
+                    let vi = vertices[i];
+                    let vj = vertices[j];
+
+                    if ((vi.1 > y) != (vj.1 > y)) &&
+                       (x < (vj.0 - vi.0) * (y - vi.1) / (vj.1 - vi.1) + vi.0) {
+                        inside = !inside;
+                    }
+                    j = i;
+                }
+
+                // Test holes (point should NOT be inside any hole)
+                if inside {
+                    for hole in holes {
+                        let mut hole_inside = false;
+                        let m = hole.len();
+                        let mut k = m - 1;
+                        for i in 0..m {
+                            let vi = hole[i];
+                            let vj = hole[k];
+
+                            if ((vi.1 > y) != (vj.1 > y)) &&
+                               (x < (vj.0 - vi.0) * (y - vi.1) / (vj.1 - vi.1) + vi.0) {
+                                hole_inside = !hole_inside;
+                            }
+                            k = i;
+                        }
+                        if hole_inside {
+                            return false; // Point is inside a hole, so not in polygon
+                        }
+                    }
+                }
+
+                inside
+            }
+            Geometry2D::ParametricCurve { x_func, y_func, t_min, t_max, bounds } => {
+                let (x_min, x_max, y_min, y_max) = bounds;
+                // Check if point is within bounding box
+                if !(x >= *x_min && x <= *x_max && y >= *y_min && y <= *y_max) {
+                    return false;
+                }
+
+                // For parametric curves, we use a simple approach:
+                // Point is inside if it's "close" to the curve (within tolerance)
+                // This is a simplified implementation - in practice, you'd use proper
+                // curve containment algorithms
+                let tolerance = 0.01; // Adjust based on curve resolution needed
+                let n_samples = 1000; // Number of samples along curve
+
+                for i in 0..n_samples {
+                    let t = t_min + (t_max - t_min) * (i as f64) / (n_samples - 1) as f64;
+                    let curve_x = x_func(t);
+                    let curve_y = y_func(t);
+
+                    let dx = x - curve_x;
+                    let dy = y - curve_y;
+                    let distance = (dx * dx + dy * dy).sqrt();
+
+                    if distance <= tolerance {
+                        return true;
+                    }
+                }
+
+                false
+            }
+            Geometry2D::AdaptiveMesh { base_geometry, .. } => {
+                // For adaptive mesh, delegate to base geometry
+                // In practice, this would check refinement criteria
+                base_geometry.contains(x, y)
+            }
+            Geometry2D::MultiRegion { regions, .. } => {
+                // Point is inside if it's in any of the regions
+                regions.iter().any(|(geom, _)| geom.contains(x, y))
+            }
         }
     }
 
@@ -245,6 +461,41 @@ impl Geometry2D {
                 y_max,
                 ..
             } => (*x_min, *x_max, *y_min, *y_max),
+            Geometry2D::Polygonal { vertices, .. } => {
+                // Compute bounding box from polygon vertices
+                let mut x_min = f64::INFINITY;
+                let mut x_max = f64::NEG_INFINITY;
+                let mut y_min = f64::INFINITY;
+                let mut y_max = f64::NEG_INFINITY;
+
+                for (x, y) in vertices {
+                    x_min = x_min.min(*x);
+                    x_max = x_max.max(*x);
+                    y_min = y_min.min(*y);
+                    y_max = y_max.max(*y);
+                }
+
+                (x_min, x_max, y_min, y_max)
+            }
+            Geometry2D::ParametricCurve { bounds, .. } => *bounds,
+            Geometry2D::AdaptiveMesh { base_geometry, .. } => base_geometry.bounding_box(),
+            Geometry2D::MultiRegion { regions, .. } => {
+                // Compute union of all region bounding boxes
+                let mut x_min = f64::INFINITY;
+                let mut x_max = f64::NEG_INFINITY;
+                let mut y_min = f64::INFINITY;
+                let mut y_max = f64::NEG_INFINITY;
+
+                for (geom, _) in regions {
+                    let (gx_min, gx_max, gy_min, gy_max) = geom.bounding_box();
+                    x_min = x_min.min(gx_min);
+                    x_max = x_max.max(gx_max);
+                    y_min = y_min.min(gy_min);
+                    y_max = y_max.max(gy_max);
+                }
+
+                (x_min, x_max, y_min, y_max)
+            }
         }
     }
 
@@ -1003,6 +1254,50 @@ mod tests {
         assert!(geom.contains(0.5, 0.5));
         assert!(!geom.contains(1.5, 0.0));
         assert!(geom.contains(0.0, 0.0));
+    }
+
+    #[test]
+    fn test_geometry_polygonal() {
+        // Simple triangle
+        let vertices = vec![(0.0, 0.0), (1.0, 0.0), (0.5, 1.0)];
+        let geom = Geometry2D::polygonal(vertices, vec![]);
+
+        // Point inside triangle
+        assert!(geom.contains(0.5, 0.3));
+        // Point outside triangle
+        assert!(!geom.contains(0.0, 0.8));
+        // Point on boundary
+        assert!(geom.contains(0.75, 0.0));
+    }
+
+    #[test]
+    fn test_geometry_parametric_curve() {
+        // Simple circle parametric curve: x = cos(t), y = sin(t)
+        let x_func: Box<dyn Fn(f64) -> f64 + Send + Sync> = Box::new(|t: f64| t.cos());
+        let y_func: Box<dyn Fn(f64) -> f64 + Send + Sync> = Box::new(|t: f64| t.sin());
+
+        let geom = Geometry2D::parametric_curve(x_func, y_func, 0.0, 2.0 * PI, (-1.1, 1.1, -1.1, 1.1));
+
+        // Point near the curve (within tolerance)
+        assert!(geom.contains(1.0, 0.0)); // Point on unit circle
+        // Point outside the curve region
+        assert!(!geom.contains(2.0, 2.0)); // Far outside
+    }
+
+    #[test]
+    fn test_geometry_multi_region() {
+        let rect1 = Geometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
+        let rect2 = Geometry2D::rectangular(1.0, 2.0, 0.0, 1.0);
+
+        let regions = vec![(rect1, 0), (rect2, 1)];
+        let geom = Geometry2D::multi_region(regions, vec![]);
+
+        // Point in first region
+        assert!(geom.contains(0.5, 0.5));
+        // Point in second region
+        assert!(geom.contains(1.5, 0.5));
+        // Point outside both regions
+        assert!(!geom.contains(2.5, 0.5));
     }
 
     #[test]
