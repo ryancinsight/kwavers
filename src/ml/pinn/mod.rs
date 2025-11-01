@@ -153,6 +153,9 @@ pub mod universal_solver;
 pub mod gpu_accelerator;
 
 #[cfg(feature = "pinn")]
+pub mod adaptive_sampling;
+
+#[cfg(feature = "pinn")]
 pub use multi_gpu_manager::{
     MultiGpuManager, GpuDeviceInfo, DecompositionStrategy, LoadBalancingAlgorithm,
     WorkUnit, CommunicationChannel, DataTransfer, TransferStatus, PerformanceMonitor,
@@ -228,6 +231,11 @@ pub use universal_solver::{
 pub use gpu_accelerator::{
     GpuMemoryManager, CudaBuffer, CudaStream, MemoryPoolType, MemoryStats,
     CudaKernelManager, BatchedPINNTrainer, TrainingStep, TrainingStats,
+};
+
+#[cfg(feature = "pinn")]
+pub use adaptive_sampling::{
+    AdaptiveCollocationSampler, SamplingStrategy, SamplingStats,
 };
 
 #[cfg(feature = "pinn")]
