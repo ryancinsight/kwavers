@@ -126,6 +126,14 @@ pub mod quantization;
 #[cfg(feature = "pinn")]
 pub mod edge_runtime;
 
+// Sprint 154: Meta-Learning & Transfer Learning
+#[cfg(feature = "pinn")]
+pub mod meta_learning;
+
+// Sprint 156: Advanced Physics Domains for PINN
+#[cfg(feature = "pinn")]
+pub mod physics;
+
 #[cfg(feature = "pinn")]
 pub use multi_gpu_manager::{
     MultiGpuManager, GpuDeviceInfo, DecompositionStrategy, LoadBalancingAlgorithm,
@@ -157,16 +165,32 @@ pub use edge_runtime::{
     DataType, HardwareCapabilities, Architecture, PerformanceMonitor as EdgePerformanceMonitor
 };
 
+// Sprint 154: Meta-Learning & Transfer Learning
+#[cfg(feature = "pinn")]
+pub use meta_learning::{
+    MetaLearner, MetaLearningConfig, PhysicsTask, PhysicsParameters,
+    TaskData, MetaLoss, TaskSampler, SamplingStrategy, MetaLearningStats
+};
+
+#[cfg(feature = "pinn")]
+pub use transfer_learning::{
+    TransferLearner, TransferLearningConfig, FreezeStrategy, TransferMetrics,
+    TransferLearningStats
+};
+
+#[cfg(feature = "pinn")]
+pub mod uncertainty_quantification;
+
+#[cfg(feature = "pinn")]
+pub use uncertainty_quantification::{
+    BayesianPINN, UncertaintyConfig, PredictionWithUncertainty, UncertaintyMethod,
+    UncertaintyStats, ConformalPredictor
+};
+
 // #[cfg(feature = "pinn")]
 // pub use advanced_architectures::{
 //     ResNetPINN1D, ResNetPINN2D, FourierFeatures, MultiScaleFeatures, PhysicsAttention, ResNetPINNConfig
 // };
-
-#[cfg(feature = "pinn")]
-pub use transfer_learning::{
-    TransferLearningConfig, TransferTrainer1D, FineTuningStrategy, DomainAdaptation,
-    MultiPhysicsTrainer, ProgressiveTraining
-};
 
 // Placeholder when pinn feature is not enabled
 #[cfg(not(feature = "pinn"))]
