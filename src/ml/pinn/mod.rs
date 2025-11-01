@@ -116,6 +116,16 @@ pub mod multi_gpu_manager;
 #[cfg(feature = "pinn")]
 pub mod distributed_training;
 
+// Sprint 153: Real-Time Inference & Optimization
+#[cfg(feature = "pinn")]
+pub mod jit_compiler;
+
+#[cfg(feature = "pinn")]
+pub mod quantization;
+
+#[cfg(feature = "pinn")]
+pub mod edge_runtime;
+
 #[cfg(feature = "pinn")]
 pub use multi_gpu_manager::{
     MultiGpuManager, GpuDeviceInfo, DecompositionStrategy, LoadBalancingAlgorithm,
@@ -126,6 +136,25 @@ pub use multi_gpu_manager::{
 #[cfg(feature = "pinn")]
 pub use distributed_training::{
     DistributedPinnTrainer, GradientAggregation, CheckpointManager, TrainingCoordinator
+};
+
+// Sprint 153: Real-Time Inference & Optimization
+#[cfg(feature = "pinn")]
+pub use jit_compiler::{
+    JitCompiler, OptimizedRuntime, CompiledKernel, OptimizationLevel,
+    CompilerStats, InferenceStats
+};
+
+#[cfg(feature = "pinn")]
+pub use quantization::{
+    Quantizer, QuantizedModel, QuantizationScheme, QuantizationParams,
+    ModelMetadata, QuantizedTensor
+};
+
+#[cfg(feature = "pinn")]
+pub use edge_runtime::{
+    EdgeRuntime, MemoryAllocator, ExecutionKernel, IOSpecification,
+    DataType, HardwareCapabilities, Architecture, PerformanceMonitor as EdgePerformanceMonitor
 };
 
 // #[cfg(feature = "pinn")]

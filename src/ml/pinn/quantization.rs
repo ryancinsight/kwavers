@@ -37,7 +37,7 @@ pub enum QuantizationScheme {
 
 /// Quantized model representation
 #[derive(Debug, Clone)]
-pub struct QuantizedModel<B: Backend> {
+pub struct QuantizedModel {
     /// Original model layers (kept for reference)
     pub original_layers: Vec<LayerInfo>,
     /// Quantized weights and biases
@@ -91,13 +91,13 @@ pub struct ModelMetadata {
 }
 
 /// Quantization engine
-pub struct Quantizer<B: Backend> {
+pub struct Quantizer {
     scheme: QuantizationScheme,
     calibration_samples: usize,
     accuracy_tolerance: f32,
 }
 
-impl<B: Backend> Quantizer<B> {
+impl Quantizer {
     /// Create a new quantizer
     pub fn new(scheme: QuantizationScheme) -> Self {
         Self {
@@ -110,15 +110,15 @@ impl<B: Backend> Quantizer<B> {
     /// Quantize a PINN model
     pub fn quantize_model(
         &self,
-        model: &crate::ml::pinn::BurnPINN2DWave<B>,
-    ) -> KwaversResult<QuantizedModel<B>> {
+        _model: &dyn std::any::Any, // Placeholder - would be BurnPINN2DWave in real implementation
+    ) -> KwaversResult<QuantizedModel> {
         // Analyze model structure
-        let layers = self.analyze_model_layers(model)?;
+        let layers = self.analyze_model_layers(_model)?;
 
         // Collect calibration data if needed
         let calibration_data = match &self.scheme {
             QuantizationScheme::Static8Bit { calibration_data } => calibration_data.clone(),
-            QuantizationScheme::Adaptive { .. } => self.collect_calibration_data(model)?,
+            QuantizationScheme::Adaptive { .. } => self.collect_calibration_data(_model)?,
             _ => Vec::new(),
         };
 
@@ -126,7 +126,7 @@ impl<B: Backend> Quantizer<B> {
         let quantized_weights = self.quantize_weights(&layers, &calibration_data)?;
 
         // Validate quantization accuracy
-        let validation_result = self.validate_quantization(model, &quantized_weights)?;
+        let validation_result = self.validate_quantization(_model, &quantized_weights)?;
         if validation_result.accuracy_loss > self.accuracy_tolerance {
             return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
                 parameter: "quantization_accuracy".to_string(),
@@ -159,7 +159,7 @@ impl<B: Backend> Quantizer<B> {
     /// Analyze model layers for quantization
     fn analyze_model_layers(
         &self,
-        _model: &crate::ml::pinn::BurnPINN2DWave<B>,
+        _model: &dyn std::any::Any,
     ) -> KwaversResult<Vec<LayerInfo>> {
         // In practice, this would inspect the Burn model structure
         // For now, return a representative layer structure
@@ -194,7 +194,7 @@ impl<B: Backend> Quantizer<B> {
     /// Collect calibration data for static quantization
     fn collect_calibration_data(
         &self,
-        _model: &crate::ml::pinn::BurnPINN2DWave<B>,
+        _model: &dyn std::any::Any,
     ) -> KwaversResult<Vec<Vec<f32>>> {
         // Generate representative physics input data
         let mut calibration_data = Vec::new();
@@ -353,7 +353,7 @@ impl<B: Backend> Quantizer<B> {
     /// Validate quantization accuracy
     fn validate_quantization(
         &self,
-        _model: &crate::ml::pinn::BurnPINN2DWave<B>,
+        _model: &dyn std::any::Any,
         _quantized_weights: &[QuantizedTensor],
     ) -> KwaversResult<ValidationResult> {
         // In practice, this would run inference on test data
@@ -411,7 +411,7 @@ struct ValidationResult {
     pub compression_ratio: f32,
 }
 
-impl<B: Backend> QuantizedModel<B> {
+impl QuantizedModel {
     /// Get model memory usage
     pub fn memory_usage(&self) -> usize {
         self.quantized_weights.iter()

@@ -4,14 +4,15 @@
 //! on resource-constrained edge devices including ARM, RISC-V, and embedded systems.
 
 use crate::error::{KwaversError, KwaversResult};
+use crate::ml::pinn::quantization::LayerInfo;
 use crate::ml::pinn::{QuantizedModel, QuantizedTensor};
 use burn::tensor::backend::Backend;
 use std::collections::HashMap;
 
 /// Edge deployment runtime
-pub struct EdgeRuntime<B: Backend> {
+pub struct EdgeRuntime {
     /// Loaded quantized model
-    model: Option<QuantizedModel<B>>,
+    model: Option<QuantizedModel>,
     /// Memory allocator for constrained environments
     allocator: MemoryAllocator,
     /// Execution kernel cache
@@ -43,7 +44,7 @@ struct MemoryBlock {
 
 /// Execution kernel for optimized inference
 #[derive(Debug, Clone)]
-struct ExecutionKernel {
+pub struct ExecutionKernel {
     /// Kernel identifier
     pub id: String,
     /// Input/output specifications
@@ -115,7 +116,7 @@ pub struct PerformanceMonitor {
     pub memory_efficiency: f32,
 }
 
-impl<B: Backend> EdgeRuntime<B> {
+impl EdgeRuntime {
     /// Create a new edge runtime for a specific hardware platform
     pub fn new(memory_limit_mb: usize) -> Self {
         let hardware_caps = Self::detect_hardware_capabilities();
@@ -137,7 +138,7 @@ impl<B: Backend> EdgeRuntime<B> {
     }
 
     /// Load a quantized model for edge deployment
-    pub fn load_model(&mut self, model: QuantizedModel<B>) -> KwaversResult<()> {
+    pub fn load_model(&mut self, model: QuantizedModel) -> KwaversResult<()> {
         // Validate model compatibility with hardware
         self.validate_model_compatibility(&model)?;
 
@@ -195,7 +196,7 @@ impl<B: Backend> EdgeRuntime<B> {
     }
 
     /// Validate model compatibility with hardware
-    fn validate_model_compatibility(&self, model: &QuantizedModel<B>) -> KwaversResult<()> {
+    fn validate_model_compatibility(&self, model: &QuantizedModel) -> KwaversResult<()> {
         // Check memory requirements
         let model_memory = model.memory_usage();
         if model_memory > self.allocator.total_memory {
@@ -241,7 +242,7 @@ impl<B: Backend> EdgeRuntime<B> {
     }
 
     /// Create optimized execution kernels
-    fn create_execution_kernels(&mut self, model: &QuantizedModel<B>) -> KwaversResult<()> {
+    fn create_execution_kernels(&mut self, model: &QuantizedModel) -> KwaversResult<()> {
         for (layer_idx, layer) in model.original_layers.iter().enumerate() {
             let kernel = ExecutionKernel {
                 id: format!("layer_{}", layer_idx),
@@ -262,7 +263,7 @@ impl<B: Backend> EdgeRuntime<B> {
     }
 
     /// Estimate kernel execution time
-    fn estimate_kernel_time(&self, layer: &crate::ml::pinn::LayerInfo) -> f64 {
+    fn estimate_kernel_time(&self, layer: &LayerInfo) -> f64 {
         let operations = layer.input_size * layer.output_size;
 
         // Base time per operation (microseconds)
@@ -281,7 +282,7 @@ impl<B: Backend> EdgeRuntime<B> {
     }
 
     /// Estimate kernel memory requirements
-    fn estimate_kernel_memory(&self, layer: &crate::ml::pinn::LayerInfo) -> usize {
+    fn estimate_kernel_memory(&self, layer: &LayerInfo) -> usize {
         // Weight matrix + bias + intermediate buffers
         let weight_memory = layer.input_size * layer.output_size * std::mem::size_of::<i8>();
         let bias_memory = layer.output_size * std::mem::size_of::<f32>();

@@ -89,7 +89,7 @@ fn main() -> KwaversResult<()> {
 #[cfg(feature = "pinn")]
 fn demonstrate_jit_compilation() -> KwaversResult<()> {
     println!("   Creating JIT compiler...");
-    let compiler = JitCompiler::<burn::backend::Autodiff<burn::backend::NdArray<f32>>>::new(
+    let compiler = JitCompiler::new(
         OptimizationLevel::Aggressive
     );
 
@@ -121,7 +121,7 @@ fn demonstrate_quantization() -> KwaversResult<()> {
     ];
 
     for (name, scheme) in schemes {
-        let quantizer = Quantizer::<burn::backend::NdArray<f32>>::new(scheme);
+        let quantizer = Quantizer::new(scheme);
         println!("   ✅ {}: Configured", name);
     }
 
@@ -135,7 +135,7 @@ fn demonstrate_quantization() -> KwaversResult<()> {
 fn demonstrate_edge_deployment() -> KwaversResult<()> {
     println!("   Initializing edge runtime (64MB memory limit)...");
 
-    let runtime = EdgeRuntime::<burn::backend::NdArray<f32>>::new(64); // 64MB
+    let runtime = EdgeRuntime::new(64); // 64MB
     let hardware_caps = runtime.get_hardware_caps();
 
     println!("   ✅ Edge runtime initialized");

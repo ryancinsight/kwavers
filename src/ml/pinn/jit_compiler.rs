@@ -40,7 +40,7 @@ pub enum KernelData {
 }
 
 /// JIT compiler for PINN models
-pub struct JitCompiler<B: AutodiffBackend> {
+pub struct JitCompiler {
     /// Compiled kernel cache
     kernel_cache: HashMap<String, CompiledKernel>,
     /// Optimization level
@@ -80,9 +80,9 @@ pub struct CompilerStats {
 }
 
 /// Optimized inference runtime
-pub struct OptimizedRuntime<B: AutodiffBackend> {
+pub struct OptimizedRuntime {
     /// JIT compiler
-    compiler: JitCompiler<B>,
+    compiler: JitCompiler,
     /// Active kernels
     active_kernels: HashMap<String, CompiledKernel>,
     /// Memory pool for inference
@@ -99,7 +99,7 @@ pub struct MemoryPool {
     current_index: usize,
 }
 
-impl<B: AutodiffBackend> JitCompiler<B> {
+impl JitCompiler {
     /// Create a new JIT compiler
     pub fn new(optimization_level: OptimizationLevel) -> Self {
         Self {
@@ -119,7 +119,7 @@ impl<B: AutodiffBackend> JitCompiler<B> {
     /// Compile a PINN model for optimized inference
     pub fn compile_pinn_model(
         &mut self,
-        model: &BurnPINN2DWave<B>,
+        model: &dyn std::any::Any, // Placeholder - would be BurnPINN2DWave in real implementation
         geometry: &Geometry2D,
         kernel_name: &str,
     ) -> KwaversResult<CompiledKernel> {
@@ -145,7 +145,7 @@ impl<B: AutodiffBackend> JitCompiler<B> {
             estimated_time_us: self.estimate_execution_time(&execution_plan),
             memory_required: self.estimate_memory_usage(&execution_plan),
             kernel_data: Arc::new(KernelData::Interpreted {
-                model: Arc::new(model.clone()), // In practice, we'd serialize and optimize
+                model: Arc::new(()), // Placeholder - in practice, we'd serialize and optimize the model
             }),
         };
 
@@ -168,7 +168,7 @@ impl<B: AutodiffBackend> JitCompiler<B> {
     }
 
     /// Analyze model structure for optimization
-    fn analyze_model(&self, model: &BurnPINN2DWave<B>) -> KwaversResult<ModelInfo> {
+    fn analyze_model(&self, _model: &dyn std::any::Any) -> KwaversResult<ModelInfo> {
         // Extract model architecture information
         // In practice, this would inspect the Burn model structure
         Ok(ModelInfo {
@@ -322,9 +322,9 @@ enum VectorizationLevel {
     SIMD256,
 }
 
-impl<B: AutodiffBackend> OptimizedRuntime<B> {
+impl OptimizedRuntime {
     /// Create optimized runtime
-    pub fn new(compiler: JitCompiler<B>) -> Self {
+    pub fn new(compiler: JitCompiler) -> Self {
         Self {
             compiler,
             active_kernels: HashMap::new(),
@@ -333,7 +333,7 @@ impl<B: AutodiffBackend> OptimizedRuntime<B> {
     }
 
     /// Load and optimize a PINN model
-    pub fn load_model(&mut self, model: &BurnPINN2DWave<B>, geometry: &Geometry2D, name: &str) -> KwaversResult<String> {
+    pub fn load_model(&mut self, model: &dyn std::any::Any, geometry: &Geometry2D, name: &str) -> KwaversResult<String> {
         let kernel = self.compiler.compile_pinn_model(model, geometry, name)?;
         let kernel_id = kernel.id.clone();
 

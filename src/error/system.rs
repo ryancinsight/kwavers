@@ -31,6 +31,10 @@ pub enum SystemError {
         operation: String,
         reason: String,
     },
+    InvalidConfiguration {
+        parameter: String,
+        reason: String,
+    },
 }
 
 impl fmt::Display for SystemError {
@@ -62,6 +66,9 @@ impl fmt::Display for SystemError {
             }
             Self::Io { operation, reason } => {
                 write!(f, "IO operation '{operation}' failed: {reason}")
+            }
+            Self::InvalidConfiguration { parameter, reason } => {
+                write!(f, "Invalid configuration for parameter '{parameter}': {reason}")
             }
         }
     }
