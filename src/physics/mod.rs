@@ -16,3 +16,4 @@ pub mod field_indices;
 pub mod field_mapping;
 pub mod bubble_dynamics;
 pub mod sonoluminescence_detector;
+pub mod validation;
