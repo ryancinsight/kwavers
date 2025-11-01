@@ -78,6 +78,21 @@ burn = { version = "0.18", features = ["ndarray", "autodiff", "wgpu"], optional 
 plotly = { version = "0.8", optional = true }
 egui = { version = "0.25", optional = true }
 
+# Enterprise API (Sprint 159 - Production Deployment)
+axum = { version = "0.7", features = ["json", "tracing", "macros"], optional = true }
+tower = { version = "0.4", optional = true }
+tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip", "request-id", "util"], optional = true }
+jsonwebtoken = { version = "9.0", optional = true }
+bcrypt = { version = "0.15", optional = true }
+uuid = { version = "1.0", features = ["v4", "serde"], optional = true }
+sha2 = { version = "0.10", optional = true }
+hmac = { version = "0.12", optional = true }
+redis = { version = "0.25", optional = true }
+deadpool-redis = { version = "0.14", optional = true }
+prometheus = { version = "0.13", optional = true }
+opentelemetry = { version = "0.21", features = ["trace", "metrics"], optional = true }
+opentelemetry-prometheus = { version = "0.14", optional = true }
+
 [dev-dependencies]
 # Minimal dev dependencies for testing only
 criterion = "0.4"
@@ -110,7 +125,9 @@ zero-copy = ["dep:rkyv"]             # Zero-copy serialization
 # Sprint 143: Added burn 0.18 integration (bincode compatibility resolved)
 pinn = ["dep:burn"]                  # Physics-informed neural networks with burn 0.18
 pinn-gpu = ["pinn", "gpu"]           # PINN with GPU acceleration via WGPU
-full = ["gpu", "plotting", "parallel", "nifti", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn"]
+# Sprint 159 - Enterprise API for production deployment
+api = ["dep:axum", "dep:tower", "dep:tower-http", "dep:jsonwebtoken", "dep:bcrypt", "dep:uuid", "dep:sha2", "dep:hmac", "dep:redis", "dep:deadpool-redis", "dep:prometheus", "dep:opentelemetry", "dep:opentelemetry-prometheus", "async-runtime", "structured-logging"]  # Enterprise REST API
+full = ["gpu", "plotting", "parallel", "nifti", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn", "api"]
 
 [profile.dev]
 # Fast development builds

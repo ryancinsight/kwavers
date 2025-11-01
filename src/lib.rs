@@ -38,6 +38,8 @@ use std::collections::HashMap;
 // Core modules
 pub mod boundary;
 pub mod cloud; // Sprint 155: Cloud integration for PINN deployment
+#[cfg(feature = "api")]
+pub mod api; // Sprint 159: Enterprise API for production deployment
 pub mod configuration; // Unified configuration system (SSOT)
                        // constants module moved to physics::constants for SSOT
 pub mod error;
