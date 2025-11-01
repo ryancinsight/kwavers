@@ -5,7 +5,6 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
-use std::sync::Arc;
 
 /// Cloud provider enumeration
 #[derive(Debug, Clone, PartialEq)]
@@ -124,6 +123,7 @@ pub struct DeploymentMetrics {
 }
 
 /// Cloud PINN service for deployment management
+#[derive(Debug)]
 pub struct CloudPINNService {
     /// Cloud provider abstraction
     provider: CloudProvider,
@@ -197,7 +197,7 @@ impl CloudPINNService {
     pub async fn scale_deployment(
         &mut self,
         deployment_id: &str,
-        target_instances: usize,
+        _target_instances: usize,
     ) -> KwaversResult<()> {
         // Check if deployment exists first
         if !self.deployments.contains_key(deployment_id) {

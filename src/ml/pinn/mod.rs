@@ -135,6 +135,18 @@ pub mod meta_learning;
 pub mod physics;
 
 #[cfg(feature = "pinn")]
+pub mod navier_stokes;
+
+#[cfg(feature = "pinn")]
+pub mod heat_transfer;
+
+#[cfg(feature = "pinn")]
+pub mod structural_mechanics;
+
+#[cfg(feature = "pinn")]
+pub mod electromagnetic;
+
+#[cfg(feature = "pinn")]
 pub use multi_gpu_manager::{
     MultiGpuManager, GpuDeviceInfo, DecompositionStrategy, LoadBalancingAlgorithm,
     WorkUnit, CommunicationChannel, DataTransfer, TransferStatus, PerformanceMonitor,
@@ -176,6 +188,27 @@ pub use meta_learning::{
 pub use transfer_learning::{
     TransferLearner, TransferLearningConfig, FreezeStrategy, TransferMetrics,
     TransferLearningStats
+};
+
+// Sprint 156: Advanced Physics Domains
+#[cfg(feature = "pinn")]
+pub use navier_stokes::{
+    NavierStokesDomain, FlowRegime, TurbulenceModel, NavierStokesBoundarySpec,
+};
+
+#[cfg(feature = "pinn")]
+pub use heat_transfer::{
+    HeatTransferDomain, HeatSource, MaterialInterface, HeatTransferBoundarySpec,
+};
+
+#[cfg(feature = "pinn")]
+pub use structural_mechanics::{
+    StructuralMechanicsDomain, StructuralLoad, MaterialModel, StructuralMechanicsBoundarySpec,
+};
+
+#[cfg(feature = "pinn")]
+pub use electromagnetic::{
+    ElectromagneticDomain, EMProblemType, CurrentSource, ElectromagneticBoundarySpec,
 };
 
 #[cfg(feature = "pinn")]
