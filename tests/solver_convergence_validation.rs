@@ -19,7 +19,6 @@ use kwavers::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::plugin::PluginManager;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
 use ndarray::{s, Array4};
-use std::f64::consts::PI;
 
 /// Test CFL stability condition
 ///

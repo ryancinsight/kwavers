@@ -2,8 +2,10 @@
 
 /// Phase distribution types
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Default)]
 pub enum PhaseDistribution {
     /// Uniform random distribution [0, 2π)
+    #[default]
     Uniform,
 
     /// Discrete phase states (e.g., 0, π/2, π, 3π/2)
@@ -28,8 +30,3 @@ pub enum PhaseDistribution {
     Quadrature,
 }
 
-impl Default for PhaseDistribution {
-    fn default() -> Self {
-        Self::Uniform
-    }
-}

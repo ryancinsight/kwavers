@@ -58,8 +58,10 @@ pub const KUZNETSOV_K_SPACE_CORRECTION_FOURTH_ORDER: f64 = 0.01;
 
 /// Acoustic equation mode selector
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Default)]
 pub enum AcousticEquationMode {
     /// Full Kuznetsov equation with all nonlinear and diffusive terms
+    #[default]
     FullKuznetsov,
     /// KZK parabolic approximation for focused beams
     KZK,
@@ -69,11 +71,6 @@ pub enum AcousticEquationMode {
     Linear,
 }
 
-impl Default for AcousticEquationMode {
-    fn default() -> Self {
-        Self::FullKuznetsov
-    }
-}
 
 /// Configuration for Kuznetsov equation solver
 #[derive(Debug, Clone)]

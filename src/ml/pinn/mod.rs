@@ -75,11 +75,40 @@ pub mod wave_equation_1d;
 #[cfg(feature = "pinn")]
 pub mod burn_wave_equation_1d;
 
+// Sprint 144: 2D Wave Equation PINN extension
+#[cfg(feature = "pinn")]
+pub mod burn_wave_equation_2d;
+
+// Sprint 150: Advanced neural architectures for improved PINN convergence
+// Temporarily disabled due to Burn API compatibility issues
+// #[cfg(feature = "pinn")]
+// pub mod advanced_architectures;
+
+// Sprint 151: Transfer learning for PINN adaptation and fine-tuning
+#[cfg(feature = "pinn")]
+pub mod transfer_learning;
+
 #[cfg(feature = "pinn")]
 pub use wave_equation_1d::{LossWeights, PINNConfig, TrainingMetrics, ValidationMetrics, PINN1DWave};
 
 #[cfg(feature = "pinn")]
 pub use burn_wave_equation_1d::{BurnLossWeights, BurnPINNConfig, BurnPINN1DWave, BurnTrainingMetrics};
+
+#[cfg(feature = "pinn")]
+pub use burn_wave_equation_2d::{
+    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, BurnTrainingMetrics2D, BoundaryCondition2D, Geometry2D
+};
+
+// #[cfg(feature = "pinn")]
+// pub use advanced_architectures::{
+//     ResNetPINN1D, ResNetPINN2D, FourierFeatures, MultiScaleFeatures, PhysicsAttention, ResNetPINNConfig
+// };
+
+#[cfg(feature = "pinn")]
+pub use transfer_learning::{
+    TransferLearningConfig, TransferTrainer1D, FineTuningStrategy, DomainAdaptation,
+    MultiPhysicsTrainer, ProgressiveTraining
+};
 
 // Placeholder when pinn feature is not enabled
 #[cfg(not(feature = "pinn"))]

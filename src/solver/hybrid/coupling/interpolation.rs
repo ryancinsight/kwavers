@@ -6,10 +6,12 @@ use serde::{Deserialize, Serialize};
 
 /// Interpolation schemes for inter-domain coupling
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum InterpolationScheme {
     /// Linear interpolation (2nd order)
     Linear,
     /// Cubic spline interpolation (4th order)
+    #[default]
     CubicSpline,
     /// Spectral interpolation (machine precision)
     Spectral,
@@ -19,11 +21,6 @@ pub enum InterpolationScheme {
     Adaptive,
 }
 
-impl Default for InterpolationScheme {
-    fn default() -> Self {
-        Self::CubicSpline
-    }
-}
 
 /// Manager for interpolation operations
 #[derive(Debug)]
