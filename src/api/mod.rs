@@ -399,7 +399,7 @@ mod tests {
     #[test]
     fn test_training_request_serialization() {
         let request = PINNTrainingRequest {
-            physics_domain: "navier_stokes".to_string(),
+            physics_domain: "acoustic_wave".to_string(),
             geometry: GeometrySpec {
                 bounds: vec![0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
                 obstacles: vec![],
@@ -427,7 +427,7 @@ mod tests {
         let json = serde_json::to_string(&request).unwrap();
         let deserialized: PINNTrainingRequest = serde_json::from_str(&json).unwrap();
 
-        assert_eq!(deserialized.physics_domain, "navier_stokes");
+        assert_eq!(deserialized.physics_domain, "acoustic_wave");
         assert_eq!(deserialized.training_config.collocation_points, 1000);
     }
 

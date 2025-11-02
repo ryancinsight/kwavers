@@ -2,6 +2,8 @@
 //!
 //! This module provides various imaging modalities for acoustic and optical imaging.
 
+pub mod ceus;
+pub mod hifu;
 pub mod elastography;
 pub mod photoacoustic;
 pub mod seismic;
@@ -24,6 +26,10 @@ pub enum ImagingModality {
     Doppler,
     /// Elastography
     Elastography,
+    /// Contrast-enhanced ultrasound
+    ContrastEnhancedUltrasound,
+    /// High-intensity focused ultrasound (therapeutic)
+    HighIntensityFocusedUltrasound,
     /// Acoustic tomography
     AcousticTomography,
 }
@@ -68,7 +74,9 @@ impl Default for ImagingConfig {
 }
 
 // Re-export commonly used types
+pub use ceus::{ContrastEnhancedUltrasound, PerfusionMap};
 pub use elastography::{ElasticityMap, InversionMethod, ShearWaveElastography};
-pub use photoacoustic::{compute_initial_pressure, PhotoacousticConfig};
+pub use hifu::{HIFUTransducer, HIFUTreatmentPlan, ThermalDose};
+pub use photoacoustic::{PhotoacousticSimulator, PhotoacousticParameters, PhotoacousticResult};
 pub use seismic::{SeismicConfig, SeismicMethod};
 pub use ultrasound::{UltrasoundConfig, UltrasoundMode};

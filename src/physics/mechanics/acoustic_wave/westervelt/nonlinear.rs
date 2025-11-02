@@ -39,8 +39,9 @@ pub fn compute_nonlinear_term(
                     medium, x, y, z, grid,
                 );
 
-                // Calculate nonlinear coefficient
-                let nonlinear_coeff = beta / (rho * c.powi(4));
+                // Calculate nonlinear coefficient (negative for Westervelt equation)
+                // Westervelt: ∇²p - (1/c²)∂²p/∂t² = - (β/ρc⁴)∂²(p²)/∂t² - δ∇²(∂p/∂t) - Q
+                let nonlinear_coeff = -beta / (rho * c.powi(4));
 
                 let term = if let Some(p_history) = pressure_history {
                     // Full second-order accuracy with pressure history

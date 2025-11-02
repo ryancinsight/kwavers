@@ -135,13 +135,7 @@ pub mod meta_learning;
 pub mod physics;
 
 #[cfg(feature = "pinn")]
-pub mod navier_stokes;
-
-#[cfg(feature = "pinn")]
-pub mod heat_transfer;
-
-#[cfg(feature = "pinn")]
-pub mod structural_mechanics;
+pub mod acoustic_wave;
 
 #[cfg(feature = "pinn")]
 pub mod electromagnetic;
@@ -201,18 +195,9 @@ pub use transfer_learning::{
 
 // Sprint 156: Advanced Physics Domains
 #[cfg(feature = "pinn")]
-pub use navier_stokes::{
-    NavierStokesDomain, FlowRegime, TurbulenceModel, NavierStokesBoundarySpec,
-};
-
-#[cfg(feature = "pinn")]
-pub use heat_transfer::{
-    HeatTransferDomain, HeatSource, MaterialInterface, HeatTransferBoundarySpec,
-};
-
-#[cfg(feature = "pinn")]
-pub use structural_mechanics::{
-    StructuralMechanicsDomain, StructuralLoad, MaterialModel, StructuralMechanicsBoundarySpec,
+pub use acoustic_wave::{
+    AcousticWaveDomain, AcousticProblemType, AcousticSource, AcousticSourceType,
+    AcousticSourceParameters, AcousticBoundarySpec, AcousticBoundaryType,
 };
 
 #[cfg(feature = "pinn")]

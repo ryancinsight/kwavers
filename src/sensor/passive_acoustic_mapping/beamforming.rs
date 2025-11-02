@@ -105,9 +105,15 @@ impl Beamformer {
                 // Compute delays for this focal point
                 let delays = self.compute_delays(ix, iy, sample_rate);
 
-                // Sum contributions from all elements
+                // CORRECTED: Calculate relative delays - closer sensors need more delay
+                let max_delay = delays.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+
+                // Sum contributions from all elements with correct delay application
                 for (elem_idx, delay) in delays.iter().enumerate() {
-                    let delay_samples = (delay * sample_rate) as usize;
+                    // Relative delay: closer sensors (smaller delay) need more compensation
+                    let relative_delay = max_delay - delay;
+                    let delay_samples = (relative_delay * sample_rate).round() as usize;
+
                     if delay_samples < nt {
                         for it in delay_samples..nt {
                             output[[ix, iy, it - delay_samples]] +=

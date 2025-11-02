@@ -68,42 +68,70 @@ impl FiniteDifference {
         let start = half_stencil;
         let (end_x, end_y, end_z) = (nx - half_stencil, ny - half_stencil, nz - half_stencil);
 
-        // Apply finite differences in the interior
-        for i in start..end_x {
-            for j in start..end_y {
+        // Apply finite differences in the interior with optimal cache locality
+        match axis {
+            0 => {
+                // X-direction differentiation: iterate over i (contiguous) first
                 for k in start..end_z {
-                    let mut val = 0.0;
+                    for j in start..end_y {
+                        for i in start..end_x {
+                            let mut val = 0.0;
 
-                    // Apply stencil coefficients
-                    for (idx, &coeff) in coeffs.iter().enumerate() {
-                        let offset = idx + 1;
-                        match axis {
-                            0 => {
-                                val +=
-                                    coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
+                            // Apply stencil coefficients along x-direction
+                            for (idx, &coeff) in coeffs.iter().enumerate() {
+                                let offset = idx + 1;
+                                val += coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
                             }
-                            1 => {
-                                val +=
-                                    coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
-                            }
-                            2 => {
-                                val +=
-                                    coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
-                            }
-                            _ => {
-                                return Err(crate::KwaversError::Config(
-                                    crate::ConfigError::InvalidValue {
-                                        parameter: "axis".to_string(),
-                                        value: axis.to_string(),
-                                        constraint: "0, 1, or 2".to_string(),
-                                    },
-                                ));
-                            }
+
+                            deriv[[i, j, k]] = val / spacing;
                         }
                     }
-
-                    deriv[[i, j, k]] = val / spacing;
                 }
+            }
+            1 => {
+                // Y-direction differentiation: iterate over j first for better cache locality
+                for k in start..end_z {
+                    for i in start..end_x {
+                        for j in start..end_y {
+                            let mut val = 0.0;
+
+                            // Apply stencil coefficients along y-direction
+                            for (idx, &coeff) in coeffs.iter().enumerate() {
+                                let offset = idx + 1;
+                                val += coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
+                            }
+
+                            deriv[[i, j, k]] = val / spacing;
+                        }
+                    }
+                }
+            }
+            2 => {
+                // Z-direction differentiation: iterate over k first for better cache locality
+                for j in start..end_y {
+                    for i in start..end_x {
+                        for k in start..end_z {
+                            let mut val = 0.0;
+
+                            // Apply stencil coefficients along z-direction
+                            for (idx, &coeff) in coeffs.iter().enumerate() {
+                                let offset = idx + 1;
+                                val += coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
+                            }
+
+                            deriv[[i, j, k]] = val / spacing;
+                        }
+                    }
+                }
+            }
+            _ => {
+                return Err(crate::KwaversError::Config(
+                    crate::ConfigError::InvalidValue {
+                        parameter: "axis".to_string(),
+                        value: axis.to_string(),
+                        constraint: "0, 1, or 2".to_string(),
+                    },
+                ));
             }
         }
 

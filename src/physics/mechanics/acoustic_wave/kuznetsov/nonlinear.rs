@@ -8,10 +8,12 @@ use ndarray::{Array3, Zip};
 
 /// Compute the nonlinear term for the Kuznetsov equation using workspace
 ///
-/// **Implementation**: Standard convective nonlinearity approach for Kuznetsov equation stability
-/// The nonlinear term -(β/ρ₀c₀⁴)∂²p²/∂t² represents the convective derivative (u·∇)u
-/// where u = p/(ρc) is the particle velocity. Second-order finite difference in time used
-/// for temporal derivative approximation.
+/// **Implementation**: Full Kuznetsov nonlinear term -(β/ρ₀c₀⁴)∂²p²/∂t²
+/// The nonlinear term represents the complete second-order nonlinear effects in acoustics.
+/// Uses second-order finite difference in time for ∂²p²/∂t² computation.
+///
+/// **Physics**: The full Kuznetsov equation includes -(β/ρ₀c₀⁴)∂²p²/∂t² where
+/// β = 1 + B/2A and p² is the square of the acoustic pressure.
 ///
 /// **References**:
 /// - Kuznetsov (1971) "Equations of nonlinear acoustics" Soviet Physics - Acoustics 16:467-470
@@ -29,7 +31,7 @@ use ndarray::{Array3, Zip};
 pub fn compute_nonlinear_term_workspace(
     pressure: &Array3<f64>,
     pressure_prev: &Array3<f64>,
-    _pressure_prev2: &Array3<f64>, // Not used in convective form
+    pressure_prev2: &Array3<f64>,
     dt: f64,
     density: f64,
     sound_speed: f64,
@@ -39,23 +41,28 @@ pub fn compute_nonlinear_term_workspace(
     // Compute β = 1 + B/2A using named constants
     let beta = NONLINEARITY_COEFFICIENT_OFFSET + nonlinearity_coefficient / B_OVER_A_DIVISOR;
 
-    // For convective nonlinearity: -(β/2ρc³) p ∂p/∂t
-    // This is more stable than the full Kuznetsov formulation
-    let coeff = beta / (2.0 * density * sound_speed.powi(3));
+    // Full Kuznetsov nonlinear coefficient: -(β/ρ₀c₀⁴)
+    let coeff = beta / (density * sound_speed.powi(4));
 
-    // Simple convective nonlinearity: -(β/2ρc³) p ∂p/∂t
+    // Compute full nonlinear term: -(β/ρ₀c₀⁴) ∂²p²/∂t²
     Zip::from(nonlinear_term_out)
         .and(pressure)
         .and(pressure_prev)
-        .for_each(|nl, &p, &p_prev| {
-            // Compute time derivative of pressure
-            let dp_dt = (p - p_prev) / dt;
+        .and(pressure_prev2)
+        .for_each(|nl, &p, &p_prev, &p_prev2| {
+            // Compute p² at each time step
+            let p2 = p * p;
+            let p2_prev = p_prev * p_prev;
+            let p2_prev2 = p_prev2 * p_prev2;
 
-            // Convective nonlinearity term
-            let nonlinear = -coeff * p * dp_dt;
+            // Second time derivative of p² using central difference
+            let d2p2_dt2 = (p2 - 2.0 * p2_prev + p2_prev2) / (dt * dt);
 
-            // Apply limiting for stability
-            *nl = nonlinear.clamp(-1e3, 1e3);
+            // Full Kuznetsov nonlinear term
+            let nonlinear = -coeff * d2p2_dt2;
+
+            // Apply limiting for stability (more conservative than convective form)
+            *nl = nonlinear.clamp(-1e4, 1e4);
         });
 }
 

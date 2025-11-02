@@ -1,66 +1,67 @@
-# Sprint 157: Advanced Applications & Industry Integrations
+# Sprint 157: Advanced Ultrasound Applications & Clinical Integrations
 
 **Date**: 2025-11-01
 **Sprint**: 157
-**Status**: 📋 **PLANNED** - Domain-specific PINN applications design
+**Status**: 📋 **PLANNED** - Clinical ultrasound applications development
 **Duration**: 16 hours (estimated)
 
 ## Executive Summary
 
-Sprint 157 transforms the modular physics framework from Sprint 156 into concrete, production-ready applications for each physics domain. This sprint delivers end-to-end PINN implementations for fluid dynamics, heat transfer, structural mechanics, and electromagnetics, complete with validation against literature benchmarks and real-world engineering applications.
+Sprint 157 transforms the enhanced physics framework into clinical ultrasound applications for medical imaging and therapy. This sprint delivers end-to-end implementations for shear wave elastography, contrast-enhanced ultrasound, high-intensity focused ultrasound (HIFU), and photoacoustic imaging, complete with validation against clinical benchmarks and medical literature.
 
 ## Objectives & Success Criteria
 
 | Objective | Target | Success Metric | Priority |
 |-----------|--------|----------------|----------|
-| **CFD Applications** | Navier-Stokes cylinder flow | <5% error vs CFD literature | P0 |
-| **Thermal Applications** | Conjugate heat transfer | Steady/transient validation | P0 |
-| **Structural Applications** | Cantilever beam analysis | <2% error vs FEM | P0 |
-| **EM Applications** | Waveguide mode analysis | Mode matching <1% error | P0 |
-| **Universal Solver** | Multi-physics capability | All domains supported | P1 |
-| **Production Examples** | 4 comprehensive demos | Real-world engineering cases | P1 |
+| **Shear Wave Elastography** | Liver fibrosis quantification | <10% stiffness error vs phantom | P0 |
+| **Contrast-Enhanced Ultrasound** | Microbubble perfusion imaging | <20% error vs experimental data | P0 |
+| **HIFU Therapy Planning** | Thermal dose calculation | ±2mm focal accuracy | P0 |
+| **Photoacoustic Imaging** | Hemodynamic imaging | <15% oxygenation error | P0 |
+| **Clinical Integration** | DICOM-compatible workflow | FDA compliance framework | P1 |
+| **Production Examples** | 4 clinical demos | Real patient imaging cases | P1 |
 
 ## Implementation Strategy
 
-### Phase 1: Universal PINN Solver Architecture (4 hours)
+### Phase 1: Clinical Ultrasound Solver Architecture (4 hours)
 
-**Multi-Physics Solver Framework**:
-- Unified solver interface across all physics domains
-- Domain-aware training configuration and optimization
-- Automatic physics parameter extraction and validation
-- Performance monitoring and convergence tracking
+**Multi-Modal Ultrasound Framework**:
+- Unified solver interface for imaging and therapy applications
+- Tissue-specific parameter optimization and validation
+- Automatic acoustic property extraction from clinical data
+- Performance monitoring and real-time processing capabilities
 
-**UniversalPINNSolver Implementation**:
+**ClinicalUltrasoundSolver Implementation**:
 ```rust
-pub struct UniversalPINNSolver<B: AutodiffBackend> {
-    /// Physics domain registry
-    physics_registry: PhysicsDomainRegistry<B>,
-    /// Neural network models per domain
-    models: HashMap<String, BurnPINN2DWave<B>>,
-    /// Training configurations
-    configs: HashMap<String, UniversalTrainingConfig>,
-    /// Performance statistics
-    stats: HashMap<String, UniversalSolverStats>,
+pub struct ClinicalUltrasoundSolver<B: AutodiffBackend> {
+    /// Ultrasound modality registry
+    modality_registry: UltrasoundModalityRegistry<B>,
+    /// Tissue models per application
+    tissue_models: HashMap<String, TissueModel<B>>,
+    /// Clinical configurations
+    clinical_configs: HashMap<String, ClinicalConfig>,
+    /// Performance and safety metrics
+    metrics: HashMap<String, ClinicalMetrics>,
 }
 
-impl<B: AutodiffBackend> UniversalPINNSolver<B> {
-    /// Solve physics problem for any registered domain
-    pub fn solve_physics_domain(
+impl<B: AutodiffBackend> ClinicalUltrasoundSolver<B> {
+    /// Solve clinical ultrasound problem for any registered modality
+    pub fn solve_clinical_application(
         &mut self,
-        domain_name: &str,
-        geometry: &Geometry2D,
-        physics_params: &PhysicsParameters,
-        training_config: &TrainingConfig,
-    ) -> Result<PhysicsSolution<B>, PhysicsError> {
-        // Domain validation and model initialization
-        let domain = self.physics_registry.get_domain(domain_name)?;
+        modality_name: &str,
+        patient_data: &PatientData,
+        scan_parameters: &UltrasoundParameters,
+        clinical_config: &ClinicalConfig,
+    ) -> Result<ClinicalSolution<B>, UltrasoundError> {
+        // Patient safety validation and parameter initialization
+        let modality = self.modality_registry.get_modality(modality_name)?;
+        self.validate_patient_safety(patient_data, modality)?;
 
-        // Physics-aware training
-        let solution = self.train_with_physics_constraints(
-            domain,
-            geometry,
-            physics_params,
-            training_config,
+        // Tissue-aware processing
+        let solution = self.process_with_tissue_model(
+            modality,
+            patient_data,
+            scan_parameters,
+            clinical_config,
         )?;
 
         Ok(solution)
@@ -68,156 +69,190 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
 }
 ```
 
-### Phase 2: Computational Fluid Dynamics Applications (4 hours)
+### Phase 2: Shear Wave Elastography Applications (4 hours)
 
-**Cylinder Flow Benchmark (Re = 20-100)**:
-- Steady incompressible Navier-Stokes around circular cylinder
-- Benchmark geometry: D = 0.1m cylinder, domain 2.2×0.41m
-- Inlet: parabolic velocity profile u(y) = 1.5Uₘₐₓ(y/H)(1-y/H)
-- Outlet: zero pressure gradient
-- Walls: no-slip boundary conditions
+**Liver Fibrosis Assessment (E = 2-20 kPa)**:
+- Dynamic shear wave propagation in viscoelastic tissue
+- Clinical geometry: 10×10×5 cm liver phantom with inclusions
+- ARFI push: 1.5 MHz, 50 μs duration, 300 kPa peak pressure
+- Shear wave tracking: ultrafast imaging at 10,000 fps
+- Tissue properties: E = 5-15 kPa, viscosity η = 1-10 Pa·s
 
-**PINN Implementation**:
+**Clinical Implementation**:
 ```rust
-fn cylinder_flow_example() -> Result<(), Box<dyn std::error::Error>> {
-    // Define flow domain
-    let ns_domain = NavierStokesDomain::new(40.0, 1000.0, 0.001, vec![2.2, 0.41])
-        .add_no_slip_wall(BoundaryPosition::Bottom)
-        .add_no_slip_wall(BoundaryPosition::Top)
-        .add_inlet(BoundaryPosition::Left, parabolic_inlet_profile(0.41))
-        .add_outlet(BoundaryPosition::Right);
+fn liver_fibrosis_swe_example() -> Result<(), Box<dyn std::error::Error>> {
+    // Define tissue domain with viscoelastic properties
+    let liver_domain = ViscoelasticTissueDomain::new(
+        vec![0.10, 0.10, 0.05],  // 10×10×5 cm
+        1050.0, 1580.0,          // density, sound speed
+        8000.0, 1.5,             // Young's modulus, Poisson's ratio
+        5.0, 0.01,               // viscosity, relaxation time
+    ).add_arfi_push(ARFIConfig {
+        frequency: 1.5e6,
+        duration: 50e-6,
+        peak_pressure: 300e3,
+        push_position: [0.05, 0.05, 0.025],
+    });
 
-    // Create solver and train
-    let mut solver = UniversalPINNSolver::new()?;
-    solver.register_physics_domain(ns_domain)?;
+    // Create clinical solver and process
+    let mut solver = ClinicalUltrasoundSolver::new()?;
+    solver.register_tissue_model(liver_domain)?;
 
-    let solution = solver.solve_physics_domain(
-        "navier_stokes",
-        &cylinder_geometry(),
-        &flow_parameters(),
-        &cfd_training_config(),
+    let solution = solver.solve_clinical_application(
+        "shear_wave_elastography",
+        &patient_liver_data(),
+        &swe_scan_parameters(),
+        &clinical_swe_config(),
     )?;
 
-    // Validate against literature (Schlichting, White)
-    validate_flow_field(&solution, &literature_data)?;
+    // Validate against phantom studies (Sarvazyan et al.)
+    validate_stiffness_map(&solution, &phantom_data)?;
 
     Ok(())
 }
 ```
 
-**Expected Performance**:
-- Drag coefficient: C_d ≈ 2.05 (literature: 2.0-2.1 for Re=40)
-- Vortex shedding: Strouhal number St ≈ 0.17
-- Velocity field: <5% error vs CFD benchmarks
+**Expected Clinical Performance**:
+- Stiffness accuracy: <10% error vs mechanical testing
+- Spatial resolution: <2mm for E > 5 kPa regions
+- Temporal stability: <5% variation over 10 acquisitions
 
-### Phase 3: Heat Transfer Applications (3 hours)
+### Phase 3: Contrast-Enhanced Ultrasound Applications (3 hours)
 
-**Conjugate Heat Transfer in Composite Wall**:
-- Multi-material conduction with interface continuity
-- Temperature-dependent thermal properties
-- Natural convection boundary conditions
-- Heat source integration
+**Myocardial Perfusion Imaging**:
+- Microbubble dynamics in cardiac tissue
+- Clinical geometry: 8×8×6 cm cardiac phantom
+- Contrast injection: 0.5 mL bolus, 1 mL/s rate
+- Imaging: 1.5 MHz harmonic imaging, 20 fps
+- Microbubble properties: R₀ = 1.5 μm, P_shell = 40 MPa
 
-**Engineering Application**:
+**Clinical Application**:
 ```rust
-fn conjugate_heat_transfer_example() -> Result<(), Box<dyn::error::Error>> {
-    // Define thermal domains
-    let solid_domain = HeatTransferDomain::new(50.0, 8000.0, 500.0, vec![0.1, 0.1])
-        .add_temperature_bc(BoundaryPosition::Left, 373.0)
-        .add_heat_source((0.025, 0.05), 1e6, 0.01);
+fn myocardial_perfusion_ceus_example() -> Result<(), Box<dyn std::error::Error>> {
+    // Define contrast agent domain with cardiac tissue
+    let cardiac_domain = ContrastEnhancedDomain::new(
+        vec![0.08, 0.08, 0.06],  // 8×8×6 cm
+        1060.0, 1580.0,          // myocardium density, sound speed
+        MicrobubbleConfig {
+            initial_radius: 1.5e-6,
+            shell_elasticity: 40e6,
+            shell_viscosity: 1.5,
+            gas_compressibility: 1.4,
+        }
+    ).add_contrast_injection(ContrastInjection {
+        volume: 0.5e-6,          // 0.5 mL
+        rate: 1.0e-6,            // 1 mL/s
+        position: [0.04, 0.04, 0.02],
+    });
 
-    let fluid_domain = NavierStokesDomain::new(10.0, 1000.0, 0.001, vec![0.1, 0.1])
-        .add_no_slip_wall(BoundaryPosition::Top)
-        .add_no_slip_wall(BoundaryPosition::Bottom);
+    // Create clinical solver and process
+    let mut solver = ClinicalUltrasoundSolver::new()?;
+    solver.register_tissue_model(cardiac_domain)?;
 
-    // Multi-physics coupling
-    let mut solver = UniversalPINNSolver::new()?;
-    solver.register_physics_domain(solid_domain)?;
-    solver.register_physics_domain(fluid_domain)?;
-
-    let solution = solver.solve_multi_physics(
-        &["heat_transfer", "navier_stokes"],
-        &composite_geometry(),
-        &coupling_interfaces(),
-        &thermal_training_config(),
+    let solution = solver.solve_clinical_application(
+        "contrast_enhanced_ultrasound",
+        &patient_cardiac_data(),
+        &ceus_scan_parameters(),
+        &clinical_ceus_config(),
     )?;
 
-    // Validate energy conservation
-    validate_thermal_balance(&solution)?;
+    // Validate perfusion curves
+    validate_perfusion_kinetics(&solution, &clinical_data)?;
 
     Ok(())
 }
 ```
 
-### Phase 4: Structural Mechanics Applications (3 hours)
+### Phase 4: High-Intensity Focused Ultrasound Applications (3 hours)
 
-**Cantilever Beam Under Load**:
-- Linear elasticity with geometric nonlinearity
-- Multiple load cases: point load, distributed load, thermal expansion
-- Material nonlinearity for large deformations
-- Dynamic response analysis
+**Prostate Cancer Thermal Ablation**:
+- HIFU treatment planning with thermal dose calculation
+- Clinical geometry: 4×4×4 cm prostate volume
+- HIFU transducer: 1.5 MHz, 100mm focal length, 50W acoustic power
+- Treatment protocol: 20s sonications, 10mm spacing
+- Safety margins: rectal wall <45°C, urethra <45°C
 
-**Engineering Validation**:
+**Clinical Therapy Planning**:
 ```rust
-fn cantilever_beam_example() -> Result<(), Box<dyn::error::Error>> {
-    let structural_domain = StructuralMechanicsDomain::new(200e9, 0.3, 7850.0, vec![1.0, 0.1])
-        .add_fixed_bc(BoundaryPosition::Left, vec![0.0, 0.0])
-        .add_free_bc(BoundaryPosition::Right)
-        .add_concentrated_force((1.0, 0.05), vec![0.0, -1000.0]);
+fn prostate_hifu_example() -> Result<(), Box<dyn std::error::Error>> {
+    let prostate_domain = HIFUTherapyDomain::new(
+        vec![0.04, 0.04, 0.04],  // 4×4×4 cm
+        1050.0, 1620.0,          // prostate density, sound speed
+        0.58, 3700.0,            // perfusion, specific heat
+        ThermalProperties {
+            thermal_conductivity: 0.5,
+            blood_perfusion_rate: 0.01,
+        }
+    ).add_hifu_transducer(HIFUTransducer {
+        frequency: 1.5e6,
+        focal_length: 0.10,
+        acoustic_power: 50.0,
+        focal_position: [0.02, 0.02, 0.02],
+    }).add_safety_constraints(vec![
+        SafetyConstraint::max_temperature("rectal_wall", 45.0),
+        SafetyConstraint::max_temperature("urethra", 45.0),
+    ]);
 
-    let mut solver = UniversalPINNSolver::new()?;
-    solver.register_physics_domain(structural_domain)?;
+    let mut solver = ClinicalUltrasoundSolver::new()?;
+    solver.register_tissue_model(prostate_domain)?;
 
-    let solution = solver.solve_physics_domain(
-        "structural_mechanics",
-        &beam_geometry(),
-        &steel_properties(),
-        &structural_training_config(),
+    let solution = solver.solve_clinical_application(
+        "hifu_therapy",
+        &patient_prostate_data(),
+        &hifu_treatment_parameters(),
+        &clinical_hifu_config(),
     )?;
 
-    // Validate against beam theory
-    let max_deflection_theory = (1000.0 * 1.0^3) / (3.0 * 200e9 * beam_moment_of_inertia());
-    validate_deflection(&solution, max_deflection_theory, 0.02)?;
+    // Validate thermal dose and safety
+    validate_thermal_dose(&solution, &treatment_goals)?;
+    validate_safety_constraints(&solution)?;
 
     Ok(())
 }
 ```
 
-### Phase 5: Electromagnetic Applications (3 hours)
+### Phase 5: Photoacoustic Imaging Applications (3 hours)
 
-**Rectangular Waveguide Analysis**:
-- TE/TM mode propagation in rectangular waveguide
-- Cutoff frequencies and field distributions
-- Impedance matching and reflection coefficients
-- Dielectric loading effects
+**Breast Cancer Detection**:
+- Photoacoustic imaging of hemoglobin oxygenation
+- Clinical geometry: 6×6×4 cm breast tissue volume
+- Laser excitation: 800 nm, 10 ns pulses, 20 mJ/cm²
+- Ultrasound detection: 5 MHz linear array, 100 fps
+- Optical properties: μ_a = 0.1-0.5 cm⁻¹, μ_s' = 10-20 cm⁻¹
 
-**RF Engineering Application**:
+**Clinical Imaging Application**:
 ```rust
-fn waveguide_example() -> Result<(), Box<dyn::error::Error>> {
-    let em_domain = ElectromagneticDomain::new(
-        EMProblemType::QuasiStatic,
-        8.854e-12,  // ε₀
-        4e-7 * PI,  // μ₀
-        0.0,        // σ
-        vec![0.02286, 0.01016],  // WR-90 dimensions
-    ).add_pec_boundary(BoundaryPosition::Top)
-     .add_pec_boundary(BoundaryPosition::Bottom)
-     .add_pec_boundary(BoundaryPosition::Left)
-     .add_pec_boundary(BoundaryPosition::Right);
+fn breast_photoacoustic_example() -> Result<(), Box<dyn std::error::Error>> {
+    let breast_domain = PhotoacousticDomain::new(
+        vec![0.06, 0.06, 0.04],  // 6×6×4 cm
+        1050.0, 1480.0,          // breast tissue density, sound speed
+        OpticalProperties {
+            absorption_coeff: 0.2,      // cm⁻¹
+            scattering_coeff: 15.0,     // cm⁻¹
+            anisotropy_factor: 0.9,
+        }
+    ).add_laser_excitation(LaserConfig {
+        wavelength: 800e-9,       // 800 nm
+        pulse_energy: 20.0,       // mJ/cm²
+        pulse_duration: 10e-9,    // 10 ns
+        beam_profile: GaussianBeam {
+            beam_diameter: 0.02,     // 2 cm
+            focus_position: [0.03, 0.03, 0.02],
+        },
+    });
 
-    let mut solver = UniversalPINNSolver::new()?;
-    solver.register_physics_domain(em_domain)?;
+    let mut solver = ClinicalUltrasoundSolver::new()?;
+    solver.register_tissue_model(breast_domain)?;
 
-    let solution = solver.solve_physics_domain(
-        "electromagnetic",
-        &waveguide_geometry(),
-        &rf_parameters(),
-        &em_training_config(),
+    let solution = solver.solve_clinical_application(
+        "photoacoustic_imaging",
+        &patient_breast_data(),
+        &photoacoustic_scan_parameters(),
+        &clinical_pai_config(),
     )?;
 
-    // Validate against waveguide theory
-    let cutoff_frequency = 1.0 / (2.0 * waveguide_a() * sqrt(permittivity * permeability));
-    validate_cutoff_frequency(&solution, cutoff_frequency, 0.01)?;
+    // Validate oxygenation quantification
+    validate_oxygenation_map(&solution, &spectroscopy_data)?;
 
     Ok(())
 }
@@ -225,89 +260,84 @@ fn waveguide_example() -> Result<(), Box<dyn::error::Error>> {
 
 ### Phase 6: Validation & Documentation (3 hours)
 
-**Literature Validation Benchmarks**:
-- Navier-Stokes: Schlichting & Gersten (2000) cylinder flow data
-- Heat Transfer: Incropera & DeWitt (2002) conduction solutions
-- Structural: Timoshenko & Gere (1961) beam theory
-- Electromagnetic: Pozar (2012) microwave engineering
+**Clinical Validation Benchmarks**:
+- SWE: Sarvazyan et al. (2011) phantom stiffness studies
+- CEUS: Averkiou et al. (2010) perfusion quantification
+- HIFU: ter Haar (2011) thermal dose calculations
+- PAI: Wang & Hu (2012) oxygenation quantification
 
-**Performance Benchmarks**:
-- Training time: <30 minutes per application
-- Memory usage: <2GB GPU memory
-- Accuracy: <5% error vs analytical/literature
-- Convergence: Loss reduction >4 orders of magnitude
+**Clinical Performance Benchmarks**:
+- Processing time: <5 minutes per patient study
+- Memory usage: <1GB GPU memory for real-time imaging
+- Accuracy: <15% error vs clinical gold standards
+- Safety: All FDA thermal and acoustic exposure limits
 
 ## Technical Architecture
 
-### Universal PINN Solver Implementation
+### Clinical Ultrasound Solver Implementation
 
-**Multi-Physics Training Loop**:
+**Multi-Modal Processing Pipeline**:
 ```rust
-impl<B: AutodiffBackend> UniversalPINNSolver<B> {
-    fn train_with_physics_constraints(
+impl<B: AutodiffBackend> ClinicalUltrasoundSolver<B> {
+    fn process_with_tissue_model(
         &mut self,
-        domain: &dyn PhysicsDomain<B>,
-        geometry: &Geometry2D,
-        physics_params: &PhysicsParameters,
-        config: &TrainingConfig,
-    ) -> Result<PhysicsSolution<B>, PhysicsError> {
-        // Generate physics-aware collocation points
-        let collocation_points = self.generate_collocation_points(geometry, domain)?;
+        modality: &dyn UltrasoundModality<B>,
+        patient_data: &PatientData,
+        scan_params: &UltrasoundParameters,
+        config: &ClinicalConfig,
+    ) -> Result<ClinicalSolution<B>, UltrasoundError> {
+        // Extract tissue properties from patient data
+        let tissue_props = self.extract_tissue_properties(patient_data)?;
 
-        // Initialize or load model
-        let model = self.initialize_model(domain)?;
+        // Set up acoustic simulation domain
+        let simulation_domain = self.setup_acoustic_domain(tissue_props, scan_params)?;
 
-        // Training loop with physics constraints
-        for epoch in 0..config.epochs {
-            // Forward pass
-            let predictions = self.forward_pass(&model, &collocation_points)?;
+        // Configure transducer and scanning geometry
+        let transducer_config = self.configure_transducer(modality, scan_params)?;
 
-            // Compute physics residuals
-            let pde_residual = domain.pde_residual(&model, &predictions, physics_params)?;
+        // Run forward acoustic simulation
+        let acoustic_field = self.compute_acoustic_field(simulation_domain, transducer_config)?;
 
-            // Boundary condition residuals
-            let bc_residual = self.compute_boundary_residuals(domain, &predictions)?;
+        // Apply modality-specific processing (SWE, CEUS, HIFU, PAI)
+        let processed_result = modality.process_acoustic_data(
+            &acoustic_field,
+            patient_data,
+            config,
+        )?;
 
-            // Initial condition residuals
-            let ic_residual = self.compute_initial_residuals(domain, &predictions)?;
+        // Validate clinical safety and accuracy
+        self.validate_clinical_constraints(&processed_result, config)?;
 
-            // Total loss with physics weights
-            let total_loss = self.compute_weighted_loss(
-                &pde_residual,
-                &bc_residual,
-                &ic_residual,
-                domain.loss_weights(),
-            )?;
-
-            // Backward pass and optimization
-            let gradients = total_loss.backward()?;
-            self.optimizer.step(&gradients)?;
-        }
-
-        Ok(PhysicsSolution { model, convergence_history, final_loss })
+        Ok(ClinicalSolution {
+            acoustic_field,
+            processed_result,
+            clinical_metrics: self.compute_clinical_metrics(&processed_result),
+        })
     }
 }
 ```
 
-### Domain-Specific Training Configurations
+### Modality-Specific Processing Configurations
 
-**CFD Training Config**:
+**SWE Clinical Config**:
 ```rust
-fn cfd_training_config() -> TrainingConfig {
-    TrainingConfig {
-        epochs: 5000,
-        learning_rate: 1e-4,
-        collocation_points: 15000,
-        boundary_points: 3000,
-        initial_points: 1000,
-        physics_weights: PhysicsLossWeights {
-            pde_weight: 1.0,
-            boundary_weight: 10.0,
-            initial_weight: 5.0,
-            domain_weights: vec![("continuity".to_string(), 1.0), ("momentum".to_string(), 1.0)],
+fn clinical_swe_config() -> ClinicalConfig {
+    ClinicalConfig {
+        safety_limits: SafetyLimits {
+            max_mi: 1.9,                    // Mechanical Index
+            max_thermal_index: 2.0,         // Thermal Index
+            max_acoustic_power: 100e-3,     // 100 mW
         },
-        adaptive_sampling: true,
-        early_stopping: EarlyStopping { patience: 100, min_delta: 1e-6 },
+        image_quality: ImageQuality {
+            frame_rate: 10000.0,            // 10 kHz for ultrafast imaging
+            spatial_resolution: 0.2e-3,     // 0.2 mm
+            stiffness_range: (2e3, 50e3),   // 2-50 kPa
+        },
+        processing_params: ProcessingParams {
+            arfi_push_duration: 50e-6,       // 50 μs
+            tracking_window: (-5e-3, 20e-3), // ±5mm displacement
+            viscoelastic_model: KelvinVoigt { eta: 5.0, modulus: 8000.0 },
+        },
     }
 }
 ```
@@ -316,149 +346,154 @@ fn cfd_training_config() -> TrainingConfig {
 
 ### Technical Risks
 
-**PINN Training Stability** (Medium):
-- Complex multi-physics loss landscapes
-- Boundary condition enforcement challenges
-- Domain coupling numerical instabilities
-- **Mitigation**: Physics-informed initialization, adaptive learning rates, gradient clipping
+**Clinical Safety Validation** (High):
+- Patient safety must be guaranteed for all modalities
+- Thermal and acoustic exposure limits compliance
+- Real-time processing latency requirements
+- **Mitigation**: Comprehensive FDA/IEC standard compliance, redundant safety checks, clinical validation protocols
 
-**Computational Complexity** (Medium):
-- Large collocation point sets for accuracy
-- Multi-physics coupling overhead
-- Memory requirements for complex geometries
-- **Mitigation**: Domain decomposition, adaptive sampling, optimized tensor operations
+**Tissue Model Accuracy** (Medium):
+- Patient-specific tissue property estimation
+- Anatomical variability and pathology effects
+- Multi-modal parameter correlation
+- **Mitigation**: Clinical database validation, adaptive model updating, uncertainty quantification
 
-**Validation Accuracy** (Low):
-- Limited analytical solutions for complex geometries
-- Numerical reference data availability
-- Benchmark case selection
-- **Mitigation**: Literature-validated test cases, convergence studies, error bounds
+**Real-Time Processing** (Medium):
+- Frame rates of 10-100 fps for imaging modalities
+- Treatment planning within clinical timeframes (<5 min)
+- GPU memory and compute resource management
+- **Mitigation**: Optimized algorithms, parallel processing, adaptive resolution
 
 ### Process Risks
 
-**Integration Complexity** (Medium):
-- Multi-physics coupling implementation
-- Domain interface consistency
-- Solver architecture extensibility
-- **Mitigation**: Incremental testing, interface contracts, modular design
+**Clinical Translation** (High):
+- FDA regulatory pathway navigation
+- Clinical trial design and execution
+- Healthcare system integration challenges
+- **Mitigation**: Early FDA engagement, clinical advisory board, phased validation approach
 
 ## Implementation Plan
 
 ### Files to Create
 
-1. **`src/ml/pinn/universal_solver.rs`** (+400 lines)
-   - Universal PINN solver implementation
-   - Multi-physics training coordination
-   - Domain-aware optimization strategies
+1. **`src/physics/ultrasound/clinical_solver.rs`** (+500 lines)
+   - Clinical ultrasound solver implementation
+   - Multi-modal processing coordination
+   - Safety validation and clinical metrics
 
-2. **`examples/pinn_cfd_cylinder.rs`** (+200 lines)
-   - Cylinder flow CFD benchmark
-   - Navier-Stokes validation against literature
-   - Performance benchmarking
+2. **`examples/swe_liver_fibrosis.rs`** (+300 lines)
+   - Liver fibrosis SWE assessment
+   - ARFI push and shear wave tracking
+   - Phantom validation against clinical standards
 
-3. **`examples/pinn_thermal_conjugate.rs`** (+180 lines)
-   - Conjugate heat transfer example
-   - Multi-material interface handling
-   - Energy conservation validation
+3. **`examples/ceus_myocardial_perfusion.rs`** (+250 lines)
+   - Myocardial perfusion CEUS imaging
+   - Microbubble dynamics simulation
+   - Perfusion curve analysis
 
-4. **`examples/pinn_structural_beam.rs`** (+160 lines)
-   - Cantilever beam structural analysis
-   - Beam theory validation
-   - Load case studies
+4. **`examples/hifu_prostate_therapy.rs`** (+280 lines)
+   - Prostate cancer HIFU treatment planning
+   - Thermal dose calculation with safety constraints
+   - Treatment optimization
 
-5. **`examples/pinn_em_waveguide.rs`** (+140 lines)
-   - Rectangular waveguide analysis
-   - Mode propagation validation
-   - Cutoff frequency calculations
+5. **`examples/photoacoustic_breast_cancer.rs`** (+220 lines)
+   - Breast cancer PAI for oxygenation mapping
+   - Laser excitation and acoustic detection
+   - Hemodynamic quantification
 
-6. **`src/ml/pinn/validation_benchmarks.rs`** (+250 lines)
-   - Literature benchmark implementations
-   - Error metrics and convergence analysis
-   - Performance comparison tools
+6. **`src/physics/ultrasound/clinical_validation.rs`** (+350 lines)
+   - Clinical benchmark implementations
+   - FDA/IEC compliance validation
+   - Performance and safety metrics
 
 ## Success Validation
 
-### Application-Specific Validation
+### Clinical Application Validation
 
-**CFD Cylinder Flow Validation**:
+**SWE Liver Fibrosis Validation**:
 ```rust
 #[test]
-fn test_cylinder_flow_pinn() {
-    let solution = solve_cylinder_flow_pinn(40.0)?;
-    let literature_cd = 2.05;  // Schlichting & Gersten (2000)
+fn test_liver_fibrosis_swe() {
+    let solution = solve_liver_fibrosis_swe(&patient_data)?;
+    let phantom_stiffness = 8.5;  // kPa from CIRS phantom
 
-    let computed_cd = compute_drag_coefficient(&solution)?;
-    assert!((computed_cd - literature_cd).abs() < 0.1);  // <5% error
+    let computed_stiffness = extract_mean_stiffness(&solution)?;
+    assert!((computed_stiffness - phantom_stiffness).abs() / phantom_stiffness < 0.10);  // <10% error
 }
 ```
 
-**Structural Beam Validation**:
+**CEUS Perfusion Validation**:
 ```rust
 #[test]
-fn test_cantilever_beam_pinn() {
-    let solution = solve_cantilever_beam_pinn()?;
-    let theory_deflection = beam_theory_max_deflection(1000.0, 1.0, 200e9, 0.01);
+fn test_myocardial_perfusion_ceus() {
+    let solution = solve_myocardial_perfusion(&patient_data)?;
+    let clinical_auc = 1250.0;  // Clinical reference AUC
 
-    let computed_deflection = extract_max_deflection(&solution)?;
-    assert!((computed_deflection - theory_deflection).abs() / theory_deflection < 0.02);  // <2% error
+    let computed_auc = compute_perfusion_auc(&solution)?;
+    assert!((computed_auc - clinical_auc).abs() / clinical_auc < 0.20);  // <20% error
 }
 ```
 
-### Performance Validation
+### Safety & Performance Validation
 
-**Training Convergence**:
+**Clinical Safety Compliance**:
 ```rust
 #[test]
-fn test_pinn_convergence() {
-    let stats = train_pinn_application("navier_stokes", &config)?;
+fn test_clinical_safety_limits() {
+    let solution = solve_hifu_prostate_therapy(&patient_data)?;
 
-    assert!(stats.final_loss < 1e-4);
-    assert!(stats.convergence_ratio > 1e4);  // 4 orders of magnitude reduction
-    assert!(stats.training_time < Duration::from_secs(1800));  // <30 minutes
+    // FDA thermal limits
+    assert!(max_temperature(&solution, "rectal_wall") < 45.0);
+    assert!(max_temperature(&solution, "urethra") < 45.0);
+
+    // Acoustic exposure limits
+    assert!(mechanical_index(&solution) < 1.9);
+    assert!(thermal_index(&solution) < 2.0);
 }
 ```
 
 ## Timeline & Milestones
 
 **Week 1** (8 hours):
-- [ ] Universal solver architecture (3 hours)
-- [ ] Navier-Stokes CFD application (3 hours)
-- [ ] Heat transfer conjugate example (2 hours)
+- [ ] Clinical ultrasound solver architecture (4 hours)
+- [ ] Shear wave elastography SWE implementation (4 hours)
 
 **Week 2** (8 hours):
-- [ ] Structural mechanics beam analysis (3 hours)
-- [ ] Electromagnetic waveguide application (3 hours)
-- [ ] Validation benchmarks and testing (2 hours)
+- [ ] Contrast-enhanced ultrasound CEUS (3 hours)
+- [ ] High-intensity focused ultrasound HIFU (3 hours)
+- [ ] Photoacoustic imaging PAI (2 hours)
 
 **Total**: 16 hours
 
 ## Dependencies & Prerequisites
 
 **Core Dependencies**:
-- Sprint 156 physics domains (completed)
-- Burn ML framework integration
-- Tensor operations and autodiff
+- Enhanced acoustic wave physics (Sprint 143-149 completed)
+- FNM fast nearfield methods (Sprint 140 completed)
+- PINN foundation (Sprint 142-143 completed)
+- Multi-physics tissue modeling
 
-**Validation Dependencies**:
-- Literature benchmark data (Schlichting, Timoshenko, Pozar)
-- Analytical solution implementations
-- Error metric calculations
+**Clinical Dependencies**:
+- FDA/IEC ultrasound safety standards
+- DICOM medical imaging protocols
+- Clinical validation datasets
+- Patient safety monitoring
 
-**Performance Dependencies**:
-- GPU acceleration for training
-- Memory optimization for large problems
-- Parallel collocation point evaluation
+**Technical Dependencies**:
+- GPU acceleration for real-time processing
+- Memory optimization for clinical workflows
+- Parallel algorithms for multi-core systems
 
 ## Conclusion
 
-Sprint 157 bridges the gap between the modular physics framework and practical engineering applications. By delivering concrete, validated PINN implementations for each physics domain, this sprint demonstrates the real-world applicability of physics-informed neural networks for computational physics problems.
+Sprint 157 transforms the enhanced acoustic physics framework into clinical ultrasound applications for medical imaging and therapy. By delivering four major ultrasound modalities with clinical validation, this sprint demonstrates the real-world applicability of advanced computational acoustics for healthcare.
 
 **Expected Outcomes**:
-- 4 production-ready PINN applications with literature validation
-- Universal solver architecture for extensible multi-physics simulations
-- Comprehensive validation framework with performance benchmarks
-- Engineering examples demonstrating order-of-magnitude speedup over traditional methods
+- 4 clinical ultrasound applications with phantom/clinical validation
+- Patient safety compliance framework
+- Real-time processing capabilities for clinical workflows
+- Medical imaging examples with FDA regulatory considerations
 
-**Impact**: Transforms theoretical physics framework into practical engineering tools, enabling rapid solution of complex multi-physics problems with unprecedented computational efficiency.
+**Impact**: Transforms theoretical acoustic physics into practical medical tools, enabling advanced ultrasound imaging and therapy with clinical-grade safety and accuracy.
 
-**Next Steps**: Sprint 158 (Performance Optimization) to enhance training speed and memory efficiency for large-scale industrial applications.
+**Next Steps**: Sprint 158 (Clinical Integration & DICOM) to enhance interoperability with medical imaging systems and clinical workflows.

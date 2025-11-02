@@ -35,6 +35,10 @@ pub enum SystemError {
         parameter: String,
         reason: String,
     },
+    FeatureNotAvailable {
+        feature: String,
+        reason: String,
+    },
 }
 
 impl fmt::Display for SystemError {
@@ -69,6 +73,9 @@ impl fmt::Display for SystemError {
             }
             Self::InvalidConfiguration { parameter, reason } => {
                 write!(f, "Invalid configuration for parameter '{parameter}': {reason}")
+            }
+            Self::FeatureNotAvailable { feature, reason } => {
+                write!(f, "Feature '{feature}' not available: {reason}")
             }
         }
     }

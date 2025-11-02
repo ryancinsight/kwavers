@@ -27,7 +27,6 @@ use crate::error::{KwaversError, KwaversResult};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use ndarray::Array3;
-use std::f64::consts::PI;
 
 /// Acoustic radiation force push pulse parameters
 ///
@@ -197,11 +196,9 @@ impl AcousticRadiationForce {
         let force_density = (2.0 * self.absorption * self.parameters.intensity) / self.sound_speed;
 
         // Calculate initial displacement from force impulse
-        // u₀ = (F × Δt) / (ρ × ω₀)
-        // where ω₀ is characteristic frequency
-        let omega = 2.0 * PI * self.parameters.frequency;
-        let displacement_scale =
-            (force_density * self.parameters.duration) / (self.density * omega);
+        // u₀ = (F × Δt) / ρ
+        // where F is radiation force density, Δt is pulse duration, ρ is density
+        let displacement_scale = (force_density * self.parameters.duration) / self.density;
 
         // Calculate focal region dimensions
         // Lateral: FWHM ≈ 1.2 × λ × F-number

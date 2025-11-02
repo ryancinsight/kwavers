@@ -191,4 +191,59 @@ mod tests {
         assert_eq!(ny, 50);
         assert_eq!(nz, 50);
     }
+
+    #[test]
+    fn test_swe_elasticity_reconstruction() {
+        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+        let swe =
+            ShearWaveElastography::new(&grid, &medium, InversionMethod::TimeOfFlight).unwrap();
+
+        // Generate shear wave
+        let push_location = [0.016, 0.016, 0.016]; // Near center
+        let _displacement_field = swe.generate_shear_wave(push_location).unwrap();
+
+        // Create synthetic displacement field for testing
+        use displacement::DisplacementField;
+        let mut synthetic_displacement = DisplacementField::zeros(grid.nx, grid.ny, grid.nz);
+
+        // Add some synthetic displacement pattern
+        let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let r = (((i as i32 - center.0 as i32).pow(2) +
+                             (j as i32 - center.1 as i32).pow(2) +
+                             (k as i32 - center.2 as i32).pow(2)) as f64).sqrt();
+                    let displacement = 1e-6 * (-r * 0.1).exp(); // Micro-meter scale
+                    synthetic_displacement.ux[[i, j, k]] = displacement;
+                    synthetic_displacement.uy[[i, j, k]] = displacement * 0.8;
+                    synthetic_displacement.uz[[i, j, k]] = displacement * 0.6;
+                }
+            }
+        }
+
+        // Test elasticity reconstruction
+        let elasticity_map = swe.reconstruct_elasticity(&synthetic_displacement.magnitude()).unwrap();
+
+        // Validate reconstruction results
+        let (nx, ny, nz) = elasticity_map.youngs_modulus.dim();
+        assert_eq!(nx, grid.nx);
+        assert_eq!(ny, grid.ny);
+        assert_eq!(nz, grid.nz);
+
+        // Check that we have reasonable elasticity values (should be positive)
+        let min_elasticity = elasticity_map.youngs_modulus.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let max_elasticity = elasticity_map.youngs_modulus.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+
+        assert!(min_elasticity > 0.0, "Elasticity should be positive");
+        assert!(max_elasticity > min_elasticity, "Should have range of elasticity values");
+
+        // Shear wave speed should also be reasonable
+        let min_c = elasticity_map.shear_wave_speed.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let max_c = elasticity_map.shear_wave_speed.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+
+        assert!(min_c > 0.0, "Shear wave speed should be positive");
+        assert!(max_c > 0.0, "Shear wave speed should be positive");
+    }
 }

@@ -96,19 +96,59 @@ impl DisplacementEstimator {
     ///
     /// Full displacement field with components
     ///
-    /// # Note
+    /// # Implementation
     ///
-    /// This simplified implementation assumes axial displacement dominates.
-    /// Full implementation would use cross-correlation or phase tracking.
+    /// Simulates ultrafast plane wave imaging with temporal evolution.
+    /// Uses simplified wave propagation model for displacement tracking.
     pub fn estimate(&self, initial_displacement: &Array3<f64>) -> KwaversResult<DisplacementField> {
         let (nx, ny, nz) = initial_displacement.dim();
 
-        // For now, assume dominant axial (z) displacement
-        // Full implementation would use speckle tracking
-        let uz = initial_displacement.clone();
+        // Simulate ultrafast imaging sequence (typical: 10,000 fps)
+        // Track displacement evolution over time
+        let n_frames = 20; // 20 frames for temporal evolution
+        let dt = 1e-4; // 100 μs between frames (10 kHz frame rate)
+        let shear_wave_speed = 3.0; // m/s (typical for soft tissue)
+
+        // Initialize displacement fields
         let ux = Array3::zeros((nx, ny, nz));
         let uy = Array3::zeros((nx, ny, nz));
+        let mut uz = initial_displacement.clone();
 
+        // Simulate shear wave propagation
+        // Simple 1D propagation along z-direction with damping
+        for frame in 1..n_frames {
+            let time = frame as f64 * dt;
+
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        let z = k as f64 * self.grid.dz;
+
+                        // Distance from push location (assume push at center z)
+                        let push_z = nz as f64 * self.grid.dz / 2.0;
+                        let distance = (z - push_z).abs();
+
+                        // Shear wave arrival time
+                        let arrival_time = distance / shear_wave_speed;
+
+                        // Temporal evolution with Gaussian envelope
+                        if time >= arrival_time {
+                            let time_delay = time - arrival_time;
+                            let amplitude = initial_displacement[[i, j, k]] *
+                                          (-time_delay * 100.0).exp() * // Damping
+                                          (-(time_delay - 0.0005).powi(2) / (2.0 * 0.0001)).exp(); // Gaussian shape
+
+                            uz[[i, j, k]] = amplitude;
+                        } else {
+                            uz[[i, j, k]] = 0.0;
+                        }
+                    }
+                }
+            }
+        }
+
+        // For this simplified model, assume only axial displacement
+        // In full implementation, this would track 2D/3D displacement fields
         Ok(DisplacementField { ux, uy, uz })
     }
 

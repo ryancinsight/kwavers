@@ -121,7 +121,36 @@
 
 ---
 
-## Advanced Physics Validation Requirements
+## Mathematical Theorems and Physical Principles
+
+### Wave Propagation Theorems
+- **1D Acoustic Wave Equation**: ∂²u/∂t² = c²∂²u/∂x² (Euler 1744, d'Alembert 1747)
+- **2D Acoustic Wave Equation**: ∂²u/∂t² = c²(∂²u/∂x² + ∂²u/∂y²) (Euler 1744, Poisson 1818)
+- **3D Acoustic Wave Equation**: ∂²u/∂t² = c²∇²u (Euler 1744, Lagrange 1760)
+- **Helmholtz Equation**: ∇²u + k²u = 0 (Helmholtz 1860)
+- **Kirchhoff Diffraction**: Huygens-Fresnel principle with obliquity factor (Kirchhoff 1882)
+- **PINN PDE Residual Issue**: Current implementation uses finite differences instead of autodiff for second derivatives - **CORRECTION NEEDED**
+
+### Bubble Dynamics Theorems
+- **Rayleigh-Plesset Equation**: RṘ + 3/2Ṙ² = (1/ρ)(p_B - p_∞ - 2σ/R - 4μṘ/R) (Rayleigh 1917, Plesset 1949)
+- **Keller-Miksis Equation**: (1 - Ṙ/c)RR̈ + 3/2(1 - Ṙ/3c)Ṙ² = (1 + Ṙ/c)(p_B - p_∞)/ρ + R/ρc × dp_B/dt (Keller & Miksis 1980)
+- **Gilmore Equation**: Accounts for liquid compressibility with enthalpy formulation (Gilmore 1952)
+- **Van der Waals Equation**: (p + a n²/V²)(V - nb) = nRT (Van der Waals 1873)
+- **Herring Equation**: Modified RP equation with surface tension derivative term (Herring 1941)
+- **Trilling Equation**: RP with thermal damping and mass transfer (Trilling 1952)
+
+### Beamforming Theorems
+- **Delay-and-Sum**: wᵢ = δ(t - τᵢ), where τᵢ is propagation delay (Van Veen & Buckley 1988)
+- **Minimum Variance Distortionless Response (MVDR)**: w = (R⁻¹a)/(aᴴR⁻¹a) (Capon 1969)
+- **Multiple Signal Classification (MUSIC)**: Pseudospectrum from noise subspace (Schmidt 1986)
+- **Linearly Constrained Minimum Variance (LCMV)**: w = R⁻¹C(CᴴR⁻¹C)⁻¹f (Frost 1972)
+
+### Imaging Theorems
+- **Fourier Slice Theorem**: 1D FT of projection = slice through 2D FT (Radon 1917, Bracewell 1956)
+- **Filtered Backprojection**: f(x,y) = ∫ p(θ,s) * h(s) ds, with ramp filter (Bracewell 1956)
+- **Synthetic Aperture Focusing**: Coherent summation with phase correction (Sherman 1971)
+
+### Advanced Physics Validation Requirements
 
 See detailed validation strategy in [`docs/gap_analysis_advanced_physics_2025.md`](gap_analysis_advanced_physics_2025.md)
 

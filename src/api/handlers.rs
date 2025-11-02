@@ -125,7 +125,7 @@ pub async fn list_models(
     let models = vec![
         ModelMetadata {
             model_id: "model_001".to_string(),
-            physics_domain: "navier_stokes".to_string(),
+            physics_domain: "acoustic_wave".to_string(),
             created_at: chrono::Utc::now() - chrono::Duration::days(1),
             training_config: crate::api::TrainingConfig {
                 collocation_points: 10000,
@@ -173,7 +173,7 @@ pub async fn get_model_info(
 
     let model = ModelMetadata {
         model_id,
-        physics_domain: "heat_transfer".to_string(),
+        physics_domain: "acoustic_wave".to_string(),
         created_at: chrono::Utc::now() - chrono::Duration::hours(2),
         training_config: crate::api::TrainingConfig {
             collocation_points: 5000,

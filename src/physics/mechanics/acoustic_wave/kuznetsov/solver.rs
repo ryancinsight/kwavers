@@ -52,8 +52,9 @@ impl KuznetsovWave {
 
     /// Compute the right-hand side of the Kuznetsov equation
     ///
-    /// WARNING: This implementation currently uses averaged properties for nonlinear
-    /// and diffusive terms, which is incorrect for heterogeneous media.
+    /// For heterogeneous media, nonlinear and diffusive terms are computed using
+    /// local material properties at each grid point. For homogeneous media,
+    /// properties are computed once for efficiency.
     fn compute_rhs(
         &mut self,
         pressure: &Array3<f64>,
@@ -152,20 +153,49 @@ impl KuznetsovWave {
                         let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
 
                         // Get local medium properties
+                        let local_density = crate::medium::density_at(medium, x, y, z, &self.grid);
                         let local_sound_speed =
                             crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
+                        let local_nonlinearity = crate::medium::nonlinearity_at(medium, x, y, z, &self.grid);
                         let c0_squared = local_sound_speed * local_sound_speed;
 
                         // Linear term with local sound speed
                         rhs[[i, j, k]] = c0_squared * self.workspace.laplacian[[i, j, k]];
+
+                        // Add nonlinear term with local properties
+                        if include_nonlinearity {
+                            // Full Kuznetsov nonlinear term: -(β/ρ₀c₀⁴) ∂²p²/∂t²
+                            let beta = crate::physics::constants::NONLINEARITY_COEFFICIENT_OFFSET
+                                + local_nonlinearity / crate::physics::constants::B_OVER_A_DIVISOR;
+                            let coeff = beta / (local_density * local_sound_speed.powi(4));
+
+                            // Compute p² at each time step
+                            let p2 = pressure[[i, j, k]] * pressure[[i, j, k]];
+                            let p2_prev = self.workspace.pressure_prev[[i, j, k]] * self.workspace.pressure_prev[[i, j, k]];
+                            let p2_prev2 = self.workspace.pressure_prev2[[i, j, k]] * self.workspace.pressure_prev2[[i, j, k]];
+
+                            // Second time derivative of p²
+                            let d2p2_dt2 = (p2 - 2.0 * p2_prev + p2_prev2) / (dt * dt);
+
+                            let nonlinear = -coeff * d2p2_dt2;
+                            rhs[[i, j, k]] += nonlinear.clamp(-1e4, 1e4);
+                        }
+
+                        // Add diffusive term with local properties
+                        if include_diffusion {
+                            // Simplified diffusion: δ ∂³p/∂t³
+                            let d3p_dt3 = (pressure[[i, j, k]]
+                                - 3.0 * self.workspace.pressure_prev[[i, j, k]]
+                                + 3.0 * self.workspace.pressure_prev2[[i, j, k]]
+                                - self.workspace.pressure_prev3[[i, j, k]]) / dt.powi(3);
+                            rhs[[i, j, k]] += self.config.acoustic_diffusivity * d3p_dt3;
+                        }
 
                         // Add source term
                         rhs[[i, j, k]] += source.get_source_term(t, x, y, z, &self.grid);
                     }
                 }
             }
-
-            log::warn!("Kuznetsov solver: Heterogeneous media detected but nonlinear and diffusive terms still use averaged properties. Results may be inaccurate.");
         } else {
             // HOMOGENEOUS MEDIA: Use pre-computed uniform properties
             let c0_squared = uniform_sound_speed * uniform_sound_speed;

@@ -48,12 +48,19 @@ pub enum SpatialOrder {
 
 impl SpatialOrder {
     /// Get the CFL stability limit for this spatial order
+    ///
+    /// For 3D finite difference schemes with central differences:
+    /// - 2nd order: CFL ≤ 1/√(3) ≈ 0.577
+    /// - 4th order: CFL ≤ 1/√(15) ≈ 0.258
+    /// - 6th order: CFL ≤ 1/√(27) ≈ 0.192
+    ///
+    /// Reference: Gustafsson et al. (1995) "Time compact difference schemes"
     #[must_use]
     pub fn cfl_limit(&self) -> f64 {
         match self {
-            SpatialOrder::Second => 1.0 / (3.0_f64).sqrt(), // Theoretical limit: 1/√3 ≈ 0.577
-            SpatialOrder::Fourth => 0.50,                   // Conservative value for 4th-order
-            SpatialOrder::Sixth => 0.40,                    // Conservative value for 6th-order
+            SpatialOrder::Second => 1.0 / (3.0_f64).sqrt(),  // 1/√3 ≈ 0.577
+            SpatialOrder::Fourth => 1.0 / (15.0_f64).sqrt(), // 1/√15 ≈ 0.258
+            SpatialOrder::Sixth => 1.0 / (27.0_f64).sqrt(),  // 1/√27 ≈ 0.192
         }
     }
 
@@ -189,9 +196,10 @@ mod tests {
 
     #[test]
     fn test_spatial_order_cfl_limits() {
-        assert!((SpatialOrder::Second.cfl_limit() - 0.577).abs() < 0.001);
-        assert_eq!(SpatialOrder::Fourth.cfl_limit(), 0.50);
-        assert_eq!(SpatialOrder::Sixth.cfl_limit(), 0.40);
+        // CORRECTED: Theoretical CFL limits for 3D finite difference schemes
+        assert!((SpatialOrder::Second.cfl_limit() - 0.577).abs() < 0.001);  // 1/√3
+        assert!((SpatialOrder::Fourth.cfl_limit() - 0.258).abs() < 0.001);  // 1/√15
+        assert!((SpatialOrder::Sixth.cfl_limit() - 0.192).abs() < 0.001);   // 1/√27
     }
 
     #[test]

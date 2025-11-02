@@ -38,7 +38,7 @@ pub enum GpuAffinity {
 }
 
 /// Communication channel between GPUs
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CommunicationChannel {
     /// Channel bandwidth (GB/s)
     pub bandwidth: f64,
@@ -84,8 +84,10 @@ impl MultiGpuContext {
         let mut peer_accessibility = Vec::new();
 
         // Enumerate and create contexts for all available GPUs
+        let adapters = instance.enumerate_adapters(wgpu::Backends::all());
         let mut adapter_count = 0;
-        for await adapter in instance.enumerate_adapters(wgpu::Backends::all()) {
+
+        for adapter in adapters {
             // Skip software adapters
             if matches!(adapter.get_info().backend, wgpu::Backend::BrowserWebGpu) {
                 continue;
@@ -320,7 +322,7 @@ impl MultiGpuContext {
     }
 
     /// Calculate optimal GPU for workload based on affinity
-    pub fn optimal_gpu_for_workload(&self, workload_size: usize, preferred_gpu: Option<usize>) -> usize {
+    pub fn optimal_gpu_for_workload(&self, _workload_size: usize, preferred_gpu: Option<usize>) -> usize {
         if let Some(gpu) = preferred_gpu {
             if gpu < self.contexts.len() {
                 return gpu;

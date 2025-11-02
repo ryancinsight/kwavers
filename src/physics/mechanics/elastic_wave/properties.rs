@@ -138,15 +138,15 @@ impl AnisotropicElasticProperties {
 
         // Validate symmetry (within numerical tolerance)
         const TOLERANCE: f64 = 1e-10;
-        for i in 0..6 {
+        for (i, row_i) in stiffness.iter().enumerate() {
             for j in i + 1..6 {
-                if (stiffness[i][j] - stiffness[j][i]).abs() > TOLERANCE {
+                if (row_i[j] - stiffness[j][i]).abs() > TOLERANCE {
                     return Err(PhysicsError::InvalidParameter {
                         parameter: "stiffness tensor".to_string(),
-                        value: stiffness[i][j],
+                        value: row_i[j],
                         reason: format!(
                             "Stiffness tensor must be symmetric. C[{}][{}]={} != C[{}][{}]={}",
-                            i, j, stiffness[i][j], j, i, stiffness[j][i]
+                            i, j, row_i[j], j, i, stiffness[j][i]
                         ),
                     }
                     .into());

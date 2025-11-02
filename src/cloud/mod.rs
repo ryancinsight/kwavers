@@ -126,8 +126,10 @@ pub struct DeploymentMetrics {
 #[derive(Debug)]
 pub struct CloudPINNService {
     /// Cloud provider abstraction
+    #[allow(dead_code)]
     provider: CloudProvider,
     /// Client configuration
+    #[allow(dead_code)]
     config: HashMap<String, String>,
     /// Deployment handles
     deployments: HashMap<String, DeploymentHandle>,
@@ -312,6 +314,7 @@ impl CloudPINNService {
     }
 
     /// Validate deployment configuration
+    #[allow(dead_code)]
     fn validate_config(&self, config: &DeploymentConfig) -> KwaversResult<()> {
         if config.provider != self.provider {
             return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {

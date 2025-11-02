@@ -490,7 +490,6 @@ mod tests {
 
         let solver = solver.unwrap();
         assert!(solver.available_domains().is_empty());
-        assert!(!solver.has_domain("navier_stokes"));
     }
 
     #[test]

@@ -2,6 +2,7 @@
 
 use super::{LocalizationConfig, LocalizationResult, Position, SensorArray};
 use crate::error::KwaversResult;
+use num_complex::Complex64;
 use serde::{Deserialize, Serialize};
 
 /// Localization method
@@ -233,24 +234,26 @@ impl BeamformingAlgorithm {
     ) -> f64 {
         let c = config.sound_speed;
 
-        // Calculate delays from position to each sensor
-        let mut delayed_sum = 0.0;
+        // CORRECTED: Calculate steered response with complex arithmetic
+        let mut beamformed = Complex64::new(0.0, 0.0);
 
         for (i, &measurement) in measurements.iter().enumerate().take(array.num_sensors()) {
             let sensor_pos = array.get_sensor_position(i);
             let distance = position.distance_to(sensor_pos);
             let delay = distance / c;
 
-            // Phase shift: exp(-j ω τ) ≈ cos(ω τ) for real signals
-            // For narrowband signals: cos(2π f τ)
+            // CORRECTED: Phase shift for coherent beamforming
+            // exp(j ω τ) = cos(ω τ) + j sin(ω τ)
             let phase = 2.0 * std::f64::consts::PI * config.frequency * delay;
+            let steering_weight = Complex64::new(phase.cos(), phase.sin());
 
-            // Apply phase shift and weight (uniform weights = 1/N)
+            // Apply steering weight and uniform weighting
             let weight = 1.0 / (array.num_sensors() as f64);
-            delayed_sum += weight * measurement * phase.cos();
+            let data_complex = Complex64::new(measurement, 0.0);
+            beamformed += weight * steering_weight * data_complex;
         }
 
         // Return power (magnitude squared)
-        delayed_sum.powi(2)
+        beamformed.norm_sqr()
     }
 }

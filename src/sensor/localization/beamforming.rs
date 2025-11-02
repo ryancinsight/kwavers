@@ -3,12 +3,13 @@
 use super::{Position, SensorArray};
 use crate::error::KwaversResult;
 use ndarray::Array2;
+use num_complex::Complex64;
 
 /// Beamformer for source localization
 #[derive(Debug)]
 pub struct Beamformer {
     #[allow(dead_code)]
-    steering_vectors: Array2<f64>,
+    steering_vectors: Array2<Complex64>,
     #[allow(dead_code)]
     frequency: f64,
     #[allow(dead_code)]
@@ -27,7 +28,7 @@ impl Beamformer {
     #[must_use]
     pub fn new(array: &SensorArray, frequency: f64, sound_speed: f64) -> Self {
         let num_sensors = array.num_sensors();
-        let mut steering_vectors = Array2::zeros((num_sensors, 360));
+        let mut steering_vectors = Array2::<Complex64>::zeros((num_sensors, 360));
 
         // Compute steering vectors for each azimuthal angle (0-359 degrees)
         let wavelength = sound_speed / frequency;
@@ -44,9 +45,9 @@ impl Beamformer {
                 let pos_array = position.to_array();
                 let delay =
                     (pos_array[0] * direction[0] + pos_array[1] * direction[1]) / sound_speed;
-                // Phase of complex exponential (using magnitude only for simplicity)
+                // CORRECTED: Complex steering vector for proper phase alignment
                 let phase = k * sound_speed * delay;
-                steering_vectors[[sensor_idx, angle_deg]] = phase.cos();
+                steering_vectors[[sensor_idx, angle_deg]] = Complex64::new(phase.cos(), phase.sin());
             }
         }
 
@@ -90,16 +91,19 @@ impl Beamformer {
         // Extract steering vector for this direction
         let steering = self.steering_vectors.column(angle_idx);
 
-        // Compute beamformed output: sum of weighted sensor data
-        let mut power = 0.0;
+        // CORRECTED: Compute beamformed output with complex arithmetic
+        let mut beamformed = Complex64::new(0.0, 0.0);
         if let Some(data_col) = data.columns().into_iter().next() {
             for (i, &s) in steering.iter().enumerate() {
                 if i < data_col.len() {
-                    power += s * data_col[i];
+                    // Convert real data to complex and multiply by steering weight
+                    let data_complex = Complex64::new(data_col[i], 0.0);
+                    beamformed += s * data_complex;
                 }
             }
         }
 
-        power.abs()
+        // Return power (magnitude squared)
+        beamformed.norm_sqr()
     }
 }

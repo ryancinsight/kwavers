@@ -22,9 +22,34 @@ mod config;
 mod covariance;
 mod processor;
 mod steering;
+mod beamforming_3d;
+#[cfg(feature = "gpu")]
+mod shaders;
+#[cfg(feature = "pinn")]
+mod neural;
 
 pub use algorithms::{AlgorithmImplementation, BeamformingAlgorithm};
 pub use config::BeamformingConfig;
 pub use covariance::{CovarianceEstimator, SpatialSmoothing};
 pub use processor::BeamformingProcessor;
 pub use steering::{SteeringVector, SteeringVectorMethod};
+pub use beamforming_3d::{
+    ApodizationWindow,
+    BeamformingAlgorithm3D,
+    BeamformingConfig3D,
+    BeamformingMetrics,
+    BeamformingProcessor3D,
+};
+
+#[cfg(feature = "pinn")]
+pub use neural::{
+    NeuralBeamformingProcessor,
+    PINNBeamformingConfig,
+    NeuralBeamformingResult,
+    DistributedNeuralBeamformingProcessor,
+    DistributedNeuralBeamformingResult,
+    DistributedNeuralBeamformingMetrics,
+    ModelParallelConfig,
+    PipelineStage,
+    FaultToleranceState,
+};
