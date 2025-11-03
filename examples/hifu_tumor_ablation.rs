@@ -25,6 +25,7 @@ struct HIFUSimulationConfig {
     /// Target tumor size (mm)
     tumor_size: [f64; 3],
     /// Treatment duration (seconds)
+    #[allow(dead_code)]
     treatment_time: f64,
     /// Monitoring interval (seconds)
     monitor_interval: f64,
@@ -234,6 +235,7 @@ struct TreatmentResult {
     target_temperature: f64,
     thermal_dose_target: f64,
     ablation_volume: f64,
+    #[allow(dead_code)]
     temperature_history: Vec<f64>,
 }
 
@@ -242,7 +244,7 @@ fn simulate_treatment(
     plan: &HIFUTreatmentPlan,
     transducer: &HIFUTransducer,
     grid: &Grid,
-    medium: &HomogeneousMedium,
+    _medium: &HomogeneousMedium,
     config: &HIFUSimulationConfig,
 ) -> KwaversResult<TreatmentResult> {
     let mut thermal_dose = ThermalDose::new(grid);

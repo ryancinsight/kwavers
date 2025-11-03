@@ -40,7 +40,6 @@
 //! ```
 
 use std::time::Instant;
-use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
 mod ml_demo {

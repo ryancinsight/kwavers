@@ -21,6 +21,7 @@
 | **ADR-018: Dead Code Allowance Policy** | ACCEPTED | Architectural fields allowed with justification | Pragmatism vs strict lint enforcement |
 | **ADR-019: GRASP Pragmatic Compliance** | ACCEPTED | 7 modules >500 lines documented for future refactoring (Sprint 149) | Pragmatism vs ideal architecture |
 | **ADR-020: Unsafe Documentation Clarity** | ACCEPTED | Explicit trust assumptions for rkyv deserialization (Sprint 149) | Documentation clarity vs brevity |
+| **ADR-021: Interdisciplinary Ultrasound-Light Physics** | ACCEPTED | Unified acoustic-optic simulation through cavitation-sonoluminescence coupling | Research complexity vs comprehensive physics modeling |
 
 ## Current Architecture Status
 
@@ -285,9 +286,37 @@
 - Documented validation approach for untrusted data (`rkyv::check_archived_root`)
 - Listed safety invariants (byte slice lifetime, error handling)  
 **Trade-offs**: Increased documentation vs conciseness (clarity wins)  
-**Impact**: Improved safety understanding for maintainers  
-**Validation**: 100% unsafe documentation coverage maintained (24/24 blocks)  
+**Impact**: Improved safety understanding for maintainers
+**Validation**: 100% unsafe documentation coverage maintained (24/24 blocks)
 **Date**: Sprint 149
+
+#### ADR-021: Interdisciplinary Ultrasound-Light Physics Architecture
+**Decision**: Unified acoustic-optic simulation platform through cavitation-sonoluminescence coupling
+**Status**: ACCEPTED (Sprint 170+)
+**Rationale**: Sonoluminescence represents the fundamental bridge between acoustic (ultrasound) and optical (light) physics domains. Ultrasound-induced cavitation bubbles emit light through extreme temperature/pressure conditions, creating a natural interdisciplinary physics coupling that enables multi-modal imaging and energy conversion research.
+
+**Key Architectural Implications**:
+- **Unified Physics Framework**: Single codebase modeling acoustic wave propagation → cavitation dynamics → photon emission
+- **Multi-Modal Integration**: Ultrasound excitation + optical detection for advanced imaging modalities
+- **Energy Conversion Pathways**: Acoustic-to-thermal-to-radiative energy transfer modeling
+- **Research Platform**: Enables sono-optics, sonochemistry, and photoacoustic imaging research
+
+**Technical Design**:
+- **Module Organization**: Separate acoustic/optical physics with shared cavitation interfaces
+- **Data Flow**: Ultrasound excitation → bubble dynamics → photon emission → optical detection
+- **Validation**: Cross-domain physics validation (acoustic spectra → optical spectra)
+- **Extensibility**: Plugin architecture for specialized acoustic/optical models
+
+**Benefits**:
+- **Unique Value Proposition**: Only platform modeling complete acoustic-to-optic pathway
+- **Research Enablement**: Supports cutting-edge sono-optics and photoacoustics research
+- **Clinical Translation**: Multi-modal imaging for enhanced diagnostics
+- **Fundamental Physics**: Models energy conversion across acoustic/optical domains
+
+**Trade-offs**: Increased research complexity vs comprehensive interdisciplinary physics modeling
+**Evidence**: Sonoluminescence literature (Suslick, Barber, etc.), photoacoustic physics foundations
+**Status**: ACCEPTED - Core architectural principle for Kwavers platform
+**Date**: Sprint 170+
 
 ---
 

@@ -20,11 +20,15 @@
 //! - Prediction on arbitrary spatial-temporal points
 //! - Performance benchmarking vs analytical solution
 
+#[cfg(feature = "pinn")]
 use kwavers::error::KwaversResult;
+#[cfg(feature = "pinn")]
 use kwavers::ml::pinn::burn_wave_equation_2d::{
     BurnPINN2DConfig, BurnPINN2DWave, Geometry2D, BurnLossWeights2D,
 };
+#[cfg(feature = "pinn")]
 use ndarray::{Array1, Array2};
+#[cfg(feature = "pinn")]
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
@@ -33,6 +37,7 @@ use burn::backend::NdArray;
 #[cfg(feature = "pinn")]
 type Backend = burn::backend::Autodiff<NdArray<f32>>;
 
+#[cfg(feature = "pinn")]
 /// Analytical solution for 2D wave equation
 /// u(x,y,t) = sin(πx) * sin(πy) * cos(π√2 * c * t)
 fn analytical_solution_2d(x: f64, y: f64, t: f64, wave_speed: f64) -> f64 {
@@ -40,6 +45,7 @@ fn analytical_solution_2d(x: f64, y: f64, t: f64, wave_speed: f64) -> f64 {
     (x * std::f64::consts::PI).sin() * (y * std::f64::consts::PI).sin() * (k * wave_speed * t).cos()
 }
 
+#[cfg(feature = "pinn")]
 /// Generate training data from analytical solution
 fn generate_training_data(
     n_samples: usize,
@@ -73,6 +79,7 @@ fn generate_training_data(
 }
 
 /// Generate test grid for validation
+#[cfg(feature = "pinn")]
 fn generate_test_grid(nx: usize, ny: usize, nt: usize, domain_size: f64, t_max: f64) -> (Array1<f64>, Array1<f64>, Array1<f64>) {
     let mut x_test = Vec::new();
     let mut y_test = Vec::new();
@@ -99,6 +106,7 @@ fn generate_test_grid(nx: usize, ny: usize, nt: usize, domain_size: f64, t_max: 
     )
 }
 
+#[cfg(feature = "pinn")]
 /// Compute L2 error between predictions and analytical solution
 fn compute_l2_error(
     x_pred: &Array1<f64>,
@@ -272,7 +280,6 @@ fn main() -> KwaversResult<()> {
 }
 
 #[cfg(not(feature = "pinn"))]
-fn main() -> KwaversResult<()> {
+fn main() {
     println!("❌ PINN feature not enabled. Run with: cargo run --example pinn_2d_wave_equation --features pinn");
-    Ok(())
 }

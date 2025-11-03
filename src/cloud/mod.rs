@@ -5,6 +5,9 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
+#[cfg(feature = "pinn")]
+use std::sync::Arc;
+
 
 /// Cloud provider enumeration
 #[derive(Debug, Clone, PartialEq)]
@@ -199,12 +202,20 @@ impl CloudPINNService {
     pub async fn scale_deployment(
         &mut self,
         deployment_id: &str,
-        _target_instances: usize,
+        target_instances: usize,
     ) -> KwaversResult<()> {
         // Check if deployment exists first
         if !self.deployments.contains_key(deployment_id) {
             return Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
                 resource: format!("deployment {}", deployment_id),
+            }));
+        }
+
+        // Validate target instances
+        if target_instances == 0 {
+            return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                parameter: "target_instances".to_string(),
+                reason: "Must specify at least 1 instance".to_string(),
             }));
         }
 

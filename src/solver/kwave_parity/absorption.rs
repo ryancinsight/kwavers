@@ -162,7 +162,7 @@ pub fn apply_power_law_absorption(
 /// Compute fractional Laplacian ∇^α in k-space
 ///
 /// Implements the fractional derivative operator using 3D FFT:
-/// ∇^α f = FFT^{-1}[|k|^α · FFT[f]]
+/// ∇^α f = FFT^{-1}\[|k|^α · FFT\[f\]\]
 ///
 /// This is the proper implementation using full 3D FFT for spectral accuracy,
 /// replacing the previous 1D slice-based approach.

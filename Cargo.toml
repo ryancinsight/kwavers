@@ -46,6 +46,7 @@ lazy_static = "1.4"
 regex = "1.8"
 nifti = "0.17.0"
 chrono = { version = "0.4", features = ["serde"] }
+fastrand = "2.0"
 
 # Async runtime and structured logging (Sprint 138 - Persona Requirements)
 tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "sync", "time", "fs", "io-util"], optional = true }
@@ -60,6 +61,7 @@ parking_lot = "0.12"
 once_cell = "1.19"
 crossbeam = "0.8"
 flume = "0.11"
+futures = "0.3"
 
 # Testing utilities (minimal)
 approx = "0.5"
@@ -89,9 +91,9 @@ sha2 = { version = "0.10", optional = true }
 hmac = { version = "0.12", optional = true }
 redis = { version = "0.25", optional = true }
 deadpool-redis = { version = "0.14", optional = true }
-prometheus = { version = "0.13", optional = true }
+prometheus = { version = "0.14", optional = true }
 opentelemetry = { version = "0.21", features = ["trace", "metrics"], optional = true }
-opentelemetry-prometheus = { version = "0.14", optional = true }
+opentelemetry-prometheus-text-exporter = { version = "0.2", optional = true }
 
 [dev-dependencies]
 # Minimal dev dependencies for testing only
@@ -125,8 +127,10 @@ zero-copy = ["dep:rkyv"]             # Zero-copy serialization
 # Sprint 143: Added burn 0.18 integration (bincode compatibility resolved)
 pinn = ["dep:burn"]                  # Physics-informed neural networks with burn 0.18
 pinn-gpu = ["pinn", "gpu"]           # PINN with GPU acceleration via WGPU
+# Adaptive Beamforming Refactor - Sprint ADR-001
+legacy_algorithms = []               # Legacy beamforming algorithms (deprecated)
 # Sprint 159 - Enterprise API for production deployment
-api = ["dep:axum", "dep:tower", "dep:tower-http", "dep:jsonwebtoken", "dep:bcrypt", "dep:uuid", "dep:sha2", "dep:hmac", "dep:redis", "dep:deadpool-redis", "dep:prometheus", "dep:opentelemetry", "dep:opentelemetry-prometheus", "async-runtime", "structured-logging"]  # Enterprise REST API
+api = ["dep:axum", "dep:tower", "dep:tower-http", "dep:jsonwebtoken", "dep:bcrypt", "dep:uuid", "dep:sha2", "dep:hmac", "dep:redis", "dep:deadpool-redis", "dep:prometheus", "dep:opentelemetry", "dep:opentelemetry-prometheus-text-exporter", "async-runtime", "structured-logging"]  # Enterprise REST API
 full = ["gpu", "plotting", "parallel", "nifti", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn", "api"]
 
 [profile.dev]
@@ -286,3 +290,5 @@ harness = false
 name = "validation_benchmarks"
 harness = false
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }

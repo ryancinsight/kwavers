@@ -461,7 +461,7 @@ mod tests {
         let grid = Grid::new(20, 20, 10, 0.001, 0.001, 0.001).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
 
-        let mut ceus = ContrastEnhancedUltrasound::new(
+        let ceus = ContrastEnhancedUltrasound::new(
             &grid,
             &medium,
             1e6,

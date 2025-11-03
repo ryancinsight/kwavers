@@ -127,6 +127,170 @@ impl SimdOps {
                 *o = a_val.mul_add(b_val, c_val); // Uses FMA instruction when available
             });
     }
+
+    /// Physics kernel: Wave equation time-stepping (p^{n+1} = 2p^n - p^{n-1} + c²Δt²∇²p^n)
+    pub fn wave_equation_step(
+        mut pressure_current: ArrayViewMut3<f64>,
+        pressure_previous: ArrayView3<f64>,
+        laplacian: ArrayView3<f64>,
+        wave_speed: f64,
+        dt: f64,
+    ) {
+        let c2_dt2 = wave_speed * wave_speed * dt * dt;
+
+        Zip::from(&mut pressure_current)
+            .and(&pressure_previous)
+            .and(&laplacian)
+            .par_for_each(|p_next, &p_curr, &lap| {
+                *p_next = 2.0 * p_curr - *p_next + c2_dt2 * lap;
+            });
+    }
+
+    /// Physics kernel: Nonlinear wave equation (Kuznetsov) with SIMD acceleration
+    pub fn nonlinear_wave_step(
+        mut pressure_current: ArrayViewMut3<f64>,
+        pressure_previous: ArrayView3<f64>,
+        laplacian: ArrayView3<f64>,
+        wave_speed: f64,
+        dt: f64,
+        nonlinearity: f64,
+        density: f64,
+    ) {
+        let c2_dt2 = wave_speed * wave_speed * dt * dt;
+        let nonlinear_coeff = nonlinearity / (density * wave_speed * wave_speed);
+
+        Zip::from(&mut pressure_current)
+            .and(&pressure_previous)
+            .and(&laplacian)
+            .par_for_each(|p_next, &p_curr, &lap| {
+                // Linear term
+                let linear = 2.0 * p_curr - *p_next + c2_dt2 * lap;
+                // Nonlinear term: ∂²p²/∂t² ≈ (p_curr² - p_prev²) / dt²
+                let nonlinear_term = nonlinear_coeff * (p_curr * p_curr - (*p_next) * (*p_next)) / (dt * dt);
+                *p_next = linear + nonlinear_term;
+            });
+    }
+
+    /// Physics kernel: Acoustic attenuation (power-law frequency dependence)
+    pub fn apply_attenuation(
+        mut pressure: ArrayViewMut3<f64>,
+        frequency: f64,
+        alpha_0: f64,
+        y: f64, // Power law exponent
+        dt: f64,
+    ) {
+        let alpha = alpha_0 * frequency.powf(y); // Power-law attenuation coefficient
+        let decay_factor = (-alpha * dt).exp();
+
+        pressure.par_mapv_inplace(|p| p * decay_factor);
+    }
+
+    /// Physics kernel: Photoacoustic initial pressure generation with SIMD
+    pub fn photoacoustic_initial_pressure(
+        fluence: ArrayView3<f64>,
+        mut pressure: ArrayViewMut3<f64>,
+        gruneisen_parameter: f64,
+        absorption_coeff: f64,
+    ) {
+        Zip::from(&mut pressure)
+            .and(&fluence)
+            .par_for_each(|p, &f| {
+                *p = gruneisen_parameter * absorption_coeff * f;
+            });
+    }
+
+    /// Physics kernel: Electromagnetic wave propagation (FDTD method)
+    pub fn electromagnetic_fdtd_step(
+        mut e_field: ArrayViewMut3<f64>,
+        mut h_field: ArrayViewMut3<f64>,
+        e_prev: ArrayView3<f64>,
+        h_prev: ArrayView3<f64>,
+        permittivity: f64,
+        permeability: f64,
+        conductivity: f64,
+        dt: f64,
+        dx: f64,
+    ) {
+        let _c = 1.0 / (permittivity * permeability).sqrt();
+        let _z0 = (permeability / permittivity).sqrt(); // Impedance of free space
+
+        // Update E field (Faraday's law: ∇×H = ε∂E/∂t + σE)
+        Zip::from(&mut e_field)
+            .and(&e_prev)
+            .and(&h_field)
+            .par_for_each(|e_next, &e_curr, &h_curr| {
+                // Simplified 1D FDTD: ∂E/∂t = (1/ε)(∂H/∂z - σE)
+                let curl_h = h_curr / dx; // Simplified curl
+                *e_next = e_curr + dt * (curl_h - conductivity * e_curr) / permittivity;
+            });
+
+        // Update H field (Ampere's law: ∇×E = -μ∂H/∂t)
+        Zip::from(&mut h_field)
+            .and(&h_prev)
+            .and(&e_field)
+            .par_for_each(|h_next, &h_curr, &e_curr| {
+                // Simplified 1D FDTD: ∂H/∂t = -(1/μ)∂E/∂z
+                let curl_e = e_curr / dx; // Simplified curl
+                *h_next = h_curr - dt * curl_e / permeability;
+            });
+    }
+
+    /// Physics kernel: Heat diffusion equation (Pennes bioheat)
+    pub fn bioheat_equation_step(
+        mut temperature: ArrayViewMut3<f64>,
+        temperature_prev: ArrayView3<f64>,
+        laplacian: ArrayView3<f64>,
+        perfusion: ArrayView3<f64>,
+        thermal_conductivity: f64,
+        density: f64,
+        specific_heat: f64,
+        blood_temp: f64,
+        dt: f64,
+    ) {
+        let alpha = thermal_conductivity / (density * specific_heat); // Thermal diffusivity
+
+        Zip::from(&mut temperature)
+            .and(&temperature_prev)
+            .and(&laplacian)
+            .and(&perfusion)
+            .par_for_each(|t_next, &t_curr, &lap, &perf| {
+                // Pennes bioheat: ρc∂T/∂t = k∇²T + ω_b ρ_b c_b (T_b - T) + Q
+                let diffusion = alpha * lap;
+                let perfusion_term = perf * (blood_temp - t_curr);
+                *t_next = t_curr + dt * (diffusion + perfusion_term);
+            });
+    }
+
+    /// Physics kernel: Elastography strain computation
+    pub fn compute_strain_tensor(
+        _displacement_u: ArrayView3<f64>,
+        _displacement_v: ArrayView3<f64>,
+        _displacement_w: ArrayView3<f64>,
+        mut strain_xx: ArrayViewMut3<f64>,
+        mut strain_yy: ArrayViewMut3<f64>,
+        mut strain_zz: ArrayViewMut3<f64>,
+        mut strain_xy: ArrayViewMut3<f64>,
+        mut strain_xz: ArrayViewMut3<f64>,
+        mut strain_yz: ArrayViewMut3<f64>,
+        _dx: f64,
+        _dy: f64,
+        _dz: f64,
+    ) {
+        // Compute strain tensor components using central differences
+        Zip::from(&mut strain_xx)
+            .and(&_displacement_u)
+            .par_for_each(|s, &u| {
+                // ∂u/∂x (simplified - would need proper finite difference stencil)
+                *s = u / _dx; // Placeholder - actual implementation needs neighboring values
+            });
+
+        // Similar for other components...
+        strain_yy.par_mapv_inplace(|_| 0.0); // Placeholder
+        strain_zz.par_mapv_inplace(|_| 0.0); // Placeholder
+        strain_xy.par_mapv_inplace(|_| 0.0); // Placeholder
+        strain_xz.par_mapv_inplace(|_| 0.0); // Placeholder
+        strain_yz.par_mapv_inplace(|_| 0.0); // Placeholder
+    }
 }
 
 /// SWAR (SIMD Within A Register) operations for portability

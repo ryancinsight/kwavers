@@ -47,6 +47,7 @@ pub trait BeamformingAlgorithm {
 
 // Re-export subspace trackers and related types from the old module
 // These are temporarily exported from the old file until they are refactored
+#[cfg(feature = "legacy_algorithms")]
 pub use super::algorithms_old::{OrthonormalSubspaceTracker, SubspaceTracker};
 
 #[cfg(test)]

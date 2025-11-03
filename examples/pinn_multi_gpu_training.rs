@@ -11,6 +11,7 @@ use kwavers::ml::pinn::{
     DistributedPinnTrainer, DecompositionStrategy,
     LoadBalancingAlgorithm, MultiGpuManager
 };
+#[cfg(feature = "pinn")]
 use kwavers::ml::pinn::distributed_training::DistributedTrainingConfig;
 #[cfg(all(feature = "pinn", feature = "gpu"))]
 use kwavers::gpu::MultiGpuContext;
@@ -167,6 +168,8 @@ fn main() -> KwaversResult<()> {
 
 #[cfg(not(feature = "pinn"))]
 fn main() {
-    println!("This example requires the 'pinn' feature to be enabled.");
-    println!("Run with: cargo run --example pinn_multi_gpu_training --features pinn");
+    println!("🚫 PINN feature not enabled!");
+    println!("   This example requires the 'pinn' feature to be enabled.");
+    println!("   Run with: cargo run --example pinn_multi_gpu_training --features pinn");
+    std::process::exit(1);
 }

@@ -25,7 +25,6 @@ use kwavers::{
     KwaversResult,
 };
 use ndarray::{Array3, Array4};
-use std::time::Instant;
 
 #[cfg(feature = "gpu")]
 #[tokio::main]
@@ -308,6 +307,7 @@ async fn demonstrate_performance_benchmarking() -> KwaversResult<()> {
 }
 
 /// Generate synthetic RF data for testing
+#[allow(dead_code)]
 fn generate_synthetic_rf_data(frames: usize, channels: usize, samples: usize) -> Array4<f32> {
     use std::f32::consts::PI;
 
@@ -335,6 +335,7 @@ fn generate_synthetic_rf_data(frames: usize, channels: usize, samples: usize) ->
 }
 
 /// Generate synthetic frame data for streaming
+#[allow(dead_code)]
 fn generate_synthetic_frame(channels: usize, samples: usize) -> Array3<f32> {
     use std::f32::consts::PI;
 

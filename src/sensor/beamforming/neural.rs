@@ -26,7 +26,7 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use crate::sensor::beamforming::{BeamformingConfig, SteeringVector};
-use ndarray::{Array3, Array4, ArrayView3};
+use ndarray::{Array3, Array4, ArrayView3, s};
 use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
@@ -1126,7 +1126,7 @@ impl DistributedNeuralBeamformingProcessor {
                   failed_gpu_idx, healthy_gpus.len(), healthy_gpus);
 
         // Update model parallelism configuration if needed
-        if let Some(config) = &mut self.model_parallel_config {
+        if let Some(mut config) = self.model_parallel_config.take() {
             // Reassign failed GPU's layers to healthy GPUs
             let failed_layers: Vec<usize> = config.layer_assignments.iter()
                 .filter(|(_, &gpu_idx)| gpu_idx == failed_gpu_idx)
@@ -1141,7 +1141,8 @@ impl DistributedNeuralBeamformingProcessor {
             }
 
             // Recreate pipeline stages
-            self.recreate_pipeline_stages(config)?;
+            self.recreate_pipeline_stages(&mut config)?;
+            self.model_parallel_config = Some(config);
         }
 
         Ok(())

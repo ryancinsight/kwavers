@@ -210,7 +210,7 @@ impl FDTD1DWaveSolver {
     ///
     /// # Returns
     ///
-    /// Array2<f64> of shape (nx, nt) containing field values at all times
+    /// `Array2<f64>` of shape (nx, nt) containing field values at all times
     ///
     /// # Example
     ///

@@ -37,6 +37,7 @@ use std::collections::HashMap;
 
 // Core modules
 pub mod boundary;
+pub mod clinical; // Clinical workflows and decision support
 pub mod cloud; // Sprint 155: Cloud integration for PINN deployment
 #[cfg(feature = "api")]
 pub mod api; // Sprint 159: Enterprise API for production deployment

@@ -81,9 +81,9 @@ pub struct LocalizationConfig {
     pub use_gpu: bool,
     /// Localization method
     pub method: LocalizationMethod,
-    /// Frequency of signal [Hz] (for beamforming)
+    /// Frequency of signal \[Hz\] (for beamforming)
     pub frequency: f64,
-    /// Search radius for grid-based methods [m]
+    /// Search radius for grid-based methods \[m\]
     pub search_radius: Option<f64>,
 }
 

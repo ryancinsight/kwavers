@@ -30,6 +30,7 @@
 //! - **DRY**: Reusable performance patterns
 //! - **YAGNI**: Only essential profiling features
 
+pub mod arena;
 pub mod benchmarks;
 pub mod metrics;
 pub mod optimization;
@@ -46,6 +47,7 @@ pub use optimization::{
     PrefetchStrategy, SimdLevel, StencilKernel,
 };
 
+pub use arena::{ArenaConfig, ArenaStats, BumpAllocator, FieldArena, ScopedArena, ThreadLocalArena};
 pub use safe_vectorization::SafeVectorOps;
 
 pub use profiling::{

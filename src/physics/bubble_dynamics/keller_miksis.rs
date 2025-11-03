@@ -99,9 +99,9 @@ impl KellerMiksisModel {
     ///
     /// # Arguments
     /// * `state` - Current bubble state (radius, velocity, etc.)
-    /// * `p_acoustic` - Acoustic pressure amplitude [Pa]
+    /// * `p_acoustic` - Acoustic pressure amplitude \[Pa\]
     /// * `dp_dt` - Time derivative of acoustic pressure [Pa/s]
-    /// * `t` - Current time [s]
+    /// * `t` - Current time \[s\]
     ///
     /// # Returns
     /// Bubble wall acceleration [m/s²]
@@ -309,7 +309,7 @@ impl KellerMiksisModel {
     ///
     /// # Arguments
     /// * `state` - Current bubble state
-    /// * `dt` - Time step [s]
+    /// * `dt` - Time step \[s\]
     pub fn update_mass_transfer(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
         use crate::physics::constants::{AVOGADRO, GAS_CONSTANT as R_GAS, M_WATER};
 
@@ -392,7 +392,7 @@ impl KellerMiksisModel {
     ///
     /// # Arguments
     /// * `state` - Current bubble state
-    /// * `dt` - Time step [s]
+    /// * `dt` - Time step \[s\]
     pub fn update_temperature(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
         use crate::physics::constants::H_VAP_WATER_100C;
 

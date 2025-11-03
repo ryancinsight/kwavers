@@ -1,7 +1,32 @@
-//! CEUS Image Reconstruction
+//! CEUS Image Reconstruction - Contrast-Enhanced Ultrasound Imaging
 //!
-//! Implements nonlinear beamforming, harmonic separation, and contrast
-//! image formation for CEUS imaging.
+//! ## Mathematical Theorems and Foundations
+//!
+//! ### Harmonic Imaging Theorem
+//! **Theorem**: Microbubble oscillations generate nonlinear harmonics at integer multiples of fundamental frequency
+//! **Foundation**: Nonlinear bubble dynamics produce 2nd, 3rd, and ultraharmonics (de Jong et al. 2002)
+//! **Mathematical Basis**: Rayleigh-Plesset equation with nonlinear terms predicts harmonic generation
+//!
+//! ### Pulse Inversion Theorem
+//! **Theorem**: Phase-inverted pulses cancel linear tissue signals while reinforcing nonlinear contrast signals
+//! **Foundation**: Tissue responds linearly, microbubbles respond nonlinearly (Simpson et al. 1999)
+//! **Mathematical Basis**: f(x) - f(-x) = 0 for linear systems, ≠0 for nonlinear systems
+//!
+//! ### Amplitude Modulation Theorem
+//! **Theorem**: Dual-frequency excitation enhances contrast-to-tissue ratio through destructive interference
+//! **Foundation**: Tissue and contrast signals have different frequency responses (Phillips 2001)
+//! **Mathematical Basis**: Complex envelope demodulation separates fundamental and harmonic components
+//!
+//! ### Microbubble Scattering Cross-Section
+//! **Theorem**: σ ∝ (ω²R₀³)² for Rayleigh scattering regime, σ ∝ ω⁴R₀⁶ for Mie scattering
+//! **Foundation**: Acoustic scattering theory applied to compressible spheres (Anderson 1950)
+//! **Mathematical Basis**: Solution to Helmholtz equation with radiation boundary conditions
+//!
+//! ## Literature References
+//! - de Jong, N. et al. (2002): "Principles and recent developments in ultrasound contrast agents"
+//! - Simpson, D.H. et al. (1999): "Pulse inversion Doppler: A new method for detecting nonlinear echoes"
+//! - Phillips, P. (2001): "Contrast pulse sequences (CPS): Imaging nonlinear microbubbles"
+//! - Anderson, V.C. (1950): "Sound scattering from a fluid sphere"
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;

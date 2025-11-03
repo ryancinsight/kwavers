@@ -50,8 +50,6 @@
 //! ```
 
 use std::time::Instant;
-use std::collections::HashMap;
-use std::sync::Arc;
 
 #[cfg(feature = "pinn")]
 mod pinn_demo {

@@ -203,7 +203,7 @@ fn validate_greens_function() -> KwaversResult<ValidationResult> {
 /// Update 3D wave equation using safe vectorization
 fn update_3d_wave_equation_safe(
     pressure: &mut Array3<f64>,
-    pressure_prev: &mut Array3<f64>,
+    _pressure_prev: &mut Array3<f64>,
     velocity_x: &mut Array3<f64>,
     velocity_y: &mut Array3<f64>,
     velocity_z: &mut Array3<f64>,
@@ -362,7 +362,7 @@ fn validate_rayleigh_sommerfeld_diffraction() -> KwaversResult<ValidationResult>
     let ny = 256;
     let nz = 1;
     let dx = 50e-6; // 50 μm for optical-scale resolution
-    let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
+    let _grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
 
     let frequency = 500e3; // 500 kHz
     let c0 = 1500.0; // Water
@@ -394,7 +394,7 @@ fn validate_rayleigh_sommerfeld_diffraction() -> KwaversResult<ValidationResult>
 
     // Propagate to far field using Fresnel propagation
     let propagation_distance = 20.0 * wavelength; // Far field
-    let mut far_field = propagate_fresnel_safe(&pressure, propagation_distance, wavelength, dx)?;
+    let far_field = propagate_fresnel_safe(&pressure, propagation_distance, wavelength, dx)?;
 
     // Calculate analytical Rayleigh-Sommerfeld solution
     let mut analytical_pattern = Array2::<f64>::zeros((nx, ny));
@@ -485,7 +485,7 @@ fn propagate_fresnel_safe(
             let r_squared = x * x + y * y;
 
             // Fresnel phase factor
-            let phase = k * r_squared / (2.0 * distance);
+            let _phase = k * r_squared / (2.0 * distance);
             let amplitude = (k / (2.0 * PI * distance)).sqrt();
 
             // Sum contributions from aperture (simplified)
@@ -546,7 +546,7 @@ fn validate_lloyds_mirror_interference() -> KwaversResult<ValidationResult> {
     let ny = 128;
     let nz = 1;
     let dx = 0.1e-3; // 0.1 mm
-    let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
+    let _grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
 
     let frequency = 1e6; // 1 MHz
     let c0 = 1500.0; // Water
@@ -618,7 +618,7 @@ fn validate_lloyds_mirror_interference() -> KwaversResult<ValidationResult> {
     // Theoretical analysis
     let source_separation = 10.0 * dx;
     let expected_fringe_spacing = wavelength * 100.0 * dx / source_separation; // Far field approximation
-    let measured_positions = max_amplitudes.len();
+    let _measured_positions = max_amplitudes.len();
 
     // Calculate errors based on theoretical expectations
     let max_error = if !max_amplitudes.is_empty() && !min_amplitudes.is_empty() {

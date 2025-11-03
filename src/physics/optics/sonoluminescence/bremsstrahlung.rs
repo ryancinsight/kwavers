@@ -198,35 +198,24 @@ impl BremsstrahlungModel {
 #[must_use]
 pub fn calculate_bremsstrahlung_emission(
     temperature_field: &Array3<f64>,
-    pressure_field: &Array3<f64>,
-    bubble_radius_field: &Array3<f64>,
+    electron_density_field: &Array3<f64>,
+    ion_density_field: &Array3<f64>,
     model: &BremsstrahlungModel,
-    ionization_energy: f64,
+    frequency: f64,
 ) -> Array3<f64> {
     let mut emission_field = Array3::zeros(temperature_field.dim());
 
     for ((i, j, k), &temp) in temperature_field.indexed_iter() {
-        let pressure = pressure_field[[i, j, k]];
-        let radius = bubble_radius_field[[i, j, k]];
+        let n_electron = electron_density_field[[i, j, k]];
+        let n_ion = ion_density_field[[i, j, k]];
 
-        if radius > 0.0 && temp > 5000.0 {
-            // Only significant at high temperatures
-            // Calculate ionization fraction
-            let x_ion = model.saha_ionization(temp, pressure, ionization_energy);
+        if n_electron > 0.0 && n_ion > 0.0 && temp > 5000.0 {
+            // Only significant at high temperatures and non-zero densities
+            // Calculate emission coefficient
+            let emission_coeff = model.emission_coefficient(frequency, temp, n_electron, n_ion);
 
-            // Total number density
-            let n_total = pressure / (BOLTZMANN_CONSTANT * temp);
-            let n_electron = x_ion * n_total;
-            let n_ion = n_electron; // Quasi-neutrality
-
-            // Bubble volume
-            let volume = 4.0 / 3.0 * PI * radius.powi(3);
-
-            // Total bremsstrahlung power
-            let power = model.total_power(temp, n_electron, n_ion, volume);
-
-            // Power density
-            emission_field[[i, j, k]] = power / volume.max(1e-20);
+            // Convert to power density (simplified - assumes unit volume)
+            emission_field[[i, j, k]] = emission_coeff;
         }
     }
 

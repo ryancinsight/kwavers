@@ -1,10 +1,16 @@
-//! Advanced Beamforming Algorithms
+//! Advanced Beamforming Algorithms (DEPRECATED)
 //!
-//! This module implements state-of-the-art beamforming algorithms including:
-//! - Delay-and-Sum (conventional beamforming)
-//! - MVDR (Capon beamformer - Minimum Variance Distortionless Response)
-//! - MUSIC (Multiple Signal Classification)
-//! - Eigenspace-based Minimum Variance (ESPMV)
+//! **DEPRECATED**: This module contains legacy beamforming implementations that have been
+//! refactored into dedicated submodules. Use the implementations in the respective submodules
+//! instead:
+//! - `conventional.rs` for Delay-and-Sum
+//! - `adaptive.rs` for MVDR and Robust Capon
+//! - `subspace.rs` for MUSIC and Eigenspace MV
+//! - `tapering.rs` for covariance tapering
+//! - `past.rs` and `opast.rs` for subspace tracking
+//!
+//! This module is maintained for backwards compatibility during the transition period.
+//! Enable with `--features legacy_algorithms` if you need the old implementations.
 //!
 //! # References
 //! - Capon (1969), "High-resolution frequency-wavenumber spectrum analysis"
@@ -12,6 +18,7 @@
 //! - Van Trees (2002), "Optimum Array Processing"
 //! - Stoica & Nehorai (1990), "MUSIC, maximum likelihood, and Cramer-Rao bound"
 
+#![cfg(feature = "legacy_algorithms")]
 // This file is being refactored into submodules - allow uppercase acronyms temporarily
 #![allow(clippy::upper_case_acronyms)]
 

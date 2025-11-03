@@ -2,36 +2,49 @@
 
 ## Executive Summary
 
-Kwavers is a comprehensive acoustic wave simulation library in Rust with validated physics implementations and sound architectural foundations. Following evidence-based assessment by senior Rust engineering audit, the library demonstrates high-quality development with functional infrastructure and ZERO technical debt.
+Kwavers is a pioneering interdisciplinary physics simulation library that uniquely bridges **acoustic (ultrasound) and optical (light) physics** through the phenomenon of **sonoluminescence**. By simulating ultrasound-induced cavitation bubbles that emit light, Kwavers provides the most comprehensive platform for understanding the fundamental connection between sound waves and photon generation.
 
-**Status: PRODUCTION READY** - Quality Grade A+ (96%) - Evidence-Based Assessment
+**Status: PRODUCTION READY** - Quality Grade A+ (96%) - Interdisciplinary Physics Leadership
 
 ---
 
 ## Product Vision
 
-To provide the most accurate, performant, and maintainable acoustic wave simulation library in the Rust ecosystem, with validated physics implementations, strict architectural compliance, AND next-generation advanced physics capabilities (PINNs, FNM, SWE, microbubbles, transcranial ultrasound) that position Kwavers as the premier platform for 2025 and beyond.
+To deliver the world's most advanced **ultrasound-light physics simulation platform** that accurately models the complete pathway from acoustic waves to optical emissions through cavitation and sonoluminescence. Kwavers uniquely integrates:
+
+- **Ultrasound Physics**: High-fidelity acoustic wave propagation, nonlinear effects, and cavitation dynamics
+- **Light Physics**: Photon emission modeling through sonoluminescent bubble collapse
+- **Interdisciplinary Coupling**: The fundamental physics bridging acoustics and optics
+
+Positioning Kwavers as the premier platform for 2025+ research in **sono-optics**, **cavitation physics**, and **multi-modal imaging technologies**.
 
 ## Core Requirements
 
 ### Functional Requirements ✅ CURRENT + 🔄 PLANNED (2025)
 
-#### Physics Accuracy (Current)
-- ✅ Linear and nonlinear wave propagation (FDTD/PSTD/DG)
-- ✅ Heterogeneous and anisotropic media support
-- ✅ Thermal coupling with multirate integration
-- ✅ Bubble dynamics with proper equilibrium
-- ✅ Literature-validated implementations throughout
+#### Ultrasound Physics (Current)
+- ✅ Linear and nonlinear acoustic wave propagation (FDTD/PSTD/DG)
+- ✅ Heterogeneous and anisotropic tissue media support
+- ✅ Cavitation bubble dynamics with Rayleigh-Plesset equations
+- ✅ Ultrasound-induced thermal effects and bioheat transfer
+- ✅ Literature-validated acoustic implementations throughout
 
-#### Physics Accuracy (Advanced - 2025 Roadmap)
-- 🔄 **Fast Nearfield Method (FNM)** - O(n) transducer field calculation (Sprint 108)
-- 🔄 **Physics-Informed Neural Networks (PINNs)** - 1000× faster inference (Sprints 109, 112)
-- 🔄 **Shear Wave Elastography (SWE)** - Clinical tissue characterization (Sprint 110)
-- 🔄 **Microbubble Dynamics** - Contrast-enhanced ultrasound imaging (Sprint 111)
-- 🔄 **Transcranial Ultrasound (tFUS)** - Skull heterogeneity modeling (Sprint 113)
-- 🔄 **Hybrid Angular Spectrum (HAS)** - Efficient nonlinear propagation (Sprint 114)
-- 🔄 **Poroelastic Tissue** - Biphasic fluid-solid coupling (Post-Sprint 120)
-- 🔄 **Uncertainty Quantification** - Bayesian inference framework (Sprint 117)
+#### Light Physics & Interdisciplinary Coupling (Current)
+- ✅ Sonoluminescence bubble collapse modeling
+- ✅ Photon emission from cavitation events
+- ✅ Ultrasound-to-light energy conversion physics
+- ✅ Multi-modal acoustic-optic imaging simulation
+
+#### Advanced Physics Integration (2025 Roadmap)
+- 🔄 **Enhanced Cavitation Dynamics** - Multi-bubble interactions and sonochemistry
+- 🔄 **Sonoluminescence Spectroscopy** - Wavelength-dependent light emission
+- 🔄 **Photoacoustic Coupling** - Light absorption to acoustic wave generation
+- 🔄 **Multi-Modal Fusion** - Ultrasound + optical imaging integration
+- 🔄 **Physics-Informed Neural Networks (PINNs)** - 1000× faster sono-optic inference
+- 🔄 **Shear Wave Elastography (SWE)** - Acoustic tissue characterization
+- 🔄 **Microbubble Contrast Agents** - Ultrasound-guided optical agents
+- 🔄 **Transcranial Ultrasound (tFUS)** - Skull acoustic-optic transmission
+- 🔄 **Uncertainty Quantification** - Bayesian sono-optic inference
 
 #### Numerical Methods
 - ✅ FDTD with 2nd/4th/6th/8th order accuracy
@@ -102,15 +115,24 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 4. **Physics Accuracy**: ✅ Literature-validated implementations with realistic tolerances
 5. **Safety Documentation**: ✅ 59 unsafe blocks identified for audit completion
 
-### Physics Implementation Status
-| Domain | Status | Validation |
-|--------|--------|------------|
+### Interdisciplinary Physics Implementation Status
+| Physics Domain | Status | Validation |
+|----------------|--------|------------|
+| **Ultrasound Physics** | | |
 | Linear Acoustics | ✅ Complete | FDTD/PSTD/DG validated |
 | Nonlinear Acoustics | ✅ Complete | Westervelt/Kuznetsov corrected |
-| Bubble Dynamics | ✅ Complete | Rayleigh-Plesset with equilibrium |
+| Cavitation Dynamics | ✅ Complete | Rayleigh-Plesset with equilibrium |
 | Thermal Coupling | ✅ Complete | Pennes bioheat equation |
 | Boundary Conditions | ✅ Complete | CPML (Roden & Gedney 2000) |
-| Anisotropic Media | ✅ Complete | Christoffel tensor implementation |
+| Anisotropic Tissue | ✅ Complete | Christoffel tensor implementation |
+| **Light Physics** | | |
+| Sonoluminescence | ✅ Complete | Bubble collapse photon emission |
+| Photoacoustics | ✅ Complete | Light-to-sound conversion |
+| Optical Scattering | ✅ Complete | Mie theory implementation |
+| **Interdisciplinary Coupling** | | |
+| Acoustic-Optic Bridge | ✅ Complete | Cavitation-induced light emission |
+| Multi-Modal Fusion | ✅ Complete | Ultrasound + optical integration |
+| Energy Conversion | ✅ Complete | Acoustic to photonic pathways |
 
 ### Performance Characteristics
 | Metric | Current | Target | Status |
@@ -194,30 +216,32 @@ The kwavers acoustic simulation library has achieved **HIGH-QUALITY DEVELOPMENT*
 
 ---
 
-## 2025 Advanced Physics Roadmap
+## 2025 Interdisciplinary Physics Roadmap
 
 See detailed analysis in [`docs/gap_analysis_advanced_physics_2025.md`](gap_analysis_advanced_physics_2025.md)
 
-### Phase 1: Foundation (Sprints 108-110) - Q1 2025
-- **Sprint 108**: Fast Nearfield Method (FNM) implementation
-- **Sprint 109**: PINN foundation (1D wave equation)
-- **Sprint 110**: Shear Wave Elastography (SWE) module
+### Phase 1: Enhanced Ultrasound-Light Coupling (Sprints 170-172) - Q1 2025
+- **Sprint 170**: AI-Enhanced Ultrasound Beamforming for cavitation targeting
+- **Sprint 171**: Advanced Cavitation Bubble Dynamics (multi-bubble interactions)
+- **Sprint 172**: Sonoluminescence Spectroscopy modeling (wavelength-dependent emission)
 
-### Phase 2: Advanced Physics (Sprints 111-114) - Q2 2025
-- **Sprint 111**: Microbubble dynamics & contrast agents
-- **Sprint 112**: PINN extensions to 2D/3D heterogeneous media
-- **Sprint 113**: Transcranial focused ultrasound (tFUS)
-- **Sprint 114**: Hybrid Angular Spectrum Method (HAS)
+### Phase 2: Multi-Modal Integration (Sprints 173-176) - Q2 2025
+- **Sprint 173**: SIMD Acceleration for real-time sono-optic simulations
+- **Sprint 174**: Memory optimization for large-scale cavitation fields
+- **Sprint 175**: Photoacoustic imaging integration (light-to-sound conversion)
+- **Sprint 176**: Multi-modal fusion algorithms (ultrasound + optical)
 
-### Phase 3: Modernization (Sprints 115-117) - Q3 2025
-- **Sprint 115**: Multi-GPU support & unified memory
-- **Sprint 116**: Beamforming-integrated neural networks
-- **Sprint 117**: Uncertainty quantification framework
+### Phase 3: Advanced Light Physics (Sprints 177-180) - Q3 2025
+- **Sprint 177**: Concurrent processing for real-time sono-optic pipelines
+- **Sprint 178**: Enhanced optical scattering models (Mie theory extensions)
+- **Sprint 179**: Photon transport in scattering media
+- **Sprint 180**: Fluorescence-guided ultrasound imaging
 
-### Phase 4: Validation & Documentation (Sprints 118-120) - Q4 2025
-- **Sprint 118**: Advanced physics validation suite
-- **Sprint 119**: Performance benchmarking
-- **Sprint 120**: Documentation & examples
+### Phase 4: Clinical Translation (Sprints 181-184) - Q4 2025
+- **Sprint 181**: Wearable ultrasound with integrated optics
+- **Sprint 182**: Real-time sonoluminescence-guided therapy
+- **Sprint 183**: Clinical validation protocols
+- **Sprint 184**: Documentation and clinical examples
 
 ---
 

@@ -483,7 +483,8 @@ impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
         let kernel_manager = CudaKernelManager::new()?;
 
         // Load PDE computation kernels
-        kernel_manager.load_module("pde_kernels", include_str!("../cuda/pde_kernels.ptx"))?;
+        // Note: CUDA kernels would be loaded here in production
+        // kernel_manager.load_module("pde_kernels", include_str!("../cuda/pde_kernels.ptx"))?;
 
         Ok(Self {
             model,

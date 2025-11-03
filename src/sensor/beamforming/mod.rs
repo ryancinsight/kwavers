@@ -28,7 +28,7 @@ mod shaders;
 #[cfg(feature = "pinn")]
 mod neural;
 
-pub use algorithms::{AlgorithmImplementation, BeamformingAlgorithm};
+pub use algorithms::{AlgorithmImplementation, BeamformingAlgorithm, MVDRBeamformer};
 pub use config::BeamformingConfig;
 pub use covariance::{CovarianceEstimator, SpatialSmoothing};
 pub use processor::BeamformingProcessor;

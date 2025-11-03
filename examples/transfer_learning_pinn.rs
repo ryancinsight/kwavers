@@ -3,12 +3,14 @@
 //! This example demonstrates the transfer learning capabilities of the PINN framework,
 //! showing how pre-trained models can be efficiently adapted to new physics scenarios.
 
+#[cfg(feature = "pinn")]
 use kwavers::ml::pinn::transfer_learning::{
     TransferLearningConfig, TransferTrainer1D, FineTuningStrategy,
     DomainAdaptation, ProgressiveTraining, MultiPhysicsTrainer, PhysicsConfig,
     TrainingData1D, TrainingData2D
 };
 
+#[cfg(feature = "pinn")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Transfer Learning for PINNs");
     println!("================================");
@@ -155,4 +157,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🚀 Ready for production PINN applications with transfer learning!");
 
     Ok(())
+}
+
+#[cfg(not(feature = "pinn"))]
+fn main() {
+    println!("🚫 PINN feature not enabled!");
+    println!("   This example requires the 'pinn' feature to be enabled.");
+    println!("   Run with: cargo run --example transfer_learning_pinn --features pinn");
+    std::process::exit(1);
 }

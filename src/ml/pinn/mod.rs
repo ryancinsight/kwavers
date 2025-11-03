@@ -80,8 +80,8 @@ pub mod burn_wave_equation_1d;
 pub mod burn_wave_equation_2d;
 
 // Sprint 151: GPU Acceleration & Advanced Geometries
-#[cfg(feature = "pinn")]
-pub mod gpu_accelerator;
+// #[cfg(feature = "pinn")]
+// pub mod gpu_accelerator;
 
 // Sprint 150: Advanced neural architectures for improved PINN convergence
 // Temporarily disabled due to Burn API compatibility issues
@@ -106,7 +106,7 @@ pub use burn_wave_equation_2d::{
 // Sprint 151: GPU Acceleration & Advanced Geometries
 #[cfg(feature = "pinn")]
 pub use gpu_accelerator::{
-    PinnGpuAccelerator, GpuMemoryManager, TrainingStats, gpu_optimizations
+    GpuMemoryManager, TrainingStats
 };
 
 // Sprint 152: Multi-GPU Support & Distributed Training
@@ -139,6 +139,9 @@ pub mod acoustic_wave;
 
 #[cfg(feature = "pinn")]
 pub mod electromagnetic;
+
+#[cfg(all(feature = "pinn", feature = "gpu"))]
+pub mod electromagnetic_gpu;
 
 #[cfg(feature = "pinn")]
 pub mod universal_solver;
@@ -205,22 +208,25 @@ pub use electromagnetic::{
     ElectromagneticDomain, EMProblemType, CurrentSource, ElectromagneticBoundarySpec,
 };
 
+#[cfg(all(feature = "pinn", feature = "gpu"))]
+pub use electromagnetic_gpu::{GPUEMSolver, EMConfig, EMFieldData, BoundaryCondition};
+
 #[cfg(feature = "pinn")]
 pub use universal_solver::{
     UniversalPINNSolver, UniversalTrainingConfig, UniversalSolverStats,
-    PhysicsSolution, Geometry2D, GeometricFeature, DomainInfo,
+    PhysicsSolution, GeometricFeature, DomainInfo,
     LearningRateSchedule, EarlyStoppingConfig, ConvergenceInfo, MemoryStats,
 };
 
 #[cfg(feature = "pinn")]
 pub use gpu_accelerator::{
-    GpuMemoryManager, CudaBuffer, CudaStream, MemoryPoolType, MemoryStats,
-    CudaKernelManager, BatchedPINNTrainer, TrainingStep, TrainingStats,
+    CudaBuffer, CudaStream, MemoryPoolType,
+    CudaKernelManager, BatchedPINNTrainer, TrainingStep,
 };
 
 #[cfg(feature = "pinn")]
 pub use adaptive_sampling::{
-    AdaptiveCollocationSampler, SamplingStrategy, SamplingStats,
+    AdaptiveCollocationSampler, SamplingStats,
 };
 
 #[cfg(feature = "pinn")]

@@ -206,6 +206,57 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         })
     }
 
+    /// Create a new universal PINN solver with all available physics domains pre-registered
+    ///
+    /// This convenience constructor automatically registers:
+    /// - Acoustic wave domains (1D and 2D wave equations)
+    /// - Electromagnetic domains (electrostatic, magnetostatic, quasi-static)
+    /// - Thermal domains (heat transfer, bioheat)
+    ///
+    /// Use this for applications requiring multi-physics capabilities.
+    pub fn with_all_domains() -> KwaversResult<Self> {
+        let mut solver = Self::new()?;
+
+        // Register acoustic wave domains
+        let acoustic_linear = super::acoustic_wave::AcousticWaveDomain::new(
+            super::acoustic_wave::AcousticProblemType::Linear,
+            343.0, // Speed of sound in air (m/s)
+            1.225, // Air density (kg/m³)
+            None,  // No nonlinearity for linear wave
+        );
+        solver.register_physics_domain(acoustic_linear)?;
+
+        // Register electromagnetic domains
+        let em_electrostatic = super::electromagnetic::ElectromagneticDomain::new(
+            super::electromagnetic::EMProblemType::Electrostatic,
+            8.854e-12, // Vacuum permittivity
+            4e-7 * std::f64::consts::PI, // Vacuum permeability
+            0.0, // Perfect dielectric
+            vec![1.0, 1.0], // Domain size
+        );
+        solver.register_physics_domain(em_electrostatic)?;
+
+        let em_magnetostatic = super::electromagnetic::ElectromagneticDomain::new(
+            super::electromagnetic::EMProblemType::Magnetostatic,
+            8.854e-12,
+            4e-7 * std::f64::consts::PI,
+            0.0,
+            vec![1.0, 1.0],
+        );
+        solver.register_physics_domain(em_magnetostatic)?;
+
+        let em_quasi_static = super::electromagnetic::ElectromagneticDomain::new(
+            super::electromagnetic::EMProblemType::QuasiStatic,
+            8.854e-12,
+            4e-7 * std::f64::consts::PI,
+            0.0,
+            vec![1.0, 1.0],
+        );
+        solver.register_physics_domain(em_quasi_static)?;
+
+        Ok(solver)
+    }
+
     /// Register a physics domain
     pub fn register_physics_domain<D>(&mut self, domain: D) -> KwaversResult<()>
     where

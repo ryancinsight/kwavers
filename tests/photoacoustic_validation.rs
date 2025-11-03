@@ -41,8 +41,10 @@ fn test_photoacoustic_analytical_pressure() -> KwaversResult<()> {
     let center_fluence = fluence[[center_i, center_j, center_k]];
     let center_props = &simulator.optical_properties()[[center_i, center_j, center_k]];
 
-    // Analytical pressure
-    let analytical_pressure = center_props.anisotropy * center_props.absorption * center_fluence;
+    // Analytical pressure: p = Γ μ_a Φ
+    // Grüneisen parameter for soft tissue at 750nm
+    let gruneisen_parameter = 0.12; // Typical value for soft tissue
+    let analytical_pressure = gruneisen_parameter * center_props.absorption * center_fluence;
 
     // Check relative error
     let relative_error = ((center_pressure - analytical_pressure) / analytical_pressure).abs();

@@ -26,9 +26,9 @@ use crate::error::KwaversResult;
 /// Shell properties for encapsulated bubbles
 #[derive(Debug, Clone)]
 pub struct ShellProperties {
-    /// Shell thickness [m]
+    /// Shell thickness \[m\]
     pub thickness: f64,
-    /// Shell shear modulus [Pa]
+    /// Shell shear modulus \[Pa\]
     pub shear_modulus: f64,
     /// Shell shear viscosity [Pa·s]
     pub shear_viscosity: f64,
@@ -36,9 +36,9 @@ pub struct ShellProperties {
     pub density: f64,
     /// Initial surface tension [N/m] (for Marmottant model)
     pub sigma_initial: f64,
-    /// Buckling radius [m] (Marmottant model)
+    /// Buckling radius \[m\] (Marmottant model)
     pub r_buckling: f64,
-    /// Rupture radius [m] (Marmottant model)  
+    /// Rupture radius \[m\] (Marmottant model)  
     pub r_rupture: f64,
     /// Elastic modulus for shell (Church model) [N/m]
     pub elastic_modulus: f64,
@@ -98,8 +98,8 @@ impl ShellProperties {
     /// Compute buckling and rupture radii based on equilibrium
     ///
     /// # Arguments
-    /// * `r0` - Equilibrium radius [m]
-    /// * `p0` - Ambient pressure [Pa]
+    /// * `r0` - Equilibrium radius \[m\]
+    /// * `p0` - Ambient pressure \[Pa\]
     ///
     /// # References
     /// - Marmottant et al. (2005), Equations 12-13
@@ -160,8 +160,8 @@ impl ChurchModel {
     ///
     /// # Arguments
     /// * `state` - Current bubble state
-    /// * `p_acoustic` - Acoustic pressure amplitude [Pa]
-    /// * `t` - Current time [s]
+    /// * `p_acoustic` - Acoustic pressure amplitude \[Pa\]
+    /// * `t` - Current time \[s\]
     ///
     /// # Returns
     /// Bubble wall acceleration [m/s²]
@@ -276,7 +276,7 @@ impl MarmottantModel {
     /// ```
     ///
     /// # Arguments
-    /// * `radius` - Current bubble radius [m]
+    /// * `radius` - Current bubble radius \[m\]
     ///
     /// # Returns
     /// Effective surface tension [N/m]
@@ -330,8 +330,8 @@ impl MarmottantModel {
     ///
     /// # Arguments
     /// * `state` - Current bubble state
-    /// * `p_acoustic` - Acoustic pressure amplitude [Pa]
-    /// * `t` - Current time [s]
+    /// * `p_acoustic` - Acoustic pressure amplitude \[Pa\]
+    /// * `t` - Current time \[s\]
     ///
     /// # Returns
     /// Bubble wall acceleration [m/s²]

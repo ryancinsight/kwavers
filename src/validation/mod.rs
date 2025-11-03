@@ -1,5 +1,7 @@
 //! Rigorous validation against literature benchmarks
 
+pub mod clinical;
+
 // Re-export existing validation types for compatibility
 pub use crate::solver::validation::{KWaveTestCase, KWaveValidator, ValidationReport};
 

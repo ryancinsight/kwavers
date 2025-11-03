@@ -17,11 +17,9 @@
 //!
 //! ## Example
 //!
-//! ```no_run
-//! #[cfg(feature = "async-runtime")]
+//! ```ignore
 //! use kwavers::runtime::async_io::AsyncFileReader;
 //!
-//! #[cfg(feature = "async-runtime")]
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let reader = AsyncFileReader::new("simulation_results.dat")?;

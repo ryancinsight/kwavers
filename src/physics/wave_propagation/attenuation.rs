@@ -1,7 +1,38 @@
-//! Wave propagation attenuation calculations
+//! Wave Propagation Attenuation - Mathematical Theorems and Physical Principles
 //!
-//! This module implements attenuation calculations for wave propagation
-//! in absorbing media, including Beer-Lambert law and frequency-dependent absorption.
+//! ## Fundamental Theorems
+//!
+//! ### Beer-Lambert Law (Bouger-Lambert-Beer Law)
+//! **Theorem**: I(x) = I₀ exp(-αx), where α is the absorption coefficient
+//! **Foundation**: Exponential decay of intensity in absorbing media (Lambert 1760, Beer 1852)
+//! **Mathematical Basis**: Solution to dI/dx = -αI with boundary condition I(0) = I₀
+//!
+//! ### Frequency-Dependent Absorption (Power Law)
+//! **Theorem**: α(f) = α₀ f^n, where n is the power law exponent (typically 1-2)
+//! **Foundation**: Molecular relaxation and viscous losses scale with frequency (Stokes 1845)
+//! **Mathematical Basis**: Kramers-Kronig relations connect absorption and dispersion
+//!
+//! ### Classical Thermo-Viscous Absorption
+//! **Theorem**: α = (ω²/ρc³)(4μ/3 + μ_B + κ(γ-1)/C_p) for Newtonian fluids
+//! **Foundation**: Combined viscous and thermal dissipation mechanisms (Kirchhoff 1868, Stokes 1845)
+//! **Mathematical Basis**: Navier-Stokes equations with heat conduction in oscillatory flow
+//!
+//! ### Complex Wave Number
+//! **Theorem**: k = ω/c + iα, where α is the absorption coefficient
+//! **Foundation**: Helmholtz equation in dissipative media (Helmholtz 1860)
+//! **Mathematical Basis**: Complex wavenumber accounts for both propagation and attenuation
+//!
+//! ## Physical Mechanisms
+//! - **Viscous Absorption**: Shear viscosity dissipates acoustic energy
+//! - **Thermal Absorption**: Heat conduction equilibrates temperature fluctuations
+//! - **Molecular Relaxation**: Finite response time of molecular degrees of freedom
+//! - **Scattering**: Energy redistribution to other directions/modes
+//!
+//! ## Literature References
+//! - Kirchhoff, G. (1868): "Ueber den Einfluss der Wärmeleitung in einem Gase auf die Schallbewegung"
+//! - Stokes, G.G. (1845): "On the theories of the internal friction of fluids in motion"
+//! - Lambert, J.H. (1760): "Photometria sive de mensura et gradibus luminis, colorum et umbrae"
+//! - Beer, A. (1852): "Bestimmung der Absorption des rothen Lichts in farbigen Flüssigkeiten"
 
 use ndarray::Array3;
 use std::f64::consts::PI;

@@ -30,9 +30,8 @@
 use kwavers::error::KwaversResult;
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
-use kwavers::medium::{CoreMedium, ElasticProperties};
 use kwavers::physics::imaging::elastography::{
-    DisplacementEstimator, InversionMethod, ShearWaveElastography,
+    InversionMethod, ShearWaveElastography,
 };
 use ndarray::Array3;
 use std::time::Instant;
@@ -291,7 +290,7 @@ fn validate_against_phantom(
 /// Extract mean stiffness from a specific region
 fn extract_region_stiffness(
     elasticity_map: &kwavers::physics::imaging::elastography::ElasticityMap,
-    x_min: f64, x_max: f64, y_min: f64, y_max: f64,
+    _x_min: f64, _x_max: f64, _y_min: f64, _y_max: f64,
 ) -> KwaversResult<f64> {
     // This is a simplified implementation
     // In practice, would need proper coordinate transformation
@@ -327,11 +326,15 @@ struct SWESimulationConfig {
     frequency: f64,
     duration: f64,
     intensity: f64,
+    #[allow(dead_code)]
     tracking_frequency: f64,
     frame_rate: f64,
     tracking_frames: usize,
+    #[allow(dead_code)]
     min_depth: f64,
+    #[allow(dead_code)]
     max_depth: f64,
+    #[allow(dead_code)]
     roi_size: [f64; 2],
 }
 

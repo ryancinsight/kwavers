@@ -132,7 +132,7 @@ pub fn build_vandermonde(
 /// * `n` - Number of quadrature points (polynomial order + 1)
 ///
 /// # Returns
-/// Tuple of (nodes, weights) both as Array1<f64>
+/// Tuple of (nodes, weights) both as `Array1<f64>`
 ///
 /// # References
 /// - Karniadakis & Sherwin (2005), "Spectral/hp Element Methods for CFD"
@@ -213,7 +213,7 @@ fn second_derivative_legendre(n: usize, x: f64) -> f64 {
 /// * `basis_type` - Type of basis functions
 ///
 /// # Returns
-/// Mass matrix as Array2<f64>
+/// Mass matrix as `Array2<f64>`
 ///
 /// # References
 /// - Hesthaven & Warburton (2008), "Nodal Discontinuous Galerkin Methods", Section 3.2
@@ -259,7 +259,7 @@ pub fn build_mass_matrix(
 /// * `basis_type` - Type of basis functions
 ///
 /// # Returns
-/// Stiffness matrix as Array2<f64>
+/// Stiffness matrix as `Array2<f64>`
 ///
 /// # References
 /// - Hesthaven & Warburton (2008), "Nodal Discontinuous Galerkin Methods", Section 3.2
@@ -305,7 +305,7 @@ pub fn build_stiffness_matrix(
 /// * `basis_type` - Type of basis functions
 ///
 /// # Returns
-/// Differentiation matrix as Array2<f64>
+/// Differentiation matrix as `Array2<f64>`
 pub fn build_differentiation_matrix(
     nodes: &Array1<f64>,
     poly_order: usize,

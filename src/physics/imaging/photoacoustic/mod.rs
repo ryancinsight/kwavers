@@ -238,14 +238,28 @@ impl PhotoacousticSimulator {
 
         let mut max_pressure: f64 = 0.0;
 
+        // Get Grüneisen parameter for the operating wavelength (assuming 750nm for now)
+        // TODO: Make this wavelength-specific based on optical properties
+        let gruneisen_parameter = self.parameters.gruneisen_parameters.first()
+            .copied()
+            .unwrap_or(0.12); // Default Grüneisen parameter for soft tissue
+
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
                     let props = &self.optical_properties[[i, j, k]];
 
-                    // Photoacoustic pressure: p = Γ μ_a Φ
-                    // Where Γ is Grüneisen parameter, μ_a is absorption coefficient, Φ is fluence
-                    let local_pressure = props.anisotropy * props.absorption * fluence[[i, j, k]];
+                    // CORRECTED: Photoacoustic pressure generation theorem
+                    // p = Γ μ_a Φ
+                    // Where:
+                    // - Γ is Grüneisen parameter (thermoelastic efficiency)
+                    // - μ_a is absorption coefficient
+                    // - Φ is optical fluence
+                    //
+                    // Reference: Wang et al. (2009): Photoacoustic tomography
+                    // "The photoacoustic pressure is proportional to the Grüneisen parameter,
+                    // the optical absorption coefficient, and the optical fluence."
+                    let local_pressure = gruneisen_parameter * props.absorption * fluence[[i, j, k]];
 
                     pressure[[i, j, k]] = local_pressure;
                     max_pressure = max_pressure.max(local_pressure);

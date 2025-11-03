@@ -13,8 +13,8 @@ pub use crate::physics::field_indices;
 
 /// Physics state container - Single Source of Truth for all field data
 ///
-/// This struct owns the field data directly, avoiding unnecessary Arc<`RwLock`>
-/// indirection. For concurrent access, wrap the entire PhysicsState in Arc<`RwLock`>
+/// This struct owns the field data directly, avoiding unnecessary `Arc<RwLock>`
+/// indirection. For concurrent access, wrap the entire PhysicsState in `Arc<RwLock>`
 /// at the application level if needed.
 #[derive(Debug)]
 pub struct PhysicsState {

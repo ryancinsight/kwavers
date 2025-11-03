@@ -193,6 +193,8 @@ pub struct BubbleParameters {
     /// Gas composition: maps gas type to mole fraction
     /// Default is air (79% N2, 21% O2)
     pub gas_composition: HashMap<GasType, f64>,
+    pub gamma: f64, // Adiabatic index (ratio of specific heats)
+    pub t0: f64,    // Ambient temperature [K]
 
     // Acoustic forcing parameters
     pub driving_frequency: f64, // Driving frequency [Hz]
@@ -217,6 +219,8 @@ impl Default for BubbleParameters {
             p0: 101325.0,
             rho_liquid: 998.0,
             c_liquid: 1482.0,
+            gamma: 1.4,     // Air adiabatic index
+            t0: 293.15,     // 20°C in Kelvin
             mu_liquid: 1.002e-3,
             sigma: 0.0728,
             pv: 2.33e3,

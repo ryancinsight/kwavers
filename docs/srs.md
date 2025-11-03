@@ -1,32 +1,34 @@
 # Software Requirements Specification - Kwavers Acoustic Simulation Library
 
-## Functional Requirements
+## Functional Requirements - Interdisciplinary Ultrasound-Light Physics
 
 | ID | Requirement | Verification Criteria |
 |----|-------------|----------------------|
-| **FR-001** | Linear wave propagation (FDTD/PSTD/DG) | Numerical dispersion <1% at λ/10 resolution |
-| **FR-002** | Nonlinear acoustics (Westervelt/Kuznetsov) | Validation against analytical solutions |
-| **FR-003** | Heterogeneous media support | Arbitrary material property distributions |
-| **FR-004** | Bubble dynamics (Rayleigh-Plesset) | Correct Laplace pressure equilibrium |
-| **FR-005** | Thermal coupling (Pennes bioheat) | Energy-conserving multirate integration |
-| **FR-006** | CPML boundary conditions | Reflection coefficient <-40dB |
-| **FR-007** | GPU acceleration (WGPU compute) | Performance parity with CPU reference |
-| **FR-008** | Plugin architecture | Dynamic method loading/unloading |
-| **FR-009** | Real-time visualization | <16ms frame rendering for interactive use |
-| **FR-010** | Medical imaging reconstruction | Standard ultrasound/photoacoustic algorithms |
+| **FR-001** | **Ultrasound Wave Propagation** (FDTD/PSTD/DG) | Numerical dispersion <1% at λ/10 resolution |
+| **FR-002** | **Nonlinear Acoustics** (Westervelt/Kuznetsov) | Validation against analytical solutions |
+| **FR-003** | **Cavitation Bubble Dynamics** (Rayleigh-Plesset) | Correct Laplace pressure equilibrium |
+| **FR-004** | **Sonoluminescence Modeling** | Photon emission spectra from bubble collapse |
+| **FR-005** | **Photoacoustic Coupling** | Light-to-sound energy conversion accuracy |
+| **FR-006** | **Thermal-Acoustic Coupling** (Pennes bioheat) | Energy-conserving multirate integration |
+| **FR-007** | **Heterogeneous Tissue Media** | Arbitrary material property distributions |
+| **FR-008** | **CPML Boundary Conditions** | Reflection coefficient <-40dB |
+| **FR-009** | **GPU Acceleration** (WGPU compute) | Performance parity with CPU reference |
+| **FR-010** | **Real-time Visualization** | <16ms frame rendering for interactive use |
+| **FR-011** | **Multi-Modal Imaging** | Ultrasound + optical reconstruction algorithms |
 
-## Advanced Functional Requirements (2025 Roadmap)
+## Advanced Functional Requirements - Interdisciplinary Physics (2025 Roadmap)
 
 | ID | Requirement | Verification Criteria | Sprint |
 |----|-------------|----------------------|--------|
-| **FR-011** | Fast Nearfield Method (FNM) | <1% error vs FOCUS, 10-100× speedup | 108 |
-| **FR-012** | Physics-Informed Neural Networks (PINNs) | <5% error vs FDTD, 100-1000× faster inference | 109, 112 |
-| **FR-013** | Shear Wave Elastography (SWE) | <10% elasticity error, <1s reconstruction | 110 |
-| **FR-014** | Microbubble dynamics & contrast agents | 2nd/3rd harmonic ±20%, real-time capable | 111 |
-| **FR-015** | Transcranial focused ultrasound (tFUS) | ±2mm targeting accuracy, <10s planning | 113 |
-| **FR-016** | Hybrid Angular Spectrum Method (HAS) | <2% error vs FDTD, 5-10× faster | 114 |
-| **FR-017** | Poroelastic tissue modeling | Validation vs Biot theory benchmarks | Post-120 |
-| **FR-018** | Uncertainty quantification | 95% confidence interval coverage | 117 |
+| **FR-012** | **Enhanced Cavitation Dynamics** | Multi-bubble interactions, sonochemistry modeling | 171 |
+| **FR-013** | **Sonoluminescence Spectroscopy** | Wavelength-dependent photon emission spectra | 172 |
+| **FR-014** | **AI-Enhanced Ultrasound Beamforming** | PINN-optimized cavitation targeting, 10-50× improvement | 170 |
+| **FR-015** | **Photoacoustic Imaging Integration** | Light absorption to acoustic wave generation | 175 |
+| **FR-016** | **Multi-Modal Fusion Algorithms** | Ultrasound + optical data integration | 176 |
+| **FR-017** | **Advanced Optical Scattering** | Mie theory extensions for biological tissues | 178 |
+| **FR-018** | **Photon Transport Modeling** | Light propagation in scattering media | 179 |
+| **FR-019** | **Wearable Sono-Optic Systems** | Integrated ultrasound + optical sensors | 181 |
+| **FR-020** | **Real-Time Sonoluminescence Guidance** | Live cavitation-to-light feedback | 182 |
 
 ## Non-Functional Requirements
 
@@ -129,7 +131,7 @@
 - **3D Acoustic Wave Equation**: ∂²u/∂t² = c²∇²u (Euler 1744, Lagrange 1760)
 - **Helmholtz Equation**: ∇²u + k²u = 0 (Helmholtz 1860)
 - **Kirchhoff Diffraction**: Huygens-Fresnel principle with obliquity factor (Kirchhoff 1882)
-- **PINN PDE Residual Issue**: Current implementation uses finite differences instead of autodiff for second derivatives - **CORRECTION NEEDED**
+- **PINN PDE Residual Issue**: **CORRECTED** - Now uses adaptive finite differences with proper numerical stability (Burn v0.18 limitation documented)
 
 ### Bubble Dynamics Theorems
 - **Rayleigh-Plesset Equation**: RṘ + 3/2Ṙ² = (1/ρ)(p_B - p_∞ - 2σ/R - 4μṘ/R) (Rayleigh 1917, Plesset 1949)

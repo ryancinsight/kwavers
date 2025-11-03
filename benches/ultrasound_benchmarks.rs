@@ -18,11 +18,18 @@
 //! - **Scalability**: Weak/strong scaling with grid size
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use kwavers::error::KwaversResult;
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::imaging::elastography::{InversionMethod, ShearWaveElastography};
-use kwavers::solver::fdtd::finite_difference::compute_derivative;
+// Simple finite difference derivative for benchmarking
+fn compute_derivative(field: &Array1<f64>, dx: f64, derivative: &mut Array1<f64>) {
+    for i in 1..field.len() - 1 {
+        derivative[i] = (field[i + 1] - field[i - 1]) / (2.0 * dx);
+    }
+    // Boundary conditions
+    derivative[0] = (field[1] - field[0]) / dx;
+    derivative[field.len() - 1] = (field[field.len() - 1] - field[field.len() - 2]) / dx;
+}
 use ndarray::{Array1, Array2, Array3};
 use std::f64::consts::PI;
 
