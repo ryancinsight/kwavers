@@ -178,7 +178,7 @@ impl KuznetsovWave {
                             let d2p2_dt2 = (p2 - 2.0 * p2_prev + p2_prev2) / (dt * dt);
 
                             let nonlinear = -coeff * d2p2_dt2;
-                            rhs[[i, j, k]] += nonlinear.clamp(-1e4, 1e4);
+                            rhs[[i, j, k]] += nonlinear; // No clamping - allow natural shock formation
                         }
 
                         // Add diffusive term with local properties

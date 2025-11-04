@@ -84,9 +84,8 @@ pub mod burn_wave_equation_2d;
 // pub mod gpu_accelerator;
 
 // Sprint 150: Advanced neural architectures for improved PINN convergence
-// Temporarily disabled due to Burn API compatibility issues
-// #[cfg(feature = "pinn")]
-// pub mod advanced_architectures;
+#[cfg(feature = "pinn")]
+pub mod advanced_architectures;
 
 // Sprint 151: Transfer learning for PINN adaptation and fine-tuning
 #[cfg(feature = "pinn")]
@@ -138,7 +137,13 @@ pub mod physics;
 pub mod acoustic_wave;
 
 #[cfg(feature = "pinn")]
+pub mod cavitation_coupled;
+
+#[cfg(feature = "pinn")]
 pub mod electromagnetic;
+
+#[cfg(feature = "pinn")]
+pub mod sonoluminescence_coupled;
 
 #[cfg(all(feature = "pinn", feature = "gpu"))]
 pub mod electromagnetic_gpu;
@@ -204,8 +209,18 @@ pub use acoustic_wave::{
 };
 
 #[cfg(feature = "pinn")]
+pub use cavitation_coupled::{
+    CavitationCoupledDomain, CavitationCouplingConfig,
+};
+
+#[cfg(feature = "pinn")]
 pub use electromagnetic::{
     ElectromagneticDomain, EMProblemType, CurrentSource, ElectromagneticBoundarySpec,
+};
+
+#[cfg(feature = "pinn")]
+pub use sonoluminescence_coupled::{
+    SonoluminescenceCoupledDomain, SonoluminescenceCouplingConfig,
 };
 
 #[cfg(all(feature = "pinn", feature = "gpu"))]

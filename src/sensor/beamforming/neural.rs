@@ -27,7 +27,7 @@
 use crate::error::{KwaversError, KwaversResult};
 use crate::sensor::beamforming::{BeamformingConfig, SteeringVector};
 use ndarray::{Array3, Array4, ArrayView3, s};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 #[cfg(feature = "pinn")]
 use crate::ml::pinn::multi_gpu_manager::{
@@ -67,7 +67,13 @@ impl Default for PINNBeamformingConfig {
         Self {
             base_config: BeamformingConfig::default(),
             pinn_config: BurnPINNConfig::default(),
-            uncertainty_config: UncertaintyConfig::default(),
+            uncertainty_config: UncertaintyConfig {
+                ensemble_size: 10,
+                mc_samples: 10,
+                dropout_prob: 0.1,
+                conformal_alpha: 0.05,
+                variance_threshold: 0.01,
+            },
             learning_rate: 0.001,
             num_epochs: 1000,
             physics_weight: 1.0,
@@ -98,10 +104,10 @@ pub struct NeuralBeamformingProcessor {
     config: PINNBeamformingConfig,
     /// PINN model for beamforming optimization
     #[cfg(feature = "pinn")]
-    pinn_model: Option<BurnPINN1DWave>,
+    pinn_model: Option<BurnPINN1DWave<burn::backend::NdArray<f32>>>,
     /// Bayesian model for uncertainty quantification
     #[cfg(feature = "pinn")]
-    bayesian_model: Option<BayesianPINN>,
+    bayesian_model: Option<BayesianPINN<burn::backend::Autodiff<burn::backend::NdArray<f32>>>>,
     /// Steering vectors cache
     steering_cache: HashMap<(usize, usize, usize), SteeringVector>,
     /// Performance metrics
@@ -158,13 +164,13 @@ impl NeuralBeamformingProcessor {
     fn initialize_pinn_model(&mut self) -> KwaversResult<()> {
         // Create PINN model with wave physics constraints
         let wave_speed = self.config.base_config.sound_speed;
-        let mut pinn = BurnPINN1DWave::new(wave_speed, self.config.pinn_config.clone())?;
+        let mut pinn = BurnPINN1DWave::new(self.config.pinn_config.clone(), &Default::default())?;
 
-        // Initialize Bayesian uncertainty quantification
-        let bayesian = BayesianPINN::new(self.config.uncertainty_config.clone())?;
+        // Initialize Bayesian uncertainty quantification (placeholder)
+        // let bayesian = BayesianPINN::new(&pinn, self.config.uncertainty_config.clone())?;
 
         self.pinn_model = Some(pinn);
-        self.bayesian_model = Some(bayesian);
+        // self.bayesian_model = Some(bayesian);
 
         Ok(())
     }
@@ -418,7 +424,7 @@ pub struct PipelineStage {
     /// Stage index
     pub stage_id: usize,
     /// GPU assigned to this stage
-    pub gpu_id: usize,
+    pub device_id: usize,
     /// Layers in this stage
     pub layer_indices: Vec<usize>,
     /// Memory requirements for this stage
@@ -458,7 +464,10 @@ impl DistributedNeuralBeamformingProcessor {
         load_balancer: LoadBalancingAlgorithm,
     ) -> KwaversResult<Self> {
         // Initialize multi-GPU manager
-        let gpu_manager = MultiGpuManager::new(num_gpus).await?;
+        let gpu_manager = MultiGpuManager::new(
+            DecompositionStrategy::Temporal { steps_per_gpu: num_gpus },
+            LoadBalancingAlgorithm::Static
+        ).await?;
 
         // Create individual processors for each GPU
         let mut processors = Vec::new();
@@ -501,8 +510,8 @@ impl DistributedNeuralBeamformingProcessor {
                 let channel = CommunicationChannel {
                     bandwidth,
                     latency,
-                    supports_p2p,
                     transfer_queue: VecDeque::new(),
+                    active_transfers: 0,
                 };
 
                 channels.insert((i, j), channel.clone());
@@ -522,12 +531,28 @@ impl DistributedNeuralBeamformingProcessor {
 
         // Distribute work units to GPUs
         let mut futures = Vec::new();
+        let num_processors = self.processors.len();
+
+        // Create a vector of work units for each processor
+        let mut processor_work: Vec<Vec<WorkUnit>> = vec![Vec::new(); num_processors];
         for (gpu_idx, work_unit) in work_units.into_iter().enumerate() {
-            if gpu_idx < self.processors.len() {
-                let processor = &mut self.processors[gpu_idx];
-                let future = self.process_work_unit(processor, work_unit);
-                futures.push(future);
+            if gpu_idx < num_processors {
+                processor_work[gpu_idx].push(work_unit);
             }
+        }
+
+        // Process work for each processor (avoid borrowing issues)
+        let mut processor_indices: Vec<(usize, WorkUnit)> = Vec::new();
+        for (gpu_idx, work_units) in processor_work.into_iter().enumerate() {
+            for work_unit in work_units {
+                processor_indices.push((gpu_idx, work_unit));
+            }
+        }
+
+        for (gpu_idx, work_unit) in processor_indices {
+            let processor = &mut self.processors[gpu_idx];
+            let future = Self::process_work_unit(processor, work_unit);
+            futures.push(future);
         }
 
         // Execute distributed processing
@@ -555,7 +580,7 @@ impl DistributedNeuralBeamformingProcessor {
             DecompositionStrategy::Temporal { steps_per_gpu } => {
                 self.decompose_temporally(frames, channels, samples, *steps_per_gpu)
             }
-            DecompositionStrategy::Hybrid { spatial_dims, temporal_steps } => {
+            DecompositionStrategy::Hybrid { spatial_dims, temporal_steps, overlap: _ } => {
                 self.decompose_hybrid(frames, channels, samples, *spatial_dims, *temporal_steps)
             }
         }
@@ -576,10 +601,11 @@ impl DistributedNeuralBeamformingProcessor {
 
                     let work_unit = WorkUnit {
                         id: gpu_idx,
-                        gpu_id: gpu_idx,
-                        data_range: (start_frame..end_frame, 0..channels, 0..samples),
+                        device_id: gpu_idx,
+                        complexity: (end_frame - start_frame) as f64,
+                        memory_required: channels * samples * 4,
                         priority: 1,
-                        estimated_compute_time: (end_frame - start_frame) as f64 * 0.1, // Estimate based on frame count
+                        dependencies: vec![],
                     };
                     work_units.push(work_unit);
                 }
@@ -597,10 +623,11 @@ impl DistributedNeuralBeamformingProcessor {
 
                     let work_unit = WorkUnit {
                         id: gpu_idx,
-                        gpu_id: gpu_idx,
-                        data_range: (start_frame..end_frame, start_channel..end_channel, 0..samples),
+                        device_id: gpu_idx,
+                        complexity: ((end_frame - start_frame) * (end_channel - start_channel)) as f64,
+                        memory_required: (end_channel - start_channel) * samples * 4,
                         priority: 1,
-                        estimated_compute_time: (end_frame - start_frame) * (end_channel - start_channel) / 100,
+                        dependencies: vec![],
                     };
                     work_units.push(work_unit);
                 }
@@ -614,10 +641,11 @@ impl DistributedNeuralBeamformingProcessor {
 
                     let work_unit = WorkUnit {
                         id: gpu_idx,
-                        gpu_id: gpu_idx,
-                        data_range: (start_frame..end_frame, 0..channels, 0..samples),
+                        device_id: gpu_idx,
+                        complexity: (end_frame - start_frame) as f64,
+                        memory_required: channels * samples * 4,
                         priority: 1,
-                        estimated_compute_time: (end_frame - start_frame) as f64 * 0.1,
+                        dependencies: vec![],
                     };
                     work_units.push(work_unit);
                 }
@@ -639,10 +667,11 @@ impl DistributedNeuralBeamformingProcessor {
 
             let work_unit = WorkUnit {
                 id: gpu_idx,
-                gpu_id: gpu_idx,
-                data_range: (0..frames, 0..channels, start_step..end_step),
+                device_id: gpu_idx,
+                complexity: (end_step - start_step) as f64,
+                memory_required: frames * channels * (end_step - start_step) * 4,
                 priority: 1,
-                estimated_compute_time: (end_step - start_step) as f64 * 0.05,
+                dependencies: vec![],
             };
             work_units.push(work_unit);
         }
@@ -662,7 +691,7 @@ impl DistributedNeuralBeamformingProcessor {
     }
 
     /// Process a work unit on a specific GPU
-    async fn process_work_unit(&self, processor: &NeuralBeamformingProcessor, work_unit: WorkUnit) -> KwaversResult<NeuralBeamformingResult> {
+    async fn process_work_unit(_processor: &NeuralBeamformingProcessor, _work_unit: WorkUnit) -> KwaversResult<NeuralBeamformingResult> {
         // Extract data for this work unit
         // In practice, this would slice the RF data according to work_unit.data_range
         // For now, create a placeholder implementation
@@ -714,10 +743,10 @@ impl DistributedNeuralBeamformingProcessor {
 
         // Validate pipeline stages
         for stage in &config.pipeline_stages {
-            if stage.gpu_id >= self.processors.len() {
+            if stage.device_id >= self.processors.len() {
                 return Err(KwaversError::InvalidInput(
                     format!("Pipeline stage {} assigned to GPU {} but only {} GPUs are available",
-                            stage.stage_id, stage.gpu_id, self.processors.len())
+                            stage.stage_id, stage.device_id, self.processors.len())
                 ));
             }
         }
@@ -755,7 +784,7 @@ impl DistributedNeuralBeamformingProcessor {
             if !stage_layers.is_empty() {
                 let stage = PipelineStage {
                     stage_id: gpu_idx,
-                    gpu_id: gpu_idx,
+                    device_id: gpu_idx,
                     layer_indices: stage_layers,
                     memory_requirement: 1024 * 1024 * 1024, // 1GB placeholder per stage
                 };
@@ -785,14 +814,14 @@ impl DistributedNeuralBeamformingProcessor {
 
         // Stage 1: Forward pass through pipeline stages
         for stage in &config.pipeline_stages {
-            let gpu_idx = stage.gpu_id;
+            let gpu_idx = stage.device_id;
             if gpu_idx >= self.processors.len() {
                 continue;
             }
 
             // Process data through this pipeline stage
-            let processor = &self.processors[gpu_idx];
-            let stage_result = self.process_pipeline_stage(processor, rf_data, stage).await?;
+            let processor = &mut self.processors[gpu_idx];
+            let stage_result = Self::process_pipeline_stage(processor, rf_data, stage).await?;
             pipeline_results.push(stage_result);
         }
 
@@ -806,7 +835,7 @@ impl DistributedNeuralBeamformingProcessor {
     }
 
     /// Process a single pipeline stage
-    async fn process_pipeline_stage(&self, processor: &NeuralBeamformingProcessor, rf_data: &Array4<f32>, stage: &PipelineStage) -> KwaversResult<NeuralBeamformingResult> {
+    async fn process_pipeline_stage(processor: &mut NeuralBeamformingProcessor, rf_data: &Array4<f32>, _stage: &PipelineStage) -> KwaversResult<NeuralBeamformingResult> {
         // In a full implementation, this would:
         // 1. Load the appropriate model layers for this stage
         // 2. Process data through these layers
@@ -868,14 +897,30 @@ impl DistributedNeuralBeamformingProcessor {
 
         // Process each chunk on a separate GPU
         let mut futures = Vec::new();
+        let num_processors = self.processors.len();
+
+        // Create a vector of data chunks for each processor
+        let mut processor_data: Vec<Vec<Array4<f32>>> = vec![Vec::new(); num_processors];
         for (gpu_idx, data_chunk) in data_chunks.into_iter().enumerate() {
-            if gpu_idx < self.processors.len() {
-                let processor = &mut self.processors[gpu_idx];
-                let future = async move {
-                    processor.process_volume(&data_chunk)
-                };
-                futures.push(future);
+            if gpu_idx < num_processors {
+                processor_data[gpu_idx].push(data_chunk);
             }
+        }
+
+        // Process data for each processor (avoid borrowing issues)
+        let mut processor_indices: Vec<(usize, Array4<f32>)> = Vec::new();
+        for (gpu_idx, data_chunks) in processor_data.into_iter().enumerate() {
+            for data_chunk in data_chunks {
+                processor_indices.push((gpu_idx, data_chunk));
+            }
+        }
+
+        for (gpu_idx, data_chunk) in processor_indices {
+            let processor = &mut self.processors[gpu_idx];
+            let future = async move {
+                processor.process_volume(&data_chunk)
+            };
+            futures.push(future);
         }
 
         // Execute data-parallel processing
@@ -1065,7 +1110,7 @@ impl DistributedNeuralBeamformingProcessor {
             // Update load balancing algorithm based on current conditions
             self.adjust_load_balancing_strategy(imbalance_ratio)?;
 
-            self.metrics.load_imbalance_ratio = imbalance_ratio;
+            self.metrics.load_imbalance_ratio = imbalance_ratio as f64;
         }
 
         Ok(())
@@ -1163,7 +1208,7 @@ impl DistributedNeuralBeamformingProcessor {
             if self.fault_tolerance.gpu_health.get(gpu_idx).copied().unwrap_or(false) {
                 let stage = PipelineStage {
                     stage_id: pipeline_stages.len(),
-                    gpu_id: gpu_idx,
+                    device_id: gpu_idx,
                     layer_indices: layers,
                     memory_requirement: 1024 * 1024 * 1024, // 1GB placeholder
                 };

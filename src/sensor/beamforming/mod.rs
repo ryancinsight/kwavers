@@ -27,6 +27,8 @@ mod beamforming_3d;
 mod shaders;
 #[cfg(feature = "pinn")]
 mod neural;
+#[cfg(feature = "pinn")]
+pub mod ai_integration;
 
 pub use algorithms::{AlgorithmImplementation, BeamformingAlgorithm, MVDRBeamformer};
 pub use config::BeamformingConfig;
@@ -52,4 +54,14 @@ pub use neural::{
     ModelParallelConfig,
     PipelineStage,
     FaultToleranceState,
+};
+#[cfg(feature = "pinn")]
+pub use ai_integration::{
+    AIEnhancedBeamformingProcessor,
+    AIBeamformingConfig,
+    AIBeamformingResult,
+    ClinicalDecisionSupport,
+    FeatureExtractor,
+    DiagnosisAlgorithm,
+    RealTimeWorkflow,
 };

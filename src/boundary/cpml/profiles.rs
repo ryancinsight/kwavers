@@ -87,13 +87,14 @@ impl CPMLProfiles {
         n: usize,
         dx: f64,
         config: &CPMLConfig,
-        _sound_speed: f64,
+        sound_speed: f64,
     ) {
         let thickness = config.thickness;
         let m = config.polynomial_order;
 
-        // Compute maximum conductivity
-        let sigma_max = config.sigma_factor * (m + 1.0) / (150.0 * std::f64::consts::PI * dx);
+        // Compute maximum conductivity with sound speed normalization
+        // σ_max = (σ_factor·(m+1)·c) / (150π·dx) (Taflove & Hagness)
+        let sigma_max = config.sigma_factor * (m + 1.0) * sound_speed / (150.0 * std::f64::consts::PI * dx);
 
         // Left boundary
         for i in 0..thickness {

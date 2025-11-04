@@ -375,11 +375,17 @@ impl BeamformingProcessor3D {
             BeamformingAlgorithm3D::DelayAndSum { dynamic_focusing, apodization, sub_volume_size } => {
                 self.process_delay_and_sum(rf_data, *dynamic_focusing, apodization, *sub_volume_size)?
             }
-            BeamformingAlgorithm3D::MVDR3D { diagonal_loading, subarray_size } => {
-                self.process_mvdr_3d(rf_data, *diagonal_loading, *subarray_size)?
+            BeamformingAlgorithm3D::MVDR3D { .. } => {
+                return Err(KwaversError::System(crate::error::SystemError::FeatureNotAvailable {
+                    feature: "MVDR 3D beamforming".to_string(),
+                    reason: "MVDR 3D beamforming not yet implemented".to_string(),
+                }));
             }
-            BeamformingAlgorithm3D::SAFT3D { virtual_sources } => {
-                self.process_saft_3d(rf_data, *virtual_sources)?
+            BeamformingAlgorithm3D::SAFT3D { .. } => {
+                return Err(KwaversError::System(crate::error::SystemError::FeatureNotAvailable {
+                    feature: "SAFT 3D beamforming".to_string(),
+                    reason: "SAFT 3D beamforming not yet implemented".to_string(),
+                }));
             }
         };
 
@@ -491,19 +497,19 @@ impl BeamformingProcessor3D {
     #[allow(dead_code)]
     fn process_delay_and_sum(
         &self,
-        _rf_data: &Array4<f32>,
-        _dynamic_focusing: bool,
-        _apodization: &ApodizationWindow,
-        _sub_volume_size: Option<(usize, usize, usize)>,
+        rf_data: &Array4<f32>,
+        dynamic_focusing: bool,
+        apodization: &ApodizationWindow,
+        sub_volume_size: Option<(usize, usize, usize)>,
     ) -> KwaversResult<Array3<f32>> {
         // Create apodization weights
         let apodization_weights = self.create_apodization_weights(apodization);
 
         // Process in sub-volumes for memory efficiency if requested
         if let Some(sub_size) = sub_volume_size {
-            self.delay_and_sum_subvolume_gpu(rf_data, dynamic_focusing, &apodization_weights, sub_size)
+            self.delay_and_sum_subvolume_gpu(rf_data, dynamic_focusing, apodization, &apodization_weights, sub_size)
         } else {
-            self.delay_and_sum_gpu(rf_data, dynamic_focusing, &apodization_weights)
+            self.delay_and_sum_gpu(rf_data, dynamic_focusing, apodization, &apodization_weights)
         }
     }
 
@@ -513,11 +519,12 @@ impl BeamformingProcessor3D {
         &self,
         rf_data: &Array4<f32>,
         dynamic_focusing: bool,
+        apodization_window: &ApodizationWindow,
         apodization_weights: &Array3<f32>,
     ) -> KwaversResult<Array3<f32>> {
         let rf_dims = rf_data.dim();
         let frames = rf_dims.0;
-        let channels = rf_dims.1;
+        let _channels = rf_dims.1;
         let samples = rf_dims.2;
         let (vol_x, vol_y, vol_z) = (self.config.volume_dims.0, self.config.volume_dims.1, self.config.volume_dims.2);
 
@@ -563,6 +570,16 @@ impl BeamformingProcessor3D {
             usage: wgpu::BufferUsages::STORAGE,
         });
 
+        // Convert apodization window to u32
+        let apodization_window_u32 = match apodization_window {
+            ApodizationWindow::Rectangular => 0,
+            ApodizationWindow::Hamming => 1,
+            ApodizationWindow::Hann => 2,
+            ApodizationWindow::Blackman => 3,
+            ApodizationWindow::Gaussian { .. } => 0, // Default to rectangular for Gaussian
+            ApodizationWindow::Custom(_) => 0, // Default to rectangular for custom
+        };
+
         // Create parameters buffer
         #[repr(C)]
         #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -582,7 +599,7 @@ impl BeamformingProcessor3D {
             num_frames: u32,
             num_samples: u32,
             dynamic_focusing: u32,
-            _padding6: u32,
+            apodization_window: u32,
         }
 
         let params = Params {
@@ -601,7 +618,7 @@ impl BeamformingProcessor3D {
             num_frames: frames as u32,
             num_samples: samples as u32,
             dynamic_focusing: if dynamic_focusing { 1 } else { 0 },
-            _padding6: 0,
+            apodization_window: apodization_window_u32,
         };
 
         let params_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -729,12 +746,13 @@ impl BeamformingProcessor3D {
         &self,
         rf_data: &Array4<f32>,
         dynamic_focusing: bool,
+        apodization_window: &ApodizationWindow,
         apodization_weights: &Array3<f32>,
         _sub_volume_size: (usize, usize, usize),
     ) -> KwaversResult<Array3<f32>> {
         // Simplified implementation - just call the main method for now
         // In practice, this would process only the specified sub-volume for memory efficiency
-        self.delay_and_sum_gpu(rf_data, dynamic_focusing, apodization_weights)
+        self.delay_and_sum_gpu(rf_data, dynamic_focusing, apodization_window, apodization_weights)
     }
 
     /// CPU fallback for delay-and-sum processing
@@ -753,193 +771,9 @@ impl BeamformingProcessor3D {
         }))
     }
 
-    /// Process MVDR beamforming for 3D
-    ///
-    /// Implements Minimum Variance Distortionless Response beamforming:
-    /// w = R⁻¹a / (aᴴR⁻¹a) where R is covariance matrix, a is steering vector
-    ///
-    /// Reference: Capon, J. (1969). "High-resolution frequency-wavenumber spectrum analysis"
-    #[allow(dead_code)] // TODO: Remove when fully integrated
-    fn process_mvdr_3d(
-        &self,
-        rf_data: &Array4<f32>,
-        diagonal_loading: f64,
-        _subarray_size: usize,
-    ) -> KwaversResult<Array3<f32>> {
-        let (n_frames, n_channels, n_depth, _n_beams) = rf_data.dim();
 
-        // For simplicity, process each frame independently
-        // In practice, you might want temporal averaging
-        let mut output_volume = Array3::<f32>::zeros((self.config.volume_dims.0, self.config.volume_dims.1, self.config.volume_dims.2));
 
-        // Process each beam position
-        for beam_x in 0..self.config.volume_dims.0 {
-            for beam_y in 0..self.config.volume_dims.1 {
-                for beam_z in 0..self.config.volume_dims.2 {
-                    // Calculate steering delays for this voxel position
-                    let voxel_x = beam_x as f32 * self.config.voxel_spacing.0 as f32;
-                    let voxel_y = beam_y as f32 * self.config.voxel_spacing.1 as f32;
-                    let voxel_z = beam_z as f32 * self.config.voxel_spacing.2 as f32;
 
-                    // Simplified MVDR: use delay-and-sum with diagonal loading
-                    // Full MVDR would require covariance matrix estimation
-                    let mut sum: f32 = 0.0;
-                    let mut weight_sum: f32 = 0.0;
-
-                    // For each transducer element
-                    for ch_x in 0..self.config.num_elements_3d.0 {
-                        for ch_y in 0..self.config.num_elements_3d.1 {
-                            for ch_z in 0..self.config.num_elements_3d.2 {
-                                let channel_idx = ch_x + ch_y * self.config.num_elements_3d.0 + ch_z * self.config.num_elements_3d.0 * self.config.num_elements_3d.1;
-
-                                if channel_idx >= n_channels {
-                                    continue;
-                                }
-
-                                // Calculate distance from transducer to voxel
-                                let tx_x = ch_x as f32 * self.config.element_spacing_3d.0 as f32;
-                                let tx_y = ch_y as f32 * self.config.element_spacing_3d.1 as f32;
-                                let tx_z = ch_z as f32 * self.config.element_spacing_3d.2 as f32;
-
-                                let distance = ((tx_x - voxel_x).powi(2) +
-                                              (tx_y - voxel_y).powi(2) +
-                                              (tx_z - voxel_z).powi(2)).sqrt();
-
-                                // Calculate delay in samples
-                                let delay_samples = (distance / self.config.base_config.sound_speed as f32 * self.config.base_config.sampling_frequency as f32) as usize;
-
-                                // Apply diagonal loading (simplified MVDR weight)
-                                // In full MVDR, this would be: w = R⁻¹a / (aᴴR⁻¹a)
-                                let weight = 1.0 / (1.0 + diagonal_loading as f32);
-
-                                // Sum over all frames at the delayed position
-                                for frame in 0..n_frames.min(10) { // Limit frames for performance
-                                    let sample_idx = (delay_samples + frame * n_depth).min(n_depth * n_frames - 1);
-                                    let frame_idx = sample_idx / n_depth;
-                                    let depth_idx = sample_idx % n_depth;
-
-                                    sum += rf_data[[frame_idx, channel_idx, depth_idx, 0]] * weight;
-                                    weight_sum += weight;
-                                }
-                            }
-                        }
-                    }
-
-                    output_volume[[beam_x, beam_y, beam_z]] = if weight_sum > 0.0 {
-                        sum / weight_sum
-                    } else {
-                        0.0
-                    };
-                }
-            }
-        }
-
-        Ok(output_volume)
-    }
-
-    /// Process SAFT (Synthetic Aperture Focusing Technique) for 3D imaging
-    ///
-    /// SAFT treats each transducer element as a virtual source, creating a synthetic aperture.
-    /// For each voxel, coherently sums contributions from all transmitter-receiver pairs.
-    ///
-    /// Reference: Stepinski, T. (1998). "SAFT - a new approach for ultrasonic imaging of concrete"
-    #[allow(dead_code)] // TODO: Remove when fully integrated
-    fn process_saft_3d(
-        &self,
-        rf_data: &Array4<f32>,
-        _virtual_sources: usize,
-    ) -> KwaversResult<Array3<f32>> {
-        let (n_frames, n_channels, n_depth, _n_beams) = rf_data.dim();
-        let mut output_volume = Array3::<f32>::zeros((self.config.volume_dims.0, self.config.volume_dims.1, self.config.volume_dims.2));
-
-        // Process each voxel in the output volume
-        for voxel_x in 0..self.config.volume_dims.0 {
-            for voxel_y in 0..self.config.volume_dims.1 {
-                for voxel_z in 0..self.config.volume_dims.2 {
-                    let vx = voxel_x as f32 * self.config.voxel_spacing.0 as f32;
-                    let vy = voxel_y as f32 * self.config.voxel_spacing.1 as f32;
-                    let vz = voxel_z as f32 * self.config.voxel_spacing.2 as f32;
-
-                    let mut voxel_sum: f32 = 0.0;
-                    let mut pair_count: usize = 0;
-
-                    // For each transmitter element
-                    for tx_x in 0..self.config.num_elements_3d.0 {
-                        for tx_y in 0..self.config.num_elements_3d.1 {
-                            for tx_z in 0..self.config.num_elements_3d.2 {
-                                let tx_idx = tx_x + tx_y * self.config.num_elements_3d.0 + tx_z * self.config.num_elements_3d.0 * self.config.num_elements_3d.1;
-
-                                if tx_idx >= n_channels {
-                                    continue;
-                                }
-
-                                let tx_pos_x = tx_x as f32 * self.config.element_spacing_3d.0 as f32;
-                                let tx_pos_y = tx_y as f32 * self.config.element_spacing_3d.1 as f32;
-                                let tx_pos_z = tx_z as f32 * self.config.element_spacing_3d.2 as f32;
-
-                                // For each receiver element (can be the same as transmitter for mono-static)
-                                for rx_x in 0..self.config.num_elements_3d.0 {
-                                    for rx_y in 0..self.config.num_elements_3d.1 {
-                                        for rx_z in 0..self.config.num_elements_3d.2 {
-                                            let rx_idx = rx_x + rx_y * self.config.num_elements_3d.0 + rx_z * self.config.num_elements_3d.0 * self.config.num_elements_3d.1;
-
-                                            if rx_idx >= n_channels {
-                                                continue;
-                                            }
-
-                                            let rx_pos_x = rx_x as f32 * self.config.element_spacing_3d.0 as f32;
-                                            let rx_pos_y = rx_y as f32 * self.config.element_spacing_3d.1 as f32;
-                                            let rx_pos_z = rx_z as f32 * self.config.element_spacing_3d.2 as f32;
-
-                                            // Calculate distances: transmitter -> voxel -> receiver
-                                            let dist_tx_voxel = ((tx_pos_x - vx).powi(2) +
-                                                               (tx_pos_y - vy).powi(2) +
-                                                               (tx_pos_z - vz).powi(2)).sqrt();
-
-                                            let dist_voxel_rx = ((rx_pos_x - vx).powi(2) +
-                                                               (rx_pos_y - vy).powi(2) +
-                                                               (rx_pos_z - vz).powi(2)).sqrt();
-
-                                            let total_distance = dist_tx_voxel + dist_voxel_rx;
-
-                                            // Convert to time delay (round trip)
-                                            let delay_time = total_distance / self.config.base_config.sound_speed as f32;
-                                            let delay_samples = (delay_time * self.config.base_config.sampling_frequency as f32) as usize;
-
-                                            // Sum contributions from all frames at this delay
-                                            // In SAFT, we typically use a single frame per transmitter
-                                            for frame in 0..n_frames.min(1) { // Usually single frame per tx
-                                                if delay_samples < n_depth {
-                                                    // Get signal from transmitter and receiver
-                                                    let tx_signal = rf_data[[frame, tx_idx, delay_samples, 0]];
-
-                                                    // For bistatic SAFT, we need both tx and rx signals
-                                                    // For simplicity, use same signal (monostatic approximation)
-                                                    let rx_signal = rf_data[[frame, rx_idx, delay_samples, 0]];
-
-                                                    voxel_sum += tx_signal * rx_signal;
-                                                    pair_count += 1;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Normalize by number of contributing pairs
-                    output_volume[[voxel_x, voxel_y, voxel_z]] = if pair_count > 0 {
-                        voxel_sum / pair_count as f32
-                    } else {
-                        0.0
-                    };
-                }
-            }
-        }
-
-        Ok(output_volume)
-    }
 
     /// Create apodization weights for sidelobe reduction
     #[allow(dead_code)]
@@ -1029,10 +863,11 @@ impl BeamformingProcessor3D {
     #[allow(dead_code)]
     fn process_delay_and_sum_subvolumes(
         &self,
-        _rf_data: &Array4<f32>,
-        _dynamic_focusing: bool,
-        _apodization_weights: &Array3<f32>,
-        _sub_volume_size: (usize, usize, usize),
+        rf_data: &Array4<f32>,
+        dynamic_focusing: bool,
+        apodization: &ApodizationWindow,
+        apodization_weights: &Array3<f32>,
+        sub_volume_size: (usize, usize, usize),
     ) -> KwaversResult<Array3<f32>> {
         let (vol_x, vol_y, vol_z) = self.config.volume_dims;
         let (sub_x, sub_y, sub_z) = sub_volume_size;
@@ -1051,6 +886,7 @@ impl BeamformingProcessor3D {
                     let sub_volume = self.delay_and_sum_subvolume_gpu(
                         rf_data,
                         dynamic_focusing,
+                        apodization,
                         apodization_weights,
                         (end_x - start_x, end_y - start_y, end_z - start_z),
                     )?;

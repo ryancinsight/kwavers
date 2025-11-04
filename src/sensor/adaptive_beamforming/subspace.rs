@@ -9,6 +9,7 @@ use num_traits::Zero;
 
 use super::conventional::BeamformingAlgorithm;
 use super::matrix_utils::{eigen_hermitian, invert_matrix};
+use super::source_estimation::{estimate_num_sources, SourceEstimationCriterion};
 
 /// MUSIC (Multiple Signal Classification) algorithm
 ///
@@ -24,25 +25,25 @@ use super::matrix_utils::{eigen_hermitian, invert_matrix};
 ///
 /// ## Usage
 ///
-/// MUSIC requires estimating the number of sources first, then performs
-/// eigendecomposition to separate signal and noise subspaces.
+/// MUSIC automatically estimates the number of sources using AIC/MDL criteria,
+/// then performs eigendecomposition to separate signal and noise subspaces.
 ///
 /// ```rust
-/// use kwavers::sensor::adaptive_beamforming::{MUSIC, estimate_num_sources, SourceEstimationCriterion};
+/// use kwavers::sensor::adaptive_beamforming::{MUSIC, SourceEstimationCriterion};
 /// use ndarray::Array2;
 /// use num_complex::Complex64;
 ///
-/// // Covariance matrix from signal processing (normally much more complex)
+/// // Covariance matrix from signal processing
 /// let cov = Array2::<Complex64>::eye(8);
-///
-/// // Estimate number of sources using AIC criterion
 /// let num_snapshots = 100; // Number of snapshots used to compute covariance
-/// let num_sources = estimate_num_sources(&cov, num_snapshots, SourceEstimationCriterion::AIC);
 ///
-/// // Create MUSIC beamformer
-/// let music = MUSIC::new(num_sources);
+/// // Create MUSIC beamformer with automatic source estimation
+/// let music = MUSIC::new_with_source_estimation(&cov, num_snapshots, SourceEstimationCriterion::MDL);
 ///
-/// // In practice, you would compute pseudospectra for many steering directions:
+/// // Or create with manual source count
+/// let music = MUSIC::new(2);
+///
+/// // Compute pseudospectra for many steering directions:
 /// // for angle in steering_angles {
 /// //     let steering = compute_steering_vector(angle);
 /// //     let spectrum = music.pseudospectrum(&cov, &steering);
@@ -52,17 +53,18 @@ use super::matrix_utils::{eigen_hermitian, invert_matrix};
 ///
 /// ## Algorithm Details
 ///
-/// 1. **Eigendecomposition**: R = U Σ U^H
-/// 2. **Subspace Separation**: Signal subspace U_s (first M eigenvectors)
-/// 3. **Noise Subspace**: U_n (remaining eigenvectors)
-/// 4. **Pseudospectrum**: P(θ) = 1 / ||U_n^H a(θ)||²
+/// 1. **Source Estimation**: Automatic M detection using AIC/MDL criteria
+/// 2. **Eigendecomposition**: R = U Σ U^H
+/// 3. **Subspace Separation**: Signal subspace U_s (first M eigenvectors)
+/// 4. **Noise Subspace**: U_n (remaining eigenvectors)
+/// 5. **Pseudospectrum**: P(θ) = 1 / ||U_n^H a(θ)||²
 ///
 /// ## Performance
 ///
 /// - **Time Complexity**: O(N³) for eigendecomposition (dominant)
 /// - **Space Complexity**: O(N²) for eigenvector storage
 /// - **Resolution**: Can resolve sources closer than λ/(2D) radians
-/// - **Robustness**: Sensitive to source number estimation errors
+/// - **Robustness**: Automatic source estimation improves reliability
 ///
 /// ## When to Use
 ///
@@ -76,6 +78,8 @@ use super::matrix_utils::{eigen_hermitian, invert_matrix};
 ///   IEEE Transactions on Antennas and Propagation, 34(3), 276-280
 /// - Stoica & Nehorai (1990), "MUSIC, maximum likelihood, and Cramer-Rao bound",
 ///   IEEE Transactions on Acoustics, Speech, and Signal Processing, 38(5), 720-741
+/// - Wax & Kailath (1985), "Detection of signals by information theoretic criteria",
+///   IEEE Transactions on Acoustics, Speech, and Signal Processing, 33(2), 387-392
 #[derive(Debug)]
 pub struct MUSIC {
     /// Number of sources (signals)
@@ -87,6 +91,31 @@ impl MUSIC {
     #[must_use]
     pub fn new(num_sources: usize) -> Self {
         Self { num_sources }
+    }
+
+    /// Create MUSIC algorithm with automatic source number estimation
+    ///
+    /// Uses AIC or MDL criteria to automatically determine the number of sources
+    /// from the covariance matrix eigenvalues.
+    ///
+    /// # Arguments
+    /// * `covariance` - Sample covariance matrix
+    /// * `num_snapshots` - Number of temporal snapshots used to compute covariance
+    /// * `criterion` - Information criterion (AIC or MDL)
+    ///
+    /// # Returns
+    /// MUSIC algorithm with automatically estimated source count
+    ///
+    /// # References
+    /// - Wax & Kailath (1985), "Detection of signals by information theoretic criteria"
+    #[must_use]
+    pub fn new_with_source_estimation(
+        covariance: &Array2<Complex64>,
+        num_snapshots: usize,
+        criterion: SourceEstimationCriterion,
+    ) -> Self {
+        let num_sources = estimate_num_sources(covariance, num_snapshots, criterion);
+        Self::new(num_sources)
     }
 
     /// Compute MUSIC pseudospectrum value for given steering vector
@@ -385,5 +414,43 @@ mod tests {
 
         // Allow some difference due to numerical precision
         assert!(diff_norm < 1.0, "Difference: {}", diff_norm);
+    }
+
+    #[test]
+    fn test_music_with_source_estimation() {
+        let n = 8;
+        let cov = create_test_covariance(n);
+        let num_snapshots = 100;
+
+        // Test with AIC criterion
+        let music_aic = MUSIC::new_with_source_estimation(
+            &cov,
+            num_snapshots,
+            SourceEstimationCriterion::AIC,
+        );
+
+        // Test with MDL criterion
+        let music_mdl = MUSIC::new_with_source_estimation(
+            &cov,
+            num_snapshots,
+            SourceEstimationCriterion::MDL,
+        );
+
+        // Both should have valid source counts
+        assert!(music_aic.num_sources < n);
+        assert!(music_mdl.num_sources < n);
+
+        // MDL should be more conservative (fewer sources) than AIC
+        assert!(music_mdl.num_sources <= music_aic.num_sources);
+
+        // Test that pseudospectrum computation works
+        let steering = create_steering_vector(n, 0.0);
+        let spectrum_aic = music_aic.pseudospectrum(&cov, &steering);
+        let spectrum_mdl = music_mdl.pseudospectrum(&cov, &steering);
+
+        assert!(spectrum_aic >= 0.0);
+        assert!(spectrum_mdl >= 0.0);
+        assert!(spectrum_aic.is_finite());
+        assert!(spectrum_mdl.is_finite());
     }
 }

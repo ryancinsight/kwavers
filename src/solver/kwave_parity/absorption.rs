@@ -104,6 +104,7 @@ pub fn apply_power_law_absorption(
     eta: &Array3<f64>,
     dt: f64,
     k_vec: &(Array3<f64>, Array3<f64>, Array3<f64>),
+    alpha_power: f64,
 ) -> crate::error::KwaversResult<()> {
     use crate::utils::fft_operations::{fft_3d_array, ifft_3d_array};
 
@@ -139,13 +140,19 @@ pub fn apply_power_law_absorption(
                 // No absorption at DC component
                 pk
             } else {
-                // Power law absorption: α(k) ∝ |k|^y
-                // Using y ≈ 1.5 for soft tissue
-                let k_power_tau = k_mag.powf(1.5); // y+1 term
-                let k_power_eta = k_mag.powf(2.5); // y+2 term
+                // Convert k-space magnitude to frequency: f = k * c_ref / (2π)
+                // where c_ref is the reference sound speed used in absorption calculations
+                let c_ref: f64 = 1500.0;
+                let frequency = k_mag * c_ref / (2.0 * PI);
+
+                // Power law absorption: α(f) ∝ f^y
+                // Convert to MHz for consistency with absorption coefficient units
+                let f_mhz = frequency / 1e6;
+                let f_power_tau = f_mhz.powf(alpha_power + 1.0); // y+1 term
+                let f_power_eta = f_mhz.powf(alpha_power + 2.0); // y+2 term
 
                 // Total absorption coefficient (tau and eta are already negative)
-                let alpha = tau_val * k_power_tau + eta_val * k_power_eta;
+                let alpha = tau_val * f_power_tau + eta_val * f_power_eta;
 
                 // Apply as exponential decay filter (stable for positive alpha)
                 let decay = (-alpha.abs() * dt).exp();
@@ -460,7 +467,7 @@ mod tests {
         let (tau, eta) = compute_power_law_operators(&grid, alpha_coeff, alpha_power, 1e6);
 
         let dt = 1e-7; // 0.1 μs time step
-        apply_power_law_absorption(&mut p, &tau, &eta, dt, &k_vec).unwrap();
+        apply_power_law_absorption(&mut p, &tau, &eta, dt, &k_vec, 1.5).unwrap();
 
         let final_max = p.iter().cloned().fold(0.0f64, f64::max);
 
@@ -509,7 +516,7 @@ mod tests {
         let dt = 1e-7;
 
         for _ in 0..10 {
-            apply_power_law_absorption(&mut p, &tau, &eta, dt, &k_vec).unwrap();
+            apply_power_law_absorption(&mut p, &tau, &eta, dt, &k_vec, 1.5).unwrap();
         }
 
         let final_energy: f64 = p.iter().map(|x| x * x).sum();
@@ -576,7 +583,7 @@ mod tests {
         let (tau, eta) = compute_absorption_operators(&config, &grid, 1e6);
 
         let dt = 1e-7;
-        apply_power_law_absorption(&mut p, &tau, &eta, dt, &k_vec).unwrap();
+        apply_power_law_absorption(&mut p, &tau, &eta, dt, &k_vec, 1.5).unwrap();
 
         // Field should be unchanged
         assert_eq!(p, p_orig, "Lossless mode should not modify field");

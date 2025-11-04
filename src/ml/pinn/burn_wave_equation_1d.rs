@@ -217,11 +217,18 @@ impl SimpleOptimizer {
         pinn: &mut BurnPINN1DWave<B>,
         grads: &B::Gradients,
     ) {
-        // Simple gradient descent: θ = θ - α * ∇L
-        // This is a simplified implementation - in practice, you'd update each parameter tensor
-        // For now, we'll use a basic parameter update approach
-        // TODO: Implement proper parameter updates using Burn's parameter iteration
-        let _ = (pinn, grads, self.learning_rate); // Placeholder for actual implementation
+        // Use Burn's parameter iteration to update each parameter tensor
+        // θ = θ - α * ∇L for each parameter tensor
+        pinn.visit(&mut |param: &mut burn::nn::Linear<B>, _name: &str| {
+            // Get the gradient for this parameter using Burn's gradient access
+            if let Some(grad) = grads.get(param) {
+                // Update weights: w = w - α * ∇w
+                param.weight = param.weight.clone() - grad.weight.clone() * self.learning_rate;
+
+                // Update bias: b = b - α * ∇b
+                param.bias = param.bias.clone() - grad.bias.clone() * self.learning_rate;
+            }
+        });
     }
 }
 
@@ -616,19 +623,25 @@ impl<B: AutodiffBackend> BurnPINN1DWave<B> {
         // Compute u(x, t)
         let u = self.forward(x.clone(), t.clone());
 
-        // Second derivative ∂²u/∂x² using central finite difference
-        let x_plus = x.clone() + eps_x;
-        let x_minus = x.clone() - eps_x;
+        // Second derivative ∂²u/∂x² using central finite difference (simplified)
+        let eps_x_tensor = Tensor::from_floats([eps_x as f32], &x.device());
+        let x_plus = x.clone() + eps_x_tensor.clone();
+        let x_minus = x.clone() - eps_x_tensor.clone();
         let u_x_plus = self.forward(x_plus, t.clone());
         let u_x_minus = self.forward(x_minus, t.clone());
-        let d2u_dx2 = (u_x_plus - u.clone() * 2.0 + u_x_minus) / (eps_x * eps_x);
+        let two_tensor = Tensor::from_floats([2.0f32], &x.device());
+        let denom_tensor = Tensor::from_floats([eps_x as f32 * eps_x as f32], &x.device());
+        let d2u_dx2 = (u_x_plus - u.clone() * two_tensor + u_x_minus) / denom_tensor;
 
         // Second derivative ∂²u/∂t² using central finite difference
-        let t_plus = t.clone() + eps_t;
-        let t_minus = t.clone() - eps_t;
+        let eps_t_tensor = Tensor::from_floats([eps_t as f32], &t.device());
+        let t_plus = t.clone() + eps_t_tensor.clone();
+        let t_minus = t.clone() - eps_t_tensor.clone();
         let u_t_plus = self.forward(x.clone(), t_plus);
         let u_t_minus = self.forward(x.clone(), t_minus);
-        let d2u_dt2 = (u_t_plus - u.clone() * 2.0 + u_t_minus) / (eps_t * eps_t);
+        let two_tensor_t = Tensor::from_floats([2.0f32], &t.device());
+        let denom_tensor_t = Tensor::from_floats([eps_t as f32 * eps_t as f32], &t.device());
+        let d2u_dt2 = (u_t_plus - u.clone() * two_tensor_t + u_t_minus) / denom_tensor_t;
 
         // PDE residual: r = ∂²u/∂t² - c²∂²u/∂x²
         // This enforces the wave equation constraint with high numerical precision

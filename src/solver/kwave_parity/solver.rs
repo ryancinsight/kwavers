@@ -315,10 +315,7 @@ impl KWaveSolver {
         }
 
         // Step 6: Apply absorption using fractional Laplacian if enabled
-        if !matches!(
-            self.config.absorption_mode,
-            super::config::AbsorptionMode::Lossless
-        ) {
+        if let super::config::AbsorptionMode::PowerLaw { alpha_power, .. } = self.config.absorption_mode {
             use super::absorption::apply_power_law_absorption;
             apply_power_law_absorption(
                 &mut self.p,
@@ -326,6 +323,7 @@ impl KWaveSolver {
                 &self.absorb_eta,
                 dt,
                 &self.k_vec,
+                alpha_power,
             )?;
         }
 

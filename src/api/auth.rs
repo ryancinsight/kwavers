@@ -20,6 +20,8 @@ use chrono::{DateTime, Utc, Duration};
 use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
 use sha2::{Sha256, Digest};
 use uuid::Uuid;
+use axum::extract::FromRequestParts;
+use axum::http::{request::Parts, StatusCode, header::AUTHORIZATION};
 
 /// JWT claims structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -92,7 +94,6 @@ pub enum APIKeyStatus {
 }
 
 /// Authentication middleware
-#[derive(Debug)]
 pub struct AuthMiddleware {
     /// JWT encoding/decoding keys
     jwt_encoding_key: EncodingKey,
@@ -374,6 +375,44 @@ impl Default for JWTConfig {
 impl Default for AuthMiddleware {
     fn default() -> Self {
         Self::new("default-secret-change-in-production", JWTConfig::default()).unwrap()
+    }
+}
+
+// Axum extractor implementation for AuthenticatedUser
+#[axum::async_trait]
+impl FromRequestParts<crate::api::handlers::AppState> for AuthenticatedUser {
+    type Rejection = (StatusCode, axum::Json<APIError>);
+
+    async fn from_request_parts(parts: &mut Parts, state: &crate::api::handlers::AppState) -> Result<Self, Self::Rejection> {
+        // Extract Authorization header
+        let auth_header = parts
+            .headers
+            .get(AUTHORIZATION)
+            .and_then(|h| h.to_str().ok())
+            .and_then(|h| h.strip_prefix("Bearer "));
+
+        let token = match auth_header {
+            Some(token) => token,
+            None => {
+                return Err((
+                    StatusCode::UNAUTHORIZED,
+                    axum::Json(APIError {
+                        error: APIErrorType::AuthenticationFailed,
+                        message: "Missing or invalid Authorization header".to_string(),
+                        details: None,
+                    }),
+                ));
+            }
+        };
+
+        // Authenticate using the auth middleware from state
+        match state.auth_middleware.authenticate_jwt(token) {
+            Ok(user) => Ok(user),
+            Err(error) => Err((
+                StatusCode::UNAUTHORIZED,
+                axum::Json(error),
+            )),
+        }
     }
 }
 

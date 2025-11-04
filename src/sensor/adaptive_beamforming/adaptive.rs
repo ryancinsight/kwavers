@@ -3,7 +3,7 @@
 //! This module implements adaptive beamforming techniques that optimize
 //! performance based on the received data statistics.
 
-use ndarray::Array1;
+use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 use num_traits::Zero;
 
@@ -66,6 +66,120 @@ impl MinimumVariance {
     pub fn with_diagonal_loading(diagonal_loading: f64) -> Self {
         Self { diagonal_loading }
     }
+
+    /// Compute condition number of the covariance matrix
+    ///
+    /// The condition number κ(R) = λ_max / λ_min indicates numerical stability.
+    /// High condition numbers (>1000) suggest potential singularity issues.
+    ///
+    /// # Returns
+    /// Condition number of the covariance matrix
+    pub fn covariance_condition_number(covariance: &Array2<Complex64>) -> f64 {
+        use super::matrix_utils::eigen_hermitian;
+
+        let eigenvalues = match eigen_hermitian(covariance, covariance.nrows()) {
+            Some((vals, _)) => vals,
+            None => return f64::INFINITY, // Matrix is singular
+        };
+
+        // Find min and max eigenvalues (all should be real and positive for covariance)
+        let mut min_eigen = f64::INFINITY;
+        let mut max_eigen = 0.0f64;
+
+        for &eigen in &eigenvalues {
+            if eigen > 0.0 {
+                min_eigen = min_eigen.min(eigen);
+                max_eigen = max_eigen.max(eigen);
+            }
+        }
+
+        if min_eigen > 0.0 && max_eigen > 0.0 {
+            max_eigen / min_eigen
+        } else {
+            f64::INFINITY // Singular or invalid matrix
+        }
+    }
+
+    /// Check if covariance matrix is well-conditioned for MVDR
+    ///
+    /// # Returns
+    /// (is_well_conditioned, condition_number, recommended_loading)
+    pub fn check_covariance_condition(
+        covariance: &Array2<Complex64>,
+    ) -> (bool, f64, f64) {
+        let condition_number = Self::covariance_condition_number(covariance);
+
+        // Thresholds for well-conditioned matrices
+        let is_well_conditioned = condition_number < 1000.0;
+
+        // Recommended diagonal loading based on condition number
+        let recommended_loading = if condition_number > 100.0 {
+            // High condition number - use larger loading
+            (condition_number / 1000.0).sqrt() * 1e-4
+        } else {
+            // Normal condition number - use default loading
+            1e-6
+        };
+
+        (is_well_conditioned, condition_number, recommended_loading)
+    }
+
+    /// Compute MVDR weights with condition monitoring
+    ///
+    /// Returns weights along with condition information for diagnostics
+    pub fn compute_weights_with_monitoring(
+        &self,
+        covariance: &Array2<Complex64>,
+        steering: &Array1<Complex64>,
+    ) -> (Array1<Complex64>, MVDRConditionInfo) {
+        let weights = self.compute_weights(covariance, steering);
+
+        // Compute condition information
+        let (is_well_conditioned, condition_number, recommended_loading) =
+            Self::check_covariance_condition(covariance);
+
+        let info = MVDRConditionInfo {
+            condition_number,
+            is_well_conditioned,
+            recommended_loading,
+            actual_loading: self.diagonal_loading,
+            matrix_rank: Self::estimate_matrix_rank(covariance),
+            matrix_size: covariance.nrows(),
+        };
+
+        (weights, info)
+    }
+
+    /// Estimate the rank of the covariance matrix
+    fn estimate_matrix_rank(covariance: &Array2<Complex64>) -> usize {
+        use super::matrix_utils::eigen_hermitian;
+
+        let eigenvalues = match eigen_hermitian(covariance, covariance.nrows()) {
+            Some((vals, _)) => vals,
+            None => return 0,
+        };
+
+        // Count eigenvalues above numerical threshold
+        let threshold = eigenvalues.iter().cloned().fold(0.0, f64::max) * 1e-12;
+        eigenvalues.iter().filter(|&&e| e > threshold).count()
+    }
+}
+
+/// Condition information for MVDR diagnostics
+#[derive(Debug, Clone)]
+pub struct MVDRConditionInfo {
+    /// Condition number of covariance matrix
+    pub condition_number: f64,
+    /// Whether matrix is well-conditioned for MVDR
+    pub is_well_conditioned: bool,
+    /// Recommended diagonal loading factor
+    pub recommended_loading: f64,
+    /// Actual diagonal loading used
+    pub actual_loading: f64,
+    /// Estimated rank of covariance matrix
+    pub matrix_rank: usize,
+    /// Matrix size (N x N)
+    pub matrix_size: usize,
 }
 
 impl BeamformingAlgorithm for MinimumVariance {
@@ -262,6 +376,191 @@ impl BeamformingAlgorithm for RobustCapon {
         // w = R^{-1} a / (a^H R^{-1} a)
         // This is the MVDR solution with robust diagonal loading
         r_inv_a.mapv(|x| x / a_h_r_inv_a)
+    }
+}
+
+/// Linearly Constrained Minimum Variance (LCMV) beamformer
+///
+/// LCMV generalizes MVDR by allowing multiple linear constraints beyond
+/// the single unit-gain constraint. This enables null steering, derivative
+/// constraints, and other advanced beamforming capabilities.
+///
+/// The optimization problem is:
+/// minimize w^H R w subject to C^H w = f
+///
+/// where C is the constraint matrix and f is the response vector.
+///
+/// # Usage
+///
+/// ```rust
+/// use kwavers::sensor::adaptive_beamforming::adaptive::LCMV;
+/// use ndarray::{Array1, Array2};
+/// use num_complex::Complex64;
+/// use std::f64::consts::PI;
+///
+/// // Create LCMV beamformer
+/// let mut lcmv = LCMV::new();
+///
+/// // Example parameters
+/// let n = 8; // 8-element array
+/// let look_angle = PI / 6.0; // 30 degrees
+/// let interference_angle = -PI / 4.0; // -45 degrees
+///
+/// // Create steering vectors (1D arrays)
+/// let steering = Array1::<Complex64>::from_elem(n, Complex64::new(1.0, 0.0));
+/// let interference_steering = Array1::<Complex64>::from_elem(n, Complex64::new(0.5, 0.5));
+///
+/// // Add unit gain constraint in look direction
+/// lcmv.add_constraint(&steering, Complex64::new(1.0, 0.0));
+///
+/// // Add null constraint in interference direction
+/// lcmv.add_constraint(&interference_steering, Complex64::new(0.0, 0.0));
+///
+/// // Create sample covariance matrix
+/// let covariance = Array2::<Complex64>::eye(n);
+///
+/// // Compute weights
+/// let weights = lcmv.compute_weights(&covariance);
+/// assert_eq!(weights.len(), n);
+/// ```
+///
+/// # References
+/// - Frost, O. L. (1972), "An algorithm for linearly constrained adaptive array processing",
+///   Proceedings of the IEEE, 60(8), 926-935
+/// - Van Trees (2002), "Optimum Array Processing", Ch. 6
+#[derive(Debug)]
+pub struct LCMV {
+    /// Constraint matrix (each column is a constraint vector)
+    constraint_matrix: Array2<Complex64>,
+    /// Response vector (desired response for each constraint)
+    response_vector: Array1<Complex64>,
+    /// Diagonal loading factor
+    diagonal_loading: f64,
+}
+
+impl Default for LCMV {
+    fn default() -> Self {
+        Self {
+            constraint_matrix: Array2::zeros((0, 0)),
+            response_vector: Array1::zeros(0),
+            diagonal_loading: 1e-6,
+        }
+    }
+}
+
+impl LCMV {
+    /// Create a new LCMV beamformer
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Create LCMV with custom diagonal loading
+    #[must_use]
+    pub fn with_diagonal_loading(diagonal_loading: f64) -> Self {
+        Self {
+            constraint_matrix: Array2::zeros((0, 0)),
+            response_vector: Array1::zeros(0),
+            diagonal_loading,
+        }
+    }
+
+    /// Add a linear constraint
+    ///
+    /// # Arguments
+    /// * `constraint_vector` - The constraint vector (e.g., steering vector)
+    /// * `desired_response` - Desired response for this constraint
+    pub fn add_constraint(&mut self, constraint_vector: &Array1<Complex64>, desired_response: Complex64) {
+        let n = constraint_vector.len();
+
+        // Initialize constraint matrix if empty
+        if self.constraint_matrix.is_empty() {
+            self.constraint_matrix = Array2::zeros((n, 0));
+            self.response_vector = Array1::zeros(0);
+        }
+
+        // Add new constraint column
+        let mut new_matrix = Array2::zeros((n, self.constraint_matrix.ncols() + 1));
+        let mut new_response = Array1::zeros(self.response_vector.len() + 1);
+
+        // Copy existing constraints
+        for i in 0..n {
+            for j in 0..self.constraint_matrix.ncols() {
+                new_matrix[(i, j)] = self.constraint_matrix[(i, j)];
+            }
+        }
+        new_response.slice_mut(ndarray::s![..self.response_vector.len()]).assign(&self.response_vector);
+
+        // Add new constraint
+        for i in 0..n {
+            new_matrix[(i, self.constraint_matrix.ncols())] = constraint_vector[i];
+        }
+        new_response[self.response_vector.len()] = desired_response;
+
+        self.constraint_matrix = new_matrix;
+        self.response_vector = new_response;
+    }
+
+    /// Clear all constraints
+    pub fn clear_constraints(&mut self) {
+        self.constraint_matrix = Array2::zeros((0, 0));
+        self.response_vector = Array1::zeros(0);
+    }
+
+    /// Get number of constraints
+    #[must_use]
+    pub fn num_constraints(&self) -> usize {
+        self.constraint_matrix.ncols()
+    }
+
+    /// Compute LCMV weights for the given covariance matrix
+    ///
+    /// # Arguments
+    /// * `covariance` - Sample covariance matrix
+    ///
+    /// # Returns
+    /// LCMV weight vector
+    pub fn compute_weights(&self, covariance: &Array2<Complex64>) -> Array1<Complex64> {
+        if self.constraint_matrix.is_empty() {
+            // No constraints - return zero vector
+            return Array1::zeros(covariance.nrows());
+        }
+
+        let n = covariance.nrows();
+        let _m = self.num_constraints();
+
+        // Add diagonal loading
+        let mut r_loaded = covariance.clone();
+        for i in 0..n {
+            r_loaded[(i, i)] += Complex64::new(self.diagonal_loading, 0.0);
+        }
+
+        // Compute R^{-1}
+        let r_inv = match invert_matrix(&r_loaded) {
+            Some(inv) => inv,
+            None => {
+                // Fallback: return uniform weights
+                return Array1::from_elem(n, Complex64::new(1.0 / (n as f64).sqrt(), 0.0));
+            }
+        };
+
+        // Compute C^H R^{-1} C (constraint matrix)
+        let c_h: Array2<Complex64> = self.constraint_matrix.t().mapv(|x| x.conj());
+        let r_inv_c: Array2<Complex64> = r_inv.dot(&self.constraint_matrix);
+        let c_h_r_inv_c: Array2<Complex64> = c_h.dot(&r_inv_c);
+
+        // Invert the constraint matrix
+        let c_h_r_inv_c_inv = match invert_matrix(&c_h_r_inv_c) {
+            Some(inv) => inv,
+            None => {
+                // Constraints are not linearly independent
+                return Array1::from_elem(n, Complex64::new(1.0 / (n as f64).sqrt(), 0.0));
+            }
+        };
+
+        // Compute weights: w = R^{-1} C (C^H R^{-1} C)^{-1} f
+        let temp = c_h_r_inv_c_inv.dot(&self.response_vector);
+        r_inv_c.dot(&temp)
     }
 }
 

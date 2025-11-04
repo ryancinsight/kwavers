@@ -158,8 +158,8 @@ impl CPMLBoundary {
 
     /// Estimate reflection coefficient
     #[must_use]
-    pub fn estimate_reflection(&self, angle: f64) -> f64 {
-        self.config.theoretical_reflection(angle.cos())
+    pub fn estimate_reflection(&self, angle: f64, dx: f64, sound_speed: f64) -> f64 {
+        self.config.theoretical_reflection(angle.cos(), dx, sound_speed)
     }
 }
 

@@ -10,7 +10,7 @@ pub mod heterogeneous;
 pub mod hybrid;
 pub mod imex;
 pub mod kspace_correction;
-pub mod kspace_pseudospectral; // NEW: k-Wave parity k-space implementation
+
 pub mod kwave_parity;
 pub mod pstd; // PSTD solver module
 pub mod spectral_dg;
@@ -36,7 +36,7 @@ pub use plugin_based::PluginBasedSolver;
 pub use amr::{AMRSolver, MemoryStats};
 pub use fdtd::FdtdConfig;
 pub use imex::{IMEXIntegrator, IMEXSchemeType};
-pub use kspace_pseudospectral::KSpaceOperator; // NEW: k-space operator export
+pub use pstd::spectral_ops::KSpaceOperator; // k-space operator export
 pub use pstd::{PstdConfig, PstdSolver};
 
 use serde::Serialize;

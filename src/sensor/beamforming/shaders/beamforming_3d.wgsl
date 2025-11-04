@@ -42,7 +42,7 @@ struct Params {
     num_frames: u32,
     num_samples: u32,
     dynamic_focusing: u32, // 0 = false, 1 = true
-    _padding6: u32,
+    apodization_window: u32, // 0=Rectangular, 1=Hamming, 2=Hann, 3=Blackman
 
     // Time delays for dynamic focusing
     time_delays: array<f32, 16384>, // Max 16K elements
@@ -138,6 +138,62 @@ fn get_apodization_weight(ex: u32, ey: u32, ez: u32, voxel_pos: vec3<f32>) -> f3
     return weight * (1.0 - normalized_distance * normalized_distance);
 }
 
+/// Hamming window function for apodization
+fn hamming_window(distance: f32, max_distance: f32) -> f32 {
+    if (max_distance == 0.0) {
+        return 1.0;
+    }
+    let normalized_distance = distance / max_distance;
+    return 0.54 - 0.46 * cos(2.0 * 3.14159265359 * normalized_distance);
+}
+
+/// Hann window function for apodization
+fn hann_window(distance: f32, max_distance: f32) -> f32 {
+    if (max_distance == 0.0) {
+        return 1.0;
+    }
+    let normalized_distance = distance / max_distance;
+    return 0.5 * (1.0 - cos(2.0 * 3.14159265359 * normalized_distance));
+}
+
+/// Blackman window function for apodization
+fn blackman_window(distance: f32, max_distance: f32) -> f32 {
+    if (max_distance == 0.0) {
+        return 1.0;
+    }
+    let normalized_distance = distance / max_distance;
+    let a0 = 0.42;
+    let a1 = 0.5;
+    let a2 = 0.08;
+    return a0 - a1 * cos(2.0 * 3.14159265359 * normalized_distance) +
+           a2 * cos(4.0 * 3.14159265359 * normalized_distance);
+}
+
+/// Apply windowed apodization based on window type
+fn apply_windowed_apodization(ex: u32, ey: u32, ez: u32, window_type: u32) -> f32 {
+    let element_pos = element_positions[element_index(ex, ey, ez)];
+    let distance_from_center = length(element_pos);
+    let max_distance = length(vec3<f32>(
+        f32(params.num_elements.x / 2u) * params.element_spacing.x,
+        f32(params.num_elements.y / 2u) * params.element_spacing.y,
+        f32(params.num_elements.z / 2u) * params.element_spacing.z
+    ));
+
+    let base_weight = apodization_weights[element_index(ex, ey, ez)];
+
+    // Apply window function
+    var window_weight = 1.0;
+    if (window_type == 1u) { // Hamming
+        window_weight = hamming_window(distance_from_center, max_distance);
+    } else if (window_type == 2u) { // Hann
+        window_weight = hann_window(distance_from_center, max_distance);
+    } else if (window_type == 3u) { // Blackman
+        window_weight = blackman_window(distance_from_center, max_distance);
+    } // 0u = Rectangular (no windowing)
+
+    return base_weight * window_weight;
+}
+
 /// Main delay-and-sum beamforming kernel
 @compute @workgroup_size(8, 8, 8)
 fn delay_and_sum_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
@@ -177,8 +233,8 @@ fn delay_and_sum_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                     delay = delay * (1.0 + depth_factor * 0.1); // Example depth-dependent adjustment
                 }
 
-                // Get apodization weight
-                let weight = get_apodization_weight(ex, ey, ez, voxel_pos);
+                // Get apodization weight with window function
+                let weight = apply_windowed_apodization(ex, ey, ez, params.apodization_window);
 
                 // Sum across all frames and samples with delay
                 for (var frame: u32 = 0u; frame < params.num_frames; frame = frame + 1u) {

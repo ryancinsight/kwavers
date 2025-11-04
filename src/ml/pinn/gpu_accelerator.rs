@@ -15,6 +15,7 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use burn::prelude::ToElement;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -81,7 +82,7 @@ struct MemoryPool {
 }
 
 /// Memory block in a pool
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct MemoryBlock {
     /// Device pointer
     ptr: *mut f32,
@@ -93,6 +94,7 @@ struct MemoryBlock {
 
 /// Pinned host buffer for fast GPU transfers
 #[derive(Debug)]
+#[derive(Clone)]
 struct PinnedBuffer<T> {
     /// Host pointer
     ptr: *mut T,
@@ -234,10 +236,13 @@ impl GpuMemoryManager {
         }
 
         if host_data.len() != device_buffer.size {
-            return Err(KwaversError::ValidationError {
-                field: "data_size".to_string(),
-                reason: format!("Host data size {} does not match device buffer size {}", host_data.len(), device_buffer.size),
-            });
+            return Err(KwaversError::Validation(
+                crate::error::ValidationError::FieldValidation {
+                    field: "data_size".to_string(),
+                    value: host_data.len().to_string(),
+                    constraint: format!("must match device buffer size {}", device_buffer.size),
+                },
+            ));
         }
 
         // In practice, this would use cudaMemcpyAsync
@@ -325,8 +330,9 @@ impl MemoryPool {
     fn deallocate(&mut self, block: MemoryBlock) -> KwaversResult<()> {
         // Simple deallocation - add to free list
         // In practice, would implement coalescing
+        let block_size = block.size;
         self.free_blocks.push(block);
-        self.used_memory -= block.size;
+        self.used_memory -= block_size;
         Ok(())
     }
 
@@ -516,18 +522,22 @@ impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
 
         for batch in batches {
             // Forward pass
-            let predictions = self.model.forward(&batch)?;
+            // Split batch into x, y, t components
+            let x = batch.clone().slice([0..batch.shape().dims[0], 0..1]).squeeze::<2>();
+            let y = batch.clone().slice([0..batch.shape().dims[0], 1..2]).squeeze::<2>();
+            let t = batch.clone().slice([0..batch.shape().dims[0], 2..3]).squeeze::<2>();
+            let predictions = self.model.forward(x, y, t);
 
             // Compute PDE residuals using GPU kernels
             let residuals = self.compute_pde_residuals_gpu(&predictions, &batch)?;
 
             // Compute loss
-            let loss = residuals.powf(2.0).mean();
+            let loss = (residuals.clone() * residuals).mean();
             total_loss += loss.clone().into_scalar().to_f32();
             batch_count += 1;
 
             // Backward pass and gradient accumulation
-            let gradients = loss.backward()?;
+            let gradients = loss.backward();
             self.accumulate_gradients(&gradients)?;
         }
 
@@ -561,7 +571,7 @@ impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
 
     /// Compute PDE residuals using GPU kernels
     fn compute_pde_residuals_gpu(
-        &self,
+        &mut self,
         predictions: &Tensor<B, 2>,
         collocation_points: &Tensor<B, 2>,
     ) -> KwaversResult<Tensor<B, 2>> {
@@ -572,13 +582,13 @@ impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
 
         // In practice, would transfer data and launch kernels
         // For now, return dummy residuals
-        let residuals = Tensor::zeros_like(&predictions.slice([0..predictions.shape().dims[0], 0..1]).squeeze(1));
+        let residuals = Tensor::zeros_like(&predictions.clone().slice([0..predictions.shape().dims[0], 0..1]).squeeze::<2>());
 
         Ok(residuals)
     }
 
     /// Accumulate gradients
-    fn accumulate_gradients(&mut self, gradients: &Tensor<B, 2>) -> KwaversResult<()> {
+    fn accumulate_gradients(&mut self, gradients: &<B as AutodiffBackend>::Gradients) -> KwaversResult<()> {
         // Initialize accumulator if needed
         if self.gradient_accumulator.is_none() {
             let size = gradients.shape().dims[0] * gradients.shape().dims[1];

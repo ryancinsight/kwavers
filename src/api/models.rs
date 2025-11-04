@@ -2,10 +2,19 @@
 //!
 //! This module contains supplementary data models used by the PINN API
 //! for job queuing, result storage, and operational metadata.
+//!
+//! ## Clinical Ultrasound API
+//!
+//! Additional models for point-of-care ultrasound integration:
+//! - Device connectivity and real-time imaging
+//! - AI-enhanced clinical decision support
+//! - DICOM/HL7 standards compliance
+//! - Mobile-optimized workflows
 
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
+use crate::api::TrainingConfig;
 
 /// Job queue entry for PINN training tasks
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,7 +47,7 @@ pub struct PINNJobConfig {
     /// Physics domain
     pub physics_domain: String,
     /// Training configuration
-    pub training_config: crate::api::TrainingConfig,
+    pub training_config: TrainingConfig,
     /// Geometry specification
     pub geometry: crate::api::GeometrySpec,
     /// Physics parameters
@@ -282,6 +291,495 @@ mod tests {
         assert_eq!(config.batch_size, 32);
         assert_eq!(config.epochs, 100);
     }
+
+// ===== CLINICAL ULTRASOUND API MODELS =====
+
+/// Ultrasound device information for point-of-care integration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UltrasoundDevice {
+    /// Unique device identifier
+    pub device_id: String,
+    /// Device model/manufacturer
+    pub model: String,
+    /// Device capabilities (linear, convex, phased array, etc.)
+    pub capabilities: Vec<String>,
+    /// Supported imaging modes
+    pub imaging_modes: Vec<String>,
+    /// Maximum frame rate (Hz)
+    pub max_frame_rate: u32,
+    /// Battery level (0-100)
+    pub battery_level: Option<u8>,
+    /// Device status
+    pub status: DeviceStatus,
+    /// Last seen timestamp
+    pub last_seen: DateTime<Utc>,
+}
+
+/// Device connection status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DeviceStatus {
+    Connected,
+    Disconnected,
+    Error,
+    Charging,
+}
+
+/// Real-time ultrasound frame data for AI processing
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UltrasoundFrame {
+    /// Frame sequence number
+    pub frame_id: u64,
+    /// Device identifier
+    pub device_id: String,
+    /// Timestamp when frame was captured
+    pub timestamp: DateTime<Utc>,
+    /// RF data dimensions [time_samples, channels, spatial_points]
+    pub dimensions: Vec<usize>,
+    /// RF data as base64-encoded bytes
+    pub rf_data: String, // Base64 encoded f32 array
+    /// Imaging parameters
+    pub parameters: ImagingParameters,
+    /// Device metadata
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Imaging parameters for beamforming
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImagingParameters {
+    /// Sound speed (m/s)
+    pub sound_speed: f64,
+    /// Sampling frequency (Hz)
+    pub sampling_frequency: f64,
+    /// Center frequency (Hz)
+    pub center_frequency: f64,
+    /// Number of active elements
+    pub num_elements: usize,
+    /// Element spacing (m)
+    pub element_spacing: f64,
+    /// Steering angles for each frame (radians)
+    pub steering_angles: Vec<f64>,
+    /// Depth range [start, end] in meters
+    pub depth_range: [f64; 2],
+}
+
+/// Clinical analysis request for AI-enhanced beamforming
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalAnalysisRequest {
+    /// Session identifier
+    pub session_id: String,
+    /// Device identifier
+    pub device_id: String,
+    /// Patient identifier (anonymized)
+    pub patient_id: String,
+    /// Exam type (cardiac, abdominal, vascular, etc.)
+    pub exam_type: String,
+    /// Priority level (normal, urgent, critical)
+    pub priority: AnalysisPriority,
+    /// Frame data for analysis
+    pub frames: Vec<UltrasoundFrame>,
+    /// Clinical context
+    pub clinical_context: ClinicalContext,
+}
+
+/// Analysis priority levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AnalysisPriority {
+    Normal,
+    Urgent,
+    Critical,
+}
+
+/// Clinical context information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalContext {
+    /// Patient age
+    pub patient_age: Option<u32>,
+    /// Patient sex
+    pub patient_sex: Option<String>,
+    /// Indication/symptoms
+    pub indications: Vec<String>,
+    /// Previous findings
+    pub previous_findings: Option<String>,
+    /// Operator experience level
+    pub operator_level: OperatorLevel,
+}
+
+/// Operator experience levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum OperatorLevel {
+    Trainee,
+    Resident,
+    Attending,
+    Specialist,
+}
+
+/// Clinical analysis response with AI-enhanced results
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalAnalysisResponse {
+    /// Analysis session identifier
+    pub session_id: String,
+    /// Processing timestamp
+    pub processed_at: DateTime<Utc>,
+    /// Overall analysis confidence (0-1)
+    pub confidence_score: f32,
+    /// Detected findings
+    pub findings: Vec<ClinicalFinding>,
+    /// Tissue characterization results
+    pub tissue_characterization: TissueCharacterization,
+    /// Clinical recommendations
+    pub recommendations: Vec<ClinicalRecommendation>,
+    /// Processing performance metrics
+    pub performance: ProcessingMetrics,
+    /// Quality indicators
+    pub quality_indicators: QualityIndicators,
+}
+
+/// Clinical finding with localization and confidence
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalFinding {
+    /// Finding type
+    pub finding_type: FindingType,
+    /// Finding description
+    pub description: String,
+    /// Confidence score (0-1)
+    pub confidence: f32,
+    /// Spatial location [x, y, z] in mm
+    pub location: [f64; 3],
+    /// Size measurements in mm
+    pub measurements: FindingMeasurements,
+    /// Clinical significance score (0-1)
+    pub clinical_significance: f32,
+}
+
+/// Types of clinical findings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FindingType {
+    Lesion,
+    FluidCollection,
+    Calcification,
+    VascularAnomaly,
+    TissueAbnormality,
+    NormalFinding,
+}
+
+/// Finding measurements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FindingMeasurements {
+    /// Maximum diameter (mm)
+    pub max_diameter_mm: f64,
+    /// Area/volume measurement (mm² or mm³)
+    pub area_volume: f64,
+    /// Boundary confidence (0-1)
+    pub boundary_confidence: f32,
+}
+
+/// Tissue characterization results
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TissueCharacterization {
+    /// Dominant tissue types per region
+    pub tissue_map: HashMap<String, TissueRegion>,
+    /// Overall tissue composition percentages
+    pub composition_percentages: HashMap<String, f32>,
+    /// Tissue homogeneity score (0-1, higher = more homogeneous)
+    pub homogeneity_score: f32,
+    /// Abnormal tissue regions
+    pub abnormal_regions: Vec<AbnormalRegion>,
+}
+
+/// Tissue region information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TissueRegion {
+    /// Tissue type
+    pub tissue_type: String,
+    /// Region boundaries [xmin, xmax, ymin, ymax, zmin, zmax] in mm
+    pub boundaries: [f64; 6],
+    /// Classification confidence (0-1)
+    pub confidence: f32,
+    /// Tissue properties
+    pub properties: TissueProperties,
+}
+
+/// Tissue physical properties
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TissueProperties {
+    /// Attenuation coefficient (dB/cm/MHz)
+    pub attenuation_db_per_cm_mhz: f64,
+    /// Backscatter coefficient
+    pub backscatter_coefficient: f64,
+    /// Speed of sound (m/s)
+    pub speed_of_sound: f64,
+}
+
+/// Abnormal tissue region
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AbnormalRegion {
+    /// Region identifier
+    pub region_id: String,
+    /// Location [x, y, z] in mm
+    pub location: [f64; 3],
+    /// Abnormality type
+    pub abnormality_type: String,
+    /// Severity score (0-1)
+    pub severity: f32,
+    /// Confidence score (0-1)
+    pub confidence: f32,
+}
+
+/// Clinical recommendation with rationale
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalRecommendation {
+    /// Recommendation type
+    pub recommendation_type: RecommendationType,
+    /// Recommendation text
+    pub text: String,
+    /// Rationale for recommendation
+    pub rationale: String,
+    /// Urgency level
+    pub urgency: UrgencyLevel,
+    /// Supporting evidence from AI analysis
+    pub supporting_evidence: Vec<String>,
+}
+
+/// Types of clinical recommendations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecommendationType {
+    FollowUpImaging,
+    BiopsyConsideration,
+    SpecialistReferral,
+    ProtocolAdjustment,
+    NormalFindings,
+    UrgentEvaluation,
+}
+
+/// Recommendation urgency levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum UrgencyLevel {
+    Routine,
+    Priority,
+    Urgent,
+    Emergency,
+}
+
+/// Processing performance metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessingMetrics {
+    /// Total processing time (ms)
+    pub total_time_ms: u64,
+    /// AI inference time (ms)
+    pub ai_inference_time_ms: u64,
+    /// Beamforming time (ms)
+    pub beamforming_time_ms: u64,
+    /// Feature extraction time (ms)
+    pub feature_extraction_time_ms: u64,
+    /// Memory usage (MB)
+    pub memory_usage_mb: f64,
+    /// GPU utilization (%)
+    pub gpu_utilization_percent: Option<f64>,
+}
+
+/// Quality indicators for clinical workflow
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QualityIndicators {
+    /// Image quality score (0-1)
+    pub image_quality: f32,
+    /// Motion artifact level (0-1, lower = better)
+    pub motion_artifacts: f32,
+    /// Acoustic shadowing (0-1)
+    pub acoustic_shadowing: f32,
+    /// Signal-to-noise ratio
+    pub snr: f64,
+    /// Frame rate achieved (Hz)
+    pub frame_rate_hz: f64,
+}
+
+/// DICOM integration request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DICOMIntegrationRequest {
+    /// Study instance UID
+    pub study_instance_uid: String,
+    /// Series instance UID
+    pub series_instance_uid: String,
+    /// SOP instance UID
+    pub sop_instance_uid: String,
+    /// DICOM tags to extract
+    pub requested_tags: Vec<String>,
+    /// Include pixel data
+    pub include_pixel_data: bool,
+}
+
+/// DICOM integration response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DICOMIntegrationResponse {
+    /// Extracted DICOM metadata
+    pub metadata: HashMap<String, DICOMValue>,
+    /// Pixel data (if requested) as base64
+    pub pixel_data: Option<String>,
+    /// Study information
+    pub study_info: DICOMStudyInfo,
+}
+
+/// DICOM value wrapper
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum DICOMValue {
+    String(String),
+    Number(f64),
+    Integer(i64),
+    Sequence(Vec<HashMap<String, DICOMValue>>),
+}
+
+/// DICOM study information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DICOMStudyInfo {
+    /// Patient ID
+    pub patient_id: String,
+    /// Study date
+    pub study_date: String,
+    /// Study description
+    pub study_description: String,
+    /// Modality
+    pub modality: String,
+    /// Institution name
+    pub institution_name: Option<String>,
+}
+
+/// Mobile device optimization request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MobileOptimizationRequest {
+    /// Device capabilities
+    pub device_capabilities: DeviceCapabilities,
+    /// Network conditions
+    pub network_conditions: NetworkConditions,
+    /// Power management settings
+    pub power_settings: PowerSettings,
+    /// Target performance requirements
+    pub performance_targets: PerformanceTargets,
+}
+
+/// Device capabilities for mobile optimization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceCapabilities {
+    /// CPU cores available
+    pub cpu_cores: usize,
+    /// RAM available (MB)
+    pub ram_mb: usize,
+    /// GPU available
+    pub has_gpu: bool,
+    /// SIMD support
+    pub has_simd: bool,
+    /// Battery capacity (mAh)
+    pub battery_mah: Option<u32>,
+}
+
+/// Network conditions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkConditions {
+    /// Connection type
+    pub connection_type: ConnectionType,
+    /// Bandwidth (Mbps)
+    pub bandwidth_mbps: f64,
+    /// Latency (ms)
+    pub latency_ms: u64,
+    /// Packet loss (%)
+    pub packet_loss_percent: f64,
+}
+
+/// Connection types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConnectionType {
+    Wifi,
+    Cellular4G,
+    Cellular5G,
+    Ethernet,
+    Bluetooth,
+}
+
+/// Power management settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PowerSettings {
+    /// Battery level (0-100)
+    pub battery_level: u8,
+    /// Power saving mode enabled
+    pub power_saving_mode: bool,
+    /// Screen brightness (0-100)
+    pub screen_brightness: u8,
+    /// Thermal throttling active
+    pub thermal_throttling: bool,
+}
+
+/// Performance targets for mobile devices
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceTargets {
+    /// Target frame rate (Hz)
+    pub target_frame_rate_hz: f64,
+    /// Maximum latency (ms)
+    pub max_latency_ms: u64,
+    /// Acceptable image quality (0-1)
+    pub acceptable_quality: f32,
+    /// Battery usage limit (% per hour)
+    pub battery_usage_limit_percent: f64,
+}
+
+/// Mobile optimization response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MobileOptimizationResponse {
+    /// Recommended processing configuration
+    pub recommended_config: ProcessingConfig,
+    /// Performance predictions
+    pub performance_predictions: PerformancePredictions,
+    /// Power consumption estimates
+    pub power_estimates: PowerEstimates,
+    /// Optimization recommendations
+    pub recommendations: Vec<String>,
+}
+
+/// Processing configuration for mobile devices
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessingConfig {
+    /// Frame rate to use (Hz)
+    pub frame_rate_hz: f64,
+    /// Image resolution scaling factor
+    pub resolution_scale: f64,
+    /// AI model precision (fp32, fp16, int8)
+    pub model_precision: String,
+    /// Enable SIMD acceleration
+    pub enable_simd: bool,
+    /// Batch processing size
+    pub batch_size: usize,
+}
+
+/// Performance predictions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformancePredictions {
+    /// Predicted latency (ms)
+    pub predicted_latency_ms: f64,
+    /// Predicted frame rate (Hz)
+    pub predicted_frame_rate_hz: f64,
+    /// Predicted image quality (0-1)
+    pub predicted_quality: f32,
+    /// Confidence in predictions (0-1)
+    pub prediction_confidence: f32,
+}
+
+/// Power consumption estimates
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PowerEstimates {
+    /// CPU usage (%)
+    pub cpu_usage_percent: f64,
+    /// GPU usage (%)
+    pub gpu_usage_percent: Option<f64>,
+    /// Battery drain rate (% per hour)
+    pub battery_drain_percent_per_hour: f64,
+    /// Thermal impact score (0-1)
+    pub thermal_impact: f64,
+}
 
     #[test]
     fn test_audit_log_serialization() {

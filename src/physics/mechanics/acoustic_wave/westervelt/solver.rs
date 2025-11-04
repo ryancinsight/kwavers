@@ -24,7 +24,8 @@ pub struct WesterveltWave {
 
     // Configuration
     nonlinearity_scaling: f64,
-    max_pressure: f64,
+    // No explicit pressure clamping - allows natural shock formation through nonlinearity
+    // Stability maintained through CFL conditions and physical viscoelastic damping
 
     // Pressure history using buffer rotation for zero-allocation updates
     pressure_buffers: [Array3<f64>; 3],
@@ -43,7 +44,6 @@ impl WesterveltWave {
         Self {
             k_squared: Some(k_squared),
             nonlinearity_scaling: 1.0,
-            max_pressure: 1e6,
             pressure_buffers: [
                 Array3::zeros(shape),
                 Array3::zeros(shape),
@@ -60,9 +60,9 @@ impl WesterveltWave {
         dt: f64,
         grid: &Grid,
         medium: &dyn Medium,
-        pressure: &Array3<f64>,
+        _pressure: &Array3<f64>,
     ) -> bool {
-        // CFL condition check
+        // CFL condition ensures numerical stability for shock-capable nonlinear propagation
         let max_c = medium
             .sound_speed_array()
             .iter()
@@ -70,10 +70,7 @@ impl WesterveltWave {
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
         let cfl = max_c * dt / min_dx;
 
-        // Check pressure bounds
-        let max_p = pressure.iter().fold(0.0_f64, |acc, &x| acc.max(x.abs()));
-
-        cfl < 0.5 && max_p < self.max_pressure
+        cfl < 0.5
     }
 
     /// Initialize pressure buffers from the field

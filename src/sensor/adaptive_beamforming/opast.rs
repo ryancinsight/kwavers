@@ -131,7 +131,7 @@ impl OrthonormalSubspaceTracker {
 
     /// Orthonormalize subspace using optimized Gram-Schmidt with parallel operations
     fn orthonormalize_subspace(&mut self) {
-        let n = self.subspace.nrows();
+        let _n = self.subspace.nrows();
         let p = self.subspace.ncols();
 
         for j in 0..p {
@@ -313,9 +313,18 @@ impl OrthonormalSubspaceTracker {
     fn normalize_column_parallel(&mut self, j: usize, norm: f64) {
         let n = self.subspace.nrows();
 
-        // Optimized column normalization with SIMD-friendly loop
-        for k in 0..n {
-            self.subspace[(k, j)] /= norm;
+        // Tightened tolerance: use 1e-15 instead of 1e-12 for better numerical precision
+        if norm > 1e-15 {
+            // Optimized column normalization with SIMD-friendly loop
+            for k in 0..n {
+                self.subspace[(k, j)] /= norm;
+            }
+        } else {
+            // Handle near-zero norm case with fallback initialization
+            // Reset column to standard basis vector to maintain subspace dimension
+            for k in 0..n {
+                self.subspace[(k, j)] = if k == j { Complex64::new(1.0, 0.0) } else { Complex64::zero() };
+            }
         }
     }
 }
@@ -326,6 +335,7 @@ mod tests {
     use std::f64::consts::PI;
 
     /// Create a steering vector for a linear array
+    #[allow(dead_code)]
     fn create_steering_vector(n: usize, angle: f64) -> Array1<Complex64> {
         let k = 2.0 * PI; // Normalized wavenumber
         Array1::from_vec(

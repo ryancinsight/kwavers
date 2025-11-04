@@ -27,6 +27,7 @@ pub use fdtd::FdtdGpu;
 pub use kspace::KSpaceGpu;
 pub use multi_gpu::{MultiGpuContext, GpuAffinity};
 pub use pipeline::{ComputePipeline, PipelineLayout};
+pub use shaders::neural_network::NeuralNetworkShader;
 
 use crate::error::{KwaversError, KwaversResult};
 

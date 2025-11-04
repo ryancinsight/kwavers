@@ -19,8 +19,38 @@ use chrono::{DateTime, Utc};
 
 pub mod auth;
 pub mod handlers;
+pub mod job_manager;
+pub mod model_registry;
 pub mod models;
 pub mod middleware;
+pub mod rate_limiter;
+#[cfg(feature = "pinn")]
+pub mod clinical_handlers;
+pub mod router;
+
+// ===== CLINICAL ULTRASOUND API TYPE RE-EXPORTS =====
+#[cfg(feature = "pinn")]
+pub use models::{
+    // Device integration
+    UltrasoundDevice, DeviceStatus, UltrasoundFrame, ImagingParameters,
+
+    // Clinical analysis
+    ClinicalAnalysisRequest, AnalysisPriority, ClinicalContext, OperatorLevel,
+    ClinicalAnalysisResponse, ClinicalFinding, FindingType, FindingMeasurements,
+    TissueCharacterization, TissueRegion, TissueProperties, AbnormalRegion,
+    ClinicalRecommendation, RecommendationType, UrgencyLevel,
+
+    // Performance and quality
+    ProcessingMetrics, QualityIndicators,
+
+    // Standards compliance
+    DICOMIntegrationRequest, DICOMIntegrationResponse, DICOMValue, DICOMStudyInfo,
+
+    // Mobile optimization
+    MobileOptimizationRequest, DeviceCapabilities, NetworkConditions, ConnectionType,
+    PowerSettings, PerformanceTargets, MobileOptimizationResponse, ProcessingConfig,
+    PerformancePredictions, PowerEstimates,
+};
 
 /// API version information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,7 +89,7 @@ pub struct ServiceStatus {
 }
 
 /// Job status enumeration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum JobStatus {
     Queued,
@@ -97,6 +127,16 @@ pub struct GeometrySpec {
     pub boundary_conditions: Vec<BoundaryConditionSpec>,
 }
 
+impl Default for GeometrySpec {
+    fn default() -> Self {
+        Self {
+            bounds: vec![0.0, 1.0, 0.0, 1.0, 0.0, 1.0], // Unit cube
+            obstacles: Vec::new(),
+            boundary_conditions: Vec::new(),
+        }
+    }
+}
+
 /// Obstacle specification
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ObstacleSpec {
@@ -124,6 +164,17 @@ pub struct PhysicsParameters {
     pub initial_values: HashMap<String, f64>,
     /// Domain parameters
     pub domain_params: HashMap<String, f64>,
+}
+
+impl Default for PhysicsParameters {
+    fn default() -> Self {
+        Self {
+            material_properties: HashMap::new(),
+            boundary_values: HashMap::new(),
+            initial_values: HashMap::new(),
+            domain_params: HashMap::new(),
+        }
+    }
 }
 
 /// Training configuration
@@ -244,6 +295,19 @@ pub struct TrainingMetrics {
     pub training_time_seconds: u64,
     pub convergence_epoch: Option<usize>,
     pub final_validation_error: Option<f64>,
+}
+
+impl Default for TrainingMetrics {
+    fn default() -> Self {
+        Self {
+            final_loss: 0.0,
+            best_loss: 0.0,
+            total_epochs: 0,
+            training_time_seconds: 0,
+            convergence_epoch: None,
+            final_validation_error: None,
+        }
+    }
 }
 
 /// List models response
@@ -430,6 +494,8 @@ mod tests {
         assert_eq!(deserialized.physics_domain, "acoustic_wave");
         assert_eq!(deserialized.training_config.collocation_points, 1000);
     }
+
+    // ===== CLINICAL ULTRASOUND API TYPE RE-EXPORTS =====
 
     #[test]
     fn test_health_status_default() {

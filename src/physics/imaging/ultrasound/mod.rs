@@ -1,9 +1,11 @@
 //! Ultrasound imaging modalities
 //!
-//! Implements B-mode, Doppler, and elastography imaging
+//! Implements B-mode, Doppler, elastography, synthetic aperture, plane wave, and coded excitation imaging
 
 use ndarray::Array2;
 use num_complex::Complex;
+
+pub mod advanced;
 
 /// Ultrasound imaging mode
 #[derive(Debug, Clone, Copy, PartialEq)]

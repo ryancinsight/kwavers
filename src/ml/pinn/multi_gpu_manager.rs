@@ -622,6 +622,11 @@ impl MultiGpuManager {
     pub fn get_active_work(&self) -> &HashMap<usize, WorkUnit> {
         &self.active_work
     }
+
+    /// Check if a GPU is healthy and available
+    pub fn is_gpu_healthy(&self, gpu_id: usize) -> bool {
+        gpu_id < self.devices.len() && self.devices[gpu_id].healthy
+    }
 }
 
 /// Performance summary for multi-GPU training

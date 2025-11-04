@@ -115,12 +115,14 @@ impl CPMLConfig {
 
     /// Calculate theoretical reflection coefficient for a given angle
     #[must_use]
-    pub fn theoretical_reflection(&self, cos_theta: f64) -> f64 {
+    pub fn theoretical_reflection(&self, cos_theta: f64, dx: f64, sound_speed: f64) -> f64 {
         let cos_theta = cos_theta.max(MIN_COS_THETA_FOR_REFLECTION);
         let m = self.polynomial_order;
         let thickness = self.thickness as f64;
 
-        // Theoretical reflection based on Collino & Tsogka (2001)
-        self.target_reflection * ((m + 1.0) * thickness * cos_theta).exp()
+        // Corrected formula based on Collino & Tsogka (2001) with proper absorption
+        // σ_max = (σ_factor·(m+1)·c) / (150π·dx) - includes sound speed
+        let sigma_max = self.sigma_factor * (m + 1.0) * sound_speed / (150.0 * std::f64::consts::PI * dx);
+        self.target_reflection * (-(m + 1.0) * sigma_max * thickness * cos_theta).exp()
     }
 }

@@ -52,8 +52,8 @@ pub struct WesterveltFdtdConfig {
     pub enable_absorption: bool,
     /// CFL safety factor (< 1.0)
     pub cfl_safety: f64,
-    /// Maximum pressure for clamping (Pa)
-    pub max_pressure: f64,
+    /// Artificial viscosity coefficient for stability (dimensionless, 0.0-1.0)
+    pub artificial_viscosity: f64,
 }
 
 impl Default for WesterveltFdtdConfig {
@@ -62,7 +62,7 @@ impl Default for WesterveltFdtdConfig {
             spatial_order: 4,
             enable_absorption: true,
             cfl_safety: 0.95,
-            max_pressure: 1e7, // 10 MPa
+            artificial_viscosity: 0.01, // Small artificial viscosity for stability
         }
     }
 }
@@ -280,13 +280,28 @@ impl WesterveltFdtd {
                     0.0
                 };
 
-                // Update equation: p^{n+1} = 2p^n - p^{n-1} + linear + nonlinear + absorption
-                *p_next = 2.0 * p - p_prev + linear_term - nl_coeff * nl - absorption_term;
+                // Artificial viscosity term for numerical stability (k-Wave approach)
+                // ∇·(ν ∇p) where ν is artificial viscosity coefficient
+                let visc_term = if i > 0 && i < grid.nx - 1 && j > 0 && j < grid.ny - 1 && k > 0 && k < grid.nz - 1 {
+                    let dx2 = grid.dx * grid.dx;
+                    let dy2 = grid.dy * grid.dy;
+                    let dz2 = grid.dz * grid.dz;
 
-                // Clamp pressure to prevent instability
-                if p_next.abs() > self.config.max_pressure {
-                    *p_next = p_next.signum() * self.config.max_pressure;
-                }
+                    // Laplacian of pressure for viscosity
+                    let lap_p = (self.pressure[(i+1, j, k)] - 2.0 * p + self.pressure[(i-1, j, k)]) / dx2
+                              + (self.pressure[(i, j+1, k)] - 2.0 * p + self.pressure[(i, j-1, k)]) / dy2
+                              + (self.pressure[(i, j, k+1)] - 2.0 * p + self.pressure[(i, j, k-1)]) / dz2;
+
+                    self.config.artificial_viscosity * dt * lap_p
+                } else {
+                    0.0
+                };
+
+                // Update equation: p^{n+1} = 2p^n - p^{n-1} + linear + nonlinear + absorption + viscosity
+                *p_next = 2.0 * p - p_prev + linear_term - nl_coeff * nl - absorption_term + visc_term;
+
+                // No explicit pressure clamping - allows natural shock formation through nonlinearity
+                // Stability maintained through CFL conditions and artificial viscosity
             });
 
         // Add source contributions
@@ -360,7 +375,9 @@ mod tests {
         // Set nonlinearity to zero for linear test
         medium.nonlinearity = 0.0;
 
-        let config = WesterveltFdtdConfig::default();
+        // Use zero artificial viscosity for energy conservation test
+        let mut config = WesterveltFdtdConfig::default();
+        config.artificial_viscosity = 0.0; // No artificial dissipation for linear test
         let mut solver = WesterveltFdtd::new(config, &grid);
 
         // Set initial Gaussian pulse
@@ -382,8 +399,9 @@ mod tests {
             solver.update(&medium, &grid, &[], 0.0, dt).unwrap();
         }
 
-        // Check that energy is conserved (approximately)
+        // Check that energy is conserved (approximately) with no artificial viscosity
         let total_energy: f64 = solver.pressure.iter().map(|&p| p * p).sum();
         assert!(total_energy > 0.0);
     }
+
 }

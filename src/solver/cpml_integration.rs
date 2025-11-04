@@ -25,6 +25,9 @@ pub struct CPMLSolver {
     nx: usize,
     ny: usize,
     nz: usize,
+
+    /// Reference sound speed for reflection calculations
+    sound_speed: f64,
 }
 
 impl CPMLSolver {
@@ -46,6 +49,7 @@ impl CPMLSolver {
             nx: grid.nx,
             ny: grid.ny,
             nz: grid.nz,
+            sound_speed,
         })
     }
 
@@ -282,7 +286,9 @@ impl CPMLSolver {
     /// Estimate reflection coefficient at given angle
     #[must_use]
     pub fn estimate_reflection(&self, angle_degrees: f64) -> f64 {
-        self.cpml.estimate_reflection(angle_degrees)
+        // Use a typical dx value for estimation (could be made configurable)
+        let dx = 1e-4; // 0.1mm typical grid spacing
+        self.cpml.estimate_reflection(angle_degrees, dx, self.sound_speed)
     }
 }
 

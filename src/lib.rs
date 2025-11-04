@@ -107,6 +107,7 @@ pub use solver::reconstruction::{
 };
 pub use solver::time_reversal::{TimeReversalConfig, TimeReversalReconstructor};
 pub use validation::{Validatable, ValidationResult};
+pub use validation::theorem_validation::{TheoremValidation, TheoremValidator};
 
 // Re-export physics plugin system (the new unified architecture)
 pub use physics::field_mapping::{

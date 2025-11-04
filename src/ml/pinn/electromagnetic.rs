@@ -137,7 +137,7 @@ impl<B: AutodiffBackend> Default for ElectromagneticDomain<B> {
     }
 }
 
-impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain {
+impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain<B> {
     fn domain_name(&self) -> &'static str {
         "electromagnetic"
     }
@@ -171,7 +171,7 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain {
         let inputs = Tensor::cat(vec![x.clone(), y.clone(), t.clone()], 1);
 
         // Forward pass through model to get field components
-        let outputs = model.forward(&inputs);
+        let outputs = model.forward(x.clone(), y.clone(), t.clone());
 
         match self.problem_type {
             EMProblemType::Electrostatic => {
@@ -437,6 +437,7 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
             domain_size,
             #[cfg(feature = "gpu")]
             gpu_config: None,
+            _backend: std::marker::PhantomData,
         }
     }
 
@@ -646,8 +647,8 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
         // For quasi-static approximation, solve coupled E and H fields
         // Assume outputs are [Ez, Hz] for 2D TMz mode
         let batch_size = x.shape().dims[0];
-        let ez = outputs.clone().slice([0..batch_size, 0..1]).squeeze(1);
-        let hz = outputs.clone().slice([0..batch_size, 1..2]).squeeze(1);
+        let ez = outputs.clone().slice([0..batch_size, 0..1]).squeeze::<2>();
+        let hz = outputs.clone().slice([0..batch_size, 1..2]).squeeze::<2>();
 
         // Use finite differences for all derivatives
         let eps_fd = 1e-4_f32;
@@ -786,8 +787,8 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
         // Full time-dependent Maxwell's equations for wave propagation
         // Assume outputs are [Ez, Hz] for 2D TMz mode
         let batch_size = x.shape().dims[0];
-        let ez = outputs.clone().slice([0..batch_size, 0..1]).squeeze(1);
-        let hz = outputs.clone().slice([0..batch_size, 1..2]).squeeze(1);
+        let ez = outputs.clone().slice([0..batch_size, 0..1]).squeeze::<2>();
+        let hz = outputs.clone().slice([0..batch_size, 1..2]).squeeze::<2>();
 
         // Use finite differences for all derivatives
         let eps_fd = 1e-4_f32;
@@ -921,8 +922,9 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
     pub fn validate(&self) -> KwaversResult<()> {
         if self.permittivity <= 0.0 {
             return Err(KwaversError::Validation(
-                crate::error::ValidationError {
-                    field: "permittivity".to_string(),
+                crate::error::ValidationError::InvalidValue {
+                    parameter: "permittivity".to_string(),
+                    value: self.permittivity,
                     reason: "Permittivity must be positive".to_string(),
                 }
             ));
@@ -930,8 +932,9 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
 
         if self.permeability <= 0.0 {
             return Err(KwaversError::Validation(
-                crate::error::ValidationError {
-                    field: "permeability".to_string(),
+                crate::error::ValidationError::InvalidValue {
+                    parameter: "permeability".to_string(),
+                    value: self.permeability,
                     reason: "Permeability must be positive".to_string(),
                 }
             ));
@@ -939,8 +942,9 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
 
         if self.conductivity < 0.0 {
             return Err(KwaversError::Validation(
-                crate::error::ValidationError {
-                    field: "conductivity".to_string(),
+                crate::error::ValidationError::InvalidValue {
+                    parameter: "conductivity".to_string(),
+                    value: self.conductivity,
                     reason: "Conductivity cannot be negative".to_string(),
                 }
             ));
@@ -948,8 +952,9 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
 
         if self.c <= 0.0 || !self.c.is_finite() {
             return Err(KwaversError::Validation(
-                crate::error::ValidationError {
-                    field: "speed_of_light".to_string(),
+                crate::error::ValidationError::InvalidValue {
+                    parameter: "speed_of_light".to_string(),
+                    value: self.c,
                     reason: "Speed of light must be positive and finite".to_string(),
                 }
             ));
@@ -965,7 +970,7 @@ mod tests {
 
     #[test]
     fn test_electromagnetic_domain_creation() {
-        let domain = ElectromagneticDomain::new(
+        let domain: ElectromagneticDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>> = ElectromagneticDomain::new(
             EMProblemType::Electrostatic,
             8.854e-12,
             4e-7 * std::f64::consts::PI,
@@ -979,7 +984,7 @@ mod tests {
 
     #[test]
     fn test_domain_validation() {
-        let valid_domain = ElectromagneticDomain::default();
+        let valid_domain: ElectromagneticDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>> = ElectromagneticDomain::default();
         assert!(valid_domain.validate().is_ok());
 
         let invalid_domain = ElectromagneticDomain::new(

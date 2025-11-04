@@ -15,16 +15,27 @@ use crate::api::{
 };
 use crate::api::auth::AuthenticatedUser;
 
+// Re-export clinical handlers for router setup
+#[cfg(feature = "pinn")]
+pub use crate::api::clinical_handlers::*;
+
 /// Application state shared across handlers
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct AppState {
     /// Service version information
     pub version: String,
     /// Uptime tracking
     pub start_time: std::time::Instant,
+    /// Job manager for PINN training operations
+    pub job_manager: std::sync::Arc<crate::api::job_manager::JobManager>,
+    /// Model registry for PINN model storage
+    pub model_registry: std::sync::Arc<crate::api::model_registry::ModelRegistry>,
+    /// Authentication middleware
+    pub auth_middleware: std::sync::Arc<crate::api::auth::AuthMiddleware>,
 }
 
 /// Health check endpoint
+#[axum::debug_handler]
 pub async fn health_check(State(state): State<AppState>) -> JsonResponse<HealthCheck> {
     // In a real implementation, this would check database, cache, and queue health
     let uptime_seconds = state.start_time.elapsed().as_secs();
@@ -46,172 +57,256 @@ pub async fn health_check(State(state): State<AppState>) -> JsonResponse<HealthC
 }
 
 /// Train PINN model endpoint
+#[axum::debug_handler]
 pub async fn train_pinn_model(
-    State(_state): State<AppState>,
-    _auth: AuthenticatedUser,
-    Json(_request): Json<PINNTrainingRequest>,
+    State(state): State<AppState>,
+    auth: AuthenticatedUser,
+    Json(request): Json<PINNTrainingRequest>,
 ) -> Result<JsonResponse<PINNTrainingResponse>, (StatusCode, JsonResponse<APIError>)> {
-    // TODO: Implement actual PINN training job submission
-    // For now, return a mock response
-
-    let response = PINNTrainingResponse {
-        job_id: "pinn_job_123".to_string(),
-        status: JobStatus::Queued,
-        estimated_completion: chrono::Utc::now() + chrono::Duration::minutes(30),
-        progress: None,
-    };
-
-    Ok(JsonResponse(response))
+    // Submit training job to job manager
+    match state.job_manager.submit_job(&auth.user_id, request).await {
+        Ok(job_id) => {
+            // Get the job to return current status
+            if let Some(job) = state.job_manager.get_job(&job_id) {
+                let response = PINNTrainingResponse {
+                    job_id,
+                    status: job.status,
+                    estimated_completion: job.created_at + chrono::Duration::minutes(30), // Estimate
+                    progress: job.progress,
+                };
+                Ok(JsonResponse(response))
+            } else {
+                Err((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    JsonResponse(APIError {
+                        error: crate::api::APIErrorType::InternalError,
+                        message: "Job submitted but not found".to_string(),
+                        details: None,
+                    }),
+                ))
+            }
+        }
+        Err(error) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            JsonResponse(error),
+        )),
+    }
 }
 
 /// Get job information endpoint
+#[axum::debug_handler]
 pub async fn get_job_info(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(job_id): Path<String>,
-    _auth: AuthenticatedUser,
+    auth: AuthenticatedUser,
 ) -> Result<JsonResponse<JobInfoResponse>, (StatusCode, JsonResponse<APIError>)> {
-    // TODO: Implement actual job status retrieval
-    // For now, return a mock response
+    // Get job from job manager
+    if let Some(job) = state.job_manager.get_job(&job_id) {
+        // Check if user owns this job
+        if job.user_id != auth.user_id {
+            return Err((
+                StatusCode::FORBIDDEN,
+                JsonResponse(APIError {
+                    error: crate::api::APIErrorType::AuthorizationFailed,
+                    message: "Not authorized to access this job".to_string(),
+                    details: None,
+                }),
+            ));
+        }
 
-    let response = JobInfoResponse {
-        job_id,
-        status: JobStatus::Running,
-        created_at: chrono::Utc::now() - chrono::Duration::minutes(10),
-        started_at: Some(chrono::Utc::now() - chrono::Duration::minutes(5)),
-        completed_at: None,
-        progress: None,
-        result_url: None,
-        error_message: None,
-    };
+        let response = JobInfoResponse {
+            job_id: job.id,
+            status: job.status,
+            created_at: job.created_at,
+            started_at: job.started_at,
+            completed_at: job.completed_at,
+            progress: job.progress,
+            result_url: job.result.as_ref().map(|_| format!("/api/jobs/{}/result", job_id)), // Placeholder URL
+            error_message: job.error_message,
+        };
 
-    Ok(JsonResponse(response))
+        Ok(JsonResponse(response))
+    } else {
+        Err((
+            StatusCode::NOT_FOUND,
+            JsonResponse(APIError {
+                error: crate::api::APIErrorType::ResourceNotFound,
+                message: "Job not found".to_string(),
+                details: None,
+            }),
+        ))
+    }
 }
 
 /// Run PINN inference endpoint
+#[axum::debug_handler]
 pub async fn run_inference(
-    State(_state): State<AppState>,
-    _auth: AuthenticatedUser,
-    Json(_request): Json<PINNInferenceRequest>,
+    State(state): State<AppState>,
+    auth: AuthenticatedUser,
+    Json(request): Json<PINNInferenceRequest>,
 ) -> Result<JsonResponse<PINNInferenceResponse>, (StatusCode, JsonResponse<APIError>)> {
-    // TODO: Implement actual PINN inference
-    // For now, return mock predictions
+    let start_time = std::time::Instant::now();
 
-    let predictions = vec![
-        vec![0.1, 0.2, 0.3], // Mock predictions for 3 output variables
-        vec![0.15, 0.25, 0.35],
-    ];
-
-    let response = PINNInferenceResponse {
-        predictions,
-        uncertainties: Some(vec![
-            vec![0.01, 0.02, 0.03],
-            vec![0.015, 0.025, 0.035],
-        ]),
-        processing_time_ms: 150,
+    // Get model from registry
+    let stored_model = match state.model_registry.get_model(&request.model_id) {
+        Some(model) => model,
+        None => {
+            return Err((
+                StatusCode::NOT_FOUND,
+                JsonResponse(APIError {
+                    error: crate::api::APIErrorType::ResourceNotFound,
+                    message: format!("Model '{}' not found", request.model_id),
+                    details: None,
+                }),
+            ));
+        }
     };
 
-    Ok(JsonResponse(response))
+    // Check if user owns this model
+    if !state.model_registry.get_user_models(&auth.user_id)
+        .iter()
+        .any(|m| m.model_id == request.model_id)
+    {
+        return Err((
+            StatusCode::FORBIDDEN,
+            JsonResponse(APIError {
+                error: crate::api::APIErrorType::AuthorizationFailed,
+                message: "Not authorized to use this model".to_string(),
+                details: None,
+            }),
+        ));
+    }
+
+    // Deserialize and run inference
+    #[cfg(feature = "pinn")]
+    match serde_json::from_slice::<crate::ml::pinn::TrainingResult>(&stored_model.model_data) {
+        Ok(training_result) => {
+            // For now, return mock predictions based on input coordinates
+            // In a full implementation, this would load the actual trained model
+            // and perform inference on the provided coordinates
+            let predictions: Vec<Vec<f64>> = request.coordinates
+                .iter()
+                .enumerate()
+                .map(|(i, coord)| {
+                    // Mock prediction based on coordinate values
+                    vec![
+                        coord.get(0).copied().unwrap_or(0.0) * 0.1 + 0.05,
+                        coord.get(1).copied().unwrap_or(0.0) * 0.15 + 0.08,
+                        coord.get(2).copied().unwrap_or(0.0) * 0.12 + 0.06,
+                    ]
+                })
+                .collect();
+
+            // Mock uncertainties
+            let uncertainties = Some(
+                predictions.iter()
+                    .map(|pred| pred.iter().map(|&p| p * 0.1).collect())
+                    .collect()
+            );
+
+            let processing_time = start_time.elapsed().as_millis() as u64;
+
+            let response = PINNInferenceResponse {
+                predictions,
+                uncertainties,
+                processing_time_ms: processing_time,
+            };
+
+            Ok(JsonResponse(response))
+        }
+        Err(e) => {
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                JsonResponse(APIError {
+                    error: crate::api::APIErrorType::InternalError,
+                    message: format!("Failed to load model: {}", e),
+                    details: None,
+                }),
+            ))
+        }
+    }
+
+    #[cfg(not(feature = "pinn"))]
+    Err((
+        StatusCode::INTERNAL_SERVER_ERROR,
+        JsonResponse(APIError {
+            error: crate::api::APIErrorType::InternalError,
+            message: "PINN inference not available - feature not enabled".to_string(),
+            details: None,
+        }),
+    ))
 }
 
 /// List available models endpoint
+#[axum::debug_handler]
 pub async fn list_models(
-    State(_state): State<AppState>,
-    _auth: AuthenticatedUser,
+    State(state): State<AppState>,
+    auth: AuthenticatedUser,
     Query(pagination): Query<PaginationParams>,
 ) -> Result<JsonResponse<ListModelsResponse>, (StatusCode, JsonResponse<APIError>)> {
-    // TODO: Implement actual model listing from database
-    // For now, return mock models
+    // Get user's models from registry
+    let all_models = state.model_registry.get_user_models(&auth.user_id);
 
-    let models = vec![
-        ModelMetadata {
-            model_id: "model_001".to_string(),
-            physics_domain: "acoustic_wave".to_string(),
-            created_at: chrono::Utc::now() - chrono::Duration::days(1),
-            training_config: crate::api::TrainingConfig {
-                collocation_points: 10000,
-                batch_size: 64,
-                epochs: 100,
-                learning_rate: 0.001,
-                hidden_layers: vec![128, 128, 64],
-                adaptive_sampling: true,
-                use_gpu: true,
-            },
-            performance_metrics: crate::api::TrainingMetrics {
-                final_loss: 0.0001,
-                best_loss: 0.00005,
-                total_epochs: 100,
-                training_time_seconds: 3600,
-                convergence_epoch: Some(75),
-                final_validation_error: Some(0.0002),
-            },
-            geometry_spec: crate::api::GeometrySpec {
-                bounds: vec![0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
-                obstacles: vec![],
-                boundary_conditions: vec![],
-            },
-        }
-    ];
+    // Apply pagination
+    let page = pagination.page.unwrap_or(1).max(1) as usize;
+    let page_size = pagination.page_size.unwrap_or(50).min(100) as usize; // Cap at 100
+    let start_idx = (page - 1) * page_size;
+    let end_idx = start_idx + page_size;
+
+    let paginated_models = if start_idx < all_models.len() {
+        all_models[start_idx..end_idx.min(all_models.len())].to_vec()
+    } else {
+        Vec::new()
+    };
 
     let response = ListModelsResponse {
-        models,
-        total_count: 1,
-        page: pagination.page.unwrap_or(1),
-        page_size: pagination.page_size.unwrap_or(50),
+        models: paginated_models,
+        total_count: all_models.len(),
+        page: page as usize,
+        page_size,
     };
 
     Ok(JsonResponse(response))
 }
 
 /// Get model metadata endpoint
+#[axum::debug_handler]
 pub async fn get_model_info(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(model_id): Path<String>,
-    _auth: AuthenticatedUser,
+    auth: AuthenticatedUser,
 ) -> Result<JsonResponse<ModelMetadata>, (StatusCode, JsonResponse<APIError>)> {
-    // TODO: Implement actual model metadata retrieval
-    // For now, return mock metadata
-
-    let model = ModelMetadata {
-        model_id,
-        physics_domain: "acoustic_wave".to_string(),
-        created_at: chrono::Utc::now() - chrono::Duration::hours(2),
-        training_config: crate::api::TrainingConfig {
-            collocation_points: 5000,
-            batch_size: 32,
-            epochs: 50,
-            learning_rate: 0.0005,
-            hidden_layers: vec![64, 64, 32],
-            adaptive_sampling: false,
-            use_gpu: false,
-        },
-        performance_metrics: crate::api::TrainingMetrics {
-            final_loss: 0.001,
-            best_loss: 0.0008,
-            total_epochs: 50,
-            training_time_seconds: 1800,
-            convergence_epoch: Some(35),
-            final_validation_error: Some(0.0015),
-        },
-        geometry_spec: crate::api::GeometrySpec {
-            bounds: vec![0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
-            obstacles: vec![],
-            boundary_conditions: vec![],
-        },
-    };
-
-    Ok(JsonResponse(model))
+    // Check if user owns this model
+    let user_models = state.model_registry.get_user_models(&auth.user_id);
+    if let Some(model_metadata) = user_models.iter().find(|m| m.model_id == model_id) {
+        Ok(JsonResponse(model_metadata.clone()))
+    } else {
+        Err((
+            StatusCode::NOT_FOUND,
+            JsonResponse(APIError {
+                error: crate::api::APIErrorType::ResourceNotFound,
+                message: "Model not found or access denied".to_string(),
+                details: None,
+            }),
+        ))
+    }
 }
 
 /// Delete model endpoint
+#[axum::debug_handler]
 pub async fn delete_model(
-    State(_state): State<AppState>,
-    Path(_model_id): Path<String>,
-    _auth: AuthenticatedUser,
+    State(state): State<AppState>,
+    Path(model_id): Path<String>,
+    auth: AuthenticatedUser,
 ) -> Result<StatusCode, (StatusCode, JsonResponse<APIError>)> {
-    // TODO: Implement actual model deletion
-    // For now, return success
-
-    Ok(StatusCode::NO_CONTENT)
+    // Delete model from registry
+    match state.model_registry.delete_model(&auth.user_id, &model_id) {
+        Ok(_) => Ok(StatusCode::NO_CONTENT),
+        Err(error) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            JsonResponse(error),
+        )),
+    }
 }
 
 #[cfg(test)]
@@ -225,6 +320,9 @@ mod tests {
         let state = AppState {
             version: "1.0.0".to_string(),
             start_time: std::time::Instant::now(),
+            job_manager: std::sync::Arc::new(crate::api::job_manager::JobManager::new(1)),
+            model_registry: std::sync::Arc::new(crate::api::model_registry::ModelRegistry::new()),
+            auth_middleware: std::sync::Arc::new(crate::api::auth::AuthMiddleware::default()),
         };
 
         let response = health_check(State(state)).await;

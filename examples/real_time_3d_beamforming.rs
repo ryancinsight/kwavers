@@ -25,6 +25,8 @@ use kwavers::{
     KwaversResult,
 };
 use ndarray::{Array3, Array4};
+#[cfg(feature = "gpu")]
+use std::time::Instant;
 
 #[cfg(feature = "gpu")]
 #[tokio::main]
@@ -73,7 +75,7 @@ async fn demonstrate_delay_and_sum() -> KwaversResult<()> {
     println!("  Voxel spacing: {:.1}mm", config.voxel_spacing.0 * 1000.0);
 
     // Create processor
-    let mut processor = BeamformingProcessor3D::new(config).await?;
+    let mut processor = BeamformingProcessor3D::new(config.clone()).await?;
 
     // Generate synthetic RF data (simulating ultrasound acquisition)
     let rf_data = generate_synthetic_rf_data(
@@ -98,7 +100,8 @@ async fn demonstrate_delay_and_sum() -> KwaversResult<()> {
     println!("Processing Results:");
     println!("  Processing time: {:.2}ms", processing_time);
     println!("  Reconstruction rate: {:.1} volumes/sec", 1000.0 / processing_time);
-    println!("  Volume dimensions: {}×{}×{}", volume.nrows(), volume.ncols(), volume.npages());
+    let (nx, ny, nz) = volume.dim();
+    println!("  Volume dimensions: {}×{}×{}", nx, ny, nz);
     println!("  Volume range: {:.3} to {:.3}", volume.iter().fold(f32::INFINITY, |a, &b| a.min(b)),
              volume.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b)));
 
@@ -123,7 +126,7 @@ async fn demonstrate_dynamic_focusing() -> KwaversResult<()> {
         ..Default::default()
     };
 
-    let mut processor = BeamformingProcessor3D::new(config).await?;
+    let mut processor = BeamformingProcessor3D::new(config.clone()).await?;
 
     // Generate RF data
     let rf_data = generate_synthetic_rf_data(2, 256, 256);
@@ -179,7 +182,7 @@ async fn demonstrate_streaming_processing() -> KwaversResult<()> {
         ..Default::default()
     };
 
-    let mut processor = BeamformingProcessor3D::new(config).await?;
+    let mut processor = BeamformingProcessor3D::new(config.clone()).await?;
 
     let algorithm = BeamformingAlgorithm3D::DelayAndSum {
         dynamic_focusing: true,
@@ -208,7 +211,7 @@ async fn demonstrate_streaming_processing() -> KwaversResult<()> {
         let start_time = Instant::now();
 
         // Process streaming frame
-        if let Some(volume) = processor.process_streaming(&frame_data, &algorithm)? {
+        if let Some(_volume) = processor.process_streaming(&frame_data, &algorithm)? {
             let processing_time = start_time.elapsed().as_secs_f64() * 1000.0;
             total_processing_time += processing_time;
             processed_volumes += 1;
@@ -244,7 +247,7 @@ async fn demonstrate_performance_benchmarking() -> KwaversResult<()> {
         ..Default::default()
     };
 
-    let mut processor = BeamformingProcessor3D::new(config).await?;
+    let mut processor = BeamformingProcessor3D::new(config.clone()).await?;
 
     // Generate test data
     let rf_data = generate_synthetic_rf_data(1, 32, 128);
@@ -370,9 +373,9 @@ fn cpu_beamforming_delay_and_sum(rf_data: &Array4<f32>, config: &BeamformingConf
         for y in 0..vol_y {
             for z in 0..vol_z {
                 let voxel_pos = (
-                    x as f32 * config.voxel_spacing.0,
-                    y as f32 * config.voxel_spacing.1,
-                    z as f32 * config.voxel_spacing.2,
+                    x as f32 * config.voxel_spacing.0 as f32,
+                    y as f32 * config.voxel_spacing.1 as f32,
+                    z as f32 * config.voxel_spacing.2 as f32,
                 );
 
                 let mut sum = 0.0;
@@ -384,16 +387,16 @@ fn cpu_beamforming_delay_and_sum(rf_data: &Array4<f32>, config: &BeamformingConf
                 for e in 0..elements_to_process {
                     // Simplified delay calculation
                     let element_pos = (
-                        ((e % 16) as f32 - 7.5) * config.element_spacing.0,
-                        (((e / 16) % 16) as f32 - 7.5) * config.element_spacing.1,
-                        ((e / 256) as f32 - 3.5) * config.element_spacing.2,
+                        ((e % 16) as f32 - 7.5) * config.element_spacing_3d.0 as f32,
+                        (((e / 16) % 16) as f32 - 7.5) * config.element_spacing_3d.1 as f32,
+                        ((e / 256) as f32 - 3.5) * config.element_spacing_3d.2 as f32,
                     );
 
                     let distance = ((voxel_pos.0 - element_pos.0).powi(2) +
                                   (voxel_pos.1 - element_pos.1).powi(2) +
                                   (voxel_pos.2 - element_pos.2).powi(2)).sqrt();
 
-                    let delay_samples = (distance / config.sound_speed * config.sampling_frequency) as usize;
+                    let delay_samples = (distance / config.sound_speed as f32 * config.sampling_frequency as f32) as usize;
                     let sample_idx = delay_samples.min(samples - 1);
 
                     // Sum across frames
