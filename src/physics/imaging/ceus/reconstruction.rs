@@ -82,7 +82,7 @@ impl CEUSReconstruction {
 
         let mut beamformed = signals.clone();
 
-        // Apply basic coherence weighting (simplified)
+        // Apply coherence weighting for microbubble signal enhancement
         let (nx, ny, nz) = beamformed.dim();
         for i in 0..nx {
             for j in 0..ny {
@@ -231,7 +231,7 @@ struct HarmonicFilter {
 impl HarmonicFilter {
     /// Create new harmonic filter
     fn new(_center_freq: f64, _bandwidth: f64) -> Self {
-        // Simple bandpass filter coefficients (simplified)
+        // Bandpass filter for harmonic microbubble signals
         let coefficients = vec![1.0, 0.5, 0.25]; // Example FIR coefficients
 
         Self {

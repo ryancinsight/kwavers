@@ -19,6 +19,8 @@
 //! - **Quality Management**: ISO 13485 compliance frameworks
 
 pub mod workflows;
+pub mod swe_3d_workflows;
+pub mod therapy_integration;
 
 // Re-export main clinical components
 pub use workflows::{
@@ -26,4 +28,18 @@ pub use workflows::{
     WorkflowPriority, QualityPreference, ClinicalProtocol, WorkflowState,
     ClinicalExaminationResult, DiagnosticRecommendation, DiagnosticUrgency,
     PerformanceMetrics,
+};
+
+// Re-export 3D SWE clinical workflow components
+pub use swe_3d_workflows::{
+    VolumetricROI, ElasticityMap3D, ElasticityMap2D, VolumetricStatistics,
+    ClinicalDecisionSupport, TissueReference, LiverFibrosisStage, FibrosisStage,
+    BreastLesionClassification, ClassificationConfidence, MultiPlanarReconstruction,
+    SliceOrientation, SlicePositions,
+};
+
+// Re-export therapy integration components
+pub use therapy_integration::{
+    TherapyIntegrationOrchestrator, TherapySessionConfig, TherapySessionState,
+    AcousticField, AcousticWaveSolver,
 };

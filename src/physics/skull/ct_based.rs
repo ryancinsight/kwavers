@@ -25,6 +25,13 @@ impl CTBasedSkullModel {
         )))
     }
 
+    /// Create from CT data array
+    pub fn from_ct_data(ct_data: &Array3<f64>) -> KwaversResult<Self> {
+        Ok(Self {
+            hounsfield: ct_data.clone(),
+        })
+    }
+
     /// Generate binary skull mask from CT
     pub fn generate_mask(&self, grid: &Grid) -> KwaversResult<Array3<f64>> {
         let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
@@ -76,5 +83,22 @@ impl CTBasedSkullModel {
             density,
             attenuation,
         })
+    }
+
+    /// Get CT data
+    pub fn ct_data(&self) -> &Array3<f64> {
+        &self.hounsfield
+    }
+
+    /// Get sound speed at specific voxel
+    pub fn sound_speed(&self, i: usize, j: usize, k: usize) -> f64 {
+        let hu = self.hounsfield[[i, j, k]];
+        if hu > 700.0 {
+            // Bone: empirical relation from Aubry et al. (2003)
+            2800.0 + (hu - 700.0) * 2.0
+        } else {
+            // Soft tissue
+            1500.0
+        }
     }
 }

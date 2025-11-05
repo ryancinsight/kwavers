@@ -83,8 +83,8 @@ fn main() -> KwaversResult<()> {
     println!("   ✓ Displacement range: {:.3} - {:.3} μm", min_disp * 1e6, max_disp * 1e6);
 
     // Debug: check initial displacement
-    let initial_min = displacement_field.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-    let initial_max = displacement_field.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+    let initial_min = displacement_field.iter().fold(f64::INFINITY, |a: f64, &b: &f64| a.min(b));
+    let initial_max = displacement_field.iter().fold(f64::NEG_INFINITY, |a: f64, &b: &f64| a.max(b));
     println!("   ✓ Initial displacement range: {:.3} - {:.3} μm", initial_min * 1e6, initial_max * 1e6);
 
     // Reconstruct elasticity map
@@ -135,16 +135,13 @@ fn create_clinical_grid() -> KwaversResult<Grid> {
 }
 
 /// Create liver phantom with average fibrosis properties
-/// In a full implementation, this would be a heterogeneous medium
+/// Uses the new liver tissue medium with proper elastic properties
 fn create_liver_phantom(grid: &Grid) -> KwaversResult<HomogeneousMedium> {
-    // Average properties for moderate fibrosis (F2-F3 stage)
-    // E ≈ 8-12 kPa for moderate fibrosis
-    let density = 1060.0;        // kg/m³ (liver density)
-    let sound_speed = 1580.0;    // m/s (liver sound speed)
-    let absorption = 0.5;        // dB/cm/MHz (liver absorption)
-    let nonlinearity = 1.5;      // B/A ratio (liver nonlinearity)
+    // Use moderate fibrosis (F2 stage) for demonstration
+    // E ≈ 8 kPa for F2 fibrosis
+    let fibrosis_stage = 2; // F2: Moderate fibrosis
 
-    Ok(HomogeneousMedium::new(density, sound_speed, absorption, nonlinearity, grid))
+    Ok(HomogeneousMedium::liver_tissue(fibrosis_stage, grid))
 }
 
 

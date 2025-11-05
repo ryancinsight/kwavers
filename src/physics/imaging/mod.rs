@@ -77,7 +77,7 @@ impl Default for ImagingConfig {
 
 // Re-export commonly used types
 pub use ceus::{ContrastEnhancedUltrasound, PerfusionMap};
-pub use elastography::{ElasticityMap, InversionMethod, ShearWaveElastography};
+pub use elastography::{ElasticityMap, InversionMethod};
 pub use fusion::{MultiModalFusion, FusionConfig, FusionMethod, FusedImageResult, RegistrationMethod};
 pub use hifu::{HIFUTransducer, HIFUTreatmentPlan, ThermalDose};
 pub use photoacoustic::{PhotoacousticSimulator, PhotoacousticParameters, PhotoacousticResult};

@@ -97,7 +97,7 @@ impl MultiGpuContext {
             let context = Self::create_context_for_adapter(adapter).await?;
             contexts.push(context);
 
-            // Initialize peer accessibility (simplified)
+            // Initialize peer accessibility for multi-GPU communication
             if peer_accessibility.is_empty() {
                 peer_accessibility = vec![vec![true; 1]; 1];
             } else {

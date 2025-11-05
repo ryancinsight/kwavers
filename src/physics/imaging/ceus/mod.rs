@@ -24,11 +24,13 @@
 //! - Renal blood flow analysis
 
 pub mod microbubble;
+pub mod cloud_dynamics;
 pub mod scattering;
 pub mod perfusion;
 pub mod reconstruction;
 
 pub use microbubble::{Microbubble, MicrobubblePopulation, BubbleDynamics};
+pub use cloud_dynamics::{CloudDynamics, CloudConfig, CloudBubble, CloudResponse, IncidentField, ScatteredField};
 pub use scattering::{NonlinearScattering, HarmonicImaging};
 pub use perfusion::{PerfusionModel, FlowKinetics, TissueUptake};
 pub use reconstruction::{CEUSReconstruction, ContrastImage};
@@ -158,7 +160,7 @@ impl ContrastEnhancedUltrasound {
                     // Local concentration from perfusion model
                     let concentration = self.perfusion.concentration(i, j, k);
 
-                    // Acoustic pressure at this location (simplified)
+                    // Acoustic pressure at bubble location
                     let local_pressure = acoustic_pressure *
                         (2.0 * std::f64::consts::PI * frequency * time).cos();
 

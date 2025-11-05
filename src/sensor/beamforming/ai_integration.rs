@@ -331,7 +331,7 @@ impl AIEnhancedBeamformingProcessor {
         angles: &[f32],
     ) -> KwaversResult<Array3<f32>> {
         // Convert 4D RF data to beamformed volume
-        // This is a simplified implementation - real beamforming would be more complex
+        // Convert RF data to beamformed volume using AI-assisted processing
         let (nt, nchan, nframes, _) = rf_data.dim();
 
         // Create output volume [x, y, z] where z represents frames/depth

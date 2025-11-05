@@ -33,7 +33,7 @@ impl NonlinearOperator {
         // Coefficient for nonlinear term
         let coeff = -self.beta * dz / (2.0 * self.rho0 * self.c0 * self.c0 * self.c0);
 
-        // Apply nonlinear correction (simplified characteristic method)
+        // Apply nonlinear correction using characteristic method
         for ((i, j, k), val) in pressure.indexed_iter() {
             // Nonlinear steepening: Δp ≈ -β/(2ρc³) × p × ∂p/∂t × Δz
             // Approximate ∂p/∂t ≈ c₀ × ∂p/∂z (plane wave assumption)

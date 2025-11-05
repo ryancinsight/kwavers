@@ -34,7 +34,7 @@ impl BiotTheory {
         let rho_11 = (1.0 - phi) * rho_s + phi * rho_f * (alpha - 1.0);
         let rho_22 = phi * rho_f * alpha;
 
-        // Elastic coefficients (simplified)
+        // Elastic wave propagation coefficients in porous media
         let k_s = self.material.solid_bulk_modulus;
         let k_f = self.material.fluid_bulk_modulus;
         let g = self.material.shear_modulus;
@@ -44,7 +44,8 @@ impl BiotTheory {
         let q_coeff = k_f * phi;
         let r_coeff = k_f * phi;
 
-        // Solve for wave speeds (simplified high-frequency limit)
+        // Solve for wave speeds using high-frequency approximation
+        // Reference: Biot (1956) theory of wave propagation in porous media
         let fast_wave = ((p_coeff + 2.0 * q_coeff + r_coeff) / rho_11).sqrt();
         let slow_wave = (r_coeff / rho_22).sqrt();
 

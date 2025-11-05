@@ -261,35 +261,197 @@ impl SimdOps {
             });
     }
 
-    /// Physics kernel: Elastography strain computation
+    /// Physics kernel: Elastography strain computation using proper finite differences
     pub fn compute_strain_tensor(
-        _displacement_u: ArrayView3<f64>,
-        _displacement_v: ArrayView3<f64>,
-        _displacement_w: ArrayView3<f64>,
+        displacement_u: ArrayView3<f64>,
+        displacement_v: ArrayView3<f64>,
+        displacement_w: ArrayView3<f64>,
         mut strain_xx: ArrayViewMut3<f64>,
         mut strain_yy: ArrayViewMut3<f64>,
         mut strain_zz: ArrayViewMut3<f64>,
         mut strain_xy: ArrayViewMut3<f64>,
         mut strain_xz: ArrayViewMut3<f64>,
         mut strain_yz: ArrayViewMut3<f64>,
-        _dx: f64,
-        _dy: f64,
-        _dz: f64,
+        dx: f64,
+        dy: f64,
+        dz: f64,
     ) {
-        // Compute strain tensor components using central differences
-        Zip::from(&mut strain_xx)
-            .and(&_displacement_u)
-            .par_for_each(|s, &u| {
-                // ∂u/∂x (simplified - would need proper finite difference stencil)
-                *s = u / _dx; // Placeholder - actual implementation needs neighboring values
+        let (nx, ny, nz) = displacement_u.dim();
+
+        // Compute strain tensor components using central finite differences
+        // ε_xx = ∂u/∂x, ε_yy = ∂v/∂y, ε_zz = ∂w/∂z (normal strains)
+        // ε_xy = (1/2)(∂u/∂y + ∂v/∂x), etc. (shear strains)
+
+        // Parallel computation of strain tensor
+        strain_xx
+            .outer_iter_mut()
+            .enumerate()
+            .for_each(|(k, mut slice_xy)| {
+                slice_xy
+                    .outer_iter_mut()
+                    .enumerate()
+                    .for_each(|(j, mut row_x)| {
+                        row_x
+                            .iter_mut()
+                            .enumerate()
+                            .for_each(|(i, s)| {
+                                // ∂u/∂x using central finite difference
+                                if i > 0 && i < nx - 1 {
+                                    *s = (displacement_u[[i + 1, j, k]] - displacement_u[[i - 1, j, k]]) / (2.0 * dx);
+                                } else if i == 0 {
+                                    // Forward difference at boundary
+                                    *s = (displacement_u[[i + 1, j, k]] - displacement_u[[i, j, k]]) / dx;
+                                } else {
+                                    // Backward difference at boundary
+                                    *s = (displacement_u[[i, j, k]] - displacement_u[[i - 1, j, k]]) / dx;
+                                }
+                            });
+                    });
             });
 
-        // Similar for other components...
-        strain_yy.par_mapv_inplace(|_| 0.0); // Placeholder
-        strain_zz.par_mapv_inplace(|_| 0.0); // Placeholder
-        strain_xy.par_mapv_inplace(|_| 0.0); // Placeholder
-        strain_xz.par_mapv_inplace(|_| 0.0); // Placeholder
-        strain_yz.par_mapv_inplace(|_| 0.0); // Placeholder
+        // ε_yy = ∂v/∂y
+        strain_yy
+            .outer_iter_mut()
+            .enumerate()
+            .for_each(|(k, mut slice_xy)| {
+                slice_xy
+                    .outer_iter_mut()
+                    .enumerate()
+                    .for_each(|(j, mut row_x)| {
+                        row_x
+                            .iter_mut()
+                            .enumerate()
+                            .for_each(|(i, s)| {
+                                if j > 0 && j < ny - 1 {
+                                    *s = (displacement_v[[i, j + 1, k]] - displacement_v[[i, j - 1, k]]) / (2.0 * dy);
+                                } else if j == 0 {
+                                    *s = (displacement_v[[i, j + 1, k]] - displacement_v[[i, j, k]]) / dy;
+                                } else {
+                                    *s = (displacement_v[[i, j, k]] - displacement_v[[i, j - 1, k]]) / dy;
+                                }
+                            });
+                    });
+            });
+
+        // ε_zz = ∂w/∂z
+        strain_zz
+            .outer_iter_mut()
+            .enumerate()
+            .for_each(|(k, mut slice_xy)| {
+                slice_xy
+                    .iter_mut()
+                    .for_each(|s| {
+                        if k > 0 && k < nz - 1 {
+                            *s = (displacement_w[[0, 0, k + 1]] - displacement_w[[0, 0, k - 1]]) / (2.0 * dz);
+                        } else if k == 0 {
+                            *s = (displacement_w[[0, 0, k + 1]] - displacement_w[[0, 0, k]]) / dz;
+                        } else {
+                            *s = (displacement_w[[0, 0, k]] - displacement_w[[0, 0, k - 1]]) / dz;
+                        }
+                    });
+            });
+
+        // ε_xy = (1/2)(∂u/∂y + ∂v/∂x) - shear strain
+        strain_xy
+            .outer_iter_mut()
+            .enumerate()
+            .for_each(|(k, mut slice_xy)| {
+                slice_xy
+                    .outer_iter_mut()
+                    .enumerate()
+                    .for_each(|(j, mut row_x)| {
+                        row_x
+                            .iter_mut()
+                            .enumerate()
+                            .for_each(|(i, s)| {
+                                let du_dy = if j > 0 && j < ny - 1 {
+                                    (displacement_u[[i, j + 1, k]] - displacement_u[[i, j - 1, k]]) / (2.0 * dy)
+                                } else if j == 0 {
+                                    (displacement_u[[i, j + 1, k]] - displacement_u[[i, j, k]]) / dy
+                                } else {
+                                    (displacement_u[[i, j, k]] - displacement_u[[i, j - 1, k]]) / dy
+                                };
+
+                                let dv_dx = if i > 0 && i < nx - 1 {
+                                    (displacement_v[[i + 1, j, k]] - displacement_v[[i - 1, j, k]]) / (2.0 * dx)
+                                } else if i == 0 {
+                                    (displacement_v[[i + 1, j, k]] - displacement_v[[i, j, k]]) / dx
+                                } else {
+                                    (displacement_v[[i, j, k]] - displacement_v[[i - 1, j, k]]) / dx
+                                };
+
+                                *s = 0.5 * (du_dy + dv_dx);
+                            });
+                    });
+            });
+
+        // ε_xz = (1/2)(∂u/∂z + ∂w/∂x) - shear strain
+        strain_xz
+            .outer_iter_mut()
+            .enumerate()
+            .for_each(|(k, mut slice_xy)| {
+                slice_xy
+                    .outer_iter_mut()
+                    .enumerate()
+                    .for_each(|(j, mut row_x)| {
+                        row_x
+                            .iter_mut()
+                            .enumerate()
+                            .for_each(|(i, s)| {
+                                let du_dz = if k > 0 && k < nz - 1 {
+                                    (displacement_u[[i, j, k + 1]] - displacement_u[[i, j, k - 1]]) / (2.0 * dz)
+                                } else if k == 0 {
+                                    (displacement_u[[i, j, k + 1]] - displacement_u[[i, j, k]]) / dz
+                                } else {
+                                    (displacement_u[[i, j, k]] - displacement_u[[i, j, k - 1]]) / dz
+                                };
+
+                                let dw_dx = if i > 0 && i < nx - 1 {
+                                    (displacement_w[[i + 1, j, k]] - displacement_w[[i - 1, j, k]]) / (2.0 * dx)
+                                } else if i == 0 {
+                                    (displacement_w[[i + 1, j, k]] - displacement_w[[i, j, k]]) / dx
+                                } else {
+                                    (displacement_w[[i, j, k]] - displacement_w[[i - 1, j, k]]) / dx
+                                };
+
+                                *s = 0.5 * (du_dz + dw_dx);
+                            });
+                    });
+            });
+
+        // ε_yz = (1/2)(∂v/∂z + ∂w/∂y) - shear strain
+        strain_yz
+            .outer_iter_mut()
+            .enumerate()
+            .for_each(|(k, mut slice_xy)| {
+                slice_xy
+                    .outer_iter_mut()
+                    .enumerate()
+                    .for_each(|(j, mut row_x)| {
+                        row_x
+                            .iter_mut()
+                            .enumerate()
+                            .for_each(|(i, s)| {
+                                let dv_dz = if k > 0 && k < nz - 1 {
+                                    (displacement_v[[i, j, k + 1]] - displacement_v[[i, j, k - 1]]) / (2.0 * dz)
+                                } else if k == 0 {
+                                    (displacement_v[[i, j, k + 1]] - displacement_v[[i, j, k]]) / dz
+                                } else {
+                                    (displacement_v[[i, j, k]] - displacement_v[[i, j, k - 1]]) / dz
+                                };
+
+                                let dw_dy = if j > 0 && j < ny - 1 {
+                                    (displacement_w[[i, j + 1, k]] - displacement_w[[i, j - 1, k]]) / (2.0 * dy)
+                                } else if j == 0 {
+                                    (displacement_w[[i, j + 1, k]] - displacement_w[[i, j, k]]) / dy
+                                } else {
+                                    (displacement_w[[i, j, k]] - displacement_w[[i, j - 1, k]]) / dy
+                                };
+
+                                *s = 0.5 * (dv_dz + dw_dy);
+                            });
+                    });
+            });
     }
 }
 

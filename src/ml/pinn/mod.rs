@@ -79,6 +79,10 @@ pub mod burn_wave_equation_1d;
 #[cfg(feature = "pinn")]
 pub mod burn_wave_equation_2d;
 
+// Sprint 173: 3D Wave Equation PINN extension for heterogeneous media
+#[cfg(feature = "pinn")]
+pub mod burn_wave_equation_3d;
+
 // Sprint 151: GPU Acceleration & Advanced Geometries
 // #[cfg(feature = "pinn")]
 // pub mod gpu_accelerator;
@@ -100,6 +104,11 @@ pub use burn_wave_equation_1d::{BurnLossWeights, BurnPINNConfig, BurnPINN1DWave,
 #[cfg(feature = "pinn")]
 pub use burn_wave_equation_2d::{
     BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, BurnTrainingMetrics2D, BoundaryCondition2D, Geometry2D, InterfaceCondition
+};
+
+#[cfg(feature = "pinn")]
+pub use burn_wave_equation_3d::{
+    BurnLossWeights3D, BurnPINN3DConfig, BurnPINN3DWave, BurnTrainingMetrics3D, BoundaryCondition3D, Geometry3D, InterfaceCondition3D
 };
 
 // Sprint 151: GPU Acceleration & Advanced Geometries

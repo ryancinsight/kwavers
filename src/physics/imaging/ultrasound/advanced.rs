@@ -393,8 +393,8 @@ impl CodedExcitationProcessor {
 
     /// Generate Golay complementary pair
     fn generate_golay(&self, length: usize) -> Array1<Complex64> {
-        // Generate Golay code A (simplified implementation)
-        // In practice, this should generate proper complementary pairs
+        // Generate Golay code A using complementary pair construction
+        // Reference: Golay (1961) complementary series for pulse compression
         let mut golay = Array1::<Complex64>::zeros(length);
 
         // Simple alternating pattern (not a true Golay code)

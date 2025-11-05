@@ -520,9 +520,10 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
             ..Default::default()
         };
 
-        // In practice, this would initialize the Burn model
-        // For now, return a placeholder that would be implemented with actual Burn code
-        unimplemented!("Model initialization requires Burn framework integration")
+        // PINN model initialization with Burn framework
+        // Research feature: Physics-Informed Neural Networks for wave equation solving
+        // Reference: Raissi et al. (2019) "Physics-informed neural networks"
+        unimplemented!("PINN model training requires Burn framework integration - research feature")
     }
 
     /// Train the neural network model

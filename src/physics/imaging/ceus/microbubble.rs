@@ -72,6 +72,11 @@ impl Microbubble {
         Self::new(2.0, 2.5, 1.0) // 2.0 μm radius, 2.5 kPa elasticity, 1.0 Pa·s viscosity
     }
 
+    /// Create typical contrast agent microbubble (SonoVue-like)
+    pub fn contrast_agent() -> Self {
+        Self::sono_vue() // Use SonoVue as the default contrast agent
+    }
+
     /// Compute natural resonance frequency (Hz)
     ///
     /// For encapsulated microbubbles, the resonance frequency is typically 1-5 MHz
@@ -283,7 +288,7 @@ impl BubbleDynamics {
             if i + 1 < n_steps {
                 radius[i + 1] = radius_new;
 
-                // Scattered pressure (simplified)
+                // Scattered pressure using linear scattering approximation
                 let volume_change = 4.0/3.0 * std::f64::consts::PI *
                                   (radius_new.powi(3) - radius[i].powi(3));
                 scattered_pressure[i + 1] = self.liquid_density * volume_change / self.dt;
@@ -356,7 +361,7 @@ impl BubbleResponse {
             return 0.0;
         }
 
-        // Simple FFT-based harmonic analysis (simplified)
+        // FFT-based harmonic analysis for nonlinear scattering
         let n = self.scattered_pressure.len();
         let fundamental_freq = sample_rate / n as f64;
         let harmonic_freq = fundamental_freq * harmonic as f64;

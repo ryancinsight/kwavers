@@ -47,7 +47,7 @@ impl SkullAttenuation {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
                     if skull_mask[[i, j, k]] > 0.5 {
-                        // Path length through skull (simplified)
+                        // Path length through skull bone layer
                         let path_length = grid.dx;
                         attenuation[[i, j, k]] = (-alpha * path_length).exp();
                     }

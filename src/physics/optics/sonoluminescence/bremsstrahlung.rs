@@ -214,7 +214,7 @@ pub fn calculate_bremsstrahlung_emission(
             // Calculate emission coefficient
             let emission_coeff = model.emission_coefficient(frequency, temp, n_electron, n_ion);
 
-            // Convert to power density (simplified - assumes unit volume)
+            // Convert to power density (normalized to unit volume)
             emission_field[[i, j, k]] = emission_coeff;
         }
     }

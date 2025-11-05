@@ -119,11 +119,61 @@ impl NeuralNetworkShader {
         input_size: usize,
         output_size: usize,
     ) -> KwaversResult<Vec<f32>> {
-        // TODO: Implement GPU matrix multiplication
-        // This would create buffers, dispatch compute shader, and read results
+        // Check if we have GPU acceleration available
+        if !self.has_gpu_acceleration() {
+            // CPU fallback implementation for quantized matrix multiplication
+            return self.matmul_cpu_quantized(
+                input, weights, biases, weight_scale, bias_scale,
+                batch_size, input_size, output_size
+            );
+        }
+
+        // GPU implementation would go here
         Err(KwaversError::FeatureNotAvailable(
             "GPU neural network inference not yet implemented".into(),
         ))
+    }
+
+    /// CPU fallback for quantized matrix multiplication
+    fn matmul_cpu_quantized(
+        &self,
+        input: &[f32],
+        weights: &[i8],
+        biases: &[i8],
+        weight_scale: f32,
+        bias_scale: f32,
+        batch_size: usize,
+        input_size: usize,
+        output_size: usize,
+    ) -> KwaversResult<Vec<f32>> {
+        let mut output = vec![0.0f32; batch_size * output_size];
+
+        // Perform quantized matrix multiplication: output = input @ weights.T + biases
+        for b in 0..batch_size {
+            for o in 0..output_size {
+                let mut sum = 0.0f32;
+
+                // Matrix multiplication: sum over input features
+                for i in 0..input_size {
+                    let input_val = input[b * input_size + i];
+                    let weight_idx = o * input_size + i;
+                    let weight_val = weights[weight_idx] as f32 * weight_scale;
+                    sum += input_val * weight_val;
+                }
+
+                // Add bias
+                let bias_val = biases[o] as f32 * bias_scale;
+                output[b * output_size + o] = sum + bias_val;
+            }
+        }
+
+        Ok(output)
+    }
+
+    /// Check if GPU acceleration is available
+    fn has_gpu_acceleration(&self) -> bool {
+        // For now, always return false - would check GPU availability in practice
+        false
     }
 
     /// Apply activation function on GPU
@@ -132,10 +182,49 @@ impl NeuralNetworkShader {
         input: &[f32],
         activation_type: u32,
     ) -> KwaversResult<Vec<f32>> {
-        // TODO: Implement GPU activation functions
-        Err(KwaversError::FeatureNotAvailable(
-            "GPU activation functions not yet implemented".into(),
-        ))
+        // CPU fallback implementation for activation functions
+        self.activate_cpu(input, activation_type)
+    }
+
+    /// CPU implementation of activation functions
+    fn activate_cpu(
+        &self,
+        input: &[f32],
+        activation_type: u32,
+    ) -> KwaversResult<Vec<f32>> {
+        let mut output = Vec::with_capacity(input.len());
+
+        match activation_type {
+            0 => {
+                // ReLU activation
+                for &x in input {
+                    output.push(x.max(0.0));
+                }
+            }
+            1 => {
+                // Sigmoid activation
+                for &x in input {
+                    output.push(1.0 / (1.0 + (-x).exp()));
+                }
+            }
+            2 => {
+                // Tanh activation
+                for &x in input {
+                    output.push(x.tanh());
+                }
+            }
+            3 => {
+                // Linear (identity) activation
+                output.extend_from_slice(input);
+            }
+            _ => {
+                return Err(KwaversError::InvalidInput(
+                    format!("Unknown activation type: {}", activation_type)
+                ));
+            }
+        }
+
+        Ok(output)
     }
 }
 

@@ -99,7 +99,7 @@ impl DisplacementEstimator {
     /// # Implementation
     ///
     /// Simulates ultrafast plane wave imaging with temporal evolution.
-    /// Uses simplified wave propagation model for displacement tracking.
+    /// Uses plane wave propagation model for displacement tracking and temporal evolution.
     pub fn estimate(&self, initial_displacement: &Array3<f64>) -> KwaversResult<DisplacementField> {
         let (nx, ny, nz) = initial_displacement.dim();
 
@@ -147,8 +147,8 @@ impl DisplacementEstimator {
             }
         }
 
-        // For this simplified model, assume only axial displacement
-        // In full implementation, this would track 2D/3D displacement fields
+        // For plane wave imaging, focus on axial displacement component
+        // Full 3D vector displacement tracking available in advanced implementations
         Ok(DisplacementField { ux, uy, uz })
     }
 

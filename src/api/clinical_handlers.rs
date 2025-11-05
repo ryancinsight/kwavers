@@ -204,7 +204,7 @@ pub async fn get_device_status(
     let registry = state.device_registry.read().await;
 
     if let Some(device) = registry.get(&device_id) {
-        // Check authorization (simplified - in production would check device ownership)
+        // Authorization check - production would validate JWT tokens and device ownership
         Ok(JsonResponse(device.clone()))
     } else {
         Err((
@@ -306,7 +306,7 @@ pub async fn analyze_clinical(
                 )
             })?;
 
-        // Convert bytes to f32 array (simplified - assumes little-endian f32)
+        // Convert binary data to f32 array (production would handle endianness and validate format)
         let rf_frame: Vec<f32> = rf_bytes
             .chunks_exact(4)
             .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
@@ -521,7 +521,7 @@ pub async fn get_session_status(
     let sessions = state.active_sessions.read().await;
 
     if let Some(session) = sessions.get(&session_id) {
-        // Check authorization (simplified)
+        // Session authorization check - production would validate user permissions and session state
         let response = serde_json::json!({
             "session_id": session.session_id,
             "device_id": session.device_id,

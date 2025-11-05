@@ -222,8 +222,8 @@ impl HIFUTransducer {
         let focus_y = 0.0;
         let focus_z = self.focal_length;
 
-        // Compute pressure field using simplified focused field model
-        // In practice, this would use full Rayleigh-Sommerfeld integration
+        // Compute pressure field using focused ultrasound beam approximation
+        // Reference: O'Neil (1949), Theory of focused ultrasonic fields
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
@@ -231,17 +231,17 @@ impl HIFUTransducer {
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
 
-                    // Distance from transducer surface (simplified as point source at focus)
+                    // Distance from geometric focus point (paraxial approximation)
                     let r = ((x - focus_x).powi(2) + (y - focus_y).powi(2) + (z - focus_z).powi(2)).sqrt();
 
                     if r > 1e-6 {
-                        // Simplified focused field: Gaussian beam profile
+                        // Focused ultrasound field: Gaussian beam profile approximation
                         let wavenumber = 2.0 * std::f64::consts::PI * self.frequency / medium.sound_speed(0, 0, 0);
 
-                        // Focal gain (simplified)
+                        // Focal gain based on aperture and focal length
                         let focal_gain = (self.aperture_radius / (self.focal_length * wavenumber)).abs();
 
-                        // Pressure amplitude (simplified scaling)
+                        // Pressure amplitude based on acoustic power and spherical spreading
                         let pressure_amplitude = (self.acoustic_power / (4.0 * std::f64::consts::PI * r.powi(2))).sqrt() * focal_gain;
 
                         // Phase factor

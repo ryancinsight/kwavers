@@ -20,7 +20,7 @@
 use kwavers::error::KwaversResult;
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
-use kwavers::physics::imaging::elastography::{InversionMethod, ShearWaveElastography};
+use kwavers::physics::imaging::elastography::{InversionMethod};
 use ndarray::Array1;
 use std::f64::consts::PI;
 

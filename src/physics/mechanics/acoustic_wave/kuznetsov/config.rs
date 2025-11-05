@@ -65,7 +65,7 @@ pub enum AcousticEquationMode {
     FullKuznetsov,
     /// KZK parabolic approximation for focused beams
     KZK,
-    /// Westervelt equation (simplified nonlinear acoustics)
+    /// Westervelt equation for nonlinear acoustic wave propagation
     Westervelt,
     /// Linear wave equation (no nonlinearity)
     Linear,

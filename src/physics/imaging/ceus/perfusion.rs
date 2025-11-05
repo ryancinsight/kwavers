@@ -38,7 +38,7 @@ impl PerfusionModel {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    // Advection term (simplified)
+                    // Advection term in contrast agent transport
                     let advective_flux = self.velocity[[i, j, k]].0 * dt; // x-direction only
 
                     // Diffusion and uptake

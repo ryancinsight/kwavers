@@ -437,7 +437,7 @@ impl KellerMiksisModel {
         let _latent_heat = H_VAP_WATER_100C; // J/mol (reserved for future full coupling)
 
         // Calculate vapor change rate (from previous mass transfer)
-        // This is a simplified model; for full coupling, track dn_vapor/dt
+        // This implementation focuses on acoustic coupling; full thermodynamic coupling requires vapor mass tracking
         let latent_term = 0.0; // Simplified: assume latent effects are small relative to adiabatic
 
         // Total temperature change

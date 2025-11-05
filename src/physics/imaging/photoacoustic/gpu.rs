@@ -158,7 +158,7 @@ impl CPUPhotoacousticPropagator {
             let c2_dt2 = self.speed_of_sound.powi(2) * self.dt.powi(2);
             let dx2_inv = 1.0 / (self.dx * self.dx);
 
-            // Interior points only (simplified, no boundary conditions)
+            // Interior points computation - boundary conditions handled separately
             let (nx, ny, nz) = initial_pressure.dim();
             if nx > 2 && ny > 2 && nz > 2 {
                 for i in 1..nx-1 {

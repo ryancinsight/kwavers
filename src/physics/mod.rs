@@ -18,3 +18,7 @@ pub mod bubble_dynamics;
 pub mod sonoluminescence_detector;
 pub mod validation;
 pub mod imaging;
+pub mod transducer;
+pub mod cavitation_control;
+pub mod transcranial;
+pub mod skull;

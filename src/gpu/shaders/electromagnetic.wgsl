@@ -251,3 +251,4 @@ fn compute_divergence_e(
     // Store residual for monitoring (could be in a separate buffer)
     // For now, just ensure it's computed
 }
+

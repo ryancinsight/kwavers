@@ -169,7 +169,7 @@ impl MieCalculator {
             panic!("Size parameter x = {} too large for current implementation", x);
         }
 
-        // Determine number of terms needed (simplified)
+        // Determine number of multipole expansion terms needed
         let n_max = (x as usize + 1).max(10).min(self.max_terms);
 
         // Calculate Mie coefficients

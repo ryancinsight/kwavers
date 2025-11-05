@@ -207,6 +207,78 @@ impl HomogeneousMedium {
 
         medium
     }
+
+    /// Create a soft tissue medium for elastography simulations
+    ///
+    /// # Arguments
+    ///
+    /// * `youngs_modulus` - Young's modulus in Pa (typical: 2-12 kPa for liver)
+    /// * `poisson_ratio` - Poisson's ratio (typical: 0.49 for nearly incompressible tissue)
+    /// * `grid` - Computational grid
+    ///
+    /// # Returns
+    ///
+    /// HomogeneousMedium configured for soft tissue elastography
+    pub fn soft_tissue(youngs_modulus: f64, poisson_ratio: f64, grid: &Grid) -> Self {
+        // Tissue acoustic properties (similar to water but with elastic behavior)
+        let density = 1060.0;        // kg/m³ (liver density)
+        let sound_speed = 1580.0;    // m/s (liver sound speed)
+
+        let mut medium = Self::new(density, sound_speed, 0.01, 0.1, grid);
+        let shape = (grid.nx, grid.ny, grid.nz);
+        medium.grid_shape = shape;
+        medium.temperature = Array3::from_elem(shape, 310.15); // 37°C (body temperature)
+        medium.bubble_radius = Array3::zeros(shape);
+        medium.bubble_velocity = Array3::zeros(shape);
+        medium.density_cache = Array3::from_elem(shape, density);
+        medium.sound_speed_cache = Array3::from_elem(shape, sound_speed);
+
+        // Set elastic properties for soft tissue
+        // λ = Eν/((1+ν)(1-2ν))
+        // μ = E/(2(1+ν))
+        let nu = poisson_ratio;
+        medium.lame_lambda = youngs_modulus * nu / ((1.0 + nu) * (1.0 - 2.0 * nu));
+        medium.lame_mu = youngs_modulus / (2.0 * (1.0 + nu));
+
+        // Tissue has higher viscosity than water
+        medium.viscosity = 0.001; // Pa·s (soft tissue viscosity)
+        medium.shear_viscosity = 0.001;
+        medium.bulk_viscosity = 2.5 * 0.001;
+
+        // Update absorption (higher for tissue)
+        let alpha = 0.5 * (medium.reference_frequency / 1e6).powf(1.1); // Tissue absorption
+        medium.absorption_cache = Array3::from_elem(shape, alpha);
+        medium.nonlinearity_cache = Array3::from_elem(shape, 7.0); // Higher nonlinearity for tissue
+
+        medium
+    }
+
+    /// Create liver tissue medium for SWE simulations
+    ///
+    /// # Arguments
+    ///
+    /// * `fibrosis_stage` - METAVIR fibrosis stage (F0-F4)
+    /// * `grid` - Computational grid
+    ///
+    /// # Returns
+    ///
+    /// HomogeneousMedium configured for liver tissue with appropriate stiffness
+    pub fn liver_tissue(fibrosis_stage: u8, grid: &Grid) -> Self {
+        // Liver stiffness increases with fibrosis stage (kPa)
+        let youngs_modulus_kpa = match fibrosis_stage {
+            0 => 5.0,   // F0: Normal liver
+            1 => 6.5,   // F1: Mild fibrosis
+            2 => 8.0,   // F2: Moderate fibrosis
+            3 => 11.0,  // F3: Severe fibrosis
+            4 => 18.0,  // F4: Cirrhosis
+            _ => 8.0,   // Default to moderate
+        };
+
+        let youngs_modulus = youngs_modulus_kpa * 1000.0; // Convert to Pa
+        let poisson_ratio = 0.49; // Nearly incompressible
+
+        Self::soft_tissue(youngs_modulus, poisson_ratio, grid)
+    }
 }
 
 // Core medium properties

@@ -8,4 +8,6 @@
 
 pub mod fast_nearfield;
 
-pub use fast_nearfield::{FastNearfieldMethod, FnmConfiguration};
+pub use fast_nearfield::{
+    FastNearfieldSolver, FNMConfig, RectangularTransducer, AngularSpectrumFactors
+};
