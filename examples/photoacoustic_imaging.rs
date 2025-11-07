@@ -41,7 +41,7 @@ fn main() -> KwaversResult<()> {
     println!("   Laser fluence: {:.0} mJ/cm²", parameters.laser_fluence * 100.0);
 
     // 4. Create photoacoustic simulator
-    let simulator = PhotoacousticSimulator::new(grid, parameters, &medium)?;
+    let mut simulator = PhotoacousticSimulator::new(grid, parameters, &medium)?;
     println!("   Simulator initialized with optical property maps");
 
     // 5. Compute optical fluence distribution

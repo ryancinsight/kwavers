@@ -84,36 +84,179 @@ impl AngularSpectrum {
         })
     }
 
-    /// Forward FFT to angular spectrum domain
+    /// Forward 2D FFT to angular spectrum domain
+    /// Literature: Goodman (2005) - Introduction to Fourier Optics
     pub fn forward_fft(&self, field: &Array2<Complex<f64>>) -> KwaversResult<Array2<Complex<f64>>> {
-        // This would implement 2D FFT
-        // For now, return a placeholder that simulates the operation
+        // Implement 2D Fast Fourier Transform for angular spectrum method
+        // The angular spectrum is the Fourier transform of the field distribution
 
-        println!("Performing forward FFT: {}x{}", field.nrows(), field.ncols());
+        use rustfft::{FftPlanner, num_complex::Complex};
+        use std::sync::Arc;
 
-        // In practice, this would use rustfft or similar
-        // For demonstration, we'll create a realistic-looking spectrum
-        let mut spectrum = Array2::zeros(self.fft_size);
+        // Create FFT planner
+        let mut planner = FftPlanner::<f64>::new();
 
-        // Simulate angular spectrum by applying phase ramps
-        for i in 0..field.nrows().min(self.fft_size.0) {
-            for j in 0..field.ncols().min(self.fft_size.1) {
-                if let Some(val) = field.get((i, j)) {
-                    spectrum[[i, j]] = *val;
-                }
+        // Create 2D FFT by performing 1D FFTs on rows then columns
+        let (rows, cols) = field.dim();
+        let mut spectrum = Array2::<Complex<f64>>::zeros((rows, cols));
+
+        // FFT along rows first
+        for row in 0..rows {
+            let mut row_data: Vec<Complex<f64>> = field.row(row).to_vec();
+            let fft = planner.plan_fft_forward(cols);
+            fft.process(&mut row_data);
+            for col in 0..cols {
+                spectrum[[row, col]] = row_data[col];
             }
         }
+
+        // FFT along columns
+        for col in 0..cols {
+            let mut col_data: Vec<Complex<f64>> = spectrum.column(col).to_vec();
+            let fft = planner.plan_fft_forward(rows);
+            fft.process(&mut col_data);
+            for row in 0..rows {
+                spectrum[[row, col]] = col_data[row];
+            }
+        }
+
+        // Apply FFT shift to center the spectrum
+        self.fft_shift(&mut spectrum);
+
+        tracing::debug!("Completed forward FFT: {}x{} -> {}x{}",
+                       field.nrows(), field.ncols(), spectrum.nrows(), spectrum.ncols());
 
         Ok(spectrum)
     }
 
-    /// Inverse FFT from angular spectrum domain
-    pub fn inverse_fft(&self, spectrum: &Array2<Complex<f64>>) -> KwaversResult<Array2<Complex<f64>>> {
-        println!("Performing inverse FFT: {}x{}", spectrum.nrows(), spectrum.ncols());
+    /// Apply FFT shift to center zero-frequency components
+    fn fft_shift(&self, spectrum: &mut Array2<Complex<f64>>) {
+        let (rows, cols) = spectrum.dim();
+        let row_shift = rows / 2;
+        let col_shift = cols / 2;
 
-        // This would implement inverse 2D FFT
-        // For demonstration, return the spectrum as-is (would be inverse transformed)
-        Ok(spectrum.clone())
+        // Create a copy for the shift operation
+        let original = spectrum.clone();
+
+        // Perform quadrant swap
+        for i in 0..rows {
+            for j in 0..cols {
+                let new_i = (i + row_shift) % rows;
+                let new_j = (j + col_shift) % cols;
+                spectrum[[new_i, new_j]] = original[[i, j]];
+            }
+        }
+    }
+
+    /// Inverse 2D FFT from angular spectrum domain
+    /// Literature: Goodman (2005) - Introduction to Fourier Optics
+    pub fn inverse_fft(&self, spectrum: &Array2<Complex<f64>>) -> KwaversResult<Array2<Complex<f64>>> {
+        // Implement 2D inverse Fast Fourier Transform
+        use rustfft::FftPlanner;
+
+        // Create FFT planner
+        let mut planner = FftPlanner::<f64>::new();
+
+        // Create copy and undo FFT shift
+        let mut field = spectrum.clone();
+        self.fft_shift(&mut field); // Undo the forward shift
+
+        let (rows, cols) = field.dim();
+
+        // Inverse FFT along columns first
+        for col in 0..cols {
+            let mut col_data: Vec<rustfft::num_complex::Complex<f64>> = field.column(col).to_vec();
+            let fft = planner.plan_fft_inverse(rows);
+            fft.process(&mut col_data);
+            // Normalize by array size
+            for val in col_data.iter_mut() {
+                *val /= rows as f64;
+            }
+            for row in 0..rows {
+                field[[row, col]] = col_data[row];
+            }
+        }
+
+        // Inverse FFT along rows
+        for row in 0..rows {
+            let mut row_data: Vec<rustfft::num_complex::Complex<f64>> = field.row(row).to_vec();
+            let fft = planner.plan_fft_inverse(cols);
+            fft.process(&mut row_data);
+            // Normalize by array size
+            for val in row_data.iter_mut() {
+                *val /= cols as f64;
+            }
+            for col in 0..cols {
+                field[[row, col]] = row_data[col];
+            }
+        }
+
+        tracing::debug!("Completed inverse FFT: {}x{} -> {}x{}",
+                       spectrum.nrows(), spectrum.ncols(), field.nrows(), field.ncols());
+
+        Ok(field)
+    }
+
+    /// Propagate field using angular spectrum method
+    /// Literature: Goodman (2005) - Introduction to Fourier Optics, Chapter 3
+    pub fn propagate(&self, field: &Array2<Complex<f64>>, distance: f64) -> KwaversResult<Array2<Complex<f64>>> {
+        // Angular spectrum method for wave propagation:
+        // 1. Forward FFT to get angular spectrum A(kx, ky)
+        // 2. Apply transfer function H(kx, ky) = exp(i * k_z * z)
+        // 3. Inverse FFT to get propagated field
+
+        // Step 1: Forward FFT
+        let mut spectrum = self.forward_fft(field)?;
+
+        // Step 2: Apply angular spectrum transfer function
+        self.apply_transfer_function(&mut spectrum, distance)?;
+
+        // Step 3: Inverse FFT
+        let propagated_field = self.inverse_fft(&spectrum)?;
+
+        tracing::info!("Angular spectrum propagation completed: distance = {} m", distance);
+
+        Ok(propagated_field)
+    }
+
+    /// Apply angular spectrum transfer function
+    /// H(kx, ky) = exp(i * k_z * z) where k_z = sqrt(k^2 - kx^2 - ky^2)
+    fn apply_transfer_function(&self, spectrum: &mut Array2<Complex<f64>>, distance: f64) -> KwaversResult<()> {
+        let (rows, cols) = spectrum.dim();
+        let wavenumber = 2.0 * std::f64::consts::PI / self.wavelength;
+
+        // Calculate spatial frequencies (centered around zero)
+        let dkx = 2.0 * std::f64::consts::PI / (rows as f64 * self.dx);
+        let dky = 2.0 * std::f64::consts::PI / (cols as f64 * self.dy);
+
+        for i in 0..rows {
+            for j in 0..cols {
+                // Calculate spatial frequencies (FFT-shifted coordinates)
+                let kx = (i as f64 - rows as f64 / 2.0) * dkx;
+                let ky = (j as f64 - cols as f64 / 2.0) * dky;
+
+                // Calculate longitudinal wavenumber: k_z = sqrt(k^2 - kx^2 - ky^2)
+                let k_squared = wavenumber * wavenumber;
+                let k_transverse_squared = kx * kx + ky * ky;
+
+                if k_transverse_squared > k_squared {
+                    // Evanescent wave - decays exponentially, set to zero for numerical stability
+                    spectrum[[i, j]] = Complex::new(0.0, 0.0);
+                } else {
+                    // Propagating wave: k_z = sqrt(k^2 - kx^2 - ky^2)
+                    let kz = (k_squared - k_transverse_squared).sqrt();
+
+                    // Transfer function: H = exp(i * k_z * z)
+                    let phase = kz * distance;
+                    let transfer_function = Complex::new(phase.cos(), phase.sin());
+
+                    // Apply transfer function to spectrum
+                    spectrum[[i, j]] *= transfer_function;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Propagate angular spectrum by distance dz

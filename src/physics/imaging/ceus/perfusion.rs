@@ -73,6 +73,46 @@ impl PerfusionModel {
     pub fn concentration_field(&self) -> &Array3<f64> {
         &self.concentration
     }
+
+    /// Create a default gamma variate flow kinetics model suitable for CEUS
+    /// bolus injection simulation.
+    pub fn gamma_variate_model() -> FlowKinetics {
+        // Default frame rate and duration for model synthesis
+        let frame_rate = 10.0; // Hz
+        let duration = 30.0;   // s
+        let n_frames = (frame_rate * duration) as usize;
+        let dt = 1.0 / frame_rate;
+
+        // Gamma variate parameters
+        let alpha = 3.0;
+        let beta = 1.5; // s
+        let tau = 0.5;  // s
+
+        let mut arterial_input = Vec::with_capacity(n_frames);
+        for i in 0..n_frames {
+            let t = i as f64 * dt;
+            let val = if t > 0.0 {
+                (t / tau).powf(alpha) * (-(t - tau) / beta).exp()
+            } else {
+                0.0
+            };
+            arterial_input.push(val.max(0.0));
+        }
+
+        // Residue function approximated as exponential decay with MTT
+        let mean_transit_time = 10.0; // s
+        let mut residue_function = Vec::with_capacity(n_frames);
+        for i in 0..n_frames {
+            let t = i as f64 * dt;
+            residue_function.push((-(t / mean_transit_time)).exp());
+        }
+
+        FlowKinetics {
+            arterial_input,
+            residue_function,
+            mean_transit_time,
+        }
+    }
 }
 
 /// Flow kinetics model

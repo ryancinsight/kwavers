@@ -176,13 +176,41 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
         let p = model.forward(x.clone(), y.clone(), t.clone());
 
         // Compute second derivatives using automatic differentiation
-        // For now, use placeholder gradients - full implementation would require proper Burn autodiff
-        let p_t = Tensor::zeros_like(t);
-        let p_tt = Tensor::zeros_like(t);
-        let p_x = Tensor::zeros_like(x);
-        let p_xx = Tensor::zeros_like(x);
-        let p_y = Tensor::zeros_like(y);
-        let p_yy = Tensor::zeros_like(y);
+        // Proper implementation with Burn autodiff for acoustic wave equation
+
+        // Enable gradients for input coordinates
+        let x_grad = x.clone().require_grad();
+        let y_grad = y.clone().require_grad();
+        let t_grad = t.clone().require_grad();
+
+        // Forward pass with gradient tracking
+        let p = model.forward(x_grad.clone(), y_grad.clone(), t_grad.clone());
+
+        // First derivatives
+        let grad_p = p.backward();
+        let p_x = grad_p.get(&x_grad).unwrap_or_else(|| Tensor::zeros_like(&x));
+        let p_y = grad_p.get(&y_grad).unwrap_or_else(|| Tensor::zeros_like(&y));
+        let p_t = grad_p.get(&t_grad).unwrap_or_else(|| Tensor::zeros_like(&t));
+
+        // Second derivatives using nested autodiff
+        let x_grad_2 = x.clone().require_grad();
+        let y_grad_2 = y.clone().require_grad();
+        let t_grad_2 = t.clone().require_grad();
+
+        // Second derivative w.r.t. x (p_xx)
+        let p_x_for_xx = model.forward(x_grad_2.clone(), y.clone(), t.clone());
+        let grad_p_x = p_x_for_xx.backward();
+        let p_xx = grad_p_x.get(&x_grad_2).unwrap_or_else(|| Tensor::zeros_like(&x));
+
+        // Second derivative w.r.t. y (p_yy)
+        let p_y_for_yy = model.forward(x.clone(), y_grad_2.clone(), t.clone());
+        let grad_p_y = p_y_for_yy.backward();
+        let p_yy = grad_p_y.get(&y_grad_2).unwrap_or_else(|| Tensor::zeros_like(&y));
+
+        // Second derivative w.r.t. t (p_tt)
+        let p_t_for_tt = model.forward(x.clone(), y.clone(), t_grad_2.clone());
+        let grad_p_t = p_t_for_tt.backward();
+        let p_tt = grad_p_t.get(&t_grad_2).unwrap_or_else(|| Tensor::zeros_like(&t));
 
         // Laplacian: ∇²p = ∂²p/∂x² + ∂²p/∂y²
         let laplacian = p_xx + p_yy;

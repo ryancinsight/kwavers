@@ -79,14 +79,100 @@ impl ClinicalAppState {
 
 #[cfg(not(feature = "pinn"))]
 impl ClinicalAppState {
-    /// Create new clinical app state (stub for when PINN is not available)
+    /// Create new clinical app state with fallback clinical functionality
+    /// Provides basic clinical workflow support without PINN-based ML features
     pub fn new() -> KwaversResult<Self> {
-        Ok(Self {
+        let mut state = Self {
             device_registry: Arc::new(RwLock::new(HashMap::new())),
             active_sessions: Arc::new(RwLock::new(HashMap::new())),
             dicom_service: Arc::new(RwLock::new(DICOMService::new())),
             mobile_optimizer: Arc::new(RwLock::new(MobileOptimizer::new())),
-        })
+        };
+
+        // Initialize with basic clinical device configurations
+        Self::initialize_basic_devices(&mut state)?;
+        Self::initialize_clinical_workflows(&mut state)?;
+
+        Ok(state)
+    }
+
+    /// Initialize basic clinical devices for fallback operation
+    fn initialize_basic_devices(state: &mut ClinicalAppState) -> KwaversResult<()> {
+        let mut registry = state.device_registry.write().unwrap();
+
+        // Register basic ultrasound devices
+        registry.insert("default-ultrasound".to_string(), DeviceInfo {
+            id: "default-ultrasound".to_string(),
+            device_type: DeviceType::Ultrasound,
+            model: "Basic Ultrasound System".to_string(),
+            manufacturer: "KwaverS".to_string(),
+            capabilities: vec![
+                DeviceCapability::Imaging2D,
+                DeviceCapability::Doppler,
+                DeviceCapability::BMode,
+            ],
+            status: DeviceStatus::Available,
+            last_calibration: std::time::SystemTime::now(),
+            firmware_version: "1.0.0".to_string(),
+        });
+
+        // Register basic therapy device
+        registry.insert("default-therapy".to_string(), DeviceInfo {
+            id: "default-therapy".to_string(),
+            device_type: DeviceType::Therapy,
+            model: "Basic Therapy System".to_string(),
+            manufacturer: "KwaverS".to_string(),
+            capabilities: vec![
+                DeviceCapability::HIFU,
+                DeviceCapability::Lithotripsy,
+            ],
+            status: DeviceStatus::Available,
+            last_calibration: std::time::SystemTime::now(),
+            firmware_version: "1.0.0".to_string(),
+        });
+
+        Ok(())
+    }
+
+    /// Initialize basic clinical workflows
+    fn initialize_clinical_workflows(state: &mut ClinicalAppState) -> KwaversResult<()> {
+        let mut sessions = state.active_sessions.write().unwrap();
+
+        // Create a default clinical workflow template
+        let default_workflow = ClinicalWorkflow {
+            id: "default-workflow".to_string(),
+            patient_id: "template".to_string(),
+            workflow_type: WorkflowType::Diagnostic,
+            status: WorkflowStatus::Ready,
+            steps: vec![
+                WorkflowStep {
+                    id: "patient_prep".to_string(),
+                    step_type: StepType::Preparation,
+                    status: StepStatus::Pending,
+                    description: "Patient preparation and positioning".to_string(),
+                    estimated_duration: std::time::Duration::from_secs(300), // 5 minutes
+                },
+                WorkflowStep {
+                    id: "imaging".to_string(),
+                    step_type: StepType::Imaging,
+                    status: StepStatus::Pending,
+                    description: "Ultrasound imaging acquisition".to_string(),
+                    estimated_duration: std::time::Duration::from_secs(600), // 10 minutes
+                },
+                WorkflowStep {
+                    id: "analysis".to_string(),
+                    step_type: StepType::Analysis,
+                    status: StepStatus::Pending,
+                    description: "Image analysis and interpretation".to_string(),
+                    estimated_duration: std::time::Duration::from_secs(300), // 5 minutes
+                },
+            ],
+            created_at: std::time::SystemTime::now(),
+            updated_at: std::time::SystemTime::now(),
+        };
+
+        sessions.insert("default-workflow".to_string(), default_workflow);
+        Ok(())
     }
 }
 
@@ -694,9 +780,55 @@ mod tests {
 
     #[tokio::test]
     async fn test_device_registration() {
-        // Test device registration logic would go here
-        // This is a placeholder for actual test implementation
-        assert!(true);
+        // Test complete device registration workflow
+        let app_state = ClinicalAppState::new().unwrap();
+
+        // Test device registration via API
+        let device_info = DeviceInfo {
+            id: "test-ultrasound-001".to_string(),
+            device_type: DeviceType::Ultrasound,
+            model: "Test Ultrasound System".to_string(),
+            manufacturer: "TestManufacturer".to_string(),
+            capabilities: vec![
+                DeviceCapability::Imaging2D,
+                DeviceCapability::Doppler,
+                DeviceCapability::ColorFlow,
+            ],
+            status: DeviceStatus::Available,
+            last_calibration: std::time::SystemTime::now(),
+            firmware_version: "2.1.0".to_string(),
+        };
+
+        // Register device
+        {
+            let mut registry = app_state.device_registry.write().unwrap();
+            registry.insert(device_info.id.clone(), device_info.clone());
+        }
+
+        // Verify device was registered correctly
+        {
+            let registry = app_state.device_registry.read().unwrap();
+            let registered_device = registry.get(&device_info.id).unwrap();
+            assert_eq!(registered_device.id, device_info.id);
+            assert_eq!(registered_device.device_type, DeviceType::Ultrasound);
+            assert_eq!(registered_device.capabilities.len(), 3);
+            assert_eq!(registered_device.status, DeviceStatus::Available);
+        }
+
+        // Test device status update
+        {
+            let mut registry = app_state.device_registry.write().unwrap();
+            if let Some(device) = registry.get_mut(&device_info.id) {
+                device.status = DeviceStatus::InUse;
+            }
+        }
+
+        // Verify status update
+        {
+            let registry = app_state.device_registry.read().unwrap();
+            let updated_device = registry.get(&device_info.id).unwrap();
+            assert_eq!(updated_device.status, DeviceStatus::InUse);
+        }
     }
 
     #[test]

@@ -715,17 +715,114 @@ impl ClinicalDecisionSupport {
         Ok(lesions)
     }
 
-    /// Estimate lesion size in millimeters
+    /// Estimate lesion size using 3D connected component analysis
+    /// Literature: Gonzalez & Woods (2008) - Digital Image Processing
     fn estimate_lesion_size(
         &self,
-        _volume: ArrayView3<f32>,
-        _features: &FeatureMap,
-        _x: usize,
-        _y: usize,
-        _z: usize,
+        volume: ArrayView3<f32>,
+        features: &FeatureMap,
+        seed_x: usize,
+        seed_y: usize,
+        seed_z: usize,
     ) -> f32 {
-        // Simplified size estimation - in practice would use connected components
-        5.0 // 5mm diameter placeholder
+        // Implement 3D connected component analysis for accurate lesion sizing
+        // Uses 26-connected neighborhood for volumetric analysis
+
+        let (nx, ny, nz) = volume.dim();
+
+        // Adaptive thresholding based on local statistics
+        let local_mean = self.compute_local_statistics(&volume, seed_x, seed_y, seed_z);
+        let threshold = local_mean + 2.0 * self.config.segmentation_sensitivity;
+
+        // 3D connected component analysis using flood fill
+        let mut visited = ndarray::Array3::<bool>::zeros((nx, ny, nz));
+        let mut component_voxels = Vec::new();
+
+        let mut queue = std::collections::VecDeque::new();
+        queue.push_back((seed_x, seed_y, seed_z));
+        visited[[seed_x, seed_y, seed_z]] = true;
+
+        // 26-connected neighborhood offsets for 3D connectivity
+        let offsets = [
+            (-1,-1,-1), (-1,-1, 0), (-1,-1, 1), (-1, 0,-1), (-1, 0, 0), (-1, 0, 1), (-1, 1,-1), (-1, 1, 0), (-1, 1, 1),
+            ( 0,-1,-1), ( 0,-1, 0), ( 0,-1, 1), ( 0, 0,-1),              ( 0, 0, 1), ( 0, 1,-1), ( 0, 1, 0), ( 0, 1, 1),
+            ( 1,-1,-1), ( 1,-1, 0), ( 1,-1, 1), ( 1, 0,-1), ( 1, 0, 0), ( 1, 0, 1), ( 1, 1,-1), ( 1, 1, 0), ( 1, 1, 1),
+        ];
+
+        // Flood fill to find all connected voxels
+        while let Some((x, y, z)) = queue.pop_front() {
+            component_voxels.push((x, y, z));
+
+            // Check all 26 neighbors
+            for (dx, dy, dz) in offsets.iter() {
+                let nx = x as isize + dx;
+                let ny = y as isize + dy;
+                let nz = z as isize + dz;
+
+                if nx >= 0 && nx < nx as isize && ny >= 0 && ny < ny as isize && nz >= 0 && nz < nz as isize {
+                    let nx = nx as usize;
+                    let ny = ny as usize;
+                    let nz = nz as usize;
+
+                    if !visited[[nx, ny, nz]] && volume[[nx, ny, nz]] > threshold {
+                        visited[[nx, ny, nz]] = true;
+                        queue.push_back((nx, ny, nz));
+                    }
+                }
+            }
+        }
+
+        // Calculate lesion volume in mm³
+        let voxel_volume_mm3 = self.config.voxel_size_mm.powi(3);
+        let lesion_volume_mm3 = component_voxels.len() as f32 * voxel_volume_mm3;
+
+        // Estimate equivalent spherical diameter (ESD) in mm
+        // V = (4/3)πr³ ⇒ r = [(3V)/(4π)]^(1/3) ⇒ diameter = 2r
+        let equivalent_radius_mm = (3.0 * lesion_volume_mm3 / (4.0 * std::f32::consts::PI)).powf(1.0/3.0);
+        let equivalent_diameter_mm = 2.0 * equivalent_radius_mm;
+
+        equivalent_diameter_mm
+    }
+
+    /// Compute local statistics for adaptive thresholding
+    fn compute_local_statistics(&self, volume: &ArrayView3<f32>, x: usize, y: usize, z: usize) -> f32 {
+        let (nx, ny, nz) = volume.dim();
+        let window_size = 5; // 5x5x5 local window
+
+        let mut sum = 0.0;
+        let mut count = 0;
+
+        for dx in -(window_size as isize)..=(window_size as isize) {
+            for dy in -(window_size as isize)..=(window_size as isize) {
+                for dz in -(window_size as isize)..=(window_size as isize) {
+                    let nx = x as isize + dx;
+                    let ny = y as isize + dy;
+                    let nz = z as isize + dz;
+
+                    if nx >= 0 && nx < nx as isize && ny >= 0 && ny < ny as isize && nz >= 0 && nz < nz as isize {
+                        let nx = nx as usize;
+                        let ny = ny as usize;
+                        let nz = nz as usize;
+
+                        sum += volume[[nx, ny, nz]];
+                        count += 1;
+                    }
+                }
+            }
+        }
+
+        if count > 0 {
+            sum / count as f32
+        } else {
+            volume[[x, y, z]]
+        }
+    }
+
+    /// Compute voxel intensity for segmentation
+    fn compute_voxel_intensity(&self, x: usize, y: usize, z: usize) -> f32 {
+        // In practice, this would compute proper ultrasound intensity
+        // For now, use a placeholder based on position
+        ((x + y + z) as f32 / 100.0).sin().abs()
     }
 
     /// Classify lesion type based on features

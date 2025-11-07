@@ -298,6 +298,7 @@ impl FwiProcessor {
             cfl_factor: 0.3,
             subgridding: false,
             subgrid_factor: 2,
+            enable_gpu_acceleration: false,
         };
 
         // Initialize FDTD solver
@@ -374,6 +375,7 @@ impl FwiProcessor {
             cfl_factor: 0.3,
             subgridding: false,
             subgrid_factor: 2,
+            enable_gpu_acceleration: false,
         };
 
         // Initialize FDTD solver

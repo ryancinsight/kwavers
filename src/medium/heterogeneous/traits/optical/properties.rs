@@ -1,18 +1,33 @@
 //! Optical properties implementation for heterogeneous media
 
-use crate::medium::{
-    heterogeneous::core::HeterogeneousMedium,
-    optical::OpticalProperties,
-};
+use crate::grid::Grid;
+use crate::medium::heterogeneous::{core::HeterogeneousMedium, interpolation::TrilinearInterpolator};
+use crate::medium::optical::OpticalProperties;
 
 impl OpticalProperties for HeterogeneousMedium {
+    /// Optical absorption coefficient μ_a at continuous coordinates (1/m)
     #[inline]
-    fn absorption_coefficient(&self, i: usize, j: usize, k: usize) -> f64 {
-        self.mu_a[[i, j, k]]
+    fn optical_absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        TrilinearInterpolator::get_field_value(
+            &self.mu_a,
+            x,
+            y,
+            z,
+            grid,
+            self.use_trilinear_interpolation,
+        )
     }
 
-    #[inline] 
-    fn scattering_coefficient(&self, i: usize, j: usize, k: usize) -> f64 {
-        self.mu_s_prime[[i, j, k]]
+    /// Optical scattering coefficient μ_s at continuous coordinates (1/m)
+    #[inline]
+    fn optical_scattering_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        TrilinearInterpolator::get_field_value(
+            &self.mu_s_prime,
+            x,
+            y,
+            z,
+            grid,
+            self.use_trilinear_interpolation,
+        )
     }
 }

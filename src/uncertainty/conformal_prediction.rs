@@ -16,6 +16,15 @@ pub struct ConformalConfig {
     pub calibration_size: usize,
 }
 
+impl Default for ConformalConfig {
+    fn default() -> Self {
+        Self {
+            confidence_level: 0.95,
+            calibration_size: 1000,
+        }
+    }
+}
+
 /// Conformal prediction result
 #[derive(Debug)]
 pub struct ConformalResult {

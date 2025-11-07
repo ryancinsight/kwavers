@@ -207,62 +207,74 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Create heterogeneous liver medium with fibrotic regions
 fn create_fibrotic_liver_medium(grid: &Grid) -> HeterogeneousMedium {
-    let mut stiffness_map = Array3::<f64>::from_elem((grid.nx, grid.ny, grid.nz), 5500.0); // 5.5 kPa background
+    // Background Young's modulus (Pa) ~ 5.5 kPa
+    let mut youngs_modulus = Array3::<f64>::from_elem((grid.nx, grid.ny, grid.nz), 5500.0);
 
     // Add fibrotic regions (higher stiffness)
-    let center_x = grid.nx / 2;
-    let center_y = grid.ny / 2;
-    let center_z = grid.nz / 2;
-
-    // Create multiple fibrotic nodules
+    let (cx, cy, cz) = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
     let fibrotic_regions = vec![
-        (center_x - 10, center_y - 5, center_z, 8, 12000.0),  // F3 fibrosis
-        (center_x + 5, center_y + 8, center_z - 5, 6, 18000.0), // F4 fibrosis
-        (center_x - 5, center_y - 10, center_z + 8, 5, 15000.0), // F3-F4 fibrosis
+        (cx - 10, cy - 5, cz, 8, 12000.0),   // F3 fibrosis
+        (cx + 5, cy + 8, cz - 5, 6, 18000.0), // F4 fibrosis
+        (cx - 5, cy - 10, cz + 8, 5, 15000.0), // F3-F4 fibrosis
     ];
 
-    for (cx, cy, cz, radius, stiffness) in fibrotic_regions {
-        for k in (cz - radius)..=(cz + radius) {
-            for j in (cy - radius)..=(cy + radius) {
-                for i in (cx - radius)..=(cx + radius) {
-                    if i >= 0 && i < grid.nx && j >= 0 && j < grid.ny && k >= 0 && k < grid.nz {
-                        let dx = (i - cx) as f64;
-                        let dy = (j - cy) as f64;
-                        let dz = (k - cz) as f64;
-                        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+    for (rx, ry, rz, radius, stiff) in fibrotic_regions {
+        let (sx, ex) = (rx.saturating_sub(radius), (rx + radius).min(grid.nx.saturating_sub(1)));
+        let (sy, ey) = (ry.saturating_sub(radius), (ry + radius).min(grid.ny.saturating_sub(1)));
+        let (sz, ez) = (rz.saturating_sub(radius), (rz + radius).min(grid.nz.saturating_sub(1)));
 
-                        if distance <= radius as f64 {
-                            // Smooth transition at boundaries
-                            let weight = 1.0 - (distance / radius as f64).powi(2);
-                            stiffness_map[[i, j, k]] = 5500.0 + weight * (stiffness - 5500.0);
-                        }
+        for k in sz..=ez {
+            for j in sy..=ey {
+                for i in sx..=ex {
+                    let dx = (i as isize - rx as isize) as f64;
+                    let dy = (j as isize - ry as isize) as f64;
+                    let dz = (k as isize - rz as isize) as f64;
+                    let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+                    if distance <= radius as f64 {
+                        // Smooth transition at boundaries
+                        let weight = 1.0 - (distance / radius as f64).powi(2);
+                        youngs_modulus[[i, j, k]] = 5500.0 + weight * (stiff - 5500.0);
                     }
                 }
             }
         }
     }
 
-    // Convert stiffness to density and speed of sound
-    let mut density_map = Array3::<f64>::from_elem((grid.nx, grid.ny, grid.nz), 1050.0); // kg/m³
-    let mut sound_speed_map = Array3::<f64>::from_elem((grid.nx, grid.ny, grid.nz), 1550.0); // m/s
+    // Derived maps: density and speed of sound
+    let mut density_map = Array3::<f64>::from_elem((grid.nx, grid.ny, grid.nz), 1050.0);
+    let mut sound_speed_map = Array3::<f64>::from_elem((grid.nx, grid.ny, grid.nz), 1550.0);
 
-    // Stiffer tissue has slightly higher density
     for k in 0..grid.nz {
         for j in 0..grid.ny {
             for i in 0..grid.nx {
-                let stiffness = stiffness_map[[i, j, k]];
-                density_map[[i, j, k]] = 1050.0 + (stiffness - 5500.0) * 0.01; // Small density increase
-                sound_speed_map[[i, j, k]] = 1450.0 + (stiffness / 1000.0).sqrt() * 10.0; // Speed increases with sqrt(stiffness)
+                let e = youngs_modulus[[i, j, k]];
+                density_map[[i, j, k]] = 1050.0 + (e - 5500.0) * 0.01; // Small density increase
+                sound_speed_map[[i, j, k]] = 1450.0 + (e / 1000.0_f64).sqrt() * 10.0;
             }
         }
     }
 
-    HeterogeneousMedium::new(
-        stiffness_map,
-        density_map,
-        sound_speed_map,
-        grid,
-    ).expect("Failed to create heterogeneous liver medium")
+    // Construct medium via dims constructor and fill arrays
+    let mut medium = HeterogeneousMedium::new(grid.nx, grid.ny, grid.nz, true);
+    medium.density = density_map;
+    medium.sound_speed = sound_speed_map;
+
+    // Convert Young's modulus to Lamé parameters with ν ≈ 0.49
+    let nu = 0.49_f64;
+    for k in 0..grid.nz {
+        for j in 0..grid.ny {
+            for i in 0..grid.nx {
+                let e = youngs_modulus[[i, j, k]];
+                let lambda = e * nu / ((1.0 + nu) * (1.0 - 2.0 * nu));
+                let mu = e / (2.0 * (1.0 + nu));
+                medium.lame_lambda[[i, j, k]] = lambda;
+                medium.lame_mu[[i, j, k]] = mu;
+                medium.shear_sound_speed[[i, j, k]] = (mu / medium.density[[i, j, k]]).sqrt();
+            }
+        }
+    }
+
+    medium
 }
 
 /// Perform 3D elasticity reconstruction from wave front tracking data

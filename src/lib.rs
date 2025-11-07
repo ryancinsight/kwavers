@@ -6,6 +6,9 @@
 //! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
+// Enable portable SIMD for cross-platform performance
+#![feature(portable_simd)]
+
 // Strict warning configuration for code quality
 #![warn(
     unused_imports,
@@ -62,6 +65,7 @@ pub mod recorder;
 pub mod runtime; // Sprint 138: Async I/O, tracing, zero-copy (Persona Requirements)
 pub mod sensor;
 pub mod signal;
+pub mod uncertainty; // Export uncertainty quantification module
 pub mod solver;
 pub mod source;
 pub mod testing; // Property-based testing framework per FSE 2025

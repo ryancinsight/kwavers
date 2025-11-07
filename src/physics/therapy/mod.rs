@@ -37,6 +37,7 @@
 //! - **Zero-Cost**: Efficient abstractions
 
 pub mod cavitation;
+pub mod lithotripsy;
 pub mod metrics;
 pub mod modalities;
 pub mod parameters;

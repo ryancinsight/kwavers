@@ -874,9 +874,40 @@ impl CloudPINNService {
         let location = url_parts[8];
         let endpoint_name = url_parts[10];
 
-        // Delete Vertex AI endpoint
-        // In practice, this would call Vertex AI APIs to delete the endpoint
-        // For now, this is a placeholder implementation
+        // Delete Vertex AI endpoint using Google Cloud AI Platform APIs
+        // Literature: Google Cloud AI Platform documentation
+
+        // Construct endpoint deletion request
+        let delete_url = format!(
+            "https://us-central1-aiplatform.googleapis.com/v1/projects/{}/locations/us-central1/endpoints/{}",
+            self.config["project_id"], endpoint_name
+        );
+
+        // Create HTTP client for API call
+        let client = reqwest::Client::new();
+
+        // Make authenticated DELETE request to Vertex AI API
+        let response = client
+            .delete(&delete_url)
+            .bearer_auth(&self.config["access_token"])
+            .send()
+            .await
+            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                service: "Google Vertex AI".to_string(),
+                error: format!("Failed to delete endpoint: {}", e),
+            }))?;
+
+        // Check response status
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                service: "Google Vertex AI".to_string(),
+                error: format!("Endpoint deletion failed: {}", error_text),
+            }));
+        }
+
+        // Log successful deletion
+        tracing::info!("Successfully deleted Vertex AI endpoint: {}", endpoint_name);
 
         Ok(())
     }
@@ -903,9 +934,58 @@ impl CloudPINNService {
                 reason: "Invalid Azure endpoint URL format".to_string(),
             }))?;
 
-        // Delete Azure ML endpoint
-        // In practice, this would call Azure ML APIs to delete the endpoint
-        // For now, this is a placeholder implementation
+        // Delete Azure ML endpoint using Azure Machine Learning REST APIs
+        // Literature: Azure Machine Learning documentation - REST API reference
+
+        // Parse endpoint URL to extract resource information
+        let url_parts: Vec<&str> = handle.endpoint_url.split('/').collect();
+        if url_parts.len() < 8 {
+            return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                parameter: "endpoint_url".to_string(),
+                reason: "Invalid Azure ML endpoint URL format".to_string(),
+            }));
+        }
+
+        let subscription_id = url_parts[2];
+        let resource_group = url_parts[4];
+        let workspace_name = url_parts[8];
+        let endpoint_name = url_parts[10];
+
+        // Construct Azure ML REST API endpoint deletion URL
+        let delete_url = format!(
+            "https://management.azure.com/subscriptions/{}/resourceGroups/{}/providers/Microsoft.MachineLearningServices/workspaces/{}/onlineEndpoints/{}?api-version=2022-05-01",
+            subscription_id, resource_group, workspace_name, endpoint_name
+        );
+
+        // Create HTTP client for Azure API call
+        let client = reqwest::Client::new();
+
+        // Make authenticated DELETE request to Azure Resource Manager API
+        let response = client
+            .delete(&delete_url)
+            .header("Authorization", format!("Bearer {}", self.config["azure_access_token"]))
+            .header("Content-Type", "application/json")
+            .send()
+            .await
+            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                service: "Azure Machine Learning".to_string(),
+                error: format!("Failed to delete endpoint: {}", e),
+            }))?;
+
+        // Check response status - Azure returns 202 for accepted deletion
+        if !response.status().is_success() && response.status() != reqwest::StatusCode::ACCEPTED {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                service: "Azure Machine Learning".to_string(),
+                error: format!("Endpoint deletion failed: {}", error_text),
+            }));
+        }
+
+        // Log successful deletion initiation
+        tracing::info!("Successfully initiated deletion of Azure ML endpoint: {}", endpoint_name);
+
+        // For Azure, deletion is asynchronous - endpoint may take time to be fully removed
+        // In production, you might want to poll for completion status
 
         Ok(())
     }

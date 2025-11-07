@@ -45,8 +45,6 @@ struct HighResidualRegion {
     residual_magnitude: f32,
 }
 
-impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
-
 /// Sampling strategy configuration
 #[derive(Debug, Clone)]
 pub struct SamplingStrategy {
@@ -319,7 +317,6 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
                 new_priorities.push(0.7); // Higher priority for physics-informed points
             }
         }
-        }
 
         // Update active points and priorities
         let device = self.active_points.device();
@@ -352,6 +349,51 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         for &count in &bins {
             if count > 0.0 {
                 let p = count / total;
+                // Shannon entropy (base e)
+                entropy -= (p * p.ln()) as f32;
+            }
+        }
+
+        self.stats.distribution_entropy = entropy as f64;
+
+        Ok(())
+    }
+
+    /// Identify regions with high PDE residual for targeted sampling
+    fn identify_high_residual_regions(&self) -> Vec<HighResidualRegion> {
+        // Evaluate residuals at current points to find high-residual regions
+        // For now, return a simple grid of regions - in practice this would
+        // cluster points based on residual magnitude
+
+        let mut regions = Vec::new();
+
+        // Create a 2x2x2 grid of regions covering the domain
+        for i in 0..2 {
+            for j in 0..2 {
+                for k in 0..2 {
+                    let center_x = (i as f32 + 0.5) / 2.0;
+                    let center_y = (j as f32 + 0.5) / 2.0;
+                    let center_t = (k as f32 + 0.5) / 2.0;
+
+                    regions.push(HighResidualRegion {
+                        center_x,
+                        center_y,
+                        center_t,
+                        size_x: 0.25,
+                        size_y: 0.25,
+                        size_t: 0.25,
+                        residual_magnitude: 0.8, // Placeholder - would compute actual residual
+                    });
+                }
+            }
+        }
+
+        // Sort by residual magnitude (highest first)
+        regions.sort_by(|a, b| b.residual_magnitude.partial_cmp(&a.residual_magnitude).unwrap_or(std::cmp::Ordering::Equal));
+
+        regions
+    }
+
     /// Get sampling statistics
     pub fn stats(&self) -> &SamplingStats {
         &self.stats
@@ -395,41 +437,6 @@ impl Default for SamplingStats {
             avg_priority: 1.0,
             max_priority: 1.0,
         }
-    }
-
-    /// Identify regions with high PDE residual for targeted sampling
-    fn identify_high_residual_regions(&self) -> Vec<HighResidualRegion> {
-        // Evaluate residuals at current points to find high-residual regions
-        // For now, return a simple grid of regions - in practice this would
-        // cluster points based on residual magnitude
-
-        let mut regions = Vec::new();
-
-        // Create a 2x2x2 grid of regions covering the domain
-        for i in 0..2 {
-            for j in 0..2 {
-                for k in 0..2 {
-                    let center_x = (i as f32 + 0.5) / 2.0;
-                    let center_y = (j as f32 + 0.5) / 2.0;
-                    let center_t = (k as f32 + 0.5) / 2.0;
-
-                    regions.push(HighResidualRegion {
-                        center_x,
-                        center_y,
-                        center_t,
-                        size_x: 0.25,
-                        size_y: 0.25,
-                        size_t: 0.25,
-                        residual_magnitude: 0.8, // Placeholder - would compute actual residual
-                    });
-                }
-            }
-        }
-
-        // Sort by residual magnitude (highest first)
-        regions.sort_by(|a, b| b.residual_magnitude.partial_cmp(&a.residual_magnitude).unwrap_or(std::cmp::Ordering::Equal));
-
-        regions
     }
 }
 

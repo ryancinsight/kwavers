@@ -11,6 +11,8 @@ pub enum TherapyModality {
     LIFU,
     /// Histotripsy (mechanical ablation)
     Histotripsy,
+    /// Lithotripsy (stone fragmentation)
+    Lithotripsy,
     /// Blood-Brain Barrier opening
     BBBOpening,
     /// Sonodynamic therapy (with sonosensitizers)
@@ -42,6 +44,7 @@ impl TherapyModality {
             Self::HIFU => TherapyMechanism::Thermal,
             Self::LIFU => TherapyMechanism::Mechanical,
             Self::Histotripsy => TherapyMechanism::Mechanical,
+            Self::Lithotripsy => TherapyMechanism::Mechanical,
             Self::BBBOpening => TherapyMechanism::Mechanical,
             Self::Sonodynamic => TherapyMechanism::Chemical,
             Self::Sonoporation => TherapyMechanism::Mechanical,
@@ -60,7 +63,7 @@ impl TherapyModality {
     pub fn has_cavitation(&self) -> bool {
         matches!(
             self,
-            Self::Histotripsy | Self::BBBOpening | Self::MicrobubbleTherapy | Self::Sonoporation
+            Self::Histotripsy | Self::Lithotripsy | Self::BBBOpening | Self::MicrobubbleTherapy | Self::Sonoporation
         )
     }
 
@@ -71,8 +74,9 @@ impl TherapyModality {
             Self::HIFU => (0.5e6, 3.0e6),
             Self::LIFU => (0.2e6, 1.0e6),
             Self::Histotripsy => (0.5e6, 3.0e6),
+            Self::Lithotripsy => (0.1e6, 2.0e6), // Lower frequencies for stone penetration
             Self::BBBOpening => (0.2e6, 1.5e6),
-            Self::Sonodynamic => (0.5e6, 3.0e6),
+            Self::Sonodynamic => (0.2e6, 3.0e6),
             Self::Sonoporation => (0.5e6, 3.0e6),
             Self::MicrobubbleTherapy => (0.2e6, 2.0e6),
         }
@@ -85,6 +89,7 @@ impl TherapyModality {
             Self::HIFU => (1e6, 10e6),
             Self::LIFU => (0.05e6, 0.5e6),
             Self::Histotripsy => (10e6, 100e6),
+            Self::Lithotripsy => (5e6, 50e6), // High pressures for stone fragmentation
             Self::BBBOpening => (0.1e6, 0.5e6),
             Self::Sonodynamic => (0.1e6, 1.0e6),
             Self::Sonoporation => (0.1e6, 1.0e6),

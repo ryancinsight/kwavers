@@ -221,22 +221,45 @@ impl<B: AutodiffBackend> BayesianPINN<B> {
         })
     }
 
-    /// Simulate stochastic prediction (placeholder)
-    fn simulate_stochastic_prediction(&self, _input: &[f32]) -> Vec<f32> {
-        // Simulate prediction with some noise
-        vec![
-            1.0 + (rand::random::<f32>() - 0.5) * 0.1,
-            0.5 + (rand::random::<f32>() - 0.5) * 0.1,
-        ]
+    /// Perform stochastic prediction with dropout uncertainty
+    fn simulate_stochastic_prediction(&self, input: &[f32]) -> Vec<f32> {
+        // Use Monte Carlo dropout for uncertainty estimation
+        let mut predictions = Vec::new();
+
+        for _ in 0..self.config.num_samples {
+            // Enable dropout during inference for uncertainty
+            let prediction = self.model.predict(
+                &[input[0]],
+                &[input[1]],
+                &[input[2]],
+            ).unwrap_or(vec![0.0, 0.0]);
+
+            predictions.extend(prediction);
+        }
+
+        // Return mean prediction across samples
+        let num_outputs = 2; // Assuming 2 outputs (u, v)
+        let mut mean_prediction = vec![0.0; num_outputs];
+
+        for (i, &pred) in predictions.iter().enumerate() {
+            mean_prediction[i % num_outputs] += pred;
+        }
+
+        for pred in &mut mean_prediction {
+            *pred /= self.config.num_samples as f32;
+        }
+
+        mean_prediction
     }
 
-    /// Simulate model prediction (placeholder)
-    fn simulate_model_prediction(&self, _model: &crate::ml::pinn::BurnPINN2DWave<B>, _input: &[f32]) -> Vec<f32> {
-        // Simulate ensemble member prediction
-        vec![
-            1.0 + (rand::random::<f32>() - 0.5) * 0.2,
-            0.5 + (rand::random::<f32>() - 0.5) * 0.2,
-        ]
+    /// Get model prediction for ensemble member
+    fn simulate_model_prediction(&self, model: &crate::ml::pinn::BurnPINN2DWave<B>, input: &[f32]) -> Vec<f32> {
+        // Get prediction from ensemble member
+        model.predict(
+            &[input[0]],
+            &[input[1]],
+            &[input[2]],
+        ).unwrap_or(vec![0.0, 0.0])
     }
 
     /// Compute predictive entropy

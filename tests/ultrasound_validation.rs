@@ -297,6 +297,7 @@ pub mod acoustic_wave_validation {
 /// Shear wave elastography validation
 pub mod swe_validation {
     use super::*;
+    use kwavers::physics::imaging::elastography::{ShearWaveInversion, DisplacementField};
 
     /// Validate SWE elasticity reconstruction accuracy
     ///
@@ -309,14 +310,30 @@ pub mod swe_validation {
         let start_time = std::time::Instant::now();
 
         // Create SWE workflow
-        let swe = ShearWaveElastography::new(grid, medium, InversionMethod::TimeOfFlight)?;
+        let swe = ShearWaveInversion::new(InversionMethod::TimeOfFlight);
 
-        // Generate synthetic shear wave (known displacement field)
+        // Generate synthetic shear wave displacement field (Gaussian around push)
         let push_location = [grid.dx * 10.0, grid.dy * 10.0, grid.dz * 10.0];
-        let displacement_field = swe.generate_shear_wave(push_location)?;
+        let mut displacement_field = DisplacementField::zeros(grid.nx, grid.ny, grid.nz);
+        let sigma = 2.0 * grid.dx.max(grid.dy).max(grid.dz);
+        let amplitude = 1e-6; // small displacement magnitude in meters
+        for k in 0..grid.nz {
+            for j in 0..grid.ny {
+                for i in 0..grid.nx {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    let dx = x - push_location[0];
+                    let dy = y - push_location[1];
+                    let dz = z - push_location[2];
+                    let r2 = dx * dx + dy * dy + dz * dz;
+                    displacement_field.uz[[i, j, k]] = amplitude * (-r2 / (2.0 * sigma * sigma)).exp();
+                }
+            }
+        }
 
-        // Reconstruct elasticity
-        let elasticity_map = swe.reconstruct_elasticity(&displacement_field)?;
+        // Reconstruct elasticity using time-of-flight inversion
+        let elasticity_map = swe.reconstruct(&displacement_field, &grid)?;
 
         // Expected elasticity values (from homogeneous medium)
         // For isotropic materials: E = μ(3λ + 2μ)/(λ + μ), cs = sqrt(μ/ρ)

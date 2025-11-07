@@ -37,6 +37,11 @@ impl ValidationResult {
             errors,
         }
     }
+
+    #[must_use]
+    pub fn is_ok(&self) -> bool {
+        self.is_valid
+    }
 }
 
 /// Trait for validatable components

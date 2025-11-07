@@ -22,3 +22,4 @@ pub mod transducer;
 pub mod cavitation_control;
 pub mod transcranial;
 pub mod skull;
+pub mod therapy;

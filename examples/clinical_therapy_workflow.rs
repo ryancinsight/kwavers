@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut therapy_orchestrator = TherapyIntegrationOrchestrator::new(
         therapy_config,
         grid,
-        &medium,
+        Box::new(medium.clone()),
     )?;
 
     println!("✅ Therapy orchestrator initialized successfully");

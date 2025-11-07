@@ -49,6 +49,87 @@ unsafe fn add_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {
     }
 }
 
+/// Multiply two fields using AVX2 instructions
+///
+/// SAFETY REQUIREMENTS: Same as add_fields_avx2_inner
+#[inline]
+pub unsafe fn multiply_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
+    unsafe {
+        multiply_fields_avx2_inner(a.as_slice().unwrap(), b.as_slice().unwrap(), out.as_slice_mut().unwrap());
+    }
+}
+
+/// Multiply two fields using AVX2 instructions
+///
+/// SAFETY REQUIREMENTS:
+/// - AVX2 must be available (checked by caller)
+/// - Input slices must have equal length
+/// - Memory accesses are bounds-checked through slice operations
+/// - 4x parallelism for main chunks (AVX2 256-bit operations)
+/// - Remainder handled sequentially
+#[inline]
+unsafe fn multiply_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {
+    // SAFETY: Same invariants as add_fields_avx2_inner
+    unsafe {
+        use std::arch::x86_64::{_mm256_mul_pd, _mm256_loadu_pd, _mm256_storeu_pd};
+
+        let chunks = a.len() / 4;
+        for i in 0..chunks {
+            let offset = i * 4;
+            // SAFETY: Same bounds reasoning as add_fields_avx2_inner
+            let va = _mm256_loadu_pd(a.as_ptr().add(offset));
+            let vb = _mm256_loadu_pd(b.as_ptr().add(offset));
+            let product = _mm256_mul_pd(va, vb);
+            // SAFETY: Same bounds reasoning applies for output slice
+            _mm256_storeu_pd(out.as_mut_ptr().add(offset), product);
+        }
+
+        // Handle remainder elements with scalar operations
+        let remainder_start = chunks * 4;
+        for i in remainder_start..a.len() {
+            out[i] = a[i] * b[i];
+        }
+    }
+}
+
+/// Subtract two fields using AVX2 instructions
+///
+/// SAFETY REQUIREMENTS: Same as add_fields_avx2_inner
+#[inline]
+pub unsafe fn subtract_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
+    unsafe {
+        subtract_fields_avx2_inner(a.as_slice().unwrap(), b.as_slice().unwrap(), out.as_slice_mut().unwrap());
+    }
+}
+
+/// Subtract two fields using AVX2 instructions
+///
+/// SAFETY REQUIREMENTS: Same as add_fields_avx2_inner
+#[inline]
+unsafe fn subtract_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {
+    // SAFETY: Same invariants as add_fields_avx2_inner
+    unsafe {
+        use std::arch::x86_64::{_mm256_sub_pd, _mm256_loadu_pd, _mm256_storeu_pd};
+
+        let chunks = a.len() / 4;
+        for i in 0..chunks {
+            let offset = i * 4;
+            // SAFETY: Same bounds reasoning as add_fields_avx2_inner
+            let va = _mm256_loadu_pd(a.as_ptr().add(offset));
+            let vb = _mm256_loadu_pd(b.as_ptr().add(offset));
+            let difference = _mm256_sub_pd(va, vb);
+            // SAFETY: Same bounds reasoning applies for output slice
+            _mm256_storeu_pd(out.as_mut_ptr().add(offset), difference);
+        }
+
+        // Handle remainder elements with scalar operations
+        let remainder_start = chunks * 4;
+        for i in remainder_start..a.len() {
+            out[i] = a[i] - b[i];
+        }
+    }
+}
+
 #[cfg(target_arch = "x86_64")]
 pub fn add_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
     if let (Some(a_slice), Some(b_slice), Some(out_slice)) =

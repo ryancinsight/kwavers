@@ -4,6 +4,17 @@
 //! to achieve optimal cohesion per senior engineering standards.
 
 use ndarray::Array3;
+use crate::grid::Grid;
+use crate::medium::homogeneous::HomogeneousMedium;
+use crate::medium::{
+    acoustic::AcousticProperties,
+    bubble::{BubbleProperties, BubbleState},
+    core::{ArrayAccess, CoreMedium},
+    elastic::ElasticArrayAccess,
+    optical::OpticalProperties,
+    thermal::{ThermalField, ThermalProperties},
+    viscous::ViscousProperties,
+};
 
 /// Medium with spatially varying properties
 ///
@@ -98,6 +109,104 @@ impl HeterogeneousMedium {
             lame_lambda: Array3::zeros((nx, ny, nz)),
             lame_mu: Array3::zeros((nx, ny, nz)),
             reference_frequency: 1.0e6, // 1 MHz default
+        }
+    }
+
+    /// Construct a heterogeneous medium by expanding a homogeneous medium
+    /// across the provided grid. Scalar properties are broadcast; cached
+    /// arrays are copied directly when available.
+    pub fn from_homogeneous(h: &HomogeneousMedium, grid: &Grid) -> Self {
+        let (nx, ny, nz) = grid.dimensions();
+        let fill = |val: f64| Array3::from_elem((nx, ny, nz), val);
+
+        // Arrays via trait-provided views
+        let density = h.density_array().to_owned();
+        let sound_speed = h.sound_speed_array().to_owned();
+        let absorption = h.absorption_array().to_owned();
+        let nonlinearity = h.nonlinearity_array().to_owned();
+
+        // Elastic arrays
+        let lame_lambda_arr = h.lame_lambda_array();
+        let lame_mu_arr = h.lame_mu_array();
+
+        // Scalar properties via trait methods
+        let ref_freq = h.reference_frequency();
+        let vis = h.viscosity(0.0, 0.0, 0.0, grid);
+        let shear_vis = h.shear_viscosity(0.0, 0.0, 0.0, grid);
+        let bulk_vis = h.bulk_viscosity(0.0, 0.0, 0.0, grid);
+        let surf_tension = h.surface_tension(0.0, 0.0, 0.0, grid);
+        let amb_pressure = h.ambient_pressure(0.0, 0.0, 0.0, grid);
+        let vap_pressure = h.vapor_pressure(0.0, 0.0, 0.0, grid);
+        let polytropic = h.polytropic_index(0.0, 0.0, 0.0, grid);
+
+        let c_p = h.specific_heat(0.0, 0.0, 0.0, grid);
+        let k_t = h.thermal_conductivity(0.0, 0.0, 0.0, grid);
+        let alpha_t = h.thermal_expansion(0.0, 0.0, 0.0, grid);
+        let gas_diff = h.gas_diffusion_coefficient(0.0, 0.0, 0.0, grid);
+        let mu_a = h.optical_absorption_coefficient(0.0, 0.0, 0.0, grid);
+        let mu_sp = h.optical_scattering_coefficient(0.0, 0.0, 0.0, grid);
+
+        // Thermal diffusivity approximation: k / (rho * c)
+        // Compute per-voxel using arrays
+        let mut thermal_diffusivity = Array3::zeros((nx, ny, nz));
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let rho = density[[i, j, k]].max(1e-12);
+                    thermal_diffusivity[[i, j, k]] = k_t / (rho * c_p);
+                }
+            }
+        }
+
+        // Shear sound speed per voxel: sqrt(mu / rho)
+        let mut shear_speed_arr = Array3::zeros((nx, ny, nz));
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let mu = lame_mu_arr[[i, j, k]].max(0.0);
+                    let rho = density[[i, j, k]].max(1e-12);
+                    shear_speed_arr[[i, j, k]] = (mu / rho).sqrt();
+                }
+            }
+        }
+
+        Self {
+            use_trilinear_interpolation: true,
+            density,
+            sound_speed,
+            viscosity: fill(vis),
+            surface_tension: fill(surf_tension),
+            ambient_pressure: amb_pressure,
+            vapor_pressure: fill(vap_pressure),
+            polytropic_index: fill(polytropic),
+
+            specific_heat: fill(c_p),
+            thermal_conductivity: fill(k_t),
+            thermal_expansion: fill(alpha_t),
+            gas_diffusion_coeff: fill(gas_diff),
+            thermal_diffusivity,
+            temperature: h.thermal_field().clone(),
+
+            mu_a: fill(mu_a),
+            mu_s_prime: fill(mu_sp),
+
+            bubble_radius: h.bubble_radius().clone(),
+            bubble_velocity: h.bubble_velocity().clone(),
+
+            alpha0: fill(0.0), // α0 (reference) not exposed directly; keep 0, use absorption array
+            delta: fill(0.0),  // power law exponent not exposed directly; keep 0
+            b_a: nonlinearity.clone(),
+            absorption: absorption.clone(),
+            nonlinearity,
+
+            shear_sound_speed: shear_speed_arr,
+            shear_viscosity_coeff: fill(shear_vis),
+            bulk_viscosity_coeff: fill(bulk_vis),
+
+            lame_lambda: lame_lambda_arr,
+            lame_mu: lame_mu_arr,
+
+            reference_frequency: ref_freq,
         }
     }
 }

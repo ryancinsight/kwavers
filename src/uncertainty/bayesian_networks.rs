@@ -16,6 +16,15 @@ pub struct BayesianConfig {
     pub num_samples: usize,
 }
 
+impl Default for BayesianConfig {
+    fn default() -> Self {
+        Self {
+            dropout_rate: 0.1,
+            num_samples: 100,
+        }
+    }
+}
+
 /// Prediction with uncertainty bounds
 #[derive(Debug, Clone)]
 pub struct PredictionWithUncertainty {
@@ -88,7 +97,7 @@ impl BayesianPINN {
 
         let shape = predictions[0].dim();
         let mut mean_prediction = Array2::zeros(shape);
-        let mut variance = Array2::zeros(shape);
+        let mut variance: Array2<f32> = Array2::zeros(shape);
 
         // Compute mean
         for prediction in predictions {
@@ -129,7 +138,7 @@ impl BayesianPINN {
         // Compute reliability score
         let mean_uncertainty = uncertainty.iter().sum::<f32>() / uncertainty.len() as f32;
         let mean_prediction_magnitude = mean_prediction.iter()
-            .map(|x| x.abs())
+            .map(|x: &f32| x.abs())
             .sum::<f32>() / mean_prediction.len() as f32;
 
         let reliability_score = if mean_prediction_magnitude > 0.0 {
@@ -142,7 +151,7 @@ impl BayesianPINN {
             mean_prediction,
             uncertainty,
             confidence_intervals,
-            reliability_score,
+            reliability_score: reliability_score.into(),
         })
     }
 

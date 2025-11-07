@@ -421,26 +421,32 @@ fn estimate_wave_speed_from_history(
 }
 
 fn create_validation_phantom(grid: &Grid) -> HeterogeneousMedium {
-    let mut stiffness_map = Array3::from_elem((grid.nx, grid.ny, grid.nz), 5000.0); // 5 kPa background
+    // Background Young's modulus map (Pa)
+    let mut youngs_modulus = Array3::from_elem((grid.nx, grid.ny, grid.nz), 5000.0);
 
     // Add spherical inclusion (10 kPa)
     let center_x = grid.nx / 2;
     let center_y = grid.ny / 2;
     let center_z = grid.nz / 2;
-    let radius = 8; // grid points
+    let radius: usize = 8; // grid points
 
-    for k in (center_z - radius)..=(center_z + radius) {
-        for j in (center_y - radius)..=(center_y + radius) {
-            for i in (center_x - radius)..=(center_x + radius) {
-                if i >= 0 && i < grid.nx && j >= 0 && j < grid.ny && k >= 0 && k < grid.nz {
-                    let dx = (i - center_x) as f64;
-                    let dy = (j - center_y) as f64;
-                    let dz = (k - center_z) as f64;
-                    let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+    let start_k = center_z.saturating_sub(radius);
+    let end_k = (center_z + radius).min(grid.nz.saturating_sub(1));
+    let start_j = center_y.saturating_sub(radius);
+    let end_j = (center_y + radius).min(grid.ny.saturating_sub(1));
+    let start_i = center_x.saturating_sub(radius);
+    let end_i = (center_x + radius).min(grid.nx.saturating_sub(1));
 
-                    if distance <= radius as f64 {
-                        stiffness_map[[i, j, k]] = 10000.0; // 10 kPa inclusion
-                    }
+    for k in start_k..=end_k {
+        for j in start_j..=end_j {
+            for i in start_i..=end_i {
+                let dx = (i as isize - center_x as isize) as f64;
+                let dy = (j as isize - center_y as isize) as f64;
+                let dz = (k as isize - center_z as isize) as f64;
+                let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+
+                if distance <= radius as f64 {
+                    youngs_modulus[[i, j, k]] = 10000.0; // 10 kPa inclusion
                 }
             }
         }
@@ -453,38 +459,64 @@ fn create_validation_phantom(grid: &Grid) -> HeterogeneousMedium {
     for k in 0..grid.nz {
         for j in 0..grid.ny {
             for i in 0..grid.nx {
-                let stiffness = stiffness_map[[i, j, k]];
-                sound_speed_map[[i, j, k]] = 1400.0 + (stiffness / 1000.0_f64).sqrt() * 15.0;
+                let e = youngs_modulus[[i, j, k]];
+                sound_speed_map[[i, j, k]] = 1400.0 + (e / 1000.0_f64).sqrt() * 15.0;
             }
         }
     }
 
-    HeterogeneousMedium::new(stiffness_map, density_map, sound_speed_map, grid)
-        .expect("Failed to create validation phantom")
+    // Construct heterogeneous medium via dims constructor and fill arrays
+    let mut medium = HeterogeneousMedium::new(grid.nx, grid.ny, grid.nz, true);
+
+    medium.density = density_map;
+    medium.sound_speed = sound_speed_map;
+
+    // Convert Young's modulus to Lamé parameters with ν ≈ 0.49
+    let nu = 0.49_f64;
+    for k in 0..grid.nz {
+        for j in 0..grid.ny {
+            for i in 0..grid.nx {
+                let e = youngs_modulus[[i, j, k]];
+                let (lambda, mu) = young_to_lame(e, nu);
+                medium.lame_lambda[[i, j, k]] = lambda;
+                medium.lame_mu[[i, j, k]] = mu;
+                // Shear sound speed from G and ρ
+                medium.shear_sound_speed[[i, j, k]] = (mu / medium.density[[i, j, k]]).sqrt();
+            }
+        }
+    }
+
+    medium
 }
 
 fn create_liver_fibrosis_phantom(grid: &Grid) -> HeterogeneousMedium {
-    let mut stiffness_map = Array3::from_elem((grid.nx, grid.ny, grid.nz), 6000.0); // 6 kPa background (mild fibrosis)
+    // Background Young's modulus map (Pa)
+    let mut youngs_modulus = Array3::from_elem((grid.nx, grid.ny, grid.nz), 6000.0); // 6 kPa background (mild fibrosis)
 
     // Add fibrotic regions
-    let fibrotic_regions = vec![
+    let fibrotic_regions: Vec<(usize, usize, usize, usize, f64)> = vec![
         (grid.nx/3, grid.ny/3, grid.nz/2, 10, 12000.0), // F3 fibrosis
         (2*grid.nx/3, 2*grid.ny/3, grid.nz/3, 8, 16000.0), // F4 fibrosis
     ];
 
     for (cx, cy, cz, radius, stiffness) in fibrotic_regions {
-        for k in (cz - radius)..=(cz + radius) {
-            for j in (cy - radius)..=(cy + radius) {
-                for i in (cx - radius)..=(cx + radius) {
-                    if i >= 0 && i < grid.nx && j >= 0 && j < grid.ny && k >= 0 && k < grid.nz {
-                        let dx = (i - cx) as f64;
-                        let dy = (j - cy) as f64;
-                        let dz = (k - cz) as f64;
-                        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+        let start_k = cz.saturating_sub(radius);
+        let end_k = (cz + radius).min(grid.nz.saturating_sub(1));
+        let start_j = cy.saturating_sub(radius);
+        let end_j = (cy + radius).min(grid.ny.saturating_sub(1));
+        let start_i = cx.saturating_sub(radius);
+        let end_i = (cx + radius).min(grid.nx.saturating_sub(1));
 
-                        if distance <= radius as f64 {
-                            stiffness_map[[i, j, k]] = stiffness;
-                        }
+        for k in start_k..=end_k {
+            for j in start_j..=end_j {
+                for i in start_i..=end_i {
+                    let dx = (i as isize - cx as isize) as f64;
+                    let dy = (j as isize - cy as isize) as f64;
+                    let dz = (k as isize - cz as isize) as f64;
+                    let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+
+                    if distance <= radius as f64 {
+                        youngs_modulus[[i, j, k]] = stiffness;
                     }
                 }
             }
@@ -497,14 +529,33 @@ fn create_liver_fibrosis_phantom(grid: &Grid) -> HeterogeneousMedium {
     for k in 0..grid.nz {
         for j in 0..grid.ny {
             for i in 0..grid.nx {
-                let stiffness = stiffness_map[[i, j, k]];
-                sound_speed_map[[i, j, k]] = 1450.0 + (stiffness / 1000.0_f64).sqrt() * 12.0;
+                let e = youngs_modulus[[i, j, k]];
+                sound_speed_map[[i, j, k]] = 1450.0 + (e / 1000.0_f64).sqrt() * 12.0;
             }
         }
     }
 
-    HeterogeneousMedium::new(stiffness_map, density_map, sound_speed_map, grid)
-        .expect("Failed to create liver fibrosis phantom")
+    // Construct heterogeneous medium via dims constructor and fill arrays
+    let mut medium = HeterogeneousMedium::new(grid.nx, grid.ny, grid.nz, true);
+
+    medium.density = density_map;
+    medium.sound_speed = sound_speed_map;
+
+    // Convert Young's modulus to Lamé parameters with ν ≈ 0.49
+    let nu = 0.49_f64;
+    for k in 0..grid.nz {
+        for j in 0..grid.ny {
+            for i in 0..grid.nx {
+                let e = youngs_modulus[[i, j, k]];
+                let (lambda, mu) = young_to_lame(e, nu);
+                medium.lame_lambda[[i, j, k]] = lambda;
+                medium.lame_mu[[i, j, k]] = mu;
+                medium.shear_sound_speed[[i, j, k]] = (mu / medium.density[[i, j, k]]).sqrt();
+            }
+        }
+    }
+
+    medium
 }
 
 fn perform_phantom_elasticity_reconstruction(
@@ -620,8 +671,10 @@ fn validate_phantom_reconstruction(
                 if elasticity_map.reliability_mask[[i, j, k]] {
                     let reconstructed = elasticity_map.young_modulus[[i, j, k]];
 
-                    // Get true phantom stiffness
-                    let phantom_stiffness = phantom.get_elastic_properties(i, j, k).unwrap().young_modulus;
+                    // Compute true phantom Young's modulus from Lamé parameters
+                    let lambda = phantom.lame_lambda[[i, j, k]];
+                    let mu = phantom.lame_mu[[i, j, k]];
+                    let phantom_stiffness = lame_to_young(lambda, mu);
 
                     let relative_error = ((reconstructed - phantom_stiffness) / phantom_stiffness).abs();
 
@@ -651,4 +704,21 @@ fn validate_phantom_reconstruction(
     assert!(inclusion_mean_error < 0.4, "Inclusion error too high: {:.1}%", inclusion_mean_error * 100.0);
     assert!(background_errors.len() > 100, "Insufficient background validation points");
     assert!(inclusion_errors.len() > 50, "Insufficient inclusion validation points");
+}
+
+#[inline]
+fn young_to_lame(e: f64, nu: f64) -> (f64, f64) {
+    let lambda = e * nu / ((1.0 + nu) * (1.0 - 2.0 * nu));
+    let mu = e / (2.0 * (1.0 + nu));
+    (lambda, mu)
+}
+
+#[inline]
+fn lame_to_young(lambda: f64, mu: f64) -> f64 {
+    // E = μ(3λ + 2μ)/(λ + μ)
+    if (lambda + mu).abs() < f64::EPSILON {
+        0.0
+    } else {
+        mu * (3.0 * lambda + 2.0 * mu) / (lambda + mu)
+    }
 }

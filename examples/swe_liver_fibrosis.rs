@@ -31,7 +31,11 @@ use kwavers::error::KwaversResult;
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::imaging::elastography::{
-    InversionMethod, ShearWaveElastography,
+    InversionMethod,
+    ShearWaveInversion,
+    AcousticRadiationForce,
+    PushPulseParameters,
+    DisplacementEstimator,
 };
 use ndarray::Array3;
 use std::time::Instant;
@@ -56,13 +60,18 @@ fn main() -> KwaversResult<()> {
              swe_config.frequency / 1e6, swe_config.duration * 1e6,
              swe_config.intensity / 1e4);
 
-    // Create SWE workflow
-    let swe = ShearWaveElastography::new(&grid, &medium, InversionMethod::TimeOfFlight)?;
-
     // Generate shear wave using ARFI
     println!("\n🔊 Generating Shear Wave...");
     let push_location = [0.025, 0.025, 0.015]; // 25mm lateral, 15mm depth
-    let displacement_field = swe.generate_shear_wave(push_location)?;
+    let mut arfi = AcousticRadiationForce::new(&grid, &medium)?;
+    arfi.set_parameters(PushPulseParameters::new(
+        swe_config.frequency,
+        swe_config.duration,
+        swe_config.intensity,
+        push_location[2],
+        2.0,
+    )?);
+    let displacement_field = arfi.apply_push_pulse(push_location)?;
 
     println!("   ✓ ARFI push applied at [{:.1}, {:.1}, {:.1}] mm",
              push_location[0] * 1000.0, push_location[1] * 1000.0, push_location[2] * 1000.0);
@@ -74,7 +83,7 @@ fn main() -> KwaversResult<()> {
         &grid,
         &medium,
         swe_config.tracking_frames,
-        swe_config.frame_rate
+        swe_config.frame_rate,
     )?;
 
     println!("   ✓ Tracked {} frames at {:.0} fps", swe_config.tracking_frames, swe_config.frame_rate);
@@ -83,13 +92,18 @@ fn main() -> KwaversResult<()> {
     println!("   ✓ Displacement range: {:.3} - {:.3} μm", min_disp * 1e6, max_disp * 1e6);
 
     // Debug: check initial displacement
-    let initial_min = displacement_field.iter().fold(f64::INFINITY, |a: f64, &b: &f64| a.min(b));
-    let initial_max = displacement_field.iter().fold(f64::NEG_INFINITY, |a: f64, &b: &f64| a.max(b));
+    let initial_min = displacement_field
+        .iter()
+        .fold(f64::INFINITY, |a, &b| a.min(b));
+    let initial_max = displacement_field
+        .iter()
+        .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
     println!("   ✓ Initial displacement range: {:.3} - {:.3} μm", initial_min * 1e6, initial_max * 1e6);
 
     // Reconstruct elasticity map
     println!("\n🧮 Reconstructing Elasticity Map...");
-    let elasticity_map = swe.reconstruct_elasticity(&tracked_displacement.magnitude())?;
+    let inversion = ShearWaveInversion::new(InversionMethod::TimeOfFlight);
+    let elasticity_map = inversion.reconstruct(&tracked_displacement, &grid)?;
 
     // Analyze results
     println!("\n📈 Clinical Analysis:");
@@ -173,22 +187,8 @@ fn track_shear_wave_propagation(
     _n_frames: usize,
     _frame_rate: f64,
 ) -> KwaversResult<kwavers::physics::imaging::elastography::DisplacementField> {
-    use kwavers::physics::imaging::elastography::DisplacementField;
-
-    // For now, use the static displacement field as tracked displacement
-    // In a full implementation, this would simulate temporal evolution
-    let (nx, ny, nz) = displacement_field.dim();
-    let mut tracked = DisplacementField::zeros(nx, ny, nz);
-
-    // Copy displacement field to uz component (axial displacement dominant)
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in 0..nz {
-                tracked.uz[[i, j, k]] = displacement_field[[i, j, k]];
-            }
-        }
-    }
-
+    let estimator = DisplacementEstimator::new(_grid);
+    let tracked = estimator.estimate(displacement_field)?;
     Ok(tracked)
 }
 

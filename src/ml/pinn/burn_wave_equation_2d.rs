@@ -121,7 +121,7 @@ use std::f64::consts::PI;
 #[cfg(feature = "gpu")]
 use crate::gpu::wgsl_shaders::neural_network::NeuralNetworkShader as BurnNeuralNetwork;
 #[cfg(feature = "simd")]
-use std::simd::{f32x16, SimdFloat};
+use std::simd::{f32x16, StdFloat};
 
 /// Interface conditions between regions in multi-region domains
 pub enum InterfaceCondition {
@@ -2139,7 +2139,15 @@ impl<B: Backend> RealTimePINNInference<B> {
 
             // Apply activation
             let activated_simd = match activation {
-                ActivationType::Tanh => simd_vec.tanh(),
+                ActivationType::Tanh => {
+                    // Lane-wise tanh to avoid unstable std::simd methods
+                    let vals = simd_vec.as_array();
+                    let mut out = [0.0f32; 16];
+                    for j in 0..chunk.len() {
+                        out[j] = vals[j].tanh();
+                    }
+                    f32x16::from_array(out)
+                }
                 ActivationType::Relu => {
                     let zero = f32x16::splat(0.0);
                     f32x16::simd_max(simd_vec, zero)

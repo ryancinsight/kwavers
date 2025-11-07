@@ -14,6 +14,6 @@ pub mod spectral;
 pub use blackbody::BlackbodyModel;
 pub use bremsstrahlung::BremsstrahlungModel;
 pub use emission::{
-    EmissionParameters, SonoluminescenceEmission, SpectralField, SpectralStatistics,
+    EmissionParameters, IntegratedSonoluminescence, SonoluminescenceEmission, SpectralField, SpectralStatistics,
 };
 pub use spectral::{EmissionSpectrum, SpectralAnalyzer};

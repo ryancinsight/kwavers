@@ -47,7 +47,7 @@ fn validate_neo_hookean_model() -> Result<(), Box<dyn std::error::Error>> {
     let model = HyperelasticModel::neo_hookean_soft_tissue();
 
     // Uniaxial compression: 20% strain
-    let lambda = 0.8;
+    let lambda: f64 = 0.8;
     let deformation_gradient = [
         [lambda, 0.0, 0.0],
         [0.0, 1.0 / lambda.sqrt(), 0.0],
@@ -86,7 +86,7 @@ fn validate_ogden_principal_stretches() -> Result<(), Box<dyn std::error::Error>
     };
 
     // Simple uniaxial stretch
-    let lambda_x = 1.2;
+    let lambda_x: f64 = 1.2;
     let lambda_y = 1.0 / lambda_x.sqrt();
     let deformation_gradient = [
         [lambda_x, 0.0, 0.0],
@@ -136,7 +136,7 @@ fn validate_harmonic_generation() -> Result<(), Box<dyn std::error::Error>> {
     let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material, config)?;
 
     // Create fundamental frequency input
-    let mut initial_disp = ndarray::Array3::zeros((32, 8, 8));
+    let mut initial_disp: ndarray::Array3<f64> = ndarray::Array3::zeros((32, 8, 8));
     let omega = 2.0 * PI * 50.0; // 50 Hz
     let k = 2.0 * PI / 0.01; // λ = 1 cm
 

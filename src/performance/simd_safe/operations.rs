@@ -97,6 +97,66 @@ impl SimdOps {
         // Fallback to SWAR
         super::swar::norm_swar(field)
     }
+
+    /// Multiply two fields element-wise using SIMD
+    #[inline]
+    #[must_use]
+    pub fn multiply_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
+        let shape = a.dim();
+        let mut result = Array3::zeros(shape);
+
+        #[cfg(target_arch = "x86_64")]
+        {
+            if is_x86_feature_detected!("avx2") {
+                unsafe {
+                    super::avx2::multiply_fields_avx2(a, b, &mut result);
+                }
+                return result;
+            }
+        }
+
+        #[cfg(target_arch = "aarch64")]
+        {
+            if std::arch::is_aarch64_feature_detected!("neon") {
+                super::neon::multiply_fields_neon(a, b, &mut result);
+                return result;
+            }
+        }
+
+        // Fallback to SWAR
+        super::swar::multiply_fields_swar(a, b, &mut result);
+        result
+    }
+
+    /// Subtract two fields element-wise using SIMD
+    #[inline]
+    #[must_use]
+    pub fn subtract_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
+        let shape = a.dim();
+        let mut result = Array3::zeros(shape);
+
+        #[cfg(target_arch = "x86_64")]
+        {
+            if is_x86_feature_detected!("avx2") {
+                unsafe {
+                    super::avx2::subtract_fields_avx2(a, b, &mut result);
+                }
+                return result;
+            }
+        }
+
+        #[cfg(target_arch = "aarch64")]
+        {
+            if std::arch::is_aarch64_feature_detected!("neon") {
+                super::neon::subtract_fields_neon(a, b, &mut result);
+                return result;
+            }
+        }
+
+        // Fallback to SWAR
+        super::swar::subtract_fields_swar(a, b, &mut result);
+        result
+    }
 }
 
 #[cfg(test)]

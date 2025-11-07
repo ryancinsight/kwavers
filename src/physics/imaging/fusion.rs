@@ -262,59 +262,303 @@ impl MultiModalFusion {
         min_dims
     }
 
-    /// Weighted average fusion
+    /// Weighted average fusion with proper registration and resampling
     fn fuse_weighted_average(&self) -> KwaversResult<FusedImageResult> {
-        let (nx, ny, nz) = self.find_common_dimensions();
+        use crate::physics::imaging::registration::ImageRegistration;
 
-        let mut fused_intensity = Array3::<f64>::zeros((nx, ny, nz));
-        let mut confidence_map = Array3::<f64>::zeros((nx, ny, nz));
-        let mut total_weight = 0.0;
+        let registration = ImageRegistration::default();
 
+        // Define target grid dimensions and spacing
+        let target_dims = (
+            (self.config.output_resolution[0] * 1e3) as usize, // Convert mm to voxels
+            (self.config.output_resolution[1] * 1e3) as usize,
+            (self.config.output_resolution[2] * 1e3) as usize,
+        );
+
+        let mut fused_intensity = Array3::<f64>::zeros(target_dims);
+        let mut confidence_map = Array3::<f64>::zeros(target_dims);
+        let mut uncertainty_map = if self.config.uncertainty_quantification {
+            Some(Array3::<f64>::zeros(target_dims))
+        } else {
+            None
+        };
+
+        let mut registration_transforms = HashMap::new();
+        let mut modality_quality = HashMap::new();
+
+        // Use first modality as reference for registration
+        let reference_modality = self.registered_data.values().next()
+            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
+                message: "No modalities available for fusion".to_string(),
+            }))?;
+
+        // Register and resample each modality
         for (modality_name, modality) in &self.registered_data {
             let weight = self.config.modality_weights.get(modality_name)
                 .copied()
                 .unwrap_or(1.0);
 
-            // Simple fusion assuming same dimensions (would need resampling in practice)
-            let data = &modality.data;
-            for i in 0..nx {
-                for j in 0..ny {
-                    for k in 0..nz {
-                        if i < data.shape()[0] && j < data.shape()[1] && k < data.shape()[2] {
-                            let value = data[[i, j, k]];
-                            fused_intensity[[i, j, k]] += value * weight;
-                            if value > 0.0 {
-                                confidence_map[[i, j, k]] += weight;
-                            }
-                        }
+            modality_quality.insert(modality_name.clone(), modality.quality_score);
+
+            // Perform intensity-based registration to reference
+            let identity_transform = [
+                1.0, 0.0, 0.0, 0.0,
+                0.0, 1.0, 0.0, 0.0,
+                0.0, 0.0, 1.0, 0.0,
+                0.0, 0.0, 0.0, 1.0,
+            ];
+
+            let registration_result = registration.intensity_registration_mutual_info(
+                &reference_modality.data,
+                &modality.data,
+                &identity_transform,
+            )?;
+
+            // Store transformation
+            let affine_transform = self.homogeneous_to_affine(&registration_result.transform_matrix);
+            registration_transforms.insert(modality_name.clone(), affine_transform);
+
+            // Resample to target grid using trilinear interpolation
+            let resampled_data = self.resample_to_target_grid(&modality.data, &registration_result.transform_matrix, target_dims);
+
+            // Fuse with probabilistic weighting based on quality and confidence
+            self.fuse_modality_probabilistic(
+                &mut fused_intensity,
+                &mut confidence_map,
+                &mut uncertainty_map,
+                &resampled_data,
+                weight,
+                modality.quality_score,
+                registration_result.confidence,
+            );
+        }
+
+        // Normalize fused intensity by confidence
+        for i in 0..target_dims.0 {
+            for j in 0..target_dims.1 {
+                for k in 0..target_dims.2 {
+                    let conf = confidence_map[[i, j, k]];
+                    if conf > 0.0 {
+                        fused_intensity[[i, j, k]] /= conf;
                     }
                 }
             }
-
-            total_weight += weight;
         }
-
-        // Normalize
-        if total_weight > 0.0 {
-            fused_intensity.mapv_inplace(|x| x / total_weight);
-        }
-
-
-        confidence_map.mapv_inplace(|c| if c > 0.0 { c / total_weight } else { 0.0 });
-
-        let modality_quality: HashMap<String, f64> = self.registered_data.iter()
-            .map(|(name, modality)| (name.clone(), modality.quality_score))
-            .collect();
 
         Ok(FusedImageResult {
             intensity_image: fused_intensity,
             tissue_properties: HashMap::new(),
             confidence_map,
-            uncertainty_map: None,
-            registration_transforms: HashMap::new(), // Simplified
+            uncertainty_map,
+            registration_transforms,
             modality_quality,
-            coordinates: [vec![], vec![], vec![]], // Placeholder
+            coordinates: self.generate_coordinate_arrays(target_dims),
         })
+    }
+
+    /// Resample image to target grid using trilinear interpolation
+    fn resample_to_target_grid(&self, source_image: &Array3<f64>, transform: &[f64; 16], target_dims: (usize, usize, usize)) -> Array3<f64> {
+        let mut resampled = Array3::<f64>::zeros(target_dims);
+        let source_dims = source_image.shape();
+
+        // Target voxel spacing (assume isotropic for simplicity)
+        let target_spacing = 1.0; // 1mm spacing
+
+        for i in 0..target_dims.0 {
+            for j in 0..target_dims.1 {
+                for k in 0..target_dims.2 {
+                    // Convert voxel indices to physical coordinates
+                    let target_coords = [
+                        i as f64 * target_spacing,
+                        j as f64 * target_spacing,
+                        k as f64 * target_spacing,
+                    ];
+
+                    // Apply inverse transform to find source coordinates
+                    let source_coords = self.apply_inverse_transform(transform, target_coords);
+
+                    // Trilinear interpolation
+                    let value = self.trilinear_interpolate(source_image, source_coords, source_dims);
+                    resampled[[i, j, k]] = value;
+                }
+            }
+        }
+
+        resampled
+    }
+
+    /// Apply inverse transformation to find source coordinates
+    fn apply_inverse_transform(&self, transform: &[f64; 16], point: [f64; 3]) -> [f64; 3] {
+        // Simplified inverse transform for rigid body (transpose rotation, negate translation)
+        // For full affine transforms, would need proper matrix inversion
+        let rot = [
+            [transform[0], transform[1], transform[2]],
+            [transform[4], transform[5], transform[6]],
+            [transform[8], transform[9], transform[10]],
+        ];
+
+        let trans = [transform[3], transform[7], transform[11]];
+
+        // For rigid body inverse: R^T * (p - t)
+        let shifted = [
+            point[0] - trans[0],
+            point[1] - trans[1],
+            point[2] - trans[2],
+        ];
+
+        [
+            rot[0][0] * shifted[0] + rot[1][0] * shifted[1] + rot[2][0] * shifted[2],
+            rot[0][1] * shifted[0] + rot[1][1] * shifted[1] + rot[2][1] * shifted[2],
+            rot[0][2] * shifted[0] + rot[1][2] * shifted[1] + rot[2][2] * shifted[2],
+        ]
+    }
+
+    /// Trilinear interpolation
+    fn trilinear_interpolate(&self, image: &Array3<f64>, coords: [f64; 3], dims: &[usize]) -> f64 {
+        let x = coords[0].max(0.0).min((dims[0] - 1) as f64);
+        let y = coords[1].max(0.0).min((dims[1] - 1) as f64);
+        let z = coords[2].max(0.0).min((dims[2] - 1) as f64);
+
+        let x0 = x.floor() as usize;
+        let y0 = y.floor() as usize;
+        let z0 = z.floor() as usize;
+
+        let x1 = (x0 + 1).min(dims[0] - 1);
+        let y1 = (y0 + 1).min(dims[1] - 1);
+        let z1 = (z0 + 1).min(dims[2] - 1);
+
+        let xd = x - x0 as f64;
+        let yd = y - y0 as f64;
+        let zd = z - z0 as f64;
+
+        // Trilinear interpolation
+        let c000 = image[[x0, y0, z0]];
+        let c001 = image[[x0, y0, z1]];
+        let c010 = image[[x0, y1, z0]];
+        let c011 = image[[x0, y1, z1]];
+        let c100 = image[[x1, y0, z0]];
+        let c101 = image[[x1, y0, z1]];
+        let c110 = image[[x1, y1, z0]];
+        let c111 = image[[x1, y1, z1]];
+
+        // Interpolate along x
+        let c00 = c000 * (1.0 - xd) + c100 * xd;
+        let c01 = c001 * (1.0 - xd) + c101 * xd;
+        let c10 = c010 * (1.0 - xd) + c110 * xd;
+        let c11 = c011 * (1.0 - xd) + c111 * xd;
+
+        // Interpolate along y
+        let c0 = c00 * (1.0 - yd) + c10 * yd;
+        let c1 = c01 * (1.0 - yd) + c11 * yd;
+
+        // Interpolate along z
+        c0 * (1.0 - zd) + c1 * zd
+    }
+
+    /// Fuse modality with probabilistic weighting
+    fn fuse_modality_probabilistic(
+        &self,
+        fused_intensity: &mut Array3<f64>,
+        confidence_map: &mut Array3<f64>,
+        uncertainty_map: &mut Option<Array3<f64>>,
+        resampled_data: &Array3<f64>,
+        weight: f64,
+        quality_score: f64,
+        registration_confidence: f64,
+    ) {
+        let (nx, ny, nz) = resampled_data.dim();
+
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let value = resampled_data[[i, j, k]];
+
+                    // Probabilistic weight combines user weight, quality score, and registration confidence
+                    let probabilistic_weight = weight * quality_score * registration_confidence;
+
+                    // Fuse intensity with probabilistic weighting
+                    fused_intensity[[i, j, k]] += value * probabilistic_weight;
+                    confidence_map[[i, j, k]] += probabilistic_weight;
+
+                    // Update uncertainty if quantification enabled
+                    if let Some(ref mut uncertainty) = uncertainty_map {
+                        // Uncertainty based on registration confidence and quality score
+                        let local_uncertainty = (1.0 - registration_confidence) * (1.0 - quality_score);
+                        uncertainty[[i, j, k]] += local_uncertainty * probabilistic_weight;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Generate coordinate arrays for the fused result
+    fn generate_coordinate_arrays(&self, dims: (usize, usize, usize)) -> [Vec<f64>; 3] {
+        let x_coords: Vec<f64> = (0..dims.0).map(|i| i as f64 * self.config.output_resolution[0]).collect();
+        let y_coords: Vec<f64> = (0..dims.1).map(|j| j as f64 * self.config.output_resolution[1]).collect();
+        let z_coords: Vec<f64> = (0..dims.2).map(|k| k as f64 * self.config.output_resolution[2]).collect();
+
+        [x_coords, y_coords, z_coords]
+    }
+
+    /// Bayesian fusion with uncertainty quantification
+    fn bayesian_fusion(&self, values: &[f64], weights: &[f64]) -> (f64, f64) {
+        if values.is_empty() {
+            return (0.0, 1.0); // High uncertainty
+        }
+
+        if values.len() == 1 {
+            return (values[0], 1.0 - weights[0].min(1.0)); // Uncertainty based on weight
+        }
+
+        // Compute weighted mean
+        let total_weight: f64 = weights.iter().sum();
+        let weighted_sum: f64 = values.iter().zip(weights.iter())
+            .map(|(v, w)| v * w)
+            .sum();
+
+        let mean = if total_weight > 0.0 { weighted_sum / total_weight } else { 0.0 };
+
+        // Compute variance (uncertainty) using weighted variance formula
+        let variance: f64 = if total_weight > 1.0 {
+            let sum_squared_diff: f64 = values.iter().zip(weights.iter())
+                .map(|(v, w)| w * (v - mean).powi(2))
+                .sum();
+            sum_squared_diff / (total_weight - 1.0) // Bessel's correction
+        } else {
+            // High uncertainty for insufficient data
+            1.0
+        };
+
+        // Normalize uncertainty to [0, 1] range
+        let normalized_uncertainty = (variance.sqrt() / (variance.sqrt() + 1.0)).min(1.0);
+
+        (mean, normalized_uncertainty)
+    }
+
+    /// Convert homogeneous transformation matrix to AffineTransform
+    fn homogeneous_to_affine(&self, homogeneous: &[f64; 16]) -> AffineTransform {
+        // Extract rotation matrix (upper-left 3x3)
+        let rotation = [
+            [homogeneous[0], homogeneous[1], homogeneous[2]],
+            [homogeneous[4], homogeneous[5], homogeneous[6]],
+            [homogeneous[8], homogeneous[9], homogeneous[10]],
+        ];
+
+        // Extract translation vector (last column, first 3 elements)
+        let translation = [homogeneous[3], homogeneous[7], homogeneous[11]];
+
+        // Extract scale factors from rotation matrix (assuming no shear)
+        let scale_x = (rotation[0][0].powi(2) + rotation[1][0].powi(2) + rotation[2][0].powi(2)).sqrt();
+        let scale_y = (rotation[0][1].powi(2) + rotation[1][1].powi(2) + rotation[2][1].powi(2)).sqrt();
+        let scale_z = (rotation[0][2].powi(2) + rotation[1][2].powi(2) + rotation[2][2].powi(2)).sqrt();
+
+        let scale = [scale_x, scale_y, scale_z];
+
+        AffineTransform {
+            rotation,
+            translation,
+            scale,
+        }
     }
 
     /// Feature-based fusion using complementary tissue properties
@@ -329,18 +573,100 @@ impl MultiModalFusion {
 
     /// Probabilistic fusion with uncertainty modeling
     fn fuse_probabilistic(&self) -> KwaversResult<FusedImageResult> {
-        // Implement probabilistic fusion with confidence intervals
-        // Would use Bayesian methods or uncertainty propagation
+        use crate::physics::imaging::registration::ImageRegistration;
 
-        let mut result = self.fuse_weighted_average()?;
+        let registration = ImageRegistration::default();
 
-        if self.config.uncertainty_quantification {
-            // Add uncertainty quantification
-            let uncertainty = self.compute_fusion_uncertainty()?;
-            result.uncertainty_map = Some(uncertainty);
+        // Define target grid dimensions
+        let target_dims = (
+            (self.config.output_resolution[0] * 1e3) as usize,
+            (self.config.output_resolution[1] * 1e3) as usize,
+            (self.config.output_resolution[2] * 1e3) as usize,
+        );
+
+        let mut fused_intensity = Array3::<f64>::zeros(target_dims);
+        let mut confidence_map = Array3::<f64>::zeros(target_dims);
+        let mut uncertainty_map = Array3::<f64>::zeros(target_dims); // Always enabled for probabilistic
+
+        let mut registration_transforms = HashMap::new();
+        let mut modality_quality = HashMap::new();
+
+        // Use first modality as reference
+        let reference_modality = self.registered_data.values().next()
+            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
+                message: "No modalities available for fusion".to_string(),
+            }))?;
+
+        // Collect all modality data for probabilistic fusion
+        let mut modality_data = Vec::new();
+
+        for (modality_name, modality) in &self.registered_data {
+            let weight = self.config.modality_weights.get(modality_name)
+                .copied()
+                .unwrap_or(1.0);
+
+            modality_quality.insert(modality_name.clone(), modality.quality_score);
+
+            // Register modality
+            let identity_transform = [
+                1.0, 0.0, 0.0, 0.0,
+                0.0, 1.0, 0.0, 0.0,
+                0.0, 0.0, 1.0, 0.0,
+                0.0, 0.0, 0.0, 1.0,
+            ];
+
+            let registration_result = registration.intensity_registration_mutual_info(
+                &reference_modality.data,
+                &modality.data,
+                &identity_transform,
+            )?;
+
+            let affine_transform = self.homogeneous_to_affine(&registration_result.transform_matrix);
+            registration_transforms.insert(modality_name.clone(), affine_transform);
+
+            // Resample to common grid
+            let resampled_data = self.resample_to_target_grid(&modality.data, &registration_result.transform_matrix, target_dims);
+
+            modality_data.push((
+                resampled_data,
+                weight,
+                modality.quality_score,
+                registration_result.confidence,
+            ));
         }
 
-        Ok(result)
+        // Perform probabilistic fusion at each voxel
+        for i in 0..target_dims.0 {
+            for j in 0..target_dims.1 {
+                for k in 0..target_dims.2 {
+                    let voxel_data: Vec<f64> = modality_data.iter()
+                        .map(|(data, _, _, _)| data[[i, j, k]])
+                        .collect();
+
+                    let weights: Vec<f64> = modality_data.iter()
+                        .map(|(_, weight, quality, confidence)| weight * quality * confidence)
+                        .collect();
+
+                    // Bayesian fusion with uncertainty quantification
+                    let (fused_value, uncertainty) = self.bayesian_fusion(&voxel_data, &weights);
+                    let total_confidence = weights.iter().sum::<f64>();
+
+                    fused_intensity[[i, j, k]] = fused_value;
+                    confidence_map[[i, j, k]] = total_confidence;
+                    uncertainty_map[[i, j, k]] = uncertainty;
+                }
+            }
+        }
+
+        Ok(FusedImageResult {
+            intensity_image: fused_intensity,
+            tissue_properties: HashMap::new(),
+            confidence_map,
+            uncertainty_map: Some(uncertainty_map),
+            registration_transforms,
+            modality_quality,
+            coordinates: self.generate_coordinate_arrays(target_dims),
+        })
     }
 
     /// Deep learning-based fusion

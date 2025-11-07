@@ -39,6 +39,7 @@ use kwavers::{
     physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
     KwaversResult,
 };
+use kwavers::error::ValidationError;
 use std::f64::consts::PI;
 use std::collections::HashMap;
 use std::fs;
@@ -499,7 +500,7 @@ impl KWaveValidator {
 
         // Apply source at appropriate spatial locations
         // This is a simplified implementation - in practice would integrate with full source API
-        if let Ok(source_pressure) = Ok(source.amplitude(time)) {
+        let source_pressure = source.amplitude(time);
             // For demonstration, apply source at center (would be configurable)
             let cx = grid.nx / 2;
             let cy = grid.ny / 2;
@@ -508,7 +509,7 @@ impl KWaveValidator {
             if cx < grid.nx && cy < grid.ny && cz < grid.nz {
                 pressure[[cx, cy, cz]] += source_pressure as f32;
             }
-        }
+        
     }
 
     /// Update velocity from pressure gradient
@@ -622,10 +623,18 @@ impl KWaveValidator {
 
     /// Create kwavers source from test case specification
     fn create_kwavers_source(&self, test_case: &KWaveTestCase, grid: &Grid) -> KwaversResult<Box<dyn kwavers::source::Source>> {
-        // For now, create a simple placeholder source
-        // In practice, this would integrate with the full source API
+        // For now, create a simple point source at the grid center using a sine wave signal
         use kwavers::source::PointSource;
-        Ok(Box::new(PointSource::new(grid.nx/2, grid.ny/2, grid.nz/2, 1e6, 1e6, 3)))
+        use kwavers::signal::SineWave;
+        use std::sync::Arc;
+
+        // Convert center indices to physical coordinates
+        let (cx, cy, cz) = grid.indices_to_coordinates(grid.nx / 2, grid.ny / 2, grid.nz / 2);
+
+        // Construct a basic sine wave signal (frequency, amplitude, phase)
+        let signal = Arc::new(SineWave::new(1.0e6, 1.0, 0.0));
+
+        Ok(Box::new(PointSource::new((cx, cy, cz), signal)))
     }
 
     /// Create sensor mask from test case

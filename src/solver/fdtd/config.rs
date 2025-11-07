@@ -18,6 +18,8 @@ pub struct FdtdConfig {
     pub subgridding: bool,
     /// Subgridding refinement factor
     pub subgrid_factor: usize,
+    /// Enable GPU acceleration (requires "gpu" feature)
+    pub enable_gpu_acceleration: bool,
 }
 
 impl Default for FdtdConfig {
@@ -28,6 +30,7 @@ impl Default for FdtdConfig {
             cfl_factor: CFL_SAFETY_FACTOR,
             subgridding: false,
             subgrid_factor: 2,
+            enable_gpu_acceleration: false,
         }
     }
 }

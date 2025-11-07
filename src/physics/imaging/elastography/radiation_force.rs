@@ -679,8 +679,14 @@ mod tests {
         // Check that pushes are distributed around the circle
         for (i, push) in pattern.pushes.iter().enumerate() {
             let expected_angle = 2.0 * PI * (i as f64) / (n_pushes as f64);
-            let actual_angle = (push.location[1] - center[1]).atan2(push.location[0] - center[0]);
-            assert!((actual_angle - expected_angle).abs() < 0.1);
+            let mut actual_angle = (push.location[1] - center[1]).atan2(push.location[0] - center[0]);
+            // Normalize angle to [0, 2π) range
+            if actual_angle < 0.0 {
+                actual_angle += 2.0 * PI;
+            }
+            // Allow for small numerical differences and account for atan2 range
+            let angle_diff = (actual_angle - expected_angle).abs().min((actual_angle - expected_angle + 2.0 * PI).abs().min((actual_angle - expected_angle - 2.0 * PI).abs()));
+            assert!(angle_diff < 0.1, "Push {}: expected angle {:.3}, got {:.3}", i, expected_angle, actual_angle);
         }
     }
 

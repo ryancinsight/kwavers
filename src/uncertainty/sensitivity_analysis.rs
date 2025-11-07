@@ -16,6 +16,15 @@ pub struct SensitivityConfig {
     pub confidence_level: f64,
 }
 
+impl Default for SensitivityConfig {
+    fn default() -> Self {
+        Self {
+            num_samples: 1000,
+            confidence_level: 0.95,
+        }
+    }
+}
+
 /// Sensitivity indices for each parameter
 #[derive(Debug)]
 pub struct SensitivityIndices {
@@ -156,8 +165,8 @@ impl SensitivityAnalyzer {
         // Simplified sensitivity analysis using correlation-based method
         // In practice, would use more sophisticated variance decomposition
 
-        let mut param_values = Vec::new();
-        let mut output_means = Vec::new();
+        let mut param_values: Vec<i32> = Vec::new();
+        let mut output_means: Vec<f64> = Vec::new();
 
         // Group samples by parameter values for sensitivity analysis
         let mut param_output_map: HashMap<i32, Vec<f64>> = HashMap::new();
@@ -194,7 +203,7 @@ impl SensitivityAnalyzer {
         }
 
         // Compute mean output
-        let mut mean_output = Array1::zeros(model_outputs[0].len());
+        let mut mean_output: Array1<f64> = Array1::zeros(model_outputs[0].len());
         for output in model_outputs {
             mean_output = &mean_output + output;
         }

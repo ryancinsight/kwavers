@@ -150,7 +150,7 @@ impl TreatmentPlanner {
         let temperature_field = self.calculate_thermal_response(&acoustic_field)?;
 
         // Step 5: Validate safety constraints
-        self.validate_safety(&temperature_field, &acoustic_field)?;
+        self.validate_safety(&temperature_field, &acoustic_field, transducer_spec.frequency)?;
 
         // Step 6: Estimate treatment time
         let treatment_time = self.estimate_treatment_time(targets, &acoustic_field);
@@ -333,6 +333,7 @@ impl TreatmentPlanner {
         &self,
         temperature: &Array3<f64>,
         acoustic_field: &Array3<f64>,
+        frequency_hz: f64,
     ) -> KwaversResult<()> {
         let constraints = SafetyConstraints::default();
 
@@ -348,10 +349,15 @@ impl TreatmentPlanner {
             }
         }
 
-        // Check mechanical index
+        // Check mechanical index using MI = P_neg(MPa) / sqrt(frequency_MHz)
+        // Convert intensity to pressure using p = sqrt(I * rho * c)
         let max_intensity = acoustic_field.iter().fold(0.0_f64, |a, &b| a.max(b));
-        let max_pressure = max_intensity.sqrt() * 1000.0; // Approximate MPa
-        let mi = max_pressure / (constraints.max_mi * 1e6).sqrt(); // Simplified MI calculation
+        let rho = 1000.0; // kg/m^3
+        let c = 1500.0; // m/s
+        let p_pa = (max_intensity * rho * c).sqrt();
+        let p_mpa = p_pa / 1_000_000.0; // Pa -> MPa
+        let freq_mhz = frequency_hz / 1_000_000.0;
+        let mi = if freq_mhz > 0.0 { p_mpa / freq_mhz.sqrt() } else { f64::INFINITY };
 
         if mi > constraints.max_mi {
             return Err(crate::error::KwaversError::Validation(

@@ -80,11 +80,16 @@ impl TissueFactory {
         let bulk_viscosity_coeff = shear_viscosity_coeff.mapv(|shear_visc| shear_visc * 3.0);
 
         // Initialize elastic properties
+        // Use physically consistent relationships:
+        //   μ = ρ c_s^2,  K ≈ ρ c_p^2,  λ = K - 2μ/3
         let default_density: f64 = 1050.0;
-        let default_sound_speed: f64 = 1540.0;
+        let default_sound_speed: f64 = 1540.0; // compressional wave speed approximation
         let default_bulk_modulus = default_density * default_sound_speed.powi(2);
-        let lame_lambda = Array3::from_elem((grid.nx, grid.ny, grid.nz), default_bulk_modulus);
-        let lame_mu = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.0);
+
+        // Compute spatially varying shear modulus from shear wave speed field
+        let lame_mu = shear_sound_speed.mapv(|cs| default_density * cs * cs);
+        // Ensure λ remains positive by subtracting 2μ/3 from bulk modulus
+        let lame_lambda = lame_mu.mapv(|mu| (default_bulk_modulus - (2.0 / 3.0) * mu).max(1.0));
 
         // Compute frequency-dependent properties
         let freq_ratio: f64 = reference_frequency / 1e6;

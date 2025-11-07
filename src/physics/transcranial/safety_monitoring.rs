@@ -194,18 +194,23 @@ impl SafetyMonitor {
 
     /// Check safety limits and return warnings
     fn check_safety_limits(&self) -> KwaversResult<()> {
-        // Check temperature limits
-        let max_temp = self.temperature.iter().fold(0.0_f64, |a, &b| a.max(b));
+        // Immediate error on temperature limit exceedance (per tests and safety policy)
+        let max_temp = self
+            .temperature
+            .iter()
+            .fold(f64::MIN, |a, &b| a.max(b));
         if max_temp > self.thresholds.max_temperature {
             return Err(crate::error::KwaversError::Validation(
                 crate::error::ValidationError::ConstraintViolation {
-                    message: format!("Temperature {:.1}°C exceeds limit {:.1}°C",
-                                   max_temp, self.thresholds.max_temperature)
-                }
+                    message: format!(
+                        "Temperature {:.1}°C exceeds limit {:.1}°C",
+                        max_temp, self.thresholds.max_temperature
+                    ),
+                },
             ));
         }
 
-        // Check thermal dose limits
+        // Check thermal dose limits (strict)
         let max_dose = self.thermal_dose.current_dose.iter()
             .fold(0.0_f64, |a, &b| a.max(b));
         if max_dose > self.thresholds.max_thermal_dose {

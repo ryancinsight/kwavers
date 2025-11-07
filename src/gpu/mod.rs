@@ -6,6 +6,7 @@
 pub mod backend;
 pub mod buffer;
 pub mod buffers;
+pub mod burn_accelerator;
 pub mod compute;
 pub mod compute_kernels;
 pub mod compute_manager;
@@ -20,6 +21,7 @@ pub mod shaders;
 pub use backend::GpuBackend;
 pub use buffer::{BufferUsage, GpuBuffer as GpuBufferV2};
 pub use buffers::{BufferManager, GpuBuffer};
+pub use burn_accelerator::BurnGpuAccelerator;
 pub use compute::GpuCompute;
 pub use compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
 pub use device::{DeviceInfo, GpuDevice};

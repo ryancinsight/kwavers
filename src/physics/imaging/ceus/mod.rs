@@ -38,7 +38,7 @@ pub use reconstruction::{CEUSReconstruction, ContrastImage};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::Array3;
+use ndarray::{Array3, Array4};
 
 /// Contrast-Enhanced Ultrasound simulation workflow
 #[derive(Debug)]
@@ -137,6 +137,153 @@ impl ContrastEnhancedUltrasound {
         }
 
         Ok(images)
+    }
+
+    /// Generate a bolus injection profile scaled to the total bubble count
+    /// using a gamma variate model. Returns inflow concentration per frame.
+    pub fn simulate_bolus_injection(&self, total_bubbles: f64) -> KwaversResult<Vec<f64>> {
+        let params = self.imaging_parameters().clone();
+        let duration = 30.0; // seconds
+        let n_frames = (params.frame_rate * duration) as usize;
+        let dt = 1.0 / params.frame_rate;
+
+        // Gamma variate parameters (typical for CEUS bolus)
+        let alpha = 3.0;
+        let beta = 1.5; // s
+        let tau = 0.5;  // s (time-to-peak)
+
+        let mut curve = Vec::with_capacity(n_frames);
+        for i in 0..n_frames {
+            let t = i as f64 * dt;
+            let val = if t > 0.0 {
+                (t / tau).powf(alpha) * (-(t - tau) / beta).exp()
+            } else {
+                0.0
+            };
+            curve.push(val.max(0.0));
+        }
+
+        // Scale such that the total integral approximates total_bubbles
+        let sum: f64 = curve.iter().sum();
+        if sum > 0.0 {
+            for v in curve.iter_mut() {
+                *v *= total_bubbles / sum;
+            }
+        }
+        Ok(curve)
+    }
+
+    /// Simulate contrast signal time series (Array4) from an injection profile
+    /// and duration using existing scattering + reconstruction pipeline.
+    pub fn simulate_contrast_signal(
+        &mut self,
+        injection_profile: &[f64],
+        duration_seconds: f64,
+    ) -> KwaversResult<Array4<f32>> {
+        let params = self.imaging_parameters().clone();
+        let n_frames = (params.frame_rate * duration_seconds).max(0.0) as usize;
+        let dt = if params.frame_rate > 0.0 { 1.0 / params.frame_rate } else { 0.0 };
+
+        // Convert MI to peak acoustic pressure: P_r (Pa) ≈ MI * sqrt(f_MHz) * 1e6
+        let freq_hz = params.frequency;
+        let freq_mhz = freq_hz / 1.0e6;
+        let acoustic_pressure = params.mechanical_index * freq_mhz.sqrt() * 1.0e6;
+
+        let (nx, ny, nz) = self.grid.dimensions();
+        let mut series = Array4::<f32>::zeros((nx, ny, nz, n_frames));
+
+        // Linear interpolation helper to resample injection_profile to n_frames
+        let L = injection_profile.len();
+        let sample = |idx: usize| -> f64 {
+            if L == 0 {
+                0.0
+            } else if L == 1 {
+                injection_profile[0]
+            } else {
+                let x = (idx as f64) * (L as f64 - 1.0) / (n_frames as f64 - 1.0).max(1.0);
+                let i0 = x.floor() as usize;
+                let i1 = (i0 + 1).min(L - 1);
+                let w = x - (i0 as f64);
+                injection_profile[i0] * (1.0 - w) + injection_profile[i1] * w
+            }
+        };
+
+        for frame in 0..n_frames {
+            let inflow_concentration = sample(frame);
+            let time = frame as f64 * dt;
+
+            // Update concentration field
+            self.perfusion.update_concentration(inflow_concentration, dt)?;
+
+            // Simulate acoustic scattering and reconstruct contrast image
+            let scattered = self.simulate_acoustic_response(acoustic_pressure, freq_hz, time)?;
+            let image = self.reconstruction.process_frame(&scattered)?;
+
+            // Copy intensity into time series
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        series[[i, j, k, frame]] = image.intensity[[i, j, k]] as f32;
+                    }
+                }
+            }
+        }
+
+        Ok(series)
+    }
+
+    /// Estimate perfusion map from contrast signal and flow kinetics.
+    /// Uses residue-weighted integration of the time-intensity curves.
+    pub fn estimate_perfusion(
+        &self,
+        contrast_signal: &Array4<f32>,
+        kinetics: &FlowKinetics,
+    ) -> KwaversResult<Array3<f32>> {
+        let (nx, ny, nz, nt) = contrast_signal.dim();
+        let mut map = Array3::<f32>::zeros((nx, ny, nz));
+
+        // Build residue vector matching time axis length
+        let residues: Vec<f64> = if kinetics.residue_function.is_empty() {
+            let dt = 1.0 / self.imaging_parameters().frame_rate;
+            let mtt = kinetics.mean_transit_time.max(1e-6);
+            (0..nt)
+                .map(|t| {
+                    let time = t as f64 * dt;
+                    (-(time / mtt)).exp()
+                })
+                .collect()
+        } else {
+            // Resample provided residue function to nt via linear interpolation
+            let L = kinetics.residue_function.len();
+            (0..nt)
+                .map(|t| {
+                    if L == 1 {
+                        kinetics.residue_function[0]
+                    } else {
+                        let x = (t as f64) * (L as f64 - 1.0) / (nt as f64 - 1.0).max(1.0);
+                        let i0 = x.floor() as usize;
+                        let i1 = (i0 + 1).min(L - 1);
+                        let w = x - (i0 as f64);
+                        kinetics.residue_function[i0] * (1.0 - w)
+                            + kinetics.residue_function[i1] * w
+                    }
+                })
+                .collect()
+        };
+
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let mut acc = 0.0f64;
+                    for t in 0..nt {
+                        acc += contrast_signal[[i, j, k, t]] as f64 * residues[t];
+                    }
+                    map[[i, j, k]] = acc as f32;
+                }
+            }
+        }
+
+        Ok(map)
     }
 
     /// Simulate acoustic response of microbubbles

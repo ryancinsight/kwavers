@@ -1,45 +1,73 @@
 //! Bubble dynamics properties implementation for heterogeneous media
 
+use crate::grid::Grid;
 use crate::medium::{
     bubble::{BubbleProperties, BubbleState},
-    heterogeneous::core::HeterogeneousMedium,
+    heterogeneous::{core::HeterogeneousMedium, interpolation::TrilinearInterpolator},
 };
+use ndarray::Array3;
 
 impl BubbleProperties for HeterogeneousMedium {
     #[inline]
-    fn surface_tension(&self, i: usize, j: usize, k: usize) -> f64 {
-        self.surface_tension[[i, j, k]]
+    fn surface_tension(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        TrilinearInterpolator::get_field_value(
+            &self.surface_tension,
+            x, y, z,
+            grid,
+            self.use_trilinear_interpolation,
+        )
     }
 
     #[inline]
-    fn ambient_pressure(&self, _i: usize, _j: usize, _k: usize) -> f64 {
+    fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.ambient_pressure
     }
 
     #[inline]
-    fn vapor_pressure(&self, i: usize, j: usize, k: usize) -> f64 {
-        self.vapor_pressure[[i, j, k]]
+    fn vapor_pressure(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        TrilinearInterpolator::get_field_value(
+            &self.vapor_pressure,
+            x, y, z,
+            grid,
+            self.use_trilinear_interpolation,
+        )
     }
 
     #[inline]
-    fn polytropic_index(&self, i: usize, j: usize, k: usize) -> f64 {
-        self.polytropic_index[[i, j, k]]
+    fn polytropic_index(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        TrilinearInterpolator::get_field_value(
+            &self.polytropic_index,
+            x, y, z,
+            grid,
+            self.use_trilinear_interpolation,
+        )
     }
 
     #[inline]
-    fn gas_diffusion_coeff(&self, i: usize, j: usize, k: usize) -> f64 {
-        self.gas_diffusion_coeff[[i, j, k]]
+    fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        TrilinearInterpolator::get_field_value(
+            &self.gas_diffusion_coeff,
+            x, y, z,
+            grid,
+            self.use_trilinear_interpolation,
+        )
     }
 }
 
 impl BubbleState for HeterogeneousMedium {
     #[inline]
-    fn bubble_radius(&self, i: usize, j: usize, k: usize) -> f64 {
-        self.bubble_radius[[i, j, k]]
+    fn bubble_radius(&self) -> &Array3<f64> {
+        &self.bubble_radius
     }
 
     #[inline]
-    fn bubble_velocity(&self, i: usize, j: usize, k: usize) -> f64 {
-        self.bubble_velocity[[i, j, k]]
+    fn bubble_velocity(&self) -> &Array3<f64> {
+        &self.bubble_velocity
+    }
+
+    #[inline]
+    fn update_bubble_state(&mut self, radius: &Array3<f64>, velocity: &Array3<f64>) {
+        self.bubble_radius = radius.clone();
+        self.bubble_velocity = velocity.clone();
     }
 }

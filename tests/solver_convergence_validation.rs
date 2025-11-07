@@ -41,6 +41,7 @@ fn test_cfl_stability_condition() {
         cfl_factor: 0.9, // Just below stability limit
         subgridding: false,
         subgrid_factor: 2,
+        enable_gpu_acceleration: false,
     };
 
     let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");
@@ -115,6 +116,7 @@ fn test_energy_conservation() {
         cfl_factor: 0.5,
         subgridding: false,
         subgrid_factor: 2,
+        enable_gpu_acceleration: false,
     };
 
     let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");

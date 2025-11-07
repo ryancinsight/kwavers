@@ -19,9 +19,8 @@
 //!   for contrast enhanced ultrasound (CEUS) in the liver." *Ultrasound in Medicine & Biology*.
 //! - Barr, R. G., et al. (2019). "Elastography assessment of liver fibrosis." *Abdominal Radiology*.
 
-use crate::error::{KwaversError, KwaversResult};
 use crate::grid::Grid;
-use ndarray::{Array3, Array4, Axis};
+use ndarray::{Array3, Axis};
 use std::collections::HashMap;
 
 /// 3D Region of Interest for volumetric SWE analysis
@@ -864,8 +863,9 @@ mod tests {
         assert!(!mpr.slice_positions.sagittal.is_empty());
         assert!(!mpr.slice_positions.coronal.is_empty());
 
-        // Test slice retrieval
-        let axial_slice = mpr.get_slice(0.01, SliceOrientation::Axial);
+        // Test slice retrieval - use first available position
+        let first_axial_pos = mpr.slice_positions.axial[0];
+        let axial_slice = mpr.get_slice(first_axial_pos, SliceOrientation::Axial);
         assert!(axial_slice.is_some());
     }
 

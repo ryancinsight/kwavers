@@ -33,10 +33,10 @@
 //! - Doinikov, A. A. (2001). "Translational motion of a bubble in an acoustic
 //!   standing wave." *Phys. Fluids*, 13(8), 2219-2226.
 
-use crate::error::{KwaversError, KwaversResult};
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use super::microbubble::{Microbubble, BubbleResponse, BubbleDynamics};
-use ndarray::{Array3, Array4};
+use ndarray::Array3;
 use std::collections::HashMap;
 
 /// Individual bubble in a cloud
