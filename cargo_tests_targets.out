@@ -1,0 +1,2289 @@
+warning: unused import: `ndarray::ArrayView1`
+   --> src\clinical\therapy_integration.rs:755:17
+    |
+755 |             use ndarray::ArrayView1;
+    |                 ^^^^^^^^^^^^^^^^^^^
+    |
+note: the lint level is defined here
+   --> src\lib.rs:14:5
+    |
+ 14 |     unused_imports,
+    |     ^^^^^^^^^^^^^^
+
+warning: unused import: `acoustic::AcousticProperties`
+  --> src\medium\heterogeneous\core\structure.rs:10:5
+   |
+10 |     acoustic::AcousticProperties,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `properties::*`
+ --> src\medium\heterogeneous\traits\elastic\mod.rs:6:9
+  |
+6 | pub use properties::*;
+  |         ^^^^^^^^^^^^^
+
+warning: unused import: `properties::*`
+ --> src\medium\heterogeneous\traits\viscous\mod.rs:4:9
+  |
+4 | pub use properties::*;
+  |         ^^^^^^^^^^^^^
+
+warning: unused import: `properties::*`
+ --> src\medium\heterogeneous\traits\thermal\mod.rs:6:9
+  |
+6 | pub use properties::*;
+  |         ^^^^^^^^^^^^^
+
+warning: unused import: `properties::*`
+ --> src\medium\heterogeneous\traits\optical\mod.rs:4:9
+  |
+4 | pub use properties::*;
+  |         ^^^^^^^^^^^^^
+
+warning: unused import: `properties::*`
+ --> src\medium\heterogeneous\traits\bubble\mod.rs:4:9
+  |
+4 | pub use properties::*;
+  |         ^^^^^^^^^^^^^
+
+warning: ambiguous glob re-exports
+  --> src\medium\heterogeneous\traits\mod.rs:17:9
+   |
+17 | pub use acoustic::*;
+   |         ^^^^^^^^^^^ the name `properties` in the type namespace is first re-exported here
+...
+22 | pub use bubble::*;
+   |         --------- but the name `properties` in the type namespace is also re-exported here
+   |
+   = note: `#[warn(ambiguous_glob_reexports)]` on by default
+
+warning: unused import: `acoustic::*`
+  --> src\medium\heterogeneous\traits\mod.rs:17:9
+   |
+17 | pub use acoustic::*;
+   |         ^^^^^^^^^^^
+
+warning: unused import: `elastic::*`
+  --> src\medium\heterogeneous\traits\mod.rs:18:9
+   |
+18 | pub use elastic::*;
+   |         ^^^^^^^^^^
+
+warning: unused import: `viscous::*`
+  --> src\medium\heterogeneous\traits\mod.rs:19:9
+   |
+19 | pub use viscous::*;
+   |         ^^^^^^^^^^
+
+warning: unused import: `thermal::*`
+  --> src\medium\heterogeneous\traits\mod.rs:20:9
+   |
+20 | pub use thermal::*;
+   |         ^^^^^^^^^^
+
+warning: unused import: `optical::*`
+  --> src\medium\heterogeneous\traits\mod.rs:21:9
+   |
+21 | pub use optical::*;
+   |         ^^^^^^^^^^
+
+warning: unused import: `bubble::*`
+  --> src\medium\heterogeneous\traits\mod.rs:22:9
+   |
+22 | pub use bubble::*;
+   |         ^^^^^^^^^
+
+warning: usage of an `unsafe` block
+   --> src\performance\simd_safe\operations.rs:111:17
+    |
+111 | / ...   unsafe {
+112 | | ...       super::avx2::multiply_fields_avx2(a, b, &mut re...
+113 | | ...   }
+    | |_______^
+    |
+note: the lint level is defined here
+   --> src\lib.rs:29:9
+    |
+ 29 | #![warn(unsafe_code)]
+    |         ^^^^^^^^^^^
+
+warning: usage of an `unsafe` block
+   --> src\performance\simd_safe\operations.rs:141:17
+    |
+141 | / ...   unsafe {
+142 | | ...       super::avx2::subtract_fields_avx2(a, b, &mut re...
+143 | | ...   }
+    | |_______^
+
+warning: unused imports: `Array4` and `Axis`
+  --> src\physics\imaging\elastography\elastic_wave_solver.rs:35:23
+   |
+35 | use ndarray::{Array3, Array4, Axis};
+   |                       ^^^^^^  ^^^^
+
+warning: unused import: `std::f64::consts::PI`
+  --> src\physics\imaging\elastography\elastic_wave_solver.rs:36:5
+   |
+36 | use std::f64::consts::PI;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Array2` and `Axis`
+  --> src\physics\imaging\elastography\harmonic_detection.rs:49:18
+   |
+49 | use ndarray::{s, Array2, Array3, Array4, Axis};
+   |                  ^^^^^^                  ^^^^
+
+warning: unused imports: `Array4` and `Axis`
+  --> src\physics\imaging\elastography\nonlinear.rs:57:23
+   |
+57 | use ndarray::{Array3, Array4, Axis};
+   |                       ^^^^^^  ^^^^
+
+warning: unused imports: `Array4` and `Axis`
+  --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:31:23
+   |
+31 | use ndarray::{Array3, Array4, Axis};
+   |                       ^^^^^^  ^^^^
+
+warning: unused import: `KwaversError`
+ --> src\physics\imaging\photoacoustic\gpu.rs:6:20
+  |
+6 | use crate::error::{KwaversError, KwaversResult};
+  |                    ^^^^^^^^^^^^
+
+warning: unused import: `num_complex::Complex32`
+  --> src\physics\imaging\photoacoustic\mod.rs:43:5
+   |
+43 | use num_complex::Complex32;
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `num_complex::Complex32`
+  --> src\physics\transducer\fast_nearfield.rs:75:27
+   |
+75 | use rustfft::{FftPlanner, num_complex::Complex32};
+   |                           ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Array4`
+ --> src\physics\transcranial\treatment_planning.rs:8:23
+  |
+8 | use ndarray::{Array3, Array4};
+  |                       ^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> src\physics\transcranial\treatment_planning.rs:10:5
+   |
+10 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Array2`
+ --> src\physics\transcranial\aberration_correction.rs:8:15
+  |
+8 | use ndarray::{Array2, Array3};
+  |               ^^^^^^
+
+warning: unused import: `KwaversResult`
+  --> src\physics\therapy\lithotripsy\stone_fracture.rs:23:20
+   |
+23 | use crate::error::{KwaversResult, ValidationError};
+   |                    ^^^^^^^^^^^^^
+
+warning: unused import: `Array4`
+  --> src\physics\therapy\lithotripsy\shock_wave.rs:29:23
+   |
+29 | use ndarray::{Array3, Array4};
+   |                       ^^^^^^
+
+warning: unused import: `crate::error::KwaversResult`
+  --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:20:5
+   |
+20 | use crate::error::KwaversResult;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel`
+  --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:22:5
+   |
+22 | use crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Array4`
+  --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:23:23
+   |
+23 | use ndarray::{Array3, Array4};
+   |                       ^^^^^^
+
+warning: unused import: `std::f64::consts::PI`
+  --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:25:5
+   |
+25 | use std::f64::consts::PI;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::error::KwaversResult`
+  --> src\physics\therapy\lithotripsy\bioeffects.rs:25:5
+   |
+25 | use crate::error::KwaversResult;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> src\physics\therapy\lithotripsy\bioeffects.rs:28:5
+   |
+28 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Deserialize` and `Serialize`
+  --> src\physics\therapy\lithotripsy\simulation.rs:29:13
+   |
+29 | use serde::{Deserialize, Serialize};
+   |             ^^^^^^^^^^^  ^^^^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> src\physics\therapy\lithotripsy\simulation.rs:30:5
+   |
+30 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ndarray::Axis`
+ --> src\sensor\beamforming\processor.rs:7:5
+  |
+7 | use ndarray::Axis;
+  |     ^^^^^^^^^^^^^
+
+warning: unused import: `Array1`
+ --> src\uncertainty\bayesian_networks.rs:7:15
+  |
+7 | use ndarray::{Array1, Array2};
+  |               ^^^^^^
+
+warning: unused import: `Array1`
+ --> src\uncertainty\ensemble_methods.rs:7:15
+  |
+7 | use ndarray::{Array1, Array2};
+  |               ^^^^^^
+
+warning: unused import: `Array2`
+ --> src\uncertainty\sensitivity_analysis.rs:7:23
+  |
+7 | use ndarray::{Array1, Array2};
+  |                       ^^^^^^
+
+warning: unused imports: `Array2` and `Array4`
+  --> src\uncertainty\mod.rs:84:23
+   |
+84 | use ndarray::{Array1, Array2, Array3, Array4};
+   |                       ^^^^^^          ^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> src\uncertainty\mod.rs:85:5
+   |
+85 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: trivial numeric cast: `f64` as `f64`
+   --> src\sensor\beamforming\beamforming_3d.rs:851:13
+    |
+851 |             self.config.center_frequency as f64,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: cast can be replaced by coercion; this might require a temporary variable
+note: the lint level is defined here
+   --> src\lib.rs:27:24
+    |
+ 27 | #![warn(trivial_casts, trivial_numeric_casts)]
+    |                        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: trivial numeric cast: `f64` as `f64`
+   --> src\sensor\beamforming\beamforming_3d.rs:853:13
+    |
+853 |             self.config.sound_speed as f64,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: cast can be replaced by coercion; this might require a temporary variable
+
+warning: trivial numeric cast: `f64` as `f64`
+   --> src\sensor\beamforming\beamforming_3d.rs:857:45
+    |
+857 |         Ok(steering_vector_complex.mapv(|c| c.norm() as f64))
+    |                                             ^^^^^^^^^^^^^^^
+    |
+    = help: cast can be replaced by coercion; this might require a temporary variable
+
+warning: trivial numeric cast: `f64` as `f64`
+   --> src\uncertainty\mod.rs:270:76
+    |
+270 | ...sqrt() as f64 / (signal_quality as f64).max(1e-6)) as f32;
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: cast can be replaced by coercion; this might require a temporary variable
+
+warning: unused variable: `config`
+   --> src\clinical\therapy_integration.rs:301:33
+    |
+301 | ...ranscranial_system(config: &TherapySessionConfig, grid: ...
+    |                       ^^^^^^ help: if this is intentional, prefix it with an underscore: `_config`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `ceus`
+   --> src\clinical\therapy_integration.rs:543:21
+    |
+543 |         if let Some(ref mut ceus) = self.ceus_system {
+    |                     ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_ceus`
+
+warning: unused variable: `cavitation`
+   --> src\clinical\therapy_integration.rs:549:21
+    |
+549 | ...   if let Some(ref mut cavitation) = self.cavitation_con...
+    |                   ^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cavitation`
+
+warning: unused variable: `chemistry`
+   --> src\clinical\therapy_integration.rs:554:21
+    |
+554 |         if let Some(ref mut chemistry) = self.chemical_model {
+    |                     ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_chemistry`
+
+warning: unused variable: `lithotripsy`
+   --> src\clinical\therapy_integration.rs:559:21
+    |
+559 | ...   if let Some(ref mut lithotripsy) = self.lithotripsy_s...
+    |                   ^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_lithotripsy`
+
+warning: unused variable: `acoustic_field`
+   --> src\clinical\therapy_integration.rs:649:44
+    |
+649 | ..._step(&mut self, acoustic_field: &AcousticField, dt: f64...
+    |                     ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_acoustic_field`
+
+warning: variable does not need to be mutable
+   --> src\clinical\therapy_integration.rs:693:13
+    |
+693 |         let mut velocity = Array3::zeros((nx, ny, nz));
+    |             ----^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+note: the lint level is defined here
+   --> src\lib.rs:15:5
+    |
+ 15 |     unused_mut,
+    |     ^^^^^^^^^^
+
+warning: unused variable: `acoustic_field`
+   --> src\clinical\therapy_integration.rs:736:47
+    |
+736 | ...amics(&mut self, acoustic_field: &AcousticField, dt: f64...
+    |                     ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_acoustic_field`
+
+warning: unused variable: `dt`
+   --> src\clinical\therapy_integration.rs:736:79
+    |
+736 | ...eld: &AcousticField, dt: f64) -> KwaversResult<()> {
+    |                         ^^ help: if this is intentional, prefix it with an underscore: `_dt`
+
+warning: unused variable: `dt`
+   --> src\clinical\therapy_integration.rs:751:77
+    |
+751 | ...eld: &AcousticField, dt: f64) -> KwaversResult<()> {
+    |                         ^^ help: if this is intentional, prefix it with an underscore: `_dt`
+
+warning: unused variable: `r1`
+   --> src\physics\optics\sonoluminescence\emission.rs:361:13
+    |
+361 |         let r1 = r0 + 0.5 * dt * k1_r;
+    |             ^^ help: if this is intentional, prefix it with an underscore: `_r1`
+
+warning: unused variable: `r2`
+   --> src\physics\optics\sonoluminescence\emission.rs:369:13
+    |
+369 |         let r2 = r0 + 0.5 * dt * k2_r;
+    |             ^^ help: if this is intentional, prefix it with an underscore: `_r2`
+
+warning: unused variable: `r3`
+   --> src\physics\optics\sonoluminescence\emission.rs:375:13
+    |
+375 |         let r3 = r0 + dt * k3_r;
+    |             ^^ help: if this is intentional, prefix it with an underscore: `_r3`
+
+warning: variable does not need to be mutable
+   --> src\physics\imaging\ceus\cloud_dynamics.rs:423:13
+    |
+423 |         let mut harmonics = HashMap::new();
+    |             ----^^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: unused variable: `nx`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:201:14
+    |
+201 |         let (nx, ny, nz) = grid.dimensions();
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `ny`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:201:18
+    |
+201 |         let (nx, ny, nz) = grid.dimensions();
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_ny`
+
+warning: unused variable: `nz`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:201:22
+    |
+201 |         let (nx, ny, nz) = grid.dimensions();
+    |                      ^^ help: if this is intentional, prefix it with an underscore: `_nz`
+
+warning: unused variable: `sigma_xx`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:448:13
+    |
+448 |         let sigma_xx = (lambda + 2.0 * mu) * du_x_dx + lamb...
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_xx`
+
+warning: unused variable: `sigma_xy`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:508:13
+    |
+508 |         let sigma_xy = mu * (du_x_dy + du_y_dx);
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_xy`
+
+warning: unused variable: `sigma_xz`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:556:13
+    |
+556 |         let sigma_xz = mu * (du_x_dz + du_z_dx);
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_xz`
+
+warning: unused variable: `sigma_yx`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:604:13
+    |
+604 |         let sigma_yx = mu * (du_y_dx + du_x_dy);
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_yx`
+
+warning: unused variable: `sigma_yy`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:656:13
+    |
+656 |         let sigma_yy = (lambda + 2.0 * mu) * du_y_dy + lamb...
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_yy`
+
+warning: unused variable: `sigma_yz`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:712:13
+    |
+712 |         let sigma_yz = mu * (du_y_dz + du_z_dy);
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_yz`
+
+warning: unused variable: `sigma_zx`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:756:13
+    |
+756 |         let sigma_zx = mu * (du_z_dx + du_x_dz);
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_zx`
+
+warning: unused variable: `sigma_zy`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:800:13
+    |
+800 |         let sigma_zy = mu * (du_z_dy + du_y_dz);
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_zy`
+
+warning: unused variable: `sigma_zz`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:851:13
+    |
+851 |         let sigma_zz = (lambda + 2.0 * mu) * du_z_dz + lamb...
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_zz`
+
+warning: variable does not need to be mutable
+    --> src\physics\imaging\elastography\elastic_wave_solver.rs:1087:25
+     |
+1087 |                     let mut rho = self.density[[i, j, k]];
+     |                         ----^^^
+     |                         |
+     |                         help: remove this `mut`
+
+warning: unused variable: `time`
+    --> src\physics\imaging\elastography\elastic_wave_solver.rs:1061:75
+     |
+1061 | ...cWaveField, dt: f64, time: f64) {
+     |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_time`
+
+warning: value assigned to `coverage` is never read
+    --> src\physics\imaging\elastography\elastic_wave_solver.rs:1268:28
+     |
+1268 |         let mut coverage = 0.0;
+     |                            ^^^
+     |
+     = help: maybe it is overwritten before being read?
+     = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `config`
+   --> src\physics\imaging\elastography\harmonic_detection.rs:148:54
+    |
+148 | ...rameter(&mut self, config: &HarmonicDetectionConfig) {
+    |                       ^^^^^^ help: if this is intentional, prefix it with an underscore: `_config`
+
+warning: unused variable: `fundamental_idx`
+   --> src\physics\imaging\elastography\harmonic_detection.rs:248:13
+    |
+248 |         let fundamental_idx = self.find_fundamental_peak(&s...
+    |             ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_fundamental_idx`
+
+warning: unused variable: `strain_energy_derivative_i2`
+   --> src\physics\imaging\elastography\nonlinear.rs:279:13
+    |
+279 |         let strain_energy_derivative_i2 = self.compute_stra...
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_strain_energy_derivative_i2`
+
+warning: unused variable: `strain_energy_derivative_j`
+   --> src\physics\imaging\elastography\nonlinear.rs:280:13
+    |
+280 |         let strain_energy_derivative_j = self.compute_strai...
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_strain_energy_derivative_j`
+
+warning: unused variable: `strain_invariant_i1`
+   --> src\physics\imaging\elastography\nonlinear.rs:571:9
+    |
+571 |         strain_invariant_i1: f64,
+    |         ^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_strain_invariant_i1`
+
+warning: unused variable: `strain_invariant_i2`
+   --> src\physics\imaging\elastography\nonlinear.rs:572:9
+    |
+572 |         strain_invariant_i2: f64,
+    |         ^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_strain_invariant_i2`
+
+warning: unused variable: `volume_ratio_j`
+   --> src\physics\imaging\elastography\nonlinear.rs:573:9
+    |
+573 |         volume_ratio_j: f64,
+    |         ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_volume_ratio_j`
+
+warning: unused variable: `k`
+   --> src\physics\imaging\elastography\nonlinear.rs:589:26
+    |
+589 | ...                for (k, (&mui, &alphai)) in mu.iter().zi...
+    |                         ^ help: if this is intentional, prefix it with an underscore: `_k`
+
+warning: unused variable: `nx`
+   --> src\physics\imaging\elastography\nonlinear.rs:729:14
+    |
+729 |         let (nx, ny, nz) = grid.dimensions();
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `ny`
+   --> src\physics\imaging\elastography\nonlinear.rs:729:18
+    |
+729 |         let (nx, ny, nz) = grid.dimensions();
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_ny`
+
+warning: unused variable: `nz`
+   --> src\physics\imaging\elastography\nonlinear.rs:729:22
+    |
+729 |         let (nx, ny, nz) = grid.dimensions();
+    |                      ^^ help: if this is intentional, prefix it with an underscore: `_nz`
+
+warning: unused variable: `nx`
+   --> src\physics\imaging\elastography\nonlinear.rs:785:14
+    |
+785 |         let (nx, ny, nz) = self.grid.dimensions();
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `ny`
+   --> src\physics\imaging\elastography\nonlinear.rs:785:18
+    |
+785 |         let (nx, ny, nz) = self.grid.dimensions();
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_ny`
+
+warning: unused variable: `nz`
+   --> src\physics\imaging\elastography\nonlinear.rs:785:22
+    |
+785 |         let (nx, ny, nz) = self.grid.dimensions();
+    |                      ^^ help: if this is intentional, prefix it with an underscore: `_nz`
+
+warning: unused variable: `u_divergence`
+   --> src\physics\imaging\elastography\nonlinear.rs:944:13
+    |
+944 |         let u_divergence = self.divergence(i, j, k, u);
+    |             ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_u_divergence`
+
+warning: unused variable: `total_memory`
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:105:16
+    |
+105 |     pub fn new(total_memory: usize, alignment: usize) -> Se...
+    |                ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_total_memory`
+
+warning: unused variable: `initial_displacements`
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:256:9
+    |
+256 |         initial_displacements: &[Array3<f64>],
+    |         ^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_initial_displacements`
+
+warning: unused variable: `push_times`
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:257:9
+    |
+257 |         push_times: &[f64],
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_push_times`
+
+warning: unused variable: `kernel_start`
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:295:17
+    |
+295 |             let kernel_start = std::time::Instant::now();
+    |                 ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_kernel_start`
+
+warning: unused variable: `volume_size`
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:346:9
+    |
+346 |         volume_size: usize,
+    |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_volume_size`
+
+warning: unused variable: `kernel`
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:348:13
+    |
+348 |         let kernel = self.kernel_cache.get(kernel_name).unw...
+    |             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_kernel`
+
+warning: unused variable: `kx_max`
+   --> src\physics\transducer\fast_nearfield.rs:210:13
+    |
+210 |         let kx_max = self.config.k_max_factor * PI / self.c...
+    |             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_kx_max`
+
+warning: unused variable: `ky_max`
+   --> src\physics\transducer\fast_nearfield.rs:211:13
+    |
+211 |         let ky_max = self.config.k_max_factor * PI / self.c...
+    |             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_ky_max`
+
+warning: unused variable: `skull_properties`
+   --> src\physics\transcranial\treatment_planning.rs:141:13
+    |
+141 |         let skull_properties = self.analyze_skull_propertie...
+    |             ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_skull_properties`
+
+warning: variable does not need to be mutable
+   --> src\physics\transcranial\treatment_planning.rs:220:13
+    |
+220 |         let mut element_amplitudes = vec![1.0; num_elements];
+    |             ----^^^^^^^^^^^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: unused variable: `targets`
+   --> src\physics\transcranial\treatment_planning.rs:375:39
+    |
+375 | ...atment_time(&self, targets: &[TargetVolume], acoustic_fi...
+    |                       ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_targets`
+
+warning: unused variable: `measured_field`
+   --> src\physics\transcranial\aberration_correction.rs:217:9
+    |
+217 |         measured_field: &Array3<Complex<f64>>,
+    |         ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_measured_field`
+
+warning: variable does not need to be mutable
+   --> src\physics\transcranial\aberration_correction.rs:260:13
+    |
+260 | ...   let mut new_amplitudes = initial_correction.amplitude...
+    |           ----^^^^^^^^^^^^^^
+    |           |
+    |           help: remove this `mut`
+
+warning: unused variable: `skull_model`
+   --> src\physics\transcranial\aberration_correction.rs:311:9
+    |
+311 |         skull_model: &crate::physics::skull::CTBasedSkullMo...
+    |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_skull_model`
+
+warning: unused variable: `target_point`
+   --> src\physics\transcranial\aberration_correction.rs:313:9
+    |
+313 |         target_point: &[f64; 3],
+    |         ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_target_point`
+
+warning: variable `avg_bubble_conc` is assigned to, but never used
+   --> src\physics\transcranial\bbb_opening.rs:239:13
+    |
+239 |         let mut avg_bubble_conc = 0.0;
+    |             ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_avg_bubble_conc` instead
+
+warning: unused variable: `pressure_scale`
+   --> src\physics\transcranial\bbb_opening.rs:258:13
+    |
+258 |         let pressure_scale = self.parameters.target_mi / cu...
+    |             ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_pressure_scale`
+
+warning: value assigned to `avg_bubble_conc` is never read
+   --> src\physics\transcranial\bbb_opening.rs:253:13
+    |
+253 |             avg_bubble_conc /= count as f64;
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: value assigned to `avg_bubble_conc` is never read
+   --> src\physics\transcranial\bbb_opening.rs:247:17
+    |
+247 | ...   avg_bubble_conc += self.microbubble_concentration[[i, j, k]];
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: unused variable: `grid`
+  --> src\physics\therapy\lithotripsy\shock_wave.rs:82:45
+   |
+82 | ...ShockWaveParameters, grid: &Grid) -> KwaversResult<Self> {
+   |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_grid`
+
+warning: unused variable: `frequency`
+   --> src\physics\therapy\lithotripsy\shock_wave.rs:349:69
+    |
+349 | ...al_amplitude: f64, frequency: f64) -> f64 {
+    |                       ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_frequency`
+
+warning: unused variable: `bubble`
+   --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:298:75
+    |
+298 | ...: usize, k: usize, bubble: &BubbleState) {
+    |                       ^^^^^^ help: if this is intentional, prefix it with an underscore: `_bubble`
+
+warning: unused variable: `exposure_time`
+   --> src\physics\therapy\lithotripsy\bioeffects.rs:159:76
+    |
+159 | ...d: &Array3<f64>, exposure_time: f64) {
+    |                     ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_exposure_time`
+
+warning: unused variable: `t_blood`
+   --> src\physics\therapy\lithotripsy\bioeffects.rs:163:13
+    |
+163 |         let t_blood = 37.0; // Blood temperature (┬░C)
+    |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_t_blood`
+
+warning: unused variable: `ambient_temp`
+   --> src\physics\therapy\lithotripsy\bioeffects.rs:164:13
+    |
+164 |         let ambient_temp = 37.0; // Initial tissue temperat...
+    |             ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_ambient_temp`
+
+warning: unused variable: `est_neg`
+   --> src\sensor\localization\multilateration\trilateration.rs:218:13
+    |
+218 |         let est_neg = add(p1, add(scale(ex, x), add(scale(e...
+    |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_est_neg`
+
+warning: unused variable: `z_score_68`
+   --> src\uncertainty\bayesian_networks.rs:133:13
+    |
+133 |         let z_score_68 = 1.0;
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_z_score_68`
+
+warning: unused variable: `source_pressure`
+   --> src\validation\theorem_validation.rs:401:9
+    |
+401 |         source_pressure: f64,
+    |         ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_source_pressure`
+
+warning: multiple fields are never read
+  --> src\clinical\workflows.rs:44:5
+   |
+43 | struct PhotoacousticConfig {
+   |        ------------------- fields in this struct
+44 |     wavelength: f64,
+   |     ^^^^^^^^^^
+45 |     optical_energy: f64,
+   |     ^^^^^^^^^^^^^^
+46 |     absorption_coefficient: f64,
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+47 |     speed_of_sound: f64,
+   |     ^^^^^^^^^^^^^^
+48 |     sampling_frequency: f64,
+   |     ^^^^^^^^^^^^^^^^^^
+49 |     num_detectors: usize,
+   |     ^^^^^^^^^^^^^
+50 |     detector_radius: f64,
+   |     ^^^^^^^^^^^^^^^
+51 |     center_frequency: f64,
+   |     ^^^^^^^^^^^^^^^^
+   |
+   = note: `PhotoacousticConfig` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: multiple fields are never read
+  --> src\clinical\workflows.rs:56:5
+   |
+55 | struct ElastographyConfig {
+   |        ------------------ fields in this struct
+56 |     excitation_frequency: f64,
+   |     ^^^^^^^^^^^^^^^^^^^^
+57 |     push_duration: f64,
+   |     ^^^^^^^^^^^^^
+58 |     track_duration: f64,
+   |     ^^^^^^^^^^^^^^
+59 |     push_focal_depth: f64,
+   |     ^^^^^^^^^^^^^^^^
+60 |     track_focal_depth: f64,
+   |     ^^^^^^^^^^^^^^^^^
+61 |     frame_rate: f64,
+   |     ^^^^^^^^^^
+62 |     num_tracking_beams: usize,
+   |     ^^^^^^^^^^^^^^^^^^
+   |
+   = note: `ElastographyConfig` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `reference_ranges` is never read
+   --> src\clinical\swe_3d_workflows.rs:317:5
+    |
+315 | pub struct ClinicalDecisionSupport {
+    |            ----------------------- field in this struct
+316 |     /// Reference ranges for different tissues
+317 |     reference_ranges: HashMap<String, TissueReference>,
+    |     ^^^^^^^^^^^^^^^^
+    |
+    = note: `ClinicalDecisionSupport` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `acoustic_solver` and `transcranial_system` are never read
+   --> src\clinical\therapy_integration.rs:194:5
+    |
+186 | pub struct TherapyIntegrationOrchestrator {
+    |            ------------------------------ fields in this struct
+...
+194 |     acoustic_solver: AcousticWaveSolver,
+    |     ^^^^^^^^^^^^^^^
+...
+198 |     transcranial_system: Option<TranscranialAberrationCorre...
+    |     ^^^^^^^^^^^^^^^^^^^
+
+warning: field `grid` is never read
+   --> src\clinical\therapy_integration.rs:857:5
+    |
+855 | pub struct AcousticWaveSolver {
+    |            ------------------ field in this struct
+856 |     /// Computational grid
+857 |     grid: Grid,
+    |     ^^^^
+    |
+    = note: `AcousticWaveSolver` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `grid` is never read
+   --> src\physics\imaging\ceus\cloud_dynamics.rs:102:5
+    |
+ 96 | pub struct CloudDynamics {
+    |            ------------- field in this struct
+...
+102 |     grid: Option<Grid>,
+    |     ^^^^
+
+warning: methods `find_common_dimensions`, `compute_fusion_uncertainty`, and `estimate_modality_noise` are never used
+   --> src\physics\imaging\fusion.rs:251:8
+    |
+154 | impl MultiModalFusion {
+    | --------------------- methods in this implementation
+...
+251 |     fn find_common_dimensions(&self) -> (usize, usize, usiz...
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+...
+697 |     fn compute_fusion_uncertainty(&self) -> KwaversResult<A...
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+728 |     fn estimate_modality_noise(&self, modality_name: &str) ...
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `medium` is never read
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:175:5
+    |
+171 | pub struct ElasticWaveSolver {
+    |            ----------------- field in this struct
+...
+175 |     medium: Box<dyn Medium>,
+    |     ^^^^^^
+
+warning: field `fft_planner` is never read
+   --> src\physics\imaging\elastography\harmonic_detection.rs:167:5
+    |
+163 | pub struct HarmonicDetector {
+    |            ---------------- field in this struct
+...
+167 |     fft_planner: FftPlanner<f64>,
+    |     ^^^^^^^^^^^
+
+warning: field `material` is never read
+   --> src\physics\imaging\elastography\nonlinear.rs:710:5
+    |
+706 | pub struct NonlinearElasticWaveSolver {
+    |            -------------------------- field in this struct
+...
+710 |     material: HyperelasticModel,
+    |     ^^^^^^^^
+
+warning: field `last_access` is never read
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:100:5
+    |
+ 94 | struct GPUMemoryBlock {
+    |        -------------- field in this struct
+...
+100 |     last_access: std::time::Instant,
+    |     ^^^^^^^^^^^
+    |
+    = note: `GPUMemoryBlock` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `name`, `shared_memory`, `registers`, and `occupancy` are never read
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:193:5
+    |
+191 | struct GPUKernel {
+    |        --------- fields in this struct
+192 |     /// Kernel name
+193 |     name: String,
+    |     ^^^^
+194 |     /// Shared memory requirements
+195 |     shared_memory: usize,
+    |     ^^^^^^^^^^^^^
+196 |     /// Register usage
+197 |     registers: usize,
+    |     ^^^^^^^^^
+198 |     /// Occupancy (0-1)
+199 |     occupancy: f64,
+    |     ^^^^^^^^^
+    |
+    = note: `GPUKernel` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `quality_thresholds` is never read
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:547:5
+    |
+541 | pub struct AdaptiveResolution {
+    |            ------------------ field in this struct
+...
+547 |     quality_thresholds: Vec<f64>,
+    |     ^^^^^^^^^^^^^^^^^^
+    |
+    = note: `AdaptiveResolution` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `quality_metric` is never read
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:557:5
+    |
+551 | struct ResolutionLevel {
+    |        --------------- field in this struct
+...
+557 |     quality_metric: f64,
+    |     ^^^^^^^^^^^^^^
+    |
+    = note: `ResolutionLevel` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `aberration_corrector` is never read
+   --> src\physics\transcranial\treatment_planning.rs:111:5
+    |
+105 | pub struct TreatmentPlanner {
+    |            ---------------- field in this struct
+...
+111 |     aberration_corrector: crate::physics::transcranial::abe...
+    |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: field `num_elements` is never read
+  --> src\physics\transcranial\aberration_correction.rs:33:5
+   |
+25 | pub struct TranscranialAberrationCorrection {
+   |            -------------------------------- field in this struct
+...
+33 |     num_elements: usize,
+   |     ^^^^^^^^^^^^
+
+warning: field `perfusion_rate` is never read
+  --> src\physics\transcranial\safety_monitoring.rs:46:5
+   |
+36 | pub struct SafetyMonitor {
+   |            ------------- field in this struct
+...
+46 |     perfusion_rate: f64,
+   |     ^^^^^^^^^^^^^^
+
+warning: field `kzk_solver` is never read
+  --> src\physics\therapy\lithotripsy\shock_wave.rs:75:5
+   |
+71 | pub struct ShockWaveGenerator {
+   |            ------------------ field in this struct
+...
+75 |     kzk_solver: KzkSolverPlugin,
+   |     ^^^^^^^^^^
+   |
+   = note: `ShockWaveGenerator` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `kzk_solver` is never read
+   --> src\physics\therapy\lithotripsy\shock_wave.rs:181:5
+    |
+179 | pub struct ShockWavePropagation {
+    |            -------------------- field in this struct
+180 |     /// KZK solver
+181 |     kzk_solver: KzkSolverPlugin,
+    |     ^^^^^^^^^^
+    |
+    = note: `ShockWavePropagation` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `cloud_velocity` is never read
+  --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:81:5
+   |
+71 | pub struct CavitationCloudDynamics {
+   |            ----------------------- field in this struct
+...
+81 |     cloud_velocity: Array3<f64>,
+   |     ^^^^^^^^^^^^^^
+   |
+   = note: `CavitationCloudDynamics` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: method `calculate_microjet_impact` is never used
+   --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:298:8
+    |
+ 88 | impl CavitationCloudDynamics {
+    | ---------------------------- method in this implementation
+...
+298 |     fn calculate_microjet_impact(&mut self, i: usize, j: us...
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `kzk_solver` is never read
+   --> src\physics\therapy\lithotripsy\simulation.rs:116:5
+    |
+100 | pub struct LithotripsySimulator {
+    |            -------------------- field in this struct
+...
+116 |     kzk_solver: KzkSolverPlugin,
+    |     ^^^^^^^^^^
+    |
+    = note: `LithotripsySimulator` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: method `compute_steering_vector_3d` is never used
+   --> src\sensor\beamforming\beamforming_3d.rs:816:8
+    |
+183 | impl BeamformingProcessor3D {
+    | --------------------------- method in this implementation
+...
+816 |     fn compute_steering_vector_3d(&self, voxel_pos: &[f32; ...
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: fields `config`, `bayesian`, `conformal`, and `ensemble` are never read
+   --> src\uncertainty\mod.rs:134:5
+    |
+133 | pub struct UncertaintyQuantifier {
+    |            --------------------- fields in this struct
+134 |     config: UncertaintyConfig,
+    |     ^^^^^^
+135 |     bayesian: Option<BayesianPINN>,
+    |     ^^^^^^^^
+136 |     conformal: Option<ConformalPredictor>,
+    |     ^^^^^^^^^
+137 |     ensemble: Option<EnsembleQuantifier>,
+    |     ^^^^^^^^
+
+warning: fields `config` and `dropout_masks` are never read
+  --> src\uncertainty\bayesian_networks.rs:43:5
+   |
+42 | pub struct BayesianPINN {
+   |            ------------ fields in this struct
+43 |     config: BayesianConfig,
+   |     ^^^^^^
+44 |     dropout_masks: Vec<Array2<bool>>,
+   |     ^^^^^^^^^^^^^
+
+warning: field `config` is never read
+  --> src\uncertainty\ensemble_methods.rs:45:5
+   |
+44 | pub struct EnsembleQuantifier {
+   |            ------------------ field in this struct
+45 |     config: EnsembleConfig,
+   |     ^^^^^^
+
+warning: field `random_seed` is never read
+   --> src\uncertainty\ensemble_methods.rs:258:5
+    |
+257 | struct EnsembleModel {
+    |        ------------- field in this struct
+258 |     random_seed: u64,
+    |     ^^^^^^^^^^^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\clinical\therapy_integration.rs:186:1
+    |
+186 | / pub struct TherapyIntegrationOrchestrator {
+187 | |     /// Session configuration
+188 | |     config: TherapySessionConfig,
+189 | |     /// Computational grid
+...   |
+206 | |     session_state: TherapySessionState,
+207 | | }
+    | |_^
+    |
+note: the lint level is defined here
+   --> src\lib.rs:25:9
+    |
+ 25 | #![warn(missing_debug_implementations)]
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable `L` should have a snake case name
+   --> src\physics\imaging\ceus\mod.rs:196:13
+    |
+196 |         let L = injection_profile.len();
+    |             ^ help: convert the identifier to snake case: `l`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: variable `L` should have a snake case name
+   --> src\physics\imaging\ceus\mod.rs:257:17
+    |
+257 |             let L = kinetics.residue_function.len();
+    |                 ^ help: convert the identifier to snake case: `l`
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\physics\imaging\ceus\cloud_dynamics.rs:96:1
+    |
+ 96 | / pub struct CloudDynamics {
+ 97 | |     /// Configuration
+ 98 | |     config: CloudConfig,
+ 99 | |     /// Bubble population
+...   |
+106 | |     incident_field: Option<IncidentField>,
+107 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:171:1
+    |
+171 | / pub struct ElasticWaveSolver {
+172 | |     /// Computational grid
+173 | |     grid: Grid,
+174 | |     /// Medium properties
+...   |
+191 | |     dispersion_factors: Option<Array3<f64>>,
+192 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\physics\imaging\elastography\harmonic_detection.rs:163:1
+    |
+163 | / pub struct HarmonicDetector {
+164 | |     /// Configuration
+165 | |     config: HarmonicDetectionConfig,
+166 | |     /// FFT planner for spectral analysis
+167 | |     fft_planner: FftPlanner<f64>,
+168 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\physics\imaging\elastography\nonlinear.rs:706:1
+    |
+706 | / pub struct NonlinearElasticWaveSolver {
+707 | |     /// Computational grid
+708 | |     grid: Grid,
+709 | |     /// Hyperelastic material model
+...   |
+718 | |     density: Array3<f64>,
+719 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\physics\transducer\fast_nearfield.rs:142:1
+    |
+142 | / pub struct FastNearfieldSolver {
+143 | |     /// Configuration
+144 | |     config: FNMConfig,
+145 | |     /// Cached angular spectrum factors by z-distance
+...   |
+152 | |     rho0: f64,
+153 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\physics\transcranial\treatment_planning.rs:105:1
+    |
+105 | / pub struct TreatmentPlanner {
+106 | |     /// Computational grid for brain volume
+107 | |     brain_grid: Grid,
+108 | |     /// Skull model from CT data
+...   |
+111 | |     aberration_corrector: crate::physics::transcranial::a...
+112 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\physics\transcranial\aberration_correction.rs:25:1
+   |
+25 | / pub struct TranscranialAberrationCorrection {
+26 | |     /// Computational grid
+27 | |     grid: Grid,
+28 | |     /// Operating frequency (Hz)
+...  |
+33 | |     num_elements: usize,
+34 | | }
+   | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\physics\transcranial\safety_monitoring.rs:36:1
+   |
+36 | / pub struct SafetyMonitor {
+37 | |     /// Temperature field (┬░C)
+38 | |     temperature: Array3<f64>,
+39 | |     /// Acoustic pressure field (Pa)
+...  |
+50 | |     thresholds: SafetyThresholds,
+51 | | }
+   | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\physics\transcranial\bbb_opening.rs:23:1
+   |
+23 | / pub struct BBBOpening {
+24 | |     /// Acoustic pressure field (Pa)
+25 | |     acoustic_pressure: Array3<f64>,
+26 | |     /// Microbubble concentration (bubbles/mL)
+...  |
+31 | |     permeability: PermeabilityEnhancement,
+32 | | }
+   | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\uncertainty\mod.rs:133:1
+    |
+133 | / pub struct UncertaintyQuantifier {
+134 | |     config: UncertaintyConfig,
+135 | |     bayesian: Option<BayesianPINN>,
+136 | |     conformal: Option<ConformalPredictor>,
+137 | |     ensemble: Option<EnsembleQuantifier>,
+138 | |     sensitivity: Option<SensitivityAnalyzer>,
+139 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\uncertainty\bayesian_networks.rs:42:1
+   |
+42 | / pub struct BayesianPINN {
+43 | |     config: BayesianConfig,
+44 | |     dropout_masks: Vec<Array2<bool>>,
+45 | | }
+   | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\uncertainty\conformal_prediction.rs:40:1
+   |
+40 | / pub struct ConformalPredictor {
+41 | |     config: ConformalConfig,
+42 | |     calibration_scores: Vec<f64>,
+43 | |     is_calibrated: bool,
+44 | | }
+   | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\uncertainty\ensemble_methods.rs:44:1
+   |
+44 | / pub struct EnsembleQuantifier {
+45 | |     config: EnsembleConfig,
+46 | |     ensemble_models: Vec<EnsembleModel>,
+47 | | }
+   | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\uncertainty\sensitivity_analysis.rs:42:1
+   |
+42 | / pub struct SensitivityAnalyzer {
+43 | |     config: SensitivityConfig,
+44 | | }
+   | |_^
+
+warning: `kwavers` (lib) generated 163 warnings (run `cargo fix --lib -p kwavers` to apply 108 suggestions)
+tests\pam_beamforming.rs:64:9: warning: unused variable: `positions`: help: if this is intentional, prefix it with an underscore: `_positions`
+tests\kwave_validation_suite.rs:198:59: warning: unused variable: `direction`: help: try ignoring the field: `direction: _`
+tests\kwave_validation_suite.rs:221:26: warning: unused variable: `fy`: help: if this is intentional, prefix it with an underscore: `_fy`
+tests\kwave_validation_suite.rs:221:30: warning: unused variable: `fz`: help: if this is intentional, prefix it with an underscore: `_fz`
+tests\kwave_validation_suite.rs:222:21: warning: unused variable: `radius`: help: if this is intentional, prefix it with an underscore: `_radius`
+tests\kwave_validation_suite.rs:234:14: warning: unused variable: `i`: help: if this is intentional, prefix it with an underscore: `_i`
+tests\kwave_validation_suite.rs:243:13: warning: unused variable: `n_steps`: help: if this is intentional, prefix it with an underscore: `_n_steps`
+tests\kwave_validation_suite.rs:321:35: warning: unused variable: `data`: help: if this is intentional, prefix it with an underscore: `_data`
+tests\kwave_validation_suite.rs:435:9: warning: unused variable: `sensor_mask`: help: if this is intentional, prefix it with an underscore: `_sensor_mask`
+tests\kwave_validation_suite.rs:625:37: warning: unused variable: `test_case`: help: if this is intentional, prefix it with an underscore: `_test_case`
+warning: unused imports: `MultiPlanarReconstruction` and `VolumetricStatistics`
+  --> tests\swe_3d_validation.rs:28:62
+   |
+28 |     VolumetricROI, ElasticityMap3D, ClinicalDecisionSupport, MultiPlanarReconstruction,
+   |                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^
+29 |     VolumetricStatistics,
+   |     ^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `std::f64::consts::PI`
+  --> tests\swe_3d_validation.rs:40:5
+   |
+40 | use std::f64::consts::PI;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `solver`
+  --> tests\swe_3d_validation.rs:89:9
+   |
+89 |     let solver = ElasticWaveSolver::new(&grid, &phantom, Def...
+   |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_solver`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `history`
+   --> tests\swe_3d_validation.rs:110:10
+    |
+110 |     let (history, tracker) = volumetric_solver.propagate_vo...
+    |          ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_history`
+
+warning: unused variable: `history`
+   --> tests\swe_3d_validation.rs:147:10
+    |
+147 |     let (history, tracker) = solver.propagate_volumetric_wa...
+    |          ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_history`
+
+warning: unused variable: `solver`
+   --> tests\swe_3d_validation.rs:328:9
+    |
+328 |     let solver = ElasticWaveSolver::new(&grid, &medium, Def...
+    |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_solver`
+
+warning: variable `arf_params` is assigned to, but never used
+   --> tests\swe_3d_validation.rs:332:9
+    |
+332 |     let mut arf_params = arf.parameters().clone();
+    |         ^^^^^^^^^^^^^^
+    |
+    = note: consider using `_arf_params` instead
+
+warning: unused variable: `history`
+   --> tests\swe_3d_validation.rs:355:10
+    |
+355 |     let (history, tracker) = volumetric_solver.propagate_vo...
+    |          ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_history`
+
+warning: value assigned to `arf_params` is never read
+   --> tests\swe_3d_validation.rs:333:5
+    |
+333 |     arf_params.frequency = 5.0e6; // 5 MHz
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: value assigned to `arf_params` is never read
+   --> tests\swe_3d_validation.rs:334:5
+    |
+334 |     arf_params.intensity = 500.0; // 500 W/cm┬▓ (lower for s...
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: value assigned to `arf_params` is never read
+   --> tests\swe_3d_validation.rs:335:5
+    |
+335 |     arf_params.duration = 200e-6; // 200 ╬╝s
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: value assigned to `arf_params` is never read
+   --> tests\swe_3d_validation.rs:336:5
+    |
+336 |     arf_params.focal_depth = 0.04; // 4cm
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: variable does not need to be mutable
+  --> tests\photoacoustic_validation.rs:26:9
+   |
+26 |     let mut simulator = PhotoacousticSimulator::new(grid, pa...
+   |         ----^^^^^^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+  --> tests\photoacoustic_validation.rs:67:9
+   |
+67 |     let mut simulator = PhotoacousticSimulator::new(grid, pa...
+   |         ----^^^^^^^^^
+   |         |
+   |         help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> tests\photoacoustic_validation.rs:140:9
+    |
+140 |     let mut simulator = PhotoacousticSimulator::new(grid, p...
+    |         ----^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> tests\photoacoustic_validation.rs:167:9
+    |
+167 |     let mut simulator = PhotoacousticSimulator::new(grid, p...
+    |         ----^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: unused import: `ndarray::Array4`
+   --> src\physics\imaging\elastography\harmonic_detection.rs:413:9
+    |
+413 |     use ndarray::Array4;
+    |         ^^^^^^^^^^^^^^^
+
+warning: unused import: `approx::assert_relative_eq`
+   --> src\physics\therapy\lithotripsy\stone_fracture.rs:518:9
+    |
+518 |     use approx::assert_relative_eq;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `approx::assert_relative_eq`
+   --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:356:9
+    |
+356 |     use approx::assert_relative_eq;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `approx::assert_relative_eq`
+   --> src\physics\therapy\lithotripsy\bioeffects.rs:382:9
+    |
+382 |     use approx::assert_relative_eq;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `history`
+    --> src\physics\imaging\elastography\elastic_wave_solver.rs:1634:14
+     |
+1634 |         let (history, tracker) = result.unwrap();
+     |              ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_history`
+
+warning: unused variable: `detector`
+   --> src\physics\imaging\elastography\harmonic_detection.rs:485:13
+    |
+485 |         let detector = HarmonicDetector::new(config);
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_detector`
+
+warning: unused variable: `block2`
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:768:13
+    |
+768 |         let block2 = pool.allocate(2048).unwrap();
+    |             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_block2`
+
+warning: variable does not need to be mutable
+   --> src\physics\imaging\photoacoustic\mod.rs:597:13
+    |
+597 | ...   let mut simulator = PhotoacousticSimulator::new(grid,...
+    |           ----^^^^^^^^^
+    |           |
+    |           help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src\physics\imaging\photoacoustic\mod.rs:616:13
+    |
+616 | ...   let mut simulator = PhotoacousticSimulator::new(grid,...
+    |           ----^^^^^^^^^
+    |           |
+    |           help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src\physics\imaging\photoacoustic\mod.rs:664:13
+    |
+664 | ...   let mut simulator = PhotoacousticSimulator::new(grid,...
+    |           ----^^^^^^^^^
+    |           |
+    |           help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src\physics\transcranial\aberration_correction.rs:438:13
+    |
+438 | ...   let mut corrector = TranscranialAberrationCorrection:...
+    |           ----^^^^^^^^^
+    |           |
+    |           help: remove this `mut`
+
+warning: `kwavers` (test "pam_beamforming") generated 1 warning (run `cargo fix --test "pam_beamforming"` to apply 1 suggestion)
+warning: `kwavers` (test "kwave_validation_suite") generated 9 warnings (run `cargo fix --test "kwave_validation_suite"` to apply 9 suggestions)
+warning: `kwavers` (test "swe_3d_validation") generated 12 warnings (run `cargo fix --test "swe_3d_validation"` to apply 7 suggestions)
+warning: `kwavers` (test "photoacoustic_validation") generated 4 warnings (run `cargo fix --test "photoacoustic_validation"` to apply 4 suggestions)
+warning: `kwavers` (lib test) generated 173 warnings (162 duplicates) (run `cargo fix --lib -p kwavers --tests` to apply 11 suggestions)
+warning: unused import: `Array4`
+  --> tests\nl_swe_convergence_tests.rs:32:23
+   |
+32 | use ndarray::{Array3, Array4};
+   |                       ^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `omega`
+   --> tests\nl_swe_convergence_tests.rs:260:13
+    |
+260 |         let omega = 2.0 * PI * 50.0; // 50 Hz
+    |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_omega`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `j`
+   --> tests\nl_swe_convergence_tests.rs:465:13
+    |
+465 |         let j = lambda1 * lambda1 * lambda3;
+    |             ^ help: if this is intentional, prefix it with an underscore: `_j`
+
+warning: unused variable: `sigma_analytical_33`
+   --> tests\nl_swe_convergence_tests.rs:470:13
+    |
+470 |         let sigma_analytical_33 = mu.iter().zip(alpha.iter())
+    |             ^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_analytical_33`
+
+warning: unused variable: `sigma_analytical_11`
+   --> tests\nl_swe_convergence_tests.rs:474:13
+    |
+474 |         let sigma_analytical_11 = mu.iter().zip(alpha.iter())
+    |             ^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_analytical_11`
+
+warning: variable does not need to be mutable
+   --> tests\nl_swe_convergence_tests.rs:753:17
+    |
+753 | ...   let mut solver = NonlinearElasticWaveSolver::new(&gri...
+    |           ----^^^^^^
+    |           |
+    |           help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> tests\nl_swe_convergence_tests.rs:834:17
+    |
+834 | ...   let mut solver = NonlinearElasticWaveSolver::new(&gri...
+    |           ----^^^^^^
+    |           |
+    |           help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> tests\nl_swe_convergence_tests.rs:913:17
+    |
+913 | ...   let mut solver = NonlinearElasticWaveSolver::new(&gri...
+    |           ----^^^^^^
+    |           |
+    |           help: remove this `mut`
+
+warning: field `test_case` is never read
+  --> tests\nl_swe_convergence_tests.rs:57:9
+   |
+56 | struct ConvergenceTester {
+   |        ----------------- field in this struct
+57 |     pub test_case: SimpleHarmonicTestCase,
+   |         ^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `run_displacement_convergence_study` is never used
+  --> tests\nl_swe_convergence_tests.rs:75:8
+   |
+61 | impl ConvergenceTester {
+   | ---------------------- method in this implementation
+...
+75 |     fn run_displacement_convergence_study(&self) -> Vec<(f64...
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `detector`
+   --> tests\nl_swe_validation.rs:123:13
+    |
+123 |         let detector = HarmonicDetector::new(config.clone());
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_detector`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> tests\nl_swe_validation.rs:340:13
+    |
+340 |         let mut swe = ElasticWaveSolver::new(
+    |             ----^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `swe`
+   --> tests\nl_swe_validation.rs:340:13
+    |
+340 |         let mut swe = ElasticWaveSolver::new(
+    |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_swe`
+
+warning: unused variable: `push_location`
+   --> tests\nl_swe_validation.rs:346:13
+    |
+346 |         let push_location = [0.008, 0.008, 0.008];
+    |             ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_push_location`
+
+warning: `kwavers` (test "nl_swe_convergence_tests") generated 10 warnings (run `cargo fix --test "nl_swe_convergence_tests"` to apply 8 suggestions)
+warning: `kwavers` (test "nl_swe_validation") generated 4 warnings (run `cargo fix --test "nl_swe_validation"` to apply 4 suggestions)
+    Finished `test` profile [unoptimized] target(s) in 3.27s
+     Running unittests src\lib.rs (target\debug\deps\kwavers-49eeb547015fa1e3.exe)
+
+running 669 tests
+test clinical::swe_3d_workflows::tests::test_volumetric_roi_creation ... ok
+test clinical::swe_3d_workflows::tests::test_roi_contains_point ... ok
+test cloud::tests::test_default_configs ... ok
+test fft::fft_processor::tests::test_fft_3d_energy_conservation ... ignored, FFT precision issue under investigation - practical usage works
+test clinical::workflows::tests::test_diagnostic_recommendations ... ok
+test clinical::workflows::tests::test_clinical_workflow_creation ... ok
+test clinical::swe_3d_workflows::tests::test_breast_lesion_classification ... ok
+test clinical::workflows::tests::test_realtime_performance_check ... ok
+test clinical::swe_3d_workflows::tests::test_liver_fibrosis_classification ... ok
+test configuration::tests::test_default_configuration ... ok
+test configuration::builder::tests::test_configuration_builder_chaining ... ok
+test configuration::builder::tests::test_configuration_builder_basic ... ok
+test cloud::tests::test_cloud_service_creation ... ok
+test geometry::tests::test_disc_symmetry ... ok
+test clinical::swe_3d_workflows::tests::test_volumetric_statistics ... ok
+test geometry::tests::test_make_ball_invalid_radius ... ok
+test clinical::swe_3d_workflows::tests::test_clinical_report_generation ... ok
+test clinical::swe_3d_workflows::tests::test_elasticity_map_3d_creation ... ok
+test configuration::builder::tests::test_configuration_builder_validation ... ok
+test geometry::tests::test_make_disc_basic ... ok
+test geometry::tests::test_make_disc_invalid_radius ... ok
+test configuration::tests::test_cfl_validation ... ok
+test clinical::therapy_integration::tests::test_safety_limit_checking ... ok
+test geometry::tests::test_make_line_axis_aligned ... ok
+test geometry::tests::test_make_line_diagonal ... ok
+test geometry::tests::test_make_ball_basic ... ok
+test medium::anisotropic::fiber::tests::test_fiber_orientation_conversion ... ok
+test clinical::swe_3d_workflows::tests::test_slice_extraction ... ok
+test io::nifti::tests::test_nifti_reader_creation ... ok
+test clinical::swe_3d_workflows::tests::test_multi_planar_reconstruction ... ok
+test medium::anisotropic::fiber::tests::test_fiber_orientation_roundtrip ... ok
+test medium::core::tests::test_max_sound_speed_pointwise ... ok
+test fft::fft_processor::tests::test_fft_1d_forward_inverse ... ok
+test medium::homogeneous::implementation::tests::test_blood_properties ... ok
+test medium::core::tests::test_max_sound_speed ... ok
+test medium::frequency_dependent::tests::test_frequency_dependent_nonlinearity ... ok
+test medium::homogeneous::implementation::tests::test_air_properties ... ok
+test geometry::tests::test_make_sphere_alias ... ok
+test clinical::therapy_integration::tests::test_therapy_step_execution ... ok
+test medium::homogeneous::implementation::tests::test_water_properties ... ok
+test medium::frequency_dependent::tests::test_phase_velocity ... ok
+test clinical::therapy_integration::tests::test_therapy_orchestrator_creation ... ok
+test ml::tests::test_anomaly_detection ... ok
+test performance::arena::tests::test_arena_config ... ok
+test performance::arena::tests::test_field_arena_allocation ... ok
+test ml::tests::test_ml_engine_creation ... ok
+test ml::inference::tests::test_softmax_inference ... ok
+test ml::tests::test_parameter_optimization ... ok
+test ml::tests::test_classification_with_uncertainty ... ok
+test ml::tests::test_outcome_predictor ... ok
+test performance::arena::tests::test_bump_allocator ... ok
+test performance::arena::tests::test_bump_allocator_oom ... ok
+test ml::tests::test_tissue_classification ... ok
+test geometry::tests::test_ball_symmetry ... ok
+test performance::safe_vectorization::tests::test_scalar_multiply_correctness ... ok
+test performance::benchmarks::tests::test_memory_benchmark ... ok
+test performance::safe_vectorization::tests::test_add_arrays_correctness ... ok
+test performance::safe_vectorization::tests::test_dot_product_correctness ... ok
+test performance::safe_vectorization::tests::test_l2_norm_correctness ... ok
+test cloud::tests::test_deployment_config_validation ... ok
+test performance::simd::tests::test_simd_addition ... ok
+test performance::simd::tests::test_simd_norm ... ok
+test performance::simd::tests::test_simd_scaling ... ok
+test performance::simd_auto::capability::tests::test_capability_detection ... ok
+test fft::fft_processor::tests::test_fft_2d_gaussian ... ok
+test performance::simd_auto::capability::tests::test_capability_display ... ok
+test performance::simd_auto::dispatcher::tests::test_scale_operation ... ok
+test performance::simd_auto::dispatcher::tests::test_simd_auto_creation ... ok
+test performance::simd_auto::dispatcher::tests::test_add_operation ... ok
+test performance::simd_auto::x86_64::avx2::tests::test_avx2_scale ... ok
+test performance::simd_auto::x86_64::avx2::tests::test_avx2_add ... ok
+test performance::simd_portable::tests::test_add_arrays ... ok
+test performance::simd_portable::tests::test_apply_decay ... ok
+test performance::simd_safe::operations::tests::test_add_fields_correctness ... ok
+test performance::simd_portable::tests::test_scalar_multiply ... ok
+test performance::simd_safe::operations::tests::test_norm_correctness ... ok
+test performance::simd_portable::tests::test_dot_product ... ok
+test physics::bubble_dynamics::adaptive_integration::tests::test_adaptive_integration ... ignored, Requires Sprint 111+ Keller-Miksis full implementation (PRD FR-014)
+test performance::simd_safe::operations::tests::test_scale_field_correctness ... ok
+test performance::simd_operations::tests::test_field_norm ... ok
+test physics::bubble_dynamics::bubble_state::tests::test_bubble_state_creation ... ok
+test physics::bubble_dynamics::adaptive_integration::tests::test_stability_check ... ok
+test physics::bubble_dynamics::bubble_field::tests::test_bubble_field_creation ... ok
+test physics::bubble_dynamics::bubble_state::tests::test_compression_tracking ... ok
+test performance::simd_operations::tests::test_simd_add ... ok
+test physics::bubble_dynamics::bubble_state::tests::test_gas_properties ... ok
+test physics::bubble_dynamics::encapsulated::tests::test_church_acceleration_finite ... ok
+test physics::bubble_dynamics::encapsulated::tests::test_church_model_creation ... ok
+test physics::bubble_dynamics::bubble_field::tests::test_bubble_cloud_generation ... ok
+test physics::bubble_dynamics::encapsulated::tests::test_church_vs_marmottant_equilibrium ... ok
+test physics::bubble_dynamics::encapsulated::tests::test_critical_radii_computation ... ok
+test physics::bubble_dynamics::encapsulated::tests::test_marmottant_acceleration_finite ... ok
+test physics::bubble_dynamics::encapsulated::tests::test_marmottant_buckling_reduces_stiffness ... ok
+test physics::bubble_dynamics::encapsulated::tests::test_marmottant_shell_state_detection ... ok
+test physics::bubble_dynamics::encapsulated::tests::test_marmottant_surface_tension_regimes ... ok
+test physics::bubble_dynamics::encapsulated::tests::test_shell_properties_defaults ... ok
+test physics::bubble_dynamics::encapsulated::tests::test_shell_elastic_restoring_force ... ok
+test physics::bubble_dynamics::encapsulated::tests::test_shell_types ... ok
+test physics::bubble_dynamics::energy_balance::tests::test_energy_balance_equilibrium ... ok
+test physics::bubble_dynamics::energy_balance::tests::test_heat_transfer_calculation ... ok
+test physics::bubble_dynamics::imex_integration::tests::test_adaptive_epsilon ... ignored, Requires Sprint 111+ Keller-Miksis full implementation (PRD FR-014)
+test physics::bubble_dynamics::gilmore::tests::test_gilmore_initialization ... ok
+test physics::bubble_dynamics::gilmore::tests::test_gilmore_vs_keller_miksis_threshold ... ok
+test physics::bubble_dynamics::gilmore::tests::test_sound_speed_calculation ... ok
+test physics::bubble_dynamics::imex_integration::tests::test_imex_integration ... ignored, Requires Sprint 111+ Keller-Miksis full implementation (PRD FR-014)
+test physics::bubble_dynamics::imex_integration::tests::test_stiffness_detection ... ok
+test physics::bubble_dynamics::imex_integration::tests::test_thermal_mass_coupling ... ok
+test physics::bubble_dynamics::integration::tests::test_integration_input_validation ... ok
+test physics::bubble_dynamics::integration::tests::test_integration_success ... ok
+test physics::bubble_dynamics::interactions::tests::test_bjerknes_interaction_type ... ok
+test physics::bubble_dynamics::interactions::tests::test_wood_sound_speed ... ok
+test physics::bubble_dynamics::keller_miksis::tests::test_heat_capacity_calculation ... ok
+test physics::bubble_dynamics::keller_miksis::tests::test_keller_miksis_acoustic_forcing ... ok
+test physics::bubble_dynamics::keller_miksis::tests::test_keller_miksis_equilibrium ... ignored, Equilibrium test needs refinement - K-M compressibility terms cause non-zero acceleration
+test physics::bubble_dynamics::keller_miksis::tests::test_keller_miksis_compression ... ok
+test physics::bubble_dynamics::keller_miksis::tests::test_keller_miksis_creation ... ok
+test physics::bubble_dynamics::keller_miksis::tests::test_keller_miksis_expansion ... ok
+test physics::bubble_dynamics::keller_miksis::tests::test_keller_miksis_mach_limit ... ok
+test physics::bubble_dynamics::keller_miksis::tests::test_mach_number_tracking ... ok
+test physics::bubble_dynamics::keller_miksis::tests::test_mass_transfer_evaporation ... ok
+test physics::bubble_dynamics::keller_miksis::tests::test_physical_bounds ... ok
+test physics::bubble_dynamics::keller_miksis::tests::test_radiation_damping_term ... ok
+test physics::bubble_dynamics::keller_miksis::tests::test_temperature_adiabatic_heating ... ok
+test physics::bubble_dynamics::keller_miksis::tests::test_temperature_cooling ... ok
+test physics::bubble_dynamics::keller_miksis::tests::test_vdw_pressure_calculation ... ok
+test physics::bubble_dynamics::rayleigh_plesset::tests::test_keller_miksis_mach_number ... ok
+test physics::bubble_dynamics::rayleigh_plesset::tests::test_rayleigh_plesset_equilibrium ... ok
+test physics::bubble_dynamics::thermodynamics::tests::test_clausius_clapeyron ... ok
+test physics::bubble_dynamics::thermodynamics::tests::test_enthalpy_vaporization ... ok
+test physics::bubble_dynamics::thermodynamics::tests::test_mass_transfer ... ok
+test physics::bubble_dynamics::thermodynamics::tests::test_vapor_pressure_models ... ok
+test physics::bubble_dynamics::units::tests::test_default_parameters ... ok
+test physics::cavitation_control::cavitation_detector::tests::test_broadband_detector ... ok
+test physics::bubble_dynamics::units::tests::test_dimensionless_numbers ... ok
+test physics::cavitation_control::feedback_controller::tests::test_feedback_controller_creation ... ok
+test physics::cavitation_control::pid_controller::tests::test_anti_windup ... ok
+test physics::cavitation_control::pid_controller::tests::test_pid_step_response ... ok
+test physics::cavitation_control::power_modulation::tests::test_amplitude_controller ... ok
+test physics::cavitation_control::power_modulation::tests::test_duty_cycle_limits ... ok
+test physics::cavitation_control::power_modulation::tests::test_modulation_schemes ... ok
+test physics::cavitation_control::power_modulation::tests::test_safety_limiter ... ok
+test physics::cavitation_control::power_modulation::tests::test_pulse_sequence ... ok
+test physics::chemistry::ros_plasma::plasma_reactions::tests::test_plasma_chemistry ... ok
+test physics::chemistry::ros_plasma::plasma_reactions::tests::test_plasma_reaction_rate ... ok
+test physics::chemistry::ros_plasma::plasma_reactions::tests::test_zeldovich_no ... ok
+test physics::chemistry::ros_plasma::radical_kinetics::tests::test_oh_yield ... ok
+test physics::chemistry::ros_plasma::radical_kinetics::tests::test_diffusion_length ... ok
+test physics::chemistry::ros_plasma::radical_kinetics::tests::test_ph_dependence ... ok
+test physics::cavitation_control::cavitation_detector::tests::test_spectral_detector ... ok
+test physics::chemistry::ros_plasma::ros_species::tests::test_ros_generation ... ok
+test physics::cavitation_control::feedback_controller::tests::test_control_output ... ok
+test physics::cavitation_control::cavitation_detector::tests::test_subharmonic_detector ... ok
+test physics::chemistry::ros_plasma::radical_kinetics::tests::test_radical_kinetics ... ok
+test physics::chemistry::ros_plasma::ros_species::tests::test_ros_properties ... ok
+test physics::chemistry::ros_plasma::sonochemistry::tests::test_ph_update ... ok
+test physics::chemistry::tests::test_chemical_model_creation ... ok
+test physics::chemistry::tests::test_reaction_config ... ok
+test physics::field_mapping::tests::test_display ... ok
+test physics::field_mapping::tests::test_field_index_consistency ... ok
+test physics::field_mapping::tests::test_field_indices_are_unique ... ok
+test physics::field_mapping::tests::test_from_index ... ok
+test physics::chemistry::ros_plasma::ros_species::tests::test_ros_concentrations ... ok
+test physics::imaging::ceus::cloud_dynamics::tests::test_cloud_initialization ... ok
+test physics::imaging::ceus::microbubble::tests::test_microbubble_creation ... ok
+test physics::imaging::ceus::microbubble::tests::test_invalid_microbubble ... ok
+test physics::imaging::ceus::microbubble::tests::test_nonlinear_scattering ... ok
+test physics::imaging::ceus::microbubble::tests::test_bubble_dynamics ... ok
+test physics::imaging::ceus::cloud_dynamics::tests::test_coalescence ... ok
+test physics::imaging::ceus::microbubble::tests::test_population_creation ... ok
+test physics::imaging::ceus::microbubble::tests::test_resonance_frequency ... ok
+test physics::imaging::ceus::tests::test_roi_statistics ... ok
+test physics::imaging::elastography::displacement::tests::test_displacement_field_creation ... ok
+test physics::imaging::elastography::displacement::tests::test_displacement_magnitude ... ok
+test physics::imaging::elastography::elastic_wave_solver::tests::test_volumetric_wave_config ... ok
+test physics::imaging::elastography::elastic_wave_solver::tests::test_volumetric_boundary_conditions ... ok
+test physics::imaging::elastography::elastic_wave_solver::tests::test_volumetric_quality_metrics ... ok
+test physics::imaging::elastography::elastic_wave_solver::tests::test_wave_field_initialization ... ok
+test physics::imaging::elastography::elastic_wave_solver::tests::test_wave_front_tracker_initialization ... ok
+test physics::imaging::elastography::elastic_wave_solver::tests::test_wave_propagation ... ok
+test physics::imaging::elastography::gpu_accelerated_3d::tests::test_gpu_device_capabilities ... ok
+test physics::imaging::elastography::elastic_wave_solver::tests::test_volumetric_attenuation_initialization ... ok
+test physics::imaging::elastography::gpu_accelerated_3d::tests::test_gpu_solver_initialization ... ok
+test physics::imaging::elastography::gpu_accelerated_3d::tests::test_memory_pool_allocation ... ok
+test physics::imaging::elastography::gpu_accelerated_3d::tests::test_performance_metrics ... ok
+test physics::imaging::elastography::harmonic_detection::tests::test_harmonic_detection_config ... ok
+test physics::imaging::elastography::harmonic_detection::tests::test_harmonic_detector_creation ... ok
+test physics::imaging::elastography::harmonic_detection::tests::test_harmonic_displacement_field_creation ... ok
+test physics::imaging::ceus::tests::test_perfusion_analysis ... ok
+test physics::imaging::elastography::displacement::tests::test_displacement_estimator ... ok
+test physics::imaging::elastography::harmonic_detection::tests::test_snr_computation ... ok
+test physics::imaging::elastography::harmonic_detection::tests::test_harmonic_ratio_computation ... ok
+test physics::imaging::elastography::harmonic_detection::tests::test_window_function ... ok
+test physics::imaging::elastography::inversion::tests::test_elasticity_map_from_speed ... ok
+test physics::imaging::elastography::elastic_wave_solver::tests::test_elastic_wave_solver_creation ... ok
+test physics::imaging::elastography::nonlinear::tests::test_hyperelastic_mooney_rivlin ... ok
+test physics::imaging::elastography::nonlinear::tests::test_hyperelastic_neo_hookean ... ok
+test physics::imaging::elastography::radiation_force::tests::test_directional_wave_tracker ... ok
+test physics::imaging::elastography::nonlinear::tests::test_nonlinear_solver_creation ... ok
+test physics::imaging::elastography::radiation_force::tests::test_focused_push_pattern ... ok
+test physics::imaging::elastography::inversion::tests::test_elasticity_statistics ... ok
+test physics::imaging::elastography::nonlinear::tests::test_nonlinear_wave_field ... ok
+test physics::imaging::elastography::radiation_force::tests::test_compound_push_pattern ... ok
+test physics::imaging::elastography::nonlinear::tests::test_time_step_calculation ... ok
+test physics::imaging::elastography::radiation_force::tests::test_multi_directional_push_creation ... ok
+test physics::imaging::elastography::radiation_force::tests::test_push_parameters_default ... ok
+test physics::imaging::elastography::radiation_force::tests::test_push_parameters_validation ... ok
+test physics::imaging::elastography::radiation_force::tests::test_wave_physics_validation ... ok
+test physics::imaging::fusion::tests::test_coordinate_unification ... ok
+test physics::imaging::fusion::tests::test_fusion_config_default ... ok
+test physics::chemistry::ros_plasma::sonochemistry::tests::test_sonochemistry_model ... ok
+test physics::imaging::fusion::tests::test_multimodal_fusion_creation ... ok
+test physics::imaging::elastography::radiation_force::tests::test_radiation_force_creation ... ok
+test physics::imaging::hifu::tests::test_hifu_transducer_creation ... ok
+test physics::imaging::fusion::tests::test_weighted_average_fusion ... ok
+test physics::imaging::photoacoustic::gpu::tests::test_cpu_propagator_creation ... ok
+test physics::imaging::hifu::tests::test_treatment_plan_validation ... ok
+test physics::imaging::elastography::elastic_wave_solver::tests::test_wave_front_tracking_update ... ok
+test physics::imaging::photoacoustic::gpu::tests::test_gpu_availability_flag ... ok
+test physics::imaging::photoacoustic::tests::test_analytical_validation ... ok
+test physics::imaging::photoacoustic::tests::test_optical_properties ... ok
+test physics::imaging::photoacoustic::tests::test_fluence_computation ... ok
+test physics::imaging::photoacoustic::gpu::tests::test_gpu_wrapper_uses_cpu_backend ... ok
+test physics::imaging::photoacoustic::tests::test_initial_pressure_computation ... ok
+test physics::imaging::photoacoustic::gpu::tests::test_wave_propagation ... ok
+test physics::imaging::ultrasound::advanced::tests::test_barker_generation ... ok
+test physics::imaging::registration::tests::test_registration_quality_metrics ... ok
+test physics::imaging::registration::tests::test_rigid_registration_landmarks ... ok
+test physics::imaging::hifu::tests::test_thermal_dose_calculation ... ok
+test physics::imaging::ultrasound::advanced::tests::test_chirp_generation ... ok
+test physics::imaging::ultrasound::advanced::tests::test_plane_wave_config ... ok
+test physics::imaging::ultrasound::advanced::tests::test_snr_improvement_calculation ... ok
+test physics::imaging::ultrasound::advanced::tests::test_synthetic_aperture_config ... ok
+test physics::mechanics::acoustic_wave::hybrid_angular_spectrum::tests::test_attenuation_frequency_dependence ... ok
+test physics::mechanics::acoustic_wave::hybrid_angular_spectrum::tests::test_has_config_default ... ok
+test physics::mechanics::acoustic_wave::hybrid_angular_spectrum::tests::test_has_config_validation ... ok
+test physics::imaging::photoacoustic::tests::test_photoacoustic_creation ... ok
+test physics::mechanics::acoustic_wave::hybrid_angular_spectrum::tests::test_rayleigh_distance ... ok
+test physics::imaging::hifu::tests::test_pressure_field_computation ... ok
+test physics::imaging::ultrasound::advanced::tests::test_plane_wave_compounding ... ok
+test physics::mechanics::acoustic_wave::hybrid_angular_spectrum::tests::test_hybrid_angular_spectrum_creation ... ok
+test physics::imaging::elastography::elastic_wave_solver::tests::test_time_step_calculation ... ok
+test physics::mechanics::acoustic_wave::hybrid_angular_spectrum::tests::test_impedance_calculation ... ok
+test physics::mechanics::acoustic_wave::hybrid_angular_spectrum::tests::test_shock_formation_distance ... ok
+test physics::mechanics::acoustic_wave::kuznetsov::validation_test::tests::test_energy_conservation_linear ... ignored, Tier 3: Comprehensive validation (>30s execution time)
+test physics::mechanics::acoustic_wave::kuznetsov::validation_test::tests::test_nonlinear_harmonic_generation ... ignored, Tier 3: Comprehensive validation (>60s execution time)
+test physics::mechanics::acoustic_wave::kzk::beam_debug::tests::test_diffraction_strength ... ok
+test physics::mechanics::acoustic_wave::kzk::beam_debug::tests::test_gaussian_beam_analytical ... ok
+test physics::mechanics::acoustic_wave::kzk::complex_parabolic_diffraction::tests::test_complex_energy_conservation ... ok
+test physics::mechanics::acoustic_wave::kuznetsov::tests::test_kuznetsov_config_validation ... ok
+test physics::imaging::elastography::inversion::tests::test_inversion_methods ... ok
+test physics::imaging::elastography::radiation_force::tests::test_push_pulse_generation ... ok
+test physics::mechanics::acoustic_wave::kuznetsov::operator_splitting::tests::test_harmonic_generation ... ok
+test physics::mechanics::acoustic_wave::kzk::parabolic_diffraction::tests::test_fft_round_trip ... ok
+test physics::mechanics::acoustic_wave::kzk::plane_wave_test::tests::test_diffraction_operator_normalization ... ok
+test physics::mechanics::acoustic_wave::kuznetsov::tests::test_kuznetsov_creation ... ok
+test physics::mechanics::acoustic_wave::kzk::angular_spectrum_2d::tests::test_2d_angular_spectrum ... ok
+test physics::imaging::elastography::radiation_force::tests::test_multi_directional_push_application ... ok
+test physics::mechanics::acoustic_wave::kzk::solver::tests::test_gaussian_beam_propagation ... ignored, Tier 3: Comprehensive validation (>30s execution time)
+test physics::mechanics::acoustic_wave::kzk::validation::tests::test_gaussian_beam_diffraction ... ignored, Tier 3: Comprehensive validation (>60s execution time)
+test physics::mechanics::acoustic_wave::kuznetsov::operator_splitting::tests::test_shock_steepening ... ok
+test physics::imaging::ceus::tests::test_ceus_initialization ... ok
+test physics::imaging::registration::tests::test_temporal_synchronization ... ok
+test physics::mechanics::acoustic_wave::test_support::tests::test_acoustic_diffusivity_formula ... ok
+test physics::mechanics::acoustic_wave::kuznetsov::tests::test_numerical_methods ... ok
+test physics::mechanics::acoustic_wave::test_support::tests::test_acoustic_diffusivity_zero_frequency ... ok
+test physics::mechanics::acoustic_wave::test_support::tests::test_heterogeneous_medium_position_dependence ... ok
+test physics::mechanics::acoustic_wave::tests::test_spatial_order_cfl_limits ... ok
+test physics::mechanics::acoustic_wave::tests::test_spatial_order_from_usize ... ok
+test physics::mechanics::acoustic_wave::tests::test_spatial_order_minimum_points ... ok
+test physics::mechanics::acoustic_wave::unified::kuznetsov::tests::test_compute_laplacian ... ok
+test physics::mechanics::acoustic_wave::unified::kuznetsov::tests::test_kuznetsov_solver_creation ... ok
+test physics::mechanics::acoustic_wave::unified::kuznetsov::tests::test_nonlinear_term_computation_is_finite ... ok
+test physics::mechanics::acoustic_wave::kzk::solver::tests::test_kzk_solver_creation ... ok
+test physics::mechanics::acoustic_wave::unified::kuznetsov::tests::test_nonlinear_term_proportional_to_pressure ... ok
+test physics::mechanics::acoustic_wave::kzk::plane_wave_test::tests::test_plane_wave_propagation ... ok
+test physics::mechanics::acoustic_wave::westervelt_fdtd::tests::test_westervelt_fdtd_creation ... ok
+test physics::mechanics::acoustic_wave::unified::kuznetsov::tests::test_nonlinear_term_initialization ... ok
+test physics::mechanics::cavitation::damage::tests::test_damage_calculation ... ok
+test physics::mechanics::cavitation::damage::tests::test_erosion_threshold ... ok
+test physics::mechanics::elastic_wave::mode_conversion::tests::test_mode_conversion_config ... ok
+test physics::mechanics::elastic_wave::mode_conversion::tests::test_stiffness_tensor_isotropic ... ok
+test physics::mechanics::elastic_wave::mode_conversion::tests::test_viscoelastic_config ... ok
+test physics::mechanics::acoustic_wave::kzk::validation::tests::test_absorption ... ok
+test physics::mechanics::elastic_wave::tests::test_elastic_wave_constructor ... ok
+test physics::mechanics::poroelastic::tests::test_bulk_density ... ok
+test physics::mechanics::poroelastic::tests::test_characteristic_frequency ... ok
+test physics::mechanics::poroelastic::tests::test_effective_bulk_modulus ... ok
+test physics::mechanics::acoustic_wave::kzk::solver::tests::test_gaussian_beam_propagation_fast ... ok
+test physics::mechanics::poroelastic::tests::test_material_validation ... ok
+test physics::mechanics::poroelastic::tests::test_poroelastic_material_default ... ok
+test physics::mechanics::poroelastic::tests::test_poroelastic_simulation_creation ... ok
+test physics::imaging::elastography::gpu_accelerated_3d::tests::test_adaptive_resolution ... ok
+test physics::mechanics::poroelastic::tests::test_tissue_types ... ok
+test physics::optics::scattering::tests::test_mie_parameters ... ok
+test physics::optics::scattering::tests::test_rayleigh_scattering ... ok
+test physics::optics::scattering::tests::test_small_particle_mie ... ok
+test physics::optics::sonoluminescence::bremsstrahlung::tests::test_saha_equation ... ok
+test physics::optics::sonoluminescence::cherenkov::tests::test_cherenkov_angle_variation ... ok
+test physics::optics::sonoluminescence::blackbody::tests::test_stefan_boltzmann ... ok
+test physics::optics::sonoluminescence::blackbody::tests::test_wien_displacement ... ok
+test physics::optics::sonoluminescence::bremsstrahlung::tests::test_emission_coefficient ... ok
+test physics::optics::sonoluminescence::blackbody::tests::test_planck_law_limits ... ok
+test physics::optics::sonoluminescence::cherenkov::tests::test_cherenkov_frank_tamm_spectral_distribution ... ok
+test physics::optics::sonoluminescence::cherenkov::tests::test_cherenkov_power_density_scaling ... ok
+test physics::optics::sonoluminescence::cherenkov::tests::test_cherenkov_refractive_index_update ... ok
+test physics::optics::sonoluminescence::cherenkov::tests::test_cherenkov_threshold_condition ... ok
+test physics::optics::sonoluminescence::emission::tests::test_adiabatic_temperature_scaling ... ok
+test physics::optics::sonoluminescence::cherenkov::tests::test_cherenkov_spectral_emission ... ok
+test physics::optics::sonoluminescence::spectral::tests::test_emission_spectrum ... ok
+test physics::optics::sonoluminescence::spectral::tests::test_spectral_range ... ok
+test physics::optics::sonoluminescence::spectral::tests::test_wavelength_to_rgb ... ok
+test physics::plugin::field_access::tests::test_plugin_field_access ... ok
+test physics::plugin::field_access::tests::test_unauthorized_access ... ok
+test physics::plugin::seismic_imaging::fwi::tests::test_adjoint_source_computation ... ok
+test physics::plugin::seismic_imaging::fwi::tests::test_gradient_calculation ... ok
+test physics::optics::sonoluminescence::emission::tests::test_bubble_dynamics_boundary_conditions ... ok
+test physics::plugin::seismic_imaging::fwi::tests::test_model_constraints ... ok
+test physics::optics::sonoluminescence::emission::tests::test_emission_calculation ... ok
+test physics::optics::sonoluminescence::emission::tests::test_spectrum_calculation ... ok
+test physics::optics::sonoluminescence::emission::tests::test_thermodynamic_consistency ... ok
+test physics::plugin::seismic_imaging::tests::test_rtm_configuration ... ok
+test physics::plugin::seismic_imaging::tests::test_rtm_without_configuration ... ok
+test physics::plugin::seismic_imaging::rtm::tests::test_laplacian_computation ... ok
+test physics::plugin::seismic_imaging::rtm::tests::test_rtm_basic_functionality ... ok
+test physics::plugin::seismic_imaging::tests::test_fwi_configuration ... ok
+test physics::plugin::seismic_imaging::tests::test_plugin_creation ... ok
+test physics::skull::tests::test_acoustic_impedance ... ok
+test physics::skull::tests::test_bone_types ... ok
+test physics::skull::tests::test_frequency_dependent_attenuation ... ok
+test physics::skull::tests::test_insertion_loss_estimation ... ok
+test physics::skull::tests::test_skull_properties_default ... ok
+test physics::state::tests::test_physics_state_creation ... ok
+test physics::imaging::ceus::tests::test_imaging_sequence ... ok
+test physics::skull::tests::test_transcranial_simulation_creation ... ok
+test physics::skull::tests::test_transmission_coefficient ... ok
+test physics::state::tests::test_field_guard_deref ... ok
+test physics::state::tests::test_field_updates ... ok
+test physics::mechanics::acoustic_wave::kzk::validation::tests::test_gaussian_beam_diffraction_fast ... ok
+test physics::state::tests::test_zero_copy_access ... ok
+test physics::therapy::lithotripsy::bioeffects::tests::test_bioeffects_model ... ok
+test physics::therapy::lithotripsy::bioeffects::tests::test_mechanical_index_calculation ... ok
+test physics::therapy::lithotripsy::bioeffects::tests::test_safety_assessment ... ok
+test physics::therapy::lithotripsy::cavitation_cloud::tests::test_cloud_evolution ... ok
+test physics::therapy::lithotripsy::cavitation_cloud::tests::test_cloud_initialization ... ok
+test physics::therapy::lithotripsy::cavitation_cloud::tests::test_microjet_impact ... ok
+test physics::therapy::lithotripsy::simulation::tests::test_lithotripsy_simulator_creation ... ok
+test physics::therapy::lithotripsy::simulation::tests::test_stone_volume_calculation ... ok
+test physics::therapy::lithotripsy::simulation::tests::test_simulation_state ... ok
+test physics::therapy::lithotripsy::stone_fracture::tests::test_griffith_critical_crack_length ... ok
+test physics::therapy::lithotripsy::stone_fracture::tests::test_material_properties ... ok
+test physics::therapy::lithotripsy::stone_fracture::tests::test_will_fracture ... ok
+test physics::therapy::tests::test_cavitation_detector ... ok
+test physics::therapy::tests::test_therapy_modality ... ok
+test physics::therapy::lithotripsy::shock_wave::tests::test_nonlinear_steepening_expected_gain ... ok
+test physics::therapy::lithotripsy::shock_wave::tests::test_shock_amplitude_calculation ... ok
+test physics::therapy::lithotripsy::shock_wave::tests::test_shock_wave_generator ... ok
+test physics::therapy::tests::test_therapy_parameters ... ok
+test physics::therapy::tests::test_treatment_metrics ... ok
+test physics::thermal::pennes::tests::test_pennes_solver_creation ... ok
+test physics::thermal::perfusion::tests::test_perfusion_temperature_dependence ... ok
+test physics::thermal::perfusion::tests::test_vessel_cooling ... ok
+test physics::thermal::properties::tests::test_absorption_temperature ... ok
+test physics::thermal::properties::tests::test_temperature_dependent_properties ... ok
+test physics::skull::tests::test_analytical_sphere_geometry ... ok
+test physics::therapy::lithotripsy::shock_wave::tests::test_shock_wave_propagation ... ok
+test physics::thermal::thermal_dose::tests::test_dose_threshold ... ok
+test physics::thermal::thermal_dose::tests::test_thermal_dose_accumulation ... ok
+test physics::transcranial::aberration_correction::tests::test_aberration_corrector_creation ... ok
+test physics::transcranial::bbb_opening::tests::test_permeability_calculation ... ok
+test physics::transcranial::bbb_opening::tests::test_safety_validation ... ok
+test physics::transcranial::bbb_opening::tests::test_treatment_protocol ... ok
+test physics::transcranial::aberration_correction::tests::test_phase_correction_calculation ... ok
+test physics::transcranial::safety_monitoring::tests::test_mechanical_index_calculation ... ok
+test physics::transcranial::safety_monitoring::tests::test_safety_level_classification ... ok
+test physics::transcranial::safety_monitoring::tests::test_safety_limit_checking ... ok
+test physics::transcranial::safety_monitoring::tests::test_safety_monitor_creation ... ok
+test physics::transcranial::safety_monitoring::tests::test_thermal_dose_accumulation ... ok
+test physics::transcranial::aberration_correction::tests::test_time_reversal_correction ... ok
+test physics::transcranial::bbb_opening::tests::test_bbb_opening_creation ... ok
+test physics::transcranial::bbb_opening::tests::test_mechanical_index_calculation ... ok
+test physics::transcranial::treatment_planning::tests::test_skull_properties_analysis ... ok
+test physics::transcranial::treatment_planning::tests::test_treatment_planner_creation ... ok
+test physics::transducer::fast_nearfield::tests::test_fnm_solver_creation ... ok
+test physics::transducer::fast_nearfield::tests::test_memory_usage ... ok
+test physics::transducer::fast_nearfield::tests::test_transducer_setup ... ok
+test physics::validation::gaussian_beam::tests::test_beam_expansion ... ok
+test physics::transducer::fast_nearfield::tests::test_precompute_factors ... ok
+test physics::validation::gaussian_beam::tests::test_rayleigh_distance ... ok
+test physics::transducer::fast_nearfield::tests::test_field_computation ... ok
+test physics::validation::gaussian_beam::tests::test_beam_measurement ... ok
+test physics::wave_propagation::attenuation::tests::test_amplitude_attenuation ... ok
+test physics::wave_propagation::attenuation::tests::test_attenuation_db ... ok
+test physics::validation::gaussian_beam::tests::test_intensity_conservation ... ok
+test physics::wave_propagation::attenuation::tests::test_penetration_depth ... ok
+test sensor::adaptive_beamforming::adaptive::tests::test_mvdr_unit_gain_constraint ... ok
+test sensor::adaptive_beamforming::adaptive::tests::test_mvdr_weights_exist ... ok
+test sensor::adaptive_beamforming::adaptive::tests::test_robust_capon_default ... ok
+test sensor::adaptive_beamforming::adaptive::tests::test_robust_capon_uncertainty_bounds ... ok
+test sensor::adaptive_beamforming::adaptive::tests::test_mvdr_diagonal_loading ... ok
+test sensor::adaptive_beamforming::adaptive::tests::test_robust_capon_unit_gain ... ok
+test sensor::adaptive_beamforming::adaptive::tests::test_robust_capon_vs_mvdr ... ok
+test sensor::adaptive_beamforming::algorithms::tests::test_delay_and_sum ... ok
+test sensor::adaptive_beamforming::algorithms::tests::test_music_pseudospectrum ... ok
+test sensor::adaptive_beamforming::algorithms::tests::test_mvdr_unit_gain_constraint ... ok
+test sensor::adaptive_beamforming::algorithms::tests::test_mvdr_weights_exist ... ok
+test sensor::adaptive_beamforming::conventional::tests::test_delay_and_sum ... ok
+test sensor::adaptive_beamforming::matrix_utils::tests::test_matrix_inversion_identity ... ok
+test sensor::adaptive_beamforming::matrix_utils::tests::test_matrix_inversion_singular ... ok
+test sensor::adaptive_beamforming::opast::tests::test_opast_initialization ... ok
+test performance::benchmarks::tests::test_benchmark_suite ... ok
+test sensor::adaptive_beamforming::opast::tests::test_opast_single_update ... ok
+test sensor::adaptive_beamforming::past::tests::test_subspace_tracker_initialization ... ok
+test sensor::adaptive_beamforming::past::tests::test_subspace_tracker_update ... ok
+test sensor::adaptive_beamforming::past::tests::test_subspace_tracker_convergence ... ok
+test physics::imaging::ceus::cloud_dynamics::tests::test_cloud_simulation ... ok
+test sensor::adaptive_beamforming::source_estimation::tests::test_estimate_num_sources_aic ... ok
+test sensor::adaptive_beamforming::source_estimation::tests::test_estimate_num_sources_high_snr ... ok
+test sensor::adaptive_beamforming::source_estimation::tests::test_estimate_num_sources_mdl ... ok
+test sensor::adaptive_beamforming::subspace::tests::test_eigenspace_mv ... ok
+test sensor::adaptive_beamforming::source_estimation::tests::test_estimate_num_sources_mdl_conservative ... ok
+test sensor::adaptive_beamforming::subspace::tests::test_eigenspace_mv_vs_mvdr ... ok
+test sensor::adaptive_beamforming::subspace::tests::test_music_pseudospectrum ... ok
+test sensor::adaptive_beamforming::opast::tests::test_opast_convergence ... ok
+test physics::thermal::pennes::tests::test_steady_state_temperature ... ok
+test sensor::beamforming::beamforming_3d::tests::test_apodization_weights_creation ... ok
+test physics::thermal::pennes::tests::test_heating_with_source ... ok
+test sensor::adaptive_beamforming::tapering::tests::test_adaptive_tapering ... ok
+test sensor::adaptive_beamforming::subspace::tests::test_music_with_source_estimation ... ok
+test sensor::adaptive_beamforming::tapering::tests::test_covariance_tapering ... ok
+test sensor::adaptive_beamforming::tapering::tests::test_covariance_tapering_types ... ok
+test sensor::beamforming::processor::tests::capon_uniform_constant_signal_expected_gain ... ok
+test sensor::beamforming::processor::tests::delay_and_sum_equal_delays_sums_channels ... ok
+test physics::imaging::photoacoustic::tests::test_simulation ... ok
+test sensor::localization::algorithms::tests::test_tdoa_localization_basic ... ok
+test sensor::beamforming::beamforming_3d::tests::test_beamforming_config_3d_default ... ok
+test sensor::beamforming::config::tests::pam_to_core_capon_loading_and_midpoint_frequency ... ok
+test sensor::beamforming::config::tests::pam_to_core_non_capon_uses_default_loading ... ok
+test sensor::localization::algorithms::tests::test_toa_localization_basic ... ok
+test sensor::localization::multilateration::core::tests::test_multilateration_adaptive_four ... ok
+test sensor::localization::multilateration::core::tests::test_multilateration_adaptive_three ... ok
+test sensor::localization::multilateration::core::tests::test_multilateration_ill_conditioned_cholesky_lm ... ok
+test sensor::localization::multilateration::core::tests::test_multilateration_ls ... ok
+test sensor::localization::multilateration::core::tests::test_multilateration_ml ... ok
+test sensor::localization::multilateration::core::tests::test_multilateration_wls ... ok
+test physics::mechanics::elastic_wave::tests::test_elastic_wave_single_step ... ok
+test physics::mechanics::acoustic_wave::kzk::validation::tests::test_harmonic_generation ... ok
+test sensor::localization::multilateration::trilateration::tests::proptest_trilateration_exact_random ... ok
+test sensor::localization::multilateration::trilateration::tests::test_trilateration_fallback_ls ... ok
+test sensor::localization::multilateration::core::tests::proptest_multilateration_random_arrays ... ok
+test sensor::localization::multilateration::trilateration::tests::test_trilateration_exact ... ok
+test sensor::localization::multilateration::trilateration::tests::test_trilateration_fourth_disambiguation_consistency ... ok
+test physics::mechanics::acoustic_wave::kuznetsov::validation_test::tests::test_homogeneous_no_warning ... ok
+test sensor::localization::multilateration::trilateration::tests::proptest_trilateration_fourth_sensor_disambiguation_positive_z ... ok
+test sensor::localization::multilateration::trilateration::tests::test_trilateration_rejects_negative_ranges ... ok
+test sensor::localization::multilateration::trilateration::tests::proptest_trilateration_noisy_ranges_robustness ... ok
+test sensor::localization::multilateration::trilateration::tests::test_trilateration_with_fourth_disambiguation ... ok
+test sensor::passive_acoustic_mapping::beamforming::tests::pam_beamformer_delegates_capon_uniform ... ok
+test sensor::passive_acoustic_mapping::beamforming::tests::pam_beamformer_delegates_das ... ok
+test sensor::localization::multilateration::trilateration::tests::test_trilateration_rejects_non_finite_ranges ... ok
+test sensor::localization::multilateration::trilateration::tests::proptest_trilateration_near_degenerate_j_small ... ok
+test signal::frequency_sweep::chirp::tests::test_linear_chirp ... ok
+test signal::modulation::amplitude::tests::test_am_modulation ... ok
+test signal::modulation::frequency::tests::test_fm_modulation_demodulation ... ok
+test solver::amr::tests::test_error_estimation ... ok
+test signal::pulse::train::tests::test_pulse_train ... ok
+test signal::modulation::quadrature::tests::test_qam_quadrature_orthogonality ... ok
+test signal::modulation::quadrature::tests::test_qam_modulation_with_hilbert ... ok
+test signal::modulation::quadrature::tests::test_qam_modulation_demodulation_roundtrip ... ok
+test signal::modulation::frequency::tests::test_fm_hilbert_based_demodulation_produces_finite_values ... ok
+test solver::fdtd::finite_difference::tests::test_derivative_linear_field ... ok
+test solver::fdtd::finite_difference::tests::test_finite_difference_creation ... ok
+test solver::amr::tests::test_interpolation ... ok
+test solver::amr::tests::test_octree_creation ... ok
+test solver::fdtd::tests::test_cfl_condition ... ok
+test solver::fdtd::tests::test_fdtd_creation ... ok
+test solver::fdtd::tests::test_derivative_computation ... ok
+test solver::amr::tests::test_wavelet_transform ... ok
+test solver::amr::tests::test_refinement_manager ... ok
+test solver::fdtd::tests::test_finite_difference_coefficients ... ok
+test solver::cpml_integration::tests::test_cpml_solver_creation ... ok
+test solver::imex::tests::test_implicit_solver_linear ... ok
+test solver::imex::tests::test_operator_splitting_strang ... ok
+test solver::heterogeneous::handler::tests::test_heterogeneous_handler_creation ... ok
+test solver::imex::tests::test_stability_analysis ... ok
+test solver::imex::tests::test_imex_rk_ssp2 ... ok
+test solver::imex::tests::test_conservation ... ok
+test solver::imex::tests::test_imex_rk_ark3 ... ok
+test solver::imex::tests::test_stiffness_detection ... ok
+test solver::imex::tests::test_imex_bdf2 ... ok
+test solver::kspace_correction::tests::test_dispersion_error ... ok
+test solver::kwave_parity::absorption::tests::test_fractional_laplacian_identity ... ok
+test solver::kwave_parity::absorption::tests::test_lossless_mode_no_absorption ... ok
+test solver::kwave_parity::absorption::tests::test_multi_relaxation_coefficients ... ok
+test solver::kspace_correction::tests::test_phase_velocity_computation ... ok
+test solver::cpml_integration::tests::test_gradient_computation ... ok
+test solver::heterogeneous::handler::tests::test_initialization_with_homogeneous_medium ... ok
+test solver::kwave_parity::absorption::tests::test_absorption_model_physics_validation ... ok
+test solver::kwave_parity::absorption::tests::test_causal_absorption_coefficients ... ok
+test solver::kwave_parity::nonlinearity::tests::test_nonlinearity_parameter ... ok
+test solver::kwave_parity::nonlinearity::tests::test_shock_detection ... ok
+test solver::kwave_parity::absorption::tests::test_power_law_coefficients ... ok
+test solver::plugin_based::field_provider::tests::test_field_provider_access_control ... ok
+test solver::plugin_based::field_registry::tests::test_field_registry ... ok
+test solver::plugin_based::solver::tests::test_solver_creation ... ok
+test solver::kspace_correction::tests::test_correction_methods_consistency ... ok
+test solver::reconstruction::photoacoustic::tests::test_photoacoustic_reconstructor_creation ... ok
+test solver::pstd::spectral_ops::tests::test_k_space_gradient_accuracy ... ok
+test solver::kspace_correction::tests::test_exact_dispersion_correction ... ok
+test solver::spectral_dg::basis::tests::test_differentiation_matrix ... ok
+test solver::spectral_dg::basis::tests::test_differentiation_quadratic ... ok
+test solver::spectral_dg::basis::tests::test_gll_nodes_n2 ... ok
+test solver::spectral_dg::basis::tests::test_gll_nodes_n3 ... ok
+test solver::spectral_dg::basis::tests::test_lagrange_basis ... ok
+test solver::spectral_dg::basis::tests::test_legendre_polynomials ... ok
+test solver::spectral_dg::basis::tests::test_mass_matrix_lagrange ... ok
+test solver::spectral_dg::basis::tests::test_mass_matrix_legendre ... ok
+test solver::spectral_dg::basis::tests::test_stiffness_matrix ... ok
+test solver::spectral_dg::coupling::tests::test_blending ... ok
+test solver::plugin_based::performance::tests::test_performance_monitoring ... ok
+test solver::pstd::spectral_ops::tests::test_dispersion_correction_general_case ... ok
+test solver::pstd::spectral_ops::tests::test_absorption_dc_component ... ok
+test solver::kwave_parity::absorption::tests::test_fft_based_absorption_reduces_amplitude ... ok
+test solver::pstd::spectral_ops::tests::test_absorption_operator_properties ... ok
+test solver::spectral_dg::coupling::tests::test_coupler_creation ... ok
+test solver::reconstruction::photoacoustic::tests::test_universal_back_projection ... ok
+test solver::spectral_dg::coupling::tests::test_conservation ... ok
+test solver::spectral_dg::dg_solver::tests::test_dg_solver_properties ... ok
+test solver::spectral_dg::coupling::tests::test_smooth_transition_mask ... ok
+test solver::spectral_dg::dg_solver::tests::test_dg_solver_creation ... ok
+test solver::kwave_parity::absorption::tests::test_fft_absorption_energy_dissipation ... ok
+test solver::spectral_dg::flux::tests::test_lax_friedrichs_flux ... ok
+test solver::spectral_dg::flux::tests::test_minmod_limiter ... ok
+test solver::spectral_dg::flux::tests::test_upwind_flux ... ok
+test solver::spectral_dg::matrices::tests::test_mass_matrix_properties ... ok
+test solver::spectral_dg::quadrature::tests::test_gauss_lobatto_2_points ... ok
+test solver::spectral_dg::matrices::tests::test_matrix_inverse ... ok
+test solver::spectral_dg::quadrature::tests::test_gauss_lobatto_3_points ... ok
+test solver::spectral_dg::tests::integration_tests::test_large_grid_performance ... ignored
+test solver::spectral_dg::spectral_solver::tests::test_wavenumber_computation ... ok
+test solver::spectral_dg::tests::integration_tests::test_config_update ... ok
+test solver::spectral_dg::quadrature::tests::test_quadrature_exactness ... ok
+test solver::pstd::spectral_ops::tests::test_dispersion_correction_y_equals_1 ... ok
+test solver::spectral_dg::shock_capturing::viscosity::tests::test_artificial_viscosity_compression ... ok
+test solver::tests::test_acoustic_fields_summary ... ok
+test solver::tests::test_flexible_fields_summary ... ok
+test solver::tests::test_progress_data_trait ... ok
+test solver::spectral_dg::spectral_solver::tests::test_spectral_solver_creation ... ok
+test solver::thermal_diffusion::tests::test_thermal_diffusion_creation ... ok
+test solver::time_integration::conservation::tests::test_conservation_monitoring ... ok
+test solver::time_integration::conservation::tests::test_energy_computation ... ok
+test solver::time_integration::tests::test_coupling_strategy_interface ... ok
+test solver::time_integration::tests::test_time_integration_module_compiles ... ok
+test solver::time_reversal::tests::test_config_validation ... ok
+test solver::time_reversal::tests::test_fft_planner_reuse ... ok
+test solver::time_reversal::tests::test_frequency_filter ... ok
+test solver::time_reversal::tests::test_tukey_window ... ok
+test solver::validation::kwave::benchmarks::tests::test_plane_wave_benchmark ... ignored, PSTD benchmark has numerical instability - needs solver refactoring (Sprint 113 Gap Analysis)
+test solver::validation::kwave::benchmarks::tests::test_point_source_benchmark ... ignored, Point source benchmark needs analytical solution validation (Sprint 113 Gap Analysis)
+test solver::thermal_diffusion::tests::test_heat_diffusion ... ok
+test solver::workspace::tests::test_inplace_operations ... ok
+test solver::workspace::tests::test_workspace_pool ... ok
+test solver::workspace::tests::test_workspace_creation ... ok
+test source::focused::utils::tests::test_multi_bowl_phases ... ignored, Tier 3: Comprehensive validation (>60s execution time)
+test solver::spectral_dg::spectral_solver::tests::test_spectral_derivative ... ok
+test source::focused::utils::tests::test_oneil_solution ... ignored, Physics validation test - needs tolerance review (non-critical for core functionality)
+test source::focused::utils::tests::test_bowl_focusing ... ok
+test source::phased_array::crosstalk::tests::test_coupling_matrix_symmetry ... ok
+test source::focused::utils::tests::test_multi_bowl_array ... ok
+test source::focused::utils::tests::test_bowl_transducer_creation ... ok
+test solver::spectral_dg::discontinuity_detector::tests::test_smooth_field_detection ... ok
+test solver::spectral_dg::discontinuity_detector::tests::test_step_function_detection ... ok
+test source::phased_array::crosstalk::tests::test_diagonal_unity ... ok
+test tests::test_cfl_calculation_basic ... ok
+test tests::test_medium_basic_properties ... ok
+test tests::test_physics_constants_validation ... ok
+test tests::test_default_config_creation ... ok
+test tests::test_error_handling_basic ... ok
+test tests::test_config_with_custom_values ... ok
+test tests::test_grid_creation_minimal ... ok
+test physics::mechanics::acoustic_wave::kuznetsov::validation_test::tests::test_linear_propagation ... ok
+test uncertainty::bayesian_networks::tests::test_prediction_statistics ... ok
+test solver::pstd::spectral_ops::tests::test_k_space_operator_creation ... ok
+test solver::spectral_dg::tests::integration_tests::test_smooth_wave_propagation ... ok
+test uncertainty::bayesian_networks::tests::test_uncertainty_decomposition ... ok
+test uncertainty::conformal_prediction::tests::test_conformal_predictor_creation ... ok
+test tests::test_version_info ... ok
+test uncertainty::conformal_prediction::tests::test_conformal_calibration ... ok
+test uncertainty::bayesian_networks::tests::test_bayesian_pinn_creation ... ok
+test uncertainty::conformal_prediction::tests::test_conformity_score_computation ... ok
+test uncertainty::conformal_prediction::tests::test_quantile_computation ... ok
+test physics::mechanics::acoustic_wave::kuznetsov::validation_test::tests::test_energy_conservation_linear_fast ... ok
+test uncertainty::ensemble_methods::tests::test_bootstrap_sampling ... ok
+test uncertainty::ensemble_methods::tests::test_ensemble_diversity ... ok
+test uncertainty::ensemble_methods::tests::test_ensemble_quantifier_creation ... ok
+test uncertainty::ensemble_methods::tests::test_ensemble_statistics ... ok
+test uncertainty::sensitivity_analysis::tests::test_morris_screening ... ok
+test uncertainty::sensitivity_analysis::tests::test_parameter_sample_generation ... ok
+test utils::differential_operators::coefficients::tests::test_generic_float_types ... ok
+test utils::differential_operators::coefficients::tests::test_second_derivative_coefficients ... ok
+test uncertainty::sensitivity_analysis::tests::test_sensitivity_analysis ... FAILED
+test uncertainty::sensitivity_analysis::tests::test_sensitivity_analyzer_creation ... ok
+test uncertainty::tests::test_beamforming_uncertainty ... ok
+test uncertainty::tests::test_confidence_check ... ok
+test uncertainty::tests::test_uncertainty_quantifier_creation ... ok
+test utils::array_utils::tests::test_filled_3d ... ok
+test utils::array_utils::tests::test_zeros_3d ... ok
+test utils::differential_operators::coefficients::tests::test_first_derivative_coefficients ... ok
+test sensor::adaptive_beamforming::opast::tests::test_opast_vs_past_stability ... ok
+test utils::differential_operators::curl::tests::test_curl_simple_rotation ... ok
+test utils::differential_operators::curl::tests::test_curl_constant_field ... ok
+test utils::differential_operators::divergence::tests::test_divergence_constant_field ... ok
+test utils::differential_operators::divergence::tests::test_divergence_linear_field ... ok
+test utils::differential_operators::gradient::tests::test_gradient_generic_types ... ok
+test utils::differential_operators::gradient::tests::test_gradient_linear_function ... ok
+test utils::differential_operators::laplacian::tests::test_laplacian_constant_field ... ok
+test utils::differential_operators::laplacian::tests::test_laplacian_generic_types ... ok
+test utils::differential_operators::laplacian::tests::test_laplacian_quadratic_field ... ok
+test physics::mechanics::acoustic_wave::kzk::complex_parabolic_diffraction::tests::test_complex_gaussian_beam_propagation ... ok
+test utils::fft_cache::tests::test_fft_cache ... ok
+test utils::format::tests::test_format_bytes ... ok
+test utils::fft_operations::tests::test_fft_ifft_identity ... ok
+test utils::format::tests::test_format_duration ... ok
+test utils::fft_cache::tests::test_parallel_operations ... ok
+test utils::linear_algebra::tests::test_numeric_ops_add_arrays ... ok
+test utils::format::tests::test_format_si_number ... ok
+test utils::iterators::tests::test_chunked_processor ... ok
+test utils::linear_algebra::tests::test_numeric_ops_l2_norm ... ok
+test utils::linear_algebra::tests::test_numeric_ops_max_abs ... ok
+test utils::iterators::tests::test_gradient_computer ... ok
+test utils::laplacian::tests::test_laplacian_constant_field ... ok
+test utils::laplacian::tests::test_laplacian_linear_field ... ok
+test utils::linear_algebra::tests::test_numeric_ops_safe_divide ... ok
+test utils::linear_algebra::tests::test_generic_float_types ... ok
+test utils::linear_algebra::tests::test_matrix_inverse ... ok
+test utils::laplacian::tests::test_different_orders ... ok
+test utils::linear_algebra::tests::test_numeric_ops_scale_array ... ok
+test utils::linear_algebra::tests::test_qr_decomposition ... ok
+test utils::linear_algebra::tests::test_solve_linear_system ... ok
+test utils::signal_processing::tests::test_empty_signal ... ok
+test utils::signal_processing::tests::test_hilbert_transform_cosine ... ok
+test utils::signal_processing::tests::test_hilbert_transform_sine ... ok
+test utils::signal_processing::tests::test_instantaneous_envelope ... ok
+test utils::signal_processing::tests::test_instantaneous_phase_constant_frequency ... ok
+test utils::signal_processing::tests::test_single_sample ... ok
+test utils::spectral::tests::test_sinc_function ... ok
+test utils::spectral::tests::test_wavenumber_computation ... ok
+test utils::stencil::tests::test_laplacian_3d ... ok
+test validation::clinical::tests::test_clinical_validator_creation ... ok
+test validation::clinical::tests::test_bmode_validation_pass ... ok
+test validation::clinical::tests::test_bmode_validation_fail ... ok
+test validation::clinical::tests::test_safety_validation ... ok
+test validation::clinical::tests::test_safety_validation_fail ... ok
+test validation::tests::test_cfl_validation ... ok
+test validation::theorem_validation::tests::test_cfl_validation ... ok
+test validation::theorem_validation::tests::test_beer_lambert_validation ... ok
+test validation::theorem_validation::tests::test_comprehensive_validation ... ok
+test validation::theorem_validation::tests::test_validation_report ... ok
+test physics::mechanics::acoustic_wave::kzk::parabolic_diffraction::tests::test_kzk_gaussian_beam ... ok
+test sensor::adaptive_beamforming::subspace::tests::test_music_peak_detection ... ok
+test solver::spectral_dg::tests::integration_tests::test_shock_handling ... ok
+test solver::spectral_dg::tests::integration_tests::test_mixed_regions ... ok
+test physics::mechanics::acoustic_wave::westervelt_fdtd::tests::test_linear_wave_propagation ... ok
+test source::focused::utils::tests::test_multi_bowl_phases_fast ... ok
+test physics::transcranial::treatment_planning::tests::test_treatment_plan_generation ... ok
+test physics::mechanics::acoustic_wave::kuznetsov::validation_test::tests::test_nonlinear_harmonic_generation_fast ... ok
+test physics::imaging::elastography::elastic_wave_solver::tests::test_volumetric_wave_propagation_single_source ... ok
+test physics::mechanics::acoustic_wave::kzk::parabolic_diffraction::tests::test_kzk_gaussian_beam_high_resolution ... ok
+test physics::imaging::elastography::elastic_wave_solver::tests::test_volumetric_wave_propagation_multiple_sources ... ok
+test clinical::workflows::tests::test_workflow_execution ... ok
+
+failures:
+
+---- uncertainty::sensitivity_analysis::tests::test_sensitivity_analysis stdout ----
+
+thread 'uncertainty::sensitivity_analysis::tests::test_sensitivity_analysis' (141080) panicked at src\uncertainty\sensitivity_analysis.rs:495:9:
+First parameter should be more sensitive
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    uncertainty::sensitivity_analysis::tests::test_sensitivity_analysis
+
+test result: FAILED. 654 passed; 1 failed; 14 ignored; 0 measured; 0 filtered out; finished in 11.35s
+
+error: test failed, to rerun pass `--lib`

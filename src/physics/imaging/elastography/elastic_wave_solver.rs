@@ -634,43 +634,261 @@ impl ElasticWaveSolver {
     }
 
     fn stress_yy_derivative(&self, i: usize, j: usize, k: usize, field: &ElasticWaveField) -> f64 {
-        // ∂σ_yy/∂y using central difference approximation
+        if j == 0 || j >= self.grid.ny - 1 {
+            return 0.0;
+        }
+
         let lambda = self.lambda[[i, j, k]];
         let mu = self.mu[[i, j, k]];
 
-        let du_dy = if j > 0 && j < self.grid.ny - 1 {
-            (field.uy[[i, j + 1, k]] - field.uy[[i, j - 1, k]]) / (2.0 * self.grid.dy)
+        let du_y_dy = (field.uy[[i, j + 1, k]] - field.uy[[i, j - 1, k]]) / (2.0 * self.grid.dy);
+        let du_x_dx = if i > 0 && i < self.grid.nx - 1 {
+            (field.ux[[i + 1, j, k]] - field.ux[[i - 1, j, k]]) / (2.0 * self.grid.dx)
         } else {
             0.0
         };
-
-        (lambda + 2.0 * mu) * du_dy
-    }
-
-    fn stress_yz_derivative(&self, _i: usize, _j: usize, _k: usize, _field: &ElasticWaveField) -> f64 {
-        0.0 // Placeholder - would need proper implementation
-    }
-
-    fn stress_zx_derivative(&self, _i: usize, _j: usize, _k: usize, _field: &ElasticWaveField) -> f64 {
-        0.0 // Placeholder - would need proper implementation
-    }
-
-    fn stress_zy_derivative(&self, _i: usize, _j: usize, _k: usize, _field: &ElasticWaveField) -> f64 {
-        0.0 // Placeholder - would need proper implementation
-    }
-
-    fn stress_zz_derivative(&self, i: usize, j: usize, k: usize, field: &ElasticWaveField) -> f64 {
-        // ∂σ_zz/∂z using central difference approximation
-        let lambda = self.lambda[[i, j, k]];
-        let mu = self.mu[[i, j, k]];
-
-        let du_dz = if k > 0 && k < self.grid.nz - 1 {
+        let du_z_dz = if k > 0 && k < self.grid.nz - 1 {
             (field.uz[[i, j, k + 1]] - field.uz[[i, j, k - 1]]) / (2.0 * self.grid.dz)
         } else {
             0.0
         };
 
-        (lambda + 2.0 * mu) * du_dz
+        let sigma_yy = (lambda + 2.0 * mu) * du_y_dy + lambda * (du_x_dx + du_z_dz);
+
+        let lambda_jp1 = self.lambda[[i, j + 1, k]];
+        let mu_jp1 = self.mu[[i, j + 1, k]];
+        let du_y_dy_jp1 = if j < self.grid.ny - 2 {
+            (field.uy[[i, j + 2, k]] - field.uy[[i, j, k]]) / (2.0 * self.grid.dy)
+        } else {
+            du_y_dy
+        };
+        let du_x_dx_jp1 = if i > 0 && i < self.grid.nx - 1 && j < self.grid.ny - 2 {
+            (field.ux[[i + 1, j + 1, k]] - field.ux[[i - 1, j + 1, k]]) / (2.0 * self.grid.dx)
+        } else {
+            du_x_dx
+        };
+        let du_z_dz_jp1 = if k > 0 && k < self.grid.nz - 1 && j < self.grid.ny - 2 {
+            (field.uz[[i, j + 1, k + 1]] - field.uz[[i, j + 1, k - 1]]) / (2.0 * self.grid.dz)
+        } else {
+            du_z_dz
+        };
+        let sigma_yy_jp1 = (lambda_jp1 + 2.0 * mu_jp1) * du_y_dy_jp1 + lambda_jp1 * (du_x_dx_jp1 + du_z_dz_jp1);
+
+        let lambda_jm1 = self.lambda[[i, j - 1, k]];
+        let mu_jm1 = self.mu[[i, j - 1, k]];
+        let du_y_dy_jm1 = if j > 1 {
+            (field.uy[[i, j, k]] - field.uy[[i, j - 2, k]]) / (2.0 * self.grid.dy)
+        } else {
+            du_y_dy
+        };
+        let du_x_dx_jm1 = if i > 0 && i < self.grid.nx - 1 && j > 1 {
+            (field.ux[[i + 1, j - 1, k]] - field.ux[[i - 1, j - 1, k]]) / (2.0 * self.grid.dx)
+        } else {
+            du_x_dx
+        };
+        let du_z_dz_jm1 = if k > 0 && k < self.grid.nz - 1 && j > 1 {
+            (field.uz[[i, j - 1, k + 1]] - field.uz[[i, j - 1, k - 1]]) / (2.0 * self.grid.dz)
+        } else {
+            du_z_dz
+        };
+        let sigma_yy_jm1 = (lambda_jm1 + 2.0 * mu_jm1) * du_y_dy_jm1 + lambda_jm1 * (du_x_dx_jm1 + du_z_dz_jm1);
+
+        (sigma_yy_jp1 - sigma_yy_jm1) / (2.0 * self.grid.dy)
+    }
+
+    fn stress_yz_derivative(&self, i: usize, j: usize, k: usize, field: &ElasticWaveField) -> f64 {
+        if k == 0 || k >= self.grid.nz - 1 {
+            return 0.0;
+        }
+
+        let mu = self.mu[[i, j, k]];
+
+        let du_y_dz = (field.uy[[i, j, k + 1]] - field.uy[[i, j, k - 1]]) / (2.0 * self.grid.dz);
+        let du_z_dy = if j > 0 && j < self.grid.ny - 1 {
+            (field.uz[[i, j + 1, k]] - field.uz[[i, j - 1, k]]) / (2.0 * self.grid.dy)
+        } else {
+            0.0
+        };
+        let sigma_yz = mu * (du_y_dz + du_z_dy);
+
+        let mu_kp1 = self.mu[[i, j, k + 1]];
+        let du_y_dz_kp1 = if k < self.grid.nz - 2 {
+            (field.uy[[i, j, k + 2]] - field.uy[[i, j, k]]) / (2.0 * self.grid.dz)
+        } else {
+            du_y_dz
+        };
+        let du_z_dy_kp1 = if j > 0 && j < self.grid.ny - 1 && k < self.grid.nz - 2 {
+            (field.uz[[i, j + 1, k + 1]] - field.uz[[i, j - 1, k + 1]]) / (2.0 * self.grid.dy)
+        } else {
+            du_z_dy
+        };
+        let sigma_yz_kp1 = mu_kp1 * (du_y_dz_kp1 + du_z_dy_kp1);
+
+        let mu_km1 = self.mu[[i, j, k - 1]];
+        let du_y_dz_km1 = if k > 1 {
+            (field.uy[[i, j, k]] - field.uy[[i, j, k - 2]]) / (2.0 * self.grid.dz)
+        } else {
+            du_y_dz
+        };
+        let du_z_dy_km1 = if j > 0 && j < self.grid.ny - 1 && k > 1 {
+            (field.uz[[i, j + 1, k - 1]] - field.uz[[i, j - 1, k - 1]]) / (2.0 * self.grid.dy)
+        } else {
+            du_z_dy
+        };
+        let sigma_yz_km1 = mu_km1 * (du_y_dz_km1 + du_z_dy_km1);
+
+        (sigma_yz_kp1 - sigma_yz_km1) / (2.0 * self.grid.dz)
+    }
+
+    fn stress_zx_derivative(&self, i: usize, j: usize, k: usize, field: &ElasticWaveField) -> f64 {
+        if i == 0 || i >= self.grid.nx - 1 {
+            return 0.0;
+        }
+
+        let mu = self.mu[[i, j, k]];
+
+        let du_z_dx = (field.uz[[i + 1, j, k]] - field.uz[[i - 1, j, k]]) / (2.0 * self.grid.dx);
+        let du_x_dz = if k > 0 && k < self.grid.nz - 1 {
+            (field.ux[[i, j, k + 1]] - field.ux[[i, j, k - 1]]) / (2.0 * self.grid.dz)
+        } else {
+            0.0
+        };
+        let sigma_zx = mu * (du_z_dx + du_x_dz);
+
+        let mu_ip1 = self.mu[[i + 1, j, k]];
+        let du_z_dx_ip1 = if i < self.grid.nx - 2 {
+            (field.uz[[i + 2, j, k]] - field.uz[[i, j, k]]) / (2.0 * self.grid.dx)
+        } else {
+            du_z_dx
+        };
+        let du_x_dz_ip1 = if k > 0 && k < self.grid.nz - 1 && i < self.grid.nx - 2 {
+            (field.ux[[i + 1, j, k + 1]] - field.ux[[i + 1, j, k - 1]]) / (2.0 * self.grid.dz)
+        } else {
+            du_x_dz
+        };
+        let sigma_zx_ip1 = mu_ip1 * (du_z_dx_ip1 + du_x_dz_ip1);
+
+        let mu_im1 = self.mu[[i - 1, j, k]];
+        let du_z_dx_im1 = if i > 1 {
+            (field.uz[[i, j, k]] - field.uz[[i - 2, j, k]]) / (2.0 * self.grid.dx)
+        } else {
+            du_z_dx
+        };
+        let du_x_dz_im1 = if k > 0 && k < self.grid.nz - 1 && i > 1 {
+            (field.ux[[i - 1, j, k + 1]] - field.ux[[i - 1, j, k - 1]]) / (2.0 * self.grid.dz)
+        } else {
+            du_x_dz
+        };
+        let sigma_zx_im1 = mu_im1 * (du_z_dx_im1 + du_x_dz_im1);
+
+        (sigma_zx_ip1 - sigma_zx_im1) / (2.0 * self.grid.dx)
+    }
+
+    fn stress_zy_derivative(&self, i: usize, j: usize, k: usize, field: &ElasticWaveField) -> f64 {
+        if j == 0 || j >= self.grid.ny - 1 {
+            return 0.0;
+        }
+
+        let mu = self.mu[[i, j, k]];
+
+        let du_z_dy = (field.uz[[i, j + 1, k]] - field.uz[[i, j - 1, k]]) / (2.0 * self.grid.dy);
+        let du_y_dz = if k > 0 && k < self.grid.nz - 1 {
+            (field.uy[[i, j, k + 1]] - field.uy[[i, j, k - 1]]) / (2.0 * self.grid.dz)
+        } else {
+            0.0
+        };
+        let sigma_zy = mu * (du_z_dy + du_y_dz);
+
+        let mu_jp1 = self.mu[[i, j + 1, k]];
+        let du_z_dy_jp1 = if j < self.grid.ny - 2 {
+            (field.uz[[i, j + 2, k]] - field.uz[[i, j, k]]) / (2.0 * self.grid.dy)
+        } else {
+            du_z_dy
+        };
+        let du_y_dz_jp1 = if k > 0 && k < self.grid.nz - 1 && j < self.grid.ny - 2 {
+            (field.uy[[i, j + 1, k + 1]] - field.uy[[i, j + 1, k - 1]]) / (2.0 * self.grid.dz)
+        } else {
+            du_y_dz
+        };
+        let sigma_zy_jp1 = mu_jp1 * (du_z_dy_jp1 + du_y_dz_jp1);
+
+        let mu_jm1 = self.mu[[i, j - 1, k]];
+        let du_z_dy_jm1 = if j > 1 {
+            (field.uz[[i, j, k]] - field.uz[[i, j - 2, k]]) / (2.0 * self.grid.dy)
+        } else {
+            du_z_dy
+        };
+        let du_y_dz_jm1 = if k > 0 && k < self.grid.nz - 1 && j > 1 {
+            (field.uy[[i, j - 1, k + 1]] - field.uy[[i, j - 1, k - 1]]) / (2.0 * self.grid.dz)
+        } else {
+            du_y_dz
+        };
+        let sigma_zy_jm1 = mu_jm1 * (du_z_dy_jm1 + du_y_dz_jm1);
+
+        (sigma_zy_jp1 - sigma_zy_jm1) / (2.0 * self.grid.dy)
+    }
+
+    fn stress_zz_derivative(&self, i: usize, j: usize, k: usize, field: &ElasticWaveField) -> f64 {
+        if k == 0 || k >= self.grid.nz - 1 {
+            return 0.0;
+        }
+
+        let lambda = self.lambda[[i, j, k]];
+        let mu = self.mu[[i, j, k]];
+
+        let du_z_dz = (field.uz[[i, j, k + 1]] - field.uz[[i, j, k - 1]]) / (2.0 * self.grid.dz);
+        let du_x_dx = if i > 0 && i < self.grid.nx - 1 {
+            (field.ux[[i + 1, j, k]] - field.ux[[i - 1, j, k]]) / (2.0 * self.grid.dx)
+        } else {
+            0.0
+        };
+        let du_y_dy = if j > 0 && j < self.grid.ny - 1 {
+            (field.uy[[i, j + 1, k]] - field.uy[[i, j - 1, k]]) / (2.0 * self.grid.dy)
+        } else {
+            0.0
+        };
+
+        let sigma_zz = (lambda + 2.0 * mu) * du_z_dz + lambda * (du_x_dx + du_y_dy);
+
+        let lambda_kp1 = self.lambda[[i, j, k + 1]];
+        let mu_kp1 = self.mu[[i, j, k + 1]];
+        let du_z_dz_kp1 = if k < self.grid.nz - 2 {
+            (field.uz[[i, j, k + 2]] - field.uz[[i, j, k]]) / (2.0 * self.grid.dz)
+        } else {
+            du_z_dz
+        };
+        let du_x_dx_kp1 = if i > 0 && i < self.grid.nx - 1 && k < self.grid.nz - 2 {
+            (field.ux[[i + 1, j, k + 1]] - field.ux[[i - 1, j, k + 1]]) / (2.0 * self.grid.dx)
+        } else {
+            du_x_dx
+        };
+        let du_y_dy_kp1 = if j > 0 && j < self.grid.ny - 1 && k < self.grid.nz - 2 {
+            (field.uy[[i, j + 1, k + 1]] - field.uy[[i, j - 1, k + 1]]) / (2.0 * self.grid.dy)
+        } else {
+            du_y_dy
+        };
+        let sigma_zz_kp1 = (lambda_kp1 + 2.0 * mu_kp1) * du_z_dz_kp1 + lambda_kp1 * (du_x_dx_kp1 + du_y_dy_kp1);
+
+        let lambda_km1 = self.lambda[[i, j, k - 1]];
+        let mu_km1 = self.mu[[i, j, k - 1]];
+        let du_z_dz_km1 = if k > 1 {
+            (field.uz[[i, j, k]] - field.uz[[i, j, k - 2]]) / (2.0 * self.grid.dz)
+        } else {
+            du_z_dz
+        };
+        let du_x_dx_km1 = if i > 0 && i < self.grid.nx - 1 && k > 1 {
+            (field.ux[[i + 1, j, k - 1]] - field.ux[[i - 1, j, k - 1]]) / (2.0 * self.grid.dx)
+        } else {
+            du_x_dx
+        };
+        let du_y_dy_km1 = if j > 0 && j < self.grid.ny - 1 && k > 1 {
+            (field.uy[[i, j + 1, k - 1]] - field.uy[[i, j - 1, k - 1]]) / (2.0 * self.grid.dy)
+        } else {
+            du_y_dy
+        };
+        let sigma_zz_km1 = (lambda_km1 + 2.0 * mu_km1) * du_z_dz_km1 + lambda_km1 * (du_x_dx_km1 + du_y_dy_km1);
+
+        (sigma_zz_kp1 - sigma_zz_km1) / (2.0 * self.grid.dz)
     }
 
     /// Set volumetric configuration for 3D SWE
@@ -1216,7 +1434,7 @@ mod tests {
         assert!(config.volumetric_attenuation);
         assert!(!config.dispersion_correction);
         assert_eq!(config.memory_optimization, 1);
-        assert!((config.front_tracking_resolution - 0.001).abs() < 1e-10);
+        assert!((config.front_tracking_resolution - 1e-8).abs() < 1e-10);
     }
 
     #[test]

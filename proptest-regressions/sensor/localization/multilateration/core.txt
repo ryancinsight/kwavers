@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 49fc150d2513267c84d10cc72cffb13cbd7b15025708752bcb1f3c12149640ae # shrinks to sx = 0.0, sy = 0.0, sz = 0.0, ax0 = 0.5546502584292156, ay0 = -0.7633126477643509, az0 = 0.0, ax1 = 0.0, ay1 = 0.0, az1 = 0.7444337753399838, ax2 = 0.0, ay2 = 0.2094896144678185, az2 = 0.0, ax3 = 0.7187451942505183, ay3 = -0.8625375907923514, az3 = 0.0
+cc 771235f17d6b822a1b37ba0def350ca4ff3bfc03353e3360b5270401544e4a71 # shrinks to sx = 0.0, sy = 0.0, sz = 0.0, ax0 = 0.0, ay0 = 0.0, az0 = -0.4565481112543208, ax1 = 0.9630519528438661, ay1 = -0.7508178968513156, az1 = -0.630188739557179, ax2 = -0.7034905465216051, ay2 = 0.0, az2 = -0.7789987931055645, ax3 = 0.5308681150374477, ay3 = 0.38093342453682455, az3 = 0.0
+cc 4b96e51cd76a0f0d360bd0a9a1093cf691bb5fd232e27f5ed7a12902901a5fad # shrinks to sx = -0.3258440641847115, sy = 0.2286870420718141, sz = 0.0, ax0 = 0.8424691874045754, ay0 = -0.9094787096034523, az0 = -0.37679865499608367, ax1 = 0.23560151660227818, ay1 = 0.0, az1 = -0.5507829715453028, ax2 = -0.4005494173325294, ay2 = 0.6093478749466236, az2 = -0.18425145338376436, ax3 = -0.07582012706516124, ay3 = -0.713879039940096, az3 = 0.9413232630888397

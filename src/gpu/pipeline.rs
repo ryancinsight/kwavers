@@ -575,15 +575,39 @@ mod tests {
 
     #[test]
     fn test_streaming_data_source() {
-        let config = StreamingConfig {
-            frame_rate: 5.0,
-            frame_size: (4, 32, 1024, 1),
-            noise_level: 0.1,
+        // Configure high frame rate for quick test and small buffers
+        let stream_cfg = StreamingConfig {
+            frame_rate: 50.0,
+            frame_size: (2, 8, 128, 1),
+            noise_level: 0.05,
             signal_amplitude: 1.0,
         };
 
-        let data_source = StreamingDataSource::new(config);
-        // Basic creation test - full streaming test would require threading
-        assert!(true); // Placeholder
+        let mut data_source = StreamingDataSource::new(stream_cfg);
+
+        // Prepare a minimal pipeline and start streaming briefly
+        let mut pipeline = RealtimeImagingPipeline::new(RealtimePipelineConfig {
+            target_fps: 60.0,
+            max_latency_ms: 50.0,
+            buffer_size: 8,
+            gpu_accelerated: false,
+            adaptive_processing: false,
+            streaming_mode: true,
+        }).unwrap();
+
+        pipeline.start().unwrap();
+        let pipeline_arc = std::sync::Arc::new(std::sync::Mutex::new(pipeline));
+        data_source.start_streaming(std::sync::Arc::clone(&pipeline_arc)).unwrap();
+
+        // Allow a few frames to be generated
+        std::thread::sleep(std::time::Duration::from_millis(100));
+
+        // Stop streaming and inspect buffer utilization
+        data_source.stop_streaming().unwrap();
+        let mut pipeline_lock = pipeline_arc.lock().unwrap();
+        let (input_util, _output_util) = pipeline_lock.buffer_utilization();
+        assert!(input_util > 0.0);
+
+        pipeline_lock.stop().unwrap();
     }
 }

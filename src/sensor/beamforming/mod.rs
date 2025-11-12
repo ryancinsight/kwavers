@@ -26,12 +26,13 @@ mod beamforming_3d;
 #[cfg(feature = "gpu")]
 mod shaders;
 #[cfg(feature = "pinn")]
+#[cfg(any(feature = "experimental_neural", feature = "pinn"))]
 mod neural;
-#[cfg(feature = "pinn")]
+#[cfg(any(feature = "experimental_neural", feature = "pinn"))]
 pub mod ai_integration;
 
 pub use algorithms::{AlgorithmImplementation, BeamformingAlgorithm, MVDRBeamformer};
-pub use config::BeamformingConfig;
+pub use config::{BeamformingConfig, BeamformingCoreConfig};
 pub use covariance::{CovarianceEstimator, SpatialSmoothing};
 pub use processor::BeamformingProcessor;
 pub use steering::{SteeringVector, SteeringVectorMethod};
@@ -43,7 +44,7 @@ pub use beamforming_3d::{
     BeamformingProcessor3D,
 };
 
-#[cfg(feature = "pinn")]
+#[cfg(any(feature = "experimental_neural", feature = "pinn"))]
 pub use neural::{
     NeuralBeamformingProcessor,
     PINNBeamformingConfig,
@@ -55,7 +56,7 @@ pub use neural::{
     PipelineStage,
     FaultToleranceState,
 };
-#[cfg(feature = "pinn")]
+#[cfg(any(feature = "experimental_neural", feature = "pinn"))]
 pub use ai_integration::{
     AIEnhancedBeamformingProcessor,
     AIBeamformingConfig,

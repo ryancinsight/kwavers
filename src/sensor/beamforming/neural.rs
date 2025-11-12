@@ -5,6 +5,25 @@
 //! neural networks. The hybrid approach achieves superior imaging quality through
 //! data-driven optimization while maintaining physical consistency.
 //!
+//! ## Current Implementation Status
+//!
+//! **Assumptions:**
+//! - Simplified matched filtering using bandpass approximation
+//! - Basic high-pass clutter suppression filter
+//! - Linear propagation models for neural beamforming
+//!
+//! **Limitations:**
+//! - Matched filtering uses simplified correlation instead of full pulse compression
+//! - Clutter suppression uses basic IIR filter instead of advanced adaptive methods
+//! - Neural components use placeholder implementations for demonstration
+//! - No real-time processing optimizations implemented
+//!
+//! **Future Improvements:**
+//! - Implement full matched filtering with actual pulse waveforms
+//! - Add advanced clutter suppression algorithms (SVD, Eigen-based)
+//! - Integrate with actual neural network backends (PyTorch, TensorFlow)
+//! - Add GPU acceleration for real-time processing
+//!
 //! ## Key Innovations
 //!
 //! ### 1. Hybrid Beamforming Architecture

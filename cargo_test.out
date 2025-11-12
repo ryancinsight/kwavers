@@ -1,0 +1,1374 @@
+warning: unused import: `ndarray::ArrayView1`
+   --> src\clinical\therapy_integration.rs:755:17
+    |
+755 |             use ndarray::ArrayView1;
+    |                 ^^^^^^^^^^^^^^^^^^^
+    |
+note: the lint level is defined here
+   --> src\lib.rs:14:5
+    |
+ 14 |     unused_imports,
+    |     ^^^^^^^^^^^^^^
+
+warning: unused import: `acoustic::AcousticProperties`
+  --> src\medium\heterogeneous\core\structure.rs:10:5
+   |
+10 |     acoustic::AcousticProperties,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `properties::*`
+ --> src\medium\heterogeneous\traits\elastic\mod.rs:6:9
+  |
+6 | pub use properties::*;
+  |         ^^^^^^^^^^^^^
+
+warning: unused import: `properties::*`
+ --> src\medium\heterogeneous\traits\viscous\mod.rs:4:9
+  |
+4 | pub use properties::*;
+  |         ^^^^^^^^^^^^^
+
+warning: unused import: `properties::*`
+ --> src\medium\heterogeneous\traits\thermal\mod.rs:6:9
+  |
+6 | pub use properties::*;
+  |         ^^^^^^^^^^^^^
+
+warning: unused import: `properties::*`
+ --> src\medium\heterogeneous\traits\optical\mod.rs:4:9
+  |
+4 | pub use properties::*;
+  |         ^^^^^^^^^^^^^
+
+warning: unused import: `properties::*`
+ --> src\medium\heterogeneous\traits\bubble\mod.rs:4:9
+  |
+4 | pub use properties::*;
+  |         ^^^^^^^^^^^^^
+
+warning: ambiguous glob re-exports
+  --> src\medium\heterogeneous\traits\mod.rs:17:9
+   |
+17 | pub use acoustic::*;
+   |         ^^^^^^^^^^^ the name `properties` in the type namespace is first re-exported here
+...
+22 | pub use bubble::*;
+   |         --------- but the name `properties` in the type namespace is also re-exported here
+   |
+   = note: `#[warn(ambiguous_glob_reexports)]` on by default
+
+warning: unused import: `acoustic::*`
+  --> src\medium\heterogeneous\traits\mod.rs:17:9
+   |
+17 | pub use acoustic::*;
+   |         ^^^^^^^^^^^
+
+warning: unused import: `elastic::*`
+  --> src\medium\heterogeneous\traits\mod.rs:18:9
+   |
+18 | pub use elastic::*;
+   |         ^^^^^^^^^^
+
+warning: unused import: `viscous::*`
+  --> src\medium\heterogeneous\traits\mod.rs:19:9
+   |
+19 | pub use viscous::*;
+   |         ^^^^^^^^^^
+
+warning: unused import: `thermal::*`
+  --> src\medium\heterogeneous\traits\mod.rs:20:9
+   |
+20 | pub use thermal::*;
+   |         ^^^^^^^^^^
+
+warning: unused import: `optical::*`
+  --> src\medium\heterogeneous\traits\mod.rs:21:9
+   |
+21 | pub use optical::*;
+   |         ^^^^^^^^^^
+
+warning: unused import: `bubble::*`
+  --> src\medium\heterogeneous\traits\mod.rs:22:9
+   |
+22 | pub use bubble::*;
+   |         ^^^^^^^^^
+
+warning: usage of an `unsafe` block
+   --> src\performance\simd_safe\operations.rs:111:17
+    |
+111 | / ...   unsafe {
+112 | | ...       super::avx2::multiply_fields_avx2(a, b, &mut re...
+113 | | ...   }
+    | |_______^
+    |
+note: the lint level is defined here
+   --> src\lib.rs:29:9
+    |
+ 29 | #![warn(unsafe_code)]
+    |         ^^^^^^^^^^^
+
+warning: usage of an `unsafe` block
+   --> src\performance\simd_safe\operations.rs:141:17
+    |
+141 | / ...   unsafe {
+142 | | ...       super::avx2::subtract_fields_avx2(a, b, &mut re...
+143 | | ...   }
+    | |_______^
+
+warning: unused imports: `Array4` and `Axis`
+  --> src\physics\imaging\elastography\elastic_wave_solver.rs:35:23
+   |
+35 | use ndarray::{Array3, Array4, Axis};
+   |                       ^^^^^^  ^^^^
+
+warning: unused import: `std::f64::consts::PI`
+  --> src\physics\imaging\elastography\elastic_wave_solver.rs:36:5
+   |
+36 | use std::f64::consts::PI;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Array2` and `Axis`
+  --> src\physics\imaging\elastography\harmonic_detection.rs:49:18
+   |
+49 | use ndarray::{s, Array2, Array3, Array4, Axis};
+   |                  ^^^^^^                  ^^^^
+
+warning: unused imports: `Array4` and `Axis`
+  --> src\physics\imaging\elastography\nonlinear.rs:57:23
+   |
+57 | use ndarray::{Array3, Array4, Axis};
+   |                       ^^^^^^  ^^^^
+
+warning: unused imports: `Array4` and `Axis`
+  --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:31:23
+   |
+31 | use ndarray::{Array3, Array4, Axis};
+   |                       ^^^^^^  ^^^^
+
+warning: unused import: `KwaversError`
+ --> src\physics\imaging\photoacoustic\gpu.rs:6:20
+  |
+6 | use crate::error::{KwaversError, KwaversResult};
+  |                    ^^^^^^^^^^^^
+
+warning: unused import: `num_complex::Complex32`
+  --> src\physics\imaging\photoacoustic\mod.rs:43:5
+   |
+43 | use num_complex::Complex32;
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `num_complex::Complex32`
+  --> src\physics\transducer\fast_nearfield.rs:75:27
+   |
+75 | use rustfft::{FftPlanner, num_complex::Complex32};
+   |                           ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Array4`
+ --> src\physics\transcranial\treatment_planning.rs:8:23
+  |
+8 | use ndarray::{Array3, Array4};
+  |                       ^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> src\physics\transcranial\treatment_planning.rs:10:5
+   |
+10 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Array2`
+ --> src\physics\transcranial\aberration_correction.rs:8:15
+  |
+8 | use ndarray::{Array2, Array3};
+  |               ^^^^^^
+
+warning: unused import: `KwaversResult`
+  --> src\physics\therapy\lithotripsy\stone_fracture.rs:23:20
+   |
+23 | use crate::error::{KwaversResult, ValidationError};
+   |                    ^^^^^^^^^^^^^
+
+warning: unused import: `Array4`
+  --> src\physics\therapy\lithotripsy\shock_wave.rs:29:23
+   |
+29 | use ndarray::{Array3, Array4};
+   |                       ^^^^^^
+
+warning: unused import: `crate::error::KwaversResult`
+  --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:20:5
+   |
+20 | use crate::error::KwaversResult;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel`
+  --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:22:5
+   |
+22 | use crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Array4`
+  --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:23:23
+   |
+23 | use ndarray::{Array3, Array4};
+   |                       ^^^^^^
+
+warning: unused import: `std::f64::consts::PI`
+  --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:25:5
+   |
+25 | use std::f64::consts::PI;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::error::KwaversResult`
+  --> src\physics\therapy\lithotripsy\bioeffects.rs:25:5
+   |
+25 | use crate::error::KwaversResult;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> src\physics\therapy\lithotripsy\bioeffects.rs:28:5
+   |
+28 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Deserialize` and `Serialize`
+  --> src\physics\therapy\lithotripsy\simulation.rs:29:13
+   |
+29 | use serde::{Deserialize, Serialize};
+   |             ^^^^^^^^^^^  ^^^^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> src\physics\therapy\lithotripsy\simulation.rs:30:5
+   |
+30 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ndarray::Axis`
+ --> src\sensor\beamforming\processor.rs:7:5
+  |
+7 | use ndarray::Axis;
+  |     ^^^^^^^^^^^^^
+
+warning: unused import: `Array1`
+ --> src\uncertainty\bayesian_networks.rs:7:15
+  |
+7 | use ndarray::{Array1, Array2};
+  |               ^^^^^^
+
+warning: unused import: `Array1`
+ --> src\uncertainty\ensemble_methods.rs:7:15
+  |
+7 | use ndarray::{Array1, Array2};
+  |               ^^^^^^
+
+warning: unused import: `Array2`
+ --> src\uncertainty\sensitivity_analysis.rs:7:23
+  |
+7 | use ndarray::{Array1, Array2};
+  |                       ^^^^^^
+
+warning: unused imports: `Array2` and `Array4`
+  --> src\uncertainty\mod.rs:84:23
+   |
+84 | use ndarray::{Array1, Array2, Array3, Array4};
+   |                       ^^^^^^          ^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> src\uncertainty\mod.rs:85:5
+   |
+85 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: trivial numeric cast: `f64` as `f64`
+   --> src\sensor\beamforming\beamforming_3d.rs:851:13
+    |
+851 |             self.config.center_frequency as f64,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: cast can be replaced by coercion; this might require a temporary variable
+note: the lint level is defined here
+   --> src\lib.rs:27:24
+    |
+ 27 | #![warn(trivial_casts, trivial_numeric_casts)]
+    |                        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: trivial numeric cast: `f64` as `f64`
+   --> src\sensor\beamforming\beamforming_3d.rs:853:13
+    |
+853 |             self.config.sound_speed as f64,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: cast can be replaced by coercion; this might require a temporary variable
+
+warning: trivial numeric cast: `f64` as `f64`
+   --> src\sensor\beamforming\beamforming_3d.rs:857:45
+    |
+857 |         Ok(steering_vector_complex.mapv(|c| c.norm() as f64))
+    |                                             ^^^^^^^^^^^^^^^
+    |
+    = help: cast can be replaced by coercion; this might require a temporary variable
+
+warning: trivial numeric cast: `f64` as `f64`
+   --> src\uncertainty\mod.rs:270:76
+    |
+270 | ...sqrt() as f64 / (signal_quality as f64).max(1e-6)) as f32;
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: cast can be replaced by coercion; this might require a temporary variable
+
+warning: unused variable: `config`
+   --> src\clinical\therapy_integration.rs:301:33
+    |
+301 | ...ranscranial_system(config: &TherapySessionConfig, grid: ...
+    |                       ^^^^^^ help: if this is intentional, prefix it with an underscore: `_config`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `ceus`
+   --> src\clinical\therapy_integration.rs:543:21
+    |
+543 |         if let Some(ref mut ceus) = self.ceus_system {
+    |                     ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_ceus`
+
+warning: unused variable: `cavitation`
+   --> src\clinical\therapy_integration.rs:549:21
+    |
+549 | ...   if let Some(ref mut cavitation) = self.cavitation_con...
+    |                   ^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cavitation`
+
+warning: unused variable: `chemistry`
+   --> src\clinical\therapy_integration.rs:554:21
+    |
+554 |         if let Some(ref mut chemistry) = self.chemical_model {
+    |                     ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_chemistry`
+
+warning: unused variable: `lithotripsy`
+   --> src\clinical\therapy_integration.rs:559:21
+    |
+559 | ...   if let Some(ref mut lithotripsy) = self.lithotripsy_s...
+    |                   ^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_lithotripsy`
+
+warning: unused variable: `acoustic_field`
+   --> src\clinical\therapy_integration.rs:649:44
+    |
+649 | ..._step(&mut self, acoustic_field: &AcousticField, dt: f64...
+    |                     ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_acoustic_field`
+
+warning: variable does not need to be mutable
+   --> src\clinical\therapy_integration.rs:693:13
+    |
+693 |         let mut velocity = Array3::zeros((nx, ny, nz));
+    |             ----^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+note: the lint level is defined here
+   --> src\lib.rs:15:5
+    |
+ 15 |     unused_mut,
+    |     ^^^^^^^^^^
+
+warning: unused variable: `acoustic_field`
+   --> src\clinical\therapy_integration.rs:736:47
+    |
+736 | ...amics(&mut self, acoustic_field: &AcousticField, dt: f64...
+    |                     ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_acoustic_field`
+
+warning: unused variable: `dt`
+   --> src\clinical\therapy_integration.rs:736:79
+    |
+736 | ...eld: &AcousticField, dt: f64) -> KwaversResult<()> {
+    |                         ^^ help: if this is intentional, prefix it with an underscore: `_dt`
+
+warning: unused variable: `dt`
+   --> src\clinical\therapy_integration.rs:751:77
+    |
+751 | ...eld: &AcousticField, dt: f64) -> KwaversResult<()> {
+    |                         ^^ help: if this is intentional, prefix it with an underscore: `_dt`
+
+warning: unused variable: `r1`
+   --> src\physics\optics\sonoluminescence\emission.rs:361:13
+    |
+361 |         let r1 = r0 + 0.5 * dt * k1_r;
+    |             ^^ help: if this is intentional, prefix it with an underscore: `_r1`
+
+warning: unused variable: `r2`
+   --> src\physics\optics\sonoluminescence\emission.rs:369:13
+    |
+369 |         let r2 = r0 + 0.5 * dt * k2_r;
+    |             ^^ help: if this is intentional, prefix it with an underscore: `_r2`
+
+warning: unused variable: `r3`
+   --> src\physics\optics\sonoluminescence\emission.rs:375:13
+    |
+375 |         let r3 = r0 + dt * k3_r;
+    |             ^^ help: if this is intentional, prefix it with an underscore: `_r3`
+
+warning: variable does not need to be mutable
+   --> src\physics\imaging\ceus\cloud_dynamics.rs:423:13
+    |
+423 |         let mut harmonics = HashMap::new();
+    |             ----^^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: unused variable: `nx`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:201:14
+    |
+201 |         let (nx, ny, nz) = grid.dimensions();
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `ny`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:201:18
+    |
+201 |         let (nx, ny, nz) = grid.dimensions();
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_ny`
+
+warning: unused variable: `nz`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:201:22
+    |
+201 |         let (nx, ny, nz) = grid.dimensions();
+    |                      ^^ help: if this is intentional, prefix it with an underscore: `_nz`
+
+warning: unused variable: `sigma_xx`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:448:13
+    |
+448 |         let sigma_xx = (lambda + 2.0 * mu) * du_x_dx + lamb...
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_xx`
+
+warning: unused variable: `sigma_xy`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:508:13
+    |
+508 |         let sigma_xy = mu * (du_x_dy + du_y_dx);
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_xy`
+
+warning: unused variable: `sigma_xz`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:556:13
+    |
+556 |         let sigma_xz = mu * (du_x_dz + du_z_dx);
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_xz`
+
+warning: unused variable: `sigma_yx`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:604:13
+    |
+604 |         let sigma_yx = mu * (du_y_dx + du_x_dy);
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_yx`
+
+warning: unused variable: `sigma_yy`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:656:13
+    |
+656 |         let sigma_yy = (lambda + 2.0 * mu) * du_y_dy + lamb...
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_yy`
+
+warning: unused variable: `sigma_yz`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:712:13
+    |
+712 |         let sigma_yz = mu * (du_y_dz + du_z_dy);
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_yz`
+
+warning: unused variable: `sigma_zx`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:756:13
+    |
+756 |         let sigma_zx = mu * (du_z_dx + du_x_dz);
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_zx`
+
+warning: unused variable: `sigma_zy`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:800:13
+    |
+800 |         let sigma_zy = mu * (du_z_dy + du_y_dz);
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_zy`
+
+warning: unused variable: `sigma_zz`
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:851:13
+    |
+851 |         let sigma_zz = (lambda + 2.0 * mu) * du_z_dz + lamb...
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sigma_zz`
+
+warning: variable does not need to be mutable
+    --> src\physics\imaging\elastography\elastic_wave_solver.rs:1087:25
+     |
+1087 |                     let mut rho = self.density[[i, j, k]];
+     |                         ----^^^
+     |                         |
+     |                         help: remove this `mut`
+
+warning: unused variable: `time`
+    --> src\physics\imaging\elastography\elastic_wave_solver.rs:1061:75
+     |
+1061 | ...cWaveField, dt: f64, time: f64) {
+     |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_time`
+
+warning: value assigned to `coverage` is never read
+    --> src\physics\imaging\elastography\elastic_wave_solver.rs:1268:28
+     |
+1268 |         let mut coverage = 0.0;
+     |                            ^^^
+     |
+     = help: maybe it is overwritten before being read?
+     = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `config`
+   --> src\physics\imaging\elastography\harmonic_detection.rs:148:54
+    |
+148 | ...rameter(&mut self, config: &HarmonicDetectionConfig) {
+    |                       ^^^^^^ help: if this is intentional, prefix it with an underscore: `_config`
+
+warning: unused variable: `fundamental_idx`
+   --> src\physics\imaging\elastography\harmonic_detection.rs:248:13
+    |
+248 |         let fundamental_idx = self.find_fundamental_peak(&s...
+    |             ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_fundamental_idx`
+
+warning: unused variable: `strain_energy_derivative_i2`
+   --> src\physics\imaging\elastography\nonlinear.rs:279:13
+    |
+279 |         let strain_energy_derivative_i2 = self.compute_stra...
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_strain_energy_derivative_i2`
+
+warning: unused variable: `strain_energy_derivative_j`
+   --> src\physics\imaging\elastography\nonlinear.rs:280:13
+    |
+280 |         let strain_energy_derivative_j = self.compute_strai...
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_strain_energy_derivative_j`
+
+warning: unused variable: `strain_invariant_i1`
+   --> src\physics\imaging\elastography\nonlinear.rs:571:9
+    |
+571 |         strain_invariant_i1: f64,
+    |         ^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_strain_invariant_i1`
+
+warning: unused variable: `strain_invariant_i2`
+   --> src\physics\imaging\elastography\nonlinear.rs:572:9
+    |
+572 |         strain_invariant_i2: f64,
+    |         ^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_strain_invariant_i2`
+
+warning: unused variable: `volume_ratio_j`
+   --> src\physics\imaging\elastography\nonlinear.rs:573:9
+    |
+573 |         volume_ratio_j: f64,
+    |         ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_volume_ratio_j`
+
+warning: unused variable: `k`
+   --> src\physics\imaging\elastography\nonlinear.rs:589:26
+    |
+589 | ...                for (k, (&mui, &alphai)) in mu.iter().zi...
+    |                         ^ help: if this is intentional, prefix it with an underscore: `_k`
+
+warning: unused variable: `nx`
+   --> src\physics\imaging\elastography\nonlinear.rs:729:14
+    |
+729 |         let (nx, ny, nz) = grid.dimensions();
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `ny`
+   --> src\physics\imaging\elastography\nonlinear.rs:729:18
+    |
+729 |         let (nx, ny, nz) = grid.dimensions();
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_ny`
+
+warning: unused variable: `nz`
+   --> src\physics\imaging\elastography\nonlinear.rs:729:22
+    |
+729 |         let (nx, ny, nz) = grid.dimensions();
+    |                      ^^ help: if this is intentional, prefix it with an underscore: `_nz`
+
+warning: unused variable: `nx`
+   --> src\physics\imaging\elastography\nonlinear.rs:785:14
+    |
+785 |         let (nx, ny, nz) = self.grid.dimensions();
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `ny`
+   --> src\physics\imaging\elastography\nonlinear.rs:785:18
+    |
+785 |         let (nx, ny, nz) = self.grid.dimensions();
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_ny`
+
+warning: unused variable: `nz`
+   --> src\physics\imaging\elastography\nonlinear.rs:785:22
+    |
+785 |         let (nx, ny, nz) = self.grid.dimensions();
+    |                      ^^ help: if this is intentional, prefix it with an underscore: `_nz`
+
+warning: unused variable: `u_divergence`
+   --> src\physics\imaging\elastography\nonlinear.rs:944:13
+    |
+944 |         let u_divergence = self.divergence(i, j, k, u);
+    |             ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_u_divergence`
+
+warning: unused variable: `total_memory`
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:105:16
+    |
+105 |     pub fn new(total_memory: usize, alignment: usize) -> Se...
+    |                ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_total_memory`
+
+warning: unused variable: `initial_displacements`
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:256:9
+    |
+256 |         initial_displacements: &[Array3<f64>],
+    |         ^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_initial_displacements`
+
+warning: unused variable: `push_times`
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:257:9
+    |
+257 |         push_times: &[f64],
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_push_times`
+
+warning: unused variable: `kernel_start`
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:295:17
+    |
+295 |             let kernel_start = std::time::Instant::now();
+    |                 ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_kernel_start`
+
+warning: unused variable: `volume_size`
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:346:9
+    |
+346 |         volume_size: usize,
+    |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_volume_size`
+
+warning: unused variable: `kernel`
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:348:13
+    |
+348 |         let kernel = self.kernel_cache.get(kernel_name).unw...
+    |             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_kernel`
+
+warning: unused variable: `kx_max`
+   --> src\physics\transducer\fast_nearfield.rs:210:13
+    |
+210 |         let kx_max = self.config.k_max_factor * PI / self.c...
+    |             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_kx_max`
+
+warning: unused variable: `ky_max`
+   --> src\physics\transducer\fast_nearfield.rs:211:13
+    |
+211 |         let ky_max = self.config.k_max_factor * PI / self.c...
+    |             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_ky_max`
+
+warning: unused variable: `skull_properties`
+   --> src\physics\transcranial\treatment_planning.rs:141:13
+    |
+141 |         let skull_properties = self.analyze_skull_propertie...
+    |             ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_skull_properties`
+
+warning: variable does not need to be mutable
+   --> src\physics\transcranial\treatment_planning.rs:220:13
+    |
+220 |         let mut element_amplitudes = vec![1.0; num_elements];
+    |             ----^^^^^^^^^^^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: unused variable: `targets`
+   --> src\physics\transcranial\treatment_planning.rs:375:39
+    |
+375 | ...atment_time(&self, targets: &[TargetVolume], acoustic_fi...
+    |                       ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_targets`
+
+warning: unused variable: `measured_field`
+   --> src\physics\transcranial\aberration_correction.rs:217:9
+    |
+217 |         measured_field: &Array3<Complex<f64>>,
+    |         ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_measured_field`
+
+warning: variable does not need to be mutable
+   --> src\physics\transcranial\aberration_correction.rs:260:13
+    |
+260 | ...   let mut new_amplitudes = initial_correction.amplitude...
+    |           ----^^^^^^^^^^^^^^
+    |           |
+    |           help: remove this `mut`
+
+warning: unused variable: `skull_model`
+   --> src\physics\transcranial\aberration_correction.rs:311:9
+    |
+311 |         skull_model: &crate::physics::skull::CTBasedSkullMo...
+    |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_skull_model`
+
+warning: unused variable: `target_point`
+   --> src\physics\transcranial\aberration_correction.rs:313:9
+    |
+313 |         target_point: &[f64; 3],
+    |         ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_target_point`
+
+warning: variable `avg_bubble_conc` is assigned to, but never used
+   --> src\physics\transcranial\bbb_opening.rs:239:13
+    |
+239 |         let mut avg_bubble_conc = 0.0;
+    |             ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_avg_bubble_conc` instead
+
+warning: unused variable: `pressure_scale`
+   --> src\physics\transcranial\bbb_opening.rs:258:13
+    |
+258 |         let pressure_scale = self.parameters.target_mi / cu...
+    |             ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_pressure_scale`
+
+warning: value assigned to `avg_bubble_conc` is never read
+   --> src\physics\transcranial\bbb_opening.rs:253:13
+    |
+253 |             avg_bubble_conc /= count as f64;
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: value assigned to `avg_bubble_conc` is never read
+   --> src\physics\transcranial\bbb_opening.rs:247:17
+    |
+247 | ...   avg_bubble_conc += self.microbubble_concentration[[i, j, k]];
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: unused variable: `grid`
+  --> src\physics\therapy\lithotripsy\shock_wave.rs:82:45
+   |
+82 | ...ShockWaveParameters, grid: &Grid) -> KwaversResult<Self> {
+   |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_grid`
+
+warning: unused variable: `frequency`
+   --> src\physics\therapy\lithotripsy\shock_wave.rs:349:69
+    |
+349 | ...al_amplitude: f64, frequency: f64) -> f64 {
+    |                       ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_frequency`
+
+warning: unused variable: `bubble`
+   --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:298:75
+    |
+298 | ...: usize, k: usize, bubble: &BubbleState) {
+    |                       ^^^^^^ help: if this is intentional, prefix it with an underscore: `_bubble`
+
+warning: unused variable: `exposure_time`
+   --> src\physics\therapy\lithotripsy\bioeffects.rs:159:76
+    |
+159 | ...d: &Array3<f64>, exposure_time: f64) {
+    |                     ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_exposure_time`
+
+warning: unused variable: `t_blood`
+   --> src\physics\therapy\lithotripsy\bioeffects.rs:163:13
+    |
+163 |         let t_blood = 37.0; // Blood temperature (┬░C)
+    |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_t_blood`
+
+warning: unused variable: `ambient_temp`
+   --> src\physics\therapy\lithotripsy\bioeffects.rs:164:13
+    |
+164 |         let ambient_temp = 37.0; // Initial tissue temperat...
+    |             ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_ambient_temp`
+
+warning: unused variable: `est_neg`
+   --> src\sensor\localization\multilateration\trilateration.rs:218:13
+    |
+218 |         let est_neg = add(p1, add(scale(ex, x), add(scale(e...
+    |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_est_neg`
+
+warning: unused variable: `z_score_68`
+   --> src\uncertainty\bayesian_networks.rs:133:13
+    |
+133 |         let z_score_68 = 1.0;
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_z_score_68`
+
+warning: unused variable: `source_pressure`
+   --> src\validation\theorem_validation.rs:401:9
+    |
+401 |         source_pressure: f64,
+    |         ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_source_pressure`
+
+warning: multiple fields are never read
+  --> src\clinical\workflows.rs:44:5
+   |
+43 | struct PhotoacousticConfig {
+   |        ------------------- fields in this struct
+44 |     wavelength: f64,
+   |     ^^^^^^^^^^
+45 |     optical_energy: f64,
+   |     ^^^^^^^^^^^^^^
+46 |     absorption_coefficient: f64,
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+47 |     speed_of_sound: f64,
+   |     ^^^^^^^^^^^^^^
+48 |     sampling_frequency: f64,
+   |     ^^^^^^^^^^^^^^^^^^
+49 |     num_detectors: usize,
+   |     ^^^^^^^^^^^^^
+50 |     detector_radius: f64,
+   |     ^^^^^^^^^^^^^^^
+51 |     center_frequency: f64,
+   |     ^^^^^^^^^^^^^^^^
+   |
+   = note: `PhotoacousticConfig` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: multiple fields are never read
+  --> src\clinical\workflows.rs:56:5
+   |
+55 | struct ElastographyConfig {
+   |        ------------------ fields in this struct
+56 |     excitation_frequency: f64,
+   |     ^^^^^^^^^^^^^^^^^^^^
+57 |     push_duration: f64,
+   |     ^^^^^^^^^^^^^
+58 |     track_duration: f64,
+   |     ^^^^^^^^^^^^^^
+59 |     push_focal_depth: f64,
+   |     ^^^^^^^^^^^^^^^^
+60 |     track_focal_depth: f64,
+   |     ^^^^^^^^^^^^^^^^^
+61 |     frame_rate: f64,
+   |     ^^^^^^^^^^
+62 |     num_tracking_beams: usize,
+   |     ^^^^^^^^^^^^^^^^^^
+   |
+   = note: `ElastographyConfig` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `reference_ranges` is never read
+   --> src\clinical\swe_3d_workflows.rs:317:5
+    |
+315 | pub struct ClinicalDecisionSupport {
+    |            ----------------------- field in this struct
+316 |     /// Reference ranges for different tissues
+317 |     reference_ranges: HashMap<String, TissueReference>,
+    |     ^^^^^^^^^^^^^^^^
+    |
+    = note: `ClinicalDecisionSupport` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `acoustic_solver` and `transcranial_system` are never read
+   --> src\clinical\therapy_integration.rs:194:5
+    |
+186 | pub struct TherapyIntegrationOrchestrator {
+    |            ------------------------------ fields in this struct
+...
+194 |     acoustic_solver: AcousticWaveSolver,
+    |     ^^^^^^^^^^^^^^^
+...
+198 |     transcranial_system: Option<TranscranialAberrationCorre...
+    |     ^^^^^^^^^^^^^^^^^^^
+
+warning: field `grid` is never read
+   --> src\clinical\therapy_integration.rs:857:5
+    |
+855 | pub struct AcousticWaveSolver {
+    |            ------------------ field in this struct
+856 |     /// Computational grid
+857 |     grid: Grid,
+    |     ^^^^
+    |
+    = note: `AcousticWaveSolver` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `grid` is never read
+   --> src\physics\imaging\ceus\cloud_dynamics.rs:102:5
+    |
+ 96 | pub struct CloudDynamics {
+    |            ------------- field in this struct
+...
+102 |     grid: Option<Grid>,
+    |     ^^^^
+
+warning: methods `find_common_dimensions`, `compute_fusion_uncertainty`, and `estimate_modality_noise` are never used
+   --> src\physics\imaging\fusion.rs:251:8
+    |
+154 | impl MultiModalFusion {
+    | --------------------- methods in this implementation
+...
+251 |     fn find_common_dimensions(&self) -> (usize, usize, usiz...
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+...
+690 |     fn compute_fusion_uncertainty(&self) -> KwaversResult<A...
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+721 |     fn estimate_modality_noise(&self, modality_name: &str) ...
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `medium` is never read
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:175:5
+    |
+171 | pub struct ElasticWaveSolver {
+    |            ----------------- field in this struct
+...
+175 |     medium: Box<dyn Medium>,
+    |     ^^^^^^
+
+warning: field `fft_planner` is never read
+   --> src\physics\imaging\elastography\harmonic_detection.rs:167:5
+    |
+163 | pub struct HarmonicDetector {
+    |            ---------------- field in this struct
+...
+167 |     fft_planner: FftPlanner<f64>,
+    |     ^^^^^^^^^^^
+
+warning: field `material` is never read
+   --> src\physics\imaging\elastography\nonlinear.rs:710:5
+    |
+706 | pub struct NonlinearElasticWaveSolver {
+    |            -------------------------- field in this struct
+...
+710 |     material: HyperelasticModel,
+    |     ^^^^^^^^
+
+warning: field `last_access` is never read
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:100:5
+    |
+ 94 | struct GPUMemoryBlock {
+    |        -------------- field in this struct
+...
+100 |     last_access: std::time::Instant,
+    |     ^^^^^^^^^^^
+    |
+    = note: `GPUMemoryBlock` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `name`, `shared_memory`, `registers`, and `occupancy` are never read
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:193:5
+    |
+191 | struct GPUKernel {
+    |        --------- fields in this struct
+192 |     /// Kernel name
+193 |     name: String,
+    |     ^^^^
+194 |     /// Shared memory requirements
+195 |     shared_memory: usize,
+    |     ^^^^^^^^^^^^^
+196 |     /// Register usage
+197 |     registers: usize,
+    |     ^^^^^^^^^
+198 |     /// Occupancy (0-1)
+199 |     occupancy: f64,
+    |     ^^^^^^^^^
+    |
+    = note: `GPUKernel` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `quality_thresholds` is never read
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:547:5
+    |
+541 | pub struct AdaptiveResolution {
+    |            ------------------ field in this struct
+...
+547 |     quality_thresholds: Vec<f64>,
+    |     ^^^^^^^^^^^^^^^^^^
+    |
+    = note: `AdaptiveResolution` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `quality_metric` is never read
+   --> src\physics\imaging\elastography\gpu_accelerated_3d.rs:557:5
+    |
+551 | struct ResolutionLevel {
+    |        --------------- field in this struct
+...
+557 |     quality_metric: f64,
+    |     ^^^^^^^^^^^^^^
+    |
+    = note: `ResolutionLevel` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `aberration_corrector` is never read
+   --> src\physics\transcranial\treatment_planning.rs:111:5
+    |
+105 | pub struct TreatmentPlanner {
+    |            ---------------- field in this struct
+...
+111 |     aberration_corrector: crate::physics::transcranial::abe...
+    |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: field `num_elements` is never read
+  --> src\physics\transcranial\aberration_correction.rs:33:5
+   |
+25 | pub struct TranscranialAberrationCorrection {
+   |            -------------------------------- field in this struct
+...
+33 |     num_elements: usize,
+   |     ^^^^^^^^^^^^
+
+warning: field `perfusion_rate` is never read
+  --> src\physics\transcranial\safety_monitoring.rs:46:5
+   |
+36 | pub struct SafetyMonitor {
+   |            ------------- field in this struct
+...
+46 |     perfusion_rate: f64,
+   |     ^^^^^^^^^^^^^^
+
+warning: field `kzk_solver` is never read
+  --> src\physics\therapy\lithotripsy\shock_wave.rs:75:5
+   |
+71 | pub struct ShockWaveGenerator {
+   |            ------------------ field in this struct
+...
+75 |     kzk_solver: KzkSolverPlugin,
+   |     ^^^^^^^^^^
+   |
+   = note: `ShockWaveGenerator` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `kzk_solver` is never read
+   --> src\physics\therapy\lithotripsy\shock_wave.rs:181:5
+    |
+179 | pub struct ShockWavePropagation {
+    |            -------------------- field in this struct
+180 |     /// KZK solver
+181 |     kzk_solver: KzkSolverPlugin,
+    |     ^^^^^^^^^^
+    |
+    = note: `ShockWavePropagation` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `cloud_velocity` is never read
+  --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:81:5
+   |
+71 | pub struct CavitationCloudDynamics {
+   |            ----------------------- field in this struct
+...
+81 |     cloud_velocity: Array3<f64>,
+   |     ^^^^^^^^^^^^^^
+   |
+   = note: `CavitationCloudDynamics` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: method `calculate_microjet_impact` is never used
+   --> src\physics\therapy\lithotripsy\cavitation_cloud.rs:298:8
+    |
+ 88 | impl CavitationCloudDynamics {
+    | ---------------------------- method in this implementation
+...
+298 |     fn calculate_microjet_impact(&mut self, i: usize, j: us...
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `kzk_solver` is never read
+   --> src\physics\therapy\lithotripsy\simulation.rs:116:5
+    |
+100 | pub struct LithotripsySimulator {
+    |            -------------------- field in this struct
+...
+116 |     kzk_solver: KzkSolverPlugin,
+    |     ^^^^^^^^^^
+    |
+    = note: `LithotripsySimulator` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: method `compute_steering_vector_3d` is never used
+   --> src\sensor\beamforming\beamforming_3d.rs:816:8
+    |
+183 | impl BeamformingProcessor3D {
+    | --------------------------- method in this implementation
+...
+816 |     fn compute_steering_vector_3d(&self, voxel_pos: &[f32; ...
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: fields `config`, `bayesian`, `conformal`, and `ensemble` are never read
+   --> src\uncertainty\mod.rs:134:5
+    |
+133 | pub struct UncertaintyQuantifier {
+    |            --------------------- fields in this struct
+134 |     config: UncertaintyConfig,
+    |     ^^^^^^
+135 |     bayesian: Option<BayesianPINN>,
+    |     ^^^^^^^^
+136 |     conformal: Option<ConformalPredictor>,
+    |     ^^^^^^^^^
+137 |     ensemble: Option<EnsembleQuantifier>,
+    |     ^^^^^^^^
+
+warning: fields `config` and `dropout_masks` are never read
+  --> src\uncertainty\bayesian_networks.rs:43:5
+   |
+42 | pub struct BayesianPINN {
+   |            ------------ fields in this struct
+43 |     config: BayesianConfig,
+   |     ^^^^^^
+44 |     dropout_masks: Vec<Array2<bool>>,
+   |     ^^^^^^^^^^^^^
+
+warning: field `config` is never read
+  --> src\uncertainty\ensemble_methods.rs:45:5
+   |
+44 | pub struct EnsembleQuantifier {
+   |            ------------------ field in this struct
+45 |     config: EnsembleConfig,
+   |     ^^^^^^
+
+warning: field `random_seed` is never read
+   --> src\uncertainty\ensemble_methods.rs:258:5
+    |
+257 | struct EnsembleModel {
+    |        ------------- field in this struct
+258 |     random_seed: u64,
+    |     ^^^^^^^^^^^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\clinical\therapy_integration.rs:186:1
+    |
+186 | / pub struct TherapyIntegrationOrchestrator {
+187 | |     /// Session configuration
+188 | |     config: TherapySessionConfig,
+189 | |     /// Computational grid
+...   |
+206 | |     session_state: TherapySessionState,
+207 | | }
+    | |_^
+    |
+note: the lint level is defined here
+   --> src\lib.rs:25:9
+    |
+ 25 | #![warn(missing_debug_implementations)]
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable `L` should have a snake case name
+   --> src\physics\imaging\ceus\mod.rs:196:13
+    |
+196 |         let L = injection_profile.len();
+    |             ^ help: convert the identifier to snake case: `l`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: variable `L` should have a snake case name
+   --> src\physics\imaging\ceus\mod.rs:257:17
+    |
+257 |             let L = kinetics.residue_function.len();
+    |                 ^ help: convert the identifier to snake case: `l`
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\physics\imaging\ceus\cloud_dynamics.rs:96:1
+    |
+ 96 | / pub struct CloudDynamics {
+ 97 | |     /// Configuration
+ 98 | |     config: CloudConfig,
+ 99 | |     /// Bubble population
+...   |
+106 | |     incident_field: Option<IncidentField>,
+107 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\physics\imaging\elastography\elastic_wave_solver.rs:171:1
+    |
+171 | / pub struct ElasticWaveSolver {
+172 | |     /// Computational grid
+173 | |     grid: Grid,
+174 | |     /// Medium properties
+...   |
+191 | |     dispersion_factors: Option<Array3<f64>>,
+192 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\physics\imaging\elastography\harmonic_detection.rs:163:1
+    |
+163 | / pub struct HarmonicDetector {
+164 | |     /// Configuration
+165 | |     config: HarmonicDetectionConfig,
+166 | |     /// FFT planner for spectral analysis
+167 | |     fft_planner: FftPlanner<f64>,
+168 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\physics\imaging\elastography\nonlinear.rs:706:1
+    |
+706 | / pub struct NonlinearElasticWaveSolver {
+707 | |     /// Computational grid
+708 | |     grid: Grid,
+709 | |     /// Hyperelastic material model
+...   |
+718 | |     density: Array3<f64>,
+719 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\physics\transducer\fast_nearfield.rs:142:1
+    |
+142 | / pub struct FastNearfieldSolver {
+143 | |     /// Configuration
+144 | |     config: FNMConfig,
+145 | |     /// Cached angular spectrum factors by z-distance
+...   |
+152 | |     rho0: f64,
+153 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\physics\transcranial\treatment_planning.rs:105:1
+    |
+105 | / pub struct TreatmentPlanner {
+106 | |     /// Computational grid for brain volume
+107 | |     brain_grid: Grid,
+108 | |     /// Skull model from CT data
+...   |
+111 | |     aberration_corrector: crate::physics::transcranial::a...
+112 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\physics\transcranial\aberration_correction.rs:25:1
+   |
+25 | / pub struct TranscranialAberrationCorrection {
+26 | |     /// Computational grid
+27 | |     grid: Grid,
+28 | |     /// Operating frequency (Hz)
+...  |
+33 | |     num_elements: usize,
+34 | | }
+   | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\physics\transcranial\safety_monitoring.rs:36:1
+   |
+36 | / pub struct SafetyMonitor {
+37 | |     /// Temperature field (┬░C)
+38 | |     temperature: Array3<f64>,
+39 | |     /// Acoustic pressure field (Pa)
+...  |
+50 | |     thresholds: SafetyThresholds,
+51 | | }
+   | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\physics\transcranial\bbb_opening.rs:23:1
+   |
+23 | / pub struct BBBOpening {
+24 | |     /// Acoustic pressure field (Pa)
+25 | |     acoustic_pressure: Array3<f64>,
+26 | |     /// Microbubble concentration (bubbles/mL)
+...  |
+31 | |     permeability: PermeabilityEnhancement,
+32 | | }
+   | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+   --> src\uncertainty\mod.rs:133:1
+    |
+133 | / pub struct UncertaintyQuantifier {
+134 | |     config: UncertaintyConfig,
+135 | |     bayesian: Option<BayesianPINN>,
+136 | |     conformal: Option<ConformalPredictor>,
+137 | |     ensemble: Option<EnsembleQuantifier>,
+138 | |     sensitivity: Option<SensitivityAnalyzer>,
+139 | | }
+    | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\uncertainty\bayesian_networks.rs:42:1
+   |
+42 | / pub struct BayesianPINN {
+43 | |     config: BayesianConfig,
+44 | |     dropout_masks: Vec<Array2<bool>>,
+45 | | }
+   | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\uncertainty\conformal_prediction.rs:40:1
+   |
+40 | / pub struct ConformalPredictor {
+41 | |     config: ConformalConfig,
+42 | |     calibration_scores: Vec<f64>,
+43 | |     is_calibrated: bool,
+44 | | }
+   | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\uncertainty\ensemble_methods.rs:44:1
+   |
+44 | / pub struct EnsembleQuantifier {
+45 | |     config: EnsembleConfig,
+46 | |     ensemble_models: Vec<EnsembleModel>,
+47 | | }
+   | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src\uncertainty\sensitivity_analysis.rs:42:1
+   |
+42 | / pub struct SensitivityAnalyzer {
+43 | |     config: SensitivityConfig,
+44 | | }
+   | |_^
+
+warning: `kwavers` (lib) generated 163 warnings (run `cargo fix --lib -p kwavers` to apply 108 suggestions)
+   Compiling kwavers v2.14.0 (D:\kwavers)
+tests\swe_3d_validation.rs:28:62: warning: unused imports: `MultiPlanarReconstruction` and `VolumetricStatistics`
+examples\swe_3d_liver_fibrosis.rs:38:5: warning: unused imports: `ClassificationConfidence`, `LiverFibrosisStage`, and `VolumetricStatistics`
+tests\swe_3d_validation.rs:40:5: warning: unused import: `std::f64::consts::PI`
+examples\swe_3d_liver_fibrosis.rs:47:5: warning: unused import: `std::collections::HashMap`
+tests\photoacoustic_validation.rs:26:9: warning: variable does not need to be mutable
+examples\nl_swe_convergence_validation.rs:140:9: warning: unused variable: `omega`: help: if this is intentional, prefix it with an underscore: `_omega`
+tests\photoacoustic_validation.rs:67:9: warning: variable does not need to be mutable
+tests\photoacoustic_validation.rs:140:9: warning: variable does not need to be mutable
+tests\photoacoustic_validation.rs:167:9: warning: variable does not need to be mutable
+tests\swe_3d_validation.rs:89:9: warning: unused variable: `solver`: help: if this is intentional, prefix it with an underscore: `_solver`
+tests\swe_3d_validation.rs:110:10: warning: unused variable: `history`: help: if this is intentional, prefix it with an underscore: `_history`
+tests\swe_3d_validation.rs:147:10: warning: unused variable: `history`: help: if this is intentional, prefix it with an underscore: `_history`
+tests\swe_3d_validation.rs:328:9: warning: unused variable: `solver`: help: if this is intentional, prefix it with an underscore: `_solver`
+tests\swe_3d_validation.rs:332:9: warning: variable `arf_params` is assigned to, but never used
+tests\swe_3d_validation.rs:355:10: warning: unused variable: `history`: help: if this is intentional, prefix it with an underscore: `_history`
+tests\swe_3d_validation.rs:333:5: warning: value assigned to `arf_params` is never read
+tests\swe_3d_validation.rs:334:5: warning: value assigned to `arf_params` is never read
+tests\swe_3d_validation.rs:335:5: warning: value assigned to `arf_params` is never read
+tests\swe_3d_validation.rs:336:5: warning: value assigned to `arf_params` is never read
+tests\kwave_validation_suite.rs:198:59: warning: unused variable: `direction`: help: try ignoring the field: `direction: _`
+tests\kwave_validation_suite.rs:221:26: warning: unused variable: `fy`: help: if this is intentional, prefix it with an underscore: `_fy`
+tests\kwave_validation_suite.rs:221:30: warning: unused variable: `fz`: help: if this is intentional, prefix it with an underscore: `_fz`
+tests\kwave_validation_suite.rs:222:21: warning: unused variable: `radius`: help: if this is intentional, prefix it with an underscore: `_radius`
+tests\kwave_validation_suite.rs:234:14: warning: unused variable: `i`: help: if this is intentional, prefix it with an underscore: `_i`
+tests\kwave_validation_suite.rs:243:13: warning: unused variable: `n_steps`: help: if this is intentional, prefix it with an underscore: `_n_steps`
+tests\kwave_validation_suite.rs:321:35: warning: unused variable: `data`: help: if this is intentional, prefix it with an underscore: `_data`
+tests\kwave_validation_suite.rs:435:9: warning: unused variable: `sensor_mask`: help: if this is intentional, prefix it with an underscore: `_sensor_mask`
+tests\kwave_validation_suite.rs:625:37: warning: unused variable: `test_case`: help: if this is intentional, prefix it with an underscore: `_test_case`
+tests\nl_swe_validation.rs:123:13: warning: unused variable: `detector`: help: if this is intentional, prefix it with an underscore: `_detector`
+tests\nl_swe_validation.rs:340:13: warning: variable does not need to be mutable
+tests\nl_swe_validation.rs:340:13: warning: unused variable: `swe`: help: if this is intentional, prefix it with an underscore: `_swe`
+tests\nl_swe_validation.rs:346:13: warning: unused variable: `push_location`: help: if this is intentional, prefix it with an underscore: `_push_location`
+tests\nl_swe_convergence_tests.rs:32:23: warning: unused import: `Array4`
+tests\nl_swe_convergence_tests.rs:260:13: warning: unused variable: `omega`: help: if this is intentional, prefix it with an underscore: `_omega`
+tests\nl_swe_convergence_tests.rs:465:13: warning: unused variable: `j`: help: if this is intentional, prefix it with an underscore: `_j`
+tests\nl_swe_convergence_tests.rs:470:13: warning: unused variable: `sigma_analytical_33`: help: if this is intentional, prefix it with an underscore: `_sigma_analytical_33`
+tests\nl_swe_convergence_tests.rs:474:13: warning: unused variable: `sigma_analytical_11`: help: if this is intentional, prefix it with an underscore: `_sigma_analytical_11`
+tests\nl_swe_convergence_tests.rs:753:17: warning: variable does not need to be mutable
+tests\nl_swe_convergence_tests.rs:834:17: warning: variable does not need to be mutable
+tests\nl_swe_convergence_tests.rs:913:17: warning: variable does not need to be mutable
+tests\nl_swe_convergence_tests.rs:57:9: warning: field `test_case` is never read
+tests\nl_swe_convergence_tests.rs:75:8: warning: method `run_displacement_convergence_study` is never used
+warning: `kwavers` (test "photoacoustic_validation") generated 4 warnings (run `cargo fix --test "photoacoustic_validation"` to apply 4 suggestions)
+warning: `kwavers` (test "swe_3d_validation") generated 12 warnings (run `cargo fix --test "swe_3d_validation"` to apply 7 suggestions)
+examples\sonoluminescence_comparison.rs:34:53: warning: unused import: `SonoluminescenceEmission`
+examples\sonoluminescence_comparison.rs:37:5: warning: unused import: `std::f64::consts::PI`
+warning: `kwavers` (test "kwave_validation_suite") generated 9 warnings (run `cargo fix --test "kwave_validation_suite"` to apply 9 suggestions)
+examples\sonoluminescence_comparison.rs:84:62: error[E0599]: no method named `shape` found for reference `&kwavers::Grid` in the current scope: method not found in `&kwavers::Grid`
+examples\sonoluminescence_comparison.rs:87:52: error[E0599]: no method named `shape` found for reference `&kwavers::Grid` in the current scope: method not found in `&kwavers::Grid`
+examples\sonoluminescence_comparison.rs:99:37: error[E0616]: field `particle_velocity_field` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:100:43: error[E0616]: field `charge_density_field` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:101:40: error[E0616]: field `compression_field` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:103:15: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:114:31: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:115:30: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:128:57: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:153:62: error[E0599]: no method named `shape` found for reference `&kwavers::Grid` in the current scope: method not found in `&kwavers::Grid`
+examples\sonoluminescence_comparison.rs:156:52: error[E0599]: no method named `shape` found for reference `&kwavers::Grid` in the current scope: method not found in `&kwavers::Grid`
+examples\sonoluminescence_comparison.rs:168:37: error[E0616]: field `particle_velocity_field` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:169:43: error[E0616]: field `charge_density_field` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:170:40: error[E0616]: field `compression_field` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:172:15: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:183:31: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:184:30: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:194:38: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:204:57: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:231:62: error[E0599]: no method named `shape` found for reference `&kwavers::Grid` in the current scope: method not found in `&kwavers::Grid`
+warning: `kwavers` (test "nl_swe_validation") generated 4 warnings (run `cargo fix --test "nl_swe_validation"` to apply 4 suggestions)
+examples\sonoluminescence_comparison.rs:234:52: error[E0599]: no method named `shape` found for reference `&kwavers::Grid` in the current scope: method not found in `&kwavers::Grid`
+examples\sonoluminescence_comparison.rs:246:37: error[E0616]: field `particle_velocity_field` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:247:43: error[E0616]: field `charge_density_field` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:248:40: error[E0616]: field `compression_field` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:250:15: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:261:31: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:262:30: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:275:57: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:282:46: error[E0616]: field `emission` of struct `IntegratedSonoluminescence` is private: private field
+examples\sonoluminescence_comparison.rs:283:29: error[E0282]: type annotations needed: cannot infer type
+examples\clinical_therapy_workflow.rs:92:9: warning: variable does not need to be mutable
+examples\clinical_therapy_workflow.rs:149:9: warning: variable does not need to be mutable
+examples\clinical_therapy_workflow.rs:150:9: warning: variable does not need to be mutable
+warning: `kwavers` (example "sonoluminescence_comparison") generated 2 warnings
+error: could not compile `kwavers` (example "sonoluminescence_comparison") due to 30 previous errors; 2 warnings emitted
+warning: build failed, waiting for other jobs to finish...
+tests\ultrasound_physics_validation.rs:448:18: error[E0061]: this method takes 7 arguments but 4 arguments were supplied
+tests\ultrasound_physics_validation.rs:455:33: error[E0061]: this method takes 6 arguments but 3 arguments were supplied
+warning: `kwavers` (example "nl_swe_convergence_validation") generated 1 warning (run `cargo fix --example "nl_swe_convergence_validation"` to apply 1 suggestion)
+tests\ultrasound_physics_validation.rs:502:18: error[E0061]: this method takes 7 arguments but 4 arguments were supplied
+tests\ultrasound_physics_validation.rs:509:33: error[E0061]: this method takes 6 arguments but 3 arguments were supplied
+tests\ultrasound_physics_validation.rs:550:18: error[E0061]: this method takes 7 arguments but 4 arguments were supplied
+tests\ultrasound_physics_validation.rs:557:25: error[E0061]: this method takes 7 arguments but 4 arguments were supplied
+tests\ultrasound_physics_validation.rs:658:18: error[E0061]: this method takes 7 arguments but 4 arguments were supplied
+warning: `kwavers` (test "nl_swe_convergence_tests") generated 10 warnings (run `cargo fix --test "nl_swe_convergence_tests"` to apply 8 suggestions)
+error: could not compile `kwavers` (test "ultrasound_physics_validation") due to 7 previous errors
+warning: `kwavers` (example "swe_3d_liver_fibrosis") generated 2 warnings (run `cargo fix --example "swe_3d_liver_fibrosis"` to apply 2 suggestions)
+warning: `kwavers` (example "clinical_therapy_workflow") generated 3 warnings (run `cargo fix --example "clinical_therapy_workflow"` to apply 3 suggestions)

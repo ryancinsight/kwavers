@@ -144,13 +144,28 @@ impl BremsstrahlungModel {
 
     /// Calculate ionization fraction using Saha equation
     ///
+    /// # Mathematical Formulation
+    /// The Saha ionization equation for hydrogen-like atoms:
+    /// n_e * n_p / n_H = (2π m_e k T / h²)^{3/2} * exp(-χ/kT)
+    ///
+    /// Where:
+    /// - n_e, n_p, n_H are electron, proton, and neutral atom densities
+    /// - χ is the ionization energy
+    /// - m_e is electron mass, k is Boltzmann constant, h is Planck constant
+    ///
+    /// For ionization fraction x, we have: x²/(1-x) = K / n_total
+    /// where K is the Saha constant.
+    ///
     /// # Arguments
     /// * `temperature` - Temperature in Kelvin
     /// * `pressure` - Pressure in Pa
     /// * `ionization_energy` - Ionization energy in eV
     ///
     /// # Returns
-    /// Ionization fraction (0-1)
+    /// Ionization fraction (0 to 1)
+    ///
+    /// # References
+    /// Saha, M. N. (1920). "Ionization in the solar chromosphere". Philosophical Magazine, 40(238), 472-488.
     #[must_use]
     pub fn saha_ionization(&self, temperature: f64, pressure: f64, ionization_energy: f64) -> f64 {
         if temperature <= 0.0 || pressure <= 0.0 {
@@ -160,22 +175,32 @@ impl BremsstrahlungModel {
         // Convert ionization energy to Joules
         let e_ion = ionization_energy * ELECTRON_CHARGE;
 
-        // Saha constant
-        let saha_const = 2.4e21; // m⁻³·K⁻³/²
+        // Calculate Saha constant from fundamental physical constants
+        // K_base = (2π m_e k / h²)^{3/2}
+        let saha_base = (2.0 * PI * ELECTRON_MASS * BOLTZMANN_CONSTANT
+                        / (PLANCK_CONSTANT * PLANCK_CONSTANT)).powf(1.5);
 
-        // Total number density
+        // Total number density (ideal gas law)
         let n_total = pressure / (BOLTZMANN_CONSTANT * temperature);
 
-        // Saha equation solution
-        let saha_factor = saha_const
+        // Saha ionization equilibrium constant
+        // K = K_base * T^{3/2} * exp(-χ/kT)
+        let saha_constant = saha_base
             * temperature.powf(1.5)
-            * (-e_ion / (BOLTZMANN_CONSTANT * temperature)).exp()
-            / n_total;
+            * (-e_ion / (BOLTZMANN_CONSTANT * temperature)).exp();
 
-        // Saha equation: x²/(1-x) = K, which gives x² + Kx - K = 0
-        // Using quadratic formula: x = (-K + sqrt(K² + 4K)) / 2
+        // Dimensionless Saha factor: K / n_total
+        let saha_factor = saha_constant / n_total;
+
+        // Solve quadratic equation: x² + Kx - K = 0
+        // where x is ionization fraction, K = saha_factor
+        // Solution: x = [-K + sqrt(K² + 4K)] / 2
         let k = saha_factor;
-        (-k + (k * k + 4.0 * k).sqrt()) / 2.0
+        if k <= 0.0 {
+            0.0
+        } else {
+            (-k + (k * k + 4.0 * k).sqrt()) / 2.0
+        }
     }
 
     /// Calculate emission spectrum

@@ -80,37 +80,50 @@ fn apply_magnetic_bc(x: u32, y: u32, z: u32, comp: u32, h_value: f32) -> f32 {
 // Apply Mur boundary condition for electric field
 fn apply_mur_electric_bc(x: u32, y: u32, z: u32, comp: u32, e_value: f32) -> f32 {
     // Get Mur coefficients for this boundary orientation
-    let mur_coeffs = compute_mur_coefficients(params.dt, params.dx, params.dx, params.dx, params.c);
+    let mur_coeffs = compute_mur_coefficients(params.dt, params.dx, params.dy, params.dz, params.c);
 
     // Determine which boundary face we're on and apply appropriate Mur BC
-    // For electric field, we need to access previous time step values
-    // This is a simplified implementation - full implementation would need auxiliary arrays
+    // Note: This implementation approximates time-stepping using current values
+    // A full implementation would require auxiliary arrays for previous time steps
 
     if (x == 0u) {
-        // Left boundary (-x face)
+        // Left boundary (-x face) - use adjacent cell in x-direction
         let coeff = mur_coeffs[0];
-        // Simplified: use adjacent cell value (would need proper time-stepping)
-        return coeff * e_value;
+        let adjacent_x = min(x + 1u, params.nx - 1u);
+        let e_adj = get_e_field(adjacent_x, y, z, comp);
+        // Mur ABC: E_boundary = coeff * (E_adjacent - E_boundary) + E_previous
+        // Approximation: assume E_previous ≈ E_adjacent for simplicity
+        return coeff * (e_adj - e_value) + e_adj;
     } else if (x == params.nx - 1u) {
         // Right boundary (+x face)
         let coeff = mur_coeffs[1];
-        return coeff * e_value;
+        let adjacent_x = max(x - 1u, 0u);
+        let e_adj = get_e_field(adjacent_x, y, z, comp);
+        return coeff * (e_adj - e_value) + e_adj;
     } else if (y == 0u) {
         // Bottom boundary (-y face)
         let coeff = mur_coeffs[2];
-        return coeff * e_value;
+        let adjacent_y = min(y + 1u, params.ny - 1u);
+        let e_adj = get_e_field(x, adjacent_y, z, comp);
+        return coeff * (e_adj - e_value) + e_adj;
     } else if (y == params.ny - 1u) {
         // Top boundary (+y face)
         let coeff = mur_coeffs[3];
-        return coeff * e_value;
+        let adjacent_y = max(y - 1u, 0u);
+        let e_adj = get_e_field(x, adjacent_y, z, comp);
+        return coeff * (e_adj - e_value) + e_adj;
     } else if (z == 0u) {
         // Back boundary (-z face)
         let coeff = mur_coeffs[4];
-        return coeff * e_value;
+        let adjacent_z = min(z + 1u, params.nz - 1u);
+        let e_adj = get_e_field(x, y, adjacent_z, comp);
+        return coeff * (e_adj - e_value) + e_adj;
     } else if (z == params.nz - 1u) {
         // Front boundary (+z face)
         let coeff = mur_coeffs[5];
-        return coeff * e_value;
+        let adjacent_z = max(z - 1u, 0u);
+        let e_adj = get_e_field(x, y, adjacent_z, comp);
+        return coeff * (e_adj - e_value) + e_adj;
     }
 
     return e_value;
@@ -121,18 +134,45 @@ fn apply_mur_magnetic_bc(x: u32, y: u32, z: u32, comp: u32, h_value: f32) -> f32
     // Similar to electric field Mur BC but for magnetic field components
     // Magnetic field Mur BC has different formulation due to Maxwell's equations
 
-    let mur_coeffs = compute_mur_coefficients(params.dt, params.dx, params.dx, params.dx, params.c);
+    let mur_coeffs = compute_mur_coefficients(params.dt, params.dx, params.dy, params.dz, params.c);
 
-    // Apply boundary-specific Mur coefficients for magnetic field
-    if (x == 0u || x == params.nx - 1u) {
-        let coeff = mur_coeffs[0]; // Use x-direction coefficient
-        return coeff * h_value;
-    } else if (y == 0u || y == params.ny - 1u) {
-        let coeff = mur_coeffs[2]; // Use y-direction coefficient
-        return coeff * h_value;
-    } else if (z == 0u || z == params.nz - 1u) {
-        let coeff = mur_coeffs[4]; // Use z-direction coefficient
-        return coeff * h_value;
+    // Apply boundary-specific Mur coefficients for magnetic field with proper adjacent cell access
+    if (x == 0u) {
+        // Left boundary (-x face)
+        let coeff = mur_coeffs[0];
+        let adjacent_x = min(x + 1u, params.nx - 1u);
+        let h_adj = get_h_field(adjacent_x, y, z, comp);
+        return coeff * (h_adj - h_value) + h_adj;
+    } else if (x == params.nx - 1u) {
+        // Right boundary (+x face)
+        let coeff = mur_coeffs[1];
+        let adjacent_x = max(x - 1u, 0u);
+        let h_adj = get_h_field(adjacent_x, y, z, comp);
+        return coeff * (h_adj - h_value) + h_adj;
+    } else if (y == 0u) {
+        // Bottom boundary (-y face)
+        let coeff = mur_coeffs[2];
+        let adjacent_y = min(y + 1u, params.ny - 1u);
+        let h_adj = get_h_field(x, adjacent_y, z, comp);
+        return coeff * (h_adj - h_value) + h_adj;
+    } else if (y == params.ny - 1u) {
+        // Top boundary (+y face)
+        let coeff = mur_coeffs[3];
+        let adjacent_y = max(y - 1u, 0u);
+        let h_adj = get_h_field(x, adjacent_y, z, comp);
+        return coeff * (h_adj - h_value) + h_adj;
+    } else if (z == 0u) {
+        // Back boundary (-z face)
+        let coeff = mur_coeffs[4];
+        let adjacent_z = min(z + 1u, params.nz - 1u);
+        let h_adj = get_h_field(x, y, adjacent_z, comp);
+        return coeff * (h_adj - h_value) + h_adj;
+    } else if (z == params.nz - 1u) {
+        // Front boundary (+z face)
+        let coeff = mur_coeffs[5];
+        let adjacent_z = max(z - 1u, 0u);
+        let h_adj = get_h_field(x, y, adjacent_z, comp);
+        return coeff * (h_adj - h_value) + h_adj;
     }
 
     return h_value;

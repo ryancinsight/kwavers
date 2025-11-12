@@ -93,7 +93,12 @@ pub use geometry::{make_ball, make_disc, make_line, make_sphere}; // k-Wave comp
 pub use grid::Grid;
 pub use medium::{homogeneous::HomogeneousMedium, Medium};
 pub use recorder::Recorder;
-pub use sensor::{ArrayGeometry, BeamformingMethod, PAMConfig, PAMPlugin, Sensor, SensorData};
+// Expose unified beamforming config at crate root and PAM elements explicitly.
+pub use sensor::{
+    ArrayGeometry, BeamformingConfig, BeamformingCoreConfig, PAMConfig, PAMPlugin, Sensor,
+    SensorData,
+};
+pub use sensor::passive_acoustic_mapping::BeamformingMethod;
 pub use source::Source;
 pub use time::Time;
 // Solver exports

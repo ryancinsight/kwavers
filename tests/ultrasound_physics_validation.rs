@@ -444,15 +444,26 @@ use ndarray::{Array1, Array2};
         let params = EmissionParameters::default();
         let mut emission = SonoluminescenceEmission::new(grid_shape, params);
 
-        // Calculate emission
-        emission.calculate_emission(&temperature_field, &pressure_field, &radius_field, 0.0);
+        // Calculate emission (provide velocity, charge density, compression fields)
+        let velocity_field = Array3::from_elem(grid_shape, 0.0);
+        let charge_density_field = Array3::from_elem(grid_shape, 0.0);
+        let compression_field = Array3::from_elem(grid_shape, 1.0);
+        emission.calculate_emission(
+            &temperature_field,
+            &pressure_field,
+            &radius_field,
+            &velocity_field,
+            &charge_density_field,
+            &compression_field,
+            0.0,
+        );
 
         // Verify emission is positive where temperature is high enough
         let total_emission: f64 = emission.emission_field.iter().sum();
         assert!(total_emission > 0.0, "Should produce light emission from hot plasma");
 
         // Test spectral calculation at a point
-        let spectrum = emission.calculate_spectrum_at_point(8000.0, 1e9, 1e-7);
+        let spectrum = emission.calculate_spectrum_at_point(8000.0, 1e9, 1e-7, 0.0, 0.0, 1.0);
         assert_eq!(spectrum.wavelengths.len(), spectrum.intensities.len(), "Spectrum should have matching wavelength/intensity arrays");
 
         // Test spectral properties
@@ -499,14 +510,25 @@ use ndarray::{Array1, Array2};
         let emission_params = EmissionParameters::default();
         let mut emission = SonoluminescenceEmission::new(grid_shape, emission_params);
 
-        emission.calculate_emission(&temperature_field, &pressure_field, &radius_field, 0.0);
+        let velocity_field = Array3::from_elem(grid_shape, 0.0);
+        let charge_density_field = Array3::from_elem(grid_shape, 0.0);
+        let compression_field = Array3::from_elem(grid_shape, 1.0);
+        emission.calculate_emission(
+            &temperature_field,
+            &pressure_field,
+            &radius_field,
+            &velocity_field,
+            &charge_density_field,
+            &compression_field,
+            0.0,
+        );
 
         // Verify acoustic-to-optic conversion produces light
         let total_light: f64 = emission.emission_field.iter().sum();
         assert!(total_light > 0.0, "Acoustic energy should convert to optical emission");
 
         // Test spectral characteristics of sonoluminescence
-        let spectrum = emission.calculate_spectrum_at_point(10000.0, 1e9, 1e-7);
+        let spectrum = emission.calculate_spectrum_at_point(10000.0, 1e9, 1e-7, 0.0, 0.0, 1.0);
         let peak_wavelength = spectrum.peak_wavelength();
 
         // Sonoluminescence typically peaks in UV-visible range (relaxed range for test)
@@ -547,14 +569,33 @@ use ndarray::{Array1, Array2};
         let emission_params = EmissionParameters::default();
         let mut emission = SonoluminescenceEmission::new(grid_shape, emission_params);
 
-        emission.calculate_emission(&temperature_field, &pressure_field, &radius_field, 0.0);
+        let velocity_field = Array3::from_elem(grid_shape, 0.0);
+        let charge_density_field = Array3::from_elem(grid_shape, 0.0);
+        let compression_field = Array3::from_elem(grid_shape, 1.0);
+        emission.calculate_emission(
+            &temperature_field,
+            &pressure_field,
+            &radius_field,
+            &velocity_field,
+            &charge_density_field,
+            &compression_field,
+            0.0,
+        );
 
         let optical_energy: f64 = emission.emission_field.iter().sum();
 
         // Test that hotter temperatures produce more light emission (main physics principle)
         let hotter_temperature_field = Array3::from_elem(grid_shape, 20000.0);
         let mut hotter_emission = SonoluminescenceEmission::new(grid_shape, EmissionParameters::default());
-        hotter_emission.calculate_emission(&hotter_temperature_field, &pressure_field, &radius_field, 0.0);
+        hotter_emission.calculate_emission(
+            &hotter_temperature_field,
+            &pressure_field,
+            &radius_field,
+            &velocity_field,
+            &charge_density_field,
+            &compression_field,
+            0.0,
+        );
 
         let hotter_optical_energy: f64 = hotter_emission.emission_field.iter().sum();
         assert!(hotter_optical_energy > optical_energy,
@@ -655,7 +696,18 @@ use ndarray::{Array1, Array2};
 
         let emission_params = EmissionParameters::default();
         let mut emission = SonoluminescenceEmission::new(grid_shape, emission_params);
-        emission.calculate_emission(&temperature_field, &pressure_field, &radius_field, 0.0);
+        let velocity_field = Array3::from_elem(grid_shape, 0.0);
+        let charge_density_field = Array3::from_elem(grid_shape, 0.0);
+        let compression_field = Array3::from_elem(grid_shape, 1.0);
+        emission.calculate_emission(
+            &temperature_field,
+            &pressure_field,
+            &radius_field,
+            &velocity_field,
+            &charge_density_field,
+            &compression_field,
+            0.0,
+        );
 
         let optical_wavelength = 500e-9; // 500 nm (green light)
 

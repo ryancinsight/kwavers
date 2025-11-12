@@ -52,6 +52,9 @@ test_octree
 *.html
 *.log
 
+# Root build/test logs
+build_log*.txt
+
 # k-Wave example replication output directories
 kwave_replication_outputs_*/
 

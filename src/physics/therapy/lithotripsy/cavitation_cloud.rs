@@ -400,15 +400,22 @@ mod tests {
 
         let mut cloud = CavitationCloudDynamics::new(params, grid_shape);
 
-        // Initialize with some bubbles
-        cloud.cloud_density[[2, 2, 2]] = 1e12; // 10^12 bubbles/m³
+        // Initialize with some bubbles in center and set up boundaries
+        let initial_density = 1e12; // 10^12 bubbles/m³
+        cloud.cloud_density[[2, 2, 2]] = initial_density;
+        cloud.cloud_boundaries.push((2, 2, 2)); // Add center as boundary for expansion
+        let initial_nonzero_voxels = cloud.cloud_density().iter().filter(|&&x| x > 0.0).count();
 
         let dt = 1e-6; // 1 μs
-        cloud.evolve_cloud(dt, 50e-6); // During expansion phase
+        cloud.evolve_cloud(dt, 10e-6); // Expansion phase (< 30 μs)
 
-        // Cloud should have expanded
-        let expanded_density: f64 = cloud.cloud_density().iter().sum();
-        assert!(expanded_density > 1e12); // More than initial density
+        // Cloud should have expanded to more voxels
+        let final_nonzero_voxels = cloud.cloud_density().iter().filter(|&&x| x > 0.0).count();
+        assert!(final_nonzero_voxels > initial_nonzero_voxels, "Cloud should expand to more voxels");
+
+        // Total density should be conserved (approximately)
+        let final_total_density: f64 = cloud.cloud_density().iter().sum();
+        assert!(final_total_density > initial_density * 0.8, "Total density should be approximately conserved during expansion");
     }
 
     #[test]

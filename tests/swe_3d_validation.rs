@@ -46,10 +46,15 @@ fn test_analytical_homogeneous_validation() {
 
     // Create homogeneous medium with known properties
     let grid = Grid::new(40, 40, 40, 0.001, 0.001, 0.001).unwrap(); // 4x4x4cm
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.49, 1.0, &grid); // E ≈ 10 kPa
+    // Use solid soft tissue model with E ≈ 10 kPa and ν ≈ 0.49
+    let medium = HomogeneousMedium::soft_tissue(10_000.0, 0.49, &grid);
 
     // Calculate expected shear wave speed analytically
-    let expected_shear_speed = (10000.0_f64 / 1000.0_f64).sqrt(); // cₛ = sqrt(E/ρ) ≈ 3.16 m/s
+    // cₛ = sqrt(μ/ρ), with μ = E/(2(1+ν)) for isotropic solids
+    let nu = 0.49_f64;
+    let mu = 10_000.0_f64 / (2.0 * (1.0 + nu));
+    // Use medium density (soft tissue ~1060 kg/m³)
+    let expected_shear_speed = (mu / 1060.0_f64).sqrt();
 
     // Setup SWE simulation
     let solver = ElasticWaveSolver::new(&grid, &medium, Default::default()).unwrap();
@@ -184,7 +189,8 @@ fn test_gpu_acceleration_performance() {
     gpu_solver.initialize_kernels().unwrap();
 
     let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.49, 1.0, &grid);
+    // Solid medium for GPU solver
+    let medium = HomogeneousMedium::soft_tissue(10_000.0, 0.49, &grid);
 
     // Create test displacements
     let mut displacements = Vec::new();
@@ -253,7 +259,7 @@ fn test_robustness_edge_cases() {
 
     // Test with very small grid
     let small_grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.49, 1.0, &small_grid);
+    let medium = HomogeneousMedium::soft_tissue(10_000.0, 0.49, &small_grid);
 
     let solver = ElasticWaveSolver::new(&small_grid, &medium, Default::default()).unwrap();
     let arf = AcousticRadiationForce::new(&small_grid, &medium).unwrap();
@@ -280,7 +286,7 @@ fn test_performance_scaling() {
 
     for &size in &sizes {
         let grid = Grid::new(size, size, size, 0.001, 0.001, 0.001).unwrap();
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.49, 1.0, &grid);
+        let medium = HomogeneousMedium::soft_tissue(10_000.0, 0.49, &grid);
 
         let solver = ElasticWaveSolver::new(&grid, &medium, Default::default()).unwrap();
         let arf = AcousticRadiationForce::new(&grid, &medium).unwrap();
@@ -316,7 +322,8 @@ fn test_literature_benchmark_comparison() {
 
     // Based on Palmeri et al. (2011) liver SWE study
     let grid = Grid::new(60, 60, 40, 0.001, 0.001, 0.0015).unwrap(); // ~6x6x6cm liver volume
-    let medium = HomogeneousMedium::new(1050.0, 1540.0, 0.49, 1.0, &grid); // Liver properties
+    // Use liver tissue model representative of F3 fibrosis
+    let medium = HomogeneousMedium::liver_tissue(3, &grid);
 
     let solver = ElasticWaveSolver::new(&grid, &medium, Default::default()).unwrap();
     let arf = AcousticRadiationForce::new(&grid, &medium).unwrap();
@@ -390,15 +397,19 @@ fn estimate_wave_speed_from_history(
 
         if i < grid.nx && j < grid.ny && k < grid.nz {
             // Find first time point with significant displacement
-            for (t, field) in history.iter().enumerate() {
+            for field in history.iter() {
                 let displacement = field.displacement_magnitude()[[i, j, k]];
                 if displacement > 1e-7 { // Threshold for wave arrival
                     let distance = ((point[0] - source_location[0]).powi(2) +
                                   (point[1] - source_location[1]).powi(2) +
                                   (point[2] - source_location[2]).powi(2)).sqrt();
-                    let time = t as f64 * 1e-6; // Assume 1μs time steps
-                    arrival_times.push((distance, time));
-                    break;
+                    let time = field.time; // Use actual recorded time
+                    // Ignore early arrivals (likely compressional components); focus on shear
+                    if time > 2.0e-3 {
+                        arrival_times.push((distance, time));
+                        break;
+                    }
+                    // else keep scanning for later shear arrival
                 }
             }
         }
@@ -414,7 +425,7 @@ fn estimate_wave_speed_from_history(
         let sum_xx: f64 = arrival_times.iter().map(|(d, _)| d * d).sum();
 
         let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x);
-        slope.abs() // Speed is positive
+        if slope != 0.0 { 1.0 / slope.abs() } else { 0.0 } // speed = distance / time
     } else {
         0.0
     }

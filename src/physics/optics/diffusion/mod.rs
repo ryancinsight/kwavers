@@ -10,30 +10,102 @@ use log::debug;
 use ndarray::{Array3, Array4, Axis};
 
 use crate::physics::constants::optical::{
-    DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF, TISSUE_ABSORPTION_COEFFICIENT,
-    TISSUE_DIFFUSION_COEFFICIENT,
+    DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF,
 };
 use crate::physics::traits::LightDiffusionModelTrait;
+
+/// Physical optical properties of a medium for photon diffusion calculations
+#[derive(Debug, Clone, Copy)]
+pub struct OpticalProperties {
+    /// Absorption coefficient μₐ [m⁻¹]
+    pub absorption_coefficient: f64,
+    /// Reduced scattering coefficient μₛ' [m⁻¹]
+    /// The reduced scattering coefficient accounts for anisotropic scattering
+    /// μₛ' = μₛ(1-g) where g is the anisotropy factor
+    pub reduced_scattering_coefficient: f64,
+    /// Refractive index n (dimensionless)
+    pub refractive_index: f64,
+}
+
+impl OpticalProperties {
+    /// Create optical properties for a typical biological tissue
+    #[must_use]
+    pub fn biological_tissue() -> Self {
+        Self {
+            absorption_coefficient: 10.0, // 10 cm⁻¹ = 100 m⁻¹ (typical NIR tissue absorption)
+            reduced_scattering_coefficient: 1000.0, // 1000 cm⁻¹ = 10000 m⁻¹ (typical tissue scattering)
+            refractive_index: 1.4, // Typical tissue refractive index
+        }
+    }
+
+    /// Create optical properties for water
+    #[must_use]
+    pub fn water() -> Self {
+        Self {
+            absorption_coefficient: 0.1, // Very low absorption in NIR
+            reduced_scattering_coefficient: 0.01, // Low scattering in pure water
+            refractive_index: 1.33,
+        }
+    }
+
+    /// Calculate diffusion coefficient from optical properties
+    ///
+    /// In the diffusion approximation: D = 1/(3(μₐ + μₛ'))
+    /// where μₐ is absorption coefficient, μₛ' is reduced scattering coefficient
+    #[must_use]
+    pub fn diffusion_coefficient(&self) -> f64 {
+        1.0 / (3.0 * (self.absorption_coefficient + self.reduced_scattering_coefficient))
+    }
+
+    /// Calculate the transport coefficient μ_tr = μₐ + μₛ'
+    #[must_use]
+    pub fn transport_coefficient(&self) -> f64 {
+        self.absorption_coefficient + self.reduced_scattering_coefficient
+    }
+
+    /// Calculate albedo ω = μₛ' / μ_tr (single scattering albedo)
+    #[must_use]
+    pub fn single_scatter_albedo(&self) -> f64 {
+        let mu_tr = self.transport_coefficient();
+        if mu_tr > 0.0 {
+            self.reduced_scattering_coefficient / mu_tr
+        } else {
+            0.0
+        }
+    }
+
+    /// Check validity of diffusion approximation
+    ///
+    /// The diffusion approximation is valid when:
+    /// 1. Reduced scattering dominates absorption: μₛ' ≫ μₐ
+    /// 2. Optical depth is large enough for diffusion to develop
+    #[must_use]
+    pub fn diffusion_approximation_valid(&self) -> bool {
+        // Require scattering to be at least 10x absorption for good diffusion approximation
+        self.reduced_scattering_coefficient >= 10.0 * self.absorption_coefficient
+    }
+}
 use std::time::Instant;
 
 #[derive(Debug)]
 pub struct LightDiffusion {
+    /// Photon fluence rate field [photons/(m²·s)]
     pub fluence_rate: Array4<f64>,
+    /// Emission spectrum field [photons/(m³·s·Hz)]
     pub emission_spectrum: Array3<f64>,
-    #[allow(dead_code)]
+    /// Physical optical properties of the medium
+    optical_properties: OpticalProperties,
+    /// Polarization model (optional)
     polarization: Option<Box<dyn PolarizationModelTrait>>,
-    #[allow(dead_code)]
+    /// Scattering calculator (optional)
     scattering: Option<ScatteringCalculator>,
-    #[allow(dead_code)]
+    /// Thermal solver (optional)
     thermal: Option<PennesSolver>,
-    #[allow(dead_code)]
+    /// Feature flags
     enable_polarization: bool,
-    #[allow(dead_code)]
     enable_scattering: bool,
-    #[allow(dead_code)]
     enable_thermal: bool,
     // Performance metrics
-    #[allow(dead_code)]
     update_time: f64,
     fft_time: f64,
     diffusion_time: f64,
@@ -42,17 +114,50 @@ pub struct LightDiffusion {
 }
 
 impl LightDiffusion {
+    /// Create a new light diffusion solver with physical optical properties
+    ///
+    /// # Arguments
+    /// * `grid` - Computational grid
+    /// * `optical_properties` - Physical optical properties of the medium
+    /// * `enable_polarization` - Enable polarization effects
+    /// * `enable_scattering` - Enable scattering calculations
+    /// * `enable_thermal` - Enable thermal effects
+    ///
+    /// # Mathematical Foundation
+    /// The photon diffusion equation is derived from the radiative transfer equation
+    /// under the diffusion approximation (P1 approximation):
+    ///
+    /// ∂φ/∂t = ∇·(D∇φ) - μₐφ + S
+    ///
+    /// where:
+    /// - φ is the photon fluence rate [photons/(m²·s)]
+    /// - D = 1/(3(μₐ + μₛ')) is the diffusion coefficient [m]
+    /// - μₐ is the absorption coefficient [m⁻¹]
+    /// - μₛ' is the reduced scattering coefficient [m⁻¹]
+    /// - S is the source term [photons/(m³·s)]
+    ///
+    /// The diffusion approximation is valid when μₛ' ≫ μₐ (scattering dominates).
     pub fn new(
         grid: &Grid,
+        optical_properties: OpticalProperties,
         enable_polarization: bool,
         enable_scattering: bool,
         enable_thermal: bool,
     ) -> Self {
         let (nx, ny, nz) = grid.dimensions();
 
+        // Validate diffusion approximation
+        if !optical_properties.diffusion_approximation_valid() {
+            log::warn!(
+                "Diffusion approximation may not be valid: μₛ'/μₐ = {:.1}, should be ≫ 10",
+                optical_properties.reduced_scattering_coefficient / optical_properties.absorption_coefficient.max(1e-10)
+            );
+        }
+
         Self {
             fluence_rate: Array4::zeros((1, nx, ny, nz)),
             emission_spectrum: Array3::zeros((nx, ny, nz)),
+            optical_properties,
             polarization: if enable_polarization {
                 Some(Box::new(LinearPolarization::new(
                     DEFAULT_POLARIZATION_FACTOR,
@@ -115,10 +220,15 @@ impl LightDiffusionModelTrait for LightDiffusion {
         // Get dimensions
         let (nx, ny, nz) = light_field.dim();
 
-        // Photon diffusion equation: ∂φ/∂t = D∇²φ - μₐφ + S
+        // Photon diffusion equation: ∂φ/∂t = ∇·(D∇φ) - μₐφ + S
         // where φ is photon fluence rate, D is diffusion coefficient, μₐ is absorption coefficient
-        let diffusion_coefficient = TISSUE_DIFFUSION_COEFFICIENT; // mm²/ns - typical tissue value
-        let absorption_coeff = TISSUE_ABSORPTION_COEFFICIENT; // mm⁻¹ - typical tissue absorption
+        //
+        // Physical diffusion coefficient from optical properties
+        let diffusion_coefficient = self.optical_properties.diffusion_coefficient();
+        let absorption_coeff = self.optical_properties.absorption_coefficient;
+
+        // Convert units if necessary (grid is in meters, coefficients in m⁻¹)
+        // diffusion_coefficient is in m²/s, absorption_coeff in m⁻¹
 
         // Create a temporary array to store the updated values
         let mut updated_field = light_field.to_owned();
@@ -184,5 +294,83 @@ impl LightDiffusionModelTrait for LightDiffusion {
             "LightDiffusion performance: update_time={:.6e}s, fft_time={:.6e}s, diffusion_time={:.6e}s, effect_time={:.6e}s, calls={}",
             self.update_time, self.fft_time, self.diffusion_time, self.effect_time, self.call_count
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::grid::Grid;
+
+    #[test]
+    fn test_optical_properties_diffusion_coefficient() {
+        // Test biological tissue properties
+        let tissue_props = OpticalProperties::biological_tissue();
+
+        // Biological tissue should have high scattering, low absorption
+        assert!(tissue_props.reduced_scattering_coefficient > tissue_props.absorption_coefficient);
+
+        // Calculate diffusion coefficient: D = 1/(3(μₐ + μₛ'))
+        let expected_d = 1.0 / (3.0 * (tissue_props.absorption_coefficient + tissue_props.reduced_scattering_coefficient));
+        let calculated_d = tissue_props.diffusion_coefficient();
+
+        approx::assert_relative_eq!(calculated_d, expected_d, epsilon = 1e-10);
+
+        // Diffusion coefficient should be small (typical tissue D ~ 0.0002 m²/s)
+        assert!(calculated_d > 0.0 && calculated_d < 0.001);
+    }
+
+    #[test]
+    fn test_optical_properties_transport_coefficient() {
+        let props = OpticalProperties {
+            absorption_coefficient: 10.0,
+            reduced_scattering_coefficient: 100.0,
+            refractive_index: 1.4,
+        };
+
+        let transport_coeff = props.transport_coefficient();
+        assert_eq!(transport_coeff, 110.0); // μₐ + μₛ'
+
+        let albedo = props.single_scatter_albedo();
+        assert_eq!(albedo, 100.0 / 110.0); // μₛ' / μ_tr
+    }
+
+    #[test]
+    fn test_diffusion_approximation_validity() {
+        // Valid case: scattering dominates
+        let valid_props = OpticalProperties {
+            absorption_coefficient: 10.0,
+            reduced_scattering_coefficient: 100.0, // 10x absorption
+            refractive_index: 1.4,
+        };
+        assert!(valid_props.diffusion_approximation_valid());
+
+        // Invalid case: absorption dominates
+        let invalid_props = OpticalProperties {
+            absorption_coefficient: 100.0,
+            reduced_scattering_coefficient: 10.0, // 0.1x absorption
+            refractive_index: 1.4,
+        };
+        assert!(!invalid_props.diffusion_approximation_valid());
+    }
+
+    #[test]
+    fn test_light_diffusion_creation() {
+        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
+        let optical_props = OpticalProperties::biological_tissue();
+
+        let diffusion = LightDiffusion::new(
+            &grid,
+            optical_props,
+            false, // no polarization
+            false, // no scattering
+            false, // no thermal
+        );
+
+        // Check that fluence rate has correct dimensions
+        assert_eq!(diffusion.fluence_rate.shape(), &[1, 10, 10, 10]);
+
+        // Check that emission spectrum has correct dimensions
+        assert_eq!(diffusion.emission_spectrum.shape(), &[10, 10, 10]);
     }
 }

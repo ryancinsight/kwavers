@@ -130,11 +130,18 @@ impl HarmonicDisplacementField {
     /// Get harmonic ratio (A₂/A₁) for nonlinearity estimation
     #[must_use]
     pub fn harmonic_ratio(&self, harmonic_order: usize) -> Array3<f64> {
-        if harmonic_order == 0 || harmonic_order > self.harmonic_magnitudes.len() {
+        // The stored `harmonic_magnitudes` exclude the fundamental and start at the second harmonic.
+        // Therefore: harmonic_order=2 -> index 0, harmonic_order=3 -> index 1, etc.
+        if harmonic_order < 2 {
             return Array3::zeros(self.fundamental_magnitude.dim());
         }
 
-        &self.harmonic_magnitudes[harmonic_order - 1] / &self.fundamental_magnitude
+        let idx = harmonic_order - 2;
+        if idx >= self.harmonic_magnitudes.len() {
+            return Array3::zeros(self.fundamental_magnitude.dim());
+        }
+
+        &self.harmonic_magnitudes[idx] / &self.fundamental_magnitude
     }
 
     /// Compute local nonlinearity parameter map
@@ -431,7 +438,7 @@ mod tests {
 
         // Set test values
         field.fundamental_magnitude.fill(1.0);
-        field.harmonic_magnitudes[1].fill(0.1); // Second harmonic
+        field.harmonic_magnitudes[0].fill(0.1); // Second harmonic
 
         let ratio = field.harmonic_ratio(2);
         assert_eq!(ratio.dim(), (5, 5, 5));

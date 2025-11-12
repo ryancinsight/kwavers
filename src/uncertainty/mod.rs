@@ -346,7 +346,7 @@ impl UncertaintyQuantifier {
     }
 
     /// Generate uncertainty report
-    pub fn generate_report(&self, results: &[Box<dyn UncertaintyResult>]) -> UncertaintyReport {
+    pub fn generate_report<'a>(&self, results: &'a [Box<dyn UncertaintyResult>]) -> UncertaintyReport<'a> {
         let mut summary = UncertaintySummary {
             mean_confidence: 0.0,
             confidence_range: (1.0, 0.0),
@@ -373,7 +373,7 @@ impl UncertaintyQuantifier {
 
         UncertaintyReport {
             summary,
-            detailed_results: Vec::new(), // TODO: Implement proper result storage
+            detailed_results: results.iter().map(|r| r.as_ref()).collect(),
             recommendations,
         }
     }
@@ -456,9 +456,9 @@ pub struct UncertaintySummary {
 
 /// Complete uncertainty report
 #[derive(Debug)]
-pub struct UncertaintyReport {
+pub struct UncertaintyReport<'a> {
     pub summary: UncertaintySummary,
-    pub detailed_results: Vec<Box<dyn UncertaintyResult>>,
+    pub detailed_results: Vec<&'a dyn UncertaintyResult>,
     pub recommendations: Vec<String>,
 }
 

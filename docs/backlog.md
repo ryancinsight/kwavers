@@ -225,6 +225,32 @@ Kwavers possesses world-class ultrasound simulation capabilities exceeding comme
 
 ## Current Priorities
 
+### Ultra High Priority (P0) - Sensor Architecture Consolidation (4 Hours) - PLANNED
+
+**OBJECTIVE**: Consolidate array processing under `sensor/beamforming` and treat `localization`/`passive_acoustic_mapping` as consumers of a unified Processor, per ADR `docs/ADR/sensor_architecture_consolidation.md`.
+
+**Scope**:
+1. Create `BeamformingCoreConfig` and `From` shims from legacy configs
+2. Move `adaptive_beamforming/*` → `beamforming/adaptive/*` and delete deprecated files
+3. Replace PAM algorithms with `BeamformingProcessor` calls; introduce `PamBeamformingConfig`
+4. Refactor localization to use Processor-backed grid search; add `BeamformSearch`
+5. Gate `beamforming/experimental/neural.rs` behind `experimental_neural` feature and update docs
+6. Update `sensor/mod.rs` re-exports and type aliases for compatibility
+7. Consolidate tests and run `cargo nextest`; benchmark with criterion
+
+**Deliverables**:
+- Updated module tree under `sensor/beamforming/*` with `adaptive` and `subspace` submodules
+- `BeamformingCoreConfig`, `PamBeamformingConfig`, and `BeamformSearch` types
+- PAM/localization consuming shared Processor; no duplicate algorithm code remains
+- Documentation updates (checklist, backlog, ADR); baseline benchmarks
+
+**Success Criteria**:
+- ✅ Single source of truth for DAS/MVDR/MUSIC/ESMV under `sensor/beamforming`
+- ✅ PAM/localization orchestration over Processor; code duplication eliminated
+- ✅ Tests pass; coverage maintained on algorithms; examples compile
+
+**Risk**: Medium — cross-module API migration; mitigated with `pub use` shims and `From` conversions
+
 ### Ultra High Priority (P0) - Sprint 162: Next Phase Planning (4 Hours) - ✅ COMPLETE
 
 **ACHIEVEMENT**: Comprehensive evidence-based strategic analysis completed

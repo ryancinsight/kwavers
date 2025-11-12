@@ -3,21 +3,25 @@
 //! Models the formation, propagation, and interaction of shock waves with stones
 //! and tissue. Implements nonlinear acoustics for high-intensity ultrasound.
 //!
-//! ## Key Physics
+//! ## Key Physics (validated formulations)
 //!
-//! 1. **Shock Wave Formation**: Nonlinear steepening of acoustic waves
-//!    ∂²p/∂t² - c²∇²p = β/ρc³ p ∂p/∂t (Burgers equation)
+//! 1. **Shock Formation (Burgers/Westervelt regime)**:
+//!    In retarded time `τ = t - z/c₀`, weakly nonlinear steepening obeys
+//!    `∂p/∂z = (β/(ρ₀ c₀³)) p ∂p/∂τ` (viscous term omitted here).
+//!    Shock formation distance: `L_s = ρ₀ c₀³ / (β ω p₀)`.
 //!
-//! 2. **Shock Wave Propagation**: KZK equation for diffraction and absorption
-//!    ∂p/∂z = (i/2k)∇_⊥²p + (α/2)ip + (βk/2ρc³)p²
+//! 2. **KZK (parabolic) propagation**:
+//!    Time-domain KZK: `∂²p/∂z∂τ = (c₀/2)∇_⊥² p + (δ/(2 c₀³)) ∂³p/∂τ³ + (β/(2 ρ₀ c₀³)) ∂²(p²)/∂τ²`.
+//!    Frequency-domain paraxial form (single-tone): `∂P/∂z = i (c₀/(2 ω)) ∇_⊥² P - α(ω) P`.
 //!
-//! 3. **Stone-Shock Interaction**: Acoustic impedance mismatch and stress concentration
+//! 3. **Stone Interaction**: Impedance mismatch and local stress concentration at interfaces.
 //!
 //! ## References
 //!
 //! - Cleveland et al. (2000): "The physics of shock wave lithotripsy"
 //! - Sapozhnikov et al. (2007): "Effect of overpressure and pulse duration on stone fragmentation with lithotripters"
 //! - Pishchalnikov et al. (2011): "Destruction of kidney stones using high-intensity focused ultrasound"
+//! - Hamilton & Blackstock (1998): "Nonlinear Acoustics" (KZK and Burgers formulations)
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
@@ -90,27 +94,31 @@ impl ShockWaveGenerator {
 
     /// Generate source pressure waveform
     fn generate_source_waveform(params: &ShockWaveParameters) -> Vec<f64> {
-        // Simple shock wave profile: fast rise, exponential decay
-        // Based on typical lithotripter waveforms
+        // Biphasic shock-like waveform: compressional lobe followed by rarefaction.
+        // Constructed as the difference of two Gaussians with distinct widths and centers.
 
-        let n_samples = 1000; // Arbitrary number of samples
+        let n_samples = 1024;
+        let dt = params.pulse_duration / n_samples as f64;
         let mut waveform = Vec::with_capacity(n_samples);
 
-        for i in 0..n_samples {
-            let t = i as f64 * params.pulse_duration / n_samples as f64;
+        let tau_r = params.rise_time.max(1e-9);
+        let t_pos = tau_r;            // center of positive lobe
+        let t_neg = 3.0 * tau_r;      // center of negative lobe
+        let sigma_pos = tau_r / 2.0;  // width of positive lobe
+        let sigma_neg = (params.pulse_duration - t_neg).max(tau_r) / 3.0; // width of negative lobe
 
-            if t <= params.rise_time {
-                // Linear rise to peak positive pressure
-                let amplitude = (t / params.rise_time) * params.peak_positive_pressure;
-                waveform.push(amplitude);
-            } else if t <= params.pulse_duration {
-                // Exponential decay to negative pressure
-                let decay_factor = (params.rise_time / (t - params.rise_time + 1e-12)).ln();
-                let amplitude = params.peak_negative_pressure * decay_factor.exp();
-                waveform.push(amplitude);
-            } else {
-                waveform.push(0.0);
-            }
+        for i in 0..n_samples {
+            let t = i as f64 * dt;
+
+            let p_pos = params.peak_positive_pressure
+                * (-(t - t_pos).powi(2) / (2.0 * sigma_pos * sigma_pos)).exp();
+            let p_neg = (-params.peak_negative_pressure.abs())
+                * (-(t - t_neg).powi(2) / (2.0 * sigma_neg * sigma_neg)).exp();
+
+            let p = p_pos + p_neg;
+            let p = p.clamp(params.peak_negative_pressure, params.peak_positive_pressure);
+
+            waveform.push(p);
         }
 
         waveform
@@ -173,6 +181,8 @@ pub struct ShockWavePropagation {
     kzk_solver: KzkSolverPlugin,
     /// Propagation distance [m]
     propagation_distance: f64,
+    /// Grid for physical spacing
+    grid: Grid,
     /// Attenuation field
     attenuation_field: Array3<f64>,
     /// Nonlinearity field
@@ -191,6 +201,7 @@ impl ShockWavePropagation {
         Ok(Self {
             kzk_solver,
             propagation_distance,
+            grid: grid.clone(),
             attenuation_field,
             nonlinearity_field,
         })
@@ -254,12 +265,13 @@ impl ShockWavePropagation {
         // This is a simplified implementation - full KZK would require frequency domain processing
 
         let mut propagated_pressure = initial_pressure.clone();
+        let initial_peak = initial_pressure.iter().fold(f64::MIN, |a, &b| a.max(b)).abs();
 
         // Apply geometric spreading (spherical wave)
         self.apply_geometric_spreading(&mut propagated_pressure);
 
         // Apply nonlinear steepening
-        self.apply_nonlinear_steepening(&mut propagated_pressure, frequency);
+        self.apply_nonlinear_steepening(&mut propagated_pressure, frequency, initial_peak);
 
         // Apply attenuation
         self.apply_attenuation(&mut propagated_pressure, frequency);
@@ -271,18 +283,19 @@ impl ShockWavePropagation {
     /// Uses 1/(1 + r) to avoid singular behavior near r ≈ 0
     fn apply_geometric_spreading(&self, pressure: &mut Array3<f64>) {
         let (nx, ny, nz) = pressure.dim();
+        let dx = self.grid.dx;
+        let dy = self.grid.dy;
+        let dz = self.grid.dz;
+        let r_scale = self.propagation_distance.max(1e-12);
 
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    let x = (i as f64 - nx as f64 / 2.0).abs();
-                    let y = (j as f64 - ny as f64 / 2.0).abs();
-                    let z = k as f64; // Propagation in z-direction
-
-                    let r = (x.powi(2) + y.powi(2) + z.powi(2)).sqrt();
-
-                    // Bounded spherical spreading: factor ∈ (0, 1]
-                    let factor = 1.0 / (1.0 + r);
+                    let x = ((i as f64 - nx as f64 / 2.0) * dx).abs();
+                    let y = ((j as f64 - ny as f64 / 2.0) * dy).abs();
+                    let z = (k as f64) * dz;
+                    let r = (x * x + y * y + z * z).sqrt();
+                    let factor = 1.0 / (1.0 + r / r_scale);
                     pressure[[i, j, k]] *= factor;
                 }
             }
@@ -290,23 +303,27 @@ impl ShockWavePropagation {
     }
 
     /// Apply nonlinear steepening using Burgers equation approximation
-    fn apply_nonlinear_steepening(&self, pressure: &mut Array3<f64>, frequency: f64) {
+    fn apply_nonlinear_steepening(&self, pressure: &mut Array3<f64>, frequency: f64, initial_peak: f64) {
+        // Shock formation distance: Ls = ρ₀ c₀³ / (β ω p₀)
         let omega = 2.0 * PI * frequency;
-        let c: f64 = 1500.0; // Speed of sound in water
+        let c0: f64 = 1500.0;
+        let rho0: f64 = 1000.0;
+        let beta: f64 = 3.5;
 
-        // Simplified nonlinear steepening
-        // In Burgers equation: ∂p/∂z = (β ω / (2 ρ c³)) p ∂p/∂z
-        // This causes shock formation over distance
+        let p0 = initial_peak.max(1.0);
+        let ls = rho0 * c0.powi(3) / (beta * omega * p0);
+        let z = self.propagation_distance;
+        let denom = 1.0 - (z / ls);
+        let mut gain = if denom <= 0.0 { 5.0 } else { 1.0 / denom };
+        if denom.abs() < 0.05 {
+            gain = 1.0 / denom.signum().max(0.1);
+        }
+        // Adaptive upper bound to prevent non-physical amplification dominating losses
+        let upper_bound = 1.0 + 0.5 * (z / ls).max(0.0);
+        let gain = gain.clamp(0.5, upper_bound.max(1.0).min(1.5));
 
-        let beta = 3.5; // Nonlinearity parameter
-        let rho = 1000.0; // Density
-
-        let steepening_factor = beta * omega / (2.0 * rho * (c as f64).powi(3)) * self.propagation_distance;
-
-        for pressure_val in pressure.iter_mut() {
-            if *pressure_val > 1e3 { // Only steepen significant pressures
-                *pressure_val *= (1.0 + steepening_factor * pressure_val.abs() * 1e-12).min(10.0);
-            }
+        for p in pressure.iter_mut() {
+            *p *= gain;
         }
     }
 
@@ -404,5 +421,47 @@ mod tests {
 
         // Should be significantly amplified by focusing and nonlinearity
         assert!(shock_amplitude > initial_amplitude * 100.0);
+    }
+
+    #[test]
+    fn test_nonlinear_steepening_expected_gain() {
+        // Scenario: uniform field, moderate z with attenuation; check expected gain application
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
+        let z = 0.1; // 10 cm
+        let frequency = 1.0e6; // 1 MHz
+        let initial_pressure = Array3::from_elem(grid.dimensions(), 1e6); // 1 MPa
+
+        let propagator = ShockWavePropagation::new(z, &grid).unwrap();
+        let propagated = propagator.propagate_shock_wave(&initial_pressure, frequency).unwrap();
+
+        let initial_max = 1e6_f64;
+
+        // Expected attenuation factor
+        let alpha_db_per_cm_per_mhz = 0.5_f64;
+        let distance_cm = z * 100.0;
+        let frequency_mhz = frequency / 1.0e6;
+        let atten_db = alpha_db_per_cm_per_mhz * frequency_mhz * distance_cm;
+        let atten_factor = 10_f64.powf(-atten_db / 20.0);
+
+        // Expected bounded nonlinear gain
+        let rho0 = 1000.0_f64;
+        let c0 = 1500.0_f64;
+        let beta = 3.5_f64;
+        let omega = 2.0 * PI * frequency;
+        let ls = rho0 * c0.powi(3) / (beta * omega * initial_max);
+        let upper_bound = (1.0 + 0.5 * (z / ls).max(0.0)).min(1.5);
+        let denom = 1.0 - (z / ls);
+        let raw_gain = if denom <= 0.0 { 5.0 } else { 1.0 / denom };
+        let expected_gain = raw_gain.min(upper_bound);
+
+        let expected_max = initial_max * expected_gain * atten_factor;
+
+        let propagated_max = propagated.iter().fold(f64::MIN, |a, &b| a.max(b));
+
+        // Allow 10% tolerance due to geometric factor variations across grid
+        let lower = expected_max * 0.9;
+        let upper = expected_max * 1.1;
+
+        assert!(propagated_max >= lower && propagated_max <= upper);
     }
 }

@@ -141,8 +141,13 @@ mod tests {
     #[tokio::test]
     async fn test_router_creation() {
         let router = create_router();
-        // Router creation succeeded - this is the main test
-        assert!(true);
+        // Validate health endpoint responds OK
+        let request = Request::get("/health")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
 
     #[cfg(debug_assertions)]
@@ -162,11 +167,19 @@ mod tests {
     #[tokio::test]
     async fn test_clinical_router_endpoints() {
         let clinical_state = ClinicalAppState::new().unwrap();
-        let router = create_clinical_router(clinical_state);
+        let router = create_clinical_router().with_state(clinical_state);
 
-        // Test that clinical routes are configured
-        // (Actual endpoint testing would require authentication setup)
-        assert!(true); // Placeholder - router creation succeeded
+        // Test that clinical devices endpoint responds OK
+        let request = Request::get("/devices")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
 }
+
+
+
+
 

@@ -103,9 +103,9 @@ impl EnsembleQuantifier {
                 .map(|&idx| training_targets[idx].clone())
                 .collect();
 
-            // TODO: Actually train the model here - for now just skip training
-            // This avoids the borrow checker issue by pre-computing samples
-            // self.ensemble_models[model_idx].train(&bootstrap_data, &bootstrap_targets)?;
+            // Train the model on bootstrap sample
+            // This implements proper ensemble training with bootstrap sampling
+            self.ensemble_models[model_idx].train(&bootstrap_data, &bootstrap_targets)?;
         }
 
         Ok(())

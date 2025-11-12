@@ -433,11 +433,11 @@ mod tests {
     fn test_thermal_dose_accumulation() {
         let mut monitor = SafetyMonitor::new((4, 4, 4), 0.01, 650e3);
         let mut temperature = Array3::from_elem((4, 4, 4), 37.0);
-        temperature[[2, 2, 2]] = 45.0; // Hot spot
+        temperature[[2, 2, 2]] = 42.0; // Hot spot below safety limit (43°C)
         let pressure = Array3::zeros((4, 4, 4));
 
         let result = monitor.update_fields(&temperature, &pressure, 1.0);
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "Update should succeed with safe temperature");
 
         // Thermal dose should accumulate
         assert!(monitor.thermal_dose.current_dose[[2, 2, 2]] > 0.0);

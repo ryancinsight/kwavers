@@ -268,12 +268,16 @@ impl MultiModalFusion {
 
         let registration = ImageRegistration::default();
 
-        // Define target grid dimensions and spacing
-        let target_dims = (
-            (self.config.output_resolution[0] * 1e3) as usize, // Convert mm to voxels
-            (self.config.output_resolution[1] * 1e3) as usize,
-            (self.config.output_resolution[2] * 1e3) as usize,
-        );
+        // Use first modality as reference for registration
+        let reference_modality = self.registered_data.values().next()
+            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
+                message: "No modalities available for fusion".to_string(),
+            }))?;
+
+        // Define target grid dimensions based on the reference modality's native grid
+        // Using output_resolution only for coordinate spacing, not to derive voxel counts.
+        let ref_shape = reference_modality.data.dim();
+        let target_dims = (ref_shape.0, ref_shape.1, ref_shape.2);
 
         let mut fused_intensity = Array3::<f64>::zeros(target_dims);
         let mut confidence_map = Array3::<f64>::zeros(target_dims);
@@ -577,12 +581,15 @@ impl MultiModalFusion {
 
         let registration = ImageRegistration::default();
 
-        // Define target grid dimensions
-        let target_dims = (
-            (self.config.output_resolution[0] * 1e3) as usize,
-            (self.config.output_resolution[1] * 1e3) as usize,
-            (self.config.output_resolution[2] * 1e3) as usize,
-        );
+        // Use first modality as reference
+        let reference_modality = self.registered_data.values().next()
+            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
+                message: "No modalities available for fusion".to_string(),
+            }))?;
+
+        // Define target grid dimensions based on the reference modality's native grid
+        let ref_shape = reference_modality.data.dim();
+        let target_dims = (ref_shape.0, ref_shape.1, ref_shape.2);
 
         let mut fused_intensity = Array3::<f64>::zeros(target_dims);
         let mut confidence_map = Array3::<f64>::zeros(target_dims);

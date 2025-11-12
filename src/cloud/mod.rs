@@ -170,24 +170,15 @@ impl CloudPINNService {
         self.validate_config(&deployment_config)?;
 
         // Create deployment based on provider
-        let handle = {
-            #[cfg(feature = "pinn")]
-            {
-                match self.provider {
-                    CloudProvider::AWS => {
-                        self.deploy_to_aws(model, &deployment_config).await?
-                    }
-                    CloudProvider::GCP => {
-                        self.deploy_to_gcp(model, &deployment_config).await?
-                    }
-                    CloudProvider::Azure => {
-                        self.deploy_to_azure(model, &deployment_config).await?
-                    }
-                }
+        let handle = match self.provider {
+            CloudProvider::AWS => {
+                self.deploy_to_aws(model, &deployment_config).await?
             }
-            #[cfg(not(feature = "pinn"))]
-            {
-                unimplemented!("PINN feature required for model deployment")
+            CloudProvider::GCP => {
+                self.deploy_to_gcp(model, &deployment_config).await?
+            }
+            CloudProvider::Azure => {
+                self.deploy_to_azure(model, &deployment_config).await?
             }
         };
 

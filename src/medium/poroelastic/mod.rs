@@ -42,3 +42,7 @@ pub use properties::{PoroelasticProperties, FluidProperties, SolidProperties};
 pub use solver::{PoroelasticSolver, PoroelasticConfig};
 pub use waves::{PoroelasticWave, WaveMode, DispersionRelation};
 
+
+
+
+

@@ -165,8 +165,15 @@ impl SensitivityAnalyzer {
         // Simplified sensitivity analysis using correlation-based method
         // In practice, would use more sophisticated variance decomposition
 
-        let mut param_values: Vec<i32> = Vec::new();
-        let mut output_means: Vec<f64> = Vec::new();
+        // Handle degenerate cases defensively
+        if parameter_samples.is_empty() || model_outputs.is_empty() {
+            return Ok((0.0, 0.0));
+        }
+
+        if total_variance <= f64::EPSILON {
+            // No output variance; sensitivities are zero to avoid NaN/Inf
+            return Ok((0.0, 0.0));
+        }
 
         // Group samples by parameter values for sensitivity analysis
         let mut param_output_map: HashMap<i32, Vec<f64>> = HashMap::new();
@@ -185,13 +192,26 @@ impl SensitivityAnalyzer {
             .map(|outputs| outputs.iter().sum::<f64>() / outputs.len() as f64)
             .collect();
 
+        if group_means.is_empty() {
+            return Ok((0.0, 0.0));
+        }
+
         let overall_mean = group_means.iter().sum::<f64>() / group_means.len() as f64;
         let between_group_variance = group_means.iter()
             .map(|&mean| (mean - overall_mean).powi(2))
             .sum::<f64>() / group_means.len() as f64;
 
-        let first_order_idx = between_group_variance / total_variance;
+        let first_order_idx = if total_variance > f64::EPSILON {
+            between_group_variance / total_variance
+        } else {
+            0.0
+        };
+
         let total_idx = first_order_idx; // Simplified
+
+        // Guard against non-finite values
+        let first_order_idx = if first_order_idx.is_finite() { first_order_idx } else { 0.0 };
+        let total_idx = if total_idx.is_finite() { total_idx } else { 0.0 };
 
         Ok((first_order_idx, total_idx))
     }
@@ -267,8 +287,12 @@ impl SensitivityAnalyzer {
             }
 
             // Compute confidence interval from bootstrap samples
+            // Filter out non-finite values to avoid sort panics
+            bootstrap_sensitivities.retain(|v| v.is_finite());
+
             if !bootstrap_sensitivities.is_empty() {
-                bootstrap_sensitivities.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                // Total ordering for f64 including NaN/Inf; after filtering only finite remain
+                bootstrap_sensitivities.sort_by(|a, b| a.total_cmp(b));
 
                 let lower_idx = ((1.0 - self.config.confidence_level) / 2.0 * bootstrap_sensitivities.len() as f64) as usize;
                 let upper_idx = ((1.0 + self.config.confidence_level) / 2.0 * bootstrap_sensitivities.len() as f64) as usize;

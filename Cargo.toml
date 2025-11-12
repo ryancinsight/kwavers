@@ -133,6 +133,7 @@ zero-copy = ["dep:rkyv"]             # Zero-copy serialization
 # Sprint 143: Added burn 0.18 integration (bincode compatibility resolved)
 pinn = ["dep:burn"]                  # Physics-informed neural networks with burn 0.18
 pinn-gpu = ["pinn", "gpu"]           # PINN with GPU acceleration via WGPU
+experimental_neural = ["pinn"]        # Gate experimental neural beamforming atop PINN deps
 # Adaptive Beamforming Refactor - Sprint ADR-001
 legacy_algorithms = []               # Legacy beamforming algorithms (deprecated)
 # Sprint 159 - Enterprise API for production deployment

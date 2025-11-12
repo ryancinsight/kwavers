@@ -5,7 +5,9 @@ pub mod scattering;
 pub mod sonoluminescence;
 
 // Re-export commonly used types
-pub use diffusion::*;
-pub use polarization::*;
+pub use diffusion::{LightDiffusion, OpticalProperties};
+pub use polarization::{
+    JonesMatrix, JonesPolarizationModel, JonesVector, LinearPolarization, PolarizationModel,
+};
 pub use scattering::{MieCalculator, MieParameters, MieResult, RayleighScattering};
 pub use sonoluminescence::{EmissionParameters, SonoluminescenceEmission};

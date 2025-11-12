@@ -9,10 +9,12 @@ pub use localization::{
     array::Sensor as LocalizationSensor, ArrayGeometry as LocalizationArrayGeometry,
     LocalizationResult, SensorArray,
 };
+// Re-export PAM components without colliding names; configs remain module-scoped.
 pub use passive_acoustic_mapping::{
-    ArrayGeometry, BeamformingConfig, BeamformingMethod, PAMConfig, PAMPlugin,
-    PassiveAcousticMapper,
+    ArrayGeometry, PAMConfig, PAMPlugin, PassiveAcousticMapper,
 };
+// Expose unified beamforming config at the sensor module root.
+pub use beamforming::{BeamformingConfig, BeamformingCoreConfig};
 
 use crate::grid::Grid;
 use crate::time::Time;

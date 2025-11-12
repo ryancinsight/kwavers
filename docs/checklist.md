@@ -218,6 +218,26 @@ Implement complete clinical ultrasound applications including microbubble contra
 - [ ] docs/gap_audit.md reflects 3D SWE capabilities
 - [ ] CHANGELOG.md updated with 3D SWE features
 
+---
+
+## Sensor Consolidation Micro-Sprint — Array Processing Unification
+
+Goal: Consolidate beamforming across `sensor` to enforce SSOT and modular boundaries per ADR "Sensor Module Architecture Consolidation".
+
+- [x] Plan consolidation architecture and publish ADR (docs/ADR/sensor_architecture_consolidation.md)
+- [ ] Create `BeamformingCoreConfig` and `From` shims from legacy configs
+- [ ] Move `adaptive_beamforming/*` → `beamforming/adaptive/*` preserving tests and docs
+- [ ] Replace PAM internal algorithms with `BeamformingProcessor` usage; add `PamBeamformingConfig`
+- [ ] Refactor localization to use `BeamformingProcessor` for grid search; add `BeamformSearch`
+- [ ] Feature-gate `beamforming/experimental/neural.rs` with `experimental_neural` feature; update docs
+- [ ] Update `sensor/mod.rs` re-exports and type aliases for compatibility
+- [ ] Migrate and consolidate unit/property/integration tests; keep suite green under `cargo nextest`
+- [ ] Bench unified Processor hot paths with criterion; capture baselines
+
+Acceptance Criteria:
+- Single source of truth for DAS/MVDR/MUSIC/ESMV under `sensor/beamforming`
+- PAM and localization consume shared Processor; no duplicate algorithm code remains
+- Docs updated; examples compile; tests pass (>90% coverage on beamforming algorithms)
 ### Final Sign-Off
 - [ ] 3D volumetric wave propagation validated against literature
 - [ ] Multi-directional shear wave generation working correctly
