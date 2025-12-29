@@ -29,7 +29,7 @@ pub fn fft_3d_array(field: &Array3<f64>) -> Array3<Complex<f64>> {
         let fft = planner.plan_fft_forward(n);
 
         for mut lane in result.lanes_mut(Axis(axis)) {
-            let mut buffer: Vec<Complex<f64>> = lane.iter().copied().collect();
+            let mut buffer: Vec<Complex<f64>> = lane.iter().copied().collect::<Vec<Complex<f64>>>();
             fft.process(&mut buffer);
             for (i, val) in buffer.into_iter().enumerate() {
                 lane[i] = val;
@@ -61,7 +61,7 @@ pub fn ifft_3d_array(field_hat: &Array3<Complex<f64>>) -> Array3<f64> {
         let fft = planner.plan_fft_inverse(n);
 
         for mut lane in result.lanes_mut(Axis(axis)) {
-            let mut buffer: Vec<Complex<f64>> = lane.iter().copied().collect();
+            let mut buffer: Vec<Complex<f64>> = lane.iter().copied().collect::<Vec<Complex<f64>>>();
             fft.process(&mut buffer);
             // Apply normalization as per DSP convention
             for (i, val) in buffer.into_iter().enumerate() {

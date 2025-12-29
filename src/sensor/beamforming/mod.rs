@@ -17,52 +17,55 @@
 //! - Capon (1969): "High-resolution frequency-wavenumber spectrum analysis"
 //! - Frost (1972): "An algorithm for linearly constrained adaptive array processing"
 
-mod algorithms;
-mod config;
-mod covariance;
-mod processor;
-mod steering;
-mod beamforming_3d;
-#[cfg(feature = "gpu")]
-mod shaders;
-#[cfg(feature = "pinn")]
-#[cfg(any(feature = "experimental_neural", feature = "pinn"))]
-mod neural;
 #[cfg(any(feature = "experimental_neural", feature = "pinn"))]
 pub mod ai_integration;
+mod algorithms;
+mod beamforming_3d;
+mod config;
+mod covariance;
+#[cfg(any(feature = "experimental_neural", feature = "pinn"))]
+mod neural;
+mod processor;
+#[cfg(feature = "gpu")]
+mod shaders;
+mod steering;
 
 pub use algorithms::{AlgorithmImplementation, BeamformingAlgorithm, MVDRBeamformer};
+pub use beamforming_3d::{
+    ApodizationWindow, BeamformingAlgorithm3D, BeamformingConfig3D, BeamformingMetrics,
+    BeamformingProcessor3D,
+};
 pub use config::{BeamformingConfig, BeamformingCoreConfig};
 pub use covariance::{CovarianceEstimator, SpatialSmoothing};
 pub use processor::BeamformingProcessor;
 pub use steering::{SteeringVector, SteeringVectorMethod};
-pub use beamforming_3d::{
-    ApodizationWindow,
-    BeamformingAlgorithm3D,
-    BeamformingConfig3D,
-    BeamformingMetrics,
-    BeamformingProcessor3D,
-};
 
 #[cfg(any(feature = "experimental_neural", feature = "pinn"))]
 pub use neural::{
-    NeuralBeamformingProcessor,
-    PINNBeamformingConfig,
-    NeuralBeamformingResult,
-    DistributedNeuralBeamformingProcessor,
-    DistributedNeuralBeamformingResult,
-    DistributedNeuralBeamformingMetrics,
-    ModelParallelConfig,
-    PipelineStage,
-    FaultToleranceState,
+    // PinnBeamformingResult,
+    // DistributedNeuralBeamformingProcessor,
+    // DistributedNeuralBeamformingResult,
+    // DistributedNeuralBeamformingMetrics,
+    BeamformingFeedback,
+    // NeuralBeamformingProcessor, // Only with pinn
+    // PINNBeamformingConfig,
+    HybridBeamformingResult,
+    NeuralBeamformer,
+    NeuralBeamformingConfig,
+    NeuralBeamformingNetwork,
+    NeuralLayer,
+    PhysicsConstraints,
+    UncertaintyEstimator,
 };
+
 #[cfg(any(feature = "experimental_neural", feature = "pinn"))]
 pub use ai_integration::{
-    AIEnhancedBeamformingProcessor,
-    AIBeamformingConfig,
-    AIBeamformingResult,
-    ClinicalDecisionSupport,
-    FeatureExtractor,
-    DiagnosisAlgorithm,
-    RealTimeWorkflow,
+    AIBeamformingConfig, AIBeamformingResult, AIEnhancedBeamformingProcessor,
+    ClinicalDecisionSupport, DiagnosisAlgorithm, FeatureExtractor, RealTimeWorkflow,
+};
+#[cfg(feature = "pinn")]
+pub use neural::{
+    DistributedNeuralBeamformingMetrics, DistributedNeuralBeamformingProcessor,
+    DistributedNeuralBeamformingResult, FaultToleranceState, ModelParallelConfig,
+    NeuralBeamformingProcessor, PINNBeamformingConfig, PinnBeamformingResult, PipelineStage,
 };

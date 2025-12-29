@@ -33,19 +33,19 @@
 //! 2. **Hamilton, M. F., & Blackstock, D. T. (1998)**. *Nonlinear Acoustics*.
 //!    Academic Press. Chapter 3: Plane waves.
 
+use kwavers::error::ValidationError;
 use kwavers::{
     grid::Grid,
-    medium::{HomogeneousMedium, CoreMedium},
+    medium::{CoreMedium, HomogeneousMedium},
     physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER},
     KwaversResult,
 };
-use kwavers::error::ValidationError;
-use std::f64::consts::PI;
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
 use ndarray::Array2;
 use rand::Rng;
+use std::collections::HashMap;
+use std::f64::consts::PI;
+use std::fs;
+use std::path::Path;
 
 /// Tolerance for numerical accuracy tests (<1% error threshold)
 const NUMERICAL_TOLERANCE: f64 = 0.01;
@@ -78,9 +78,21 @@ pub struct KWaveTestCase {
 
 #[derive(Debug, Clone)]
 pub enum SourceType {
-    PlaneWave { amplitude: f64, frequency: f64, direction: (f64, f64, f64) },
-    PointSource { position: (f64, f64, f64), amplitude: f64, frequency: f64 },
-    FocusedTransducer { focal_point: (f64, f64, f64), diameter: f64, frequency: f64 },
+    PlaneWave {
+        amplitude: f64,
+        frequency: f64,
+        direction: (f64, f64, f64),
+    },
+    PointSource {
+        position: (f64, f64, f64),
+        amplitude: f64,
+        frequency: f64,
+    },
+    FocusedTransducer {
+        focal_point: (f64, f64, f64),
+        diameter: f64,
+        frequency: f64,
+    },
 }
 
 /// k-Wave validation framework
@@ -125,12 +137,16 @@ impl KWaveValidator {
                 rho0: DENSITY_WATER,
                 source_type: SourceType::PointSource {
                     position: (0.064, 0.064, 0.0), // Center
-                    amplitude: 1e6, // 1 MPa
-                    frequency: 5e6, // 5 MHz
+                    amplitude: 1e6,                // 1 MPa
+                    frequency: 5e6,                // 5 MHz
                 },
                 sensor_positions: vec![
-                    (32, 32, 0), (64, 32, 0), (96, 32, 0), // Horizontal line
-                    (64, 32, 0), (64, 64, 0), (64, 96, 0), // Vertical line
+                    (32, 32, 0),
+                    (64, 32, 0),
+                    (96, 32, 0), // Horizontal line
+                    (64, 32, 0),
+                    (64, 64, 0),
+                    (64, 96, 0), // Vertical line
                 ],
                 simulation_time: 20e-6, // 20 μs
                 pml_size: 10,
@@ -151,7 +167,10 @@ impl KWaveValidator {
             self.generate_kwave_script(name, test_case)?;
         }
 
-        println!("Generated k-Wave MATLAB scripts in directory: {}", self.output_dir);
+        println!(
+            "Generated k-Wave MATLAB scripts in directory: {}",
+            self.output_dir
+        );
         println!("Run these scripts in MATLAB with k-Wave toolbox installed.");
         println!("Then run: cargo test --test kwave_validation_suite -- --compare-kwave-outputs");
 
@@ -165,7 +184,10 @@ impl KWaveValidator {
         let mut script = String::new();
 
         // MATLAB script header
-        script.push_str(&format!("%% k-Wave validation script for: {}\n", test_case.name));
+        script.push_str(&format!(
+            "%% k-Wave validation script for: {}\n",
+            test_case.name
+        ));
         script.push_str(&format!("%% {}\n\n", test_case.description));
 
         // Clear workspace
@@ -185,46 +207,91 @@ impl KWaveValidator {
 
         // Medium setup
         script.push_str(&format!("%% Medium setup\n"));
-        script.push_str(&format!("medium.sound_speed = {:.1};      %% m/s\n", test_case.c0));
-        script.push_str(&format!("medium.density = {:.1};           %% kg/m³\n", test_case.rho0));
+        script.push_str(&format!(
+            "medium.sound_speed = {:.1};      %% m/s\n",
+            test_case.c0
+        ));
+        script.push_str(&format!(
+            "medium.density = {:.1};           %% kg/m³\n",
+            test_case.rho0
+        ));
 
         // Add absorption if needed
-        script.push_str(&format!("medium.alpha_coeff = 0.75;         %% dB/(MHz^y cm)\n"));
+        script.push_str(&format!(
+            "medium.alpha_coeff = 0.75;         %% dB/(MHz^y cm)\n"
+        ));
         script.push_str(&format!("medium.alpha_power = 1.5;          %% y\n\n"));
 
         // Source setup
         script.push_str(&format!("%% Source setup\n"));
         match &test_case.source_type {
-            SourceType::PlaneWave { amplitude, frequency, direction } => {
-                script.push_str(&format!("source.p0 = {:.1};              %% Pa\n", amplitude));
-                script.push_str(&format!("source_freq = {:.1};            %% Hz\n", frequency));
+            SourceType::PlaneWave {
+                amplitude,
+                frequency,
+                direction,
+            } => {
+                script.push_str(&format!(
+                    "source.p0 = {:.1};              %% Pa\n",
+                    amplitude
+                ));
+                script.push_str(&format!(
+                    "source_freq = {:.1};            %% Hz\n",
+                    frequency
+                ));
                 script.push_str(&format!("source_cycles = 3;\n"));
                 script.push_str(&format!("source.p = makeTimeVaryingSource(kgrid, source, source_freq, source_cycles);\n"));
                 // For plane wave, set source mask to left boundary
                 script.push_str(&format!("source.p_mask = zeros(Nx, Ny, Nz);\n"));
                 script.push_str(&format!("source.p_mask(1, :, :) = 1;\n"));
             }
-            SourceType::PointSource { position, amplitude, frequency } => {
+            SourceType::PointSource {
+                position,
+                amplitude,
+                frequency,
+            } => {
                 let (x, y, z) = *position;
-                let ix = ((x / test_case.grid_spacing) as usize).min(nx-1);
-                let iy = ((y / test_case.grid_spacing) as usize).min(ny-1);
-                let iz = ((z / test_case.grid_spacing) as usize).min(nz-1);
+                let ix = ((x / test_case.grid_spacing) as usize).min(nx - 1);
+                let iy = ((y / test_case.grid_spacing) as usize).min(ny - 1);
+                let iz = ((z / test_case.grid_spacing) as usize).min(nz - 1);
 
-                script.push_str(&format!("source.p0 = {:.1};              %% Pa\n", amplitude));
-                script.push_str(&format!("source_freq = {:.1};            %% Hz\n", frequency));
+                script.push_str(&format!(
+                    "source.p0 = {:.1};              %% Pa\n",
+                    amplitude
+                ));
+                script.push_str(&format!(
+                    "source_freq = {:.1};            %% Hz\n",
+                    frequency
+                ));
                 script.push_str(&format!("source_cycles = 3;\n"));
                 script.push_str(&format!("source.p = makeTimeVaryingSource(kgrid, source, source_freq, source_cycles);\n"));
                 script.push_str(&format!("source.p_mask = zeros(Nx, Ny, Nz);\n"));
-                script.push_str(&format!("source.p_mask({}, {}, {}) = 1;\n", ix+1, iy+1, iz+1));
+                script.push_str(&format!(
+                    "source.p_mask({}, {}, {}) = 1;\n",
+                    ix + 1,
+                    iy + 1,
+                    iz + 1
+                ));
             }
-            SourceType::FocusedTransducer { focal_point, diameter, frequency } => {
+            SourceType::FocusedTransducer {
+                focal_point,
+                diameter,
+                frequency,
+            } => {
                 let (fx, fy, fz) = *focal_point;
                 let radius = diameter / 2.0;
-                script.push_str(&format!("transducer.diameter = {:.3};      %% m\n", diameter));
+                script.push_str(&format!(
+                    "transducer.diameter = {:.3};      %% m\n",
+                    diameter
+                ));
                 script.push_str(&format!("transducer.focus_distance = {:.3}; %% m\n", fx)); // Approximate
-                script.push_str(&format!("transducer.source_freq = {:.1};   %% Hz\n", frequency));
+                script.push_str(&format!(
+                    "transducer.source_freq = {:.1};   %% Hz\n",
+                    frequency
+                ));
                 script.push_str(&format!("transducer.cycles = 3;\n"));
-                script.push_str(&format!("source = makeTransducer(kgrid, medium, transducer);\n"));
+                script.push_str(&format!(
+                    "source = makeTransducer(kgrid, medium, transducer);\n"
+                ));
             }
         }
 
@@ -232,7 +299,12 @@ impl KWaveValidator {
         script.push_str(&format!("\n%% Sensor setup\n"));
         script.push_str(&format!("sensor.mask = zeros(Nx, Ny, Nz);\n"));
         for (i, (ix, iy, iz)) in test_case.sensor_positions.iter().enumerate() {
-            script.push_str(&format!("sensor.mask({}, {}, {}) = 1;\n", ix+1, iy+1, iz+1));
+            script.push_str(&format!(
+                "sensor.mask({}, {}, {}) = 1;\n",
+                ix + 1,
+                iy + 1,
+                iz + 1
+            ));
         }
 
         // Simulation setup
@@ -241,12 +313,20 @@ impl KWaveValidator {
 
         let dt_kwave = test_case.grid_spacing / test_case.c0; // CFL condition for k-Wave
         let n_steps = (test_case.simulation_time / dt_kwave) as usize;
-        script.push_str(&format!("sensor_data = kspaceFirstOrder3D(kgrid, medium, source, sensor, input_args{{:}});\n\n"));
+        script.push_str(&format!(
+            "sensor_data = kspaceFirstOrder3D(kgrid, medium, source, sensor, input_args{{:}});\n\n"
+        ));
 
         // Save results
         script.push_str(&format!("%% Save results\n"));
-        script.push_str(&format!("save('{}_kwave_output.mat', 'sensor_data', 'kgrid', 'medium', 'source', 'sensor');\n", name));
-        script.push_str(&format!("fprintf('k-Wave simulation completed for: {}\\n');\n", name));
+        script.push_str(&format!(
+            "save('{}_kwave_output.mat', 'sensor_data', 'kgrid', 'medium', 'source', 'sensor');\n",
+            name
+        ));
+        script.push_str(&format!(
+            "fprintf('k-Wave simulation completed for: {}\\n');\n",
+            name
+        ));
 
         // Write to file
         fs::write(&script_path, script)?;
@@ -272,22 +352,34 @@ impl KWaveValidator {
         let kwave_file = Path::new(&self.output_dir).join(format!("{}_kwave_output.mat", name));
 
         if !kwave_file.exists() {
-            println!("Warning: k-Wave output file not found: {}", kwave_file.display());
+            println!(
+                "Warning: k-Wave output file not found: {}",
+                kwave_file.display()
+            );
             println!("Run k-Wave scripts first with: cargo test --test kwave_validation_suite -- --generate-kwave-inputs");
             return Ok(1.0); // Return high error to indicate missing data
         }
 
         // Load k-Wave output data
         let kwave_data = self.load_kwave_output(&kwave_file)?;
-        println!("Loaded k-Wave data for {}: {} sensors, {} time steps", name, kwave_data.n_sensors, kwave_data.n_time_steps);
+        println!(
+            "Loaded k-Wave data for {}: {} sensors, {} time steps",
+            name, kwave_data.n_sensors, kwave_data.n_time_steps
+        );
 
         // Run kwavers simulation for comparison
         let kwavers_data = self.run_kwavers_simulation(test_case)?;
-        println!("Completed kwavers simulation for {}: {} sensors, {} time steps", name, kwavers_data.n_sensors, kwavers_data.n_time_steps);
+        println!(
+            "Completed kwavers simulation for {}: {} sensors, {} time steps",
+            name, kwavers_data.n_sensors, kwavers_data.n_time_steps
+        );
 
         // Compare the results
         let error = self.compute_comparison_error(&kwave_data, &kwavers_data)?;
-        println!("Comparison completed for {}: relative error = {:.2e}", name, error);
+        println!(
+            "Comparison completed for {}: relative error = {:.2e}",
+            name, error
+        );
 
         Ok(error)
     }
@@ -297,7 +389,7 @@ impl KWaveValidator {
         if !file_path.exists() {
             return Err(kwavers::KwaversError::Io(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("MAT file not found: {}", file_path.display())
+                format!("MAT file not found: {}", file_path.display()),
             )));
         }
 
@@ -363,10 +455,12 @@ impl KWaveValidator {
 
         // Add some multipath echoes and noise
         let main_echo = envelope * carrier;
-        let multipath1 = 0.3 * (-((time - 1e-6) * center_freq * 2.0 * PI / pulse_length).powi(2)).exp()
-                        * ((time - 1e-6) * center_freq * 2.0 * PI).sin();
-        let multipath2 = 0.1 * (-((time - 2e-6) * center_freq * 2.0 * PI / pulse_length).powi(2)).exp()
-                        * ((time - 2e-6) * center_freq * 2.0 * PI).sin();
+        let multipath1 = 0.3
+            * (-((time - 1e-6) * center_freq * 2.0 * PI / pulse_length).powi(2)).exp()
+            * ((time - 1e-6) * center_freq * 2.0 * PI).sin();
+        let multipath2 = 0.1
+            * (-((time - 2e-6) * center_freq * 2.0 * PI / pulse_length).powi(2)).exp()
+            * ((time - 2e-6) * center_freq * 2.0 * PI).sin();
 
         // Add sensor-specific phase delay (simulate different path lengths)
         let sensor_delay = sensor_idx as f64 * 0.1e-6; // 0.1 μs per sensor
@@ -381,7 +475,10 @@ impl KWaveValidator {
 
     /// Run kwavers simulation for test case
     fn run_kwavers_simulation(&self, test_case: &KWaveTestCase) -> KwaversResult<SimulationData> {
-        println!("Running kwavers simulation for test case: {}", test_case.name);
+        println!(
+            "Running kwavers simulation for test case: {}",
+            test_case.name
+        );
 
         // Create grid
         let grid = Grid::new(
@@ -406,7 +503,10 @@ impl KWaveValidator {
         let dt = test_case.grid_spacing / test_case.c0 * 0.5; // Conservative CFL
         let n_steps = (test_case.simulation_time / dt) as usize;
 
-        println!("Grid: {}x{}x{}, dt={:.2e}s, n_steps={}", grid.nx, grid.ny, grid.nz, dt, n_steps);
+        println!(
+            "Grid: {}x{}x{}, dt={:.2e}s, n_steps={}",
+            grid.nx, grid.ny, grid.nz, dt, n_steps
+        );
 
         // Run actual kwavers simulation
         let sensor_data = self.execute_kwavers_simulation(
@@ -456,19 +556,34 @@ impl KWaveValidator {
 
             // Update velocity from pressure gradient
             self.update_velocity_from_pressure(
-                &mut velocity_x, &mut velocity_y, &mut velocity_z,
-                &pressure, dt, grid, medium
+                &mut velocity_x,
+                &mut velocity_y,
+                &mut velocity_z,
+                &pressure,
+                dt,
+                grid,
+                medium,
             );
 
             // Update pressure from velocity divergence
             self.update_pressure_from_velocity(
                 &mut pressure,
-                &velocity_x, &velocity_y, &velocity_z,
-                dt, grid, medium
+                &velocity_x,
+                &velocity_y,
+                &velocity_z,
+                dt,
+                grid,
+                medium,
             );
 
             // Apply boundary conditions (simple absorbing)
-            self.apply_boundary_conditions(&mut pressure, &mut velocity_x, &mut velocity_y, &mut velocity_z, grid);
+            self.apply_boundary_conditions(
+                &mut pressure,
+                &mut velocity_x,
+                &mut velocity_y,
+                &mut velocity_z,
+                grid,
+            );
 
             // Record sensor data
             for (sensor_idx, &(ix, iy, iz)) in test_case.sensor_positions.iter().enumerate() {
@@ -501,15 +616,14 @@ impl KWaveValidator {
         // Apply source at appropriate spatial locations
         // This is a simplified implementation - in practice would integrate with full source API
         let source_pressure = source.amplitude(time);
-            // For demonstration, apply source at center (would be configurable)
-            let cx = grid.nx / 2;
-            let cy = grid.ny / 2;
-            let cz = grid.nz / 2;
+        // For demonstration, apply source at center (would be configurable)
+        let cx = grid.nx / 2;
+        let cy = grid.ny / 2;
+        let cz = grid.nz / 2;
 
-            if cx < grid.nx && cy < grid.ny && cz < grid.nz {
-                pressure[[cx, cy, cz]] += source_pressure as f32;
-            }
-        
+        if cx < grid.nx && cy < grid.ny && cz < grid.nz {
+            pressure[[cx, cy, cz]] += source_pressure as f32;
+        }
     }
 
     /// Update velocity from pressure gradient
@@ -523,29 +637,35 @@ impl KWaveValidator {
         grid: &Grid,
         medium: &HomogeneousMedium,
     ) {
-        let rho = CoreMedium::density(medium, grid.nx/2, grid.ny/2, grid.nz/2) as f32;
+        let rho = CoreMedium::density(medium, grid.nx / 2, grid.ny / 2, grid.nz / 2) as f32;
 
-        for i in 1..grid.nx-1 {
+        for i in 1..grid.nx - 1 {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
                     // ∂vx/∂t = -1/ρ ∂p/∂x
-                    velocity_x[[i, j, k]] -= (dt as f32 / rho) * (pressure[[i+1, j, k]] - pressure[[i-1, j, k]]) / (2.0 * grid.dx as f32);
+                    velocity_x[[i, j, k]] -= (dt as f32 / rho)
+                        * (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]])
+                        / (2.0 * grid.dx as f32);
                 }
             }
         }
 
         for i in 0..grid.nx {
-            for j in 1..grid.ny-1 {
+            for j in 1..grid.ny - 1 {
                 for k in 0..grid.nz {
-                    velocity_y[[i, j, k]] -= (dt as f32 / rho) * (pressure[[i, j+1, k]] - pressure[[i, j-1, k]]) / (2.0 * grid.dy as f32);
+                    velocity_y[[i, j, k]] -= (dt as f32 / rho)
+                        * (pressure[[i, j + 1, k]] - pressure[[i, j - 1, k]])
+                        / (2.0 * grid.dy as f32);
                 }
             }
         }
 
         for i in 0..grid.nx {
             for j in 0..grid.ny {
-                for k in 1..grid.nz-1 {
-                    velocity_z[[i, j, k]] -= (dt as f32 / rho) * (pressure[[i, j, k+1]] - pressure[[i, j, k-1]]) / (2.0 * grid.dz as f32);
+                for k in 1..grid.nz - 1 {
+                    velocity_z[[i, j, k]] -= (dt as f32 / rho)
+                        * (pressure[[i, j, k + 1]] - pressure[[i, j, k - 1]])
+                        / (2.0 * grid.dz as f32);
                 }
             }
         }
@@ -562,15 +682,19 @@ impl KWaveValidator {
         grid: &Grid,
         medium: &HomogeneousMedium,
     ) {
-        let kappa = CoreMedium::sound_speed(medium, grid.nx/2, grid.ny/2, grid.nz/2).powi(2) * CoreMedium::density(medium, grid.nx/2, grid.ny/2, grid.nz/2); // Bulk modulus approximation
+        let kappa = CoreMedium::sound_speed(medium, grid.nx / 2, grid.ny / 2, grid.nz / 2).powi(2)
+            * CoreMedium::density(medium, grid.nx / 2, grid.ny / 2, grid.nz / 2); // Bulk modulus approximation
 
-        for i in 1..grid.nx-1 {
-            for j in 1..grid.ny-1 {
-                for k in 1..grid.nz-1 {
+        for i in 1..grid.nx - 1 {
+            for j in 1..grid.ny - 1 {
+                for k in 1..grid.nz - 1 {
                     // ∂p/∂t = κ ∇·v
-                    let divergence = (velocity_x[[i+1, j, k]] - velocity_x[[i-1, j, k]]) / (2.0 * grid.dx as f32) +
-                                   (velocity_y[[i, j+1, k]] - velocity_y[[i, j-1, k]]) / (2.0 * grid.dy as f32) +
-                                   (velocity_z[[i, j, k+1]] - velocity_z[[i, j, k-1]]) / (2.0 * grid.dz as f32);
+                    let divergence = (velocity_x[[i + 1, j, k]] - velocity_x[[i - 1, j, k]])
+                        / (2.0 * grid.dx as f32)
+                        + (velocity_y[[i, j + 1, k]] - velocity_y[[i, j - 1, k]])
+                            / (2.0 * grid.dy as f32)
+                        + (velocity_z[[i, j, k + 1]] - velocity_z[[i, j, k - 1]])
+                            / (2.0 * grid.dz as f32);
 
                     pressure[[i, j, k]] += (dt as f32 * kappa as f32) * divergence;
                 }
@@ -594,9 +718,9 @@ impl KWaveValidator {
         for j in 0..grid.ny {
             for k in 0..grid.nz {
                 pressure[[0, j, k]] *= damping;
-                pressure[[grid.nx-1, j, k]] *= damping;
+                pressure[[grid.nx - 1, j, k]] *= damping;
                 velocity_x[[0, j, k]] *= damping;
-                velocity_x[[grid.nx-1, j, k]] *= damping;
+                velocity_x[[grid.nx - 1, j, k]] *= damping;
             }
         }
 
@@ -604,9 +728,9 @@ impl KWaveValidator {
         for i in 0..grid.nx {
             for k in 0..grid.nz {
                 pressure[[i, 0, k]] *= damping;
-                pressure[[i, grid.ny-1, k]] *= damping;
+                pressure[[i, grid.ny - 1, k]] *= damping;
                 velocity_y[[i, 0, k]] *= damping;
-                velocity_y[[i, grid.ny-1, k]] *= damping;
+                velocity_y[[i, grid.ny - 1, k]] *= damping;
             }
         }
 
@@ -614,18 +738,22 @@ impl KWaveValidator {
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 pressure[[i, j, 0]] *= damping;
-                pressure[[i, j, grid.nz-1]] *= damping;
+                pressure[[i, j, grid.nz - 1]] *= damping;
                 velocity_z[[i, j, 0]] *= damping;
-                velocity_z[[i, j, grid.nz-1]] *= damping;
+                velocity_z[[i, j, grid.nz - 1]] *= damping;
             }
         }
     }
 
     /// Create kwavers source from test case specification
-    fn create_kwavers_source(&self, test_case: &KWaveTestCase, grid: &Grid) -> KwaversResult<Box<dyn kwavers::source::Source>> {
+    fn create_kwavers_source(
+        &self,
+        test_case: &KWaveTestCase,
+        grid: &Grid,
+    ) -> KwaversResult<Box<dyn kwavers::source::Source>> {
         // For now, create a simple point source at the grid center using a sine wave signal
-        use kwavers::source::PointSource;
         use kwavers::signal::SineWave;
+        use kwavers::source::PointSource;
         use std::sync::Arc;
 
         // Convert center indices to physical coordinates
@@ -651,14 +779,20 @@ impl KWaveValidator {
     }
 
     /// Compute comparison error between k-Wave and kwavers results
-    fn compute_comparison_error(&self, kwave: &SimulationData, kwavers: &SimulationData) -> KwaversResult<f64> {
+    fn compute_comparison_error(
+        &self,
+        kwave: &SimulationData,
+        kwavers: &SimulationData,
+    ) -> KwaversResult<f64> {
         // Check dimensions match
         if kwave.n_sensors != kwavers.n_sensors {
             return Err(kwavers::KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: format!("Sensor count mismatch: k-Wave has {}, kwavers has {}",
-                                   kwave.n_sensors, kwavers.n_sensors)
-                }
+                    message: format!(
+                        "Sensor count mismatch: k-Wave has {}, kwavers has {}",
+                        kwave.n_sensors, kwavers.n_sensors
+                    ),
+                },
             ));
         }
 
@@ -666,8 +800,18 @@ impl KWaveValidator {
         // In practice, this would need proper temporal alignment and amplitude scaling
 
         // Compare RMS values as a basic sanity check
-        let kwave_rms: f64 = kwave.sensor_data.iter().map(|&x| (x * x) as f64).sum::<f64>().sqrt();
-        let kwavers_rms: f64 = kwavers.sensor_data.iter().map(|&x| (x * x) as f64).sum::<f64>().sqrt();
+        let kwave_rms: f64 = kwave
+            .sensor_data
+            .iter()
+            .map(|&x| (x * x) as f64)
+            .sum::<f64>()
+            .sqrt();
+        let kwavers_rms: f64 = kwavers
+            .sensor_data
+            .iter()
+            .map(|&x| (x * x) as f64)
+            .sum::<f64>()
+            .sqrt();
 
         if kwave_rms == 0.0 {
             return Ok(1.0); // High error if k-Wave data is zero
@@ -703,7 +847,10 @@ fn test_kwave_comparison() -> KwaversResult<()> {
     }
 
     // Check that we have some results
-    assert!(!results.is_empty(), "No k-Wave comparison results generated");
+    assert!(
+        !results.is_empty(),
+        "No k-Wave comparison results generated"
+    );
 
     Ok(())
 }

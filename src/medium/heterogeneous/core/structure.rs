@@ -3,11 +3,9 @@
 //! Following GRASP principle: Separated core data structure from trait implementations
 //! to achieve optimal cohesion per senior engineering standards.
 
-use ndarray::Array3;
 use crate::grid::Grid;
 use crate::medium::homogeneous::HomogeneousMedium;
 use crate::medium::{
-    acoustic::AcousticProperties,
     bubble::{BubbleProperties, BubbleState},
     core::{ArrayAccess, CoreMedium},
     elastic::ElasticArrayAccess,
@@ -15,6 +13,7 @@ use crate::medium::{
     thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
+use ndarray::Array3;
 
 /// Medium with spatially varying properties
 ///

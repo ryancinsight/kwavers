@@ -12,9 +12,9 @@
 
 use kwavers::error::KwaversResult;
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::universal_solver::{UniversalPINNSolver, UniversalTrainingConfig};
-#[cfg(feature = "pinn")]
 use kwavers::ml::pinn::physics::PhysicsParameters;
+#[cfg(feature = "pinn")]
+use kwavers::ml::pinn::universal_solver::{UniversalPINNSolver, UniversalTrainingConfig};
 #[cfg(feature = "pinn")]
 use std::time::Instant;
 
@@ -47,28 +47,32 @@ fn main() -> KwaversResult<()> {
     // Physics parameters for the coupled system
     let mut physics_params = PhysicsParameters {
         material_properties: [
-            ("ambient_pressure".to_string(), 101325.0), // 1 atm
-            ("liquid_density".to_string(), 1000.0),     // Water density (kg/m³)
-            ("speed_of_sound".to_string(), 1500.0),     // Water speed of sound (m/s)
-            ("surface_tension".to_string(), 0.072),     // Water surface tension (N/m)
-            ("viscosity".to_string(), 0.001),           // Water viscosity (Pa·s)
+            ("ambient_pressure".to_string(), 101325.0),     // 1 atm
+            ("liquid_density".to_string(), 1000.0),         // Water density (kg/m³)
+            ("speed_of_sound".to_string(), 1500.0),         // Water speed of sound (m/s)
+            ("surface_tension".to_string(), 0.072),         // Water surface tension (N/m)
+            ("viscosity".to_string(), 0.001),               // Water viscosity (Pa·s)
             ("permittivity".to_string(), 80.0 * 8.854e-12), // Water permittivity
             ("permeability".to_string(), 4e-7 * std::f64::consts::PI), // Free space
-        ].into(),
+        ]
+        .into(),
         boundary_values: [
             ("pressure_amplitude".to_string(), vec![1e5]), // 1 MPa acoustic pressure
             ("frequency".to_string(), vec![1e6]),          // 1 MHz ultrasound
-        ].into(),
+        ]
+        .into(),
         initial_values: [
             ("initial_bubble_radius".to_string(), vec![1e-6]), // 1 μm bubbles
             ("equilibrium_radius".to_string(), vec![5e-6]),    // 5 μm equilibrium
-        ].into(),
+        ]
+        .into(),
         domain_params: [
-            ("acoustic_attenuation".to_string(), 0.1),        // dB/cm/MHz
-            ("bubble_concentration".to_string(), 1e8),        // bubbles/m³
-            ("temperature".to_string(), 293.15),              // Room temperature (K)
-            ("dissolved_gas".to_string(), 0.02),              // 2% dissolved air
-        ].into(),
+            ("acoustic_attenuation".to_string(), 0.1), // dB/cm/MHz
+            ("bubble_concentration".to_string(), 1e8), // bubbles/m³
+            ("temperature".to_string(), 293.15),       // Room temperature (K)
+            ("dissolved_gas".to_string(), 0.02),       // 2% dissolved air
+        ]
+        .into(),
     };
 
     println!("\n🔊 Phase 1: Ultrasound Excitation");
@@ -80,36 +84,42 @@ fn main() -> KwaversResult<()> {
 
     // Training phase 1: Acoustic wave propagation
     let start_time = Instant::now();
-    let acoustic_result = solver.train_domain(
-        "cavitation_coupled",
-        &training_config,
-        &physics_params,
-    )?;
+    let acoustic_result =
+        solver.train_domain("cavitation_coupled", &training_config, &physics_params)?;
 
-    println!("   ✅ Acoustic training completed in {:.2}s", start_time.elapsed().as_secs_f64());
+    println!(
+        "   ✅ Acoustic training completed in {:.2}s",
+        start_time.elapsed().as_secs_f64()
+    );
     println!("   📊 Acoustic loss: {:.2e}", acoustic_result.final_loss);
 
     println!("\n🫧 Phase 2: Cavitation Bubble Dynamics");
     println!("------------------------------------");
 
     // Simulate bubble field initialization
-    println!("   🫧 Bubble field: {:.0} bubbles/m³, radius {:.0} μm",
-             physics_params.domain_params["bubble_concentration"],
-             physics_params.initial_values["initial_bubble_radius"][0] * 1e6);
+    println!(
+        "   🫧 Bubble field: {:.0} bubbles/m³, radius {:.0} μm",
+        physics_params.domain_params["bubble_concentration"],
+        physics_params.initial_values["initial_bubble_radius"][0] * 1e6
+    );
 
     // Update physics parameters for cavitation coupling
-    physics_params.domain_params.insert("coupling_strength".to_string(), 0.8);
-    physics_params.domain_params.insert("nonlinear_acoustic".to_string(), 1.0);
+    physics_params
+        .domain_params
+        .insert("coupling_strength".to_string(), 0.8);
+    physics_params
+        .domain_params
+        .insert("nonlinear_acoustic".to_string(), 1.0);
 
     // Training phase 2: Cavitation dynamics
-    let cavitation_result = solver.train_domain(
-        "cavitation_coupled",
-        &training_config,
-        &physics_params,
-    )?;
+    let cavitation_result =
+        solver.train_domain("cavitation_coupled", &training_config, &physics_params)?;
 
     println!("   ✅ Cavitation training completed");
-    println!("   📊 Cavitation loss: {:.2e}", cavitation_result.final_loss);
+    println!(
+        "   📊 Cavitation loss: {:.2e}",
+        cavitation_result.final_loss
+    );
 
     // Simulate bubble collapse and extreme conditions
     println!("   💥 Bubble collapse: T > 10,000 K, P > 1,000 atm");
@@ -118,8 +128,12 @@ fn main() -> KwaversResult<()> {
     println!("-----------------------------------");
 
     // Configure sonoluminescence parameters
-    physics_params.domain_params.insert("coupling_efficiency".to_string(), 0.001);
-    physics_params.domain_params.insert("min_temperature".to_string(), 5000.0);
+    physics_params
+        .domain_params
+        .insert("coupling_efficiency".to_string(), 0.001);
+    physics_params
+        .domain_params
+        .insert("min_temperature".to_string(), 5000.0);
 
     // Training phase 3: Electromagnetic wave propagation with light sources
     let light_result = solver.train_domain(
@@ -129,7 +143,10 @@ fn main() -> KwaversResult<()> {
     )?;
 
     println!("   ✅ Sonoluminescence training completed");
-    println!("   📊 Light propagation loss: {:.2e}", light_result.final_loss);
+    println!(
+        "   📊 Light propagation loss: {:.2e}",
+        light_result.final_loss
+    );
 
     // Simulate spectral emission
     println!("   🌈 Spectral emission: 200-1000 nm (UV to NIR)");
@@ -143,14 +160,14 @@ fn main() -> KwaversResult<()> {
     println!("   🔄 Coupled system training...");
 
     // Full system training with all domains
-    let coupled_result = solver.train_all_domains(
-        &training_config,
-        &physics_params,
-    )?;
+    let coupled_result = solver.train_all_domains(&training_config, &physics_params)?;
 
     println!("   ✅ Multi-physics training completed");
     println!("   📊 Total system loss: {:.2e}", coupled_result.total_loss);
-    println!("   ⏱️  Total training time: {:.2}s", coupled_result.training_time.as_secs_f64());
+    println!(
+        "   ⏱️  Total training time: {:.2}s",
+        coupled_result.training_time.as_secs_f64()
+    );
 
     println!("\n🎯 Results Summary");
     println!("=================");

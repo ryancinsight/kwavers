@@ -168,7 +168,8 @@ impl MultiModalFusion {
             quality_score: 0.85, // Placeholder quality score
         };
 
-        self.registered_data.insert("ultrasound".to_string(), registered_data);
+        self.registered_data
+            .insert("ultrasound".to_string(), registered_data);
         Ok(())
     }
 
@@ -182,7 +183,8 @@ impl MultiModalFusion {
             quality_score: self.compute_pa_quality(pa_result),
         };
 
-        self.registered_data.insert("photoacoustic".to_string(), registered_data);
+        self.registered_data
+            .insert("photoacoustic".to_string(), registered_data);
         Ok(())
     }
 
@@ -193,17 +195,24 @@ impl MultiModalFusion {
             quality_score: self.compute_elastography_quality(elasticity_map),
         };
 
-        self.registered_data.insert("elastography".to_string(), registered_data);
+        self.registered_data
+            .insert("elastography".to_string(), registered_data);
         Ok(())
     }
 
     /// Register optical/sonoluminescence data for fusion
-    pub fn register_optical(&mut self, optical_intensity: &Array3<f64>, wavelength: f64) -> KwaversResult<()> {
+    pub fn register_optical(
+        &mut self,
+        optical_intensity: &Array3<f64>,
+        wavelength: f64,
+    ) -> KwaversResult<()> {
         // Validate optical data represents intensity/emission
         if optical_intensity.iter().any(|&x| x < 0.0) {
-            return Err(KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
-                message: "Optical intensity values must be non-negative".to_string(),
-            }));
+            return Err(KwaversError::Validation(
+                crate::error::ValidationError::ConstraintViolation {
+                    message: "Optical intensity values must be non-negative".to_string(),
+                },
+            ));
         }
 
         let registered_data = RegisteredModality {
@@ -211,7 +220,10 @@ impl MultiModalFusion {
             quality_score: self.compute_optical_quality(optical_intensity, wavelength),
         };
 
-        self.registered_data.insert(format!("optical_{}nm", (wavelength * 1e9) as usize), registered_data);
+        self.registered_data.insert(
+            format!("optical_{}nm", (wavelength * 1e9) as usize),
+            registered_data,
+        );
         Ok(())
     }
 
@@ -230,9 +242,11 @@ impl MultiModalFusion {
     /// Perform multi-modal fusion
     pub fn fuse(&self) -> KwaversResult<FusedImageResult> {
         if self.registered_data.len() < 2 {
-            return Err(KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
-                message: "At least two modalities required for fusion".to_string(),
-            }));
+            return Err(KwaversError::Validation(
+                crate::error::ValidationError::ConstraintViolation {
+                    message: "At least two modalities required for fusion".to_string(),
+                },
+            ));
         }
 
         // Apply fusion method
@@ -248,7 +262,7 @@ impl MultiModalFusion {
     }
 
     /// Find the common dimensions for multi-modal image fusion
-    fn find_common_dimensions(&self) -> (usize, usize, usize) {
+    fn _find_common_dimensions(&self) -> (usize, usize, usize) {
         // Find the smallest common dimensions across all modalities
         let mut min_dims = (usize::MAX, usize::MAX, usize::MAX);
 
@@ -269,10 +283,11 @@ impl MultiModalFusion {
         let registration = ImageRegistration::default();
 
         // Use first modality as reference for registration
-        let reference_modality = self.registered_data.values().next()
-            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
+        let reference_modality = self.registered_data.values().next().ok_or_else(|| {
+            KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
                 message: "No modalities available for fusion".to_string(),
-            }))?;
+            })
+        })?;
 
         // Define target grid dimensions based on the reference modality's native grid
         // Using output_resolution only for coordinate spacing, not to derive voxel counts.
@@ -291,14 +306,18 @@ impl MultiModalFusion {
         let mut modality_quality = HashMap::new();
 
         // Use first modality as reference for registration
-        let reference_modality = self.registered_data.values().next()
-            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
+        let reference_modality = self.registered_data.values().next().ok_or_else(|| {
+            KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
                 message: "No modalities available for fusion".to_string(),
-            }))?;
+            })
+        })?;
 
         // Register and resample each modality
         for (modality_name, modality) in &self.registered_data {
-            let weight = self.config.modality_weights.get(modality_name)
+            let weight = self
+                .config
+                .modality_weights
+                .get(modality_name)
                 .copied()
                 .unwrap_or(1.0);
 
@@ -306,10 +325,7 @@ impl MultiModalFusion {
 
             // Perform intensity-based registration to reference
             let identity_transform = [
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0,
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
             ];
 
             let registration_result = registration.intensity_registration_mutual_info(
@@ -319,11 +335,16 @@ impl MultiModalFusion {
             )?;
 
             // Store transformation
-            let affine_transform = self.homogeneous_to_affine(&registration_result.transform_matrix);
+            let affine_transform =
+                self.homogeneous_to_affine(&registration_result.transform_matrix);
             registration_transforms.insert(modality_name.clone(), affine_transform);
 
             // Resample to target grid using trilinear interpolation
-            let resampled_data = self.resample_to_target_grid(&modality.data, &registration_result.transform_matrix, target_dims);
+            let resampled_data = self.resample_to_target_grid(
+                &modality.data,
+                &registration_result.transform_matrix,
+                target_dims,
+            );
 
             // Fuse with probabilistic weighting based on quality and confidence
             self.fuse_modality_probabilistic(
@@ -361,7 +382,12 @@ impl MultiModalFusion {
     }
 
     /// Resample image to target grid using trilinear interpolation
-    fn resample_to_target_grid(&self, source_image: &Array3<f64>, transform: &[f64; 16], target_dims: (usize, usize, usize)) -> Array3<f64> {
+    fn resample_to_target_grid(
+        &self,
+        source_image: &Array3<f64>,
+        transform: &[f64; 16],
+        target_dims: (usize, usize, usize),
+    ) -> Array3<f64> {
         let mut resampled = Array3::<f64>::zeros(target_dims);
         let source_dims = source_image.shape();
 
@@ -382,7 +408,8 @@ impl MultiModalFusion {
                     let source_coords = self.apply_inverse_transform(transform, target_coords);
 
                     // Trilinear interpolation
-                    let value = self.trilinear_interpolate(source_image, source_coords, source_dims);
+                    let value =
+                        self.trilinear_interpolate(source_image, source_coords, source_dims);
                     resampled[[i, j, k]] = value;
                 }
             }
@@ -487,7 +514,8 @@ impl MultiModalFusion {
                     // Update uncertainty if quantification enabled
                     if let Some(ref mut uncertainty) = uncertainty_map {
                         // Uncertainty based on registration confidence and quality score
-                        let local_uncertainty = (1.0 - registration_confidence) * (1.0 - quality_score);
+                        let local_uncertainty =
+                            (1.0 - registration_confidence) * (1.0 - quality_score);
                         uncertainty[[i, j, k]] += local_uncertainty * probabilistic_weight;
                     }
                 }
@@ -497,9 +525,15 @@ impl MultiModalFusion {
 
     /// Generate coordinate arrays for the fused result
     fn generate_coordinate_arrays(&self, dims: (usize, usize, usize)) -> [Vec<f64>; 3] {
-        let x_coords: Vec<f64> = (0..dims.0).map(|i| i as f64 * self.config.output_resolution[0]).collect();
-        let y_coords: Vec<f64> = (0..dims.1).map(|j| j as f64 * self.config.output_resolution[1]).collect();
-        let z_coords: Vec<f64> = (0..dims.2).map(|k| k as f64 * self.config.output_resolution[2]).collect();
+        let x_coords: Vec<f64> = (0..dims.0)
+            .map(|i| i as f64 * self.config.output_resolution[0])
+            .collect();
+        let y_coords: Vec<f64> = (0..dims.1)
+            .map(|j| j as f64 * self.config.output_resolution[1])
+            .collect();
+        let z_coords: Vec<f64> = (0..dims.2)
+            .map(|k| k as f64 * self.config.output_resolution[2])
+            .collect();
 
         [x_coords, y_coords, z_coords]
     }
@@ -516,15 +550,19 @@ impl MultiModalFusion {
 
         // Compute weighted mean
         let total_weight: f64 = weights.iter().sum();
-        let weighted_sum: f64 = values.iter().zip(weights.iter())
-            .map(|(v, w)| v * w)
-            .sum();
+        let weighted_sum: f64 = values.iter().zip(weights.iter()).map(|(v, w)| v * w).sum();
 
-        let mean = if total_weight > 0.0 { weighted_sum / total_weight } else { 0.0 };
+        let mean = if total_weight > 0.0 {
+            weighted_sum / total_weight
+        } else {
+            0.0
+        };
 
         // Compute variance (uncertainty) using weighted variance formula
         let variance: f64 = if total_weight > 1.0 {
-            let sum_squared_diff: f64 = values.iter().zip(weights.iter())
+            let sum_squared_diff: f64 = values
+                .iter()
+                .zip(weights.iter())
                 .map(|(v, w)| w * (v - mean).powi(2))
                 .sum();
             sum_squared_diff / (total_weight - 1.0) // Bessel's correction
@@ -552,9 +590,12 @@ impl MultiModalFusion {
         let translation = [homogeneous[3], homogeneous[7], homogeneous[11]];
 
         // Extract scale factors from rotation matrix (assuming no shear)
-        let scale_x = (rotation[0][0].powi(2) + rotation[1][0].powi(2) + rotation[2][0].powi(2)).sqrt();
-        let scale_y = (rotation[0][1].powi(2) + rotation[1][1].powi(2) + rotation[2][1].powi(2)).sqrt();
-        let scale_z = (rotation[0][2].powi(2) + rotation[1][2].powi(2) + rotation[2][2].powi(2)).sqrt();
+        let scale_x =
+            (rotation[0][0].powi(2) + rotation[1][0].powi(2) + rotation[2][0].powi(2)).sqrt();
+        let scale_y =
+            (rotation[0][1].powi(2) + rotation[1][1].powi(2) + rotation[2][1].powi(2)).sqrt();
+        let scale_z =
+            (rotation[0][2].powi(2) + rotation[1][2].powi(2) + rotation[2][2].powi(2)).sqrt();
 
         let scale = [scale_x, scale_y, scale_z];
 
@@ -582,10 +623,11 @@ impl MultiModalFusion {
         let registration = ImageRegistration::default();
 
         // Use first modality as reference
-        let reference_modality = self.registered_data.values().next()
-            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
+        let reference_modality = self.registered_data.values().next().ok_or_else(|| {
+            KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
                 message: "No modalities available for fusion".to_string(),
-            }))?;
+            })
+        })?;
 
         // Define target grid dimensions based on the reference modality's native grid
         let ref_shape = reference_modality.data.dim();
@@ -599,16 +641,20 @@ impl MultiModalFusion {
         let mut modality_quality = HashMap::new();
 
         // Use first modality as reference
-        let reference_modality = self.registered_data.values().next()
-            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
+        let reference_modality = self.registered_data.values().next().ok_or_else(|| {
+            KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
                 message: "No modalities available for fusion".to_string(),
-            }))?;
+            })
+        })?;
 
         // Collect all modality data for probabilistic fusion
         let mut modality_data = Vec::new();
 
         for (modality_name, modality) in &self.registered_data {
-            let weight = self.config.modality_weights.get(modality_name)
+            let weight = self
+                .config
+                .modality_weights
+                .get(modality_name)
                 .copied()
                 .unwrap_or(1.0);
 
@@ -616,10 +662,7 @@ impl MultiModalFusion {
 
             // Register modality
             let identity_transform = [
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0,
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
             ];
 
             let registration_result = registration.intensity_registration_mutual_info(
@@ -628,11 +671,16 @@ impl MultiModalFusion {
                 &identity_transform,
             )?;
 
-            let affine_transform = self.homogeneous_to_affine(&registration_result.transform_matrix);
+            let affine_transform =
+                self.homogeneous_to_affine(&registration_result.transform_matrix);
             registration_transforms.insert(modality_name.clone(), affine_transform);
 
             // Resample to common grid
-            let resampled_data = self.resample_to_target_grid(&modality.data, &registration_result.transform_matrix, target_dims);
+            let resampled_data = self.resample_to_target_grid(
+                &modality.data,
+                &registration_result.transform_matrix,
+                target_dims,
+            );
 
             modality_data.push((
                 resampled_data,
@@ -646,11 +694,13 @@ impl MultiModalFusion {
         for i in 0..target_dims.0 {
             for j in 0..target_dims.1 {
                 for k in 0..target_dims.2 {
-                    let voxel_data: Vec<f64> = modality_data.iter()
+                    let voxel_data: Vec<f64> = modality_data
+                        .iter()
                         .map(|(data, _, _, _)| data[[i, j, k]])
                         .collect();
 
-                    let weights: Vec<f64> = modality_data.iter()
+                    let weights: Vec<f64> = modality_data
+                        .iter()
                         .map(|(_, weight, quality, confidence)| weight * quality * confidence)
                         .collect();
 
@@ -694,18 +744,21 @@ impl MultiModalFusion {
     }
 
     /// Compute fusion uncertainty
-    fn compute_fusion_uncertainty(&self) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = self.find_common_dimensions();
+    fn _compute_fusion_uncertainty(&self) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = self._find_common_dimensions();
         let mut uncertainty = Array3::<f64>::zeros((nx, ny, nz));
 
         // Simple variance-based uncertainty
         for (modality_name, modality) in &self.registered_data {
-            let weight = self.config.modality_weights.get(modality_name)
+            let weight = self
+                .config
+                .modality_weights
+                .get(modality_name)
                 .copied()
                 .unwrap_or(1.0);
 
             // Estimate noise level for this modality
-            let noise_estimate = self.estimate_modality_noise(modality_name);
+            let noise_estimate = self._estimate_modality_noise(modality_name);
 
             let data = &modality.data;
             for i in 0..nx.min(data.shape()[0]) {
@@ -715,7 +768,8 @@ impl MultiModalFusion {
                         // Add contribution to uncertainty
                         let signal_variance = (d * 0.1).powi(2); // Assume 10% signal variation
                         let noise_variance = noise_estimate.powi(2);
-                        uncertainty[[i, j, k]] += weight * (signal_variance + noise_variance).sqrt();
+                        uncertainty[[i, j, k]] +=
+                            weight * (signal_variance + noise_variance).sqrt();
                     }
                 }
             }
@@ -725,11 +779,11 @@ impl MultiModalFusion {
     }
 
     /// Estimate noise level for a modality
-    fn estimate_modality_noise(&self, modality_name: &str) -> f64 {
+    fn _estimate_modality_noise(&self, modality_name: &str) -> f64 {
         match modality_name {
-            "ultrasound" => 0.05,     // 5% noise
-            "photoacoustic" => 0.08,  // 8% noise
-            "elastography" => 0.1,    // 10% noise
+            "ultrasound" => 0.05,    // 5% noise
+            "photoacoustic" => 0.08, // 8% noise
+            "elastography" => 0.1,   // 10% noise
             _ => 0.05,
         }
     }
@@ -753,20 +807,33 @@ impl MultiModalFusion {
         let mean_intensity = total_intensity / optical_intensity.len() as f64;
 
         // Signal-to-noise ratio approximation
-        let variance: f64 = optical_intensity.iter()
+        let variance: f64 = optical_intensity
+            .iter()
             .map(|&x| (x - mean_intensity).powi(2))
-            .sum::<f64>() / optical_intensity.len() as f64;
-        let snr = if variance > 0.0 { mean_intensity / variance.sqrt() } else { 0.0 };
+            .sum::<f64>()
+            / optical_intensity.len() as f64;
+        let snr = if variance > 0.0 {
+            mean_intensity / variance.sqrt()
+        } else {
+            0.0
+        };
 
         // Quality score based on SNR and wavelength (visible light preferred)
-        let wavelength_factor = if (400e-9..700e-9).contains(&wavelength) { 1.0 } else { 0.8 };
+        let wavelength_factor = if (400e-9..700e-9).contains(&wavelength) {
+            1.0
+        } else {
+            0.8
+        };
         let snr_factor = (snr / 10.0).min(1.0); // Normalize SNR
 
         0.6 + 0.3 * wavelength_factor + 0.1 * snr_factor // Base quality + factors
     }
 
     /// Extract tissue properties from fused data
-    pub fn extract_tissue_properties(&self, fused_result: &FusedImageResult) -> HashMap<String, Array3<f64>> {
+    pub fn extract_tissue_properties(
+        &self,
+        fused_result: &FusedImageResult,
+    ) -> HashMap<String, Array3<f64>> {
         let mut properties = HashMap::new();
 
         // Extract derived tissue properties from multi-modal fusion

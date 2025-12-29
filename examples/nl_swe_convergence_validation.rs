@@ -7,9 +7,9 @@
 //! - Test harmonic generation accuracy
 //! - Analyze numerical convergence rates
 
-use kwavers::physics::imaging::elastography::*;
 use kwavers::grid::Grid;
 use kwavers::medium::HomogeneousMedium;
+use kwavers::physics::imaging::elastography::*;
 use std::f64::consts::PI;
 
 /// Simple demonstration of convergence testing
@@ -51,7 +51,7 @@ fn validate_neo_hookean_model() -> Result<(), Box<dyn std::error::Error>> {
     let deformation_gradient = [
         [lambda, 0.0, 0.0],
         [0.0, 1.0 / lambda.sqrt(), 0.0],
-        [0.0, 0.0, 1.0 / lambda.sqrt()]
+        [0.0, 0.0, 1.0 / lambda.sqrt()],
     ];
 
     let stress = model.cauchy_stress(&deformation_gradient);
@@ -59,7 +59,8 @@ fn validate_neo_hookean_model() -> Result<(), Box<dyn std::error::Error>> {
 
     // Analytical approximation for Neo-Hookean
     let c1 = 1000.0; // From implementation
-    let analytical_stress = c1 * (lambda * lambda - 1.0 / (lambda * lambda * lambda * lambda)) * lambda * lambda;
+    let analytical_stress =
+        c1 * (lambda * lambda - 1.0 / (lambda * lambda * lambda * lambda)) * lambda * lambda;
 
     let relative_error = ((sigma_xx - analytical_stress) / analytical_stress).abs();
 
@@ -91,18 +92,25 @@ fn validate_ogden_principal_stretches() -> Result<(), Box<dyn std::error::Error>
     let deformation_gradient = [
         [lambda_x, 0.0, 0.0],
         [0.0, lambda_y, 0.0],
-        [0.0, 0.0, lambda_y]
+        [0.0, 0.0, lambda_y],
     ];
 
     let principal_stretches = model.principal_stretches(&deformation_gradient);
 
-    println!("  Input stretches: λx={:.3}, λy={:.3}, λz={:.3}", lambda_x, lambda_y, lambda_y);
-    println!("  Computed principal stretches: [{:.6}, {:.6}, {:.6}]",
-             principal_stretches[0], principal_stretches[1], principal_stretches[2]);
+    println!(
+        "  Input stretches: λx={:.3}, λy={:.3}, λz={:.3}",
+        lambda_x, lambda_y, lambda_y
+    );
+    println!(
+        "  Computed principal stretches: [{:.6}, {:.6}, {:.6}]",
+        principal_stretches[0], principal_stretches[1], principal_stretches[2]
+    );
 
     // Check ordering (should be sorted ascending)
-    let is_sorted = principal_stretches[0] <= principal_stretches[1] && principal_stretches[1] <= principal_stretches[2];
-    let max_error = principal_stretches.iter()
+    let is_sorted = principal_stretches[0] <= principal_stretches[1]
+        && principal_stretches[1] <= principal_stretches[2];
+    let max_error = principal_stretches
+        .iter()
         .zip(&[lambda_y, lambda_y, lambda_x])
         .map(|(&computed, &expected)| (computed - expected).abs() / expected.abs())
         .fold(0.0, f64::max);
@@ -184,9 +192,18 @@ fn demonstrate_convergence_setup() -> Result<(), Box<dyn std::error::Error>> {
 
     for &nx in &grid_sizes {
         let dx = 0.01 / nx as f64; // 1cm domain
-        let expected_convergence = if nx <= 64 { "2nd order" } else { "limited by model" };
+        let expected_convergence = if nx <= 64 {
+            "2nd order"
+        } else {
+            "limited by model"
+        };
 
-        println!("  {:8} | {:.4}  | {}", nx, dx * 1000.0, expected_convergence);
+        println!(
+            "  {:8} | {:.4}  | {}",
+            nx,
+            dx * 1000.0,
+            expected_convergence
+        );
 
         // In a full implementation, we would run the simulation here
         // For demo purposes, just show the setup

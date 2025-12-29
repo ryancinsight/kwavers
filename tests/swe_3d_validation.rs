@@ -25,17 +25,16 @@
 //!   acoustic radiation force." *Ultrasound in Medicine & Biology*, 37(4), 546-558.
 
 use kwavers::clinical::swe_3d_workflows::{
-    VolumetricROI, ElasticityMap3D, ClinicalDecisionSupport, MultiPlanarReconstruction,
+    ClinicalDecisionSupport, ElasticityMap3D, MultiPlanarReconstruction, VolumetricROI,
     VolumetricStatistics,
 };
-use kwavers::physics::imaging::elastography::{
-    ElasticWaveSolver, VolumetricWaveConfig, WaveFrontTracker,
-    AcousticRadiationForce, MultiDirectionalPush,
-    GPUElasticWaveSolver3D, GPUDevice, AdaptiveResolution,
-};
 use kwavers::grid::Grid;
-use kwavers::medium::{HomogeneousMedium};
 use kwavers::medium::heterogeneous::HeterogeneousMedium;
+use kwavers::medium::HomogeneousMedium;
+use kwavers::physics::imaging::elastography::{
+    AcousticRadiationForce, AdaptiveResolution, ElasticWaveSolver, GPUDevice,
+    GPUElasticWaveSolver3D, MultiDirectionalPush, VolumetricWaveConfig, WaveFrontTracker,
+};
 use ndarray::Array3;
 use std::f64::consts::PI;
 
@@ -46,7 +45,7 @@ fn test_analytical_homogeneous_validation() {
 
     // Create homogeneous medium with known properties
     let grid = Grid::new(40, 40, 40, 0.001, 0.001, 0.001).unwrap(); // 4x4x4cm
-    // Use solid soft tissue model with E ≈ 10 kPa and ν ≈ 0.49
+                                                                    // Use solid soft tissue model with E ≈ 10 kPa and ν ≈ 0.49
     let medium = HomogeneousMedium::soft_tissue(10_000.0, 0.49, &grid);
 
     // Calculate expected shear wave speed analytically
@@ -71,10 +70,18 @@ fn test_analytical_homogeneous_validation() {
 
     // Validate against analytical solution
     let relative_error = ((measured_speed - expected_shear_speed) / expected_shear_speed).abs();
-    println!("Expected speed: {:.3} m/s, Measured: {:.3} m/s, Error: {:.2}%",
-             expected_shear_speed, measured_speed, relative_error * 100.0);
+    println!(
+        "Expected speed: {:.3} m/s, Measured: {:.3} m/s, Error: {:.2}%",
+        expected_shear_speed,
+        measured_speed,
+        relative_error * 100.0
+    );
 
-    assert!(relative_error < 0.15, "Wave speed error too large: {:.2}%", relative_error * 100.0);
+    assert!(
+        relative_error < 0.15,
+        "Wave speed error too large: {:.2}%",
+        relative_error * 100.0
+    );
 }
 
 /// Test volumetric phantom with known inclusions
@@ -93,7 +100,8 @@ fn test_volumetric_phantom_validation() {
     let push_pattern = MultiDirectionalPush::orthogonal_pattern([0.025, 0.025, 0.025], 0.01);
 
     // Configure volumetric features
-    let mut volumetric_solver = ElasticWaveSolver::new(&grid, &phantom, Default::default()).unwrap();
+    let mut volumetric_solver =
+        ElasticWaveSolver::new(&grid, &phantom, Default::default()).unwrap();
     volumetric_solver.set_volumetric_config(VolumetricWaveConfig {
         volumetric_boundaries: true,
         interference_tracking: true,
@@ -107,9 +115,9 @@ fn test_volumetric_phantom_validation() {
 
     // Propagate with volumetric tracking
     let push_times: Vec<f64> = push_pattern.time_delays.clone();
-    let (history, tracker) = volumetric_solver.propagate_volumetric_waves(
-        &[initial_disp], &push_times
-    ).unwrap();
+    let (history, tracker) = volumetric_solver
+        .propagate_volumetric_waves(&[initial_disp], &push_times)
+        .unwrap();
 
     // Reconstruct 3D elasticity map
     let mut elasticity_map = ElasticityMap3D::new(&grid);
@@ -144,7 +152,9 @@ fn test_clinical_liver_fibrosis_accuracy() {
     // Clinical examination
     let initial_disp = arf.apply_multi_directional_push(&push_pattern).unwrap();
     let push_times: Vec<f64> = push_pattern.time_delays.clone();
-    let (history, tracker) = solver.propagate_volumetric_waves(&[initial_disp], &push_times).unwrap();
+    let (history, tracker) = solver
+        .propagate_volumetric_waves(&[initial_disp], &push_times)
+        .unwrap();
 
     // Reconstruct elasticity
     let mut elasticity_map = ElasticityMap3D::new(&grid);
@@ -164,9 +174,19 @@ fn test_clinical_liver_fibrosis_accuracy() {
     println!("  Confidence: {:?}", classification.confidence);
 
     // Validate clinical accuracy
-    assert!(stats.mean_modulus > 8000.0, "Stiffness too low for fibrosis phantom");
-    assert!(stats.mean_modulus < 15000.0, "Stiffness too high for fibrosis phantom");
-    assert!(stats.volume_coverage > 0.8, "Insufficient volume coverage: {:.1}%", stats.volume_coverage * 100.0);
+    assert!(
+        stats.mean_modulus > 8000.0,
+        "Stiffness too low for fibrosis phantom"
+    );
+    assert!(
+        stats.mean_modulus < 15000.0,
+        "Stiffness too high for fibrosis phantom"
+    );
+    assert!(
+        stats.volume_coverage > 0.8,
+        "Insufficient volume coverage: {:.1}%",
+        stats.volume_coverage * 100.0
+    );
 }
 
 /// Test GPU acceleration performance
@@ -178,7 +198,7 @@ fn test_gpu_acceleration_performance() {
     let gpu_device = GPUDevice {
         name: "NVIDIA RTX 3080".to_string(),
         global_memory: 10 * 1024 * 1024 * 1024, // 10GB
-        shared_memory: 48 * 1024, // 48KB
+        shared_memory: 48 * 1024,               // 48KB
         max_threads_per_block: 1024,
         max_grid_dims: [2147483647, 65535, 65535],
         compute_capability: (8, 6),
@@ -204,12 +224,7 @@ fn test_gpu_acceleration_performance() {
     let push_times = vec![0.0, 50e-6, 100e-6];
 
     // Test GPU propagation
-    let gpu_result = gpu_solver.propagate_waves_gpu(
-        &displacements,
-        &push_times,
-        &grid,
-        100
-    );
+    let gpu_result = gpu_solver.propagate_waves_gpu(&displacements, &push_times, &grid, 100);
 
     match gpu_result {
         Ok(result) => {
@@ -217,10 +232,20 @@ fn test_gpu_acceleration_performance() {
             println!("  Execution time: {:.3} s", result.execution_time);
             println!("  Kernel time: {:.3} s", result.kernel_time);
             println!("  Throughput: {:.1} cells/s", result.throughput);
-            println!("  Memory used: {:.1} MB", result.memory_used as f64 / (1024.0 * 1024.0));
+            println!(
+                "  Memory used: {:.1} MB",
+                result.memory_used as f64 / (1024.0 * 1024.0)
+            );
 
-            assert!(result.execution_time > 0.0, "Execution time should be positive");
-            assert!(result.throughput > 1000.0, "Throughput too low: {:.0}", result.throughput);
+            assert!(
+                result.execution_time > 0.0,
+                "Execution time should be positive"
+            );
+            assert!(
+                result.throughput > 1000.0,
+                "Throughput too low: {:.0}",
+                result.throughput
+            );
         }
         Err(e) => {
             println!("GPU test skipped (expected on systems without GPU): {}", e);
@@ -245,11 +270,24 @@ fn test_adaptive_resolution() {
     println!("Adaptive Resolution Results:");
     println!("  Resolution levels: {}", result.steps.len());
     println!("  Final quality: {:.2}", result.final_quality);
-    println!("  Total computation time: {:.3} s", result.total_computation_time);
+    println!(
+        "  Total computation time: {:.3} s",
+        result.total_computation_time
+    );
 
-    assert!(result.steps.len() >= 2, "Should use multiple resolution levels");
-    assert!(result.final_quality > 0.8, "Final quality too low: {:.2}", result.final_quality);
-    assert!(result.total_computation_time > 0.0, "Computation time should be positive");
+    assert!(
+        result.steps.len() >= 2,
+        "Should use multiple resolution levels"
+    );
+    assert!(
+        result.final_quality > 0.8,
+        "Final quality too low: {:.2}",
+        result.final_quality
+    );
+    assert!(
+        result.total_computation_time > 0.0,
+        "Computation time should be positive"
+    );
 }
 
 /// Test robustness with edge cases
@@ -273,7 +311,10 @@ fn test_robustness_edge_cases() {
     let boundary_disp = arf.apply_push_pulse([0.0, 0.0, 0.0]).unwrap();
     let boundary_history = solver.propagate_waves(&boundary_disp).unwrap();
 
-    assert!(!boundary_history.is_empty(), "Should handle boundary conditions");
+    assert!(
+        !boundary_history.is_empty(),
+        "Should handle boundary conditions"
+    );
 }
 
 /// Benchmark performance scaling
@@ -301,17 +342,29 @@ fn test_performance_scaling() {
         let throughput = cells as f64 * history.len() as f64 / elapsed;
 
         results.push((cells, elapsed, throughput));
-        println!("  Size {}x{}x{}: {:.3}s, {:.0} cells/s", size, size, size, elapsed, throughput);
+        println!(
+            "  Size {}x{}x{}: {:.3}s, {:.0} cells/s",
+            size, size, size, elapsed, throughput
+        );
     }
 
     // Check scaling (should be roughly O(n³) for volume, but better with optimizations)
     for i in 1..results.len() {
-        let ratio = results[i].0 as f64 / results[i-1].0 as f64;
-        let time_ratio = results[i].1 / results[i-1].1;
+        let ratio = results[i].0 as f64 / results[i - 1].0 as f64;
+        let time_ratio = results[i].1 / results[i - 1].1;
         let scaling_efficiency = ratio / time_ratio;
 
-        println!("  Scaling efficiency {}-{}: {:.2}x", sizes[i-1], sizes[i], scaling_efficiency);
-        assert!(scaling_efficiency > 0.1, "Scaling too poor: {:.2}x", scaling_efficiency);
+        println!(
+            "  Scaling efficiency {}-{}: {:.2}x",
+            sizes[i - 1],
+            sizes[i],
+            scaling_efficiency
+        );
+        assert!(
+            scaling_efficiency > 0.1,
+            "Scaling too poor: {:.2}x",
+            scaling_efficiency
+        );
     }
 }
 
@@ -322,7 +375,7 @@ fn test_literature_benchmark_comparison() {
 
     // Based on Palmeri et al. (2011) liver SWE study
     let grid = Grid::new(60, 60, 40, 0.001, 0.001, 0.0015).unwrap(); // ~6x6x6cm liver volume
-    // Use liver tissue model representative of F3 fibrosis
+                                                                     // Use liver tissue model representative of F3 fibrosis
     let medium = HomogeneousMedium::liver_tissue(3, &grid);
 
     let solver = ElasticWaveSolver::new(&grid, &medium, Default::default()).unwrap();
@@ -352,22 +405,40 @@ fn test_literature_benchmark_comparison() {
     let initial_disp = arf.apply_multi_directional_push(&push_pattern).unwrap();
     let push_times: Vec<f64> = push_pattern.time_delays.clone();
 
-    let (history, tracker) = volumetric_solver.propagate_volumetric_waves(
-        &[initial_disp], &push_times
-    ).unwrap();
+    let (history, tracker) = volumetric_solver
+        .propagate_volumetric_waves(&[initial_disp], &push_times)
+        .unwrap();
 
     // Extract clinically relevant metrics
     let quality_metrics = volumetric_solver.calculate_volumetric_quality(&tracker);
 
     println!("Literature Benchmark Comparison:");
-    println!("  Volume coverage: {:.1}%", quality_metrics.coverage * 100.0);
+    println!(
+        "  Volume coverage: {:.1}%",
+        quality_metrics.coverage * 100.0
+    );
     println!("  Quality score: {:.2}", quality_metrics.average_quality);
-    println!("  Valid tracking points: {}", quality_metrics.valid_tracking_points);
+    println!(
+        "  Valid tracking points: {}",
+        quality_metrics.valid_tracking_points
+    );
 
     // Clinical benchmarks (based on literature)
-    assert!(quality_metrics.coverage > 0.7, "Coverage below clinical threshold: {:.1}%", quality_metrics.coverage * 100.0);
-    assert!(quality_metrics.average_quality > 0.6, "Quality below clinical threshold: {:.2}", quality_metrics.average_quality);
-    assert!(quality_metrics.valid_tracking_points > 1000, "Insufficient valid points: {}", quality_metrics.valid_tracking_points);
+    assert!(
+        quality_metrics.coverage > 0.7,
+        "Coverage below clinical threshold: {:.1}%",
+        quality_metrics.coverage * 100.0
+    );
+    assert!(
+        quality_metrics.average_quality > 0.6,
+        "Quality below clinical threshold: {:.2}",
+        quality_metrics.average_quality
+    );
+    assert!(
+        quality_metrics.valid_tracking_points > 1000,
+        "Insufficient valid points: {}",
+        quality_metrics.valid_tracking_points
+    );
 }
 
 // Helper functions
@@ -375,7 +446,7 @@ fn test_literature_benchmark_comparison() {
 fn estimate_wave_speed_from_history(
     history: &[kwavers::physics::imaging::elastography::ElasticWaveField],
     grid: &Grid,
-    source_location: [f64; 3]
+    source_location: [f64; 3],
 ) -> f64 {
     if history.len() < 10 {
         return 0.0;
@@ -383,9 +454,21 @@ fn estimate_wave_speed_from_history(
 
     // Track displacement at several points away from source
     let monitor_points = vec![
-        [source_location[0] + 0.01, source_location[1], source_location[2]], // 1cm away
-        [source_location[0] + 0.015, source_location[1], source_location[2]], // 1.5cm away
-        [source_location[0] + 0.02, source_location[1], source_location[2]], // 2cm away
+        [
+            source_location[0] + 0.01,
+            source_location[1],
+            source_location[2],
+        ], // 1cm away
+        [
+            source_location[0] + 0.015,
+            source_location[1],
+            source_location[2],
+        ], // 1.5cm away
+        [
+            source_location[0] + 0.02,
+            source_location[1],
+            source_location[2],
+        ], // 2cm away
     ];
 
     let mut arrival_times = Vec::new();
@@ -399,12 +482,14 @@ fn estimate_wave_speed_from_history(
             // Find first time point with significant displacement
             for field in history.iter() {
                 let displacement = field.displacement_magnitude()[[i, j, k]];
-                if displacement > 1e-7 { // Threshold for wave arrival
-                    let distance = ((point[0] - source_location[0]).powi(2) +
-                                  (point[1] - source_location[1]).powi(2) +
-                                  (point[2] - source_location[2]).powi(2)).sqrt();
+                if displacement > 1e-7 {
+                    // Threshold for wave arrival
+                    let distance = ((point[0] - source_location[0]).powi(2)
+                        + (point[1] - source_location[1]).powi(2)
+                        + (point[2] - source_location[2]).powi(2))
+                    .sqrt();
                     let time = field.time; // Use actual recorded time
-                    // Ignore early arrivals (likely compressional components); focus on shear
+                                           // Ignore early arrivals (likely compressional components); focus on shear
                     if time > 2.0e-3 {
                         arrival_times.push((distance, time));
                         break;
@@ -425,7 +510,11 @@ fn estimate_wave_speed_from_history(
         let sum_xx: f64 = arrival_times.iter().map(|(d, _)| d * d).sum();
 
         let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x);
-        if slope != 0.0 { 1.0 / slope.abs() } else { 0.0 } // speed = distance / time
+        if slope != 0.0 {
+            1.0 / slope.abs()
+        } else {
+            0.0
+        } // speed = distance / time
     } else {
         0.0
     }
@@ -506,8 +595,8 @@ fn create_liver_fibrosis_phantom(grid: &Grid) -> HeterogeneousMedium {
 
     // Add fibrotic regions
     let fibrotic_regions: Vec<(usize, usize, usize, usize, f64)> = vec![
-        (grid.nx/3, grid.ny/3, grid.nz/2, 10, 12000.0), // F3 fibrosis
-        (2*grid.nx/3, 2*grid.ny/3, grid.nz/3, 8, 16000.0), // F4 fibrosis
+        (grid.nx / 3, grid.ny / 3, grid.nz / 2, 10, 12000.0), // F3 fibrosis
+        (2 * grid.nx / 3, 2 * grid.ny / 3, grid.nz / 3, 8, 16000.0), // F4 fibrosis
     ];
 
     for (cx, cy, cz, radius, stiffness) in fibrotic_regions {
@@ -597,7 +686,13 @@ fn perform_phantom_elasticity_reconstruction(
                         let young_modulus = 3.0 * density * estimated_speed * estimated_speed;
 
                         let quality = tracker.tracking_quality[[i, j, k]];
-                        let confidence = if quality > 0.8 { 0.9 } else if quality > 0.6 { 0.7 } else { 0.5 };
+                        let confidence = if quality > 0.8 {
+                            0.9
+                        } else if quality > 0.6 {
+                            0.7
+                        } else {
+                            0.5
+                        };
 
                         elasticity_map.young_modulus[[i, j, k]] = young_modulus;
                         elasticity_map.shear_speed[[i, j, k]] = estimated_speed;
@@ -633,9 +728,11 @@ fn perform_clinical_elasticity_reconstruction(
                         let dz = k as f64 * grid.dz - push.location[2];
                         let distance = (dx * dx + dy * dy + dz * dz).sqrt();
 
-                        if distance > 0.005 { // Minimum distance threshold
+                        if distance > 0.005 {
+                            // Minimum distance threshold
                             let local_speed = distance / arrival_time;
-                            if local_speed > 0.5 && local_speed < 10.0 { // Reasonable speed range
+                            if local_speed > 0.5 && local_speed < 10.0 {
+                                // Reasonable speed range
                                 speed_estimates.push(local_speed);
                             }
                         }
@@ -651,9 +748,13 @@ fn perform_clinical_elasticity_reconstruction(
                         let young_modulus = 3.0 * density * median_speed * median_speed;
 
                         let quality = tracker.tracking_quality[[i, j, k]];
-                        let confidence = if quality > 0.8 && speed_estimates.len() >= 3 { 0.9 }
-                                       else if quality > 0.6 && speed_estimates.len() >= 2 { 0.7 }
-                                       else { 0.5 };
+                        let confidence = if quality > 0.8 && speed_estimates.len() >= 3 {
+                            0.9
+                        } else if quality > 0.6 && speed_estimates.len() >= 2 {
+                            0.7
+                        } else {
+                            0.5
+                        };
 
                         elasticity_map.young_modulus[[i, j, k]] = young_modulus;
                         elasticity_map.shear_speed[[i, j, k]] = median_speed;
@@ -687,10 +788,12 @@ fn validate_phantom_reconstruction(
                     let mu = phantom.lame_mu[[i, j, k]];
                     let phantom_stiffness = lame_to_young(lambda, mu);
 
-                    let relative_error = ((reconstructed - phantom_stiffness) / phantom_stiffness).abs();
+                    let relative_error =
+                        ((reconstructed - phantom_stiffness) / phantom_stiffness).abs();
 
                     // Classify as background or inclusion
-                    if phantom_stiffness < 6000.0 { // Background threshold
+                    if phantom_stiffness < 6000.0 {
+                        // Background threshold
                         background_errors.push(relative_error);
                     } else {
                         inclusion_errors.push(relative_error);
@@ -701,20 +804,42 @@ fn validate_phantom_reconstruction(
     }
 
     // Calculate statistics
-    let background_mean_error: f64 = background_errors.iter().sum::<f64>() / background_errors.len() as f64;
-    let inclusion_mean_error: f64 = inclusion_errors.iter().sum::<f64>() / inclusion_errors.len() as f64;
+    let background_mean_error: f64 =
+        background_errors.iter().sum::<f64>() / background_errors.len() as f64;
+    let inclusion_mean_error: f64 =
+        inclusion_errors.iter().sum::<f64>() / inclusion_errors.len() as f64;
 
     println!("Phantom Validation Results:");
-    println!("  Background regions: {} points, mean error: {:.1}%",
-             background_errors.len(), background_mean_error * 100.0);
-    println!("  Inclusion regions: {} points, mean error: {:.1}%",
-             inclusion_errors.len(), inclusion_mean_error * 100.0);
+    println!(
+        "  Background regions: {} points, mean error: {:.1}%",
+        background_errors.len(),
+        background_mean_error * 100.0
+    );
+    println!(
+        "  Inclusion regions: {} points, mean error: {:.1}%",
+        inclusion_errors.len(),
+        inclusion_mean_error * 100.0
+    );
 
     // Validation criteria
-    assert!(background_mean_error < 0.3, "Background error too high: {:.1}%", background_mean_error * 100.0);
-    assert!(inclusion_mean_error < 0.4, "Inclusion error too high: {:.1}%", inclusion_mean_error * 100.0);
-    assert!(background_errors.len() > 100, "Insufficient background validation points");
-    assert!(inclusion_errors.len() > 50, "Insufficient inclusion validation points");
+    assert!(
+        background_mean_error < 0.3,
+        "Background error too high: {:.1}%",
+        background_mean_error * 100.0
+    );
+    assert!(
+        inclusion_mean_error < 0.4,
+        "Inclusion error too high: {:.1}%",
+        inclusion_mean_error * 100.0
+    );
+    assert!(
+        background_errors.len() > 100,
+        "Insufficient background validation points"
+    );
+    assert!(
+        inclusion_errors.len() > 50,
+        "Insufficient inclusion validation points"
+    );
 }
 
 #[inline]

@@ -26,14 +26,12 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::physics::plugin::kzk_solver::KzkSolverPlugin;
 use ndarray::Array3;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use super::{
-    stone_fracture::{StoneFractureModel, StoneMaterial},
-    shock_wave::{ShockWaveGenerator, ShockWavePropagation, ShockWaveParameters},
-    cavitation_cloud::{CavitationCloudDynamics, CloudParameters},
     bioeffects::{BioeffectsModel, BioeffectsParameters, SafetyAssessment},
+    cavitation_cloud::{CavitationCloudDynamics, CloudParameters},
+    shock_wave::{ShockWaveGenerator, ShockWaveParameters, ShockWavePropagation},
+    stone_fracture::{StoneFractureModel, StoneMaterial},
 };
 
 /// Lithotripsy simulation parameters
@@ -64,9 +62,9 @@ impl Default for LithotripsyParameters {
             shock_parameters: ShockWaveParameters::default(),
             cloud_parameters: CloudParameters::default(),
             bioeffects_parameters: BioeffectsParameters::default(),
-            treatment_frequency: 1.0,        // 1 Hz
-            num_shock_waves: 1000,          // Typical treatment
-            interpulse_delay: 1.0,          // 1 second between pulses
+            treatment_frequency: 1.0,                    // 1 Hz
+            num_shock_waves: 1000,                       // Typical treatment
+            interpulse_delay: 1.0,                       // 1 second between pulses
             stone_geometry: Array3::zeros((32, 32, 32)), // Will be set later
         }
     }
@@ -113,7 +111,7 @@ pub struct LithotripsySimulator {
     /// Bioeffects model
     bioeffects_model: BioeffectsModel,
     /// KZK solver for nonlinear propagation
-    kzk_solver: KzkSolverPlugin,
+    _kzk_solver: KzkSolverPlugin,
     /// Simulation state
     simulation_time: f64,
     /// Results accumulator
@@ -129,16 +127,19 @@ impl LithotripsySimulator {
                 crate::error::ValidationError::FieldValidation {
                     field: "stone_geometry".to_string(),
                     value: format!("{:?}", params.stone_geometry.dim()),
-                    constraint: format!("Must match grid dimensions {:?}", grid.dimensions()).to_string(),
-                }
+                    constraint: format!("Must match grid dimensions {:?}", grid.dimensions())
+                        .to_string(),
+                },
             ));
         }
 
         let stone_model = StoneFractureModel::new(params.stone_material.clone(), grid.dimensions());
         let shock_generator = ShockWaveGenerator::new(params.shock_parameters.clone(), &grid)?;
         let shock_propagator = ShockWavePropagation::new(0.1, &grid)?;
-        let cavitation_cloud = CavitationCloudDynamics::new(params.cloud_parameters.clone(), grid.dimensions());
-        let bioeffects_model = BioeffectsModel::new(grid.dimensions(), params.bioeffects_parameters.clone());
+        let cavitation_cloud =
+            CavitationCloudDynamics::new(params.cloud_parameters.clone(), grid.dimensions());
+        let bioeffects_model =
+            BioeffectsModel::new(grid.dimensions(), params.bioeffects_parameters.clone());
         let kzk_solver = KzkSolverPlugin::new();
 
         let results = SimulationResults {
@@ -168,7 +169,7 @@ impl LithotripsySimulator {
             shock_propagator,
             cavitation_cloud,
             bioeffects_model,
-            kzk_solver,
+            _kzk_solver: kzk_solver,
             simulation_time: 0.0,
             results,
         })
@@ -176,7 +177,10 @@ impl LithotripsySimulator {
 
     /// Run complete lithotripsy simulation
     pub fn run_simulation(&mut self) -> KwaversResult<&SimulationResults> {
-        println!("Starting lithotripsy simulation with {} shock waves", self.params.num_shock_waves);
+        println!(
+            "Starting lithotripsy simulation with {} shock waves",
+            self.params.num_shock_waves
+        );
 
         // Record initial stone volume
         let initial_volume = self.calculate_stone_volume();
@@ -200,10 +204,14 @@ impl LithotripsySimulator {
             // Record progress
             if pulse_num % 100 == 0 {
                 let current_volume = self.calculate_stone_volume();
-                let eroded_mass = self.cavitation_cloud.total_eroded_mass(self.params.interpulse_delay);
+                let eroded_mass = self
+                    .cavitation_cloud
+                    .total_eroded_mass(self.params.interpulse_delay);
 
-                println!("Pulse {}: Stone volume = {:.2e} m³, Eroded mass = {:.2e} kg",
-                        pulse_num, current_volume, eroded_mass);
+                println!(
+                    "Pulse {}: Stone volume = {:.2e} m³, Eroded mass = {:.2e} kg",
+                    pulse_num, current_volume, eroded_mass
+                );
 
                 self.results.stone_volume_history.push(current_volume);
                 self.results.erosion_history.push(eroded_mass);
@@ -213,8 +221,10 @@ impl LithotripsySimulator {
         // Finalize results
         self.finalize_results();
 
-        println!("Simulation complete: {} pulses delivered, {:.2e} kg eroded",
-                self.results.shock_waves_delivered, self.results.total_eroded_mass);
+        println!(
+            "Simulation complete: {} pulses delivered, {:.2e} kg eroded",
+            self.results.shock_waves_delivered, self.results.total_eroded_mass
+        );
 
         Ok(&self.results)
     }
@@ -222,15 +232,14 @@ impl LithotripsySimulator {
     /// Deliver a single shock wave
     fn deliver_shock_wave(&mut self) -> KwaversResult<()> {
         // Generate shock wave at source
-        let source_pressure = self.shock_generator.generate_shock_field(
-            &self.grid,
-            self.params.shock_parameters.center_frequency
-        );
+        let source_pressure = self
+            .shock_generator
+            .generate_shock_field(&self.grid, self.params.shock_parameters.center_frequency);
 
         // Propagate shock wave to stone region
         let propagated_pressure = self.shock_propagator.propagate_shock_wave(
             &source_pressure,
-            self.params.shock_parameters.center_frequency
+            self.params.shock_parameters.center_frequency,
         )?;
 
         // Apply shock wave to stone
@@ -264,7 +273,11 @@ impl LithotripsySimulator {
         let strain_rate = 1.0 / self.params.shock_parameters.rise_time;
 
         // Apply damage accumulation
-        self.stone_model.apply_stress_loading(&stress_field, self.params.interpulse_delay, strain_rate);
+        self.stone_model.apply_stress_loading(
+            &stress_field,
+            self.params.interpulse_delay,
+            strain_rate,
+        );
 
         Ok(())
     }
@@ -272,7 +285,8 @@ impl LithotripsySimulator {
     /// Simulate cavitation effects from shock wave
     fn simulate_cavitation_effects(&mut self, shock_pressure: &Array3<f64>) -> KwaversResult<()> {
         // Initialize cavitation cloud around stone
-        self.cavitation_cloud.initialize_cloud(&self.params.stone_geometry, shock_pressure);
+        self.cavitation_cloud
+            .initialize_cloud(&self.params.stone_geometry, shock_pressure);
 
         // Evolve cloud over the pulse duration
         let cloud_time_steps = 100;
@@ -290,7 +304,7 @@ impl LithotripsySimulator {
     fn calculate_acoustic_intensity(&self, pressure_field: &Array3<f64>) -> Array3<f64> {
         // I = (1/(2ρc)) * p² (time-averaged intensity)
         let rho = 1000.0; // kg/m³
-        let c = 1500.0;   // m/s
+        let c = 1500.0; // m/s
 
         pressure_field.mapv(|p| p * p / (2.0 * rho * c))
     }
@@ -298,7 +312,10 @@ impl LithotripsySimulator {
     /// Calculate current stone volume
     fn calculate_stone_volume(&self) -> f64 {
         let voxel_volume = self.grid.dx * self.grid.dy * self.grid.dz;
-        let intact_voxels = self.params.stone_geometry.iter()
+        let intact_voxels = self
+            .params
+            .stone_geometry
+            .iter()
             .zip(self.stone_model.damage_field().iter())
             .filter(|(&geom, &damage)| geom > 0.5 && damage < 1.0)
             .count();
@@ -315,7 +332,9 @@ impl LithotripsySimulator {
         self.results.fragment_sizes = self.stone_model.fragment_sizes().to_vec();
 
         // Calculate total eroded mass
-        self.results.total_eroded_mass = self.cavitation_cloud.total_eroded_mass(self.simulation_time);
+        self.results.total_eroded_mass = self
+            .cavitation_cloud
+            .total_eroded_mass(self.simulation_time);
 
         // Set treatment time
         self.results.treatment_time = self.simulation_time;
@@ -326,7 +345,9 @@ impl LithotripsySimulator {
         // Add final values to history
         let final_volume = self.calculate_stone_volume();
         self.results.stone_volume_history.push(final_volume);
-        self.results.erosion_history.push(self.results.total_eroded_mass);
+        self.results
+            .erosion_history
+            .push(self.results.total_eroded_mass);
     }
 
     /// Get current simulation state
@@ -336,8 +357,13 @@ impl LithotripsySimulator {
             simulation_time: self.simulation_time,
             shock_waves_delivered: self.results.shock_waves_delivered,
             stone_volume: self.calculate_stone_volume(),
-            eroded_mass: self.cavitation_cloud.total_eroded_mass(self.simulation_time),
-            safety_assessment: self.bioeffects_model.current_assessment().check_safety_limits(),
+            eroded_mass: self
+                .cavitation_cloud
+                .total_eroded_mass(self.simulation_time),
+            safety_assessment: self
+                .bioeffects_model
+                .current_assessment()
+                .check_safety_limits(),
         }
     }
 
@@ -448,7 +474,9 @@ mod tests {
         assert!(results.treatment_time > 0.0);
 
         // Safety should be assessed
-        assert!(results.final_safety_assessment.overall_safe ||
-                !results.final_safety_assessment.violations.is_empty());
+        assert!(
+            results.final_safety_assessment.overall_safe
+                || !results.final_safety_assessment.violations.is_empty()
+        );
     }
 }

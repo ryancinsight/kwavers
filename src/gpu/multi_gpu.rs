@@ -116,9 +116,11 @@ impl MultiGpuContext {
         }
 
         if contexts.len() < 2 {
-            return Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: "Multiple GPU devices required for multi-GPU context".to_string(),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::ResourceUnavailable {
+                    resource: "Multiple GPU devices required for multi-GPU context".to_string(),
+                },
+            ));
         }
 
         // Initialize communication channels
@@ -200,7 +202,9 @@ impl MultiGpuContext {
     }
 
     /// Initialize communication channels between GPUs
-    fn initialize_communication_channels(contexts: &[GpuContext]) -> HashMap<(usize, usize), CommunicationChannel> {
+    fn initialize_communication_channels(
+        contexts: &[GpuContext],
+    ) -> HashMap<(usize, usize), CommunicationChannel> {
         let mut channels = HashMap::new();
 
         for i in 0..contexts.len() {
@@ -208,7 +212,7 @@ impl MultiGpuContext {
                 // Estimate bandwidth and latency based on device capabilities
                 // In practice, this would be measured or queried from system
                 let bandwidth = 50.0; // GB/s (PCIe 4.0 x16)
-                let latency = 5.0;   // microseconds
+                let latency = 5.0; // microseconds
                 let supports_p2p = true; // Assume P2P possible for now
 
                 let channel = CommunicationChannel {
@@ -263,17 +267,37 @@ impl MultiGpuContext {
     }
 
     /// Get communication channel between two GPUs
-    pub fn get_communication_channel(&self, gpu_a: usize, gpu_b: usize) -> Option<&CommunicationChannel> {
-        let key = if gpu_a < gpu_b { (gpu_a, gpu_b) } else { (gpu_b, gpu_a) };
+    pub fn get_communication_channel(
+        &self,
+        gpu_a: usize,
+        gpu_b: usize,
+    ) -> Option<&CommunicationChannel> {
+        let key = if gpu_a < gpu_b {
+            (gpu_a, gpu_b)
+        } else {
+            (gpu_b, gpu_a)
+        };
         self.communication_channels.get(&key)
     }
 
     /// Initiate data transfer between GPUs
-    pub fn initiate_transfer(&mut self, from_gpu: usize, to_gpu: usize, size: usize, priority: u8) -> KwaversResult<()> {
-        let channel = self.get_communication_channel_mut(from_gpu, to_gpu)
-            .ok_or_else(|| KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: format!("No communication channel between GPUs {} and {}", from_gpu, to_gpu),
-            }))?;
+    pub fn initiate_transfer(
+        &mut self,
+        from_gpu: usize,
+        to_gpu: usize,
+        size: usize,
+        priority: u8,
+    ) -> KwaversResult<()> {
+        let channel = self
+            .get_communication_channel_mut(from_gpu, to_gpu)
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                    resource: format!(
+                        "No communication channel between GPUs {} and {}",
+                        from_gpu, to_gpu
+                    ),
+                })
+            })?;
 
         let transfer = PendingTransfer {
             size,
@@ -283,14 +307,24 @@ impl MultiGpuContext {
 
         channel.transfer_queue.push(transfer);
         // Sort by priority (highest first)
-        channel.transfer_queue.sort_by(|a, b| b.priority.cmp(&a.priority));
+        channel
+            .transfer_queue
+            .sort_by(|a, b| b.priority.cmp(&a.priority));
 
         Ok(())
     }
 
     /// Get mutable communication channel
-    fn get_communication_channel_mut(&mut self, gpu_a: usize, gpu_b: usize) -> Option<&mut CommunicationChannel> {
-        let key = if gpu_a < gpu_b { (gpu_a, gpu_b) } else { (gpu_b, gpu_a) };
+    fn get_communication_channel_mut(
+        &mut self,
+        gpu_a: usize,
+        gpu_b: usize,
+    ) -> Option<&mut CommunicationChannel> {
+        let key = if gpu_a < gpu_b {
+            (gpu_a, gpu_b)
+        } else {
+            (gpu_b, gpu_a)
+        };
         self.communication_channels.get_mut(&key)
     }
 
@@ -310,7 +344,9 @@ impl MultiGpuContext {
             }
 
             // Remove completed transfers
-            channel.transfer_queue.retain(|t| t.status != TransferStatus::Completed);
+            channel
+                .transfer_queue
+                .retain(|t| t.status != TransferStatus::Completed);
         }
 
         completed_transfers
@@ -322,7 +358,11 @@ impl MultiGpuContext {
     }
 
     /// Calculate optimal GPU for workload based on affinity
-    pub fn optimal_gpu_for_workload(&self, _workload_size: usize, preferred_gpu: Option<usize>) -> usize {
+    pub fn optimal_gpu_for_workload(
+        &self,
+        _workload_size: usize,
+        preferred_gpu: Option<usize>,
+    ) -> usize {
         if let Some(gpu) = preferred_gpu {
             if gpu < self.contexts.len() {
                 return gpu;

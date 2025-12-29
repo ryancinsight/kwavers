@@ -17,6 +17,7 @@ pub use blackbody::BlackbodyModel;
 pub use bremsstrahlung::BremsstrahlungModel;
 pub use cherenkov::CherenkovModel;
 pub use emission::{
-    EmissionParameters, IntegratedSonoluminescence, SonoluminescenceEmission, SpectralField, SpectralStatistics,
+    EmissionParameters, IntegratedSonoluminescence, SonoluminescenceEmission, SpectralField,
+    SpectralStatistics,
 };
 pub use spectral::{EmissionSpectrum, SpectralAnalyzer};

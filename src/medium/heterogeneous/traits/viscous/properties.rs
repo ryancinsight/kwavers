@@ -2,7 +2,9 @@
 
 use crate::grid::Grid;
 use crate::medium::core::MIN_PHYSICAL_DENSITY;
-use crate::medium::heterogeneous::{core::HeterogeneousMedium, interpolation::TrilinearInterpolator};
+use crate::medium::heterogeneous::{
+    core::HeterogeneousMedium, interpolation::TrilinearInterpolator,
+};
 use crate::medium::viscous::ViscousProperties;
 
 impl ViscousProperties for HeterogeneousMedium {

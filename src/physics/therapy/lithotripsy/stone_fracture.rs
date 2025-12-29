@@ -20,7 +20,7 @@
 //! - Cleveland et al. (2000): "The physics of shock wave lithotripsy"
 //! - Pishchalnikov et al. (2003): "Cavitation bubble cluster activity in shock wave lithotripsy"
 
-use crate::error::{KwaversResult, ValidationError};
+use crate::error::ValidationError;
 use crate::validation::ValidationResult;
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};
@@ -55,15 +55,15 @@ impl Default for StoneMaterial {
     fn default() -> Self {
         // Calcium oxalate monohydrate (COM) - most common kidney stone
         Self {
-            youngs_modulus: 20e9,        // 20 GPa
+            youngs_modulus: 20e9, // 20 GPa
             poissons_ratio: 0.25,
-            density: 2100.0,             // kg/m³
-            fracture_toughness: 0.5e6,   // Pa·√m (lower than ceramics)
-            surface_energy: 0.5,         // J/m²
-            compressive_strength: 50e6,  // 50 MPa
-            tensile_strength: 5e6,       // 5 MPa (much lower than compression)
-            hardness: 3e9,               // Vickers hardness
-            acoustic_impedance: 4.4e6,   // Z = ρ·c
+            density: 2100.0,               // kg/m³
+            fracture_toughness: 0.5e6,     // Pa·√m (lower than ceramics)
+            surface_energy: 0.5,           // J/m²
+            compressive_strength: 50e6,    // 50 MPa
+            tensile_strength: 5e6,         // 5 MPa (much lower than compression)
+            hardness: 3e9,                 // Vickers hardness
+            acoustic_impedance: 4.4e6,     // Z = ρ·c
             attenuation_coefficient: 50.0, // Np/m at 1 MHz
         }
     }
@@ -80,7 +80,7 @@ impl StoneMaterial {
     #[must_use]
     pub fn calcium_oxalate_dihydrate() -> Self {
         Self {
-            youngs_modulus: 25e9,        // Slightly stiffer
+            youngs_modulus: 25e9, // Slightly stiffer
             density: 2000.0,
             fracture_toughness: 0.6e6,
             surface_energy: 0.6,
@@ -97,9 +97,9 @@ impl StoneMaterial {
     #[must_use]
     pub fn calcium_phosphate() -> Self {
         Self {
-            youngs_modulus: 80e9,        // Much stiffer
+            youngs_modulus: 80e9, // Much stiffer
             density: 3100.0,
-            fracture_toughness: 1.2e6,   // Higher fracture toughness
+            fracture_toughness: 1.2e6, // Higher fracture toughness
             surface_energy: 1.0,
             compressive_strength: 150e6, // Very strong in compression
             tensile_strength: 15e6,
@@ -114,9 +114,9 @@ impl StoneMaterial {
     #[must_use]
     pub fn uric_acid() -> Self {
         Self {
-            youngs_modulus: 5e9,         // Much softer
+            youngs_modulus: 5e9, // Much softer
             density: 1600.0,
-            fracture_toughness: 0.2e6,   // Lower fracture toughness
+            fracture_toughness: 0.2e6, // Lower fracture toughness
             surface_energy: 0.3,
             compressive_strength: 20e6,
             tensile_strength: 2e6,
@@ -201,7 +201,7 @@ impl StoneMaterial {
 }
 
 /// Fracture mechanics calculations
- /// Fracture mechanics calculations
+/// Fracture mechanics calculations
 #[derive(Debug)]
 pub struct FractureMechanics {
     /// Material properties
@@ -240,7 +240,7 @@ impl FractureMechanics {
         let a_critical = (self.k_critical / (PI * stress)).powi(2);
 
         // Ensure reasonable bounds (cracks smaller than atomic spacing don't make sense)
-        a_critical.max(1e-9).min(1.0) // Between 1 nm and 1 m
+        a_critical.clamp(1e-9, 1.0) // Between 1 nm and 1 m
     }
 
     /// Calculate stress intensity factor for a crack
@@ -256,7 +256,12 @@ impl FractureMechanics {
     /// # Returns
     /// Stress intensity factor [Pa·√m]
     #[must_use]
-    pub fn stress_intensity_factor(&self, stress: f64, crack_length: f64, geometry_factor: f64) -> f64 {
+    pub fn stress_intensity_factor(
+        &self,
+        stress: f64,
+        crack_length: f64,
+        geometry_factor: f64,
+    ) -> f64 {
         stress * (PI * crack_length).sqrt() * geometry_factor
     }
 
@@ -359,7 +364,12 @@ impl StoneFractureModel {
     /// * `stress_field` - Applied stress field [Pa]
     /// * `time_step` - Time step for damage accumulation [s]
     /// * `strain_rate` - Strain rate during loading [s⁻¹]
-    pub fn apply_stress_loading(&mut self, stress_field: &Array3<f64>, time_step: f64, strain_rate: f64) {
+    pub fn apply_stress_loading(
+        &mut self,
+        stress_field: &Array3<f64>,
+        time_step: f64,
+        strain_rate: f64,
+    ) {
         // Calculate damage accumulation at each point
         for ((i, j, k), stress) in stress_field.indexed_iter() {
             let stress_val = *stress;
@@ -377,10 +387,11 @@ impl StoneFractureModel {
             let stress_ratio = stress_val / self.material.tensile_strength;
 
             // Fracture initiation (Griffith criterion)
-            if stress_ratio > 0.3 { // Threshold for initial crack formation
+            if stress_ratio > 0.3 {
+                // Threshold for initial crack formation
                 // Griffith criterion: σ_critical = sqrt(2Eγ/(πa))
                 // Simplified: damage initiates when stress exceeds material strength
-                let initiation_probability = (stress_ratio - 0.3).max(0.0).min(1.0);
+                let initiation_probability = (stress_ratio - 0.3).clamp(0.0, 1.0);
 
                 if rand::random::<f64>() < initiation_probability * time_step {
                     // Initiate new crack
@@ -392,11 +403,12 @@ impl StoneFractureModel {
             if current_cracks > 0.0 && stress_ratio > 0.1 {
                 // Stress intensity factor range: ΔK = Y * σ * sqrt(π * a)
                 // Y ≈ 1.12 for surface cracks (simplified)
-                let stress_intensity_range = 1.12 * stress_val * (std::f64::consts::PI * current_cracks).sqrt();
+                let stress_intensity_range =
+                    1.12 * stress_val * (std::f64::consts::PI * current_cracks).sqrt();
 
                 // Paris' law parameters for kidney stones (literature-based approximation)
                 let c_paris = 1e-10; // Crack growth rate coefficient [m/cycle]
-                let m_paris = 2.0;   // Paris' law exponent
+                let m_paris = 2.0; // Paris' law exponent
 
                 // Crack growth per stress cycle: da/dN = C * (ΔK)^m
                 let crack_growth_rate = c_paris * stress_intensity_range.powf(m_paris);
@@ -416,9 +428,11 @@ impl StoneFractureModel {
 
             // Spallation damage (tensile failure from rarefaction waves)
             // Occurs when tensile stress exceeds material strength
-            if stress_val < -self.material.tensile_strength * 0.5 { // Negative stress = tension
+            if stress_val < -self.material.tensile_strength * 0.5 {
+                // Negative stress = tension
                 let tensile_stress = -stress_val; // Convert to positive for calculations
-                let spallation_damage = (tensile_stress / self.material.tensile_strength).powf(1.5) * time_step;
+                let spallation_damage =
+                    (tensile_stress / self.material.tensile_strength).powf(1.5) * time_step;
 
                 let current_damage = self.damage_field[[i, j, k]];
                 let new_damage = (current_damage + spallation_damage).min(1.0);
@@ -440,7 +454,10 @@ impl StoneFractureModel {
             }
 
             // Check for complete fracture (Griffith criterion)
-            if self.fracture.will_fracture(stress_val, a_critical, current_cracks) {
+            if self
+                .fracture
+                .will_fracture(stress_val, a_critical, current_cracks)
+            {
                 self.damage_field[[i, j, k]] = 1.0; // Complete fracture
             }
         }

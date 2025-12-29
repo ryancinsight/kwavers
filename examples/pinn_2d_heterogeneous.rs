@@ -25,8 +25,7 @@
 use kwavers::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::burn_wave_equation_2d::{
-    BurnPINN2DConfig, BurnPINN2DWave, Geometry2D, BurnLossWeights2D,
-    InterfaceCondition,
+    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, Geometry2D, InterfaceCondition,
 };
 #[cfg(feature = "pinn")]
 use ndarray::{Array1, Array2};
@@ -196,7 +195,7 @@ fn main() -> KwaversResult<()> {
     // Create PINN configuration optimized for heterogeneous media
     let pinn_config = BurnPINN2DConfig {
         hidden_layers: vec![150, 150, 150, 150], // Larger network for complex media
-        learning_rate: 5e-4, // Lower learning rate for stability
+        learning_rate: 5e-4,                     // Lower learning rate for stability
         loss_weights: BurnLossWeights2D {
             data: 1.0,
             pde: 2.0, // Higher PDE weight for heterogeneous physics
@@ -210,18 +209,29 @@ fn main() -> KwaversResult<()> {
     println!("🧠 PINN Configuration:");
     println!("   Hidden layers: {:?}", pinn_config.hidden_layers);
     println!("   Learning rate: {}", pinn_config.learning_rate);
-    println!("   Loss weights: data={:.1}, pde={:.1}, boundary={:.1}, initial={:.1}",
-             pinn_config.loss_weights.data,
-             pinn_config.loss_weights.pde,
-             pinn_config.loss_weights.boundary,
-             pinn_config.loss_weights.initial);
+    println!(
+        "   Loss weights: data={:.1}, pde={:.1}, boundary={:.1}, initial={:.1}",
+        pinn_config.loss_weights.data,
+        pinn_config.loss_weights.pde,
+        pinn_config.loss_weights.boundary,
+        pinn_config.loss_weights.initial
+    );
     println!();
 
     // Test different heterogeneous media configurations
     let media_configs = vec![
-        ("Layered Medium", layered_medium_wave_speed as fn(f32, f32) -> f32),
-        ("Inclusion Medium", inclusion_wave_speed as fn(f32, f32) -> f32),
-        ("Gradient Medium", gradient_wave_speed as fn(f32, f32) -> f32),
+        (
+            "Layered Medium",
+            layered_medium_wave_speed as fn(f32, f32) -> f32,
+        ),
+        (
+            "Inclusion Medium",
+            inclusion_wave_speed as fn(f32, f32) -> f32,
+        ),
+        (
+            "Gradient Medium",
+            gradient_wave_speed as fn(f32, f32) -> f32,
+        ),
     ];
 
     for (media_name, wave_speed_fn) in media_configs {
@@ -235,11 +245,7 @@ fn main() -> KwaversResult<()> {
         println!();
 
         // Create heterogeneous PINN
-        let pinn = BurnPINN2DWave::new_heterogeneous(
-            pinn_config.clone(),
-            wave_speed_fn,
-            &device,
-        )?;
+        let pinn = BurnPINN2DWave::new_heterogeneous(pinn_config.clone(), wave_speed_fn, &device)?;
         println!("✅ Heterogeneous PINN: Created successfully");
         println!();
 
@@ -260,29 +266,36 @@ fn main() -> KwaversResult<()> {
         let start_time = Instant::now();
         let mut trainer = trainer;
         let metrics = trainer.train(
-            &x_train,
-            &y_train,
-            &t_train,
-            &u_train,
+            &x_train, &y_train, &t_train, &u_train,
             1500.0, // Default fallback (not used in heterogeneous mode)
-            &device,
-            epochs,
+            &device, epochs,
         )?;
         let training_time = start_time.elapsed();
 
-        println!("✅ Training completed in {:.2}s", training_time.as_secs_f64());
-        println!("   Final total loss: {:.6e}", metrics.total_loss.last().unwrap());
-        println!("   Final data loss: {:.6e}", metrics.data_loss.last().unwrap());
-        println!("   Final PDE loss: {:.6e}", metrics.pde_loss.last().unwrap());
+        println!(
+            "✅ Training completed in {:.2}s",
+            training_time.as_secs_f64()
+        );
+        println!(
+            "   Final total loss: {:.6e}",
+            metrics.total_loss.last().unwrap()
+        );
+        println!(
+            "   Final data loss: {:.6e}",
+            metrics.data_loss.last().unwrap()
+        );
+        println!(
+            "   Final PDE loss: {:.6e}",
+            metrics.pde_loss.last().unwrap()
+        );
         println!("   Final BC loss: {:.6e}", metrics.bc_loss.last().unwrap());
         println!("   Final IC loss: {:.6e}", metrics.ic_loss.last().unwrap());
         println!();
 
         // Generate test data for validation
         println!("🧪 Validating PINN predictions...");
-        let (x_test, y_test, t_test, c_test) = generate_heterogeneous_test_grid(
-            8, 8, 3, &geometry, wave_speed_fn
-        );
+        let (x_test, y_test, t_test, c_test) =
+            generate_heterogeneous_test_grid(8, 8, 3, &geometry, wave_speed_fn);
         println!("   Test points: {}", x_test.len());
 
         // Make predictions
@@ -306,19 +319,26 @@ fn main() -> KwaversResult<()> {
 
         // Performance analysis
         println!("📈 Performance Analysis:");
-        println!("   Training time: {:.2}s ({:.1} ms/epoch)",
-                 training_time.as_secs_f64(),
-                 training_time.as_millis() as f64 / epochs as f64);
+        println!(
+            "   Training time: {:.2}s ({:.1} ms/epoch)",
+            training_time.as_secs_f64(),
+            training_time.as_millis() as f64 / epochs as f64
+        );
 
         let loss_reduction = metrics.total_loss[0] / metrics.total_loss.last().unwrap();
         println!("   Loss reduction: {:.2e}x", loss_reduction);
 
-        let convergence_epoch = metrics.total_loss.iter()
+        let convergence_epoch = metrics
+            .total_loss
+            .iter()
             .enumerate()
             .find(|(_, &loss)| loss < 1e-2)
             .map(|(epoch, _)| epoch)
             .unwrap_or(epochs);
-        println!("   Convergence: {} epochs to reach 1e-2 loss", convergence_epoch);
+        println!(
+            "   Convergence: {} epochs to reach 1e-2 loss",
+            convergence_epoch
+        );
         println!();
 
         // Demonstrate wave speed evaluation

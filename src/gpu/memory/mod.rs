@@ -22,6 +22,7 @@ pub enum MemoryPoolType {
 }
 
 /// Unified memory manager for multi-GPU systems
+#[derive(Debug)]
 pub struct UnifiedMemoryManager {
     /// Memory pools per GPU device
     pools: HashMap<usize, HashMap<MemoryPoolType, MemoryPool>>,
@@ -45,9 +46,16 @@ impl UnifiedMemoryManager {
     }
 
     /// Allocate memory in specified pool on specific GPU
-    pub fn allocate(&mut self, gpu_id: usize, pool_type: MemoryPoolType, size: usize) -> KwaversResult<MemoryHandle> {
+    pub fn allocate(
+        &mut self,
+        gpu_id: usize,
+        pool_type: MemoryPoolType,
+        size: usize,
+    ) -> KwaversResult<MemoryHandle> {
         let pools = self.pools.entry(gpu_id).or_insert_with(HashMap::new);
-        let pool = pools.entry(pool_type).or_insert_with(|| MemoryPool::new(pool_type));
+        let pool = pools
+            .entry(pool_type)
+            .or_insert_with(|| MemoryPool::new(pool_type));
 
         pool.allocate(size)
     }
@@ -66,11 +74,16 @@ impl UnifiedMemoryManager {
     }
 
     /// Transfer data between GPUs with streaming optimization
-    pub fn transfer(&mut self, src: &MemoryHandle, dst: &MemoryHandle, size: usize) -> KwaversResult<()> {
+    pub fn transfer(
+        &mut self,
+        src: &MemoryHandle,
+        dst: &MemoryHandle,
+        size: usize,
+    ) -> KwaversResult<()> {
         // Check if unified memory can be used
         if let Some(region) = self.find_unified_region(src, dst) {
             // Use zero-copy unified memory access
-            self.streaming.unified_transfer(src, dst, size, region)
+            self.streaming.unified_transfer(src, dst, size, &region)
         } else {
             // Use optimized streaming transfer
             self.streaming.streaming_transfer(src, dst, size)
@@ -105,14 +118,20 @@ impl UnifiedMemoryManager {
     }
 
     /// Find unified memory region for two handles
-    fn find_unified_region(&self, src: &MemoryHandle, dst: &MemoryHandle) -> Option<&UnifiedMemoryRegion> {
-        self.unified_regions.iter().find(|region| {
-            region.contains_gpu(src.gpu_id) && region.contains_gpu(dst.gpu_id)
-        })
+    fn find_unified_region(
+        &self,
+        src: &MemoryHandle,
+        dst: &MemoryHandle,
+    ) -> Option<UnifiedMemoryRegion> {
+        self.unified_regions
+            .iter()
+            .find(|region| region.contains_gpu(src.gpu_id) && region.contains_gpu(dst.gpu_id))
+            .cloned()
     }
 }
 
 /// Memory pool for efficient allocation
+#[derive(Debug)]
 pub struct MemoryPool {
     pool_type: MemoryPoolType,
     allocations: Vec<MemoryBlock>,
@@ -151,7 +170,11 @@ impl MemoryPool {
     }
 
     pub fn deallocate(&mut self, handle: MemoryHandle) -> KwaversResult<()> {
-        if let Some(index) = self.allocations.iter().position(|b| b.offset == handle.block.offset) {
+        if let Some(index) = self
+            .allocations
+            .iter()
+            .position(|b| b.offset == handle.block.offset)
+        {
             let block = &self.allocations[index];
             self.total_allocated = self.total_allocated.saturating_sub(block.size);
             self.allocations.remove(index);
@@ -165,8 +188,9 @@ impl MemoryPool {
         MemoryStats {
             allocated_bytes: self.total_allocated,
             peak_bytes: self.peak_allocated,
-            transfer_count: 0, // Would track in real implementation
+            transfer_count: 0,
             transfer_bytes: 0,
+            compression_ratio: 1.0,
         }
     }
 }
@@ -188,7 +212,7 @@ pub struct MemoryBlock {
 }
 
 /// Unified memory region accessible by multiple GPUs
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnifiedMemoryRegion {
     pub gpu_ids: Vec<usize>,
     pub size: usize,
@@ -202,6 +226,7 @@ impl UnifiedMemoryRegion {
 }
 
 /// Memory compression for optimization
+#[derive(Debug)]
 pub struct MemoryCompression {
     compressed_blocks: HashMap<String, CompressedBlock>,
 }
@@ -214,7 +239,10 @@ impl MemoryCompression {
     }
 
     pub fn compress(&mut self, handle: &MemoryHandle) -> KwaversResult<f64> {
-        let key = format!("gpu{}_pool{:?}_offset{}", handle.gpu_id, handle.pool_type, handle.block.offset);
+        let key = format!(
+            "gpu{}_pool{:?}_offset{}",
+            handle.gpu_id, handle.pool_type, handle.block.offset
+        );
 
         // Simple compression ratio estimation (would implement real compression)
         let compression_ratio = 0.7; // 30% compression
@@ -229,7 +257,10 @@ impl MemoryCompression {
     }
 
     pub fn decompress(&mut self, handle: &MemoryHandle) -> KwaversResult<()> {
-        let key = format!("gpu{}_pool{:?}_offset{}", handle.gpu_id, handle.pool_type, handle.block.offset);
+        let key = format!(
+            "gpu{}_pool{:?}_offset{}",
+            handle.gpu_id, handle.pool_type, handle.block.offset
+        );
         self.compressed_blocks.remove(&key);
         Ok(())
     }
@@ -243,6 +274,7 @@ pub struct CompressedBlock {
 }
 
 /// Streaming transfer manager for optimized GPU-GPU transfers
+#[derive(Debug)]
 pub struct StreamingTransferManager {
     active_transfers: Vec<TransferStream>,
 }
@@ -262,8 +294,10 @@ impl StreamingTransferManager {
         region: &UnifiedMemoryRegion,
     ) -> KwaversResult<()> {
         // Implement zero-copy unified memory transfer
-        println!("Performing zero-copy unified memory transfer: {} bytes at {} GB/s",
-                 size, region.bandwidth);
+        println!(
+            "Performing zero-copy unified memory transfer: {} bytes at {} GB/s",
+            size, region.bandwidth
+        );
         Ok(())
     }
 
@@ -282,7 +316,10 @@ impl StreamingTransferManager {
         };
 
         self.active_transfers.push(stream);
-        println!("Streaming transfer: GPU{} -> GPU{}, {} bytes", src.gpu_id, dst.gpu_id, size);
+        println!(
+            "Streaming transfer: GPU{} -> GPU{}, {} bytes",
+            src.gpu_id, dst.gpu_id, size
+        );
         Ok(())
     }
 }
@@ -326,8 +363,12 @@ mod tests {
     fn test_unified_memory_manager() {
         let mut manager = UnifiedMemoryManager::new();
 
-        let handle1 = manager.allocate(0, MemoryPoolType::Temporary, 2048).unwrap();
-        let handle2 = manager.allocate(0, MemoryPoolType::Collocation, 4096).unwrap();
+        let handle1 = manager
+            .allocate(0, MemoryPoolType::Temporary, 2048)
+            .unwrap();
+        let handle2 = manager
+            .allocate(0, MemoryPoolType::Collocation, 4096)
+            .unwrap();
 
         let stats = manager.statistics();
         assert_eq!(stats.allocated_bytes, 6144);
@@ -342,7 +383,9 @@ mod tests {
     #[test]
     fn test_memory_compression() {
         let mut manager = UnifiedMemoryManager::new();
-        let handle = manager.allocate(0, MemoryPoolType::Persistent, 8192).unwrap();
+        let handle = manager
+            .allocate(0, MemoryPoolType::Persistent, 8192)
+            .unwrap();
 
         let ratio = manager.compress(&handle).unwrap();
         assert!(ratio < 1.0); // Should compress

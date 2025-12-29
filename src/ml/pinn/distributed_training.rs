@@ -265,15 +265,18 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
                     training_time_secs: 0.0,
                     epochs_completed: 0,
                 },
-                gpu_metrics: vec![BurnTrainingMetrics2D {
-                    total_loss: vec![],
-                    data_loss: vec![],
-                    pde_loss: vec![],
-                    bc_loss: vec![],
-                    ic_loss: vec![],
-                    training_time_secs: 0.0,
-                    epochs_completed: 0,
-                }; config.num_gpus],
+                gpu_metrics: vec![
+                    BurnTrainingMetrics2D {
+                        total_loss: vec![],
+                        data_loss: vec![],
+                        pde_loss: vec![],
+                        bc_loss: vec![],
+                        ic_loss: vec![],
+                        training_time_secs: 0.0,
+                        epochs_completed: 0,
+                    };
+                    config.num_gpus
+                ],
                 last_checkpoint: 0,
                 start_time: std::time::Instant::now(),
             },
@@ -302,20 +305,28 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
             let epoch_start = std::time::Instant::now();
 
             // Distributed training step
-            let gpu_results = self.train_epoch_distributed(
-                collocation_points,
-                boundary_points,
-                initial_points,
-                target_values,
-            ).await?;
+            let gpu_results = self
+                .train_epoch_distributed(
+                    collocation_points,
+                    boundary_points,
+                    initial_points,
+                    target_values,
+                )
+                .await?;
 
             // Aggregate gradients and update models
             self.aggregate_gradients_and_update(&gpu_results).await?;
 
             // Update training state
             self.coordinator.training_state.current_epoch = epoch + 1;
-            self.coordinator.training_state.global_metrics.epochs_completed = epoch + 1;
-            self.coordinator.training_state.global_metrics.training_time_secs = start_time.elapsed().as_secs_f64();
+            self.coordinator
+                .training_state
+                .global_metrics
+                .epochs_completed = epoch + 1;
+            self.coordinator
+                .training_state
+                .global_metrics
+                .training_time_secs = start_time.elapsed().as_secs_f64();
 
             let epoch_time = epoch_start.elapsed().as_secs_f64();
 
@@ -326,26 +337,36 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
                 let stats = PerformanceStats {
                     gpu_id,
                     epoch_time,
-                    memory_usage: 0, // Would be measured in practice
-                    gpu_utilization: 0.8, // Would be measured in practice
+                    memory_usage: 0,          // Would be measured in practice
+                    gpu_utilization: 0.8,     // Would be measured in practice
                     communication_time: 0.01, // Would be measured in practice
                 };
                 self.coordinator.performance_stats.push(stats);
             }
 
             // Checkpoint if needed
-            if self.config.checkpoint_config.auto_save &&
-               (epoch + 1) % self.config.checkpoint_config.interval == 0 {
+            if self.config.checkpoint_config.auto_save
+                && (epoch + 1) % self.config.checkpoint_config.interval == 0
+            {
                 self.save_checkpoint().await?;
             }
 
             // Log progress
             if epoch % 10 == 0 {
-                let current_loss = self.coordinator.training_state.global_metrics.total_loss.last().unwrap_or(&0.0);
-                println!("Epoch {}/{}: Global Loss = {:.6e}, Time = {:.2}s",
-                    epoch + 1, n_epochs,
+                let current_loss = self
+                    .coordinator
+                    .training_state
+                    .global_metrics
+                    .total_loss
+                    .last()
+                    .unwrap_or(&0.0);
+                println!(
+                    "Epoch {}/{}: Global Loss = {:.6e}, Time = {:.2}s",
+                    epoch + 1,
+                    n_epochs,
                     current_loss,
-                    epoch_time);
+                    epoch_time
+                );
             }
         }
 
@@ -426,11 +447,31 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         let avg_ic_loss = ic_loss / n_gpus as f64;
 
         // Update global metrics
-        self.coordinator.training_state.global_metrics.total_loss.push(avg_total_loss);
-        self.coordinator.training_state.global_metrics.data_loss.push(avg_data_loss);
-        self.coordinator.training_state.global_metrics.pde_loss.push(avg_pde_loss);
-        self.coordinator.training_state.global_metrics.bc_loss.push(avg_bc_loss);
-        self.coordinator.training_state.global_metrics.ic_loss.push(avg_ic_loss);
+        self.coordinator
+            .training_state
+            .global_metrics
+            .total_loss
+            .push(avg_total_loss);
+        self.coordinator
+            .training_state
+            .global_metrics
+            .data_loss
+            .push(avg_data_loss);
+        self.coordinator
+            .training_state
+            .global_metrics
+            .pde_loss
+            .push(avg_pde_loss);
+        self.coordinator
+            .training_state
+            .global_metrics
+            .bc_loss
+            .push(avg_bc_loss);
+        self.coordinator
+            .training_state
+            .global_metrics
+            .ic_loss
+            .push(avg_ic_loss);
 
         // In practice, this would aggregate gradients and update all model replicas
         // For this implementation, we simulate the update
@@ -442,14 +483,18 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
     pub async fn save_checkpoint(&mut self) -> KwaversResult<()> {
         let checkpoint = TrainingCheckpoint {
             epoch: self.coordinator.training_state.current_epoch,
-            parameters: vec![], // Would serialize actual model parameters
+            parameters: vec![],      // Would serialize actual model parameters
             optimizer_state: vec![], // Would serialize optimizer state
             metrics: self.coordinator.training_state.global_metrics.clone(),
             timestamp: std::time::SystemTime::now(),
         };
 
         let filename = format!("checkpoint_epoch_{}.bin", checkpoint.epoch);
-        let path = self.coordinator.checkpoint_manager.checkpoint_dir.join(filename);
+        let path = self
+            .coordinator
+            .checkpoint_manager
+            .checkpoint_dir
+            .join(filename);
 
         // In practice, serialize and save checkpoint
         // For this implementation, we just log
@@ -463,7 +508,11 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
     /// Load training checkpoint
     pub async fn load_checkpoint(&mut self, epoch: usize) -> KwaversResult<()> {
         let filename = format!("checkpoint_epoch_{}.bin", epoch);
-        let path = self.coordinator.checkpoint_manager.checkpoint_dir.join(filename);
+        let path = self
+            .coordinator
+            .checkpoint_manager
+            .checkpoint_dir
+            .join(filename);
 
         if path.exists() {
             // In practice, deserialize checkpoint
@@ -471,9 +520,11 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
             self.coordinator.training_state.current_epoch = epoch;
             self.coordinator.training_state.last_checkpoint = epoch;
         } else {
-            return Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: format!("Checkpoint file not found: {}", path.display()),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::ResourceUnavailable {
+                    resource: format!("Checkpoint file not found: {}", path.display()),
+                },
+            ));
         }
 
         Ok(())
@@ -495,7 +546,10 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
             manager.handle_gpu_failure(failed_gpu_id)?;
 
             // Redistribute training work
-            println!("GPU {} failed, redistributing work to remaining GPUs", failed_gpu_id);
+            println!(
+                "GPU {} failed, redistributing work to remaining GPUs",
+                failed_gpu_id
+            );
         }
 
         Ok(())
@@ -520,8 +574,13 @@ impl CheckpointManager {
                 let entry = entry?;
                 let filename_owned = entry.file_name().to_string_lossy().to_string();
 
-                if filename_owned.starts_with("checkpoint_epoch_") && filename_owned.ends_with(".bin") {
-                    if let Some(epoch_str) = filename_owned.strip_prefix("checkpoint_epoch_").and_then(|s| s.strip_suffix(".bin")) {
+                if filename_owned.starts_with("checkpoint_epoch_")
+                    && filename_owned.ends_with(".bin")
+                {
+                    if let Some(epoch_str) = filename_owned
+                        .strip_prefix("checkpoint_epoch_")
+                        .and_then(|s| s.strip_suffix(".bin"))
+                    {
                         if let Ok(epoch) = epoch_str.parse::<usize>() {
                             checkpoints.push(epoch);
                         }
@@ -590,7 +649,8 @@ mod tests {
         let base_config = crate::ml::pinn::BurnPINN2DConfig::default();
         let geometry = crate::ml::pinn::Geometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
 
-        let result = DistributedPinnTrainer::<TestBackend>::new(config, base_config, geometry).await;
+        let result =
+            DistributedPinnTrainer::<TestBackend>::new(config, base_config, geometry).await;
 
         match result {
             Ok(trainer) => {

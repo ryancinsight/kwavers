@@ -4,8 +4,10 @@
 //! Following TSE 2025 "Domain-Specific Module Organization"
 
 use crate::grid::Grid;
-use crate::medium::heterogeneous::{core::HeterogeneousMedium, interpolation::TrilinearInterpolator};
 use crate::medium::elastic::{ElasticArrayAccess, ElasticProperties};
+use crate::medium::heterogeneous::{
+    core::HeterogeneousMedium, interpolation::TrilinearInterpolator,
+};
 use ndarray::Array3;
 
 impl ElasticProperties for HeterogeneousMedium {

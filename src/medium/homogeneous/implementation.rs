@@ -221,8 +221,8 @@ impl HomogeneousMedium {
     /// HomogeneousMedium configured for soft tissue elastography
     pub fn soft_tissue(youngs_modulus: f64, poisson_ratio: f64, grid: &Grid) -> Self {
         // Tissue acoustic properties (similar to water but with elastic behavior)
-        let density = 1060.0;        // kg/m³ (liver density)
-        let sound_speed = 1580.0;    // m/s (liver sound speed)
+        let density = 1060.0; // kg/m³ (liver density)
+        let sound_speed = 1580.0; // m/s (liver sound speed)
 
         let mut medium = Self::new(density, sound_speed, 0.01, 0.1, grid);
         let shape = (grid.nx, grid.ny, grid.nz);
@@ -266,12 +266,12 @@ impl HomogeneousMedium {
     pub fn liver_tissue(fibrosis_stage: u8, grid: &Grid) -> Self {
         // Liver stiffness increases with fibrosis stage (kPa)
         let youngs_modulus_kpa = match fibrosis_stage {
-            0 => 5.0,   // F0: Normal liver
-            1 => 6.5,   // F1: Mild fibrosis
-            2 => 8.0,   // F2: Moderate fibrosis
-            3 => 11.0,  // F3: Severe fibrosis
-            4 => 18.0,  // F4: Cirrhosis
-            _ => 8.0,   // Default to moderate
+            0 => 5.0,  // F0: Normal liver
+            1 => 6.5,  // F1: Mild fibrosis
+            2 => 8.0,  // F2: Moderate fibrosis
+            3 => 11.0, // F3: Severe fibrosis
+            4 => 18.0, // F4: Cirrhosis
+            _ => 8.0,  // Default to moderate
         };
 
         let youngs_modulus = youngs_modulus_kpa * 1000.0; // Convert to Pa
@@ -371,6 +371,14 @@ impl AcousticProperties for HomogeneousMedium {
     ) -> f64 {
         // Power law absorption: α = α₀ * (f/f₀)^y
         self.absorption_alpha * (frequency / self.reference_frequency).powf(self.absorption_power)
+    }
+
+    fn alpha_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.absorption_alpha
+    }
+
+    fn alpha_power(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.absorption_power
     }
 
     fn nonlinearity_parameter(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {

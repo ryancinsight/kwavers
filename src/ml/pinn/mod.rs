@@ -96,32 +96,43 @@ pub mod advanced_architectures;
 pub mod transfer_learning;
 
 #[cfg(feature = "pinn")]
-pub use wave_equation_1d::{LossWeights, PINNConfig, TrainingMetrics, ValidationMetrics, PINN1DWave};
+pub use wave_equation_1d::{
+    LossWeights, PINN1DWave, PINNConfig as LegacyPINNConfig, TrainingMetrics, ValidationMetrics,
+};
 
 #[cfg(feature = "pinn")]
-pub use burn_wave_equation_1d::{BurnLossWeights, BurnPINNConfig, BurnPINN1DWave, BurnTrainingMetrics};
+pub use burn_wave_equation_1d::{
+    BurnLossWeights, BurnPINN1DWave, BurnPINNConfig, BurnPINNTrainer, BurnTrainingMetrics,
+    SimpleOptimizer,
+};
+
+#[cfg(all(feature = "pinn", feature = "api"))]
+pub mod trainer;
+
+#[cfg(all(feature = "pinn", feature = "api"))]
+pub use trainer::{Geometry, PINNConfig, PINNTrainer, PhysicsParams, TrainingConfig};
 
 #[cfg(feature = "pinn")]
 pub use burn_wave_equation_2d::{
-    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, BurnTrainingMetrics2D, BoundaryCondition2D, Geometry2D, InterfaceCondition
+    BoundaryCondition2D, BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave,
+    BurnTrainingMetrics2D, Geometry2D, InterfaceCondition,
 };
 
 #[cfg(feature = "pinn")]
 pub use burn_wave_equation_3d::{
-    BurnLossWeights3D, BurnPINN3DConfig, BurnPINN3DWave, BurnTrainingMetrics3D, BoundaryCondition3D, Geometry3D, InterfaceCondition3D
+    BoundaryCondition3D, BurnLossWeights3D, BurnPINN3DConfig, BurnPINN3DWave,
+    BurnTrainingMetrics3D, Geometry3D, InterfaceCondition3D,
 };
 
 // Sprint 151: GPU Acceleration & Advanced Geometries
 #[cfg(feature = "pinn")]
-pub use gpu_accelerator::{
-    GpuMemoryManager, TrainingStats
-};
+pub use gpu_accelerator::{GpuMemoryManager, TrainingStats};
 
 // Sprint 152: Multi-GPU Support & Distributed Training
 #[cfg(feature = "pinn")]
 pub mod multi_gpu_manager;
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "api"))]
 pub mod distributed_training;
 
 // Sprint 153: Real-Time Inference & Optimization
@@ -168,98 +179,89 @@ pub mod adaptive_sampling;
 
 #[cfg(feature = "pinn")]
 pub use multi_gpu_manager::{
-    MultiGpuManager, GpuDeviceInfo, DecompositionStrategy, LoadBalancingAlgorithm,
-    WorkUnit, CommunicationChannel, DataTransfer, TransferStatus, PerformanceMonitor,
-    FaultTolerance, PerformanceSummary
+    CommunicationChannel, DataTransfer, DecompositionStrategy, FaultTolerance, GpuDeviceInfo,
+    LoadBalancingAlgorithm, MultiGpuManager, PerformanceMonitor, PerformanceSummary,
+    TransferStatus, WorkUnit,
 };
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "api"))]
 pub use distributed_training::{
-    DistributedPinnTrainer, GradientAggregation, CheckpointManager, TrainingCoordinator
+    CheckpointManager, DistributedPinnTrainer, GradientAggregation, TrainingCoordinator,
 };
 
 // Sprint 153: Real-Time Inference & Optimization
 #[cfg(feature = "pinn")]
 pub use jit_compiler::{
-    JitCompiler, OptimizedRuntime, CompiledKernel, OptimizationLevel,
-    CompilerStats, InferenceStats
+    CompiledKernel, CompilerStats, InferenceStats, JitCompiler, OptimizationLevel, OptimizedRuntime,
 };
 
 #[cfg(feature = "pinn")]
 pub use quantization::{
-    Quantizer, QuantizedModel, QuantizationScheme, QuantizationParams,
-    ModelMetadata, QuantizedTensor
+    ModelMetadata, QuantizationParams, QuantizationScheme, QuantizedModel, QuantizedTensor,
+    Quantizer,
 };
 
 #[cfg(feature = "pinn")]
 pub use edge_runtime::{
-    EdgeRuntime, MemoryAllocator, ExecutionKernel, IOSpecification,
-    DataType, HardwareCapabilities, Architecture, PerformanceMonitor as EdgePerformanceMonitor
+    Architecture, DataType, EdgeRuntime, ExecutionKernel, HardwareCapabilities, IOSpecification,
+    MemoryAllocator, PerformanceMonitor as EdgePerformanceMonitor,
 };
 
 // Sprint 154: Meta-Learning & Transfer Learning
 #[cfg(feature = "pinn")]
 pub use meta_learning::{
-    MetaLearner, MetaLearningConfig, PhysicsTask, PhysicsParameters,
-    TaskData, MetaLoss, TaskSampler, SamplingStrategy, MetaLearningStats
+    MetaLearner, MetaLearningConfig, MetaLearningStats, MetaLoss, PhysicsParameters, PhysicsTask,
+    SamplingStrategy, TaskData, TaskSampler,
 };
 
 #[cfg(feature = "pinn")]
 pub use transfer_learning::{
-    TransferLearner, TransferLearningConfig, FreezeStrategy, TransferMetrics,
-    TransferLearningStats
+    FreezeStrategy, TransferLearner, TransferLearningConfig, TransferLearningStats, TransferMetrics,
 };
 
 // Sprint 156: Advanced Physics Domains
 #[cfg(feature = "pinn")]
 pub use acoustic_wave::{
-    AcousticWaveDomain, AcousticProblemType, AcousticSource, AcousticSourceType,
-    AcousticSourceParameters, AcousticBoundarySpec, AcousticBoundaryType,
+    AcousticBoundarySpec, AcousticBoundaryType, AcousticProblemType, AcousticSource,
+    AcousticSourceParameters, AcousticSourceType, AcousticWaveDomain,
 };
 
 #[cfg(feature = "pinn")]
-pub use cavitation_coupled::{
-    CavitationCoupledDomain, CavitationCouplingConfig,
-};
+pub use cavitation_coupled::{CavitationCoupledDomain, CavitationCouplingConfig};
 
 #[cfg(feature = "pinn")]
 pub use electromagnetic::{
-    ElectromagneticDomain, EMProblemType, CurrentSource, ElectromagneticBoundarySpec,
+    CurrentSource, EMProblemType, ElectromagneticBoundarySpec, ElectromagneticDomain,
 };
 
 #[cfg(feature = "pinn")]
-pub use sonoluminescence_coupled::{
-    SonoluminescenceCoupledDomain, SonoluminescenceCouplingConfig,
-};
+pub use sonoluminescence_coupled::{SonoluminescenceCoupledDomain, SonoluminescenceCouplingConfig};
 
 #[cfg(all(feature = "pinn", feature = "gpu"))]
-pub use electromagnetic_gpu::{GPUEMSolver, EMConfig, EMFieldData, BoundaryCondition};
+pub use electromagnetic_gpu::{BoundaryCondition, EMConfig, EMFieldData, GPUEMSolver};
 
 #[cfg(feature = "pinn")]
 pub use universal_solver::{
-    UniversalPINNSolver, UniversalTrainingConfig, UniversalSolverStats,
-    PhysicsSolution, GeometricFeature, DomainInfo,
-    LearningRateSchedule, EarlyStoppingConfig, ConvergenceInfo, MemoryStats,
+    ConvergenceInfo, DomainInfo, EarlyStoppingConfig, GeometricFeature, LearningRateSchedule,
+    MemoryStats, PhysicsSolution, UniversalPINNSolver, UniversalSolverStats,
+    UniversalTrainingConfig,
 };
 
 #[cfg(feature = "pinn")]
 pub use gpu_accelerator::{
-    CudaBuffer, CudaStream, MemoryPoolType,
-    CudaKernelManager, BatchedPINNTrainer, TrainingStep,
+    BatchedPINNTrainer, CudaBuffer, CudaKernelManager, CudaStream, MemoryPoolType, TrainingStep,
 };
 
 #[cfg(feature = "pinn")]
-pub use adaptive_sampling::{
-    AdaptiveCollocationSampler, SamplingStats,
-};
+pub use adaptive_sampling::{AdaptiveCollocationSampler, SamplingStats};
 
 #[cfg(feature = "pinn")]
 pub mod uncertainty_quantification;
 
 #[cfg(feature = "pinn")]
 pub use uncertainty_quantification::{
-    BayesianPINN, UncertaintyConfig, PredictionWithUncertainty, UncertaintyMethod,
-    UncertaintyStats, ConformalPredictor
+    BayesianPINN, ConformalPredictor, PinnUncertaintyConfig, PredictionWithUncertainty,
+    UncertaintyMethod, UncertaintyStats,
 };
 
 // #[cfg(feature = "pinn")]
@@ -275,7 +277,7 @@ pub struct PINN1DWave;
 impl PINN1DWave {
     pub fn new(_wave_speed: f64, _config: ()) -> Result<Self, crate::error::KwaversError> {
         Err(crate::error::KwaversError::InvalidInput(
-            "PINN feature not enabled. Add 'pinn' feature to Cargo.toml".to_string()
+            "PINN feature not enabled. Add 'pinn' feature to Cargo.toml".to_string(),
         ))
     }
 }

@@ -13,24 +13,25 @@
 //!
 //! - Wang et al. (2021): "When and why PINNs fail to train: A neural tangent kernel perspective"
 //! - Wang et al. (2022): "On the eigenvector bias of Fourier feature networks"
-
+//!
 //! Fourier feature embedding for improved frequency representation in PINNs
 //!
 //! Fourier features provide better representation of oscillatory physics by mapping
 //! input coordinates to higher-frequency sinusoidal functions.
 
 use burn::{
-    module::Module,
-    nn::{Gelu, Linear, LinearConfig, LayerNorm, LayerNormConfig},
+    module::{Module, Param},
+    nn::{Gelu, LayerNorm, LayerNormConfig, Linear, LinearConfig},
     tensor::{backend::Backend, Tensor},
 };
 
 /// Fourier feature embedding for improved frequency representation
-#[derive(Clone)]
+#[derive(Debug, Module)]
 pub struct FourierFeatures<B: Backend> {
     /// Learned frequency parameters
-    frequencies: Tensor<B, 2>,
+    frequencies: Param<Tensor<B, 2>>,
     /// Feature scaling factor
+    #[module(ignore)]
     scale: f32,
 }
 
@@ -46,7 +47,7 @@ impl<B: Backend> FourierFeatures<B> {
             .reshape([input_dim as i64, num_features as i64]);
 
         Self {
-            frequencies,
+            frequencies: Param::from_tensor(frequencies),
             scale,
         }
     }
@@ -58,10 +59,10 @@ impl<B: Backend> FourierFeatures<B> {
 
         // Compute Fourier features: [cos(2π * x * f), sin(2π * x * f)]
         let scaled_x = x * self.scale;
-        let features = scaled_x.matmul(self.frequencies);
+        let features = scaled_x.matmul(self.frequencies.val());
 
         // Apply sinusoidal transformations
-        let cos_features = features.cos();
+        let cos_features = features.clone().cos();
         let sin_features = features.sin();
 
         // Concatenate cos and sin features
@@ -341,7 +342,7 @@ mod tests {
         let device = Default::default();
         let block = ResidualBlock::<TestBackend>::new(10, 20, &device);
 
-        let input = Tensor::<TestBackend, 2>::from_floats(vec![vec![0.1; 10]], &device);
+        let input = Tensor::<TestBackend, 2>::from_floats([[0.1f32; 10]], &device);
         let output = block.forward(input);
 
         // Should maintain input dimension

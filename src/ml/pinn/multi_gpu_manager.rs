@@ -91,6 +91,12 @@ pub struct WorkUnit {
     pub priority: u32,
     /// Dependencies on other work units
     pub dependencies: Vec<usize>,
+    /// Data range for this work unit (start..end indices for frames)
+    pub data_range: Option<std::ops::Range<usize>>,
+    /// Channel range for this work unit (start..end indices for channels)
+    pub channel_range: Option<std::ops::Range<usize>>,
+    /// Sample range for this work unit (start..end indices for time samples)
+    pub sample_range: Option<std::ops::Range<usize>>,
 }
 
 /// Multi-GPU manager for PINN training
@@ -107,7 +113,7 @@ pub struct MultiGpuManager {
     /// Active work assignments
     active_work: HashMap<usize, WorkUnit>,
     /// Communication channels between GPUs
-    communication_channels: HashMap<(usize, usize), CommunicationChannel>,
+    _communication_channels: HashMap<(usize, usize), CommunicationChannel>,
     /// Performance monitoring
     performance_monitor: PerformanceMonitor,
     /// Fault tolerance state
@@ -183,13 +189,18 @@ pub struct FaultTolerance {
 
 impl MultiGpuManager {
     /// Create a new multi-GPU manager
-    pub async fn new(decomposition: DecompositionStrategy, load_balancer: LoadBalancingAlgorithm) -> KwaversResult<Self> {
+    pub async fn new(
+        decomposition: DecompositionStrategy,
+        load_balancer: LoadBalancingAlgorithm,
+    ) -> KwaversResult<Self> {
         let devices = Self::discover_gpu_devices().await?;
 
         if devices.len() < 2 {
-            return Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: "Multiple GPU devices required for multi-GPU training".to_string(),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::ResourceUnavailable {
+                    resource: "Multiple GPU devices required for multi-GPU training".to_string(),
+                },
+            ));
         }
 
         let communication_channels = Self::initialize_communication_channels(&devices);
@@ -202,7 +213,7 @@ impl MultiGpuManager {
             load_balancer,
             work_queue: VecDeque::new(),
             active_work: HashMap::new(),
-            communication_channels,
+            _communication_channels: communication_channels,
             performance_monitor: PerformanceMonitor {
                 gpu_utilization: vec![vec![]; device_count],
                 memory_usage: vec![vec![]; device_count],
@@ -234,7 +245,10 @@ impl MultiGpuManager {
         let mut device_id = 0;
 
         // Enumerate all available adapters
-        let adapters: Vec<_> = instance.enumerate_adapters(wgpu::Backends::all()).collect().await;
+        let adapters: Vec<_> = instance
+            .enumerate_adapters(wgpu::Backends::all())
+            .into_iter()
+            .collect();
         for adapter in adapters {
             let info = adapter.get_info();
             let limits = adapter.limits();
@@ -276,22 +290,22 @@ impl MultiGpuManager {
     #[cfg(not(feature = "gpu"))]
     async fn discover_gpu_devices() -> KwaversResult<Vec<GpuDeviceInfo>> {
         // Return a single CPU-based device when GPU support is not enabled
-        let devices = vec![
-            GpuDeviceInfo {
-                id: 0,
-                name: "CPU Backend".to_string(),
-                backend: "CPU".to_string(),
-                memory_used: 0,
-                compute_load: 0.0,
-                healthy: true,
-            }
-        ];
+        let devices = vec![GpuDeviceInfo {
+            id: 0,
+            name: "CPU Backend".to_string(),
+            backend: "CPU".to_string(),
+            memory_used: 0,
+            compute_load: 0.0,
+            healthy: true,
+        }];
 
         Ok(devices)
     }
 
     /// Initialize communication channels between GPUs
-    fn initialize_communication_channels(devices: &[GpuDeviceInfo]) -> HashMap<(usize, usize), CommunicationChannel> {
+    fn initialize_communication_channels(
+        devices: &[GpuDeviceInfo],
+    ) -> HashMap<(usize, usize), CommunicationChannel> {
         let mut channels = HashMap::new();
 
         for i in 0..devices.len() {
@@ -299,7 +313,7 @@ impl MultiGpuManager {
                 // Estimate bandwidth and latency based on device capabilities
                 // In practice, this would be measured or queried from the system
                 let bandwidth = 50.0; // GB/s (conservative estimate for PCIe 4.0)
-                let latency = 5.0;   // microseconds
+                let latency = 5.0; // microseconds
 
                 let channel = CommunicationChannel {
                     bandwidth,
@@ -323,15 +337,29 @@ impl MultiGpuManager {
         geometry_bounds: (f64, f64, f64, f64),
     ) -> KwaversResult<Vec<WorkUnit>> {
         match &self.decomposition {
-            DecompositionStrategy::Spatial { dimensions, overlap } => {
-                self.decompose_spatially(total_collocation_points, geometry_bounds, *dimensions, *overlap)
-            }
+            DecompositionStrategy::Spatial {
+                dimensions,
+                overlap,
+            } => self.decompose_spatially(
+                total_collocation_points,
+                geometry_bounds,
+                *dimensions,
+                *overlap,
+            ),
             DecompositionStrategy::Temporal { steps_per_gpu } => {
                 self.decompose_temporally(total_collocation_points, *steps_per_gpu)
             }
-            DecompositionStrategy::Hybrid { spatial_dims, temporal_steps, overlap } => {
-                self.decompose_hybrid(total_collocation_points, geometry_bounds, *spatial_dims, *temporal_steps, *overlap)
-            }
+            DecompositionStrategy::Hybrid {
+                spatial_dims,
+                temporal_steps,
+                overlap,
+            } => self.decompose_hybrid(
+                total_collocation_points,
+                geometry_bounds,
+                *spatial_dims,
+                *temporal_steps,
+                *overlap,
+            ),
         }
     }
 
@@ -340,22 +368,22 @@ impl MultiGpuManager {
         &self,
         total_points: usize,
         bounds: (f64, f64, f64, f64),
-        dimensions: usize,
+        _dimensions: usize,
         overlap: f64,
     ) -> KwaversResult<Vec<WorkUnit>> {
         let n_gpus = self.devices.len();
         let points_per_gpu = total_points / n_gpus;
         let mut work_units = Vec::new();
 
-        let (x_min, x_max, y_min, y_max) = bounds;
+        let (x_min, x_max, _y_min, _y_max) = bounds;
 
         for gpu_id in 0..n_gpus {
             let x_start = x_min + (x_max - x_min) * (gpu_id as f64) / (n_gpus as f64);
             let x_end = x_min + (x_max - x_min) * ((gpu_id + 1) as f64) / (n_gpus as f64);
 
             // Add overlap for boundary conditions
-            let x_start_overlap = (x_start - overlap).max(x_min);
-            let x_end_overlap = (x_end + overlap).min(x_max);
+            let _x_start_overlap = (x_start - overlap).max(x_min);
+            let _x_end_overlap = (x_end + overlap).min(x_max);
 
             let work_unit = WorkUnit {
                 id: gpu_id,
@@ -364,6 +392,9 @@ impl MultiGpuManager {
                 memory_required: points_per_gpu * std::mem::size_of::<f32>() * 4, // Conservative estimate
                 priority: 1,
                 dependencies: vec![], // No dependencies for spatial decomposition
+                data_range: None,
+                channel_range: None,
+                sample_range: None,
             };
 
             work_units.push(work_unit);
@@ -373,7 +404,11 @@ impl MultiGpuManager {
     }
 
     /// Temporal decomposition
-    fn decompose_temporally(&self, total_points: usize, steps_per_gpu: usize) -> KwaversResult<Vec<WorkUnit>> {
+    fn decompose_temporally(
+        &self,
+        total_points: usize,
+        _steps_per_gpu: usize,
+    ) -> KwaversResult<Vec<WorkUnit>> {
         let n_gpus = self.devices.len();
         let mut work_units = Vec::new();
 
@@ -385,6 +420,9 @@ impl MultiGpuManager {
                 memory_required: (total_points / n_gpus) * std::mem::size_of::<f32>() * 2,
                 priority: 1,
                 dependencies: if gpu_id > 0 { vec![gpu_id - 1] } else { vec![] },
+                data_range: None,
+                channel_range: None,
+                sample_range: None,
             };
 
             work_units.push(work_unit);
@@ -419,6 +457,9 @@ impl MultiGpuManager {
                     memory_required: spatial_unit.memory_required + temporal_unit.memory_required,
                     priority: 1,
                     dependencies: temporal_unit.dependencies.clone(),
+                    data_range: spatial_unit.data_range.clone(),
+                    channel_range: spatial_unit.channel_range.clone(),
+                    sample_range: temporal_unit.sample_range.clone(),
                 };
 
                 work_units.push(hybrid_unit);
@@ -456,7 +497,11 @@ impl MultiGpuManager {
     fn assign_work_dynamic(&mut self, work_units: Vec<WorkUnit>) -> KwaversResult<()> {
         // Sort work units by complexity (largest first)
         let mut sorted_work = work_units;
-        sorted_work.sort_by(|a, b| b.complexity.partial_cmp(&a.complexity).unwrap());
+        sorted_work.sort_by(|a, b| {
+            b.complexity
+                .partial_cmp(&a.complexity)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // Assign to least loaded GPU
         for work_unit in sorted_work {
@@ -498,14 +543,19 @@ impl MultiGpuManager {
     }
 
     /// Predict optimal GPU for work unit using historical data
-    fn predict_optimal_gpu(&self, work_unit: &WorkUnit) -> usize {
+    fn predict_optimal_gpu(&self, _work_unit: &WorkUnit) -> usize {
         // Simple prediction based on current load
         // In practice, this would use machine learning models
         self.find_least_loaded_gpu()
     }
 
     /// Update performance metrics
-    pub fn update_performance_metrics(&mut self, gpu_id: usize, utilization: f32, memory_used: usize) {
+    pub fn update_performance_metrics(
+        &mut self,
+        gpu_id: usize,
+        utilization: f32,
+        memory_used: usize,
+    ) {
         if gpu_id < self.devices.len() {
             self.devices[gpu_id].compute_load = utilization;
             self.devices[gpu_id].memory_used = memory_used;
@@ -535,14 +585,23 @@ impl MultiGpuManager {
             return 0.0;
         }
 
-        let variance = loads.iter().map(|&load| (load - mean_load).powi(2)).sum::<f32>() / loads.len() as f32;
+        let variance = loads
+            .iter()
+            .map(|&load| (load - mean_load).powi(2))
+            .sum::<f32>()
+            / loads.len() as f32;
         variance.sqrt() / mean_load
     }
 
     /// Calculate scaling efficiency
     pub fn calculate_scaling_efficiency(&self) -> f64 {
         let n_gpus = self.devices.len() as f64;
-        let avg_utilization = self.devices.iter().map(|d| d.compute_load as f64).sum::<f64>() / n_gpus;
+        let avg_utilization = self
+            .devices
+            .iter()
+            .map(|d| d.compute_load as f64)
+            .sum::<f64>()
+            / n_gpus;
 
         // Efficiency = actual speedup / ideal speedup
         // For simplicity, assume utilization = efficiency for identical GPUs
@@ -556,7 +615,8 @@ impl MultiGpuManager {
             load_imbalance: self.calculate_load_imbalance(),
             scaling_efficiency: self.calculate_scaling_efficiency(),
             communication_overhead: self.performance_monitor.communication_overhead,
-            average_utilization: self.devices.iter().map(|d| d.compute_load).sum::<f32>() / self.devices.len() as f32,
+            average_utilization: self.devices.iter().map(|d| d.compute_load).sum::<f32>()
+                / self.devices.len() as f32,
         }
     }
 
@@ -570,7 +630,9 @@ impl MultiGpuManager {
 
         if self.fault_tolerance.graceful_degradation {
             // Redistribute work from failed GPU
-            let failed_work: Vec<_> = self.active_work.values()
+            let failed_work: Vec<_> = self
+                .active_work
+                .values()
                 .filter(|work| work.device_id == failed_gpu_id)
                 .cloned()
                 .collect();
@@ -580,7 +642,8 @@ impl MultiGpuManager {
             }
 
             // Remove failed work assignments
-            self.active_work.retain(|_, work| work.device_id != failed_gpu_id);
+            self.active_work
+                .retain(|_, work| work.device_id != failed_gpu_id);
 
             // Reassign work to healthy GPUs
             self.reassign_work_after_failure()?;
@@ -591,16 +654,20 @@ impl MultiGpuManager {
 
     /// Reassign work after GPU failure
     fn reassign_work_after_failure(&mut self) -> KwaversResult<()> {
-        let healthy_gpus: Vec<usize> = self.devices.iter()
+        let healthy_gpus: Vec<usize> = self
+            .devices
+            .iter()
             .enumerate()
             .filter(|(_, device)| device.healthy)
             .map(|(i, _)| i)
             .collect();
 
         if healthy_gpus.is_empty() {
-            return Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: "No healthy GPUs remaining".to_string(),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::ResourceUnavailable {
+                    resource: "No healthy GPUs remaining".to_string(),
+                },
+            ));
         }
 
         while let Some(work) = self.work_queue.pop_front() {
@@ -656,9 +723,13 @@ mod tests {
         // This test would require actual GPU hardware
         // For CI/CD, we skip if no GPUs are available
         let result = MultiGpuManager::new(
-            DecompositionStrategy::Spatial { dimensions: 2, overlap: 0.1 },
+            DecompositionStrategy::Spatial {
+                dimensions: 2,
+                overlap: 0.1,
+            },
             LoadBalancingAlgorithm::Static,
-        ).await;
+        )
+        .await;
 
         // Either succeeds with GPUs or fails gracefully
         match result {
@@ -680,6 +751,14 @@ mod tests {
                 id: 0,
                 name: "GPU 0".to_string(),
                 backend: "Vulkan".to_string(),
+                #[cfg(feature = "gpu")]
+                capabilities: GpuCapabilities {
+                    max_buffer_size: 0,
+                    max_workgroup_size: [0, 0, 0],
+                    max_compute_invocations: 0,
+                    supports_f64: false,
+                    supports_atomics: false,
+                },
                 memory_used: 0,
                 compute_load: 0.0,
                 healthy: true,
@@ -688,13 +767,24 @@ mod tests {
                 id: 1,
                 name: "GPU 1".to_string(),
                 backend: "Vulkan".to_string(),
+                #[cfg(feature = "gpu")]
+                capabilities: GpuCapabilities {
+                    max_buffer_size: 0,
+                    max_workgroup_size: [0, 0, 0],
+                    max_compute_invocations: 0,
+                    supports_f64: false,
+                    supports_atomics: false,
+                },
                 memory_used: 0,
                 compute_load: 0.0,
                 healthy: true,
             },
         ];
 
-        let decomposition = DecompositionStrategy::Spatial { dimensions: 2, overlap: 0.1 };
+        let decomposition = DecompositionStrategy::Spatial {
+            dimensions: 2,
+            overlap: 0.1,
+        };
 
         // Test spatial decomposition logic
         let bounds = (0.0, 1.0, 0.0, 1.0);

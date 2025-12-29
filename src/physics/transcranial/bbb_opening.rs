@@ -20,6 +20,7 @@ pub struct PermeabilityEnhancement {
 }
 
 /// BBB opening simulation
+#[derive(Debug)]
 pub struct BBBOpening {
     /// Acoustic pressure field (Pa)
     acoustic_pressure: Array3<f64>,
@@ -50,11 +51,11 @@ pub struct BBBParameters {
 impl Default for BBBParameters {
     fn default() -> Self {
         Self {
-            frequency: 1.0e6,     // 1 MHz
-            prf: 1.0,             // 1 Hz
-            duty_cycle: 10.0,     // 10%
-            duration: 120.0,      // 2 minutes
-            target_mi: 0.3,       // Low MI for BBB opening
+            frequency: 1.0e6,        // 1 MHz
+            prf: 1.0,                // 1 Hz
+            duty_cycle: 10.0,        // 10%
+            duration: 120.0,         // 2 minutes
+            target_mi: 0.3,          // Low MI for BBB opening
             bubble_size: (1.5, 0.3), // 1.5 ± 0.3 μm
         }
     }
@@ -99,7 +100,8 @@ impl BBBOpening {
                     let bubble_conc = self.microbubble_concentration[[i, j, k]];
 
                     // Calculate local permeability enhancement
-                    let enhancement = self.calculate_permeability_enhancement(pressure, bubble_conc);
+                    let enhancement =
+                        self.calculate_permeability_enhancement(pressure, bubble_conc);
                     self.permeability.permeability_factor[[i, j, k]] = enhancement;
 
                     // Calculate opening duration
@@ -236,30 +238,23 @@ impl BBBOpening {
     pub fn optimize_parameters(&self, target_region: &[(usize, usize, usize)]) -> BBBParameters {
         // Analyze current field to optimize parameters
         let mut max_pressure: f64 = 0.0;
-        let mut avg_bubble_conc = 0.0;
-        let mut count = 0;
 
         for &(i, j, k) in target_region {
-            if i < self.acoustic_pressure.dim().0 &&
-                j < self.acoustic_pressure.dim().1 &&
-               k < self.acoustic_pressure.dim().2 {
+            if i < self.acoustic_pressure.dim().0
+                && j < self.acoustic_pressure.dim().1
+                && k < self.acoustic_pressure.dim().2
+            {
                 max_pressure = max_pressure.max(self.acoustic_pressure[[i, j, k]]);
-                avg_bubble_conc += self.microbubble_concentration[[i, j, k]];
-                count += 1;
             }
-        }
-
-        if count > 0 {
-            avg_bubble_conc /= count as f64;
         }
 
         // Optimize for target MI
         let current_mi = self.calculate_mechanical_index(max_pressure);
-        let pressure_scale = self.parameters.target_mi / current_mi.max(0.01);
+        let _pressure_scale = self.parameters.target_mi / current_mi.max(0.01);
 
         let mut optimized = self.parameters.clone();
         optimized.frequency = self.parameters.frequency; // Keep frequency
-        // Adjust other parameters based on optimization...
+                                                         // Adjust other parameters based on optimization...
 
         optimized
     }
@@ -311,12 +306,14 @@ impl BBBOpening {
 
     /// Validate treatment safety
     pub fn validate_safety(&self) -> SafetyValidation {
-        let max_mi = self.acoustic_pressure.iter()
+        let max_mi = self
+            .acoustic_pressure
+            .iter()
             .map(|&p| self.calculate_mechanical_index(p))
             .fold(0.0_f64, f64::max);
 
-        let avg_enhancement = self.permeability.permeability_factor.iter()
-            .sum::<f64>() / self.permeability.permeability_factor.len() as f64;
+        let avg_enhancement = self.permeability.permeability_factor.iter().sum::<f64>()
+            / self.permeability.permeability_factor.len() as f64;
 
         SafetyValidation {
             max_mechanical_index: max_mi,
@@ -335,7 +332,10 @@ impl BBBOpening {
         }
 
         if avg_enhancement > 50.0 {
-            warnings.push(format!("High permeability enhancement ({:.1}x) may indicate BBB disruption", avg_enhancement));
+            warnings.push(format!(
+                "High permeability enhancement ({:.1}x) may indicate BBB disruption",
+                avg_enhancement
+            ));
         }
 
         if max_mi < 0.1 {
@@ -391,7 +391,11 @@ mod tests {
         let result = bbb.simulate_opening();
 
         assert!(result.is_ok());
-        assert!(bbb.permeability.permeability_factor.iter().any(|&x| x > 1.0));
+        assert!(bbb
+            .permeability
+            .permeability_factor
+            .iter()
+            .any(|&x| x > 1.0));
     }
 
     #[test]

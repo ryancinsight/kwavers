@@ -8,6 +8,7 @@ use ndarray::ArrayView3;
 pub struct SpectralMetrics {
     pub smoothness: f64,
     pub frequency_content: f64,
+    pub spectral_centroid: f64,
     pub dispersion_error: f64,
 }
 
@@ -15,12 +16,13 @@ impl SpectralMetrics {
     /// Compute spectral metrics from field data
     pub fn compute(field: ArrayView3<f64>, grid: &Grid) -> Self {
         let smoothness = Self::compute_smoothness(field, grid);
-        let frequency_content = Self::compute_frequency_content(field);
+        let (frequency_content, spectral_centroid) = Self::compute_spectral_features(field, grid);
         let dispersion_error = Self::estimate_dispersion_error(field, grid);
 
         Self {
             smoothness,
             frequency_content,
+            spectral_centroid,
             dispersion_error,
         }
     }
@@ -45,18 +47,86 @@ impl SpectralMetrics {
         }
 
         if count > 0 {
+            // Normalize by max possible gradient estimate or just return raw
+            // Ideally should be normalized for the selector
             total_gradient / f64::from(count)
         } else {
             0.0
         }
     }
 
-    fn compute_frequency_content(field: ArrayView3<f64>) -> f64 {
-        // Frequency content proxy using field variance
-        // Full analysis: FFT spectral decomposition per Cooley-Tukey (1965)
-        // Current: Variance correlates with high-frequency content
-        let variance = field.var(0.0);
-        variance.sqrt()
+    fn compute_spectral_features(field: ArrayView3<f64>, grid: &Grid) -> (f64, f64) {
+        use crate::fft::ProcessorFft3d;
+        use std::f64::consts::PI;
+
+        let (nx, ny, nz) = field.dim();
+
+        // 1. Perform FFT
+        // Create a new processor (acceptable cost for adaptive selection)
+        let mut fft = ProcessorFft3d::new(nx, ny, nz);
+
+        // We need an owned array for the FFT processor
+        let field_owned = field.to_owned();
+        let spectrum = fft.forward(&field_owned);
+
+        // 2. Compute Spectral Metrics
+        let mut total_energy = 0.0;
+        let mut weighted_k_sum = 0.0;
+        let mut high_freq_energy = 0.0;
+
+        // Nyquist limits and normalization factors
+        let kx_max = PI / grid.dx;
+        let ky_max = PI / grid.dy;
+        let kz_max = PI / grid.dz;
+        let k_max_norm = (kx_max.powi(2) + ky_max.powi(2) + kz_max.powi(2)).sqrt();
+        let k_high_cutoff = k_max_norm * 0.5;
+
+        for k_idx in 0..nz {
+            let kz = if k_idx <= nz / 2 {
+                2.0 * PI * k_idx as f64 / (nz as f64 * grid.dz)
+            } else {
+                2.0 * PI * (k_idx as f64 - nz as f64) / (nz as f64 * grid.dz)
+            };
+
+            for j in 0..ny {
+                let ky = if j <= ny / 2 {
+                    2.0 * PI * j as f64 / (ny as f64 * grid.dy)
+                } else {
+                    2.0 * PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
+                };
+
+                for i in 0..nx {
+                    let kx = if i <= nx / 2 {
+                        2.0 * PI * i as f64 / (nx as f64 * grid.dx)
+                    } else {
+                        2.0 * PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
+                    };
+
+                    let k_mag = (kx.powi(2) + ky.powi(2) + kz.powi(2)).sqrt();
+
+                    // Use squared magnitude (energy)
+                    let energy = spectrum[[i, j, k_idx]].norm_sqr();
+
+                    // Exclude DC component
+                    if k_mag > 1e-10 {
+                        total_energy += energy;
+                        weighted_k_sum += k_mag * energy;
+
+                        if k_mag > k_high_cutoff {
+                            high_freq_energy += energy;
+                        }
+                    }
+                }
+            }
+        }
+
+        if total_energy > 0.0 {
+            let spectral_centroid = (weighted_k_sum / total_energy) / k_max_norm;
+            let frequency_content = high_freq_energy / total_energy;
+            (frequency_content, spectral_centroid)
+        } else {
+            (0.0, 0.0)
+        }
     }
 
     fn estimate_dispersion_error(_field: ArrayView3<f64>, grid: &Grid) -> f64 {
@@ -200,5 +270,62 @@ impl ComputationalMetrics {
         } else {
             0.4 // May need optimization
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::Array3;
+    use std::f64::consts::PI;
+
+    #[test]
+    fn test_spectral_metrics_computation() {
+        let nx = 32;
+        let ny = 32;
+        let nz = 32;
+        let dx = 0.001;
+        let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
+
+        let mut field_low = Array3::zeros((nx, ny, nz));
+        let mut field_high = Array3::zeros((nx, ny, nz));
+
+        // Low frequency: 1 period
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    let x = i as f64 * dx;
+                    field_low[[i, j, k]] = (2.0 * PI * x / (nx as f64 * dx)).sin();
+                }
+            }
+        }
+
+        // High frequency: 8 periods
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    let x = i as f64 * dx;
+                    field_high[[i, j, k]] = (2.0 * PI * x * 8.0 / (nx as f64 * dx)).sin();
+                }
+            }
+        }
+
+        let metrics_low = SpectralMetrics::compute(field_low.view(), &grid);
+        let metrics_high = SpectralMetrics::compute(field_high.view(), &grid);
+
+        println!("Low Freq Metrics: {:?}", metrics_low);
+        println!("High Freq Metrics: {:?}", metrics_high);
+
+        // High frequency content should be higher for the high frequency field
+        assert!(
+            metrics_high.frequency_content > metrics_low.frequency_content,
+            "High frequency field should have higher frequency content score"
+        );
+
+        // Spectral centroid should be higher for high frequency field
+        assert!(
+            metrics_high.spectral_centroid > metrics_low.spectral_centroid,
+            "High frequency field should have higher spectral centroid"
+        );
     }
 }

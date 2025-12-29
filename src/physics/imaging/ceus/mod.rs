@@ -23,17 +23,19 @@
 //! - Tumor vascularity assessment
 //! - Renal blood flow analysis
 
-pub mod microbubble;
 pub mod cloud_dynamics;
-pub mod scattering;
+pub mod microbubble;
 pub mod perfusion;
 pub mod reconstruction;
+pub mod scattering;
 
-pub use microbubble::{Microbubble, MicrobubblePopulation, BubbleDynamics};
-pub use cloud_dynamics::{CloudDynamics, CloudConfig, CloudBubble, CloudResponse, IncidentField, ScatteredField};
-pub use scattering::{NonlinearScattering, HarmonicImaging};
-pub use perfusion::{PerfusionModel, FlowKinetics, TissueUptake};
+pub use cloud_dynamics::{
+    CloudBubble, CloudConfig, CloudDynamics, CloudResponse, IncidentField, ScatteredField,
+};
+pub use microbubble::{BubbleDynamics, Microbubble, MicrobubblePopulation};
+pub use perfusion::{FlowKinetics, PerfusionModel, TissueUptake};
 pub use reconstruction::{CEUSReconstruction, ContrastImage};
+pub use scattering::{HarmonicImaging, NonlinearScattering};
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
@@ -121,14 +123,12 @@ impl ContrastEnhancedUltrasound {
             let time = frame as f64 * dt;
 
             // Update microbubble distribution
-            self.perfusion.update_concentration(current_concentration, dt)?;
+            self.perfusion
+                .update_concentration(current_concentration, dt)?;
 
             // Simulate acoustic excitation
-            let scattered_signals = self.simulate_acoustic_response(
-                acoustic_pressure,
-                frequency,
-                time,
-            )?;
+            let scattered_signals =
+                self.simulate_acoustic_response(acoustic_pressure, frequency, time)?;
 
             // Reconstruct contrast image
             let contrast_image = self.reconstruction.process_frame(&scattered_signals)?;
@@ -150,7 +150,7 @@ impl ContrastEnhancedUltrasound {
         // Gamma variate parameters (typical for CEUS bolus)
         let alpha = 3.0;
         let beta = 1.5; // s
-        let tau = 0.5;  // s (time-to-peak)
+        let tau = 0.5; // s (time-to-peak)
 
         let mut curve = Vec::with_capacity(n_frames);
         for i in 0..n_frames {
@@ -182,7 +182,11 @@ impl ContrastEnhancedUltrasound {
     ) -> KwaversResult<Array4<f32>> {
         let params = self.imaging_parameters().clone();
         let n_frames = (params.frame_rate * duration_seconds).max(0.0) as usize;
-        let dt = if params.frame_rate > 0.0 { 1.0 / params.frame_rate } else { 0.0 };
+        let dt = if params.frame_rate > 0.0 {
+            1.0 / params.frame_rate
+        } else {
+            0.0
+        };
 
         // Convert MI to peak acoustic pressure: P_r (Pa) ≈ MI * sqrt(f_MHz) * 1e6
         let freq_hz = params.frequency;
@@ -193,16 +197,16 @@ impl ContrastEnhancedUltrasound {
         let mut series = Array4::<f32>::zeros((nx, ny, nz, n_frames));
 
         // Linear interpolation helper to resample injection_profile to n_frames
-        let L = injection_profile.len();
+        let l = injection_profile.len();
         let sample = |idx: usize| -> f64 {
-            if L == 0 {
+            if l == 0 {
                 0.0
-            } else if L == 1 {
+            } else if l == 1 {
                 injection_profile[0]
             } else {
-                let x = (idx as f64) * (L as f64 - 1.0) / (n_frames as f64 - 1.0).max(1.0);
+                let x = (idx as f64) * (l as f64 - 1.0) / (n_frames as f64 - 1.0).max(1.0);
                 let i0 = x.floor() as usize;
-                let i1 = (i0 + 1).min(L - 1);
+                let i1 = (i0 + 1).min(l - 1);
                 let w = x - (i0 as f64);
                 injection_profile[i0] * (1.0 - w) + injection_profile[i1] * w
             }
@@ -213,7 +217,8 @@ impl ContrastEnhancedUltrasound {
             let time = frame as f64 * dt;
 
             // Update concentration field
-            self.perfusion.update_concentration(inflow_concentration, dt)?;
+            self.perfusion
+                .update_concentration(inflow_concentration, dt)?;
 
             // Simulate acoustic scattering and reconstruct contrast image
             let scattered = self.simulate_acoustic_response(acoustic_pressure, freq_hz, time)?;
@@ -254,15 +259,15 @@ impl ContrastEnhancedUltrasound {
                 .collect()
         } else {
             // Resample provided residue function to nt via linear interpolation
-            let L = kinetics.residue_function.len();
+            let l = kinetics.residue_function.len();
             (0..nt)
                 .map(|t| {
-                    if L == 1 {
+                    if l == 1 {
                         kinetics.residue_function[0]
                     } else {
-                        let x = (t as f64) * (L as f64 - 1.0) / (nt as f64 - 1.0).max(1.0);
+                        let x = (t as f64) * (l as f64 - 1.0) / (nt as f64 - 1.0).max(1.0);
                         let i0 = x.floor() as usize;
-                        let i1 = (i0 + 1).min(L - 1);
+                        let i1 = (i0 + 1).min(l - 1);
                         let w = x - (i0 as f64);
                         kinetics.residue_function[i0] * (1.0 - w)
                             + kinetics.residue_function[i1] * w
@@ -308,8 +313,8 @@ impl ContrastEnhancedUltrasound {
                     let concentration = self.perfusion.concentration(i, j, k);
 
                     // Acoustic pressure at bubble location
-                    let local_pressure = acoustic_pressure *
-                        (2.0 * std::f64::consts::PI * frequency * time).cos();
+                    let local_pressure =
+                        acoustic_pressure * (2.0 * std::f64::consts::PI * frequency * time).cos();
 
                     // Microbubble scattering response
                     let scattering_response = self.scattering.compute_scattering(
@@ -336,9 +341,9 @@ impl ContrastEnhancedUltrasound {
     ) -> Vec<f64> {
         // Gamma variate bolus profile: C(t) = A * (t/τ)^α * exp(-(t-τ)/β)
         // Typical parameters for contrast agents
-        let alpha = 3.0;  // Shape parameter
-        let beta = 1.5;   // Scale parameter (s)
-        let tau = 0.5;    // Time to peak (s)
+        let alpha = 3.0; // Shape parameter
+        let beta = 1.5; // Scale parameter (s)
+        let tau = 0.5; // Time to peak (s)
 
         let amplitude = injection_rate * 1000.0; // Convert to concentration units
         let dt = total_time / n_frames as f64;
@@ -384,7 +389,8 @@ impl ContrastEnhancedUltrasound {
             for j in 0..ny {
                 for k in 0..nz {
                     // Extract time-intensity curve for this voxel
-                    let tic: Vec<f64> = analysis_frames.iter()
+                    let tic: Vec<f64> = analysis_frames
+                        .iter()
                         .map(|img| img.intensity[[i, j, k]])
                         .collect();
 
@@ -525,12 +531,12 @@ pub struct CEUSImagingParameters {
 impl Default for CEUSImagingParameters {
     fn default() -> Self {
         Self {
-            frequency: 3.0e6,        // 3 MHz
-            mechanical_index: 0.1,   // Low MI for CEUS
-            frame_rate: 10.0,        // 10 fps
-            dynamic_range: 60.0,     // 60 dB
-            fov: (80.0, 60.0),       // 80x60 mm
-            depth: 150.0,            // 150 mm
+            frequency: 3.0e6,      // 3 MHz
+            mechanical_index: 0.1, // Low MI for CEUS
+            frame_rate: 10.0,      // 10 fps
+            dynamic_range: 60.0,   // 60 dB
+            fov: (80.0, 60.0),     // 80x60 mm
+            depth: 150.0,          // 150 mm
         }
     }
 }
@@ -565,19 +571,18 @@ mod tests {
         let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
 
         let mut ceus = ContrastEnhancedUltrasound::new(
-            &grid,
-            &medium,
-            1e6,   // 1 million bubbles/mL
-            2.5,   // 2.5 μm diameter
-        ).unwrap();
+            &grid, &medium, 1e6, // 1 million bubbles/mL
+            2.5, // 2.5 μm diameter
+        )
+        .unwrap();
 
         // Initially concentration should be zero, but after simulation it should have values
         assert!(ceus.concentration_field().iter().all(|&x| x >= 0.0));
 
         // Test a short simulation
-        let images = ceus.simulate_imaging_sequence(
-            1.0, 1.0, 1.0, 1e5, 2e6,
-        ).unwrap();
+        let images = ceus
+            .simulate_imaging_sequence(1.0, 1.0, 1.0, 1e5, 2e6)
+            .unwrap();
         assert_eq!(images.len(), 1);
     }
 
@@ -587,22 +592,25 @@ mod tests {
         let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
 
         let mut ceus = ContrastEnhancedUltrasound::new(
-            &grid,
-            &medium,
-            5e5,   // 500k bubbles/mL
-            2.0,   // 2.0 μm diameter
-        ).unwrap();
+            &grid, &medium, 5e5, // 500k bubbles/mL
+            2.0, // 2.0 μm diameter
+        )
+        .unwrap();
 
-        let images = ceus.simulate_imaging_sequence(
-            1.0,      // 1 mL/s injection rate
-            2.0,      // 2 seconds total
-            5.0,      // 5 fps
-            100_000.0, // 100 kPa acoustic pressure
-            3e6,      // 3 MHz
-        ).unwrap();
+        let images = ceus
+            .simulate_imaging_sequence(
+                1.0,       // 1 mL/s injection rate
+                2.0,       // 2 seconds total
+                5.0,       // 5 fps
+                100_000.0, // 100 kPa acoustic pressure
+                3e6,       // 3 MHz
+            )
+            .unwrap();
 
         assert_eq!(images.len(), 10); // 2s * 5fps = 10 frames
-        assert!(images.iter().all(|img| img.intensity.iter().all(|&x| x >= 0.0)));
+        assert!(images
+            .iter()
+            .all(|img| img.intensity.iter().all(|&x| x >= 0.0)));
     }
 
     #[test]
@@ -610,12 +618,7 @@ mod tests {
         let grid = Grid::new(20, 20, 10, 0.001, 0.001, 0.001).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
 
-        let ceus = ContrastEnhancedUltrasound::new(
-            &grid,
-            &medium,
-            1e6,
-            2.5,
-        ).unwrap();
+        let ceus = ContrastEnhancedUltrasound::new(&grid, &medium, 1e6, 2.5).unwrap();
 
         // Create mock images with increasing intensity
         let mut images = Vec::new();

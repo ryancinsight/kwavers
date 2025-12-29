@@ -59,6 +59,55 @@ impl ComputeManager {
         }
     }
 
+    /// Create new compute manager (blocking)
+    pub fn new_blocking() -> KwaversResult<Self> {
+        pollster::block_on(Self::new())
+    }
+
+    /// Get device reference (error if GPU unavailable)
+    pub fn device(&self) -> KwaversResult<&wgpu::Device> {
+        self.device.as_ref().ok_or_else(|| {
+            KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                resource: "GPU device".to_string(),
+            })
+        })
+    }
+
+    /// Get queue reference (error if GPU unavailable)
+    pub fn queue(&self) -> KwaversResult<&wgpu::Queue> {
+        self.queue.as_ref().ok_or_else(|| {
+            KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                resource: "GPU queue".to_string(),
+            })
+        })
+    }
+
+    /// Create a GPU buffer (error if GPU unavailable)
+    pub fn create_buffer(
+        &self,
+        size_bytes: usize,
+        usage: wgpu::BufferUsages,
+    ) -> KwaversResult<wgpu::Buffer> {
+        let device = self.device()?;
+        Ok(device.create_buffer(&wgpu::BufferDescriptor {
+            label: None,
+            size: size_bytes as u64,
+            usage,
+            mapped_at_creation: false,
+        }))
+    }
+
+    /// Write typed data into a GPU buffer (error if GPU unavailable)
+    pub fn write_buffer<T: bytemuck::Pod>(
+        &self,
+        buffer: &wgpu::Buffer,
+        data: &[T],
+    ) -> KwaversResult<()> {
+        let queue = self.queue()?;
+        queue.write_buffer(buffer, 0, bytemuck::cast_slice(data));
+        Ok(())
+    }
+
     /// Initialize GPU if available
     async fn init_gpu() -> KwaversResult<(wgpu::Device, wgpu::Queue)> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {

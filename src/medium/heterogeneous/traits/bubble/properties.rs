@@ -12,7 +12,9 @@ impl BubbleProperties for HeterogeneousMedium {
     fn surface_tension(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         TrilinearInterpolator::get_field_value(
             &self.surface_tension,
-            x, y, z,
+            x,
+            y,
+            z,
             grid,
             self.use_trilinear_interpolation,
         )
@@ -27,7 +29,9 @@ impl BubbleProperties for HeterogeneousMedium {
     fn vapor_pressure(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         TrilinearInterpolator::get_field_value(
             &self.vapor_pressure,
-            x, y, z,
+            x,
+            y,
+            z,
             grid,
             self.use_trilinear_interpolation,
         )
@@ -37,7 +41,9 @@ impl BubbleProperties for HeterogeneousMedium {
     fn polytropic_index(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         TrilinearInterpolator::get_field_value(
             &self.polytropic_index,
-            x, y, z,
+            x,
+            y,
+            z,
             grid,
             self.use_trilinear_interpolation,
         )
@@ -47,7 +53,9 @@ impl BubbleProperties for HeterogeneousMedium {
     fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         TrilinearInterpolator::get_field_value(
             &self.gas_diffusion_coeff,
-            x, y, z,
+            x,
+            y,
+            z,
             grid,
             self.use_trilinear_interpolation,
         )

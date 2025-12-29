@@ -1,7 +1,7 @@
 // localization/multilateration/core.rs - Generalized multilateration (LS/WLS/ML)
 
-use crate::sensor::localization::{Position, SensorArray, TrilaterationSolver};
 use crate::error::KwaversResult;
+use crate::sensor::localization::{Position, SensorArray, TrilaterationSolver};
 
 /// Multilateration methods for range-based localization
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -121,11 +121,7 @@ impl MultilaterationSolver {
                 // Residual r_i = d(x, p_i) - r_i
                 let mut r = di - ri;
                 let mut jrow = if di > 1e-10 {
-                    [
-                        (x.x - pi.x) / di,
-                        (x.y - pi.y) / di,
-                        (x.z - pi.z) / di,
-                    ]
+                    [(x.x - pi.x) / di, (x.y - pi.y) / di, (x.z - pi.z) / di]
                 } else {
                     [0.0, 0.0, 0.0]
                 };
@@ -180,9 +176,14 @@ impl MultilaterationSolver {
                 if cost1.is_finite() && cost1 < cost0 {
                     x = x_try;
                     // Modest damping reduction after successful step
-                    if lambda > 0.0 { lambda *= 0.3; }
-                    let norm = (delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2]).sqrt();
-                    if norm < TOL { return Ok(x); }
+                    if lambda > 0.0 {
+                        lambda *= 0.3;
+                    }
+                    let norm =
+                        (delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2]).sqrt();
+                    if norm < TOL {
+                        return Ok(x);
+                    }
                     accepted = true;
                     break;
                 } else {
@@ -196,10 +197,35 @@ impl MultilaterationSolver {
                 }
             }
 
-            if !accepted { break; }
+            if !accepted {
+                break;
+            }
         }
 
         Ok(x)
+    }
+
+    /// Adaptive solve: if exactly three ranges are provided, use trilateration closed-form.
+    /// If four or more ranges, use LS/WLS/ML according to `self.method` and optional weights.
+    pub fn solve_adaptive(
+        &self,
+        ranges: &[f64],
+        weights: Option<&[f64]>,
+        array: &SensorArray,
+    ) -> KwaversResult<Position> {
+        if ranges.len() == 3 {
+            // Use first three sensors by convention; ranges must correspond to indices 0..2
+            let tri = TrilaterationSolver::new(array);
+            let res = tri.solve_three([ranges[0], ranges[1], ranges[2]], [0, 1, 2])?;
+            return Ok(Position::from_array(res.position));
+        }
+
+        match (self.method, weights) {
+            (MultilaterationMethod::WeightedLeastSquares, Some(w)) => {
+                self.solve_ranges_weighted(ranges, w, array)
+            }
+            _ => self.solve_ranges(ranges, array),
+        }
     }
 }
 
@@ -248,16 +274,30 @@ fn compute_cost(array: &SensorArray, ranges: &[f64], weights: Option<&[f64]>, x:
 fn solve_spd_3x3_cholesky(a: [[f64; 3]; 3], b: [f64; 3]) -> Result<[f64; 3], ()> {
     // Ensure symmetry numerically (guard against tiny asymmetries)
     let a = [
-        [a[0][0], 0.5 * (a[0][1] + a[1][0]), 0.5 * (a[0][2] + a[2][0])],
-        [0.5 * (a[1][0] + a[0][1]), a[1][1], 0.5 * (a[1][2] + a[2][1])],
-        [0.5 * (a[2][0] + a[0][2]), 0.5 * (a[2][1] + a[1][2]), a[2][2]],
+        [
+            a[0][0],
+            0.5 * (a[0][1] + a[1][0]),
+            0.5 * (a[0][2] + a[2][0]),
+        ],
+        [
+            0.5 * (a[1][0] + a[0][1]),
+            a[1][1],
+            0.5 * (a[1][2] + a[2][1]),
+        ],
+        [
+            0.5 * (a[2][0] + a[0][2]),
+            0.5 * (a[2][1] + a[1][2]),
+            a[2][2],
+        ],
     ];
 
     // Cholesky decomposition: a = L L^T, with L lower-triangular
     let mut l = [[0.0f64; 3]; 3];
 
     // l00
-    if a[0][0] <= 0.0 { return Err(()); }
+    if a[0][0] <= 0.0 {
+        return Err(());
+    }
     l[0][0] = a[0][0].sqrt();
     // l10, l20
     l[1][0] = a[1][0] / l[0][0];
@@ -265,14 +305,18 @@ fn solve_spd_3x3_cholesky(a: [[f64; 3]; 3], b: [f64; 3]) -> Result<[f64; 3], ()>
 
     // l11
     let d11 = a[1][1] - l[1][0] * l[1][0];
-    if d11 <= 0.0 { return Err(()); }
+    if d11 <= 0.0 {
+        return Err(());
+    }
     l[1][1] = d11.sqrt();
     // l21
     l[2][1] = (a[2][1] - l[2][0] * l[1][0]) / l[1][1];
 
     // l22
     let d22 = a[2][2] - l[2][0] * l[2][0] - l[2][1] * l[2][1];
-    if d22 <= 0.0 { return Err(()); }
+    if d22 <= 0.0 {
+        return Err(());
+    }
     l[2][2] = d22.sqrt();
 
     // Forward solve: L y = b
@@ -312,7 +356,9 @@ mod tests {
             .collect();
 
         let solver = MultilaterationSolver::new(MultilaterationMethod::LeastSquares);
-        let pos = solver.solve_ranges(&ranges, &array).expect("LS solve failed");
+        let pos = solver
+            .solve_ranges(&ranges, &array)
+            .expect("LS solve failed");
         let err = pos.distance_to(&source);
         assert!(err < 0.05, "LS multilateration error too large: {err}");
     }
@@ -343,7 +389,9 @@ mod tests {
             .collect();
 
         let solver = MultilaterationSolver::new(MultilaterationMethod::MaximumLikelihood);
-        let pos = solver.solve_ranges(&ranges, &array).expect("ML solve failed");
+        let pos = solver
+            .solve_ranges(&ranges, &array)
+            .expect("ML solve failed");
         let err = pos.distance_to(&source);
         assert!(err < 0.05, "ML multilateration error too large: {err}");
     }
@@ -400,7 +448,7 @@ mod tests {
             // Baseline cost at centroid
             let x0 = array.centroid();
             let cost0: f64 = (0..array.num_sensors()).map(|i|{
-                let di = x0.distance_to(&array.get_sensor_position(i));
+                let di = x0.distance_to(array.get_sensor_position(i));
                 let ri = ranges[i];
                 let r = di - ri;
                 r*r
@@ -409,7 +457,7 @@ mod tests {
             let solver = MultilaterationSolver::new(MultilaterationMethod::LeastSquares);
             let pos = solver.solve_ranges(&ranges, &array).expect("Solve failed");
             let cost1: f64 = (0..array.num_sensors()).map(|i|{
-                let di = pos.distance_to(&array.get_sensor_position(i));
+                let di = pos.distance_to(array.get_sensor_position(i));
                 let ri = ranges[i];
                 let r = di - ri;
                 r*r
@@ -450,30 +498,5 @@ mod tests {
             .expect("Adaptive LS failed");
         let err = pos.distance_to(&source);
         assert!(err < 0.05, "Adaptive LS error too large: {err}");
-    }
-}
-
-impl MultilaterationSolver {
-    /// Adaptive solve: if exactly three ranges are provided, use trilateration closed-form.
-    /// If four or more ranges, use LS/WLS/ML according to `self.method` and optional weights.
-    pub fn solve_adaptive(
-        &self,
-        ranges: &[f64],
-        weights: Option<&[f64]>,
-        array: &SensorArray,
-    ) -> KwaversResult<Position> {
-        if ranges.len() == 3 {
-            // Use first three sensors by convention; ranges must correspond to indices 0..2
-            let tri = TrilaterationSolver::new(array);
-            let res = tri.solve_three([ranges[0], ranges[1], ranges[2]], [0, 1, 2])?;
-            return Ok(Position::from_array(res.position));
-        }
-
-        match (self.method, weights) {
-            (MultilaterationMethod::WeightedLeastSquares, Some(w)) => {
-                self.solve_ranges_weighted(ranges, w, array)
-            }
-            _ => self.solve_ranges(ranges, array),
-        }
     }
 }

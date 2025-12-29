@@ -23,30 +23,21 @@
 //! - **Clinical Validation**: Automated quality assurance and standards compliance
 
 use kwavers::error::KwaversResult;
-use kwavers::grid::Grid;
-use kwavers::medium::{Medium, homogeneous::HomogeneousMedium, heterogeneous::HeterogeneousMedium};
-use kwavers::physics::imaging::elastography::{
-    ElasticWaveSolver,
-    ElasticWaveConfig,
-    ElasticWaveField,
-    ShearWaveInversion,
-    InversionMethod,
-    AcousticRadiationForce,
-    PushPulseParameters,
-    NonlinearInversion,
-    NonlinearInversionMethod,
-    NonlinearParameterMap,
-    DisplacementField,
-    HarmonicDetector,
-    HarmonicDetectionConfig,
-};
-use kwavers::physics::imaging::ceus::{ContrastEnhancedUltrasound, PerfusionModel};
-use kwavers::physics::transcranial::safety_monitoring::{SafetyMonitor, SafetyThresholds};
 #[cfg(feature = "gpu")]
 use kwavers::gpu::memory::UnifiedMemoryManager;
-use kwavers::uncertainty::{UncertaintyQuantifier, UncertaintyConfig, UncertaintyMethod};
+use kwavers::grid::Grid;
+use kwavers::medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium, Medium};
+use kwavers::physics::imaging::ceus::{ContrastEnhancedUltrasound, PerfusionModel};
+use kwavers::physics::imaging::elastography::{
+    AcousticRadiationForce, DisplacementField, ElasticWaveConfig, ElasticWaveField,
+    ElasticWaveSolver, HarmonicDetectionConfig, HarmonicDetector, InversionMethod,
+    NonlinearInversion, NonlinearInversionMethod, NonlinearParameterMap, PushPulseParameters,
+    ShearWaveInversion,
+};
+use kwavers::physics::transcranial::safety_monitoring::{SafetyMonitor, SafetyThresholds};
+use kwavers::uncertainty::{UncertaintyConfig, UncertaintyMethod, UncertaintyQuantifier};
 use kwavers::validation::clinical::ClinicalValidator;
-use ndarray::{Array3, Array4, s};
+use ndarray::{s, Array3, Array4};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -75,9 +66,14 @@ pub struct LiverAssessmentWorkflow {
 impl LiverAssessmentWorkflow {
     /// Create new liver assessment workflow for a patient
     pub fn new(patient_id: &str, liver_volume_mm3: (f64, f64, f64)) -> KwaversResult<Self> {
-        println!("Initializing comprehensive liver assessment for patient: {}", patient_id);
-        println!("Liver volume: {:.1} x {:.1} x {:.1} mm³",
-                 liver_volume_mm3.0, liver_volume_mm3.1, liver_volume_mm3.2);
+        println!(
+            "Initializing comprehensive liver assessment for patient: {}",
+            patient_id
+        );
+        println!(
+            "Liver volume: {:.1} x {:.1} x {:.1} mm³",
+            liver_volume_mm3.0, liver_volume_mm3.1, liver_volume_mm3.2
+        );
 
         // Create computational grid for liver volume
         // Scale down for computational efficiency while maintaining clinical relevance
@@ -86,10 +82,15 @@ impl LiverAssessmentWorkflow {
             (liver_volume_mm3.0 * scale_factor) as usize,
             (liver_volume_mm3.1 * scale_factor) as usize,
             (liver_volume_mm3.2 * scale_factor) as usize,
-            5e-4, 5e-4, 5e-4, // 0.5 mm resolution
+            5e-4,
+            5e-4,
+            5e-4, // 0.5 mm resolution
         )?;
 
-        println!("Computational grid: {}x{}x{} cells", grid.nx, grid.ny, grid.nz);
+        println!(
+            "Computational grid: {}x{}x{} cells",
+            grid.nx, grid.ny, grid.nz
+        );
 
         // Create heterogeneous liver tissue model
         let liver_tissue = Self::create_liver_tissue_model(&grid)?;
@@ -161,7 +162,8 @@ impl LiverAssessmentWorkflow {
 
         // Phase 5: Clinical decision support
         println!("\n--- Phase 5: Clinical Decision Support ---");
-        let diagnosis = self.generate_clinical_diagnosis(&swe_result, &ceus_result, &uncertainty_result)?;
+        let diagnosis =
+            self.generate_clinical_diagnosis(&swe_result, &ceus_result, &uncertainty_result)?;
 
         // Phase 6: Treatment planning (if indicated)
         println!("\n--- Phase 6: Treatment Planning ---");
@@ -201,16 +203,18 @@ impl LiverAssessmentWorkflow {
             sppa_intensity: 100.0, // W/cm²
         };
 
-        let bmode_validation = self
-            .clinical_validator
-            .validate_bmode(&quality_metrics, &accuracy_metrics, &safety_indices)?;
-        let safety_validation = self
-            .clinical_validator
-            .validate_safety(&safety_indices)?;
+        let bmode_validation = self.clinical_validator.validate_bmode(
+            &quality_metrics,
+            &accuracy_metrics,
+            &safety_indices,
+        )?;
+        let safety_validation = self.clinical_validator.validate_safety(&safety_indices)?;
 
-        let validation_report = self
-            .clinical_validator
-            .generate_validation_report(Some(&bmode_validation), None, Some(&safety_validation));
+        let validation_report = self.clinical_validator.generate_validation_report(
+            Some(&bmode_validation),
+            None,
+            Some(&safety_validation),
+        );
 
         let total_time = start_time.elapsed();
         println!("\n=== Assessment Complete ===");
@@ -238,14 +242,17 @@ impl LiverAssessmentWorkflow {
         // Simulate liver parenchyma with some anatomical features
         // In practice, this would use the full ultrasound simulation pipeline
 
-        println!("B-mode imaging: {}x{} pixels", self.liver_grid.nx, self.liver_grid.ny);
+        println!(
+            "B-mode imaging: {}x{} pixels",
+            self.liver_grid.nx, self.liver_grid.ny
+        );
         println!("Estimated resolution: axial=0.3mm, lateral=0.8mm");
 
         Ok(BModeResult {
             envelope,
-            axial_resolution: 0.3, // mm
+            axial_resolution: 0.3,   // mm
             lateral_resolution: 0.8, // mm
-            contrast_ratio: 25.0, // dB
+            contrast_ratio: 25.0,    // dB
         })
     }
 
@@ -256,20 +263,27 @@ impl LiverAssessmentWorkflow {
 
         let mut arfi = AcousticRadiationForce::new(&self.liver_grid, &self.liver_tissue)?;
         arfi.set_parameters(PushPulseParameters::new(
-            2.0e6,    // ultrasound center frequency (Hz)
-            0.005,     // push duration (s)
-            450.0,     // intensity (W/cm^2)
+            2.0e6, // ultrasound center frequency (Hz)
+            0.005, // push duration (s)
+            450.0, // intensity (W/cm^2)
             push_location[2],
-            2.0,       // focal sigma (mm)
+            2.0, // focal sigma (mm)
         )?);
         let initial_displacement = arfi.apply_push_pulse(push_location)?;
 
-        let solver = ElasticWaveSolver::new(&self.liver_grid, &self.liver_tissue, ElasticWaveConfig::default())?;
+        let solver = ElasticWaveSolver::new(
+            &self.liver_grid,
+            &self.liver_tissue,
+            ElasticWaveConfig::default(),
+        )?;
         let displacement_history = solver.propagate_waves(&initial_displacement)?;
 
         // Inversion: estimate elasticity from displacement field
-        let last = displacement_history.last().expect("non-empty displacement history");
-        let mut disp = DisplacementField::zeros(self.liver_grid.nx, self.liver_grid.ny, self.liver_grid.nz);
+        let last = displacement_history
+            .last()
+            .expect("non-empty displacement history");
+        let mut disp =
+            DisplacementField::zeros(self.liver_grid.nx, self.liver_grid.ny, self.liver_grid.nz);
         disp.ux.assign(&last.ux);
         disp.uy.assign(&last.uy);
         disp.uz.assign(&last.uz);
@@ -297,9 +311,13 @@ impl LiverAssessmentWorkflow {
         let nonlinear_analysis = nl_inv.reconstruct_nonlinear(&harmonic_field, &self.liver_grid)?;
 
         // Calculate fibrosis staging metrics
-        let fibrosis_metrics = self.calculate_fibrosis_metrics(&stiffness_map, &nonlinear_analysis)?;
+        let fibrosis_metrics =
+            self.calculate_fibrosis_metrics(&stiffness_map, &nonlinear_analysis)?;
 
-        println!("SWE completed: Mean stiffness = {:.1} kPa", fibrosis_metrics.mean_stiffness);
+        println!(
+            "SWE completed: Mean stiffness = {:.1} kPa",
+            fibrosis_metrics.mean_stiffness
+        );
         println!("Fibrosis stage: {}", fibrosis_metrics.fibrosis_stage);
 
         Ok(SWEResult {
@@ -316,17 +334,27 @@ impl LiverAssessmentWorkflow {
         let injection_profile = self.ceus_system.simulate_bolus_injection(5e6)?; // 5 million bubbles
 
         // Simulate contrast signal over time
-        let contrast_signal = self.ceus_system.simulate_contrast_signal(&injection_profile, 30.0)?; // 30 seconds
+        let contrast_signal = self
+            .ceus_system
+            .simulate_contrast_signal(&injection_profile, 30.0)?; // 30 seconds
 
         // Perform perfusion analysis
         let perfusion_model = PerfusionModel::gamma_variate_model();
-        let perfusion_map = self.ceus_system.estimate_perfusion(&contrast_signal, &perfusion_model)?;
+        let perfusion_map = self
+            .ceus_system
+            .estimate_perfusion(&contrast_signal, &perfusion_model)?;
 
         // Calculate perfusion metrics
         let perfusion_metrics = self.calculate_perfusion_metrics(&perfusion_map)?;
 
-        println!("CEUS completed: Peak enhancement = {:.1} dB", perfusion_metrics.peak_enhancement);
-        println!("Perfusion rate: {:.2} mL/min/100g", perfusion_metrics.perfusion_rate);
+        println!(
+            "CEUS completed: Peak enhancement = {:.1} dB",
+            perfusion_metrics.peak_enhancement
+        );
+        println!(
+            "Perfusion rate: {:.2} mL/min/100g",
+            perfusion_metrics.perfusion_rate
+        );
 
         Ok(CEUSResult {
             contrast_signal,
@@ -342,11 +370,13 @@ impl LiverAssessmentWorkflow {
         ceus_result: &CEUSResult,
     ) -> KwaversResult<UncertaintyAnalysis> {
         // Quantify uncertainty in stiffness measurements
-        let swe_uncertainty = self.uncertainty_analyzer
+        let swe_uncertainty = self
+            .uncertainty_analyzer
             .quantify_beamforming_uncertainty(&swe_result.stiffness_map, 0.95)?;
 
         // Quantify uncertainty in perfusion measurements
-        let perfusion_uncertainty = self.uncertainty_analyzer
+        let perfusion_uncertainty = self
+            .uncertainty_analyzer
             .quantify_beamforming_uncertainty(&ceus_result.perfusion_map, 0.90)?;
 
         // Generate uncertainty report
@@ -355,7 +385,9 @@ impl LiverAssessmentWorkflow {
             confidence_score: swe_uncertainty.confidence_score,
             reliability_metrics: kwavers::uncertainty::ReliabilityMetrics {
                 signal_to_noise_ratio: swe_uncertainty.reliability_metrics.signal_to_noise_ratio,
-                contrast_to_noise_ratio: swe_uncertainty.reliability_metrics.contrast_to_noise_ratio,
+                contrast_to_noise_ratio: swe_uncertainty
+                    .reliability_metrics
+                    .contrast_to_noise_ratio,
                 spatial_resolution: swe_uncertainty.reliability_metrics.spatial_resolution,
             },
         };
@@ -363,25 +395,26 @@ impl LiverAssessmentWorkflow {
             uncertainty_map: perfusion_uncertainty.uncertainty_map.clone(),
             confidence_score: perfusion_uncertainty.confidence_score,
             reliability_metrics: kwavers::uncertainty::ReliabilityMetrics {
-                signal_to_noise_ratio: perfusion_uncertainty.reliability_metrics.signal_to_noise_ratio,
-                contrast_to_noise_ratio: perfusion_uncertainty.reliability_metrics.contrast_to_noise_ratio,
+                signal_to_noise_ratio: perfusion_uncertainty
+                    .reliability_metrics
+                    .signal_to_noise_ratio,
+                contrast_to_noise_ratio: perfusion_uncertainty
+                    .reliability_metrics
+                    .contrast_to_noise_ratio,
                 spatial_resolution: perfusion_uncertainty.reliability_metrics.spatial_resolution,
             },
         };
-        let results: Vec<Box<dyn kwavers::uncertainty::UncertaintyResult>> = vec![
-            Box::new(swe_clone),
-            Box::new(perf_clone),
-        ];
-        let uncertainty_report = self.uncertainty_analyzer.generate_report(&results);
-
-        println!("Uncertainty analysis: SWE confidence = {:.1}%, CEUS confidence = {:.1}%",
-                 swe_uncertainty.confidence_score * 100.0,
-                 perfusion_uncertainty.confidence_score * 100.0);
+        let results: Vec<Box<dyn kwavers::uncertainty::UncertaintyResult>> =
+            vec![Box::new(swe_clone), Box::new(perf_clone)];
+        println!(
+            "Uncertainty analysis: SWE confidence = {:.1}%, CEUS confidence = {:.1}%",
+            swe_uncertainty.confidence_score * 100.0,
+            perfusion_uncertainty.confidence_score * 100.0
+        );
 
         Ok(UncertaintyAnalysis {
             swe_uncertainty,
             perfusion_uncertainty,
-            report: uncertainty_report,
         })
     }
 
@@ -406,20 +439,30 @@ impl LiverAssessmentWorkflow {
             "Normal liver tissue - No significant findings".to_string()
         };
 
-        let confidence_level = (uncertainty.swe_uncertainty.confidence_score +
-                              uncertainty.perfusion_uncertainty.confidence_score) / 2.0;
+        let confidence_level = (uncertainty.swe_uncertainty.confidence_score
+            + uncertainty.perfusion_uncertainty.confidence_score)
+            / 2.0;
 
         Ok(ClinicalDiagnosis {
             diagnosis_text: diagnosis,
             fibrosis_stage,
-            perfusion_status: if perfusion_abnormality { "Abnormal" } else { "Normal" }.to_string(),
+            perfusion_status: if perfusion_abnormality {
+                "Abnormal"
+            } else {
+                "Normal"
+            }
+            .to_string(),
             confidence_level,
-            recommendations: self.generate_clinical_recommendations(fibrosis_stage, perfusion_abnormality),
+            recommendations: self
+                .generate_clinical_recommendations(fibrosis_stage, perfusion_abnormality),
         })
     }
 
     /// Generate treatment plan based on diagnosis
-    fn generate_treatment_plan(&self, diagnosis: &ClinicalDiagnosis) -> KwaversResult<TreatmentPlan> {
+    fn generate_treatment_plan(
+        &self,
+        diagnosis: &ClinicalDiagnosis,
+    ) -> KwaversResult<TreatmentPlan> {
         let plan = match diagnosis.fibrosis_stage {
             0 => "Routine monitoring - Annual ultrasound screening".to_string(),
             1 => "Lifestyle intervention - Weight management, exercise, alcohol cessation".to_string(),
@@ -474,7 +517,10 @@ impl LiverAssessmentWorkflow {
         // In practice, this would load patient-specific CT/MR data
         let base_properties = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.1, grid);
         // Convert to heterogeneous (simplified)
-        Ok(HeterogeneousMedium::from_homogeneous(&base_properties, grid))
+        Ok(HeterogeneousMedium::from_homogeneous(
+            &base_properties,
+            grid,
+        ))
     }
 
     fn calculate_fibrosis_metrics(
@@ -505,23 +551,31 @@ impl LiverAssessmentWorkflow {
                 .nonlinearity_parameter
                 .iter()
                 .copied()
-                .sum::<f64>() / nonlinear_analysis.nonlinearity_parameter.len() as f64,
+                .sum::<f64>()
+                / nonlinear_analysis.nonlinearity_parameter.len() as f64,
         })
     }
 
-    fn calculate_perfusion_metrics(&self, perfusion_map: &Array3<f32>) -> KwaversResult<PerfusionMetrics> {
+    fn calculate_perfusion_metrics(
+        &self,
+        perfusion_map: &Array3<f32>,
+    ) -> KwaversResult<PerfusionMetrics> {
         let peak_enhancement: f32 = perfusion_map.iter().cloned().fold(0.0_f32, f32::max);
         let mean_perfusion: f32 = perfusion_map.iter().sum::<f32>() / perfusion_map.len() as f32;
 
         Ok(PerfusionMetrics {
             peak_enhancement: 20.0 * (peak_enhancement as f64).log10(), // dB
-            perfusion_rate: mean_perfusion as f64 * 1000.0, // mL/min/100g (scaled)
-            wash_in_time: 15.0, // seconds
-            wash_out_time: 120.0, // seconds
+            perfusion_rate: mean_perfusion as f64 * 1000.0,             // mL/min/100g (scaled)
+            wash_in_time: 15.0,                                         // seconds
+            wash_out_time: 120.0,                                       // seconds
         })
     }
 
-    fn generate_clinical_recommendations(&self, fibrosis_stage: i32, perfusion_abnormality: bool) -> Vec<String> {
+    fn generate_clinical_recommendations(
+        &self,
+        fibrosis_stage: i32,
+        perfusion_abnormality: bool,
+    ) -> Vec<String> {
         let mut recommendations = Vec::new();
 
         match fibrosis_stage {
@@ -549,7 +603,8 @@ impl LiverAssessmentWorkflow {
         }
 
         if perfusion_abnormality {
-            recommendations.push("Further evaluation for hepatocellular carcinoma risk".to_string());
+            recommendations
+                .push("Further evaluation for hepatocellular carcinoma risk".to_string());
         }
 
         recommendations
@@ -575,9 +630,9 @@ pub struct LiverAssessmentReport {
 #[derive(Debug)]
 pub struct BModeResult {
     pub envelope: Array3<f32>,
-    pub axial_resolution: f64,    // mm
-    pub lateral_resolution: f64,  // mm
-    pub contrast_ratio: f64,      // dB
+    pub axial_resolution: f64,   // mm
+    pub lateral_resolution: f64, // mm
+    pub contrast_ratio: f64,     // dB
 }
 
 /// SWE assessment results
@@ -602,7 +657,6 @@ pub struct CEUSResult {
 pub struct UncertaintyAnalysis {
     pub swe_uncertainty: kwavers::uncertainty::BeamformingUncertainty,
     pub perfusion_uncertainty: kwavers::uncertainty::BeamformingUncertainty,
-    pub report: kwavers::uncertainty::UncertaintyReport,
 }
 
 /// Clinical diagnosis
@@ -636,19 +690,19 @@ pub struct SafetyAssessment {
 /// Fibrosis assessment metrics
 #[derive(Debug)]
 pub struct FibrosisMetrics {
-    pub mean_stiffness: f64,     // kPa
-    pub stiffness_std: f64,      // kPa
-    pub fibrosis_stage: i32,     // 0-4 METAVIR scale
+    pub mean_stiffness: f64, // kPa
+    pub stiffness_std: f64,  // kPa
+    pub fibrosis_stage: i32, // 0-4 METAVIR scale
     pub nonlinear_parameter: f64,
 }
 
 /// Perfusion assessment metrics
 #[derive(Debug)]
 pub struct PerfusionMetrics {
-    pub peak_enhancement: f64,   // dB
-    pub perfusion_rate: f64,     // mL/min/100g
-    pub wash_in_time: f64,       // seconds
-    pub wash_out_time: f64,      // seconds
+    pub peak_enhancement: f64, // dB
+    pub perfusion_rate: f64,   // mL/min/100g
+    pub wash_in_time: f64,     // seconds
+    pub wash_out_time: f64,    // seconds
 }
 
 #[cfg(not(feature = "gpu"))]
@@ -670,7 +724,7 @@ fn main() -> KwaversResult<()> {
     // Initialize comprehensive liver assessment workflow
     let mut workflow = LiverAssessmentWorkflow::new(
         "LIVER_PATIENT_001",
-        (120.0, 80.0, 60.0) // 120x80x60 mm³ liver volume
+        (120.0, 80.0, 60.0), // 120x80x60 mm³ liver volume
     )?;
 
     // Execute complete assessment protocol
@@ -679,30 +733,67 @@ fn main() -> KwaversResult<()> {
     // Display comprehensive results
     println!("\n=== LIVER ASSESSMENT REPORT ===");
     println!("Patient ID: {}", report.patient_id);
-    println!("Processing Time: {:.2}s", report.processing_time.as_secs_f64());
+    println!(
+        "Processing Time: {:.2}s",
+        report.processing_time.as_secs_f64()
+    );
     println!();
 
     println!("B-MODE IMAGING:");
-    println!("  Axial Resolution: {:.1} mm", report.b_mode_result.axial_resolution);
-    println!("  Lateral Resolution: {:.1} mm", report.b_mode_result.lateral_resolution);
-    println!("  Contrast Ratio: {:.1} dB", report.b_mode_result.contrast_ratio);
+    println!(
+        "  Axial Resolution: {:.1} mm",
+        report.b_mode_result.axial_resolution
+    );
+    println!(
+        "  Lateral Resolution: {:.1} mm",
+        report.b_mode_result.lateral_resolution
+    );
+    println!(
+        "  Contrast Ratio: {:.1} dB",
+        report.b_mode_result.contrast_ratio
+    );
     println!();
 
     println!("SHEAR WAVE ELASTOGRAPHY:");
-    println!("  Mean Stiffness: {:.1} kPa", report.swe_result.fibrosis_metrics.mean_stiffness);
-    println!("  Fibrosis Stage: F{}", report.swe_result.fibrosis_metrics.fibrosis_stage);
-    println!("  Confidence: {:.1}%", report.uncertainty_result.swe_uncertainty.confidence_score * 100.0);
+    println!(
+        "  Mean Stiffness: {:.1} kPa",
+        report.swe_result.fibrosis_metrics.mean_stiffness
+    );
+    println!(
+        "  Fibrosis Stage: F{}",
+        report.swe_result.fibrosis_metrics.fibrosis_stage
+    );
+    println!(
+        "  Confidence: {:.1}%",
+        report.uncertainty_result.swe_uncertainty.confidence_score * 100.0
+    );
     println!();
 
     println!("CONTRAST-ENHANCED ULTRASOUND:");
-    println!("  Peak Enhancement: {:.1} dB", report.ceus_result.perfusion_metrics.peak_enhancement);
-    println!("  Perfusion Rate: {:.1} mL/min/100g", report.ceus_result.perfusion_metrics.perfusion_rate);
-    println!("  Confidence: {:.1}%", report.uncertainty_result.perfusion_uncertainty.confidence_score * 100.0);
+    println!(
+        "  Peak Enhancement: {:.1} dB",
+        report.ceus_result.perfusion_metrics.peak_enhancement
+    );
+    println!(
+        "  Perfusion Rate: {:.1} mL/min/100g",
+        report.ceus_result.perfusion_metrics.perfusion_rate
+    );
+    println!(
+        "  Confidence: {:.1}%",
+        report
+            .uncertainty_result
+            .perfusion_uncertainty
+            .confidence_score
+            * 100.0
+    );
     println!();
 
     println!("CLINICAL DIAGNOSIS:");
     println!("  {}", report.diagnosis.diagnosis_text);
-    println!("  Overall Confidence: {:.1}%", report.diagnosis.confidence_level * 100.0);
+    println!(
+        "  Overall Confidence: {:.1}%",
+        report.diagnosis.confidence_level * 100.0
+    );
     println!();
 
     println!("TREATMENT PLAN:");
@@ -711,8 +802,22 @@ fn main() -> KwaversResult<()> {
     println!();
 
     println!("SAFETY ASSESSMENT:");
-    println!("  Acoustic Safety: {}", if report.safety_assessment.acoustic_safety { "PASS" } else { "FAIL" });
-    println!("  Thermal Safety: {}", if report.safety_assessment.thermal_safety { "PASS" } else { "FAIL" });
+    println!(
+        "  Acoustic Safety: {}",
+        if report.safety_assessment.acoustic_safety {
+            "PASS"
+        } else {
+            "FAIL"
+        }
+    );
+    println!(
+        "  Thermal Safety: {}",
+        if report.safety_assessment.thermal_safety {
+            "PASS"
+        } else {
+            "FAIL"
+        }
+    );
     println!("  Notes: {}", report.safety_assessment.safety_notes);
     println!();
 
@@ -726,8 +831,3 @@ fn main() -> KwaversResult<()> {
 
     Ok(())
 }
-
-
-
-
-

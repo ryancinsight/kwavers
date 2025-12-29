@@ -48,7 +48,7 @@ fn test_heterogeneous_viscous_properties_nearest_neighbor() {
     // Choose a coordinate that maps to a valid nearest neighbor index
     let x = 2.0e-3; // nearest neighbor round to index 2
     let y = 1.0e-3; // index 1
-    let z = 0.0;    // index 0
+    let z = 0.0; // index 0
 
     let mu = medium.viscosity(x, y, z, &grid);
     assert!((mu - 1.2e-3).abs() < 1e-12);

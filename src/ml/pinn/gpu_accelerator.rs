@@ -14,10 +14,9 @@
 //! - Performance profiling and monitoring
 
 use crate::error::{KwaversError, KwaversResult};
-use burn::tensor::{backend::AutodiffBackend, Tensor};
 use burn::prelude::ToElement;
+use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;
-use std::sync::Arc;
 
 /// CUDA device buffer with memory management
 #[derive(Debug)]
@@ -55,6 +54,7 @@ pub enum MemoryPoolType {
 }
 
 /// GPU memory manager with pool allocation
+#[derive(Debug)]
 pub struct GpuMemoryManager {
     /// Memory pools by type
     pools: HashMap<MemoryPoolType, MemoryPool>,
@@ -93,17 +93,17 @@ struct MemoryBlock {
 }
 
 /// Pinned host buffer for fast GPU transfers
-#[derive(Debug)]
-#[derive(Clone)]
-struct PinnedBuffer<T> {
+#[derive(Debug, Clone)]
+pub struct PinnedBuffer<T> {
     /// Host pointer
-    ptr: *mut T,
+    pub _ptr: *mut T,
     /// Buffer size
-    size: usize,
+    pub _size: usize,
 }
 
 /// Memory usage statistics
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct MemoryStats {
     /// Peak GPU memory usage (bytes)
     pub peak_gpu_memory: usize,
@@ -117,17 +117,6 @@ pub struct MemoryStats {
     pub deallocation_count: usize,
 }
 
-impl Default for MemoryStats {
-    fn default() -> Self {
-        Self {
-            peak_gpu_memory: 0,
-            current_gpu_memory: 0,
-            peak_pinned_memory: 0,
-            allocation_count: 0,
-            deallocation_count: 0,
-        }
-    }
-}
 
 impl GpuMemoryManager {
     /// Create a new GPU memory manager
@@ -135,16 +124,30 @@ impl GpuMemoryManager {
         let mut pools = HashMap::new();
 
         // Initialize memory pools
-        pools.insert(MemoryPoolType::Temporary, MemoryPool::new(MemoryPoolType::Temporary, 256 * 1024 * 1024, 256)); // 256MB
-        pools.insert(MemoryPoolType::Persistent, MemoryPool::new(MemoryPoolType::Persistent, 512 * 1024 * 1024, 256)); // 512MB
-        pools.insert(MemoryPoolType::Gradients, MemoryPool::new(MemoryPoolType::Gradients, 256 * 1024 * 1024, 256)); // 256MB
-        pools.insert(MemoryPoolType::Collocation, MemoryPool::new(MemoryPoolType::Collocation, 128 * 1024 * 1024, 256)); // 128MB
+        pools.insert(
+            MemoryPoolType::Temporary,
+            MemoryPool::new(MemoryPoolType::Temporary, 256 * 1024 * 1024, 256),
+        ); // 256MB
+        pools.insert(
+            MemoryPoolType::Persistent,
+            MemoryPool::new(MemoryPoolType::Persistent, 512 * 1024 * 1024, 256),
+        ); // 512MB
+        pools.insert(
+            MemoryPoolType::Gradients,
+            MemoryPool::new(MemoryPoolType::Gradients, 256 * 1024 * 1024, 256),
+        ); // 256MB
+        pools.insert(
+            MemoryPoolType::Collocation,
+            MemoryPool::new(MemoryPoolType::Collocation, 128 * 1024 * 1024, 256),
+        ); // 128MB
 
         // Initialize transfer streams
-        let transfer_streams = (0..4).map(|i| CudaStream {
-            handle: i,
-            priority: 0,
-        }).collect();
+        let transfer_streams = (0..4)
+            .map(|i| CudaStream {
+                handle: i,
+                priority: 0,
+            })
+            .collect();
 
         Ok(Self {
             pools,
@@ -155,23 +158,34 @@ impl GpuMemoryManager {
     }
 
     /// Allocate device memory from appropriate pool
-    pub fn allocate_device(&mut self, pool_type: MemoryPoolType, size: usize) -> KwaversResult<CudaBuffer<f32>> {
-        let pool = self.pools.get_mut(&pool_type)
-            .ok_or_else(|| KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+    pub fn allocate_device(
+        &mut self,
+        pool_type: MemoryPoolType,
+        size: usize,
+    ) -> KwaversResult<CudaBuffer<f32>> {
+        let pool = self.pools.get_mut(&pool_type).ok_or_else(|| {
+            KwaversError::System(crate::error::SystemError::ResourceUnavailable {
                 resource: format!("memory pool {:?}", pool_type),
-            }))?;
+            })
+        })?;
 
         let block = pool.allocate(size * std::mem::size_of::<f32>())?;
 
         self.stats.allocation_count += 1;
         self.stats.current_gpu_memory += block.size;
-        self.stats.peak_gpu_memory = self.stats.peak_gpu_memory.max(self.stats.current_gpu_memory);
+        self.stats.peak_gpu_memory = self
+            .stats
+            .peak_gpu_memory
+            .max(self.stats.current_gpu_memory);
 
         Ok(CudaBuffer {
             ptr: block.ptr,
             size,
             pool_id: pool_type as usize,
-            stream: CudaStream { handle: 0, priority: 0 }, // Default stream
+            stream: CudaStream {
+                handle: 0,
+                priority: 0,
+            }, // Default stream
         })
     }
 
@@ -182,10 +196,14 @@ impl GpuMemoryManager {
             1 => MemoryPoolType::Persistent,
             2 => MemoryPoolType::Gradients,
             3 => MemoryPoolType::Collocation,
-            _ => return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "pool_id".to_string(),
-                reason: "Invalid memory pool ID".to_string(),
-            })),
+            _ => {
+                return Err(KwaversError::System(
+                    crate::error::SystemError::InvalidConfiguration {
+                        parameter: "pool_id".to_string(),
+                        reason: "Invalid memory pool ID".to_string(),
+                    },
+                ))
+            }
         };
 
         let pool = self.pools.get_mut(&pool_type).unwrap();
@@ -205,34 +223,49 @@ impl GpuMemoryManager {
     pub fn allocate_pinned(&mut self, size: usize) -> KwaversResult<PinnedBuffer<f32>> {
         // In practice, this would use cudaHostAlloc
         // For now, simulate with regular allocation
-        let layout = std::alloc::Layout::array::<f32>(size)
-            .map_err(|_| KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+        let layout = std::alloc::Layout::array::<f32>(size).map_err(|_| {
+            KwaversError::System(crate::error::SystemError::ResourceUnavailable {
                 resource: "pinned memory allocation".to_string(),
-            }))?;
+            })
+        })?;
 
+        // SAFETY: The layout is valid and the allocation is checked for null immediately after.
+        #[allow(unsafe_code)]
         let ptr = unsafe { std::alloc::alloc(layout) as *mut f32 };
 
         if ptr.is_null() {
-            return Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: "pinned memory".to_string(),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::ResourceUnavailable {
+                    resource: "pinned memory".to_string(),
+                },
+            ));
         }
 
-        let buffer = PinnedBuffer { ptr, size };
+        let buffer = PinnedBuffer { _ptr: ptr, _size: size };
 
-        self.stats.peak_pinned_memory = self.stats.peak_pinned_memory.max(size * std::mem::size_of::<f32>());
+        self.stats.peak_pinned_memory = self
+            .stats
+            .peak_pinned_memory
+            .max(size * std::mem::size_of::<f32>());
         self.pinned_buffers.push(buffer.clone());
 
         Ok(buffer)
     }
 
     /// Prefetch data to GPU using transfer stream
-    pub fn prefetch_to_device(&self, host_data: &[f32], device_buffer: &CudaBuffer<f32>, stream_idx: usize) -> KwaversResult<()> {
-        if stream_idx >= self.transfer_streams.len() {
-            return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "stream_idx".to_string(),
-                reason: "Invalid transfer stream index".to_string(),
-            }));
+    pub fn prefetch_to_device(
+        &self,
+        host_data: &[f32],
+        device_buffer: &CudaBuffer<f32>,
+        _stream_idx: usize,
+    ) -> KwaversResult<()> {
+        if _stream_idx >= self.transfer_streams.len() {
+            return Err(KwaversError::System(
+                crate::error::SystemError::InvalidConfiguration {
+                    parameter: "_stream_idx".to_string(),
+                    reason: "Invalid transfer stream index".to_string(),
+                },
+            ));
         }
 
         if host_data.len() != device_buffer.size {
@@ -247,6 +280,8 @@ impl GpuMemoryManager {
 
         // In practice, this would use cudaMemcpyAsync
         // For now, simulate the transfer
+        // SAFETY: host_data and device_buffer pointers are valid and have the same length.
+        #[allow(unsafe_code)]
         unsafe {
             std::ptr::copy_nonoverlapping(host_data.as_ptr(), device_buffer.ptr, host_data.len());
         }
@@ -287,12 +322,14 @@ impl MemoryPool {
     /// Allocate memory from pool
     fn allocate(&mut self, size: usize) -> KwaversResult<MemoryBlock> {
         // Find best fit free block
-        let aligned_size = (size + self.alignment - 1) / self.alignment * self.alignment;
+        let aligned_size = size.div_ceil(self.alignment) * self.alignment;
 
         if aligned_size > self.total_allocated - self.used_memory {
-            return Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: format!("memory pool {:?}", self.pool_type),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::ResourceUnavailable {
+                    resource: format!("memory pool {:?}", self.pool_type),
+                },
+            ));
         }
 
         // Find suitable free block (first fit strategy)
@@ -301,6 +338,8 @@ impl MemoryPool {
                 // Split block if necessary
                 let remaining = block.size - aligned_size;
                 let allocated_block = MemoryBlock {
+                    // SAFETY: block.ptr is valid and adding offset stays within the allocated block.
+                    #[allow(unsafe_code)]
                     ptr: unsafe { block.ptr.add(block.offset) },
                     size: aligned_size,
                     offset: block.offset,
@@ -321,9 +360,11 @@ impl MemoryPool {
             }
         }
 
-        Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-            resource: format!("memory pool {:?}", self.pool_type),
-        }))
+        Err(KwaversError::System(
+            crate::error::SystemError::ResourceUnavailable {
+                resource: format!("memory pool {:?}", self.pool_type),
+            },
+        ))
     }
 
     /// Deallocate memory to pool
@@ -365,6 +406,7 @@ impl MemoryPool {
 }
 
 /// CUDA kernel manager for PDE operations
+#[derive(Debug)]
 pub struct CudaKernelManager {
     /// Loaded CUDA modules
     modules: HashMap<String, CudaModule>,
@@ -372,24 +414,44 @@ pub struct CudaKernelManager {
     kernels: HashMap<String, CudaKernel>,
 }
 
-/// CUDA module containing compiled kernels
 #[derive(Debug)]
-struct CudaModule {
-    /// Module handle
-    handle: usize,
-    /// Module name
-    name: String,
+pub struct CudaDevice {
+    /// Device ID
+    pub id: usize,
+    /// Device name
+    pub name: String,
+    /// Total memory in bytes
+    pub total_memory: u64,
+    /// Multi-processor count
+    pub multiprocessors: usize,
+    /// Compute capability
+    pub compute_capability: (i32, i32),
 }
 
-/// CUDA kernel function
 #[derive(Debug)]
-struct CudaKernel {
-    /// Function handle
-    handle: usize,
+pub struct CudaModule {
+    /// Module handle
+    pub handle: usize,
+    /// Module name
+    pub name: String,
+}
+
+#[derive(Debug)]
+pub struct CudaKernel {
+    /// Kernel handle
+    pub handle: usize,
     /// Kernel name
-    name: String,
-    /// Module containing this kernel
-    module: String,
+    pub name: String,
+}
+
+#[derive(Debug)]
+pub struct CudaContext {
+    /// Device info
+    pub device: CudaDevice,
+    /// Loaded CUDA modules
+    pub modules: HashMap<String, CudaModule>,
+    /// Kernel function handles
+    pub kernels: HashMap<String, CudaKernel>,
 }
 
 impl CudaKernelManager {
@@ -402,7 +464,7 @@ impl CudaKernelManager {
     }
 
     /// Load CUDA module from PTX or cubin
-    pub fn load_module(&mut self, name: &str, ptx_source: &str) -> KwaversResult<()> {
+    pub fn compile_ptx(&mut self, name: &str, _ptx_source: &str) -> KwaversResult<()> {
         // In practice, this would compile and load CUDA module
         // For now, simulate loading
         let module = CudaModule {
@@ -423,27 +485,29 @@ impl CudaKernelManager {
     /// Launch PDE residual computation kernel
     pub fn launch_pde_residual_kernel(
         &self,
-        kernel_name: &str,
-        inputs: &[&CudaBuffer<f32>],
-        outputs: &[&CudaBuffer<f32>],
-        grid_dims: (u32, u32, u32),
-        block_dims: (u32, u32, u32),
-        stream: &CudaStream,
+        _kernel_name: &str,
+        _inputs: &[&CudaBuffer<f32>],
+        _outputs: &[&CudaBuffer<f32>],
+        _grid_dims: (u32, u32, u32),
+        _block_dims: (u32, u32, u32),
+        _stream: &CudaStream,
     ) -> KwaversResult<()> {
-        let kernel = self.get_kernel("pde_kernels", kernel_name)
-            .ok_or_else(|| KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: format!("CUDA kernel {}", kernel_name),
-            }))?;
+        let kernel = self.get_kernel("pde_kernels", _kernel_name).ok_or_else(|| {
+            KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                resource: format!("CUDA kernel {}", _kernel_name),
+            })
+        })?;
 
-        // In practice, this would set up kernel arguments and launch
-        // For now, simulate kernel execution
-        println!("Launching CUDA kernel {} with grid {:?} block {:?}", kernel_name, grid_dims, block_dims);
+        // In practice, this would launch the kernel
+        // For now, simulate the launch
+        let _handle = kernel.handle;
 
         Ok(())
     }
 }
 
 /// Batched PINN trainer with GPU acceleration
+#[derive(Debug)]
 pub struct BatchedPINNTrainer<B: AutodiffBackend> {
     /// Neural network model
     model: crate::ml::pinn::BurnPINN2DWave<B>,
@@ -452,7 +516,7 @@ pub struct BatchedPINNTrainer<B: AutodiffBackend> {
     /// GPU memory manager
     memory_manager: GpuMemoryManager,
     /// CUDA kernel manager
-    kernel_manager: CudaKernelManager,
+    _kernel_manager: CudaKernelManager,
     /// Gradient accumulation buffer
     gradient_accumulator: Option<CudaBuffer<f32>>,
     /// Current accumulation step
@@ -496,7 +560,7 @@ impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
             model,
             batch_size,
             memory_manager,
-            kernel_manager,
+            _kernel_manager: kernel_manager,
             gradient_accumulator: None,
             accumulation_step: 0,
             total_accumulation_steps: accumulation_steps,
@@ -511,7 +575,10 @@ impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
     }
 
     /// Train on a batch of collocation points
-    pub fn train_batch(&mut self, collocation_points: &Tensor<B, 2>) -> KwaversResult<TrainingStep> {
+    pub fn train_batch(
+        &mut self,
+        collocation_points: &Tensor<B, 2>,
+    ) -> KwaversResult<TrainingStep> {
         let start_time = std::time::Instant::now();
 
         // Split collocation points into batches
@@ -523,9 +590,18 @@ impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
         for batch in batches {
             // Forward pass
             // Split batch into x, y, t components
-            let x = batch.clone().slice([0..batch.shape().dims[0], 0..1]).squeeze::<2>();
-            let y = batch.clone().slice([0..batch.shape().dims[0], 1..2]).squeeze::<2>();
-            let t = batch.clone().slice([0..batch.shape().dims[0], 2..3]).squeeze::<2>();
+            let x = batch
+                .clone()
+                .slice([0..batch.shape().dims[0], 0..1])
+                .squeeze::<2>();
+            let y = batch
+                .clone()
+                .slice([0..batch.shape().dims[0], 1..2])
+                .squeeze::<2>();
+            let t = batch
+                .clone()
+                .slice([0..batch.shape().dims[0], 2..3])
+                .squeeze::<2>();
             let predictions = self.model.forward(x, y, t);
 
             // Compute PDE residuals using GPU kernels
@@ -562,11 +638,19 @@ impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
 
         for start in (0..total_points).step_by(self.batch_size) {
             let end = (start + self.batch_size).min(total_points);
-            let batch = tensor.clone().slice([start..end, 0..tensor.shape().dims[1]]);
+            let batch = tensor
+                .clone()
+                .slice([start..end, 0..tensor.shape().dims[1]]);
             batches.push(batch);
         }
 
         Ok(batches)
+    }
+
+    fn _register_kernel(&mut self, _name: &str, _ptx_source: &str) -> KwaversResult<()> {
+        // In practice, would compile and register CUDA kernel
+        // self._kernel_manager.register_kernel(name)?;
+        Ok(())
     }
 
     /// Compute PDE residuals using GPU kernels
@@ -576,23 +660,44 @@ impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
         collocation_points: &Tensor<B, 2>,
     ) -> KwaversResult<Tensor<B, 2>> {
         // Transfer data to GPU
-        let pred_buffer = self.memory_manager.allocate_device(MemoryPoolType::Temporary, predictions.shape().dims[0] * predictions.shape().dims[1])?;
-        let coll_buffer = self.memory_manager.allocate_device(MemoryPoolType::Collocation, collocation_points.shape().dims[0] * collocation_points.shape().dims[1])?;
-        let residual_buffer = self.memory_manager.allocate_device(MemoryPoolType::Temporary, predictions.shape().dims[0])?;
+        let _pred_buffer = self.memory_manager.allocate_device(
+            MemoryPoolType::Temporary,
+            predictions.shape().dims[0] * predictions.shape().dims[1],
+        )?;
+        let _coll_buffer = self.memory_manager.allocate_device(
+            MemoryPoolType::Collocation,
+            collocation_points.shape().dims[0] * collocation_points.shape().dims[1],
+        )?;
+        let _residual_buffer = self
+            .memory_manager
+            .allocate_device(MemoryPoolType::Temporary, predictions.shape().dims[0])?;
 
         // In practice, would transfer data and launch kernels
         // For now, return dummy residuals
-        let residuals = Tensor::zeros_like(&predictions.clone().slice([0..predictions.shape().dims[0], 0..1]).squeeze::<2>());
+        let residuals = Tensor::zeros_like(
+            &predictions
+                .clone()
+                .slice([0..predictions.shape().dims[0], 0..1])
+                .squeeze::<2>(),
+        );
 
         Ok(residuals)
     }
 
     /// Accumulate gradients
-    fn accumulate_gradients(&mut self, gradients: &<B as AutodiffBackend>::Gradients) -> KwaversResult<()> {
+    fn accumulate_gradients(
+        &mut self,
+        _gradients: &<B as AutodiffBackend>::Gradients,
+    ) -> KwaversResult<()> {
         // Initialize accumulator if needed
         if self.gradient_accumulator.is_none() {
-            let size = gradients.shape().dims[0] * gradients.shape().dims[1];
-            self.gradient_accumulator = Some(self.memory_manager.allocate_device(MemoryPoolType::Gradients, size)?);
+            // Placeholder size calculation since we can't access gradient shape directly
+            // In a real implementation, we would know the parameter sizes from the model
+            let size = 1024 * 1024;
+            self.gradient_accumulator = Some(
+                self.memory_manager
+                    .allocate_device(MemoryPoolType::Gradients, size)?,
+            );
         }
 
         // In practice, would accumulate gradients on GPU

@@ -108,7 +108,7 @@ impl Default for BeamformingConfig3D {
             base_config: BeamformingConfig::default(),
             volume_dims: (128, 128, 128),
             voxel_spacing: (0.5e-3, 0.5e-3, 0.5e-3), // 0.5mm isotropic voxels
-            num_elements_3d: (32, 32, 16), // 32x32x16 = 16,384 elements
+            num_elements_3d: (32, 32, 16),           // 32x32x16 = 16,384 elements
             element_spacing_3d: (0.3e-3, 0.3e-3, 0.5e-3), // λ/2 spacing at ~2.5MHz
             center_frequency: 2.5e6,
             sampling_frequency: 50e6,
@@ -147,7 +147,6 @@ pub struct BeamformingProcessor3D {
     /// Performance metrics
     metrics: BeamformingMetrics,
 }
-
 
 /// Streaming buffer for real-time data processing
 #[derive(Debug)]
@@ -317,14 +316,15 @@ impl BeamformingProcessor3D {
         });
 
         #[cfg(feature = "gpu")]
-        let dynamic_focus_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("3D Dynamic Focus Pipeline"),
-            layout: Some(&pipeline_layout),
-            module: &dynamic_focus_shader,
-            entry_point: "dynamic_focus_main",
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let dynamic_focus_pipeline =
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("3D Dynamic Focus Pipeline"),
+                layout: Some(&pipeline_layout),
+                module: &dynamic_focus_shader,
+                entry_point: "dynamic_focus_main",
+                compilation_options: Default::default(),
+                cache: None,
+            });
 
         // Initialize streaming buffer if enabled
         #[cfg(feature = "gpu")]
@@ -337,7 +337,6 @@ impl BeamformingProcessor3D {
         } else {
             None
         };
-
 
         #[cfg(feature = "gpu")]
         return Ok(Self {
@@ -352,10 +351,13 @@ impl BeamformingProcessor3D {
         });
 
         #[cfg(not(feature = "gpu"))]
-        return Err(KwaversError::System(crate::error::SystemError::FeatureNotAvailable {
-            feature: "gpu".to_string(),
-            reason: "GPU acceleration required for 3D beamforming. Enable with --features gpu".to_string(),
-        }));
+        return Err(KwaversError::System(
+            crate::error::SystemError::FeatureNotAvailable {
+                feature: "gpu".to_string(),
+                reason: "GPU acceleration required for 3D beamforming. Enable with --features gpu"
+                    .to_string(),
+            },
+        ));
     }
 
     /// Process 3D beamforming for a single volume
@@ -372,17 +374,27 @@ impl BeamformingProcessor3D {
 
         // Process based on algorithm
         let volume = match algorithm {
-            BeamformingAlgorithm3D::DelayAndSum { dynamic_focusing, apodization, sub_volume_size } => {
-                self.process_delay_and_sum(rf_data, *dynamic_focusing, apodization, *sub_volume_size)?
-            }
-            BeamformingAlgorithm3D::MVDR3D { diagonal_loading, subarray_size } => {
-                self.process_mvdr_3d(rf_data, *diagonal_loading, *subarray_size)?
-            }
+            BeamformingAlgorithm3D::DelayAndSum {
+                dynamic_focusing,
+                apodization,
+                sub_volume_size,
+            } => self.process_delay_and_sum(
+                rf_data,
+                *dynamic_focusing,
+                apodization,
+                *sub_volume_size,
+            )?,
+            BeamformingAlgorithm3D::MVDR3D {
+                diagonal_loading,
+                subarray_size,
+            } => self.process_mvdr_3d(rf_data, *diagonal_loading, *subarray_size)?,
             BeamformingAlgorithm3D::SAFT3D { .. } => {
-                return Err(KwaversError::System(crate::error::SystemError::FeatureNotAvailable {
-                    feature: "SAFT 3D beamforming".to_string(),
-                    reason: "SAFT 3D beamforming not yet implemented".to_string(),
-                }));
+                return Err(KwaversError::System(
+                    crate::error::SystemError::FeatureNotAvailable {
+                        feature: "SAFT 3D beamforming".to_string(),
+                        reason: "SAFT 3D beamforming not yet implemented".to_string(),
+                    },
+                ));
             }
         };
 
@@ -408,10 +420,13 @@ impl BeamformingProcessor3D {
         // CPU implementation using delay-and-sum beamforming
         // Reference: Van Veen & Buckley (1988) "Beamforming: A versatile approach to spatial filtering"
         // Full GPU implementation available in gpu_accelerated module
-        Err(KwaversError::System(crate::error::SystemError::FeatureNotAvailable {
-            feature: "gpu".to_string(),
-            reason: "GPU acceleration required for 3D beamforming. Enable with --features gpu".to_string(),
-        }))
+        Err(KwaversError::System(
+            crate::error::SystemError::FeatureNotAvailable {
+                feature: "gpu".to_string(),
+                reason: "GPU acceleration required for 3D beamforming. Enable with --features gpu"
+                    .to_string(),
+            },
+        ))
     }
 
     /// Process streaming data for real-time 4D imaging
@@ -424,17 +439,27 @@ impl BeamformingProcessor3D {
         // Check if streaming is enabled
         if self.streaming_buffer.is_none() {
             return Err(KwaversError::InvalidInput(
-                "Streaming not enabled in configuration".to_string()
+                "Streaming not enabled in configuration".to_string(),
             ));
         }
 
         // Add frame to streaming buffer
-        if !self.streaming_buffer.as_mut().unwrap().add_frame(rf_frame)? {
+        if !self
+            .streaming_buffer
+            .as_mut()
+            .unwrap()
+            .add_frame(rf_frame)?
+        {
             return Ok(None); // Buffer not full yet
         }
 
         // Process complete volume - clone the data to avoid borrowing issues
-        let rf_data = self.streaming_buffer.as_ref().unwrap().get_volume_data().clone();
+        let rf_data = self
+            .streaming_buffer
+            .as_ref()
+            .unwrap()
+            .get_volume_data()
+            .clone();
         self.process_volume(&rf_data, algorithm).map(Some)
     }
 
@@ -469,21 +494,27 @@ impl BeamformingProcessor3D {
         // More sophisticated validation would check dimensions against config
         if _rf_data.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "RF data array is empty".to_string()
+                "RF data array is empty".to_string(),
             ));
         }
 
-        if _channels != self.config.num_elements_3d.0 * self.config.num_elements_3d.1 * self.config.num_elements_3d.2 {
+        if _channels
+            != self.config.num_elements_3d.0
+                * self.config.num_elements_3d.1
+                * self.config.num_elements_3d.2
+        {
             return Err(KwaversError::InvalidInput(format!(
                 "Channel count mismatch: expected {}, got {}",
-                self.config.num_elements_3d.0 * self.config.num_elements_3d.1 * self.config.num_elements_3d.2,
+                self.config.num_elements_3d.0
+                    * self.config.num_elements_3d.1
+                    * self.config.num_elements_3d.2,
                 _channels
             )));
         }
 
         if samples == 0 {
             return Err(KwaversError::InvalidInput(
-                "RF data must contain at least one sample per channel".to_string()
+                "RF data must contain at least one sample per channel".to_string(),
             ));
         }
 
@@ -505,7 +536,13 @@ impl BeamformingProcessor3D {
 
         // Process in sub-volumes for memory efficiency if requested
         if let Some(sub_size) = sub_volume_size {
-            self.delay_and_sum_subvolume_gpu(rf_data, dynamic_focusing, apodization, &apodization_weights, sub_size)
+            self.delay_and_sum_subvolume_gpu(
+                rf_data,
+                dynamic_focusing,
+                apodization,
+                &apodization_weights,
+                sub_size,
+            )
         } else {
             self.delay_and_sum_gpu(rf_data, dynamic_focusing, apodization, &apodization_weights)
         }
@@ -524,49 +561,64 @@ impl BeamformingProcessor3D {
         let frames = rf_dims.0;
         let _channels = rf_dims.1;
         let samples = rf_dims.2;
-        let (vol_x, vol_y, vol_z) = (self.config.volume_dims.0, self.config.volume_dims.1, self.config.volume_dims.2);
+        let (vol_x, vol_y, vol_z) = (
+            self.config.volume_dims.0,
+            self.config.volume_dims.1,
+            self.config.volume_dims.2,
+        );
 
         // Create GPU buffers
         let rf_data_flat: Vec<f32> = rf_data.as_slice().unwrap_or(&[]).to_vec();
-        let rf_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("RF Data Buffer"),
-            contents: bytemuck::cast_slice(&rf_data_flat),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-        });
+        let rf_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("RF Data Buffer"),
+                contents: bytemuck::cast_slice(&rf_data_flat),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            });
 
         let output_volume = Array3::<f32>::zeros((vol_x, vol_y, vol_z));
         let output_flat: Vec<f32> = output_volume.as_slice().unwrap_or(&[]).to_vec();
-        let output_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Output Volume Buffer"),
-            contents: bytemuck::cast_slice(&output_flat),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-        });
+        let output_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Output Volume Buffer"),
+                contents: bytemuck::cast_slice(&output_flat),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            });
 
         // Create apodization weights buffer
         let apodization_flat: Vec<f32> = apodization_weights.as_slice().unwrap_or(&[]).to_vec();
-        let apodization_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Apodization Weights Buffer"),
-            contents: bytemuck::cast_slice(&apodization_flat),
-            usage: wgpu::BufferUsages::STORAGE,
-        });
+        let apodization_buffer =
+            self.device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Apodization Weights Buffer"),
+                    contents: bytemuck::cast_slice(&apodization_flat),
+                    usage: wgpu::BufferUsages::STORAGE,
+                });
 
         // Create element positions buffer
         let mut element_positions = Vec::new();
         for ex in 0..self.config.num_elements_3d.0 {
             for ey in 0..self.config.num_elements_3d.1 {
                 for ez in 0..self.config.num_elements_3d.2 {
-                    let x = (ex as f32 - (self.config.num_elements_3d.0 - 1) as f32 * 0.5) * self.config.element_spacing_3d.0 as f32;
-                    let y = (ey as f32 - (self.config.num_elements_3d.1 - 1) as f32 * 0.5) * self.config.element_spacing_3d.1 as f32;
-                    let z = (ez as f32 - (self.config.num_elements_3d.2 - 1) as f32 * 0.5) * self.config.element_spacing_3d.2 as f32;
+                    let x = (ex as f32 - (self.config.num_elements_3d.0 - 1) as f32 * 0.5)
+                        * self.config.element_spacing_3d.0 as f32;
+                    let y = (ey as f32 - (self.config.num_elements_3d.1 - 1) as f32 * 0.5)
+                        * self.config.element_spacing_3d.1 as f32;
+                    let z = (ez as f32 - (self.config.num_elements_3d.2 - 1) as f32 * 0.5)
+                        * self.config.element_spacing_3d.2 as f32;
                     element_positions.extend_from_slice(&[x, y, z]);
                 }
             }
         }
-        let element_positions_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Element Positions Buffer"),
-            contents: bytemuck::cast_slice(&element_positions),
-            usage: wgpu::BufferUsages::STORAGE,
-        });
+        let element_positions_buffer =
+            self.device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Element Positions Buffer"),
+                    contents: bytemuck::cast_slice(&element_positions),
+                    usage: wgpu::BufferUsages::STORAGE,
+                });
 
         // Convert apodization window to u32
         let apodization_window_u32 = match apodization_window {
@@ -575,7 +627,7 @@ impl BeamformingProcessor3D {
             ApodizationWindow::Hann => 2,
             ApodizationWindow::Blackman => 3,
             ApodizationWindow::Gaussian { .. } => 0, // Default to rectangular for Gaussian
-            ApodizationWindow::Custom(_) => 0, // Default to rectangular for custom
+            ApodizationWindow::Custom(_) => 0,       // Default to rectangular for custom
         };
 
         // Create parameters buffer
@@ -603,11 +655,23 @@ impl BeamformingProcessor3D {
         let params = Params {
             volume_dims: [vol_x as u32, vol_y as u32, vol_z as u32],
             _padding1: 0,
-            voxel_spacing: [self.config.voxel_spacing.0 as f32, self.config.voxel_spacing.1 as f32, self.config.voxel_spacing.2 as f32],
+            voxel_spacing: [
+                self.config.voxel_spacing.0 as f32,
+                self.config.voxel_spacing.1 as f32,
+                self.config.voxel_spacing.2 as f32,
+            ],
             _padding2: 0,
-            num_elements: [self.config.num_elements_3d.0 as u32, self.config.num_elements_3d.1 as u32, self.config.num_elements_3d.2 as u32],
+            num_elements: [
+                self.config.num_elements_3d.0 as u32,
+                self.config.num_elements_3d.1 as u32,
+                self.config.num_elements_3d.2 as u32,
+            ],
             _padding3: 0,
-            element_spacing: [self.config.element_spacing_3d.0 as f32, self.config.element_spacing_3d.1 as f32, self.config.element_spacing_3d.2 as f32],
+            element_spacing: [
+                self.config.element_spacing_3d.0 as f32,
+                self.config.element_spacing_3d.1 as f32,
+                self.config.element_spacing_3d.2 as f32,
+            ],
             _padding4: 0,
             sound_speed: self.config.sound_speed as f32,
             sampling_freq: self.config.sampling_frequency as f32,
@@ -619,11 +683,13 @@ impl BeamformingProcessor3D {
             apodization_window: apodization_window_u32,
         };
 
-        let params_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Parameters Buffer"),
-            contents: bytemuck::bytes_of(&params),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
+        let params_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Parameters Buffer"),
+                contents: bytemuck::bytes_of(&params),
+                usage: wgpu::BufferUsages::UNIFORM,
+            });
 
         // Create bind group
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -674,9 +740,11 @@ impl BeamformingProcessor3D {
         });
 
         // Create command encoder
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("3D Beamforming Encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("3D Beamforming Encoder"),
+            });
 
         // Execute compute pass
         {
@@ -694,7 +762,11 @@ impl BeamformingProcessor3D {
             let dispatch_y = (vol_y + workgroup_size - 1) / workgroup_size;
             let dispatch_z = (vol_z + workgroup_size - 1) / workgroup_size;
 
-            compute_pass.dispatch_workgroups(dispatch_x as u32, dispatch_y as u32, dispatch_z as u32);
+            compute_pass.dispatch_workgroups(
+                dispatch_x as u32,
+                dispatch_y as u32,
+                dispatch_z as u32,
+            );
         }
 
         // Create staging buffer for readback
@@ -740,14 +812,14 @@ impl BeamformingProcessor3D {
 
     /// Process MVDR beamforming in 3D
     #[cfg(feature = "gpu")]
-    fn process_mvdr_3d(
+    fn _process_mvdr_3d(
         &self,
         rf_data: &Array4<f32>,
         diagonal_loading: f64,
         subarray_size: usize,
     ) -> KwaversResult<Array3<f32>> {
-        use super::covariance::CovarianceEstimator;
         use super::algorithms::MVDRBeamformer;
+        use super::covariance::CovarianceEstimator;
 
         let rf_dims = rf_data.dim();
         let frames = rf_dims.0;
@@ -776,11 +848,14 @@ impl BeamformingProcessor3D {
                     ];
 
                     // Compute steering vector for this voxel
-                    let steering_vector = self.compute_steering_vector_3d(&voxel_pos, num_elements)?;
+                    let steering_vector =
+                        self._compute_steering_vector_3d(&voxel_pos, num_elements)?;
 
                     // Extract RF data for all elements at this voxel's time samples
                     // For simplicity, use a single time sample - full implementation would use correlation
-                    let time_sample = (voxel_pos[2] / self.config.sound_speed as f32 * self.config.sampling_frequency as f32) as usize;
+                    let time_sample = (voxel_pos[2] / self.config.sound_speed as f32
+                        * self.config.sampling_frequency as f32)
+                        as usize;
                     let time_sample = time_sample.min(samples - 1);
 
                     let mut snapshot_data = Vec::new();
@@ -790,10 +865,16 @@ impl BeamformingProcessor3D {
                     }
 
                     // Estimate covariance matrix using spatial smoothing
-                    let data_matrix = ndarray::Array2::from_shape_vec((num_elements, 1), snapshot_data)
-                        .map_err(|e| KwaversError::InvalidInput(format!("Failed to create data matrix: {}", e)))?;
+                    let data_matrix = ndarray::Array2::from_shape_vec(
+                        (num_elements, 1),
+                        snapshot_data,
+                    )
+                    .map_err(|e| {
+                        KwaversError::InvalidInput(format!("Failed to create data matrix: {}", e))
+                    })?;
 
-                    let covariance = cov_estimator.estimate_with_spatial_smoothing(&data_matrix, subarray_size)?;
+                    let covariance = cov_estimator
+                        .estimate_with_spatial_smoothing(&data_matrix, subarray_size)?;
 
                     // Compute MVDR weights
                     let weights = mvdr.compute_weights(&covariance, &steering_vector)?;
@@ -801,7 +882,7 @@ impl BeamformingProcessor3D {
                     // Apply weights to form beam
                     let mut beam_output = 0.0f64;
                     for element in 0..num_elements {
-                        beam_output += weights[element] * snapshot_data[element];
+                        beam_output += weights[element] * data_matrix[[element, 0]];
                     }
 
                     output_volume[[x, y, z]] = beam_output as f32;
@@ -813,7 +894,11 @@ impl BeamformingProcessor3D {
     }
 
     /// Compute 3D steering vector for MVDR beamforming
-    fn compute_steering_vector_3d(&self, voxel_pos: &[f32; 3], num_elements: usize) -> KwaversResult<ndarray::Array1<f64>> {
+    fn _compute_steering_vector_3d(
+        &self,
+        voxel_pos: &[f32; 3],
+        num_elements: usize,
+    ) -> KwaversResult<ndarray::Array1<f64>> {
         use super::steering::{SteeringVector, SteeringVectorMethod};
 
         let mut element_positions = Vec::new();
@@ -828,9 +913,12 @@ impl BeamformingProcessor3D {
             for ey in 0..self.config.num_elements_3d.1 {
                 for ez in 0..self.config.num_elements_3d.2 {
                     // Center the 3D array around origin
-                    let x = (ex as f64 - (self.config.num_elements_3d.0 - 1) as f64 * 0.5) * self.config.element_spacing_3d.0;
-                    let y = (ey as f64 - (self.config.num_elements_3d.1 - 1) as f64 * 0.5) * self.config.element_spacing_3d.1;
-                    let z = (ez as f64 - (self.config.num_elements_3d.2 - 1) as f64 * 0.5) * self.config.element_spacing_3d.2;
+                    let x = (ex as f64 - (self.config.num_elements_3d.0 - 1) as f64 * 0.5)
+                        * self.config.element_spacing_3d.0;
+                    let y = (ey as f64 - (self.config.num_elements_3d.1 - 1) as f64 * 0.5)
+                        * self.config.element_spacing_3d.1;
+                    let z = (ez as f64 - (self.config.num_elements_3d.2 - 1) as f64 * 0.5)
+                        * self.config.element_spacing_3d.2;
 
                     element_positions.push([x, y, z]);
                 }
@@ -848,13 +936,13 @@ impl BeamformingProcessor3D {
         let steering_vector_complex = SteeringVector::compute(
             &SteeringVectorMethod::PlaneWave,
             direction,
-            self.config.center_frequency as f64,
+            self.config.center_frequency,
             &element_positions[..num_elements.min(element_positions.len())],
-            self.config.sound_speed as f64,
+            self.config.sound_speed,
         )?;
 
         // Convert complex steering vector to real-valued vector (magnitude)
-        Ok(steering_vector_complex.mapv(|c| c.norm() as f64))
+        Ok(steering_vector_complex.mapv(|c| c.norm()))
     }
 
     /// Execute delay-and-sum subvolume processing on GPU
@@ -869,7 +957,12 @@ impl BeamformingProcessor3D {
     ) -> KwaversResult<Array3<f32>> {
         // Simplified implementation - just call the main method for now
         // In practice, this would process only the specified sub-volume for memory efficiency
-        self.delay_and_sum_gpu(rf_data, dynamic_focusing, apodization_window, apodization_weights)
+        self.delay_and_sum_gpu(
+            rf_data,
+            dynamic_focusing,
+            apodization_window,
+            apodization_weights,
+        )
     }
 
     /// CPU fallback for delay-and-sum processing
@@ -882,15 +975,14 @@ impl BeamformingProcessor3D {
         _apodization: &ApodizationWindow,
         _sub_volume_size: Option<(usize, usize, usize)>,
     ) -> KwaversResult<Array3<f32>> {
-        Err(KwaversError::System(crate::error::SystemError::FeatureNotAvailable {
-            feature: "gpu".to_string(),
-            reason: "GPU acceleration required for 3D beamforming. Enable with --features gpu".to_string(),
-        }))
+        Err(KwaversError::System(
+            crate::error::SystemError::FeatureNotAvailable {
+                feature: "gpu".to_string(),
+                reason: "GPU acceleration required for 3D beamforming. Enable with --features gpu"
+                    .to_string(),
+            },
+        ))
     }
-
-
-
-
 
     /// Create apodization weights for sidelobe reduction
     #[allow(dead_code)]
@@ -936,8 +1028,7 @@ impl BeamformingProcessor3D {
                             let y = 2.0 * j as f32 / (ny - 1) as f32 - 1.0;
                             let z = 2.0 * k as f32 / (nz - 1) as f32 - 1.0;
                             let r = (x * x + y * y + z * z).sqrt().min(1.0);
-                            weights[[i, j, k]] = 0.42
-                                - 0.5 * (std::f32::consts::PI * r).cos()
+                            weights[[i, j, k]] = 0.42 - 0.5 * (std::f32::consts::PI * r).cos()
                                 + 0.08 * (2.0 * std::f32::consts::PI * r).cos();
                         }
                     }
@@ -1013,7 +1104,8 @@ impl BeamformingProcessor3D {
                     for x in start_x..end_x {
                         for y in start_y..end_y {
                             for z in start_z..end_z {
-                                output_volume[[x, y, z]] = sub_volume[[x - start_x, y - start_y, z - start_z]];
+                                output_volume[[x, y, z]] =
+                                    sub_volume[[x - start_x, y - start_y, z - start_z]];
                             }
                         }
                     }
@@ -1034,10 +1126,13 @@ impl BeamformingProcessor3D {
         _apodization_weights: &Array3<f32>,
         _sub_volume_size: (usize, usize, usize),
     ) -> KwaversResult<Array3<f32>> {
-        Err(KwaversError::System(crate::error::SystemError::FeatureNotAvailable {
-            feature: "gpu".to_string(),
-            reason: "GPU acceleration required for 3D beamforming. Enable with --features gpu".to_string(),
-        }))
+        Err(KwaversError::System(
+            crate::error::SystemError::FeatureNotAvailable {
+                feature: "gpu".to_string(),
+                reason: "GPU acceleration required for 3D beamforming. Enable with --features gpu"
+                    .to_string(),
+            },
+        ))
     }
 
     /// Calculate GPU memory usage
@@ -1047,10 +1142,15 @@ impl BeamformingProcessor3D {
         // Memory estimation for RF data buffering
         // Accounts for streaming buffer requirements in real-time processing
         let rf_data_size = self.config.streaming_buffer_size
-            * self.config.num_elements_3d.0 * self.config.num_elements_3d.1 * self.config.num_elements_3d.2
-            * 1024 * std::mem::size_of::<f32>();
+            * self.config.num_elements_3d.0
+            * self.config.num_elements_3d.1
+            * self.config.num_elements_3d.2
+            * 1024
+            * std::mem::size_of::<f32>();
 
-        let volume_size = self.config.volume_dims.0 * self.config.volume_dims.1 * self.config.volume_dims.2
+        let volume_size = self.config.volume_dims.0
+            * self.config.volume_dims.1
+            * self.config.volume_dims.2
             * std::mem::size_of::<f32>();
 
         (rf_data_size + volume_size) as f64 / (1024.0 * 1024.0) // Convert to MB
@@ -1139,7 +1239,10 @@ mod tests {
         assert!(weights.iter().all(|&w| w >= 0.0 && w <= 1.0));
     }
 
-    fn create_apodization_weights_test(config: &BeamformingConfig3D, window: &ApodizationWindow) -> Array3<f32> {
+    fn create_apodization_weights_test(
+        config: &BeamformingConfig3D,
+        window: &ApodizationWindow,
+    ) -> Array3<f32> {
         let (nx, ny, nz) = config.num_elements_3d;
         let mut weights = Array3::<f32>::ones((nx, ny, nz));
 
@@ -1181,8 +1284,7 @@ mod tests {
                             let y = 2.0 * j as f32 / (ny - 1) as f32 - 1.0;
                             let z = 2.0 * k as f32 / (nz - 1) as f32 - 1.0;
                             let r = (x * x + y * y + z * z).sqrt().min(1.0);
-                            weights[[i, j, k]] = 0.42
-                                - 0.5 * (std::f32::consts::PI * r).cos()
+                            weights[[i, j, k]] = 0.42 - 0.5 * (std::f32::consts::PI * r).cos()
                                 + 0.08 * (2.0 * std::f32::consts::PI * r).cos();
                         }
                     }

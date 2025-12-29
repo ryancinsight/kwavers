@@ -9,5 +9,5 @@
 pub mod fast_nearfield;
 
 pub use fast_nearfield::{
-    FastNearfieldSolver, FNMConfig, RectangularTransducer, AngularSpectrumFactors
+    AngularSpectrumFactors, FNMConfig, FastNearfieldSolver, RectangularTransducer,
 };

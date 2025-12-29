@@ -24,16 +24,14 @@
 //! - Van Veen & Buckley (1988): "Beamforming: A versatile approach"
 //! - Kendall & Gal (2017): "What uncertainties do we need in Bayesian DL?"
 
-use crate::error::{KwaversError, KwaversResult};
+use crate::error::KwaversResult;
 use crate::sensor::beamforming::{BeamformingConfig, BeamformingProcessor};
-use ndarray::{Array3, Array4, ArrayView3, ArrayView4};
+use ndarray::{Array3, ArrayView3, ArrayView4};
 use std::collections::HashMap;
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 use crate::ml::pinn::burn_wave_equation_2d::RealTimePINNInference;
-#[cfg(feature = "pinn")]
-use burn::backend::NdArray;
 
 /// Configuration for AI-enhanced beamforming
 #[derive(Debug, Clone)]
@@ -103,6 +101,10 @@ pub struct ClinicalThresholds {
     pub contrast_abnormality_threshold: f32,
     /// Speckle pattern anomaly threshold
     pub speckle_anomaly_threshold: f32,
+    /// Segmentation sensitivity (std dev multiplier)
+    pub segmentation_sensitivity: f32,
+    /// Voxel size in mm (for volume calculation)
+    pub voxel_size_mm: f32,
 }
 
 impl Default for ClinicalThresholds {
@@ -112,6 +114,8 @@ impl Default for ClinicalThresholds {
             tissue_uncertainty_threshold: 0.3,
             contrast_abnormality_threshold: 2.0,
             speckle_anomaly_threshold: 1.5,
+            segmentation_sensitivity: 1.0,
+            voxel_size_mm: 0.5,
         }
     }
 }
@@ -198,6 +202,8 @@ pub struct PerformanceMetrics {
     pub clinical_analysis_time_ms: f64,
     /// Memory usage (MB)
     pub memory_usage_mb: f64,
+    /// GPU utilization (percent)
+    pub gpu_utilization_percent: f64,
 }
 
 /// AI-Enhanced Beamforming Processor
@@ -207,7 +213,7 @@ pub struct PerformanceMetrics {
 #[derive(Debug)]
 pub struct AIEnhancedBeamformingProcessor {
     /// Base beamforming processor
-    beamforming_processor: BeamformingProcessor,
+    _beamforming_processor: BeamformingProcessor,
     /// Real-time PINN inference engine
     #[cfg(feature = "pinn")]
     realtime_pinn: RealTimePINNInference<burn::backend::NdArray>,
@@ -227,15 +233,13 @@ impl AIEnhancedBeamformingProcessor {
         sensor_positions: Vec<[f64; 3]>,
     ) -> KwaversResult<Self> {
         // Create base beamforming processor
-        let beamforming_processor = BeamformingProcessor::new(
-            config.beamforming_config.clone(),
-            sensor_positions,
-        );
+        let beamforming_processor =
+            BeamformingProcessor::new(config.beamforming_config.clone(), sensor_positions);
 
         // Initialize real-time PINN inference
         // Note: In production, this would load a pre-trained model
         // For now, create with default parameters
-        let device = burn::backend::NdArray::default();
+        let device = Default::default();
         let burn_pinn = crate::ml::pinn::burn_wave_equation_2d::BurnPINN2DWave::new(
             crate::ml::pinn::BurnPINN2DConfig::default(),
             &device,
@@ -247,7 +251,7 @@ impl AIEnhancedBeamformingProcessor {
         let clinical_support = ClinicalDecisionSupport::new(config.clinical_thresholds.clone());
 
         Ok(Self {
-            beamforming_processor,
+            _beamforming_processor: beamforming_processor,
             realtime_pinn,
             feature_extractor,
             clinical_support,
@@ -320,6 +324,7 @@ impl AIEnhancedBeamformingProcessor {
                 pinn_inference_time_ms: pinn_time,
                 clinical_analysis_time_ms: clinical_time,
                 memory_usage_mb: self.estimate_memory_usage(),
+                gpu_utilization_percent: 0.0, // Placeholder
             },
         })
     }
@@ -347,7 +352,8 @@ impl AIEnhancedBeamformingProcessor {
 
                     // Accumulate signals from channels with delays
                     let mut sum = 0.0;
-                    for chan in 0..nchan.min(10) { // Limit channels for simulation
+                    for chan in 0..nchan.min(10) {
+                        // Limit channels for simulation
                         let sample_idx = ((frame * nt / nframes) as f32 + steering_delay) as usize;
                         if sample_idx < nt {
                             sum += rf_data[[sample_idx, chan, frame, 0]];
@@ -366,7 +372,7 @@ impl AIEnhancedBeamformingProcessor {
     fn perform_pinn_inference(
         &mut self,
         volume: &Array3<f32>,
-        features: &FeatureMap,
+        _features: &FeatureMap,
     ) -> KwaversResult<(Array3<f32>, Array3<f32>)> {
         let (nx, ny, nz) = volume.dim();
 
@@ -388,11 +394,9 @@ impl AIEnhancedBeamformingProcessor {
         }
 
         // Perform batched PINN inference
-        let (predictions, uncertainties) = self.realtime_pinn.predict_realtime(
-            &x_coords,
-            &y_coords,
-            &t_coords,
-        )?;
+        let (_predictions, uncertainties) = self
+            .realtime_pinn
+            .predict_realtime(&x_coords, &y_coords, &t_coords)?;
 
         // Interpolate results back to full volume resolution
         let mut uncertainty_volume = Array3::<f32>::zeros((nx, ny, nz));
@@ -440,7 +444,7 @@ impl AIEnhancedBeamformingProcessor {
 }
 
 /// Feature Extractor for Ultrasound Analysis
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FeatureExtractor {
     config: FeatureConfig,
 }
@@ -462,10 +466,7 @@ impl FeatureExtractor {
                 "gradient_magnitude".to_string(),
                 self.compute_gradient_magnitude(volume),
             );
-            morphological.insert(
-                "laplacian".to_string(),
-                self.compute_laplacian(volume),
-            );
+            morphological.insert("laplacian".to_string(), self.compute_laplacian(volume));
         }
 
         if self.config.spectral_features {
@@ -480,10 +481,7 @@ impl FeatureExtractor {
                 "speckle_variance".to_string(),
                 self.compute_speckle_variance(volume),
             );
-            texture.insert(
-                "homogeneity".to_string(),
-                self.compute_homogeneity(volume),
-            );
+            texture.insert("homogeneity".to_string(), self.compute_homogeneity(volume));
         }
 
         Ok(FeatureMap {
@@ -498,14 +496,14 @@ impl FeatureExtractor {
         let (nx, ny, nz) = volume.dim();
         let mut result = Array3::<f32>::zeros((nx, ny, nz));
 
-        for z in 1..nz-1 {
-            for y in 1..ny-1 {
-                for x in 1..nx-1 {
-                    let dx = volume[[x+1, y, z]] - volume[[x-1, y, z]];
-                    let dy = volume[[x, y+1, z]] - volume[[x, y-1, z]];
-                    let dz = volume[[x, y, z+1]] - volume[[x, y, z-1]];
+        for z in 1..nz - 1 {
+            for y in 1..ny - 1 {
+                for x in 1..nx - 1 {
+                    let dx = volume[[x + 1, y, z]] - volume[[x - 1, y, z]];
+                    let dy = volume[[x, y + 1, z]] - volume[[x, y - 1, z]];
+                    let dz = volume[[x, y, z + 1]] - volume[[x, y, z - 1]];
 
-                    result[[x, y, z]] = (dx*dx + dy*dy + dz*dz).sqrt();
+                    result[[x, y, z]] = (dx * dx + dy * dy + dz * dz).sqrt();
                 }
             }
         }
@@ -518,14 +516,17 @@ impl FeatureExtractor {
         let (nx, ny, nz) = volume.dim();
         let mut result = Array3::<f32>::zeros((nx, ny, nz));
 
-        for z in 1..nz-1 {
-            for y in 1..ny-1 {
-                for x in 1..nx-1 {
+        for z in 1..nz - 1 {
+            for y in 1..ny - 1 {
+                for x in 1..nx - 1 {
                     let center = volume[[x, y, z]];
-                    let laplacian = volume[[x+1, y, z]] + volume[[x-1, y, z]]
-                                  + volume[[x, y+1, z]] + volume[[x, y-1, z]]
-                                  + volume[[x, y, z+1]] + volume[[x, y, z-1]]
-                                  - 6.0 * center;
+                    let laplacian = volume[[x + 1, y, z]]
+                        + volume[[x - 1, y, z]]
+                        + volume[[x, y + 1, z]]
+                        + volume[[x, y - 1, z]]
+                        + volume[[x, y, z + 1]]
+                        + volume[[x, y, z - 1]]
+                        - 6.0 * center;
 
                     result[[x, y, z]] = laplacian;
                 }
@@ -541,19 +542,26 @@ impl FeatureExtractor {
         let mut result = Array3::<f32>::zeros((nx, ny, nz));
 
         // Simplified frequency analysis using local variance
-        for z in 1..nz-1 {
-            for y in 1..ny-1 {
-                for x in 1..nx-1 {
-                    let window: Vec<f32> = (-1..=1).flat_map(|dz| {
-                        (-1..=1).flat_map(move |dy| {
-                            (-1..=1).map(move |dx| {
-                                volume[[x.saturating_add_signed(dx), y.saturating_add_signed(dy), z.saturating_add_signed(dz)]]
+        for z in 1..nz - 1 {
+            for y in 1..ny - 1 {
+                for x in 1..nx - 1 {
+                    let window: Vec<f32> = (-1..=1)
+                        .flat_map(|dz| {
+                            (-1..=1).flat_map(move |dy| {
+                                (-1..=1).map(move |dx| {
+                                    volume[[
+                                        x.saturating_add_signed(dx),
+                                        y.saturating_add_signed(dy),
+                                        z.saturating_add_signed(dz),
+                                    ]]
+                                })
                             })
                         })
-                    }).collect();
+                        .collect();
 
                     let mean = window.iter().sum::<f32>() / window.len() as f32;
-                    let variance = window.iter().map(|&v| (v - mean).powi(2)).sum::<f32>() / window.len() as f32;
+                    let variance = window.iter().map(|&v| (v - mean).powi(2)).sum::<f32>()
+                        / window.len() as f32;
 
                     result[[x, y, z]] = variance.sqrt(); // Use std dev as frequency proxy
                 }
@@ -570,22 +578,26 @@ impl FeatureExtractor {
 
         let window_size = self.config.window_size;
 
-        for z in window_size/2..nz-window_size/2 {
-            for y in window_size/2..ny-window_size/2 {
-                for x in window_size/2..nx-window_size/2 {
+        for z in window_size / 2..nz - window_size / 2 {
+            for y in window_size / 2..ny - window_size / 2 {
+                for x in window_size / 2..nx - window_size / 2 {
                     let mut window_values = Vec::new();
 
                     // Extract local window
-                    for wz in z-window_size/2..z+window_size/2 {
-                        for wy in y-window_size/2..y+window_size/2 {
-                            for wx in x-window_size/2..x+window_size/2 {
+                    for wz in z - window_size / 2..z + window_size / 2 {
+                        for wy in y - window_size / 2..y + window_size / 2 {
+                            for wx in x - window_size / 2..x + window_size / 2 {
                                 window_values.push(volume[[wx, wy, wz]]);
                             }
                         }
                     }
 
                     let mean = window_values.iter().sum::<f32>() / window_values.len() as f32;
-                    let variance = window_values.iter().map(|&v| (v - mean).powi(2)).sum::<f32>() / window_values.len() as f32;
+                    let variance = window_values
+                        .iter()
+                        .map(|&v| (v - mean).powi(2))
+                        .sum::<f32>()
+                        / window_values.len() as f32;
 
                     result[[x, y, z]] = variance;
                 }
@@ -600,19 +612,26 @@ impl FeatureExtractor {
         let (nx, ny, nz) = volume.dim();
         let mut result = Array3::<f32>::zeros((nx, ny, nz));
 
-        for z in 1..nz-1 {
-            for y in 1..ny-1 {
-                for x in 1..nx-1 {
+        for z in 1..nz - 1 {
+            for y in 1..ny - 1 {
+                for x in 1..nx - 1 {
                     let center = volume[[x, y, z]];
                     let neighbors = [
-                        volume[[x-1, y-1, z]], volume[[x, y-1, z]], volume[[x+1, y-1, z]],
-                        volume[[x-1, y, z]],                         volume[[x+1, y, z]],
-                        volume[[x-1, y+1, z]], volume[[x, y+1, z]], volume[[x+1, y+1, z]],
+                        volume[[x - 1, y - 1, z]],
+                        volume[[x, y - 1, z]],
+                        volume[[x + 1, y - 1, z]],
+                        volume[[x - 1, y, z]],
+                        volume[[x + 1, y, z]],
+                        volume[[x - 1, y + 1, z]],
+                        volume[[x, y + 1, z]],
+                        volume[[x + 1, y + 1, z]],
                     ];
 
-                    let homogeneity = neighbors.iter()
+                    let homogeneity = neighbors
+                        .iter()
                         .map(|&n| 1.0 / (1.0 + (center - n).abs()))
-                        .sum::<f32>() / neighbors.len() as f32;
+                        .sum::<f32>()
+                        / neighbors.len() as f32;
 
                     result[[x, y, z]] = homogeneity;
                 }
@@ -626,13 +645,13 @@ impl FeatureExtractor {
 /// Clinical Decision Support System
 #[derive(Debug)]
 pub struct ClinicalDecisionSupport {
-    thresholds: ClinicalThresholds,
+    config: ClinicalThresholds,
 }
 
 impl ClinicalDecisionSupport {
     /// Create new clinical decision support system
     pub fn new(thresholds: ClinicalThresholds) -> Self {
-        Self { thresholds }
+        Self { config: thresholds }
     }
 
     /// Perform comprehensive clinical analysis
@@ -675,37 +694,40 @@ impl ClinicalDecisionSupport {
         let (nx, ny, nz) = volume.dim();
 
         // Simple lesion detection based on feature anomalies
-        for z in 10..nz-10 {
-            for y in 10..ny-10 {
-                for x in 10..nx-10 {
+        for z in 10..nz - 10 {
+            for y in 10..ny - 10 {
+                for x in 10..nx - 10 {
                     let vol_val = volume[[x, y, z]];
                     let conf_val = confidence[[x, y, z]];
                     let uncert_val = uncertainty[[x, y, z]];
 
                     // Check for high-contrast regions with low uncertainty
-                    let gradient_mag = features.morphological
+                    let gradient_mag = features
+                        .morphological
                         .get("gradient_magnitude")
-                        .and_then(|arr| Some(arr[[x, y, z]]))
+                        .map(|arr| arr[[x, y, z]])
                         .unwrap_or(0.0);
 
-                    let speckle_var = features.texture
+                    let speckle_var = features
+                        .texture
                         .get("speckle_variance")
-                        .and_then(|arr| Some(arr[[x, y, z]]))
+                        .map(|arr| arr[[x, y, z]])
                         .unwrap_or(0.0);
 
                     // Lesion criteria: high contrast, high confidence, anomalous speckle
-                    if vol_val > self.thresholds.contrast_abnormality_threshold
-                        && conf_val > self.thresholds.lesion_confidence_threshold
-                        && uncert_val < self.thresholds.tissue_uncertainty_threshold
-                        && speckle_var > self.thresholds.speckle_anomaly_threshold
-                        && gradient_mag > 0.5 {
-
+                    if vol_val > self.config.contrast_abnormality_threshold
+                        && conf_val > self.config.lesion_confidence_threshold
+                        && uncert_val < self.config.tissue_uncertainty_threshold
+                        && speckle_var > self.config.speckle_anomaly_threshold
+                        && gradient_mag > 0.5
+                    {
                         lesions.push(LesionDetection {
                             center: (x, y, z),
                             size_mm: self.estimate_lesion_size(volume, features, x, y, z),
                             confidence: conf_val,
                             lesion_type: self.classify_lesion_type(vol_val, features, x, y, z),
-                            clinical_significance: self.assess_clinical_significance(conf_val, vol_val),
+                            clinical_significance: self
+                                .assess_clinical_significance(conf_val, vol_val),
                         });
                     }
                 }
@@ -720,7 +742,7 @@ impl ClinicalDecisionSupport {
     fn estimate_lesion_size(
         &self,
         volume: ArrayView3<f32>,
-        features: &FeatureMap,
+        _features: &FeatureMap,
         seed_x: usize,
         seed_y: usize,
         seed_z: usize,
@@ -728,14 +750,14 @@ impl ClinicalDecisionSupport {
         // Implement 3D connected component analysis for accurate lesion sizing
         // Uses 26-connected neighborhood for volumetric analysis
 
-        let (nx, ny, nz) = volume.dim();
+        let (dim_x, dim_y, dim_z) = volume.dim();
 
         // Adaptive thresholding based on local statistics
         let local_mean = self.compute_local_statistics(&volume, seed_x, seed_y, seed_z);
         let threshold = local_mean + 2.0 * self.config.segmentation_sensitivity;
 
         // 3D connected component analysis using flood fill
-        let mut visited = ndarray::Array3::<bool>::zeros((nx, ny, nz));
+        let mut visited = Array3::<bool>::from_elem((dim_x, dim_y, dim_z), false);
         let mut component_voxels = Vec::new();
 
         let mut queue = std::collections::VecDeque::new();
@@ -744,9 +766,32 @@ impl ClinicalDecisionSupport {
 
         // 26-connected neighborhood offsets for 3D connectivity
         let offsets = [
-            (-1,-1,-1), (-1,-1, 0), (-1,-1, 1), (-1, 0,-1), (-1, 0, 0), (-1, 0, 1), (-1, 1,-1), (-1, 1, 0), (-1, 1, 1),
-            ( 0,-1,-1), ( 0,-1, 0), ( 0,-1, 1), ( 0, 0,-1),              ( 0, 0, 1), ( 0, 1,-1), ( 0, 1, 0), ( 0, 1, 1),
-            ( 1,-1,-1), ( 1,-1, 0), ( 1,-1, 1), ( 1, 0,-1), ( 1, 0, 0), ( 1, 0, 1), ( 1, 1,-1), ( 1, 1, 0), ( 1, 1, 1),
+            (-1, -1, -1),
+            (-1, -1, 0),
+            (-1, -1, 1),
+            (-1, 0, -1),
+            (-1, 0, 0),
+            (-1, 0, 1),
+            (-1, 1, -1),
+            (-1, 1, 0),
+            (-1, 1, 1),
+            (0, -1, -1),
+            (0, -1, 0),
+            (0, -1, 1),
+            (0, 0, -1),
+            (0, 0, 1),
+            (0, 1, -1),
+            (0, 1, 0),
+            (0, 1, 1),
+            (1, -1, -1),
+            (1, -1, 0),
+            (1, -1, 1),
+            (1, 0, -1),
+            (1, 0, 0),
+            (1, 0, 1),
+            (1, 1, -1),
+            (1, 1, 0),
+            (1, 1, 1),
         ];
 
         // Flood fill to find all connected voxels
@@ -759,7 +804,13 @@ impl ClinicalDecisionSupport {
                 let ny = y as isize + dy;
                 let nz = z as isize + dz;
 
-                if nx >= 0 && nx < nx as isize && ny >= 0 && ny < ny as isize && nz >= 0 && nz < nz as isize {
+                if nx >= 0
+                    && nx < dim_x as isize
+                    && ny >= 0
+                    && ny < dim_y as isize
+                    && nz >= 0
+                    && nz < dim_z as isize
+                {
                     let nx = nx as usize;
                     let ny = ny as usize;
                     let nz = nz as usize;
@@ -778,14 +829,20 @@ impl ClinicalDecisionSupport {
 
         // Estimate equivalent spherical diameter (ESD) in mm
         // V = (4/3)πr³ ⇒ r = [(3V)/(4π)]^(1/3) ⇒ diameter = 2r
-        let equivalent_radius_mm = (3.0 * lesion_volume_mm3 / (4.0 * std::f32::consts::PI)).powf(1.0/3.0);
-        let equivalent_diameter_mm = 2.0 * equivalent_radius_mm;
+        let equivalent_radius_mm =
+            (3.0 * lesion_volume_mm3 / (4.0 * std::f32::consts::PI)).powf(1.0 / 3.0);
 
-        equivalent_diameter_mm
+        2.0 * equivalent_radius_mm
     }
 
     /// Compute local statistics for adaptive thresholding
-    fn compute_local_statistics(&self, volume: &ArrayView3<f32>, x: usize, y: usize, z: usize) -> f32 {
+    fn compute_local_statistics(
+        &self,
+        volume: &ArrayView3<f32>,
+        x: usize,
+        y: usize,
+        z: usize,
+    ) -> f32 {
         let (nx, ny, nz) = volume.dim();
         let window_size = 5; // 5x5x5 local window
 
@@ -795,16 +852,22 @@ impl ClinicalDecisionSupport {
         for dx in -(window_size as isize)..=(window_size as isize) {
             for dy in -(window_size as isize)..=(window_size as isize) {
                 for dz in -(window_size as isize)..=(window_size as isize) {
-                    let nx = x as isize + dx;
-                    let ny = y as isize + dy;
-                    let nz = z as isize + dz;
+                    let neighbor_x = x as isize + dx;
+                    let neighbor_y = y as isize + dy;
+                    let neighbor_z = z as isize + dz;
 
-                    if nx >= 0 && nx < nx as isize && ny >= 0 && ny < ny as isize && nz >= 0 && nz < nz as isize {
-                        let nx = nx as usize;
-                        let ny = ny as usize;
-                        let nz = nz as usize;
+                    if neighbor_x >= 0
+                        && neighbor_x < nx as isize
+                        && neighbor_y >= 0
+                        && neighbor_y < ny as isize
+                        && neighbor_z >= 0
+                        && neighbor_z < nz as isize
+                    {
+                        let neighbor_x = neighbor_x as usize;
+                        let neighbor_y = neighbor_y as usize;
+                        let neighbor_z = neighbor_z as usize;
 
-                        sum += volume[[nx, ny, nz]];
+                        sum += volume[[neighbor_x, neighbor_y, neighbor_z]];
                         count += 1;
                     }
                 }
@@ -819,7 +882,7 @@ impl ClinicalDecisionSupport {
     }
 
     /// Compute voxel intensity for segmentation
-    fn compute_voxel_intensity(&self, x: usize, y: usize, z: usize) -> f32 {
+    fn _compute_voxel_intensity(&self, x: usize, y: usize, z: usize) -> f32 {
         // In practice, this would compute proper ultrasound intensity
         // For now, use a placeholder based on position
         ((x + y + z) as f32 / 100.0).sin().abs()
@@ -873,9 +936,10 @@ impl ClinicalDecisionSupport {
             for y in 0..ny {
                 for x in 0..nx {
                     let intensity = volume[[x, y, z]];
-                    let speckle_var = features.texture
+                    let speckle_var = features
+                        .texture
                         .get("speckle_variance")
-                        .and_then(|arr| Some(arr[[x, y, z]]))
+                        .map(|arr| arr[[x, y, z]])
                         .unwrap_or(0.5);
 
                     let tissue_type = if intensity < 0.7 && speckle_var > 0.8 {
@@ -915,9 +979,7 @@ impl ClinicalDecisionSupport {
                 lesions.len()
             ));
 
-            let high_confidence_lesions = lesions.iter()
-                .filter(|l| l.confidence > 0.9)
-                .count();
+            let high_confidence_lesions = lesions.iter().filter(|l| l.confidence > 0.9).count();
 
             if high_confidence_lesions > 0 {
                 recommendations.push(format!(
@@ -927,7 +989,10 @@ impl ClinicalDecisionSupport {
             }
         }
 
-        recommendations.push("AI analysis is supportive only. Clinical judgment required for final diagnosis.".to_string());
+        recommendations.push(
+            "AI analysis is supportive only. Clinical judgment required for final diagnosis."
+                .to_string(),
+        );
 
         recommendations
     }
@@ -954,21 +1019,29 @@ impl ClinicalDecisionSupport {
 #[derive(Debug)]
 pub struct DiagnosisAlgorithm {
     /// Trained classification models
-    models: HashMap<String, Vec<f32>>,
+    _models: HashMap<String, Vec<f32>>,
 }
 
 impl DiagnosisAlgorithm {
     /// Create new diagnosis algorithm
     pub fn new() -> Self {
         Self {
-            models: HashMap::new(),
+            _models: HashMap::new(),
         }
     }
+}
 
+impl Default for DiagnosisAlgorithm {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DiagnosisAlgorithm {
     /// Perform automated diagnosis
     pub fn diagnose(
         &self,
-        features: &FeatureMap,
+        _features: &FeatureMap,
         clinical_data: &ClinicalAnalysis,
     ) -> KwaversResult<String> {
         // Simplified diagnostic logic
@@ -986,9 +1059,9 @@ impl DiagnosisAlgorithm {
 #[derive(Debug)]
 pub struct RealTimeWorkflow {
     /// Performance monitoring
-    performance_history: Vec<f64>,
+    pub performance_history: Vec<f64>,
     /// Quality metrics
-    quality_metrics: HashMap<String, f64>,
+    pub quality_metrics: HashMap<String, f64>,
 }
 
 impl RealTimeWorkflow {
@@ -999,7 +1072,15 @@ impl RealTimeWorkflow {
             quality_metrics: HashMap::new(),
         }
     }
+}
 
+impl Default for RealTimeWorkflow {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl RealTimeWorkflow {
     /// Execute real-time workflow
     pub fn execute_workflow(
         &mut self,
@@ -1010,7 +1091,8 @@ impl RealTimeWorkflow {
         let result = processor.process_ai_enhanced(rf_data, angles)?;
 
         // Update performance history
-        self.performance_history.push(result.performance.total_time_ms);
+        self.performance_history
+            .push(result.performance.total_time_ms);
 
         // Maintain rolling window of last 100 measurements
         if self.performance_history.len() > 100 {
@@ -1037,8 +1119,14 @@ impl RealTimeWorkflow {
 
         if !self.performance_history.is_empty() {
             let times = &self.performance_history;
-            stats.insert("min_time".to_string(), times.iter().cloned().fold(f64::INFINITY, f64::min));
-            stats.insert("max_time".to_string(), times.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
+            stats.insert(
+                "min_time".to_string(),
+                times.iter().cloned().fold(f64::INFINITY, f64::min),
+            );
+            stats.insert(
+                "max_time".to_string(),
+                times.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
+            );
             stats.insert("median_time".to_string(), self.compute_median(times));
         }
 
@@ -1051,7 +1139,7 @@ impl RealTimeWorkflow {
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let mid = sorted.len() / 2;
-        if sorted.len() % 2 == 0 {
+        if sorted.len().is_multiple_of(2) {
             (sorted[mid - 1] + sorted[mid]) / 2.0
         } else {
             sorted[mid]

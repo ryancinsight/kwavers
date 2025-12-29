@@ -189,6 +189,33 @@ Implement complete clinical ultrasound applications including microbubble contra
 
 ---
 
+## Sprint 179: Neural Beamforming Remediation
+
+### Objectives
+- Replace placeholder `NeuralLayer` with mathematically correct implementation.
+- Replace placeholder feature extraction with rigorous signal processing.
+- Verify implementations against signal processing theory.
+
+### Task Breakdown
+
+#### Phase 1: Core Neural Architecture (1 hour)
+- [ ] Implement `NeuralLayer` with proper matrix multiplication and activation functions.
+- [ ] Implement `NeuralBeamformingNetwork` forward pass with rigorous tensor operations.
+- [ ] Add unit tests for network forward pass.
+
+#### Phase 2: Feature Extraction (1 hour)
+- [ ] Implement FFT-based frequency content analysis (replace gradient proxy).
+- [ ] Implement spectral centroid calculation (replace constant).
+- [ ] Implement rigorous coherence calculation (replace simplified averaging).
+
+#### Phase 3: Signal Quality & Validation (1 hour)
+- [ ] Implement robust SNR estimation.
+- [ ] Add integration tests for the full beamforming pipeline.
+- [ ] Verify outputs against theoretical expectations.
+
+
+---
+
 ## Emergency Procedures
 
 ### If 3D Memory Limits Exceeded

@@ -156,7 +156,8 @@ impl KuznetsovWave {
                         let local_density = crate::medium::density_at(medium, x, y, z, &self.grid);
                         let local_sound_speed =
                             crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
-                        let local_nonlinearity = crate::medium::nonlinearity_at(medium, x, y, z, &self.grid);
+                        let local_nonlinearity =
+                            crate::medium::nonlinearity_at(medium, x, y, z, &self.grid);
                         let c0_squared = local_sound_speed * local_sound_speed;
 
                         // Linear term with local sound speed
@@ -171,8 +172,10 @@ impl KuznetsovWave {
 
                             // Compute p² at each time step
                             let p2 = pressure[[i, j, k]] * pressure[[i, j, k]];
-                            let p2_prev = self.workspace.pressure_prev[[i, j, k]] * self.workspace.pressure_prev[[i, j, k]];
-                            let p2_prev2 = self.workspace.pressure_prev2[[i, j, k]] * self.workspace.pressure_prev2[[i, j, k]];
+                            let p2_prev = self.workspace.pressure_prev[[i, j, k]]
+                                * self.workspace.pressure_prev[[i, j, k]];
+                            let p2_prev2 = self.workspace.pressure_prev2[[i, j, k]]
+                                * self.workspace.pressure_prev2[[i, j, k]];
 
                             // Second time derivative of p²
                             let d2p2_dt2 = (p2 - 2.0 * p2_prev + p2_prev2) / (dt * dt);
@@ -187,7 +190,8 @@ impl KuznetsovWave {
                             let d3p_dt3 = (pressure[[i, j, k]]
                                 - 3.0 * self.workspace.pressure_prev[[i, j, k]]
                                 + 3.0 * self.workspace.pressure_prev2[[i, j, k]]
-                                - self.workspace.pressure_prev3[[i, j, k]]) / dt.powi(3);
+                                - self.workspace.pressure_prev3[[i, j, k]])
+                                / dt.powi(3);
                             rhs[[i, j, k]] += self.config.acoustic_diffusivity * d3p_dt3;
                         }
 

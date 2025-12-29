@@ -5,7 +5,7 @@
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use ndarray::{Array2, Array3};
+use ndarray::Array3;
 use num_complex::Complex;
 
 /// Phase correction data for transducer elements
@@ -22,6 +22,7 @@ pub struct PhaseCorrection {
 }
 
 /// Transcranial aberration correction system
+#[derive(Debug)]
 pub struct TranscranialAberrationCorrection {
     /// Computational grid
     grid: Grid,
@@ -30,7 +31,7 @@ pub struct TranscranialAberrationCorrection {
     /// Reference sound speed (m/s)
     reference_speed: f64,
     /// Number of transducer elements
-    num_elements: usize,
+    _num_elements: usize,
 }
 
 impl TranscranialAberrationCorrection {
@@ -38,9 +39,9 @@ impl TranscranialAberrationCorrection {
     pub fn new(grid: &Grid) -> KwaversResult<Self> {
         Ok(Self {
             grid: grid.clone(),
-            frequency: 650e3, // Default brain therapy frequency
+            frequency: 650e3,        // Default brain therapy frequency
             reference_speed: 1500.0, // Water speed
-            num_elements: 1024, // Default hemispherical array
+            _num_elements: 1024,      // Default hemispherical array
         })
     }
 
@@ -51,15 +52,14 @@ impl TranscranialAberrationCorrection {
         transducer_positions: &[[f64; 3]],
         target_point: &[f64; 3],
     ) -> KwaversResult<PhaseCorrection> {
-        println!("Calculating aberration correction for {} transducer elements",
-                 transducer_positions.len());
+        println!(
+            "Calculating aberration correction for {} transducer elements",
+            transducer_positions.len()
+        );
 
         // Step 1: Calculate propagation path through skull for each element
-        let path_delays = self.calculate_path_delays(
-            skull_model,
-            transducer_positions,
-            target_point,
-        )?;
+        let path_delays =
+            self.calculate_path_delays(skull_model, transducer_positions, target_point)?;
 
         // Step 2: Convert delays to phases
         let wavenumbers = self.calculate_wavenumbers(&path_delays);
@@ -105,9 +105,8 @@ impl TranscranialAberrationCorrection {
                 target_point[2] - transducer_pos[2],
             ];
 
-            let path_length = (path_vector[0].powi(2) +
-                             path_vector[1].powi(2) +
-                             path_vector[2].powi(2)).sqrt();
+            let path_length =
+                (path_vector[0].powi(2) + path_vector[1].powi(2) + path_vector[2].powi(2)).sqrt();
 
             // Sample skull properties along the path
             let num_samples = 100;
@@ -136,7 +135,8 @@ impl TranscranialAberrationCorrection {
             }
 
             // Subtract reference delay (straight line at reference speed)
-            let reference_delay = 2.0 * std::f64::consts::PI * self.frequency * path_length / self.reference_speed;
+            let reference_delay =
+                2.0 * std::f64::consts::PI * self.frequency * path_length / self.reference_speed;
             let aberration_delay = total_delay - reference_delay;
 
             delays.push(aberration_delay);
@@ -147,10 +147,7 @@ impl TranscranialAberrationCorrection {
 
     /// Calculate wavenumbers from delays
     fn calculate_wavenumbers(&self, delays: &[f64]) -> Vec<f64> {
-        delays.iter().map(|&delay| {
-            // For monochromatic waves, wavenumber is delay (phase)
-            delay
-        }).collect()
+        delays.to_vec()
     }
 
     /// Optimize element amplitudes for uniform focal intensity
@@ -160,15 +157,18 @@ impl TranscranialAberrationCorrection {
         let max_delay = delays.iter().cloned().fold(0.0_f64, f64::max);
         let min_delay = delays.iter().cloned().fold(f64::INFINITY, f64::min);
 
-        delays.iter().map(|&delay| {
-            // Compensate for attenuation (higher delay = more attenuation)
-            let delay_range = max_delay - min_delay;
-            if delay_range > 0.0 {
-                1.0 + (max_delay - delay) / delay_range // Boost weaker elements
-            } else {
-                1.0
-            }
-        }).collect()
+        delays
+            .iter()
+            .map(|&delay| {
+                // Compensate for attenuation (higher delay = more attenuation)
+                let delay_range = max_delay - min_delay;
+                if delay_range > 0.0 {
+                    1.0 + (max_delay - delay) / delay_range // Boost weaker elements
+                } else {
+                    1.0
+                }
+            })
+            .collect()
     }
 
     /// Estimate correction quality (0-1 scale)
@@ -214,7 +214,7 @@ impl TranscranialAberrationCorrection {
     /// Apply time-reversal aberration correction
     pub fn apply_time_reversal_correction(
         &self,
-        measured_field: &Array3<Complex<f64>>,
+        _measured_field: &Array3<Complex<f64>>,
         transducer_positions: &[[f64; 3]],
     ) -> KwaversResult<PhaseCorrection> {
         // Time-reversal acoustics for aberration correction
@@ -234,9 +234,10 @@ impl TranscranialAberrationCorrection {
         // Placeholder implementation
         for i in 0..transducer_positions.len() {
             // Simple geometric phase calculation
-            let dist_to_origin = (transducer_positions[i][0].powi(2) +
-                                transducer_positions[i][1].powi(2) +
-                                transducer_positions[i][2].powi(2)).sqrt();
+            let dist_to_origin = (transducer_positions[i][0].powi(2)
+                + transducer_positions[i][1].powi(2)
+                + transducer_positions[i][2].powi(2))
+            .sqrt();
             let k = 2.0 * std::f64::consts::PI * self.frequency / self.reference_speed;
             phases[i] = -k * dist_to_origin;
         }
@@ -257,7 +258,7 @@ impl TranscranialAberrationCorrection {
         learning_rate: f64,
     ) -> PhaseCorrection {
         let mut new_phases = initial_correction.phases.clone();
-        let mut new_amplitudes = initial_correction.amplitudes.clone();
+        let new_amplitudes = initial_correction.amplitudes.clone();
 
         // Simple gradient descent on feedback signal
         // In practice, this would use more sophisticated optimization
@@ -308,9 +309,9 @@ impl TranscranialAberrationCorrection {
     fn simulate_corrected_field(
         &self,
         correction: &PhaseCorrection,
-        skull_model: &crate::physics::skull::CTBasedSkullModel,
+        _skull_model: &crate::physics::skull::CTBasedSkullModel,
         transducer_positions: &[[f64; 3]],
-        target_point: &[f64; 3],
+        _target_point: &[f64; 3],
     ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = self.grid.dimensions();
         let mut field = Array3::zeros((nx, ny, nz));
@@ -329,14 +330,15 @@ impl TranscranialAberrationCorrection {
                         let dx = x - elem_pos[0];
                         let dy = y - elem_pos[1];
                         let dz = z - elem_pos[2];
-                        let distance = (dx*dx + dy*dy + dz*dz).sqrt();
+                        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
 
                         if distance > 0.0 {
                             // Apply phase correction
                             let phase = correction.phases.get(elem_idx).unwrap_or(&0.0);
                             let amplitude = correction.amplitudes.get(elem_idx).unwrap_or(&1.0);
 
-                            let k = 2.0 * std::f64::consts::PI * self.frequency / self.reference_speed;
+                            let k =
+                                2.0 * std::f64::consts::PI * self.frequency / self.reference_speed;
                             let uncorrected_phase = k * distance;
                             let corrected_phase = uncorrected_phase + phase;
 
@@ -379,11 +381,14 @@ impl TranscranialAberrationCorrection {
             for j in 0..self.grid.ny {
                 for i in 0..self.grid.nx {
                     // Skip points near focal region
-                    let distance_from_focus = (((i as i32 - focal_ix as i32).pow(2) +
-                                              (j as i32 - focal_iy as i32).pow(2) +
-                                              (k as i32 - focal_iz as i32).pow(2)) as f64).sqrt();
+                    let distance_from_focus = (((i as i32 - focal_ix as i32).pow(2)
+                        + (j as i32 - focal_iy as i32).pow(2)
+                        + (k as i32 - focal_iz as i32).pow(2))
+                        as f64)
+                        .sqrt();
 
-                    if distance_from_focus > 3.0 { // Outside focal region
+                    if distance_from_focus > 3.0 {
+                        // Outside focal region
                         max_sidelobe = max_sidelobe.max(field[[i, j, k]]);
                     }
                 }
@@ -442,19 +447,12 @@ mod tests {
         let skull_model = CTBasedSkullModel::from_ct_data(&ct_data).unwrap();
 
         // Simple transducer array
-        let transducer_positions = vec![
-            [0.0, 0.0, 0.08],
-            [0.02, 0.0, 0.08],
-            [0.0, 0.02, 0.08],
-        ];
+        let transducer_positions = vec![[0.0, 0.0, 0.08], [0.02, 0.0, 0.08], [0.0, 0.02, 0.08]];
 
         let target_point = [0.0, 0.0, 0.0]; // Brain center
 
-        let correction = corrector.calculate_correction(
-            &skull_model,
-            &transducer_positions,
-            &target_point,
-        );
+        let correction =
+            corrector.calculate_correction(&skull_model, &transducer_positions, &target_point);
 
         assert!(correction.is_ok());
         let corr = correction.unwrap();
@@ -467,17 +465,12 @@ mod tests {
         let grid = Grid::new(16, 16, 16, 0.005, 0.005, 0.005).unwrap();
         let corrector = TranscranialAberrationCorrection::new(&grid).unwrap();
 
-        let transducer_positions = vec![
-            [0.0, 0.0, 0.08],
-            [0.02, 0.0, 0.08],
-        ];
+        let transducer_positions = vec![[0.0, 0.0, 0.08], [0.02, 0.0, 0.08]];
 
         let measured_field = Array3::from_elem((16, 16, 16), Complex::new(1.0, 0.0));
 
-        let correction = corrector.apply_time_reversal_correction(
-            &measured_field,
-            &transducer_positions,
-        );
+        let correction =
+            corrector.apply_time_reversal_correction(&measured_field, &transducer_positions);
 
         assert!(correction.is_ok());
     }

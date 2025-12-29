@@ -3,6 +3,9 @@
 //! This module provides middleware components for the PINN API including
 //! authentication, authorization, rate limiting, logging, and metrics collection.
 
+use crate::api::auth::AuthMiddleware;
+use crate::api::rate_limiter::{RateLimitConfig, RateLimiter};
+use crate::api::{APIError, APIErrorType, RateLimitInfo};
 use axum::{
     extract::{Request, State},
     http::{header, StatusCode},
@@ -10,9 +13,6 @@ use axum::{
     response::Response,
 };
 use std::time::Instant;
-use crate::api::{APIError, APIErrorType, RateLimitInfo};
-use crate::api::auth::AuthMiddleware;
-use crate::api::rate_limiter::{RateLimiter, RateLimitConfig};
 
 /// Authentication middleware
 pub async fn auth_middleware(
@@ -103,7 +103,7 @@ pub async fn rate_limit_middleware(
         Err(error) => {
             // Return rate limit exceeded response
             let mut response = axum::response::Response::new(axum::body::Body::from(
-                serde_json::to_string(&error).unwrap_or_default()
+                serde_json::to_string(&error).unwrap_or_default(),
             ));
             *response.status_mut() = StatusCode::TOO_MANY_REQUESTS;
 
@@ -119,7 +119,12 @@ pub async fn rate_limit_middleware(
             );
             response.headers_mut().insert(
                 "X-RateLimit-Reset",
-                limit_info.reset_time.timestamp().to_string().parse().unwrap(),
+                limit_info
+                    .reset_time
+                    .timestamp()
+                    .to_string()
+                    .parse()
+                    .unwrap(),
             );
 
             response
@@ -153,7 +158,9 @@ pub async fn logging_middleware(
     );
 
     // Record metrics
-    metrics.record_request(method.as_str(), status.as_u16(), duration).await;
+    metrics
+        .record_request(method.as_str(), status.as_u16(), duration)
+        .await;
 
     response
 }
@@ -168,7 +175,8 @@ pub fn cors_middleware() -> tower_http::cors::CorsLayer {
 }
 
 /// Request ID middleware
-pub fn request_id_middleware() -> tower_http::request_id::SetRequestIdLayer<tower_http::request_id::MakeRequestUuid> {
+pub fn request_id_middleware(
+) -> tower_http::request_id::SetRequestIdLayer<tower_http::request_id::MakeRequestUuid> {
     tower_http::request_id::SetRequestIdLayer::x_request_id(tower_http::request_id::MakeRequestUuid)
 }
 
@@ -179,7 +187,7 @@ pub fn compression_middleware() -> tower_http::compression::CompressionLayer {
 
 /// Tracing middleware
 pub fn tracing_middleware() -> tower_http::trace::TraceLayer<
-    tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>
+    tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>,
 > {
     tower_http::trace::TraceLayer::new_for_http()
 }
@@ -220,15 +228,20 @@ impl MetricsCollector {
                 .namespace("kwavers")
                 .subsystem("api"),
             &["method", "endpoint", "status"],
-        ).unwrap();
+        )
+        .unwrap();
 
         let http_request_duration = prometheus::HistogramVec::new(
-            prometheus::HistogramOpts::new("http_request_duration_seconds", "HTTP request duration in seconds")
-                .namespace("kwavers")
-                .subsystem("api")
-                .buckets(vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0]),
+            prometheus::HistogramOpts::new(
+                "http_request_duration_seconds",
+                "HTTP request duration in seconds",
+            )
+            .namespace("kwavers")
+            .subsystem("api")
+            .buckets(vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0]),
             &["method", "endpoint"],
-        ).unwrap();
+        )
+        .unwrap();
 
         // Training job metrics
         let training_jobs_total = prometheus::CounterVec::new(
@@ -236,53 +249,82 @@ impl MetricsCollector {
                 .namespace("kwavers")
                 .subsystem("ml"),
             &["status", "model_type"],
-        ).unwrap();
+        )
+        .unwrap();
 
         let training_job_duration = prometheus::Histogram::with_opts(
-            prometheus::HistogramOpts::new("training_job_duration_seconds", "Training job duration in seconds")
-                .namespace("kwavers")
-                .subsystem("ml")
-                .buckets(vec![1.0, 5.0, 10.0, 30.0, 60.0, 300.0, 600.0, 1800.0, 3600.0]),
-        ).unwrap();
+            prometheus::HistogramOpts::new(
+                "training_job_duration_seconds",
+                "Training job duration in seconds",
+            )
+            .namespace("kwavers")
+            .subsystem("ml")
+            .buckets(vec![
+                1.0, 5.0, 10.0, 30.0, 60.0, 300.0, 600.0, 1800.0, 3600.0,
+            ]),
+        )
+        .unwrap();
 
         // Inference metrics
         let inference_requests_total = prometheus::CounterVec::new(
-            prometheus::Opts::new("inference_requests_total", "Total number of inference requests")
-                .namespace("kwavers")
-                .subsystem("ml"),
+            prometheus::Opts::new(
+                "inference_requests_total",
+                "Total number of inference requests",
+            )
+            .namespace("kwavers")
+            .subsystem("ml"),
             &["model_type", "status"],
-        ).unwrap();
+        )
+        .unwrap();
 
         let inference_latency = prometheus::Histogram::with_opts(
-            prometheus::HistogramOpts::new("inference_latency_seconds", "Inference request latency in seconds")
-                .namespace("kwavers")
-                .subsystem("ml")
-                .buckets(vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5]),
-        ).unwrap();
+            prometheus::HistogramOpts::new(
+                "inference_latency_seconds",
+                "Inference request latency in seconds",
+            )
+            .namespace("kwavers")
+            .subsystem("ml")
+            .buckets(vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5]),
+        )
+        .unwrap();
 
         // System metrics
-        let active_connections = prometheus::Gauge::new(
-            "active_connections", "Number of active connections"
-        ).unwrap();
+        let active_connections =
+            prometheus::Gauge::new("active_connections", "Number of active connections").unwrap();
 
-        let memory_usage = prometheus::Gauge::new(
-            "memory_usage_bytes", "Current memory usage in bytes"
-        ).unwrap();
+        let memory_usage =
+            prometheus::Gauge::new("memory_usage_bytes", "Current memory usage in bytes").unwrap();
 
-        let gpu_utilization = prometheus::Gauge::new(
-            "gpu_utilization_percent", "GPU utilization percentage"
-        ).unwrap();
+        let gpu_utilization =
+            prometheus::Gauge::new("gpu_utilization_percent", "GPU utilization percentage")
+                .unwrap();
 
         // Register all metrics
-        registry.register(Box::new(http_requests_total.clone())).unwrap();
-        registry.register(Box::new(http_request_duration.clone())).unwrap();
-        registry.register(Box::new(training_jobs_total.clone())).unwrap();
-        registry.register(Box::new(training_job_duration.clone())).unwrap();
-        registry.register(Box::new(inference_requests_total.clone())).unwrap();
-        registry.register(Box::new(inference_latency.clone())).unwrap();
-        registry.register(Box::new(active_connections.clone())).unwrap();
+        registry
+            .register(Box::new(http_requests_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(http_request_duration.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(training_jobs_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(training_job_duration.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(inference_requests_total.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(inference_latency.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(active_connections.clone()))
+            .unwrap();
         registry.register(Box::new(memory_usage.clone())).unwrap();
-        registry.register(Box::new(gpu_utilization.clone())).unwrap();
+        registry
+            .register(Box::new(gpu_utilization.clone()))
+            .unwrap();
 
         Self {
             registry,
@@ -322,7 +364,12 @@ impl MetricsCollector {
     }
 
     /// Record an inference request
-    pub async fn record_inference_request(&self, latency_seconds: f64, model_type: &str, status: &str) {
+    pub async fn record_inference_request(
+        &self,
+        latency_seconds: f64,
+        model_type: &str,
+        status: &str,
+    ) {
         self.inference_requests_total
             .with_label_values(&[model_type, status])
             .inc();
@@ -382,7 +429,9 @@ mod tests {
     #[tokio::test]
     async fn test_metrics_collector_creation() {
         let metrics = MetricsCollector::new();
-        metrics.record_request("GET", 200, std::time::Duration::from_millis(100)).await;
+        metrics
+            .record_request("GET", 200, std::time::Duration::from_millis(100))
+            .await;
     }
 
     #[test]

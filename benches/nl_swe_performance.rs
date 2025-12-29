@@ -27,9 +27,9 @@
 //! - **Memory efficiency**: < 8 bytes per grid point for storage
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use kwavers::physics::imaging::elastography::*;
 use kwavers::grid::Grid;
 use kwavers::medium::HomogeneousMedium;
+use kwavers::physics::imaging::elastography::*;
 use ndarray::Array3;
 
 /// Benchmark hyperelastic constitutive model evaluation
@@ -79,7 +79,8 @@ pub fn bench_harmonic_detection(c: &mut Criterion) {
             for j in 0..ny {
                 for k in 0..nz {
                     let fundamental = (2.0 * std::f64::consts::PI * fundamental_freq * time).sin();
-                    let harmonic = 0.1 * (4.0 * std::f64::consts::PI * fundamental_freq * time).sin();
+                    let harmonic =
+                        0.1 * (4.0 * std::f64::consts::PI * fundamental_freq * time).sin();
                     time_series[[i, j, k, t]] = fundamental + harmonic;
                 }
             }
@@ -102,7 +103,8 @@ pub fn bench_nonlinear_inversion(c: &mut Criterion) {
     let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
 
     let harmonic_ratio_inv = NonlinearInversion::new(NonlinearInversionMethod::HarmonicRatio);
-    let least_squares_inv = NonlinearInversion::new(NonlinearInversionMethod::NonlinearLeastSquares);
+    let least_squares_inv =
+        NonlinearInversion::new(NonlinearInversionMethod::NonlinearLeastSquares);
     let bayesian_inv = NonlinearInversion::new(NonlinearInversionMethod::BayesianInversion);
 
     c.bench_function("harmonic_ratio_inversion", |b| {
@@ -132,7 +134,8 @@ pub fn bench_wave_propagation_comparison(c: &mut Criterion) {
             simulation_time: 0.5e-3, // Short simulation for benchmarking
             ..Default::default()
         },
-    ).unwrap();
+    )
+    .unwrap();
 
     // Nonlinear SWE setup
     let material = HyperelasticModel::neo_hookean_soft_tissue();
@@ -145,7 +148,8 @@ pub fn bench_wave_propagation_comparison(c: &mut Criterion) {
             enable_harmonics: false, // Disable harmonics for fair comparison
             ..Default::default()
         },
-    ).unwrap();
+    )
+    .unwrap();
 
     let push_location = [0.008, 0.008, 0.008];
     let initial_disp = Array3::zeros((16, 16, 16));
@@ -167,16 +171,19 @@ pub fn bench_end_to_end_workflow(c: &mut Criterion) {
     c.bench_function("nl_swe_end_to_end_workflow", |b| {
         b.iter(|| {
             // Step 1: Linear SWE wave generation
-            let mut swe = black_box(ShearWaveElastography::new(
-                &grid,
-                &medium,
-                InversionMethod::TimeOfFlight,
-                ElasticWaveConfig {
-                    simulation_time: 0.3e-3,
-                    save_every: 5,
-                    ..Default::default()
-                },
-            ).unwrap());
+            let mut swe = black_box(
+                ShearWaveElastography::new(
+                    &grid,
+                    &medium,
+                    InversionMethod::TimeOfFlight,
+                    ElasticWaveConfig {
+                        simulation_time: 0.3e-3,
+                        save_every: 5,
+                        ..Default::default()
+                    },
+                )
+                .unwrap(),
+            );
 
             let push_location = [0.006, 0.006, 0.006];
             let displacement_history = swe.generate_shear_wave(push_location).unwrap();
@@ -202,7 +209,9 @@ pub fn bench_end_to_end_workflow(c: &mut Criterion) {
 
             // Step 4: Nonlinear inversion
             let inversion = NonlinearInversion::new(NonlinearInversionMethod::HarmonicRatio);
-            let _nonlinear_params = inversion.reconstruct_nonlinear(&harmonic_field, &grid).unwrap();
+            let _nonlinear_params = inversion
+                .reconstruct_nonlinear(&harmonic_field, &grid)
+                .unwrap();
 
             black_box(())
         })
@@ -246,7 +255,9 @@ pub fn bench_convergence_analysis(c: &mut Criterion) {
                     ..Default::default()
                 };
 
-                let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config).unwrap();
+                let solver =
+                    NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config)
+                        .unwrap();
                 let initial_disp = Array3::zeros((8, 8, 8));
                 let result = solver.propagate_waves(&initial_disp);
 

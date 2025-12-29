@@ -89,7 +89,9 @@ impl TheoremValidator {
             confidence: Self::calculate_confidence(theoretical_bound, max_error, passed),
             details: format!(
                 "Validated over {} points, max error: {:.2e}, theoretical bound: {:.2e}",
-                distances.len(), max_error, theoretical_bound
+                distances.len(),
+                max_error,
+                theoretical_bound
             ),
         }
     }
@@ -129,7 +131,7 @@ impl TheoremValidator {
     ) -> TheoremValidation {
         let n_samples = time_domain.len() as f64;
         let time_energy: f64 = time_domain.iter().map(|&x| x * x).sum::<f64>();
-        let freq_energy: f64 = freq_domain.iter().map(|&x| x.norm_sqr()).sum::<f64>() / n_samples;
+        let freq_energy: f64 = freq_domain.iter().map(|&x: &Complex64| x.norm_sqr()).sum::<f64>() / n_samples;
 
         let error = (time_energy - freq_energy).abs() / time_energy.abs().max(1e-10);
         let passed = error < 1e-10; // Very tight tolerance for Parseval (machine precision)
@@ -226,7 +228,8 @@ impl TheoremValidator {
         for (i, (&omega, &measured_disp)) in frequencies.iter().zip(dispersion.iter()).enumerate() {
             // Theoretical dispersion from Kramers-Kronig for power-law
             let tan_factor = (alpha_power * PI / 2.0).tan();
-            let theoretical_disp = sound_speed + (2.0 * alpha_0 / PI) * omega.powf(alpha_power) * tan_factor;
+            let theoretical_disp =
+                sound_speed + (2.0 * alpha_0 / PI) * omega.powf(alpha_power) * tan_factor;
 
             let error = (theoretical_disp - measured_disp).abs() / sound_speed.abs().max(1e-10);
             max_error = max_error.max(error);
@@ -235,7 +238,8 @@ impl TheoremValidator {
             // Also check that absorption matches power law
             let theoretical_alpha = alpha_0 * omega.powf(alpha_power);
             let measured_alpha = absorption[i];
-            let alpha_error = (theoretical_alpha - measured_alpha).abs() / measured_alpha.abs().max(1e-10);
+            let alpha_error =
+                (theoretical_alpha - measured_alpha).abs() / measured_alpha.abs().max(1e-10);
             max_error = max_error.max(alpha_error);
         }
 
@@ -341,14 +345,18 @@ impl TheoremValidator {
     /// Validate plane wave reflection coefficient
     /// R = (Z2 - Z1)/(Z2 + Z1) where Z = ρc is acoustic impedance
     pub fn validate_impedance_reflection(
-        rho1: f64, c1: f64, rho2: f64, c2: f64,
+        rho1: f64,
+        c1: f64,
+        rho2: f64,
+        c2: f64,
         measured_reflection_coeff: f64,
     ) -> TheoremValidation {
         let z1 = rho1 * c1;
         let z2 = rho2 * c2;
         let theoretical_r = (z2 - z1) / (z2 + z1);
 
-        let error = (measured_reflection_coeff - theoretical_r).abs() / theoretical_r.abs().max(1e-10);
+        let error =
+            (measured_reflection_coeff - theoretical_r).abs() / theoretical_r.abs().max(1e-10);
         let passed = error < 0.05; // 5% tolerance
 
         TheoremValidation {
@@ -369,13 +377,14 @@ impl TheoremValidator {
     pub fn validate_ideal_gas_speed(
         temperature_k: f64,
         molecular_mass: f64, // kg/mol
-        gamma: f64, // adiabatic index
+        gamma: f64,          // adiabatic index
         measured_speed: f64,
     ) -> TheoremValidation {
         // Ideal gas law: c = sqrt(γ kT / m) where k is Boltzmann constant
         let k_boltzmann = 1.380649e-23; // J/K
         let n_avogadro = 6.02214076e23; // mol^-1
-        let theoretical_speed = (gamma * k_boltzmann * temperature_k / (molecular_mass / n_avogadro)).sqrt();
+        let theoretical_speed =
+            (gamma * k_boltzmann * temperature_k / (molecular_mass / n_avogadro)).sqrt();
 
         let error = (measured_speed - theoretical_speed).abs() / theoretical_speed;
         let passed = error < 0.01; // 1% tolerance for gas properties
@@ -398,7 +407,7 @@ impl TheoremValidator {
     pub fn validate_rayleigh_sommerfeld_decay(
         distances: &[f64],
         pressures: &[f64],
-        source_pressure: f64,
+        _source_pressure: f64,
     ) -> TheoremValidation {
         // For spherical waves: p(r) ∝ 1/r
         // So log|p| should decrease linearly with log(r)
@@ -406,9 +415,9 @@ impl TheoremValidator {
         let mut max_error: f64 = 0.0;
 
         for i in 1..distances.len() {
-            let r1: f64 = distances[i-1];
+            let r1: f64 = distances[i - 1];
             let r2: f64 = distances[i];
-            let p1: f64 = pressures[i-1].abs();
+            let p1: f64 = pressures[i - 1].abs();
             let p2: f64 = pressures[i].abs();
 
             if p1 > 1e-12 && p2 > 1e-12 {
@@ -416,7 +425,8 @@ impl TheoremValidator {
                 let measured_ratio = p2 / p1;
                 let error = (measured_ratio - theoretical_ratio).abs() / theoretical_ratio;
 
-                if error > 0.1 { // 10% tolerance
+                if error > 0.1 {
+                    // 10% tolerance
                     passed = false;
                 }
                 max_error = max_error.max(error);
@@ -431,7 +441,8 @@ impl TheoremValidator {
             confidence: if passed { 0.85 } else { 0.4 },
             details: format!(
                 "Spherical wave decay validation: {} points, Max error: {:.2e}",
-                distances.len(), max_error
+                distances.len(),
+                max_error
             ),
         }
     }
@@ -444,8 +455,16 @@ impl TheoremValidator {
         let distances = vec![1.0, 2.0, 3.0, 4.0];
         let alpha: f64 = 0.1;
         let initial_intensity: f64 = 1.0;
-        let intensities: Vec<f64> = distances.iter().map(|&d| initial_intensity * (-alpha * d).exp()).collect();
-        results.push(Self::validate_beer_lambert_law(initial_intensity, alpha, &distances, &intensities));
+        let intensities: Vec<f64> = distances
+            .iter()
+            .map(|&d| initial_intensity * (-alpha * d).exp())
+            .collect();
+        results.push(Self::validate_beer_lambert_law(
+            initial_intensity,
+            alpha,
+            &distances,
+            &intensities,
+        ));
 
         // Test CFL condition with realistic parameters
         results.push(Self::validate_cfl_condition(1e-8, 5e-5, 1500.0, 3));
@@ -457,9 +476,11 @@ impl TheoremValidator {
         let amplitude = 1.0;
 
         // Create time domain signal: sinusoid
-        let time_signal = Array1::from_vec((0..n_samples)
-            .map(|n| amplitude * (2.0 * PI * k as f64 * n as f64 / n_samples as f64).sin())
-            .collect());
+        let time_signal = Array1::from_vec(
+            (0..n_samples)
+                .map(|n| amplitude * (2.0 * PI * k as f64 * n as f64 / n_samples as f64).sin())
+                .collect(),
+        );
 
         // Analytical DFT for sinusoid x[n] = A*sin(2π k n / N)
         // X[k] = -i*A*N/2, X[N-k] = i*A*N/2
@@ -468,7 +489,11 @@ impl TheoremValidator {
         freq_signal[k] = Complex64::new(0.0, -peak_magnitude); // Negative frequency
         freq_signal[n_samples - k] = Complex64::new(0.0, peak_magnitude); // Positive frequency
 
-        results.push(Self::validate_parsevals_theorem(&time_signal, &freq_signal, 1000.0));
+        results.push(Self::validate_parsevals_theorem(
+            &time_signal,
+            &freq_signal,
+            1000.0,
+        ));
 
         // Test MUSIC resolution
         results.push(Self::validate_music_resolution(0.1, 0.0003, 20.0, 0.01));
@@ -482,16 +507,27 @@ impl TheoremValidator {
         let alpha_power = 1.5; // Power-law exponent (typical for soft tissue)
 
         // Generate absorption using power law: α(ω) = α₀ |ω|^y
-        let alpha: Vec<f64> = freqs.iter().map(|&omega: &f64| alpha_0 * omega.powf(alpha_power)).collect();
+        let alpha: Vec<f64> = freqs
+            .iter()
+            .map(|&omega: &f64| alpha_0 * omega.powf(alpha_power))
+            .collect();
 
         // Generate theoretical dispersion using Kramers-Kronig
         let c0 = 1500.0; // Reference sound speed [m/s]
-        let dispersion: Vec<f64> = freqs.iter().map(|&omega: &f64| {
-            let tan_factor = (alpha_power * PI / 2.0).tan();
-            c0 + (2.0 * alpha_0 / PI) * omega.powf(alpha_power) * tan_factor
-        }).collect();
+        let dispersion: Vec<f64> = freqs
+            .iter()
+            .map(|&omega: &f64| {
+                let tan_factor = (alpha_power * PI / 2.0).tan();
+                c0 + (2.0 * alpha_0 / PI) * omega.powf(alpha_power) * tan_factor
+            })
+            .collect();
 
-        results.push(Self::validate_kramers_kronig(&freqs, &alpha, &dispersion, c0));
+        results.push(Self::validate_kramers_kronig(
+            &freqs,
+            &alpha,
+            &dispersion,
+            c0,
+        ));
 
         // Test ultrasound axial resolution (typical practical system)
         // 5 MHz bandwidth gives theoretical resolution of ~0.15 mm
@@ -507,7 +543,9 @@ impl TheoremValidator {
         results.push(Self::validate_reciprocity(1.0, 1.0, 1e-10));
 
         // Test acoustic impedance reflection (water-air interface)
-        results.push(Self::validate_impedance_reflection(1000.0, 1500.0, 1.2, 340.0, -0.9999));
+        results.push(Self::validate_impedance_reflection(
+            1000.0, 1500.0, 1.2, 340.0, -0.9999,
+        ));
 
         // Test ideal gas speed of sound (air at STP)
         results.push(Self::validate_ideal_gas_speed(293.15, 0.02897, 1.4, 343.0));
@@ -515,7 +553,9 @@ impl TheoremValidator {
         // Test Rayleigh-Sommerfeld diffraction (spherical wave decay)
         let distances = vec![0.01, 0.02, 0.05, 0.1]; // meters
         let pressures = vec![1000.0, 500.0, 200.0, 100.0]; // simulated 1/r decay
-        results.push(Self::validate_rayleigh_sommerfeld_decay(&distances, &pressures, 1000.0));
+        results.push(Self::validate_rayleigh_sommerfeld_decay(
+            &distances, &pressures, 1000.0,
+        ));
 
         results
     }
@@ -524,7 +564,10 @@ impl TheoremValidator {
     pub fn generate_validation_report(&self, validations: &[TheoremValidation]) -> String {
         let mut report = String::new();
         report.push_str("# Theorem Validation Report\n\n");
-        report.push_str(&format!("Total theorems validated: {}\n", validations.len()));
+        report.push_str(&format!(
+            "Total theorems validated: {}\n",
+            validations.len()
+        ));
 
         let passed_count = validations.iter().filter(|v| v.passed).count();
         let pass_rate = passed_count as f64 / validations.len() as f64 * 100.0;
@@ -534,17 +577,29 @@ impl TheoremValidator {
         report.push_str("## Detailed Results\n\n");
 
         for validation in validations {
-            let status = if validation.passed { "✅ PASS" } else { "❌ FAIL" };
+            let status = if validation.passed {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            };
             report.push_str(&format!("### {}: {}\n", validation.theorem, status));
             report.push_str(&format!("- Error bound: {:.2e}\n", validation.error_bound));
-            report.push_str(&format!("- Measured error: {:.2e}\n", validation.measured_error));
-            report.push_str(&format!("- Confidence: {:.1}%\n", validation.confidence * 100.0));
+            report.push_str(&format!(
+                "- Measured error: {:.2e}\n",
+                validation.measured_error
+            ));
+            report.push_str(&format!(
+                "- Confidence: {:.1}%\n",
+                validation.confidence * 100.0
+            ));
             report.push_str(&format!("- Details: {}\n\n", validation.details));
         }
 
         report.push_str("## Summary\n\n");
         report.push_str("- **Citation Coverage**: 95% of theorems have peer-reviewed references\n");
-        report.push_str("- **Error Bounds**: All theorems include quantitative convergence guarantees\n");
+        report.push_str(
+            "- **Error Bounds**: All theorems include quantitative convergence guarantees\n",
+        );
         report.push_str("- **Validation**: Automated testing ensures mathematical correctness\n");
 
         report
@@ -559,7 +614,8 @@ mod tests {
     fn test_beer_lambert_validation() {
         let distances = vec![1.0, 2.0, 3.0];
         let intensities = vec![0.9048, 0.8187, 0.7408]; // e^(-0.1*x)
-        let result = TheoremValidator::validate_beer_lambert_law(1.0, 0.1, &distances, &intensities);
+        let result =
+            TheoremValidator::validate_beer_lambert_law(1.0, 0.1, &distances, &intensities);
 
         assert!(result.passed);
         assert!(result.measured_error < 0.01);
@@ -578,13 +634,23 @@ mod tests {
 
         let result = TheoremValidator::validate_cfl_condition(dt, dx, c, dimensions);
 
-        assert!(result.passed, "CFL condition should pass for conservative timestep");
-        assert!(result.measured_error < 0.5, "CFL number should be < 0.5 for stability");
+        assert!(
+            result.passed,
+            "CFL condition should pass for conservative timestep"
+        );
+        assert!(
+            result.measured_error < 0.5,
+            "CFL number should be < 0.5 for stability"
+        );
 
         // Also test a case that should fail
         let unstable_dt = 1e-7; // Too large timestep
-        let result_unstable = TheoremValidator::validate_cfl_condition(unstable_dt, dx, c, dimensions);
-        assert!(!result_unstable.passed, "Large timestep should violate CFL condition");
+        let result_unstable =
+            TheoremValidator::validate_cfl_condition(unstable_dt, dx, c, dimensions);
+        assert!(
+            !result_unstable.passed,
+            "Large timestep should violate CFL condition"
+        );
     }
 
     #[test]
@@ -602,16 +668,14 @@ mod tests {
     #[test]
     fn test_validation_report() {
         let validator = TheoremValidator;
-        let validations = vec![
-            TheoremValidation {
-                theorem: "Test Theorem".to_string(),
-                passed: true,
-                error_bound: 1e-6,
-                measured_error: 1e-7,
-                confidence: 0.95,
-                details: "Test validation".to_string(),
-            }
-        ];
+        let validations = vec![TheoremValidation {
+            theorem: "Test Theorem".to_string(),
+            passed: true,
+            error_bound: 1e-6,
+            measured_error: 1e-7,
+            confidence: 0.95,
+            details: "Test validation".to_string(),
+        }];
 
         let report = validator.generate_validation_report(&validations);
         assert!(report.contains("Theorem Validation Report"));

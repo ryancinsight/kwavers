@@ -26,18 +26,18 @@
 //! - **Order of Accuracy**: Second-order convergence for central differences
 //! - **Harmonic Generation**: Amplitude ratios A₂/A₁ ∝ β, A₃/A₁ ∝ β²
 
-use kwavers::physics::imaging::elastography::*;
 use kwavers::grid::Grid;
 use kwavers::medium::HomogeneousMedium;
+use kwavers::physics::imaging::elastography::*;
 use ndarray::{Array3, Array4};
 use std::f64::consts::PI;
 
 /// Analytical test case for simple harmonic wave propagation
 struct SimpleHarmonicTestCase {
-    pub omega: f64,      // Angular frequency (rad/s)
-    pub k: f64,          // Wave number (1/m)
-    pub amplitude: f64,  // Wave amplitude (m)
-    pub phase: f64,      // Phase offset (rad)
+    pub omega: f64,     // Angular frequency (rad/s)
+    pub k: f64,         // Wave number (1/m)
+    pub amplitude: f64, // Wave amplitude (m)
+    pub phase: f64,     // Phase offset (rad)
 }
 
 impl SimpleHarmonicTestCase {
@@ -85,7 +85,13 @@ impl ConvergenceTester {
             let material = HyperelasticModel::neo_hookean_soft_tissue();
 
             // Create solver
-            let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material, NonlinearSWEConfig::default()).unwrap();
+            let solver = NonlinearElasticWaveSolver::new(
+                &grid,
+                &medium,
+                material,
+                NonlinearSWEConfig::default(),
+            )
+            .unwrap();
 
             // Create analytical reference solution
             let mut analytical_u = Array3::zeros((nx, ny, nz));
@@ -109,7 +115,11 @@ impl ConvergenceTester {
 
             // Run simulation
             let result = solver.propagate_waves(&initial_disp);
-            assert!(result.is_ok(), "Wave propagation should succeed for dx = {}", dx);
+            assert!(
+                result.is_ok(),
+                "Wave propagation should succeed for dx = {}",
+                dx
+            );
 
             let history = result.unwrap();
             let final_field = &history[history.len() - 1];
@@ -147,7 +157,8 @@ impl ConvergenceTester {
         let mut log_dx = Vec::new();
 
         for &(dx, error, _) in error_data {
-            if error > 1e-16 { // Avoid log(0)
+            if error > 1e-16 {
+                // Avoid log(0)
                 log_errors.push(error.ln());
                 log_dx.push(dx.ln());
             }
@@ -164,7 +175,11 @@ impl ConvergenceTester {
         let n = log_errors.len() as f64;
         let sum_x = log_dx.iter().sum::<f64>();
         let sum_y = log_errors.iter().sum::<f64>();
-        let sum_xy = log_dx.iter().zip(log_errors.iter()).map(|(x, y)| x * y).sum::<f64>();
+        let sum_xy = log_dx
+            .iter()
+            .zip(log_errors.iter())
+            .map(|(x, y)| x * y)
+            .sum::<f64>();
         let sum_x2 = log_dx.iter().map(|x| x * x).sum::<f64>();
 
         let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
@@ -185,7 +200,7 @@ impl HyperelasticValidator {
         let f = [
             [lambda, 0.0, 0.0],
             [0.0, 1.0 / (lambda as f64).sqrt(), 0.0],
-            [0.0, 0.0, 1.0 / (lambda as f64).sqrt()]
+            [0.0, 0.0, 1.0 / (lambda as f64).sqrt()],
         ];
 
         let stress = model.cauchy_stress(&f);
@@ -197,7 +212,8 @@ impl HyperelasticValidator {
         let analytical_sigma_11 = mu * (lambda * lambda - 1.0); // (μ/J) * (B₁₁ - 1)
 
         let numerical_sigma_11 = stress[0][0];
-        let relative_error = ((numerical_sigma_11 - analytical_sigma_11) / analytical_sigma_11).abs();
+        let relative_error =
+            ((numerical_sigma_11 - analytical_sigma_11) / analytical_sigma_11).abs();
 
         (numerical_sigma_11, relative_error)
     }
@@ -217,7 +233,7 @@ impl HyperelasticValidator {
         let f = [
             [lambda_x, 0.0, 0.0],
             [0.0, lambda_y, 0.0],
-            [0.0, 0.0, lambda_z]
+            [0.0, 0.0, lambda_z],
         ];
 
         let principal_stretches = model.principal_stretches(&f);
@@ -227,7 +243,8 @@ impl HyperelasticValidator {
         let mut expected_sorted = expected.clone();
         expected_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
-        let max_error = principal_stretches.iter()
+        let max_error = principal_stretches
+            .iter()
             .zip(expected_sorted.iter())
             .map(|(computed, expected)| (computed - expected).abs() / expected.abs())
             .fold(0.0, f64::max);
@@ -249,7 +266,7 @@ impl HarmonicValidator {
 
         let config = NonlinearSWEConfig {
             nonlinearity_parameter: 1e-4, // Small but non-zero nonlinearity for stable harmonic generation
-            enable_harmonics: true, // Enable harmonics
+            enable_harmonics: true,       // Enable harmonics
             ..Default::default()
         };
 
@@ -275,8 +292,22 @@ impl HarmonicValidator {
         // Debug output
         println!("Fundamental energy: {:.2e}", fundamental_energy);
         println!("Second harmonic energy: {:.2e}", second_harmonic_energy);
-        println!("Max fundamental displacement: {:.2e}", final_field.u_fundamental.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
-        println!("Max second harmonic displacement: {:.2e}", final_field.u_second.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
+        println!(
+            "Max fundamental displacement: {:.2e}",
+            final_field
+                .u_fundamental
+                .iter()
+                .cloned()
+                .fold(f64::NEG_INFINITY, f64::max)
+        );
+        println!(
+            "Max second harmonic displacement: {:.2e}",
+            final_field
+                .u_second
+                .iter()
+                .cloned()
+                .fold(f64::NEG_INFINITY, f64::max)
+        );
 
         // Check that both fundamental and second harmonic have energy
         let fundamental_ok = fundamental_energy > 1e-15;
@@ -291,7 +322,14 @@ impl HarmonicValidator {
 
         let ratio_ok = harmonic_ratio > 0.0 && harmonic_ratio < 1e-30; // Very small ratio expected for this simplified implementation
 
-        (harmonic_ratio, if fundamental_ok && harmonic_ok && ratio_ok { 0.0 } else { 1.0 })
+        (
+            harmonic_ratio,
+            if fundamental_ok && harmonic_ok && ratio_ok {
+                0.0
+            } else {
+                1.0
+            },
+        )
     }
 }
 
@@ -316,8 +354,14 @@ mod convergence_tests {
         let v = test_case.analytical_velocity(x, t);
 
         // Basic sanity checks
-        assert!(u.abs() <= test_case.amplitude, "Displacement should be bounded");
-        assert!(v.abs() <= test_case.amplitude * test_case.omega, "Velocity should be bounded");
+        assert!(
+            u.abs() <= test_case.amplitude,
+            "Displacement should be bounded"
+        );
+        assert!(
+            v.abs() <= test_case.amplitude * test_case.omega,
+            "Velocity should be bounded"
+        );
 
         // Check that ∂u/∂t = v
         let u_plus = test_case.analytical_displacement(x, t + 1e-6);
@@ -325,20 +369,31 @@ mod convergence_tests {
         let numerical_v = (u_plus - u_minus) / 2e-6;
 
         let relative_error = ((numerical_v - v) / v).abs();
-        assert!(relative_error < 1e-4, "Velocity derivative should match analytical");
+        assert!(
+            relative_error < 1e-4,
+            "Velocity derivative should match analytical"
+        );
     }
 
     #[test]
     fn test_convergence_study_setup() {
         let tester = ConvergenceTester::new();
 
-        assert!(!tester.grid_refinements.is_empty(), "Should have grid refinement levels");
-        assert!(tester.grid_refinements.len() >= 3, "Should have multiple refinement levels for convergence analysis");
+        assert!(
+            !tester.grid_refinements.is_empty(),
+            "Should have grid refinement levels"
+        );
+        assert!(
+            tester.grid_refinements.len() >= 3,
+            "Should have multiple refinement levels for convergence analysis"
+        );
 
         // Check that refinements are in decreasing order
         for i in 1..tester.grid_refinements.len() {
-            assert!(tester.grid_refinements[i] < tester.grid_refinements[i-1],
-                   "Grid refinements should be in decreasing order");
+            assert!(
+                tester.grid_refinements[i] < tester.grid_refinements[i - 1],
+                "Grid refinements should be in decreasing order"
+            );
         }
     }
 
@@ -348,16 +403,19 @@ mod convergence_tests {
 
         // Create synthetic convergence data: error = C * dx^2 (2nd order convergence)
         let synthetic_data = vec![
-            (0.01, 0.01, 0.0001),    // dx=0.01, error=0.01, dx²=0.0001
-            (0.005, 0.0025, 0.000025), // dx=0.005, error=0.0025, dx²=0.000025
+            (0.01, 0.01, 0.0001),           // dx=0.01, error=0.01, dx²=0.0001
+            (0.005, 0.0025, 0.000025),      // dx=0.005, error=0.0025, dx²=0.000025
             (0.0025, 0.000625, 0.00000625), // dx=0.0025, error=0.000625, dx²=0.00000625
         ];
 
         let convergence_rate = tester.analyze_convergence_rate(&synthetic_data);
 
         // Should be close to 2.0 for second-order convergence
-        assert!((convergence_rate - 2.0).abs() < 0.1,
-               "Should detect second-order convergence, got rate = {}", convergence_rate);
+        assert!(
+            (convergence_rate - 2.0).abs() < 0.1,
+            "Should detect second-order convergence, got rate = {}",
+            convergence_rate
+        );
     }
 
     #[test]
@@ -365,8 +423,15 @@ mod convergence_tests {
         let validator = HyperelasticValidator {};
         let (numerical_stress, relative_error) = validator.validate_neo_hookean_uniaxial();
 
-        assert!(numerical_stress < 0.0, "Compressive stress should be negative (compressive)");
-        assert!(relative_error < 0.01, "Relative error should be small: {}%", relative_error * 100.0);
+        assert!(
+            numerical_stress < 0.0,
+            "Compressive stress should be negative (compressive)"
+        );
+        assert!(
+            relative_error < 0.01,
+            "Relative error should be small: {}%",
+            relative_error * 100.0
+        );
     }
 
     #[test]
@@ -374,8 +439,14 @@ mod convergence_tests {
         let validator = HyperelasticValidator {};
         let (largest_stretch, max_error) = validator.validate_ogden_principal_stretches();
 
-        assert!(largest_stretch > 1.0, "Should have tensile stretch in x-direction");
-        assert!(max_error < 1e-10, "Principal stretch computation should be very accurate");
+        assert!(
+            largest_stretch > 1.0,
+            "Should have tensile stretch in x-direction"
+        );
+        assert!(
+            max_error < 1e-10,
+            "Principal stretch computation should be very accurate"
+        );
     }
 
     #[test]
@@ -383,9 +454,18 @@ mod convergence_tests {
         let validator = HarmonicValidator {};
         let (harmonic_ratio, validity_flag) = validator.validate_second_harmonic();
 
-        assert!(harmonic_ratio > 0.0, "Should generate second harmonic content");
-        assert_eq!(validity_flag, 0.0, "Harmonic generation should work correctly");
-        assert!(harmonic_ratio < 1e-8, "Second harmonic should be much smaller than fundamental");
+        assert!(
+            harmonic_ratio > 0.0,
+            "Should generate second harmonic content"
+        );
+        assert_eq!(
+            validity_flag, 0.0,
+            "Harmonic generation should work correctly"
+        );
+        assert!(
+            harmonic_ratio < 1e-8,
+            "Second harmonic should be much smaller than fundamental"
+        );
     }
 
     #[test]
@@ -402,13 +482,25 @@ mod convergence_tests {
             let stress = model.cauchy_stress(&f);
 
             // Basic sanity checks
-            assert!(stress[0][0] > 0.0, "Normal stress should be positive under compression");
+            assert!(
+                stress[0][0] > 0.0,
+                "Normal stress should be positive under compression"
+            );
             assert!(stress[0][0].is_finite(), "Stress should be finite");
 
             // Check symmetry (stress tensor should be symmetric)
-            assert!((stress[0][1] - stress[1][0]).abs() < 1e-10, "Stress tensor should be symmetric");
-            assert!((stress[0][2] - stress[2][0]).abs() < 1e-10, "Stress tensor should be symmetric");
-            assert!((stress[1][2] - stress[2][1]).abs() < 1e-10, "Stress tensor should be symmetric");
+            assert!(
+                (stress[0][1] - stress[1][0]).abs() < 1e-10,
+                "Stress tensor should be symmetric"
+            );
+            assert!(
+                (stress[0][2] - stress[2][0]).abs() < 1e-10,
+                "Stress tensor should be symmetric"
+            );
+            assert!(
+                (stress[1][2] - stress[2][1]).abs() < 1e-10,
+                "Stress tensor should be symmetric"
+            );
         }
     }
 
@@ -421,16 +513,28 @@ mod convergence_tests {
         let eigenvalues = model.matrix_eigenvalues(&identity);
 
         for &eigenval in &eigenvalues {
-            assert!((eigenval - 1.0).abs() < 1e-12, "Identity matrix eigenvalues should be 1.0");
+            assert!(
+                (eigenval - 1.0).abs() < 1e-12,
+                "Identity matrix eigenvalues should be 1.0"
+            );
         }
 
         // Test with diagonal matrix
         let diagonal = [[2.0, 0.0, 0.0], [0.0, 3.0, 0.0], [0.0, 0.0, 4.0]];
         let eigenvalues = model.matrix_eigenvalues(&diagonal);
 
-        assert!((eigenvalues[0] - 2.0).abs() < 1e-10, "Should find eigenvalue 2.0");
-        assert!((eigenvalues[1] - 3.0).abs() < 1e-10, "Should find eigenvalue 3.0");
-        assert!((eigenvalues[2] - 4.0).abs() < 1e-10, "Should find eigenvalue 4.0");
+        assert!(
+            (eigenvalues[0] - 2.0).abs() < 1e-10,
+            "Should find eigenvalue 2.0"
+        );
+        assert!(
+            (eigenvalues[1] - 3.0).abs() < 1e-10,
+            "Should find eigenvalue 3.0"
+        );
+        assert!(
+            (eigenvalues[2] - 4.0).abs() < 1e-10,
+            "Should find eigenvalue 4.0"
+        );
     }
 
     #[test]
@@ -438,8 +542,8 @@ mod convergence_tests {
         // Test Ogden material under uniaxial compression against analytical solution
         // Reference: Ogden (1984) "Nonlinear Elastic Deformations"
 
-        let mu = vec![1e3, 0.5e3];     // Shear moduli (Pa)
-        let alpha = vec![1.5, 5.0];   // Exponents (dimensionless)
+        let mu = vec![1e3, 0.5e3]; // Shear moduli (Pa)
+        let alpha = vec![1.5, 5.0]; // Exponents (dimensionless)
 
         let model = HyperelasticModel::Ogden {
             mu: mu.clone(),
@@ -455,7 +559,7 @@ mod convergence_tests {
         let f = [
             [lambda1, 0.0, 0.0],
             [0.0, lambda1, 0.0],
-            [0.0, 0.0, lambda3]
+            [0.0, 0.0, lambda3],
         ];
 
         // Compute Cauchy stress
@@ -467,35 +571,58 @@ mod convergence_tests {
         // Analytical solution for Ogden material under uniaxial compression
         // For incompressible Ogden material: σᵢ = Σⱼ μⱼ (λᵢ^αⱼ - 1)
 
-        let sigma_analytical_33 = mu.iter().zip(alpha.iter())
+        let sigma_analytical_33 = mu
+            .iter()
+            .zip(alpha.iter())
             .map(|(&mui, &alphai)| mui * ((lambda3 as f64).powf(alphai) - 1.0))
             .sum::<f64>();
 
-        let sigma_analytical_11 = mu.iter().zip(alpha.iter())
+        let sigma_analytical_11 = mu
+            .iter()
+            .zip(alpha.iter())
             .map(|(&mui, &alphai)| mui * ((lambda1 as f64).powf(alphai) - 1.0))
             .sum::<f64>();
 
-
         // Find compression stress (most negative) and lateral stresses
         let diagonal_stresses = [stress[0][0], stress[1][1], stress[2][2]];
-        let compression_stress = diagonal_stresses.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-        let lateral_stresses: Vec<f64> = diagonal_stresses.iter().filter(|&&s| s != compression_stress).cloned().collect();
+        let compression_stress = diagonal_stresses
+            .iter()
+            .fold(f64::INFINITY, |a, &b| a.min(b));
+        let lateral_stresses: Vec<f64> = diagonal_stresses
+            .iter()
+            .filter(|&&s| s != compression_stress)
+            .cloned()
+            .collect();
 
         // Check that compression stress is negative
-        assert!(compression_stress < 0.0, "Compression stress should be negative: {:.6}", compression_stress);
+        assert!(
+            compression_stress < 0.0,
+            "Compression stress should be negative: {:.6}",
+            compression_stress
+        );
 
         // Check that lateral stresses are positive (hoop stress)
         for &lateral_stress in lateral_stresses.iter() {
-            assert!(lateral_stress > 0.0, "Lateral stress should be positive: {:.6}", lateral_stress);
+            assert!(
+                lateral_stress > 0.0,
+                "Lateral stress should be positive: {:.6}",
+                lateral_stress
+            );
         }
 
         // Check incompressibility: trace(σ) should be reasonable
         let trace = stress[0][0] + stress[1][1] + stress[2][2];
-        assert!(trace.abs() < 1e6, "Trace should be reasonable for incompressible material");
+        assert!(
+            trace.abs() < 1e6,
+            "Trace should be reasonable for incompressible material"
+        );
 
         println!("Ogden uniaxial compression test passed:");
         println!("  λ₁ = {:.3}, λ₃ = {:.3}", lambda1, lambda3);
-        println!("  σ₁₁ = {:.2e} Pa, σ₃₃ = {:.2e} Pa", stress[0][0], stress[2][2]);
+        println!(
+            "  σ₁₁ = {:.2e} Pa, σ₃₃ = {:.2e} Pa",
+            stress[0][0], stress[2][2]
+        );
     }
 
     #[test]
@@ -525,12 +652,18 @@ mod convergence_tests {
 
             // For Neo-Hookean, ∂W/∂I₁ should equal C₁ at reference state
             if let HyperelasticModel::NeoHookean { c1, .. } = model {
-                assert!((dw_di1 - c1).abs() < 1e-10, "Neo-Hookean ∂W/∂I₁ should equal C₁");
+                assert!(
+                    (dw_di1 - c1).abs() < 1e-10,
+                    "Neo-Hookean ∂W/∂I₁ should equal C₁"
+                );
             }
 
             // For Mooney-Rivlin, ∂W/∂I₂ should equal C₂ at reference state
             if let HyperelasticModel::MooneyRivlin { c2, .. } = model {
-                assert!((dw_di2 - c2).abs() < 1e-10, "Mooney-Rivlin ∂W/∂I₂ should equal C₂");
+                assert!(
+                    (dw_di2 - c2).abs() < 1e-10,
+                    "Mooney-Rivlin ∂W/∂I₂ should equal C₂"
+                );
             }
         }
     }
@@ -553,13 +686,16 @@ mod convergence_tests {
             let identity = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
             let stress_ref = model.cauchy_stress(&identity);
 
-
             // At reference state, stress should be zero
             for i in 0..3 {
                 for j in 0..3 {
-                    assert!(stress_ref[i][j].abs() < 1e-10,
+                    assert!(
+                        stress_ref[i][j].abs() < 1e-10,
                         "Stress should be zero at reference state, got {:.2e} at [{},{}]",
-                        stress_ref[i][j], i, j);
+                        stress_ref[i][j],
+                        i,
+                        j
+                    );
                 }
             }
 
@@ -567,7 +703,7 @@ mod convergence_tests {
             let compression_extreme = [
                 [0.5, 0.0, 0.0],
                 [0.0, 0.5, 0.0],
-                [0.0, 0.0, 2.0]  // J = 0.5, extreme compression
+                [0.0, 0.0, 2.0], // J = 0.5, extreme compression
             ];
 
             let stress_extreme = model.cauchy_stress(&compression_extreme);
@@ -575,19 +711,23 @@ mod convergence_tests {
             // Extreme compression should produce finite, reasonable stresses
             for i in 0..3 {
                 for j in 0..3 {
-                    assert!(stress_extreme[i][j].is_finite(),
-                        "Stress should be finite under extreme compression");
-                    assert!(stress_extreme[i][j].abs() < 1e10,
+                    assert!(
+                        stress_extreme[i][j].is_finite(),
+                        "Stress should be finite under extreme compression"
+                    );
+                    assert!(
+                        stress_extreme[i][j].abs() < 1e10,
                         "Stress should be reasonable under extreme compression, got {:.2e}",
-                        stress_extreme[i][j]);
+                        stress_extreme[i][j]
+                    );
                 }
             }
 
             // Test simple shear deformation
             let shear = [
-                [1.0, 0.1, 0.0],  // Small shear strain
+                [1.0, 0.1, 0.0], // Small shear strain
                 [0.0, 1.0, 0.0],
-                [0.0, 0.0, 1.0]
+                [0.0, 0.0, 1.0],
             ];
 
             let stress_shear = model.cauchy_stress(&shear);
@@ -595,14 +735,19 @@ mod convergence_tests {
             // Simple shear should produce finite stresses
             for i in 0..3 {
                 for j in 0..3 {
-                    assert!(stress_shear[i][j].is_finite(),
-                        "Stress should be finite under shear deformation");
+                    assert!(
+                        stress_shear[i][j].is_finite(),
+                        "Stress should be finite under shear deformation"
+                    );
                 }
             }
 
             // Test strain energy at extreme conditions
-            let w_extreme = model.strain_energy(6.0, 12.0, 0.5);  // Extreme strain state
-            assert!(w_extreme.is_finite(), "Strain energy should be finite at extreme conditions");
+            let w_extreme = model.strain_energy(6.0, 12.0, 0.5); // Extreme strain state
+            assert!(
+                w_extreme.is_finite(),
+                "Strain energy should be finite at extreme conditions"
+            );
             assert!(w_extreme >= 0.0, "Strain energy should be non-negative");
         }
     }
@@ -614,16 +759,10 @@ mod convergence_tests {
         let model = HyperelasticModel::neo_hookean_soft_tissue();
 
         // Test with nearly singular deformation gradient (very small determinant)
-        let nearly_singular = [
-            [1e-6, 0.0, 0.0],
-            [0.0, 1e-6, 0.0],
-            [0.0, 0.0, 1e-6]
-        ];
+        let nearly_singular = [[1e-6, 0.0, 0.0], [0.0, 1e-6, 0.0], [0.0, 0.0, 1e-6]];
 
         // This should not crash or produce infinite values
-        let result = std::panic::catch_unwind(|| {
-            model.cauchy_stress(&nearly_singular)
-        });
+        let result = std::panic::catch_unwind(|| model.cauchy_stress(&nearly_singular));
 
         match result {
             Ok(stress) => {
@@ -643,17 +782,19 @@ mod convergence_tests {
 
         // Test with very large deformation (hyperelastic limit)
         let large_deformation = [
-            [10.0, 0.0, 0.0],  // 10x extension
+            [10.0, 0.0, 0.0], // 10x extension
             [0.0, 10.0, 0.0],
-            [0.0, 0.0, 0.1]    // 10x compression to maintain J=1
+            [0.0, 0.0, 0.1], // 10x compression to maintain J=1
         ];
 
         let stress_large = model.cauchy_stress(&large_deformation);
 
         for i in 0..3 {
             for j in 0..3 {
-                assert!(stress_large[i][j].is_finite(),
-                    "Stress should be finite under large deformation");
+                assert!(
+                    stress_large[i][j].is_finite(),
+                    "Stress should be finite under large deformation"
+                );
             }
         }
     }
@@ -669,30 +810,40 @@ mod convergence_tests {
         let eigenvals_identity = model.matrix_eigenvalues(&identity);
 
         for &val in &eigenvals_identity {
-            assert!((val - 1.0).abs() < 1e-10,
+            assert!(
+                (val - 1.0).abs() < 1e-10,
                 "Identity matrix should have eigenvalues of 1.0, got {:.6}",
-                val);
+                val
+            );
         }
 
         // Test diagonal matrix with zeros
         let diagonal_zero = [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 2.0]];
         let eigenvals_zero = model.matrix_eigenvalues(&diagonal_zero);
 
-        assert!((eigenvals_zero[0] - 0.0).abs() < 1e-10,
-            "Should find eigenvalue 0.0");
-        assert!((eigenvals_zero[1] - 1.0).abs() < 1e-10,
-            "Should find eigenvalue 1.0");
-        assert!((eigenvals_zero[2] - 2.0).abs() < 1e-10,
-            "Should find eigenvalue 2.0");
+        assert!(
+            (eigenvals_zero[0] - 0.0).abs() < 1e-10,
+            "Should find eigenvalue 0.0"
+        );
+        assert!(
+            (eigenvals_zero[1] - 1.0).abs() < 1e-10,
+            "Should find eigenvalue 1.0"
+        );
+        assert!(
+            (eigenvals_zero[2] - 2.0).abs() < 1e-10,
+            "Should find eigenvalue 2.0"
+        );
 
         // Test matrix with repeated eigenvalues
         let repeated_eigen = [[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]];
         let eigenvals_repeated = model.matrix_eigenvalues(&repeated_eigen);
 
         for &val in &eigenvals_repeated {
-            assert!((val - 2.0).abs() < 1e-10,
+            assert!(
+                (val - 2.0).abs() < 1e-10,
                 "Repeated eigenvalue matrix should have all eigenvalues 2.0, got {:.6}",
-                val);
+                val
+            );
         }
     }
 
@@ -720,8 +871,11 @@ mod convergence_tests {
             let model = HyperelasticModel::neo_hookean_soft_tissue();
             let solver = NonlinearElasticWaveSolver::new(&grid, &medium, model, config.clone());
 
-            assert!(solver.is_ok(), "Solver should create successfully with config: nonlinearity = {}",
-                   config.nonlinearity_parameter);
+            assert!(
+                solver.is_ok(),
+                "Solver should create successfully with config: nonlinearity = {}",
+                config.nonlinearity_parameter
+            );
         }
     }
 
@@ -750,7 +904,8 @@ mod convergence_tests {
                 ..Default::default()
             };
 
-            let mut solver = NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config).unwrap();
+            let mut solver =
+                NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config).unwrap();
 
             // Create a focused wave with known amplitude
             let mut initial_disp = Array3::zeros((64, 8, 8));
@@ -769,12 +924,14 @@ mod convergence_tests {
             let final_field = history.last().unwrap();
 
             // Analyze steepening behavior
-            let center_line: Vec<f64> = (0..64).map(|i| final_field.u_fundamental[[i, 4, 4]]).collect();
+            let center_line: Vec<f64> = (0..64)
+                .map(|i| final_field.u_fundamental[[i, 4, 4]])
+                .collect();
 
             // Compute maximum gradient (steepness measure)
             let mut max_gradient = 0.0f64;
             for i in 1..63 {
-                let gradient = (center_line[i+1] - center_line[i-1]).abs() / (2.0 * grid.dx);
+                let gradient = (center_line[i + 1] - center_line[i - 1]).abs() / (2.0 * grid.dx);
                 max_gradient = max_gradient.max(gradient);
             }
 
@@ -782,16 +939,25 @@ mod convergence_tests {
             match regime {
                 "linear" => {
                     // Linear regime: minimal steepening
-                    assert!(max_gradient < amplitude * 2.0 * PI / (20.0 * grid.dx) * 1.1,
-                           "Linear regime should show minimal steepening: gradient={:.2e}", max_gradient);
+                    assert!(
+                        max_gradient < amplitude * 2.0 * PI / (20.0 * grid.dx) * 1.1,
+                        "Linear regime should show minimal steepening: gradient={:.2e}",
+                        max_gradient
+                    );
                 }
                 "weak_nonlinear" => {
                     // Weak nonlinear: moderate steepening
                     let linear_gradient = amplitude * 2.0 * PI / (20.0 * grid.dx);
-                    assert!(max_gradient > linear_gradient * 1.05,
-                           "Weak nonlinear regime should show moderate steepening: gradient={:.2e}", max_gradient);
-                    assert!(max_gradient < linear_gradient * 2.0,
-                           "Weak nonlinear steepening should be bounded: gradient={:.2e}", max_gradient);
+                    assert!(
+                        max_gradient > linear_gradient * 1.05,
+                        "Weak nonlinear regime should show moderate steepening: gradient={:.2e}",
+                        max_gradient
+                    );
+                    assert!(
+                        max_gradient < linear_gradient * 2.0,
+                        "Weak nonlinear steepening should be bounded: gradient={:.2e}",
+                        max_gradient
+                    );
                 }
                 "strong_nonlinear" => {
                     // Strong nonlinear: significant steepening
@@ -799,7 +965,7 @@ mod convergence_tests {
                     assert!(max_gradient > linear_gradient * 1.5,
                            "Strong nonlinear regime should show significant steepening: gradient={:.2e}", max_gradient);
                 }
-                _ => unreachable!()
+                _ => unreachable!(),
             }
 
             println!("✓ {} - Max gradient: {:.2e}", description, max_gradient);
@@ -831,7 +997,8 @@ mod convergence_tests {
                 ..Default::default()
             };
 
-            let mut solver = NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config).unwrap();
+            let mut solver =
+                NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config).unwrap();
 
             // Create identical initial conditions
             let mut initial_disp = Array3::zeros((64, 8, 8));
@@ -847,15 +1014,18 @@ mod convergence_tests {
             let final_field = history.last().unwrap();
 
             // Analyze results
-            let center_line: Vec<f64> = (0..64).map(|i| final_field.u_fundamental[[i, 4, 4]]).collect();
+            let center_line: Vec<f64> = (0..64)
+                .map(|i| final_field.u_fundamental[[i, 4, 4]])
+                .collect();
 
             // Compute RMS amplitude (attenuation effect)
-            let rms_amplitude = (center_line.iter().map(|&x| x*x).sum::<f64>() / center_line.len() as f64).sqrt();
+            let rms_amplitude =
+                (center_line.iter().map(|&x| x * x).sum::<f64>() / center_line.len() as f64).sqrt();
 
             // Compute steepening measure
             let mut max_gradient = 0.0f64;
             for i in 1..63 {
-                let gradient = (center_line[i+1] - center_line[i-1]).abs() / (2.0 * grid.dx);
+                let gradient = (center_line[i + 1] - center_line[i - 1]).abs() / (2.0 * grid.dx);
                 max_gradient = max_gradient.max(gradient);
             }
 
@@ -864,26 +1034,49 @@ mod convergence_tests {
             // Expected behavior: higher attenuation reduces both amplitude and steepening
             match attenuation_regime {
                 "no_attenuation" => {
-                    assert!(rms_amplitude > amplitude * 0.9, "No attenuation should preserve amplitude");
-                    assert!(max_gradient > linear_gradient * 1.2, "No attenuation should allow steepening");
+                    assert!(
+                        rms_amplitude > amplitude * 0.9,
+                        "No attenuation should preserve amplitude"
+                    );
+                    assert!(
+                        max_gradient > linear_gradient * 1.2,
+                        "No attenuation should allow steepening"
+                    );
                 }
                 "low_attenuation" => {
-                    assert!(rms_amplitude > amplitude * 0.7, "Low attenuation should moderately reduce amplitude");
-                    assert!(max_gradient > linear_gradient * 1.1, "Low attenuation should allow some steepening");
+                    assert!(
+                        rms_amplitude > amplitude * 0.7,
+                        "Low attenuation should moderately reduce amplitude"
+                    );
+                    assert!(
+                        max_gradient > linear_gradient * 1.1,
+                        "Low attenuation should allow some steepening"
+                    );
                 }
                 "moderate_attenuation" => {
-                    assert!(rms_amplitude > amplitude * 0.4, "Moderate attenuation should significantly reduce amplitude");
-                    assert!(max_gradient > linear_gradient * 1.05, "Moderate attenuation should limit steepening");
+                    assert!(
+                        rms_amplitude > amplitude * 0.4,
+                        "Moderate attenuation should significantly reduce amplitude"
+                    );
+                    assert!(
+                        max_gradient > linear_gradient * 1.05,
+                        "Moderate attenuation should limit steepening"
+                    );
                 }
                 "high_attenuation" => {
-                    assert!(rms_amplitude < amplitude * 0.3, "High attenuation should strongly reduce amplitude");
+                    assert!(
+                        rms_amplitude < amplitude * 0.3,
+                        "High attenuation should strongly reduce amplitude"
+                    );
                     // High attenuation may prevent significant steepening
                 }
-                _ => unreachable!()
+                _ => unreachable!(),
             }
 
-            println!("✓ Attenuation {} - RMS amp: {:.2e}, Max gradient: {:.2e}",
-                    attenuation_regime, rms_amplitude, max_gradient);
+            println!(
+                "✓ Attenuation {} - RMS amp: {:.2e}, Max gradient: {:.2e}",
+                attenuation_regime, rms_amplitude, max_gradient
+            );
         }
     }
 
@@ -898,9 +1091,9 @@ mod convergence_tests {
 
         // Test different nonlinearity parameters
         let nonlinearity_cases = vec![
-            (0.01, 1e-3),  // Low nonlinearity, low amplitude
-            (0.05, 1e-3),  // Medium nonlinearity, low amplitude
-            (0.01, 2e-3),  // Low nonlinearity, high amplitude
+            (0.01, 1e-3), // Low nonlinearity, low amplitude
+            (0.05, 1e-3), // Medium nonlinearity, low amplitude
+            (0.01, 2e-3), // Low nonlinearity, high amplitude
         ];
 
         for (beta, amplitude) in nonlinearity_cases {
@@ -910,7 +1103,8 @@ mod convergence_tests {
                 ..Default::default()
             };
 
-            let mut solver = NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config).unwrap();
+            let mut solver =
+                NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config).unwrap();
 
             // Theoretical shock formation distance (simplified)
             // Ls ≈ ρ c³ / (β ω A) where A is amplitude
@@ -933,10 +1127,12 @@ mod convergence_tests {
             let final_field = history.last().unwrap();
 
             // Analyze final steepening
-            let center_line: Vec<f64> = (10..118).map(|i| final_field.u_fundamental[[i, 4, 4]]).collect();
+            let center_line: Vec<f64> = (10..118)
+                .map(|i| final_field.u_fundamental[[i, 4, 4]])
+                .collect();
             let mut final_gradient = 0.0f64;
-            for i in 1..center_line.len()-1 {
-                let gradient = (center_line[i+1] - center_line[i-1]).abs() / (2.0 * grid.dx);
+            for i in 1..center_line.len() - 1 {
+                let gradient = (center_line[i + 1] - center_line[i - 1]).abs() / (2.0 * grid.dx);
                 final_gradient = final_gradient.max(gradient);
             }
 
@@ -945,13 +1141,23 @@ mod convergence_tests {
 
             // Higher nonlinearity/amplitude should lead to faster steepening
             if beta >= 0.05 || amplitude >= 2e-3 {
-                assert!(steepening_ratio > 2.0, "High nonlinearity/amplitude should cause significant steepening: ratio={:.2}", steepening_ratio);
+                assert!(
+                    steepening_ratio > 2.0,
+                    "High nonlinearity/amplitude should cause significant steepening: ratio={:.2}",
+                    steepening_ratio
+                );
             } else {
-                assert!(steepening_ratio > 1.2, "Low nonlinearity/amplitude should cause moderate steepening: ratio={:.2}", steepening_ratio);
+                assert!(
+                    steepening_ratio > 1.2,
+                    "Low nonlinearity/amplitude should cause moderate steepening: ratio={:.2}",
+                    steepening_ratio
+                );
             }
 
-            println!("✓ β={:.3}, A={:.1e} - Shock distance: {:.1} pts, Steepening ratio: {:.2}",
-                    beta, amplitude, ls_grid_points, steepening_ratio);
+            println!(
+                "✓ β={:.3}, A={:.1e} - Shock distance: {:.1} pts, Steepening ratio: {:.2}",
+                beta, amplitude, ls_grid_points, steepening_ratio
+            );
         }
     }
 }

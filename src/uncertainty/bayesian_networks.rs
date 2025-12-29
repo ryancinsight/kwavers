@@ -4,7 +4,12 @@
 //! uncertainty estimation in physics-informed neural networks.
 
 use crate::error::KwaversResult;
+#[cfg(feature = "pinn")]
+use burn::tensor::backend::Backend;
+#[cfg(feature = "pinn")]
 use ndarray::{Array1, Array2};
+#[cfg(not(feature = "pinn"))]
+use ndarray::Array2;
 use std::collections::HashMap;
 
 /// Configuration for Bayesian PINN
@@ -39,8 +44,10 @@ pub struct PredictionWithUncertainty {
 }
 
 /// Bayesian Physics-Informed Neural Network
+#[derive(Debug)]
 pub struct BayesianPINN {
-    config: BayesianConfig,
+    _config: BayesianConfig,
+    #[allow(dead_code)]
     dropout_masks: Vec<Array2<bool>>,
 }
 
@@ -48,27 +55,32 @@ impl BayesianPINN {
     /// Create new Bayesian PINN
     pub fn new(config: BayesianConfig) -> KwaversResult<Self> {
         Ok(Self {
-            config,
+            _config: config,
             dropout_masks: Vec::new(),
         })
     }
 
     /// Quantify uncertainty for PINN predictions
     #[cfg(feature = "pinn")]
-    pub fn quantify_uncertainty(
-        &mut self,
-        pinn: &crate::ml::pinn::BurnPINN1DWave,
+    pub fn quantify_uncertainty<B: Backend>(
+        &self,
+        pinn: &crate::ml::pinn::BurnPINN1DWave<B>,
         inputs: &Array2<f32>,
     ) -> KwaversResult<PredictionWithUncertainty> {
         let mut predictions = Vec::new();
 
         // Generate Monte Carlo samples with dropout
-        for _ in 0..self.config.num_samples {
+        for _ in 0..self._config.num_samples {
             // Apply dropout mask
             self.apply_dropout_mask(pinn)?;
 
             // Make prediction
-            let prediction = pinn.predict(inputs)?;
+            let x: Array1<f64> = inputs.column(0).mapv(|v| v as f64).to_owned();
+            let t: Array1<f64> = inputs.column(1).mapv(|v| v as f64).to_owned();
+            let device = pinn.device();
+
+            let prediction_f64 = pinn.predict(&x, &t, &device)?;
+            let prediction = prediction_f64.mapv(|v| v as f32);
             predictions.push(prediction);
         }
 
@@ -78,7 +90,10 @@ impl BayesianPINN {
 
     /// Apply dropout mask to network
     #[cfg(feature = "pinn")]
-    fn apply_dropout_mask(&mut self, pinn: &crate::ml::pinn::BurnPINN1DWave) -> KwaversResult<()> {
+    fn apply_dropout_mask<B: Backend>(
+        &self,
+        _pinn: &crate::ml::pinn::BurnPINN1DWave<B>,
+    ) -> KwaversResult<()> {
         // This would modify the PINN's internal dropout layers
         // For now, this is a placeholder implementation
         Ok(())
@@ -91,7 +106,7 @@ impl BayesianPINN {
     ) -> KwaversResult<PredictionWithUncertainty> {
         if predictions.is_empty() {
             return Err(crate::error::KwaversError::InvalidInput(
-                "No predictions available for statistics".to_string()
+                "No predictions available for statistics".to_string(),
             ));
         }
 
@@ -130,16 +145,15 @@ impl BayesianPINN {
         confidence_intervals.insert("95%".to_string(), (ci_95_lower, ci_95_upper));
 
         // 68% confidence interval
-        let z_score_68 = 1.0;
+        let _z_score_68 = 1.0;
         let ci_68_lower = &mean_prediction - &uncertainty;
         let ci_68_upper = &mean_prediction + &uncertainty;
         confidence_intervals.insert("68%".to_string(), (ci_68_lower, ci_68_upper));
 
         // Compute reliability score
         let mean_uncertainty = uncertainty.iter().sum::<f32>() / uncertainty.len() as f32;
-        let mean_prediction_magnitude = mean_prediction.iter()
-            .map(|x: &f32| x.abs())
-            .sum::<f32>() / mean_prediction.len() as f32;
+        let mean_prediction_magnitude = mean_prediction.iter().map(|x: &f32| x.abs()).sum::<f32>()
+            / mean_prediction.len() as f32;
 
         let reliability_score = if mean_prediction_magnitude > 0.0 {
             1.0 / (1.0 + mean_uncertainty / mean_prediction_magnitude)
@@ -162,7 +176,7 @@ impl BayesianPINN {
     ) -> KwaversResult<UncertaintyDecomposition> {
         if predictions.len() < 2 {
             return Err(crate::error::KwaversError::InvalidInput(
-                "Need at least 2 predictions for uncertainty decomposition".to_string()
+                "Need at least 2 predictions for uncertainty decomposition".to_string(),
             ));
         }
 
@@ -203,10 +217,13 @@ impl BayesianPINN {
         mae /= (n_samples * stats.mean_prediction.len()) as f32;
 
         // Adjust uncertainty estimates based on calibration
-        let calibration_factor = mae / (stats.uncertainty.iter().sum::<f32>() / stats.uncertainty.len() as f32);
+        let calibration_factor =
+            mae / (stats.uncertainty.iter().sum::<f32>() / stats.uncertainty.len() as f32);
 
-        println!("Uncertainty calibration: MAE = {:.4}, calibration factor = {:.4}",
-                 mae, calibration_factor);
+        println!(
+            "Uncertainty calibration: MAE = {:.4}, calibration factor = {:.4}",
+            mae, calibration_factor
+        );
 
         Ok(())
     }
@@ -285,4 +302,3 @@ mod tests {
         assert_eq!(result.aleatoric_uncertainty.dim(), (5, 5));
     }
 }
-

@@ -3,24 +3,24 @@
 //! This module contains the HTTP request handlers for the enterprise PINN API,
 //! implementing RESTful endpoints for training, inference, and model management.
 
+use crate::api::auth::AuthenticatedUser;
+use crate::api::{
+    APIError, HealthCheck, JobInfoResponse, JobStatus, ListModelsResponse, ModelMetadata,
+    PINNInferenceRequest, PINNInferenceResponse, PINNTrainingRequest, PINNTrainingResponse,
+    PaginationParams,
+};
 use axum::{
     extract::{Json, Path, Query, State},
     http::StatusCode,
     response::Json as JsonResponse,
 };
-use crate::api::{
-    PINNTrainingRequest, PINNTrainingResponse, PINNInferenceRequest, PINNInferenceResponse,
-    JobInfoResponse, ModelMetadata, ListModelsResponse, HealthCheck, APIError,
-    PaginationParams, JobStatus,
-};
-use crate::api::auth::AuthenticatedUser;
 
 // Re-export clinical handlers for router setup
 #[cfg(feature = "pinn")]
 pub use crate::api::clinical_handlers::*;
 
 /// Application state shared across handlers
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct AppState {
     /// Service version information
     pub version: String,
@@ -44,7 +44,8 @@ pub async fn health_check(State(state): State<AppState>) -> JsonResponse<HealthC
         status: crate::api::HealthStatus::Healthy,
         version: crate::api::APIVersion {
             version: state.version.clone(),
-            build_date: std::env::var("VERGEN_BUILD_DATE").unwrap_or_else(|_| "unknown".to_string()),
+            build_date: std::env::var("VERGEN_BUILD_DATE")
+                .unwrap_or_else(|_| "unknown".to_string()),
             commit_hash: std::env::var("VERGEN_GIT_SHA").unwrap_or_else(|_| "unknown".to_string()),
         },
         uptime_seconds,
@@ -86,10 +87,7 @@ pub async fn train_pinn_model(
                 ))
             }
         }
-        Err(error) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            JsonResponse(error),
-        )),
+        Err(error) => Err((StatusCode::INTERNAL_SERVER_ERROR, JsonResponse(error))),
     }
 }
 
@@ -121,7 +119,10 @@ pub async fn get_job_info(
             started_at: job.started_at,
             completed_at: job.completed_at,
             progress: job.progress,
-            result_url: job.result.as_ref().map(|_| format!("/api/jobs/{}/result", job_id)), // Placeholder URL
+            result_url: job
+                .result
+                .as_ref()
+                .map(|_| format!("/api/jobs/{}/result", job_id)), // Placeholder URL
             error_message: job.error_message,
         };
 
@@ -145,7 +146,7 @@ pub async fn run_inference(
     auth: AuthenticatedUser,
     Json(request): Json<PINNInferenceRequest>,
 ) -> Result<JsonResponse<PINNInferenceResponse>, (StatusCode, JsonResponse<APIError>)> {
-    let start_time = std::time::Instant::now();
+    let _start_time = std::time::Instant::now();
 
     // Get model from registry
     let stored_model = match state.model_registry.get_model(&request.model_id) {
@@ -163,7 +164,9 @@ pub async fn run_inference(
     };
 
     // Check if user owns this model
-    if !state.model_registry.get_user_models(&auth.user_id)
+    if !state
+        .model_registry
+        .get_user_models(&auth.user_id)
         .iter()
         .any(|m| m.model_id == request.model_id)
     {
@@ -177,53 +180,17 @@ pub async fn run_inference(
         ));
     }
 
-    // Deserialize and run inference
     #[cfg(feature = "pinn")]
-    match serde_json::from_slice::<crate::ml::pinn::TrainingResult>(&stored_model.model_data) {
-        Ok(training_result) => {
-            // For now, return mock predictions based on input coordinates
-            // In a full implementation, this would load the actual trained model
-            // and perform inference on the provided coordinates
-            let predictions: Vec<Vec<f64>> = request.coordinates
-                .iter()
-                .enumerate()
-                .map(|(i, coord)| {
-                    // Mock prediction based on coordinate values
-                    vec![
-                        coord.get(0).copied().unwrap_or(0.0) * 0.1 + 0.05,
-                        coord.get(1).copied().unwrap_or(0.0) * 0.15 + 0.08,
-                        coord.get(2).copied().unwrap_or(0.0) * 0.12 + 0.06,
-                    ]
-                })
-                .collect();
-
-            // Mock uncertainties
-            let uncertainties = Some(
-                predictions.iter()
-                    .map(|pred| pred.iter().map(|&p| p * 0.1).collect())
-                    .collect()
-            );
-
-            let processing_time = start_time.elapsed().as_millis() as u64;
-
-            let response = PINNInferenceResponse {
-                predictions,
-                uncertainties,
-                processing_time_ms: processing_time,
-            };
-
-            Ok(JsonResponse(response))
-        }
-        Err(e) => {
-            Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                JsonResponse(APIError {
-                    error: crate::api::APIErrorType::InternalError,
-                    message: format!("Failed to load model: {}", e),
-                    details: None,
-                }),
-            ))
-        }
+    {
+        let _ = stored_model;
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            JsonResponse(APIError {
+                error: crate::api::APIErrorType::ServiceUnavailable,
+                message: "PINN inference is not available: stored model artifacts are not yet deserializable into an executable model".to_string(),
+                details: None,
+            }),
+        ));
     }
 
     #[cfg(not(feature = "pinn"))]
@@ -302,10 +269,7 @@ pub async fn delete_model(
     // Delete model from registry
     match state.model_registry.delete_model(&auth.user_id, &model_id) {
         Ok(_) => Ok(StatusCode::NO_CONTENT),
-        Err(error) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            JsonResponse(error),
-        )),
+        Err(error) => Err((StatusCode::INTERNAL_SERVER_ERROR, JsonResponse(error))),
     }
 }
 
@@ -313,7 +277,8 @@ pub async fn delete_model(
 mod tests {
     use super::*;
     use axum::http::Request;
-    use tower::ServiceExt;
+    use tower::Service;
+    use tower::util::ServiceExt;
 
     #[tokio::test]
     async fn test_health_check() {

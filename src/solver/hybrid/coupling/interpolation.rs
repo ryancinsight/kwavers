@@ -5,8 +5,7 @@ use ndarray::Array3;
 use serde::{Deserialize, Serialize};
 
 /// Interpolation schemes for inter-domain coupling
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 pub enum InterpolationScheme {
     /// Linear interpolation (2nd order)
     Linear,
@@ -20,7 +19,6 @@ pub enum InterpolationScheme {
     /// Adaptive interpolation (switches based on local conditions)
     Adaptive,
 }
-
 
 /// Manager for interpolation operations
 #[derive(Debug)]

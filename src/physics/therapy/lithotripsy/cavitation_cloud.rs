@@ -17,12 +17,9 @@
 //! - Sapozhnikov et al. (2002): "Cloud cavitation control for lithotripsy"
 //! - Zhong et al. (1997): "Dynamics of bubble cloud in shock wave lithotripsy"
 
-use crate::error::KwaversResult;
 use crate::physics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
-use crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel;
-use ndarray::{Array3, Array4};
+use ndarray::Array3;
 use serde::{Deserialize, Serialize};
-use std::f64::consts::PI;
 
 /// Parameters for cavitation cloud formation and dynamics
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,16 +49,16 @@ pub struct CloudParameters {
 impl Default for CloudParameters {
     fn default() -> Self {
         Self {
-            initial_radius: 1e-6,        // 1 μm initial bubbles
-            surface_tension: 0.072,      // Water surface tension
-            viscosity: 0.001,            // Water viscosity
-            ambient_pressure: 101325.0,  // Atmospheric pressure
-            gas_concentration: 0.24,     // Dissolved air in water
-            nucleation_threshold: -10e6, // -10 MPa for nucleation
+            initial_radius: 1e-6,           // 1 μm initial bubbles
+            surface_tension: 0.072,         // Water surface tension
+            viscosity: 0.001,               // Water viscosity
+            ambient_pressure: 101325.0,     // Atmospheric pressure
+            gas_concentration: 0.24,        // Dissolved air in water
+            nucleation_threshold: -10e6,    // -10 MPa for nucleation
             cloud_expansion_velocity: 50.0, // 50 m/s expansion
-            max_cloud_radius: 5e-3,      // 5 mm max cloud size
-            interaction_distance: 1e-4,  // 100 μm interaction distance
-            collapse_time: 100e-6,       // 100 μs collapse time
+            max_cloud_radius: 5e-3,         // 5 mm max cloud size
+            interaction_distance: 1e-4,     // 100 μm interaction distance
+            collapse_time: 100e-6,          // 100 μs collapse time
         }
     }
 }
@@ -78,7 +75,7 @@ pub struct CavitationCloudDynamics {
     /// Cloud pressure field [Pa]
     cloud_pressure: Array3<f64>,
     /// Cloud velocity field [m/s]
-    cloud_velocity: Array3<f64>,
+    _cloud_velocity: Array3<f64>,
     /// Erosion rate field [kg/(m²·s)]
     erosion_rate: Array3<f64>,
     /// Cloud boundaries
@@ -91,7 +88,7 @@ impl CavitationCloudDynamics {
         let bubble_field = Array3::from_elem(grid_shape, Vec::new());
         let cloud_density = Array3::zeros(grid_shape);
         let cloud_pressure = Array3::from_elem(grid_shape, params.ambient_pressure);
-        let cloud_velocity = Array3::zeros(grid_shape);
+        let _cloud_velocity = Array3::zeros(grid_shape);
         let erosion_rate = Array3::zeros(grid_shape);
 
         Self {
@@ -99,7 +96,7 @@ impl CavitationCloudDynamics {
             bubble_field,
             cloud_density,
             cloud_pressure,
-            cloud_velocity,
+            _cloud_velocity,
             erosion_rate,
             cloud_boundaries: Vec::new(),
         }
@@ -118,12 +115,14 @@ impl CavitationCloudDynamics {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    if stone_geometry[[i, j, k]] > 0.5 { // Stone voxel
+                    if stone_geometry[[i, j, k]] > 0.5 {
+                        // Stone voxel
                         // Check neighboring liquid voxels for nucleation
                         let neighbors = self.get_neighbor_indices(i, j, k, stone_geometry.dim());
 
                         for (ni, nj, nk) in neighbors {
-                            if stone_geometry[[ni, nj, nk]] < 0.5 { // Liquid voxel
+                            if stone_geometry[[ni, nj, nk]] < 0.5 {
+                                // Liquid voxel
                                 let shock_p = shock_pressure[[ni, nj, nk]];
 
                                 // Nucleate bubbles if pressure is below threshold
@@ -140,17 +139,35 @@ impl CavitationCloudDynamics {
     }
 
     /// Get neighboring voxel indices (6-connected)
-    fn get_neighbor_indices(&self, i: usize, j: usize, k: usize, dims: (usize, usize, usize)) -> Vec<(usize, usize, usize)> {
+    fn get_neighbor_indices(
+        &self,
+        i: usize,
+        j: usize,
+        k: usize,
+        dims: (usize, usize, usize),
+    ) -> Vec<(usize, usize, usize)> {
         let mut neighbors = Vec::new();
         let (nx, ny, nz) = dims;
 
         // Check all 6 directions
-        if i > 0 { neighbors.push((i-1, j, k)); }
-        if i < nx - 1 { neighbors.push((i+1, j, k)); }
-        if j > 0 { neighbors.push((i, j-1, k)); }
-        if j < ny - 1 { neighbors.push((i, j+1, k)); }
-        if k > 0 { neighbors.push((i, j, k-1)); }
-        if k < nz - 1 { neighbors.push((i, j, k+1)); }
+        if i > 0 {
+            neighbors.push((i - 1, j, k));
+        }
+        if i < nx - 1 {
+            neighbors.push((i + 1, j, k));
+        }
+        if j > 0 {
+            neighbors.push((i, j - 1, k));
+        }
+        if j < ny - 1 {
+            neighbors.push((i, j + 1, k));
+        }
+        if k > 0 {
+            neighbors.push((i, j, k - 1));
+        }
+        if k < nz - 1 {
+            neighbors.push((i, j, k + 1));
+        }
 
         neighbors
     }
@@ -162,19 +179,21 @@ impl CavitationCloudDynamics {
         let nucleation_rate = pressure_deficit.abs() / 1e6; // Empirical scaling
 
         // Create bubble parameters using canonical BubbleParameters fields
-        let mut bubble_params = BubbleParameters::default();
-        bubble_params.r0 = self.params.initial_radius;
-        bubble_params.p0 = self.params.ambient_pressure;
-        bubble_params.rho_liquid = 1000.0; // Water density
-        bubble_params.c_liquid = 1500.0;   // Speed of sound in water
-        bubble_params.mu_liquid = self.params.viscosity;
-        bubble_params.sigma = self.params.surface_tension;
-        bubble_params.accommodation_coeff = 0.01;
-        bubble_params.thermal_conductivity = 0.6;
-        bubble_params.specific_heat_liquid = 4182.0; // Water cp [J/(kg·K)]
-        bubble_params.gamma = 1.4; // Polytropic exponent
-        bubble_params.pv = 2330.0; // Vapor pressure [Pa] at 20°C
-        bubble_params.initial_gas_pressure = self.params.ambient_pressure;
+        let bubble_params = BubbleParameters {
+            r0: self.params.initial_radius,
+            p0: self.params.ambient_pressure,
+            rho_liquid: 1000.0, // Water density
+            c_liquid: 1500.0,   // Speed of sound in water
+            mu_liquid: self.params.viscosity,
+            sigma: self.params.surface_tension,
+            accommodation_coeff: 0.01,
+            thermal_conductivity: 0.6,
+            specific_heat_liquid: 4182.0, // Water cp [J/(kg·K)]
+            gamma: 1.4,                   // Polytropic exponent
+            pv: 2330.0,                   // Vapor pressure [Pa] at 20°C
+            initial_gas_pressure: self.params.ambient_pressure,
+            ..Default::default()
+        };
 
         // Create initial bubble state
         let bubble_state = BubbleState::new(&bubble_params);
@@ -282,7 +301,8 @@ impl CavitationCloudDynamics {
                         if bubble.radius < self.params.initial_radius * 0.1 {
                             let microjet_velocity = 200.0; // m/s
                             let density = 1000.0; // kg/m³
-                            let impact_pressure = 0.5 * density * microjet_velocity * microjet_velocity;
+                            let impact_pressure =
+                                0.5 * density * microjet_velocity * microjet_velocity;
                             cell_impact = Some(impact_pressure);
                         }
                     }
@@ -295,7 +315,7 @@ impl CavitationCloudDynamics {
     }
 
     /// Calculate microjet impact on stone surface
-    fn calculate_microjet_impact(&mut self, i: usize, j: usize, k: usize, bubble: &BubbleState) {
+    fn _calculate_microjet_impact(&mut self, i: usize, j: usize, k: usize, _bubble: &BubbleState) {
         // Microjet velocity can reach hundreds of m/s
         // Impact pressure: P = 0.5 * ρ * v²
         let microjet_velocity = 200.0; // m/s (typical value)
@@ -370,9 +390,10 @@ mod tests {
         for i in 0..grid_shape.0 {
             for j in 0..grid_shape.1 {
                 for k in 0..grid_shape.2 {
-                    let dist = ((i as f64 - center as f64).powi(2) +
-                               (j as f64 - center as f64).powi(2) +
-                               (k as f64 - center as f64).powi(2)).sqrt();
+                    let dist = ((i as f64 - center as f64).powi(2)
+                        + (j as f64 - center as f64).powi(2)
+                        + (k as f64 - center as f64).powi(2))
+                    .sqrt();
                     if dist <= radius as f64 {
                         stone_geometry[[i, j, k]] = 1.0;
                     }
@@ -411,11 +432,17 @@ mod tests {
 
         // Cloud should have expanded to more voxels
         let final_nonzero_voxels = cloud.cloud_density().iter().filter(|&&x| x > 0.0).count();
-        assert!(final_nonzero_voxels > initial_nonzero_voxels, "Cloud should expand to more voxels");
+        assert!(
+            final_nonzero_voxels > initial_nonzero_voxels,
+            "Cloud should expand to more voxels"
+        );
 
         // Total density should be conserved (approximately)
         let final_total_density: f64 = cloud.cloud_density().iter().sum();
-        assert!(final_total_density > initial_density * 0.8, "Total density should be approximately conserved during expansion");
+        assert!(
+            final_total_density > initial_density * 0.8,
+            "Total density should be approximately conserved during expansion"
+        );
     }
 
     #[test]

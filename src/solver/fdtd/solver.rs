@@ -6,8 +6,8 @@
 use crate::boundary::cpml::CPMLBoundary;
 use crate::error::{KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
-use crate::physics::mechanics::acoustic_wave::SpatialOrder;
 use crate::performance::simd_safe::operations::SimdOps;
+use crate::physics::mechanics::acoustic_wave::SpatialOrder;
 use log::info;
 use ndarray::{s, Array3, ArrayView3, Zip};
 
@@ -109,7 +109,16 @@ impl FdtdSolver {
         // Use GPU acceleration if available and enabled
         #[cfg(feature = "gpu")]
         if let Some(ref accelerator) = self.gpu_accelerator {
-            return self.update_pressure_gpu(accelerator, pressure, vx, vy, vz, density, sound_speed, dt);
+            return self.update_pressure_gpu(
+                accelerator,
+                pressure,
+                vx,
+                vy,
+                vz,
+                density,
+                sound_speed,
+                dt,
+            );
         }
 
         // Fall back to CPU implementation
@@ -184,7 +193,7 @@ impl FdtdSolver {
     /// Burn-based GPU implementation of pressure update
     #[cfg(feature = "gpu")]
     fn update_pressure_gpu(
-        &mut self,
+        &self,
         accelerator: &BurnGpuAccelerator<Autodiff<Wgpu<f32>>>,
         pressure: &mut Array3<f64>,
         vx: &Array3<f64>,
@@ -200,7 +209,8 @@ impl FdtdSolver {
         // Convert arrays to the format expected by Burn (create dummy arrays for now)
         // In a full implementation, we would convert the actual velocity fields
         let density_array = Array3::from_elem(density.dim(), density.mean().unwrap_or(1000.0));
-        let sound_speed_array = Array3::from_elem(sound_speed.dim(), sound_speed.mean().unwrap_or(1540.0));
+        let sound_speed_array =
+            Array3::from_elem(sound_speed.dim(), sound_speed.mean().unwrap_or(1540.0));
 
         // Execute GPU-accelerated pressure propagation
         let result = accelerator.propagate_acoustic_wave(

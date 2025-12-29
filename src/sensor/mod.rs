@@ -10,9 +10,7 @@ pub use localization::{
     LocalizationResult, SensorArray,
 };
 // Re-export PAM components without colliding names; configs remain module-scoped.
-pub use passive_acoustic_mapping::{
-    ArrayGeometry, PAMConfig, PAMPlugin, PassiveAcousticMapper,
-};
+pub use passive_acoustic_mapping::{ArrayGeometry, PAMConfig, PAMPlugin, PassiveAcousticMapper};
 // Expose unified beamforming config at the sensor module root.
 pub use beamforming::{BeamformingConfig, BeamformingCoreConfig};
 
@@ -67,9 +65,9 @@ impl Default for SensorConfig {
 
 #[derive(Debug)]
 pub struct Sensor {
-    positions: Vec<(usize, usize, usize)>, // Grid indices
-    pressure_data: Array2<f64>,            // Pressure time series
-    light_data: Array2<f64>,               // Light fluence rate time series
+    pub positions: Vec<(usize, usize, usize)>, // Grid indices
+    pub pressure_data: Array2<f64>,            // Pressure time series
+    pub light_data: Array2<f64>,               // Light fluence rate time series
     grid: Grid,
 }
 
@@ -390,6 +388,13 @@ impl Sensor {
     /// Creates a sensor from configuration
     pub fn from_config(grid: &Grid, time: &Time, config: &SensorConfig) -> Self {
         Self::new(grid, time, &config.positions)
+    }
+
+    /// Records only pressure data at the current time step.
+    pub fn record_pressure(&mut self, time_step: usize, pressure_field: &Array3<f64>) {
+        for (i, &(ix, iy, iz)) in self.positions.iter().enumerate() {
+            self.pressure_data[[i, time_step]] = pressure_field[[ix, iy, iz]];
+        }
     }
 
     /// Records pressure and light data at the current time step from k-space fields.

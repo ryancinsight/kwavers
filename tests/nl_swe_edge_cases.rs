@@ -6,9 +6,9 @@
 //! - Large deformation hyperelastic behavior
 //! - Harmonic generation under extreme conditions
 
-use kwavers::physics::imaging::elastography::*;
 use kwavers::grid::Grid;
 use kwavers::medium::HomogeneousMedium;
+use kwavers::physics::imaging::elastography::*;
 use ndarray::Array3;
 
 /// Edge case testing framework
@@ -21,7 +21,10 @@ impl EdgeCaseTester {
 
         let models = vec![
             ("Neo-Hookean", HyperelasticModel::neo_hookean_soft_tissue()),
-            ("Mooney-Rivlin", HyperelasticModel::mooney_rivlin_biological()),
+            (
+                "Mooney-Rivlin",
+                HyperelasticModel::mooney_rivlin_biological(),
+            ),
         ];
 
         // Test compression ratios from 10% to 90%
@@ -32,7 +35,7 @@ impl EdgeCaseTester {
                 let deformation_gradient = [
                     [lambda, 0.0, 0.0],
                     [0.0, 1.0 / lambda.sqrt(), 0.0],
-                    [0.0, 0.0, 1.0 / lambda.sqrt()]
+                    [0.0, 0.0, 1.0 / lambda.sqrt()],
                 ];
 
                 let stress = model.cauchy_stress(&deformation_gradient);
@@ -41,7 +44,11 @@ impl EdgeCaseTester {
                 // Check stability: stress should be positive and finite
                 let is_stable = sigma_xx > 0.0 && sigma_xx.is_finite() && !sigma_xx.is_nan();
 
-                results.push((format!("{}_{:.0}%", model_name, (1.0 - lambda) * 100.0), sigma_xx, is_stable));
+                results.push((
+                    format!("{}_{:.0}%", model_name, (1.0 - lambda) * 100.0),
+                    sigma_xx,
+                    is_stable,
+                ));
             }
         }
 
@@ -54,7 +61,10 @@ impl EdgeCaseTester {
 
         let models = vec![
             ("Neo-Hookean", HyperelasticModel::neo_hookean_soft_tissue()),
-            ("Mooney-Rivlin", HyperelasticModel::mooney_rivlin_biological()),
+            (
+                "Mooney-Rivlin",
+                HyperelasticModel::mooney_rivlin_biological(),
+            ),
         ];
 
         // Test extension ratios from 10% to 300%
@@ -65,7 +75,7 @@ impl EdgeCaseTester {
                 let deformation_gradient = [
                     [lambda, 0.0, 0.0],
                     [0.0, 1.0 / lambda.sqrt(), 0.0],
-                    [0.0, 0.0, 1.0 / lambda.sqrt()]
+                    [0.0, 0.0, 1.0 / lambda.sqrt()],
                 ];
 
                 let stress = model.cauchy_stress(&deformation_gradient);
@@ -74,7 +84,11 @@ impl EdgeCaseTester {
                 // Check stability: stress should be finite (can be negative for extension)
                 let is_stable = sigma_xx.is_finite() && !sigma_xx.is_nan();
 
-                results.push((format!("{}_{:.0}x", model_name, lambda), sigma_xx, is_stable));
+                results.push((
+                    format!("{}_{:.0}x", model_name, lambda),
+                    sigma_xx,
+                    is_stable,
+                ));
             }
         }
 
@@ -97,20 +111,24 @@ impl EdgeCaseTester {
         let deformation_gradient = [
             [1.2, 0.0, 0.0],
             [0.0, 0.91, 0.0], // 1/sqrt(1.2) ≈ 0.912
-            [0.0, 0.0, 0.91]
+            [0.0, 0.0, 0.91],
         ];
 
         for (case_name, mu, alpha) in test_cases {
-            let model = HyperelasticModel::Ogden { mu: mu.clone(), alpha: alpha.clone() };
+            let model = HyperelasticModel::Ogden {
+                mu: mu.clone(),
+                alpha: alpha.clone(),
+            };
 
-            let stress_result = std::panic::catch_unwind(|| {
-                model.cauchy_stress(&deformation_gradient)
-            });
+            let stress_result =
+                std::panic::catch_unwind(|| model.cauchy_stress(&deformation_gradient));
 
             let is_stable = stress_result.is_ok() && {
                 if let Ok(stress) = stress_result {
                     // Check all stress components are finite
-                    stress.iter().all(|row| row.iter().all(|&s| s.is_finite() && !s.is_nan()))
+                    stress
+                        .iter()
+                        .all(|row| row.iter().all(|&s| s.is_finite() && !s.is_nan()))
                 } else {
                     false
                 }
@@ -128,34 +146,44 @@ impl EdgeCaseTester {
 
         // Test deformation gradients that might cause numerical issues
         let critical_cases = vec![
-            ("Near zero volume", [
-                [0.01, 0.0, 0.0], // Very small stretch
-                [0.0, 100.0, 0.0], // Very large stretch
-                [0.0, 0.0, 100.0]
-            ]),
-            ("High shear", [
-                [1.0, 0.9, 0.0], // Large shear component
-                [0.9, 1.0, 0.0],
-                [0.0, 0.0, 1.0]
-            ]),
-            ("Rotation dominant", [
-                [0.0, 1.0, 0.0], // Pure rotation
-                [-1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0]
-            ]),
+            (
+                "Near zero volume",
+                [
+                    [0.01, 0.0, 0.0],  // Very small stretch
+                    [0.0, 100.0, 0.0], // Very large stretch
+                    [0.0, 0.0, 100.0],
+                ],
+            ),
+            (
+                "High shear",
+                [
+                    [1.0, 0.9, 0.0], // Large shear component
+                    [0.9, 1.0, 0.0],
+                    [0.0, 0.0, 1.0],
+                ],
+            ),
+            (
+                "Rotation dominant",
+                [
+                    [0.0, 1.0, 0.0], // Pure rotation
+                    [-1.0, 0.0, 0.0],
+                    [0.0, 0.0, 1.0],
+                ],
+            ),
         ];
 
         let model = HyperelasticModel::neo_hookean_soft_tissue();
 
         for (case_name, deformation_gradient) in critical_cases {
-            let stress_result = std::panic::catch_unwind(|| {
-                model.cauchy_stress(&deformation_gradient)
-            });
+            let stress_result =
+                std::panic::catch_unwind(|| model.cauchy_stress(&deformation_gradient));
 
             let is_stable = stress_result.is_ok() && {
                 if let Ok(stress) = stress_result {
                     // Check all stress components are finite
-                    stress.iter().all(|row| row.iter().all(|&s| s.is_finite() && !s.is_nan()))
+                    stress
+                        .iter()
+                        .all(|row| row.iter().all(|&s| s.is_finite() && !s.is_nan()))
                 } else {
                     false
                 }
@@ -204,8 +232,10 @@ impl EdgeCaseTester {
                     let final_field = &history[history.len() - 1];
 
                     // Check that all fields are finite
-                    let fundamental_finite = final_field.u_fundamental.iter().all(|&x| x.is_finite());
-                    let second_harmonic_finite = final_field.u_second.iter().all(|&x| x.is_finite());
+                    let fundamental_finite =
+                        final_field.u_fundamental.iter().all(|&x| x.is_finite());
+                    let second_harmonic_finite =
+                        final_field.u_second.iter().all(|&x| x.is_finite());
 
                     fundamental_finite && second_harmonic_finite
                 } else {
@@ -216,7 +246,8 @@ impl EdgeCaseTester {
             // Calculate harmonic ratio if successful
             let harmonic_ratio = if let Ok(ref history) = propagation_result {
                 let final_field = &history[history.len() - 1];
-                let fundamental_energy: f64 = final_field.u_fundamental.iter().map(|&x| x * x).sum();
+                let fundamental_energy: f64 =
+                    final_field.u_fundamental.iter().map(|&x| x * x).sum();
                 let harmonic_energy: f64 = final_field.u_second.iter().map(|&x| x * x).sum();
 
                 if fundamental_energy > 1e-20 {
@@ -247,7 +278,11 @@ mod edge_case_tests {
         println!("Extreme compression stability test:");
         for (case, stress, is_stable) in results {
             println!("  {}: σ = {:.2e} Pa, stable = {}", case, stress, is_stable);
-            assert!(is_stable, "Compression case '{}' should be numerically stable", case);
+            assert!(
+                is_stable,
+                "Compression case '{}' should be numerically stable",
+                case
+            );
         }
     }
 
@@ -259,7 +294,11 @@ mod edge_case_tests {
         println!("Extreme tension stability test:");
         for (case, stress, is_stable) in results {
             println!("  {}: σ = {:.2e} Pa, stable = {}", case, stress, is_stable);
-            assert!(is_stable, "Tension case '{}' should be numerically stable", case);
+            assert!(
+                is_stable,
+                "Tension case '{}' should be numerically stable",
+                case
+            );
         }
     }
 
@@ -299,7 +338,10 @@ mod edge_case_tests {
 
         // Some near-singular cases may be unstable, which is acceptable
         // The important thing is that the code doesn't crash
-        println!("  Found {} potentially unstable cases (may be acceptable)", unstable_cases.len());
+        println!(
+            "  Found {} potentially unstable cases (may be acceptable)",
+            unstable_cases.len()
+        );
     }
 
     #[test]
@@ -310,7 +352,11 @@ mod edge_case_tests {
         println!("Extreme harmonic generation test:");
         for (case, ratio, is_stable) in results {
             println!("  {}: ratio = {:.2e}, stable = {}", case, ratio, is_stable);
-            assert!(is_stable, "Harmonic generation case '{}' should be numerically stable", case);
+            assert!(
+                is_stable,
+                "Harmonic generation case '{}' should be numerically stable",
+                case
+            );
         }
     }
 
@@ -322,22 +368,23 @@ mod edge_case_tests {
             HyperelasticModel::mooney_rivlin_biological(),
         ];
 
-        let deformation_gradient = [
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0]
-        ];
+        let deformation_gradient = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
 
         for model in models {
             let stress = model.cauchy_stress(&deformation_gradient);
 
             // At reference configuration, stress should be zero (or very small due to numerical precision)
-            let max_stress = stress.iter()
+            let max_stress = stress
+                .iter()
                 .flat_map(|row| row.iter())
                 .map(|&s| s.abs())
                 .fold(0.0, f64::max);
 
-            assert!(max_stress < 1e-6, "Stress at reference configuration should be near zero, got {:.2e}", max_stress);
+            assert!(
+                max_stress < 1e-6,
+                "Stress at reference configuration should be near zero, got {:.2e}",
+                max_stress
+            );
         }
     }
 
@@ -373,7 +420,11 @@ mod edge_case_tests {
 
         for (i, config) in configs.into_iter().enumerate() {
             let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config);
-            assert!(solver.is_ok(), "Solver configuration {} should create successfully", i);
+            assert!(
+                solver.is_ok(),
+                "Solver configuration {} should create successfully",
+                i
+            );
 
             let solver = solver.unwrap();
             let initial_disp = Array3::zeros((8, 8, 8));
@@ -389,7 +440,13 @@ mod edge_case_tests {
     #[test]
     fn test_grid_size_robustness() {
         let material = HyperelasticModel::neo_hookean_soft_tissue();
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &Grid::new(4, 4, 4, 0.01, 0.01, 0.01).unwrap());
+        let medium = HomogeneousMedium::new(
+            1000.0,
+            1500.0,
+            0.5,
+            1.0,
+            &Grid::new(4, 4, 4, 0.01, 0.01, 0.01).unwrap(),
+        );
 
         // Test with various grid sizes
         let grid_sizes = [(4, 4, 4), (8, 8, 8), (16, 8, 8)];
@@ -397,8 +454,19 @@ mod edge_case_tests {
         for (nx, ny, nz) in grid_sizes {
             let grid = Grid::new(nx, ny, nz, 0.01, 0.01, 0.01).unwrap();
 
-            let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), NonlinearSWEConfig::default());
-            assert!(solver.is_ok(), "Should create solver for grid size {}x{}x{}", nx, ny, nz);
+            let solver = NonlinearElasticWaveSolver::new(
+                &grid,
+                &medium,
+                material.clone(),
+                NonlinearSWEConfig::default(),
+            );
+            assert!(
+                solver.is_ok(),
+                "Should create solver for grid size {}x{}x{}",
+                nx,
+                ny,
+                nz
+            );
         }
     }
 }

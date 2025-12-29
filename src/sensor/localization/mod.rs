@@ -3,9 +3,9 @@
 pub mod algorithms;
 pub mod array;
 pub mod beamforming;
+pub mod multilateration;
 pub mod tdoa;
 pub mod triangulation;
-pub mod multilateration;
 
 use crate::error::KwaversResult;
 use serde::{Deserialize, Serialize};
@@ -14,10 +14,10 @@ use serde::{Deserialize, Serialize};
 pub use algorithms::{LocalizationMethod, LocalizationProcessor as AlgorithmProcessor};
 pub use array::{ArrayGeometry, SensorArray};
 pub use beamforming::Beamformer;
+pub use multilateration::trilateration::{TrilaterationResult, TrilaterationSolver};
+pub use multilateration::{MultilaterationMethod, MultilaterationSolver};
 pub use tdoa::{TDOAMeasurement, TDOAProcessor};
 pub use triangulation::Triangulator;
-pub use multilateration::{MultilaterationMethod, MultilaterationSolver};
-pub use multilateration::trilateration::{TrilaterationResult, TrilaterationSolver};
 
 /// Position in 3D space
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

@@ -4,11 +4,15 @@
 //! Target: >2x speedup over scalar implementation for FDTD pressure updates
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use ndarray::Array3;
 use kwavers::performance::simd_safe::operations::SimdOps;
+use ndarray::Array3;
 
 /// Generate test data for FDTD benchmarking
-fn generate_test_data(nx: usize, ny: usize, nz: usize) -> (Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>) {
+fn generate_test_data(
+    nx: usize,
+    ny: usize,
+    nz: usize,
+) -> (Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>) {
     let mut pressure = Array3::zeros((nx, ny, nz));
     let mut divergence = Array3::zeros((nx, ny, nz));
     let mut density = Array3::zeros((nx, ny, nz));
@@ -73,7 +77,12 @@ fn bench_simd_vs_scalar(c: &mut Criterion) {
         // Scalar baseline
         group.bench_with_input(
             BenchmarkId::new("scalar", format!("{}x{}x{}", nx, ny, nz)),
-            &(pressure.clone(), divergence.clone(), density.clone(), sound_speed.clone()),
+            &(
+                pressure.clone(),
+                divergence.clone(),
+                density.clone(),
+                sound_speed.clone(),
+            ),
             |b, (p, div, rho, c)| {
                 b.iter(|| {
                     let result = scalar_pressure_update(p.clone(), div, rho, c, dt);

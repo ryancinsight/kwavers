@@ -4,6 +4,8 @@
 //! bounds with guaranteed coverage probabilities.
 
 use crate::error::KwaversResult;
+#[cfg(feature = "pinn")]
+use burn::tensor::backend::Backend;
 use ndarray::{Array1, Array2};
 use std::collections::HashMap;
 
@@ -37,6 +39,7 @@ pub struct ConformalResult {
 }
 
 /// Conformal predictor for uncertainty quantification
+#[derive(Debug)]
 pub struct ConformalPredictor {
     config: ConformalConfig,
     calibration_scores: Vec<f64>,
@@ -48,7 +51,7 @@ impl ConformalPredictor {
     pub fn new(config: ConformalConfig) -> KwaversResult<Self> {
         if config.confidence_level <= 0.0 || config.confidence_level >= 1.0 {
             return Err(crate::error::KwaversError::InvalidInput(
-                "Confidence level must be between 0 and 1".to_string()
+                "Confidence level must be between 0 and 1".to_string(),
             ));
         }
 
@@ -67,7 +70,7 @@ impl ConformalPredictor {
     ) -> KwaversResult<()> {
         if predictions.len() != targets.len() {
             return Err(crate::error::KwaversError::InvalidInput(
-                "Predictions and targets must have same length".to_string()
+                "Predictions and targets must have same length".to_string(),
             ));
         }
 
@@ -80,30 +83,41 @@ impl ConformalPredictor {
         }
 
         // Sort scores for quantile computation
-        self.calibration_scores.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        self.calibration_scores
+            .sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         self.is_calibrated = true;
-        println!("Conformal predictor calibrated with {} samples", self.calibration_scores.len());
+        println!(
+            "Conformal predictor calibrated with {} samples",
+            self.calibration_scores.len()
+        );
 
         Ok(())
     }
 
     /// Quantify uncertainty using conformal prediction
     #[cfg(feature = "pinn")]
-    pub fn quantify_uncertainty(
+    pub fn quantify_uncertainty<B: Backend>(
         &self,
-        pinn: &crate::ml::pinn::BurnPINN1DWave,
+        pinn: &crate::ml::pinn::BurnPINN1DWave<B>,
         inputs: &Array2<f32>,
-        ground_truth: Option<&Array2<f32>>,
+        _ground_truth: Option<&Array2<f32>>,
     ) -> KwaversResult<crate::uncertainty::PredictionWithUncertainty> {
         if !self.is_calibrated {
             return Err(crate::error::KwaversError::InvalidInput(
-                "Conformal predictor must be calibrated before use".to_string()
+                "Conformal predictor must be calibrated before use".to_string(),
             ));
         }
 
         // Get prediction from PINN
-        let prediction = pinn.predict(inputs)?;
+        // inputs is expected to be [N, 2] where col 0 is x and col 1 is t
+        let x: Array1<f64> = inputs.column(0).mapv(|v| v as f64).to_owned();
+        let t: Array1<f64> = inputs.column(1).mapv(|v| v as f64).to_owned();
+        let device = pinn.device();
+
+        let prediction_f64 = pinn.predict(&x, &t, &device)?;
+        // Convert back to f32
+        let prediction = prediction_f64.mapv(|v| v as f32);
 
         // Compute quantile for desired confidence level
         let quantile = self.compute_quantile(self.config.confidence_level);
@@ -142,7 +156,7 @@ impl ConformalPredictor {
         errors.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let mid = errors.len() / 2;
-        if errors.len() % 2 == 0 {
+        if errors.len().is_multiple_of(2) {
             (errors[mid - 1] + errors[mid]) / 2.0
         } else {
             errors[mid]
@@ -157,7 +171,10 @@ impl ConformalPredictor {
 
         // For 1-α confidence level, use quantile at α
         let alpha = 1.0 - confidence_level;
-        let index = ((self.calibration_scores.len() as f64 * alpha).ceil() as usize).max(1).min(self.calibration_scores.len()) - 1;
+        let index = ((self.calibration_scores.len() as f64 * alpha).ceil() as usize)
+            .max(1)
+            .min(self.calibration_scores.len())
+            - 1;
 
         self.calibration_scores[index]
     }
@@ -170,13 +187,10 @@ impl ConformalPredictor {
     }
 
     /// Generate prediction intervals for new data
-    pub fn predict_intervals(
-        &self,
-        predictions: &[Array2<f32>],
-    ) -> KwaversResult<ConformalResult> {
+    pub fn predict_intervals(&self, predictions: &[Array2<f32>]) -> KwaversResult<ConformalResult> {
         if !self.is_calibrated {
             return Err(crate::error::KwaversError::InvalidInput(
-                "Predictor must be calibrated".to_string()
+                "Predictor must be calibrated".to_string(),
             ));
         }
 
@@ -221,7 +235,7 @@ impl ConformalPredictor {
     ) -> KwaversResult<ValidationMetrics> {
         if test_predictions.len() != test_targets.len() {
             return Err(crate::error::KwaversError::InvalidInput(
-                "Test predictions and targets must have same length".to_string()
+                "Test predictions and targets must have same length".to_string(),
             ));
         }
 
@@ -234,7 +248,9 @@ impl ConformalPredictor {
             let upper_bound = pred + quantile as f32;
 
             // Check if target is within interval
-            let target_within_interval = lower_bound.iter().zip(upper_bound.iter())
+            let target_within_interval = lower_bound
+                .iter()
+                .zip(upper_bound.iter())
                 .zip(target.iter())
                 .all(|((low, high), t)| t >= low && t <= high);
 
@@ -248,7 +264,8 @@ impl ConformalPredictor {
         }
 
         let empirical_coverage = coverage_count as f64 / test_predictions.len() as f64;
-        let mean_interval_width = interval_widths.iter().sum::<f32>() / interval_widths.len() as f32;
+        let mean_interval_width =
+            interval_widths.iter().sum::<f32>() / interval_widths.len() as f32;
 
         Ok(ValidationMetrics {
             empirical_coverage,
@@ -278,11 +295,18 @@ impl ConformalPredictor {
             };
         }
 
-        let min_score = self.calibration_scores.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-        let max_score = self.calibration_scores.iter().fold(0.0_f64, |a, &b| a.max(b));
-        let mean_score = self.calibration_scores.iter().sum::<f64>() / self.calibration_scores.len() as f64;
+        let min_score = self
+            .calibration_scores
+            .iter()
+            .fold(f64::INFINITY, |a, &b| a.min(b));
+        let max_score = self
+            .calibration_scores
+            .iter()
+            .fold(0.0_f64, |a, &b| a.max(b));
+        let mean_score =
+            self.calibration_scores.iter().sum::<f64>() / self.calibration_scores.len() as f64;
 
-        let median_score = if self.calibration_scores.len() % 2 == 0 {
+        let median_score = if self.calibration_scores.len().is_multiple_of(2) {
             let mid = self.calibration_scores.len() / 2;
             (self.calibration_scores[mid - 1] + self.calibration_scores[mid]) / 2.0
         } else {

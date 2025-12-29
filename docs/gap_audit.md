@@ -1,0 +1,11 @@
+- 2025-12-09: Adaptive Selection Metrics Audit and Correction:
+  - Working but Incorrect — severity: Major
+    - Finding: `compute_frequency_content` in `adaptive_selection/metrics.rs` used variance (RMS amplitude) as a proxy for frequency content, which is dimensionally incorrect for [0,1] normalized metrics and physically inaccurate. `compute_spectral_centroid` was missing or hardcoded.
+    - Action: Implemented full FFT-based spectral analysis using `ProcessorFft3d`.
+      - `frequency_content` is now the High Frequency Energy Ratio (energy > Nyquist/2 / total energy), strictly normalized [0,1].
+      - `spectral_centroid` is now calculated as the energy-weighted mean frequency, normalized by max possible frequency magnitude [0,1].
+    - Status: resolved.
+  - Testing — severity: Minor
+    - Finding: No tests for `SpectralMetrics`.
+    - Action: Added unit tests `test_spectral_metrics_computation` verifying that high-frequency fields yield higher `frequency_content` and `spectral_centroid` scores than low-frequency fields.
+    - Status: resolved.

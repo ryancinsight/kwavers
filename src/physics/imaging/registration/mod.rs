@@ -165,15 +165,20 @@ impl ImageRegistration {
         moving_landmarks: &Array2<f64>,
     ) -> KwaversResult<RegistrationResult> {
         if fixed_landmarks.nrows() != moving_landmarks.nrows() {
-            return Err(KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
-                message: "Fixed and moving landmark arrays must have same number of points".to_string(),
-            }));
+            return Err(KwaversError::Validation(
+                crate::error::ValidationError::ConstraintViolation {
+                    message: "Fixed and moving landmark arrays must have same number of points"
+                        .to_string(),
+                },
+            ));
         }
 
         if fixed_landmarks.ncols() != 3 || moving_landmarks.ncols() != 3 {
-            return Err(KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
-                message: "Landmark arrays must have 3 columns (x, y, z)".to_string(),
-            }));
+            return Err(KwaversError::Validation(
+                crate::error::ValidationError::ConstraintViolation {
+                    message: "Landmark arrays must have 3 columns (x, y, z)".to_string(),
+                },
+            ));
         }
 
         let _n_points = fixed_landmarks.nrows();
@@ -191,9 +196,18 @@ impl ImageRegistration {
 
         // Compute translation
         let translation = [
-            fixed_centroid[0] - (rotation[0] * moving_centroid[0] + rotation[1] * moving_centroid[1] + rotation[2] * moving_centroid[2]),
-            fixed_centroid[1] - (rotation[3] * moving_centroid[0] + rotation[4] * moving_centroid[1] + rotation[5] * moving_centroid[2]),
-            fixed_centroid[2] - (rotation[6] * moving_centroid[0] + rotation[7] * moving_centroid[1] + rotation[8] * moving_centroid[2]),
+            fixed_centroid[0]
+                - (rotation[0] * moving_centroid[0]
+                    + rotation[1] * moving_centroid[1]
+                    + rotation[2] * moving_centroid[2]),
+            fixed_centroid[1]
+                - (rotation[3] * moving_centroid[0]
+                    + rotation[4] * moving_centroid[1]
+                    + rotation[5] * moving_centroid[2]),
+            fixed_centroid[2]
+                - (rotation[6] * moving_centroid[0]
+                    + rotation[7] * moving_centroid[1]
+                    + rotation[8] * moving_centroid[2]),
         ];
 
         // Build homogeneous transformation matrix
@@ -203,7 +217,7 @@ impl ImageRegistration {
         let fre = self.compute_fre(fixed_landmarks, moving_landmarks, &rotation, &translation);
         let quality_metrics = RegistrationQualityMetrics {
             fre: Some(fre),
-            tre: None, // Would need anatomical landmarks for TRE
+            tre: None,               // Would need anatomical landmarks for TRE
             mutual_information: 0.0, // Not computed for landmark-based registration
             correlation_coefficient: 0.0,
             normalized_cross_correlation: 0.0,
@@ -212,7 +226,10 @@ impl ImageRegistration {
             final_cost: fre,
         };
 
-        let spatial_transform = SpatialTransform::RigidBody { rotation, translation };
+        let spatial_transform = SpatialTransform::RigidBody {
+            rotation,
+            translation,
+        };
 
         Ok(RegistrationResult {
             spatial_transform: Some(spatial_transform),
@@ -243,7 +260,8 @@ impl ImageRegistration {
         // or gradient descent to maximize mutual information
 
         let mut current_transform = *initial_transform;
-        let mut best_mi = self.compute_mutual_information(fixed_image, moving_image, &current_transform);
+        let mut best_mi =
+            self.compute_mutual_information(fixed_image, moving_image, &current_transform);
         let mut converged = false;
 
         for _iteration in 0..self.max_iterations {
@@ -254,8 +272,10 @@ impl ImageRegistration {
             let mut best_perturbation_mi = best_mi;
 
             for perturbation in &perturbations {
-                let test_transform = self.apply_transform_perturbation(&current_transform, perturbation);
-                let test_mi = self.compute_mutual_information(fixed_image, moving_image, &test_transform);
+                let test_transform =
+                    self.apply_transform_perturbation(&current_transform, perturbation);
+                let test_mi =
+                    self.compute_mutual_information(fixed_image, moving_image, &test_transform);
 
                 if test_mi > best_perturbation_mi {
                     best_perturbation_mi = test_mi;
@@ -268,7 +288,8 @@ impl ImageRegistration {
                     converged = true;
                     break;
                 }
-                current_transform = self.apply_transform_perturbation(&current_transform, &perturbation);
+                current_transform =
+                    self.apply_transform_perturbation(&current_transform, &perturbation);
                 best_mi = best_perturbation_mi;
             } else {
                 break;
@@ -282,8 +303,16 @@ impl ImageRegistration {
             fre: None,
             tre: None,
             mutual_information: best_mi,
-            correlation_coefficient: self.compute_correlation(fixed_image, moving_image, &current_transform),
-            normalized_cross_correlation: self.compute_ncc(fixed_image, moving_image, &current_transform),
+            correlation_coefficient: self.compute_correlation(
+                fixed_image,
+                moving_image,
+                &current_transform,
+            ),
+            normalized_cross_correlation: self.compute_ncc(
+                fixed_image,
+                moving_image,
+                &current_transform,
+            ),
             converged,
             iterations: self.max_iterations,
             final_cost: -best_mi, // Negative because we maximize MI but cost should be minimized
@@ -315,7 +344,9 @@ impl ImageRegistration {
     ) -> KwaversResult<TemporalSync> {
         // Compute cross-correlation for phase offset estimation
         let correlation = self.compute_cross_correlation(reference_signal, target_signal);
-        let max_corr_idx = correlation.iter().enumerate()
+        let max_corr_idx = correlation
+            .iter()
+            .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
             .map(|(idx, _)| idx)
             .unwrap_or(0);
@@ -326,8 +357,10 @@ impl ImageRegistration {
         let phase_offset = 2.0 * std::f64::consts::PI * lag / n_samples;
 
         // Compute timing error metrics
-        let rms_timing_error = self.compute_rms_timing_error(reference_signal, target_signal, lag / sampling_rate);
-        let max_timing_deviation = self.compute_max_timing_deviation(reference_signal, target_signal, lag / sampling_rate);
+        let rms_timing_error =
+            self.compute_rms_timing_error(reference_signal, target_signal, lag / sampling_rate);
+        let max_timing_deviation =
+            self.compute_max_timing_deviation(reference_signal, target_signal, lag / sampling_rate);
 
         // Estimate phase lock stability using timing error statistics
         let phase_lock_stability = (-rms_timing_error * sampling_rate).exp().min(1.0);
@@ -380,9 +413,13 @@ impl ImageRegistration {
                     let tj = transformed[1].round() as isize;
                     let tk = transformed[2].round() as isize;
 
-                    if ti >= 0 && ti < shape[0] as isize &&
-                       tj >= 0 && tj < shape[1] as isize &&
-                       tk >= 0 && tk < shape[2] as isize {
+                    if ti >= 0
+                        && ti < shape[0] as isize
+                        && tj >= 0
+                        && tj < shape[1] as isize
+                        && tk >= 0
+                        && tk < shape[2] as isize
+                    {
                         result[[i, j, k]] = image[[ti as usize, tj as usize, tk as usize]];
                     }
                 }
@@ -413,17 +450,17 @@ impl ImageRegistration {
         centered
     }
 
-    fn kabsch_algorithm(&self, _fixed: &Array2<f64>, _moving: &Array2<f64>) -> KwaversResult<[f64; 9]> {
+    fn kabsch_algorithm(
+        &self,
+        _fixed: &Array2<f64>,
+        _moving: &Array2<f64>,
+    ) -> KwaversResult<[f64; 9]> {
         // Simplified Kabsch algorithm - for now return identity rotation
         // In practice, this would require SVD decomposition which isn't available in ndarray
         // Full implementation would use external linear algebra libraries
 
         // Return identity rotation matrix for basic functionality
-        Ok([
-            1.0, 0.0, 0.0,
-            0.0, 1.0, 0.0,
-            0.0, 0.0, 1.0,
-        ])
+        Ok([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
     }
 
     #[allow(dead_code)]
@@ -443,21 +480,39 @@ impl ImageRegistration {
 
     #[allow(dead_code)]
     fn matrix_determinant(&self, matrix: &Array2<f64>) -> f64 {
-        matrix[[0, 0]] * (matrix[[1, 1]] * matrix[[2, 2]] - matrix[[1, 2]] * matrix[[2, 1]]) -
-        matrix[[0, 1]] * (matrix[[1, 0]] * matrix[[2, 2]] - matrix[[1, 2]] * matrix[[2, 0]]) +
-        matrix[[0, 2]] * (matrix[[1, 0]] * matrix[[2, 1]] - matrix[[1, 1]] * matrix[[2, 0]])
+        matrix[[0, 0]] * (matrix[[1, 1]] * matrix[[2, 2]] - matrix[[1, 2]] * matrix[[2, 1]])
+            - matrix[[0, 1]] * (matrix[[1, 0]] * matrix[[2, 2]] - matrix[[1, 2]] * matrix[[2, 0]])
+            + matrix[[0, 2]] * (matrix[[1, 0]] * matrix[[2, 1]] - matrix[[1, 1]] * matrix[[2, 0]])
     }
 
     fn build_homogeneous_matrix(&self, rotation: &[f64; 9], translation: &[f64; 3]) -> [f64; 16] {
         [
-            rotation[0], rotation[1], rotation[2], translation[0],
-            rotation[3], rotation[4], rotation[5], translation[1],
-            rotation[6], rotation[7], rotation[8], translation[2],
-            0.0, 0.0, 0.0, 1.0,
+            rotation[0],
+            rotation[1],
+            rotation[2],
+            translation[0],
+            rotation[3],
+            rotation[4],
+            rotation[5],
+            translation[1],
+            rotation[6],
+            rotation[7],
+            rotation[8],
+            translation[2],
+            0.0,
+            0.0,
+            0.0,
+            1.0,
         ]
     }
 
-    fn compute_fre(&self, fixed: &Array2<f64>, moving: &Array2<f64>, rotation: &[f64; 9], translation: &[f64; 3]) -> f64 {
+    fn compute_fre(
+        &self,
+        fixed: &Array2<f64>,
+        moving: &Array2<f64>,
+        rotation: &[f64; 9],
+        translation: &[f64; 3],
+    ) -> f64 {
         let mut sum_squared_error = 0.0;
         let n_points = fixed.nrows();
 
@@ -467,15 +522,24 @@ impl ImageRegistration {
 
             // Apply transformation to moving point
             let transformed = [
-                rotation[0] * moving_point[0] + rotation[1] * moving_point[1] + rotation[2] * moving_point[2] + translation[0],
-                rotation[3] * moving_point[0] + rotation[4] * moving_point[1] + rotation[5] * moving_point[2] + translation[1],
-                rotation[6] * moving_point[0] + rotation[7] * moving_point[1] + rotation[8] * moving_point[2] + translation[2],
+                rotation[0] * moving_point[0]
+                    + rotation[1] * moving_point[1]
+                    + rotation[2] * moving_point[2]
+                    + translation[0],
+                rotation[3] * moving_point[0]
+                    + rotation[4] * moving_point[1]
+                    + rotation[5] * moving_point[2]
+                    + translation[1],
+                rotation[6] * moving_point[0]
+                    + rotation[7] * moving_point[1]
+                    + rotation[8] * moving_point[2]
+                    + translation[2],
             ];
 
             // Compute Euclidean distance
-            let error = (fixed_point[0] - transformed[0]).powi(2) +
-                       (fixed_point[1] - transformed[1]).powi(2) +
-                       (fixed_point[2] - transformed[2]).powi(2);
+            let error = (fixed_point[0] - transformed[0]).powi(2)
+                + (fixed_point[1] - transformed[1]).powi(2)
+                + (fixed_point[2] - transformed[2]).powi(2);
 
             sum_squared_error += error.sqrt();
         }
@@ -483,18 +547,33 @@ impl ImageRegistration {
         sum_squared_error / n_points as f64
     }
 
-    fn compute_mutual_information(&self, _fixed: &Array3<f64>, _moving: &Array3<f64>, _transform: &[f64; 16]) -> f64 {
+    fn compute_mutual_information(
+        &self,
+        _fixed: &Array3<f64>,
+        _moving: &Array3<f64>,
+        _transform: &[f64; 16],
+    ) -> f64 {
         // Simplified mutual information computation
         // In practice, this would compute joint and marginal histograms
         0.8 // Placeholder - high mutual information indicates good alignment
     }
 
-    fn compute_correlation(&self, _fixed: &Array3<f64>, _moving: &Array3<f64>, _transform: &[f64; 16]) -> f64 {
+    fn compute_correlation(
+        &self,
+        _fixed: &Array3<f64>,
+        _moving: &Array3<f64>,
+        _transform: &[f64; 16],
+    ) -> f64 {
         // Simplified correlation computation
         0.9 // Placeholder
     }
 
-    fn compute_ncc(&self, _fixed: &Array3<f64>, _moving: &Array3<f64>, _transform: &[f64; 16]) -> f64 {
+    fn compute_ncc(
+        &self,
+        _fixed: &Array3<f64>,
+        _moving: &Array3<f64>,
+        _transform: &[f64; 16],
+    ) -> f64 {
         // Simplified normalized cross-correlation
         0.85 // Placeholder
     }
@@ -502,43 +581,68 @@ impl ImageRegistration {
     fn generate_transform_perturbations(&self) -> Vec<[f64; 6]> {
         // Generate small perturbations for rigid body transform (3 rotation + 3 translation)
         vec![
-            [0.01, 0.0, 0.0, 0.0, 0.0, 0.0],   // Small rotation around x
-            [-0.01, 0.0, 0.0, 0.0, 0.0, 0.0],  // Negative rotation
-            [0.0, 0.01, 0.0, 0.0, 0.0, 0.0],   // Small rotation around y
-            [0.0, 0.0, 0.01, 0.0, 0.0, 0.0],   // Small rotation around z
-            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],    // Translation in x
-            [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],    // Translation in y
-            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],    // Translation in z
+            [0.01, 0.0, 0.0, 0.0, 0.0, 0.0],  // Small rotation around x
+            [-0.01, 0.0, 0.0, 0.0, 0.0, 0.0], // Negative rotation
+            [0.0, 0.01, 0.0, 0.0, 0.0, 0.0],  // Small rotation around y
+            [0.0, 0.0, 0.01, 0.0, 0.0, 0.0],  // Small rotation around z
+            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],   // Translation in x
+            [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],   // Translation in y
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],   // Translation in z
         ]
     }
 
-    fn apply_transform_perturbation(&self, base_transform: &[f64; 16], perturbation: &[f64; 6]) -> [f64; 16] {
+    fn apply_transform_perturbation(
+        &self,
+        base_transform: &[f64; 16],
+        perturbation: &[f64; 6],
+    ) -> [f64; 16] {
         // Simplified perturbation application
         // In practice, this would properly compose transformations
         let mut result = *base_transform;
         result[0] += perturbation[0] * 0.1; // Small rotation effect on matrix
-        result[3] += perturbation[3];       // Translation in x
-        result[7] += perturbation[4];       // Translation in y
-        result[11] += perturbation[5];      // Translation in z
+        result[3] += perturbation[3]; // Translation in x
+        result[7] += perturbation[4]; // Translation in y
+        result[11] += perturbation[5]; // Translation in z
         result
     }
 
-    fn extract_spatial_transform(&self, homogeneous: &[f64; 16]) -> KwaversResult<SpatialTransform> {
+    fn extract_spatial_transform(
+        &self,
+        homogeneous: &[f64; 16],
+    ) -> KwaversResult<SpatialTransform> {
         let rotation = [
-            homogeneous[0], homogeneous[1], homogeneous[2],
-            homogeneous[4], homogeneous[5], homogeneous[6],
-            homogeneous[8], homogeneous[9], homogeneous[10],
+            homogeneous[0],
+            homogeneous[1],
+            homogeneous[2],
+            homogeneous[4],
+            homogeneous[5],
+            homogeneous[6],
+            homogeneous[8],
+            homogeneous[9],
+            homogeneous[10],
         ];
         let translation = [homogeneous[3], homogeneous[7], homogeneous[11]];
 
-        Ok(SpatialTransform::RigidBody { rotation, translation })
+        Ok(SpatialTransform::RigidBody {
+            rotation,
+            translation,
+        })
     }
 
     fn transform_point(&self, transform: &[f64; 16], point: [f64; 3]) -> [f64; 3] {
         [
-            transform[0] * point[0] + transform[1] * point[1] + transform[2] * point[2] + transform[3],
-            transform[4] * point[0] + transform[5] * point[1] + transform[6] * point[2] + transform[7],
-            transform[8] * point[0] + transform[9] * point[1] + transform[10] * point[2] + transform[11],
+            transform[0] * point[0]
+                + transform[1] * point[1]
+                + transform[2] * point[2]
+                + transform[3],
+            transform[4] * point[0]
+                + transform[5] * point[1]
+                + transform[6] * point[2]
+                + transform[7],
+            transform[8] * point[0]
+                + transform[9] * point[1]
+                + transform[10] * point[2]
+                + transform[11],
         ]
     }
 
@@ -568,12 +672,22 @@ impl ImageRegistration {
         correlation
     }
 
-    fn compute_rms_timing_error(&self, _ref_signal: &Array1<f64>, _target_signal: &Array1<f64>, _lag: f64) -> f64 {
+    fn compute_rms_timing_error(
+        &self,
+        _ref_signal: &Array1<f64>,
+        _target_signal: &Array1<f64>,
+        _lag: f64,
+    ) -> f64 {
         // Simplified RMS timing error computation
         1e-6 // 1 microsecond RMS error
     }
 
-    fn compute_max_timing_deviation(&self, _ref_signal: &Array1<f64>, _target_signal: &Array1<f64>, _lag: f64) -> f64 {
+    fn compute_max_timing_deviation(
+        &self,
+        _ref_signal: &Array1<f64>,
+        _target_signal: &Array1<f64>,
+        _lag: f64,
+    ) -> f64 {
         // Simplified maximum timing deviation
         5e-6 // 5 microseconds maximum deviation
     }
@@ -588,19 +702,17 @@ mod tests {
         let registration = ImageRegistration::default();
 
         // Create simple landmark sets (translated by [1, 2, 3])
-        let fixed_landmarks = Array2::from_shape_vec((3, 3), vec![
-            0.0, 0.0, 0.0,
-            1.0, 0.0, 0.0,
-            0.0, 1.0, 0.0,
-        ]).unwrap();
+        let fixed_landmarks =
+            Array2::from_shape_vec((3, 3), vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0])
+                .unwrap();
 
-        let moving_landmarks = Array2::from_shape_vec((3, 3), vec![
-            1.0, 2.0, 3.0,
-            2.0, 2.0, 3.0,
-            1.0, 3.0, 3.0,
-        ]).unwrap();
+        let moving_landmarks =
+            Array2::from_shape_vec((3, 3), vec![1.0, 2.0, 3.0, 2.0, 2.0, 3.0, 1.0, 3.0, 3.0])
+                .unwrap();
 
-        let result = registration.rigid_registration_landmarks(&fixed_landmarks, &moving_landmarks).unwrap();
+        let result = registration
+            .rigid_registration_landmarks(&fixed_landmarks, &moving_landmarks)
+            .unwrap();
 
         // Check that we got a rigid body transform
         match result.spatial_transform {
@@ -627,10 +739,23 @@ mod tests {
         // Create reference and target signals with known phase offset
         let n_samples = 1000;
         let sampling_rate = 1000.0; // 1 kHz
-        let ref_signal = Array1::from_vec((0..n_samples).map(|i| (2.0 * std::f64::consts::PI * i as f64 / 100.0).sin()).collect());
-        let target_signal = Array1::from_vec((0..n_samples).map(|i| (2.0 * std::f64::consts::PI * i as f64 / 100.0 + std::f64::consts::PI / 4.0).sin()).collect());
+        let ref_signal = Array1::from_vec(
+            (0..n_samples)
+                .map(|i| (2.0 * std::f64::consts::PI * i as f64 / 100.0).sin())
+                .collect(),
+        );
+        let target_signal = Array1::from_vec(
+            (0..n_samples)
+                .map(|i| {
+                    (2.0 * std::f64::consts::PI * i as f64 / 100.0 + std::f64::consts::PI / 4.0)
+                        .sin()
+                })
+                .collect(),
+        );
 
-        let sync = registration.temporal_synchronization(&ref_signal, &target_signal, sampling_rate).unwrap();
+        let sync = registration
+            .temporal_synchronization(&ref_signal, &target_signal, sampling_rate)
+            .unwrap();
 
         // Phase offset should be reasonable (cross-correlation result)
         assert!(sync.phase_offset.abs() < 2.0 * std::f64::consts::PI);
@@ -650,7 +775,9 @@ mod tests {
         let fixed = Array2::from_shape_vec((2, 3), vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]).unwrap();
         let moving = Array2::from_shape_vec((2, 3), vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]).unwrap();
 
-        let result = registration.rigid_registration_landmarks(&fixed, &moving).unwrap();
+        let result = registration
+            .rigid_registration_landmarks(&fixed, &moving)
+            .unwrap();
 
         // For identical point sets, FRE should be very small
         assert!(result.quality_metrics.fre.unwrap() < 1e-10);

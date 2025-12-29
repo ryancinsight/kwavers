@@ -12,7 +12,7 @@
 //! - Correlation Coefficient
 
 use crate::error::{KwaversError, KwaversResult};
-use crate::ml::pinn::fdtd_reference::{FDTDConfig, FDTD1DWaveSolver};
+use crate::ml::pinn::fdtd_reference::{FDTD1DWaveSolver, FDTDConfig};
 use crate::ml::pinn::wave_equation_1d::{PINN1DWave, ValidationMetrics};
 use ndarray::{Array1, Array2};
 
@@ -127,8 +127,16 @@ pub fn validate_pinn_vs_fdtd(
 
     // Generate PINN prediction
     let pinn_start = Instant::now();
-    let x = Array1::linspace(0.0, (fdtd_config.nx - 1) as f64 * fdtd_config.dx, fdtd_config.nx);
-    let t = Array1::linspace(0.0, (fdtd_config.nt - 1) as f64 * fdtd_config.dt, fdtd_config.nt);
+    let x = Array1::linspace(
+        0.0,
+        (fdtd_config.nx - 1) as f64 * fdtd_config.dx,
+        fdtd_config.nx,
+    );
+    let t = Array1::linspace(
+        0.0,
+        (fdtd_config.nt - 1) as f64 * fdtd_config.dt,
+        fdtd_config.nt,
+    );
     let pinn_prediction = pinn.predict(&x, &t);
     let pinn_time = pinn_start.elapsed().as_secs_f64();
 

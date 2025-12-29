@@ -34,15 +34,15 @@
 //! - Barr, R. G., et al. (2019). "Elastography assessment of liver fibrosis." *Abdominal Radiology*
 
 use kwavers::clinical::swe_3d_workflows::{
-    VolumetricROI, ElasticityMap3D, ClinicalDecisionSupport, MultiPlanarReconstruction,
-    VolumetricStatistics, LiverFibrosisStage, ClassificationConfidence,
-};
-use kwavers::physics::imaging::elastography::{
-    ElasticWaveSolver, VolumetricWaveConfig, WaveFrontTracker,
-    AcousticRadiationForce, MultiDirectionalPush,
+    ClassificationConfidence, ClinicalDecisionSupport, ElasticityMap3D, LiverFibrosisStage,
+    MultiPlanarReconstruction, VolumetricROI, VolumetricStatistics,
 };
 use kwavers::grid::Grid;
 use kwavers::medium::heterogeneous::HeterogeneousMedium;
+use kwavers::physics::imaging::elastography::{
+    AcousticRadiationForce, ElasticWaveSolver, MultiDirectionalPush, VolumetricWaveConfig,
+    WaveFrontTracker,
+};
 use ndarray::Array3;
 use std::collections::HashMap;
 
@@ -53,19 +53,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Step 1: Patient setup and ROI definition
     println!("📋 Step 1: Patient Setup and ROI Definition");
     let grid = Grid::new(80, 80, 60, 0.001, 0.001, 0.0015)?; // 8x8x9cm volume
-    println!("   Computational grid: {}x{}x{} ({}x{}x{}cm)",
-             grid.nx, grid.ny, grid.nz,
-             grid.nx as f64 * grid.dx * 100.0,
-             grid.ny as f64 * grid.dy * 100.0,
-             grid.nz as f64 * grid.dz * 100.0);
+    println!(
+        "   Computational grid: {}x{}x{} ({}x{}x{}cm)",
+        grid.nx,
+        grid.ny,
+        grid.nz,
+        grid.nx as f64 * grid.dx * 100.0,
+        grid.ny as f64 * grid.dy * 100.0,
+        grid.nz as f64 * grid.dz * 100.0
+    );
 
     // Define liver ROI for fibrosis assessment
     let liver_roi = VolumetricROI::liver_roi([0.04, 0.04, 0.045]); // Center of volume
-    println!("   Liver ROI: {:.1}x{:.1}x{:.1}cm volume",
-             liver_roi.size[0] * 100.0, liver_roi.size[1] * 100.0, liver_roi.size[2] * 100.0);
-    println!("   Quality threshold: {:.1}, Depth range: {:.1}-{:.1}cm\n",
-             liver_roi.quality_threshold,
-             liver_roi.min_depth * 100.0, liver_roi.max_depth * 100.0);
+    println!(
+        "   Liver ROI: {:.1}x{:.1}x{:.1}cm volume",
+        liver_roi.size[0] * 100.0,
+        liver_roi.size[1] * 100.0,
+        liver_roi.size[2] * 100.0
+    );
+    println!(
+        "   Quality threshold: {:.1}, Depth range: {:.1}-{:.1}cm\n",
+        liver_roi.quality_threshold,
+        liver_roi.min_depth * 100.0,
+        liver_roi.max_depth * 100.0
+    );
 
     // Step 2: Create heterogeneous liver medium with fibrosis
     println!("🫘 Step 2: Liver Tissue Model Creation");
@@ -81,18 +92,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create orthogonal push pattern for comprehensive 3D coverage
     let push_pattern = MultiDirectionalPush::orthogonal_pattern(
         [0.04, 0.04, 0.03], // Push location (3cm depth)
-        0.015 // 1.5cm spacing between pushes
+        0.015,              // 1.5cm spacing between pushes
     );
-    println!("   Generated {} orthogonal push pulses", push_pattern.pushes.len());
-    println!("   Push sequence duration: {:.1} μs", push_pattern.sequence_duration * 1e6);
-    println!("   Time delays: {:.1} to {:.1} μs\n",
-             push_pattern.time_delays.iter().cloned().fold(f64::INFINITY, f64::min) * 1e6,
-             push_pattern.time_delays.iter().cloned().fold(0.0, f64::max) * 1e6);
+    println!(
+        "   Generated {} orthogonal push pulses",
+        push_pattern.pushes.len()
+    );
+    println!(
+        "   Push sequence duration: {:.1} μs",
+        push_pattern.sequence_duration * 1e6
+    );
+    println!(
+        "   Time delays: {:.1} to {:.1} μs\n",
+        push_pattern
+            .time_delays
+            .iter()
+            .cloned()
+            .fold(f64::INFINITY, f64::min)
+            * 1e6,
+        push_pattern.time_delays.iter().cloned().fold(0.0, f64::max) * 1e6
+    );
 
     // Step 4: Volumetric wave propagation simulation
     println!("🔬 Step 4: Volumetric Wave Propagation Simulation");
-    let mut solver = ElasticWaveSolver::new(&grid, &liver_medium,
-                                          Default::default())?;
+    let mut solver = ElasticWaveSolver::new(&grid, &liver_medium, Default::default())?;
 
     // Configure volumetric features
     let volumetric_config = VolumetricWaveConfig {
@@ -108,16 +131,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate initial displacement field from multi-directional pushes
     let initial_displacement = arf.apply_multi_directional_push(&push_pattern)?;
     println!("   Initial displacement field generated");
-    println!("   Maximum displacement: {:.2} μm",
-             initial_displacement.iter().cloned().fold(0.0_f64, |a, b| a.max(b.abs())) * 1e6);
+    println!(
+        "   Maximum displacement: {:.2} μm",
+        initial_displacement
+            .iter()
+            .cloned()
+            .fold(0.0_f64, |a, b| a.max(b.abs()))
+            * 1e6
+    );
 
     // Propagate waves with volumetric tracking
     let push_times: Vec<f64> = push_pattern.time_delays.clone();
-    let (displacement_history, tracker) = solver.propagate_volumetric_waves(
-        &[initial_displacement],
-        &push_times,
-    )?;
-    println!("   Simulated {} time steps of wave propagation", displacement_history.len());
+    let (displacement_history, tracker) =
+        solver.propagate_volumetric_waves(&[initial_displacement], &push_times)?;
+    println!(
+        "   Simulated {} time steps of wave propagation",
+        displacement_history.len()
+    );
     println!("   Wave front tracking completed\n");
 
     // Step 5: 3D elasticity reconstruction
@@ -125,34 +155,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut elasticity_map = ElasticityMap3D::new(&grid);
 
     // Perform multi-directional time-of-flight inversion
-    perform_3d_elasticity_reconstruction(
-        &tracker,
-        &push_pattern,
-        &mut elasticity_map,
-        &grid,
-    )?;
+    perform_3d_elasticity_reconstruction(&tracker, &push_pattern, &mut elasticity_map, &grid)?;
     println!("   3D elasticity map reconstructed");
-    println!("   Mean stiffness: {:.1} kPa",
-             calculate_mean_stiffness(&elasticity_map, &liver_roi) / 1000.0);
-    println!("   Reliable voxels: {:.1}%\n",
-             calculate_reliability_percentage(&elasticity_map, &liver_roi) * 100.0);
+    println!(
+        "   Mean stiffness: {:.1} kPa",
+        calculate_mean_stiffness(&elasticity_map, &liver_roi) / 1000.0
+    );
+    println!(
+        "   Reliable voxels: {:.1}%\n",
+        calculate_reliability_percentage(&elasticity_map, &liver_roi) * 100.0
+    );
 
     // Step 6: Volumetric statistical analysis
     println!("📊 Step 6: Volumetric Statistical Analysis");
     let stats = elasticity_map.volumetric_statistics(&liver_roi);
     println!("   Analysis of {}x{}x{}cm ROI", 8, 8, 6);
-    println!("   Valid voxels: {} ({:.1}%)",
-             stats.valid_voxels,
-             stats.volume_coverage * 100.0);
-    println!("   Mean Young's modulus: {:.1} ± {:.1} kPa",
-             stats.mean_modulus / 1000.0,
-             stats.std_modulus / 1000.0);
-    println!("   Range: {:.1} - {:.1} kPa",
-             stats.min_modulus / 1000.0,
-             stats.max_modulus / 1000.0);
+    println!(
+        "   Valid voxels: {} ({:.1}%)",
+        stats.valid_voxels,
+        stats.volume_coverage * 100.0
+    );
+    println!(
+        "   Mean Young's modulus: {:.1} ± {:.1} kPa",
+        stats.mean_modulus / 1000.0,
+        stats.std_modulus / 1000.0
+    );
+    println!(
+        "   Range: {:.1} - {:.1} kPa",
+        stats.min_modulus / 1000.0,
+        stats.max_modulus / 1000.0
+    );
     println!("   Mean shear speed: {:.1} m/s", stats.mean_speed);
-    println!("   Quality metrics - Confidence: {:.2}, Quality: {:.2}\n",
-             stats.mean_confidence, stats.mean_quality);
+    println!(
+        "   Quality metrics - Confidence: {:.2}, Quality: {:.2}\n",
+        stats.mean_confidence, stats.mean_quality
+    );
 
     // Step 7: Clinical decision support
     println!("🏥 Step 7: Clinical Decision Support");
@@ -161,9 +198,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("   Liver Fibrosis Assessment (METAVIR Classification):");
     println!("   Stage: {:?}", fibrosis_classification.stage);
-    println!("   Mean stiffness: {:.1} kPa", fibrosis_classification.mean_stiffness_kpa);
+    println!(
+        "   Mean stiffness: {:.1} kPa",
+        fibrosis_classification.mean_stiffness_kpa
+    );
     println!("   Confidence: {:?}", fibrosis_classification.confidence);
-    println!("   Quality score: {:.2}\n", fibrosis_classification.quality_score);
+    println!(
+        "   Quality score: {:.2}\n",
+        fibrosis_classification.quality_score
+    );
 
     // Step 8: Multi-planar visualization
     println!("📈 Step 8: Multi-Planar Visualization");
@@ -188,8 +231,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Volumetric quality assessment:");
     println!("   Coverage: {:.1}%", quality_metrics.coverage * 100.0);
     println!("   Average quality: {:.2}", quality_metrics.average_quality);
-    println!("   Maximum interference: {:.0}", quality_metrics.max_interference);
-    println!("   Valid tracking points: {}\n", quality_metrics.valid_tracking_points);
+    println!(
+        "   Maximum interference: {:.0}",
+        quality_metrics.max_interference
+    );
+    println!(
+        "   Valid tracking points: {}\n",
+        quality_metrics.valid_tracking_points
+    );
 
     // Final summary
     println!("🎯 Examination Summary");
@@ -198,7 +247,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Modality: 3D Shear Wave Elastography");
     println!("ROI: Liver parenchyma (8x8x6cm)");
     println!("Fibrosis Stage: {:?}", fibrosis_classification.stage);
-    println!("Mean Stiffness: {:.1} kPa", fibrosis_classification.mean_stiffness_kpa);
+    println!(
+        "Mean Stiffness: {:.1} kPa",
+        fibrosis_classification.mean_stiffness_kpa
+    );
     println!("Quality: {:?}", fibrosis_classification.confidence);
     println!("Recommendation: Further evaluation with biopsy correlation");
 
@@ -213,15 +265,24 @@ fn create_fibrotic_liver_medium(grid: &Grid) -> HeterogeneousMedium {
     // Add fibrotic regions (higher stiffness)
     let (cx, cy, cz) = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
     let fibrotic_regions = vec![
-        (cx - 10, cy - 5, cz, 8, 12000.0),   // F3 fibrosis
-        (cx + 5, cy + 8, cz - 5, 6, 18000.0), // F4 fibrosis
+        (cx - 10, cy - 5, cz, 8, 12000.0),     // F3 fibrosis
+        (cx + 5, cy + 8, cz - 5, 6, 18000.0),  // F4 fibrosis
         (cx - 5, cy - 10, cz + 8, 5, 15000.0), // F3-F4 fibrosis
     ];
 
     for (rx, ry, rz, radius, stiff) in fibrotic_regions {
-        let (sx, ex) = (rx.saturating_sub(radius), (rx + radius).min(grid.nx.saturating_sub(1)));
-        let (sy, ey) = (ry.saturating_sub(radius), (ry + radius).min(grid.ny.saturating_sub(1)));
-        let (sz, ez) = (rz.saturating_sub(radius), (rz + radius).min(grid.nz.saturating_sub(1)));
+        let (sx, ex) = (
+            rx.saturating_sub(radius),
+            (rx + radius).min(grid.nx.saturating_sub(1)),
+        );
+        let (sy, ey) = (
+            ry.saturating_sub(radius),
+            (ry + radius).min(grid.ny.saturating_sub(1)),
+        );
+        let (sz, ez) = (
+            rz.saturating_sub(radius),
+            (rz + radius).min(grid.nz.saturating_sub(1)),
+        );
 
         for k in sz..=ez {
             for j in sy..=ey {
@@ -313,7 +374,13 @@ fn perform_3d_elasticity_reconstruction(
 
                         // Quality assessment
                         let quality = tracker.tracking_quality[[i, j, k]];
-                        let confidence = if quality > 0.8 { 0.9 } else if quality > 0.6 { 0.7 } else { 0.5 };
+                        let confidence = if quality > 0.8 {
+                            0.9
+                        } else if quality > 0.6 {
+                            0.7
+                        } else {
+                            0.5
+                        };
 
                         // Store results
                         elasticity_map.young_modulus[[i, j, k]] = young_modulus;
@@ -340,8 +407,9 @@ fn calculate_mean_stiffness(elasticity_map: &ElasticityMap3D, roi: &VolumetricRO
     for k in min_z..=max_z {
         for j in min_y..=max_y {
             for i in min_x..=max_x {
-                if elasticity_map.reliability_mask[[i, j, k]] &&
-                   elasticity_map.confidence[[i, j, k]] >= roi.quality_threshold {
+                if elasticity_map.reliability_mask[[i, j, k]]
+                    && elasticity_map.confidence[[i, j, k]] >= roi.quality_threshold
+                {
                     sum_stiffness += elasticity_map.young_modulus[[i, j, k]];
                     count += 1;
                 }
@@ -349,7 +417,11 @@ fn calculate_mean_stiffness(elasticity_map: &ElasticityMap3D, roi: &VolumetricRO
         }
     }
 
-    if count > 0 { sum_stiffness / count as f64 } else { 0.0 }
+    if count > 0 {
+        sum_stiffness / count as f64
+    } else {
+        0.0
+    }
 }
 
 /// Calculate percentage of reliable voxels in ROI
@@ -362,8 +434,9 @@ fn calculate_reliability_percentage(elasticity_map: &ElasticityMap3D, roi: &Volu
     for k in min_z..=max_z {
         for j in min_y..=max_y {
             for i in min_x..=max_x {
-                if elasticity_map.reliability_mask[[i, j, k]] &&
-                   elasticity_map.confidence[[i, j, k]] >= roi.quality_threshold {
+                if elasticity_map.reliability_mask[[i, j, k]]
+                    && elasticity_map.confidence[[i, j, k]] >= roi.quality_threshold
+                {
                     reliable_count += 1;
                 }
             }
@@ -377,25 +450,36 @@ fn calculate_reliability_percentage(elasticity_map: &ElasticityMap3D, roi: &Volu
 fn display_slice_statistics(mpr: &MultiPlanarReconstruction) {
     if !mpr.axial_slices.is_empty() {
         let axial_stats = calculate_slice_stats(&mpr.axial_slices);
-        println!("   Axial slices: {} total, mean stiffness {:.1} kPa",
-                mpr.axial_slices.len(), axial_stats.mean_stiffness / 1000.0);
+        println!(
+            "   Axial slices: {} total, mean stiffness {:.1} kPa",
+            mpr.axial_slices.len(),
+            axial_stats.mean_stiffness / 1000.0
+        );
     }
 
     if !mpr.sagittal_slices.is_empty() {
         let sagittal_stats = calculate_slice_stats(&mpr.sagittal_slices);
-        println!("   Sagittal slices: {} total, mean stiffness {:.1} kPa",
-                mpr.sagittal_slices.len(), sagittal_stats.mean_stiffness / 1000.0);
+        println!(
+            "   Sagittal slices: {} total, mean stiffness {:.1} kPa",
+            mpr.sagittal_slices.len(),
+            sagittal_stats.mean_stiffness / 1000.0
+        );
     }
 
     if !mpr.coronal_slices.is_empty() {
         let coronal_stats = calculate_slice_stats(&mpr.coronal_slices);
-        println!("   Coronal slices: {} total, mean stiffness {:.1} kPa",
-                mpr.coronal_slices.len(), coronal_stats.mean_stiffness / 1000.0);
+        println!(
+            "   Coronal slices: {} total, mean stiffness {:.1} kPa",
+            mpr.coronal_slices.len(),
+            coronal_stats.mean_stiffness / 1000.0
+        );
     }
 }
 
 /// Calculate statistics for a set of slices
-fn calculate_slice_stats(slices: &[kwavers::clinical::swe_3d_workflows::ElasticityMap2D]) -> SliceStats {
+fn calculate_slice_stats(
+    slices: &[kwavers::clinical::swe_3d_workflows::ElasticityMap2D],
+) -> SliceStats {
     let mut total_stiffness = 0.0;
     let mut total_voxels = 0;
 

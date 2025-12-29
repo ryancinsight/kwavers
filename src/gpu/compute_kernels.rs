@@ -24,7 +24,7 @@ impl AcousticFieldKernel {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
-        
+
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
@@ -37,7 +37,7 @@ impl AcousticFieldKernel {
                     resource: "GPU adapter".to_string(),
                 })
             })?;
-        
+
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
@@ -54,12 +54,12 @@ impl AcousticFieldKernel {
                     resource: format!("GPU device: {}", e),
                 })
             })?;
-        
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Acoustic Field Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/acoustic_field.wgsl").into()),
         });
-        
+
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("Acoustic Field Bind Group Layout"),
             entries: &[
@@ -98,13 +98,13 @@ impl AcousticFieldKernel {
                 },
             ],
         });
-        
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Acoustic Field Pipeline Layout"),
             bind_group_layouts: &[&bind_group_layout],
             push_constant_ranges: &[],
         });
-        
+
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Acoustic Field Pipeline"),
             layout: Some(&pipeline_layout),
@@ -113,7 +113,7 @@ impl AcousticFieldKernel {
             compilation_options: Default::default(),
             cache: None,
         });
-        
+
         Ok(Self {
             device,
             queue,
@@ -121,7 +121,7 @@ impl AcousticFieldKernel {
             bind_group_layout,
         })
     }
-    
+
     /// Compute acoustic field propagation on GPU
     pub fn compute_propagation(
         &self,
@@ -132,7 +132,7 @@ impl AcousticFieldKernel {
     ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = pressure.dim();
         let total_size = nx * ny * nz;
-        
+
         // Convert to f32 for GPU (most GPUs don't support f64)
         let pressure_f32: Vec<f32> = pressure
             .as_slice()
@@ -142,21 +142,23 @@ impl AcousticFieldKernel {
             .iter()
             .map(|&x| x as f32)
             .collect();
-        
+
         // Create GPU buffers
-        let input_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Input Pressure Buffer"),
-            contents: bytemuck::cast_slice(&pressure_f32),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-        });
-        
+        let input_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Input Pressure Buffer"),
+                contents: bytemuck::cast_slice(&pressure_f32),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            });
+
         let output_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Output Pressure Buffer"),
             size: (total_size * std::mem::size_of::<f32>()) as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
-        
+
         // Parameters uniform buffer
         #[repr(C)]
         #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -172,7 +174,7 @@ impl AcousticFieldKernel {
             c: f32,
             _padding2: [f32; 3],
         }
-        
+
         let params = Params {
             nx: nx as u32,
             ny: ny as u32,
@@ -185,13 +187,15 @@ impl AcousticFieldKernel {
             c: sound_speed as f32,
             _padding2: [0.0; 3],
         };
-        
-        let params_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Parameters Buffer"),
-            contents: bytemuck::bytes_of(&params),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
-        
+
+        let params_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Parameters Buffer"),
+                contents: bytemuck::bytes_of(&params),
+                usage: wgpu::BufferUsages::UNIFORM,
+            });
+
         // Create bind group
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Acoustic Field Bind Group"),
@@ -211,30 +215,36 @@ impl AcousticFieldKernel {
                 },
             ],
         });
-        
+
         // Create command encoder
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Acoustic Field Encoder"),
-        });
-        
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Acoustic Field Encoder"),
+            });
+
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("Acoustic Field Pass"),
                 timestamp_writes: None,
             });
-            
+
             compute_pass.set_pipeline(&self.pipeline);
             compute_pass.set_bind_group(0, &bind_group, &[]);
-            
+
             // Dispatch with 8x8x8 workgroups
             let workgroup_size = 8;
             let dispatch_x = nx.div_ceil(workgroup_size);
             let dispatch_y = ny.div_ceil(workgroup_size);
             let dispatch_z = nz.div_ceil(workgroup_size);
-            
-            compute_pass.dispatch_workgroups(dispatch_x as u32, dispatch_y as u32, dispatch_z as u32);
+
+            compute_pass.dispatch_workgroups(
+                dispatch_x as u32,
+                dispatch_y as u32,
+                dispatch_z as u32,
+            );
         }
-        
+
         // Create staging buffer for readback
         let staging_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Staging Buffer"),
@@ -242,7 +252,7 @@ impl AcousticFieldKernel {
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        
+
         encoder.copy_buffer_to_buffer(
             &output_buffer,
             0,
@@ -250,29 +260,34 @@ impl AcousticFieldKernel {
             0,
             (total_size * std::mem::size_of::<f32>()) as u64,
         );
-        
+
         self.queue.submit(std::iter::once(encoder.finish()));
-        
+
         // Read back results
         let buffer_slice = staging_buffer.slice(..);
         let (sender, receiver) = flume::bounded(1);
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
             let _ = sender.send(result);
         });
-        
+
         self.device.poll(wgpu::Maintain::Wait);
-        
-        receiver.recv()
-            .map_err(|_| KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: "GPU buffer mapping channel".to_string(),
-            }))?
-            .map_err(|_| KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: "GPU buffer mapping".to_string(),
-            }))?;
-        
+
+        receiver
+            .recv()
+            .map_err(|_| {
+                KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                    resource: "GPU buffer mapping channel".to_string(),
+                })
+            })?
+            .map_err(|_| {
+                KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                    resource: "GPU buffer mapping".to_string(),
+                })
+            })?;
+
         let data = buffer_slice.get_mapped_range();
         let result_f32: &[f32] = bytemuck::cast_slice(&data);
-        
+
         // Convert back to f64
         let mut result = Array3::zeros((nx, ny, nz));
         if let Some(result_slice) = result.as_slice_mut() {
@@ -289,10 +304,10 @@ impl AcousticFieldKernel {
                 }
             }
         }
-        
+
         drop(data);
         staging_buffer.unmap();
-        
+
         Ok(result)
     }
 }
@@ -310,7 +325,7 @@ impl WaveEquationGpu {
             kernel: AcousticFieldKernel::new().await?,
         })
     }
-    
+
     /// Solve wave equation for one time step
     pub fn step(
         &self,
@@ -325,27 +340,30 @@ impl WaveEquationGpu {
         // For heterogeneous media, these would be spatially-varying on GPU
         let c_avg = sound_speed.mean().unwrap_or(1500.0);
         let rho_avg = density.mean().unwrap_or(1000.0);
-        
+
         // Update pressure: p_new = p + dt * (-ρc² ∇·v)
         let new_pressure = self.kernel.compute_propagation(pressure, grid, dt, c_avg)?;
-        
+
         // Update velocity: v_new = v + dt * (-1/ρ ∇p)
         // Compute pressure gradient using central differences
         let mut grad_p_x = Array3::zeros(pressure.dim());
         let mut grad_p_y = Array3::zeros(pressure.dim());
         let mut grad_p_z = Array3::zeros(pressure.dim());
-        
+
         let (nx, ny, nz) = pressure.dim();
-        for i in 1..nx-1 {
-            for j in 1..ny-1 {
-                for k in 1..nz-1 {
-                    grad_p_x[[i,j,k]] = (pressure[[i+1,j,k]] - pressure[[i-1,j,k]]) / (2.0 * grid.dx);
-                    grad_p_y[[i,j,k]] = (pressure[[i,j+1,k]] - pressure[[i,j-1,k]]) / (2.0 * grid.dy);
-                    grad_p_z[[i,j,k]] = (pressure[[i,j,k+1]] - pressure[[i,j,k-1]]) / (2.0 * grid.dz);
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
+                    grad_p_x[[i, j, k]] =
+                        (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]]) / (2.0 * grid.dx);
+                    grad_p_y[[i, j, k]] =
+                        (pressure[[i, j + 1, k]] - pressure[[i, j - 1, k]]) / (2.0 * grid.dy);
+                    grad_p_z[[i, j, k]] =
+                        (pressure[[i, j, k + 1]] - pressure[[i, j, k - 1]]) / (2.0 * grid.dz);
                 }
             }
         }
-        
+
         // Update velocity components: v_new = v - dt/ρ * ∇p
         let mut new_velocity = velocity.clone();
         use ndarray::Zip;
@@ -359,7 +377,7 @@ impl WaveEquationGpu {
                 let grad_magnitude = (dpx * dpx + dpy * dpy + dpz * dpz).sqrt();
                 *v -= dt / rho_avg * grad_magnitude;
             });
-        
+
         Ok((new_pressure, new_velocity))
     }
 }

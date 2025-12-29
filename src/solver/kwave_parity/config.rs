@@ -5,9 +5,13 @@
 
 use ndarray::Array3;
 
+use super::sensors::SensorConfig;
+
 /// k-Wave simulation configuration matching MATLAB interface
 #[derive(Debug, Clone)]
 pub struct KWaveConfig {
+    /// Number of time steps
+    pub nt: usize,
     /// Time step size \[s\]
     pub dt: f64,
     /// Enable power law absorption
@@ -24,6 +28,7 @@ pub struct KWaveConfig {
     pub pml_inside: bool,
     /// Smooth source terms
     pub smooth_sources: bool,
+    pub sensor_config: SensorConfig,
 }
 
 /// Absorption models supported by k-Wave (enhanced for exact parity)
@@ -52,6 +57,7 @@ pub enum AbsorptionMode {
 impl Default for KWaveConfig {
     fn default() -> Self {
         Self {
+            nt: 1000,
             dt: 1e-7, // 100 ns default time step
             absorption_mode: AbsorptionMode::Lossless,
             nonlinearity: false,
@@ -60,6 +66,7 @@ impl Default for KWaveConfig {
             sensor_mask: None,
             pml_inside: true,
             smooth_sources: true,
+            sensor_config: SensorConfig::default(),
         }
     }
 }

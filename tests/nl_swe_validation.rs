@@ -6,9 +6,9 @@
 //! - Nonlinear inversion methods
 //! - End-to-end NL-SWE workflow
 
-use kwavers::physics::imaging::elastography::*;
 use kwavers::grid::Grid;
 use kwavers::medium::HomogeneousMedium;
+use kwavers::physics::imaging::elastography::*;
 use ndarray::{Array3, Array4};
 use std::f64::consts::PI;
 
@@ -23,7 +23,10 @@ mod hyperelastic_tests {
 
         // Test strain energy at reference state (should be zero)
         let w_ref = model.strain_energy(3.0, 3.0, 1.0);
-        assert!((w_ref - 0.0).abs() < 1e-10, "Reference strain energy should be zero");
+        assert!(
+            (w_ref - 0.0).abs() < 1e-10,
+            "Reference strain energy should be zero"
+        );
 
         // Test strain energy under deformation
         let w_def = model.strain_energy(4.0, 4.0, 1.0);
@@ -34,8 +37,14 @@ mod hyperelastic_tests {
         let stress = model.cauchy_stress(&f);
 
         // Check that stress tensor is symmetric and positive
-        assert!((stress[0][0] - stress[0][0]).abs() < 1e-10, "Stress should be finite");
-        assert!(stress[0][0] > 0.0, "Normal stress should be positive under compression");
+        assert!(
+            (stress[0][0] - stress[0][0]).abs() < 1e-10,
+            "Stress should be finite"
+        );
+        assert!(
+            stress[0][0] > 0.0,
+            "Normal stress should be positive under compression"
+        );
     }
 
     #[test]
@@ -52,7 +61,10 @@ mod hyperelastic_tests {
         // Mooney-Rivlin should give different results than Neo-Hookean
         let neo_hookean = HyperelasticModel::neo_hookean_soft_tissue();
         let w_neo = neo_hookean.strain_energy(4.0, 5.0, 1.0);
-        assert!((w_def - w_neo).abs() > 1e-6, "Mooney-Rivlin should differ from Neo-Hookean");
+        assert!(
+            (w_def - w_neo).abs() > 1e-6,
+            "Mooney-Rivlin should differ from Neo-Hookean"
+        );
     }
 
     #[test]
@@ -75,7 +87,10 @@ mod hyperelastic_tests {
         let config = NonlinearSWEConfig::default();
 
         let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material, config);
-        assert!(solver.is_ok(), "Nonlinear wave solver should create successfully");
+        assert!(
+            solver.is_ok(),
+            "Nonlinear wave solver should create successfully"
+        );
     }
 
     #[test]
@@ -200,13 +215,16 @@ mod harmonic_detection_tests {
         let harmonic_field = result.unwrap();
 
         // Should detect fundamental frequency
-        let max_fundamental = harmonic_field.fundamental_magnitude.iter()
+        let max_fundamental = harmonic_field
+            .fundamental_magnitude
+            .iter()
             .cloned()
             .fold(0.0, f64::max);
         assert!(max_fundamental > 0.0, "Should detect fundamental frequency");
 
         // Should detect harmonic
-        let max_harmonic = harmonic_field.harmonic_magnitudes[0].iter()
+        let max_harmonic = harmonic_field.harmonic_magnitudes[0]
+            .iter()
             .cloned()
             .fold(0.0, f64::max);
         assert!(max_harmonic > 0.0, "Should detect harmonic component");
@@ -296,7 +314,10 @@ mod nonlinear_inversion_tests {
 
         // Bayesian method should provide uncertainty estimates
         let avg_uncertainty = param_map.nonlinearity_uncertainty.mean().unwrap_or(0.0);
-        assert!(avg_uncertainty > 0.0, "Should have non-zero uncertainty estimates");
+        assert!(
+            avg_uncertainty > 0.0,
+            "Should have non-zero uncertainty estimates"
+        );
     }
 
     #[test]
@@ -337,11 +358,7 @@ mod end_to_end_tests {
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
         // Step 1: Linear SWE (existing functionality)
-        let mut swe = ElasticWaveSolver::new(
-            &grid,
-            &medium,
-            ElasticWaveConfig::default(),
-        ).unwrap();
+        let mut swe = ElasticWaveSolver::new(&grid, &medium, ElasticWaveConfig::default()).unwrap();
 
         let push_location = [0.008, 0.008, 0.008];
         // TODO: Implement proper shear wave generation
@@ -366,15 +383,25 @@ mod end_to_end_tests {
             }
         }
 
-        let harmonic_field = harmonic_detector.analyze_harmonics(&time_series, 1000.0).unwrap();
+        let harmonic_field = harmonic_detector
+            .analyze_harmonics(&time_series, 1000.0)
+            .unwrap();
 
         // Step 3: Nonlinear inversion
         let nonlinear_inversion = NonlinearInversion::new(NonlinearInversionMethod::HarmonicRatio);
-        let nonlinear_params = nonlinear_inversion.reconstruct_nonlinear(&harmonic_field, &grid).unwrap();
+        let nonlinear_params = nonlinear_inversion
+            .reconstruct_nonlinear(&harmonic_field, &grid)
+            .unwrap();
 
         // Verify results
-        assert!(nonlinear_params.nonlinearity_parameter.iter().any(|&x| x >= 0.0));
-        assert!(nonlinear_params.estimation_quality.iter().any(|&x| x >= 0.0));
+        assert!(nonlinear_params
+            .nonlinearity_parameter
+            .iter()
+            .any(|&x| x >= 0.0));
+        assert!(nonlinear_params
+            .estimation_quality
+            .iter()
+            .any(|&x| x >= 0.0));
 
         // Test passes if entire workflow completes successfully
     }
@@ -388,11 +415,8 @@ mod end_to_end_tests {
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
         // Linear SWE
-        let linear_swe = ElasticWaveSolver::new(
-            &grid,
-            &medium,
-            ElasticWaveConfig::default(),
-        ).unwrap();
+        let linear_swe =
+            ElasticWaveSolver::new(&grid, &medium, ElasticWaveConfig::default()).unwrap();
 
         let push_location = [0.008, 0.008, 0.008];
         // Create an initial displacement centered at the push location
@@ -413,7 +437,8 @@ mod end_to_end_tests {
             &medium,
             material,
             NonlinearSWEConfig::default(),
-        ).unwrap();
+        )
+        .unwrap();
 
         let initial_disp = Array3::zeros((8, 8, 8));
         let nonlinear_result = nonlinear_solver.propagate_waves(&initial_disp);
@@ -444,11 +469,19 @@ mod convergence_tests {
             };
 
             let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config);
-            assert!(solver.is_ok(), "Should create solver for nonlinearity = {}", nonlinearity);
+            assert!(
+                solver.is_ok(),
+                "Should create solver for nonlinearity = {}",
+                nonlinearity
+            );
 
             let initial_disp = Array3::zeros((8, 8, 8));
             let result = solver.unwrap().propagate_waves(&initial_disp);
-            assert!(result.is_ok(), "Should converge for nonlinearity = {}", nonlinearity);
+            assert!(
+                result.is_ok(),
+                "Should converge for nonlinearity = {}",
+                nonlinearity
+            );
         }
     }
 
@@ -465,7 +498,11 @@ mod convergence_tests {
             // In practice, would add random noise here
 
             let result = detector.analyze_harmonics(&noisy_series, 1000.0);
-            assert!(result.is_ok(), "Should handle noise level = {}", noise_level);
+            assert!(
+                result.is_ok(),
+                "Should handle noise level = {}",
+                noise_level
+            );
         }
     }
 
@@ -490,8 +527,11 @@ mod convergence_tests {
             assert!(result.is_ok(), "Method {:?} should succeed", method);
 
             let param_map = result.unwrap();
-            assert!(param_map.nonlinearity_parameter.iter().all(|&x| x >= 0.0),
-                   "Method {:?} should produce non-negative parameters", method);
+            assert!(
+                param_map.nonlinearity_parameter.iter().all(|&x| x >= 0.0),
+                "Method {:?} should produce non-negative parameters",
+                method
+            );
         }
     }
 }

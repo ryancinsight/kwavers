@@ -7,8 +7,8 @@
 
 use kwavers::{
     physics::{
-        plugin::{Plugin, PluginContext, PluginState, PluginManager, PluginMetadata},
         field_mapping::UnifiedFieldType,
+        plugin::{Plugin, PluginContext, PluginManager, PluginMetadata, PluginState},
     },
     Grid, HomogeneousMedium, KwaversResult,
 };

@@ -5,16 +5,15 @@
 
 #[cfg(feature = "pinn")]
 use kwavers::error::KwaversResult;
-#[cfg(feature = "pinn")]
-use kwavers::ml::pinn::{
-    BurnPINN2DConfig, BurnLossWeights2D, Geometry2D,
-    DistributedPinnTrainer, DecompositionStrategy,
-    LoadBalancingAlgorithm, MultiGpuManager
-};
-#[cfg(feature = "pinn")]
-use kwavers::ml::pinn::distributed_training::DistributedTrainingConfig;
 #[cfg(all(feature = "pinn", feature = "gpu"))]
 use kwavers::gpu::MultiGpuContext;
+#[cfg(feature = "pinn")]
+use kwavers::ml::pinn::distributed_training::DistributedTrainingConfig;
+#[cfg(feature = "pinn")]
+use kwavers::ml::pinn::{
+    BurnLossWeights2D, BurnPINN2DConfig, DecompositionStrategy, DistributedPinnTrainer, Geometry2D,
+    LoadBalancingAlgorithm, MultiGpuManager,
+};
 #[cfg(feature = "pinn")]
 use std::time::Instant;
 
@@ -40,7 +39,10 @@ fn main() -> KwaversResult<()> {
 
     // Show decomposition strategies
     println!("🏗️  Domain Decomposition Strategies:");
-    let spatial = DecompositionStrategy::Spatial { dimensions: 2, overlap: 0.05 };
+    let spatial = DecompositionStrategy::Spatial {
+        dimensions: 2,
+        overlap: 0.05,
+    };
     let temporal = DecompositionStrategy::Temporal { steps_per_gpu: 100 };
     let hybrid = DecompositionStrategy::Hybrid {
         spatial_dims: 2,
@@ -78,7 +80,10 @@ fn main() -> KwaversResult<()> {
         fault_tolerance: Default::default(),
     };
     println!("   ✅ Gradient aggregation: Average");
-    println!("   ✅ Checkpoint interval: {} epochs", training_config.checkpoint_config.interval);
+    println!(
+        "   ✅ Checkpoint interval: {} epochs",
+        training_config.checkpoint_config.interval
+    );
     println!("   ✅ Fault tolerance: Enabled");
     println!();
 
@@ -104,7 +109,10 @@ fn main() -> KwaversResult<()> {
         boundary_condition: kwavers::ml::pinn::BoundaryCondition2D::Dirichlet,
     };
     println!("   ✅ Hidden layers: {:?}", pinn_config.hidden_layers);
-    println!("   ✅ Collocation points: {}", pinn_config.num_collocation_points);
+    println!(
+        "   ✅ Collocation points: {}",
+        pinn_config.num_collocation_points
+    );
     println!("   ✅ Learning rate: {}", pinn_config.learning_rate);
     println!();
 
@@ -120,24 +128,38 @@ fn main() -> KwaversResult<()> {
     for epoch in 0..n_epochs {
         if epoch % 10 == 0 {
             let progress = epoch as f32 / n_epochs as f32 * 100.0;
-            println!("   Epoch {}/{} ({:.1}%): Simulating distributed training...",
-                    epoch + 1, n_epochs, progress);
+            println!(
+                "   Epoch {}/{} ({:.1}%): Simulating distributed training...",
+                epoch + 1,
+                n_epochs,
+                progress
+            );
         }
         // Simulate training work
         std::thread::sleep(std::time::Duration::from_millis(5));
     }
 
     let training_time = start_time.elapsed();
-    println!("   ✅ Training simulation completed in {:.2}s", training_time.as_secs_f64());
+    println!(
+        "   ✅ Training simulation completed in {:.2}s",
+        training_time.as_secs_f64()
+    );
     println!();
 
     // Performance analysis
     println!("📈 Performance Analysis:");
-    println!("   Training time: {:.2} seconds", training_time.as_secs_f64());
-    println!("   Average time per epoch: {:.3} seconds",
-             training_time.as_secs_f64() / n_epochs as f64);
-    println!("   Estimated scaling efficiency: {:.1}% (single GPU baseline)",
-             100.0);
+    println!(
+        "   Training time: {:.2} seconds",
+        training_time.as_secs_f64()
+    );
+    println!(
+        "   Average time per epoch: {:.3} seconds",
+        training_time.as_secs_f64() / n_epochs as f64
+    );
+    println!(
+        "   Estimated scaling efficiency: {:.1}% (single GPU baseline)",
+        100.0
+    );
     println!();
 
     println!("🎉 Multi-GPU PINN API Demonstration Complete!");

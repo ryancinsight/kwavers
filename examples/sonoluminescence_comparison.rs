@@ -30,11 +30,8 @@
 
 use kwavers::grid::Grid;
 use kwavers::physics::bubble_dynamics::bubble_state::BubbleParameters;
-use kwavers::physics::optics::sonoluminescence::{
-    EmissionParameters, IntegratedSonoluminescence, SonoluminescenceEmission,
-};
+use kwavers::physics::optics::sonoluminescence::{EmissionParameters, IntegratedSonoluminescence};
 use ndarray::Array3;
-use std::f64::consts::PI;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔬 Sonoluminescence Hypothesis Comparison");
@@ -43,9 +40,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Setup simulation parameters
     let grid = Grid::new(32, 8, 8, 0.001, 0.001, 0.001).unwrap();
     let bubble_params = BubbleParameters {
-        r0: 10e-6,        // 10 μm initial radius
-        t0: 300.0,        // 300 K ambient temperature
-        gamma: 1.4,       // Air polytropic index
+        r0: 4e-6,                       // 4 μm initial radius
+        t0: 300.0,                      // 300 K ambient temperature
+        gamma: 1.667, // Argon polytropic index (Monatomic gas is essential for SBSL)
         initial_gas_pressure: 101325.0, // 1 atm
         ..Default::default()
     };
@@ -73,7 +70,7 @@ fn run_bremsstrahlung_dominant_scenario(
     println!("🌡️  Scenario 1: Bremsstrahlung-Dominant Emission");
     println!("------------------------------------------------");
 
-    let mut emission_params = EmissionParameters {
+    let emission_params = EmissionParameters {
         use_blackbody: false,
         use_bremsstrahlung: true,
         use_cherenkov: false,
@@ -81,21 +78,60 @@ fn run_bremsstrahlung_dominant_scenario(
         ..Default::default()
     };
 
-    let mut simulator = IntegratedSonoluminescence::new(grid.shape(), bubble_params.clone(), emission_params);
+    let mut simulator =
+        IntegratedSonoluminescence::new(grid.dimensions(), bubble_params.clone(), emission_params);
 
     // Setup moderate acoustic driving (non-relativistic)
-    let acoustic_pressure = Array3::from_elem(grid.shape(), 1e5); // 1 bar
+    // Negative pressure starts with rarefaction -> growth -> collapse
+    let acoustic_pressure = Array3::from_elem(grid.dimensions(), -1.25e5); // -1.25 bar
     simulator.set_acoustic_pressure(acoustic_pressure);
 
+    // Track peak state
+    let mut peak_temp = 0.0;
+    let mut peak_fields = (
+        simulator.temperature_field.clone(),
+        simulator.pressure_field.clone(),
+        simulator.radius_field.clone(),
+        simulator.particle_velocity_field.clone(),
+        simulator.charge_density_field.clone(),
+        simulator.compression_field.clone(),
+    );
+
     // Simulate bubble dynamics
-    for step in 0..50 {
-        simulator.simulate_step(1e-8, step as f64 * 1e-8);
+    println!("Simulating 1 full acoustic cycle (~38 µs) with high precision...");
+    for step in 0..800000 {
+        simulator.simulate_step(5e-11, step as f64 * 5e-11)?;
+
+        // Check for peak temperature
+        let current_max_temp = simulator
+            .temperature_field
+            .iter()
+            .fold(0.0f64, |a, &b| a.max(b));
+        if current_max_temp > peak_temp {
+            peak_temp = current_max_temp;
+            peak_fields = (
+                simulator.temperature_field.clone(),
+                simulator.pressure_field.clone(),
+                simulator.radius_field.clone(),
+                simulator.particle_velocity_field.clone(),
+                simulator.charge_density_field.clone(),
+                simulator.compression_field.clone(),
+            );
+        }
     }
 
+    // Restore peak state for analysis
+    simulator.temperature_field = peak_fields.0;
+    simulator.pressure_field = peak_fields.1;
+    simulator.radius_field = peak_fields.2;
+    simulator.particle_velocity_field = peak_fields.3;
+    simulator.charge_density_field = peak_fields.4;
+    simulator.compression_field = peak_fields.5;
+
     // Calculate emission
-    let temp_field = simulator.temperature_field();
-    let pressure_field = simulator.pressure_field();
-    let radius_field = simulator.radius_field();
+    let temp_field = &simulator.temperature_field;
+    let pressure_field = &simulator.pressure_field;
+    let radius_field = &simulator.radius_field;
     let velocity_field = &simulator.particle_velocity_field;
     let charge_density_field = &simulator.charge_density_field;
     let compression_field = &simulator.compression_field;
@@ -125,8 +161,14 @@ fn run_bremsstrahlung_dominant_scenario(
     println!("  Peak Pressure: {:.1e} Pa", pressure_field[[i, j, k]]);
     println!("  Compression Ratio: {:.1}", compression_field[[i, j, k]]);
     println!("  Particle Velocity: {:.1e} m/s", velocity_field[[i, j, k]]);
-    println!("  Total Emission: {:.2e} W/m³", simulator.emission.total_light_output());
-    println!("  Peak Wavelength: {:.0} nm", spectrum.peak_wavelength() * 1e9);
+    println!(
+        "  Total Emission: {:.2e} W/m³",
+        simulator.emission.total_light_output()
+    );
+    println!(
+        "  Peak Wavelength: {:.0} nm",
+        spectrum.peak_wavelength() * 1e9
+    );
     println!("  Spectral Range: Thermal (broadband)\n");
 
     Ok(())
@@ -140,31 +182,69 @@ fn run_cherenkov_dominant_scenario(
     println!("⚡ Scenario 2: Cherenkov-Dominant Emission");
     println!("-----------------------------------------");
 
-    let mut emission_params = EmissionParameters {
+    let emission_params = EmissionParameters {
         use_blackbody: false,
         use_bremsstrahlung: false,
         use_cherenkov: true,
-        cherenkov_refractive_index: 1.5,  // Higher refractive index for compressed water
+        cherenkov_refractive_index: 1.5, // Higher refractive index for compressed water
         cherenkov_coherence_factor: 500.0, // Enhanced coherence
-        min_temperature: 1000.0, // Lower threshold for Cherenkov
+        min_temperature: 1000.0,         // Lower threshold for Cherenkov
         ..Default::default()
     };
 
-    let mut simulator = IntegratedSonoluminescence::new(grid.shape(), bubble_params.clone(), emission_params);
+    let mut simulator =
+        IntegratedSonoluminescence::new(grid.dimensions(), bubble_params.clone(), emission_params);
 
     // Setup extreme acoustic driving (potentially relativistic)
-    let acoustic_pressure = Array3::from_elem(grid.shape(), 1e7); // 100 bar - extreme conditions
+    let acoustic_pressure = Array3::from_elem(grid.dimensions(), -1.28e5); // -1.28 bar (reduced from -1.35 to avoid Mach instability)
     simulator.set_acoustic_pressure(acoustic_pressure);
 
+    // Track peak state
+    let mut peak_temp = 0.0;
+    let mut peak_fields = (
+        simulator.temperature_field.clone(),
+        simulator.pressure_field.clone(),
+        simulator.radius_field.clone(),
+        simulator.particle_velocity_field.clone(),
+        simulator.charge_density_field.clone(),
+        simulator.compression_field.clone(),
+    );
+
     // Simulate with smaller timesteps for stability
-    for step in 0..100 {
-        simulator.simulate_step(5e-9, step as f64 * 5e-9);
+    println!("Simulating 1 full acoustic cycle (~38 µs) with high precision...");
+    for step in 0..800000 {
+        simulator.simulate_step(5e-11, step as f64 * 5e-11)?;
+
+        // Check for peak temperature
+        let current_max_temp = simulator
+            .temperature_field
+            .iter()
+            .fold(0.0f64, |a, &b| a.max(b));
+        if current_max_temp > peak_temp {
+            peak_temp = current_max_temp;
+            peak_fields = (
+                simulator.temperature_field.clone(),
+                simulator.pressure_field.clone(),
+                simulator.radius_field.clone(),
+                simulator.particle_velocity_field.clone(),
+                simulator.charge_density_field.clone(),
+                simulator.compression_field.clone(),
+            );
+        }
     }
 
+    // Restore peak state for analysis
+    simulator.temperature_field = peak_fields.0;
+    simulator.pressure_field = peak_fields.1;
+    simulator.radius_field = peak_fields.2;
+    simulator.particle_velocity_field = peak_fields.3;
+    simulator.charge_density_field = peak_fields.4;
+    simulator.compression_field = peak_fields.5;
+
     // Calculate emission
-    let temp_field = simulator.temperature_field();
-    let pressure_field = simulator.pressure_field();
-    let radius_field = simulator.radius_field();
+    let temp_field = &simulator.temperature_field;
+    let pressure_field = &simulator.pressure_field;
+    let radius_field = &simulator.radius_field;
     let velocity_field = &simulator.particle_velocity_field;
     let charge_density_field = &simulator.charge_density_field;
     let compression_field = &simulator.compression_field;
@@ -201,9 +281,15 @@ fn run_cherenkov_dominant_scenario(
     println!("  Particle Velocity: {:.1e} m/s", velocity_field[[i, j, k]]);
     println!("  Cherenkov Threshold: {:.1e} m/s", critical_velocity);
     println!("  Exceeds Threshold: {}", exceeds_threshold);
-    println!("  Total Emission: {:.2e} W/m³", simulator.emission.total_light_output());
+    println!(
+        "  Total Emission: {:.2e} W/m³",
+        simulator.emission.total_light_output()
+    );
     if spectrum.peak_wavelength() > 0.0 {
-        println!("  Peak Wavelength: {:.0} nm", spectrum.peak_wavelength() * 1e9);
+        println!(
+            "  Peak Wavelength: {:.0} nm",
+            spectrum.peak_wavelength() * 1e9
+        );
     }
     println!("  Spectral Range: Cherenkov (UV/blue bias)\n");
 
@@ -218,7 +304,7 @@ fn run_combined_emission_scenario(
     println!("🔬 Scenario 3: Combined Bremsstrahlung + Cherenkov Emission");
     println!("----------------------------------------------------------");
 
-    let mut emission_params = EmissionParameters {
+    let emission_params = EmissionParameters {
         use_blackbody: false,
         use_bremsstrahlung: true,
         use_cherenkov: true,
@@ -228,21 +314,59 @@ fn run_combined_emission_scenario(
         ..Default::default()
     };
 
-    let mut simulator = IntegratedSonoluminescence::new(grid.shape(), bubble_params.clone(), emission_params);
+    let mut simulator =
+        IntegratedSonoluminescence::new(grid.dimensions(), bubble_params.clone(), emission_params);
 
     // Setup intermediate acoustic driving
-    let acoustic_pressure = Array3::from_elem(grid.shape(), 5e5); // 5 bar
+    let acoustic_pressure = Array3::from_elem(grid.dimensions(), -1.27e5); // -1.27 bar
     simulator.set_acoustic_pressure(acoustic_pressure);
 
+    // Track peak state
+    let mut peak_temp = 0.0;
+    let mut peak_fields = (
+        simulator.temperature_field.clone(),
+        simulator.pressure_field.clone(),
+        simulator.radius_field.clone(),
+        simulator.particle_velocity_field.clone(),
+        simulator.charge_density_field.clone(),
+        simulator.compression_field.clone(),
+    );
+
     // Simulate bubble dynamics
-    for step in 0..75 {
-        simulator.simulate_step(8e-9, step as f64 * 8e-9);
+    println!("Simulating 1 full acoustic cycle (~38 µs) with high precision...");
+    for step in 0..800000 {
+        simulator.simulate_step(5e-11, step as f64 * 5e-11)?;
+
+        // Check for peak temperature
+        let current_max_temp = simulator
+            .temperature_field
+            .iter()
+            .fold(0.0f64, |a, &b| a.max(b));
+        if current_max_temp > peak_temp {
+            peak_temp = current_max_temp;
+            peak_fields = (
+                simulator.temperature_field.clone(),
+                simulator.pressure_field.clone(),
+                simulator.radius_field.clone(),
+                simulator.particle_velocity_field.clone(),
+                simulator.charge_density_field.clone(),
+                simulator.compression_field.clone(),
+            );
+        }
     }
 
+    // Restore peak state for analysis
+    simulator.temperature_field = peak_fields.0;
+    simulator.pressure_field = peak_fields.1;
+    simulator.radius_field = peak_fields.2;
+    simulator.particle_velocity_field = peak_fields.3;
+    simulator.charge_density_field = peak_fields.4;
+    simulator.compression_field = peak_fields.5;
+
     // Calculate emission
-    let temp_field = simulator.temperature_field();
-    let pressure_field = simulator.pressure_field();
-    let radius_field = simulator.radius_field();
+    let temp_field = &simulator.temperature_field;
+    let pressure_field = &simulator.pressure_field;
+    let radius_field = &simulator.radius_field;
     let velocity_field = &simulator.particle_velocity_field;
     let charge_density_field = &simulator.charge_density_field;
     let compression_field = &simulator.compression_field;
@@ -272,30 +396,67 @@ fn run_combined_emission_scenario(
     println!("  Peak Pressure: {:.1e} Pa", pressure_field[[i, j, k]]);
     println!("  Compression Ratio: {:.1}", compression_field[[i, j, k]]);
     println!("  Particle Velocity: {:.1e} m/s", velocity_field[[i, j, k]]);
-    println!("  Total Emission: {:.2e} W/m³", simulator.emission.total_light_output());
+    println!(
+        "  Total Emission: {:.2e} W/m³",
+        simulator.emission.total_light_output()
+    );
     if spectrum.peak_wavelength() > 0.0 {
-        println!("  Peak Wavelength: {:.0} nm", spectrum.peak_wavelength() * 1e9);
+        println!(
+            "  Peak Wavelength: {:.0} nm",
+            spectrum.peak_wavelength() * 1e9
+        );
     }
     println!("  Spectral Characteristics: Mixed (thermal + coherent)\n");
+
+    // Calculate full spectral field for analysis
+    simulator.emission.calculate_spectral_field(
+        &simulator.temperature_field,
+        &simulator.pressure_field,
+        &simulator.radius_field,
+        &simulator.particle_velocity_field,
+        &simulator.charge_density_field,
+        &simulator.compression_field,
+        0.0,
+    );
 
     // Analyze emission components if spectral field is available
     if let Some(spectral_field) = &simulator.emission.spectral_field {
         let peak_spectrum = spectral_field.get_spectrum_at(i, j, k);
         println!("  Spectral Analysis:");
-        println!("    Total Intensity: {:.2e} W/(m²·sr)", peak_spectrum.total_intensity());
+        println!(
+            "    Total Intensity: {:.2e} W/(m²·sr)",
+            peak_spectrum.total_intensity()
+        );
 
         // Check for Cherenkov signature (shorter wavelengths)
-        let uv_fraction = spectral_field.wavelengths.iter()
-            .zip(peak_spectrum.intensities.iter())
-            .filter(|(&lambda, _)| lambda < 400e-9) // UV/blue
-            .map(|(_, &intensity)| intensity)
-            .sum::<f64>() / peak_spectrum.total_intensity();
+        // Use trapezoidal integration for UV portion to match total_intensity dimensions
+        let wavelengths = &spectral_field.wavelengths;
+        let intensities = &peak_spectrum.intensities;
+        let mut uv_integrated_intensity = 0.0;
+
+        for idx in 0..wavelengths.len().saturating_sub(1) {
+            let lambda_avg = (wavelengths[idx] + wavelengths[idx + 1]) * 0.5;
+
+            if lambda_avg < 400e-9 {
+                let d_lambda = wavelengths[idx + 1] - wavelengths[idx];
+                let i_avg = (intensities[idx] + intensities[idx + 1]) * 0.5;
+                uv_integrated_intensity += i_avg * d_lambda;
+            }
+        }
+
+        let total_int = peak_spectrum.total_intensity();
+        let uv_fraction = if total_int > 1e-20 {
+            uv_integrated_intensity / total_int
+        } else {
+            0.0
+        };
 
         println!("    UV/Blue Fraction: {:.1}%", uv_fraction * 100.0);
-        println!("    Cherenkov Indicator: {}", if uv_fraction > 0.3 { "High" } else { "Low" });
+        println!(
+            "    Cherenkov Indicator: {}",
+            if uv_fraction > 0.3 { "High" } else { "Low" }
+        );
     }
 
     Ok(())
 }
-
-

@@ -26,7 +26,7 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::physics::plugin::kzk_solver::KzkSolverPlugin;
-use ndarray::{Array3, Array4};
+use ndarray::Array3;
 use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 
@@ -54,14 +54,14 @@ pub struct ShockWaveParameters {
 impl Default for ShockWaveParameters {
     fn default() -> Self {
         Self {
-            center_frequency: 1e6,          // 1 MHz
-            peak_positive_pressure: 30e6,   // 30 MPa
-            peak_negative_pressure: -5e6,   // -5 MPa
-            rise_time: 50e-9,               // 50 ns
-            pulse_duration: 1e-6,           // 1 μs
-            prf: 1.0,                       // 1 Hz
-            b_over_a: 5.2,                  // Water nonlinearity
-            shock_formation_distance: 0.1,  // 10 cm
+            center_frequency: 1e6,         // 1 MHz
+            peak_positive_pressure: 30e6,  // 30 MPa
+            peak_negative_pressure: -5e6,  // -5 MPa
+            rise_time: 50e-9,              // 50 ns
+            pulse_duration: 1e-6,          // 1 μs
+            prf: 1.0,                      // 1 Hz
+            b_over_a: 5.2,                 // Water nonlinearity
+            shock_formation_distance: 0.1, // 10 cm
         }
     }
 }
@@ -72,14 +72,14 @@ pub struct ShockWaveGenerator {
     /// Generation parameters
     params: ShockWaveParameters,
     /// KZK solver for nonlinear propagation
-    kzk_solver: KzkSolverPlugin,
+    _kzk_solver: KzkSolverPlugin,
     /// Source pressure waveform
     source_waveform: Vec<f64>,
 }
 
 impl ShockWaveGenerator {
     /// Create new shock wave generator
-    pub fn new(params: ShockWaveParameters, grid: &Grid) -> KwaversResult<Self> {
+    pub fn new(params: ShockWaveParameters, _grid: &Grid) -> KwaversResult<Self> {
         let kzk_solver = KzkSolverPlugin::new();
 
         // Generate initial pressure waveform
@@ -87,7 +87,7 @@ impl ShockWaveGenerator {
 
         Ok(Self {
             params,
-            kzk_solver,
+            _kzk_solver: kzk_solver,
             source_waveform,
         })
     }
@@ -102,9 +102,9 @@ impl ShockWaveGenerator {
         let mut waveform = Vec::with_capacity(n_samples);
 
         let tau_r = params.rise_time.max(1e-9);
-        let t_pos = tau_r;            // center of positive lobe
-        let t_neg = 3.0 * tau_r;      // center of negative lobe
-        let sigma_pos = tau_r / 2.0;  // width of positive lobe
+        let t_pos = tau_r; // center of positive lobe
+        let t_neg = 3.0 * tau_r; // center of negative lobe
+        let sigma_pos = tau_r / 2.0; // width of positive lobe
         let sigma_neg = (params.pulse_duration - t_neg).max(tau_r) / 3.0; // width of negative lobe
 
         for i in 0..n_samples {
@@ -147,10 +147,12 @@ impl ShockWaveGenerator {
 
                     let distance = (dx.powi(2) + dy.powi(2) + dz.powi(2)).sqrt();
 
-                    if distance < 0.05 { // Within focal region
+                    if distance < 0.05 {
+                        // Within focal region
                         // Apply shock waveform with phase delay for focusing
                         let phase_delay = distance / 1500.0; // Speed of sound delay
-                        let time_index = (phase_delay * frequency).round() as usize % self.source_waveform.len();
+                        let time_index =
+                            (phase_delay * frequency).round() as usize % self.source_waveform.len();
 
                         pressure_field[[i, j, k]] = self.source_waveform[time_index];
                     }
@@ -178,7 +180,7 @@ impl ShockWaveGenerator {
 #[derive(Debug)]
 pub struct ShockWavePropagation {
     /// KZK solver
-    kzk_solver: KzkSolverPlugin,
+    _kzk_solver: KzkSolverPlugin,
     /// Propagation distance [m]
     propagation_distance: f64,
     /// Grid for physical spacing
@@ -199,7 +201,7 @@ impl ShockWavePropagation {
         let nonlinearity_field = Self::calculate_nonlinearity_field(grid);
 
         Ok(Self {
-            kzk_solver,
+            _kzk_solver: kzk_solver,
             propagation_distance,
             grid: grid.clone(),
             attenuation_field,
@@ -242,9 +244,15 @@ impl ShockWavePropagation {
         let stone_center_z = grid.nz / 2;
         let stone_radius = 5; // voxels
 
-        for i in (stone_center_x.saturating_sub(stone_radius))..(stone_center_x + stone_radius).min(grid.nx) {
-            for j in (stone_center_y.saturating_sub(stone_radius))..(stone_center_y + stone_radius).min(grid.ny) {
-                for k in (stone_center_z.saturating_sub(stone_radius))..(stone_center_z + stone_radius).min(grid.nz) {
+        for i in (stone_center_x.saturating_sub(stone_radius))
+            ..(stone_center_x + stone_radius).min(grid.nx)
+        {
+            for j in (stone_center_y.saturating_sub(stone_radius))
+                ..(stone_center_y + stone_radius).min(grid.ny)
+            {
+                for k in (stone_center_z.saturating_sub(stone_radius))
+                    ..(stone_center_z + stone_radius).min(grid.nz)
+                {
                     let dx = i as f64 - stone_center_x as f64;
                     let dy = j as f64 - stone_center_y as f64;
                     let dz = k as f64 - stone_center_z as f64;
@@ -260,12 +268,19 @@ impl ShockWavePropagation {
     }
 
     /// Propagate shock wave using KZK equation
-    pub fn propagate_shock_wave(&self, initial_pressure: &Array3<f64>, frequency: f64) -> KwaversResult<Array3<f64>> {
+    pub fn propagate_shock_wave(
+        &self,
+        initial_pressure: &Array3<f64>,
+        frequency: f64,
+    ) -> KwaversResult<Array3<f64>> {
         // Use KZK solver for nonlinear propagation
         // This is a simplified implementation - full KZK would require frequency domain processing
 
         let mut propagated_pressure = initial_pressure.clone();
-        let initial_peak = initial_pressure.iter().fold(f64::MIN, |a, &b| a.max(b)).abs();
+        let initial_peak = initial_pressure
+            .iter()
+            .fold(f64::MIN, |a, &b| a.max(b))
+            .abs();
 
         // Apply geometric spreading (spherical wave)
         self.apply_geometric_spreading(&mut propagated_pressure);
@@ -303,7 +318,12 @@ impl ShockWavePropagation {
     }
 
     /// Apply nonlinear steepening using Burgers equation approximation
-    fn apply_nonlinear_steepening(&self, pressure: &mut Array3<f64>, frequency: f64, initial_peak: f64) {
+    fn apply_nonlinear_steepening(
+        &self,
+        pressure: &mut Array3<f64>,
+        frequency: f64,
+        initial_peak: f64,
+    ) {
         // Shock formation distance: Ls = ρ₀ c₀³ / (β ω p₀)
         let omega = 2.0 * PI * frequency;
         let c0: f64 = 1500.0;
@@ -320,7 +340,7 @@ impl ShockWavePropagation {
         }
         // Adaptive upper bound to prevent non-physical amplification dominating losses
         let upper_bound = 1.0 + 0.5 * (z / ls).max(0.0);
-        let gain = gain.clamp(0.5, upper_bound.max(1.0).min(1.5));
+        let gain = gain.clamp(0.5, upper_bound.clamp(1.0, 1.5));
 
         for p in pressure.iter_mut() {
             *p *= gain;
@@ -346,10 +366,10 @@ impl ShockWavePropagation {
 
     /// Calculate shock amplitude at focus
     #[must_use]
-    pub fn calculate_shock_amplitude(&self, initial_amplitude: f64, frequency: f64) -> f64 {
+    pub fn calculate_shock_amplitude(&self, initial_amplitude: f64, _frequency: f64) -> f64 {
         // Account for focusing gain and nonlinear effects
         let focusing_gain = 100.0; // Typical focusing gain
-        let nonlinear_gain = 2.0;  // Nonlinear enhancement
+        let nonlinear_gain = 2.0; // Nonlinear enhancement
 
         initial_amplitude * focusing_gain * nonlinear_gain
     }
@@ -399,7 +419,9 @@ mod tests {
 
         let initial_pressure = Array3::from_elem(grid.dimensions(), 1e6); // 1 MPa uniform field
 
-        let propagated = propagator.propagate_shock_wave(&initial_pressure, 1e6).unwrap();
+        let propagated = propagator
+            .propagate_shock_wave(&initial_pressure, 1e6)
+            .unwrap();
 
         // Propagated field should be attenuated
         let initial_max = initial_pressure.iter().fold(f64::MIN, |a, &b| a.max(b));
@@ -432,7 +454,9 @@ mod tests {
         let initial_pressure = Array3::from_elem(grid.dimensions(), 1e6); // 1 MPa
 
         let propagator = ShockWavePropagation::new(z, &grid).unwrap();
-        let propagated = propagator.propagate_shock_wave(&initial_pressure, frequency).unwrap();
+        let propagated = propagator
+            .propagate_shock_wave(&initial_pressure, frequency)
+            .unwrap();
 
         let initial_max = 1e6_f64;
 

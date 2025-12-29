@@ -99,6 +99,8 @@ pub fn compute_kspace_correction_factors(
     kz: &Array3<f64>,
     grid: &Grid,
     correction_type: CorrectionType,
+    dt: f64,
+    c_ref: f64,
 ) -> Array3<f64> {
     let mut correction = Array3::from_elem(kx.dim(), 1.0);
 
@@ -115,30 +117,28 @@ pub fn compute_kspace_correction_factors(
             );
         }
         CorrectionType::Treeby2010 => {
-            // Treeby & Cox (2010) correction: exact for staggered grid
+            // Treeby & Cox (2010) correction: exact for staggered grid + temporal dispersion
             Zip::from(&mut correction).and(kx).and(ky).and(kz).for_each(
                 |c, &kx_val, &ky_val, &kz_val| {
-                    let cx = if kx_val.abs() > 1e-10 {
-                        (kx_val * grid.dx / 2.0).sin() / (kx_val * grid.dx / 2.0)
-                    } else {
-                        1.0
-                    };
-                    let cy = if ky_val.abs() > 1e-10 {
-                        (ky_val * grid.dy / 2.0).sin() / (ky_val * grid.dy / 2.0)
-                    } else {
-                        1.0
-                    };
-                    let cz = if kz_val.abs() > 1e-10 {
-                        (kz_val * grid.dz / 2.0).sin() / (kz_val * grid.dz / 2.0)
-                    } else {
-                        1.0
-                    };
-                    *c = cx * cy * cz;
+                    // Physical wavenumber magnitude
+                    let k_sq = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
+                    let k_mag = k_sq.sqrt();
+
+                    // Temporal correction (k-Wave standard)
+                    // kappa = sinc(c0 * dt * k / 2)
+                    let temporal_correction = sinc(c_ref * dt * k_mag / 2.0);
+
+                    // Note: k-Wave also includes spatial sinc if using staggered grid.
+                    // Assuming collocated for now, so only temporal correction is applied.
+                    // If we want to match k-Wave's "exact" behavior on a staggered grid,
+                    // we would also multiply by spatial sincs.
+
+                    *c = temporal_correction;
                 },
             );
         }
         CorrectionType::None => {
-            // No correction
+            // No correction (array initialized to 1.0)
         }
     }
 

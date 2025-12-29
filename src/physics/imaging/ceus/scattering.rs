@@ -51,14 +51,17 @@ impl NonlinearScattering {
         let pressure_factor = (acoustic_pressure / 100_000.0).min(1.0); // Normalize to 100 kPa
 
         // Resonance enhancement
-        let resonance_freq = population.reference_bubble.resonance_frequency(101325.0, 1000.0);
+        let resonance_freq = population
+            .reference_bubble
+            .resonance_frequency(101325.0, 1000.0);
         let freq_ratio = frequency / resonance_freq;
         let resonance_factor = 1.0 / (1.0 + (freq_ratio - 1.0).powi(2));
 
         // Total nonlinear scattering
-        let nonlinear_scattering = linear_scattering * concentration *
-                                 (1.0 + self.harmonic_efficiency * pressure_factor) *
-                                 resonance_factor;
+        let nonlinear_scattering = linear_scattering
+            * concentration
+            * (1.0 + self.harmonic_efficiency * pressure_factor)
+            * resonance_factor;
 
         Ok(nonlinear_scattering)
     }
@@ -89,9 +92,9 @@ impl HarmonicImaging {
     /// Create new harmonic imaging system
     pub fn new(fundamental_freq: f64) -> Self {
         let harmonic_frequencies = vec![
-            fundamental_freq * 2.0,     // Second harmonic
-            fundamental_freq * 1.5,     // Ultraharmonic
-            fundamental_freq * 0.5,     // Subharmonic
+            fundamental_freq * 2.0, // Second harmonic
+            fundamental_freq * 1.5, // Ultraharmonic
+            fundamental_freq * 0.5, // Subharmonic
         ];
 
         Self {

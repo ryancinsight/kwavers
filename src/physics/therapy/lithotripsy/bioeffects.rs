@@ -22,10 +22,8 @@
 //! - IEC 62359 (2010): "Ultrasonics - Field characterization - Test methods for the determination of thermal and mechanical indices"
 //! - Sapozhnikov et al. (2007): "Tissue erosion using cavitation effects of shock waves"
 
-use crate::error::KwaversResult;
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Bioeffects assessment parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,14 +51,14 @@ pub struct BioeffectsParameters {
 impl Default for BioeffectsParameters {
     fn default() -> Self {
         Self {
-            mi_threshold: 1.9,       // FDA limit
-            ti_threshold: 6.0,       // Soft tissue limit
+            mi_threshold: 1.9,           // FDA limit
+            ti_threshold: 6.0,           // Soft tissue limit
             cavitation_threshold: 100.0, // Arbitrary units
-            perfusion_rate: 0.001,   // 1/s
-            thermal_conductivity: 0.5, // W/(m·K)
-            specific_heat: 3600.0,   // J/(kg·K)
-            blood_perfusion: 0.01,   // 1/s
-            tissue_density: 1050.0,  // kg/m³
+            perfusion_rate: 0.001,       // 1/s
+            thermal_conductivity: 0.5,   // W/(m·K)
+            specific_heat: 3600.0,       // J/(kg·K)
+            blood_perfusion: 0.01,       // 1/s
+            tissue_density: 1050.0,      // kg/m³
             absorption_coefficient: 5.0, // Np/m at 1 MHz
         }
     }
@@ -156,12 +154,12 @@ impl TissueDamageAssessment {
     }
 
     /// Calculate thermal effects and thermal index
-    fn calculate_thermal_effects(&mut self, intensity_field: &Array3<f64>, exposure_time: f64) {
+    fn calculate_thermal_effects(&mut self, intensity_field: &Array3<f64>, _exposure_time: f64) {
         // Simplified thermal model using bioheat equation
         // dT/dt = (α I) / (ρ c) - perfusion_rate * (T - T_blood)
 
-        let t_blood = 37.0; // Blood temperature (°C)
-        let ambient_temp = 37.0; // Initial tissue temperature (°C)
+        let _t_blood = 37.0; // Blood temperature (°C)
+        let _ambient_temp = 37.0; // Initial tissue temperature (°C)
 
         let (nx, ny, nz) = intensity_field.dim();
         for i in 0..nx {
@@ -170,8 +168,8 @@ impl TissueDamageAssessment {
                     let intensity = intensity_field[[i, j, k]];
 
                     // Heating rate: dT/dt = (α I) / (ρ c_p)
-                    let heating_rate = (self.params.absorption_coefficient * intensity) /
-                                     (self.params.tissue_density * self.params.specific_heat);
+                    let heating_rate = (self.params.absorption_coefficient * intensity)
+                        / (self.params.tissue_density * self.params.specific_heat);
 
                     // Steady-state temperature rise (simplified)
                     let temp_rise = heating_rate / self.params.perfusion_rate;
@@ -217,12 +215,25 @@ impl TissueDamageAssessment {
                     let cavitation = self.cavitation_dose[[i, j, k]];
 
                     // Damage probability based on exceeding thresholds
-                    let mi_damage = if mi > self.params.mi_threshold { 0.8 } else { 0.0 };
-                    let ti_damage = if ti > self.params.ti_threshold { 0.6 } else { 0.0 };
-                    let cav_damage = if cavitation > self.params.cavitation_threshold { 0.4 } else { 0.0 };
+                    let mi_damage = if mi > self.params.mi_threshold {
+                        0.8
+                    } else {
+                        0.0
+                    };
+                    let ti_damage = if ti > self.params.ti_threshold {
+                        0.6
+                    } else {
+                        0.0
+                    };
+                    let cav_damage = if cavitation > self.params.cavitation_threshold {
+                        0.4
+                    } else {
+                        0.0
+                    };
 
                     // Combined damage (simplified model)
-                    let combined_damage = 1.0 - (1.0 - mi_damage) * (1.0 - ti_damage) * (1.0 - cav_damage);
+                    let combined_damage =
+                        1.0 - (1.0 - mi_damage) * (1.0 - ti_damage) * (1.0 - cav_damage);
                     self.damage_probability[[i, j, k]] = combined_damage;
                 }
             }
@@ -235,7 +246,10 @@ impl TissueDamageAssessment {
         let max_mi = self.mechanical_index.iter().fold(0.0f64, |a, &b| a.max(b));
         let max_ti = self.thermal_index.iter().fold(0.0f64, |a, &b| a.max(b));
         let max_cavitation = self.cavitation_dose.iter().fold(0.0f64, |a, &b| a.max(b));
-        let max_damage_prob = self.damage_probability.iter().fold(0.0f64, |a, &b| a.max(b));
+        let max_damage_prob = self
+            .damage_probability
+            .iter()
+            .fold(0.0f64, |a, &b| a.max(b));
 
         let mi_safe = max_mi <= self.params.mi_threshold;
         let ti_safe = max_ti <= self.params.ti_threshold;
@@ -249,10 +263,25 @@ impl TissueDamageAssessment {
             max_cavitation_dose: max_cavitation,
             max_damage_probability: max_damage_prob,
             violations: vec![
-                if !mi_safe { Some("Mechanical Index".to_string()) } else { None },
-                if !ti_safe { Some("Thermal Index".to_string()) } else { None },
-                if !cavitation_safe { Some("Cavitation Dose".to_string()) } else { None },
-            ].into_iter().flatten().collect(),
+                if !mi_safe {
+                    Some("Mechanical Index".to_string())
+                } else {
+                    None
+                },
+                if !ti_safe {
+                    Some("Thermal Index".to_string())
+                } else {
+                    None
+                },
+                if !cavitation_safe {
+                    Some("Cavitation Dose".to_string())
+                } else {
+                    None
+                },
+            ]
+            .into_iter()
+            .flatten()
+            .collect(),
         }
     }
 
@@ -393,7 +422,13 @@ mod tests {
         let intensity_field = Array3::zeros(grid_shape);
         let cavitation_field = Array3::zeros(grid_shape);
 
-        assessment.assess_bioeffects(&pressure_field, &intensity_field, &cavitation_field, 1e6, 1.0);
+        assessment.assess_bioeffects(
+            &pressure_field,
+            &intensity_field,
+            &cavitation_field,
+            1e6,
+            1.0,
+        );
 
         // MI = p_r / √f = 10 / √1 = 10 (should be high)
         let mi = assessment.mechanical_index()[[2, 2, 2]];
@@ -412,7 +447,13 @@ mod tests {
         let intensity_field = Array3::zeros(grid_shape);
         let cavitation_field = Array3::zeros(grid_shape);
 
-        assessment.assess_bioeffects(&pressure_field, &intensity_field, &cavitation_field, 1e6, 1.0);
+        assessment.assess_bioeffects(
+            &pressure_field,
+            &intensity_field,
+            &cavitation_field,
+            1e6,
+            1.0,
+        );
 
         let safety = assessment.check_safety_limits();
         assert!(safety.overall_safe);
@@ -430,7 +471,13 @@ mod tests {
         let intensity_field = Array3::from_elem(grid_shape, 1000.0); // 1000 W/m²
         let cavitation_field = Array3::zeros(grid_shape);
 
-        model.update_assessment(&pressure_field, &intensity_field, &cavitation_field, 1e6, 1.0);
+        model.update_assessment(
+            &pressure_field,
+            &intensity_field,
+            &cavitation_field,
+            1e6,
+            1.0,
+        );
 
         let safety = model.check_safety();
         assert!(safety.overall_safe);

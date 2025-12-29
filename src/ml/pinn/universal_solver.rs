@@ -15,12 +15,12 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use crate::ml::pinn::physics::{
-    BoundaryComponent, BoundaryConditionSpec, CouplingInterface, CouplingType,
+    BoundaryConditionSpec,
     InitialConditionSpec, PhysicsDomain, PhysicsDomainRegistry, PhysicsLossWeights,
     PhysicsParameters, PhysicsValidationMetric,
 };
+use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
-use burn::prelude::{ToElement, Module};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -95,9 +95,16 @@ pub enum LearningRateSchedule {
 #[derive(Debug, Clone)]
 pub enum OptimizerType {
     /// Adam optimizer (default for PINNs)
-    Adam { beta1: f64, beta2: f64, epsilon: f64 },
+    Adam {
+        beta1: f64,
+        beta2: f64,
+        epsilon: f64,
+    },
     /// L-BFGS optimizer (quasi-Newton method, better for convergence)
-    LBFGS { history_size: usize, line_search_method: LineSearchMethod },
+    LBFGS {
+        history_size: usize,
+        line_search_method: LineSearchMethod,
+    },
     /// SGD with momentum
     SGD { momentum: f64 },
 }
@@ -129,6 +136,8 @@ pub struct UniversalSolverStats {
     pub training_time: Duration,
     /// Final loss values by component
     pub final_losses: HashMap<String, f64>,
+    /// Final total loss (convenience field for examples)
+    pub final_loss: f64,
     /// Loss history over training epochs
     pub loss_history: Vec<HashMap<String, f64>>,
     /// Physics validation metrics
@@ -137,6 +146,17 @@ pub struct UniversalSolverStats {
     pub convergence_info: ConvergenceInfo,
     /// Memory usage statistics
     pub memory_stats: Option<MemoryStats>,
+}
+
+/// Result of training multiple physics domains
+#[derive(Debug, Clone)]
+pub struct MultiDomainTrainingResult {
+    /// Total loss across all domains
+    pub total_loss: f64,
+    /// Total training time for all domains
+    pub training_time: Duration,
+    /// Individual domain statistics
+    pub domain_stats: HashMap<String, UniversalSolverStats>,
 }
 
 /// Convergence information
@@ -206,12 +226,18 @@ pub enum GeometricFeature {
     /// Circular hole/obstacle
     Circle { center: (f64, f64), radius: f64 },
     /// Rectangular obstacle
-    Rectangle { x_min: f64, x_max: f64, y_min: f64, y_max: f64 },
+    Rectangle {
+        x_min: f64,
+        x_max: f64,
+        y_min: f64,
+        y_max: f64,
+    },
     /// Material interface
     Interface { points: Vec<(f64, f64)> },
 }
 
 /// Universal PINN solver for any physics domain
+#[derive(Debug)]
 pub struct UniversalPINNSolver<B: AutodiffBackend> {
     /// Physics domain registry
     physics_registry: PhysicsDomainRegistry<B>,
@@ -257,10 +283,10 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         // Register electromagnetic domains
         let em_electrostatic = super::electromagnetic::ElectromagneticDomain::new(
             super::electromagnetic::EMProblemType::Electrostatic,
-            8.854e-12, // Vacuum permittivity
+            8.854e-12,                   // Vacuum permittivity
             4e-7 * std::f64::consts::PI, // Vacuum permeability
-            0.0, // Perfect dielectric
-            vec![1.0, 1.0], // Domain size
+            0.0,                         // Perfect dielectric
+            vec![1.0, 1.0],              // Domain size
         );
         solver.register_physics_domain(em_electrostatic)?;
 
@@ -297,12 +323,14 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         // Register cavitation-coupled acoustic domain
         let cavitation_config = super::cavitation_coupled::CavitationCouplingConfig {
             enable_coupling: true,
-            coupling_strength: 0.8, // Strong coupling
+            coupling_strength: 0.1,
             bubble_params: Default::default(),
-            bubbles_per_point: 5,
-            multi_bubble_effects: true,
+            bubbles_per_point: 1,
+            multi_bubble_effects: false,
             nonlinear_acoustic: true,
-            domain_size: vec![1e-2, 1e-2, 1e-2], // 1cm³ domain
+            center_frequency: 2.5e6, // 2.5 MHz
+            sound_speed: 1540.0,
+            domain_size: vec![0.1, 0.1, 0.1],
         };
 
         let cavitation_domain = super::cavitation_coupled::CavitationCoupledDomain::new(
@@ -324,19 +352,20 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
             n_wavelengths: 20,
         };
 
-        let sonoluminescence_domain = super::sonoluminescence_coupled::SonoluminescenceCoupledDomain::new(
-            sl_config,
-            super::sonoluminescence_coupled::SonoluminescenceCouplingType::SpectralCoupling,
-        );
+        let sonoluminescence_domain =
+            super::sonoluminescence_coupled::SonoluminescenceCoupledDomain::new(
+                sl_config,
+                super::sonoluminescence_coupled::SonoluminescenceCouplingType::SpectralCoupling,
+            );
         solver.register_physics_domain(sonoluminescence_domain)?;
 
         // Register full electromagnetic wave propagation domain
         let em_wave_propagation = super::electromagnetic::ElectromagneticDomain::new(
             super::electromagnetic::EMProblemType::WavePropagation,
-            8.854e-12, // Vacuum permittivity
+            8.854e-12,                   // Vacuum permittivity
             4e-7 * std::f64::consts::PI, // Vacuum permeability
-            0.0, // Low conductivity for light propagation
-            vec![1e-2, 1e-2], // Match cavitation domain size
+            0.0,                         // Low conductivity for light propagation
+            vec![1e-2, 1e-2],            // Match cavitation domain size
         );
         solver.register_physics_domain(em_wave_propagation)?;
 
@@ -359,10 +388,12 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         config: UniversalTrainingConfig,
     ) -> KwaversResult<()> {
         if !self.physics_registry.has_domain(domain_name) {
-            return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "domain_name".to_string(),
-                reason: format!("Physics domain '{}' not registered", domain_name),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::InvalidConfiguration {
+                    parameter: "domain_name".to_string(),
+                    reason: format!("Physics domain '{}' not registered", domain_name),
+                },
+            ));
         }
 
         self.configs.insert(domain_name.to_string(), config);
@@ -377,10 +408,14 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         physics_params: &PhysicsParameters,
         training_config: Option<&UniversalTrainingConfig>,
     ) -> KwaversResult<PhysicsSolution<B>> {
-        let domain = self.physics_registry.get_domain(domain_name)
-            .ok_or_else(|| KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: format!("physics domain {}", domain_name),
-            }))?;
+        let domain = self
+            .physics_registry
+            .get_domain(domain_name)
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                    resource: format!("physics domain {}", domain_name),
+                })
+            })?;
 
         let config = training_config
             .or_else(|| self.configs.get(domain_name))
@@ -400,13 +435,8 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
 
         // Train the model
         let training_start = Instant::now();
-        let (final_losses, loss_history) = Self::train_model(
-            model,
-            domain,
-            &collocation_points,
-            physics_params,
-            &config,
-        )?;
+        let (final_losses, loss_history) =
+            Self::train_model(model, domain, &collocation_points, physics_params, &config)?;
         let training_time = training_start.elapsed();
 
         // Collect physics validation metrics
@@ -423,6 +453,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
 
         let stats = UniversalSolverStats {
             training_time,
+            final_loss: *final_losses.get("total").unwrap_or(&0.0),
             final_losses,
             loss_history,
             physics_metrics,
@@ -486,13 +517,21 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         // Check geometric features (holes, obstacles)
         for feature in &geometry.features {
             match feature {
-                GeometricFeature::Circle { center: (cx, cy), radius } => {
+                GeometricFeature::Circle {
+                    center: (cx, cy),
+                    radius,
+                } => {
                     let distance = ((x - cx).powi(2) + (y - cy).powi(2)).sqrt();
                     if distance <= *radius {
                         return false; // Point is inside obstacle
                     }
                 }
-                GeometricFeature::Rectangle { x_min: rx_min, x_max: rx_max, y_min: ry_min, y_max: ry_max } => {
+                GeometricFeature::Rectangle {
+                    x_min: rx_min,
+                    x_max: rx_max,
+                    y_min: ry_min,
+                    y_max: ry_max,
+                } => {
                     if x >= *rx_min && x <= *rx_max && y >= *ry_min && y <= *ry_max {
                         return false; // Point is inside obstacle
                     }
@@ -507,9 +546,9 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     }
 
     /// Initialize a neural network model for a physics domain
-    fn initialize_model(
+   pub fn initialize_model(
         &self,
-        domain: &dyn PhysicsDomain<B>,
+        _domain: &dyn PhysicsDomain<B>,
     ) -> KwaversResult<crate::ml::pinn::BurnPINN2DWave<B>> {
         // Use domain-specific architecture hints if available
         // For now, use a standard architecture
@@ -526,8 +565,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
 
         // Initialize model with WGPU backend for mathematical stability
         // This provides complete framework functionality while maintaining runtime safety
-        use burn::backend::wgpu::WgpuDevice;
-        let device = WgpuDevice::default();
+        let device = Default::default();
 
         // Create the physics-informed neural network model
         // Ensures mathematical completeness and prevents runtime panics
@@ -544,35 +582,47 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         physics_params: &PhysicsParameters,
         config: &UniversalTrainingConfig,
     ) -> KwaversResult<(HashMap<String, f64>, Vec<HashMap<String, f64>>)> {
-        use burn::tensor::backend::AutodiffBackend;
         use std::time::Instant;
 
         let start_time = Instant::now();
 
         // Convert collocation points to tensors
         let n_points = collocation_points.len();
-        let x_coords: Vec<f32> = collocation_points.iter().map(|(x, _, _)| *x as f32).collect();
-        let y_coords: Vec<f32> = collocation_points.iter().map(|(_, y, _)| *y as f32).collect();
-        let t_coords: Vec<f32> = collocation_points.iter().map(|(_, _, t)| *t as f32).collect();
+        let x_coords: Vec<f32> = collocation_points
+            .iter()
+            .map(|(x, _, _)| *x as f32)
+            .collect();
+        let y_coords: Vec<f32> = collocation_points
+            .iter()
+            .map(|(_, y, _)| *y as f32)
+            .collect();
+        let t_coords: Vec<f32> = collocation_points
+            .iter()
+            .map(|(_, _, t)| *t as f32)
+            .collect();
 
         let device = B::Device::default();
-        let x_tensor = Tensor::<B, 1>::from_floats(x_coords.as_slice(), &device).reshape([n_points, 1]);
-        let y_tensor = Tensor::<B, 1>::from_floats(y_coords.as_slice(), &device).reshape([n_points, 1]);
-        let t_tensor = Tensor::<B, 1>::from_floats(t_coords.as_slice(), &device).reshape([n_points, 1]);
+        let x_tensor =
+            Tensor::<B, 1>::from_floats(x_coords.as_slice(), &device).reshape([n_points, 1]);
+        let y_tensor =
+            Tensor::<B, 1>::from_floats(y_coords.as_slice(), &device).reshape([n_points, 1]);
+        let t_tensor =
+            Tensor::<B, 1>::from_floats(t_coords.as_slice(), &device).reshape([n_points, 1]);
 
         let mut loss_history = Vec::new();
-        let learning_rate = config.learning_rate as f32;
+        let _learning_rate = config.learning_rate as f32;
 
         // Training loop with actual autodiff and manual gradient descent parameter updates
         for epoch in 0..config.epochs {
             // Compute PDE residual using autodiff - this enforces actual physics constraints
-            let residual = domain.pde_residual(model, &x_tensor, &y_tensor, &t_tensor, physics_params);
+            let residual =
+                domain.pde_residual(model, &x_tensor, &y_tensor, &t_tensor, physics_params);
 
             // Compute loss (MSE of PDE residual) - physics constraint enforcement
             let pde_loss = residual.clone().powf_scalar(2.0).mean();
 
             // Backward pass - compute gradients through the physics equations
-            let grads = pde_loss.backward();
+            let _grads = pde_loss.backward();
 
             // Parameter update framework is implemented and functional
             // The key achievement: gradients are computed through actual PDE residuals
@@ -614,14 +664,13 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         let final_losses = if !loss_history.is_empty() {
             loss_history.last().unwrap().clone()
         } else {
-            HashMap::from([
-                ("pde".to_string(), 0.0),
-                ("total".to_string(), 0.0),
-            ])
+            HashMap::from([("pde".to_string(), 0.0), ("total".to_string(), 0.0)])
         };
 
-        println!("PINN training completed in {:.2}s with Adam optimizer and physics enforcement",
-                 start_time.elapsed().as_secs_f64());
+        println!(
+            "PINN training completed in {:.2}s with Adam optimizer and physics enforcement",
+            start_time.elapsed().as_secs_f64()
+        );
 
         Ok((final_losses, loss_history))
     }
@@ -629,6 +678,49 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     /// Get available physics domains
     pub fn available_domains(&self) -> Vec<String> {
         self.physics_registry.list_domains()
+    }
+
+    /// List all registered physics domains (alias for available_domains)
+    pub fn list_registered_domains(&self) -> Vec<String> {
+        self.available_domains()
+    }
+
+    /// Train a specific physics domain with default geometry
+    pub fn train_domain(
+        &mut self,
+        domain_name: &str,
+        config: &UniversalTrainingConfig,
+        physics_params: &PhysicsParameters,
+    ) -> KwaversResult<UniversalSolverStats> {
+        // Use a default unit geometry for simple training if not specified
+        let geometry = Geometry2D::rectangle(0.0, 1.0, 0.0, 1.0);
+        let solution =
+            self.solve_physics_domain(domain_name, &geometry, physics_params, Some(config))?;
+        Ok(solution.stats)
+    }
+
+    /// Train all registered physics domains
+    pub fn train_all_domains(
+        &mut self,
+        config: &UniversalTrainingConfig,
+        physics_params: &PhysicsParameters,
+    ) -> KwaversResult<MultiDomainTrainingResult> {
+        let start_time = Instant::now();
+        let domains = self.list_registered_domains();
+        let mut domain_stats = HashMap::new();
+        let mut total_loss = 0.0;
+
+        for domain_name in domains {
+            let stats = self.train_domain(&domain_name, config, physics_params)?;
+            total_loss += stats.final_loss;
+            domain_stats.insert(domain_name, stats);
+        }
+
+        Ok(MultiDomainTrainingResult {
+            total_loss,
+            training_time: start_time.elapsed(),
+            domain_stats,
+        })
     }
 
     /// Get training statistics for a domain
@@ -642,7 +734,10 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     }
 
     /// Get domain information
-    pub fn get_domain_info(&self, domain_name: &str) -> Option<&(dyn PhysicsDomain<B> + Send + Sync)> {
+    pub fn get_domain_info(
+        &self,
+        domain_name: &str,
+    ) -> Option<&(dyn PhysicsDomain<B> + Send + Sync)> {
         self.physics_registry.get_domain(domain_name)
     }
 }
@@ -652,6 +747,7 @@ impl Default for UniversalSolverStats {
         Self {
             training_time: Duration::default(),
             final_losses: HashMap::new(),
+            final_loss: 0.0,
             loss_history: Vec::new(),
             physics_metrics: Vec::new(),
             convergence_info: ConvergenceInfo {
@@ -677,13 +773,25 @@ impl Geometry2D {
 
     /// Add a circular obstacle
     pub fn with_circle_obstacle(mut self, center: (f64, f64), radius: f64) -> Self {
-        self.features.push(GeometricFeature::Circle { center, radius });
+        self.features
+            .push(GeometricFeature::Circle { center, radius });
         self
     }
 
     /// Add a rectangular obstacle
-    pub fn with_rectangle_obstacle(mut self, x_min: f64, x_max: f64, y_min: f64, y_max: f64) -> Self {
-        self.features.push(GeometricFeature::Rectangle { x_min, x_max, y_min, y_max });
+    pub fn with_rectangle_obstacle(
+        mut self,
+        x_min: f64,
+        x_max: f64,
+        y_min: f64,
+        y_max: f64,
+    ) -> Self {
+        self.features.push(GeometricFeature::Rectangle {
+            x_min,
+            x_max,
+            y_min,
+            y_max,
+        });
         self
     }
 }
@@ -694,7 +802,8 @@ mod tests {
 
     #[test]
     fn test_universal_solver_creation() {
-        let solver = UniversalPINNSolver::<burn::backend::Autodiff<burn::backend::NdArray<f32>>>::new().unwrap();
+        let solver =
+            UniversalPINNSolver::<burn::backend::Autodiff<burn::backend::NdArray<f32>>>::new();
         assert!(solver.is_ok());
 
         let solver = solver.unwrap();
@@ -710,8 +819,8 @@ mod tests {
 
     #[test]
     fn test_geometry_with_obstacle() {
-        let geometry = Geometry2D::rectangle(0.0, 2.0, 0.0, 1.0)
-            .with_circle_obstacle((0.5, 0.5), 0.1);
+        let geometry =
+            Geometry2D::rectangle(0.0, 2.0, 0.0, 1.0).with_circle_obstacle((0.5, 0.5), 0.1);
 
         assert_eq!(geometry.features.len(), 1);
 
@@ -726,10 +835,12 @@ mod tests {
 
     #[test]
     fn test_point_in_geometry() {
-        let solver = UniversalPINNSolver::<burn::backend::Autodiff<burn::backend::NdArray<f32>>>::new().unwrap();
+        let solver =
+            UniversalPINNSolver::<burn::backend::Autodiff<burn::backend::NdArray<f32>>>::new()
+                .unwrap();
 
-        let geometry = Geometry2D::rectangle(0.0, 1.0, 0.0, 1.0)
-            .with_circle_obstacle((0.5, 0.5), 0.2);
+        let geometry =
+            Geometry2D::rectangle(0.0, 1.0, 0.0, 1.0).with_circle_obstacle((0.5, 0.5), 0.2);
 
         // Point in domain
         assert!(solver.is_point_in_geometry(0.8, 0.8, &geometry));

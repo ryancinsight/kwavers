@@ -3,24 +3,30 @@
 //! This module configures the complete REST API router for both PINN operations
 //! and clinical ultrasound integration, including middleware and route organization.
 
+use crate::api::{
+    handlers::{
+        delete_model, get_job_info, get_model_info, health_check, list_models, run_inference,
+        train_pinn_model, AppState,
+    },
+    middleware::MetricsCollector,
+};
 use axum::{
     middleware,
-    routing::{get, post, put, delete},
+    routing::{delete, get, post, put},
     Router,
 };
 use tower_http::{
-    cors::{CorsLayer, Any},
-    trace::TraceLayer,
     compression::CompressionLayer,
+    cors::{Any, CorsLayer},
     request_id::{MakeRequestUuid, SetRequestIdLayer},
-};
-use crate::api::{
-    handlers::{AppState, health_check, train_pinn_model, get_job_info, run_inference, list_models, get_model_info, delete_model},
-    middleware::{MetricsCollector},
+    trace::TraceLayer,
 };
 
 #[cfg(feature = "pinn")]
-use crate::api::clinical_handlers::{ClinicalAppState, register_device, get_device_status, list_devices, analyze_clinical, dicom_integrate, optimize_mobile, get_session_status};
+use crate::api::clinical_handlers::{
+    analyze_clinical, dicom_integrate, get_device_status, get_session_status, list_devices,
+    optimize_mobile, register_device, ClinicalAppState,
+};
 
 /// Create the complete API router
 pub fn create_router() -> Router<AppState> {
@@ -37,22 +43,27 @@ pub fn create_router() -> Router<AppState> {
     let mut router = Router::new()
         // Health and monitoring
         .route("/health", get(health_check))
-
         // PINN API routes (/api/pinn/*)
         .nest("/api/pinn", create_pinn_router());
 
     // Add clinical routes if PINN feature is enabled
     #[cfg(feature = "pinn")]
     {
-        let clinical_state = crate::api::clinical_handlers::ClinicalAppState::new().expect("Failed to create clinical app state");
-        router = router.nest("/api/clinical", create_clinical_router().with_state(clinical_state));
+        let clinical_state = crate::api::clinical_handlers::ClinicalAppState::new(
+            pinn_state.auth_middleware.clone(),
+        )
+        .expect("Failed to create clinical app state");
+        router = router.nest(
+            "/api/clinical",
+            create_clinical_router().with_state(clinical_state),
+        );
     }
 
     router
         // Apply global middleware
         .layer(SetRequestIdLayer::new(
             axum::http::HeaderName::from_static("x-request-id"),
-            tower_http::request_id::MakeRequestUuid::default()
+            tower_http::request_id::MakeRequestUuid::default(),
         ))
         .layer(TraceLayer::new_for_http())
         .layer(CompressionLayer::new())
@@ -60,7 +71,7 @@ pub fn create_router() -> Router<AppState> {
             CorsLayer::new()
                 .allow_origin(Any)
                 .allow_methods(Any)
-                .allow_headers(Any)
+                .allow_headers(Any),
         )
         .with_state(pinn_state)
 }
@@ -71,10 +82,8 @@ fn create_pinn_router() -> Router<AppState> {
         // Training operations
         .route("/train", post(train_pinn_model))
         .route("/jobs/:job_id", get(get_job_info))
-
         // Inference operations
         .route("/inference", post(run_inference))
-
         // Model management
         .route("/models", get(list_models))
         .route("/models/:model_id", get(get_model_info))
@@ -89,16 +98,12 @@ fn create_clinical_router() -> Router<ClinicalAppState> {
         .route("/devices", post(register_device))
         .route("/devices", get(list_devices))
         .route("/devices/:device_id", get(get_device_status))
-
         // Clinical analysis (AI-enhanced beamforming)
         .route("/analyze", post(analyze_clinical))
-
         // Standards integration
         .route("/dicom", post(dicom_integrate))
-
         // Mobile optimization
         .route("/optimize", post(optimize_mobile))
-
         // Session management
         .route("/sessions/:session_id", get(get_session_status))
 }
@@ -135,16 +140,14 @@ async fn debug_info() -> axum::response::Json<serde_json::Value> {
 mod tests {
     use super::*;
     use axum::http::Request;
-    use hyper::Body;
-    use tower::ServiceExt;
+    use axum::body::Body;
+    use tower::util::ServiceExt;
 
     #[tokio::test]
     async fn test_router_creation() {
         let router = create_router();
         // Validate health endpoint responds OK
-        let request = Request::get("/health")
-            .body(Body::empty())
-            .unwrap();
+        let request = Request::get("/health").body(Body::empty()).unwrap();
 
         let response = router.oneshot(request).await.unwrap();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
@@ -156,9 +159,7 @@ mod tests {
         let router = create_dev_router();
 
         // Test debug endpoint
-        let request = Request::get("/debug/info")
-            .body(Body::empty())
-            .unwrap();
+        let request = Request::get("/debug/info").body(Body::empty()).unwrap();
 
         let response = router.oneshot(request).await.unwrap();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
@@ -170,16 +171,9 @@ mod tests {
         let router = create_clinical_router().with_state(clinical_state);
 
         // Test that clinical devices endpoint responds OK
-        let request = Request::get("/devices")
-            .body(Body::empty())
-            .unwrap();
+        let request = Request::get("/devices").body(Body::empty()).unwrap();
 
         let response = router.oneshot(request).await.unwrap();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
 }
-
-
-
-
-

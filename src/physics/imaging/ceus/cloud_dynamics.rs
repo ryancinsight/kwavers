@@ -33,9 +33,9 @@
 //! - Doinikov, A. A. (2001). "Translational motion of a bubble in an acoustic
 //!   standing wave." *Phys. Fluids*, 13(8), 2219-2226.
 
+use super::microbubble::{BubbleDynamics, BubbleResponse, Microbubble};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use super::microbubble::{Microbubble, BubbleResponse, BubbleDynamics};
 use ndarray::Array3;
 use std::collections::HashMap;
 
@@ -83,8 +83,8 @@ impl Default for CloudConfig {
             num_bubbles: 1000,
             concentration: 1e12, // 10^12 bubbles/m³ (typical for contrast agents)
             dimensions: [1e-3, 1e-3, 1e-3], // 1 mm³ volume
-            dt: 1e-8, // 10 ns (much smaller than acoustic period)
-            duration: 1e-3, // 1 ms
+            dt: 1e-8,            // 10 ns (much smaller than acoustic period)
+            duration: 1e-3,      // 1 ms
             coalescence_distance: 2e-6, // 2 μm
             enable_interactions: true,
             enable_dissolution: false,
@@ -93,13 +93,14 @@ impl Default for CloudConfig {
 }
 
 /// Microbubble cloud dynamics simulator
+#[derive(Debug)]
 pub struct CloudDynamics {
     /// Configuration
     config: CloudConfig,
     /// Bubble population
     bubbles: Vec<CloudBubble>,
     /// Computational grid for field calculations
-    grid: Option<Grid>,
+    _grid: Option<Grid>,
     /// Microbubble dynamics solver for individual bubbles
     bubble_solver: BubbleDynamics,
     /// Acoustic field incident on the cloud
@@ -114,7 +115,7 @@ impl CloudDynamics {
         Ok(Self {
             config,
             bubbles: Vec::new(),
-            grid: None,
+            _grid: None,
             bubble_solver,
             incident_field: None,
         })
@@ -125,12 +126,15 @@ impl CloudDynamics {
         self.bubbles.clear();
 
         // Calculate actual number of bubbles based on concentration and volume
-        let volume = self.config.dimensions[0] * self.config.dimensions[1] * self.config.dimensions[2];
+        let volume =
+            self.config.dimensions[0] * self.config.dimensions[1] * self.config.dimensions[2];
         let actual_num_bubbles = (self.config.concentration * volume) as usize;
         let num_bubbles = actual_num_bubbles.min(self.config.num_bubbles);
 
-        println!("Initializing cloud with {} bubbles in {:.2e} m³ volume",
-                 num_bubbles, volume);
+        println!(
+            "Initializing cloud with {} bubbles in {:.2e} m³ volume",
+            num_bubbles, volume
+        );
 
         for i in 0..num_bubbles {
             // Random position within volume
@@ -170,8 +174,11 @@ impl CloudDynamics {
         let n_steps = (self.config.duration / self.config.dt) as usize;
         let mut responses = Vec::new();
 
-        println!("Simulating cloud dynamics: {} steps, {} bubbles",
-                 n_steps, self.bubbles.len());
+        println!(
+            "Simulating cloud dynamics: {} steps, {} bubbles",
+            n_steps,
+            self.bubbles.len()
+        );
 
         // Save initial state
         responses.push(self.capture_cloud_state());
@@ -200,7 +207,10 @@ impl CloudDynamics {
 
             if step % 10000 == 0 {
                 let active_bubbles = self.bubbles.iter().filter(|b| b.active).count();
-                println!("Step {}/{}, active bubbles: {}", step, n_steps, active_bubbles);
+                println!(
+                    "Step {}/{}, active bubbles: {}",
+                    step, n_steps, active_bubbles
+                );
             }
         }
 
@@ -244,12 +254,16 @@ impl CloudDynamics {
 
                     // Calculate primary radiation force (King, 1934)
                     // F_rad = (4π/3) R₀³ ρ₁ (2πf)² (p₀²/(3ρ₁c₁²)) (5ρ₂ - 2ρ₁)/(2ρ₂ + ρ₁)
-                    let radiation_force = self.calculate_radiation_force(&self.bubbles[bubble_idx], &response);
+                    let radiation_force =
+                        self.calculate_radiation_force(&self.bubbles[bubble_idx], &response);
 
                     // Update velocity using Newton's second law
-                    let mass = (4.0/3.0) * std::f64::consts::PI * self.bubbles[bubble_idx].current_radius.powi(3) * 1000.0; // Assume water density
-                    for i in 0..3 {
-                        self.bubbles[bubble_idx].velocity[i] += (radiation_force[i] / mass) * self.config.dt;
+                    let mass = (4.0 / 3.0)
+                        * std::f64::consts::PI
+                        * self.bubbles[bubble_idx].current_radius.powi(3)
+                        * 1000.0; // Assume water density
+                    for (i, force) in radiation_force.iter().enumerate() {
+                        self.bubbles[bubble_idx].velocity[i] += (force / mass) * self.config.dt;
                     }
                 }
             }
@@ -268,7 +282,7 @@ impl CloudDynamics {
                 continue;
             }
 
-            for j in (i+1)..self.bubbles.len() {
+            for j in (i + 1)..self.bubbles.len() {
                 if !self.bubbles[j].active {
                     continue;
                 }
@@ -293,7 +307,7 @@ impl CloudDynamics {
         let dx = self.bubbles[i].position[0] - self.bubbles[j].position[0];
         let dy = self.bubbles[i].position[1] - self.bubbles[j].position[1];
         let dz = self.bubbles[i].position[2] - self.bubbles[j].position[2];
-        (dx*dx + dy*dy + dz*dz).sqrt()
+        (dx * dx + dy * dy + dz * dz).sqrt()
     }
 
     /// Handle bubble coalescence
@@ -302,8 +316,8 @@ impl CloudDynamics {
         let bubble2 = &self.bubbles[j];
 
         // Conservation of volume (spherical bubbles)
-        let vol1 = (4.0/3.0) * std::f64::consts::PI * bubble1.current_radius.powi(3);
-        let vol2 = (4.0/3.0) * std::f64::consts::PI * bubble2.current_radius.powi(3);
+        let vol1 = (4.0 / 3.0) * std::f64::consts::PI * bubble1.current_radius.powi(3);
+        let vol2 = (4.0 / 3.0) * std::f64::consts::PI * bubble2.current_radius.powi(3);
         let total_vol = vol1 + vol2;
 
         let new_radius = ((3.0 * total_vol) / (4.0 * std::f64::consts::PI)).cbrt();
@@ -314,14 +328,14 @@ impl CloudDynamics {
         let total_mass = mass1 + mass2;
 
         let mut new_velocity = [0.0; 3];
-        for k in 0..3 {
-            new_velocity[k] = (bubble1.velocity[k] * mass1 + bubble2.velocity[k] * mass2) / total_mass;
+        for (k, val) in new_velocity.iter_mut().enumerate() {
+            *val = (bubble1.velocity[k] * mass1 + bubble2.velocity[k] * mass2) / total_mass;
         }
 
         // New position (center of mass)
         let mut new_position = [0.0; 3];
-        for k in 0..3 {
-            new_position[k] = (bubble1.position[k] * mass1 + bubble2.position[k] * mass2) / total_mass;
+        for (k, val) in new_position.iter_mut().enumerate() {
+            *val = (bubble1.position[k] * mass1 + bubble2.position[k] * mass2) / total_mass;
         }
 
         // Update bubble i to be the merged bubble
@@ -339,7 +353,8 @@ impl CloudDynamics {
         // Simplified dissolution model
         // In reality, this would involve gas diffusion equations
         for bubble in &mut self.bubbles {
-            if bubble.active && bubble.current_radius < 0.5e-6 { // Below 0.5 μm
+            if bubble.active && bubble.current_radius < 0.5e-6 {
+                // Below 0.5 μm
                 bubble.active = false;
             }
         }
@@ -358,7 +373,11 @@ impl CloudDynamics {
     }
 
     /// Calculate primary radiation force on a bubble
-    fn calculate_radiation_force(&self, bubble: &CloudBubble, response: &BubbleResponse) -> [f64; 3] {
+    fn calculate_radiation_force(
+        &self,
+        bubble: &CloudBubble,
+        response: &BubbleResponse,
+    ) -> [f64; 3] {
         // Simplified radiation force calculation
         // In reality, this involves complex acoustic streaming and Bjerknes forces
 
@@ -378,8 +397,12 @@ impl CloudDynamics {
 
             // Radiation force magnitude (Bjerknes force for oscillating bubbles)
             // Reference: Bjerknes (1906), Acoustic streaming and radiation pressure
-            let force_magnitude = (4.0/3.0) * std::f64::consts::PI * bubble.current_radius.powi(3) *
-                                field.pressure_amplitude * volume_amp * k;
+            let force_magnitude = (4.0 / 3.0)
+                * std::f64::consts::PI
+                * bubble.current_radius.powi(3)
+                * field.pressure_amplitude
+                * volume_amp
+                * k;
 
             // Primary radiation force acts along the incident wave direction
             [force_magnitude, 0.0, 0.0]
@@ -390,10 +413,7 @@ impl CloudDynamics {
 
     /// Capture current cloud state
     fn capture_cloud_state(&self) -> CloudState {
-        let active_bubbles: Vec<_> = self.bubbles.iter()
-            .filter(|b| b.active)
-            .cloned()
-            .collect();
+        let active_bubbles: Vec<_> = self.bubbles.iter().filter(|b| b.active).cloned().collect();
 
         CloudState {
             bubbles: active_bubbles,
@@ -420,20 +440,23 @@ impl CloudDynamics {
         let nz = 64;
 
         let mut scattered_pressure = Array3::<f64>::zeros((nx, ny, nz));
-        let mut harmonics = HashMap::new();
+        let harmonics = HashMap::new();
 
         // Calculate wavenumber
         let k: f64 = 2.0 * std::f64::consts::PI * frequency / 1500.0; // c = 1500 m/s
 
         // Sum scattering contributions from each bubble
         for (bubble_idx, bubble) in self.bubbles.iter().enumerate() {
-            if bubble_idx >= 1000 { break; } // Limit for computational efficiency
+            if bubble_idx >= 1000 {
+                break;
+            } // Limit for computational efficiency
 
             let bubble_pos = &bubble.position;
 
             // Calculate scattering amplitude based on bubble resonance
             let resonance_freq = bubble.properties.resonance_frequency(101325.0, 1000.0);
-            let scattering_amplitude = if (frequency - resonance_freq).abs() < 0.1 * resonance_freq {
+            let scattering_amplitude = if (frequency - resonance_freq).abs() < 0.1 * resonance_freq
+            {
                 // Near resonance - enhanced scattering
                 bubble.current_radius.powi(3) * 1e6
             } else {
@@ -454,12 +477,14 @@ impl CloudDynamics {
                         let dx = x - bubble_pos[0];
                         let dy = y - bubble_pos[1];
                         let dz = z - bubble_pos[2];
-                        let distance = (dx*dx + dy*dy + dz*dz).sqrt();
+                        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
 
-                        if distance > 1e-6 { // Avoid singularity at bubble center
+                        if distance > 1e-6 {
+                            // Avoid singularity at bubble center
                             // Spherical wave scattering contribution
                             let phase: f64 = k * distance;
-                            let contribution = scattering_amplitude * (phase.cos() / distance).max(-1e6).min(1e6);
+                            let contribution =
+                                scattering_amplitude * (phase.cos() / distance).clamp(-1e6, 1e6);
 
                             scattered_pressure[[i, j, kz]] += contribution;
                         }
@@ -510,10 +535,10 @@ impl IncidentField {
     /// Calculate pressure at position and time
     pub fn pressure_at(&self, position: [f64; 3], time: f64) -> f64 {
         // Plane wave: p(x,t) = p0 * cos(k·x - ωt + φ)
-        let kx = (2.0 * std::f64::consts::PI * self.frequency / self.sound_speed) *
-                 (position[0] * self.direction[0] +
-                  position[1] * self.direction[1] +
-                  position[2] * self.direction[2]);
+        let kx = (2.0 * std::f64::consts::PI * self.frequency / self.sound_speed)
+            * (position[0] * self.direction[0]
+                + position[1] * self.direction[1]
+                + position[2] * self.direction[2]);
 
         let omega_t = 2.0 * std::f64::consts::PI * self.frequency * time;
 

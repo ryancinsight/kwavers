@@ -76,7 +76,7 @@ pub struct DeviceInfo {
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GpuDevice {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,

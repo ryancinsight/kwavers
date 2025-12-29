@@ -20,7 +20,7 @@
 use kwavers::error::KwaversResult;
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
-use kwavers::physics::imaging::elastography::{InversionMethod};
+use kwavers::physics::imaging::elastography::InversionMethod;
 use ndarray::Array1;
 use std::f64::consts::PI;
 
@@ -36,7 +36,13 @@ fn compute_derivative(field: &Array1<f64>, dx: f64, derivative: &mut Array1<f64>
 }
 
 /// Compute total energy in the wave field (kinetic + potential)
-fn compute_total_energy(u_curr: &Array1<f64>, u_prev: &Array1<f64>, dx: f64, dt: f64, c: f64) -> f64 {
+fn compute_total_energy(
+    u_curr: &Array1<f64>,
+    u_prev: &Array1<f64>,
+    dx: f64,
+    dt: f64,
+    c: f64,
+) -> f64 {
     let mut kinetic_energy = 0.0;
     let mut potential_energy = 0.0;
 
@@ -46,7 +52,7 @@ fn compute_total_energy(u_curr: &Array1<f64>, u_prev: &Array1<f64>, dx: f64, dt:
         kinetic_energy += velocity * velocity;
 
         // Potential energy: (1/2) ∫ (∂u/∂x)² dx (for wave equation)
-        let strain = (u_curr[i+1] - u_curr[i-1]) / (2.0 * dx);
+        let strain = (u_curr[i + 1] - u_curr[i - 1]) / (2.0 * dx);
         potential_energy += strain * strain;
     }
 
@@ -167,10 +173,11 @@ pub mod acoustic_wave_validation {
         let mut energy_violation: f64 = 0.0;
         let mut stable_steps: usize = 0;
 
-        for _i in 1..time_points.min(1000) { // Limit steps to prevent excessive computation
+        for _i in 1..time_points.min(1000) {
+            // Limit steps to prevent excessive computation
             // Interior points
             for j in 1..grid_points - 1 {
-                let u_xx = u_curr[j+1] - 2.0 * u_curr[j] + u_curr[j-1];
+                let u_xx = u_curr[j + 1] - 2.0 * u_curr[j] + u_curr[j - 1];
                 u_next[j] = 2.0 * u_curr[j] - u_prev[j] + r * u_xx;
             }
 
@@ -186,7 +193,11 @@ pub mod acoustic_wave_validation {
             let current_energy = compute_total_energy(&u_curr, &u_prev, dx, dt, wave_speed);
             let energy_ratio = current_energy / initial_energy;
 
-            max_displacement = max_displacement.max(u_curr.iter().fold(0.0f64, |a: f64, &b: &f64| a.max(b.abs())));
+            max_displacement = max_displacement.max(
+                u_curr
+                    .iter()
+                    .fold(0.0f64, |a: f64, &b: &f64| a.max(b.abs())),
+            );
             energy_violation = energy_violation.max((energy_ratio - 1.0).abs());
 
             // Check for instability (exploding solution)
@@ -195,7 +206,8 @@ pub mod acoustic_wave_validation {
             }
 
             // Count stable steps
-            if energy_ratio < 2.0 { // Allow some energy growth due to boundary reflections
+            if energy_ratio < 2.0 {
+                // Allow some energy growth due to boundary reflections
                 stable_steps += 1;
             }
         }
@@ -209,14 +221,23 @@ pub mod acoustic_wave_validation {
         let bounded_displacement = max_displacement < amplitude * 10.0; // Reasonable bound
         let sufficient_stability = stable_steps as f64 > time_points as f64 * 0.8; // 80% stable steps
 
-        let passed = finite_solution && bounded_energy && bounded_displacement && sufficient_stability;
+        let passed =
+            finite_solution && bounded_energy && bounded_displacement && sufficient_stability;
 
         let computation_time = start_time.elapsed().as_secs_f64();
 
         // Calculate error metrics based on stability criteria
-        let max_absolute_error = if finite_solution { max_displacement } else { f64::INFINITY };
+        let max_absolute_error = if finite_solution {
+            max_displacement
+        } else {
+            f64::INFINITY
+        };
         let rmse = energy_violation.sqrt(); // Use energy violation as RMSE proxy
-        let mape = if initial_energy > 0.0 { energy_violation * 100.0 } else { 0.0 };
+        let mape = if initial_energy > 0.0 {
+            energy_violation * 100.0
+        } else {
+            0.0
+        };
         let correlation = if passed { 0.95 } else { 0.5 }; // High correlation for stable solutions
 
         Ok(ValidationResult {
@@ -297,7 +318,7 @@ pub mod acoustic_wave_validation {
 /// Shear wave elastography validation
 pub mod swe_validation {
     use super::*;
-    use kwavers::physics::imaging::elastography::{ShearWaveInversion, DisplacementField};
+    use kwavers::physics::imaging::elastography::{DisplacementField, ShearWaveInversion};
 
     /// Validate SWE elasticity reconstruction accuracy
     ///
@@ -327,7 +348,8 @@ pub mod swe_validation {
                     let dy = y - push_location[1];
                     let dz = z - push_location[2];
                     let r2 = dx * dx + dy * dy + dz * dz;
-                    displacement_field.uz[[i, j, k]] = amplitude * (-r2 / (2.0 * sigma * sigma)).exp();
+                    displacement_field.uz[[i, j, k]] =
+                        amplitude * (-r2 / (2.0 * sigma * sigma)).exp();
                 }
             }
         }
@@ -381,7 +403,9 @@ pub mod swe_validation {
             },
             performance: PerformanceMetrics {
                 computation_time,
-                memory_usage: (elasticity_map.youngs_modulus.len() * 3 * std::mem::size_of::<f64>()) as f64 / 1e6,
+                memory_usage: (elasticity_map.youngs_modulus.len() * 3 * std::mem::size_of::<f64>())
+                    as f64
+                    / 1e6,
                 convergence_rate: 0.95,
             },
             clinical_score: if passed { 0.8 } else { 0.5 },
@@ -406,7 +430,7 @@ pub mod swe_validation {
             f4_range: (14.0, 75.0), // kPa
 
             // Diagnostic accuracy
-            auc_fibrosis: 0.85, // Area under ROC curve
+            auc_fibrosis: 0.85,   // Area under ROC curve
             sensitivity_f4: 0.82, // Sensitivity for cirrhosis detection
             specificity_f4: 0.85, // Specificity for cirrhosis detection
 
@@ -429,9 +453,12 @@ pub mod swe_validation {
         };
 
         // Compare against literature standards
-        let auc_error = (implementation_metrics.auc_fibrosis - literature_metrics.auc_fibrosis).abs();
-        let sensitivity_error = (implementation_metrics.sensitivity_f4 - literature_metrics.sensitivity_f4).abs();
-        let specificity_error = (implementation_metrics.specificity_f4 - literature_metrics.specificity_f4).abs();
+        let auc_error =
+            (implementation_metrics.auc_fibrosis - literature_metrics.auc_fibrosis).abs();
+        let sensitivity_error =
+            (implementation_metrics.sensitivity_f4 - literature_metrics.sensitivity_f4).abs();
+        let specificity_error =
+            (implementation_metrics.specificity_f4 - literature_metrics.specificity_f4).abs();
 
         let max_error = auc_error.max(sensitivity_error).max(specificity_error);
         let passed = max_error < 0.05; // 5% tolerance for clinical metrics
@@ -481,11 +508,11 @@ pub mod medical_standards_validation {
     pub fn validate_fda_compliance() -> ValidationResult {
         // FDA standards for diagnostic ultrasound equipment
         let _fda_standards = FDAStandards {
-            max_intensity_ispta: 720.0, // mW/cm²
-            max_intensity_isptb: 50.0,  // W/cm²
-            max_pressure_pr: 190.0,     // kPa
+            max_intensity_ispta: 720.0,   // mW/cm²
+            max_intensity_isptb: 50.0,    // W/cm²
+            max_pressure_pr: 190.0,       // kPa
             frequency_range: (1.0, 18.0), // MHz
-            accuracy_tolerance: 0.1,    // 10% for measurements
+            accuracy_tolerance: 0.1,      // 10% for measurements
         };
 
         // Check our implementation against standards
@@ -512,9 +539,9 @@ pub mod medical_standards_validation {
     pub fn validate_iec_compliance() -> ValidationResult {
         // IEC 60601-2-37: Ultrasound physiotherapy equipment
         let _iec_standards = IECStandards {
-            power_accuracy: 0.3,        // 30% tolerance
-            frequency_accuracy: 0.1,    // 10% tolerance
-            timer_accuracy: 0.1,        // 10% tolerance
+            power_accuracy: 0.3,     // 30% tolerance
+            frequency_accuracy: 0.1, // 10% tolerance
+            timer_accuracy: 0.1,     // 10% tolerance
             safety_interlocks: true,
             emergency_stop: true,
         };
@@ -580,11 +607,15 @@ mod tests {
             0.001,  // 1 ms duration
             100,    // 100 grid points
             &tolerance,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(result.passed, "1D wave equation validation should pass");
         // For stability test, use different criteria than analytical matching
-        assert!(result.errors.rmse < 1.0, "RMS energy violation should be reasonable");
+        assert!(
+            result.errors.rmse < 1.0,
+            "RMS energy violation should be reasonable"
+        );
         assert!(result.clinical_score > 0.8);
     }
 
@@ -597,7 +628,8 @@ mod tests {
             &frequencies,
             20, // 20 points per wavelength
             &tolerance,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(result.passed, "Dispersion analysis should pass");
         assert!(result.errors.max_absolute_error < tolerance.relative);

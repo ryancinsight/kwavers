@@ -288,7 +288,8 @@ impl CPMLSolver {
     pub fn estimate_reflection(&self, angle_degrees: f64) -> f64 {
         // Use a typical dx value for estimation (could be made configurable)
         let dx = 1e-4; // 0.1mm typical grid spacing
-        self.cpml.estimate_reflection(angle_degrees, dx, self.sound_speed)
+        self.cpml
+            .estimate_reflection(angle_degrees, dx, self.sound_speed)
     }
 }
 

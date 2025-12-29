@@ -8,7 +8,6 @@
 
 // Enable portable SIMD for cross-platform performance
 #![feature(portable_simd)]
-
 // Strict warning configuration for code quality
 #![warn(
     unused_imports,
@@ -39,11 +38,12 @@ use std::collections::HashMap;
 // Removed unused validation constants - use constants module instead
 
 // Core modules
-pub mod boundary;
-pub mod clinical; // Clinical workflows and decision support
-pub mod cloud; // Sprint 155: Cloud integration for PINN deployment
 #[cfg(feature = "api")]
 pub mod api; // Sprint 159: Enterprise API for production deployment
+pub mod boundary;
+pub mod clinical; // Clinical workflows and decision support
+#[cfg(feature = "cloud")]
+pub mod cloud; // Sprint 155: Cloud integration for PINN deployment
 pub mod configuration; // Unified configuration system (SSOT)
                        // constants module moved to physics::constants for SSOT
 pub mod error;
@@ -65,11 +65,11 @@ pub mod recorder;
 pub mod runtime; // Sprint 138: Async I/O, tracing, zero-copy (Persona Requirements)
 pub mod sensor;
 pub mod signal;
-pub mod uncertainty; // Export uncertainty quantification module
 pub mod solver;
 pub mod source;
 pub mod testing; // Property-based testing framework per FSE 2025
 pub mod time;
+pub mod uncertainty; // Export uncertainty quantification module
 pub mod utils;
 pub mod validation;
 
@@ -94,11 +94,11 @@ pub use grid::Grid;
 pub use medium::{homogeneous::HomogeneousMedium, Medium};
 pub use recorder::Recorder;
 // Expose unified beamforming config at crate root and PAM elements explicitly.
+pub use sensor::passive_acoustic_mapping::BeamformingMethod;
 pub use sensor::{
     ArrayGeometry, BeamformingConfig, BeamformingCoreConfig, PAMConfig, PAMPlugin, Sensor,
     SensorData,
 };
-pub use sensor::passive_acoustic_mapping::BeamformingMethod;
 pub use source::Source;
 pub use time::Time;
 // Solver exports
@@ -115,8 +115,8 @@ pub use solver::reconstruction::{
     UniversalBackProjection, WeightFunction,
 };
 pub use solver::time_reversal::{TimeReversalConfig, TimeReversalReconstructor};
-pub use validation::{Validatable, ValidationResult};
 pub use validation::theorem_validation::{TheoremValidation, TheoremValidator};
+pub use validation::{Validatable, ValidationResult};
 
 // Re-export physics plugin system (the new unified architecture)
 pub use physics::field_mapping::{

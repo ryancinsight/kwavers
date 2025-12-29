@@ -94,10 +94,13 @@ mod tests {
     #[test]
     fn pam_to_core_capon_loading_and_midpoint_frequency() {
         let pam = PamConfig {
-            method: PamMethod::CaponDiagonalLoading { diagonal_loading: 0.05 },
+            method: PamMethod::CaponDiagonalLoading {
+                diagonal_loading: 0.05,
+            },
             frequency_range: (1.0e6, 3.0e6),
             spatial_resolution: 1e-3,
-            apodization: crate::sensor::passive_acoustic_mapping::beamforming::ApodizationType::Hamming,
+            apodization:
+                crate::sensor::passive_acoustic_mapping::beamforming::ApodizationType::Hamming,
             focal_point: [0.0, 0.0, 0.0],
         };
 
@@ -116,7 +119,8 @@ mod tests {
             method: PamMethod::DelayAndSum,
             frequency_range: (2.0e6, 2.0e6),
             spatial_resolution: 1e-3,
-            apodization: crate::sensor::passive_acoustic_mapping::beamforming::ApodizationType::None,
+            apodization:
+                crate::sensor::passive_acoustic_mapping::beamforming::ApodizationType::None,
             focal_point: [0.0, 0.0, 0.0],
         };
 

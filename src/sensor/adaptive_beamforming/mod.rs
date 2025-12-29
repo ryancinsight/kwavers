@@ -125,12 +125,9 @@ pub use weights::{WeightCalculator, WeightingScheme};
 // Legacy algorithms (deprecated) - available with --features legacy_algorithms
 #[cfg(feature = "legacy_algorithms")]
 pub use algorithms_old::{
-    CovarianceTaper as LegacyCovarianceTaper,
-    DelayAndSum as LegacyDelayAndSum,
-    EigenspaceMV as LegacyEigenspaceMV,
-    MinimumVariance as LegacyMinimumVariance,
-    MUSIC as LegacyMUSIC,
+    CovarianceTaper as LegacyCovarianceTaper, DelayAndSum as LegacyDelayAndSum,
+    EigenspaceMV as LegacyEigenspaceMV, MinimumVariance as LegacyMinimumVariance,
     OrthonormalSubspaceTracker as LegacyOrthonormalSubspaceTracker,
-    RobustCapon as LegacyRobustCapon,
-    SubspaceTracker as LegacySubspaceTracker,
+    RobustCapon as LegacyRobustCapon, SubspaceTracker as LegacySubspaceTracker,
+    MUSIC as LegacyMUSIC,
 };

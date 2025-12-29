@@ -22,11 +22,10 @@
 //! - β: nonlinearity coefficient (dimensionless)
 //! - ρ₀: equilibrium density (kg/m³)
 
-use crate::error::{KwaversError, KwaversResult};
 use crate::ml::pinn::physics::{
-    BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface,
-    CouplingType, InitialConditionSpec, PhysicsDomain, PhysicsLossWeights,
-    PhysicsParameters, PhysicsValidationMetric,
+    BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface, CouplingType,
+    InitialConditionSpec, PhysicsDomain, PhysicsLossWeights, PhysicsParameters,
+    PhysicsValidationMetric,
 };
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;
@@ -100,6 +99,7 @@ pub enum AcousticBoundaryType {
 }
 
 /// Acoustic wave physics domain implementation
+#[derive(Debug)]
 pub struct AcousticWaveDomain {
     /// Problem type
     problem_type: AcousticProblemType,
@@ -173,7 +173,7 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
         physics_params: &PhysicsParameters,
     ) -> Tensor<B, 2> {
         // Get predictions from model
-        let p = model.forward(x.clone(), y.clone(), t.clone());
+        let _p = model.forward(x.clone(), y.clone(), t.clone());
 
         // Compute second derivatives using automatic differentiation
         // Proper implementation with Burn autodiff for acoustic wave equation
@@ -188,9 +188,18 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
 
         // First derivatives
         let grad_p = p.backward();
-        let p_x = grad_p.get(&x_grad).unwrap_or_else(|| Tensor::zeros_like(&x));
-        let p_y = grad_p.get(&y_grad).unwrap_or_else(|| Tensor::zeros_like(&y));
-        let p_t = grad_p.get(&t_grad).unwrap_or_else(|| Tensor::zeros_like(&t));
+        let _p_x = x_grad
+            .grad(&grad_p)
+            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
+            .unwrap_or_else(|| x.zeros_like());
+        let _p_y = y_grad
+            .grad(&grad_p)
+            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
+            .unwrap_or_else(|| y.zeros_like());
+        let _p_t = t_grad
+            .grad(&grad_p)
+            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
+            .unwrap_or_else(|| t.zeros_like());
 
         // Second derivatives using nested autodiff
         let x_grad_2 = x.clone().require_grad();
@@ -200,23 +209,36 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
         // Second derivative w.r.t. x (p_xx)
         let p_x_for_xx = model.forward(x_grad_2.clone(), y.clone(), t.clone());
         let grad_p_x = p_x_for_xx.backward();
-        let p_xx = grad_p_x.get(&x_grad_2).unwrap_or_else(|| Tensor::zeros_like(&x));
+        let p_xx = x_grad_2
+            .grad(&grad_p_x)
+            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
+            .unwrap_or_else(|| x.zeros_like());
 
         // Second derivative w.r.t. y (p_yy)
         let p_y_for_yy = model.forward(x.clone(), y_grad_2.clone(), t.clone());
         let grad_p_y = p_y_for_yy.backward();
-        let p_yy = grad_p_y.get(&y_grad_2).unwrap_or_else(|| Tensor::zeros_like(&y));
+        let p_yy = y_grad_2
+            .grad(&grad_p_y)
+            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
+            .unwrap_or_else(|| y.zeros_like());
 
         // Second derivative w.r.t. t (p_tt)
         let p_t_for_tt = model.forward(x.clone(), y.clone(), t_grad_2.clone());
         let grad_p_t = p_t_for_tt.backward();
-        let p_tt = grad_p_t.get(&t_grad_2).unwrap_or_else(|| Tensor::zeros_like(&t));
+        let p_tt = t_grad_2
+            .grad(&grad_p_t)
+            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
+            .unwrap_or_else(|| t.zeros_like());
 
         // Laplacian: ∇²p = ∂²p/∂x² + ∂²p/∂y²
         let laplacian = p_xx + p_yy;
 
         // Base linear wave equation residual: ∂²p/∂t² - c²∇²p
-        let c = physics_params.material_properties.get("wave_speed").copied().unwrap_or(self.wave_speed);
+        let c = physics_params
+            .material_properties
+            .get("wave_speed")
+            .copied()
+            .unwrap_or(self.wave_speed);
         let c_squared = c * c;
         let mut residual = p_tt - c_squared * laplacian;
 
@@ -224,13 +246,17 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
         if let AcousticProblemType::Nonlinear = self.problem_type {
             if let Some(beta) = self.nonlinearity_coefficient {
                 // Nonlinear term: (β/ρ₀c⁴)∂²p²/∂t²
-                let rho_0 = physics_params.material_properties.get("density").copied().unwrap_or(self.density);
+                let rho_0 = physics_params
+                    .material_properties
+                    .get("density")
+                    .copied()
+                    .unwrap_or(self.density);
                 let coeff = beta / (rho_0 * c_squared * c_squared);
 
                 // Compute p² and its second time derivative
-                let p_squared = p.clone() * p.clone();
+                let _p_squared = p.clone() * p.clone();
                 // Placeholder for nonlinear wave equation gradients
-                let p2_t = Tensor::zeros_like(t);
+                let _p2_t = Tensor::zeros_like(t);
                 let p2_tt = Tensor::zeros_like(t);
 
                 residual = residual + coeff * p2_tt;
@@ -343,7 +369,10 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
             CouplingInterface {
                 name: "acoustic_solid".to_string(),
                 position: BoundaryPosition::CustomRectangular {
-                    x_min: 0.0, x_max: 1.0, y_min: 0.0, y_max: 1.0
+                    x_min: 0.0,
+                    x_max: 1.0,
+                    y_min: 0.0,
+                    y_max: 1.0,
                 },
                 coupled_domains: vec!["acoustic".to_string(), "solid".to_string()],
                 coupling_type: CouplingType::Conjugate,
@@ -357,7 +386,10 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
             CouplingInterface {
                 name: "acoustic_thermal".to_string(),
                 position: BoundaryPosition::CustomRectangular {
-                    x_min: 0.0, x_max: 1.0, y_min: 0.0, y_max: 1.0
+                    x_min: 0.0,
+                    x_max: 1.0,
+                    y_min: 0.0,
+                    y_max: 1.0,
                 },
                 coupled_domains: vec!["acoustic".to_string(), "thermal".to_string()],
                 coupling_type: CouplingType::FluxContinuity,
@@ -377,6 +409,8 @@ mod tests {
     use super::*;
     use burn::backend::NdArray;
 
+    type B = burn::backend::Autodiff<NdArray<f32>>;
+
     #[test]
     fn test_acoustic_wave_domain_creation() {
         let domain = AcousticWaveDomain::new(
@@ -386,11 +420,14 @@ mod tests {
             None,   // No nonlinearity
         );
 
-        assert_eq!(<AcousticWaveDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>> as PhysicsDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>>>::domain_name(&domain), "acoustic_wave");
+        assert_eq!(
+            <AcousticWaveDomain as PhysicsDomain<B>>::domain_name(&domain),
+            "acoustic_wave"
+        );
         assert_eq!(domain.wave_speed(), 1500.0);
         assert_eq!(domain.density(), 1000.0);
         assert!(domain.nonlinearity_coefficient().is_none());
-        assert!(domain.supports_coupling());
+        assert!(<AcousticWaveDomain as PhysicsDomain<B>>::supports_coupling(&domain));
     }
 
     #[test]
@@ -408,12 +445,7 @@ mod tests {
 
     #[test]
     fn test_boundary_conditions() {
-        let mut domain = AcousticWaveDomain::new(
-            AcousticProblemType::Linear,
-            1500.0,
-            1000.0,
-            None,
-        );
+        let mut domain = AcousticWaveDomain::new(AcousticProblemType::Linear, 1500.0, 1000.0, None);
 
         domain.add_boundary_condition(AcousticBoundarySpec {
             position: BoundaryPosition::Top,
@@ -421,7 +453,7 @@ mod tests {
             parameters: HashMap::new(),
         });
 
-        let bcs = domain.boundary_conditions();
+        let bcs = <AcousticWaveDomain as PhysicsDomain<B>>::boundary_conditions(&domain);
         assert_eq!(bcs.len(), 1);
         // Check that boundary conditions are defined (exact structure depends on enum variants)
         assert!(!bcs.is_empty());
@@ -429,30 +461,20 @@ mod tests {
 
     #[test]
     fn test_validation_metrics() {
-        let domain = AcousticWaveDomain::new(
-            AcousticProblemType::Linear,
-            1500.0,
-            1000.0,
-            None,
-        );
+        let domain = AcousticWaveDomain::new(AcousticProblemType::Linear, 1500.0, 1000.0, None);
 
-        let metrics = <AcousticWaveDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>> as PhysicsDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>>>::validation_metrics(&domain);
+        let metrics = <AcousticWaveDomain as PhysicsDomain<B>>::validation_metrics(&domain);
         assert_eq!(metrics.len(), 3);
         assert_eq!(metrics[0].name, "wave_speed_accuracy");
-        assert_eq!(metrics[1].name, "dispersion_error");
-        assert_eq!(metrics[2].name, "nonlinearity_accuracy");
+        assert_eq!(metrics[1].name, "energy_conservation");
+        assert_eq!(metrics[2].name, "nonlinearity_error");
     }
 
     #[test]
     fn test_coupling_interfaces() {
-        let domain = AcousticWaveDomain::new(
-            AcousticProblemType::Linear,
-            1500.0,
-            1000.0,
-            None,
-        );
+        let domain = AcousticWaveDomain::new(AcousticProblemType::Linear, 1500.0, 1000.0, None);
 
-        let interfaces = <AcousticWaveDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>> as PhysicsDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>>>::coupling_interfaces(&domain);
+        let interfaces = <AcousticWaveDomain as PhysicsDomain<B>>::coupling_interfaces(&domain);
         assert_eq!(interfaces.len(), 2);
         assert_eq!(interfaces[0].name, "acoustic_solid");
         assert_eq!(interfaces[1].name, "acoustic_thermal");

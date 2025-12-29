@@ -153,7 +153,7 @@ impl AcousticRadiationForce {
         // Estimate absorption coefficient
         // For soft tissue at 5 MHz: α ≈ 0.5 dB/cm/MHz ≈ 5.8 Np/m
         let absorption = 5.8; // Np/m, typical value for soft tissue at 1 MHz
-        // Reference: Duck (1990), Physical Properties of Tissue
+                              // Reference: Duck (1990), Physical Properties of Tissue
 
         Ok(Self {
             parameters: PushPulseParameters::default(),
@@ -247,7 +247,10 @@ impl AcousticRadiationForce {
     /// # Returns
     ///
     /// Combined initial displacement field from all push pulses
-    pub fn apply_multi_directional_push(&self, push_sequence: &MultiDirectionalPush) -> KwaversResult<Array3<f64>> {
+    pub fn apply_multi_directional_push(
+        &self,
+        push_sequence: &MultiDirectionalPush,
+    ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = self.grid.dimensions();
         let mut total_displacement = Array3::zeros((nx, ny, nz));
 
@@ -257,7 +260,8 @@ impl AcousticRadiationForce {
             for k in 0..nz {
                 for j in 0..ny {
                     for i in 0..nx {
-                        total_displacement[[i, j, k]] += displacement[[i, j, k]] * push.amplitude_weight;
+                        total_displacement[[i, j, k]] +=
+                            displacement[[i, j, k]] * push.amplitude_weight;
                     }
                 }
             }
@@ -365,7 +369,11 @@ impl MultiDirectionalPush {
             let z = center[2];
 
             // Alternate between different depths for 3D coverage
-            let z_offset = if i % 2 == 0 { radius * 0.5 } else { -radius * 0.5 };
+            let z_offset = if i % 2 == 0 {
+                radius * 0.5
+            } else {
+                -radius * 0.5
+            };
             let location = [x, y, z + z_offset];
 
             // Direction points radially outward from center
@@ -416,9 +424,10 @@ impl MultiDirectionalPush {
                     let z = roi_center[2] + (k as f64 - nz as f64 / 2.0) * 0.005;
 
                     // Weight pushes based on distance from ROI center
-                    let distance = ((x - roi_center[0]).powi(2) +
-                                  (y - roi_center[1]).powi(2) +
-                                  (z - roi_center[2]).powi(2)).sqrt();
+                    let distance = ((x - roi_center[0]).powi(2)
+                        + (y - roi_center[1]).powi(2)
+                        + (z - roi_center[2]).powi(2))
+                    .sqrt();
                     let max_distance = roi_size.iter().cloned().fold(0.0, f64::max) / 2.0;
                     let weight = (1.0 - distance / max_distance).max(0.1);
 
@@ -435,12 +444,14 @@ impl MultiDirectionalPush {
         // Limit total pushes for computational efficiency
         if pushes.len() > density {
             pushes.sort_by(|a, b| {
-                let dist_a = ((a.location[0] - roi_center[0]).powi(2) +
-                            (a.location[1] - roi_center[1]).powi(2) +
-                            (a.location[2] - roi_center[2]).powi(2)).sqrt();
-                let dist_b = ((b.location[0] - roi_center[0]).powi(2) +
-                            (b.location[1] - roi_center[1]).powi(2) +
-                            (b.location[2] - roi_center[2]).powi(2)).sqrt();
+                let dist_a = ((a.location[0] - roi_center[0]).powi(2)
+                    + (a.location[1] - roi_center[1]).powi(2)
+                    + (a.location[2] - roi_center[2]).powi(2))
+                .sqrt();
+                let dist_b = ((b.location[0] - roi_center[0]).powi(2)
+                    + (b.location[1] - roi_center[1]).powi(2)
+                    + (b.location[2] - roi_center[2]).powi(2))
+                .sqrt();
                 dist_a.partial_cmp(&dist_b).unwrap()
             });
             pushes.truncate(density);
@@ -500,12 +511,12 @@ impl DirectionalWaveTracker {
     /// Create tracker for orthogonal push pattern
     pub fn for_orthogonal_pattern(center: [f64; 3], roi_size: [f64; 3]) -> Self {
         let directions = vec![
-            [1.0, 0.0, 0.0],   // +X
-            [-1.0, 0.0, 0.0],  // -X
-            [0.0, 1.0, 0.0],   // +Y
-            [0.0, -1.0, 0.0],  // -Y
-            [0.0, 0.0, 1.0],   // +Z
-            [0.0, 0.0, -1.0],  // -Z
+            [1.0, 0.0, 0.0],  // +X
+            [-1.0, 0.0, 0.0], // -X
+            [0.0, 1.0, 0.0],  // +Y
+            [0.0, -1.0, 0.0], // -Y
+            [0.0, 0.0, 1.0],  // +Z
+            [0.0, 0.0, -1.0], // -Z
         ];
 
         let mut tracking_regions = Vec::new();
@@ -541,11 +552,19 @@ impl DirectionalWaveTracker {
     }
 
     /// Validate multi-directional wave propagation physics
-    pub fn validate_wave_physics(&self, measured_speeds: &[f64], expected_speeds: &[f64]) -> ValidationResult {
+    pub fn validate_wave_physics(
+        &self,
+        measured_speeds: &[f64],
+        expected_speeds: &[f64],
+    ) -> ValidationResult {
         let mut directional_consistency = 0.0;
         let mut amplitude_uniformity = 0.0;
 
-        for (i, (&measured, &expected)) in measured_speeds.iter().zip(expected_speeds.iter()).enumerate() {
+        for (i, (&measured, &expected)) in measured_speeds
+            .iter()
+            .zip(expected_speeds.iter())
+            .enumerate()
+        {
             // Check speed consistency across directions
             let speed_ratio = measured / expected;
             directional_consistency += (1.0 - (speed_ratio - 1.0).abs()).max(0.0);
@@ -557,10 +576,10 @@ impl DirectionalWaveTracker {
 
             let direction_idx = i % 8; // Assume 8 standard directions
             let expected_amplitude = match direction_idx {
-                0 | 4 => 1.0, // Axial directions - maximum amplitude
+                0 | 4 => 1.0,           // Axial directions - maximum amplitude
                 1 | 3 | 5 | 7 => 0.866, // 30-degree directions
-                2 | 6 => 0.707, // 45-degree directions
-                _ => 0.5, // Other directions
+                2 | 6 => 0.707,         // 45-degree directions
+                _ => 0.5,               // Other directions
             };
 
             // Calculate amplitude deviation from expected
@@ -679,14 +698,25 @@ mod tests {
         // Check that pushes are distributed around the circle
         for (i, push) in pattern.pushes.iter().enumerate() {
             let expected_angle = 2.0 * PI * (i as f64) / (n_pushes as f64);
-            let mut actual_angle = (push.location[1] - center[1]).atan2(push.location[0] - center[0]);
+            let mut actual_angle =
+                (push.location[1] - center[1]).atan2(push.location[0] - center[0]);
             // Normalize angle to [0, 2π) range
             if actual_angle < 0.0 {
                 actual_angle += 2.0 * PI;
             }
             // Allow for small numerical differences and account for atan2 range
-            let angle_diff = (actual_angle - expected_angle).abs().min((actual_angle - expected_angle + 2.0 * PI).abs().min((actual_angle - expected_angle - 2.0 * PI).abs()));
-            assert!(angle_diff < 0.1, "Push {}: expected angle {:.3}, got {:.3}", i, expected_angle, actual_angle);
+            let angle_diff = (actual_angle - expected_angle).abs().min(
+                (actual_angle - expected_angle + 2.0 * PI)
+                    .abs()
+                    .min((actual_angle - expected_angle - 2.0 * PI).abs()),
+            );
+            assert!(
+                angle_diff < 0.1,
+                "Push {}: expected angle {:.3}, got {:.3}",
+                i,
+                expected_angle,
+                actual_angle
+            );
         }
     }
 
@@ -703,12 +733,12 @@ mod tests {
 
         // All pushes should be within ROI bounds
         for push in &pattern.pushes {
-            assert!(push.location[0] >= roi_center[0] - roi_size[0]/2.0);
-            assert!(push.location[0] <= roi_center[0] + roi_size[0]/2.0);
-            assert!(push.location[1] >= roi_center[1] - roi_size[1]/2.0);
-            assert!(push.location[1] <= roi_center[1] + roi_size[1]/2.0);
-            assert!(push.location[2] >= roi_center[2] - roi_size[2]/2.0);
-            assert!(push.location[2] <= roi_center[2] + roi_size[2]/2.0);
+            assert!(push.location[0] >= roi_center[0] - roi_size[0] / 2.0);
+            assert!(push.location[0] <= roi_center[0] + roi_size[0] / 2.0);
+            assert!(push.location[1] >= roi_center[1] - roi_size[1] / 2.0);
+            assert!(push.location[1] <= roi_center[1] + roi_size[1] / 2.0);
+            assert!(push.location[2] >= roi_center[2] - roi_size[2] / 2.0);
+            assert!(push.location[2] <= roi_center[2] + roi_size[2] / 2.0);
         }
     }
 
@@ -726,8 +756,12 @@ mod tests {
 
         // Check that directions are orthogonal unit vectors
         for direction in &tracker.wave_directions {
-            let magnitude = (direction[0].powi(2) + direction[1].powi(2) + direction[2].powi(2)).sqrt();
-            assert!((magnitude - 1.0).abs() < 1e-10, "Direction should be unit vector");
+            let magnitude =
+                (direction[0].powi(2) + direction[1].powi(2) + direction[2].powi(2)).sqrt();
+            assert!(
+                (magnitude - 1.0).abs() < 1e-10,
+                "Direction should be unit vector"
+            );
         }
     }
 
@@ -765,11 +799,17 @@ mod tests {
         assert_eq!(displacement.dim(), (30, 30, 30));
 
         // Should have non-zero displacement
-        let max_disp = displacement.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let max_disp = displacement
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
         assert!(max_disp > 0.0);
 
         // Should have multiple displacement peaks from different pushes
         let non_zero_count = displacement.iter().filter(|&&x| x.abs() > 1e-9).count();
-        assert!(non_zero_count > 100, "Should have multiple displacement regions");
+        assert!(
+            non_zero_count > 100,
+            "Should have multiple displacement regions"
+        );
     }
 }

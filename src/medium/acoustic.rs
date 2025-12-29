@@ -29,6 +29,19 @@ pub trait AcousticProperties: CoreMedium {
         1.0 + self.nonlinearity_parameter(x, y, z, grid) / 2.0
     }
 
+    /// Get absorption coefficient alpha_0 (dB/(MHz^y cm) or Np/(MHz^y m))
+    /// This is the prefactor for power law absorption: alpha(f) = alpha_0 * f^y
+    /// Default implementation assumes it's embedded in the attenuation function, returning 0 if not explicit.
+    fn alpha_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        0.0
+    }
+
+    /// Get absorption power exponent y
+    /// Default is 1.05 (typical for soft tissue)
+    fn alpha_power(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        1.05
+    }
+
     /// Get the tissue type at a specific position (if medium supports tissue types)
     fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<TissueType> {
         None

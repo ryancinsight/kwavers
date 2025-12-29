@@ -157,11 +157,13 @@ impl SyntheticApertureReconstruction {
                 for tx in 0..n_tx {
                     for rx in 0..n_rx {
                         // Calculate transmit delay (from tx element to image point)
-                        let tx_x = (tx as f64 - (n_tx - 1) as f64 / 2.0) * self.config.element_spacing;
+                        let tx_x =
+                            (tx as f64 - (n_tx - 1) as f64 / 2.0) * self.config.element_spacing;
                         let tx_delay = self.calculate_delay(tx_x, 0.0, x, z);
 
                         // Calculate receive delay (from image point to rx element)
-                        let rx_x = (rx as f64 - (n_rx - 1) as f64 / 2.0) * self.config.element_spacing;
+                        let rx_x =
+                            (rx as f64 - (n_rx - 1) as f64 / 2.0) * self.config.element_spacing;
                         let rx_delay = self.calculate_delay(x, z, rx_x, 0.0);
 
                         // Total round-trip delay
@@ -177,7 +179,8 @@ impl SyntheticApertureReconstruction {
                             let phase_correction = Complex64::new(
                                 0.0,
                                 -2.0 * PI * self.config.frequency * total_delay,
-                            ).exp();
+                            )
+                            .exp();
 
                             sum += rf_sample * phase_correction;
                         }
@@ -252,7 +255,8 @@ impl PlaneWaveReconstruction {
                 // Sum over all receive elements
                 for elem in 0..n_elements {
                     // Calculate receive delay (from image point to element)
-                    let elem_x = (elem as f64 - (n_elements - 1) as f64 / 2.0) * self.config.element_spacing;
+                    let elem_x =
+                        (elem as f64 - (n_elements - 1) as f64 / 2.0) * self.config.element_spacing;
                     let rx_delay = self.calculate_receive_delay(x, z, elem_x);
 
                     // Convert delay to sample index
@@ -262,10 +266,8 @@ impl PlaneWaveReconstruction {
                         let rf_sample = rf_data[[sample_idx, elem]];
 
                         // Phase correction for center frequency
-                        let phase_correction = Complex64::new(
-                            0.0,
-                            -2.0 * PI * self.config.frequency * rx_delay,
-                        ).exp();
+                        let phase_correction =
+                            Complex64::new(0.0, -2.0 * PI * self.config.frequency * rx_delay).exp();
 
                         sum += rf_sample * phase_correction;
                     }
@@ -317,15 +319,13 @@ impl CodedExcitationProcessor {
     #[must_use]
     pub fn generate_code(&self) -> Array1<Complex64> {
         match &self.config.code {
-            ExcitationCode::Chirp { start_freq, end_freq, length } => {
-                self.generate_chirp(*start_freq, *end_freq, *length)
-            }
-            ExcitationCode::Barker { length } => {
-                self.generate_barker(*length)
-            }
-            ExcitationCode::Golay { length } => {
-                self.generate_golay(*length)
-            }
+            ExcitationCode::Chirp {
+                start_freq,
+                end_freq,
+                length,
+            } => self.generate_chirp(*start_freq, *end_freq, *length),
+            ExcitationCode::Barker { length } => self.generate_barker(*length),
+            ExcitationCode::Golay { length } => self.generate_golay(*length),
         }
     }
 
@@ -338,7 +338,11 @@ impl CodedExcitationProcessor {
     /// # Returns
     /// Pulse compressed signal
     #[must_use]
-    pub fn matched_filter(&self, received_signal: &Array1<f64>, code: &Array1<Complex64>) -> Array1<f64> {
+    pub fn matched_filter(
+        &self,
+        received_signal: &Array1<f64>,
+        code: &Array1<Complex64>,
+    ) -> Array1<f64> {
         let n_signal = received_signal.len();
         let n_code = code.len();
         let mut compressed = Array1::<f64>::zeros(n_signal - n_code + 1);
@@ -388,7 +392,10 @@ impl CodedExcitationProcessor {
             _ => vec![1; length], // Default to all ones
         };
 
-        sequence.into_iter().map(|x| Complex64::new(x as f64, 0.0)).collect()
+        sequence
+            .into_iter()
+            .map(|x| Complex64::new(x as f64, 0.0))
+            .collect()
     }
 
     /// Generate Golay complementary pair

@@ -81,9 +81,15 @@ impl FiniteDifference {
 
         // Apply SIMD-accelerated finite differences using parallel processing
         match axis {
-            0 => self.compute_x_derivative(field, &mut deriv, coeffs, start, end_x, end_y, end_z, spacing),
-            1 => self.compute_y_derivative(field, &mut deriv, coeffs, start, end_x, end_y, end_z, spacing),
-            2 => self.compute_z_derivative(field, &mut deriv, coeffs, start, end_x, end_y, end_z, spacing),
+            0 => self.compute_x_derivative(
+                field, &mut deriv, coeffs, start, end_x, end_y, end_z, spacing,
+            ),
+            1 => self.compute_y_derivative(
+                field, &mut deriv, coeffs, start, end_x, end_y, end_z, spacing,
+            ),
+            2 => self.compute_z_derivative(
+                field, &mut deriv, coeffs, start, end_x, end_y, end_z, spacing,
+            ),
             _ => {
                 return Err(crate::KwaversError::Config(
                     crate::ConfigError::InvalidValue {
@@ -132,12 +138,15 @@ impl FiniteDifference {
                                     // Apply stencil coefficients along x-direction
                                     if coeffs.len() == 1 {
                                         // 2nd order: coeff[0] * (f[i+1] - f[i-1])
-                                        val = coeffs[0] * (field[[i + 1, j, k]] - field[[i - 1, j, k]]);
+                                        val = coeffs[0]
+                                            * (field[[i + 1, j, k]] - field[[i - 1, j, k]]);
                                     } else {
                                         // General case for 4th/6th order stencils
                                         for (idx, &coeff) in coeffs.iter().enumerate() {
                                             let offset = idx + 1;
-                                            val += coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
+                                            val += coeff
+                                                * (field[[i + offset, j, k]]
+                                                    - field[[i - offset, j, k]]);
                                         }
                                     }
 
@@ -181,7 +190,8 @@ impl FiniteDifference {
                                 // General case for 4th/6th order stencils
                                 for (idx, &coeff) in coeffs.iter().enumerate() {
                                     let offset = idx + 1;
-                                    val += coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
+                                    val += coeff
+                                        * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
                                 }
                             }
 
@@ -222,12 +232,15 @@ impl FiniteDifference {
                                     // Apply stencil coefficients along z-direction
                                     if coeffs.len() == 1 {
                                         // 2nd order: coeff[0] * (f[k+1] - f[k-1])
-                                        val = coeffs[0] * (field[[i, j, k + 1]] - field[[i, j, k - 1]]);
+                                        val = coeffs[0]
+                                            * (field[[i, j, k + 1]] - field[[i, j, k - 1]]);
                                     } else {
                                         // General case for 4th/6th order stencils
                                         for (idx, &coeff) in coeffs.iter().enumerate() {
                                             let offset = idx + 1;
-                                            val += coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
+                                            val += coeff
+                                                * (field[[i, j, k + offset]]
+                                                    - field[[i, j, k - offset]]);
                                         }
                                     }
 

@@ -10,9 +10,9 @@
 //!
 //! References: Frank & Tamm (1937), Jackson (1999).
 
+use crate::physics::constants::fundamental::SPEED_OF_LIGHT;
 use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
-use crate::physics::constants::fundamental::SPEED_OF_LIGHT;
 
 /// Cherenkov radiation model with refractive index and coherence parameters
 #[derive(Debug, Clone)]
@@ -98,9 +98,23 @@ impl CherenkovModel {
         self.coherence_factor * charge_density.max(0.0) * threshold_term * temp_scale
     }
 
-    /// Emission spectrum over wavelengths (intensity ∝ 1/λ² above threshold)
+    /// Emission spectrum over wavelengths (intensity ∝ ω above threshold)
+    ///
+    /// For Cherenkov radiation, the spectral intensity follows the Frank-Tamm formula:
+    /// dI/dx dω ∝ ω (1 - 1/(n²β²))
+    ///
+    /// This gives I(ω) ∝ ω, so I(f) ∝ f, and since f ∝ 1/λ, I(λ) ∝ 1/λ.
+    /// The spectrum peaks at shorter wavelengths (UV/blue) as observed experimentally.
+    ///
+    /// Reference: Frank, I. M., & Tamm, I. E. (1937). "Coherent visible radiation of fast
+    /// electrons passing through matter". Doklady Akademii Nauk SSSR, 14(3), 109-114.
     #[must_use]
-    pub fn emission_spectrum(&self, velocity: f64, charge: f64, wavelengths: &Array1<f64>) -> Array1<f64> {
+    pub fn emission_spectrum(
+        &self,
+        velocity: f64,
+        charge: f64,
+        wavelengths: &Array1<f64>,
+    ) -> Array1<f64> {
         if !self.exceeds_threshold(velocity) {
             return Array1::zeros(wavelengths.len());
         }
@@ -109,7 +123,8 @@ impl CherenkovModel {
         let mut intensities = Array1::zeros(wavelengths.len());
         for (i, &lambda) in wavelengths.iter().enumerate() {
             if lambda > 0.0 {
-                intensities[i] = self.coherence_factor * charge.abs() * threshold_term / lambda.powi(2);
+                // I(λ) ∝ 1/λ (peaks at short wavelengths)
+                intensities[i] = self.coherence_factor * charge.abs() * threshold_term / lambda;
             }
         }
         intensities
@@ -212,8 +227,8 @@ mod tests {
         // θ = arccos(1/(nβ)), angle increases with higher β
         let model = CherenkovModel::new(1.5, 1.0);
 
-        let v1 = model.critical_velocity * 1.1;  // Just above threshold
-        let v2 = model.critical_velocity * 2.0;  // Higher velocity
+        let v1 = model.critical_velocity * 1.1; // Just above threshold
+        let v2 = model.critical_velocity * 2.0; // Higher velocity
 
         let angle1 = model.cherenkov_angle(v1);
         let angle2 = model.cherenkov_angle(v2);
@@ -262,7 +277,8 @@ mod tests {
         assert!(power2 > power1);
 
         // No emission below threshold
-        let power_below = model.total_power_density(model.critical_velocity * 0.9, charge_density_1, temperature);
+        let power_below =
+            model.total_power_density(model.critical_velocity * 0.9, charge_density_1, temperature);
         assert_eq!(power_below, 0.0);
     }
 
@@ -283,9 +299,12 @@ mod tests {
         assert!(peak_intensity > 0.0);
 
         // Find peak wavelength
-        let peak_idx = spectrum.iter().enumerate()
+        let peak_idx = spectrum
+            .iter()
+            .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .map(|(i, _)| i).unwrap();
+            .map(|(i, _)| i)
+            .unwrap();
 
         // Peak should be in UV/blue for Cherenkov in water
         let peak_wavelength = wavelengths[peak_idx];

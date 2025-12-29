@@ -33,9 +33,7 @@
 
 use kwavers::grid::Grid;
 use kwavers::physics::bubble_dynamics::bubble_state::BubbleParameters;
-use kwavers::physics::optics::sonoluminescence::{
-    EmissionParameters, IntegratedSonoluminescence,
-};
+use kwavers::physics::optics::sonoluminescence::{EmissionParameters, IntegratedSonoluminescence};
 use ndarray::Array3;
 use std::f64::consts::PI;
 
@@ -49,9 +47,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Setup simulation
     let grid = Grid::new(16, 8, 8, 0.001, 0.001, 0.001).unwrap();
     let bubble_params = BubbleParameters {
-        r0: 10e-6,        // 10 μm initial radius
-        t0: 300.0,        // 300 K ambient temperature
-        gamma: 1.4,       // Air polytropic index
+        r0: 10e-6,                      // 10 μm initial radius
+        t0: 300.0,                      // 300 K ambient temperature
+        gamma: 1.4,                     // Air polytropic index
         initial_gas_pressure: 101325.0, // 1 atm
         ..Default::default()
     };
@@ -181,16 +179,17 @@ fn run_comprehensive_simulation(
 
     // Setup emission parameters for both mechanisms
     let emission_params = EmissionParameters {
-        use_blackbody: false,        // Focus on plasma emission
-        use_bremsstrahlung: true,    // Enable bremsstrahlung
-        use_cherenkov: true,         // Enable Cherenkov
+        use_blackbody: false,            // Focus on plasma emission
+        use_bremsstrahlung: true,        // Enable bremsstrahlung
+        use_cherenkov: true,             // Enable Cherenkov
         cherenkov_refractive_index: 1.5, // Compressed water
         cherenkov_coherence_factor: 100.0,
-        min_temperature: 1000.0,    // Lower threshold for Cherenkov
+        min_temperature: 1000.0, // Lower threshold for Cherenkov
         ..Default::default()
     };
 
-    let mut simulator = IntegratedSonoluminescence::new(grid.dimensions(), bubble_params.clone(), emission_params);
+    let mut simulator =
+        IntegratedSonoluminescence::new(grid.dimensions(), bubble_params.clone(), emission_params);
 
     // Extreme acoustic driving for sonoluminescence conditions
     let acoustic_pressure = Array3::from_elem(grid.dimensions(), 1e6); // 10 bar - extreme conditions
@@ -228,7 +227,9 @@ fn run_comprehensive_simulation(
         // Store physical quantities
         results.times.push(time);
         results.radii.push(simulator.radius_field()[center]);
-        results.temperatures.push(simulator.temperature_field()[center]);
+        results
+            .temperatures
+            .push(simulator.temperature_field()[center]);
         results.pressures.push(simulator.pressure_field()[center]);
 
         // Estimate derived quantities for physics relationships
@@ -337,15 +338,22 @@ fn run_comprehensive_simulation(
 
         // Progress indicator
         if step % 50 == 0 {
-            println!("  Step {}/{}: T={:.0}K, R={:.1}μm, compression={:.1}x",
-                    step, n_steps,
-                    temp_field[center],
-                    radius_field[center] * 1e6,
-                    compression_ratio);
+            println!(
+                "  Step {}/{}: T={:.0}K, R={:.1}μm, compression={:.1}x",
+                step,
+                n_steps,
+                temp_field[center],
+                radius_field[center] * 1e6,
+                compression_ratio
+            );
         }
     }
 
-    println!("  Simulation completed: {} steps, {:.1} μs total time", n_steps, results.times.last().unwrap_or(&0.0) * 1e6);
+    println!(
+        "  Simulation completed: {} steps, {:.1} μs total time",
+        n_steps,
+        results.times.last().unwrap_or(&0.0) * 1e6
+    );
     Ok(results)
 }
 
@@ -371,25 +379,40 @@ fn display_bubble_dynamics_data(results: &SimulationResults) {
     println!("  Time(μs) | Temp(K) | Compression | Velocity(m/s)");
     println!("  ---------|---------|-------------|--------------");
 
-    for i in (0..results.times.len()).step_by(20) { // Sample every 20 steps
-        println!("  {:.1}     | {:.0}    | {:.1}         | {:.1e}",
-                results.times[i] * 1e6,
-                results.temperatures[i],
-                results.compression_ratios[i],
-                results.particle_velocities[i]);
+    for i in (0..results.times.len()).step_by(20) {
+        // Sample every 20 steps
+        println!(
+            "  {:.1}     | {:.0}    | {:.1}         | {:.1e}",
+            results.times[i] * 1e6,
+            results.temperatures[i],
+            results.compression_ratios[i],
+            results.particle_velocities[i]
+        );
     }
 
     let max_temp = results.temperatures.iter().fold(0.0_f64, |a, &b| a.max(b));
-    let max_compression = results.compression_ratios.iter().fold(0.0_f64, |a, &b| a.max(b));
-    let max_velocity = results.particle_velocities.iter().fold(0.0_f64, |a, &b| a.max(b));
+    let max_compression = results
+        .compression_ratios
+        .iter()
+        .fold(0.0_f64, |a, &b| a.max(b));
+    let max_velocity = results
+        .particle_velocities
+        .iter()
+        .fold(0.0_f64, |a, &b| a.max(b));
     let cherenkov_threshold = 3e8 / 1.5; // c/n for n=1.5
 
     println!("  Maximum values:");
     println!("  - Temperature: {:.0} K", max_temp);
     println!("  - Compression: {:.1}x", max_compression);
     println!("  - Velocity: {:.1e} m/s", max_velocity);
-    println!("  - Cherenkov threshold: {:.1e} m/s (v > c/n)", cherenkov_threshold);
-    println!("  - Threshold exceeded: {}", max_velocity > cherenkov_threshold);
+    println!(
+        "  - Cherenkov threshold: {:.1e} m/s (v > c/n)",
+        cherenkov_threshold
+    );
+    println!(
+        "  - Threshold exceeded: {}",
+        max_velocity > cherenkov_threshold
+    );
     println!();
 }
 
@@ -398,23 +421,40 @@ fn display_emission_comparison_data(results: &SimulationResults) {
     println!("  Time(μs) | Bremsstrahlung(W/m³) | Cherenkov(W/m³)");
     println!("  ---------|--------------------|----------------");
 
-    for i in (0..results.times.len()).step_by(25) { // Sample every 25 steps
-        println!("  {:.1}     | {:.2e}             | {:.2e}",
-                results.times[i] * 1e6,
-                results.bremsstrahlung_emission[i],
-                results.cherenkov_emission[i]);
+    for i in (0..results.times.len()).step_by(25) {
+        // Sample every 25 steps
+        println!(
+            "  {:.1}     | {:.2e}             | {:.2e}",
+            results.times[i] * 1e6,
+            results.bremsstrahlung_emission[i],
+            results.cherenkov_emission[i]
+        );
     }
 
-    let max_brems = results.bremsstrahlung_emission.iter().fold(0.0_f64, |a, &b| a.max(b));
-    let max_cherenkov = results.cherenkov_emission.iter().fold(0.0_f64, |a, &b| a.max(b));
+    let max_brems = results
+        .bremsstrahlung_emission
+        .iter()
+        .fold(0.0_f64, |a, &b| a.max(b));
+    let max_cherenkov = results
+        .cherenkov_emission
+        .iter()
+        .fold(0.0_f64, |a, &b| a.max(b));
 
     // Calculate coupling contribution
     let coupling_contribution = if max_cherenkov > 0.0 {
-        let avg_base_brems = results.bremsstrahlung_emission.iter()
+        let avg_base_brems = results
+            .bremsstrahlung_emission
+            .iter()
             .zip(results.cherenkov_emission.iter())
             .filter(|(_, &c)| c == 0.0) // Only when Cherenkov is off
             .map(|(b, _)| *b)
-            .sum::<f64>() / results.cherenkov_emission.iter().filter(|&&c| c == 0.0).count().max(1) as f64;
+            .sum::<f64>()
+            / results
+                .cherenkov_emission
+                .iter()
+                .filter(|&&c| c == 0.0)
+                .count()
+                .max(1) as f64;
         (max_brems - avg_base_brems).max(0.0)
     } else {
         0.0
@@ -423,10 +463,19 @@ fn display_emission_comparison_data(results: &SimulationResults) {
     println!("  Peak emissions:");
     println!("  - Bremsstrahlung: {:.2e} W/m³", max_brems);
     println!("  - Cherenkov: {:.2e} W/m³", max_cherenkov);
-    println!("  - Ratio (Brems/Cherenkov): {:.1}", max_brems / max_cherenkov.max(1e-12));
-    println!("  - Coupling contribution: {:.2e} W/m³ ({:.1}% of total bremsstrahlung)",
-            coupling_contribution,
-            if max_brems > 0.0 { coupling_contribution / max_brems * 100.0 } else { 0.0 });
+    println!(
+        "  - Ratio (Brems/Cherenkov): {:.1}",
+        max_brems / max_cherenkov.max(1e-12)
+    );
+    println!(
+        "  - Coupling contribution: {:.2e} W/m³ ({:.1}% of total bremsstrahlung)",
+        coupling_contribution,
+        if max_brems > 0.0 {
+            coupling_contribution / max_brems * 100.0
+        } else {
+            0.0
+        }
+    );
     println!();
 }
 
@@ -440,7 +489,9 @@ fn display_spectral_data(results: &SimulationResults) {
     println!("  --------------|---------------|----------");
 
     // Plot spectra from peak emission time
-    let peak_idx = results.bremsstrahlung_emission.iter()
+    let peak_idx = results
+        .bremsstrahlung_emission
+        .iter()
         .enumerate()
         .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
         .map(|(i, _)| i / 20) // Convert to spectrum index
@@ -452,26 +503,45 @@ fn display_spectral_data(results: &SimulationResults) {
             let brems_intensity = results.bremsstrahlung_spectra[peak_idx][i];
             let cherenkov_intensity = results.cherenkov_spectra[peak_idx][i];
 
-            println!("  {:.0}            | {:.2e}      | {:.2e}",
-                    wavelength_nm, brems_intensity, cherenkov_intensity);
+            println!(
+                "  {:.0}            | {:.2e}      | {:.2e}",
+                wavelength_nm, brems_intensity, cherenkov_intensity
+            );
         }
     }
 
     // Analyze spectral characteristics
-    let uv_range = results.wavelengths.iter().enumerate()
+    let uv_range = results
+        .wavelengths
+        .iter()
+        .enumerate()
         .filter(|(_, &w)| w < 400e-9) // UV/blue < 400nm
         .map(|(i, _)| i);
 
     let total_brems: f64 = results.bremsstrahlung_spectra[peak_idx].iter().sum();
     let total_cherenkov: f64 = results.cherenkov_spectra[peak_idx].iter().sum();
-    let uv_brems = uv_range.clone().map(|i| results.bremsstrahlung_spectra[peak_idx][i]).sum::<f64>();
-    let uv_cherenkov = uv_range.map(|i| results.cherenkov_spectra[peak_idx][i]).sum::<f64>();
+    let uv_brems = uv_range
+        .clone()
+        .map(|i| results.bremsstrahlung_spectra[peak_idx][i])
+        .sum::<f64>();
+    let uv_cherenkov = uv_range
+        .map(|i| results.cherenkov_spectra[peak_idx][i])
+        .sum::<f64>();
 
     println!("  Spectral analysis:");
-    println!("  - Bremsstrahlung UV fraction: {:.1}%", (uv_brems / total_brems.max(1e-12)) * 100.0);
-    println!("  - Cherenkov UV fraction: {:.1}%", (uv_cherenkov / total_cherenkov.max(1e-12)) * 100.0);
-    println!("  - Cherenkov UV bias: {:.1}x higher than bremsstrahlung",
-            (uv_cherenkov / total_cherenkov.max(1e-12)) / (uv_brems / total_brems.max(1e-12)).max(1e-12));
+    println!(
+        "  - Bremsstrahlung UV fraction: {:.1}%",
+        (uv_brems / total_brems.max(1e-12)) * 100.0
+    );
+    println!(
+        "  - Cherenkov UV fraction: {:.1}%",
+        (uv_cherenkov / total_cherenkov.max(1e-12)) * 100.0
+    );
+    println!(
+        "  - Cherenkov UV bias: {:.1}x higher than bremsstrahlung",
+        (uv_cherenkov / total_cherenkov.max(1e-12))
+            / (uv_brems / total_brems.max(1e-12)).max(1e-12)
+    );
     println!();
 }
 
@@ -482,8 +552,10 @@ fn display_physics_relationships_data(results: &SimulationResults) {
     // Show temperature-emission correlation
     for i in (0..results.times.len()).step_by(25) {
         if i < results.temperatures.len() && i < results.bremsstrahlung_emission.len() {
-            println!("    T={:.0}K → Brems={:.2e} W/m³",
-                    results.temperatures[i], results.bremsstrahlung_emission[i]);
+            println!(
+                "    T={:.0}K → Brems={:.2e} W/m³",
+                results.temperatures[i], results.bremsstrahlung_emission[i]
+            );
         }
     }
 
@@ -495,23 +567,48 @@ fn display_physics_relationships_data(results: &SimulationResults) {
         if i < results.particle_velocities.len() && i < results.cherenkov_emission.len() {
             let v = results.particle_velocities[i];
             let e = results.cherenkov_emission[i];
-            let threshold_status = if v > cherenkov_threshold { "ABOVE" } else { "below" };
-            println!("    v={:.1e}m/s ({}) → Cherenkov={:.2e} W/m³",
-                    v, threshold_status, e);
+            let threshold_status = if v > cherenkov_threshold {
+                "ABOVE"
+            } else {
+                "below"
+            };
+            println!(
+                "    v={:.1e}m/s ({}) → Cherenkov={:.2e} W/m³",
+                v, threshold_status, e
+            );
         }
     }
 
-    println!("  Cherenkov threshold: {:.1e} m/s (v > c/n)", cherenkov_threshold);
+    println!(
+        "  Cherenkov threshold: {:.1e} m/s (v > c/n)",
+        cherenkov_threshold
+    );
 
     // Correlation analysis
-    let temp_max_idx = results.temperatures.iter().enumerate()
-        .max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).map(|(i, _)| i).unwrap_or(0);
-    let velocity_max_idx = results.particle_velocities.iter().enumerate()
-        .max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).map(|(i, _)| i).unwrap_or(0);
+    let temp_max_idx = results
+        .temperatures
+        .iter()
+        .enumerate()
+        .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+        .map(|(i, _)| i)
+        .unwrap_or(0);
+    let velocity_max_idx = results
+        .particle_velocities
+        .iter()
+        .enumerate()
+        .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+        .map(|(i, _)| i)
+        .unwrap_or(0);
 
     println!("  Peak analysis:");
-    println!("  - Bremsstrahlung peaks at max temperature (step {})", temp_max_idx);
-    println!("  - Cherenkov peaks at max velocity (step {})", velocity_max_idx);
+    println!(
+        "  - Bremsstrahlung peaks at max temperature (step {})",
+        temp_max_idx
+    );
+    println!(
+        "  - Cherenkov peaks at max velocity (step {})",
+        velocity_max_idx
+    );
     println!("  - Different timing: Temperature vs Velocity driven");
     println!();
 }
@@ -521,12 +618,16 @@ fn analyze_physics_relationships(results: &SimulationResults) {
     println!("--------------------------------");
 
     // Find peak emissions
-    let (brems_peak_idx, _) = results.bremsstrahlung_emission.iter()
+    let (brems_peak_idx, _) = results
+        .bremsstrahlung_emission
+        .iter()
         .enumerate()
         .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
         .unwrap();
 
-    let (cherenkov_peak_idx, _) = results.cherenkov_emission.iter()
+    let (cherenkov_peak_idx, _) = results
+        .cherenkov_emission
+        .iter()
         .enumerate()
         .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
         .unwrap();
@@ -534,44 +635,87 @@ fn analyze_physics_relationships(results: &SimulationResults) {
     println!("📊 Peak Emission Analysis:");
     println!("  Bremsstrahlung Peak:");
     println!("    Time: {:.1} μs", results.times[brems_peak_idx] * 1e6);
-    println!("    Temperature: {:.0} K", results.temperatures[brems_peak_idx]);
-    println!("    Compression: {:.1}", results.compression_ratios[brems_peak_idx]);
-    println!("    Emission: {:.2e} W/m³", results.bremsstrahlung_emission[brems_peak_idx]);
+    println!(
+        "    Temperature: {:.0} K",
+        results.temperatures[brems_peak_idx]
+    );
+    println!(
+        "    Compression: {:.1}",
+        results.compression_ratios[brems_peak_idx]
+    );
+    println!(
+        "    Emission: {:.2e} W/m³",
+        results.bremsstrahlung_emission[brems_peak_idx]
+    );
 
     println!("  Cherenkov Peak:");
-    println!("    Time: {:.1} μs", results.times[cherenkov_peak_idx] * 1e6);
-    println!("    Velocity: {:.1e} m/s", results.particle_velocities[cherenkov_peak_idx]);
-    println!("    Compression: {:.1}", results.compression_ratios[cherenkov_peak_idx]);
-    println!("    Emission: {:.2e} W/m³", results.cherenkov_emission[cherenkov_peak_idx]);
+    println!(
+        "    Time: {:.1} μs",
+        results.times[cherenkov_peak_idx] * 1e6
+    );
+    println!(
+        "    Velocity: {:.1e} m/s",
+        results.particle_velocities[cherenkov_peak_idx]
+    );
+    println!(
+        "    Compression: {:.1}",
+        results.compression_ratios[cherenkov_peak_idx]
+    );
+    println!(
+        "    Emission: {:.2e} W/m³",
+        results.cherenkov_emission[cherenkov_peak_idx]
+    );
 
     // Physics relationships
     println!("\n⚛️  Physics Relationships Observed:");
 
     // Cavitation → Bremsstrahlung
     let max_temp = results.temperatures.iter().fold(0.0_f64, |a, &b| a.max(b));
-    let max_compression = results.compression_ratios.iter().fold(0.0_f64, |a, &b| a.max(b));
+    let max_compression = results
+        .compression_ratios
+        .iter()
+        .fold(0.0_f64, |a, &b| a.max(b));
 
     println!("  Cavitation → Bremsstrahlung:");
     println!("    Max Temperature: {:.0} K (plasma formation)", max_temp);
-    println!("    Max Compression: {:.1}x (extreme density)", max_compression);
+    println!(
+        "    Max Compression: {:.1}x (extreme density)",
+        max_compression
+    );
     println!("    Ionization threshold exceeded for bremsstrahlung");
 
     // Cavitation → Cherenkov
-    let max_velocity = results.particle_velocities.iter().fold(0.0_f64, |a, &b| a.max(b));
+    let max_velocity = results
+        .particle_velocities
+        .iter()
+        .fold(0.0_f64, |a, &b| a.max(b));
     let cherenkov_threshold = 3e8 / 1.5; // c/n for n=1.5
 
     println!("  Cavitation → Cherenkov:");
     println!("    Max Velocity: {:.1e} m/s", max_velocity);
     println!("    Cherenkov Threshold: {:.1e} m/s", cherenkov_threshold);
-    println!("    Threshold {}exceeded", if max_velocity > cherenkov_threshold { "" } else { "not " });
+    println!(
+        "    Threshold {}exceeded",
+        if max_velocity > cherenkov_threshold {
+            ""
+        } else {
+            "not "
+        }
+    );
 
     // Bremsstrahlung ≠ Cherenkov causation (but potential coupling)
     let temp_at_cherenkov_peak = results.temperatures[cherenkov_peak_idx];
     let velocity_at_brems_peak = results.particle_velocities[brems_peak_idx];
 
     println!("  Bremsstrahlung ≠ Cherenkov Causation (But Potential Coupling):");
-    println!("    Temperature at Cherenkov peak: {:.0} K", temp_at_cherenkov_peak);
-    println!("    Velocity at Bremsstrahlung peak: {:.1e} m/s", velocity_at_brems_peak);
+    println!(
+        "    Temperature at Cherenkov peak: {:.0} K",
+        temp_at_cherenkov_peak
+    );
+    println!(
+        "    Velocity at Bremsstrahlung peak: {:.1e} m/s",
+        velocity_at_brems_peak
+    );
     println!("    Different physical drivers: T vs v");
     println!("    Potential Cherenkov → Bremsstrahlung coupling:");
     println!("      • Cherenkov EM fields create local scattering centers");

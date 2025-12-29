@@ -5,8 +5,8 @@
 //! **Forward-Backward Averaging**: Reduces correlation matrix bias for finite samples
 //! **Spatial Smoothing**: Decorrelates coherent sources using subarray averaging
 
-use ndarray::{Array2, s};
 use crate::error::KwaversResult;
+use ndarray::{s, Array2};
 
 /// Covariance matrix estimator with multiple methods
 #[derive(Debug, Clone)]
@@ -43,7 +43,7 @@ impl CovarianceEstimator {
 
         if num_snapshots == 0 {
             return Err(crate::error::KwaversError::InvalidInput(
-                "No snapshots available for covariance estimation".to_string()
+                "No snapshots available for covariance estimation".to_string(),
             ));
         }
 

@@ -213,12 +213,12 @@ impl<'a> TrilaterationSolver<'a> {
         }
         let z = z2.max(0.0).sqrt();
 
-        // Two candidates: z sign ambiguous without additional information
+        // Two candidates: z sign ambiguous without additional information.
+        // est_pos corresponds to the solution in the direction of +ez (ex × ey).
+        // est_neg corresponds to the solution in the direction of -ez.
         let est_pos = add(p1, add(scale(ex, x), add(scale(ey, y), scale(ez, z))));
         let est_neg = add(p1, add(scale(ex, x), add(scale(ey, y), scale(ez, -z))));
-        // Default: choose positive z (convention)
-        let est = est_pos;
-        let position = Position::from_array(est);
+        let position = Position::from_array(est_pos);
 
         // Uncertainty as RMSE of residuals to the three spheres
         let d1 = position.distance_to(&Position::from_array(p1));
@@ -232,7 +232,12 @@ impl<'a> TrilaterationSolver<'a> {
             tracing::Span::current().record("branch", &tracing::field::display("exact"));
         }
 
-        Ok(TrilaterationResult { position: position.to_array(), uncertainty: rmse })
+        Ok(TrilaterationResult {
+            position: position.to_array(),
+            uncertainty: rmse,
+            ambiguous: z > 0.0,
+            alt_position: if z > 0.0 { Some(est_neg) } else { None },
+        })
     }
 
     /// Solve with fourth-sensor disambiguation: uses an additional range from a fourth sensor
@@ -277,7 +282,10 @@ impl<'a> TrilaterationSolver<'a> {
         fourth: (usize, f64),
     ) -> crate::error::KwaversResult<TrilaterationResult> {
         // Input validation: non-negative, finite ranges including fourth
-        if !ranges_m.iter().all(|&r| r.is_finite() && r >= 0.0) || !(fourth.1.is_finite() && fourth.1 >= 0.0) {
+        if !(ranges_m.iter().all(|&r| r.is_finite() && r >= 0.0)
+            && fourth.1.is_finite()
+            && fourth.1 >= 0.0)
+        {
             return Err(crate::error::KwaversError::InvalidInput(
                 "Ranges must be finite and non-negative".to_string(),
             ));
@@ -352,7 +360,8 @@ impl<'a> TrilaterationSolver<'a> {
         let d_neg = Position::from_array(est_neg).distance_to(p4);
         let res_pos = (d_pos - r4).abs();
         let res_neg = (d_neg - r4).abs();
-        let est = if res_pos <= res_neg { est_pos } else { est_neg };
+        let choose_pos = res_pos <= res_neg;
+        let est = if choose_pos { est_pos } else { est_neg };
         let position = Position::from_array(est);
 
         // Uncertainty across all four constraints
@@ -365,10 +374,16 @@ impl<'a> TrilaterationSolver<'a> {
         #[cfg(feature = "structured-logging")]
         {
             tracing::Span::current().record("rmse", &tracing::field::display(rmse));
-            tracing::Span::current().record("branch", &tracing::field::display("fourth_disambiguation"));
+            tracing::Span::current()
+                .record("branch", &tracing::field::display("fourth_disambiguation"));
         }
 
-        Ok(TrilaterationResult { position: position.to_array(), uncertainty: rmse })
+        Ok(TrilaterationResult {
+            position: position.to_array(),
+            uncertainty: rmse,
+            ambiguous: false,
+            alt_position: Some(if choose_pos { est_neg } else { est_pos }),
+        })
     }
 
     fn fallback_ls(
@@ -402,15 +417,20 @@ impl<'a> TrilaterationSolver<'a> {
         let p1 = subset.get_sensor_position(0);
         let p2 = subset.get_sensor_position(1);
         let p3 = subset.get_sensor_position(2);
-        let d1 = pos.distance_to(&p1);
-        let d2 = pos.distance_to(&p2);
-        let d3 = pos.distance_to(&p3);
+        let d1 = pos.distance_to(p1);
+        let d2 = pos.distance_to(p2);
+        let d3 = pos.distance_to(p3);
         let r1 = ranges_m[0];
         let r2 = ranges_m[1];
         let r3 = ranges_m[2];
         let res = [d1 - r1, d2 - r2, d3 - r3];
         let rmse = ((res[0] * res[0] + res[1] * res[1] + res[2] * res[2]) / 3.0).sqrt();
-        Ok(TrilaterationResult { position: pos.to_array(), uncertainty: rmse })
+        Ok(TrilaterationResult {
+            position: pos.to_array(),
+            uncertainty: rmse,
+            ambiguous: false,
+            alt_position: None,
+        })
     }
 }
 
@@ -422,16 +442,41 @@ pub struct TrilaterationResult {
     /// Uncertainty estimate (RMSE of residual ranges)
     /// Computed as the root-mean-square of range residuals against the constraints used.
     pub uncertainty: f64,
+    pub ambiguous: bool,
+    pub alt_position: Option<[f64; 3]>,
 }
 
 // --- small vector helpers ---
-fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] { [a[0] - b[0], a[1] - b[1], a[2] - b[2]] }
-fn add(a: [f64; 3], b: [f64; 3]) -> [f64; 3] { [a[0] + b[0], a[1] + b[1], a[2] + b[2]] }
-fn scale(a: [f64; 3], s: f64) -> [f64; 3] { [a[0] * s, a[1] * s, a[2] * s] }
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 { a[0] * b[0] + a[1] * b[1] + a[2] * b[2] }
-fn norm(a: [f64; 3]) -> f64 { (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]).sqrt() }
-fn normalize(a: [f64; 3]) -> [f64; 3] { let n = norm(a); if n < 1e-12 { [0.0, 0.0, 0.0] } else { [a[0]/n, a[1]/n, a[2]/n] } }
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] { [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]] }
+fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+fn add(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+}
+fn scale(a: [f64; 3], s: f64) -> [f64; 3] {
+    [a[0] * s, a[1] * s, a[2] * s]
+}
+fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+fn norm(a: [f64; 3]) -> f64 {
+    (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]).sqrt()
+}
+fn normalize(a: [f64; 3]) -> [f64; 3] {
+    let n = norm(a);
+    if n < 1e-12 {
+        [0.0, 0.0, 0.0]
+    } else {
+        [a[0] / n, a[1] / n, a[2] / n]
+    }
+}
+fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
 
 #[cfg(test)]
 mod tests {
@@ -470,6 +515,32 @@ mod tests {
     }
 
     #[test]
+    fn test_trilateration_ambiguity_flag() {
+        let array = make_array();
+        let source = Position::new(0.3, 0.25, 0.2);
+        let r0 = array.get_sensor_position(0).distance_to(&source);
+        let r1 = array.get_sensor_position(1).distance_to(&source);
+        let r2 = array.get_sensor_position(2).distance_to(&source);
+        let solver = TrilaterationSolver::new(&array);
+        let result = solver
+            .solve_three([r0, r1, r2], [0, 1, 2])
+            .expect("Trilateration failed");
+        assert!(
+            result.ambiguous,
+            "Three-sensor solution should be ambiguous"
+        );
+        assert!(
+            result.alt_position.is_some(),
+            "Alt position must be present"
+        );
+        let alt = result.alt_position.unwrap();
+        assert!(
+            alt[2] < 0.0,
+            "Alt solution z should reflect across sensor plane"
+        );
+    }
+
+    #[test]
     fn test_trilateration_fallback_ls() {
         // Collinear sensors -> fallback to LS
         let sensors = vec![
@@ -491,7 +562,10 @@ mod tests {
         // Degenerate geometry (collinear sensors) is ill-posed in 3D; LS provides a best-effort estimate.
         // Validate that we get a finite estimate with bounded error.
         let err = est.distance_to(&source);
-        assert!(err < 1.0, "Fallback LS trilateration error too large: {err}");
+        assert!(
+            err < 1.0,
+            "Fallback LS trilateration error too large: {err}"
+        );
     }
 
     #[test]
@@ -516,7 +590,10 @@ mod tests {
             .expect("Disambiguation failed");
         let est = Position::from_array(result.position);
         let err = est.distance_to(&source);
-        assert!(err < 1e-6, "Disambiguated trilateration error too large: {err}");
+        assert!(
+            err < 1e-6,
+            "Disambiguated trilateration error too large: {err}"
+        );
         assert!(est.z > 0.0, "Expected positive z solution to be selected");
     }
 
@@ -540,6 +617,37 @@ mod tests {
             .expect("Trilateration 4th disambiguation failed");
         let est = Position::from_array(res.position);
         assert!(est.distance_to(&source) < 1e-6);
+    }
+
+    #[test]
+    fn test_trilateration_negative_z() {
+        let array = make_array();
+        // Target below the z=0 plane
+        let source = Position::new(0.3, 0.25, -0.5);
+        let r0 = array.get_sensor_position(0).distance_to(&source);
+        let r1 = array.get_sensor_position(1).distance_to(&source);
+        let r2 = array.get_sensor_position(2).distance_to(&source);
+
+        let solver = TrilaterationSolver::new(&array);
+        let result = solver
+            .solve_three([r0, r1, r2], [0, 1, 2])
+            .expect("Trilateration failed");
+
+        // For 3 sensors, we get ambiguous results.
+        // est_pos is usually the primary return, but alt_position must contain the correct one.
+        let est_pos = Position::from_array(result.position);
+        let est_neg = Position::from_array(result.alt_position.expect("Should have alt position"));
+
+        // One of them should be close to source
+        let d1 = est_pos.distance_to(&source);
+        let d2 = est_neg.distance_to(&source);
+
+        assert!(d1 < 1e-6 || d2 < 1e-6, "One solution must match source");
+
+        // Specifically check that est_neg (alt) is the correct one for negative Z target
+        // because est_pos (primary) is constructed with +z relative to ez=(0,0,1)
+        assert!(d2 < 1e-6, "est_neg should match negative Z source");
+        assert!(d1 > 0.1, "est_pos should be the reflection");
     }
 
     #[test]
@@ -581,93 +689,93 @@ mod tests {
         }
     }
 
-        proptest! {
-            #[test]
-            fn proptest_trilateration_fourth_sensor_disambiguation_positive_z(
-                sx in -0.4f64..0.9f64,
-                sy in -0.4f64..0.9f64,
-                sz in 0.05f64..0.5f64,
-            ) {
-            // Base sensors in z=0 plane, 4th above plane to select positive z
+    proptest! {
+        #[test]
+        fn proptest_trilateration_fourth_sensor_disambiguation_positive_z(
+            sx in -0.4f64..0.9f64,
+            sy in -0.4f64..0.9f64,
+            sz in 0.05f64..0.5f64,
+        ) {
+        // Base sensors in z=0 plane, 4th above plane to select positive z
+        let sensors = vec![
+            Sensor::new(0, Position::new(0.0, 0.0, 0.0)),
+            Sensor::new(1, Position::new(1.0, 0.0, 0.0)),
+            Sensor::new(2, Position::new(0.0, 1.0, 0.0)),
+            Sensor::new(3, Position::new(0.5, 0.5, 2.0)),
+        ];
+        let array = SensorArray::new(sensors, 1500.0, ArrayGeometry::Arbitrary);
+        let source = Position::new(sx, sy, sz);
+        let r0 = array.get_sensor_position(0).distance_to(&source);
+        let r1 = array.get_sensor_position(1).distance_to(&source);
+        let r2 = array.get_sensor_position(2).distance_to(&source);
+        let r3 = array.get_sensor_position(3).distance_to(&source);
+        let solver = TrilaterationSolver::new(&array);
+        let res = solver
+            .solve_three_with_fourth([r0, r1, r2], [0, 1, 2], (3, r3))
+            .expect("Fourth-sensor disambiguation should succeed");
+        let est = Position::from_array(res.position);
+        prop_assert!(est.distance_to(&source) < 1e-6);
+        // Since source.z > 0 and 4th sensor is above, selected solution should have positive z
+            prop_assert!(est.z > 0.0);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn proptest_trilateration_near_degenerate_j_small(
+            eps in 1e-6f64..1e-3f64,
+            t in 1e-6f64..1e-2f64,
+            sx in 0.1f64..0.9f64,
+            sy in 0.1f64..0.9f64,
+            sz in 0.05f64..0.5f64,
+        ) {
+            // Sensors nearly collinear: p2 on x-axis, p3 very close to x-axis (small j)
             let sensors = vec![
                 Sensor::new(0, Position::new(0.0, 0.0, 0.0)),
                 Sensor::new(1, Position::new(1.0, 0.0, 0.0)),
-                Sensor::new(2, Position::new(0.0, 1.0, 0.0)),
-                Sensor::new(3, Position::new(0.5, 0.5, 2.0)),
+                Sensor::new(2, Position::new(eps, t, 0.0)),
             ];
-            let array = SensorArray::new(sensors, 1500.0, ArrayGeometry::Arbitrary);
+            let array = SensorArray::new(sensors, 343.0, ArrayGeometry::Arbitrary);
             let source = Position::new(sx, sy, sz);
             let r0 = array.get_sensor_position(0).distance_to(&source);
             let r1 = array.get_sensor_position(1).distance_to(&source);
             let r2 = array.get_sensor_position(2).distance_to(&source);
-            let r3 = array.get_sensor_position(3).distance_to(&source);
             let solver = TrilaterationSolver::new(&array);
-            let res = solver
-                .solve_three_with_fourth([r0, r1, r2], [0, 1, 2], (3, r3))
-                .expect("Fourth-sensor disambiguation should succeed");
+            let res = solver.solve_three([r0, r1, r2], [0, 1, 2])
+                .expect("Trilateration should return estimate or LS fallback for near-degenerate geometry");
             let est = Position::from_array(res.position);
-            prop_assert!(est.distance_to(&source) < 1e-6);
-            // Since source.z > 0 and 4th sensor is above, selected solution should have positive z
-                prop_assert!(est.z > 0.0);
-            }
-        }
-
-        proptest! {
-            #[test]
-            fn proptest_trilateration_near_degenerate_j_small(
-                eps in 1e-6f64..1e-3f64,
-                t in 1e-6f64..1e-2f64,
-                sx in 0.1f64..0.9f64,
-                sy in 0.1f64..0.9f64,
-                sz in 0.05f64..0.5f64,
-            ) {
-                // Sensors nearly collinear: p2 on x-axis, p3 very close to x-axis (small j)
-                let sensors = vec![
-                    Sensor::new(0, Position::new(0.0, 0.0, 0.0)),
-                    Sensor::new(1, Position::new(1.0, 0.0, 0.0)),
-                    Sensor::new(2, Position::new(eps, t, 0.0)),
-                ];
-                let array = SensorArray::new(sensors, 343.0, ArrayGeometry::Arbitrary);
-                let source = Position::new(sx, sy, sz);
-                let r0 = array.get_sensor_position(0).distance_to(&source);
-                let r1 = array.get_sensor_position(1).distance_to(&source);
-                let r2 = array.get_sensor_position(2).distance_to(&source);
-                let solver = TrilaterationSolver::new(&array);
-                let res = solver.solve_three([r0, r1, r2], [0, 1, 2])
-                    .expect("Trilateration should return estimate or LS fallback for near-degenerate geometry");
-                let est = Position::from_array(res.position);
-                // Robustness: estimate stays within reasonable bound despite small j
-                prop_assert!(est.distance_to(&source) < 0.05);
-                prop_assert!(res.uncertainty.is_finite());
-            }
-        }
-
-        proptest! {
-            #[test]
-            fn proptest_trilateration_noisy_ranges_robustness(
-                sx in -0.4f64..0.9f64,
-                sy in -0.4f64..0.9f64,
-                sz in 0.05f64..0.5f64,
-                noise in 1e-6f64..1e-3f64,
-                d0 in -1.0f64..1.0f64,
-                d1 in -1.0f64..1.0f64,
-                d2 in -1.0f64..1.0f64,
-            ) {
-                let array = make_array();
-                let source = Position::new(sx, sy, sz);
-                let r0 = array.get_sensor_position(0).distance_to(&source);
-                let r1 = array.get_sensor_position(1).distance_to(&source);
-                let r2 = array.get_sensor_position(2).distance_to(&source);
-                let r0n = (r0 + noise * d0).max(0.0);
-                let r1n = (r1 + noise * d1).max(0.0);
-                let r2n = (r2 + noise * d2).max(0.0);
-                let solver = TrilaterationSolver::new(&array);
-                let res = solver.solve_three([r0n, r1n, r2n], [0, 1, 2])
-                    .expect("Trilateration should remain robust under small range noise");
-                let est = Position::from_array(res.position);
-                // Robustness: error bounded under small noise
-                prop_assert!(est.distance_to(&source) < 0.05);
-                prop_assert!(res.uncertainty.is_finite());
-            }
+            // Robustness: estimate stays within reasonable bound despite small j
+            prop_assert!(est.distance_to(&source) < 0.05);
+            prop_assert!(res.uncertainty.is_finite());
         }
     }
+
+    proptest! {
+        #[test]
+        fn proptest_trilateration_noisy_ranges_robustness(
+            sx in -0.4f64..0.9f64,
+            sy in -0.4f64..0.9f64,
+            sz in 0.05f64..0.5f64,
+            noise in 1e-6f64..1e-3f64,
+            d0 in -1.0f64..1.0f64,
+            d1 in -1.0f64..1.0f64,
+            d2 in -1.0f64..1.0f64,
+        ) {
+            let array = make_array();
+            let source = Position::new(sx, sy, sz);
+            let r0 = array.get_sensor_position(0).distance_to(&source);
+            let r1 = array.get_sensor_position(1).distance_to(&source);
+            let r2 = array.get_sensor_position(2).distance_to(&source);
+            let r0n = (r0 + noise * d0).max(0.0);
+            let r1n = (r1 + noise * d1).max(0.0);
+            let r2n = (r2 + noise * d2).max(0.0);
+            let solver = TrilaterationSolver::new(&array);
+            let res = solver.solve_three([r0n, r1n, r2n], [0, 1, 2])
+                .expect("Trilateration should remain robust under small range noise");
+            let est = Position::from_array(res.position);
+            // Robustness: error bounded under small noise
+            prop_assert!(est.distance_to(&source) < 0.05);
+            prop_assert!(res.uncertainty.is_finite());
+        }
+    }
+}

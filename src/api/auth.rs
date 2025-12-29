@@ -12,16 +12,16 @@
 //! - Rate limiting integration
 //! - Audit logging for security events
 
-use crate::error::{KwaversError, KwaversResult};
 use crate::api::{APIError, APIErrorType};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use chrono::{DateTime, Utc, Duration};
-use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
-use sha2::{Sha256, Digest};
-use uuid::Uuid;
+use crate::error::{KwaversError, KwaversResult};
 use axum::extract::FromRequestParts;
-use axum::http::{request::Parts, StatusCode, header::AUTHORIZATION};
+use axum::http::{header::AUTHORIZATION, request::Parts, StatusCode};
+use chrono::{DateTime, Duration, Utc};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
+use uuid::Uuid;
 
 /// JWT claims structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,6 +94,15 @@ pub enum APIKeyStatus {
 }
 
 /// Authentication middleware
+impl std::fmt::Debug for AuthMiddleware {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AuthMiddleware")
+            .field("jwt_config", &self.jwt_config)
+            .field("permissions", &self.permissions)
+            .finish_non_exhaustive()
+    }
+}
+
 pub struct AuthMiddleware {
     /// JWT encoding/decoding keys
     jwt_encoding_key: EncodingKey,
@@ -136,44 +145,56 @@ impl AuthMiddleware {
         let mut permissions = HashMap::new();
 
         // PINN training permissions
-        permissions.insert("pinn:train".to_string(), vec![
-            "pinn:train:basic".to_string(),
-            "pinn:train:advanced".to_string(),
-            "pinn:train:gpu".to_string(),
-        ]);
+        permissions.insert(
+            "pinn:train".to_string(),
+            vec![
+                "pinn:train:basic".to_string(),
+                "pinn:train:advanced".to_string(),
+                "pinn:train:gpu".to_string(),
+            ],
+        );
 
         // PINN inference permissions
-        permissions.insert("pinn:infer".to_string(), vec![
-            "pinn:infer:basic".to_string(),
-            "pinn:infer:batch".to_string(),
-        ]);
+        permissions.insert(
+            "pinn:infer".to_string(),
+            vec![
+                "pinn:infer:basic".to_string(),
+                "pinn:infer:batch".to_string(),
+            ],
+        );
 
         // Model management permissions
-        permissions.insert("models:read".to_string(), vec![
-            "models:read:own".to_string(),
-            "models:read:all".to_string(),
-        ]);
+        permissions.insert(
+            "models:read".to_string(),
+            vec!["models:read:own".to_string(), "models:read:all".to_string()],
+        );
 
-        permissions.insert("models:write".to_string(), vec![
-            "models:write:own".to_string(),
-            "models:write:all".to_string(),
-        ]);
+        permissions.insert(
+            "models:write".to_string(),
+            vec![
+                "models:write:own".to_string(),
+                "models:write:all".to_string(),
+            ],
+        );
 
-        permissions.insert("models:delete".to_string(), vec![
-            "models:delete:own".to_string(),
-            "models:delete:all".to_string(),
-        ]);
+        permissions.insert(
+            "models:delete".to_string(),
+            vec![
+                "models:delete:own".to_string(),
+                "models:delete:all".to_string(),
+            ],
+        );
 
         // Job management permissions
-        permissions.insert("jobs:read".to_string(), vec![
-            "jobs:read:own".to_string(),
-            "jobs:read:all".to_string(),
-        ]);
+        permissions.insert(
+            "jobs:read".to_string(),
+            vec!["jobs:read:own".to_string(), "jobs:read:all".to_string()],
+        );
 
-        permissions.insert("jobs:write".to_string(), vec![
-            "jobs:write:own".to_string(),
-            "jobs:write:all".to_string(),
-        ]);
+        permissions.insert(
+            "jobs:write".to_string(),
+            vec!["jobs:write:own".to_string(), "jobs:write:all".to_string()],
+        );
 
         permissions
     }
@@ -182,8 +203,8 @@ impl AuthMiddleware {
     pub fn authenticate_jwt(&self, token: &str) -> Result<AuthenticatedUser, APIError> {
         // Decode and validate JWT
         let validation = Validation::new(self.jwt_config.algorithm);
-        let token_data = decode::<Claims>(token, &self.jwt_decoding_key, &validation)
-            .map_err(|e| {
+        let token_data =
+            decode::<Claims>(token, &self.jwt_decoding_key, &validation).map_err(|e| {
                 // Check if it's an expired signature error by examining the error message
                 let error_msg = e.to_string();
                 if error_msg.contains("ExpiredSignature") || error_msg.contains("expired") {
@@ -231,12 +252,17 @@ impl AuthMiddleware {
     }
 
     /// Authenticate user from API key
-    pub fn authenticate_api_key(&self, api_key: &str, api_keys: &[APIKey]) -> Result<AuthenticatedUser, APIError> {
+    pub fn authenticate_api_key(
+        &self,
+        api_key: &str,
+        api_keys: &[APIKey],
+    ) -> Result<AuthenticatedUser, APIError> {
         // Hash the provided API key
         let key_hash = Self::hash_api_key(api_key);
 
         // Find matching API key
-        let key_info = api_keys.iter()
+        let key_info = api_keys
+            .iter()
             .find(|k| k.key_hash == key_hash && matches!(k.status, APIKeyStatus::Active))
             .ok_or_else(|| APIError {
                 error: APIErrorType::AuthenticationFailed,
@@ -264,7 +290,12 @@ impl AuthMiddleware {
     }
 
     /// Authorize user action
-    pub fn authorize(&self, user: &AuthenticatedUser, action: &str, resource: &str) -> Result<(), APIError> {
+    pub fn authorize(
+        &self,
+        user: &AuthenticatedUser,
+        action: &str,
+        resource: &str,
+    ) -> Result<(), APIError> {
         let required_permission = format!("{}:{}", action, resource);
 
         // Check if user has the required permission
@@ -291,16 +322,30 @@ impl AuthMiddleware {
 
         Err(APIError {
             error: APIErrorType::AuthorizationFailed,
-            message: format!("Insufficient permissions for action: {}", required_permission),
+            message: format!(
+                "Insufficient permissions for action: {}",
+                required_permission
+            ),
             details: Some(HashMap::from([
-                ("required_permission".to_string(), serde_json::Value::String(required_permission)),
-                ("user_permissions".to_string(), serde_json::json!(user.permissions)),
+                (
+                    "required_permission".to_string(),
+                    serde_json::Value::String(required_permission),
+                ),
+                (
+                    "user_permissions".to_string(),
+                    serde_json::json!(user.permissions),
+                ),
             ])),
         })
     }
 
     /// Generate JWT token for user
-    pub fn generate_token(&self, user_id: &str, roles: &[String], permissions: &[String]) -> KwaversResult<String> {
+    pub fn generate_token(
+        &self,
+        user_id: &str,
+        roles: &[String],
+        permissions: &[String],
+    ) -> KwaversResult<String> {
         let now = Utc::now();
         let iat = now.timestamp();
         let exp = (now + Duration::seconds(self.jwt_config.expiration_seconds as i64)).timestamp();
@@ -316,15 +361,27 @@ impl AuthMiddleware {
             iss: self.jwt_config.issuer.clone(),
         };
 
-        encode(&Header::new(self.jwt_config.algorithm), &claims, &self.jwt_encoding_key)
-            .map_err(|e| KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+        encode(
+            &Header::new(self.jwt_config.algorithm),
+            &claims,
+            &self.jwt_encoding_key,
+        )
+        .map_err(|e| {
+            KwaversError::System(crate::error::SystemError::InvalidConfiguration {
                 parameter: "jwt_token_generation".to_string(),
                 reason: format!("Failed to generate JWT token: {}", e),
-            }))
+            })
+        })
     }
 
     /// Generate API key for user
-    pub fn generate_api_key(&self, user_id: &str, name: &str, permissions: &[String], expires_at: Option<DateTime<Utc>>) -> (String, APIKey) {
+    pub fn generate_api_key(
+        &self,
+        user_id: &str,
+        name: &str,
+        permissions: &[String],
+        expires_at: Option<DateTime<Utc>>,
+    ) -> (String, APIKey) {
         let key_id = Uuid::new_v4().to_string();
         let raw_key = Uuid::new_v4().to_string(); // In production, use a cryptographically secure random string
         let key_hash = Self::hash_api_key(&raw_key);
@@ -383,7 +440,33 @@ impl Default for AuthMiddleware {
 impl FromRequestParts<crate::api::handlers::AppState> for AuthenticatedUser {
     type Rejection = (StatusCode, axum::Json<APIError>);
 
-    async fn from_request_parts(parts: &mut Parts, state: &crate::api::handlers::AppState) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &crate::api::handlers::AppState,
+    ) -> Result<Self, Self::Rejection> {
+        Self::extract_from_middleware(parts, &state.auth_middleware).await
+    }
+}
+
+#[cfg(feature = "pinn")]
+#[axum::async_trait]
+impl FromRequestParts<crate::api::clinical_handlers::ClinicalAppState> for AuthenticatedUser {
+    type Rejection = (StatusCode, axum::Json<APIError>);
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &crate::api::clinical_handlers::ClinicalAppState,
+    ) -> Result<Self, Self::Rejection> {
+        Self::extract_from_middleware(parts, &state.auth_middleware).await
+    }
+}
+
+impl AuthenticatedUser {
+    /// Helper to extract authenticated user from parts and auth middleware
+    async fn extract_from_middleware(
+        parts: &mut Parts,
+        auth_middleware: &std::sync::Arc<AuthMiddleware>,
+    ) -> Result<Self, (StatusCode, axum::Json<APIError>)> {
         // Extract Authorization header
         let auth_header = parts
             .headers
@@ -405,13 +488,10 @@ impl FromRequestParts<crate::api::handlers::AppState> for AuthenticatedUser {
             }
         };
 
-        // Authenticate using the auth middleware from state
-        match state.auth_middleware.authenticate_jwt(token) {
+        // Authenticate using the auth middleware
+        match auth_middleware.authenticate_jwt(token) {
             Ok(user) => Ok(user),
-            Err(error) => Err((
-                StatusCode::UNAUTHORIZED,
-                axum::Json(error),
-            )),
+            Err(error) => Err((StatusCode::UNAUTHORIZED, axum::Json(error))),
         }
     }
 }
@@ -448,7 +528,8 @@ mod tests {
         let permissions = vec!["pinn:infer".to_string()];
 
         // Generate API key
-        let (raw_key, api_key_info) = auth.generate_api_key(user_id, "test-key", &permissions, None);
+        let (raw_key, api_key_info) =
+            auth.generate_api_key(user_id, "test-key", &permissions, None);
 
         assert_eq!(api_key_info.user_id, user_id);
         assert_eq!(api_key_info.permissions, permissions);
@@ -511,7 +592,9 @@ mod tests {
 
     #[test]
     fn test_api_key_format_validation() {
-        assert!(AuthMiddleware::validate_api_key_format("valid-api-key-with-reasonable-length"));
+        assert!(AuthMiddleware::validate_api_key_format(
+            "valid-api-key-with-reasonable-length"
+        ));
         assert!(!AuthMiddleware::validate_api_key_format(""));
         assert!(!AuthMiddleware::validate_api_key_format("short"));
         assert!(!AuthMiddleware::validate_api_key_format(&"x".repeat(200))); // too long
@@ -534,6 +617,9 @@ mod tests {
 
         let result = auth.authenticate_api_key("dummy", &[expired_key]);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err().error, APIErrorType::AuthenticationFailed));
+        assert!(matches!(
+            result.unwrap_err().error,
+            APIErrorType::AuthenticationFailed
+        ));
     }
 }

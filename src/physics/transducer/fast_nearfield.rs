@@ -72,15 +72,17 @@
 
 use ndarray::{s, Array2, Array3, Axis};
 use num_complex::Complex;
-use rustfft::{FftPlanner, num_complex::Complex32};
+use rustfft::FftPlanner;
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
 /// Configuration for Fast Nearfield Method
 #[derive(Debug, Clone)]
 pub struct FNMConfig {
-    /// Grid spacing in transducer plane (m)
+    /// Grid spacing in x-direction (m)
     pub dx: f64,
+    /// Grid spacing in y-direction (m)
+    pub dy: f64,
     /// Number of angular spectrum points (Nx, Ny)
     pub angular_spectrum_size: (usize, usize),
     /// Maximum k-space extent (as fraction of Nyquist)
@@ -93,6 +95,7 @@ impl Default for FNMConfig {
     fn default() -> Self {
         Self {
             dx: 0.1e-3, // 0.1 mm
+            dy: 0.1e-3, // 0.1 mm
             angular_spectrum_size: (512, 512),
             k_max_factor: 2.0,
             separable_approximation: false,
@@ -116,7 +119,10 @@ pub struct RectangularTransducer {
 impl RectangularTransducer {
     /// Get element size
     pub fn element_size(&self) -> (f64, f64) {
-        (self.width / self.elements.0 as f64, self.height / self.elements.1 as f64)
+        (
+            self.width / self.elements.0 as f64,
+            self.height / self.elements.1 as f64,
+        )
     }
 
     /// Get wavenumber
@@ -139,6 +145,7 @@ pub struct AngularSpectrumFactors {
 }
 
 /// Fast Nearfield Method solver
+#[derive(Debug)]
 pub struct FastNearfieldSolver {
     /// Configuration
     config: FNMConfig,
@@ -159,7 +166,7 @@ impl FastNearfieldSolver {
             config,
             cached_factors: HashMap::new(),
             transducer: None,
-            c0: 1500.0, // Default water speed
+            c0: 1500.0,   // Default water speed
             rho0: 1000.0, // Default water density
         })
     }
@@ -179,7 +186,9 @@ impl FastNearfieldSolver {
 
     /// Precompute angular spectrum factors for a given z-distance
     pub fn precompute_factors(&mut self, z: f64) -> Result<(), String> {
-        let transducer = self.transducer.as_ref()
+        let transducer = self
+            .transducer
+            .as_ref()
             .ok_or("Transducer not set. Call set_transducer() first.")?;
 
         let z_key = (z * 1e9) as u64; // Use nanometer precision for key
@@ -207,20 +216,28 @@ impl FastNearfieldSolver {
         let dkx = 2.0 * PI / (self.config.dx * n_kx as f64);
         let dky = 2.0 * PI / (self.config.dx * n_ky as f64);
 
-        let kx_max = self.config.k_max_factor * PI / self.config.dx;
-        let ky_max = self.config.k_max_factor * PI / self.config.dx;
+        let _kx_max = self.config.k_max_factor * PI / self.config.dx;
+        let _ky_max = self.config.k_max_factor * PI / self.config.dy;
 
         let mut kx = Vec::with_capacity(n_kx);
         let mut ky = Vec::with_capacity(n_ky);
 
         // Create k-space coordinates (centered at zero)
         for i in 0..n_kx {
-            let i_centered = if i < n_kx / 2 { i as f64 } else { i as f64 - n_kx as f64 };
+            let i_centered = if i < n_kx / 2 {
+                i as f64
+            } else {
+                i as f64 - n_kx as f64
+            };
             kx.push(i_centered * dkx);
         }
 
         for i in 0..n_ky {
-            let i_centered = if i < n_ky / 2 { i as f64 } else { i as f64 - n_ky as f64 };
+            let i_centered = if i < n_ky / 2 {
+                i as f64
+            } else {
+                i as f64 - n_ky as f64
+            };
             ky.push(i_centered * dky);
         }
 
@@ -241,7 +258,8 @@ impl FastNearfieldSolver {
                         // Ĝ(kx,ky,z) = (kz/k) * exp(j*kz*z) for the angular spectrum
                         let phase_factor = Complex::new(0.0, kz * z).exp();
                         let amplitude_factor = kz / k;
-                        green_spectrum[[i, j]] = Complex::new(0.0, 1.0) * amplitude_factor * phase_factor;
+                        green_spectrum[[i, j]] =
+                            Complex::new(0.0, 1.0) * amplitude_factor * phase_factor;
                     } else if z == 0.0 {
                         // On-axis case - direct field
                         green_spectrum[[i, j]] = Complex::new(1.0, 0.0);
@@ -249,7 +267,8 @@ impl FastNearfieldSolver {
                         // Backward propagation (less common but mathematically valid)
                         let phase_factor = Complex::new(0.0, kz * z).exp();
                         let amplitude_factor = kz / k;
-                        green_spectrum[[i, j]] = Complex::new(0.0, -1.0) * amplitude_factor * phase_factor;
+                        green_spectrum[[i, j]] =
+                            Complex::new(0.0, -1.0) * amplitude_factor * phase_factor;
                     }
                 } else {
                     // Evanescent wave - set to zero (no propagation)
@@ -267,20 +286,31 @@ impl FastNearfieldSolver {
     }
 
     /// Compute pressure field from transducer velocity distribution
-    pub fn compute_field(&self, velocity: &Array2<Complex<f64>>, z: f64) -> Result<Array2<Complex<f64>>, String> {
-        let transducer = self.transducer.as_ref()
+    pub fn compute_field(
+        &self,
+        velocity: &Array2<Complex<f64>>,
+        z: f64,
+    ) -> Result<Array2<Complex<f64>>, String> {
+        let transducer = self
+            .transducer
+            .as_ref()
             .ok_or("Transducer not set. Call set_transducer() first.")?;
 
         let z_key = (z * 1e9) as u64;
-        let factors = self.cached_factors.get(&z_key)
-            .ok_or(format!("Angular spectrum factors not computed for z = {} m. Call precompute_factors() first.", z))?;
+        let factors = self.cached_factors.get(&z_key).ok_or(format!(
+            "Angular spectrum factors not computed for z = {} m. Call precompute_factors() first.",
+            z
+        ))?;
 
         // Check velocity array dimensions match transducer elements
         let (n_elem_x, n_elem_y) = transducer.elements;
         if velocity.nrows() != n_elem_x || velocity.ncols() != n_elem_y {
             return Err(format!(
                 "Velocity array dimensions ({}, {}) don't match transducer elements ({}, {})",
-                velocity.nrows(), velocity.ncols(), n_elem_x, n_elem_y
+                velocity.nrows(),
+                velocity.ncols(),
+                n_elem_x,
+                n_elem_y
             ));
         }
 
@@ -312,16 +342,19 @@ impl FastNearfieldSolver {
         let start_x = (n_kx - n_elem_x) / 2;
         let start_y = (n_ky - n_elem_y) / 2;
 
-        let result = pressure_field.slice(s![
-            start_x..start_x + n_elem_x,
-            start_y..start_y + n_elem_y
-        ]).to_owned();
+        let result = pressure_field
+            .slice(s![start_x..start_x + n_elem_x, start_y..start_y + n_elem_y])
+            .to_owned();
 
         Ok(result)
     }
 
     /// Compute field at multiple z-distances (efficient batch computation)
-    pub fn compute_field_stack(&self, velocity: &Array2<Complex<f64>>, z_values: &[f64]) -> Result<Array3<Complex<f64>>, String> {
+    pub fn compute_field_stack(
+        &self,
+        velocity: &Array2<Complex<f64>>,
+        z_values: &[f64],
+    ) -> Result<Array3<Complex<f64>>, String> {
         let mut results = Vec::new();
 
         for &z in z_values {
@@ -350,10 +383,9 @@ impl FastNearfieldSolver {
         let start_x = (n_kx - n_elem_x) / 2;
         let start_y = (n_ky - n_elem_y) / 2;
 
-        padded.slice_mut(s![
-            start_x..start_x + n_elem_x,
-            start_y..start_y + n_elem_y
-        ]).assign(velocity);
+        padded
+            .slice_mut(s![start_x..start_x + n_elem_x, start_y..start_y + n_elem_y])
+            .assign(velocity);
 
         padded
     }
@@ -363,7 +395,8 @@ impl FastNearfieldSolver {
         let (rows, cols) = input.dim();
 
         // Convert to Vec<Complex<f32>> for rustfft (f32 is more common and efficient)
-        let mut buffer: Vec<Complex<f32>> = input.iter()
+        let mut buffer: Vec<Complex<f32>> = input
+            .iter()
             .map(|&c| Complex::new(c.re as f32, c.im as f32))
             .collect();
 
@@ -410,7 +443,8 @@ impl FastNearfieldSolver {
         let (rows, cols) = input.dim();
 
         // Convert to Vec<Complex<f32>> for rustfft
-        let mut buffer: Vec<Complex<f32>> = input.iter()
+        let mut buffer: Vec<Complex<f32>> = input
+            .iter()
             .map(|&c| Complex::new(c.re as f32, c.im as f32))
             .collect();
 
@@ -456,7 +490,8 @@ impl FastNearfieldSolver {
 
     /// Get cached z-distances
     pub fn cached_z_distances(&self) -> Vec<f64> {
-        self.cached_factors.keys()
+        self.cached_factors
+            .keys()
             .map(|&key| key as f64 / 1e9)
             .collect()
     }

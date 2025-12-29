@@ -170,11 +170,7 @@ impl ComputeBackend for Backend {
                     // Copy input data to GPU
                     // Safety: f32 is Pod and bytemuck::cast_slice is safe for f32
                     let input_data: Vec<f32> = data.iter().map(|&x| x.into()).collect();
-                    queue.write_buffer(
-                        &input_buffer,
-                        0,
-                        bytemuck::cast_slice(&input_data),
-                    );
+                    queue.write_buffer(&input_buffer, 0, bytemuck::cast_slice(&input_data));
 
                     // Create bind group
                     let bind_group_layout = compute_pipeline.get_bind_group_layout(0);
@@ -201,8 +197,7 @@ impl ComputeBackend for Backend {
                             encoder.begin_compute_pass(&ComputePassDescriptor::default());
                         compute_pass.set_pipeline(&compute_pipeline);
                         compute_pass.set_bind_group(0, &bind_group, &[]);
-                        compute_pass
-                            .dispatch_workgroups((data.len() as u32).div_ceil(64), 1, 1);
+                        compute_pass.dispatch_workgroups((data.len() as u32).div_ceil(64), 1, 1);
                     }
 
                     // Copy from output buffer to staging buffer for reading
@@ -264,10 +259,7 @@ async fn compute_squares<T>(
 where
     T: Copy + std::ops::Mul<Output = T> + Default + Into<f32> + From<f32>,
 {
-    backend
-        .compute_squares(storage)
-        .await
-        .map_err(Into::into)
+    backend.compute_squares(storage).await.map_err(Into::into)
 }
 
 #[cfg(test)]

@@ -32,7 +32,11 @@ impl PerfusionModel {
     }
 
     /// Update concentration field over time
-    pub fn update_concentration(&mut self, inflow_concentration: f64, dt: f64) -> KwaversResult<()> {
+    pub fn update_concentration(
+        &mut self,
+        inflow_concentration: f64,
+        dt: f64,
+    ) -> KwaversResult<()> {
         // Simplified advection-diffusion model
         let (nx, ny, nz) = self.concentration.dim();
         for i in 0..nx {
@@ -49,7 +53,8 @@ impl PerfusionModel {
                     self.concentration[[i, j, k]] += advective_flux + diffusion + uptake;
 
                     // Add inflow
-                    if i == 0 { // Inlet boundary
+                    if i == 0 {
+                        // Inlet boundary
                         self.concentration[[i, j, k]] += inflow_concentration * dt;
                     }
 
@@ -79,14 +84,14 @@ impl PerfusionModel {
     pub fn gamma_variate_model() -> FlowKinetics {
         // Default frame rate and duration for model synthesis
         let frame_rate = 10.0; // Hz
-        let duration = 30.0;   // s
+        let duration = 30.0; // s
         let n_frames = (frame_rate * duration) as usize;
         let dt = 1.0 / frame_rate;
 
         // Gamma variate parameters
         let alpha = 3.0;
         let beta = 1.5; // s
-        let tau = 0.5;  // s
+        let tau = 0.5; // s
 
         let mut arterial_input = Vec::with_capacity(n_frames);
         for i in 0..n_frames {
@@ -143,9 +148,12 @@ impl FlowKinetics {
         }
 
         // Find peak
-        let peak_idx = tic.iter().enumerate()
+        let peak_idx = tic
+            .iter()
+            .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .map(|(i, _)| i).unwrap_or(0);
+            .map(|(i, _)| i)
+            .unwrap_or(0);
 
         let peak_intensity = tic[peak_idx];
         let time_to_peak = peak_idx as f64 / frame_rate;
@@ -233,8 +241,8 @@ impl TissueUptake {
     /// Create new tissue uptake model
     pub fn new() -> Self {
         Self {
-            uptake_rate: 0.1,        // 0.1 /s
-            clearance_rate: 0.05,     // 0.05 /s
+            uptake_rate: 0.1,           // 0.1 /s
+            clearance_rate: 0.05,       // 0.05 /s
             partition_coefficient: 0.2, // Dimensionless
         }
     }

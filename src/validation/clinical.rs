@@ -169,21 +169,27 @@ impl Default for ClinicalValidator {
                 ("contrast_resolution".to_string(), 30.0), // dB (higher better)
                 ("dynamic_range".to_string(), 60.0),       // dB (higher better)
                 ("snr".to_string(), 20.0),                 // dB (higher better)
-            ].into(),
+            ]
+            .into(),
             maximum_errors: [
-                ("distance_error".to_string(), 5.0),      // % (lower better)
-                ("area_error".to_string(), 10.0),         // % (lower better)
-                ("axial_resolution".to_string(), 0.5),     // mm (lower better)
-                ("lateral_resolution".to_string(), 1.0),   // mm (lower better)
-            ].into(),
+                ("distance_error".to_string(), 5.0),     // % (lower better)
+                ("area_error".to_string(), 10.0),        // % (lower better)
+                ("axial_resolution".to_string(), 0.5),   // mm (lower better)
+                ("lateral_resolution".to_string(), 1.0), // mm (lower better)
+            ]
+            .into(),
             safety_thresholds: [
-                ("mechanical_index".to_string(), 1.9),    // MI limit (lower better)
-                ("thermal_index".to_string(), 6.0),      // TI limit (lower better)
-            ].into(),
+                ("mechanical_index".to_string(), 1.9), // MI limit (lower better)
+                ("thermal_index".to_string(), 6.0),    // TI limit (lower better)
+            ]
+            .into(),
             standard: ClinicalStandard::FDA510k,
             category: ClinicalCategory::BMode,
         };
-        requirements.insert((ClinicalStandard::FDA510k, ClinicalCategory::BMode), bmode_reqs);
+        requirements.insert(
+            (ClinicalStandard::FDA510k, ClinicalCategory::BMode),
+            bmode_reqs,
+        );
 
         // IEC 60601-2-37 safety requirements
         let safety_reqs = ClinicalRequirements {
@@ -194,13 +200,17 @@ impl Default for ClinicalValidator {
                 ("thermal_index_soft_max".to_string(), 6.0),
                 ("thermal_index_bone_max".to_string(), 1.0),
                 ("thermal_index_cranial_max".to_string(), 1.0),
-                ("spta_max".to_string(), 720.0),          // mW/cm²
-                ("sppa_max".to_string(), 190.0),          // W/cm²
-            ].into(),
+                ("spta_max".to_string(), 720.0), // mW/cm²
+                ("sppa_max".to_string(), 190.0), // W/cm²
+            ]
+            .into(),
             standard: ClinicalStandard::IEC60601_2_37,
             category: ClinicalCategory::Safety,
         };
-        requirements.insert((ClinicalStandard::IEC60601_2_37, ClinicalCategory::Safety), safety_reqs);
+        requirements.insert(
+            (ClinicalStandard::IEC60601_2_37, ClinicalCategory::Safety),
+            safety_reqs,
+        );
 
         Self { requirements }
     }
@@ -224,21 +234,46 @@ impl ClinicalValidator {
         let mut recommendations = Vec::new();
 
         // Extract metrics
-        metrics.insert("contrast_resolution".to_string(), quality_metrics.contrast_resolution);
-        metrics.insert("axial_resolution".to_string(), quality_metrics.axial_resolution);
-        metrics.insert("lateral_resolution".to_string(), quality_metrics.lateral_resolution);
+        metrics.insert(
+            "contrast_resolution".to_string(),
+            quality_metrics.contrast_resolution,
+        );
+        metrics.insert(
+            "axial_resolution".to_string(),
+            quality_metrics.axial_resolution,
+        );
+        metrics.insert(
+            "lateral_resolution".to_string(),
+            quality_metrics.lateral_resolution,
+        );
         metrics.insert("dynamic_range".to_string(), quality_metrics.dynamic_range);
         metrics.insert("snr".to_string(), quality_metrics.snr);
-        metrics.insert("distance_error".to_string(), accuracy_metrics.distance_error_percent);
-        metrics.insert("area_error".to_string(), accuracy_metrics.area_error_percent);
-        metrics.insert("mechanical_index".to_string(), safety_indices.mechanical_index);
-        metrics.insert("thermal_index".to_string(), safety_indices.thermal_index_soft);
+        metrics.insert(
+            "distance_error".to_string(),
+            accuracy_metrics.distance_error_percent,
+        );
+        metrics.insert(
+            "area_error".to_string(),
+            accuracy_metrics.area_error_percent,
+        );
+        metrics.insert(
+            "mechanical_index".to_string(),
+            safety_indices.mechanical_index,
+        );
+        metrics.insert(
+            "thermal_index".to_string(),
+            safety_indices.thermal_index_soft,
+        );
 
         // Check FDA 510(k) requirements
-        let reqs = self.requirements.get(&(ClinicalStandard::FDA510k, ClinicalCategory::BMode))
-            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
-                message: "FDA 510(k) B-mode requirements not found".to_string(),
-            }))?;
+        let reqs = self
+            .requirements
+            .get(&(ClinicalStandard::FDA510k, ClinicalCategory::BMode))
+            .ok_or_else(|| {
+                KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
+                    message: "FDA 510(k) B-mode requirements not found".to_string(),
+                })
+            })?;
 
         let mut passed = true;
 
@@ -247,9 +282,14 @@ impl ClinicalValidator {
             if let Some(actual_value) = metrics.get(metric_name) {
                 if *actual_value < *min_value {
                     passed = false;
-                    issues.push(format!("{} ({:.2}) below minimum requirement ({:.2})",
-                                       metric_name, actual_value, min_value));
-                    recommendations.push(format!("Improve {} to meet FDA 510(k) requirements", metric_name));
+                    issues.push(format!(
+                        "{} ({:.2}) below minimum requirement ({:.2})",
+                        metric_name, actual_value, min_value
+                    ));
+                    recommendations.push(format!(
+                        "Improve {} to meet FDA 510(k) requirements",
+                        metric_name
+                    ));
                 }
             }
         }
@@ -259,8 +299,10 @@ impl ClinicalValidator {
             if let Some(actual_error) = metrics.get(error_name) {
                 if *actual_error > *max_error {
                     passed = false;
-                    issues.push(format!("{} ({:.2}%) exceeds maximum error ({:.2}%)",
-                                       error_name, actual_error, max_error));
+                    issues.push(format!(
+                        "{} ({:.2}%) exceeds maximum error ({:.2}%)",
+                        error_name, actual_error, max_error
+                    ));
                     recommendations.push(format!("Reduce {} measurement error", error_name));
                 }
             }
@@ -271,9 +313,12 @@ impl ClinicalValidator {
             if let Some(actual_value) = metrics.get(safety_name) {
                 if *actual_value > *max_value {
                     passed = false;
-                    issues.push(format!("{} ({:.2}) exceeds safety threshold ({:.2})",
-                                       safety_name, actual_value, max_value));
-                    recommendations.push("Reduce acoustic output to meet safety requirements".to_string());
+                    issues.push(format!(
+                        "{} ({:.2}) exceeds safety threshold ({:.2})",
+                        safety_name, actual_value, max_value
+                    ));
+                    recommendations
+                        .push("Reduce acoustic output to meet safety requirements".to_string());
                 }
             }
         }
@@ -306,7 +351,10 @@ impl ClinicalValidator {
         metrics.insert("velocity_error".to_string(), velocity_accuracy);
         metrics.insert("angle_error".to_string(), angle_accuracy);
         metrics.insert("sensitivity".to_string(), sensitivity);
-        metrics.insert("mechanical_index".to_string(), safety_indices.mechanical_index);
+        metrics.insert(
+            "mechanical_index".to_string(),
+            safety_indices.mechanical_index,
+        );
 
         // AIUM Doppler requirements (placeholder - would need actual standards)
         let min_sensitivity = 5.0; // cm/s minimum detectable velocity
@@ -317,26 +365,35 @@ impl ClinicalValidator {
 
         if sensitivity < min_sensitivity {
             passed = false;
-            issues.push(format!("Doppler sensitivity ({:.1} cm/s) below minimum ({:.1} cm/s)",
-                               sensitivity, min_sensitivity));
-            recommendations.push("Improve Doppler sensitivity through beamforming optimization".to_string());
+            issues.push(format!(
+                "Doppler sensitivity ({:.1} cm/s) below minimum ({:.1} cm/s)",
+                sensitivity, min_sensitivity
+            ));
+            recommendations
+                .push("Improve Doppler sensitivity through beamforming optimization".to_string());
         }
 
         if velocity_accuracy > max_velocity_error {
             passed = false;
-            issues.push(format!("Velocity accuracy ({:.1}%) exceeds maximum error ({:.1}%)",
-                               velocity_accuracy, max_velocity_error));
+            issues.push(format!(
+                "Velocity accuracy ({:.1}%) exceeds maximum error ({:.1}%)",
+                velocity_accuracy, max_velocity_error
+            ));
             recommendations.push("Calibrate Doppler frequency estimation".to_string());
         }
 
         if angle_accuracy > max_angle_error {
             passed = false;
-            issues.push(format!("Angle accuracy ({:.1}°) exceeds maximum error ({:.1}°)",
-                               angle_accuracy, max_angle_error));
+            issues.push(format!(
+                "Angle accuracy ({:.1}°) exceeds maximum error ({:.1}°)",
+                angle_accuracy, max_angle_error
+            ));
             recommendations.push("Improve beam steering angle accuracy".to_string());
         }
 
-        let clinical_score = 100.0 - (velocity_accuracy + angle_accuracy) * 2.0 - (min_sensitivity - sensitivity).max(0.0) * 5.0;
+        let clinical_score = 100.0
+            - (velocity_accuracy + angle_accuracy) * 2.0
+            - (min_sensitivity - sensitivity).max(0.0) * 5.0;
 
         Ok(ClinicalValidationResult {
             passed,
@@ -349,23 +406,42 @@ impl ClinicalValidator {
     }
 
     /// Validate safety indices against IEC 60601-2-37
-    pub fn validate_safety(&self, safety_indices: &SafetyIndices) -> KwaversResult<ClinicalValidationResult> {
+    pub fn validate_safety(
+        &self,
+        safety_indices: &SafetyIndices,
+    ) -> KwaversResult<ClinicalValidationResult> {
         let mut metrics = HashMap::new();
         let mut issues = Vec::new();
         let mut recommendations = Vec::new();
 
         // Extract all safety metrics
-        metrics.insert("mechanical_index_max".to_string(), safety_indices.mechanical_index);
-        metrics.insert("thermal_index_bone_max".to_string(), safety_indices.thermal_index_bone);
-        metrics.insert("thermal_index_soft_max".to_string(), safety_indices.thermal_index_soft);
-        metrics.insert("thermal_index_cranial_max".to_string(), safety_indices.thermal_index_cranial);
+        metrics.insert(
+            "mechanical_index_max".to_string(),
+            safety_indices.mechanical_index,
+        );
+        metrics.insert(
+            "thermal_index_bone_max".to_string(),
+            safety_indices.thermal_index_bone,
+        );
+        metrics.insert(
+            "thermal_index_soft_max".to_string(),
+            safety_indices.thermal_index_soft,
+        );
+        metrics.insert(
+            "thermal_index_cranial_max".to_string(),
+            safety_indices.thermal_index_cranial,
+        );
         metrics.insert("spta_max".to_string(), safety_indices.spta_intensity);
         metrics.insert("sppa_max".to_string(), safety_indices.sppa_intensity);
 
-        let reqs = self.requirements.get(&(ClinicalStandard::IEC60601_2_37, ClinicalCategory::Safety))
-            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
-                message: "IEC 60601-2-37 safety requirements not found".to_string(),
-            }))?;
+        let reqs = self
+            .requirements
+            .get(&(ClinicalStandard::IEC60601_2_37, ClinicalCategory::Safety))
+            .ok_or_else(|| {
+                KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
+                    message: "IEC 60601-2-37 safety requirements not found".to_string(),
+                })
+            })?;
 
         let mut passed = true;
 
@@ -374,12 +450,16 @@ impl ClinicalValidator {
             if let Some(actual_value) = metrics.get(safety_param) {
                 if *actual_value > *max_value {
                     passed = false;
-                    issues.push(format!("{} ({:.2}) exceeds IEC 60601-2-37 limit ({:.2})",
-                                       safety_param, actual_value, max_value));
+                    issues.push(format!(
+                        "{} ({:.2}) exceeds IEC 60601-2-37 limit ({:.2})",
+                        safety_param, actual_value, max_value
+                    ));
 
                     let recommendation = match safety_param.as_str() {
                         "mechanical_index_max" => "Reduce peak negative pressure to lower MI",
-                        "thermal_index_soft_max" => "Reduce acoustic power or duty cycle for soft tissue",
+                        "thermal_index_soft_max" => {
+                            "Reduce acoustic power or duty cycle for soft tissue"
+                        }
                         "thermal_index_bone_max" => "Reduce acoustic power for bone imaging",
                         "thermal_index_cranial_max" => "Reduce acoustic power for cranial imaging",
                         "spta_max" => "Reduce temporal average intensity",
@@ -404,7 +484,11 @@ impl ClinicalValidator {
     }
 
     /// Calculate overall clinical acceptability score
-    fn calculate_clinical_score(&self, metrics: &HashMap<String, f64>, reqs: &ClinicalRequirements) -> f64 {
+    fn calculate_clinical_score(
+        &self,
+        metrics: &HashMap<String, f64>,
+        reqs: &ClinicalRequirements,
+    ) -> f64 {
         let mut total_score = 0.0;
         let mut total_weight = 0.0;
 
@@ -430,7 +514,11 @@ impl ClinicalValidator {
         // Score safety (binary)
         for (safety_name, max_value) in &reqs.safety_thresholds {
             if let Some(actual_value) = metrics.get(safety_name) {
-                let score = if *actual_value <= *max_value { 25.0 } else { 0.0 };
+                let score = if *actual_value <= *max_value {
+                    25.0
+                } else {
+                    0.0
+                };
                 total_score += score;
                 total_weight += 25.0;
             }
@@ -453,21 +541,35 @@ impl ClinicalValidator {
         let mut report = String::new();
 
         report.push_str("# Clinical Validation Report - Kwavers Ultrasound System\n\n");
-        report.push_str(&format!("**Generated**: {}\n\n", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")));
+        report.push_str(&format!(
+            "**Generated**: {}\n\n",
+            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
+        ));
 
         // Overall status
         let all_passed = [bmode_result, doppler_result, safety_result]
             .iter()
             .all(|r| r.map(|res| res.passed).unwrap_or(true));
 
-        report.push_str(&format!("## Overall Status: {}\n\n",
-                                if all_passed { "✅ PASSED" } else { "❌ FAILED" }));
+        report.push_str(&format!(
+            "## Overall Status: {}\n\n",
+            if all_passed {
+                "✅ PASSED"
+            } else {
+                "❌ FAILED"
+            }
+        ));
 
         // Individual validations
         if let Some(result) = bmode_result {
-            report.push_str(&format!("## B-Mode Imaging Validation {}\n\n",
-                                    if result.passed { "✅" } else { "❌" }));
-            report.push_str(&format!("**Clinical Score**: {:.1}/100\n\n", result.clinical_score));
+            report.push_str(&format!(
+                "## B-Mode Imaging Validation {}\n\n",
+                if result.passed { "✅" } else { "❌" }
+            ));
+            report.push_str(&format!(
+                "**Clinical Score**: {:.1}/100\n\n",
+                result.clinical_score
+            ));
 
             if !result.issues.is_empty() {
                 report.push_str("### Issues Identified\n\n");
@@ -487,9 +589,14 @@ impl ClinicalValidator {
         }
 
         if let Some(result) = doppler_result {
-            report.push_str(&format!("## Doppler Imaging Validation {}\n\n",
-                                    if result.passed { "✅" } else { "❌" }));
-            report.push_str(&format!("**Clinical Score**: {:.1}/100\n\n", result.clinical_score));
+            report.push_str(&format!(
+                "## Doppler Imaging Validation {}\n\n",
+                if result.passed { "✅" } else { "❌" }
+            ));
+            report.push_str(&format!(
+                "**Clinical Score**: {:.1}/100\n\n",
+                result.clinical_score
+            ));
 
             if !result.issues.is_empty() {
                 report.push_str("### Issues Identified\n\n");
@@ -501,10 +608,18 @@ impl ClinicalValidator {
         }
 
         if let Some(result) = safety_result {
-            report.push_str(&format!("## Safety Validation (IEC 60601-2-37) {}\n\n",
-                                    if result.passed { "✅" } else { "❌" }));
-            report.push_str(&format!("**Safety Compliance**: {}\n\n",
-                                    if result.regulatory_compliant { "REGULATORY COMPLIANT" } else { "REQUIRES CORRECTION" }));
+            report.push_str(&format!(
+                "## Safety Validation (IEC 60601-2-37) {}\n\n",
+                if result.passed { "✅" } else { "❌" }
+            ));
+            report.push_str(&format!(
+                "**Safety Compliance**: {}\n\n",
+                if result.regulatory_compliant {
+                    "REGULATORY COMPLIANT"
+                } else {
+                    "REQUIRES CORRECTION"
+                }
+            ));
 
             if !result.issues.is_empty() {
                 report.push_str("### Safety Issues\n\n");
@@ -520,13 +635,25 @@ impl ClinicalValidator {
         report.push_str("|----------|--------|-------|\n");
 
         if let Some(result) = bmode_result {
-            report.push_str(&format!("| FDA 510(k) | {} | B-mode imaging requirements |\n",
-                                    if result.regulatory_compliant { "✅ Compliant" } else { "❌ Non-compliant" }));
+            report.push_str(&format!(
+                "| FDA 510(k) | {} | B-mode imaging requirements |\n",
+                if result.regulatory_compliant {
+                    "✅ Compliant"
+                } else {
+                    "❌ Non-compliant"
+                }
+            ));
         }
 
         if let Some(result) = safety_result {
-            report.push_str(&format!("| IEC 60601-2-37 | {} | Ultrasound safety standards |\n",
-                                    if result.regulatory_compliant { "✅ Compliant" } else { "❌ Non-compliant" }));
+            report.push_str(&format!(
+                "| IEC 60601-2-37 | {} | Ultrasound safety standards |\n",
+                if result.regulatory_compliant {
+                    "✅ Compliant"
+                } else {
+                    "❌ Non-compliant"
+                }
+            ));
         }
 
         report.push_str("\n## Next Steps\n\n");
@@ -537,7 +664,9 @@ impl ClinicalValidator {
             report.push_str("4. **Re-validate** after implementing corrections\n");
             report.push_str("5. **Generate updated clinical validation report**\n");
         } else {
-            report.push_str("1. **Proceed with clinical trials** - system meets regulatory requirements\n");
+            report.push_str(
+                "1. **Proceed with clinical trials** - system meets regulatory requirements\n",
+            );
             report.push_str("2. **Document validation results** for FDA submission\n");
             report.push_str("3. **Monitor performance** in clinical environment\n");
             report.push_str("4. **Plan post-market surveillance** and updates\n");
@@ -562,32 +691,34 @@ mod tests {
         let validator = ClinicalValidator::new();
 
         let quality = ImageQualityMetrics {
-            contrast_resolution: 35.0,  // > 30 dB required
-            axial_resolution: 0.3,      // < 0.5 mm required
-            lateral_resolution: 0.8,    // < 1.0 mm required
-            dynamic_range: 70.0,        // > 60 dB required
-            snr: 25.0,                  // > 20 dB required
+            contrast_resolution: 35.0, // > 30 dB required
+            axial_resolution: 0.3,     // < 0.5 mm required
+            lateral_resolution: 0.8,   // < 1.0 mm required
+            dynamic_range: 70.0,       // > 60 dB required
+            snr: 25.0,                 // > 20 dB required
             cnr: 15.0,
         };
 
         let accuracy = MeasurementAccuracy {
-            distance_error_percent: 3.0,  // < 5% required
-            area_error_percent: 8.0,      // < 10% required
+            distance_error_percent: 3.0, // < 5% required
+            area_error_percent: 8.0,     // < 10% required
             volume_error_percent: 12.0,
             velocity_error_percent: 8.0,
             angle_error_degrees: 3.0,
         };
 
         let safety = SafetyIndices {
-            mechanical_index: 1.5,        // < 1.9 required
+            mechanical_index: 1.5, // < 1.9 required
             thermal_index_bone: 0.5,
-            thermal_index_soft: 2.0,      // < 6.0 required
+            thermal_index_soft: 2.0, // < 6.0 required
             thermal_index_cranial: 0.3,
             spta_intensity: 500.0,
             sppa_intensity: 100.0,
         };
 
-        let result = validator.validate_bmode(&quality, &accuracy, &safety).unwrap();
+        let result = validator
+            .validate_bmode(&quality, &accuracy, &safety)
+            .unwrap();
         assert!(result.passed);
         assert!(result.clinical_score > 80.0);
         assert!(result.regulatory_compliant);
@@ -598,17 +729,17 @@ mod tests {
         let validator = ClinicalValidator::new();
 
         let quality = ImageQualityMetrics {
-            contrast_resolution: 20.0,  // < 30 dB required - FAIL
-            axial_resolution: 1.0,      // > 0.5 mm required - FAIL
-            lateral_resolution: 1.5,    // > 1.0 mm required - FAIL
-            dynamic_range: 40.0,        // < 60 dB required - FAIL
-            snr: 15.0,                  // < 20 dB required - FAIL
+            contrast_resolution: 20.0, // < 30 dB required - FAIL
+            axial_resolution: 1.0,     // > 0.5 mm required - FAIL
+            lateral_resolution: 1.5,   // > 1.0 mm required - FAIL
+            dynamic_range: 40.0,       // < 60 dB required - FAIL
+            snr: 15.0,                 // < 20 dB required - FAIL
             cnr: 10.0,
         };
 
         let accuracy = MeasurementAccuracy {
-            distance_error_percent: 8.0,  // > 5% required - FAIL
-            area_error_percent: 15.0,     // > 10% required - FAIL
+            distance_error_percent: 8.0, // > 5% required - FAIL
+            area_error_percent: 15.0,    // > 10% required - FAIL
             volume_error_percent: 12.0,
             velocity_error_percent: 8.0,
             angle_error_degrees: 3.0,
@@ -623,7 +754,9 @@ mod tests {
             sppa_intensity: 100.0,
         };
 
-        let result = validator.validate_bmode(&quality, &accuracy, &safety).unwrap();
+        let result = validator
+            .validate_bmode(&quality, &accuracy, &safety)
+            .unwrap();
         assert!(!result.passed);
         assert!(result.clinical_score < 80.0); // Allow some partial credit for good metrics
         assert!(!result.issues.is_empty());
@@ -635,12 +768,12 @@ mod tests {
         let validator = ClinicalValidator::new();
 
         let safety = SafetyIndices {
-            mechanical_index: 1.5,        // Within limit
-            thermal_index_bone: 0.8,     // Within limit
-            thermal_index_soft: 4.0,     // Within limit
+            mechanical_index: 1.5,      // Within limit
+            thermal_index_bone: 0.8,    // Within limit
+            thermal_index_soft: 4.0,    // Within limit
             thermal_index_cranial: 0.7, // Within limit
-            spta_intensity: 600.0,       // Within limit
-            sppa_intensity: 150.0,       // Within limit
+            spta_intensity: 600.0,      // Within limit
+            sppa_intensity: 150.0,      // Within limit
         };
 
         let result = validator.validate_safety(&safety).unwrap();
@@ -654,9 +787,9 @@ mod tests {
         let validator = ClinicalValidator::new();
 
         let safety = SafetyIndices {
-            mechanical_index: 2.5,        // Exceeds 1.9 limit - FAIL
-            thermal_index_bone: 1.5,     // Exceeds 1.0 limit - FAIL
-            thermal_index_soft: 8.0,     // Exceeds 6.0 limit - FAIL
+            mechanical_index: 2.5,   // Exceeds 1.9 limit - FAIL
+            thermal_index_bone: 1.5, // Exceeds 1.0 limit - FAIL
+            thermal_index_soft: 8.0, // Exceeds 6.0 limit - FAIL
             thermal_index_cranial: 0.7,
             spta_intensity: 600.0,
             sppa_intensity: 150.0,

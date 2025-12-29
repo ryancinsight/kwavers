@@ -54,7 +54,7 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::{Array3, Array4, Axis};
+use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Configuration for nonlinear SWE solver
@@ -82,10 +82,10 @@ impl Default for NonlinearSWEConfig {
             nonlinearity_parameter: 0.1, // Weak nonlinearity
             max_strain: 0.1,             // 10% strain limit
             enable_harmonics: true,
-            n_harmonics: 3,              // Fundamental + 2 harmonics
+            n_harmonics: 3, // Fundamental + 2 harmonics
             adaptive_timestep: true,
-            dissipation_coeff: 1e-6,     // Small dissipation for stability
-            max_dt: 9.0e-7,              // Strictly less than 1e-6 to satisfy stability test
+            dissipation_coeff: 1e-6, // Small dissipation for stability
+            max_dt: 9.0e-7,          // Strictly less than 1e-6 to satisfy stability test
         }
     }
 }
@@ -263,9 +263,7 @@ impl HyperelasticModel {
             Self::NeoHookean { .. } | Self::MooneyRivlin { .. } => {
                 self.cauchy_stress_invariant_based(f)
             }
-            Self::Ogden { .. } => {
-                self.cauchy_stress_ogden(f)
-            }
+            Self::Ogden { .. } => self.cauchy_stress_ogden(f),
         }
     }
 
@@ -275,9 +273,10 @@ impl HyperelasticModel {
         let (i1, i2, j) = self.compute_invariants(f);
 
         // Compute derivatives of strain energy
-        let strain_energy_derivative_i1 = self.compute_strain_energy_derivative_wrt_i1(i1, i2, j, Some(f));
-        let strain_energy_derivative_i2 = self.compute_strain_energy_derivative_wrt_i2(i1, i2, j);
-        let strain_energy_derivative_j = self.compute_strain_energy_derivative_wrt_j(i1, i2, j);
+        let strain_energy_derivative_i1 =
+            self.compute_strain_energy_derivative_wrt_i1(i1, i2, j, Some(f));
+        let _strain_energy_derivative_i2 = self.compute_strain_energy_derivative_wrt_i2(i1, i2, j);
+        let _strain_energy_derivative_j = self.compute_strain_energy_derivative_wrt_j(i1, i2, j);
 
         // Compute stress using hyperelastic relations
         // σ = (1/J) F · S · F^T
@@ -317,7 +316,11 @@ impl HyperelasticModel {
                 stress[i][k] = (mu / volume_ratio_j) * (b[i][k] - if i == k { 1.0 } else { 0.0 });
                 // Volumetric part: bulk modulus * ln(J) on diagonal
                 if i == k {
-                    let bulk_modulus = if d1 > 0.0 { mu / (d1 * volume_ratio_j * volume_ratio_j) } else { 0.0 };
+                    let bulk_modulus = if d1 > 0.0 {
+                        mu / (d1 * volume_ratio_j * volume_ratio_j)
+                    } else {
+                        0.0
+                    };
                     stress[i][k] += bulk_modulus * volume_ratio_j.ln();
                 }
             }
@@ -378,8 +381,8 @@ impl HyperelasticModel {
         let mut c = [[0.0; 3]; 3];
         for i in 0..3 {
             for j in 0..3 {
-                for k in 0..3 {
-                    c[i][j] += f[k][i] * f[k][j];
+                for row in f.iter().take(3) {
+                    c[i][j] += row[i] * row[j];
                 }
             }
         }
@@ -390,20 +393,19 @@ impl HyperelasticModel {
 
         // Strain invariants
         let i1 = lambda_sq.iter().sum::<f64>();
-        let i2 = lambda_sq.iter().map(|&x| x).product::<f64>();
+        let i2 = lambda_sq.iter().copied().product::<f64>();
         let j = lambda.iter().product::<f64>();
 
         (i1, i2, j)
     }
-
 
     /// Compute left Cauchy-Green tensor B = F · F^T
     fn left_cauchy_green(&self, f: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
         let mut b = [[0.0; 3]; 3];
         for i in 0..3 {
             for j in 0..3 {
-                for k in 0..3 {
-                    b[i][j] += f[i][k] * f[j][k];
+                for (v1, v2) in f[i].iter().zip(f[j].iter()) {
+                    b[i][j] += v1 * v2;
                 }
             }
         }
@@ -426,8 +428,8 @@ impl HyperelasticModel {
         let mut c = [[0.0; 3]; 3];
         for i in 0..3 {
             for j in 0..3 {
-                for k in 0..3 {
-                    c[i][j] += f[k][i] * f[k][j];
+                for row in f.iter().take(3) {
+                    c[i][j] += row[i] * row[j];
                 }
             }
         }
@@ -461,9 +463,9 @@ impl HyperelasticModel {
 
         // Compute Frobenius norm for convergence criterion
         let mut frobenius_norm = 0.0;
-        for i in 0..3 {
-            for j in 0..3 {
-                frobenius_norm += a[i][j] * a[i][j];
+        for row in &a {
+            for val in row {
+                frobenius_norm += val * val;
             }
         }
         frobenius_norm = frobenius_norm.sqrt();
@@ -472,17 +474,18 @@ impl HyperelasticModel {
         let tolerance = frobenius_norm * f64::EPSILON.sqrt(); // ~1e-8 for typical matrices
 
         // Jacobi iterations (typically converges in 5-15 iterations for 3x3)
-        for iteration in 0..100 { // Maximum iterations with safety limit
+        for iteration in 0..100 {
+            // Maximum iterations with safety limit
             // Find largest off-diagonal element in absolute value
             let mut max_off_diag = 0.0;
             let mut p = 0;
             let mut q = 1;
 
-            for i in 0..3 {
-                for j in (i + 1)..3 {
-                    let val = a[i][j].abs();
-                    if val > max_off_diag {
-                        max_off_diag = val;
+            for (i, row) in a.iter().enumerate() {
+                for (j, &val) in row.iter().enumerate().skip(i + 1) {
+                    let val_abs = val.abs();
+                    if val_abs > max_off_diag {
+                        max_off_diag = val_abs;
                         p = i;
                         q = j;
                     }
@@ -508,21 +511,23 @@ impl HyperelasticModel {
             let cos_theta = theta.cos();
             let sin_theta = theta.sin();
 
-            // Apply Jacobi rotation
-            for i in 0..3 {
-                if i != p && i != q {
-                    let aip = a[i][p];
-                    let aiq = a[i][q];
-                    a[i][p] = aip * cos_theta - aiq * sin_theta;
-                    a[i][q] = aip * sin_theta + aiq * cos_theta;
-                    a[p][i] = a[i][p];
-                    a[q][i] = a[i][q];
-                }
-            }
+            // Apply Jacobi rotation to the remaining rows/columns
+            // There is exactly one index k != p and k != q in {0, 1, 2}
+            let k = 3 - p - q;
+
+            let akp = a[k][p];
+            let akq = a[k][q];
+            a[k][p] = akp * cos_theta - akq * sin_theta;
+            a[k][q] = akp * sin_theta + akq * cos_theta;
+            a[p][k] = a[k][p];
+            a[q][k] = a[k][q];
 
             // Update diagonal and off-diagonal elements
-            a[p][p] = app * cos_theta * cos_theta + aqq * sin_theta * sin_theta - 2.0 * apq * sin_theta * cos_theta;
-            a[q][q] = app * sin_theta * sin_theta + aqq * cos_theta * cos_theta + 2.0 * apq * sin_theta * cos_theta;
+            a[p][p] = app * cos_theta * cos_theta + aqq * sin_theta * sin_theta
+                - 2.0 * apq * sin_theta * cos_theta;
+            a[q][q] = app * sin_theta * sin_theta
+                + aqq * cos_theta * cos_theta
+                + 2.0 * apq * sin_theta * cos_theta;
             a[p][q] = 0.0;
             a[q][p] = 0.0;
         }
@@ -550,6 +555,7 @@ impl HyperelasticModel {
     /// * `i2` - Second strain invariant I₂
     /// * `j` - Volume ratio J
     /// * `f` - Deformation gradient tensor F (required for Ogden materials)
+    ///
     /// Compute derivative of strain energy with respect to first strain invariant ∂W/∂I₁
     ///
     /// # Theorem Reference
@@ -568,10 +574,10 @@ impl HyperelasticModel {
     /// * `deformation_gradient` - Deformation gradient tensor F (required for Ogden materials)
     pub fn compute_strain_energy_derivative_wrt_i1(
         &self,
-        strain_invariant_i1: f64,
-        strain_invariant_i2: f64,
-        volume_ratio_j: f64,
-        deformation_gradient: Option<&[[f64; 3]; 3]>
+        _strain_invariant_i1: f64,
+        _strain_invariant_i2: f64,
+        _volume_ratio_j: f64,
+        deformation_gradient: Option<&[[f64; 3]; 3]>,
     ) -> f64 {
         match self {
             Self::NeoHookean { c1, .. } => *c1,
@@ -586,11 +592,12 @@ impl HyperelasticModel {
                     // This is complex and requires the full Ogden formulation
                     // For now, compute the effective modulus from current deformation state
                     let mut strain_energy_derivative_i1_total = 0.0;
-                    for (k, (&mui, &alphai)) in mu.iter().zip(alpha.iter()).enumerate() {
+                    for (&mui, &alphai) in mu.iter().zip(alpha.iter()) {
                         // Simplified: use current strain state to estimate effective modulus
                         // Full implementation requires solving the system ∂W/∂λᵢ = 0 for equilibrium
                         let lambda_sum: f64 = lambda.iter().map(|&l| l.powf(alphai)).sum();
-                        strain_energy_derivative_i1_total += mui * lambda_sum / 3.0; // Approximate average contribution
+                        strain_energy_derivative_i1_total += mui * lambda_sum / 3.0;
+                        // Approximate average contribution
                     }
                     strain_energy_derivative_i1_total / mu.len() as f64
                 } else {
@@ -622,7 +629,7 @@ impl HyperelasticModel {
         &self,
         _strain_invariant_i1: f64,
         _strain_invariant_i2: f64,
-        _volume_ratio_j: f64
+        _volume_ratio_j: f64,
     ) -> f64 {
         match self {
             Self::MooneyRivlin { c2, .. } => *c2,
@@ -651,10 +658,12 @@ impl HyperelasticModel {
         &self,
         _strain_invariant_i1: f64,
         _strain_invariant_i2: f64,
-        volume_ratio_j: f64
+        volume_ratio_j: f64,
     ) -> f64 {
         match self {
-            Self::NeoHookean { d1, .. } | Self::MooneyRivlin { d1, .. } => 2.0 * d1 * (volume_ratio_j - 1.0),
+            Self::NeoHookean { d1, .. } | Self::MooneyRivlin { d1, .. } => {
+                2.0 * d1 * (volume_ratio_j - 1.0)
+            }
             Self::Ogden { .. } => 0.0, // Ogden typically incompressible
         }
     }
@@ -691,8 +700,7 @@ impl NonlinearElasticWaveField {
     /// Compute total displacement magnitude including harmonics
     #[must_use]
     pub fn total_displacement_magnitude(&self) -> Array3<f64> {
-        let mut total = &self.u_fundamental * &self.u_fundamental
-            + &self.u_second * &self.u_second;
+        let mut total = &self.u_fundamental * &self.u_fundamental + &self.u_second * &self.u_second;
 
         for harmonic in &self.u_harmonics {
             total = &total + &(harmonic * harmonic);
@@ -703,11 +711,12 @@ impl NonlinearElasticWaveField {
 }
 
 /// Nonlinear elastic wave equation solver
+#[derive(Debug)]
 pub struct NonlinearElasticWaveSolver {
     /// Computational grid
     grid: Grid,
     /// Hyperelastic material model
-    material: HyperelasticModel,
+    _material: HyperelasticModel,
     /// Configuration
     config: NonlinearSWEConfig,
     /// Linear elastic properties (for comparison)
@@ -726,7 +735,7 @@ impl NonlinearElasticWaveSolver {
         material: HyperelasticModel,
         config: NonlinearSWEConfig,
     ) -> KwaversResult<Self> {
-        let (nx, ny, nz) = grid.dimensions();
+        let (_nx, _ny, _nz) = grid.dimensions();
 
         // Get linear elastic properties for initialization
         let lambda = medium.lame_lambda_array();
@@ -735,7 +744,7 @@ impl NonlinearElasticWaveSolver {
 
         Ok(Self {
             grid: grid.clone(),
-            material,
+            _material: material,
             config,
             lambda,
             mu,
@@ -782,7 +791,7 @@ impl NonlinearElasticWaveSolver {
 
     /// Single time step of nonlinear wave propagation
     fn time_step(&self, field: &mut NonlinearElasticWaveField, dt: f64) {
-        let (nx, ny, nz) = self.grid.dimensions();
+        let (_nx, _ny, _nz) = self.grid.dimensions();
 
         // Update fundamental frequency
         self.update_fundamental_frequency(field, dt);
@@ -805,10 +814,12 @@ impl NonlinearElasticWaveSolver {
             for j in 1..ny - 1 {
                 for i in 1..nx - 1 {
                     // Linear elastic stress divergence
-                    let linear_stress_div = self.linear_stress_divergence(i, j, k, &field.u_fundamental);
+                    let linear_stress_div =
+                        self.linear_stress_divergence(i, j, k, &field.u_fundamental);
 
                     // Nonlinear terms (geometric nonlinearity)
-                    let nonlinear_terms = self.geometric_nonlinearity(i, j, k, &field.u_fundamental);
+                    let nonlinear_terms =
+                        self.geometric_nonlinearity(i, j, k, &field.u_fundamental);
 
                     // Acceleration = (1/ρ) * (linear + nonlinear)
                     let rho = self.density[[i, j, k]];
@@ -875,15 +886,23 @@ impl NonlinearElasticWaveSolver {
                         let laplacian_u2 = self.laplacian(i, j, k, &field.u_second);
 
                         // Third harmonic source terms (Chen 2013, Eq. 12)
-                        let term1 = u1 * laplacian_u2;  // u₁ ∇²u₂
-                        let term2 = u2 * laplacian_u1;  // u₂ ∇²u₁
-                        let term3 = 2.0 * self.divergence_product(i, j, k, &field.u_fundamental, &field.u_second); // 2 ∇u₁·∇u₂
+                        let term1 = u1 * laplacian_u2; // u₁ ∇²u₂
+                        let term2 = u2 * laplacian_u1; // u₂ ∇²u₁
+                        let term3 = 2.0
+                            * self.divergence_product(
+                                i,
+                                j,
+                                k,
+                                &field.u_fundamental,
+                                &field.u_second,
+                            ); // 2 ∇u₁·∇u₂
 
                         let third_harmonic_source = beta * (term1 + term2 + term3);
 
                         // Update third harmonic
                         let laplacian_u3 = self.laplacian(i, j, k, &field.u_harmonics[0]);
-                        let acceleration_u3 = self.config.sound_speed().powi(2) * laplacian_u3 + third_harmonic_source;
+                        let acceleration_u3 = self.config.sound_speed().powi(2) * laplacian_u3
+                            + third_harmonic_source;
 
                         field.u_harmonics[0][[i, j, k]] += dt * dt * acceleration_u3;
                     }
@@ -916,11 +935,15 @@ impl NonlinearElasticWaveSolver {
                         };
 
                         // Cascading harmonic generation
-                        let higher_harmonic_source = amplitude_factor * beta * (u1 * laplacian_u_prev + u_prev * laplacian_u1);
+                        let higher_harmonic_source = amplitude_factor
+                            * beta
+                            * (u1 * laplacian_u_prev + u_prev * laplacian_u1);
 
                         // Update harmonic
-                        let laplacian_u_n = self.laplacian(i, j, k, &field.u_harmonics[harmonic_idx]);
-                        let acceleration_u_n = self.config.sound_speed().powi(2) * laplacian_u_n + higher_harmonic_source;
+                        let laplacian_u_n =
+                            self.laplacian(i, j, k, &field.u_harmonics[harmonic_idx]);
+                        let acceleration_u_n = self.config.sound_speed().powi(2) * laplacian_u_n
+                            + higher_harmonic_source;
 
                         field.u_harmonics[harmonic_idx][[i, j, k]] += dt * dt * acceleration_u_n;
                     }
@@ -941,7 +964,7 @@ impl NonlinearElasticWaveSolver {
         let u_laplacian = self.laplacian(i, j, k, u);
 
         // Divergence ∇·u
-        let u_divergence = self.divergence(i, j, k, u);
+        let _u_divergence = self.divergence(i, j, k, u);
 
         // Stress divergence
         mu * u_laplacian + (lambda + mu) * self.divergence_laplacian(i, j, k, u)
@@ -957,7 +980,8 @@ impl NonlinearElasticWaveSolver {
         }
 
         let du_dx = (u[[i + 1, j, k]] - u[[i - 1, j, k]]) / (2.0 * self.grid.dx);
-        let d2u_dx2 = (u[[i + 1, j, k]] - 2.0 * u[[i, j, k]] + u[[i - 1, j, k]]) / (self.grid.dx * self.grid.dx);
+        let d2u_dx2 = (u[[i + 1, j, k]] - 2.0 * u[[i, j, k]] + u[[i - 1, j, k]])
+            / (self.grid.dx * self.grid.dx);
 
         // ∇·(∇u ⊗ ∇u) ≈ d/dx( (du/dx)² ) = 2 (du/dx) d²u/dx²
         2.0 * du_dx * d2u_dx2
@@ -1027,11 +1051,24 @@ impl NonlinearElasticWaveSolver {
     /// This is implemented as ∇·(∇u₁ ⊗ ∇u₂) for numerical stability
     /// Reference: Chen, S., et al. (2013). "Harmonic motion detection in ultrasound elastography."
     /// IEEE Transactions on Medical Imaging, 32(5), 863-874.
-    fn divergence_product(&self, i: usize, j: usize, k: usize, u1: &Array3<f64>, u2: &Array3<f64>) -> f64 {
+    fn divergence_product(
+        &self,
+        i: usize,
+        j: usize,
+        k: usize,
+        u1: &Array3<f64>,
+        u2: &Array3<f64>,
+    ) -> f64 {
         // Compute ∇·(∇u₁ ⊗ ∇u₂) = ∂/∂x(∂u₁/∂x * ∂u₂/∂x) + ∂/∂y(∂u₁/∂y * ∂u₂/∂y) + ∂/∂z(∂u₁/∂z * ∂u₂/∂z)
         // This requires computing derivatives of the product of gradients at neighboring points
 
-        if i < 2 || i >= self.grid.nx - 2 || j < 2 || j >= self.grid.ny - 2 || k < 2 || k >= self.grid.nz - 2 {
+        if i < 2
+            || i >= self.grid.nx - 2
+            || j < 2
+            || j >= self.grid.ny - 2
+            || k < 2
+            || k >= self.grid.nz - 2
+        {
             return 0.0;
         }
 
@@ -1094,7 +1131,7 @@ impl NonlinearElasticWaveSolver {
 
         // Reduce for nonlinear stability and clamp to maximum allowed dt
         let dt = cfl_dt * 0.3 * (1.0 - self.config.nonlinearity_parameter);
-        dt.min(self.config.max_dt).max(std::f64::EPSILON)
+        dt.min(self.config.max_dt).max(f64::EPSILON)
     }
 }
 
@@ -1130,11 +1167,17 @@ mod tests {
 
         // Test strain energy for undeformed state (I₁=3, I₂=3, J=1)
         let w = model.strain_energy(3.0, 3.0, 1.0);
-        assert!((w - 0.0).abs() < 1e-10, "Strain energy should be zero at reference state");
+        assert!(
+            (w - 0.0).abs() < 1e-10,
+            "Strain energy should be zero at reference state"
+        );
 
         // Test with deformation
         let w_deformed = model.strain_energy(4.0, 4.0, 1.0);
-        assert!(w_deformed > 0.0, "Strain energy should be positive under deformation");
+        assert!(
+            w_deformed > 0.0,
+            "Strain energy should be positive under deformation"
+        );
     }
 
     #[test]

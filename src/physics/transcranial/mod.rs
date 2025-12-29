@@ -26,17 +26,12 @@
 //! - McDannold, N., et al. (2010). "MRI monitoring of heating produced by ultrasound
 //!   absorption in the skull." *Urology*, 76(5), 1328-1331.
 
-pub mod treatment_planning;
 pub mod aberration_correction;
-pub mod safety_monitoring;
 pub mod bbb_opening;
+pub mod safety_monitoring;
+pub mod treatment_planning;
 
-pub use treatment_planning::{TreatmentPlan, TargetVolume, TreatmentPlanner};
-pub use aberration_correction::{TranscranialAberrationCorrection, PhaseCorrection};
-pub use safety_monitoring::{SafetyMonitor, ThermalDose, MechanicalIndex};
+pub use aberration_correction::{PhaseCorrection, TranscranialAberrationCorrection};
 pub use bbb_opening::{BBBOpening, PermeabilityEnhancement};
-
-
-
-
-
+pub use safety_monitoring::{MechanicalIndex, SafetyMonitor, ThermalDose};
+pub use treatment_planning::{TargetVolume, TreatmentPlan, TreatmentPlanner};

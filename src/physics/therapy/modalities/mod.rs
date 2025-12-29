@@ -63,7 +63,11 @@ impl TherapyModality {
     pub fn has_cavitation(&self) -> bool {
         matches!(
             self,
-            Self::Histotripsy | Self::Lithotripsy | Self::BBBOpening | Self::MicrobubbleTherapy | Self::Sonoporation
+            Self::Histotripsy
+                | Self::Lithotripsy
+                | Self::BBBOpening
+                | Self::MicrobubbleTherapy
+                | Self::Sonoporation
         )
     }
 

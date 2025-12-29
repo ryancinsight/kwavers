@@ -122,7 +122,8 @@ impl CPMLConfig {
 
         // Corrected formula based on Collino & Tsogka (2001) with proper absorption
         // σ_max = (σ_factor·(m+1)·c) / (150π·dx) - includes sound speed
-        let sigma_max = self.sigma_factor * (m + 1.0) * sound_speed / (150.0 * std::f64::consts::PI * dx);
+        let sigma_max =
+            self.sigma_factor * (m + 1.0) * sound_speed / (150.0 * std::f64::consts::PI * dx);
         self.target_reflection * (-(m + 1.0) * sigma_max * thickness * cos_theta).exp()
     }
 }

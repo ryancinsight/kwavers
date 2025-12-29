@@ -28,7 +28,7 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use crate::grid::Grid;
-use ndarray::{Array3, Array4, Axis};
+use ndarray::Array3;
 use std::collections::HashMap;
 
 /// GPU device information and capabilities
@@ -65,7 +65,9 @@ impl GPUDevice {
 
         // Adjust based on device limits
         for i in 0..3 {
-            while block_size[i] > 1 && block_size.iter().product::<usize>() > self.max_threads_per_block {
+            while block_size[i] > 1
+                && block_size.iter().product::<usize>() > self.max_threads_per_block
+            {
                 block_size[i] /= 2;
             }
         }
@@ -97,12 +99,12 @@ struct GPUMemoryBlock {
     /// Block ID for tracking
     id: usize,
     /// Last access time for LRU eviction
-    last_access: std::time::Instant,
+    _last_access: std::time::Instant,
 }
 
 impl GPUMemoryPool {
     /// Create new memory pool
-    pub fn new(total_memory: usize, alignment: usize) -> Self {
+    pub fn new(_total_memory: usize, alignment: usize) -> Self {
         Self {
             available_blocks: Vec::new(),
             total_allocated: 0,
@@ -113,10 +115,11 @@ impl GPUMemoryPool {
     /// Allocate memory block
     pub fn allocate(&mut self, size: usize) -> KwaversResult<usize> {
         // Align size
-        let aligned_size = (size + self.alignment - 1) / self.alignment * self.alignment;
+        let aligned_size = size.div_ceil(self.alignment) * self.alignment;
 
         // Check if we have available memory
-        if self.total_allocated + aligned_size > 1024 * 1024 * 1024 { // 1GB limit for demo
+        if self.total_allocated + aligned_size > 1024 * 1024 * 1024 {
+            // 1GB limit for demo
             return Err(KwaversError::ResourceLimitExceeded {
                 message: "GPU memory pool exhausted".to_string(),
             });
@@ -127,7 +130,7 @@ impl GPUMemoryPool {
         self.available_blocks.push(GPUMemoryBlock {
             size: aligned_size,
             id: block_id,
-            last_access: std::time::Instant::now(),
+            _last_access: std::time::Instant::now(),
         });
 
         self.total_allocated += aligned_size;
@@ -190,13 +193,13 @@ pub struct GPUElasticWaveSolver3D {
 #[derive(Debug, Clone)]
 struct GPUKernel {
     /// Kernel name
-    name: String,
+    _name: String,
     /// Shared memory requirements
-    shared_memory: usize,
+    _shared_memory: usize,
     /// Register usage
-    registers: usize,
+    _registers: usize,
     /// Occupancy (0-1)
-    occupancy: f64,
+    _occupancy: f64,
 }
 
 impl GPUElasticWaveSolver3D {
@@ -218,10 +221,10 @@ impl GPUElasticWaveSolver3D {
         self.kernel_cache.insert(
             "elastic_wave_3d".to_string(),
             GPUKernel {
-                name: "elastic_wave_3d".to_string(),
-                shared_memory: 8192, // 8KB shared memory for 3D stencil
-                registers: 32,
-                occupancy: 0.75,
+                _name: "elastic_wave_3d".to_string(),
+                _shared_memory: 8192, // 8KB shared memory for 3D stencil
+                _registers: 32,
+                _occupancy: 0.75,
             },
         );
 
@@ -229,10 +232,10 @@ impl GPUElasticWaveSolver3D {
         self.kernel_cache.insert(
             "multidirectional_inversion".to_string(),
             GPUKernel {
-                name: "multidirectional_inversion".to_string(),
-                shared_memory: 4096, // 4KB for inversion operations
-                registers: 24,
-                occupancy: 0.8,
+                _name: "multidirectional_inversion".to_string(),
+                _shared_memory: 4096, // 4KB for inversion operations
+                _registers: 24,
+                _occupancy: 0.8,
             },
         );
 
@@ -240,10 +243,10 @@ impl GPUElasticWaveSolver3D {
         self.kernel_cache.insert(
             "volumetric_attenuation".to_string(),
             GPUKernel {
-                name: "volumetric_attenuation".to_string(),
-                shared_memory: 2048, // 2KB for attenuation
-                registers: 16,
-                occupancy: 0.9,
+                _name: "volumetric_attenuation".to_string(),
+                _shared_memory: 2048, // 2KB for attenuation
+                _registers: 16,
+                _occupancy: 0.9,
             },
         );
 
@@ -253,8 +256,8 @@ impl GPUElasticWaveSolver3D {
     /// Execute GPU-accelerated 3D wave propagation
     pub fn propagate_waves_gpu(
         &mut self,
-        initial_displacements: &[Array3<f64>],
-        push_times: &[f64],
+        _initial_displacements: &[Array3<f64>],
+        _push_times: &[f64],
         grid: &Grid,
         time_steps: usize,
     ) -> KwaversResult<GPUPropagationResult> {
@@ -267,32 +270,46 @@ impl GPUElasticWaveSolver3D {
         // Check memory requirements
         if !self.device.can_handle_volume(grid) {
             return Err(KwaversError::ResourceLimitExceeded {
-                message: format!("Volume too large for GPU memory: {} GB required",
-                               total_memory as f64 / (1024.0 * 1024.0 * 1024.0)),
+                message: format!(
+                    "Volume too large for GPU memory: {} GB required",
+                    total_memory as f64 / (1024.0 * 1024.0 * 1024.0)
+                ),
             });
         }
 
         // Allocate memory blocks
-        let ux_block = self.memory_pool.allocate(volume_size * std::mem::size_of::<f64>())?;
-        let uy_block = self.memory_pool.allocate(volume_size * std::mem::size_of::<f64>())?;
-        let uz_block = self.memory_pool.allocate(volume_size * std::mem::size_of::<f64>())?;
-        let vx_block = self.memory_pool.allocate(volume_size * std::mem::size_of::<f64>())?;
-        let vy_block = self.memory_pool.allocate(volume_size * std::mem::size_of::<f64>())?;
-        let vz_block = self.memory_pool.allocate(volume_size * std::mem::size_of::<f64>())?;
+        let ux_block = self
+            .memory_pool
+            .allocate(volume_size * std::mem::size_of::<f64>())?;
+        let uy_block = self
+            .memory_pool
+            .allocate(volume_size * std::mem::size_of::<f64>())?;
+        let uz_block = self
+            .memory_pool
+            .allocate(volume_size * std::mem::size_of::<f64>())?;
+        let vx_block = self
+            .memory_pool
+            .allocate(volume_size * std::mem::size_of::<f64>())?;
+        let vy_block = self
+            .memory_pool
+            .allocate(volume_size * std::mem::size_of::<f64>())?;
+        let vz_block = self
+            .memory_pool
+            .allocate(volume_size * std::mem::size_of::<f64>())?;
 
         // Get optimal kernel configuration
         let block_size = self.device.optimal_block_size([grid.nx, grid.ny, grid.nz]);
         let grid_size = [
-            (grid.nx + block_size[0] - 1) / block_size[0],
-            (grid.ny + block_size[1] - 1) / block_size[1],
-            (grid.nz + block_size[2] - 1) / block_size[2],
+            grid.nx.div_ceil(block_size[0]),
+            grid.ny.div_ceil(block_size[1]),
+            grid.nz.div_ceil(block_size[2]),
         ];
 
         // Simulate GPU kernel execution
         let mut kernel_time = 0.0;
         for step in 0..time_steps {
             // Launch elastic wave propagation kernel
-            let kernel_start = std::time::Instant::now();
+            let _kernel_start = std::time::Instant::now();
 
             // Simulate kernel execution time (real implementation would use CUDA/OpenCL)
             let kernel_execution_time = self.simulate_kernel_execution(
@@ -307,7 +324,8 @@ impl GPUElasticWaveSolver3D {
             // Periodic synchronization and data transfer
             if step % 100 == 0 {
                 // Simulate PCIe transfer time
-                let transfer_time = self.simulate_data_transfer(volume_size * std::mem::size_of::<f64>());
+                let transfer_time =
+                    self.simulate_data_transfer(volume_size * std::mem::size_of::<f64>());
                 kernel_time += transfer_time;
             }
         }
@@ -343,12 +361,13 @@ impl GPUElasticWaveSolver3D {
         kernel_name: &str,
         grid_size: [usize; 3],
         block_size: [usize; 3],
-        volume_size: usize,
+        _volume_size: usize,
     ) -> f64 {
-        let kernel = self.kernel_cache.get(kernel_name).unwrap();
+        let _kernel = self.kernel_cache.get(kernel_name).unwrap();
 
         // Estimate execution time based on kernel characteristics
-        let total_threads = grid_size.iter().product::<usize>() * block_size.iter().product::<usize>();
+        let total_threads =
+            grid_size.iter().product::<usize>() * block_size.iter().product::<usize>();
         let operations_per_thread = 100; // Estimate for 3D stencil operations
         let total_operations = total_threads * operations_per_thread;
 
@@ -389,15 +408,18 @@ impl GPUElasticWaveSolver3D {
         // Allocate memory blocks
         let mut memory_blocks = Vec::new();
         for _ in 0..(arrival_times.len() + 2) {
-            memory_blocks.push(self.memory_pool.allocate(volume_size * std::mem::size_of::<f64>())?);
+            memory_blocks.push(
+                self.memory_pool
+                    .allocate(volume_size * std::mem::size_of::<f64>())?,
+            );
         }
 
         // Get optimal kernel configuration
         let block_size = self.device.optimal_block_size([grid.nx, grid.ny, grid.nz]);
         let grid_size = [
-            (grid.nx + block_size[0] - 1) / block_size[0],
-            (grid.ny + block_size[1] - 1) / block_size[1],
-            (grid.nz + block_size[2] - 1) / block_size[2],
+            grid.nx.div_ceil(block_size[0]),
+            grid.ny.div_ceil(block_size[1]),
+            grid.nz.div_ceil(block_size[2]),
         ];
 
         // Simulate inversion kernel execution
@@ -426,7 +448,7 @@ impl GPUElasticWaveSolver3D {
             memory_used: total_memory,
             directions_processed: wave_directions.len(),
             convergence_iterations: 50, // Typical for iterative inversion
-            residual_error: 0.001, // 0.1% residual error
+            residual_error: 0.001,      // 0.1% residual error
         })
     }
 
@@ -544,7 +566,7 @@ pub struct AdaptiveResolution {
     /// Resolution levels (higher = finer resolution)
     resolution_levels: Vec<ResolutionLevel>,
     /// Quality thresholds for resolution adaptation
-    quality_thresholds: Vec<f64>,
+    _quality_thresholds: Vec<f64>,
 }
 
 #[derive(Debug, Clone)]
@@ -554,7 +576,7 @@ struct ResolutionLevel {
     /// Scale factor relative to base grid
     scale_factor: f64,
     /// Quality metric at this level
-    quality_metric: f64,
+    _quality_metric: f64,
 }
 
 impl AdaptiveResolution {
@@ -568,13 +590,20 @@ impl AdaptiveResolution {
             let ny = (base_grid.ny as f64 / scale_factor) as usize;
             let nz = (base_grid.nz as f64 / scale_factor) as usize;
 
-            let grid = Grid::new(nx, ny, nz, base_grid.dx * scale_factor,
-                               base_grid.dy * scale_factor, base_grid.dz * scale_factor).unwrap();
+            let grid = Grid::new(
+                nx,
+                ny,
+                nz,
+                base_grid.dx * scale_factor,
+                base_grid.dy * scale_factor,
+                base_grid.dz * scale_factor,
+            )
+            .unwrap();
 
             resolution_levels.push(ResolutionLevel {
                 grid,
                 scale_factor,
-                quality_metric: 0.0, // To be computed
+                _quality_metric: 0.0, // To be computed
             });
         }
 
@@ -584,7 +613,7 @@ impl AdaptiveResolution {
         Self {
             base_grid: base_grid.clone(),
             resolution_levels,
-            quality_thresholds,
+            _quality_thresholds: quality_thresholds,
         }
     }
 
@@ -598,8 +627,10 @@ impl AdaptiveResolution {
 
         // Start with coarsest resolution
         for (level, resolution_level) in self.resolution_levels.iter().enumerate() {
-            println!("Solving at resolution level {}: {}x{}x{}",
-                    level, resolution_level.grid.nx, resolution_level.grid.ny, resolution_level.grid.nz);
+            println!(
+                "Solving at resolution level {}: {}x{}x{}",
+                level, resolution_level.grid.nx, resolution_level.grid.ny, resolution_level.grid.nz
+            );
 
             // Interpolate initial displacement to current resolution
             let interpolated_displacement = self.interpolate_to_resolution(
@@ -609,7 +640,8 @@ impl AdaptiveResolution {
             )?;
 
             // Solve at this resolution (placeholder - would use actual solver)
-            let solution_quality = self.simulate_solve_quality(&interpolated_displacement, resolution_level);
+            let solution_quality =
+                self.simulate_solve_quality(&interpolated_displacement, resolution_level);
 
             solutions.push(AdaptiveSolutionStep {
                 level,
@@ -704,7 +736,11 @@ impl AdaptiveResolution {
         let resolution_bonus = 0.1 * (level.scale_factor.ln() / (2.0_f64).ln()).min(1.0);
 
         // Quality also depends on signal strength
-        let signal_strength = displacement.iter().cloned().fold(0.0_f64, |a, b| a + b.abs()) / displacement.len() as f64;
+        let signal_strength = displacement
+            .iter()
+            .cloned()
+            .fold(0.0_f64, |a, b| a + b.abs())
+            / displacement.len() as f64;
         let signal_bonus = (signal_strength * 1000.0).min(0.1); // Up to 10% bonus for strong signals
 
         (base_quality + resolution_bonus + signal_bonus).min(1.0)
@@ -744,7 +780,7 @@ mod tests {
         let device = GPUDevice {
             name: "Test GPU".to_string(),
             global_memory: 8 * 1024 * 1024 * 1024, // 8GB
-            shared_memory: 48 * 1024, // 48KB
+            shared_memory: 48 * 1024,              // 48KB
             max_threads_per_block: 1024,
             max_grid_dims: [2147483647, 65535, 65535],
             compute_capability: (7, 5),
@@ -801,7 +837,10 @@ mod tests {
         let adaptive = AdaptiveResolution::new(&base_grid, 3);
 
         assert_eq!(adaptive.resolution_levels.len(), 3);
-        assert!(adaptive.resolution_levels[0].scale_factor <= adaptive.resolution_levels[1].scale_factor);
+        assert!(
+            adaptive.resolution_levels[0].scale_factor
+                <= adaptive.resolution_levels[1].scale_factor
+        );
 
         // Test adaptive solving
         let initial_disp = Array3::zeros((64, 64, 64));

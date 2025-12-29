@@ -16,7 +16,9 @@ impl ThermalProperties for HeterogeneousMedium {
     fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         TrilinearInterpolator::get_field_value(
             &self.thermal_conductivity,
-            x, y, z,
+            x,
+            y,
+            z,
             grid,
             self.use_trilinear_interpolation,
         )
@@ -27,7 +29,9 @@ impl ThermalProperties for HeterogeneousMedium {
     fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         TrilinearInterpolator::get_field_value(
             &self.specific_heat,
-            x, y, z,
+            x,
+            y,
+            z,
             grid,
             self.use_trilinear_interpolation,
         )
@@ -38,7 +42,9 @@ impl ThermalProperties for HeterogeneousMedium {
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         TrilinearInterpolator::get_field_value(
             &self.thermal_diffusivity,
-            x, y, z,
+            x,
+            y,
+            z,
             grid,
             self.use_trilinear_interpolation,
         )

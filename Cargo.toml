@@ -22,6 +22,7 @@ num-traits = "0.2"
 
 # Error handling (production critical)
 thiserror = "1.0"
+anyhow = "1.0"
 
 # Serialization (minimal)
 serde = { version = "1.0", features = ["derive"] }
@@ -47,11 +48,19 @@ base64 = "0.22"
 
 # Async runtime and structured logging (Sprint 138 - Persona Requirements)
 tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "sync", "time", "fs", "io-util"], optional = true }
+futures = "0.3"
 tracing = { version = "0.1", features = ["attributes"], optional = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"], optional = true }
 
 # Zero-copy serialization (Sprint 138 - Persona Requirements)
-rkyv = { version = "0.8", optional = true }
+rkyv = { version = "0.7", features = ["validation"], optional = true }
+
+# Cloud dependencies (Sprint 159)
+reqwest = { version = "0.11", optional = true }
+# google-cloud-aiplatform = { version = "0.5", optional = true }
+# google-cloud-functions = { version = "0.1", optional = true }
+# azure_functions = { version = "0.1", optional = true }
+# azure_ai = { version = "0.1", optional = true }
 
 # Concurrency
 parking_lot = "0.12"
@@ -69,7 +78,7 @@ pollster = { version = "0.4", optional = true }
 
 # Machine Learning (Sprint 143 - PINNs with burn integration)
 # Updated to burn 0.18.0 (bincode compatibility resolved)
-burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu"], optional = true }
+burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu", "train"], optional = true }
 
 # Visualization (optional)
 plotly = { version = "0.8", optional = true }
@@ -121,6 +130,8 @@ plotting = ["dep:plotly"]
 # Additional features referenced in code
 nifti = []             # Medical imaging support
 nightly = []           # Nightly Rust features
+simd = []              # SIMD acceleration support
+fpu = []               # FPU acceleration support
 advanced-visualization = ["plotting"] # Advanced visualization features
 web-visualization = ["plotting"]      # Web-based visualization
 gpu-visualization = ["gpu", "plotting", "dep:egui"] # GPU-accelerated visualization
@@ -138,7 +149,8 @@ experimental_neural = ["pinn"]        # Gate experimental neural beamforming ato
 legacy_algorithms = []               # Legacy beamforming algorithms (deprecated)
 # Sprint 159 - Enterprise API for production deployment
 api = ["dep:axum", "dep:tower", "dep:tower-http", "async-runtime", "structured-logging", "dep:jsonwebtoken", "dep:sha2", "dep:uuid", "dep:prometheus"]  # REST API for clinical ultrasound with cloud deployment
-full = ["gpu", "plotting", "parallel", "nifti", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn", "api"]
+cloud = ["dep:reqwest", "dep:uuid", "async-runtime", "structured-logging"]
+full = ["gpu", "plotting", "parallel", "nifti", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn", "api", "cloud"]
 
 [profile.dev]
 # Fast development builds

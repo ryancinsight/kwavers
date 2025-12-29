@@ -219,8 +219,8 @@ impl Default for BubbleParameters {
             p0: 101325.0,
             rho_liquid: 998.0,
             c_liquid: 1482.0,
-            gamma: 1.4,     // Air adiabatic index
-            t0: 293.15,     // 20°C in Kelvin
+            gamma: 1.4, // Air adiabatic index
+            t0: 293.15, // 20°C in Kelvin
             mu_liquid: 1.002e-3,
             sigma: 0.0728,
             pv: 2.33e3,

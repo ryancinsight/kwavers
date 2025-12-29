@@ -5,11 +5,11 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use crate::ml::pinn::quantization::LayerInfo;
-use crate::ml::pinn::{QuantizedModel, QuantizedTensor};
-use burn::tensor::backend::Backend;
+use crate::ml::pinn::QuantizedModel;
 use std::collections::HashMap;
 
 /// Edge deployment runtime
+#[derive(Debug)]
 pub struct EdgeRuntime {
     /// Loaded quantized model
     model: Option<QuantizedModel>,
@@ -24,6 +24,7 @@ pub struct EdgeRuntime {
 }
 
 /// Memory allocator for constrained environments
+#[derive(Debug)]
 pub struct MemoryAllocator {
     /// Total available memory (bytes)
     total_memory: usize,
@@ -39,7 +40,7 @@ struct MemoryBlock {
     pub start_address: usize,
     pub size: usize,
     pub allocated: bool,
-    pub alignment: usize,
+    pub _alignment: usize,
 }
 
 /// Execution kernel for optimized inference
@@ -157,13 +158,14 @@ impl EdgeRuntime {
     pub fn inference(&mut self, input: &[f32]) -> KwaversResult<Vec<f32>> {
         let start_time = std::time::Instant::now();
 
-        let model = self.model.as_ref()
-            .ok_or_else(|| KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+        let model = self.model.as_ref().ok_or_else(|| {
+            KwaversError::System(crate::error::SystemError::ResourceUnavailable {
                 resource: "No model loaded".to_string(),
-            }))?;
+            })
+        })?;
 
         // Allocate input/output buffers
-        let input_size = input.len() * std::mem::size_of::<f32>();
+        let input_size = std::mem::size_of_val(input);
         let output_size = model.metadata.compression_ratio as usize * 4; // Estimate
 
         self.allocator.allocate_block(input_size, 16)?;
@@ -200,10 +202,14 @@ impl EdgeRuntime {
         // Check memory requirements
         let model_memory = model.memory_usage();
         if model_memory > self.allocator.total_memory {
-            return Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: format!("Model requires {} bytes, only {} available",
-                    model_memory, self.allocator.total_memory),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::ResourceUnavailable {
+                    resource: format!(
+                        "Model requires {} bytes, only {} available",
+                        model_memory, self.allocator.total_memory
+                    ),
+                },
+            ));
         }
 
         // Check quantization compatibility
@@ -211,10 +217,12 @@ impl EdgeRuntime {
             crate::ml::pinn::QuantizationScheme::None => {
                 // FP32 requires FPU
                 if !self.hardware_caps.has_fpu {
-                    return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                        parameter: "quantization".to_string(),
-                        reason: "FP32 model requires FPU support".to_string(),
-                    }));
+                    return Err(KwaversError::System(
+                        crate::error::SystemError::InvalidConfiguration {
+                            parameter: "quantization".to_string(),
+                            reason: "FP32 model requires FPU support".to_string(),
+                        },
+                    ));
                 }
             }
             _ => {
@@ -225,17 +233,25 @@ impl EdgeRuntime {
         // Check SIMD requirements
         let required_simd = match &model.quantization_params.scheme {
             crate::ml::pinn::QuantizationScheme::MixedPrecision { weight_bits, .. } => {
-                if *weight_bits <= 8 { 8 } else { 16 }
+                if *weight_bits <= 8 {
+                    8
+                } else {
+                    16
+                }
             }
             _ => 8, // Default 8-bit operations
         };
 
         if self.hardware_caps.simd_width < required_simd {
-            return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "simd_width".to_string(),
-                reason: format!("Model requires {} SIMD width, hardware provides {}",
-                    required_simd, self.hardware_caps.simd_width),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::InvalidConfiguration {
+                    parameter: "simd_width".to_string(),
+                    reason: format!(
+                        "Model requires {} SIMD width, hardware provides {}",
+                        required_simd, self.hardware_caps.simd_width
+                    ),
+                },
+            ));
         }
 
         Ok(())
@@ -269,7 +285,7 @@ impl EdgeRuntime {
         // Base time per operation (microseconds)
         let base_time_per_op = match self.hardware_caps.architecture {
             Architecture::ARM | Architecture::ARM64 => 0.01, // Faster mobile CPUs
-            Architecture::RISCV => 0.05, // Slower embedded CPUs
+            Architecture::RISCV => 0.05,                     // Slower embedded CPUs
             Architecture::X86 | Architecture::X86_64 => 0.005, // Desktop CPUs
             Architecture::Other(_) => 0.02,
         };
@@ -292,7 +308,11 @@ impl EdgeRuntime {
     }
 
     /// Quantize input for kernel execution
-    fn quantize_input_for_kernel(&self, input: &[f32], kernel: &ExecutionKernel) -> KwaversResult<Vec<f32>> {
+    fn quantize_input_for_kernel(
+        &self,
+        input: &[f32],
+        kernel: &ExecutionKernel,
+    ) -> KwaversResult<Vec<f32>> {
         // Apply hardware-specific quantization
         match self.hardware_caps.architecture {
             Architecture::ARM | Architecture::ARM64 => {
@@ -311,51 +331,67 @@ impl EdgeRuntime {
     }
 
     /// NEON-optimized quantization (ARM)
-    fn neon_quantize(&self, input: &[f32], _kernel: &ExecutionKernel) -> KwaversResult<Vec<f32>> {
+    fn neon_quantize(&self, input: &[f32], kernel: &ExecutionKernel) -> KwaversResult<Vec<f32>> {
         // In practice, this would use ARM NEON intrinsics
         // For now, simulate optimized quantization
+        let _ = kernel; // Explicitly mark as used if not currently in implementation
         Ok(input.iter().map(|&x| x.clamp(-1.0, 1.0)).collect())
     }
 
     /// RISC-V optimized quantization
-    fn riscv_quantize(&self, input: &[f32], _kernel: &ExecutionKernel) -> KwaversResult<Vec<f32>> {
+    fn riscv_quantize(&self, input: &[f32], kernel: &ExecutionKernel) -> KwaversResult<Vec<f32>> {
         // In practice, this would use RISC-V vector instructions
         // For now, simulate optimized quantization
+        let _ = kernel; // Explicitly mark as used if not currently in implementation
         Ok(input.iter().map(|&x| x.clamp(-1.0, 1.0)).collect())
     }
 
     /// Software fallback quantization
-    fn software_quantize(&self, input: &[f32], kernel: &ExecutionKernel) -> KwaversResult<Vec<f32>> {
+    fn software_quantize(
+        &self,
+        input: &[f32],
+        kernel: &ExecutionKernel,
+    ) -> KwaversResult<Vec<f32>> {
         match kernel.io_spec.input_dtype {
             DataType::Float32 => Ok(input.to_vec()),
             DataType::Float16 => {
                 // Simulate FP16 conversion
-                Ok(input.iter().map(|&x| x as f32).collect())
+                Ok(input.to_vec())
             }
             DataType::Int8 => {
                 // Simulate 8-bit quantization
                 let scale = input.iter().map(|x| x.abs()).fold(0.0, f32::max) / 127.0;
-                Ok(input.iter().map(|&x| (x / scale).clamp(-127.0, 127.0)).collect())
+                Ok(input
+                    .iter()
+                    .map(|&x| (x / scale).clamp(-127.0, 127.0))
+                    .collect())
             }
             DataType::Int4 => {
                 // Simulate 4-bit quantization
                 let scale = input.iter().map(|x| x.abs()).fold(0.0, f32::max) / 7.0;
-                Ok(input.iter().map(|&x| (x / scale).clamp(-7.0, 7.0)).collect())
+                Ok(input
+                    .iter()
+                    .map(|&x| (x / scale).clamp(-7.0, 7.0))
+                    .collect())
             }
         }
     }
 
     /// Fixed-point inference for devices without FPU
-    fn fixed_point_inference(&self, input: &[f32], kernel: &ExecutionKernel) -> KwaversResult<Vec<f32>> {
+    fn fixed_point_inference(
+        &self,
+        input: &[f32],
+        kernel: &ExecutionKernel,
+    ) -> KwaversResult<Vec<f32>> {
+        let _ = kernel;
         // Convert to fixed-point representation
-        let fixed_input: Vec<i32> = input.iter()
+        let fixed_input: Vec<i32> = input
+            .iter()
             .map(|&x| (x * 65536.0) as i32) // 16.16 fixed point
             .collect();
 
         // Simulate fixed-point computation
-        let output: Vec<f32> = fixed_input.iter()
-            .map(|&x| x as f32 / 65536.0)
-            .collect();
+        let output: Vec<f32> = fixed_input.iter().map(|&x| x as f32 / 65536.0).collect();
 
         Ok(output)
     }
@@ -367,73 +403,114 @@ impl EdgeRuntime {
 
         let mut output = vec![0.0; kernel.io_spec.output_shape[0]];
 
-        // Perform optimized matrix multiplication using quantized weights
-        if let Some(ref quantized_model) = self.quantized_model {
-            // Use SIMD-accelerated computation for edge devices
-            #[cfg(feature = "simd")]
-            {
-                use std::simd::{f32x16, StdFloat};
+        let Some(ref quantized_model) = self.model else {
+            return Err(KwaversError::System(
+                crate::error::SystemError::InvalidConfiguration {
+                    parameter: "model".to_string(),
+                    reason: "No quantized model loaded".to_string(),
+                },
+            ));
+        };
 
-                let chunk_size = 16;
-                for chunk_start in (0..output.len()).step_by(chunk_size) {
-                    let chunk_end = (chunk_start + chunk_size).min(output.len());
-                    let mut sum_chunk = f32x16::splat(0.0);
+        let layer_idx = kernel
+            .id
+            .strip_prefix("layer_")
+            .and_then(|s| s.parse::<usize>().ok())
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "kernel.id".to_string(),
+                    reason: format!("Invalid kernel id: {}", kernel.id),
+                })
+            })?;
 
-                    for j in 0..input.len() {
-                        if j >= quantized_model.weights.len() { break; }
+        let layer = quantized_model
+            .original_layers
+            .get(layer_idx)
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "model.layers".to_string(),
+                    reason: format!("Missing layer index {}", layer_idx),
+                })
+            })?;
 
-                        let weight_row = &quantized_model.weights[j];
-                        if chunk_start >= weight_row.len() { continue; }
+        let weight_tensor = quantized_model
+            .quantized_weights
+            .get(layer_idx * 2)
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "model.quantized_weights".to_string(),
+                    reason: format!("Missing weights for layer {}", layer_idx),
+                })
+            })?;
+        let bias_tensor = quantized_model
+            .quantized_weights
+            .get(layer_idx * 2 + 1)
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "model.quantized_weights".to_string(),
+                    reason: format!("Missing biases for layer {}", layer_idx),
+                })
+            })?;
 
-                        let weight_chunk_end = (chunk_start + chunk_size).min(weight_row.len());
-                        let weights = &weight_row[chunk_start..weight_chunk_end];
+        let input_len = input.len().min(layer.input_size);
+        let output_len = output.len().min(layer.output_size);
+        output.truncate(output_len);
 
-                        // Pad to SIMD width if necessary
-                        let mut weight_simd = [0.0f32; 16];
-                        for (i, &w) in weights.iter().enumerate() {
-                            weight_simd[i] = w;
+        // Dequantize weights and biases for execution
+        // In a real optimized runtime, we would use quantized kernels
+        let weights = weight_tensor.dequantize();
+        let biases = bias_tensor.dequantize();
+
+        #[cfg(feature = "simd")]
+        {
+            use std::simd::{f32x16, StdFloat};
+
+            let chunk_size = 16;
+            for chunk_start in (0..output.len()).step_by(chunk_size) {
+                let chunk_end = (chunk_start + chunk_size).min(output.len());
+                let mut sum_chunk = f32x16::splat(0.0);
+
+                for (j, &input_val) in input.iter().enumerate().take(input_len) {
+                    let mut weight_simd = [0.0f32; 16];
+
+                    for (lane, out_idx) in (chunk_start..chunk_end).enumerate() {
+                        let weight_index = j * layer.output_size + out_idx;
+                        if weight_index < weights.len() {
+                            weight_simd[lane] = weights[weight_index];
                         }
-
-                        let input_val = input[j];
-                        let weight_simd_vec = f32x16::from_array(weight_simd);
-                        sum_chunk = sum_chunk + weight_simd_vec * f32x16::splat(input_val);
                     }
 
-                    // Apply activation (lane-wise tanh for stable std::simd)
-                    let vals = sum_chunk.as_array();
-                    let mut activated_arr = [0.0f32; 16];
-                    for i in 0..(chunk_end - chunk_start) {
-                        activated_arr[i] = vals[i].tanh();
+                    let weight_simd_vec = f32x16::from_array(weight_simd);
+                    sum_chunk = sum_chunk + weight_simd_vec * f32x16::splat(input_val);
+                }
+
+                let sums = sum_chunk.as_array();
+                for (lane, out_idx) in (chunk_start..chunk_end).enumerate() {
+                    let mut sum = sums[lane];
+                    if out_idx < biases.len() {
+                        sum += biases[out_idx];
                     }
-                    let activated = f32x16::from_array(activated_arr);
-                    let results = activated.as_array();
-                    for i in 0..(chunk_end - chunk_start) {
-                        output[chunk_start + i] = results[i];
-                    }
+                    output[out_idx] = sum.tanh();
                 }
             }
+        }
 
-            #[cfg(not(feature = "simd"))]
-            {
-                // Fallback scalar implementation
-                for i in 0..output.len() {
-                    let mut sum = 0.0;
-                    for j in 0..input.len() {
-                        if j < quantized_model.weights.len() && i < quantized_model.weights[j].len() {
-                            sum += input[j] * quantized_model.weights[j][i];
-                        }
+        #[cfg(not(feature = "simd"))]
+        {
+            for out_idx in 0..output.len() {
+                let mut sum = 0.0f32;
+                for (j, &input_val) in input.iter().enumerate().take(input_len) {
+                    let weight_index = j * layer.output_size + out_idx;
+                    if weight_index < weights.len() {
+                        sum += input_val * weights[weight_index];
                     }
-                    output[i] = sum.tanh();
                 }
-            }
-        } else {
-            // Fallback to simple computation if no quantized model
-            for i in 0..output.len() {
-                let mut sum = 0.0;
-                for j in 0..input.len().min(64) { // Limit for edge device performance
-                    sum += input[j] * ((i as f32 * 0.01).sin() + (j as f32 * 0.01).cos());
+
+                if out_idx < biases.len() {
+                    sum += biases[out_idx];
                 }
-                output[i] = sum.tanh();
+
+                output[out_idx] = sum.tanh();
             }
         }
 
@@ -444,15 +521,9 @@ impl EdgeRuntime {
     fn dequantize_output(&self, quantized_output: &[f32]) -> KwaversResult<Vec<f32>> {
         // Apply hardware-specific dequantization
         match self.hardware_caps.architecture {
-            Architecture::ARM | Architecture::ARM64 => {
-                self.neon_dequantize(quantized_output)
-            }
-            Architecture::RISCV => {
-                self.riscv_dequantize(quantized_output)
-            }
-            _ => {
-                Ok(quantized_output.to_vec())
-            }
+            Architecture::ARM | Architecture::ARM64 => self.neon_dequantize(quantized_output),
+            Architecture::RISCV => self.riscv_dequantize(quantized_output),
+            _ => Ok(quantized_output.to_vec()),
         }
     }
 
@@ -473,8 +544,8 @@ impl EdgeRuntime {
         self.performance_monitor.inference_count += 1;
         self.performance_monitor.total_inference_time_us += inference_time_us;
 
-        self.performance_monitor.avg_latency_us =
-            self.performance_monitor.total_inference_time_us as f64
+        self.performance_monitor.avg_latency_us = self.performance_monitor.total_inference_time_us
+            as f64
             / self.performance_monitor.inference_count as f64;
 
         // Update memory efficiency
@@ -488,15 +559,48 @@ impl EdgeRuntime {
     }
 
     /// Detect hardware capabilities
+    /// Detect hardware capabilities using target_arch and system info
     fn detect_hardware_capabilities() -> HardwareCapabilities {
-        // In practice, this would query the actual hardware
-        // For now, assume ARM64 with NEON
+        let architecture = if cfg!(target_arch = "aarch64") {
+            Architecture::ARM64
+        } else if cfg!(target_arch = "arm") {
+            Architecture::ARM
+        } else if cfg!(target_arch = "riscv64") {
+            Architecture::RISCV
+        } else if cfg!(target_arch = "x86") {
+            Architecture::X86
+        } else if cfg!(target_arch = "x86_64") {
+            Architecture::X86_64
+        } else {
+            Architecture::Other(std::env::consts::ARCH.to_string())
+        };
+
+        let mut instruction_sets = Vec::new();
+        if cfg!(target_feature = "neon") {
+            instruction_sets.push("NEON".to_string());
+        }
+        if cfg!(target_feature = "sse") {
+            instruction_sets.push("SSE".to_string());
+        }
+        if cfg!(target_feature = "avx") {
+            instruction_sets.push("AVX".to_string());
+        }
+        if cfg!(target_feature = "avx2") {
+            instruction_sets.push("AVX2".to_string());
+        }
+
         HardwareCapabilities {
-            architecture: Architecture::ARM64,
-            instruction_sets: vec!["NEON".to_string(), "AES".to_string()],
-            total_memory_mb: 512, // 512MB for embedded device
-            has_fpu: true,
-            simd_width: 128, // NEON 128-bit
+            architecture,
+            instruction_sets,
+            total_memory_mb: 512, // Default for embedded
+            has_fpu: cfg!(target_arch = "x86_64") || cfg!(target_arch = "aarch64") || cfg!(target_feature = "neon") || cfg!(target_feature = "sse2"),
+            simd_width: if cfg!(target_feature = "avx2") {
+                256
+            } else if cfg!(target_feature = "neon") || cfg!(target_feature = "sse") {
+                128
+            } else {
+                64
+            },
             cache_line_size: 64,
         }
     }
@@ -524,42 +628,81 @@ impl MemoryAllocator {
 
     /// Allocate a memory block with alignment
     pub fn allocate_block(&mut self, size: usize, alignment: usize) -> KwaversResult<usize> {
-        // Find suitable free block
-        let aligned_size = (size + alignment - 1) / alignment * alignment;
+        let aligned_size = size.div_ceil(alignment) * alignment;
 
-        // Simple first-fit allocation strategy
-        let mut current_address = 0;
-
-        for block in &self.allocations {
-            if !block.allocated && block.size >= aligned_size {
-                // Found suitable block
-                let address = block.start_address;
-                // In practice, we'd split the block here
-                return Ok(address);
-            }
-            current_address = block.start_address + block.size;
+        // Check if we have enough total memory
+        let used_memory: usize = self.allocations.iter().map(|b| b.size).sum();
+        if used_memory + aligned_size > self.total_memory {
+            return Err(KwaversError::System(
+                crate::error::SystemError::ResourceUnavailable {
+                    resource: format!(
+                        "Memory limit reached: {}/{} bytes",
+                        used_memory + aligned_size,
+                        self.total_memory
+                    ),
+                },
+            ));
         }
 
-        // Allocate at the end
-        if current_address + aligned_size <= self.total_memory {
-            self.allocations.push(MemoryBlock {
-                start_address: current_address,
-                size: aligned_size,
-                allocated: true,
-                alignment,
-            });
-            Ok(current_address)
+        // Find a gap between existing allocations or append at the end
+        let mut best_start = 0;
+        let mut allocations = self.allocations.clone();
+        allocations.sort_by_key(|b| b.start_address);
+
+        for block in &allocations {
+            if block.start_address >= best_start + aligned_size {
+                // Found a gap
+                break;
+            }
+            best_start = (block.start_address + block.size).div_ceil(alignment) * alignment;
+        }
+
+        if best_start + aligned_size > self.total_memory {
+            return Err(KwaversError::System(
+                crate::error::SystemError::ResourceUnavailable {
+                    resource: "Memory fragmentation: No contiguous block found".to_string(),
+                },
+            ));
+        }
+
+        let new_block = MemoryBlock {
+            start_address: best_start,
+            size: aligned_size,
+            allocated: true,
+            _alignment: alignment,
+        };
+
+        self.allocations.push(new_block);
+        self.update_fragmentation_stats();
+
+        Ok(best_start)
+    }
+
+    fn update_fragmentation_stats(&mut self) {
+        if self.allocations.is_empty() {
+            self.fragmentation_ratio = 0.0;
+            return;
+        }
+
+        let total_allocated: usize = self.allocations.iter().map(|b| b.size).sum();
+        let max_address = self
+            .allocations
+            .iter()
+            .map(|b| b.start_address + b.size)
+            .max()
+            .unwrap_or(0);
+
+        if max_address == 0 {
+            self.fragmentation_ratio = 0.0;
         } else {
-            Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: format!("Out of memory: requested {}, available {}",
-                    aligned_size, self.total_memory - current_address),
-            }))
+            self.fragmentation_ratio = 1.0 - (total_allocated as f32 / max_address as f32);
         }
     }
 
     /// Get total allocated memory
     pub fn get_allocated_memory(&self) -> usize {
-        self.allocations.iter()
+        self.allocations
+            .iter()
             .filter(|block| block.allocated)
             .map(|block| block.size)
             .sum()
@@ -575,7 +718,7 @@ mod tests {
 
     #[test]
     fn test_edge_runtime_creation() {
-        let runtime = EdgeRuntime::<TestBackend>::new(64); // 64MB limit
+        let runtime = EdgeRuntime::new(64); // 64MB limit
         assert_eq!(runtime.allocator.total_memory, 64 * 1024 * 1024);
         assert!(runtime.model.is_none());
     }
@@ -594,7 +737,7 @@ mod tests {
 
     #[test]
     fn test_hardware_capabilities() {
-        let caps = EdgeRuntime::<TestBackend>::detect_hardware_capabilities();
+        let caps = EdgeRuntime::detect_hardware_capabilities();
 
         // Should detect ARM64 with NEON
         match caps.architecture {
@@ -608,7 +751,7 @@ mod tests {
 
     #[test]
     fn test_data_type_quantization() {
-        let runtime = EdgeRuntime::<TestBackend>::new(64);
+        let runtime = EdgeRuntime::new(64);
         let input = vec![1.0, -1.0, 0.5, -0.5];
         let kernel = ExecutionKernel {
             id: "test".to_string(),

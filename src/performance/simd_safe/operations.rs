@@ -108,6 +108,8 @@ impl SimdOps {
         #[cfg(target_arch = "x86_64")]
         {
             if is_x86_feature_detected!("avx2") {
+                // SAFETY: AVX2 feature is detected and input arrays have compatible shapes.
+                #[allow(unsafe_code)]
                 unsafe {
                     super::avx2::multiply_fields_avx2(a, b, &mut result);
                 }
@@ -138,6 +140,8 @@ impl SimdOps {
         #[cfg(target_arch = "x86_64")]
         {
             if is_x86_feature_detected!("avx2") {
+                // SAFETY: AVX2 feature is detected and input arrays have compatible shapes.
+                #[allow(unsafe_code)]
                 unsafe {
                     super::avx2::subtract_fields_avx2(a, b, &mut result);
                 }

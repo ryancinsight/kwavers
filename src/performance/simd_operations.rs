@@ -166,7 +166,8 @@ impl SimdOps {
                 // Linear term
                 let linear = 2.0 * p_curr - *p_next + c2_dt2 * lap;
                 // Nonlinear term: ∂²p²/∂t² ≈ (p_curr² - p_prev²) / dt²
-                let nonlinear_term = nonlinear_coeff * (p_curr * p_curr - (*p_next) * (*p_next)) / (dt * dt);
+                let nonlinear_term =
+                    nonlinear_coeff * (p_curr * p_curr - (*p_next) * (*p_next)) / (dt * dt);
                 *p_next = linear + nonlinear_term;
             });
     }
@@ -291,21 +292,22 @@ impl SimdOps {
                     .outer_iter_mut()
                     .enumerate()
                     .for_each(|(j, mut row_x)| {
-                        row_x
-                            .iter_mut()
-                            .enumerate()
-                            .for_each(|(i, s)| {
-                                // ∂u/∂x using central finite difference
-                                if i > 0 && i < nx - 1 {
-                                    *s = (displacement_u[[i + 1, j, k]] - displacement_u[[i - 1, j, k]]) / (2.0 * dx);
-                                } else if i == 0 {
-                                    // Forward difference at boundary
-                                    *s = (displacement_u[[i + 1, j, k]] - displacement_u[[i, j, k]]) / dx;
-                                } else {
-                                    // Backward difference at boundary
-                                    *s = (displacement_u[[i, j, k]] - displacement_u[[i - 1, j, k]]) / dx;
-                                }
-                            });
+                        row_x.iter_mut().enumerate().for_each(|(i, s)| {
+                            // ∂u/∂x using central finite difference
+                            if i > 0 && i < nx - 1 {
+                                *s = (displacement_u[[i + 1, j, k]]
+                                    - displacement_u[[i - 1, j, k]])
+                                    / (2.0 * dx);
+                            } else if i == 0 {
+                                // Forward difference at boundary
+                                *s = (displacement_u[[i + 1, j, k]] - displacement_u[[i, j, k]])
+                                    / dx;
+                            } else {
+                                // Backward difference at boundary
+                                *s = (displacement_u[[i, j, k]] - displacement_u[[i - 1, j, k]])
+                                    / dx;
+                            }
+                        });
                     });
             });
 
@@ -318,18 +320,19 @@ impl SimdOps {
                     .outer_iter_mut()
                     .enumerate()
                     .for_each(|(j, mut row_x)| {
-                        row_x
-                            .iter_mut()
-                            .enumerate()
-                            .for_each(|(i, s)| {
-                                if j > 0 && j < ny - 1 {
-                                    *s = (displacement_v[[i, j + 1, k]] - displacement_v[[i, j - 1, k]]) / (2.0 * dy);
-                                } else if j == 0 {
-                                    *s = (displacement_v[[i, j + 1, k]] - displacement_v[[i, j, k]]) / dy;
-                                } else {
-                                    *s = (displacement_v[[i, j, k]] - displacement_v[[i, j - 1, k]]) / dy;
-                                }
-                            });
+                        row_x.iter_mut().enumerate().for_each(|(i, s)| {
+                            if j > 0 && j < ny - 1 {
+                                *s = (displacement_v[[i, j + 1, k]]
+                                    - displacement_v[[i, j - 1, k]])
+                                    / (2.0 * dy);
+                            } else if j == 0 {
+                                *s = (displacement_v[[i, j + 1, k]] - displacement_v[[i, j, k]])
+                                    / dy;
+                            } else {
+                                *s = (displacement_v[[i, j, k]] - displacement_v[[i, j - 1, k]])
+                                    / dy;
+                            }
+                        });
                     });
             });
 
@@ -338,17 +341,16 @@ impl SimdOps {
             .outer_iter_mut()
             .enumerate()
             .for_each(|(k, mut slice_xy)| {
-                slice_xy
-                    .iter_mut()
-                    .for_each(|s| {
-                        if k > 0 && k < nz - 1 {
-                            *s = (displacement_w[[0, 0, k + 1]] - displacement_w[[0, 0, k - 1]]) / (2.0 * dz);
-                        } else if k == 0 {
-                            *s = (displacement_w[[0, 0, k + 1]] - displacement_w[[0, 0, k]]) / dz;
-                        } else {
-                            *s = (displacement_w[[0, 0, k]] - displacement_w[[0, 0, k - 1]]) / dz;
-                        }
-                    });
+                slice_xy.iter_mut().for_each(|s| {
+                    if k > 0 && k < nz - 1 {
+                        *s = (displacement_w[[0, 0, k + 1]] - displacement_w[[0, 0, k - 1]])
+                            / (2.0 * dz);
+                    } else if k == 0 {
+                        *s = (displacement_w[[0, 0, k + 1]] - displacement_w[[0, 0, k]]) / dz;
+                    } else {
+                        *s = (displacement_w[[0, 0, k]] - displacement_w[[0, 0, k - 1]]) / dz;
+                    }
+                });
             });
 
         // ε_xy = (1/2)(∂u/∂y + ∂v/∂x) - shear strain
@@ -360,28 +362,27 @@ impl SimdOps {
                     .outer_iter_mut()
                     .enumerate()
                     .for_each(|(j, mut row_x)| {
-                        row_x
-                            .iter_mut()
-                            .enumerate()
-                            .for_each(|(i, s)| {
-                                let du_dy = if j > 0 && j < ny - 1 {
-                                    (displacement_u[[i, j + 1, k]] - displacement_u[[i, j - 1, k]]) / (2.0 * dy)
-                                } else if j == 0 {
-                                    (displacement_u[[i, j + 1, k]] - displacement_u[[i, j, k]]) / dy
-                                } else {
-                                    (displacement_u[[i, j, k]] - displacement_u[[i, j - 1, k]]) / dy
-                                };
+                        row_x.iter_mut().enumerate().for_each(|(i, s)| {
+                            let du_dy = if j > 0 && j < ny - 1 {
+                                (displacement_u[[i, j + 1, k]] - displacement_u[[i, j - 1, k]])
+                                    / (2.0 * dy)
+                            } else if j == 0 {
+                                (displacement_u[[i, j + 1, k]] - displacement_u[[i, j, k]]) / dy
+                            } else {
+                                (displacement_u[[i, j, k]] - displacement_u[[i, j - 1, k]]) / dy
+                            };
 
-                                let dv_dx = if i > 0 && i < nx - 1 {
-                                    (displacement_v[[i + 1, j, k]] - displacement_v[[i - 1, j, k]]) / (2.0 * dx)
-                                } else if i == 0 {
-                                    (displacement_v[[i + 1, j, k]] - displacement_v[[i, j, k]]) / dx
-                                } else {
-                                    (displacement_v[[i, j, k]] - displacement_v[[i - 1, j, k]]) / dx
-                                };
+                            let dv_dx = if i > 0 && i < nx - 1 {
+                                (displacement_v[[i + 1, j, k]] - displacement_v[[i - 1, j, k]])
+                                    / (2.0 * dx)
+                            } else if i == 0 {
+                                (displacement_v[[i + 1, j, k]] - displacement_v[[i, j, k]]) / dx
+                            } else {
+                                (displacement_v[[i, j, k]] - displacement_v[[i - 1, j, k]]) / dx
+                            };
 
-                                *s = 0.5 * (du_dy + dv_dx);
-                            });
+                            *s = 0.5 * (du_dy + dv_dx);
+                        });
                     });
             });
 
@@ -394,28 +395,27 @@ impl SimdOps {
                     .outer_iter_mut()
                     .enumerate()
                     .for_each(|(j, mut row_x)| {
-                        row_x
-                            .iter_mut()
-                            .enumerate()
-                            .for_each(|(i, s)| {
-                                let du_dz = if k > 0 && k < nz - 1 {
-                                    (displacement_u[[i, j, k + 1]] - displacement_u[[i, j, k - 1]]) / (2.0 * dz)
-                                } else if k == 0 {
-                                    (displacement_u[[i, j, k + 1]] - displacement_u[[i, j, k]]) / dz
-                                } else {
-                                    (displacement_u[[i, j, k]] - displacement_u[[i, j, k - 1]]) / dz
-                                };
+                        row_x.iter_mut().enumerate().for_each(|(i, s)| {
+                            let du_dz = if k > 0 && k < nz - 1 {
+                                (displacement_u[[i, j, k + 1]] - displacement_u[[i, j, k - 1]])
+                                    / (2.0 * dz)
+                            } else if k == 0 {
+                                (displacement_u[[i, j, k + 1]] - displacement_u[[i, j, k]]) / dz
+                            } else {
+                                (displacement_u[[i, j, k]] - displacement_u[[i, j, k - 1]]) / dz
+                            };
 
-                                let dw_dx = if i > 0 && i < nx - 1 {
-                                    (displacement_w[[i + 1, j, k]] - displacement_w[[i - 1, j, k]]) / (2.0 * dx)
-                                } else if i == 0 {
-                                    (displacement_w[[i + 1, j, k]] - displacement_w[[i, j, k]]) / dx
-                                } else {
-                                    (displacement_w[[i, j, k]] - displacement_w[[i - 1, j, k]]) / dx
-                                };
+                            let dw_dx = if i > 0 && i < nx - 1 {
+                                (displacement_w[[i + 1, j, k]] - displacement_w[[i - 1, j, k]])
+                                    / (2.0 * dx)
+                            } else if i == 0 {
+                                (displacement_w[[i + 1, j, k]] - displacement_w[[i, j, k]]) / dx
+                            } else {
+                                (displacement_w[[i, j, k]] - displacement_w[[i - 1, j, k]]) / dx
+                            };
 
-                                *s = 0.5 * (du_dz + dw_dx);
-                            });
+                            *s = 0.5 * (du_dz + dw_dx);
+                        });
                     });
             });
 
@@ -428,28 +428,27 @@ impl SimdOps {
                     .outer_iter_mut()
                     .enumerate()
                     .for_each(|(j, mut row_x)| {
-                        row_x
-                            .iter_mut()
-                            .enumerate()
-                            .for_each(|(i, s)| {
-                                let dv_dz = if k > 0 && k < nz - 1 {
-                                    (displacement_v[[i, j, k + 1]] - displacement_v[[i, j, k - 1]]) / (2.0 * dz)
-                                } else if k == 0 {
-                                    (displacement_v[[i, j, k + 1]] - displacement_v[[i, j, k]]) / dz
-                                } else {
-                                    (displacement_v[[i, j, k]] - displacement_v[[i, j, k - 1]]) / dz
-                                };
+                        row_x.iter_mut().enumerate().for_each(|(i, s)| {
+                            let dv_dz = if k > 0 && k < nz - 1 {
+                                (displacement_v[[i, j, k + 1]] - displacement_v[[i, j, k - 1]])
+                                    / (2.0 * dz)
+                            } else if k == 0 {
+                                (displacement_v[[i, j, k + 1]] - displacement_v[[i, j, k]]) / dz
+                            } else {
+                                (displacement_v[[i, j, k]] - displacement_v[[i, j, k - 1]]) / dz
+                            };
 
-                                let dw_dy = if j > 0 && j < ny - 1 {
-                                    (displacement_w[[i, j + 1, k]] - displacement_w[[i, j - 1, k]]) / (2.0 * dy)
-                                } else if j == 0 {
-                                    (displacement_w[[i, j + 1, k]] - displacement_w[[i, j, k]]) / dy
-                                } else {
-                                    (displacement_w[[i, j, k]] - displacement_w[[i, j - 1, k]]) / dy
-                                };
+                            let dw_dy = if j > 0 && j < ny - 1 {
+                                (displacement_w[[i, j + 1, k]] - displacement_w[[i, j - 1, k]])
+                                    / (2.0 * dy)
+                            } else if j == 0 {
+                                (displacement_w[[i, j + 1, k]] - displacement_w[[i, j, k]]) / dy
+                            } else {
+                                (displacement_w[[i, j, k]] - displacement_w[[i, j - 1, k]]) / dy
+                            };
 
-                                *s = 0.5 * (dv_dz + dw_dy);
-                            });
+                            *s = 0.5 * (dv_dz + dw_dy);
+                        });
                     });
             });
     }

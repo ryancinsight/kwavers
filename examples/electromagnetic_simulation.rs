@@ -25,19 +25,19 @@
 //! - Result visualization and validation
 
 #[cfg(feature = "pinn")]
-use kwavers::error::KwaversResult;
-#[cfg(feature = "pinn")]
-use kwavers::ml::pinn::electromagnetic::{ElectromagneticDomain, EMProblemType};
-#[cfg(feature = "pinn")]
-use kwavers::ml::pinn::physics::{BoundaryPosition, PhysicsParameters};
-#[cfg(feature = "pinn")]
-use kwavers::ml::pinn::{BurnPINN2DWave, PINNConfig, PINNTrainer};
-#[cfg(feature = "pinn")]
 use burn::backend::wgpu::WgpuDevice;
 #[cfg(feature = "pinn")]
 use burn::backend::Autodiff;
 #[cfg(feature = "pinn")]
 use burn::optim::AdamConfig;
+#[cfg(feature = "pinn")]
+use kwavers::error::KwaversResult;
+#[cfg(feature = "pinn")]
+use kwavers::ml::pinn::electromagnetic::{EMProblemType, ElectromagneticDomain};
+#[cfg(feature = "pinn")]
+use kwavers::ml::pinn::physics::{BoundaryPosition, PhysicsParameters};
+#[cfg(feature = "pinn")]
+use kwavers::ml::pinn::{BurnPINN2DWave, PINNConfig, PINNTrainer};
 #[cfg(feature = "pinn")]
 use std::collections::HashMap;
 
@@ -49,14 +49,14 @@ pub fn electrostatic_capacitor_example() -> KwaversResult<()> {
     // Create electromagnetic domain for electrostatics
     let domain = ElectromagneticDomain::new(
         EMProblemType::Electrostatic,
-        8.854e-12, // Vacuum permittivity
+        8.854e-12,                   // Vacuum permittivity
         4e-7 * std::f64::consts::PI, // Vacuum permeability
-        0.0, // No conductivity
-        vec![0.01, 0.01], // 1cm x 1cm domain
+        0.0,                         // No conductivity
+        vec![0.01, 0.01],            // 1cm x 1cm domain
     )
-    .add_pec_boundary(BoundaryPosition::Top)    // +V plate
+    .add_pec_boundary(BoundaryPosition::Top) // +V plate
     .add_pec_boundary(BoundaryPosition::Bottom) // Ground plate
-    .add_pec_boundary(BoundaryPosition::Left)   // Side wall
+    .add_pec_boundary(BoundaryPosition::Left) // Side wall
     .add_pec_boundary(BoundaryPosition::Right); // Side wall
 
     // Configure PINN
@@ -71,8 +71,12 @@ pub fn electrostatic_capacitor_example() -> KwaversResult<()> {
 
     // Create physics parameters
     let mut physics_params = PhysicsParameters::default();
-    physics_params.domain_params.insert("voltage_top".to_string(), 100.0); // 100V
-    physics_params.domain_params.insert("voltage_bottom".to_string(), 0.0); // Ground
+    physics_params
+        .domain_params
+        .insert("voltage_top".to_string(), 100.0); // 100V
+    physics_params
+        .domain_params
+        .insert("voltage_bottom".to_string(), 0.0); // Ground
 
     // Initialize PINN
     let device = WgpuDevice::default();
@@ -155,8 +159,12 @@ pub fn wave_propagation_example() -> KwaversResult<()> {
 
     // Physics parameters for wave propagation
     let mut physics_params = PhysicsParameters::default();
-    physics_params.domain_params.insert("source_frequency".to_string(), 3e9); // 3GHz
-    physics_params.domain_params.insert("source_position".to_string(), 0.05); // Center
+    physics_params
+        .domain_params
+        .insert("source_frequency".to_string(), 3e9); // 3GHz
+    physics_params
+        .domain_params
+        .insert("source_position".to_string(), 0.05); // Center
 
     // Initialize and train PINN
     let device = WgpuDevice::default();
@@ -181,7 +189,7 @@ pub fn lossy_waveguide_example() -> KwaversResult<()> {
         EMProblemType::WavePropagation,
         4.0 * 8.854e-12, // Relative permittivity ε_r = 4
         4e-7 * std::f64::consts::PI,
-        0.01, // Lossy dielectric (σ = 0.01 S/m)
+        0.01,             // Lossy dielectric (σ = 0.01 S/m)
         vec![0.05, 0.02], // Waveguide dimensions
     )
     .add_pec_boundary(BoundaryPosition::Top)
@@ -200,8 +208,12 @@ pub fn lossy_waveguide_example() -> KwaversResult<()> {
 
     // Physics parameters
     let mut physics_params = PhysicsParameters::default();
-    physics_params.domain_params.insert("port_impedance".to_string(), 50.0); // 50Ω port
-    physics_params.domain_params.insert("input_power".to_string(), 1.0); // 1W input
+    physics_params
+        .domain_params
+        .insert("port_impedance".to_string(), 50.0); // 50Ω port
+    physics_params
+        .domain_params
+        .insert("input_power".to_string(), 1.0); // 1W input
 
     // Initialize and train PINN
     let device = WgpuDevice::default();
@@ -226,7 +238,7 @@ pub fn quasi_static_induction_example() -> KwaversResult<()> {
         EMProblemType::QuasiStatic,
         8.854e-12,
         4e-7 * std::f64::consts::PI,
-        5.8e7, // Copper conductivity
+        5.8e7,            // Copper conductivity
         vec![0.03, 0.03], // 3cm x 3cm domain
     )
     .add_current_source((0.015, 0.015), vec![1e5, 0.0], 0.005); // Primary coil
@@ -243,8 +255,12 @@ pub fn quasi_static_induction_example() -> KwaversResult<()> {
 
     // Physics parameters
     let mut physics_params = PhysicsParameters::default();
-    physics_params.domain_params.insert("coil_turns".to_string(), 10.0);
-    physics_params.domain_params.insert("frequency".to_string(), 1e6); // 1MHz
+    physics_params
+        .domain_params
+        .insert("coil_turns".to_string(), 10.0);
+    physics_params
+        .domain_params
+        .insert("frequency".to_string(), 1e6); // 1MHz
 
     // Initialize and train PINN
     let device = WgpuDevice::default();
@@ -325,15 +341,19 @@ mod tests {
         // Test that different domain configurations can be created
         let electrostatic = ElectromagneticDomain::new(
             EMProblemType::Electrostatic,
-            8.854e-12, 4e-7 * std::f64::consts::PI, 0.0,
-            vec![0.01, 0.01]
+            8.854e-12,
+            4e-7 * std::f64::consts::PI,
+            0.0,
+            vec![0.01, 0.01],
         );
         assert!(electrostatic.validate().is_ok());
 
         let wave_propagation = ElectromagneticDomain::new(
             EMProblemType::WavePropagation,
-            8.854e-12, 4e-7 * std::f64::consts::PI, 0.0,
-            vec![0.1, 0.1]
+            8.854e-12,
+            4e-7 * std::f64::consts::PI,
+            0.0,
+            vec![0.1, 0.1],
         );
         assert!(wave_propagation.validate().is_ok());
     }

@@ -143,7 +143,13 @@ impl PerformanceBenchmarkSuite {
     }
 
     /// Benchmark FDTD acoustic wave propagation
-    fn benchmark_fdtd_wave(&self, nx: usize, ny: usize, nz: usize, sim_time: f64) -> KwaversResult<BenchmarkResult> {
+    fn benchmark_fdtd_wave(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        sim_time: f64,
+    ) -> KwaversResult<BenchmarkResult> {
         let grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
@@ -163,15 +169,32 @@ impl PerformanceBenchmarkSuite {
             let dt = grid.dx / 1500.0 * 0.5; // CFL condition
             let n_steps = (sim_time / dt) as usize;
 
-            for _ in 0..n_steps.min(1000) { // Limit for benchmarking
+            for _ in 0..n_steps.min(1000) {
+                // Limit for benchmarking
                 // Add source (simplified)
-                pressure[[nx/2, ny/2, nz/2]] += 1e5;
+                pressure[[nx / 2, ny / 2, nz / 2]] += 1e5;
 
                 // Update velocity from pressure
-                self.update_velocity_fdtd(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, dt, &grid, &medium);
+                self.update_velocity_fdtd(
+                    &mut velocity_x,
+                    &mut velocity_y,
+                    &mut velocity_z,
+                    &pressure,
+                    dt,
+                    &grid,
+                    &medium,
+                );
 
                 // Update pressure from velocity
-                self.update_pressure_fdtd(&mut pressure, &velocity_x, &velocity_y, &velocity_z, dt, &grid, &medium);
+                self.update_pressure_fdtd(
+                    &mut pressure,
+                    &velocity_x,
+                    &velocity_y,
+                    &velocity_z,
+                    dt,
+                    &grid,
+                    &medium,
+                );
             }
 
             total_time += start.elapsed();
@@ -193,7 +216,13 @@ impl PerformanceBenchmarkSuite {
     }
 
     /// Benchmark PSTD wave propagation
-    fn benchmark_pstd_wave(&self, nx: usize, ny: usize, nz: usize, sim_time: f64) -> KwaversResult<BenchmarkResult> {
+    fn benchmark_pstd_wave(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        sim_time: f64,
+    ) -> KwaversResult<BenchmarkResult> {
         let grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
@@ -214,10 +243,11 @@ impl PerformanceBenchmarkSuite {
             for step in 0..n_steps.min(500) {
                 // Add source with temporal modulation
                 let time = step as f64 * dt;
-                let source_amplitude = 1e5 * (2.0 * std::f64::consts::PI * 5e6 * time).sin() *
-                                     (-0.5 * (time * 5e6 * 2.0 * std::f64::consts::PI / 2.0).powi(2)).exp();
+                let source_amplitude = 1e5
+                    * (2.0 * std::f64::consts::PI * 5e6 * time).sin()
+                    * (-0.5 * (time * 5e6 * 2.0 * std::f64::consts::PI / 2.0).powi(2)).exp();
 
-                field[[nx/2, ny/2, nz/2]] += source_amplitude as f32;
+                field[[nx / 2, ny / 2, nz / 2]] += source_amplitude as f32;
 
                 // Simulate k-space operations (FFT-based)
                 // In practice, this would use actual FFT libraries
@@ -243,7 +273,13 @@ impl PerformanceBenchmarkSuite {
     }
 
     /// Benchmark HAS wave propagation
-    fn benchmark_has_wave(&self, nx: usize, ny: usize, nz: usize, sim_time: f64) -> KwaversResult<BenchmarkResult> {
+    fn benchmark_has_wave(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        sim_time: f64,
+    ) -> KwaversResult<BenchmarkResult> {
         let grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
@@ -269,7 +305,8 @@ impl PerformanceBenchmarkSuite {
                         let x = i as f64 * grid.dx;
                         let y = j as f64 * grid.dy;
                         let phase = 2.0 * std::f64::consts::PI * 5e6 * (x * 0.7 + y * 0.3) / 1500.0; // Angled wave
-                        field[[i, j, nz/2]] += 1e4 * (phase + 2.0 * std::f64::consts::PI * 5e6 * time).cos() as f32;
+                        field[[i, j, nz / 2]] +=
+                            1e4 * (phase + 2.0 * std::f64::consts::PI * 5e6 * time).cos() as f32;
                     }
                 }
 
@@ -278,8 +315,9 @@ impl PerformanceBenchmarkSuite {
             }
 
             total_time += start.elapsed();
-            memory_usage = field.len() * std::mem::size_of::<f32>() +
-                          nx * ny * std::mem::size_of::<f32>() * 2; // Angular spectrum workspace
+            memory_usage =
+                field.len() * std::mem::size_of::<f32>() + nx * ny * std::mem::size_of::<f32>() * 2;
+            // Angular spectrum workspace
         }
 
         let avg_time = total_time / self.config.repetitions as u32;
@@ -297,7 +335,13 @@ impl PerformanceBenchmarkSuite {
     }
 
     /// Benchmark nonlinear Westervelt equation
-    fn benchmark_westervelt_wave(&self, nx: usize, ny: usize, nz: usize, sim_time: f64) -> KwaversResult<BenchmarkResult> {
+    fn benchmark_westervelt_wave(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        sim_time: f64,
+    ) -> KwaversResult<BenchmarkResult> {
         let grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
@@ -319,19 +363,38 @@ impl PerformanceBenchmarkSuite {
             let dt = grid.dx / 1500.0 * 0.3; // Stricter CFL for nonlinear
             let n_steps = (sim_time / dt) as usize;
 
-            for step in 0..n_steps.min(200) { // Shorter for nonlinear stability
+            for step in 0..n_steps.min(200) {
+                // Shorter for nonlinear stability
                 let time = step as f64 * dt;
 
                 // Add high-amplitude source for nonlinear effects
-                pressure[[nx/2, ny/2, nz/2]] += 5e5 * (2.0 * std::f64::consts::PI * 1e6 * time).sin() as f32 *
-                                              (-0.5 * (time * 1e6).powi(2)).exp() as f32;
+                pressure[[nx / 2, ny / 2, nz / 2]] += 5e5
+                    * (2.0 * std::f64::consts::PI * 1e6 * time).sin() as f32
+                    * (-0.5 * (time * 1e6).powi(2)).exp() as f32;
 
                 // Update velocity (linear part)
-                self.update_velocity_fdtd(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, dt, &grid, &medium);
+                self.update_velocity_fdtd(
+                    &mut velocity_x,
+                    &mut velocity_y,
+                    &mut velocity_z,
+                    &pressure,
+                    dt,
+                    &grid,
+                    &medium,
+                );
 
                 // Update pressure with nonlinear terms
-                self.update_pressure_nonlinear(&mut pressure, &velocity_x, &velocity_y, &velocity_z,
-                                             dt, &grid, &medium, beta, absorption);
+                self.update_pressure_nonlinear(
+                    &mut pressure,
+                    &velocity_x,
+                    &velocity_y,
+                    &velocity_z,
+                    dt,
+                    &grid,
+                    &medium,
+                    beta,
+                    absorption,
+                );
             }
 
             total_time += start.elapsed();
@@ -427,7 +490,8 @@ impl PerformanceBenchmarkSuite {
             let time = time_point as f64 * 0.01; // 10ms intervals
 
             // Simulate microbubble scattering
-            for _ in 0..n_microbubbles.min(100) { // Limit for benchmark
+            for _ in 0..n_microbubbles.min(100) {
+                // Limit for benchmark
                 self.simulate_microbubble_scattering(&mut contrast_signal, time);
             }
 
@@ -453,7 +517,12 @@ impl PerformanceBenchmarkSuite {
     }
 
     /// Benchmark transcranial focused ultrasound
-    fn benchmark_transcranial_fus(&self, nx: usize, ny: usize, nz: usize) -> KwaversResult<BenchmarkResult> {
+    fn benchmark_transcranial_fus(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+    ) -> KwaversResult<BenchmarkResult> {
         let start = Instant::now();
 
         // Transcranial FUS involves aberration correction and safety monitoring
@@ -466,7 +535,8 @@ impl PerformanceBenchmarkSuite {
 
         for time_step in 0..n_time_steps {
             // Simulate aberration correction
-            for elem in 0..n_elements.min(64) { // Limit for benchmark
+            for elem in 0..n_elements.min(64) {
+                // Limit for benchmark
                 self.simulate_transducer_element(&mut acoustic_field, elem, time_step, &grid);
             }
 
@@ -478,8 +548,8 @@ impl PerformanceBenchmarkSuite {
         }
 
         let execution_time = start.elapsed();
-        let memory_usage = acoustic_field.len() * std::mem::size_of::<f32>() +
-                          n_elements * std::mem::size_of::<f32>();
+        let memory_usage = acoustic_field.len() * std::mem::size_of::<f32>()
+            + n_elements * std::mem::size_of::<f32>();
 
         Ok(BenchmarkResult {
             simulation_type: "Transcranial Focused Ultrasound".to_string(),
@@ -525,7 +595,12 @@ impl PerformanceBenchmarkSuite {
 
     /// Benchmark single GPU performance
     #[cfg(feature = "gpu")]
-    fn benchmark_single_gpu(&self, nx: usize, ny: usize, nz: usize) -> KwaversResult<BenchmarkResult> {
+    fn benchmark_single_gpu(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+    ) -> KwaversResult<BenchmarkResult> {
         // GPU-accelerated FDTD benchmark
         let start = Instant::now();
 
@@ -559,7 +634,12 @@ impl PerformanceBenchmarkSuite {
 
     /// Benchmark multi-GPU performance
     #[cfg(feature = "gpu")]
-    fn benchmark_multi_gpu(&self, nx: usize, ny: usize, nz: usize) -> KwaversResult<BenchmarkResult> {
+    fn benchmark_multi_gpu(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+    ) -> KwaversResult<BenchmarkResult> {
         // Multi-GPU domain decomposition benchmark
         let start = Instant::now();
 
@@ -618,7 +698,12 @@ impl PerformanceBenchmarkSuite {
     }
 
     /// Benchmark Monte Carlo dropout uncertainty
-    fn benchmark_monte_carlo_dropout(&self, nx: usize, ny: usize, nz: usize) -> KwaversResult<BenchmarkResult> {
+    fn benchmark_monte_carlo_dropout(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+    ) -> KwaversResult<BenchmarkResult> {
         let start = Instant::now();
 
         let n_samples = 50; // Monte Carlo samples
@@ -632,7 +717,8 @@ impl PerformanceBenchmarkSuite {
             for i in 0..nx {
                 for j in 0..ny {
                     for k in 0..nz {
-                        if rand::random::<f32>() < 0.1 { // 10% dropout
+                        if rand::random::<f32>() < 0.1 {
+                            // 10% dropout
                             prediction[[i, j, k]] = 0.0;
                         }
                     }
@@ -660,7 +746,12 @@ impl PerformanceBenchmarkSuite {
     }
 
     /// Benchmark ensemble methods
-    fn benchmark_ensemble_methods(&self, nx: usize, ny: usize, nz: usize) -> KwaversResult<BenchmarkResult> {
+    fn benchmark_ensemble_methods(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+    ) -> KwaversResult<BenchmarkResult> {
         let start = Instant::now();
 
         let n_models = 10; // Ensemble size
@@ -684,7 +775,8 @@ impl PerformanceBenchmarkSuite {
 
         // Compute ensemble statistics
         let ensemble_mean = self.compute_ensemble_mean(&ensemble_predictions);
-        let ensemble_variance = self.compute_ensemble_variance(&ensemble_predictions, &ensemble_mean);
+        let ensemble_variance =
+            self.compute_ensemble_variance(&ensemble_predictions, &ensemble_mean);
 
         let execution_time = start.elapsed();
         let memory_usage = nx * ny * nz * 4 * n_models;
@@ -701,7 +793,12 @@ impl PerformanceBenchmarkSuite {
     }
 
     /// Benchmark conformal prediction
-    fn benchmark_conformal_prediction(&self, nx: usize, ny: usize, nz: usize) -> KwaversResult<BenchmarkResult> {
+    fn benchmark_conformal_prediction(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+    ) -> KwaversResult<BenchmarkResult> {
         let start = Instant::now();
 
         let n_calibration = 100; // Calibration set size
@@ -724,7 +821,8 @@ impl PerformanceBenchmarkSuite {
         let n_test = 50;
         for _ in 0..n_test {
             let test_prediction = Array3::<f32>::from_elem((nx, ny, nz), rand::random::<f32>());
-            let _interval = self.compute_prediction_interval(&test_prediction, &conformity_scores, 0.9);
+            let _interval =
+                self.compute_prediction_interval(&test_prediction, &conformity_scores, 0.9);
         }
 
         let execution_time = start.elapsed();
@@ -747,21 +845,26 @@ impl PerformanceBenchmarkSuite {
         println!("=====================================");
 
         // Group results by simulation type
-        let mut type_results: std::collections::HashMap<String, Vec<&BenchmarkResult>> = std::collections::HashMap::new();
+        let mut type_results: std::collections::HashMap<String, Vec<&BenchmarkResult>> =
+            std::collections::HashMap::new();
 
         for result in &self.results {
-            type_results.entry(result.simulation_type.clone())
-                       .or_insert(Vec::new())
-                       .push(result);
+            type_results
+                .entry(result.simulation_type.clone())
+                .or_insert(Vec::new())
+                .push(result);
         }
 
         for (sim_type, results) in &type_results {
             println!("\n--- {} ---", sim_type);
 
-            let avg_throughput: f64 = results.iter().map(|r| r.throughput).sum::<f64>() / results.len() as f64;
+            let avg_throughput: f64 =
+                results.iter().map(|r| r.throughput).sum::<f64>() / results.len() as f64;
             let max_throughput = results.iter().map(|r| r.throughput).fold(0.0, f64::max);
-            let avg_memory: f64 = results.iter().map(|r| r.memory_usage as f64).sum::<f64>() / results.len() as f64;
-            let avg_accuracy: f64 = results.iter().map(|r| r.accuracy_metric).sum::<f64>() / results.len() as f64;
+            let avg_memory: f64 =
+                results.iter().map(|r| r.memory_usage as f64).sum::<f64>() / results.len() as f64;
+            let avg_accuracy: f64 =
+                results.iter().map(|r| r.accuracy_metric).sum::<f64>() / results.len() as f64;
 
             println!("  Average Throughput: {:.2} sim/s", avg_throughput);
             println!("  Peak Throughput: {:.2} sim/s", max_throughput);
@@ -770,40 +873,77 @@ impl PerformanceBenchmarkSuite {
 
             // Show scaling with grid size
             println!("  Scaling Analysis:");
-            for result in results.iter().filter(|r| r.grid_size.1 == r.grid_size.0) { // Square grids
+            for result in results.iter().filter(|r| r.grid_size.1 == r.grid_size.0) {
+                // Square grids
                 let grid_points = result.grid_size.0 * result.grid_size.1 * result.grid_size.2;
-                println!("    {:>8} points: {:.2} sim/s ({:.1}ms)",
-                        grid_points, result.throughput, result.execution_time.as_millis());
+                println!(
+                    "    {:>8} points: {:.2} sim/s ({:.1}ms)",
+                    grid_points,
+                    result.throughput,
+                    result.execution_time.as_millis()
+                );
             }
         }
 
         println!("\n=== PERFORMANCE SUMMARY ===");
         println!("Total benchmarks run: {}", self.results.len());
-        println!("Best performing simulation: {}",
-                self.results.iter()
-                    .max_by(|a, b| a.throughput.partial_cmp(&b.throughput).unwrap())
-                    .map(|r| r.simulation_type.as_str())
-                    .unwrap_or("None"));
-        println!("Most memory efficient: {}",
-                self.results.iter()
-                    .min_by(|a, b| a.memory_usage.cmp(&b.memory_usage))
-                    .map(|r| r.simulation_type.as_str())
-                    .unwrap_or("None"));
+        println!(
+            "Best performing simulation: {}",
+            self.results
+                .iter()
+                .max_by(|a, b| a.throughput.partial_cmp(&b.throughput).unwrap())
+                .map(|r| r.simulation_type.as_str())
+                .unwrap_or("None")
+        );
+        println!(
+            "Most memory efficient: {}",
+            self.results
+                .iter()
+                .min_by(|a, b| a.memory_usage.cmp(&b.memory_usage))
+                .map(|r| r.simulation_type.as_str())
+                .unwrap_or("None")
+        );
     }
 
     // Helper methods for benchmark implementations
-    fn update_velocity_fdtd(&self, vx: &mut Array3<f32>, vy: &mut Array3<f32>, vz: &mut Array3<f32>,
-                           p: &Array3<f32>, dt: f64, grid: &Grid, medium: &HomogeneousMedium) {
+    fn update_velocity_fdtd(
+        &self,
+        vx: &mut Array3<f32>,
+        vy: &mut Array3<f32>,
+        vz: &mut Array3<f32>,
+        p: &Array3<f32>,
+        dt: f64,
+        grid: &Grid,
+        medium: &HomogeneousMedium,
+    ) {
         // Simplified FDTD velocity update
     }
 
-    fn update_pressure_fdtd(&self, p: &mut Array3<f32>, vx: &Array3<f32>, vy: &Array3<f32>, vz: &Array3<f32>,
-                           dt: f64, grid: &Grid, medium: &HomogeneousMedium) {
+    fn update_pressure_fdtd(
+        &self,
+        p: &mut Array3<f32>,
+        vx: &Array3<f32>,
+        vy: &Array3<f32>,
+        vz: &Array3<f32>,
+        dt: f64,
+        grid: &Grid,
+        medium: &HomogeneousMedium,
+    ) {
         // Simplified FDTD pressure update
     }
 
-    fn update_pressure_nonlinear(&self, p: &mut Array3<f32>, vx: &Array3<f32>, vy: &Array3<f32>, vz: &Array3<f32>,
-                                dt: f64, grid: &Grid, medium: &HomogeneousMedium, beta: f64, absorption: f64) {
+    fn update_pressure_nonlinear(
+        &self,
+        p: &mut Array3<f32>,
+        vx: &Array3<f32>,
+        vy: &Array3<f32>,
+        vz: &Array3<f32>,
+        dt: f64,
+        grid: &Grid,
+        medium: &HomogeneousMedium,
+        beta: f64,
+        absorption: f64,
+    ) {
         // Simplified nonlinear pressure update with Westervelt terms
     }
 
@@ -841,7 +981,13 @@ impl PerformanceBenchmarkSuite {
         signal.clone()
     }
 
-    fn simulate_transducer_element(&self, field: &mut Array3<f32>, elem: usize, time_step: usize, grid: &Grid) {
+    fn simulate_transducer_element(
+        &self,
+        field: &mut Array3<f32>,
+        elem: usize,
+        time_step: usize,
+        grid: &Grid,
+    ) {
         // Simulate transducer element contribution
     }
 
@@ -863,7 +1009,11 @@ impl PerformanceBenchmarkSuite {
         Array3::zeros((10, 10, 10)) // Placeholder
     }
 
-    fn compute_ensemble_variance(&self, predictions: &[Array3<f32>], mean: &Array3<f32>) -> Array3<f32> {
+    fn compute_ensemble_variance(
+        &self,
+        predictions: &[Array3<f32>],
+        mean: &Array3<f32>,
+    ) -> Array3<f32> {
         // Compute ensemble variance
         Array3::zeros((10, 10, 10)) // Placeholder
     }
@@ -873,7 +1023,12 @@ impl PerformanceBenchmarkSuite {
         0.0 // Placeholder
     }
 
-    fn compute_prediction_interval(&self, prediction: &Array3<f32>, scores: &[f64], confidence: f64) -> (Array3<f32>, Array3<f32>) {
+    fn compute_prediction_interval(
+        &self,
+        prediction: &Array3<f32>,
+        scores: &[f64],
+        confidence: f64,
+    ) -> (Array3<f32>, Array3<f32>) {
         // Compute prediction interval
         (prediction.clone(), prediction.clone()) // Placeholder
     }
@@ -905,8 +1060,3 @@ criterion_group!(
     benchmark_advanced_physics
 );
 criterion_main!(benches);
-
-
-
-
-

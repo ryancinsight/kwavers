@@ -53,8 +53,8 @@ impl Microbubble {
     /// * `shell_viscosity` - Shell viscosity (Pa·s)
     pub fn new(radius: f64, shell_elasticity: f64, shell_viscosity: f64) -> Self {
         Self {
-            radius_eq: radius * 1e-6, // Convert μm to m
-            shell_thickness: radius * 1e-6 * 0.1, // 10% of radius
+            radius_eq: radius * 1e-6,                 // Convert μm to m
+            shell_thickness: radius * 1e-6 * 0.1,     // 10% of radius
             shell_elasticity: shell_elasticity * 1e3, // Convert kPa to Pa
             shell_viscosity,
             polytropic_index: 1.07, // Typical for encapsulated bubbles
@@ -103,7 +103,8 @@ impl Microbubble {
     #[must_use]
     pub fn scattering_cross_section(&self, frequency: f64) -> f64 {
         let _ka = 2.0 * std::f64::consts::PI * frequency * self.radius_eq / 343.0; // k*a
-        let resonance_factor = 1.0 / (1.0 - (frequency / self.resonance_frequency(101325.0, 1000.0)).powi(2)).powi(2);
+        let resonance_factor =
+            1.0 / (1.0 - (frequency / self.resonance_frequency(101325.0, 1000.0)).powi(2)).powi(2);
 
         // Simplified scattering cross-section
         std::f64::consts::PI * self.radius_eq * self.radius_eq * resonance_factor
@@ -221,10 +222,10 @@ impl BubbleDynamics {
     /// Create new bubble dynamics simulator
     pub fn new() -> Self {
         Self {
-            dt: 1e-9, // 1 ns time step
+            dt: 1e-9,                   // 1 ns time step
             ambient_pressure: 101325.0, // Atmospheric pressure
-            liquid_density: 1000.0,      // Water density
-            damping_coefficient: 0.1,    // Empirical damping
+            liquid_density: 1000.0,     // Water density
+            damping_coefficient: 0.1,   // Empirical damping
         }
     }
 
@@ -260,27 +261,32 @@ impl BubbleDynamics {
             let time = i as f64 * self.dt;
 
             // Incident acoustic pressure
-            let p_acoustic = acoustic_pressure * (2.0 * std::f64::consts::PI * frequency * time).sin();
+            let p_acoustic =
+                acoustic_pressure * (2.0 * std::f64::consts::PI * frequency * time).sin();
 
             // Gas pressure (polytropic)
-            let p_gas = self.ambient_pressure *
-                (bubble.radius_eq / radius[i]).powf(bubble.polytropic_index);
+            let p_gas = self.ambient_pressure
+                * (bubble.radius_eq / radius[i]).powf(bubble.polytropic_index);
 
             // Surface tension and shell pressure
             let p_surface = 2.0 * bubble.surface_tension / radius[i];
-            let p_shell = 4.0 * bubble.shell_elasticity * bubble.shell_thickness *
-                          (radius[i] - bubble.radius_eq) / (bubble.radius_eq * bubble.radius_eq);
+            let p_shell = 4.0
+                * bubble.shell_elasticity
+                * bubble.shell_thickness
+                * (radius[i] - bubble.radius_eq)
+                / (bubble.radius_eq * bubble.radius_eq);
 
             // Viscous damping term
             let damping_force = -self.damping_coefficient * radius_dot / radius[i];
 
             // Rayleigh-Plesset equation
             let total_pressure = p_gas + p_surface + p_shell - self.ambient_pressure - p_acoustic;
-            let acceleration = total_pressure / (self.liquid_density * radius[i]) +
-                             damping_force - 1.5 * radius_dot * radius_dot / radius[i];
+            let acceleration = total_pressure / (self.liquid_density * radius[i]) + damping_force
+                - 1.5 * radius_dot * radius_dot / radius[i];
 
             // Verlet integration
-            let radius_new = radius[i] + radius_dot * self.dt + 0.5 * acceleration * self.dt * self.dt;
+            let radius_new =
+                radius[i] + radius_dot * self.dt + 0.5 * acceleration * self.dt * self.dt;
             let acceleration_new = acceleration; // Simplified
 
             radius_dot += 0.5 * (acceleration + acceleration_new) * self.dt;
@@ -289,8 +295,8 @@ impl BubbleDynamics {
                 radius[i + 1] = radius_new;
 
                 // Scattered pressure using linear scattering approximation
-                let volume_change = 4.0/3.0 * std::f64::consts::PI *
-                                  (radius_new.powi(3) - radius[i].powi(3));
+                let volume_change =
+                    4.0 / 3.0 * std::f64::consts::PI * (radius_new.powi(3) - radius[i].powi(3));
                 scattered_pressure[i + 1] = self.liquid_density * volume_change / self.dt;
             }
         }
@@ -334,8 +340,8 @@ impl BubbleDynamics {
         };
 
         // Pressure-dependent nonlinearity
-        let acoustic_parameter = pressure_amplitude * bubble.radius_eq /
-                                (self.ambient_pressure * bubble.shell_elasticity);
+        let acoustic_parameter = pressure_amplitude * bubble.radius_eq
+            / (self.ambient_pressure * bubble.shell_elasticity);
 
         // Empirical nonlinear scattering efficiency
         beta * acoustic_parameter.min(1.0)
@@ -387,7 +393,8 @@ impl BubbleResponse {
         }
 
         let eq_radius = self.radius[0]; // Assume starts at equilibrium
-        self.radius.iter()
+        self.radius
+            .iter()
             .map(|&r| (r - eq_radius).abs())
             .fold(0.0, f64::max)
     }
@@ -435,12 +442,13 @@ mod tests {
         let dynamics = BubbleDynamics::new();
         let bubble = Microbubble::definit_y();
 
-        let response = dynamics.simulate_oscillation(
-            &bubble,
-            50_000.0, // 50 kPa
-            2e6,       // 2 MHz
-            1e-6,      // 1 μs
-        ).unwrap();
+        let response = dynamics
+            .simulate_oscillation(
+                &bubble, 50_000.0, // 50 kPa
+                2e6,      // 2 MHz
+                1e-6,     // 1 μs
+            )
+            .unwrap();
 
         assert!(!response.time.is_empty());
         assert!(!response.radius.is_empty());
@@ -457,9 +465,8 @@ mod tests {
         let bubble = Microbubble::sono_vue();
 
         let efficiency = dynamics.nonlinear_scattering_efficiency(
-            &bubble,
-            100_000.0, // 100 kPa
-            3e6,        // 3 MHz
+            &bubble, 100_000.0, // 100 kPa
+            3e6,       // 3 MHz
         );
 
         assert!(efficiency >= 0.0 && efficiency <= 1.0);

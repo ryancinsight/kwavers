@@ -90,20 +90,22 @@ impl RateLimiter {
         let mut states = self.states.write();
         let now = Instant::now();
 
-        let user_limit = states.entry(user_key.clone()).or_insert_with(|| UserRateLimit {
-            tokens: config.requests_per_window as f64,
-            last_refill: now,
-            reset_time: chrono::Utc::now() + chrono::Duration::seconds(config.window_seconds as i64),
-        });
+        let user_limit = states
+            .entry(user_key.clone())
+            .or_insert_with(|| UserRateLimit {
+                tokens: config.requests_per_window as f64,
+                last_refill: now,
+                reset_time: chrono::Utc::now()
+                    + chrono::Duration::seconds(config.window_seconds as i64),
+            });
 
         // Refill tokens based on elapsed time
         let elapsed = now.duration_since(user_limit.last_refill);
         let refill_rate = config.requests_per_window as f64 / config.window_seconds as f64;
         let tokens_to_add = elapsed.as_secs_f64() * refill_rate;
 
-        user_limit.tokens = (user_limit.tokens + tokens_to_add).min(
-            (config.requests_per_window + config.burst_capacity) as f64
-        );
+        user_limit.tokens = (user_limit.tokens + tokens_to_add)
+            .min((config.requests_per_window + config.burst_capacity) as f64);
         user_limit.last_refill = now;
 
         // Check if request can be allowed
@@ -114,15 +116,22 @@ impl RateLimiter {
             // Calculate reset time
             let tokens_needed = 1.0 - user_limit.tokens;
             let wait_seconds = tokens_needed / refill_rate;
-            user_limit.reset_time = chrono::Utc::now() + chrono::Duration::seconds(wait_seconds as i64);
+            user_limit.reset_time =
+                chrono::Utc::now() + chrono::Duration::seconds(wait_seconds as i64);
 
             Err(APIError {
                 error: APIErrorType::RateLimitExceeded,
-                message: format!("Rate limit exceeded for endpoint '{}'. Try again in {:.1}s", endpoint, wait_seconds),
+                message: format!(
+                    "Rate limit exceeded for endpoint '{}'. Try again in {:.1}s",
+                    endpoint, wait_seconds
+                ),
                 details: Some(HashMap::from([
                     ("endpoint".to_string(), serde_json::json!(endpoint)),
                     ("user_id".to_string(), serde_json::json!(user_id)),
-                    ("reset_in_seconds".to_string(), serde_json::json!(wait_seconds))
+                    (
+                        "reset_in_seconds".to_string(),
+                        serde_json::json!(wait_seconds),
+                    ),
                 ])),
             })
         }
@@ -164,7 +173,8 @@ impl RateLimiter {
             RateLimitInfo {
                 limit: config.requests_per_window as usize,
                 remaining: config.requests_per_window as usize,
-                reset_time: chrono::Utc::now() + chrono::Duration::seconds(config.window_seconds as i64),
+                reset_time: chrono::Utc::now()
+                    + chrono::Duration::seconds(config.window_seconds as i64),
             }
         }
     }

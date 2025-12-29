@@ -7,11 +7,9 @@ use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 use std::f64::consts::PI;
 
-use kwavers::sensor::adaptive_beamforming::{
-    MinimumVariance, MUSIC, SourceEstimationCriterion,
-};
 use kwavers::sensor::adaptive_beamforming::adaptive::LCMV;
 use kwavers::sensor::adaptive_beamforming::conventional::BeamformingAlgorithm;
+use kwavers::sensor::adaptive_beamforming::{MinimumVariance, SourceEstimationCriterion, MUSIC};
 
 /// Create a simple test covariance matrix
 fn create_test_covariance(n: usize) -> Array2<Complex64> {
@@ -122,17 +120,11 @@ mod tests {
         let num_snapshots = 100;
 
         // Test AIC vs MDL
-        let music_aic = MUSIC::new_with_source_estimation(
-            &cov,
-            num_snapshots,
-            SourceEstimationCriterion::AIC,
-        );
+        let music_aic =
+            MUSIC::new_with_source_estimation(&cov, num_snapshots, SourceEstimationCriterion::AIC);
 
-        let music_mdl = MUSIC::new_with_source_estimation(
-            &cov,
-            num_snapshots,
-            SourceEstimationCriterion::MDL,
-        );
+        let music_mdl =
+            MUSIC::new_with_source_estimation(&cov, num_snapshots, SourceEstimationCriterion::MDL);
 
         // Should estimate reasonable number of sources (0 to n-1)
         assert!(music_aic.num_sources < n);
@@ -155,6 +147,10 @@ mod tests {
         assert!(condition_number.is_finite());
 
         // For well-conditioned synthetic data, should be reasonable
-        assert!(condition_number < 1000.0, "Condition number too high: {}", condition_number);
+        assert!(
+            condition_number < 1000.0,
+            "Condition number too high: {}",
+            condition_number
+        );
     }
 }

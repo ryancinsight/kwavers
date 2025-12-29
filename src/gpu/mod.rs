@@ -6,6 +6,7 @@
 pub mod backend;
 pub mod buffer;
 pub mod buffers;
+#[cfg(feature = "pinn")]
 pub mod burn_accelerator;
 pub mod compute;
 pub mod compute_kernels;
@@ -14,6 +15,7 @@ pub mod device;
 pub mod fdtd;
 pub mod kernels;
 pub mod kspace;
+pub mod memory;
 pub mod multi_gpu;
 pub mod pipeline;
 pub mod shaders;
@@ -21,13 +23,15 @@ pub mod shaders;
 pub use backend::GpuBackend;
 pub use buffer::{BufferUsage, GpuBuffer as GpuBufferV2};
 pub use buffers::{BufferManager, GpuBuffer};
+#[cfg(feature = "pinn")]
 pub use burn_accelerator::BurnGpuAccelerator;
 pub use compute::GpuCompute;
 pub use compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
 pub use device::{DeviceInfo, GpuDevice};
 pub use fdtd::FdtdGpu;
 pub use kspace::KSpaceGpu;
-pub use multi_gpu::{MultiGpuContext, GpuAffinity};
+pub use memory::{MemoryPoolType, UnifiedMemoryManager};
+pub use multi_gpu::{GpuAffinity, MultiGpuContext};
 pub use pipeline::{ComputePipeline, PipelineLayout};
 pub use shaders::neural_network::NeuralNetworkShader;
 

@@ -8,7 +8,6 @@ use std::collections::HashMap;
 #[cfg(feature = "pinn")]
 use std::sync::Arc;
 
-
 /// Model deployment data for cloud storage
 #[derive(Debug, Clone)]
 pub struct ModelDeploymentData {
@@ -171,30 +170,30 @@ impl CloudPINNService {
 
         // Create deployment based on provider
         let handle = match self.provider {
-            CloudProvider::AWS => {
-                self.deploy_to_aws(model, &deployment_config).await?
-            }
-            CloudProvider::GCP => {
-                self.deploy_to_gcp(model, &deployment_config).await?
-            }
-            CloudProvider::Azure => {
-                self.deploy_to_azure(model, &deployment_config).await?
-            }
+            CloudProvider::AWS => self.deploy_to_aws(model, &deployment_config).await?,
+            CloudProvider::GCP => self.deploy_to_gcp(model, &deployment_config).await?,
+            CloudProvider::Azure => self.deploy_to_azure(model, &deployment_config).await?,
         };
 
         let handle = Arc::new(handle);
-        self.deployments.insert(handle.id.clone(), (*handle).clone());
+        self.deployments
+            .insert(handle.id.clone(), (*handle).clone());
 
         Ok(handle)
     }
 
     /// Get deployment status
-    pub async fn get_deployment_status(&self, deployment_id: &str) -> KwaversResult<DeploymentStatus> {
+    pub async fn get_deployment_status(
+        &self,
+        deployment_id: &str,
+    ) -> KwaversResult<DeploymentStatus> {
         match self.deployments.get(deployment_id) {
             Some(handle) => Ok(handle.status.clone()),
-            None => Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: format!("deployment {}", deployment_id),
-            })),
+            None => Err(KwaversError::System(
+                crate::error::SystemError::ResourceUnavailable {
+                    resource: format!("deployment {}", deployment_id),
+                },
+            )),
         }
     }
 
@@ -206,17 +205,21 @@ impl CloudPINNService {
     ) -> KwaversResult<()> {
         // Check if deployment exists first
         if !self.deployments.contains_key(deployment_id) {
-            return Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: format!("deployment {}", deployment_id),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::ResourceUnavailable {
+                    resource: format!("deployment {}", deployment_id),
+                },
+            ));
         }
 
         // Validate target instances
         if target_instances == 0 {
-            return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "target_instances".to_string(),
-                reason: "Must specify at least 1 instance".to_string(),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::InvalidConfiguration {
+                    parameter: "target_instances".to_string(),
+                    reason: "Must specify at least 1 instance".to_string(),
+                },
+            ));
         }
 
         // Update status to scaling
@@ -227,16 +230,17 @@ impl CloudPINNService {
         // Perform provider-specific scaling for cloud deployment
         #[cfg(feature = "pinn")]
         {
+            let config = self.config.clone();
             if let Some(handle) = self.deployments.get_mut(deployment_id) {
                 match self.provider {
                     CloudProvider::AWS => {
-                        self.scale_aws_deployment(handle, target_instances).await?;
+                        Self::scale_aws_deployment(&config, handle, target_instances).await?;
                     }
                     CloudProvider::GCP => {
-                        self.scale_gcp_deployment(handle, target_instances).await?;
+                        Self::scale_gcp_deployment(&config, handle, target_instances).await?;
                     }
                     CloudProvider::Azure => {
-                        self.scale_azure_deployment(handle, target_instances).await?;
+                        Self::scale_azure_deployment(&config, handle, target_instances).await?;
                     }
                 }
             }
@@ -252,10 +256,11 @@ impl CloudPINNService {
 
     /// Terminate deployment
     pub async fn terminate_deployment(&mut self, deployment_id: &str) -> KwaversResult<()> {
-        let mut handle = self.deployments.remove(deployment_id)
-            .ok_or_else(|| KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+        let mut handle = self.deployments.remove(deployment_id).ok_or_else(|| {
+            KwaversError::System(crate::error::SystemError::ResourceUnavailable {
                 resource: format!("deployment {}", deployment_id),
-            }))?;
+            })
+        })?;
 
         // Update status to terminating
         handle.status = DeploymentStatus::Terminating;
@@ -278,36 +283,60 @@ impl CloudPINNService {
     }
 
     /// Load provider-specific configuration
-    async fn load_provider_config(provider: &CloudProvider) -> KwaversResult<HashMap<String, String>> {
+    async fn load_provider_config(
+        provider: &CloudProvider,
+    ) -> KwaversResult<HashMap<String, String>> {
         let mut config = HashMap::new();
 
         // Load configuration from environment variables or config files
         match provider {
             CloudProvider::AWS => {
-                config.insert("access_key".to_string(),
-                    std::env::var("AWS_ACCESS_KEY_ID").unwrap_or_default());
-                config.insert("secret_key".to_string(),
-                    std::env::var("AWS_SECRET_ACCESS_KEY").unwrap_or_default());
-                config.insert("region".to_string(),
-                    std::env::var("AWS_REGION").unwrap_or("us-east-1".to_string()));
-                config.insert("execution_role_arn".to_string(),
-                    std::env::var("AWS_SAGEMAKER_EXECUTION_ROLE_ARN").unwrap_or("arn:aws:iam::123456789012:role/SageMakerExecutionRole".to_string()));
+                config.insert(
+                    "access_key".to_string(),
+                    std::env::var("AWS_ACCESS_KEY_ID").unwrap_or_default(),
+                );
+                config.insert(
+                    "secret_key".to_string(),
+                    std::env::var("AWS_SECRET_ACCESS_KEY").unwrap_or_default(),
+                );
+                config.insert(
+                    "region".to_string(),
+                    std::env::var("AWS_REGION").unwrap_or("us-east-1".to_string()),
+                );
+                config.insert(
+                    "execution_role_arn".to_string(),
+                    std::env::var("AWS_SAGEMAKER_EXECUTION_ROLE_ARN").unwrap_or(
+                        "arn:aws:iam::123456789012:role/SageMakerExecutionRole".to_string(),
+                    ),
+                );
             }
             CloudProvider::GCP => {
-                config.insert("project_id".to_string(),
-                    std::env::var("GOOGLE_CLOUD_PROJECT").unwrap_or_default());
-                config.insert("credentials_path".to_string(),
-                    std::env::var("GOOGLE_APPLICATION_CREDENTIALS").unwrap_or_default());
+                config.insert(
+                    "project_id".to_string(),
+                    std::env::var("GOOGLE_CLOUD_PROJECT").unwrap_or_default(),
+                );
+                config.insert(
+                    "credentials_path".to_string(),
+                    std::env::var("GOOGLE_APPLICATION_CREDENTIALS").unwrap_or_default(),
+                );
             }
             CloudProvider::Azure => {
-                config.insert("subscription_id".to_string(),
-                    std::env::var("AZURE_SUBSCRIPTION_ID").unwrap_or_default());
-                config.insert("client_id".to_string(),
-                    std::env::var("AZURE_CLIENT_ID").unwrap_or_default());
-                config.insert("client_secret".to_string(),
-                    std::env::var("AZURE_CLIENT_SECRET").unwrap_or_default());
-                config.insert("tenant_id".to_string(),
-                    std::env::var("AZURE_TENANT_ID").unwrap_or_default());
+                config.insert(
+                    "subscription_id".to_string(),
+                    std::env::var("AZURE_SUBSCRIPTION_ID").unwrap_or_default(),
+                );
+                config.insert(
+                    "client_id".to_string(),
+                    std::env::var("AZURE_CLIENT_ID").unwrap_or_default(),
+                );
+                config.insert(
+                    "client_secret".to_string(),
+                    std::env::var("AZURE_CLIENT_SECRET").unwrap_or_default(),
+                );
+                config.insert(
+                    "tenant_id".to_string(),
+                    std::env::var("AZURE_TENANT_ID").unwrap_or_default(),
+                );
             }
         }
 
@@ -318,24 +347,30 @@ impl CloudPINNService {
     #[allow(dead_code)]
     fn validate_config(&self, config: &DeploymentConfig) -> KwaversResult<()> {
         if config.provider != self.provider {
-            return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "provider".to_string(),
-                reason: "Provider mismatch".to_string(),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::InvalidConfiguration {
+                    parameter: "provider".to_string(),
+                    reason: "Provider mismatch".to_string(),
+                },
+            ));
         }
 
         if config.gpu_count == 0 {
-            return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "gpu_count".to_string(),
-                reason: "Must specify at least 1 GPU".to_string(),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::InvalidConfiguration {
+                    parameter: "gpu_count".to_string(),
+                    reason: "Must specify at least 1 GPU".to_string(),
+                },
+            ));
         }
 
         if config.memory_gb == 0 {
-            return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "memory_gb".to_string(),
-                reason: "Must specify memory allocation".to_string(),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::InvalidConfiguration {
+                    parameter: "memory_gb".to_string(),
+                    reason: "Must specify memory allocation".to_string(),
+                },
+            ));
         }
 
         Ok(())
@@ -347,32 +382,21 @@ impl CloudPINNService {
         &self,
         model: &crate::ml::pinn::BurnPINN2DWave<B>,
     ) -> KwaversResult<ModelDeploymentData> {
-        use burn::record::{FullPrecisionSettings, Recorder};
-        use std::io::Cursor;
+        use burn::module::Module;
+        use burn::record::{BinBytesRecorder, FullPrecisionSettings, Recorder};
 
         // Generate unique model ID for this deployment
         let model_id = uuid::Uuid::new_v4().to_string();
         let model_key = format!("kwavers-pinn-{}.bin", model_id);
 
-        // Serialize the Burn model using FullPrecisionRecorder
-        let recorder = burn::record::BinFileRecorder::<FullPrecisionSettings>::new();
-        let mut buffer = Vec::new();
-        let mut cursor = Cursor::new(&mut buffer);
-
-        // Record the model state
-        model
-            .visit(&mut |module: &burn::nn::Linear<B>, _name: &str| {
-                recorder.record(module, &mut cursor).map_err(|e| {
-                    KwaversError::SerializationError {
-                        format: "Burn model".to_string(),
-                        reason: format!("Failed to serialize model: {}", e),
-                    }
-                })
+        let recorder = BinBytesRecorder::<FullPrecisionSettings, Vec<u8>>::default();
+        let model_record = model.clone().into_record();
+        let buffer = recorder.record(model_record, ()).map_err(|e| {
+            KwaversError::Data(crate::error::DataError::FormatError {
+                format: "burn model".to_string(),
+                reason: format!("Failed to serialize model: {e}"),
             })
-            .map_err(|e| KwaversError::SerializationError {
-                format: "Burn model".to_string(),
-                reason: format!("Failed to visit model modules: {:?}", e),
-            })?;
+        })?;
 
         let model_size_bytes = buffer.len();
 
@@ -399,7 +423,10 @@ impl CloudPINNService {
                 let container = "models";
                 let key = &model_key;
                 // In practice, this would use Azure SDK to upload buffer to blob storage
-                format!("https://{}.blob.core.windows.net/{}/{}", account, container, key)
+                format!(
+                    "https://{}.blob.core.windows.net/{}/{}",
+                    account, container, key
+                )
             }
         };
 
@@ -417,11 +444,11 @@ impl CloudPINNService {
         config: &DeploymentConfig,
     ) -> KwaversResult<DeploymentHandle> {
         use aws_config::BehaviorVersion;
-        use aws_sdk_sagemaker::{types::ProductionVariant, Client as SageMakerClient};
-        use aws_sdk_lambda::Client as LambdaClient;
-        use aws_sdk_ec2::Client as EC2Client;
         use aws_sdk_autoscaling::Client as AutoScalingClient;
+        use aws_sdk_ec2::Client as EC2Client;
         use aws_sdk_elasticloadbalancingv2::Client as ELBClient;
+        use aws_sdk_lambda::Client as LambdaClient;
+        use aws_sdk_sagemaker::{types::ProductionVariant, Client as SageMakerClient};
 
         // Load AWS configuration
         let shared_config = aws_config::defaults(BehaviorVersion::v2023_11_09())
@@ -448,10 +475,12 @@ impl CloudPINNService {
             .create_model()
             .model_name(&model_name)
             .execution_role_arn(&self.config["execution_role_arn"])
-            .primary_container(|c| {
-                c.image("763104351884.dkr.ecr.us-east-1.amazonaws.com/pytorch-inference:1.12.0-cpu-py38-ubuntu20.04-sagemaker")
+            .primary_container(
+                aws_sdk_sagemaker::types::ContainerDefinition::builder()
+                    .image("763104351884.dkr.ecr.us-east-1.amazonaws.com/pytorch-inference:1.12.0-cpu-py38-ubuntu20.04-sagemaker")
                     .model_data_url(&model_data.model_url)
-            })
+                    .build()
+            )
             .send()
             .await
             .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
@@ -465,13 +494,13 @@ impl CloudPINNService {
             .variant_name("primary")
             .model_name(&model_name)
             .initial_instance_count(config.auto_scaling.min_instances as i32)
-            .instance_type(config.instance_type.clone())
+            .instance_type(
+                aws_sdk_sagemaker::types::ProductionVariantInstanceType::from(
+                    config.instance_type.as_str(),
+                ),
+            )
             .initial_variant_weight(1.0)
-            .build()
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ConfigurationError {
-                parameter: "production_variant".to_string(),
-                reason: e.to_string(),
-            }))?;
+            .build();
 
         sagemaker_client
             .create_endpoint_config()
@@ -479,10 +508,12 @@ impl CloudPINNService {
             .production_variants(production_variant)
             .send()
             .await
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "AWS SageMaker".to_string(),
-                error: e.to_string(),
-            }))?;
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                    service: "AWS SageMaker".to_string(),
+                    error: e.to_string(),
+                })
+            })?;
 
         // Create SageMaker endpoint
         let endpoint_name = format!("kwavers-pinn-endpoint-{}", deployment_id);
@@ -492,27 +523,34 @@ impl CloudPINNService {
             .endpoint_config_name(&endpoint_config_name)
             .send()
             .await
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "AWS SageMaker".to_string(),
-                error: e.to_string(),
-            }))?;
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                    service: "AWS SageMaker".to_string(),
+                    error: e.to_string(),
+                })
+            })?;
 
         // Create Application Load Balancer for the endpoint
         let load_balancer = elb_client
             .create_load_balancer()
             .name(format!("kwavers-pinn-alb-{}", deployment_id))
-            .subnets("subnet-12345678", "subnet-87654321") // Would be configured properly
+            .subnets("subnet-12345678") // Would be configured properly
+            .subnets("subnet-87654321") // Would be configured properly
             .security_groups("sg-12345678") // Would be configured properly
-            .scheme(aws_sdk_elasticloadbalancingv2::types::LoadBalancerScheme::InternetFacing)
+            .scheme(aws_sdk_elasticloadbalancingv2::types::LoadBalancerSchemeEnum::InternetFacing)
             .send()
             .await
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "AWS ELB".to_string(),
-                error: e.to_string(),
-            }))?;
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                    service: "AWS ELB".to_string(),
+                    error: e.to_string(),
+                })
+            })?;
 
-        let endpoint_url = format!("https://{}.sagemaker.{}.amazonaws.com",
-            endpoint_name, config.region);
+        let endpoint_url = format!(
+            "https://{}.sagemaker.{}.amazonaws.com",
+            endpoint_name, config.region
+        );
 
         Ok(DeploymentHandle {
             id: deployment_id,
@@ -536,36 +574,21 @@ impl CloudPINNService {
         model: &crate::ml::pinn::BurnPINN2DWave<B>,
         config: &DeploymentConfig,
     ) -> KwaversResult<DeploymentHandle> {
-        use google_cloud_aiplatform::client::Client as VertexClient;
-        use google_cloud_functions::client::Client as CloudFunctionsClient;
-
         // Generate unique deployment ID
         let deployment_id = uuid::Uuid::new_v4().to_string();
 
         // Serialize model for deployment
         let model_data = self.serialize_model_for_deployment(model).await?;
 
-        // Initialize GCP clients for cloud integration
-        // Full implementation uses proper GCP authentication and service account credentials
-        let vertex_client = VertexClient::new().await
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "Google Cloud Vertex AI".to_string(),
-                error: e.to_string(),
-            }))?;
-
-        let functions_client = CloudFunctionsClient::new().await
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "Google Cloud Functions".to_string(),
-                error: e.to_string(),
-            }))?;
-
         // Create Vertex AI endpoint
         let endpoint_name = format!("kwavers-pinn-endpoint-{}", deployment_id);
         let project_id = &self.config["project_id"];
 
         // Deploy model to Vertex AI with proper endpoint configuration
-        let endpoint_url = format!("https://{}-{}.aiplatform.googleapis.com/v1/projects/{}/locations/{}/endpoints/{}",
-            config.region, "aiplatform", project_id, config.region, endpoint_name);
+        let endpoint_url = format!(
+            "https://{}-{}.aiplatform.googleapis.com/v1/projects/{}/locations/{}/endpoints/{}",
+            config.region, "aiplatform", project_id, config.region, endpoint_name
+        );
 
         Ok(DeploymentHandle {
             id: deployment_id,
@@ -589,22 +612,11 @@ impl CloudPINNService {
         model: &crate::ml::pinn::BurnPINN2DWave<B>,
         config: &DeploymentConfig,
     ) -> KwaversResult<DeploymentHandle> {
-        use azure_functions::codegen::Function;
-        use azure_ai::client::Client as AzureAIClient;
-
         // Generate unique deployment ID
         let deployment_id = uuid::Uuid::new_v4().to_string();
 
         // Serialize model for deployment
         let model_data = self.serialize_model_for_deployment(model).await?;
-
-        // Initialize Azure ML clients for cloud deployment
-        // Full implementation uses proper Azure authentication and service principal credentials
-        let ai_client = AzureAIClient::new(&self.config["subscription_id"])
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "Azure AI".to_string(),
-                error: e.to_string(),
-            }))?;
 
         // Create Azure Machine Learning endpoint
         let endpoint_name = format!("kwavers-pinn-endpoint-{}", deployment_id);
@@ -612,8 +624,7 @@ impl CloudPINNService {
         let workspace_name = "kwavers-ml-workspace"; // Would be configured properly
 
         // Deploy model to Azure ML with proper endpoint configuration
-        let endpoint_url = format!("https://{}.azureml.ms/score",
-            endpoint_name);
+        let endpoint_url = format!("https://{}.azureml.ms/score", endpoint_name);
 
         Ok(DeploymentHandle {
             id: deployment_id,
@@ -632,14 +643,18 @@ impl CloudPINNService {
     }
 
     #[cfg(all(feature = "pinn", feature = "api"))]
-    async fn scale_aws_deployment(&self, handle: &mut DeploymentHandle, target_instances: usize) -> KwaversResult<()> {
+    async fn scale_aws_deployment(
+        config: &HashMap<String, String>,
+        handle: &mut DeploymentHandle,
+        target_instances: usize,
+    ) -> KwaversResult<()> {
         use aws_config::BehaviorVersion;
         use aws_sdk_applicationautoscaling::Client as AutoScalingClient;
         use aws_sdk_sagemaker::Client as SageMakerClient;
 
         // Load AWS configuration
         let shared_config = aws_config::defaults(BehaviorVersion::v2023_11_09())
-            .region(aws_config::Region::new(self.config["region"].clone()))
+            .region(aws_config::Region::new(config["region"].clone()))
             .load()
             .await;
 
@@ -653,10 +668,12 @@ impl CloudPINNService {
             .split("https://")
             .nth(1)
             .and_then(|s| s.split('.').next())
-            .ok_or_else(|| KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "endpoint".to_string(),
-                reason: "Invalid endpoint URL format".to_string(),
-            }))?;
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "endpoint".to_string(),
+                    reason: "Invalid endpoint URL format".to_string(),
+                })
+            })?;
 
         // Update SageMaker endpoint configuration with new instance count
         let endpoint_config_name = format!("{}-config", endpoint_name);
@@ -667,10 +684,12 @@ impl CloudPINNService {
             .endpoint_config_name(&endpoint_config_name)
             .send()
             .await
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "AWS SageMaker".to_string(),
-                error: e.to_string(),
-            }))?;
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                    service: "AWS SageMaker".to_string(),
+                    error: e.to_string(),
+                })
+            })?;
 
         // Update production variant with new instance count
         if let Some(variants) = current_config.production_variants {
@@ -681,10 +700,12 @@ impl CloudPINNService {
                     .endpoint_name(endpoint_name)
                     .send()
                     .await
-                    .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                        service: "AWS SageMaker".to_string(),
-                        error: e.to_string(),
-                    }))?;
+                    .map_err(|e| {
+                        KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                            service: "AWS SageMaker".to_string(),
+                            error: e.to_string(),
+                        })
+                    })?;
 
                 // Update metrics
                 if let Some(metrics) = &mut handle.metrics {
@@ -697,80 +718,40 @@ impl CloudPINNService {
     }
 
     #[cfg(feature = "pinn")]
-    async fn scale_gcp_deployment(&self, handle: &mut DeploymentHandle, target_instances: usize) -> KwaversResult<()> {
-        use google_cloud_aiplatform::client::Client as VertexClient;
-
-        // Initialize GCP Vertex AI client
-        let vertex_client = VertexClient::new().await
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "Google Cloud Vertex AI".to_string(),
-                error: e.to_string(),
-            }))?;
-
-        // Extract endpoint information from handle
-        let endpoint_url = &handle.endpoint;
-        // Parse endpoint URL to get project, location, and endpoint name
-        // Format: https://{region}-aiplatform.googleapis.com/v1/projects/{project}/locations/{region}/endpoints/{endpoint}
-        let url_parts: Vec<&str> = endpoint_url.split('/').collect();
-        if url_parts.len() < 8 {
-            return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "endpoint".to_string(),
-                reason: "Invalid GCP endpoint URL format".to_string(),
-            }));
-        }
-
-        let project_id = url_parts[6];
-        let location = url_parts[8];
-        let endpoint_name = url_parts[10];
-
-        // Update endpoint with new instance configuration
-        // In practice, this would call Vertex AI APIs to scale the endpoint
-        // For now, update local metrics
-        if let Some(metrics) = &mut handle.metrics {
-            metrics.instance_count = target_instances;
-        }
-
-        Ok(())
+    async fn scale_gcp_deployment(
+        _config: &HashMap<String, String>,
+        _handle: &mut DeploymentHandle,
+        _target_instances: usize,
+    ) -> KwaversResult<()> {
+        Err(KwaversError::System(
+            crate::error::SystemError::FeatureNotAvailable {
+                feature: "GCP Vertex AI scaling".to_string(),
+                reason: "GCP scaling requires a Vertex AI client dependency that is not enabled"
+                    .to_string(),
+            },
+        ))
     }
 
     #[cfg(feature = "pinn")]
-    async fn scale_azure_deployment(&self, handle: &mut DeploymentHandle, target_instances: usize) -> KwaversResult<()> {
-        use azure_ai::client::Client as AzureAIClient;
-
-        // Initialize Azure AI client
-        let ai_client = AzureAIClient::new(&self.config["subscription_id"])
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "Azure AI".to_string(),
-                error: e.to_string(),
-            }))?;
-
-        // Extract endpoint information from handle
-        let endpoint_url = &handle.endpoint;
-        // Parse Azure ML endpoint URL
-        let endpoint_name = endpoint_url
-            .split("https://")
-            .nth(1)
-            .and_then(|s| s.split('.').next())
-            .ok_or_else(|| KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "endpoint".to_string(),
-                reason: "Invalid Azure endpoint URL format".to_string(),
-            }))?;
-
-        // Update Azure ML endpoint with new instance count
-        // In practice, this would call Azure ML APIs to scale the endpoint
-        // For now, update local metrics
-        if let Some(metrics) = &mut handle.metrics {
-            metrics.instance_count = target_instances;
-        }
-
-        Ok(())
+    async fn scale_azure_deployment(
+        _config: &HashMap<String, String>,
+        _handle: &mut DeploymentHandle,
+        _target_instances: usize,
+    ) -> KwaversResult<()> {
+        Err(KwaversError::System(
+            crate::error::SystemError::FeatureNotAvailable {
+                feature: "Azure ML scaling".to_string(),
+                reason: "Azure scaling requires an Azure AI client dependency that is not enabled"
+                    .to_string(),
+            },
+        ))
     }
 
     #[cfg(all(feature = "pinn", feature = "api"))]
     async fn terminate_aws_deployment(&self, handle: &DeploymentHandle) -> KwaversResult<()> {
         use aws_config::BehaviorVersion;
-        use aws_sdk_sagemaker::Client as SageMakerClient;
         use aws_sdk_elasticloadbalancingv2::Client as ELBClient;
+        use aws_sdk_sagemaker::Client as SageMakerClient;
 
         // Load AWS configuration
         let shared_config = aws_config::defaults(BehaviorVersion::v2023_11_09())
@@ -788,10 +769,12 @@ impl CloudPINNService {
             .split("https://")
             .nth(1)
             .and_then(|s| s.split('.').next())
-            .ok_or_else(|| KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "endpoint".to_string(),
-                reason: "Invalid endpoint URL format".to_string(),
-            }))?;
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "endpoint".to_string(),
+                    reason: "Invalid endpoint URL format".to_string(),
+                })
+            })?;
 
         // Delete SageMaker endpoint
         sagemaker_client
@@ -799,10 +782,12 @@ impl CloudPINNService {
             .endpoint_name(endpoint_name)
             .send()
             .await
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "AWS SageMaker".to_string(),
-                error: e.to_string(),
-            }))?;
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                    service: "AWS SageMaker".to_string(),
+                    error: e.to_string(),
+                })
+            })?;
 
         // Delete endpoint configuration
         let endpoint_config_name = format!("{}-config", endpoint_name);
@@ -811,10 +796,12 @@ impl CloudPINNService {
             .endpoint_config_name(&endpoint_config_name)
             .send()
             .await
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "AWS SageMaker".to_string(),
-                error: e.to_string(),
-            }))?;
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                    service: "AWS SageMaker".to_string(),
+                    error: e.to_string(),
+                })
+            })?;
 
         // Delete model
         let model_name = format!("kwavers-pinn-{}", handle.id);
@@ -823,55 +810,78 @@ impl CloudPINNService {
             .model_name(&model_name)
             .send()
             .await
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "AWS SageMaker".to_string(),
-                error: e.to_string(),
-            }))?;
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                    service: "AWS SageMaker".to_string(),
+                    error: e.to_string(),
+                })
+            })?;
 
         // Delete load balancer (if it exists)
         let load_balancer_name = format!("kwavers-pinn-alb-{}", handle.id);
-        let _ = elb_client
-            .delete_load_balancer()
-            .name(&load_balancer_name)
+        if let Ok(lb_response) = elb_client
+            .describe_load_balancers()
+            .names(load_balancer_name)
             .send()
-            .await; // Ignore errors for load balancer deletion
+            .await
+        {
+            if let Some(lb) = lb_response.load_balancers().first() {
+                if let Some(lb_arn) = lb.load_balancer_arn() {
+                    let _ = elb_client
+                        .delete_load_balancer()
+                        .load_balancer_arn(lb_arn)
+                        .send()
+                        .await;
+                }
+            }
+        }
 
         Ok(())
     }
 
     #[cfg(feature = "pinn")]
     async fn terminate_gcp_deployment(&self, handle: &DeploymentHandle) -> KwaversResult<()> {
-        use google_cloud_aiplatform::client::Client as VertexClient;
-
-        // Initialize GCP Vertex AI client
-        let vertex_client = VertexClient::new().await
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "Google Cloud Vertex AI".to_string(),
-                error: e.to_string(),
-            }))?;
-
         // Extract endpoint information from handle
         let endpoint_url = &handle.endpoint;
-        // Parse endpoint URL to get project, location, and endpoint name
         let url_parts: Vec<&str> = endpoint_url.split('/').collect();
-        if url_parts.len() < 8 {
-            return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "endpoint".to_string(),
-                reason: "Invalid GCP endpoint URL format".to_string(),
-            }));
-        }
-
-        let project_id = url_parts[6];
-        let location = url_parts[8];
-        let endpoint_name = url_parts[10];
+        let project_id = url_parts
+            .iter()
+            .position(|&p| p == "projects")
+            .and_then(|i| url_parts.get(i + 1).copied())
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "endpoint".to_string(),
+                    reason: "Missing GCP project in endpoint URL".to_string(),
+                })
+            })?;
+        let location = url_parts
+            .iter()
+            .position(|&p| p == "locations")
+            .and_then(|i| url_parts.get(i + 1).copied())
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "endpoint".to_string(),
+                    reason: "Missing GCP location in endpoint URL".to_string(),
+                })
+            })?;
+        let endpoint_name = url_parts
+            .iter()
+            .position(|&p| p == "endpoints")
+            .and_then(|i| url_parts.get(i + 1).copied())
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "endpoint".to_string(),
+                    reason: "Missing GCP endpoint name in endpoint URL".to_string(),
+                })
+            })?;
 
         // Delete Vertex AI endpoint using Google Cloud AI Platform APIs
         // Literature: Google Cloud AI Platform documentation
 
         // Construct endpoint deletion request
         let delete_url = format!(
-            "https://us-central1-aiplatform.googleapis.com/v1/projects/{}/locations/us-central1/endpoints/{}",
-            self.config["project_id"], endpoint_name
+            "https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/endpoints/{}",
+            location, project_id, location, endpoint_name
         );
 
         // Create HTTP client for API call
@@ -883,18 +893,25 @@ impl CloudPINNService {
             .bearer_auth(&self.config["access_token"])
             .send()
             .await
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "Google Vertex AI".to_string(),
-                error: format!("Failed to delete endpoint: {}", e),
-            }))?;
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                    service: "Google Vertex AI".to_string(),
+                    error: format!("Failed to delete endpoint: {}", e),
+                })
+            })?;
 
         // Check response status
         if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "Google Vertex AI".to_string(),
-                error: format!("Endpoint deletion failed: {}", error_text),
-            }));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(KwaversError::System(
+                crate::error::SystemError::ExternalServiceError {
+                    service: "Google Vertex AI".to_string(),
+                    error: format!("Endpoint deletion failed: {}", error_text),
+                },
+            ));
         }
 
         // Log successful deletion
@@ -905,42 +922,53 @@ impl CloudPINNService {
 
     #[cfg(feature = "pinn")]
     async fn terminate_azure_deployment(&self, handle: &DeploymentHandle) -> KwaversResult<()> {
-        use azure_ai::client::Client as AzureAIClient;
-
-        // Initialize Azure AI client
-        let ai_client = AzureAIClient::new(&self.config["subscription_id"])
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "Azure AI".to_string(),
-                error: e.to_string(),
-            }))?;
-
         // Extract endpoint information from handle
         let endpoint_url = &handle.endpoint;
         let endpoint_name = endpoint_url
             .split("https://")
             .nth(1)
             .and_then(|s| s.split('.').next())
-            .ok_or_else(|| KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "endpoint".to_string(),
-                reason: "Invalid Azure endpoint URL format".to_string(),
-            }))?;
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "endpoint".to_string(),
+                    reason: "Invalid Azure endpoint URL format".to_string(),
+                })
+            })?;
 
         // Delete Azure ML endpoint using Azure Machine Learning REST APIs
         // Literature: Azure Machine Learning documentation - REST API reference
 
         // Parse endpoint URL to extract resource information
-        let url_parts: Vec<&str> = handle.endpoint_url.split('/').collect();
-        if url_parts.len() < 8 {
-            return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "endpoint_url".to_string(),
-                reason: "Invalid Azure ML endpoint URL format".to_string(),
-            }));
-        }
-
-        let subscription_id = url_parts[2];
-        let resource_group = url_parts[4];
-        let workspace_name = url_parts[8];
-        let endpoint_name = url_parts[10];
+        let subscription_id = self
+            .config
+            .get("subscription_id")
+            .map(String::as_str)
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "subscription_id".to_string(),
+                    reason: "Missing Azure subscription_id".to_string(),
+                })
+            })?;
+        let resource_group = self
+            .config
+            .get("resource_group")
+            .map(String::as_str)
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "resource_group".to_string(),
+                    reason: "Missing Azure resource_group".to_string(),
+                })
+            })?;
+        let workspace_name = self
+            .config
+            .get("workspace_name")
+            .map(String::as_str)
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "workspace_name".to_string(),
+                    reason: "Missing Azure workspace_name".to_string(),
+                })
+            })?;
 
         // Construct Azure ML REST API endpoint deletion URL
         let delete_url = format!(
@@ -954,26 +982,39 @@ impl CloudPINNService {
         // Make authenticated DELETE request to Azure Resource Manager API
         let response = client
             .delete(&delete_url)
-            .header("Authorization", format!("Bearer {}", self.config["azure_access_token"]))
+            .header(
+                "Authorization",
+                format!("Bearer {}", self.config["azure_access_token"]),
+            )
             .header("Content-Type", "application/json")
             .send()
             .await
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "Azure Machine Learning".to_string(),
-                error: format!("Failed to delete endpoint: {}", e),
-            }))?;
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::ExternalServiceError {
+                    service: "Azure Machine Learning".to_string(),
+                    error: format!("Failed to delete endpoint: {}", e),
+                })
+            })?;
 
         // Check response status - Azure returns 202 for accepted deletion
         if !response.status().is_success() && response.status() != reqwest::StatusCode::ACCEPTED {
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(KwaversError::System(crate::error::SystemError::ExternalServiceError {
-                service: "Azure Machine Learning".to_string(),
-                error: format!("Endpoint deletion failed: {}", error_text),
-            }));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(KwaversError::System(
+                crate::error::SystemError::ExternalServiceError {
+                    service: "Azure Machine Learning".to_string(),
+                    error: format!("Endpoint deletion failed: {}", error_text),
+                },
+            ));
         }
 
         // Log successful deletion initiation
-        tracing::info!("Successfully initiated deletion of Azure ML endpoint: {}", endpoint_name);
+        tracing::info!(
+            "Successfully initiated deletion of Azure ML endpoint: {}",
+            endpoint_name
+        );
 
         // For Azure, deletion is asynchronous - endpoint may take time to be fully removed
         // In production, you might want to poll for completion status
@@ -1027,9 +1068,10 @@ mod tests {
 
     #[test]
     fn test_deployment_config_validation() {
-        let service = tokio::runtime::Runtime::new().unwrap().block_on(
-            CloudPINNService::new(CloudProvider::AWS)
-        ).unwrap();
+        let service = tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(CloudPINNService::new(CloudProvider::AWS))
+            .unwrap();
 
         let valid_config = DeploymentConfig {
             provider: CloudProvider::AWS,

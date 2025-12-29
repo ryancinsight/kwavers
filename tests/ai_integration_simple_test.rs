@@ -2,8 +2,8 @@
 
 #[cfg(feature = "pinn")]
 use kwavers::sensor::beamforming::ai_integration::{
-    FeatureExtractor, ClinicalDecisionSupport, DiagnosisAlgorithm, RealTimeWorkflow,
-    FeatureConfig, ClinicalThresholds, FeatureMap,
+    ClinicalDecisionSupport, ClinicalThresholds, DiagnosisAlgorithm, FeatureConfig,
+    FeatureExtractor, FeatureMap, RealTimeWorkflow,
 };
 
 #[cfg(feature = "pinn")]
@@ -30,10 +30,16 @@ fn test_clinical_decision_support() {
 
     // Create dummy features
     let mut morphological = std::collections::HashMap::new();
-    morphological.insert("gradient_magnitude".to_string(), ndarray::Array3::from_elem((32, 32, 16), 0.5));
+    morphological.insert(
+        "gradient_magnitude".to_string(),
+        ndarray::Array3::from_elem((32, 32, 16), 0.5),
+    );
 
     let mut texture = std::collections::HashMap::new();
-    texture.insert("speckle_variance".to_string(), ndarray::Array3::from_elem((32, 32, 16), 0.8));
+    texture.insert(
+        "speckle_variance".to_string(),
+        ndarray::Array3::from_elem((32, 32, 16), 0.8),
+    );
 
     let features = FeatureMap {
         morphological,
@@ -45,12 +51,14 @@ fn test_clinical_decision_support() {
     let uncertainty = ndarray::Array3::<f32>::from_elem((32, 32, 16), 0.1);
     let confidence = ndarray::Array3::<f32>::from_elem((32, 32, 16), 0.9);
 
-    let analysis = support.analyze_clinical(
-        volume.view(),
-        &features,
-        uncertainty.view(),
-        confidence.view(),
-    ).unwrap();
+    let analysis = support
+        .analyze_clinical(
+            volume.view(),
+            &features,
+            uncertainty.view(),
+            confidence.view(),
+        )
+        .unwrap();
 
     assert!(analysis.diagnostic_confidence >= 0.0 && analysis.diagnostic_confidence <= 1.0);
     assert!(!analysis.recommendations.is_empty());
@@ -165,7 +173,10 @@ fn test_feature_extraction_comprehensive() {
     // Verify gradient magnitude is computed (should be > 0 in some regions)
     let grad_mag = features.morphological.get("gradient_magnitude").unwrap();
     let max_grad = grad_mag.iter().cloned().fold(0.0f32, f32::max);
-    assert!(max_grad > 0.0, "Gradient magnitude should be positive in some regions");
+    assert!(
+        max_grad > 0.0,
+        "Gradient magnitude should be positive in some regions"
+    );
 
     // Verify speckle variance is computed
     let speckle_var = features.texture.get("speckle_variance").unwrap();

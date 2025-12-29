@@ -488,7 +488,10 @@ mod tests {
 
         // All absorption values should have magnitude ≤ 1 (physical requirement)
         for abs_val in operator.absorption_operator.iter() {
-            assert!(abs_val.norm() <= 1.0, "Absorption must be ≤ 1 for stability");
+            assert!(
+                abs_val.norm() <= 1.0,
+                "Absorption must be ≤ 1 for stability"
+            );
         }
 
         // Check that we have some reasonable absorption values
@@ -499,7 +502,10 @@ mod tests {
                 break;
             }
         }
-        assert!(has_non_zero, "Should have significant non-zero absorption values");
+        assert!(
+            has_non_zero,
+            "Should have significant non-zero absorption values"
+        );
     }
 
     #[test]

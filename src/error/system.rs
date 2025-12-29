@@ -39,6 +39,10 @@ pub enum SystemError {
         feature: String,
         reason: String,
     },
+    ExternalServiceError {
+        service: String,
+        error: String,
+    },
 }
 
 impl fmt::Display for SystemError {
@@ -72,10 +76,16 @@ impl fmt::Display for SystemError {
                 write!(f, "IO operation '{operation}' failed: {reason}")
             }
             Self::InvalidConfiguration { parameter, reason } => {
-                write!(f, "Invalid configuration for parameter '{parameter}': {reason}")
+                write!(
+                    f,
+                    "Invalid configuration for parameter '{parameter}': {reason}"
+                )
             }
             Self::FeatureNotAvailable { feature, reason } => {
                 write!(f, "Feature '{feature}' not available: {reason}")
+            }
+            Self::ExternalServiceError { service, error } => {
+                write!(f, "External service '{service}' error: {error}")
             }
         }
     }

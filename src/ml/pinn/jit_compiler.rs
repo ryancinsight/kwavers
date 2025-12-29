@@ -4,13 +4,12 @@
 //! enabling sub-millisecond inference latency through optimized kernel generation and execution.
 
 use crate::error::{KwaversError, KwaversResult};
-use crate::ml::pinn::{BurnPINN2DWave, Geometry2D};
-use burn::tensor::backend::AutodiffBackend;
+use crate::ml::pinn::Geometry2D;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Compiled kernel for optimized inference
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct CompiledKernel {
     /// Unique kernel identifier
     pub id: String,
@@ -39,7 +38,21 @@ pub enum KernelData {
     },
 }
 
+impl std::fmt::Debug for KernelData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Interpreted { .. } => f.debug_struct("Interpreted").finish(),
+            Self::Compiled { function_ptr, .. } => f
+                .debug_struct("Compiled")
+                .field("function_ptr", function_ptr)
+                .field("cleanup_fn", &"<closure>")
+                .finish(),
+        }
+    }
+}
+
 /// JIT compiler for PINN models
+#[derive(Debug)]
 pub struct JitCompiler {
     /// Compiled kernel cache
     kernel_cache: HashMap<String, CompiledKernel>,
@@ -80,6 +93,7 @@ pub struct CompilerStats {
 }
 
 /// Optimized inference runtime
+#[derive(Debug)]
 pub struct OptimizedRuntime {
     /// JIT compiler
     compiler: JitCompiler,
@@ -87,16 +101,39 @@ pub struct OptimizedRuntime {
     active_kernels: HashMap<String, CompiledKernel>,
     /// Memory pool for inference
     memory_pool: MemoryPool,
+    /// Runtime configuration
+    config: RuntimeConfig,
+    /// Model weights (layer, neuron, input)
+    weights: Vec<Vec<Vec<f32>>>,
+    /// Model biases (layer, neuron)
+    biases: Vec<Vec<f32>>,
+}
+
+/// Runtime configuration for optimized inference
+#[derive(Debug, Clone)]
+pub struct RuntimeConfig {
+    pub hidden_sizes: Vec<usize>,
+    pub physics_weight: f32,
+}
+
+impl Default for RuntimeConfig {
+    fn default() -> Self {
+        Self {
+            hidden_sizes: vec![50],
+            physics_weight: 1.0,
+        }
+    }
 }
 
 /// Memory pool for efficient inference allocation
+#[derive(Debug)]
 pub struct MemoryPool {
     /// Pre-allocated buffers
     buffers: Vec<Vec<f32>>,
     /// Buffer size distribution
     buffer_sizes: Vec<usize>,
     /// Current allocation index
-    current_index: usize,
+    _current_index: usize,
 }
 
 impl JitCompiler {
@@ -153,8 +190,9 @@ impl JitCompiler {
 
         // Update statistics
         self.stats.kernels_compiled += 1;
-        self.stats.avg_compile_time_ms =
-            (self.stats.avg_compile_time_ms * (self.stats.kernels_compiled - 1) as f64 + compile_time)
+        self.stats.avg_compile_time_ms = (self.stats.avg_compile_time_ms
+            * (self.stats.kernels_compiled - 1) as f64
+            + compile_time)
             / self.stats.kernels_compiled as f64;
         self.stats.memory_usage += kernel.memory_required;
 
@@ -172,17 +210,21 @@ impl JitCompiler {
         // Extract model architecture information
         // In practice, this would inspect the Burn model structure
         Ok(ModelInfo {
-            input_dims: vec![3], // (x, y, t) coordinates
-            output_dims: vec![1], // Wave amplitude
-            num_layers: 4, // Example 4-layer network
-            num_parameters: 10000, // Estimated parameter count
+            input_dims: vec![3],   // (x, y, t) coordinates
+            output_dims: vec![1],  // Wave amplitude
+            num_layers: 4,         // Example 4-layer network
+            _num_parameters: 10000, // Estimated parameter count
             hash: "pinn_2d_wave_v1".to_string(),
             activation_functions: vec!["tanh".to_string(); 3],
         })
     }
 
     /// Generate optimized execution plan
-    fn generate_execution_plan(&self, model_info: &ModelInfo, geometry: &Geometry2D) -> KwaversResult<ExecutionPlan> {
+    fn generate_execution_plan(
+        &self,
+        model_info: &ModelInfo,
+        geometry: &Geometry2D,
+    ) -> KwaversResult<ExecutionPlan> {
         let mut operations = Vec::new();
 
         // Input processing
@@ -191,24 +233,31 @@ impl JitCompiler {
         // Forward pass through layers
         for layer_idx in 0..model_info.num_layers {
             operations.push(Operation::LinearLayer {
-                input_size: if layer_idx == 0 { 3 } else { 200 },
-                output_size: if layer_idx == model_info.num_layers - 1 { 1 } else { 200 },
-                activation: model_info.activation_functions.get(layer_idx).cloned()
+                _input_size: if layer_idx == 0 { 3 } else { 200 },
+                _output_size: if layer_idx == model_info.num_layers - 1 {
+                    1
+                } else {
+                    200
+                },
+                _activation: model_info
+                    .activation_functions
+                    .get(layer_idx)
+                    .cloned()
                     .unwrap_or_else(|| "linear".to_string()),
             });
         }
 
         // Physics constraint application
         operations.push(Operation::PhysicsConstraints {
-            geometry_type: geometry.geometry_type(),
-            wave_speed: 343.0, // m/s
+            _geometry_type: geometry.geometry_type(),
+            _wave_speed: 343.0, // m/s
         });
 
         Ok(ExecutionPlan {
             operations,
-            memory_layout: MemoryLayout::Contiguous,
-            vectorization: self.determine_vectorization_level(),
-            cache_optimization: true,
+            _memory_layout: MemoryLayout::Contiguous,
+            _vectorization: self.determine_vectorization_level(),
+            _cache_optimization: true,
         })
     }
 
@@ -225,10 +274,10 @@ impl JitCompiler {
     }
 
     /// Estimate memory usage for a kernel
-    fn estimate_memory_usage(&self, plan: &ExecutionPlan) -> usize {
+    fn estimate_memory_usage(&self, _plan: &ExecutionPlan) -> usize {
         let bytes_per_param = match self.optimization_level {
-            OptimizationLevel::None => 8,      // f64 for debugging
-            _ => 4,                            // f32 for performance
+            OptimizationLevel::None => 8, // f64 for debugging
+            _ => 4,                       // f32 for performance
         };
 
         // Estimate based on largest layer
@@ -251,7 +300,10 @@ impl JitCompiler {
             // Remove oldest kernel (simple LRU approximation)
             if let Some(oldest_key) = self.kernel_cache.keys().next().cloned() {
                 if let Some(removed_kernel) = self.kernel_cache.remove(&oldest_key) {
-                    self.stats.memory_usage = self.stats.memory_usage.saturating_sub(removed_kernel.memory_required);
+                    self.stats.memory_usage = self
+                        .stats
+                        .memory_usage
+                        .saturating_sub(removed_kernel.memory_required);
                 }
             }
         }
@@ -276,7 +328,7 @@ struct ModelInfo {
     pub input_dims: Vec<usize>,
     pub output_dims: Vec<usize>,
     pub num_layers: usize,
-    pub num_parameters: usize,
+    pub _num_parameters: usize,
     pub hash: String,
     pub activation_functions: Vec<String>,
 }
@@ -285,9 +337,9 @@ struct ModelInfo {
 #[derive(Debug, Clone)]
 struct ExecutionPlan {
     pub operations: Vec<Operation>,
-    pub memory_layout: MemoryLayout,
-    pub vectorization: VectorizationLevel,
-    pub cache_optimization: bool,
+    pub _memory_layout: MemoryLayout,
+    pub _vectorization: VectorizationLevel,
+    pub _cache_optimization: bool,
 }
 
 /// Operation in the execution plan
@@ -295,13 +347,13 @@ struct ExecutionPlan {
 enum Operation {
     InputNormalization,
     LinearLayer {
-        input_size: usize,
-        output_size: usize,
-        activation: String,
+        _input_size: usize,
+        _output_size: usize,
+        _activation: String,
     },
     PhysicsConstraints {
-        geometry_type: String,
-        wave_speed: f64,
+        _geometry_type: String,
+        _wave_speed: f64,
     },
 }
 
@@ -309,8 +361,8 @@ enum Operation {
 #[derive(Debug, Clone)]
 enum MemoryLayout {
     Contiguous,
-    CacheAligned,
-    NUMAOptimized,
+    _CacheAligned,
+    _NUMAOptimized,
 }
 
 /// Vectorization level
@@ -325,15 +377,47 @@ enum VectorizationLevel {
 impl OptimizedRuntime {
     /// Create optimized runtime
     pub fn new(compiler: JitCompiler) -> Self {
+        // Initialize with dummy weights for now
+        let hidden_size = 50;
+        let input_size = 3;
+        let output_size = 1;
+
+        // Layer 0: 3 -> 50
+        let mut w0 = Vec::new();
+        let mut b0 = Vec::new();
+        for _ in 0..hidden_size {
+            w0.push(vec![0.0; input_size]);
+            b0.push(0.0);
+        }
+
+        // Layer 1: 50 -> 1
+        let mut w1 = Vec::new();
+        let mut b1 = Vec::new();
+        for _ in 0..output_size {
+            w1.push(vec![0.0; hidden_size]);
+            b1.push(0.0);
+        }
+
+        let weights = vec![w0, w1];
+        let biases = vec![b0, b1];
+
         Self {
             compiler,
             active_kernels: HashMap::new(),
             memory_pool: MemoryPool::new(),
+            config: RuntimeConfig::default(),
+            weights,
+            biases,
         }
     }
 
     /// Load and optimize a PINN model
-    pub fn load_model(&mut self, model: &dyn std::any::Any, geometry: &Geometry2D, name: &str) -> KwaversResult<String> {
+    pub fn load_model(
+        &mut self,
+        model: &dyn std::any::Any,
+        geometry: &Geometry2D,
+        name: &str,
+    ) -> KwaversResult<String> {
         let kernel = self.compiler.compile_pinn_model(model, geometry, name)?;
         let kernel_id = kernel.id.clone();
 
@@ -345,18 +429,21 @@ impl OptimizedRuntime {
 
     /// Execute optimized inference
     pub fn inference(&self, kernel_id: &str, input: &[f32]) -> KwaversResult<Vec<f32>> {
-        let kernel = self.active_kernels.get(kernel_id)
-            .ok_or_else(|| KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+        let kernel = self.active_kernels.get(kernel_id).ok_or_else(|| {
+            KwaversError::System(crate::error::SystemError::ResourceUnavailable {
                 resource: format!("Kernel '{}' not found", kernel_id),
-            }))?;
+            })
+        })?;
 
         // Allocate memory from pool
-        let mut output = self.memory_pool.allocate_output_buffer(kernel.output_dims[0])?;
+        let mut output = self
+            .memory_pool
+            .allocate_output_buffer(kernel.output_dims[0])?;
 
         // Execute kernel (currently interpreted - JIT compilation not yet implemented)
         // Use interpreted mode for mathematical stability and completeness
         match kernel.kernel_data.as_ref() {
-            KernelData::Interpreted { model } => {
+            KernelData::Interpreted { model: _ } => {
                 // Execute optimized interpreted physics computation
                 // Reference: Raissi et al. (2019) "Physics-informed neural networks"
                 self.simulate_optimized_inference(input, &mut output);
@@ -386,10 +473,10 @@ impl OptimizedRuntime {
         // Layer 1: Input -> Hidden (optimized computation)
         let mut h1 = Vec::with_capacity(self.config.hidden_sizes[0]);
         for i in 0..self.config.hidden_sizes[0] {
-            let mut sum = self.weights[0][i][0] * x +
-                         self.weights[0][i][1] * y +
-                         self.weights[0][i][2] * t +
-                         self.biases[0][i];
+            let mut sum = self.weights[0][i][0] * x
+                + self.weights[0][i][1] * y
+                + self.weights[0][i][2] * t
+                + self.biases[0][i];
             // Tanh activation (JIT-compiled)
             sum = sum.tanh();
             h1.push(sum);
@@ -397,8 +484,8 @@ impl OptimizedRuntime {
 
         // Layer 2: Hidden -> Output (optimized computation)
         let mut result = 0.0;
-        for i in 0..self.config.hidden_sizes[0] {
-            result += self.weights[1][0][i] * h1[i];
+        for (w, &h) in self.weights[1][0].iter().zip(h1.iter()) {
+            result += w * h;
         }
         result += self.biases[1][0];
 
@@ -450,18 +537,24 @@ impl OptimizedRuntime {
     }
 }
 
+impl Default for MemoryPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MemoryPool {
     /// Create new memory pool
     pub fn new() -> Self {
         Self {
             buffers: Vec::new(),
             buffer_sizes: vec![64, 128, 256, 512, 1024, 2048, 4096], // Pre-defined sizes
-            current_index: 0,
+            _current_index: 0,
         }
     }
 
     /// Allocate memory for a kernel
-    pub fn allocate_for_kernel(&mut self, kernel_id: &str) -> KwaversResult<()> {
+    pub fn allocate_for_kernel(&mut self, _kernel_id: &str) -> KwaversResult<()> {
         // Pre-allocate common buffer sizes
         for &size in &self.buffer_sizes {
             self.buffers.push(vec![0.0; size]);
@@ -472,7 +565,9 @@ impl MemoryPool {
     /// Allocate output buffer
     pub fn allocate_output_buffer(&self, size: usize) -> KwaversResult<Vec<f32>> {
         // Find suitable buffer size
-        let buffer_size = self.buffer_sizes.iter()
+        let buffer_size = self
+            .buffer_sizes
+            .iter()
             .find(|&&s| s >= size)
             .copied()
             .unwrap_or(size);
@@ -482,7 +577,10 @@ impl MemoryPool {
 
     /// Get total allocated memory
     pub fn get_total_allocated(&self) -> usize {
-        self.buffers.iter().map(|b| b.len() * std::mem::size_of::<f32>()).sum()
+        self.buffers
+            .iter()
+            .map(|b| b.len() * std::mem::size_of::<f32>())
+            .sum()
     }
 }
 
@@ -514,13 +612,10 @@ impl Geometry2D {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use burn::backend::NdArray;
-
-    type TestBackend = burn::backend::Autodiff<NdArray<f32>>;
 
     #[test]
     fn test_jit_compiler_creation() {
-        let compiler = JitCompiler::<TestBackend>::new(OptimizationLevel::Basic);
+        let compiler = JitCompiler::new(OptimizationLevel::Basic);
         assert_eq!(compiler.kernel_cache.len(), 0);
         assert_eq!(compiler.stats.kernels_compiled, 0);
     }
@@ -534,15 +629,15 @@ mod tests {
 
     #[test]
     fn test_optimization_levels() {
-        let compiler_none = JitCompiler::<TestBackend>::new(OptimizationLevel::None);
-        let compiler_max = JitCompiler::<TestBackend>::new(OptimizationLevel::Maximum);
+        let compiler_none = JitCompiler::new(OptimizationLevel::None);
+        let compiler_max = JitCompiler::new(OptimizationLevel::Maximum);
 
         // Different optimization levels should produce different estimates
         let plan = ExecutionPlan {
             operations: vec![Operation::InputNormalization],
-            memory_layout: MemoryLayout::Contiguous,
-            vectorization: VectorizationLevel::None,
-            cache_optimization: false,
+            _memory_layout: MemoryLayout::Contiguous,
+            _vectorization: VectorizationLevel::None,
+            _cache_optimization: false,
         };
 
         let time_none = compiler_none.estimate_execution_time(&plan);

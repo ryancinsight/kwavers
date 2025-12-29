@@ -4,7 +4,7 @@
 //! GPU acceleration, adaptive beamforming, and interactive visualization.
 
 use crate::error::KwaversResult;
-use crate::gpu::memory::{UnifiedMemoryManager, MemoryPoolType};
+use crate::gpu::memory::{MemoryPoolType, UnifiedMemoryManager};
 use ndarray::{Array3, Array4};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
@@ -27,7 +27,21 @@ pub struct RealtimePipelineConfig {
     pub streaming_mode: bool,
 }
 
+#[allow(dead_code)]
+#[derive(Debug)]
+pub struct ComputePipeline {
+    pipeline: wgpu::ComputePipeline,
+    layout: wgpu::PipelineLayout,
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+pub struct PipelineLayout {
+    layout: wgpu::PipelineLayout,
+}
+
 /// Real-time imaging pipeline
+#[derive(Debug)]
 pub struct RealtimeImagingPipeline {
     /// Pipeline configuration
     config: RealtimePipelineConfig,
@@ -89,8 +103,10 @@ impl RealtimeImagingPipeline {
     /// Start the imaging pipeline
     pub fn start(&mut self) -> KwaversResult<()> {
         println!("Starting real-time imaging pipeline...");
-        println!("Target FPS: {:.1}, Max latency: {:.1} ms",
-                 self.config.target_fps, self.config.max_latency_ms);
+        println!(
+            "Target FPS: {:.1}, Max latency: {:.1} ms",
+            self.config.target_fps, self.config.max_latency_ms
+        );
 
         self.state = PipelineState::Starting;
 
@@ -130,7 +146,7 @@ impl RealtimeImagingPipeline {
     pub fn submit_rf_data(&mut self, rf_data: Array4<f32>) -> KwaversResult<()> {
         if self.state != PipelineState::Running {
             return Err(crate::error::KwaversError::InvalidInput(
-                "Pipeline is not running".to_string()
+                "Pipeline is not running".to_string(),
             ));
         }
 
@@ -187,14 +203,17 @@ impl RealtimeImagingPipeline {
             self.stats.total_processing_time += processing_time;
 
             if self.stats.frames_processed > 0 {
-                self.stats.average_latency = self.stats.total_processing_time / self.stats.frames_processed as u32;
+                self.stats.average_latency =
+                    self.stats.total_processing_time / self.stats.frames_processed as u32;
             }
 
             // Check latency requirements
             let latency_ms = processing_time.as_secs_f64() * 1000.0;
             if latency_ms > self.config.max_latency_ms {
-                println!("Warning: Processing latency {:.1}ms exceeds limit {:.1}ms",
-                        latency_ms, self.config.max_latency_ms);
+                println!(
+                    "Warning: Processing latency {:.1}ms exceeds limit {:.1}ms",
+                    latency_ms, self.config.max_latency_ms
+                );
             }
         }
 
@@ -245,12 +264,12 @@ impl RealtimeImagingPipeline {
         // Hilbert transform for envelope detection
         let mut envelope = Array3::zeros(beamformed.dim());
 
-        for i in 0..beamformed.nrows() {
+        for i in 0..beamformed.shape()[0] {
             for k in 0..beamformed.dim().2 {
                 // Simplified envelope detection (magnitude of analytic signal)
                 let mut analytic = vec![];
 
-                for j in 0..beamformed.ncols() {
+                for j in 0..beamformed.shape()[1] {
                     analytic.push(beamformed[[i, j, k]] as f64);
                 }
 
@@ -258,8 +277,8 @@ impl RealtimeImagingPipeline {
                 let hilbert = self.hilbert_transform(&analytic);
 
                 for j in 0..hilbert.len() {
-                    envelope[[i, j, k]] = ((beamformed[[i, j, k]] as f64).powi(2) +
-                                          hilbert[j].powi(2)).sqrt() as f32;
+                    envelope[[i, j, k]] =
+                        ((beamformed[[i, j, k]] as f64).powi(2) + hilbert[j].powi(2)).sqrt() as f32;
                 }
             }
         }
@@ -282,16 +301,15 @@ impl RealtimeImagingPipeline {
         let ifft = planner.plan_fft_inverse(signal.len());
 
         // Convert to complex
-        let mut spectrum: Vec<Complex<f64>> = signal.iter()
-            .map(|&x| Complex::new(x, 0.0))
-            .collect();
+        let mut spectrum: Vec<Complex<f64>> =
+            signal.iter().map(|&x| Complex::new(x, 0.0)).collect();
 
         // Forward FFT
         fft.process(&mut spectrum);
 
         // Apply Hilbert transform in frequency domain
         let n = spectrum.len();
-        for i in 1..n/2 {
+        for i in 1..n / 2 {
             // Negative frequencies get multiplied by 2, positive by 0
             spectrum[i] *= 2.0;
         }
@@ -313,13 +331,13 @@ impl RealtimeImagingPipeline {
     fn log_compression(&self, envelope: &Array3<f32>) -> KwaversResult<Array3<f32>> {
         let mut compressed = Array3::zeros(envelope.dim());
         let dynamic_range_db = 60.0; // 60 dB dynamic range
-        let compression_factor = dynamic_range_db / 20.0; // Convert to linear factor
+        let compression_factor: f32 = dynamic_range_db / 20.0; // Convert to linear factor
 
-        for i in 0..envelope.nrows() {
-            for j in 0..envelope.ncols() {
+        for i in 0..envelope.shape()[0] {
+            for j in 0..envelope.shape()[1] {
                 for k in 0..envelope.dim().2 {
                     let value = envelope[[i, j, k]].max(1e-10) as f64; // Avoid log(0)
-                    let log_value = value.ln() / compression_factor.ln();
+                    let log_value = value.ln() / (compression_factor as f64).ln();
                     compressed[[i, j, k]] = log_value.max(0.0).min(1.0) as f32;
                 }
             }
@@ -373,6 +391,7 @@ impl RealtimeImagingPipeline {
 }
 
 /// Streaming data source for real-time imaging
+#[derive(Debug)]
 pub struct StreamingDataSource {
     /// Configuration
     config: StreamingConfig,
@@ -389,6 +408,8 @@ pub struct StreamingConfig {
     pub frame_size: (usize, usize, usize, usize), // (tx, rx, samples, frames)
     pub noise_level: f64,
     pub signal_amplitude: f64,
+    pub source_id: String,
+    pub sample_rate: f64,
 }
 
 impl StreamingDataSource {
@@ -402,7 +423,10 @@ impl StreamingDataSource {
     }
 
     /// Start streaming data
-    pub fn start_streaming(&mut self, pipeline: Arc<Mutex<RealtimeImagingPipeline>>) -> KwaversResult<()> {
+    pub fn start_streaming(
+        &mut self,
+        pipeline: Arc<Mutex<RealtimeImagingPipeline>>,
+    ) -> KwaversResult<()> {
         let config = self.config.clone();
         let stop_signal = Arc::clone(&self.stop_signal);
 
@@ -469,9 +493,9 @@ impl StreamingDataSource {
                         let delay = (tx + rx) as f64 * 1e-7; // Inter-element delay
 
                         // Generate ultrasound pulse with noise
-                        let signal = config.signal_amplitude *
-                                   (-0.5 * ((time - delay) * 5e7).powi(2)).exp() *
-                                   ((time - delay) * 3e7).cos();
+                        let signal = config.signal_amplitude
+                            * (-0.5 * ((time - delay) * 5e7).powi(2)).exp()
+                            * ((time - delay) * 3e7).cos();
 
                         let noise = config.noise_level * rand::random::<f64>();
                         rf_data[[tx, rx, sample, frame]] = (signal + noise) as f32;
@@ -593,11 +617,14 @@ mod tests {
             gpu_accelerated: false,
             adaptive_processing: false,
             streaming_mode: true,
-        }).unwrap();
+        })
+        .unwrap();
 
         pipeline.start().unwrap();
         let pipeline_arc = std::sync::Arc::new(std::sync::Mutex::new(pipeline));
-        data_source.start_streaming(std::sync::Arc::clone(&pipeline_arc)).unwrap();
+        data_source
+            .start_streaming(std::sync::Arc::clone(&pipeline_arc))
+            .unwrap();
 
         // Allow a few frames to be generated
         std::thread::sleep(std::time::Duration::from_millis(100));

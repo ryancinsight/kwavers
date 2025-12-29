@@ -13,43 +13,67 @@
 //! - Comprehensive monitoring and metrics
 //! - OpenAPI 3.0 specification compliance
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 
 pub mod auth;
-pub mod handlers;
-pub mod job_manager;
-pub mod model_registry;
-pub mod models;
-pub mod middleware;
-pub mod rate_limiter;
 #[cfg(feature = "pinn")]
 pub mod clinical_handlers;
+pub mod handlers;
+pub mod job_manager;
+pub mod middleware;
+pub mod model_registry;
+pub mod models;
+pub mod rate_limiter;
 pub mod router;
 
 // ===== CLINICAL ULTRASOUND API TYPE RE-EXPORTS =====
 #[cfg(feature = "pinn")]
 pub use models::{
-    // Device integration
-    UltrasoundDevice, DeviceStatus, UltrasoundFrame, ImagingParameters,
-
+    AbnormalRegion,
+    AnalysisPriority,
     // Clinical analysis
-    ClinicalAnalysisRequest, AnalysisPriority, ClinicalContext, OperatorLevel,
-    ClinicalAnalysisResponse, ClinicalFinding, FindingType, FindingMeasurements,
-    TissueCharacterization, TissueRegion, TissueProperties, AbnormalRegion,
-    ClinicalRecommendation, RecommendationType, UrgencyLevel,
-
-    // Performance and quality
-    ProcessingMetrics, QualityIndicators,
-
+    ClinicalAnalysisRequest,
+    ClinicalAnalysisResponse,
+    ClinicalContext,
+    ClinicalFinding,
+    ClinicalRecommendation,
+    ConnectionType,
     // Standards compliance
-    DICOMIntegrationRequest, DICOMIntegrationResponse, DICOMValue, DICOMStudyInfo,
+    DICOMIntegrationRequest,
+    DICOMIntegrationResponse,
+    DICOMStudyInfo,
+
+    DICOMValue,
+    DeviceCapabilities,
+    DeviceStatus,
+    FindingMeasurements,
+    FindingType,
+    ImagingParameters,
 
     // Mobile optimization
-    MobileOptimizationRequest, DeviceCapabilities, NetworkConditions, ConnectionType,
-    PowerSettings, PerformanceTargets, MobileOptimizationResponse, ProcessingConfig,
-    PerformancePredictions, PowerEstimates,
+    MobileOptimizationRequest,
+    MobileOptimizationResponse,
+    NetworkConditions,
+    OperatorLevel,
+    PerformancePredictions,
+    PerformanceTargets,
+    PowerEstimates,
+    PowerSettings,
+    ProcessingConfig,
+    // Performance and quality
+    ProcessingMetrics,
+    QualityIndicators,
+
+    RecommendationType,
+    TissueCharacterization,
+    TissueProperties,
+    TissueRegion,
+    // Device integration
+    UltrasoundDevice,
+    UltrasoundFrame,
+    UrgencyLevel,
 };
 
 /// API version information
@@ -148,7 +172,7 @@ pub struct ObstacleSpec {
 /// Boundary condition specification
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BoundaryConditionSpec {
-    pub boundary: String, // "left", "right", "top", "bottom", "front", "back"
+    pub boundary: String,       // "left", "right", "top", "bottom", "front", "back"
     pub condition_type: String, // "dirichlet", "neumann", "robin"
     pub value: f64,
 }
@@ -310,6 +334,20 @@ impl Default for TrainingMetrics {
     }
 }
 
+#[cfg(feature = "pinn")]
+impl From<crate::ml::pinn::wave_equation_1d::TrainingMetrics> for TrainingMetrics {
+    fn from(m: crate::ml::pinn::wave_equation_1d::TrainingMetrics) -> Self {
+        Self {
+            final_loss: m.total_loss.last().copied().unwrap_or(0.0),
+            best_loss: m.total_loss.iter().fold(f64::INFINITY, |a, &b| a.min(b)),
+            total_epochs: m.epochs_completed,
+            training_time_seconds: m.training_time_secs as u64,
+            convergence_epoch: None,
+            final_validation_error: None,
+        }
+    }
+}
+
 /// List models response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListModelsResponse {
@@ -411,7 +449,7 @@ impl Default for APIConfig {
                 authenticated_rpm: 600,
                 burst_allowance: 10,
             },
-            request_timeout: 300, // 5 minutes
+            request_timeout: 300,            // 5 minutes
             max_body_size: 10 * 1024 * 1024, // 10MB
         }
     }

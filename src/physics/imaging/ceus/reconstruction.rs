@@ -124,21 +124,22 @@ impl CEUSReconstruction {
     fn contrast_enhancement(&self, harmonic_image: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let mut enhanced = harmonic_image.clone();
 
-                // Apply log compression
-                let (nx, ny, nz) = enhanced.dim();
-                for i in 0..nx {
-                    for j in 0..ny {
-                        for k in 0..nz {
-                            let signal = enhanced[[i, j, k]].abs(); // Ensure positive for log
-                            if signal > 1e-12 { // Very small threshold to avoid log(0)
-                                // Convert to dB scale
-                                enhanced[[i, j, k]] = 20.0 * (signal / 1e-6).log10();
-                            } else {
-                                enhanced[[i, j, k]] = -60.0; // Noise floor
-                            }
-                        }
+        // Apply log compression
+        let (nx, ny, nz) = enhanced.dim();
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let signal = enhanced[[i, j, k]].abs(); // Ensure positive for log
+                    if signal > 1e-12 {
+                        // Very small threshold to avoid log(0)
+                        // Convert to dB scale
+                        enhanced[[i, j, k]] = 20.0 * (signal / 1e-6).log10();
+                    } else {
+                        enhanced[[i, j, k]] = -60.0; // Noise floor
                     }
                 }
+            }
+        }
 
         // Apply dynamic range compression
         let max_intensity = enhanced.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
@@ -234,9 +235,7 @@ impl HarmonicFilter {
         // Bandpass filter for harmonic microbubble signals
         let coefficients = vec![1.0, 0.5, 0.25]; // Example FIR coefficients
 
-        Self {
-            coefficients,
-        }
+        Self { coefficients }
     }
 
     /// Apply filter to signal

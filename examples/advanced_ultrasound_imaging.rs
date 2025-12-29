@@ -9,9 +9,9 @@
 //! for improved resolution, frame rate, and penetration.
 
 use kwavers::physics::imaging::ultrasound::advanced::{
-    SyntheticApertureConfig, SyntheticApertureReconstruction,
-    PlaneWaveConfig, PlaneWaveReconstruction, PlaneWaveCompounding,
-    CodedExcitationConfig, ExcitationCode, CodedExcitationProcessor,
+    CodedExcitationConfig, CodedExcitationProcessor, ExcitationCode, PlaneWaveCompounding,
+    PlaneWaveConfig, PlaneWaveReconstruction, SyntheticApertureConfig,
+    SyntheticApertureReconstruction,
 };
 use ndarray::{Array1, Array2, Array3};
 
@@ -53,7 +53,10 @@ fn demonstrate_synthetic_aperture() -> Result<(), Box<dyn std::error::Error>> {
     println!("SA Configuration:");
     println!("  TX Elements: {}", sa_config.num_tx_elements);
     println!("  RX Elements: {}", sa_config.num_rx_elements);
-    println!("  Element Spacing: {:.1} mm", sa_config.element_spacing * 1e3);
+    println!(
+        "  Element Spacing: {:.1} mm",
+        sa_config.element_spacing * 1e3
+    );
     println!("  Center Frequency: {:.1} MHz", sa_config.frequency / 1e6);
 
     // Create SA reconstruction processor
@@ -80,7 +83,11 @@ fn demonstrate_synthetic_aperture() -> Result<(), Box<dyn std::error::Error>> {
     // Analyze image quality
     let image_stats = analyze_image_quality(&sa_image);
     println!("  SA Image Statistics:");
-    println!("    Image Size: {} x {}", sa_image.nrows(), sa_image.ncols());
+    println!(
+        "    Image Size: {} x {}",
+        sa_image.nrows(),
+        sa_image.ncols()
+    );
     println!("    Max Value: {:.3}", image_stats.max_value);
     println!("    Mean Value: {:.3}", image_stats.mean_value);
     println!("    Dynamic Range: {:.1} dB", image_stats.dynamic_range);
@@ -111,9 +118,9 @@ fn demonstrate_plane_wave_imaging() -> Result<(), Box<dyn std::error::Error>> {
     let angles = vec![
         -20.0f64.to_radians(), // -20 degrees
         -10.0f64.to_radians(), // -10 degrees
-         0.0,                  // 0 degrees
-         10.0f64.to_radians(), // 10 degrees
-         20.0f64.to_radians(), // 20 degrees
+        0.0,                   // 0 degrees
+        10.0f64.to_radians(),  // 10 degrees
+        20.0f64.to_radians(),  // 20 degrees
     ];
 
     println!("PWI Configuration:");
@@ -162,7 +169,11 @@ fn demonstrate_plane_wave_imaging() -> Result<(), Box<dyn std::error::Error>> {
     // Analyze compounded image
     let image_stats = analyze_image_quality(&compounded_image);
     println!("  Compounded Image Statistics:");
-    println!("    Image Size: {} x {}", compounded_image.nrows(), compounded_image.ncols());
+    println!(
+        "    Image Size: {} x {}",
+        compounded_image.nrows(),
+        compounded_image.ncols()
+    );
     println!("    Max Value: {:.3}", image_stats.max_value);
     println!("    Mean Value: {:.3}", image_stats.mean_value);
     println!("    Dynamic Range: {:.1} dB", image_stats.dynamic_range);
@@ -181,11 +192,14 @@ fn demonstrate_coded_excitation() -> Result<(), Box<dyn std::error::Error>> {
 
     // Configure coded excitation
     let codes = vec![
-        ("Chirp", ExcitationCode::Chirp {
-            start_freq: 2e6,
-            end_freq: 8e6,
-            length: 256,
-        }),
+        (
+            "Chirp",
+            ExcitationCode::Chirp {
+                start_freq: 2e6,
+                end_freq: 8e6,
+                length: 256,
+            },
+        ),
         ("Barker-7", ExcitationCode::Barker { length: 7 }),
         ("Barker-13", ExcitationCode::Barker { length: 13 }),
     ];
@@ -207,7 +221,10 @@ fn demonstrate_coded_excitation() -> Result<(), Box<dyn std::error::Error>> {
 
         // Calculate theoretical SNR improvement
         let snr_improvement = processor.theoretical_snr_improvement();
-        println!("    Theoretical SNR Improvement: {:.1} dB", 20.0 * snr_improvement.log10());
+        println!(
+            "    Theoretical SNR Improvement: {:.1} dB",
+            20.0 * snr_improvement.log10()
+        );
 
         // Simulate received signal with noise
         let received_signal = generate_noisy_received_signal(&excitation_code, 0.1);
@@ -217,9 +234,18 @@ fn demonstrate_coded_excitation() -> Result<(), Box<dyn std::error::Error>> {
 
         // Analyze compression results
         let compression_stats = analyze_pulse_compression(&received_signal, &compressed_signal);
-        println!("    Compression Ratio: {:.1}", compression_stats.compression_ratio);
-        println!("    Peak Sidelobe Level: {:.1} dB", compression_stats.peak_sidelobe_db);
-        println!("    Main Lobe Width: {:.0} samples", compression_stats.main_lobe_width);
+        println!(
+            "    Compression Ratio: {:.1}",
+            compression_stats.compression_ratio
+        );
+        println!(
+            "    Peak Sidelobe Level: {:.1} dB",
+            compression_stats.peak_sidelobe_db
+        );
+        println!(
+            "    Main Lobe Width: {:.0} samples",
+            compression_stats.main_lobe_width
+        );
     }
 
     Ok(())
@@ -263,7 +289,11 @@ fn generate_synthetic_sa_rf_data(
 }
 
 /// Generate synthetic RF data for plane wave imaging
-fn generate_synthetic_pw_rf_data(n_samples: usize, n_elements: usize, _tx_angle: f64) -> Array2<f64> {
+fn generate_synthetic_pw_rf_data(
+    n_samples: usize,
+    n_elements: usize,
+    _tx_angle: f64,
+) -> Array2<f64> {
     let mut rf_data = Array2::<f64>::zeros((n_samples, n_elements));
 
     // Create a simple point scatterer at (5mm, 30mm)
@@ -312,7 +342,10 @@ fn create_image_grid(width: usize, height: usize, max_depth: f64) -> Array3<f64>
 }
 
 /// Generate noisy received signal for coded excitation testing
-fn generate_noisy_received_signal(code: &Array1<num_complex::Complex64>, noise_level: f64) -> Array1<f64> {
+fn generate_noisy_received_signal(
+    code: &Array1<num_complex::Complex64>,
+    noise_level: f64,
+) -> Array1<f64> {
     use rand::prelude::*;
 
     let mut rng = rand::thread_rng();

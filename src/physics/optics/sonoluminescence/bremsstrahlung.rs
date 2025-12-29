@@ -178,16 +178,16 @@ impl BremsstrahlungModel {
         // Calculate Saha constant from fundamental physical constants
         // K_base = (2π m_e k / h²)^{3/2}
         let saha_base = (2.0 * PI * ELECTRON_MASS * BOLTZMANN_CONSTANT
-                        / (PLANCK_CONSTANT * PLANCK_CONSTANT)).powf(1.5);
+            / (PLANCK_CONSTANT * PLANCK_CONSTANT))
+            .powf(1.5);
 
         // Total number density (ideal gas law)
         let n_total = pressure / (BOLTZMANN_CONSTANT * temperature);
 
         // Saha ionization equilibrium constant
         // K = K_base * T^{3/2} * exp(-χ/kT)
-        let saha_constant = saha_base
-            * temperature.powf(1.5)
-            * (-e_ion / (BOLTZMANN_CONSTANT * temperature)).exp();
+        let saha_constant =
+            saha_base * temperature.powf(1.5) * (-e_ion / (BOLTZMANN_CONSTANT * temperature)).exp();
 
         // Dimensionless Saha factor: K / n_total
         let saha_factor = saha_constant / n_total;
@@ -219,14 +219,13 @@ impl BremsstrahlungModel {
     }
 }
 
-/// Calculate bremsstrahlung emission field
+/// Calculate total bremsstrahlung emission field (Power Density in W/m³)
 #[must_use]
 pub fn calculate_bremsstrahlung_emission(
     temperature_field: &Array3<f64>,
     electron_density_field: &Array3<f64>,
     ion_density_field: &Array3<f64>,
     model: &BremsstrahlungModel,
-    frequency: f64,
 ) -> Array3<f64> {
     let mut emission_field = Array3::zeros(temperature_field.dim());
 
@@ -234,13 +233,11 @@ pub fn calculate_bremsstrahlung_emission(
         let n_electron = electron_density_field[[i, j, k]];
         let n_ion = ion_density_field[[i, j, k]];
 
-        if n_electron > 0.0 && n_ion > 0.0 && temp > 5000.0 {
-            // Only significant at high temperatures and non-zero densities
-            // Calculate emission coefficient
-            let emission_coeff = model.emission_coefficient(frequency, temp, n_electron, n_ion);
-
-            // Convert to power density (normalized to unit volume)
-            emission_field[[i, j, k]] = emission_coeff;
+        if n_electron > 0.0 && n_ion > 0.0 && temp > 0.0 {
+            // Calculate total power density (W/m³)
+            // Pass volume = 1.0 to get power per unit volume
+            let power_density = model.total_power(temp, n_electron, n_ion, 1.0);
+            emission_field[[i, j, k]] = power_density;
         }
     }
 

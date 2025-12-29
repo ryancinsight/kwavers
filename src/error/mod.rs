@@ -77,6 +77,22 @@ pub enum KwaversError {
     #[error(transparent)]
     Validation(#[from] ValidationError),
 
+    /// Internal error
+    #[error("Internal error: {0}")]
+    InternalError(String),
+
+    /// Dimension mismatch
+    #[error("Dimension mismatch: {0}")]
+    DimensionMismatch(String),
+
+    /// Feature not available or implemented
+    #[error("Feature not available: {0}")]
+    FeatureNotAvailable(String),
+
+    /// Performance validation error
+    #[error("Performance error: {0}")]
+    PerformanceError(String),
+
     /// Standard I/O errors
     #[error("I/O error")]
     Io(#[from] std::io::Error),
@@ -122,6 +138,14 @@ pub enum KwaversError {
         /// Error message
         message: String,
     },
+
+    /// NdArray shape errors
+    #[error("Shape error: {0}")]
+    Shape(#[from] ndarray::ShapeError),
+
+    /// Anyhow errors
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
 
 /// Result type alias for operations that may return a `KwaversError`

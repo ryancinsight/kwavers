@@ -13,8 +13,9 @@ use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
 use kwavers::medium::CoreMedium;
 use kwavers::physics::imaging::hifu::{
-    AvoidanceZone, FeedbackChannel, HIFUTreatmentPlan, HIFUTransducer, MonitoringConfig,
-    SafetyConstraints, TargetShape, ThermalDose, TreatmentPhase, TreatmentProtocol, TreatmentTarget,
+    AvoidanceZone, FeedbackChannel, HIFUTransducer, HIFUTreatmentPlan, MonitoringConfig,
+    SafetyConstraints, TargetShape, ThermalDose, TreatmentPhase, TreatmentProtocol,
+    TreatmentTarget,
 };
 use std::time::Instant;
 
@@ -52,42 +53,58 @@ fn main() -> KwaversResult<()> {
     // 1. Create computational grid
     let grid = create_simulation_grid(&config)?;
     println!("📊 Simulation Setup:");
-    println!("   Grid: {} × {} × {} ({} mm³)",
-             grid.nx, grid.ny, grid.nz,
-             (grid.dx * grid.nx as f64 * 1e3).powi(3).round());
+    println!(
+        "   Grid: {} × {} × {} ({} mm³)",
+        grid.nx,
+        grid.ny,
+        grid.nz,
+        (grid.dx * grid.nx as f64 * 1e3).powi(3).round()
+    );
 
     // 2. Create tissue medium (soft tissue properties)
     let medium = create_tissue_medium(&grid)?;
-    println!("   Tissue: Soft tissue phantom (ρ = {} kg/m³, c = {} m/s)",
-             medium.density(0, 0, 0), medium.sound_speed(0, 0, 0));
+    println!(
+        "   Tissue: Soft tissue phantom (ρ = {} kg/m³, c = {} m/s)",
+        medium.density(0, 0, 0),
+        medium.sound_speed(0, 0, 0)
+    );
 
     // 3. Configure HIFU transducer
     let transducer = create_hifu_transducer()?;
     println!("\n🔊 HIFU Transducer:");
     println!("   Frequency: {:.1} MHz", transducer.frequency / 1e6);
     println!("   Power: {:.1} W", transducer.acoustic_power);
-    println!("   Focal Length: {:.1} mm", transducer.focal_length * 1000.0);
+    println!(
+        "   Focal Length: {:.1} mm",
+        transducer.focal_length * 1000.0
+    );
     println!("   Aperture: {:.1} mm", transducer.aperture_radius * 2000.0);
 
     // 4. Define treatment target
     let target = create_treatment_target(&config);
     println!("\n🎯 Treatment Target:");
-    println!("   Location: [{:.1}, {:.1}, {:.1}] mm",
-             target.center[0] * 1000.0,
-             target.center[1] * 1000.0,
-             target.center[2] * 1000.0);
-    println!("   Size: {:.1} × {:.1} × {:.1} mm³",
-             target.dimensions[0] * 1000.0,
-             target.dimensions[1] * 1000.0,
-             target.dimensions[2] * 1000.0);
+    println!(
+        "   Location: [{:.1}, {:.1}, {:.1}] mm",
+        target.center[0] * 1000.0,
+        target.center[1] * 1000.0,
+        target.center[2] * 1000.0
+    );
+    println!(
+        "   Size: {:.1} × {:.1} × {:.1} mm³",
+        target.dimensions[0] * 1000.0,
+        target.dimensions[1] * 1000.0,
+        target.dimensions[2] * 1000.0
+    );
 
     // 5. Create treatment plan
     let plan = create_treatment_plan(target)?;
     println!("\n📋 Treatment Plan:");
     println!("   Duration: {:.1} s", plan.protocol.total_duration);
     println!("   Phases: {}", plan.protocol.phases.len());
-    println!("   Safety: Max T = {:.1}°C, Max Dose = {:.1} CEM43",
-             plan.safety.max_temperature, plan.safety.max_thermal_dose);
+    println!(
+        "   Safety: Max T = {:.1}°C, Max Dose = {:.1} CEM43",
+        plan.safety.max_temperature, plan.safety.max_thermal_dose
+    );
 
     // Validate treatment plan
     plan.validate(&grid, &medium, &transducer)?;
@@ -99,19 +116,27 @@ fn main() -> KwaversResult<()> {
 
     // 7. Analyze results
     println!("\n📈 Treatment Results:");
-    println!("   Final Temperature: {:.1}°C (max), {:.1}°C (target)",
-             treatment_result.max_temperature,
-             treatment_result.target_temperature);
-    println!("   Thermal Dose: {:.1} CEM43 (target region)",
-             treatment_result.thermal_dose_target);
-    println!("   Ablation Volume: {:.1} cm³",
-             treatment_result.ablation_volume * 1e6); // Convert m³ to cm³
+    println!(
+        "   Final Temperature: {:.1}°C (max), {:.1}°C (target)",
+        treatment_result.max_temperature, treatment_result.target_temperature
+    );
+    println!(
+        "   Thermal Dose: {:.1} CEM43 (target region)",
+        treatment_result.thermal_dose_target
+    );
+    println!(
+        "   Ablation Volume: {:.1} cm³",
+        treatment_result.ablation_volume * 1e6
+    ); // Convert m³ to cm³
 
     // Clinical assessment
     assess_treatment_outcome(&treatment_result);
 
     let elapsed_time = start_time.elapsed();
-    println!("\n⏱️  Simulation time: {:.2} seconds", elapsed_time.as_secs_f64());
+    println!(
+        "\n⏱️  Simulation time: {:.2} seconds",
+        elapsed_time.as_secs_f64()
+    );
 
     println!("\n🎉 HIFU tumor ablation simulation completed!");
     println!("   Demonstrates clinical-grade treatment planning and monitoring");
@@ -126,30 +151,33 @@ fn create_simulation_grid(config: &HIFUSimulationConfig) -> KwaversResult<Grid> 
     let dy = config.grid_size[1] * 1e-3 / 64.0;
     let dz = config.grid_size[2] * 1e-3 / 64.0;
 
-    Ok(Grid::new(
-        64, 64, 64,
-        dx, dy, dz
-    )?)
+    Ok(Grid::new(64, 64, 64, dx, dy, dz)?)
 }
 
 /// Create tissue medium with soft tissue properties
 fn create_tissue_medium(grid: &Grid) -> KwaversResult<HomogeneousMedium> {
     // Soft tissue properties
-    let density = 1040.0;        // kg/m³
-    let sound_speed = 1540.0;    // m/s
-    let attenuation = 0.5;       // dB/cm/MHz
-    let nonlinearity = 0.2;      // B/A
+    let density = 1040.0; // kg/m³
+    let sound_speed = 1540.0; // m/s
+    let attenuation = 0.5; // dB/cm/MHz
+    let nonlinearity = 0.2; // B/A
 
-    Ok(HomogeneousMedium::new(density, sound_speed, attenuation, nonlinearity, grid))
+    Ok(HomogeneousMedium::new(
+        density,
+        sound_speed,
+        attenuation,
+        nonlinearity,
+        grid,
+    ))
 }
 
 /// Create HIFU transducer configuration
 fn create_hifu_transducer() -> KwaversResult<HIFUTransducer> {
     Ok(HIFUTransducer::new_single_element(
-        1.2e6,      // 1.2 MHz frequency (typical for abdominal HIFU)
-        150.0,      // 150 W acoustic power
-        0.12,       // 120 mm focal length
-        0.06,       // 60 mm aperture radius
+        1.2e6, // 1.2 MHz frequency (typical for abdominal HIFU)
+        150.0, // 150 W acoustic power
+        0.12,  // 120 mm focal length
+        0.06,  // 60 mm aperture radius
     ))
 }
 
@@ -171,53 +199,48 @@ fn create_treatment_plan(target: TreatmentTarget) -> KwaversResult<HIFUTreatment
     let protocol = TreatmentProtocol {
         total_duration: 120.0, // 2 minutes
         pulse_duration: 10.0,  // 10 second pulses
-        prf: 0.1,             // 0.1 Hz pulse repetition frequency
-        cooling_period: 20.0, // 20 second cooling
+        prf: 0.1,              // 0.1 Hz pulse repetition frequency
+        cooling_period: 20.0,  // 20 second cooling
         phases: vec![
             TreatmentPhase {
                 name: "Low Power Targeting".to_string(),
-                duration: 30.0,    // 30 seconds
-                power: 50.0,       // 50 W
+                duration: 30.0, // 30 seconds
+                power: 50.0,    // 50 W
                 focus_offset: [0.0, 0.0, 0.0],
             },
             TreatmentPhase {
                 name: "Therapeutic Heating".to_string(),
-                duration: 60.0,    // 60 seconds
-                power: 120.0,      // 120 W
+                duration: 60.0, // 60 seconds
+                power: 120.0,   // 120 W
                 focus_offset: [0.0, 0.0, 0.0],
             },
             TreatmentPhase {
                 name: "Ablation Phase".to_string(),
-                duration: 30.0,    // 30 seconds
-                power: 150.0,      // 150 W
+                duration: 30.0, // 30 seconds
+                power: 150.0,   // 150 W
                 focus_offset: [0.0, 0.0, 0.0],
             },
         ],
     };
 
     let safety = SafetyConstraints {
-        max_temperature: 90.0,     // 90°C max
-        max_thermal_dose: 240.0,   // 240 CEM43
-        max_intensity: 500.0,      // 500 W/cm² (reasonable for HIFU)
-        avoidance_zones: vec![
-            AvoidanceZone {
-                center: [0.0, 0.0, 0.03], // Near surface
-                radius: 0.02,             // 20 mm radius
-                max_temp_rise: 5.0,       // 5°C max rise
-            }
-        ],
+        max_temperature: 90.0,   // 90°C max
+        max_thermal_dose: 240.0, // 240 CEM43
+        max_intensity: 500.0,    // 500 W/cm² (reasonable for HIFU)
+        avoidance_zones: vec![AvoidanceZone {
+            center: [0.0, 0.0, 0.03], // Near surface
+            radius: 0.02,             // 20 mm radius
+            max_temp_rise: 5.0,       // 5°C max rise
+        }],
     };
 
     let monitoring = MonitoringConfig {
         temperature_points: vec![
-            [0.0, 0.0, 0.08],    // Target center
-            [0.01, 0.0, 0.08],   // Target edge
-            [0.0, 0.0, 0.03],    // Near surface
+            [0.0, 0.0, 0.08],  // Target center
+            [0.01, 0.0, 0.08], // Target edge
+            [0.0, 0.0, 0.03],  // Near surface
         ],
-        feedback_channels: vec![
-            FeedbackChannel::MRI,
-            FeedbackChannel::Ultrasound,
-        ],
+        feedback_channels: vec![FeedbackChannel::MRI, FeedbackChannel::Ultrasound],
         real_time_adjustment: true,
     };
 
@@ -252,14 +275,14 @@ fn simulate_treatment(
 
     // Target region bounds (convert to grid indices)
     let target_min = [
-        ((plan.target.center[0] - plan.target.dimensions[0]/2.0) / grid.dx) as usize,
-        ((plan.target.center[1] - plan.target.dimensions[1]/2.0) / grid.dy) as usize,
-        ((plan.target.center[2] - plan.target.dimensions[2]/2.0) / grid.dz) as usize,
+        ((plan.target.center[0] - plan.target.dimensions[0] / 2.0) / grid.dx) as usize,
+        ((plan.target.center[1] - plan.target.dimensions[1] / 2.0) / grid.dy) as usize,
+        ((plan.target.center[2] - plan.target.dimensions[2] / 2.0) / grid.dz) as usize,
     ];
     let target_max = [
-        ((plan.target.center[0] + plan.target.dimensions[0]/2.0) / grid.dx) as usize,
-        ((plan.target.center[1] + plan.target.dimensions[1]/2.0) / grid.dy) as usize,
-        ((plan.target.center[2] + plan.target.dimensions[2]/2.0) / grid.dz) as usize,
+        ((plan.target.center[0] + plan.target.dimensions[0] / 2.0) / grid.dx) as usize,
+        ((plan.target.center[1] + plan.target.dimensions[1] / 2.0) / grid.dy) as usize,
+        ((plan.target.center[2] + plan.target.dimensions[2] / 2.0) / grid.dz) as usize,
     ];
 
     let mut current_time = 0.0;
@@ -273,7 +296,8 @@ fn simulate_treatment(
         // Simple thermal model: temperature rise proportional to power and time
         // In practice, this would solve the bio-heat equation
         let baseline_temp = 37.0; // °C
-        let temp_rise = 30.0 * power_factor * (current_time / plan.protocol.total_duration).min(1.0);
+        let temp_rise =
+            30.0 * power_factor * (current_time / plan.protocol.total_duration).min(1.0);
         let current_temp = baseline_temp + temp_rise;
 
         // Create temperature field (simplified: uniform in target region)
@@ -297,7 +321,10 @@ fn simulate_treatment(
         // Progress indicator
         let progress = (current_time / plan.protocol.total_duration * 100.0) as i32;
         if progress % 20 == 0 && progress > 0 {
-            println!("   {}% complete - Temperature: {:.1}°C", progress, current_temp);
+            println!(
+                "   {}% complete - Temperature: {:.1}°C",
+                progress, current_temp
+            );
         }
     }
 
@@ -316,12 +343,18 @@ fn simulate_treatment(
             }
         }
     }
-    let thermal_dose_target = if dose_count > 0 { total_dose / dose_count as f64 } else { 0.0 };
+    let thermal_dose_target = if dose_count > 0 {
+        total_dose / dose_count as f64
+    } else {
+        0.0
+    };
 
     // Calculate ablation volume (region where CEM43 > 240)
     let ablation_mask = thermal_dose.ablation_threshold_reached();
     let ablation_volume = ablation_mask.iter().filter(|&&ablated| ablated).count() as f64
-                         * grid.dx * grid.dy * grid.dz;
+        * grid.dx
+        * grid.dy
+        * grid.dz;
 
     Ok(TreatmentResult {
         max_temperature,
@@ -353,16 +386,28 @@ fn assess_treatment_outcome(result: &TreatmentResult) {
 
     // Temperature criteria
     if result.target_temperature >= 60.0 {
-        println!("   ✅ Target temperature achieved: {:.1}°C", result.target_temperature);
+        println!(
+            "   ✅ Target temperature achieved: {:.1}°C",
+            result.target_temperature
+        );
     } else {
-        println!("   ⚠️  Target temperature not reached: {:.1}°C", result.target_temperature);
+        println!(
+            "   ⚠️  Target temperature not reached: {:.1}°C",
+            result.target_temperature
+        );
     }
 
     // Thermal dose criteria (CEM43 > 240 for complete ablation)
     if result.thermal_dose_target >= 240.0 {
-        println!("   ✅ Sufficient thermal dose: {:.1} CEM43", result.thermal_dose_target);
+        println!(
+            "   ✅ Sufficient thermal dose: {:.1} CEM43",
+            result.thermal_dose_target
+        );
     } else {
-        println!("   ⚠️  Insufficient thermal dose: {:.1} CEM43", result.thermal_dose_target);
+        println!(
+            "   ⚠️  Insufficient thermal dose: {:.1} CEM43",
+            result.thermal_dose_target
+        );
     }
 
     // Ablation volume assessment

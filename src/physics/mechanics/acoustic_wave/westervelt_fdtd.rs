@@ -282,15 +282,25 @@ impl WesterveltFdtd {
 
                 // Artificial viscosity term for numerical stability (k-Wave approach)
                 // ∇·(ν ∇p) where ν is artificial viscosity coefficient
-                let visc_term = if i > 0 && i < grid.nx - 1 && j > 0 && j < grid.ny - 1 && k > 0 && k < grid.nz - 1 {
+                let visc_term = if i > 0
+                    && i < grid.nx - 1
+                    && j > 0
+                    && j < grid.ny - 1
+                    && k > 0
+                    && k < grid.nz - 1
+                {
                     let dx2 = grid.dx * grid.dx;
                     let dy2 = grid.dy * grid.dy;
                     let dz2 = grid.dz * grid.dz;
 
                     // Laplacian of pressure for viscosity
-                    let lap_p = (self.pressure[(i+1, j, k)] - 2.0 * p + self.pressure[(i-1, j, k)]) / dx2
-                              + (self.pressure[(i, j+1, k)] - 2.0 * p + self.pressure[(i, j-1, k)]) / dy2
-                              + (self.pressure[(i, j, k+1)] - 2.0 * p + self.pressure[(i, j, k-1)]) / dz2;
+                    let lap_p = (self.pressure[(i + 1, j, k)] - 2.0 * p
+                        + self.pressure[(i - 1, j, k)])
+                        / dx2
+                        + (self.pressure[(i, j + 1, k)] - 2.0 * p + self.pressure[(i, j - 1, k)])
+                            / dy2
+                        + (self.pressure[(i, j, k + 1)] - 2.0 * p + self.pressure[(i, j, k - 1)])
+                            / dz2;
 
                     self.config.artificial_viscosity * dt * lap_p
                 } else {
@@ -298,7 +308,8 @@ impl WesterveltFdtd {
                 };
 
                 // Update equation: p^{n+1} = 2p^n - p^{n-1} + linear + nonlinear + absorption + viscosity
-                *p_next = 2.0 * p - p_prev + linear_term - nl_coeff * nl - absorption_term + visc_term;
+                *p_next =
+                    2.0 * p - p_prev + linear_term - nl_coeff * nl - absorption_term + visc_term;
 
                 // No explicit pressure clamping - allows natural shock formation through nonlinearity
                 // Stability maintained through CFL conditions and artificial viscosity
@@ -403,5 +414,4 @@ mod tests {
         let total_energy: f64 = solver.pressure.iter().map(|&p| p * p).sum();
         assert!(total_energy > 0.0);
     }
-
 }

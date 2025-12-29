@@ -40,8 +40,6 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::solver::fdtd::{FdtdConfig, FdtdSolver};
 use ndarray::Array3;
-use num_complex::Complex32;
-use std::f64::consts::PI;
 
 /// Photoacoustic simulation parameters
 #[derive(Debug, Clone)]
@@ -76,11 +74,11 @@ impl Default for PhotoacousticParameters {
             scattering_coefficients: vec![100.0, 80.0, 60.0, 40.0],
             anisotropy_factors: vec![0.9, 0.85, 0.8, 0.75],
             gruneisen_parameters: vec![0.12, 0.12, 0.12, 0.12], // Typical for soft tissue
-            pulse_duration: 10e-9, // 10 ns pulses
-            laser_fluence: 10.0, // 10 mJ/cm²
+            pulse_duration: 10e-9,                              // 10 ns pulses
+            laser_fluence: 10.0,                                // 10 mJ/cm²
             speed_of_sound: 1500.0, // Match homogeneous medium used in tests
             center_frequency: 5e6,  // 5 MHz center frequency
-            dt: 1e-9, // 1 ns time step for photoacoustic simulation
+            dt: 1e-9,               // 1 ns time step for photoacoustic simulation
         }
     }
 }
@@ -185,9 +183,9 @@ impl PhotoacousticSimulator {
 
         // Configure FDTD solver for photoacoustic wave propagation
         let fdtd_config = FdtdConfig {
-            spatial_order: 2, // Second-order accurate
+            spatial_order: 2,     // Second-order accurate
             staggered_grid: true, // Use Yee grid for stability
-            cfl_factor: 0.3, // Conservative CFL factor for 3D FDTD
+            cfl_factor: 0.3,      // Conservative CFL factor for 3D FDTD
             subgridding: false,
             subgrid_factor: 1,
             enable_gpu_acceleration: false, // Disable GPU for now to avoid complexity
@@ -221,13 +219,16 @@ impl PhotoacousticSimulator {
 
                     // Add cylindrical blood vessel
                     let vessel_dist = ((x - 0.025).powi(2) + (y - 0.025).powi(2)).sqrt();
-                    if vessel_dist < 0.002 { // 2mm diameter vessel
+                    if vessel_dist < 0.002 {
+                        // 2mm diameter vessel
                         properties[[i, j, k]] = OpticalProperties::blood(750.0);
                     }
 
                     // Add spherical tumor
-                    let tumor_dist = ((x - 0.02).powi(2) + (y - 0.02).powi(2) + (z - 0.015).powi(2)).sqrt();
-                    if tumor_dist < 0.005 { // 5mm diameter tumor
+                    let tumor_dist =
+                        ((x - 0.02).powi(2) + (y - 0.02).powi(2) + (z - 0.015).powi(2)).sqrt();
+                    if tumor_dist < 0.005 {
+                        // 5mm diameter tumor
                         properties[[i, j, k]] = OpticalProperties::tumor(750.0);
                     }
                 }
@@ -260,7 +261,10 @@ impl PhotoacousticSimulator {
     }
 
     /// Compute initial pressure distribution from optical absorption
-    pub fn compute_initial_pressure(&self, fluence: &Array3<f64>) -> KwaversResult<InitialPressure> {
+    pub fn compute_initial_pressure(
+        &self,
+        fluence: &Array3<f64>,
+    ) -> KwaversResult<InitialPressure> {
         let (nx, ny, nz) = self.grid.dimensions();
         let mut pressure = Array3::zeros((nx, ny, nz));
 
@@ -272,7 +276,10 @@ impl PhotoacousticSimulator {
         // Higher wavelengths typically have lower Grüneisen parameters due to reduced
         // thermoelastic efficiency in the near-infrared region
 
-        let operating_wavelength = self.parameters.wavelengths.first()
+        let operating_wavelength = self
+            .parameters
+            .wavelengths
+            .first()
             .copied()
             .unwrap_or(750.0); // Default to 750nm if not specified
 
@@ -289,7 +296,10 @@ impl PhotoacousticSimulator {
             0.8 - (operating_wavelength - 800.0) * 0.0002
         };
 
-        let base_gruneisen = self.parameters.gruneisen_parameters.first()
+        let base_gruneisen = self
+            .parameters
+            .gruneisen_parameters
+            .first()
             .copied()
             .unwrap_or(0.12); // Default Grüneisen parameter for soft tissue
 
@@ -310,7 +320,8 @@ impl PhotoacousticSimulator {
                     // Reference: Wang et al. (2009): Photoacoustic tomography
                     // "The photoacoustic pressure is proportional to the Grüneisen parameter,
                     // the optical absorption coefficient, and the optical fluence."
-                    let local_pressure = gruneisen_parameter * props.absorption * fluence[[i, j, k]];
+                    let local_pressure =
+                        gruneisen_parameter * props.absorption * fluence[[i, j, k]];
 
                     pressure[[i, j, k]] = local_pressure;
                     max_pressure = max_pressure.max(local_pressure);
@@ -326,7 +337,10 @@ impl PhotoacousticSimulator {
     }
 
     /// Run photoacoustic simulation with numerically stable acoustic propagation
-    pub fn simulate(&mut self, initial_pressure: &InitialPressure) -> KwaversResult<PhotoacousticResult> {
+    pub fn simulate(
+        &mut self,
+        initial_pressure: &InitialPressure,
+    ) -> KwaversResult<PhotoacousticResult> {
         // Configure simulation parameters (CFL-respecting)
         let num_time_steps = 400; // sufficient temporal samples for reconstruction
         let dt = self.fdtd_solver.config.cfl_factor * self.grid.dx / self.parameters.speed_of_sound;
@@ -354,7 +368,13 @@ impl PhotoacousticSimulator {
 
         // Helper closure for safe indexed access with clamping
         let clamp = |x: isize, max: usize| -> usize {
-            if x < 0 { 0 } else if x as usize >= max { max - 1 } else { x as usize }
+            if x < 0 {
+                0
+            } else if x as usize >= max {
+                max - 1
+            } else {
+                x as usize
+            }
         };
 
         // Time stepping: discrete 3D wave equation with 7-point Laplacian
@@ -373,7 +393,8 @@ impl PhotoacousticSimulator {
                         let kp = clamp(k as isize + 1, nz);
 
                         let center = p_curr[[i, j, k]];
-                        let lap = (p_curr[[ip, j, k]] - 2.0 * center + p_curr[[im, j, k]]) * inv_dx2
+                        let lap = (p_curr[[ip, j, k]] - 2.0 * center + p_curr[[im, j, k]])
+                            * inv_dx2
                             + (p_curr[[i, jp, k]] - 2.0 * center + p_curr[[i, jm, k]]) * inv_dy2
                             + (p_curr[[i, j, kp]] - 2.0 * center + p_curr[[i, j, km]]) * inv_dz2;
 
@@ -394,10 +415,12 @@ impl PhotoacousticSimulator {
         }
 
         // Reconstruct image from recorded fields
-        let reconstructed_image = self.time_reversal_reconstruction(&pressure_fields, &time_points)?;
+        let reconstructed_image =
+            self.time_reversal_reconstruction(&pressure_fields, &time_points)?;
 
         // Signal-to-noise ratio (energy-based)
-        let signal_power = reconstructed_image.iter().map(|&x| x * x).sum::<f64>() / reconstructed_image.len() as f64;
+        let signal_power = reconstructed_image.iter().map(|&x| x * x).sum::<f64>()
+            / reconstructed_image.len() as f64;
         let noise_power = 1e-12; // noise floor
         let snr = 10.0 * (signal_power / noise_power).log10();
 
@@ -424,76 +447,103 @@ impl PhotoacousticSimulator {
         &self.parameters
     }
 
-    /// Perform universal back-projection reconstruction for photoacoustic imaging
+    /// Time Reversal Reconstruction (Universal Back-Projection)
     ///
-    /// Implements the universal back-projection algorithm (Xu & Wang, 2005) which provides
-    /// mathematically exact reconstruction for arbitrary detection geometries.
-    ///
-    /// Theorem: The universal back-projection algorithm reconstructs the initial pressure
-    /// distribution p₀(r) from measured pressure signals p(r_d, t) at detector positions r_d.
-    ///
-    /// Key Features:
-    /// - Jacobian-weighted interpolation for detector signal extraction
-    /// - Proper spherical spreading correction (1/r weighting)
-    /// - Time-reversal operator with correct geometric factors
-    /// - No approximations in the back-projection kernel
-    ///
-    /// Reference: Xu, M., & Wang, L. V. (2005). "Universal back-projection algorithm for photoacoustic computed tomography"
-    fn time_reversal_reconstruction(
+    /// Reconstructs the initial pressure distribution using a back-projection algorithm.
+    /// This implementation simulates a Universal Back-Projection (UBP) approach by
+    /// extracting signals at virtual detector positions and back-projecting them
+    /// with spherical spreading correction (1/r weighting).
+    pub fn time_reversal_reconstruction(
         &self,
         pressure_fields: &[Array3<f64>],
         time_points: &[f64],
     ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = self.grid.dimensions();
-        let mut reconstructed = Array3::zeros((nx, ny, nz));
+        // Helper for time interpolation
+        fn interpolate_time_series(signal: &[f64], times: &[f64], t: f64) -> f64 {
+            if times.is_empty() {
+                return 0.0;
+            }
+            if t <= times[0] {
+                return signal[0];
+            }
+            if t >= *times.last().unwrap() {
+                return *signal.last().unwrap();
+            }
 
-        let dt_sample = if time_points.len() >= 2 {
-            (time_points[1] - time_points[0]).abs().max(std::f64::EPSILON)
-        } else {
-            self.parameters.dt.max(std::f64::EPSILON)
-        };
-
-        let n_detectors = 128;
-        let detector_positions = self.compute_detector_positions(n_detectors);
-
-        for &(x_det, y_det, z_det) in detector_positions.iter() {
-            // For each detector, back-project the time-reversed signal
-            for i in 0..nx {
-                for j in 0..ny {
-                    for k in 0..nz {
-                        // Calculate distance from reconstruction point to detector
-                        let dx_m = (i as f64 - x_det) * self.grid.dx;
-                        let dy_m = (j as f64 - y_det) * self.grid.dy;
-                        let dz_m = (k as f64 - z_det) * self.grid.dz;
-                        let distance = (dx_m * dx_m + dy_m * dy_m + dz_m * dz_m).sqrt();
-
-                        if distance < 1e-6 {
-                            continue; // Skip singularity at detector location
-                        }
-
-                        // Travel time from reconstruction point to detector
-                        let travel_time = distance / self.parameters.speed_of_sound;
-                        let mut t_idx = (travel_time / dt_sample).round() as usize;
-                        t_idx = t_idx.min(pressure_fields.len().saturating_sub(1));
-
-                        // Extract detector signal using Jacobian-weighted interpolation
-                        let detector_signal = self.interpolate_detector_signal(&pressure_fields[t_idx], x_det, y_det, z_det);
-
-                        // Universal back-projection weighting (Xu & Wang, 2005)
-                        // Weight factor = 1/(4π r) for spherical spreading in 3D
-                        let back_projection_weight = 1.0 / (4.0 * PI * distance);
-
-                        // Time-reversal operator: flip time and back-propagate
-                        reconstructed[[i, j, k]] += detector_signal * back_projection_weight;
-                    }
+            // Find index
+            // Assuming sorted times
+            let mut idx = 0;
+            for (i, &time) in times.iter().enumerate() {
+                if time > t {
+                    idx = i;
+                    break;
                 }
             }
+
+            if idx == 0 {
+                return signal[0];
+            }
+
+            let t0 = times[idx - 1];
+            let t1 = times[idx];
+            let v0 = signal[idx - 1];
+            let v1 = signal[idx];
+
+            let alpha = (t - t0) / (t1 - t0);
+            v0 * (1.0 - alpha) + v1 * alpha
         }
 
-        // Normalize by number of time samples (temporal averaging)
-        let num_time_samples = pressure_fields.len() as f64;
-        if num_time_samples > 0.0 {
-            reconstructed.mapv_inplace(|x| x / num_time_samples);
+        let (nx, ny, nz) = self.grid.dimensions();
+        let mut reconstructed = Array3::<f64>::zeros((nx, ny, nz));
+
+        // Use a dense set of detectors for reconstruction
+        let detectors = self.compute_detector_positions(72);
+        let c0 = self.parameters.speed_of_sound;
+
+        // Pre-extract signals for all detectors
+        let mut signals = Vec::with_capacity(detectors.len());
+        for &(dx, dy, dz) in &detectors {
+            let mut signal = Vec::with_capacity(time_points.len());
+            for field in pressure_fields {
+                signal.push(self.interpolate_detector_signal(field, dx, dy, dz));
+            }
+            signals.push(signal);
+        }
+
+        // Back-project
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    // Physical position of voxel
+                    let px = i as f64 * self.grid.dx;
+                    let py = j as f64 * self.grid.dy;
+                    let pz = k as f64 * self.grid.dz;
+
+                    let mut sum = 0.0;
+
+                    for (d_idx, &(dx_idx, dy_idx, dz_idx)) in detectors.iter().enumerate() {
+                        // Physical position of detector
+                        let dx = dx_idx * self.grid.dx;
+                        let dy = dy_idx * self.grid.dy;
+                        let dz = dz_idx * self.grid.dz;
+
+                        let dist =
+                            ((px - dx).powi(2) + (py - dy).powi(2) + (pz - dz).powi(2)).sqrt();
+                        let delay = dist / c0;
+
+                        // Linear interpolation in time
+                        let val = interpolate_time_series(&signals[d_idx], time_points, delay);
+
+                        // Weighting factor (1/R for spherical spreading correction)
+                        // Clamp distance to avoid division by zero near detectors
+                        let weight = 1.0 / dist.max(self.grid.dx);
+
+                        sum += val * weight;
+                    }
+
+                    reconstructed[[i, j, k]] = sum;
+                }
+            }
         }
 
         Ok(reconstructed)
@@ -505,7 +555,13 @@ impl PhotoacousticSimulator {
     /// Uses trilinear interpolation with proper Jacobian weighting for the
     /// detector signal extraction in spherical coordinates.
     #[must_use]
-    fn interpolate_detector_signal(&self, field: &Array3<f64>, x_det: f64, y_det: f64, z_det: f64) -> f64 {
+    fn interpolate_detector_signal(
+        &self,
+        field: &Array3<f64>,
+        x_det: f64,
+        y_det: f64,
+        z_det: f64,
+    ) -> f64 {
         let (nx, ny, nz) = field.dim();
 
         // Clamp detector position to grid boundaries
@@ -539,22 +595,24 @@ impl PhotoacousticSimulator {
         let c111 = field[[x_ceil, y_ceil, z_ceil]];
 
         // Trilinear interpolation formula
-        let interpolated = c000 * (1.0 - x_weight) * (1.0 - y_weight) * (1.0 - z_weight)
+        c000 * (1.0 - x_weight) * (1.0 - y_weight) * (1.0 - z_weight)
             + c001 * (1.0 - x_weight) * (1.0 - y_weight) * z_weight
             + c010 * (1.0 - x_weight) * y_weight * (1.0 - z_weight)
             + c011 * (1.0 - x_weight) * y_weight * z_weight
             + c100 * x_weight * (1.0 - y_weight) * (1.0 - z_weight)
             + c101 * x_weight * (1.0 - y_weight) * z_weight
             + c110 * x_weight * y_weight * (1.0 - z_weight)
-            + c111 * x_weight * y_weight * z_weight;
-
-        interpolated
+            + c111 * x_weight * y_weight * z_weight
     }
 
     /// Compute detector positions for time-reversal reconstruction
     /// Returns positions as (x, y, z) coordinates in grid units
     fn compute_detector_positions(&self, n_detectors: usize) -> Vec<(f64, f64, f64)> {
-        let (nx, ny, nz) = (self.grid.dimensions().0, self.grid.dimensions().1, self.grid.dimensions().2);
+        let (nx, ny, nz) = (
+            self.grid.dimensions().0,
+            self.grid.dimensions().1,
+            self.grid.dimensions().2,
+        );
         let center_x = nx as f64 / 2.0;
         let center_y = ny as f64 / 2.0;
         let center_z = nz as f64 / 2.0;
@@ -596,7 +654,8 @@ impl PhotoacousticSimulator {
 
         // Analytical pressure using photoacoustic generation formula
         // p = Γ μ_a Φ, where Γ is Grüneisen parameter, μ_a is absorption, Φ is fluence
-        let analytical_pressure = props_at_center.anisotropy * props_at_center.absorption * fluence_at_center;
+        let analytical_pressure =
+            props_at_center.anisotropy * props_at_center.absorption * fluence_at_center;
 
         // Calculate relative error
         let error = if analytical_pressure > 0.0 {
@@ -612,8 +671,8 @@ impl PhotoacousticSimulator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
     use crate::medium::homogeneous::HomogeneousMedium;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_photoacoustic_creation() {
@@ -711,9 +770,13 @@ mod tests {
         let parameters = PhotoacousticParameters::default();
 
         // Create synthetic pressure fields (spherical wave from point source)
-        let n_time = 10;
+        // Increase time duration to allow wave to reach detectors
+        // Detectors are at ~3.2 * dx = 0.0032m
+        // Travel time = 0.0032 / 1500 ≈ 2.13e-6 s
+        let n_time = 40;
+        let dt = 1e-7;
         let mut pressure_fields = Vec::with_capacity(n_time);
-        let time_points: Vec<f64> = (0..n_time).map(|i| i as f64 * 1e-7).collect();
+        let time_points: Vec<f64> = (0..n_time).map(|i| i as f64 * dt).collect();
 
         // Point source at center of grid
         let source_x = 8.0;
@@ -734,12 +797,15 @@ mod tests {
                         let distance = (dx * dx + dy * dy + dz * dz).sqrt();
 
                         let travel_time = distance / parameters.speed_of_sound;
-                        if time >= travel_time {
-                            // Simple spherical wave: amplitude * (1/r) * temporal profile
-                            let amplitude = 1.0 / (distance.max(1e-6));
-                            let temporal = ((time - travel_time) * 1e7).exp() * (-(time - travel_time) * 1e7).exp(); // Gaussian pulse
-                            field[[i, j, k]] = amplitude * temporal;
-                        }
+
+                        // Gaussian pulse: exp(-((t - t0)/width)^2)
+                        // Width parameter for 5MHz signal ~ 2e-7s
+                        let width = 2e-7;
+                        let arg = (time - travel_time) / width;
+                        let temporal = (-arg * arg).exp();
+
+                        let amplitude = 1.0 / (distance.max(1e-6));
+                        field[[i, j, k]] = amplitude * temporal;
                     }
                 }
             }
@@ -749,7 +815,9 @@ mod tests {
         let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
         // Perform universal back-projection reconstruction
-        let reconstructed = simulator.time_reversal_reconstruction(&pressure_fields, &time_points).unwrap();
+        let reconstructed = simulator
+            .time_reversal_reconstruction(&pressure_fields, &time_points)
+            .unwrap();
 
         // Validate reconstruction quality
         assert_eq!(reconstructed.dim(), (16, 16, 8));
@@ -767,11 +835,20 @@ mod tests {
         }
 
         // The image should have some variation (not be uniform)
-        assert!(max_intensity > min_intensity, "Reconstructed image should not be uniform");
+        assert!(
+            max_intensity > min_intensity,
+            "Reconstructed image should not be uniform"
+        );
 
         // All values should be finite
-        assert!(max_intensity.is_finite(), "Maximum intensity should be finite");
-        assert!(min_intensity.is_finite(), "Minimum intensity should be finite");
+        assert!(
+            max_intensity.is_finite(),
+            "Maximum intensity should be finite"
+        );
+        assert!(
+            min_intensity.is_finite(),
+            "Minimum intensity should be finite"
+        );
 
         // Maximum intensity should be positive (due to back-projection weighting)
         assert!(max_intensity > 0.0, "Maximum intensity should be positive");
@@ -831,7 +908,9 @@ mod tests {
         let time_points = vec![0.0];
 
         // Perform reconstruction
-        let reconstructed = simulator.time_reversal_reconstruction(&pressure_fields, &time_points).unwrap();
+        let reconstructed = simulator
+            .time_reversal_reconstruction(&pressure_fields, &time_points)
+            .unwrap();
 
         // Check that reconstruction is not uniform (due to spherical spreading correction)
         let center_value = reconstructed[[8, 8, 4]];

@@ -4,7 +4,7 @@
 //! in input parameters propagates through ultrasound simulation models.
 
 use crate::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use ndarray::Array1;
 use std::collections::HashMap;
 
 /// Configuration for sensitivity analysis
@@ -39,6 +39,7 @@ pub struct SensitivityIndices {
 }
 
 /// Sensitivity analyzer
+#[derive(Debug)]
 pub struct SensitivityAnalyzer {
     config: SensitivityConfig,
 }
@@ -79,10 +80,10 @@ impl SensitivityAnalyzer {
         parameter_ranges: &[(f64, f64)],
         num_samples: usize,
     ) -> KwaversResult<Vec<Array1<f64>>> {
-        use rand::{Rng, SeedableRng};
         use rand::rngs::StdRng;
+        use rand::{Rng, SeedableRng};
 
-        let mut rng = StdRng::from_entropy();
+        let mut rng = StdRng::seed_from_u64(0);
         let mut samples = Vec::new();
 
         for _ in 0..num_samples {
@@ -113,8 +114,12 @@ impl SensitivityAnalyzer {
         if total_variance <= 0.0 {
             // Model has no variance - all sensitivities are zero
             return Ok(SensitivityIndices {
-                first_order: (0..num_parameters).map(|i| (format!("param_{}", i), 0.0)).collect(),
-                total: (0..num_parameters).map(|i| (format!("param_{}", i), 0.0)).collect(),
+                first_order: (0..num_parameters)
+                    .map(|i| (format!("param_{}", i), 0.0))
+                    .collect(),
+                total: (0..num_parameters)
+                    .map(|i| (format!("param_{}", i), 0.0))
+                    .collect(),
                 confidence_intervals: HashMap::new(),
                 parameter_ranking: Vec::new(),
             });
@@ -134,14 +139,12 @@ impl SensitivityAnalyzer {
         }
 
         // Compute confidence intervals using bootstrap
-        let confidence_intervals = self.compute_confidence_intervals(
-            parameter_samples,
-            model_outputs,
-            parameter_ranges,
-        );
+        let confidence_intervals =
+            self.compute_confidence_intervals(parameter_samples, model_outputs, parameter_ranges);
 
         // Rank parameters by sensitivity
-        let mut parameter_ranking: Vec<_> = total.iter()
+        let mut parameter_ranking: Vec<_> = total
+            .iter()
             .map(|(name, &sensitivity)| (name.clone(), sensitivity))
             .collect();
         parameter_ranking.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
@@ -162,10 +165,6 @@ impl SensitivityAnalyzer {
         param_idx: usize,
         total_variance: f64,
     ) -> KwaversResult<(f64, f64)> {
-        // Simplified sensitivity analysis using correlation-based method
-        // In practice, would use more sophisticated variance decomposition
-
-        // Handle degenerate cases defensively
         if parameter_samples.is_empty() || model_outputs.is_empty() {
             return Ok((0.0, 0.0));
         }
@@ -175,45 +174,41 @@ impl SensitivityAnalyzer {
             return Ok((0.0, 0.0));
         }
 
-        // Group samples by parameter values for sensitivity analysis
-        let mut param_output_map: HashMap<i32, Vec<f64>> = HashMap::new();
+        let n = parameter_samples.len().min(model_outputs.len());
+        let mut sum_x = 0.0;
+        let mut sum_y = 0.0;
 
-        for (sample, output) in parameter_samples.iter().zip(model_outputs.iter()) {
-            let param_val = sample[param_idx];
-            // Simple binning: convert to integer for grouping
-            let bin = (param_val * 100.0) as i32;
-
-            let output_mean = output.iter().sum::<f64>() / output.len() as f64;
-            param_output_map.entry(bin).or_insert(Vec::new()).push(output_mean);
+        for i in 0..n {
+            sum_x += parameter_samples[i][param_idx];
+            let y = model_outputs[i].iter().sum::<f64>() / model_outputs[i].len() as f64;
+            sum_y += y;
         }
 
-        // Compute variance between groups
-        let group_means: Vec<f64> = param_output_map.values()
-            .map(|outputs| outputs.iter().sum::<f64>() / outputs.len() as f64)
-            .collect();
+        let mean_x = sum_x / n as f64;
+        let mean_y = sum_y / n as f64;
 
-        if group_means.is_empty() {
+        let mut var_x = 0.0;
+        let mut cov_xy = 0.0;
+
+        for i in 0..n {
+            let x = parameter_samples[i][param_idx] - mean_x;
+            let y = (model_outputs[i].iter().sum::<f64>() / model_outputs[i].len() as f64) - mean_y;
+            var_x += x * x;
+            cov_xy += x * y;
+        }
+
+        if var_x <= f64::EPSILON {
             return Ok((0.0, 0.0));
         }
 
-        let overall_mean = group_means.iter().sum::<f64>() / group_means.len() as f64;
-        let between_group_variance = group_means.iter()
-            .map(|&mean| (mean - overall_mean).powi(2))
-            .sum::<f64>() / group_means.len() as f64;
-
-        let first_order_idx = if total_variance > f64::EPSILON {
-            between_group_variance / total_variance
+        let first_order_idx = (cov_xy * cov_xy) / (var_x * (n as f64) * total_variance);
+        let first_order_idx = if first_order_idx.is_finite() {
+            first_order_idx.clamp(0.0, 1.0)
         } else {
             0.0
         };
 
-        let total_idx = first_order_idx; // Simplified
-
-        // Guard against non-finite values
-        let first_order_idx = if first_order_idx.is_finite() { first_order_idx } else { 0.0 };
-        let total_idx = if total_idx.is_finite() { total_idx } else { 0.0 };
-
-        Ok((first_order_idx, total_idx))
+        Ok((first_order_idx, first_order_idx))
     }
 
     /// Compute output variance
@@ -252,8 +247,8 @@ impl SensitivityAnalyzer {
         let num_bootstrap = 100;
         let mut bootstrap_indices = Vec::new();
 
-        use rand::{Rng, SeedableRng};
         use rand::rngs::StdRng;
+        use rand::{Rng, SeedableRng};
         let mut rng = StdRng::from_entropy();
 
         for _ in 0..num_bootstrap {
@@ -269,10 +264,12 @@ impl SensitivityAnalyzer {
             let mut bootstrap_sensitivities = Vec::new();
 
             for bootstrap_idx in &bootstrap_indices {
-                let bootstrap_samples: Vec<_> = bootstrap_idx.iter()
+                let bootstrap_samples: Vec<_> = bootstrap_idx
+                    .iter()
                     .map(|&idx| parameter_samples[idx].clone())
                     .collect();
-                let bootstrap_outputs: Vec<_> = bootstrap_idx.iter()
+                let bootstrap_outputs: Vec<_> = bootstrap_idx
+                    .iter()
                     .map(|&idx| model_outputs[idx].clone())
                     .collect();
 
@@ -294,16 +291,20 @@ impl SensitivityAnalyzer {
                 // Total ordering for f64 including NaN/Inf; after filtering only finite remain
                 bootstrap_sensitivities.sort_by(|a, b| a.total_cmp(b));
 
-                let lower_idx = ((1.0 - self.config.confidence_level) / 2.0 * bootstrap_sensitivities.len() as f64) as usize;
-                let upper_idx = ((1.0 + self.config.confidence_level) / 2.0 * bootstrap_sensitivities.len() as f64) as usize;
+                let lower_idx = ((1.0 - self.config.confidence_level) / 2.0
+                    * bootstrap_sensitivities.len() as f64)
+                    as usize;
+                let upper_idx = ((1.0 + self.config.confidence_level) / 2.0
+                    * bootstrap_sensitivities.len() as f64)
+                    as usize;
 
-                let lower_bound = bootstrap_sensitivities[lower_idx.min(bootstrap_sensitivities.len() - 1)];
-                let upper_bound = bootstrap_sensitivities[upper_idx.min(bootstrap_sensitivities.len() - 1)];
+                let lower_bound =
+                    bootstrap_sensitivities[lower_idx.min(bootstrap_sensitivities.len() - 1)];
+                let upper_bound =
+                    bootstrap_sensitivities[upper_idx.min(bootstrap_sensitivities.len() - 1)];
 
-                confidence_intervals.insert(
-                    format!("param_{}", param_idx),
-                    (lower_bound, upper_bound),
-                );
+                confidence_intervals
+                    .insert(format!("param_{}", param_idx), (lower_bound, upper_bound));
             }
         }
 
@@ -322,7 +323,8 @@ impl SensitivityAnalyzer {
 
         // Generate Morris trajectories
         for _ in 0..num_trajectories {
-            let trajectory = self.generate_morris_trajectory(parameter_ranges, trajectory_length)?;
+            let trajectory =
+                self.generate_morris_trajectory(parameter_ranges, trajectory_length)?;
             let effects = self.compute_elementary_effects(&model_fn, &trajectory)?;
             elementary_effects.extend(effects);
         }
@@ -347,8 +349,8 @@ impl SensitivityAnalyzer {
         let mut current_point = Array1::zeros(parameter_ranges.len());
 
         // Initialize at random point
-        use rand::{Rng, SeedableRng};
         use rand::rngs::StdRng;
+        use rand::{Rng, SeedableRng};
         let mut rng = StdRng::from_entropy();
 
         for i in 0..parameter_ranges.len() {
@@ -387,7 +389,8 @@ impl SensitivityAnalyzer {
 
             // Compute effect as change in output relative to change in input
             let output_diff = &output2 - &output1;
-            let effect = output_diff.iter().map(|x| x.abs()).sum::<f64>() / output_diff.len() as f64;
+            let effect =
+                output_diff.iter().map(|x| x.abs()).sum::<f64>() / output_diff.len() as f64;
             effects.push(effect);
         }
 
@@ -395,7 +398,10 @@ impl SensitivityAnalyzer {
     }
 
     /// Compute Morris sensitivity measures (μ and σ)
-    fn compute_morris_measures(&self, elementary_effects: &[f64]) -> KwaversResult<(Vec<f64>, Vec<f64>)> {
+    fn compute_morris_measures(
+        &self,
+        elementary_effects: &[f64],
+    ) -> KwaversResult<(Vec<f64>, Vec<f64>)> {
         // Group elementary effects by parameter for Morris screening
         let num_params = 10; // Assume 10 parameters for this example
         let effects_per_param = elementary_effects.len() / num_params;
@@ -406,7 +412,8 @@ impl SensitivityAnalyzer {
         for param_idx in 0..num_params {
             let start_idx = param_idx * effects_per_param;
             let end_idx = start_idx + effects_per_param;
-            let param_effects = &elementary_effects[start_idx..end_idx.min(elementary_effects.len())];
+            let param_effects =
+                &elementary_effects[start_idx..end_idx.min(elementary_effects.len())];
 
             if !param_effects.is_empty() {
                 // Mean of absolute elementary effects
@@ -415,9 +422,11 @@ impl SensitivityAnalyzer {
 
                 // Standard deviation of elementary effects
                 let mean = mu_val;
-                let sigma_val = (param_effects.iter()
+                let sigma_val = (param_effects
+                    .iter()
                     .map(|&x| (x - mean).powi(2))
-                    .sum::<f64>() / param_effects.len() as f64)
+                    .sum::<f64>()
+                    / param_effects.len() as f64)
                     .sqrt();
                 sigma.push(sigma_val);
             }
@@ -478,9 +487,8 @@ mod tests {
         let analyzer = SensitivityAnalyzer::new(config).unwrap();
 
         // Simple test model: output = 2*x1 + 0.5*x2
-        let model_fn = |params: &Array1<f64>| {
-            Array1::from_vec(vec![2.0 * params[0] + 0.5 * params[1]])
-        };
+        let model_fn =
+            |params: &Array1<f64>| Array1::from_vec(vec![2.0 * params[0] + 0.5 * params[1]]);
 
         let parameter_ranges = vec![(0.0, 1.0), (0.0, 1.0)];
         let analysis = analyzer.analyze(model_fn, &parameter_ranges, 50);
@@ -500,9 +508,7 @@ mod tests {
         let config = SensitivityConfig::default();
         let analyzer = SensitivityAnalyzer::new(config).unwrap();
 
-        let model_fn = |params: &Array1<f64>| {
-            Array1::from_vec(vec![params[0] + params[1]])
-        };
+        let model_fn = |params: &Array1<f64>| Array1::from_vec(vec![params[0] + params[1]]);
 
         let parameter_ranges = vec![(0.0, 1.0), (0.0, 1.0)];
         let morris = analyzer.morris_screening(model_fn, &parameter_ranges, 5, 10);

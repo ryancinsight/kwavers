@@ -203,8 +203,12 @@ impl ShearWaveInversion {
             InversionMethod::TimeOfFlight => self.time_of_flight_inversion(displacement, grid),
             InversionMethod::PhaseGradient => self.phase_gradient_inversion(displacement, grid),
             InversionMethod::DirectInversion => self.direct_inversion(displacement, grid),
-            InversionMethod::VolumetricTimeOfFlight => self.volumetric_time_of_flight_inversion(displacement, grid),
-            InversionMethod::DirectionalPhaseGradient => self.directional_phase_gradient_inversion(displacement, grid),
+            InversionMethod::VolumetricTimeOfFlight => {
+                self.volumetric_time_of_flight_inversion(displacement, grid)
+            }
+            InversionMethod::DirectionalPhaseGradient => {
+                self.directional_phase_gradient_inversion(displacement, grid)
+            }
         }
     }
 
@@ -258,9 +262,12 @@ impl ShearWaveInversion {
                         let x = i as f64 * grid.dx;
                         let y = j as f64 * grid.dy;
                         let z = k as f64 * grid.dz;
-                        let distance = ((x - push_x).powi(2) + (y - push_y).powi(2) + (z - push_z).powi(2)).sqrt();
+                        let distance =
+                            ((x - push_x).powi(2) + (y - push_y).powi(2) + (z - push_z).powi(2))
+                                .sqrt();
 
-                        if distance > 1e-6 { // Avoid division by zero
+                        if distance > 1e-6 {
+                            // Avoid division by zero
                             // Estimate arrival time based on displacement amplitude
                             // Higher amplitude indicates earlier arrival (closer in time)
                             // Use normalized amplitude as a proxy for temporal weighting
@@ -320,8 +327,8 @@ impl ShearWaveInversion {
         let mut shear_wave_speed = Array3::zeros((nx, ny, nz));
 
         // For each spatial slice, compute phase gradient
-        for k in 1..nz-1 {
-            for j in 1..ny-1 {
+        for k in 1..nz - 1 {
+            for j in 1..ny - 1 {
                 // Extract 1D profile along x-direction at this y,z location
                 let mut profile = Vec::with_capacity(nx);
                 for i in 0..nx {
@@ -362,11 +369,11 @@ impl ShearWaveInversion {
         let mut phase_gradient = 0.0;
         let mut valid_points = 0;
 
-        for i in 1..profile.len()-1 {
+        for i in 1..profile.len() - 1 {
             if profile[i].abs() > 1e-12 {
                 // Approximate phase as atan2 of Hilbert transform
                 // Simplified: use slope of displacement as phase proxy
-                let phase_diff = (profile[i+1] - profile[i-1]) / (2.0 * dx);
+                let phase_diff = (profile[i + 1] - profile[i - 1]) / (2.0 * dx);
                 phase_gradient += phase_diff.abs();
                 valid_points += 1;
             }
@@ -377,7 +384,8 @@ impl ShearWaveInversion {
             // Convert phase gradient to wavenumber, then to speed
             // For sinusoidal wave: phase = k*x, so k = d(phase)/dx
             // cs = ω/k = 2πf/k (assuming f is known)
-            let wavenumber = phase_gradient / profile.iter().cloned().fold(0.0, f64::max).max(1e-12);
+            let wavenumber =
+                phase_gradient / profile.iter().cloned().fold(0.0, f64::max).max(1e-12);
             let frequency = 100.0; // Assume 100 Hz (typical for SWE)
             let cs = 2.0 * std::f64::consts::PI * frequency / wavenumber.abs().max(0.1);
 
@@ -393,9 +401,9 @@ impl ShearWaveInversion {
         let mut smoothed = speed_field.clone();
 
         // Simple 3x3x3 averaging filter
-        for i in 1..nx-1 {
-            for j in 1..ny-1 {
-                for k in 1..nz-1 {
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
                     let mut sum = 0.0;
                     let mut count = 0;
 
@@ -514,17 +522,26 @@ impl ShearWaveInversion {
                         let mut speed_estimates = Vec::new();
 
                         for push_pos in &push_locations {
-                            let distance = ((voxel_pos[0] - push_pos[0]).powi(2) +
-                                          (voxel_pos[1] - push_pos[1]).powi(2) +
-                                          (voxel_pos[2] - push_pos[2]).powi(2)).sqrt();
+                            let distance = ((voxel_pos[0] - push_pos[0]).powi(2)
+                                + (voxel_pos[1] - push_pos[1]).powi(2)
+                                + (voxel_pos[2] - push_pos[2]).powi(2))
+                            .sqrt();
 
                             if distance > 1e-6 {
                                 // Estimate arrival time from displacement amplitude
-                                let normalized_amp = displacement_amp / push_locations.iter()
-                                    .map(|p| displacement.uz[[(p[0]/grid.dx) as usize,
-                                                            (p[1]/grid.dy) as usize,
-                                                            (p[2]/grid.dz) as usize]].abs())
-                                    .fold(0.0, f64::max).max(1e-12);
+                                let normalized_amp = displacement_amp
+                                    / push_locations
+                                        .iter()
+                                        .map(|p| {
+                                            displacement.uz[[
+                                                (p[0] / grid.dx) as usize,
+                                                (p[1] / grid.dy) as usize,
+                                                (p[2] / grid.dz) as usize,
+                                            ]]
+                                            .abs()
+                                        })
+                                        .fold(0.0, f64::max)
+                                        .max(1e-12);
 
                                 let arrival_time = distance / (normalized_amp * 10.0);
                                 let cs = distance / arrival_time;
@@ -583,16 +600,22 @@ impl ShearWaveInversion {
         let mut shear_wave_speed = Array3::zeros((nx, ny, nz));
 
         // Analyze phase gradients in all three spatial directions
-        for i in 1..nx-1 {
-            for j in 1..ny-1 {
-                for k in 1..nz-1 {
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
                     let displacement_val = displacement.uz[[i, j, k]];
 
                     if displacement_val.abs() > 1e-12 {
                         // Compute phase gradients in x, y, z directions
-                        let grad_x = (displacement.uz[[i+1, j, k]] - displacement.uz[[i-1, j, k]]) / (2.0 * grid.dx);
-                        let grad_y = (displacement.uz[[i, j+1, k]] - displacement.uz[[i, j-1, k]]) / (2.0 * grid.dy);
-                        let grad_z = (displacement.uz[[i, j, k+1]] - displacement.uz[[i, j, k-1]]) / (2.0 * grid.dz);
+                        let grad_x = (displacement.uz[[i + 1, j, k]]
+                            - displacement.uz[[i - 1, j, k]])
+                            / (2.0 * grid.dx);
+                        let grad_y = (displacement.uz[[i, j + 1, k]]
+                            - displacement.uz[[i, j - 1, k]])
+                            / (2.0 * grid.dy);
+                        let grad_z = (displacement.uz[[i, j, k + 1]]
+                            - displacement.uz[[i, j, k - 1]])
+                            / (2.0 * grid.dz);
 
                         // Compute directional wavenumbers
                         let kx = grad_x.abs() / displacement_val.abs().max(1e-12);
@@ -635,9 +658,9 @@ impl ShearWaveInversion {
         let threshold = displacement.uz.iter().cloned().fold(0.0, f64::max) * 0.3; // 30% of max
 
         // Simple peak finding (could be enhanced with more sophisticated algorithms)
-        for i in 1..nx-1 {
-            for j in 1..ny-1 {
-                for k in 1..nz-1 {
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
                     let val = displacement.uz[[i, j, k]].abs();
                     if val > threshold {
                         // Check if it's a local maximum
@@ -645,25 +668,37 @@ impl ShearWaveInversion {
                         for di in -1..=1 {
                             for dj in -1..=1 {
                                 for dk in -1..=1 {
-                                    if di == 0 && dj == 0 && dk == 0 { continue; }
+                                    if di == 0 && dj == 0 && dk == 0 {
+                                        continue;
+                                    }
                                     let ii = (i as i32 + di) as usize;
                                     let jj = (j as i32 + dj) as usize;
                                     let kk = (k as i32 + dk) as usize;
 
-                                    if ii < nx && jj < ny && kk < nz {
-                                        if displacement.uz[[ii, jj, kk]].abs() > val {
-                                            is_local_max = false;
-                                            break;
-                                        }
+                                    if ii < nx
+                                        && jj < ny
+                                        && kk < nz
+                                        && displacement.uz[[ii, jj, kk]].abs() > val
+                                    {
+                                        is_local_max = false;
+                                        break;
                                     }
                                 }
-                                if !is_local_max { break; }
+                                if !is_local_max {
+                                    break;
+                                }
                             }
-                            if !is_local_max { break; }
+                            if !is_local_max {
+                                break;
+                            }
                         }
 
                         if is_local_max {
-                            locations.push([i as f64 * grid.dx, j as f64 * grid.dy, k as f64 * grid.dz]);
+                            locations.push([
+                                i as f64 * grid.dx,
+                                j as f64 * grid.dy,
+                                k as f64 * grid.dz,
+                            ]);
                         }
                     }
                 }
@@ -681,9 +716,9 @@ impl ShearWaveInversion {
         let mut smoothed = speed_field.clone();
 
         // 3x3x3 volumetric averaging with distance weighting
-        for i in 1..nx-1 {
-            for j in 1..ny-1 {
-                for k in 1..nz-1 {
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
                     let mut sum = 0.0;
                     let mut weight_sum = 0.0;
 
@@ -723,17 +758,18 @@ impl ShearWaveInversion {
         let mut smoothed = speed_field.clone();
 
         // Directional smoothing along likely wave propagation paths
-        for i in 1..nx-1 {
-            for j in 1..ny-1 {
-                for k in 1..nz-1 {
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
                     // Weighted average favoring values along coordinate axes
                     let center = speed_field[[i, j, k]];
-                    let x_dir = (speed_field[[i-1, j, k]] + speed_field[[i+1, j, k]]) / 2.0;
-                    let y_dir = (speed_field[[i, j-1, k]] + speed_field[[i, j+1, k]]) / 2.0;
-                    let z_dir = (speed_field[[i, j, k-1]] + speed_field[[i, j, k+1]]) / 2.0;
+                    let x_dir = (speed_field[[i - 1, j, k]] + speed_field[[i + 1, j, k]]) / 2.0;
+                    let y_dir = (speed_field[[i, j - 1, k]] + speed_field[[i, j + 1, k]]) / 2.0;
+                    let z_dir = (speed_field[[i, j, k - 1]] + speed_field[[i, j, k + 1]]) / 2.0;
 
                     // Combine with directional weighting
-                    smoothed[[i, j, k]] = (center * 0.4 + x_dir * 0.2 + y_dir * 0.2 + z_dir * 0.2).clamp(0.5, 10.0);
+                    smoothed[[i, j, k]] =
+                        (center * 0.4 + x_dir * 0.2 + y_dir * 0.2 + z_dir * 0.2).clamp(0.5, 10.0);
                 }
             }
         }
@@ -855,7 +891,7 @@ impl NonlinearInversion {
                         // Estimate B/A from harmonic ratio
                         // Simplified relationship (would need calibration)
                         let beta = 1.0; // Nonlinearity coefficient (dimensionless)
-                        let p0 = 1e5;   // Acoustic pressure amplitude (Pa)
+                        let p0 = 1e5; // Acoustic pressure amplitude (Pa)
 
                         let shear_modulus = self.density * 9.0; // Approximate μ from typical cs=3 m/s
                         let ba_ratio = (8.0 / shear_modulus)
@@ -873,14 +909,16 @@ impl NonlinearInversion {
                         };
 
                         // Estimation quality based on SNR and amplitude
-                        estimation_quality[[i, j, k]] = (snr / 10.0).min(1.0) * (a1 / 1e-6).min(1.0);
+                        estimation_quality[[i, j, k]] =
+                            (snr / 10.0).min(1.0) * (a1 / 1e-6).min(1.0);
 
                         // Estimate higher-order elastic constants using empirical relationships
                         // Reference: Destrade et al. (2010), Third-order elasticity constants
                         elastic_constants[0][[i, j, k]] = shear_modulus * ba_ratio / 10.0; // A
                         elastic_constants[1][[i, j, k]] = shear_modulus * ba_ratio / 20.0; // B
                         elastic_constants[2][[i, j, k]] = shear_modulus * ba_ratio / 50.0; // C
-                        elastic_constants[3][[i, j, k]] = shear_modulus * ba_ratio / 100.0; // D
+                        elastic_constants[3][[i, j, k]] = shear_modulus * ba_ratio / 100.0;
+                    // D
                     } else {
                         // No signal detected
                         nonlinearity_parameter[[i, j, k]] = 0.0;
@@ -962,7 +1000,8 @@ impl NonlinearInversion {
                         // Gauss-Newton update
                         let denominator = da1_dba.powi(2) + da2_dba.powi(2);
                         if denominator.abs() > 1e-12 {
-                            let delta_ba = (residual_a1 * da1_dba + residual_a2 * da2_dba) / denominator;
+                            let delta_ba =
+                                (residual_a1 * da1_dba + residual_a2 * da2_dba) / denominator;
                             ba_estimate += delta_ba;
 
                             // Check convergence
@@ -1053,7 +1092,8 @@ impl NonlinearInversion {
                         let ratio = measured_a2 / measured_a1;
                         let data_likelihood_mean = ratio * 10.0; // Simplified calibration
 
-                        let posterior_mean = (prior_mean / prior_std.powi(2) + data_likelihood_mean * likelihood_precision)
+                        let posterior_mean = (prior_mean / prior_std.powi(2)
+                            + data_likelihood_mean * likelihood_precision)
                             / posterior_precision;
                         let posterior_std = 1.0 / posterior_precision.sqrt();
 

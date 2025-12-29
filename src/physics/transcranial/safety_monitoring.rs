@@ -33,6 +33,7 @@ pub struct MechanicalIndex {
 }
 
 /// Safety monitoring system for tFUS
+#[derive(Debug)]
 pub struct SafetyMonitor {
     /// Temperature field (°C)
     temperature: Array3<f64>,
@@ -43,7 +44,7 @@ pub struct SafetyMonitor {
     /// Mechanical index
     mechanical_index: MechanicalIndex,
     /// Tissue perfusion rate (1/s)
-    perfusion_rate: f64,
+    _perfusion_rate: f64,
     /// Acoustic frequency (Hz)
     frequency: f64,
     /// Safety thresholds
@@ -58,10 +59,21 @@ pub struct SafetyThresholds {
     pub max_power_density: f64,    // W/cm²
 }
 
+impl SafetyThresholds {
+    pub fn new(max_temperature: f64, max_thermal_dose: f64, max_mechanical_index: f64, max_power_density: f64) -> Self {
+        Self {
+            max_temperature,
+            max_thermal_dose,
+            max_mechanical_index,
+            max_power_density,
+        }
+    }
+}
+
 impl Default for SafetyThresholds {
     fn default() -> Self {
         Self {
-            max_temperature: 43.0,    // Brain tissue limit
+            max_temperature: 43.0,     // Brain tissue limit
             max_thermal_dose: 240.0,   // CEM43 for brain
             max_mechanical_index: 1.9, // FDA limit
             max_power_density: 100.0,  // W/cm²
@@ -71,11 +83,7 @@ impl Default for SafetyThresholds {
 
 impl SafetyMonitor {
     /// Create new safety monitor
-    pub fn new(
-        grid_dims: (usize, usize, usize),
-        perfusion_rate: f64,
-        frequency: f64,
-    ) -> Self {
+    pub fn new(grid_dims: (usize, usize, usize), perfusion_rate: f64, frequency: f64) -> Self {
         let temperature = Array3::from_elem(grid_dims, 37.0); // Body temperature
         let pressure = Array3::zeros(grid_dims);
         let thermal_dose = ThermalDose {
@@ -96,7 +104,7 @@ impl SafetyMonitor {
             pressure,
             thermal_dose,
             mechanical_index,
-            perfusion_rate,
+            _perfusion_rate: perfusion_rate,
             frequency,
             thresholds: SafetyThresholds::default(),
         }
@@ -174,7 +182,9 @@ impl SafetyMonitor {
     /// Update mechanical index
     fn update_mechanical_index(&mut self) {
         // Find peak pressure
-        let peak_pressure = self.pressure.iter()
+        let peak_pressure = self
+            .pressure
+            .iter()
             .map(|&p| p.abs())
             .fold(0.0_f64, f64::max);
 
@@ -195,10 +205,7 @@ impl SafetyMonitor {
     /// Check safety limits and return warnings
     fn check_safety_limits(&self) -> KwaversResult<()> {
         // Immediate error on temperature limit exceedance (per tests and safety policy)
-        let max_temp = self
-            .temperature
-            .iter()
-            .fold(f64::MIN, |a, &b| a.max(b));
+        let max_temp = self.temperature.iter().fold(f64::MIN, |a, &b| a.max(b));
         if max_temp > self.thresholds.max_temperature {
             return Err(crate::error::KwaversError::Validation(
                 crate::error::ValidationError::ConstraintViolation {
@@ -211,14 +218,19 @@ impl SafetyMonitor {
         }
 
         // Check thermal dose limits (strict)
-        let max_dose = self.thermal_dose.current_dose.iter()
+        let max_dose = self
+            .thermal_dose
+            .current_dose
+            .iter()
             .fold(0.0_f64, |a, &b| a.max(b));
         if max_dose > self.thresholds.max_thermal_dose {
             return Err(crate::error::KwaversError::Validation(
                 crate::error::ValidationError::ConstraintViolation {
-                    message: format!("Thermal dose {:.0} CEM43 exceeds limit {:.0} CEM43",
-                                   max_dose, self.thresholds.max_thermal_dose)
-                }
+                    message: format!(
+                        "Thermal dose {:.0} CEM43 exceeds limit {:.0} CEM43",
+                        max_dose, self.thresholds.max_thermal_dose
+                    ),
+                },
             ));
         }
 
@@ -226,9 +238,11 @@ impl SafetyMonitor {
         if self.mechanical_index.current_mi > self.thresholds.max_mechanical_index {
             return Err(crate::error::KwaversError::Validation(
                 crate::error::ValidationError::ConstraintViolation {
-                    message: format!("Mechanical index {:.2} exceeds limit {:.2}",
-                                   self.mechanical_index.current_mi, self.thresholds.max_mechanical_index)
-                }
+                    message: format!(
+                        "Mechanical index {:.2} exceeds limit {:.2}",
+                        self.mechanical_index.current_mi, self.thresholds.max_mechanical_index
+                    ),
+                },
             ));
         }
 
@@ -238,15 +252,21 @@ impl SafetyMonitor {
     /// Get current safety status
     pub fn safety_status(&self) -> SafetyStatus {
         let max_temp = self.temperature.iter().fold(0.0_f64, |a, &b| a.max(b));
-        let max_dose = self.thermal_dose.current_dose.iter()
+        let max_dose = self
+            .thermal_dose
+            .current_dose
+            .iter()
             .fold(0.0_f64, |a, &b| a.max(b));
 
         SafetyStatus {
             temperature_status: SafetyLevel::from_value(max_temp, self.thresholds.max_temperature),
-            thermal_dose_status: SafetyLevel::from_value(max_dose, self.thresholds.max_thermal_dose),
+            thermal_dose_status: SafetyLevel::from_value(
+                max_dose,
+                self.thresholds.max_thermal_dose,
+            ),
             mechanical_index_status: SafetyLevel::from_value(
                 self.mechanical_index.current_mi,
-                self.thresholds.max_mechanical_index
+                self.thresholds.max_mechanical_index,
             ),
             overall_safety: self.overall_safety_level(),
         }
@@ -268,12 +288,18 @@ impl SafetyMonitor {
 
     /// Get treatment progress towards target dose
     pub fn treatment_progress(&self, target_dose: f64) -> TreatmentProgress {
-        let max_current_dose = self.thermal_dose.current_dose.iter()
+        let max_current_dose = self
+            .thermal_dose
+            .current_dose
+            .iter()
             .fold(0.0_f64, |a, &b| a.max(b));
         let progress = (max_current_dose / target_dose).min(1.0);
 
         let estimated_time_remaining = if progress < 1.0 {
-            let max_time_to_target = self.thermal_dose.time_to_target.iter()
+            let max_time_to_target = self
+                .thermal_dose
+                .time_to_target
+                .iter()
                 .fold(0.0_f64, |a, &b| a.max(b));
             max_time_to_target
         } else {
@@ -309,36 +335,50 @@ impl SafetyMonitor {
 
         match status.temperature_status {
             SafetyLevel::Critical => {
-                recommendations.push("CRITICAL: Temperature exceeds safe limits. Stop treatment immediately.".to_string());
+                recommendations.push(
+                    "CRITICAL: Temperature exceeds safe limits. Stop treatment immediately."
+                        .to_string(),
+                );
             }
             SafetyLevel::Warning => {
-                recommendations.push("WARNING: Temperature approaching limit. Reduce power.".to_string());
+                recommendations
+                    .push("WARNING: Temperature approaching limit. Reduce power.".to_string());
             }
             _ => {}
         }
 
         match status.thermal_dose_status {
             SafetyLevel::Critical => {
-                recommendations.push("CRITICAL: Thermal dose exceeds safe limits. Stop treatment.".to_string());
+                recommendations.push(
+                    "CRITICAL: Thermal dose exceeds safe limits. Stop treatment.".to_string(),
+                );
             }
             SafetyLevel::Warning => {
-                recommendations.push("WARNING: Thermal dose approaching limit. Monitor closely.".to_string());
+                recommendations
+                    .push("WARNING: Thermal dose approaching limit. Monitor closely.".to_string());
             }
             _ => {}
         }
 
         match status.mechanical_index_status {
             SafetyLevel::Critical => {
-                recommendations.push("CRITICAL: Mechanical index exceeds safety limit. Reduce acoustic power.".to_string());
+                recommendations.push(
+                    "CRITICAL: Mechanical index exceeds safety limit. Reduce acoustic power."
+                        .to_string(),
+                );
             }
             SafetyLevel::Warning => {
-                recommendations.push("WARNING: Mechanical index approaching limit. Reduce pressure amplitude.".to_string());
+                recommendations.push(
+                    "WARNING: Mechanical index approaching limit. Reduce pressure amplitude."
+                        .to_string(),
+                );
             }
             _ => {}
         }
 
         if recommendations.is_empty() {
-            recommendations.push("All parameters within safe limits. Treatment may continue.".to_string());
+            recommendations
+                .push("All parameters within safe limits. Treatment may continue.".to_string());
         }
 
         recommendations
@@ -381,10 +421,10 @@ pub struct SafetyStatus {
 /// Treatment progress information
 #[derive(Debug, Clone)]
 pub struct TreatmentProgress {
-    pub dose_progress: f64,           // 0.0 to 1.0
+    pub dose_progress: f64,            // 0.0 to 1.0
     pub estimated_time_remaining: f64, // seconds
-    pub current_max_dose: f64,        // CEM43
-    pub target_dose: f64,             // CEM43
+    pub current_max_dose: f64,         // CEM43
+    pub target_dose: f64,              // CEM43
 }
 
 /// Comprehensive safety report
@@ -437,7 +477,10 @@ mod tests {
         let pressure = Array3::zeros((4, 4, 4));
 
         let result = monitor.update_fields(&temperature, &pressure, 1.0);
-        assert!(result.is_ok(), "Update should succeed with safe temperature");
+        assert!(
+            result.is_ok(),
+            "Update should succeed with safe temperature"
+        );
 
         // Thermal dose should accumulate
         assert!(monitor.thermal_dose.current_dose[[2, 2, 2]] > 0.0);

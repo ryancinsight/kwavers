@@ -9,9 +9,7 @@ use crate::physics::wave_propagation::scattering::ScatteringCalculator;
 use log::debug;
 use ndarray::{Array3, Array4, Axis};
 
-use crate::physics::constants::optical::{
-    DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF,
-};
+use crate::physics::constants::optical::{DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF};
 use crate::physics::traits::LightDiffusionModelTrait;
 
 /// Physical optical properties of a medium for photon diffusion calculations
@@ -34,7 +32,7 @@ impl OpticalProperties {
         Self {
             absorption_coefficient: 10.0, // 10 cm⁻¹ = 100 m⁻¹ (typical NIR tissue absorption)
             reduced_scattering_coefficient: 1000.0, // 1000 cm⁻¹ = 10000 m⁻¹ (typical tissue scattering)
-            refractive_index: 1.4, // Typical tissue refractive index
+            refractive_index: 1.4,                  // Typical tissue refractive index
         }
     }
 
@@ -42,7 +40,7 @@ impl OpticalProperties {
     #[must_use]
     pub fn water() -> Self {
         Self {
-            absorption_coefficient: 0.1, // Very low absorption in NIR
+            absorption_coefficient: 0.1,          // Very low absorption in NIR
             reduced_scattering_coefficient: 0.01, // Low scattering in pure water
             refractive_index: 1.33,
         }
@@ -96,15 +94,15 @@ pub struct LightDiffusion {
     /// Physical optical properties of the medium
     optical_properties: OpticalProperties,
     /// Polarization model (optional)
-    polarization: Option<Box<dyn PolarizationModelTrait>>,
+    _polarization: Option<Box<dyn PolarizationModelTrait>>,
     /// Scattering calculator (optional)
-    scattering: Option<ScatteringCalculator>,
+    _scattering: Option<ScatteringCalculator>,
     /// Thermal solver (optional)
-    thermal: Option<PennesSolver>,
+    _thermal: Option<PennesSolver>,
     /// Feature flags
-    enable_polarization: bool,
-    enable_scattering: bool,
-    enable_thermal: bool,
+    _enable_polarization: bool,
+    _enable_scattering: bool,
+    _enable_thermal: bool,
     // Performance metrics
     update_time: f64,
     fft_time: f64,
@@ -150,7 +148,8 @@ impl LightDiffusion {
         if !optical_properties.diffusion_approximation_valid() {
             log::warn!(
                 "Diffusion approximation may not be valid: μₛ'/μₐ = {:.1}, should be ≫ 10",
-                optical_properties.reduced_scattering_coefficient / optical_properties.absorption_coefficient.max(1e-10)
+                optical_properties.reduced_scattering_coefficient
+                    / optical_properties.absorption_coefficient.max(1e-10)
             );
         }
 
@@ -158,14 +157,14 @@ impl LightDiffusion {
             fluence_rate: Array4::zeros((1, nx, ny, nz)),
             emission_spectrum: Array3::zeros((nx, ny, nz)),
             optical_properties,
-            polarization: if enable_polarization {
+            _polarization: if enable_polarization {
                 Some(Box::new(LinearPolarization::new(
                     DEFAULT_POLARIZATION_FACTOR,
                 )))
             } else {
                 None
             },
-            scattering: if enable_scattering {
+            _scattering: if enable_scattering {
                 // Default optical frequency for scattering
                 let frequency = 5e14; // ~600nm wavelength
                 let wave_speed = 3e8; // Speed of light
@@ -173,7 +172,7 @@ impl LightDiffusion {
             } else {
                 None
             },
-            thermal: if enable_thermal {
+            _thermal: if enable_thermal {
                 use crate::physics::thermal::ThermalProperties;
                 let properties = ThermalProperties {
                     k: 0.5,
@@ -191,9 +190,9 @@ impl LightDiffusion {
             } else {
                 None
             },
-            enable_polarization,
-            enable_scattering,
-            enable_thermal,
+            _enable_polarization: enable_polarization,
+            _enable_scattering: enable_scattering,
+            _enable_thermal: enable_thermal,
             update_time: 0.0,
             fft_time: 0.0,
             diffusion_time: 0.0,
@@ -311,7 +310,10 @@ mod tests {
         assert!(tissue_props.reduced_scattering_coefficient > tissue_props.absorption_coefficient);
 
         // Calculate diffusion coefficient: D = 1/(3(μₐ + μₛ'))
-        let expected_d = 1.0 / (3.0 * (tissue_props.absorption_coefficient + tissue_props.reduced_scattering_coefficient));
+        let expected_d = 1.0
+            / (3.0
+                * (tissue_props.absorption_coefficient
+                    + tissue_props.reduced_scattering_coefficient));
         let calculated_d = tissue_props.diffusion_coefficient();
 
         approx::assert_relative_eq!(calculated_d, expected_d, epsilon = 1e-10);

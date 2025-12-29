@@ -119,9 +119,7 @@ impl ThreadLocalFieldGuard {
             let field_ptr = unsafe { arena.memory.as_ptr().add(offset) as *mut f64 };
 
             // Return slice
-            Some(unsafe {
-                std::slice::from_raw_parts_mut(field_ptr, arena.config.field_size)
-            })
+            Some(unsafe { std::slice::from_raw_parts_mut(field_ptr, arena.config.field_size) })
         })
     }
 }
@@ -181,19 +179,23 @@ impl FieldArena {
 
         // Ensure we don't allocate zero-sized memory
         if total_size == 0 {
-            return Err(KwaversError::Validation(crate::error::ValidationError::InvalidValue {
-                parameter: "arena_config".to_string(),
-                value: 0.0,
-                reason: "Arena configuration results in zero memory allocation".to_string(),
-            }));
+            return Err(KwaversError::Validation(
+                crate::error::ValidationError::InvalidValue {
+                    parameter: "arena_config".to_string(),
+                    value: 0.0,
+                    reason: "Arena configuration results in zero memory allocation".to_string(),
+                },
+            ));
         }
 
         // Create layout for aligned allocation
         let layout = Layout::from_size_align(total_size, 64) // 64-byte alignment for SIMD
-            .map_err(|_| KwaversError::System(crate::error::SystemError::MemoryAllocation {
-                requested_bytes: total_size,
-                reason: "Failed to create layout for arena allocation".to_string(),
-            }))?;
+            .map_err(|_| {
+                KwaversError::System(crate::error::SystemError::MemoryAllocation {
+                    requested_bytes: total_size,
+                    reason: "Failed to create layout for arena allocation".to_string(),
+                })
+            })?;
 
         // Allocate memory
         let memory = unsafe { alloc(layout) };
@@ -224,11 +226,15 @@ impl FieldArena {
         let mut state = self.allocation_state.borrow_mut();
 
         // Find first available slot
-        let slot = state.allocated.iter().position(|&allocated| !allocated).ok_or_else(|| {
-            KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: "arena field slot".to_string(),
-            })
-        })?;
+        let slot = state
+            .allocated
+            .iter()
+            .position(|&allocated| !allocated)
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                    resource: "arena field slot".to_string(),
+                })
+            })?;
 
         // Mark as allocated
         state.allocated[slot] = true;
@@ -239,9 +245,8 @@ impl FieldArena {
         let field_ptr = unsafe { self.memory.as_ptr().add(offset) as *mut f64 };
 
         // Return slice
-        let field_slice = unsafe {
-            std::slice::from_raw_parts_mut(field_ptr, self.config.field_size)
-        };
+        let field_slice =
+            unsafe { std::slice::from_raw_parts_mut(field_ptr, self.config.field_size) };
 
         Ok(field_slice)
     }
@@ -309,11 +314,15 @@ impl ThreadLocalArena {
             let mut state = arena.allocation_state.borrow_mut();
 
             // Find first available slot
-            let slot = state.allocated.iter().position(|&allocated| !allocated).ok_or_else(|| {
-                KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                    resource: "arena field slot".to_string(),
-                })
-            })?;
+            let slot = state
+                .allocated
+                .iter()
+                .position(|&allocated| !allocated)
+                .ok_or_else(|| {
+                    KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                        resource: "arena field slot".to_string(),
+                    })
+                })?;
 
             // Mark as allocated
             state.allocated[slot] = true;
@@ -350,11 +359,12 @@ pub struct BumpAllocator {
 impl BumpAllocator {
     /// Create a new bump allocator
     pub fn new(size_bytes: usize) -> KwaversResult<Self> {
-        let layout = Layout::from_size_align(size_bytes, 64)
-            .map_err(|_| KwaversError::System(crate::error::SystemError::MemoryAllocation {
+        let layout = Layout::from_size_align(size_bytes, 64).map_err(|_| {
+            KwaversError::System(crate::error::SystemError::MemoryAllocation {
                 requested_bytes: size_bytes,
                 reason: "Failed to create layout for bump allocator".to_string(),
-            }))?;
+            })
+        })?;
 
         let memory = unsafe { alloc(layout) };
         let memory = NonNull::new(memory).ok_or_else(|| {
@@ -383,10 +393,16 @@ impl BumpAllocator {
 
         // Check if we have enough space
         if aligned_offset + size > self.total_size {
-            return Err(KwaversError::System(crate::error::SystemError::MemoryAllocation {
-                requested_bytes: size,
-                reason: format!("Bump allocator out of memory: {} requested, {} available", size, self.total_size - *offset),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::MemoryAllocation {
+                    requested_bytes: size,
+                    reason: format!(
+                        "Bump allocator out of memory: {} requested, {} available",
+                        size,
+                        self.total_size - *offset
+                    ),
+                },
+            ));
         }
 
         // Allocate

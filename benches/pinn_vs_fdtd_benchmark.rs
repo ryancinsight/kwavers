@@ -18,7 +18,7 @@ use ndarray::{Array1, Array2};
 use burn::backend::NdArray;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::burn_wave_equation_2d::{
-    BurnPINN2DConfig, BurnPINN2DWave, Geometry2D, BurnLossWeights2D,
+    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, Geometry2D,
 };
 
 /// Benchmark configuration for different problem sizes
@@ -144,7 +144,8 @@ fn fdtd_2d_benchmark(c: &mut Criterion) {
                         config.dx,
                         config.dx,
                         config.dx,
-                    ).expect("Grid creation failed");
+                    )
+                    .expect("Grid creation failed");
 
                     let medium = HomogeneousMedium::new(1.225, wave_speed, 0.0, 1.0, &grid);
 
@@ -154,7 +155,8 @@ fn fdtd_2d_benchmark(c: &mut Criterion) {
                         cfl_factor: 0.95,
                         ..Default::default()
                     };
-                    let solver = FdtdSolver::new(fdtd_config, &grid).expect("FDTD solver creation failed");
+                    let solver =
+                        FdtdSolver::new(fdtd_config, &grid).expect("FDTD solver creation failed");
 
                     black_box((grid, medium, solver))
                 });
@@ -174,7 +176,8 @@ fn fdtd_2d_benchmark(c: &mut Criterion) {
                         config.dx,
                         config.dx,
                         config.dx,
-                    ).expect("Grid creation failed");
+                    )
+                    .expect("Grid creation failed");
 
                     let medium = HomogeneousMedium::new(1.225, wave_speed, 0.0, 1.0, &grid);
 
@@ -183,7 +186,8 @@ fn fdtd_2d_benchmark(c: &mut Criterion) {
                         cfl_factor: 0.95,
                         ..Default::default()
                     };
-                    let mut solver = FdtdSolver::new(fdtd_config, &grid).expect("FDTD solver creation failed");
+                    let mut solver =
+                        FdtdSolver::new(fdtd_config, &grid).expect("FDTD solver creation failed");
 
                     // Initialize fields
                     let mut pressure = grid.create_field();
@@ -211,27 +215,32 @@ fn fdtd_2d_benchmark(c: &mut Criterion) {
                     let n_steps = (config.total_time / config.dt) as usize;
                     let dt = config.dt;
 
-                    for _step in 0..n_steps.min(1000) { // Limit steps for benchmarking
+                    for _step in 0..n_steps.min(1000) {
+                        // Limit steps for benchmarking
                         // Update velocity from pressure
-                        solver.update_velocity(
-                            &mut vx,
-                            &mut vy,
-                            &mut vz,
-                            &pressure,
-                            medium.density_array().view(),
-                            dt,
-                        ).expect("Velocity update failed");
+                        solver
+                            .update_velocity(
+                                &mut vx,
+                                &mut vy,
+                                &mut vz,
+                                &pressure,
+                                medium.density_array().view(),
+                                dt,
+                            )
+                            .expect("Velocity update failed");
 
                         // Update pressure from velocity
-                        solver.update_pressure(
-                            &mut pressure,
-                            &vx,
-                            &vy,
-                            &vz,
-                            medium.density_array().view(),
-                            medium.sound_speed_array().view(),
-                            dt,
-                        ).expect("Pressure update failed");
+                        solver
+                            .update_pressure(
+                                &mut pressure,
+                                &vx,
+                                &vy,
+                                &vz,
+                                medium.density_array().view(),
+                                medium.sound_speed_array().view(),
+                                dt,
+                            )
+                            .expect("Pressure update failed");
                     }
 
                     black_box(pressure)
@@ -284,8 +293,9 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                         (config.grid_size.1 - 1) as f64 * config.dx,
                     );
 
-                    let trainer = BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)
-                        .expect("PINN trainer creation failed");
+                    let trainer =
+                        BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)
+                            .expect("PINN trainer creation failed");
 
                     black_box(trainer)
                 });
@@ -320,23 +330,26 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                         (config.grid_size.1 - 1) as f64 * config.dx,
                     );
 
-                    let mut trainer = BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)
-                        .expect("PINN trainer creation failed");
+                    let mut trainer =
+                        BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)
+                            .expect("PINN trainer creation failed");
 
                     // Generate training data
                     let (x_data, y_data, t_data, u_data) =
                         generate_training_data(config, wave_speed, 100);
 
                     // Train PINN
-                    let _metrics = trainer.train(
-                        &x_data,
-                        &y_data,
-                        &t_data,
-                        &u_data,
-                        wave_speed,
-                        &device,
-                        config.pinn_epochs,
-                    ).expect("PINN training failed");
+                    let _metrics = trainer
+                        .train(
+                            &x_data,
+                            &y_data,
+                            &t_data,
+                            &u_data,
+                            wave_speed,
+                            &device,
+                            config.pinn_epochs,
+                        )
+                        .expect("PINN training failed");
 
                     black_box(trainer)
                 });
@@ -364,8 +377,9 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                         (config.grid_size.1 - 1) as f64 * config.dx,
                     );
 
-                    let trainer = BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)
-                        .expect("PINN trainer creation failed");
+                    let trainer =
+                        BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)
+                            .expect("PINN trainer creation failed");
 
                     // Generate test points
                     let n_test = 1000;
@@ -387,12 +401,10 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                     let t_test = Array1::from_vec(t_test);
 
                     // Make predictions
-                    let predictions = trainer.pinn().predict(
-                        &x_test,
-                        &y_test,
-                        &t_test,
-                        &device,
-                    ).expect("PINN prediction failed");
+                    let predictions = trainer
+                        .pinn()
+                        .predict(&x_test, &y_test, &t_test, &device)
+                        .expect("PINN prediction failed");
 
                     black_box(predictions)
                 });
@@ -420,7 +432,8 @@ fn memory_usage_benchmark(c: &mut Criterion) {
                 config.dx,
                 config.dx,
                 config.dx,
-            ).expect("Grid creation failed");
+            )
+            .expect("Grid creation failed");
 
             // FDTD requires storing multiple field arrays
             let pressure = grid.create_field();
@@ -473,7 +486,8 @@ fn accuracy_benchmark(c: &mut Criterion) {
                 config.dx,
                 config.dx,
                 config.dx,
-            ).expect("Grid creation failed");
+            )
+            .expect("Grid creation failed");
 
             let medium = HomogeneousMedium::new(1.225, wave_speed, 0.0, 1.0, &grid);
 
@@ -482,7 +496,8 @@ fn accuracy_benchmark(c: &mut Criterion) {
                 cfl_factor: 0.95,
                 ..Default::default()
             };
-            let mut solver = FdtdSolver::new(fdtd_config, &grid).expect("FDTD solver creation failed");
+            let mut solver =
+                FdtdSolver::new(fdtd_config, &grid).expect("FDTD solver creation failed");
 
             // Initialize with analytical solution
             let mut pressure = grid.create_field();
@@ -506,31 +521,36 @@ fn accuracy_benchmark(c: &mut Criterion) {
             let dt = config.dt;
 
             for _step in 0..n_steps {
-                solver.update_velocity(
-                    &mut vx,
-                    &mut vy,
-                    &mut vz,
-                    &pressure,
-                    medium.density_array().view(),
-                    dt,
-                ).expect("Velocity update failed");
+                solver
+                    .update_velocity(
+                        &mut vx,
+                        &mut vy,
+                        &mut vz,
+                        &pressure,
+                        medium.density_array().view(),
+                        dt,
+                    )
+                    .expect("Velocity update failed");
 
-                solver.update_pressure(
-                    &mut pressure,
-                    &vx,
-                    &vy,
-                    &vz,
-                    medium.density_array().view(),
-                    medium.sound_speed_array().view(),
-                    dt,
-                ).expect("Pressure update failed");
+                solver
+                    .update_pressure(
+                        &mut pressure,
+                        &vx,
+                        &vy,
+                        &vz,
+                        medium.density_array().view(),
+                        medium.sound_speed_array().view(),
+                        dt,
+                    )
+                    .expect("Pressure update failed");
             }
 
             // Compute error against analytical solution
             let mut max_error: f64 = 0.0;
             let t_final = t + n_steps as f64 * dt;
-            for i in 1..grid.nx-1 { // Skip boundaries
-                for j in 1..grid.ny-1 {
+            for i in 1..grid.nx - 1 {
+                // Skip boundaries
+                for j in 1..grid.ny - 1 {
                     for k in 0..grid.nz {
                         let x = i as f64 * grid.dx;
                         let y = j as f64 * grid.dy;
@@ -572,23 +592,25 @@ fn accuracy_benchmark(c: &mut Criterion) {
                 (config.grid_size.1 - 1) as f64 * config.dx,
             );
 
-            let mut trainer = BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)
-                .expect("PINN trainer creation failed");
+            let mut trainer =
+                BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)
+                    .expect("PINN trainer creation failed");
 
             // Generate training data
-            let (x_data, y_data, t_data, u_data) =
-                generate_training_data(&config, wave_speed, 200);
+            let (x_data, y_data, t_data, u_data) = generate_training_data(&config, wave_speed, 200);
 
             // Train PINN
-            let _metrics = trainer.train(
-                &x_data,
-                &y_data,
-                &t_data,
-                &u_data,
-                wave_speed,
-                &device,
-                config.pinn_epochs,
-            ).expect("PINN training failed");
+            let _metrics = trainer
+                .train(
+                    &x_data,
+                    &y_data,
+                    &t_data,
+                    &u_data,
+                    wave_speed,
+                    &device,
+                    config.pinn_epochs,
+                )
+                .expect("PINN training failed");
 
             // Generate test points
             let n_test = 100;
@@ -616,12 +638,10 @@ fn accuracy_benchmark(c: &mut Criterion) {
             let t_test = Array1::from_vec(t_test);
 
             // Make predictions
-            let predictions = trainer.pinn().predict(
-                &x_test,
-                &y_test,
-                &t_test,
-                &device,
-            ).expect("PINN prediction failed");
+            let predictions = trainer
+                .pinn()
+                .predict(&x_test, &y_test, &t_test, &device)
+                .expect("PINN prediction failed");
 
             // Compute error
             let mut max_error: f64 = 0.0;

@@ -155,7 +155,10 @@ impl FDTD1DWaveSolver {
                     u_current[i] = amplitude * (-dist.powi(2) / (2.0 * width.powi(2))).exp();
                 }
             }
-            InitialCondition::SineWave { frequency, amplitude } => {
+            InitialCondition::SineWave {
+                frequency,
+                amplitude,
+            } => {
                 for i in 0..nx {
                     let x = i as f64 * config.dx;
                     u_current[i] = amplitude * (2.0 * std::f64::consts::PI * frequency * x).sin();

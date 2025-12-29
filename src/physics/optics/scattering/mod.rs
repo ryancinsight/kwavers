@@ -58,7 +58,12 @@ pub struct MieParameters {
 impl MieParameters {
     /// Create new Mie parameters
     #[must_use]
-    pub fn new(radius: f64, refractive_index: num_complex::Complex64, medium_index: f64, wavelength: f64) -> Self {
+    pub fn new(
+        radius: f64,
+        refractive_index: num_complex::Complex64,
+        medium_index: f64,
+        wavelength: f64,
+    ) -> Self {
         Self {
             radius,
             refractive_index,
@@ -166,7 +171,10 @@ impl MieCalculator {
 
         // Check size parameter limits
         if x > 100.0 {
-            panic!("Size parameter x = {} too large for current implementation", x);
+            panic!(
+                "Size parameter x = {} too large for current implementation",
+                x
+            );
         }
 
         // Determine number of multipole expansion terms needed
@@ -207,18 +215,22 @@ impl MieCalculator {
         }
     }
 
-    /// Rayleigh approximation for small particles
+    /// Rayleigh approximation for small particles (x << 1)
+    ///
+    /// For particles much smaller than the wavelength, Mie theory reduces to Rayleigh scattering.
+    /// The scattering efficiency is given by Q_sca = (8/3) x^4 |(m²-1)/(m²+2)|²
+    /// where x = 2πr/λ is the size parameter.
+    ///
+    /// Reference: Bohren, C. F., & Huffman, D. R. (1983). Absorption and scattering of light by small particles
     fn rayleigh_approximation(&self, params: &MieParameters) -> MieResult {
         let x = params.size_parameter();
         let m = params.relative_index();
 
-        // Rayleigh scattering efficiencies (approximate)
+        // Rayleigh scattering efficiency: Q_sca = (8/3) x^4 |(m²-1)/(m²+2)|²
+        // This is the standard form from Bohren & Huffman (1983)
         let m2 = m * m;
         let alpha_term = (m2 - 1.0) / (m2 + 2.0);
-        let alpha = 4.0 * PI * params.radius.powi(3) * alpha_term;
-
-        let k = 2.0 * PI * params.medium_index / params.wavelength; // wave number
-        let q_sca = (8.0/3.0) * k.powi(4) * alpha.norm_sqr();
+        let q_sca = (8.0 / 3.0) * x.powi(4) * alpha_term.norm_sqr();
         let q_ext = q_sca; // No absorption in Rayleigh limit for transparent particles
 
         let geometric_cs = MieResult::geometric_cross_section(params.radius);
@@ -238,9 +250,12 @@ impl MieCalculator {
     }
 
     /// Calculate Mie scattering coefficients a_n and b_n
-    fn calculate_coefficients(&self, x: num_complex::Complex64, m: num_complex::Complex64, n_max: usize)
-        -> (Vec<num_complex::Complex64>, Vec<num_complex::Complex64>)
-    {
+    fn calculate_coefficients(
+        &self,
+        x: num_complex::Complex64,
+        m: num_complex::Complex64,
+        n_max: usize,
+    ) -> (Vec<num_complex::Complex64>, Vec<num_complex::Complex64>) {
         let mut an = Vec::with_capacity(n_max);
         let mut bn = Vec::with_capacity(n_max);
 
@@ -263,24 +278,26 @@ impl MieCalculator {
     }
 
     /// Calculate Riccati-Bessel functions ψ_n(z) and ξ_n(z)
-    fn riccati_bessel(&self, z: num_complex::Complex64, n_max: usize)
-        -> (Vec<num_complex::Complex64>, Vec<num_complex::Complex64>)
-    {
+    fn riccati_bessel(
+        &self,
+        z: num_complex::Complex64,
+        n_max: usize,
+    ) -> (Vec<num_complex::Complex64>, Vec<num_complex::Complex64>) {
         let mut psi = Vec::with_capacity(n_max + 1);
         let mut xi = Vec::with_capacity(n_max + 1);
 
         // Initialize with spherical Bessel functions
-        psi.push(z.sin());  // ψ₀(z) = sin(z)
-        xi.push(z.sin() - num_complex::Complex64::I * z.cos());  // ξ₀(z) = sin(z) - i*cos(z)
+        psi.push(z.sin()); // ψ₀(z) = sin(z)
+        xi.push(z.sin() - num_complex::Complex64::I * z.cos()); // ξ₀(z) = sin(z) - i*cos(z)
 
-        psi.push(z.sin()/z - z.cos());  // ψ₁(z) = sin(z)/z - cos(z)
-        xi.push(psi[1] - num_complex::Complex64::I * (z.sin()/z + z.cos()));  // ξ₁(z)
+        psi.push(z.sin() / z - z.cos()); // ψ₁(z) = sin(z)/z - cos(z)
+        xi.push(psi[1] - num_complex::Complex64::I * (z.sin() / z + z.cos())); // ξ₁(z)
 
         // Recurrence relation for higher orders
         for n in 2..=n_max {
             let n_f64 = n as f64;
-            let psi_n = ((2.0 * n_f64 - 1.0) / n_f64) * psi[n-1] - psi[n-2];
-            let xi_n = ((2.0 * n_f64 - 1.0) / n_f64) * xi[n-1] - xi[n-2];
+            let psi_n = ((2.0 * n_f64 - 1.0) / n_f64) * psi[n - 1] - psi[n - 2];
+            let xi_n = ((2.0 * n_f64 - 1.0) / n_f64) * xi[n - 1] - xi[n - 2];
 
             psi.push(psi_n);
             xi.push(xi_n);
@@ -290,11 +307,15 @@ impl MieCalculator {
     }
 
     /// Calculate Mie a_n coefficient
-    fn mie_a_coefficient(&self, n: usize, m: num_complex::Complex64,
-                        psi: &[num_complex::Complex64], xi: &[num_complex::Complex64],
-                        psi_m: &[num_complex::Complex64], xi_m: &[num_complex::Complex64])
-                        -> num_complex::Complex64
-    {
+    fn mie_a_coefficient(
+        &self,
+        n: usize,
+        m: num_complex::Complex64,
+        psi: &[num_complex::Complex64],
+        xi: &[num_complex::Complex64],
+        psi_m: &[num_complex::Complex64],
+        xi_m: &[num_complex::Complex64],
+    ) -> num_complex::Complex64 {
         let numerator = psi[n] * (psi_m[n] - m * xi_m[n]) - psi_m[n] * (psi[n] - xi[n]);
         let denominator = xi[n] * (psi_m[n] - m * xi_m[n]) - psi_m[n] * (xi[n] - m * xi_m[n]);
 
@@ -302,11 +323,15 @@ impl MieCalculator {
     }
 
     /// Calculate Mie b_n coefficient
-    fn mie_b_coefficient(&self, n: usize, m: num_complex::Complex64,
-                        psi: &[num_complex::Complex64], xi: &[num_complex::Complex64],
-                        psi_m: &[num_complex::Complex64], xi_m: &[num_complex::Complex64])
-                        -> num_complex::Complex64
-    {
+    fn mie_b_coefficient(
+        &self,
+        n: usize,
+        m: num_complex::Complex64,
+        psi: &[num_complex::Complex64],
+        xi: &[num_complex::Complex64],
+        psi_m: &[num_complex::Complex64],
+        xi_m: &[num_complex::Complex64],
+    ) -> num_complex::Complex64 {
         let numerator = psi_m[n] * (psi[n] - m * xi[n]) - psi[n] * (psi_m[n] - m * xi_m[n]);
         let denominator = psi_m[n] * (xi[n] - m * xi[n]) - xi_m[n] * (psi[n] - m * xi[n]);
 
@@ -314,7 +339,12 @@ impl MieCalculator {
     }
 
     /// Calculate scattering efficiency Q_sca
-    fn scattering_efficiency(&self, an: &[num_complex::Complex64], bn: &[num_complex::Complex64], x: f64) -> f64 {
+    fn scattering_efficiency(
+        &self,
+        an: &[num_complex::Complex64],
+        bn: &[num_complex::Complex64],
+        x: f64,
+    ) -> f64 {
         let mut sum = 0.0;
 
         for n in 0..an.len() {
@@ -326,7 +356,12 @@ impl MieCalculator {
     }
 
     /// Calculate extinction efficiency Q_ext
-    fn extinction_efficiency(&self, an: &[num_complex::Complex64], bn: &[num_complex::Complex64], x: f64) -> f64 {
+    fn extinction_efficiency(
+        &self,
+        an: &[num_complex::Complex64],
+        bn: &[num_complex::Complex64],
+        x: f64,
+    ) -> f64 {
         let mut sum = 0.0;
 
         for n in 0..an.len() {
@@ -338,7 +373,11 @@ impl MieCalculator {
     }
 
     /// Calculate backscattering efficiency Q_bsa
-    fn backscattering_efficiency(&self, an: &[num_complex::Complex64], bn: &[num_complex::Complex64]) -> f64 {
+    fn backscattering_efficiency(
+        &self,
+        an: &[num_complex::Complex64],
+        bn: &[num_complex::Complex64],
+    ) -> f64 {
         let mut sum = num_complex::Complex64::new(0.0, 0.0);
 
         for n in 0..an.len() {
@@ -350,7 +389,12 @@ impl MieCalculator {
     }
 
     /// Calculate asymmetry parameter g
-    fn asymmetry_parameter(&self, an: &[num_complex::Complex64], bn: &[num_complex::Complex64], x: f64) -> f64 {
+    fn asymmetry_parameter(
+        &self,
+        an: &[num_complex::Complex64],
+        bn: &[num_complex::Complex64],
+        x: f64,
+    ) -> f64 {
         let mut sum1 = 0.0;
         let mut sum2 = 0.0;
 
@@ -370,7 +414,11 @@ impl MieCalculator {
     }
 
     /// Calculate phase function at 180°
-    fn phase_function_180(&self, an: &[num_complex::Complex64], bn: &[num_complex::Complex64]) -> f64 {
+    fn phase_function_180(
+        &self,
+        an: &[num_complex::Complex64],
+        bn: &[num_complex::Complex64],
+    ) -> f64 {
         let mut sum = num_complex::Complex64::new(0.0, 0.0);
 
         for n in 0..an.len() {
@@ -412,7 +460,7 @@ impl RayleighScattering {
     /// Calculate Rayleigh scattering cross-section
     #[must_use]
     pub fn scattering_cross_section(&self) -> f64 {
-        (8.0/3.0) * PI.powi(4) * self.polarizability / self.wavelength.powi(4)
+        (8.0 / 3.0) * PI.powi(4) * self.polarizability / self.wavelength.powi(4)
     }
 
     /// Calculate Rayleigh extinction cross-section
@@ -456,10 +504,10 @@ mod tests {
     #[test]
     fn test_mie_parameters() {
         let params = MieParameters::new(
-            100e-9, // 100 nm radius
+            100e-9,                                // 100 nm radius
             num_complex::Complex64::new(1.5, 0.1), // Complex refractive index
-            1.0, // Air medium
-            500e-9, // 500 nm wavelength
+            1.0,                                   // Air medium
+            500e-9,                                // 500 nm wavelength
         );
 
         let x = params.size_parameter();
@@ -472,9 +520,9 @@ mod tests {
     #[test]
     fn test_small_particle_mie() {
         let params = MieParameters::new(
-            50e-9, // Small particle
+            50e-9,                                  // Small particle
             num_complex::Complex64::new(1.33, 0.0), // Water
-            1.0, // Air
+            1.0,                                    // Air
             500e-9,
         );
 

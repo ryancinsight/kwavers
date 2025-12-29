@@ -232,17 +232,22 @@ impl HIFUTransducer {
                     let z = k as f64 * grid.dz;
 
                     // Distance from geometric focus point (paraxial approximation)
-                    let r = ((x - focus_x).powi(2) + (y - focus_y).powi(2) + (z - focus_z).powi(2)).sqrt();
+                    let r = ((x - focus_x).powi(2) + (y - focus_y).powi(2) + (z - focus_z).powi(2))
+                        .sqrt();
 
                     if r > 1e-6 {
                         // Focused ultrasound field: Gaussian beam profile approximation
-                        let wavenumber = 2.0 * std::f64::consts::PI * self.frequency / medium.sound_speed(0, 0, 0);
+                        let wavenumber = 2.0 * std::f64::consts::PI * self.frequency
+                            / medium.sound_speed(0, 0, 0);
 
                         // Focal gain based on aperture and focal length
-                        let focal_gain = (self.aperture_radius / (self.focal_length * wavenumber)).abs();
+                        let focal_gain =
+                            (self.aperture_radius / (self.focal_length * wavenumber)).abs();
 
                         // Pressure amplitude based on acoustic power and spherical spreading
-                        let pressure_amplitude = (self.acoustic_power / (4.0 * std::f64::consts::PI * r.powi(2))).sqrt() * focal_gain;
+                        let pressure_amplitude =
+                            (self.acoustic_power / (4.0 * std::f64::consts::PI * r.powi(2))).sqrt()
+                                * focal_gain;
 
                         // Phase factor
                         let phase = -wavenumber * r;
@@ -291,7 +296,12 @@ impl HIFUTreatmentPlan {
     }
 
     /// Validate treatment plan against safety constraints
-    pub fn validate(&self, _grid: &Grid, _medium: &dyn Medium, transducer: &HIFUTransducer) -> KwaversResult<()> {
+    pub fn validate(
+        &self,
+        _grid: &Grid,
+        _medium: &dyn Medium,
+        transducer: &HIFUTransducer,
+    ) -> KwaversResult<()> {
         // Check target is within accessible region
         if self.target.center[2] < transducer.focal_length * 0.5 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
@@ -311,7 +321,8 @@ impl HIFUTreatmentPlan {
         }
 
         // Check acoustic intensity limits
-        if self.safety.max_intensity > 1000.0 { // 1000 W/cm² = 10^7 W/m²
+        if self.safety.max_intensity > 1000.0 {
+            // 1000 W/cm² = 10^7 W/m²
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "safety.max_intensity".to_string(),
                 value: self.safety.max_intensity,
@@ -326,9 +337,9 @@ impl HIFUTreatmentPlan {
 impl Default for SafetyConstraints {
     fn default() -> Self {
         Self {
-            max_temperature: 85.0, // °C
+            max_temperature: 85.0,   // °C
             max_thermal_dose: 240.0, // CEM43
-            max_intensity: 1000.0, // W/cm²
+            max_intensity: 1000.0,   // W/cm²
             avoidance_zones: Vec::new(),
         }
     }
@@ -373,13 +384,14 @@ impl ThermalDose {
         self.cem43.fill(0.0);
 
         for i in 1..self.temperature_history.len() {
-            let dt = self.time_points[i] - self.time_points[i-1];
-            let temp_prev = &self.temperature_history[i-1];
+            let dt = self.time_points[i] - self.time_points[i - 1];
+            let temp_prev = &self.temperature_history[i - 1];
             let temp_curr = &self.temperature_history[i];
 
             // Use average temperature over time step
             for idx in 0..self.cem43.len() {
-                let t_avg = (temp_prev.as_slice().unwrap()[idx] + temp_curr.as_slice().unwrap()[idx]) / 2.0;
+                let t_avg =
+                    (temp_prev.as_slice().unwrap()[idx] + temp_curr.as_slice().unwrap()[idx]) / 2.0;
 
                 // R factor based on temperature
                 let r: f64 = if t_avg >= 43.0 { 4.0 } else { 2.0 };
@@ -431,7 +443,7 @@ mod tests {
         // Check that pressure is non-zero at focus (approximate)
         let focus_i = (0.08 / 0.002) as usize;
         if focus_i < grid.nx {
-            assert!(pressure[[focus_i, grid.ny/2, grid.nz/2]].abs() > 0.0);
+            assert!(pressure[[focus_i, grid.ny / 2, grid.nz / 2]].abs() > 0.0);
         }
 
         Ok(())
@@ -452,13 +464,13 @@ mod tests {
         thermal_dose.add_temperature_measurement(temp3, 20.0);
 
         // Check that dose increases with temperature
-        let dose_center = thermal_dose.dose_at(grid.nx/2, grid.ny/2, grid.nz/2);
+        let dose_center = thermal_dose.dose_at(grid.nx / 2, grid.ny / 2, grid.nz / 2);
         assert!(dose_center > 0.0);
 
         // Check ablation threshold detection
         let ablation = thermal_dose.ablation_threshold_reached();
         // Should be false for this short heating period
-        assert!(!ablation[[grid.nx/2, grid.ny/2, grid.nz/2]]);
+        assert!(!ablation[[grid.nx / 2, grid.ny / 2, grid.nz / 2]]);
     }
 
     #[test]

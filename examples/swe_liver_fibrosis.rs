@@ -31,11 +31,8 @@ use kwavers::error::KwaversResult;
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::imaging::elastography::{
-    InversionMethod,
+    AcousticRadiationForce, DisplacementEstimator, InversionMethod, PushPulseParameters,
     ShearWaveInversion,
-    AcousticRadiationForce,
-    PushPulseParameters,
-    DisplacementEstimator,
 };
 use ndarray::Array3;
 use std::time::Instant;
@@ -53,12 +50,20 @@ fn main() -> KwaversResult<()> {
     let swe_config = create_swe_parameters()?;
 
     println!("📊 Simulation Setup:");
-    println!("   Grid: {} × {} × {} ({} mm³)", grid.nx, grid.ny, grid.nz,
-             (grid.nx as f64 * grid.dx * 1000.0) as usize);
+    println!(
+        "   Grid: {} × {} × {} ({} mm³)",
+        grid.nx,
+        grid.ny,
+        grid.nz,
+        (grid.nx as f64 * grid.dx * 1000.0) as usize
+    );
     println!("   Tissue: Heterogeneous liver phantom");
-    println!("   ARFI Push: {:.1} MHz, {:.0} μs, {:.0} W/cm²",
-             swe_config.frequency / 1e6, swe_config.duration * 1e6,
-             swe_config.intensity / 1e4);
+    println!(
+        "   ARFI Push: {:.1} MHz, {:.0} μs, {:.0} W/cm²",
+        swe_config.frequency / 1e6,
+        swe_config.duration * 1e6,
+        swe_config.intensity / 1e4
+    );
 
     // Generate shear wave using ARFI
     println!("\n🔊 Generating Shear Wave...");
@@ -73,8 +78,12 @@ fn main() -> KwaversResult<()> {
     )?);
     let displacement_field = arfi.apply_push_pulse(push_location)?;
 
-    println!("   ✓ ARFI push applied at [{:.1}, {:.1}, {:.1}] mm",
-             push_location[0] * 1000.0, push_location[1] * 1000.0, push_location[2] * 1000.0);
+    println!(
+        "   ✓ ARFI push applied at [{:.1}, {:.1}, {:.1}] mm",
+        push_location[0] * 1000.0,
+        push_location[1] * 1000.0,
+        push_location[2] * 1000.0
+    );
 
     // Track shear wave propagation (ultrafast imaging simulation)
     println!("\n📹 Tracking Shear Wave Propagation...");
@@ -86,10 +95,23 @@ fn main() -> KwaversResult<()> {
         swe_config.frame_rate,
     )?;
 
-    println!("   ✓ Tracked {} frames at {:.0} fps", swe_config.tracking_frames, swe_config.frame_rate);
-    let min_disp = tracked_displacement.magnitude().iter().fold(f64::INFINITY, |a, &b| a.min(b));
-    let max_disp = tracked_displacement.magnitude().iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-    println!("   ✓ Displacement range: {:.3} - {:.3} μm", min_disp * 1e6, max_disp * 1e6);
+    println!(
+        "   ✓ Tracked {} frames at {:.0} fps",
+        swe_config.tracking_frames, swe_config.frame_rate
+    );
+    let min_disp = tracked_displacement
+        .magnitude()
+        .iter()
+        .fold(f64::INFINITY, |a, &b| a.min(b));
+    let max_disp = tracked_displacement
+        .magnitude()
+        .iter()
+        .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+    println!(
+        "   ✓ Displacement range: {:.3} - {:.3} μm",
+        min_disp * 1e6,
+        max_disp * 1e6
+    );
 
     // Debug: check initial displacement
     let initial_min = displacement_field
@@ -98,7 +120,11 @@ fn main() -> KwaversResult<()> {
     let initial_max = displacement_field
         .iter()
         .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-    println!("   ✓ Initial displacement range: {:.3} - {:.3} μm", initial_min * 1e6, initial_max * 1e6);
+    println!(
+        "   ✓ Initial displacement range: {:.3} - {:.3} μm",
+        initial_min * 1e6,
+        initial_max * 1e6
+    );
 
     // Reconstruct elasticity map
     println!("\n🧮 Reconstructing Elasticity Map...");
@@ -109,15 +135,21 @@ fn main() -> KwaversResult<()> {
     println!("\n📈 Clinical Analysis:");
     let stiffness_stats = analyze_stiffness_distribution(&elasticity_map)?;
 
-    println!("   Liver Stiffness: {:.1} ± {:.1} kPa (IQR: {:.1} - {:.1} kPa)",
-             stiffness_stats.mean / 1000.0,
-             stiffness_stats.std / 1000.0,
-             stiffness_stats.q25 / 1000.0,
-             stiffness_stats.q75 / 1000.0);
+    println!(
+        "   Liver Stiffness: {:.1} ± {:.1} kPa (IQR: {:.1} - {:.1} kPa)",
+        stiffness_stats.mean / 1000.0,
+        stiffness_stats.std / 1000.0,
+        stiffness_stats.q25 / 1000.0,
+        stiffness_stats.q75 / 1000.0
+    );
 
     // Clinical interpretation
     let fibrosis_stage = interpret_fibrosis_stage(stiffness_stats.mean);
-    println!("   Fibrosis Stage: {} ({} kPa)", fibrosis_stage.name, fibrosis_stage.threshold / 1000.0);
+    println!(
+        "   Fibrosis Stage: {} ({} kPa)",
+        fibrosis_stage.name,
+        fibrosis_stage.threshold / 1000.0
+    );
     println!("   Confidence: {:.1}%", fibrosis_stage.confidence * 100.0);
 
     // Validate against phantom studies
@@ -125,7 +157,10 @@ fn main() -> KwaversResult<()> {
     validate_against_phantom(&elasticity_map, &stiffness_stats)?;
 
     let elapsed = start_time.elapsed();
-    println!("\n⏱️  Total simulation time: {:.2} seconds", elapsed.as_secs_f64());
+    println!(
+        "\n⏱️  Total simulation time: {:.2} seconds",
+        elapsed.as_secs_f64()
+    );
 
     println!("\n🎉 SWE liver assessment completed successfully!");
     println!("   Results demonstrate clinical-grade tissue characterization");
@@ -137,11 +172,11 @@ fn main() -> KwaversResult<()> {
 fn create_clinical_grid() -> KwaversResult<Grid> {
     // Clinical SWE typically uses 40-60 mm lateral field of view
     // with 20-40 mm depth for liver imaging
-    let nx = 200;  // 50 mm lateral (0.25 mm/pixel)
-    let ny = 200;  // 50 mm elevational
-    let nz = 160;  // 40 mm depth
+    let nx = 200; // 50 mm lateral (0.25 mm/pixel)
+    let ny = 200; // 50 mm elevational
+    let nz = 160; // 40 mm depth
 
-    let dx = 0.00025;  // 0.25 mm resolution (typical for SWE)
+    let dx = 0.00025; // 0.25 mm resolution (typical for SWE)
     let dy = 0.00025;
     let dz = 0.00025;
 
@@ -158,24 +193,23 @@ fn create_liver_phantom(grid: &Grid) -> KwaversResult<HomogeneousMedium> {
     Ok(HomogeneousMedium::liver_tissue(fibrosis_stage, grid))
 }
 
-
 /// Create SWE acquisition parameters based on clinical protocols
 fn create_swe_parameters() -> KwaversResult<SWESimulationConfig> {
     Ok(SWESimulationConfig {
         // ARFI push parameters (Supersonic Imagine Aixplorer protocol)
-        frequency: 4.5e6,        // 4.5 MHz push frequency
-        duration: 67e-6,         // 67 μs push duration
-        intensity: 1500e4,       // 1500 W/cm² acoustic intensity
+        frequency: 4.5e6,  // 4.5 MHz push frequency
+        duration: 67e-6,   // 67 μs push duration
+        intensity: 1500e4, // 1500 W/cm² acoustic intensity
 
         // Tracking parameters
-        tracking_frequency: 8e6,  // 8 MHz imaging frequency
-        frame_rate: 10000.0,      // 10 kHz frame rate
-        tracking_frames: 100,     // Track for 10 ms
+        tracking_frequency: 8e6, // 8 MHz imaging frequency
+        frame_rate: 10000.0,     // 10 kHz frame rate
+        tracking_frames: 100,    // Track for 10 ms
 
         // Reconstruction parameters
-        min_depth: 0.005,         // 5 mm minimum depth
-        max_depth: 0.035,         // 35 mm maximum depth
-        roi_size: [0.02, 0.02],   // 20×20 mm ROI
+        min_depth: 0.005,       // 5 mm minimum depth
+        max_depth: 0.035,       // 35 mm maximum depth
+        roi_size: [0.02, 0.02], // 20×20 mm ROI
     })
 }
 
@@ -193,9 +227,9 @@ fn track_shear_wave_propagation(
 }
 
 /// Analyze stiffness distribution for clinical interpretation
-fn analyze_stiffness_distribution(elasticity_map: &kwavers::physics::imaging::elastography::ElasticityMap)
-    -> KwaversResult<StiffnessStatistics> {
-
+fn analyze_stiffness_distribution(
+    elasticity_map: &kwavers::physics::imaging::elastography::ElasticityMap,
+) -> KwaversResult<StiffnessStatistics> {
     let mut values: Vec<f64> = elasticity_map.youngs_modulus.iter().cloned().collect();
     values.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
@@ -208,13 +242,19 @@ fn analyze_stiffness_distribution(elasticity_map: &kwavers::physics::imaging::el
     let q25 = values[n / 4];
     let q75 = values[3 * n / 4];
 
-    Ok(StiffnessStatistics { mean, std, q25, q75 })
+    Ok(StiffnessStatistics {
+        mean,
+        std,
+        q25,
+        q75,
+    })
 }
 
 /// Interpret fibrosis stage based on stiffness thresholds
 fn interpret_fibrosis_stage(mean_stiffness: f64) -> FibrosisStage {
     // METAVIR scoring system thresholds (kPa)
-    match mean_stiffness / 1000.0 { // Convert to kPa
+    match mean_stiffness / 1000.0 {
+        // Convert to kPa
         s if s < 5.5 => FibrosisStage {
             name: "F0-F1 (No/Mild Fibrosis)".to_string(),
             threshold: 5500.0,
@@ -248,37 +288,56 @@ fn validate_against_phantom(
     elasticity_map: &kwavers::physics::imaging::elastography::ElasticityMap,
     stats: &StiffnessStatistics,
 ) -> KwaversResult<()> {
-
     // Expected phantom stiffness ranges (CIRS model 039)
-    let expected_f1 = 8000.0..12000.0;  // 8-12 kPa
+    let expected_f1 = 8000.0..12000.0; // 8-12 kPa
     let expected_f3 = 12000.0..18000.0; // 12-18 kPa
 
     // Check if F1 region is within expected range
     let f1_region_stiffness = extract_region_stiffness(elasticity_map, 0.020, 0.030, 0.010, 0.020)?;
     if !expected_f1.contains(&f1_region_stiffness) {
-        println!("   ⚠️  F1 region stiffness {:.1} kPa outside expected range {:.1}-{:.1} kPa",
-                 f1_region_stiffness / 1000.0, expected_f1.start / 1000.0, expected_f1.end / 1000.0);
+        println!(
+            "   ⚠️  F1 region stiffness {:.1} kPa outside expected range {:.1}-{:.1} kPa",
+            f1_region_stiffness / 1000.0,
+            expected_f1.start / 1000.0,
+            expected_f1.end / 1000.0
+        );
     } else {
-        println!("   ✓ F1 region validated: {:.1} kPa", f1_region_stiffness / 1000.0);
+        println!(
+            "   ✓ F1 region validated: {:.1} kPa",
+            f1_region_stiffness / 1000.0
+        );
     }
 
     // Check if F3 region is within expected range
     let f3_region_stiffness = extract_region_stiffness(elasticity_map, 0.030, 0.040, 0.010, 0.020)?;
     if !expected_f3.contains(&f3_region_stiffness) {
-        println!("   ⚠️  F3 region stiffness {:.1} kPa outside expected range {:.1}-{:.1} kPa",
-                 f3_region_stiffness / 1000.0, expected_f3.start / 1000.0, expected_f3.end / 1000.0);
+        println!(
+            "   ⚠️  F3 region stiffness {:.1} kPa outside expected range {:.1}-{:.1} kPa",
+            f3_region_stiffness / 1000.0,
+            expected_f3.start / 1000.0,
+            expected_f3.end / 1000.0
+        );
     } else {
-        println!("   ✓ F3 region validated: {:.1} kPa", f3_region_stiffness / 1000.0);
+        println!(
+            "   ✓ F3 region validated: {:.1} kPa",
+            f3_region_stiffness / 1000.0
+        );
     }
 
     // Overall accuracy check
     let target_accuracy = 0.10; // 10% target accuracy
     let measured_error = stats.std / stats.mean;
     if measured_error > target_accuracy {
-        println!("   ⚠️  Measurement variability {:.1}% exceeds target {:.1}%",
-                 measured_error * 100.0, target_accuracy * 100.0);
+        println!(
+            "   ⚠️  Measurement variability {:.1}% exceeds target {:.1}%",
+            measured_error * 100.0,
+            target_accuracy * 100.0
+        );
     } else {
-        println!("   ✓ Measurement precision: {:.1}% variability", measured_error * 100.0);
+        println!(
+            "   ✓ Measurement precision: {:.1}% variability",
+            measured_error * 100.0
+        );
     }
 
     Ok(())
@@ -287,7 +346,10 @@ fn validate_against_phantom(
 /// Extract mean stiffness from a specific region
 fn extract_region_stiffness(
     elasticity_map: &kwavers::physics::imaging::elastography::ElasticityMap,
-    _x_min: f64, _x_max: f64, _y_min: f64, _y_max: f64,
+    _x_min: f64,
+    _x_max: f64,
+    _y_min: f64,
+    _y_max: f64,
 ) -> KwaversResult<f64> {
     // This is a simplified implementation
     // In practice, would need proper coordinate transformation
@@ -309,7 +371,7 @@ fn extract_region_stiffness(
 
     if count == 0 {
         return Err(kwavers::error::KwaversError::InvalidInput(
-            "No points found in specified region".to_string()
+            "No points found in specified region".to_string(),
         ));
     }
 

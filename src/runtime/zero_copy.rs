@@ -43,8 +43,8 @@ mod rkyv_impl {
     use crate::error::{KwaversError, KwaversResult};
     use crate::grid::Grid;
     use rkyv::{
-        access::archived_root,
-        ser::serializers::AllocSerializer,
+        archived_root,
+        ser::{serializers::AllocSerializer, Serializer},
         Archive, Deserialize, Infallible, Serialize,
     };
 
@@ -185,9 +185,9 @@ mod rkyv_impl {
         }
 
         /// Deserialize from bytes with zero-copy access
-        /// 
+        ///
         /// # Safety
-        /// 
+        ///
         /// Assumes bytes are valid rkyv-serialized data from a trusted source.
         /// For untrusted data, use rkyv::check_archived_root explicitly.
         pub fn from_bytes(bytes: &[u8]) -> KwaversResult<Self> {
@@ -223,12 +223,12 @@ mod rkyv_impl {
             let loaded = deserialize_grid(&bytes).unwrap();
 
             // Verify
-            assert_eq!(original.nx(), loaded.nx());
-            assert_eq!(original.ny(), loaded.ny());
-            assert_eq!(original.nz(), loaded.nz());
-            assert!((original.dx() - loaded.dx()).abs() < 1e-10);
-            assert!((original.dy() - loaded.dy()).abs() < 1e-10);
-            assert!((original.dz() - loaded.dz()).abs() < 1e-10);
+            assert_eq!(original.nx, loaded.nx);
+            assert_eq!(original.ny, loaded.ny);
+            assert_eq!(original.nz, loaded.nz);
+            assert!((original.dx - loaded.dx).abs() < 1e-10);
+            assert!((original.dy - loaded.dy).abs() < 1e-10);
+            assert!((original.dz - loaded.dz).abs() < 1e-10);
         }
 
         #[test]

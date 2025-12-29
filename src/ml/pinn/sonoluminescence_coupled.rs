@@ -18,11 +18,10 @@
 //! 3. **Molecular Emission**: Excited species produce line spectra
 //! 4. **Electromagnetic Propagation**: Light waves propagate through the medium
 
-use crate::error::{KwaversError, KwaversResult};
 use crate::ml::pinn::physics::{
-    BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface,
-    CouplingType, InitialConditionSpec, PhysicsDomain, PhysicsLossWeights,
-    PhysicsParameters, PhysicsValidationMetric,
+    BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface, CouplingType,
+    InitialConditionSpec, PhysicsDomain, PhysicsLossWeights, PhysicsParameters,
+    PhysicsValidationMetric,
 };
 use crate::physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
 use burn::tensor::{backend::AutodiffBackend, Tensor};
@@ -76,7 +75,7 @@ pub enum SonoluminescenceCouplingType {
     SpectralCoupling,
 }
 
-/// Sonoluminescence-coupled physics domain
+/// Sonoluminescence coupled physics domain implementation
 #[derive(Debug)]
 pub struct SonoluminescenceCoupledDomain<B: AutodiffBackend> {
     /// Coupling configuration
@@ -101,10 +100,8 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
         config: SonoluminescenceCouplingConfig,
         coupling_type: SonoluminescenceCouplingType,
     ) -> Self {
-        let emission_calculator = SonoluminescenceEmission::new(
-            config.grid_shape,
-            config.emission_params.clone(),
-        );
+        let emission_calculator =
+            SonoluminescenceEmission::new(config.grid_shape, config.emission_params.clone());
 
         // Initialize fields
         let bubble_states = Array3::zeros(config.grid_shape);
@@ -140,16 +137,27 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
                 y_min: 0.0,
                 y_max: config.grid_shape.1 as f64 * config.grid_spacing.1,
             },
-            coupled_domains: vec!["electromagnetic".to_string(), "sonoluminescence".to_string()],
+            coupled_domains: vec![
+                "electromagnetic".to_string(),
+                "sonoluminescence".to_string(),
+            ],
             coupling_type: match coupling_type {
                 SonoluminescenceCouplingType::StaticEmission => CouplingType::SolutionContinuity,
                 SonoluminescenceCouplingType::DynamicEmission => CouplingType::FluxContinuity,
-                SonoluminescenceCouplingType::SpectralCoupling => CouplingType::Custom("spectral".to_string()),
+                SonoluminescenceCouplingType::SpectralCoupling => {
+                    CouplingType::Custom("spectral".to_string())
+                }
             },
             coupling_params: {
                 let mut params = HashMap::new();
-                params.insert("coupling_efficiency".to_string(), config.coupling_efficiency);
-                params.insert("spectral_resolution".to_string(), if config.spectral_resolution { 1.0 } else { 0.0 });
+                params.insert(
+                    "coupling_efficiency".to_string(),
+                    config.coupling_efficiency,
+                );
+                params.insert(
+                    "spectral_resolution".to_string(),
+                    if config.spectral_resolution { 1.0 } else { 0.0 },
+                );
                 params.insert("n_wavelengths".to_string(), config.n_wavelengths as f64);
                 params
             },
@@ -158,7 +166,12 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
         interfaces.push(em_sl_coupling);
 
         // Add spectral interface if spectral coupling is enabled
-        if config.spectral_resolution && matches!(coupling_type, SonoluminescenceCouplingType::SpectralCoupling) {
+        if config.spectral_resolution
+            && matches!(
+                coupling_type,
+                SonoluminescenceCouplingType::SpectralCoupling
+            )
+        {
             let spectral_coupling = CouplingInterface {
                 name: "spectral_propagation".to_string(),
                 position: BoundaryPosition::CustomRectangular {
@@ -184,7 +197,11 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
     }
 
     /// Update bubble state and temperature fields
-    pub fn update_bubble_states(&mut self, new_bubble_states: Array3<f64>, new_temperature: Array3<f64>) {
+    pub fn update_bubble_states(
+        &mut self,
+        new_bubble_states: Array3<f64>,
+        new_temperature: Array3<f64>,
+    ) {
         self.bubble_states = new_bubble_states;
         self.temperature_field = new_temperature;
 
@@ -199,17 +216,17 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
         x: &Tensor<B, 2>,
         y: &Tensor<B, 2>,
         t: &Tensor<B, 2>,
-        physics_params: &PhysicsParameters,
+        _physics_params: &PhysicsParameters,
     ) -> Tensor<B, 2> {
         // Convert tensor positions to grid indices
-        let x_vals = x.clone();
-        let y_vals = y.clone();
+        let _x_vals = x.clone();
+        let _y_vals = y.clone();
 
         // Simplified: assume we're working with 2D slices
         // In practice, would need 3D interpolation
 
         // Get emission intensity from calculator
-        let emission_intensity = self.emission_calculator.emission_field.clone();
+        let _emission_intensity = self.emission_calculator.emission_field.clone();
 
         // Proper interpolation from emission intensity field to PINN collocation points
         // This implements the coupling between sonoluminescence and electromagnetic fields
@@ -219,12 +236,12 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
 
         // Get emission field dimensions (assuming 3D grid)
         let emission_dims = self.emission_calculator.emission_field.dim();
-        let (nx, ny, nz) = (emission_dims[0], emission_dims[1], emission_dims[2]);
+        let (nx, ny, nz) = (emission_dims.0, emission_dims.1, emission_dims.2);
 
         // Convert spatial coordinates to grid indices
-        let x_coords = x.to_data().to_vec().unwrap();
-        let y_coords = y.to_data().to_vec().unwrap();
-        let t_coords = t.to_data().to_vec().unwrap();
+        let x_coords: Vec<f32> = x.to_data().to_vec().unwrap();
+        let y_coords: Vec<f32> = y.to_data().to_vec().unwrap();
+        let t_coords: Vec<f32> = t.to_data().to_vec().unwrap();
 
         for i in 0..batch_size {
             let x_pos = x_coords[i] as f64;
@@ -248,7 +265,11 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
             source_terms.push(source_term);
         }
 
-        Tensor::<B, 1>::from_floats(source_terms.as_slice(), &<B as burn::tensor::backend::Backend>::Device::default()).reshape([batch_size, 1])
+        Tensor::<B, 1>::from_floats(
+            source_terms.as_slice(),
+            &<B as burn::tensor::backend::Backend>::Device::default(),
+        )
+        .reshape([batch_size, 1])
     }
 
     /// Compute electromagnetic PDE residual with sonoluminescence sources
@@ -274,13 +295,22 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
         // Forward pass to get electromagnetic field components
         // For 2D TE/TM mode assumption, we solve for Ez and Hz components
         let electric_field = model.forward(x_grad.clone(), y_grad.clone(), t_grad.clone());
-        let magnetic_field = model.forward(x_grad.clone(), y_grad.clone(), t_grad.clone()); // Simplified - would be separate field
+        let _magnetic_field = model.forward(x_grad.clone(), y_grad.clone(), t_grad.clone()); // Simplified - would be separate field
 
         // Compute spatial derivatives for curl operations
         let grad_electric = electric_field.backward();
-        let e_dx = grad_electric.get(&x_grad).unwrap_or_else(|| Tensor::zeros_like(&x));
-        let e_dy = grad_electric.get(&y_grad).unwrap_or_else(|| Tensor::zeros_like(&y));
-        let e_dt = grad_electric.get(&t_grad).unwrap_or_else(|| Tensor::zeros_like(&t));
+        let e_dx = x_grad
+            .grad(&grad_electric)
+            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
+            .unwrap_or_else(|| x.zeros_like());
+        let e_dy = y_grad
+            .grad(&grad_electric)
+            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
+            .unwrap_or_else(|| y.zeros_like());
+        let e_dt = t_grad
+            .grad(&grad_electric)
+            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
+            .unwrap_or_else(|| t.zeros_like());
 
         // Compute magnetic field derivatives
         let x_grad_2 = x.clone().require_grad();
@@ -289,14 +319,23 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
 
         let magnetic_field_2 = model.forward(x_grad_2.clone(), y_grad_2.clone(), t_grad_2.clone());
         let grad_magnetic = magnetic_field_2.backward();
-        let b_dx = grad_magnetic.get(&x_grad_2).unwrap_or_else(|| Tensor::zeros_like(&x));
-        let b_dy = grad_magnetic.get(&y_grad_2).unwrap_or_else(|| Tensor::zeros_like(&y));
-        let b_dt = grad_magnetic.get(&t_grad_2).unwrap_or_else(|| Tensor::zeros_like(&t));
+        let b_dx = x_grad_2
+            .grad(&grad_magnetic)
+            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
+            .unwrap_or_else(|| x.zeros_like());
+        let b_dy = y_grad_2
+            .grad(&grad_magnetic)
+            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
+            .unwrap_or_else(|| y.zeros_like());
+        let b_dt = t_grad_2
+            .grad(&grad_magnetic)
+            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
+            .unwrap_or_else(|| t.zeros_like());
 
         // Physical constants
         let mu_0 = 4.0 * std::f64::consts::PI * 1e-7_f64; // Permeability of free space [H/m]
         let epsilon_0 = 8.854e-12_f64; // Permittivity of free space [F/m]
-        let c = 1.0 / (mu_0 * epsilon_0).sqrt(); // Speed of light [m/s]
+        let _c = 1.0 / (mu_0 * epsilon_0).sqrt(); // Speed of light [m/s]
 
         // Convert to f32 for tensor operations
         let mu_0_f32 = mu_0 as f32;
@@ -307,11 +346,12 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
 
         // Ampere's law residual: ∇×E + ∂B/∂t + μ₀ J = 0
         // For 2D TM mode: ∂Ez/∂y - ∂Ez/∂x + ∂Bz/∂t + μ₀ Jz = 0
-        let ampere_residual = e_dy - e_dx + b_dt * mu_0_f32 + current_density * mu_0_f32;
+        let ampere_residual = e_dy - e_dx + b_dt * mu_0_f32 + current_density.clone() * mu_0_f32;
 
         // Faraday's law residual: ∇×B - μ₀ ε₀ ∂E/∂t - μ₀ J = 0
         // For 2D TM mode: ∂Bz/∂x - ∂Bz/∂y - μ₀ ε₀ ∂Ez/∂t - μ₀ Jz = 0
-        let faraday_residual = b_dx - b_dy - mu_0_f32 * epsilon_0_f32 * e_dt - current_density * mu_0_f32;
+        let faraday_residual =
+            b_dx - b_dy - mu_0_f32 * epsilon_0_f32 * e_dt - current_density * mu_0_f32;
 
         // Combined Maxwell's equations residual
         // Literature: Taflove & Hagness (2005) Computational Electrodynamics
@@ -389,8 +429,18 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for SonoluminescenceCoupledDomain<B> {
             initial_weight: 10.0,
             physics_weights: {
                 let mut weights = HashMap::new();
-                weights.insert("light_source_weight".to_string(), self.config.coupling_efficiency);
-                weights.insert("spectral_weight".to_string(), if self.config.spectral_resolution { 1.0 } else { 0.0 });
+                weights.insert(
+                    "light_source_weight".to_string(),
+                    self.config.coupling_efficiency,
+                );
+                weights.insert(
+                    "spectral_weight".to_string(),
+                    if self.config.spectral_resolution {
+                        1.0
+                    } else {
+                        0.0
+                    },
+                );
                 weights
             },
         }
@@ -458,7 +508,9 @@ mod tests {
     #[test]
     fn test_sonoluminescence_coupled_domain_creation() {
         let config = SonoluminescenceCouplingConfig::default();
-        let domain: SonoluminescenceCoupledDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>> = SonoluminescenceCoupledDomain::new(
+        let domain: SonoluminescenceCoupledDomain<
+            burn::backend::Autodiff<burn::backend::NdArray<f32>>,
+        > = SonoluminescenceCoupledDomain::new(
             config,
             SonoluminescenceCouplingType::DynamicEmission,
         );
@@ -474,7 +526,9 @@ mod tests {
             spectral_resolution: true,
             ..Default::default()
         };
-        let domain: SonoluminescenceCoupledDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>> = SonoluminescenceCoupledDomain::new(
+        let domain: SonoluminescenceCoupledDomain<
+            burn::backend::Autodiff<burn::backend::NdArray<f32>>,
+        > = SonoluminescenceCoupledDomain::new(
             config,
             SonoluminescenceCouplingType::SpectralCoupling,
         );
@@ -483,7 +537,9 @@ mod tests {
         assert!(interfaces.len() >= 2); // Should have EM-SL and spectral interfaces
 
         // Check for expected interface names
-        let has_em_sl = interfaces.iter().any(|i| i.name == "electromagnetic_sonoluminescence");
+        let has_em_sl = interfaces
+            .iter()
+            .any(|i| i.name == "electromagnetic_sonoluminescence");
         let has_spectral = interfaces.iter().any(|i| i.name == "spectral_propagation");
 
         assert!(has_em_sl);
@@ -496,7 +552,9 @@ mod tests {
             coupling_efficiency: 0.005, // 0.5%
             ..Default::default()
         };
-        let domain: SonoluminescenceCoupledDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>> = SonoluminescenceCoupledDomain::new(
+        let domain: SonoluminescenceCoupledDomain<
+            burn::backend::Autodiff<burn::backend::NdArray<f32>>,
+        > = SonoluminescenceCoupledDomain::new(
             config,
             SonoluminescenceCouplingType::DynamicEmission,
         );

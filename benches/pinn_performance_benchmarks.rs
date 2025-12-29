@@ -17,7 +17,7 @@ use std::time::Duration;
 
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::{
-    AdaptiveCollocationSampler, BatchedPINNTrainer, BurnPINN2DWave, BurnPINN2DConfig,
+    AdaptiveCollocationSampler, BatchedPINNTrainer, BurnPINN2DConfig, BurnPINN2DWave,
     GpuMemoryManager, MemoryPoolType, SamplingStrategy, UniversalTrainingConfig,
 };
 
@@ -150,10 +150,15 @@ fn pinn_training_benchmark(c: &mut Criterion) {
 }
 
 #[cfg(feature = "pinn")]
-fn run_pinn_training_benchmark(config: PinnBenchmarkConfig) -> Result<f64, Box<dyn std::error::Error>> {
+fn run_pinn_training_benchmark(
+    config: PinnBenchmarkConfig,
+) -> Result<f64, Box<dyn std::error::Error>> {
     // Create physics domain (simplified for benchmarking)
     let physics_domain = Box::new(kwavers::ml::pinn::navier_stokes::NavierStokesDomain::new(
-        40.0, 1000.0, 0.001, vec![1.0, 1.0],
+        40.0,
+        1000.0,
+        0.001,
+        vec![1.0, 1.0],
     ));
 
     // Create model
@@ -170,13 +175,20 @@ fn run_pinn_training_benchmark(config: PinnBenchmarkConfig) -> Result<f64, Box<d
     // In practice, this would create actual Burn model
     // For benchmarking, simulate training time
     let base_time_per_point = if config.use_gpu { 0.0001 } else { 0.001 }; // seconds
-    let adaptive_factor = if config.use_adaptive_sampling { 1.2 } else { 1.0 };
+    let adaptive_factor = if config.use_adaptive_sampling {
+        1.2
+    } else {
+        1.0
+    };
     let batch_factor = (config.collocation_points as f64 / config.batch_size as f64).sqrt();
 
-    let training_time = config.collocation_points as f64 * base_time_per_point * adaptive_factor * batch_factor;
+    let training_time =
+        config.collocation_points as f64 * base_time_per_point * adaptive_factor * batch_factor;
 
     // Simulate some work
-    std::thread::sleep(std::time::Duration::from_millis((training_time * 1000.0) as u64));
+    std::thread::sleep(std::time::Duration::from_millis(
+        (training_time * 1000.0) as u64,
+    ));
 
     Ok(training_time)
 }
@@ -251,7 +263,9 @@ fn run_adaptive_sampling_benchmark(size: usize) -> Result<f64, Box<dyn std::erro
     let sampling_time = base_time * size_factor * adaptive_overhead;
 
     // Simulate work
-    std::thread::sleep(std::time::Duration::from_millis((sampling_time * 1000.0) as u64));
+    std::thread::sleep(std::time::Duration::from_millis(
+        (sampling_time * 1000.0) as u64,
+    ));
 
     Ok(sampling_time)
 }
@@ -338,7 +352,8 @@ fn scaling_analysis_benchmark(c: &mut Criterion) {
     let total_problem_size = 50000;
 
     for &gpus in &gpu_counts {
-        if gpus <= 4 { // Limit for strong scaling test
+        if gpus <= 4 {
+            // Limit for strong scaling test
             group.throughput(Throughput::Elements(total_problem_size as u64));
             group.bench_with_input(
                 BenchmarkId::from_parameter(format!("strong_scaling_{}gpus", gpus)),

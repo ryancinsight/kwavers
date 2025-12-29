@@ -1,10 +1,10 @@
 //! Beamforming algorithms for PAM
 
 use crate::error::KwaversResult;
+use crate::sensor::beamforming::BeamformingCoreConfig;
+use crate::sensor::beamforming::BeamformingProcessor;
 use ndarray::{Array2, Array3, Axis};
 use std::f64::consts::PI;
-use crate::sensor::beamforming::BeamformingProcessor;
-use crate::sensor::beamforming::BeamformingCoreConfig;
 
 /// Beamforming methods for PAM
 #[derive(Debug, Clone)]
@@ -146,7 +146,8 @@ impl Beamformer {
         diagonal_loading: f64,
     ) -> KwaversResult<Array3<f64>> {
         let _ = sample_rate; // not used in Capon
-        self.processor.capon_with_uniform(sensor_data, diagonal_loading)
+        self.processor
+            .capon_with_uniform(sensor_data, diagonal_loading)
     }
 
     /// MUSIC algorithm for source localization
@@ -226,9 +227,11 @@ impl Beamformer {
 
         // Sort eigenpairs by ascending eigenvalue to identify noise subspace
         let mut indices: Vec<usize> = (0..n_elements).collect();
-        indices.sort_by(|&a, &b| eigenvalues[a]
-            .partial_cmp(&eigenvalues[b])
-            .unwrap_or(std::cmp::Ordering::Equal));
+        indices.sort_by(|&a, &b| {
+            eigenvalues[a]
+                .partial_cmp(&eigenvalues[b])
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // For PAM we assume a single dominant source; use all but the largest
         // eigenvalue/eigenvector as noise subspace. This is consistent and
@@ -354,9 +357,11 @@ impl Beamformer {
 
         // Sort indices by descending eigenvalue to identify dominant signal subspace
         let mut indices: Vec<usize> = (0..n_elements).collect();
-        indices.sort_by(|&a, &b| eigenvalues[b]
-            .partial_cmp(&eigenvalues[a])
-            .unwrap_or(std::cmp::Ordering::Equal));
+        indices.sort_by(|&a, &b| {
+            eigenvalues[b]
+                .partial_cmp(&eigenvalues[a])
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         let signal_index = indices[0];
         let mut a_s = DVector::zeros(n_elements);
@@ -470,6 +475,40 @@ impl Beamformer {
     }
 }
 
+impl Default for BeamformingConfig {
+    fn default() -> Self {
+        Self {
+            method: BeamformingMethod::DelayAndSum,
+            frequency_range: (20e3, 10e6),
+            spatial_resolution: 1e-3,
+            apodization: ApodizationType::Hamming,
+            focal_point: [0.0, 0.0, 0.0],
+        }
+    }
+}
+
+fn modified_bessel_i0(x: f64) -> f64 {
+    const MAX_ITERATIONS: usize = 50;
+    const TOLERANCE: f64 = 1e-12;
+
+    let x_abs = x.abs();
+    let x_half = x_abs / 2.0;
+
+    let mut term = 1.0;
+    let mut sum = 1.0;
+
+    for k in 1..MAX_ITERATIONS {
+        term *= (x_half * x_half) / ((k * k) as f64);
+        sum += term;
+
+        if term < TOLERANCE * sum {
+            break;
+        }
+    }
+
+    sum
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -493,7 +532,9 @@ mod tests {
 
     fn make_config_capon(dl: f64) -> BeamformingConfig {
         BeamformingConfig {
-            method: BeamformingMethod::CaponDiagonalLoading { diagonal_loading: dl },
+            method: BeamformingMethod::CaponDiagonalLoading {
+                diagonal_loading: dl,
+            },
             frequency_range: (2.0e6, 2.0e6),
             spatial_resolution: 1e-3,
             apodization: ApodizationType::None,
@@ -507,8 +548,8 @@ mod tests {
         let cfg = make_config_delay_and_sum();
         let mut bf = Beamformer::new(geometry, cfg).expect("construct beamformer");
 
-        let sensor0 = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let sensor1 = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+        let sensor0 = [1.0, 2.0, 3.0, 4.0, 5.0];
+        let sensor1 = [10.0, 20.0, 30.0, 40.0, 50.0];
         let n_samples = sensor0.len();
         let mut data = ndarray::Array3::<f64>::zeros((2, 1, n_samples));
         for t in 0..n_samples {
@@ -540,46 +581,4 @@ mod tests {
             assert!((out[[0, 0, t]] - std::f64::consts::SQRT_2).abs() < 1e-6);
         }
     }
-}
-impl Default for BeamformingConfig {
-    fn default() -> Self {
-        Self {
-            method: BeamformingMethod::DelayAndSum,
-            frequency_range: (20e3, 10e6), // 20 kHz to 10 MHz
-            spatial_resolution: 1e-3,      // 1 mm
-            apodization: ApodizationType::Hamming,
-            focal_point: [0.0, 0.0, 0.0],
-        }
-    }
-}
-
-/// Modified Bessel function of the first kind I_0(x)
-///
-/// Uses series expansion for accurate computation:
-/// I_0(x) = Σ_{k=0}^∞ [(x/2)^(2k)] / [(k!)^2]
-///
-/// # References
-/// - Abramowitz & Stegun (1964), Section 9.8
-/// - Kaiser & Schafer (1980), "On the use of the I0-sinh window"
-fn modified_bessel_i0(x: f64) -> f64 {
-    const MAX_ITERATIONS: usize = 50;
-    const TOLERANCE: f64 = 1e-12;
-
-    let x_abs = x.abs();
-    let x_half = x_abs / 2.0;
-
-    let mut term = 1.0;
-    let mut sum = 1.0;
-
-    for k in 1..MAX_ITERATIONS {
-        // term_{k} = term_{k-1} * (x/2)^2 / k^2
-        term *= (x_half * x_half) / ((k * k) as f64);
-        sum += term;
-
-        if term < TOLERANCE * sum {
-            break;
-        }
-    }
-
-    sum
 }

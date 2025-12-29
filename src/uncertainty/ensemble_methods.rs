@@ -4,7 +4,12 @@
 //! bootstrap aggregation for robust uncertainty bounds.
 
 use crate::error::KwaversResult;
+#[cfg(feature = "pinn")]
+use burn::tensor::backend::Backend;
+#[cfg(feature = "pinn")]
 use ndarray::{Array1, Array2};
+#[cfg(not(feature = "pinn"))]
+use ndarray::Array2;
 use std::collections::HashMap;
 
 /// Configuration for ensemble methods
@@ -41,7 +46,9 @@ pub struct EnsembleResult {
 }
 
 /// Ensemble quantifier for uncertainty estimation
+#[derive(Debug)]
 pub struct EnsembleQuantifier {
+    #[allow(dead_code)]
     config: EnsembleConfig,
     ensemble_models: Vec<EnsembleModel>,
 }
@@ -64,9 +71,9 @@ impl EnsembleQuantifier {
 
     /// Quantify uncertainty using ensemble methods
     #[cfg(feature = "pinn")]
-    pub fn quantify_uncertainty(
+    pub fn quantify_uncertainty<B: Backend>(
         &self,
-        pinn: &crate::ml::pinn::BurnPINN1DWave,
+        pinn: &crate::ml::pinn::BurnPINN1DWave<B>,
         inputs: &Array2<f32>,
     ) -> KwaversResult<crate::uncertainty::PredictionWithUncertainty> {
         let mut predictions = Vec::new();
@@ -96,10 +103,12 @@ impl EnsembleQuantifier {
             .collect();
 
         for (model_idx, bootstrap_indices) in bootstrap_samples.into_iter().enumerate() {
-            let bootstrap_data: Vec<_> = bootstrap_indices.iter()
+            let bootstrap_data: Vec<_> = bootstrap_indices
+                .iter()
                 .map(|&idx| training_data[idx].clone())
                 .collect();
-            let bootstrap_targets: Vec<_> = bootstrap_indices.iter()
+            let bootstrap_targets: Vec<_> = bootstrap_indices
+                .iter()
                 .map(|&idx| training_targets[idx].clone())
                 .collect();
 
@@ -113,8 +122,8 @@ impl EnsembleQuantifier {
 
     /// Generate bootstrap sample indices
     fn bootstrap_sample(&self, n_samples: usize) -> Vec<usize> {
-        use rand::{Rng, SeedableRng};
         use rand::rngs::StdRng;
+        use rand::{Rng, SeedableRng};
 
         let mut rng = StdRng::from_entropy();
         let mut indices = Vec::with_capacity(n_samples);
@@ -134,7 +143,7 @@ impl EnsembleQuantifier {
     ) -> KwaversResult<crate::uncertainty::PredictionWithUncertainty> {
         if predictions.is_empty() {
             return Err(crate::error::KwaversError::InvalidInput(
-                "No predictions available".to_string()
+                "No predictions available".to_string(),
             ));
         }
 
@@ -237,14 +246,18 @@ impl EnsembleQuantifier {
     pub fn update_weights(&mut self, performance_scores: &[f64]) -> KwaversResult<()> {
         if performance_scores.len() != self.ensemble_models.len() {
             return Err(crate::error::KwaversError::InvalidInput(
-                "Performance scores must match ensemble size".to_string()
+                "Performance scores must match ensemble size".to_string(),
             ));
         }
 
         // Update weights using performance
         let total_performance: f64 = performance_scores.iter().sum();
         if total_performance > 0.0 {
-            for (model, &performance) in self.ensemble_models.iter_mut().zip(performance_scores.iter()) {
+            for (model, &performance) in self
+                .ensemble_models
+                .iter_mut()
+                .zip(performance_scores.iter())
+            {
                 model.weight = performance / total_performance;
             }
         }
@@ -254,8 +267,9 @@ impl EnsembleQuantifier {
 }
 
 /// Individual ensemble model
+#[derive(Debug, Clone)]
 struct EnsembleModel {
-    random_seed: u64,
+    _random_seed: u64,
     weight: f64,
     performance_score: f64,
 }
@@ -263,32 +277,37 @@ struct EnsembleModel {
 impl EnsembleModel {
     fn new(seed: u64) -> Self {
         Self {
-            random_seed: seed,
+            _random_seed: seed,
             weight: 1.0, // Equal weight initially
             performance_score: 0.0,
         }
     }
 
     #[cfg(feature = "pinn")]
-    fn predict_with_noise(
+    fn predict_with_noise<B: Backend>(
         &self,
-        pinn: &crate::ml::pinn::BurnPINN1DWave,
+        pinn: &crate::ml::pinn::BurnPINN1DWave<B>,
         inputs: &Array2<f32>,
     ) -> KwaversResult<Array2<f32>> {
         // Add noise to inputs for ensemble diversity
-        use rand::{Rng, SeedableRng};
         use rand::rngs::StdRng;
+        use rand::{Rng, SeedableRng};
 
-        let mut rng = StdRng::seed_from_u64(self.random_seed);
+        let mut rng = StdRng::seed_from_u64(self._random_seed);
         let mut noisy_inputs = inputs.clone();
 
         // Add small amount of noise
         for elem in noisy_inputs.iter_mut() {
-            let noise = rng.gen_range(-0.01..0.01);
-            *elem += noise as f32;
+            let noise: f32 = rng.gen_range(-0.01..0.01);
+            *elem += noise;
         }
 
-        pinn.predict(&noisy_inputs)
+        let x: Array1<f64> = noisy_inputs.column(0).mapv(|v| v as f64).to_owned();
+        let t: Array1<f64> = noisy_inputs.column(1).mapv(|v| v as f64).to_owned();
+        let device = pinn.device();
+
+        let prediction_f64 = pinn.predict(&x, &t, &device)?;
+        Ok(prediction_f64.mapv(|v| v as f32))
     }
 
     fn train(&mut self, data: &[Array2<f32>], targets: &[Array2<f32>]) -> KwaversResult<()> {
@@ -381,4 +400,3 @@ mod tests {
         assert!(diversity > 0.0); // Should have diversity
     }
 }
-

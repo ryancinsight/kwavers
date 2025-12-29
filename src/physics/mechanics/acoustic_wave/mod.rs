@@ -8,7 +8,6 @@ pub mod hybrid_angular_spectrum; // Sprint 139: HAS for efficient nonlinear prop
 pub mod kuznetsov;
 pub mod kzk;
 pub mod nonlinear;
-pub mod unified;
 pub mod westervelt;
 pub mod westervelt_fdtd;
 pub mod westervelt_wave;
@@ -20,7 +19,6 @@ mod test_support;
 // Re-exports for convenience
 pub use kuznetsov::{KuznetsovConfig, KuznetsovWave};
 pub use nonlinear::NonlinearWave;
-pub use unified::{AcousticModelType, AcousticSolverConfig, UnifiedAcousticSolver};
 pub use westervelt::WesterveltWave;
 pub use westervelt_fdtd::{WesterveltFdtd, WesterveltFdtdConfig};
 
@@ -58,9 +56,9 @@ impl SpatialOrder {
     #[must_use]
     pub fn cfl_limit(&self) -> f64 {
         match self {
-            SpatialOrder::Second => 1.0 / (3.0_f64).sqrt(),  // 1/√3 ≈ 0.577
+            SpatialOrder::Second => 1.0 / (3.0_f64).sqrt(), // 1/√3 ≈ 0.577
             SpatialOrder::Fourth => 1.0 / (15.0_f64).sqrt(), // 1/√15 ≈ 0.258
-            SpatialOrder::Sixth => 1.0 / (27.0_f64).sqrt(),  // 1/√27 ≈ 0.192
+            SpatialOrder::Sixth => 1.0 / (27.0_f64).sqrt(), // 1/√27 ≈ 0.192
         }
     }
 
@@ -197,9 +195,9 @@ mod tests {
     #[test]
     fn test_spatial_order_cfl_limits() {
         // CORRECTED: Theoretical CFL limits for 3D finite difference schemes
-        assert!((SpatialOrder::Second.cfl_limit() - 0.577).abs() < 0.001);  // 1/√3
-        assert!((SpatialOrder::Fourth.cfl_limit() - 0.258).abs() < 0.001);  // 1/√15
-        assert!((SpatialOrder::Sixth.cfl_limit() - 0.192).abs() < 0.001);   // 1/√27
+        assert!((SpatialOrder::Second.cfl_limit() - 0.577).abs() < 0.001); // 1/√3
+        assert!((SpatialOrder::Fourth.cfl_limit() - 0.258).abs() < 0.001); // 1/√15
+        assert!((SpatialOrder::Sixth.cfl_limit() - 0.192).abs() < 0.001); // 1/√27
     }
 
     #[test]

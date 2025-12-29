@@ -197,16 +197,19 @@ impl OrthonormalSubspaceTracker {
         let mut whw = Array2::<Complex64>::zeros((p, p));
 
         // Parallel computation using outer iterator for better cache efficiency
-        whw.outer_iter_mut().into_par_iter().enumerate().for_each(|(i, mut row)| {
-            for j in 0..p {
-                // Compute W[:,i]^H * W[:,j] using SIMD-friendly accumulation
-                let mut sum = Complex64::zero();
-                for k in 0..n {
-                    sum += subspace[(k, i)].conj() * subspace[(k, j)];
+        whw.outer_iter_mut()
+            .into_par_iter()
+            .enumerate()
+            .for_each(|(i, mut row)| {
+                for j in 0..p {
+                    // Compute W[:,i]^H * W[:,j] using SIMD-friendly accumulation
+                    let mut sum = Complex64::zero();
+                    for k in 0..n {
+                        sum += subspace[(k, i)].conj() * subspace[(k, j)];
+                    }
+                    row[j] = sum;
                 }
-                row[j] = sum;
-            }
-        });
+            });
 
         whw
     }
@@ -228,8 +231,7 @@ impl OrthonormalSubspaceTracker {
         let mut wh_y = Array1::<Complex64>::zeros(p);
 
         // Parallel computation of W^H y
-        wh_y
-            .outer_iter_mut()
+        wh_y.outer_iter_mut()
             .into_par_iter()
             .enumerate()
             .for_each(|(j, mut val)| {
@@ -323,7 +325,11 @@ impl OrthonormalSubspaceTracker {
             // Handle near-zero norm case with fallback initialization
             // Reset column to standard basis vector to maintain subspace dimension
             for k in 0..n {
-                self.subspace[(k, j)] = if k == j { Complex64::new(1.0, 0.0) } else { Complex64::zero() };
+                self.subspace[(k, j)] = if k == j {
+                    Complex64::new(1.0, 0.0)
+                } else {
+                    Complex64::zero()
+                };
             }
         }
     }

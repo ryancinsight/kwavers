@@ -41,8 +41,9 @@ use super::{
     cherenkov::{calculate_cherenkov_emission, CherenkovModel},
     spectral::{EmissionSpectrum, SpectralAnalyzer, SpectralRange},
 };
+use crate::error::KwaversResult;
+use crate::physics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel;
-use crate::physics::bubble_dynamics::bubble_state::BubbleParameters;
 use ndarray::{s, Array1, Array3, Array4};
 
 /// Parameters for sonoluminescence emission
@@ -166,25 +167,27 @@ impl SpectralField {
 #[derive(Debug)]
 pub struct IntegratedSonoluminescence {
     /// Emission calculator
-    emission: SonoluminescenceEmission,
+    pub emission: SonoluminescenceEmission,
     /// Bubble dynamics model (Keller-Miksis equation)
-    bubble_model: KellerMiksisModel,
+    pub bubble_model: KellerMiksisModel,
     /// Bubble parameters
-    bubble_params: BubbleParameters,
+    pub bubble_params: BubbleParameters,
     /// Acoustic pressure field driving bubble oscillations (Pa)
-    acoustic_pressure: Array3<f64>,
+    pub acoustic_pressure: Array3<f64>,
     /// Temperature field from bubble dynamics (K)
-    temperature_field: Array3<f64>,
+    pub temperature_field: Array3<f64>,
     /// Pressure field from bubble dynamics (Pa)
-    pressure_field: Array3<f64>,
+    pub pressure_field: Array3<f64>,
     /// Bubble radius field (m)
-    radius_field: Array3<f64>,
+    pub radius_field: Array3<f64>,
+    /// Bubble wall velocity field (m/s)
+    pub wall_velocity_field: Array3<f64>,
     /// Particle velocity field for Cherenkov calculations (m/s)
-    particle_velocity_field: Array3<f64>,
+    pub particle_velocity_field: Array3<f64>,
     /// Charge density field for Cherenkov calculations (C/m³)
-    charge_density_field: Array3<f64>,
+    pub charge_density_field: Array3<f64>,
     /// Compression ratio field ρ/ρ₀
-    compression_field: Array3<f64>,
+    pub compression_field: Array3<f64>,
 }
 
 /// Main sonoluminescence emission calculator
@@ -225,6 +228,7 @@ impl IntegratedSonoluminescence {
             temperature_field: Array3::from_elem(grid_shape, 300.0), // Ambient temperature
             pressure_field: Array3::from_elem(grid_shape, 101325.0), // Atmospheric pressure
             radius_field: Array3::from_elem(grid_shape, bubble_params.r0),
+            wall_velocity_field: Array3::zeros(grid_shape), // Initially at rest
             particle_velocity_field: Array3::zeros(grid_shape), // Initially at rest
             charge_density_field: Array3::zeros(grid_shape), // Initially neutral
             compression_field: Array3::from_elem(grid_shape, 1.0), // Ambient density
@@ -248,141 +252,159 @@ impl IntegratedSonoluminescence {
     /// 3. Use temperature/pressure/radius for light emission calculations
     ///
     /// Reference: Brenner et al. (2002), "Single-bubble sonoluminescence"
-    pub fn simulate_step(&mut self, dt: f64, time: f64) {
+    pub fn simulate_step(&mut self, dt: f64, time: f64) -> KwaversResult<()> {
+        let omega = 2.0 * std::f64::consts::PI * self.bubble_params.driving_frequency;
+
         // For each spatial point, simulate bubble dynamics
         let (nx, ny, nz) = self.temperature_field.dim();
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    // Get acoustic driving pressure at this location
-                    let p_acoustic = self.acoustic_pressure[[i, j, k]];
+                    // Get acoustic driving pressure amplitude at this location
+                    let p_amp = self.acoustic_pressure[[i, j, k]];
 
                     // Create bubble state for this location
-                    let mut bubble_state = crate::physics::bubble_dynamics::bubble_state::BubbleState::new(&self.bubble_params);
-                    bubble_state.radius = self.radius_field[[i, j, k]];
-                    bubble_state.wall_velocity = 0.0; // Initial velocity
-                    bubble_state.temperature = self.temperature_field[[i, j, k]];
-                    bubble_state.pressure_internal = self.pressure_field[[i, j, k]];
+                    let mut state = BubbleState::new(&self.bubble_params);
+                    state.radius = self.radius_field[[i, j, k]];
+                    state.wall_velocity = self.wall_velocity_field[[i, j, k]];
+                    state.temperature = self.temperature_field[[i, j, k]];
+                    state.pressure_internal = self.pressure_field[[i, j, k]];
 
-                    // Simulate bubble dynamics for one time step using Keller-Miksis
-                    // Full implementation with proper ODE integration using 4th-order Runge-Kutta
+                    // 4th-order Runge-Kutta Integration
+                    // We need to solve dY/dt = F(Y, t) where Y = [R, V]
+                    // dR/dt = V
+                    // dV/dt = Acceleration(R, V, t)
 
-                    // Calculate bubble wall acceleration using Keller-Miksis equation
-                    let acceleration = self.bubble_model.calculate_acceleration(
-                        &mut bubble_state,
-                        p_acoustic,
-                        time,
-                        dt,
-                    );
+                    // k1
+                    let dp_dt_k1 = p_amp * omega * (omega * time).cos();
+                    let k1_v = self
+                        .bubble_model
+                        .calculate_acceleration(&mut state, p_amp, dp_dt_k1, time)?;
+                    let k1_r = state.wall_velocity;
 
-                    // Handle Result type from calculate_acceleration
-                    let acceleration = match acceleration {
-                        Ok(acc) => acc,
-                        Err(_) => 0.0, // Fallback for calculation errors
-                    };
+                    // k2
+                    let t_k2 = time + 0.5 * dt;
+                    let dp_dt_k2 = p_amp * omega * (omega * t_k2).cos();
 
-                    // Update bubble state using 4th-order Runge-Kutta integration
-                    // For the system: d²R/dt² = acceleration, dR/dt = velocity
-                    let (new_radius, new_velocity) = self.runge_kutta_4_integration(
-                        bubble_state.radius,
-                        bubble_state.wall_velocity,
-                        acceleration,
-                        dt,
-                    );
+                    let mut state_k2 = state.clone();
+                    state_k2.radius += 0.5 * dt * k1_r;
+                    state_k2.wall_velocity += 0.5 * dt * k1_v;
+                    self.update_thermodynamics(&mut state_k2);
 
-                    // Update thermodynamic state using adiabatic compression heating
-                    // For adiabatic process: T * V^(γ-1) = constant, where V ∝ R³
-                    // Therefore: T ∝ R^(3(1-γ))
-                    // Reference: Prosperetti (1991), "Bubble dynamics in a compressible liquid"
-                    let gamma = 1.4; // Polytropic index for air
+                    let k2_v = self.bubble_model.calculate_acceleration(
+                        &mut state_k2,
+                        p_amp,
+                        dp_dt_k2,
+                        t_k2,
+                    )?;
+                    let k2_r = state_k2.wall_velocity;
 
-                    // Compute temperature from adiabatic relation
-                    // T = T_initial * (R_initial / R_current)^(3(γ-1))
-                    let adiabatic_exponent = 3.0 * (gamma - 1.0);
-                    let radius_ratio = self.bubble_params.r0 / new_radius;
-                    let new_temperature = self.bubble_params.t0 *
-                        radius_ratio.powf(adiabatic_exponent);
+                    // k3
+                    let t_k3 = time + 0.5 * dt; // Same time as k2
+                    let dp_dt_k3 = dp_dt_k2;
 
-                    // Update pressure using adiabatic relation: P ∝ ρ^γ ∝ (R₀/R)^(3γ)
-                    // Use BubbleParameters fields for initial radius and gas pressure
+                    let mut state_k3 = state.clone();
+                    state_k3.radius += 0.5 * dt * k2_r;
+                    state_k3.wall_velocity += 0.5 * dt * k2_v;
+                    self.update_thermodynamics(&mut state_k3);
+
+                    let k3_v = self.bubble_model.calculate_acceleration(
+                        &mut state_k3,
+                        p_amp,
+                        dp_dt_k3,
+                        t_k3,
+                    )?;
+                    let k3_r = state_k3.wall_velocity;
+
+                    // k4
+                    let t_k4 = time + dt;
+                    let dp_dt_k4 = p_amp * omega * (omega * t_k4).cos();
+
+                    let mut state_k4 = state.clone();
+                    state_k4.radius += dt * k3_r;
+                    state_k4.wall_velocity += dt * k3_v;
+                    self.update_thermodynamics(&mut state_k4);
+
+                    let k4_v = self.bubble_model.calculate_acceleration(
+                        &mut state_k4,
+                        p_amp,
+                        dp_dt_k4,
+                        t_k4,
+                    )?;
+                    let k4_r = state_k4.wall_velocity;
+
+                    // Final update
+                    let new_radius =
+                        state.radius + (dt / 6.0) * (k1_r + 2.0 * k2_r + 2.0 * k3_r + k4_r);
+                    let new_velocity =
+                        state.wall_velocity + (dt / 6.0) * (k1_v + 2.0 * k2_v + 2.0 * k3_v + k4_v);
+
+                    // Apply updates to state
+                    state.radius = new_radius;
+                    state.wall_velocity = new_velocity;
+                    self.update_thermodynamics(&mut state);
+
+                    // Calculate auxiliary fields
                     let compression_ratio = (self.bubble_params.r0 / new_radius).powi(3);
-                    let new_pressure = self.bubble_params.initial_gas_pressure * compression_ratio.powf(gamma);
 
-                    // Estimate particle velocities during collapse
-                    // During violent collapse, particles can reach velocities comparable to wall velocity
-                    // For Cherenkov calculations, we use RMS thermal velocity plus collapse velocity
-                    let thermal_velocity = (3.0 * 1.380649e-23 * new_temperature / 4.0026e-26).sqrt(); // Argon mass
-                    let collapse_velocity = new_velocity.abs(); // Wall velocity
-                    let particle_velocity = (thermal_velocity * thermal_velocity + collapse_velocity * collapse_velocity).sqrt();
+                    // Particle velocity for Cherenkov (thermal electrons + wall motion)
+                    // Use electron mass (9.109e-31 kg) instead of ion mass for radiation-relevant velocity
+                    let electron_mass = 9.10938356e-31;
+                    let thermal_velocity_sq =
+                        3.0 * 1.380649e-23 * state.temperature / electron_mass;
+                    let collapse_velocity = new_velocity.abs();
+                    // Combine thermal and bulk motion
+                    let particle_velocity =
+                        (thermal_velocity_sq + collapse_velocity * collapse_velocity).sqrt();
 
-                    // Estimate charge density from Saha ionization
-                    let ionization_fraction = if new_temperature > 5000.0 {
-                        // Simple ionization estimate: significant ionization above 5000K
-                        let temp_ratio = new_temperature / 10000.0;
-                        (temp_ratio * temp_ratio).min(0.5) // Up to 50% ionization
-                    } else {
-                        0.0
-                    };
-
-                    // Number density from ideal gas law
-                    let number_density = new_pressure / (1.380649e-23 * new_temperature);
+                    // Charge density (Saha)
+                    // Use rigorous Saha equation from BremsstrahlungModel
+                    let ionization_fraction = self.emission.bremsstrahlung.saha_ionization(
+                        state.temperature,
+                        state.pressure_internal,
+                        self.emission.params.ionization_energy,
+                    );
+                    let number_density =
+                        state.pressure_internal / (1.380649e-23 * state.temperature);
                     let electron_density = ionization_fraction * number_density;
-                    let charge_density = electron_density * 1.602176634e-19; // C/m³
+                    let charge_density = electron_density * 1.602176634e-19;
 
                     // Store updated state
                     self.radius_field[[i, j, k]] = new_radius;
-                    self.temperature_field[[i, j, k]] = new_temperature;
-                    self.pressure_field[[i, j, k]] = new_pressure;
+                    self.wall_velocity_field[[i, j, k]] = new_velocity;
+                    self.temperature_field[[i, j, k]] = state.temperature;
+                    self.pressure_field[[i, j, k]] = state.pressure_internal;
                     self.particle_velocity_field[[i, j, k]] = particle_velocity;
                     self.charge_density_field[[i, j, k]] = charge_density;
                     self.compression_field[[i, j, k]] = compression_ratio;
                 }
             }
         }
+        Ok(())
     }
 
-    /// Perform 4th-order Runge-Kutta integration for bubble dynamics
-    /// Solves the system: d²R/dt² = a(R, Ṙ, t), dR/dt = Ṙ
-    fn runge_kutta_4_integration(
-        &self,
-        r0: f64,
-        v0: f64,
-        acceleration: f64,
-        dt: f64,
-    ) -> (f64, f64) {
-        // For bubble dynamics, we have a system of ODEs:
-        // dr/dt = v
-        // dv/dt = a(r, v, t)
+    /// Helper to update thermodynamic state (T, P) based on current Radius
+    /// Uses adiabatic assumption: T ∝ R^(3(1-γ))
+    fn update_thermodynamics(&self, state: &mut BubbleState) {
+        // Prevent non-physical radius
+        if state.radius <= 0.0 {
+            state.radius = 1e-9; // Minimum radius to avoid NaN
+        }
 
-        // RK4 coefficients for position
-        let k1_r = v0;
-        let k1_v = acceleration;
+        let gamma = self.bubble_params.gamma;
 
-        let r1 = r0 + 0.5 * dt * k1_r;
-        let v1 = v0 + 0.5 * dt * k1_v;
+        // T = T0 * (R0/R)^(3(gamma-1))
+        let adiabatic_exponent = 3.0 * (gamma - 1.0);
+        let radius_ratio = self.bubble_params.r0 / state.radius;
+        state.temperature = self.bubble_params.t0 * radius_ratio.powf(adiabatic_exponent);
 
-        // For simplicity, assume acceleration is constant over the time step
-        // In full implementation, would recalculate acceleration at each intermediate step
-        let k2_r = v1;
-        let k2_v = acceleration;
-
-        let r2 = r0 + 0.5 * dt * k2_r;
-        let v2 = v0 + 0.5 * dt * k2_v;
-
-        let k3_r = v2;
-        let k3_v = acceleration;
-
-        let r3 = r0 + dt * k3_r;
-        let v3 = v0 + dt * k3_v;
-
-        let k4_r = v3;
-        let k4_v = acceleration;
-
-        // Final RK4 integration
-        let new_radius = r0 + (dt / 6.0) * (k1_r + 2.0 * k2_r + 2.0 * k3_r + k4_r);
-        let new_velocity = v0 + (dt / 6.0) * (k1_v + 2.0 * k2_v + 2.0 * k3_v + k4_v);
-
-        (new_radius, new_velocity)
+        // P = P0 * (R0/R)^(3gamma)
+        // Note: This assumes P_gas >> P_vapor for simplicity in this helper.
+        // For more rigorous thermodynamics, use the BubbleModel's internal calculators.
+        // But for adiabatic RK4 step, this is consistent with the physics model assumption.
+        let compression_ratio = radius_ratio.powi(3);
+        state.pressure_internal =
+            self.bubble_params.initial_gas_pressure * compression_ratio.powf(gamma);
     }
 
     /// Get the current emission field
@@ -414,6 +436,13 @@ impl SonoluminescenceEmission {
     /// Create new emission calculator
     #[must_use]
     pub fn new(grid_shape: (usize, usize, usize), params: EmissionParameters) -> Self {
+        // Initialize spectral analyzer with default range
+        let analyzer = SpectralAnalyzer::new(SpectralRange::default());
+
+        // Initialize spectral field with wavelengths from analyzer
+        // This ensures the field is ready for spectral calculations if needed
+        let spectral_field = Some(SpectralField::new(grid_shape, analyzer.range.wavelengths()));
+
         Self {
             params: params.clone(),
             blackbody: BlackbodyModel::default(),
@@ -422,9 +451,9 @@ impl SonoluminescenceEmission {
                 params.cherenkov_refractive_index,
                 params.cherenkov_coherence_factor,
             ),
-            analyzer: SpectralAnalyzer::new(SpectralRange::default()),
+            analyzer,
             emission_field: Array3::zeros(grid_shape),
-            spectral_field: None,
+            spectral_field,
         }
     }
 
@@ -432,7 +461,7 @@ impl SonoluminescenceEmission {
     pub fn calculate_emission(
         &mut self,
         temperature_field: &Array3<f64>,
-        pressure_field: &Array3<f64>,
+        _pressure_field: &Array3<f64>,
         radius_field: &Array3<f64>,
         velocity_field: &Array3<f64>,
         charge_density_field: &Array3<f64>,
@@ -451,12 +480,18 @@ impl SonoluminescenceEmission {
 
         // Calculate bremsstrahlung emission
         if self.params.use_bremsstrahlung {
+            // Derive electron/ion densities from charge density field (n_e = rho / e)
+            // This ensures consistency with the charge density calculated via Saha in simulate_step
+            let e_charge = 1.602176634e-19;
+            let electron_density_field = charge_density_field.mapv(|rho| rho / e_charge);
+            // Assuming singly ionized plasma (n_e = n_i) for Bremsstrahlung
+            let ion_density_field = electron_density_field.clone();
+
             let br_emission = calculate_bremsstrahlung_emission(
                 temperature_field,
-                pressure_field,
-                radius_field,
+                &electron_density_field,
+                &ion_density_field,
                 &self.bremsstrahlung,
-                self.params.ionization_energy,
             );
             self.emission_field = &self.emission_field + &br_emission;
         }
@@ -540,11 +575,8 @@ impl SonoluminescenceEmission {
                 // Estimate charge per particle (assume singly ionized plasma)
                 let charge_per_particle = 1.0; // Elementary charge units
 
-                let ch_spectrum = local_model.emission_spectrum(
-                    velocity,
-                    charge_per_particle,
-                    &wavelengths,
-                );
+                let ch_spectrum =
+                    local_model.emission_spectrum(velocity, charge_per_particle, &wavelengths);
 
                 // Scale by charge density and path length
                 let path_length = 2.0 * radius;
@@ -775,8 +807,15 @@ mod tests {
         temp_field[[5, 5, 5]] = 20000.0; // 20,000 K
 
         // Calculate emission
-        emission.calculate_emission(&temp_field, &pressure_field, &radius_field,
-                                   &velocity_field, &charge_density_field, &compression_field, 0.0);
+        emission.calculate_emission(
+            &temp_field,
+            &pressure_field,
+            &radius_field,
+            &velocity_field,
+            &charge_density_field,
+            &compression_field,
+            0.0,
+        );
 
         // Check that emission occurred at hot spot
         assert!(emission.emission_field[[5, 5, 5]] > 0.0);
@@ -809,13 +848,17 @@ mod tests {
         // Test that temperature scales correctly with compression ratio
         // For adiabatic process: T ∝ R^(3(1-γ))
         let params = BubbleParameters {
-            r0: 10e-6, // 10 μm initial radius
-            t0: 300.0, // 300 K initial temperature
+            r0: 10e-6,  // 10 μm initial radius
+            t0: 300.0,  // 300 K initial temperature
             gamma: 1.4, // air
             ..Default::default()
         };
 
-        let mut integrated = IntegratedSonoluminescence::new((1, 1, 1), params.clone(), EmissionParameters::default());
+        let mut integrated = IntegratedSonoluminescence::new(
+            (1, 1, 1),
+            params.clone(),
+            EmissionParameters::default(),
+        );
 
         // Simulate compression to half the radius
         let compressed_radius = 5e-6; // 5 μm
@@ -875,7 +918,11 @@ mod tests {
     fn test_bubble_dynamics_boundary_conditions() {
         // Test that bubble dynamics respect physical boundary conditions
         let params = BubbleParameters::default();
-        let mut integrated = IntegratedSonoluminescence::new((5, 5, 5), params.clone(), EmissionParameters::default());
+        let mut integrated = IntegratedSonoluminescence::new(
+            (5, 5, 5),
+            params.clone(),
+            EmissionParameters::default(),
+        );
 
         // Set some acoustic pressure
         let acoustic_pressure = Array3::from_elem((5, 5, 5), 1e5); // 1 bar
@@ -883,7 +930,9 @@ mod tests {
 
         // Run a few simulation steps
         for step in 0..10 {
-            integrated.simulate_step(1e-9, step as f64 * 1e-9); // 1 ns timesteps
+            integrated
+                .simulate_step(1e-9, step as f64 * 1e-9)
+                .expect("simulate_step should succeed");
         }
 
         // Check boundary conditions

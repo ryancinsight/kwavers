@@ -423,18 +423,12 @@ mod tests {
         let num_snapshots = 100;
 
         // Test with AIC criterion
-        let music_aic = MUSIC::new_with_source_estimation(
-            &cov,
-            num_snapshots,
-            SourceEstimationCriterion::AIC,
-        );
+        let music_aic =
+            MUSIC::new_with_source_estimation(&cov, num_snapshots, SourceEstimationCriterion::AIC);
 
         // Test with MDL criterion
-        let music_mdl = MUSIC::new_with_source_estimation(
-            &cov,
-            num_snapshots,
-            SourceEstimationCriterion::MDL,
-        );
+        let music_mdl =
+            MUSIC::new_with_source_estimation(&cov, num_snapshots, SourceEstimationCriterion::MDL);
 
         // Both should have valid source counts
         assert!(music_aic.num_sources < n);

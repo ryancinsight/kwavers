@@ -47,7 +47,8 @@ impl Beamformer {
                     (pos_array[0] * direction[0] + pos_array[1] * direction[1]) / sound_speed;
                 // CORRECTED: Complex steering vector for proper phase alignment
                 let phase = k * sound_speed * delay;
-                steering_vectors[[sensor_idx, angle_deg]] = Complex64::new(phase.cos(), phase.sin());
+                steering_vectors[[sensor_idx, angle_deg]] =
+                    Complex64::new(phase.cos(), phase.sin());
             }
         }
 

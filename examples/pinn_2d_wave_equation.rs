@@ -24,7 +24,7 @@
 use kwavers::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::burn_wave_equation_2d::{
-    BurnPINN2DConfig, BurnPINN2DWave, Geometry2D, BurnLossWeights2D,
+    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, Geometry2D,
 };
 #[cfg(feature = "pinn")]
 use ndarray::{Array1, Array2};
@@ -80,7 +80,13 @@ fn generate_training_data(
 
 /// Generate test grid for validation
 #[cfg(feature = "pinn")]
-fn generate_test_grid(nx: usize, ny: usize, nt: usize, domain_size: f64, t_max: f64) -> (Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_test_grid(
+    nx: usize,
+    ny: usize,
+    nt: usize,
+    domain_size: f64,
+    t_max: f64,
+) -> (Array1<f64>, Array1<f64>, Array1<f64>) {
     let mut x_test = Vec::new();
     let mut y_test = Vec::new();
     let mut t_test = Vec::new();
@@ -170,16 +176,21 @@ fn main() -> KwaversResult<()> {
     println!("🧠 PINN Configuration:");
     println!("   Hidden layers: {:?}", pinn_config.hidden_layers);
     println!("   Learning rate: {}", pinn_config.learning_rate);
-    println!("   Loss weights: data={:.1}, pde={:.1}, boundary={:.1}, initial={:.1}",
-             pinn_config.loss_weights.data,
-             pinn_config.loss_weights.pde,
-             pinn_config.loss_weights.boundary,
-             pinn_config.loss_weights.initial);
+    println!(
+        "   Loss weights: data={:.1}, pde={:.1}, boundary={:.1}, initial={:.1}",
+        pinn_config.loss_weights.data,
+        pinn_config.loss_weights.pde,
+        pinn_config.loss_weights.boundary,
+        pinn_config.loss_weights.initial
+    );
     println!();
 
     // Create geometry (unit square)
     let geometry = Geometry2D::rectangular(0.0, domain_size, 0.0, domain_size);
-    println!("📐 Geometry: Unit square [0,{}] x [0,{}]", domain_size, domain_size);
+    println!(
+        "📐 Geometry: Unit square [0,{}] x [0,{}]",
+        domain_size, domain_size
+    );
     println!();
 
     // Create PINN trainer
@@ -199,20 +210,26 @@ fn main() -> KwaversResult<()> {
     let start_time = Instant::now();
     let mut trainer = trainer;
     let metrics = trainer.train(
-        &x_train,
-        &y_train,
-        &t_train,
-        &u_train,
-        wave_speed,
-        &device,
-        epochs,
+        &x_train, &y_train, &t_train, &u_train, wave_speed, &device, epochs,
     )?;
     let training_time = start_time.elapsed();
 
-    println!("✅ Training completed in {:.2}s", training_time.as_secs_f64());
-    println!("   Final total loss: {:.6e}", metrics.total_loss.last().unwrap());
-    println!("   Final data loss: {:.6e}", metrics.data_loss.last().unwrap());
-    println!("   Final PDE loss: {:.6e}", metrics.pde_loss.last().unwrap());
+    println!(
+        "✅ Training completed in {:.2}s",
+        training_time.as_secs_f64()
+    );
+    println!(
+        "   Final total loss: {:.6e}",
+        metrics.total_loss.last().unwrap()
+    );
+    println!(
+        "   Final data loss: {:.6e}",
+        metrics.data_loss.last().unwrap()
+    );
+    println!(
+        "   Final PDE loss: {:.6e}",
+        metrics.pde_loss.last().unwrap()
+    );
     println!("   Final BC loss: {:.6e}", metrics.bc_loss.last().unwrap());
     println!("   Final IC loss: {:.6e}", metrics.ic_loss.last().unwrap());
     println!();
@@ -233,40 +250,51 @@ fn main() -> KwaversResult<()> {
 
     // Performance analysis
     println!("📈 Performance Analysis:");
-    println!("   Training time: {:.2}s ({:.1} ms/epoch)",
-             training_time.as_secs_f64(),
-             training_time.as_millis() as f64 / epochs as f64);
+    println!(
+        "   Training time: {:.2}s ({:.1} ms/epoch)",
+        training_time.as_secs_f64(),
+        training_time.as_millis() as f64 / epochs as f64
+    );
 
     let loss_reduction = metrics.total_loss[0] / metrics.total_loss.last().unwrap();
     println!("   Loss reduction: {:.2e}x", loss_reduction);
 
-    let convergence_epoch = metrics.total_loss.iter()
+    let convergence_epoch = metrics
+        .total_loss
+        .iter()
         .enumerate()
         .find(|(_, &loss)| loss < 1e-3)
         .map(|(epoch, _)| epoch)
         .unwrap_or(epochs);
-    println!("   Convergence: {} epochs to reach 1e-3 loss", convergence_epoch);
+    println!(
+        "   Convergence: {} epochs to reach 1e-3 loss",
+        convergence_epoch
+    );
     println!();
 
     // Demonstrate prediction at specific points
     println!("🎯 Example Predictions:");
-    let test_points = vec![
-        (0.25, 0.25, 0.0),
-        (0.5, 0.5, 0.005),
-        (0.75, 0.75, 0.01),
-    ];
+    let test_points = vec![(0.25, 0.25, 0.0), (0.5, 0.5, 0.005), (0.75, 0.75, 0.01)];
 
     for (x, y, t) in test_points {
         let x_point = Array1::from_vec(vec![x]);
         let y_point = Array1::from_vec(vec![y]);
         let t_point = Array1::from_vec(vec![t]);
 
-        let pred = trainer.pinn().predict(&x_point, &y_point, &t_point, &device)?;
+        let pred = trainer
+            .pinn()
+            .predict(&x_point, &y_point, &t_point, &device)?;
         let analytical = analytical_solution_2d(x, y, t, wave_speed);
 
-        println!("   Point ({:.2}, {:.2}, {:.3}s): PINN={:.6}, Analytical={:.6}, Error={:.6}",
-                 x, y, t, pred[[0, 0]] as f64, analytical,
-                 (pred[[0, 0]] as f64 - analytical).abs());
+        println!(
+            "   Point ({:.2}, {:.2}, {:.3}s): PINN={:.6}, Analytical={:.6}, Error={:.6}",
+            x,
+            y,
+            t,
+            pred[[0, 0]] as f64,
+            analytical,
+            (pred[[0, 0]] as f64 - analytical).abs()
+        );
     }
     println!();
 

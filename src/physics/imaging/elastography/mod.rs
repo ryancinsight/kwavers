@@ -34,39 +34,26 @@ pub mod radiation_force;
 
 pub use displacement::{DisplacementEstimator, DisplacementField};
 pub use elastic_wave_solver::{
-    ElasticWaveConfig,
-    ElasticWaveField,
-    ElasticWaveSolver,
-    VolumetricWaveConfig,
-    WaveFrontTracker,
-    VolumetricQualityMetrics,
+    ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver, VolumetricQualityMetrics,
+    VolumetricWaveConfig, WaveFrontTracker,
 };
 
 // GPU acceleration for 3D SWE
 pub mod gpu_accelerated_3d;
 pub use gpu_accelerated_3d::{
-    GPUDevice,
-    GPUMemoryPool,
-    GPUElasticWaveSolver3D,
-    GPUPropagationResult,
-    GPUInversionResult,
-    PerformanceMetrics,
+    AdaptiveResolution, AdaptiveSolution, AdaptiveSolutionStep, GPUDevice, GPUElasticWaveSolver3D,
+    GPUInversionResult, GPUMemoryPool, GPUPropagationResult, MemoryStats, PerformanceMetrics,
     PerformanceStatistics,
-    MemoryStats,
-    AdaptiveResolution,
-    AdaptiveSolution,
-    AdaptiveSolutionStep,
 };
-pub use harmonic_detection::{HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField};
-pub use inversion::{ElasticityMap, InversionMethod, NonlinearInversion, NonlinearInversionMethod, NonlinearParameterMap, ShearWaveInversion};
+pub use harmonic_detection::{
+    HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField,
+};
+pub use inversion::{
+    ElasticityMap, InversionMethod, NonlinearInversion, NonlinearInversionMethod,
+    NonlinearParameterMap, ShearWaveInversion,
+};
 pub use nonlinear::{HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig};
 pub use radiation_force::{
-    AcousticRadiationForce,
-    PushPulseParameters,
-    MultiDirectionalPush,
-    DirectionalPush,
-    DirectionalWaveTracker,
-    TrackingRegion,
-    DirectionalQuality,
-    ValidationResult,
+    AcousticRadiationForce, DirectionalPush, DirectionalQuality, DirectionalWaveTracker,
+    MultiDirectionalPush, PushPulseParameters, TrackingRegion, ValidationResult,
 };

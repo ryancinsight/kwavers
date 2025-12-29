@@ -3,7 +3,7 @@
 //! Provides thread-safe storage and retrieval of trained PINN models
 //! with proper serialization, versioning, and metadata management.
 
-use crate::api::{ModelMetadata, APIError, APIErrorType};
+use crate::api::{APIError, APIErrorType, ModelMetadata};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -228,7 +228,14 @@ mod tests {
         };
 
         // Store model
-        assert!(registry.store_model("user123", "test_model", model_data.clone(), metadata.clone()).is_ok());
+        assert!(registry
+            .store_model(
+                "user123",
+                "test_model",
+                model_data.clone(),
+                metadata.clone()
+            )
+            .is_ok());
 
         // Retrieve model
         let stored = registry.get_model("test_model").unwrap();
@@ -255,7 +262,9 @@ mod tests {
         };
 
         // Store and then delete
-        assert!(registry.store_model("user123", "test_model", vec![1, 2, 3], metadata).is_ok());
+        assert!(registry
+            .store_model("user123", "test_model", vec![1, 2, 3], metadata)
+            .is_ok());
         assert!(registry.delete_model("user123", "test_model").is_ok());
 
         // Should not exist anymore
@@ -276,7 +285,9 @@ mod tests {
             geometry_spec: crate::api::GeometrySpec::default(),
         };
 
-        assert!(registry.store_model("user123", "test_model", vec![1, 2, 3], metadata).is_ok());
+        assert!(registry
+            .store_model("user123", "test_model", vec![1, 2, 3], metadata)
+            .is_ok());
 
         // Different user should not be able to delete
         assert!(registry.delete_model("user456", "test_model").is_err());
@@ -295,7 +306,9 @@ mod tests {
             geometry_spec: crate::api::GeometrySpec::default(),
         };
 
-        assert!(registry.store_model("user123", "test_model", vec![1, 2, 3, 4, 5], metadata).is_ok());
+        assert!(registry
+            .store_model("user123", "test_model", vec![1, 2, 3, 4, 5], metadata)
+            .is_ok());
 
         let stats = registry.get_stats();
         assert_eq!(stats.total_models, 1);

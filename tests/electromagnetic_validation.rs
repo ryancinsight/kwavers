@@ -11,11 +11,11 @@
 //! - Material interface handling
 
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::electromagnetic::{ElectromagneticDomain, EMProblemType};
-#[cfg(feature = "pinn")]
-use kwavers::ml::pinn::physics::{PhysicsParameters, BoundaryConditionSpec, BoundaryPosition};
-#[cfg(feature = "pinn")]
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+#[cfg(feature = "pinn")]
+use kwavers::ml::pinn::electromagnetic::{EMProblemType, ElectromagneticDomain};
+#[cfg(feature = "pinn")]
+use kwavers::ml::pinn::physics::{BoundaryConditionSpec, BoundaryPosition, PhysicsParameters};
 #[cfg(feature = "pinn")]
 use ndarray::{Array2, Array3};
 #[cfg(feature = "pinn")]
@@ -34,10 +34,10 @@ fn validate_electrostatic_laplace_equation() {
 
     let domain = ElectromagneticDomain::new(
         EMProblemType::Electrostatic,
-        8.854e-12, // ε₀
+        8.854e-12,                   // ε₀
         4e-7 * std::f64::consts::PI, // μ₀
-        0.0, // σ
-        vec![2.0, 2.0], // domain size
+        0.0,                         // σ
+        vec![2.0, 2.0],              // domain size
     );
 
     // Create test points
@@ -56,13 +56,13 @@ fn validate_electrostatic_laplace_equation() {
     }
 
     let x = Tensor::<burn::backend::NdArray<f32>, 2>::from_floats(
-        ndarray::Array::from_shape_vec((x_tensor.len(), 1), x_tensor).unwrap()
+        ndarray::Array::from_shape_vec((x_tensor.len(), 1), x_tensor).unwrap(),
     );
     let y = Tensor::<burn::backend::NdArray<f32>, 2>::from_floats(
-        ndarray::Array::from_shape_vec((y_tensor.len(), 1), y_tensor).unwrap()
+        ndarray::Array::from_shape_vec((y_tensor.len(), 1), y_tensor).unwrap(),
     );
     let t = Tensor::<burn::backend::NdArray<f32>, 2>::from_floats(
-        ndarray::Array::from_shape_vec((t_tensor.len(), 1), t_tensor).unwrap()
+        ndarray::Array::from_shape_vec((t_tensor.len(), 1), t_tensor).unwrap(),
     );
 
     let physics_params = PhysicsParameters {
@@ -72,7 +72,10 @@ fn validate_electrostatic_laplace_equation() {
     };
 
     // Test that domain can be created and validated
-    assert!(domain.validate().is_ok(), "Electrostatic domain should validate successfully");
+    assert!(
+        domain.validate().is_ok(),
+        "Electrostatic domain should validate successfully"
+    );
 
     // Test domain properties
     assert_eq!(domain.problem_type, EMProblemType::Electrostatic);
@@ -89,7 +92,10 @@ fn validate_electrostatic_laplace_equation() {
     // Test loss weights are reasonable
     let weights = domain.loss_weights();
     assert!(weights.pde_weight > 0.0, "PDE weight should be positive");
-    assert!(weights.boundary_weight > 0.0, "Boundary weight should be positive");
+    assert!(
+        weights.boundary_weight > 0.0,
+        "Boundary weight should be positive"
+    );
 }
 
 #[cfg(feature = "pinn")]
@@ -111,10 +117,10 @@ fn validate_electrostatic_poisson_equation() {
 
     // Test that charge density computation doesn't panic
     let x = Tensor::<burn::backend::NdArray<f32>, 2>::from_floats(
-        ndarray::Array::from_shape_vec((4, 1), vec![0.25, 0.5, 0.75, 1.0]).unwrap()
+        ndarray::Array::from_shape_vec((4, 1), vec![0.25, 0.5, 0.75, 1.0]).unwrap(),
     );
     let y = Tensor::<burn::backend::NdArray<f32>, 2>::from_floats(
-        ndarray::Array::from_shape_vec((4, 1), vec![0.25, 0.5, 0.75, 1.0]).unwrap()
+        ndarray::Array::from_shape_vec((4, 1), vec![0.25, 0.5, 0.75, 1.0]).unwrap(),
     );
 
     let physics_params = PhysicsParameters {
@@ -125,12 +131,19 @@ fn validate_electrostatic_poisson_equation() {
 
     // Test charge density computation (should return zeros for now)
     let rho = domain.compute_charge_density(&x, &y, &physics_params);
-    assert_eq!(rho.shape().dims, &[4, 1], "Charge density should match input shape");
+    assert_eq!(
+        rho.shape().dims,
+        &[4, 1],
+        "Charge density should match input shape"
+    );
 
     // All values should be zero (no charge sources implemented yet)
     let rho_data = rho.to_data().to_vec().unwrap();
     for &val in &rho_data {
-        assert!((val as f64).abs() < 1e-10, "Charge density should be zero without sources");
+        assert!(
+            (val as f64).abs() < 1e-10,
+            "Charge density should be zero without sources"
+        );
     }
 }
 
@@ -152,10 +165,10 @@ fn validate_magnetostatic_vector_potential() {
 
     // Test current density computation
     let x = Tensor::<burn::backend::NdArray<f32>, 2>::from_floats(
-        ndarray::Array::from_shape_vec((4, 1), vec![0.25, 0.5, 0.75, 1.0]).unwrap()
+        ndarray::Array::from_shape_vec((4, 1), vec![0.25, 0.5, 0.75, 1.0]).unwrap(),
     );
     let y = Tensor::<burn::backend::NdArray<f32>, 2>::from_floats(
-        ndarray::Array::from_shape_vec((4, 1), vec![0.25, 0.5, 0.75, 1.0]).unwrap()
+        ndarray::Array::from_shape_vec((4, 1), vec![0.25, 0.5, 0.75, 1.0]).unwrap(),
     );
 
     let physics_params = PhysicsParameters {
@@ -166,12 +179,19 @@ fn validate_magnetostatic_vector_potential() {
 
     // Test z-component current density computation
     let j_z = domain.compute_current_density_z(&x, &y, &physics_params);
-    assert_eq!(j_z.shape().dims, &[4, 1], "Current density should match input shape");
+    assert_eq!(
+        j_z.shape().dims,
+        &[4, 1],
+        "Current density should match input shape"
+    );
 
     // All values should be zero (no current sources implemented yet)
     let jz_data = j_z.to_data().to_vec().unwrap();
     for &val in &jz_data {
-        assert!((val as f64).abs() < 1e-10, "Current density should be zero without sources");
+        assert!(
+            (val as f64).abs() < 1e-10,
+            "Current density should be zero without sources"
+        );
     }
 }
 
@@ -200,15 +220,24 @@ fn validate_time_harmonic_wave_equation() {
 
     // Test loss weights for wave propagation
     let weights = domain.loss_weights();
-    assert!(weights.boundary_weight < 1.0, "Wave propagation should have lower boundary weight");
+    assert!(
+        weights.boundary_weight < 1.0,
+        "Wave propagation should have lower boundary weight"
+    );
 
     // Test validation metrics include wave propagation metrics
     let metrics = domain.validation_metrics();
-    assert!(metrics.len() >= 5, "Wave propagation should have multiple validation metrics");
+    assert!(
+        metrics.len() >= 5,
+        "Wave propagation should have multiple validation metrics"
+    );
 
     // Check for wave speed metric
     let has_wave_speed = metrics.iter().any(|m| m.name == "wave_speed");
-    assert!(has_wave_speed, "Should include wave speed validation metric");
+    assert!(
+        has_wave_speed,
+        "Should include wave speed validation metric"
+    );
 }
 
 #[cfg(feature = "pinn")]
@@ -244,11 +273,19 @@ fn validate_maxwell_equations_consistency() {
             vec![1.0, 1.0],
         );
 
-        assert!(test_domain.validate().is_ok(), "Problem type {:?} should validate", problem_type);
+        assert!(
+            test_domain.validate().is_ok(),
+            "Problem type {:?} should validate",
+            problem_type
+        );
 
         // Each problem type should have appropriate validation metrics
         let metrics = test_domain.validation_metrics();
-        assert!(!metrics.is_empty(), "Problem type {:?} should have validation metrics", problem_type);
+        assert!(
+            !metrics.is_empty(),
+            "Problem type {:?} should have validation metrics",
+            problem_type
+        );
     }
 }
 
@@ -275,11 +312,19 @@ fn validate_perfect_electric_conductor_boundary() {
 
     // Check boundary conditions are generated
     let bc_specs = domain.boundary_conditions();
-    assert!(!bc_specs.is_empty(), "Should generate boundary conditions with PEC");
+    assert!(
+        !bc_specs.is_empty(),
+        "Should generate boundary conditions with PEC"
+    );
 
     // Should contain Dirichlet boundary condition
-    let has_dirichlet = bc_specs.iter().any(|spec| matches!(spec, BoundaryConditionSpec::Dirichlet { .. }));
-    assert!(has_dirichlet, "PEC should generate Dirichlet boundary condition");
+    let has_dirichlet = bc_specs
+        .iter()
+        .any(|spec| matches!(spec, BoundaryConditionSpec::Dirichlet { .. }));
+    assert!(
+        has_dirichlet,
+        "PEC should generate Dirichlet boundary condition"
+    );
 }
 
 #[cfg(feature = "pinn")]
@@ -301,11 +346,19 @@ fn validate_perfect_magnetic_conductor_boundary() {
 
     // Check boundary conditions are generated
     let bc_specs = domain.boundary_conditions();
-    assert!(!bc_specs.is_empty(), "Should generate boundary conditions with PMC");
+    assert!(
+        !bc_specs.is_empty(),
+        "Should generate boundary conditions with PMC"
+    );
 
     // Should contain Neumann boundary condition
-    let has_neumann = bc_specs.iter().any(|spec| matches!(spec, BoundaryConditionSpec::Neumann { .. }));
-    assert!(has_neumann, "PMC should generate Neumann boundary condition");
+    let has_neumann = bc_specs
+        .iter()
+        .any(|spec| matches!(spec, BoundaryConditionSpec::Neumann { .. }));
+    assert!(
+        has_neumann,
+        "PMC should generate Neumann boundary condition"
+    );
 }
 
 // ============================================================================
@@ -320,9 +373,9 @@ fn validate_material_properties() {
     // Test vacuum properties
     let vacuum_domain = ElectromagneticDomain::new(
         EMProblemType::WavePropagation,
-        8.854e-12, // ε₀
+        8.854e-12,                   // ε₀
         4e-7 * std::f64::consts::PI, // μ₀
-        0.0, // σ
+        0.0,                         // σ
         vec![1.0, 1.0],
     );
 
@@ -341,7 +394,10 @@ fn validate_material_properties() {
         vec![1.0, 1.0],
     );
 
-    assert!(invalid_domain.validate().is_err(), "Should reject negative permittivity");
+    assert!(
+        invalid_domain.validate().is_err(),
+        "Should reject negative permittivity"
+    );
 
     let invalid_domain2 = ElectromagneticDomain::new(
         EMProblemType::Electrostatic,
@@ -351,7 +407,10 @@ fn validate_material_properties() {
         vec![1.0, 1.0],
     );
 
-    assert!(invalid_domain2.validate().is_err(), "Should reject negative permeability");
+    assert!(
+        invalid_domain2.validate().is_err(),
+        "Should reject negative permeability"
+    );
 
     let invalid_domain3 = ElectromagneticDomain::new(
         EMProblemType::Electrostatic,
@@ -361,7 +420,10 @@ fn validate_material_properties() {
         vec![1.0, 1.0],
     );
 
-    assert!(invalid_domain3.validate().is_err(), "Should reject negative conductivity");
+    assert!(
+        invalid_domain3.validate().is_err(),
+        "Should reject negative conductivity"
+    );
 }
 
 #[cfg(feature = "pinn")]
@@ -401,19 +463,31 @@ fn validate_gpu_acceleration_setup() {
     use kwavers::ml::pinn::electromagnetic_gpu::EMConfig;
 
     let config = EMConfig::default();
-    assert!(config.grid_size.iter().all(|&s| s > 0), "Grid dimensions should be positive");
+    assert!(
+        config.grid_size.iter().all(|&s| s > 0),
+        "Grid dimensions should be positive"
+    );
     assert!(config.time_steps > 0, "Time steps should be positive");
     assert!(config.permittivity > 0.0, "Permittivity should be positive");
     assert!(config.permeability > 0.0, "Permeability should be positive");
-    assert!(config.spatial_steps.iter().all(|&s| s > 0.0), "Spatial steps should be positive");
+    assert!(
+        config.spatial_steps.iter().all(|&s| s > 0.0),
+        "Spatial steps should be positive"
+    );
     assert!(config.time_step > 0.0, "Time step should be positive");
-    assert!(config.courant_factor > 0.0 && config.courant_factor <= 1.0, "Courant factor should be in (0,1]");
+    assert!(
+        config.courant_factor > 0.0 && config.courant_factor <= 1.0,
+        "Courant factor should be in (0,1]"
+    );
 
     // Test GPU solver creation
     let solver_result = kwavers::ml::pinn::electromagnetic_gpu::GPUEMSolver::new(config);
     // Note: GPU solver may fail if no GPU is available, which is acceptable
     // We just test that the API works
-    assert!(solver_result.is_ok() || solver_result.is_err(), "GPU solver creation should not panic");
+    assert!(
+        solver_result.is_ok() || solver_result.is_err(),
+        "GPU solver creation should not panic"
+    );
 }
 
 #[cfg(feature = "gpu")]
@@ -422,7 +496,7 @@ fn validate_gpu_acceleration_setup() {
 fn validate_gpu_field_data_structure() {
     // Test GPU field data structure and initialization
 
-    use kwavers::ml::pinn::electromagnetic_gpu::{EMFieldData, EMConfig, GPUEMSolver};
+    use kwavers::ml::pinn::electromagnetic_gpu::{EMConfig, EMFieldData, GPUEMSolver};
 
     let config = EMConfig {
         grid_size: [4, 4, 4], // Small grid for testing
@@ -434,16 +508,25 @@ fn validate_gpu_field_data_structure() {
     if let Ok(mut solver) = solver_result {
         // Test field initialization
         let init_result = solver.initialize_fields(None);
-        assert!(init_result.is_ok() || init_result.is_err(), "Field initialization should not panic");
+        assert!(
+            init_result.is_ok() || init_result.is_err(),
+            "Field initialization should not panic"
+        );
 
         if init_result.is_ok() {
             // Test field data access
             let field_result = solver.get_field_at(0, [0, 0, 0]);
-            assert!(field_result.is_some() || field_result.is_none(), "Field access should not panic");
+            assert!(
+                field_result.is_some() || field_result.is_none(),
+                "Field access should not panic"
+            );
 
             // Test energy computation
             let energy_result = solver.compute_energy(0);
-            assert!(energy_result.is_some() || energy_result.is_none(), "Energy computation should not panic");
+            assert!(
+                energy_result.is_some() || energy_result.is_none(),
+                "Energy computation should not panic"
+            );
         }
     }
 }
@@ -506,22 +589,38 @@ fn validate_problem_type_consistency() {
         );
 
         // All domains should validate
-        assert!(domain.validate().is_ok(), "Problem type {:?} should validate", problem_type);
+        assert!(
+            domain.validate().is_ok(),
+            "Problem type {:?} should validate",
+            problem_type
+        );
 
         // All domains should have the same domain name
         assert_eq!(domain.domain_name(), "electromagnetic");
 
         // All domains should generate boundary conditions
         let bc_specs = domain.boundary_conditions();
-        assert!(!bc_specs.is_empty(), "Problem type {:?} should generate boundary conditions", problem_type);
+        assert!(
+            !bc_specs.is_empty(),
+            "Problem type {:?} should generate boundary conditions",
+            problem_type
+        );
 
         // All domains should generate initial conditions
         let ic_specs = domain.initial_conditions();
-        assert!(!ic_specs.is_empty(), "Problem type {:?} should generate initial conditions", problem_type);
+        assert!(
+            !ic_specs.is_empty(),
+            "Problem type {:?} should generate initial conditions",
+            problem_type
+        );
 
         // All domains should have validation metrics
         let metrics = domain.validation_metrics();
-        assert!(!metrics.is_empty(), "Problem type {:?} should have validation metrics", problem_type);
+        assert!(
+            !metrics.is_empty(),
+            "Problem type {:?} should have validation metrics",
+            problem_type
+        );
     }
 }
 
@@ -551,9 +650,15 @@ fn validate_pinn_integration_interface() {
     let metrics = domain.validation_metrics();
     for metric in &metrics {
         assert!(!metric.name.is_empty(), "Metric name should not be empty");
-        assert!(metric.acceptable_range.0 <= metric.acceptable_range.1,
-                "Acceptable range should be valid for metric {}", metric.name);
-        assert!(!metric.description.is_empty(), "Metric description should not be empty");
+        assert!(
+            metric.acceptable_range.0 <= metric.acceptable_range.1,
+            "Acceptable range should be valid for metric {}",
+            metric.name
+        );
+        assert!(
+            !metric.description.is_empty(),
+            "Metric description should not be empty"
+        );
     }
 
     // Test coupling interface (should not support coupling yet)
@@ -581,9 +686,15 @@ fn validate_physics_parameter_handling() {
     };
 
     // Add custom material properties
-    physics_params.domain_params.insert("permittivity".to_string(), 4.0 * 8.854e-12); // Dielectric
-    physics_params.domain_params.insert("permeability".to_string(), 4e-7 * std::f64::consts::PI); // Same μ
-    physics_params.domain_params.insert("conductivity".to_string(), 1e-6); // Slightly conductive
+    physics_params
+        .domain_params
+        .insert("permittivity".to_string(), 4.0 * 8.854e-12); // Dielectric
+    physics_params
+        .domain_params
+        .insert("permeability".to_string(), 4e-7 * std::f64::consts::PI); // Same μ
+    physics_params
+        .domain_params
+        .insert("conductivity".to_string(), 1e-6); // Slightly conductive
 
     // Test that domain can handle physics parameters (through PDE residual method)
     // This is tested implicitly through the PDE residual interface
@@ -651,13 +762,18 @@ fn validate_wave_propagation_setup() {
     );
     let static_weights = static_domain.loss_weights();
 
-    assert!(weights.boundary_weight <= static_weights.boundary_weight,
-            "Wave propagation should have lower boundary weight than static problems");
+    assert!(
+        weights.boundary_weight <= static_weights.boundary_weight,
+        "Wave propagation should have lower boundary weight than static problems"
+    );
 
     // Should have wave speed validation metric
     let metrics = domain.validation_metrics();
     let has_wave_speed = metrics.iter().any(|m| m.name == "wave_speed");
-    assert!(has_wave_speed, "Wave propagation should validate wave speed");
+    assert!(
+        has_wave_speed,
+        "Wave propagation should validate wave speed"
+    );
 }
 
 #[cfg(not(feature = "pinn"))]

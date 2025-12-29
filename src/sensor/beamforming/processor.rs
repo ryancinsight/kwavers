@@ -4,7 +4,6 @@ use super::config::BeamformingConfig;
 use crate::error::KwaversResult;
 use crate::utils::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2, Array3};
-use ndarray::Axis;
 
 /// Beamforming processor for array algorithms
 #[derive(Debug)]
@@ -24,7 +23,7 @@ impl BeamformingProcessor {
             sensor_positions,
             num_sensors,
         }
-}
+    }
     /// Get number of sensors
     #[must_use]
     pub fn num_sensors(&self) -> usize {
@@ -82,21 +81,16 @@ impl BeamformingProcessor {
         let (n_elements, _channels, n_samples) = sensor_data.dim();
 
         if delays.len() != n_elements || weights.len() != n_elements {
-            return Err(crate::error::KwaversError::InvalidInput(
-                format!(
-                    "Invalid delays/weights: delays={}, weights={}, n_elements={}",
-                    delays.len(),
-                    weights.len(),
-                    n_elements
-                ),
-            ));
+            return Err(crate::error::KwaversError::InvalidInput(format!(
+                "Invalid delays/weights: delays={}, weights={}, n_elements={}",
+                delays.len(),
+                weights.len(),
+                n_elements
+            )));
         }
 
         // Align by relative delays so contributions add coherently
-        let max_delay = delays
-            .iter()
-            .copied()
-            .fold(f64::NEG_INFINITY, f64::max);
+        let max_delay = delays.iter().copied().fold(f64::NEG_INFINITY, f64::max);
 
         let mut output = Array3::zeros((1, 1, n_samples));
         for (elem_idx, &delay) in delays.iter().enumerate() {
@@ -129,7 +123,12 @@ impl BeamformingProcessor {
             // Fall back to trivial DAS with unit weights
             let weights = vec![1.0; n_elements];
             let delays = vec![0.0; n_elements];
-            return self.delay_and_sum_with(sensor_data, self.config.sampling_frequency, &delays, &weights);
+            return self.delay_and_sum_with(
+                sensor_data,
+                self.config.sampling_frequency,
+                &delays,
+                &weights,
+            );
         }
 
         // Compute sample covariance R = (1/N) Σ x(n)x^T(n)
@@ -160,7 +159,12 @@ impl BeamformingProcessor {
             // Fallback on numerical issues
             let weights = vec![1.0; n_elements];
             let delays = vec![0.0; n_elements];
-            return self.delay_and_sum_with(sensor_data, self.config.sampling_frequency, &delays, &weights);
+            return self.delay_and_sum_with(
+                sensor_data,
+                self.config.sampling_frequency,
+                &delays,
+                &weights,
+            );
         }
 
         let weights = inv_cov_a.mapv(|x| x / denominator);
@@ -193,8 +197,8 @@ mod tests {
     fn delay_and_sum_equal_delays_sums_channels() {
         let bf = make_processor(2);
 
-        let sensor0 = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let sensor1 = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+        let sensor0 = [1.0, 2.0, 3.0, 4.0, 5.0];
+        let sensor1 = [10.0, 20.0, 30.0, 40.0, 50.0];
         let n_samples = sensor0.len();
 
         let mut data = Array3::<f64>::zeros((2, 1, n_samples));

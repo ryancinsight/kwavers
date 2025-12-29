@@ -80,7 +80,12 @@ fn delay_and_sum_single_look_aligns_impulses() {
     }
 
     // Allow one-sample tolerance due to rounding
-    assert!(max_idx < early_window, "peak at {}, expected within first {} samples", max_idx, early_window);
+    assert!(
+        max_idx < early_window,
+        "peak at {}, expected within first {} samples",
+        max_idx,
+        early_window
+    );
     assert!(max_val > 0.5, "beamformed peak too small: {}", max_val);
 }
 
@@ -95,7 +100,9 @@ fn capon_diagonal_loading_produces_finite_output() {
     let sensor_data = synth_sensor_data(&geometry, n_samples, focal, sample_rate);
 
     let config = BeamformingConfig {
-        method: BeamformingMethod::CaponDiagonalLoading { diagonal_loading: 1e-4 },
+        method: BeamformingMethod::CaponDiagonalLoading {
+            diagonal_loading: 1e-4,
+        },
         frequency_range: (20e3, 10e6),
         spatial_resolution: 1e-3,
         apodization: ApodizationType::Hamming,

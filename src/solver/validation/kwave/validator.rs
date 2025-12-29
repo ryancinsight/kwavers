@@ -46,6 +46,7 @@ impl KWaveValidator {
     /// - IEEE 29148-2018: Software validation requirements
     fn run_test_case(&self, test_case: &KWaveTestCase) -> KwaversResult<TestResult> {
         use crate::medium::HomogeneousMedium;
+        use crate::solver::kwave_parity::sources::KWaveSource;
         use crate::solver::kwave_parity::{KWaveConfig, KWaveSolver};
 
         // Create test-specific configuration
@@ -55,14 +56,15 @@ impl KWaveValidator {
         };
 
         // Initialize solver with test grid
-        let mut solver = KWaveSolver::new(config, self.grid.clone())?;
+        let medium = HomogeneousMedium::water(&self.grid);
+        let source = KWaveSource::default();
+        let mut solver = KWaveSolver::new(config, self.grid.clone(), &medium, source)?;
 
         // Run simulation based on test case type
         let computed_result = match test_case.name.as_str() {
             "homogeneous_propagation" => {
                 // Plane wave test: analytical solution available
-                let medium = HomogeneousMedium::water(&self.grid);
-                solver.run(&medium, 100)?; // 100 time steps
+                solver.run(100)?; // 100 time steps
 
                 // Extract pressure field and compute RMS
                 let p_field = solver.pressure_field();
@@ -73,8 +75,7 @@ impl KWaveValidator {
 
             "pml_absorption" => {
                 // Test PML absorption: expect exponential decay
-                let medium = HomogeneousMedium::water(&self.grid);
-                solver.run(&medium, 200)?;
+                solver.run(200)?;
 
                 // Measure field amplitude at boundaries (should be near zero)
                 let p_field = solver.pressure_field();
@@ -94,8 +95,7 @@ impl KWaveValidator {
 
             "heterogeneous_medium" => {
                 // Layered medium test
-                let medium = HomogeneousMedium::water(&self.grid);
-                solver.run(&medium, 150)?;
+                solver.run(150)?;
 
                 let p_field = solver.pressure_field();
                 p_field[[self.grid.nx / 2, self.grid.ny / 2, self.grid.nz / 2]]
@@ -103,8 +103,7 @@ impl KWaveValidator {
 
             "nonlinear_propagation" => {
                 // Nonlinear test with harmonic generation
-                let medium = HomogeneousMedium::water(&self.grid);
-                solver.run(&medium, 200)?;
+                solver.run(200)?;
 
                 // Measure harmonic content using peak pressure metric
                 // Full harmonic analysis would use FFT spectral decomposition
@@ -116,8 +115,7 @@ impl KWaveValidator {
 
             "focused_transducer" => {
                 // Focused field pattern test
-                let medium = HomogeneousMedium::water(&self.grid);
-                solver.run(&medium, 100)?;
+                solver.run(100)?;
 
                 // Measure focusing quality at focal point
                 let p_field = solver.pressure_field();

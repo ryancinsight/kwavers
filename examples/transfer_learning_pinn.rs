@@ -5,9 +5,8 @@
 
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::transfer_learning::{
-    TransferLearningConfig, TransferTrainer1D, FineTuningStrategy,
-    DomainAdaptation, ProgressiveTraining, MultiPhysicsTrainer, PhysicsConfig,
-    TrainingData1D, TrainingData2D
+    DomainAdaptation, FineTuningStrategy, MultiPhysicsTrainer, PhysicsConfig, ProgressiveTraining,
+    TrainingData1D, TrainingData2D, TransferLearningConfig, TransferTrainer1D,
 };
 
 #[cfg(feature = "pinn")]
@@ -40,7 +39,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (material, speed, training_data) in materials {
         println!("🔄 Adapting to {} ({} m/s)", material, speed);
         let metrics = trainer.fine_tune_wave_speed(speed, &training_data)?;
-        println!("   Final loss: {:.2e}", metrics.total_loss.last().unwrap_or(&0.0));
+        println!(
+            "   Final loss: {:.2e}",
+            metrics.total_loss.last().unwrap_or(&0.0)
+        );
         println!("   Training time: {:.1}s", metrics.training_time_secs);
         println!("   Epochs: {}", metrics.epochs_completed);
     }
@@ -49,9 +51,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let report = trainer.analyze_effectiveness();
     println!("📈 Transfer Learning Report:");
     println!("   Total adaptations: {}", report.total_adaptations);
-    println!("   Average convergence: {:.2e}", report.average_convergence_time);
-    println!("   Strategy effectiveness: {:.1}%",
-             report.strategy_effectiveness * 100.0);
+    println!(
+        "   Average convergence: {:.2e}",
+        report.average_convergence_time
+    );
+    println!(
+        "   Strategy effectiveness: {:.1}%",
+        report.strategy_effectiveness * 100.0
+    );
 
     // Example 2: Domain adaptation
     println!("\n🏗️  Example 2: Domain Adaptation");
@@ -69,7 +76,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for geometry in geometries {
         println!("🔄 Adapting to {} geometry", geometry);
         let metrics = domain_adaptation.adapt_geometry(geometry, &TrainingData2D)?;
-        println!("   Final loss: {:.2e}", metrics.total_loss.last().unwrap_or(&0.0));
+        println!(
+            "   Final loss: {:.2e}",
+            metrics.total_loss.last().unwrap_or(&0.0)
+        );
     }
 
     // Example 3: Progressive training curriculum
@@ -98,11 +108,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("📊 Curriculum Results:");
     for (i, metrics) in results.iter().enumerate() {
-        println!("   Stage {}: Loss = {:.2e}",
-                i + 1, metrics.total_loss.last().unwrap_or(&0.0));
+        println!(
+            "   Stage {}: Loss = {:.2e}",
+            i + 1,
+            metrics.total_loss.last().unwrap_or(&0.0)
+        );
     }
-    println!("   Knowledge transfer effectiveness: {:.1}%",
-             curriculum_report.knowledge_transfer_effectiveness * 100.0);
+    println!(
+        "   Knowledge transfer effectiveness: {:.1}%",
+        curriculum_report.knowledge_transfer_effectiveness * 100.0
+    );
 
     // Example 4: Multi-physics training
     println!("\n🔬 Example 4: Multi-Physics Training");
@@ -141,8 +156,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("🔬 Multi-Physics Results:");
     for (physics, metrics) in &multi_results {
-        println!("   {}: Loss = {:.2e}",
-                physics, metrics.total_loss.last().unwrap_or(&0.0));
+        println!(
+            "   {}: Loss = {:.2e}",
+            physics,
+            metrics.total_loss.last().unwrap_or(&0.0)
+        );
     }
 
     // Summary

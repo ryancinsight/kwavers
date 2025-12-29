@@ -22,82 +22,100 @@ pub struct NeuralNetworkShader {
 impl NeuralNetworkShader {
     /// Create new neural network shader
     pub async fn new(device: &GpuDevice) -> KwaversResult<Self> {
-        let shader_module = device.device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("Neural Network Shader"),
-            source: wgpu::ShaderSource::Wgsl(NEURAL_NETWORK_SHADER.into()),
-        });
+        let shader_module = device
+            .device()
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Neural Network Shader"),
+                source: wgpu::ShaderSource::Wgsl(NEURAL_NETWORK_SHADER.into()),
+            });
 
         // Create bind group layouts
-        let bind_group_layout = device.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("Neural Network Bind Group Layout"),
-            entries: &[
-                // Input buffer
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                // Weight buffer
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                // Bias buffer
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                // Output buffer
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
-        });
+        let bind_group_layout =
+            device
+                .device()
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("Neural Network Bind Group Layout"),
+                    entries: &[
+                        // Input buffer
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: wgpu::ShaderStages::COMPUTE,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Storage { read_only: true },
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
+                        // Weight buffer
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 1,
+                            visibility: wgpu::ShaderStages::COMPUTE,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Storage { read_only: true },
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
+                        // Bias buffer
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 2,
+                            visibility: wgpu::ShaderStages::COMPUTE,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Storage { read_only: true },
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
+                        // Output buffer
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 3,
+                            visibility: wgpu::ShaderStages::COMPUTE,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Storage { read_only: false },
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
+                    ],
+                });
 
         // Create pipelines
-        let pipeline_layout = device.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("Neural Network Pipeline Layout"),
-            bind_group_layouts: &[&bind_group_layout],
-            push_constant_ranges: &[],
-        });
+        let pipeline_layout =
+            device
+                .device()
+                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some("Neural Network Pipeline Layout"),
+                    bind_group_layouts: &[&bind_group_layout],
+                    push_constant_ranges: &[],
+                });
 
-        let matmul_pipeline = device.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("Matrix Multiplication Pipeline"),
-            layout: Some(&pipeline_layout),
-            module: &shader_module,
-            entry_point: "matmul_kernel",
-        });
+        let matmul_pipeline =
+            device
+                .device()
+                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("Matrix Multiplication Pipeline"),
+                    layout: Some(&pipeline_layout),
+                    module: &shader_module,
+                    entry_point: "matmul_kernel",
+                    compilation_options: Default::default(),
+                    cache: None,
+                });
 
-        let activation_pipeline = device.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("Activation Pipeline"),
-            layout: Some(&pipeline_layout),
-            module: &shader_module,
-            entry_point: "activation_kernel",
-        });
+        let activation_pipeline =
+            device
+                .device()
+                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("Activation Pipeline"),
+                    layout: Some(&pipeline_layout),
+                    module: &shader_module,
+                    entry_point: "activation_kernel",
+                    compilation_options: Default::default(),
+                    cache: None,
+                });
 
         Ok(Self {
             device: device.clone(),
@@ -123,8 +141,14 @@ impl NeuralNetworkShader {
         if !self.has_gpu_acceleration() {
             // CPU fallback implementation for quantized matrix multiplication
             return self.matmul_cpu_quantized(
-                input, weights, biases, weight_scale, bias_scale,
-                batch_size, input_size, output_size
+                input,
+                weights,
+                biases,
+                weight_scale,
+                bias_scale,
+                batch_size,
+                input_size,
+                output_size,
             );
         }
 
@@ -177,21 +201,13 @@ impl NeuralNetworkShader {
     }
 
     /// Apply activation function on GPU
-    pub fn activate(
-        &self,
-        input: &[f32],
-        activation_type: u32,
-    ) -> KwaversResult<Vec<f32>> {
+    pub fn activate(&self, input: &[f32], activation_type: u32) -> KwaversResult<Vec<f32>> {
         // CPU fallback implementation for activation functions
         self.activate_cpu(input, activation_type)
     }
 
     /// CPU implementation of activation functions
-    fn activate_cpu(
-        &self,
-        input: &[f32],
-        activation_type: u32,
-    ) -> KwaversResult<Vec<f32>> {
+    fn activate_cpu(&self, input: &[f32], activation_type: u32) -> KwaversResult<Vec<f32>> {
         let mut output = Vec::with_capacity(input.len());
 
         match activation_type {
@@ -218,9 +234,10 @@ impl NeuralNetworkShader {
                 output.extend_from_slice(input);
             }
             _ => {
-                return Err(KwaversError::InvalidInput(
-                    format!("Unknown activation type: {}", activation_type)
-                ));
+                return Err(KwaversError::InvalidInput(format!(
+                    "Unknown activation type: {}",
+                    activation_type
+                )));
             }
         }
 

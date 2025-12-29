@@ -63,25 +63,39 @@ fn main() -> KwaversResult<()> {
 
     for (x, y, description) in test_points {
         let inside = geometry.contains(x, y);
-        println!("   Point ({:.1}, {:.1}): {} - {}",
-                x, y, if inside { "INSIDE" } else { "OUTSIDE" }, description);
+        println!(
+            "   Point ({:.1}, {:.1}): {} - {}",
+            x,
+            y,
+            if inside { "INSIDE" } else { "OUTSIDE" },
+            description
+        );
     }
     println!();
 
     // Show geometry bounding box
     let (x_min, x_max, y_min, y_max) = geometry.bounding_box();
     println!("📐 Geometry Bounds:");
-    println!("   Bounding box: [{:.1}, {:.1}] × [{:.1}, {:.1}]", x_min, x_max, y_min, y_max);
+    println!(
+        "   Bounding box: [{:.1}, {:.1}] × [{:.1}, {:.1}]",
+        x_min, x_max, y_min, y_max
+    );
     println!();
 
     // Sample some points
     println!("🎯 Point Sampling:");
     let (x_points, y_points) = geometry.sample_points(1000);
     println!("   Sampled {} points in geometry", x_points.len());
-    println!("   X range: {:.3} to {:.3}", x_points.iter().fold(f64::INFINITY, |a, &b| a.min(b)),
-             x_points.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b)));
-    println!("   Y range: {:.3} to {:.3}", y_points.iter().fold(f64::INFINITY, |a, &b| a.min(b)),
-             y_points.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b)));
+    println!(
+        "   X range: {:.3} to {:.3}",
+        x_points.iter().fold(f64::INFINITY, |a, &b| a.min(b)),
+        x_points.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))
+    );
+    println!(
+        "   Y range: {:.3} to {:.3}",
+        y_points.iter().fold(f64::INFINITY, |a, &b| a.min(b)),
+        y_points.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))
+    );
     println!();
 
     println!("🎉 Advanced PINN Geometry Features Complete!");

@@ -15,9 +15,9 @@ use ndarray::Array3;
 /// Create a test grid for acoustic simulations
 fn create_test_grid() -> Grid {
     Grid::new(
-        32,   // nx
-        32,   // ny
-        32,   // nz
+        32,    // nx
+        32,    // ny
+        32,    // nz
         0.001, // dx: 1mm spacing
         0.001, // dy
         0.001, // dz
@@ -185,8 +185,7 @@ async fn test_compute_propagation_different_sizes() {
     let sizes = vec![(16, 16, 16), (32, 32, 32), (64, 16, 16)];
 
     for (nx, ny, nz) in sizes {
-        let grid = Grid::new(nx, ny, nz, 0.001, 0.001, 0.001)
-            .expect("Failed to create grid");
+        let grid = Grid::new(nx, ny, nz, 0.001, 0.001, 0.001).expect("Failed to create grid");
 
         let pressure = Array3::from_elem((nx, ny, nz), 0.5);
 

@@ -46,8 +46,8 @@
 //!   imaging: A review." *Current Medical Imaging Reviews*, 11(1), 22-32.
 
 use crate::error::KwaversResult;
-use ndarray::{s, Array2, Array3, Array4, Axis};
-use rustfft::{FftPlanner, num_complex::Complex};
+use ndarray::{s, Array3, Array4};
+use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
 /// Configuration for harmonic detection
@@ -73,8 +73,8 @@ impl Default for HarmonicDetectionConfig {
             fundamental_frequency: 50.0, // 50 Hz typical for SWE
             n_harmonics: 3,              // Fundamental + 2 harmonics
             fft_window_size: 1024,
-            fft_overlap: 0.5,            // 50% overlap
-            min_snr_db: 10.0,            // 10 dB minimum SNR
+            fft_overlap: 0.5, // 50% overlap
+            min_snr_db: 10.0, // 10 dB minimum SNR
             enable_phase_unwrapping: true,
         }
     }
@@ -145,7 +145,7 @@ impl HarmonicDisplacementField {
     }
 
     /// Compute local nonlinearity parameter map
-    pub fn compute_nonlinearity_parameter(&mut self, config: &HarmonicDetectionConfig) {
+    pub fn compute_nonlinearity_parameter(&mut self, _config: &HarmonicDetectionConfig) {
         // Use second harmonic ratio for B/A estimation
         // B/A = (8/μ) * (ρ₀ c₀³ / (β P₀)) * (A₂/A₁)
         // Simplified version using empirical relationship
@@ -164,7 +164,16 @@ pub struct HarmonicDetector {
     /// Configuration
     config: HarmonicDetectionConfig,
     /// FFT planner for spectral analysis
-    fft_planner: FftPlanner<f64>,
+    _fft_planner: FftPlanner<f64>,
+}
+
+impl std::fmt::Debug for HarmonicDetector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HarmonicDetector")
+            .field("config", &self.config)
+            .field("_fft_planner", &"FftPlanner")
+            .finish()
+    }
 }
 
 impl HarmonicDetector {
@@ -173,7 +182,7 @@ impl HarmonicDetector {
     pub fn new(config: HarmonicDetectionConfig) -> Self {
         Self {
             config,
-            fft_planner: FftPlanner::new(),
+            _fft_planner: FftPlanner::new(),
         }
     }
 
@@ -194,7 +203,8 @@ impl HarmonicDetector {
     ) -> KwaversResult<HarmonicDisplacementField> {
         let (nx, ny, nz, n_times) = displacement_time_series.dim();
 
-        let mut harmonic_field = HarmonicDisplacementField::new(nx, ny, nz, self.config.n_harmonics, n_times);
+        let mut harmonic_field =
+            HarmonicDisplacementField::new(nx, ny, nz, self.config.n_harmonics, n_times);
 
         // Set time and frequency vectors
         for t in 0..n_times {
@@ -211,16 +221,20 @@ impl HarmonicDetector {
             for j in 0..ny {
                 for i in 0..nx {
                     let time_series = displacement_time_series.slice(s![i, j, k, ..]);
-                    let harmonics = self.analyze_single_point(&time_series.to_vec(), sampling_frequency)?;
+                    let harmonics =
+                        self.analyze_single_point(&time_series.to_vec(), sampling_frequency)?;
 
                     // Store results
-                    harmonic_field.fundamental_magnitude[[i, j, k]] = harmonics.fundamental_magnitude;
+                    harmonic_field.fundamental_magnitude[[i, j, k]] =
+                        harmonics.fundamental_magnitude;
                     harmonic_field.fundamental_phase[[i, j, k]] = harmonics.fundamental_phase;
 
                     for h in 0..self.config.n_harmonics {
                         if h < harmonics.harmonic_magnitudes.len() {
-                            harmonic_field.harmonic_magnitudes[h][[i, j, k]] = harmonics.harmonic_magnitudes[h];
-                            harmonic_field.harmonic_phases[h][[i, j, k]] = harmonics.harmonic_phases[h];
+                            harmonic_field.harmonic_magnitudes[h][[i, j, k]] =
+                                harmonics.harmonic_magnitudes[h];
+                            harmonic_field.harmonic_phases[h][[i, j, k]] =
+                                harmonics.harmonic_phases[h];
                             harmonic_field.harmonic_snrs[h][[i, j, k]] = harmonics.harmonic_snrs[h];
                         }
                     }
@@ -245,7 +259,7 @@ impl HarmonicDetector {
         let spectrum = self.compute_fft(&windowed)?;
 
         // Find fundamental frequency peak
-        let fundamental_idx = self.find_fundamental_peak(&spectrum, sampling_frequency)?;
+        let _fundamental_idx = self.find_fundamental_peak(&spectrum, sampling_frequency)?;
 
         // Extract harmonic components
         let mut harmonic_magnitudes = Vec::new();
@@ -254,7 +268,8 @@ impl HarmonicDetector {
 
         for harmonic_order in 1..=self.config.n_harmonics {
             let harmonic_freq = harmonic_order as f64 * self.config.fundamental_frequency;
-            let harmonic_idx = (harmonic_freq / sampling_frequency * spectrum.len() as f64) as usize;
+            let harmonic_idx =
+                (harmonic_freq / sampling_frequency * spectrum.len() as f64) as usize;
 
             if harmonic_idx < spectrum.len() {
                 let magnitude = spectrum[harmonic_idx].norm();
@@ -297,9 +312,9 @@ impl HarmonicDetector {
         let mut windowed = Vec::with_capacity(n);
 
         // Hann window
-        for i in 0..n {
+        for (i, &val) in time_series.iter().enumerate().take(n) {
             let window = 0.5 * (1.0 - (2.0 * PI * i as f64 / (n - 1) as f64).cos());
-            windowed.push(time_series[i] * window);
+            windowed.push(val * window);
         }
 
         windowed
@@ -310,10 +325,8 @@ impl HarmonicDetector {
         let mut planner = FftPlanner::new();
         let fft = planner.plan_fft_forward(time_series.len());
 
-        let mut buffer: Vec<Complex<f64>> = time_series
-            .iter()
-            .map(|&x| Complex::new(x, 0.0))
-            .collect();
+        let mut buffer: Vec<Complex<f64>> =
+            time_series.iter().map(|&x| Complex::new(x, 0.0)).collect();
 
         fft.process(&mut buffer);
 
@@ -343,8 +356,13 @@ impl HarmonicDetector {
         let mut max_magnitude = 0.0;
         let mut peak_idx = expected_idx;
 
-        for idx in start_idx..=end_idx {
-            let magnitude = spectrum[idx].norm();
+        for (idx, val) in spectrum
+            .iter()
+            .enumerate()
+            .take(end_idx + 1)
+            .skip(start_idx)
+        {
+            let magnitude = val.norm();
             if magnitude > max_magnitude {
                 max_magnitude = magnitude;
                 peak_idx = idx;

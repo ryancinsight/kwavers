@@ -14,6 +14,15 @@ pub mod matrix_array;
 pub mod phased_array;
 pub mod transducer;
 
+/// Type of source injection
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SourceType {
+    Pressure,
+    VelocityX,
+    VelocityY,
+    VelocityZ,
+}
+
 /// Efficient source trait using mask-based approach
 pub trait Source: Debug + Sync + Send {
     /// Create a source mask on the grid (1.0 at source locations, 0.0 elsewhere)
@@ -29,6 +38,17 @@ pub trait Source: Debug + Sync + Send {
 
     /// Get the underlying signal
     fn signal(&self) -> &dyn Signal;
+
+    /// Get the type of source
+    fn source_type(&self) -> SourceType {
+        SourceType::Pressure
+    }
+
+    /// Get the initial amplitude (for p0/u0)
+    /// If non-zero, this source contributes to the initial conditions
+    fn initial_amplitude(&self) -> f64 {
+        0.0
+    }
 
     /// Get source term at a specific position and time
     /// Uses `create_mask()` and `amplitude()` internally for compatibility

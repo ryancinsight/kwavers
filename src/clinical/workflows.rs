@@ -30,7 +30,7 @@
 use crate::error::{KwaversError, KwaversResult};
 use crate::physics::imaging::{
     elastography::ElasticityMap,
-    fusion::{FusionConfig, MultiModalFusion, FusedImageResult},
+    fusion::{FusedImageResult, FusionConfig, MultiModalFusion},
     photoacoustic::PhotoacousticResult,
 };
 use crate::sensor::beamforming::BeamformingConfig3D;
@@ -41,25 +41,25 @@ use std::time::{Duration, Instant};
 // Simple config structs for clinical workflows
 #[derive(Debug, Clone)]
 struct PhotoacousticConfig {
-    wavelength: f64,
-    optical_energy: f64,
-    absorption_coefficient: f64,
-    speed_of_sound: f64,
-    sampling_frequency: f64,
-    num_detectors: usize,
-    detector_radius: f64,
-    center_frequency: f64,
+    _wavelength: f64,
+    _optical_energy: f64,
+    _absorption_coefficient: f64,
+    _speed_of_sound: f64,
+    _sampling_frequency: f64,
+    _num_detectors: usize,
+    _detector_radius: f64,
+    _center_frequency: f64,
 }
 
 #[derive(Debug, Clone)]
 struct ElastographyConfig {
-    excitation_frequency: f64,
-    push_duration: f64,
-    track_duration: f64,
-    push_focal_depth: f64,
-    track_focal_depth: f64,
-    frame_rate: f64,
-    num_tracking_beams: usize,
+    _excitation_frequency: f64,
+    _push_duration: f64,
+    _track_duration: f64,
+    _push_focal_depth: f64,
+    _track_focal_depth: f64,
+    _frame_rate: f64,
+    _num_tracking_beams: usize,
 }
 
 /// Clinical workflow configuration
@@ -263,7 +263,8 @@ impl ClinicalWorkflowOrchestrator {
                     ("ultrasound".to_string(), 0.3),
                     ("photoacoustic".to_string(), 0.4), // Higher weight for molecular imaging
                     ("elastography".to_string(), 0.3),
-                ].into(),
+                ]
+                .into(),
                 fusion_method: crate::physics::imaging::fusion::FusionMethod::Probabilistic,
                 uncertainty_quantification: true,
                 ..Default::default()
@@ -272,7 +273,8 @@ impl ClinicalWorkflowOrchestrator {
                 modality_weights: [
                     ("ultrasound".to_string(), 0.5),
                     ("elastography".to_string(), 0.5), // Higher weight for myocardial stiffness
-                ].into(),
+                ]
+                .into(),
                 ..Default::default()
             },
             _ => FusionConfig::default(),
@@ -287,7 +289,10 @@ impl ClinicalWorkflowOrchestrator {
     }
 
     /// Execute complete clinical examination workflow
-    pub fn execute_examination(&mut self, patient_id: &str) -> KwaversResult<ClinicalExaminationResult> {
+    pub fn execute_examination(
+        &mut self,
+        patient_id: &str,
+    ) -> KwaversResult<ClinicalExaminationResult> {
         let start_time = Instant::now();
         self.performance_monitor.start_monitoring();
 
@@ -296,28 +301,32 @@ impl ClinicalWorkflowOrchestrator {
 
         // Phase 1: Multi-modal data acquisition
         let acquisition_result = self.acquire_multimodal_data()?;
-        self.performance_monitor.record_stage("acquisition", start_time.elapsed());
+        self.performance_monitor
+            .record_stage("acquisition", start_time.elapsed());
 
         // Update state
         self.state = WorkflowState::Processing;
 
         // Phase 2: Real-time processing
         let _processing_result = self.process_realtime_data(acquisition_result)?;
-        self.performance_monitor.record_stage("processing", start_time.elapsed());
+        self.performance_monitor
+            .record_stage("processing", start_time.elapsed());
 
         // Update state
         self.state = WorkflowState::Fusing;
 
         // Phase 3: Multi-modal fusion
         let fused_result = self.fusion_processor.fuse()?;
-        self.performance_monitor.record_stage("fusion", start_time.elapsed());
+        self.performance_monitor
+            .record_stage("fusion", start_time.elapsed());
 
         // Update state
         self.state = WorkflowState::Analyzing;
 
         // Phase 4: AI-enhanced analysis
         let analysis_result = self.perform_ai_analysis(&fused_result)?;
-        self.performance_monitor.record_stage("analysis", start_time.elapsed());
+        self.performance_monitor
+            .record_stage("analysis", start_time.elapsed());
 
         // Update state
         self.state = WorkflowState::Reporting;
@@ -354,10 +363,17 @@ impl ClinicalWorkflowOrchestrator {
 
         // Check real-time constraints
         let acquisition_time = acquisition_start.elapsed();
-        if self.config.real_time_enabled && acquisition_time > Duration::from_millis(self.config.max_latency_ms / 3) {
-            return Err(KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
-                message: format!("Acquisition time {}ms exceeds real-time constraint", acquisition_time.as_millis()),
-            }));
+        if self.config.real_time_enabled
+            && acquisition_time > Duration::from_millis(self.config.max_latency_ms / 3)
+        {
+            return Err(KwaversError::Validation(
+                crate::error::ValidationError::ConstraintViolation {
+                    message: format!(
+                        "Acquisition time {}ms exceeds real-time constraint",
+                        acquisition_time.as_millis()
+                    ),
+                },
+            ));
         }
 
         Ok(AcquisitionResult {
@@ -369,23 +385,36 @@ impl ClinicalWorkflowOrchestrator {
     }
 
     /// Process acquired data in real-time
-    fn process_realtime_data(&mut self, acquisition: AcquisitionResult) -> KwaversResult<ProcessingResult> {
+    fn process_realtime_data(
+        &mut self,
+        acquisition: AcquisitionResult,
+    ) -> KwaversResult<ProcessingResult> {
         let processing_start = Instant::now();
 
         // Register modalities for fusion
-        self.fusion_processor.register_ultrasound(&acquisition.ultrasound_data)?;
-        self.fusion_processor.register_photoacoustic(&acquisition.photoacoustic_result)?;
-        self.fusion_processor.register_elastography(&acquisition.elastography_result)?;
+        self.fusion_processor
+            .register_ultrasound(&acquisition.ultrasound_data)?;
+        self.fusion_processor
+            .register_photoacoustic(&acquisition.photoacoustic_result)?;
+        self.fusion_processor
+            .register_elastography(&acquisition.elastography_result)?;
 
         // Perform initial quality checks
         let quality_metrics = self.perform_quality_assessment(&acquisition)?;
 
         // Check real-time constraints
         let processing_time = processing_start.elapsed();
-        if self.config.real_time_enabled && processing_time > Duration::from_millis(self.config.max_latency_ms / 3) {
-            return Err(KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
-                message: format!("Processing time {}ms exceeds real-time constraint", processing_time.as_millis()),
-            }));
+        if self.config.real_time_enabled
+            && processing_time > Duration::from_millis(self.config.max_latency_ms / 3)
+        {
+            return Err(KwaversError::Validation(
+                crate::error::ValidationError::ConstraintViolation {
+                    message: format!(
+                        "Processing time {}ms exceeds real-time constraint",
+                        processing_time.as_millis()
+                    ),
+                },
+            ));
         }
 
         Ok(ProcessingResult {
@@ -395,9 +424,14 @@ impl ClinicalWorkflowOrchestrator {
     }
 
     /// Perform AI-enhanced diagnostic analysis
-    fn perform_ai_analysis(&self, fused_result: &FusedImageResult) -> KwaversResult<AnalysisResult> {
+    fn perform_ai_analysis(
+        &self,
+        fused_result: &FusedImageResult,
+    ) -> KwaversResult<AnalysisResult> {
         // Extract tissue properties from fused data
-        let tissue_properties = self.fusion_processor.extract_tissue_properties(fused_result);
+        let tissue_properties = self
+            .fusion_processor
+            .extract_tissue_properties(fused_result);
 
         // Simulate AI analysis (would use actual ML models)
         let recommendations = self.generate_diagnostic_recommendations(&tissue_properties)?;
@@ -450,14 +484,16 @@ impl ClinicalWorkflowOrchestrator {
         // Use actual ultrasound imaging pipeline
         // This coordinates with ultrasound acquisition hardware/systems
 
-        use crate::physics::imaging::ultrasound::{UltrasoundConfig, UltrasoundMode, compute_bmode_image};
+        use crate::physics::imaging::ultrasound::{
+            compute_bmode_image, UltrasoundConfig, UltrasoundMode,
+        };
         use crate::sensor::beamforming::BeamformingConfig3D;
         use ndarray::{Array2, Array3};
 
         // Configure ultrasound imaging parameters
         let config = UltrasoundConfig {
             mode: UltrasoundMode::BMode,
-            frequency: 5e6, // 5 MHz center frequency
+            frequency: 5e6,           // 5 MHz center frequency
             sampling_frequency: 40e6, // 40 MHz sampling
             dynamic_range: 60.0,
             tgc_enabled: true,
@@ -502,7 +538,10 @@ impl ClinicalWorkflowOrchestrator {
         // Process each elevational slice
         for elev in 0..beamforming_config.volume_dims.2 {
             // Extract 2D RF data for this slice
-            let mut rf_slice = Array2::zeros((beamforming_config.volume_dims.0, beamforming_config.volume_dims.1));
+            let mut rf_slice = Array2::zeros((
+                beamforming_config.volume_dims.0,
+                beamforming_config.volume_dims.1,
+            ));
 
             for depth in 0..beamforming_config.volume_dims.0 {
                 for lat in 0..beamforming_config.volume_dims.1 {
@@ -531,14 +570,14 @@ impl ClinicalWorkflowOrchestrator {
 
         // Configure photoacoustic acquisition
         let pa_config = PhotoacousticConfig {
-            wavelength: 800e-9, // 800 nm excitation
-            optical_energy: 10e-3, // 10 mJ pulse energy
-            absorption_coefficient: 100.0, // cm⁻¹
-            speed_of_sound: 1540.0,
-            sampling_frequency: 50e6, // 50 MHz for PA signals
-            num_detectors: 256,
-            detector_radius: 0.025, // 2.5 cm radius
-            center_frequency: 5e6,
+            _wavelength: 800e-9,            // 800 nm excitation
+            _optical_energy: 10e-3,         // 10 mJ pulse energy
+            _absorption_coefficient: 100.0, // cm⁻¹
+            _speed_of_sound: 1540.0,
+            _sampling_frequency: 50e6, // 50 MHz for PA signals
+            _num_detectors: 256,
+            _detector_radius: 0.025, // 2.5 cm radius
+            _center_frequency: 5e6,
         };
 
         // In a real implementation, this would:
@@ -571,13 +610,13 @@ impl ClinicalWorkflowOrchestrator {
 
         // Configure elastography acquisition
         let elast_config = ElastographyConfig {
-            excitation_frequency: 100.0, // 100 Hz push pulse
-            push_duration: 200e-6, // 200 μs push
-            track_duration: 10e-3, // 10 ms tracking
-            push_focal_depth: 0.03, // 3 cm push depth
-            track_focal_depth: 0.04, // 4 cm track depth
-            frame_rate: 10.0, // 10 fps
-            num_tracking_beams: 8,
+            _excitation_frequency: 100.0, // 100 Hz push pulse
+            _push_duration: 200e-6,       // 200 μs push
+            _track_duration: 10e-3,       // 10 ms tracking
+            _push_focal_depth: 0.03,      // 3 cm push depth
+            _track_focal_depth: 0.04,     // 4 cm track depth
+            _frame_rate: 10.0,            // 10 fps
+            _num_tracking_beams: 8,
         };
 
         // In a real implementation, this would:
@@ -611,9 +650,11 @@ impl ClinicalWorkflowOrchestrator {
             for lat in 0..num_lat {
                 for depth in 0..num_depth {
                     // Distance from transducer element to voxel
-                    let distance = ((depth as f64 * config.sound_speed / config.sampling_frequency) +
-                                   (lat as f64 - num_lat as f64 / 2.0).powi(2) * 0.0001 +
-                                   (elev as f64 - num_elev as f64 / 2.0).powi(2) * 0.0001).sqrt();
+                    let distance = ((depth as f64 * config.sound_speed
+                        / config.sampling_frequency)
+                        + (lat as f64 - num_lat as f64 / 2.0).powi(2) * 0.0001
+                        + (elev as f64 - num_elev as f64 / 2.0).powi(2) * 0.0001)
+                        .sqrt();
 
                     // Attenuation with depth
                     let attenuation = (-0.5 * distance * 100.0).exp(); // 0.5 dB/cm/MHz
@@ -623,8 +664,17 @@ impl ClinicalWorkflowOrchestrator {
 
                     // Generate RF signal with realistic envelope
                     let t = depth as f64 / config.sampling_frequency;
-                    let envelope = (-((t - distance / config.sound_speed) * config.center_frequency * 2.0 * std::f64::consts::PI).powi(2) * 0.5).exp();
-                    let rf_signal = envelope * (2.0 * std::f64::consts::PI * config.center_frequency * t).sin() * attenuation * (1.0 + scattering);
+                    let envelope = (-((t - distance / config.sound_speed)
+                        * config.center_frequency
+                        * 2.0
+                        * std::f64::consts::PI)
+                        .powi(2)
+                        * 0.5)
+                        .exp();
+                    let rf_signal = envelope
+                        * (2.0 * std::f64::consts::PI * config.center_frequency * t).sin()
+                        * attenuation
+                        * (1.0 + scattering);
 
                     rf_data[[depth, lat, elev]] = rf_signal;
                 }
@@ -635,7 +685,10 @@ impl ClinicalWorkflowOrchestrator {
     }
 
     /// Generate realistic photoacoustic data
-    fn generate_realistic_pa_data(&self, _config: &PhotoacousticConfig) -> (Vec<Array3<f64>>, Vec<f64>) {
+    fn generate_realistic_pa_data(
+        &self,
+        _config: &PhotoacousticConfig,
+    ) -> (Vec<Array3<f64>>, Vec<f64>) {
         // Generate time-resolved pressure fields
         let time_points = vec![0.0, 2e-6, 4e-6, 6e-6, 8e-6]; // 5 time points
         let mut pressure_fields = Vec::new();
@@ -647,12 +700,17 @@ impl ClinicalWorkflowOrchestrator {
             for z in 0..64 {
                 for y in 0..128 {
                     for x in 0..128 {
-                        let r = ((x as f64 - 64.0).powi(2) + (y as f64 - 64.0).powi(2) + (z as f64 - 32.0).powi(2)).sqrt() * 0.001; // distance in meters
+                        let r = ((x as f64 - 64.0).powi(2)
+                            + (y as f64 - 64.0).powi(2)
+                            + (z as f64 - 32.0).powi(2))
+                        .sqrt()
+                            * 0.001; // distance in meters
                         let propagation_time = r / 1540.0; // speed of sound
 
                         if t >= propagation_time {
                             // Gaussian pulse with spherical spreading
-                            let amplitude = 1e5 * (-((t - propagation_time) * 5e6).powi(2)).exp() / (r + 0.01); // 100 kPa peak
+                            let amplitude =
+                                1e5 * (-((t - propagation_time) * 5e6).powi(2)).exp() / (r + 0.01); // 100 kPa peak
                             let variation = (rand::random::<f64>()).max(0.1);
                             field[[x, y, z]] = amplitude * variation; // Add some variation
                         }
@@ -667,13 +725,17 @@ impl ClinicalWorkflowOrchestrator {
     }
 
     /// Reconstruct photoacoustic image using time-reversal
-    fn reconstruct_pa_image(&self, pressure_fields: &[Array3<f64>], _config: &PhotoacousticConfig) -> KwaversResult<Array3<f64>> {
+    fn reconstruct_pa_image(
+        &self,
+        pressure_fields: &[Array3<f64>],
+        _config: &PhotoacousticConfig,
+    ) -> KwaversResult<Array3<f64>> {
         // Simple back-projection reconstruction
         // In practice, this would use proper time-reversal algorithms
         let mut reconstructed = Array3::zeros(pressure_fields[0].dim());
 
         for field in pressure_fields {
-            reconstructed = reconstructed + field;
+            reconstructed += field;
         }
 
         // Normalize
@@ -699,7 +761,10 @@ impl ClinicalWorkflowOrchestrator {
     }
 
     /// Generate realistic elastography data
-    fn generate_realistic_elastography_data(&self, _config: &ElastographyConfig) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
+    fn generate_realistic_elastography_data(
+        &self,
+        _config: &ElastographyConfig,
+    ) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
         let dims = (128, 128, 64);
 
         // Generate realistic tissue properties
@@ -715,11 +780,13 @@ impl ClinicalWorkflowOrchestrator {
 
                     // Base properties (soft tissue)
                     let mut e_mod = 10e3; // 10 kPa
-                    let mut g_mod = 5e3;  // 5 kPa
+                    let mut g_mod = 5e3; // 5 kPa
 
                     // Add inclusions (harder regions)
-                    if (x as f64 - 64.0).powi(2) + (y as f64 - 64.0).powi(2) < 100.0 &&
-                       depth > 0.02 && depth < 0.04 {
+                    if (x as f64 - 64.0).powi(2) + (y as f64 - 64.0).powi(2) < 100.0
+                        && depth > 0.02
+                        && depth < 0.04
+                    {
                         e_mod = 50e3; // 50 kPa inclusion
                         g_mod = 25e3;
                     }
@@ -741,7 +808,10 @@ impl ClinicalWorkflowOrchestrator {
         (youngs_modulus, shear_modulus, shear_wave_speed)
     }
 
-    fn perform_quality_assessment(&self, acquisition: &AcquisitionResult) -> KwaversResult<HashMap<String, f64>> {
+    fn perform_quality_assessment(
+        &self,
+        acquisition: &AcquisitionResult,
+    ) -> KwaversResult<HashMap<String, f64>> {
         let mut metrics = HashMap::new();
 
         // Assess ultrasound quality
@@ -749,7 +819,10 @@ impl ClinicalWorkflowOrchestrator {
         metrics.insert("ultrasound_cnr".to_string(), 12.0);
 
         // Assess photoacoustic quality
-        metrics.insert("photoacoustic_snr".to_string(), acquisition.photoacoustic_result.snr);
+        metrics.insert(
+            "photoacoustic_snr".to_string(),
+            acquisition.photoacoustic_result.snr,
+        );
 
         // Assess elastography quality
         metrics.insert("elastography_snr".to_string(), 18.0);
@@ -757,7 +830,10 @@ impl ClinicalWorkflowOrchestrator {
         Ok(metrics)
     }
 
-    fn generate_diagnostic_recommendations(&self, tissue_properties: &HashMap<String, Array3<f64>>) -> KwaversResult<Vec<DiagnosticRecommendation>> {
+    fn generate_diagnostic_recommendations(
+        &self,
+        tissue_properties: &HashMap<String, Array3<f64>>,
+    ) -> KwaversResult<Vec<DiagnosticRecommendation>> {
         let mut recommendations = Vec::new();
 
         // Advanced multi-parameter diagnostic analysis
@@ -767,23 +843,40 @@ impl ClinicalWorkflowOrchestrator {
         // Tissue classification analysis
         if let Some(classification) = tissue_properties.get("tissue_classification") {
             let high_risk_voxels = classification.iter().filter(|&&x| x >= 2.0).count();
-            let moderate_risk_voxels = classification.iter().filter(|&&x| (1.0..2.0).contains(&x)).count();
-            let borderline_voxels = classification.iter().filter(|&&x| (0.5..1.0).contains(&x)).count();
+            let moderate_risk_voxels = classification
+                .iter()
+                .filter(|&&x| (1.0..2.0).contains(&x))
+                .count();
+            let borderline_voxels = classification
+                .iter()
+                .filter(|&&x| (0.5..1.0).contains(&x))
+                .count();
             let total_voxels = classification.len();
 
             let high_risk_ratio = high_risk_voxels as f64 / total_voxels as f64;
             let moderate_risk_ratio = moderate_risk_voxels as f64 / total_voxels as f64;
 
-            if high_risk_ratio > 0.05 { // >5% high-risk tissue
+            if high_risk_ratio > 0.05 {
+                // >5% high-risk tissue
                 diagnostic_score += 30.0;
-                evidence.push(format!("{:.1}% high-risk tissue regions detected", high_risk_ratio * 100.0));
-            } else if moderate_risk_ratio > 0.15 { // >15% moderate-risk tissue
+                evidence.push(format!(
+                    "{:.1}% high-risk tissue regions detected",
+                    high_risk_ratio * 100.0
+                ));
+            } else if moderate_risk_ratio > 0.15 {
+                // >15% moderate-risk tissue
                 diagnostic_score += 20.0;
-                evidence.push(format!("{:.1}% moderate-risk tissue regions detected", moderate_risk_ratio * 100.0));
+                evidence.push(format!(
+                    "{:.1}% moderate-risk tissue regions detected",
+                    moderate_risk_ratio * 100.0
+                ));
             }
 
             if borderline_voxels > 0 {
-                evidence.push(format!("{} borderline regions require monitoring", borderline_voxels));
+                evidence.push(format!(
+                    "{} borderline regions require monitoring",
+                    borderline_voxels
+                ));
             }
         }
 
@@ -796,14 +889,22 @@ impl ClinicalWorkflowOrchestrator {
             let hypoxia_ratio = low_oxygenation_voxels as f64 / total_voxels as f64;
             let hyperoxia_ratio = high_oxygenation_voxels as f64 / total_voxels as f64;
 
-            if hypoxia_ratio > 0.2 { // >20% hypoxic regions
+            if hypoxia_ratio > 0.2 {
+                // >20% hypoxic regions
                 diagnostic_score += 25.0;
-                evidence.push(format!("{:.1}% hypoxic tissue regions (potential malignancy)", hypoxia_ratio * 100.0));
+                evidence.push(format!(
+                    "{:.1}% hypoxic tissue regions (potential malignancy)",
+                    hypoxia_ratio * 100.0
+                ));
             }
 
-            if hyperoxia_ratio > 0.3 { // >30% hyperoxic regions
+            if hyperoxia_ratio > 0.3 {
+                // >30% hyperoxic regions
                 diagnostic_score += 10.0;
-                evidence.push(format!("{:.1}% hypervascular regions detected", hyperoxia_ratio * 100.0));
+                evidence.push(format!(
+                    "{:.1}% hypervascular regions detected",
+                    hyperoxia_ratio * 100.0
+                ));
             }
         }
 
@@ -813,9 +914,13 @@ impl ClinicalWorkflowOrchestrator {
             let total_voxels = stiffness.len();
 
             let stiff_ratio = high_stiffness_voxels as f64 / total_voxels as f64;
-            if stiff_ratio > 0.25 { // >25% stiff tissue
+            if stiff_ratio > 0.25 {
+                // >25% stiff tissue
                 diagnostic_score += 20.0;
-                evidence.push(format!("{:.1}% stiff tissue regions (fibrosis/carcinoma)", stiff_ratio * 100.0));
+                evidence.push(format!(
+                    "{:.1}% stiff tissue regions (fibrosis/carcinoma)",
+                    stiff_ratio * 100.0
+                ));
             }
         }
 
@@ -823,7 +928,8 @@ impl ClinicalWorkflowOrchestrator {
         if diagnostic_score >= 40.0 {
             // High suspicion case
             recommendations.push(DiagnosticRecommendation {
-                finding: "High suspicion of tissue abnormality requiring immediate attention".to_string(),
+                finding: "High suspicion of tissue abnormality requiring immediate attention"
+                    .to_string(),
                 confidence: f64::min(75.0 + diagnostic_score * 0.5, 98.0),
                 recommendations: vec![
                     "Urgent biopsy recommended within 1-2 weeks".to_string(),
@@ -883,13 +989,18 @@ impl ClinicalWorkflowOrchestrator {
         Ok(recommendations)
     }
 
-    fn calculate_confidence_score(&self, fused_result: &FusedImageResult, tissue_properties: &HashMap<String, Array3<f64>>) -> f64 {
+    fn calculate_confidence_score(
+        &self,
+        fused_result: &FusedImageResult,
+        tissue_properties: &HashMap<String, Array3<f64>>,
+    ) -> f64 {
         // Calculate overall confidence based on multiple factors
         let mut confidence = 80.0; // Base confidence
 
         // Quality factor - handle empty collections
         if !fused_result.modality_quality.is_empty() {
-            let avg_quality = fused_result.modality_quality.values().sum::<f64>() / fused_result.modality_quality.len() as f64;
+            let avg_quality = fused_result.modality_quality.values().sum::<f64>()
+                / fused_result.modality_quality.len() as f64;
             if avg_quality.is_finite() {
                 confidence += (avg_quality - 0.5) * 10.0; // ±10 based on quality
             }
@@ -897,7 +1008,8 @@ impl ClinicalWorkflowOrchestrator {
 
         // Fusion confidence factor - handle empty collections
         if !fused_result.confidence_map.is_empty() {
-            let avg_confidence = fused_result.confidence_map.iter().sum::<f64>() / fused_result.confidence_map.len() as f64;
+            let avg_confidence = fused_result.confidence_map.iter().sum::<f64>()
+                / fused_result.confidence_map.len() as f64;
             if avg_confidence.is_finite() {
                 confidence += avg_confidence * 5.0; // ±5 based on fusion confidence
             }
@@ -983,7 +1095,8 @@ impl PerformanceMonitor {
         // Simulate GPU and memory monitoring with simple variation
         let sample_count = self.gpu_samples.len() as f64;
         self.gpu_samples.push(75.0 + (sample_count.sin() * 10.0)); // 65-85% GPU usage
-        self.memory_samples.push(1024.0 + (sample_count.cos() * 128.0)); // 896-1152MB
+        self.memory_samples
+            .push(1024.0 + (sample_count.cos() * 128.0)); // 896-1152MB
     }
 
     fn get_stage_times(&self) -> HashMap<String, Duration> {
@@ -1023,7 +1136,7 @@ mod tests {
 
         let workflow = workflow.unwrap();
         match workflow.get_state() {
-            WorkflowState::Initializing => {},
+            WorkflowState::Initializing => {}
             _ => panic!("Expected Initializing state"),
         }
     }

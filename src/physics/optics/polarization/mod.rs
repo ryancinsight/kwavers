@@ -33,7 +33,7 @@
 use crate::grid::Grid;
 use crate::medium::Medium;
 use log::debug;
-use ndarray::{Array3, Array4, Axis, Zip};
+use ndarray::{Array3, Array4, Zip};
 use num_complex::Complex64;
 use std::fmt::Debug;
 
@@ -69,20 +69,14 @@ impl JonesVector {
     #[must_use]
     pub fn right_circular(amplitude: f64) -> Self {
         let norm = amplitude / std::f64::consts::SQRT_2;
-        Self::new(
-            Complex64::new(norm, 0.0),
-            Complex64::new(0.0, -norm),
-        )
+        Self::new(Complex64::new(norm, 0.0), Complex64::new(0.0, -norm))
     }
 
     /// Create left-circularly polarized light
     #[must_use]
     pub fn left_circular(amplitude: f64) -> Self {
         let norm = amplitude / std::f64::consts::SQRT_2;
-        Self::new(
-            Complex64::new(norm, 0.0),
-            Complex64::new(0.0, norm),
-        )
+        Self::new(Complex64::new(norm, 0.0), Complex64::new(0.0, norm))
     }
 
     /// Calculate the intensity (time-averaged power density)
@@ -127,8 +121,10 @@ impl JonesMatrix {
     #[must_use]
     pub fn identity() -> Self {
         Self::new(
-            Complex64::new(1.0, 0.0), Complex64::new(0.0, 0.0),
-            Complex64::new(0.0, 0.0), Complex64::new(1.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(1.0, 0.0),
         )
     }
 
@@ -136,8 +132,10 @@ impl JonesMatrix {
     #[must_use]
     pub fn horizontal_polarizer() -> Self {
         Self::new(
-            Complex64::new(1.0, 0.0), Complex64::new(0.0, 0.0),
-            Complex64::new(0.0, 0.0), Complex64::new(0.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
         )
     }
 
@@ -145,8 +143,10 @@ impl JonesMatrix {
     #[must_use]
     pub fn vertical_polarizer() -> Self {
         Self::new(
-            Complex64::new(0.0, 0.0), Complex64::new(0.0, 0.0),
-            Complex64::new(0.0, 0.0), Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(1.0, 0.0),
         )
     }
 
@@ -164,8 +164,10 @@ impl JonesMatrix {
     pub fn quarter_wave_plate() -> Self {
         let sqrt_half = std::f64::consts::FRAC_1_SQRT_2; // 1/√2 ≈ 0.707
         Self::new(
-            Complex64::new(sqrt_half, sqrt_half), Complex64::new(sqrt_half, -sqrt_half),
-            Complex64::new(sqrt_half, -sqrt_half), Complex64::new(sqrt_half, sqrt_half),
+            Complex64::new(sqrt_half, sqrt_half),
+            Complex64::new(sqrt_half, -sqrt_half),
+            Complex64::new(sqrt_half, -sqrt_half),
+            Complex64::new(sqrt_half, sqrt_half),
         )
     }
 
@@ -184,8 +186,10 @@ impl JonesMatrix {
         let cos = theta.cos();
         let sin = theta.sin();
         Self::new(
-            Complex64::new(cos, 0.0), Complex64::new(-sin, 0.0),
-            Complex64::new(sin, 0.0), Complex64::new(cos, 0.0),
+            Complex64::new(cos, 0.0),
+            Complex64::new(-sin, 0.0),
+            Complex64::new(sin, 0.0),
+            Complex64::new(cos, 0.0),
         )
     }
 
@@ -253,7 +257,7 @@ impl JonesPolarizationModel {
 
     /// Create a linear polarizer model
     #[must_use]
-    pub fn linear_polarizer(axis_angle: f64, extinction_ratio: f64) -> Self {
+    pub fn linear_polarizer(axis_angle: f64, _extinction_ratio: f64) -> Self {
         let mut model = Self::new(500e-9); // Default 500nm
 
         // Rotation to align polarizer axis
@@ -432,10 +436,7 @@ mod tests {
 
         // Test horizontal polarizer
         let polarizer = JonesMatrix::horizontal_polarizer();
-        let input = JonesVector::new(
-            Complex64::new(1.0, 0.0),
-            Complex64::new(1.0, 0.0),
-        );
+        let input = JonesVector::new(Complex64::new(1.0, 0.0), Complex64::new(1.0, 0.0));
         let output = polarizer.apply(&input);
         assert_eq!(output.ex, Complex64::new(1.0, 0.0));
         assert_eq!(output.ey, Complex64::new(0.0, 0.0));
@@ -495,7 +496,8 @@ mod tests {
                 for k in 0..2 {
                     assert_eq!(polarization_state[[0, i, j, k]], Complex64::new(1.0, 0.0)); // Ex
                     assert_eq!(polarization_state[[1, i, j, k]], Complex64::new(0.0, 0.0)); // Ey = 0
-                    assert_relative_eq!(fluence[[i, j, k]], 0.5, epsilon = 1e-10); // Intensity = |Ex|²/2
+                    assert_relative_eq!(fluence[[i, j, k]], 0.5, epsilon = 1e-10);
+                    // Intensity = |Ex|²/2
                 }
             }
         }

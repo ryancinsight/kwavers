@@ -24,15 +24,15 @@
 use crate::error::{KwaversError, KwaversResult};
 use crate::ml::pinn::physics::{
     BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface,
-    CouplingType, InitialConditionSpec, PhysicsDomain, PhysicsLossWeights,
-    PhysicsParameters, PhysicsValidationMetric,
+    InitialConditionSpec, PhysicsDomain, PhysicsLossWeights, PhysicsParameters,
+    PhysicsValidationMetric,
 };
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;
 
 /// GPU acceleration flag for electromagnetic simulations
 #[cfg(feature = "gpu")]
-use crate::ml::pinn::electromagnetic_gpu::{GPUEMSolver, EMConfig};
+use crate::ml::pinn::electromagnetic_gpu::{EMConfig, GPUEMSolver};
 
 /// Electromagnetic problem type
 #[derive(Debug, Clone, PartialEq)]
@@ -90,7 +90,7 @@ pub enum ElectromagneticBoundarySpec {
 }
 
 /// Electromagnetic physics domain implementation
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ElectromagneticDomain<B: AutodiffBackend> {
     /// Problem type
     pub problem_type: EMProblemType,
@@ -168,7 +168,7 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain<B> {
             .unwrap_or(self.conductivity);
 
         // Create input tensor for neural network
-        let inputs = Tensor::cat(vec![x.clone(), y.clone(), t.clone()], 1);
+        let _inputs = Tensor::cat(vec![x.clone(), y.clone(), t.clone()], 1);
 
         // Forward pass through model to get field components
         let outputs = model.forward(x.clone(), y.clone(), t.clone());
@@ -215,7 +215,10 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain<B> {
                         component: BoundaryComponent::Vector(vec![0, 1]),
                     }
                 }
-                ElectromagneticBoundarySpec::ImpedanceBoundary { position, impedance } => {
+                ElectromagneticBoundarySpec::ImpedanceBoundary {
+                    position,
+                    impedance,
+                } => {
                     // Impedance boundary condition
                     BoundaryConditionSpec::Robin {
                         boundary: position.clone(),
@@ -224,7 +227,11 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain<B> {
                         component: BoundaryComponent::Scalar,
                     }
                 }
-                ElectromagneticBoundarySpec::Port { position, port_impedance, .. } => {
+                ElectromagneticBoundarySpec::Port {
+                    position,
+                    port_impedance,
+                    ..
+                } => {
                     // Port boundary with characteristic impedance
                     BoundaryConditionSpec::Robin {
                         boundary: position.clone(),
@@ -388,7 +395,7 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain<B> {
         };
 
         // Common metrics
-        let mut common_metrics = vec![
+        let common_metrics = vec![
             PhysicsValidationMetric {
                 name: "boundary_error".to_string(),
                 value: 0.0,
@@ -442,7 +449,12 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
     }
 
     /// Add a current source
-    pub fn add_current_source(mut self, position: (f64, f64), current_density: Vec<f64>, radius: f64) -> Self {
+    pub fn add_current_source(
+        mut self,
+        position: (f64, f64),
+        current_density: Vec<f64>,
+        radius: f64,
+    ) -> Self {
         self.current_sources.push(CurrentSource {
             position,
             current_density,
@@ -453,13 +465,15 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
 
     /// Add a perfect electric conductor boundary
     pub fn add_pec_boundary(mut self, position: BoundaryPosition) -> Self {
-        self.boundary_specs.push(ElectromagneticBoundarySpec::PerfectElectricConductor { position });
+        self.boundary_specs
+            .push(ElectromagneticBoundarySpec::PerfectElectricConductor { position });
         self
     }
 
     /// Add a perfect magnetic conductor boundary
     pub fn add_pmc_boundary(mut self, position: BoundaryPosition) -> Self {
-        self.boundary_specs.push(ElectromagneticBoundarySpec::PerfectMagneticConductor { position });
+        self.boundary_specs
+            .push(ElectromagneticBoundarySpec::PerfectMagneticConductor { position });
         self
     }
 
@@ -486,10 +500,10 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
         physics_params: &PhysicsParameters,
     ) -> Tensor<B, 2> {
         // Create input tensor for neural network
-        let inputs = Tensor::cat(vec![x.clone(), y.clone(), Tensor::zeros_like(x)], 1);
+        let _inputs = Tensor::cat(vec![x.clone(), y.clone(), Tensor::zeros_like(x)], 1);
 
         // Forward pass through model to get electric potential φ
-        let phi = model.forward(x.clone(), y.clone(), Tensor::zeros_like(x));
+        let _phi = model.forward(x.clone(), y.clone(), Tensor::zeros_like(x));
 
         // Use finite differences within autodiff framework (similar to burn_wave_equation_2d.rs)
         let eps_fd = (f32::EPSILON).sqrt() * 1e-2_f32; // Adaptive epsilon for numerical stability
@@ -509,21 +523,29 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
         let dphi_dy = (phi_y_plus - phi_y_minus) / (2.0 * eps_fd);
 
         // Compute displacement field D = εE, where E = -∇φ
-        let d_x = eps as f32 * (-dphi_dx);
-        let d_y = eps as f32 * (-dphi_dy);
+        let _d_x = eps as f32 * (-dphi_dx);
+        let _d_y = eps as f32 * (-dphi_dy);
 
         // Gauss's law: ∇·D = ρ_free
         // Compute ∂D_x/∂x and ∂D_y/∂y using finite differences
-        let d_x_plus = eps as f32 * (-model.forward(x.clone() + eps_fd, y.clone(), Tensor::zeros_like(x)) +
-                                   model.forward(x.clone() - eps_fd, y.clone(), Tensor::zeros_like(x))) / (2.0 * eps_fd);
-        let d_x_minus = eps as f32 * (-model.forward(x.clone() - eps_fd, y.clone(), Tensor::zeros_like(x)) +
-                                    model.forward(x.clone() + eps_fd, y.clone(), Tensor::zeros_like(x))) / (2.0 * eps_fd);
+        let d_x_plus = eps as f32
+            * (-model.forward(x.clone() + eps_fd, y.clone(), Tensor::zeros_like(x))
+                + model.forward(x.clone() - eps_fd, y.clone(), Tensor::zeros_like(x)))
+            / (2.0 * eps_fd);
+        let d_x_minus = eps as f32
+            * (-model.forward(x.clone() - eps_fd, y.clone(), Tensor::zeros_like(x))
+                + model.forward(x.clone() + eps_fd, y.clone(), Tensor::zeros_like(x)))
+            / (2.0 * eps_fd);
         let dd_x_dx = (d_x_plus - d_x_minus) / (2.0 * eps_fd);
 
-        let d_y_plus = eps as f32 * (-model.forward(x.clone(), y.clone() + eps_fd, Tensor::zeros_like(x)) +
-                                   model.forward(x.clone(), y.clone() - eps_fd, Tensor::zeros_like(x))) / (2.0 * eps_fd);
-        let d_y_minus = eps as f32 * (-model.forward(x.clone(), y.clone() - eps_fd, Tensor::zeros_like(x)) +
-                                    model.forward(x.clone(), y.clone() + eps_fd, Tensor::zeros_like(x))) / (2.0 * eps_fd);
+        let d_y_plus = eps as f32
+            * (-model.forward(x.clone(), y.clone() + eps_fd, Tensor::zeros_like(x))
+                + model.forward(x.clone(), y.clone() - eps_fd, Tensor::zeros_like(x)))
+            / (2.0 * eps_fd);
+        let d_y_minus = eps as f32
+            * (-model.forward(x.clone(), y.clone() - eps_fd, Tensor::zeros_like(x))
+                + model.forward(x.clone(), y.clone() + eps_fd, Tensor::zeros_like(x)))
+            / (2.0 * eps_fd);
         let dd_y_dy = (d_y_plus - d_y_minus) / (2.0 * eps_fd);
 
         let gauss_residual = dd_x_dx + dd_y_dy;
@@ -536,20 +558,20 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
     }
 
     /// Helper function to compute phi at given coordinates
-    fn compute_phi_at(&self, x: Tensor<B, 2>, y: Tensor<B, 2>) -> Tensor<B, 2> {
+    fn _compute_phi_at(&self, x: Tensor<B, 2>, _y: Tensor<B, 2>) -> Tensor<B, 2> {
         // This would need access to the model - for now return zeros
         // In practice, this should call the neural network forward pass
         Tensor::zeros_like(&x)
     }
 
     /// Helper function to compute D_x at given coordinates
-    fn compute_d_x_at(&self, x: Tensor<B, 2>, y: Tensor<B, 2>, eps: f64) -> Tensor<B, 2> {
+    fn _compute_d_x_at(&self, x: Tensor<B, 2>, _y: Tensor<B, 2>, eps: f64) -> Tensor<B, 2> {
         // Simplified implementation - in practice should compute properly
         Tensor::zeros_like(&x) * eps as f32
     }
 
     /// Helper function to compute D_y at given coordinates
-    fn compute_d_y_at(&self, x: Tensor<B, 2>, y: Tensor<B, 2>, eps: f64) -> Tensor<B, 2> {
+    fn _compute_d_y_at(&self, x: Tensor<B, 2>, _y: Tensor<B, 2>, eps: f64) -> Tensor<B, 2> {
         // Simplified implementation - in practice should compute properly
         Tensor::zeros_like(&x) * eps as f32
     }
@@ -564,7 +586,7 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
         physics_params: &PhysicsParameters,
     ) -> Tensor<B, 2> {
         // Forward pass through model to get magnetic vector potential Az
-        let az = model.forward(x.clone(), y.clone(), Tensor::zeros_like(x));
+        let _az = model.forward(x.clone(), y.clone(), Tensor::zeros_like(x));
 
         // Use finite differences within autodiff framework
         let eps_fd = (f32::EPSILON).sqrt() * 1e-2_f32; // Adaptive epsilon for numerical stability
@@ -586,22 +608,30 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
         let b_y = daz_dx;
 
         // Compute magnetic field intensity H = B/μ
-        let h_x = b_x.clone() / mu as f32;
-        let h_y = b_y.clone() / mu as f32;
+        let _h_x = b_x.clone() / mu as f32;
+        let _h_y = b_y.clone() / mu as f32;
 
         // Compute ∇×H = (∂Hy/∂x - ∂Hx/∂y) k̂ (z-component in 2D)
         // ∂Hy/∂x
-        let h_y_x_plus = (model.forward(x.clone() + eps_fd, y.clone(), Tensor::zeros_like(x)) -
-                         model.forward(x.clone() - eps_fd, y.clone(), Tensor::zeros_like(x))) / (2.0 * eps_fd) / mu as f32;
-        let h_y_x_minus = (model.forward(x.clone() - eps_fd, y.clone(), Tensor::zeros_like(x)) -
-                          model.forward(x.clone() + eps_fd, y.clone(), Tensor::zeros_like(x))) / (2.0 * eps_fd) / mu as f32;
+        let h_y_x_plus = (model.forward(x.clone() + eps_fd, y.clone(), Tensor::zeros_like(x))
+            - model.forward(x.clone() - eps_fd, y.clone(), Tensor::zeros_like(x)))
+            / (2.0 * eps_fd)
+            / mu as f32;
+        let h_y_x_minus = (model.forward(x.clone() - eps_fd, y.clone(), Tensor::zeros_like(x))
+            - model.forward(x.clone() + eps_fd, y.clone(), Tensor::zeros_like(x)))
+            / (2.0 * eps_fd)
+            / mu as f32;
         let dh_y_dx = (h_y_x_plus - h_y_x_minus) / (2.0 * eps_fd);
 
         // -∂Hx/∂y
-        let h_x_y_plus = -(model.forward(x.clone(), y.clone() + eps_fd, Tensor::zeros_like(x)) -
-                          model.forward(x.clone(), y.clone() - eps_fd, Tensor::zeros_like(x))) / (2.0 * eps_fd) / mu as f32;
-        let h_x_y_minus = -(model.forward(x.clone(), y.clone() - eps_fd, Tensor::zeros_like(x)) -
-                           model.forward(x.clone(), y.clone() + eps_fd, Tensor::zeros_like(x))) / (2.0 * eps_fd) / mu as f32;
+        let h_x_y_plus = -(model.forward(x.clone(), y.clone() + eps_fd, Tensor::zeros_like(x))
+            - model.forward(x.clone(), y.clone() - eps_fd, Tensor::zeros_like(x)))
+            / (2.0 * eps_fd)
+            / mu as f32;
+        let h_x_y_minus = -(model.forward(x.clone(), y.clone() - eps_fd, Tensor::zeros_like(x))
+            - model.forward(x.clone(), y.clone() + eps_fd, Tensor::zeros_like(x)))
+            / (2.0 * eps_fd)
+            / mu as f32;
         let minus_dh_x_dy = (h_x_y_plus - h_x_y_minus) / (2.0 * eps_fd);
 
         let curl_h_z = dh_y_dx + minus_dh_x_dy;
@@ -615,19 +645,19 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
     }
 
     /// Helper function to compute Az at given coordinates
-    fn compute_az_at(&self, x: Tensor<B, 2>, y: Tensor<B, 2>) -> Tensor<B, 2> {
+    fn _compute_az_at(&self, x: Tensor<B, 2>, _y: Tensor<B, 2>) -> Tensor<B, 2> {
         // This would need access to the model - for now return zeros
         Tensor::zeros_like(&x)
     }
 
     /// Helper function to compute H_x at given coordinates
-    fn compute_h_x_at(&self, x: Tensor<B, 2>, y: Tensor<B, 2>, mu: f64) -> Tensor<B, 2> {
+    fn _compute_h_x_at(&self, x: Tensor<B, 2>, _y: Tensor<B, 2>, mu: f64) -> Tensor<B, 2> {
         // Simplified implementation
         Tensor::zeros_like(&x) / mu as f32
     }
 
     /// Helper function to compute H_y at given coordinates
-    fn compute_h_y_at(&self, x: Tensor<B, 2>, y: Tensor<B, 2>, mu: f64) -> Tensor<B, 2> {
+    fn _compute_h_y_at(&self, x: Tensor<B, 2>, _y: Tensor<B, 2>, mu: f64) -> Tensor<B, 2> {
         // Simplified implementation
         Tensor::zeros_like(&x) / mu as f32
     }
@@ -635,7 +665,7 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
     /// Compute quasi-static electromagnetic residual
     fn quasi_static_residual(
         &self,
-        outputs: &Tensor<B, 2>,
+        _outputs: &Tensor<B, 2>,
         x: &Tensor<B, 2>,
         y: &Tensor<B, 2>,
         t: &Tensor<B, 2>,
@@ -647,8 +677,8 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
         // For quasi-static approximation, solve coupled E and H fields
         // Assume outputs are [Ez, Hz] for 2D TMz mode
         let batch_size = x.shape().dims[0];
-        let ez = outputs.clone().slice([0..batch_size, 0..1]).squeeze::<2>();
-        let hz = outputs.clone().slice([0..batch_size, 1..2]).squeeze::<2>();
+        let _ez = _outputs.clone().slice([0..batch_size, 0..1]).squeeze::<2>();
+        let _hz = _outputs.clone().slice([0..batch_size, 1..2]).squeeze::<2>();
 
         // Use finite differences for all derivatives
         let eps_fd = 1e-4_f32;
@@ -660,26 +690,26 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
         let hz_y_plus = self.compute_hz_at(x.clone(), y_plus, t.clone());
         let hz_y_minus = self.compute_hz_at(x.clone(), y_minus, t.clone());
         let dhz_dy = (hz_y_plus - hz_y_minus) / (2.0 * eps_fd);
-        let ex = -mu as f32 * dhz_dy;
+        let _ex = -mu as f32 * dhz_dy;
 
         let x_plus = x.clone() + eps_fd;
         let x_minus = x.clone() - eps_fd;
         let hz_x_plus = self.compute_hz_at(x_plus, y.clone(), t.clone());
         let hz_x_minus = self.compute_hz_at(x_minus, y.clone(), t.clone());
         let dhz_dx = (hz_x_plus - hz_x_minus) / (2.0 * eps_fd);
-        let ey = mu as f32 * dhz_dx;
+        let _ey = mu as f32 * dhz_dx;
 
         // Compute H field components from Ez using Ampere's law
         // ∇×H = J + ∂D/∂t + σE, so for TMz: Hx = -∂Ez/∂y, Hy = ∂Ez/∂x
         let ez_y_plus = self.compute_ez_at(x.clone(), y.clone() + eps_fd, t.clone());
         let ez_y_minus = self.compute_ez_at(x.clone(), y.clone() - eps_fd, t.clone());
         let dez_dy = (ez_y_plus - ez_y_minus) / (2.0 * eps_fd);
-        let hx = -dez_dy;
+        let _hx = -dez_dy;
 
         let ez_x_plus = self.compute_ez_at(x.clone() + eps_fd, y.clone(), t.clone());
         let ez_x_minus = self.compute_ez_at(x.clone() - eps_fd, y.clone(), t.clone());
         let dez_dx = (ez_x_plus - ez_x_minus) / (2.0 * eps_fd);
-        let hy = dez_dx;
+        let _hy = dez_dx;
 
         // Faraday's law residual: ∇×E = -μ∂H/∂t
         let ey_x_plus = self.compute_ey_at(x.clone() + eps_fd, y.clone(), t.clone());
@@ -716,7 +746,7 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
         let dez_dt = (ez_t_plus - ez_t_minus) / (2.0 * eps_fd);
 
         let d_d_dt = eps as f32 * dez_dt;
-        let conductivity_term = sigma as f32 * ez.clone();
+        let conductivity_term = sigma as f32 * _ez.clone();
         let j_z = self.compute_current_density_z(x, y, physics_params);
         let ampere_residual = curl_h_z - conductivity_term - d_d_dt - j_z;
 
@@ -736,38 +766,36 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
         let ampere_weight = 1.0;
         let gauss_weight = 0.1; // Lower weight for divergence constraint
 
-        faraday_residual * faraday_weight +
-        ampere_residual * ampere_weight +
-        div_b * gauss_weight
+        faraday_residual * faraday_weight + ampere_residual * ampere_weight + div_b * gauss_weight
     }
 
     /// Helper functions for computing field components at different coordinates
-    fn compute_ez_at(&self, x: Tensor<B, 2>, y: Tensor<B, 2>, t: Tensor<B, 2>) -> Tensor<B, 2> {
+    fn compute_ez_at(&self, x: Tensor<B, 2>, _y: Tensor<B, 2>, _t: Tensor<B, 2>) -> Tensor<B, 2> {
         // Simplified - would need model access
         Tensor::zeros_like(&x)
     }
 
-    fn compute_hz_at(&self, x: Tensor<B, 2>, y: Tensor<B, 2>, t: Tensor<B, 2>) -> Tensor<B, 2> {
+    fn compute_hz_at(&self, x: Tensor<B, 2>, _y: Tensor<B, 2>, _t: Tensor<B, 2>) -> Tensor<B, 2> {
         // Simplified - would need model access
         Tensor::zeros_like(&x)
     }
 
-    fn compute_ex_at(&self, x: Tensor<B, 2>, y: Tensor<B, 2>, t: Tensor<B, 2>) -> Tensor<B, 2> {
+    fn compute_ex_at(&self, x: Tensor<B, 2>, _y: Tensor<B, 2>, _t: Tensor<B, 2>) -> Tensor<B, 2> {
         // Simplified - would need model access
         Tensor::zeros_like(&x)
     }
 
-    fn compute_ey_at(&self, x: Tensor<B, 2>, y: Tensor<B, 2>, t: Tensor<B, 2>) -> Tensor<B, 2> {
+    fn compute_ey_at(&self, x: Tensor<B, 2>, _y: Tensor<B, 2>, _t: Tensor<B, 2>) -> Tensor<B, 2> {
         // Simplified - would need model access
         Tensor::zeros_like(&x)
     }
 
-    fn compute_hx_at(&self, x: Tensor<B, 2>, y: Tensor<B, 2>, t: Tensor<B, 2>) -> Tensor<B, 2> {
+    fn compute_hx_at(&self, x: Tensor<B, 2>, _y: Tensor<B, 2>, _t: Tensor<B, 2>) -> Tensor<B, 2> {
         // Simplified - would need model access
         Tensor::zeros_like(&x)
     }
 
-    fn compute_hy_at(&self, x: Tensor<B, 2>, y: Tensor<B, 2>, t: Tensor<B, 2>) -> Tensor<B, 2> {
+    fn compute_hy_at(&self, x: Tensor<B, 2>, _y: Tensor<B, 2>, _t: Tensor<B, 2>) -> Tensor<B, 2> {
         // Simplified - would need model access
         Tensor::zeros_like(&x)
     }
@@ -788,7 +816,7 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
         // Assume outputs are [Ez, Hz] for 2D TMz mode
         let batch_size = x.shape().dims[0];
         let ez = outputs.clone().slice([0..batch_size, 0..1]).squeeze::<2>();
-        let hz = outputs.clone().slice([0..batch_size, 1..2]).squeeze::<2>();
+        let _hz = outputs.clone().slice([0..batch_size, 1..2]).squeeze::<2>();
 
         // Use finite differences for all derivatives
         let eps_fd = 1e-4_f32;
@@ -799,25 +827,25 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
         let hz_y_plus = self.compute_hz_at(x.clone(), y_plus, t.clone());
         let hz_y_minus = self.compute_hz_at(x.clone(), y_minus, t.clone());
         let dhz_dy = (hz_y_plus - hz_y_minus) / (2.0 * eps_fd);
-        let ex = -mu as f32 * dhz_dy;
+        let _ex = -mu as f32 * dhz_dy;
 
         let x_plus = x.clone() + eps_fd;
         let x_minus = x.clone() - eps_fd;
         let hz_x_plus = self.compute_hz_at(x_plus, y.clone(), t.clone());
         let hz_x_minus = self.compute_hz_at(x_minus, y.clone(), t.clone());
         let dhz_dx = (hz_x_plus - hz_x_minus) / (2.0 * eps_fd);
-        let ey = mu as f32 * dhz_dx;
+        let _ey = mu as f32 * dhz_dx;
 
         // Compute H field components from Ez using Ampere's law
         let ez_y_plus = self.compute_ez_at(x.clone(), y.clone() + eps_fd, t.clone());
         let ez_y_minus = self.compute_ez_at(x.clone(), y.clone() - eps_fd, t.clone());
         let dez_dy = (ez_y_plus - ez_y_minus) / (2.0 * eps_fd);
-        let hx = -dez_dy;
+        let _hx = -dez_dy;
 
         let ez_x_plus = self.compute_ez_at(x.clone() + eps_fd, y.clone(), t.clone());
         let ez_x_minus = self.compute_ez_at(x.clone() - eps_fd, y.clone(), t.clone());
         let dez_dx = (ez_x_plus - ez_x_minus) / (2.0 * eps_fd);
-        let hy = dez_dx;
+        let _hy = dez_dx;
 
         // Faraday's law: ∇×E = -∂B/∂t = -μ∂H/∂t
         let ey_x_plus = self.compute_ey_at(x.clone() + eps_fd, y.clone(), t.clone());
@@ -888,17 +916,17 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
         let gauss_b_weight = 0.1;
         let gauss_d_weight = 0.1;
 
-        faraday_residual * faraday_weight +
-        ampere_residual * ampere_weight +
-        div_b * gauss_b_weight +
-        gauss_residual * gauss_d_weight
+        faraday_residual * faraday_weight
+            + ampere_residual * ampere_weight
+            + div_b * gauss_b_weight
+            + gauss_residual * gauss_d_weight
     }
 
     /// Compute charge density at given spatial positions
     fn compute_charge_density(
         &self,
         x: &Tensor<B, 2>,
-        y: &Tensor<B, 2>,
+        _y: &Tensor<B, 2>,
         _physics_params: &PhysicsParameters,
     ) -> Tensor<B, 2> {
         // For now, assume zero charge density (can be extended with charge sources)
@@ -910,7 +938,7 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
     fn compute_current_density_z(
         &self,
         x: &Tensor<B, 2>,
-        y: &Tensor<B, 2>,
+        _y: &Tensor<B, 2>,
         _physics_params: &PhysicsParameters,
     ) -> Tensor<B, 2> {
         // For now, assume zero current density (can be extended with current sources)
@@ -926,7 +954,7 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
                     parameter: "permittivity".to_string(),
                     value: self.permittivity,
                     reason: "Permittivity must be positive".to_string(),
-                }
+                },
             ));
         }
 
@@ -936,7 +964,7 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
                     parameter: "permeability".to_string(),
                     value: self.permeability,
                     reason: "Permeability must be positive".to_string(),
-                }
+                },
             ));
         }
 
@@ -946,7 +974,7 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
                     parameter: "conductivity".to_string(),
                     value: self.conductivity,
                     reason: "Conductivity cannot be negative".to_string(),
-                }
+                },
             ));
         }
 
@@ -956,7 +984,7 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
                     parameter: "speed_of_light".to_string(),
                     value: self.c,
                     reason: "Speed of light must be positive and finite".to_string(),
-                }
+                },
             ));
         }
 
@@ -968,9 +996,11 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
 mod tests {
     use super::*;
 
+    type TestBackend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
+
     #[test]
     fn test_electromagnetic_domain_creation() {
-        let domain: ElectromagneticDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>> = ElectromagneticDomain::new(
+        let domain: ElectromagneticDomain<TestBackend> = ElectromagneticDomain::new(
             EMProblemType::Electrostatic,
             8.854e-12,
             4e-7 * std::f64::consts::PI,
@@ -984,10 +1014,11 @@ mod tests {
 
     #[test]
     fn test_domain_validation() {
-        let valid_domain: ElectromagneticDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>> = ElectromagneticDomain::default();
+        let valid_domain: ElectromagneticDomain<TestBackend> =
+            ElectromagneticDomain::<TestBackend>::default();
         assert!(valid_domain.validate().is_ok());
 
-        let invalid_domain = ElectromagneticDomain::new(
+        let invalid_domain: ElectromagneticDomain<TestBackend> = ElectromagneticDomain::new(
             EMProblemType::Electrostatic,
             -1.0, // Invalid permittivity
             4e-7 * std::f64::consts::PI,
@@ -999,7 +1030,7 @@ mod tests {
 
     #[test]
     fn test_boundary_condition_builder() {
-        let domain = ElectromagneticDomain::default()
+        let domain = ElectromagneticDomain::<TestBackend>::default()
             .add_pec_boundary(BoundaryPosition::Left)
             .add_pmc_boundary(BoundaryPosition::Right);
 
@@ -1015,8 +1046,11 @@ mod tests {
 
     #[test]
     fn test_current_source_builder() {
-        let domain = ElectromagneticDomain::default()
-            .add_current_source((0.5, 0.5), vec![1e6, 0.0], 0.1);
+        let domain = ElectromagneticDomain::<TestBackend>::default().add_current_source(
+            (0.5, 0.5),
+            vec![1e6, 0.0],
+            0.1,
+        );
 
         assert_eq!(domain.current_sources.len(), 1);
         assert_eq!(domain.current_sources[0].position, (0.5, 0.5));
@@ -1024,7 +1058,7 @@ mod tests {
 
     #[test]
     fn test_physics_domain_interface() {
-        let domain = ElectromagneticDomain::default();
+        let domain = ElectromagneticDomain::<TestBackend>::default();
 
         assert_eq!(domain.domain_name(), "electromagnetic");
 
@@ -1039,13 +1073,13 @@ mod tests {
 
     #[test]
     fn test_problem_type_specifics() {
-        let electrostatic = ElectromagneticDomain::default()
+        let electrostatic = ElectromagneticDomain::<TestBackend>::default()
             .with_problem_type(EMProblemType::Electrostatic);
 
-        let magnetostatic = ElectromagneticDomain::default()
+        let magnetostatic = ElectromagneticDomain::<TestBackend>::default()
             .with_problem_type(EMProblemType::Magnetostatic);
 
-        let quasi_static = ElectromagneticDomain::default()
+        let quasi_static = ElectromagneticDomain::<TestBackend>::default()
             .with_problem_type(EMProblemType::QuasiStatic);
 
         assert_eq!(electrostatic.problem_type, EMProblemType::Electrostatic);

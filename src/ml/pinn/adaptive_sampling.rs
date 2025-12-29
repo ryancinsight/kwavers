@@ -1,4 +1,4 @@
-///! Adaptive Sampling for PINN Training
+//! Adaptive Sampling for PINN Training
 //!
 //! This module implements physics-aware adaptive collocation point sampling
 //! to optimize PINN training efficiency. The system dynamically redistributes
@@ -12,12 +12,13 @@
 //! - Uncertainty quantification for sampling priority
 //! - Memory-efficient point redistribution
 
-use crate::error::{KwaversError, KwaversResult};
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use crate::error::KwaversResult;
+use burn::tensor::{backend::AutodiffBackend, ElementConversion, Tensor};
 use rand::prelude::*;
 use std::collections::HashMap;
 
 /// Adaptive collocation point sampler
+#[derive(Debug)]
 pub struct AdaptiveCollocationSampler<B: AutodiffBackend> {
     /// Total number of collocation points
     total_points: usize,
@@ -119,9 +120,9 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         let mut points = Vec::with_capacity(total_points * 3);
 
         for _ in 0..total_points {
-            points.push(rand::random::<f32>() as f32); // x
-            points.push(rand::random::<f32>() as f32); // y
-            points.push(rand::random::<f32>() as f32); // t
+            points.push(rand::random::<f32>()); // x
+            points.push(rand::random::<f32>()); // y
+            points.push(rand::random::<f32>()); // t
         }
 
         Ok(Tensor::from_data(points.as_slice(), &device))
@@ -147,7 +148,10 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
     }
 
     /// Evaluate PDE residuals at current collocation points
-    fn evaluate_residuals(&self, model: &crate::ml::pinn::BurnPINN2DWave<B>) -> KwaversResult<Tensor<B, 1>> {
+    fn evaluate_residuals(
+        &self,
+        model: &crate::ml::pinn::BurnPINN2DWave<B>,
+    ) -> KwaversResult<Tensor<B, 1>> {
         // Get physics parameters for PINN training domain
         let physics_params = crate::ml::pinn::physics::PhysicsParameters {
             material_properties: HashMap::new(),
@@ -157,12 +161,20 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         };
 
         // Compute PDE residuals for each point
-        let mut all_residuals = Vec::new();
-
         // Process all points at once for efficiency
-        let x_coords: Vec<f32> = self.active_points.column(0).iter().map(|&x| x as f32).collect();
-        let y_coords: Vec<f32> = self.active_points.column(1).iter().map(|&x| x as f32).collect();
-        let t_coords: Vec<f32> = self.active_points.column(2).iter().map(|&x| x as f32).collect();
+        let points_data = self.active_points.to_data();
+        let values = points_data.to_vec::<f32>().unwrap_or_default();
+        let mut x_coords = Vec::with_capacity(self.total_points);
+        let mut y_coords = Vec::with_capacity(self.total_points);
+        let mut t_coords = Vec::with_capacity(self.total_points);
+
+        for chunk in values.chunks(3) {
+            if chunk.len() == 3 {
+                x_coords.push(chunk[0]);
+                y_coords.push(chunk[1]);
+                t_coords.push(chunk[2]);
+            }
+        }
 
         let device = self.active_points.device();
         let x = Tensor::<B, 1>::from_floats(x_coords.as_slice(), &device);
@@ -170,10 +182,16 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         let t = Tensor::<B, 1>::from_floats(t_coords.as_slice(), &device);
 
         // Compute PDE residual for this physics domain
-        let residuals = self.domain.pde_residual(model, &x.unsqueeze(), &y.unsqueeze(), &t.unsqueeze(), &physics_params);
+        let residuals = self.domain.pde_residual(
+            model,
+            &x.unsqueeze(),
+            &y.unsqueeze(),
+            &t.unsqueeze(),
+            &physics_params,
+        );
 
         // Take the L2 norm of residual components to get residual magnitude per point
-        let residual_magnitude = (residuals.clone() * residuals).sum_dim(1).sqrt();
+        let residual_magnitude = (residuals.clone() * residuals).sum_dim(1).sqrt().squeeze();
 
         Ok(residual_magnitude)
     }
@@ -181,22 +199,26 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
     /// Update point priorities based on residual magnitudes
     fn update_priorities(&mut self, residuals: &Tensor<B, 1>) -> KwaversResult<()> {
         // Compute actual min/max residuals for proper normalization
-        let max_residual = residuals.clone().max().into_scalar().to_f32().unwrap_or(1.0);
-        let min_residual = residuals.clone().min().into_scalar().to_f32().unwrap_or(0.0);
+        let max_residual = residuals.clone().max().into_scalar().elem::<f32>();
+        let min_residual = residuals.clone().min().into_scalar().elem::<f32>();
 
         if (max_residual - min_residual).abs() < 1e-10_f32 {
             // All residuals similar - keep uniform priorities
             self.priorities = Tensor::ones([self.total_points], &Default::default());
         } else {
             // Scale residuals to priority values using proper normalization
-            let normalized_residuals = (residuals.clone() - min_residual) / (max_residual - min_residual);
+            let normalized_residuals =
+                (residuals.clone() - min_residual) / (max_residual - min_residual);
 
             // Apply residual weight and add uncertainty component
             let residual_priority = normalized_residuals * self.strategy.residual_weight as f32;
 
             // Add uncertainty-based priority using model uncertainty quantification
-            let uncertainty_priority = Tensor::from_data(vec![self.strategy.uncertainty_weight as f32].as_slice(), &residuals.device())
-                .expand([self.total_points]);
+            let uncertainty_priority = Tensor::<B, 1>::from_floats(
+                [self.strategy.uncertainty_weight as f32],
+                &residuals.device(),
+            )
+            .expand([self.total_points]);
 
             self.priorities = residual_priority + uncertainty_priority;
         }
@@ -206,8 +228,12 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         let sum: f32 = priorities_data.iter().sum();
         let max: f32 = priorities_data.iter().cloned().fold(0.0, f32::max);
 
-        self.stats.avg_priority = if priorities_data.is_empty() { 0.0 } else { sum / priorities_data.len() as f32 };
-        self.stats.max_priority = max;
+        self.stats.avg_priority = if priorities_data.is_empty() {
+            0.0
+        } else {
+            (sum / priorities_data.len() as f32) as f64
+        };
+        self.stats.max_priority = max as f64;
 
         Ok(())
     }
@@ -219,20 +245,28 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         let points_data: Vec<f32> = self.active_points.to_data().to_vec().unwrap_or_default();
 
         // Create index-priority pairs and sort by priority (descending)
-        let mut indexed_priorities: Vec<(usize, f32)> = priorities_data.iter().enumerate()
-            .map(|(i, &p)| (i, p)).collect();
-        indexed_priorities.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        let mut indexed_priorities: Vec<(usize, f32)> = priorities_data
+            .iter()
+            .enumerate()
+            .map(|(i, &p)| (i, p))
+            .collect();
+        indexed_priorities
+            .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         // Identify points for refinement (high priority)
-        let refinement_count = (self.total_points as f64 * self.strategy.refinement_fraction) as usize;
-        let high_priority_indices: Vec<usize> = indexed_priorities.iter()
+        let refinement_count =
+            (self.total_points as f64 * self.strategy.refinement_fraction) as usize;
+        let high_priority_indices: Vec<usize> = indexed_priorities
+            .iter()
             .take(refinement_count)
             .map(|(idx, _)| *idx)
             .collect();
 
         // Identify points for coarsening (low priority)
-        let coarsening_count = (self.total_points as f64 * self.strategy.coarsening_fraction) as usize;
-        let low_priority_indices: Vec<usize> = indexed_priorities.iter()
+        let coarsening_count =
+            (self.total_points as f64 * self.strategy.coarsening_fraction) as usize;
+        let low_priority_indices: Vec<usize> = indexed_priorities
+            .iter()
             .rev() // Reverse to get lowest priorities
             .take(coarsening_count)
             .map(|(idx, _)| *idx)
@@ -243,15 +277,15 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         let mut new_priorities = Vec::new();
 
         // Keep medium-priority points (not in high or low priority lists)
-        for i in 0..self.total_points {
+        for (i, &priority) in priorities_data.iter().enumerate().take(self.total_points) {
             if !high_priority_indices.contains(&i) && !low_priority_indices.contains(&i) {
                 // Extract actual point coordinates from tensor data
                 let base_idx = i * 3;
                 if base_idx + 2 < points_data.len() {
-                    new_points.push(points_data[base_idx]);     // x
+                    new_points.push(points_data[base_idx]); // x
                     new_points.push(points_data[base_idx + 1]); // y
                     new_points.push(points_data[base_idx + 2]); // t
-                    new_priorities.push(priorities_data[i]);
+                    new_priorities.push(priority);
                 }
             }
         }
@@ -290,7 +324,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         let new_total = new_points.len() / 3;
         if new_total > self.total_points {
             // Remove excess points (lowest priority first)
-            let excess = new_total - self.total_points;
+            let _excess = new_total - self.total_points;
             new_points.truncate(self.total_points * 3);
             new_priorities.truncate(self.total_points);
         } else if new_total < self.total_points {
@@ -332,7 +366,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
     /// Update sampling statistics
     fn update_statistics(&mut self) -> KwaversResult<()> {
         // Calculate distribution entropy based on point clustering
-        let points_data: Vec<f32> = self.active_points.to_data().to_vec().unwrap_or_default();
+        let _points_data: Vec<f32> = self.active_points.to_data().to_vec().unwrap_or_default();
         let priorities_data: Vec<f32> = self.priorities.to_data().to_vec().unwrap_or_default();
 
         // Simple entropy calculation based on priority distribution
@@ -350,7 +384,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
             if count > 0.0 {
                 let p = count / total;
                 // Shannon entropy (base e)
-                entropy -= (p * p.ln()) as f32;
+                entropy -= p * p.ln();
             }
         }
 
@@ -389,7 +423,11 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         }
 
         // Sort by residual magnitude (highest first)
-        regions.sort_by(|a, b| b.residual_magnitude.partial_cmp(&a.residual_magnitude).unwrap_or(std::cmp::Ordering::Equal));
+        regions.sort_by(|a, b| {
+            b.residual_magnitude
+                .partial_cmp(&a.residual_magnitude)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         regions
     }
@@ -444,29 +482,49 @@ impl Default for SamplingStats {
 mod tests {
     use super::*;
     use crate::ml::pinn::physics::PhysicsParameters;
+    use burn::backend::{Autodiff, NdArray};
 
     // Mock physics domain for testing
+    #[derive(Debug)]
     struct MockPhysicsDomain;
     impl<B: AutodiffBackend> crate::ml::pinn::physics::PhysicsDomain<B> for MockPhysicsDomain {
-        fn domain_name(&self) -> &'static str { "mock" }
-        fn pde_residual(&self, _model: &crate::ml::pinn::BurnPINN2DWave<B>, x: &Tensor<B, 2>, _y: &Tensor<B, 2>, _t: &Tensor<B, 2>, _params: &PhysicsParameters) -> burn::tensor::Result<Tensor<B, 2>> {
+        fn domain_name(&self) -> &'static str {
+            "mock"
+        }
+        fn pde_residual(
+            &self,
+            _model: &crate::ml::pinn::BurnPINN2DWave<B>,
+            x: &Tensor<B, 2>,
+            _y: &Tensor<B, 2>,
+            _t: &Tensor<B, 2>,
+            _params: &PhysicsParameters,
+        ) -> burn::tensor::Result<Tensor<B, 2>> {
             // Return mock residuals proportional to x coordinate
             Ok(x.clone() * 0.1)
         }
-        fn boundary_conditions(&self) -> Vec<crate::ml::pinn::physics::BoundaryConditionSpec> { vec![] }
-        fn initial_conditions(&self) -> Vec<crate::ml::pinn::physics::InitialConditionSpec> { vec![] }
+        fn boundary_conditions(&self) -> Vec<crate::ml::pinn::physics::BoundaryConditionSpec> {
+            vec![]
+        }
+        fn initial_conditions(&self) -> Vec<crate::ml::pinn::physics::InitialConditionSpec> {
+            vec![]
+        }
         fn loss_weights(&self) -> crate::ml::pinn::physics::PhysicsLossWeights {
             crate::ml::pinn::physics::PhysicsLossWeights::default()
         }
-        fn validation_metrics(&self) -> Vec<crate::ml::pinn::physics::PhysicsValidationMetric> { vec![] }
+        fn validation_metrics(&self) -> Vec<crate::ml::pinn::physics::PhysicsValidationMetric> {
+            vec![]
+        }
     }
 
     #[test]
     fn test_adaptive_sampler_creation() {
-        let domain = Box::new(MockPhysicsDomain);
+        type TestBackend = Autodiff<NdArray<f32>>;
+
+        let domain: Box<dyn crate::ml::pinn::physics::PhysicsDomain<TestBackend>> =
+            Box::new(MockPhysicsDomain);
         let strategy = SamplingStrategy::default();
 
-        let sampler = AdaptiveCollocationSampler::<burn::backend::NdArray<f32>>::new(100, domain, strategy);
+        let sampler = AdaptiveCollocationSampler::<TestBackend>::new(100, domain, strategy);
         assert!(sampler.is_ok());
 
         let sampler = sampler.unwrap();

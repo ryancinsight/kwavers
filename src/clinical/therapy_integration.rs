@@ -10,12 +10,12 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::imaging::ceus::ContrastEnhancedUltrasound;
-use crate::physics::transcranial::TranscranialAberrationCorrection;
-use crate::physics::chemistry::ChemicalModel;
 use crate::physics::cavitation_control::FeedbackController;
-use crate::physics::traits::ChemicalModelTrait;
+use crate::physics::chemistry::ChemicalModel;
+use crate::physics::imaging::ceus::ContrastEnhancedUltrasound;
 use crate::physics::therapy::lithotripsy::LithotripsySimulator;
+use crate::physics::traits::ChemicalModelTrait;
+use crate::physics::transcranial::TranscranialAberrationCorrection;
 use ndarray::Array3;
 use std::collections::HashMap;
 
@@ -182,7 +182,8 @@ pub struct SafetyMetrics {
     pub temperature_rise: Array3<f64>,
 }
 
-/// Main therapy integration orchestrator
+/// Therapy integration orchestrator
+#[derive(Debug)]
 pub struct TherapyIntegrationOrchestrator {
     /// Session configuration
     config: TherapySessionConfig,
@@ -191,11 +192,11 @@ pub struct TherapyIntegrationOrchestrator {
     /// Medium properties
     medium: Box<dyn Medium>,
     /// Acoustic wave solver
-    acoustic_solver: AcousticWaveSolver,
+    _acoustic_solver: AcousticWaveSolver,
     /// CEUS system (for microbubble therapy)
     ceus_system: Option<ContrastEnhancedUltrasound>,
     /// Transcranial correction system
-    transcranial_system: Option<TranscranialAberrationCorrection>,
+    _transcranial_system: Option<TranscranialAberrationCorrection>,
     /// Chemical model (for sonodynamic therapy)
     chemical_model: Option<ChemicalModel>,
     /// Cavitation detector and controller
@@ -217,38 +218,55 @@ impl TherapyIntegrationOrchestrator {
         let acoustic_solver = AcousticWaveSolver::new(&grid, &*medium)?;
 
         // Initialize modality-specific systems
-        let ceus_system = if config.primary_modality == TherapyModality::Microbubble ||
-                          config.secondary_modalities.contains(&TherapyModality::Microbubble) {
+        let ceus_system = if config.primary_modality == TherapyModality::Microbubble
+            || config
+                .secondary_modalities
+                .contains(&TherapyModality::Microbubble)
+        {
             Some(Self::init_ceus_system(&grid, &*medium)?)
         } else {
             None
         };
 
-        let transcranial_system = if config.primary_modality == TherapyModality::Transcranial ||
-                                  config.secondary_modalities.contains(&TherapyModality::Transcranial) {
+        let transcranial_system = if config.primary_modality == TherapyModality::Transcranial
+            || config
+                .secondary_modalities
+                .contains(&TherapyModality::Transcranial)
+        {
             Some(Self::init_transcranial_system(&config, &grid)?)
         } else {
             None
         };
 
-        let chemical_model = if config.primary_modality == TherapyModality::Sonodynamic ||
-                             config.secondary_modalities.contains(&TherapyModality::Sonodynamic) {
+        let chemical_model = if config.primary_modality == TherapyModality::Sonodynamic
+            || config
+                .secondary_modalities
+                .contains(&TherapyModality::Sonodynamic)
+        {
             Some(Self::init_chemical_model(&grid)?)
         } else {
             None
         };
 
-        let cavitation_controller = if config.primary_modality == TherapyModality::Histotripsy ||
-                                    config.primary_modality == TherapyModality::Oncotripsy ||
-                                    config.secondary_modalities.contains(&TherapyModality::Histotripsy) ||
-                                    config.secondary_modalities.contains(&TherapyModality::Oncotripsy) {
+        let cavitation_controller = if config.primary_modality == TherapyModality::Histotripsy
+            || config.primary_modality == TherapyModality::Oncotripsy
+            || config
+                .secondary_modalities
+                .contains(&TherapyModality::Histotripsy)
+            || config
+                .secondary_modalities
+                .contains(&TherapyModality::Oncotripsy)
+        {
             Some(Self::init_cavitation_controller(&config)?)
         } else {
             None
         };
 
-        let lithotripsy_simulator = if config.primary_modality == TherapyModality::Lithotripsy ||
-                                   config.secondary_modalities.contains(&TherapyModality::Lithotripsy) {
+        let lithotripsy_simulator = if config.primary_modality == TherapyModality::Lithotripsy
+            || config
+                .secondary_modalities
+                .contains(&TherapyModality::Lithotripsy)
+        {
             Some(Self::init_lithotripsy_simulator(&config, &grid)?)
         } else {
             None
@@ -273,9 +291,9 @@ impl TherapyIntegrationOrchestrator {
             config,
             grid,
             medium,
-            acoustic_solver,
+            _acoustic_solver: acoustic_solver,
             ceus_system,
-            transcranial_system,
+            _transcranial_system: transcranial_system,
             chemical_model,
             cavitation_controller,
             lithotripsy_simulator,
@@ -284,21 +302,22 @@ impl TherapyIntegrationOrchestrator {
     }
 
     /// Initialize CEUS system for microbubble therapy
-    fn init_ceus_system(grid: &Grid, medium: &dyn Medium) -> KwaversResult<ContrastEnhancedUltrasound> {
+    fn init_ceus_system(
+        grid: &Grid,
+        medium: &dyn Medium,
+    ) -> KwaversResult<ContrastEnhancedUltrasound> {
         // Create microbubble population with clinical parameters
         let bubble_concentration = 1e6; // 1 million bubbles/mL (typical clinical dose)
         let bubble_size = 2.5; // 2.5 μm mean diameter
 
-        ContrastEnhancedUltrasound::new(
-            grid,
-            medium,
-            bubble_concentration,
-            bubble_size,
-        )
+        ContrastEnhancedUltrasound::new(grid, medium, bubble_concentration, bubble_size)
     }
 
     /// Initialize transcranial system
-    fn init_transcranial_system(config: &TherapySessionConfig, grid: &Grid) -> KwaversResult<TranscranialAberrationCorrection> {
+    fn init_transcranial_system(
+        _config: &TherapySessionConfig,
+        grid: &Grid,
+    ) -> KwaversResult<TranscranialAberrationCorrection> {
         // Create transcranial correction system
         // This would use patient skull data from config.patient_params.skull_thickness
         TranscranialAberrationCorrection::new(grid)
@@ -310,7 +329,9 @@ impl TherapyIntegrationOrchestrator {
     }
 
     /// Initialize cavitation controller for histotripsy/oncotripsy
-    fn init_cavitation_controller(config: &TherapySessionConfig) -> KwaversResult<FeedbackController> {
+    fn init_cavitation_controller(
+        config: &TherapySessionConfig,
+    ) -> KwaversResult<FeedbackController> {
         // Create cavitation feedback controller with appropriate parameters
         // based on therapy modality (histotripsy vs oncotripsy)
         let feedback_config = match config.primary_modality {
@@ -345,7 +366,10 @@ impl TherapyIntegrationOrchestrator {
     }
 
     /// Initialize lithotripsy simulator
-    fn init_lithotripsy_simulator(config: &TherapySessionConfig, grid: &Grid) -> KwaversResult<LithotripsySimulator> {
+    fn init_lithotripsy_simulator(
+        config: &TherapySessionConfig,
+        grid: &Grid,
+    ) -> KwaversResult<LithotripsySimulator> {
         use crate::physics::therapy::lithotripsy::{LithotripsyParameters, StoneMaterial};
 
         // Create stone geometry based on target volume
@@ -384,10 +408,7 @@ impl TherapyIntegrationOrchestrator {
         // Step 2: Register CT data to acoustic simulation grid
         let registration = ImageRegistration::default();
         let identity_transform = [
-            1.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0, 1.0,
+            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
         ];
         let registered_ct = registration.apply_transform(&ct_data, &identity_transform);
 
@@ -416,11 +437,14 @@ impl TherapyIntegrationOrchestrator {
         // In practice, this would load DICOM CT data from PACS or file system
         // For now, return error to trigger fallback to synthetic data
         // This is proper error handling rather than a simplification
-        Err(crate::error::KwaversError::Validation(crate::error::ValidationError::InvalidValue {
-            parameter: "CT imaging data".to_string(),
-            value: 0.0,
-            reason: "CT data loading not yet implemented - requires DICOM integration".to_string(),
-        }))
+        Err(crate::error::KwaversError::Validation(
+            crate::error::ValidationError::InvalidValue {
+                parameter: "CT imaging data".to_string(),
+                value: 0.0,
+                reason: "CT data loading not yet implemented - requires DICOM integration"
+                    .to_string(),
+            },
+        ))
     }
 
     /// Generate synthetic CT data for testing when real CT data unavailable
@@ -452,7 +476,8 @@ impl TherapyIntegrationOrchestrator {
                     let dz_kidney = (k as f64 - center_z as f64) / kidney_c;
 
                     // Check if point is inside kidney ellipsoid
-                    if dx_kidney * dx_kidney + dy_kidney * dy_kidney + dz_kidney * dz_kidney <= 1.0 {
+                    if dx_kidney * dx_kidney + dy_kidney * dy_kidney + dz_kidney * dz_kidney <= 1.0
+                    {
                         // Kidney tissue: HU ~ 30-50
                         ct_data[[i, j, k]] = 40.0;
 
@@ -460,7 +485,9 @@ impl TherapyIntegrationOrchestrator {
                         let dx_stone = i as f64 - stone_center_x as f64;
                         let dy_stone = j as f64 - stone_center_y as f64;
                         let dz_stone = k as f64 - stone_center_z as f64;
-                        let distance_from_stone = (dx_stone * dx_stone + dy_stone * dy_stone + dz_stone * dz_stone).sqrt();
+                        let distance_from_stone =
+                            (dx_stone * dx_stone + dy_stone * dy_stone + dz_stone * dz_stone)
+                                .sqrt();
 
                         if distance_from_stone <= stone_radius {
                             // Calcium oxalate stone: HU ~ 500-1500 (Williams et al. 2010)
@@ -511,9 +538,12 @@ impl TherapyIntegrationOrchestrator {
                     // If voxel is not stone but surrounded by stones, fill it (closing)
                     let is_stone = stone_mask[[i, j, k]] > 0.5;
                     let neighbors = [
-                        stone_mask[[i-1, j, k]], stone_mask[[i+1, j, k]],
-                        stone_mask[[i, j-1, k]], stone_mask[[i, j+1, k]],
-                        stone_mask[[i, j, k-1]], stone_mask[[i, j, k+1]],
+                        stone_mask[[i - 1, j, k]],
+                        stone_mask[[i + 1, j, k]],
+                        stone_mask[[i, j - 1, k]],
+                        stone_mask[[i, j + 1, k]],
+                        stone_mask[[i, j, k - 1]],
+                        stone_mask[[i, j, k + 1]],
                     ];
                     let stone_neighbors = neighbors.iter().filter(|&&n| n > 0.5).count();
 
@@ -540,23 +570,23 @@ impl TherapyIntegrationOrchestrator {
         let corrected_field = acoustic_field; // Simplified - no transcranial correction
 
         // Update microbubble dynamics if enabled
-        if let Some(ref mut ceus) = self.ceus_system {
+        if let Some(ref mut _ceus) = self.ceus_system {
             // Simulate microbubble response to acoustic field
             self.update_microbubble_dynamics(&corrected_field, dt)?;
         }
 
         // Update cavitation activity if enabled
-        if let Some(ref mut cavitation) = self.cavitation_controller {
+        if let Some(ref mut _cavitation) = self.cavitation_controller {
             self.update_cavitation_control(&corrected_field, dt)?;
         }
 
         // Update chemical reactions if enabled
-        if let Some(ref mut chemistry) = self.chemical_model {
+        if let Some(ref mut _chemistry) = self.chemical_model {
             self.update_chemical_reactions(&corrected_field, dt)?;
         }
 
         // Execute lithotripsy if enabled
-        if let Some(ref mut lithotripsy) = self.lithotripsy_simulator {
+        if let Some(ref mut _lithotripsy) = self.lithotripsy_simulator {
             self.execute_lithotripsy_step(&corrected_field, dt)?;
         }
 
@@ -570,10 +600,16 @@ impl TherapyIntegrationOrchestrator {
     }
 
     /// Update chemical reactions based on acoustic field and cavitation activity
-    fn update_chemical_reactions(&mut self, acoustic_field: &AcousticField, dt: f64) -> KwaversResult<()> {
+    fn update_chemical_reactions(
+        &mut self,
+        acoustic_field: &AcousticField,
+        dt: f64,
+    ) -> KwaversResult<()> {
         if let Some(ref mut chemistry) = self.chemical_model {
             // Extract cavitation activity for chemical reaction rates
-            let cavitation_activity = self.session_state.cavitation_activity
+            let cavitation_activity = self
+                .session_state
+                .cavitation_activity
                 .as_ref()
                 .cloned()
                 .unwrap_or_else(|| Array3::zeros(acoustic_field.pressure.dim()));
@@ -597,14 +633,14 @@ impl TherapyIntegrationOrchestrator {
             // where Q_acoustic is acoustic absorption heating
             let ambient_temp = 310.0; // 37°C in Kelvin
             let mut temperature = Array3::from_elem(acoustic_field.pressure.dim(), ambient_temp);
-            
+
             // Calculate acoustic absorption heating from pressure field
             // Q_acoustic = α * |p|² / (ρ * c) where α is attenuation coefficient
             let alpha = 0.5; // 0.5 Np/m typical for soft tissue
             let rho = 1000.0; // kg/m³
             let c = 1540.0; // m/s
             let heating_factor = alpha / (rho * c);
-            
+
             // Add acoustic heating with spatial spreading
             for (index, &pressure) in acoustic_field.pressure.indexed_iter() {
                 // Acoustic heating proportional to intensity (pressure^2)
@@ -614,12 +650,12 @@ impl TherapyIntegrationOrchestrator {
                 let x = i as f64 * self.grid.dx - self.config.acoustic_params.focal_depth;
                 let y = j as f64 * self.grid.dy;
                 let z = k as f64 * self.grid.dz;
-                let r = (x*x + y*y + z*z).sqrt();
-                
+                let r = (x * x + y * y + z * z).sqrt();
+
                 // Temperature rise decreases with distance from focus
                 let distance_factor = (-r / 0.01).exp(); // 1cm characteristic length
                 let temp_rise = heating * distance_factor * dt * 1e-6; // Convert to temperature rise
-                
+
                 temperature[index] = ambient_temp + temp_rise;
             }
 
@@ -646,7 +682,11 @@ impl TherapyIntegrationOrchestrator {
     }
 
     /// Execute lithotripsy simulation step
-    fn execute_lithotripsy_step(&mut self, acoustic_field: &AcousticField, dt: f64) -> KwaversResult<()> {
+    fn execute_lithotripsy_step(
+        &mut self,
+        _acoustic_field: &AcousticField,
+        dt: f64,
+    ) -> KwaversResult<()> {
         if let Some(ref mut lithotripsy) = self.lithotripsy_simulator {
             // Update lithotripsy simulation with current acoustic field
             // In a full implementation, this would run multiple shock wave cycles
@@ -656,7 +696,8 @@ impl TherapyIntegrationOrchestrator {
             // We just need to ensure it's synchronized with the overall therapy session
 
             // Check if we should deliver a shock wave based on PRF
-            let time_since_last_pulse = self.session_state.current_time % (1.0 / self.config.acoustic_params.prf);
+            let time_since_last_pulse =
+                self.session_state.current_time % (1.0 / self.config.acoustic_params.prf);
             if time_since_last_pulse < dt {
                 // This time step includes a shock wave delivery
                 // The lithotripsy simulator manages its own shock wave delivery internally
@@ -665,18 +706,25 @@ impl TherapyIntegrationOrchestrator {
 
             // Update session state with lithotripsy progress
             let state = lithotripsy.current_state();
-            self.session_state.progress = state.shock_waves_delivered as f64 /
-                                       lithotripsy.parameters().num_shock_waves as f64;
+            self.session_state.progress = state.shock_waves_delivered as f64
+                / lithotripsy.parameters().num_shock_waves as f64;
 
             // Update safety metrics from lithotripsy bioeffects
             let bioeffects = lithotripsy.bioeffects_model().current_assessment();
             // Integrate lithotripsy safety metrics with overall session safety
             let lithotripsy_safety = bioeffects.check_safety_limits();
-            self.session_state.safety_metrics.thermal_index =
-                self.session_state.safety_metrics.thermal_index.max(lithotripsy_safety.max_thermal_index);
-            self.session_state.safety_metrics.mechanical_index =
-                self.session_state.safety_metrics.mechanical_index.max(lithotripsy_safety.max_mechanical_index);
-            self.session_state.safety_metrics.cavitation_dose += lithotripsy_safety.max_cavitation_dose * dt;
+            self.session_state.safety_metrics.thermal_index = self
+                .session_state
+                .safety_metrics
+                .thermal_index
+                .max(lithotripsy_safety.max_thermal_index);
+            self.session_state.safety_metrics.mechanical_index = self
+                .session_state
+                .safety_metrics
+                .mechanical_index
+                .max(lithotripsy_safety.max_mechanical_index);
+            self.session_state.safety_metrics.cavitation_dose +=
+                lithotripsy_safety.max_cavitation_dose * dt;
         }
 
         Ok(())
@@ -690,14 +738,10 @@ impl TherapyIntegrationOrchestrator {
         // Generate focused acoustic field using Gaussian beam approximation
         let (nx, ny, nz) = self.grid.dimensions();
         let mut pressure = Array3::zeros((nx, ny, nz));
-        let mut velocity = Array3::zeros((nx, ny, nz));
+        let velocity = Array3::zeros((nx, ny, nz));
 
         // Create focused pressure field using Gaussian beam approximation
-        let focal_point = (
-            self.config.acoustic_params.focal_depth,
-            0.0,
-            0.0
-        );
+        let focal_point = (self.config.acoustic_params.focal_depth, 0.0, 0.0);
 
         let beam_width = 0.005; // 5mm beam width
 
@@ -712,14 +756,14 @@ impl TherapyIntegrationOrchestrator {
                     let dx = x - focal_point.0;
                     let dy = y - focal_point.1;
                     let dz = z - focal_point.2;
-                    let r = (dx*dx + dy*dy + dz*dz).sqrt();
+                    let r = (dx * dx + dy * dy + dz * dz).sqrt();
 
                     // Gaussian beam profile
-                    let beam_profile = (-r*r / (beam_width*beam_width)).exp();
+                    let beam_profile = (-r * r / (beam_width * beam_width)).exp();
 
                     // Pressure field using Gaussian beam approximation
                     // Reference: O'Neil (1949) Gaussian beam propagation in focused ultrasound
-                    pressure[[i,j,k]] = self.config.acoustic_params.pnp * beam_profile;
+                    pressure[[i, j, k]] = self.config.acoustic_params.pnp * beam_profile;
                 }
             }
         }
@@ -733,7 +777,11 @@ impl TherapyIntegrationOrchestrator {
     }
 
     /// Update microbubble dynamics
-    fn update_microbubble_dynamics(&mut self, acoustic_field: &AcousticField, dt: f64) -> KwaversResult<()> {
+    fn update_microbubble_dynamics(
+        &mut self,
+        _acoustic_field: &AcousticField,
+        _dt: f64,
+    ) -> KwaversResult<()> {
         // Integrate microbubble physics with acoustic field
         // Basic implementation - full dynamics would require coupled bubble-acoustic equations
 
@@ -748,11 +796,14 @@ impl TherapyIntegrationOrchestrator {
     }
 
     /// Update cavitation control
-    fn update_cavitation_control(&mut self, acoustic_field: &AcousticField, dt: f64) -> KwaversResult<()> {
+    fn update_cavitation_control(
+        &mut self,
+        acoustic_field: &AcousticField,
+        _dt: f64,
+    ) -> KwaversResult<()> {
         if let Some(ref mut cavitation) = self.cavitation_controller {
             // Process the acoustic signal through the feedback controller
             // Use pressure field as the input signal for cavitation detection and control
-            use ndarray::ArrayView1;
             let signal = acoustic_field.pressure.as_slice().unwrap();
             let array_view = ndarray::ArrayView1::from(signal);
             let control_output = cavitation.process(&array_view);
@@ -770,10 +821,11 @@ impl TherapyIntegrationOrchestrator {
                 let pressure_amplitude = pressure_val.abs();
                 if pressure_amplitude > cavitation_threshold {
                     // Scale activity based on pressure relative to threshold and control intensity
-                    let activity_level = ((pressure_amplitude - cavitation_threshold) /
-                                        (self.config.acoustic_params.pnp - cavitation_threshold))
-                                        .clamp(0.0, 1.0);
-                    cavitation_activity[[i, j, k]] = activity_level * control_output.cavitation_intensity;
+                    let activity_level = ((pressure_amplitude - cavitation_threshold)
+                        / (self.config.acoustic_params.pnp - cavitation_threshold))
+                        .clamp(0.0, 1.0);
+                    cavitation_activity[[i, j, k]] =
+                        activity_level * control_output.cavitation_intensity;
                 }
             }
 
@@ -783,14 +835,20 @@ impl TherapyIntegrationOrchestrator {
         Ok(())
     }
 
-
     /// Update safety metrics
-    fn update_safety_metrics(&mut self, acoustic_field: &AcousticField, dt: f64) -> KwaversResult<()> {
+    fn update_safety_metrics(
+        &mut self,
+        acoustic_field: &AcousticField,
+        dt: f64,
+    ) -> KwaversResult<()> {
         // Calculate thermal index (IEC 62359 compliant)
-        let pressure_rms = acoustic_field.pressure.iter()
-            .map(|&p| p*p)
+        let pressure_rms = acoustic_field
+            .pressure
+            .iter()
+            .map(|&p| p * p)
             .sum::<f64>()
-            .sqrt() / acoustic_field.pressure.len() as f64;
+            .sqrt()
+            / acoustic_field.pressure.len() as f64;
 
         self.session_state.safety_metrics.thermal_index =
             pressure_rms * self.config.acoustic_params.frequency.sqrt() / 1e6;
@@ -854,7 +912,7 @@ pub struct AcousticField {
 #[derive(Debug)]
 pub struct AcousticWaveSolver {
     /// Computational grid
-    grid: Grid,
+    _grid: Grid,
 }
 
 impl AcousticWaveSolver {
@@ -862,7 +920,7 @@ impl AcousticWaveSolver {
     pub fn new(_grid: &Grid, _medium: &dyn Medium) -> KwaversResult<Self> {
         // Stub implementation - would initialize appropriate solver
         Ok(Self {
-            grid: _grid.clone(),
+            _grid: _grid.clone(),
         })
     }
 }
@@ -894,11 +952,11 @@ mod tests {
             secondary_modalities: vec![TherapyModality::Microbubble],
             duration: 60.0, // 1 minute
             acoustic_params: AcousticTherapyParams {
-                frequency: 1e6,     // 1 MHz
-                pnp: 10e6,          // 10 MPa
-                prf: 100.0,         // 100 Hz
-                duty_cycle: 0.01,   // 1%
-                focal_depth: 0.05,  // 5 cm
+                frequency: 1e6,        // 1 MHz
+                pnp: 10e6,             // 10 MPa
+                prf: 100.0,            // 100 Hz
+                duty_cycle: 0.01,      // 1%
+                focal_depth: 0.05,     // 5 cm
                 treatment_volume: 1.0, // 1 cm³
             },
             safety_limits: SafetyLimits {
@@ -927,11 +985,18 @@ mod tests {
         let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
 
-        let orchestrator = TherapyIntegrationOrchestrator::new(config, grid, Box::new(medium.clone()));
-        assert!(orchestrator.is_ok(), "Therapy orchestrator should create successfully");
+        let orchestrator =
+            TherapyIntegrationOrchestrator::new(config, grid, Box::new(medium.clone()));
+        assert!(
+            orchestrator.is_ok(),
+            "Therapy orchestrator should create successfully"
+        );
 
         let orchestrator = orchestrator.unwrap();
-        assert_eq!(orchestrator.config().primary_modality, TherapyModality::Histotripsy);
+        assert_eq!(
+            orchestrator.config().primary_modality,
+            TherapyModality::Histotripsy
+        );
         assert!(orchestrator.session_state().current_time < 1e-6); // Should start at 0
     }
 
@@ -985,7 +1050,11 @@ mod tests {
 
             // Check that safety limits are not exceeded
             let safety_status = orchestrator.check_safety_limits();
-            assert_eq!(safety_status, SafetyStatus::Safe, "Safety limits should not be exceeded");
+            assert_eq!(
+                safety_status,
+                SafetyStatus::Safe,
+                "Safety limits should not be exceeded"
+            );
         }
 
         // Check that session state is updated
@@ -1034,7 +1103,8 @@ mod tests {
         let grid = Grid::new(8, 8, 8, 0.005, 0.005, 0.005).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
 
-        let mut orchestrator = TherapyIntegrationOrchestrator::new(config, grid, Box::new(medium.clone())).unwrap();
+        let mut orchestrator =
+            TherapyIntegrationOrchestrator::new(config, grid, Box::new(medium.clone())).unwrap();
 
         // Execute therapy step - should be safe
         let result = orchestrator.execute_therapy_step(1.0);

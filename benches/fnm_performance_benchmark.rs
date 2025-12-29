@@ -5,7 +5,9 @@
 //! the O(n) vs O(n²) complexity advantage.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use kwavers::physics::transducer::fast_nearfield::{FastNearfieldSolver, FNMConfig, RectangularTransducer};
+use kwavers::physics::transducer::fast_nearfield::{
+    FNMConfig, FastNearfieldSolver, RectangularTransducer,
+};
 use ndarray::Array2;
 use num_complex::Complex;
 use std::f64::consts::PI;
@@ -19,7 +21,11 @@ struct RayleighSommerfeldSolver {
 
 impl RayleighSommerfeldSolver {
     fn new(transducer: RectangularTransducer, c0: f64, rho0: f64) -> Self {
-        Self { transducer, c0, rho0 }
+        Self {
+            transducer,
+            c0,
+            rho0,
+        }
     }
 
     /// Compute pressure field using direct Rayleigh-Sommerfeld integration
@@ -46,7 +52,8 @@ impl RayleighSommerfeldSolver {
 
                         let r = (dx * dx + dy * dy + dz * dz).sqrt();
 
-                        if r > 1e-12 { // Avoid singularity
+                        if r > 1e-12 {
+                            // Avoid singularity
                             // Rayleigh-Sommerfeld Green's function
                             let green = Complex::new(0.0, k * r).exp() / r;
                             let obliquity = dz / r; // z-component of unit vector
@@ -83,7 +90,7 @@ fn benchmark_fnm_vs_rayleigh_sommerfeld(c: &mut Criterion) {
         // Setup FNM solver
         let config = FNMConfig {
             angular_spectrum_size: (64, 64), // Smaller for benchmarking
-            dx: 0.2e-3, // Coarser grid for speed
+            dx: 0.2e-3,                      // Coarser grid for speed
             ..Default::default()
         };
 

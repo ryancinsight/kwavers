@@ -132,8 +132,8 @@ fn main() {
         (0.25, 0.25, 0.0),
         (0.5, 0.5, 0.001),
         (0.75, 0.75, 0.002),
-        (0.0, 0.0, 0.0),   // Boundary point
-        (1.0, 1.0, 0.0),   // Boundary point
+        (0.0, 0.0, 0.0), // Boundary point
+        (1.0, 1.0, 0.0), // Boundary point
     ];
 
     println!("🧪 Analytical Solution Validation:");
@@ -142,7 +142,7 @@ fn main() {
 
     for (x, y, t) in &test_points {
         let u = analytical_solution_2d(*x, *y, *t, wave_speed);
-    println!("   ({:.2}, {:.2}, {:.3}s) → {:.6}", x, y, t, u);
+        println!("   ({:.2}, {:.2}, {:.3}s) → {:.6}", x, y, t, u);
     }
     println!();
 
@@ -171,7 +171,10 @@ fn main() {
 
     println!("   Maximum residual: {:.2e}", max_residual);
     println!("   RMSE residual: {:.2e}", rmse);
-    println!("   Residual threshold: {:.2e} (accounting for numerical precision)", 1e-9);
+    println!(
+        "   Residual threshold: {:.2e} (accounting for numerical precision)",
+        1e-9
+    );
     println!();
 
     // Boundary condition validation
@@ -221,7 +224,10 @@ fn main() {
     }
 
     println!("   Maximum initial condition error: {:.2e}", max_ic_error);
-    println!("   Initial condition threshold: {:.2e} (should be ~0)", 1e-15);
+    println!(
+        "   Initial condition threshold: {:.2e} (should be ~0)",
+        1e-15
+    );
     println!();
 
     // Summary
@@ -232,9 +238,18 @@ fn main() {
     let bc_valid = max_bc_error < 1e-14;
     let ic_valid = max_ic_error < 1e-14;
 
-    println!("   ✅ PDE satisfaction: {}", if physics_valid { "PASS" } else { "FAIL" });
-    println!("   ✅ Boundary conditions: {}", if bc_valid { "PASS" } else { "FAIL" });
-    println!("   ✅ Initial conditions: {}", if ic_valid { "PASS" } else { "FAIL" });
+    println!(
+        "   ✅ PDE satisfaction: {}",
+        if physics_valid { "PASS" } else { "FAIL" }
+    );
+    println!(
+        "   ✅ Boundary conditions: {}",
+        if bc_valid { "PASS" } else { "FAIL" }
+    );
+    println!(
+        "   ✅ Initial conditions: {}",
+        if ic_valid { "PASS" } else { "FAIL" }
+    );
 
     if physics_valid && bc_valid && ic_valid {
         println!();
@@ -266,13 +281,20 @@ fn main() {
     println!();
     println!("⚡ Performance Summary:");
     println!("=======================");
-    println!("   Total validation time: {:.3} ms", total_elapsed.as_millis());
+    println!(
+        "   Total validation time: {:.3} ms",
+        total_elapsed.as_millis()
+    );
     println!("   Validated {} spatial-temporal points", total_points);
-    println!("   PDE residual benchmark ({} iterations): {:.3} μs/iter",
-             iterations,
-             perf_elapsed.as_micros() as f64 / iterations as f64);
-    println!("   Overall throughput: {:.0} points/ms",
-             total_points as f64 / total_elapsed.as_millis().max(1) as f64);
+    println!(
+        "   PDE residual benchmark ({} iterations): {:.3} μs/iter",
+        iterations,
+        perf_elapsed.as_micros() as f64 / iterations as f64
+    );
+    println!(
+        "   Overall throughput: {:.0} points/ms",
+        total_points as f64 / total_elapsed.as_millis().max(1) as f64
+    );
 }
 
 #[cfg(test)]
@@ -300,9 +322,14 @@ mod tests {
             for y in [0.25, 0.5, 0.75] {
                 let u_analytical = analytical_solution_2d(x, y, 0.0, wave_speed);
                 let u_expected = (x * PI).sin() * (y * PI).sin();
-                assert!((u_analytical - u_expected).abs() < 1e-15,
+                assert!(
+                    (u_analytical - u_expected).abs() < 1e-15,
                     "Initial condition failed at ({}, {}): expected {}, got {}",
-                    x, y, u_expected, u_analytical);
+                    x,
+                    y,
+                    u_expected,
+                    u_analytical
+                );
             }
         }
     }
@@ -312,17 +339,18 @@ mod tests {
         let wave_speed = 343.0;
 
         // Test that PDE residual is acceptably small at various points
-        let test_points = vec![
-            (0.25, 0.25, 0.0),
-            (0.5, 0.5, 0.001),
-            (0.75, 0.75, 0.002),
-        ];
+        let test_points = vec![(0.25, 0.25, 0.0), (0.5, 0.5, 0.001), (0.75, 0.75, 0.002)];
 
         for (x, y, t) in test_points {
             let residual = compute_analytical_residual(x, y, t, wave_speed);
-            assert!(residual.abs() < 1e-8,
+            assert!(
+                residual.abs() < 1e-8,
                 "PDE residual too large at ({}, {}, {}): {}",
-                x, y, t, residual);
+                x,
+                y,
+                t,
+                residual
+            );
         }
     }
 
@@ -339,8 +367,12 @@ mod tests {
         let u_at_0 = analytical_solution_2d(x, y, 0.0, wave_speed);
         let u_at_period = analytical_solution_2d(x, y, period, wave_speed);
 
-        assert!((u_at_0 - u_at_period).abs() < 1e-12,
-            "Solution not periodic: u(0)={}, u(T)={}", u_at_0, u_at_period);
+        assert!(
+            (u_at_0 - u_at_period).abs() < 1e-12,
+            "Solution not periodic: u(0)={}, u(T)={}",
+            u_at_0,
+            u_at_period
+        );
     }
 
     #[test]
@@ -349,7 +381,10 @@ mod tests {
 
         // At t=0, maximum amplitude should be sin²(π/2) = 1
         let u_max = analytical_solution_2d(0.5, 0.5, 0.0, wave_speed);
-        assert!((u_max - 1.0).abs() < 1e-15,
-            "Maximum amplitude incorrect: expected 1.0, got {}", u_max);
+        assert!(
+            (u_max - 1.0).abs() < 1e-15,
+            "Maximum amplitude incorrect: expected 1.0, got {}",
+            u_max
+        );
     }
 }

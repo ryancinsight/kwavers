@@ -13,8 +13,8 @@
 //! - **Scientific Computing**: Optimized for PDEs, wave propagation, and physics simulations
 
 use crate::error::{KwaversError, KwaversResult};
-use burn::tensor::{backend::Backend, Tensor};
 use burn::prelude::*;
+use burn::tensor::{backend::Backend, Tensor};
 use ndarray::Array3;
 use std::marker::PhantomData;
 
@@ -87,39 +87,19 @@ pub enum Precision {
 
 impl<B: Backend> BurnGpuAccelerator<B> {
     /// Create new GPU accelerator
-    pub fn new(config: &GpuConfig) -> KwaversResult<Self> {
+    pub fn new(config: &GpuConfig) -> KwaversResult<Self>
+    where
+        B::Device: Default,
+    {
         if !config.enable_gpu {
-            return Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: "GPU acceleration disabled".to_string(),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::ResourceUnavailable {
+                    resource: "GPU acceleration disabled".to_string(),
+                },
+            ));
         }
 
-        // Create Burn device based on backend
-        let device = match config.backend.as_str() {
-            "wgpu" => {
-                // For WGPU backend, we need to block on async initialization
-                #[cfg(feature = "burn-wgpu")]
-                {
-                    use burn::backend::wgpu::WgpuDevice;
-                    WgpuDevice::default()
-                }
-                #[cfg(not(feature = "burn-wgpu"))]
-                {
-                    return Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                        resource: "WGPU backend not available".to_string(),
-                    }));
-                }
-            }
-            "cpu" => {
-                use burn::backend::ndarray::NdArrayDevice;
-                NdArrayDevice::default()
-            }
-            _ => {
-                return Err(KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                    resource: format!("Backend '{}' not supported", config.backend),
-                }));
-            }
-        };
+        let device = B::Device::default();
 
         Ok(Self {
             device,
@@ -137,19 +117,21 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         let shape = array.shape();
         let data: Vec<f32> = array.iter().map(|&x| x as f32).collect();
 
-        Tensor::<B, 1>::from_data(data.as_slice(), &self.device)
-            .reshape([shape[0] as i32, shape[1] as i32, shape[2] as i32])
+        Tensor::<B, 1>::from_data(TensorData::from(data.as_slice()), &self.device)
+            .reshape([shape[0], shape[1], shape[2]])
     }
 
     /// Convert Burn tensor to ndarray Array3
     pub fn tensor_to_array(&self, tensor: Tensor<B, 3>) -> Array3<f64> {
         let shape = tensor.shape();
-        let data = tensor.into_data().as_slice::<f32>().unwrap();
+        let data = tensor.into_data();
+        let slice = data.as_slice::<f32>().unwrap();
 
         Array3::from_shape_vec(
             (shape[0] as usize, shape[1] as usize, shape[2] as usize),
-            data.iter().map(|&x| x as f64).collect(),
-        ).unwrap()
+            slice.iter().map(|&x| x as f64).collect(),
+        )
+        .unwrap()
     }
 
     /// Execute acoustic wave propagation on GPU
@@ -178,9 +160,9 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         let divergence = self.compute_divergence(&vx_tensor, &vy_tensor, &vz_tensor, dx, dy, dz);
 
         // Update pressure: p^{n+1} = p^n - dt * ρ * c² * ∇·v
-        let c_squared = c_tensor.clone().powf(2.0);
+        let c_squared = c_tensor.clone().powf_scalar(2.0);
         let rho_c_squared = rho_tensor * c_squared;
-        let pressure_update = divergence * rho_c_squared * Tensor::from_data([dt as f32], &self.device);
+        let pressure_update = (divergence * rho_c_squared).mul_scalar(dt as f32);
         let new_pressure = p_tensor - pressure_update;
 
         // Convert back to array
@@ -211,41 +193,23 @@ impl<B: Backend> BurnGpuAccelerator<B> {
 
     /// Compute gradient in x-direction using central differences
     fn compute_gradient_x(&self, field: &Tensor<B, 3>, dx: f32) -> Tensor<B, 3> {
-        let shape = field.shape();
-        let nx = shape[0];
-
-        // Roll tensor to compute differences
-        let shifted_right = field.clone().roll([1, 0, 0], 0);
-        let shifted_left = field.clone().roll([-1, 0, 0], 0);
-
-        // Central difference: (f[i+1] - f[i-1]) / (2*dx)
-        (shifted_right - shifted_left) / Tensor::from_data([2.0 * dx], &self.device)
+        let shifted_right = field.clone().roll(&[1], &[0]);
+        let shifted_left = field.clone().roll(&[-1], &[0]);
+        (shifted_right - shifted_left).div_scalar(2.0 * dx)
     }
 
     /// Compute gradient in y-direction using central differences
     fn compute_gradient_y(&self, field: &Tensor<B, 3>, dy: f32) -> Tensor<B, 3> {
-        let shape = field.shape();
-        let ny = shape[1];
-
-        // Roll tensor to compute differences
-        let shifted_up = field.clone().roll([0, 1, 0], 1);
-        let shifted_down = field.clone().roll([0, -1, 0], 1);
-
-        // Central difference: (f[j+1] - f[j-1]) / (2*dy)
-        (shifted_up - shifted_down) / Tensor::from_data([2.0 * dy], &self.device)
+        let shifted_up = field.clone().roll(&[1], &[1]);
+        let shifted_down = field.clone().roll(&[-1], &[1]);
+        (shifted_up - shifted_down).div_scalar(2.0 * dy)
     }
 
     /// Compute gradient in z-direction using central differences
     fn compute_gradient_z(&self, field: &Tensor<B, 3>, dz: f32) -> Tensor<B, 3> {
-        let shape = field.shape();
-        let nz = shape[2];
-
-        // Roll tensor to compute differences
-        let shifted_front = field.clone().roll([0, 0, 1], 2);
-        let shifted_back = field.clone().roll([0, 0, -1], 2);
-
-        // Central difference: (f[k+1] - f[k-1]) / (2*dz)
-        (shifted_front - shifted_back) / Tensor::from_data([2.0 * dz], &self.device)
+        let shifted_front = field.clone().roll(&[1], &[2]);
+        let shifted_back = field.clone().roll(&[-1], &[2]);
+        (shifted_front - shifted_back).div_scalar(2.0 * dz)
     }
 
     /// Execute electromagnetic wave propagation on GPU
@@ -264,7 +228,14 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         dx: f64,
         dy: f64,
         dz: f64,
-    ) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>)> {
+    ) -> KwaversResult<(
+        Array3<f64>,
+        Array3<f64>,
+        Array3<f64>,
+        Array3<f64>,
+        Array3<f64>,
+        Array3<f64>,
+    )> {
         // Convert inputs to tensors
         let ex_tensor = self.array_to_tensor(ex);
         let ey_tensor = self.array_to_tensor(ey);
@@ -278,16 +249,24 @@ impl<B: Backend> BurnGpuAccelerator<B> {
 
         // Update H field from E field
         let (hx_new, hy_new, hz_new) = self.update_magnetic_field(
-            &hx_tensor, &hy_tensor, &hz_tensor,
-            &ex_tensor, &ey_tensor, &ez_tensor,
-            &mu_tensor, dt as f32, dx as f32, dy as f32, dz as f32
+            &hx_tensor, &hy_tensor, &hz_tensor, &ex_tensor, &ey_tensor, &ez_tensor, &mu_tensor,
+            dt as f32, dx as f32, dy as f32, dz as f32,
         );
 
         // Update E field from H field
         let (ex_new, ey_new, ez_new) = self.update_electric_field(
-            &ex_tensor, &ey_tensor, &ez_tensor,
-            &hx_new, &hy_new, &hz_new,
-            &eps_tensor, &sigma_tensor, dt as f32, dx as f32, dy as f32, dz as f32
+            &ex_tensor,
+            &ey_tensor,
+            &ez_tensor,
+            &hx_new,
+            &hy_new,
+            &hz_new,
+            &eps_tensor,
+            &sigma_tensor,
+            dt as f32,
+            dx as f32,
+            dy as f32,
+            dz as f32,
         );
 
         // Convert back to arrays
@@ -304,10 +283,17 @@ impl<B: Backend> BurnGpuAccelerator<B> {
     /// Update magnetic field (H) from electric field (E)
     fn update_magnetic_field(
         &self,
-        hx: &Tensor<B, 3>, hy: &Tensor<B, 3>, hz: &Tensor<B, 3>,
-        ex: &Tensor<B, 3>, ey: &Tensor<B, 3>, ez: &Tensor<B, 3>,
+        hx: &Tensor<B, 3>,
+        hy: &Tensor<B, 3>,
+        hz: &Tensor<B, 3>,
+        ex: &Tensor<B, 3>,
+        ey: &Tensor<B, 3>,
+        ez: &Tensor<B, 3>,
         mu: &Tensor<B, 3>,
-        dt: f32, dx: f32, dy: f32, dz: f32,
+        dt: f32,
+        dx: f32,
+        dy: f32,
+        dz: f32,
     ) -> (Tensor<B, 3>, Tensor<B, 3>, Tensor<B, 3>) {
         // Maxwell's equations: ∂H/∂t = -∇×E / μ
         // Using Yee's algorithm
@@ -328,7 +314,7 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         let curl_z = dey_dx - dex_dy;
 
         // Update H: H^{n+1} = H^n - (dt/μ) * ∇×E
-        let dt_mu = Tensor::from_data([dt], &self.device) / mu.clone();
+        let dt_mu = mu.clone().recip().mul_scalar(dt);
         let hx_new = hx.clone() - dt_mu.clone() * curl_x;
         let hy_new = hy.clone() - dt_mu.clone() * curl_y;
         let hz_new = hz.clone() - dt_mu * curl_z;
@@ -339,10 +325,18 @@ impl<B: Backend> BurnGpuAccelerator<B> {
     /// Update electric field (E) from magnetic field (H)
     fn update_electric_field(
         &self,
-        ex: &Tensor<B, 3>, ey: &Tensor<B, 3>, ez: &Tensor<B, 3>,
-        hx: &Tensor<B, 3>, hy: &Tensor<B, 3>, hz: &Tensor<B, 3>,
-        eps: &Tensor<B, 3>, sigma: &Tensor<B, 3>,
-        dt: f32, dx: f32, dy: f32, dz: f32,
+        ex: &Tensor<B, 3>,
+        ey: &Tensor<B, 3>,
+        ez: &Tensor<B, 3>,
+        hx: &Tensor<B, 3>,
+        hy: &Tensor<B, 3>,
+        hz: &Tensor<B, 3>,
+        eps: &Tensor<B, 3>,
+        sigma: &Tensor<B, 3>,
+        dt: f32,
+        dx: f32,
+        dy: f32,
+        dz: f32,
     ) -> (Tensor<B, 3>, Tensor<B, 3>, Tensor<B, 3>) {
         // Maxwell's equations: ∂E/∂t = (∇×H - σE) / ε
         // Using Yee's algorithm
@@ -363,11 +357,13 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         let curl_z = dhy_dx - dhx_dy;
 
         // Update E: E^{n+1} = E^n + (dt/ε) * (∇×H - σE)
-        let dt_eps = Tensor::from_data([dt], &self.device) / eps.clone();
-        let conductivity_term = sigma.clone() * Tensor::from_data([dt], &self.device);
+        let dt_eps = eps.clone().recip().mul_scalar(dt);
+        let conductivity_term = sigma.clone().mul_scalar(dt);
 
-        let ex_new = ex.clone() + dt_eps.clone() * (curl_x - conductivity_term.clone() * ex.clone());
-        let ey_new = ey.clone() + dt_eps.clone() * (curl_y - conductivity_term.clone() * ey.clone());
+        let ex_new =
+            ex.clone() + dt_eps.clone() * (curl_x - conductivity_term.clone() * ex.clone());
+        let ey_new =
+            ey.clone() + dt_eps.clone() * (curl_y - conductivity_term.clone() * ey.clone());
         let ez_new = ez.clone() + dt_eps * (curl_z - conductivity_term * ez.clone());
 
         (ex_new, ey_new, ez_new)
@@ -378,7 +374,8 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         &self,
         u: &Tensor<B, 4>, // [batch, x, y, t]
         physics_params: &PhysicsParameters,
-    ) -> Tensor<B, 3> { // [batch, x, y]
+    ) -> Tensor<B, 3> {
+        // [batch, x, y]
         match physics_params.equation_type {
             EquationType::Wave => self.compute_wave_equation_residual(u, physics_params),
             EquationType::Heat => self.compute_heat_equation_residual(u, physics_params),
@@ -400,18 +397,32 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         let shape = u.shape();
 
         // ∂²u/∂t² using central differences
-        let u_t_plus = u.clone().slice([0..shape[0], 0..shape[1], 0..shape[2], 2..shape[3]]);
-        let u_t_minus = u.clone().slice([0..shape[0], 0..shape[1], 0..shape[2], 0..shape[3]-2]);
-        let u_center = u.clone().slice([0..shape[0], 0..shape[1], 0..shape[2], 1..shape[3]-1]);
+        let u_t_plus = u
+            .clone()
+            .slice([0..shape[0], 0..shape[1], 0..shape[2], 2..shape[3]]);
+        let u_t_minus = u
+            .clone()
+            .slice([0..shape[0], 0..shape[1], 0..shape[2], 0..shape[3] - 2]);
+        let u_center = u
+            .clone()
+            .slice([0..shape[0], 0..shape[1], 0..shape[2], 1..shape[3] - 1]);
 
-        let d2u_dt2 = (u_t_plus - u_center.clone() * Tensor::from_data([2.0], &self.device) + u_t_minus)
-            / Tensor::from_data([params.dt.powf(2.0)], &self.device);
+        let d2u_dt2 = u_t_plus
+            .sub(u_center.clone().mul_scalar(2.0))
+            .add(u_t_minus)
+            .div_scalar((params.dt as f32) * (params.dt as f32));
 
         // ∇²u = ∂²u/∂x² + ∂²u/∂y²
         let laplacian = self.compute_laplacian_2d(&u_center, params.dx, params.dy);
 
         // Residual: ∂²u/∂t² - c²∇²u
-        d2u_dt2 - laplacian * Tensor::from_data([c * c], &self.device)
+        let residual = d2u_dt2 - laplacian.mul_scalar(c * c);
+
+        // Return 3D tensor by squeezing batch dimension if it's 1,
+        // or just taking the first simulation in the batch for now
+        // to match the Tensor<B, 3> return type.
+        // In a production multi-simulation setup, we would return Tensor<B, 4>.
+        residual.slice([0..1]).squeeze()
     }
 
     /// Compute Laplacian in 2D
@@ -428,33 +439,49 @@ impl<B: Backend> BurnGpuAccelerator<B> {
     /// Compute second derivative in x-direction
     fn compute_second_derivative_x(&self, field: &Tensor<B, 4>, dx: f32) -> Tensor<B, 4> {
         // f''(x) ≈ (f[i+1] - 2f[i] + f[i-1]) / dx²
-        let shifted_right = field.clone().roll([0, 1, 0, 0], 1);
-        let shifted_left = field.clone().roll([0, -1, 0, 0], 1);
+        let shifted_right = field.clone().roll(&[1], &[1]);
+        let shifted_left = field.clone().roll(&[-1], &[1]);
 
-        (shifted_right + shifted_left - field.clone() * Tensor::from_data([2.0], &self.device))
-            / Tensor::from_data([dx * dx], &self.device)
+        shifted_right
+            .add(shifted_left)
+            .sub(field.clone().mul_scalar(2.0))
+            .div_scalar(dx * dx)
     }
 
     /// Compute second derivative in y-direction
     fn compute_second_derivative_y(&self, field: &Tensor<B, 4>, dy: f32) -> Tensor<B, 4> {
         // f''(y) ≈ (f[j+1] - 2f[j] + f[j-1]) / dy²
-        let shifted_up = field.clone().roll([0, 0, 1, 0], 2);
-        let shifted_down = field.clone().roll([0, 0, -1, 0], 2);
+        let shifted_up = field.clone().roll(&[1], &[2]);
+        let shifted_down = field.clone().roll(&[-1], &[2]);
 
-        (shifted_up + shifted_down - field.clone() * Tensor::from_data([2.0], &self.device))
-            / Tensor::from_data([dy * dy], &self.device)
+        shifted_up
+            .add(shifted_down)
+            .sub(field.clone().mul_scalar(2.0))
+            .div_scalar(dy * dy)
     }
 
     /// Stub implementations for other PDEs (can be implemented as needed)
-    fn compute_heat_equation_residual(&self, _u: &Tensor<B, 4>, _params: &PhysicsParameters) -> Tensor<B, 3> {
+    fn compute_heat_equation_residual(
+        &self,
+        _u: &Tensor<B, 4>,
+        _params: &PhysicsParameters,
+    ) -> Tensor<B, 3> {
         Tensor::zeros([1, 1, 1], &self.device)
     }
 
-    fn compute_diffusion_residual(&self, _u: &Tensor<B, 4>, _params: &PhysicsParameters) -> Tensor<B, 3> {
+    fn compute_diffusion_residual(
+        &self,
+        _u: &Tensor<B, 4>,
+        _params: &PhysicsParameters,
+    ) -> Tensor<B, 3> {
         Tensor::zeros([1, 1, 1], &self.device)
     }
 
-    fn compute_navier_stokes_residual(&self, _u: &Tensor<B, 4>, _params: &PhysicsParameters) -> Tensor<B, 3> {
+    fn compute_navier_stokes_residual(
+        &self,
+        _u: &Tensor<B, 4>,
+        _params: &PhysicsParameters,
+    ) -> Tensor<B, 3> {
         Tensor::zeros([1, 1, 1], &self.device)
     }
 }
@@ -492,7 +519,3 @@ impl Default for GpuConfig {
         }
     }
 }
-
-
-
-

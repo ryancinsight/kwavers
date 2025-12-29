@@ -32,8 +32,7 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::{Array3, Array4, Axis};
-use std::f64::consts::PI;
+use ndarray::Array3;
 
 /// Configuration for elastic wave solver
 #[derive(Debug, Clone)]
@@ -53,7 +52,7 @@ pub struct ElasticWaveConfig {
 impl Default for ElasticWaveConfig {
     fn default() -> Self {
         Self {
-            dt: None, // Auto-calculate
+            dt: None,               // Auto-calculate
             simulation_time: 10e-3, // 10 ms
             cfl_factor: 0.3,
             pml_thickness: 10,
@@ -168,11 +167,12 @@ pub struct WaveFrontTracker {
 }
 
 /// Elastic wave equation solver
+#[derive(Debug)]
 pub struct ElasticWaveSolver {
     /// Computational grid
     grid: Grid,
     /// Medium properties
-    medium: Box<dyn Medium>,
+    _medium: Box<dyn Medium>,
     /// Configuration
     config: ElasticWaveConfig,
     /// Volumetric configuration
@@ -198,7 +198,7 @@ impl ElasticWaveSolver {
         medium: &M,
         config: ElasticWaveConfig,
     ) -> KwaversResult<Self> {
-        let (nx, ny, nz) = grid.dimensions();
+        let (_nx, _ny, _nz) = grid.dimensions();
 
         // Initialize material properties using Medium trait elastic properties
         let lambda = medium.lame_lambda_array().to_owned();
@@ -221,7 +221,7 @@ impl ElasticWaveSolver {
 
         Ok(Self {
             grid: grid.clone(),
-            medium: Box::new(medium.clone()),
+            _medium: Box::new(medium.clone()),
             config,
             volumetric_config: VolumetricWaveConfig::default(),
             lambda,
@@ -369,17 +369,17 @@ impl ElasticWaveSolver {
                 for i in 1..nx - 1 {
                     // Stress derivatives using second-order central differences
                     // Reference: Fornberg (1988), Generation of finite difference formulas
-                    let d_sigma_xx_dx = self.stress_xx_derivative(i, j, k, &field);
-                    let d_sigma_xy_dy = self.stress_xy_derivative(i, j, k, &field);
-                    let d_sigma_xz_dz = self.stress_xz_derivative(i, j, k, &field);
+                    let d_sigma_xx_dx = self.stress_xx_derivative(i, j, k, field);
+                    let d_sigma_xy_dy = self.stress_xy_derivative(i, j, k, field);
+                    let d_sigma_xz_dz = self.stress_xz_derivative(i, j, k, field);
 
-                    let d_sigma_yx_dx = self.stress_yx_derivative(i, j, k, &field);
-                    let d_sigma_yy_dy = self.stress_yy_derivative(i, j, k, &field);
-                    let d_sigma_yz_dz = self.stress_yz_derivative(i, j, k, &field);
+                    let d_sigma_yx_dx = self.stress_yx_derivative(i, j, k, field);
+                    let d_sigma_yy_dy = self.stress_yy_derivative(i, j, k, field);
+                    let d_sigma_yz_dz = self.stress_yz_derivative(i, j, k, field);
 
-                    let d_sigma_zx_dx = self.stress_zx_derivative(i, j, k, &field);
-                    let d_sigma_zy_dy = self.stress_zy_derivative(i, j, k, &field);
-                    let d_sigma_zz_dz = self.stress_zz_derivative(i, j, k, &field);
+                    let d_sigma_zx_dx = self.stress_zx_derivative(i, j, k, field);
+                    let d_sigma_zy_dy = self.stress_zy_derivative(i, j, k, field);
+                    let d_sigma_zz_dz = self.stress_zz_derivative(i, j, k, field);
 
                     // Acceleration = (1/ρ) * ∇·σ
                     let rho = self.density[[i, j, k]];
@@ -428,8 +428,8 @@ impl ElasticWaveSolver {
             return 0.0; // Boundary - no derivative
         }
 
-        let lambda = self.lambda[[i, j, k]];
-        let mu = self.mu[[i, j, k]];
+        let _lambda = self.lambda[[i, j, k]];
+        let _mu = self.mu[[i, j, k]];
 
         // σ_xx = (λ+2μ)∂u_x/∂x + λ(∂u_y/∂y + ∂u_z/∂z)
         let du_x_dx = (field.ux[[i + 1, j, k]] - field.ux[[i - 1, j, k]]) / (2.0 * self.grid.dx);
@@ -443,9 +443,6 @@ impl ElasticWaveSolver {
         } else {
             0.0
         };
-
-        // Compute σ_xx at (i,j,k)
-        let sigma_xx = (lambda + 2.0 * mu) * du_x_dx + lambda * (du_y_dy + du_z_dz);
 
         // Compute σ_xx at (i+1,j,k) and (i-1,j,k) for derivative
         let lambda_ip1 = self.lambda[[i + 1, j, k]];
@@ -465,7 +462,8 @@ impl ElasticWaveSolver {
         } else {
             du_z_dz
         };
-        let sigma_xx_ip1 = (lambda_ip1 + 2.0 * mu_ip1) * du_x_dx_ip1 + lambda_ip1 * (du_y_dy_ip1 + du_z_dz_ip1);
+        let sigma_xx_ip1 =
+            (lambda_ip1 + 2.0 * mu_ip1) * du_x_dx_ip1 + lambda_ip1 * (du_y_dy_ip1 + du_z_dz_ip1);
 
         let lambda_im1 = self.lambda[[i - 1, j, k]];
         let mu_im1 = self.mu[[i - 1, j, k]];
@@ -484,7 +482,8 @@ impl ElasticWaveSolver {
         } else {
             du_z_dz
         };
-        let sigma_xx_im1 = (lambda_im1 + 2.0 * mu_im1) * du_x_dx_im1 + lambda_im1 * (du_y_dy_im1 + du_z_dz_im1);
+        let sigma_xx_im1 =
+            (lambda_im1 + 2.0 * mu_im1) * du_x_dx_im1 + lambda_im1 * (du_y_dy_im1 + du_z_dz_im1);
 
         (sigma_xx_ip1 - sigma_xx_im1) / (2.0 * self.grid.dx)
     }
@@ -495,7 +494,7 @@ impl ElasticWaveSolver {
             return 0.0; // Boundary - no derivative
         }
 
-        let mu = self.mu[[i, j, k]];
+        let _mu = self.mu[[i, j, k]];
 
         // σ_xy = μ(∂u_x/∂y + ∂u_y/∂x)
         let du_x_dy = (field.ux[[i, j + 1, k]] - field.ux[[i, j - 1, k]]) / (2.0 * self.grid.dy);
@@ -504,8 +503,6 @@ impl ElasticWaveSolver {
         } else {
             0.0
         };
-
-        let sigma_xy = mu * (du_x_dy + du_y_dx);
 
         // Compute σ_xy at (i,j+1,k) and (i,j-1,k) for derivative
         let mu_jp1 = self.mu[[i, j + 1, k]];
@@ -543,7 +540,7 @@ impl ElasticWaveSolver {
             return 0.0; // Boundary - no derivative
         }
 
-        let mu = self.mu[[i, j, k]];
+        let _mu = self.mu[[i, j, k]];
 
         // σ_xz = μ(∂u_x/∂z + ∂u_z/∂x)
         let du_x_dz = (field.ux[[i, j, k + 1]] - field.ux[[i, j, k - 1]]) / (2.0 * self.grid.dz);
@@ -552,8 +549,6 @@ impl ElasticWaveSolver {
         } else {
             0.0
         };
-
-        let sigma_xz = mu * (du_x_dz + du_z_dx);
 
         // Compute σ_xz at (i,j,k+1) and (i,j,k-1) for derivative
         let mu_kp1 = self.mu[[i, j, k + 1]];
@@ -591,7 +586,7 @@ impl ElasticWaveSolver {
             return 0.0; // Boundary - no derivative
         }
 
-        let mu = self.mu[[i, j, k]];
+        let _mu = self.mu[[i, j, k]];
 
         // σ_yx = μ(∂u_y/∂x + ∂u_x/∂y) = σ_xy
         let du_y_dx = (field.uy[[i + 1, j, k]] - field.uy[[i - 1, j, k]]) / (2.0 * self.grid.dx);
@@ -600,8 +595,6 @@ impl ElasticWaveSolver {
         } else {
             0.0
         };
-
-        let sigma_yx = mu * (du_y_dx + du_x_dy);
 
         // Compute σ_yx at (i+1,j,k) and (i-1,j,k) for derivative
         let mu_ip1 = self.mu[[i + 1, j, k]];
@@ -638,8 +631,8 @@ impl ElasticWaveSolver {
             return 0.0;
         }
 
-        let lambda = self.lambda[[i, j, k]];
-        let mu = self.mu[[i, j, k]];
+        let _lambda = self.lambda[[i, j, k]];
+        let _mu = self.mu[[i, j, k]];
 
         let du_y_dy = (field.uy[[i, j + 1, k]] - field.uy[[i, j - 1, k]]) / (2.0 * self.grid.dy);
         let du_x_dx = if i > 0 && i < self.grid.nx - 1 {
@@ -652,8 +645,6 @@ impl ElasticWaveSolver {
         } else {
             0.0
         };
-
-        let sigma_yy = (lambda + 2.0 * mu) * du_y_dy + lambda * (du_x_dx + du_z_dz);
 
         let lambda_jp1 = self.lambda[[i, j + 1, k]];
         let mu_jp1 = self.mu[[i, j + 1, k]];
@@ -672,7 +663,8 @@ impl ElasticWaveSolver {
         } else {
             du_z_dz
         };
-        let sigma_yy_jp1 = (lambda_jp1 + 2.0 * mu_jp1) * du_y_dy_jp1 + lambda_jp1 * (du_x_dx_jp1 + du_z_dz_jp1);
+        let sigma_yy_jp1 =
+            (lambda_jp1 + 2.0 * mu_jp1) * du_y_dy_jp1 + lambda_jp1 * (du_x_dx_jp1 + du_z_dz_jp1);
 
         let lambda_jm1 = self.lambda[[i, j - 1, k]];
         let mu_jm1 = self.mu[[i, j - 1, k]];
@@ -691,7 +683,8 @@ impl ElasticWaveSolver {
         } else {
             du_z_dz
         };
-        let sigma_yy_jm1 = (lambda_jm1 + 2.0 * mu_jm1) * du_y_dy_jm1 + lambda_jm1 * (du_x_dx_jm1 + du_z_dz_jm1);
+        let sigma_yy_jm1 =
+            (lambda_jm1 + 2.0 * mu_jm1) * du_y_dy_jm1 + lambda_jm1 * (du_x_dx_jm1 + du_z_dz_jm1);
 
         (sigma_yy_jp1 - sigma_yy_jm1) / (2.0 * self.grid.dy)
     }
@@ -701,7 +694,7 @@ impl ElasticWaveSolver {
             return 0.0;
         }
 
-        let mu = self.mu[[i, j, k]];
+        let _mu = self.mu[[i, j, k]];
 
         let du_y_dz = (field.uy[[i, j, k + 1]] - field.uy[[i, j, k - 1]]) / (2.0 * self.grid.dz);
         let du_z_dy = if j > 0 && j < self.grid.ny - 1 {
@@ -709,8 +702,6 @@ impl ElasticWaveSolver {
         } else {
             0.0
         };
-        let sigma_yz = mu * (du_y_dz + du_z_dy);
-
         let mu_kp1 = self.mu[[i, j, k + 1]];
         let du_y_dz_kp1 = if k < self.grid.nz - 2 {
             (field.uy[[i, j, k + 2]] - field.uy[[i, j, k]]) / (2.0 * self.grid.dz)
@@ -745,7 +736,7 @@ impl ElasticWaveSolver {
             return 0.0;
         }
 
-        let mu = self.mu[[i, j, k]];
+        let _mu = self.mu[[i, j, k]];
 
         let du_z_dx = (field.uz[[i + 1, j, k]] - field.uz[[i - 1, j, k]]) / (2.0 * self.grid.dx);
         let du_x_dz = if k > 0 && k < self.grid.nz - 1 {
@@ -753,8 +744,6 @@ impl ElasticWaveSolver {
         } else {
             0.0
         };
-        let sigma_zx = mu * (du_z_dx + du_x_dz);
-
         let mu_ip1 = self.mu[[i + 1, j, k]];
         let du_z_dx_ip1 = if i < self.grid.nx - 2 {
             (field.uz[[i + 2, j, k]] - field.uz[[i, j, k]]) / (2.0 * self.grid.dx)
@@ -789,7 +778,7 @@ impl ElasticWaveSolver {
             return 0.0;
         }
 
-        let mu = self.mu[[i, j, k]];
+        let _mu = self.mu[[i, j, k]];
 
         let du_z_dy = (field.uz[[i, j + 1, k]] - field.uz[[i, j - 1, k]]) / (2.0 * self.grid.dy);
         let du_y_dz = if k > 0 && k < self.grid.nz - 1 {
@@ -797,8 +786,6 @@ impl ElasticWaveSolver {
         } else {
             0.0
         };
-        let sigma_zy = mu * (du_z_dy + du_y_dz);
-
         let mu_jp1 = self.mu[[i, j + 1, k]];
         let du_z_dy_jp1 = if j < self.grid.ny - 2 {
             (field.uz[[i, j + 2, k]] - field.uz[[i, j, k]]) / (2.0 * self.grid.dy)
@@ -833,8 +820,8 @@ impl ElasticWaveSolver {
             return 0.0;
         }
 
-        let lambda = self.lambda[[i, j, k]];
-        let mu = self.mu[[i, j, k]];
+        let _lambda = self.lambda[[i, j, k]];
+        let _mu = self.mu[[i, j, k]];
 
         let du_z_dz = (field.uz[[i, j, k + 1]] - field.uz[[i, j, k - 1]]) / (2.0 * self.grid.dz);
         let du_x_dx = if i > 0 && i < self.grid.nx - 1 {
@@ -847,8 +834,6 @@ impl ElasticWaveSolver {
         } else {
             0.0
         };
-
-        let sigma_zz = (lambda + 2.0 * mu) * du_z_dz + lambda * (du_x_dx + du_y_dy);
 
         let lambda_kp1 = self.lambda[[i, j, k + 1]];
         let mu_kp1 = self.mu[[i, j, k + 1]];
@@ -867,7 +852,8 @@ impl ElasticWaveSolver {
         } else {
             du_y_dy
         };
-        let sigma_zz_kp1 = (lambda_kp1 + 2.0 * mu_kp1) * du_z_dz_kp1 + lambda_kp1 * (du_x_dx_kp1 + du_y_dy_kp1);
+        let sigma_zz_kp1 =
+            (lambda_kp1 + 2.0 * mu_kp1) * du_z_dz_kp1 + lambda_kp1 * (du_x_dx_kp1 + du_y_dy_kp1);
 
         let lambda_km1 = self.lambda[[i, j, k - 1]];
         let mu_km1 = self.mu[[i, j, k - 1]];
@@ -886,7 +872,8 @@ impl ElasticWaveSolver {
         } else {
             du_y_dy
         };
-        let sigma_zz_km1 = (lambda_km1 + 2.0 * mu_km1) * du_z_dz_km1 + lambda_km1 * (du_x_dx_km1 + du_y_dy_km1);
+        let sigma_zz_km1 =
+            (lambda_km1 + 2.0 * mu_km1) * du_z_dz_km1 + lambda_km1 * (du_x_dx_km1 + du_y_dy_km1);
 
         (sigma_zz_kp1 - sigma_zz_km1) / (2.0 * self.grid.dz)
     }
@@ -983,7 +970,9 @@ impl ElasticWaveSolver {
 
         println!(
             "Volumetric elastic wave propagation: {} steps, {} sources, dt = {:.2e} s",
-            n_steps, initial_displacements.len(), dt
+            n_steps,
+            initial_displacements.len(),
+            dt
         );
 
         // Initialize wave field
@@ -1058,7 +1047,7 @@ impl ElasticWaveSolver {
     }
 
     /// Single time step with volumetric corrections
-    fn volumetric_time_step(&self, field: &mut ElasticWaveField, dt: f64, time: f64) {
+    fn volumetric_time_step(&self, field: &mut ElasticWaveField, dt: f64, _time: f64) {
         let (nx, ny, nz) = self.grid.dimensions();
 
         // Create temporary arrays for updated velocities
@@ -1071,20 +1060,20 @@ impl ElasticWaveSolver {
             for j in 1..ny - 1 {
                 for i in 1..nx - 1 {
                     // Compute stress derivatives
-                    let d_sigma_xx_dx = self.stress_xx_derivative(i, j, k, &field);
-                    let d_sigma_xy_dy = self.stress_xy_derivative(i, j, k, &field);
-                    let d_sigma_xz_dz = self.stress_xz_derivative(i, j, k, &field);
+                    let d_sigma_xx_dx = self.stress_xx_derivative(i, j, k, field);
+                    let d_sigma_xy_dy = self.stress_xy_derivative(i, j, k, field);
+                    let d_sigma_xz_dz = self.stress_xz_derivative(i, j, k, field);
 
-                    let d_sigma_yx_dx = self.stress_yx_derivative(i, j, k, &field);
-                    let d_sigma_yy_dy = self.stress_yy_derivative(i, j, k, &field);
-                    let d_sigma_yz_dz = self.stress_yz_derivative(i, j, k, &field);
+                    let d_sigma_yx_dx = self.stress_yx_derivative(i, j, k, field);
+                    let d_sigma_yy_dy = self.stress_yy_derivative(i, j, k, field);
+                    let d_sigma_yz_dz = self.stress_yz_derivative(i, j, k, field);
 
-                    let d_sigma_zx_dx = self.stress_zx_derivative(i, j, k, &field);
-                    let d_sigma_zy_dy = self.stress_zy_derivative(i, j, k, &field);
-                    let d_sigma_zz_dz = self.stress_zz_derivative(i, j, k, &field);
+                    let d_sigma_zx_dx = self.stress_zx_derivative(i, j, k, field);
+                    let d_sigma_zy_dy = self.stress_zy_derivative(i, j, k, field);
+                    let d_sigma_zz_dz = self.stress_zz_derivative(i, j, k, field);
 
                     // Acceleration = (1/ρ) * ∇·σ
-                    let mut rho = self.density[[i, j, k]];
+                    let rho = self.density[[i, j, k]];
 
                     let mut ax = (d_sigma_xx_dx + d_sigma_xy_dy + d_sigma_xz_dz) / rho;
                     let mut ay = (d_sigma_yx_dx + d_sigma_yy_dy + d_sigma_yz_dz) / rho;
@@ -1114,7 +1103,14 @@ impl ElasticWaveSolver {
 
                     // Apply volumetric boundary conditions
                     if self.volumetric_config.volumetric_boundaries {
-                        self.apply_volumetric_boundaries(&mut vx_new, &mut vy_new, &mut vz_new, i, j, k);
+                        self.apply_volumetric_boundaries(
+                            &mut vx_new,
+                            &mut vy_new,
+                            &mut vz_new,
+                            i,
+                            j,
+                            k,
+                        );
                     }
 
                     // Apply damping (PML)
@@ -1211,7 +1207,8 @@ impl ElasticWaveSolver {
                     let displacement = field.displacement_magnitude()[[i, j, k]];
 
                     // Update arrival time if this is the first time threshold is exceeded
-                    if displacement > threshold && tracker.arrival_times[[i, j, k]] == f64::INFINITY {
+                    if displacement > threshold && tracker.arrival_times[[i, j, k]] == f64::INFINITY
+                    {
                         tracker.arrival_times[[i, j, k]] = time;
                         tracker.amplitudes[[i, j, k]] = displacement;
 
@@ -1232,13 +1229,15 @@ impl ElasticWaveSolver {
 
                         // Quality metric based on signal consistency
                         let expected_speed = (self.mu[[i, j, k]] / self.density[[i, j, k]]).sqrt();
-                        let distance = ((i as f64 * self.grid.dx).powi(2) +
-                                      (j as f64 * self.grid.dy).powi(2) +
-                                      (k as f64 * self.grid.dz).powi(2)).sqrt();
+                        let distance = ((i as f64 * self.grid.dx).powi(2)
+                            + (j as f64 * self.grid.dy).powi(2)
+                            + (k as f64 * self.grid.dz).powi(2))
+                        .sqrt();
                         let expected_time = distance / expected_speed;
 
                         let time_error = (time - expected_time).abs();
-                        tracker.tracking_quality[[i, j, k]] = (-time_error / 1e-6).exp(); // Quality based on timing accuracy
+                        tracker.tracking_quality[[i, j, k]] = (-time_error / 1e-6).exp();
+                        // Quality based on timing accuracy
                     }
                 }
             }
@@ -1261,11 +1260,13 @@ impl ElasticWaveSolver {
     }
 
     /// Calculate volumetric wave propagation quality metrics
-    pub fn calculate_volumetric_quality(&self, tracker: &WaveFrontTracker) -> VolumetricQualityMetrics {
+    pub fn calculate_volumetric_quality(
+        &self,
+        tracker: &WaveFrontTracker,
+    ) -> VolumetricQualityMetrics {
         let mut valid_points = 0;
         let mut total_quality = 0.0;
         let mut max_interference: f64 = 0.0;
-        let mut coverage = 0.0;
 
         let total_points = tracker.tracking_quality.len() as f64;
 
@@ -1280,11 +1281,15 @@ impl ElasticWaveSolver {
             max_interference = max_interference.max(interference);
         }
 
-        coverage = valid_points as f64 / total_points;
+        let coverage = valid_points as f64 / total_points;
 
         VolumetricQualityMetrics {
             coverage,
-            average_quality: if valid_points > 0 { total_quality / valid_points as f64 } else { 0.0 },
+            average_quality: if valid_points > 0 {
+                total_quality / valid_points as f64
+            } else {
+                0.0
+            },
             max_interference,
             valid_tracking_points: valid_points,
         }
@@ -1501,12 +1506,21 @@ mod tests {
 
         // Check that attenuation values are reasonable (positive and decreasing with depth)
         let surface_attenuation = attenuation[[8, 8, 0]]; // Near surface
-        let deep_attenuation = attenuation[[8, 8, 15]];   // Deep
+        let deep_attenuation = attenuation[[8, 8, 15]]; // Deep
 
-        assert!(surface_attenuation >= 0.0, "Surface attenuation should be non-negative");
-        assert!(deep_attenuation > 0.0, "Deep attenuation should be positive");
+        assert!(
+            surface_attenuation >= 0.0,
+            "Surface attenuation should be non-negative"
+        );
+        assert!(
+            deep_attenuation > 0.0,
+            "Deep attenuation should be positive"
+        );
         // Attenuation should generally increase with depth (more absorption)
-        assert!(deep_attenuation >= surface_attenuation * 0.5, "Attenuation should not decrease significantly with depth");
+        assert!(
+            deep_attenuation >= surface_attenuation * 0.5,
+            "Attenuation should not decrease significantly with depth"
+        );
     }
 
     #[test]
@@ -1580,7 +1594,9 @@ mod tests {
         }
 
         // Check wave front tracking
-        let valid_arrivals = tracker.arrival_times.iter()
+        let valid_arrivals = tracker
+            .arrival_times
+            .iter()
             .filter(|&&time| !time.is_infinite())
             .count();
         assert!(valid_arrivals > 0, "Should track some wave arrivals");
@@ -1631,17 +1647,25 @@ mod tests {
         let result = solver.propagate_volumetric_waves(&initial_displacements, &push_times);
         assert!(result.is_ok());
 
-        let (history, tracker) = result.unwrap();
+        let (_history, tracker) = result.unwrap();
 
         // Check interference tracking (should detect multiple wave arrivals)
-        let max_interference = tracker.interference_map.iter()
+        let max_interference = tracker
+            .interference_map
+            .iter()
             .cloned()
             .fold(0.0_f64, f64::max);
-        assert!(max_interference >= 1.0, "Should detect wave interference from multiple sources");
+        assert!(
+            max_interference >= 1.0,
+            "Should detect wave interference from multiple sources"
+        );
 
         // Check volumetric quality
         let quality = solver.calculate_volumetric_quality(&tracker);
-        assert!(quality.max_interference >= 1.0, "Should detect interference patterns");
+        assert!(
+            quality.max_interference >= 1.0,
+            "Should detect interference patterns"
+        );
     }
 
     #[test]
@@ -1719,10 +1743,14 @@ mod tests {
 
         // Check that direction was calculated
         let direction = tracker.directions[[4, 4, 4]];
-        let magnitude = (direction[0] * direction[0] +
-                        direction[1] * direction[1] +
-                        direction[2] * direction[2]).sqrt();
-        assert!((magnitude - 1.0).abs() < 1e-10, "Direction should be unit vector");
+        let magnitude = (direction[0] * direction[0]
+            + direction[1] * direction[1]
+            + direction[2] * direction[2])
+            .sqrt();
+        assert!(
+            (magnitude - 1.0).abs() < 1e-10,
+            "Direction should be unit vector"
+        );
     }
 
     #[test]

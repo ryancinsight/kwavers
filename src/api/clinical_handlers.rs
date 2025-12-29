@@ -11,35 +11,37 @@
 //! - **Mobile Optimization**: Battery-aware processing for portable devices
 //! - **Clinical Workflows**: Automated diagnosis and recommendations
 
+use crate::api::auth::AuthenticatedUser;
+use crate::api::{
+    APIError, ClinicalAnalysisRequest, ClinicalAnalysisResponse, DICOMIntegrationRequest,
+    DICOMIntegrationResponse, MobileOptimizationRequest, MobileOptimizationResponse,
+    PaginationParams, UltrasoundDevice,
+};
+use crate::error::KwaversResult;
 use axum::{
     extract::{Json, Path, Query, State},
     http::StatusCode,
     response::Json as JsonResponse,
 };
-use crate::api::{
-    ClinicalAnalysisRequest, ClinicalAnalysisResponse, UltrasoundDevice,
-    DICOMIntegrationRequest, DICOMIntegrationResponse, MobileOptimizationRequest,
-    MobileOptimizationResponse, APIError, PaginationParams,
-};
-use crate::api::auth::AuthenticatedUser;
-use crate::error::KwaversResult;
+use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
-use chrono::{DateTime, Utc};
+use tokio::sync::{Mutex, RwLock};
 
 #[cfg(feature = "pinn")]
 use crate::sensor::beamforming::ai_integration::{
-    AIEnhancedBeamformingProcessor, AIBeamformingConfig, FeatureExtractor,
-    ClinicalDecisionSupport, RealTimeWorkflow
+    AIBeamformingConfig, AIEnhancedBeamformingProcessor, ClinicalDecisionSupport, FeatureExtractor,
+    RealTimeWorkflow,
 };
 
 /// Clinical API application state
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ClinicalAppState {
     /// AI-enhanced beamforming processor
     #[cfg(feature = "pinn")]
-    pub ai_processor: Arc<RwLock<AIEnhancedBeamformingProcessor>>,
+    pub ai_processor: Arc<Mutex<AIEnhancedBeamformingProcessor>>,
+    /// Authentication middleware
+    pub auth_middleware: Arc<crate::api::auth::AuthMiddleware>,
     /// Connected ultrasound devices registry
     pub device_registry: Arc<RwLock<HashMap<String, UltrasoundDevice>>>,
     /// Active clinical sessions
@@ -53,7 +55,7 @@ pub struct ClinicalAppState {
 #[cfg(feature = "pinn")]
 impl ClinicalAppState {
     /// Create new clinical app state
-    pub fn new() -> KwaversResult<Self> {
+    pub fn new(auth_middleware: Arc<crate::api::auth::AuthMiddleware>) -> KwaversResult<Self> {
         // Initialize AI processor with default config
         let config = AIBeamformingConfig::default();
         let sensor_positions = vec![
@@ -63,12 +65,14 @@ impl ClinicalAppState {
             [0.001, 0.001, 0.0],
         ];
 
-        let ai_processor = Arc::new(RwLock::new(
-            AIEnhancedBeamformingProcessor::new(config, sensor_positions)?
-        ));
+        let ai_processor = Arc::new(Mutex::new(AIEnhancedBeamformingProcessor::new(
+            config,
+            sensor_positions,
+        )?));
 
         Ok(Self {
             ai_processor,
+            auth_middleware,
             device_registry: Arc::new(RwLock::new(HashMap::new())),
             active_sessions: Arc::new(RwLock::new(HashMap::new())),
             dicom_service: Arc::new(RwLock::new(DICOMService::new())),
@@ -81,8 +85,9 @@ impl ClinicalAppState {
 impl ClinicalAppState {
     /// Create new clinical app state with fallback clinical functionality
     /// Provides basic clinical workflow support without PINN-based ML features
-    pub fn new() -> KwaversResult<Self> {
+    pub fn new(auth_middleware: Arc<crate::api::auth::AuthMiddleware>) -> KwaversResult<Self> {
         let mut state = Self {
+            auth_middleware,
             device_registry: Arc::new(RwLock::new(HashMap::new())),
             active_sessions: Arc::new(RwLock::new(HashMap::new())),
             dicom_service: Arc::new(RwLock::new(DICOMService::new())),
@@ -101,35 +106,38 @@ impl ClinicalAppState {
         let mut registry = state.device_registry.write().unwrap();
 
         // Register basic ultrasound devices
-        registry.insert("default-ultrasound".to_string(), DeviceInfo {
-            id: "default-ultrasound".to_string(),
-            device_type: DeviceType::Ultrasound,
-            model: "Basic Ultrasound System".to_string(),
-            manufacturer: "KwaverS".to_string(),
-            capabilities: vec![
-                DeviceCapability::Imaging2D,
-                DeviceCapability::Doppler,
-                DeviceCapability::BMode,
-            ],
-            status: DeviceStatus::Available,
-            last_calibration: std::time::SystemTime::now(),
-            firmware_version: "1.0.0".to_string(),
-        });
+        registry.insert(
+            "default-ultrasound".to_string(),
+            DeviceInfo {
+                id: "default-ultrasound".to_string(),
+                device_type: DeviceType::Ultrasound,
+                model: "Basic Ultrasound System".to_string(),
+                manufacturer: "KwaverS".to_string(),
+                capabilities: vec![
+                    DeviceCapability::Imaging2D,
+                    DeviceCapability::Doppler,
+                    DeviceCapability::BMode,
+                ],
+                status: DeviceStatus::Available,
+                last_calibration: std::time::SystemTime::now(),
+                firmware_version: "1.0.0".to_string(),
+            },
+        );
 
         // Register basic therapy device
-        registry.insert("default-therapy".to_string(), DeviceInfo {
-            id: "default-therapy".to_string(),
-            device_type: DeviceType::Therapy,
-            model: "Basic Therapy System".to_string(),
-            manufacturer: "KwaverS".to_string(),
-            capabilities: vec![
-                DeviceCapability::HIFU,
-                DeviceCapability::Lithotripsy,
-            ],
-            status: DeviceStatus::Available,
-            last_calibration: std::time::SystemTime::now(),
-            firmware_version: "1.0.0".to_string(),
-        });
+        registry.insert(
+            "default-therapy".to_string(),
+            DeviceInfo {
+                id: "default-therapy".to_string(),
+                device_type: DeviceType::Therapy,
+                model: "Basic Therapy System".to_string(),
+                manufacturer: "KwaverS".to_string(),
+                capabilities: vec![DeviceCapability::HIFU, DeviceCapability::Lithotripsy],
+                status: DeviceStatus::Available,
+                last_calibration: std::time::SystemTime::now(),
+                firmware_version: "1.0.0".to_string(),
+            },
+        );
 
         Ok(())
     }
@@ -275,7 +283,7 @@ pub async fn register_device(
         "Device registered: {} ({}) by user {}",
         device.device_id,
         device.model,
-        auth.id
+        auth.user_id
     );
 
     Ok(JsonResponse(registered_device))
@@ -351,7 +359,7 @@ pub async fn analyze_clinical(
         return Err((
             StatusCode::BAD_REQUEST,
             JsonResponse(APIError {
-                error: crate::api::APIErrorType::ValidationError,
+                error: crate::api::APIErrorType::InvalidRequest,
                 message: format!("Device '{}' is not registered", request.device_id),
                 details: None,
             }),
@@ -376,21 +384,20 @@ pub async fn analyze_clinical(
 
     // Convert ultrasound frames to RF data for processing
     let mut rf_data = Vec::new();
-    let mut angles = Vec::new();
+    let mut angles: Vec<f32> = Vec::new();
 
     for frame in &request.frames {
         // Decode base64 RF data
-        let rf_bytes = base64::decode(&frame.rf_data)
-            .map_err(|e| {
-                (
-                    StatusCode::BAD_REQUEST,
-                    JsonResponse(APIError {
-                        error: crate::api::APIErrorType::ValidationError,
-                        message: format!("Invalid RF data encoding: {}", e),
-                        details: None,
-                    }),
-                )
-            })?;
+        let rf_bytes = base64::decode(&frame.rf_data).map_err(|e| {
+            (
+                StatusCode::BAD_REQUEST,
+                JsonResponse(APIError {
+                    error: crate::api::APIErrorType::InvalidRequest,
+                    message: format!("Invalid RF data encoding: {}", e),
+                    details: None,
+                }),
+            )
+        })?;
 
         // Convert binary data to f32 array (production would handle endianness and validate format)
         let rf_frame: Vec<f32> = rf_bytes
@@ -399,7 +406,14 @@ pub async fn analyze_clinical(
             .collect();
 
         rf_data.push(rf_frame);
-        angles.push(frame.parameters.steering_angles.get(0).copied().unwrap_or(0.0));
+        angles.push(
+            frame
+                .parameters
+                .steering_angles
+                .get(0)
+                .copied()
+                .unwrap_or(0.0) as f32,
+        );
     }
 
     // Create 4D RF data array [time, channels, frames, spatial]
@@ -421,20 +435,19 @@ pub async fn analyze_clinical(
     }
 
     // Perform AI-enhanced beamforming analysis
-    let ai_processor = state.ai_processor.read().await;
-    let analysis_result = ai_processor.process_ai_enhanced(
-        rf_data_4d.view(),
-        &angles,
-    ).map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            JsonResponse(APIError {
-                error: crate::api::APIErrorType::InternalError,
-                message: format!("AI analysis failed: {}", e),
-                details: None,
-            }),
-        )
-    })?;
+    let mut ai_processor = state.ai_processor.lock().await;
+    let analysis_result = ai_processor
+        .process_ai_enhanced(rf_data_4d.view(), &angles)
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                JsonResponse(APIError {
+                    error: crate::api::APIErrorType::InternalError,
+                    message: format!("AI analysis failed: {}", e),
+                    details: None,
+                }),
+            )
+        })?;
     drop(ai_processor);
 
     // Convert analysis result to clinical response
@@ -469,12 +482,30 @@ pub async fn dicom_integrate(
 
     // Simulate DICOM query/retrieve (in production would connect to PACS)
     let metadata = HashMap::from([
-        ("StudyInstanceUID".to_string(), crate::api::DICOMValue::String(request.study_instance_uid.clone())),
-        ("SeriesInstanceUID".to_string(), crate::api::DICOMValue::String(request.series_instance_uid.clone())),
-        ("SOPInstanceUID".to_string(), crate::api::DICOMValue::String(request.sop_instance_uid.clone())),
-        ("PatientID".to_string(), crate::api::DICOMValue::String("ANON123".to_string())),
-        ("StudyDate".to_string(), crate::api::DICOMValue::String("20241104".to_string())),
-        ("Modality".to_string(), crate::api::DICOMValue::String("US".to_string())),
+        (
+            "StudyInstanceUID".to_string(),
+            crate::api::DICOMValue::String(request.study_instance_uid.clone()),
+        ),
+        (
+            "SeriesInstanceUID".to_string(),
+            crate::api::DICOMValue::String(request.series_instance_uid.clone()),
+        ),
+        (
+            "SOPInstanceUID".to_string(),
+            crate::api::DICOMValue::String(request.sop_instance_uid.clone()),
+        ),
+        (
+            "PatientID".to_string(),
+            crate::api::DICOMValue::String("ANON123".to_string()),
+        ),
+        (
+            "StudyDate".to_string(),
+            crate::api::DICOMValue::String("20241104".to_string()),
+        ),
+        (
+            "Modality".to_string(),
+            crate::api::DICOMValue::String("US".to_string()),
+        ),
     ]);
 
     let study_info = crate::api::DICOMStudyInfo {
@@ -554,11 +585,12 @@ pub async fn optimize_mobile(
     let predicted_frame_rate = recommended_config.frame_rate_hz;
 
     // Estimate power consumption
-    let cpu_usage = if request.network_conditions.connection_type == crate::api::ConnectionType::Cellular5G {
-        60.0
-    } else {
-        40.0
-    };
+    let cpu_usage =
+        if request.network_conditions.connection_type == crate::api::ConnectionType::Cellular5G {
+            60.0
+        } else {
+            40.0
+        };
 
     let battery_drain = if request.power_settings.power_saving_mode {
         5.0
@@ -673,8 +705,9 @@ fn clinical_analysis_from_beamforming_result(
 
     // Generate tissue characterization
     let tissue_characterization = crate::api::TissueCharacterization {
-        tissue_map: HashMap::from([
-            ("liver".to_string(), crate::api::TissueRegion {
+        tissue_map: HashMap::from([(
+            "liver".to_string(),
+            crate::api::TissueRegion {
                 tissue_type: "Liver".to_string(),
                 boundaries: [0.0, 100.0, 0.0, 100.0, 0.0, 50.0],
                 confidence: 0.85,
@@ -683,8 +716,8 @@ fn clinical_analysis_from_beamforming_result(
                     backscatter_coefficient: 1.2,
                     speed_of_sound: 1540.0,
                 },
-            }),
-        ]),
+            },
+        )]),
         composition_percentages: HashMap::from([
             ("Liver".to_string(), 85.0),
             ("Vessels".to_string(), 10.0),
@@ -708,8 +741,11 @@ fn clinical_analysis_from_beamforming_result(
     let recommendations = if findings.is_empty() {
         vec![crate::api::ClinicalRecommendation {
             recommendation_type: crate::api::RecommendationType::NormalFindings,
-            text: "No significant abnormalities detected. Routine follow-up recommended.".to_string(),
-            rationale: "AI analysis shows normal tissue characteristics with no suspicious findings.".to_string(),
+            text: "No significant abnormalities detected. Routine follow-up recommended."
+                .to_string(),
+            rationale:
+                "AI analysis shows normal tissue characteristics with no suspicious findings."
+                    .to_string(),
             urgency: crate::api::UrgencyLevel::Routine,
             supporting_evidence: vec![
                 "Homogeneous tissue appearance".to_string(),
@@ -722,7 +758,10 @@ fn clinical_analysis_from_beamforming_result(
             crate::api::ClinicalRecommendation {
                 recommendation_type: crate::api::RecommendationType::FollowUpImaging,
                 text: "Follow-up imaging recommended to characterize detected lesion.".to_string(),
-                rationale: format!("AI detected {} potential lesion(s) with high confidence.", findings.len()),
+                rationale: format!(
+                    "AI detected {} potential lesion(s) with high confidence.",
+                    findings.len()
+                ),
                 urgency: crate::api::UrgencyLevel::Priority,
                 supporting_evidence: vec![
                     format!("{} lesions detected with confidence > 0.8", findings.len()),
@@ -732,7 +771,8 @@ fn clinical_analysis_from_beamforming_result(
             },
             crate::api::ClinicalRecommendation {
                 recommendation_type: crate::api::RecommendationType::SpecialistReferral,
-                text: "Consider referral to radiology specialist for further evaluation.".to_string(),
+                text: "Consider referral to radiology specialist for further evaluation."
+                    .to_string(),
                 rationale: "Lesion characteristics warrant specialist interpretation.".to_string(),
                 urgency: crate::api::UrgencyLevel::Priority,
                 supporting_evidence: vec![
@@ -762,7 +802,7 @@ fn clinical_analysis_from_beamforming_result(
             beamforming_time_ms: result.performance.beamforming_time_ms as u64,
             feature_extraction_time_ms: result.performance.feature_extraction_time_ms as u64,
             memory_usage_mb: result.performance.memory_usage_mb,
-            gpu_utilization_percent: result.performance.gpu_utilization_percent,
+            gpu_utilization_percent: Some(result.performance.gpu_utilization_percent),
         },
         quality_indicators: crate::api::QualityIndicators {
             image_quality: 0.85,
@@ -777,6 +817,8 @@ fn clinical_analysis_from_beamforming_result(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::{DeviceInfo, DeviceType, DeviceCapability, DeviceStatus};
+    use chrono::Utc;
 
     #[tokio::test]
     async fn test_device_registration() {
@@ -795,7 +837,7 @@ mod tests {
                 DeviceCapability::ColorFlow,
             ],
             status: DeviceStatus::Available,
-            last_calibration: std::time::SystemTime::now(),
+            last_calibration: Utc::now(),
             firmware_version: "2.1.0".to_string(),
         };
 
@@ -848,6 +890,9 @@ mod tests {
         };
 
         assert_eq!(finding.confidence, 0.85);
-        assert!(matches!(finding.finding_type, crate::api::FindingType::Lesion));
+        assert!(matches!(
+            finding.finding_type,
+            crate::api::FindingType::Lesion
+        ));
     }
 }

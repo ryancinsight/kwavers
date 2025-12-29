@@ -118,15 +118,15 @@ impl LocalizationAlgorithmImpl for TDOAAlgorithm {
         match measurements.len() {
             len if len == n_sensors => {
                 let t0 = measurements[0];
-                for i in 1..n_sensors {
-                    let dt = measurements[i] - t0;
+                for (i, &measurement) in measurements.iter().enumerate().skip(1) {
+                    let dt = measurement - t0;
                     processor.add_measurement(super::tdoa::TDOAMeasurement::new(0, i, dt));
                 }
             }
             len if len == n_sensors.saturating_sub(1) => {
-                for i in 1..n_sensors {
-                    let dt = measurements[i - 1];
-                    processor.add_measurement(super::tdoa::TDOAMeasurement::new(0, i, dt));
+                for (i, &measurement) in measurements.iter().enumerate() {
+                    let dt = measurement;
+                    processor.add_measurement(super::tdoa::TDOAMeasurement::new(0, i + 1, dt));
                 }
             }
             _ => {
@@ -266,7 +266,9 @@ mod tests {
         };
 
         let proc = LocalizationProcessor::from_method(LocalizationMethod::TDOA);
-        let result = proc.localize(&array, &toas, &config).expect("TDOA localization failed");
+        let result = proc
+            .localize(&array, &toas, &config)
+            .expect("TDOA localization failed");
 
         let err = result.position.distance_to(&source);
         assert!(err < 0.05, "TDOA position error too large: {err}");
@@ -294,7 +296,9 @@ mod tests {
         };
 
         let proc = LocalizationProcessor::from_method(LocalizationMethod::TOA);
-        let result = proc.localize(&array, &toas, &config).expect("TOA localization failed");
+        let result = proc
+            .localize(&array, &toas, &config)
+            .expect("TOA localization failed");
 
         let err = result.position.distance_to(&source);
         assert!(err < 0.05, "TOA position error too large: {err}");

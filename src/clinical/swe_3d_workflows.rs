@@ -43,8 +43,8 @@ pub struct VolumetricROI {
 impl Default for VolumetricROI {
     fn default() -> Self {
         Self {
-            center: [0.0, 0.0, 0.04], // 4cm depth (typical liver)
-            size: [0.06, 0.06, 0.04], // 6x6x4cm volume
+            center: [0.0, 0.0, 0.04],     // 4cm depth (typical liver)
+            size: [0.06, 0.06, 0.04],     // 6x6x4cm volume
             orientation: [0.0, 0.0, 0.0], // Axial orientation
             quality_threshold: 0.7,
             min_depth: 0.02, // 2cm minimum
@@ -98,21 +98,24 @@ impl VolumetricROI {
         let dy = (point[1] - self.center[1]).abs();
         let dz = (point[2] - self.center[2]).abs();
 
-        dx <= self.size[0] / 2.0 &&
-        dy <= self.size[1] / 2.0 &&
-        dz <= self.size[2] / 2.0 &&
-        point[2] >= self.min_depth &&
-        point[2] <= self.max_depth
+        dx <= self.size[0] / 2.0
+            && dy <= self.size[1] / 2.0
+            && dz <= self.size[2] / 2.0
+            && point[2] >= self.min_depth
+            && point[2] <= self.max_depth
     }
 
     /// Get ROI bounds as grid indices
     pub fn grid_bounds(&self, grid: &Grid) -> ([usize; 3], [usize; 3]) {
-        let min_x = ((self.center[0] - self.size[0]/2.0) / grid.dx).max(0.0) as usize;
-        let max_x = ((self.center[0] + self.size[0]/2.0) / grid.dx).min(grid.nx as f64 - 1.0) as usize;
-        let min_y = ((self.center[1] - self.size[1]/2.0) / grid.dy).max(0.0) as usize;
-        let max_y = ((self.center[1] + self.size[1]/2.0) / grid.dy).min(grid.ny as f64 - 1.0) as usize;
-        let min_z = ((self.center[2] - self.size[2]/2.0) / grid.dz).max(0.0) as usize;
-        let max_z = ((self.center[2] + self.size[2]/2.0) / grid.dz).min(grid.nz as f64 - 1.0) as usize;
+        let min_x = ((self.center[0] - self.size[0] / 2.0) / grid.dx).max(0.0) as usize;
+        let max_x =
+            ((self.center[0] + self.size[0] / 2.0) / grid.dx).min(grid.nx as f64 - 1.0) as usize;
+        let min_y = ((self.center[1] - self.size[1] / 2.0) / grid.dy).max(0.0) as usize;
+        let max_y =
+            ((self.center[1] + self.size[1] / 2.0) / grid.dy).min(grid.ny as f64 - 1.0) as usize;
+        let min_z = ((self.center[2] - self.size[2] / 2.0) / grid.dz).max(0.0) as usize;
+        let max_z =
+            ((self.center[2] + self.size[2] / 2.0) / grid.dz).min(grid.nz as f64 - 1.0) as usize;
 
         ([min_x, min_y, min_z], [max_x, max_y, max_z])
     }
@@ -156,7 +159,10 @@ impl ElasticityMap3D {
             shear_speed: self.shear_speed.index_axis(Axis(2), z_index).to_owned(),
             confidence: self.confidence.index_axis(Axis(2), z_index).to_owned(),
             quality: self.quality.index_axis(Axis(2), z_index).to_owned(),
-            reliability_mask: self.reliability_mask.index_axis(Axis(2), z_index).to_owned(),
+            reliability_mask: self
+                .reliability_mask
+                .index_axis(Axis(2), z_index)
+                .to_owned(),
         }
     }
 
@@ -167,7 +173,10 @@ impl ElasticityMap3D {
             shear_speed: self.shear_speed.index_axis(Axis(0), x_index).to_owned(),
             confidence: self.confidence.index_axis(Axis(0), x_index).to_owned(),
             quality: self.quality.index_axis(Axis(0), x_index).to_owned(),
-            reliability_mask: self.reliability_mask.index_axis(Axis(0), x_index).to_owned(),
+            reliability_mask: self
+                .reliability_mask
+                .index_axis(Axis(0), x_index)
+                .to_owned(),
         }
     }
 
@@ -178,7 +187,10 @@ impl ElasticityMap3D {
             shear_speed: self.shear_speed.index_axis(Axis(1), y_index).to_owned(),
             confidence: self.confidence.index_axis(Axis(1), y_index).to_owned(),
             quality: self.quality.index_axis(Axis(1), y_index).to_owned(),
-            reliability_mask: self.reliability_mask.index_axis(Axis(1), y_index).to_owned(),
+            reliability_mask: self
+                .reliability_mask
+                .index_axis(Axis(1), y_index)
+                .to_owned(),
         }
     }
 
@@ -197,7 +209,9 @@ impl ElasticityMap3D {
         for k in min_z..=max_z {
             for j in min_y..=max_y {
                 for i in min_x..=max_x {
-                    if self.reliability_mask[[i, j, k]] && self.confidence[[i, j, k]] >= roi.quality_threshold {
+                    if self.reliability_mask[[i, j, k]]
+                        && self.confidence[[i, j, k]] >= roi.quality_threshold
+                    {
                         let modulus = self.young_modulus[[i, j, k]];
                         let speed = self.shear_speed[[i, j, k]];
 
@@ -238,7 +252,9 @@ impl ElasticityMap3D {
         for k in min_z..=max_z {
             for j in min_y..=max_y {
                 for i in min_x..=max_x {
-                    if self.reliability_mask[[i, j, k]] && self.confidence[[i, j, k]] >= roi.quality_threshold {
+                    if self.reliability_mask[[i, j, k]]
+                        && self.confidence[[i, j, k]] >= roi.quality_threshold
+                    {
                         let diff = self.young_modulus[[i, j, k]] - mean_modulus;
                         sum_squared_diff += diff * diff;
                     }
@@ -314,7 +330,7 @@ pub struct VolumetricStatistics {
 #[derive(Debug)]
 pub struct ClinicalDecisionSupport {
     /// Reference ranges for different tissues
-    reference_ranges: HashMap<String, TissueReference>,
+    _reference_ranges: HashMap<String, TissueReference>,
     /// Classification thresholds
     classification_thresholds: HashMap<String, Vec<f64>>,
 }
@@ -325,44 +341,59 @@ impl Default for ClinicalDecisionSupport {
         let mut classification_thresholds = HashMap::new();
 
         // Liver reference ranges (kPa)
-        reference_ranges.insert("liver_normal".to_string(), TissueReference {
-            mean_modulus: 5.5,  // kPa
-            std_modulus: 1.2,
-            min_modulus: 3.0,
-            max_modulus: 8.0,
-        });
+        reference_ranges.insert(
+            "liver_normal".to_string(),
+            TissueReference {
+                mean_modulus: 5.5, // kPa
+                std_modulus: 1.2,
+                min_modulus: 3.0,
+                max_modulus: 8.0,
+            },
+        );
 
-        reference_ranges.insert("liver_fibrosis_f4".to_string(), TissueReference {
-            mean_modulus: 15.0, // kPa
-            std_modulus: 3.0,
-            min_modulus: 10.0,
-            max_modulus: 25.0,
-        });
+        reference_ranges.insert(
+            "liver_fibrosis_f4".to_string(),
+            TissueReference {
+                mean_modulus: 15.0, // kPa
+                std_modulus: 3.0,
+                min_modulus: 10.0,
+                max_modulus: 25.0,
+            },
+        );
 
         // Liver fibrosis classification thresholds (kPa)
-        classification_thresholds.insert("liver_metavir".to_string(), vec![
-            6.5,  // F0/F1 vs F2/F3/F4
-            8.5,  // F0/F1/F2 vs F3/F4
-            11.0, // F0/F1/F2/F3 vs F4
-        ]);
+        classification_thresholds.insert(
+            "liver_metavir".to_string(),
+            vec![
+                6.5,  // F0/F1 vs F2/F3/F4
+                8.5,  // F0/F1/F2 vs F3/F4
+                11.0, // F0/F1/F2/F3 vs F4
+            ],
+        );
 
         // Breast reference ranges (kPa)
-        reference_ranges.insert("breast_normal".to_string(), TissueReference {
-            mean_modulus: 18.0,
-            std_modulus: 5.0,
-            min_modulus: 10.0,
-            max_modulus: 30.0,
-        });
+        reference_ranges.insert(
+            "breast_normal".to_string(),
+            TissueReference {
+                mean_modulus: 18.0,
+                std_modulus: 5.0,
+                min_modulus: 10.0,
+                max_modulus: 30.0,
+            },
+        );
 
-        reference_ranges.insert("breast_malignant".to_string(), TissueReference {
-            mean_modulus: 120.0,
-            std_modulus: 40.0,
-            min_modulus: 50.0,
-            max_modulus: 200.0,
-        });
+        reference_ranges.insert(
+            "breast_malignant".to_string(),
+            TissueReference {
+                mean_modulus: 120.0,
+                std_modulus: 40.0,
+                min_modulus: 50.0,
+                max_modulus: 200.0,
+            },
+        );
 
         Self {
-            reference_ranges,
+            _reference_ranges: reference_ranges,
             classification_thresholds,
         }
     }
@@ -385,7 +416,8 @@ impl ClinicalDecisionSupport {
         };
 
         // Confidence based on standard deviation and quality
-        let confidence = if stats.std_modulus / stats.mean_modulus < 0.3 && stats.mean_quality > 0.7 {
+        let confidence = if stats.std_modulus / stats.mean_modulus < 0.3 && stats.mean_quality > 0.7
+        {
             ClassificationConfidence::High
         } else if stats.std_modulus / stats.mean_modulus < 0.5 && stats.mean_quality > 0.5 {
             ClassificationConfidence::Medium
@@ -402,7 +434,10 @@ impl ClinicalDecisionSupport {
     }
 
     /// Classify breast lesion using BI-RADS criteria
-    pub fn classify_breast_lesion(&self, stats: &VolumetricStatistics) -> BreastLesionClassification {
+    pub fn classify_breast_lesion(
+        &self,
+        stats: &VolumetricStatistics,
+    ) -> BreastLesionClassification {
         let mean_kpa = stats.mean_modulus / 1000.0; // Convert to kPa
 
         // Simplified BI-RADS classification based on stiffness
@@ -416,7 +451,8 @@ impl ClinicalDecisionSupport {
             (5, 0.95) // Highly suggestive of malignancy
         };
 
-        let confidence = if stats.std_modulus / stats.mean_modulus < 0.4 && stats.mean_quality > 0.8 {
+        let confidence = if stats.std_modulus / stats.mean_modulus < 0.4 && stats.mean_quality > 0.8
+        {
             ClassificationConfidence::High
         } else if stats.std_modulus / stats.mean_modulus < 0.6 && stats.mean_quality > 0.6 {
             ClassificationConfidence::Medium
@@ -438,40 +474,65 @@ impl ClinicalDecisionSupport {
         let mut report = format!("3D SWE Clinical Report - {}\n", organ.to_uppercase());
         report.push_str(&format!("={}\n\n", "=".repeat(40)));
 
-        report.push_str(&format!("Volumetric Analysis:\n"));
+        report.push_str("Volumetric Analysis:\n");
         report.push_str(&format!("- Valid voxels: {}\n", stats.valid_voxels));
-        report.push_str(&format!("- Volume coverage: {:.1}%\n", stats.volume_coverage * 100.0));
+        report.push_str(&format!(
+            "- Volume coverage: {:.1}%\n",
+            stats.volume_coverage * 100.0
+        ));
         report.push_str(&format!("- Mean quality: {:.2}\n", stats.mean_quality));
-        report.push_str(&format!("- Mean confidence: {:.2}\n\n", stats.mean_confidence));
+        report.push_str(&format!(
+            "- Mean confidence: {:.2}\n\n",
+            stats.mean_confidence
+        ));
 
-        report.push_str(&format!("Elasticity Results:\n"));
-        report.push_str(&format!("- Mean Young's modulus: {:.1} kPa\n", stats.mean_modulus / 1000.0));
-        report.push_str(&format!("- Standard deviation: {:.1} kPa\n", stats.std_modulus / 1000.0));
-        report.push_str(&format!("- Range: {:.1} - {:.1} kPa\n", stats.min_modulus / 1000.0, stats.max_modulus / 1000.0));
-        report.push_str(&format!("- Mean shear speed: {:.1} m/s\n\n", stats.mean_speed));
+        report.push_str("Elasticity Results:\n");
+        report.push_str(&format!(
+            "- Mean Young's modulus: {:.1} kPa\n",
+            stats.mean_modulus / 1000.0
+        ));
+        report.push_str(&format!(
+            "- Standard deviation: {:.1} kPa\n",
+            stats.std_modulus / 1000.0
+        ));
+        report.push_str(&format!(
+            "- Range: {:.1} - {:.1} kPa\n",
+            stats.min_modulus / 1000.0,
+            stats.max_modulus / 1000.0
+        ));
+        report.push_str(&format!(
+            "- Mean shear speed: {:.1} m/s\n\n",
+            stats.mean_speed
+        ));
 
         // Organ-specific classification
         match organ.to_lowercase().as_str() {
             "liver" => {
                 let classification = self.classify_liver_fibrosis(stats);
-                report.push_str(&format!("Liver Fibrosis Assessment (METAVIR):\n"));
+                report.push_str("Liver Fibrosis Assessment (METAVIR):\n");
                 report.push_str(&format!("- Stage: {:?}\n", classification.stage));
                 report.push_str(&format!("- Confidence: {:?}\n", classification.confidence));
-                report.push_str(&format!("- Quality score: {:.2}\n", classification.quality_score));
+                report.push_str(&format!(
+                    "- Quality score: {:.2}\n",
+                    classification.quality_score
+                ));
             }
             "breast" => {
                 let classification = self.classify_breast_lesion(stats);
-                report.push_str(&format!("Breast Lesion Assessment (BI-RADS):\n"));
+                report.push_str("Breast Lesion Assessment (BI-RADS):\n");
                 report.push_str(&format!("- Category: {}\n", classification.birads_category));
-                report.push_str(&format!("- Estimated malignancy: {:.1}%\n", classification.estimated_malignancy_probability * 100.0));
+                report.push_str(&format!(
+                    "- Estimated malignancy: {:.1}%\n",
+                    classification.estimated_malignancy_probability * 100.0
+                ));
                 report.push_str(&format!("- Confidence: {:?}\n", classification.confidence));
             }
             _ => {
-                report.push_str(&format!("General tissue assessment completed.\n"));
+                report.push_str("General tissue assessment completed.\n");
             }
         }
 
-        report.push_str(&format!("\nNote: This is an automated analysis. Clinical correlation required.\n"));
+        report.push_str("\nNote: This is an automated analysis. Clinical correlation required.\n");
         report
     }
 }
@@ -615,18 +676,34 @@ impl MultiPlanarReconstruction {
     }
 
     /// Get slice at specific position and orientation
-    pub fn get_slice(&self, position: f64, orientation: SliceOrientation) -> Option<&ElasticityMap2D> {
+    pub fn get_slice(
+        &self,
+        position: f64,
+        orientation: SliceOrientation,
+    ) -> Option<&ElasticityMap2D> {
         match orientation {
             SliceOrientation::Axial => {
-                let index = self.slice_positions.axial.iter().position(|&p| (p - position).abs() < 1e-6)?;
+                let index = self
+                    .slice_positions
+                    .axial
+                    .iter()
+                    .position(|&p| (p - position).abs() < 1e-6)?;
                 self.axial_slices.get(index)
             }
             SliceOrientation::Sagittal => {
-                let index = self.slice_positions.sagittal.iter().position(|&p| (p - position).abs() < 1e-6)?;
+                let index = self
+                    .slice_positions
+                    .sagittal
+                    .iter()
+                    .position(|&p| (p - position).abs() < 1e-6)?;
                 self.sagittal_slices.get(index)
             }
             SliceOrientation::Coronal => {
-                let index = self.slice_positions.coronal.iter().position(|&p| (p - position).abs() < 1e-6)?;
+                let index = self
+                    .slice_positions
+                    .coronal
+                    .iter()
+                    .position(|&p| (p - position).abs() < 1e-6)?;
                 self.coronal_slices.get(index)
             }
         }
@@ -740,7 +817,7 @@ mod tests {
             for j in 2..8 {
                 for i in 2..8 {
                     map.young_modulus[[i, j, k]] = 5000.0; // 5 kPa
-                    map.shear_speed[[i, j, k]] = 2.0;       // 2 m/s
+                    map.shear_speed[[i, j, k]] = 2.0; // 2 m/s
                     map.confidence[[i, j, k]] = 0.8;
                     map.quality[[i, j, k]] = 0.9;
                     map.reliability_mask[[i, j, k]] = true;

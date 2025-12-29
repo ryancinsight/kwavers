@@ -47,7 +47,9 @@ pub use optimization::{
     PrefetchStrategy, SimdLevel, StencilKernel,
 };
 
-pub use arena::{ArenaConfig, ArenaStats, BumpAllocator, FieldArena, ScopedArena, ThreadLocalArena};
+pub use arena::{
+    ArenaConfig, ArenaStats, BumpAllocator, FieldArena, ScopedArena, ThreadLocalArena,
+};
 pub use safe_vectorization::SafeVectorOps;
 
 pub use profiling::{

@@ -28,8 +28,8 @@
 //! - Schmidt, R.O. (1986): "Multiple emitter location and signal parameter estimation"
 //! - Frost, O.L. (1972): "An algorithm for linearly constrained adaptive array processing"
 
-use ndarray::{Array1, Array2};
 use crate::error::KwaversResult;
+use ndarray::{Array1, Array2};
 
 /// Beamforming algorithm types with literature-based implementations
 #[derive(Debug, Clone)]
@@ -129,7 +129,11 @@ impl MVDRBeamformer {
 
     /// Apply spatial smoothing to covariance matrix for coherent sources
     #[must_use]
-    pub fn apply_spatial_smoothing(&self, covariance: &Array2<f64>, subarray_size: usize) -> Array2<f64> {
+    pub fn apply_spatial_smoothing(
+        &self,
+        covariance: &Array2<f64>,
+        subarray_size: usize,
+    ) -> Array2<f64> {
         if !self.spatial_smoothing || subarray_size >= covariance.nrows() {
             return covariance.clone();
         }
@@ -232,7 +236,7 @@ impl MVDRBeamformer {
                             crate::error::NumericalError::SingularMatrix {
                                 operation: "Cholesky decomposition".to_string(),
                                 condition_number: 0.0, // Would need to compute this properly
-                            }
+                            },
                         ));
                     }
                     l[[j, j]] = diag.sqrt();

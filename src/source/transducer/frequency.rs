@@ -81,7 +81,7 @@ impl FrequencyResponse {
             let electrical_term = Complex64::new(1.0, 2.0 * delta * electrical_q);
 
             // Combined response
-            let response = coupling.powi(2) / (mechanical_term * electrical_term);
+            let response: Complex64 = Complex64::new(coupling.powi(2), 0.0) / (mechanical_term * electrical_term);
 
             magnitude[i] = response.norm();
             phase[i] = response.arg();
@@ -94,7 +94,7 @@ impl FrequencyResponse {
         }
 
         // Normalize magnitude
-        let max_mag = magnitude.iter().fold(0.0_f64, |a, &b| a.max(b));
+        let max_mag = magnitude.iter().fold(0.0_f64, |a: f64, &b| a.max(b));
         if max_mag > 0.0 {
             magnitude /= max_mag;
         }
@@ -230,7 +230,7 @@ impl FrequencyResponse {
         let z = self.impedance[center_idx];
 
         let reflection_coeff = (z - z0) / (z + z0);
-        let transmission = 1.0 - reflection_coeff.norm().powi(2);
+        let transmission: f64 = 1.0 - reflection_coeff.norm().powi(2);
 
         -10.0 * transmission.log10()
     }

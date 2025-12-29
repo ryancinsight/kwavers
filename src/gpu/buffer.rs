@@ -47,13 +47,13 @@ pub struct BufferUsage;
 impl BufferUsage {
     /// Storage buffer usage - can be bound as storage buffer in shaders
     pub const STORAGE: wgpu::BufferUsages = wgpu::BufferUsages::STORAGE;
-    
+
     /// Uniform buffer usage - can be bound as uniform buffer in shaders
     pub const UNIFORM: wgpu::BufferUsages = wgpu::BufferUsages::UNIFORM;
-    
+
     /// Copy source - can be used as source in copy operations
     pub const COPY_SRC: wgpu::BufferUsages = wgpu::BufferUsages::COPY_SRC;
-    
+
     /// Copy destination - can be used as destination in copy operations
     pub const COPY_DST: wgpu::BufferUsages = wgpu::BufferUsages::COPY_DST;
 }
@@ -292,9 +292,10 @@ impl GpuBuffer {
         device.poll(wgpu::Maintain::Wait);
 
         receiver.recv().map_err(|e| {
-            crate::KwaversError::Io(std::io::Error::other(
-                format!("Failed to map buffer: {}", e),
-            ))
+            crate::KwaversError::Io(std::io::Error::other(format!(
+                "Failed to map buffer: {}",
+                e
+            )))
         })??;
 
         let data = buffer_slice.get_mapped_range();

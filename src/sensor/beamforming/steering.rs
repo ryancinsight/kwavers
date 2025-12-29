@@ -5,8 +5,8 @@
 //! **Spherical Wave**: a(r) = exp(j k |r - r₀|) / |r - r₀| for near-field sources
 //! **Focused Beam**: Combines phase delays for beam focusing at specific point
 
-use ndarray::Array1;
 use crate::error::KwaversResult;
+use ndarray::Array1;
 
 /// Steering vector calculation methods
 #[derive(Debug, Clone)]
@@ -91,7 +91,13 @@ impl SteeringVector {
         sensor_positions: &[[f64; 3]],
         speed_of_sound: f64,
     ) -> KwaversResult<Array1<f64>> {
-        let complex_steering = Self::compute(method, direction, frequency, sensor_positions, speed_of_sound)?;
+        let complex_steering = Self::compute(
+            method,
+            direction,
+            frequency,
+            sensor_positions,
+            speed_of_sound,
+        )?;
         Ok(complex_steering.mapv(|c| c.re)) // Take real part for delay-and-sum compatibility
     }
 
@@ -120,7 +126,11 @@ impl SteeringVector {
 
     /// Compute broadside steering vector (perpendicular to array axis)
     #[must_use]
-    pub fn broadside(sensor_positions: &[[f64; 3]], frequency: f64, speed_of_sound: f64) -> Array1<f64> {
+    pub fn broadside(
+        sensor_positions: &[[f64; 3]],
+        frequency: f64,
+        speed_of_sound: f64,
+    ) -> Array1<f64> {
         // Broadside: direction perpendicular to array (typically [0, 0, 1] or [0, 1, 0])
         Self::compute_real(
             &SteeringVectorMethod::PlaneWave,
@@ -128,12 +138,17 @@ impl SteeringVector {
             frequency,
             sensor_positions,
             speed_of_sound,
-        ).unwrap_or_else(|_| Array1::ones(sensor_positions.len()))
+        )
+        .unwrap_or_else(|_| Array1::ones(sensor_positions.len()))
     }
 
     /// Compute endfire steering vector (along array axis)
     #[must_use]
-    pub fn endfire(sensor_positions: &[[f64; 3]], frequency: f64, speed_of_sound: f64) -> Array1<f64> {
+    pub fn endfire(
+        sensor_positions: &[[f64; 3]],
+        frequency: f64,
+        speed_of_sound: f64,
+    ) -> Array1<f64> {
         // Endfire: direction along array axis (typically [1, 0, 0])
         Self::compute_real(
             &SteeringVectorMethod::PlaneWave,
@@ -141,6 +156,7 @@ impl SteeringVector {
             frequency,
             sensor_positions,
             speed_of_sound,
-        ).unwrap_or_else(|_| Array1::ones(sensor_positions.len()))
+        )
+        .unwrap_or_else(|_| Array1::ones(sensor_positions.len()))
     }
 }

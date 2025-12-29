@@ -5,9 +5,8 @@
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use ndarray::{Array3, Array4};
+use ndarray::Array3;
 use num_complex::Complex;
-use std::collections::HashMap;
 
 /// Treatment target volume in brain coordinates
 #[derive(Debug, Clone)]
@@ -92,9 +91,9 @@ pub struct SafetyConstraints {
 impl Default for SafetyConstraints {
     fn default() -> Self {
         Self {
-            max_skull_temp: 42.0,   // °C
-            max_brain_temp: 43.0,   // °C
-            max_mi: 1.9,            // Mechanical index limit
+            max_skull_temp: 42.0,    // °C
+            max_brain_temp: 43.0,    // °C
+            max_mi: 1.9,             // Mechanical index limit
             max_thermal_dose: 240.0, // CEM43 for brain tissue
             min_skull_distance: 5.0, // mm
         }
@@ -102,28 +101,27 @@ impl Default for SafetyConstraints {
 }
 
 /// Treatment planner for tFUS procedures
+#[derive(Debug)]
 pub struct TreatmentPlanner {
     /// Computational grid for brain volume
     brain_grid: Grid,
     /// Skull model from CT data
     skull_model: crate::physics::skull::CTBasedSkullModel,
     /// Aberration correction calculator
-    aberration_corrector: crate::physics::transcranial::aberration_correction::TranscranialAberrationCorrection,
+    _aberration_corrector:
+        crate::physics::transcranial::aberration_correction::TranscranialAberrationCorrection,
 }
 
 impl TreatmentPlanner {
     /// Create new treatment planner
-    pub fn new(
-        brain_grid: &Grid,
-        skull_ct_data: &Array3<f64>,
-    ) -> KwaversResult<Self> {
+    pub fn new(brain_grid: &Grid, skull_ct_data: &Array3<f64>) -> KwaversResult<Self> {
         let skull_model = crate::physics::skull::CTBasedSkullModel::from_ct_data(skull_ct_data)?;
         let aberration_corrector = crate::physics::transcranial::aberration_correction::TranscranialAberrationCorrection::new(brain_grid)?;
 
         Ok(Self {
             brain_grid: brain_grid.clone(),
             skull_model,
-            aberration_corrector,
+            _aberration_corrector: aberration_corrector,
         })
     }
 
@@ -138,7 +136,7 @@ impl TreatmentPlanner {
         println!("Planning for {} target volumes", targets.len());
 
         // Step 1: Analyze skull properties
-        let skull_properties = self.analyze_skull_properties()?;
+        let _skull_properties = self.analyze_skull_properties()?;
 
         // Step 2: Calculate optimal transducer configuration
         let transducer_setup = self.optimize_transducer_setup(targets, transducer_spec)?;
@@ -150,7 +148,11 @@ impl TreatmentPlanner {
         let temperature_field = self.calculate_thermal_response(&acoustic_field)?;
 
         // Step 5: Validate safety constraints
-        self.validate_safety(&temperature_field, &acoustic_field, transducer_spec.frequency)?;
+        self.validate_safety(
+            &temperature_field,
+            &acoustic_field,
+            transducer_spec.frequency,
+        )?;
 
         // Step 6: Estimate treatment time
         let treatment_time = self.estimate_treatment_time(targets, &acoustic_field);
@@ -183,15 +185,18 @@ impl TreatmentPlanner {
 
                     // Empirical relationships from literature
                     // Reference: Pinton et al. (2012)
-                    if hu > 300.0 { // Bone threshold
+                    if hu > 300.0 {
+                        // Bone threshold
                         speed_map[[i, j, k]] = 3000.0 + (hu - 300.0) * 2.0; // m/s
                         density_map[[i, j, k]] = 1800.0 + (hu - 300.0) * 0.5; // kg/m³
                         attenuation_map[[i, j, k]] = 5.0 + (hu - 300.0) * 0.01; // dB/MHz/cm
-                    } else if hu > -200.0 { // Tissue
+                    } else if hu > -200.0 {
+                        // Tissue
                         speed_map[[i, j, k]] = 1500.0;
                         density_map[[i, j, k]] = 1000.0;
                         attenuation_map[[i, j, k]] = 0.5;
-                    } else { // Air
+                    } else {
+                        // Air
                         speed_map[[i, j, k]] = 340.0;
                         density_map[[i, j, k]] = 1.2;
                         attenuation_map[[i, j, k]] = 0.0;
@@ -217,7 +222,7 @@ impl TreatmentPlanner {
         let num_elements = spec.num_elements;
         let mut element_positions = Vec::with_capacity(num_elements);
         let mut element_phases = vec![0.0; num_elements];
-        let mut element_amplitudes = vec![1.0; num_elements];
+        let element_amplitudes = vec![1.0; num_elements];
 
         // Arrange elements in hemispherical array
         let radius = spec.radius;
@@ -238,9 +243,10 @@ impl TreatmentPlanner {
         for (i, &pos) in element_positions.iter().enumerate() {
             // Simplified phase calculation - would need full wave propagation
             let target_center = targets[0].center; // Focus on first target
-            let distance = ((pos[0] - target_center[0]).powi(2) +
-                           (pos[1] - target_center[1]).powi(2) +
-                           (pos[2] - target_center[2]).powi(2)).sqrt();
+            let distance = ((pos[0] - target_center[0]).powi(2)
+                + (pos[1] - target_center[1]).powi(2)
+                + (pos[2] - target_center[2]).powi(2))
+            .sqrt();
 
             let k = 2.0 * std::f64::consts::PI * spec.frequency / spec.sound_speed;
             element_phases[i] = -k * distance; // Phase conjugation
@@ -277,7 +283,7 @@ impl TreatmentPlanner {
                         let dx = x - element[0];
                         let dy = y - element[1];
                         let dz = z - element[2];
-                        let distance = (dx*dx + dy*dy + dz*dz).sqrt();
+                        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
 
                         if distance > 0.0 {
                             let k = 2.0 * std::f64::consts::PI * setup.frequency / 1500.0;
@@ -296,7 +302,10 @@ impl TreatmentPlanner {
     }
 
     /// Calculate thermal response to acoustic field
-    fn calculate_thermal_response(&self, acoustic_field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+    fn calculate_thermal_response(
+        &self,
+        acoustic_field: &Array3<f64>,
+    ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = acoustic_field.dim();
         let mut temperature_field = Array3::zeros((nx, ny, nz));
 
@@ -317,8 +326,8 @@ impl TreatmentPlanner {
                     let absorbed_power = absorption_coeff * intensity;
 
                     // Steady-state temperature rise calculation
-                    let temp_rise = absorbed_power * exposure_time /
-                                  (density * specific_heat * (perfusion_rate + absorption_coeff));
+                    let temp_rise = absorbed_power * exposure_time
+                        / (density * specific_heat * (perfusion_rate + absorption_coeff));
 
                     temperature_field[[i, j, k]] = 37.0 + temp_rise; // Body temp + rise
                 }
@@ -342,9 +351,11 @@ impl TreatmentPlanner {
             if temp > constraints.max_brain_temp {
                 return Err(crate::error::KwaversError::Validation(
                     crate::error::ValidationError::ConstraintViolation {
-                        message: format!("Brain temperature {:.1}°C exceeds limit {:.1}°C",
-                                       temp, constraints.max_brain_temp)
-                    }
+                        message: format!(
+                            "Brain temperature {:.1}°C exceeds limit {:.1}°C",
+                            temp, constraints.max_brain_temp
+                        ),
+                    },
                 ));
             }
         }
@@ -357,14 +368,20 @@ impl TreatmentPlanner {
         let p_pa = (max_intensity * rho * c).sqrt();
         let p_mpa = p_pa / 1_000_000.0; // Pa -> MPa
         let freq_mhz = frequency_hz / 1_000_000.0;
-        let mi = if freq_mhz > 0.0 { p_mpa / freq_mhz.sqrt() } else { f64::INFINITY };
+        let mi = if freq_mhz > 0.0 {
+            p_mpa / freq_mhz.sqrt()
+        } else {
+            f64::INFINITY
+        };
 
         if mi > constraints.max_mi {
             return Err(crate::error::KwaversError::Validation(
                 crate::error::ValidationError::ConstraintViolation {
-                    message: format!("Mechanical index {:.2} exceeds limit {:.2}",
-                                   mi, constraints.max_mi)
-                }
+                    message: format!(
+                        "Mechanical index {:.2} exceeds limit {:.2}",
+                        mi, constraints.max_mi
+                    ),
+                },
             ));
         }
 
@@ -372,7 +389,11 @@ impl TreatmentPlanner {
     }
 
     /// Estimate treatment time
-    fn estimate_treatment_time(&self, targets: &[TargetVolume], acoustic_field: &Array3<f64>) -> f64 {
+    fn estimate_treatment_time(
+        &self,
+        _targets: &[TargetVolume],
+        acoustic_field: &Array3<f64>,
+    ) -> f64 {
         // Estimate based on required thermal dose
         let thermal_dose_target = 240.0; // CEM43
         let max_intensity = acoustic_field.iter().fold(0.0_f64, |a, &b| a.max(b));
@@ -408,10 +429,10 @@ impl Default for TransducerSpecification {
     fn default() -> Self {
         Self {
             num_elements: 1024,
-            frequency: 650e3, // 650 kHz for brain therapy
+            frequency: 650e3,      // 650 kHz for brain therapy
             focal_distance: 120.0, // mm
-            radius: 80.0, // mm
-            sound_speed: 1500.0, // m/s
+            radius: 80.0,          // mm
+            sound_speed: 1500.0,   // m/s
         }
     }
 }

@@ -3,7 +3,7 @@
 //! Provides CUDA/OpenCL acceleration for photoacoustic wave propagation
 //! using compute shaders and parallel processing.
 
-use crate::error::{KwaversError, KwaversResult};
+use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// GPU-accelerated photoacoustic wave propagator
@@ -40,7 +40,8 @@ impl GPUPhotoacousticPropagator {
         initial_pressure: &Array3<f64>,
         time_steps: usize,
     ) -> KwaversResult<Vec<Array3<f64>>> {
-        self.cpu_fallback.propagate_wave(initial_pressure, time_steps)
+        self.cpu_fallback
+            .propagate_wave(initial_pressure, time_steps)
     }
 }
 
@@ -91,19 +92,18 @@ impl CPUPhotoacousticPropagator {
             // Interior points computation - boundary conditions handled separately
             let (nx, ny, nz) = initial_pressure.dim();
             if nx > 2 && ny > 2 && nz > 2 {
-                for i in 1..nx-1 {
-                    for j in 1..ny-1 {
-                        for k in 1..nz-1 {
+                for i in 1..nx - 1 {
+                    for j in 1..ny - 1 {
+                        for k in 1..nz - 1 {
                             // Laplacian approximation
-                            let laplacian = (
-                                current_pressure[[i+1, j, k]] +
-                                current_pressure[[i-1, j, k]] +
-                                current_pressure[[i, j+1, k]] +
-                                current_pressure[[i, j-1, k]] +
-                                current_pressure[[i, j, k+1]] +
-                                current_pressure[[i, j, k-1]] -
-                                6.0 * current_pressure[[i, j, k]]
-                            ) * dx2_inv;
+                            let laplacian = (current_pressure[[i + 1, j, k]]
+                                + current_pressure[[i - 1, j, k]]
+                                + current_pressure[[i, j + 1, k]]
+                                + current_pressure[[i, j - 1, k]]
+                                + current_pressure[[i, j, k + 1]]
+                                + current_pressure[[i, j, k - 1]]
+                                - 6.0 * current_pressure[[i, j, k]])
+                                * dx2_inv;
 
                             // Wave equation update
                             next_pressure[[i, j, k]] = 2.0 * current_pressure[[i, j, k]]
@@ -160,10 +160,13 @@ mod tests {
 
     #[test]
     fn test_gpu_wrapper_uses_cpu_backend() {
-        let gpu = GPUPhotoacousticPropagator::new(1e-8, 0.001, 1500.0).expect("GPU wrapper construction must succeed");
+        let gpu = GPUPhotoacousticPropagator::new(1e-8, 0.001, 1500.0)
+            .expect("GPU wrapper construction must succeed");
         let mut initial_pressure = Array3::<f64>::zeros((10, 10, 10));
         initial_pressure[[5, 5, 5]] = 1.0;
-        let result = gpu.propagate_wave(&initial_pressure, 3).expect("GPU wrapper must delegate to CPU backend");
+        let result = gpu
+            .propagate_wave(&initial_pressure, 3)
+            .expect("GPU wrapper must delegate to CPU backend");
         assert_eq!(result.len(), 4);
     }
 
@@ -173,4 +176,3 @@ mod tests {
         assert!(!GPUPhotoacousticPropagator::is_available());
     }
 }
-

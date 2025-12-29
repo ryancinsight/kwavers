@@ -4,7 +4,8 @@
 //! speed while maintaining physics-informed accuracy for real-time applications.
 
 use crate::error::{KwaversError, KwaversResult};
-use burn::tensor::{Tensor, backend::Backend};
+use crate::ml::pinn::BurnPINN2DWave;
+use burn::tensor::{backend::Backend, Tensor};
 use std::collections::HashMap;
 
 /// Quantization scheme configuration
@@ -38,7 +39,7 @@ pub enum QuantizationScheme {
 /// Quantized model representation
 #[derive(Debug, Clone)]
 pub struct QuantizedModel {
-    /// Original model layers (kept for reference)
+    /// Original model layers
     pub original_layers: Vec<LayerInfo>,
     /// Quantized weights and biases
     pub quantized_weights: Vec<QuantizedTensor>,
@@ -57,17 +58,52 @@ pub struct LayerInfo {
     pub activation: String,
 }
 
+/// Quantized or full-precision tensor data
+#[derive(Debug, Clone)]
+pub enum QuantizedData {
+    /// Full precision 32-bit float
+    F32(Vec<f32>),
+    /// 8-bit signed integer
+    I8(Vec<i8>),
+}
+
 /// Quantized tensor with scale and zero point
 #[derive(Debug, Clone)]
 pub struct QuantizedTensor {
-    /// Quantized values (u8 or i8)
-    pub data: Vec<i8>,
+    /// Quantized or full-precision values
+    pub data: QuantizedData,
     /// Scale factor for dequantization
     pub scale: f32,
     /// Zero point for asymmetric quantization
     pub zero_point: i8,
     /// Original shape
     pub shape: Vec<usize>,
+}
+
+impl QuantizedTensor {
+    /// Get the number of elements in the tensor
+    pub fn len(&self) -> usize {
+        match &self.data {
+            QuantizedData::F32(v) => v.len(),
+            QuantizedData::I8(v) => v.len(),
+        }
+    }
+
+    /// Check if the tensor is empty
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Dequantize to f32 vector
+    pub fn dequantize(&self) -> Vec<f32> {
+        match &self.data {
+            QuantizedData::F32(v) => v.clone(),
+            QuantizedData::I8(v) => v
+                .iter()
+                .map(|&q| (q.wrapping_sub(self.zero_point) as f32) * self.scale)
+                .collect(),
+        }
+    }
 }
 
 /// Quantization parameters
@@ -91,6 +127,7 @@ pub struct ModelMetadata {
 }
 
 /// Quantization engine
+#[derive(Debug)]
 pub struct Quantizer {
     scheme: QuantizationScheme,
     calibration_samples: usize,
@@ -108,36 +145,40 @@ impl Quantizer {
     }
 
     /// Quantize a PINN model
-    pub fn quantize_model(
+    pub fn quantize_model<B: Backend>(
         &self,
-        _model: &dyn std::any::Any, // Placeholder - would be BurnPINN2DWave in real implementation
+        model: &BurnPINN2DWave<B>,
     ) -> KwaversResult<QuantizedModel> {
         // Analyze model structure
-        let layers = self.analyze_model_layers(_model)?;
+        let layers = self.analyze_model_layers(model)?;
 
         // Collect calibration data if needed
-        let calibration_data = match &self.scheme {
+        let _calibration_data = match &self.scheme {
             QuantizationScheme::Static8Bit { calibration_data } => calibration_data.clone(),
-            QuantizationScheme::Adaptive { .. } => self.collect_calibration_data(_model)?,
+            QuantizationScheme::Adaptive { .. } => self.collect_calibration_data(model)?,
             _ => Vec::new(),
         };
 
         // Quantize weights and biases
-        let quantized_weights = self.quantize_weights(&layers, &calibration_data)?;
+        let quantized_weights = self.quantize_weights(model)?;
 
         // Validate quantization accuracy
-        let validation_result = self.validate_quantization(_model, &quantized_weights)?;
+        let validation_result = self.validate_quantization(model, &quantized_weights)?;
         if validation_result.accuracy_loss > self.accuracy_tolerance {
-            return Err(KwaversError::System(crate::error::SystemError::InvalidConfiguration {
-                parameter: "quantization_accuracy".to_string(),
-                reason: format!("Accuracy loss {:.3} exceeds tolerance {:.3}",
-                    validation_result.accuracy_loss, self.accuracy_tolerance),
-            }));
+            return Err(KwaversError::System(
+                crate::error::SystemError::InvalidConfiguration {
+                    parameter: "quantization_accuracy".to_string(),
+                    reason: format!(
+                        "Accuracy loss {:.3} exceeds tolerance {:.3}",
+                        validation_result.accuracy_loss, self.accuracy_tolerance
+                    ),
+                },
+            ));
         }
 
         let quantization_params = QuantizationParams {
-            global_scale: self.calculate_global_scale(&layers),
-            layer_scales: self.calculate_layer_scales(&layers),
+            global_scale: self.calculate_global_scale(&quantized_weights),
+            layer_scales: self.calculate_layer_scales(&layers, &quantized_weights),
             scheme: self.scheme.clone(),
         };
 
@@ -157,44 +198,48 @@ impl Quantizer {
     }
 
     /// Analyze model layers for quantization
-    fn analyze_model_layers(
+    fn analyze_model_layers<B: Backend>(
         &self,
-        _model: &dyn std::any::Any,
+        model: &BurnPINN2DWave<B>,
     ) -> KwaversResult<Vec<LayerInfo>> {
-        // In practice, this would inspect the Burn model structure
-        // For now, return a representative layer structure
-        Ok(vec![
-            LayerInfo {
-                name: "input_layer".to_string(),
-                input_size: 3,
-                output_size: 200,
+        let mut layers = Vec::new();
+
+        // Input layer
+        let input_shape = model.input_layer.weight.val().shape();
+        layers.push(LayerInfo {
+            name: "input_layer".to_string(),
+            input_size: input_shape.dims[1],
+            output_size: input_shape.dims[0],
+            activation: "tanh".to_string(),
+        });
+
+        // Hidden layers
+        for (i, layer) in model.hidden_layers.iter().enumerate() {
+            let shape = layer.weight.val().shape();
+            layers.push(LayerInfo {
+                name: format!("hidden_{}", i),
+                input_size: shape.dims[1],
+                output_size: shape.dims[0],
                 activation: "tanh".to_string(),
-            },
-            LayerInfo {
-                name: "hidden_1".to_string(),
-                input_size: 200,
-                output_size: 200,
-                activation: "tanh".to_string(),
-            },
-            LayerInfo {
-                name: "hidden_2".to_string(),
-                input_size: 200,
-                output_size: 200,
-                activation: "tanh".to_string(),
-            },
-            LayerInfo {
-                name: "output_layer".to_string(),
-                input_size: 200,
-                output_size: 1,
-                activation: "linear".to_string(),
-            },
-        ])
+            });
+        }
+
+        // Output layer
+        let output_shape = model.output_layer.weight.val().shape();
+        layers.push(LayerInfo {
+            name: "output_layer".to_string(),
+            input_size: output_shape.dims[1],
+            output_size: output_shape.dims[0],
+            activation: "linear".to_string(),
+        });
+
+        Ok(layers)
     }
 
     /// Collect calibration data for static quantization
-    fn collect_calibration_data(
+    fn collect_calibration_data<B: Backend>(
         &self,
-        _model: &dyn std::any::Any,
+        _model: &BurnPINN2DWave<B>,
     ) -> KwaversResult<Vec<Vec<f32>>> {
         // Generate representative physics input data
         let mut calibration_data = Vec::new();
@@ -203,7 +248,7 @@ impl Quantizer {
             // Generate (x, y, t) coordinates covering the domain
             let x = rand::random::<f32>() * 2.0 - 1.0; // [-1, 1]
             let y = rand::random::<f32>() * 2.0 - 1.0; // [-1, 1]
-            let t = rand::random::<f32>() * 1.0;       // [0, 1]
+            let t = rand::random::<f32>() * 1.0; // [0, 1]
 
             calibration_data.push(vec![x, y, t]);
         }
@@ -212,110 +257,112 @@ impl Quantizer {
     }
 
     /// Quantize model weights
-    fn quantize_weights(
+    fn quantize_weights<B: Backend>(
         &self,
-        layers: &[LayerInfo],
-        calibration_data: &[Vec<f32>],
+        model: &BurnPINN2DWave<B>,
     ) -> KwaversResult<Vec<QuantizedTensor>> {
         let mut quantized_weights = Vec::new();
 
-        for layer in layers {
-            // Simulate weight quantization
-            // In practice, this would access actual model weights
-            let weight_count = layer.input_size * layer.output_size;
-            let bias_count = layer.output_size;
+        // Input layer
+        quantized_weights.push(self.quantize_burn_tensor(&model.input_layer.weight.val())?);
+        if let Some(bias) = &model.input_layer.bias {
+            quantized_weights.push(self.quantize_burn_tensor(&bias.val())?);
+        }
 
-            // Generate mock weight data (normally from model)
-            let weights = self.generate_mock_weights(weight_count);
-            let biases = self.generate_mock_weights(bias_count);
+        // Hidden layers
+        for layer in &model.hidden_layers {
+            quantized_weights.push(self.quantize_burn_tensor(&layer.weight.val())?);
+            if let Some(bias) = &layer.bias {
+                quantized_weights.push(self.quantize_burn_tensor(&bias.val())?);
+            }
+        }
 
-            // Quantize weights
-            let quantized_weight_tensor = self.quantize_tensor(&weights, layer)?;
-            let quantized_bias_tensor = self.quantize_tensor(&biases, layer)?;
-
-            quantized_weights.push(quantized_weight_tensor);
-            quantized_weights.push(quantized_bias_tensor);
+        // Output layer
+        quantized_weights.push(self.quantize_burn_tensor(&model.output_layer.weight.val())?);
+        if let Some(bias) = &model.output_layer.bias {
+            quantized_weights.push(self.quantize_burn_tensor(&bias.val())?);
         }
 
         Ok(quantized_weights)
     }
 
+    fn quantize_burn_tensor<B: Backend, const D: usize>(
+        &self,
+        tensor: &Tensor<B, D>,
+    ) -> KwaversResult<QuantizedTensor> {
+        let data = tensor.to_data();
+        let floats = data.as_slice::<f32>().map_err(|e| {
+            KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                parameter: "tensor_data".to_string(),
+                reason: format!("Expected f32 tensor data: {:?}", e),
+            })
+        })?;
+
+        let shape = tensor.shape().dims.to_vec();
+        self.quantize_tensor(floats, &shape)
+    }
+
     /// Quantize a single tensor
-    fn quantize_tensor(&self, data: &[f32], layer: &LayerInfo) -> KwaversResult<QuantizedTensor> {
+    fn quantize_tensor(&self, data: &[f32], shape: &[usize]) -> KwaversResult<QuantizedTensor> {
         match &self.scheme {
-            QuantizationScheme::None => {
-                // No quantization - convert to i8 range (inefficient but preserves precision)
-                let scale = 1.0 / 127.0; // Map f32 range to i8
-                let quantized_data: Vec<i8> = data.iter()
-                    .map(|&x| (x / scale).clamp(-127.0, 127.0) as i8)
-                    .collect();
-
-                Ok(QuantizedTensor {
-                    data: quantized_data,
-                    scale,
-                    zero_point: 0,
-                    shape: vec![data.len()],
-                })
-            }
+            QuantizationScheme::None => Ok(QuantizedTensor {
+                data: QuantizedData::F32(data.to_vec()),
+                scale: 1.0,
+                zero_point: 0,
+                shape: shape.to_vec(),
+            }),
             QuantizationScheme::Dynamic8Bit | QuantizationScheme::Static8Bit { .. } => {
-                // 8-bit symmetric quantization
                 let abs_max = data.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
-                let scale = abs_max / 127.0;
+                let scale = if abs_max == 0.0 { 1.0 } else { abs_max / 127.0 };
 
-                if scale == 0.0 {
-                    // Handle zero tensor
-                    return Ok(QuantizedTensor {
-                        data: vec![0; data.len()],
-                        scale: 1.0,
-                        zero_point: 0,
-                        shape: vec![data.len()],
-                    });
-                }
-
-                let quantized_data: Vec<i8> = data.iter()
+                let quantized_data: Vec<i8> = data
+                    .iter()
                     .map(|&x| (x / scale).clamp(-127.0, 127.0) as i8)
                     .collect();
 
                 Ok(QuantizedTensor {
-                    data: quantized_data,
+                    data: QuantizedData::I8(quantized_data),
                     scale,
                     zero_point: 0,
-                    shape: vec![data.len()],
+                    shape: shape.to_vec(),
                 })
             }
             QuantizationScheme::MixedPrecision { weight_bits, .. } => {
-                // Variable bit quantization
                 let bits = *weight_bits;
                 let max_val = 2f32.powf(bits as f32 - 1.0) - 1.0;
                 let abs_max = data.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
-                let scale = abs_max / max_val;
+                let scale = if abs_max == 0.0 { 1.0 } else { abs_max / max_val };
 
-                let quantized_data: Vec<i8> = data.iter()
+                let quantized_data: Vec<i8> = data
+                    .iter()
                     .map(|&x| (x / scale).clamp(-max_val, max_val) as i8)
                     .collect();
 
                 Ok(QuantizedTensor {
-                    data: quantized_data,
+                    data: QuantizedData::I8(quantized_data),
                     scale,
                     zero_point: 0,
-                    shape: vec![data.len()],
+                    shape: shape.to_vec(),
                 })
             }
-            QuantizationScheme::Adaptive { accuracy_threshold, max_bits } => {
-                // Adaptive quantization based on sensitivity
-                // Start with higher precision and reduce based on impact
+            QuantizationScheme::Adaptive {
+                accuracy_threshold,
+                max_bits,
+            } => {
                 let mut current_bits = *max_bits;
-
                 loop {
-                    let test_scale = data.iter().map(|x| x.abs()).fold(0.0f32, f32::max)
-                        / (2f32.powf(current_bits as f32 - 1.0) - 1.0);
+                    let max_val = 2f32.powf(current_bits as f32 - 1.0) - 1.0;
+                    let abs_max = data.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
+                    let test_scale = if abs_max == 0.0 { 1.0 } else { abs_max / max_val };
 
-                    let test_quantized: Vec<i8> = data.iter()
-                        .map(|&x| (x / test_scale).clamp(-127.0, 127.0) as i8)
+                    let test_quantized: Vec<i8> = data
+                        .iter()
+                        .map(|&x| (x / test_scale).clamp(-max_val, max_val) as i8)
                         .collect();
 
-                    // Estimate quantization error
-                    let error: f32 = data.iter().zip(&test_quantized)
+                    let error: f32 = data
+                        .iter()
+                        .zip(&test_quantized)
                         .map(|(&orig, &quant)| {
                             let dequant = quant as f32 * test_scale;
                             (orig - dequant).powi(2)
@@ -323,68 +370,120 @@ impl Quantizer {
                         .sum();
 
                     let rmse = (error / data.len() as f32).sqrt();
-                    let relative_error = rmse / data.iter().map(|x| x.abs()).sum::<f32>() * data.len() as f32;
+                    let sum_abs = data.iter().map(|x| x.abs()).sum::<f32>();
+                    let relative_error = if sum_abs == 0.0 {
+                        0.0
+                    } else {
+                        rmse / (sum_abs / data.len() as f32)
+                    };
 
                     if relative_error <= *accuracy_threshold || current_bits <= 4 {
                         return Ok(QuantizedTensor {
-                            data: test_quantized,
+                            data: QuantizedData::I8(test_quantized),
                             scale: test_scale,
                             zero_point: 0,
-                            shape: vec![data.len()],
+                            shape: shape.to_vec(),
                         });
                     }
-
                     current_bits -= 1;
                 }
             }
         }
     }
 
-    /// Generate mock weights for demonstration
-    fn generate_mock_weights(&self, count: usize) -> Vec<f32> {
-        (0..count)
-            .map(|i| {
-                let layer_factor = (i % 4) as f32 * 0.1;
-                (rand::random::<f32>() - 0.5) * 0.1 + layer_factor
-            })
-            .collect()
-    }
-
     /// Validate quantization accuracy
-    fn validate_quantization(
+    fn validate_quantization<B: Backend>(
         &self,
-        _model: &dyn std::any::Any,
-        _quantized_weights: &[QuantizedTensor],
+        model: &BurnPINN2DWave<B>,
+        quantized_weights: &[QuantizedTensor],
     ) -> KwaversResult<ValidationResult> {
-        // In practice, this would run inference on test data
-        // and compare original vs quantized accuracy
+        let original_params = model.parameters();
+
+        if original_params.len() != quantized_weights.len() {
+            return Err(KwaversError::System(
+                crate::error::SystemError::InvalidConfiguration {
+                    parameter: "quantized_weights".to_string(),
+                    reason: format!(
+                        "Parameter count mismatch: original={}, quantized={}",
+                        original_params.len(),
+                        quantized_weights.len()
+                    ),
+                },
+            ));
+        }
+
+        let mut total_mse = 0.0;
+        let mut total_elements = 0;
+        let mut original_bytes = 0;
+        let mut quantized_bytes = 0;
+
+        for (orig, quant) in original_params.iter().zip(quantized_weights) {
+            let orig_data = orig.to_data();
+            let orig_floats = orig_data.as_slice::<f32>().map_err(|e| {
+                KwaversError::System(crate::error::SystemError::InvalidConfiguration {
+                    parameter: "original_params".to_string(),
+                    reason: format!("Failed to get f32 slice: {:?}", e),
+                })
+            })?;
+
+            let dequant_floats = quant.dequantize();
+            original_bytes += orig_floats.len() * 4;
+
+            match &quant.data {
+                QuantizedData::F32(v) => quantized_bytes += v.len() * 4,
+                QuantizedData::I8(v) => quantized_bytes += v.len(),
+            }
+
+            for (o, q) in orig_floats.iter().zip(&dequant_floats) {
+                total_mse += (o - q).powi(2);
+                total_elements += 1;
+            }
+        }
+
+        let rmse = if total_elements > 0 {
+            (total_mse / total_elements as f32).sqrt()
+        } else {
+            0.0
+        };
+
+        // Heuristic: Accuracy loss is proportional to RMSE relative to weight magnitude
+        let accuracy_loss = (rmse * 100.0).clamp(0.0, 100.0);
+        let compression_ratio = if quantized_bytes > 0 {
+            original_bytes as f32 / quantized_bytes as f32
+        } else {
+            1.0
+        };
+
         Ok(ValidationResult {
-            original_accuracy: 0.95, // Mock high accuracy
-            quantized_accuracy: 0.92, // Small accuracy loss
-            accuracy_loss: 0.03,
-            compression_ratio: 4.0, // 4x compression for 8-bit
+            original_accuracy: 1.0,
+            quantized_accuracy: (1.0 - rmse).max(0.0),
+            accuracy_loss,
+            compression_ratio,
         })
     }
 
     /// Calculate global scale factor
-    fn calculate_global_scale(&self, layers: &[LayerInfo]) -> f32 {
-        // Use the maximum weight magnitude across all layers
-        // In practice, this would analyze actual weights
-        0.1 // Conservative estimate
+    fn calculate_global_scale(&self, quantized_weights: &[QuantizedTensor]) -> f32 {
+        quantized_weights
+            .iter()
+            .map(|t| t.scale)
+            .fold(0.0f32, f32::max)
     }
 
     /// Calculate per-layer scale factors
-    fn calculate_layer_scales(&self, layers: &[LayerInfo]) -> HashMap<String, f32> {
+    fn calculate_layer_scales(
+        &self,
+        layers: &[LayerInfo],
+        quantized_weights: &[QuantizedTensor],
+    ) -> HashMap<String, f32> {
         let mut scales = HashMap::new();
+        let mut weight_idx = 0;
 
         for layer in layers {
-            // Different scales for different layer types
-            let scale = match layer.name.as_str() {
-                "input_layer" => 0.05,
-                "output_layer" => 0.01,
-                _ => 0.1,
-            };
-            scales.insert(layer.name.clone(), scale);
+            // Weight and optional bias
+            let weight_scale = quantized_weights[weight_idx].scale;
+            scales.insert(layer.name.clone(), weight_scale);
+            weight_idx += 2; // Assume weight + bias for simplicity here
         }
 
         scales
@@ -414,45 +513,44 @@ struct ValidationResult {
 impl QuantizedModel {
     /// Get model memory usage
     pub fn memory_usage(&self) -> usize {
-        self.quantized_weights.iter()
-            .map(|tensor| tensor.data.len())
-            .sum::<usize>() * std::mem::size_of::<i8>()
+        self.quantized_weights
+            .iter()
+            .map(|tensor| match &tensor.data {
+                QuantizedData::F32(v) => v.len() * 4,
+                QuantizedData::I8(v) => v.len(),
+            })
+            .sum::<usize>()
     }
 
     /// Get compression ratio
     pub fn compression_ratio(&self) -> f32 {
-        // Estimate original FP32 size vs quantized size
-        let original_size = self.original_layers.iter()
-            .map(|layer| (layer.input_size * layer.output_size + layer.output_size) * 4) // FP32
-            .sum::<usize>();
+        let original_size: usize = self
+            .original_layers
+            .iter()
+            .map(|l| l.input_size * l.output_size + l.output_size)
+            .sum::<usize>()
+            * 4; // FP32
 
         let quantized_size = self.memory_usage();
-
         original_size as f32 / quantized_size as f32
     }
 
     /// Dequantize weights for a specific layer
-    pub fn dequantize_layer(&self, layer_name: &str) -> Option<Vec<f32>> {
-        self.quantized_weights.iter()
+    pub fn dequantize_layer(&self, _layer_name: &str) -> Option<Vec<f32>> {
+        self.quantized_weights
+            .iter()
             .find(|tensor| tensor.shape.len() > 1) // Find weight tensors
-            .map(|tensor| {
-                tensor.data.iter()
-                    .map(|&q| (q as f32 - tensor.zero_point as f32) * tensor.scale)
-                    .collect()
-            })
+            .map(|tensor| tensor.dequantize())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use burn::backend::NdArray;
-
-    type TestBackend = burn::backend::NdArray<f32>;
 
     #[test]
     fn test_quantizer_creation() {
-        let quantizer = Quantizer::<TestBackend>::new(QuantizationScheme::Dynamic8Bit);
+        let quantizer = Quantizer::new(QuantizationScheme::Dynamic8Bit);
         assert_eq!(quantizer.accuracy_tolerance, 0.05);
     }
 
@@ -461,13 +559,21 @@ mod tests {
         let schemes = vec![
             QuantizationScheme::None,
             QuantizationScheme::Dynamic8Bit,
-            QuantizationScheme::Static8Bit { calibration_data: vec![vec![1.0, 2.0, 3.0]] },
-            QuantizationScheme::MixedPrecision { weight_bits: 8, activation_bits: 8 },
-            QuantizationScheme::Adaptive { accuracy_threshold: 0.05, max_bits: 8 },
+            QuantizationScheme::Static8Bit {
+                calibration_data: vec![vec![1.0, 2.0, 3.0]],
+            },
+            QuantizationScheme::MixedPrecision {
+                weight_bits: 8,
+                activation_bits: 8,
+            },
+            QuantizationScheme::Adaptive {
+                accuracy_threshold: 0.05,
+                max_bits: 8,
+            },
         ];
 
         for scheme in schemes {
-            let quantizer = Quantizer::<TestBackend>::new(scheme);
+            let quantizer = Quantizer::new(scheme);
             assert!(quantizer.accuracy_tolerance >= 0.0);
         }
     }
@@ -475,25 +581,20 @@ mod tests {
     #[test]
     fn test_quantized_tensor_creation() {
         let data = vec![1.0, -1.0, 0.5, -0.5];
-        let layer = LayerInfo {
-            name: "test".to_string(),
-            input_size: 4,
-            output_size: 4,
-            activation: "tanh".to_string(),
-        };
+        let shape = vec![1, 4];
 
-        let quantizer = Quantizer::<TestBackend>::new(QuantizationScheme::Dynamic8Bit);
-        let result = quantizer.quantize_tensor(&data, &layer);
+        let quantizer = Quantizer::new(QuantizationScheme::Dynamic8Bit);
+        let result = quantizer.quantize_tensor(&data, &shape);
 
         assert!(result.is_ok());
         let quantized = result.unwrap();
-        assert_eq!(quantized.data.len(), 4);
+        assert_eq!(quantized.len(), 4);
         assert!(quantized.scale > 0.0);
     }
 
     #[test]
     fn test_compression_ratio_calculation() {
-        let model = QuantizedModel::<TestBackend> {
+        let model = QuantizedModel {
             original_layers: vec![LayerInfo {
                 name: "test".to_string(),
                 input_size: 10,
@@ -501,10 +602,10 @@ mod tests {
                 activation: "tanh".to_string(),
             }],
             quantized_weights: vec![QuantizedTensor {
-                data: vec![1i8; 100], // 100 bytes
+                data: QuantizedData::I8(vec![1i8; 110]), // 100 weights + 10 biases
                 scale: 1.0,
                 zero_point: 0,
-                shape: vec![10, 10],
+                shape: vec![10, 11],
             }],
             quantization_params: QuantizationParams {
                 global_scale: 1.0,

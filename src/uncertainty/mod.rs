@@ -75,13 +75,19 @@ pub mod conformal_prediction;
 pub mod ensemble_methods;
 pub mod sensitivity_analysis;
 
-pub use bayesian_networks::{BayesianPINN, BayesianConfig, PredictionWithUncertainty};
-pub use conformal_prediction::{ConformalPredictor, ConformalConfig, ConformalResult};
-pub use ensemble_methods::{EnsembleQuantifier, EnsembleConfig, EnsembleResult};
+pub use bayesian_networks::{BayesianConfig, BayesianPINN, PredictionWithUncertainty};
+pub use conformal_prediction::{ConformalConfig, ConformalPredictor, ConformalResult};
+pub use ensemble_methods::{EnsembleConfig, EnsembleQuantifier, EnsembleResult};
 pub use sensitivity_analysis::{SensitivityAnalyzer, SensitivityConfig, SensitivityIndices};
 
 use crate::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2, Array3, Array4};
+#[cfg(feature = "pinn")]
+use burn::tensor::backend::Backend;
+#[cfg(feature = "pinn")]
+use ndarray::{Array1, Array2, Array3};
+#[cfg(not(feature = "pinn"))]
+use ndarray::{Array1, Array3};
+#[cfg(feature = "pinn")]
 use std::collections::HashMap;
 
 /// Uncertainty quantification methods
@@ -130,18 +136,22 @@ impl Default for UncertaintyConfig {
 }
 
 /// Main uncertainty quantification interface
+#[derive(Debug)]
 pub struct UncertaintyQuantifier {
-    config: UncertaintyConfig,
-    bayesian: Option<BayesianPINN>,
-    conformal: Option<ConformalPredictor>,
-    ensemble: Option<EnsembleQuantifier>,
-    sensitivity: Option<SensitivityAnalyzer>,
+    _config: UncertaintyConfig,
+    _bayesian: Option<BayesianPINN>,
+    _conformal: Option<ConformalPredictor>,
+    _ensemble: Option<EnsembleQuantifier>,
+    _sensitivity: Option<SensitivityAnalyzer>,
 }
 
 impl UncertaintyQuantifier {
     /// Create new uncertainty quantifier
     pub fn new(config: UncertaintyConfig) -> KwaversResult<Self> {
-        let bayesian = if matches!(config.method, UncertaintyMethod::MonteCarloDropout | UncertaintyMethod::Hybrid) {
+        let bayesian = if matches!(
+            config.method,
+            UncertaintyMethod::MonteCarloDropout | UncertaintyMethod::Hybrid
+        ) {
             Some(BayesianPINN::new(BayesianConfig {
                 dropout_rate: config.dropout_rate,
                 num_samples: config.num_samples,
@@ -150,7 +160,10 @@ impl UncertaintyQuantifier {
             None
         };
 
-        let conformal = if matches!(config.method, UncertaintyMethod::Conformal | UncertaintyMethod::Hybrid) {
+        let conformal = if matches!(
+            config.method,
+            UncertaintyMethod::Conformal | UncertaintyMethod::Hybrid
+        ) {
             Some(ConformalPredictor::new(ConformalConfig {
                 confidence_level: config.confidence_level,
                 calibration_size: config.calibration_size,
@@ -159,7 +172,10 @@ impl UncertaintyQuantifier {
             None
         };
 
-        let ensemble = if matches!(config.method, UncertaintyMethod::Ensemble | UncertaintyMethod::Hybrid) {
+        let ensemble = if matches!(
+            config.method,
+            UncertaintyMethod::Ensemble | UncertaintyMethod::Hybrid
+        ) {
             Some(EnsembleQuantifier::new(EnsembleConfig {
                 ensemble_size: config.ensemble_size,
                 num_samples: config.num_samples,
@@ -168,7 +184,10 @@ impl UncertaintyQuantifier {
             None
         };
 
-        let sensitivity = if matches!(config.method, UncertaintyMethod::Sensitivity | UncertaintyMethod::Hybrid) {
+        let sensitivity = if matches!(
+            config.method,
+            UncertaintyMethod::Sensitivity | UncertaintyMethod::Hybrid
+        ) {
             Some(SensitivityAnalyzer::new(SensitivityConfig {
                 num_samples: config.num_samples,
                 confidence_level: config.confidence_level,
@@ -178,69 +197,76 @@ impl UncertaintyQuantifier {
         };
 
         Ok(Self {
-            config,
-            bayesian,
-            conformal,
-            ensemble,
-            sensitivity,
+            _config: config,
+            _bayesian: bayesian,
+            _conformal: conformal,
+            _ensemble: ensemble,
+            _sensitivity: sensitivity,
         })
     }
 
     /// Quantify uncertainty for PINN predictions
     #[cfg(feature = "pinn")]
-    pub fn quantify_pinn_uncertainty(
+    pub fn quantify_pinn_uncertainty<B: Backend>(
         &self,
-        pinn: &crate::ml::pinn::BurnPINN1DWave,
+        pinn: &crate::ml::pinn::BurnPINN1DWave<B>,
         inputs: &Array2<f32>,
         ground_truth: Option<&Array2<f32>>,
     ) -> KwaversResult<PredictionWithUncertainty> {
-        match self.config.method {
+        match self._config.method {
             UncertaintyMethod::MonteCarloDropout => {
-                if let Some(bayesian) = &self.bayesian {
+                if let Some(bayesian) = &self._bayesian {
                     bayesian.quantify_uncertainty(pinn, inputs)
                 } else {
-                    Err(KwaversError::InvalidInput("Bayesian module not configured".to_string()))
+                    Err(KwaversError::InvalidInput(
+                        "Bayesian module not configured".to_string(),
+                    ))
                 }
             }
             UncertaintyMethod::Ensemble => {
-                if let Some(ensemble) = &self.ensemble {
+                if let Some(ensemble) = &self._ensemble {
                     ensemble.quantify_uncertainty(pinn, inputs)
                 } else {
-                    Err(KwaversError::InvalidInput("Ensemble module not configured".to_string()))
+                    Err(KwaversError::InvalidInput(
+                        "Ensemble module not configured".to_string(),
+                    ))
                 }
             }
             UncertaintyMethod::Conformal => {
-                if let Some(conformal) = &self.conformal {
+                if let Some(conformal) = &self._conformal {
                     conformal.quantify_uncertainty(pinn, inputs, ground_truth)
                 } else {
-                    Err(KwaversError::InvalidInput("Conformal module not configured".to_string()))
+                    Err(KwaversError::InvalidInput(
+                        "Conformal module not configured".to_string(),
+                    ))
                 }
             }
             UncertaintyMethod::Hybrid => {
                 // Combine multiple methods
                 let mut results = Vec::new();
 
-                if let Some(bayesian) = &self.bayesian {
+                if let Some(bayesian) = &self._bayesian {
                     results.push(bayesian.quantify_uncertainty(pinn, inputs)?);
                 }
 
-                if let Some(ensemble) = &self.ensemble {
+                if let Some(ensemble) = &self._ensemble {
                     results.push(ensemble.quantify_uncertainty(pinn, inputs)?);
                 }
 
                 // Return combined uncertainty quantification result
-                Ok(results.into_iter().next().unwrap_or_else(|| {
-                    PredictionWithUncertainty {
+                Ok(results
+                    .into_iter()
+                    .next()
+                    .unwrap_or_else(|| PredictionWithUncertainty {
                         mean_prediction: Array2::zeros(inputs.dim()),
                         uncertainty: Array2::zeros(inputs.dim()),
                         confidence_intervals: HashMap::new(),
                         reliability_score: 0.5,
-                    }
-                }))
+                    }))
             }
-            UncertaintyMethod::Sensitivity => {
-                Err(KwaversError::InvalidInput("Sensitivity analysis not applicable for PINN uncertainty".to_string()))
-            }
+            UncertaintyMethod::Sensitivity => Err(KwaversError::InvalidInput(
+                "Sensitivity analysis not applicable for PINN uncertainty".to_string(),
+            )),
         }
     }
 
@@ -259,15 +285,17 @@ impl UncertaintyQuantifier {
                 for k in 0..beamformed_image.dim().2 {
                     let center = beamformed_image[[i, j, k]];
                     let neighbors = [
-                        beamformed_image[[i-1, j, k]], beamformed_image[[i+1, j, k]],
-                        beamformed_image[[i, j-1, k]], beamformed_image[[i, j+1, k]],
+                        beamformed_image[[i - 1, j, k]],
+                        beamformed_image[[i + 1, j, k]],
+                        beamformed_image[[i, j - 1, k]],
+                        beamformed_image[[i, j + 1, k]],
                     ];
 
-                    let variance = neighbors.iter()
-                        .map(|&n| (n - center).powi(2))
-                        .sum::<f32>() / neighbors.len() as f32;
+                    let variance = neighbors.iter().map(|&n| (n - center).powi(2)).sum::<f32>()
+                        / neighbors.len() as f32;
 
-                    uncertainty_map[[i, j, k]] = (variance.sqrt() as f64 / (signal_quality as f64).max(1e-6)) as f32;
+                    uncertainty_map[[i, j, k]] =
+                        (variance.sqrt() as f64 / signal_quality.max(1e-6)) as f32;
                 }
             }
         }
@@ -294,10 +322,12 @@ impl UncertaintyQuantifier {
         parameter_ranges: &[(f64, f64)],
         num_samples: usize,
     ) -> KwaversResult<SensitivityIndices> {
-        if let Some(sensitivity) = &self.sensitivity {
+        if let Some(sensitivity) = &self._sensitivity {
             sensitivity.analyze(model_fn, parameter_ranges, num_samples)
         } else {
-            Err(KwaversError::InvalidInput("Sensitivity analysis not configured".to_string()))
+            Err(KwaversError::InvalidInput(
+                "Sensitivity analysis not configured".to_string(),
+            ))
         }
     }
 
@@ -310,9 +340,11 @@ impl UncertaintyQuantifier {
     fn compute_cnr(&self, image: &Array3<f32>) -> f64 {
         // Simplified CNR calculation
         let mean_signal = image.iter().sum::<f32>() / image.len() as f32;
-        let variance = image.iter()
+        let variance = image
+            .iter()
             .map(|&x| (x - mean_signal).powi(2))
-            .sum::<f32>() / image.len() as f32;
+            .sum::<f32>()
+            / image.len() as f32;
 
         if variance > 0.0 {
             (mean_signal / variance.sqrt()) as f64
@@ -330,8 +362,8 @@ impl UncertaintyQuantifier {
         for i in 1..image.dim().0 - 1 {
             for j in 1..image.dim().1 - 1 {
                 for k in 0..image.dim().2 {
-                    let dx = (image[[i+1, j, k]] - image[[i-1, j, k]]).abs();
-                    let dy = (image[[i, j+1, k]] - image[[i, j-1, k]]).abs();
+                    let dx = (image[[i + 1, j, k]] - image[[i - 1, j, k]]).abs();
+                    let dy = (image[[i, j + 1, k]] - image[[i, j - 1, k]]).abs();
                     total_gradient += (dx + dy) / 2.0;
                     count += 1;
                 }
@@ -346,7 +378,10 @@ impl UncertaintyQuantifier {
     }
 
     /// Generate uncertainty report
-    pub fn generate_report<'a>(&self, results: &'a [Box<dyn UncertaintyResult>]) -> UncertaintyReport<'a> {
+    pub fn generate_report<'a>(
+        &self,
+        results: &'a [Box<dyn UncertaintyResult>],
+    ) -> UncertaintyReport<'a> {
         let mut summary = UncertaintySummary {
             mean_confidence: 0.0,
             confidence_range: (1.0, 0.0),
@@ -404,7 +439,8 @@ impl UncertaintyQuantifier {
         }
 
         if recommendations.is_empty() {
-            recommendations.push("Uncertainty levels acceptable for clinical decision-making.".to_string());
+            recommendations
+                .push("Uncertainty levels acceptable for clinical decision-making.".to_string());
         }
 
         recommendations
@@ -431,8 +467,14 @@ impl UncertaintyResult for BeamformingUncertainty {
     }
 
     fn uncertainty_bounds(&self) -> (f64, f64) {
-        let min_uncertainty = self.uncertainty_map.iter().fold(f64::INFINITY, |a, &b| a.min(b as f64));
-        let max_uncertainty = self.uncertainty_map.iter().fold(0.0_f64, |a, &b| a.max(b as f64));
+        let min_uncertainty = self
+            .uncertainty_map
+            .iter()
+            .fold(f64::INFINITY, |a, &b| a.min(b as f64));
+        let max_uncertainty = self
+            .uncertainty_map
+            .iter()
+            .fold(0.0_f64, |a, &b| a.max(b as f64));
         (min_uncertainty, max_uncertainty)
     }
 }
@@ -501,7 +543,9 @@ mod tests {
         let quantifier = UncertaintyQuantifier::new(config).unwrap();
 
         let image = Array3::from_elem((16, 16, 8), 1.0);
-        let uncertainty = quantifier.quantify_beamforming_uncertainty(&image, 0.9).unwrap();
+        let uncertainty = quantifier
+            .quantify_beamforming_uncertainty(&image, 0.9)
+            .unwrap();
 
         assert!(quantifier.is_confident(&uncertainty, 0.5));
         assert!(!quantifier.is_confident(&uncertainty, 0.95));

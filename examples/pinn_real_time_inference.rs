@@ -7,10 +7,9 @@
 use kwavers::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::{
-    BurnPINN2DConfig, BurnPINN2DWave, BurnLossWeights2D, Geometry2D,
-    JitCompiler, OptimizedRuntime, OptimizationLevel, CompilerStats,
-    Quantizer, QuantizationScheme, QuantizedModel,
-    EdgeRuntime, PerformanceMonitor, HardwareCapabilities
+    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, CompilerStats, EdgeRuntime, Geometry2D,
+    HardwareCapabilities, JitCompiler, OptimizationLevel, OptimizedRuntime, PerformanceMonitor,
+    QuantizationScheme, QuantizedModel, Quantizer,
 };
 #[cfg(feature = "pinn")]
 use std::time::Instant;
@@ -44,9 +43,15 @@ fn main() -> KwaversResult<()> {
     };
 
     println!("🧠 Model Configuration:");
-    println!("   Architecture: {} layers", pinn_config.hidden_layers.len());
+    println!(
+        "   Architecture: {} layers",
+        pinn_config.hidden_layers.len()
+    );
     println!("   Hidden sizes: {:?}", pinn_config.hidden_layers);
-    println!("   Collocation points: {}", pinn_config.num_collocation_points);
+    println!(
+        "   Collocation points: {}",
+        pinn_config.num_collocation_points
+    );
     println!();
 
     // Create geometry for wave equation
@@ -89,16 +94,16 @@ fn main() -> KwaversResult<()> {
 #[cfg(feature = "pinn")]
 fn demonstrate_jit_compilation() -> KwaversResult<()> {
     println!("   Creating JIT compiler...");
-    let compiler = JitCompiler::new(
-        OptimizationLevel::Aggressive
-    );
+    let compiler = JitCompiler::new(OptimizationLevel::Aggressive);
 
     println!("   ✅ Compiler created with aggressive optimization");
     println!("   📈 Expected performance: 10-50× speedup vs interpreted execution");
 
     let stats = compiler.get_stats();
-    println!("   📊 Compiler stats: {} kernels compiled, {:.1}ms avg compile time",
-             stats.kernels_compiled, stats.avg_compile_time_ms);
+    println!(
+        "   📊 Compiler stats: {} kernels compiled, {:.1}ms avg compile time",
+        stats.kernels_compiled, stats.avg_compile_time_ms
+    );
 
     Ok(())
 }
@@ -110,14 +115,20 @@ fn demonstrate_quantization() -> KwaversResult<()> {
     let schemes = vec![
         ("No quantization", QuantizationScheme::None),
         ("Dynamic 8-bit", QuantizationScheme::Dynamic8Bit),
-        ("Mixed precision", QuantizationScheme::MixedPrecision {
-            weight_bits: 8,
-            activation_bits: 16,
-        }),
-        ("Adaptive quantization", QuantizationScheme::Adaptive {
-            accuracy_threshold: 0.05,
-            max_bits: 8,
-        }),
+        (
+            "Mixed precision",
+            QuantizationScheme::MixedPrecision {
+                weight_bits: 8,
+                activation_bits: 16,
+            },
+        ),
+        (
+            "Adaptive quantization",
+            QuantizationScheme::Adaptive {
+                accuracy_threshold: 0.05,
+                max_bits: 8,
+            },
+        ),
     ];
 
     for (name, scheme) in schemes {
@@ -145,8 +156,11 @@ fn demonstrate_edge_deployment() -> KwaversResult<()> {
     println!("   🎯 Cache line: {} bytes", hardware_caps.cache_line_size);
 
     let perf_stats = runtime.get_performance_stats();
-    println!("   📊 Performance: {:.1}μs avg latency, {:.0} samples/sec throughput",
-             perf_stats.avg_latency_us, perf_stats.inference_count as f64 / 1000.0);
+    println!(
+        "   📊 Performance: {:.1}μs avg latency, {:.0} samples/sec throughput",
+        perf_stats.avg_latency_us,
+        perf_stats.inference_count as f64 / 1000.0
+    );
 
     Ok(())
 }
@@ -177,14 +191,18 @@ fn run_performance_benchmark() -> KwaversResult<()> {
     println!("   📈 Benchmark Results:");
     println!("   ⚡ Average latency: {:.1} μs", avg_latency);
     println!("   🚀 Throughput: {:.0} samples/sec", throughput);
-    println!("   🎯 Target achievement: {}%",
-             if avg_latency < 500.0 { "100" } else { "85" });
+    println!(
+        "   🎯 Target achievement: {}%",
+        if avg_latency < 500.0 { "100" } else { "85" }
+    );
 
     // Memory usage simulation
     let memory_usage = simulate_memory_usage();
     println!("   💾 Memory usage: {} KB", memory_usage / 1024);
-    println!("   📊 Memory efficiency: {:.1}%",
-             (memory_usage as f32 / (64.0 * 1024.0 * 1024.0)) * 100.0);
+    println!(
+        "   📊 Memory efficiency: {:.1}%",
+        (memory_usage as f32 / (64.0 * 1024.0 * 1024.0)) * 100.0
+    );
 
     Ok(())
 }

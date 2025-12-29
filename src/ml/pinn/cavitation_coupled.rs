@@ -17,13 +17,13 @@
 //! 2. **Strong Coupling**: Mutual interaction with scattering and nonlinear effects
 //! 3. **Multi-bubble Coupling**: Collective bubble effects and Bjerknes forces
 
-use crate::error::{KwaversError, KwaversResult};
 use crate::ml::pinn::physics::{
-    BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface,
-    CouplingType, InitialConditionSpec, PhysicsDomain, PhysicsLossWeights,
-    PhysicsParameters, PhysicsValidationMetric,
+    BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface, CouplingType,
+    InitialConditionSpec, PhysicsDomain, PhysicsLossWeights, PhysicsParameters,
+    PhysicsValidationMetric,
 };
 use crate::physics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
+use burn::prelude::ElementConversion;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;
 
@@ -42,6 +42,10 @@ pub struct CavitationCouplingConfig {
     pub multi_bubble_effects: bool,
     /// Enable nonlinear acoustic effects from bubbles
     pub nonlinear_acoustic: bool,
+    /// Center frequency for resonance calculation (Hz)
+    pub center_frequency: f64,
+    /// Speed of sound in the medium (m/s)
+    pub sound_speed: f64,
     /// Domain size for bubble field [Lx, Ly, Lz]
     pub domain_size: Vec<f64>,
 }
@@ -55,6 +59,8 @@ impl Default for CavitationCouplingConfig {
             bubbles_per_point: 1,
             multi_bubble_effects: false,
             nonlinear_acoustic: true,
+            center_frequency: 2.5e6,             // 2.5 MHz default
+            sound_speed: 1540.0,                 // Water/Tissue default
             domain_size: vec![1e-2, 1e-2, 1e-2], // 1cm³ domain
         }
     }
@@ -71,8 +77,8 @@ pub enum CavitationCouplingType {
     MultiBubble,
 }
 
-/// Cavitation-coupled physics domain
-#[derive(Debug, Clone)]
+/// Cavitation coupled physics domain implementation
+#[derive(Debug)]
 pub struct CavitationCoupledDomain<B: AutodiffBackend> {
     /// Coupling configuration
     pub config: CavitationCouplingConfig,
@@ -140,13 +146,21 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
             coupling_type: match coupling_type {
                 CavitationCouplingType::Weak => CouplingType::FluxContinuity,
                 CavitationCouplingType::Strong => CouplingType::Conjugate,
-                CavitationCouplingType::MultiBubble => CouplingType::Custom("multi_bubble".to_string()),
+                CavitationCouplingType::MultiBubble => {
+                    CouplingType::Custom("multi_bubble".to_string())
+                }
             },
             coupling_params: {
                 let mut params = HashMap::new();
                 params.insert("coupling_strength".to_string(), config.coupling_strength);
-                params.insert("bubbles_per_point".to_string(), config.bubbles_per_point as f64);
-                params.insert("nonlinear_acoustic".to_string(), if config.nonlinear_acoustic { 1.0 } else { 0.0 });
+                params.insert(
+                    "bubbles_per_point".to_string(),
+                    config.bubbles_per_point as f64,
+                );
+                params.insert(
+                    "nonlinear_acoustic".to_string(),
+                    if config.nonlinear_acoustic { 1.0 } else { 0.0 },
+                );
                 params
             },
         };
@@ -182,7 +196,7 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
     fn cavitation_residual(
         &self,
         acoustic_pressure: &Tensor<B, 2>,
-        bubble_positions: &Tensor<B, 2>,
+        _bubble_positions: &Tensor<B, 2>,
         physics_params: &PhysicsParameters,
     ) -> Tensor<B, 2> {
         // Extract bubble parameters from physics params
@@ -206,7 +220,7 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
         let pressure_forcing = acoustic_pressure.clone() - ambient_pressure as f32;
 
         // Physical parameters (literature-backed values)
-        let equilibrium_radius = self.config.equilibrium_radius as f32; // Equilibrium bubble radius [m]
+        let equilibrium_radius = self.config.bubble_params.r0 as f32; // Equilibrium bubble radius [m]
         let polytropic_index = 1.4_f32; // γ for air (adiabatic index)
         let ambient_density = 1000.0_f32; // Water density [kg/m³]
         let viscosity = viscosity as f32; // Water viscosity [Pa·s]
@@ -215,8 +229,9 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
 
         // Gas pressure inside bubble (polytropic compression/expansion)
         // P_gas = P_initial * (R_initial/R)^(3γ) - proper polytropic gas law
-        let gas_pressure = self.config.initial_gas_pressure as f32 *
-                          (self.config.equilibrium_radius as f32 / equilibrium_radius).powf(3.0 * polytropic_index);
+        let gas_pressure = self.config.bubble_params.initial_gas_pressure as f32
+            * (self.config.bubble_params.r0 as f32 / equilibrium_radius)
+                .powf(3.0 * polytropic_index);
 
         // Surface tension pressure: 2σ/R (Young-Laplace equation for spherical bubble)
         let surface_tension_pressure = 2.0_f32 * surface_tension / equilibrium_radius;
@@ -228,19 +243,25 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
         let estimated_radial_velocity = 0.0_f32; // Would be dR/dt from NN prediction
 
         // Viscous pressure contribution: (4μ/ρ) * (Ṙ/R²) * ρ = 4μ Ṙ/R²
-        let viscous_pressure = 4.0_f32 * viscosity * estimated_radial_velocity / (equilibrium_radius * equilibrium_radius);
+        let viscous_pressure = 4.0_f32 * viscosity * estimated_radial_velocity
+            / (equilibrium_radius * equilibrium_radius);
 
         // Complete Keller-Miksis equation (Keller & Miksis 1980):
         // R̈ = [P_gas + P_vapor - P_0 - P_acoustic - P_surface - P_viscous] / (ρ R) - 3/2 Ṙ²/R
 
         let total_internal_pressure = gas_pressure + vapor_pressure;
-        let total_external_pressure = ambient_pressure as f32 + pressure_forcing + surface_tension_pressure + viscous_pressure;
+        let total_external_pressure = ambient_pressure as f32
+            + pressure_forcing
+            + surface_tension_pressure
+            + viscous_pressure;
 
         // Pressure difference term: (P_internal - P_external) / (ρ R)
-        let pressure_difference_term = (total_internal_pressure - total_external_pressure) / (ambient_density * equilibrium_radius);
+        let pressure_difference_term = (total_internal_pressure - total_external_pressure)
+            / (ambient_density * equilibrium_radius);
 
         // Nonlinear inertial term: -3/2 Ṙ²/R (accounts for convective acceleration)
-        let inertial_term = -1.5_f32 * estimated_radial_velocity * estimated_radial_velocity / equilibrium_radius;
+        let inertial_term =
+            -1.5_f32 * estimated_radial_velocity * estimated_radial_velocity / equilibrium_radius;
 
         // Complete KM acceleration: R̈ = pressure_term + inertial_term
         let radial_acceleration = pressure_difference_term + inertial_term;
@@ -272,49 +293,62 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
         // For each point in the field, compute scattering contribution from nearby bubbles
         // This implements the scattered field as a source term in the wave equation
 
-        let n_points = acoustic_field.shape()[0];
-        let mut scattering_field = Tensor::zeros_like(acoustic_field);
+        let n_points = acoustic_field.shape().dims[0];
+        let mut scattered_rows = Vec::with_capacity(n_points);
 
         // Bubble scattering cross-section and phase shift calculations
         // Based on resonance scattering theory for gas bubbles in liquids
 
         for i in 0..n_points {
             // Extract position of current field point
-            let current_pos = bubble_positions.select(0, i);
+            let current_pos = bubble_positions.clone().slice([i..i + 1, 0..2]);
+            let mut total_scatter = Tensor::zeros([1, 1], &acoustic_field.device());
 
             // For each bubble, compute scattering contribution
             for j in 0..n_points {
-                if i == j { continue; } // Skip self-scattering
+                if i == j {
+                    continue;
+                } // Skip self-scattering
 
-                let bubble_pos = bubble_positions.select(0, j);
-                let distance_squared = (current_pos.clone() - bubble_pos).powf(2.0).sum_dim(0);
+                let bubble_pos = bubble_positions.clone().slice([j..j + 1, 0..2]);
+                let distance_squared = (current_pos.clone() - bubble_pos)
+                    .powf_scalar(2.0)
+                    .sum_dim(1);
 
                 // Avoid division by zero and very close interactions
                 let distance = distance_squared.sqrt().clamp(1e-6_f32, f32::MAX);
+                let dist_val = distance.into_scalar().elem::<f32>();
 
                 // Resonance frequency for bubble (Minnaert resonance)
-                let bubble_radius = self.config.equilibrium_radius as f32;
-                let resonance_freq = 3.25_f32 / (2.0 * std::f64::consts::PI as f32 * bubble_radius) *
-                                   (self.config.surface_tension as f32 / self.config.ambient_density as f32).sqrt();
+                let bubble_radius = self.config.bubble_params.r0 as f32;
+                let _resonance_freq = 3.25_f32 / (2.0 * std::f64::consts::PI as f32 * bubble_radius)
+                    * (self.config.bubble_params.sigma as f32
+                        / self.config.bubble_params.rho_liquid as f32)
+                        .sqrt();
 
                 // Scattering amplitude (simplified resonance scattering)
                 // Real implementation would use full Mie scattering theory
-                let wave_number = 2.0 * std::f64::consts::PI as f32 * self.config.center_frequency as f32 /
-                                self.config.sound_speed as f32;
-                let scattering_amplitude = (bubble_radius * wave_number).powf(3.0) /
-                                         (1.0 + (wave_number * bubble_radius).powf(2.0));
+                let wave_number =
+                    2.0 * std::f64::consts::PI as f32 * self.config.center_frequency as f32
+                        / self.config.sound_speed as f32;
+                let scattering_amplitude = (bubble_radius * wave_number).powf(3.0)
+                    / (1.0 + (wave_number * bubble_radius).powf(2.0));
 
                 // Phase-shifted scattering field
-                let phase = wave_number * distance;
-                let scattering_contribution = scattering_amplitude / distance *
-                                           (phase.cos() - phase.sin()) * 0.1_f32; // Amplitude scaling
+                let phase = wave_number * dist_val;
+                let scattering_contribution =
+                    scattering_amplitude / dist_val * (phase.cos() - phase.sin()) * 0.1_f32; // Amplitude scaling
 
                 // Add to scattering field (accumulate contributions)
-                scattering_field = scattering_field.add(&acoustic_field.select(0, i) * scattering_contribution);
+                // Assuming scattering driven by field at receiver (simplified model from original code)
+                let contribution =
+                    acoustic_field.clone().slice([i..i + 1, 0..1]) * scattering_contribution;
+                total_scatter = total_scatter + contribution;
             }
+            scattered_rows.push(total_scatter);
         }
 
-        scattering_field
+        Tensor::cat(scattered_rows, 0)
     }
 }
 
@@ -338,10 +372,12 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for CavitationCoupledDomain<B> {
         let bubble_positions = Tensor::cat(vec![x.clone(), y.clone()], 1);
 
         // Compute cavitation coupling residual
-        let cavitation_residual = self.cavitation_residual(&acoustic_field, &bubble_positions, physics_params);
+        let cavitation_residual =
+            self.cavitation_residual(&acoustic_field, &bubble_positions, physics_params);
 
         // Add bubble scattering effects to acoustic field
-        let scattering_residual = self.bubble_scattering_residual(&acoustic_field, &bubble_positions);
+        let scattering_residual =
+            self.bubble_scattering_residual(&acoustic_field, &bubble_positions);
 
         // Combine residuals
         cavitation_residual + scattering_residual
@@ -392,8 +428,18 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for CavitationCoupledDomain<B> {
             initial_weight: 10.0,
             physics_weights: {
                 let mut weights = HashMap::new();
-                weights.insert("cavitation_weight".to_string(), self.config.coupling_strength);
-                weights.insert("scattering_weight".to_string(), if self.config.nonlinear_acoustic { 0.5 } else { 0.0 });
+                weights.insert(
+                    "cavitation_weight".to_string(),
+                    self.config.coupling_strength,
+                );
+                weights.insert(
+                    "scattering_weight".to_string(),
+                    if self.config.nonlinear_acoustic {
+                        0.5
+                    } else {
+                        0.0
+                    },
+                );
                 weights
             },
         }
@@ -434,15 +480,13 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for CavitationCoupledDomain<B> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
 
     #[test]
     fn test_cavitation_coupled_domain_creation() {
         let config = CavitationCouplingConfig::default();
-        let domain: CavitationCoupledDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>> = CavitationCoupledDomain::new(
-            config,
-            CavitationCouplingType::Weak,
-            vec![1e-2, 1e-2],
-        );
+        let domain: CavitationCoupledDomain<B> =
+            CavitationCoupledDomain::new(config, CavitationCouplingType::Weak, vec![1e-2, 1e-2]);
 
         assert_eq!(domain.domain_name(), "cavitation_coupled");
         assert!(domain.supports_coupling());
@@ -455,18 +499,23 @@ mod tests {
             multi_bubble_effects: true,
             ..Default::default()
         };
-        let domain: CavitationCoupledDomain<burn::backend::Autodiff<burn::backend::NdArray<f32>>> = CavitationCoupledDomain::new(
-            config,
-            CavitationCouplingType::MultiBubble,
-            vec![1e-2, 1e-2],
-        );
+        let domain: CavitationCoupledDomain<B> =
+            CavitationCoupledDomain::new(
+                config,
+                CavitationCouplingType::MultiBubble,
+                vec![1e-2, 1e-2],
+            );
 
         let interfaces = domain.coupling_interfaces();
         assert!(interfaces.len() >= 2); // Should have acoustic-bubble and multi-bubble interfaces
 
         // Check that we have the expected coupling types
-        let has_acoustic_bubble = interfaces.iter().any(|i| i.name == "acoustic_bubble_coupling");
-        let has_multi_bubble = interfaces.iter().any(|i| i.name == "multi_bubble_interactions");
+        let has_acoustic_bubble = interfaces
+            .iter()
+            .any(|i| i.name == "acoustic_bubble_coupling");
+        let has_multi_bubble = interfaces
+            .iter()
+            .any(|i| i.name == "multi_bubble_interactions");
 
         assert!(has_acoustic_bubble);
         assert!(has_multi_bubble);
@@ -476,13 +525,13 @@ mod tests {
     fn test_loss_weights_by_coupling_type() {
         let config = CavitationCouplingConfig::default();
 
-        let weak_domain = CavitationCoupledDomain::new(
+        let weak_domain: CavitationCoupledDomain<B> = CavitationCoupledDomain::new(
             config.clone(),
             CavitationCouplingType::Weak,
             vec![1e-2, 1e-2],
         );
 
-        let strong_domain = CavitationCoupledDomain::new(
+        let strong_domain: CavitationCoupledDomain<B> = CavitationCoupledDomain::new(
             config.clone(),
             CavitationCouplingType::Strong,
             vec![1e-2, 1e-2],

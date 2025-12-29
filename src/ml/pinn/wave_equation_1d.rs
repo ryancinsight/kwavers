@@ -71,8 +71,10 @@ impl Default for LossWeights {
     }
 }
 
+use serde::{Deserialize, Serialize};
+
 /// Training metrics for monitoring convergence
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrainingMetrics {
     /// Total loss history
     pub total_loss: Vec<f64>,
@@ -209,7 +211,7 @@ impl PINN1DWave {
         use std::time::Instant;
 
         let start_time = Instant::now();
-        
+
         // Validate input
         if reference_data.is_empty() {
             return Err(KwaversError::InvalidInput(
@@ -235,7 +237,7 @@ impl PINN1DWave {
             let data_loss = 1.0 * (1.0 - progress).powi(2);
             let pde_loss = 1.0 * (1.0 - progress).powi(2);
             let bc_loss = 10.0 * (1.0 - progress).powi(2);
-            
+
             let total_loss = self.config.loss_weights.data * data_loss
                 + self.config.loss_weights.pde * pde_loss
                 + self.config.loss_weights.boundary * bc_loss;
@@ -307,15 +309,15 @@ impl PINN1DWave {
                 // Solution to wave equation: u(x,t) = f(x - ct) + g(x + ct)
                 let x_val = x[i];
                 let t_val = t[j];
-                
+
                 // Forward traveling wave
                 let wave_pos = x_val - self.wave_speed * t_val;
                 let gaussian = (-wave_pos.powi(2) / 0.01).exp();
-                
+
                 // Add small backward component for realism
                 let wave_pos_back = x_val + self.wave_speed * t_val;
                 let gaussian_back = 0.1 * (-wave_pos_back.powi(2) / 0.01).exp();
-                
+
                 result[[i, j]] = gaussian + gaussian_back;
             }
         }
@@ -385,7 +387,7 @@ impl PINN1DWave {
                 let pred = prediction[[i, j]];
                 let ref_val = fdtd_solution[[i, j]];
                 let error = (pred - ref_val).abs();
-                
+
                 sum_abs_error += error;
                 sum_squared_error += error * error;
                 sum_squared_ref += ref_val * ref_val;
@@ -435,7 +437,7 @@ mod tests {
         let config = PINNConfig::default();
         let pinn = PINN1DWave::new(1500.0, config);
         assert!(pinn.is_ok());
-        
+
         let pinn = pinn.unwrap();
         assert_eq!(pinn.wave_speed(), 1500.0);
         assert!(!pinn.is_trained());
@@ -446,7 +448,7 @@ mod tests {
         let config = PINNConfig::default();
         let pinn = PINN1DWave::new(-1500.0, config.clone());
         assert!(pinn.is_err());
-        
+
         let pinn = PINN1DWave::new(0.0, config);
         assert!(pinn.is_err());
     }
@@ -455,13 +457,13 @@ mod tests {
     fn test_training() {
         let config = PINNConfig::default();
         let mut pinn = PINN1DWave::new(1500.0, config).unwrap();
-        
+
         // Create synthetic reference data
         let reference_data = Array2::from_elem((50, 50), 0.5);
-        
+
         let metrics = pinn.train(&reference_data, 100);
         assert!(metrics.is_ok());
-        
+
         let metrics = metrics.unwrap();
         assert_eq!(metrics.epochs_completed, 100);
         assert!(metrics.total_loss.len() > 0);
@@ -472,30 +474,33 @@ mod tests {
     fn test_training_convergence() {
         let config = PINNConfig::default();
         let mut pinn = PINN1DWave::new(1500.0, config).unwrap();
-        
+
         let reference_data = Array2::from_elem((50, 50), 0.5);
         let metrics = pinn.train(&reference_data, 1000).unwrap();
-        
+
         // Loss should decrease
         let first_loss = metrics.total_loss.first().unwrap();
         let last_loss = metrics.total_loss.last().unwrap();
-        assert!(last_loss < first_loss, "Loss should decrease during training");
+        assert!(
+            last_loss < first_loss,
+            "Loss should decrease during training"
+        );
     }
 
     #[test]
     fn test_prediction() {
         let config = PINNConfig::default();
         let mut pinn = PINN1DWave::new(1500.0, config).unwrap();
-        
+
         let reference_data = Array2::from_elem((50, 50), 0.5);
         pinn.train(&reference_data, 100).unwrap();
-        
+
         let x = Array1::linspace(0.0, 1.0, 10);
         let t = Array1::linspace(0.0, 0.001, 10);
         let prediction = pinn.predict(&x, &t);
-        
+
         assert_eq!(prediction.dim(), (10, 10));
-        
+
         // Predictions should be finite
         for &val in prediction.iter() {
             assert!(val.is_finite());
@@ -506,13 +511,13 @@ mod tests {
     fn test_validation() {
         let config = PINNConfig::default();
         let mut pinn = PINN1DWave::new(1500.0, config).unwrap();
-        
+
         let reference_data = Array2::from_elem((50, 50), 0.5);
         pinn.train(&reference_data, 100).unwrap();
-        
+
         let metrics = pinn.validate(&reference_data);
         assert!(metrics.is_ok());
-        
+
         let metrics = metrics.unwrap();
         assert!(metrics.mean_absolute_error >= 0.0);
         assert!(metrics.rmse >= 0.0);
@@ -524,7 +529,7 @@ mod tests {
     fn test_validation_before_training() {
         let config = PINNConfig::default();
         let pinn = PINN1DWave::new(1500.0, config).unwrap();
-        
+
         let reference_data = Array2::from_elem((50, 50), 0.5);
         let result = pinn.validate(&reference_data);
         assert!(result.is_err());
@@ -534,7 +539,7 @@ mod tests {
     fn test_empty_reference_data() {
         let config = PINNConfig::default();
         let mut pinn = PINN1DWave::new(1500.0, config).unwrap();
-        
+
         let empty_data = Array2::from_elem((0, 0), 0.0);
         let result = pinn.train(&empty_data, 100);
         assert!(result.is_err());

@@ -2,8 +2,8 @@
 
 #[cfg(feature = "pinn")]
 use kwavers::sensor::beamforming::{
-    AIEnhancedBeamformingProcessor, AIBeamformingConfig, AIBeamformingResult,
-    FeatureExtractor, ClinicalDecisionSupport, DiagnosisAlgorithm, RealTimeWorkflow
+    AIBeamformingConfig, AIBeamformingResult, AIEnhancedBeamformingProcessor,
+    ClinicalDecisionSupport, DiagnosisAlgorithm, FeatureExtractor, RealTimeWorkflow,
 };
 #[cfg(feature = "pinn")]
 use ndarray::Array3;
@@ -13,9 +13,9 @@ use std::collections::HashMap;
 #[cfg(feature = "pinn")]
 mod pinn_tests {
     use super::*;
-    use kwavers::sensor::beamforming::ai_integration::FeatureExtractor;
     use kwavers::sensor::beamforming::ai_integration::ClinicalDecisionSupport;
     use kwavers::sensor::beamforming::ai_integration::DiagnosisAlgorithm;
+    use kwavers::sensor::beamforming::ai_integration::FeatureExtractor;
     use kwavers::sensor::beamforming::ai_integration::RealTimeWorkflow;
 
     #[test]
@@ -52,19 +52,32 @@ mod pinn_tests {
 
     #[test]
     fn test_clinical_decision_support() {
-        let thresholds = kwavers::sensor::beamforming::ai_integration::ClinicalThresholds::default();
+        let thresholds =
+            kwavers::sensor::beamforming::ai_integration::ClinicalThresholds::default();
         let support = ClinicalDecisionSupport::new(thresholds);
 
         // Create dummy features
         let mut morphological = HashMap::new();
-        morphological.insert("gradient_magnitude".to_string(), Array3::from_elem((32, 32, 16), 0.5));
+        morphological.insert(
+            "gradient_magnitude".to_string(),
+            Array3::from_elem((32, 32, 16), 0.5),
+        );
 
         let mut spectral = HashMap::new();
-        spectral.insert("local_frequency".to_string(), Array3::from_elem((32, 32, 16), 0.1));
+        spectral.insert(
+            "local_frequency".to_string(),
+            Array3::from_elem((32, 32, 16), 0.1),
+        );
 
         let mut texture = HashMap::new();
-        texture.insert("speckle_variance".to_string(), Array3::from_elem((32, 32, 16), 0.8));
-        texture.insert("homogeneity".to_string(), Array3::from_elem((32, 32, 16), 0.7));
+        texture.insert(
+            "speckle_variance".to_string(),
+            Array3::from_elem((32, 32, 16), 0.8),
+        );
+        texture.insert(
+            "homogeneity".to_string(),
+            Array3::from_elem((32, 32, 16), 0.7),
+        );
 
         let features = kwavers::sensor::beamforming::ai_integration::FeatureMap {
             morphological,
@@ -76,12 +89,14 @@ mod pinn_tests {
         let uncertainty = Array3::<f32>::from_elem((32, 32, 16), 0.1);
         let confidence = Array3::<f32>::from_elem((32, 32, 16), 0.9);
 
-        let analysis = support.analyze_clinical(
-            volume.view(),
-            &features,
-            uncertainty.view(),
-            confidence.view(),
-        ).unwrap();
+        let analysis = support
+            .analyze_clinical(
+                volume.view(),
+                &features,
+                uncertainty.view(),
+                confidence.view(),
+            )
+            .unwrap();
 
         assert!(analysis.diagnostic_confidence >= 0.0 && analysis.diagnostic_confidence <= 1.0);
         assert!(!analysis.recommendations.is_empty());
@@ -94,11 +109,12 @@ mod pinn_tests {
         // Create dummy clinical analysis
         let clinical_analysis = kwavers::sensor::beamforming::ai_integration::ClinicalAnalysis {
             lesions: vec![],
-            tissue_classification: kwavers::sensor::beamforming::ai_integration::TissueClassification {
-                probabilities: HashMap::new(),
-                dominant_tissue: Array3::from_elem((32, 32, 16), "Muscle".to_string()),
-                boundary_confidence: Array3::from_elem((32, 32, 16), 0.8),
-            },
+            tissue_classification:
+                kwavers::sensor::beamforming::ai_integration::TissueClassification {
+                    probabilities: HashMap::new(),
+                    dominant_tissue: Array3::from_elem((32, 32, 16), "Muscle".to_string()),
+                    boundary_confidence: Array3::from_elem((32, 32, 16), 0.8),
+                },
             recommendations: vec!["Test recommendation".to_string()],
             diagnostic_confidence: 0.85,
         };
@@ -179,7 +195,10 @@ mod pinn_tests {
         // Verify gradient magnitude is computed (should be > 0 in some regions)
         let grad_mag = features.morphological.get("gradient_magnitude").unwrap();
         let max_grad = grad_mag.iter().cloned().fold(0.0f32, f32::max);
-        assert!(max_grad > 0.0, "Gradient magnitude should be positive in some regions");
+        assert!(
+            max_grad > 0.0,
+            "Gradient magnitude should be positive in some regions"
+        );
 
         // Verify speckle variance is computed
         let speckle_var = features.texture.get("speckle_variance").unwrap();
@@ -194,6 +213,8 @@ mod pinn_tests {
             tissue_uncertainty_threshold: 0.2,
             contrast_abnormality_threshold: 2.0,
             speckle_anomaly_threshold: 1.0,
+            segmentation_sensitivity: 1.0,
+            voxel_size_mm: 0.5,
         };
 
         let support = ClinicalDecisionSupport::new(thresholds);
@@ -202,13 +223,13 @@ mod pinn_tests {
         let mut morphological = HashMap::new();
         morphological.insert(
             "gradient_magnitude".to_string(),
-            Array3::from_elem((16, 16, 8), 1.0) // High gradients
+            Array3::from_elem((16, 16, 8), 1.0), // High gradients
         );
 
         let mut texture = HashMap::new();
         texture.insert(
             "speckle_variance".to_string(),
-            Array3::from_elem((16, 16, 8), 2.0) // High variance
+            Array3::from_elem((16, 16, 8), 2.0), // High variance
         );
 
         let features = kwavers::sensor::beamforming::ai_integration::FeatureMap {
@@ -224,16 +245,20 @@ mod pinn_tests {
         let uncertainty = Array3::<f32>::from_elem((16, 16, 8), 0.1);
         let confidence = Array3::<f32>::from_elem((16, 16, 8), 0.9);
 
-        let analysis = support.analyze_clinical(
-            volume.view(),
-            &features,
-            uncertainty.view(),
-            confidence.view(),
-        ).unwrap();
+        let analysis = support
+            .analyze_clinical(
+                volume.view(),
+                &features,
+                uncertainty.view(),
+                confidence.view(),
+            )
+            .unwrap();
 
         // Should detect at least one lesion
-        assert!(!analysis.lesions.is_empty(),
-                "Clinical analysis should detect lesions with high contrast and feature anomalies");
+        assert!(
+            !analysis.lesions.is_empty(),
+            "Clinical analysis should detect lesions with high contrast and feature anomalies"
+        );
 
         // Verify lesion properties
         let lesion = &analysis.lesions[0];

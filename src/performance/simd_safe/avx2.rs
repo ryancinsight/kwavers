@@ -51,11 +51,18 @@ unsafe fn add_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {
 
 /// Multiply two fields using AVX2 instructions
 ///
-/// SAFETY REQUIREMENTS: Same as add_fields_avx2_inner
+/// # Safety
+/// - AVX2 must be available (checked by caller)
+/// - Input fields must have equal shape
+/// - Slices must be obtainable from the arrays
 #[inline]
 pub unsafe fn multiply_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
     unsafe {
-        multiply_fields_avx2_inner(a.as_slice().unwrap(), b.as_slice().unwrap(), out.as_slice_mut().unwrap());
+        multiply_fields_avx2_inner(
+            a.as_slice().unwrap(),
+            b.as_slice().unwrap(),
+            out.as_slice_mut().unwrap(),
+        );
     }
 }
 
@@ -71,7 +78,7 @@ pub unsafe fn multiply_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut A
 unsafe fn multiply_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {
     // SAFETY: Same invariants as add_fields_avx2_inner
     unsafe {
-        use std::arch::x86_64::{_mm256_mul_pd, _mm256_loadu_pd, _mm256_storeu_pd};
+        use std::arch::x86_64::{_mm256_loadu_pd, _mm256_mul_pd, _mm256_storeu_pd};
 
         let chunks = a.len() / 4;
         for i in 0..chunks {
@@ -94,11 +101,18 @@ unsafe fn multiply_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {
 
 /// Subtract two fields using AVX2 instructions
 ///
-/// SAFETY REQUIREMENTS: Same as add_fields_avx2_inner
+/// # Safety
+/// - AVX2 must be available (checked by caller)
+/// - Input fields must have equal shape
+/// - Slices must be obtainable from the arrays
 #[inline]
 pub unsafe fn subtract_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
     unsafe {
-        subtract_fields_avx2_inner(a.as_slice().unwrap(), b.as_slice().unwrap(), out.as_slice_mut().unwrap());
+        subtract_fields_avx2_inner(
+            a.as_slice().unwrap(),
+            b.as_slice().unwrap(),
+            out.as_slice_mut().unwrap(),
+        );
     }
 }
 
@@ -109,7 +123,7 @@ pub unsafe fn subtract_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut A
 unsafe fn subtract_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {
     // SAFETY: Same invariants as add_fields_avx2_inner
     unsafe {
-        use std::arch::x86_64::{_mm256_sub_pd, _mm256_loadu_pd, _mm256_storeu_pd};
+        use std::arch::x86_64::{_mm256_loadu_pd, _mm256_storeu_pd, _mm256_sub_pd};
 
         let chunks = a.len() / 4;
         for i in 0..chunks {

@@ -27,9 +27,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Patient Profile:");
     println!("  - Tissue: Liver with tumor");
-    println!("  - Target: {:.1} mm³ tumor at {:.1} cm depth",
-             target_volume.dimensions.0 * target_volume.dimensions.1 * target_volume.dimensions.2 * 1e9,
-             target_volume.center.0 * 100.0);
+    println!(
+        "  - Target: {:.1} mm³ tumor at {:.1} cm depth",
+        target_volume.dimensions.0 * target_volume.dimensions.1 * target_volume.dimensions.2 * 1e9,
+        target_volume.center.0 * 100.0
+    );
 
     // 2. Configure multi-modal therapy
     println!("\n2. Multi-Modal Therapy Configuration");
@@ -37,16 +39,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let therapy_config = TherapySessionConfig {
         primary_modality: TherapyModality::Histotripsy,
-        secondary_modalities: vec![
-            TherapyModality::Sonodynamic,
-            TherapyModality::Microbubble,
-        ],
+        secondary_modalities: vec![TherapyModality::Sonodynamic, TherapyModality::Microbubble],
         duration: 300.0, // 5 minutes
         acoustic_params: AcousticTherapyParams {
-            frequency: 1.0e6,     // 1 MHz for histotripsy
-            pnp: 15e6,            // 15 MPa peak negative pressure
-            prf: 100.0,           // 100 Hz pulse repetition
-            duty_cycle: 0.005,    // 0.5% duty cycle
+            frequency: 1.0e6,  // 1 MHz for histotripsy
+            pnp: 15e6,         // 15 MPa peak negative pressure
+            prf: 100.0,        // 100 Hz pulse repetition
+            duty_cycle: 0.005, // 0.5% duty cycle
             focal_depth: target_volume.center.0,
             treatment_volume: 2.0, // 2 cm³ treatment volume
         },
@@ -63,8 +62,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  - Primary: Histotripsy (mechanical ablation)");
     println!("  - Secondary: Sonodynamic therapy + Microbubble enhancement");
     println!("  - Duration: {} seconds", therapy_config.duration);
-    println!("  - Frequency: {:.1} MHz", therapy_config.acoustic_params.frequency / 1e6);
-    println!("  - Peak Pressure: {:.0} MPa", therapy_config.acoustic_params.pnp / 1e6);
+    println!(
+        "  - Frequency: {:.1} MHz",
+        therapy_config.acoustic_params.frequency / 1e6
+    );
+    println!(
+        "  - Peak Pressure: {:.0} MPa",
+        therapy_config.acoustic_params.pnp / 1e6
+    );
 
     // 3. Initialize therapy system
     println!("\n3. Therapy System Initialization");
@@ -73,11 +78,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001)?; // 6.4cm³ domain
     let medium = HomogeneousMedium::new(1050.0, 1570.0, 0.7, 1.0, &grid); // Liver properties
 
-    let mut therapy_orchestrator = TherapyIntegrationOrchestrator::new(
-        therapy_config,
-        grid,
-        Box::new(medium.clone()),
-    )?;
+    let mut therapy_orchestrator =
+        TherapyIntegrationOrchestrator::new(therapy_config, grid, Box::new(medium.clone()))?;
 
     println!("✅ Therapy orchestrator initialized successfully");
     println!("   - Grid: {}x{}x{}", 64, 64, 64);
@@ -104,8 +106,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // Continue therapy
                 }
                 _ => {
-                    println!("⚠️  Safety limit reached: {:?} at t={:.1}s",
-                           safety_status, therapy_orchestrator.session_state().current_time);
+                    println!(
+                        "⚠️  Safety limit reached: {:?} at t={:.1}s",
+                        safety_status,
+                        therapy_orchestrator.session_state().current_time
+                    );
                     break;
                 }
             }
@@ -123,11 +128,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let safety_metrics = &final_state.safety_metrics;
 
     println!("Treatment Summary:");
-    println!("  - Total Duration: {:.1} seconds", final_state.current_time);
+    println!(
+        "  - Total Duration: {:.1} seconds",
+        final_state.current_time
+    );
     println!("  - Progress: {:.1}%", final_state.progress * 100.0);
-    println!("  - Final Thermal Index: {:.2}", safety_metrics.thermal_index);
-    println!("  - Final Mechanical Index: {:.2}", safety_metrics.mechanical_index);
-    println!("  - Total Cavitation Dose: {:.0}", safety_metrics.cavitation_dose);
+    println!(
+        "  - Final Thermal Index: {:.2}",
+        safety_metrics.thermal_index
+    );
+    println!(
+        "  - Final Mechanical Index: {:.2}",
+        safety_metrics.mechanical_index
+    );
+    println!(
+        "  - Total Cavitation Dose: {:.0}",
+        safety_metrics.cavitation_dose
+    );
 
     // Check treatment completion
     if final_state.progress >= 0.95 {
@@ -147,16 +164,16 @@ fn create_patient_profile() -> PatientParameters {
     // Simulate patient liver properties
     let grid_dims = (64, 64, 64);
     let mut speed_of_sound = Array3::from_elem(grid_dims, 1570.0); // Liver SoS
-    let mut density = Array3::from_elem(grid_dims, 1050.0);       // Liver density
-    let mut attenuation = Array3::from_elem(grid_dims, 0.7);       // Liver attenuation
-    let mut nonlinearity = Array3::from_elem(grid_dims, 6.2);      // Liver B/A
+    let mut density = Array3::from_elem(grid_dims, 1050.0); // Liver density
+    let mut attenuation = Array3::from_elem(grid_dims, 0.7); // Liver attenuation
+    let mut nonlinearity = Array3::from_elem(grid_dims, 6.2); // Liver B/A
 
     // Simulate tumor region (higher attenuation, different properties)
     for i in 25..35 {
         for j in 25..35 {
             for k in 25..35 {
-                attenuation[[i,j,k]] = 1.2;  // Higher attenuation in tumor
-                nonlinearity[[i,j,k]] = 8.0; // Different nonlinearity
+                attenuation[[i, j, k]] = 1.2; // Higher attenuation in tumor
+                nonlinearity[[i, j, k]] = 8.0; // Different nonlinearity
             }
         }
     }
@@ -184,7 +201,7 @@ fn create_patient_profile() -> PatientParameters {
 /// Define tumor target volume
 fn define_tumor_target() -> TargetVolume {
     TargetVolume {
-        center: (0.035, 0.0, 0.0), // 3.5cm depth
+        center: (0.035, 0.0, 0.0),         // 3.5cm depth
         dimensions: (0.015, 0.015, 0.015), // 1.5cm³ tumor
         tissue_type: TissueType::Tumor,
     }
@@ -195,17 +212,28 @@ fn report_therapy_progress(orchestrator: &TherapyIntegrationOrchestrator, target
     let state = orchestrator.session_state();
     let metrics = &state.safety_metrics;
 
-    println!("📊 Progress at {:.0}s ({:.0}% complete):", target_time, state.progress * 100.0);
-    println!("   Thermal Index: {:.2} | Mechanical Index: {:.2}",
-             metrics.thermal_index, metrics.mechanical_index);
-    println!("   Cavitation Dose: {:.0} | Safety Status: {:?}",
-             metrics.cavitation_dose,
-             orchestrator.check_safety_limits());
+    println!(
+        "📊 Progress at {:.0}s ({:.0}% complete):",
+        target_time,
+        state.progress * 100.0
+    );
+    println!(
+        "   Thermal Index: {:.2} | Mechanical Index: {:.2}",
+        metrics.thermal_index, metrics.mechanical_index
+    );
+    println!(
+        "   Cavitation Dose: {:.0} | Safety Status: {:?}",
+        metrics.cavitation_dose,
+        orchestrator.check_safety_limits()
+    );
 
     // Report modality-specific metrics
     if let Some(ref microbubbles) = state.microbubble_concentration {
         let avg_concentration: f64 = microbubbles.mean().unwrap_or(0.0);
-        println!("   Microbubble Concentration: {:.2e} bubbles/mL", avg_concentration);
+        println!(
+            "   Microbubble Concentration: {:.2e} bubbles/mL",
+            avg_concentration
+        );
     }
 
     if let Some(ref cavitation) = state.cavitation_activity {

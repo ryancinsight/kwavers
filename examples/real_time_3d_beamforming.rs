@@ -19,8 +19,7 @@
 #[cfg(feature = "gpu")]
 use kwavers::{
     sensor::beamforming::{
-        ApodizationWindow, BeamformingAlgorithm3D, BeamformingConfig3D,
-        BeamformingProcessor3D,
+        ApodizationWindow, BeamformingAlgorithm3D, BeamformingConfig3D, BeamformingProcessor3D,
     },
     KwaversResult,
 };
@@ -63,15 +62,23 @@ async fn demonstrate_delay_and_sum() -> KwaversResult<()> {
 
     // Create configuration
     let config = BeamformingConfig3D {
-        volume_dims: (64, 64, 64), // Smaller for demo
+        volume_dims: (64, 64, 64),    // Smaller for demo
         num_elements_3d: (16, 16, 8), // 2,048 elements
         ..Default::default()
     };
 
     println!("Configuration:");
-    println!("  Volume: {}×{}×{}", config.volume_dims.0, config.volume_dims.1, config.volume_dims.2);
-    println!("  Elements: {}×{}×{} = {}", config.num_elements_3d.0, config.num_elements_3d.1, config.num_elements_3d.2,
-             config.num_elements_3d.0 * config.num_elements_3d.1 * config.num_elements_3d.2);
+    println!(
+        "  Volume: {}×{}×{}",
+        config.volume_dims.0, config.volume_dims.1, config.volume_dims.2
+    );
+    println!(
+        "  Elements: {}×{}×{} = {}",
+        config.num_elements_3d.0,
+        config.num_elements_3d.1,
+        config.num_elements_3d.2,
+        config.num_elements_3d.0 * config.num_elements_3d.1 * config.num_elements_3d.2
+    );
     println!("  Voxel spacing: {:.1}mm", config.voxel_spacing.0 * 1000.0);
 
     // Create processor
@@ -99,11 +106,17 @@ async fn demonstrate_delay_and_sum() -> KwaversResult<()> {
     // Display results
     println!("Processing Results:");
     println!("  Processing time: {:.2}ms", processing_time);
-    println!("  Reconstruction rate: {:.1} volumes/sec", 1000.0 / processing_time);
+    println!(
+        "  Reconstruction rate: {:.1} volumes/sec",
+        1000.0 / processing_time
+    );
     let (nx, ny, nz) = volume.dim();
     println!("  Volume dimensions: {}×{}×{}", nx, ny, nz);
-    println!("  Volume range: {:.3} to {:.3}", volume.iter().fold(f32::INFINITY, |a, &b| a.min(b)),
-             volume.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b)));
+    println!(
+        "  Volume range: {:.3} to {:.3}",
+        volume.iter().fold(f32::INFINITY, |a, &b| a.min(b)),
+        volume.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b))
+    );
 
     // Get performance metrics
     let metrics = processor.metrics();
@@ -133,16 +146,22 @@ async fn demonstrate_dynamic_focusing() -> KwaversResult<()> {
 
     // Compare static vs dynamic focusing
     let algorithms = vec![
-        ("Static Focusing", BeamformingAlgorithm3D::DelayAndSum {
-            dynamic_focusing: false,
-            apodization: ApodizationWindow::Hamming,
-            sub_volume_size: None,
-        }),
-        ("Dynamic Focusing", BeamformingAlgorithm3D::DelayAndSum {
-            dynamic_focusing: true,
-            apodization: ApodizationWindow::Hamming,
-            sub_volume_size: None,
-        }),
+        (
+            "Static Focusing",
+            BeamformingAlgorithm3D::DelayAndSum {
+                dynamic_focusing: false,
+                apodization: ApodizationWindow::Hamming,
+                sub_volume_size: None,
+            },
+        ),
+        (
+            "Dynamic Focusing",
+            BeamformingAlgorithm3D::DelayAndSum {
+                dynamic_focusing: true,
+                apodization: ApodizationWindow::Hamming,
+                sub_volume_size: None,
+            },
+        ),
     ];
 
     for (name, algorithm) in algorithms {
@@ -192,7 +211,10 @@ async fn demonstrate_streaming_processing() -> KwaversResult<()> {
 
     println!("Streaming Configuration:");
     println!("  Buffer size: {} frames", config.streaming_buffer_size);
-    println!("  Volume size: {}×{}×{}", config.volume_dims.0, config.volume_dims.1, config.volume_dims.2);
+    println!(
+        "  Volume size: {}×{}×{}",
+        config.volume_dims.0, config.volume_dims.1, config.volume_dims.2
+    );
 
     // Simulate streaming data acquisition
     let total_frames = 24;
@@ -217,10 +239,16 @@ async fn demonstrate_streaming_processing() -> KwaversResult<()> {
             processed_volumes += 1;
 
             if processed_volumes <= 3 || processed_volumes % 5 == 0 {
-                println!("  Frame {}: Processed volume in {:.2}ms", frame_idx, processing_time);
+                println!(
+                    "  Frame {}: Processed volume in {:.2}ms",
+                    frame_idx, processing_time
+                );
             }
         } else {
-            println!("  Frame {}: Added to buffer (buffer not full yet)", frame_idx);
+            println!(
+                "  Frame {}: Added to buffer (buffer not full yet)",
+                frame_idx
+            );
         }
     }
 
@@ -228,8 +256,14 @@ async fn demonstrate_streaming_processing() -> KwaversResult<()> {
         let avg_processing_time = total_processing_time / processed_volumes as f64;
         println!("Streaming Results:");
         println!("  Total volumes processed: {}", processed_volumes);
-        println!("  Average processing time: {:.2}ms per volume", avg_processing_time);
-        println!("  Effective frame rate: {:.1} volumes/sec", 1000.0 / avg_processing_time);
+        println!(
+            "  Average processing time: {:.2}ms per volume",
+            avg_processing_time
+        );
+        println!(
+            "  Effective frame rate: {:.1} volumes/sec",
+            1000.0 / avg_processing_time
+        );
     }
 
     Ok(())
@@ -302,9 +336,21 @@ async fn demonstrate_performance_benchmarking() -> KwaversResult<()> {
 
     println!("Target Analysis:");
     println!("  Target time: <{}ms per volume", target_time);
-    println!("  Achieved: {:.1}ms {}", gpu_avg, if gpu_avg < target_time { "✅" } else { "❌" });
+    println!(
+        "  Achieved: {:.1}ms {}",
+        gpu_avg,
+        if gpu_avg < target_time { "✅" } else { "❌" }
+    );
     println!("  Target speedup: >{}x", target_speedup);
-    println!("  Achieved: {:.1}x {}", speedup_avg, if speedup_avg > target_speedup { "✅" } else { "❌" });
+    println!(
+        "  Achieved: {:.1}x {}",
+        speedup_avg,
+        if speedup_avg > target_speedup {
+            "✅"
+        } else {
+            "❌"
+        }
+    );
 
     Ok(())
 }
@@ -362,7 +408,10 @@ fn generate_synthetic_frame(channels: usize, samples: usize) -> Array3<f32> {
 
 /// Simplified CPU implementation for benchmarking
 #[cfg(feature = "gpu")]
-fn cpu_beamforming_delay_and_sum(rf_data: &Array4<f32>, config: &BeamformingConfig3D) -> KwaversResult<Array3<f32>> {
+fn cpu_beamforming_delay_and_sum(
+    rf_data: &Array4<f32>,
+    config: &BeamformingConfig3D,
+) -> KwaversResult<Array3<f32>> {
     let (frames, channels, samples, _) = rf_data.dim();
     let (vol_x, vol_y, vol_z) = config.volume_dims;
 
@@ -392,11 +441,14 @@ fn cpu_beamforming_delay_and_sum(rf_data: &Array4<f32>, config: &BeamformingConf
                         ((e / 256) as f32 - 3.5) * config.element_spacing_3d.2 as f32,
                     );
 
-                    let distance = ((voxel_pos.0 - element_pos.0).powi(2) +
-                                  (voxel_pos.1 - element_pos.1).powi(2) +
-                                  (voxel_pos.2 - element_pos.2).powi(2)).sqrt();
+                    let distance = ((voxel_pos.0 - element_pos.0).powi(2)
+                        + (voxel_pos.1 - element_pos.1).powi(2)
+                        + (voxel_pos.2 - element_pos.2).powi(2))
+                    .sqrt();
 
-                    let delay_samples = (distance / config.sound_speed as f32 * config.sampling_frequency as f32) as usize;
+                    let delay_samples = (distance / config.sound_speed as f32
+                        * config.sampling_frequency as f32)
+                        as usize;
                     let sample_idx = delay_samples.min(samples - 1);
 
                     // Sum across frames

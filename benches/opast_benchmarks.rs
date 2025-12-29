@@ -20,7 +20,8 @@ fn generate_test_snapshot(n: usize, num_signals: usize) -> Array1<Complex64> {
         for s in 0..num_signals {
             let freq = 0.1 * (s + 1) as f64;
             let phase = 2.0 * PI * freq * (i as f64) / (n as f64);
-            signal += Complex64::new(phase.cos(), phase.sin()) * Complex64::new(1.0 / (s + 1) as f64, 0.0);
+            signal += Complex64::new(phase.cos(), phase.sin())
+                * Complex64::new(1.0 / (s + 1) as f64, 0.0);
         }
         snapshot[i] = signal;
     }

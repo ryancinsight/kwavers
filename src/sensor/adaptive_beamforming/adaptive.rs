@@ -104,9 +104,7 @@ impl MinimumVariance {
     ///
     /// # Returns
     /// (is_well_conditioned, condition_number, recommended_loading)
-    pub fn check_covariance_condition(
-        covariance: &Array2<Complex64>,
-    ) -> (bool, f64, f64) {
+    pub fn check_covariance_condition(covariance: &Array2<Complex64>) -> (bool, f64, f64) {
         let condition_number = Self::covariance_condition_number(covariance);
 
         // Thresholds for well-conditioned matrices
@@ -470,7 +468,11 @@ impl LCMV {
     /// # Arguments
     /// * `constraint_vector` - The constraint vector (e.g., steering vector)
     /// * `desired_response` - Desired response for this constraint
-    pub fn add_constraint(&mut self, constraint_vector: &Array1<Complex64>, desired_response: Complex64) {
+    pub fn add_constraint(
+        &mut self,
+        constraint_vector: &Array1<Complex64>,
+        desired_response: Complex64,
+    ) {
         let n = constraint_vector.len();
 
         // Initialize constraint matrix if empty
@@ -489,7 +491,9 @@ impl LCMV {
                 new_matrix[(i, j)] = self.constraint_matrix[(i, j)];
             }
         }
-        new_response.slice_mut(ndarray::s![..self.response_vector.len()]).assign(&self.response_vector);
+        new_response
+            .slice_mut(ndarray::s![..self.response_vector.len()])
+            .assign(&self.response_vector);
 
         // Add new constraint
         for i in 0..n {

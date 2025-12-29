@@ -3,9 +3,9 @@
 //! This module provides various imaging modalities for acoustic and optical imaging.
 
 pub mod ceus;
+pub mod elastography;
 pub mod fusion;
 pub mod hifu;
-pub mod elastography;
 pub mod photoacoustic;
 pub mod registration;
 pub mod seismic;
@@ -78,9 +78,14 @@ impl Default for ImagingConfig {
 // Re-export commonly used types
 pub use ceus::{ContrastEnhancedUltrasound, PerfusionMap};
 pub use elastography::{ElasticityMap, InversionMethod};
-pub use fusion::{MultiModalFusion, FusionConfig, FusionMethod, FusedImageResult, RegistrationMethod};
+pub use fusion::{
+    FusedImageResult, FusionConfig, FusionMethod, MultiModalFusion, RegistrationMethod,
+};
 pub use hifu::{HIFUTransducer, HIFUTreatmentPlan, ThermalDose};
-pub use photoacoustic::{PhotoacousticSimulator, PhotoacousticParameters, PhotoacousticResult};
-pub use registration::{ImageRegistration, RegistrationResult, RegistrationQualityMetrics, SpatialTransform, TemporalSync};
+pub use photoacoustic::{PhotoacousticParameters, PhotoacousticResult, PhotoacousticSimulator};
+pub use registration::{
+    ImageRegistration, RegistrationQualityMetrics, RegistrationResult, SpatialTransform,
+    TemporalSync,
+};
 pub use seismic::{SeismicConfig, SeismicMethod};
 pub use ultrasound::{UltrasoundConfig, UltrasoundMode};
