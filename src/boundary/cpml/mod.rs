@@ -26,9 +26,11 @@ pub use memory::CPMLMemory;
 pub use profiles::CPMLProfiles;
 pub use update::CPMLUpdater;
 
+use crate::boundary::Boundary;
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use ndarray::Array4;
+use ndarray::{Array3, ArrayViewMut3, Zip};
+use rustfft::num_complex::Complex;
 
 /// Main CPML boundary struct that coordinates all components
 #[derive(Debug)]
@@ -45,7 +47,7 @@ impl CPMLBoundary {
         config.validate()?;
         let profiles = CPMLProfiles::new(&config, grid, sound_speed)?;
         let memory = CPMLMemory::new(&config, grid);
-        let updater = CPMLUpdater::new(&config);
+        let updater = CPMLUpdater::new();
 
         Ok(Self {
             config,
@@ -53,45 +55,6 @@ impl CPMLBoundary {
             memory,
             updater,
         })
-    }
-
-    /// # Deprecated
-    /// The CFL factor is now handled by the solver. This constructor is provided
-    /// for backward compatibility, and the `_cfl` parameter is ignored.
-    /// Use `CPMLBoundary::new` instead.
-    #[deprecated(
-        since = "3.0.0",
-        note = "CFL factor is now handled by the solver. Use `CPMLBoundary::new` instead."
-    )]
-    pub fn with_cfl(
-        config: CPMLConfig,
-        grid: &Grid,
-        _cfl: f64,
-        sound_speed: f64,
-    ) -> KwaversResult<Self> {
-        Self::new(config, grid, sound_speed)
-    }
-
-    /// Apply CPML update to fields (for non-staggered grid solvers)
-    ///
-    /// This method operates on a 4D array and is intended for use with
-    /// unified field representations where the field components are stored
-    /// in the fourth dimension. For staggered-grid FDTD solvers, use
-    /// `update_and_apply_gradient_correction` instead.
-    ///
-    /// # Arguments
-    /// * `fields` - 4D field array where the last dimension represents field components
-    /// * `dt` - Time step
-    /// * `grid` - Computational grid
-    pub fn apply(&mut self, fields: &mut Array4<f64>, dt: f64, grid: &Grid) -> KwaversResult<()> {
-        self.updater.update_fields(
-            fields,
-            &mut self.memory,
-            &self.profiles,
-            dt,
-            grid,
-            &self.config,
-        )
     }
 
     /// Get the CPML thickness
@@ -182,7 +145,7 @@ impl Clone for CPMLBoundary {
         memory.reset();
 
         // Clone the other components
-        let updater = CPMLUpdater::new(&self.config);
+        let updater = CPMLUpdater::new();
 
         Self {
             config: self.config.clone(),
@@ -202,5 +165,60 @@ impl CPMLBoundary {
     #[deprecated(since = "3.1.0", note = "Use `.clone()` instead of `recreate`")]
     pub fn recreate(&self, grid: &Grid, sound_speed: f64) -> KwaversResult<Self> {
         Self::new(self.config.clone(), grid, sound_speed)
+    }
+}
+
+impl Boundary for CPMLBoundary {
+    fn apply_acoustic(
+        &mut self,
+        mut field: ArrayViewMut3<f64>,
+        grid: &Grid,
+        _time_step: usize,
+    ) -> KwaversResult<()> {
+        // For solvers that don't support full convolutional PML (like k-space),
+        // we apply CPML as a damping layer using its sigma profiles.
+        // This provides compatibility with the Boundary trait.
+        let dx = grid.dx;
+
+        Zip::indexed(&mut field).for_each(|(i, j, k), val| {
+            let s_x = self.profiles.sigma_x[i];
+            let s_y = self.profiles.sigma_y[j];
+            let s_z = self.profiles.sigma_z[k];
+            let sigma_total = s_x + s_y + s_z;
+
+            if sigma_total > 0.0 {
+                *val *= (-sigma_total * dx).exp();
+            }
+        });
+
+        Ok(())
+    }
+
+    fn apply_acoustic_freq(
+        &mut self,
+        field: &mut Array3<Complex<f64>>,
+        grid: &Grid,
+        _time_step: usize,
+    ) -> KwaversResult<()> {
+        let dx = grid.dx;
+
+        Zip::indexed(field).for_each(|(i, j, k), val| {
+            let s_x = self.profiles.sigma_x[i];
+            let s_y = self.profiles.sigma_y[j];
+            let s_z = self.profiles.sigma_z[k];
+            let sigma_total = s_x + s_y + s_z;
+
+            if sigma_total > 0.0 {
+                let decay = (-sigma_total * dx).exp();
+                val.re *= decay;
+                val.im *= decay;
+            }
+        });
+
+        Ok(())
+    }
+
+    fn apply_light(&mut self, _field: ArrayViewMut3<f64>, _grid: &Grid, _time_step: usize) {
+        // CPML for light is not implemented yet
     }
 }

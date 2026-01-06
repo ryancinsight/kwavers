@@ -4,6 +4,7 @@ use super::analyzer::QualityMetrics;
 use super::region::{DomainRegion, DomainType};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
+use crate::solver::hybrid::config::DecompositionStrategy;
 
 /// Partitions domain into regions for different solvers
 #[derive(Debug)]
@@ -27,12 +28,17 @@ impl DomainPartitioner {
         }
     }
 
-    /// Partition the domain based on quality metrics
+    /// Partition the domain based on quality metrics and strategy
     pub fn partition(
         &self,
         grid: &Grid,
         metrics: &QualityMetrics,
+        strategy: DecompositionStrategy,
     ) -> KwaversResult<Vec<DomainRegion>> {
+        if let DecompositionStrategy::UserDefined(regions) = strategy {
+            return Ok(regions);
+        }
+
         let mut regions = Vec::new();
 
         // Simple partitioning: divide into uniform blocks and classify each

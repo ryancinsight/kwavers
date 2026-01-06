@@ -74,10 +74,15 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     
     - name: Build
-      run: cargo build --verbose --features="plotting"
+      run: cargo build --release --verbose --features="plotting"
     
+    - name: Install nextest
+      uses: taiki-e/install-action@v2
+      with:
+        tool: nextest
+
     - name: Run tests
-      run: timeout 300 cargo test --lib --verbose --features="plotting"
+      run: cargo nextest run --profile ci --lib --release --verbose --features="plotting"
     
     - name: Run doc tests
       run: cargo test --doc --verbose

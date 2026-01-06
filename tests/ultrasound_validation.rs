@@ -355,7 +355,7 @@ pub mod swe_validation {
         }
 
         // Reconstruct elasticity using time-of-flight inversion
-        let elasticity_map = swe.reconstruct(&displacement_field, &grid)?;
+        let elasticity_map = swe.reconstruct(&displacement_field, grid)?;
 
         // Expected elasticity values (from homogeneous medium)
         // For isotropic materials: E = μ(3λ + 2μ)/(λ + μ), cs = sqrt(μ/ρ)

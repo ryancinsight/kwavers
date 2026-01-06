@@ -5,8 +5,8 @@
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
+use crate::fft::Complex64;
 use ndarray::{Array2, Array3};
-use num_complex::Complex;
 
 /// Types of local corrections available
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -46,7 +46,7 @@ pub struct LocalCorrection {
     /// Position in grid coordinates
     position: (usize, usize, usize),
     /// Local correction kernel
-    kernel: Array3<Complex<f64>>,
+    kernel: Array3<Complex64>,
 }
 
 impl LocalCorrection {
@@ -70,7 +70,7 @@ impl LocalCorrection {
     }
 
     /// Apply correction to field
-    pub fn apply(&self, field: &mut Array3<Complex<f64>>, grid: &Grid) {
+    pub fn apply(&self, field: &mut Array3<Complex64>, grid: &Grid) {
         let (px, py, pz) = self.position;
         let radius = self.radius as i32;
 
@@ -105,7 +105,7 @@ impl LocalCorrection {
         radius: usize,
         strength: f64,
         grid: &Grid,
-    ) -> KwaversResult<Array3<Complex<f64>>> {
+    ) -> KwaversResult<Array3<Complex64>> {
         let kernel_size = 2 * radius + 1;
         let mut kernel = Array3::zeros((kernel_size, kernel_size, kernel_size));
 
@@ -129,7 +129,7 @@ impl LocalCorrection {
 
     /// Born approximation kernel for weak inhomogeneities
     fn born_approximation_kernel(
-        kernel: &mut Array3<Complex<f64>>,
+        kernel: &mut Array3<Complex64>,
         radius: usize,
         strength: f64,
         grid: &Grid,
@@ -147,8 +147,8 @@ impl LocalCorrection {
 
                     if r > 0.0 {
                         // Born approximation: exp(i k0 r) / r
-                        let phase = Complex::new(0.0, k0 * r);
-                        kernel[[i, j, k]] = Complex::new(strength, 0.0) * phase.exp() / r;
+                        let phase = Complex64::new(0.0, k0 * r);
+                        kernel[[i, j, k]] = Complex64::new(strength, 0.0) * phase.exp() / r;
                     }
                 }
             }
@@ -159,7 +159,7 @@ impl LocalCorrection {
 
     /// Rytov approximation kernel for phase corrections
     fn rytov_approximation_kernel(
-        kernel: &mut Array3<Complex<f64>>,
+        kernel: &mut Array3<Complex64>,
         radius: usize,
         strength: f64,
         grid: &Grid,
@@ -175,7 +175,7 @@ impl LocalCorrection {
                     let r_squared = dx*dx + dy*dy + dz*dz;
                     let phase_correction = strength * r_squared;
 
-                    kernel[[i, j, k]] = Complex::new(0.0, phase_correction).exp();
+                    kernel[[i, j, k]] = Complex64::new(0.0, phase_correction).exp();
                 }
             }
         }
@@ -185,7 +185,7 @@ impl LocalCorrection {
 
     /// Kirchhoff diffraction kernel for strong inhomogeneities
     fn kirchhoff_diffraction_kernel(
-        kernel: &mut Array3<Complex<f64>>,
+        kernel: &mut Array3<Complex64>,
         radius: usize,
         strength: f64,
         grid: &Grid,
@@ -204,8 +204,8 @@ impl LocalCorrection {
                     if r > 0.0 {
                         // Kirchhoff diffraction: (i k0 / (4π r)) * exp(i k0 r) * obliquity_factor
                         let obliquity = 1.0; // Simplified - would compute actual obliquity
-                        let phase = Complex::new(0.0, k0 * r);
-                        kernel[[i, j, k]] = Complex::new(0.0, k0 / (4.0 * std::f64::consts::PI * r))
+                        let phase = Complex64::new(0.0, k0 * r);
+                        kernel[[i, j, k]] = Complex64::new(0.0, k0 / (4.0 * std::f64::consts::PI * r))
                                            * phase.exp() * obliquity * strength;
                     }
                 }
@@ -217,7 +217,7 @@ impl LocalCorrection {
 
     /// Split-step beam propagation kernel
     fn split_step_kernel(
-        kernel: &mut Array3<Complex<f64>>,
+        kernel: &mut Array3<Complex64>,
         radius: usize,
         strength: f64,
         grid: &Grid,
@@ -240,7 +240,7 @@ impl LocalCorrection {
                     let longitudinal_phase = k0 * dz * (k as f64 - radius as f64);
 
                     let total_phase = longitudinal_phase + phase_correction;
-                    kernel[[i, j, k]] = Complex::new(0.0, total_phase * strength).exp();
+                    kernel[[i, j, k]] = Complex64::new(0.0, total_phase * strength).exp();
                 }
             }
         }
@@ -294,7 +294,7 @@ impl CorrectionManager {
     }
 
     /// Apply all corrections to field
-    pub fn apply_corrections(&self, field: &mut Array3<Complex<f64>>, grid: &Grid) {
+    pub fn apply_corrections(&self, field: &mut Array3<Complex64>, grid: &Grid) {
         for correction in &self.corrections {
             correction.apply(field, grid);
         }

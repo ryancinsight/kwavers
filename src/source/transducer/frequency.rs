@@ -81,7 +81,8 @@ impl FrequencyResponse {
             let electrical_term = Complex64::new(1.0, 2.0 * delta * electrical_q);
 
             // Combined response
-            let response: Complex64 = Complex64::new(coupling.powi(2), 0.0) / (mechanical_term * electrical_term);
+            let response: Complex64 =
+                Complex64::new(coupling.powi(2), 0.0) / (mechanical_term * electrical_term);
 
             magnitude[i] = response.norm();
             phase[i] = response.arg();

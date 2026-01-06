@@ -2,27 +2,28 @@
 
 use crate::solver::fdtd::FdtdConfig;
 use crate::solver::hybrid::adaptive_selection::SelectionCriteria;
-use crate::solver::pstd::PstdConfig;
+use crate::solver::hybrid::domain_decomposition::DomainRegion;
+use crate::solver::spectral::SpectralConfig;
 use serde::{Deserialize, Serialize};
 
 /// Domain decomposition strategy
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum DecompositionStrategy {
     /// Static decomposition based on initial conditions
     Static,
     /// Dynamic decomposition that adapts during simulation
     Dynamic,
     /// User-defined regions
-    UserDefined,
+    UserDefined(Vec<DomainRegion>),
     /// Frequency-based decomposition
     FrequencyBased,
 }
 
-/// Configuration for the hybrid PSTD/FDTD solver
+/// Configuration for the hybrid Spectral/FDTD solver
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HybridConfig {
-    /// PSTD solver configuration
-    pub pstd_config: PstdConfig,
+    /// Spectral solver configuration
+    pub spectral_config: SpectralConfig,
 
     /// FDTD solver configuration  
     pub fdtd_config: FdtdConfig,
@@ -46,7 +47,7 @@ pub struct HybridConfig {
 impl Default for HybridConfig {
     fn default() -> Self {
         Self {
-            pstd_config: PstdConfig::default(),
+            spectral_config: SpectralConfig::default(),
             fdtd_config: FdtdConfig::default(),
             decomposition_strategy: DecompositionStrategy::Dynamic,
             selection_criteria: SelectionCriteria::default(),

@@ -47,66 +47,66 @@ impl Default for BeamformingCoreConfig {
 /// Backward-compatible alias for the unified core configuration.
 pub type BeamformingConfig = BeamformingCoreConfig;
 
-/// Deterministic conversion from PAM's beamforming configuration to the core
+/// Deterministic conversion from PAM's **policy** config to the shared core
 /// beamforming configuration.
 ///
+/// PAM owns policy knobs (method selection, focal point, apodization, frequency
+/// range) while `BeamformingCoreConfig` owns the beamforming numerical/physical
+/// primitives (sound speed, sampling frequency, diagonal loading defaults, etc.).
+///
 /// Mapping rationale:
-/// - `reference_frequency`: set to the midpoint of the PAM `frequency_range`.
-/// - `diagonal_loading`: if PAM selects Capon with loading, adopt the provided
-///   value; otherwise use the core default for numerical stability.
-/// - `sound_speed` and `sampling_frequency`: adopt well-established system
-///   defaults (`SOUND_SPEED_TISSUE`, `SAMPLING_FREQUENCY_DEFAULT`) when not
-///   specified by PAM.
-/// - `num_snapshots` and `spatial_smoothing`: fall back to core defaults;
-///   higher-level processors may override via domain-specific policies.
-impl From<crate::sensor::passive_acoustic_mapping::beamforming::BeamformingConfig>
+/// - `reference_frequency`: set to the midpoint of PAM `frequency_range`.
+/// - `diagonal_loading`: if PAM selects Capon with loading, adopt the provided value;
+///   otherwise preserve the `core.diagonal_loading`.
+/// - Remaining fields are preserved from PAM's embedded `core` to avoid overriding
+///   caller-specified physical parameters.
+impl From<crate::sensor::passive_acoustic_mapping::beamforming_config::PamBeamformingConfig>
     for BeamformingCoreConfig
 {
-    fn from(pam: crate::sensor::passive_acoustic_mapping::beamforming::BeamformingConfig) -> Self {
-        use crate::sensor::passive_acoustic_mapping::beamforming::BeamformingMethod as PamMethod;
+    fn from(
+        pam: crate::sensor::passive_acoustic_mapping::beamforming_config::PamBeamformingConfig,
+    ) -> Self {
+        use crate::sensor::passive_acoustic_mapping::beamforming_config::PamBeamformingMethod;
 
         let (f_min, f_max) = pam.frequency_range;
         let reference_frequency = 0.5 * (f_min + f_max);
 
-        let diagonal_loading = match pam.method {
-            PamMethod::CaponDiagonalLoading { diagonal_loading } => diagonal_loading,
-            _ => 0.01,
-        };
+        let mut core = pam.core;
+        core.reference_frequency = reference_frequency;
 
-        BeamformingCoreConfig {
-            sound_speed: SOUND_SPEED_TISSUE,
-            sampling_frequency: SAMPLING_FREQUENCY_DEFAULT,
-            reference_frequency,
-            diagonal_loading,
-            num_snapshots: 100,
-            spatial_smoothing: None,
+        if let PamBeamformingMethod::CaponDiagonalLoading { diagonal_loading } = pam.method {
+            core.diagonal_loading = diagonal_loading;
         }
+
+        core
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sensor::passive_acoustic_mapping::beamforming::{
-        BeamformingConfig as PamConfig, BeamformingMethod as PamMethod,
+    use crate::sensor::passive_acoustic_mapping::beamforming_config::{
+        ApodizationType, PamBeamformingConfig, PamBeamformingMethod,
     };
 
     #[test]
-    fn pam_to_core_capon_loading_and_midpoint_frequency() {
-        let pam = PamConfig {
-            method: PamMethod::CaponDiagonalLoading {
+    fn pam_policy_to_core_capon_loading_and_midpoint_frequency() {
+        let pam = PamBeamformingConfig {
+            core: BeamformingCoreConfig::default(),
+            method: PamBeamformingMethod::CaponDiagonalLoading {
                 diagonal_loading: 0.05,
             },
             frequency_range: (1.0e6, 3.0e6),
             spatial_resolution: 1e-3,
-            apodization:
-                crate::sensor::passive_acoustic_mapping::beamforming::ApodizationType::Hamming,
+            apodization: ApodizationType::Hamming,
             focal_point: [0.0, 0.0, 0.0],
         };
 
         let core: BeamformingCoreConfig = pam.into();
         assert!((core.reference_frequency - 2.0e6).abs() < 1.0);
         assert!((core.diagonal_loading - 0.05).abs() < 1e-12);
+
+        // These should remain aligned to the SSOT defaults unless the caller overrides `pam.core`.
         assert_eq!(core.sound_speed, SOUND_SPEED_TISSUE);
         assert_eq!(core.sampling_frequency, SAMPLING_FREQUENCY_DEFAULT);
         assert_eq!(core.num_snapshots, 100);
@@ -114,18 +114,21 @@ mod tests {
     }
 
     #[test]
-    fn pam_to_core_non_capon_uses_default_loading() {
-        let pam = PamConfig {
-            method: PamMethod::DelayAndSum,
+    fn pam_policy_to_core_non_capon_preserves_core_loading_and_sets_reference_frequency() {
+        let mut embedded_core = BeamformingCoreConfig::default();
+        embedded_core.diagonal_loading = 0.123; // caller override must be preserved
+
+        let pam = PamBeamformingConfig {
+            core: embedded_core.clone(),
+            method: PamBeamformingMethod::DelayAndSum,
             frequency_range: (2.0e6, 2.0e6),
             spatial_resolution: 1e-3,
-            apodization:
-                crate::sensor::passive_acoustic_mapping::beamforming::ApodizationType::None,
+            apodization: ApodizationType::None,
             focal_point: [0.0, 0.0, 0.0],
         };
 
         let core: BeamformingCoreConfig = pam.into();
         assert!((core.reference_frequency - 2.0e6).abs() < 1.0);
-        assert!((core.diagonal_loading - 0.01).abs() < 1e-12);
+        assert!((core.diagonal_loading - embedded_core.diagonal_loading).abs() < 1e-12);
     }
 }

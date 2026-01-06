@@ -153,7 +153,7 @@ Positioning Kwavers as the premier platform for 2025+ research in **sono-optics*
 - **RefCell Usage**: Minimal and appropriate for interior mutability patterns
 
 ### Code Architecture ✅
-- **SLAP Violations**: Fixed long methods (KWaveSolver::new refactored)
+- **SLAP Violations**: Fixed long methods (KSpaceSolver::new refactored)
 - **DRY Compliance**: Helper functions available, usage can be improved
 - **YAGNI**: No unused abstractions detected
 - **Generic Types**: Enhanced with num_traits::Float bounds

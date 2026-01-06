@@ -7,8 +7,8 @@
 //! - Lee & Hamilton (1995) "Parametric array in air", Eq. 2.23
 //! - Kamakura et al. (1992) "Nonlinear acoustic beam propagation"
 
+use crate::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::{Array2, ArrayViewMut2};
-use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
 use super::KZKConfig;
@@ -21,7 +21,6 @@ pub struct KzkDiffractionOperator {
     config: KZKConfig,
     kx2: Array2<f64>,
     ky2: Array2<f64>,
-    fft_planner: FftPlanner<f64>,
 }
 
 impl std::fmt::Debug for KzkDiffractionOperator {
@@ -36,7 +35,6 @@ impl std::fmt::Debug for KzkDiffractionOperator {
                 "ky2",
                 &format!("Array2<f64> {}x{}", self.ky2.nrows(), self.ky2.ncols()),
             )
-            .field("fft_planner", &"<FftPlanner>")
             .finish()
     }
 }
@@ -59,7 +57,7 @@ impl KzkDiffractionOperator {
             let kx = if i <= nx / 2 {
                 i as f64 * dkx
             } else {
-                (i as f64 - nx as f64) * dkx
+                (i as i32 - nx as i32) as f64 * dkx
             };
 
             for j in 0..ny {
@@ -71,7 +69,7 @@ impl KzkDiffractionOperator {
             let ky = if j <= ny / 2 {
                 j as f64 * dky
             } else {
-                (j as f64 - ny as f64) * dky
+                (j as i32 - ny as i32) as f64 * dky
             };
 
             for i in 0..nx {
@@ -83,17 +81,10 @@ impl KzkDiffractionOperator {
             config: config.clone(),
             kx2,
             ky2,
-            fft_planner: FftPlanner::new(),
         }
     }
 
     /// Apply KZK diffraction step
-    ///
-    /// This implements the parabolic approximation:
-    /// P(z+Δz) = P(z) * exp(-i(k_x² + `k_y²)Δz/(2k₀`))
-    ///
-    /// Note: This is different from angular spectrum which uses:
-    /// P(z+Δz) = P(z) * exp(i*sqrt(k₀² - `k_x²` - `k_y²`)*Δz)
     pub fn apply(&mut self, field: &mut ArrayViewMut2<f64>, step_size: f64) {
         self.apply_with_step(field, step_size, 0);
     }
@@ -104,15 +95,10 @@ impl KzkDiffractionOperator {
         let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
 
         // Convert to complex field
-        let mut complex_field = Array2::zeros((nx, ny));
-        for i in 0..nx {
-            for j in 0..ny {
-                complex_field[[i, j]] = Complex::new(field[[i, j]], 0.0);
-            }
-        }
+        let mut complex_field = field.mapv(|x| Complex64::new(x, 0.0));
 
-        // 2D FFT
-        complex_field = self.fft_2d_forward(complex_field);
+        // 2D FFT using central cache
+        let mut complex_field_fft = fft_2d_complex(&complex_field);
 
         // Apply parabolic propagator in k-space
         // H(kx,ky) = exp(-i(kx² + ky²)Δz/(2k₀))
@@ -121,92 +107,32 @@ impl KzkDiffractionOperator {
                 let kt2 = self.kx2[[i, j]] + self.ky2[[i, j]];
 
                 // Parabolic approximation phase
-                // For forward propagation in +z direction
                 let phase = kt2 * step_size / (2.0 * k0);
 
                 // Apply propagator H = exp(i*phase)
-                complex_field[[i, j]] *= Complex::new(phase.cos(), phase.sin());
+                complex_field_fft[[i, j]] *= Complex64::from_polar(1.0, phase);
             }
         }
 
-        // Inverse 2D FFT
-        complex_field = self.fft_2d_inverse(complex_field);
+        // Inverse 2D FFT: result is complex
+        let recovered = ifft_2d_complex(&complex_field_fft);
 
-        // Extract magnitude (for intensity-based measurements)
-        // Note: Real part extraction is appropriate for fields initialized as real-valued
-        // Reference: Goodman (2005) "Introduction to Fourier Optics" §3.2 - real field assumption
-        // Complex amplitude tracking would require full phase information at initialization
+        // Extract real part
         for i in 0..nx {
             for j in 0..ny {
-                field[[i, j]] = complex_field[[i, j]].re;
+                field[[i, j]] = recovered[[i, j]].re;
             }
         }
     }
 
-    /// Forward 2D FFT (proper implementation)
-    fn fft_2d_forward(&mut self, mut data: Array2<Complex<f64>>) -> Array2<Complex<f64>> {
-        let nx = data.shape()[0];
-        let ny = data.shape()[1];
-
-        // FFT along rows
-        for j in 0..ny {
-            let mut row_buffer: Vec<Complex<f64>> = (0..nx).map(|i| data[[i, j]]).collect();
-
-            let fft = self.fft_planner.plan_fft_forward(nx);
-            fft.process(&mut row_buffer);
-
-            for i in 0..nx {
-                data[[i, j]] = row_buffer[i];
-            }
-        }
-
-        // FFT along columns
-        for i in 0..nx {
-            let mut col_buffer: Vec<Complex<f64>> = (0..ny).map(|j| data[[i, j]]).collect();
-
-            let fft = self.fft_planner.plan_fft_forward(ny);
-            fft.process(&mut col_buffer);
-
-            for j in 0..ny {
-                data[[i, j]] = col_buffer[j];
-            }
-        }
-
-        data
+    #[cfg(test)]
+    fn fft_2d_forward(&self, data: Array2<Complex64>) -> Array2<Complex64> {
+        fft_2d_complex(&data)
     }
 
-    /// Inverse 2D FFT
-    fn fft_2d_inverse(&mut self, mut data: Array2<Complex<f64>>) -> Array2<Complex<f64>> {
-        let nx = data.shape()[0];
-        let ny = data.shape()[1];
-
-        // IFFT along columns
-        for i in 0..nx {
-            let mut col_buffer: Vec<Complex<f64>> = (0..ny).map(|j| data[[i, j]]).collect();
-
-            let ifft = self.fft_planner.plan_fft_inverse(ny);
-            ifft.process(&mut col_buffer);
-
-            for j in 0..ny {
-                data[[i, j]] = col_buffer[j];
-            }
-        }
-
-        // IFFT along rows
-        for j in 0..ny {
-            let mut row_buffer: Vec<Complex<f64>> = (0..nx).map(|i| data[[i, j]]).collect();
-
-            let ifft = self.fft_planner.plan_fft_inverse(nx);
-            ifft.process(&mut row_buffer);
-
-            for i in 0..nx {
-                data[[i, j]] = row_buffer[i];
-            }
-        }
-
-        // Normalize
-        let norm = 1.0 / (nx * ny) as f64;
-        data.mapv(|c| c * norm)
+    #[cfg(test)]
+    fn fft_2d_inverse(&self, data: Array2<Complex64>) -> Array2<Complex64> {
+        ifft_2d_complex(&data)
     }
 }
 
@@ -409,7 +335,7 @@ mod tests {
         let mut complex_data = Array2::zeros((64, 64));
         for i in 0..64 {
             for j in 0..64 {
-                complex_data[[i, j]] = Complex::new(original[[i, j]], 0.0);
+                complex_data[[i, j]] = Complex64::new(original[[i, j]], 0.0);
             }
         }
 

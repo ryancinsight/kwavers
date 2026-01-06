@@ -56,7 +56,7 @@ impl Default for PushPulseParameters {
         Self {
             frequency: 5.0e6,  // 5 MHz
             duration: 150e-6,  // 150 μs
-            intensity: 1000.0, // 1 kW/m²
+            intensity: 1.0e6,  // 1 MW/m²
             focal_depth: 0.04, // 40 mm
             f_number: 2.0,
         }
@@ -175,7 +175,7 @@ impl AcousticRadiationForce {
         &self.parameters
     }
 
-    /// Apply push pulse to generate shear wave
+    /// Create an elastic body-force configuration for an ARFI push pulse.
     ///
     /// # Arguments
     ///
@@ -183,33 +183,92 @@ impl AcousticRadiationForce {
     ///
     /// # Returns
     ///
-    /// Initial displacement field (3D array)
+    /// Elastic body-force configuration to be consumed by the elastic solver as a source term.
+    ///
+    /// # Correctness invariant
+    ///
+    /// This returns a *forcing term* `f(x,t)` with units N/m³, to be used in:
+    ///
+    ///   ρ ∂v/∂t = ∇·σ + f
+    ///
+    /// This is intentionally not an “initial displacement” API.
     ///
     /// # References
     ///
-    /// Nightingale et al. (2002): Radiation force F = (2αI)/c generates
-    /// initial displacement proportional to pulse duration and intensity.
+    /// Nightingale et al. (2002): Radiation force density f ≈ (2αI)/c.
+    pub fn push_pulse_body_force(
+        &self,
+        push_location: [f64; 3],
+    ) -> KwaversResult<crate::physics::imaging::elastography::ElasticBodyForceConfig> {
+        // Calculate radiation force density magnitude (N/m³)
+        // f = (2αI)/c
+        let force_density = (2.0 * self.absorption * self.parameters.intensity) / self.sound_speed;
+
+        // Convert pulse duration into an impulse density J = ∫ f(t) dt (N·s/m³).
+        // We model the temporal envelope as a unit-area Gaussian in the solver, so this is the
+        // time integral of the force density.
+        let impulse_n_per_m3_s = force_density * self.parameters.duration;
+
+        // Spatial envelope: use Gaussian standard deviations derived from FWHM heuristics.
+        // Lateral: FWHM ≈ 1.2 × λ × F-number
+        // Axial:   FWHM ≈ 6 × λ × F-number²
+        //
+        // For a Gaussian exp(-0.5 (r/σ)²), FWHM = 2 √(2 ln 2) σ.
+        let wavelength = self.sound_speed / self.parameters.frequency;
+        let lateral_fwhm = 1.2 * wavelength * self.parameters.f_number;
+        let axial_fwhm = 6.0 * wavelength * self.parameters.f_number * self.parameters.f_number;
+
+        let fwhm_to_sigma = 1.0 / (2.0 * (2.0 * std::f64::consts::LN_2).sqrt());
+        let sigma_lateral = (lateral_fwhm * fwhm_to_sigma).max(1e-12);
+        let sigma_axial = (axial_fwhm * fwhm_to_sigma).max(1e-12);
+
+        // Temporal envelope: use a Gaussian with σ_t chosen so that ~99% of mass lies within the
+        // push duration. For a Gaussian, ±3σ covers ~99.7%, so take σ_t = duration / 6.
+        let sigma_t_s = (self.parameters.duration / 6.0).max(1e-12);
+
+        // Direction: ARFI primarily pushes along the beam axis. In this simplified geometry, we
+        // model the beam axis as +z.
+        let direction = [0.0, 0.0, 1.0];
+
+        Ok(
+            crate::physics::imaging::elastography::ElasticBodyForceConfig::GaussianImpulse {
+                center_m: push_location,
+                sigma_m: [sigma_lateral, sigma_lateral, sigma_axial],
+                direction,
+                t0_s: 0.0,
+                sigma_t_s,
+                impulse_n_per_m3_s,
+            },
+        )
+    }
+
+    /// Legacy API: Apply push pulse and return an initial displacement.
+    ///
+    /// # Correctness warning
+    ///
+    /// This method is maintained for compatibility but is not physically faithful: ARFI is a
+    /// body-force excitation, not an instantaneous displacement assignment. Prefer
+    /// [`push_pulse_body_force`] and configure the solver to use body-force sources.
+    #[deprecated(
+        note = "ARFI should be modeled as a body-force source term; use push_pulse_body_force instead."
+    )]
     pub fn apply_push_pulse(&self, push_location: [f64; 3]) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = self.grid.dimensions();
         let mut displacement = Array3::zeros((nx, ny, nz));
 
         // Calculate radiation force density
-        // F = (2αI)/c (N/m³)
+        // f = (2αI)/c (N/m³)
         let force_density = (2.0 * self.absorption * self.parameters.intensity) / self.sound_speed;
 
-        // Calculate initial displacement from force impulse
-        // u₀ = (F × Δt) / ρ
-        // where F is radiation force density, Δt is pulse duration, ρ is density
-        let displacement_scale = (force_density * self.parameters.duration) / self.density;
+        // NOTE: This computes a quantity with units [m/s], not [m]. Historically this was used as a
+        // displacement initializer; we keep it only for backward compatibility.
+        let pseudo_displacement_scale = (force_density * self.parameters.duration) / self.density;
 
-        // Calculate focal region dimensions
-        // Lateral: FWHM ≈ 1.2 × λ × F-number
-        // Axial: FWHM ≈ 6 × λ × F-number²
+        // FWHM heuristics
         let wavelength = self.sound_speed / self.parameters.frequency;
         let lateral_width = 1.2 * wavelength * self.parameters.f_number;
         let axial_length = 6.0 * wavelength * self.parameters.f_number * self.parameters.f_number;
 
-        // Apply Gaussian-shaped displacement around focal point
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
@@ -217,20 +276,18 @@ impl AcousticRadiationForce {
                     let y = j as f64 * self.grid.dy;
                     let z = k as f64 * self.grid.dz;
 
-                    // Distance from focal point
                     let dx = x - push_location[0];
                     let dy = y - push_location[1];
                     let dz = z - push_location[2];
 
-                    // Lateral and axial distances
                     let r_lateral = (dx * dx + dy * dy).sqrt();
                     let r_axial = dz.abs();
 
-                    // Gaussian focal profile
                     let lateral_profile = (-4.0 * (r_lateral / lateral_width).powi(2)).exp();
                     let axial_profile = (-4.0 * (r_axial / axial_length).powi(2)).exp();
 
-                    displacement[[i, j, k]] = displacement_scale * lateral_profile * axial_profile;
+                    displacement[[i, j, k]] =
+                        pseudo_displacement_scale * lateral_profile * axial_profile;
                 }
             }
         }
@@ -247,6 +304,9 @@ impl AcousticRadiationForce {
     /// # Returns
     ///
     /// Combined initial displacement field from all push pulses
+    #[deprecated(
+        note = "ARFI should be modeled as a body-force source term; use multi_directional_body_forces instead."
+    )]
     pub fn apply_multi_directional_push(
         &self,
         push_sequence: &MultiDirectionalPush,
@@ -268,6 +328,30 @@ impl AcousticRadiationForce {
         }
 
         Ok(total_displacement)
+    }
+
+    /// Create per-push body-force configs for a multi-directional push sequence.
+    ///
+    /// This is the correctness-first replacement for summing scalar “initial displacements”.
+    pub fn multi_directional_body_forces(
+        &self,
+        push_sequence: &MultiDirectionalPush,
+    ) -> KwaversResult<Vec<crate::physics::imaging::elastography::ElasticBodyForceConfig>> {
+        let mut forces = Vec::with_capacity(push_sequence.pushes.len());
+        for push in &push_sequence.pushes {
+            let mut cfg = self.push_pulse_body_force(push.location)?;
+            // Apply amplitude weighting by scaling impulse density (impulse density is ∫ f dt).
+            match &mut cfg {
+                crate::physics::imaging::elastography::ElasticBodyForceConfig::GaussianImpulse {
+                    impulse_n_per_m3_s,
+                    ..
+                } => {
+                    *impulse_n_per_m3_s *= push.amplitude_weight;
+                }
+            }
+            forces.push(cfg);
+        }
+        Ok(forces)
     }
 }
 

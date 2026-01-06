@@ -1,7 +1,7 @@
 //! Spectral operations for Westervelt solver
 
+use crate::fft::{fft_3d_array, ifft_3d_array};
 use crate::grid::Grid;
-use crate::utils::fft_operations::{fft_3d_array, ifft_3d_array};
 use ndarray::Array3;
 use num_complex::Complex;
 use std::f64::consts::PI;

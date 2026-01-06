@@ -121,7 +121,7 @@ use burn::{
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 #[cfg(feature = "simd")]
-use std::simd::{f32x16, StdFloat};
+use std::simd::f32x16;
 
 use std::sync::Arc;
 
@@ -137,10 +137,7 @@ pub struct WaveSpeedFn<B: Backend> {
 impl<B: Backend> WaveSpeedFn<B> {
     /// Create a new wave speed function from a CPU closure
     pub fn new(func: Arc<dyn Fn(f32, f32) -> f32 + Send + Sync>) -> Self {
-        Self {
-            func,
-            grid: None,
-        }
+        Self { func, grid: None }
     }
 
     /// Create a new wave speed function from a device-resident grid
@@ -201,9 +198,7 @@ impl<B: Backend> Module<B> for WaveSpeedFn<B> {
         self
     }
 
-    fn into_record(self) -> Self::Record {
-        
-    }
+    fn into_record(self) -> Self::Record {}
 }
 
 impl<B: Backend> burn::module::ModuleDisplayDefault for WaveSpeedFn<B> {
@@ -1999,7 +1994,7 @@ impl<B: Backend> RealTimePINNInference<B> {
     ///
     /// # Returns
     /// Optimized real-time inference engine with <100ms performance
-    pub fn new(burn_pinn: BurnPINN2DWave<B>, _device: &B::Device) -> KwaversResult<Self> {
+    pub fn new(burn_pinn: BurnPINN2DWave<B>, device: &B::Device) -> KwaversResult<Self> {
         // Extract network architecture from Burn model
         let layer_sizes = Self::extract_layer_sizes(&burn_pinn);
         let activations = Self::extract_activations(&burn_pinn);
@@ -2013,7 +2008,7 @@ impl<B: Backend> RealTimePINNInference<B> {
         // Initialize SIMD processor if available
         #[cfg(feature = "simd")]
         let simd_processor = SIMDProcessor {
-            lanes: f32x16::LANES,
+            lanes: 16, // f32x16 has 16 lanes
         };
 
         // Initialize GPU engine if available
@@ -2341,7 +2336,7 @@ impl<B: Backend> RealTimePINNInference<B> {
     ) -> KwaversResult<(Vec<f32>, Vec<f32>)> {
         let batch_size = x.len();
         let mut predictions = vec![0.0; batch_size];
-        let mut uncertainties = vec![0.01; batch_size]; // Placeholder uncertainty
+        let uncertainties = vec![0.01; batch_size]; // Placeholder uncertainty
 
         // Process in SIMD chunks for maximum throughput
         let chunk_size = self.simd_processor.lanes;
@@ -2437,7 +2432,7 @@ impl<B: Backend> RealTimePINNInference<B> {
         let mut output = vec![0.0; batch_size * output_size];
 
         // SIMD matrix multiplication with quantization
-        let lanes = f32x16::LANES;
+        let _lanes = 16; // f32x16 has 16 lanes
 
         for batch_idx in 0..batch_size {
             for out_idx in 0..output_size {
@@ -2475,7 +2470,7 @@ impl<B: Backend> RealTimePINNInference<B> {
     /// Apply activation function with SIMD
     #[cfg(feature = "simd")]
     fn apply_activation_simd(&self, input: &[f32], activation: ActivationType) -> Vec<f32> {
-        let lanes = f32x16::LANES;
+        let lanes = 16; // f32x16 has 16 lanes
         let mut output = vec![0.0; input.len()];
 
         for i in (0..input.len()).step_by(lanes) {
@@ -2501,8 +2496,13 @@ impl<B: Backend> RealTimePINNInference<B> {
                     f32x16::from_array(out)
                 }
                 ActivationType::Relu => {
-                    let zero = f32x16::splat(0.0);
-                    f32x16::simd_max(simd_vec, zero)
+                    // Use lane-wise max since simd_max is not found
+                    let vals = simd_vec.to_array();
+                    let mut out = [0.0f32; 16];
+                    for j in 0..16 {
+                        out[j] = vals[j].max(0.0);
+                    }
+                    f32x16::from_array(out)
                 }
                 ActivationType::Linear => simd_vec,
             };
@@ -2563,13 +2563,13 @@ impl<B: Backend> RealTimePINNInference<B> {
                 for in_idx in 0..input_size {
                     let weight_idx = out_idx * input_size + in_idx;
                     let weight_val = weights[weight_idx] as f32 * weight_scale;
-                    
+
                     let input_val = if layer_idx == 0 {
                         input[in_idx]
                     } else {
                         prev_buffers[layer_idx - 1][in_idx]
                     };
-                    
+
                     sum += input_val * weight_val;
                 }
 
@@ -2595,7 +2595,11 @@ impl<B: Backend> RealTimePINNInference<B> {
         let t: Vec<f32> = x.clone();
 
         // Warmup
-        let _ = self.predict_realtime(&x[..10.min(test_samples)], &y[..10.min(test_samples)], &t[..10.min(test_samples)]);
+        let _ = self.predict_realtime(
+            &x[..10.min(test_samples)],
+            &y[..10.min(test_samples)],
+            &t[..10.min(test_samples)],
+        );
 
         // Timed inference
         let start = Instant::now();

@@ -14,6 +14,7 @@
 //! - Validates wave propagation without instabilities
 //! - Validates solver doesn't produce NaN or Inf values
 
+use kwavers::boundary::{PMLBoundary, PMLConfig};
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::plugin::PluginManager;
@@ -56,10 +57,14 @@ fn test_cfl_stability_condition() {
     let c = 1500.0;
     let dt = 0.9 * dx / c;
 
+    let mut boundary =
+        PMLBoundary::new(PMLConfig::default()).expect("Failed to create PML boundary");
+    let sources = vec![];
+
     for step in 0..100 {
         let t = step as f64 * dt;
         plugin_manager
-            .execute(&mut fields, &grid, &medium, dt, t)
+            .execute(&mut fields, &grid, &medium, &sources, &mut boundary, dt, t)
             .expect("Failed to execute plugins");
 
         // Check stability
@@ -138,11 +143,15 @@ fn test_energy_conservation() {
     let c = 1500.0;
     let dt = 0.5 * dx / c;
 
+    let mut boundary =
+        PMLBoundary::new(PMLConfig::default()).expect("Failed to create PML boundary");
+    let sources = vec![];
+
     // Run for multiple steps
     for step in 0..50 {
         let t = step as f64 * dt;
         plugin_manager
-            .execute(&mut fields, &grid, &medium, dt, t)
+            .execute(&mut fields, &grid, &medium, &sources, &mut boundary, dt, t)
             .expect("Failed to execute plugins");
     }
 

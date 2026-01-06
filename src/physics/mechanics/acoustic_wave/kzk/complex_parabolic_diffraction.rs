@@ -1,7 +1,7 @@
 //! Complex-valued parabolic diffraction operator for proper energy conservation
 
+use crate::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::{Array2, ArrayViewMut2};
-use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
 use super::KZKConfig;
@@ -11,7 +11,6 @@ pub struct ParabolicDiffractionOperator {
     config: KZKConfig,
     kx2: Array2<f64>,
     ky2: Array2<f64>,
-    fft_planner: FftPlanner<f64>,
 }
 
 impl std::fmt::Debug for ParabolicDiffractionOperator {
@@ -67,21 +66,20 @@ impl ParabolicDiffractionOperator {
             config: config.clone(),
             kx2,
             ky2,
-            fft_planner: FftPlanner::new(),
         }
     }
 
     /// Apply diffraction step to complex field
-    pub fn apply_complex(&mut self, field: &mut ArrayViewMut2<Complex<f64>>, step_size: f64) {
+    pub fn apply_complex(&mut self, field: &mut ArrayViewMut2<Complex64>, step_size: f64) {
         let nx = self.config.nx;
         let ny = self.config.ny;
         let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
 
-        // Clone field for FFT (in-place would be better but complex indexing)
-        let mut complex_field = field.to_owned();
+        // Clone field for FFT
+        let complex_field_owned = field.to_owned();
 
         // 2D FFT
-        complex_field = self.fft_2d_forward(complex_field);
+        let mut complex_field = fft_2d_complex(&complex_field_owned);
 
         // Apply parabolic propagator in k-space
         // H(kx,ky) = exp(i(kx² + ky²)Δz/(2k₀))
@@ -93,81 +91,15 @@ impl ParabolicDiffractionOperator {
                 let phase = kt2 * step_size / (2.0 * k0);
 
                 // Apply propagator H = exp(i*phase)
-                complex_field[[i, j]] *= Complex::new(phase.cos(), phase.sin());
+                complex_field[[i, j]] *= Complex64::from_polar(1.0, phase);
             }
         }
 
         // Inverse 2D FFT
-        complex_field = self.fft_2d_inverse(complex_field);
+        let inverted = ifft_2d_complex(&complex_field);
 
         // Copy back to field
-        field.assign(&complex_field);
-    }
-
-    /// Forward 2D FFT
-    fn fft_2d_forward(&mut self, mut data: Array2<Complex<f64>>) -> Array2<Complex<f64>> {
-        let nx = data.shape()[0];
-        let ny = data.shape()[1];
-
-        // FFT along rows
-        for i in 0..nx {
-            let mut row_buffer: Vec<Complex<f64>> = (0..ny).map(|j| data[[i, j]]).collect();
-
-            let fft = self.fft_planner.plan_fft_forward(ny);
-            fft.process(&mut row_buffer);
-
-            for j in 0..ny {
-                data[[i, j]] = row_buffer[j];
-            }
-        }
-
-        // FFT along columns
-        for j in 0..ny {
-            let mut col_buffer: Vec<Complex<f64>> = (0..nx).map(|i| data[[i, j]]).collect();
-
-            let fft = self.fft_planner.plan_fft_forward(nx);
-            fft.process(&mut col_buffer);
-
-            for i in 0..nx {
-                data[[i, j]] = col_buffer[i];
-            }
-        }
-
-        data
-    }
-
-    /// Inverse 2D FFT with proper normalization
-    fn fft_2d_inverse(&mut self, mut data: Array2<Complex<f64>>) -> Array2<Complex<f64>> {
-        let nx = data.shape()[0];
-        let ny = data.shape()[1];
-
-        // IFFT along columns
-        for j in 0..ny {
-            let mut col_buffer: Vec<Complex<f64>> = (0..nx).map(|i| data[[i, j]]).collect();
-
-            let ifft = self.fft_planner.plan_fft_inverse(nx);
-            ifft.process(&mut col_buffer);
-
-            for i in 0..nx {
-                data[[i, j]] = col_buffer[i];
-            }
-        }
-
-        // IFFT along rows
-        for i in 0..nx {
-            let mut row_buffer: Vec<Complex<f64>> = (0..ny).map(|j| data[[i, j]]).collect();
-
-            let ifft = self.fft_planner.plan_fft_inverse(ny);
-            ifft.process(&mut row_buffer);
-
-            for j in 0..ny {
-                data[[i, j]] = row_buffer[j];
-            }
-        }
-
-        // Normalize
-        let norm = 1.0 / (nx * ny) as f64;
-        data.mapv(|c| c * norm)
+        field.assign(&inverted);
     }
 }
 
@@ -195,14 +127,14 @@ mod tests {
 
         // Create complex Gaussian beam
         let beam_waist = DEFAULT_BEAM_WAIST;
-        let mut field = Array2::zeros((config.nx, config.ny));
+        let mut field = Array2::<Complex64>::zeros((config.nx, config.ny));
 
         for i in 0..config.nx {
             for j in 0..config.ny {
                 let x = (i as f64 - config.nx as f64 / 2.0) * config.dx;
                 let y = (j as f64 - config.ny as f64 / 2.0) * config.dx;
                 let r2 = x * x + y * y;
-                field[[i, j]] = Complex::new((-r2 / (beam_waist * beam_waist)).exp(), 0.0);
+                field[[i, j]] = Complex64::new((-r2 / (beam_waist * beam_waist)).exp(), 0.0);
             }
         }
 
@@ -239,14 +171,14 @@ mod tests {
 
         // Create complex Gaussian beam
         let beam_waist = DEFAULT_BEAM_WAIST;
-        let mut field = Array2::zeros((config.nx, config.ny));
+        let mut field = Array2::<Complex64>::zeros((config.nx, config.ny));
 
         for i in 0..config.nx {
             for j in 0..config.ny {
                 let x = (i as f64 - config.nx as f64 / 2.0) * config.dx;
                 let y = (j as f64 - config.ny as f64 / 2.0) * config.dx;
                 let r2 = x * x + y * y;
-                field[[i, j]] = Complex::new((-r2 / (beam_waist * beam_waist)).exp(), 0.0);
+                field[[i, j]] = Complex64::new((-r2 / (beam_waist * beam_waist)).exp(), 0.0);
             }
         }
 

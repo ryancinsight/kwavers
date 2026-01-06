@@ -4,9 +4,8 @@
 //! in homogeneous media.
 
 use crate::error::KwaversResult;
-use crate::grid::Grid;
-use ndarray::{Array2, Array3};
-use num_complex::Complex;
+use crate::fft::{Complex64, fft_2d_complex, ifft_2d_complex, utils as fft_utils};
+use ndarray::Array2;
 use std::f64::consts::PI;
 
 /// Configuration for angular spectrum propagation
@@ -31,6 +30,8 @@ pub struct AngularSpectrum {
     kz: Array2<f64>,
     /// FFT size
     fft_size: (usize, usize),
+    /// Current frequency (Hz)
+    frequency: f64,
     /// Configuration
     config: SpectrumConfig,
 }
@@ -80,48 +81,23 @@ impl AngularSpectrum {
             ky,
             kz,
             fft_size,
+            frequency: 1e6, // Default to 1 MHz
             config,
         })
     }
 
+    /// Set current frequency
+    pub fn set_frequency(&mut self, frequency: f64) {
+        self.frequency = frequency;
+    }
+
     /// Forward 2D FFT to angular spectrum domain
-    /// Literature: Goodman (2005) - Introduction to Fourier Optics
-    pub fn forward_fft(&self, field: &Array2<Complex<f64>>) -> KwaversResult<Array2<Complex<f64>>> {
-        // Implement 2D Fast Fourier Transform for angular spectrum method
-        // The angular spectrum is the Fourier transform of the field distribution
-
-        use rustfft::{FftPlanner, num_complex::Complex};
-        use std::sync::Arc;
-
-        // Create FFT planner
-        let mut planner = FftPlanner::<f64>::new();
-
-        // Create 2D FFT by performing 1D FFTs on rows then columns
-        let (rows, cols) = field.dim();
-        let mut spectrum = Array2::<Complex<f64>>::zeros((rows, cols));
-
-        // FFT along rows first
-        for row in 0..rows {
-            let mut row_data: Vec<Complex<f64>> = field.row(row).to_vec();
-            let fft = planner.plan_fft_forward(cols);
-            fft.process(&mut row_data);
-            for col in 0..cols {
-                spectrum[[row, col]] = row_data[col];
-            }
-        }
-
-        // FFT along columns
-        for col in 0..cols {
-            let mut col_data: Vec<Complex<f64>> = spectrum.column(col).to_vec();
-            let fft = planner.plan_fft_forward(rows);
-            fft.process(&mut col_data);
-            for row in 0..rows {
-                spectrum[[row, col]] = col_data[row];
-            }
-        }
+    pub fn forward_fft(&self, field: &Array2<Complex64>) -> KwaversResult<Array2<Complex64>> {
+        // Forward 2D FFT using central cache
+        let mut spectrum = fft_2d_complex(field);
 
         // Apply FFT shift to center the spectrum
-        self.fft_shift(&mut spectrum);
+        fft_utils::fft_shift_2d(&mut spectrum);
 
         tracing::debug!("Completed forward FFT: {}x{} -> {}x{}",
                        field.nrows(), field.ncols(), spectrum.nrows(), spectrum.ncols());
@@ -129,67 +105,15 @@ impl AngularSpectrum {
         Ok(spectrum)
     }
 
-    /// Apply FFT shift to center zero-frequency components
-    fn fft_shift(&self, spectrum: &mut Array2<Complex<f64>>) {
-        let (rows, cols) = spectrum.dim();
-        let row_shift = rows / 2;
-        let col_shift = cols / 2;
-
-        // Create a copy for the shift operation
-        let original = spectrum.clone();
-
-        // Perform quadrant swap
-        for i in 0..rows {
-            for j in 0..cols {
-                let new_i = (i + row_shift) % rows;
-                let new_j = (j + col_shift) % cols;
-                spectrum[[new_i, new_j]] = original[[i, j]];
-            }
-        }
-    }
 
     /// Inverse 2D FFT from angular spectrum domain
-    /// Literature: Goodman (2005) - Introduction to Fourier Optics
-    pub fn inverse_fft(&self, spectrum: &Array2<Complex<f64>>) -> KwaversResult<Array2<Complex<f64>>> {
-        // Implement 2D inverse Fast Fourier Transform
-        use rustfft::FftPlanner;
-
-        // Create FFT planner
-        let mut planner = FftPlanner::<f64>::new();
-
+    pub fn inverse_fft(&self, spectrum: &Array2<Complex64>) -> KwaversResult<Array2<Complex64>> {
         // Create copy and undo FFT shift
-        let mut field = spectrum.clone();
-        self.fft_shift(&mut field); // Undo the forward shift
+        let mut shifted = spectrum.clone();
+        fft_utils::ifft_shift_2d(&mut shifted);
 
-        let (rows, cols) = field.dim();
-
-        // Inverse FFT along columns first
-        for col in 0..cols {
-            let mut col_data: Vec<rustfft::num_complex::Complex<f64>> = field.column(col).to_vec();
-            let fft = planner.plan_fft_inverse(rows);
-            fft.process(&mut col_data);
-            // Normalize by array size
-            for val in col_data.iter_mut() {
-                *val /= rows as f64;
-            }
-            for row in 0..rows {
-                field[[row, col]] = col_data[row];
-            }
-        }
-
-        // Inverse FFT along rows
-        for row in 0..rows {
-            let mut row_data: Vec<rustfft::num_complex::Complex<f64>> = field.row(row).to_vec();
-            let fft = planner.plan_fft_inverse(cols);
-            fft.process(&mut row_data);
-            // Normalize by array size
-            for val in row_data.iter_mut() {
-                *val /= cols as f64;
-            }
-            for col in 0..cols {
-                field[[row, col]] = row_data[col];
-            }
-        }
+        // Inverse 2D FFT using central cache
+        let field = ifft_2d_complex(&shifted);
 
         tracing::debug!("Completed inverse FFT: {}x{} -> {}x{}",
                        spectrum.nrows(), spectrum.ncols(), field.nrows(), field.ncols());
@@ -198,8 +122,7 @@ impl AngularSpectrum {
     }
 
     /// Propagate field using angular spectrum method
-    /// Literature: Goodman (2005) - Introduction to Fourier Optics, Chapter 3
-    pub fn propagate(&self, field: &Array2<Complex<f64>>, distance: f64) -> KwaversResult<Array2<Complex<f64>>> {
+    pub fn propagate(&self, field: &Array2<Complex64>, distance: f64) -> KwaversResult<Array2<Complex64>> {
         // Angular spectrum method for wave propagation:
         // 1. Forward FFT to get angular spectrum A(kx, ky)
         // 2. Apply transfer function H(kx, ky) = exp(i * k_z * z)
@@ -221,13 +144,14 @@ impl AngularSpectrum {
 
     /// Apply angular spectrum transfer function
     /// H(kx, ky) = exp(i * k_z * z) where k_z = sqrt(k^2 - kx^2 - ky^2)
-    fn apply_transfer_function(&self, spectrum: &mut Array2<Complex<f64>>, distance: f64) -> KwaversResult<()> {
+    fn apply_transfer_function(&self, spectrum: &mut Array2<Complex64>, distance: f64) -> KwaversResult<()> {
         let (rows, cols) = spectrum.dim();
-        let wavenumber = 2.0 * std::f64::consts::PI / self.wavelength;
+        let c0 = 1500.0; // Reference speed
+        let wavenumber = 2.0 * PI * self.frequency / c0;
 
         // Calculate spatial frequencies (centered around zero)
-        let dkx = 2.0 * std::f64::consts::PI / (rows as f64 * self.dx);
-        let dky = 2.0 * std::f64::consts::PI / (cols as f64 * self.dy);
+        let dkx = 2.0 * PI / (rows as f64 * self.config.dx);
+        let dky = 2.0 * PI / (cols as f64 * self.config.dx); // Assuming isotropic dx
 
         for i in 0..rows {
             for j in 0..cols {
@@ -241,14 +165,14 @@ impl AngularSpectrum {
 
                 if k_transverse_squared > k_squared {
                     // Evanescent wave - decays exponentially, set to zero for numerical stability
-                    spectrum[[i, j]] = Complex::new(0.0, 0.0);
+                    spectrum[[i, j]] = Complex64::new(0.0, 0.0);
                 } else {
                     // Propagating wave: k_z = sqrt(k^2 - kx^2 - ky^2)
                     let kz = (k_squared - k_transverse_squared).sqrt();
 
                     // Transfer function: H = exp(i * k_z * z)
                     let phase = kz * distance;
-                    let transfer_function = Complex::new(phase.cos(), phase.sin());
+                    let transfer_function = Complex64::from_polar(1.0, phase);
 
                     // Apply transfer function to spectrum
                     spectrum[[i, j]] *= transfer_function;
@@ -260,7 +184,7 @@ impl AngularSpectrum {
     }
 
     /// Propagate angular spectrum by distance dz
-    pub fn propagate_spectrum(&mut self, spectrum: &Array2<Complex<f64>>, dz: f64) -> KwaversResult<Array2<Complex<f64>>> {
+    pub fn propagate_spectrum(&mut self, spectrum: &Array2<Complex64>, dz: f64) -> KwaversResult<Array2<Complex64>> {
         // Update kz for the propagation distance
         self.update_wave_numbers(dz);
 
@@ -273,7 +197,7 @@ impl AngularSpectrum {
 
                 if kz_val.is_finite() {
                     // Propagation phase: exp(i * kz * dz)
-                    let phase = Complex::new(0.0, kz_val * dz);
+                    let phase = Complex64::new(0.0, kz_val * dz);
                     propagated[[i, j]] *= phase.exp();
                 } else {
                     // Evanescent wave - attenuate rapidly
@@ -286,8 +210,9 @@ impl AngularSpectrum {
     }
 
     /// Update wave numbers for given propagation distance
-    fn update_wave_numbers(&mut self, dz: f64) {
-        let k0 = 2.0 * PI / 0.0005; // Reference wavenumber (500 μm wavelength)
+    fn update_wave_numbers(&mut self, _dz: f64) {
+        let c0 = 1500.0;
+        let k0 = 2.0 * PI * self.frequency / c0;
 
         for i in 0..self.fft_size.0 {
             for j in 0..self.fft_size.1 {
@@ -301,7 +226,7 @@ impl AngularSpectrum {
                     self.kz[[i, j]] = (k0 * k0 - k_transverse_squared).sqrt();
                 } else {
                     // Evanescent wave
-                    self.kz[[i, j]] = -((k_transverse_squared - k0 * k0).sqrt() as f64).sqrt();
+                    self.kz[[i, j]] = -((k_transverse_squared - k0 * k0).sqrt());
                 }
             }
         }
@@ -326,7 +251,9 @@ impl AngularSpectrum {
 
     /// Apply angular spectrum cutoff based on maximum angle
     pub fn apply_angle_cutoff(&mut self) {
-        let k_max = (2.0 * PI / 0.0005) * self.config.max_angle.sin(); // k0 * sin(theta_max)
+        let c0 = 1500.0;
+        let k0 = 2.0 * PI * self.frequency / c0;
+        let k_max = k0 * self.config.max_angle.sin(); // k0 * sin(theta_max)
 
         for i in 0..self.fft_size.0 {
             for j in 0..self.fft_size.1 {
@@ -343,9 +270,9 @@ impl AngularSpectrum {
     /// Compute field at multiple depths efficiently
     pub fn propagate_to_depths(
         &mut self,
-        initial_field: &Array2<Complex<f64>>,
+        initial_field: &Array2<Complex64>,
         depths: &[f64],
-    ) -> KwaversResult<Vec<Array2<Complex<f64>>>> {
+    ) -> KwaversResult<Vec<Array2<Complex64>>> {
         let mut results = Vec::new();
         let mut current_spectrum = self.forward_fft(initial_field)?;
 
@@ -368,9 +295,9 @@ impl AngularSpectrum {
     }
 
     /// Compute diffraction pattern from aperture
-    pub fn diffraction_pattern(&self, aperture: &Array2<f64>, distance: f64) -> KwaversResult<Array2<Complex<f64>>> {
+    pub fn diffraction_pattern(&self, aperture: &Array2<f64>, distance: f64) -> KwaversResult<Array2<Complex64>> {
         // Compute Fraunhofer diffraction pattern
-        let mut spectrum = self.forward_fft(&aperture.mapv(|x| Complex::new(x, 0.0)))?;
+        let mut spectrum = self.forward_fft(&aperture.mapv(|x| Complex64::new(x, 0.0)))?;
         spectrum = self.propagate_spectrum(&spectrum, distance)?;
         self.inverse_fft(&spectrum)
     }
@@ -427,7 +354,7 @@ mod tests {
         let spectrum = AngularSpectrum::new(0.001, (32, 32), PI / 6.0).unwrap();
 
         // Create test field
-        let field = Array2::from_elem((32, 32), Complex::new(1.0, 0.0));
+        let field = Array2::from_elem((32, 32), Complex64::new(1.0, 0.0));
 
         let transformed = spectrum.forward_fft(&field);
         assert!(transformed.is_ok());
@@ -440,7 +367,7 @@ mod tests {
     fn test_spectrum_propagation() {
         let mut spectrum = AngularSpectrum::new(0.001, (16, 16), PI / 3.0).unwrap();
 
-        let test_spectrum = Array2::from_elem((16, 16), Complex::new(1.0, 0.0));
+        let test_spectrum = Array2::from_elem((16, 16), Complex64::new(1.0, 0.0));
 
         let propagated = spectrum.propagate_spectrum(&test_spectrum, 0.01);
         assert!(propagated.is_ok());

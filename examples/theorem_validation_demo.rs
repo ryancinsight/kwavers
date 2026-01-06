@@ -76,14 +76,14 @@ fn demonstrate_individual_validations() -> Result<(), Box<dyn std::error::Error>
     // Demonstrate Beer-Lambert law validation
     println!("\n1. Beer-Lambert Law Validation:");
     println!("-------------------------------");
-    let distances = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
-    let alpha = 0.1; // 1/m
-    let initial_intensity = 1.0;
+    let distances: Vec<f64> = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+    let alpha: f64 = 0.1; // 1/m
+    let initial_intensity: f64 = 1.0;
 
     // Generate theoretical intensities
     let theoretical_intensities: Vec<f64> = distances
         .iter()
-        .map(|&d| initial_intensity * (-alpha * d as f64).exp())
+        .map(|&d| initial_intensity * (-alpha * d).exp())
         .collect();
 
     // Add some measurement noise

@@ -126,7 +126,7 @@ pub fn bench_wave_propagation_comparison(c: &mut Criterion) {
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
     // Linear SWE setup
-    let mut linear_swe = ShearWaveElastography::new(
+    let linear_swe = ShearWaveElastography::new(
         &grid,
         &medium,
         InversionMethod::TimeOfFlight,
@@ -144,7 +144,6 @@ pub fn bench_wave_propagation_comparison(c: &mut Criterion) {
         &medium,
         material,
         NonlinearSWEConfig {
-            simulation_time: 0.5e-3,
             enable_harmonics: false, // Disable harmonics for fair comparison
             ..Default::default()
         },
@@ -171,7 +170,7 @@ pub fn bench_end_to_end_workflow(c: &mut Criterion) {
     c.bench_function("nl_swe_end_to_end_workflow", |b| {
         b.iter(|| {
             // Step 1: Linear SWE wave generation
-            let mut swe = black_box(
+            let swe = black_box(
                 ShearWaveElastography::new(
                     &grid,
                     &medium,
@@ -251,7 +250,6 @@ pub fn bench_convergence_analysis(c: &mut Criterion) {
             b.iter(|| {
                 let config = NonlinearSWEConfig {
                     nonlinearity_parameter: beta,
-                    simulation_time: 0.2e-3,
                     ..Default::default()
                 };
 
@@ -302,18 +300,20 @@ pub fn bench_literature_performance_validation(c: &mut Criterion) {
 
     // Memory efficiency validation
     c.bench_function("hyperelastic_memory_efficiency", |b| {
-        // Measure memory usage for storing hyperelastic material properties
-        let materials = vec![
-            black_box(HyperelasticModel::neo_hookean_soft_tissue()),
-            black_box(HyperelasticModel::mooney_rivlin_biological()),
-            black_box(HyperelasticModel::Ogden {
-                mu: vec![1e3, 0.5e3],
-                alpha: vec![1.5, 5.0],
-            }),
-        ];
+        b.iter(|| {
+            // Measure memory usage for storing hyperelastic material properties
+            let materials = [
+                black_box(HyperelasticModel::neo_hookean_soft_tissue()),
+                black_box(HyperelasticModel::mooney_rivlin_biological()),
+                black_box(HyperelasticModel::Ogden {
+                    mu: vec![1e3, 0.5e3],
+                    alpha: vec![1.5, 5.0],
+                }),
+            ];
 
-        // Literature target: < 8 bytes per grid point for material storage
-        black_box(materials.len())
+            // Literature target: < 8 bytes per grid point for material storage
+            black_box(materials.len())
+        });
     });
 }
 

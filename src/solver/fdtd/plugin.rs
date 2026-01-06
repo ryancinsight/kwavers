@@ -94,7 +94,7 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        _context: &PluginContext,
+        _context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         // Ensure fields have correct dimensions
         if fields.dim().0 < 4 {

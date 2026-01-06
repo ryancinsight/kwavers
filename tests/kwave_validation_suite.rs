@@ -101,6 +101,12 @@ pub struct KWaveValidator {
     output_dir: String,
 }
 
+impl Default for KWaveValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl KWaveValidator {
     pub fn new() -> Self {
         let mut test_cases = HashMap::new();
@@ -196,17 +202,17 @@ impl KWaveValidator {
         // Grid setup
         let (nx, ny, nz) = test_case.grid_size;
         let dx = test_case.grid_spacing * 1000.0; // Convert to mm for k-Wave
-        script.push_str(&format!("%% Grid setup\n"));
+        script.push_str("%% Grid setup\n");
         script.push_str(&format!("Nx = {};\n", nx));
         script.push_str(&format!("Ny = {};\n", ny));
         script.push_str(&format!("Nz = {};\n", nz));
         script.push_str(&format!("dx = {:.6};     %% mm\n", dx));
         script.push_str(&format!("dy = {:.6};     %% mm\n", dx));
         script.push_str(&format!("dz = {:.6};     %% mm\n", dx));
-        script.push_str(&format!("kgrid = kWaveGrid(Nx, dx, Ny, dy, Nz, dz);\n\n"));
+        script.push_str("kgrid = kWaveGrid(Nx, dx, Ny, dy, Nz, dz);\n\n");
 
         // Medium setup
-        script.push_str(&format!("%% Medium setup\n"));
+        script.push_str("%% Medium setup\n");
         script.push_str(&format!(
             "medium.sound_speed = {:.1};      %% m/s\n",
             test_case.c0
@@ -217,18 +223,16 @@ impl KWaveValidator {
         ));
 
         // Add absorption if needed
-        script.push_str(&format!(
-            "medium.alpha_coeff = 0.75;         %% dB/(MHz^y cm)\n"
-        ));
-        script.push_str(&format!("medium.alpha_power = 1.5;          %% y\n\n"));
+        script.push_str("medium.alpha_coeff = 0.75;         %% dB/(MHz^y cm)\n");
+        script.push_str("medium.alpha_power = 1.5;          %% y\n\n");
 
         // Source setup
-        script.push_str(&format!("%% Source setup\n"));
+        script.push_str("%% Source setup\n");
         match &test_case.source_type {
             SourceType::PlaneWave {
                 amplitude,
                 frequency,
-                direction,
+                direction: _,
             } => {
                 script.push_str(&format!(
                     "source.p0 = {:.1};              %% Pa\n",
@@ -238,11 +242,11 @@ impl KWaveValidator {
                     "source_freq = {:.1};            %% Hz\n",
                     frequency
                 ));
-                script.push_str(&format!("source_cycles = 3;\n"));
-                script.push_str(&format!("source.p = makeTimeVaryingSource(kgrid, source, source_freq, source_cycles);\n"));
+                script.push_str("source_cycles = 3;\n");
+                script.push_str("source.p = makeTimeVaryingSource(kgrid, source, source_freq, source_cycles);\n");
                 // For plane wave, set source mask to left boundary
-                script.push_str(&format!("source.p_mask = zeros(Nx, Ny, Nz);\n"));
-                script.push_str(&format!("source.p_mask(1, :, :) = 1;\n"));
+                script.push_str("source.p_mask = zeros(Nx, Ny, Nz);\n");
+                script.push_str("source.p_mask(1, :, :) = 1;\n");
             }
             SourceType::PointSource {
                 position,
@@ -262,9 +266,9 @@ impl KWaveValidator {
                     "source_freq = {:.1};            %% Hz\n",
                     frequency
                 ));
-                script.push_str(&format!("source_cycles = 3;\n"));
-                script.push_str(&format!("source.p = makeTimeVaryingSource(kgrid, source, source_freq, source_cycles);\n"));
-                script.push_str(&format!("source.p_mask = zeros(Nx, Ny, Nz);\n"));
+                script.push_str("source_cycles = 3;\n");
+                script.push_str("source.p = makeTimeVaryingSource(kgrid, source, source_freq, source_cycles);\n");
+                script.push_str("source.p_mask = zeros(Nx, Ny, Nz);\n");
                 script.push_str(&format!(
                     "source.p_mask({}, {}, {}) = 1;\n",
                     ix + 1,
@@ -277,8 +281,8 @@ impl KWaveValidator {
                 diameter,
                 frequency,
             } => {
-                let (fx, fy, fz) = *focal_point;
-                let radius = diameter / 2.0;
+                let (fx, _fy, _fz) = *focal_point;
+                let _radius = diameter / 2.0;
                 script.push_str(&format!(
                     "transducer.diameter = {:.3};      %% m\n",
                     diameter
@@ -288,17 +292,15 @@ impl KWaveValidator {
                     "transducer.source_freq = {:.1};   %% Hz\n",
                     frequency
                 ));
-                script.push_str(&format!("transducer.cycles = 3;\n"));
-                script.push_str(&format!(
-                    "source = makeTransducer(kgrid, medium, transducer);\n"
-                ));
+                script.push_str("transducer.cycles = 3;\n");
+                script.push_str("source = makeTransducer(kgrid, medium, transducer);\n");
             }
         }
 
         // Sensor setup
-        script.push_str(&format!("\n%% Sensor setup\n"));
-        script.push_str(&format!("sensor.mask = zeros(Nx, Ny, Nz);\n"));
-        for (i, (ix, iy, iz)) in test_case.sensor_positions.iter().enumerate() {
+        script.push_str("\n%% Sensor setup\n");
+        script.push_str("sensor.mask = zeros(Nx, Ny, Nz);\n");
+        for (ix, iy, iz) in test_case.sensor_positions.iter() {
             script.push_str(&format!(
                 "sensor.mask({}, {}, {}) = 1;\n",
                 ix + 1,
@@ -308,17 +310,17 @@ impl KWaveValidator {
         }
 
         // Simulation setup
-        script.push_str(&format!("\n%% Simulation setup\n"));
+        script.push_str("\n%% Simulation setup\n");
         script.push_str(&format!("input_args = {{'PMLSize', {}, 'PMLInside', false, 'PlotPML', false, 'Smooth', false}};\n", test_case.pml_size));
 
         let dt_kwave = test_case.grid_spacing / test_case.c0; // CFL condition for k-Wave
-        let n_steps = (test_case.simulation_time / dt_kwave) as usize;
-        script.push_str(&format!(
-            "sensor_data = kspaceFirstOrder3D(kgrid, medium, source, sensor, input_args{{:}});\n\n"
-        ));
+        let _n_steps = (test_case.simulation_time / dt_kwave) as usize;
+        script.push_str(
+            "sensor_data = kspaceFirstOrder3D(kgrid, medium, source, sensor, input_args{:});\n\n",
+        );
 
         // Save results
-        script.push_str(&format!("%% Save results\n"));
+        script.push_str("%% Save results\n");
         script.push_str(&format!(
             "save('{}_kwave_output.mat', 'sensor_data', 'kgrid', 'medium', 'source', 'sensor');\n",
             name
@@ -410,7 +412,7 @@ impl KWaveValidator {
     }
 
     /// Parse MAT file data (simplified implementation)
-    fn parse_mat_file_data(&self, data: &[u8]) -> KwaversResult<Array2<f32>> {
+    fn parse_mat_file_data(&self, _data: &[u8]) -> KwaversResult<Array2<f32>> {
         // This is a placeholder for actual MAT file parsing
         // In practice, you would use a library like `mat-file` or implement HDF5 reading
 
@@ -532,7 +534,7 @@ impl KWaveValidator {
         grid: &Grid,
         medium: &HomogeneousMedium,
         source: &Box<dyn kwavers::source::Source>,
-        sensor_mask: &ndarray::Array3<bool>,
+        _sensor_mask: &ndarray::Array3<bool>,
         dt: f64,
         n_steps: usize,
         test_case: &KWaveTestCase,
@@ -748,7 +750,7 @@ impl KWaveValidator {
     /// Create kwavers source from test case specification
     fn create_kwavers_source(
         &self,
-        test_case: &KWaveTestCase,
+        _test_case: &KWaveTestCase,
         grid: &Grid,
     ) -> KwaversResult<Box<dyn kwavers::source::Source>> {
         // For now, create a simple point source at the grid center using a sine wave signal

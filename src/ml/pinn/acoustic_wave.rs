@@ -427,7 +427,9 @@ mod tests {
         assert_eq!(domain.wave_speed(), 1500.0);
         assert_eq!(domain.density(), 1000.0);
         assert!(domain.nonlinearity_coefficient().is_none());
-        assert!(<AcousticWaveDomain as PhysicsDomain<B>>::supports_coupling(&domain));
+        assert!(<AcousticWaveDomain as PhysicsDomain<B>>::supports_coupling(
+            &domain
+        ));
     }
 
     #[test]

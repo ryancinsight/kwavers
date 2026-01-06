@@ -64,7 +64,7 @@ impl ArrayGeometry {
                 orientation,
             } => {
                 let mut positions = Vec::with_capacity(*elements);
-                let norm = normalize(orientation);
+                let norm = crate::sensor::math::normalize3(*orientation);
 
                 for i in 0..*elements {
                     let offset = (i as f64 - (*elements as f64 - 1.0) / 2.0) * pitch;
@@ -86,7 +86,7 @@ impl ArrayGeometry {
                 normal,
             } => {
                 let mut positions = Vec::with_capacity(elements_x * elements_y);
-                let (u, v) = orthogonal_basis(normal);
+                let (u, v) = crate::sensor::math::orthogonal_basis_from_normal3(*normal);
 
                 for i in 0..*elements_x {
                     for j in 0..*elements_y {
@@ -110,7 +110,7 @@ impl ArrayGeometry {
                 normal,
             } => {
                 let mut positions = Vec::with_capacity(*elements);
-                let (u, v) = orthogonal_basis(normal);
+                let (u, v) = crate::sensor::math::orthogonal_basis_from_normal3(*normal);
 
                 for i in 0..*elements {
                     let angle = 2.0 * std::f64::consts::PI * i as f64 / *elements as f64;
@@ -173,43 +173,4 @@ impl ArrayGeometry {
             ArrayGeometry::Arbitrary { positions } => positions.len(),
         }
     }
-}
-
-/// Normalize a vector
-fn normalize(v: &[f64; 3]) -> [f64; 3] {
-    let mag = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
-    if mag > 0.0 {
-        [v[0] / mag, v[1] / mag, v[2] / mag]
-    } else {
-        [0.0, 0.0, 1.0]
-    }
-}
-
-/// Create orthogonal basis from normal vector
-fn orthogonal_basis(normal: &[f64; 3]) -> ([f64; 3], [f64; 3]) {
-    let n = normalize(normal);
-
-    // Find a vector not parallel to n
-    let v = if n[0].abs() < 0.9 {
-        [1.0, 0.0, 0.0]
-    } else {
-        [0.0, 1.0, 0.0]
-    };
-
-    // First orthogonal vector: u = v × n
-    let u = [
-        v[1] * n[2] - v[2] * n[1],
-        v[2] * n[0] - v[0] * n[2],
-        v[0] * n[1] - v[1] * n[0],
-    ];
-    let u = normalize(&u);
-
-    // Second orthogonal vector: v = n × u
-    let v = [
-        n[1] * u[2] - n[2] * u[1],
-        n[2] * u[0] - n[0] * u[2],
-        n[0] * u[1] - n[1] * u[0],
-    ];
-
-    (u, v)
 }

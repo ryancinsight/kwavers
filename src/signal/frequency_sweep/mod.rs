@@ -11,7 +11,6 @@ use crate::signal::Signal;
 use std::fmt::Debug;
 
 // Re-export main types
-pub use crate::physics::constants::*;
 pub use chirp::LinearChirp;
 pub use exponential::ExponentialSweep;
 pub use hyperbolic::HyperbolicSweep;
@@ -117,7 +116,7 @@ impl SweepFactory {
                 config.start_frequency,
                 config.stop_frequency,
                 config.duration,
-                DEFAULT_FREQUENCY_STEPS,
+                constants::DEFAULT_FREQUENCY_STEPS,
                 config.amplitude,
             )),
         }

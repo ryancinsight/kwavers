@@ -6,10 +6,14 @@
 //! - Carcione, "Wave Fields in Real Media", 2007
 
 use approx::assert_relative_eq;
+use kwavers::boundary::{PMLBoundary, PMLConfig};
+use kwavers::source::Source;
 use kwavers::{
     grid::Grid,
     medium::{thermal::ThermalField, ElasticProperties},
-    physics::plugin::{elastic_wave_plugin::ElasticWavePlugin, Plugin, PluginContext},
+    physics::plugin::{
+        elastic_wave_plugin::ElasticWavePlugin, Plugin, PluginContext, PluginFields,
+    },
 };
 use ndarray::Array4;
 
@@ -88,10 +92,17 @@ fn test_elastic_wave_propagation() {
 
     // Propagate for several timesteps
     let pressure = ndarray::Array3::<f64>::zeros((100, 100, 100));
-    let context = PluginContext::new(pressure);
+    let extra_fields = PluginFields::new(pressure);
+    let sources: Vec<Box<dyn Source>> = Vec::new();
+    let mut boundary = PMLBoundary::new(PMLConfig::default()).unwrap();
+    let mut context = PluginContext {
+        extra_fields: &extra_fields,
+        sources: &sources,
+        boundary: &mut boundary,
+    };
     for _ in 0..10 {
         plugin
-            .update(&mut fields, &grid, &medium, dt, 0.0, &context)
+            .update(&mut fields, &grid, &medium, dt, 0.0, &mut context)
             .unwrap();
     }
 

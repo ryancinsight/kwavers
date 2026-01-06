@@ -11,15 +11,15 @@ use ndarray::Array4;
 /// Hybrid solver plugin for integration with physics pipeline
 #[derive(Debug)]
 pub struct HybridPlugin {
-    solver: HybridSolver,
+    solver: Option<HybridSolver>,
+    config: HybridConfig,
     metadata: PluginMetadata,
     state: PluginState,
 }
 
 impl HybridPlugin {
     /// Create a new hybrid solver plugin
-    pub fn new(config: HybridConfig, grid: &Grid) -> KwaversResult<Self> {
-        let solver = HybridSolver::new(config, grid)?;
+    pub fn new(config: HybridConfig, _grid: &Grid) -> KwaversResult<Self> {
         let metadata = PluginMetadata {
             id: "hybrid_solver".to_string(),
             name: "Hybrid PSTD/FDTD Solver".to_string(),
@@ -30,7 +30,8 @@ impl HybridPlugin {
         };
 
         Ok(Self {
-            solver,
+            solver: None,
+            config,
             metadata,
             state: PluginState::Created,
         })
@@ -43,11 +44,13 @@ impl crate::physics::plugin::Plugin for HybridPlugin {
     }
 
     fn state(&self) -> PluginState {
-        PluginState::Initialized
+        self.state
     }
 
-    fn initialize(&mut self, _grid: &Grid, _medium: &dyn Medium) -> KwaversResult<()> {
-        // Solver is already initialized in new()
+    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
+        let solver = HybridSolver::new(self.config.clone(), grid, medium)?;
+        self.solver = Some(solver);
+        self.state = PluginState::Initialized;
         Ok(())
     }
 
@@ -58,21 +61,25 @@ impl crate::physics::plugin::Plugin for HybridPlugin {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        _context: &PluginContext,
+        context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
-        // Plugin architecture limitation: Solver requires source/boundary but plugin interface doesn't provide them
-        // Using NullSource (no-op) and default PML boundary as hybrid solver manages these internally
-        // Future: Extend plugin interface to accept optional source/boundary parameters
-        use crate::boundary::pml::PMLBoundary;
-        use crate::source::NullSource;
+        let solver = self.solver.as_mut().ok_or_else(|| {
+            crate::error::KwaversError::InternalError("Hybrid solver not initialized".to_string())
+        })?;
 
-        let source = NullSource::new();
-        use crate::boundary::pml::PMLConfig;
-        let pml_config = PMLConfig::default();
-        let mut boundary = PMLBoundary::new(pml_config)?;
+        // Hybrid solver requires a single source and boundary for its update method.
+        // We use the first source from the context or a NullSource if none are provided.
+        // The boundary is taken from the context.
+        use crate::source::{NullSource, Source};
+        let null_source = NullSource::new();
+        let source: &dyn Source = context
+            .sources
+            .first()
+            .map(|s| s.as_ref())
+            .unwrap_or(&null_source);
+        let boundary = &mut *context.boundary;
 
-        self.solver
-            .update(fields, medium, &source, &mut boundary, dt, t)
+        solver.update(fields, medium, source, boundary, dt, t)
     }
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {
@@ -100,12 +107,16 @@ impl crate::physics::plugin::Plugin for HybridPlugin {
     }
 
     fn diagnostics(&self) -> String {
-        let metrics = self.solver.metrics();
-        format!(
-            "Hybrid Plugin - PSTD fraction: {:.2}%, Total time: {:.2}ms",
-            metrics.pstd_fraction() * 100.0,
-            metrics.total_time().as_millis()
-        )
+        if let Some(solver) = &self.solver {
+            let metrics = solver.metrics();
+            format!(
+                "Hybrid Plugin - PSTD fraction: {:.2}%, Total time: {:.2}ms",
+                metrics.pstd_fraction() * 100.0,
+                metrics.total_time().as_millis()
+            )
+        } else {
+            "Hybrid Plugin - Not initialized".to_string()
+        }
     }
 
     fn set_state(&mut self, state: PluginState) {

@@ -9,6 +9,18 @@
 //! 2. Tracking wave propagation with ultrafast imaging
 //! 3. Reconstructing elasticity from shear wave speed
 //!
+//! ## Mathematical model (high-level)
+//!
+//! For isotropic, nearly-incompressible soft tissue (ν ≈ 0.5):
+//!
+//! - Shear modulus: μ = ρ cₛ²
+//! - Young's modulus (incompressible limit): E ≈ 3 μ = 3 ρ cₛ²
+//!
+//! Volumetric time-of-flight (ToF) reconstruction relies on *arrival times* `t_arrival(x)`
+//! estimated by a user-selected detector (see [`ArrivalDetection`]). “Arrival time” is not
+//! a single universal concept; it must be specified explicitly to avoid conflating
+//! displacement amplitude thresholds with spatial resolution or sampling.
+//!
 //! ## Literature References
 //!
 //! - Sarvazyan, A. P., et al. (1998). "Shear wave elasticity imaging: a new ultrasonic
@@ -30,13 +42,16 @@ pub mod elastic_wave_solver;
 pub mod harmonic_detection;
 pub mod inversion;
 pub mod nonlinear;
+pub mod orchestrator;
 pub mod radiation_force;
 
 pub use displacement::{DisplacementEstimator, DisplacementField};
 pub use elastic_wave_solver::{
-    ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver, VolumetricQualityMetrics,
-    VolumetricWaveConfig, WaveFrontTracker,
+    ArrivalDetection, ElasticBodyForceConfig, ElasticWaveConfig, ElasticWaveField,
+    ElasticWaveSolver, VolumetricQualityMetrics, VolumetricSource, VolumetricWaveConfig,
+    WaveFrontTracker,
 };
+pub use orchestrator::ShearWaveElastography;
 
 // GPU acceleration for 3D SWE
 pub mod gpu_accelerated_3d;

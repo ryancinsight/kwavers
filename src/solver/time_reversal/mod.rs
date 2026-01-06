@@ -13,6 +13,7 @@
 pub mod config;
 pub mod processing;
 pub mod reconstruction;
+pub mod utils;
 pub mod validation;
 
 // Re-export main types for convenience
@@ -69,7 +70,7 @@ mod tests {
     fn test_frequency_filter() {
         use processing::FrequencyFilter;
 
-        let mut filter = FrequencyFilter::new();
+        let filter = FrequencyFilter::new();
 
         // Create a signal with multiple frequency components
         let dt = 1e-5;
@@ -85,9 +86,7 @@ mod tests {
                 + (2.0 * PI * 10000.0 * t).sin();
         }
 
-        let filtered = filter
-            .apply_bandpass(signal.clone(), dt, (1000.0, 5000.0))
-            .unwrap();
+        let filtered = filter.bandpass(&signal, dt, 1000.0, 5000.0).unwrap();
 
         // The filtered signal should have reduced amplitude compared to original
         let original_energy: f64 = signal.iter().map(|&x| x * x).sum();

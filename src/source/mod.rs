@@ -1,27 +1,28 @@
 // source/mod.rs
 
 use crate::grid::Grid;
-use crate::signal::Signal;
+use crate::signal::{NullSignal, Signal, TimeVaryingSignal};
 use ndarray::Array3;
 use std::fmt::Debug;
+use std::sync::Arc;
 
-pub mod apodization;
-pub mod flexible;
-pub mod focused;
-pub mod hemispherical;
-pub mod linear_array;
-pub mod matrix_array;
-pub mod phased_array;
-pub mod transducer;
+// Hierarchical source module structure
+pub mod basic;
+pub mod custom;
+pub mod transducers;
+pub mod wavefront;
 
 /// Type of source injection
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SourceType {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SourceField {
+    #[default]
     Pressure,
     VelocityX,
     VelocityY,
     VelocityZ,
 }
+
+pub type SourceType = SourceField;
 
 /// Efficient source trait using mask-based approach
 pub trait Source: Debug + Sync + Send {
@@ -40,8 +41,8 @@ pub trait Source: Debug + Sync + Send {
     fn signal(&self) -> &dyn Signal;
 
     /// Get the type of source
-    fn source_type(&self) -> SourceType {
-        SourceType::Pressure
+    fn source_type(&self) -> SourceField {
+        SourceField::Pressure
     }
 
     /// Get the initial amplitude (for p0/u0)
@@ -63,23 +64,35 @@ pub trait Source: Debug + Sync + Send {
     }
 }
 
-pub use apodization::{
-    Apodization, BlackmanApodization, GaussianApodization, HammingApodization, HanningApodization,
-    RectangularApodization,
+// Re-export all source types for easy access
+pub use basic::{
+    linear_array::LinearArray,
+    matrix_array::MatrixArray,
+    piston::{PistonApodization, PistonBuilder, PistonConfig, PistonSource},
 };
-pub use focused::{
-    make_annular_array, make_bowl, ApodizationType, ArcConfig, ArcSource, BowlConfig,
-    BowlTransducer, MultiBowlArray,
+pub use custom::{
+    CustomSourceBuilder, FunctionSource, SimpleCustomSource, SimpleCustomSourceBuilder,
 };
-pub use linear_array::LinearArray;
-pub use matrix_array::MatrixArray;
-pub use phased_array::{
-    BeamformingMode, ElementSensitivity, PhasedArrayConfig, PhasedArrayTransducer,
-    TransducerElement,
+pub use transducers::{
+    apodization::{
+        Apodization, BlackmanApodization, GaussianApodization, HammingApodization,
+        HanningApodization, RectangularApodization,
+    },
+    focused::{
+        make_annular_array, make_bowl, ApodizationType, ArcConfig, ArcSource, BowlConfig,
+        BowlTransducer, MultiBowlArray,
+    },
+    phased_array::{
+        BeamformingMode, ElementSensitivity, PhasedArrayConfig, PhasedArrayTransducer,
+        TransducerElement,
+    },
 };
-
-// Source implementations are defined in this module
-// No need to re-export them from self
+pub use wavefront::{
+    bessel::{BesselBuilder, BesselConfig, BesselSource},
+    gaussian::{GaussianBuilder, GaussianConfig, GaussianSource},
+    plane_wave::{PlaneWaveBuilder, PlaneWaveConfig, PlaneWaveSource},
+    spherical::{SphericalBuilder, SphericalConfig, SphericalSource, SphericalWaveType},
+};
 
 /// Point source implementation
 #[derive(Debug)]
@@ -130,7 +143,8 @@ pub struct TimeVaryingSource {
 impl TimeVaryingSource {
     #[must_use]
     pub fn new(position: (usize, usize, usize), signal_values: Vec<f64>, dt: f64) -> Self {
-        let signal_wrapper = TimeVaryingSignal::new(signal_values.clone(), dt);
+        let signal_wrapper =
+            crate::signal::special::TimeVaryingSignal::new(signal_values.clone(), dt);
         Self {
             position,
             signal_values,
@@ -221,28 +235,6 @@ impl Source for CompositeSource {
     }
 }
 
-/// Null signal for sources with no signal
-#[derive(Debug, Clone)]
-struct NullSignal;
-
-impl Signal for NullSignal {
-    fn amplitude(&self, _t: f64) -> f64 {
-        0.0
-    }
-
-    fn frequency(&self, _t: f64) -> f64 {
-        0.0
-    }
-
-    fn phase(&self, _t: f64) -> f64 {
-        0.0
-    }
-
-    fn clone_box(&self) -> Box<dyn Signal> {
-        Box::new(self.clone())
-    }
-}
-
 /// Null source implementation for testing
 #[derive(Debug)]
 pub struct NullSource {
@@ -253,7 +245,7 @@ impl NullSource {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            null_signal: NullSignal,
+            null_signal: NullSignal::new(),
         }
     }
 }
@@ -279,53 +271,5 @@ impl Source for NullSource {
 
     fn signal(&self) -> &dyn Signal {
         &self.null_signal
-    }
-}
-
-/// Time-varying signal wrapper for sources with pre-computed values
-#[derive(Debug, Clone)]
-struct TimeVaryingSignal {
-    values: Vec<f64>,
-    dt: f64,
-    base_frequency: f64,
-}
-
-impl TimeVaryingSignal {
-    fn new(values: Vec<f64>, dt: f64) -> Self {
-        // Estimate base frequency from signal using FFT or zero-crossing
-        let base_frequency = if dt > 0.0 {
-            1.0 / (dt * values.len() as f64)
-        } else {
-            0.0
-        };
-        Self {
-            values,
-            dt,
-            base_frequency,
-        }
-    }
-}
-
-impl Signal for TimeVaryingSignal {
-    fn amplitude(&self, t: f64) -> f64 {
-        let index = (t / self.dt) as usize;
-        if index < self.values.len() {
-            self.values[index]
-        } else {
-            0.0
-        }
-    }
-
-    fn frequency(&self, _t: f64) -> f64 {
-        self.base_frequency
-    }
-
-    fn phase(&self, t: f64) -> f64 {
-        // Phase estimation based on time index
-        2.0 * std::f64::consts::PI * self.base_frequency * t
-    }
-
-    fn clone_box(&self) -> Box<dyn Signal> {
-        Box::new(self.clone())
     }
 }

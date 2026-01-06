@@ -91,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("---------------------------------------------");
 
     let dt = 0.1; // 100ms time steps
-    let mut time_points = vec![0.0, 60.0, 120.0, 180.0, 240.0, 300.0]; // Monitor every minute
+    let time_points = vec![0.0, 60.0, 120.0, 180.0, 240.0, 300.0]; // Monitor every minute
 
     for &target_time in &time_points {
         while therapy_orchestrator.session_state().current_time < target_time {
@@ -163,8 +163,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn create_patient_profile() -> PatientParameters {
     // Simulate patient liver properties
     let grid_dims = (64, 64, 64);
-    let mut speed_of_sound = Array3::from_elem(grid_dims, 1570.0); // Liver SoS
-    let mut density = Array3::from_elem(grid_dims, 1050.0); // Liver density
+    let speed_of_sound = Array3::from_elem(grid_dims, 1570.0); // Liver SoS
+    let density = Array3::from_elem(grid_dims, 1050.0); // Liver density
     let mut attenuation = Array3::from_elem(grid_dims, 0.7); // Liver attenuation
     let mut nonlinearity = Array3::from_elem(grid_dims, 6.2); // Liver B/A
 

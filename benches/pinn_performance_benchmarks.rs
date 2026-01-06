@@ -12,14 +12,12 @@
 //! - **Batch Processing**: Training throughput and GPU utilization
 //! - **Large-Scale Problems**: 10K-100K collocation point scaling
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use std::time::Duration;
-
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::{
-    AdaptiveCollocationSampler, BatchedPINNTrainer, BurnPINN2DConfig, BurnPINN2DWave,
-    GpuMemoryManager, MemoryPoolType, SamplingStrategy, UniversalTrainingConfig,
-};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+#[cfg(feature = "pinn")]
+use kwavers::ml::pinn::BurnPINN2DConfig;
+#[cfg(feature = "pinn")]
+use std::time::Duration;
 
 /// Benchmark configuration for different problem sizes
 #[derive(Debug, Clone)]
@@ -140,7 +138,7 @@ fn pinn_training_benchmark(c: &mut Criterion) {
             &config,
             |b, config| {
                 b.iter(|| {
-                    black_box(run_pinn_training_benchmark(config.clone()));
+                    let _ = black_box(run_pinn_training_benchmark(config.clone()));
                 });
             },
         );
@@ -153,22 +151,11 @@ fn pinn_training_benchmark(c: &mut Criterion) {
 fn run_pinn_training_benchmark(
     config: PinnBenchmarkConfig,
 ) -> Result<f64, Box<dyn std::error::Error>> {
-    // Create physics domain (simplified for benchmarking)
-    let physics_domain = Box::new(kwavers::ml::pinn::navier_stokes::NavierStokesDomain::new(
-        40.0,
-        1000.0,
-        0.001,
-        vec![1.0, 1.0],
-    ));
-
     // Create model
-    let model_config = BurnPINN2DConfig {
+    let _model_config = BurnPINN2DConfig {
         hidden_layers: vec![64, 64, 64],
         learning_rate: 0.001,
-        epochs: 1,
-        collocation_points: config.collocation_points,
-        boundary_points: 100,
-        initial_points: 50,
+        num_collocation_points: config.collocation_points,
         ..Default::default()
     };
 
@@ -242,7 +229,7 @@ fn adaptive_sampling_benchmark(c: &mut Criterion) {
             &size,
             |b, &size| {
                 b.iter(|| {
-                    black_box(run_adaptive_sampling_benchmark(size));
+                    let _ = black_box(run_adaptive_sampling_benchmark(size));
                 });
             },
         );

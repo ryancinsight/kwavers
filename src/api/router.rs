@@ -29,18 +29,43 @@ use crate::api::clinical_handlers::{
 };
 
 /// Create the complete API router
-pub fn create_router() -> Router<AppState> {
+pub fn create_router() -> Router<()> {
     // Create application states
+    // Correctness + security invariant:
+    // Router construction MUST NOT rely on `AuthMiddleware::default()`, because that allows
+    // accidental deployments with an implicit/placeholder secret. We require an explicit secret
+    // sourced from the process environment (or secret manager wiring upstream).
+    //
+    // For tests, construct `AppState` directly in test modules with an explicit test-secret.
+    let jwt_secret = std::env::var("KWAVERS_JWT_SECRET").expect(
+        "KWAVERS_JWT_SECRET must be set to a strong, non-empty secret to construct the API router",
+    );
+    let jwt_secret = jwt_secret.trim();
+    assert!(
+        !jwt_secret.is_empty(),
+        "KWAVERS_JWT_SECRET is set but empty/whitespace; set it to a strong, non-empty secret"
+    );
+    assert!(
+        jwt_secret != "default-secret-change-in-production",
+        "KWAVERS_JWT_SECRET is set to a known placeholder; set it to a strong, unique secret"
+    );
+
     let pinn_state = AppState {
         version: env!("CARGO_PKG_VERSION").to_string(),
         start_time: std::time::Instant::now(),
         job_manager: std::sync::Arc::new(crate::api::job_manager::JobManager::new(5)),
         model_registry: std::sync::Arc::new(crate::api::model_registry::ModelRegistry::new()),
-        auth_middleware: std::sync::Arc::new(crate::api::auth::AuthMiddleware::default()),
+        auth_middleware: std::sync::Arc::new(
+            crate::api::auth::AuthMiddleware::new(
+                jwt_secret,
+                crate::api::auth::JWTConfig::default(),
+            )
+            .expect("Failed to construct AuthMiddleware from KWAVERS_JWT_SECRET"),
+        ),
     };
 
     // Build router with middleware stack
-    let mut router = Router::new()
+    let mut router = Router::<AppState>::new()
         // Health and monitoring
         .route("/health", get(health_check))
         // PINN API routes (/api/pinn/*)
@@ -63,7 +88,7 @@ pub fn create_router() -> Router<AppState> {
         // Apply global middleware
         .layer(SetRequestIdLayer::new(
             axum::http::HeaderName::from_static("x-request-id"),
-            tower_http::request_id::MakeRequestUuid::default(),
+            tower_http::request_id::MakeRequestUuid,
         ))
         .layer(TraceLayer::new_for_http())
         .layer(CompressionLayer::new())
@@ -139,15 +164,19 @@ async fn debug_info() -> axum::response::Json<serde_json::Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::Request;
     use axum::body::Body;
+    use axum::http::Request;
     use tower::util::ServiceExt;
 
     #[tokio::test]
     async fn test_router_creation() {
+        // `create_router()` requires an explicit secret via KWAVERS_JWT_SECRET.
+        std::env::set_var("KWAVERS_JWT_SECRET", "test-secret-do-not-use-in-production");
+
         let router = create_router();
+
         // Validate health endpoint responds OK
-        let request = Request::get("/health").body(Body::empty()).unwrap();
+        let request: Request<Body> = Request::get("/health").body(Body::empty()).unwrap();
 
         let response = router.oneshot(request).await.unwrap();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
@@ -156,22 +185,33 @@ mod tests {
     #[cfg(debug_assertions)]
     #[tokio::test]
     async fn test_dev_router_creation() {
+        // `create_dev_router()` builds on `create_router()` and therefore requires an explicit secret.
+        std::env::set_var("KWAVERS_JWT_SECRET", "test-secret-do-not-use-in-production");
+
         let router = create_dev_router();
 
         // Test debug endpoint
-        let request = Request::get("/debug/info").body(Body::empty()).unwrap();
+        let request: Request<Body> = Request::get("/debug/info").body(Body::empty()).unwrap();
 
         let response = router.oneshot(request).await.unwrap();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
 
+    #[cfg(feature = "pinn")]
     #[tokio::test]
     async fn test_clinical_router_endpoints() {
-        let clinical_state = ClinicalAppState::new().unwrap();
+        let clinical_state = ClinicalAppState::new(std::sync::Arc::new(
+            crate::api::auth::AuthMiddleware::new(
+                "test-secret-do-not-use-in-production",
+                crate::api::auth::JWTConfig::default(),
+            )
+            .expect("test auth middleware construction must succeed"),
+        ))
+        .unwrap();
         let router = create_clinical_router().with_state(clinical_state);
 
         // Test that clinical devices endpoint responds OK
-        let request = Request::get("/devices").body(Body::empty()).unwrap();
+        let request: Request<Body> = Request::get("/devices").body(Body::empty()).unwrap();
 
         let response = router.oneshot(request).await.unwrap();
         assert_eq!(response.status(), axum::http::StatusCode::OK);

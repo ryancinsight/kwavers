@@ -28,6 +28,9 @@
 
 use kwavers::grid::Grid;
 use kwavers::medium::HomogeneousMedium;
+use kwavers::physics::imaging::elastography::nonlinear::{
+    HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
+};
 use kwavers::physics::imaging::elastography::*;
 use ndarray::{Array3, Array4};
 use std::f64::consts::PI;
@@ -687,12 +690,12 @@ mod convergence_tests {
             let stress_ref = model.cauchy_stress(&identity);
 
             // At reference state, stress should be zero
-            for i in 0..3 {
-                for j in 0..3 {
+            for (i, row) in stress_ref.iter().enumerate() {
+                for (j, &value) in row.iter().enumerate() {
                     assert!(
-                        stress_ref[i][j].abs() < 1e-10,
+                        value.abs() < 1e-10,
                         "Stress should be zero at reference state, got {:.2e} at [{},{}]",
-                        stress_ref[i][j],
+                        value,
                         i,
                         j
                     );
@@ -709,16 +712,16 @@ mod convergence_tests {
             let stress_extreme = model.cauchy_stress(&compression_extreme);
 
             // Extreme compression should produce finite, reasonable stresses
-            for i in 0..3 {
-                for j in 0..3 {
+            for row in &stress_extreme {
+                for &value in row {
                     assert!(
-                        stress_extreme[i][j].is_finite(),
+                        value.is_finite(),
                         "Stress should be finite under extreme compression"
                     );
                     assert!(
-                        stress_extreme[i][j].abs() < 1e10,
+                        value.abs() < 1e10,
                         "Stress should be reasonable under extreme compression, got {:.2e}",
-                        stress_extreme[i][j]
+                        value
                     );
                 }
             }
@@ -733,10 +736,10 @@ mod convergence_tests {
             let stress_shear = model.cauchy_stress(&shear);
 
             // Simple shear should produce finite stresses
-            for i in 0..3 {
-                for j in 0..3 {
+            for row in &stress_shear {
+                for &value in row {
                     assert!(
-                        stress_shear[i][j].is_finite(),
+                        value.is_finite(),
                         "Stress should be finite under shear deformation"
                     );
                 }
@@ -767,10 +770,12 @@ mod convergence_tests {
         match result {
             Ok(stress) => {
                 // If it doesn't panic, check that all values are finite
-                for i in 0..3 {
-                    for j in 0..3 {
-                        assert!(stress[i][j].is_finite() || stress[i][j].abs() < 1e20,
-                            "Stress should be finite or very large but not NaN/Inf near singularity");
+                for row in &stress {
+                    for &value in row {
+                        assert!(
+                            value.is_finite() || value.abs() < 1e20,
+                            "Stress should be finite or very large but not NaN/Inf near singularity"
+                        );
                     }
                 }
             }
@@ -789,10 +794,10 @@ mod convergence_tests {
 
         let stress_large = model.cauchy_stress(&large_deformation);
 
-        for i in 0..3 {
-            for j in 0..3 {
+        for row in &stress_large {
+            for &value in row {
                 assert!(
-                    stress_large[i][j].is_finite(),
+                    value.is_finite(),
                     "Stress should be finite under large deformation"
                 );
             }
@@ -840,7 +845,7 @@ mod convergence_tests {
 
         for &val in &eigenvals_repeated {
             assert!(
-                (val - 2.0).abs() < 1e-10,
+                (val - 2.0f64).abs() < 1e-10f64,
                 "Repeated eigenvalue matrix should have all eigenvalues 2.0, got {:.6}",
                 val
             );

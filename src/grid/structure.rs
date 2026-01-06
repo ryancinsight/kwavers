@@ -60,6 +60,12 @@ pub struct Grid {
     pub dy: f64,
     /// Spacing in z-direction (meters)
     pub dz: f64,
+    /// Origin of the grid [x0, y0, z0]
+    pub origin: [f64; 3],
+    /// Dimensionality of the grid (1, 2, or 3)
+    pub dimensionality: usize,
+    /// Maximum wavenumber supported by the grid
+    pub k_max: f64,
     /// Cache for `k_squared` computation
     pub(crate) k_squared_cache: OnceLock<Array3<f64>>,
 }
@@ -68,13 +74,21 @@ impl Default for Grid {
     /// Creates a default 32x32x32 grid with 1mm spacing
     fn default() -> Self {
         // Direct construction since we know the values are valid
+        let dx = 1e-3;
+        let dy = 1e-3;
+        let dz = 1e-3;
+        let k_max = std::f64::consts::PI / dx;
+
         Self {
             nx: 32,
             ny: 32,
             nz: 32,
-            dx: 1e-3,
-            dy: 1e-3,
-            dz: 1e-3,
+            dx,
+            dy,
+            dz,
+            origin: [0.0, 0.0, 0.0],
+            dimensionality: 3,
+            k_max,
             k_squared_cache: OnceLock::new(),
         }
     }
@@ -98,6 +112,28 @@ impl Grid {
             return Err(GridError::NonPositiveSpacing { dx, dy, dz });
         }
 
+        let mut dimensionality = 0;
+        if nx > 1 {
+            dimensionality += 1;
+        }
+        if ny > 1 {
+            dimensionality += 1;
+        }
+        if nz > 1 {
+            dimensionality += 1;
+        }
+        if dimensionality == 0 {
+            dimensionality = 1;
+        } // Scalar point
+
+        let min_dx = if nx > 1 { dx } else { f64::MAX }
+            .min(if ny > 1 { dy } else { f64::MAX })
+            .min(if nz > 1 { dz } else { f64::MAX });
+
+        // Handle cases where all dimensions are 1
+        let min_dx = if min_dx == f64::MAX { dx } else { min_dx };
+        let k_max = std::f64::consts::PI / min_dx;
+
         let grid = Self {
             nx,
             ny,
@@ -105,6 +141,9 @@ impl Grid {
             dx,
             dy,
             dz,
+            origin: [0.0, 0.0, 0.0],
+            dimensionality,
+            k_max,
             k_squared_cache: OnceLock::new(),
         };
 
@@ -137,6 +176,12 @@ impl Grid {
     #[inline]
     pub fn spacing(&self) -> (f64, f64, f64) {
         (self.dx, self.dy, self.dz)
+    }
+
+    /// Get total number of grid points (alias for size)
+    #[inline]
+    pub fn total_grid_points(&self) -> usize {
+        self.size()
     }
 
     /// Check if the grid has uniform spacing

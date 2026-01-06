@@ -70,9 +70,8 @@
 //! // Pressure is now a 2D complex array with the field at z = 50 mm
 //! ```
 
+use crate::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::{s, Array2, Array3, Axis};
-use num_complex::Complex;
-use rustfft::FftPlanner;
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
@@ -137,7 +136,7 @@ pub struct AngularSpectrumFactors {
     /// Z distance (m)
     pub z: f64,
     /// Angular spectrum of Green's function (complex)
-    pub green_spectrum: Array2<Complex<f64>>,
+    pub green_spectrum: Array2<Complex64>,
     /// kx coordinates
     pub kx: Vec<f64>,
     /// ky coordinates
@@ -243,7 +242,7 @@ impl FastNearfieldSolver {
 
         // Compute angular spectrum of Green's function
         // Based on McGough (2004) and Kelly & McGough (2006)
-        let mut green_spectrum = Array2::<Complex<f64>>::zeros((n_kx, n_ky));
+        let mut green_spectrum = Array2::<Complex64>::zeros((n_kx, n_ky));
 
         for (i, &kx_val) in kx.iter().enumerate() {
             for (j, &ky_val) in ky.iter().enumerate() {
@@ -256,23 +255,23 @@ impl FastNearfieldSolver {
                     if z > 0.0 {
                         // Forward propagation: angular spectrum factor for Rayleigh-Sommerfeld
                         // Ĝ(kx,ky,z) = (kz/k) * exp(j*kz*z) for the angular spectrum
-                        let phase_factor = Complex::new(0.0, kz * z).exp();
+                        let phase_factor = Complex64::new(0.0, kz * z).exp();
                         let amplitude_factor = kz / k;
                         green_spectrum[[i, j]] =
-                            Complex::new(0.0, 1.0) * amplitude_factor * phase_factor;
+                            Complex64::new(0.0, 1.0) * amplitude_factor * phase_factor;
                     } else if z == 0.0 {
                         // On-axis case - direct field
-                        green_spectrum[[i, j]] = Complex::new(1.0, 0.0);
+                        green_spectrum[[i, j]] = Complex64::new(1.0, 0.0);
                     } else {
                         // Backward propagation (less common but mathematically valid)
-                        let phase_factor = Complex::new(0.0, kz * z).exp();
+                        let phase_factor = Complex64::new(0.0, kz * z).exp();
                         let amplitude_factor = kz / k;
                         green_spectrum[[i, j]] =
-                            Complex::new(0.0, -1.0) * amplitude_factor * phase_factor;
+                            Complex64::new(0.0, -1.0) * amplitude_factor * phase_factor;
                     }
                 } else {
                     // Evanescent wave - set to zero (no propagation)
-                    green_spectrum[[i, j]] = Complex::new(0.0, 0.0);
+                    green_spectrum[[i, j]] = Complex64::new(0.0, 0.0);
                 }
             }
         }
@@ -288,9 +287,9 @@ impl FastNearfieldSolver {
     /// Compute pressure field from transducer velocity distribution
     pub fn compute_field(
         &self,
-        velocity: &Array2<Complex<f64>>,
+        velocity: &Array2<Complex64>,
         z: f64,
-    ) -> Result<Array2<Complex<f64>>, String> {
+    ) -> Result<Array2<Complex64>, String> {
         let transducer = self
             .transducer
             .as_ref()
@@ -318,24 +317,25 @@ impl FastNearfieldSolver {
         let padded_velocity = self.zero_pad_velocity(velocity);
 
         // Forward FFT (angular spectrum of velocity)
-        let velocity_spectrum = self.fft2_forward(&padded_velocity)?;
+        let velocity_spectrum = fft_2d_complex(&padded_velocity);
 
         // Multiply by Green's function angular spectrum
-        let mut pressure_spectrum = velocity_spectrum.clone();
+        let mut pressure_spectrum = velocity_spectrum;
         for ((i, j), val) in pressure_spectrum.indexed_iter_mut() {
             *val *= factors.green_spectrum[[i, j]];
         }
 
         // Scaling factor from Rayleigh-Sommerfeld theory
         let k = transducer.wavenumber(self.c0);
-        let scaling = Complex::new(0.0, self.rho0 * self.c0 * k / (2.0 * PI));
+        let scaling = Complex64::new(0.0, self.rho0 * self.c0 * k / (2.0 * PI));
 
         for val in pressure_spectrum.iter_mut() {
             *val *= scaling;
         }
 
         // Inverse FFT to get spatial pressure field
-        let pressure_field = self.fft2_inverse(&pressure_spectrum)?;
+        // Note: ifft_2d_complex already normalizes by 1/N
+        let pressure_field = ifft_2d_complex(&pressure_spectrum);
 
         // Extract the central region corresponding to the transducer aperture
         let (n_kx, n_ky) = self.config.angular_spectrum_size;
@@ -352,9 +352,9 @@ impl FastNearfieldSolver {
     /// Compute field at multiple z-distances (efficient batch computation)
     pub fn compute_field_stack(
         &self,
-        velocity: &Array2<Complex<f64>>,
+        velocity: &Array2<Complex64>,
         z_values: &[f64],
-    ) -> Result<Array3<Complex<f64>>, String> {
+    ) -> Result<Array3<Complex64>, String> {
         let mut results = Vec::new();
 
         for &z in z_values {
@@ -364,7 +364,7 @@ impl FastNearfieldSolver {
 
         // Stack into 3D array (z, x, y)
         let shape = (z_values.len(), results[0].nrows(), results[0].ncols());
-        let mut stacked = Array3::<Complex<f64>>::zeros(shape);
+        let mut stacked = Array3::<Complex64>::zeros(shape);
 
         for (i, field) in results.into_iter().enumerate() {
             stacked.index_axis_mut(Axis(0), i).assign(&field);
@@ -374,11 +374,11 @@ impl FastNearfieldSolver {
     }
 
     /// Zero-pad velocity distribution to angular spectrum size
-    fn zero_pad_velocity(&self, velocity: &Array2<Complex<f64>>) -> Array2<Complex<f64>> {
+    fn zero_pad_velocity(&self, velocity: &Array2<Complex64>) -> Array2<Complex64> {
         let (n_elem_x, n_elem_y) = velocity.dim();
         let (n_kx, n_ky) = self.config.angular_spectrum_size;
 
-        let mut padded = Array2::<Complex<f64>>::zeros((n_kx, n_ky));
+        let mut padded = Array2::<Complex64>::zeros((n_kx, n_ky));
 
         let start_x = (n_kx - n_elem_x) / 2;
         let start_y = (n_ky - n_elem_y) / 2;
@@ -388,104 +388,6 @@ impl FastNearfieldSolver {
             .assign(velocity);
 
         padded
-    }
-
-    /// 2D forward FFT
-    fn fft2_forward(&self, input: &Array2<Complex<f64>>) -> Result<Array2<Complex<f64>>, String> {
-        let (rows, cols) = input.dim();
-
-        // Convert to Vec<Complex<f32>> for rustfft (f32 is more common and efficient)
-        let mut buffer: Vec<Complex<f32>> = input
-            .iter()
-            .map(|&c| Complex::new(c.re as f32, c.im as f32))
-            .collect();
-
-        // Create FFT planner
-        let mut planner = FftPlanner::<f32>::new();
-        let fft_rows = planner.plan_fft_forward(rows);
-        let fft_cols = planner.plan_fft_forward(cols);
-
-        // FFT along rows first
-        for row in 0..rows {
-            let start = row * cols;
-            let end = start + cols;
-            fft_cols.process(&mut buffer[start..end]);
-        }
-
-        // FFT along columns
-        let mut temp = vec![Complex::new(0.0f32, 0.0f32); rows];
-        for col in 0..cols {
-            // Extract column
-            for row in 0..rows {
-                temp[row] = buffer[row * cols + col];
-            }
-            // FFT column
-            fft_rows.process(&mut temp);
-            // Put back
-            for row in 0..rows {
-                buffer[row * cols + col] = temp[row];
-            }
-        }
-
-        // Convert back to Array2<Complex<f64>>
-        let mut output = Array2::<Complex<f64>>::zeros((rows, cols));
-        for (i, &val) in buffer.iter().enumerate() {
-            let row = i / cols;
-            let col = i % cols;
-            output[[row, col]] = Complex::new(val.re as f64, val.im as f64);
-        }
-
-        Ok(output)
-    }
-
-    /// 2D inverse FFT
-    fn fft2_inverse(&self, input: &Array2<Complex<f64>>) -> Result<Array2<Complex<f64>>, String> {
-        let (rows, cols) = input.dim();
-
-        // Convert to Vec<Complex<f32>> for rustfft
-        let mut buffer: Vec<Complex<f32>> = input
-            .iter()
-            .map(|&c| Complex::new(c.re as f32, c.im as f32))
-            .collect();
-
-        // Create FFT planner
-        let mut planner = FftPlanner::<f32>::new();
-        let fft_rows = planner.plan_fft_inverse(rows);
-        let fft_cols = planner.plan_fft_inverse(cols);
-
-        // IFFT along rows first
-        for row in 0..rows {
-            let start = row * cols;
-            let end = start + cols;
-            fft_cols.process(&mut buffer[start..end]);
-        }
-
-        // IFFT along columns
-        let mut temp = vec![Complex::new(0.0f32, 0.0f32); rows];
-        for col in 0..cols {
-            // Extract column
-            for row in 0..rows {
-                temp[row] = buffer[row * cols + col];
-            }
-            // FFT column
-            fft_rows.process(&mut temp);
-            // Put back
-            for row in 0..rows {
-                buffer[row * cols + col] = temp[row];
-            }
-        }
-
-        // Normalize by array size and convert back to Array2<Complex<f64>>
-        let norm_factor = 1.0 / (rows * cols) as f32;
-        let mut output = Array2::<Complex<f64>>::zeros((rows, cols));
-        for (i, &val) in buffer.iter().enumerate() {
-            let row = i / cols;
-            let col = i % cols;
-            let normalized = val * norm_factor;
-            output[[row, col]] = Complex::new(normalized.re as f64, normalized.im as f64);
-        }
-
-        Ok(output)
     }
 
     /// Get cached z-distances
@@ -507,7 +409,7 @@ impl FastNearfieldSolver {
 
         // Cache memory
         for factors in self.cached_factors.values() {
-            total += factors.green_spectrum.len() * std::mem::size_of::<Complex<f64>>();
+            total += factors.green_spectrum.len() * std::mem::size_of::<Complex64>();
             total += factors.kx.len() * std::mem::size_of::<f64>();
             total += factors.ky.len() * std::mem::size_of::<f64>();
         }
@@ -519,7 +421,6 @@ impl FastNearfieldSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use num_complex::Complex;
 
     #[test]
     fn test_fnm_solver_creation() {
@@ -589,7 +490,7 @@ mod tests {
         solver.precompute_factors(25e-3).unwrap();
 
         // Uniform velocity distribution
-        let velocity = Array2::<Complex<f64>>::from_elem((16, 16), Complex::new(1.0, 0.0));
+        let velocity = Array2::<Complex64>::from_elem((16, 16), Complex64::new(1.0, 0.0));
 
         let pressure = solver.compute_field(&velocity, 25e-3);
         assert!(pressure.is_ok());
@@ -598,7 +499,7 @@ mod tests {
         assert_eq!(pressure_field.dim(), (16, 16));
 
         // Check that result is not zero (basic sanity check)
-        let sum: Complex<f64> = pressure_field.iter().sum();
+        let sum: Complex64 = pressure_field.iter().sum();
         assert!(sum.norm() > 0.0);
     }
 

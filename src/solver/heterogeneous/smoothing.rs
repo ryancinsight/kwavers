@@ -142,37 +142,19 @@ impl Smoother {
         density: ArrayView3<f64>,
         sound_speed: ArrayView3<f64>,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
-        use crate::fft::Fft3d;
-        use ndarray::Array3;
-        use num_complex::Complex;
+        use crate::fft::get_fft_for_grid;
+        use num_complex::Complex64;
 
-        // Initialize FFT processor
-        let fft = Fft3d::new(self.grid.nx, self.grid.ny, self.grid.nz);
+        let fft = get_fft_for_grid(&self.grid);
+        let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
 
-        // Transform to frequency domain
-        let mut density_fft =
-            Array3::<Complex<f64>>::zeros((self.grid.nx, self.grid.ny, self.grid.nz));
-        let mut sound_speed_fft =
-            Array3::<Complex<f64>>::zeros((self.grid.nx, self.grid.ny, self.grid.nz));
-
-        // Convert real to complex
-        for ((i, j, k), &val) in density.indexed_iter() {
-            density_fft[[i, j, k]] = Complex::new(val, 0.0);
-        }
-        for ((i, j, k), &val) in sound_speed.indexed_iter() {
-            sound_speed_fft[[i, j, k]] = Complex::new(val, 0.0);
-        }
-
-        // Forward FFT
-        let mut fft_processor = fft;
-        fft_processor.process(&mut density_fft, &self.grid);
-        fft_processor.process(&mut sound_speed_fft, &self.grid);
+        let mut density_hat = Array3::<Complex64>::zeros((nx, ny, nz));
+        let mut sound_speed_hat = Array3::<Complex64>::zeros((nx, ny, nz));
+        fft.forward_into(&density.to_owned(), &mut density_hat);
+        fft.forward_into(&sound_speed.to_owned(), &mut sound_speed_hat);
 
         // Apply low-pass filter in frequency domain
         // Cutoff at Nyquist/4 to remove high-frequency artifacts
-        let nx = self.grid.nx;
-        let ny = self.grid.ny;
-        let nz = self.grid.nz;
         let cutoff_x = nx / 4;
         let cutoff_y = ny / 4;
         let cutoff_z = nz / 4;
@@ -203,30 +185,18 @@ impl Smoother {
                         };
 
                         let window = wx * wy * wz;
-                        density_fft[[i, j, k]] *= window;
-                        sound_speed_fft[[i, j, k]] *= window;
+                        density_hat[[i, j, k]] *= window;
+                        sound_speed_hat[[i, j, k]] *= window;
                     }
                 }
             }
         }
 
-        // Inverse FFT
-        use crate::fft::Ifft3d;
-        let mut ifft = Ifft3d::new(nx, ny, nz);
-        ifft.process(&mut density_fft, &self.grid);
-        ifft.process(&mut sound_speed_fft, &self.grid);
-
-        // Convert back to real and normalize
-        let mut density_smooth = Array3::zeros((nx, ny, nz));
-        let mut sound_speed_smooth = Array3::zeros((nx, ny, nz));
-        let norm = 1.0 / (nx * ny * nz) as f64;
-
-        for ((i, j, k), val) in density_fft.indexed_iter() {
-            density_smooth[[i, j, k]] = val.re * norm;
-        }
-        for ((i, j, k), val) in sound_speed_fft.indexed_iter() {
-            sound_speed_smooth[[i, j, k]] = val.re * norm;
-        }
+        let mut density_smooth = Array3::<f64>::zeros((nx, ny, nz));
+        let mut sound_speed_smooth = Array3::<f64>::zeros((nx, ny, nz));
+        let mut scratch = Array3::<Complex64>::zeros((nx, ny, nz));
+        fft.inverse_into(&density_hat, &mut density_smooth, &mut scratch);
+        fft.inverse_into(&sound_speed_hat, &mut sound_speed_smooth, &mut scratch);
 
         Ok((density_smooth, sound_speed_smooth))
     }

@@ -22,16 +22,14 @@ start_time=$(date +%s)
 if command -v cargo-nextest &> /dev/null; then
     echo "📊 Using nextest for parallel execution"
     
-    # Configure nextest for production requirements
-    export NEXTEST_PROFILE=ci
     export RUST_BACKTRACE=0
     export RUST_LOG=error
     
     timeout ${MAX_TOTAL_TIME} cargo nextest run \
+        --profile production \
         --all-features \
-        --no-fail-fast \
-        --test-threads=${PARALLEL_JOBS} \
-        --final-status-level=pass
+        --release \
+        --test-threads=${PARALLEL_JOBS}
 else
     echo "⚡ Using cargo test with optimizations"
     
@@ -41,6 +39,7 @@ else
     
     timeout ${MAX_TOTAL_TIME} cargo test \
         --all-features \
+        --release \
         -- --test-threads=${PARALLEL_JOBS} --nocapture
 fi
 

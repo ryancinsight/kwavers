@@ -801,7 +801,7 @@ mod tests {
 
         // Allocate some blocks
         let block1 = pool.allocate(1024).unwrap();
-        let block2 = pool.allocate(2048).unwrap();
+        let _block2 = pool.allocate(2048).unwrap();
 
         let stats = pool.memory_stats();
         assert_eq!(stats.total_blocks, 2);
@@ -854,10 +854,12 @@ mod tests {
 
     #[test]
     fn test_performance_metrics() {
-        let mut metrics = PerformanceMetrics::default();
-        metrics.total_kernel_time = 1.0;
-        metrics.total_execution_time = 1.5;
-        metrics.kernels_executed = 10;
+        let metrics = PerformanceMetrics {
+            total_kernel_time: 1.0,
+            total_execution_time: 1.5,
+            kernels_executed: 10,
+            ..PerformanceMetrics::default()
+        };
 
         let stats = metrics.statistics();
         assert!(stats.average_kernel_time > 0.0);

@@ -3,8 +3,8 @@
 //! Implements the angular spectrum method for beam diffraction.
 //! Reference: Vecchio & Lewin (1994) "Finite amplitude acoustic propagation"
 
-use ndarray::{Array2, ArrayViewMut2};
-use rustfft::{num_complex::Complex, FftPlanner};
+use crate::fft::{fft_1d_complex, ifft_1d_complex, Complex64};
+use ndarray::{Array1, Array2, ArrayViewMut2};
 use std::f64::consts::PI;
 
 use super::KZKConfig;
@@ -15,8 +15,6 @@ pub struct DiffractionOperator {
     kx2: Array2<f64>,
     /// Wavenumber squared in y direction
     ky2: Array2<f64>,
-    /// FFT planner
-    fft_planner: FftPlanner<f64>,
     /// Configuration
     config: KZKConfig,
 }
@@ -71,7 +69,6 @@ impl DiffractionOperator {
         Self {
             kx2,
             ky2,
-            fft_planner: FftPlanner::new(),
             config: config.clone(),
         }
     }
@@ -83,23 +80,18 @@ impl DiffractionOperator {
         let ny = self.config.ny;
 
         // Convert to complex for FFT
-        let mut complex_field: Vec<Complex<f64>> = Vec::with_capacity(nx * ny);
-        for j in 0..ny {
-            for i in 0..nx {
-                complex_field.push(Complex::new(slice[[i, j]], 0.0));
-            }
-        }
+        let complex_field = Array1::from_shape_fn(nx * ny, |idx| {
+            let i = idx % nx;
+            let j = idx / nx;
+            Complex64::new(slice[[i, j]], 0.0)
+        });
 
-        // Forward FFT
-        let fft = self.fft_planner.plan_fft_forward(nx * ny);
-        fft.process(&mut complex_field);
+        // Forward FFT (1D of size nx * ny as in original implementation)
+        let mut transformed = fft_1d_complex(&complex_field);
 
         // Apply diffraction propagator in frequency domain
-        // For forward propagation in +z direction:
-        // H(kx,ky) = exp(-i * step_size * (kx² + ky²) / (2k₀))
-        // Note the negative sign for proper phase advance
         let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
-        let factor = -step_size / (2.0 * k0); // Negative for forward propagation
+        let factor = -step_size / (2.0 * k0);
 
         for j in 0..ny {
             for i in 0..nx {
@@ -108,20 +100,18 @@ impl DiffractionOperator {
                 let phase = factor * k_perp2;
 
                 // Multiply by propagator
-                complex_field[idx] *= Complex::new(phase.cos(), phase.sin());
+                transformed[idx] *= Complex64::from_polar(1.0, phase);
             }
         }
 
         // Inverse FFT
-        let ifft = self.fft_planner.plan_fft_inverse(nx * ny);
-        ifft.process(&mut complex_field);
+        let inverted = ifft_1d_complex(&transformed);
 
-        // Copy back to real array (normalized)
-        let norm = 1.0 / (nx * ny) as f64;
+        // Copy back to real array (normalized part is already in ifft_1d_complex)
         for j in 0..ny {
             for i in 0..nx {
                 let idx = j * nx + i;
-                slice[[i, j]] = complex_field[idx].re * norm;
+                slice[[i, j]] = inverted[idx].re;
             }
         }
     }

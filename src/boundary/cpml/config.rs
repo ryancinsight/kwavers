@@ -1,12 +1,13 @@
 //! CPML configuration and validation
 
 use crate::error::{ConfigError, KwaversResult};
+use serde::{Deserialize, Serialize};
 
 /// Minimum cosine theta value to prevent division by zero in reflection estimation
 const MIN_COS_THETA_FOR_REFLECTION: f64 = 0.1;
 
 /// Configuration for Convolutional PML
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CPMLConfig {
     /// Number of PML cells in each direction
     pub thickness: usize,

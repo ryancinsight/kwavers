@@ -35,7 +35,6 @@ use kwavers::grid::Grid;
 use kwavers::physics::bubble_dynamics::bubble_state::BubbleParameters;
 use kwavers::physics::optics::sonoluminescence::{EmissionParameters, IntegratedSonoluminescence};
 use ndarray::Array3;
-use std::f64::consts::PI;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔬 Single Bubble Sonoluminescence: Bremsstrahlung vs Cherenkov");
@@ -218,7 +217,7 @@ fn run_comprehensive_simulation(
     // Run simulation
     for step in 0..n_steps {
         let time = step as f64 * dt;
-        simulator.simulate_step(dt, time);
+        simulator.simulate_step(dt, time)?;
 
         // Extract data at center point
         let dims = grid.dimensions();
@@ -261,13 +260,13 @@ fn run_comprehensive_simulation(
 
         // Calculate emissions (simplified - using placeholder arrays for Cherenkov parameters)
         let temp_field = simulator.temperature_field();
-        let pressure_field = simulator.pressure_field();
+        let _pressure_field = simulator.pressure_field();
         let radius_field = simulator.radius_field();
 
         // Create placeholder arrays for Cherenkov calculation
-        let velocity_field = Array3::from_elem(grid.dimensions(), velocity_estimate);
-        let charge_density_field = Array3::from_elem(grid.dimensions(), charge_density);
-        let compression_field = Array3::from_elem(grid.dimensions(), compression_ratio);
+        let _velocity_field = Array3::from_elem(grid.dimensions(), velocity_estimate);
+        let _charge_density_field = Array3::from_elem(grid.dimensions(), charge_density);
+        let _compression_field = Array3::from_elem(grid.dimensions(), compression_ratio);
 
         // Calculate emissions using the simulator's calculate_emission method
         // For this example, we'll use a simplified approach since the method signature is complex

@@ -46,19 +46,18 @@ impl KWaveValidator {
     /// - IEEE 29148-2018: Software validation requirements
     fn run_test_case(&self, test_case: &KWaveTestCase) -> KwaversResult<TestResult> {
         use crate::medium::HomogeneousMedium;
-        use crate::solver::kwave_parity::sources::KWaveSource;
-        use crate::solver::kwave_parity::{KWaveConfig, KWaveSolver};
+        use crate::solver::spectral::{SpectralConfig, SpectralSolver, SpectralSource};
 
         // Create test-specific configuration
-        let config = KWaveConfig {
+        let config = SpectralConfig {
             dt: 1e-7, // 100 ns time step
             ..Default::default()
         };
 
         // Initialize solver with test grid
         let medium = HomogeneousMedium::water(&self.grid);
-        let source = KWaveSource::default();
-        let mut solver = KWaveSolver::new(config, self.grid.clone(), &medium, source)?;
+        let source = SpectralSource::default();
+        let mut solver = SpectralSolver::new(config, self.grid.clone(), &medium, source)?;
 
         // Run simulation based on test case type
         let computed_result = match test_case.name.as_str() {
@@ -83,7 +82,8 @@ impl KWaveValidator {
 
                 // Sample boundary values
                 let mut boundary_values = Vec::new();
-                for i in 0..nx.min(5) {
+                let nx_limit = nx.min(5usize);
+                for i in 0..nx_limit {
                     for j in 0..ny {
                         boundary_values.push(p_field[[i, j, nz / 2]].abs());
                     }
@@ -109,7 +109,7 @@ impl KWaveValidator {
                 // Full harmonic analysis would use FFT spectral decomposition
                 // Current: Peak detection sufficient for validation threshold
                 let p_field = solver.pressure_field();
-                let max_p = p_field.iter().map(|&p| p.abs()).fold(0.0, f64::max);
+                let max_p = p_field.iter().map(|p: &f64| p.abs()).fold(0.0, f64::max);
                 max_p
             }
 

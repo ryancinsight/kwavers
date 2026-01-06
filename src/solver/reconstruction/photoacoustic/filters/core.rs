@@ -5,6 +5,7 @@
 
 use super::spatial;
 use crate::error::KwaversResult;
+use crate::signal::{analytic, filter::FrequencyFilter, window_value, WindowType};
 use crate::solver::reconstruction::FilterType;
 use ndarray::{Array1, Array2, Array3};
 use rustfft::{num_complex::Complex, FftPlanner};
@@ -70,40 +71,10 @@ impl Filters {
         high_freq: f64,
         sampling_freq: f64,
     ) -> KwaversResult<Array1<f64>> {
-        let n = signal.len();
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(n);
-        let ifft = planner.plan_fft_inverse(n);
-
-        // Convert to complex
-        let mut complex_signal: Vec<Complex<f64>> =
-            signal.iter().map(|&x| Complex::new(x, 0.0)).collect();
-
-        // Forward FFT
-        fft.process(&mut complex_signal);
-
-        // Apply bandpass filter
-        let freq_resolution = sampling_freq / n as f64;
-        for (i, val) in complex_signal.iter_mut().enumerate() {
-            let freq = if i <= n / 2 {
-                i as f64 * freq_resolution
-            } else {
-                (n - i) as f64 * freq_resolution
-            };
-
-            if freq < low_freq || freq > high_freq {
-                *val = Complex::new(0.0, 0.0);
-            }
-        }
-
-        // Inverse FFT
-        ifft.process(&mut complex_signal);
-
-        // Extract real part and normalize
-        let norm_factor = 1.0 / n as f64;
-        Ok(Array1::from_vec(
-            complex_signal.iter().map(|c| c.re * norm_factor).collect(),
-        ))
+        let filter = FrequencyFilter::new();
+        let dt = 1.0 / sampling_freq;
+        let filtered = filter.bandpass(signal.as_slice().unwrap(), dt, low_freq, high_freq)?;
+        Ok(Array1::from_vec(filtered))
     }
 
     /// Apply envelope detection using Hilbert transform
@@ -113,53 +84,14 @@ impl Filters {
 
         for sensor_idx in 0..n_sensors {
             let signal = data.column(sensor_idx);
-            let analytic = self.hilbert_transform_1d(signal.to_owned())?;
+            let analytic_signal = analytic::hilbert_transform(&signal.to_owned());
 
-            for (i, val) in analytic.iter().enumerate() {
+            for (i, val) in analytic_signal.iter().enumerate() {
                 envelope[[i, sensor_idx]] = val.norm();
             }
         }
 
         Ok(envelope)
-    }
-
-    /// Compute 1D Hilbert transform
-    fn hilbert_transform_1d(&self, signal: Array1<f64>) -> KwaversResult<Vec<Complex<f64>>> {
-        let n = signal.len();
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(n);
-        let ifft = planner.plan_fft_inverse(n);
-
-        // Convert to complex
-        let mut complex_signal: Vec<Complex<f64>> =
-            signal.iter().map(|&x| Complex::new(x, 0.0)).collect();
-
-        // Forward FFT
-        fft.process(&mut complex_signal);
-
-        // Apply Hilbert transform in frequency domain
-        for (i, complex_val) in complex_signal.iter_mut().enumerate().take(n) {
-            if i == 0 || i == n / 2 {
-                // DC and Nyquist components unchanged
-            } else if i < n / 2 {
-                // Positive frequencies doubled
-                *complex_val *= 2.0;
-            } else {
-                // Negative frequencies zeroed
-                *complex_val = Complex::new(0.0, 0.0);
-            }
-        }
-
-        // Inverse FFT
-        ifft.process(&mut complex_signal);
-
-        // Normalize
-        let norm_factor = 1.0 / n as f64;
-        for val in &mut complex_signal {
-            *val *= norm_factor;
-        }
-
-        Ok(complex_signal)
     }
 
     /// Apply FBP filter to data
@@ -294,9 +226,8 @@ impl Filters {
         for i in 0..n {
             let freq = i as f64 / n as f64;
             let ram_lak = if i <= n / 2 { freq } else { 1.0 - freq };
-            // Hamming window: 0.54 - 0.46*cos(2πn/(N-1))
             let hamming_window = if n > 1 {
-                0.54 - 0.46 * (2.0 * PI * i as f64 / (n - 1) as f64).cos()
+                window_value(WindowType::Hamming, i as f64 / (n - 1) as f64)
             } else {
                 1.0
             };
@@ -318,9 +249,8 @@ impl Filters {
         for i in 0..n {
             let freq = i as f64 / n as f64;
             let ram_lak = if i <= n / 2 { freq } else { 1.0 - freq };
-            // Hann window: 0.5 * (1 - cos(2πn/(N-1)))
             let hann_window = if n > 1 {
-                0.5 * (1.0 - (2.0 * PI * i as f64 / (n - 1) as f64).cos())
+                window_value(WindowType::Hann, i as f64 / (n - 1) as f64)
             } else {
                 1.0
             };

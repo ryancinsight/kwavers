@@ -15,6 +15,7 @@ pub mod optimization;
 pub mod pinn;
 pub mod training;
 pub mod types;
+pub mod uncertainty;
 
 // Re-export key types for easier access
 pub use engine::MLEngine;

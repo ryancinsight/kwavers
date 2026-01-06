@@ -211,7 +211,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
     pub async fn new(
         config: DistributedTrainingConfig,
         base_config: crate::ml::pinn::BurnPINN2DConfig,
-        geometry: Geometry2D,
+        _geometry: Geometry2D,
     ) -> KwaversResult<Self> {
         // Create multi-GPU manager
         let decomposition = crate::ml::pinn::DecompositionStrategy::Spatial {
@@ -376,10 +376,10 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
     /// Train one epoch across all GPUs
     async fn train_epoch_distributed(
         &mut self,
-        collocation_points: &[(f64, f64, f64)],
-        boundary_points: &[(f64, f64, f64)],
-        initial_points: &[(f64, f64, f64)],
-        target_values: &[f64],
+        _collocation_points: &[(f64, f64, f64)],
+        _boundary_points: &[(f64, f64, f64)],
+        _initial_points: &[(f64, f64, f64)],
+        _target_values: &[f64],
     ) -> KwaversResult<Vec<(BurnTrainingMetrics2D, Vec<f32>)>> {
         let mut gpu_results = Vec::new();
 

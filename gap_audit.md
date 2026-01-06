@@ -285,10 +285,11 @@ Status: identified → remediation planning initialized (this document) → impl
   - Added `focal_point` to `BeamformingConfig` and made delay computation coherent w.r.t. focal geometry and constant sound speed assumptions.
   - Fixed steering vector handling in MUSIC/E-MVDR to accept `nalgebra` matrices of shape `(n_elements, 1)` or `(1, n_elements)` with consistent normalization; removed non-linked tracing attributes to restore compilation.
   - Improved numerical robustness in MVDR via explicit diagonal loading path and ensured outputs are single-look tensors of shape `(1, 1, n_samples)`.
-  - Tests added: `tests/pam_beamforming.rs` with
-    - Delay-and-Sum alignment property (distinct early peak within alignment window) and shape validation.
-    - Capon diagonal loading finite-output sanity over initial segment.
-  - Status: resolved (compilation restored; unit tests passing). Follow-up: add property-based tests for covariance positive-definiteness under noise models and MUSIC pseudospectrum validation with synthetic multi-source scenarios.
+  - Tests updated: `tests/pam_beamforming.rs` now validates **PAM composes shared `sensor::beamforming::BeamformingProcessor` (SSOT)** rather than relying on a PAM-local `beamforming` module:
+    - `PamBeamformingMethod::DelayAndSum` produces a non-zero, finite PAM map.
+    - `PamBeamformingMethod::CaponDiagonalLoading` produces a finite, non-negative PAM map.
+    - `PamBeamformingMethod::TimeExposureAcoustics` produces a strictly positive single-plane output for impulse-aligned inputs.
+  - Status: resolved (PAM-local beamforming implementation deleted; integration tests target the consolidated sensor stack). Follow-up: wire PAM `Music` / `EigenspaceMinVariance` policies to the shared `beamforming::adaptive` subspace implementations and add property tests for multi-source scenarios.
 
 - 2025-11-10: Trilateration (Multilateration) solver audit and corrections:
   - Mathematical Accuracy — severity: Minor

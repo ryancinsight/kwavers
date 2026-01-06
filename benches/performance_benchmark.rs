@@ -224,7 +224,7 @@ impl PerformanceBenchmarkSuite {
         sim_time: f64,
     ) -> KwaversResult<BenchmarkResult> {
         let grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+        let _medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
         let mut total_time = Duration::new(0, 0);
         let mut memory_usage = 0;
@@ -281,7 +281,7 @@ impl PerformanceBenchmarkSuite {
         sim_time: f64,
     ) -> KwaversResult<BenchmarkResult> {
         let grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+        let _medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
         let mut total_time = Duration::new(0, 0);
         let mut memory_usage = 0;
@@ -459,7 +459,7 @@ impl PerformanceBenchmarkSuite {
         }
 
         // Estimate stiffness (simplified)
-        let stiffness_map = self.simulate_stiffness_estimation(&displacement_field);
+        let _stiffness_map = self.simulate_stiffness_estimation(&displacement_field);
 
         let execution_time = start.elapsed();
         let memory_usage = displacement_field.len() * std::mem::size_of::<f32>() * 3; // Multiple components
@@ -480,7 +480,7 @@ impl PerformanceBenchmarkSuite {
         let start = Instant::now();
 
         // CEUS involves microbubble dynamics and perfusion analysis
-        let grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
+        let _grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
         let mut contrast_signal = Array3::<f32>::zeros((nx, ny, nz));
 
         let n_time_points = 1000; // 10 seconds at 100 fps
@@ -500,7 +500,7 @@ impl PerformanceBenchmarkSuite {
         }
 
         // Perform perfusion analysis
-        let perfusion_map = self.simulate_perfusion_analysis(&contrast_signal);
+        let _perfusion_map = self.simulate_perfusion_analysis(&contrast_signal);
 
         let execution_time = start.elapsed();
         let memory_usage = contrast_signal.len() * std::mem::size_of::<f32>() * 2;
@@ -605,7 +605,7 @@ impl PerformanceBenchmarkSuite {
         let start = Instant::now();
 
         // Initialize GPU context (simplified)
-        let gpu_context = kwavers::gpu::GpuContext::new()?; // Would use actual GPU initialization
+        let _gpu_context = pollster::block_on(kwavers::gpu::GpuContext::new())?;
 
         let grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
         let n_steps = 1000;
@@ -646,9 +646,9 @@ impl PerformanceBenchmarkSuite {
         let n_gpus = 2; // Assume 2 GPUs available
         let domains_per_gpu = 2; // Split into domains
 
-        let sub_nx = nx / (n_gpus * domains_per_gpu);
+        let _sub_nx = nx / (n_gpus * domains_per_gpu);
 
-        for gpu in 0..n_gpus {
+        for _gpu in 0..n_gpus {
             for domain in 0..domains_per_gpu {
                 // Process domain on GPU (simplified)
                 let domain_start = Instant::now();
@@ -729,7 +729,7 @@ impl PerformanceBenchmarkSuite {
         }
 
         // Compute uncertainty statistics
-        let uncertainty = self.compute_uncertainty_statistics(&predictions);
+        let _uncertainty = self.compute_uncertainty_statistics(&predictions);
 
         let execution_time = start.elapsed();
         let memory_usage = nx * ny * nz * 4 * n_samples; // All samples in memory
@@ -775,7 +775,7 @@ impl PerformanceBenchmarkSuite {
 
         // Compute ensemble statistics
         let ensemble_mean = self.compute_ensemble_mean(&ensemble_predictions);
-        let ensemble_variance =
+        let _ensemble_variance =
             self.compute_ensemble_variance(&ensemble_predictions, &ensemble_mean);
 
         let execution_time = start.elapsed();
@@ -851,7 +851,7 @@ impl PerformanceBenchmarkSuite {
         for result in &self.results {
             type_results
                 .entry(result.simulation_type.clone())
-                .or_insert(Vec::new())
+                .or_default()
                 .push(result);
         }
 
@@ -908,58 +908,63 @@ impl PerformanceBenchmarkSuite {
     // Helper methods for benchmark implementations
     fn update_velocity_fdtd(
         &self,
-        vx: &mut Array3<f32>,
-        vy: &mut Array3<f32>,
-        vz: &mut Array3<f32>,
-        p: &Array3<f32>,
-        dt: f64,
-        grid: &Grid,
-        medium: &HomogeneousMedium,
+        _vx: &mut Array3<f32>,
+        _vy: &mut Array3<f32>,
+        _vz: &mut Array3<f32>,
+        _p: &Array3<f32>,
+        _dt: f64,
+        _grid: &Grid,
+        _medium: &HomogeneousMedium,
     ) {
         // Simplified FDTD velocity update
     }
 
     fn update_pressure_fdtd(
         &self,
-        p: &mut Array3<f32>,
-        vx: &Array3<f32>,
-        vy: &Array3<f32>,
-        vz: &Array3<f32>,
-        dt: f64,
-        grid: &Grid,
-        medium: &HomogeneousMedium,
+        _p: &mut Array3<f32>,
+        _vx: &Array3<f32>,
+        _vy: &Array3<f32>,
+        _vz: &Array3<f32>,
+        _dt: f64,
+        _grid: &Grid,
+        _medium: &HomogeneousMedium,
     ) {
         // Simplified FDTD pressure update
     }
 
     fn update_pressure_nonlinear(
         &self,
-        p: &mut Array3<f32>,
-        vx: &Array3<f32>,
-        vy: &Array3<f32>,
-        vz: &Array3<f32>,
-        dt: f64,
-        grid: &Grid,
-        medium: &HomogeneousMedium,
-        beta: f64,
-        absorption: f64,
+        _p: &mut Array3<f32>,
+        _vx: &Array3<f32>,
+        _vy: &Array3<f32>,
+        _vz: &Array3<f32>,
+        _dt: f64,
+        _grid: &Grid,
+        _medium: &HomogeneousMedium,
+        _beta: f64,
+        _absorption: f64,
     ) {
         // Simplified nonlinear pressure update with Westervelt terms
     }
 
-    fn simulate_fft_operations(&self, field: &mut Array3<f32>) {
+    fn simulate_fft_operations(&self, _field: &mut Array3<f32>) {
         // Simulate FFT-based operations
     }
 
-    fn simulate_angular_spectrum_propagation(&self, field: &mut Array3<f32>, dt: f64) {
+    fn simulate_angular_spectrum_propagation(&self, _field: &mut Array3<f32>, _dt: f64) {
         // Simulate angular spectrum propagation
     }
 
-    fn simulate_elastic_wave_step(&self, displacement: &mut Array3<f32>, step: usize, grid: &Grid) {
+    fn simulate_elastic_wave_step(
+        &self,
+        _displacement: &mut Array3<f32>,
+        _step: usize,
+        _grid: &Grid,
+    ) {
         // Simulate elastic wave propagation step
     }
 
-    fn simulate_displacement_tracking(&self, displacement: &Array3<f32>, step: usize) {
+    fn simulate_displacement_tracking(&self, _displacement: &Array3<f32>, _step: usize) {
         // Simulate displacement tracking
     }
 
@@ -968,11 +973,11 @@ impl PerformanceBenchmarkSuite {
         displacement.clone()
     }
 
-    fn simulate_microbubble_scattering(&self, signal: &mut Array3<f32>, time: f64) {
+    fn simulate_microbubble_scattering(&self, _signal: &mut Array3<f32>, _time: f64) {
         // Simulate microbubble scattering
     }
 
-    fn simulate_tissue_perfusion(&self, signal: &mut Array3<f32>, time: f64) {
+    fn simulate_tissue_perfusion(&self, _signal: &mut Array3<f32>, _time: f64) {
         // Simulate tissue perfusion
     }
 
@@ -983,42 +988,42 @@ impl PerformanceBenchmarkSuite {
 
     fn simulate_transducer_element(
         &self,
-        field: &mut Array3<f32>,
-        elem: usize,
-        time_step: usize,
-        grid: &Grid,
+        _field: &mut Array3<f32>,
+        _elem: usize,
+        _time_step: usize,
+        _grid: &Grid,
     ) {
         // Simulate transducer element contribution
     }
 
-    fn simulate_skull_transmission(&self, field: &mut Array3<f32>, grid: &Grid) {
+    fn simulate_skull_transmission(&self, _field: &mut Array3<f32>, _grid: &Grid) {
         // Simulate skull transmission effects
     }
 
-    fn simulate_thermal_monitoring(&self, field: &Array3<f32>) {
+    fn simulate_thermal_monitoring(&self, _field: &Array3<f32>) {
         // Simulate thermal safety monitoring
     }
 
-    fn compute_uncertainty_statistics(&self, predictions: &[Array3<f32>]) -> Array3<f32> {
+    fn compute_uncertainty_statistics(&self, _predictions: &[Array3<f32>]) -> Array3<f32> {
         // Compute uncertainty statistics
         Array3::zeros((10, 10, 10)) // Placeholder
     }
 
-    fn compute_ensemble_mean(&self, predictions: &[Array3<f32>]) -> Array3<f32> {
+    fn compute_ensemble_mean(&self, _predictions: &[Array3<f32>]) -> Array3<f32> {
         // Compute ensemble mean
         Array3::zeros((10, 10, 10)) // Placeholder
     }
 
     fn compute_ensemble_variance(
         &self,
-        predictions: &[Array3<f32>],
-        mean: &Array3<f32>,
+        _predictions: &[Array3<f32>],
+        _mean: &Array3<f32>,
     ) -> Array3<f32> {
         // Compute ensemble variance
         Array3::zeros((10, 10, 10)) // Placeholder
     }
 
-    fn compute_conformity_score(&self, prediction: &Array3<f32>, target: &Array3<f32>) -> f64 {
+    fn compute_conformity_score(&self, _prediction: &Array3<f32>, _target: &Array3<f32>) -> f64 {
         // Compute conformity score
         0.0 // Placeholder
     }
@@ -1026,8 +1031,8 @@ impl PerformanceBenchmarkSuite {
     fn compute_prediction_interval(
         &self,
         prediction: &Array3<f32>,
-        scores: &[f64],
-        confidence: f64,
+        _scores: &[f64],
+        _confidence: f64,
     ) -> (Array3<f32>, Array3<f32>) {
         // Compute prediction interval
         (prediction.clone(), prediction.clone()) // Placeholder
@@ -1039,7 +1044,8 @@ fn benchmark_wave_propagation(c: &mut Criterion) {
 
     c.bench_function("wave_propagation_suite", |b| {
         b.iter(|| {
-            black_box(suite.run_wave_propagation_benchmarks().unwrap());
+            suite.run_wave_propagation_benchmarks().unwrap();
+            black_box(());
         });
     });
 }
@@ -1049,7 +1055,8 @@ fn benchmark_advanced_physics(c: &mut Criterion) {
 
     c.bench_function("advanced_physics_suite", |b| {
         b.iter(|| {
-            black_box(suite.run_advanced_physics_benchmarks().unwrap());
+            suite.run_advanced_physics_benchmarks().unwrap();
+            black_box(());
         });
     });
 }

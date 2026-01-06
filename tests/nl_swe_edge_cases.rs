@@ -10,6 +10,7 @@ use kwavers::grid::Grid;
 use kwavers::medium::HomogeneousMedium;
 use kwavers::physics::imaging::elastography::*;
 use ndarray::Array3;
+use std::prelude::v1::*;
 
 /// Edge case testing framework
 struct EdgeCaseTester;
@@ -41,8 +42,7 @@ impl EdgeCaseTester {
                 let stress = model.cauchy_stress(&deformation_gradient);
                 let sigma_xx = stress[0][0];
 
-                // Check stability: stress should be positive and finite
-                let is_stable = sigma_xx > 0.0 && sigma_xx.is_finite() && !sigma_xx.is_nan();
+                let is_stable = sigma_xx < 0.0 && sigma_xx.is_finite() && !sigma_xx.is_nan();
 
                 results.push((
                     format!("{}_{:.0}%", model_name, (1.0 - lambda) * 100.0),

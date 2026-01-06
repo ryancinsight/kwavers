@@ -16,10 +16,11 @@ START_TIME=$(date +%s)
 
 # Run TIER 1 fast integration tests only
 echo "🔗 Running fast integration tests (19 tests total)..."
-cargo test --test infrastructure_test \
-           --test integration_test \
-           --test fast_unit_tests \
-           --test simple_integration_test
+cargo nextest run --profile ci --release \
+                  --test infrastructure_test \
+                  --test integration_test \
+                  --test fast_unit_tests \
+                  --test simple_integration_test
 
 # Calculate execution time
 END_TIME=$(date +%s)

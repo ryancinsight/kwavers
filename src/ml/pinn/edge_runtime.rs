@@ -593,7 +593,10 @@ impl EdgeRuntime {
             architecture,
             instruction_sets,
             total_memory_mb: 512, // Default for embedded
-            has_fpu: cfg!(target_arch = "x86_64") || cfg!(target_arch = "aarch64") || cfg!(target_feature = "neon") || cfg!(target_feature = "sse2"),
+            has_fpu: cfg!(target_arch = "x86_64")
+                || cfg!(target_arch = "aarch64")
+                || cfg!(target_feature = "neon")
+                || cfg!(target_feature = "sse2"),
             simd_width: if cfg!(target_feature = "avx2") {
                 256
             } else if cfg!(target_feature = "neon") || cfg!(target_feature = "sse") {

@@ -315,7 +315,13 @@ impl CavitationCloudDynamics {
     }
 
     /// Calculate microjet impact on stone surface
-    fn _calculate_microjet_impact(&mut self, i: usize, j: usize, k: usize, _bubble: &BubbleState) {
+    pub fn calculate_microjet_impact(
+        &mut self,
+        i: usize,
+        j: usize,
+        k: usize,
+        _bubble: &BubbleState,
+    ) {
         // Microjet velocity can reach hundreds of m/s
         // Impact pressure: P = 0.5 * ρ * v²
         let microjet_velocity = 200.0; // m/s (typical value)
@@ -373,7 +379,6 @@ impl CavitationCloudDynamics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
 
     #[test]
     fn test_cloud_initialization() {

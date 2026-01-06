@@ -293,7 +293,7 @@ mod tests {
     #[test]
     fn test_physics_domain_registry() {
         use burn::backend::Autodiff;
-        let mut registry = PhysicsDomainRegistry::<Autodiff<burn::backend::NdArray<f32>>>::new();
+        let registry = PhysicsDomainRegistry::<Autodiff<burn::backend::NdArray<f32>>>::new();
 
         // Test empty registry
         assert!(!registry.has_domain("test"));

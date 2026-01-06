@@ -10,10 +10,10 @@ use crate::solver::hybrid::config::{DecompositionStrategy, HybridConfig};
 use crate::solver::hybrid::coupling::CouplingInterface;
 use crate::solver::hybrid::domain_decomposition::{DomainDecomposer, DomainRegion, DomainType};
 use crate::solver::hybrid::metrics::{HybridMetrics, ValidationResults};
-use crate::solver::pstd::PstdSolver;
+use crate::solver::spectral::{SpectralSolver, SpectralSource};
 use crate::source::Source;
 use log::{debug, info};
-use ndarray::{s, Array4};
+use ndarray::{s, Array3, Array4};
 use std::time::Instant;
 
 /// Context for regional solver application
@@ -32,13 +32,25 @@ pub struct HybridSolver {
     /// Computational grid
     grid: Grid,
 
-    /// PSTD solver for smooth regions
+    /// Spectral solver for smooth regions
     #[allow(dead_code)]
-    pstd_solver: PstdSolver,
+    spectral_solver: SpectralSolver,
 
     /// FDTD solver for discontinuous regions
     #[allow(dead_code)]
     fdtd_solver: FdtdSolver,
+
+    /// FDTD scratch fields
+    // Using Array4 to match fields structure or separate Array3s?
+    // Actually simpler to store Array3s to match FdtdSolver signature
+    fdtd_pressure: Array3<f64>,
+    fdtd_vx: Array3<f64>,
+    fdtd_vy: Array3<f64>,
+    fdtd_vz: Array3<f64>,
+
+    /// Material properties cache
+    rho0: Array3<f64>,
+    c0: Array3<f64>,
 
     /// Domain decomposer
     decomposer: DomainDecomposer,
@@ -64,11 +76,16 @@ pub struct HybridSolver {
 
 impl HybridSolver {
     /// Create a new hybrid solver
-    pub fn new(config: HybridConfig, grid: &Grid) -> KwaversResult<Self> {
-        info!("Initializing hybrid PSTD/FDTD solver");
+    pub fn new(config: HybridConfig, grid: &Grid, medium: &dyn Medium) -> KwaversResult<Self> {
+        info!("Initializing hybrid Spectral/FDTD solver");
 
         // Initialize component solvers
-        let pstd_solver = PstdSolver::new(config.pstd_config.clone(), grid)?;
+        let spectral_solver = SpectralSolver::new(
+            config.spectral_config.clone(),
+            grid.clone(),
+            medium,
+            SpectralSource::default(),
+        )?;
         let fdtd_solver = FdtdSolver::new(config.fdtd_config, grid)?;
 
         // Initialize domain decomposition
@@ -83,15 +100,39 @@ impl HybridSolver {
         // Perform initial domain decomposition
         // Create a default medium for initial decomposition
         let default_medium = crate::medium::homogeneous::HomogeneousMedium::water(grid);
-        let regions = decomposer.decompose(grid, &default_medium)?;
+        let regions =
+            decomposer.decompose(grid, &default_medium, config.decomposition_strategy.clone())?;
 
         info!("Hybrid solver initialized with {} regions", regions.len());
+
+        // Initialize material properties
+        let mut rho0 = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut c0 = Array3::zeros((grid.nx, grid.ny, grid.nz));
+
+        // Compute material properties
+        for k in 0..grid.nz {
+            for j in 0..grid.ny {
+                for i in 0..grid.nx {
+                    let (x, y, z) = grid.indices_to_coordinates(i, j, k);
+                    rho0[[i, j, k]] = crate::medium::density_at(medium, x, y, z, grid);
+                    c0[[i, j, k]] = crate::medium::sound_speed_at(medium, x, y, z, grid);
+                }
+            }
+        }
+
+        let shape = (grid.nx, grid.ny, grid.nz);
 
         Ok(Self {
             config,
             grid: grid.clone(),
-            pstd_solver,
+            spectral_solver,
             fdtd_solver,
+            fdtd_pressure: Array3::zeros(shape),
+            fdtd_vx: Array3::zeros(shape),
+            fdtd_vy: Array3::zeros(shape),
+            fdtd_vz: Array3::zeros(shape),
+            rho0,
+            c0,
             decomposer,
             selector,
             coupling,
@@ -119,23 +160,128 @@ impl HybridSolver {
             self.update_decomposition(fields, medium)?;
         }
 
-        // Process each region with appropriate solver
+        // 1. Sync global fields to component solvers
+        use crate::physics::field_mapping::UnifiedFieldType;
+        let p_idx = UnifiedFieldType::Pressure.index();
+        let vx_idx = UnifiedFieldType::VelocityX.index();
+        let vy_idx = UnifiedFieldType::VelocityY.index();
+        let vz_idx = UnifiedFieldType::VelocityZ.index();
+
+        // Sync Spectral Solver
+        self.spectral_solver
+            .p
+            .assign(&fields.index_axis(ndarray::Axis(0), p_idx));
+        self.spectral_solver
+            .ux
+            .assign(&fields.index_axis(ndarray::Axis(0), vx_idx));
+        self.spectral_solver
+            .uy
+            .assign(&fields.index_axis(ndarray::Axis(0), vy_idx));
+        self.spectral_solver
+            .uz
+            .assign(&fields.index_axis(ndarray::Axis(0), vz_idx));
+
+        // Sync FDTD Solver scratch
+        self.fdtd_pressure
+            .assign(&fields.index_axis(ndarray::Axis(0), p_idx));
+        self.fdtd_vx
+            .assign(&fields.index_axis(ndarray::Axis(0), vx_idx));
+        self.fdtd_vy
+            .assign(&fields.index_axis(ndarray::Axis(0), vy_idx));
+        self.fdtd_vz
+            .assign(&fields.index_axis(ndarray::Axis(0), vz_idx));
+
+        // 2. Apply sources
+        // We assume sources are additive and apply them to the solver states before stepping
+        // Note: This simplifies source handling by treating component solvers as propagators
+        // For FDTD
+        // We need a way to apply 'source' to 'fdtd_pressure'.
+        // Since 'source' is dyn Source, we assume it has an apply method or similar.
+        // But 'Source' trait definition is in 'crate::source'.
+        // Assuming 'source.apply' works on Array4, we might need to wrap fdtd fields in Array4 temporarily or manually apply.
+        // For now, we skip explicit source application here if the solvers handle it or if fields already contain source terms (e.g. initial conditions).
+        // However, continuous sources need to be added.
+        // TODO: Implement proper source application logic.
+
+        // 3. Step Solvers
+        // Spectral Solver
+        self.spectral_solver.step_forward()?;
+
+        // FDTD Solver
+        self.fdtd_solver.update_pressure(
+            &mut self.fdtd_pressure,
+            &self.fdtd_vx,
+            &self.fdtd_vy,
+            &self.fdtd_vz,
+            self.rho0.view(),
+            self.c0.view(),
+            dt,
+        )?;
+        self.fdtd_solver.update_velocity(
+            &mut self.fdtd_vx,
+            &mut self.fdtd_vy,
+            &mut self.fdtd_vz,
+            &self.fdtd_pressure,
+            self.rho0.view(),
+            dt,
+        )?;
+
+        // 4. Blend results based on regions
+        // Iterate regions and copy from appropriate solver
+        // We use the regions vector to determine which solver output to use for each spatial location
+
         let regions = self.regions.clone();
         for region in &regions {
             match region.domain_type {
                 DomainType::PSTD => {
-                    let pstd_start = Instant::now();
-                    self.apply_pstd_region(fields, medium, dt, t, region)?;
-                    self.metrics.pstd_time += pstd_start.elapsed();
+                    let mut p_view = fields.index_axis_mut(ndarray::Axis(0), p_idx);
+                    let slice = s![
+                        region.start.0..region.end.0,
+                        region.start.1..region.end.1,
+                        region.start.2..region.end.2
+                    ];
+                    p_view
+                        .slice_mut(slice)
+                        .assign(&self.spectral_solver.p.slice(slice));
+
+                    let mut vx_view = fields.index_axis_mut(ndarray::Axis(0), vx_idx);
+                    vx_view
+                        .slice_mut(slice)
+                        .assign(&self.spectral_solver.ux.slice(slice));
+
+                    let mut vy_view = fields.index_axis_mut(ndarray::Axis(0), vy_idx);
+                    vy_view
+                        .slice_mut(slice)
+                        .assign(&self.spectral_solver.uy.slice(slice));
+
+                    let mut vz_view = fields.index_axis_mut(ndarray::Axis(0), vz_idx);
+                    vz_view
+                        .slice_mut(slice)
+                        .assign(&self.spectral_solver.uz.slice(slice));
                 }
                 DomainType::FDTD => {
-                    let fdtd_start = Instant::now();
-                    self.apply_fdtd_region(fields, medium, dt, t, region)?;
-                    self.metrics.fdtd_time += fdtd_start.elapsed();
+                    let mut p_view = fields.index_axis_mut(ndarray::Axis(0), p_idx);
+                    let slice = s![
+                        region.start.0..region.end.0,
+                        region.start.1..region.end.1,
+                        region.start.2..region.end.2
+                    ];
+                    p_view
+                        .slice_mut(slice)
+                        .assign(&self.fdtd_pressure.slice(slice));
+
+                    let mut vx_view = fields.index_axis_mut(ndarray::Axis(0), vx_idx);
+                    vx_view.slice_mut(slice).assign(&self.fdtd_vx.slice(slice));
+
+                    let mut vy_view = fields.index_axis_mut(ndarray::Axis(0), vy_idx);
+                    vy_view.slice_mut(slice).assign(&self.fdtd_vy.slice(slice));
+
+                    let mut vz_view = fields.index_axis_mut(ndarray::Axis(0), vz_idx);
+                    vz_view.slice_mut(slice).assign(&self.fdtd_vz.slice(slice));
                 }
                 DomainType::Hybrid => {
-                    // Process as transition region
-                    self.apply_hybrid_region(fields, medium, dt, t, region)?;
+                    // Apply blending
+                    self.apply_hybrid_region_blended(fields, region)?;
                 }
             }
         }
@@ -160,108 +306,34 @@ impl HybridSolver {
         Ok(())
     }
 
-    /// Apply PSTD solver to a region
-    fn apply_pstd_region(
-        &mut self,
-        fields: &mut Array4<f64>,
-        _medium: &dyn Medium,
-        _dt: f64,
-        _t: f64,
-        region: &DomainRegion,
-    ) -> KwaversResult<()> {
-        // Extract region view
-        let mut region_fields = fields.slice_mut(s![
-            ..,
-            region.start.0..region.end.0,
-            region.start.1..region.end.1,
-            region.start.2..region.end.2,
-        ]);
-
-        // Apply PSTD update to the region
-        // Convert region view to owned array for PSTD solver
-        let region_array = region_fields.to_owned();
-
-        // Update using PSTD solver with proper context
-        // Note: This design allows the hybrid solver to delegate to specialized solvers
-        // while maintaining proper field ownership. Full regional solver context
-        // (source terms, boundaries) is managed by the hybrid solver coordinator.
-        // See ADR-012 for hybrid solver architecture decisions.
-
-        // Copy results back
-        region_fields.assign(&region_array);
-
-        debug!("Applied PSTD to region {:?}", region);
-        Ok(())
-    }
-
-    /// Apply FDTD solver to a region
-    fn apply_fdtd_region(
-        &mut self,
-        fields: &mut Array4<f64>,
-        _medium: &dyn Medium,
-        _dt: f64,
-        _t: f64,
-        region: &DomainRegion,
-    ) -> KwaversResult<()> {
-        // Extract region view
-        let mut region_fields = fields.slice_mut(s![
-            ..,
-            region.start.0..region.end.0,
-            region.start.1..region.end.1,
-            region.start.2..region.end.2,
-        ]);
-
-        // Apply FDTD update to the region
-        // Convert region view to owned array for FDTD solver
-        let region_array = region_fields.to_owned();
-
-        // Update using FDTD solver
-        // Note: FDTD solver requires source and boundary which are not available in region context
-        // This is a fundamental architectural issue that needs redesign
-
-        // Copy results back
-        region_fields.assign(&region_array);
-
-        debug!("Applied FDTD to region {:?}", region);
-        Ok(())
-    }
-
     /// Apply hybrid processing to transition region
-    fn apply_hybrid_region(
+    fn apply_hybrid_region_blended(
         &mut self,
         fields: &mut Array4<f64>,
-        _medium: &dyn Medium,
-        _dt: f64,
-        _t: f64,
         region: &DomainRegion,
     ) -> KwaversResult<()> {
+        use crate::physics::field_mapping::UnifiedFieldType;
+        let p_idx = UnifiedFieldType::Pressure.index();
+        let vx_idx = UnifiedFieldType::VelocityX.index();
+        let uy_idx = UnifiedFieldType::VelocityY.index();
+        let uz_idx = UnifiedFieldType::VelocityZ.index();
+
         // Apply blended approach in transition regions
         // This uses weighted averaging between PSTD and FDTD solutions
-
-        let pstd_fields = fields
-            .slice(s![
-                ..,
-                region.start.0..region.end.0,
-                region.start.1..region.end.1,
-                region.start.2..region.end.2,
-            ])
-            .to_owned();
-
-        let fdtd_fields = pstd_fields.clone();
-
-        // Apply both solvers with proper coordination
-        // Note: Both solvers require source and boundary which are not available in region context
-        // This hybrid approach needs fundamental redesign to properly coordinate solvers
-
-        // Blend results with distance-based weighting
         const BLEND_WIDTH: usize = 5; // Grid points for smooth transition
-        for i in 0..pstd_fields.shape()[1] {
-            for j in 0..pstd_fields.shape()[2] {
-                for k in 0..pstd_fields.shape()[3] {
+
+        // We iterate over the region dimensions
+        let nx = region.end.0 - region.start.0;
+        let ny = region.end.1 - region.start.1;
+        let nz = region.end.2 - region.start.2;
+
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
                     // Calculate distance from region boundary
-                    let dist_from_boundary = ((i.min(pstd_fields.shape()[1] - i - 1))
-                        .min(j.min(pstd_fields.shape()[2] - j - 1))
-                        .min(k.min(pstd_fields.shape()[3] - k - 1)))
+                    let dist_from_boundary = ((i.min(nx - i - 1))
+                        .min(j.min(ny - j - 1))
+                        .min(k.min(nz - k - 1)))
                         as f64;
 
                     // Smooth blending function
@@ -273,16 +345,26 @@ impl HybridSolver {
                         1.0
                     };
 
-                    // Apply weighted average
-                    for field_idx in 0..pstd_fields.shape()[0] {
-                        fields[[
-                            field_idx,
-                            region.start.0 + i,
-                            region.start.1 + j,
-                            region.start.2 + k,
-                        ]] = weight * pstd_fields[[field_idx, i, j, k]]
-                            + (1.0 - weight) * fdtd_fields[[field_idx, i, j, k]];
-                    }
+                    // Global indices
+                    let gi = region.start.0 + i;
+                    let gj = region.start.1 + j;
+                    let gk = region.start.2 + k;
+
+                    // Blend Pressure
+                    fields[[p_idx, gi, gj, gk]] = weight * self.spectral_solver.p[[gi, gj, gk]]
+                        + (1.0 - weight) * self.fdtd_pressure[[gi, gj, gk]];
+
+                    // Blend Velocity X
+                    fields[[vx_idx, gi, gj, gk]] = weight * self.spectral_solver.ux[[gi, gj, gk]]
+                        + (1.0 - weight) * self.fdtd_vx[[gi, gj, gk]];
+
+                    // Blend Velocity Y
+                    fields[[uy_idx, gi, gj, gk]] = weight * self.spectral_solver.uy[[gi, gj, gk]]
+                        + (1.0 - weight) * self.fdtd_vy[[gi, gj, gk]];
+
+                    // Blend Velocity Z
+                    fields[[uz_idx, gi, gj, gk]] = weight * self.spectral_solver.uz[[gi, gj, gk]]
+                        + (1.0 - weight) * self.fdtd_vz[[gi, gj, gk]];
                 }
             }
         }
@@ -309,7 +391,11 @@ impl HybridSolver {
         self.selector.update_metrics(fields);
 
         // Update decomposition if needed
-        let new_regions = self.decomposer.decompose(&self.grid, medium)?;
+        let new_regions = self.decomposer.decompose(
+            &self.grid,
+            medium,
+            self.config.decomposition_strategy.clone(),
+        )?;
 
         if new_regions.len() != self.regions.len() {
             info!(

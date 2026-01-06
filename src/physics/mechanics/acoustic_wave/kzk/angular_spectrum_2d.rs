@@ -1,9 +1,5 @@
-//! Proper 2D angular spectrum implementation
-//!
-//! Uses correct 2D FFT instead of 1D FFT on flattened array
-
+use crate::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::{Array2, ArrayViewMut2};
-use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
 use super::KZKConfig;
@@ -13,7 +9,6 @@ pub struct AngularSpectrum2D {
     config: KZKConfig,
     kx: Array2<f64>,
     ky: Array2<f64>,
-    fft_planner: FftPlanner<f64>,
 }
 
 impl std::fmt::Debug for AngularSpectrum2D {
@@ -22,7 +17,6 @@ impl std::fmt::Debug for AngularSpectrum2D {
             .field("config", &self.config)
             .field("kx", &self.kx)
             .field("ky", &self.ky)
-            .field("fft_planner", &"<FftPlanner>")
             .finish()
     }
 }
@@ -44,7 +38,7 @@ impl AngularSpectrum2D {
             let kx_val = if i <= nx / 2 {
                 i as f64 * dkx
             } else {
-                (i as f64 - nx as f64) * dkx
+                (i as i32 - nx as i32) as f64 * dkx
             };
 
             for j in 0..ny {
@@ -56,7 +50,7 @@ impl AngularSpectrum2D {
             let ky_val = if j <= ny / 2 {
                 j as f64 * dky
             } else {
-                (j as f64 - ny as f64) * dky
+                (j as i32 - ny as i32) as f64 * dky
             };
 
             for i in 0..nx {
@@ -68,7 +62,6 @@ impl AngularSpectrum2D {
             config: config.clone(),
             kx,
             ky,
-            fft_planner: FftPlanner::new(),
         }
     }
 
@@ -79,15 +72,10 @@ impl AngularSpectrum2D {
         let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
 
         // Convert to complex
-        let mut complex_field = Array2::zeros((nx, ny));
-        for i in 0..nx {
-            for j in 0..ny {
-                complex_field[[i, j]] = Complex::new(field[[i, j]], 0.0);
-            }
-        }
+        let complex_field = field.mapv(|x| Complex64::new(x, 0.0));
 
-        // 2D FFT: transform rows then columns
-        complex_field = self.fft_2d_forward(complex_field);
+        // 2D FFT using central cache
+        let mut complex_field_fft = fft_2d_complex(&complex_field);
 
         // Apply transfer function
         for i in 0..nx {
@@ -100,90 +88,24 @@ impl AngularSpectrum2D {
                     // Propagating waves
                     let kz = (k0 * k0 - kt2).sqrt();
                     let phase = kz * distance;
-                    complex_field[[i, j]] *= Complex::new(phase.cos(), phase.sin());
+                    complex_field_fft[[i, j]] *= Complex64::from_polar(1.0, phase);
                 } else {
                     // Evanescent waves - exponential decay
                     let alpha = (kt2 - k0 * k0).sqrt();
-                    complex_field[[i, j]] *= (-alpha * distance).exp();
+                    complex_field_fft[[i, j]] *= (-alpha * distance).exp();
                 }
             }
         }
 
-        // Inverse 2D FFT
-        complex_field = self.fft_2d_inverse(complex_field);
+        // Inverse 2D FFT: result is normalized
+        let recovered = ifft_2d_complex(&complex_field_fft);
 
         // Extract real part
         for i in 0..nx {
             for j in 0..ny {
-                field[[i, j]] = complex_field[[i, j]].re;
+                field[[i, j]] = recovered[[i, j]].re;
             }
         }
-    }
-
-    /// Forward 2D FFT
-    fn fft_2d_forward(&mut self, mut data: Array2<Complex<f64>>) -> Array2<Complex<f64>> {
-        let nx = data.shape()[0];
-        let ny = data.shape()[1];
-
-        // FFT along rows (axis 0)
-        for j in 0..ny {
-            let mut row_buffer: Vec<Complex<f64>> = (0..nx).map(|i| data[[i, j]]).collect();
-
-            let fft = self.fft_planner.plan_fft_forward(nx);
-            fft.process(&mut row_buffer);
-
-            for i in 0..nx {
-                data[[i, j]] = row_buffer[i];
-            }
-        }
-
-        // FFT along columns (axis 1)
-        for i in 0..nx {
-            let mut col_buffer: Vec<Complex<f64>> = (0..ny).map(|j| data[[i, j]]).collect();
-
-            let fft = self.fft_planner.plan_fft_forward(ny);
-            fft.process(&mut col_buffer);
-
-            for j in 0..ny {
-                data[[i, j]] = col_buffer[j];
-            }
-        }
-
-        data
-    }
-
-    /// Inverse 2D FFT
-    fn fft_2d_inverse(&mut self, mut data: Array2<Complex<f64>>) -> Array2<Complex<f64>> {
-        let nx = data.shape()[0];
-        let ny = data.shape()[1];
-
-        // IFFT along columns (axis 1)
-        for i in 0..nx {
-            let mut col_buffer: Vec<Complex<f64>> = (0..ny).map(|j| data[[i, j]]).collect();
-
-            let ifft = self.fft_planner.plan_fft_inverse(ny);
-            ifft.process(&mut col_buffer);
-
-            for j in 0..ny {
-                data[[i, j]] = col_buffer[j];
-            }
-        }
-
-        // IFFT along rows (axis 0)
-        for j in 0..ny {
-            let mut row_buffer: Vec<Complex<f64>> = (0..nx).map(|i| data[[i, j]]).collect();
-
-            let ifft = self.fft_planner.plan_fft_inverse(nx);
-            ifft.process(&mut row_buffer);
-
-            for i in 0..nx {
-                data[[i, j]] = row_buffer[i];
-            }
-        }
-
-        // Normalize
-        let norm = 1.0 / (nx * ny) as f64;
-        data.mapv(|c| c * norm)
     }
 }
 

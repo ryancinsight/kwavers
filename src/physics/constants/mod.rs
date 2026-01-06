@@ -7,17 +7,21 @@ pub mod acoustic_parameters;
 pub mod cavitation;
 pub mod chemistry;
 pub mod fundamental;
+pub mod hounsfield;
 pub mod medical;
 pub mod numerical;
 pub mod optical;
 pub mod thermodynamic;
+pub mod water;
 
 // Re-export all constants for convenience
 pub use acoustic_parameters::*;
 pub use cavitation::*;
 pub use chemistry::*;
 pub use fundamental::*;
+pub use hounsfield::*;
 pub use medical::*;
 pub use numerical::*;
 pub use optical::*;
 pub use thermodynamic::*;
+pub use water::*;

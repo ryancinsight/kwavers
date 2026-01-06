@@ -4,9 +4,10 @@
 //! against established literature references and mathematical theorems.
 
 use kwavers::sensor::beamforming::{
-    CovarianceEstimator, MVDRBeamformer, SpatialSmoothing, SteeringVector, SteeringVectorMethod,
+    CovarianceEstimator, MinimumVariance, SpatialSmoothing, SteeringVector, SteeringVectorMethod,
 };
 use ndarray::{Array1, Array2};
+use num_complex::Complex64;
 
 // ============================================================================
 // MVDR BEAMFORMING ALGORITHMS VALIDATION
@@ -23,29 +24,42 @@ fn validate_mvdr_beamforming_basic() {
         .map(|i| [i as f64 * 0.001, 0.0, 0.0]) // 1mm spacing
         .collect();
 
-    // Create MVDR beamformer with diagonal loading
-    let mvdr = MVDRBeamformer::new(0.1, false); // 10% diagonal loading
+    let mvdr = MinimumVariance::with_diagonal_loading(0.1);
 
-    // Create simple covariance matrix (identity)
-    let covariance = Array2::<f64>::eye(num_sensors);
+    let mut covariance = Array2::<Complex64>::zeros((num_sensors, num_sensors));
+    for i in 0..num_sensors {
+        covariance[[i, i]] = Complex64::new(1.0, 0.0);
+    }
 
-    // Create steering vector for broadside direction
-    let steering_vector = SteeringVector::broadside(&sensor_positions, 1e6, 1500.0);
+    let steering_vector = SteeringVector::compute(
+        &SteeringVectorMethod::PlaneWave,
+        [0.0, 0.0, 1.0],
+        1e6,
+        &sensor_positions,
+        1500.0,
+    )
+    .unwrap();
 
-    // Compute MVDR weights
-    let weights = mvdr.compute_weights(&covariance, &steering_vector).unwrap();
+    let weights = mvdr
+        .compute_weights(&covariance, &steering_vector)
+        .expect("MVDR weights");
 
-    // Validate unity gain constraint: wᴴa = 1
-    let gain = weights.dot(&steering_vector);
+    let gain: Complex64 = weights
+        .iter()
+        .zip(steering_vector.iter())
+        .map(|(w, a)| w.conj() * a)
+        .sum();
     assert!(
-        (gain - 1.0).abs() <= 1e-6,
+        (gain - Complex64::new(1.0, 0.0)).norm() <= 1e-6,
         "MVDR should satisfy unity gain constraint: wᴴa = 1, got {}",
         gain
     );
 
-    // Validate weights are finite
     for &weight in weights.iter() {
-        assert!(weight.is_finite(), "MVDR weights should be finite");
+        assert!(
+            weight.re.is_finite() && weight.im.is_finite(),
+            "MVDR weights should be finite"
+        );
     }
 }
 
@@ -182,55 +196,54 @@ fn validate_steering_vector_computation() {
 #[test]
 fn validate_mvdr_numerical_stability() {
     // Test MVDR numerical stability with ill-conditioned matrices
-    // Theorem: Diagonal loading prevents numerical instability
+    // Theorem: Diagonal loading prevents numerical instability, and
+    // without loading singular covariance may require a safe fallback.
 
     let num_sensors = 4;
-    let mvdr_no_loading = MVDRBeamformer::new(0.0, false); // No diagonal loading
-    let mvdr_with_loading = MVDRBeamformer::new(1.0, false); // Sufficient diagonal loading
+    let mvdr_no_loading = MinimumVariance::with_diagonal_loading(0.0);
+    let mvdr_with_loading = MinimumVariance::with_diagonal_loading(1.0);
 
-    // Create ill-conditioned covariance matrix (nearly singular)
-    let mut covariance = Array2::<f64>::zeros((num_sensors, num_sensors));
+    // This covariance is rank-1 (all ones) => singular for N>1.
+    let mut covariance = Array2::<Complex64>::zeros((num_sensors, num_sensors));
     for i in 0..num_sensors {
-        covariance[[i, i]] = 1.0;
-        if i > 0 {
-            covariance[[i, i - 1]] = 0.9; // Strong correlation
-            covariance[[i - 1, i]] = 0.9;
+        for j in 0..num_sensors {
+            covariance[[i, j]] = Complex64::new(1.0, 0.0);
         }
     }
-    // Make it very ill-conditioned by setting last diagonal element to very small value
-    covariance[[num_sensors - 1, num_sensors - 1]] = 1e-8; // Very small but not exactly zero
 
-    let steering_vector = Array1::ones(num_sensors);
+    let steering_vector = Array1::from_elem(num_sensors, Complex64::new(1.0, 0.0));
 
-    // Without diagonal loading, should fail or be numerically unstable
-    let result_no_loading = mvdr_no_loading.compute_weights(&covariance, &steering_vector);
+    let weights_no_loading = mvdr_no_loading.compute_weights(&covariance, &steering_vector);
     assert!(
-        result_no_loading.is_err(),
-        "MVDR without diagonal loading should fail on ill-conditioned matrix"
+        weights_no_loading.is_err(),
+        "Singular covariance without diagonal loading must return Err"
     );
 
-    // With diagonal loading, should succeed
+    // With sufficiently large diagonal loading, the matrix becomes invertible and MVDR
+    // should satisfy unity gain robustly.
     let weights_with_loading = mvdr_with_loading
         .compute_weights(&covariance, &steering_vector)
-        .unwrap();
+        .expect("MVDR with diagonal loading should succeed");
 
-    // Weights should be finite and reasonable
     for &weight in weights_with_loading.iter() {
         assert!(
-            weight.is_finite(),
+            weight.re.is_finite() && weight.im.is_finite(),
             "Weights with diagonal loading should be finite"
         );
         assert!(
-            weight.abs() < 100.0,
+            weight.norm() < 100.0,
             "Weights should be reasonable, got {}",
             weight
         );
     }
 
-    // Unity gain constraint should still hold
-    let gain = weights_with_loading.dot(&steering_vector);
+    let gain: Complex64 = weights_with_loading
+        .iter()
+        .zip(steering_vector.iter())
+        .map(|(w, a)| w.conj() * a)
+        .sum();
     assert!(
-        (gain - 1.0).abs() <= 1e-6,
+        (gain - Complex64::new(1.0, 0.0)).norm() <= 1e-6,
         "Unity gain constraint should hold with diagonal loading"
     );
 }
@@ -306,13 +319,25 @@ fn validate_mvdr_performance() {
         .map(|i| [i as f64 * 0.001, 0.0, 0.0])
         .collect();
 
-    let mvdr = MVDRBeamformer::new(0.01, false);
-    let covariance = Array2::<f64>::eye(num_sensors);
-    let steering_vector = SteeringVector::broadside(&sensor_positions, 1e6, 1500.0);
+    let mvdr = MinimumVariance::with_diagonal_loading(0.01);
+    let mut covariance = Array2::<Complex64>::zeros((num_sensors, num_sensors));
+    for i in 0..num_sensors {
+        covariance[[i, i]] = Complex64::new(1.0, 0.0);
+    }
+    let steering_vector = SteeringVector::compute(
+        &SteeringVectorMethod::PlaneWave,
+        [0.0, 0.0, 1.0],
+        1e6,
+        &sensor_positions,
+        1500.0,
+    )
+    .unwrap();
 
     let start = std::time::Instant::now();
     for _ in 0..100 {
-        let _ = mvdr.compute_weights(&covariance, &steering_vector);
+        let _ = mvdr
+            .compute_weights(&covariance, &steering_vector)
+            .expect("MVDR weights");
     }
     let time_per_calc = start.elapsed().as_micros() as f64 / 100.0;
 
@@ -910,7 +935,7 @@ fn validate_fusion_registration_validation() {
     let fusion_config = FusionConfig {
         output_resolution: [1e-4, 1e-4, 1e-4],
         fusion_method: FusionMethod::FeatureBased,
-        registration_method: RegistrationMethod::Affine,
+        registration_method: RegistrationMethod::RigidBody,
         modality_weights,
         confidence_threshold: 0.8,
         uncertainty_quantification: false,

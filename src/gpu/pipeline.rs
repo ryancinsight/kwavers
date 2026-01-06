@@ -605,6 +605,8 @@ mod tests {
             frame_size: (2, 8, 128, 1),
             noise_level: 0.05,
             signal_amplitude: 1.0,
+            source_id: "test".to_string(),
+            sample_rate: 40_000_000.0,
         };
 
         let mut data_source = StreamingDataSource::new(stream_cfg);

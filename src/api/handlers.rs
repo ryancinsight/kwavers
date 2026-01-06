@@ -215,8 +215,8 @@ pub async fn list_models(
     let all_models = state.model_registry.get_user_models(&auth.user_id);
 
     // Apply pagination
-    let page = pagination.page.unwrap_or(1).max(1) as usize;
-    let page_size = pagination.page_size.unwrap_or(50).min(100) as usize; // Cap at 100
+    let page = pagination.page.unwrap_or(1).max(1);
+    let page_size = pagination.page_size.unwrap_or(50).min(100); // Cap at 100
     let start_idx = (page - 1) * page_size;
     let end_idx = start_idx + page_size;
 
@@ -229,7 +229,7 @@ pub async fn list_models(
     let response = ListModelsResponse {
         models: paginated_models,
         total_count: all_models.len(),
-        page: page as usize,
+        page,
         page_size,
     };
 
@@ -277,8 +277,8 @@ pub async fn delete_model(
 mod tests {
     use super::*;
     use axum::http::Request;
-    use tower::Service;
     use tower::util::ServiceExt;
+    use tower::Service;
 
     #[tokio::test]
     async fn test_health_check() {
@@ -287,7 +287,13 @@ mod tests {
             start_time: std::time::Instant::now(),
             job_manager: std::sync::Arc::new(crate::api::job_manager::JobManager::new(1)),
             model_registry: std::sync::Arc::new(crate::api::model_registry::ModelRegistry::new()),
-            auth_middleware: std::sync::Arc::new(crate::api::auth::AuthMiddleware::default()),
+            auth_middleware: std::sync::Arc::new(
+                crate::api::auth::AuthMiddleware::new(
+                    "test-secret-do-not-use-in-production",
+                    crate::api::auth::JWTConfig::default(),
+                )
+                .expect("test auth middleware construction must succeed"),
+            ),
         };
 
         let response = health_check(State(state)).await;

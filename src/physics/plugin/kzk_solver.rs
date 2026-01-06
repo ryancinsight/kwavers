@@ -320,7 +320,7 @@ impl crate::physics::plugin::Plugin for KzkSolverPlugin {
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        _context: &crate::physics::plugin::PluginContext,
+        _context: &mut crate::physics::plugin::PluginContext<'_>,
     ) -> KwaversResult<()> {
         use crate::physics::field_mapping::UnifiedFieldType;
 

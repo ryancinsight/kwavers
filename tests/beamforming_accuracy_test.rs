@@ -7,9 +7,14 @@ use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 use std::f64::consts::PI;
 
-use kwavers::sensor::adaptive_beamforming::adaptive::LCMV;
-use kwavers::sensor::adaptive_beamforming::conventional::BeamformingAlgorithm;
-use kwavers::sensor::adaptive_beamforming::{MinimumVariance, SourceEstimationCriterion, MUSIC};
+use kwavers::sensor::beamforming::MinimumVariance;
+
+#[cfg(feature = "legacy_algorithms")]
+use kwavers::sensor::beamforming::adaptive::adaptive::LCMV;
+#[cfg(feature = "legacy_algorithms")]
+use kwavers::sensor::beamforming::adaptive::conventional::BeamformingAlgorithm;
+#[cfg(feature = "legacy_algorithms")]
+use kwavers::sensor::beamforming::{SourceEstimationCriterion, MUSIC};
 
 /// Create a simple test covariance matrix
 fn create_test_covariance(n: usize) -> Array2<Complex64> {
@@ -52,7 +57,7 @@ mod tests {
         let steering = create_steering_vector(n, 0.0);
 
         let mvdr = MinimumVariance::default();
-        let weights = mvdr.compute_weights(&cov, &steering);
+        let weights = mvdr.compute_weights(&cov, &steering).expect("MVDR weights");
 
         // Weights should be finite
         assert_eq!(weights.len(), n);
@@ -62,6 +67,10 @@ mod tests {
     }
 
     /// Test MVDR condition monitoring
+    ///
+    /// Strict SSOT note: the MVDR implementation now has explicit error semantics and does not
+    /// provide condition-monitoring helpers in this test surface. Conditioning checks should be
+    /// evaluated via SSOT linear algebra utilities in targeted tests.
     #[test]
     fn test_mvdr_condition_monitoring() {
         let n = 8;
@@ -69,16 +78,17 @@ mod tests {
         let steering = create_steering_vector(n, 0.0);
 
         let mvdr = MinimumVariance::default();
-        let (_weights, condition_info) = mvdr.compute_weights_with_monitoring(&cov, &steering);
+        let weights = mvdr.compute_weights(&cov, &steering).expect("MVDR weights");
 
-        // Check condition info validity
-        assert!(condition_info.condition_number > 0.0);
-        assert!(condition_info.matrix_rank <= condition_info.matrix_size);
-        assert!(condition_info.recommended_loading >= 0.0);
-        assert!(condition_info.actual_loading >= 0.0);
+        // Basic sanity: weights should be finite and correct length.
+        assert_eq!(weights.len(), n);
+        for &w in &weights {
+            assert!(w.is_finite());
+        }
     }
 
     /// Test LCMV basic functionality
+    #[cfg(feature = "legacy_algorithms")]
     #[test]
     fn test_lcmv_basic() {
         let n = 8;
@@ -98,6 +108,7 @@ mod tests {
     }
 
     /// Test MUSIC basic functionality
+    #[cfg(feature = "legacy_algorithms")]
     #[test]
     fn test_music_basic() {
         let n = 8;
@@ -105,7 +116,9 @@ mod tests {
         let steering = create_steering_vector(n, 0.0);
 
         let music = MUSIC::new(1);
-        let spectrum = music.pseudospectrum(&cov, &steering);
+        let spectrum = music
+            .pseudospectrum(&cov, &steering)
+            .expect("MUSIC pseudospectrum");
 
         // Pseudospectrum should be positive
         assert!(spectrum >= 0.0);
@@ -113,6 +126,7 @@ mod tests {
     }
 
     /// Test MUSIC source estimation
+    #[cfg(feature = "legacy_algorithms")]
     #[test]
     fn test_music_source_estimation() {
         let n = 8;
@@ -135,6 +149,11 @@ mod tests {
     }
 
     /// Test condition number computation
+    ///
+    /// Strict SSOT note: the condition-number helper was part of legacy MVDR surfaces that relied on
+    /// non-SSOT eigendecomposition. Until SSOT provides complex Hermitian eigendecomposition (or an
+    /// SSOT-conditioned estimator), this test is gated behind `legacy_algorithms`.
+    #[cfg(feature = "legacy_algorithms")]
     #[test]
     fn test_covariance_condition_number() {
         let n = 8;

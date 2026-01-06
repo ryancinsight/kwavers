@@ -5,7 +5,6 @@
 //! - Tavakkoli et al. (1998) "A new algorithm for computational simulation of HIFU"
 
 use ndarray::{Array2, Array3, Axis};
-use rustfft::FftPlanner;
 use std::f64::consts::PI;
 
 use super::absorption::AbsorptionOperator;
@@ -35,9 +34,6 @@ pub struct KZKSolver {
     absorption: AbsorptionOperator,
     /// Nonlinear operator
     nonlinear: NonlinearOperator,
-    /// FFT planner for spectral methods
-    #[allow(dead_code)] // FFT infrastructure for KZK equation
-    fft_planner: FftPlanner<f64>,
 }
 
 impl std::fmt::Debug for KZKSolver {
@@ -68,7 +64,6 @@ impl std::fmt::Debug for KZKSolver {
             .field("use_kzk_diffraction", &self.use_kzk_diffraction)
             .field("absorption", &self.absorption)
             .field("nonlinear", &self.nonlinear)
-            .field("fft_planner", &"<FftPlanner>")
             .finish()
     }
 }
@@ -96,7 +91,6 @@ impl KZKSolver {
 
         let absorption = AbsorptionOperator::new(&config);
         let nonlinear = NonlinearOperator::new(&config);
-        let fft_planner = FftPlanner::new();
 
         Ok(Self {
             config,
@@ -108,7 +102,6 @@ impl KZKSolver {
             use_kzk_diffraction,
             absorption,
             nonlinear,
-            fft_planner,
         })
     }
 

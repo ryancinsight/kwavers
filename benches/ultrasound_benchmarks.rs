@@ -20,6 +20,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
+use kwavers::physics::imaging::elastography::elastic_wave_solver::ElasticWaveConfig;
 use kwavers::physics::imaging::elastography::{InversionMethod, ShearWaveElastography};
 // Simple finite difference derivative for benchmarking
 fn compute_derivative(field: &Array1<f64>, dx: f64, derivative: &mut Array1<f64>) {
@@ -30,7 +31,7 @@ fn compute_derivative(field: &Array1<f64>, dx: f64, derivative: &mut Array1<f64>
     derivative[0] = (field[1] - field[0]) / dx;
     derivative[field.len() - 1] = (field[field.len() - 1] - field[field.len() - 2]) / dx;
 }
-use ndarray::{Array1, Array2, Array3};
+use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
 
 /// Benchmark 1D wave equation accuracy and performance
@@ -94,8 +95,13 @@ fn bench_swe_reconstruction(c: &mut Criterion) {
 
         group.bench_function(format!("swe_{}", grid_size), |b| {
             b.iter(|| {
-                let swe = ShearWaveElastography::new(&grid, &medium, InversionMethod::TimeOfFlight)
-                    .unwrap();
+                let swe = ShearWaveElastography::new(
+                    &grid,
+                    &medium,
+                    InversionMethod::TimeOfFlight,
+                    ElasticWaveConfig::default(),
+                )
+                .unwrap();
                 let push_location = [grid.dx * 10.0, grid.dy * 10.0, grid.dz * 10.0];
                 let displacement = swe.generate_shear_wave(push_location).unwrap();
                 let elasticity = swe.reconstruct_elasticity(&displacement).unwrap();
@@ -186,16 +192,18 @@ fn bench_clinical_workflow(c: &mut Criterion) {
             let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid); // Liver properties
 
             // SWE workflow
-            let swe =
-                ShearWaveElastography::new(&grid, &medium, InversionMethod::TimeOfFlight).unwrap();
+            let swe = ShearWaveElastography::new(
+                &grid,
+                &medium,
+                InversionMethod::TimeOfFlight,
+                ElasticWaveConfig::default(),
+            )
+            .unwrap();
             let push_location = [0.025, 0.025, 0.015]; // 25mm lateral, 15mm depth
             let displacement = swe.generate_shear_wave(push_location).unwrap();
 
-            // Simulate tracking (simplified)
-            let displacement_magnitude = displacement.mapv(f64::abs);
-
             // Reconstruct elasticity
-            let elasticity_map = swe.reconstruct_elasticity(&displacement_magnitude).unwrap();
+            let elasticity_map = swe.reconstruct_elasticity(&displacement).unwrap();
 
             // Clinical analysis (simplified)
             let mean_stiffness = elasticity_map.youngs_modulus.mean().unwrap();

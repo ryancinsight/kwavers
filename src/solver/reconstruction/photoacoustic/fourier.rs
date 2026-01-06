@@ -8,6 +8,9 @@
 //! - Kostli et al. (2001) "Temporal backward projection of optoacoustic pressure"
 
 use crate::error::KwaversResult;
+use crate::fft::FFT_CACHE;
+use crate::signal::window_value;
+use crate::signal::WindowType;
 use ndarray::{Array1, Array2, Array3, ArrayView2};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
@@ -194,7 +197,6 @@ impl FourierReconstructor {
     fn apply_k_space_filter(&self, k_space: &mut Array3<Complex<f64>>) {
         let [nx, ny, nz] = self.grid_size;
 
-        // Apply Hann window for smooth roll-off
         for ix in 0..nx {
             for iy in 0..ny {
                 for iz in 0..nz {
@@ -204,9 +206,8 @@ impl FourierReconstructor {
 
                     let k_norm = (kx * kx + ky * ky + kz * kz).sqrt();
 
-                    // Hann window
                     let window = if k_norm < 0.5 {
-                        0.5 * (1.0 + (2.0 * PI * k_norm).cos())
+                        window_value(WindowType::Hann, k_norm / 0.5)
                     } else {
                         0.0
                     };
@@ -223,31 +224,10 @@ impl FourierReconstructor {
         k_space: &Array3<Complex<f64>>,
     ) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = self.grid_size;
-        let mut planner = FftPlanner::new();
-        let ifft = planner.plan_fft_inverse(nx * ny * nz);
-
-        // Flatten k-space data
-        let mut complex_data: Vec<Complex<f64>> = Vec::with_capacity(nx * ny * nz);
-        for ix in 0..nx {
-            for iy in 0..ny {
-                for iz in 0..nz {
-                    complex_data.push(k_space[[ix, iy, iz]]);
-                }
-            }
-        }
-
-        // Inverse FFT
-        ifft.process(&mut complex_data);
-
-        // Extract real part and reshape
-        let norm = 1.0 / (nx * ny * nz) as f64;
-        let mut result = Array3::zeros((nx, ny, nz));
-        for (idx, val) in complex_data.iter().enumerate() {
-            let iz = idx % nz;
-            let iy = (idx / nz) % ny;
-            let ix = idx / (ny * nz);
-            result[[ix, iy, iz]] = val.re * norm;
-        }
+        let fft = FFT_CACHE.get_or_create(nx, ny, nz);
+        let mut result = Array3::<f64>::zeros((nx, ny, nz));
+        let mut scratch = Array3::<Complex<f64>>::zeros((nx, ny, nz));
+        fft.inverse_into(k_space, &mut result, &mut scratch);
 
         // Apply positivity constraint (pressure should be non-negative)
         result.mapv_inplace(|x| x.max(0.0));

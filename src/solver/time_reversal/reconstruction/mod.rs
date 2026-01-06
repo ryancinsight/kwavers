@@ -136,9 +136,9 @@ impl TimeReversalReconstructor {
             // Apply frequency filter if configured
             if self.config.apply_frequency_filter {
                 if let Some(freq_range) = self.config.frequency_range {
-                    signal = self
-                        .frequency_filter
-                        .apply_bandpass(signal, dt, freq_range)?;
+                    signal =
+                        self.frequency_filter
+                            .bandpass(&signal, dt, freq_range.0, freq_range.1)?;
                 }
             }
 
@@ -213,7 +213,7 @@ impl TimeReversalReconstructor {
 
         // Add all sources to the solver
         for source in sources {
-            solver.add_source(source);
+            solver.add_source(source)?;
         }
 
         Ok(())

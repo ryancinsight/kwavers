@@ -29,7 +29,7 @@ impl Modulation for QuadratureAmplitudeModulation {
         // References:
         // - Proakis & Salehi (2008): "Digital Communications" Chapter 4
         // - Haykin (2001): "Communication Systems" Chapter 6
-        use crate::utils::signal_processing::hilbert_transform;
+        use crate::signal::analytic::hilbert_transform;
         use ndarray::Array1;
 
         if carrier.len() != t.len() {

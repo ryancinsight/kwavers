@@ -1,4 +1,11 @@
 //! PAM processing and mapping algorithms
+//!
+//! # SSOT (Single Source of Truth) / Architectural Note
+//! Beamforming algorithms and numerical primitives are owned by `crate::sensor::beamforming`.
+//! PAM owns *policy* and *mapping/post-processing*.
+//!
+//! This module depends on `super::beamforming_config::PamBeamformingConfig` (policy)
+//! rather than any PAM-local beamforming implementation.
 
 use crate::error::KwaversResult;
 use ndarray::Array3;
@@ -7,7 +14,8 @@ use rustfft::{num_complex::Complex, FftPlanner};
 /// PAM configuration
 #[derive(Debug, Clone)]
 pub struct PAMConfig {
-    pub beamforming: super::beamforming::BeamformingConfig,
+    /// PAM-owned beamforming policy; converted into the shared beamforming core config (SSOT).
+    pub beamforming: super::beamforming_config::PamBeamformingConfig,
     pub frequency_bands: Vec<(f64, f64)>,
     pub integration_time: f64,
     pub threshold: f64,
@@ -98,14 +106,37 @@ impl PAMProcessor {
 
     /// Integrate power in frequency band
     fn integrate_band_power(&self, spectrum: &[f64], f_min: f64, f_max: f64) -> f64 {
-        // Convert frequencies to indices using linear frequency spacing
-        // Assumes uniform FFT frequency bins: Δf = f_sample / N
-        // Reference: Cooley & Tukey (1965) for FFT frequency interpretation
+        // Convert frequencies to indices using linear frequency spacing:
+        // Δf = f_s / N, so k = f / Δf = f * N / f_s.
+        //
+        // SSOT: the sampling frequency is owned by the shared beamforming core config, and PAM
+        // carries it via `PamBeamformingConfig.core.sampling_frequency`.
         let n = spectrum.len();
-        let idx_min = ((f_min / 1e6) * n as f64) as usize;
-        let idx_max = ((f_max / 1e6) * n as f64) as usize;
+        if n == 0 {
+            return 0.0;
+        }
 
-        spectrum[idx_min.min(n - 1)..idx_max.min(n)].iter().sum()
+        let f_s = self.config.beamforming.core.sampling_frequency;
+        if !f_s.is_finite() || f_s <= 0.0 {
+            // Defensive: invalid sampling frequency makes frequency-to-bin mapping undefined.
+            return 0.0;
+        }
+
+        // Clamp invalid band inputs to a safe no-op.
+        if !f_min.is_finite() || !f_max.is_finite() || f_min < 0.0 || f_max < 0.0 || f_min > f_max {
+            return 0.0;
+        }
+
+        let idx_min = ((f_min * n as f64) / f_s).floor().max(0.0) as usize;
+        let idx_max = ((f_max * n as f64) / f_s).ceil().max(0.0) as usize;
+
+        let lo = idx_min.min(n - 1);
+        let hi = idx_max.min(n); // exclusive upper bound
+        if lo >= hi {
+            return 0.0;
+        }
+
+        spectrum[lo..hi].iter().sum()
     }
 
     /// Analyze harmonic content
@@ -161,7 +192,7 @@ impl PAMProcessor {
 impl Default for PAMConfig {
     fn default() -> Self {
         Self {
-            beamforming: super::beamforming::BeamformingConfig::default(),
+            beamforming: super::beamforming_config::PamBeamformingConfig::default(),
             frequency_bands: vec![
                 (20e3, 100e3),  // Sub-harmonic
                 (100e3, 500e3), // Fundamental

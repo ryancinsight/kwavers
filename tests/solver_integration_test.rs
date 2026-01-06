@@ -1,8 +1,9 @@
+use kwavers::boundary::PMLConfig;
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
-use kwavers::solver::kwave_parity::config::KWaveConfig;
-use kwavers::solver::kwave_parity::solver::KWaveSolver;
-use kwavers::solver::kwave_parity::sources::KWaveSource;
+use kwavers::solver::spectral::config::{BoundaryConfig, SpectralConfig as KSpaceConfig};
+use kwavers::solver::spectral::solver::SpectralSolver as KSpaceSolver;
+use kwavers::solver::spectral::sources::SpectralSource as KSpaceSource;
 use ndarray::Array3;
 
 #[test]
@@ -16,17 +17,19 @@ fn test_kwave_solver_init_and_step() {
     let medium = HomogeneousMedium::water(&grid);
 
     // 3. Setup Config
-    let config = KWaveConfig {
+    let config = KSpaceConfig {
         dt: 50e-9, // 50 ns
-        pml_size: 4,
-        pml_alpha: 2.0,
         nonlinearity: false,
-        absorption_mode: kwavers::solver::kwave_parity::config::AbsorptionMode::Lossless,
+        boundary: BoundaryConfig::PML(PMLConfig {
+            thickness: 4,
+            sigma_max_acoustic: 2.0,
+            ..PMLConfig::default()
+        }),
         ..Default::default()
     };
 
     // 4. Initialize Solver
-    let mut solver = KWaveSolver::new(config, grid.clone(), &medium, KWaveSource::default())
+    let mut solver = KSpaceSolver::new(config, grid.clone(), &medium, KSpaceSource::default())
         .expect("Failed to create solver");
 
     // 5. Add initial pressure source (Gaussian pulse in center)
@@ -56,7 +59,7 @@ fn test_kwave_solver_init_and_step() {
     let p_field = solver.pressure_field();
 
     // Check for NaNs
-    for &val in p_field {
+    for &val in p_field.iter() {
         assert!(!val.is_nan(), "Pressure field contains NaNs");
     }
 

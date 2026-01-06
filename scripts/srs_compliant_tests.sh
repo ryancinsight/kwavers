@@ -22,19 +22,28 @@ echo "✅ Compilation completed in ${compilation_time}s"
 echo "⚡ Phase 2: Minimal unit tests execution..."
 test_start=$(date +%s)
 
-timeout $TIMEOUT cargo test \
-    --lib \
-    --quiet \
-    -- \
-    test_default_config_creation \
-    test_config_with_custom_values \
-    test_version_info \
-    test_grid_creation_minimal \
-    test_medium_basic_properties \
-    test_physics_constants_validation \
-    test_cfl_calculation_basic \
-    test_error_handling_basic \
-    --nocapture
+if command -v cargo-nextest &> /dev/null; then
+    timeout $TIMEOUT cargo nextest run \
+        --profile ci \
+        --release \
+        --lib \
+        -E 'test(/test_default_config_creation/) or test(/test_config_with_custom_values/) or test(/test_version_info/) or test(/test_grid_creation_minimal/) or test(/test_medium_basic_properties/) or test(/test_physics_constants_validation/) or test(/test_cfl_calculation_basic/) or test(/test_error_handling_basic/)' \
+        --quiet
+else
+    timeout $TIMEOUT cargo test \
+        --lib \
+        --quiet \
+        -- \
+        test_default_config_creation \
+        test_config_with_custom_values \
+        test_version_info \
+        test_grid_creation_minimal \
+        test_medium_basic_properties \
+        test_physics_constants_validation \
+        test_cfl_calculation_basic \
+        test_error_handling_basic \
+        --nocapture
+fi
 
 test_end=$(date +%s)
 test_time=$((test_end - test_start))

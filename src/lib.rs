@@ -69,7 +69,6 @@ pub mod solver;
 pub mod source;
 pub mod testing; // Property-based testing framework per FSE 2025
 pub mod time;
-pub mod uncertainty; // Export uncertainty quantification module
 pub mod utils;
 pub mod validation;
 
@@ -92,9 +91,13 @@ pub use error::{KwaversError, KwaversResult};
 pub use geometry::{make_ball, make_disc, make_line, make_sphere}; // k-Wave compatible geometry helpers
 pub use grid::Grid;
 pub use medium::{homogeneous::HomogeneousMedium, Medium};
+pub use ml::uncertainty;
 pub use recorder::Recorder;
-// Expose unified beamforming config at crate root and PAM elements explicitly.
-pub use sensor::passive_acoustic_mapping::BeamformingMethod;
+
+// Expose unified beamforming config at crate root and PAM policy types explicitly.
+pub use sensor::passive_acoustic_mapping::{
+    ApodizationType as PamApodizationType, PamBeamformingConfig, PamBeamformingMethod,
+};
 pub use sensor::{
     ArrayGeometry, BeamformingConfig, BeamformingCoreConfig, PAMConfig, PAMPlugin, Sensor,
     SensorData,
@@ -126,12 +129,12 @@ pub use physics::plugin::{Plugin, PluginContext, PluginManager, PluginMetadata};
 pub use physics::state::{field_indices, FieldView, FieldViewMut, PhysicsState};
 
 // Re-export spectral-DG components
-pub use solver::spectral_dg::shock_capturing::{ArtificialViscosity, ShockDetector, WENOLimiter};
-pub use solver::spectral_dg::{HybridSpectralDGConfig, HybridSpectralDGSolver};
+pub use solver::spectral::dg::shock_capturing::{ArtificialViscosity, ShockDetector, WENOLimiter};
+pub use solver::spectral::dg::{HybridSpectralDGConfig, HybridSpectralDGSolver};
 
-// Re-export PSTD and FDTD plugins
+// Re-export Spectral and FDTD solvers
 pub use solver::fdtd::{FdtdConfig, FdtdPlugin, FdtdSolver};
-pub use solver::pstd::{PstdConfig, PstdPlugin, PstdSolver};
+pub use solver::spectral::{SpectralConfig, SpectralPlugin, SpectralSolver, SpectralSource};
 
 // Re-export GPU-related items only when feature enabled
 

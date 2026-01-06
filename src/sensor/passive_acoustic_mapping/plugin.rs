@@ -64,7 +64,7 @@ impl crate::physics::plugin::Plugin for PAMPlugin {
         _medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        _context: &PluginContext,
+        _context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         self.state = PluginState::Running;
 

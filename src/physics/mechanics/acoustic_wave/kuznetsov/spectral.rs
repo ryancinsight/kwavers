@@ -4,12 +4,13 @@
 //! workspaces and pre-computes wavenumber vectors for efficient spectral
 //! derivative calculations.
 
-use crate::fft::{Fft3d, Ifft3d};
+use crate::fft::{get_fft_for_grid, Fft3d};
 use crate::grid::Grid;
 use crate::physics::constants::numerical::FFT_K_SCALING;
 use ndarray::{Array1, Array3, Zip};
-use num_complex::Complex;
+use num_complex::Complex64;
 use std::f64::consts::PI;
+use std::sync::Arc;
 
 /// Spectral operator for computing derivatives in Fourier space
 #[derive(Debug)]
@@ -28,17 +29,16 @@ pub struct SpectralOperator {
     kz_vec: Array1<f64>,
 
     /// FFT and IFFT operators
-    fft: Fft3d,
-    ifft: Ifft3d,
+    fft: Arc<Fft3d>,
 
     /// Workspace arrays for complex fields
-    field_complex: Array3<Complex<f64>>,
-    field_hat: Array3<Complex<f64>>,
+    field_hat: Array3<Complex64>,
+    scratch_hat: Array3<Complex64>,
 
     /// Workspace arrays for gradient computation
-    grad_x_hat: Array3<Complex<f64>>,
-    grad_y_hat: Array3<Complex<f64>>,
-    grad_z_hat: Array3<Complex<f64>>,
+    grad_x_hat: Array3<Complex64>,
+    grad_y_hat: Array3<Complex64>,
+    grad_z_hat: Array3<Complex64>,
 }
 
 impl SpectralOperator {
@@ -81,16 +81,14 @@ impl SpectralOperator {
             })
             .collect();
 
-        // Create FFT operators
-        let fft = Fft3d::new(nx, ny, nz);
-        let ifft = Ifft3d::new(nx, ny, nz);
+        let fft = get_fft_for_grid(grid);
 
         // Pre-allocate workspace arrays
-        let field_complex = Array3::<Complex<f64>>::zeros((nx, ny, nz));
-        let field_hat = Array3::<Complex<f64>>::zeros((nx, ny, nz));
-        let grad_x_hat = Array3::<Complex<f64>>::zeros((nx, ny, nz));
-        let grad_y_hat = Array3::<Complex<f64>>::zeros((nx, ny, nz));
-        let grad_z_hat = Array3::<Complex<f64>>::zeros((nx, ny, nz));
+        let field_hat = Array3::<Complex64>::zeros((nx, ny, nz));
+        let scratch_hat = Array3::<Complex64>::zeros((nx, ny, nz));
+        let grad_x_hat = Array3::<Complex64>::zeros((nx, ny, nz));
+        let grad_y_hat = Array3::<Complex64>::zeros((nx, ny, nz));
+        let grad_z_hat = Array3::<Complex64>::zeros((nx, ny, nz));
 
         Self {
             nx,
@@ -100,9 +98,8 @@ impl SpectralOperator {
             ky_vec,
             kz_vec,
             fft,
-            ifft,
-            field_complex,
             field_hat,
+            scratch_hat,
             grad_x_hat,
             grad_y_hat,
             grad_z_hat,
@@ -114,16 +111,9 @@ impl SpectralOperator {
         &mut self,
         field: &Array3<f64>,
         laplacian_out: &mut Array3<f64>,
-        grid: &Grid,
+        _grid: &Grid,
     ) {
-        // Convert real field to complex
-        Zip::from(&mut self.field_complex)
-            .and(field)
-            .for_each(|c, &r| *c = Complex::new(r, 0.0));
-
-        // Transform to k-space
-        self.field_hat.assign(&self.field_complex);
-        self.fft.process(&mut self.field_hat, grid);
+        self.fft.forward_into(field, &mut self.field_hat);
 
         // Apply Laplacian operator in k-space: ∇²f = -(kx² + ky² + kz²) * f_hat
         Zip::indexed(&mut self.field_hat).for_each(|(i, j, k), f| {
@@ -135,9 +125,8 @@ impl SpectralOperator {
             *f = -k_squared * *f;
         });
 
-        // Transform back to real space
-        let result = self.ifft.process(&mut self.field_hat, grid);
-        laplacian_out.assign(&result);
+        self.fft
+            .inverse_into(&self.field_hat, laplacian_out, &mut self.scratch_hat);
     }
 
     /// Compute gradient using spectral methods with pre-allocated workspace
@@ -147,16 +136,9 @@ impl SpectralOperator {
         grad_x_out: &mut Array3<f64>,
         grad_y_out: &mut Array3<f64>,
         grad_z_out: &mut Array3<f64>,
-        grid: &Grid,
+        _grid: &Grid,
     ) {
-        // Convert real field to complex
-        Zip::from(&mut self.field_complex)
-            .and(field)
-            .for_each(|c, &r| *c = Complex::new(r, 0.0));
-
-        // Transform to k-space
-        self.field_hat.assign(&self.field_complex);
-        self.fft.process(&mut self.field_hat, grid);
+        self.fft.forward_into(field, &mut self.field_hat);
 
         // Apply gradient operators in k-space: ∂f/∂x = i*kx*f_hat
         Zip::indexed(&mut self.grad_x_hat)
@@ -169,18 +151,16 @@ impl SpectralOperator {
                 let kz = self.kz_vec[k];
 
                 // Gradient in k-space: ∂f/∂x = i*kx*f_hat
-                *gx = Complex::new(0.0, kx) * f;
-                *gy = Complex::new(0.0, ky) * f;
-                *gz = Complex::new(0.0, kz) * f;
+                *gx = Complex64::new(0.0, kx) * f;
+                *gy = Complex64::new(0.0, ky) * f;
+                *gz = Complex64::new(0.0, kz) * f;
             });
 
-        // Transform back to real space
-        let grad_x_result = self.ifft.process(&mut self.grad_x_hat, grid);
-        let grad_y_result = self.ifft.process(&mut self.grad_y_hat, grid);
-        let grad_z_result = self.ifft.process(&mut self.grad_z_hat, grid);
-
-        grad_x_out.assign(&grad_x_result);
-        grad_y_out.assign(&grad_y_result);
-        grad_z_out.assign(&grad_z_result);
+        self.fft
+            .inverse_into(&self.grad_x_hat, grad_x_out, &mut self.scratch_hat);
+        self.fft
+            .inverse_into(&self.grad_y_hat, grad_y_out, &mut self.scratch_hat);
+        self.fft
+            .inverse_into(&self.grad_z_hat, grad_z_out, &mut self.scratch_hat);
     }
 }

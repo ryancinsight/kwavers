@@ -167,7 +167,7 @@ impl crate::physics::plugin::Plugin for ThermalDiffusionPlugin {
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        _context: &PluginContext,
+        _context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         if let Some(ref mut solver) = self.solver {
             // Get heat source from fields if available (could be from acoustic absorption)

@@ -469,7 +469,7 @@ mod tests {
             3e6,       // 3 MHz
         );
 
-        assert!(efficiency >= 0.0 && efficiency <= 1.0);
+        assert!((0.0..=1.0).contains(&efficiency));
     }
 
     #[test]

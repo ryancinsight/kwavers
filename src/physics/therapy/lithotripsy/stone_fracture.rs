@@ -532,7 +532,6 @@ impl StoneFractureModel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
 
     #[test]
     fn test_griffith_critical_crack_length() {

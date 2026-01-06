@@ -387,8 +387,10 @@ mod tests {
         medium.nonlinearity = 0.0;
 
         // Use zero artificial viscosity for energy conservation test
-        let mut config = WesterveltFdtdConfig::default();
-        config.artificial_viscosity = 0.0; // No artificial dissipation for linear test
+        let config = WesterveltFdtdConfig {
+            artificial_viscosity: 0.0,
+            ..WesterveltFdtdConfig::default()
+        };
         let mut solver = WesterveltFdtd::new(config, &grid);
 
         // Set initial Gaussian pulse

@@ -226,9 +226,6 @@ pub const ENERGY_CONSERVATION_TOLERANCE: f64 = 1e-6;
 /// Default spatial resolution (m)
 pub const DEFAULT_SPATIAL_RESOLUTION: f64 = 1e-3;
 
-/// Default number of frequency steps for sweeps
-pub const DEFAULT_FREQUENCY_STEPS: usize = 100;
-
 /// Minimum grid spacing for stability (m)
 pub const MIN_DX: f64 = 1e-6;
 

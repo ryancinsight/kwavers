@@ -26,7 +26,7 @@ use kwavers::error::KwaversResult;
 #[cfg(feature = "gpu")]
 use kwavers::gpu::memory::UnifiedMemoryManager;
 use kwavers::grid::Grid;
-use kwavers::medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium, Medium};
+use kwavers::medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium};
 use kwavers::physics::imaging::ceus::{ContrastEnhancedUltrasound, PerfusionModel};
 use kwavers::physics::imaging::elastography::{
     AcousticRadiationForce, DisplacementField, ElasticWaveConfig, ElasticWaveField,
@@ -34,11 +34,10 @@ use kwavers::physics::imaging::elastography::{
     NonlinearInversion, NonlinearInversionMethod, NonlinearParameterMap, PushPulseParameters,
     ShearWaveInversion,
 };
-use kwavers::physics::transcranial::safety_monitoring::{SafetyMonitor, SafetyThresholds};
+use kwavers::physics::transcranial::safety_monitoring::SafetyMonitor;
 use kwavers::uncertainty::{UncertaintyConfig, UncertaintyMethod, UncertaintyQuantifier};
 use kwavers::validation::clinical::ClinicalValidator;
 use ndarray::{s, Array3, Array4};
-use std::collections::HashMap;
 use std::time::Instant;
 
 /// Comprehensive liver assessment workflow
@@ -404,7 +403,7 @@ impl LiverAssessmentWorkflow {
                 spatial_resolution: perfusion_uncertainty.reliability_metrics.spatial_resolution,
             },
         };
-        let results: Vec<Box<dyn kwavers::uncertainty::UncertaintyResult>> =
+        let _results: Vec<Box<dyn kwavers::uncertainty::UncertaintyResult>> =
             vec![Box::new(swe_clone), Box::new(perf_clone)];
         println!(
             "Uncertainty analysis: SWE confidence = {:.1}%, CEUS confidence = {:.1}%",

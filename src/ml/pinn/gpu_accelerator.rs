@@ -102,8 +102,7 @@ pub struct PinnedBuffer<T> {
 }
 
 /// Memory usage statistics
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct MemoryStats {
     /// Peak GPU memory usage (bytes)
     pub peak_gpu_memory: usize,
@@ -116,7 +115,6 @@ pub struct MemoryStats {
     /// Memory deallocation count
     pub deallocation_count: usize,
 }
-
 
 impl GpuMemoryManager {
     /// Create a new GPU memory manager
@@ -241,7 +239,10 @@ impl GpuMemoryManager {
             ));
         }
 
-        let buffer = PinnedBuffer { _ptr: ptr, _size: size };
+        let buffer = PinnedBuffer {
+            _ptr: ptr,
+            _size: size,
+        };
 
         self.stats.peak_pinned_memory = self
             .stats
@@ -492,11 +493,13 @@ impl CudaKernelManager {
         _block_dims: (u32, u32, u32),
         _stream: &CudaStream,
     ) -> KwaversResult<()> {
-        let kernel = self.get_kernel("pde_kernels", _kernel_name).ok_or_else(|| {
-            KwaversError::System(crate::error::SystemError::ResourceUnavailable {
-                resource: format!("CUDA kernel {}", _kernel_name),
-            })
-        })?;
+        let kernel = self
+            .get_kernel("pde_kernels", _kernel_name)
+            .ok_or_else(|| {
+                KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                    resource: format!("CUDA kernel {}", _kernel_name),
+                })
+            })?;
 
         // In practice, this would launch the kernel
         // For now, simulate the launch
@@ -775,7 +778,7 @@ mod tests {
         let mut manager = manager.unwrap();
 
         // Load dummy module
-        assert!(manager.load_module("test", "dummy_ptx").is_ok());
+        assert!(manager.compile_ptx("test", "dummy_ptx").is_ok());
 
         // Check module was loaded
         assert!(manager.modules.contains_key("test"));

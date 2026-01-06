@@ -1,10 +1,12 @@
 use crate::boundary::Boundary;
-use crate::error::{ConfigError, KwaversResult};
+use crate::error::{ConfigError, KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
 use log::trace;
 use ndarray::{Array3, ArrayViewMut3, Zip};
 
 use rustfft::num_complex::Complex;
+
+use serde::{Deserialize, Serialize};
 
 // Physical constants for PML boundary parameters
 /// Exponential scaling factor for PML absorption profile
@@ -20,9 +22,6 @@ const PML_EXPONENTIAL_SCALING_FACTOR: f64 = 0.1;
 /// with optional backing by a theoretical model for automatic parameter selection.
 #[derive(Debug, Clone)]
 pub struct PMLBoundary {
-    // thickness: usize, // Removed
-    // sigma_max_acoustic: f64, // Removed
-    // sigma_max_light: f64, // Removed
     /// Pre-computed damping profiles for each dimension
     acoustic_damping_x: Vec<f64>,
     acoustic_damping_y: Vec<f64>,
@@ -30,16 +29,12 @@ pub struct PMLBoundary {
     light_damping_x: Vec<f64>,
     light_damping_y: Vec<f64>,
     light_damping_z: Vec<f64>,
-    // polynomial_order: usize, // Removed
-    // target_reflection: f64, // Removed
-    /// Pre-computed combined damping factors for optimization
-    acoustic_damping_3d: Option<Array3<f64>>,
-    light_damping_3d: Option<Array3<f64>>,
+    thickness: usize,
 }
 
 /// Configuration for PML boundary layer
 /// Follows SOLID principles by grouping related parameters together
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PMLConfig {
     pub thickness: usize,
     pub sigma_max_acoustic: f64,
@@ -128,8 +123,7 @@ impl PMLBoundary {
             light_damping_x: light_profile.clone(),
             light_damping_y: light_profile.clone(),
             light_damping_z: light_profile,
-            acoustic_damping_3d: None,
-            light_damping_3d: None,
+            thickness: config.thickness,
         })
     }
 
@@ -149,12 +143,15 @@ impl PMLBoundary {
     /// * `order` - Polynomial order for profile grading
     fn damping_profile(
         thickness: usize,
-        length: usize,
+        _length: usize, // Unused in local profile generation
         dx: f64,
         sigma_max: f64,
         order: usize,
     ) -> Vec<f64> {
-        let mut profile = vec![0.0; length];
+        // We only store the profile for the thickness itself, symmetrical
+        // Profile is stored as [sigma(0), sigma(1), ... sigma(thickness-1)]
+        // where sigma(0) is at the deepest point of PML (boundary) and sigma(thickness-1) is interface
+        let mut profile = vec![0.0; thickness];
 
         // PML profile with exponential absorption characteristics
         // Theoretical reference sigma for reflection coefficient R
@@ -163,33 +160,28 @@ impl PMLBoundary {
             -((order + 1) as f64) * target_reflection.ln() / (2.0 * thickness as f64 * dx);
         let sigma_eff = sigma_max.min(reference_sigma * 2.0); // Don't exceed theoretical reference
 
-        // Apply PML at both domain boundaries (left/right or top/bottom)
-        // Left/bottom boundary - polynomial grading
-        for (i, profile_val) in profile.iter_mut().enumerate().take(thickness) {
-            let normalized_distance = (thickness - i) as f64 / thickness as f64;
-            let polynomial_factor = normalized_distance.powi(order as i32);
+        for (i, profile_val) in profile.iter_mut().enumerate() {
+            // Distance from interface (normalized): 0 at interface, 1 at boundary
+            // In our loop i=0 is boundary, i=thickness-1 is interface
+            // So distance is (thickness - 1 - i) / thickness
+            // Wait, legacy implementation used full length. Let's standardize.
+            // Let profile[d] be damping at distance d nodes from boundary.
+            // d=0 is the boundary node.
+
+            let dist_from_boundary = i as f64;
+            let normalized_dist = (thickness as f64 - dist_from_boundary) / thickness as f64;
+            // normalized_dist is 1 at boundary (i=0), 0 at interface
+
+            // Standard polynomial grading: sigma(x) = sigma_max * (x/L)^n
+            let polynomial_factor = normalized_dist.powi(order as i32);
 
             // Add exponential component for grazing angle absorption
-            let exponential_factor = (-2.0 * normalized_distance).exp();
+            let exponential_factor = (-2.0 * normalized_dist).exp();
 
             *profile_val = sigma_eff
                 * polynomial_factor
                 * (1.0 + PML_EXPONENTIAL_SCALING_FACTOR * exponential_factor);
         }
-
-        // Right/top boundary
-        (0..thickness).for_each(|i| {
-            let idx = length - i - 1;
-            let normalized_distance = i as f64 / thickness as f64;
-            let polynomial_factor = normalized_distance.powi(order as i32);
-
-            // Add exponential component for grazing angle absorption
-            let exponential_factor = (-2.0 * normalized_distance).exp();
-
-            profile[idx] = sigma_eff
-                * polynomial_factor
-                * (1.0 + PML_EXPONENTIAL_SCALING_FACTOR * exponential_factor);
-        });
 
         profile
     }
@@ -212,45 +204,21 @@ impl PMLBoundary {
         }
     }
 
-    /// Precomputes the 3D damping factors for acoustic fields to avoid repeated calculations
-    fn precompute_acoustic_damping_3d(&mut self, grid: &Grid) {
-        if self.acoustic_damping_3d.is_none() {
-            trace!("Precomputing 3D acoustic damping factors");
-            let mut damping_3d = Array3::zeros((grid.nx, grid.ny, grid.nz));
-
-            Zip::indexed(&mut damping_3d).for_each(|(i, j, k), val| {
-                // Use modulo to handle size mismatch safely
-                let x_idx = i.min(self.acoustic_damping_x.len().saturating_sub(1));
-                let y_idx = j.min(self.acoustic_damping_y.len().saturating_sub(1));
-                let z_idx = k.min(self.acoustic_damping_z.len().saturating_sub(1));
-
-                *val = self.acoustic_damping_x[x_idx]
-                    + self.acoustic_damping_y[y_idx]
-                    + self.acoustic_damping_z[z_idx];
-            });
-
-            self.acoustic_damping_3d = Some(damping_3d);
-        }
-    }
-
-    /// Precomputes the 3D damping factors for light fields to avoid repeated calculations
-    fn precompute_light_damping_3d(&mut self, grid: &Grid) {
-        if self.light_damping_3d.is_none() {
-            trace!("Precomputing 3D light damping factors");
-            let mut damping_3d = Array3::zeros((grid.nx, grid.ny, grid.nz));
-
-            Zip::indexed(&mut damping_3d).for_each(|(i, j, k), val| {
-                // Use modulo to handle size mismatch safely
-                let x_idx = i.min(self.light_damping_x.len().saturating_sub(1));
-                let y_idx = j.min(self.light_damping_y.len().saturating_sub(1));
-                let z_idx = k.min(self.light_damping_z.len().saturating_sub(1));
-
-                *val = self.light_damping_x[x_idx]
-                    + self.light_damping_y[y_idx]
-                    + self.light_damping_z[z_idx];
-            });
-
-            self.light_damping_3d = Some(damping_3d);
+    /// Get damping factor at a specific index
+    #[inline]
+    fn get_damping(&self, idx: usize, profile: &[f64], max_dim: usize) -> f64 {
+        if idx < self.thickness {
+            // Left/Bottom/Back boundary
+            profile[idx]
+        } else if idx >= max_dim - self.thickness {
+            // Right/Top/Front boundary
+            // Map idx to 0..thickness
+            // max_dim - 1 -> 0
+            // max_dim - thickness -> thickness - 1
+            let dist = max_dim - 1 - idx;
+            profile[dist]
+        } else {
+            0.0
         }
     }
 }
@@ -264,17 +232,149 @@ impl Boundary for PMLBoundary {
     ) -> crate::KwaversResult<()> {
         trace!("Applying spatial acoustic PML at step {}", time_step);
         let dx = grid.dx;
+        let (nx, ny, nz) = grid.dimensions();
+        let t = self.thickness;
 
-        // Lazily initialize 3D damping factors if not computed yet
-        self.precompute_acoustic_damping_3d(grid);
-        let damping_3d = self.acoustic_damping_3d.as_ref().unwrap();
+        if 2 * t >= nx {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!(
+                        "PML thickness {} incompatible with grid nx={}; require 2*thickness < nx",
+                        t, nx
+                    ),
+                },
+            ));
+        }
+        if ny > 1 && 2 * t >= ny {
+            return Err(KwaversError::Validation(ValidationError::ConstraintViolation {
+                message: format!(
+                    "PML thickness {} incompatible with grid ny={}; require 2*thickness < ny for y-PML",
+                    t, ny
+                ),
+            }));
+        }
+        if nz > 1 && 2 * t >= nz {
+            return Err(KwaversError::Validation(ValidationError::ConstraintViolation {
+                message: format!(
+                    "PML thickness {} incompatible with grid nz={}; require 2*thickness < nz for z-PML",
+                    t, nz
+                ),
+            }));
+        }
 
-        // Apply damping using precomputed factors
-        Zip::from(&mut field)
-            .and(damping_3d)
-            .for_each(|val, &damping| {
-                Self::apply_damping(val, damping, dx);
-            });
+        let apply_y = ny > 1;
+        let apply_z = nz > 1;
+
+        // Apply X boundaries
+        for i in 0..t {
+            // Left boundary
+            let d_x = self.acoustic_damping_x[i];
+            for j in 0..ny {
+                for k in 0..nz {
+                    // Add Y and Z damping if in corners
+                    let d_y = if apply_y {
+                        self.get_damping(j, &self.acoustic_damping_y, ny)
+                    } else {
+                        0.0
+                    };
+                    let d_z = if apply_z {
+                        self.get_damping(k, &self.acoustic_damping_z, nz)
+                    } else {
+                        0.0
+                    };
+                    Self::apply_damping(&mut field[[i, j, k]], d_x + d_y + d_z, dx);
+                }
+            }
+            // Right boundary
+            let ri = nx - 1 - i;
+            let d_x_r = self.acoustic_damping_x[i];
+            for j in 0..ny {
+                for k in 0..nz {
+                    let d_y = if apply_y {
+                        self.get_damping(j, &self.acoustic_damping_y, ny)
+                    } else {
+                        0.0
+                    };
+                    let d_z = if apply_z {
+                        self.get_damping(k, &self.acoustic_damping_z, nz)
+                    } else {
+                        0.0
+                    };
+                    Self::apply_damping(&mut field[[ri, j, k]], d_x_r + d_y + d_z, dx);
+                }
+            }
+        }
+
+        // Apply Y boundaries (excluding X corners to avoid double counting)
+        // Correct approach: Iterate only the "bulk" of Y boundary that wasn't touched by X loop?
+        // No, standard approach: Iterate all boundary regions.
+        // Optimization:
+        // Region 1: X slabs (covers entire Y-Z plane for x in [0, t) and [nx-t, nx)) -> Done above.
+        // Region 2: Y slabs (y in [0, t) and [ny-t, ny)), but skip X slabs to avoid double application?
+        // Wait, if I simply iterate the volumes, I must be careful not to apply twice.
+        // The damping is Exp(-sigma*dx). Applying twice means Exp(-(s1+s2)*dx), which IS correct if we want to sum damping.
+        // BUT my logic above inside X loop included Y and Z damping components: `d_x + d_y + d_z`.
+        // So the corners are fully handled in the X loop!
+        // We only need to handle the regions NOT covered by X loop.
+
+        let x_start = t;
+        let x_end = nx - t;
+
+        if apply_y && x_end > x_start {
+            // Apply Y boundaries
+            for j in 0..t {
+                // Bottom
+                let d_y = self.acoustic_damping_y[j];
+                for i in x_start..x_end {
+                    for k in 0..nz {
+                        let d_z = if apply_z {
+                            self.get_damping(k, &self.acoustic_damping_z, nz)
+                        } else {
+                            0.0
+                        };
+                        Self::apply_damping(&mut field[[i, j, k]], d_y + d_z, dx);
+                    }
+                }
+                // Top
+                let rj = ny - 1 - j;
+                let d_y_r = self.acoustic_damping_y[j];
+                for i in x_start..x_end {
+                    for k in 0..nz {
+                        let d_z = if apply_z {
+                            self.get_damping(k, &self.acoustic_damping_z, nz)
+                        } else {
+                            0.0
+                        };
+                        Self::apply_damping(&mut field[[i, rj, k]], d_y_r + d_z, dx);
+                    }
+                }
+            }
+
+            let y_start = t;
+            let y_end = ny - t;
+
+            // Apply Z boundaries
+            if apply_z && y_end > y_start {
+                for k in 0..t {
+                    // Front
+                    let d_z = self.acoustic_damping_z[k];
+                    for i in x_start..x_end {
+                        for j in y_start..y_end {
+                            Self::apply_damping(&mut field[[i, j, k]], d_z, dx);
+                        }
+                    }
+                    // Back
+                    let rk = nz - 1 - k;
+                    let d_z_r = self.acoustic_damping_z[k];
+                    for i in x_start..x_end {
+                        for j in y_start..y_end {
+                            Self::apply_damping(&mut field[[i, j, rk]], d_z_r, dx);
+                        }
+                    }
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -289,32 +389,220 @@ impl Boundary for PMLBoundary {
             time_step
         );
         let dx = grid.dx;
+        let (nx, ny, nz) = grid.dimensions();
+        let t = self.thickness;
 
-        // Lazily initialize 3D damping factors if not computed yet
-        self.precompute_acoustic_damping_3d(grid);
-        let damping_3d = self.acoustic_damping_3d.as_ref().unwrap();
+        if 2 * t >= nx {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!(
+                        "PML thickness {} incompatible with grid nx={}; require 2*thickness < nx",
+                        t, nx
+                    ),
+                },
+            ));
+        }
+        if ny > 1 && 2 * t >= ny {
+            return Err(KwaversError::Validation(ValidationError::ConstraintViolation {
+                message: format!(
+                    "PML thickness {} incompatible with grid ny={}; require 2*thickness < ny for y-PML",
+                    t, ny
+                ),
+            }));
+        }
+        if nz > 1 && 2 * t >= nz {
+            return Err(KwaversError::Validation(ValidationError::ConstraintViolation {
+                message: format!(
+                    "PML thickness {} incompatible with grid nz={}; require 2*thickness < nz for z-PML",
+                    t, nz
+                ),
+            }));
+        }
 
-        // Apply damping using precomputed factors
-        Zip::from(field).and(damping_3d).for_each(|val, &damping| {
-            Self::apply_complex_damping(val, damping, dx);
-        });
+        let apply_y = ny > 1;
+        let apply_z = nz > 1;
+
+        // Apply X boundaries (full Y-Z plane) - Handles corners fully
+        for i in 0..t {
+            let d_x = self.acoustic_damping_x[i];
+            for j in 0..ny {
+                for k in 0..nz {
+                    let d_y = if apply_y {
+                        self.get_damping(j, &self.acoustic_damping_y, ny)
+                    } else {
+                        0.0
+                    };
+                    let d_z = if apply_z {
+                        self.get_damping(k, &self.acoustic_damping_z, nz)
+                    } else {
+                        0.0
+                    };
+                    Self::apply_complex_damping(&mut field[[i, j, k]], d_x + d_y + d_z, dx);
+                }
+            }
+            let ri = nx - 1 - i;
+            let d_x_r = self.acoustic_damping_x[i];
+            for j in 0..ny {
+                for k in 0..nz {
+                    let d_y = if apply_y {
+                        self.get_damping(j, &self.acoustic_damping_y, ny)
+                    } else {
+                        0.0
+                    };
+                    let d_z = if apply_z {
+                        self.get_damping(k, &self.acoustic_damping_z, nz)
+                    } else {
+                        0.0
+                    };
+                    Self::apply_complex_damping(&mut field[[ri, j, k]], d_x_r + d_y + d_z, dx);
+                }
+            }
+        }
+
+        // Apply Y boundaries (excluding X regions)
+        let x_start = t;
+        let x_end = nx - t;
+
+        if apply_y && x_end > x_start {
+            for j in 0..t {
+                let d_y = self.acoustic_damping_y[j];
+                for i in x_start..x_end {
+                    for k in 0..nz {
+                        let d_z = if apply_z {
+                            self.get_damping(k, &self.acoustic_damping_z, nz)
+                        } else {
+                            0.0
+                        };
+                        Self::apply_complex_damping(&mut field[[i, j, k]], d_y + d_z, dx);
+                    }
+                }
+                let rj = ny - 1 - j;
+                let d_y_r = self.acoustic_damping_y[j];
+                for i in x_start..x_end {
+                    for k in 0..nz {
+                        let d_z = if apply_z {
+                            self.get_damping(k, &self.acoustic_damping_z, nz)
+                        } else {
+                            0.0
+                        };
+                        Self::apply_complex_damping(&mut field[[i, rj, k]], d_y_r + d_z, dx);
+                    }
+                }
+            }
+
+            // Apply Z boundaries (excluding X and Y regions)
+            let y_start = t;
+            let y_end = ny - t;
+
+            if apply_z && y_end > y_start {
+                for k in 0..t {
+                    let d_z = self.acoustic_damping_z[k];
+                    for i in x_start..x_end {
+                        for j in y_start..y_end {
+                            Self::apply_complex_damping(&mut field[[i, j, k]], d_z, dx);
+                        }
+                    }
+                    let rk = nz - 1 - k;
+                    let d_z_r = self.acoustic_damping_z[k];
+                    for i in x_start..x_end {
+                        for j in y_start..y_end {
+                            Self::apply_complex_damping(&mut field[[i, j, rk]], d_z_r, dx);
+                        }
+                    }
+                }
+            }
+        }
         Ok(())
     }
 
     fn apply_light(&mut self, mut field: ArrayViewMut3<f64>, grid: &Grid, time_step: usize) {
         trace!("Applying light PML at step {}", time_step);
         let dx = grid.dx;
+        let (nx, ny, nz) = grid.dimensions();
+        let t = self.thickness;
+        let apply_y = ny > 1 && 2 * t < ny;
+        let apply_z = nz > 1 && 2 * t < nz;
 
-        // Lazily initialize 3D damping factors if not computed yet
-        self.precompute_light_damping_3d(grid);
-        let damping_3d = self.light_damping_3d.as_ref().unwrap();
+        // X boundaries
+        for i in 0..t.min(nx.saturating_sub(1)) {
+            let d_x = self.light_damping_x[i];
+            for j in 0..ny {
+                for k in 0..nz {
+                    let d_y = if apply_y {
+                        self.get_damping(j, &self.light_damping_y, ny)
+                    } else {
+                        0.0
+                    };
+                    let d_z = if apply_z {
+                        self.get_damping(k, &self.light_damping_z, nz)
+                    } else {
+                        0.0
+                    };
+                    Self::apply_damping(&mut field[[i, j, k]], d_x + d_y + d_z, dx);
+                }
+            }
+            let ri = nx - 1 - i;
+            let d_x_r = self.light_damping_x[i];
+            for j in 0..ny {
+                for k in 0..nz {
+                    let d_y = if apply_y {
+                        self.get_damping(j, &self.light_damping_y, ny)
+                    } else {
+                        0.0
+                    };
+                    let d_z = if apply_z {
+                        self.get_damping(k, &self.light_damping_z, nz)
+                    } else {
+                        0.0
+                    };
+                    Self::apply_damping(&mut field[[ri, j, k]], d_x_r + d_y + d_z, dx);
+                }
+            }
+        }
 
-        // Apply damping using precomputed factors
-        Zip::from(&mut field)
-            .and(damping_3d)
-            .for_each(|val, &damping| {
-                Self::apply_damping(val, damping, dx);
-            });
+        // Y boundaries
+        let x_start = t;
+        let x_end = nx - t;
+        if x_end > x_start {
+            for j in 0..t {
+                let d_y = self.light_damping_y[j];
+                for i in x_start..x_end {
+                    for k in 0..nz {
+                        let d_z = self.get_damping(k, &self.light_damping_z, nz);
+                        Self::apply_damping(&mut field[[i, j, k]], d_y + d_z, dx);
+                    }
+                }
+                let rj = ny - 1 - j;
+                let d_y_r = self.light_damping_y[j];
+                for i in x_start..x_end {
+                    for k in 0..nz {
+                        let d_z = self.get_damping(k, &self.light_damping_z, nz);
+                        Self::apply_damping(&mut field[[i, rj, k]], d_y_r + d_z, dx);
+                    }
+                }
+            }
+
+            // Z boundaries
+            let y_start = t;
+            let y_end = ny - t;
+            if y_end > y_start {
+                for k in 0..t {
+                    let d_z = self.light_damping_z[k];
+                    for i in x_start..x_end {
+                        for j in y_start..y_end {
+                            Self::apply_damping(&mut field[[i, j, k]], d_z, dx);
+                        }
+                    }
+                    let rk = nz - 1 - k;
+                    let d_z_r = self.light_damping_z[k];
+                    for i in x_start..x_end {
+                        for j in y_start..y_end {
+                            Self::apply_damping(&mut field[[i, j, rk]], d_z_r, dx);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -334,17 +622,88 @@ impl PMLBoundary {
             time_step
         );
         let dx = grid.dx;
+        let (nx, ny, nz) = grid.dimensions();
+        let t = self.thickness;
 
-        // Lazily initialize 3D damping factors if not computed yet
-        self.precompute_acoustic_damping_3d(grid);
-        let damping_3d = self.acoustic_damping_3d.as_ref().unwrap();
+        // Apply X boundaries
+        for i in 0..t {
+            let d_x = self.acoustic_damping_x[i];
+            for j in 0..ny {
+                for k in 0..nz {
+                    let d_y = self.get_damping(j, &self.acoustic_damping_y, ny);
+                    let d_z = self.get_damping(k, &self.acoustic_damping_z, nz);
+                    Self::apply_damping(
+                        &mut field[[i, j, k]],
+                        (d_x + d_y + d_z) * damping_factor,
+                        dx,
+                    );
+                }
+            }
+            let ri = nx - 1 - i;
+            let d_x_r = self.acoustic_damping_x[i];
+            for j in 0..ny {
+                for k in 0..nz {
+                    let d_y = self.get_damping(j, &self.acoustic_damping_y, ny);
+                    let d_z = self.get_damping(k, &self.acoustic_damping_z, nz);
+                    Self::apply_damping(
+                        &mut field[[ri, j, k]],
+                        (d_x_r + d_y + d_z) * damping_factor,
+                        dx,
+                    );
+                }
+            }
+        }
 
-        // Apply damping using precomputed factors with custom scaling
-        Zip::from(&mut field)
-            .and(damping_3d)
-            .for_each(|val, &damping| {
-                let scaled_damping = damping * damping_factor;
-                Self::apply_damping(val, scaled_damping, dx);
-            });
+        // Apply Y boundaries
+        let x_start = t;
+        let x_end = nx - t;
+        if x_end > x_start {
+            for j in 0..t {
+                let d_y = self.acoustic_damping_y[j];
+                for i in x_start..x_end {
+                    for k in 0..nz {
+                        let d_z = self.get_damping(k, &self.acoustic_damping_z, nz);
+                        Self::apply_damping(
+                            &mut field[[i, j, k]],
+                            (d_y + d_z) * damping_factor,
+                            dx,
+                        );
+                    }
+                }
+                let rj = ny - 1 - j;
+                let d_y_r = self.acoustic_damping_y[j];
+                for i in x_start..x_end {
+                    for k in 0..nz {
+                        let d_z = self.get_damping(k, &self.acoustic_damping_z, nz);
+                        Self::apply_damping(
+                            &mut field[[i, rj, k]],
+                            (d_y_r + d_z) * damping_factor,
+                            dx,
+                        );
+                    }
+                }
+            }
+
+            // Apply Z boundaries
+            let y_start = t;
+            let y_end = ny - t;
+            if y_end > y_start {
+                for k in 0..t {
+                    let d_z = self.acoustic_damping_z[k];
+                    for i in x_start..x_end {
+                        for j in y_start..y_end {
+                            Self::apply_damping(&mut field[[i, j, k]], d_z * damping_factor, dx);
+                        }
+                    }
+                    let rk = nz - 1 - k;
+                    let d_z_r = self.acoustic_damping_z[k];
+                    for i in x_start..x_end {
+                        for j in y_start..y_end {
+                            Self::apply_damping(&mut field[[i, j, rk]], d_z_r * damping_factor, dx);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

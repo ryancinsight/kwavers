@@ -94,6 +94,48 @@ impl HomogeneousMedium {
         }
     }
 
+    pub fn set_acoustic_properties(
+        &mut self,
+        absorption_alpha: f64,
+        absorption_power: f64,
+        nonlinearity: f64,
+    ) -> KwaversResult<()> {
+        if !absorption_alpha.is_finite() || absorption_alpha < 0.0 {
+            return Err(KwaversError::Validation(ValidationError::InvalidValue {
+                parameter: "absorption_alpha".to_string(),
+                value: absorption_alpha,
+                reason: "Absorption coefficient must be finite and non-negative".to_string(),
+            }));
+        }
+
+        if !absorption_power.is_finite() || absorption_power < 0.0 {
+            return Err(KwaversError::Validation(ValidationError::InvalidValue {
+                parameter: "absorption_power".to_string(),
+                value: absorption_power,
+                reason: "Absorption power must be finite and non-negative".to_string(),
+            }));
+        }
+
+        if !nonlinearity.is_finite() || nonlinearity < 0.0 {
+            return Err(KwaversError::Validation(ValidationError::InvalidValue {
+                parameter: "nonlinearity".to_string(),
+                value: nonlinearity,
+                reason: "Nonlinearity must be finite and non-negative".to_string(),
+            }));
+        }
+
+        self.absorption_alpha = absorption_alpha;
+        self.absorption_power = absorption_power;
+        self.nonlinearity = nonlinearity;
+
+        let alpha_at_ref =
+            self.absorption_alpha * (self.reference_frequency / 1e6).powf(self.absorption_power);
+        self.absorption_cache = Array3::from_elem(self.grid_shape, alpha_at_ref);
+        self.nonlinearity_cache = Array3::from_elem(self.grid_shape, self.nonlinearity);
+
+        Ok(())
+    }
+
     /// Create a water medium with standard properties at 20°C
     pub fn water(grid: &Grid) -> Self {
         let mut medium = Self::new(

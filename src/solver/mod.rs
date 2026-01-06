@@ -9,11 +9,8 @@ pub mod fdtd;
 pub mod heterogeneous;
 pub mod hybrid;
 pub mod imex;
-pub mod kspace_correction;
-
-pub mod kwave_parity;
-pub mod pstd; // PSTD solver module
-pub mod spectral_dg;
+pub mod spectral;
+pub mod spectral_correction;
 pub mod time_integration;
 pub mod validation;
 
@@ -23,6 +20,7 @@ pub use crate::physics::field_indices::{
     STRESS_XZ_IDX as SXZ_IDX, STRESS_YY_IDX as SYY_IDX, STRESS_YZ_IDX as SYZ_IDX,
     STRESS_ZZ_IDX as SZZ_IDX, TOTAL_FIELDS, VX_IDX, VY_IDX, VZ_IDX,
 };
+pub mod linear_algebra;
 pub mod reconstruction;
 pub mod thermal_diffusion;
 pub mod time_reversal;
@@ -36,8 +34,7 @@ pub use plugin_based::PluginBasedSolver;
 pub use amr::{AMRSolver, MemoryStats};
 pub use fdtd::FdtdConfig;
 pub use imex::{IMEXIntegrator, IMEXSchemeType};
-pub use pstd::spectral_ops::KSpaceOperator; // k-space operator export
-pub use pstd::{PstdConfig, PstdSolver};
+pub use spectral::{SpectralConfig, SpectralSolver};
 
 use serde::Serialize;
 use std::collections::HashMap;

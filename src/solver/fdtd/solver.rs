@@ -14,7 +14,7 @@ use ndarray::{s, Array3, ArrayView3, Zip};
 #[cfg(feature = "gpu")]
 use crate::gpu::burn_accelerator::{BurnGpuAccelerator, GpuConfig, Precision};
 #[cfg(feature = "gpu")]
-use burn::backend::{Autodiff, NdArray, Wgpu};
+use burn::backend::{Autodiff, Wgpu};
 
 use super::config::FdtdConfig;
 use super::finite_difference::FiniteDifference;

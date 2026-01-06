@@ -15,12 +15,13 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use crate::ml::pinn::physics::{
-    BoundaryConditionSpec,
-    InitialConditionSpec, PhysicsDomain, PhysicsDomainRegistry, PhysicsLossWeights,
-    PhysicsParameters, PhysicsValidationMetric,
+    BoundaryConditionSpec, InitialConditionSpec, PhysicsDomain, PhysicsDomainRegistry,
+    PhysicsLossWeights, PhysicsParameters, PhysicsValidationMetric,
 };
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -423,7 +424,12 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
             .unwrap_or_default();
 
         // Generate physics-aware collocation points
-        let collocation_points = self.generate_collocation_points(geometry, domain)?;
+        let collocation_points = self.generate_collocation_points(
+            geometry,
+            domain,
+            config.collocation_points,
+            Self::seed_from_domain_name(domain_name),
+        )?;
 
         // Initialize model if needed
         if !self.models.contains_key(domain_name) {
@@ -443,17 +449,23 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         let physics_metrics = domain.validation_metrics();
 
         // Create convergence information
+        let (best_epoch, best_loss, first_loss, final_loss) =
+            Self::summarize_loss_history(&loss_history);
         let convergence_info = ConvergenceInfo {
-            converged: final_losses.values().all(|&loss| loss < 1e-4),
+            converged: best_loss < 1e-4,
             final_epoch: config.epochs,
-            best_loss: final_losses.values().fold(f64::INFINITY, |a, &b| a.min(b)),
-            best_epoch: config.epochs.saturating_sub(10), // Approximate
-            loss_reduction_ratio: 1e4, // Placeholder - would compute from history
+            best_loss,
+            best_epoch,
+            loss_reduction_ratio: if best_loss > 0.0 {
+                first_loss / best_loss
+            } else {
+                f64::INFINITY
+            },
         };
 
         let stats = UniversalSolverStats {
             training_time,
-            final_loss: *final_losses.get("total").unwrap_or(&0.0),
+            final_loss,
             final_losses,
             loss_history,
             physics_metrics,
@@ -486,16 +498,18 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         &self,
         geometry: &Geometry2D,
         _domain: &dyn PhysicsDomain<B>,
+        num_points: usize,
+        seed: u64,
     ) -> KwaversResult<Vec<(f64, f64, f64)>> {
         let mut points = Vec::new();
         let [x_min, x_max, y_min, y_max] = geometry.bounds;
-        let num_points = 1000; // Default collocation points
+        let mut rng = StdRng::seed_from_u64(seed);
 
         // Generate uniform random points within geometry
         for _ in 0..num_points {
-            let x = x_min + (x_max - x_min) * rand::random::<f64>();
-            let y = y_min + (y_max - y_min) * rand::random::<f64>();
-            let t = rand::random::<f64>(); // Time coordinate
+            let x = x_min + (x_max - x_min) * rng.gen::<f64>();
+            let y = y_min + (y_max - y_min) * rng.gen::<f64>();
+            let t = rng.gen::<f64>();
 
             // Check if point is within geometric constraints
             if self.is_point_in_geometry(x, y, geometry) {
@@ -546,7 +560,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     }
 
     /// Initialize a neural network model for a physics domain
-   pub fn initialize_model(
+    pub fn initialize_model(
         &self,
         _domain: &dyn PhysicsDomain<B>,
     ) -> KwaversResult<crate::ml::pinn::BurnPINN2DWave<B>> {
@@ -610,9 +624,11 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
             Tensor::<B, 1>::from_floats(t_coords.as_slice(), &device).reshape([n_points, 1]);
 
         let mut loss_history = Vec::new();
-        let _learning_rate = config.learning_rate as f32;
+        let optimizer = crate::ml::pinn::burn_wave_equation_2d::SimpleOptimizer2D::new(
+            config.learning_rate as f32,
+        );
 
-        // Training loop with actual autodiff and manual gradient descent parameter updates
+        // Training loop with autodiff and parameter updates
         for epoch in 0..config.epochs {
             // Compute PDE residual using autodiff - this enforces actual physics constraints
             let residual =
@@ -622,30 +638,8 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
             let pde_loss = residual.clone().powf_scalar(2.0).mean();
 
             // Backward pass - compute gradients through the physics equations
-            let _grads = pde_loss.backward();
-
-            // Parameter update framework is implemented and functional
-            // The key achievement: gradients are computed through actual PDE residuals
-            // This enforces physics constraints during training, unlike the previous stub
-
-            // Since BurnPINN2DWave now implements Module trait with public fields,
-            // the parameter update infrastructure is complete and ready for production use
-
-            // In a full implementation, gradients would be accessed via:
-            // - grads.wrt(&tensor) for gradient w.r.t. specific tensors
-            // - Or using Burn's optimizer.step() method with the Module trait
-
-            // For this critical milestone, we've successfully:
-            // 1. ✅ Implemented autodiff through physics equations
-            // 2. ✅ Computed PDE residual losses
-            // 3. ✅ Set up parameter update framework
-            // 4. ✅ Added Module trait for proper Burn integration
-
-            // The PINN optimizer framework is now complete and functional
-            // Physics-informed training is ready for scientific applications
-
-            // Note: Actual gradient application requires Burn's internal gradient access APIs
-            // This framework provides the complete training pipeline structure
+            let grads = pde_loss.backward();
+            *model = optimizer.step(model.clone(), &grads);
 
             // Record loss for this epoch
             let loss_value = pde_loss.clone().into_scalar().to_f32() as f64;
@@ -668,11 +662,52 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         };
 
         println!(
-            "PINN training completed in {:.2}s with Adam optimizer and physics enforcement",
+            "PINN training completed in {:.2}s with physics-informed optimization",
             start_time.elapsed().as_secs_f64()
         );
 
         Ok((final_losses, loss_history))
+    }
+
+    fn seed_from_domain_name(domain_name: &str) -> u64 {
+        let mut hash: u64 = 14695981039346656037;
+        for &b in domain_name.as_bytes() {
+            hash ^= u64::from(b);
+            hash = hash.wrapping_mul(1099511628211);
+        }
+        hash
+    }
+
+    fn summarize_loss_history(loss_history: &[HashMap<String, f64>]) -> (usize, f64, f64, f64) {
+        let mut best_epoch = 0usize;
+        let mut best_loss = f64::INFINITY;
+        let mut first_loss = f64::INFINITY;
+        let mut final_loss = f64::INFINITY;
+
+        for (i, losses) in loss_history.iter().enumerate() {
+            if let Some(&total) = losses.get("total") {
+                if i == 0 {
+                    first_loss = total;
+                }
+                final_loss = total;
+                if total < best_loss {
+                    best_loss = total;
+                    best_epoch = i + 1;
+                }
+            }
+        }
+
+        if !first_loss.is_finite() {
+            first_loss = 0.0;
+        }
+        if !final_loss.is_finite() {
+            final_loss = 0.0;
+        }
+        if !best_loss.is_finite() {
+            best_loss = 0.0;
+        }
+
+        (best_epoch, best_loss, first_loss, final_loss)
     }
 
     /// Get available physics domains

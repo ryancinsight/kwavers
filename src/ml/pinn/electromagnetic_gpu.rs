@@ -338,7 +338,7 @@ impl GPUEMSolver {
     }
 
     /// GPU implementation of electromagnetic time stepping using FDTD
-    fn time_step_gpu(&mut self, step: usize) -> KwaversResult<()> {
+    fn time_step_gpu(&mut self, _step: usize) -> KwaversResult<()> {
         let electric_buffer = self.gpu_buffers.get("electric").unwrap();
         let magnetic_buffer = self.gpu_buffers.get("magnetic").unwrap();
         let current_density_buffer = self.gpu_buffers.get("current_density").unwrap();

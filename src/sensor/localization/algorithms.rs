@@ -1,8 +1,14 @@
 // localization/algorithms.rs - Localization algorithms
+//
+// SSOT note:
+// - Beamforming numerics/algorithms are owned by `crate::sensor::beamforming`.
+// - Localization beamforming *search policy + orchestration* is owned by
+//   `crate::sensor::localization::beamforming_search`.
+//
+// This file must not re-implement beamforming (DAS/MVDR/steering) logic.
 
 use super::{LocalizationConfig, LocalizationResult, Position, SensorArray};
-use crate::error::KwaversResult;
-use num_complex::Complex64;
+use crate::error::{KwaversError, KwaversResult};
 use serde::{Deserialize, Serialize};
 
 /// Localization method
@@ -10,7 +16,7 @@ use serde::{Deserialize, Serialize};
 pub enum LocalizationMethod {
     TDOA,        // Time Difference of Arrival
     TOA,         // Time of Arrival
-    Beamforming, // Beamforming-based
+    Beamforming, // Beamforming-based grid search (SSOT via BeamformingProcessor + BeamformSearch)
     MUSIC,       // Multiple Signal Classification
     ESPRIT,      // Estimation of Signal Parameters via Rotational Invariance
     SrpPhat,     // Steered Response Power with Phase Transform
@@ -228,6 +234,36 @@ impl LocalizationAlgorithmImpl for TOAAlgorithm {
     }
 }
 
+/// Beamforming localization algorithm (SSOT-compliant grid search).
+///
+/// This implementation delegates all beamforming numerics to the shared
+/// `crate::sensor::beamforming::BeamformingProcessor` via
+/// `crate::sensor::localization::beamforming_search::BeamformSearch`.
+struct BeamformingAlgorithm;
+
+impl LocalizationAlgorithmImpl for BeamformingAlgorithm {
+    fn localize_impl(
+        &self,
+        _array: &SensorArray,
+        _measurements: &[f64],
+        _config: &LocalizationConfig,
+    ) -> KwaversResult<LocalizationResult> {
+        // Contract: for beamforming-based localization we require raw time-series data.
+        // The shared beamforming stack expects `(n_elements, 1, n_samples)` sensor data.
+        //
+        // This legacy entry-point receives `measurements: &[f64]` with an ambiguous meaning in
+        // this module (it was previously treated as one scalar per sensor and then "beamformed"
+        // via phase weights, which is not a time-domain DAS implementation).
+        //
+        // To avoid mathematically incorrect behavior (and to avoid silently producing invalid
+        // positions), we *fail fast* until a dedicated API is introduced.
+        Err(KwaversError::InvalidInput(
+            "Beamforming localization requires raw sensor time-series data shaped (n_sensors, 1, n_samples). The current LocalizationAlgorithm interface provides only scalar measurements and is insufficient for SSOT beamforming. Introduce a dedicated beamforming-localization API that accepts Array3<f64> sensor data."
+                .to_string(),
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -302,128 +338,5 @@ mod tests {
 
         let err = result.position.distance_to(&source);
         assert!(err < 0.05, "TOA position error too large: {err}");
-    }
-}
-
-/// Beamforming localization algorithm
-struct BeamformingAlgorithm;
-
-impl LocalizationAlgorithmImpl for BeamformingAlgorithm {
-    fn localize_impl(
-        &self,
-        array: &SensorArray,
-        measurements: &[f64],
-        config: &LocalizationConfig,
-    ) -> KwaversResult<LocalizationResult> {
-        use std::time::Instant;
-        let start = Instant::now();
-
-        // Delay-and-sum beamforming: search grid for maximum steered response
-        // Algorithm:
-        // 1. Define search grid over spatial region
-        // 2. For each grid point, calculate delays to all sensors
-        // 3. Apply delays and sum (coherent integration)
-        // 4. Find grid point with maximum output power
-        //
-        // References:
-        // - Van Trees (2002): "Optimum Array Processing"
-        // - Johnson & Dudgeon (1993): "Array Signal Processing"
-
-        if measurements.len() != array.num_sensors() {
-            return Err(crate::error::KwaversError::InvalidInput(format!(
-                "Beamforming requires {} measurements (one per sensor), got {}",
-                array.num_sensors(),
-                measurements.len()
-            )));
-        }
-
-        // Define search grid (coarse grid for efficiency)
-        let search_range = config.search_radius.unwrap_or(1.0); // meters
-        let grid_resolution = 0.05; // 5 cm resolution
-        let n_points = ((2.0 * search_range / grid_resolution) as usize).max(10);
-
-        let centroid = array.centroid();
-        let mut best_position = centroid;
-        let mut best_power = f64::NEG_INFINITY;
-
-        // Grid search
-        for i in 0..n_points {
-            for j in 0..n_points {
-                for k in 0..n_points {
-                    let x = centroid.x - search_range
-                        + (i as f64) * 2.0 * search_range / (n_points as f64);
-                    let y = centroid.y - search_range
-                        + (j as f64) * 2.0 * search_range / (n_points as f64);
-                    let z = centroid.z - search_range
-                        + (k as f64) * 2.0 * search_range / (n_points as f64);
-
-                    let test_pos = Position::new(x, y, z);
-
-                    // Calculate steered response power
-                    let power =
-                        self.calculate_steered_response(&test_pos, array, measurements, config);
-
-                    if power > best_power {
-                        best_power = power;
-                        best_position = test_pos;
-                    }
-                }
-            }
-        }
-
-        // Estimate uncertainty based on beamwidth (inversely proportional to array aperture)
-        let array_size = array.max_baseline();
-        let wavelength = config.sound_speed / config.frequency;
-        let beamwidth = wavelength / array_size; // Approximate beamwidth in radians
-        let uncertainty = beamwidth * search_range; // Spatial uncertainty
-
-        let computation_time = start.elapsed().as_secs_f64();
-
-        Ok(LocalizationResult {
-            position: best_position,
-            uncertainty: Position::new(uncertainty, uncertainty, uncertainty),
-            confidence: (best_power / measurements.len() as f64).clamp(0.0, 1.0),
-            method: LocalizationMethod::Beamforming,
-            computation_time,
-        })
-    }
-}
-
-impl BeamformingAlgorithm {
-    /// Calculate steered response power at a test position
-    ///
-    /// Implements delay-and-sum beamforming:
-    /// P(r) = |∑ᵢ wᵢ xᵢ(t - τᵢ(r))|²
-    /// where τᵢ(r) is the propagation delay from position r to sensor i
-    fn calculate_steered_response(
-        &self,
-        position: &Position,
-        array: &SensorArray,
-        measurements: &[f64],
-        config: &LocalizationConfig,
-    ) -> f64 {
-        let c = config.sound_speed;
-
-        // CORRECTED: Calculate steered response with complex arithmetic
-        let mut beamformed = Complex64::new(0.0, 0.0);
-
-        for (i, &measurement) in measurements.iter().enumerate().take(array.num_sensors()) {
-            let sensor_pos = array.get_sensor_position(i);
-            let distance = position.distance_to(sensor_pos);
-            let delay = distance / c;
-
-            // CORRECTED: Phase shift for coherent beamforming
-            // exp(j ω τ) = cos(ω τ) + j sin(ω τ)
-            let phase = 2.0 * std::f64::consts::PI * config.frequency * delay;
-            let steering_weight = Complex64::new(phase.cos(), phase.sin());
-
-            // Apply steering weight and uniform weighting
-            let weight = 1.0 / (array.num_sensors() as f64);
-            let data_complex = Complex64::new(measurement, 0.0);
-            beamformed += weight * steering_weight * data_complex;
-        }
-
-        // Return power (magnitude squared)
-        beamformed.norm_sqr()
     }
 }

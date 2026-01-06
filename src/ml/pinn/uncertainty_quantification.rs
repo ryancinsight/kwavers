@@ -119,10 +119,8 @@ impl<B: AutodiffBackend> BayesianPINN<B> {
 
         // Also calibrate conformal predictor if alpha is set
         if self.config.conformal_alpha > 0.0 {
-            let mut cp = ConformalPredictor::new(
-                self.ensemble[0].clone(),
-                self.config.conformal_alpha,
-            );
+            let mut cp =
+                ConformalPredictor::new(self.ensemble[0].clone(), self.config.conformal_alpha);
             cp.calibrate(calibration_inputs, calibration_targets)?;
             self.conformal_predictor = Some(cp);
         }
@@ -153,7 +151,8 @@ impl<B: AutodiffBackend> BayesianPINN<B> {
             predictions.push(prediction);
         }
 
-        let mut stats = self.compute_uncertainty_stats(&predictions, UncertaintyMethod::DeepEnsemble)?;
+        let mut stats =
+            self.compute_uncertainty_stats(&predictions, UncertaintyMethod::DeepEnsemble)?;
 
         // If conformal predictor is available, use it to refine confidence intervals
         if let Some(cp) = &self.conformal_predictor {

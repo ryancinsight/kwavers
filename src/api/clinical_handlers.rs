@@ -23,6 +23,7 @@ use axum::{
     http::StatusCode,
     response::Json as JsonResponse,
 };
+use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -251,6 +252,12 @@ impl MobileOptimizer {
     }
 }
 
+impl Default for MobileOptimizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Optimization rule for mobile devices
 #[derive(Debug, Clone)]
 pub struct OptimizationRule {
@@ -293,7 +300,7 @@ pub async fn register_device(
 pub async fn get_device_status(
     State(state): State<ClinicalAppState>,
     Path(device_id): Path<String>,
-    auth: AuthenticatedUser,
+    _auth: AuthenticatedUser,
 ) -> Result<JsonResponse<UltrasoundDevice>, (StatusCode, JsonResponse<APIError>)> {
     let registry = state.device_registry.read().await;
 
@@ -315,7 +322,7 @@ pub async fn get_device_status(
 /// List connected devices endpoint
 pub async fn list_devices(
     State(state): State<ClinicalAppState>,
-    auth: AuthenticatedUser,
+    _auth: AuthenticatedUser,
     Query(pagination): Query<PaginationParams>,
 ) -> Result<JsonResponse<serde_json::Value>, (StatusCode, JsonResponse<APIError>)> {
     let registry = state.device_registry.read().await;
@@ -323,8 +330,8 @@ pub async fn list_devices(
     let devices: Vec<&UltrasoundDevice> = registry.values().collect();
 
     // Apply pagination
-    let page = pagination.page.unwrap_or(1).max(1) as usize;
-    let page_size = pagination.page_size.unwrap_or(50).min(100) as usize;
+    let page = pagination.page.unwrap_or(1).max(1);
+    let page_size = pagination.page_size.unwrap_or(50).min(100);
     let start_idx = (page - 1) * page_size;
     let end_idx = start_idx + page_size;
 
@@ -348,7 +355,7 @@ pub async fn list_devices(
 #[cfg(feature = "pinn")]
 pub async fn analyze_clinical(
     State(state): State<ClinicalAppState>,
-    auth: AuthenticatedUser,
+    _auth: AuthenticatedUser,
     Json(request): Json<ClinicalAnalysisRequest>,
 ) -> Result<JsonResponse<ClinicalAnalysisResponse>, (StatusCode, JsonResponse<APIError>)> {
     let start_time = std::time::Instant::now();
@@ -388,16 +395,18 @@ pub async fn analyze_clinical(
 
     for frame in &request.frames {
         // Decode base64 RF data
-        let rf_bytes = base64::decode(&frame.rf_data).map_err(|e| {
-            (
-                StatusCode::BAD_REQUEST,
-                JsonResponse(APIError {
-                    error: crate::api::APIErrorType::InvalidRequest,
-                    message: format!("Invalid RF data encoding: {}", e),
-                    details: None,
-                }),
-            )
-        })?;
+        let rf_bytes = general_purpose::STANDARD
+            .decode(&frame.rf_data)
+            .map_err(|e| {
+                (
+                    StatusCode::BAD_REQUEST,
+                    JsonResponse(APIError {
+                        error: crate::api::APIErrorType::InvalidRequest,
+                        message: format!("Invalid RF data encoding: {}", e),
+                        details: None,
+                    }),
+                )
+            })?;
 
         // Convert binary data to f32 array (production would handle endianness and validate format)
         let rf_frame: Vec<f32> = rf_bytes
@@ -410,7 +419,7 @@ pub async fn analyze_clinical(
             frame
                 .parameters
                 .steering_angles
-                .get(0)
+                .first()
                 .copied()
                 .unwrap_or(0.0) as f32,
         );
@@ -475,10 +484,10 @@ pub async fn analyze_clinical(
 /// DICOM integration endpoint
 pub async fn dicom_integrate(
     State(state): State<ClinicalAppState>,
-    auth: AuthenticatedUser,
+    _auth: AuthenticatedUser,
     Json(request): Json<DICOMIntegrationRequest>,
 ) -> Result<JsonResponse<DICOMIntegrationResponse>, (StatusCode, JsonResponse<APIError>)> {
-    let dicom_service = state.dicom_service.read().await;
+    let _dicom_service = state.dicom_service.read().await;
 
     // Simulate DICOM query/retrieve (in production would connect to PACS)
     let metadata = HashMap::from([
@@ -528,7 +537,7 @@ pub async fn dicom_integrate(
         metadata: extracted_metadata,
         pixel_data: if request.include_pixel_data {
             // Simulate pixel data (would be actual DICOM pixel data)
-            Some(base64::encode(vec![0u8; 1024 * 1024])) // 1MB dummy data
+            Some(general_purpose::STANDARD.encode(vec![0u8; 1024 * 1024]))
         } else {
             None
         },
@@ -541,10 +550,10 @@ pub async fn dicom_integrate(
 /// Mobile optimization endpoint
 pub async fn optimize_mobile(
     State(state): State<ClinicalAppState>,
-    auth: AuthenticatedUser,
+    _auth: AuthenticatedUser,
     Json(request): Json<MobileOptimizationRequest>,
 ) -> Result<JsonResponse<MobileOptimizationResponse>, (StatusCode, JsonResponse<APIError>)> {
-    let optimizer = state.mobile_optimizer.read().await;
+    let _optimizer = state.mobile_optimizer.read().await;
 
     // Analyze device capabilities and conditions
     let recommended_config = crate::api::ProcessingConfig {
@@ -634,7 +643,7 @@ pub async fn optimize_mobile(
 pub async fn get_session_status(
     State(state): State<ClinicalAppState>,
     Path(session_id): Path<String>,
-    auth: AuthenticatedUser,
+    _auth: AuthenticatedUser,
 ) -> Result<JsonResponse<serde_json::Value>, (StatusCode, JsonResponse<APIError>)> {
     let sessions = state.active_sessions.read().await;
 
@@ -817,59 +826,67 @@ fn clinical_analysis_from_beamforming_result(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::{DeviceInfo, DeviceType, DeviceCapability, DeviceStatus};
     use chrono::Utc;
 
     #[tokio::test]
     async fn test_device_registration() {
         // Test complete device registration workflow
-        let app_state = ClinicalAppState::new().unwrap();
+        let auth_middleware = Arc::new(
+            crate::api::auth::AuthMiddleware::new(
+                "test-secret-do-not-use-in-production",
+                crate::api::auth::JWTConfig::default(),
+            )
+            .expect("test auth middleware construction must succeed"),
+        );
+        let app_state = ClinicalAppState::new(auth_middleware).unwrap();
 
         // Test device registration via API
-        let device_info = DeviceInfo {
-            id: "test-ultrasound-001".to_string(),
-            device_type: DeviceType::Ultrasound,
+        let device_info = UltrasoundDevice {
+            device_id: "test-ultrasound-001".to_string(),
             model: "Test Ultrasound System".to_string(),
-            manufacturer: "TestManufacturer".to_string(),
             capabilities: vec![
-                DeviceCapability::Imaging2D,
-                DeviceCapability::Doppler,
-                DeviceCapability::ColorFlow,
+                "Imaging2D".to_string(),
+                "Doppler".to_string(),
+                "ColorFlow".to_string(),
             ],
-            status: DeviceStatus::Available,
-            last_calibration: Utc::now(),
-            firmware_version: "2.1.0".to_string(),
+            imaging_modes: vec!["B-Mode".to_string()],
+            max_frame_rate: 30,
+            battery_level: None,
+            status: crate::api::DeviceStatus::Available,
+            last_seen: Utc::now(),
         };
 
         // Register device
         {
-            let mut registry = app_state.device_registry.write().unwrap();
-            registry.insert(device_info.id.clone(), device_info.clone());
+            let mut registry = app_state.device_registry.write().await;
+            registry.insert(device_info.device_id.clone(), device_info.clone());
         }
 
         // Verify device was registered correctly
         {
-            let registry = app_state.device_registry.read().unwrap();
-            let registered_device = registry.get(&device_info.id).unwrap();
-            assert_eq!(registered_device.id, device_info.id);
-            assert_eq!(registered_device.device_type, DeviceType::Ultrasound);
+            let registry = app_state.device_registry.read().await;
+            let registered_device = registry.get(&device_info.device_id).unwrap();
+            assert_eq!(registered_device.device_id, device_info.device_id);
             assert_eq!(registered_device.capabilities.len(), 3);
-            assert_eq!(registered_device.status, DeviceStatus::Available);
+            assert_eq!(
+                registered_device.status,
+                crate::api::DeviceStatus::Available
+            );
         }
 
         // Test device status update
         {
-            let mut registry = app_state.device_registry.write().unwrap();
-            if let Some(device) = registry.get_mut(&device_info.id) {
-                device.status = DeviceStatus::InUse;
+            let mut registry = app_state.device_registry.write().await;
+            if let Some(device) = registry.get_mut(&device_info.device_id) {
+                device.status = crate::api::DeviceStatus::InUse;
             }
         }
 
         // Verify status update
         {
-            let registry = app_state.device_registry.read().unwrap();
-            let updated_device = registry.get(&device_info.id).unwrap();
-            assert_eq!(updated_device.status, DeviceStatus::InUse);
+            let registry = app_state.device_registry.read().await;
+            let updated_device = registry.get(&device_info.device_id).unwrap();
+            assert_eq!(updated_device.status, crate::api::DeviceStatus::InUse);
         }
     }
 

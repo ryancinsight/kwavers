@@ -18,18 +18,15 @@ run_tests_with_constraint() {
     
     echo "⏱️  Starting optimized test execution (max ${TIMEOUT}s)..."
     
-    # Phase 1: Critical core tests only (target <20s) 
-    echo "Running critical core tests (SRS constraint enforcement)"
-    timeout 20 cargo test \
+    # Phase 1: Critical core tests only (target <20s)
+    echo "Running critical core tests (SRS constraint enforcement) with nextest"
+    timeout 20 cargo nextest run \
+        --profile ci \
+        --release \
         --lib \
-        --quiet \
-        -- \
         --test-threads=4 \
-        --skip "physics" \
-        --skip "validation" \
-        --skip "benchmark" \
-        --skip "integration" \
-        --nocapture || handle_test_failure $?
+        -E 'not test(/physics/) and not test(/validation/) and not test(/benchmark/) and not test(/integration/)' \
+        || handle_test_failure $?
     
     local core_end=$(date +%s)
     local core_duration=$((core_end - start_time))
@@ -39,14 +36,14 @@ run_tests_with_constraint() {
     # Phase 2: Optional physics validation (if time permits)
     local remaining_time=$((TIMEOUT - core_duration))
     if [ $remaining_time -gt 10 ]; then
-        echo "⚡ Running physics validation tests (${remaining_time}s remaining)"
-        timeout $remaining_time cargo test \
+        echo "⚡ Running physics validation tests (${remaining_time}s remaining) with nextest"
+        timeout $remaining_time cargo nextest run \
+            --profile ci \
+            --release \
             --lib \
-            --quiet \
-            -- \
             --test-threads=2 \
-            "physics::mechanics::acoustic_wave::kzk" \
-            --nocapture || echo "⚠️  Physics validation tests require more time (non-critical)"
+            physics::mechanics::acoustic_wave::kzk \
+            || echo "⚠️  Physics validation tests require more time (non-critical)"
     else
         echo "⚠️  Skipping physics validation tests due to SRS time constraint"
     fi
@@ -78,7 +75,11 @@ handle_test_failure() {
         1)
             echo "❌ Test failures detected - investigating..."
             # Run a quick diagnostic to identify failing tests
-            cargo test --lib -- --list | head -10
+            if command -v cargo-nextest &> /dev/null; then
+                cargo nextest list --profile ci --lib --format terse | head -10
+            else
+                cargo test --lib -- --list | head -10
+            fi
             exit 1
             ;;
         *)

@@ -1,5 +1,7 @@
 //! Tone burst signal implementation
 
+use crate::error::{KwaversError, KwaversResult};
+use crate::signal::window::{window_value, WindowType};
 use crate::signal::Signal;
 use std::f64::consts::PI;
 
@@ -16,16 +18,6 @@ pub struct ToneBurst {
     amplitude: f64,
     phase: f64,
     window_type: WindowType,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum WindowType {
-    Rectangular,
-    Hann,
-    Hamming,
-    Blackman,
-    Gaussian,
-    Tukey { alpha: f64 }, // alpha = 0: rectangular, alpha = 1: Hann
 }
 
 impl ToneBurst {
@@ -45,9 +37,55 @@ impl ToneBurst {
         }
     }
 
+    pub fn try_new(
+        center_frequency: f64,
+        num_cycles: f64,
+        start_time: f64,
+        amplitude: f64,
+    ) -> KwaversResult<Self> {
+        if !center_frequency.is_finite() || center_frequency <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "center_frequency must be finite and > 0, got {center_frequency}"
+            )));
+        }
+        if !num_cycles.is_finite() || num_cycles <= 0.0 || num_cycles > MAX_TONE_BURST_CYCLES as f64
+        {
+            return Err(KwaversError::InvalidInput(format!(
+                "num_cycles must be finite, in (0, {}], got {num_cycles}",
+                MAX_TONE_BURST_CYCLES
+            )));
+        }
+        if !start_time.is_finite() {
+            return Err(KwaversError::InvalidInput(format!(
+                "start_time must be finite, got {start_time}"
+            )));
+        }
+        if !amplitude.is_finite() || amplitude < 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "amplitude must be finite and >= 0, got {amplitude}"
+            )));
+        }
+
+        Ok(Self {
+            center_frequency,
+            num_cycles,
+            start_time,
+            amplitude,
+            phase: 0.0,
+            window_type: WindowType::Hann,
+        })
+    }
+
     #[must_use]
     pub fn with_window(mut self, window_type: WindowType) -> Self {
         self.window_type = window_type;
+        self
+    }
+
+    #[must_use]
+    pub fn with_phase(mut self, phase: f64) -> Self {
+        assert!(phase.is_finite(), "Phase must be finite");
+        self.phase = phase;
         self
     }
 
@@ -64,35 +102,7 @@ impl ToneBurst {
         }
 
         let normalized_time = relative_time / duration;
-
-        match self.window_type {
-            WindowType::Rectangular => 1.0,
-
-            WindowType::Hann => 0.5 * (1.0 - (2.0 * PI * normalized_time).cos()),
-
-            WindowType::Hamming => 0.54 - 0.46 * (2.0 * PI * normalized_time).cos(),
-
-            WindowType::Blackman => {
-                0.42 - 0.5 * (2.0 * PI * normalized_time).cos()
-                    + 0.08 * (4.0 * PI * normalized_time).cos()
-            }
-
-            WindowType::Gaussian => {
-                let sigma = 0.4; // Standard deviation (adjustable)
-                let arg = (normalized_time - 0.5) / sigma;
-                (-0.5 * arg * arg).exp()
-            }
-
-            WindowType::Tukey { alpha } => {
-                if normalized_time < alpha / 2.0 {
-                    0.5 * (1.0 + (2.0 * PI * normalized_time / alpha - PI).cos())
-                } else if normalized_time < 1.0 - alpha / 2.0 {
-                    1.0
-                } else {
-                    0.5 * (1.0 + (2.0 * PI * (normalized_time - 1.0) / alpha + PI).cos())
-                }
-            }
-        }
+        window_value(self.window_type, normalized_time)
     }
 }
 

@@ -4,6 +4,7 @@ pub mod config;
 pub mod detection;
 pub mod events;
 pub mod implementation;
+pub mod kwave_sensor_recorder;
 pub mod statistics;
 pub mod storage;
 pub mod traits;
@@ -12,5 +13,8 @@ pub mod traits;
 pub use config::RecorderConfig;
 pub use events::{CavitationEvent, ThermalEvent};
 pub use implementation::Recorder;
+pub use kwave_sensor_recorder::{
+    KWaveSensorData, SensorConfig, SensorData, SensorHandler, SpectralSensorConfig,
+};
 pub use statistics::RecorderStatistics;
 pub use traits::RecorderTrait;

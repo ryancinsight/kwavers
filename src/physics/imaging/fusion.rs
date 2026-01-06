@@ -280,12 +280,18 @@ impl MultiModalFusion {
     fn fuse_weighted_average(&self) -> KwaversResult<FusedImageResult> {
         use crate::physics::imaging::registration::ImageRegistration;
 
-        let registration = ImageRegistration::default();
+        let mut modality_names: Vec<&String> = self.registered_data.keys().collect();
+        modality_names.sort();
 
-        // Use first modality as reference for registration
-        let reference_modality = self.registered_data.values().next().ok_or_else(|| {
+        let reference_name = modality_names.first().ok_or_else(|| {
             KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
                 message: "No modalities available for fusion".to_string(),
+            })
+        })?;
+
+        let reference_modality = self.registered_data.get(*reference_name).ok_or_else(|| {
+            KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
+                message: "Reference modality missing".to_string(),
             })
         })?;
 
@@ -305,66 +311,105 @@ impl MultiModalFusion {
         let mut registration_transforms = HashMap::new();
         let mut modality_quality = HashMap::new();
 
-        // Use first modality as reference for registration
-        let reference_modality = self.registered_data.values().next().ok_or_else(|| {
-            KwaversError::Validation(crate::error::ValidationError::ConstraintViolation {
-                message: "No modalities available for fusion".to_string(),
+        let registration = ImageRegistration::default();
+        let total_weight: f64 = modality_names
+            .iter()
+            .map(|&name| {
+                self.config
+                    .modality_weights
+                    .get(name.as_str())
+                    .copied()
+                    .unwrap_or(1.0)
             })
-        })?;
+            .sum();
+        if total_weight <= 0.0 || !total_weight.is_finite() {
+            return Err(KwaversError::Validation(
+                crate::error::ValidationError::ConstraintViolation {
+                    message: "FusionConfig.modality_weights must sum to a positive finite value"
+                        .to_string(),
+                },
+            ));
+        }
+
+        let identity_transform = [
+            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+        ];
 
         // Register and resample each modality
-        for (modality_name, modality) in &self.registered_data {
+        for modality_name in modality_names {
+            let modality = self
+                .registered_data
+                .get(modality_name.as_str())
+                .ok_or_else(|| KwaversError::InvalidInput("Modality missing".to_string()))?;
+
             let weight = self
                 .config
                 .modality_weights
-                .get(modality_name)
+                .get(modality_name.as_str())
                 .copied()
                 .unwrap_or(1.0);
 
             modality_quality.insert(modality_name.clone(), modality.quality_score);
 
-            // Perform intensity-based registration to reference
-            let identity_transform = [
-                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-            ];
+            let registration_result = match self.config.registration_method {
+                RegistrationMethod::RigidBody | RegistrationMethod::Automatic => registration
+                    .intensity_registration_mutual_info(
+                        &reference_modality.data,
+                        &modality.data,
+                        &identity_transform,
+                    )?,
+                RegistrationMethod::Affine | RegistrationMethod::NonRigid => {
+                    return Err(KwaversError::Validation(
+                        crate::error::ValidationError::ConstraintViolation {
+                            message: format!(
+                                "Registration method {:?} is not implemented for fusion",
+                                self.config.registration_method
+                            ),
+                        },
+                    ));
+                }
+            };
 
-            let registration_result = registration.intensity_registration_mutual_info(
-                &reference_modality.data,
-                &modality.data,
-                &identity_transform,
-            )?;
-
-            // Store transformation
             let affine_transform =
                 self.homogeneous_to_affine(&registration_result.transform_matrix);
             registration_transforms.insert(modality_name.clone(), affine_transform);
 
-            // Resample to target grid using trilinear interpolation
-            let resampled_data = self.resample_to_target_grid(
-                &modality.data,
-                &registration_result.transform_matrix,
-                target_dims,
-            );
+            let resampled_data = if modality.data.dim() == target_dims
+                && registration_result.transform_matrix == identity_transform
+            {
+                modality.data.clone()
+            } else {
+                self.resample_to_target_grid(
+                    &modality.data,
+                    &registration_result.transform_matrix,
+                    target_dims,
+                )
+            };
 
-            // Fuse with probabilistic weighting based on quality and confidence
-            self.fuse_modality_probabilistic(
-                &mut fused_intensity,
-                &mut confidence_map,
-                &mut uncertainty_map,
-                &resampled_data,
-                weight,
-                modality.quality_score,
-                registration_result.confidence,
-            );
+            for i in 0..target_dims.0 {
+                for j in 0..target_dims.1 {
+                    for k in 0..target_dims.2 {
+                        let value = resampled_data[[i, j, k]];
+                        fused_intensity[[i, j, k]] += value * weight;
+                        confidence_map[[i, j, k]] += weight;
+                        if let Some(ref mut uncertainty) = uncertainty_map {
+                            uncertainty[[i, j, k]] += (1.0 - modality.quality_score) * weight;
+                        }
+                    }
+                }
+            }
         }
 
-        // Normalize fused intensity by confidence
+        // Normalize fused intensity by weight sum
         for i in 0..target_dims.0 {
             for j in 0..target_dims.1 {
                 for k in 0..target_dims.2 {
                     let conf = confidence_map[[i, j, k]];
                     if conf > 0.0 {
                         fused_intensity[[i, j, k]] /= conf;
+                        if let Some(ref mut uncertainty) = uncertainty_map {
+                            uncertainty[[i, j, k]] /= conf;
+                        }
                     }
                 }
             }
@@ -907,7 +952,7 @@ impl MultiModalFusion {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // use ndarray::Array3; // Unused in current tests
+    use ndarray::Array3;
 
     #[test]
     fn test_fusion_config_default() {
@@ -926,20 +971,62 @@ mod tests {
     #[test]
     fn test_coordinate_unification() {
         let config = FusionConfig::default();
-        let _fusion = MultiModalFusion::new(config);
+        let fusion = MultiModalFusion::new(config);
 
-        // Test unified coordinate creation
-        // Would need mock modality data to test properly
-        assert!(true); // Placeholder
+        let dims = (16, 8, 4);
+        let coords = fusion.generate_coordinate_arrays(dims);
+
+        assert_eq!(coords[0].len(), dims.0);
+        assert_eq!(coords[1].len(), dims.1);
+        assert_eq!(coords[2].len(), dims.2);
+
+        assert_eq!(coords[0][0], 0.0);
+        assert_eq!(coords[1][0], 0.0);
+        assert_eq!(coords[2][0], 0.0);
+
+        let dx = fusion.config.output_resolution[0];
+        let dy = fusion.config.output_resolution[1];
+        let dz = fusion.config.output_resolution[2];
+
+        assert!((coords[0][1] - dx).abs() < f64::EPSILON);
+        assert!((coords[1][1] - dy).abs() < f64::EPSILON);
+        assert!((coords[2][1] - dz).abs() < f64::EPSILON);
     }
 
     #[test]
     fn test_weighted_average_fusion() {
         let config = FusionConfig::default();
-        let _fusion = MultiModalFusion::new(config);
+        let mut fusion = MultiModalFusion::new(config);
 
-        // Test would require setting up mock modality data
-        // and verifying fusion results
-        assert!(true); // Placeholder
+        let shape = (8, 8, 4);
+
+        fusion.registered_data.insert(
+            "ultrasound".to_string(),
+            RegisteredModality {
+                data: Array3::from_elem(shape, 1.0),
+                quality_score: 0.9,
+            },
+        );
+
+        fusion.registered_data.insert(
+            "photoacoustic".to_string(),
+            RegisteredModality {
+                data: Array3::from_elem(shape, 3.0),
+                quality_score: 0.8,
+            },
+        );
+
+        let fused = fusion.fuse().unwrap();
+
+        assert_eq!(fused.intensity_image.dim(), shape);
+
+        let weights = &fusion.config.modality_weights;
+        let w_us = weights["ultrasound"];
+        let w_pa = weights["photoacoustic"];
+        let expected = (w_us * 1.0 + w_pa * 3.0) / (w_us + w_pa);
+
+        for v in fused.intensity_image.iter() {
+            assert!((v - expected).abs() < 1e-9);
+        }
     }
 }

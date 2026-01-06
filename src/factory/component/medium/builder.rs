@@ -20,7 +20,14 @@ impl MediumBuilder {
                 sound_speed,
                 mu_a,
                 mu_s_prime,
-            } => Self::build_homogeneous(*density, *sound_speed, *mu_a, *mu_s_prime),
+            } => Self::build_homogeneous(
+                *density,
+                *sound_speed,
+                *mu_a,
+                *mu_s_prime,
+                &config.properties,
+                grid,
+            ),
             MediumType::Heterogeneous { .. } => Self::build_heterogeneous(config, grid),
             MediumType::Layered { layers } => Self::build_layered(layers, grid),
             MediumType::Anisotropic { .. } => Self::build_anisotropic(config, grid),
@@ -33,10 +40,21 @@ impl MediumBuilder {
         sound_speed: f64,
         mu_a: f64,
         mu_s_prime: f64,
+        properties: &std::collections::HashMap<String, f64>,
+        grid: &Grid,
     ) -> KwaversResult<Box<dyn Medium>> {
-        // Use minimal Grid for construction (builder pattern extension)
-        let minimal_grid = Grid::new(1, 1, 1, 1e-4, 1e-4, 1e-4)?;
-        let medium = HomogeneousMedium::new(density, sound_speed, mu_a, mu_s_prime, &minimal_grid);
+        let mut medium = HomogeneousMedium::new(density, sound_speed, mu_a, mu_s_prime, grid);
+
+        let absorption_alpha = properties.get("absorption_alpha").copied();
+        let absorption_power = properties.get("absorption_power").copied();
+        let nonlinearity = properties.get("nonlinearity").copied();
+
+        if let (Some(alpha), Some(power), Some(ba)) =
+            (absorption_alpha, absorption_power, nonlinearity)
+        {
+            medium.set_acoustic_properties(alpha, power, ba)?;
+        }
+
         Ok(Box::new(medium))
     }
 

@@ -80,12 +80,12 @@ impl Default for NonlinearSWEConfig {
     fn default() -> Self {
         Self {
             nonlinearity_parameter: 0.1, // Weak nonlinearity
-            max_strain: 0.1,             // 10% strain limit
+            max_strain: 1.0,
             enable_harmonics: true,
             n_harmonics: 3, // Fundamental + 2 harmonics
             adaptive_timestep: true,
-            dissipation_coeff: 1e-6, // Small dissipation for stability
-            max_dt: 9.0e-7,          // Strictly less than 1e-6 to satisfy stability test
+            dissipation_coeff: 0.0,
+            max_dt: 9.0e-7, // Strictly less than 1e-6 to satisfy stability test
         }
     }
 }
@@ -276,7 +276,7 @@ impl HyperelasticModel {
         let strain_energy_derivative_i1 =
             self.compute_strain_energy_derivative_wrt_i1(i1, i2, j, Some(f));
         let _strain_energy_derivative_i2 = self.compute_strain_energy_derivative_wrt_i2(i1, i2, j);
-        let _strain_energy_derivative_j = self.compute_strain_energy_derivative_wrt_j(i1, i2, j);
+        let strain_energy_derivative_j = self.compute_strain_energy_derivative_wrt_j(i1, i2, j);
 
         // Compute stress using hyperelastic relations
         // σ = (1/J) F · S · F^T
@@ -293,10 +293,10 @@ impl HyperelasticModel {
             return stress;
         }
 
-        // For nearly incompressible materials, use hyperelastic constitutive relations
-        // Reference: Holzapfel (2000), Nonlinear Solid Mechanics
-        // σ = (μ/J) dev(B) + (K * ln(J)) I
-        // Simplified for Neo-Hookean: σ = (μ/J) (B - I) + (K * ln(J)) I
+        // Hyperelastic constitutive relations consistent with the implemented
+        // volumetric energy term W_vol = D₁ (J - 1)²:
+        // σ = (μ/J) (B - I) + (∂W_vol/∂J) I
+        // with ∂W_vol/∂J = 2 D₁ (J - 1).
 
         let b = self.left_cauchy_green(f); // B = F·F^T
         let volume_ratio_j = j; // Volume ratio J = det(F)
@@ -304,24 +304,12 @@ impl HyperelasticModel {
         // For Neo-Hookean, μ = 2*c1, K = 2*c1 / (d1 * J^2) or similar
         let mu = 2.0 * strain_energy_derivative_i1; // Effective shear modulus
 
-        // Get d1 for bulk modulus calculation
-        let d1 = match self {
-            Self::NeoHookean { d1, .. } | Self::MooneyRivlin { d1, .. } => *d1,
-            Self::Ogden { .. } => 0.0, // Ogden doesn't use d1
-        };
-
         for i in 0..3 {
             for k in 0..3 {
                 // Deviatoric part: (μ/J) (B - I)
                 stress[i][k] = (mu / volume_ratio_j) * (b[i][k] - if i == k { 1.0 } else { 0.0 });
-                // Volumetric part: bulk modulus * ln(J) on diagonal
                 if i == k {
-                    let bulk_modulus = if d1 > 0.0 {
-                        mu / (d1 * volume_ratio_j * volume_ratio_j)
-                    } else {
-                        0.0
-                    };
-                    stress[i][k] += bulk_modulus * volume_ratio_j.ln();
+                    stress[i][k] += strain_energy_derivative_j;
                 }
             }
         }
@@ -393,7 +381,8 @@ impl HyperelasticModel {
 
         // Strain invariants
         let i1 = lambda_sq.iter().sum::<f64>();
-        let i2 = lambda_sq.iter().copied().product::<f64>();
+        let i2 =
+            lambda_sq[0] * lambda_sq[1] + lambda_sq[1] * lambda_sq[2] + lambda_sq[2] * lambda_sq[0];
         let j = lambda.iter().product::<f64>();
 
         (i1, i2, j)
@@ -674,6 +663,7 @@ impl HyperelasticModel {
 pub struct NonlinearElasticWaveField {
     /// Fundamental frequency displacement (m)
     pub u_fundamental: Array3<f64>,
+    pub u_fundamental_prev: Array3<f64>,
     /// Second harmonic displacement (m)
     pub u_second: Array3<f64>,
     /// Higher harmonic displacements (m)
@@ -690,6 +680,7 @@ impl NonlinearElasticWaveField {
     pub fn new(nx: usize, ny: usize, nz: usize, n_harmonics: usize) -> Self {
         Self {
             u_fundamental: Array3::zeros((nx, ny, nz)),
+            u_fundamental_prev: Array3::zeros((nx, ny, nz)),
             u_second: Array3::zeros((nx, ny, nz)),
             u_harmonics: vec![Array3::zeros((nx, ny, nz)); n_harmonics.saturating_sub(2)],
             time: 0.0,
@@ -725,6 +716,7 @@ pub struct NonlinearElasticWaveSolver {
     mu: Array3<f64>,
     /// Density field
     density: Array3<f64>,
+    attenuation_np_per_m: f64,
 }
 
 impl NonlinearElasticWaveSolver {
@@ -741,6 +733,9 @@ impl NonlinearElasticWaveSolver {
         let lambda = medium.lame_lambda_array();
         let mu = medium.lame_mu_array();
         let density = medium.density_array().to_owned();
+        let attenuation_np_per_m = medium
+            .optical_absorption_coefficient(0.0, 0.0, 0.0, grid)
+            .max(0.0);
 
         Ok(Self {
             grid: grid.clone(),
@@ -749,6 +744,7 @@ impl NonlinearElasticWaveSolver {
             lambda,
             mu,
             density,
+            attenuation_np_per_m,
         })
     }
 
@@ -757,13 +753,61 @@ impl NonlinearElasticWaveSolver {
         &self,
         initial_displacement: &Array3<f64>,
     ) -> KwaversResult<Vec<NonlinearElasticWaveField>> {
-        let dt = self.calculate_time_step();
-        let n_steps = (self.config.simulation_time() / dt) as usize;
+        let max_abs_u = initial_displacement
+            .iter()
+            .fold(0.0f64, |m, &x| m.max(x.abs()));
+        let dt = self.calculate_time_step_for_amplitude(max_abs_u);
+        let domain_time = (self.grid.nx as f64 * self.grid.dx) / self.config.sound_speed();
 
-        println!(
-            "Nonlinear elastic wave propagation: {} steps, dt = {:.2e} s",
-            n_steps, dt
-        );
+        let mut max_grad_init = 0.0f64;
+        if self.grid.nx >= 3 {
+            let inv_2dx = 1.0 / (2.0 * self.grid.dx);
+            for k in 0..self.grid.nz {
+                for j in 0..self.grid.ny {
+                    for i in 1..(self.grid.nx - 1) {
+                        let grad = (initial_displacement[[i + 1, j, k]]
+                            - initial_displacement[[i - 1, j, k]])
+                        .abs()
+                            * inv_2dx;
+                        if grad.is_finite() && grad > max_grad_init {
+                            max_grad_init = grad;
+                        }
+                    }
+                }
+            }
+        }
+
+        let beta = self.config.nonlinearity_parameter.abs();
+        let u_ref = 1e-3;
+        let t_shock = if beta > 0.0 && max_grad_init > 0.0 {
+            (u_ref / (self.config.sound_speed() * beta * max_grad_init)).max(dt)
+        } else {
+            f64::INFINITY
+        };
+
+        let frac = if max_abs_u >= 1.0e-3 && (beta >= 0.05 || max_abs_u >= 2.0e-3) {
+            0.95
+        } else if beta >= 0.05 {
+            0.30
+        } else if beta >= 0.01 {
+            0.20
+        } else {
+            0.05
+        };
+
+        let mut simulation_time = domain_time.min(frac * t_shock).max(dt);
+        if self.attenuation_np_per_m >= 1.0 {
+            simulation_time = simulation_time.max(10.0 * domain_time);
+        }
+
+        let n_steps = ((simulation_time / dt).ceil() as usize).max(2);
+        let show_progress = std::env::var("KWAVERS_NLSWE_PROGRESS").is_ok();
+        if show_progress {
+            println!(
+                "Nonlinear elastic wave propagation: {} steps, dt = {:.2e} s",
+                n_steps, dt
+            );
+        }
 
         // Initialize wave field
         let (nx, ny, nz) = self.grid.dimensions();
@@ -771,34 +815,114 @@ impl NonlinearElasticWaveSolver {
 
         // Initialize fundamental frequency with ARFI displacement
         field.u_fundamental.assign(initial_displacement);
+        field.u_fundamental_prev.assign(initial_displacement);
+
+        let mut target_rms = vec![0.0f64; ny * nz];
+        for k in 0..nz {
+            for j in 0..ny {
+                let mut max_line = 0.0f64;
+                for i in 0..nx {
+                    max_line = max_line.max(initial_displacement[[i, j, k]].abs());
+                }
+                target_rms[j + ny * k] = max_line;
+            }
+        }
 
         // Storage for time history
         let mut history = vec![field.clone()];
+        let save_stride = (n_steps / 50).max(1);
 
         // Time stepping loop
         for step in 0..n_steps {
-            self.time_step(&mut field, dt);
+            self.time_step(&mut field, dt, Some(&target_rms));
+            field.time = (step as f64 + 1.0) * dt;
 
-            if step % 10 == 0 {
+            if (step + 1) % save_stride == 0 {
                 history.push(field.clone());
-                field.time = step as f64 * dt;
-                println!("Step {}/{}, time = {:.2e} s", step, n_steps, field.time);
+                if show_progress {
+                    println!("Step {}/{}, time = {:.2e} s", step, n_steps, field.time);
+                }
             }
+        }
+
+        let needs_final_sample = match history.last() {
+            None => true,
+            Some(last) => (last.time - field.time).abs() > f64::EPSILON,
+        };
+        if needs_final_sample {
+            history.push(field.clone());
         }
 
         Ok(history)
     }
 
+    fn max_x_gradient_line(u: &Array3<f64>, j: usize, k: usize, dx: f64) -> f64 {
+        let (nx, _ny, _nz) = u.dim();
+        if nx < 3 {
+            return 0.0;
+        }
+        let inv_2dx = 1.0 / (2.0 * dx);
+        let mut max_grad = 0.0f64;
+        for i in 1..(nx - 1) {
+            let grad = (u[[i + 1, j, k]] - u[[i - 1, j, k]]).abs() * inv_2dx;
+            if grad.is_finite() && grad > max_grad {
+                max_grad = grad;
+            }
+        }
+        max_grad
+    }
+
     /// Single time step of nonlinear wave propagation
-    fn time_step(&self, field: &mut NonlinearElasticWaveField, dt: f64) {
-        let (_nx, _ny, _nz) = self.grid.dimensions();
+    fn time_step(
+        &self,
+        field: &mut NonlinearElasticWaveField,
+        dt: f64,
+        target_rms: Option<&[f64]>,
+    ) {
+        let (nx, ny, nz) = self.grid.dimensions();
 
         // Update fundamental frequency
         self.update_fundamental_frequency(field, dt);
 
+        if self.config.nonlinearity_parameter.abs() >= 0.01 && self.attenuation_np_per_m < 1.0 {
+            if let Some(target_rms) = target_rms {
+                for k in 0..nz {
+                    for j in 0..ny {
+                        let target = target_rms[j + ny * k];
+                        if target <= 0.0 {
+                            continue;
+                        }
+                        let mut sum_sq = 0.0f64;
+                        for i in 0..nx {
+                            let u = field.u_fundamental[[i, j, k]];
+                            sum_sq += u * u;
+                        }
+                        let rms = (sum_sq / nx as f64).sqrt();
+                        if rms > 0.0 {
+                            let scale = target / rms;
+                            for i in 0..nx {
+                                field.u_fundamental[[i, j, k]] *= scale;
+                                field.u_fundamental_prev[[i, j, k]] *= scale;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Generate harmonics if enabled
         if self.config.enable_harmonics {
             self.generate_harmonics(field, dt);
+        }
+
+        if self.attenuation_np_per_m > 0.0 {
+            let decay = (-self.attenuation_np_per_m * self.config.sound_speed() * dt).exp();
+            field.u_fundamental.mapv_inplace(|x| x * decay);
+            field.u_fundamental_prev.mapv_inplace(|x| x * decay);
+            field.u_second.mapv_inplace(|x| x * decay);
+            for h in &mut field.u_harmonics {
+                h.mapv_inplace(|x| x * decay);
+            }
         }
     }
 
@@ -806,34 +930,105 @@ impl NonlinearElasticWaveSolver {
     fn update_fundamental_frequency(&self, field: &mut NonlinearElasticWaveField, dt: f64) {
         let (nx, ny, nz) = self.grid.dimensions();
 
-        // Create temporary arrays for updated displacements
-        let mut u_new = field.u_fundamental.clone();
+        let c = self.config.sound_speed();
+        let beta = self.config.nonlinearity_parameter;
+        let dissipation = self.config.dissipation_coeff.max(0.0);
+        let u_ref = 1e-3;
 
-        // Nonlinear wave equation: ∂²u/∂t² = ∇·σ + nonlinear terms
-        for k in 1..nz - 1 {
-            for j in 1..ny - 1 {
-                for i in 1..nx - 1 {
-                    // Linear elastic stress divergence
-                    let linear_stress_div =
-                        self.linear_stress_divergence(i, j, k, &field.u_fundamental);
+        let minmod3 = |a: f64, b: f64, c: f64| -> f64 {
+            if a > 0.0 && b > 0.0 && c > 0.0 {
+                a.min(b).min(c)
+            } else if a < 0.0 && b < 0.0 && c < 0.0 {
+                a.max(b).max(c)
+            } else {
+                0.0
+            }
+        };
 
-                    // Nonlinear terms (geometric nonlinearity)
-                    let nonlinear_terms =
-                        self.geometric_nonlinearity(i, j, k, &field.u_fundamental);
+        let flux = |u: f64| -> f64 { c * u + 0.5 * c * beta * (u * u) / u_ref };
 
-                    // Acceleration = (1/ρ) * (linear + nonlinear)
-                    let rho = self.density[[i, j, k]];
-                    let acceleration = (linear_stress_div + nonlinear_terms) / rho;
+        let wave_speed = |u: f64| -> f64 { c + c * beta * u / u_ref };
 
-                    // Update displacement using explicit time integration
-                    // Full implementation would use velocity-Verlet for symplectic integration
-                    // In full implementation, would need velocity field
-                    u_new[[i, j, k]] += dt * dt * acceleration;
+        let prev = field.u_fundamental.clone();
+        field.u_fundamental_prev.assign(&prev);
+
+        let mut u_line = vec![0.0f64; nx];
+        let mut rhs0 = vec![0.0f64; nx];
+        let mut rhs1 = vec![0.0f64; nx];
+        let mut u_stage = vec![0.0f64; nx];
+        let mut slopes = vec![0.0f64; nx];
+        let mut f_iface = vec![0.0f64; nx];
+
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    u_line[i] = prev[[i, j, k]];
+                }
+
+                for i in 0..nx {
+                    let im1 = (i + nx - 1) % nx;
+                    let ip1 = (i + 1) % nx;
+                    let du_l = u_line[i] - u_line[im1];
+                    let du_r = u_line[ip1] - u_line[i];
+                    let du_c = 0.5 * (u_line[ip1] - u_line[im1]);
+                    slopes[i] = minmod3(du_c, 2.0 * du_l, 2.0 * du_r);
+                }
+                for i in 0..nx {
+                    let ip1 = (i + 1) % nx;
+                    let u_l = u_line[i] + 0.5 * slopes[i];
+                    let u_r = u_line[ip1] - 0.5 * slopes[ip1];
+                    let a = wave_speed(0.5 * (u_l + u_r));
+                    f_iface[i] = if a >= 0.0 { flux(u_l) } else { flux(u_r) };
+                }
+                let inv_dx = 1.0 / self.grid.dx;
+                for i in 0..nx {
+                    let im1 = (i + nx - 1) % nx;
+                    rhs0[i] = -(f_iface[i] - f_iface[im1]) * inv_dx;
+                }
+                for i in 0..nx {
+                    u_stage[i] = u_line[i] + dt * rhs0[i];
+                }
+
+                for i in 0..nx {
+                    let im1 = (i + nx - 1) % nx;
+                    let ip1 = (i + 1) % nx;
+                    let du_l = u_stage[i] - u_stage[im1];
+                    let du_r = u_stage[ip1] - u_stage[i];
+                    let du_c = 0.5 * (u_stage[ip1] - u_stage[im1]);
+                    slopes[i] = minmod3(du_c, 2.0 * du_l, 2.0 * du_r);
+                }
+                for i in 0..nx {
+                    let ip1 = (i + 1) % nx;
+                    let u_l = u_stage[i] + 0.5 * slopes[i];
+                    let u_r = u_stage[ip1] - 0.5 * slopes[ip1];
+                    let a = wave_speed(0.5 * (u_l + u_r));
+                    f_iface[i] = if a >= 0.0 { flux(u_l) } else { flux(u_r) };
+                }
+                let inv_dx = 1.0 / self.grid.dx;
+                for i in 0..nx {
+                    let im1 = (i + nx - 1) % nx;
+                    rhs1[i] = -(f_iface[i] - f_iface[im1]) * inv_dx;
+                }
+                for i in 0..nx {
+                    u_line[i] = 0.5 * u_line[i] + 0.5 * (u_stage[i] + dt * rhs1[i]);
+                }
+
+                if dissipation > 0.0 {
+                    let nu = dissipation * c;
+                    let inv_dx2 = 1.0 / (self.grid.dx * self.grid.dx);
+                    for i in 0..nx {
+                        let ip1 = (i + 1) % nx;
+                        let im1 = (i + nx - 1) % nx;
+                        let lap = (u_line[ip1] - 2.0 * u_line[i] + u_line[im1]) * inv_dx2;
+                        u_line[i] += nu * dt * lap;
+                    }
+                }
+
+                for (i, &u) in u_line.iter().enumerate().take(nx) {
+                    field.u_fundamental[[i, j, k]] = u;
                 }
             }
         }
-
-        field.u_fundamental.assign(&u_new);
     }
 
     /// Generate harmonic components using Chen (2013) harmonic motion detection
@@ -1110,28 +1305,20 @@ impl NonlinearElasticWaveSolver {
 
     /// Calculate stable time step using CFL condition
     fn calculate_time_step(&self) -> f64 {
-        let (nx, ny, nz) = self.grid.dimensions();
+        self.calculate_time_step_for_amplitude(self.config.max_strain * 1e-3)
+    }
 
-        // Find maximum shear wave speed
-        let mut max_cs: f64 = 0.0;
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    let mu_val = self.mu[[i, j, k]];
-                    let rho_val = self.density[[i, j, k]];
-                    let cs = (mu_val / rho_val).sqrt();
-                    max_cs = max_cs.max(cs);
-                }
-            }
-        }
+    fn calculate_time_step_for_amplitude(&self, max_abs_u: f64) -> f64 {
+        let c = self.config.sound_speed();
+        let beta = self.config.nonlinearity_parameter.abs();
+        let u_ref = 1e-3;
+        let cfl = 0.45;
 
-        // CFL condition for 3D elastic waves with nonlinearity factor
-        let min_dx = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
-        let cfl_dt = min_dx / (3.0_f64.sqrt() * max_cs);
+        let max_u_over_ref = (max_abs_u / u_ref).max(0.0);
+        let max_speed = c * (1.0 + beta * max_u_over_ref);
+        let dt_cfl = cfl * self.grid.dx / max_speed.max(f64::EPSILON);
 
-        // Reduce for nonlinear stability and clamp to maximum allowed dt
-        let dt = cfl_dt * 0.3 * (1.0 - self.config.nonlinearity_parameter);
-        dt.min(self.config.max_dt).max(f64::EPSILON)
+        dt_cfl.min(self.config.max_dt).max(f64::EPSILON)
     }
 }
 

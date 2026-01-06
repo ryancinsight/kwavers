@@ -5,12 +5,15 @@
 
 pub mod coordinates;
 pub mod field_ops;
-pub mod kspace;
+use crate::fft::kspace;
+pub mod operators;
 pub mod stability;
 pub mod structure;
+use crate::fft::utils as fft_utils;
 
 // Re-exports for convenience
 pub use coordinates::CoordinateSystem;
+pub use fft_utils::*;
 pub use kspace::KSpaceCalculator;
 pub use structure::{Bounds, Dimension, Grid};
 
@@ -138,5 +141,11 @@ impl Grid {
     #[inline]
     pub fn z_coordinates(&self) -> ndarray::Array1<f64> {
         CoordinateSystem::generate_z_vector(self)
+    }
+
+    /// Get maximum wavenumber supported by grid
+    #[inline]
+    pub fn k_max(&self) -> f64 {
+        self.k_max
     }
 }

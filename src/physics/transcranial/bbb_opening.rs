@@ -421,7 +421,7 @@ mod tests {
         bbb.simulate_opening().unwrap();
 
         let validation = bbb.validate_safety();
-        assert!(validation.is_safe || validation.warnings.len() > 0);
+        assert!(validation.is_safe || !validation.warnings.is_empty());
     }
 
     #[test]

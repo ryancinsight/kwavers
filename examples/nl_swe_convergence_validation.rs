@@ -145,7 +145,7 @@ fn validate_harmonic_generation() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create fundamental frequency input
     let mut initial_disp: ndarray::Array3<f64> = ndarray::Array3::zeros((32, 8, 8));
-    let omega = 2.0 * PI * 50.0; // 50 Hz
+    let _omega = 2.0 * PI * 50.0; // 50 Hz
     let k = 2.0 * PI / 0.01; // λ = 1 cm
 
     for i in 0..32 {

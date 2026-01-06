@@ -15,7 +15,7 @@
 //! - Tarantola (1984): "Inversion of seismic reflection data in the acoustic approximation"
 
 use crate::error::KwaversResult;
-use crate::utils::signal_processing::{
+use crate::signal::analytic::{
     hilbert_transform, instantaneous_envelope_2d, instantaneous_phase_2d,
 };
 use ndarray::Array2;

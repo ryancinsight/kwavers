@@ -41,7 +41,7 @@ impl TranscranialAberrationCorrection {
             grid: grid.clone(),
             frequency: 650e3,        // Default brain therapy frequency
             reference_speed: 1500.0, // Water speed
-            _num_elements: 1024,      // Default hemispherical array
+            _num_elements: 1024,     // Default hemispherical array
         })
     }
 
@@ -440,7 +440,7 @@ mod tests {
     #[test]
     fn test_phase_correction_calculation() {
         let grid = Grid::new(16, 16, 16, 0.005, 0.005, 0.005).unwrap();
-        let mut corrector = TranscranialAberrationCorrection::new(&grid).unwrap();
+        let corrector = TranscranialAberrationCorrection::new(&grid).unwrap();
 
         // Create simple skull model
         let ct_data = Array3::from_elem((16, 16, 16), 400.0); // Bone HU

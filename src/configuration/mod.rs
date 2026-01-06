@@ -134,7 +134,8 @@ impl Configuration {
 
         // CFL condition check - require necessary values to be present
         if let Some(dt) = self.simulation.dt {
-            if let Some(max_velocity) = self.medium.sound_speed_max {
+            let max_velocity = self.medium.sound_speed_max.or(self.medium.sound_speed);
+            if let Some(max_velocity) = max_velocity {
                 // Use minimum grid spacing for most restrictive CFL condition
                 let min_spacing = self.grid.spacing[0]
                     .min(self.grid.spacing[1])
@@ -166,7 +167,8 @@ impl Configuration {
         }
 
         // Nyquist sampling check - require necessary values to be present
-        if let Some(min_sound_speed) = self.medium.sound_speed_min {
+        let min_sound_speed = self.medium.sound_speed_min.or(self.medium.sound_speed);
+        if let Some(min_sound_speed) = min_sound_speed {
             let min_wavelength = min_sound_speed / self.simulation.frequency;
             // Use maximum grid spacing for most restrictive Nyquist condition
             let max_spacing = self.grid.spacing[0]

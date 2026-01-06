@@ -4,7 +4,7 @@
 //! and parallel processing optimizations in the adaptive beamforming module.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use kwavers::sensor::adaptive_beamforming::opast::OrthonormalSubspaceTracker;
+use kwavers::sensor::beamforming::adaptive::opast::OrthonormalSubspaceTracker;
 use ndarray::Array1;
 use num_complex::Complex64;
 use num_traits::Zero;

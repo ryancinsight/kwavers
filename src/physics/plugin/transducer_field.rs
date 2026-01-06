@@ -137,15 +137,15 @@ impl TransducerFieldCalculatorPlugin {
     ) -> KwaversResult<Array3<f64>> {
         // Angular spectrum method implementation
         // Reference: Zeng & McGough (2008) "Evaluation of the angular spectrum approach"
+        use crate::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
         use ndarray::{s, Array2};
-        use rustfft::{num_complex::Complex, FftPlanner};
 
         let mut pressure_field = Array3::zeros(grid.dimensions());
         let c = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid); // Use reference sound speed
         let k = 2.0 * std::f64::consts::PI * frequency / c; // Wave number
 
         // Initialize source plane (z=0) with transducer aperture function
-        let mut source_plane = Array2::<Complex<f64>>::zeros((grid.nx, grid.ny));
+        let mut source_plane = Array2::<Complex64>::zeros((grid.nx, grid.ny));
 
         // Use first transducer geometry if available
         if !self.transducer_geometries.is_empty() {
@@ -163,14 +163,14 @@ impl TransducerFieldCalculatorPlugin {
                         if (x - elem_pos[0]).abs() <= elem_size[0] / 2.0
                             && (y - elem_pos[1]).abs() <= elem_size[1] / 2.0
                         {
-                            let mut amplitude = Complex::new(1.0, 0.0);
+                            let mut amplitude = Complex64::new(1.0, 0.0);
 
                             // Apply element delay if specified
                             if let Some(delays) = &geometry.delays {
                                 if elem_idx < delays.len() {
                                     let phase =
                                         2.0 * std::f64::consts::PI * frequency * delays[elem_idx];
-                                    amplitude *= Complex::from_polar(1.0, phase);
+                                    amplitude *= Complex64::from_polar(1.0, phase);
                                 }
                             }
 
@@ -189,28 +189,7 @@ impl TransducerFieldCalculatorPlugin {
         }
 
         // Perform 2D FFT of source plane
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(grid.nx);
-        let mut spectrum = source_plane.clone();
-
-        // FFT along x-axis
-        for j in 0..grid.ny {
-            let mut row: Vec<Complex<f64>> = spectrum.slice(s![.., j]).to_vec();
-            fft.process(&mut row);
-            for (i, val) in row.iter().enumerate() {
-                spectrum[[i, j]] = *val;
-            }
-        }
-
-        // FFT along y-axis
-        let fft_y = planner.plan_fft_forward(grid.ny);
-        for i in 0..grid.nx {
-            let mut col: Vec<Complex<f64>> = spectrum.slice(s![i, ..]).to_vec();
-            fft_y.process(&mut col);
-            for (j, val) in col.iter().enumerate() {
-                spectrum[[i, j]] = *val;
-            }
-        }
+        let spectrum = fft_2d_complex(&source_plane);
 
         // Propagate through each z-plane
         for k_idx in 0..grid.nz {
@@ -229,7 +208,7 @@ impl TransducerFieldCalculatorPlugin {
                     if kz_sq > 0.0 {
                         // Propagating waves
                         let kz = kz_sq.sqrt();
-                        let phase = Complex::from_polar(1.0, kz * z);
+                        let phase = Complex64::from_polar(1.0, kz * z);
                         propagated[[i, j]] *= phase;
                     } else {
                         // Evanescent waves - exponential decay
@@ -240,21 +219,12 @@ impl TransducerFieldCalculatorPlugin {
             }
 
             // Inverse FFT to get spatial domain pressure
-            let ifft_y = planner.plan_fft_inverse(grid.ny);
-            for i in 0..grid.nx {
-                let mut col: Vec<Complex<f64>> = propagated.slice(s![i, ..]).to_vec();
-                ifft_y.process(&mut col);
-                for (j, val) in col.iter().enumerate() {
-                    propagated[[i, j]] = *val / grid.ny as f64;
-                }
-            }
+            let spatial_field = ifft_2d_complex(&propagated);
 
-            let ifft_x = planner.plan_fft_inverse(grid.nx);
-            for j in 0..grid.ny {
-                let mut row: Vec<Complex<f64>> = propagated.slice(s![.., j]).to_vec();
-                ifft_x.process(&mut row);
-                for (i, val) in row.iter().enumerate() {
-                    pressure_field[[i, j, k_idx]] = val.re / grid.nx as f64;
+            // Assign real part to pressure field
+            for i in 0..grid.nx {
+                for j in 0..grid.ny {
+                    pressure_field[[i, j, k_idx]] = spatial_field[[i, j]].re;
                 }
             }
         }
@@ -419,7 +389,7 @@ impl crate::physics::plugin::Plugin for TransducerFieldCalculatorPlugin {
         medium: &dyn Medium,
         _dt: f64,
         t: f64,
-        _context: &crate::physics::plugin::PluginContext,
+        _context: &mut crate::physics::plugin::PluginContext<'_>,
     ) -> KwaversResult<()> {
         use crate::physics::field_mapping::UnifiedFieldType;
 

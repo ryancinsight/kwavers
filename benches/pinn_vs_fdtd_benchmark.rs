@@ -339,6 +339,7 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                         generate_training_data(config, wave_speed, 100);
 
                     // Train PINN
+                    let train_config = trainer.pinn().config().clone();
                     let _metrics = trainer
                         .train(
                             &x_data,
@@ -346,6 +347,7 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                             &t_data,
                             &u_data,
                             wave_speed,
+                            &train_config,
                             &device,
                             config.pinn_epochs,
                         )
@@ -600,6 +602,7 @@ fn accuracy_benchmark(c: &mut Criterion) {
             let (x_data, y_data, t_data, u_data) = generate_training_data(&config, wave_speed, 200);
 
             // Train PINN
+            let train_config = trainer.pinn().config().clone();
             let _metrics = trainer
                 .train(
                     &x_data,
@@ -607,6 +610,7 @@ fn accuracy_benchmark(c: &mut Criterion) {
                     &t_data,
                     &u_data,
                     wave_speed,
+                    &train_config,
                     &device,
                     config.pinn_epochs,
                 )

@@ -34,17 +34,15 @@
 //! - Barr, R. G., et al. (2019). "Elastography assessment of liver fibrosis." *Abdominal Radiology*
 
 use kwavers::clinical::swe_3d_workflows::{
-    ClassificationConfidence, ClinicalDecisionSupport, ElasticityMap3D, LiverFibrosisStage,
-    MultiPlanarReconstruction, VolumetricROI, VolumetricStatistics,
+    ClinicalDecisionSupport, ElasticityMap3D, MultiPlanarReconstruction, VolumetricROI,
 };
 use kwavers::grid::Grid;
 use kwavers::medium::heterogeneous::HeterogeneousMedium;
 use kwavers::physics::imaging::elastography::{
-    AcousticRadiationForce, ElasticWaveSolver, MultiDirectionalPush, VolumetricWaveConfig,
-    WaveFrontTracker,
+    AcousticRadiationForce, ArrivalDetection, ElasticWaveSolver, MultiDirectionalPush,
+    VolumetricSource, VolumetricWaveConfig, WaveFrontTracker,
 };
 use ndarray::Array3;
-use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🫀 3D SWE Liver Fibrosis Assessment Example");
@@ -123,7 +121,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         interference_tracking: true,
         volumetric_attenuation: true,
         dispersion_correction: true,
-        front_tracking_resolution: 0.0005, // 0.5mm resolution
+        arrival_detection: ArrivalDetection::MatchedFilter {
+            template: vec![0.0, 0.25, 0.5, 1.0, 0.5, 0.25, 0.0],
+            // Correlation is in "meters * template_units"; choose a permissive threshold and rely on
+            // subsequent tracking-quality metrics to reject inconsistent arrivals.
+            min_corr: 1e-20,
+        },
+        tracking_decimation: [1, 1, 1],
         ..Default::default()
     };
     solver.set_volumetric_config(volumetric_config);
@@ -142,8 +146,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Propagate waves with volumetric tracking
     let push_times: Vec<f64> = push_pattern.time_delays.clone();
-    let (displacement_history, tracker) =
-        solver.propagate_volumetric_waves(&[initial_displacement], &push_times)?;
+    let sources: Vec<VolumetricSource> = push_pattern
+        .pushes
+        .iter()
+        .zip(push_pattern.time_delays.iter())
+        .map(|(push, &t)| VolumetricSource {
+            location_m: push.location,
+            time_offset_s: t,
+        })
+        .collect();
+
+    let (displacement_history, tracker) = solver.propagate_volumetric_waves_with_sources(
+        &[initial_displacement],
+        &push_times,
+        &sources,
+    )?;
     println!(
         "   Simulated {} time steps of wave propagation",
         displacement_history.len()

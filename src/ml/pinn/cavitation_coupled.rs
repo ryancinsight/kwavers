@@ -321,7 +321,8 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
 
                 // Resonance frequency for bubble (Minnaert resonance)
                 let bubble_radius = self.config.bubble_params.r0 as f32;
-                let _resonance_freq = 3.25_f32 / (2.0 * std::f64::consts::PI as f32 * bubble_radius)
+                let _resonance_freq = 3.25_f32
+                    / (2.0 * std::f64::consts::PI as f32 * bubble_radius)
                     * (self.config.bubble_params.sigma as f32
                         / self.config.bubble_params.rho_liquid as f32)
                         .sqrt();
@@ -499,12 +500,11 @@ mod tests {
             multi_bubble_effects: true,
             ..Default::default()
         };
-        let domain: CavitationCoupledDomain<B> =
-            CavitationCoupledDomain::new(
-                config,
-                CavitationCouplingType::MultiBubble,
-                vec![1e-2, 1e-2],
-            );
+        let domain: CavitationCoupledDomain<B> = CavitationCoupledDomain::new(
+            config,
+            CavitationCouplingType::MultiBubble,
+            vec![1e-2, 1e-2],
+        );
 
         let interfaces = domain.coupling_interfaces();
         assert!(interfaces.len() >= 2); // Should have acoustic-bubble and multi-bubble interfaces

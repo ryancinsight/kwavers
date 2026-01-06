@@ -34,8 +34,7 @@ impl KWaveBenchmarks {
     /// Test 1: Plane wave propagation in homogeneous medium
     /// Validates against analytical solution: p(x,t) = sin(k(x - ct))
     pub fn plane_wave_propagation() -> KwaversResult<BenchmarkResult> {
-        use crate::solver::pstd::{PstdConfig, PstdSolver};
-        use std::sync::Arc;
+        use crate::solver::spectral::{SpectralConfig, SpectralSolver, SpectralSource};
 
         // Test parameters matching k-Wave example
         let nx = 128;
@@ -47,7 +46,7 @@ impl KWaveBenchmarks {
         // Medium properties (water at 20°C)
         let c0 = SOUND_SPEED_WATER;
         let rho0 = DENSITY_WATER;
-        let _medium = Arc::new(HomogeneousMedium::water(&grid));
+        let medium = HomogeneousMedium::water(&grid);
 
         // Source parameters
         let f0 = 1e6; // 1 MHz
@@ -62,9 +61,10 @@ impl KWaveBenchmarks {
             )));
         }
 
-        // Initialize PSTD solver with k-space correction
-        let pstd_config = PstdConfig::default();
-        let mut solver = PstdSolver::new(pstd_config, &grid)?;
+        // Initialize Spectral solver
+        let config = SpectralConfig::default();
+        let source = SpectralSource::default();
+        let mut solver = SpectralSolver::new(config, grid.clone(), &medium, source)?;
 
         // Time parameters for PSTD
         let dt = solver.get_timestep();
@@ -81,36 +81,31 @@ impl KWaveBenchmarks {
 
             // Apply sinusoidal source at left boundary
             for j in 0..ny {
-                solver.pressure[[0, j, 0]] = (2.0 * PI * f0 * t).sin();
+                solver.p[[0, j, 0]] = (2.0 * PI * f0 * t).sin();
             }
 
             // Update pressure using spectral methods
-            let divergence = solver.spectral.compute_divergence(
-                &solver.velocity_x,
-                &solver.velocity_y,
-                &solver.velocity_z,
-            );
+            let divergence = solver.compute_divergence();
 
             // ∂p/∂t = -ρc²∇·v
             let factor = -rho0 * c0 * c0 * dt;
-            ndarray::Zip::from(&mut solver.pressure)
+            ndarray::Zip::from(&mut solver.p)
                 .and(&divergence)
                 .for_each(|p, &div| {
                     *p += factor * div;
                 });
 
             // Update velocity using pressure gradient
-            let (dp_dx, dp_dy, _dp_dz) =
-                solver.spectral.compute_gradient(&solver.pressure, &grid)?;
+            let (dp_dx, dp_dy, _dp_dz) = solver.compute_gradient()?;
 
             // ∂v/∂t = -∇p/ρ
             let vel_factor = -dt / rho0;
-            ndarray::Zip::from(&mut solver.velocity_x)
+            ndarray::Zip::from(&mut solver.ux)
                 .and(&dp_dx)
                 .for_each(|v, &grad| {
                     *v += vel_factor * grad;
                 });
-            ndarray::Zip::from(&mut solver.velocity_y)
+            ndarray::Zip::from(&mut solver.uy)
                 .and(&dp_dy)
                 .for_each(|v, &grad| {
                     *v += vel_factor * grad;
@@ -118,7 +113,7 @@ impl KWaveBenchmarks {
 
             // Compare with analytical solution after initial transient
             if step > n_steps / 4 {
-                let pressure = &solver.pressure;
+                let pressure = &solver.p;
 
                 for i in 0..nx {
                     let x = i as f64 * dx;

@@ -60,7 +60,12 @@ pub struct SafetyThresholds {
 }
 
 impl SafetyThresholds {
-    pub fn new(max_temperature: f64, max_thermal_dose: f64, max_mechanical_index: f64, max_power_density: f64) -> Self {
+    pub fn new(
+        max_temperature: f64,
+        max_thermal_dose: f64,
+        max_mechanical_index: f64,
+        max_power_density: f64,
+    ) -> Self {
         Self {
             max_temperature,
             max_thermal_dose,

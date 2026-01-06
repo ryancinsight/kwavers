@@ -4,7 +4,8 @@
 //! These tests verify that both solvers run without crashing and produce output.
 
 use kwavers::{
-    FdtdConfig, FdtdPlugin, Grid, HomogeneousMedium, PluginManager, PstdConfig, PstdPlugin,
+    FdtdConfig, FdtdPlugin, Grid, HomogeneousMedium, PMLBoundary, PMLConfig, PluginManager,
+    SpectralConfig, SpectralPlugin,
 };
 use ndarray::{Array3, Array4};
 
@@ -82,6 +83,7 @@ fn run_fdtd_simulation_with_time(
         cfl_factor: 0.95,
         subgridding: false,
         subgrid_factor: 2,
+        enable_gpu_acceleration: false,
     };
 
     let cfl_factor = config.cfl_factor;
@@ -103,10 +105,14 @@ fn run_fdtd_simulation_with_time(
 
     plugin_manager.initialize(grid, medium).unwrap();
 
+    // Use empty sources and null boundary for testing
+    let sources = Vec::new();
+    let mut boundary = PMLBoundary::new(PMLConfig::default().with_thickness(20)).unwrap();
+
     for _step in 0..n_steps {
         let t = _step as f64 * dt;
         plugin_manager
-            .execute(&mut fields, grid, medium, dt, t)
+            .execute(&mut fields, grid, medium, &sources, &mut boundary, dt, t)
             .unwrap();
     }
 
@@ -128,24 +134,17 @@ fn run_pstd_simulation_with_time(
     initial_pressure: &Array3<f64>,
     t_end: f64,
 ) -> Array3<f64> {
-    let config = PstdConfig {
-        use_kspace_correction: true,
-        correction_method: kwavers::solver::pstd::CorrectionMethod::Sinc,
-        use_antialiasing: true,
-        use_absorption: false,
-        absorption_alpha: 0.0,
-        absorption_y: 1.0,
-        cfl_factor: 0.3,
-        max_steps: 1000,
-        dispersive_media: false,
-        pml_layers: 4,
-        pml_alpha: 0.0,
-    };
+    let mut config = SpectralConfig::default();
+    config.spectral_correction.enabled = true;
+    config.spectral_correction.method =
+        kwavers::solver::spectral_correction::CorrectionMethod::SincSpatial;
+    config.anti_aliasing.enabled = true;
+    config.absorption_mode = kwavers::solver::spectral::config::AbsorptionMode::Lossless;
 
-    let cfl_factor = config.cfl_factor;
+    let cfl_factor = 0.3;
     let mut plugin_manager = PluginManager::new();
     plugin_manager
-        .add_plugin(Box::new(PstdPlugin::new(config, grid).unwrap()))
+        .add_plugin(Box::new(SpectralPlugin::new(config, grid).unwrap()))
         .unwrap();
 
     // Initialize fields - must match UnifiedFieldType::COUNT
@@ -161,10 +160,14 @@ fn run_pstd_simulation_with_time(
 
     plugin_manager.initialize(grid, medium).unwrap();
 
+    // Use empty sources and null boundary for testing
+    let sources = Vec::new();
+    let mut boundary = PMLBoundary::new(PMLConfig::default().with_thickness(20)).unwrap();
+
     for _step in 0..n_steps {
         let t = _step as f64 * dt;
         plugin_manager
-            .execute(&mut fields, grid, medium, dt, t)
+            .execute(&mut fields, grid, medium, &sources, &mut boundary, dt, t)
             .unwrap();
     }
 

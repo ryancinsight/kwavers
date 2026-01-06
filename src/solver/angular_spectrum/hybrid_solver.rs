@@ -7,8 +7,8 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use ndarray::{Array2, Array3, Axis};
-use num_complex::Complex;
-use rustfft::{FftPlanner, num_complex::Complex as FftComplex};
+use crate::fft::Complex64;
+use super::angular_spectrum::AngularSpectrum;
 use std::f64::consts::PI;
 
 /// Configuration for Hybrid Angular Spectrum solver
@@ -88,10 +88,10 @@ impl HybridAngularSpectrumSolver {
     /// Propagate field from z_start to z_end
     pub fn propagate(
         &mut self,
-        field: &Array2<Complex<f64>>,
+        field: &Array2<Complex64>,
         z_start: f64,
         z_end: f64,
-    ) -> KwaversResult<Array2<Complex<f64>>> {
+    ) -> KwaversResult<Array2<Complex64>> {
         let dz = z_end - z_start;
         if dz.abs() < 1e-9 {
             return Ok(field.clone());
@@ -130,9 +130,9 @@ impl HybridAngularSpectrumSolver {
     /// Propagate using pure angular spectrum (homogeneous medium)
     fn propagate_angular_spectrum(
         &self,
-        field: &Array2<Complex<f64>>,
+        field: &Array2<Complex64>,
         dz: f64,
-    ) -> KwaversResult<Array2<Complex<f64>>> {
+    ) -> KwaversResult<Array2<Complex64>> {
         // Forward FFT to angular spectrum
         let spectrum = self.angular_spectrum.forward_fft(field)?;
 
@@ -146,10 +146,10 @@ impl HybridAngularSpectrumSolver {
     /// Propagate using hybrid approach with corrections
     fn propagate_hybrid(
         &mut self,
-        field: &Array2<Complex<f64>>,
+        field: &Array2<Complex64>,
         dz: f64,
         inhomogeneity_map: &Array2<f64>,
-    ) -> KwaversResult<Array2<Complex<f64>>> {
+    ) -> KwaversResult<Array2<Complex64>> {
         let n_layers = self.config.correction_layers;
         let dz_layer = dz / n_layers as f64;
 
@@ -171,9 +171,9 @@ impl HybridAngularSpectrumSolver {
     /// Propagate using local corrections only (highly inhomogeneous)
     fn propagate_local(
         &self,
-        field: &Array2<Complex<f64>>,
+        field: &Array2<Complex64>,
         dz: f64,
-    ) -> KwaversResult<Array2<Complex<f64>>> {
+    ) -> KwaversResult<Array2<Complex64>> {
         // For highly inhomogeneous media, fall back to simpler approach
         // In practice, this might interface with FDTD for complex regions
         println!("Using hybrid angular spectrum method for inhomogeneous media propagation");
@@ -181,7 +181,7 @@ impl HybridAngularSpectrumSolver {
 
         // Simple phase shift approximation (not physically accurate)
         let k0 = 2.0 * PI * 1e6 / 1500.0; // Approximate wavenumber
-        let phase_shift = Complex::new(0.0, k0 * dz);
+        let phase_shift = Complex64::new(0.0, k0 * dz);
 
         let mut result = field.clone();
         for elem in result.iter_mut() {
@@ -243,9 +243,9 @@ impl HybridAngularSpectrumSolver {
     /// Compute field at multiple z-locations efficiently
     pub fn propagate_stack(
         &mut self,
-        initial_field: &Array2<Complex<f64>>,
+        initial_field: &Array2<Complex64>,
         z_positions: &[f64],
-    ) -> KwaversResult<Vec<Array2<Complex<f64>>>> {
+    ) -> KwaversResult<Vec<Array2<Complex64>>> {
         let mut results = Vec::new();
         let mut current_field = initial_field.clone();
 
@@ -283,116 +283,6 @@ pub struct HASMetrics {
     pub separable_optimization: bool,
 }
 
-/// Placeholder structures (to be implemented)
-pub struct AngularSpectrum {
-    dx: f64,
-    n_spectrum: (usize, usize),
-    max_angle: f64,
-}
-
-impl AngularSpectrum {
-    pub fn new(_dx: f64, _n_spectrum: (usize, usize), _max_angle: f64) -> KwaversResult<Self> {
-        Ok(Self {
-            dx: _dx,
-            n_spectrum: _n_spectrum,
-            max_angle: _max_angle,
-        })
-    }
-
-    /// Compute 2D forward FFT of spatial field
-    /// Uses separable FFT approach: FFT along rows, then along columns
-    pub fn forward_fft(&self, field: &Array2<Complex<f64>>) -> KwaversResult<Array2<Complex<f64>>> {
-        let (ny, nx) = field.dim();
-        let mut planner = FftPlanner::<f64>::new();
-        let mut result = field.clone();
-
-        // FFT along rows (x-direction)
-        for j in 0..ny {
-            let mut row: Vec<FftComplex<f64>> = result.row(j).to_vec().into_iter()
-                .map(|c| FftComplex::new(c.re, c.im)).collect();
-            let fft = planner.plan_fft_forward(nx);
-            fft.process(&mut row);
-            for (i, val) in row.into_iter().enumerate() {
-                result[[j, i]] = Complex::new(val.re, val.im);
-            }
-        }
-
-        // FFT along columns (y-direction)
-        for i in 0..nx {
-            let mut col: Vec<FftComplex<f64>> = result.column(i).to_vec().into_iter()
-                .map(|c| FftComplex::new(c.re, c.im)).collect();
-            let fft = planner.plan_fft_forward(ny);
-            fft.process(&mut col);
-            for (j, val) in col.into_iter().enumerate() {
-                result[[j, i]] = Complex::new(val.re, val.im);
-            }
-        }
-
-        Ok(result)
-    }
-
-    /// Compute 2D inverse FFT of angular spectrum
-    /// Uses separable IFFT approach: IFFT along columns, then along rows
-    pub fn inverse_fft(&self, spectrum: &Array2<Complex<f64>>) -> KwaversResult<Array2<Complex<f64>>> {
-        let (ny, nx) = spectrum.dim();
-        let mut planner = FftPlanner::<f64>::new();
-        let mut result = spectrum.clone();
-
-        // IFFT along columns (y-direction)
-        for i in 0..nx {
-            let mut col: Vec<FftComplex<f64>> = result.column(i).to_vec().into_iter()
-                .map(|c| FftComplex::new(c.re, c.im)).collect();
-            let ifft = planner.plan_fft_inverse(ny);
-            ifft.process(&mut col);
-            for (j, val) in col.into_iter().enumerate() {
-                result[[j, i]] = Complex::new(val.re / ny as f64, val.im / ny as f64);
-            }
-        }
-
-        // IFFT along rows (x-direction)
-        for j in 0..ny {
-            let mut row: Vec<FftComplex<f64>> = result.row(j).to_vec().into_iter()
-                .map(|c| FftComplex::new(c.re, c.im)).collect();
-            let ifft = planner.plan_fft_inverse(nx);
-            ifft.process(&mut row);
-            for (i, val) in row.into_iter().enumerate() {
-                result[[j, i]] = Complex::new(val.re / nx as f64, val.im / nx as f64);
-            }
-        }
-
-        Ok(result)
-    }
-
-    pub fn propagate_spectrum(&self, spectrum: &Array2<Complex<f64>>, dz: f64) -> KwaversResult<Array2<Complex<f64>>> {
-        let mut propagated = spectrum.clone();
-
-        // Apply angular spectrum propagation phase
-        for ((i, j), elem) in propagated.indexed_iter_mut() {
-            let kx = 2.0 * PI * (i as f64 - self.n_spectrum.0 as f64 / 2.0) / (self.dx * self.n_spectrum.0 as f64);
-            let ky = 2.0 * PI * (j as f64 - self.n_spectrum.1 as f64 / 2.0) / (self.dx * self.n_spectrum.1 as f64);
-
-            let k = 2.0 * PI * 1e6 / 1500.0; // Approximate wavenumber
-            let kz_squared = k * k - kx * kx - ky * ky;
-
-            if kz_squared > 0.0 {
-                let kz = kz_squared.sqrt();
-                let phase = Complex::new(0.0, kz * dz);
-                *elem *= phase.exp();
-            } else {
-                // Evanescent wave - attenuate
-                *elem *= 0.1;
-            }
-        }
-
-        Ok(propagated)
-    }
-
-    pub fn efficiency(&self) -> f64 {
-        // Estimate computational efficiency
-        0.8 // Placeholder
-    }
-}
-
 pub struct LocalCorrection;
 
 #[cfg(test)]
@@ -419,7 +309,7 @@ mod tests {
         let mut solver = HybridAngularSpectrumSolver::new(config, &grid, &medium).unwrap();
 
         // Create simple initial field (plane wave)
-        let field = Array2::from_elem((64, 64), Complex::new(1.0, 0.0));
+        let field = Array2::from_elem((64, 64), Complex64::new(1.0, 0.0));
 
         let result = solver.propagate(&field, 0.0, 0.01);
         assert!(result.is_ok());

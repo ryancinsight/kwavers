@@ -19,7 +19,7 @@ pub trait ExecutionStrategy: Send + Sync {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        context: &PluginContext,
+        context: &mut PluginContext<'_>,
     ) -> KwaversResult<()>;
 }
 
@@ -36,7 +36,7 @@ impl ExecutionStrategy for SequentialStrategy {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        context: &PluginContext,
+        context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         for plugin in plugins.iter_mut() {
             plugin.update(fields, grid, medium, dt, t, context)?;
@@ -88,7 +88,7 @@ impl PluginExecutor {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        context: &PluginContext,
+        context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         self.strategy
             .execute(plugins, fields, grid, medium, dt, t, context)
@@ -133,7 +133,7 @@ impl ExecutionStrategy for ParallelStrategy {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        context: &PluginContext,
+        context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         // Note: Currently executes sequentially due to mutable field access
         // True parallelism would require:

@@ -781,13 +781,13 @@ mod tests {
             },
         ];
 
-        let decomposition = DecompositionStrategy::Spatial {
+        let _decomposition = DecompositionStrategy::Spatial {
             dimensions: 2,
             overlap: 0.1,
         };
 
         // Test spatial decomposition logic
-        let bounds = (0.0, 1.0, 0.0, 1.0);
+        let _bounds = (0.0, 1.0, 0.0, 1.0);
         let total_points = 1000;
 
         let points_per_gpu = total_points / devices.len();

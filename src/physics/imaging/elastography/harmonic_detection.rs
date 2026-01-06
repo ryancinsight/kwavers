@@ -428,7 +428,6 @@ struct PointHarmonics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array4;
 
     #[test]
     fn test_harmonic_detection_config() {
@@ -500,7 +499,7 @@ mod tests {
             ..Default::default()
         };
 
-        let detector = HarmonicDetector::new(config);
+        let _detector = HarmonicDetector::new(config);
         // Test passes if no panic occurs
     }
 }

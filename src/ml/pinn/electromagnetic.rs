@@ -196,6 +196,99 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain<B> {
     }
 
     fn boundary_conditions(&self) -> Vec<BoundaryConditionSpec> {
+        if self.boundary_specs.is_empty() {
+            return match self.problem_type {
+                EMProblemType::Electrostatic => vec![
+                    BoundaryConditionSpec::Dirichlet {
+                        boundary: BoundaryPosition::Left,
+                        value: vec![0.0],
+                        component: BoundaryComponent::Scalar,
+                    },
+                    BoundaryConditionSpec::Dirichlet {
+                        boundary: BoundaryPosition::Right,
+                        value: vec![0.0],
+                        component: BoundaryComponent::Scalar,
+                    },
+                    BoundaryConditionSpec::Dirichlet {
+                        boundary: BoundaryPosition::Bottom,
+                        value: vec![0.0],
+                        component: BoundaryComponent::Scalar,
+                    },
+                    BoundaryConditionSpec::Dirichlet {
+                        boundary: BoundaryPosition::Top,
+                        value: vec![0.0],
+                        component: BoundaryComponent::Scalar,
+                    },
+                ],
+                EMProblemType::Magnetostatic => vec![
+                    BoundaryConditionSpec::Neumann {
+                        boundary: BoundaryPosition::Left,
+                        flux: vec![0.0, 0.0],
+                        component: BoundaryComponent::Vector(vec![0, 1]),
+                    },
+                    BoundaryConditionSpec::Neumann {
+                        boundary: BoundaryPosition::Right,
+                        flux: vec![0.0, 0.0],
+                        component: BoundaryComponent::Vector(vec![0, 1]),
+                    },
+                    BoundaryConditionSpec::Neumann {
+                        boundary: BoundaryPosition::Bottom,
+                        flux: vec![0.0, 0.0],
+                        component: BoundaryComponent::Vector(vec![0, 1]),
+                    },
+                    BoundaryConditionSpec::Neumann {
+                        boundary: BoundaryPosition::Top,
+                        flux: vec![0.0, 0.0],
+                        component: BoundaryComponent::Vector(vec![0, 1]),
+                    },
+                ],
+                EMProblemType::QuasiStatic => vec![
+                    BoundaryConditionSpec::Dirichlet {
+                        boundary: BoundaryPosition::Left,
+                        value: vec![0.0, 0.0],
+                        component: BoundaryComponent::Vector(vec![0, 1]),
+                    },
+                    BoundaryConditionSpec::Dirichlet {
+                        boundary: BoundaryPosition::Right,
+                        value: vec![0.0, 0.0],
+                        component: BoundaryComponent::Vector(vec![0, 1]),
+                    },
+                    BoundaryConditionSpec::Dirichlet {
+                        boundary: BoundaryPosition::Bottom,
+                        value: vec![0.0, 0.0],
+                        component: BoundaryComponent::Vector(vec![0, 1]),
+                    },
+                    BoundaryConditionSpec::Dirichlet {
+                        boundary: BoundaryPosition::Top,
+                        value: vec![0.0, 0.0],
+                        component: BoundaryComponent::Vector(vec![0, 1]),
+                    },
+                ],
+                EMProblemType::WavePropagation => vec![
+                    BoundaryConditionSpec::Dirichlet {
+                        boundary: BoundaryPosition::Left,
+                        value: vec![0.0],
+                        component: BoundaryComponent::Scalar,
+                    },
+                    BoundaryConditionSpec::Dirichlet {
+                        boundary: BoundaryPosition::Right,
+                        value: vec![0.0],
+                        component: BoundaryComponent::Scalar,
+                    },
+                    BoundaryConditionSpec::Dirichlet {
+                        boundary: BoundaryPosition::Bottom,
+                        value: vec![0.0],
+                        component: BoundaryComponent::Scalar,
+                    },
+                    BoundaryConditionSpec::Dirichlet {
+                        boundary: BoundaryPosition::Top,
+                        value: vec![0.0],
+                        component: BoundaryComponent::Scalar,
+                    },
+                ],
+            };
+        }
+
         self.boundary_specs
             .iter()
             .map(|spec| match spec {
@@ -923,7 +1016,7 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
     }
 
     /// Compute charge density at given spatial positions
-    fn compute_charge_density(
+    pub fn compute_charge_density(
         &self,
         x: &Tensor<B, 2>,
         _y: &Tensor<B, 2>,
@@ -935,7 +1028,7 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
     }
 
     /// Compute z-component of current density at given spatial positions
-    fn compute_current_density_z(
+    pub fn compute_current_density_z(
         &self,
         x: &Tensor<B, 2>,
         _y: &Tensor<B, 2>,

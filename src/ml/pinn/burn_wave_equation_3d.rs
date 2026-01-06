@@ -422,8 +422,7 @@ impl<B: Backend> PINN3DNetwork<B> {
 
         // Output layer
         let output_layer =
-            LinearConfig::new(*config.hidden_layers.last().unwrap(), output_size)
-                .init(device);
+            LinearConfig::new(*config.hidden_layers.last().unwrap(), output_size).init(device);
 
         Self {
             input_layer,
@@ -555,10 +554,7 @@ pub struct WaveSpeedFn3D<B: Backend> {
 impl<B: Backend> WaveSpeedFn3D<B> {
     /// Create a new wave speed function from a CPU closure
     pub fn new(func: std::sync::Arc<dyn Fn(f32, f32, f32) -> f32 + Send + Sync>) -> Self {
-        Self {
-            func,
-            grid: None,
-        }
+        Self { func, grid: None }
     }
 
     /// Create a new wave speed function from a device-resident grid
@@ -617,9 +613,7 @@ impl<B: Backend> Module<B> for WaveSpeedFn3D<B> {
         self
     }
 
-    fn into_record(self) -> Self::Record {
-        
-    }
+    fn into_record(self) -> Self::Record {}
 }
 
 impl<B: Backend> burn::module::ModuleDisplayDefault for WaveSpeedFn3D<B> {
@@ -886,13 +880,11 @@ impl<B: Backend> BurnPINN3DWave<B> {
         let data_loss = (u_pred.clone() - u_data).powf_scalar(2.0).mean();
 
         // PDE loss: MSE of PDE residual at collocation points
-        let pde_residual = self.pinn.compute_pde_residual(
-            x_colloc,
-            y_colloc,
-            z_colloc,
-            t_colloc,
-            |x, y, z| self.get_wave_speed(x, y, z),
-        );
+        let pde_residual =
+            self.pinn
+                .compute_pde_residual(x_colloc, y_colloc, z_colloc, t_colloc, |x, y, z| {
+                    self.get_wave_speed(x, y, z)
+                });
         let pde_loss = pde_residual.powf_scalar(2.0).mean();
 
         // Boundary condition loss for Dirichlet boundary conditions
@@ -966,7 +958,7 @@ mod tests {
         let device = Default::default();
         let config = BurnPINN3DConfig::default();
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
-        let wave_speed = |x: f32, y: f32, z: f32| 1500.0;
+        let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
         let pinn = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device);
         assert!(pinn.pinn.hidden_layers.len() > 0);

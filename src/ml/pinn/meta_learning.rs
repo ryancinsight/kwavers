@@ -29,10 +29,7 @@ use crate::ml::pinn::burn_wave_equation_2d::{
 use crate::ml::pinn::Geometry2D;
 use burn::module::{Module, ModuleMapper};
 use burn::prelude::ToElement;
-use burn::tensor::{
-    backend::AutodiffBackend, Bool, Int,
-    Tensor,
-};
+use burn::tensor::{backend::AutodiffBackend, Bool, Int, Tensor};
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -1118,7 +1115,7 @@ mod tests {
     fn test_meta_optimizer_creation() {
         let optimizer = MetaOptimizer::<TestBackend>::new(0.001, 2);
         assert_eq!(optimizer.lr, 0.001);
-        assert_eq!(optimizer.m.len(), 2);
-        assert_eq!(optimizer.v.len(), 2);
+        assert_eq!(optimizer._m.len(), 2);
+        assert_eq!(optimizer._v.len(), 2);
     }
 }

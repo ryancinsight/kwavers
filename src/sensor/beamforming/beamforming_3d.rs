@@ -49,7 +49,7 @@ pub enum BeamformingAlgorithm3D {
         /// Diagonal loading factor
         diagonal_loading: f64,
         /// Subarray size for covariance estimation
-        subarray_size: usize,
+        subarray_size: [usize; 3],
     },
     /// Synthetic Aperture Focusing Technique (SAFT) for 3D
     SAFT3D {
@@ -181,7 +181,10 @@ pub struct BeamformingMetrics {
 
 impl BeamformingProcessor3D {
     /// Create new 3D beamforming processor
-    pub async fn new(_config: BeamformingConfig3D) -> KwaversResult<Self> {
+    pub async fn new(config: BeamformingConfig3D) -> KwaversResult<Self> {
+        #[cfg(not(feature = "gpu"))]
+        let _ = config;
+
         // GPU-specific variables (only defined when GPU feature is enabled)
         #[cfg(feature = "gpu")]
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
@@ -387,7 +390,7 @@ impl BeamformingProcessor3D {
             BeamformingAlgorithm3D::MVDR3D {
                 diagonal_loading,
                 subarray_size,
-            } => self.process_mvdr_3d(rf_data, *diagonal_loading, *subarray_size)?,
+            } => self.process_mvdr_3d(rf_data, *diagonal_loading as f32, *subarray_size)?,
             BeamformingAlgorithm3D::SAFT3D { .. } => {
                 return Err(KwaversError::System(
                     crate::error::SystemError::FeatureNotAvailable {
@@ -519,6 +522,22 @@ impl BeamformingProcessor3D {
         }
 
         Ok(())
+    }
+
+    /// Process MVDR 3D beamforming (not yet implemented)
+    #[cfg(feature = "gpu")]
+    fn process_mvdr_3d(
+        &mut self,
+        _rf_data: &Array4<f32>,
+        _diagonal_loading: f32,
+        _subarray_size: [usize; 3],
+    ) -> KwaversResult<Array3<f32>> {
+        Err(KwaversError::System(
+            crate::error::SystemError::FeatureNotAvailable {
+                feature: "MVDR 3D beamforming".to_string(),
+                reason: "MVDR 3D beamforming not yet implemented. Requires adaptive spatial filtering module.".to_string(),
+            },
+        ))
     }
 
     /// Process delay-and-sum beamforming
@@ -757,10 +776,10 @@ impl BeamformingProcessor3D {
             compute_pass.set_bind_group(0, &bind_group, &[]);
 
             // Dispatch workgroups (8x8x8 threads per workgroup)
-            let workgroup_size = 8;
-            let dispatch_x = (vol_x + workgroup_size - 1) / workgroup_size;
-            let dispatch_y = (vol_y + workgroup_size - 1) / workgroup_size;
-            let dispatch_z = (vol_z + workgroup_size - 1) / workgroup_size;
+            let workgroup_size = 8_usize;
+            let dispatch_x = vol_x.div_ceil(workgroup_size);
+            let dispatch_y = vol_y.div_ceil(workgroup_size);
+            let dispatch_z = vol_z.div_ceil(workgroup_size);
 
             compute_pass.dispatch_workgroups(
                 dispatch_x as u32,
@@ -808,89 +827,6 @@ impl BeamformingProcessor3D {
         staging_buffer.unmap();
 
         Ok(result_volume)
-    }
-
-    /// Process MVDR beamforming in 3D
-    #[cfg(feature = "gpu")]
-    fn _process_mvdr_3d(
-        &self,
-        rf_data: &Array4<f32>,
-        diagonal_loading: f64,
-        subarray_size: usize,
-    ) -> KwaversResult<Array3<f32>> {
-        use super::algorithms::MVDRBeamformer;
-        use super::covariance::CovarianceEstimator;
-
-        let rf_dims = rf_data.dim();
-        let frames = rf_dims.0;
-        let num_elements = rf_dims.1;
-        let samples = rf_dims.2;
-        let (vol_x, vol_y, vol_z) = self.config.volume_dims;
-
-        // Initialize output volume
-        let mut output_volume = Array3::<f32>::zeros((vol_x, vol_y, vol_z));
-
-        // Create covariance estimator
-        let cov_estimator = CovarianceEstimator::new(true, frames); // Forward-backward averaging enabled
-
-        // Create MVDR beamformer
-        let mvdr = MVDRBeamformer::new(diagonal_loading, true); // Spatial smoothing enabled
-
-        // Process each voxel
-        for z in 0..vol_z {
-            for y in 0..vol_y {
-                for x in 0..vol_x {
-                    // Calculate voxel position in physical coordinates
-                    let voxel_pos = [
-                        x as f32 * self.config.voxel_spacing.0 as f32,
-                        y as f32 * self.config.voxel_spacing.1 as f32,
-                        z as f32 * self.config.voxel_spacing.2 as f32,
-                    ];
-
-                    // Compute steering vector for this voxel
-                    let steering_vector =
-                        self._compute_steering_vector_3d(&voxel_pos, num_elements)?;
-
-                    // Extract RF data for all elements at this voxel's time samples
-                    // For simplicity, use a single time sample - full implementation would use correlation
-                    let time_sample = (voxel_pos[2] / self.config.sound_speed as f32
-                        * self.config.sampling_frequency as f32)
-                        as usize;
-                    let time_sample = time_sample.min(samples - 1);
-
-                    let mut snapshot_data = Vec::new();
-                    for element in 0..num_elements {
-                        let rf_value = rf_data[[0, element, time_sample, 0]]; // Simplified indexing
-                        snapshot_data.push(rf_value as f64);
-                    }
-
-                    // Estimate covariance matrix using spatial smoothing
-                    let data_matrix = ndarray::Array2::from_shape_vec(
-                        (num_elements, 1),
-                        snapshot_data,
-                    )
-                    .map_err(|e| {
-                        KwaversError::InvalidInput(format!("Failed to create data matrix: {}", e))
-                    })?;
-
-                    let covariance = cov_estimator
-                        .estimate_with_spatial_smoothing(&data_matrix, subarray_size)?;
-
-                    // Compute MVDR weights
-                    let weights = mvdr.compute_weights(&covariance, &steering_vector)?;
-
-                    // Apply weights to form beam
-                    let mut beam_output = 0.0f64;
-                    for element in 0..num_elements {
-                        beam_output += weights[element] * data_matrix[[element, 0]];
-                    }
-
-                    output_volume[[x, y, z]] = beam_output as f32;
-                }
-            }
-        }
-
-        Ok(output_volume)
     }
 
     /// Compute 3D steering vector for MVDR beamforming
@@ -1236,7 +1172,7 @@ mod tests {
         // Test the apodization weights creation function directly
         let weights = create_apodization_weights_test(&config, &ApodizationWindow::Hamming);
         assert_eq!(weights.dim(), (32, 32, 16));
-        assert!(weights.iter().all(|&w| w >= 0.0 && w <= 1.0));
+        assert!(weights.iter().all(|&w| (0.0..=1.0).contains(&w)));
     }
 
     fn create_apodization_weights_test(

@@ -25,7 +25,7 @@
 use kwavers::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::burn_wave_equation_2d::{
-    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, Geometry2D, InterfaceCondition,
+    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, Geometry2D,
 };
 #[cfg(feature = "pinn")]
 use ndarray::{Array1, Array2};
@@ -41,7 +41,7 @@ type Backend = burn::backend::Autodiff<NdArray<f32>>;
 /// Layered medium wave speed function
 /// c(x,y) = 1500 m/s (water) for y < 0.5, 3000 m/s (tissue) for y >= 0.5
 #[cfg(feature = "pinn")]
-fn layered_medium_wave_speed(x: f32, y: f32) -> f32 {
+fn layered_medium_wave_speed(_x: f32, y: f32) -> f32 {
     if y < 0.5 {
         1500.0 // Water layer
     } else {
@@ -72,7 +72,7 @@ fn inclusion_wave_speed(x: f32, y: f32) -> f32 {
 /// Gradient medium wave speed function
 /// c(x,y) = 1500 + 1500 * y (linear increase with depth)
 #[cfg(feature = "pinn")]
-fn gradient_wave_speed(x: f32, y: f32) -> f32 {
+fn gradient_wave_speed(_x: f32, y: f32) -> f32 {
     1500.0 + 1500.0 * y
 }
 
@@ -99,7 +99,7 @@ where
         let t = rand::random::<f64>() * 0.01; // Short time for stability
 
         // Get wave speed at this location
-        let c = wave_speed_fn(x as f32, y as f32);
+        let _c = wave_speed_fn(x as f32, y as f32);
 
         // Generate analytical solution (simplified - in practice would solve PDE)
         // For demonstration, use a simple standing wave pattern
@@ -188,7 +188,7 @@ fn main() -> KwaversResult<()> {
     println!();
 
     // Initialize Burn backend
-    let device = Default::default();
+    let device: <Backend as burn::tensor::backend::Backend>::Device = Default::default();
     println!("🔥 Burn Backend: Initialized (CPU with Autodiff)");
     println!();
 
@@ -245,13 +245,12 @@ fn main() -> KwaversResult<()> {
         println!();
 
         // Create heterogeneous PINN
-        let pinn = BurnPINN2DWave::new_heterogeneous(pinn_config.clone(), wave_speed_fn, &device)?;
+        let _pinn = BurnPINN2DWave::<Backend>::new_heterogeneous(
+            pinn_config.clone(),
+            wave_speed_fn,
+            &device,
+        )?;
         println!("✅ Heterogeneous PINN: Created successfully");
-        println!();
-
-        // Create trainer
-        let trainer = BurnPINN2DWave::new_trainer(pinn_config.clone(), geometry.clone(), &device)?;
-        println!("✅ PINN Trainer: Created successfully");
         println!();
 
         // Generate training data
@@ -261,14 +260,31 @@ fn main() -> KwaversResult<()> {
         println!("   Training points: {}", x_train.len());
         println!();
 
+        // Generate test data for validation
+        println!("🧪 Validating PINN predictions...");
+        let (x_test, y_test, t_test, _c_test) =
+            generate_heterogeneous_test_grid(8, 8, 3, &geometry, wave_speed_fn);
+        println!("   Test points: {}", x_test.len());
+
+        // Create trainer
+        let trainer =
+            BurnPINN2DWave::<Backend>::new_trainer(pinn_config.clone(), geometry, &device)?;
+        println!("✅ PINN Trainer: Created successfully");
+        println!();
+
         // Train PINN
         println!("🚀 Training PINN on {}...", media_name);
         let start_time = Instant::now();
         let mut trainer = trainer;
         let metrics = trainer.train(
-            &x_train, &y_train, &t_train, &u_train,
+            &x_train,
+            &y_train,
+            &t_train,
+            &u_train,
             1500.0, // Default fallback (not used in heterogeneous mode)
-            &device, epochs,
+            &pinn_config,
+            &device,
+            epochs,
         )?;
         let training_time = start_time.elapsed();
 
@@ -292,12 +308,6 @@ fn main() -> KwaversResult<()> {
         println!("   Final IC loss: {:.6e}", metrics.ic_loss.last().unwrap());
         println!();
 
-        // Generate test data for validation
-        println!("🧪 Validating PINN predictions...");
-        let (x_test, y_test, t_test, c_test) =
-            generate_heterogeneous_test_grid(8, 8, 3, &geometry, wave_speed_fn);
-        println!("   Test points: {}", x_test.len());
-
         // Make predictions
         let predictions = trainer.pinn().predict(&x_test, &y_test, &t_test, &device)?;
         println!("   Predictions completed");
@@ -305,9 +315,14 @@ fn main() -> KwaversResult<()> {
         // Compute error statistics
         let mut errors = Vec::new();
         for i in 0..x_test.len() {
-            // Simplified error calculation (in practice would use analytical solution)
-            let error = (predictions[[i, 0]] as f64).abs() * 0.01; // Placeholder
-            errors.push(error);
+            let x = x_test[i];
+            let y = y_test[i];
+            let t = t_test[i];
+            let k = std::f64::consts::PI / 1.0;
+            let omega = 2.0 * std::f64::consts::PI * 1000.0;
+            let u_exact = (k * x).sin() * (k * y).sin() * (omega * t).cos() * 0.1;
+            let u_pred = predictions[[i, 0]] as f64;
+            errors.push((u_pred - u_exact).abs());
         }
 
         let mean_error: f64 = errors.iter().sum::<f64>() / errors.len() as f64;

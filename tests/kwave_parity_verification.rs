@@ -1,9 +1,10 @@
+use kwavers::boundary::PMLConfig;
 use kwavers::grid::Grid;
 use kwavers::medium::HomogeneousMedium;
-use kwavers::solver::kwave_parity::config::KWaveConfig;
-use kwavers::solver::kwave_parity::sensors::SensorConfig;
-use kwavers::solver::kwave_parity::solver::KWaveSolver;
-use kwavers::solver::kwave_parity::sources::KWaveSource;
+use kwavers::solver::spectral::config::{BoundaryConfig, SpectralConfig as KSpaceConfig};
+use kwavers::solver::spectral::solver::SpectralSolver as KSpaceSolver;
+use kwavers::solver::spectral::sources::SpectralSource as KSpaceSource;
+use kwavers::solver::spectral::SensorConfig;
 use ndarray::Array3;
 
 #[test]
@@ -37,21 +38,24 @@ fn test_kwave_parity_basic_simulation() {
         }
     }
 
-    let source = KWaveSource {
+    let source = KSpaceSource {
         p0: Some(p0.clone()),
         ..Default::default()
     };
 
     // 4. Setup Config
-    let config = KWaveConfig {
-        pml_size: 4,
-        pml_alpha: 2.0,
+    let config = KSpaceConfig {
+        boundary: BoundaryConfig::PML(PMLConfig {
+            thickness: 4,
+            sigma_max_acoustic: 2.0,
+            ..PMLConfig::default()
+        }),
         dt: 1e-7, // Set time step
         ..Default::default()
     };
 
     // 5. Create Solver
-    let mut solver = KWaveSolver::new(config, grid, &medium, source).unwrap();
+    let mut solver = KSpaceSolver::new(config, grid, &medium, source).unwrap();
 
     // 6. Run a few steps
     for _ in 0..10 {
@@ -105,7 +109,7 @@ fn test_kwave_sensor_records_intensity_and_stats() {
     let mut p0 = Array3::zeros((nx, ny, nz));
     p0[[nx / 2, ny / 2, nz / 2]] = 1.0;
 
-    let source = KWaveSource {
+    let source = KSpaceSource {
         p0: Some(p0),
         ..Default::default()
     };
@@ -129,15 +133,18 @@ fn test_kwave_sensor_records_intensity_and_stats() {
         frequency_response: None,
     };
 
-    let config = KWaveConfig {
+    let config = KSpaceConfig {
         dt: 5e-8,
-        pml_size: 4,
-        pml_alpha: 2.0,
+        boundary: BoundaryConfig::PML(PMLConfig {
+            thickness: 4,
+            sigma_max_acoustic: 2.0,
+            ..PMLConfig::default()
+        }),
         sensor_config,
         ..Default::default()
     };
 
-    let mut solver = KWaveSolver::new(config, grid, &medium, source).unwrap();
+    let mut solver = KSpaceSolver::new(config, grid, &medium, source).unwrap();
     let data = solver.run(25).unwrap();
 
     let p = data.p.expect("Expected `p` time series");

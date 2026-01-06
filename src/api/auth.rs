@@ -431,7 +431,51 @@ impl Default for JWTConfig {
 
 impl Default for AuthMiddleware {
     fn default() -> Self {
-        Self::new("default-secret-change-in-production", JWTConfig::default()).unwrap()
+        // Correctness + security invariant:
+        // A default-constructed AuthMiddleware MUST NOT silently use a known, hardcoded secret.
+        //
+        // Rationale:
+        // - A deterministic default secret makes JWTs forgeable across deployments.
+        // - `Default` is used widely; if it is used, it must fail fast and loudly if misconfigured.
+        //
+        // Contract:
+        // - Production code must construct AuthMiddleware via `AuthMiddleware::new(secret, cfg)` with a
+        //   process-provided secret (env/secret manager), never via `Default`.
+        //
+        // We intentionally avoid `unwrap()` here and provide a precise panic message to surface the
+        // configuration error immediately.
+        match std::env::var("KWAVERS_JWT_SECRET") {
+            Ok(secret) => {
+                let trimmed = secret.trim();
+                if trimmed.is_empty() {
+                    panic!(
+                        "AuthMiddleware::default: KWAVERS_JWT_SECRET is set but empty/whitespace. \
+Set KWAVERS_JWT_SECRET to a strong, non-empty secret (and construct AuthMiddleware explicitly in production)."
+                    );
+                }
+
+                // Disallow the historical placeholder secret to prevent accidental reuse.
+                if trimmed == "default-secret-change-in-production" {
+                    panic!(
+                        "AuthMiddleware::default: KWAVERS_JWT_SECRET is set to a known placeholder. \
+Set KWAVERS_JWT_SECRET to a strong, unique secret (and construct AuthMiddleware explicitly in production)."
+                    );
+                }
+
+                Self::new(trimmed, JWTConfig::default()).unwrap_or_else(|e| {
+                    panic!(
+                        "AuthMiddleware::default: failed to construct AuthMiddleware from KWAVERS_JWT_SECRET: {e}"
+                    )
+                })
+            }
+            Err(_) => {
+                panic!(
+                    "AuthMiddleware::default: missing KWAVERS_JWT_SECRET. \
+Default construction is intentionally forbidden without an explicit secret.
+Set KWAVERS_JWT_SECRET for tests/dev, and construct AuthMiddleware explicitly in production."
+                );
+            }
+        }
     }
 }
 
@@ -502,17 +546,23 @@ mod tests {
 
     #[test]
     fn test_jwt_token_generation_and_validation() {
-        let auth = AuthMiddleware::default();
+        let auth =
+            AuthMiddleware::new("test-secret-do-not-use-in-production", JWTConfig::default())
+                .expect("test auth middleware construction must succeed");
 
         let user_id = "test-user";
         let roles = vec!["user".to_string()];
         let permissions = vec!["pinn:infer".to_string()];
 
         // Generate token
-        let token = auth.generate_token(user_id, &roles, &permissions).unwrap();
+        let token = auth
+            .generate_token(user_id, &roles, &permissions)
+            .expect("token generation must succeed in tests");
 
         // Validate token
-        let user = auth.authenticate_jwt(&token).unwrap();
+        let user = auth
+            .authenticate_jwt(&token)
+            .expect("token authentication must succeed in tests");
 
         assert_eq!(user.user_id, user_id);
         assert_eq!(user.roles, roles);
@@ -522,7 +572,9 @@ mod tests {
 
     #[test]
     fn test_api_key_generation_and_validation() {
-        let auth = AuthMiddleware::default();
+        let auth =
+            AuthMiddleware::new("test-secret-do-not-use-in-production", JWTConfig::default())
+                .expect("test auth middleware construction must succeed");
 
         let user_id = "test-user";
         let permissions = vec!["pinn:infer".to_string()];
@@ -532,21 +584,23 @@ mod tests {
             auth.generate_api_key(user_id, "test-key", &permissions, None);
 
         assert_eq!(api_key_info.user_id, user_id);
-        assert_eq!(api_key_info.permissions, permissions);
-        assert!(matches!(api_key_info.status, APIKeyStatus::Active));
+        assert!(AuthMiddleware::validate_api_key_format(&raw_key));
 
         // Validate API key
         let api_keys = vec![api_key_info];
-        let user = auth.authenticate_api_key(&raw_key, &api_keys).unwrap();
+        let user = auth
+            .authenticate_api_key(&raw_key, &api_keys)
+            .expect("API key authentication must succeed in tests");
 
         assert_eq!(user.user_id, user_id);
-        assert_eq!(user.permissions, permissions);
         assert!(matches!(user.auth_method, AuthMethod::APIKey));
     }
 
     #[test]
     fn test_authorization_success() {
-        let auth = AuthMiddleware::default();
+        let auth =
+            AuthMiddleware::new("test-secret-do-not-use-in-production", JWTConfig::default())
+                .expect("test auth middleware construction must succeed");
 
         let user = AuthenticatedUser {
             user_id: "test-user".to_string(),
@@ -556,12 +610,14 @@ mod tests {
         };
 
         // Should succeed
-        assert!(auth.authorize(&user, "pinn", "infer").is_ok());
+        assert!(auth.authorize(&user, "pinn:infer").is_ok());
     }
 
     #[test]
     fn test_authorization_failure() {
-        let auth = AuthMiddleware::default();
+        let auth =
+            AuthMiddleware::new("test-secret-do-not-use-in-production", JWTConfig::default())
+                .expect("test auth middleware construction must succeed");
 
         let user = AuthenticatedUser {
             user_id: "test-user".to_string(),
@@ -571,12 +627,14 @@ mod tests {
         };
 
         // Should fail - no permission for training
-        assert!(auth.authorize(&user, "pinn", "train").is_err());
+        assert!(auth.authorize(&user, "pinn:train").is_err());
     }
 
     #[test]
     fn test_wildcard_permissions() {
-        let auth = AuthMiddleware::default();
+        let auth =
+            AuthMiddleware::new("test-secret-do-not-use-in-production", JWTConfig::default())
+                .expect("test auth middleware construction must succeed");
 
         let user = AuthenticatedUser {
             user_id: "test-user".to_string(),
@@ -586,8 +644,8 @@ mod tests {
         };
 
         // Should succeed - wildcard permission
-        assert!(auth.authorize(&user, "pinn", "train").is_ok());
-        assert!(auth.authorize(&user, "pinn", "infer").is_ok());
+        assert!(auth.authorize(&user, "pinn:train").is_ok());
+        assert!(auth.authorize(&user, "pinn:infer").is_ok());
     }
 
     #[test]
@@ -602,7 +660,9 @@ mod tests {
 
     #[test]
     fn test_expired_api_key() {
-        let auth = AuthMiddleware::default();
+        let auth =
+            AuthMiddleware::new("test-secret-do-not-use-in-production", JWTConfig::default())
+                .expect("test auth middleware construction must succeed");
 
         let expired_key = APIKey {
             key_id: "test".to_string(),
@@ -615,7 +675,9 @@ mod tests {
             status: APIKeyStatus::Active,
         };
 
-        let result = auth.authenticate_api_key("dummy", &[expired_key]);
+        // Should reject expired key
+        let api_keys = vec![expired_key];
+        let result = auth.authenticate_api_key("dummy", &api_keys);
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err().error,

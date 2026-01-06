@@ -366,7 +366,7 @@ fn simulate_treatment(
 }
 
 /// Get current treatment phase based on time
-fn get_current_phase<'a>(protocol: &'a TreatmentProtocol, time: f64) -> &'a TreatmentPhase {
+fn get_current_phase(protocol: &TreatmentProtocol, time: f64) -> &TreatmentPhase {
     let mut cumulative_time = 0.0;
 
     for phase in &protocol.phases {

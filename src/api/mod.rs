@@ -47,7 +47,10 @@ pub use models::{
 
     DICOMValue,
     DeviceCapabilities,
+    DeviceCapability,
+    DeviceInfo,
     DeviceStatus,
+    DeviceType,
     FindingMeasurements,
     FindingType,
     ImagingParameters,
@@ -96,16 +99,17 @@ pub struct HealthCheck {
 }
 
 /// Service health status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum HealthStatus {
+    #[default]
     Healthy,
     Degraded,
     Unhealthy,
 }
 
 /// Individual service status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ServiceStatus {
     pub status: HealthStatus,
     pub latency_ms: Option<u64>,
@@ -113,9 +117,10 @@ pub struct ServiceStatus {
 }
 
 /// Job status enumeration
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum JobStatus {
+    #[default]
     Queued,
     Running,
     Completed,
@@ -178,7 +183,7 @@ pub struct BoundaryConditionSpec {
 }
 
 /// Physics parameters
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PhysicsParameters {
     /// Material properties
     pub material_properties: HashMap<String, f64>,
@@ -188,17 +193,6 @@ pub struct PhysicsParameters {
     pub initial_values: HashMap<String, f64>,
     /// Domain parameters
     pub domain_params: HashMap<String, f64>,
-}
-
-impl Default for PhysicsParameters {
-    fn default() -> Self {
-        Self {
-            material_properties: HashMap::new(),
-            boundary_values: HashMap::new(),
-            initial_values: HashMap::new(),
-            domain_params: HashMap::new(),
-        }
-    }
 }
 
 /// Training configuration
@@ -452,28 +446,6 @@ impl Default for APIConfig {
             request_timeout: 300,            // 5 minutes
             max_body_size: 10 * 1024 * 1024, // 10MB
         }
-    }
-}
-
-impl Default for HealthStatus {
-    fn default() -> Self {
-        HealthStatus::Healthy
-    }
-}
-
-impl Default for ServiceStatus {
-    fn default() -> Self {
-        Self {
-            status: HealthStatus::Healthy,
-            latency_ms: None,
-            error_message: None,
-        }
-    }
-}
-
-impl Default for JobStatus {
-    fn default() -> Self {
-        JobStatus::Queued
     }
 }
 

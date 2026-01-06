@@ -835,7 +835,7 @@ mod tests {
 
         #[test]
         fn test_burn_pinn_gpu_creation() {
-            let device = burn::backend::wgpu::WgpuDevice::Default;
+            let device = burn::backend::wgpu::WgpuDevice::default();
             let config = BurnPINNConfig {
                 hidden_layers: vec![20, 20],
                 ..Default::default()
@@ -873,10 +873,10 @@ mod tests {
             };
             if let Ok(pinn) = BurnPINN1DWave::<GpuBackend>::new(config, &device) {
                 // Create test collocation points
-                let x = Tensor::<GpuBackend, 1>::from_floats([0.0, 0.5, 1.0], &device)
-                    .reshape([3, 1]);
-                let t = Tensor::<GpuBackend, 1>::from_floats([0.0, 0.1, 0.2], &device)
-                    .reshape([3, 1]);
+                let x =
+                    Tensor::<GpuBackend, 1>::from_floats([0.0, 0.5, 1.0], &device).reshape([3, 1]);
+                let t =
+                    Tensor::<GpuBackend, 1>::from_floats([0.0, 0.1, 0.2], &device).reshape([3, 1]);
 
                 // Compute PDE residual
                 let wave_speed = 343.0;

@@ -14,22 +14,31 @@ start_time=$(date +%s)
 
 echo "⚡ Phase 1: Core library unit tests only..."
 
-# Run only fast unit tests, skip expensive integration tests
-timeout $TIMEOUT cargo test \
-    --lib \
-    --quiet \
-    --no-default-features \
-    -- \
-    --test-threads=4 \
-    --skip "test_rayleigh_collapse_time" \
-    --skip "test_acoustic_dispersion_relation" \
-    --skip "literature_validation" \
-    --skip "physics_validation_test" \
-    --skip "energy_conservation" \
-    --skip "cfl_stability" \
-    --skip "dispersion_validation" \
-    --skip "benchmark" \
-    --nocapture
+if command -v cargo-nextest &> /dev/null; then
+    timeout $TIMEOUT cargo nextest run \
+        --profile ci \
+        --release \
+        --lib \
+        --no-default-features \
+        -E 'not test(/test_rayleigh_collapse_time/) and not test(/test_acoustic_dispersion_relation/) and not test(/literature_validation/) and not test(/physics_validation_test/) and not test(/energy_conservation/) and not test(/cfl_stability/) and not test(/dispersion_validation/) and not test(/benchmark/)' \
+        --quiet
+else
+    timeout $TIMEOUT cargo test \
+        --lib \
+        --quiet \
+        --no-default-features \
+        -- \
+        --test-threads=4 \
+        --skip "test_rayleigh_collapse_time" \
+        --skip "test_acoustic_dispersion_relation" \
+        --skip "literature_validation" \
+        --skip "physics_validation_test" \
+        --skip "energy_conservation" \
+        --skip "cfl_stability" \
+        --skip "dispersion_validation" \
+        --skip "benchmark" \
+        --nocapture
+fi
 
 end_time=$(date +%s)
 duration=$((end_time - start_time))

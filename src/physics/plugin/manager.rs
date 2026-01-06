@@ -2,12 +2,14 @@
 //!
 //! This module provides the main plugin manager that coordinates plugin execution.
 
-use super::{ExecutionStrategy, Plugin, PluginContext, SequentialStrategy};
+use super::{ExecutionStrategy, Plugin, PluginContext, PluginFields, SequentialStrategy};
+use crate::boundary::Boundary;
 use crate::error::{KwaversError, KwaversResult, PhysicsError, ValidationError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::performance::metrics::PerformanceMetrics;
 use crate::physics::field_mapping::UnifiedFieldType;
+use crate::source::Source;
 use ndarray::Array3;
 use ndarray::Array4;
 use std::collections::{HashMap, HashSet};
@@ -18,7 +20,7 @@ pub struct PluginManager {
     plugins: Vec<Box<dyn Plugin>>,
     execution_order: Vec<usize>,
     execution_strategy: Box<dyn ExecutionStrategy>,
-    context: PluginContext,
+    extra_fields: PluginFields,
     performance_metrics: PerformanceMetrics,
 }
 
@@ -28,7 +30,7 @@ impl std::fmt::Debug for PluginManager {
             .field("plugins_count", &self.plugins.len())
             .field("execution_order", &self.execution_order)
             .field("execution_strategy", &"<dyn ExecutionStrategy>")
-            .field("context", &self.context)
+            .field("extra_fields", &self.extra_fields)
             .field("performance_metrics", &self.performance_metrics)
             .finish()
     }
@@ -53,7 +55,7 @@ impl PluginManager {
             plugins: Vec::new(),
             execution_order: Vec::new(),
             execution_strategy: Box::new(SequentialStrategy),
-            context: PluginContext::new(Array3::zeros((1, 1, 1))),
+            extra_fields: PluginFields::new(Array3::zeros((1, 1, 1))),
             performance_metrics: PerformanceMetrics::new(),
         }
     }
@@ -97,9 +99,18 @@ impl PluginManager {
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
+        sources: &[Box<dyn Source>],
+        boundary: &mut dyn Boundary,
         dt: f64,
         t: f64,
     ) -> KwaversResult<()> {
+        // Create plugin context
+        let mut context = PluginContext {
+            extra_fields: &self.extra_fields,
+            sources,
+            boundary,
+        };
+
         // Execute plugins in dependency order - safe implementation
         for &idx in &self.execution_order {
             if idx >= self.plugins.len() {
@@ -115,7 +126,7 @@ impl PluginManager {
             }
 
             // Execute plugin directly without unsafe pointer manipulation
-            self.plugins[idx].update(fields, grid, medium, dt, t, &self.context)?;
+            self.plugins[idx].update(fields, grid, medium, dt, t, &mut context)?;
         }
 
         Ok(())
@@ -127,10 +138,19 @@ impl PluginManager {
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
+        sources: &[Box<dyn Source>],
+        boundary: &mut dyn Boundary,
         dt: f64,
         t: f64,
     ) -> KwaversResult<()> {
         let start = Instant::now();
+
+        // Create plugin context
+        let mut context = PluginContext {
+            extra_fields: &self.extra_fields,
+            sources,
+            boundary,
+        };
 
         // Execute each plugin and measure its time
         for &idx in &self.execution_order {
@@ -149,7 +169,7 @@ impl PluginManager {
             let plugin_start = Instant::now();
             let plugin = &mut self.plugins[idx];
 
-            plugin.update(fields, grid, medium, dt, t, &self.context)?;
+            plugin.update(fields, grid, medium, dt, t, &mut context)?;
 
             let plugin_duration = plugin_start.elapsed();
             self.performance_metrics

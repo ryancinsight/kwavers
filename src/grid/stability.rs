@@ -13,10 +13,11 @@ impl StabilityCalculator {
     /// Calculate CFL timestep for FDTD scheme
     pub fn cfl_timestep_fdtd(grid: &Grid, max_sound_speed: f64) -> f64 {
         let min_dx = grid.min_spacing();
+        let dim_factor = (grid.dimensionality as f64).sqrt();
 
-        // For 3D FDTD, CFL condition is dt <= dx / (c * sqrt(3))
+        // For FDTD, CFL condition is dt <= dx / (c * sqrt(dim))
         // We use safety factor for stability
-        CFL_SAFETY_FACTOR * min_dx / (max_sound_speed * 3.0_f64.sqrt())
+        CFL_SAFETY_FACTOR * min_dx / (max_sound_speed * dim_factor)
     }
 
     /// Calculate CFL timestep for PSTD scheme

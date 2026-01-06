@@ -1,10 +1,14 @@
 //! Simple tests to verify FDTD and PSTD solvers are working correctly
 
+use kwavers::boundary::{PMLBoundary, PMLConfig};
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::plugin::PluginManager;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
-use kwavers::solver::pstd::{PstdConfig, PstdPlugin};
+use kwavers::solver::spectral::config::BoundaryConfig;
+use kwavers::solver::spectral::SpectralConfig;
+use kwavers::solver::spectral::SpectralPlugin;
+use kwavers::source::Source;
 use ndarray::{s, Array4, Zip};
 
 // Named constants for test configuration
@@ -55,6 +59,7 @@ fn test_fdtd_solver() {
         cfl_factor: FDTD_CFL_FACTOR,
         subgridding: false,
         subgrid_factor: DEFAULT_SUBGRID_FACTOR,
+        enable_gpu_acceleration: false,
     };
 
     let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");
@@ -69,12 +74,18 @@ fn test_fdtd_solver() {
 
     let c = TEST_SOUND_SPEED;
     let dt = FDTD_CFL_FACTOR * TEST_GRID_SPACING / c;
+    let sources: Vec<Box<dyn Source>> = Vec::new();
+    let mut boundary = PMLBoundary::new(PMLConfig {
+        thickness: DEFAULT_PML_STENCIL_SIZE,
+        ..Default::default()
+    })
+    .expect("Failed to create PML boundary");
 
     // Run simulation for a few steps
     for step in 0..TEST_STEPS_SHORT {
         let t = step as f64 * dt;
         plugin_manager
-            .execute(&mut fields, &grid, &medium, dt, t)
+            .execute(&mut fields, &grid, &medium, &sources, &mut boundary, dt, t)
             .expect("Failed to execute plugins");
     }
 
@@ -136,21 +147,19 @@ fn test_pstd_solver() {
     let center = TEST_GRID_SIZE / 2;
     fields[[0, center, center, center]] = TEST_PRESSURE_AMPLITUDE; // Point source in pressure field
 
-    let config = PstdConfig {
-        use_kspace_correction: true,
-        correction_method: kwavers::solver::pstd::CorrectionMethod::Sinc,
-        use_antialiasing: true,
-        use_absorption: false,
-        absorption_alpha: 0.0,
-        absorption_y: 1.0,
-        cfl_factor: PSTD_CFL_FACTOR,
-        max_steps: 1000,
-        dispersive_media: false,
-        pml_layers: DEFAULT_PML_STENCIL_SIZE,
-        pml_alpha: 0.0,
+    let c = TEST_SOUND_SPEED;
+    let dt = PSTD_CFL_FACTOR * TEST_GRID_SPACING / c;
+    let config = SpectralConfig {
+        nt: TEST_STEPS_SHORT + 1,
+        dt,
+        boundary: BoundaryConfig::PML(PMLConfig {
+            thickness: DEFAULT_PML_STENCIL_SIZE,
+            ..Default::default()
+        }),
+        ..Default::default()
     };
 
-    let plugin = PstdPlugin::new(config, &grid).expect("Failed to create PSTD plugin");
+    let plugin = SpectralPlugin::new(config, &grid).expect("Failed to create spectral plugin");
     let mut plugin_manager = PluginManager::new();
     plugin_manager
         .add_plugin(Box::new(plugin))
@@ -160,14 +169,18 @@ fn test_pstd_solver() {
         .initialize(&grid, &medium)
         .expect("Failed to initialize plugins");
 
-    let c = TEST_SOUND_SPEED;
-    let dt = PSTD_CFL_FACTOR * TEST_GRID_SPACING / c;
+    let sources: Vec<Box<dyn Source>> = Vec::new();
+    let mut boundary = PMLBoundary::new(PMLConfig {
+        thickness: DEFAULT_PML_STENCIL_SIZE,
+        ..Default::default()
+    })
+    .expect("Failed to create PML boundary");
 
     // Run simulation for a few steps
     for step in 0..TEST_STEPS_SHORT {
         let t = step as f64 * dt;
         plugin_manager
-            .execute(&mut fields, &grid, &medium, dt, t)
+            .execute(&mut fields, &grid, &medium, &sources, &mut boundary, dt, t)
             .expect("Failed to execute plugins");
     }
 
@@ -252,6 +265,7 @@ fn test_wave_propagation() {
             cfl_factor: FDTD_CFL_FACTOR,
             subgridding: false,
             subgrid_factor: DEFAULT_SUBGRID_FACTOR,
+            enable_gpu_acceleration: false,
         };
 
         let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");
@@ -265,12 +279,26 @@ fn test_wave_propagation() {
 
         let c = TEST_SOUND_SPEED;
         let dt = FDTD_CFL_FACTOR * TEST_GRID_SPACING / c;
+        let sources: Vec<Box<dyn Source>> = Vec::new();
+        let mut boundary = PMLBoundary::new(PMLConfig {
+            thickness: DEFAULT_PML_STENCIL_SIZE,
+            ..Default::default()
+        })
+        .expect("Failed to create PML boundary");
 
         // Run for enough steps to see propagation
         for step in 0..TEST_STEPS_MEDIUM {
             let t = step as f64 * dt;
             plugin_manager
-                .execute(&mut fields_fdtd, &grid, &medium, dt, t)
+                .execute(
+                    &mut fields_fdtd,
+                    &grid,
+                    &medium,
+                    &sources,
+                    &mut boundary,
+                    dt,
+                    t,
+                )
                 .expect("Failed to execute plugins");
         }
 
@@ -285,24 +313,23 @@ fn test_wave_propagation() {
         // This is a known issue that needs further investigation
     }
 
-    // Test PSTD
+    // Test Spectral
     {
-        let mut fields_pstd = initial_fields.clone();
-        let config = PstdConfig {
-            use_kspace_correction: true,
-            correction_method: kwavers::solver::pstd::CorrectionMethod::Sinc,
-            use_antialiasing: true,
-            use_absorption: false,
-            absorption_alpha: 0.0,
-            absorption_y: 1.0,
-            cfl_factor: PSTD_CFL_FACTOR,
-            max_steps: 1000,
-            dispersive_media: false,
-            pml_layers: DEFAULT_PML_STENCIL_SIZE,
-            pml_alpha: 0.0,
+        let mut fields_spectral = initial_fields.clone();
+
+        let c = TEST_SOUND_SPEED;
+        let dt = PSTD_CFL_FACTOR * TEST_GRID_SPACING / c;
+        let config = SpectralConfig {
+            nt: TEST_STEPS_MEDIUM + 1,
+            dt,
+            boundary: BoundaryConfig::PML(PMLConfig {
+                thickness: DEFAULT_PML_STENCIL_SIZE,
+                ..Default::default()
+            }),
+            ..Default::default()
         };
 
-        let plugin = PstdPlugin::new(config, &grid).expect("Failed to create PSTD plugin");
+        let plugin = SpectralPlugin::new(config, &grid).expect("Failed to create spectral plugin");
         let mut plugin_manager = PluginManager::new();
         plugin_manager
             .add_plugin(Box::new(plugin))
@@ -311,25 +338,34 @@ fn test_wave_propagation() {
             .initialize(&grid, &medium)
             .expect("Failed to initialize plugins");
 
-        let c = TEST_SOUND_SPEED;
-        let dt = PSTD_CFL_FACTOR * TEST_GRID_SPACING / c;
+        let sources: Vec<Box<dyn Source>> = Vec::new();
+        let mut boundary = PMLBoundary::new(PMLConfig {
+            thickness: DEFAULT_PML_STENCIL_SIZE,
+            ..Default::default()
+        })
+        .expect("Failed to create PML boundary");
 
         // Run for enough steps to see propagation
         for step in 0..TEST_STEPS_MEDIUM {
             let t = step as f64 * dt;
             plugin_manager
-                .execute(&mut fields_pstd, &grid, &medium, dt, t)
+                .execute(
+                    &mut fields_spectral,
+                    &grid,
+                    &medium,
+                    &sources,
+                    &mut boundary,
+                    dt,
+                    t,
+                )
                 .expect("Failed to execute plugins");
         }
 
         // Check that simulation completed without NaN or infinity
-        let center_pressure = fields_pstd[[0, center, center, center]];
+        let center_pressure = fields_spectral[[0, center, center, center]];
         assert!(
             center_pressure.is_finite(),
-            "PSTD: Simulation should complete without NaN/Inf"
+            "Spectral: Simulation should complete without NaN/Inf"
         );
-
-        // Note: Wave propagation is not working correctly yet
-        // This is a known issue that needs further investigation
     }
 }

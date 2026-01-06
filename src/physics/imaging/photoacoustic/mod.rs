@@ -366,31 +366,18 @@ impl PhotoacousticSimulator {
         pressure_fields.push(p_curr.clone());
         time_points.push(0.0);
 
-        // Helper closure for safe indexed access with clamping
-        let clamp = |x: isize, max: usize| -> usize {
-            if x < 0 {
-                0
-            } else if x as usize >= max {
-                max - 1
-            } else {
-                x as usize
-            }
-        };
-
         // Time stepping: discrete 3D wave equation with 7-point Laplacian
+        let mut p_next = Array3::zeros((nx, ny, nz));
         for step in 1..=num_time_steps {
-            let mut p_next = Array3::zeros((nx, ny, nz));
-
             for i in 0..nx {
+                let im = if i > 0 { i - 1 } else { 0 };
+                let ip = if i + 1 < nx { i + 1 } else { nx - 1 };
                 for j in 0..ny {
+                    let jm = if j > 0 { j - 1 } else { 0 };
+                    let jp = if j + 1 < ny { j + 1 } else { ny - 1 };
                     for k in 0..nz {
-                        // Neighbors with clamp boundaries
-                        let im = clamp(i as isize - 1, nx);
-                        let ip = clamp(i as isize + 1, nx);
-                        let jm = clamp(j as isize - 1, ny);
-                        let jp = clamp(j as isize + 1, ny);
-                        let km = clamp(k as isize - 1, nz);
-                        let kp = clamp(k as isize + 1, nz);
+                        let km = if k > 0 { k - 1 } else { 0 };
+                        let kp = if k + 1 < nz { k + 1 } else { nz - 1 };
 
                         let center = p_curr[[i, j, k]];
                         let lap = (p_curr[[ip, j, k]] - 2.0 * center + p_curr[[im, j, k]])
@@ -398,14 +385,13 @@ impl PhotoacousticSimulator {
                             + (p_curr[[i, jp, k]] - 2.0 * center + p_curr[[i, jm, k]]) * inv_dy2
                             + (p_curr[[i, j, kp]] - 2.0 * center + p_curr[[i, j, km]]) * inv_dz2;
 
-                        // Leapfrog update: p^{n+1} = 2p^n - p^{n-1} + c^2 dt^2 ∇^2 p^n
                         p_next[[i, j, k]] = 2.0 * center - p_prev[[i, j, k]] + c2_dt2 * lap;
                     }
                 }
             }
 
-            // Advance state
-            p_prev = std::mem::replace(&mut p_curr, p_next);
+            std::mem::swap(&mut p_prev, &mut p_curr);
+            std::mem::swap(&mut p_curr, &mut p_next);
 
             // Save every 10 steps
             if step % 10 == 0 {
@@ -458,41 +444,6 @@ impl PhotoacousticSimulator {
         pressure_fields: &[Array3<f64>],
         time_points: &[f64],
     ) -> KwaversResult<Array3<f64>> {
-        // Helper for time interpolation
-        fn interpolate_time_series(signal: &[f64], times: &[f64], t: f64) -> f64 {
-            if times.is_empty() {
-                return 0.0;
-            }
-            if t <= times[0] {
-                return signal[0];
-            }
-            if t >= *times.last().unwrap() {
-                return *signal.last().unwrap();
-            }
-
-            // Find index
-            // Assuming sorted times
-            let mut idx = 0;
-            for (i, &time) in times.iter().enumerate() {
-                if time > t {
-                    idx = i;
-                    break;
-                }
-            }
-
-            if idx == 0 {
-                return signal[0];
-            }
-
-            let t0 = times[idx - 1];
-            let t1 = times[idx];
-            let v0 = signal[idx - 1];
-            let v1 = signal[idx];
-
-            let alpha = (t - t0) / (t1 - t0);
-            v0 * (1.0 - alpha) + v1 * alpha
-        }
-
         let (nx, ny, nz) = self.grid.dimensions();
         let mut reconstructed = Array3::<f64>::zeros((nx, ny, nz));
 
@@ -501,50 +452,94 @@ impl PhotoacousticSimulator {
         let c0 = self.parameters.speed_of_sound;
 
         // Pre-extract signals for all detectors
-        let mut signals = Vec::with_capacity(detectors.len());
-        for &(dx, dy, dz) in &detectors {
-            let mut signal = Vec::with_capacity(time_points.len());
-            for field in pressure_fields {
-                signal.push(self.interpolate_detector_signal(field, dx, dy, dz));
+        let n_time = time_points.len().min(pressure_fields.len());
+        if n_time == 0 {
+            return Ok(reconstructed);
+        }
+
+        let t_start = time_points.first().copied().unwrap_or(0.0);
+        let dt_time = if n_time >= 2 {
+            (time_points[1] - time_points[0]).abs()
+        } else {
+            0.0
+        };
+        let inv_dt_time = if dt_time > 0.0 { 1.0 / dt_time } else { 0.0 };
+
+        let mut detector_positions_m = Vec::with_capacity(detectors.len());
+        for &(dx_idx, dy_idx, dz_idx) in &detectors {
+            detector_positions_m.push((
+                dx_idx * self.grid.dx,
+                dy_idx * self.grid.dy,
+                dz_idx * self.grid.dz,
+            ));
+        }
+
+        let mut signals = vec![0.0f64; detectors.len() * n_time];
+        for (d_idx, &(dx, dy, dz)) in detectors.iter().enumerate() {
+            let base = d_idx * n_time;
+            for (t_idx, field) in pressure_fields.iter().take(n_time).enumerate() {
+                signals[base + t_idx] = self.interpolate_detector_signal(field, dx, dy, dz);
             }
-            signals.push(signal);
         }
 
         // Back-project
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    // Physical position of voxel
-                    let px = i as f64 * self.grid.dx;
-                    let py = j as f64 * self.grid.dy;
-                    let pz = k as f64 * self.grid.dz;
-
-                    let mut sum = 0.0;
-
-                    for (d_idx, &(dx_idx, dy_idx, dz_idx)) in detectors.iter().enumerate() {
-                        // Physical position of detector
-                        let dx = dx_idx * self.grid.dx;
-                        let dy = dy_idx * self.grid.dy;
-                        let dz = dz_idx * self.grid.dz;
-
-                        let dist =
-                            ((px - dx).powi(2) + (py - dy).powi(2) + (pz - dz).powi(2)).sqrt();
-                        let delay = dist / c0;
-
-                        // Linear interpolation in time
-                        let val = interpolate_time_series(&signals[d_idx], time_points, delay);
-
-                        // Weighting factor (1/R for spherical spreading correction)
-                        // Clamp distance to avoid division by zero near detectors
-                        let weight = 1.0 / dist.max(self.grid.dx);
-
-                        sum += val * weight;
-                    }
-
-                    reconstructed[[i, j, k]] = sum;
-                }
-            }
+        let nxy = ny * nz;
+        let expected_len = nx * nxy;
+        let out = reconstructed.as_slice_mut().ok_or_else(|| {
+            crate::error::KwaversError::InternalError(
+                "Reconstruction buffer not contiguous".to_string(),
+            )
+        })?;
+        if out.len() != expected_len {
+            return Err(crate::error::KwaversError::InternalError(
+                "Reconstruction buffer length mismatch".to_string(),
+            ));
         }
+
+        use rayon::prelude::*;
+        out.par_iter_mut().enumerate().for_each(|(idx, out_cell)| {
+            let k = idx % nz;
+            let j = (idx / nz) % ny;
+            let i = idx / nxy;
+
+            let px = i as f64 * self.grid.dx;
+            let py = j as f64 * self.grid.dy;
+            let pz = k as f64 * self.grid.dz;
+
+            let mut sum = 0.0;
+            for (d_idx, &(dx, dy, dz)) in detector_positions_m.iter().enumerate() {
+                let rx = px - dx;
+                let ry = py - dy;
+                let rz = pz - dz;
+                let dist = (rx * rx + ry * ry + rz * rz).sqrt();
+                let delay = dist / c0;
+
+                let mut val = signals[d_idx * n_time];
+                if n_time >= 2 && inv_dt_time > 0.0 {
+                    let pos = (delay - t_start) * inv_dt_time;
+                    if pos <= 0.0 {
+                        val = signals[d_idx * n_time];
+                    } else {
+                        let max_pos = (n_time - 1) as f64;
+                        if pos >= max_pos {
+                            val = signals[d_idx * n_time + (n_time - 1)];
+                        } else {
+                            let i0 = pos.floor() as usize;
+                            let frac = pos - i0 as f64;
+                            let base = d_idx * n_time + i0;
+                            let v0 = signals[base];
+                            let v1 = signals[base + 1];
+                            val = v0 * (1.0 - frac) + v1 * frac;
+                        }
+                    }
+                }
+
+                let weight = 1.0 / dist.max(self.grid.dx);
+                sum += val * weight;
+            }
+
+            *out_cell = sum;
+        });
 
         Ok(reconstructed)
     }
@@ -689,7 +684,7 @@ mod tests {
         let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
         let parameters = PhotoacousticParameters::default();
-        let mut simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
+        let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
         let fluence = simulator.compute_fluence();
         assert!(fluence.is_ok());
@@ -708,7 +703,7 @@ mod tests {
         let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
         let parameters = PhotoacousticParameters::default();
-        let mut simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
+        let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
         let fluence = simulator.compute_fluence().unwrap();
         let initial_pressure = simulator.compute_initial_pressure(&fluence);
@@ -756,7 +751,7 @@ mod tests {
         let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
         let parameters = PhotoacousticParameters::default();
-        let mut simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
+        let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
         let error = simulator.validate_analytical();
         assert!(error.is_ok());
@@ -783,9 +778,8 @@ mod tests {
         let source_y = 8.0;
         let source_z = 4.0;
 
-        for t in 0..n_time {
+        for &time in time_points.iter() {
             let mut field = Array3::<f64>::zeros((16, 16, 8));
-            let time = time_points[t];
 
             // Generate spherical wave from point source
             for i in 0..16 {

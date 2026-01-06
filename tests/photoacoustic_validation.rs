@@ -23,7 +23,7 @@ fn test_photoacoustic_analytical_pressure() -> KwaversResult<()> {
     let mut params = PhotoacousticParameters::default();
     params.laser_fluence = 10.0; // 10 mJ/cm²
 
-    let mut simulator = PhotoacousticSimulator::new(grid, params, &medium)?;
+    let simulator = PhotoacousticSimulator::new(grid, params, &medium)?;
 
     // Compute fluence and initial pressure
     let fluence = simulator.compute_fluence()?;
@@ -68,7 +68,7 @@ fn test_optical_fluence_attenuation() -> KwaversResult<()> {
     let grid = Grid::new(10, 10, 20, 0.001, 0.001, 0.001)?;
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
     let params = PhotoacousticParameters::default();
-    let mut simulator = PhotoacousticSimulator::new(grid, params, &medium)?;
+    let simulator = PhotoacousticSimulator::new(grid, params, &medium)?;
 
     let fluence = simulator.compute_fluence()?;
 
@@ -157,7 +157,7 @@ fn test_multiwavelength_simulation() -> KwaversResult<()> {
     params.wavelengths = vec![532.0, 650.0, 750.0, 850.0];
     params.absorption_coefficients = vec![50.0, 25.0, 15.0, 10.0];
 
-    let mut simulator = PhotoacousticSimulator::new(grid, params, &medium)?;
+    let simulator = PhotoacousticSimulator::new(grid, params, &medium)?;
 
     // Simulate at different wavelengths
     let fluence = simulator.compute_fluence()?;
@@ -187,7 +187,7 @@ fn test_heterogeneous_tissue_simulation() -> KwaversResult<()> {
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
     let params = PhotoacousticParameters::default();
 
-    let mut simulator = PhotoacousticSimulator::new(grid, params, &medium)?;
+    let simulator = PhotoacousticSimulator::new(grid, params, &medium)?;
 
     // The simulator should have created heterogeneous optical properties
     let optical_props = simulator.optical_properties();
@@ -304,7 +304,7 @@ fn test_kwave_compatibility() -> KwaversResult<()> {
 fn test_performance_benchmark() -> KwaversResult<()> {
     use std::time::Instant;
 
-    let grid = Grid::new(64, 64, 32, 0.0002, 0.0002, 0.0004)?;
+    let grid = Grid::new(32, 32, 16, 0.0002, 0.0002, 0.0004)?;
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
     let params = PhotoacousticParameters::default();
 

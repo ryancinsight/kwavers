@@ -2,7 +2,7 @@
 //! Based on Pinton et al. (2009): "A heterogeneous nonlinear attenuating full-wave model"
 
 use crate::error::KwaversResult;
-use crate::fft::{Fft3d, Ifft3d};
+use crate::fft::FFT_CACHE;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::plugin::{PluginMetadata, PluginState};
@@ -106,48 +106,22 @@ impl MixedDomainPropagationPlugin {
 
     /// Convert field to frequency domain
     pub fn to_frequency_domain(&mut self, field: &Array3<f64>) -> KwaversResult<Array3<Complex64>> {
-        // Convert real field to complex for FFT
-        let mut complex_field = field.mapv(|x| Complex64::new(x, 0.0));
+        let (nx, ny, nz) = field.dim();
+        let fft = FFT_CACHE.get_or_create(nx, ny, nz);
 
-        // Create grid for FFT operation (dimensions match field, spacing is 1.0 for normalized k-space)
-        // Grid provides metadata for FFT wavenumber calculations
-        let grid = crate::grid::Grid::new(
-            field.shape()[0],
-            field.shape()[1],
-            field.shape()[2],
-            1.0,
-            1.0,
-            1.0,
-        )?;
-
-        // Apply 3D FFT
-        let mut fft = Fft3d::new(field.shape()[0], field.shape()[1], field.shape()[2]);
-        fft.process(&mut complex_field, &grid);
-
-        Ok(complex_field)
+        let mut out = Array3::<Complex64>::zeros((nx, ny, nz));
+        fft.forward_into(field, &mut out);
+        Ok(out)
     }
 
     /// Convert field to time domain
     pub fn to_time_domain(&mut self, field: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
-        // Clone field for IFFT (process modifies in place)
-        let mut complex_field = field.clone();
-
-        // Create grid for IFFT operation (dimensions match field, spacing is 1.0 for normalized k-space)
-        // Grid provides metadata for IFFT wavenumber calculations
-        let grid = crate::grid::Grid::new(
-            field.shape()[0],
-            field.shape()[1],
-            field.shape()[2],
-            1.0,
-            1.0,
-            1.0,
-        )?;
-
-        // Apply 3D IFFT
-        let mut ifft = Ifft3d::new(field.shape()[0], field.shape()[1], field.shape()[2]);
-        let real_field = ifft.process(&mut complex_field, &grid);
-
-        Ok(real_field)
+        let (nx, ny, nz) = field.dim();
+        let fft = FFT_CACHE.get_or_create(nx, ny, nz);
+        let mut out = Array3::<f64>::zeros((nx, ny, nz));
+        let mut scratch = Array3::<Complex64>::zeros((nx, ny, nz));
+        fft.inverse_into(field, &mut out, &mut scratch);
+        Ok(out)
     }
 
     /// Time-domain propagation for nonlinear fields
@@ -248,7 +222,7 @@ impl crate::physics::plugin::Plugin for MixedDomainPropagationPlugin {
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        _context: &crate::physics::plugin::PluginContext,
+        _context: &mut crate::physics::plugin::PluginContext<'_>,
     ) -> KwaversResult<()> {
         use crate::physics::field_mapping::UnifiedFieldType;
 

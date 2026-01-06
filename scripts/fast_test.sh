@@ -15,7 +15,7 @@ start_time=$(date +%s)
 
 # Run optimized integration tests with minimal features
 echo "Running SRS NFR-002 compliant integration tests..."
-timeout 25 cargo test --test integration_test --no-default-features --features minimal --quiet || {
+timeout 25 cargo nextest run --profile ci --release --test integration_test --no-default-features --features minimal || {
     echo "❌ CRITICAL: Integration tests exceed SRS NFR-002 limit (30s)"
     exit 1
 }

@@ -9,7 +9,6 @@
 
 use crate::error::{KwaversResult, ValidationError};
 use crate::grid::Grid;
-use crate::physics::plugin::PluginContext;
 use crate::physics::traits::ChemicalModelTrait;
 use log::debug;
 use ndarray::Array3;
@@ -128,11 +127,7 @@ impl ChemicalModel {
     }
 
     /// Update chemical reactions based on acoustic field
-    pub fn update(
-        &mut self,
-        params: &ChemicalUpdateParams,
-        _context: &PluginContext,
-    ) -> KwaversResult<()> {
+    pub fn update(&mut self, params: &ChemicalUpdateParams) -> KwaversResult<()> {
         let start = Instant::now();
         self.state = ChemicalModelState::Running;
 
@@ -372,9 +367,8 @@ impl ChemicalModelTrait for ChemicalModel {
 
         match params_result {
             Ok(params) => {
-                // Create context with actual pressure field
-                let context = PluginContext::new(p.clone());
-                if let Err(e) = self.update(&params, &context) {
+                // Update chemical model with params
+                if let Err(e) = self.update(&params) {
                     log::error!("Chemical update failed: {}", e);
                 }
             }

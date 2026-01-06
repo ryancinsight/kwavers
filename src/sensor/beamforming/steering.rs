@@ -9,7 +9,7 @@ use crate::error::KwaversResult;
 use ndarray::Array1;
 
 /// Steering vector calculation methods
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum SteeringVectorMethod {
     /// Far-field plane wave assumption: a(θ,φ) = exp(j k r · û)
     PlaneWave,
@@ -24,6 +24,26 @@ pub enum SteeringVectorMethod {
 pub struct SteeringVector;
 
 impl SteeringVector {
+    pub fn compute_plane_wave(
+        direction: [f64; 3],
+        frequency: f64,
+        sensor_positions: &[[f64; 3]],
+        speed_of_sound: f64,
+    ) -> Array1<num_complex::Complex<f64>> {
+        use num_complex::Complex;
+
+        let wavenumber = 2.0 * std::f64::consts::PI * frequency / speed_of_sound;
+        let direction_unit = crate::sensor::math::normalize3(direction);
+
+        let mut steering_vector = Array1::zeros(sensor_positions.len());
+        for (i, &pos) in sensor_positions.iter().enumerate() {
+            let phase = wavenumber * crate::sensor::math::dot3(pos, direction_unit);
+            steering_vector[i] = Complex::new(0.0, phase).exp();
+        }
+
+        steering_vector
+    }
+
     /// Compute steering vector for given direction and sensor positions
     /// Returns complex-valued steering vector as `Array1<Complex<f64>>`
     pub fn compute(
@@ -42,21 +62,19 @@ impl SteeringVector {
 
         match method {
             SteeringVectorMethod::PlaneWave => {
-                // Plane wave steering: a_i = exp(j k · r_i · û)
-                // where û is the unit direction vector
-                let direction_unit = Self::normalize_vector(direction);
-
-                for (i, &pos) in sensor_positions.iter().enumerate() {
-                    let phase = wavenumber * Self::dot_product(pos, direction_unit);
-                    steering_vector[i] = Complex::new(0.0, phase).exp();
-                }
+                steering_vector = Self::compute_plane_wave(
+                    direction,
+                    frequency,
+                    sensor_positions,
+                    speed_of_sound,
+                );
             }
 
             SteeringVectorMethod::SphericalWave { source_position } => {
                 // Spherical wave steering: a_i = exp(j k |r_i - r₀|) / |r_i - r₀|
                 // where r₀ is the source position
                 for (i, &pos) in sensor_positions.iter().enumerate() {
-                    let distance = Self::euclidean_distance(pos, *source_position);
+                    let distance = crate::sensor::math::distance3(pos, *source_position);
                     if distance.abs() < 1e-12 {
                         return Err(crate::error::KwaversError::Numerical(
                             crate::error::NumericalError::InvalidOperation(
@@ -73,7 +91,7 @@ impl SteeringVector {
             SteeringVectorMethod::Focused { focal_point } => {
                 // Focused beam: phase delays to focus at focal_point
                 for (i, &pos) in sensor_positions.iter().enumerate() {
-                    let distance_to_focus = Self::euclidean_distance(pos, *focal_point);
+                    let distance_to_focus = crate::sensor::math::distance3(pos, *focal_point);
                     let phase = wavenumber * distance_to_focus;
                     steering_vector[i] = Complex::new(0.0, phase).exp();
                 }
@@ -99,29 +117,6 @@ impl SteeringVector {
             speed_of_sound,
         )?;
         Ok(complex_steering.mapv(|c| c.re)) // Take real part for delay-and-sum compatibility
-    }
-
-    /// Normalize 3D vector to unit length
-    fn normalize_vector(v: [f64; 3]) -> [f64; 3] {
-        let norm = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
-        if norm > 0.0 {
-            [v[0] / norm, v[1] / norm, v[2] / norm]
-        } else {
-            [0.0, 0.0, 1.0] // Default to z-direction if zero vector
-        }
-    }
-
-    /// Compute dot product of two 3D vectors
-    fn dot_product(a: [f64; 3], b: [f64; 3]) -> f64 {
-        a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-    }
-
-    /// Compute Euclidean distance between two 3D points
-    fn euclidean_distance(a: [f64; 3], b: [f64; 3]) -> f64 {
-        let dx = a[0] - b[0];
-        let dy = a[1] - b[1];
-        let dz = a[2] - b[2];
-        (dx * dx + dy * dy + dz * dz).sqrt()
     }
 
     /// Compute broadside steering vector (perpendicular to array axis)

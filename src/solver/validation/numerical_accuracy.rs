@@ -164,7 +164,7 @@ impl NumericalValidator {
     fn validate_dispersion(&self) -> Result<DispersionResults, Box<dyn std::error::Error>> {
         use crate::physics::mechanics::acoustic_wave::kuznetsov::{KuznetsovConfig, KuznetsovWave};
         use crate::solver::fdtd::{FdtdConfig, FdtdSolver};
-        use crate::solver::pstd::{PstdConfig, PstdSolver};
+        use crate::solver::spectral::{SpectralConfig, SpectralSolver, SpectralSource};
         use std::f64::consts::PI;
 
         // Test parameters
@@ -174,9 +174,14 @@ impl NumericalValidator {
         let dt = 0.5 * self.grid.dx
             / crate::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
 
-        // PSTD dispersion test
-        let pstd_config = PstdConfig::default();
-        let pstd_solver = PstdSolver::new(pstd_config, &self.grid)?;
+        // PSTD (Spectral) dispersion test
+        let pstd_config = SpectralConfig::default();
+        let pstd_solver = SpectralSolver::new(
+            pstd_config,
+            self.grid.clone(),
+            &self.medium,
+            SpectralSource::default(),
+        )?;
         let pstd_phase_error = self.compute_phase_error(&pstd_solver, k, omega, dt)?;
 
         // FDTD dispersion test

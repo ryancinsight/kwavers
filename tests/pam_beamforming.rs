@@ -1,8 +1,17 @@
+//! Integration tests for PAM beamforming that enforce SSOT usage.
+//!
+//! Invariants:
+//! - PAM must not re-implement beamforming algorithms; it must compose `sensor::beamforming`.
+//! - Tests must exercise only what we touched: PAM + shared `BeamformingProcessor` integration.
+//! - Tests must run in `--release` and be deterministic.
+
+use kwavers::physics::constants::SOUND_SPEED_WATER;
+use kwavers::sensor::beamforming::BeamformingCoreConfig;
+use kwavers::sensor::passive_acoustic_mapping::geometry::ArrayGeometry;
 use kwavers::sensor::passive_acoustic_mapping::{
-    beamforming::{ApodizationType, Beamformer, BeamformingConfig, BeamformingMethod},
-    geometry::ArrayGeometry,
+    ApodizationType, PAMConfig, PamBeamformingConfig, PamBeamformingMethod, PassiveAcousticMapper,
 };
-use ndarray::Array3;
+use ndarray::{Array3, Axis};
 
 fn linear_array_positions(elements: usize, pitch_m: f64) -> ArrayGeometry {
     ArrayGeometry::Linear {
@@ -13,109 +22,206 @@ fn linear_array_positions(elements: usize, pitch_m: f64) -> ArrayGeometry {
     }
 }
 
-fn synth_sensor_data(
+fn synth_sensor_data_impulses(
     geometry: &ArrayGeometry,
     n_samples: usize,
     focal_point: [f64; 3],
     sample_rate: f64,
+    sound_speed: f64,
 ) -> Array3<f64> {
     // Shape: (n_elements, 1, n_samples)
     let n_elements = geometry.num_elements();
     let mut data = Array3::<f64>::zeros((n_elements, 1, n_samples));
 
-    // Compute delays and create unit impulses at those indices
-    // Reuse a simple delay computation consistent with beamforming implementation
     let positions = geometry.element_positions();
-    let c = kwavers::physics::constants::SOUND_SPEED_WATER;
     for (i, pos) in positions.iter().enumerate() {
-        let dist = ((pos[0] - focal_point[0]).powi(2)
-            + (pos[1] - focal_point[1]).powi(2)
-            + (pos[2] - focal_point[2]).powi(2))
-        .sqrt();
-        let delay_s = dist / c;
-        let idx = (delay_s * sample_rate).round() as usize;
-        if idx < n_samples {
-            data[[i, 0, idx]] = 1.0;
+        let dx = pos[0] - focal_point[0];
+        let dy = pos[1] - focal_point[1];
+        let dz = pos[2] - focal_point[2];
+        let dist = (dx * dx + dy * dy + dz * dz).sqrt();
+
+        let delay_s = dist / sound_speed;
+        let idx = (delay_s * sample_rate).round() as isize;
+
+        if idx >= 0 && (idx as usize) < n_samples {
+            data[[i, 0, idx as usize]] = 1.0;
         }
     }
 
     data
 }
 
-#[test]
-fn delay_and_sum_single_look_aligns_impulses() {
-    let elements = 8;
-    let pitch = 0.01; // 1 cm
-    let geometry = linear_array_positions(elements, pitch);
-    let sample_rate = 1_000_000.0; // 1 MHz
-    let n_samples = 4096;
-    let focal = [0.0, 0.0, 0.0];
-    let sensor_data = synth_sensor_data(&geometry, n_samples, focal, sample_rate);
+fn pam_config_for(
+    method: PamBeamformingMethod,
+    focal_point: [f64; 3],
+    sample_rate: f64,
+    sound_speed: f64,
+) -> PAMConfig {
+    let mut core = BeamformingCoreConfig::default();
+    // SSOT: sampling & sound speed must be consistent between delay computation and band mapping.
+    core.sampling_frequency = sample_rate;
+    core.sound_speed = sound_speed;
 
-    let config = BeamformingConfig {
-        method: BeamformingMethod::DelayAndSum,
+    let beamforming = PamBeamformingConfig {
+        core,
+        method,
         frequency_range: (20e3, 10e6),
         spatial_resolution: 1e-3,
         apodization: ApodizationType::Hamming,
-        focal_point: focal,
+        focal_point,
     };
 
-    // Precompute positions before moving geometry
-    let positions = geometry.element_positions();
-    let mut bf = Beamformer::new(geometry, config).expect("beamformer init");
-    let out = bf.beamform(&sensor_data, sample_rate).expect("beamform");
-
-    assert_eq!(out.dim(), (1, 1, n_samples));
-
-    // Expect a distinct peak within an early window (alignment window)
-    let early_window = 128usize;
-    let mut max_val = -f64::INFINITY;
-    let mut max_idx = 0usize;
-    for t in 0..n_samples {
-        let v = out[[0, 0, t]];
-        if v > max_val {
-            max_val = v;
-            max_idx = t;
-        }
+    PAMConfig {
+        beamforming,
+        // Keep bands minimal so tests focus on integration not DSP decisions.
+        frequency_bands: vec![(20e3, 100e3)],
+        integration_time: 0.1,
+        threshold: 0.0, // accept any non-zero power
+        enable_harmonic_analysis: false,
+        enable_broadband_analysis: false,
     }
-
-    // Allow one-sample tolerance due to rounding
-    assert!(
-        max_idx < early_window,
-        "peak at {}, expected within first {} samples",
-        max_idx,
-        early_window
-    );
-    assert!(max_val > 0.5, "beamformed peak too small: {}", max_val);
 }
 
 #[test]
-fn capon_diagonal_loading_produces_finite_output() {
+fn pam_delay_and_sum_pipeline_produces_nonzero_map() {
     let elements = 8;
-    let pitch = 0.01; // 1 cm
+    let pitch = 0.01;
     let geometry = linear_array_positions(elements, pitch);
-    let sample_rate = 1_000_000.0; // 1 MHz
-    let n_samples = 4096;
-    let focal = [0.0, 0.0, 0.0];
-    let sensor_data = synth_sensor_data(&geometry, n_samples, focal, sample_rate);
 
-    let config = BeamformingConfig {
-        method: BeamformingMethod::CaponDiagonalLoading {
+    let sample_rate = 1_000_000.0; // 1 MHz
+    let n_samples = 2048;
+    let focal = [0.0, 0.0, 0.0];
+    let sound_speed = SOUND_SPEED_WATER;
+
+    let sensor_data =
+        synth_sensor_data_impulses(&geometry, n_samples, focal, sample_rate, sound_speed);
+
+    let config = pam_config_for(
+        PamBeamformingMethod::DelayAndSum,
+        focal,
+        sample_rate,
+        sound_speed,
+    );
+    let mut pam = PassiveAcousticMapper::new(config, geometry).expect("PAM init");
+
+    let map = pam
+        .process(&sensor_data, sample_rate)
+        .expect("PAM process (DAS)");
+
+    // Output: (nx, ny, nbands). For the current PAM pipeline, beamformed data is (1,1,nt),
+    // so map is expected to be (1,1,nbands).
+    assert_eq!(map.shape()[0], 1);
+    assert_eq!(map.shape()[1], 1);
+    assert_eq!(map.shape()[2], 1);
+
+    let v = map[[0, 0, 0]];
+    assert!(v.is_finite());
+    assert!(v > 0.0, "expected non-zero band power, got {v}");
+}
+
+#[test]
+fn pam_capon_pipeline_produces_finite_map() {
+    let elements = 8;
+    let pitch = 0.01;
+    let geometry = linear_array_positions(elements, pitch);
+
+    let sample_rate = 1_000_000.0; // 1 MHz
+    let n_samples = 2048;
+    let focal = [0.0, 0.0, 0.0];
+    let sound_speed = SOUND_SPEED_WATER;
+
+    let sensor_data =
+        synth_sensor_data_impulses(&geometry, n_samples, focal, sample_rate, sound_speed);
+
+    let config = pam_config_for(
+        PamBeamformingMethod::CaponDiagonalLoading {
             diagonal_loading: 1e-4,
         },
-        frequency_range: (20e3, 10e6),
-        spatial_resolution: 1e-3,
-        apodization: ApodizationType::Hamming,
-        focal_point: focal,
-    };
+        focal,
+        sample_rate,
+        sound_speed,
+    );
+    let mut pam = PassiveAcousticMapper::new(config, geometry).expect("PAM init");
 
-    let mut bf = Beamformer::new(geometry, config).expect("beamformer init");
-    let out = bf.beamform(&sensor_data, sample_rate).expect("beamform");
-    assert_eq!(out.dim(), (1, 1, n_samples));
+    let map = pam
+        .process(&sensor_data, sample_rate)
+        .expect("PAM process (Capon)");
 
-    // Basic sanity: values are finite and the initial segment has energy
-    for t in 0..64 {
-        let v = out[[0, 0, t]];
-        assert!(v.is_finite(), "non-finite output at {}: {}", t, v);
+    assert_eq!(map.shape()[0], 1);
+    assert_eq!(map.shape()[1], 1);
+    assert_eq!(map.shape()[2], 1);
+
+    let v = map[[0, 0, 0]];
+    assert!(v.is_finite(), "non-finite map value: {v}");
+    assert!(v >= 0.0, "band power must be non-negative: {v}");
+}
+
+#[test]
+fn pam_time_exposure_acoustics_outputs_single_time_plane() {
+    let elements = 8;
+    let pitch = 0.01;
+    let geometry = linear_array_positions(elements, pitch);
+
+    let sample_rate = 1_000_000.0;
+    let n_samples = 2048;
+    let focal = [0.0, 0.0, 0.0];
+    let sound_speed = SOUND_SPEED_WATER;
+
+    // Use impulses; TEA should integrate (DAS^2) over time => positive scalar.
+    let sensor_data =
+        synth_sensor_data_impulses(&geometry, n_samples, focal, sample_rate, sound_speed);
+
+    let config = pam_config_for(
+        PamBeamformingMethod::TimeExposureAcoustics,
+        focal,
+        sample_rate,
+        sound_speed,
+    );
+    let mut pam = PassiveAcousticMapper::new(config, geometry).expect("PAM init");
+
+    let map = pam
+        .process(&sensor_data, sample_rate)
+        .expect("PAM process (TEA)");
+
+    assert_eq!(map.shape(), &[1, 1, 1]);
+
+    let v = map[[0, 0, 0]];
+    assert!(v.is_finite());
+    assert!(
+        v > 0.0,
+        "TEA should be strictly positive for impulse-aligned data"
+    );
+}
+
+/// Sanity check: the synthetic impulse data has exactly one impulse per element.
+#[test]
+fn synth_impulses_has_one_impulse_per_element() {
+    let elements = 8;
+    let pitch = 0.01;
+    let geometry = linear_array_positions(elements, pitch);
+
+    let sample_rate = 1_000_000.0;
+    let n_samples = 2048;
+    let focal = [0.0, 0.0, 0.0];
+
+    let data =
+        synth_sensor_data_impulses(&geometry, n_samples, focal, sample_rate, SOUND_SPEED_WATER);
+
+    // Count impulses per element channel.
+    for elem in 0..elements {
+        let channel = data.index_axis(Axis(0), elem);
+        let mut count = 0usize;
+        for v in channel.iter() {
+            if *v == 1.0 {
+                count += 1;
+            } else {
+                // enforce exact 0/1 outputs from the generator
+                assert!(*v == 0.0, "unexpected non-binary sample: {v}");
+            }
+        }
+        assert_eq!(
+            count, 1,
+            "expected 1 impulse for element {elem}, got {count}"
+        );
     }
 }

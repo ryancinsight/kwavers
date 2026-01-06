@@ -18,7 +18,7 @@
 use kwavers::{
     grid::Grid,
     medium::HomogeneousMedium,
-    signal::{sine_wave::SineWave, Signal},
+    signal::{Signal, SineWave},
     time::Time,
     KwaversResult,
 };

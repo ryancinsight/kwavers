@@ -61,9 +61,9 @@ use crate::sensor::localization::{Position, SensorArray};
 /// -----
 ///
 /// ```no_run
-/// use crate::sensor::localization::array::{Sensor, SensorArray, ArrayGeometry};
-/// use crate::sensor::localization::Position;
-/// use crate::sensor::localization::multilateration::trilateration::TrilaterationSolver;
+/// use kwavers::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
+/// use kwavers::sensor::localization::multilateration::trilateration::TrilaterationSolver;
+/// use kwavers::sensor::localization::Position;
 ///
 /// // Construct a simple non-collinear array
 /// let sensors = vec![
@@ -83,7 +83,7 @@ use crate::sensor::localization::{Position, SensorArray};
 /// // With a fourth sensor to disambiguate +/- z
 /// let res4 = solver.solve_three_with_fourth(ranges, [0, 1, 2], (3, 1.5))?;
 /// assert!(res4.uncertainty <= res.uncertainty + 1e-6);
-/// # Ok::<(), crate::error::KwaversError>(())
+/// # Ok::<(), kwavers::error::KwaversError>(())
 /// ```
 ///
 /// Safety & Errors
@@ -109,9 +109,9 @@ impl<'a> TrilaterationSolver<'a> {
     /// Example
     /// -------
     /// ```no_run
-    /// # use crate::sensor::localization::array::{Sensor, SensorArray, ArrayGeometry};
-    /// # use crate::sensor::localization::Position;
-    /// # use crate::sensor::localization::multilateration::trilateration::TrilaterationSolver;
+    /// # use kwavers::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
+    /// # use kwavers::sensor::localization::multilateration::trilateration::TrilaterationSolver;
+    /// # use kwavers::sensor::localization::Position;
     /// # let sensors = vec![
     /// #     Sensor::new(0, Position::new(0.0, 0.0, 0.0)),
     /// #     Sensor::new(1, Position::new(1.0, 0.0, 0.0)),
@@ -121,7 +121,7 @@ impl<'a> TrilaterationSolver<'a> {
     /// # let solver = TrilaterationSolver::new(&array);
     /// let res = solver.solve_three([1.0, 1.1180, 1.1180], [0, 1, 2])?;
     /// assert!(res.uncertainty.is_finite());
-    /// # Ok::<(), crate::error::KwaversError>(())
+    /// # Ok::<(), kwavers::error::KwaversError>(())
     /// ```
     #[cfg_attr(
         feature = "structured-logging",
@@ -161,7 +161,7 @@ impl<'a> TrilaterationSolver<'a> {
         let ex = normalize(sub(p2, p1));
         let d = norm(sub(p2, p1));
         #[cfg(feature = "structured-logging")]
-        tracing::Span::current().record("d", &tracing::field::display(d));
+        tracing::Span::current().record("d", tracing::field::display(d));
         if d < 1e-12 {
             #[cfg(feature = "structured-logging")]
             tracing::warn!(d, "Degenerate sensor configuration: p1 and p2 coincide");
@@ -173,7 +173,7 @@ impl<'a> TrilaterationSolver<'a> {
         let p3p1 = sub(p3, p1);
         let i = dot(ex, p3p1);
         #[cfg(feature = "structured-logging")]
-        tracing::Span::current().record("i", &tracing::field::display(i));
+        tracing::Span::current().record("i", tracing::field::display(i));
         let temp = sub(p3p1, scale(ex, i));
         let temp_norm = norm(temp);
         if temp_norm < 1e-12 {
@@ -181,19 +181,19 @@ impl<'a> TrilaterationSolver<'a> {
             #[cfg(feature = "structured-logging")]
             tracing::warn!(temp_norm, "Collinear sensors detected; falling back to LS");
             #[cfg(feature = "structured-logging")]
-            tracing::Span::current().record("branch", &tracing::field::display("ls_fallback"));
+            tracing::Span::current().record("branch", tracing::field::display("ls_fallback"));
             return self.fallback_ls(ranges_m, sensor_indices);
         }
         let ey = normalize(temp);
         let ez = cross(ex, ey);
         let j = dot(ey, p3p1);
         #[cfg(feature = "structured-logging")]
-        tracing::Span::current().record("j", &tracing::field::display(j));
+        tracing::Span::current().record("j", tracing::field::display(j));
         if j.abs() < 1e-12 {
             #[cfg(feature = "structured-logging")]
             tracing::warn!(j, "Degenerate geometry (j≈0); falling back to LS");
             #[cfg(feature = "structured-logging")]
-            tracing::Span::current().record("branch", &tracing::field::display("ls_fallback"));
+            tracing::Span::current().record("branch", tracing::field::display("ls_fallback"));
             return self.fallback_ls(ranges_m, sensor_indices);
         }
 
@@ -202,13 +202,13 @@ impl<'a> TrilaterationSolver<'a> {
         let y = ((r1 * r1 - r3 * r3 + i * i + j * j) / (2.0 * j)) - (i / j) * x;
         let z2 = r1 * r1 - x * x - y * y;
         #[cfg(feature = "structured-logging")]
-        tracing::Span::current().record("z2", &tracing::field::display(z2));
+        tracing::Span::current().record("z2", tracing::field::display(z2));
         if z2 < -1e-10 {
             // No real intersection -> numerical issues or inconsistent ranges; fallback
             #[cfg(feature = "structured-logging")]
             tracing::warn!(z2, "No real intersection (z^2<0); falling back to LS");
             #[cfg(feature = "structured-logging")]
-            tracing::Span::current().record("branch", &tracing::field::display("ls_fallback"));
+            tracing::Span::current().record("branch", tracing::field::display("ls_fallback"));
             return self.fallback_ls(ranges_m, sensor_indices);
         }
         let z = z2.max(0.0).sqrt();
@@ -228,8 +228,8 @@ impl<'a> TrilaterationSolver<'a> {
         let rmse = ((res[0] * res[0] + res[1] * res[1] + res[2] * res[2]) / 3.0).sqrt();
         #[cfg(feature = "structured-logging")]
         {
-            tracing::Span::current().record("rmse", &tracing::field::display(rmse));
-            tracing::Span::current().record("branch", &tracing::field::display("exact"));
+            tracing::Span::current().record("rmse", tracing::field::display(rmse));
+            tracing::Span::current().record("branch", tracing::field::display("exact"));
         }
 
         Ok(TrilaterationResult {
@@ -246,9 +246,9 @@ impl<'a> TrilaterationSolver<'a> {
     /// Example
     /// -------
     /// ```no_run
-    /// # use crate::sensor::localization::array::{Sensor, SensorArray, ArrayGeometry};
-    /// # use crate::sensor::localization::Position;
-    /// # use crate::sensor::localization::multilateration::trilateration::TrilaterationSolver;
+    /// # use kwavers::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
+    /// # use kwavers::sensor::localization::multilateration::trilateration::TrilaterationSolver;
+    /// # use kwavers::sensor::localization::Position;
     /// # let sensors = vec![
     /// #     Sensor::new(0, Position::new(0.0, 0.0, 0.0)),
     /// #     Sensor::new(1, Position::new(1.0, 0.0, 0.0)),
@@ -259,7 +259,7 @@ impl<'a> TrilaterationSolver<'a> {
     /// # let solver = TrilaterationSolver::new(&array);
     /// let res = solver.solve_three_with_fourth([1.0, 1.1180, 1.1180], [0, 1, 2], (3, 1.5))?;
     /// assert!(res.uncertainty.is_finite());
-    /// # Ok::<(), crate::error::KwaversError>(())
+    /// # Ok::<(), kwavers::error::KwaversError>(())
     /// ```
     #[cfg_attr(
         feature = "structured-logging",
@@ -301,7 +301,7 @@ impl<'a> TrilaterationSolver<'a> {
         let ex = normalize(sub(p2, p1));
         let d = norm(sub(p2, p1));
         #[cfg(feature = "structured-logging")]
-        tracing::Span::current().record("d", &tracing::field::display(d));
+        tracing::Span::current().record("d", tracing::field::display(d));
         if d < 1e-12 {
             #[cfg(feature = "structured-logging")]
             tracing::warn!(d, "Degenerate sensor configuration: p1 and p2 coincide");
@@ -312,7 +312,7 @@ impl<'a> TrilaterationSolver<'a> {
         let p3p1 = sub(p3, p1);
         let i = dot(ex, p3p1);
         #[cfg(feature = "structured-logging")]
-        tracing::Span::current().record("i", &tracing::field::display(i));
+        tracing::Span::current().record("i", tracing::field::display(i));
         let temp = sub(p3p1, scale(ex, i));
         let temp_norm = norm(temp);
         if temp_norm < 1e-12 {
@@ -320,19 +320,19 @@ impl<'a> TrilaterationSolver<'a> {
             #[cfg(feature = "structured-logging")]
             tracing::warn!(temp_norm, "Collinear sensors detected; falling back to LS");
             #[cfg(feature = "structured-logging")]
-            tracing::Span::current().record("branch", &tracing::field::display("ls_fallback"));
+            tracing::Span::current().record("branch", tracing::field::display("ls_fallback"));
             return self.fallback_ls(ranges_m, sensor_indices);
         }
         let ey = normalize(temp);
         let ez = cross(ex, ey);
         let j = dot(ey, p3p1);
         #[cfg(feature = "structured-logging")]
-        tracing::Span::current().record("j", &tracing::field::display(j));
+        tracing::Span::current().record("j", tracing::field::display(j));
         if j.abs() < 1e-12 {
             #[cfg(feature = "structured-logging")]
             tracing::warn!(j, "Degenerate geometry (j≈0); falling back to LS");
             #[cfg(feature = "structured-logging")]
-            tracing::Span::current().record("branch", &tracing::field::display("ls_fallback"));
+            tracing::Span::current().record("branch", tracing::field::display("ls_fallback"));
             return self.fallback_ls(ranges_m, sensor_indices);
         }
 
@@ -340,12 +340,12 @@ impl<'a> TrilaterationSolver<'a> {
         let y = ((r1 * r1 - r3 * r3 + i * i + j * j) / (2.0 * j)) - (i / j) * x;
         let z2 = r1 * r1 - x * x - y * y;
         #[cfg(feature = "structured-logging")]
-        tracing::Span::current().record("z2", &tracing::field::display(z2));
+        tracing::Span::current().record("z2", tracing::field::display(z2));
         if z2 < -1e-10 {
             #[cfg(feature = "structured-logging")]
             tracing::warn!(z2, "No real intersection (z^2<0); falling back to LS");
             #[cfg(feature = "structured-logging")]
-            tracing::Span::current().record("branch", &tracing::field::display("ls_fallback"));
+            tracing::Span::current().record("branch", tracing::field::display("ls_fallback"));
             return self.fallback_ls(ranges_m, sensor_indices);
         }
         let z = z2.max(0.0).sqrt();
@@ -373,9 +373,9 @@ impl<'a> TrilaterationSolver<'a> {
         let rmse = ((res.iter().map(|v| v * v).sum::<f64>()) / 4.0).sqrt();
         #[cfg(feature = "structured-logging")]
         {
-            tracing::Span::current().record("rmse", &tracing::field::display(rmse));
+            tracing::Span::current().record("rmse", tracing::field::display(rmse));
             tracing::Span::current()
-                .record("branch", &tracing::field::display("fourth_disambiguation"));
+                .record("branch", tracing::field::display("fourth_disambiguation"));
         }
 
         Ok(TrilaterationResult {

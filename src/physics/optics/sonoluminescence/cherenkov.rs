@@ -308,6 +308,6 @@ mod tests {
 
         // Peak should be in UV/blue for Cherenkov in water
         let peak_wavelength = wavelengths[peak_idx];
-        assert!(peak_wavelength >= 200e-9 && peak_wavelength <= 400e-9);
+        assert!((200e-9..=400e-9).contains(&peak_wavelength));
     }
 }

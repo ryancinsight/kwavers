@@ -458,9 +458,9 @@ impl CloudPINNService {
 
         // Initialize AWS clients
         let sagemaker_client = SageMakerClient::new(&shared_config);
-        let lambda_client = LambdaClient::new(&shared_config);
-        let ec2_client = EC2Client::new(&shared_config);
-        let autoscaling_client = AutoScalingClient::new(&shared_config);
+        let _lambda_client = LambdaClient::new(&shared_config);
+        let _ec2_client = EC2Client::new(&shared_config);
+        let _autoscaling_client = AutoScalingClient::new(&shared_config);
         let elb_client = ELBClient::new(&shared_config);
 
         // Generate unique deployment ID
@@ -531,7 +531,7 @@ impl CloudPINNService {
             })?;
 
         // Create Application Load Balancer for the endpoint
-        let load_balancer = elb_client
+        let _load_balancer = elb_client
             .create_load_balancer()
             .name(format!("kwavers-pinn-alb-{}", deployment_id))
             .subnets("subnet-12345678") // Would be configured properly
@@ -578,7 +578,7 @@ impl CloudPINNService {
         let deployment_id = uuid::Uuid::new_v4().to_string();
 
         // Serialize model for deployment
-        let model_data = self.serialize_model_for_deployment(model).await?;
+        let _model_data = self.serialize_model_for_deployment(model).await?;
 
         // Create Vertex AI endpoint
         let endpoint_name = format!("kwavers-pinn-endpoint-{}", deployment_id);
@@ -616,12 +616,12 @@ impl CloudPINNService {
         let deployment_id = uuid::Uuid::new_v4().to_string();
 
         // Serialize model for deployment
-        let model_data = self.serialize_model_for_deployment(model).await?;
+        let _model_data = self.serialize_model_for_deployment(model).await?;
 
         // Create Azure Machine Learning endpoint
         let endpoint_name = format!("kwavers-pinn-endpoint-{}", deployment_id);
-        let resource_group = "kwavers-rg"; // Would be configured properly
-        let workspace_name = "kwavers-ml-workspace"; // Would be configured properly
+        let _resource_group = "kwavers-rg"; // Would be configured properly
+        let _workspace_name = "kwavers-ml-workspace"; // Would be configured properly
 
         // Deploy model to Azure ML with proper endpoint configuration
         let endpoint_url = format!("https://{}.azureml.ms/score", endpoint_name);
@@ -659,7 +659,7 @@ impl CloudPINNService {
             .await;
 
         // Initialize AWS clients
-        let autoscaling_client = AutoScalingClient::new(&shared_config);
+        let _autoscaling_client = AutoScalingClient::new(&shared_config);
         let sagemaker_client = SageMakerClient::new(&shared_config);
 
         // Extract endpoint name from handle endpoint URL
@@ -693,7 +693,7 @@ impl CloudPINNService {
 
         // Update production variant with new instance count
         if let Some(variants) = current_config.production_variants {
-            if let Some(primary_variant) = variants.first() {
+            if let Some(_primary_variant) = variants.first() {
                 // Update endpoint configuration
                 sagemaker_client
                     .update_endpoint()

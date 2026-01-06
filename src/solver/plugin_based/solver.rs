@@ -10,9 +10,10 @@ use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::plugin::{Plugin, PluginManager};
 use crate::recorder::RecorderTrait;
-use crate::source::Source;
+use crate::source::{Source, SourceField};
 use crate::time::Time;
 use log::{debug, info};
+use ndarray::Array3;
 use std::sync::Arc;
 
 use super::field_registry::FieldRegistry;
@@ -30,6 +31,7 @@ pub struct PluginBasedSolver {
     boundary: Box<dyn Boundary>,
     /// Acoustic sources
     sources: Vec<Box<dyn Source>>,
+    source_masks: Vec<Array3<f64>>,
     /// Field registry for data management
     field_registry: FieldRegistry,
     /// Plugin manager for physics modules
@@ -66,7 +68,9 @@ impl PluginBasedSolver {
         boundary: Box<dyn Boundary>,
         source: Box<dyn Source>,
     ) -> Self {
+        let source_mask = source.create_mask(&grid);
         let sources = vec![source];
+        let source_masks = vec![source_mask];
 
         let field_registry = FieldRegistry::new(&grid);
         Self {
@@ -75,6 +79,7 @@ impl PluginBasedSolver {
             medium,
             boundary,
             sources,
+            source_masks,
             field_registry,
             plugin_manager: PluginManager::new(),
             performance: PerformanceMonitor::new(),
@@ -95,8 +100,19 @@ impl PluginBasedSolver {
     }
 
     /// Add an acoustic source
-    pub fn add_source(&mut self, source: Box<dyn Source>) {
+    pub fn add_source(&mut self, source: Box<dyn Source>) -> KwaversResult<()> {
+        let required_field = match source.source_type() {
+            SourceField::Pressure => UnifiedFieldType::Pressure,
+            SourceField::VelocityX => UnifiedFieldType::VelocityX,
+            SourceField::VelocityY => UnifiedFieldType::VelocityY,
+            SourceField::VelocityZ => UnifiedFieldType::VelocityZ,
+        };
+        self.field_registry.register_field(required_field)?;
+
+        let mask = source.create_mask(&self.grid);
         self.sources.push(source);
+        self.source_masks.push(mask);
+        Ok(())
     }
 
     /// Set the recorder
@@ -108,6 +124,18 @@ impl PluginBasedSolver {
     pub fn initialize(&mut self) -> KwaversResult<()> {
         info!("Initializing plugin-based solver");
 
+        let mut required_fields = Vec::new();
+        for source in &self.sources {
+            let field = match source.source_type() {
+                SourceField::Pressure => UnifiedFieldType::Pressure,
+                SourceField::VelocityX => UnifiedFieldType::VelocityX,
+                SourceField::VelocityY => UnifiedFieldType::VelocityY,
+                SourceField::VelocityZ => UnifiedFieldType::VelocityZ,
+            };
+            required_fields.push(field);
+        }
+        self.field_registry.register_fields(&required_fields)?;
+
         // Build field registry
         self.field_registry.build()?;
 
@@ -115,6 +143,23 @@ impl PluginBasedSolver {
         self.plugin_manager.initialize(&self.grid, &*self.medium)?;
 
         // Boundary conditions don't need initialization in current implementation
+        for (source, mask) in self.sources.iter().zip(self.source_masks.iter()) {
+            let init_amp = source.initial_amplitude();
+            if init_amp == 0.0 {
+                continue;
+            }
+
+            let field_type = match source.source_type() {
+                SourceField::Pressure => UnifiedFieldType::Pressure,
+                SourceField::VelocityX => UnifiedFieldType::VelocityX,
+                SourceField::VelocityY => UnifiedFieldType::VelocityY,
+                SourceField::VelocityZ => UnifiedFieldType::VelocityZ,
+            };
+
+            if let Ok(mut field) = self.field_registry.get_field_mut(field_type) {
+                field.scaled_add(init_amp, mask);
+            }
+        }
 
         debug!(
             "Solver initialized with {} plugins",
@@ -161,14 +206,17 @@ impl PluginBasedSolver {
         let t = self.current_step as f64 * self.time.dt;
 
         // Apply sources
-        for source in &self.sources {
-            if let Ok(mut pressure) = self
-                .field_registry
-                .get_field_mut(UnifiedFieldType::Pressure)
-            {
-                let mask = source.create_mask(&self.grid);
+        for (source, mask) in self.sources.iter().zip(self.source_masks.iter()) {
+            let field_type = match source.source_type() {
+                SourceField::Pressure => UnifiedFieldType::Pressure,
+                SourceField::VelocityX => UnifiedFieldType::VelocityX,
+                SourceField::VelocityY => UnifiedFieldType::VelocityY,
+                SourceField::VelocityZ => UnifiedFieldType::VelocityZ,
+            };
+
+            if let Ok(mut field) = self.field_registry.get_field_mut(field_type) {
                 let amplitude = source.amplitude(t);
-                pressure.scaled_add(amplitude, &mask);
+                field.scaled_add(amplitude, mask);
             }
         }
 
@@ -182,7 +230,9 @@ impl PluginBasedSolver {
             let result = plugin_manager.execute(
                 fields_array,
                 &self.grid,
-                self.medium.as_ref(), // Get &**self.medium,  // Deref Arc<dyn Medium> to &dyn Mediumdyn Medium from Arc
+                self.medium.as_ref(),
+                &self.sources,
+                self.boundary.as_mut(),
                 self.time.dt,
                 t,
             );

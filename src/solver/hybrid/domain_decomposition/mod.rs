@@ -38,6 +38,7 @@ pub use region::{DomainRegion, DomainType};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
+use crate::solver::hybrid::config::DecompositionStrategy;
 
 /// Main domain decomposer that coordinates analysis and partitioning
 #[derive(Debug)]
@@ -56,13 +57,18 @@ impl DomainDecomposer {
         }
     }
 
-    /// Decompose the domain based on medium properties and grid
-    pub fn decompose(&self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<Vec<DomainRegion>> {
+    /// Decompose the domain based on medium properties, grid, and strategy
+    pub fn decompose(
+        &self,
+        grid: &Grid,
+        medium: &dyn Medium,
+        strategy: DecompositionStrategy,
+    ) -> KwaversResult<Vec<DomainRegion>> {
         // Analyze the domain
         let metrics = self.analyzer.analyze(grid, medium)?;
 
-        // Partition based on analysis
-        self.partitioner.partition(grid, &metrics)
+        // Partition based on analysis and strategy
+        self.partitioner.partition(grid, &metrics, strategy)
     }
 }
 

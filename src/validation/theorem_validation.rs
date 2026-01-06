@@ -131,7 +131,11 @@ impl TheoremValidator {
     ) -> TheoremValidation {
         let n_samples = time_domain.len() as f64;
         let time_energy: f64 = time_domain.iter().map(|&x| x * x).sum::<f64>();
-        let freq_energy: f64 = freq_domain.iter().map(|&x: &Complex64| x.norm_sqr()).sum::<f64>() / n_samples;
+        let freq_energy: f64 = freq_domain
+            .iter()
+            .map(|&x: &Complex64| x.norm_sqr())
+            .sum::<f64>()
+            / n_samples;
 
         let error = (time_energy - freq_energy).abs() / time_energy.abs().max(1e-10);
         let passed = error < 1e-10; // Very tight tolerance for Parseval (machine precision)

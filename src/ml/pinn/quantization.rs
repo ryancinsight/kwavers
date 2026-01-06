@@ -331,7 +331,11 @@ impl Quantizer {
                 let bits = *weight_bits;
                 let max_val = 2f32.powf(bits as f32 - 1.0) - 1.0;
                 let abs_max = data.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
-                let scale = if abs_max == 0.0 { 1.0 } else { abs_max / max_val };
+                let scale = if abs_max == 0.0 {
+                    1.0
+                } else {
+                    abs_max / max_val
+                };
 
                 let quantized_data: Vec<i8> = data
                     .iter()
@@ -353,7 +357,11 @@ impl Quantizer {
                 loop {
                     let max_val = 2f32.powf(current_bits as f32 - 1.0) - 1.0;
                     let abs_max = data.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
-                    let test_scale = if abs_max == 0.0 { 1.0 } else { abs_max / max_val };
+                    let test_scale = if abs_max == 0.0 {
+                        1.0
+                    } else {
+                        abs_max / max_val
+                    };
 
                     let test_quantized: Vec<i8> = data
                         .iter()

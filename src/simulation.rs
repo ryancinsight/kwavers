@@ -7,10 +7,10 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::sensor::Sensor;
-use crate::solver::kwave_parity::config::KWaveConfig;
-use crate::solver::kwave_parity::solver::KWaveSolver;
-use crate::solver::kwave_parity::sources::{KWaveSource, SourceMode};
-use crate::solver::kwave_parity::sensors::{SensorConfig as KWaveSensorConfig};
+use crate::solver::kspace::config::KSpaceConfig;
+use crate::solver::kspace::solver::KSpaceSolver;
+use crate::solver::kspace::sources::{KSpaceSource, SourceMode};
+use crate::solver::kspace::sensors::{SensorConfig};
 use crate::source::{Source, SourceType};
 use ndarray::{Array2, Array3};
 use log::info;
@@ -18,18 +18,18 @@ use std::collections::HashMap;
 
 /// Main simulation controller
 pub struct Simulation<'a, M: Medium> {
-    solver: KWaveSolver,
+    solver: KSpaceSolver,
     grid: Grid,
     sources: Vec<&'a dyn Source>,
     sensors: Vec<&'a mut Sensor>,
     medium: &'a M,
-    config: KWaveConfig,
+    config: KSpaceConfig,
 }
 
 impl<'a, M: Medium> Simulation<'a, M> {
     /// Create a new simulation
     pub fn new(
-        config: KWaveConfig,
+        config: KSpaceConfig,
         grid: Grid,
         medium: &'a M,
         sources: Vec<&'a dyn Source>,
@@ -37,7 +37,7 @@ impl<'a, M: Medium> Simulation<'a, M> {
     ) -> KwaversResult<Self> {
         
         // 1. Prepare Sources
-        // Combine generic sources into KWaveSource
+        // Combine generic sources into KSpaceSource
         let nt = config.nt;
         let dt = config.dt;
         
@@ -181,7 +181,7 @@ impl<'a, M: Medium> Simulation<'a, M> {
             }
         }
         
-        let kwave_source = KWaveSource {
+        let kspace_source = KSpaceSource {
             p0: if has_p0 { Some(p0_acc) } else { None },
             u0: if has_u0 { Some((ux0_acc, uy0_acc, uz0_acc)) } else { None },
             p_mask: if num_points > 0 { Some(p_mask) } else { None },
@@ -208,7 +208,7 @@ impl<'a, M: Medium> Simulation<'a, M> {
         let mut config_clone = config.clone();
         config_clone.sensor_mask = Some(sensor_mask_arr);
         
-        let solver = KWaveSolver::new(config_clone, grid.clone(), medium, kwave_source)?;
+        let solver = KSpaceSolver::new(config_clone, grid.clone(), medium, kspace_source)?;
 
         Ok(Self {
             solver,
@@ -225,7 +225,7 @@ impl<'a, M: Medium> Simulation<'a, M> {
         info!("Starting simulation with {} steps", self.config.nt);
         
         // 1. Update Sensor Mask in Solver (if it wasn't set in new)
-        // KWaveSolver::new reads config.sensor_mask.
+        // KSpaceSolver::new reads config.sensor_mask.
         // So we must set it in `new`.
         
         // 2. Time Loop

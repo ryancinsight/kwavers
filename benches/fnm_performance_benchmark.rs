@@ -150,7 +150,8 @@ fn benchmark_fnm_precomputation(c: &mut Criterion) {
             b.iter(|| {
                 // Clear cache to force recomputation
                 solver.clear_cache();
-                black_box(solver.precompute_factors(z).unwrap());
+                solver.precompute_factors(z).unwrap();
+                black_box(());
             });
         });
     }
@@ -187,7 +188,8 @@ fn benchmark_fnm_memory_scaling(c: &mut Criterion) {
             b.iter(|| {
                 solver.clear_cache();
                 for &z in &z_values {
-                    black_box(solver.precompute_factors(z).unwrap());
+                    solver.precompute_factors(z).unwrap();
+                    black_box(());
                 }
                 black_box(solver.memory_usage());
             });

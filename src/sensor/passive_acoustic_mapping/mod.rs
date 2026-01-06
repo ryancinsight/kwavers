@@ -4,6 +4,16 @@
 //! mapping cavitation fields and sonoluminescence events using arbitrary sensor
 //! array geometries.
 //!
+//! ## Architectural Note (SSOT Enforcement)
+//!
+//! PAM provides **no** independent beamforming algorithm implementations.
+//! Beamforming algorithms and numerical primitives are owned by
+//! `crate::sensor::beamforming` (single source of truth). PAM owns:
+//! - beamforming *policy* (method selection, apodization, focal point, bands)
+//! - map construction and post-processing (TEA, band power integration, etc.)
+//!
+//! This preserves a deep vertical separation of concern.
+//!
 //! ## Literature References
 //!
 //! 1. **Gyöngy & Coussios (2010)**: "Passive spatial mapping of inertial cavitation
@@ -13,30 +23,35 @@
 //! 3. **Coviello et al. (2015)**: "Passive acoustic mapping utilizing optimal beamforming
 //!    in ultrasound therapy monitoring", J. Acoust. Soc. Am.
 
-pub mod beamforming;
+pub mod beamforming_config;
 pub mod geometry;
 pub mod mapping;
 pub mod plugin;
 
-pub use beamforming::{Beamformer, BeamformingConfig, BeamformingMethod};
+pub use beamforming_config::{ApodizationType, PamBeamformingConfig, PamBeamformingMethod};
 pub use geometry::{ArrayElement, ArrayGeometry};
 pub use mapping::{PAMConfig, PAMProcessor};
 pub use plugin::PAMPlugin;
 
-use crate::error::KwaversResult;
-use ndarray::Array3;
+use crate::error::{KwaversError, KwaversResult};
+use crate::sensor::beamforming::BeamformingProcessor;
+use ndarray::{Array3, Axis};
 
 /// Main PAM interface
 #[derive(Debug)]
 pub struct PassiveAcousticMapper {
     processor: PAMProcessor,
-    beamformer: Beamformer,
+    beamformer: BeamformingProcessor,
 }
 
 impl PassiveAcousticMapper {
     /// Create a new passive acoustic mapper
     pub fn new(config: PAMConfig, geometry: ArrayGeometry) -> KwaversResult<Self> {
-        let beamformer = Beamformer::new(geometry, config.beamforming.clone())?;
+        config.beamforming.validate()?;
+
+        let element_positions = geometry.element_positions();
+        let core_cfg = config.beamforming.clone().into();
+        let beamformer = BeamformingProcessor::new(core_cfg, element_positions);
         let processor = PAMProcessor::new(config)?;
 
         Ok(Self {
@@ -51,10 +66,63 @@ impl PassiveAcousticMapper {
         sensor_data: &Array3<f64>,
         sample_rate: f64,
     ) -> KwaversResult<Array3<f64>> {
-        // Beamform the data
-        let beamformed = self.beamformer.beamform(sensor_data, sample_rate)?;
+        let config = self.processor.config();
 
-        // Process to extract cavitation map
+        // Ensure config invariants (no silent divergence).
+        config.beamforming.validate()?;
+
+        let delays = self
+            .beamformer
+            .compute_delays(config.beamforming.focal_point);
+
+        let beamformed = match config.beamforming.method {
+            PamBeamformingMethod::DelayAndSum => {
+                let weights = vec![1.0; self.beamformer.num_sensors()];
+                self.beamformer
+                    .delay_and_sum_with(sensor_data, sample_rate, &delays, &weights)?
+            }
+            PamBeamformingMethod::CaponDiagonalLoading { diagonal_loading } => self
+                .beamformer
+                .mvdr_unsteered_weights_time_series(sensor_data, diagonal_loading)?,
+            PamBeamformingMethod::Music { .. } => {
+                return Err(KwaversError::InvalidInput(
+                    "PAM beamforming: MUSIC is not yet wired to the shared subspace implementation. Use DelayAndSum or CaponDiagonalLoading for PAM mapping."
+                        .to_string(),
+                ));
+            }
+            PamBeamformingMethod::EigenspaceMinVariance { .. } => {
+                return Err(KwaversError::InvalidInput(
+                    "PAM beamforming: EigenspaceMinVariance is not yet wired to the shared subspace implementation. Use DelayAndSum or CaponDiagonalLoading for PAM mapping."
+                        .to_string(),
+                ));
+            }
+            PamBeamformingMethod::TimeExposureAcoustics => {
+                // TEA = ∫ (DAS(t))² dt, computed here to keep the invariant explicit.
+                let weights = vec![1.0; self.beamformer.num_sensors()];
+                let das = self.beamformer.delay_and_sum_with(
+                    sensor_data,
+                    sample_rate,
+                    &delays,
+                    &weights,
+                )?;
+
+                let mut squared = das.clone();
+                squared.mapv_inplace(|x| x * x);
+
+                let integrated = squared.sum_axis(Axis(2));
+                let (nx, ny) = (integrated.shape()[0], integrated.shape()[1]);
+
+                let mut tea = Array3::<f64>::zeros((nx, ny, 1));
+                for ix in 0..nx {
+                    for iy in 0..ny {
+                        tea[[ix, iy, 0]] = integrated[[ix, iy]];
+                    }
+                }
+
+                tea
+            }
+        };
+
         self.processor.process(&beamformed)
     }
 
@@ -66,8 +134,14 @@ impl PassiveAcousticMapper {
 
     /// Update configuration
     pub fn set_config(&mut self, config: PAMConfig) -> KwaversResult<()> {
-        self.processor.set_config(config.clone())?;
-        self.beamformer.set_config(config.beamforming)?;
+        config.beamforming.validate()?;
+
+        // Rebuild the shared beamformer from SSOT-derived config.
+        let element_positions: Vec<[f64; 3]> = self.beamformer.sensor_positions().to_vec();
+        let core_cfg = config.beamforming.clone().into();
+        self.beamformer = BeamformingProcessor::new(core_cfg, element_positions);
+
+        self.processor.set_config(config)?;
         Ok(())
     }
 }

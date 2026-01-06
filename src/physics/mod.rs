@@ -3,6 +3,7 @@
 //! This module contains the core physics implementations for acoustic wave simulation,
 //! including material properties, wave equations, and numerical constants.
 
+pub mod analysis;
 pub mod bubble_dynamics;
 pub mod cavitation_control;
 pub mod chemistry;

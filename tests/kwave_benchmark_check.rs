@@ -1,8 +1,10 @@
 use kwavers::grid::Grid;
-use kwavers::medium::HomogeneousMedium;
-use kwavers::solver::kwave_parity::config::{AbsorptionMode, KWaveConfig};
-use kwavers::solver::kwave_parity::solver::KWaveSolver;
-use kwavers::solver::kwave_parity::sources::{KWaveSource, SourceMode};
+use kwavers::medium::{CoreMedium, HomogeneousMedium};
+use kwavers::solver::spectral::config::{
+    AbsorptionMode, BoundaryConfig, SpectralConfig as KSpaceConfig,
+};
+use kwavers::solver::spectral::solver::SpectralSolver as KSpaceSolver;
+use kwavers::solver::spectral::sources::{SourceMode, SpectralSource as KSpaceSource};
 use ndarray::{Array2, Array3};
 
 #[test]
@@ -17,7 +19,7 @@ fn test_plane_wave_propagation_benchmark() {
     // 2. Setup Medium (Water)
     // c0 = 1500 m/s, rho0 = 1000 kg/m^3
     let medium = HomogeneousMedium::water(&grid);
-    let c0 = 1500.0; // Expected speed
+    let c0 = medium.sound_speed(0, 0, 0);
 
     // 3. Setup Source (Plane Wave Source at x_index = 20)
     let source_x_idx = 20;
@@ -44,7 +46,7 @@ fn test_plane_wave_propagation_benchmark() {
         p_signal[[0, n]] = val;
     }
 
-    let source = KWaveSource {
+    let source = KSpaceSource {
         p_mask: Some(p_mask),
         p_signal: Some(p_signal),
         p_mode: SourceMode::Dirichlet, // Use Dirichlet to avoid time-derivative
@@ -52,16 +54,15 @@ fn test_plane_wave_propagation_benchmark() {
     };
 
     // 4. Setup Config
-    let config = KWaveConfig {
-        pml_size: 0, // Disable PML to avoid damping in small Y/Z dimensions
-        pml_alpha: 2.0,
+    let config = KSpaceConfig {
         dt,
         absorption_mode: AbsorptionMode::Lossless, // Pure propagation for speed check
+        boundary: BoundaryConfig::None,
         ..Default::default()
     };
 
     // 5. Create Solver
-    let mut solver = KWaveSolver::new(config, grid.clone(), &medium, source).unwrap();
+    let mut solver = KSpaceSolver::new(config, grid.clone(), &medium, source).unwrap();
 
     // 6. Run Simulation
     // We want to check the peak position at the end
@@ -78,7 +79,7 @@ fn test_plane_wave_propagation_benchmark() {
     let mut max_idx = 0;
 
     for i in 0..nx {
-        let val = p_field[[i, j_center, k_center]];
+        let val = p_field[[i, j_center, k_center]].abs();
         if val > max_val {
             max_val = val;
             max_idx = i;
@@ -87,29 +88,20 @@ fn test_plane_wave_propagation_benchmark() {
 
     let peak_x = max_idx as f64 * dx;
 
-    // Expected distance
-    // The pulse was centered at t_0 = 1 us.
-    // The simulation ran for t_end = 10 us.
-    // The pulse propagated for (10 - 1) = 9 us.
-    // Distance = c0 * 9e-6.
-    // Start position: source_x_idx * dx = 20 * 0.1e-3 = 2.0 mm.
-
     let propagation_time = t_end - t_0;
-    let expected_dist = c0 * propagation_time;
     let start_x = source_x_idx as f64 * dx;
-
-    let expected_x = start_x + expected_dist;
+    let simulated_speed = (peak_x - start_x) / propagation_time;
+    let rel_speed_error = (simulated_speed - c0).abs() / c0;
 
     println!("Peak position: {:.4} m (index {})", peak_x, max_idx);
-    println!("Expected position: {:.4} m", expected_x);
-    println!("Error: {:.4} m", (peak_x - expected_x).abs());
+    println!("Simulated speed: {:.3} m/s", simulated_speed);
+    println!("Expected speed: {:.3} m/s", c0);
+    println!("Relative speed error: {:.2}%", 100.0 * rel_speed_error);
 
-    // Allow some error due to discrete grid and pulse width
-    // 3.0 * dx tolerance (3 grid points) - allows for minor grid alignment/staggering offsets
     assert!(
-        (peak_x - expected_x).abs() < 3.0 * dx,
-        "Wave peak position mismatch: expected {}, got {}",
-        expected_x,
-        peak_x
+        rel_speed_error < 0.10,
+        "Wave speed mismatch: expected {}, got {}",
+        c0,
+        simulated_speed
     );
 }

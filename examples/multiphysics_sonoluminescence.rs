@@ -10,6 +10,8 @@
 //!
 //! This represents the complete interdisciplinary pathway from sound to light.
 
+#[cfg(feature = "pinn")]
+use burn::backend::{Autodiff, NdArray};
 use kwavers::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::physics::PhysicsParameters;
@@ -19,13 +21,15 @@ use kwavers::ml::pinn::universal_solver::{UniversalPINNSolver, UniversalTraining
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
+type Backend = Autodiff<NdArray<f32>>;
+#[cfg(feature = "pinn")]
 fn main() -> KwaversResult<()> {
     println!("🔬 Multi-Physics Sonoluminescence Coupling Simulation");
     println!("==================================================");
 
     // Create the universal solver with cavitation-sonoluminescence coupling
     println!("\n📡 Initializing multi-physics solver...");
-    let mut solver = UniversalPINNSolver::with_cavitation_sonoluminescence_coupling()?;
+    let mut solver = UniversalPINNSolver::<Backend>::with_cavitation_sonoluminescence_coupling()?;
 
     // Configure training for multi-physics coupling
     let training_config = UniversalTrainingConfig {

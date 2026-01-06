@@ -498,9 +498,9 @@ mod tests {
             _y: &Tensor<B, 2>,
             _t: &Tensor<B, 2>,
             _params: &PhysicsParameters,
-        ) -> burn::tensor::Result<Tensor<B, 2>> {
+        ) -> Tensor<B, 2> {
             // Return mock residuals proportional to x coordinate
-            Ok(x.clone() * 0.1)
+            x.clone() * 0.1
         }
         fn boundary_conditions(&self) -> Vec<crate::ml::pinn::physics::BoundaryConditionSpec> {
             vec![]

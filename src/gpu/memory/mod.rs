@@ -288,8 +288,8 @@ impl StreamingTransferManager {
 
     pub fn unified_transfer(
         &mut self,
-        src: &MemoryHandle,
-        dst: &MemoryHandle,
+        _src: &MemoryHandle,
+        _dst: &MemoryHandle,
         size: usize,
         region: &UnifiedMemoryRegion,
     ) -> KwaversResult<()> {

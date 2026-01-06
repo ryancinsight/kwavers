@@ -68,8 +68,7 @@ impl Signal for SteppedSweep {
             return 0.0;
         }
 
-        let freq = self.instantaneous_frequency(t);
-        let phase = TWO_PI * freq * t;
+        let phase = FrequencySweep::phase(self, t);
         self.amplitude * phase.sin()
     }
 

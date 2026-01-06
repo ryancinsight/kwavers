@@ -89,7 +89,7 @@ impl Plugin for FrequencyAbsorptionPlugin {
         _medium: &dyn kwavers::medium::Medium,
         dt: f64,
         _t: f64,
-        _context: &PluginContext,
+        _context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         // Get absorption coefficient for current frequency
         // In a real implementation, frequency would come from simulation parameters
@@ -181,7 +181,7 @@ impl Plugin for StatisticsPlugin {
         _medium: &dyn kwavers::medium::Medium,
         _dt: f64,
         t: f64,
-        _context: &PluginContext,
+        _context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         let pressure = fields.index_axis(ndarray::Axis(0), 0);
 

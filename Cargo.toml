@@ -14,7 +14,7 @@ categories = ["science", "simulation", "medical"]
 # Following minimalist production architecture per ADR-011
 
 # Essential numerical computing
-ndarray = { version = "0.16", features = ["rayon"] }
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
 rayon = "1.10"
 rustfft = "6.2"
 num-complex = "0.4"
@@ -86,7 +86,7 @@ egui = { version = "0.25", optional = true }
 
 # Enterprise API (Sprint 159 - Production Deployment)
 axum = { version = "0.7", features = ["json", "tracing", "macros"], optional = true }
-tower = { version = "0.4", optional = true }
+tower = { version = "0.4", features = ["util"], optional = true }
 tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip", "request-id", "util"], optional = true }
 jsonwebtoken = { version = "9.0", optional = true }
 bcrypt = { version = "0.15", optional = true }

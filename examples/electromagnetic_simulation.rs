@@ -25,11 +25,7 @@
 //! - Result visualization and validation
 
 #[cfg(feature = "pinn")]
-use burn::backend::wgpu::WgpuDevice;
-#[cfg(feature = "pinn")]
-use burn::backend::Autodiff;
-#[cfg(feature = "pinn")]
-use burn::optim::AdamConfig;
+use burn::backend::{Autodiff, NdArray};
 #[cfg(feature = "pinn")]
 use kwavers::error::KwaversResult;
 #[cfg(feature = "pinn")]
@@ -37,17 +33,31 @@ use kwavers::ml::pinn::electromagnetic::{EMProblemType, ElectromagneticDomain};
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::physics::{BoundaryPosition, PhysicsParameters};
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::{BurnPINN2DWave, PINNConfig, PINNTrainer};
+use kwavers::ml::pinn::universal_solver::Geometry2D;
+#[cfg(feature = "pinn")]
+use kwavers::ml::pinn::{UniversalPINNSolver, UniversalTrainingConfig};
 #[cfg(feature = "pinn")]
 use std::collections::HashMap;
+
+#[cfg(feature = "pinn")]
+type Backend = Autodiff<NdArray<f32>>;
+
+#[cfg(feature = "pinn")]
+fn empty_physics_parameters() -> PhysicsParameters {
+    PhysicsParameters {
+        material_properties: HashMap::new(),
+        boundary_values: HashMap::new(),
+        initial_values: HashMap::new(),
+        domain_params: HashMap::new(),
+    }
+}
 
 /// Example: Electrostatic parallel plate capacitor
 #[cfg(feature = "pinn")]
 pub fn electrostatic_capacitor_example() -> KwaversResult<()> {
     println!("=== Electrostatic Capacitor Example ===");
 
-    // Create electromagnetic domain for electrostatics
-    let domain = ElectromagneticDomain::new(
+    let domain: ElectromagneticDomain<Backend> = ElectromagneticDomain::new(
         EMProblemType::Electrostatic,
         8.854e-12,                   // Vacuum permittivity
         4e-7 * std::f64::consts::PI, // Vacuum permeability
@@ -59,18 +69,9 @@ pub fn electrostatic_capacitor_example() -> KwaversResult<()> {
     .add_pec_boundary(BoundaryPosition::Left) // Side wall
     .add_pec_boundary(BoundaryPosition::Right); // Side wall
 
-    // Configure PINN
-    let config = PINNConfig {
-        hidden_layers: vec![64, 64, 64],
-        learning_rate: 1e-3,
-        max_epochs: 5000,
-        domain_size: vec![0.01, 0.01],
-        time_span: None, // No time dependence
-        ..Default::default()
-    };
+    let geometry = Geometry2D::rectangle(0.0, 0.01, 0.0, 0.01);
 
-    // Create physics parameters
-    let mut physics_params = PhysicsParameters::default();
+    let mut physics_params = empty_physics_parameters();
     physics_params
         .domain_params
         .insert("voltage_top".to_string(), 100.0); // 100V
@@ -78,16 +79,22 @@ pub fn electrostatic_capacitor_example() -> KwaversResult<()> {
         .domain_params
         .insert("voltage_bottom".to_string(), 0.0); // Ground
 
-    // Initialize PINN
-    let device = WgpuDevice::default();
-    let mut pinn = BurnPINN2DWave::<Autodiff<WgpuDevice>>::new(config, domain, physics_params)?;
+    let mut config = UniversalTrainingConfig::default();
+    config.epochs = 200;
+    config.learning_rate = 1e-3;
+    config.collocation_points = 512;
 
-    // Train the network
-    let trainer = PINNTrainer::new(AdamConfig::new().with_lr(1e-3));
-    let trained_pinn = trainer.train(&mut pinn, 5000)?;
+    let mut solver = UniversalPINNSolver::<Backend>::new()?;
+    solver.register_physics_domain(domain)?;
+    let solution = solver.solve_physics_domain(
+        "electromagnetic",
+        &geometry,
+        &physics_params,
+        Some(&config),
+    )?;
 
     println!("Electrostatic capacitor training completed");
-    println!("Final loss: {:.6e}", trained_pinn.compute_loss()?);
+    println!("Final loss: {:.6e}", solution.stats.final_loss);
 
     Ok(())
 }
@@ -97,8 +104,7 @@ pub fn electrostatic_capacitor_example() -> KwaversResult<()> {
 pub fn magnetostatic_wire_example() -> KwaversResult<()> {
     println!("=== Magnetostatic Wire Example ===");
 
-    // Create electromagnetic domain for magnetostatics
-    let domain = ElectromagneticDomain::new(
+    let domain: ElectromagneticDomain<Backend> = ElectromagneticDomain::new(
         EMProblemType::Magnetostatic,
         8.854e-12,
         4e-7 * std::f64::consts::PI,
@@ -107,28 +113,26 @@ pub fn magnetostatic_wire_example() -> KwaversResult<()> {
     )
     .add_current_source((0.01, 0.01), vec![1e6, 0.0], 0.001); // 1MA current at center
 
-    // Configure PINN for magnetostatics
-    let config = PINNConfig {
-        hidden_layers: vec![64, 64, 64],
-        learning_rate: 1e-3,
-        max_epochs: 3000,
-        domain_size: vec![0.02, 0.02],
-        time_span: None,
-        ..Default::default()
-    };
+    let geometry = Geometry2D::rectangle(0.0, 0.02, 0.0, 0.02);
 
-    // Physics parameters for magnetostatics
-    let physics_params = PhysicsParameters::default();
+    let physics_params = empty_physics_parameters();
 
-    // Initialize and train PINN
-    let device = WgpuDevice::default();
-    let mut pinn = BurnPINN2DWave::<Autodiff<WgpuDevice>>::new(config, domain, physics_params)?;
+    let mut config = UniversalTrainingConfig::default();
+    config.epochs = 150;
+    config.learning_rate = 1e-3;
+    config.collocation_points = 512;
 
-    let trainer = PINNTrainer::new(AdamConfig::new().with_lr(1e-3));
-    let trained_pinn = trainer.train(&mut pinn, 3000)?;
+    let mut solver = UniversalPINNSolver::<Backend>::new()?;
+    solver.register_physics_domain(domain)?;
+    let solution = solver.solve_physics_domain(
+        "electromagnetic",
+        &geometry,
+        &physics_params,
+        Some(&config),
+    )?;
 
     println!("Magnetostatic wire training completed");
-    println!("Final loss: {:.6e}", trained_pinn.compute_loss()?);
+    println!("Final loss: {:.6e}", solution.stats.final_loss);
 
     Ok(())
 }
@@ -138,8 +142,7 @@ pub fn magnetostatic_wire_example() -> KwaversResult<()> {
 pub fn wave_propagation_example() -> KwaversResult<()> {
     println!("=== Wave Propagation Example ===");
 
-    // Create electromagnetic domain for wave propagation
-    let domain = ElectromagneticDomain::new(
+    let domain: ElectromagneticDomain<Backend> = ElectromagneticDomain::new(
         EMProblemType::WavePropagation,
         8.854e-12,
         4e-7 * std::f64::consts::PI,
@@ -147,18 +150,9 @@ pub fn wave_propagation_example() -> KwaversResult<()> {
         vec![0.1, 0.1], // 10cm x 10cm domain
     );
 
-    // Configure PINN for time-dependent problems
-    let config = PINNConfig {
-        hidden_layers: vec![128, 128, 128],
-        learning_rate: 5e-4,
-        max_epochs: 10000,
-        domain_size: vec![0.1, 0.1],
-        time_span: Some((0.0, 1e-9)), // 1ns simulation
-        ..Default::default()
-    };
+    let geometry = Geometry2D::rectangle(0.0, 0.1, 0.0, 0.1);
 
-    // Physics parameters for wave propagation
-    let mut physics_params = PhysicsParameters::default();
+    let mut physics_params = empty_physics_parameters();
     physics_params
         .domain_params
         .insert("source_frequency".to_string(), 3e9); // 3GHz
@@ -166,15 +160,22 @@ pub fn wave_propagation_example() -> KwaversResult<()> {
         .domain_params
         .insert("source_position".to_string(), 0.05); // Center
 
-    // Initialize and train PINN
-    let device = WgpuDevice::default();
-    let mut pinn = BurnPINN2DWave::<Autodiff<WgpuDevice>>::new(config, domain, physics_params)?;
+    let mut config = UniversalTrainingConfig::default();
+    config.epochs = 200;
+    config.learning_rate = 5e-4;
+    config.collocation_points = 1024;
 
-    let trainer = PINNTrainer::new(AdamConfig::new().with_lr(5e-4));
-    let trained_pinn = trainer.train(&mut pinn, 10000)?;
+    let mut solver = UniversalPINNSolver::<Backend>::new()?;
+    solver.register_physics_domain(domain)?;
+    let solution = solver.solve_physics_domain(
+        "electromagnetic",
+        &geometry,
+        &physics_params,
+        Some(&config),
+    )?;
 
     println!("Wave propagation training completed");
-    println!("Final loss: {:.6e}", trained_pinn.compute_loss()?);
+    println!("Final loss: {:.6e}", solution.stats.final_loss);
 
     Ok(())
 }
@@ -184,8 +185,7 @@ pub fn wave_propagation_example() -> KwaversResult<()> {
 pub fn lossy_waveguide_example() -> KwaversResult<()> {
     println!("=== Lossy Waveguide Example ===");
 
-    // Create electromagnetic domain with conductivity
-    let domain = ElectromagneticDomain::new(
+    let domain: ElectromagneticDomain<Backend> = ElectromagneticDomain::new(
         EMProblemType::WavePropagation,
         4.0 * 8.854e-12, // Relative permittivity ε_r = 4
         4e-7 * std::f64::consts::PI,
@@ -196,18 +196,9 @@ pub fn lossy_waveguide_example() -> KwaversResult<()> {
     .add_pec_boundary(BoundaryPosition::Bottom)
     .add_pec_boundary(BoundaryPosition::Left); // Port excitation
 
-    // Configure PINN
-    let config = PINNConfig {
-        hidden_layers: vec![128, 128, 128, 64],
-        learning_rate: 1e-3,
-        max_epochs: 8000,
-        domain_size: vec![0.05, 0.02],
-        time_span: Some((0.0, 5e-10)), // 0.5ns simulation
-        ..Default::default()
-    };
+    let geometry = Geometry2D::rectangle(0.0, 0.05, 0.0, 0.02);
 
-    // Physics parameters
-    let mut physics_params = PhysicsParameters::default();
+    let mut physics_params = empty_physics_parameters();
     physics_params
         .domain_params
         .insert("port_impedance".to_string(), 50.0); // 50Ω port
@@ -215,15 +206,22 @@ pub fn lossy_waveguide_example() -> KwaversResult<()> {
         .domain_params
         .insert("input_power".to_string(), 1.0); // 1W input
 
-    // Initialize and train PINN
-    let device = WgpuDevice::default();
-    let mut pinn = BurnPINN2DWave::<Autodiff<WgpuDevice>>::new(config, domain, physics_params)?;
+    let mut config = UniversalTrainingConfig::default();
+    config.epochs = 200;
+    config.learning_rate = 1e-3;
+    config.collocation_points = 1024;
 
-    let trainer = PINNTrainer::new(AdamConfig::new().with_lr(1e-3));
-    let trained_pinn = trainer.train(&mut pinn, 8000)?;
+    let mut solver = UniversalPINNSolver::<Backend>::new()?;
+    solver.register_physics_domain(domain)?;
+    let solution = solver.solve_physics_domain(
+        "electromagnetic",
+        &geometry,
+        &physics_params,
+        Some(&config),
+    )?;
 
     println!("Lossy waveguide training completed");
-    println!("Final loss: {:.6e}", trained_pinn.compute_loss()?);
+    println!("Final loss: {:.6e}", solution.stats.final_loss);
 
     Ok(())
 }
@@ -233,8 +231,7 @@ pub fn lossy_waveguide_example() -> KwaversResult<()> {
 pub fn quasi_static_induction_example() -> KwaversResult<()> {
     println!("=== Quasi-Static Induction Example ===");
 
-    // Create electromagnetic domain for quasi-static problems
-    let domain = ElectromagneticDomain::new(
+    let domain: ElectromagneticDomain<Backend> = ElectromagneticDomain::new(
         EMProblemType::QuasiStatic,
         8.854e-12,
         4e-7 * std::f64::consts::PI,
@@ -243,18 +240,9 @@ pub fn quasi_static_induction_example() -> KwaversResult<()> {
     )
     .add_current_source((0.015, 0.015), vec![1e5, 0.0], 0.005); // Primary coil
 
-    // Configure PINN for quasi-static time-dependent problems
-    let config = PINNConfig {
-        hidden_layers: vec![96, 96, 96],
-        learning_rate: 8e-4,
-        max_epochs: 6000,
-        domain_size: vec![0.03, 0.03],
-        time_span: Some((0.0, 1e-6)), // 1μs simulation
-        ..Default::default()
-    };
+    let geometry = Geometry2D::rectangle(0.0, 0.03, 0.0, 0.03);
 
-    // Physics parameters
-    let mut physics_params = PhysicsParameters::default();
+    let mut physics_params = empty_physics_parameters();
     physics_params
         .domain_params
         .insert("coil_turns".to_string(), 10.0);
@@ -262,15 +250,22 @@ pub fn quasi_static_induction_example() -> KwaversResult<()> {
         .domain_params
         .insert("frequency".to_string(), 1e6); // 1MHz
 
-    // Initialize and train PINN
-    let device = WgpuDevice::default();
-    let mut pinn = BurnPINN2DWave::<Autodiff<WgpuDevice>>::new(config, domain, physics_params)?;
+    let mut config = UniversalTrainingConfig::default();
+    config.epochs = 200;
+    config.learning_rate = 8e-4;
+    config.collocation_points = 1024;
 
-    let trainer = PINNTrainer::new(AdamConfig::new().with_lr(8e-4));
-    let trained_pinn = trainer.train(&mut pinn, 6000)?;
+    let mut solver = UniversalPINNSolver::<Backend>::new()?;
+    solver.register_physics_domain(domain)?;
+    let solution = solver.solve_physics_domain(
+        "electromagnetic",
+        &geometry,
+        &physics_params,
+        Some(&config),
+    )?;
 
     println!("Quasi-static induction training completed");
-    println!("Final loss: {:.6e}", trained_pinn.compute_loss()?);
+    println!("Final loss: {:.6e}", solution.stats.final_loss);
 
     Ok(())
 }
@@ -339,7 +334,7 @@ mod tests {
     #[tokio::test]
     async fn test_domain_configurations() {
         // Test that different domain configurations can be created
-        let electrostatic = ElectromagneticDomain::new(
+        let electrostatic = ElectromagneticDomain::<Backend>::new(
             EMProblemType::Electrostatic,
             8.854e-12,
             4e-7 * std::f64::consts::PI,
@@ -348,7 +343,7 @@ mod tests {
         );
         assert!(electrostatic.validate().is_ok());
 
-        let wave_propagation = ElectromagneticDomain::new(
+        let wave_propagation = ElectromagneticDomain::<Backend>::new(
             EMProblemType::WavePropagation,
             8.854e-12,
             4e-7 * std::f64::consts::PI,

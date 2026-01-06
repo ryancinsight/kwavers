@@ -210,9 +210,9 @@ impl JitCompiler {
         // Extract model architecture information
         // In practice, this would inspect the Burn model structure
         Ok(ModelInfo {
-            input_dims: vec![3],   // (x, y, t) coordinates
-            output_dims: vec![1],  // Wave amplitude
-            num_layers: 4,         // Example 4-layer network
+            input_dims: vec![3],    // (x, y, t) coordinates
+            output_dims: vec![1],   // Wave amplitude
+            num_layers: 4,          // Example 4-layer network
             _num_parameters: 10000, // Estimated parameter count
             hash: "pinn_2d_wave_v1".to_string(),
             activation_functions: vec!["tanh".to_string(); 3],

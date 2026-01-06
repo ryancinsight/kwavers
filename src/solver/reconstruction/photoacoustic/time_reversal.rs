@@ -8,9 +8,10 @@
 //! - Treeby et al. (2010) "k-Wave: MATLAB toolbox"
 
 use crate::error::KwaversResult;
+use crate::fft::get_fft_for_grid;
 use crate::grid::Grid;
 use ndarray::{Array3, ArrayView2, Zip};
-use rustfft::{num_complex::Complex, FftPlanner};
+use num_complex::Complex64;
 use std::f64::consts::PI;
 
 /// Time reversal reconstruction algorithm
@@ -51,6 +52,7 @@ impl TimeReversal {
     ) -> KwaversResult<Array3<f64>> {
         let (n_time, _n_sensors) = sensor_data.dim();
         let [nx, ny, nz] = self.grid_size;
+        let fft = get_fft_for_grid(grid);
 
         // Initialize pressure field
         let mut pressure = Array3::zeros((nx, ny, nz));
@@ -101,8 +103,15 @@ impl TimeReversal {
             )?;
 
             // Apply k-space propagation
-            let pressure_next =
-                self.k_space_step(&pressure, &pressure_prev, &propagator, &k_squared, c0, dt)?;
+            let pressure_next = self.k_space_step(
+                &pressure,
+                &pressure_prev,
+                &propagator,
+                &k_squared,
+                c0,
+                dt,
+                fft.as_ref(),
+            )?;
 
             // Update fields
             pressure_prev = pressure;
@@ -130,16 +139,11 @@ impl TimeReversal {
     }
 
     /// Compute k-space propagator for wave equation
-    fn compute_propagator(
-        &self,
-        k_squared: &Array3<f64>,
-        c0: f64,
-        dt: f64,
-    ) -> Array3<Complex<f64>> {
+    fn compute_propagator(&self, k_squared: &Array3<f64>, c0: f64, dt: f64) -> Array3<Complex64> {
         let omega_dt = c0 * dt;
         k_squared.mapv(|k2| {
             let arg = omega_dt * k2.sqrt();
-            Complex::new(arg.cos(), -arg.sin())
+            Complex64::new(arg.cos(), -arg.sin())
         })
     }
 
@@ -148,80 +152,34 @@ impl TimeReversal {
         &self,
         pressure: &Array3<f64>,
         pressure_prev: &Array3<f64>,
-        propagator: &Array3<Complex<f64>>,
+        propagator: &Array3<Complex64>,
         _k_squared: &Array3<f64>,
         _c0: f64,
         _dt: f64,
+        fft: &crate::fft::Fft3d,
     ) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = self.grid_size;
 
-        // FFT of pressure fields
-        let pressure_fft = self.fft_3d(pressure)?;
-        let pressure_prev_fft = self.fft_3d(pressure_prev)?;
+        let mut pressure_hat = Array3::<Complex64>::zeros((nx, ny, nz));
+        let mut pressure_prev_hat = Array3::<Complex64>::zeros((nx, ny, nz));
+        fft.forward_into(pressure, &mut pressure_hat);
+        fft.forward_into(pressure_prev, &mut pressure_prev_hat);
 
         // Apply k-space operator (exact solution in Fourier domain)
         // p(t+dt) = 2*cos(c*k*dt)*p(t) - p(t-dt) + dt²*c²*source
-        let mut pressure_next_fft = Array3::zeros((nx, ny, nz));
-        Zip::from(&mut pressure_next_fft)
+        let mut pressure_next_hat = Array3::<Complex64>::zeros((nx, ny, nz));
+        Zip::from(&mut pressure_next_hat)
             .and(propagator)
-            .and(&pressure_fft)
-            .and(&pressure_prev_fft)
+            .and(&pressure_hat)
+            .and(&pressure_prev_hat)
             .for_each(|pn, &prop, &p, &pp| {
                 *pn = 2.0 * prop * p - pp;
             });
 
-        // Inverse FFT
-        self.ifft_3d(&pressure_next_fft)
-    }
-
-    /// 3D FFT
-    fn fft_3d(&self, data: &Array3<f64>) -> KwaversResult<Array3<Complex<f64>>> {
-        let [nx, ny, nz] = self.grid_size;
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(nx * ny * nz);
-
-        // Convert to complex and flatten
-        let mut complex_data: Vec<Complex<f64>> =
-            data.iter().map(|&x| Complex::new(x, 0.0)).collect();
-
-        // Perform FFT
-        fft.process(&mut complex_data);
-
-        // Reshape to 3D
-        let mut result = Array3::zeros((nx, ny, nz));
-        for (i, val) in complex_data.iter().enumerate() {
-            let iz = i % nz;
-            let iy = (i / nz) % ny;
-            let ix = i / (ny * nz);
-            result[[ix, iy, iz]] = *val;
-        }
-
-        Ok(result)
-    }
-
-    /// 3D inverse FFT
-    fn ifft_3d(&self, data: &Array3<Complex<f64>>) -> KwaversResult<Array3<f64>> {
-        let [nx, ny, nz] = self.grid_size;
-        let mut planner = FftPlanner::new();
-        let ifft = planner.plan_fft_inverse(nx * ny * nz);
-
-        // Flatten
-        let mut complex_data: Vec<Complex<f64>> = data.iter().copied().collect();
-
-        // Perform inverse FFT
-        ifft.process(&mut complex_data);
-
-        // Normalize and extract real part
-        let norm = 1.0 / (nx * ny * nz) as f64;
-        let mut result = Array3::zeros((nx, ny, nz));
-        for (i, val) in complex_data.iter().enumerate() {
-            let iz = i % nz;
-            let iy = (i / nz) % ny;
-            let ix = i / (ny * nz);
-            result[[ix, iy, iz]] = val.re * norm;
-        }
-
-        Ok(result)
+        let mut out = Array3::<f64>::zeros((nx, ny, nz));
+        let mut scratch = Array3::<Complex64>::zeros((nx, ny, nz));
+        fft.inverse_into(&pressure_next_hat, &mut out, &mut scratch);
+        Ok(out)
     }
 
     /// Inject sensor data at sensor positions

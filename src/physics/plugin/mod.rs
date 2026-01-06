@@ -15,10 +15,12 @@ pub mod mixed_domain;
 pub mod seismic_imaging;
 pub mod transducer_field;
 
+use crate::boundary::Boundary;
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
+use crate::source::Source;
 use ndarray::{Array3, Array4};
 use std::any::Any;
 use std::fmt::Debug;
@@ -70,7 +72,15 @@ pub enum PluginPriority {
 }
 
 /// Context passed to plugins during execution
-pub type PluginContext = PluginFields;
+#[derive(Debug)]
+pub struct PluginContext<'a> {
+    /// Additional fields for plugin communication
+    pub extra_fields: &'a PluginFields,
+    /// Acoustic sources in the simulation
+    pub sources: &'a [Box<dyn Source>],
+    /// Boundary conditions
+    pub boundary: &'a mut dyn Boundary,
+}
 
 /// Alias for physics-specific plugins
 pub type PhysicsPlugin = dyn Plugin;
@@ -103,7 +113,7 @@ pub trait Plugin: Debug + Send + Sync {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        context: &PluginContext,
+        context: &mut PluginContext<'_>,
     ) -> KwaversResult<()>;
 
     /// Initialize the plugin

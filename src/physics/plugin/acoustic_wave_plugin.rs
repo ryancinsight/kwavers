@@ -167,7 +167,7 @@ impl Plugin for AcousticWavePlugin {
         _medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        _context: &PluginContext,
+        _context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         // Extract field slices
         let pressure_idx = UnifiedFieldType::Pressure.index();

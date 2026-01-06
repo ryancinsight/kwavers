@@ -194,7 +194,7 @@ fn main() -> KwaversResult<()> {
     println!();
 
     // Create PINN trainer
-    let trainer = BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)?;
+    let trainer = BurnPINN2DWave::<Backend>::new_trainer(pinn_config.clone(), geometry, &device)?;
     println!("✅ PINN Trainer: Created successfully");
     println!();
 
@@ -210,7 +210,14 @@ fn main() -> KwaversResult<()> {
     let start_time = Instant::now();
     let mut trainer = trainer;
     let metrics = trainer.train(
-        &x_train, &y_train, &t_train, &u_train, wave_speed, &device, epochs,
+        &x_train,
+        &y_train,
+        &t_train,
+        &u_train,
+        wave_speed,
+        &pinn_config,
+        &device,
+        epochs,
     )?;
     let training_time = start_time.elapsed();
 

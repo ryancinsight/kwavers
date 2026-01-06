@@ -253,12 +253,12 @@ Goal: Consolidate beamforming across `sensor` to enforce SSOT and modular bounda
 
 - [x] Plan consolidation architecture and publish ADR (docs/ADR/sensor_architecture_consolidation.md)
 - [ ] Create `BeamformingCoreConfig` and `From` shims from legacy configs
-- [ ] Move `adaptive_beamforming/*` → `beamforming/adaptive/*` preserving tests and docs
-- [ ] Replace PAM internal algorithms with `BeamformingProcessor` usage; add `PamBeamformingConfig`
-- [ ] Refactor localization to use `BeamformingProcessor` for grid search; add `BeamformSearch`
-- [ ] Feature-gate `beamforming/experimental/neural.rs` with `experimental_neural` feature; update docs
-- [ ] Update `sensor/mod.rs` re-exports and type aliases for compatibility
-- [ ] Migrate and consolidate unit/property/integration tests; keep suite green under `cargo nextest`
+- [x] Move `adaptive_beamforming/*` → `beamforming/adaptive/*` preserving tests and docs
+- [x] Replace PAM internal algorithms with `BeamformingProcessor` usage; add `PamBeamformingConfig`
+- [x] Refactor localization to use `BeamformingProcessor` for grid search; add `BeamformSearch`
+- [x] Feature-gate `beamforming/experimental/neural.rs` with `experimental_neural` feature; update docs
+- [x] Update `sensor/mod.rs` re-exports and type aliases for compatibility
+- [x] Migrate and consolidate unit/property/integration tests; keep suite green under `cargo nextest`
 - [ ] Bench unified Processor hot paths with criterion; capture baselines
 
 Acceptance Criteria:

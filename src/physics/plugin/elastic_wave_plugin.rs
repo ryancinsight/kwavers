@@ -287,7 +287,7 @@ impl Plugin for ElasticWavePlugin {
         _medium: &dyn Medium,
         _dt: f64,
         _t: f64,
-        _context: &PluginContext,
+        _context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         // Update elastic wave fields
         self.update_fields(None, grid)?; // Source integration would be added later
