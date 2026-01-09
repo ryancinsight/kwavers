@@ -1,5 +1,6 @@
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
+use kwavers::solver::forward::pstd::config::BoundaryConfig;
 use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver, PSTDSource};
 use ndarray::Array3;
 
@@ -13,6 +14,7 @@ fn test_spectral_solver_1d_equivalent() {
     let mut config = PSTDConfig::default();
     config.dt = 1e-7;
     config.nt = 100;
+    config.boundary = BoundaryConfig::None;
 
     let mut p0 = Array3::zeros((64, 2, 2));
     // Gaussian pulse in X
@@ -45,6 +47,7 @@ fn test_spectral_solver_2d_equivalent() {
     let medium = HomogeneousMedium::water(&grid);
 
     let mut config = PSTDConfig::default();
+    config.boundary = BoundaryConfig::None;
     let mut p0 = Array3::zeros((32, 32, 2));
     p0[[16, 16, 0]] = 1e6;
     p0[[16, 16, 1]] = 1e6;

@@ -70,14 +70,38 @@ Migrate signal processing algorithms (beamforming, localization, PAM) from `doma
 
 **Evidence**: All 31 tests passing. Zero regressions. Backward compatibility maintained.
 
-### Phase 2E: Documentation & Next Steps (CURRENT TASK 🔵)
-- [ ] Update checklist.md with Phase 2 completion status
-- [ ] Update backlog.md with Phase 3 tasks (adaptive beamforming migration)
-- [ ] Create migration guide for users updating their code
-- [ ] Update technical documentation with new module paths
-- [ ] Commit Phase 2 changes to repository
+### Phase 2E: Documentation & Next Steps (COMPLETED ✅)
+- [x] Update checklist.md with Phase 2 completion status
+- [x] Update backlog.md with Phase 3 tasks (adaptive beamforming migration)
+- [x] Create migration guide for users updating their code
+- [x] Update technical documentation with new module paths
+- [x] Commit Phase 2 changes to repository
 
-**Next Phase Preview**: Phase 3 will migrate adaptive beamforming (Capon, MUSIC) and narrowband algorithms.
+**Evidence**: Phase 2 committed (c78bd052). Documentation updated. All artifacts synchronized.
+
+---
+
+### Phase 3: Adaptive Beamforming Migration (IN PROGRESS 🟡)
+
+#### Phase 3A: MVDR/Capon Migration (COMPLETED ✅)
+- [x] Create `analysis::signal_processing::beamforming::adaptive` module structure
+- [x] Define `AdaptiveBeamformer` trait with SSOT error semantics
+- [x] Migrate MVDR (Minimum Variance Distortionless Response) implementation
+- [x] Add comprehensive documentation with mathematical foundation and literature references
+- [x] Add 14 comprehensive unit tests (all passing)
+- [x] Verify unit gain constraint and SINR optimization
+- [x] Add pseudospectrum computation for spatial spectrum analysis
+
+**Evidence**: MVDR migration complete with 14/14 tests passing. Total: 44/44 signal_processing tests passing.
+
+#### Phase 3B: MUSIC & ESMV Migration (NEXT TASK 🔵)
+- [ ] Migrate MUSIC (Multiple Signal Classification) algorithm
+- [ ] Migrate ESMV (Eigenspace Minimum Variance) algorithm
+- [ ] Add eigendecomposition-based pseudospectrum computation
+- [ ] Add source number estimation utilities
+- [ ] Comprehensive test coverage for subspace methods
+
+**Next Phase Preview**: Phase 4 will add deprecation warnings to domain layer adaptive beamforming.
 
 ---
 
@@ -150,16 +174,20 @@ Migrate signal processing algorithms (beamforming, localization, PAM) from `doma
 
 ## Progress Tracking
 
-### Current Status - PHASE 2 EXECUTION (Domain Layer Purification)
+### Current Status - PHASE 3 EXECUTION (Adaptive Beamforming Migration)
 
-**Sprint 180 - Phase 2: Domain Layer Purification**
+**Sprint 180 - Phase 2: Domain Layer Purification** ✅ COMPLETED
 - [x] **Phase 2A**: Structure Creation & ADR (5/5 complete) - **COMPLETED: ADR 003 written**
 - [x] **Phase 2B**: Time-Domain DAS Migration (5/5 complete) - **COMPLETED: 23 tests passing**
 - [x] **Phase 2C**: Backward Compatibility & Deprecation (5/5 complete) - **COMPLETED: Shims in place**
 - [x] **Phase 2D**: Integration & Verification (4/4 complete) - **COMPLETED: 31 tests passing**
-- [ ] **Phase 2E**: Documentation & Next Steps (1/5 complete) - **IN PROGRESS: Updating docs**
+- [x] **Phase 2E**: Documentation & Next Steps (5/5 complete) - **COMPLETED: Phase 2 committed**
 
-**Test Status**: ✅ All 31 tests passing (29 new + 2 deprecated)
+**Sprint 180 - Phase 3: Adaptive Beamforming Migration** 🟡 IN PROGRESS
+- [x] **Phase 3A**: MVDR/Capon Migration (7/7 complete) - **COMPLETED: 14 tests passing**
+- [ ] **Phase 3B**: MUSIC & ESMV Migration (0/5 started) - **NEXT: Subspace methods**
+
+**Test Status**: ✅ All 44 tests passing (31 time-domain + 14 adaptive - 1 deprecated)
 **Build Status**: ✅ Clean build with deprecation warnings (as intended)
 **Regression Status**: ✅ Zero regressions detected
 

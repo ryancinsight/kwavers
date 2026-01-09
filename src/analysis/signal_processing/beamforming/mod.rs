@@ -192,13 +192,13 @@
 //!
 //! ## Implementation Status
 //!
-//! Algorithms are being migrated from `domain::sensor::beamforming` in Phase 2:
+//! Algorithms are being migrated from `domain::sensor::beamforming` in Phase 2-3:
 //!
 //! - [x] Time-domain DAS (Delay-and-Sum) ✅
 //! - [x] Delay reference policy and utilities ✅
-//! - [ ] Define `Beamformer` trait (planned)
-//! - [ ] Adaptive beamforming: MinimumVariance (Capon)
-//! - [ ] Subspace methods: MUSIC, ESMV
+//! - [x] Define `AdaptiveBeamformer` trait ✅
+//! - [x] Adaptive beamforming: MinimumVariance (Capon/MVDR) ✅
+//! - [ ] Subspace methods: MUSIC, ESMV (in progress)
 //! - [ ] Narrowband frequency-domain beamforming
 //! - [ ] Migrate neural beamforming (experimental)
 //! - [ ] Add GPU implementations
@@ -206,21 +206,21 @@
 //!
 //! ## Status
 //!
-//! **Current:** 🟢 Time-domain DAS migration complete (Phase 2 PoC)
-//! **Next:** Migrate adaptive beamforming (Capon, MUSIC) from domain layer
+//! **Current:** 🟢 Phase 3 in progress - MVDR migration complete
+//! **Next:** Migrate MUSIC and ESMV subspace methods
 //! **Timeline:** Week 3-4 execution
 
 // Algorithm implementations
+pub mod adaptive;
 pub mod time_domain;
 
 // Future modules (planned)
-// pub mod traits;           // Trait definitions for Beamformer, etc.
-// pub mod adaptive;         // Adaptive beamforming (Capon, MUSIC, ESMV)
 // pub mod narrowband;       // Frequency-domain beamforming
 // pub mod neural;           // Neural network beamforming (experimental)
 // pub mod utils;            // Utility functions
 
 // Re-exports for convenience
+pub use adaptive::{AdaptiveBeamformer, MinimumVariance};
 pub use time_domain::{
     alignment_shifts_s, delay_and_sum, relative_delays_s, DelayReference, DEFAULT_DELAY_REFERENCE,
 };
@@ -233,6 +233,8 @@ mod tests {
     fn test_module_structure() {
         // Verify time_domain module is accessible
         let _ = DEFAULT_DELAY_REFERENCE;
+        // Verify adaptive module is accessible
+        let _ = MinimumVariance::default();
         assert!(true);
     }
 
@@ -241,5 +243,12 @@ mod tests {
         // Verify DelayReference is accessible
         let ref_policy = DelayReference::recommended_default();
         assert_eq!(ref_policy, DelayReference::SensorIndex(0));
+    }
+
+    #[test]
+    fn test_adaptive_beamformer_export() {
+        // Verify adaptive beamforming types are accessible
+        let mvdr = MinimumVariance::with_diagonal_loading(1e-4);
+        assert_eq!(mvdr.diagonal_loading, 1e-4);
     }
 }
