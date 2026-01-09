@@ -4,8 +4,8 @@
 //! they have declared as required or provided, preventing accidental access
 //! to unrelated fields and improving encapsulation.
 
-use crate::error::{KwaversResult, PhysicsError};
-use crate::physics::field_mapping::UnifiedFieldType;
+use crate::core::error::{KwaversResult, PhysicsError};
+use crate::domain::field::mapping::UnifiedFieldType;
 use crate::physics::state::{FieldView, PhysicsState};
 use ndarray::{Array4, ArrayView3, ArrayViewMut3};
 use std::collections::HashSet;
@@ -281,7 +281,7 @@ impl<'a> DirectPluginFieldAccess<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid::Grid;
+    use crate::domain::grid::Grid;
 
     #[test]
     fn test_plugin_field_access() {

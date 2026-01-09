@@ -27,9 +27,9 @@
 //! - Tissue: Viscoelastic model (E = 2-12 kPa, η = 1-5 Pa·s)
 //! - Reconstruction: Time-of-flight method with phase gradient refinement
 
-use kwavers::error::KwaversResult;
-use kwavers::grid::Grid;
-use kwavers::medium::homogeneous::HomogeneousMedium;
+use kwavers::core::error::KwaversResult;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::imaging::elastography::{
     AcousticRadiationForce, DisplacementEstimator, InversionMethod, PushPulseParameters,
     ShearWaveInversion,
@@ -370,7 +370,7 @@ fn extract_region_stiffness(
     }
 
     if count == 0 {
-        return Err(kwavers::error::KwaversError::InvalidInput(
+        return Err(kwavers::core::error::KwaversError::InvalidInput(
             "No points found in specified region".to_string(),
         ));
     }

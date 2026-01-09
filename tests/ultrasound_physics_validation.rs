@@ -3,7 +3,7 @@
 //! This test suite validates the MVDR beamforming implementation
 //! against established literature references and mathematical theorems.
 
-use kwavers::sensor::beamforming::{
+use kwavers::domain::sensor::beamforming::{
     CovarianceEstimator, MinimumVariance, SpatialSmoothing, SteeringVector, SteeringVectorMethod,
 };
 use ndarray::{Array1, Array2};
@@ -444,9 +444,9 @@ fn validate_photoacoustic_wave_equation() {
     // Test photoacoustic wave equation coupling
     // Theorem: ∂²p/∂t² - c²∇²p = Γμ_a Φ(r,t) ∂H/∂t
 
-    use kwavers::grid::Grid;
-    use kwavers::medium::homogeneous::HomogeneousMedium;
-    use kwavers::physics::imaging::photoacoustic::{
+    use kwavers::domain::grid::Grid;
+    use kwavers::domain::medium::homogeneous::HomogeneousMedium;
+    use kwavers::simulation::modalities::photoacoustic::{
         PhotoacousticParameters, PhotoacousticSimulator,
     };
 

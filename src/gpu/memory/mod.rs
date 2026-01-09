@@ -3,7 +3,7 @@
 //! Provides unified memory, memory pooling, streaming transfers, and compression
 //! for optimal multi-GPU performance.
 
-use crate::KwaversResult;
+use crate::core::error::KwaversResult;
 use std::collections::HashMap;
 
 /// Memory pool types for different usage patterns
@@ -52,7 +52,7 @@ impl UnifiedMemoryManager {
         pool_type: MemoryPoolType,
         size: usize,
     ) -> KwaversResult<MemoryHandle> {
-        let pools = self.pools.entry(gpu_id).or_insert_with(HashMap::new);
+        let pools = self.pools.entry(gpu_id).or_default();
         let pool = pools
             .entry(pool_type)
             .or_insert_with(|| MemoryPool::new(pool_type));
@@ -127,6 +127,12 @@ impl UnifiedMemoryManager {
             .iter()
             .find(|region| region.contains_gpu(src.gpu_id) && region.contains_gpu(dst.gpu_id))
             .cloned()
+    }
+}
+
+impl Default for UnifiedMemoryManager {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -266,6 +272,12 @@ impl MemoryCompression {
     }
 }
 
+impl Default for MemoryCompression {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Compressed memory block
 #[derive(Debug)]
 pub struct CompressedBlock {
@@ -321,6 +333,12 @@ impl StreamingTransferManager {
             src.gpu_id, dst.gpu_id, size
         );
         Ok(())
+    }
+}
+
+impl Default for StreamingTransferManager {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

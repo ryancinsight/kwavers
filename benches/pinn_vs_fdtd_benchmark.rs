@@ -10,8 +10,8 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
-use kwavers::medium::ArrayAccess;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdSolver};
+use kwavers::source::GridSource;
 use ndarray::{Array1, Array2};
 
 #[cfg(feature = "pinn")]
@@ -134,16 +134,16 @@ fn fdtd_2d_benchmark(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::from_parameter(format!("{}_setup", name)),
             &config,
-            |b, config| {
+            |b, bench_config| {
                 b.iter(|| {
                     // Create grid and medium
                     let grid = Grid::new(
-                        config.grid_size.0,
-                        config.grid_size.1,
-                        config.grid_size.2,
-                        config.dx,
-                        config.dx,
-                        config.dx,
+                        bench_config.grid_size.0,
+                        bench_config.grid_size.1,
+                        bench_config.grid_size.2,
+                        bench_config.dx,
+                        bench_config.dx,
+                        bench_config.dx,
                     )
                     .expect("Grid creation failed");
 
@@ -153,10 +153,13 @@ fn fdtd_2d_benchmark(c: &mut Criterion) {
                     let fdtd_config = FdtdConfig {
                         spatial_order: 4,
                         cfl_factor: 0.95,
+                        dt: bench_config.dt,
+                        nt: 1,
                         ..Default::default()
                     };
                     let solver =
-                        FdtdSolver::new(fdtd_config, &grid).expect("FDTD solver creation failed");
+                        FdtdSolver::new(fdtd_config, &grid, &medium, GridSource::default())
+                            .expect("FDTD solver creation failed");
 
                     black_box((grid, medium, solver))
                 });
@@ -166,34 +169,34 @@ fn fdtd_2d_benchmark(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::from_parameter(format!("{}_simulation", name)),
             &config,
-            |b, config| {
+            |b, bench_config| {
                 b.iter(|| {
                     // Setup
                     let grid = Grid::new(
-                        config.grid_size.0,
-                        config.grid_size.1,
-                        config.grid_size.2,
-                        config.dx,
-                        config.dx,
-                        config.dx,
+                        bench_config.grid_size.0,
+                        bench_config.grid_size.1,
+                        bench_config.grid_size.2,
+                        bench_config.dx,
+                        bench_config.dx,
+                        bench_config.dx,
                     )
                     .expect("Grid creation failed");
 
                     let medium = HomogeneousMedium::new(1.225, wave_speed, 0.0, 1.0, &grid);
 
+                    let n_steps = (bench_config.total_time / bench_config.dt) as usize;
+                    let steps_for_bench = n_steps.min(1000);
+
                     let fdtd_config = FdtdConfig {
                         spatial_order: 4,
                         cfl_factor: 0.95,
+                        dt: bench_config.dt,
+                        nt: steps_for_bench,
                         ..Default::default()
                     };
                     let mut solver =
-                        FdtdSolver::new(fdtd_config, &grid).expect("FDTD solver creation failed");
-
-                    // Initialize fields
-                    let mut pressure = grid.create_field();
-                    let mut vx = grid.create_field();
-                    let mut vy = grid.create_field();
-                    let mut vz = grid.create_field();
+                        FdtdSolver::new(fdtd_config, &grid, &medium, GridSource::default())
+                            .expect("FDTD solver creation failed");
 
                     // Add initial perturbation (Gaussian pulse)
                     let center_x = (grid.nx / 2) as f64 * grid.dx;
@@ -206,44 +209,19 @@ fn fdtd_2d_benchmark(c: &mut Criterion) {
                                 let x = i as f64 * grid.dx;
                                 let y = j as f64 * grid.dy;
                                 let r2 = (x - center_x).powi(2) + (y - center_y).powi(2);
-                                pressure[[i, j, k]] = (-r2 / (2.0 * sigma * sigma)).exp();
+                                solver.fields.p[[i, j, k]] = (-r2 / (2.0 * sigma * sigma)).exp();
                             }
                         }
                     }
 
                     // Time stepping
-                    let n_steps = (config.total_time / config.dt) as usize;
-                    let dt = config.dt;
-
-                    for _step in 0..n_steps.min(1000) {
+                    for _step in 0..steps_for_bench {
                         // Limit steps for benchmarking
-                        // Update velocity from pressure
-                        solver
-                            .update_velocity(
-                                &mut vx,
-                                &mut vy,
-                                &mut vz,
-                                &pressure,
-                                medium.density_array().view(),
-                                dt,
-                            )
-                            .expect("Velocity update failed");
-
-                        // Update pressure from velocity
-                        solver
-                            .update_pressure(
-                                &mut pressure,
-                                &vx,
-                                &vy,
-                                &vz,
-                                medium.density_array().view(),
-                                medium.sound_speed_array().view(),
-                                dt,
-                            )
-                            .expect("Pressure update failed");
+                        solver.step_forward().expect("FDTD step failed");
                     }
 
-                    black_box(pressure)
+                    let center_k = grid.nz / 2;
+                    black_box(solver.fields.p[[grid.nx / 2, grid.ny / 2, center_k]])
                 });
             },
         );
@@ -493,58 +471,34 @@ fn accuracy_benchmark(c: &mut Criterion) {
 
             let medium = HomogeneousMedium::new(1.225, wave_speed, 0.0, 1.0, &grid);
 
+            let n_steps = 10;
+            let dt = config.dt;
+
             let fdtd_config = FdtdConfig {
                 spatial_order: 4,
                 cfl_factor: 0.95,
+                dt,
+                nt: n_steps,
                 ..Default::default()
             };
-            let mut solver =
-                FdtdSolver::new(fdtd_config, &grid).expect("FDTD solver creation failed");
+            let mut solver = FdtdSolver::new(fdtd_config, &grid, &medium, GridSource::default())
+                .expect("FDTD solver creation failed");
 
             // Initialize with analytical solution
-            let mut pressure = grid.create_field();
-            let mut vx = grid.create_field();
-            let mut vy = grid.create_field();
-            let mut vz = grid.create_field();
-
             let t = config.total_time * 0.5; // Mid-simulation time
             for i in 0..grid.nx {
                 for j in 0..grid.ny {
                     for k in 0..grid.nz {
                         let x = i as f64 * grid.dx;
                         let y = j as f64 * grid.dy;
-                        pressure[[i, j, k]] = analytical_solution_2d(x, y, t, wave_speed);
+                        solver.fields.p[[i, j, k]] = analytical_solution_2d(x, y, t, wave_speed);
                     }
                 }
             }
 
             // Run simulation for a few steps
-            let n_steps = 10;
-            let dt = config.dt;
-
             for _step in 0..n_steps {
-                solver
-                    .update_velocity(
-                        &mut vx,
-                        &mut vy,
-                        &mut vz,
-                        &pressure,
-                        medium.density_array().view(),
-                        dt,
-                    )
-                    .expect("Velocity update failed");
-
-                solver
-                    .update_pressure(
-                        &mut pressure,
-                        &vx,
-                        &vy,
-                        &vz,
-                        medium.density_array().view(),
-                        medium.sound_speed_array().view(),
-                        dt,
-                    )
-                    .expect("Pressure update failed");
+                solver.step_forward().expect("FDTD step failed");
             }
 
             // Compute error against analytical solution
@@ -557,7 +511,7 @@ fn accuracy_benchmark(c: &mut Criterion) {
                         let x = i as f64 * grid.dx;
                         let y = j as f64 * grid.dy;
                         let analytical = analytical_solution_2d(x, y, t_final, wave_speed);
-                        let error = (pressure[[i, j, k]] - analytical).abs();
+                        let error = (solver.fields.p[[i, j, k]] - analytical).abs();
                         max_error = max_error.max(error);
                     }
                 }

@@ -1,14 +1,14 @@
 //! Simple tests to verify FDTD and PSTD solvers are working correctly
 
-use kwavers::boundary::{PMLBoundary, PMLConfig};
-use kwavers::grid::Grid;
-use kwavers::medium::homogeneous::HomogeneousMedium;
+use kwavers::domain::boundary::{PMLBoundary, PMLConfig};
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::homogeneous::HomogeneousMedium;
+use kwavers::domain::source::Source;
 use kwavers::physics::plugin::PluginManager;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers::solver::spectral::config::BoundaryConfig;
 use kwavers::solver::spectral::SpectralConfig;
 use kwavers::solver::spectral::SpectralPlugin;
-use kwavers::source::Source;
 use ndarray::{s, Array4, Zip};
 
 // Named constants for test configuration

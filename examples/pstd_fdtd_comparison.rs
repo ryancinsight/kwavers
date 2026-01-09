@@ -4,13 +4,13 @@
 //! Note: Full comparison functionality temporarily simplified due to API changes.
 
 use kwavers::{
-    boundary::pml::{PMLBoundary, PMLConfig},
+    domain::boundary::pml::{PMLBoundary, PMLConfig},
+    domain::source::NullSource,
     error::KwaversResult,
     grid::Grid,
     medium::HomogeneousMedium,
-    physics::plugin::acoustic_wave_plugin::AcousticWavePlugin,
+    solver::forward::acoustic::AcousticWavePlugin,
     solver::plugin_based::PluginBasedSolver,
-    source::NullSource,
     time::Time,
 };
 use std::sync::Arc;
@@ -47,13 +47,8 @@ fn main() -> KwaversResult<()> {
     // Source (null for this demo)
     let source = Box::new(NullSource::new());
 
-    let mut fdtd_solver = PluginBasedSolver::new(
-        grid.clone(),
-        time.clone(),
-        medium.clone(),
-        boundary.clone(),
-        source,
-    );
+    let mut fdtd_solver =
+        PluginBasedSolver::new(grid.clone(), time.clone(), medium.clone(), boundary, source);
 
     // Register acoustic plugin (uses finite differences internally)
     let fdtd_plugin = Box::new(AcousticWavePlugin::new(0.5));

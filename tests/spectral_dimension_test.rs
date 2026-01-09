@@ -1,8 +1,6 @@
-use kwavers::grid::Grid;
-use kwavers::medium::homogeneous::HomogeneousMedium;
-use kwavers::solver::spectral::{
-    config::BoundaryConfig, SpectralConfig, SpectralSolver, SpectralSource,
-};
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::homogeneous::HomogeneousMedium;
+use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver, PSTDSource};
 use ndarray::Array3;
 
 #[test]
@@ -12,10 +10,9 @@ fn test_spectral_solver_1d_equivalent() {
     let grid = Grid::new(64, 2, 2, 1e-3, 1e-3, 1e-3).unwrap();
     let medium = HomogeneousMedium::water(&grid);
 
-    let mut config = SpectralConfig::default();
+    let mut config = PSTDConfig::default();
     config.dt = 1e-7;
     config.nt = 100;
-    config.boundary = BoundaryConfig::None;
 
     let mut p0 = Array3::zeros((64, 2, 2));
     // Gaussian pulse in X
@@ -27,16 +24,16 @@ fn test_spectral_solver_1d_equivalent() {
         p0[[i, 1, 1]] = p0[[i, 0, 0]];
     }
 
-    let mut source = SpectralSource::default();
+    let mut source = PSTDSource::default();
     source.p0 = Some(p0);
 
-    let mut solver = SpectralSolver::new(config, grid, &medium, source).unwrap();
+    let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
 
     // Step forward
     solver.run(10).unwrap();
 
-    let p = solver.pressure_field();
-    let max_p = p.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+    let p = &solver.fields.p;
+    let max_p = p.iter().fold(0.0f64, |a: f64, &b: &f64| a.max(b.abs()));
 
     assert!(max_p > 0.0);
     assert!(max_p < 2e6);
@@ -47,19 +44,18 @@ fn test_spectral_solver_2d_equivalent() {
     let grid = Grid::new(32, 32, 2, 1e-3, 1e-3, 1e-3).unwrap();
     let medium = HomogeneousMedium::water(&grid);
 
-    let mut config = SpectralConfig::default();
-    config.boundary = BoundaryConfig::None;
+    let mut config = PSTDConfig::default();
     let mut p0 = Array3::zeros((32, 32, 2));
     p0[[16, 16, 0]] = 1e6;
     p0[[16, 16, 1]] = 1e6;
 
-    let mut source = SpectralSource::default();
+    let mut source = PSTDSource::default();
     source.p0 = Some(p0);
 
-    let mut solver = SpectralSolver::new(config, grid, &medium, source).unwrap();
+    let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
     solver.run(5).unwrap();
 
-    let p = solver.pressure_field();
-    let max_p = p.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+    let p = &solver.fields.p;
+    let max_p = p.iter().fold(0.0f64, |a: f64, &b: &f64| a.max(b.abs()));
     assert!(max_p > 0.0);
 }

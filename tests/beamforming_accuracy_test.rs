@@ -7,14 +7,14 @@ use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 use std::f64::consts::PI;
 
-use kwavers::sensor::beamforming::MinimumVariance;
+use kwavers::domain::sensor::beamforming::MinimumVariance;
 
 #[cfg(feature = "legacy_algorithms")]
-use kwavers::sensor::beamforming::adaptive::adaptive::LCMV;
+use kwavers::domain::sensor::beamforming::adaptive::adaptive::LCMV;
 #[cfg(feature = "legacy_algorithms")]
-use kwavers::sensor::beamforming::adaptive::conventional::BeamformingAlgorithm;
+use kwavers::domain::sensor::beamforming::adaptive::conventional::BeamformingAlgorithm;
 #[cfg(feature = "legacy_algorithms")]
-use kwavers::sensor::beamforming::{SourceEstimationCriterion, MUSIC};
+use kwavers::domain::sensor::beamforming::{SourceEstimationCriterion, MUSIC};
 
 /// Create a simple test covariance matrix
 fn create_test_covariance(n: usize) -> Array2<Complex64> {

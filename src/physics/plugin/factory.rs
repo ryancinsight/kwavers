@@ -3,8 +3,8 @@
 //! This module provides factory patterns for creating and managing plugins.
 
 use super::{Plugin, PluginMetadata};
-use crate::error::{KwaversError, KwaversResult, ValidationError};
-use crate::grid::Grid;
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::domain::grid::Grid;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;

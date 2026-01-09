@@ -2,7 +2,7 @@
 
 ## 🎉 Implementation Summary
 
-This document provides comprehensive documentation for the newly implemented source types in kwavers, completing the feature parity with k-Wave.
+This document provides comprehensive documentation for the newly implemented source types in kwavers, completing the source module feature set.
 
 ## 📊 Implementation Status
 
@@ -457,7 +457,7 @@ let custom_source = FunctionSource::new(custom_function, signal, SourceField::Pr
 
 ## ✅ Conclusion
 
-The kwavers source module now provides **complete feature parity** with k-Wave, offering:
+The kwavers source module now provides a complete set of supported source types, offering:
 
 - **14 distinct source types** covering all common acoustic scenarios
 - **Comprehensive factory support** for easy source creation
@@ -476,6 +476,6 @@ The kwavers source module now provides **complete feature parity** with k-Wave, 
 
 **Status**: ✅ **COMPLETE**
 **Quality Grade**: **A+ (100%)**
-**Feature Parity**: **100% with k-Wave**
+**Feature Coverage**: **100% of declared source types**
 
 The source module is now production-ready and provides a solid foundation for all acoustic simulation needs in kwavers.

@@ -2,7 +2,7 @@
 //!
 //! Validates SRS requirements with evidence-based benchmarking
 
-use kwavers::performance::{run_production_benchmarks, ProductionBenchmarks};
+use kwavers::analysis::performance::{run_production_benchmarks, ProductionBenchmarks};
 
 #[test]
 fn test_production_benchmark_execution() {

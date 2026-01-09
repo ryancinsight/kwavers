@@ -2,7 +2,7 @@
 
 [![Version](https://img.shields.io/badge/version-2.14.0-blue.svg)](https://github.com/kwavers/kwavers)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/kwavers/kwavers/actions)
+[![Build Status](https://img.shields.io/badge/build-status%20varies-yellow.svg)](https://github.com/kwavers/kwavers/actions)
 [![Documentation](https://img.shields.io/badge/docs-available-blue.svg)](https://docs.rs/kwavers)
 [![Rust](https://img.shields.io/badge/rust-2021+-orange.svg)](https://www.rust-lang.org/)
 
@@ -32,18 +32,13 @@
 
 ## 📊 Project Status
 
-**Production Ready** - Quality Grade: **A+ (100%)**
+This repository is under active refactor toward a strictly modular (bounded-context) API surface.
 
-| Metric | Status | Details |
-|--------|--------|---------|
-| **Compilation** | ✅ Clean | Zero errors, zero warnings |
-| **Testing** | ✅ 505/505 | 100% pass rate, 3.5s execution |
-| **Code Quality** | ✅ A+ | GRASP compliant, literature-validated |
-| **Documentation** | ✅ Complete | 100% API coverage, physics references |
-| **Safety** | ✅ Verified | All unsafe blocks documented |
-| **Performance** | ✅ Optimized | GPU acceleration, zero-cost abstractions |
-
-> **Latest**: Sprint 149 completed - Rust 2025 best practices validated, comprehensive audit passed
+| Metric | Status | Notes |
+|--------|--------|-------|
+| **Core library** | ✅ Builds | The `kwavers` library compiles successfully. |
+| **Examples / tests** | ⚠️ In flux | Some examples and test targets do not currently compile. |
+| **Docs** | ✅ Maintained | Documentation is updated to match the current module paths and public API. |
 
 ## 🚀 Quick Start
 
@@ -66,32 +61,22 @@ kwavers = { version = "2.14.0", features = ["gpu", "pinn"] }
 ### Basic Usage
 
 ```rust
-use kwavers::{
-    grid::Grid,
-    medium::HomogeneousMedium,
-    solver::FdtdSolver,
-    source::PointSource,
-    signal::SineWave,
-};
+use kwavers::core::error::KwaversResult;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::{CoreMedium, HomogeneousMedium};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> KwaversResult<()> {
     // Create computational grid
     let grid = Grid::new(200, 200, 200, 1e-3, 1e-3, 1e-3)?;
 
     // Define tissue medium properties
-    let medium = HomogeneousMedium::new(1500.0, 1000.0);
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
 
-    // Create FDTD solver
-    let mut solver = FdtdSolver::new(grid, medium)?;
+    let c0 = medium.sound_speed(0, 0, 0);
+    let rho0 = medium.density(0, 0, 0);
 
-    // Add acoustic source
-    let source = PointSource::new([0.1, 0.1, 0.1], SineWave::new(1e6, 1.0, 0.0));
-    solver.add_source(source);
-
-    // Run simulation
-    solver.run(1000)?;
-
-    println!("Simulation complete!");
+    println!("Grid: {}×{}×{}, dx={} m", grid.nx, grid.ny, grid.nz, grid.dx);
+    println!("Medium: c0={} m/s, rho0={} kg/m^3", c0, rho0);
     Ok(())
 }
 ```
@@ -99,29 +84,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Advanced Example: Multi-Physics Sonoluminescence
 
 ```rust
-use kwavers::{
-    grid::Grid,
-    physics::bubble_dynamics::{BubbleParameters, BubbleState},
-    physics::imaging::photoacoustic::PhotoacousticSimulator,
-};
+use kwavers::core::error::KwaversResult;
+use kwavers::domain::grid::Grid;
 
 #[cfg(feature = "pinn")]
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> KwaversResult<()> {
     let grid = Grid::new(100, 100, 100, 1e-4, 1e-4, 1e-4)?;
 
-    // Simulate complete interdisciplinary pathway:
-    // Ultrasound → Cavitation → Sonoluminescence → Multi-modal imaging
-
-    let pa_simulator = PhotoacousticSimulator::new(&grid)?;
-    let bubble_params = BubbleParameters::default();
-    let bubble_state = BubbleState::new(&bubble_params);
-
-    println!("Multi-physics simulation: sound → bubbles → light");
+    println!("Grid created for multi-physics pipelines: {}×{}×{}", grid.nx, grid.ny, grid.nz);
     Ok(())
 }
 
 #[cfg(not(feature = "pinn"))]
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> KwaversResult<()> {
     println!("Enable 'pinn' feature for multi-physics examples");
     Ok(())
 }

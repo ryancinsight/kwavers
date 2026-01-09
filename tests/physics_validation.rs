@@ -4,7 +4,7 @@
 //! established literature and analytical solutions.
 
 use approx::assert_relative_eq;
-use kwavers::physics::constants::*;
+use kwavers::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER, WATER_NONLINEARITY_B_A};
 
 #[cfg(test)]
 mod wave_equation_tests {
@@ -67,7 +67,7 @@ mod nonlinear_acoustics_tests {
         // Shock formation distance: x_s = ρ₀c₀³/(βωp₀)
         // where β = 1 + B/2A is coefficient of nonlinearity
 
-        let beta = 1.0 + NONLINEARITY_WATER / 2.0; // ~3.6 for water
+        let beta = 1.0 + WATER_NONLINEARITY_B_A / 2.0; // ~3.6 for water
         let frequency = 1e6; // 1 MHz
         let omega = 2.0 * std::f64::consts::PI * frequency;
         let p0 = 1e6; // 1 MPa amplitude
@@ -88,7 +88,7 @@ mod nonlinear_acoustics_tests {
         // Γ < 1: linear propagation
         // Γ > 1: nonlinear effects significant
 
-        let beta = 1.0 + NONLINEARITY_WATER / 2.0;
+        let beta = 1.0 + WATER_NONLINEARITY_B_A / 2.0;
         let p0 = 1e5; // 100 kPa
         let x = 0.1; // 10 cm propagation
         let rho0 = DENSITY_WATER;

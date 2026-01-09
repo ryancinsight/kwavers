@@ -4853,6 +4853,7 @@ dependencies = [
  "axum 0.7.9",
  "base64 0.22.1",
  "bcrypt",
+ "bitflags 2.10.0",
  "burn",
  "bytemuck",
  "chrono",

@@ -9,8 +9,8 @@
 //! 4. Combined therapy approaches
 
 use kwavers::clinical::therapy_integration::*;
-use kwavers::grid::Grid;
-use kwavers::medium::homogeneous::HomogeneousMedium;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use ndarray::Array3;
 
 /// Example: Liver tumor treatment with combined histotripsy and sonodynamic therapy

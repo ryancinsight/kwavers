@@ -35,7 +35,7 @@ pub use multi_gpu::{GpuAffinity, MultiGpuContext};
 pub use pipeline::{ComputePipeline, PipelineLayout};
 pub use shaders::neural_network::NeuralNetworkShader;
 
-use crate::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 
 /// GPU device capabilities
 #[derive(Debug, Clone)]
@@ -84,7 +84,7 @@ impl GpuContext {
             })
             .await
             .ok_or_else(|| {
-                KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
                     resource: "GPU adapter".to_string(),
                 })
             })?;
@@ -124,7 +124,7 @@ impl GpuContext {
             )
             .await
             .map_err(|e| {
-                KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
                     resource: format!("GPU device: {}", e),
                 })
             })?;

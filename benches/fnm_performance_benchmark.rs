@@ -5,11 +5,12 @@
 //! the O(n) vs O(n²) complexity advantage.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use kwavers::physics::transducer::fast_nearfield::{
-    FNMConfig, FastNearfieldSolver, RectangularTransducer,
+use kwavers::{
+    domain::source::RectangularTransducer,
+    solver::analytical::transducer::{FNMConfig, FastNearfieldSolver},
 };
 use ndarray::Array2;
-use num_complex::Complex;
+use num_complex::Complex64;
 use std::f64::consts::PI;
 
 /// Simplified Rayleigh-Sommerfeld implementation for comparison
@@ -30,9 +31,9 @@ impl RayleighSommerfeldSolver {
 
     /// Compute pressure field using direct Rayleigh-Sommerfeld integration
     /// This is O(n²) complexity where n is the number of transducer elements
-    fn compute_field(&self, velocity: &Array2<Complex<f64>>, z: f64) -> Array2<Complex<f64>> {
+    fn compute_field(&self, velocity: &Array2<Complex64>, z: f64) -> Array2<Complex64> {
         let (n_elem_x, n_elem_y) = velocity.dim();
-        let mut pressure = Array2::<Complex<f64>>::zeros((n_elem_x, n_elem_y));
+        let mut pressure = Array2::<Complex64>::zeros((n_elem_x, n_elem_y));
 
         let k = self.transducer.wavenumber(self.c0);
         let (elem_width, elem_height) = self.transducer.element_size();
@@ -40,7 +41,7 @@ impl RayleighSommerfeldSolver {
         // For each observation point (on transducer surface for simplicity)
         for i in 0..n_elem_x {
             for j in 0..n_elem_y {
-                let mut p_sum = Complex::new(0.0, 0.0);
+                let mut p_sum = Complex64::new(0.0, 0.0);
 
                 // Sum contributions from all source elements (O(n²) loop)
                 for si in 0..n_elem_x {
@@ -55,7 +56,7 @@ impl RayleighSommerfeldSolver {
                         if r > 1e-12 {
                             // Avoid singularity
                             // Rayleigh-Sommerfeld Green's function
-                            let green = Complex::new(0.0, k * r).exp() / r;
+                            let green = Complex64::new(0.0, k * r).exp() / r;
                             let obliquity = dz / r; // z-component of unit vector
 
                             p_sum += velocity[[si, sj]] * green * obliquity;
@@ -64,7 +65,7 @@ impl RayleighSommerfeldSolver {
                 }
 
                 // Scaling factor
-                let scaling = Complex::new(0.0, self.rho0 * self.c0 * k / (2.0 * PI));
+                let scaling = Complex64::new(0.0, self.rho0 * self.c0 * k / (2.0 * PI));
                 pressure[[i, j]] = p_sum * scaling;
             }
         }
@@ -102,7 +103,7 @@ fn benchmark_fnm_vs_rayleigh_sommerfeld(c: &mut Criterion) {
         let rs_solver = RayleighSommerfeldSolver::new(transducer, 1500.0, 1000.0);
 
         // Create test velocity distribution
-        let velocity = Array2::<Complex<f64>>::from_elem((nx, ny), Complex::new(1.0, 0.0));
+        let velocity = Array2::<Complex64>::from_elem((nx, ny), Complex64::new(1.0, 0.0));
         let z = 25e-3; // 25 mm
 
         // Precompute FNM factors

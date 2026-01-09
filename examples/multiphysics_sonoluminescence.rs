@@ -12,7 +12,7 @@
 
 #[cfg(feature = "pinn")]
 use burn::backend::{Autodiff, NdArray};
-use kwavers::error::KwaversResult;
+use kwavers::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::physics::PhysicsParameters;
 #[cfg(feature = "pinn")]

@@ -29,15 +29,19 @@
 //!
 //! ### Deprecation Plan
 //!
-//! **Phase 1 (Week 2):** Structure Creation ✅
+//! **Phase 1 (Week 2):** Structure Creation ✅ **COMPLETE**
 //! - Create `analysis::signal_processing` module
 //! - Define trait interfaces
 //! - Document deprecation strategy
 //!
-//! **Phase 2 (Week 3-4):** Gradual Migration
-//! - New code uses `analysis::signal_processing::*`
-//! - Add deprecation warnings to `domain::sensor::beamforming`
-//! - Maintain backward compatibility shims
+//! **Phase 2 (Week 3-4):** Gradual Migration 🟡 **IN PROGRESS**
+//! - [x] Migrate time-domain DAS (Delay-and-Sum) ✅
+//! - [x] Migrate delay reference policy ✅
+//! - [ ] Add deprecation warnings to `domain::sensor::beamforming`
+//! - [ ] Create backward compatibility shims
+//! - [ ] Migrate adaptive beamforming (Capon, MUSIC)
+//! - [ ] Migrate localization algorithms
+//! - [ ] Migrate PAM algorithms
 //!
 //! **Phase 3 (Week 5+):** Cleanup
 //! - Migrate all callers to new location
@@ -47,19 +51,30 @@
 //! ## Usage Example
 //!
 //! ```rust,ignore
-//! use kwavers::analysis::signal_processing::beamforming::{DelayAndSum, Beamformer};
+//! use kwavers::analysis::signal_processing::beamforming::{
+//!     delay_and_sum, DelayReference, DEFAULT_DELAY_REFERENCE
+//! };
 //! use kwavers::domain::sensor::GridSensorSet;
-//! use ndarray::Array2;
+//! use ndarray::Array3;
 //!
 //! // Sensor geometry (domain primitive)
-//! let sensors = GridSensorSet::new(positions, sample_rate);
+//! let sensors = GridSensorSet::new(positions, sample_rate)?;
 //!
-//! // Beamforming algorithm (analysis)
-//! let beamformer = DelayAndSum::new(&sensors, sound_speed);
+//! // Compute delays from sensor geometry and physics
+//! let focal_point = [0.0, 0.0, 0.02]; // 20mm depth
+//! let sound_speed = 1540.0; // m/s
+//! let delays = sensors.compute_tof_delays(&focal_point, sound_speed)?;
 //!
-//! // Process sensor data
-//! let rf_data: Array2<f64> = sensors.get_recorded_data();
-//! let beamformed_image = beamformer.process(&rf_data)?;
+//! // Process sensor data (analysis algorithm)
+//! let rf_data: Array3<f64> = sensors.get_recorded_data();
+//! let weights = vec![1.0; sensors.len()]; // Equal weights
+//! let beamformed = delay_and_sum(
+//!     &rf_data,
+//!     sample_rate,
+//!     &delays,
+//!     &weights,
+//!     DEFAULT_DELAY_REFERENCE,
+//! )?;
 //! ```
 //!
 //! ## Design Principles
@@ -73,10 +88,10 @@
 //! ## Algorithms Provided
 //!
 //! ### Beamforming
-//! - **Delay-and-Sum (DAS)**: Standard time-domain beamforming
-//! - **Minimum Variance (Capon)**: Adaptive beamforming
-//! - **MUSIC**: Multiple signal classification
-//! - **Neural Beamforming**: ML-based beamforming (experimental)
+//! - **Delay-and-Sum (DAS)**: Standard time-domain beamforming ✅ **IMPLEMENTED**
+//! - **Minimum Variance (Capon)**: Adaptive beamforming (planned)
+//! - **MUSIC**: Multiple signal classification (planned)
+//! - **Neural Beamforming**: ML-based beamforming (experimental, planned)
 //!
 //! ### Localization
 //! - **Trilateration**: Time-of-arrival based localization
@@ -120,12 +135,14 @@
 //!
 //! ### Old (Deprecated)
 //! ```rust,ignore
-//! use crate::domain::sensor::beamforming::{BeamformingProcessor, BeamformingConfig};
+//! use crate::domain::sensor::beamforming::time_domain::das::delay_and_sum_time_domain_with_reference;
 //! ```
 //!
 //! ### New (Correct)
 //! ```rust,ignore
-//! use crate::analysis::signal_processing::beamforming::{Beamformer, BeamformingConfig};
+//! use crate::analysis::signal_processing::beamforming::time_domain::delay_and_sum;
+//! // Or use the convenience re-export:
+//! use crate::analysis::signal_processing::beamforming::delay_and_sum;
 //! ```
 //!
 //! ### Compatibility Period
@@ -146,8 +163,13 @@ pub mod pam;
 // pub mod deconvolution;  // Point spread function deconvolution
 // pub mod reconstruction; // Image reconstruction algorithms
 
-// Re-export main types (will be populated as modules are implemented)
-// pub use beamforming::{Beamformer, BeamformingConfig, DelayAndSum, MinimumVariance};
+// Re-export main types from implemented modules
+pub use beamforming::{
+    alignment_shifts_s, delay_and_sum, relative_delays_s, DelayReference, DEFAULT_DELAY_REFERENCE,
+};
+
+// Future re-exports (will be populated as modules are implemented)
+// pub use beamforming::{Beamformer, BeamformingConfig, MinimumVariance, MUSIC};
 // pub use localization::{Localizer, LocalizationConfig, Trilateration};
 // pub use pam::{PassiveAcousticMapper, PAMConfig};
 
@@ -157,7 +179,15 @@ mod tests {
 
     #[test]
     fn test_module_structure() {
-        // Verify module is loadable
+        // Verify module is loadable and beamforming exports work
+        let _ = DEFAULT_DELAY_REFERENCE;
         assert!(true);
+    }
+
+    #[test]
+    fn test_beamforming_exports() {
+        // Verify key beamforming types are accessible
+        let ref_policy = DelayReference::recommended_default();
+        assert_eq!(ref_policy, DelayReference::SensorIndex(0));
     }
 }

@@ -17,9 +17,9 @@
 //! - **SWE Standards**: Bamber et al. (2013), "EFSUMB guidelines on elastography"
 //! - **CEUS Standards**: Claudon et al. (2013), "Guidelines for CEUS in liver imaging"
 
-use kwavers::error::KwaversResult;
-use kwavers::grid::Grid;
-use kwavers::medium::homogeneous::HomogeneousMedium;
+use kwavers::core::error::KwaversResult;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::imaging::elastography::InversionMethod;
 use ndarray::Array1;
 use std::f64::consts::PI;
@@ -359,7 +359,7 @@ pub mod swe_validation {
 
         // Expected elasticity values (from homogeneous medium)
         // For isotropic materials: E = μ(3λ + 2μ)/(λ + μ), cs = sqrt(μ/ρ)
-        use kwavers::medium::{CoreMedium, ElasticProperties};
+        use kwavers::domain::medium::{CoreMedium, ElasticProperties};
         let lame_mu = medium.lame_mu(0.0, 0.0, 0.0, grid);
         let density = medium.density(0, 0, 0);
         let lame_lambda = medium.lame_lambda(0.0, 0.0, 0.0, grid);

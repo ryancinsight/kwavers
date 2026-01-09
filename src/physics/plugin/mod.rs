@@ -3,40 +3,36 @@
 //! This module provides a flexible plugin architecture for extending
 //! simulation capabilities without modifying core code.
 
-pub mod acoustic_wave_plugin;
-pub mod elastic_wave_plugin;
 pub mod execution;
-pub mod factory;
+// pub mod factory; // Removed
 pub mod field_access;
-pub mod kzk_solver;
 pub mod manager;
 pub mod metadata;
-pub mod mixed_domain;
-pub mod seismic_imaging;
+
+pub mod pam;
+// pub mod seismic_imaging; // Moved to solver
 pub mod transducer_field;
 
-use crate::boundary::Boundary;
-use crate::error::KwaversResult;
-use crate::grid::Grid;
-use crate::medium::Medium;
-use crate::physics::field_mapping::UnifiedFieldType;
-use crate::source::Source;
+use crate::core::error::KwaversResult;
+use crate::domain::field::indices;
+// ... imports ...
+use crate::domain::boundary::Boundary;
+use crate::domain::field::mapping::UnifiedFieldType;
+use crate::domain::grid::Grid;
+use crate::domain::medium::Medium;
+use crate::domain::source::Source;
 use ndarray::{Array3, Array4};
 use std::any::Any;
 use std::fmt::Debug;
 
-pub use acoustic_wave_plugin::AcousticWavePlugin;
-pub use elastic_wave_plugin::ElasticWavePlugin;
 pub use execution::{ExecutionStrategy, PluginExecutor, SequentialStrategy};
-pub use factory::PluginFactory;
-pub use kzk_solver::{FrequencyOperator, KzkSolverPlugin};
+// pub use factory::PluginFactory; // Removed
+
 pub use manager::PluginManager;
 pub use metadata::PluginMetadata;
-pub use mixed_domain::{DomainSelection, MixedDomainPropagationPlugin};
-pub use seismic_imaging::{
-    BoundaryType, ConvergenceCriteria, FwiParameters, ImagingCondition, MigrationAperture,
-    RegularizationParameters, RtmSettings, SeismicImagingPlugin, StorageStrategy,
-};
+
+pub use pam::PAMPlugin;
+// Seismic imaging moved to solver
 pub use transducer_field::{TransducerFieldCalculatorPlugin, TransducerGeometry};
 
 /// State of a plugin

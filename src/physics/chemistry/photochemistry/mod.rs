@@ -1,6 +1,6 @@
 // physics/chemistry/photochemistry/mod.rs
-use crate::grid::Grid;
-use crate::medium::Medium;
+use crate::domain::grid::Grid;
+use crate::domain::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
 

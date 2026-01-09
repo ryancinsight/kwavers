@@ -2,7 +2,7 @@
 //!
 //! This module defines metadata structures and configuration traits for plugins.
 
-use crate::validation::ValidationResult;
+use crate::analysis::validation::ValidationResult;
 use std::any::Any;
 use std::fmt::Debug;
 

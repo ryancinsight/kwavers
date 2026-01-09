@@ -3,11 +3,15 @@
 //! Demonstrates Full Waveform Inversion (FWI) and Reverse Time Migration (RTM)
 //! for seismic imaging applications using the Kwavers acoustic solver.
 
-use kwavers::error::KwaversResult;
-use kwavers::grid::Grid;
-use kwavers::physics::plugin::seismic_imaging::{
-    BoundaryType, FwiParameters, FwiProcessor, ImagingCondition, RegularizationParameters,
-    RtmProcessor, RtmSettings, StorageStrategy,
+use kwavers::core::error::KwaversResult;
+use kwavers::domain::grid::Grid;
+use kwavers::solver::inverse::seismic::{
+    fwi::FwiProcessor,
+    parameters::{
+        BoundaryType, FwiParameters, ImagingCondition, RegularizationParameters, RtmSettings,
+        StorageStrategy,
+    },
+    rtm::RtmProcessor,
 };
 use ndarray::Array3;
 
@@ -67,10 +71,16 @@ fn main() -> KwaversResult<()> {
     println!("True model includes velocity anomaly at center (2500 m/s)");
 
     // Configure FWI parameters
+    let c_max = 2500.0;
+    let dt = 0.3 * dx / (c_max * 3.0_f64.sqrt());
     let fwi_params = FwiParameters {
         max_iterations: 10,
         tolerance: 1e-6,
         step_size: 0.01,
+        nt: 10,
+        dt,
+        n_trace: nx,
+        n_depth: ny,
         regularization: RegularizationParameters {
             tikhonov_weight: 0.01,
             tv_weight: 0.0,
@@ -142,7 +152,7 @@ fn main() -> KwaversResult<()> {
     match rtm.migrate(&source_wavefield, &receiver_wavefield, &grid) {
         Ok(image) => {
             println!("✓ RTM migration completed successfully");
-            let max_amplitude = image.iter().cloned().fold(0.0, f64::max);
+            let max_amplitude = image.iter().copied().fold(0.0f64, |a, b| a.max(b));
             println!("  Maximum image amplitude: {:.3}", max_amplitude);
         }
         Err(e) => {

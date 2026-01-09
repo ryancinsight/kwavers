@@ -17,15 +17,16 @@ The Multi-Rate Time Integration module provides sophisticated time stepping meth
 The module follows SOLID design principles with clear separation of concerns:
 
 ```
-time_integration/
-├── mod.rs              # Main module and MultiRateTimeIntegrator
-├── traits.rs           # Common interfaces (ISP)
-├── time_stepper.rs     # Time stepping methods (SRP)
-├── adaptive_stepping.rs # Adaptive control (SRP)
-├── multi_rate_controller.rs # Multi-rate management
-├── stability.rs        # Stability analysis
-├── coupling.rs         # Coupling strategies
-└── tests.rs           # Comprehensive tests
+solver/integration/time_integration/
+├── mod.rs                   # MultiRateTimeIntegrator + re-exports
+├── traits.rs                # Interfaces and configuration types
+├── time_stepper.rs          # Runge-Kutta, Adams-Bashforth implementations
+├── adaptive_stepping.rs     # AdaptiveTimeStepper + error estimators
+├── multi_rate_controller.rs # Subcycling orchestration
+├── time_scale_separation.rs # TimeScaleSeparator
+├── stability.rs             # StabilityAnalyzer + CFLCondition
+├── coupling.rs              # Coupling strategies
+└── tests.rs                 # Module tests
 ```
 
 ## Usage Examples
@@ -33,72 +34,91 @@ time_integration/
 ### Basic Time Stepping
 
 ```rust
-use kwavers::solver::time_integration::*;
+use kwavers::core::error::KwaversResult;
+use kwavers::domain::grid::Grid;
+use kwavers::solver::time_integration::{RungeKutta4, TimeStepper};
+use kwavers::solver::time_integration::time_stepper::RK4Config;
+use ndarray::Array3;
 
-// Create a 4th-order Runge-Kutta stepper
-let config = RK4Config::default();
-let mut stepper = RungeKutta4::new(config);
+fn rk4_step_zero_rhs() -> KwaversResult<()> {
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).expect("grid creation failed");
+    let mut field = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
 
-// Define your RHS function
-let rhs_fn = |field: &Array3<f64>| -> KwaversResult<Array3<f64>> {
-    // Compute time derivatives
-    physics.evaluate(field, &grid)
-};
+    let rhs_fn = |y: &Array3<f64>| -> KwaversResult<Array3<f64>> {
+        Ok(Array3::zeros(y.dim()))
+    };
 
-// Take a time step
-let new_field = stepper.step(&field, rhs_fn, dt, &grid)?;
+    let mut stepper = RungeKutta4::new(RK4Config::default());
+    stepper.step(&mut field, rhs_fn, 1e-7, &grid)?;
+
+    Ok(())
+}
 ```
 
 ### Adaptive Time Stepping
 
 ```rust
-// Create adaptive time stepper
-let base_stepper = RungeKutta4::new(RK4Config::default());
-let low_order = RungeKutta4::new(RK4Config::default());
-let error_estimator = Box::new(RichardsonErrorEstimator::new(4));
+use kwavers::core::error::KwaversResult;
+use kwavers::domain::grid::Grid;
+use kwavers::solver::time_integration::{AdaptiveTimeStepper, ErrorEstimator, RungeKutta4, TimeStepper};
+use kwavers::solver::time_integration::time_stepper::RK4Config;
+use ndarray::Array3;
 
-let mut adaptive = AdaptiveTimeStepper::new(
-    base_stepper,
-    low_order,
-    error_estimator,
-    0.01,    // initial dt
-    1e-6,    // min dt
-    1.0,     // max dt
-    1e-4,    // tolerance
-);
+fn adaptive_step_zero_rhs() -> KwaversResult<()> {
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).expect("grid creation failed");
+    let field = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
 
-// Take adaptive step
-let (new_field, actual_dt) = adaptive.adaptive_step(&field, rhs_fn, &grid)?;
+    let rhs_fn = |y: &Array3<f64>| -> KwaversResult<Array3<f64>> {
+        Ok(Array3::zeros(y.dim()))
+    };
+
+    let base_stepper = RungeKutta4::new(RK4Config::default());
+    let low_order_stepper = RungeKutta4::new(RK4Config::default());
+
+    let mut adaptive = AdaptiveTimeStepper::new(
+        base_stepper,
+        low_order_stepper,
+        Box::new(ErrorEstimator::new(4)),
+        1e-7,
+        1e-10,
+        1e-4,
+        1e-8,
+    );
+
+    let (_new_field, _actual_dt) = adaptive.adaptive_step(&field, rhs_fn, &grid)?;
+    Ok(())
+}
 ```
 
 ### Multi-Rate Integration
 
 ```rust
-// Configure multi-rate integration
-let mut config = MultiRateConfig::default();
-config.max_subcycles = 10;
-config.stability_factor = 0.9;
+use kwavers::core::error::KwaversResult;
+use kwavers::domain::grid::Grid;
+use kwavers::physics::plugin::AcousticWavePlugin;
+use kwavers::solver::time_integration::{MultiRateConfig, MultiRateTimeIntegrator};
+use ndarray::Array3;
+use std::collections::HashMap;
 
-// Create integrator
-let mut integrator = MultiRateTimeIntegrator::new(config);
+fn multirate_advance_example() -> KwaversResult<()> {
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).expect("grid creation failed");
 
-// Set up physics components
-let mut fields = HashMap::new();
-fields.insert("acoustic".to_string(), acoustic_field);
-fields.insert("thermal".to_string(), thermal_field);
+    let mut config = MultiRateConfig::default();
+    config.max_subcycles = 10;
+    config.stability_factor = 0.9;
 
-let mut physics = HashMap::new();
-physics.insert("acoustic".to_string(), Box::new(acoustic_physics));
-physics.insert("thermal".to_string(), Box::new(thermal_physics));
+    let mut integrator = MultiRateTimeIntegrator::new(config, &grid);
 
-// Advance the coupled system
-let final_time = integrator.advance(
-    &mut fields,
-    &physics,
-    0.0,      // start time
-    1.0,      // target time
-    &grid,
-)?;
+    let mut fields = HashMap::new();
+    fields.insert("acoustic".to_string(), Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz)));
+
+    let mut physics_components: HashMap<String, Box<dyn kwavers::physics::plugin::Plugin>> =
+        HashMap::new();
+    physics_components.insert("acoustic".to_string(), Box::new(AcousticWavePlugin::new(0.3)));
+
+    let _final_time = integrator.advance(&mut fields, &physics_components, 0.0, 1e-6, &grid)?;
+    Ok(())
+}
 ```
 
 ## Time Stepping Methods
@@ -147,9 +167,6 @@ The module provides comprehensive stability analysis:
 
 ```rust
 let analyzer = StabilityAnalyzer::new(0.9); // 90% of CFL limit
-
-// Compute stable time step
-let max_dt = analyzer.compute_stable_dt(&physics, &field, &grid)?;
 
 // Check stability
 let cfl = CFLCondition::new(dt, max_wave_speed, &grid, 0.9);

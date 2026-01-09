@@ -58,7 +58,7 @@ This directory contains comprehensive examples demonstrating the interdisciplina
 ### ⚡ **Performance & Benchmarks**
 | Example | Description | Features |
 |---------|-------------|----------|
-| [`kwave_benchmarks.rs`](kwave_benchmarks.rs) | k-Wave compatibility | Performance comparison, migration |
+| [`kwave_benchmarks.rs`](kwave_benchmarks.rs) | Reference compatibility | Performance comparison, migration |
 | [`performance_validation.rs`](performance_validation.rs) | Performance analysis | Timing, scaling, optimization |
 | [`safe_vectorization_benchmarks.rs`](safe_vectorization_benchmarks.rs) | Vectorization benchmarks | SIMD performance, safety |
 
@@ -152,4 +152,4 @@ Examples include comprehensive validation against:
 - **Analytical solutions** - Green's functions, diffraction theory
 - **Literature benchmarks** - Published research results
 - **Performance metrics** - Timing, accuracy, scaling analysis
-- **k-Wave compatibility** - MATLAB toolbox validation
+- **Reference compatibility** - MATLAB toolbox validation

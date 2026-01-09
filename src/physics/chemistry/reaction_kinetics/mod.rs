@@ -1,6 +1,6 @@
 // physics/chemistry/reaction_kinetics/mod.rs
-use crate::grid::Grid;
-use crate::medium::Medium;
+use crate::domain::grid::Grid;
+use crate::domain::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
 
@@ -38,7 +38,7 @@ impl ReactionKinetics {
                 let _y = j as f64 * grid.dy;
                 let _z = k as f64 * grid.dz;
 
-                use crate::physics::constants::thermodynamic::{
+                use crate::core::constants::thermodynamic::{
                     REACTION_REFERENCE_TEMPERATURE, SECONDARY_REACTION_RATE,
                     SONOCHEMISTRY_BASE_RATE,
                 };

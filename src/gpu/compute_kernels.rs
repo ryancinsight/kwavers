@@ -3,8 +3,8 @@
 //! High-performance compute shaders using wgpu for cross-platform GPU acceleration.
 //! Supports both integrated and discrete GPUs with automatic fallback.
 
-use crate::error::{KwaversError, KwaversResult};
-use crate::Grid;
+use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::grid;
 use ndarray::Array3;
 use wgpu::util::DeviceExt;
 
@@ -33,7 +33,7 @@ impl AcousticFieldKernel {
             })
             .await
             .ok_or_else(|| {
-                KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
                     resource: "GPU adapter".to_string(),
                 })
             })?;
@@ -50,7 +50,7 @@ impl AcousticFieldKernel {
             )
             .await
             .map_err(|e| {
-                KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
                     resource: format!("GPU device: {}", e),
                 })
             })?;
@@ -126,7 +126,7 @@ impl AcousticFieldKernel {
     pub fn compute_propagation(
         &self,
         pressure: &Array3<f64>,
-        grid: &Grid,
+        grid: &grid::Grid,
         dt: f64,
         sound_speed: f64,
     ) -> KwaversResult<Array3<f64>> {
@@ -275,12 +275,12 @@ impl AcousticFieldKernel {
         receiver
             .recv()
             .map_err(|_| {
-                KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
                     resource: "GPU buffer mapping channel".to_string(),
                 })
             })?
             .map_err(|_| {
-                KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
                     resource: "GPU buffer mapping".to_string(),
                 })
             })?;
@@ -333,7 +333,7 @@ impl WaveEquationGpu {
         velocity: &Array3<f64>,
         density: &Array3<f64>,
         sound_speed: &Array3<f64>,
-        grid: &Grid,
+        grid: &grid::Grid,
         dt: f64,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
         // Compute average properties for efficient GPU computation

@@ -21,7 +21,7 @@
 //! - Performance benchmarking vs analytical solution
 
 #[cfg(feature = "pinn")]
-use kwavers::error::KwaversResult;
+use kwavers::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::burn_wave_equation_2d::{
     BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, Geometry2D,

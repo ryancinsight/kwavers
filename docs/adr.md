@@ -129,19 +129,19 @@
 **Date**: Sprint 111
 
 #### ADR-022: K-Space Solver Modularization (Sprint 161)
-**Problem**: The `kwave_parity` module was monolithic, used legacy naming, and lacked flexibility to support both k-Wave parity and optimal literature defaults in a single implementation.
+**Problem**: The `kwave_parity` module was monolithic, used legacy naming, and lacked flexibility to support both reference-parity behavior and optimal literature defaults in a single implementation.
 **Solution**: Refactor to `kspace` module with modular operator structure and `CompatibilityMode` switching.
 **Implementation**:
 - **Renamed**: `kwave_parity` → `kspace` for domain clarity.
 - **Modularized**: Split into `pressure`, `velocity`, `absorption`, `operators`, `data`, `sensors`, and `sources`.
 - **Compatibility Modes**:
   - `Optimal`: Uses exact dispersion correction (Liu 1997) as default.
-  - `KWave`: Matches legacy k-Wave behavior (Treeby & Cox 2010) via configuration.
+  - `KWave`: Matches legacy reference behavior (Treeby & Cox 2010) via configuration.
 - **Optimization**: Refactored large `ndarray::Zip` chains to smaller sequential calls to resolve compiler limitations.
 - **Unified Correction**: Integrated with `kspace_correction` module.
 **Rationale**: 
 - Follows GRASP/SOLID for better maintainability and architectural purity.
-- Provides 100% parity with k-Wave while offering superior accuracy via `Optimal` mode.
+- Provides 100% parity with the legacy reference behavior while offering superior accuracy via `Optimal` mode.
 - Resolves "Potemkin village" risk by removing stubs and centralizing logic.
 **Metrics**:
 - 100% parity verified in `kwave_parity_verification.rs`.

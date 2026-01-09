@@ -9,13 +9,13 @@
 //! - Azhari (2010) "Basics of Biomedical Ultrasound for Engineers"
 
 use kwavers::{
-    boundary::pml::{PMLBoundary, PMLConfig},
+    domain::boundary::pml::{PMLBoundary, PMLConfig},
+    domain::grid::{stability::StabilityCalculator, Grid},
+    domain::source::NullSource,
     error::KwaversResult,
-    grid::{stability::StabilityCalculator, Grid},
     medium::HomogeneousMedium,
-    physics::plugin::acoustic_wave_plugin::AcousticWavePlugin,
+    solver::forward::acoustic::AcousticWavePlugin,
     solver::plugin_based::PluginBasedSolver,
-    source::NullSource,
     time::Time,
 };
 use std::sync::Arc;
@@ -196,7 +196,7 @@ fn create_tissue_model_comprehensive(grid: &Grid) -> KwaversResult<Arc<Homogeneo
 ///
 /// For actual multilayer simulation, use:
 /// ```rust,ignore
-/// use kwavers::medium::heterogeneous::HeterogeneousMedium;
+/// use kwavers::domain::medium::heterogeneous::HeterogeneousMedium;
 /// let mut medium = HeterogeneousMedium::new(nx, ny, nz, true);
 /// // Set properties for each voxel based on layer structure
 /// ```

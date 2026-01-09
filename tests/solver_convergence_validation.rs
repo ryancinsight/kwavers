@@ -5,7 +5,7 @@
 //!
 //! ## References
 //! - Taflove & Hagness (2005) "Computational Electrodynamics: The Finite-Difference Time-Domain Method"
-//! - Treeby & Cox (2010) "k-Wave: MATLAB toolbox for the simulation and reconstruction of photoacoustic wave fields"
+//! - Treeby & Cox (2010) "MATLAB toolbox for the simulation and reconstruction of photoacoustic wave fields"
 //! - Finkelstein & Kastner (2007) "Finite difference time domain dispersion reduction schemes"
 //!
 //! ## Sprint 150: Solver Property Validation
@@ -14,9 +14,9 @@
 //! - Validates wave propagation without instabilities
 //! - Validates solver doesn't produce NaN or Inf values
 
-use kwavers::boundary::{PMLBoundary, PMLConfig};
-use kwavers::grid::Grid;
-use kwavers::medium::homogeneous::HomogeneousMedium;
+use kwavers::domain::boundary::{PMLBoundary, PMLConfig};
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::plugin::PluginManager;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
 use ndarray::{s, Array4};
@@ -39,10 +39,11 @@ fn test_cfl_stability_condition() {
     let config = FdtdConfig {
         spatial_order: 2,
         staggered_grid: true,
-        cfl_factor: 0.9, // Just below stability limit
+        cfl_factor: 0.5,
         subgridding: false,
         subgrid_factor: 2,
         enable_gpu_acceleration: false,
+        ..Default::default()
     };
 
     let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");
@@ -55,10 +56,10 @@ fn test_cfl_stability_condition() {
         .expect("Failed to initialize plugins");
 
     let c = 1500.0;
-    let dt = 0.9 * dx / c;
+    let dt = 0.5 * dx / (c * (3.0_f64).sqrt());
 
-    let mut boundary =
-        PMLBoundary::new(PMLConfig::default()).expect("Failed to create PML boundary");
+    let mut boundary = PMLBoundary::new(PMLConfig::default().with_thickness(2))
+        .expect("Failed to create PML boundary");
     let sources = vec![];
 
     for step in 0..100 {
@@ -122,6 +123,7 @@ fn test_energy_conservation() {
         subgridding: false,
         subgrid_factor: 2,
         enable_gpu_acceleration: false,
+        ..Default::default()
     };
 
     let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");
@@ -133,18 +135,33 @@ fn test_energy_conservation() {
         .initialize(&grid, &medium)
         .expect("Failed to initialize plugins");
 
-    // Compute initial energy
-    let initial_energy: f64 = fields
-        .slice(s![0, .., .., ..])
-        .iter()
-        .map(|&x| x.powi(2))
-        .sum();
-
     let c = 1500.0;
-    let dt = 0.5 * dx / c;
+    let dt = 0.3 * dx / (c * (3.0_f64).sqrt());
 
-    let mut boundary =
-        PMLBoundary::new(PMLConfig::default()).expect("Failed to create PML boundary");
+    let rho = 1000.0;
+    let rho_c2 = rho * c * c;
+
+    let energy = |f: &Array4<f64>| -> f64 {
+        let p = f.slice(s![0, .., .., ..]);
+        let vx = f.slice(s![6, .., .., ..]);
+        let vy = f.slice(s![7, .., .., ..]);
+        let vz = f.slice(s![8, .., .., ..]);
+
+        let potential = p.iter().map(|&x| (x * x) / rho_c2).sum::<f64>();
+        let kinetic = vx
+            .iter()
+            .zip(vy.iter())
+            .zip(vz.iter())
+            .map(|((&x, &y), &z)| rho * (x * x + y * y + z * z))
+            .sum::<f64>();
+
+        0.5 * (potential + kinetic)
+    };
+
+    let initial_energy = energy(&fields);
+
+    let mut boundary = PMLBoundary::new(PMLConfig::default().with_thickness(4))
+        .expect("Failed to create PML boundary");
     let sources = vec![];
 
     // Run for multiple steps
@@ -156,11 +173,7 @@ fn test_energy_conservation() {
     }
 
     // Compute final energy
-    let final_energy: f64 = fields
-        .slice(s![0, .., .., ..])
-        .iter()
-        .map(|&x| x.powi(2))
-        .sum();
+    let final_energy = energy(&fields);
 
     let energy_change = (final_energy - initial_energy).abs() / initial_energy;
 

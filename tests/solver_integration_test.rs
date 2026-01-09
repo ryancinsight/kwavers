@@ -1,13 +1,12 @@
-use kwavers::boundary::PMLConfig;
-use kwavers::grid::Grid;
-use kwavers::medium::homogeneous::HomogeneousMedium;
-use kwavers::solver::spectral::config::{BoundaryConfig, SpectralConfig as KSpaceConfig};
-use kwavers::solver::spectral::solver::SpectralSolver as KSpaceSolver;
-use kwavers::solver::spectral::sources::SpectralSource as KSpaceSource;
+use kwavers::domain::boundary::PMLConfig;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::homogeneous::HomogeneousMedium;
+use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver, PSTDSource};
+use kwavers::solver::pstd::config::BoundaryConfig;
 use ndarray::Array3;
 
 #[test]
-fn test_kwave_solver_init_and_step() {
+fn test_kspace_solver_init_and_step() {
     // 1. Setup Grid
     let (nx, ny, nz) = (32, 32, 32);
     let (dx, dy, dz) = (1.0e-3, 1.0e-3, 1.0e-3);
@@ -17,9 +16,8 @@ fn test_kwave_solver_init_and_step() {
     let medium = HomogeneousMedium::water(&grid);
 
     // 3. Setup Config
-    let config = KSpaceConfig {
+    let mut config = PSTDConfig {
         dt: 50e-9, // 50 ns
-        nonlinearity: false,
         boundary: BoundaryConfig::PML(PMLConfig {
             thickness: 4,
             sigma_max_acoustic: 2.0,
@@ -29,7 +27,7 @@ fn test_kwave_solver_init_and_step() {
     };
 
     // 4. Initialize Solver
-    let mut solver = KSpaceSolver::new(config, grid.clone(), &medium, KSpaceSource::default())
+    let mut solver = PSTDSolver::new(config, grid.clone(), &medium, PSTDSource::default())
         .expect("Failed to create solver");
 
     // 5. Add initial pressure source (Gaussian pulse in center)
@@ -50,7 +48,7 @@ fn test_kwave_solver_init_and_step() {
         }
     }
 
-    solver.add_pressure_source(&source);
+    solver.fields.p.assign(&source);
 
     // 6. Run a few steps
     solver.run(10).expect("Failed to run solver");

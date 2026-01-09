@@ -4,7 +4,7 @@
 //! across multiple GPUs using domain decomposition and load balancing.
 
 #[cfg(feature = "pinn")]
-use kwavers::error::KwaversResult;
+use kwavers::core::error::KwaversResult;
 #[cfg(all(feature = "pinn", feature = "gpu"))]
 use kwavers::gpu::MultiGpuContext;
 #[cfg(feature = "pinn")]

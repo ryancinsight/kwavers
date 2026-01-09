@@ -1,0 +1,343 @@
+# ADR 003: Signal Processing Migration to Analysis Layer
+
+**Status:** Accepted  
+**Date:** 2024-01-20  
+**Deciders:** Architecture Team  
+**Technical Story:** Domain Layer Purification (Phase 2)
+
+## Context
+
+### Problem Statement
+
+The kwavers codebase has a significant architectural violation: signal processing algorithms (beamforming, localization, passive acoustic mapping) reside in the `domain::sensor` module. This violates the layered architecture principle and causes multiple issues:
+
+1. **Layer Violation**: Domain layer (Layer 2) should contain only primitives (sensor geometry, grid sampling, field definitions). Signal processing is analysis (Layer 7), creating a ~5-layer jump.
+
+2. **Circular Dependency Risk**: Domain importing from physics/solver for processing creates bidirectional dependencies, violating the strict downward-only dependency rule.
+
+3. **Namespace Pollution**: Sensor module conflates:
+   - **Primitives** (sensor positions, sampling rates, geometry) — domain concern
+   - **Algorithms** (beamforming, localization, PAM) — analysis concern
+
+4. **Hindered Reusability**: Signal processing algorithms should work on data from:
+   - Real sensors (domain)
+   - Simulated data (simulation layer)
+   - Clinical workflows (clinical layer)
+   
+   Current placement in `domain::sensor` incorrectly couples algorithms to domain primitives.
+
+5. **Literature Misalignment**: Standard references (Van Trees, Capon, Schmidt) treat beamforming as signal processing / array processing, not sensor geometry.
+
+### Architectural Target
+
+**Correct Layering:**
+```
+Layer 7: analysis (signal_processing, validation, visualization) [CROSS-CUTTING]
+         ↑ can import from ↓
+Layer 6: clinical (imaging, therapy workflows)
+Layer 5: simulation (time-stepping, orchestration)
+Layer 4: solver (FDTD, PSTD, DG, FEM numerical methods)
+Layer 3: physics (acoustic models, constitutive laws)
+Layer 2: domain (grid, field, medium, sensor geometry, boundary)
+Layer 1: math (operators, transforms, numerics)
+Layer 0: core (error, constants, traits)
+```
+
+**Key Insight:** Signal processing algorithms are **consumers** of sensor data, not **components** of sensor primitives.
+
+### Mathematical Justification
+
+**Beamforming** is a data processing operation:
+```
+y(t, θ) = Σᵢ wᵢ · xᵢ(t - τᵢ(θ))
+```
+Where:
+- `xᵢ(t)` = sensor data (domain: recorded time series)
+- `τᵢ(θ)` = propagation delays (computed from sensor positions + physics)
+- `wᵢ` = array weights (algorithm parameter)
+- `y(t, θ)` = beamformed output (analysis result)
+
+**Separation:**
+- **Domain:** sensor positions `rᵢ`, sampling rate `fs`, recorded data `xᵢ(t)`
+- **Physics:** sound speed `c`, medium properties
+- **Analysis:** delay computation `τᵢ = ||rᵢ - p|| / c`, weighting `wᵢ`, summation algorithm
+
+Current architecture conflates all three in `domain::sensor::beamforming`.
+
+## Decision
+
+We will **migrate all signal processing algorithms** from `domain::sensor` to `analysis::signal_processing`, following a **gradual, backward-compatible migration strategy**.
+
+### Target Structure
+
+```
+src/analysis/signal_processing/
+├── mod.rs                      # Module root with migration docs
+├── beamforming/
+│   ├── mod.rs                  # Trait definitions
+│   ├── time_domain/
+│   │   ├── das.rs              # Delay-and-Sum
+│   │   └── srp.rs              # Steered Response Power
+│   ├── adaptive/
+│   │   ├── capon.rs            # Minimum Variance (Capon)
+│   │   ├── music.rs            # MUSIC subspace method
+│   │   └── esmv.rs             # Eigenvector Spatial Variance
+│   ├── narrowband/
+│   │   └── frequency_domain.rs # STFT-based beamforming
+│   └── neural/                 # ML-based beamforming (experimental)
+├── localization/
+│   ├── mod.rs
+│   ├── trilateration.rs        # Time-of-arrival localization
+│   ├── beamforming_search.rs   # Grid-based SRP-DAS search
+│   └── multilateration.rs      # Multi-sensor fusion
+└── pam/
+    ├── mod.rs
+    ├── cavitation_detection.rs # Real-time PAM
+    └── spatial_mapping.rs      # 3D cavitation mapping
+```
+
+### Migration Phases
+
+#### Phase 1: Structure Creation ✅ (Week 2, Completed)
+- [x] Create `analysis::signal_processing` module tree
+- [x] Document migration strategy in module docstrings
+- [x] Define trait interfaces for future implementations
+
+#### Phase 2: Proof-of-Concept Migration (Week 3, Current)
+- [ ] Create ADR 003 (this document)
+- [ ] Migrate Delay-and-Sum (DAS) as reference implementation
+  - [ ] Port `time_domain::das` to `analysis::signal_processing::beamforming::time_domain::das`
+  - [ ] Add comprehensive unit tests
+  - [ ] Add integration tests with domain sensor primitives
+  - [ ] Verify mathematical correctness against analytical models
+- [ ] Add deprecation warnings to `domain::sensor::beamforming::time_domain::das`
+- [ ] Create backward-compatible shim (re-export from new location)
+- [ ] Update example code to use new location
+- [ ] Run full test suite to verify no regressions
+
+#### Phase 3: Incremental Migration (Weeks 3-4)
+- [ ] Migrate narrowband beamforming (Capon, MUSIC)
+- [ ] Migrate localization algorithms
+- [ ] Migrate PAM algorithms
+- [ ] Update all internal callers progressively
+- [ ] Maintain shims for external callers
+
+#### Phase 4: Deprecation Period (Week 4-5)
+- [ ] Mark all `domain::sensor::beamforming` items with `#[deprecated]`
+- [ ] Add compile-time warnings with migration instructions
+- [ ] Update all documentation and examples
+- [ ] Update PRD, SRS, and technical guides
+
+#### Phase 5: Removal (Week 6+)
+- [ ] Remove deprecated `domain::sensor::beamforming` module
+- [ ] Remove backward-compatible shims
+- [ ] Final test suite validation
+- [ ] Performance benchmarks to ensure no regression
+
+### Backward Compatibility Strategy
+
+**Shim Pattern:**
+```rust
+// domain/sensor/beamforming/time_domain/das/mod.rs (deprecated)
+
+#[deprecated(
+    since = "0.2.0",
+    note = "Moved to `analysis::signal_processing::beamforming::time_domain`. 
+            Use `crate::analysis::signal_processing::beamforming::time_domain::delay_and_sum` instead."
+)]
+pub use crate::analysis::signal_processing::beamforming::time_domain::delay_and_sum as delay_and_sum_time_domain_with_reference;
+
+#[deprecated(since = "0.2.0", note = "Moved to analysis::signal_processing::beamforming")]
+pub use crate::analysis::signal_processing::beamforming::time_domain::DEFAULT_DELAY_REFERENCE;
+```
+
+**Migration Instructions for Users:**
+
+Old (deprecated):
+```rust
+use crate::domain::sensor::beamforming::time_domain::das::delay_and_sum_time_domain_with_reference;
+```
+
+New (correct):
+```rust
+use crate::analysis::signal_processing::beamforming::time_domain::delay_and_sum;
+```
+
+### Domain Layer Purification
+
+After migration, `domain::sensor` will contain **only primitives:**
+
+```rust
+// domain/sensor/mod.rs (post-purification)
+pub mod grid_sampling;    // Sensor grid definitions
+pub mod recorder;         // Data recording primitives
+pub mod geometry;         // Sensor position geometry (NEW)
+
+// REMOVED:
+// pub mod beamforming;   // → analysis::signal_processing::beamforming
+// pub mod localization;  // → analysis::signal_processing::localization
+// pub mod passive_acoustic_mapping; // → analysis::signal_processing::pam
+```
+
+**New Domain Primitives (if needed):**
+- `SensorGeometry`: positions, orientations, aperture
+- `SensorArray`: collection of sensors with shared properties
+- `RecordedData`: time-series data with metadata
+
+These are **passive data structures**, not **active algorithms**.
+
+## Consequences
+
+### Positive
+
+1. **Architectural Purity**: Strict layer separation restored; analysis layer can import from domain without creating cycles.
+
+2. **Improved Reusability**: Beamforming algorithms can now process:
+   - Simulated sensor data (from `simulation` layer)
+   - Clinical workflow outputs (from `clinical` layer)
+   - External data sources (via domain primitives)
+
+3. **Clear Ownership**: 
+   - Domain team owns sensor geometry and data recording
+   - Analysis team owns signal processing algorithms
+   - No cross-contamination of responsibilities
+
+4. **Literature Alignment**: Code structure matches standard signal processing / array processing literature.
+
+5. **Better Testability**: Signal processing algorithms can be tested independently from sensor implementations.
+
+6. **Simplified Dependencies**: Domain layer has fewer, clearer dependencies; analysis layer explicitly depends on domain.
+
+7. **Namespace Clarity**: `domain::sensor` becomes intuitively understandable (just sensor primitives).
+
+### Negative
+
+1. **Migration Effort**: ~800-1000 lines of beamforming code must be carefully moved and retested.
+
+2. **User Code Updates**: External users must update imports (mitigated by deprecation warnings and shims).
+
+3. **Documentation Updates**: All docs, examples, tutorials must be updated to reflect new structure.
+
+4. **Short-Term Duplication**: During migration period, some code exists in both locations (shims).
+
+### Neutral
+
+1. **API Surface Changes**: Function signatures remain identical; only module paths change.
+
+2. **Performance**: No performance impact (pure refactor, no algorithmic changes).
+
+### Risk Mitigation
+
+**Risk:** Breaking changes to external APIs.  
+**Mitigation:** Maintain shims for at least one minor version; provide clear migration path; use `#[deprecated]` attributes.
+
+**Risk:** Regression in algorithm correctness.  
+**Mitigation:** Comprehensive test suite including:
+- Unit tests for each algorithm
+- Property-based tests (proptest)
+- Integration tests with known analytical solutions
+- Benchmark tests to detect performance regressions
+
+**Risk:** Circular dependency introduction during migration.  
+**Mitigation:** Strict code review; automated dependency checker; incremental migration with validation after each step.
+
+## Verification Strategy
+
+### Mathematical Verification
+
+Each migrated algorithm MUST pass:
+
+1. **Unit Tests**: Basic functionality
+2. **Property Tests**: Invariant preservation (e.g., DAS output energy ≤ sum of input energies)
+3. **Analytical Tests**: Comparison with closed-form solutions for simple cases
+4. **Literature Tests**: Reproduce results from cited papers
+
+### Example: DAS Verification
+
+```rust
+#[test]
+fn das_aligns_impulses_correctly() {
+    // Test that DAS correctly aligns impulse responses
+    // based on known propagation delays
+}
+
+#[test]
+fn das_preserves_energy_bound() {
+    // Verify that ||y||² ≤ Σᵢ wᵢ² · ||xᵢ||²
+}
+
+#[test]
+fn das_matches_literature_example() {
+    // Reproduce Van Trees example 2.1
+}
+```
+
+### Integration Verification
+
+```rust
+#[test]
+fn beamforming_with_simulated_data() {
+    // Simulate point source
+    // Record with sensor array
+    // Beamform and verify peak at source location
+}
+```
+
+## References
+
+### Literature
+- Van Trees, H. L. (2002). *Optimum Array Processing*. Wiley.
+- Capon, J. (1969). "High-resolution frequency-wavenumber spectrum analysis." *Proceedings of the IEEE*, 57(8), 1408-1418.
+- Schmidt, R. O. (1986). "Multiple emitter location and signal parameter estimation." *IEEE Trans. Antennas and Propagation*, 34(3), 276-280.
+
+### Related ADRs
+- ADR 001: Math Numerics Single Source of Truth (Phase 1, Foundation)
+- ADR 002: (Future) Physics Model Separation from Solver
+
+### Architectural Principles
+- SOLID: Single Responsibility Principle (SRP), Dependency Inversion
+- GRASP: High Cohesion, Low Coupling, Protected Variations
+- Clean Architecture: Layer separation, dependency rule
+
+## Status Log
+
+- **2024-01-20**: Proposed (Phase 2 planning)
+- **2024-01-20**: Accepted (Architecture review)
+- **2024-01-20**: Implementation Started (DAS migration PoC)
+
+## Notes
+
+### Why Not Keep Beamforming in Domain?
+
+Counter-argument: "Beamforming is tightly coupled to sensor arrays, so it belongs in `domain::sensor`."
+
+**Rebuttal:**
+1. **Coupling Direction**: Beamforming **uses** sensor geometry (downward dependency), but sensor geometry does not need beamforming (no upward dependency). This is a classic analysis-depends-on-domain relationship.
+
+2. **Reusability**: Beamforming algorithms should work on:
+   - Real hardware sensor data
+   - Simulated sensor data
+   - Synthetic test data
+   Placing it in `domain::sensor` incorrectly suggests it only works with domain sensor types.
+
+3. **Layering Discipline**: Allowing algorithms in domain layer creates precedent for more violations (e.g., "should image reconstruction be in domain::field?"). Strict layering prevents architectural decay.
+
+4. **Evolution**: As beamforming evolves (neural networks, GPU acceleration, distributed processing), it will import from more layers (solver for numerical methods, clinical for workflows). Domain layer cannot have these dependencies.
+
+### Alternative Considered: Keep in Domain, Extract Interface
+
+**Alternative:** Keep implementation in `domain::sensor::beamforming`, but extract trait to `analysis`.
+
+**Rejected Because:**
+- Still violates layer boundaries (implementation in wrong layer)
+- Creates confusing split (interface vs implementation in different layers)
+- Does not solve the reusability problem
+- Adds complexity without architectural benefit
+
+**Conclusion:** Full migration to analysis layer is the correct solution.
+
+---
+
+**Signature:**  
+Architecture Team  
+Date: 2024-01-20

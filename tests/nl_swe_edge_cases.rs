@@ -6,9 +6,9 @@
 //! - Large deformation hyperelastic behavior
 //! - Harmonic generation under extreme conditions
 
-use kwavers::grid::Grid;
-use kwavers::medium::HomogeneousMedium;
-use kwavers::physics::imaging::elastography::*;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::HomogeneousMedium;
+use kwavers::physics::imaging::modalities::elastography::*;
 use ndarray::Array3;
 use std::prelude::v1::*;
 

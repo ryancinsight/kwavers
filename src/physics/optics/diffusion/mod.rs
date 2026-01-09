@@ -1,7 +1,7 @@
 // physics/optics/diffusion/mod.rs
-use crate::grid::Grid;
-use crate::medium::Medium;
-use crate::physics::field_indices::LIGHT_IDX;
+use crate::domain::field::indices::LIGHT_IDX;
+use crate::domain::grid::Grid;
+use crate::domain::medium::Medium;
 use crate::physics::optics::polarization::LinearPolarization;
 use crate::physics::optics::PolarizationModel as PolarizationModelTrait;
 use crate::physics::thermal::PennesSolver;
@@ -9,7 +9,7 @@ use crate::physics::wave_propagation::scattering::ScatteringCalculator;
 use log::debug;
 use ndarray::{Array3, Array4, Axis};
 
-use crate::physics::constants::optical::{DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF};
+use crate::core::constants::optical::{DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF};
 use crate::physics::traits::LightDiffusionModelTrait;
 
 /// Physical optical properties of a medium for photon diffusion calculations
@@ -299,7 +299,7 @@ impl LightDiffusionModelTrait for LightDiffusion {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid::Grid;
+    use crate::domain::grid::Grid;
 
     #[test]
     fn test_optical_properties_diffusion_coefficient() {

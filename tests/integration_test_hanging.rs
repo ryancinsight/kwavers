@@ -20,7 +20,7 @@ fn test_point_source_propagation() {
     let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
 
     // Create boundary
-    let pml_config = kwavers::boundary::PMLConfig {
+    let pml_config = kwavers::domain::boundary::PMLConfig {
         thickness: 10,
         ..Default::default()
     };
@@ -29,7 +29,7 @@ fn test_point_source_propagation() {
     // Create source
     let source = PointSource::new(
         (32.0, 32.0, 32.0),
-        Arc::new(kwavers::signal::SineWave::new(1e6, 1.0, 0.0)),
+        Arc::new(kwavers::SineWave::new(1e6, 1.0, 0.0)),
     );
 
     // Create time settings

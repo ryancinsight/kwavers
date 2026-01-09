@@ -12,7 +12,7 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use kwavers::{
     medium::{CoreMedium, HomogeneousMedium},
-    solver::fdtd::finite_difference::FiniteDifference,
+    solver::fdtd::FiniteDifference,
     Grid,
 };
 use ndarray::Array3;

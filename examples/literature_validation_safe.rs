@@ -288,7 +288,7 @@ fn update_velocity_component_safe(
             }
         }
         _ => {
-            return Err(kwavers::error::KwaversError::InvalidInput(
+            return Err(kwavers::core::error::KwaversError::InvalidInput(
                 "Invalid direction".to_string(),
             ))
         }

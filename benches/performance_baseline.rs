@@ -3,7 +3,7 @@
 //! These benchmarks establish performance baselines for critical operations.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use kwavers::medium::{core::CoreMedium, homogeneous::HomogeneousMedium};
+use kwavers::medium::{CoreMedium, HomogeneousMedium};
 use kwavers::Grid;
 
 fn grid_creation_benchmark(c: &mut Criterion) {

@@ -20,8 +20,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
-use kwavers::physics::imaging::elastography::elastic_wave_solver::ElasticWaveConfig;
-use kwavers::physics::imaging::elastography::{InversionMethod, ShearWaveElastography};
+use kwavers::physics::imaging::modalities::elastography::ElasticWaveConfig;
+use kwavers::physics::imaging::modalities::elastography::{InversionMethod, ShearWaveElastography};
 // Simple finite difference derivative for benchmarking
 fn compute_derivative(field: &Array1<f64>, dx: f64, derivative: &mut Array1<f64>) {
     for i in 1..field.len() - 1 {

@@ -6,11 +6,10 @@
 //! 3. Adapt existing components as plugins
 
 use kwavers::{
-    physics::{
-        field_mapping::UnifiedFieldType,
-        plugin::{Plugin, PluginContext, PluginManager, PluginMetadata, PluginState},
-    },
-    Grid, HomogeneousMedium, KwaversResult,
+    domain::field::mapping::UnifiedFieldType,
+    medium::HomogeneousMedium,
+    physics::plugin::{Plugin, PluginContext, PluginManager, PluginMetadata, PluginState},
+    Grid, KwaversResult,
 };
 use ndarray::Array4;
 use std::collections::HashMap;
@@ -76,7 +75,7 @@ impl Plugin for FrequencyAbsorptionPlugin {
     fn initialize(
         &mut self,
         _grid: &Grid,
-        _medium: &dyn kwavers::medium::Medium,
+        _medium: &dyn kwavers::domain::medium::Medium,
     ) -> KwaversResult<()> {
         println!("Initializing frequency-dependent absorption plugin");
         Ok(())
@@ -86,7 +85,7 @@ impl Plugin for FrequencyAbsorptionPlugin {
         &mut self,
         fields: &mut Array4<f64>,
         _grid: &Grid,
-        _medium: &dyn kwavers::medium::Medium,
+        _medium: &dyn kwavers::domain::medium::Medium,
         dt: f64,
         _t: f64,
         _context: &mut PluginContext<'_>,
@@ -168,7 +167,7 @@ impl Plugin for StatisticsPlugin {
     fn initialize(
         &mut self,
         _grid: &Grid,
-        _medium: &dyn kwavers::medium::Medium,
+        _medium: &dyn kwavers::domain::medium::Medium,
     ) -> KwaversResult<()> {
         println!("Initializing statistics monitor");
         Ok(())
@@ -178,7 +177,7 @@ impl Plugin for StatisticsPlugin {
         &mut self,
         fields: &mut Array4<f64>,
         _grid: &Grid,
-        _medium: &dyn kwavers::medium::Medium,
+        _medium: &dyn kwavers::domain::medium::Medium,
         _dt: f64,
         t: f64,
         _context: &mut PluginContext<'_>,

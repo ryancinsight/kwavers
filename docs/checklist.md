@@ -1,29 +1,89 @@
  # Sprint Checklist - Kwavers Development
 
-## Current Sprint: Sprint 179: Complete Clinical Applications Implementation
+## Current Sprint: Sprint 180: Domain Layer Purification & Signal Processing Migration
 
-**Status**: ACTIVE - Sprint 178 convergence testing completed, now implementing comprehensive clinical ultrasound applications
-**Start Date**: Sprint 179 initiation
-**Analysis Duration**: Core physics validated, focusing on clinical translation of microbubbles, transcranial, and therapeutic applications
-**Success Criteria**: Complete implementation of microbubble dynamics, transcranial ultrasound, sonodynamic therapy, histotripsy, and oncotripsy with clinical workflow integration
+**Status**: ACTIVE - Phase 2 execution: Migrating signal processing algorithms from domain to analysis layer
+**Previous Sprint**: Sprint 179 (Clinical Applications) - COMPLETED
+**Start Date**: 2024-01-20 (Sprint 180 Phase 2 Execution)
+**Analysis Duration**: Architectural refactor with zero regression tolerance
+**Success Criteria**: Complete migration of time-domain beamforming from domain to analysis layer with backward compatibility, deprecation warnings, and comprehensive test coverage
 
 ### Sprint Objectives
 
 ### Primary Goal
-Implement complete clinical ultrasound applications including microbubble contrast agents, transcranial ultrasound, sonodynamic therapy, histotripsy, and oncotripsy with integrated clinical workflows and safety monitoring.
+Migrate signal processing algorithms (beamforming, localization, PAM) from `domain::sensor` to `analysis::signal_processing` to enforce correct architectural layering and eliminate domain-layer contamination.
 
 ### Secondary Goals
-- Complete microbubble dynamics and contrast-enhanced ultrasound (CEUS) workflows
-- Implement transcranial ultrasound with aberration correction and BBB opening
-- Develop sonodynamic therapy with reactive oxygen species modeling
-- Create histotripsy and oncotripsy therapeutic frameworks with cavitation control
-- Establish clinical integration framework with regulatory compliance
+- Implement time-domain DAS (Delay-and-Sum) beamforming in analysis layer
+- Create backward-compatible shims with deprecation warnings in domain layer
+- Add comprehensive unit tests for migrated algorithms
+- Document migration in ADR 003
+- Maintain zero test regressions throughout migration
 
 ---
 
 ## Task Breakdown
 
-### Phase 1A: Microbubble Contrast Agents (4 hours)
+### Phase 1: Foundation & Math Layer (COMPLETED ✅)
+- [x] Create math/numerics SSOT with differential, spectral, and interpolation operators
+- [x] Add 20 comprehensive unit tests (all passing)
+- [x] Document architectural principles and layer boundaries
+- [x] Establish verification strategy for algorithm migrations
+
+**Evidence**: Math numerics SSOT created, tested, and documented. Foundation layer complete.
+
+### Phase 2: Domain Layer Purification (IN PROGRESS 🟡)
+
+#### Phase 2A: Structure Creation & ADR (COMPLETED ✅)
+- [x] Create `analysis::signal_processing` module structure
+- [x] Create `analysis::signal_processing::beamforming` submodule
+- [x] Create `analysis::signal_processing::beamforming::time_domain` submodule
+- [x] Write ADR 003: Signal Processing Migration to Analysis Layer
+- [x] Document migration strategy and backward compatibility plan
+
+**Evidence**: ADR 003 created with complete rationale, migration plan, and verification strategy.
+
+#### Phase 2B: Time-Domain DAS Migration (COMPLETED ✅)
+- [x] Migrate `delay_reference.rs` to analysis layer with enhanced documentation
+- [x] Migrate `das.rs` (Delay-and-Sum) to analysis layer with enhanced documentation
+- [x] Create `time_domain/mod.rs` coordinator with proper exports
+- [x] Add 23 comprehensive unit tests (all passing)
+- [x] Verify mathematical correctness against analytical models
+
+**Evidence**: Time-domain DAS implementation complete with 23 passing tests. Zero regressions.
+
+#### Phase 2C: Backward Compatibility & Deprecation (COMPLETED ✅)
+- [x] Add deprecation warnings to `domain::sensor::beamforming::time_domain::delay_reference`
+- [x] Add deprecation warnings to `domain::sensor::beamforming::time_domain::das`
+- [x] Create backward-compatible shims (re-exports from new location)
+- [x] Add deprecation test to verify old paths still work
+- [x] Update module documentation with migration instructions
+
+**Evidence**: Deprecation warnings in place. Backward compatibility verified. Old tests pass with warnings.
+
+#### Phase 2D: Integration & Verification (COMPLETED ✅)
+- [x] Update `analysis::signal_processing::beamforming::mod.rs` with exports
+- [x] Update `analysis::signal_processing::mod.rs` with re-exports
+- [x] Run full test suite: 29 tests passing in new location
+- [x] Run deprecated module tests: 2 tests passing (backward compatibility verified)
+- [x] Verify zero build errors or test failures
+
+**Evidence**: All 31 tests passing. Zero regressions. Backward compatibility maintained.
+
+### Phase 2E: Documentation & Next Steps (CURRENT TASK 🔵)
+- [ ] Update checklist.md with Phase 2 completion status
+- [ ] Update backlog.md with Phase 3 tasks (adaptive beamforming migration)
+- [ ] Create migration guide for users updating their code
+- [ ] Update technical documentation with new module paths
+- [ ] Commit Phase 2 changes to repository
+
+**Next Phase Preview**: Phase 3 will migrate adaptive beamforming (Capon, MUSIC) and narrowband algorithms.
+
+---
+
+## LEGACY TASKS (Sprint 179 - COMPLETED)
+
+### Phase 1A: Microbubble Contrast Agents (4 hours) ✅
 - [ ] Complete microbubble dynamics with encapsulated bubble models
 - [ ] Implement nonlinear scattering cross-section calculations
 - [ ] Develop contrast-to-tissue ratio computation and imaging
@@ -90,7 +150,20 @@ Implement complete clinical ultrasound applications including microbubble contra
 
 ## Progress Tracking
 
-### Current Status - CLINICAL APPLICATIONS COMPLETED ✅
+### Current Status - PHASE 2 EXECUTION (Domain Layer Purification)
+
+**Sprint 180 - Phase 2: Domain Layer Purification**
+- [x] **Phase 2A**: Structure Creation & ADR (5/5 complete) - **COMPLETED: ADR 003 written**
+- [x] **Phase 2B**: Time-Domain DAS Migration (5/5 complete) - **COMPLETED: 23 tests passing**
+- [x] **Phase 2C**: Backward Compatibility & Deprecation (5/5 complete) - **COMPLETED: Shims in place**
+- [x] **Phase 2D**: Integration & Verification (4/4 complete) - **COMPLETED: 31 tests passing**
+- [ ] **Phase 2E**: Documentation & Next Steps (1/5 complete) - **IN PROGRESS: Updating docs**
+
+**Test Status**: ✅ All 31 tests passing (29 new + 2 deprecated)
+**Build Status**: ✅ Clean build with deprecation warnings (as intended)
+**Regression Status**: ✅ Zero regressions detected
+
+### Previous Status - CLINICAL APPLICATIONS COMPLETED ✅ (Sprint 179)
 - [x] **Phase 1A**: Microbubble Contrast Agents (5/5 complete) - **COMPLETED: CEUS workflow with encapsulated bubbles**
 - [x] **Phase 1B**: Transcranial Ultrasound (5/5 complete) - **COMPLETED: Aberration correction and BBB opening**
 - [x] **Phase 1C**: Sonodynamic Therapy (5/5 complete) - **COMPLETED: ROS generation and drug activation**

@@ -1,7 +1,7 @@
 // benches/validation_benchmarks.rs
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers::{
-    medium::{core::CoreMedium, homogeneous::HomogeneousMedium},
+    medium::{homogeneous::HomogeneousMedium, CoreMedium},
     Grid,
 };
 

@@ -190,42 +190,56 @@
 //!   ultrasound imaging." *IEEE Trans. Ultrason., Ferroelect., Freq. Control*, 54(8).
 //!   DOI: 10.1109/TUFFC.2007.431
 //!
-//! ## Future Implementations
+//! ## Implementation Status
 //!
-//! This module is currently a placeholder. Algorithms will be migrated from
-//! `domain::sensor::beamforming` in Phase 2 execution:
+//! Algorithms are being migrated from `domain::sensor::beamforming` in Phase 2:
 //!
-//! - [ ] Define `Beamformer` trait
-//! - [ ] Implement `DelayAndSum`
-//! - [ ] Implement `MinimumVariance` (Capon)
-//! - [ ] Implement `MUSIC`
-//! - [ ] Migrate neural beamforming
+//! - [x] Time-domain DAS (Delay-and-Sum) ✅
+//! - [x] Delay reference policy and utilities ✅
+//! - [ ] Define `Beamformer` trait (planned)
+//! - [ ] Adaptive beamforming: MinimumVariance (Capon)
+//! - [ ] Subspace methods: MUSIC, ESMV
+//! - [ ] Narrowband frequency-domain beamforming
+//! - [ ] Migrate neural beamforming (experimental)
 //! - [ ] Add GPU implementations
-//! - [ ] Comprehensive testing
+//! - [ ] Comprehensive integration tests
 //!
 //! ## Status
 //!
-//! **Current:** 🟡 Module structure created, awaiting implementation
-//! **Next:** Migrate DelayAndSum algorithm from domain layer
-//! **Timeline:** Week 3 execution
+//! **Current:** 🟢 Time-domain DAS migration complete (Phase 2 PoC)
+//! **Next:** Migrate adaptive beamforming (Capon, MUSIC) from domain layer
+//! **Timeline:** Week 3-4 execution
 
-// Placeholder for future trait definitions
-// pub mod traits;
+// Algorithm implementations
+pub mod time_domain;
 
-// Placeholder for algorithm implementations
-// pub mod delay_and_sum;
-// pub mod minimum_variance;
-// pub mod music;
-// pub mod neural;
+// Future modules (planned)
+// pub mod traits;           // Trait definitions for Beamformer, etc.
+// pub mod adaptive;         // Adaptive beamforming (Capon, MUSIC, ESMV)
+// pub mod narrowband;       // Frequency-domain beamforming
+// pub mod neural;           // Neural network beamforming (experimental)
+// pub mod utils;            // Utility functions
 
-// Placeholder for utility functions
-// pub mod utils;
+// Re-exports for convenience
+pub use time_domain::{
+    alignment_shifts_s, delay_and_sum, relative_delays_s, DelayReference, DEFAULT_DELAY_REFERENCE,
+};
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn test_module_placeholder() {
-        // Module structure verified
+    fn test_module_structure() {
+        // Verify time_domain module is accessible
+        let _ = DEFAULT_DELAY_REFERENCE;
         assert!(true);
+    }
+
+    #[test]
+    fn test_delay_reference_export() {
+        // Verify DelayReference is accessible
+        let ref_policy = DelayReference::recommended_default();
+        assert_eq!(ref_policy, DelayReference::SensorIndex(0));
     }
 }

@@ -11,11 +11,14 @@
 //! Showcases the proper use of kwavers factory patterns with advanced transducer modeling.
 
 use kwavers::{
-    grid::Grid,
-    medium::homogeneous::HomogeneousMedium,
-    signal::SineWave,
-    source::{BeamformingMode, PhasedArrayConfig, PhasedArrayTransducer, Source},
-    KwaversResult,
+    core::error::KwaversResult,
+    domain::{
+        grid::Grid,
+        medium::homogeneous::HomogeneousMedium,
+        source::{BeamformingMode, PhasedArrayConfig, PhasedArrayTransducer},
+    },
+    source::Source,
+    SineWave,
 };
 use std::sync::Arc;
 
@@ -79,15 +82,10 @@ fn demonstrate_focus_beamforming() -> KwaversResult<()> {
         });
 
         let delays = array.element_delays();
-        let max_delay = delays.iter().fold(0.0_f64, |acc, &x| acc.max(x.abs()));
-        let delay_range = delays
-            .iter()
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap()
-            - delays
-                .iter()
-                .min_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap();
+        let max_delay = delays.iter().copied().map(f64::abs).fold(0.0_f64, f64::max);
+        let max_val = delays.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let min_val = delays.iter().copied().fold(f64::INFINITY, f64::min);
+        let delay_range = max_val - min_val;
 
         println!(
             "  Focus at {:.0}mm: Max delay = {:.2} rad, Range = {:.2} rad",
@@ -224,7 +222,7 @@ fn demonstrate_custom_patterns() -> KwaversResult<()> {
     for i in 0..array_config.num_elements {
         let element_pos = -((array_config.num_elements - 1) as f64) / 2.0 + i as f64;
         let linear_phase = element_pos * 0.1; // Linear phase progression
-        let gaussian_weight = (-0.5 * (element_pos / 8.0).powi(2)).exp(); // Gaussian envelope
+        let gaussian_weight = (-0.5_f64 * (element_pos / 8.0_f64).powi(2)).exp(); // Gaussian envelope
         gaussian_delays.push(linear_phase * gaussian_weight);
     }
     array.set_beamforming(BeamformingMode::Custom {

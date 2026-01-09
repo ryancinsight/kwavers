@@ -3,7 +3,7 @@
 //! Implements streaming pipelines for real-time ultrasound imaging with
 //! GPU acceleration, adaptive beamforming, and interactive visualization.
 
-use crate::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::gpu::memory::{MemoryPoolType, UnifiedMemoryManager};
 use ndarray::{Array3, Array4};
 use std::collections::VecDeque;
@@ -145,7 +145,7 @@ impl RealtimeImagingPipeline {
     /// Submit RF data for processing
     pub fn submit_rf_data(&mut self, rf_data: Array4<f32>) -> KwaversResult<()> {
         if self.state != PipelineState::Running {
-            return Err(crate::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "Pipeline is not running".to_string(),
             ));
         }
@@ -309,12 +309,11 @@ impl RealtimeImagingPipeline {
 
         // Apply Hilbert transform in frequency domain
         let n = spectrum.len();
-        for i in 1..n / 2 {
-            // Negative frequencies get multiplied by 2, positive by 0
-            spectrum[i] *= 2.0;
+        for v in spectrum.iter_mut().take(n / 2).skip(1) {
+            *v *= 2.0;
         }
         // DC and Nyquist remain unchanged
-        if n % 2 == 1 {
+        if !n.is_multiple_of(2) {
             // For odd length, Nyquist frequency (if exists) remains unchanged
         } else {
             // For even length, Nyquist frequency remains unchanged
@@ -338,7 +337,7 @@ impl RealtimeImagingPipeline {
                 for k in 0..envelope.dim().2 {
                     let value = envelope[[i, j, k]].max(1e-10) as f64; // Avoid log(0)
                     let log_value = value.ln() / (compression_factor as f64).ln();
-                    compressed[[i, j, k]] = log_value.max(0.0).min(1.0) as f32;
+                    compressed[[i, j, k]] = log_value.clamp(0.0, 1.0) as f32;
                 }
             }
         }

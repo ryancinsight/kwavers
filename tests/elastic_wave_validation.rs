@@ -6,8 +6,8 @@
 //! - Carcione, "Wave Fields in Real Media", 2007
 
 use approx::assert_relative_eq;
-use kwavers::boundary::{PMLBoundary, PMLConfig};
-use kwavers::source::Source;
+use kwavers::domain::boundary::{PMLBoundary, PMLConfig};
+use kwavers::domain::source::Source;
 use kwavers::{
     grid::Grid,
     medium::{thermal::ThermalField, ElasticProperties},
@@ -140,7 +140,7 @@ impl TestElasticMedium {
 }
 
 // Implement required traits for TestElasticMedium
-use kwavers::medium::{
+use kwavers::domain::medium::{
     AcousticProperties, ArrayAccess, BubbleProperties, BubbleState, CoreMedium, ElasticArrayAccess,
     OpticalProperties, ThermalProperties, ViscousProperties,
 };

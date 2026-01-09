@@ -38,6 +38,8 @@ nalgebra = { version = "0.32" }
 # Essential utilities
 log = "0.4"
 env_logger = "0.11"
+tracing = { version = "0.1", features = ["attributes"] }
+bitflags = "2.4"
 rand = "0.8"
 rand_distr = "0.4"
 rand_chacha = "0.3"
@@ -46,10 +48,9 @@ nifti = "0.17.0"
 chrono = { version = "0.4", features = ["serde"] }
 base64 = "0.22"
 
-# Async runtime and structured logging (Sprint 138 - Persona Requirements)
+# Async runtime (Sprint 138 - Persona Requirements)
 tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "sync", "time", "fs", "io-util"], optional = true }
 futures = "0.3"
-tracing = { version = "0.1", features = ["attributes"], optional = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"], optional = true }
 
 # Zero-copy serialization (Sprint 138 - Persona Requirements)
@@ -126,7 +127,7 @@ default = ["minimal"]  # PRODUCTION DEFAULT
 minimal = []           # Core functionality only
 parallel = ["ndarray/rayon"] # Add back parallel feature
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster"]
-plotting = ["dep:plotly"] 
+plotting = ["dep:plotly"]
 # Additional features referenced in code
 nifti = []             # Medical imaging support
 nightly = []           # Nightly Rust features
@@ -138,7 +139,7 @@ gpu-visualization = ["gpu", "plotting", "dep:egui"] # GPU-accelerated visualizat
 vr-support = []        # VR headset support (future)
 # Sprint 138 - Persona Requirements
 async-runtime = ["dep:tokio"]        # Async I/O with tokio
-structured-logging = ["dep:tracing", "dep:tracing-subscriber"]  # Tracing infrastructure
+structured-logging = ["dep:tracing-subscriber"]  # Tracing infrastructure
 zero-copy = ["dep:rkyv"]             # Zero-copy serialization
 # Sprint 142-143 - Physics-Informed Neural Networks
 # Sprint 143: Added burn 0.18 integration (bincode compatibility resolved)
@@ -180,7 +181,7 @@ debug-assertions = false # Skip expensive debug checks
 # - Library unit tests: cargo test --lib
 # - Fast integration tests below
 #
-# TIER 2: Standard tests (<30s) - Run on PR validation  
+# TIER 2: Standard tests (<30s) - Run on PR validation
 # - All tests in tests/ directory with required-features = []
 #
 # TIER 3: Comprehensive validation (>30s) - Run on release validation
@@ -221,13 +222,13 @@ harness = true
 required-features = []
 
 # TIER 3: Comprehensive validation tests (>30s) - Requires full feature set
-[[test]]  
+[[test]]
 name = "validation_suite"
 harness = true
 required-features = ["full"]
 
 [[test]]
-name = "literature_validation" 
+name = "literature_validation"
 harness = true
 required-features = ["full"]
 
@@ -308,6 +309,11 @@ harness = false
 [[bench]]
 name = "validation_benchmarks"
 harness = false
+
+[[bench]]
+name = "opast_benchmarks"
+harness = false
+required-features = ["legacy_algorithms"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }

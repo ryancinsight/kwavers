@@ -2,10 +2,10 @@
 //!
 //! Provides high-level interface for GPU compute operations
 
-use crate::error::{KwaversError, KwaversResult};
+use crate::analysis::performance::simd_auto::SimdAuto;
+use crate::core::constants::numerical;
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::gpu::shaders;
-use crate::performance::simd_auto::SimdAuto;
-use crate::physics::constants::numerical;
 use ndarray::Array3;
 #[allow(unused_imports)]
 use wgpu::util::DeviceExt;
@@ -67,7 +67,7 @@ impl ComputeManager {
     /// Get device reference (error if GPU unavailable)
     pub fn device(&self) -> KwaversResult<&wgpu::Device> {
         self.device.as_ref().ok_or_else(|| {
-            KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+            KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
                 resource: "GPU device".to_string(),
             })
         })
@@ -76,7 +76,7 @@ impl ComputeManager {
     /// Get queue reference (error if GPU unavailable)
     pub fn queue(&self) -> KwaversResult<&wgpu::Queue> {
         self.queue.as_ref().ok_or_else(|| {
-            KwaversError::System(crate::error::SystemError::ResourceUnavailable {
+            KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
                 resource: "GPU queue".to_string(),
             })
         })
@@ -314,7 +314,7 @@ mod tests {
 
     /*
     use super::*;
-    use crate::physics::constants::{tissue, water};
+    use crate::core::constants::{tissue, water};
 
     #[tokio::test]
     async fn test_compute_manager_creation() {

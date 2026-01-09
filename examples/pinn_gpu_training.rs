@@ -11,7 +11,7 @@
 //! - Multi-region domains with interface conditions
 
 #[cfg(feature = "pinn")]
-use kwavers::error::KwaversResult;
+use kwavers::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::Geometry2D;
 

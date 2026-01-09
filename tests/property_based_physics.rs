@@ -8,7 +8,7 @@ use kwavers::testing::acoustic_properties::*;
 use kwavers::testing::grid_properties::*;
 use kwavers::testing::medium_properties::*;
 use kwavers::{
-    medium::{CoreMedium, HomogeneousMedium},
+    domain::medium::{CoreMedium, HomogeneousMedium},
     Grid,
 };
 use proptest::prelude::*;

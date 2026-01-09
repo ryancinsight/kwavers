@@ -7,8 +7,8 @@
 //! - Test harmonic generation accuracy
 //! - Analyze numerical convergence rates
 
-use kwavers::grid::Grid;
-use kwavers::medium::HomogeneousMedium;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::physics::imaging::elastography::*;
 use std::f64::consts::PI;
 

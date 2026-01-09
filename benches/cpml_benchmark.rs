@@ -9,15 +9,11 @@
 //! - Komatitsch & Martin (2007) "An unsplit convolutional PML"
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use kwavers::{
-    boundary::{
-        cpml::{CPMLBoundary, CPMLConfig},
-        pml::{PMLBoundary, PMLConfig},
-        Boundary,
-    },
-    grid::Grid,
-};
-use ndarray::{Array3, Array4};
+use kwavers::domain::boundary::cpml::{CPMLBoundary, CPMLConfig};
+use kwavers::domain::boundary::pml::{PMLBoundary, PMLConfig};
+use kwavers::domain::boundary::Boundary;
+use kwavers::grid::Grid;
+use ndarray::Array3;
 
 /// Benchmark CPML gradient correction for various grid sizes
 fn cpml_gradient_correction_benchmark(c: &mut Criterion) {
@@ -52,15 +48,14 @@ fn cpml_field_update_benchmark(c: &mut Criterion) {
         let config = CPMLConfig::with_thickness(10);
         let mut boundary = CPMLBoundary::new(config, &grid, 1500.0)
             .expect("CPML boundary creation should succeed");
-        let mut fields = Array4::zeros((grid.nx, grid.ny, grid.nz, 3));
-        let dt = 1e-8;
+        let mut field = grid.create_field();
 
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             b.iter(|| {
                 boundary
-                    .apply(&mut fields, dt, &grid)
+                    .apply_acoustic(field.view_mut(), &grid, 0)
                     .expect("CPML field update should succeed");
-                black_box(&fields);
+                black_box(&field);
             });
         });
     }

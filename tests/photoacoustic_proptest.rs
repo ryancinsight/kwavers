@@ -6,7 +6,7 @@
 use kwavers::{
     grid::Grid,
     medium::homogeneous::HomogeneousMedium,
-    physics::imaging::photoacoustic::{PhotoacousticParameters, PhotoacousticSimulator},
+    simulation::modalities::photoacoustic::{PhotoacousticParameters, PhotoacousticSimulator},
 };
 use proptest::prelude::*;
 
@@ -43,6 +43,7 @@ proptest! {
         // Assert: values finite and not all zeros
         let mut any_nonzero = false;
         for val in result.reconstructed_image.iter() {
+            let val: f64 = *val;
             assert!(val.is_finite(), "non-finite value in reconstructed image");
             if val.abs() > 0.0 { any_nonzero = true; }
         }

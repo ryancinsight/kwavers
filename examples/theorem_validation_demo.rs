@@ -3,7 +3,7 @@
 //! This example demonstrates the systematic validation of mathematical theorems
 //! implemented in Kwavers with quantitative error bounds and convergence proofs.
 
-use kwavers::validation::theorem_validation::{TheoremValidation, TheoremValidator};
+use kwavers::analysis::validation::theorem_validation::{TheoremValidation, TheoremValidator};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔬 Theorem Validation Demonstration");

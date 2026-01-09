@@ -1,6 +1,6 @@
 // physics/chemistry/radical_initiation/mod.rs
-use crate::grid::Grid;
-use crate::medium::Medium;
+use crate::domain::grid::Grid;
+use crate::domain::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
 
@@ -38,7 +38,7 @@ impl RadicalInitiation {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                let alpha = crate::medium::AcousticProperties::absorption_coefficient(
+                let alpha = crate::domain::medium::AcousticProperties::absorption_coefficient(
                     medium, x, y, z, grid, frequency,
                 );
 

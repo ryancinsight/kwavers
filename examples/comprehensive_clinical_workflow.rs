@@ -22,11 +22,15 @@
 //! - **Uncertainty Quantification**: Confidence assessment for clinical decisions
 //! - **Clinical Validation**: Automated quality assurance and standards compliance
 
-use kwavers::error::KwaversResult;
+use kwavers::analysis::validation::clinical::{
+    ClinicalValidator, ImageQualityMetrics, MeasurementAccuracy, SafetyIndices,
+};
+use kwavers::core::error::KwaversResult;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium};
 #[cfg(feature = "gpu")]
 use kwavers::gpu::memory::UnifiedMemoryManager;
-use kwavers::grid::Grid;
-use kwavers::medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium};
+use kwavers::ml::uncertainty::{UncertaintyConfig, UncertaintyMethod, UncertaintyQuantifier};
 use kwavers::physics::imaging::ceus::{ContrastEnhancedUltrasound, PerfusionModel};
 use kwavers::physics::imaging::elastography::{
     AcousticRadiationForce, DisplacementField, ElasticWaveConfig, ElasticWaveField,
@@ -35,8 +39,6 @@ use kwavers::physics::imaging::elastography::{
     ShearWaveInversion,
 };
 use kwavers::physics::transcranial::safety_monitoring::SafetyMonitor;
-use kwavers::uncertainty::{UncertaintyConfig, UncertaintyMethod, UncertaintyQuantifier};
-use kwavers::validation::clinical::ClinicalValidator;
 use ndarray::{s, Array3, Array4};
 use std::time::Instant;
 
@@ -176,7 +178,7 @@ impl LiverAssessmentWorkflow {
         println!("\n--- Phase 8: Clinical Validation ---");
         // Build minimal clinical validation using available metrics
         // Image quality and measurement accuracy derived from Phase 1 results
-        let quality_metrics = kwavers::validation::clinical::ImageQualityMetrics {
+        let quality_metrics = ImageQualityMetrics {
             contrast_resolution: b_mode_result.contrast_ratio,
             axial_resolution: b_mode_result.axial_resolution,
             lateral_resolution: b_mode_result.lateral_resolution,
@@ -185,7 +187,7 @@ impl LiverAssessmentWorkflow {
             snr: 25.0,
             cnr: 20.0,
         };
-        let accuracy_metrics = kwavers::validation::clinical::MeasurementAccuracy {
+        let accuracy_metrics = MeasurementAccuracy {
             distance_error_percent: 3.0,
             area_error_percent: 5.0,
             volume_error_percent: 8.0,
@@ -193,7 +195,7 @@ impl LiverAssessmentWorkflow {
             angle_error_degrees: 2.0,
         };
         // Safety indices consistent with imaging constraints
-        let safety_indices = kwavers::validation::clinical::SafetyIndices {
+        let safety_indices = SafetyIndices {
             mechanical_index: 1.0,
             thermal_index_bone: 0.8,
             thermal_index_soft: 0.5,
@@ -379,10 +381,10 @@ impl LiverAssessmentWorkflow {
             .quantify_beamforming_uncertainty(&ceus_result.perfusion_map, 0.90)?;
 
         // Generate uncertainty report
-        let swe_clone = kwavers::uncertainty::BeamformingUncertainty {
+        let swe_clone = kwavers::ml::uncertainty::BeamformingUncertainty {
             uncertainty_map: swe_uncertainty.uncertainty_map.clone(),
             confidence_score: swe_uncertainty.confidence_score,
-            reliability_metrics: kwavers::uncertainty::ReliabilityMetrics {
+            reliability_metrics: kwavers::ml::uncertainty::ReliabilityMetrics {
                 signal_to_noise_ratio: swe_uncertainty.reliability_metrics.signal_to_noise_ratio,
                 contrast_to_noise_ratio: swe_uncertainty
                     .reliability_metrics
@@ -390,10 +392,10 @@ impl LiverAssessmentWorkflow {
                 spatial_resolution: swe_uncertainty.reliability_metrics.spatial_resolution,
             },
         };
-        let perf_clone = kwavers::uncertainty::BeamformingUncertainty {
+        let perf_clone = kwavers::ml::uncertainty::BeamformingUncertainty {
             uncertainty_map: perfusion_uncertainty.uncertainty_map.clone(),
             confidence_score: perfusion_uncertainty.confidence_score,
-            reliability_metrics: kwavers::uncertainty::ReliabilityMetrics {
+            reliability_metrics: kwavers::ml::uncertainty::ReliabilityMetrics {
                 signal_to_noise_ratio: perfusion_uncertainty
                     .reliability_metrics
                     .signal_to_noise_ratio,
@@ -403,7 +405,7 @@ impl LiverAssessmentWorkflow {
                 spatial_resolution: perfusion_uncertainty.reliability_metrics.spatial_resolution,
             },
         };
-        let _results: Vec<Box<dyn kwavers::uncertainty::UncertaintyResult>> =
+        let _results: Vec<Box<dyn kwavers::ml::uncertainty::UncertaintyResult>> =
             vec![Box::new(swe_clone), Box::new(perf_clone)];
         println!(
             "Uncertainty analysis: SWE confidence = {:.1}%, CEUS confidence = {:.1}%",
@@ -654,8 +656,8 @@ pub struct CEUSResult {
 /// Uncertainty analysis results
 #[derive(Debug)]
 pub struct UncertaintyAnalysis {
-    pub swe_uncertainty: kwavers::uncertainty::BeamformingUncertainty,
-    pub perfusion_uncertainty: kwavers::uncertainty::BeamformingUncertainty,
+    pub swe_uncertainty: kwavers::ml::uncertainty::BeamformingUncertainty,
+    pub perfusion_uncertainty: kwavers::ml::uncertainty::BeamformingUncertainty,
 }
 
 /// Clinical diagnosis

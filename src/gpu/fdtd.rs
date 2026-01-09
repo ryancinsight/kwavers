@@ -1,7 +1,7 @@
 //! GPU-accelerated FDTD solver
 
-use crate::error::{KwaversError, KwaversResult};
-use crate::grid::Grid;
+use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::grid::Grid;
 use ndarray::Array3;
 
 /// GPU-accelerated FDTD solver

@@ -29,7 +29,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers::grid::Grid;
 use kwavers::medium::HomogeneousMedium;
-use kwavers::physics::imaging::elastography::*;
+use kwavers::physics::imaging::modalities::elastography::*;
 use ndarray::Array3;
 
 /// Benchmark hyperelastic constitutive model evaluation

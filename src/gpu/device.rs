@@ -23,7 +23,7 @@
 //! # }
 //! ```
 
-use crate::{KwaversError, KwaversResult};
+use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 use std::sync::Arc;
 
 /// Information about a GPU device
@@ -130,7 +130,7 @@ impl GpuDevice {
             })
             .await
             .ok_or_else(|| {
-                KwaversError::Config(crate::ConfigError::InvalidValue {
+                KwaversError::Config(ConfigError::InvalidValue {
                     parameter: "gpu".to_string(),
                     value: "none".to_string(),
                     constraint: "GPU adapter not found".to_string(),
@@ -152,7 +152,7 @@ impl GpuDevice {
             )
             .await
             .map_err(|e| {
-                KwaversError::Config(crate::ConfigError::InvalidValue {
+                KwaversError::Config(ConfigError::InvalidValue {
                     parameter: "gpu_device".to_string(),
                     value: format!("{:?}", e),
                     constraint: "Failed to create GPU device".to_string(),

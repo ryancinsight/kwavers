@@ -22,29 +22,38 @@ The Kwavers plugin architecture provides a flexible, extensible system for addin
 
 ## Core Components
 
-### 1. PhysicsPlugin Trait
+### 1. Plugin Trait
 
 The main interface that all plugins must implement:
 
 ```rust
-pub trait PhysicsPlugin: Debug + Send + Sync {
+use kwavers::core::error::KwaversResult;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::Medium;
+use kwavers::domain::source::Source;
+use kwavers::domain::boundary::Boundary;
+use kwavers::physics::field_mapping::UnifiedFieldType;
+use kwavers::physics::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
+use ndarray::Array4;
+use std::any::Any;
+use std::fmt::Debug;
+
+pub trait Plugin: Debug + Send + Sync {
     /// Get plugin metadata
     fn metadata(&self) -> &PluginMetadata;
-    
-    /// Get required input fields
-    fn required_fields(&self) -> Vec<FieldType>;
-    
-    /// Get provided output fields
-    fn provided_fields(&self) -> Vec<FieldType>;
-    
-    /// Initialize the plugin
-    fn initialize(
-        &mut self,
-        config: Option<Box<dyn PluginConfig>>,
-        grid: &Grid,
-        medium: &dyn Medium,
-    ) -> KwaversResult<()>;
-    
+
+    /// Get current plugin state
+    fn state(&self) -> PluginState;
+
+    /// Set plugin state
+    fn set_state(&mut self, state: PluginState);
+
+    /// Get required fields for this plugin
+    fn required_fields(&self) -> Vec<UnifiedFieldType>;
+
+    /// Get fields provided by this plugin
+    fn provided_fields(&self) -> Vec<UnifiedFieldType>;
+
     /// Update physics for one time step
     fn update(
         &mut self,
@@ -53,11 +62,28 @@ pub trait PhysicsPlugin: Debug + Send + Sync {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        context: &PluginContext,
+        context: &mut PluginContext<'_>,
     ) -> KwaversResult<()>;
-    
-    /// Validate plugin configuration
-    fn validate(&self, grid: &Grid, medium: &dyn Medium) -> ValidationResult;
+
+    fn initialize(&mut self, _grid: &Grid, _medium: &dyn Medium) -> KwaversResult<()> {
+        Ok(())
+    }
+
+    fn finalize(&mut self) -> KwaversResult<()> {
+        Ok(())
+    }
+
+    fn reset(&mut self) -> KwaversResult<()> {
+        Ok(())
+    }
+
+    fn diagnostics(&self) -> String {
+        format!("Plugin: {:?}", self.metadata())
+    }
+
+    fn as_any(&self) -> &dyn Any;
+
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 ```
 
@@ -82,21 +108,25 @@ Manages plugin lifecycle and execution:
 
 ```rust
 pub struct PluginManager {
-    // Register a new plugin
-    pub fn register(&mut self, plugin: Box<dyn PhysicsPlugin>) -> KwaversResult<()>;
-    
-    // Compute execution order based on dependencies
-    pub fn compute_execution_order(&mut self) -> KwaversResult<()>;
-    
+    // Create a new plugin manager
+    pub fn new() -> Self;
+
+    // Add a plugin to the manager (dependency order resolved internally)
+    pub fn add_plugin(&mut self, plugin: Box<dyn Plugin>) -> KwaversResult<()>;
+
+    // Initialize all plugins
+    pub fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()>;
+
     // Execute all plugins for one time step
-    pub fn update_all(
+    pub fn execute(
         &mut self,
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
+        sources: &[Box<dyn Source>],
+        boundary: &mut dyn Boundary,
         dt: f64,
         t: f64,
-        context: &PluginContext,
     ) -> KwaversResult<()>;
 }
 ```
@@ -106,44 +136,47 @@ pub struct PluginManager {
 ### Step 1: Define Your Plugin Structure
 
 ```rust
-use kwavers::physics::{PhysicsPlugin, PluginMetadata, FieldType};
+use kwavers::core::error::KwaversResult;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::Medium;
+use kwavers::physics::field_mapping::UnifiedFieldType;
+use kwavers::physics::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
+use ndarray::Array4;
+use std::any::Any;
+use std::fmt::Debug;
 
 #[derive(Debug)]
 struct MyCustomPlugin {
     metadata: PluginMetadata,
+    state: PluginState,
     // Your plugin-specific fields
     coefficient: f64,
     enabled: bool,
 }
 ```
 
-### Step 2: Implement the PhysicsPlugin Trait
+### Step 2: Implement the Plugin Trait
 
 ```rust
-impl PhysicsPlugin for MyCustomPlugin {
+impl Plugin for MyCustomPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
-    
-    fn required_fields(&self) -> Vec<FieldType> {
-        vec![FieldType::Pressure, FieldType::Velocity]
+
+    fn state(&self) -> PluginState {
+        self.state
     }
-    
-    fn provided_fields(&self) -> Vec<FieldType> {
-        vec![FieldType::Custom("MyOutput".to_string())]
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
     }
-    
-    fn initialize(
-        &mut self,
-        config: Option<Box<dyn PluginConfig>>,
-        grid: &Grid,
-        medium: &dyn Medium,
-    ) -> KwaversResult<()> {
-        // Perform initialization
-        if let Some(cfg) = config {
-            // Apply configuration
-        }
-        Ok(())
+
+    fn required_fields(&self) -> Vec<UnifiedFieldType> {
+        vec![UnifiedFieldType::Pressure]
+    }
+
+    fn provided_fields(&self) -> Vec<UnifiedFieldType> {
+        vec![UnifiedFieldType::Pressure]
     }
     
     fn update(
@@ -153,15 +186,18 @@ impl PhysicsPlugin for MyCustomPlugin {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        context: &PluginContext,
+        context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
-        // Implement your physics calculations
-        let pressure = &fields.slice(s![field_indices::PRESSURE, .., .., ..]);
-        let velocity = &fields.slice(s![field_indices::VELOCITY_X, .., .., ..]);
-        
-        // Perform computations...
-        
+        let _ = (fields, grid, medium, dt, t, context);
         Ok(())
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 ```
@@ -181,15 +217,16 @@ let plugin = Box::new(MyCustomPlugin {
         description: "Custom physics implementation".to_string(),
         license: "MIT".to_string(),
     },
+    state: PluginState::Created,
     coefficient: 1.5,
     enabled: true,
 });
 
-manager.register(plugin)?;
-manager.compute_execution_order()?;
+manager.add_plugin(plugin)?;
 
 // Use in simulation loop
-manager.update_all(&mut fields, &grid, &medium, dt, t, &context)?;
+manager.initialize(&grid, &medium)?;
+manager.execute(&mut fields, &grid, &medium, &sources, &mut boundary, dt, t)?;
 ```
 
 ## Adapting Existing Components

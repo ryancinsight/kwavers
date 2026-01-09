@@ -27,7 +27,7 @@
 #[cfg(feature = "pinn")]
 use burn::backend::{Autodiff, NdArray};
 #[cfg(feature = "pinn")]
-use kwavers::error::KwaversResult;
+use kwavers::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::electromagnetic::{EMProblemType, ElectromagneticDomain};
 #[cfg(feature = "pinn")]

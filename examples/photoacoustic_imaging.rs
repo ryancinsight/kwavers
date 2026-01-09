@@ -6,10 +6,10 @@
 //! - Acoustic wave propagation
 //! - Image reconstruction and validation
 
-use kwavers::error::KwaversResult;
-use kwavers::grid::Grid;
-use kwavers::medium::homogeneous::HomogeneousMedium;
-use kwavers::physics::imaging::photoacoustic::{
+use kwavers::core::error::KwaversResult;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::homogeneous::HomogeneousMedium;
+use kwavers::simulation::modalities::photoacoustic::{
     OpticalProperties, PhotoacousticParameters, PhotoacousticSimulator,
 };
 use std::time::Instant;
@@ -168,7 +168,7 @@ fn create_photoacoustic_parameters() -> KwaversResult<PhotoacousticParameters> {
 
 /// Analyze simulation results and extract quantitative metrics
 fn analyze_simulation_results(
-    result: &kwavers::physics::imaging::photoacoustic::PhotoacousticResult,
+    result: &kwavers::simulation::modalities::photoacoustic::PhotoacousticResult,
 ) -> KwaversResult<()> {
     let reconstructed = &result.reconstructed_image;
 

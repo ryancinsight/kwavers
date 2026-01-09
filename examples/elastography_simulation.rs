@@ -1,7 +1,5 @@
-use kwavers::{
-    grid::Grid, init_logging, medium::absorption::TissueType,
-    medium::heterogeneous::tissue::HeterogeneousTissueMedium,
-};
+use kwavers::domain::medium::heterogeneous::tissue::{HeterogeneousTissueMedium, TissueType};
+use kwavers::{grid::Grid, init_logging};
 use log::info;
 use ndarray::Array3;
 use std::io::Write;
@@ -13,7 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let domain_size = 0.04f64; // 4 cm cubic domain
     let dx = 0.0002f64; // 0.2 mm spacing
     let n = (domain_size / dx).round() as usize;
-    let grid = Grid::new(n, n, n, dx, dx, dx);
+    let grid = Grid::new(n, n, n, dx, dx, dx)?;
 
     info!(
         "Created {}x{}x{} grid with {} mm spacing",
@@ -24,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Create tissue medium with inclusions of different stiffness
-    let _medium = HeterogeneousTissueMedium::new(grid.clone()?, TissueType::Muscle);
+    let _medium = HeterogeneousTissueMedium::new(grid.clone(), TissueType::Muscle);
 
     // Create shear modulus distribution with stiff inclusion
     let mut mu = Array3::<f64>::ones((n, n, n)) * 3.0e3; // 3 kPa background (soft tissue)

@@ -3,19 +3,19 @@
 //! These tests verify that the physics implementations are correct
 //! by comparing against analytical solutions and known results.
 
-use kwavers::medium::{core::CoreMedium, homogeneous::HomogeneousMedium};
-use kwavers::Grid;
+use kwavers::domain::grid;
+use kwavers::domain::medium::{core::CoreMedium, homogeneous::HomogeneousMedium};
 use std::f64::consts::PI;
 
 #[test]
 fn test_wave_speed_in_medium() {
     // Test that wave propagation speed matches the medium's sound speed
     let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3).expect("Failed to create grid");
-    let sound_speed = 1500.0; // m/s
+    let sound_speed: f64 = 1500.0; // m/s
     let _medium = HomogeneousMedium::new(1000.0, sound_speed, 0.0, 0.0, &grid);
 
     // CFL condition for 3D FDTD
-    let cfl = 0.5;
+    let cfl: f64 = 0.5;
     let min_dx = grid.dx.min(grid.dy).min(grid.dz);
     let dt = cfl * min_dx / sound_speed;
 
@@ -28,7 +28,7 @@ fn test_wave_speed_in_medium() {
     // Expected magnitude: O(1e-6) for typical grid spacing
     // Conservative tolerance: 10 * machine_epsilon * magnitude ≈ 1e-21 * 1e-6 = 1e-15
     // We use 1e-14 to account for accumulated rounding in CFL calculation
-    let tolerance = 1e-14;
+    let tolerance: f64 = 1e-14;
 
     // These should be equal within numerical precision bounds
     assert!((expected_distance - grid_distance).abs() < tolerance,

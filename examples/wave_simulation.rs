@@ -3,11 +3,11 @@
 //! Demonstrates basic wave propagation simulation
 
 use kwavers::{
+    domain::grid::{stability::StabilityCalculator, Grid},
+    domain::medium::{core::CoreMedium, HomogeneousMedium},
+    domain::source::NullSource,
     error::KwaversResult,
-    grid::{stability::StabilityCalculator, Grid},
-    medium::{core::CoreMedium, HomogeneousMedium},
     solver::plugin_based::PluginBasedSolver,
-    source::NullSource,
 };
 use std::sync::Arc;
 
@@ -38,19 +38,20 @@ fn main() -> KwaversResult<()> {
     println!("Source: Using null source for demonstration");
 
     // Create time configuration
-    use kwavers::time::Time;
+    use kwavers::core::time::Time;
     let time = Time::new(dt, num_steps);
 
     // Create boundary (using PML for absorption)
-    use kwavers::boundary::pml::{PMLBoundary, PMLConfig};
+    use kwavers::domain::boundary::pml::{PMLBoundary, PMLConfig};
     let pml_config = PMLConfig::default();
-    let boundary: Box<dyn kwavers::boundary::Boundary> = Box::new(PMLBoundary::new(pml_config)?);
+    let boundary: Box<dyn kwavers::domain::boundary::Boundary> =
+        Box::new(PMLBoundary::new(pml_config)?);
 
     // Create solver
     let mut solver = PluginBasedSolver::new(grid.clone(), time, medium.clone(), boundary, source);
 
     // Register acoustic wave plugin
-    use kwavers::physics::plugin::acoustic_wave_plugin::AcousticWavePlugin;
+    use kwavers::solver::forward::acoustic::AcousticWavePlugin;
     let acoustic_plugin = Box::new(AcousticWavePlugin::new(0.95)); // CFL number
     solver.add_plugin(acoustic_plugin)?;
 

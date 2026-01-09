@@ -8,8 +8,8 @@
 //! - **Memory Efficiency**: 30-50% reduction in allocations
 
 #[allow(unused_imports)]
-use crate::error::{KwaversError, KwaversResult, SystemError};
-use crate::grid::Grid;
+use crate::core::error::{KwaversError, KwaversResult, SystemError};
+use crate::domain::grid::Grid;
 use ndarray::Array3;
 use num_complex::Complex;
 #[cfg(feature = "parallel")]
@@ -221,7 +221,7 @@ pub mod inplace_ops {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid::Grid;
+    use crate::domain::grid::Grid;
 
     #[test]
     fn test_workspace_creation() {

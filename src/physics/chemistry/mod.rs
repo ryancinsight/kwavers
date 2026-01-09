@@ -7,8 +7,8 @@
 //! - Dependency Inversion: Depends on abstractions (traits) not concrete types
 //! - Single Responsibility: Each component has one clear purpose
 
-use crate::error::{KwaversResult, ValidationError};
-use crate::grid::Grid;
+use crate::core::error::{KwaversResult, ValidationError};
+use crate::domain::grid::Grid;
 use crate::physics::traits::ChemicalModelTrait;
 use log::debug;
 use ndarray::Array3;
@@ -349,7 +349,7 @@ impl ChemicalModelTrait for ChemicalModel {
         temperature: &Array3<f64>,
         grid: &Grid,
         dt: f64,
-        medium: &dyn crate::medium::Medium,
+        medium: &dyn crate::domain::medium::Medium,
         frequency: f64,
     ) {
         // Create ChemicalUpdateParams for the update

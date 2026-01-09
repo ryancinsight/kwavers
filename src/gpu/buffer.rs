@@ -26,7 +26,7 @@
 //! # }
 //! ```
 
-use crate::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use wgpu::util::DeviceExt;
 
 /// Buffer usage flags for GPU buffers
@@ -292,10 +292,7 @@ impl GpuBuffer {
         device.poll(wgpu::Maintain::Wait);
 
         receiver.recv().map_err(|e| {
-            crate::KwaversError::Io(std::io::Error::other(format!(
-                "Failed to map buffer: {}",
-                e
-            )))
+            KwaversError::Io(std::io::Error::other(format!("Failed to map buffer: {e}")))
         })??;
 
         let data = buffer_slice.get_mapped_range();

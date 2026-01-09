@@ -36,8 +36,8 @@
 use kwavers::clinical::swe_3d_workflows::{
     ClinicalDecisionSupport, ElasticityMap3D, MultiPlanarReconstruction, VolumetricROI,
 };
-use kwavers::grid::Grid;
-use kwavers::medium::heterogeneous::HeterogeneousMedium;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::heterogeneous::HeterogeneousMedium;
 use kwavers::physics::imaging::elastography::{
     AcousticRadiationForce, ArrivalDetection, ElasticWaveSolver, MultiDirectionalPush,
     VolumetricSource, VolumetricWaveConfig, WaveFrontTracker,

@@ -3,13 +3,14 @@
 //! This module provides the main plugin manager that coordinates plugin execution.
 
 use super::{ExecutionStrategy, Plugin, PluginContext, PluginFields, SequentialStrategy};
-use crate::boundary::Boundary;
-use crate::error::{KwaversError, KwaversResult, PhysicsError, ValidationError};
-use crate::grid::Grid;
-use crate::medium::Medium;
-use crate::performance::metrics::PerformanceMetrics;
-use crate::physics::field_mapping::UnifiedFieldType;
-use crate::source::Source;
+use crate::analysis::performance::metrics::PerformanceMetrics;
+use crate::core::error::{KwaversError, KwaversResult, PhysicsError, ValidationError};
+use crate::domain::boundary::Boundary;
+use crate::domain::field::indices;
+use crate::domain::field::mapping::UnifiedFieldType;
+use crate::domain::grid::Grid;
+use crate::domain::medium::Medium;
+use crate::domain::source::Source;
 use ndarray::Array3;
 use ndarray::Array4;
 use std::collections::{HashMap, HashSet};
@@ -40,9 +41,9 @@ impl PluginManager {
     /// Initialize all plugins
     pub fn initialize_all(
         &mut self,
-        grid: &crate::grid::Grid,
-        medium: &dyn crate::medium::Medium,
-    ) -> crate::error::KwaversResult<()> {
+        grid: &crate::domain::grid::Grid,
+        medium: &dyn crate::domain::medium::Medium,
+    ) -> crate::core::error::KwaversResult<()> {
         for plugin in &mut self.plugins {
             plugin.initialize(grid, medium)?;
         }

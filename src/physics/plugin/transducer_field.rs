@@ -1,9 +1,9 @@
 //! Multi-Element Transducer Field Calculator Plugin
 //! Based on Jensen & Svendsen (1992): "Calculation of pressure fields from arbitrarily shaped transducers"
 
-use crate::error::KwaversResult;
-use crate::grid::Grid;
-use crate::medium::{AcousticProperties, Medium};
+use crate::core::error::KwaversResult;
+use crate::domain::grid::Grid;
+use crate::domain::medium::{AcousticProperties, Medium};
 use crate::physics::plugin::{PluginMetadata, PluginState};
 use ndarray::{Array2, Array3};
 use std::collections::HashMap;
@@ -106,7 +106,7 @@ impl TransducerFieldCalculatorPlugin {
                         // Spatial impulse response for rectangular piston
                         // h(r,t) = (v₀/2πc) * δ(t - r/c) / r
                         if r > 1e-10 {
-                            let _c = crate::medium::sound_speed_at(medium, x, y, z, grid);
+                            let _c = crate::domain::medium::sound_speed_at(medium, x, y, z, grid);
                             response += element_area / (2.0 * std::f64::consts::PI * r);
 
                             // Apply apodization if specified
@@ -137,11 +137,11 @@ impl TransducerFieldCalculatorPlugin {
     ) -> KwaversResult<Array3<f64>> {
         // Angular spectrum method implementation
         // Reference: Zeng & McGough (2008) "Evaluation of the angular spectrum approach"
-        use crate::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
-        use ndarray::{s, Array2};
+        use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
+        use ndarray::Array2;
 
         let mut pressure_field = Array3::zeros(grid.dimensions());
-        let c = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid); // Use reference sound speed
+        let c = crate::domain::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid); // Use reference sound speed
         let k = 2.0 * std::f64::consts::PI * frequency / c; // Wave number
 
         // Initialize source plane (z=0) with transducer aperture function
@@ -253,7 +253,7 @@ impl TransducerFieldCalculatorPlugin {
 
         let mut harmonic_field = Array3::zeros(grid.dimensions());
         let harmonic_freq = fundamental_freq * harmonic as f64;
-        let c = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
+        let c = crate::domain::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
 
         // Nonlinearity parameter B/A for the medium
         let beta =
@@ -265,7 +265,7 @@ impl TransducerFieldCalculatorPlugin {
             for j in 0..grid.ny {
                 for k in 1..grid.nz {
                     let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    let rho = crate::medium::density_at(medium, x, y, z, grid);
+                    let rho = crate::domain::medium::density_at(medium, x, y, z, grid);
 
                     // Approximate time derivative using spatial gradient and wave equation
                     let p1 = fundamental_field[[i, j, k]];
@@ -335,7 +335,7 @@ impl TransducerFieldCalculatorPlugin {
         // where I = p^2 / (2 * rho * c) is acoustic intensity
         // Reference: Nyborg (1981) "Heat generation by ultrasound in a relaxing medium"
 
-        use crate::medium::AcousticProperties;
+        use crate::domain::medium::AcousticProperties;
         use ndarray::Zip;
 
         let mut heating = Array3::zeros(pressure_field.dim());
@@ -344,8 +344,8 @@ impl TransducerFieldCalculatorPlugin {
             .and(pressure_field)
             .for_each(|(i, j, k), q, &p| {
                 let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                let density = crate::medium::density_at(medium, x, y, z, grid);
-                let sound_speed = crate::medium::sound_speed_at(medium, x, y, z, grid);
+                let density = crate::domain::medium::density_at(medium, x, y, z, grid);
+                let sound_speed = crate::domain::medium::sound_speed_at(medium, x, y, z, grid);
                 let alpha =
                     AcousticProperties::absorption_coefficient(medium, x, y, z, grid, frequency);
 
@@ -374,12 +374,12 @@ impl crate::physics::plugin::Plugin for TransducerFieldCalculatorPlugin {
         self.state = state;
     }
 
-    fn required_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
+    fn required_fields(&self) -> Vec<crate::domain::field::mapping::UnifiedFieldType> {
         vec![] // No required fields - generates pressure from transducer definitions
     }
 
-    fn provided_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
-        vec![crate::physics::field_mapping::UnifiedFieldType::Pressure]
+    fn provided_fields(&self) -> Vec<crate::domain::field::mapping::UnifiedFieldType> {
+        vec![crate::domain::field::mapping::UnifiedFieldType::Pressure]
     }
 
     fn update(
@@ -391,7 +391,8 @@ impl crate::physics::plugin::Plugin for TransducerFieldCalculatorPlugin {
         t: f64,
         _context: &mut crate::physics::plugin::PluginContext<'_>,
     ) -> KwaversResult<()> {
-        use crate::physics::field_mapping::UnifiedFieldType;
+        use crate::domain::field::indices;
+        use crate::domain::field::mapping::UnifiedFieldType;
 
         // Calculate frequency from time
         let frequency = 1e6; // Default 1 MHz - should be configurable

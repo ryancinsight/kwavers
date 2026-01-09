@@ -3,9 +3,9 @@
 //! This module provides different execution strategies for running plugins.
 
 use super::{Plugin, PluginContext};
-use crate::error::KwaversResult;
-use crate::grid::Grid;
-use crate::medium::Medium;
+use crate::core::error::KwaversResult;
+use crate::domain::grid::Grid;
+use crate::domain::medium::Medium;
 use ndarray::Array4;
 
 /// Strategy for executing plugins

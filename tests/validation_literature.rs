@@ -144,19 +144,19 @@ fn test_power_law_absorption_scaling() {
 /// **Reference**: Hamilton & Blackstock (1998), Chapter 2
 /// **Physics**: Impedance mismatch causes reflections at interfaces
 #[test]
-fn test_acoustic_impedance_and_reflection() {
-    // Water properties
+fn test_acoustic_impedance_reflection_transmission() {
+    // Water properties at 20°C
     let rho_water = DENSITY_WATER; // kg/m³
     let c_water = SOUND_SPEED_WATER; // m/s
     let z_water = rho_water * c_water;
 
     // Muscle tissue properties (Duck 1990)
-    let rho_muscle = 1050.0;
-    let c_muscle = 1547.0;
+    let rho_muscle: f64 = 1050.0;
+    let c_muscle: f64 = 1547.0;
     let z_muscle = rho_muscle * c_muscle;
 
     // Calculate reflection coefficient at water-muscle interface
-    let r_coeff = (z_muscle - z_water) / (z_muscle + z_water);
+    let r_coeff: f64 = (z_muscle - z_water) / (z_muscle + z_water);
     let r_percent = r_coeff.abs() * 100.0;
 
     // Verify small reflection (<5%) as expected for water-tissue interface
@@ -168,12 +168,12 @@ fn test_acoustic_impedance_and_reflection() {
 
     // Verify energy conservation: For intensity, I_r + I_t = I_i
     // Where I_r = |R|²·I_i and I_t = (Z₁/Z₂)|T|²·I_i
-    let transmission_coeff = 1.0 + r_coeff; // For pressure amplitude
-    let intensity_refl_ratio = r_coeff.powi(2);
-    let intensity_trans_ratio = (z_water / z_muscle) * transmission_coeff.powi(2);
+    let transmission_coeff: f64 = 1.0 + r_coeff; // For pressure amplitude
+    let intensity_refl_ratio: f64 = r_coeff.powi(2);
+    let intensity_trans_ratio: f64 = (z_water / z_muscle) * transmission_coeff.powi(2);
 
     // Energy conservation check (should sum to ~1)
-    let total_energy = intensity_refl_ratio + intensity_trans_ratio;
+    let total_energy: f64 = intensity_refl_ratio + intensity_trans_ratio;
     assert!(
         (total_energy - 1.0).abs() < 1e-6,
         "Energy conservation violated: R²+T²(Z₁/Z₂) = {:.6} ≠ 1",
@@ -181,8 +181,8 @@ fn test_acoustic_impedance_and_reflection() {
     );
 
     // Test extreme impedance mismatch (water-air)
-    let rho_air = 1.2;
-    let c_air = 343.0;
+    let rho_air: f64 = 1.2;
+    let c_air: f64 = 343.0;
     let z_air = rho_air * c_air;
     let r_air = ((z_air - z_water) / (z_air + z_water)).abs();
 

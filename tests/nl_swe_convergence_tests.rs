@@ -26,8 +26,8 @@
 //! - **Order of Accuracy**: Second-order convergence for central differences
 //! - **Harmonic Generation**: Amplitude ratios A₂/A₁ ∝ β, A₃/A₁ ∝ β²
 
-use kwavers::grid::Grid;
-use kwavers::medium::HomogeneousMedium;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::physics::imaging::elastography::nonlinear::{
     HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
 };

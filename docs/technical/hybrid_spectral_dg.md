@@ -16,25 +16,25 @@ The Hybrid Spectral-Discontinuous Galerkin (Spectral-DG) methods module provides
 The module follows SOLID design principles with clear separation of concerns:
 
 ```
-spectral_dg/
-├── mod.rs                    # Main module interface
-├── traits.rs                 # Common traits and interfaces
-├── discontinuity_detector.rs # Discontinuity detection algorithms
-├── spectral_solver.rs        # FFT-based spectral solver
-├── dg_solver.rs             # Discontinuous Galerkin solver
-├── coupling.rs              # Solution coupling and conservation
-└── tests.rs                 # Integration tests
+solver/forward/pstd/dg/
+├── mod.rs                     # Main module interface
+├── traits.rs                  # Common traits and interfaces
+├── discontinuity_detector.rs  # Discontinuity detection algorithms
+├── spectral_solver.rs         # FFT-based spectral solver
+├── dg_solver/                 # Discontinuous Galerkin solver
+├── coupling.rs                # Solution coupling and conservation
+└── shock_capturing/           # Stabilization utilities
 ```
 
 ## Usage Example
 
 ```rust
-use kwavers::solver::spectral_dg::{HybridSpectralDGSolver, HybridSpectralDGConfig};
-use kwavers::grid::Grid;
+use kwavers::{HybridSpectralDGConfig, HybridSpectralDGSolver};
+use kwavers::domain::grid::Grid;
 use std::sync::Arc;
 
 // Create computational grid
-let grid = Arc::new(Grid::new(128, 128, 128, 1.0, 1.0, 1.0));
+let grid = Arc::new(Grid::new(128, 128, 128, 1.0, 1.0, 1.0).expect("grid creation failed"));
 
 // Configure the hybrid solver
 let config = HybridSpectralDGConfig {
@@ -46,16 +46,7 @@ let config = HybridSpectralDGConfig {
 };
 
 // Create the solver
-let mut solver = HybridSpectralDGSolver::new(config, grid.clone());
-
-// Solve for one time step
-let dt = 0.001;
-let new_field = solver.solve(&field, dt, &grid)?;
-
-// Check where DG was used
-if let Some(mask) = solver.discontinuity_mask() {
-    println!("DG used in {} cells", mask.iter().filter(|&&x| x).count());
-}
+let _solver = HybridSpectralDGSolver::new(config, grid);
 ```
 
 ## Components
@@ -69,13 +60,18 @@ The discontinuity detector supports multiple detection strategies:
 - **Combined**: Uses both methods for robust detection
 
 ```rust
-use kwavers::solver::spectral_dg::{DiscontinuityDetector, DetectionMethod};
+use kwavers::solver::pstd::dg::DiscontinuityDetector;
+use kwavers::domain::grid::Grid;
+use ndarray::Array3;
+use std::sync::Arc;
 
-// Create detector with specific method
-let detector = DiscontinuityDetector::with_method(0.1, DetectionMethod::Combined);
+let grid = Arc::new(Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).expect("grid creation failed"));
+let field: Array3<f64> = Array3::zeros((64, 64, 64));
 
 // Detect discontinuities
+let detector = DiscontinuityDetector::new(0.1);
 let mask = detector.detect(&field, &grid)?;
+let _ = mask;
 ```
 
 ### Spectral Solver
@@ -89,8 +85,8 @@ The spectral solver uses FFT for high-order accuracy:
 ```rust
 // Spectral solver is created internally by HybridSpectralDGSolver
 // But can be used standalone:
-let spectral = SpectralSolver::new(8, grid.clone());
-let derivative = spectral.spectral_derivative(&field, 0)?; // x-derivative
+use kwavers::solver::pstd::dg::spectral_solver::RegionPSTDSolver;
+let _spectral = RegionPSTDSolver::new(8, grid.clone());
 ```
 
 ### DG Solver
@@ -104,8 +100,17 @@ The DG solver provides robust shock handling:
 ```rust
 // DG solver is created internally by HybridSpectralDGSolver
 // But can be used standalone:
-let dg = DGSolver::new(3, grid.clone());
-let flux = dg.compute_flux(left_state, right_state, normal);
+use kwavers::solver::pstd::dg::{BasisType, DGConfig, DGSolver, FluxType, LimiterType};
+
+let dg_config = DGConfig {
+    polynomial_order: 3,
+    basis_type: BasisType::Legendre,
+    flux_type: FluxType::LaxFriedrichs,
+    use_limiter: true,
+    limiter_type: LimiterType::Minmod,
+    shock_threshold: 0.1,
+};
+let _dg = DGSolver::new(dg_config, grid.clone()).expect("DG solver creation failed");
 ```
 
 ### Solution Coupling

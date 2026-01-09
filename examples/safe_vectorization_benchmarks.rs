@@ -32,7 +32,7 @@
 //! - Cache efficiency (L1, L2, L3 miss rates)
 //! - Energy efficiency (operations per joule)
 
-use kwavers::{error::KwaversResult, grid::Grid, performance::safe_vectorization::SafeVectorOps};
+use kwavers::{analysis::performance::SafeVectorOps, error::KwaversResult, grid::Grid};
 use ndarray::{Array1, Array3, Zip};
 use std::time::Instant;
 

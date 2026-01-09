@@ -2,7 +2,7 @@
 //!
 //! This example shows the simplest way to set up and run a simulation.
 
-use kwavers::{medium::core::CoreMedium, Grid, HomogeneousMedium, KwaversResult, Time};
+use kwavers::{medium::CoreMedium, medium::HomogeneousMedium, time::Time, Grid, KwaversResult};
 use std::time::Instant;
 
 fn main() -> KwaversResult<()> {

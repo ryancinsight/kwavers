@@ -28,7 +28,7 @@
 //! - Cherenkov produces bluer, more directional emission
 //! - Combined emission shows complex interplay of both mechanisms
 
-use kwavers::grid::Grid;
+use kwavers::domain::grid::Grid;
 use kwavers::physics::bubble_dynamics::bubble_state::BubbleParameters;
 use kwavers::physics::optics::sonoluminescence::{EmissionParameters, IntegratedSonoluminescence};
 use ndarray::Array3;

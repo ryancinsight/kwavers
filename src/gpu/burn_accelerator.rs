@@ -12,7 +12,7 @@
 //! - **Multi-Backend Support**: CPU, WGPU, CUDA (via Burn backends)
 //! - **Scientific Computing**: Optimized for PDEs, wave propagation, and physics simulations
 
-use crate::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use burn::prelude::*;
 use burn::tensor::{backend::Backend, Tensor};
 use ndarray::Array3;
@@ -93,7 +93,7 @@ impl<B: Backend> BurnGpuAccelerator<B> {
     {
         if !config.enable_gpu {
             return Err(KwaversError::System(
-                crate::error::SystemError::ResourceUnavailable {
+                crate::core::error::SystemError::ResourceUnavailable {
                     resource: "GPU acceleration disabled".to_string(),
                 },
             ));
@@ -128,7 +128,7 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         let slice = data.as_slice::<f32>().unwrap();
 
         Array3::from_shape_vec(
-            (shape[0] as usize, shape[1] as usize, shape[2] as usize),
+            (shape[0], shape[1], shape[2]),
             slice.iter().map(|&x| x as f64).collect(),
         )
         .unwrap()
@@ -422,7 +422,10 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         // or just taking the first simulation in the batch for now
         // to match the Tensor<B, 3> return type.
         // In a production multi-simulation setup, we would return Tensor<B, 4>.
-        residual.slice([0..1]).squeeze()
+        let r_shape = residual.shape();
+        residual
+            .slice([0..1, 0..r_shape[1], 0..r_shape[2], 0..r_shape[3]])
+            .squeeze()
     }
 
     /// Compute Laplacian in 2D

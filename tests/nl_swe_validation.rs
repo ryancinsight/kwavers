@@ -6,9 +6,9 @@
 //! - Nonlinear inversion methods
 //! - End-to-end NL-SWE workflow
 
-pub use kwavers::grid::Grid;
-pub use kwavers::medium::HomogeneousMedium;
-pub use kwavers::physics::imaging::elastography::*;
+pub use kwavers::domain::grid::Grid;
+pub use kwavers::domain::medium::HomogeneousMedium;
+pub use kwavers::physics::imaging::modalities::elastography::*;
 pub use ndarray::{Array3, Array4};
 pub use std::f64::consts::PI;
 

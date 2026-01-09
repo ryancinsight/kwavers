@@ -5,12 +5,12 @@
 //! - Tests must exercise only what we touched: PAM + shared `BeamformingProcessor` integration.
 //! - Tests must run in `--release` and be deterministic.
 
-use kwavers::physics::constants::SOUND_SPEED_WATER;
-use kwavers::sensor::beamforming::BeamformingCoreConfig;
-use kwavers::sensor::passive_acoustic_mapping::geometry::ArrayGeometry;
-use kwavers::sensor::passive_acoustic_mapping::{
+use kwavers::domain::sensor::beamforming::BeamformingCoreConfig;
+use kwavers::domain::sensor::passive_acoustic_mapping::geometry::ArrayGeometry;
+use kwavers::domain::sensor::passive_acoustic_mapping::{
     ApodizationType, PAMConfig, PamBeamformingConfig, PamBeamformingMethod, PassiveAcousticMapper,
 };
+use kwavers::physics::constants::SOUND_SPEED_WATER;
 use ndarray::{Array3, Axis};
 
 fn linear_array_positions(elements: usize, pitch_m: f64) -> ArrayGeometry {

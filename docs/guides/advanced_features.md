@@ -1,11 +1,11 @@
 # Advanced Features Tutorial
 
-This tutorial covers the advanced features of Kwavers, including performance profiling, k-Wave validation, and benchmark suites.
+This tutorial covers the advanced features of Kwavers, including performance profiling, validation, and benchmark suites.
 
 ## Table of Contents
 
 1. [Performance Profiling](#performance-profiling)
-2. [k-Wave Validation](#k-wave-validation)
+2. [Validation](#validation)
 3. [Benchmark Suite](#benchmark-suite)
 4. [Advanced Numerical Methods](#advanced-numerical-methods)
 5. [Multi-Physics Simulations](#multi-physics-simulations)
@@ -17,29 +17,26 @@ The performance profiling infrastructure provides comprehensive insights into yo
 ### Basic Usage
 
 ```rust
-use kwavers::performance::profiling::{PerformanceProfiler, ProfileReport, MemoryEventType, PerformanceBound};
-use kwavers::{Grid, HomogeneousMedium};
+use kwavers::analysis::performance::profiling::PerformanceProfiler;
+use kwavers::domain::grid::Grid;
 
 // Create profiler
-let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3);
-let profiler = PerformanceProfiler::new(&grid);
+let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3).expect("grid creation failed");
+let profiler = PerformanceProfiler::new(grid);
 
 // Profile a computation
 {
-    let _scope = profiler.time_scope("pressure_update");
-    // Your computation here
+    let _scope = profiler.scope("pressure_update");
+    let _ = 1 + 1;
 }
 
-// Record memory events
-profiler.record_memory_event(
-    1024 * 1024, 
-    MemoryEventType::Allocation,
-    Some("field allocation".to_string())
-);
+// Record allocations/deallocations
+profiler.allocate(1024 * 1024);
+profiler.deallocate(1024 * 1024);
 
 // Generate report
-let report = profiler.generate_report()?;
-report.print_summary();
+let report = profiler.report();
+println!("{}", report.report());
 ```
 
 ### Roofline Analysis
@@ -47,10 +44,7 @@ report.print_summary();
 The profiler includes roofline analysis to identify performance bottlenecks:
 
 ```rust
-// The report includes roofline analysis
-println!("Performance bound: {:?}", report.roofline.bound_type);
-println!("Arithmetic intensity: {:.2} FLOP/byte", report.roofline.arithmetic_intensity);
-println!("Achieved: {:.1} GFLOP/s", report.roofline.achieved_gflops);
+println!("{}", report.performance_analysis);
 ```
 
 ### Cache Profiling
@@ -58,32 +52,30 @@ println!("Achieved: {:.1} GFLOP/s", report.roofline.achieved_gflops);
 Monitor cache behavior for optimization:
 
 ```rust
-profiler.update_cache_stats(|stats| {
-    stats.l1_hits += 1000;
-    stats.l1_misses += 10;
-});
+profiler.cache.record_hit(1);
+profiler.cache.record_miss(1);
+
+let cache_profile = profiler.cache.profile();
+println!("L1 hit rate: {:.3}", cache_profile.statistics.l1_hit_rate());
 ```
 
-## k-Wave Validation
+## Validation
 
-Validate your simulations against the industry-standard k-Wave toolbox.
+Validate your simulations against analytical solutions and literature benchmarks.
 
 ### Running Validation Tests
 
 ```rust
-use kwavers::solver::validation::KWaveValidator;
+use kwavers::solver::utilities::validation::NumericalValidator;
 
-let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3);
-let validator = KWaveValidator::new(grid);
+let validator = NumericalValidator::new();
+let results = validator
+    .validate_all()
+    .expect("numerical validation failed");
 
-// Run all tests
-let report = validator.run_all_tests()?;
-report.print_summary();
-
-// Check if all tests passed
-if report.all_passed() {
-    println!("All k-Wave validation tests passed!");
-}
+println!("PSTD stable: {}", results.stability_tests.pstd_stable);
+println!("FDTD stable: {}", results.stability_tests.fdtd_stable);
+println!("PSTD phase error: {}", results.dispersion_tests.pstd_phase_error);
 ```
 
 ### Available Test Cases
@@ -97,17 +89,14 @@ if report.all_passed() {
 
 ### Custom Validation Tests
 
-Create your own validation tests:
+For reference parity comparisons, configure the PSTD solver in reference mode:
 
 ```rust
-use kwavers::solver::validation::{KWaveTestCase, ReferenceSource};
+use kwavers::solver::pstd::config::CompatibilityMode;
+use kwavers::solver::pstd::PSTDConfig;
 
-let custom_test = KWaveTestCase {
-    name: "my_test".to_string(),
-    description: "Custom validation test".to_string(),
-    tolerance: 1e-3,
-    reference: ReferenceSource::Literature("Paper et al. 2024".to_string()),
-};
+let mut config = PSTDConfig::default();
+config.compatibility_mode = CompatibilityMode::Reference;
 ```
 
 ## Benchmark Suite
@@ -117,25 +106,14 @@ The automated benchmark suite provides comprehensive performance testing.
 ### Running Benchmarks
 
 ```rust
-use kwavers::benchmarks::{BenchmarkSuite, BenchmarkConfig, OutputFormat};
+use kwavers::analysis::performance::ProductionBenchmarks;
 
-// Configure benchmarks
-let config = BenchmarkConfig {
-    grid_sizes: vec![64, 128, 256],
-    time_steps: 100,
-    iterations: 5,
-    enable_gpu: true,
-    enable_amr: true,
-    output_format: OutputFormat::Markdown,
-};
+let benchmarks = ProductionBenchmarks::new(100, 1000);
+let results = benchmarks.run_all();
 
-// Run benchmarks
-let mut suite = BenchmarkSuite::new(config);
-let report = suite.run_all()?;
-report.print_summary();
-
-// Export results
-report.export_csv("benchmark_results.csv")?;
+for result in results {
+    println!("{}", result.report());
+}
 ```
 
 ### Benchmark Components
@@ -151,27 +129,21 @@ report.export_csv("benchmark_results.csv")?;
 ### Adaptive Mesh Refinement (AMR)
 
 ```rust
-use kwavers::solver::amr::{AMRManager, AMRConfig, WaveletType};
+use kwavers::domain::grid::Grid;
+use kwavers::solver::amr::AMRSolver;
+use ndarray::Array3;
 
-let config = AMRConfig {
-    max_level: 3,
-    min_level: 0,
-    refine_threshold: 0.1,
-    coarsen_threshold: 0.01,
-    refinement_ratio: 2,
-    buffer_cells: 2,
-    wavelet_type: WaveletType::Daubechies4,
-    interpolation_scheme: InterpolationScheme::Conservative,
-};
+let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).expect("grid creation failed");
+let mut amr = AMRSolver::new(&grid, 3).expect("amr init failed");
 
-let mut amr = AMRManager::new(config, &grid)?;
+let pressure_field: Array3<f64> = Array3::zeros((64, 64, 64));
 
-// Adapt mesh based on field
-amr.adapt_mesh(&pressure_field)?;
+amr.adapt_mesh(&pressure_field, 0.1).expect("amr mesh adaptation failed");
 
 // Get statistics
-let stats = amr.get_statistics();
-println!("Compression ratio: {:.2}", stats.compression_ratio);
+let stats = amr.memory_stats();
+println!("Octree nodes: {}", stats.nodes);
+println!("Octree leaves: {}", stats.leaves);
 ```
 
 ### IMEX Time Integration
@@ -179,17 +151,14 @@ println!("Compression ratio: {:.2}", stats.compression_ratio);
 For problems with multiple time scales:
 
 ```rust
-use kwavers::solver::imex::{IMEXScheme, IMEXRKConfig, IMEXRKType};
+use kwavers::solver::forward::imex::{IMEXRKConfig, IMEXRKType, IMEXRK};
 
 let config = IMEXRKConfig {
     scheme_type: IMEXRKType::ARK3,
-    adaptive_timestepping: true,
-    tolerance: 1e-6,
-    safety_factor: 0.9,
-    max_timestep_ratio: 2.0,
+    embedded_error: false,
 };
 
-let imex_scheme = IMEXScheme::IMEXRK(config);
+let _scheme = IMEXRK::new(config);
 ```
 
 ### Spectral-DG Methods
@@ -197,7 +166,9 @@ let imex_scheme = IMEXScheme::IMEXRK(config);
 For robust shock handling:
 
 ```rust
-use kwavers::solver::spectral_dg::{HybridSpectralDGConfig, HybridSpectralDG};
+use kwavers::{HybridSpectralDGConfig, HybridSpectralDGSolver};
+use kwavers::domain::grid::Grid;
+use std::sync::Arc;
 
 let config = HybridSpectralDGConfig {
     discontinuity_threshold: 0.01,
@@ -207,7 +178,8 @@ let config = HybridSpectralDGConfig {
     conservation_tolerance: 1e-10,
 };
 
-let solver = HybridSpectralDG::new(config, &grid)?;
+let grid = Arc::new(Grid::new(128, 128, 128, 1.0, 1.0, 1.0).expect("grid creation failed"));
+let _solver = HybridSpectralDGSolver::new(config, grid);
 ```
 
 ## Multi-Physics Simulations
@@ -217,16 +189,16 @@ let solver = HybridSpectralDG::new(config, &grid)?;
 Model realistic tissue absorption:
 
 ```rust
-use kwavers::medium::absorption::FractionalDerivativeAbsorption;
+use kwavers::domain::medium::absorption::{AbsorptionCalculator, AbsorptionModel, TissueAbsorption, TissueType};
+use ndarray::Array3;
 
-let absorption = FractionalDerivativeAbsorption::new(
-    1.1,    // Power law exponent for liver
-    0.5,    // α₀ at 1 MHz (Np/m)
-    1e6,    // Reference frequency (Hz)
-);
+let model = AbsorptionModel::Tissue(TissueAbsorption::new(TissueType::Liver));
+let absorption = AbsorptionCalculator::new(model);
 
-// Apply to simulation
-absorption.apply(&mut pressure, &grid, dt)?;
+let mut pressure: Array3<f64> = Array3::zeros((64, 64, 64));
+let frequency_hz = 1e6;
+let dt = 1e-7;
+absorption.apply_absorption(&mut pressure, frequency_hz, dt)?;
 ```
 
 ### Anisotropic Materials
@@ -234,18 +206,19 @@ absorption.apply(&mut pressure, &grid, dt)?;
 Model directionally-dependent properties:
 
 ```rust
-use kwavers::medium::anisotropic::{StiffnessTensor, AnisotropyType};
+use kwavers::domain::medium::anisotropic::{AnisotropyType, StiffnessTensor};
 
 // Transversely isotropic (muscle fiber)
 let stiffness = StiffnessTensor::transversely_isotropic(
     11e9,   // C11
-    5.5e9,  // C13
-    2.5e9,  // C33
-    2e9,    // C44
-    3e9,    // C66
-);
+    5.5e9,  // C12
+    2.5e9,  // C13
+    2e9,    // C33
+    3e9,    // C44
+)
+.expect("invalid stiffness tensor");
 
-let propagator = AnisotropicWavePropagator::new(stiffness, density, &grid)?;
+assert_eq!(stiffness.anisotropy_type, AnisotropyType::TransverselyIsotropic);
 ```
 
 ### Multi-Rate Integration
@@ -254,17 +227,19 @@ Efficiently handle multiple time scales:
 
 ```rust
 use kwavers::solver::time_integration::TimeScaleSeparator;
+use ndarray::Array4;
 
-let separator = TimeScaleSeparator::new(&grid);
-let time_scales = separator.analyze_system(&fields, &medium)?;
+let mut separator = TimeScaleSeparator::new(&grid);
+let fields = Array4::<f64>::zeros((kwavers::solver::TOTAL_FIELDS, grid.nx, grid.ny, grid.nz));
+let time_scales = separator
+    .analyze(&fields, 1e-12)
+    .expect("time-scale analysis failed");
 
 // Automatic sub-cycling
 for scale in &time_scales {
-    if scale.is_stiff {
-        println!("Stiff component: {} (τ = {:.2e}s)", scale.component, scale.time_scale);
-    }
+    println!("Time scale: {:.2e}s", scale);
 }
-```
+``` 
 
 ## Best Practices
 
@@ -294,14 +269,11 @@ field.slice_mut(s![.., .., 0]).fill(0.0);
 ```rust
 // Profile critical sections
 {
-    let _scope = profiler.time_scope("critical_computation");
+    let _scope = profiler.scope("critical_computation");
     // Your computation
 }
 
-// Check performance bounds
-if matches!(report.roofline.bound_type, PerformanceBound::MemoryBound) {
-    println!("Consider cache blocking or data layout optimization");
-}
+println!("{}", report.performance_analysis);
 ```
 
 ### Validation
@@ -309,20 +281,15 @@ if matches!(report.roofline.bound_type, PerformanceBound::MemoryBound) {
 Always validate against known solutions:
 
 ```rust
-use kwavers::{Grid, solver::validation::KWaveValidator};
+use kwavers::solver::utilities::validation::NumericalValidator;
 
-// Run validation tests
-let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3);
-let validator = KWaveValidator::new(grid);
-let report = validator.run_all_tests()?;
+let validator = NumericalValidator::new();
+let results = validator
+    .validate_all()
+    .expect("numerical validation failed");
 
-// Check results
-if report.all_passed() {
-    println!("All validation tests passed!");
-} else {
-    println!("Some validation tests failed - check report for details");
-    report.print_summary();
-}
+println!("PSTD stable: {}", results.stability_tests.pstd_stable);
+println!("FDTD stable: {}", results.stability_tests.fdtd_stable);
 ```
 
 ## Example: Complete Simulation Pipeline
@@ -330,87 +297,34 @@ if report.all_passed() {
 Here's a complete example combining multiple advanced features:
 
 ```rust
-use kwavers::*;
-use kwavers::performance::profiling::PerformanceProfiler;
-use kwavers::solver::amr::{AMRManager, AMRConfig};
-use kwavers::physics::mechanics::acoustic_wave::{KuznetsovWave, KuznetsovConfig};
-use kwavers::physics::traits::AcousticWaveModel;
-use kwavers::source::NullSource;
-use kwavers::medium::HomogeneousMedium;
-use ndarray::{Array3, Array4, Axis};
+use kwavers::analysis::performance::profiling::PerformanceProfiler;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::HomogeneousMedium;
+use kwavers::physics::plugin::PluginManager;
+use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
+use ndarray::Array4;
 
-fn multi_physics_simulation() -> KwaversResult<()> {
-    // Setup
-    let grid = Grid::new(256, 256, 256, 1e-3, 1e-3, 1e-3);
-    let profiler = PerformanceProfiler::new(&grid);
-    
-    // Configure AMR
-    let amr_config = AMRConfig::default();
-    let mut amr = AMRManager::new(amr_config, &grid)?;
-    
-    // Configure nonlinear solver
-    let kuznetsov_config = KuznetsovConfig {
-        enable_nonlinearity: true,
-        enable_diffusivity: true,
-        ..Default::default()
-    };
-    let mut solver = KuznetsovWave::new(&grid, kuznetsov_config);
-    
-    // Initialize fields
-    let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
-    let mut prev_pressure = grid.zeros_array();
-    initialize_focused_source(&mut fields.index_axis_mut(Axis(0), 0).to_owned(), &grid);
-    
-    // Create medium and source
-    let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
-    let source = NullSource;
-    
-    // Time stepping
-    let dt = 1e-6;
-    let n_steps = 1000;
-    let mut t = 0.0;
-    
-    for step in 0..n_steps {
-        // Profile time step
-        let _scope = profiler.time_scope("time_step");
-        
-        // Adaptive mesh refinement
-        if step % 10 == 0 {
-            let pressure = fields.index_axis(Axis(0), 0).to_owned();
-            amr.adapt_mesh(&pressure)?;
-        }
-        
-        // Solve
-        solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t)?;
-        prev_pressure.assign(&fields.index_axis(Axis(0), 0));
-        t += dt;
-        
-        // Record statistics
-        if step % 100 == 0 {
-            let stats = amr.memory_stats();
-            println!("Step {}: active cells = {}", 
-                    step, stats.active_cells);
-        }
+fn simulation_step_example() {
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).expect("grid creation failed");
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let profiler = PerformanceProfiler::new(grid.clone());
+
+    let mut plugin_manager = PluginManager::new();
+    let fdtd_plugin = FdtdPlugin::new(FdtdConfig::default(), &grid).expect("plugin init failed");
+    plugin_manager.add_plugin(Box::new(fdtd_plugin)).expect("add plugin failed");
+    plugin_manager.initialize(&grid, &medium).expect("plugin init failed");
+
+    let mut fields = Array4::zeros((kwavers::solver::TOTAL_FIELDS, grid.nx, grid.ny, grid.nz));
+    let dt = 1e-7;
+    let t = 0.0;
+
+    {
+        let _scope = profiler.scope("plugin_step");
+        let _ = _scope;
     }
-    
-    // Generate performance report
-    let report = profiler.generate_report()?;
-    report.print_summary();
-    
-    Ok(())
-}
 
-fn initialize_focused_source(field: &mut Array3<f64>, grid: &Grid) {
-    // Implementation of source initialization
-    let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
-    field.indexed_iter_mut()
-        .for_each(|((i, j, k), value)| {
-            let x = (i as f64 - center.0 as f64) * grid.dx;
-            let y = (j as f64 - center.1 as f64) * grid.dy;
-            let z = (k as f64 - center.2 as f64) * grid.dz;
-            let r2 = x*x + y*y + z*z;
-            *value = (-r2 / (2.0 * 0.01 * 0.01)).exp();
-        });
+    let report = profiler.report();
+    let _ = report;
 }
 ```
 

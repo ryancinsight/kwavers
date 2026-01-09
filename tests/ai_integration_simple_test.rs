@@ -1,7 +1,7 @@
 //! Simple AI integration tests that don't depend on PINN compilation
 
 #[cfg(feature = "pinn")]
-use kwavers::sensor::beamforming::ai_integration::{
+use kwavers::domain::sensor::beamforming::ai_integration::{
     ClinicalDecisionSupport, ClinicalThresholds, DiagnosisAlgorithm, FeatureConfig,
     FeatureExtractor, FeatureMap, RealTimeWorkflow,
 };
@@ -70,16 +70,18 @@ fn test_diagnosis_algorithm() {
     let algorithm = DiagnosisAlgorithm::new();
 
     // Create dummy clinical analysis
-    let clinical_analysis = kwavers::sensor::beamforming::ai_integration::ClinicalAnalysis {
-        lesions: vec![],
-        tissue_classification: kwavers::sensor::beamforming::ai_integration::TissueClassification {
-            probabilities: std::collections::HashMap::new(),
-            dominant_tissue: ndarray::Array3::from_elem((32, 32, 16), "Muscle".to_string()),
-            boundary_confidence: ndarray::Array3::from_elem((32, 32, 16), 0.8),
-        },
-        recommendations: vec!["Test recommendation".to_string()],
-        diagnostic_confidence: 0.85,
-    };
+    let clinical_analysis =
+        kwavers::domain::sensor::beamforming::ai_integration::ClinicalAnalysis {
+            lesions: vec![],
+            tissue_classification:
+                kwavers::domain::sensor::beamforming::ai_integration::TissueClassification {
+                    probabilities: std::collections::HashMap::new(),
+                    dominant_tissue: ndarray::Array3::from_elem((32, 32, 16), "Muscle".to_string()),
+                    boundary_confidence: ndarray::Array3::from_elem((32, 32, 16), 0.8),
+                },
+            recommendations: vec!["Test recommendation".to_string()],
+            diagnostic_confidence: 0.85,
+        };
 
     let features = FeatureMap {
         morphological: std::collections::HashMap::new(),

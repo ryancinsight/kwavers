@@ -3,7 +3,9 @@
 //! This example demonstrates validation of numerical methods against
 //! known analytical solutions in physics.
 
-use kwavers::{medium::acoustic::AcousticProperties, Grid, HomogeneousMedium};
+use kwavers::medium::AcousticProperties;
+use kwavers::medium::HomogeneousMedium;
+use kwavers::Grid;
 use ndarray::Array3;
 use std::f64::consts::PI;
 
@@ -257,8 +259,8 @@ fn test_acoustic_absorption() -> Result<(), Box<dyn std::error::Error>> {
         // In production, use proper constructors or builder patterns
 
         // Initial amplitude
-        let a0 = 1.0;
-        let distance = 0.1; // 10 cm
+        let a0: f64 = 1.0;
+        let distance: f64 = 0.1; // 10 cm
 
         // Get absorption coefficient from medium
         let alpha = medium.absorption_coefficient(0.0, 0.0, 0.0, &grid, frequency);

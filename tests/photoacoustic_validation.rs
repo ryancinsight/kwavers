@@ -2,13 +2,13 @@
 //!
 //! Comprehensive validation of photoacoustic imaging against:
 //! - Analytical solutions
-//! - k-Wave compatibility benchmarks
+//! - reference compatibility benchmarks
 //! - Physical accuracy tests
 
-use kwavers::error::KwaversResult;
-use kwavers::grid::Grid;
-use kwavers::medium::homogeneous::HomogeneousMedium;
-use kwavers::physics::imaging::photoacoustic::{
+use kwavers::core::error::KwaversResult;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::homogeneous::HomogeneousMedium;
+use kwavers::simulation::modalities::photoacoustic::{
     OpticalProperties, PhotoacousticParameters, PhotoacousticSimulator,
 };
 
@@ -234,7 +234,7 @@ fn test_heterogeneous_tissue_simulation() -> KwaversResult<()> {
 // k-Wave compatibility validation
 /// This test validates against known k-Wave benchmark results
 #[test]
-fn test_kwave_compatibility() -> KwaversResult<()> {
+fn test_reference_toolbox_compatibility() -> KwaversResult<()> {
     // Test against a known analytical case that k-Wave can solve
     // Using a simplified 2D case for validation
 

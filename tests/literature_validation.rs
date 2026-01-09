@@ -3,8 +3,8 @@
 //! These tests validate our implementations against known analytical solutions
 //! and published results from peer-reviewed literature.
 
-use kwavers::grid::Grid;
-use kwavers::medium::HomogeneousMedium;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::physics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
 
 use ndarray::Array3;
@@ -73,7 +73,7 @@ fn test_acoustic_dispersion_relation() {
     let c = 1500.0; // Sound speed in water
 
     // Generate k-space
-    use kwavers::grid::KSpaceCalculator;
+    use kwavers::domain::grid::KSpaceCalculator;
     let _kx = KSpaceCalculator::generate_kx(&grid);
     let _ky = KSpaceCalculator::generate_ky(&grid);
     let _kz = KSpaceCalculator::generate_kz(&grid);
@@ -194,7 +194,8 @@ fn test_cfl_stability_condition() {
     let c_max = 1500.0; // Maximum sound speed
 
     // Calculate CFL timestep
-    let dt_cfl = kwavers::grid::stability::StabilityCalculator::cfl_timestep_fdtd(&grid, c_max);
+    let dt_cfl =
+        kwavers::domain::grid::stability::StabilityCalculator::cfl_timestep_fdtd(&grid, c_max);
 
     // For 3D FDTD: dt <= dx / (c * sqrt(3))
     let dx_min = grid.min_spacing();

@@ -30,8 +30,8 @@
 //! - Jones, R. C. (1941). "A new calculus for the treatment of optical systems"
 //! - Born, M., & Wolf, E. (1999). Principles of Optics
 
-use crate::grid::Grid;
-use crate::medium::Medium;
+use crate::domain::grid::Grid;
+use crate::domain::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Array4, Zip};
 use num_complex::Complex64;
@@ -383,7 +383,7 @@ impl PolarizationModel for LinearPolarization {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid::Grid;
+    use crate::domain::grid::Grid;
     use approx::assert_relative_eq;
 
     #[test]
@@ -487,7 +487,7 @@ mod tests {
 
         let grid = Grid::new(2, 2, 2, 1.0, 1.0, 1.0).unwrap();
 
-        let medium = crate::medium::HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+        let medium = crate::domain::medium::HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
         model.apply_polarization(&mut fluence, &mut polarization_state, &grid, &medium);
 
         // After horizontal polarizer, only horizontal component should remain
