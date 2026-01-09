@@ -75,11 +75,12 @@ test_octree
 bench_*
 
 # Redundant documentation (only keep essential docs)
-*_SUMMARY.md
-*_REVIEW.md
-*_REPORT.md
-*_UPDATE.md
-*_PROGRESS.md
+# Allow refactoring docs but block other temporary docs
+# *_SUMMARY.md
+# *_REVIEW.md
+# *_REPORT.md
+# *_UPDATE.md
+# *_PROGRESS.md
 *IMPROVEMENTS*.md
 *OPTIMIZATION*.md
 PULL_REQUEST.md
