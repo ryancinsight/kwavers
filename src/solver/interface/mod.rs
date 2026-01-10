@@ -4,9 +4,13 @@
 //! for all solver implementations in Kwavers.
 
 // pub mod config; // Consolidated into crate::solver::config
-pub use crate::solver::config::SolverConfiguration as SolverConfig;
-pub use feature::{FeatureManager, SolverFeature};
-pub use progress::{
+pub mod feature;
+pub mod progress;
+pub mod solver;
+
+pub use self::feature::{FeatureManager, SolverFeature};
+pub use self::progress::{
     ConsoleProgressReporter, FieldsSummary, ProgressData, ProgressReporter, ProgressUpdate,
 };
-pub use solver::{Solver, SolverStatistics};
+pub use self::solver::{Solver, SolverStatistics};
+pub use crate::solver::config::SolverConfiguration as SolverConfig;

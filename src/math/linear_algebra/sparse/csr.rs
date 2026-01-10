@@ -121,4 +121,121 @@ impl CompressedSparseRowMatrix {
 
         dense
     }
+
+    /// Add value to matrix at (row, col) position
+    pub fn add_value(&mut self, row: usize, col: usize, value: f64) {
+        // Find position in row
+        let row_start = self.row_pointers[row];
+        let row_end = self.row_pointers[row + 1];
+
+        // Check if entry already exists
+        for i in row_start..row_end {
+            if self.col_indices[i] == col {
+                self.values[i] += value;
+                return;
+            }
+        }
+
+        // Insert new entry (simple insertion - not optimal for performance)
+        self.values.insert(row_end, value);
+        self.col_indices.insert(row_end, col);
+
+        // Update row pointers for subsequent rows
+        for i in (row + 1)..=self.rows {
+            self.row_pointers[i] += 1;
+        }
+
+        self.nnz += 1;
+    }
+
+    /// Set diagonal entry
+    pub fn set_diagonal(&mut self, row: usize, value: f64) {
+        self.add_value(row, row, value);
+    }
+
+    /// Get diagonal entry
+    #[must_use]
+    pub fn get_diagonal(&self, row: usize) -> f64 {
+        let row_start = self.row_pointers[row];
+        let row_end = self.row_pointers[row + 1];
+
+        for i in row_start..row_end {
+            if self.col_indices[i] == row {
+                return self.values[i];
+            }
+        }
+
+        0.0 // Zero if not found
+    }
+
+    /// Zero out row (except diagonal)
+    pub fn zero_row_off_diagonals(&mut self, row: usize) {
+        let row_start = self.row_pointers[row];
+        let row_end = self.row_pointers[row + 1];
+
+        let mut i = row_start;
+        while i < row_end {
+            if self.col_indices[i] != row {
+                // Remove off-diagonal entry
+                self.values.remove(i);
+                self.col_indices.remove(i);
+
+                // Update row pointers for subsequent rows
+                for r in (row + 1)..=self.rows {
+                    self.row_pointers[r] -= 1;
+                }
+
+                self.nnz -= 1;
+                // Don't increment i since we removed an element
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    /// Zero out entire row
+    pub fn zero_row(&mut self, row: usize) {
+        let row_start = self.row_pointers[row];
+        let row_end = self.row_pointers[row + 1];
+        let num_to_remove = row_end - row_start;
+
+        // Remove all entries in row
+        self.values.drain(row_start..row_end);
+        self.col_indices.drain(row_start..row_end);
+
+        // Update row pointers for subsequent rows
+        for r in (row + 1)..=self.rows {
+            self.row_pointers[r] -= num_to_remove;
+        }
+
+        self.nnz -= num_to_remove;
+    }
+
+    /// Compress matrix by removing near-zero entries
+    pub fn compress(&mut self, tolerance: f64) {
+        let mut i = 0;
+        while i < self.values.len() {
+            if self.values[i].abs() < tolerance {
+                // Remove entry
+                self.values.remove(i);
+                self.col_indices.remove(i);
+
+                // Update row pointers - need to find which row this was in
+                for r in 0..self.rows {
+                    if i >= self.row_pointers[r] && i < self.row_pointers[r + 1] {
+                        // Update subsequent row pointers
+                        for s in (r + 1)..=self.rows {
+                            self.row_pointers[s] -= 1;
+                        }
+                        break;
+                    }
+                }
+
+                self.nnz -= 1;
+                // Don't increment i since we removed an element
+            } else {
+                i += 1;
+            }
+        }
+    }
 }

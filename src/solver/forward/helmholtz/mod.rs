@@ -38,6 +38,7 @@
 //! - **Heterogeneous density support**: Full acoustic parameter variations
 
 pub mod born_series;
+pub mod fem;
 pub mod preconditioners;
 
 /// Configuration for Helmholtz solvers

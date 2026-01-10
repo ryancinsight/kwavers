@@ -8,6 +8,7 @@ pub mod field;
 pub mod grid;
 pub mod imaging;
 pub mod medium;
+pub mod mesh;
 pub mod plugin;
 pub mod sensor;
 pub mod signal;
