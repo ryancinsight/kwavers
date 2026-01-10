@@ -10,7 +10,7 @@ use crate::domain::medium::config::MediumParameters;
 use crate::domain::source::config::SourceParameters;
 use crate::infra::io::config::OutputParameters;
 use crate::infra::runtime::PerformanceParameters;
-use crate::solver::config::SolverParameters;
+use crate::solver::config::SolverConfiguration;
 use crate::solver::validation::ValidationParameters;
 
 /// Builder for creating Configuration instances programmatically
@@ -71,7 +71,7 @@ impl ConfigurationBuilder {
     }
 
     /// Set solver parameters
-    pub fn solver(mut self, params: SolverParameters) -> Self {
+    pub fn solver(mut self, params: SolverConfiguration) -> Self {
         self.config.solver = params;
         self
     }

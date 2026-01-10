@@ -131,7 +131,7 @@ impl SolverConfiguration {
         Ok(())
     }
 
-     /// Create a configuration optimized for accuracy
+    /// Create a configuration optimized for accuracy
     pub fn accuracy_optimized() -> Self {
         Self {
             cfl: 0.1,

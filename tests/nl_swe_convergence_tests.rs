@@ -400,6 +400,14 @@ mod convergence_tests {
     }
 
     #[test]
+    #[ignore]
+    fn test_displacement_convergence_study_runs() {
+        let tester = ConvergenceTester::new();
+        let results = tester.run_displacement_convergence_study();
+        assert_eq!(results.len(), tester.grid_refinements.len());
+    }
+
+    #[test]
     fn test_convergence_rate_analysis() {
         let tester = ConvergenceTester::new();
 
@@ -555,7 +563,7 @@ mod convergence_tests {
         // Uniaxial compression: λ₁ = λ₂ = λ₃^(-1/2) for incompressible material
         // Compression ratio: λ₃ = 0.9 (10% compression)
         let lambda3 = 0.9;
-        let lambda1 = (lambda3 as f64).sqrt().recip(); // λ₁ = λ₃^(-1/2) for incompressibility
+        let lambda1 = lambda3.sqrt().recip(); // λ₁ = λ₃^(-1/2) for incompressibility
 
         // Deformation gradient for uniaxial compression along z-direction
         let f = [
@@ -567,22 +575,19 @@ mod convergence_tests {
         // Compute Cauchy stress
         let stress = model.cauchy_stress(&f);
 
-        // Compute volume ratio J = det(F)
-        let j = lambda1 * lambda1 * lambda3;
-
         // Analytical solution for Ogden material under uniaxial compression
         // For incompressible Ogden material: σᵢ = Σⱼ μⱼ (λᵢ^αⱼ - 1)
 
-        let sigma_analytical_33 = mu
+        let _sigma_analytical_33 = mu
             .iter()
             .zip(alpha.iter())
-            .map(|(&mui, &alphai)| mui * ((lambda3 as f64).powf(alphai) - 1.0))
+            .map(|(&mui, &alphai)| mui * (lambda3.powf(alphai) - 1.0))
             .sum::<f64>();
 
-        let sigma_analytical_11 = mu
+        let _sigma_analytical_11 = mu
             .iter()
             .zip(alpha.iter())
-            .map(|(&mui, &alphai)| mui * ((lambda1 as f64).powf(alphai) - 1.0))
+            .map(|(&mui, &alphai)| mui * (lambda1.powf(alphai) - 1.0))
             .sum::<f64>();
 
         // Find compression stress (most negative) and lateral stresses
@@ -908,7 +913,7 @@ mod convergence_tests {
                 ..Default::default()
             };
 
-            let mut solver =
+            let solver =
                 NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config).unwrap();
 
             // Create a focused wave with known amplitude
@@ -1001,7 +1006,7 @@ mod convergence_tests {
                 ..Default::default()
             };
 
-            let mut solver =
+            let solver =
                 NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config).unwrap();
 
             // Create identical initial conditions
@@ -1107,7 +1112,7 @@ mod convergence_tests {
                 ..Default::default()
             };
 
-            let mut solver =
+            let solver =
                 NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config).unwrap();
 
             // Theoretical shock formation distance (simplified)

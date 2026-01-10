@@ -25,7 +25,7 @@ pub use crate::domain::field::indices::{
 };
 
 // Re-export commonly used types from hierarchical modules
-pub use config::{SolverParameters, SolverType};
+pub use config::{SolverConfiguration, SolverType};
 pub use forward::{FdtdSolver, HybridSolver, IMEXIntegrator, PSTDSolver, PluginBasedSolver};
 pub use interface::{Solver, SolverConfig};
 pub use inverse::{

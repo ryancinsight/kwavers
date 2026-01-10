@@ -62,7 +62,9 @@ impl SolverFactory {
                 Ok(Box::new(solver))
             }
             SolverType::Auto => unreachable!("Auto should have been resolved"),
-            _ => Err(crate::core::error::KwaversError::NotImplemented("Solver type not yet supported in factory".to_string())),
+            _ => Err(crate::core::error::KwaversError::NotImplemented(
+                "Solver type not yet supported in factory".to_string(),
+            )),
         }
     }
 
