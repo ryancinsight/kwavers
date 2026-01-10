@@ -3,7 +3,6 @@
 //! This module contains the implementations of standard traits
 //! for the DG solver including NumericalSolver and DGOperations.
 
-use super::super::shock_capturing::detector::ShockDetector;
 use super::super::traits::{DGOperations, NumericalSolver};
 use super::core::DGSolver;
 use crate::core::error::KwaversResult;
@@ -97,11 +96,6 @@ impl DGSolver {
     /// Get the number of nodes per element
     pub fn nodes_per_element(&self) -> usize {
         self.n_nodes
-    }
-
-    fn detect(&self, field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<bool>> {
-        let detector = ShockDetector::new(self.config.shock_threshold);
-        Ok(detector.detect_shocks(field, grid))
     }
 
     /// Get element data - returns a copy to avoid lifetime issues

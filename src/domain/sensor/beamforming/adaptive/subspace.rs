@@ -412,12 +412,13 @@ mod tests {
         let cov = create_test_covariance(n);
         let steering = create_steering_vector(n, 0.0);
 
-        let mvdr = super::super::algorithms_old::MinimumVariance::default();
+        let mvdr = super::super::algorithms::MinimumVariance::default();
         let espmv = EigenspaceMV::new(n); // Full rank = equivalent to MVDR
 
-        let weights_mvdr = super::super::algorithms_old::BeamformingAlgorithm::compute_weights(
+        let weights_mvdr = super::super::algorithms::BeamformingAlgorithm::compute_weights(
             &mvdr, &cov, &steering,
-        );
+        )
+        .expect("MVDR weights must compute for SPD test covariance");
         let weights_espmv = super::super::conventional::BeamformingAlgorithm::compute_weights(
             &espmv, &cov, &steering,
         );

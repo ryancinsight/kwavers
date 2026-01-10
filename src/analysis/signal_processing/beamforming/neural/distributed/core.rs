@@ -297,7 +297,10 @@ mod tests {
         let result = DistributedNeuralBeamformingProcessor::new(
             config,
             2,
-            DecompositionStrategy::Spatial,
+            DecompositionStrategy::Spatial {
+                dimensions: 3,
+                overlap: 0.0,
+            },
             LoadBalancingAlgorithm::Static,
         )
         .await;

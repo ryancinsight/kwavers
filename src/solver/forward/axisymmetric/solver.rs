@@ -9,7 +9,7 @@ use super::config::AxisymmetricMedium;
 use super::coordinates::CylindricalGrid;
 use super::transforms::DiscreteHankelTransform;
 use crate::core::error::KwaversResult;
-use crate::domain::grid::{CylindricalTopology, Grid};
+use crate::domain::grid::CylindricalTopology;
 use crate::domain::medium::adapters::CylindricalMediumProjection;
 use crate::domain::medium::Medium;
 use ndarray::{Array1, Array2, Axis};

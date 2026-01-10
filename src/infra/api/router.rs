@@ -8,7 +8,6 @@ use crate::infra::api::{
         delete_model, get_job_info, get_model_info, health_check, list_models, run_inference,
         train_pinn_model, AppState,
     },
-    middleware::MetricsCollector,
 };
 use axum::{
     middleware,

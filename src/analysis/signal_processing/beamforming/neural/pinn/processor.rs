@@ -45,7 +45,7 @@ use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
 use crate::math::ml::pinn::{
-    uncertainty_quantification::BayesianPINN, BurnPINN1DWave, BurnTrainingMetrics,
+    uncertainty_quantification::BayesianPINN, BurnPINN1DWave,
 };
 
 use crate::domain::sensor::beamforming::SteeringVector;

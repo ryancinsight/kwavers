@@ -230,9 +230,12 @@ pub mod time_domain;
 pub mod covariance; // Covariance matrix estimation
 pub mod utils; // Steering vectors, windows, interpolation
 
-// Future algorithm modules (planned for Phase 3)
+// Advanced algorithm modules
 pub mod experimental;
-pub mod narrowband; // Frequency-domain beamforming (awaiting migration) // Neural/ML beamforming (research-grade)
+pub mod neural; // Neural/ML beamforming (PINN, distributed) // Experimental/research-grade algorithms
+
+// Future algorithm modules (planned for Phase 3)
+pub mod narrowband; // Frequency-domain beamforming (awaiting migration)
 
 // Test utilities (shared accessor layer for test modules)
 #[cfg(test)]

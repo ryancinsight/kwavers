@@ -12,7 +12,7 @@ pub struct ThermalOpticalSolver {
     /// Absorption coefficient (m^-1)
     absorption_coefficient: f64,
     /// Grid reference
-    grid: Grid,
+    _grid: Grid,
 }
 
 impl ThermalOpticalSolver {
@@ -20,7 +20,7 @@ impl ThermalOpticalSolver {
     pub fn new(grid: Grid, absorption_coefficient: f64) -> Self {
         Self {
             absorption_coefficient,
-            grid,
+            _grid: grid,
         }
     }
 

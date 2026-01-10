@@ -192,6 +192,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(deprecated)]
     fn test_grid_creation() {
         let grid = CylindricalGrid::new(64, 32, 1e-4, 1e-4).unwrap();
         assert_eq!(grid.nz, 64);
@@ -200,6 +201,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_coordinates() {
         let grid = CylindricalGrid::new(10, 10, 0.1, 0.1).unwrap();
 
@@ -211,6 +213,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_index_lookup() {
         let grid = CylindricalGrid::new(100, 50, 1e-3, 1e-3).unwrap();
 
@@ -219,6 +222,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_wavenumbers() {
         let grid = CylindricalGrid::new(64, 32, 1e-4, 1e-4).unwrap();
 
@@ -232,6 +236,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_meshgrid() {
         let grid = CylindricalGrid::new(4, 3, 1.0, 1.0).unwrap();
 

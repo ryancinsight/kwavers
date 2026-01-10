@@ -4,8 +4,8 @@
 //! authentication, authorization, rate limiting, logging, and metrics collection.
 
 use crate::infra::api::auth::AuthMiddleware;
-use crate::infra::api::rate_limiter::{RateLimitConfig, RateLimiter};
-use crate::infra::api::{APIError, APIErrorType, RateLimitInfo};
+use crate::infra::api::rate_limiter::RateLimiter;
+use crate::infra::api::APIErrorType;
 use axum::{
     extract::{Request, State},
     http::{header, StatusCode},

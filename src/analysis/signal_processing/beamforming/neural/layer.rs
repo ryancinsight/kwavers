@@ -304,7 +304,7 @@ mod tests {
     #[test]
     fn test_xavier_initialization_bounds() {
         let layer = NeuralLayer::new(64, 32).unwrap();
-        let limit = (6.0 / (64.0 + 32.0)).sqrt();
+        let limit = (6.0_f64 / (64.0_f64 + 32.0_f64)).sqrt();
 
         // All weights should be within [-limit, limit]
         for &weight in layer.weights().iter() {

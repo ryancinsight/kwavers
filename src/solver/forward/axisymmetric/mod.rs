@@ -46,6 +46,7 @@
 //! - `kspaceFirstOrderAS` documentation
 
 mod config;
+#[allow(deprecated)]
 #[deprecated(
     since = "2.15.0",
     note = "Use `domain::grid::CylindricalTopology` instead. This module is retained for backward compatibility only."
@@ -54,6 +55,7 @@ mod coordinates;
 mod solver;
 mod transforms;
 
+#[allow(deprecated)]
 pub use config::{AxisymmetricConfig, AxisymmetricMedium};
 
 // Re-export the unified topology from domain

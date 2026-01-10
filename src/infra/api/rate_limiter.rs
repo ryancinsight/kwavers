@@ -11,7 +11,7 @@ use crate::infra::api::{APIError, APIErrorType, RateLimitInfo};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 /// Configuration for rate limiting
 #[derive(Debug, Clone)]

@@ -106,22 +106,17 @@ pub use time_domain::{
 };
 
 #[cfg(feature = "experimental_neural")]
-pub use experimental::neural::{
-    // PinnBeamformingResult,
-    // DistributedNeuralBeamformingProcessor,
-    // DistributedNeuralBeamformingResult,
-    // DistributedNeuralBeamformingMetrics,
-    BeamformingFeedback,
-    // NeuralBeamformingProcessor, // Only with pinn
-    // PINNBeamformingConfig,
-    HybridBeamformingResult,
-    NeuralBeamformer,
-    NeuralBeamformingConfig,
-    NeuralBeamformingNetwork,
-    NeuralLayer,
-    PhysicsConstraints,
-    UncertaintyEstimator,
+pub use experimental::{
+    BeamformingFeedback, HybridBeamformingMetrics, HybridBeamformingResult,
+    NeuralBeamformingNetwork, NeuralLayer, PhysicsConstraints, UncertaintyEstimator,
 };
+
+// Note: NeuralBeamformer and NeuralBeamformingConfig are NOT YET MIGRATED.
+// These high-level API types remain in the old monolithic file and will be
+// extracted in a future sprint. Use the lower-level primitives directly:
+// - NeuralBeamformingNetwork (for network operations)
+// - PhysicsConstraints (for physics-informed constraints)
+// - UncertaintyEstimator (for uncertainty quantification)
 
 #[cfg(any(feature = "experimental_neural", feature = "pinn"))]
 pub use ai_integration::{
@@ -129,7 +124,7 @@ pub use ai_integration::{
     ClinicalDecisionSupport, DiagnosisAlgorithm, FeatureExtractor, RealTimeWorkflow,
 };
 #[cfg(feature = "pinn")]
-pub use experimental::neural::{
+pub use experimental::{
     DistributedNeuralBeamformingMetrics, DistributedNeuralBeamformingProcessor,
     DistributedNeuralBeamformingResult, FaultToleranceState, ModelParallelConfig,
     NeuralBeamformingProcessor, PINNBeamformingConfig, PinnBeamformingResult, PipelineStage,

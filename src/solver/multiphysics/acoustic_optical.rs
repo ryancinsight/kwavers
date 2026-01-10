@@ -12,7 +12,7 @@ pub struct AcousticOpticalSolver {
     /// Photoelastic coefficient
     photoelastic_coefficient: f64,
     /// Grid reference
-    grid: Grid,
+    _grid: Grid,
 }
 
 impl AcousticOpticalSolver {
@@ -20,7 +20,7 @@ impl AcousticOpticalSolver {
     pub fn new(grid: Grid, photoelastic_coefficient: f64) -> Self {
         Self {
             photoelastic_coefficient,
-            grid,
+            _grid: grid,
         }
     }
 

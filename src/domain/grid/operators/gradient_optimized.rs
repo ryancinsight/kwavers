@@ -118,9 +118,9 @@ where
     let stencil_radius = coeffs.len();
     let (dx_inv, dy_inv, dz_inv) = if let Some(cache) = cache {
         (
-            cache.spacing_inverses.0.clone(),
-            cache.spacing_inverses.1.clone(),
-            cache.spacing_inverses.2.clone(),
+            cache.spacing_inverses.0,
+            cache.spacing_inverses.1,
+            cache.spacing_inverses.2,
         )
     } else {
         (
@@ -268,7 +268,7 @@ where
         let Some(ku) = map_index(kk, nz) else {
             return T::zero();
         };
-        field[[iu, ju, ku]].clone()
+        field[[iu, ju, ku]]
     };
 
     for i in 0..nx {

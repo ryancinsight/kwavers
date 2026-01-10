@@ -355,7 +355,7 @@ mod tests {
     #[test]
     fn test_combined_constraints() {
         let pc = PhysicsConstraints::default();
-        let image = Array::from_shape_fn((10, 10, 5), |(i, j, k)| {
+        let image = Array::from_shape_fn((10, 10, 5), |(i, j, _k)| {
             if i == 5 && j == 5 {
                 100.0
             } else {

@@ -3,7 +3,6 @@
 //! This module contains the core solver implementation including
 //! flux computation, limiting, and time stepping operations.
 
-use super::super::flux::{apply_limiter, compute_numerical_flux};
 use super::super::matrices::matrix_inverse;
 use super::core::DGSolver;
 use crate::core::error::KwaversResult;
@@ -11,59 +10,6 @@ use crate::core::error::{KwaversError, ValidationError};
 use ndarray::{Array2, Array3};
 
 impl DGSolver {
-    /// Compute numerical flux between elements
-    fn compute_numerical_flux(
-        &self,
-        left_state: f64,
-        right_state: f64,
-        wave_speed: f64,
-    ) -> KwaversResult<f64> {
-        // Numerical flux computation for scalar conservation law
-        // Args: left, right, flux_type, wave_speed, normal
-        Ok(compute_numerical_flux(
-            left_state,
-            right_state,
-            self.config.flux_type,
-            wave_speed,
-            1.0, // normal direction
-        ))
-    }
-
-    /// Apply slope limiter for shock capturing
-    fn apply_limiter(&self, coeffs: &mut Array3<f64>) -> KwaversResult<()> {
-        if !self.config.use_limiter {
-            return Ok(());
-        }
-
-        let n_elements = coeffs.shape()[0];
-        let n_vars = coeffs.shape()[2];
-
-        for var in 0..n_vars {
-            for elem in 1..n_elements - 1 {
-                // Get cell averages
-                let u_minus = coeffs[(elem - 1, 0, var)];
-                let u_center = coeffs[(elem, 0, var)];
-                let u_plus = coeffs[(elem + 1, 0, var)];
-
-                // Compute differences
-                let delta_minus = u_center - u_minus;
-                let delta_plus = u_plus - u_center;
-
-                // Apply limiter to higher-order modes
-                for mode in 1..self.n_nodes {
-                    let limited = apply_limiter(self.config.limiter_type, delta_minus, delta_plus);
-
-                    // Scale higher-order coefficients
-                    if limited.abs() < coeffs[(elem, mode, var)].abs() {
-                        coeffs[(elem, mode, var)] *= limited / (coeffs[(elem, mode, var)] + 1e-10);
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-
     /// Perform one time step using DG method
     pub fn solve_step(&mut self, field: &mut Array3<f64>, _dt: f64) -> KwaversResult<()> {
         // Project to DG basis if not already done

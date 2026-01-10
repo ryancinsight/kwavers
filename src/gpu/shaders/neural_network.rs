@@ -10,13 +10,13 @@ use crate::gpu::device::GpuDevice;
 #[derive(Debug)]
 pub struct NeuralNetworkShader {
     /// GPU device handle
-    device: GpuDevice,
+    _device: GpuDevice,
     /// Compute pipeline for matrix multiplication
-    matmul_pipeline: wgpu::ComputePipeline,
+    _matmul_pipeline: wgpu::ComputePipeline,
     /// Compute pipeline for activation functions
-    activation_pipeline: wgpu::ComputePipeline,
+    _activation_pipeline: wgpu::ComputePipeline,
     /// Bind group layouts
-    bind_group_layouts: Vec<wgpu::BindGroupLayout>,
+    _bind_group_layouts: Vec<wgpu::BindGroupLayout>,
 }
 
 impl NeuralNetworkShader {
@@ -118,10 +118,10 @@ impl NeuralNetworkShader {
                 });
 
         Ok(Self {
-            device: device.clone(),
-            matmul_pipeline,
-            activation_pipeline,
-            bind_group_layouts: vec![bind_group_layout],
+            _device: device.clone(),
+            _matmul_pipeline: matmul_pipeline,
+            _activation_pipeline: activation_pipeline,
+            _bind_group_layouts: vec![bind_group_layout],
         })
     }
 

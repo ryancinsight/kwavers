@@ -16,9 +16,9 @@ pub struct MultiPhysicsSolver {
     /// Field coupler for multi-physics interactions
     field_coupler: FieldCoupler,
     /// Computational grid
-    grid: Grid,
+    _grid: Grid,
     /// Medium properties
-    medium: Arc<dyn Medium + Send + Sync>,
+    _medium: Arc<dyn Medium + Send + Sync>,
     /// Multi-physics field array
     fields: Vec<Array3<f64>>,
 }
@@ -41,8 +41,8 @@ impl MultiPhysicsSolver {
 
         Ok(Self {
             field_coupler,
-            grid,
-            medium,
+            _grid: grid,
+            _medium: medium,
             fields,
         })
     }
