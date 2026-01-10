@@ -2,7 +2,7 @@
 
 use super::config::BeamformingConfig;
 use crate::core::error::KwaversResult;
-use crate::domain::math::linear_algebra::LinearAlgebra;
+use crate::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2, Array3};
 
 /// Beamforming processor for array algorithms
@@ -102,14 +102,12 @@ impl BeamformingProcessor {
         let (n_elements, _channels, n_samples) = sensor_data.dim();
 
         if delays.len() != n_elements || weights.len() != n_elements {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
-                format!(
-                    "Invalid delays/weights: delays={}, weights={}, n_elements={}",
-                    delays.len(),
-                    weights.len(),
-                    n_elements
-                ),
-            ));
+            return Err(crate::core::error::KwaversError::InvalidInput(format!(
+                "Invalid delays/weights: delays={}, weights={}, n_elements={}",
+                delays.len(),
+                weights.len(),
+                n_elements
+            )));
         }
 
         // Delay reference policy (explicit):

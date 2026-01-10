@@ -234,7 +234,7 @@ impl Boundary for PMLBoundary {
         mut field: ArrayViewMut3<f64>,
         grid: &Grid,
         time_step: usize,
-    ) -> crate::domain::core::error::KwaversResult<()> {
+    ) -> crate::core::error::KwaversResult<()> {
         trace!("Applying spatial acoustic PML at step {}", time_step);
         let dx = grid.dx;
         let (nx, ny, nz) = grid.dimensions();
@@ -404,7 +404,7 @@ impl Boundary for PMLBoundary {
         field: &mut Array3<Complex<f64>>,
         grid: &Grid,
         time_step: usize,
-    ) -> crate::domain::core::error::KwaversResult<()> {
+    ) -> crate::core::error::KwaversResult<()> {
         trace!(
             "Applying frequency domain acoustic PML at step {}",
             time_step

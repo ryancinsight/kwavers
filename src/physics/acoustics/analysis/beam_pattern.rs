@@ -80,7 +80,7 @@ pub fn calculate_beam_pattern(
             let dir_z = phi.cos();
 
             // Calculate far-field pressure using Rayleigh integral
-            let mut pressure_complex = crate::domain::math::fft::Complex64::new(0.0, 0.0);
+            let mut pressure_complex = crate::math::fft::Complex64::new(0.0, 0.0);
 
             for ix in 0..grid.nx {
                 for iy in 0..grid.ny {
@@ -95,7 +95,7 @@ pub fn calculate_beam_pattern(
                         // Add contribution
                         let p = pressure_field[[ix, iy, iz]];
                         pressure_complex +=
-                            p * crate::domain::math::fft::Complex64::from_polar(1.0, -phase);
+                            p * crate::math::fft::Complex64::from_polar(1.0, -phase);
                     }
                 }
             }

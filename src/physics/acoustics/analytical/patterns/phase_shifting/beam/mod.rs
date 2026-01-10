@@ -46,9 +46,9 @@ impl BeamSteering {
     /// Set steering angles (azimuth and elevation in degrees)
     pub fn set_steering_angles(&mut self, azimuth: f64, elevation: f64) -> KwaversResult<()> {
         if azimuth.abs() > MAX_STEERING_ANGLE || elevation.abs() > MAX_STEERING_ANGLE {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
-                format!("Steering angles exceed maximum of {MAX_STEERING_ANGLE} degrees"),
-            ));
+            return Err(crate::core::error::KwaversError::InvalidInput(format!(
+                "Steering angles exceed maximum of {MAX_STEERING_ANGLE} degrees"
+            )));
         }
 
         self.steering_angles = (azimuth, elevation);

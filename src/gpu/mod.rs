@@ -84,11 +84,9 @@ impl GpuContext {
             })
             .await
             .ok_or_else(|| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ResourceUnavailable {
-                        resource: "GPU adapter".to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
+                    resource: "GPU adapter".to_string(),
+                })
             })?;
 
         // Get adapter info and limits
@@ -126,11 +124,9 @@ impl GpuContext {
             )
             .await
             .map_err(|e| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ResourceUnavailable {
-                        resource: format!("GPU device: {}", e),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
+                    resource: format!("GPU device: {}", e),
+                })
             })?;
 
         let capabilities = GpuCapabilities {

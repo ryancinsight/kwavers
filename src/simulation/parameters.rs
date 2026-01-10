@@ -38,9 +38,9 @@ pub enum SimulationType {
 
 impl SimulationParameters {
     /// Validate simulation parameters
-    pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
+    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         if self.duration <= 0.0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "duration".to_string(),
                 value: self.duration.to_string(),
                 constraint: "Must be positive".to_string(),
@@ -50,7 +50,7 @@ impl SimulationParameters {
 
         if let Some(dt) = self.dt {
             if dt <= 0.0 {
-                return Err(crate::domain::core::error::ConfigError::InvalidValue {
+                return Err(crate::core::error::ConfigError::InvalidValue {
                     parameter: "dt".to_string(),
                     value: dt.to_string(),
                     constraint: "Must be positive".to_string(),
@@ -60,7 +60,7 @@ impl SimulationParameters {
         }
 
         if self.cfl <= 0.0 || self.cfl > 1.0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "cfl".to_string(),
                 value: self.cfl.to_string(),
                 constraint: "Must be in (0, 1]".to_string(),
@@ -69,7 +69,7 @@ impl SimulationParameters {
         }
 
         if self.frequency <= 0.0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "frequency".to_string(),
                 value: self.frequency.to_string(),
                 constraint: "Must be positive".to_string(),
@@ -78,7 +78,7 @@ impl SimulationParameters {
         }
 
         if self.temperature < 0.0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "temperature".to_string(),
                 value: self.temperature.to_string(),
                 constraint: "Must be non-negative (Kelvin)".to_string(),

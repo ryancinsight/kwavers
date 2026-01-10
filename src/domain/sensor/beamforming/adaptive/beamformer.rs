@@ -30,13 +30,11 @@ impl AdaptiveBeamformer {
     /// Apply beamforming to input data
     pub fn beamform(&self, data: &Array2<Complex64>) -> KwaversResult<Array1<Complex64>> {
         if data.nrows() != self.num_elements {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
-                format!(
-                    "Data rows {} != num_elements {}",
-                    data.nrows(),
-                    self.num_elements
-                ),
-            ));
+            return Err(crate::core::error::KwaversError::InvalidInput(format!(
+                "Data rows {} != num_elements {}",
+                data.nrows(),
+                self.num_elements
+            )));
         }
 
         Ok(self.weights.dot(&data.t()))

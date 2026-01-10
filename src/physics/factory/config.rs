@@ -36,7 +36,7 @@ impl PhysicsConfig {
     }
 
     /// Validate configuration - maintains backward compatibility
-    pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
+    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         use crate::core::error::ConfigError;
 
         if self.models.is_empty() {

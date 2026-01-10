@@ -67,7 +67,7 @@
 //! domain::sensor (Layer 2) - sensor positions, sampling parameters
 //! physics::acoustics (Layer 3) - sound speed
 //! math::numerics (Layer 1) - numerical operations
-//! domain::core::error (Layer 0) - error types
+//! core::error (Layer 0) - error types
 //! ```
 //!
 //! ## What Belongs Here vs Domain Layer

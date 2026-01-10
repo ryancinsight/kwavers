@@ -230,7 +230,7 @@ mod tests {
         // Expected amplitude = A * 2 * sin(kh/2) where h is bowl height
         let a = bowl.config.diameter / 2.0; // 0.032 m
         let r = bowl.config.radius_of_curvature; // 0.064 m
-        let k = 2.0 * PI * frequency / crate::domain::core::constants::SOUND_SPEED_WATER;
+        let k = 2.0 * PI * frequency / crate::core::constants::SOUND_SPEED_WATER;
         let h = r - (r * r - a * a).sqrt(); // Bowl height
         let expected_amplitude = bowl.config.amplitude * 2.0 * (k * h / 2.0).sin() / focus_distance;
 

@@ -270,11 +270,9 @@ impl ClinicalValidator {
             .requirements
             .get(&(ClinicalStandard::FDA510k, ClinicalCategory::BMode))
             .ok_or_else(|| {
-                KwaversError::Validation(
-                    crate::domain::core::error::ValidationError::ConstraintViolation {
-                        message: "FDA 510(k) B-mode requirements not found".to_string(),
-                    },
-                )
+                KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
+                    message: "FDA 510(k) B-mode requirements not found".to_string(),
+                })
             })?;
 
         let mut passed = true;
@@ -440,11 +438,9 @@ impl ClinicalValidator {
             .requirements
             .get(&(ClinicalStandard::IEC60601_2_37, ClinicalCategory::Safety))
             .ok_or_else(|| {
-                KwaversError::Validation(
-                    crate::domain::core::error::ValidationError::ConstraintViolation {
-                        message: "IEC 60601-2-37 safety requirements not found".to_string(),
-                    },
-                )
+                KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
+                    message: "IEC 60601-2-37 safety requirements not found".to_string(),
+                })
             })?;
 
         let mut passed = true;

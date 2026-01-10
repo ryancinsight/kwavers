@@ -20,6 +20,7 @@ pub enum SystemError {
         resource: String,
         reason: String,
     },
+    GpuNotAvailable,
     ResourceUnavailable {
         resource: String,
     },
@@ -86,6 +87,12 @@ impl fmt::Display for SystemError {
             }
             Self::ExternalServiceError { service, error } => {
                 write!(f, "External service '{service}' error: {error}")
+            }
+            Self::GpuNotAvailable => {
+                write!(
+                    f,
+                    "GPU acceleration not available - requires 'gpu' feature flag"
+                )
             }
         }
     }

@@ -210,7 +210,7 @@ impl MultiModalFusion {
         // Validate optical data represents intensity/emission
         if optical_intensity.iter().any(|&x| x < 0.0) {
             return Err(KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
+                crate::core::error::ValidationError::ConstraintViolation {
                     message: "Optical intensity values must be non-negative".to_string(),
                 },
             ));
@@ -244,7 +244,7 @@ impl MultiModalFusion {
     pub fn fuse(&self) -> KwaversResult<FusedImageResult> {
         if self.registered_data.len() < 2 {
             return Err(KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
+                crate::core::error::ValidationError::ConstraintViolation {
                     message: "At least two modalities required for fusion".to_string(),
                 },
             ));
@@ -285,19 +285,15 @@ impl MultiModalFusion {
         modality_names.sort();
 
         let reference_name = modality_names.first().ok_or_else(|| {
-            KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
-                    message: "No modalities available for fusion".to_string(),
-                },
-            )
+            KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
+                message: "No modalities available for fusion".to_string(),
+            })
         })?;
 
         let reference_modality = self.registered_data.get(*reference_name).ok_or_else(|| {
-            KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
-                    message: "Reference modality missing".to_string(),
-                },
-            )
+            KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
+                message: "Reference modality missing".to_string(),
+            })
         })?;
 
         // Define target grid dimensions based on the reference modality's native grid
@@ -329,7 +325,7 @@ impl MultiModalFusion {
             .sum();
         if total_weight <= 0.0 || !total_weight.is_finite() {
             return Err(KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
+                crate::core::error::ValidationError::ConstraintViolation {
                     message: "FusionConfig.modality_weights must sum to a positive finite value"
                         .to_string(),
                 },
@@ -365,7 +361,7 @@ impl MultiModalFusion {
                     )?,
                 RegistrationMethod::Affine | RegistrationMethod::NonRigid => {
                     return Err(KwaversError::Validation(
-                        crate::domain::core::error::ValidationError::ConstraintViolation {
+                        crate::core::error::ValidationError::ConstraintViolation {
                             message: format!(
                                 "Registration method {:?} is not implemented for fusion",
                                 self.config.registration_method
@@ -674,11 +670,9 @@ impl MultiModalFusion {
 
         // Use first modality as reference
         let reference_modality = self.registered_data.values().next().ok_or_else(|| {
-            KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
-                    message: "No modalities available for fusion".to_string(),
-                },
-            )
+            KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
+                message: "No modalities available for fusion".to_string(),
+            })
         })?;
 
         // Define target grid dimensions based on the reference modality's native grid
@@ -694,11 +688,9 @@ impl MultiModalFusion {
 
         // Use first modality as reference
         let reference_modality = self.registered_data.values().next().ok_or_else(|| {
-            KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
-                    message: "No modalities available for fusion".to_string(),
-                },
-            )
+            KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
+                message: "No modalities available for fusion".to_string(),
+            })
         })?;
 
         // Collect all modality data for probabilistic fusion

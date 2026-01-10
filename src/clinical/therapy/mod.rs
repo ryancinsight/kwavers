@@ -22,11 +22,5 @@ pub use swe_3d_workflows::*;
 pub use therapy_integration::*;
 
 pub use crate::simulation::therapy::calculator::TherapyCalculator;
-use crate::{
-    domain::core::error::KwaversResult, domain::grid::Grid, domain::medium::Medium,
-    physics::thermal::PennesSolver,
-};
-use ndarray::{Array3, Zip};
-use std::sync::Arc;
 
 // TherapyCalculator moved to crate::simulation::therapy::calculator

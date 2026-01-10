@@ -64,7 +64,7 @@ impl crate::domain::plugin::Plugin for HybridPlugin {
         context: &mut crate::domain::plugin::PluginContext<'_>,
     ) -> KwaversResult<()> {
         let solver = self.solver.as_mut().ok_or_else(|| {
-            crate::domain::core::error::KwaversError::InternalError(
+            crate::core::error::KwaversError::InternalError(
                 "Hybrid solver not initialized".to_string(),
             )
         })?;

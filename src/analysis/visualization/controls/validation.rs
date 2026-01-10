@@ -146,7 +146,7 @@ impl ParameterValidator {
         if result.is_valid {
             Ok(result.corrected_value.unwrap_or(value))
         } else {
-            Err(crate::domain::core::error::KwaversError::InvalidInput(
+            Err(crate::core::error::KwaversError::InvalidInput(
                 result
                     .message
                     .unwrap_or_else(|| "Validation failed".to_string()),

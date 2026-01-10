@@ -67,7 +67,7 @@
 //!   ↓ imports from
 //! math::linear_algebra (Layer 1) - linear solvers, eigendecomposition
 //! domain::sensor (Layer 2) - sensor array geometry
-//! domain::core::error (Layer 0) - error types
+//! core::error (Layer 0) - error types
 //! ```
 //!
 //! # Algorithm Categories

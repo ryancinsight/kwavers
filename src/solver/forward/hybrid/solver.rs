@@ -553,7 +553,7 @@ impl HybridSolver {
 
             if self.config.validation.check_nan_inf {
                 return Err(KwaversError::Validation(
-                    crate::domain::core::error::ValidationError::FieldValidation {
+                    crate::core::error::ValidationError::FieldValidation {
                         field: "pressure".to_string(),
                         value: format!("NaN: {has_nan}, Inf: {has_inf}"),
                         constraint: "Must be finite".to_string(),

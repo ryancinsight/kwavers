@@ -31,7 +31,7 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
-use crate::domain::math::ml::pinn::burn_wave_equation_2d::RealTimePINNInference;
+use crate::analysis::ml::pinn::burn_wave_equation_2d::RealTimePINNInference;
 
 /// Configuration for AI-enhanced beamforming
 #[derive(Debug, Clone)]

@@ -127,16 +127,17 @@ impl KzkSolverPlugin {
         use crate::domain::medium::AcousticProperties;
 
         // Validate operators are initialized
-        let operators = self.frequency_operators.as_ref().ok_or(
-            crate::domain::core::error::KwaversError::Physics(
-                crate::domain::core::error::PhysicsError::InvalidParameter {
-                    parameter: "frequency_operators".to_string(),
-                    value: 0.0,
-                    reason: "KZK operators not initialized - call initialize_operators first"
-                        .to_string(),
-                },
-            ),
-        )?;
+        let operators =
+            self.frequency_operators
+                .as_ref()
+                .ok_or(crate::core::error::KwaversError::Physics(
+                    crate::core::error::PhysicsError::InvalidParameter {
+                        parameter: "frequency_operators".to_string(),
+                        value: 0.0,
+                        reason: "KZK operators not initialized - call initialize_operators first"
+                            .to_string(),
+                    },
+                ))?;
 
         // Real-valued field representation (complex field requires FFT infrastructure)
         // Suitable for weakly nonlinear regime per Collins (1970)

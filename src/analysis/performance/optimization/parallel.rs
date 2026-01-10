@@ -34,8 +34,8 @@ impl ParallelOptimizer {
             .num_threads(threads)
             .build_global()
             .map_err(|e| {
-                crate::domain::core::error::KwaversError::System(
-                    crate::domain::core::error::SystemError::ThreadCreation {
+                crate::core::error::KwaversError::System(
+                    crate::core::error::SystemError::ThreadCreation {
                         reason: e.to_string(),
                     },
                 )

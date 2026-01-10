@@ -137,7 +137,7 @@ impl TransducerFieldCalculatorPlugin {
     ) -> KwaversResult<Array3<f64>> {
         // Angular spectrum method implementation
         // Reference: Zeng & McGough (2008) "Evaluation of the angular spectrum approach"
-        use crate::domain::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
+        use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
         use ndarray::Array2;
 
         let mut pressure_field = Array3::zeros(grid.dimensions());

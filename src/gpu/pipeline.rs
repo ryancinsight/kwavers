@@ -145,7 +145,7 @@ impl RealtimeImagingPipeline {
     /// Submit RF data for processing
     pub fn submit_rf_data(&mut self, rf_data: Array4<f32>) -> KwaversResult<()> {
         if self.state != PipelineState::Running {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "Pipeline is not running".to_string(),
             ));
         }

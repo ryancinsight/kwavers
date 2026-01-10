@@ -14,9 +14,7 @@ pub mod constants {
 
 pub use acoustics::*;
 
-pub mod plugin {
-    pub use crate::domain::plugin::*;
-}
+pub mod plugin;
 
 pub mod imaging {
     pub use crate::physics::acoustics::imaging::modalities::{ceus, elastography, ultrasound};

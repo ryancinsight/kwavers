@@ -5,8 +5,8 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::domain::math::fft::Complex64;
 use crate::domain::medium::Medium;
+use crate::math::fft::Complex64;
 use ndarray::Array3;
 
 /// Helper struct for field array initialization

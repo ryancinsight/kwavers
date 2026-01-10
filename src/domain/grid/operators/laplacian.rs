@@ -87,13 +87,11 @@ impl LaplacianOperator {
         mut output: ArrayViewMut3<f64>,
     ) -> KwaversResult<()> {
         if input.dim() != output.dim() {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
-                format!(
-                    "Output dimensions {:?} don't match input {:?}",
-                    output.dim(),
-                    input.dim()
-                ),
-            ));
+            return Err(crate::core::error::KwaversError::InvalidInput(format!(
+                "Output dimensions {:?} don't match input {:?}",
+                output.dim(),
+                input.dim()
+            )));
         }
 
         let (center_coeff, side_coeffs) = (

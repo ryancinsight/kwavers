@@ -9,7 +9,8 @@ use crate::domain::boundary::Boundary;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::domain::plugin::{Plugin, PluginContext, PluginFields};
+use crate::domain::plugin::PluginFields;
+use crate::domain::plugin::{Plugin, PluginContext};
 use crate::domain::source::Source;
 use ndarray::Array3;
 use ndarray::Array4;
@@ -43,7 +44,7 @@ impl PluginManager {
         &mut self,
         grid: &crate::domain::grid::Grid,
         medium: &dyn crate::domain::medium::Medium,
-    ) -> crate::domain::core::error::KwaversResult<()> {
+    ) -> crate::core::error::KwaversResult<()> {
         for plugin in &mut self.plugins {
             plugin.initialize(grid, medium)?;
         }

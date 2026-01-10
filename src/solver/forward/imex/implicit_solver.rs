@@ -72,7 +72,7 @@ impl ImplicitSolver for LinearSolver {
         }
 
         Err(KwaversError::Physics(
-            crate::domain::core::error::PhysicsError::ConvergenceFailure {
+            crate::core::error::PhysicsError::ConvergenceFailure {
                 solver: "LinearSolver".to_string(),
                 iterations: self.max_iterations,
                 residual: last_norm,
@@ -252,7 +252,7 @@ impl ImplicitSolver for NonlinearSolver {
         }
 
         Err(KwaversError::Physics(
-            crate::domain::core::error::PhysicsError::ConvergenceFailure {
+            crate::core::error::PhysicsError::ConvergenceFailure {
                 solver: "NonlinearSolver".to_string(),
                 iterations: self.max_iterations,
                 residual: last_norm,

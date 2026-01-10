@@ -90,7 +90,7 @@ impl crate::domain::plugin::Plugin for PSTDPlugin {
         _context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         let solver = self.solver.as_mut().ok_or_else(|| {
-            crate::domain::core::error::KwaversError::InternalError(
+            crate::core::error::KwaversError::InternalError(
                 "PSTD solver not initialized".to_string(),
             )
         })?;

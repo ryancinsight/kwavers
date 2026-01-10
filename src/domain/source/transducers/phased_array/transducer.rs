@@ -41,8 +41,8 @@ impl PhasedArrayTransducer {
     ) -> KwaversResult<Self> {
         // Validate configuration
         config.validate().map_err(|e| {
-            crate::domain::core::error::KwaversError::Validation(
-                crate::domain::core::error::ValidationError::FieldValidation {
+            crate::core::error::KwaversError::Validation(
+                crate::core::error::ValidationError::FieldValidation {
                     field: "phased_array_config".to_string(),
                     value: format!("{config:?}"),
                     constraint: e,

@@ -6,7 +6,7 @@
 use crate::core::error::KwaversResult;
 use crate::core::error::{KwaversError, ValidationError};
 use crate::domain::grid::Grid;
-use crate::domain::math::fft::ProcessorFft3d;
+use crate::math::fft::ProcessorFft3d;
 use crate::solver::pstd::utils::{compute_anti_aliasing_filter, compute_wavenumbers};
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;

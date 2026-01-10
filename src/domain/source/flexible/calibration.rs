@@ -128,7 +128,7 @@ impl CalibrationManager {
 
         let n = reflectors.len();
         if n < 4 || measurements.len() < n {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "Insufficient measurements for triangulation".to_string(),
             ));
         }
@@ -165,8 +165,8 @@ impl CalibrationManager {
         let decomp = at_a.lu();
         let solution = decomp
             .solve(&at_b)
-            .ok_or(crate::domain::core::error::KwaversError::Numerical(
-                crate::domain::core::error::NumericalError::SolverFailed {
+            .ok_or(crate::core::error::KwaversError::Numerical(
+                crate::core::error::NumericalError::SolverFailed {
                     method: "LU decomposition".to_string(),
                     reason: "Singular matrix in triangulation".to_string(),
                 },
@@ -260,7 +260,7 @@ impl CalibrationManager {
         let kalman = self
             .kalman_state
             .as_mut()
-            .ok_or(crate::domain::core::error::KwaversError::InvalidInput(
+            .ok_or(crate::core::error::KwaversError::InvalidInput(
                 "Kalman filter not initialized".to_string(),
             ))?;
 
@@ -298,8 +298,8 @@ impl CalibrationManager {
         let k = &kalman.covariance
             * h_matrix.transpose()
             * s.try_inverse()
-                .ok_or(crate::domain::core::error::KwaversError::Numerical(
-                    crate::domain::core::error::NumericalError::SolverFailed {
+                .ok_or(crate::core::error::KwaversError::Numerical(
+                    crate::core::error::NumericalError::SolverFailed {
                         method: "Matrix inversion".to_string(),
                         reason: "Singular innovation covariance".to_string(),
                     },

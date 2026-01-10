@@ -67,22 +67,18 @@ impl ComputeManager {
     /// Get device reference (error if GPU unavailable)
     pub fn device(&self) -> KwaversResult<&wgpu::Device> {
         self.device.as_ref().ok_or_else(|| {
-            KwaversError::System(
-                crate::domain::core::error::SystemError::ResourceUnavailable {
-                    resource: "GPU device".to_string(),
-                },
-            )
+            KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
+                resource: "GPU device".to_string(),
+            })
         })
     }
 
     /// Get queue reference (error if GPU unavailable)
     pub fn queue(&self) -> KwaversResult<&wgpu::Queue> {
         self.queue.as_ref().ok_or_else(|| {
-            KwaversError::System(
-                crate::domain::core::error::SystemError::ResourceUnavailable {
-                    resource: "GPU queue".to_string(),
-                },
-            )
+            KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
+                resource: "GPU queue".to_string(),
+            })
         })
     }
 

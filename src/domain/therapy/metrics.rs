@@ -21,27 +21,17 @@ impl TreatmentMetrics {
     /// Calculate thermal dose accumulation for a time step
     ///
     /// Uses CEM43 formula: R^(T - 43) * dt
+    ///
+    /// Returns the maximum thermal dose rate in the volume multiplied by dt.
+    /// Standard CEM43: R=0.5 (2^(T-43)) for T>43°C, R=0.25 (4^(T-43)) for 37°C<T<43°C
     pub fn calculate_thermal_dose(temperature: &Array3<f64>, dt: f64) -> f64 {
-        let mut dose = 0.0;
-        for &t in temperature.iter() {
-            if t > 43.0 {
-                dose += 2.0_f64.powf(t - 43.0) * dt;
-            } else if t > 37.0 {
-                dose += 4.0_f64.powf(t - 43.0) * dt; // R=0.25 => 4^-1? No R=4 for T<43?
-                                                     // Standard: R=0.5 for T>43, R=0.25 (1/4) for T<43
-                                                     // Wait, 0.5^(43-T) = 2^(T-43).
-                                                     // 0.25^(43-T) = 4^(T-43).
-                                                     // Correct.
-            }
-        }
-        // Average or Max? Usually cumulative at specific point.
-        // This function returns scalar. Maybe max dose in volume?
-        // Let's assume max dose added.
         let max_dose_rate = temperature.iter().fold(0.0f64, |acc, &t| {
             let rate = if t > 43.0 {
                 2.0_f64.powf(t - 43.0)
-            } else {
+            } else if t > 37.0 {
                 4.0_f64.powf(t - 43.0)
+            } else {
+                0.0
             };
             acc.max(rate)
         });

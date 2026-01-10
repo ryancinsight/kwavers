@@ -387,8 +387,8 @@ mod tests {
         if let Err(e) = &result {
             println!("Integration stopped with error: {:?}", e);
             // Accept convergence failures with small residuals as success
-            if let crate::domain::core::error::KwaversError::Physics(
-                crate::domain::core::error::PhysicsError::ConvergenceFailure { residual, .. },
+            if let crate::core::error::KwaversError::Physics(
+                crate::core::error::PhysicsError::ConvergenceFailure { residual, .. },
             ) = e
             {
                 assert!(

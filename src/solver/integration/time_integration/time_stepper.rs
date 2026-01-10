@@ -196,8 +196,8 @@ impl TimeStepperConfig for AdamsBashforthConfig {
 
     fn validate(&self) -> KwaversResult<()> {
         if self.order != 2 && self.order != 3 {
-            return Err(crate::domain::core::error::KwaversError::Validation(
-                crate::domain::core::error::ValidationError::FieldValidation {
+            return Err(crate::core::error::KwaversError::Validation(
+                crate::core::error::ValidationError::FieldValidation {
                     field: "order".to_string(),
                     value: self.order.to_string(),
                     constraint: "Must be 2 or 3".to_string(),
@@ -317,8 +317,8 @@ impl TimeStepper for AdamsBashforth {
                 }
             }
             _ => {
-                return Err(crate::domain::core::error::KwaversError::Config(
-                    crate::domain::core::error::ConfigError::InvalidValue {
+                return Err(crate::core::error::KwaversError::Config(
+                    crate::core::error::ConfigError::InvalidValue {
                         parameter: "order".to_string(),
                         value: self.config.order.to_string(),
                         constraint: "1, 2, 3, or 4".to_string(),

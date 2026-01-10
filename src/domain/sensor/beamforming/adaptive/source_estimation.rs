@@ -73,7 +73,7 @@ pub fn estimate_num_sources(
     let _ = criterion; // retained for API stability
 
     Err(KwaversError::Numerical(
-        crate::domain::core::error::NumericalError::UnsupportedOperation {
+        crate::core::error::NumericalError::UnsupportedOperation {
             operation: "estimate_num_sources (complex Hermitian eigendecomposition)".to_string(),
             reason: "SSOT complex eigendecomposition is not implemented; implement it in crate::utils::linear_algebra and route source model-order selection through it".to_string(),
         },

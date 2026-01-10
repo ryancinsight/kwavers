@@ -105,9 +105,9 @@ pub enum EnvelopeType {
 
 impl SourceParameters {
     /// Validate source parameters
-    pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
+    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         if self.amplitude < 0.0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "amplitude".to_string(),
                 value: self.amplitude.to_string(),
                 constraint: "Must be non-negative".to_string(),
@@ -116,7 +116,7 @@ impl SourceParameters {
         }
 
         if self.frequency <= 0.0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "frequency".to_string(),
                 value: self.frequency.to_string(),
                 constraint: "Must be positive".to_string(),
@@ -125,7 +125,7 @@ impl SourceParameters {
         }
 
         if self.radius < 0.0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "radius".to_string(),
                 value: self.radius.to_string(),
                 constraint: "Must be non-negative".to_string(),

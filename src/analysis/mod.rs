@@ -1,3 +1,4 @@
+pub mod ml;
 pub mod performance;
 pub mod plotting;
 pub mod signal_processing;

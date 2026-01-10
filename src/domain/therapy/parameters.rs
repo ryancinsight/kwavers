@@ -1,7 +1,5 @@
 //! Therapy parameters
 
-use crate::core::error::{KwaversError, KwaversResult, ValidationError};
-
 /// Therapy treatment parameters
 #[derive(Debug, Clone, Copy)]
 pub struct TherapyParameters {

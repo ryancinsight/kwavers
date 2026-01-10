@@ -3,10 +3,10 @@
 //! This module defines the core traits and types for the plugin system,
 //! allowing loose coupling between the solver orchestration and physics implementations.
 
-pub mod field_access;
+pub mod fields;
 pub mod metadata;
 
-pub use field_access::{FieldAccessor, PluginFields};
+pub use fields::PluginFields;
 pub use metadata::PluginMetadata;
 
 use crate::core::error::KwaversResult;

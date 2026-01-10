@@ -8,6 +8,7 @@ pub mod axisymmetric;
 pub mod elastic;
 pub mod elastic_wave;
 pub mod fdtd;
+pub mod helmholtz;
 pub mod hybrid;
 pub mod imex;
 pub mod nonlinear;
@@ -18,6 +19,10 @@ pub mod thermal_diffusion;
 
 pub use axisymmetric::AxisymmetricSolver;
 pub use fdtd::FdtdSolver;
+pub use helmholtz::born_series::{
+    ConvergentBornSolver, ConvergentBornStats, IterativeBornSolver, IterativeBornStats,
+    ModifiedBornSolver, ModifiedBornStats,
+};
 pub use hybrid::HybridSolver;
 pub use imex::IMEXIntegrator;
 pub use plugin_based::PluginBasedSolver;

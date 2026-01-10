@@ -117,13 +117,11 @@ impl GilmoreSolver {
 
         // Avoid singularity when u approaches c
         if u_c.abs() > 0.99 {
-            return Err(
-                crate::domain::core::error::PhysicsError::NumericalInstability {
-                    timestep: 0.0,
-                    cfl_limit: u_c.abs(),
-                }
-                .into(),
-            );
+            return Err(crate::core::error::PhysicsError::NumericalInstability {
+                timestep: 0.0,
+                cfl_limit: u_c.abs(),
+            }
+            .into());
         }
 
         let lhs_coeff = r * (1.0 - u_c);

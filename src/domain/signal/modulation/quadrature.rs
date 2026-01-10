@@ -33,7 +33,7 @@ impl Modulation for QuadratureAmplitudeModulation {
         use ndarray::Array1;
 
         if carrier.len() != t.len() {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "Carrier and time arrays must have same length".to_string(),
             ));
         }

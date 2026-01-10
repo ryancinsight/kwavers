@@ -25,9 +25,9 @@ pub struct ValidationParameters {
 
 impl ValidationParameters {
     /// Validate validation parameters (meta!)
-    pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
+    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         if self.energy_tolerance <= 0.0 || self.energy_tolerance >= 1.0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "energy_tolerance".to_string(),
                 value: self.energy_tolerance.to_string(),
                 constraint: "Must be in (0, 1)".to_string(),
@@ -36,7 +36,7 @@ impl ValidationParameters {
         }
 
         if self.mass_tolerance <= 0.0 || self.mass_tolerance >= 1.0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "mass_tolerance".to_string(),
                 value: self.mass_tolerance.to_string(),
                 constraint: "Must be in (0, 1)".to_string(),
@@ -45,7 +45,7 @@ impl ValidationParameters {
         }
 
         if self.dispersion_tolerance <= 0.0 || self.dispersion_tolerance >= 1.0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "dispersion_tolerance".to_string(),
                 value: self.dispersion_tolerance.to_string(),
                 constraint: "Must be in (0, 1)".to_string(),
@@ -54,7 +54,7 @@ impl ValidationParameters {
         }
 
         if self.validation_interval == 0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "validation_interval".to_string(),
                 value: "0".to_string(),
                 constraint: "Must be positive".to_string(),

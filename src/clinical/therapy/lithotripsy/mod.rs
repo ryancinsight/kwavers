@@ -125,8 +125,8 @@ impl LithotripsySimulator {
     pub fn new(params: LithotripsyParameters, grid: Grid) -> KwaversResult<Self> {
         // Validate stone geometry matches grid
         if params.stone_geometry.dim() != grid.dimensions() {
-            return Err(crate::domain::core::error::KwaversError::Validation(
-                crate::domain::core::error::ValidationError::FieldValidation {
+            return Err(crate::core::error::KwaversError::Validation(
+                crate::core::error::ValidationError::FieldValidation {
                     field: "stone_geometry".to_string(),
                     value: format!("{:?}", params.stone_geometry.dim()),
                     constraint: format!("Must match grid dimensions {:?}", grid.dimensions())
@@ -185,8 +185,8 @@ impl LithotripsySimulator {
 
     pub fn advance(&mut self, dt: f64) -> KwaversResult<()> {
         if self.params.interpulse_delay <= 0.0 {
-            return Err(crate::domain::core::error::KwaversError::Validation(
-                crate::domain::core::error::ValidationError::FieldValidation {
+            return Err(crate::core::error::KwaversError::Validation(
+                crate::core::error::ValidationError::FieldValidation {
                     field: "interpulse_delay".to_string(),
                     value: self.params.interpulse_delay.to_string(),
                     constraint: "Must be positive".to_string(),

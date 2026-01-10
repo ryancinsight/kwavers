@@ -134,7 +134,10 @@ fn pinn_training_benchmark(c: &mut Criterion) {
     for (name, config) in configs {
         group.throughput(Throughput::Elements(config.collocation_points as u64));
         group.bench_with_input(
-            BenchmarkId::from_parameter(format!("{}_{}pts", name, config.collocation_points)),
+            BenchmarkId::from_parameter(format!(
+                "{}_{}pts_{}ep_{}",
+                name, config.collocation_points, config.epochs, config.domain
+            )),
             &config,
             |b, config| {
                 b.iter(|| {

@@ -28,7 +28,7 @@
 //! analysis::signal_processing::beamforming::covariance (Layer 7)
 //!   ↓ imports from
 //! math::linear_algebra (Layer 1) - matrix operations, eigendecomposition
-//! domain::core::error (Layer 0) - error types
+//! core::error (Layer 0) - error types
 //! ```
 //!
 //! # Mathematical Foundation

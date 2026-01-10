@@ -1,7 +1,7 @@
 //! MUSIC (Multiple Signal Classification) algorithm
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::math::linear_algebra::LinearAlgebra;
+use crate::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
@@ -118,7 +118,7 @@ impl MUSIC {
 
         if !denom.is_finite() || denom <= 0.0 {
             return Err(KwaversError::Numerical(
-                crate::domain::core::error::NumericalError::InvalidOperation(
+                crate::core::error::NumericalError::InvalidOperation(
                     "MUSIC::pseudospectrum: non-positive or non-finite denominator a^H Pn a"
                         .to_string(),
                 ),

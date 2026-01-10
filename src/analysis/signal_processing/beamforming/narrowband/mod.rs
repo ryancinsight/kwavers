@@ -34,7 +34,7 @@
 //! analysis::signal_processing::beamforming::{traits, covariance, utils} (Layer 7)
 //! math::linear_algebra (Layer 1) - matrix operations
 //! math::fft (Layer 1) - Fourier transforms
-//! domain::core::error (Layer 0) - error types
+//! core::error (Layer 0) - error types
 //! ```
 //!
 //! # Mathematical Foundation

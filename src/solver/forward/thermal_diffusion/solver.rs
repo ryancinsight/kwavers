@@ -1,6 +1,6 @@
 //! Unified thermal diffusion solver
 
-use crate::{domain::core::error::KwaversResult, domain::grid::Grid, domain::medium::Medium};
+use crate::{core::error::KwaversResult, domain::grid::Grid, domain::medium::Medium};
 use ndarray::{Array3, Zip};
 
 use crate::physics::thermal::diffusion::{

@@ -185,8 +185,7 @@ impl ConvergenceTester {
             .sum::<f64>();
         let sum_x2 = log_dx.iter().map(|x| x * x).sum::<f64>();
 
-        let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
-        slope
+        (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
     }
 }
 
@@ -202,8 +201,8 @@ impl HyperelasticValidator {
         let lambda = 0.8; // 20% compression
         let f = [
             [lambda, 0.0, 0.0],
-            [0.0, 1.0 / (lambda as f64).sqrt(), 0.0],
-            [0.0, 0.0, 1.0 / (lambda as f64).sqrt()],
+            [0.0, 1.0 / lambda.sqrt(), 0.0],
+            [0.0, 0.0, 1.0 / lambda.sqrt()],
         ];
 
         let stress = model.cauchy_stress(&f);
@@ -230,7 +229,7 @@ impl HyperelasticValidator {
 
         // Simple uniaxial stretch
         let lambda_x = 1.2;
-        let lambda_y = 1.0 / (lambda_x as f64).sqrt();
+        let lambda_y = 1.0 / lambda_x.sqrt();
         let lambda_z = lambda_y;
 
         let f = [

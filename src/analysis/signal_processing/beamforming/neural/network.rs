@@ -32,7 +32,7 @@
 //! - LeCun et al. (1998): "Efficient BackProp"
 
 use crate::core::error::{KwaversError, KwaversResult};
-use ndarray::{Array3, Axis};
+use ndarray::Array3;
 
 use super::layer::NeuralLayer;
 use super::types::BeamformingFeedback;

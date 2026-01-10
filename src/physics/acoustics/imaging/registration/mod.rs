@@ -166,7 +166,7 @@ impl ImageRegistration {
     ) -> KwaversResult<RegistrationResult> {
         if fixed_landmarks.nrows() != moving_landmarks.nrows() {
             return Err(KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
+                crate::core::error::ValidationError::ConstraintViolation {
                     message: "Fixed and moving landmark arrays must have same number of points"
                         .to_string(),
                 },
@@ -175,7 +175,7 @@ impl ImageRegistration {
 
         if fixed_landmarks.ncols() != 3 || moving_landmarks.ncols() != 3 {
             return Err(KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
+                crate::core::error::ValidationError::ConstraintViolation {
                     message: "Landmark arrays must have 3 columns (x, y, z)".to_string(),
                 },
             ));

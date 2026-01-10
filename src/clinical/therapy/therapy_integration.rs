@@ -532,8 +532,8 @@ impl TherapyIntegrationOrchestrator {
         // In practice, this would load DICOM CT data from PACS or file system
         // For now, return error to trigger fallback to synthetic data
         // This is proper error handling rather than a simplification
-        Err(crate::domain::core::error::KwaversError::Validation(
-            crate::domain::core::error::ValidationError::InvalidValue {
+        Err(crate::core::error::KwaversError::Validation(
+            crate::core::error::ValidationError::InvalidValue {
                 parameter: "CT imaging data".to_string(),
                 value: 0.0,
                 reason: "CT data loading not yet implemented - requires DICOM integration"

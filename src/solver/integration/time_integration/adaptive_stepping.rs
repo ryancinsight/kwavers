@@ -55,9 +55,9 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
         field: &Array3<f64>,
         rhs_fn: F,
         grid: &crate::domain::grid::Grid,
-    ) -> crate::domain::core::error::KwaversResult<(Array3<f64>, f64)>
+    ) -> crate::core::error::KwaversResult<(Array3<f64>, f64)>
     where
-        F: Fn(&Array3<f64>) -> crate::domain::core::error::KwaversResult<Array3<f64>> + Clone,
+        F: Fn(&Array3<f64>) -> crate::core::error::KwaversResult<Array3<f64>> + Clone,
     {
         let mut dt = self.current_dt;
         let mut attempts = 0;
@@ -66,8 +66,8 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
         loop {
             attempts += 1;
             if attempts > MAX_ATTEMPTS {
-                return Err(crate::domain::core::error::KwaversError::Numerical(
-                    crate::domain::core::error::NumericalError::Instability {
+                return Err(crate::core::error::KwaversError::Numerical(
+                    crate::core::error::NumericalError::Instability {
                         operation: "adaptive_step".to_string(),
                         condition: attempts as f64,
                     },

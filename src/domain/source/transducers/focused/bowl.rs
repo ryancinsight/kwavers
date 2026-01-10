@@ -3,7 +3,7 @@
 //! Provides focused bowl transducer geometry and source generation.
 
 use crate::{
-    domain::core::{
+    core::{
         constants::SOUND_SPEED_WATER,
         error::{KwaversError, KwaversResult, ValidationError},
     },

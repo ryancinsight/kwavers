@@ -35,7 +35,7 @@
 //!   ↓ imports from
 //! analysis::signal_processing::beamforming::{traits, covariance, utils} (Layer 7)
 //! math::linear_algebra (Layer 1) - matrix operations
-//! domain::core::error (Layer 0) - error types
+//! core::error (Layer 0) - error types
 //!
 //! Optional (feature-gated):
 //!   ↓ imports from

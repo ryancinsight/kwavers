@@ -180,7 +180,7 @@ impl FieldArena {
         // Ensure we don't allocate zero-sized memory
         if total_size == 0 {
             return Err(KwaversError::Validation(
-                crate::domain::core::error::ValidationError::InvalidValue {
+                crate::core::error::ValidationError::InvalidValue {
                     parameter: "arena_config".to_string(),
                     value: 0.0,
                     reason: "Arena configuration results in zero memory allocation".to_string(),
@@ -191,7 +191,7 @@ impl FieldArena {
         // Create layout for aligned allocation
         let layout = Layout::from_size_align(total_size, 64) // 64-byte alignment for SIMD
             .map_err(|_| {
-                KwaversError::System(crate::domain::core::error::SystemError::MemoryAllocation {
+                KwaversError::System(crate::core::error::SystemError::MemoryAllocation {
                     requested_bytes: total_size,
                     reason: "Failed to create layout for arena allocation".to_string(),
                 })
@@ -200,7 +200,7 @@ impl FieldArena {
         // Allocate memory
         let memory = unsafe { alloc(layout) };
         let memory = NonNull::new(memory).ok_or_else(|| {
-            KwaversError::System(crate::domain::core::error::SystemError::MemoryAllocation {
+            KwaversError::System(crate::core::error::SystemError::MemoryAllocation {
                 requested_bytes: total_size,
                 reason: "Failed to allocate memory for arena".to_string(),
             })
@@ -231,11 +231,9 @@ impl FieldArena {
             .iter()
             .position(|&allocated| !allocated)
             .ok_or_else(|| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ResourceUnavailable {
-                        resource: "arena field slot".to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
+                    resource: "arena field slot".to_string(),
+                })
             })?;
 
         // Mark as allocated
@@ -321,11 +319,9 @@ impl ThreadLocalArena {
                 .iter()
                 .position(|&allocated| !allocated)
                 .ok_or_else(|| {
-                    KwaversError::System(
-                        crate::domain::core::error::SystemError::ResourceUnavailable {
-                            resource: "arena field slot".to_string(),
-                        },
-                    )
+                    KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
+                        resource: "arena field slot".to_string(),
+                    })
                 })?;
 
             // Mark as allocated
@@ -364,7 +360,7 @@ impl BumpAllocator {
     /// Create a new bump allocator
     pub fn new(size_bytes: usize) -> KwaversResult<Self> {
         let layout = Layout::from_size_align(size_bytes, 64).map_err(|_| {
-            KwaversError::System(crate::domain::core::error::SystemError::MemoryAllocation {
+            KwaversError::System(crate::core::error::SystemError::MemoryAllocation {
                 requested_bytes: size_bytes,
                 reason: "Failed to create layout for bump allocator".to_string(),
             })
@@ -372,7 +368,7 @@ impl BumpAllocator {
 
         let memory = unsafe { alloc(layout) };
         let memory = NonNull::new(memory).ok_or_else(|| {
-            KwaversError::System(crate::domain::core::error::SystemError::MemoryAllocation {
+            KwaversError::System(crate::core::error::SystemError::MemoryAllocation {
                 requested_bytes: size_bytes,
                 reason: "Failed to allocate memory for bump allocator".to_string(),
             })
@@ -398,7 +394,7 @@ impl BumpAllocator {
         // Check if we have enough space
         if aligned_offset + size > self.total_size {
             return Err(KwaversError::System(
-                crate::domain::core::error::SystemError::MemoryAllocation {
+                crate::core::error::SystemError::MemoryAllocation {
                     requested_bytes: size,
                     reason: format!(
                         "Bump allocator out of memory: {} requested, {} available",

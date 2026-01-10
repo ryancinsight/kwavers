@@ -1,3 +1,4 @@
+#![cfg(feature = "opast")]
 //! Performance benchmarks for OPAST (Orthonormal PAST) algorithm
 //!
 //! These benchmarks validate the performance improvements from SIMD acceleration

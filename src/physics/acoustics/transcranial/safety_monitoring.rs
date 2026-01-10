@@ -212,8 +212,8 @@ impl SafetyMonitor {
         // Immediate error on temperature limit exceedance (per tests and safety policy)
         let max_temp = self.temperature.iter().fold(f64::MIN, |a, &b| a.max(b));
         if max_temp > self.thresholds.max_temperature {
-            return Err(crate::domain::core::error::KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
+            return Err(crate::core::error::KwaversError::Validation(
+                crate::core::error::ValidationError::ConstraintViolation {
                     message: format!(
                         "Temperature {:.1}°C exceeds limit {:.1}°C",
                         max_temp, self.thresholds.max_temperature
@@ -229,8 +229,8 @@ impl SafetyMonitor {
             .iter()
             .fold(0.0_f64, |a, &b| a.max(b));
         if max_dose > self.thresholds.max_thermal_dose {
-            return Err(crate::domain::core::error::KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
+            return Err(crate::core::error::KwaversError::Validation(
+                crate::core::error::ValidationError::ConstraintViolation {
                     message: format!(
                         "Thermal dose {:.0} CEM43 exceeds limit {:.0} CEM43",
                         max_dose, self.thresholds.max_thermal_dose
@@ -241,8 +241,8 @@ impl SafetyMonitor {
 
         // Check mechanical index
         if self.mechanical_index.current_mi > self.thresholds.max_mechanical_index {
-            return Err(crate::domain::core::error::KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
+            return Err(crate::core::error::KwaversError::Validation(
+                crate::core::error::ValidationError::ConstraintViolation {
                     message: format!(
                         "Mechanical index {:.2} exceeds limit {:.2}",
                         self.mechanical_index.current_mi, self.thresholds.max_mechanical_index

@@ -32,11 +32,11 @@ pub enum BoundaryType {
 
 impl BoundaryParameters {
     /// Validate boundary parameters
-    pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
+    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         if self.pml_thickness == 0 {
             for boundary in &self.boundary_types {
                 if *boundary == BoundaryType::PML {
-                    return Err(crate::domain::core::error::ConfigError::InvalidValue {
+                    return Err(crate::core::error::ConfigError::InvalidValue {
                         parameter: "pml_thickness".to_string(),
                         value: "0".to_string(),
                         constraint: "Must be positive when using PML boundaries".to_string(),
@@ -47,7 +47,7 @@ impl BoundaryParameters {
         }
 
         if self.pml_alpha < 0.0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "pml_alpha".to_string(),
                 value: self.pml_alpha.to_string(),
                 constraint: "Must be non-negative".to_string(),

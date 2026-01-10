@@ -7,7 +7,7 @@
 //! This file therefore provides only compatibility shims so higher-level adaptive algorithms
 //! do not duplicate numerics.
 
-use crate::domain::math::linear_algebra::LinearAlgebra;
+use crate::math::linear_algebra::LinearAlgebra;
 use ndarray::Array2;
 use num_complex::{Complex, Complex64};
 

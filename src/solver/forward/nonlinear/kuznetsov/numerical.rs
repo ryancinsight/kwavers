@@ -1,7 +1,7 @@
 //! Numerical methods for Kuznetsov equation solver
 
 use crate::domain::grid::Grid;
-use crate::domain::math::fft::get_fft_for_grid;
+use crate::math::fft::get_fft_for_grid;
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;
 use std::f64::consts::PI;

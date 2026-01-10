@@ -93,7 +93,7 @@ impl<B: Backend> BurnGpuAccelerator<B> {
     {
         if !config.enable_gpu {
             return Err(KwaversError::System(
-                crate::domain::core::error::SystemError::ResourceUnavailable {
+                crate::core::error::SystemError::ResourceUnavailable {
                     resource: "GPU acceleration disabled".to_string(),
                 },
             ));

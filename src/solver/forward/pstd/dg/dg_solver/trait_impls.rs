@@ -126,12 +126,12 @@ impl DGSolver {
                 }
                 Ok(())
             } else {
-                Err(crate::domain::core::error::KwaversError::InvalidInput(
+                Err(crate::core::error::KwaversError::InvalidInput(
                     "Invalid element ID or data size".to_string(),
                 ))
             }
         } else {
-            Err(crate::domain::core::error::KwaversError::InvalidInput(
+            Err(crate::core::error::KwaversError::InvalidInput(
                 "Modal coefficients not initialized".to_string(),
             ))
         }

@@ -141,22 +141,22 @@ impl BeamformingLocalizationInput {
     pub fn validate(&self, expected_sensors: usize) -> KwaversResult<()> {
         let (n_sensors, channels, n_samples) = self.sensor_data.dim();
         if n_sensors != expected_sensors {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(format!(
+            return Err(crate::core::error::KwaversError::InvalidInput(format!(
                 "BeamformingLocalizationInput: sensor_data n_sensors ({n_sensors}) does not match expected ({expected_sensors})"
             )));
         }
         if channels != 1 {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
-                format!("BeamformingLocalizationInput: expected channels=1, got {channels}"),
-            ));
+            return Err(crate::core::error::KwaversError::InvalidInput(format!(
+                "BeamformingLocalizationInput: expected channels=1, got {channels}"
+            )));
         }
         if n_samples == 0 {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "BeamformingLocalizationInput: n_samples must be > 0".to_string(),
             ));
         }
         if !self.sampling_frequency.is_finite() || self.sampling_frequency <= 0.0 {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "BeamformingLocalizationInput: sampling_frequency must be finite and > 0"
                     .to_string(),
             ));
@@ -212,7 +212,7 @@ impl LocalizationProcessor {
 
         // Ensure sampling frequency consistency between policy core and input.
         if (search_cfg.core.sampling_frequency - input.sampling_frequency).abs() > 0.0 {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "localize_beamforming: search_cfg.core.sampling_frequency must equal input.sampling_frequency to keep frequency-to-sample mapping consistent"
                     .to_string(),
             ));

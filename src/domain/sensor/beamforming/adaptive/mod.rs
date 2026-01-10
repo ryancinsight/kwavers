@@ -85,10 +85,10 @@ pub use weights::{WeightCalculator, WeightingScheme};
 // DEPRECATED RE-EXPORTS FROM NEW ANALYSIS LAYER LOCATION
 // ============================================================================
 
-/// DEPRECATED: Use `analysis::signal_processing::beamforming::adaptive::MUSIC` instead.
-///
-/// This re-export provides backward compatibility during migration (Phase 3B).
-/// It will be removed in the next minor version.
+#[cfg(feature = "legacy_algorithms")]
+pub use subspace::MUSIC;
+
+#[cfg(not(feature = "legacy_algorithms"))]
 #[deprecated(
     since = "2.14.0",
     note = "Moved to `analysis::signal_processing::beamforming::adaptive::MUSIC`. Update your imports."

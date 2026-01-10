@@ -49,7 +49,7 @@ use ndarray::Array4;
 use std::collections::{HashMap, VecDeque};
 
 #[cfg(feature = "pinn")]
-use crate::domain::math::ml::pinn::multi_gpu_manager::{
+use crate::analysis::ml::pinn::multi_gpu_manager::{
     CommunicationChannel, DecompositionStrategy, LoadBalancingAlgorithm, MultiGpuManager,
 };
 
@@ -294,7 +294,7 @@ impl DistributedNeuralBeamformingProcessor {
     ) -> KwaversResult<DistributedNeuralBeamformingResult> {
         // Placeholder implementation
         Err(KwaversError::System(
-            crate::domain::core::error::SystemError::FeatureNotAvailable {
+            crate::core::error::SystemError::FeatureNotAvailable {
                 feature: "distributed_processing".to_string(),
                 reason: "Full distributed implementation in progress".to_string(),
             },

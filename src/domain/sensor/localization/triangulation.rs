@@ -28,7 +28,7 @@ impl Triangulator {
     /// Triangulate position from ranges
     pub fn triangulate(&self, ranges: &[f64], array: &SensorArray) -> KwaversResult<Position> {
         if ranges.len() < 3 {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "Need at least 3 ranges for 3D triangulation".to_string(),
             ));
         }
@@ -99,7 +99,7 @@ impl Triangulator {
         array: &SensorArray,
     ) -> KwaversResult<Position> {
         if angles.len() < 2 {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "Need at least 2 angle measurements".to_string(),
             ));
         }

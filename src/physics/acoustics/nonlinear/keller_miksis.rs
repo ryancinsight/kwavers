@@ -124,13 +124,11 @@ impl KellerMiksisModel {
         // Check for numerical stability (wall velocity approaching sound speed)
         // K-M equation becomes singular when Ṙ → c
         if mach > 0.95 {
-            return Err(
-                crate::domain::core::error::PhysicsError::NumericalInstability {
-                    timestep: 0.0,
-                    cfl_limit: mach,
-                }
-                .into(),
-            );
+            return Err(crate::core::error::PhysicsError::NumericalInstability {
+                timestep: 0.0,
+                cfl_limit: mach,
+            }
+            .into());
         }
 
         // Acoustic forcing with proper phase
@@ -172,13 +170,11 @@ impl KellerMiksisModel {
 
         // Check for division by zero (should not occur if mach < 0.95)
         if lhs_coeff.abs() < 1e-12 {
-            return Err(
-                crate::domain::core::error::PhysicsError::NumericalInstability {
-                    timestep: 0.0,
-                    cfl_limit: mach,
-                }
-                .into(),
-            );
+            return Err(crate::core::error::PhysicsError::NumericalInstability {
+                timestep: 0.0,
+                cfl_limit: mach,
+            }
+            .into());
         }
 
         let acceleration = (pressure_term + radiation_term - nonlinear_term) / lhs_coeff;
@@ -231,7 +227,7 @@ impl KellerMiksisModel {
 
         // Check for physical validity
         if volume <= excluded_volume {
-            return Err(crate::domain::core::error::PhysicsError::InvalidParameter {
+            return Err(crate::core::error::PhysicsError::InvalidParameter {
                 parameter: "bubble_volume".to_string(),
                 value: volume,
                 reason: format!(
@@ -349,7 +345,7 @@ impl KellerMiksisModel {
         // Check physical bounds
         let n_total_new = state.n_gas + state.n_vapor;
         if n_total_new < 0.0 || n_total_new.is_nan() || n_total_new.is_infinite() {
-            return Err(crate::domain::core::error::PhysicsError::InvalidParameter {
+            return Err(crate::core::error::PhysicsError::InvalidParameter {
                 parameter: "vapor_content".to_string(),
                 value: state.n_vapor,
                 reason: format!(
@@ -452,7 +448,7 @@ impl KellerMiksisModel {
 
         // Physical bounds checking
         if !(0.0..=50000.0).contains(&t_new) || t_new.is_nan() || t_new.is_infinite() {
-            return Err(crate::domain::core::error::PhysicsError::InvalidParameter {
+            return Err(crate::core::error::PhysicsError::InvalidParameter {
                 parameter: "bubble_temperature".to_string(),
                 value: t_new,
                 reason: format!(
@@ -621,8 +617,8 @@ mod tests {
             assert!(
                 matches!(
                     e,
-                    crate::domain::core::error::KwaversError::Physics(
-                        crate::domain::core::error::PhysicsError::NumericalInstability { .. }
+                    crate::core::error::KwaversError::Physics(
+                        crate::core::error::PhysicsError::NumericalInstability { .. }
                     )
                 ),
                 "Should be numerical instability error"

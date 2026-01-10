@@ -32,11 +32,11 @@ pub enum GridType {
 
 impl GridParameters {
     /// Validate grid parameters
-    pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
+    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         // Check dimensions
         for (i, &dim) in self.dimensions.iter().enumerate() {
             if dim == 0 {
-                return Err(crate::domain::core::error::ConfigError::InvalidValue {
+                return Err(crate::core::error::ConfigError::InvalidValue {
                     parameter: format!("dimensions[{i}]"),
                     value: dim.to_string(),
                     constraint: "Must be positive".to_string(),
@@ -48,7 +48,7 @@ impl GridParameters {
         // Check spacing
         for (i, &dx) in self.spacing.iter().enumerate() {
             if dx <= 0.0 {
-                return Err(crate::domain::core::error::ConfigError::InvalidValue {
+                return Err(crate::core::error::ConfigError::InvalidValue {
                     parameter: format!("spacing[{i}]"),
                     value: dx.to_string(),
                     constraint: "Must be positive".to_string(),

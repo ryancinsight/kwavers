@@ -3,7 +3,7 @@
 //! Validates input data and sensor configurations.
 
 use crate::{
-    domain::core::error::{KwaversError, KwaversResult, ValidationError},
+    core::error::{KwaversError, KwaversResult, ValidationError},
     domain::grid::Grid,
 };
 use ndarray::Array2;

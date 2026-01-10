@@ -100,8 +100,8 @@ impl ShearWaveElastography {
         // For simplicity, we use the displacement at the final time point for inversion
         // in this high-level API. More advanced methods would use the full history.
         let final_field = displacement_history.last().ok_or_else(|| {
-            crate::domain::core::error::KwaversError::Validation(
-                crate::domain::core::error::ValidationError::InvalidValue {
+            crate::core::error::KwaversError::Validation(
+                crate::core::error::ValidationError::InvalidValue {
                     parameter: "displacement_history".to_string(),
                     value: 0.0,
                     reason: "History cannot be empty".to_string(),

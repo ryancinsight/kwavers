@@ -14,6 +14,10 @@ pub enum FieldError {
         expected: (usize, usize, usize),
         actual: (usize, usize, usize),
     },
+    InvalidFieldAccess {
+        field: String,
+        reason: String,
+    },
 }
 
 impl fmt::Display for FieldError {
@@ -31,6 +35,9 @@ impl fmt::Display for FieldError {
                     f,
                     "Field {field} dimension mismatch: expected {expected:?}, got {actual:?}"
                 )
+            }
+            Self::InvalidFieldAccess { field, reason } => {
+                write!(f, "Invalid field access for {field}: {reason}")
             }
         }
     }

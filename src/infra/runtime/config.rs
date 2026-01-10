@@ -23,10 +23,10 @@ pub struct PerformanceParameters {
 
 impl PerformanceParameters {
     /// Validate performance parameters
-    pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
+    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         if let Some(threads) = self.num_threads {
             if threads == 0 {
-                return Err(crate::domain::core::error::ConfigError::InvalidValue {
+                return Err(crate::core::error::ConfigError::InvalidValue {
                     parameter: "num_threads".to_string(),
                     value: "0".to_string(),
                     constraint: "Must be positive".to_string(),
@@ -36,7 +36,7 @@ impl PerformanceParameters {
         }
 
         if self.cache_size == 0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "cache_size".to_string(),
                 value: "0".to_string(),
                 constraint: "Must be positive".to_string(),
@@ -45,7 +45,7 @@ impl PerformanceParameters {
         }
 
         if self.chunk_size == 0 {
-            return Err(crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::ConfigError::InvalidValue {
                 parameter: "chunk_size".to_string(),
                 value: "0".to_string(),
                 constraint: "Must be positive".to_string(),

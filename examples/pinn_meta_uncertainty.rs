@@ -43,8 +43,6 @@ use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 mod ml_demo {
-    use super::*;
-
     /// Demonstrate meta-learning capabilities
     pub fn demonstrate_meta_learning() {
         println!("🎓 Meta-Learning PINN Demonstration");
@@ -312,7 +310,18 @@ fn main() {
         "--impact" => {
             ml_demo::demonstrate_real_world_impact();
         }
-        "--all" | _ => {
+        "--all" => {
+            println!("🎭 Complete Advanced ML Demonstration");
+            println!("=====================================");
+            println!();
+
+            ml_demo::demonstrate_meta_learning();
+            ml_demo::demonstrate_transfer_learning();
+            ml_demo::demonstrate_uncertainty();
+            ml_demo::demonstrate_integrated_ml();
+            ml_demo::demonstrate_real_world_impact();
+        }
+        _ => {
             println!("🎭 Complete Advanced ML Demonstration");
             println!("=====================================");
             println!();

@@ -58,7 +58,7 @@ principles:
   development_philosophy: |
     Correctness > Functionality.
     Transparency: Fix root causes, document limitations, never mask errors.
-    Cleanliness: Remove dead/deprecated code, outdated documentation, obsolete benchmarks, irrelevant examples, unused tests, stale logs, and old files/folders immediately upon obsolescence.
+    Cleanliness: Never create deprecated code; immediately remove obsolete code and update all consumers to use new APIs. Remove outdated documentation, obsolete benchmarks, irrelevant examples, unused tests, stale logs, and old files/folders immediately upon obsolescence.
   rejection: |
     Absolute Prohibition: TODOs, stubs, dummy data, zero-filled placeholders, "simplified" paths, error masking, unwrap() without proof.
 

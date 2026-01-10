@@ -50,9 +50,9 @@ use crate::analysis::signal_processing::beamforming::narrowband::snapshots::{
 };
 use crate::analysis::signal_processing::beamforming::narrowband::steering::NarrowbandSteering;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::math::linear_algebra::LinearAlgebra;
 use crate::domain::sensor::beamforming::covariance::CovarianceEstimator;
 use crate::domain::sensor::beamforming::{SteeringVector, SteeringVectorMethod};
+use crate::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
 
@@ -271,7 +271,7 @@ pub fn capon_spatial_spectrum_point(
     let denom_re = denom.re;
     if !denom_re.is_finite() || denom_re <= 1e-18 {
         return Err(KwaversError::Numerical(
-            crate::domain::core::error::NumericalError::InvalidOperation(
+            crate::core::error::NumericalError::InvalidOperation(
                 "capon_spatial_spectrum_point: non-positive or non-finite MVDR denominator"
                     .to_string(),
             ),
@@ -310,7 +310,7 @@ pub fn capon_spatial_spectrum_point(
 /// # Implementation note (SSOT correctness)
 /// This function computes the MVDR quadratic form without forming `R^{-1}` explicitly by solving
 /// the linear system `R y = a` and then evaluating `aᴴ y`. The complex linear solve is provided by
-/// SSOT `crate::domain::math::linear_algebra::LinearAlgebra::solve_linear_system_complex`.
+/// SSOT `crate::math::linear_algebra::LinearAlgebra::solve_linear_system_complex`.
 pub fn capon_spatial_spectrum_point_complex_baseband(
     sensor_data: &Array3<f64>,
     sensor_positions: &[[f64; 3]],
@@ -423,7 +423,7 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
     let denom_re = denom.re;
     if !denom_re.is_finite() || denom_re <= 1e-18 {
         return Err(KwaversError::Numerical(
-            crate::domain::core::error::NumericalError::InvalidOperation(
+            crate::core::error::NumericalError::InvalidOperation(
                 "capon_spatial_spectrum_point_complex_baseband: non-positive or non-finite MVDR denominator"
                     .to_string(),
             ),

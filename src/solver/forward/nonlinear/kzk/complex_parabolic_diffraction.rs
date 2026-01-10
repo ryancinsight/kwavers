@@ -1,6 +1,6 @@
 //! Complex-valued parabolic diffraction operator for proper energy conservation
 
-use crate::domain::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
+use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::{Array2, ArrayViewMut2};
 use std::f64::consts::PI;
 

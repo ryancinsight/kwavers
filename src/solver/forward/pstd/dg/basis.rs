@@ -41,9 +41,10 @@ pub fn build_vandermonde(
             }
         }
         _ => {
-            return Err(crate::domain::core::error::KwaversError::NotImplemented(
-                format!("Basis type {:?} not implemented", basis_type),
-            ))
+            return Err(crate::core::error::KwaversError::NotImplemented(format!(
+                "Basis type {:?} not implemented",
+                basis_type
+            )))
         }
     }
 

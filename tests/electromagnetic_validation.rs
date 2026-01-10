@@ -19,8 +19,6 @@ use kwavers::ml::pinn::physics::{
     BoundaryConditionSpec, BoundaryPosition, PhysicsDomain, PhysicsParameters,
 };
 #[cfg(feature = "pinn")]
-use ndarray::{Array2, Array3};
-#[cfg(feature = "pinn")]
 use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
@@ -30,7 +28,6 @@ type TestBackend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
 // ELECTROSTATIC FIELD VALIDATION
 // ============================================================================
 
-#[cfg(feature = "pinn")]
 #[cfg(feature = "pinn")]
 #[test]
 fn validate_electrostatic_laplace_equation() {
@@ -499,7 +496,7 @@ fn validate_gpu_acceleration_setup() {
 fn validate_gpu_field_data_structure() {
     // Test GPU field data structure and initialization
 
-    use kwavers::ml::pinn::electromagnetic_gpu::{EMConfig, EMFieldData, GPUEMSolver};
+    use kwavers::ml::pinn::electromagnetic_gpu::{EMConfig, GPUEMSolver};
 
     let config = EMConfig {
         grid_size: [4, 4, 4], // Small grid for testing

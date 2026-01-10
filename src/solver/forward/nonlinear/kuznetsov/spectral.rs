@@ -6,7 +6,7 @@
 
 use crate::core::constants::numerical::FFT_K_SCALING;
 use crate::domain::grid::Grid;
-use crate::domain::math::fft::{get_fft_for_grid, Fft3d};
+use crate::math::fft::{get_fft_for_grid, Fft3d};
 use ndarray::{Array1, Array3, Zip};
 use num_complex::Complex64;
 use std::f64::consts::PI;

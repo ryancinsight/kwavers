@@ -270,8 +270,8 @@ impl IMEXIntegrator {
             )?;
 
             if dt > stable_dt * self.config.safety_factor {
-                return Err(crate::domain::core::error::KwaversError::Numerical(
-                    crate::domain::core::error::NumericalError::Instability {
+                return Err(crate::core::error::KwaversError::Numerical(
+                    crate::core::error::NumericalError::Instability {
                         operation: "IMEX time step".to_string(),
                         condition: dt,
                     },
@@ -289,8 +289,8 @@ impl IMEXIntegrator {
                     IMEXSchemeType::BDF(bdf) => format!("IMEX-BDF (order {})", bdf.order()),
                 };
 
-                crate::domain::core::error::KwaversError::Numerical(
-                    crate::domain::core::error::NumericalError::InvalidOperation(format!(
+                crate::core::error::KwaversError::Numerical(
+                    crate::core::error::NumericalError::InvalidOperation(format!(
                         "IMEX scheme {scheme_name} failed at dt={dt:.3e}: {e}"
                     )),
                 )

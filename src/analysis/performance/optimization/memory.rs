@@ -84,8 +84,8 @@ impl MemoryOptimizer {
         let align = self.alignment.max(std::mem::align_of::<T>());
 
         let layout = Layout::from_size_align(size, align).map_err(|e| {
-            crate::domain::core::error::KwaversError::System(
-                crate::domain::core::error::SystemError::MemoryAllocation {
+            crate::core::error::KwaversError::System(
+                crate::core::error::SystemError::MemoryAllocation {
                     requested_bytes: size,
                     reason: e.to_string(),
                 },
@@ -101,8 +101,8 @@ impl MemoryOptimizer {
         unsafe {
             let ptr = alloc(layout).cast::<T>();
             if ptr.is_null() {
-                return Err(crate::domain::core::error::KwaversError::System(
-                    crate::domain::core::error::SystemError::MemoryAllocation {
+                return Err(crate::core::error::KwaversError::System(
+                    crate::core::error::SystemError::MemoryAllocation {
                         requested_bytes: size,
                         reason: "Failed to allocate aligned memory".to_string(),
                     },

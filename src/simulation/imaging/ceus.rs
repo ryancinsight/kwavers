@@ -77,7 +77,7 @@ impl ContrastEnhancedUltrasound {
 
     pub fn simulate_bolus_injection(&self, total_bubbles: f64) -> KwaversResult<Vec<f64>> {
         if !total_bubbles.is_finite() || total_bubbles <= 0.0 {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "simulate_bolus_injection: total_bubbles must be finite and > 0".to_string(),
             ));
         }
@@ -104,7 +104,7 @@ impl ContrastEnhancedUltrasound {
 
         let area = unscaled.iter().sum::<f64>() * dt;
         if !area.is_finite() || area <= 0.0 {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "simulate_bolus_injection: invalid gamma-variate area".to_string(),
             ));
         }
@@ -119,12 +119,12 @@ impl ContrastEnhancedUltrasound {
         total_time_s: f64,
     ) -> KwaversResult<Array4<f32>> {
         if injection_profile_bubbles_per_s.is_empty() {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "simulate_contrast_signal: injection_profile must be non-empty".to_string(),
             ));
         }
         if !total_time_s.is_finite() || total_time_s <= 0.0 {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "simulate_contrast_signal: total_time_s must be finite and > 0".to_string(),
             ));
         }
@@ -150,7 +150,7 @@ impl ContrastEnhancedUltrasound {
 
                     for (t, &inj_rate) in injection_profile_bubbles_per_s.iter().enumerate() {
                         if !inj_rate.is_finite() || inj_rate < 0.0 {
-                            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                            return Err(crate::core::error::KwaversError::InvalidInput(
                                 "simulate_contrast_signal: injection_profile contains invalid values"
                                     .to_string(),
                             ));
@@ -174,14 +174,14 @@ impl ContrastEnhancedUltrasound {
     ) -> KwaversResult<Array3<f32>> {
         let (nt, nx, ny, nz) = contrast_signal.dim();
         if nt == 0 {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "estimate_perfusion: contrast_signal must have nt > 0".to_string(),
             ));
         }
         if perfusion_model.mean_transit_time <= 0.0
             || !perfusion_model.mean_transit_time.is_finite()
         {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "estimate_perfusion: mean_transit_time must be finite and > 0".to_string(),
             ));
         }

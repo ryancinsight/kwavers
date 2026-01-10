@@ -210,7 +210,7 @@ impl WavefieldModeler {
     /// Get stored forward wavefield
     pub fn get_forward_wavefield(&self) -> KwaversResult<Array3<f64>> {
         self.forward_wavefield.clone().ok_or_else(|| {
-            crate::domain::core::error::KwaversError::InvalidInput(
+            crate::core::error::KwaversError::InvalidInput(
                 "Forward wavefield not computed".to_string(),
             )
         })

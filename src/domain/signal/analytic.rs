@@ -54,7 +54,7 @@ pub fn hilbert_transform(signal: &Array1<f64>) -> Array1<Complex64> {
     }
 
     // Convert to complex and compute FFT using central cache
-    let mut complex_signal = crate::domain::math::fft::fft_1d_array(signal);
+    let mut complex_signal = crate::math::fft::fft_1d_array(signal);
 
     // Apply Hilbert transform in frequency domain
     // Per Marple (1999): H[x] = -i * sign(ω) * X(ω)
@@ -71,7 +71,7 @@ pub fn hilbert_transform(signal: &Array1<f64>) -> Array1<Complex64> {
         }
     }
 
-    crate::domain::math::fft::ifft_1d_complex(&complex_signal)
+    crate::math::fft::ifft_1d_complex(&complex_signal)
 }
 
 /// Compute instantaneous envelope from analytic signal

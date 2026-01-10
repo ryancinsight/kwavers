@@ -28,7 +28,7 @@
 //!   ↓ imports from
 //! math::linear_algebra::sparse (Layer 1) - Generic sparse matrix types (CSR, COO)
 //! analysis::signal_processing::beamforming::utils::delays (Layer 7) - Delay calculations
-//! domain::core::error (Layer 0) - Error types
+//! core::error (Layer 0) - Error types
 //! ```
 //!
 //! # Use Cases
@@ -122,7 +122,7 @@
 //! - [ ] Compressive sensing solvers (ADMM, FISTA)
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::math::linear_algebra::sparse::{CompressedSparseRowMatrix, CoordinateMatrix};
+use crate::math::linear_algebra::sparse::{CompressedSparseRowMatrix, CoordinateMatrix};
 use ndarray::Array2;
 use num_complex::Complex64;
 use std::f64::consts::PI;

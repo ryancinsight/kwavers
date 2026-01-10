@@ -73,7 +73,7 @@ impl TDOAProcessor {
     /// - Foy (1976): "Position-location solutions by Taylor-series estimation"
     pub fn process(&self, array: &SensorArray) -> KwaversResult<Position> {
         if self.measurements.len() < 3 {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "Need at least 3 TDOA measurements for 3D localization".to_string(),
             ));
         }

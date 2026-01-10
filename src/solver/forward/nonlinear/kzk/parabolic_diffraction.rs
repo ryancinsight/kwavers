@@ -7,7 +7,7 @@
 //! - Lee & Hamilton (1995) "Parametric array in air", Eq. 2.23
 //! - Kamakura et al. (1992) "Nonlinear acoustic beam propagation"
 
-use crate::domain::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
+use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::{Array2, ArrayViewMut2};
 use std::f64::consts::PI;
 

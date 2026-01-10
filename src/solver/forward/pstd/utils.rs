@@ -5,7 +5,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::domain::math::fft::KSpaceCalculator;
+use crate::math::fft::KSpaceCalculator;
 use ndarray::{s, Array3, Zip};
 use std::f64::consts::PI;
 
@@ -251,17 +251,17 @@ pub fn gradient_x(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>
     let (_nx, _ny, _nz) = field.dim();
 
     // Use the central FFT processor for spectral derivative
-    let fft = crate::domain::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz);
+    let fft = crate::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz);
     fft.spectral_derivative(field, 0)
 }
 
 pub fn gradient_y(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
-    let fft = crate::domain::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz);
+    let fft = crate::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz);
     fft.spectral_derivative(field, 1)
 }
 
 pub fn gradient_z(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
-    let fft = crate::domain::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz);
+    let fft = crate::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz);
     fft.spectral_derivative(field, 2)
 }
 

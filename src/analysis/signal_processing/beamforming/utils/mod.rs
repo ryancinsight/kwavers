@@ -27,7 +27,7 @@
 //! analysis::signal_processing::beamforming::utils (Layer 7)
 //!   ↓ imports from
 //! math::geometry (Layer 1) - distance, vector operations
-//! domain::core::error (Layer 0) - error types
+//! core::error (Layer 0) - error types
 //! ```
 //!
 //! # Module Organization

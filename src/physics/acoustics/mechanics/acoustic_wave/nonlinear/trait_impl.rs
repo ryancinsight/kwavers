@@ -90,8 +90,8 @@ impl NonlinearWave {
     pub fn validate_parameters(&self, medium: &dyn Medium, grid: &Grid) -> KwaversResult<()> {
         // Check CFL condition
         if !self.is_stable(medium, grid) {
-            return Err(crate::domain::core::error::KwaversError::Physics(
-                crate::domain::core::error::PhysicsError::InvalidParameter {
+            return Err(crate::core::error::KwaversError::Physics(
+                crate::core::error::PhysicsError::InvalidParameter {
                     parameter: "timestep".to_string(),
                     value: self.dt,
                     reason: format!(
@@ -111,8 +111,8 @@ impl NonlinearWave {
         );
 
         if min_c <= 0.0 || min_c.is_infinite() {
-            return Err(crate::domain::core::error::KwaversError::Physics(
-                crate::domain::core::error::PhysicsError::InvalidParameter {
+            return Err(crate::core::error::KwaversError::Physics(
+                crate::core::error::PhysicsError::InvalidParameter {
                     parameter: "sound_speed".to_string(),
                     value: min_c,
                     reason: "Sound speed must be positive and finite".to_string(),
@@ -127,8 +127,8 @@ impl NonlinearWave {
         // Ensure at least 6 points per wavelength for accurate simulation
         const MIN_POINTS_PER_WAVELENGTH: f64 = 6.0;
         if min_dx > min_wavelength / MIN_POINTS_PER_WAVELENGTH {
-            return Err(crate::domain::core::error::KwaversError::Physics(
-                crate::domain::core::error::PhysicsError::InvalidParameter {
+            return Err(crate::core::error::KwaversError::Physics(
+                crate::core::error::PhysicsError::InvalidParameter {
                     parameter: "grid_spacing".to_string(),
                     value: min_dx,
                     reason: format!(
@@ -144,8 +144,8 @@ impl NonlinearWave {
 
         // Check for valid nonlinearity scaling
         if self.nonlinearity_scaling < 0.0 || self.nonlinearity_scaling > 10.0 {
-            return Err(crate::domain::core::error::KwaversError::Physics(
-                crate::domain::core::error::PhysicsError::InvalidParameter {
+            return Err(crate::core::error::KwaversError::Physics(
+                crate::core::error::PhysicsError::InvalidParameter {
                     parameter: "nonlinearity_scaling".to_string(),
                     value: self.nonlinearity_scaling,
                     reason: "Must be between 0.0 and 10.0".to_string(),

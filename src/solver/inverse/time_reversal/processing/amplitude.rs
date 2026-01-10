@@ -3,7 +3,7 @@
 //! Implements amplitude correction for geometric spreading and absorption compensation.
 
 use crate::{
-    domain::core::error::KwaversResult,
+    core::error::KwaversResult,
     domain::{grid::Grid, medium::Medium},
 };
 use log::debug;

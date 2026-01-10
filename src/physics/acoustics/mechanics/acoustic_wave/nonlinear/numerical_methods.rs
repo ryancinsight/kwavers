@@ -5,8 +5,8 @@
 use crate::core::constants::numerical;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::domain::math::fft::{fft_3d_array, ifft_3d_array};
 use crate::domain::medium::Medium;
+use crate::math::fft::{fft_3d_array, ifft_3d_array};
 
 use log::{debug, warn};
 use ndarray::{Array3, Zip};
@@ -47,17 +47,15 @@ impl NonlinearWave {
 
         // Validate inputs
         if pressure.shape() != [grid.nx, grid.ny, grid.nz] {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
-                format!(
-                    "Pressure array shape [{}, {}, {}] doesn't match grid dimensions [{}, {}, {}]",
-                    pressure.shape()[0],
-                    pressure.shape()[1],
-                    pressure.shape()[2],
-                    grid.nx,
-                    grid.ny,
-                    grid.nz
-                ),
-            ));
+            return Err(crate::core::error::KwaversError::InvalidInput(format!(
+                "Pressure array shape [{}, {}, {}] doesn't match grid dimensions [{}, {}, {}]",
+                pressure.shape()[0],
+                pressure.shape()[1],
+                pressure.shape()[2],
+                grid.nx,
+                grid.ny,
+                grid.nz
+            )));
         }
 
         // Compute nonlinear term

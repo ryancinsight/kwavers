@@ -1,6 +1,120 @@
  # Sprint Checklist - Kwavers Development
 
-## Current Sprint: Phase 1 Sprint 4: Beamforming Consolidation
+## Current Sprint: Sprint 185 - Advanced Physics Research (Multi-Bubble Interactions & Shock Physics)
+
+**Previous Sprint**: Sprint 4 (Beamforming Consolidation) - COMPLETED ✅
+**Current Focus**: Implementing 2020-2025 acoustics and optics research with mathematically verified implementations
+**Next Sprints**: 186-190 (Advanced Physics Completion, Optics Research, Interdisciplinary Coupling)
+
+---
+
+## Sprint 185: Multi-Bubble Interactions & Shock Physics (16 hours) - IN PROGRESS 🟡
+
+### Sprint Objectives
+
+**Primary Goal**: Implement cutting-edge bubble-bubble interaction models and shock wave physics based on 2020-2025 literature review.
+
+**Success Criteria**:
+- Multi-harmonic Bjerknes force calculator with <10% error vs. Doinikov (2021)
+- Shock wave Rankine-Hugoniot solver validated against Cleveland (2022) HIFU data
+- Non-spherical bubble dynamics with shape oscillations matching Shaw (2023)
+- All implementations <500 lines (GRASP compliance)
+- Zero placeholders, complete theorem documentation
+
+### Task Breakdown
+
+#### Week 1: Gap A1 - Multi-Bubble Interactions (6 hours) - 🔴 NOT STARTED
+- [ ] Hour 1-2: Literature review (Lauterborn 2023, Doinikov 2021, Zhang & Li 2022)
+- [ ] Hour 3-5: Implement multi-harmonic Bjerknes force calculator
+  - [ ] Multi-frequency driving force coupling
+  - [ ] Phase-coherent interaction topology
+  - [ ] Polydisperse bubble cloud models
+- [ ] Hour 6-7: Spatial clustering (octree) for O(N log N) scaling
+- [ ] Hour 8-10: Validate against Doinikov 2-bubble analytical solutions
+- [ ] Hour 11-12: Property-based tests (phase coherence, energy conservation)
+- [ ] **Deliverable**: `src/physics/acoustics/nonlinear/multi_bubble_interactions.rs`
+
+**Mathematical Requirements**:
+```
+Secondary Bjerknes Force (Multi-Frequency):
+F₁₂ = -(ρ/(4πr₁₂)) ∑ₙ ∑ₘ V̇₁ⁿ V̇₂ᵐ cos(φₙ - φₘ)
+```
+
+#### Week 2: Gap A5 - Shock Wave Physics (4 hours) - 🔴 NOT STARTED
+- [ ] Hour 1-2: Literature review (Cleveland 2022, Coulouvrat 2020)
+- [ ] Hour 3-4: Implement Rankine-Hugoniot jump conditions
+  - [ ] Shock detection algorithm (pressure gradient threshold)
+  - [ ] Entropy fix for rarefaction shocks
+- [ ] Hour 5-6: Adaptive mesh refinement near shocks
+- [ ] Hour 7-8: Validate against HIFU experimental data (Cleveland 2022)
+- [ ] Hour 9-10: Integration tests with existing FDTD solver
+- [ ] **Deliverable**: `src/physics/acoustics/nonlinear/shock_physics.rs`
+
+**Mathematical Requirements**:
+```
+Rankine-Hugoniot Conditions:
+[ρu] = 0  (mass)
+[p + ρu²] = 0  (momentum)
+[E + pu/ρ] = 0  (energy)
+```
+
+#### Week 3: Gap A2 - Non-Spherical Bubble Dynamics (6 hours) - 🔴 NOT STARTED
+- [ ] Hour 1-2: Literature review (Lohse & Prosperetti 2021, Shaw 2023)
+- [ ] Hour 3-5: Implement spherical harmonic decomposition (n=2-10 modes)
+- [ ] Hour 6-8: Mode coupling coefficients (Prosperetti 1977)
+- [ ] Hour 9-10: Instability detection (Rayleigh-Taylor criteria)
+- [ ] Hour 11-12: Validate against Shaw (2023) jet formation data
+- [ ] **Deliverable**: `src/physics/acoustics/nonlinear/shape_oscillations.rs`
+
+**Mathematical Requirements**:
+```
+Shape Perturbation Equation (Prosperetti 1977):
+d²aₙ/dt² + bₙ(daₙ/dt) + ωₙ²aₙ = fₙ(t)
+```
+
+### Quality Gates - Sprint 185
+- [ ] All tests passing (maintain >95% pass rate)
+- [ ] Validation error <10% RMS vs. literature
+- [ ] All modules <500 lines (GRASP compliance)
+- [ ] Complete Rustdoc with literature references
+- [ ] Zero clippy warnings
+- [ ] Property-based tests for invariants
+
+### Literature References - Sprint 185
+1. Lauterborn et al. (2023). "Multi-bubble systems with collective dynamics." *Ultrasonics Sonochemistry*
+2. Doinikov (2021). "Translational dynamics of bubbles." *Physics of Fluids*
+3. Zhang & Li (2022). "Phase-dependent bubble interaction." *J Fluid Mechanics*
+4. Cleveland et al. (2022). "Shock waves in medical ultrasound." *J Therapeutic Ultrasound*
+5. Shaw (2023). "Jetting and fragmentation in sonoluminescence." *Physical Review E*
+6. Lohse & Prosperetti (2021). "Shape oscillations and instabilities." *Annual Review of Fluid Mechanics*
+
+---
+
+## Sprint 186-190: Advanced Physics Pipeline - PLANNED
+
+### Sprint 186: Thermal Effects & Fractional Acoustics (8 hours)
+- Gap A3: Thermal effects in dense bubble clouds (3h)
+- Gap A4: Fractional nonlinear acoustics (5h)
+
+### Sprint 187: Multi-Wavelength Sonoluminescence (6 hours)
+- Gap O1: Wavelength-resolved spectroscopy with Stark broadening (6h)
+
+### Sprint 188: Photon Transport & Nonlinear Optics (8 hours)
+- Gap O2: Monte Carlo photon transport (6h)
+- Gap O3: Nonlinear optical effects (2h)
+
+### Sprint 189: Interdisciplinary Coupling (6 hours)
+- Gap I1: Photoacoustic feedback mechanisms (4h)
+- Gap O4: Plasmonic enhancement (2h)
+
+### Sprint 190: Validation & Documentation (12 hours)
+- Comprehensive validation suite (6h)
+- Property-based testing (3h)
+- Documentation completion (3h)
+
+---
+
+## LEGACY: Phase 1 Sprint 4: Beamforming Consolidation (COMPLETED ✅)
 
 **Status**: ACTIVE - Phase 6 COMPLETE, Phase 7 NEXT
 **Previous Sprints**: Sprint 1-3 (Grid, Boundary, Medium) - COMPLETED ✅
@@ -495,7 +609,33 @@ Complete Phase 1 Sprint 4: Consolidate all beamforming algorithms into the analy
 
 ---
 
-## Sensor Consolidation Micro-Sprint — Array Processing Unification
+## Advanced Physics Research Audit Reference
+
+**Primary Document**: `ACOUSTICS_OPTICS_RESEARCH_GAP_AUDIT_2025.md`
+**Backlog Updates**: `docs/backlog.md` (Sprints 185-190 roadmap added)
+**Gap Analysis**: 15 critical gaps identified across acoustics, optics, and interdisciplinary domains
+
+### Gap Priority Matrix
+**High Priority (Sprints 185-187)**:
+- A1: Multi-bubble interactions
+- A5: Shock wave physics
+- O1: Multi-wavelength sonoluminescence
+- O2: Photon transport
+
+**Medium Priority (Sprints 188-189)**:
+- A2: Non-spherical bubble dynamics
+- A3: Thermal effects in clouds
+- O3: Nonlinear optics
+- I1: Photoacoustic feedback
+
+**Low Priority (Sprint 190+)**:
+- A4: Fractional acoustics
+- O4: Plasmonic enhancement
+- O5: Dispersive Čerenkov
+
+---
+
+## LEGACY: Sensor Consolidation Micro-Sprint — Array Processing Unification
 
 Goal: Consolidate beamforming across `sensor` to enforce SSOT and modular boundaries per ADR "Sensor Module Architecture Consolidation".
 

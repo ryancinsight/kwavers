@@ -250,14 +250,14 @@ pub mod stub {
 
     /// Zero-copy serialization not available - enable "zero-copy" feature
     pub fn serialize_grid(_grid: &Grid) -> KwaversResult<Vec<u8>> {
-        Err(crate::domain::core::error::KwaversError::InvalidInput(
+        Err(crate::core::error::KwaversError::InvalidInput(
             "zero-copy feature not enabled".to_string(),
         ))
     }
 
     /// Zero-copy serialization not available - enable "zero-copy" feature
     pub fn deserialize_grid(_bytes: &[u8]) -> KwaversResult<Grid> {
-        Err(crate::domain::core::error::KwaversError::InvalidInput(
+        Err(crate::core::error::KwaversError::InvalidInput(
             "zero-copy feature not enabled".to_string(),
         ))
     }

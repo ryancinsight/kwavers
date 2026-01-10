@@ -36,7 +36,7 @@ impl SpectralStressFields {
     /// Initialize from real-valued stress fields via FFT
     #[must_use]
     pub fn from_real(real_fields: &super::fields::StressFields) -> Self {
-        use crate::domain::math::fft::fft_3d_array;
+        use crate::math::fft::fft_3d_array;
 
         let (nx, ny, nz) = real_fields.txx.dim();
         let mut spectral = Self::new(nx, ny, nz);
@@ -55,7 +55,7 @@ impl SpectralStressFields {
     /// Convert back to real-valued fields via inverse FFT
     #[must_use]
     pub fn to_real(&self) -> super::fields::StressFields {
-        use crate::domain::math::fft::ifft_3d_array;
+        use crate::math::fft::ifft_3d_array;
 
         let (nx, ny, nz) = self.txx.dim();
         let mut real_fields = super::fields::StressFields::new(nx, ny, nz);
@@ -95,7 +95,7 @@ impl SpectralVelocityFields {
     /// Initialize from real-valued velocity fields via FFT
     #[must_use]
     pub fn from_real(real_fields: &super::fields::VelocityFields) -> Self {
-        use crate::domain::math::fft::fft_3d_array;
+        use crate::math::fft::fft_3d_array;
 
         let (nx, ny, nz) = real_fields.vx.dim();
         let mut spectral = Self::new(nx, ny, nz);
@@ -110,7 +110,7 @@ impl SpectralVelocityFields {
     /// Convert back to real-valued fields via inverse FFT
     #[must_use]
     pub fn to_real(&self) -> super::fields::VelocityFields {
-        use crate::domain::math::fft::ifft_3d_array;
+        use crate::math::fft::ifft_3d_array;
 
         let (nx, ny, nz) = self.vx.dim();
         let mut real_fields = super::fields::VelocityFields::new(nx, ny, nz);

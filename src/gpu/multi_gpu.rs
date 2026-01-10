@@ -117,7 +117,7 @@ impl MultiGpuContext {
 
         if contexts.len() < 2 {
             return Err(KwaversError::System(
-                crate::domain::core::error::SystemError::ResourceUnavailable {
+                crate::core::error::SystemError::ResourceUnavailable {
                     resource: "Multiple GPU devices required for multi-GPU context".to_string(),
                 },
             ));
@@ -172,11 +172,9 @@ impl MultiGpuContext {
             )
             .await
             .map_err(|e| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ResourceUnavailable {
-                        resource: format!("GPU device initialization failed: {}", e),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
+                    resource: format!("GPU device initialization failed: {}", e),
+                })
             })?;
 
         let capabilities = GpuCapabilities {
@@ -293,14 +291,12 @@ impl MultiGpuContext {
         let channel = self
             .get_communication_channel_mut(from_gpu, to_gpu)
             .ok_or_else(|| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ResourceUnavailable {
-                        resource: format!(
-                            "No communication channel between GPUs {} and {}",
-                            from_gpu, to_gpu
-                        ),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
+                    resource: format!(
+                        "No communication channel between GPUs {} and {}",
+                        from_gpu, to_gpu
+                    ),
+                })
             })?;
 
         let transfer = PendingTransfer {

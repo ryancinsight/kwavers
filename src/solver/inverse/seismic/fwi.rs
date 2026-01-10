@@ -32,7 +32,7 @@ impl FwiProcessor {
         initial_model: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        use crate::domain::math::linear_algebra::norm_l2;
+        use crate::math::linear_algebra::norm_l2;
 
         let mut current_model = initial_model.clone();
         let mut prev_misfit = f64::INFINITY;
@@ -230,7 +230,7 @@ impl FwiProcessor {
         observed_data: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<f64> {
-        use crate::domain::math::linear_algebra::norm_l2;
+        use crate::math::linear_algebra::norm_l2;
 
         let mut step_size = self.parameters.step_size;
         let c1 = 1e-4; // Armijo condition constant

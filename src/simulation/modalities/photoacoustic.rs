@@ -429,12 +429,12 @@ impl PhotoacousticSimulator {
         let nxy = ny * nz;
         let expected_len = nx * nxy;
         let out = reconstructed.as_slice_mut().ok_or_else(|| {
-            crate::domain::core::error::KwaversError::InternalError(
+            crate::core::error::KwaversError::InternalError(
                 "Reconstruction buffer not contiguous".to_string(),
             )
         })?;
         if out.len() != expected_len {
-            return Err(crate::domain::core::error::KwaversError::InternalError(
+            return Err(crate::core::error::KwaversError::InternalError(
                 "Reconstruction buffer length mismatch".to_string(),
             ));
         }

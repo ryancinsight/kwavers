@@ -24,7 +24,7 @@
 //! use kwavers::domain::medium::{HomogeneousMedium, adapters::CylindricalMediumProjection};
 //! use kwavers::domain::grid::{Grid, CylindricalTopology};
 //!
-//! # fn example() -> kwavers::domain::core::error::KwaversResult<()> {
+//! # fn example() -> kwavers::core::error::KwaversResult<()> {
 //! // Create 3D medium and grid
 //! let grid = Grid::new(128, 128, 128, 0.0001, 0.0001, 0.0001)?;
 //! let medium = HomogeneousMedium::water(&grid);

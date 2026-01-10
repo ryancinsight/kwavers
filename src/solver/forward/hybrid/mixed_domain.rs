@@ -3,9 +3,9 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::domain::math::fft::FFT_CACHE;
 use crate::domain::medium::Medium;
 use crate::domain::plugin::{PluginMetadata, PluginState};
+use crate::math::fft::FFT_CACHE;
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;
 

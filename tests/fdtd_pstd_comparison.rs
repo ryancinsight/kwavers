@@ -3,6 +3,7 @@
 //! Note: PSTD currently uses finite differences (not spectral methods) for stability.
 //! These tests verify that both solvers run without crashing and produce output.
 
+use kwavers::physics::mechanics::absorption::AbsorptionMode;
 use kwavers::{
     FdtdConfig, FdtdPlugin, Grid, HomogeneousMedium, PMLBoundary, PMLConfig, PluginManager,
     SpectralConfig, SpectralPlugin,
@@ -141,7 +142,7 @@ fn run_pstd_simulation_with_time(
     config.spectral_correction.method =
         kwavers::solver::spectral_correction::CorrectionMethod::SincSpatial;
     config.anti_aliasing.enabled = true;
-    config.absorption_mode = kwavers::solver::spectral::config::AbsorptionMode::Lossless;
+    config.absorption_mode = AbsorptionMode::Lossless;
 
     let cfl_factor = 0.3;
     let mut plugin_manager = PluginManager::new();

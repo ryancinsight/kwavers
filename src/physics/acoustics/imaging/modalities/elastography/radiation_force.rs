@@ -84,7 +84,7 @@ impl PushPulseParameters {
     ) -> KwaversResult<Self> {
         if frequency <= 0.0 {
             return Err(KwaversError::Validation(
-                crate::domain::core::error::ValidationError::InvalidValue {
+                crate::core::error::ValidationError::InvalidValue {
                     parameter: "frequency".to_string(),
                     value: frequency,
                     reason: "must be positive".to_string(),
@@ -93,7 +93,7 @@ impl PushPulseParameters {
         }
         if duration <= 0.0 {
             return Err(KwaversError::Validation(
-                crate::domain::core::error::ValidationError::InvalidValue {
+                crate::core::error::ValidationError::InvalidValue {
                     parameter: "duration".to_string(),
                     value: duration,
                     reason: "must be positive".to_string(),
@@ -102,7 +102,7 @@ impl PushPulseParameters {
         }
         if intensity <= 0.0 {
             return Err(KwaversError::Validation(
-                crate::domain::core::error::ValidationError::InvalidValue {
+                crate::core::error::ValidationError::InvalidValue {
                     parameter: "intensity".to_string(),
                     value: intensity,
                     reason: "must be positive".to_string(),

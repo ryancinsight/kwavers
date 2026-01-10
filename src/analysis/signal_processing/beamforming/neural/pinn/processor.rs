@@ -44,7 +44,7 @@ use ndarray::{s, Array3, Array4, ArrayView3};
 use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
-use crate::domain::math::ml::pinn::{uncertainty_quantification::BayesianPINN, BurnPINN1DWave};
+use crate::analysis::ml::pinn::{uncertainty_quantification::BayesianPINN, BurnPINN1DWave};
 
 use crate::domain::sensor::beamforming::SteeringVector;
 
@@ -224,7 +224,7 @@ impl NeuralBeamformingProcessor {
         _sample_idx: usize,
     ) -> KwaversResult<f64> {
         Err(KwaversError::System(
-            crate::domain::core::error::SystemError::FeatureNotAvailable {
+            crate::core::error::SystemError::FeatureNotAvailable {
                 feature: "pinn".to_string(),
                 reason: "PINN beamforming requires 'pinn' feature".to_string(),
             },

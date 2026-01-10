@@ -85,7 +85,7 @@ impl HIFUTreatmentPlan {
     pub fn validate(
         &self,
         transducer: &HIFUTransducer,
-    ) -> Result<(), crate::domain::core::error::KwaversError> {
+    ) -> Result<(), crate::core::error::KwaversError> {
         use crate::core::error::{KwaversError, ValidationError};
 
         // Check target is within accessible region

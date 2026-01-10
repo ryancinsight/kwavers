@@ -81,8 +81,8 @@ impl SeismicImagingPlugin {
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         let processor = self.rtm_processor.as_ref().ok_or_else(|| {
-            crate::domain::core::error::KwaversError::Physics(
-                crate::domain::core::error::PhysicsError::InvalidConfiguration {
+            crate::core::error::KwaversError::Physics(
+                crate::core::error::PhysicsError::InvalidConfiguration {
                     parameter: "rtm_processor".to_string(),
                     reason: "RTM processor not configured".to_string(),
                 },
@@ -106,8 +106,8 @@ impl SeismicImagingPlugin {
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         let processor = self.fwi_processor.as_ref().ok_or_else(|| {
-            crate::domain::core::error::KwaversError::Physics(
-                crate::domain::core::error::PhysicsError::InvalidConfiguration {
+            crate::core::error::KwaversError::Physics(
+                crate::core::error::PhysicsError::InvalidConfiguration {
                     parameter: "fwi_processor".to_string(),
                     reason: "FWI processor not configured".to_string(),
                 },

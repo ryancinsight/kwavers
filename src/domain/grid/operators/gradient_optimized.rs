@@ -96,8 +96,8 @@ where
 
     // Validate grid compatibility
     if (nx, ny, nz) != (grid.nx, grid.ny, grid.nz) {
-        return Err(crate::domain::core::error::KwaversError::Grid(
-            crate::domain::core::error::GridError::DimensionMismatch {
+        return Err(crate::core::error::KwaversError::Grid(
+            crate::core::error::GridError::DimensionMismatch {
                 expected: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
                 actual: format!("({}, {}, {})", nx, ny, nz),
             },
@@ -204,8 +204,8 @@ where
 
     // Validate grid compatibility
     if (nx, ny, nz) != (grid.nx, grid.ny, grid.nz) {
-        return Err(crate::domain::core::error::KwaversError::Grid(
-            crate::domain::core::error::GridError::DimensionMismatch {
+        return Err(crate::core::error::KwaversError::Grid(
+            crate::core::error::GridError::DimensionMismatch {
                 expected: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
                 actual: format!("({}, {}, {})", nx, ny, nz),
             },

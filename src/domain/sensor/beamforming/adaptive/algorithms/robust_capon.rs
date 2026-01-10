@@ -17,7 +17,7 @@
 //! - No fallback to `steering.clone()` is permitted.
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::math::linear_algebra::LinearAlgebra;
+use crate::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 use num_traits::Zero;
@@ -180,7 +180,7 @@ impl BeamformingAlgorithm for RobustCapon {
         let denom_re = denom.re;
         if !denom_re.is_finite() || denom_re <= 0.0 {
             return Err(KwaversError::Numerical(
-                crate::domain::core::error::NumericalError::InvalidOperation(
+                crate::core::error::NumericalError::InvalidOperation(
                     "RobustCapon: non-positive or non-finite denominator a^H R^{-1} a".to_string(),
                 ),
             ));

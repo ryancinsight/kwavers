@@ -7,27 +7,14 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::GridSource;
+use crate::solver::config::{SolverConfiguration, SolverType};
 use crate::solver::forward::fdtd::FdtdConfig;
 use crate::solver::forward::hybrid::config::HybridConfig;
-use crate::solver::forward::pstd::PSTDConfig;
-use crate::solver::forward::pstd::PSTDSource;
+use crate::solver::forward::pstd::{PSTDConfig, PSTDSource};
 use crate::solver::forward::{FdtdSolver, HybridSolver, PSTDSolver};
-use crate::solver::interface::{Solver, SolverConfig};
+use crate::solver::interface::Solver;
 
 use log::info;
-
-/// Enumeration of available solver types
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SolverType {
-    /// Finite-Difference Time Domain
-    FDTD,
-    /// Pseudo-Spectral Time Domain
-    PSTD,
-    /// Hybrid FDTD/PSTD
-    Hybrid,
-    /// Automatically selected
-    Auto,
-}
 
 /// Factory for creating solver instances
 #[derive(Debug)]
@@ -37,7 +24,7 @@ impl SolverFactory {
     /// Create a solver based on the provided configuration
     pub fn create_solver(
         solver_type: SolverType,
-        _config: SolverConfig,
+        _config: SolverConfiguration, // Using unified config
         grid: &Grid,
         medium: &dyn Medium,
         // Optional specific configs could be passed here or embedded in a larger config struct
@@ -75,6 +62,7 @@ impl SolverFactory {
                 Ok(Box::new(solver))
             }
             SolverType::Auto => unreachable!("Auto should have been resolved"),
+            _ => Err(crate::core::error::KwaversError::NotImplemented("Solver type not yet supported in factory".to_string())),
         }
     }
 
@@ -109,7 +97,7 @@ mod tests {
     use super::*;
     use crate::domain::grid::Grid;
     use crate::domain::medium::homogeneous::HomogeneousMedium;
-    use crate::solver::interface::config::SolverConfig;
+    use crate::solver::config::SolverConfiguration;
 
     #[test]
     fn test_solver_factory_creation() {
@@ -118,7 +106,7 @@ mod tests {
         // Use a simple homogeneous medium
         let medium = HomogeneousMedium::water(&grid);
 
-        let config = SolverConfig {
+        let config = SolverConfiguration {
             max_steps: 10,
             dt: 1e-6,
             ..Default::default()

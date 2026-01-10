@@ -7,7 +7,7 @@
 
 use crate::analysis::signal_processing::beamforming::utils::delays;
 use crate::core::error::KwaversResult;
-use crate::domain::math::geometry::distance3;
+use crate::math::geometry::distance3;
 use ndarray::Array1;
 
 /// Steering vector calculation methods
@@ -58,17 +58,17 @@ impl SteeringVector {
         use num_complex::Complex;
 
         if !frequency.is_finite() || frequency <= 0.0 {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "frequency must be finite and > 0".to_string(),
             ));
         }
         if !speed_of_sound.is_finite() || speed_of_sound <= 0.0 {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "speed_of_sound must be finite and > 0".to_string(),
             ));
         }
         if sensor_positions.is_empty() {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "sensor_positions must be non-empty".to_string(),
             ));
         }
@@ -76,7 +76,7 @@ impl SteeringVector {
             .iter()
             .any(|p| !p.iter().all(|v| v.is_finite()))
         {
-            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "sensor_positions must be finite 3D coordinates".to_string(),
             ));
         }
@@ -98,7 +98,7 @@ impl SteeringVector {
 
             SteeringVectorMethod::SphericalWave { source_position } => {
                 if source_position.iter().any(|v| !v.is_finite()) {
-                    return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                    return Err(crate::core::error::KwaversError::InvalidInput(
                         "source_position must be finite".to_string(),
                     ));
                 }
@@ -107,8 +107,8 @@ impl SteeringVector {
                 for (i, &pos) in sensor_positions.iter().enumerate() {
                     let distance = distance3(pos, *source_position);
                     if distance.abs() < 1e-12 {
-                        return Err(crate::domain::core::error::KwaversError::Numerical(
-                            crate::domain::core::error::NumericalError::InvalidOperation(
+                        return Err(crate::core::error::KwaversError::Numerical(
+                            crate::core::error::NumericalError::InvalidOperation(
                                 format!("Sensor at source position (distance = {:.2e}) - spherical wave steering undefined", distance)
                             )
                         ));

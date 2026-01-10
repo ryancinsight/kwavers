@@ -24,16 +24,14 @@ fn fdtd_dispersion_relation(
         2 => {
             // Second-order central difference
             let k_numerical = 2.0 * (k * dx / 2.0).sin() / dx;
-            let omega_numerical = 2.0 * ((courant * k_numerical * dx / 2.0).sin()).asin() / dt;
-            omega_numerical
+            2.0 * ((courant * k_numerical * dx / 2.0).sin()).asin() / dt
         }
         4 => {
             // Fourth-order central difference
             // sin(kΔx/2) term modified by fourth-order stencil
             let sin_k = (k * dx / 2.0).sin();
             let k_numerical = (8.0 * sin_k - (2.0 * k * dx).sin()) / (6.0 * dx);
-            let omega_numerical = 2.0 * ((courant * k_numerical * dx / 2.0).sin()).asin() / dt;
-            omega_numerical
+            2.0 * ((courant * k_numerical * dx / 2.0).sin()).asin() / dt
         }
         _ => panic!("Only 2nd and 4th order supported"),
     }

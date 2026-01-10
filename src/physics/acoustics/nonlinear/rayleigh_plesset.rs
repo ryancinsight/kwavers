@@ -165,7 +165,7 @@ pub fn integrate_bubble_dynamics_stable(
     dp_dt: f64,
     dt: f64,
     t: f64,
-) -> crate::domain::core::error::KwaversResult<()> {
+) -> crate::core::error::KwaversResult<()> {
     use super::adaptive_integration::integrate_bubble_dynamics_adaptive;
 
     // Use adaptive integration with sub-cycling (no Mutex needed anymore)

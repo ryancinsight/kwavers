@@ -367,12 +367,10 @@ impl AuthMiddleware {
             &self.jwt_encoding_key,
         )
         .map_err(|e| {
-            KwaversError::System(
-                crate::domain::core::error::SystemError::InvalidConfiguration {
-                    parameter: "jwt_token_generation".to_string(),
-                    reason: format!("Failed to generate JWT token: {}", e),
-                },
-            )
+            KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                parameter: "jwt_token_generation".to_string(),
+                reason: format!("Failed to generate JWT token: {}", e),
+            })
         })
     }
 

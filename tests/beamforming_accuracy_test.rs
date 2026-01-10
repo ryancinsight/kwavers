@@ -134,18 +134,13 @@ mod tests {
         let num_snapshots = 100;
 
         // Test AIC vs MDL
-        let music_aic =
-            MUSIC::new_with_source_estimation(&cov, num_snapshots, SourceEstimationCriterion::AIC);
+        let _ =
+            MUSIC::new_with_source_estimation(&cov, num_snapshots, SourceEstimationCriterion::AIC)
+                .expect_err("strict SSOT must error without complex eigendecomposition");
 
-        let music_mdl =
-            MUSIC::new_with_source_estimation(&cov, num_snapshots, SourceEstimationCriterion::MDL);
-
-        // Should estimate reasonable number of sources (0 to n-1)
-        assert!(music_aic.num_sources < n);
-        assert!(music_mdl.num_sources < n);
-
-        // MDL should be more conservative (may estimate fewer sources)
-        assert!(music_mdl.num_sources <= music_aic.num_sources);
+        let _ =
+            MUSIC::new_with_source_estimation(&cov, num_snapshots, SourceEstimationCriterion::MDL)
+                .expect_err("strict SSOT must error without complex eigendecomposition");
     }
 
     /// Test condition number computation

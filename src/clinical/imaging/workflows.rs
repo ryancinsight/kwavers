@@ -365,7 +365,7 @@ impl ClinicalWorkflowOrchestrator {
             && acquisition_time > Duration::from_millis(self.config.max_latency_ms / 3)
         {
             return Err(KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
+                crate::core::error::ValidationError::ConstraintViolation {
                     message: format!(
                         "Acquisition time {}ms exceeds real-time constraint",
                         acquisition_time.as_millis()
@@ -406,7 +406,7 @@ impl ClinicalWorkflowOrchestrator {
             && processing_time > Duration::from_millis(self.config.max_latency_ms / 3)
         {
             return Err(KwaversError::Validation(
-                crate::domain::core::error::ValidationError::ConstraintViolation {
+                crate::core::error::ValidationError::ConstraintViolation {
                     message: format!(
                         "Processing time {}ms exceeds real-time constraint",
                         processing_time.as_millis()

@@ -37,14 +37,12 @@ impl LinearSolver {
 
         // Validate dimensions
         if b.len() != m {
-            return Err(
-                crate::domain::core::error::NumericalError::MatrixDimension {
-                    operation: "Tikhonov regularized least squares".to_string(),
-                    expected: format!("RHS vector length {} to match matrix rows {}", m, m),
-                    actual: format!("RHS vector length {}", b.len()),
-                }
-                .into(),
-            );
+            return Err(crate::core::error::NumericalError::MatrixDimension {
+                operation: "Tikhonov regularized least squares".to_string(),
+                expected: format!("RHS vector length {} to match matrix rows {}", m, m),
+                actual: format!("RHS vector length {}", b.len()),
+            }
+            .into());
         }
 
         // Form normal equations: (A^T A + λ L^T L) x = A^T b
@@ -100,14 +98,12 @@ impl LinearSolver {
         }
 
         // If we're here, we didn't converge
-        Err(
-            crate::domain::core::error::NumericalError::ConvergenceFailed {
-                method: "Conjugate Gradient".to_string(),
-                iterations: self.max_iterations,
-                error: rsold.sqrt(),
-            }
-            .into(),
-        )
+        Err(crate::core::error::NumericalError::ConvergenceFailed {
+            method: "Conjugate Gradient".to_string(),
+            iterations: self.max_iterations,
+            error: rsold.sqrt(),
+        }
+        .into())
     }
 
     /// Solve using Total Variation regularization
@@ -125,14 +121,12 @@ impl LinearSolver {
 
         // Validate dimensions
         if b.len() != m {
-            return Err(
-                crate::domain::core::error::NumericalError::MatrixDimension {
-                    operation: "Total Variation regularized least squares".to_string(),
-                    expected: format!("RHS vector length {} to match matrix rows {}", m, m),
-                    actual: format!("RHS vector length {}", b.len()),
-                }
-                .into(),
-            );
+            return Err(crate::core::error::NumericalError::MatrixDimension {
+                operation: "Total Variation regularized least squares".to_string(),
+                expected: format!("RHS vector length {} to match matrix rows {}", m, m),
+                actual: format!("RHS vector length {}", b.len()),
+            }
+            .into());
         }
 
         let mut x = Array1::zeros(n);
@@ -236,14 +230,12 @@ impl LinearSolver {
 
         // Validate dimensions
         if b.len() != m {
-            return Err(
-                crate::domain::core::error::NumericalError::MatrixDimension {
-                    operation: "L1 regularized least squares (Lasso)".to_string(),
-                    expected: format!("RHS vector length {} to match matrix rows {}", m, m),
-                    actual: format!("RHS vector length {}", b.len()),
-                }
-                .into(),
-            );
+            return Err(crate::core::error::NumericalError::MatrixDimension {
+                operation: "L1 regularized least squares (Lasso)".to_string(),
+                expected: format!("RHS vector length {} to match matrix rows {}", m, m),
+                actual: format!("RHS vector length {}", b.len()),
+            }
+            .into());
         }
 
         let mut x = Array1::zeros(n);

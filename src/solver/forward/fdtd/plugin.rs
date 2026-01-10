@@ -103,8 +103,8 @@ impl crate::domain::plugin::Plugin for FdtdPlugin {
     ) -> KwaversResult<()> {
         // Ensure fields have correct dimensions
         if fields.dim().0 <= UnifiedFieldType::VelocityZ.index() {
-            return Err(crate::domain::core::error::KwaversError::Physics(
-                crate::domain::core::error::PhysicsError::InvalidFieldDimensions {
+            return Err(crate::core::error::KwaversError::Physics(
+                crate::core::error::PhysicsError::InvalidFieldDimensions {
                     expected: "pressure + 3 velocity components".to_string(),
                     actual: format!("{} components", fields.dim().0),
                 },
@@ -112,8 +112,8 @@ impl crate::domain::plugin::Plugin for FdtdPlugin {
         }
 
         let solver = self.solver.as_mut().ok_or_else(|| {
-            crate::domain::core::error::KwaversError::Physics(
-                crate::domain::core::error::PhysicsError::ModelNotInitialized {
+            crate::core::error::KwaversError::Physics(
+                crate::core::error::PhysicsError::ModelNotInitialized {
                     model: "FDTD Solver".to_string(),
                     reason: "Solver not initialized by plugin lifecycle".to_string(),
                 },

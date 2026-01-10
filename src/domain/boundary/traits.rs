@@ -292,8 +292,8 @@ pub trait AbsorbingBoundary: BoundaryCondition {
         let min_thickness = (wavelength / (4.0 * min_spacing)).ceil() as usize;
 
         if self.thickness() < min_thickness.max(10) {
-            return Err(crate::domain::core::error::KwaversError::Config(
-                crate::domain::core::error::ConfigError::InvalidValue {
+            return Err(crate::core::error::KwaversError::Config(
+                crate::core::error::ConfigError::InvalidValue {
                     parameter: "boundary thickness".to_string(),
                     value: self.thickness().to_string(),
                     constraint: format!("Must be at least {} points", min_thickness.max(10)),

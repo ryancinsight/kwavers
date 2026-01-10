@@ -41,6 +41,9 @@ use std::collections::HashMap;
 // Core infrastructure (foundational layer)
 pub mod core;
 
+// Pure mathematical primitives (foundational layer)
+pub mod math;
+
 // Infrastructure services
 pub mod infra;
 
@@ -101,7 +104,7 @@ pub mod testing {
     pub use crate::analysis::testing::*;
 }
 
-pub use domain::math::ml;
+pub use analysis::ml;
 pub use domain::signal::{Signal, SineWave};
 
 // Analysis and tools
@@ -129,7 +132,7 @@ pub use analysis::visualization;
 // Intentionally no crate-root type re-exports. Import from the defining modules directly.
 // Example patterns:
 //
-// - Errors: crate::domain::core::error::{KwaversResult, KwaversError, ValidationError, ...}
+// - Errors: crate::core::error::{KwaversResult, KwaversError, ValidationError, ...}
 // - Grid: crate::domain::grid::Grid
 // - Medium: crate::domain::medium::Medium
 // - Boundaries: crate::domain::boundary::{Boundary, PMLBoundary, CPMLBoundary, ...}
@@ -165,6 +168,7 @@ pub use physics::mechanics::elastic_wave::{
 };
 pub use physics::mechanics::{CavitationModel, StreamingModel};
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
+pub use simulation::factory::PhysicsFactory;
 pub use solver::forward::nonlinear::kuznetsov::{KuznetsovConfig, KuznetsovWave};
 
 // Re-export factory items removed
@@ -196,7 +200,7 @@ pub use domain::source::{HanningApodization, LinearArray};
 // Re-export configuration types
 pub use domain::sensor::recorder::RecorderConfig;
 /// Initialize logging for the kwavers library
-pub fn init_logging() -> crate::domain::core::error::KwaversResult<()> {
+pub fn init_logging() -> crate::core::error::KwaversResult<()> {
     env_logger::init();
     Ok(())
 }

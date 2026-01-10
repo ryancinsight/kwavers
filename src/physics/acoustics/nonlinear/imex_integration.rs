@@ -299,7 +299,7 @@ impl BubbleIMEXIntegrator {
         let b = 1730.63;
         let c = 233.426;
 
-        let t_celsius = crate::domain::core::constants::kelvin_to_celsius(temperature);
+        let t_celsius = crate::core::constants::kelvin_to_celsius(temperature);
         let log10_p = a - b / (c + t_celsius);
 
         // Convert from mmHg to Pa

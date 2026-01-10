@@ -1,10 +1,15 @@
 # Mathematical Code Audit — kwavers (Single Source of Truth)
 
-Audit date: 2025-11-12
+Audit date: 2025-11-12 (Updated: 2025-01-12)
 Auditor: Elite Mathematical Code Auditor
 Scope: Mathematical accuracy, theorem documentation, algorithm validation, testing, and code quality
 
 Purpose: Maintain a single, living gap audit document with evidence-backed findings, rigorous categorization, and remediation tracking.
+
+**⚠️ IMPORTANT: For 2020-2025 acoustics and optics research gap analysis, see:**
+- **`ACOUSTICS_OPTICS_RESEARCH_GAP_AUDIT_2025.md`** - Comprehensive literature review with 15 identified gaps
+- **Implementation Roadmap:** Sprints 185-190 (documented in `docs/backlog.md` and `docs/checklist.md`)
+- **Literature Base:** 25 peer-reviewed sources (2020-2025) covering advanced bubble dynamics, shock physics, multi-wavelength sonoluminescence, photon transport, and interdisciplinary coupling
 
 ## Audit Summary (2025-11-12) - COMPREHENSIVE MATHEMATICAL VALIDATION COMPLETED
 

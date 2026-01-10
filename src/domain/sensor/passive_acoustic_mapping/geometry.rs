@@ -64,7 +64,7 @@ impl ArrayGeometry {
                 orientation,
             } => {
                 let mut positions = Vec::with_capacity(*elements);
-                let norm = crate::domain::math::geometry::normalize3(*orientation);
+                let norm = crate::math::geometry::normalize3(*orientation);
 
                 for i in 0..*elements {
                     let offset = (i as f64 - (*elements as f64 - 1.0) / 2.0) * pitch;
@@ -86,7 +86,7 @@ impl ArrayGeometry {
                 normal,
             } => {
                 let mut positions = Vec::with_capacity(elements_x * elements_y);
-                let (u, v) = crate::domain::math::geometry::orthogonal_basis_from_normal3(*normal);
+                let (u, v) = crate::math::geometry::orthogonal_basis_from_normal3(*normal);
 
                 for i in 0..*elements_x {
                     for j in 0..*elements_y {
@@ -110,7 +110,7 @@ impl ArrayGeometry {
                 normal,
             } => {
                 let mut positions = Vec::with_capacity(*elements);
-                let (u, v) = crate::domain::math::geometry::orthogonal_basis_from_normal3(*normal);
+                let (u, v) = crate::math::geometry::orthogonal_basis_from_normal3(*normal);
 
                 for i in 0..*elements {
                     let angle = 2.0 * std::f64::consts::PI * i as f64 / *elements as f64;

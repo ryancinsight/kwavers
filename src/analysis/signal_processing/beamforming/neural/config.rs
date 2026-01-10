@@ -390,7 +390,7 @@ impl NeuralBeamformingConfig {
     /// - Learning rate is non-positive
     /// - Batch size is zero
     /// - Sensor geometry has < 2 elements
-    pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
+    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         use crate::core::error::KwaversError;
 
         // Network architecture validation

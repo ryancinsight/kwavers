@@ -190,7 +190,7 @@ impl CloudPINNService {
         match self.deployments.get(deployment_id) {
             Some(handle) => Ok(handle.status.clone()),
             None => Err(KwaversError::System(
-                crate::domain::core::error::SystemError::ResourceUnavailable {
+                crate::core::error::SystemError::ResourceUnavailable {
                     resource: format!("deployment {}", deployment_id),
                 },
             )),
@@ -206,7 +206,7 @@ impl CloudPINNService {
         // Check if deployment exists first
         if !self.deployments.contains_key(deployment_id) {
             return Err(KwaversError::System(
-                crate::domain::core::error::SystemError::ResourceUnavailable {
+                crate::core::error::SystemError::ResourceUnavailable {
                     resource: format!("deployment {}", deployment_id),
                 },
             ));
@@ -215,7 +215,7 @@ impl CloudPINNService {
         // Validate target instances
         if target_instances == 0 {
             return Err(KwaversError::System(
-                crate::domain::core::error::SystemError::InvalidConfiguration {
+                crate::core::error::SystemError::InvalidConfiguration {
                     parameter: "target_instances".to_string(),
                     reason: "Must specify at least 1 instance".to_string(),
                 },
@@ -257,11 +257,9 @@ impl CloudPINNService {
     /// Terminate deployment
     pub async fn terminate_deployment(&mut self, deployment_id: &str) -> KwaversResult<()> {
         let mut handle = self.deployments.remove(deployment_id).ok_or_else(|| {
-            KwaversError::System(
-                crate::domain::core::error::SystemError::ResourceUnavailable {
-                    resource: format!("deployment {}", deployment_id),
-                },
-            )
+            KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
+                resource: format!("deployment {}", deployment_id),
+            })
         })?;
 
         // Update status to terminating
@@ -350,7 +348,7 @@ impl CloudPINNService {
     fn validate_config(&self, config: &DeploymentConfig) -> KwaversResult<()> {
         if config.provider != self.provider {
             return Err(KwaversError::System(
-                crate::domain::core::error::SystemError::InvalidConfiguration {
+                crate::core::error::SystemError::InvalidConfiguration {
                     parameter: "provider".to_string(),
                     reason: "Provider mismatch".to_string(),
                 },
@@ -359,7 +357,7 @@ impl CloudPINNService {
 
         if config.gpu_count == 0 {
             return Err(KwaversError::System(
-                crate::domain::core::error::SystemError::InvalidConfiguration {
+                crate::core::error::SystemError::InvalidConfiguration {
                     parameter: "gpu_count".to_string(),
                     reason: "Must specify at least 1 GPU".to_string(),
                 },
@@ -368,7 +366,7 @@ impl CloudPINNService {
 
         if config.memory_gb == 0 {
             return Err(KwaversError::System(
-                crate::domain::core::error::SystemError::InvalidConfiguration {
+                crate::core::error::SystemError::InvalidConfiguration {
                     parameter: "memory_gb".to_string(),
                     reason: "Must specify memory allocation".to_string(),
                 },
@@ -394,7 +392,7 @@ impl CloudPINNService {
         let recorder = BinBytesRecorder::<FullPrecisionSettings, Vec<u8>>::default();
         let model_record = model.clone().into_record();
         let buffer = recorder.record(model_record, ()).map_err(|e| {
-            KwaversError::Data(crate::domain::core::error::DataError::FormatError {
+            KwaversError::Data(crate::core::error::DataError::FormatError {
                 format: "burn model".to_string(),
                 reason: format!("Failed to serialize model: {e}"),
             })
@@ -485,7 +483,7 @@ impl CloudPINNService {
             )
             .send()
             .await
-            .map_err(|e| KwaversError::System(crate::domain::core::error::SystemError::ExternalServiceError {
+            .map_err(|e| KwaversError::System(crate::core::error::SystemError::ExternalServiceError {
                 service: "AWS SageMaker".to_string(),
                 error: e.to_string(),
             }))?;
@@ -511,12 +509,10 @@ impl CloudPINNService {
             .send()
             .await
             .map_err(|e| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ExternalServiceError {
-                        service: "AWS SageMaker".to_string(),
-                        error: e.to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ExternalServiceError {
+                    service: "AWS SageMaker".to_string(),
+                    error: e.to_string(),
+                })
             })?;
 
         // Create SageMaker endpoint
@@ -528,12 +524,10 @@ impl CloudPINNService {
             .send()
             .await
             .map_err(|e| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ExternalServiceError {
-                        service: "AWS SageMaker".to_string(),
-                        error: e.to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ExternalServiceError {
+                    service: "AWS SageMaker".to_string(),
+                    error: e.to_string(),
+                })
             })?;
 
         // Create Application Load Balancer for the endpoint
@@ -547,12 +541,10 @@ impl CloudPINNService {
             .send()
             .await
             .map_err(|e| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ExternalServiceError {
-                        service: "AWS ELB".to_string(),
-                        error: e.to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ExternalServiceError {
+                    service: "AWS ELB".to_string(),
+                    error: e.to_string(),
+                })
             })?;
 
         let endpoint_url = format!(
@@ -662,12 +654,10 @@ impl CloudPINNService {
 
         // Load AWS configuration
         let region = config.get("region").ok_or_else(|| {
-            KwaversError::System(
-                crate::domain::core::error::SystemError::InvalidConfiguration {
-                    parameter: "region".to_string(),
-                    reason: "Missing region in config".to_string(),
-                },
-            )
+            KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                parameter: "region".to_string(),
+                reason: "Missing region in config".to_string(),
+            })
         })?;
 
         let shared_config = aws_config::defaults(BehaviorVersion::v2025_08_07())
@@ -686,12 +676,10 @@ impl CloudPINNService {
             .nth(1)
             .and_then(|s| s.split('.').next())
             .ok_or_else(|| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::InvalidConfiguration {
-                        parameter: "endpoint".to_string(),
-                        reason: "Invalid endpoint URL format".to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                    parameter: "endpoint".to_string(),
+                    reason: "Invalid endpoint URL format".to_string(),
+                })
             })?;
 
         // Update SageMaker endpoint configuration with new instance count
@@ -704,12 +692,10 @@ impl CloudPINNService {
             .send()
             .await
             .map_err(|e| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ExternalServiceError {
-                        service: "AWS SageMaker".to_string(),
-                        error: e.to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ExternalServiceError {
+                    service: "AWS SageMaker".to_string(),
+                    error: e.to_string(),
+                })
             })?;
 
         // Update production variant with new instance count
@@ -723,7 +709,7 @@ impl CloudPINNService {
                     .await
                     .map_err(|e| {
                         KwaversError::System(
-                            crate::domain::core::error::SystemError::ExternalServiceError {
+                            crate::core::error::SystemError::ExternalServiceError {
                                 service: "AWS SageMaker".to_string(),
                                 error: e.to_string(),
                             },
@@ -747,7 +733,7 @@ impl CloudPINNService {
         _target_instances: usize,
     ) -> KwaversResult<()> {
         Err(KwaversError::System(
-            crate::domain::core::error::SystemError::FeatureNotAvailable {
+            crate::core::error::SystemError::FeatureNotAvailable {
                 feature: "GCP Vertex AI scaling".to_string(),
                 reason: "GCP scaling requires a Vertex AI client dependency that is not enabled"
                     .to_string(),
@@ -762,7 +748,7 @@ impl CloudPINNService {
         _target_instances: usize,
     ) -> KwaversResult<()> {
         Err(KwaversError::System(
-            crate::domain::core::error::SystemError::FeatureNotAvailable {
+            crate::core::error::SystemError::FeatureNotAvailable {
                 feature: "Azure ML scaling".to_string(),
                 reason: "Azure scaling requires an Azure AI client dependency that is not enabled"
                     .to_string(),
@@ -793,12 +779,10 @@ impl CloudPINNService {
             .nth(1)
             .and_then(|s| s.split('.').next())
             .ok_or_else(|| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::InvalidConfiguration {
-                        parameter: "endpoint".to_string(),
-                        reason: "Invalid endpoint URL format".to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                    parameter: "endpoint".to_string(),
+                    reason: "Invalid endpoint URL format".to_string(),
+                })
             })?;
 
         // Delete SageMaker endpoint
@@ -808,12 +792,10 @@ impl CloudPINNService {
             .send()
             .await
             .map_err(|e| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ExternalServiceError {
-                        service: "AWS SageMaker".to_string(),
-                        error: e.to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ExternalServiceError {
+                    service: "AWS SageMaker".to_string(),
+                    error: e.to_string(),
+                })
             })?;
 
         // Delete endpoint configuration
@@ -824,12 +806,10 @@ impl CloudPINNService {
             .send()
             .await
             .map_err(|e| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ExternalServiceError {
-                        service: "AWS SageMaker".to_string(),
-                        error: e.to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ExternalServiceError {
+                    service: "AWS SageMaker".to_string(),
+                    error: e.to_string(),
+                })
             })?;
 
         // Delete model
@@ -840,12 +820,10 @@ impl CloudPINNService {
             .send()
             .await
             .map_err(|e| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ExternalServiceError {
-                        service: "AWS SageMaker".to_string(),
-                        error: e.to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ExternalServiceError {
+                    service: "AWS SageMaker".to_string(),
+                    error: e.to_string(),
+                })
             })?;
 
         // Delete load balancer (if it exists)
@@ -880,36 +858,30 @@ impl CloudPINNService {
             .position(|&p| p == "projects")
             .and_then(|i| url_parts.get(i + 1).copied())
             .ok_or_else(|| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::InvalidConfiguration {
-                        parameter: "endpoint".to_string(),
-                        reason: "Missing GCP project in endpoint URL".to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                    parameter: "endpoint".to_string(),
+                    reason: "Missing GCP project in endpoint URL".to_string(),
+                })
             })?;
         let location = url_parts
             .iter()
             .position(|&p| p == "locations")
             .and_then(|i| url_parts.get(i + 1).copied())
             .ok_or_else(|| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::InvalidConfiguration {
-                        parameter: "endpoint".to_string(),
-                        reason: "Missing GCP location in endpoint URL".to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                    parameter: "endpoint".to_string(),
+                    reason: "Missing GCP location in endpoint URL".to_string(),
+                })
             })?;
         let endpoint_name = url_parts
             .iter()
             .position(|&p| p == "endpoints")
             .and_then(|i| url_parts.get(i + 1).copied())
             .ok_or_else(|| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::InvalidConfiguration {
-                        parameter: "endpoint".to_string(),
-                        reason: "Missing GCP endpoint name in endpoint URL".to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                    parameter: "endpoint".to_string(),
+                    reason: "Missing GCP endpoint name in endpoint URL".to_string(),
+                })
             })?;
 
         // Delete Vertex AI endpoint using Google Cloud AI Platform APIs
@@ -931,12 +903,10 @@ impl CloudPINNService {
             .send()
             .await
             .map_err(|e| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ExternalServiceError {
-                        service: "Google Vertex AI".to_string(),
-                        error: format!("Failed to delete endpoint: {}", e),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ExternalServiceError {
+                    service: "Google Vertex AI".to_string(),
+                    error: format!("Failed to delete endpoint: {}", e),
+                })
             })?;
 
         // Check response status
@@ -946,7 +916,7 @@ impl CloudPINNService {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(KwaversError::System(
-                crate::domain::core::error::SystemError::ExternalServiceError {
+                crate::core::error::SystemError::ExternalServiceError {
                     service: "Google Vertex AI".to_string(),
                     error: format!("Endpoint deletion failed: {}", error_text),
                 },
@@ -968,12 +938,10 @@ impl CloudPINNService {
             .nth(1)
             .and_then(|s| s.split('.').next())
             .ok_or_else(|| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::InvalidConfiguration {
-                        parameter: "endpoint".to_string(),
-                        reason: "Invalid Azure endpoint URL format".to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                    parameter: "endpoint".to_string(),
+                    reason: "Invalid Azure endpoint URL format".to_string(),
+                })
             })?;
 
         // Delete Azure ML endpoint using Azure Machine Learning REST APIs
@@ -985,36 +953,30 @@ impl CloudPINNService {
             .get("subscription_id")
             .map(String::as_str)
             .ok_or_else(|| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::InvalidConfiguration {
-                        parameter: "subscription_id".to_string(),
-                        reason: "Missing Azure subscription_id".to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                    parameter: "subscription_id".to_string(),
+                    reason: "Missing Azure subscription_id".to_string(),
+                })
             })?;
         let resource_group = self
             .config
             .get("resource_group")
             .map(String::as_str)
             .ok_or_else(|| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::InvalidConfiguration {
-                        parameter: "resource_group".to_string(),
-                        reason: "Missing Azure resource_group".to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                    parameter: "resource_group".to_string(),
+                    reason: "Missing Azure resource_group".to_string(),
+                })
             })?;
         let workspace_name = self
             .config
             .get("workspace_name")
             .map(String::as_str)
             .ok_or_else(|| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::InvalidConfiguration {
-                        parameter: "workspace_name".to_string(),
-                        reason: "Missing Azure workspace_name".to_string(),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                    parameter: "workspace_name".to_string(),
+                    reason: "Missing Azure workspace_name".to_string(),
+                })
             })?;
 
         // Construct Azure ML REST API endpoint deletion URL
@@ -1037,12 +999,10 @@ impl CloudPINNService {
             .send()
             .await
             .map_err(|e| {
-                KwaversError::System(
-                    crate::domain::core::error::SystemError::ExternalServiceError {
-                        service: "Azure Machine Learning".to_string(),
-                        error: format!("Failed to delete endpoint: {}", e),
-                    },
-                )
+                KwaversError::System(crate::core::error::SystemError::ExternalServiceError {
+                    service: "Azure Machine Learning".to_string(),
+                    error: format!("Failed to delete endpoint: {}", e),
+                })
             })?;
 
         // Check response status - Azure returns 202 for accepted deletion
@@ -1052,7 +1012,7 @@ impl CloudPINNService {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(KwaversError::System(
-                crate::domain::core::error::SystemError::ExternalServiceError {
+                crate::core::error::SystemError::ExternalServiceError {
                     service: "Azure Machine Learning".to_string(),
                     error: format!("Endpoint deletion failed: {}", error_text),
                 },

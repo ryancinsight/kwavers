@@ -3,7 +3,7 @@
 //! Core engine for managing visualization pipeline.
 
 use crate::{
-    domain::core::error::{KwaversError, KwaversResult},
+    core::error::{KwaversError, KwaversResult},
     domain::field::UnifiedFieldType as FieldType,
     domain::grid::Grid,
 };
@@ -198,7 +198,7 @@ impl VisualizationEngine {
     /// Update a visualization parameter
     pub fn update_parameter(&mut self, name: &str, value: f64) -> KwaversResult<()> {
         let mut params = self.parameters.lock().map_err(|_| {
-            KwaversError::System(crate::domain::core::error::SystemError::ResourceExhausted {
+            KwaversError::System(crate::core::error::SystemError::ResourceExhausted {
                 resource: "Visualization parameters mutex".to_string(),
                 reason: "Mutex poisoned".to_string(),
             })
