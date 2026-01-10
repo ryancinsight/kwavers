@@ -4,8 +4,8 @@
 //! for acoustic wave propagation using the finite-difference time-domain method.
 
 use crate::analysis::performance::simd_safe::operations::SimdOps;
-use crate::domain::boundary::cpml::CPMLBoundary;
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::boundary::cpml::CPMLBoundary;
 use crate::domain::grid::Grid;
 use crate::domain::math::numerics::operators::{
     CentralDifference2, CentralDifference4, CentralDifference6, DifferentialOperator,

@@ -4,8 +4,8 @@
 //! dealing with nested public fields.
 
 use super::*;
-use crate::domain::boundary::config::BoundaryParameters;
 use crate::core::error::KwaversResult;
+use crate::domain::boundary::config::BoundaryParameters;
 use crate::domain::medium::config::MediumParameters;
 use crate::domain::source::config::SourceParameters;
 use crate::infra::io::config::OutputParameters;

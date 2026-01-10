@@ -279,9 +279,7 @@ impl BubbleIMEXIntegrator {
 
     /// Calculate effective polytropic index for thermal model
     fn calculate_effective_polytropic_index(&self, state: &BubbleState) -> f64 {
-        use crate::core::constants::cavitation::{
-            MIN_PECLET_NUMBER, PECLET_SCALING_FACTOR,
-        };
+        use crate::core::constants::cavitation::{MIN_PECLET_NUMBER, PECLET_SCALING_FACTOR};
 
         let params = self.solver.params();
         let thermal_diffusivity =

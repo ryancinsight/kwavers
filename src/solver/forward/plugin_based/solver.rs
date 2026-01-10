@@ -3,9 +3,9 @@
 //! Orchestrates physics simulations using a plugin architecture.
 //! Follows SOLID principles with clear separation of concerns.
 
-use crate::domain::boundary::Boundary;
 use crate::core::error::KwaversResult;
 use crate::core::time::Time;
+use crate::domain::boundary::Boundary;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
