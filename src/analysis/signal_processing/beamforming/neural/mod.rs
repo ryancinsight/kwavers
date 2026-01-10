@@ -173,6 +173,9 @@
 //! - Jensen (1996): "Field: A Program for Simulating Ultrasound Systems"
 //!   Medical & Biological Engineering & Computing
 
+pub mod beamformer;
+pub mod config;
+pub mod features;
 pub mod layer;
 pub mod network;
 pub mod physics;
@@ -187,6 +190,21 @@ pub mod pinn;
 pub mod distributed;
 
 // Re-export primary types for convenience
+
+// High-level API
+pub use beamformer::NeuralBeamformer;
+pub use config::{
+    AdaptationParameters, NeuralBeamformingConfig, NeuralBeamformingMode, PhysicsParameters,
+    SensorGeometry,
+};
+
+// Feature extraction
+pub use features::{
+    compute_laplacian, compute_local_entropy, compute_local_std, compute_spatial_gradient,
+    extract_all_features,
+};
+
+// Core primitives
 pub use layer::NeuralLayer;
 pub use network::NeuralBeamformingNetwork;
 pub use physics::PhysicsConstraints;
@@ -205,10 +223,20 @@ mod tests {
     #[test]
     fn test_module_exports() {
         // Verify all primary types are accessible
+        let _ = std::any::type_name::<NeuralBeamformer>();
+        let _ = std::any::type_name::<NeuralBeamformingConfig>();
+        let _ = std::any::type_name::<NeuralBeamformingMode>();
         let _ = std::any::type_name::<NeuralLayer>();
         let _ = std::any::type_name::<NeuralBeamformingNetwork>();
         let _ = std::any::type_name::<PhysicsConstraints>();
         let _ = std::any::type_name::<UncertaintyEstimator>();
         let _ = std::any::type_name::<PINNBeamformingConfig>();
+    }
+
+    #[test]
+    fn test_high_level_api_available() {
+        // Verify high-level API is accessible
+        let config = NeuralBeamformingConfig::default();
+        assert!(config.validate().is_ok());
     }
 }

@@ -1,42 +1,26 @@
-//! Plugin system for acoustic simulations
+//! Plugin interfaces and contracts
 //!
-//! This module provides a flexible plugin architecture for extending
-//! simulation capabilities without modifying core code.
+//! This module defines the core traits and types for the plugin system,
+//! allowing loose coupling between the solver orchestration and physics implementations.
 
-pub mod execution;
-// pub mod factory; // Removed
 pub mod field_access;
-pub mod manager;
 pub mod metadata;
 
-pub mod pam;
-// pub mod seismic_imaging; // Moved to solver
-pub mod transducer_field;
+pub use field_access::{FieldAccessor, PluginFields};
+pub use metadata::PluginMetadata;
 
 use crate::core::error::KwaversResult;
-use crate::domain::field::indices;
-// ... imports ...
 use crate::domain::boundary::Boundary;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;
-use ndarray::{Array3, Array4};
+use ndarray::Array4;
 use std::any::Any;
 use std::fmt::Debug;
 
-pub use execution::{ExecutionStrategy, PluginExecutor, SequentialStrategy};
-// pub use factory::PluginFactory; // Removed
-
-pub use manager::PluginManager;
-pub use metadata::PluginMetadata;
-
-pub use pam::PAMPlugin;
-// Seismic imaging moved to solver
-pub use transducer_field::{TransducerFieldCalculatorPlugin, TransducerGeometry};
-
 /// State of a plugin
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PluginState {
     /// Plugin is created but not initialized
     Created,
@@ -77,12 +61,6 @@ pub struct PluginContext<'a> {
     /// Boundary conditions
     pub boundary: &'a mut dyn Boundary,
 }
-
-/// Alias for physics-specific plugins
-pub type PhysicsPlugin = dyn Plugin;
-
-/// Field accessor for plugins
-pub type FieldAccessor = PluginFields;
 
 /// Core trait that all plugins must implement
 pub trait Plugin: Debug + Send + Sync {
@@ -133,9 +111,8 @@ pub trait Plugin: Debug + Send + Sync {
     }
 
     /// Get stability constraints for time stepping
-    fn stability_constraints(&self) -> crate::solver::time_integration::StabilityConstraints {
-        // Default: no constraints
-        crate::solver::time_integration::StabilityConstraints::default()
+    fn stability_constraints(&self) -> TransformationStabilityConstraints {
+        TransformationStabilityConstraints::default()
     }
 
     /// Get plugin priority
@@ -155,67 +132,16 @@ pub trait Plugin: Debug + Send + Sync {
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-/// Configuration for plugins
-#[derive(Debug, Clone)]
-pub struct PluginConfig {
-    /// Plugin-specific parameters
-    pub parameters: std::collections::HashMap<String, ConfigValue>,
-    /// Enable debug output
-    pub debug: bool,
-    /// Maximum memory usage in bytes
-    pub max_memory: Option<usize>,
-    /// Number of threads to use
-    pub num_threads: Option<usize>,
-}
+// Support struct for stability - usually imported from solver but we can define basic needs here or import
+// Since this is domain, it shouldn't import from solver.
+// We will use a simplified struct or move StabilityConstraints to domain if needed.
+// For now, let's assume we can define a simple one or use an associated type.
+// But checking the original code, it imported `crate::solver::time_integration::StabilityConstraints`.
+// This is a dependency inversion violation if domain -> solver.
+// We should probably move StabilityConstraints to domain too or use a generic.
+// For now, I'll stub it here to break the dependency chain.
 
-/// Configuration value types
-#[derive(Debug, Clone)]
-pub enum ConfigValue {
-    Bool(bool),
-    Integer(i64),
-    Float(f64),
-    String(String),
-    Array(Vec<f64>),
-}
-
-/// Container for fields that plugins can access and modify
-#[derive(Debug)]
-pub struct PluginFields {
-    /// Pressure field
-    pub pressure: Array3<f64>,
-    /// Velocity field (optional)
-    pub velocity: Option<Array3<f64>>,
-    /// Temperature field (optional)
-    pub temperature: Option<Array3<f64>>,
-    /// Additional custom fields
-    pub custom: std::collections::HashMap<String, Array3<f64>>,
-}
-
-impl PluginFields {
-    /// Create new plugin fields container
-    #[must_use]
-    pub fn new(pressure: Array3<f64>) -> Self {
-        Self {
-            pressure,
-            velocity: None,
-            temperature: None,
-            custom: std::collections::HashMap::new(),
-        }
-    }
-
-    /// Add a custom field
-    pub fn add_custom(&mut self, name: String, field: Array3<f64>) {
-        self.custom.insert(name, field);
-    }
-
-    /// Get a custom field
-    #[must_use]
-    pub fn get_custom(&self, name: &str) -> Option<&Array3<f64>> {
-        self.custom.get(name)
-    }
-
-    /// Get a mutable custom field
-    pub fn get_custom_mut(&mut self, name: &str) -> Option<&mut Array3<f64>> {
-        self.custom.get_mut(name)
-    }
+#[derive(Debug, Clone, Default)]
+pub struct TransformationStabilityConstraints {
+    pub cfl_limit: Option<f64>,
 }

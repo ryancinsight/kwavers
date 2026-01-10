@@ -11,3 +11,4 @@ pub mod medium;
 pub mod sensor;
 pub mod signal;
 pub mod source;
+pub mod plugin;

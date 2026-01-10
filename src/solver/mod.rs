@@ -13,6 +13,7 @@ pub mod integration;
 pub mod interface;
 pub mod inverse;
 pub mod multiphysics;
+pub mod plugin;
 pub mod utilities;
 pub mod workspace;
 

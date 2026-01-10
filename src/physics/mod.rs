@@ -6,7 +6,7 @@
 pub mod acoustics;
 pub mod chemistry;
 pub mod optics;
-pub mod plugin;
+// pub mod plugin; // Split into domain/plugin, solver/plugin, physics/acoustics/transducer
 pub mod thermal;
 // pub mod factory; // Removed
 pub mod constants {

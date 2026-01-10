@@ -14,7 +14,7 @@ pub mod state;
 pub mod therapy;
 pub mod traits;
 pub mod transcranial;
-pub mod validation;
+// pub mod validation; // Moved to solver/validation/physics_benchmarks
 // wave_fields moved to domain/field/wave.rs
 
 pub use conservation::*;
