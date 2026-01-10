@@ -1,25 +1,35 @@
-//! # Adaptive Beamforming Algorithms
+//! # Adaptive Beamforming Algorithms (DEPRECATED)
 //!
-//! This module provides adaptive beamforming algorithms for array signal processing.
+//! **⚠️ DEPRECATION NOTICE**: This module has been moved to `analysis::signal_processing::beamforming::adaptive`.
 //!
-//! # SSOT enforcement (strict)
-//! This crate enforces a **Single Source of Truth** (SSOT) for numerical linear algebra and
-//! prohibits error masking. Concretely:
-//! - Adaptive algorithms must not implement ad-hoc matrix inversion / eigensolvers locally.
-//! - Adaptive algorithms must not silently fall back to dummy weights (e.g. `steering.clone()`)
-//!   or dummy pseudospectrum values (e.g. `0.0`) on numerical failure.
+//! ## Migration Guide
 //!
-//! ## Architectural boundary
-//! - **Numerics (solves/inversion/eigendecomposition)** belong to `crate::utils::linear_algebra`.
-//! - **Beamforming math orchestration** belongs to `crate::sensor::beamforming` SSOT modules.
-//! - This module is a thin composition/orchestration layer that re-exports SSOT-correct APIs.
+//! Update your imports as follows:
 //!
-//! ## Strict mode note
-//! Some high-resolution subspace methods (e.g. MUSIC/ESMV) require **complex Hermitian
-//! eigendecomposition**. If SSOT does not yet provide a complex eigensolver, those methods are
-//! deliberately **disabled** rather than shipped with local numerics or silent fallbacks.
+//! ```rust,ignore
+//! // OLD (deprecated):
+//! use kwavers::domain::sensor::beamforming::adaptive::{MinimumVariance, MUSIC, EigenspaceMV};
 //!
-//! # References
+//! // NEW:
+//! use kwavers::analysis::signal_processing::beamforming::adaptive::{MinimumVariance, MUSIC, EigenspaceMV};
+//! ```
+//!
+//! ## Rationale
+//!
+//! Beamforming algorithms are **signal processing / analysis** operations, not domain primitives.
+//! Moving them to the analysis layer enforces proper architectural layering:
+//!
+//! - **Domain layer** (`domain::sensor`): Sensor geometry, array configuration, data acquisition
+//! - **Analysis layer** (`analysis::signal_processing`): Beamforming, DOA estimation, filtering
+//!
+//! This module now provides backward-compatible re-exports for one minor version cycle.
+//!
+//! ## Timeline
+//!
+//! - **Current (v2.14)**: Deprecated re-exports available (with warnings)
+//! - **Next minor (v2.15)**: This module will be removed
+//!
+//! ## References
 //! - Van Trees, H. L. (2002). *Optimum Array Processing*. Wiley.
 //! - Capon, J. (1969). "High-resolution frequency-wavenumber spectrum analysis".
 //!   *Proceedings of the IEEE*, 57(8), 1408-1418.
@@ -95,3 +105,27 @@ pub use algorithms_old::{
     RobustCapon as LegacyRobustCapon2, SubspaceTracker as LegacySubspaceTracker,
     MUSIC as LegacyMUSIC,
 };
+
+// ============================================================================
+// DEPRECATED RE-EXPORTS FROM NEW ANALYSIS LAYER LOCATION
+// ============================================================================
+
+/// DEPRECATED: Use `analysis::signal_processing::beamforming::adaptive::MUSIC` instead.
+///
+/// This re-export provides backward compatibility during migration (Phase 3B).
+/// It will be removed in the next minor version.
+#[deprecated(
+    since = "2.14.0",
+    note = "Moved to `analysis::signal_processing::beamforming::adaptive::MUSIC`. Update your imports."
+)]
+pub use crate::analysis::signal_processing::beamforming::adaptive::MUSIC;
+
+/// DEPRECATED: Use `analysis::signal_processing::beamforming::adaptive::EigenspaceMV` instead.
+///
+/// This re-export provides backward compatibility during migration (Phase 3B).
+/// It will be removed in the next minor version.
+#[deprecated(
+    since = "2.14.0",
+    note = "Moved to `analysis::signal_processing::beamforming::adaptive::EigenspaceMV`. Update your imports."
+)]
+pub use crate::analysis::signal_processing::beamforming::adaptive::EigenspaceMV;

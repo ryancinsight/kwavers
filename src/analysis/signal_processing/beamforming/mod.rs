@@ -198,7 +198,7 @@
 //! - [x] Delay reference policy and utilities ✅
 //! - [x] Define `AdaptiveBeamformer` trait ✅
 //! - [x] Adaptive beamforming: MinimumVariance (Capon/MVDR) ✅
-//! - [ ] Subspace methods: MUSIC, ESMV (in progress)
+//! - [x] Subspace methods: MUSIC, ESMV ✅
 //! - [ ] Narrowband frequency-domain beamforming
 //! - [ ] Migrate neural beamforming (experimental)
 //! - [ ] Add GPU implementations
@@ -206,13 +206,17 @@
 //!
 //! ## Status
 //!
-//! **Current:** 🟢 Phase 3 in progress - MVDR migration complete
-//! **Next:** Migrate MUSIC and ESMV subspace methods
-//! **Timeline:** Week 3-4 execution
+//! **Current:** 🟢 Phase 3B complete - Subspace methods (MUSIC, ESMV) migrated
+//! **Next:** Phase 4 - Deprecation sweep and migration guide
+//! **Timeline:** Week 4-5 execution
 
 // Algorithm implementations
 pub mod adaptive;
 pub mod time_domain;
+
+// Test utilities (shared accessor layer for test modules)
+#[cfg(test)]
+pub mod test_utilities;
 
 // Future modules (planned)
 // pub mod narrowband;       // Frequency-domain beamforming
@@ -220,7 +224,7 @@ pub mod time_domain;
 // pub mod utils;            // Utility functions
 
 // Re-exports for convenience
-pub use adaptive::{AdaptiveBeamformer, MinimumVariance};
+pub use adaptive::{AdaptiveBeamformer, EigenspaceMV, MinimumVariance, MUSIC};
 pub use time_domain::{
     alignment_shifts_s, delay_and_sum, relative_delays_s, DelayReference, DEFAULT_DELAY_REFERENCE,
 };
@@ -231,11 +235,9 @@ mod tests {
 
     #[test]
     fn test_module_structure() {
-        // Verify time_domain module is accessible
-        let _ = DEFAULT_DELAY_REFERENCE;
-        // Verify adaptive module is accessible
-        let _ = MinimumVariance::default();
-        assert!(true);
+        assert_eq!(DEFAULT_DELAY_REFERENCE, DelayReference::SensorIndex(0));
+        let mvdr = MinimumVariance::default();
+        assert!(mvdr.diagonal_loading.is_finite());
     }
 
     #[test]
@@ -250,5 +252,16 @@ mod tests {
         // Verify adaptive beamforming types are accessible
         let mvdr = MinimumVariance::with_diagonal_loading(1e-4);
         assert_eq!(mvdr.diagonal_loading, 1e-4);
+    }
+
+    #[test]
+    fn test_subspace_export() {
+        // Verify subspace methods are accessible
+        let music = MUSIC::new(2);
+        assert_eq!(music.num_sources, 2);
+
+        let esmv = EigenspaceMV::with_diagonal_loading(3, 1e-4);
+        assert_eq!(esmv.num_sources, 3);
+        assert_eq!(esmv.diagonal_loading, 1e-4);
     }
 }

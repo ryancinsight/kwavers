@@ -22,7 +22,7 @@
 //! ## Usage Patterns
 //!
 //! ```rust
-//! use kwavers::performance::arena::{FieldArena, ArenaConfig};
+//! use kwavers::analysis::performance::{ArenaConfig, FieldArena};
 //!
 //! // Create arena for 3D field operations
 //! let config = ArenaConfig {

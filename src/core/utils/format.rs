@@ -10,7 +10,7 @@ use std::time::Duration;
 /// # Examples
 /// ```
 /// use std::time::Duration;
-/// use kwavers::utils::format::format_duration;
+/// use kwavers::core::utils::format::format_duration;
 ///
 /// assert_eq!(format_duration(Duration::from_secs(45)), "45s");
 /// assert_eq!(format_duration(Duration::from_secs(125)), "2m 5s");
@@ -46,7 +46,7 @@ pub fn format_duration(duration: Duration) -> String {
 ///
 /// # Examples
 /// ```
-/// use kwavers::utils::format::format_si_number;
+/// use kwavers::core::utils::format::format_si_number;
 ///
 /// assert_eq!(format_si_number(1234.0), "1.23k");
 /// assert_eq!(format_si_number(1234567.0), "1.23M");
@@ -83,7 +83,7 @@ pub fn format_si_number(value: f64) -> String {
 ///
 /// # Examples
 /// ```
-/// use kwavers::utils::format::format_bytes;
+/// use kwavers::core::utils::format::format_bytes;
 ///
 /// assert_eq!(format_bytes(1024), "1.00 KiB");
 /// assert_eq!(format_bytes(1048576), "1.00 MiB");

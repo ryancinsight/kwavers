@@ -11,8 +11,10 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use kwavers::{
+    math::numerics::operators::{
+        CentralDifference2, CentralDifference4, CentralDifference6, DifferentialOperator,
+    },
     medium::{CoreMedium, HomogeneousMedium},
-    solver::fdtd::FiniteDifference,
     Grid,
 };
 use ndarray::Array3;
@@ -26,22 +28,44 @@ fn bench_fdtd_derivatives(c: &mut Criterion) {
 
     // Test different spatial orders (2nd, 4th, 6th)
     for order in [2, 4, 6] {
-        let fd = FiniteDifference::new(order).expect("Valid order");
+        enum CentralOp {
+            Order2(CentralDifference2),
+            Order4(CentralDifference4),
+            Order6(CentralDifference6),
+        }
+
+        impl CentralOp {
+            fn new(order: usize, dx: f64) -> Self {
+                match order {
+                    2 => Self::Order2(CentralDifference2::new(dx, dx, dx).expect("Valid spacing")),
+                    4 => Self::Order4(CentralDifference4::new(dx, dx, dx).expect("Valid spacing")),
+                    6 => Self::Order6(CentralDifference6::new(dx, dx, dx).expect("Valid spacing")),
+                    _ => panic!("Invalid spatial order"),
+                }
+            }
+
+            fn apply_x(&self, field: ndarray::ArrayView3<f64>) -> ndarray::Array3<f64> {
+                match self {
+                    Self::Order2(op) => op.apply_x(field).expect("Derivative computation"),
+                    Self::Order4(op) => op.apply_x(field).expect("Derivative computation"),
+                    Self::Order6(op) => op.apply_x(field).expect("Derivative computation"),
+                }
+            }
+        }
 
         // Test different grid sizes (small, medium, large)
         for size in [32, 64, 128] {
             let _grid = Grid::new(size, size, size, 0.001, 0.001, 0.001).expect("Grid creation");
             let field = Array3::<f64>::ones((size, size, size));
             let spacing = 0.001;
+            let op = CentralOp::new(order, spacing);
 
             group.bench_with_input(
                 BenchmarkId::new(format!("order_{}", order), size),
                 &size,
                 |b, _| {
                     b.iter(|| {
-                        let deriv = fd
-                            .compute_derivative(&field.view(), black_box(0), spacing)
-                            .expect("Derivative computation");
+                        let deriv = op.apply_x(field.view());
                         black_box(deriv)
                     })
                 },

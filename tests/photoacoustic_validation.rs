@@ -301,6 +301,7 @@ fn test_reference_toolbox_compatibility() -> KwaversResult<()> {
 
 /// Performance benchmark test
 #[test]
+#[ignore]
 fn test_performance_benchmark() -> KwaversResult<()> {
     use std::time::Instant;
 

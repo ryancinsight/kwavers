@@ -56,7 +56,9 @@ pub use interpolation::Interpolator;
 pub use spectral::SpectralOperator;
 
 // Re-export common implementations
-pub use differential::{CentralDifference2, CentralDifference4, StaggeredGridOperator};
+pub use differential::{
+    CentralDifference2, CentralDifference4, CentralDifference6, StaggeredGridOperator,
+};
 pub use interpolation::{LinearInterpolator, TrilinearInterpolator};
 pub use spectral::PseudospectralDerivative;
 

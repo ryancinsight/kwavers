@@ -179,9 +179,7 @@ mod tests {
 
     #[test]
     fn test_module_structure() {
-        // Verify module is loadable and beamforming exports work
-        let _ = DEFAULT_DELAY_REFERENCE;
-        assert!(true);
+        assert_eq!(DEFAULT_DELAY_REFERENCE, DelayReference::SensorIndex(0));
     }
 
     #[test]

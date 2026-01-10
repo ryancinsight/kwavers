@@ -10,9 +10,16 @@ use std::fmt::Debug;
 
 pub mod config;
 pub mod cpml;
+pub mod field_updater;
 pub mod pml;
+pub mod traits;
 
 pub use config::{BoundaryParameters, BoundaryType};
+pub use field_updater::{FieldUpdater, GradientFieldUpdater, LegacyFieldUpdater};
+pub use traits::{
+    AbsorbingBoundary, BoundaryCondition, BoundaryDirections, BoundaryDomain, BoundaryLayer,
+    BoundaryLayerManager, FieldType, PeriodicBoundary, ReflectiveBoundary,
+};
 
 /// Trait for runtime boundary condition implementations.
 ///

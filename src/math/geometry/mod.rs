@@ -49,7 +49,7 @@ use ndarray::Array3;
 /// # Examples
 ///
 /// ```rust
-/// use kwavers::{Grid, geometry::make_disc};
+/// use kwavers::{math::geometry::make_disc, Grid};
 ///
 /// let grid = Grid::new(64, 64, 1, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
 /// let center = [3.2e-3, 3.2e-3, 0.0]; // Center in meters
@@ -139,7 +139,7 @@ pub fn make_disc(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<Ar
 /// # Examples
 ///
 /// ```rust
-/// use kwavers::{Grid, geometry::make_ball};
+/// use kwavers::{math::geometry::make_ball, Grid};
 ///
 /// let grid = Grid::new(64, 64, 64, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
 /// let center = [3.2e-3, 3.2e-3, 3.2e-3]; // Center in meters
@@ -217,7 +217,7 @@ pub fn make_ball(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<Ar
 /// # Examples
 ///
 /// ```rust
-/// use kwavers::{Grid, geometry::make_sphere};
+/// use kwavers::{math::geometry::make_sphere, Grid};
 ///
 /// let grid = Grid::new(64, 64, 64, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
 /// let center = [3.2e-3, 3.2e-3, 3.2e-3];
@@ -265,7 +265,7 @@ pub fn make_sphere(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<
 /// # Examples
 ///
 /// ```rust
-/// use kwavers::{Grid, geometry::make_line};
+/// use kwavers::{math::geometry::make_line, Grid};
 ///
 /// let grid = Grid::new(64, 64, 64, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
 /// let start = [1.0e-3, 1.0e-3, 1.0e-3];

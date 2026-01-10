@@ -89,15 +89,11 @@
 // Public modules
 pub mod config;
 pub mod metrics;
-pub mod numerics;
 pub mod plugin;
 pub mod solver;
 
 // Re-exports for convenience
 pub use config::FdtdConfig;
-pub use numerics::{
-    BoundaryStencils, FieldComponent, FiniteDifference, StaggeredGrid, StaggeredInterpolation,
-};
 pub use plugin::FdtdPlugin;
 pub use solver::FdtdSolver;
 pub use source_handler::SourceHandler;
@@ -108,7 +104,6 @@ pub mod source_handler;
 mod tests {
     use super::*;
     use crate::domain::grid::Grid;
-    use ndarray::Array3;
 
     #[test]
     fn test_fdtd_creation() {
@@ -130,36 +125,6 @@ mod tests {
 
         // Check that solver was created successfully with default config
         assert_eq!(solver.config.spatial_order, 4);
-    }
-
-    #[test]
-    fn test_derivative_computation() {
-        let fd = FiniteDifference::new(2).unwrap();
-
-        // Create a linear field (derivative should be constant)
-        let mut field = Array3::zeros((10, 10, 10));
-        for i in 0..10 {
-            for j in 0..10 {
-                for k in 0..10 {
-                    field[[i, j, k]] = i as f64; // Linear in x
-                }
-            }
-        }
-
-        let deriv = fd.compute_derivative(&field.view(), 0, 1.0).unwrap();
-
-        // Check that derivative is approximately 1.0 in the interior
-        for i in 1..9 {
-            for j in 1..9 {
-                for k in 1..9 {
-                    assert!(
-                        (deriv[[i, j, k]] - 1.0).abs() < 1e-10,
-                        "Expected derivative 1.0, got {}",
-                        deriv[[i, j, k]]
-                    );
-                }
-            }
-        }
     }
 
     #[test]

@@ -134,7 +134,187 @@ pub trait DifferentialOperator: Send + Sync {
     ///
     /// Adjoint-consistent operators satisfy: ⟨Ax, y⟩ = ⟨x, A*y⟩
     fn is_adjoint_consistent(&self) -> bool {
-        false
+        true
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CentralDifference6 {
+    dx: f64,
+    dy: f64,
+    dz: f64,
+}
+
+impl CentralDifference6 {
+    pub fn new(dx: f64, dy: f64, dz: f64) -> KwaversResult<Self> {
+        if dx <= 0.0 || dy <= 0.0 || dz <= 0.0 {
+            return Err(NumericalError::InvalidGridSpacing { dx, dy, dz }.into());
+        }
+        Ok(Self { dx, dy, dz })
+    }
+}
+
+impl DifferentialOperator for CentralDifference6 {
+    fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = field.dim();
+
+        if nx < 7 {
+            return Err(NumericalError::InsufficientGridPoints {
+                required: 7,
+                actual: nx,
+                direction: "X".to_string(),
+            }
+            .into());
+        }
+
+        let mut result = Array3::zeros((nx, ny, nz));
+
+        for i in 3..nx - 3 {
+            for j in 0..ny {
+                for k in 0..nz {
+                    result[[i, j, k]] = (-field[[i - 3, j, k]] + 9.0 * field[[i - 2, j, k]]
+                        - 45.0 * field[[i - 1, j, k]]
+                        + 45.0 * field[[i + 1, j, k]]
+                        - 9.0 * field[[i + 2, j, k]]
+                        + field[[i + 3, j, k]])
+                        / (60.0 * self.dx);
+                }
+            }
+        }
+
+        for j in 0..ny {
+            for k in 0..nz {
+                result[[2, j, k]] = (-field[[4, j, k]] + 8.0 * field[[3, j, k]]
+                    - 8.0 * field[[1, j, k]]
+                    + field[[0, j, k]])
+                    / (12.0 * self.dx);
+                result[[nx - 3, j, k]] = (-field[[nx - 1, j, k]] + 8.0 * field[[nx - 2, j, k]]
+                    - 8.0 * field[[nx - 4, j, k]]
+                    + field[[nx - 5, j, k]])
+                    / (12.0 * self.dx);
+
+                result[[1, j, k]] = (field[[2, j, k]] - field[[0, j, k]]) / (2.0 * self.dx);
+                result[[nx - 2, j, k]] =
+                    (field[[nx - 1, j, k]] - field[[nx - 3, j, k]]) / (2.0 * self.dx);
+
+                result[[0, j, k]] = (field[[1, j, k]] - field[[0, j, k]]) / self.dx;
+                result[[nx - 1, j, k]] = (field[[nx - 1, j, k]] - field[[nx - 2, j, k]]) / self.dx;
+            }
+        }
+
+        Ok(result)
+    }
+
+    fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = field.dim();
+
+        if ny < 7 {
+            return Err(NumericalError::InsufficientGridPoints {
+                required: 7,
+                actual: ny,
+                direction: "Y".to_string(),
+            }
+            .into());
+        }
+
+        let mut result = Array3::zeros((nx, ny, nz));
+
+        for i in 0..nx {
+            for j in 3..ny - 3 {
+                for k in 0..nz {
+                    result[[i, j, k]] = (-field[[i, j - 3, k]] + 9.0 * field[[i, j - 2, k]]
+                        - 45.0 * field[[i, j - 1, k]]
+                        + 45.0 * field[[i, j + 1, k]]
+                        - 9.0 * field[[i, j + 2, k]]
+                        + field[[i, j + 3, k]])
+                        / (60.0 * self.dy);
+                }
+            }
+        }
+
+        for i in 0..nx {
+            for k in 0..nz {
+                result[[i, 2, k]] = (-field[[i, 4, k]] + 8.0 * field[[i, 3, k]]
+                    - 8.0 * field[[i, 1, k]]
+                    + field[[i, 0, k]])
+                    / (12.0 * self.dy);
+                result[[i, ny - 3, k]] = (-field[[i, ny - 1, k]] + 8.0 * field[[i, ny - 2, k]]
+                    - 8.0 * field[[i, ny - 4, k]]
+                    + field[[i, ny - 5, k]])
+                    / (12.0 * self.dy);
+
+                result[[i, 1, k]] = (field[[i, 2, k]] - field[[i, 0, k]]) / (2.0 * self.dy);
+                result[[i, ny - 2, k]] =
+                    (field[[i, ny - 1, k]] - field[[i, ny - 3, k]]) / (2.0 * self.dy);
+
+                result[[i, 0, k]] = (field[[i, 1, k]] - field[[i, 0, k]]) / self.dy;
+                result[[i, ny - 1, k]] = (field[[i, ny - 1, k]] - field[[i, ny - 2, k]]) / self.dy;
+            }
+        }
+
+        Ok(result)
+    }
+
+    fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = field.dim();
+
+        if nz < 7 {
+            return Err(NumericalError::InsufficientGridPoints {
+                required: 7,
+                actual: nz,
+                direction: "Z".to_string(),
+            }
+            .into());
+        }
+
+        let mut result = Array3::zeros((nx, ny, nz));
+
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 3..nz - 3 {
+                    result[[i, j, k]] = (-field[[i, j, k - 3]] + 9.0 * field[[i, j, k - 2]]
+                        - 45.0 * field[[i, j, k - 1]]
+                        + 45.0 * field[[i, j, k + 1]]
+                        - 9.0 * field[[i, j, k + 2]]
+                        + field[[i, j, k + 3]])
+                        / (60.0 * self.dz);
+                }
+            }
+        }
+
+        for i in 0..nx {
+            for j in 0..ny {
+                result[[i, j, 2]] = (-field[[i, j, 4]] + 8.0 * field[[i, j, 3]]
+                    - 8.0 * field[[i, j, 1]]
+                    + field[[i, j, 0]])
+                    / (12.0 * self.dz);
+                result[[i, j, nz - 3]] = (-field[[i, j, nz - 1]] + 8.0 * field[[i, j, nz - 2]]
+                    - 8.0 * field[[i, j, nz - 4]]
+                    + field[[i, j, nz - 5]])
+                    / (12.0 * self.dz);
+
+                result[[i, j, 1]] = (field[[i, j, 2]] - field[[i, j, 0]]) / (2.0 * self.dz);
+                result[[i, j, nz - 2]] =
+                    (field[[i, j, nz - 1]] - field[[i, j, nz - 3]]) / (2.0 * self.dz);
+
+                result[[i, j, 0]] = (field[[i, j, 1]] - field[[i, j, 0]]) / self.dz;
+                result[[i, j, nz - 1]] = (field[[i, j, nz - 1]] - field[[i, j, nz - 2]]) / self.dz;
+            }
+        }
+
+        Ok(result)
+    }
+
+    fn order(&self) -> usize {
+        6
+    }
+
+    fn stencil_width(&self) -> usize {
+        7
+    }
+
+    fn is_adjoint_consistent(&self) -> bool {
+        true
     }
 }
 
@@ -599,6 +779,72 @@ impl StaggeredGridOperator {
 
         Ok(result)
     }
+
+    pub fn apply_backward_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = field.dim();
+
+        if ny < 2 {
+            return Err(NumericalError::InsufficientGridPoints {
+                required: 2,
+                actual: ny,
+                direction: "Y".to_string(),
+            }
+            .into());
+        }
+
+        let mut result = Array3::zeros((nx, ny, nz));
+
+        for i in 0..nx {
+            for j in 1..ny {
+                for k in 0..nz {
+                    result[[i, j, k]] = (field[[i, j, k]] - field[[i, j - 1, k]]) / self.dy;
+                }
+            }
+        }
+
+        for i in 0..nx {
+            for k in 0..nz {
+                if ny > 1 {
+                    result[[i, 0, k]] = (field[[i, 1, k]] - field[[i, 0, k]]) / self.dy;
+                }
+            }
+        }
+
+        Ok(result)
+    }
+
+    pub fn apply_backward_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = field.dim();
+
+        if nz < 2 {
+            return Err(NumericalError::InsufficientGridPoints {
+                required: 2,
+                actual: nz,
+                direction: "Z".to_string(),
+            }
+            .into());
+        }
+
+        let mut result = Array3::zeros((nx, ny, nz));
+
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 1..nz {
+                    result[[i, j, k]] = (field[[i, j, k]] - field[[i, j, k - 1]]) / self.dz;
+                }
+            }
+        }
+
+        for i in 0..nx {
+            for j in 0..ny {
+                if nz > 1 {
+                    result[[i, j, 0]] = (field[[i, j, 1]] - field[[i, j, 0]]) / self.dz;
+                }
+            }
+        }
+
+        Ok(result)
+    }
 }
 
 impl DifferentialOperator for StaggeredGridOperator {
@@ -717,6 +963,36 @@ mod tests {
         for i in 0..10 {
             for j in 0..10 {
                 for k in 1..9 {
+                    assert_abs_diff_eq!(grad_z[[i, j, k]], 4.0, epsilon = 1e-10);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_central_difference_6_linear_function() {
+        let dx = 0.1;
+        let op = CentralDifference6::new(dx, dx, dx).unwrap();
+
+        let mut field = Array3::zeros((12, 12, 12));
+        for i in 0..12 {
+            for j in 0..12 {
+                for k in 0..12 {
+                    field[[i, j, k]] =
+                        2.0 * (i as f64) * dx + 3.0 * (j as f64) * dx + 4.0 * (k as f64) * dx;
+                }
+            }
+        }
+
+        let grad_x = op.apply_x(field.view()).unwrap();
+        let grad_y = op.apply_y(field.view()).unwrap();
+        let grad_z = op.apply_z(field.view()).unwrap();
+
+        for i in 3..9 {
+            for j in 3..9 {
+                for k in 3..9 {
+                    assert_abs_diff_eq!(grad_x[[i, j, k]], 2.0, epsilon = 1e-10);
+                    assert_abs_diff_eq!(grad_y[[i, j, k]], 3.0, epsilon = 1e-10);
                     assert_abs_diff_eq!(grad_z[[i, j, k]], 4.0, epsilon = 1e-10);
                 }
             }

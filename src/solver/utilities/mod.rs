@@ -4,5 +4,4 @@
 //! used by various solvers in the system.
 
 pub mod amr;
-pub mod cpml_integration;
 pub mod validation;

@@ -475,44 +475,16 @@ impl MinimumVariance {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::analysis::signal_processing::beamforming::test_utilities;
     use approx::assert_relative_eq;
     use ndarray::Array1;
     use std::f64::consts::PI;
 
-    /// Create a simple test covariance matrix (identity + small off-diagonal)
-    fn create_test_covariance(n: usize) -> Array2<Complex64> {
-        let mut r = Array2::zeros((n, n));
-        for i in 0..n {
-            for j in 0..n {
-                let val = if i == j {
-                    Complex64::new(1.0, 0.0)
-                } else {
-                    Complex64::new(0.1 / (1.0 + (i as f64 - j as f64).abs()), 0.0)
-                };
-                r[(i, j)] = val;
-            }
-        }
-        r
-    }
-
-    /// Create a steering vector for a linear array with uniform element spacing
-    fn create_steering_vector(n: usize, angle_rad: f64) -> Array1<Complex64> {
-        let k = 2.0 * PI; // Normalized wavenumber (λ = 1)
-        Array1::from_vec(
-            (0..n)
-                .map(|i| {
-                    let phase = k * (i as f64) * angle_rad.sin();
-                    Complex64::new(phase.cos(), phase.sin())
-                })
-                .collect(),
-        )
-    }
-
     #[test]
     fn mvdr_computes_finite_weights() {
-        let n = 4;
-        let cov = create_test_covariance(n);
-        let steering = create_steering_vector(n, 0.0);
+        let n = 8;
+        let cov = test_utilities::create_diagonal_dominant_covariance(n, 0.1);
+        let steering = test_utilities::create_steering_vector(n, 0.0);
 
         let mvdr = MinimumVariance::default();
         let weights = mvdr
@@ -528,8 +500,8 @@ mod tests {
     #[test]
     fn mvdr_satisfies_unit_gain_constraint() {
         let n = 8;
-        let cov = create_test_covariance(n);
-        let steering = create_steering_vector(n, 0.0);
+        let cov = test_utilities::create_diagonal_dominant_covariance(n, 0.1);
+        let steering = test_utilities::create_steering_vector(n, 0.0);
 
         let mvdr = MinimumVariance::with_diagonal_loading(1e-4);
         let weights = mvdr
@@ -540,7 +512,7 @@ mod tests {
         let gain: Complex64 = weights
             .iter()
             .zip(steering.iter())
-            .map(|(w, a)| w.conj() * a)
+            .map(|(&w, &a)| w.conj() * a)
             .sum();
 
         assert_relative_eq!(gain.re, 1.0, epsilon = 1e-6);
@@ -550,13 +522,13 @@ mod tests {
     #[test]
     fn mvdr_with_different_angles() {
         let n = 4;
-        let cov = create_test_covariance(n);
+        let cov = test_utilities::create_test_covariance(n, 0.2, 0.1);
 
         let mvdr = MinimumVariance::default();
 
         for angle_deg in [-30.0, 0.0, 30.0] {
             let angle_rad = angle_deg * PI / 180.0;
-            let steering = create_steering_vector(n, angle_rad);
+            let steering = test_utilities::create_steering_vector(n, angle_rad);
 
             let weights = mvdr
                 .compute_weights(&cov, &steering)
@@ -566,7 +538,7 @@ mod tests {
             let gain: Complex64 = weights
                 .iter()
                 .zip(steering.iter())
-                .map(|(w, a)| w.conj() * a)
+                .map(|(&w, &a)| w.conj() * a)
                 .sum();
 
             assert_relative_eq!(gain.norm(), 1.0, epsilon = 1e-6);
@@ -575,9 +547,9 @@ mod tests {
 
     #[test]
     fn mvdr_pseudospectrum_is_positive() {
-        let n = 4;
-        let cov = create_test_covariance(n);
-        let steering = create_steering_vector(n, 0.0);
+        let n = 8;
+        let cov = test_utilities::create_diagonal_dominant_covariance(n, 0.1);
+        let steering = test_utilities::create_steering_vector(n, 0.0);
 
         let mvdr = MinimumVariance::with_diagonal_loading(1e-6);
         let spectrum = mvdr
@@ -590,8 +562,8 @@ mod tests {
 
     #[test]
     fn mvdr_rejects_empty_covariance() {
-        let cov = Array2::zeros((0, 0));
-        let steering = Array1::zeros(0);
+        let cov = Array2::<Complex64>::zeros((0, 0));
+        let steering = Array1::<Complex64>::zeros(0);
 
         let mvdr = MinimumVariance::default();
         let err = mvdr
@@ -603,8 +575,8 @@ mod tests {
 
     #[test]
     fn mvdr_rejects_non_square_covariance() {
-        let cov = Array2::zeros((3, 4));
-        let steering = Array1::zeros(3);
+        let cov = Array2::<Complex64>::zeros((3, 4));
+        let steering = Array1::<Complex64>::zeros(3);
 
         let mvdr = MinimumVariance::default();
         let err = mvdr
@@ -616,7 +588,7 @@ mod tests {
 
     #[test]
     fn mvdr_rejects_dimension_mismatch() {
-        let cov = create_test_covariance(4);
+        let cov = test_utilities::create_test_covariance(4, 0.2, 0.1);
         let steering = Array1::zeros(5); // Wrong size
 
         let mvdr = MinimumVariance::default();
@@ -629,8 +601,8 @@ mod tests {
 
     #[test]
     fn mvdr_rejects_negative_diagonal_loading() {
-        let cov = create_test_covariance(4);
-        let steering = create_steering_vector(4, 0.0);
+        let cov = test_utilities::create_test_covariance(4, 0.2, 0.1);
+        let steering = test_utilities::create_steering_vector(4, 0.0);
 
         let mvdr = MinimumVariance::with_diagonal_loading(-0.1);
         let err = mvdr
@@ -642,8 +614,8 @@ mod tests {
 
     #[test]
     fn mvdr_rejects_nan_diagonal_loading() {
-        let cov = create_test_covariance(4);
-        let steering = create_steering_vector(4, 0.0);
+        let cov = test_utilities::create_test_covariance(4, 0.2, 0.1);
+        let steering = test_utilities::create_steering_vector(4, 0.0);
 
         let mvdr = MinimumVariance::with_diagonal_loading(f64::NAN);
         let err = mvdr

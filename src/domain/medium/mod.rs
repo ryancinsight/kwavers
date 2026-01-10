@@ -5,6 +5,7 @@ use std::fmt::Debug;
 // Module declarations
 pub mod absorption;
 pub mod acoustic;
+pub mod adapters;
 pub mod analytical_properties;
 pub mod anisotropic;
 pub mod bubble;

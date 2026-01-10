@@ -262,11 +262,3 @@
 // pub mod utils;
 // pub mod spectral;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_module_placeholder() {
-        // Module structure verified
-        assert!(true);
-    }
-}

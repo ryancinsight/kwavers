@@ -21,8 +21,6 @@ pub mod system;
 pub mod validation;
 
 // Re-export main error types
-pub use crate::domain::grid::error::GridError;
-pub use crate::domain::medium::error::MediumError;
 pub use composite::{CompositeError, MultiError};
 pub use config::ConfigError;
 pub use context::ErrorContext;
@@ -33,7 +31,68 @@ pub use physics::PhysicsError;
 pub use system::SystemError;
 pub use validation::ValidationError;
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+/// Specific errors for grid creation and validation
+#[derive(Debug, Clone, Error, Serialize, Deserialize)]
+pub enum GridError {
+    /// Grid dimensions must be positive
+    #[error("Grid dimensions must be positive, got nx={nx}, ny={ny}, nz={nz}")]
+    ZeroDimension { nx: usize, ny: usize, nz: usize },
+
+    /// Grid spacing must be positive
+    #[error("Grid spacing must be positive, got dx={dx}, dy={dy}, dz={dz}")]
+    NonPositiveSpacing { dx: f64, dy: f64, dz: f64 },
+
+    /// Grid is too large for available memory
+    #[error("Grid too large: {nx}x{ny}x{nz} = {total} points exceeds maximum {max}")]
+    TooLarge {
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        total: usize,
+        max: usize,
+    },
+
+    /// Grid is too small for the numerical scheme
+    #[error(
+        "Grid too small: minimum {min} points required in each dimension, got ({nx}, {ny}, {nz})"
+    )]
+    TooSmall {
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        min: usize,
+    },
+
+    /// Failed to convert grid spacing to target numeric type
+    #[error("Failed to convert grid spacing {value} to {target_type}")]
+    GridConversion {
+        value: f64,
+        target_type: &'static str,
+    },
+
+    /// Dimension mismatch between arrays and grid
+    #[error("Dimension mismatch: expected {expected}, got {actual}")]
+    DimensionMismatch { expected: String, actual: String },
+}
+
+#[derive(Debug, Clone, Error, Serialize, Deserialize)]
+pub enum MediumError {
+    #[error("Invalid medium property {property} = {value}: {constraint}")]
+    InvalidProperties {
+        property: String,
+        value: f64,
+        constraint: String,
+    },
+
+    #[error("Medium '{medium_name}' not found")]
+    NotFound { medium_name: String },
+
+    #[error("Medium initialization failed: {reason}")]
+    InitializationFailed { reason: String },
+}
 
 /// Main error type for kwavers operations
 ///

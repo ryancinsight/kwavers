@@ -33,6 +33,12 @@
 //! The radial derivative term is handled using discrete Hankel transforms (DHT)
 //! which are the cylindrical analog of the Fourier transform.
 //!
+//! # Grid Topology
+//!
+//! This module now uses the unified `CylindricalTopology` from `domain::grid::topology`
+//! for consistent grid handling across the codebase. The legacy `CylindricalGrid` type
+//! is deprecated and will be removed in a future release.
+//!
 //! # References
 //!
 //! - Treeby, B. E., & Cox, B. T. (2010). "MATLAB toolbox for the simulation
@@ -40,11 +46,25 @@
 //! - `kspaceFirstOrderAS` documentation
 
 mod config;
+#[deprecated(
+    since = "2.15.0",
+    note = "Use `domain::grid::CylindricalTopology` instead. This module is retained for backward compatibility only."
+)]
 mod coordinates;
 mod solver;
 mod transforms;
 
 pub use config::{AxisymmetricConfig, AxisymmetricMedium};
+
+// Re-export the unified topology from domain
+pub use crate::domain::grid::CylindricalTopology;
+
+// Deprecated re-export for backward compatibility
+#[deprecated(
+    since = "2.15.0",
+    note = "Use `domain::grid::CylindricalTopology` instead"
+)]
 pub use coordinates::CylindricalGrid;
+
 pub use solver::AxisymmetricSolver;
 pub use transforms::DiscreteHankelTransform;

@@ -222,11 +222,3 @@
 // Placeholder for utility functions
 // pub mod utils;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_module_placeholder() {
-        // Module structure verified
-        assert!(true);
-    }
-}

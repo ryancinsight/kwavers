@@ -10,7 +10,7 @@
 //! # Example
 //!
 //! ```rust
-//! use crate::physics::cavitation_control::{CavitationDetector, SpectralDetector};
+//! use kwavers::physics::cavitation_control::{CavitationDetector, SpectralDetector};
 //! use ndarray::Array1;
 //!
 //! let mut detector = SpectralDetector::new(1e6, 10e6);

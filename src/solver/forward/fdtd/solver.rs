@@ -4,11 +4,15 @@
 //! for acoustic wave propagation using the finite-difference time-domain method.
 
 use crate::analysis::performance::simd_safe::operations::SimdOps;
-use crate::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::boundary::cpml::CPMLBoundary;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::{Source, SourceField};
+use crate::math::numerics::operators::{
+    CentralDifference2, CentralDifference4, CentralDifference6, DifferentialOperator,
+    StaggeredGridOperator,
+};
 use crate::physics::mechanics::acoustic_wave::SpatialOrder;
 use log::info;
 use ndarray::{s, Array3, ArrayView3, Zip};
@@ -21,14 +25,68 @@ use burn::backend::{Autodiff, Wgpu};
 
 use super::config::FdtdConfig;
 use super::metrics::FdtdMetrics;
-use super::numerics::FiniteDifference;
-use super::numerics::StaggeredGrid;
 use super::source_handler::SourceHandler;
 use crate::domain::sensor::recorder::simple::SensorRecorder;
 use crate::domain::source::grid_source::GridSource;
 
 use crate::domain::field::wave::WaveFields;
 use crate::domain::medium::MaterialFields;
+
+#[derive(Debug, Clone)]
+enum CentralDifferenceOperator {
+    Order2(CentralDifference2),
+    Order4(CentralDifference4),
+    Order6(CentralDifference6),
+}
+
+impl CentralDifferenceOperator {
+    fn new(order: usize, dx: f64, dy: f64, dz: f64) -> KwaversResult<Self> {
+        match order {
+            2 => Ok(Self::Order2(CentralDifference2::new(dx, dy, dz)?)),
+            4 => Ok(Self::Order4(CentralDifference4::new(dx, dy, dz)?)),
+            6 => Ok(Self::Order6(CentralDifference6::new(dx, dy, dz)?)),
+            _ => Err(KwaversError::InvalidInput(format!(
+                "spatial_order must be 2, 4, or 6, got {order}"
+            ))),
+        }
+    }
+
+    fn gradient(
+        &self,
+        field: ArrayView3<f64>,
+    ) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
+        match self {
+            Self::Order2(op) => Ok((op.apply_x(field)?, op.apply_y(field)?, op.apply_z(field)?)),
+            Self::Order4(op) => Ok((op.apply_x(field)?, op.apply_y(field)?, op.apply_z(field)?)),
+            Self::Order6(op) => Ok((op.apply_x(field)?, op.apply_y(field)?, op.apply_z(field)?)),
+        }
+    }
+
+    fn divergence(
+        &self,
+        vx: ArrayView3<f64>,
+        vy: ArrayView3<f64>,
+        vz: ArrayView3<f64>,
+    ) -> KwaversResult<Array3<f64>> {
+        let dvx_dx = match self {
+            Self::Order2(op) => op.apply_x(vx)?,
+            Self::Order4(op) => op.apply_x(vx)?,
+            Self::Order6(op) => op.apply_x(vx)?,
+        };
+        let dvy_dy = match self {
+            Self::Order2(op) => op.apply_y(vy)?,
+            Self::Order4(op) => op.apply_y(vy)?,
+            Self::Order6(op) => op.apply_y(vy)?,
+        };
+        let dvz_dz = match self {
+            Self::Order2(op) => op.apply_z(vz)?,
+            Self::Order4(op) => op.apply_z(vz)?,
+            Self::Order6(op) => op.apply_z(vz)?,
+        };
+
+        Ok(&dvx_dx + &dvy_dy + &dvz_dz)
+    }
+}
 
 /// FDTD solver for acoustic wave propagation
 #[derive(Debug)]
@@ -37,11 +95,8 @@ pub struct FdtdSolver {
     pub(crate) config: FdtdConfig,
     /// Grid reference
     pub(crate) grid: Grid,
-    /// Staggered grid positions
-    #[allow(dead_code)]
-    pub(crate) staggered: StaggeredGrid,
-    /// Finite difference operator
-    pub(crate) fd_operator: FiniteDifference,
+    pub(crate) central_operator: CentralDifferenceOperator,
+    pub(crate) staggered_operator: StaggeredGridOperator,
     /// Performance metrics
     metrics: FdtdMetrics,
     /// C-PML boundary (if enabled)
@@ -80,8 +135,9 @@ impl FdtdSolver {
         // Validate spatial order by converting to enum
         let spatial_order = SpatialOrder::from_usize(config.spatial_order)?;
 
-        // Create finite difference operator
-        let fd_operator = FiniteDifference::new(config.spatial_order)?;
+        let central_operator =
+            CentralDifferenceOperator::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;
+        let staggered_operator = StaggeredGridOperator::new(grid.dx, grid.dy, grid.dz)?;
 
         // Initialize Burn GPU accelerator if feature is enabled
         #[cfg(all(feature = "gpu", feature = "pinn"))]
@@ -126,8 +182,8 @@ impl FdtdSolver {
         Ok(Self {
             config,
             grid: grid.clone(),
-            staggered: StaggeredGrid::default(),
-            fd_operator,
+            central_operator,
+            staggered_operator,
             metrics: FdtdMetrics::new(),
             cpml_boundary: None,
             spatial_order,
@@ -264,13 +320,10 @@ impl FdtdSolver {
         let divergence = if self.config.staggered_grid {
             self.compute_divergence_staggered()?
         } else {
-            self.fd_operator.compute_divergence(
-                &self.fields.ux.view(),
-                &self.fields.uy.view(),
-                &self.fields.uz.view(),
-                self.grid.dx,
-                self.grid.dy,
-                self.grid.dz,
+            self.central_operator.divergence(
+                self.fields.ux.view(),
+                self.fields.uy.view(),
+                self.fields.uz.view(),
             )?
         };
 
@@ -354,12 +407,8 @@ impl FdtdSolver {
         }
 
         // Compute pressure gradient
-        let (mut grad_x, mut grad_y, mut grad_z) = self.fd_operator.compute_gradient(
-            &self.fields.p.view(),
-            self.grid.dx,
-            self.grid.dy,
-            self.grid.dz,
-        )?;
+        let (mut grad_x, mut grad_y, mut grad_z) =
+            self.central_operator.gradient(self.fields.p.view())?;
 
         // Apply C-PML if enabled
         if let Some(ref mut cpml) = self.cpml_boundary {
@@ -393,69 +442,33 @@ impl FdtdSolver {
     }
 
     fn compute_divergence_staggered(&self) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = self.fields.p.dim();
-        let dx = self.grid.dx;
-        let dy = self.grid.dy;
-        let dz = self.grid.dz;
+        let dvx_dx = self
+            .staggered_operator
+            .apply_backward_x(self.fields.ux.view())?;
+        let dvy_dy = self
+            .staggered_operator
+            .apply_backward_y(self.fields.uy.view())?;
+        let dvz_dz = self
+            .staggered_operator
+            .apply_backward_z(self.fields.uz.view())?;
 
-        let mut div = Array3::<f64>::zeros((nx, ny, nz));
-
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let dvx_dx = if nx > 1 {
-                        if i == 0 {
-                            0.0
-                        } else {
-                            (self.fields.ux[[i, j, k]] - self.fields.ux[[i - 1, j, k]]) / dx
-                        }
-                    } else {
-                        0.0
-                    };
-
-                    let dvy_dy = if ny > 1 {
-                        if j == 0 {
-                            0.0
-                        } else {
-                            (self.fields.uy[[i, j, k]] - self.fields.uy[[i, j - 1, k]]) / dy
-                        }
-                    } else {
-                        0.0
-                    };
-
-                    let dvz_dz = if nz > 1 {
-                        if k == 0 {
-                            0.0
-                        } else {
-                            (self.fields.uz[[i, j, k]] - self.fields.uz[[i, j, k - 1]]) / dz
-                        }
-                    } else {
-                        0.0
-                    };
-
-                    div[[i, j, k]] = dvx_dx + dvy_dy + dvz_dz;
-                }
-            }
-        }
-
-        Ok(div)
+        Ok(&dvx_dx + &dvy_dy + &dvz_dz)
     }
 
     fn update_velocity_staggered(&mut self, dt: f64) -> KwaversResult<()> {
         let (nx, ny, nz) = self.fields.p.dim();
-        let dx = self.grid.dx;
-        let dy = self.grid.dy;
-        let dz = self.grid.dz;
 
         if nx > 1 {
+            let dp_dx = self
+                .staggered_operator
+                .apply_forward_x(self.fields.p.view())?;
             for i in 0..nx - 1 {
                 for j in 0..ny {
                     for k in 0..nz {
-                        let dp_dx = (self.fields.p[[i + 1, j, k]] - self.fields.p[[i, j, k]]) / dx;
                         let rho = 0.5
                             * (self.materials.rho0[[i, j, k]] + self.materials.rho0[[i + 1, j, k]]);
                         if rho > 1e-9 {
-                            self.fields.ux[[i, j, k]] -= dt / rho * dp_dx;
+                            self.fields.ux[[i, j, k]] -= dt / rho * dp_dx[[i, j, k]];
                         }
                     }
                 }
@@ -464,14 +477,14 @@ impl FdtdSolver {
         }
 
         if ny > 1 {
+            let dp_dy = self.staggered_operator.apply_y(self.fields.p.view())?;
             for i in 0..nx {
                 for j in 0..ny - 1 {
                     for k in 0..nz {
-                        let dp_dy = (self.fields.p[[i, j + 1, k]] - self.fields.p[[i, j, k]]) / dy;
                         let rho = 0.5
                             * (self.materials.rho0[[i, j, k]] + self.materials.rho0[[i, j + 1, k]]);
                         if rho > 1e-9 {
-                            self.fields.uy[[i, j, k]] -= dt / rho * dp_dy;
+                            self.fields.uy[[i, j, k]] -= dt / rho * dp_dy[[i, j, k]];
                         }
                     }
                 }
@@ -480,14 +493,14 @@ impl FdtdSolver {
         }
 
         if nz > 1 {
+            let dp_dz = self.staggered_operator.apply_z(self.fields.p.view())?;
             for i in 0..nx {
                 for j in 0..ny {
                     for k in 0..nz - 1 {
-                        let dp_dz = (self.fields.p[[i, j, k + 1]] - self.fields.p[[i, j, k]]) / dz;
                         let rho = 0.5
                             * (self.materials.rho0[[i, j, k]] + self.materials.rho0[[i, j, k + 1]]);
                         if rho > 1e-9 {
-                            self.fields.uz[[i, j, k]] -= dt / rho * dp_dz;
+                            self.fields.uz[[i, j, k]] -= dt / rho * dp_dz[[i, j, k]];
                         }
                     }
                 }
@@ -496,73 +509,6 @@ impl FdtdSolver {
         }
 
         Ok(())
-    }
-
-    /// Interpolate field to staggered grid positions
-    pub fn interpolate_to_staggered(
-        &self,
-        field: &ndarray::ArrayView3<f64>,
-        axis: usize,
-        offset: f64,
-    ) -> KwaversResult<Array3<f64>> {
-        if offset == 0.0 {
-            return Ok(field.to_owned());
-        }
-        if offset != 0.5 {
-            return Err(KwaversError::NotImplemented(
-                "Only 0.5 offset supported".to_string(),
-            ));
-        }
-
-        let mut interpolated = Array3::zeros(field.raw_dim());
-        let (nx, ny, nz) = field.dim();
-
-        match axis {
-            0 => {
-                if nx < 2 {
-                    return Ok(interpolated);
-                }
-                let mut interp_slice = interpolated.slice_mut(s![..nx - 1, .., ..]);
-                let s1 = field.slice(s![..nx - 1, .., ..]);
-                let s2 = field.slice(s![1.., .., ..]);
-                interp_slice.assign(&((&s1 + &s2) * 0.5));
-                interpolated
-                    .slice_mut(s![nx - 1, .., ..])
-                    .assign(&field.slice(s![nx - 1, .., ..]));
-            }
-            1 => {
-                if ny < 2 {
-                    return Ok(interpolated);
-                }
-                let mut interp_slice = interpolated.slice_mut(s![.., ..ny - 1, ..]);
-                let s1 = field.slice(s![.., ..ny - 1, ..]);
-                let s2 = field.slice(s![.., 1.., ..]);
-                interp_slice.assign(&((&s1 + &s2) * 0.5));
-                interpolated
-                    .slice_mut(s![.., ny - 1, ..])
-                    .assign(&field.slice(s![.., ny - 1, ..]));
-            }
-            2 => {
-                if nz < 2 {
-                    return Ok(interpolated);
-                }
-                let mut interp_slice = interpolated.slice_mut(s![.., .., ..nz - 1]);
-                let s1 = field.slice(s![.., .., ..nz - 1]);
-                let s2 = field.slice(s![.., .., 1..]);
-                interp_slice.assign(&((&s1 + &s2) * 0.5));
-                interpolated
-                    .slice_mut(s![.., .., nz - 1])
-                    .assign(&field.slice(s![.., .., nz - 1]));
-            }
-            _ => {
-                return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                    field: "axis".to_string(),
-                    value: axis.to_string(),
-                    constraint: "must be 0, 1, or 2".to_string(),
-                }));
-            }
-        }
-        Ok(interpolated)
     }
 
     /// Calculate maximum stable time step based on CFL condition

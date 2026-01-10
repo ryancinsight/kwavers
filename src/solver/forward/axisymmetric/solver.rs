@@ -2,10 +2,15 @@
 //!
 //! Main solver implementation for axisymmetric wave propagation.
 
-use super::config::{AxisymmetricConfig, AxisymmetricMedium};
+use super::config::AxisymmetricConfig;
+#[allow(deprecated)]
+use super::config::AxisymmetricMedium;
 use super::coordinates::CylindricalGrid;
 use super::transforms::DiscreteHankelTransform;
 use crate::core::error::KwaversResult;
+use crate::domain::grid::{CylindricalTopology, Grid};
+use crate::domain::medium::adapters::CylindricalMediumProjection;
+use crate::domain::medium::Medium;
 use ndarray::{Array1, Array2, Axis};
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -65,7 +70,116 @@ pub struct AxisymmetricSolver {
 }
 
 impl AxisymmetricSolver {
-    /// Create a new axisymmetric solver
+    /// Create a new axisymmetric solver from cylindrical medium projection
+    ///
+    /// This is the recommended constructor for new code. It accepts a domain-level
+    /// medium projected to cylindrical coordinates.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Solver configuration
+    /// * `projection` - Cylindrical projection of a 3D medium
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use kwavers::solver::forward::axisymmetric::{AxisymmetricSolver, AxisymmetricConfig};
+    /// use kwavers::domain::medium::{HomogeneousMedium, adapters::CylindricalMediumProjection};
+    /// use kwavers::domain::grid::{Grid, CylindricalTopology};
+    ///
+    /// let grid = Grid::new(128, 128, 128, 1e-4, 1e-4, 1e-4)?;
+    /// let medium = HomogeneousMedium::water(&grid);
+    /// let topology = CylindricalTopology::new(128, 64, 1e-4, 1e-4)?;
+    /// let projection = CylindricalMediumProjection::new(&medium, &grid, &topology)?;
+    ///
+    /// let config = AxisymmetricConfig::default();
+    /// let solver = AxisymmetricSolver::new_with_projection(config, &projection)?;
+    /// # Ok::<(), kwavers::core::error::KwaversError>(())
+    /// ```
+    pub fn new_with_projection<M: Medium>(
+        config: AxisymmetricConfig,
+        projection: &CylindricalMediumProjection<M>,
+    ) -> KwaversResult<Self> {
+        config.validate().map_err(|e| {
+            crate::core::error::KwaversError::Config(
+                crate::core::error::ConfigError::InvalidValue {
+                    parameter: "config".to_string(),
+                    value: "invalid".to_string(),
+                    constraint: e,
+                },
+            )
+        })?;
+
+        // Verify projection dimensions match config
+        let (nz_proj, nr_proj) = projection.sound_speed_field().dim();
+        if nz_proj != config.nz || nr_proj != config.nr {
+            return Err(crate::core::error::KwaversError::Config(
+                crate::core::error::ConfigError::InvalidValue {
+                    parameter: "projection dimensions".to_string(),
+                    value: format!("({}, {})", nz_proj, nr_proj),
+                    constraint: format!(
+                        "Must match config dimensions ({}, {})",
+                        config.nz, config.nr
+                    ),
+                },
+            ));
+        }
+
+        // Build AxisymmetricMedium from projection for internal use
+        let medium = AxisymmetricMedium {
+            sound_speed: projection.sound_speed_field().to_owned(),
+            density: projection.density_field().to_owned(),
+            alpha_coeff: projection.absorption_field().to_owned(),
+            alpha_power: 2.0, // Default, could be extended in future
+            b_over_a: projection.nonlinearity_field().map(|arr| arr.to_owned()),
+        };
+
+        // Delegate to existing constructor
+        #[allow(deprecated)]
+        Self::new(config, medium)
+    }
+
+    /// Create a new axisymmetric solver (legacy constructor)
+    ///
+    /// # Deprecation
+    ///
+    /// This constructor is deprecated. Use [`AxisymmetricSolver::new_with_projection`]
+    /// instead, which accepts domain-level media via `CylindricalMediumProjection`.
+    ///
+    /// # Migration Guide
+    ///
+    /// **Old code:**
+    /// ```rust,ignore
+    /// use kwavers::solver::forward::axisymmetric::{AxisymmetricConfig, AxisymmetricMedium, AxisymmetricSolver};
+    ///
+    /// let config = AxisymmetricConfig::default();
+    /// let medium = AxisymmetricMedium::homogeneous(128, 64, 1500.0, 1000.0);
+    /// let solver = AxisymmetricSolver::new(config, medium)?;
+    /// ```
+    ///
+    /// **New code:**
+    /// ```rust,ignore
+    /// use kwavers::solver::forward::axisymmetric::{AxisymmetricConfig, AxisymmetricSolver};
+    /// use kwavers::domain::medium::{HomogeneousMedium, adapters::CylindricalMediumProjection};
+    /// use kwavers::domain::grid::{Grid, CylindricalTopology};
+    ///
+    /// // Create 3D grid and medium
+    /// let grid = Grid::new(128, 128, 128, 1e-4, 1e-4, 1e-4)?;
+    /// let medium = HomogeneousMedium::new(&grid, 1500.0, 1000.0, 0.0);
+    ///
+    /// // Create cylindrical topology and projection
+    /// let topology = CylindricalTopology::new(128, 64, 1e-4, 1e-4)?;
+    /// let projection = CylindricalMediumProjection::new(&medium, &grid, &topology)?;
+    ///
+    /// // Use new constructor
+    /// let config = AxisymmetricConfig::default();
+    /// let solver = AxisymmetricSolver::new_with_projection(config, &projection)?;
+    /// ```
+    #[deprecated(
+        since = "2.16.0",
+        note = "Use `new_with_projection` with `CylindricalMediumProjection` instead. \
+                See migration guide in documentation."
+    )]
     pub fn new(config: AxisymmetricConfig, medium: AxisymmetricMedium) -> KwaversResult<Self> {
         config.validate().map_err(|e| {
             crate::core::error::KwaversError::Config(
@@ -522,10 +636,35 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_solver_creation() {
+    fn test_solver_creation_legacy() {
         let config = AxisymmetricConfig::default();
+        #[allow(deprecated)]
         let medium = AxisymmetricMedium::homogeneous(config.nz, config.nr, 1500.0, 1000.0);
+        #[allow(deprecated)]
         let solver = AxisymmetricSolver::new(config, medium);
+        assert!(solver.is_ok());
+    }
+
+    #[test]
+    fn test_solver_creation_with_projection() {
+        use crate::domain::grid::Grid;
+        use crate::domain::medium::{adapters::CylindricalMediumProjection, HomogeneousMedium};
+
+        let config = AxisymmetricConfig::default();
+
+        // Create 3D grid and medium
+        let grid = Grid::new(128, 128, 128, 1e-4, 1e-4, 1e-4).unwrap();
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+
+        // Create cylindrical topology
+        let topology =
+            CylindricalTopology::new(config.nz, config.nr, config.dz, config.dr).unwrap();
+
+        // Create projection
+        let projection = CylindricalMediumProjection::new(&medium, &grid, &topology).unwrap();
+
+        // Create solver
+        let solver = AxisymmetricSolver::new_with_projection(config, &projection);
         assert!(solver.is_ok());
     }
 
@@ -547,7 +686,9 @@ mod tests {
             pml_size: 4,
             ..Default::default()
         };
+        #[allow(deprecated)]
         let medium = AxisymmetricMedium::homogeneous(32, 16, 1500.0, 1000.0);
+        #[allow(deprecated)]
         let mut solver = AxisymmetricSolver::new(config, medium).unwrap();
 
         let p0 = Array2::from_elem((32, 16), 1.0);

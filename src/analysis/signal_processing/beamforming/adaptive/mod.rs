@@ -174,15 +174,15 @@ use num_complex::Complex64;
 
 // Algorithm implementations
 pub mod mvdr;
+pub mod subspace;
 
 // Future implementations (planned)
-// pub mod music;           // MUSIC subspace method
-// pub mod esmv;            // Eigenspace Minimum Variance
 // pub mod robust_capon;    // Robust Capon with uncertainty
 // pub mod lcmv;            // Linearly Constrained Minimum Variance
 
 // Re-export main types
 pub use mvdr::MinimumVariance;
+pub use subspace::{EigenspaceMV, MUSIC};
 
 /// Adaptive beamforming algorithm trait.
 ///
@@ -264,44 +264,29 @@ impl AdaptiveBeamformer for MinimumVariance {
     }
 }
 
+// Implement trait for EigenspaceMV
+impl AdaptiveBeamformer for EigenspaceMV {
+    fn compute_weights(
+        &self,
+        covariance: &Array2<Complex64>,
+        steering: &Array1<Complex64>,
+    ) -> KwaversResult<Array1<Complex64>> {
+        // Delegate to inherent method
+        self.compute_weights(covariance, steering)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::analysis::signal_processing::beamforming::test_utilities::{self, angle};
     use approx::assert_relative_eq;
-    use std::f64::consts::PI;
-
-    fn create_test_covariance(n: usize) -> Array2<Complex64> {
-        let mut r = Array2::zeros((n, n));
-        for i in 0..n {
-            for j in 0..n {
-                let val = if i == j {
-                    Complex64::new(1.0, 0.0)
-                } else {
-                    Complex64::new(0.05, 0.0)
-                };
-                r[(i, j)] = val;
-            }
-        }
-        r
-    }
-
-    fn create_steering_vector(n: usize, angle: f64) -> Array1<Complex64> {
-        let k = 2.0 * PI;
-        Array1::from_vec(
-            (0..n)
-                .map(|i| {
-                    let phase = k * (i as f64) * angle.sin();
-                    Complex64::new(phase.cos(), phase.sin())
-                })
-                .collect(),
-        )
-    }
 
     #[test]
     fn test_adaptive_beamformer_trait() {
         let n = 4;
-        let cov = create_test_covariance(n);
-        let steering = create_steering_vector(n, 0.0);
+        let cov = test_utilities::create_diagonal_dominant_covariance(n, 0.05);
+        let steering = test_utilities::create_steering_vector(n, 0.0);
 
         let beamformer: Box<dyn AdaptiveBeamformer> = Box::new(MinimumVariance::default());
         let weights = beamformer
@@ -317,8 +302,8 @@ mod tests {
     #[test]
     fn test_mvdr_via_trait() {
         let n = 8;
-        let cov = create_test_covariance(n);
-        let steering = create_steering_vector(n, 0.0);
+        let cov = test_utilities::create_diagonal_dominant_covariance(n, 0.05);
+        let steering = test_utilities::create_steering_vector(n, 0.0);
 
         let mvdr = MinimumVariance::with_diagonal_loading(1e-4);
         let weights = mvdr
@@ -338,8 +323,38 @@ mod tests {
 
     #[test]
     fn test_module_exports() {
-        // Verify key types are accessible
-        let _mvdr = MinimumVariance::default();
-        assert!(true);
+        let mvdr = MinimumVariance::with_diagonal_loading(1e-4);
+        assert_eq!(mvdr.diagonal_loading, 1e-4);
+
+        let music = MUSIC::new(2);
+        assert_eq!(music.num_sources, 2);
+
+        let esmv = EigenspaceMV::with_diagonal_loading(2, 1e-4);
+        assert_eq!(esmv.num_sources, 2);
+        assert_eq!(esmv.diagonal_loading, 1e-4);
+    }
+
+    #[test]
+    fn test_subspace_via_trait() {
+        let n = 8;
+        let cov = test_utilities::create_test_covariance(n, 0.2, 0.1);
+        let steering = test_utilities::create_steering_vector(n, 0.0);
+
+        // Test ESMV via trait
+        let beamformer: Box<dyn AdaptiveBeamformer> =
+            Box::new(EigenspaceMV::with_diagonal_loading(2, 1e-4));
+        let weights = beamformer
+            .compute_weights(&cov, &steering)
+            .expect("ESMV via trait should work");
+
+        // Verify unit gain
+        let gain: Complex64 = weights
+            .iter()
+            .zip(steering.iter())
+            .map(|(w, a)| w.conj() * a)
+            .sum();
+
+        assert_relative_eq!(gain.re, 1.0, epsilon = 1e-6);
+        assert_relative_eq!(gain.im, 0.0, epsilon = 1e-6);
     }
 }

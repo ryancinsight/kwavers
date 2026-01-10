@@ -118,7 +118,7 @@ pub mod tolerance {
     pub const HERMITIAN_EIG_TOL: f64 = 1e-12;
 
     /// Maximum sweeps (major iterations) for the SSOT complex Hermitian eigensolver (Jacobi).
-    pub const HERMITIAN_EIG_MAX_SWEEPS: usize = 128;
+    pub const HERMITIAN_EIG_MAX_SWEEPS: usize = 2048;
 
     /// Convergence tolerance for tridiagonal QR eigensolver (off-diagonal magnitude threshold).
     pub const SYMM_TRIDIAG_QR_TOL: f64 = 1e-12;

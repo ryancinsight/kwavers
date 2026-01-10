@@ -3,6 +3,7 @@
 //! This module provides the core grid structures and utilities for
 //! defining computational domains and spatial discretization.
 
+pub mod adapter;
 pub mod config;
 pub mod coordinates;
 pub mod error;
@@ -12,16 +13,19 @@ pub mod operators;
 pub mod simple_config;
 pub mod stability;
 pub mod structure;
+pub mod topology;
 pub mod validation;
 use crate::math::fft::utils as fft_utils;
 
 // Re-exports for convenience
+pub use adapter::{GridAdapter, GridTopologyExt};
 pub use config::{GridParameters, GridType};
 pub use coordinates::CoordinateSystem;
 pub use fft_utils::*;
 pub use kspace::KSpaceCalculator;
 pub use simple_config::GridConfig;
 pub use structure::{Bounds, Dimension, Grid};
+pub use topology::{CartesianTopology, CylindricalTopology, GridTopology, TopologyDimension};
 pub use validation::GridValidator;
 
 // Extension methods for Grid (compatibility layer)

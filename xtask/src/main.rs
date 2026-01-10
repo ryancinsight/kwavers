@@ -6,7 +6,11 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::fs;
+use std::path::PathBuf;
 use walkdir::WalkDir;
+
+mod architecture;
+use architecture::validate_architecture;
 
 #[derive(Parser)]
 #[command(name = "xtask")]
@@ -30,6 +34,15 @@ enum Command {
     Metrics,
     /// Fix all automated issues
     Fix,
+    /// Check architecture for layer violations and cross-contamination
+    CheckArchitecture {
+        /// Generate markdown report
+        #[arg(long)]
+        markdown: bool,
+        /// Fail with non-zero exit code on violations
+        #[arg(long)]
+        strict: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -42,6 +55,7 @@ fn main() -> Result<()> {
         Command::CheckConfigs => check_configs(),
         Command::Metrics => generate_metrics(),
         Command::Fix => fix_all(),
+        Command::CheckArchitecture { markdown, strict } => check_architecture(markdown, strict),
     }
 }
 
@@ -80,7 +94,7 @@ fn audit_naming() -> Result<()> {
     println!("🔍 Auditing naming conventions...");
 
     let mut violations = Vec::new();
-    
+
     // Patterns to detect - using word boundaries for precision
     let bad_patterns = [
         "_old",
@@ -93,14 +107,14 @@ fn audit_naming() -> Result<()> {
         "_updated",
         "_improved",
     ];
-    
+
     // Legitimate domain terms that contain pattern substrings but are valid
     let allowed_terms = [
-        "temperature",        // Contains _temp but is domain term
-        "temporal",          // Contains _temp but is domain term  
-        "tempered",          // Contains _temp but is domain term
-        "properties",        // Contains _proper but is valid when not _proper suffix
-        "property_based",    // Contains _proper but is valid module name
+        "temperature",    // Contains _temp but is domain term
+        "temporal",       // Contains _temp but is domain term
+        "tempered",       // Contains _temp but is domain term
+        "properties",     // Contains _proper but is valid when not _proper suffix
+        "property_based", // Contains _proper but is valid module name
     ];
 
     for entry in WalkDir::new("src").into_iter().filter_map(|e| e.ok()) {
@@ -113,40 +127,47 @@ fn audit_naming() -> Result<()> {
                 if line.trim_start().starts_with("//") {
                     continue;
                 }
-                
+
                 for pattern in &bad_patterns {
                     if !line.contains(pattern) {
                         continue;
                     }
-                    
+
                     // Check if this is a legitimate domain term
-                    let is_allowed = allowed_terms.iter().any(|term| {
-                        line.contains(term)
-                    });
-                    
+                    let is_allowed = allowed_terms.iter().any(|term| line.contains(term));
+
                     if is_allowed {
                         continue;
                     }
-                    
+
                     // Check for word boundaries - pattern should be isolated or at end of identifier
                     // Valid violations: variable_old, x_new, was_corrected
                     // Invalid (false positives): temperature, temporal, properties
                     let lower_line = line.to_lowercase();
-                    
+
                     // Look for the pattern with word boundaries
                     if let Some(pos) = lower_line.find(pattern) {
-                        let before = if pos > 0 { 
-                            lower_line.chars().nth(pos - 1) 
-                        } else { 
-                            None 
+                        let before = if pos > 0 {
+                            lower_line.chars().nth(pos - 1)
+                        } else {
+                            None
                         };
                         let after = lower_line.chars().nth(pos + pattern.len());
-                        
+
                         // Check if pattern is at a word boundary
                         // Valid if preceded by letter/number/underscore and followed by non-letter
-                        let is_word_boundary = matches!(before, Some('_') | Some(' ') | Some('(') | Some(',') | None) ||
-                                              matches!(after, Some(' ') | Some(')') | Some(',') | Some(';') | Some(':') | None);
-                        
+                        let is_word_boundary =
+                            matches!(before, Some('_') | Some(' ') | Some('(') | Some(',') | None)
+                                || matches!(
+                                    after,
+                                    Some(' ')
+                                        | Some(')')
+                                        | Some(',')
+                                        | Some(';')
+                                        | Some(':')
+                                        | None
+                                );
+
                         if is_word_boundary {
                             violations.push((
                                 entry.path().to_path_buf(),
@@ -181,7 +202,7 @@ fn check_stubs() -> Result<()> {
     let mut violations = Vec::new();
     let stub_patterns = [
         "TODO",
-        "FIXME", 
+        "FIXME",
         "todo!",
         "unimplemented!",
         "panic!",
@@ -194,21 +215,23 @@ fn check_stubs() -> Result<()> {
     for entry in WalkDir::new("src").into_iter().filter_map(|e| e.ok()) {
         if entry.path().extension().map_or(false, |ext| ext == "rs") {
             // Skip xtask and tool files to avoid false positives
-            if entry.path().to_string_lossy().contains("xtask") 
-                || entry.path().to_string_lossy().contains("main.rs") {
+            if entry.path().to_string_lossy().contains("xtask")
+                || entry.path().to_string_lossy().contains("main.rs")
+            {
                 continue;
             }
-            
+
             let content = fs::read_to_string(entry.path())
                 .with_context(|| format!("Failed to read {}", entry.path().display()))?;
 
             for (line_num, line) in content.lines().enumerate() {
                 for pattern in &stub_patterns {
-                    if line.contains(pattern) 
+                    if line.contains(pattern)
                         && !line.trim_start().starts_with("//")  // Skip comments
                         && !line.contains("\"")                 // Skip string literals
                         && !line.contains("&amp;")                 // Skip HTML entities
-                        && line.contains(pattern)               // Actual usage
+                        && line.contains(pattern)
+                    // Actual usage
                     {
                         violations.push((
                             entry.path().to_path_buf(),
@@ -234,7 +257,7 @@ fn check_stubs() -> Result<()> {
     Ok(())
 }
 
-/// Count configuration structs for SSOT violations  
+/// Count configuration structs for SSOT violations
 fn check_configs() -> Result<()> {
     println!("🔍 Checking configuration structs (SSOT compliance)...");
 
@@ -271,6 +294,39 @@ fn check_configs() -> Result<()> {
         );
     } else {
         println!("✅ Config struct count within reasonable limits");
+    }
+
+    Ok(())
+}
+
+/// Check architecture for layer violations and cross-contamination
+fn check_architecture(markdown: bool, strict: bool) -> Result<()> {
+    let src_root = PathBuf::from("../src");
+
+    if !src_root.exists() {
+        eprintln!("❌ Source directory not found: {}", src_root.display());
+        eprintln!("   Run from xtask directory or adjust path");
+        std::process::exit(1);
+    }
+
+    println!("🔍 Validating architecture...\n");
+
+    let report = validate_architecture(src_root)
+        .map_err(|e| anyhow::anyhow!("Failed to validate architecture: {}", e))?;
+
+    if markdown {
+        // Generate markdown report
+        let md = report.to_markdown();
+        let output_path = PathBuf::from("../ARCHITECTURE_VALIDATION_REPORT.md");
+        fs::write(&output_path, md).context("Failed to write markdown report")?;
+        println!("📄 Markdown report written to: {}", output_path.display());
+    } else {
+        // Print to console
+        report.print();
+    }
+
+    if strict && !report.is_clean() {
+        std::process::exit(report.exit_code());
     }
 
     Ok(())

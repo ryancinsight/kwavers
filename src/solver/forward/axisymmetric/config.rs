@@ -123,6 +123,28 @@ impl AxisymmetricConfig {
 }
 
 /// Medium properties for axisymmetric simulation
+///
+/// # Deprecation
+///
+/// This type is deprecated in favor of using domain-level `Medium` types with
+/// `CylindricalMediumProjection`. The new approach provides better separation
+/// of concerns and allows reuse of domain medium definitions.
+///
+/// # Migration
+///
+/// Replace direct use of `AxisymmetricMedium` with:
+/// 1. Create a 3D `Medium` (e.g., `HomogeneousMedium`, `HeterogeneousMedium`)
+/// 2. Create a `CylindricalMediumProjection` to project it to 2D
+/// 3. Use `AxisymmetricSolver::new_with_projection` instead of `new`
+///
+/// See [`AxisymmetricSolver::new_with_projection`] for examples.
+///
+/// [`AxisymmetricSolver::new_with_projection`]: crate::solver::forward::axisymmetric::AxisymmetricSolver::new_with_projection
+#[deprecated(
+    since = "2.16.0",
+    note = "Use domain-level `Medium` types with `CylindricalMediumProjection` instead. \
+            See type documentation for migration guide."
+)]
 #[derive(Debug, Clone)]
 pub struct AxisymmetricMedium {
     /// Sound speed field (nz x nr)
@@ -139,6 +161,14 @@ pub struct AxisymmetricMedium {
 
 impl AxisymmetricMedium {
     /// Create homogeneous medium
+    ///
+    /// # Deprecation
+    ///
+    /// This method is deprecated. Use `HomogeneousMedium` from `domain::medium` instead.
+    #[deprecated(
+        since = "2.16.0",
+        note = "Use `HomogeneousMedium::new` with `CylindricalMediumProjection` instead"
+    )]
     pub fn homogeneous(nz: usize, nr: usize, sound_speed: f64, density: f64) -> Self {
         Self {
             sound_speed: ndarray::Array2::from_elem((nz, nr), sound_speed),
@@ -150,6 +180,14 @@ impl AxisymmetricMedium {
     }
 
     /// Create tissue medium with typical properties
+    ///
+    /// # Deprecation
+    ///
+    /// This method is deprecated. Use `HomogeneousMedium` from `domain::medium` instead.
+    #[deprecated(
+        since = "2.16.0",
+        note = "Use `HomogeneousMedium::new` with tissue parameters instead"
+    )]
     pub fn tissue(nz: usize, nr: usize) -> Self {
         Self {
             sound_speed: ndarray::Array2::from_elem((nz, nr), 1540.0),
@@ -161,11 +199,27 @@ impl AxisymmetricMedium {
     }
 
     /// Get maximum sound speed for CFL calculation
+    ///
+    /// # Deprecation
+    ///
+    /// This method is deprecated. Use `CylindricalMediumProjection::max_sound_speed` instead.
+    #[deprecated(
+        since = "2.16.0",
+        note = "Use `CylindricalMediumProjection::max_sound_speed` instead"
+    )]
     pub fn max_sound_speed(&self) -> f64 {
         self.sound_speed.iter().cloned().fold(f64::MIN, f64::max)
     }
 
     /// Get minimum sound speed
+    ///
+    /// # Deprecation
+    ///
+    /// This method is deprecated. Use `CylindricalMediumProjection::min_sound_speed` instead.
+    #[deprecated(
+        since = "2.16.0",
+        note = "Use `CylindricalMediumProjection::min_sound_speed` instead"
+    )]
     pub fn min_sound_speed(&self) -> f64 {
         self.sound_speed.iter().cloned().fold(f64::MAX, f64::min)
     }
@@ -176,12 +230,14 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(deprecated)]
     fn test_config_default() {
         let config = AxisymmetricConfig::default();
         assert!(config.validate().is_ok());
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_config_hifu() {
         let config = AxisymmetricConfig::hifu_default();
         assert!(config.validate().is_ok());
@@ -189,6 +245,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_cfl_stability() {
         let config = AxisymmetricConfig::default();
         // With default settings and water sound speed
@@ -196,6 +253,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_homogeneous_medium() {
         let medium = AxisymmetricMedium::homogeneous(64, 32, 1500.0, 1000.0);
         assert_eq!(medium.sound_speed.dim(), (64, 32));

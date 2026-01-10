@@ -10,9 +10,11 @@
 //! --------
 //! Basic adaptive multilateration:
 //! ```
-//! use kwavers::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
-//! use kwavers::sensor::localization::multilateration::{MultilaterationMethod, MultilaterationSolver};
-//! use kwavers::sensor::localization::Position;
+//! use kwavers::domain::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
+//! use kwavers::domain::sensor::localization::multilateration::{
+//!     MultilaterationMethod, MultilaterationSolver,
+//! };
+//! use kwavers::domain::sensor::localization::Position;
 //! let sensors = vec![
 //!     Sensor::new(0, Position::new(0.0, 0.0, 0.0)),
 //!     Sensor::new(1, Position::new(1.0, 0.0, 0.0)),
@@ -31,9 +33,9 @@
 //!
 //! Trilateration with fourth-sensor disambiguation:
 //! ```
-//! use kwavers::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
-//! use kwavers::sensor::localization::multilateration::trilateration::TrilaterationSolver;
-//! use kwavers::sensor::localization::Position;
+//! use kwavers::domain::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
+//! use kwavers::domain::sensor::localization::multilateration::trilateration::TrilaterationSolver;
+//! use kwavers::domain::sensor::localization::Position;
 //! let sensors = vec![
 //!     Sensor::new(0, Position::new(0.0, 0.0, 0.0)),
 //!     Sensor::new(1, Position::new(1.0, 0.0, 0.0)),

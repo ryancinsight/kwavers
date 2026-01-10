@@ -61,9 +61,9 @@ use crate::domain::sensor::localization::{Position, SensorArray};
 /// -----
 ///
 /// ```no_run
-/// use kwavers::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
-/// use kwavers::sensor::localization::multilateration::trilateration::TrilaterationSolver;
-/// use kwavers::sensor::localization::Position;
+/// use kwavers::domain::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
+/// use kwavers::domain::sensor::localization::multilateration::trilateration::TrilaterationSolver;
+/// use kwavers::domain::sensor::localization::Position;
 ///
 /// // Construct a simple non-collinear array
 /// let sensors = vec![
@@ -109,9 +109,9 @@ impl<'a> TrilaterationSolver<'a> {
     /// Example
     /// -------
     /// ```no_run
-    /// # use kwavers::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
-    /// # use kwavers::sensor::localization::multilateration::trilateration::TrilaterationSolver;
-    /// # use kwavers::sensor::localization::Position;
+    /// # use kwavers::domain::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
+    /// # use kwavers::domain::sensor::localization::multilateration::trilateration::TrilaterationSolver;
+    /// # use kwavers::domain::sensor::localization::Position;
     /// # let sensors = vec![
     /// #     Sensor::new(0, Position::new(0.0, 0.0, 0.0)),
     /// #     Sensor::new(1, Position::new(1.0, 0.0, 0.0)),
@@ -246,9 +246,9 @@ impl<'a> TrilaterationSolver<'a> {
     /// Example
     /// -------
     /// ```no_run
-    /// # use kwavers::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
-    /// # use kwavers::sensor::localization::multilateration::trilateration::TrilaterationSolver;
-    /// # use kwavers::sensor::localization::Position;
+    /// # use kwavers::domain::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
+    /// # use kwavers::domain::sensor::localization::multilateration::trilateration::TrilaterationSolver;
+    /// # use kwavers::domain::sensor::localization::Position;
     /// # let sensors = vec![
     /// #     Sensor::new(0, Position::new(0.0, 0.0, 0.0)),
     /// #     Sensor::new(1, Position::new(1.0, 0.0, 0.0)),
