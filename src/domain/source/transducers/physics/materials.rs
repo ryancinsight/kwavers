@@ -3,7 +3,7 @@
 //! Defines piezoelectric materials, backing layers, matching layers,
 //! and acoustic lenses used in transducer construction.
 
-use crate::domain::core::error::{ConfigError, KwaversError, KwaversResult};
+use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Piezoelectric material properties
 ///

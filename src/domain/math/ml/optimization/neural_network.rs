@@ -1,6 +1,6 @@
 //! Neural network implementation for parameter optimization
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2, Axis};
 use rand::Rng;
 

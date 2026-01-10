@@ -4,7 +4,7 @@
 
 use super::bowl::{BowlConfig, BowlTransducer};
 use super::multi_bowl::MultiBowlArray;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 
 pub use super::multi_bowl::ApodizationType;
 

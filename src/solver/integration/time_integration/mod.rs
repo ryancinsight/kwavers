@@ -41,8 +41,8 @@ pub use time_scale_separation::{TimeScale, TimeScaleSeparator};
 pub use time_stepper::{AdamsBashforth, RungeKutta4};
 pub use traits::{MultiRateConfig, TimeStepper, TimeStepperConfig, TimeStepperType};
 
-use crate::domain::core::error::KwaversResult;
-use crate::domain::core::error::{KwaversError, ValidationError};
+use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, ValidationError};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::collections::HashMap;

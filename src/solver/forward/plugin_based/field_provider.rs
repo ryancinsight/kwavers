@@ -4,7 +4,7 @@
 //! to only the fields they need.
 
 use super::field_registry::FieldRegistry;
-use crate::domain::core::error::FieldError;
+use crate::core::error::FieldError;
 use crate::domain::field::mapping::UnifiedFieldType;
 use ndarray::{ArrayView3, ArrayViewMut3};
 

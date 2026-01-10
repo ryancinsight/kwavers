@@ -391,7 +391,7 @@ impl NeuralBeamformingConfig {
     /// - Batch size is zero
     /// - Sensor geometry has < 2 elements
     pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
-        use crate::domain::core::error::KwaversError;
+        use crate::core::error::KwaversError;
 
         // Network architecture validation
         if self.network_architecture.len() < 2 {

@@ -4,7 +4,7 @@
 //! This module focuses solely on the core solving logic.
 
 use crate::domain::boundary::{Boundary, CPMLBoundary, PMLBoundary};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::math::fft::Complex64;
 use crate::domain::medium::Medium;

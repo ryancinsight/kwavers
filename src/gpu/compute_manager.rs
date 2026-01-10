@@ -3,8 +3,8 @@
 //! Provides high-level interface for GPU compute operations
 
 use crate::analysis::performance::simd_auto::SimdAuto;
-use crate::domain::core::constants::numerical;
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::constants::numerical;
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::gpu::shaders;
 use ndarray::Array3;
 #[allow(unused_imports)]

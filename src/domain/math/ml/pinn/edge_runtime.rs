@@ -3,7 +3,7 @@
 //! This module provides optimized runtime execution for quantized PINN models
 //! on resource-constrained edge devices including ARM, RISC-V, and embedded systems.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::ml::pinn::quantization::LayerInfo;
 use crate::domain::math::ml::pinn::QuantizedModel;
 use std::collections::HashMap;

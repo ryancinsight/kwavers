@@ -9,7 +9,7 @@
 //! sensor representation is therefore a grid probe set (`GridSensorSet`) rather than
 //! a domain-specific array sensor.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::sensor::GridSensorSet;

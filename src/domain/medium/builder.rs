@@ -3,7 +3,7 @@
 //! Follows Builder pattern for complex medium instantiation
 
 use super::{LayerParameters, MediumParameters, MediumType};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::{homogeneous::HomogeneousMedium, Medium};
 

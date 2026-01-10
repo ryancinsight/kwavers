@@ -26,7 +26,7 @@
 //! - **Photoacoustic-Ultrasound** (2019): "Photoacoustic-ultrasound imaging fusion methods"
 //!   *IEEE Transactions on Medical Imaging*, 38(9), 2023-2034.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::imaging::photoacoustic::PhotoacousticResult;
 use crate::domain::imaging::ultrasound::elastography::ElasticityMap;
 use ndarray::Array3;

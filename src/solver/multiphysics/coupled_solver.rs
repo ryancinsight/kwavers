@@ -2,7 +2,7 @@
 //!
 //! This module implements a unified solver for coupled acoustic-optical-thermal simulations.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::field::indices::*;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;

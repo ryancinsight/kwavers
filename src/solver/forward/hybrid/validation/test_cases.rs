@@ -1,6 +1,6 @@
 //! Validation test cases
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 
 /// Test result
 #[derive(Debug, Clone)]

@@ -1,7 +1,7 @@
 //! Wavefield modeling for FWI
 //! Based on Virieux (1986): "P-SV wave propagation in heterogeneous media"
 
-use crate::domain::core::error::{KwaversError, KwaversResult, PhysicsError};
+use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
 use ndarray::{Array1, Array2, Array3, Zip};
 
 /// Configuration for wavefield modeling

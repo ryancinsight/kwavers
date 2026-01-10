@@ -30,8 +30,8 @@
 
 use super::bubble_state::{BubbleParameters, BubbleState};
 use super::thermodynamics::{ThermodynamicsCalculator, VaporPressureModel};
-use crate::domain::core::constants::cavitation::{BAR_L2_TO_PA_M6, L_TO_M3};
-use crate::domain::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
+use crate::core::constants::cavitation::{BAR_L2_TO_PA_M6, L_TO_M3};
+use crate::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
 
 // Remove duplicate constant definitions - they're now imported from constants module
 

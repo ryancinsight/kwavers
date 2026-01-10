@@ -1,7 +1,7 @@
 //! Treatment outcome prediction model
 
 use super::{MLModel, ModelMetadata};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array2;
 
 /// Outcome prediction model

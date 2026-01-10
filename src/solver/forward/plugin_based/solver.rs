@@ -4,8 +4,8 @@
 //! Follows SOLID principles with clear separation of concerns.
 
 use crate::domain::boundary::Boundary;
-use crate::domain::core::error::KwaversResult;
-use crate::domain::core::time::Time;
+use crate::core::error::KwaversResult;
+use crate::core::time::Time;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;

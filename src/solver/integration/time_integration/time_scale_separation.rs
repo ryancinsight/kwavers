@@ -11,7 +11,7 @@
 //!   for computing atmospheric reactive flows" Applied Numerical Mathematics,
 //!   28(2-4), 327-341.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, Array4, Axis};
 use std::collections::HashMap;

@@ -3,7 +3,7 @@
 //! Patient-specific treatment planning using CT scans for skull characterization
 //! and optimal trajectory calculation for brain targets.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use num_complex::Complex;

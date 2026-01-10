@@ -2,7 +2,7 @@
 
 use super::analyzer::QualityMetrics;
 use super::region::{DomainRegion, DomainType};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::solver::hybrid::config::DecompositionStrategy;
 

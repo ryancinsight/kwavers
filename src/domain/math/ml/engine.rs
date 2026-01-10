@@ -3,7 +3,7 @@
 //! This module contains the main `MLEngine` struct and its implementation
 //! for managing machine learning models and inference.
 
-use crate::domain::core::error::{
+use crate::core::error::{
     ConfigError, DataError, KwaversError, KwaversResult, SystemError,
 };
 use ndarray::{Array1, Array2, Array3};

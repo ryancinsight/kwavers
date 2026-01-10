@@ -5,8 +5,8 @@
 
 use super::super::matrices::matrix_inverse;
 use super::core::DGSolver;
-use crate::domain::core::error::KwaversResult;
-use crate::domain::core::error::{KwaversError, ValidationError};
+use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, ValidationError};
 use ndarray::{Array2, Array3};
 
 impl DGSolver {

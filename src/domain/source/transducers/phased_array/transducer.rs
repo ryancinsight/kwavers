@@ -4,7 +4,7 @@ use super::beamforming::{BeamformingCalculator, BeamformingMode};
 use super::config::PhasedArrayConfig;
 use super::crosstalk::CrosstalkModel;
 use super::element::TransducerElement;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::signal::Signal;

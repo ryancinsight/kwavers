@@ -12,7 +12,7 @@
 //! - Rate limiting integration
 //! - Audit logging for security events
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::infra::api::{APIError, APIErrorType};
 use axum::extract::FromRequestParts;
 use axum::http::{header::AUTHORIZATION, request::Parts, StatusCode};

@@ -30,7 +30,7 @@
 //! let result = solver.solve()?;
 //! ```
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::gpu::compute_manager::ComputeManager;
 use ndarray::{Array4, Array5};
 use std::collections::HashMap;

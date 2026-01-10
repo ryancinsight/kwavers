@@ -3,7 +3,7 @@
 //! Models the mechanisms of BBB opening for targeted drug delivery using
 //! low-intensity focused ultrasound with microbubbles.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Permeability enhancement data

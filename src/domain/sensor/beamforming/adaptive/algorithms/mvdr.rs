@@ -17,7 +17,7 @@
 //! - Callers must decide how to handle failure; this module will not return `steering` as a
 //!   disguised fallback.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;

@@ -28,7 +28,7 @@
 //! - Phillips, P. (2001): "Contrast pulse sequences (CPS): Imaging nonlinear microbubbles"
 //! - Anderson, V.C. (1950): "Sound scattering from a fluid sphere"
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::imaging::ultrasound::ceus::CEUSImagingParameters;
 use ndarray::Array3;

@@ -3,7 +3,7 @@
 //! Implements global sensitivity analysis methods to quantify how uncertainty
 //! in input parameters propagates through ultrasound simulation models.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array1;
 use std::collections::HashMap;
 

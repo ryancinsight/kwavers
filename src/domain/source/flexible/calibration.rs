@@ -3,7 +3,7 @@
 //! This module provides methods for calibrating and tracking flexible
 //! transducer arrays, including self-calibration and external tracking integration.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use nalgebra::{DMatrix, DVector};
 use ndarray::{Array1, Array2, Array3};
 

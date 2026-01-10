@@ -7,7 +7,7 @@
 //! - Treeby & Cox (2010) J. Biomed. Opt. 15(2)
 //! - Liu, Q. H. (1997) "The PSTD algorithm" MOTL 15(3)
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::math::fft::KSpaceCalculator;
 use crate::domain::medium::Medium;

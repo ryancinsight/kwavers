@@ -49,7 +49,7 @@ use crate::analysis::signal_processing::beamforming::narrowband::snapshots::{
     SnapshotSelection,
 };
 use crate::analysis::signal_processing::beamforming::narrowband::steering::NarrowbandSteering;
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::linear_algebra::LinearAlgebra;
 use crate::domain::sensor::beamforming::covariance::CovarianceEstimator;
 use crate::domain::sensor::beamforming::{SteeringVector, SteeringVectorMethod};

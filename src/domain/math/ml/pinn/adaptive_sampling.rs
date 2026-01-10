@@ -12,7 +12,7 @@
 //! - Uncertainty quantification for sampling priority
 //! - Memory-efficient point redistribution
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use burn::tensor::{backend::AutodiffBackend, ElementConversion, Tensor};
 use rand::prelude::*;
 use std::collections::HashMap;

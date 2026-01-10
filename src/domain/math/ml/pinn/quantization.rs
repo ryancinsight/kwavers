@@ -3,7 +3,7 @@
 //! This module provides quantization strategies to reduce model size and improve inference
 //! speed while maintaining physics-informed accuracy for real-time applications.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::ml::pinn::BurnPINN2DWave;
 use burn::tensor::{backend::Backend, Tensor};
 use std::collections::HashMap;

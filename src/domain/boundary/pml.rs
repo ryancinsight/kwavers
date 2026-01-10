@@ -1,5 +1,5 @@
 use crate::domain::boundary::Boundary;
-use crate::domain::core::error::{ConfigError, KwaversError, KwaversResult, ValidationError};
+use crate::core::error::{ConfigError, KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use log::trace;
 use ndarray::{Array3, ArrayViewMut3};

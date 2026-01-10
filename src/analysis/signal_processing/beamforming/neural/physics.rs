@@ -32,7 +32,7 @@
 //! - Perona & Malik (1990): "Scale-space and edge detection" - Coherence preservation
 //! - Donoho (1995): "De-noising by soft-thresholding" - Sparsity enforcement
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 use super::types::BeamformingFeedback;

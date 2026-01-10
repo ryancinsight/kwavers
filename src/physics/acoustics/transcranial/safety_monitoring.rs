@@ -3,7 +3,7 @@
 //! Real-time monitoring of thermal and mechanical indices during tFUS treatments
 //! to ensure patient safety and treatment efficacy.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Thermal dose accumulation (CEM43)

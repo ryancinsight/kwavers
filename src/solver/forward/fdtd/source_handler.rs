@@ -1,4 +1,4 @@
-use crate::domain::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::domain::source::{GridSource, Source, SourceField, SourceMode};
 use ndarray::{Array2, Array3, Zip};

@@ -21,7 +21,7 @@
 //! - J: current density (A/m²)
 //! - ρ: charge density (C/m³)
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::ml::pinn::physics::{
     BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface,
     InitialConditionSpec, PhysicsDomain, PhysicsLossWeights, PhysicsParameters,

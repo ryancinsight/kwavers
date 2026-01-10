@@ -3,7 +3,7 @@
 //! This module provides the primary wave propagation calculator that coordinates
 //! calculations across different wave modes and interface types.
 
-use crate::domain::core::error::{KwaversError, KwaversResult, PhysicsError};
+use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
 use crate::physics::acoustics::analytical::propagation::{
     coefficients::PropagationCoefficients, interfaces::fresnel::FresnelCalculator,
     interfaces::interface::Interface, interfaces::snell::SnellLawCalculator, Polarization,

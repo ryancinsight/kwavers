@@ -28,7 +28,7 @@
 //!
 //! This file provides explicit, jargon-aligned helpers to avoid silent convention mismatches.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::geometry::distance3;
 use ndarray::Array1;
 use num_complex::Complex64;

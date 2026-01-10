@@ -3,7 +3,7 @@
 //! This module implements transfer learning techniques to adapt Physics-Informed Neural Networks
 //! trained on simple geometries to more complex geometries, enabling efficient generalization.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 

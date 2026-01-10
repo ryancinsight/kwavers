@@ -39,7 +39,7 @@
 //! - Harris (1978): "On the use of windows for harmonic analysis with the discrete Fourier transform"
 //! - Szabo (2004): "Diagnostic Ultrasound Imaging: Inside Out"
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 
 /// Compute optimal beamforming delay using eikonal equation.
 ///

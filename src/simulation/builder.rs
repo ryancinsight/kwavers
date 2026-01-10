@@ -5,7 +5,7 @@
 
 use super::*;
 use crate::domain::boundary::config::BoundaryParameters;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::medium::config::MediumParameters;
 use crate::domain::source::config::SourceParameters;
 use crate::infra::io::config::OutputParameters;

@@ -4,7 +4,7 @@
 //! they have declared as required or provided, preventing accidental access
 //! to unrelated fields and improving encapsulation.
 
-use crate::domain::core::error::{KwaversResult, PhysicsError};
+use crate::core::error::{KwaversResult, PhysicsError};
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::physics::state::{FieldView, PhysicsState};
 use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3};

@@ -4,7 +4,7 @@
 //! within the PINN ecosystem, enabling rapid extension to new physics while maintaining
 //! a unified training and inference interface.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;
 

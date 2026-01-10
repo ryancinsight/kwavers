@@ -13,7 +13,7 @@
 //! - **DRY**: Reusable tensor operations
 //! - **KISS**: Focused API for wave mode conversion
 
-use crate::domain::core::error::{KwaversResult, PhysicsError};
+use crate::core::error::{KwaversResult, PhysicsError};
 use ndarray::Array2;
 
 /// Mode conversion configuration

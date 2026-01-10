@@ -1,7 +1,7 @@
 //! Core hybrid PSTD/FDTD solver implementation
 
 use crate::domain::boundary::Boundary;
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::GridSource;

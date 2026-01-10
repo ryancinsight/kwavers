@@ -38,7 +38,7 @@ impl ReactionKinetics {
                 let _y = j as f64 * grid.dy;
                 let _z = k as f64 * grid.dz;
 
-                use crate::domain::core::constants::thermodynamic::{
+                use crate::core::constants::thermodynamic::{
                     REACTION_REFERENCE_TEMPERATURE, SECONDARY_REACTION_RATE,
                     SONOCHEMISTRY_BASE_RATE,
                 };

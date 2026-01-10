@@ -16,7 +16,7 @@ mod pulse_sequence;
 mod safety;
 mod schemes;
 
-pub use crate::domain::core::constants::*;
+pub use crate::core::constants::*;
 pub use amplitude::AmplitudeController;
 pub use duty_cycle::DutyCycleController;
 pub use filters::ExponentialFilter;

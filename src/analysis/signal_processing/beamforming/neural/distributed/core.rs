@@ -44,7 +44,7 @@
 //! - Raina et al. (2009): "Large-scale deep unsupervised learning using graphics processors"
 //! - Dean et al. (2012): "Large scale distributed deep networks"
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array4;
 use std::collections::{HashMap, VecDeque};
 

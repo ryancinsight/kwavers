@@ -10,7 +10,7 @@
 //!
 //! References: Frank & Tamm (1937), Jackson (1999).
 
-use crate::domain::core::constants::fundamental::SPEED_OF_LIGHT;
+use crate::core::constants::fundamental::SPEED_OF_LIGHT;
 use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
 

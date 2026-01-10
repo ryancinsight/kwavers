@@ -4,7 +4,7 @@
 //! Refactored following GRASP principles - maintains backward compatibility
 //! Based on Claerbout (1985): "Imaging the Earth's Interior"
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::plugin::{PluginMetadata, PluginState};
 // Note: Keeping Plugin dependency here, which is in physics. Cycle?
 // Solver -> Physics (traits/plugins) is OK.

@@ -7,7 +7,7 @@
 //! - Xu & Wang (2005) "Time-reversal reconstruction algorithm"
 //! - Treeby et al. (2010) "MATLAB toolbox"
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::math::fft::get_fft_for_grid;
 use ndarray::{Array3, ArrayView2, Zip};

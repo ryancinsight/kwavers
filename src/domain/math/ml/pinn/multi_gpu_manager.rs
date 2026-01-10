@@ -3,7 +3,7 @@
 //! This module provides comprehensive multi-GPU support for Physics-Informed Neural Networks,
 //! including device discovery, domain decomposition, load balancing, and communication protocols.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "gpu")]
 use crate::gpu::GpuCapabilities;
 use std::collections::{HashMap, VecDeque};

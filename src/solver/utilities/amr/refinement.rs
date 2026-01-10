@@ -1,6 +1,6 @@
 //! Refinement management and level control
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::{Array3, Zip};
 
 /// Refinement level information

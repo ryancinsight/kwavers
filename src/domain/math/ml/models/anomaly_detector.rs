@@ -1,7 +1,7 @@
 //! Anomaly detection model
 
 use super::{MLModel, ModelMetadata};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 
 /// Anomaly detection model

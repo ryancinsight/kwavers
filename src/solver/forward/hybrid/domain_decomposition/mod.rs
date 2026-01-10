@@ -35,7 +35,7 @@ pub use metrics::QualityMetrics;
 pub use partitioner::DomainPartitioner;
 pub use region::{DomainRegion, DomainType};
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::solver::hybrid::config::DecompositionStrategy;

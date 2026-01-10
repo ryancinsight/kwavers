@@ -30,7 +30,7 @@
 //! - **IEC 60601-2-37 (2015)**. "Medical electrical equipment - Part 2-37: Particular requirements for the basic safety and essential performance of ultrasonic medical diagnostic and monitoring equipment"
 //! - **FDA (2019)**. "Information for Manufacturers Seeking Marketing Clearance of Diagnostic Ultrasound Systems and Transducers"
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
 /// Clinical validation standards

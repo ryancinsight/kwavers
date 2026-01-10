@@ -5,7 +5,7 @@
 use super::models::{
     AnomalyDetectorModel, ConvergencePredictorModel, ParameterOptimizerModel, TissueClassifierModel,
 };
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array2;
 
 /// ML model types supported by the system

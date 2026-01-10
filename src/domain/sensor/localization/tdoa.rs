@@ -1,7 +1,7 @@
 // localization/tdoa.rs - Time Difference of Arrival processing
 
 use super::{Position, SensorArray};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use serde::{Deserialize, Serialize};
 
 /// TDOA measurement between sensor pair

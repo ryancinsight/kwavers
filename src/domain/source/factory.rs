@@ -2,7 +2,7 @@
 //!
 //! Follows Creator pattern for source instantiation using domain types.
 
-use crate::domain::core::error::{ConfigError, KwaversResult};
+use crate::core::error::{ConfigError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::signal::{Signal, SineWave, ToneBurst, WindowType};
 use crate::domain::source::{

@@ -3,7 +3,7 @@
 //! This module provides common functionality for computing wavenumbers,
 //! k-space corrections, and spectral derivatives used by multiple solvers.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::math::fft::KSpaceCalculator;
 use ndarray::{s, Array3, Zip};

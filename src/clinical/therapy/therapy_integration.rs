@@ -57,7 +57,7 @@
 //! - FDA Q-submission process for combination products
 
 use crate::clinical::therapy::lithotripsy::LithotripsySimulator;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::physics::cavitation_control::FeedbackController;

@@ -3,7 +3,7 @@
 //! This module provides stability analysis and CFL condition computation
 //! for time integration methods.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 

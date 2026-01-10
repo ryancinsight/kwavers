@@ -1,7 +1,7 @@
 //! KZK Equation Solver Plugin
 //! Based on Lee & Hamilton (1995): "Time-domain modeling of pulsed finite-amplitude sound beams"
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::plugin::{PluginMetadata, PluginState};

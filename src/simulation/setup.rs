@@ -3,7 +3,7 @@
 //! Replaces legacy factory system. Orchestrates the creation of simulation components
 //! from configuration (SSOT).
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::{Medium, MediumBuilder};
 use crate::domain::sensor::GridSensorSet;

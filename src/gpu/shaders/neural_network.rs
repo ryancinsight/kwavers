@@ -3,7 +3,7 @@
 //! WGSL compute shaders for real-time PINN inference on GPU.
 //! Provides matrix multiplication and activation function kernels.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::gpu::device::GpuDevice;
 
 /// Neural network shader for GPU-accelerated inference

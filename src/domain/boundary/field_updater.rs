@@ -27,7 +27,7 @@
 //! ```
 
 use crate::domain::boundary::traits::{BoundaryCondition, FieldType};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::{Grid, GridTopology};
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 

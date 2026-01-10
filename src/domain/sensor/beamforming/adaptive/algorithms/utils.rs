@@ -10,7 +10,7 @@
 //! `crate::utils::linear_algebra::LinearAlgebra` (solve / inversion) and must surface failures via
 //! `KwaversResult` rather than fallback outputs.
 
-use crate::domain::core::error::{KwaversError, KwaversResult, NumericalError};
+use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 
 /// `adaptive::algorithms` no longer provides local numerics.
 ///

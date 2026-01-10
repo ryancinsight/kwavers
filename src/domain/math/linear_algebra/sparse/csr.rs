@@ -1,6 +1,6 @@
 //! Compressed Sparse Row (CSR) matrix format
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::{Array1, ArrayView1, ArrayView2};
 
 /// Compressed Sparse Row matrix format

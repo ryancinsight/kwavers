@@ -26,7 +26,7 @@
 //! - Mickievicius, P. (2009). "3D finite difference computation on GPUs using CUDA."
 //!   *Proceedings of 2nd Workshop on General Purpose Processing on Graphics Processing Units*
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::collections::HashMap;

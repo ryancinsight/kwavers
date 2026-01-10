@@ -90,7 +90,7 @@
 //! )?;
 //! ```
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
 use std::f64::consts::PI;
 

@@ -16,7 +16,7 @@ pub use outcome_predictor::OutcomePredictorModel;
 pub use parameter_optimizer::ParameterOptimizerModel;
 pub use tissue_classifier::TissueClassifierModel;
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array2;
 
 /// Common trait for all ML models

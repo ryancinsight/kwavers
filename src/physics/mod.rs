@@ -9,7 +9,7 @@ pub mod optics;
 pub mod thermal;
 // pub mod factory; // Removed
 pub mod constants {
-    pub use crate::domain::core::constants::*;
+    pub use crate::core::constants::*;
 }
 
 pub use acoustics::*;

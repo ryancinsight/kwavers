@@ -4,7 +4,7 @@
 //! acoustic scattering from microbubble contrast agents.
 
 use super::microbubble::MicrobubblePopulation;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 
 /// Nonlinear scattering model for microbubbles
 #[derive(Debug)]

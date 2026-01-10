@@ -24,7 +24,7 @@
 //! - Van Veen & Buckley (1988): "Beamforming: A versatile approach"
 //! - Kendall & Gal (2017): "What uncertainties do we need in Bayesian DL?"
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::sensor::beamforming::{BeamformingConfig, BeamformingProcessor};
 use ndarray::{Array3, ArrayView3, ArrayView4};
 use std::collections::HashMap;

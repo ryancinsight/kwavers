@@ -2,7 +2,7 @@
 //!
 //! This module handles numerical stability calculations for time-stepping.
 
-use crate::domain::core::constants::numerical::CFL_SAFETY_FACTOR;
+use crate::core::constants::numerical::CFL_SAFETY_FACTOR;
 use crate::domain::grid::structure::Grid;
 
 /// Stability calculator for numerical schemes

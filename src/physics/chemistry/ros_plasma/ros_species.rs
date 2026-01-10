@@ -10,7 +10,7 @@
 use ndarray::Array3;
 use std::collections::HashMap;
 
-use crate::domain::core::constants::{
+use crate::core::constants::{
     HYDROGEN_PEROXIDE_WEIGHT, HYDROXYL_RADICAL_WEIGHT, NITRIC_OXIDE_WEIGHT, PEROXYNITRITE_WEIGHT,
     SINGLET_OXYGEN_WEIGHT, SUPEROXIDE_WEIGHT,
 };

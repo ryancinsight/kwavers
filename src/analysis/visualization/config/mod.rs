@@ -2,7 +2,7 @@
 //!
 //! Provides configuration structures for visualization and rendering.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 
 // Constants for visualization
 pub const DEFAULT_TARGET_FPS: f64 = 60.0;

@@ -43,7 +43,7 @@ pub mod constants {
     pub const T_BOILING_WATER: f64 = 373.15;
 }
 
-use crate::domain::core::constants::{
+use crate::core::constants::{
     H_VAP_WATER_100C, M_WATER, P_ATM, P_CRITICAL_WATER, P_TRIPLE_WATER, R_GAS, T_BOILING_WATER,
     T_CRITICAL_WATER, T_TRIPLE_WATER,
 };

@@ -1,7 +1,7 @@
 //! Interpolation schemes for mesh refinement
 
 use super::octree::Octree;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Interpolation scheme for refinement/coarsening

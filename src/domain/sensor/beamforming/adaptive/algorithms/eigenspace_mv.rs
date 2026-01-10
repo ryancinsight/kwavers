@@ -23,7 +23,7 @@
 //! - Gershman et al. (1999), robust adaptive beamforming in subspaces
 //! - Shahbazpanahi et al. (2003), generalized Capon / subspace localization
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;

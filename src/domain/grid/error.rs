@@ -1,3 +1,3 @@
 //! Grid-specific error types
 
-pub use crate::domain::core::error::GridError;
+pub use crate::core::error::GridError;

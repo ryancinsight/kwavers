@@ -37,7 +37,7 @@ pub use octree::{Octree, OctreeNode};
 pub use refinement::{RefinementLevel, RefinementManager};
 pub use wavelet::{WaveletBasis, WaveletTransform};
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 

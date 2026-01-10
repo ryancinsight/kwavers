@@ -4,7 +4,7 @@
 //! filtering operations (bandpass, envelope detection, FBP filters).
 
 use super::spatial;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::signal::{analytic, filter::FrequencyFilter, window_value, WindowType};
 use crate::solver::reconstruction::FilterType;
 use ndarray::{Array1, Array2, Array3};

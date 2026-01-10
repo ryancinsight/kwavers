@@ -1,7 +1,7 @@
 //! Common traits for IMEX schemes
 
 use super::ImplicitSolverType;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 use std::fmt::Debug;
 

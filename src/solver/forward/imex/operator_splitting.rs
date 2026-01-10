@@ -1,7 +1,7 @@
 //! Operator splitting strategies for IMEX schemes
 
 use super::traits::OperatorSplitting;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Lie-Trotter splitting (first-order)

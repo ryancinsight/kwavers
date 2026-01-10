@@ -5,7 +5,7 @@
 //! - Claerbout (1985): "Imaging the Earth's Interior"
 //! - Zhang & Sun (2009): "Practical issues in reverse time migration"
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::{s, Array2, Array3, Array4, Zip};
 

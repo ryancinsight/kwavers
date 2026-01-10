@@ -31,7 +31,7 @@
 //! - Glorot & Bengio (2010): "Understanding the difficulty of training deep feedforward neural networks"
 //! - LeCun et al. (1998): "Efficient BackProp"
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array3, Axis};
 
 use super::layer::NeuralLayer;

@@ -1,7 +1,7 @@
 //! Gradient computation for FWI
 //! Based on Plessix (2006): "Adjoint-state method for gradient computation"
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::{Array2, Array3, Zip};
 
 /// Gradient computation methods for FWI

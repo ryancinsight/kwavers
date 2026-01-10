@@ -4,7 +4,7 @@
 //! in different media, including acoustic and optical impedance calculations,
 //! primarily for analytical solutions.
 
-use crate::domain::core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
+use crate::core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use ndarray::Array2;
 
 /// Medium properties for wave propagation

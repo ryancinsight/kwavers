@@ -7,7 +7,7 @@
 //! - Norton (1980) "Reconstruction from projections"
 //! - Kostli et al. (2001) "Temporal backward projection of optoacoustic pressure"
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::math::fft::FFT_CACHE;
 use crate::domain::signal::window_value;
 use crate::domain::signal::WindowType;

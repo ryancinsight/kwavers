@@ -1,6 +1,6 @@
 //! Tissue region configuration and mapping
 
-use crate::domain::core::error::{ConfigError, KwaversResult};
+use crate::core::error::{ConfigError, KwaversResult};
 use crate::domain::medium::absorption::TissueType;
 
 /// Configuration for setting tissue in a specific region

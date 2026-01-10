@@ -3,7 +3,7 @@
 //! This module calculates mechanical damage from cavitation bubble collapse
 //! including erosion, pitting, and material fatigue
 
-use crate::domain::core::constants::cavitation::{
+use crate::core::constants::cavitation::{
     COMPRESSION_FACTOR_EXPONENT, DEFAULT_CONCENTRATION_FACTOR, DEFAULT_FATIGUE_RATE,
     DEFAULT_PIT_EFFICIENCY, DEFAULT_THRESHOLD_PRESSURE, IMPACT_ENERGY_COEFFICIENT,
     MATERIAL_REMOVAL_EFFICIENCY,

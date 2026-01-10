@@ -1,7 +1,7 @@
 //! Mixed-Domain Propagation Plugin
 //! Based on Pinton et al. (2009): "A heterogeneous nonlinear attenuating full-wave model"
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::math::fft::FFT_CACHE;
 use crate::domain::medium::Medium;

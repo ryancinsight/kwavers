@@ -55,7 +55,7 @@
 //! - **Evans, J. (2006)**. "A scalable concurrent malloc(3) implementation for FreeBSD"
 //!   *BSDCan Conference*, 157-168.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use std::alloc::{alloc, dealloc, Layout};
 use std::cell::RefCell;
 use std::ptr::NonNull;

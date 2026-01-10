@@ -1,6 +1,6 @@
 //! Parallel execution optimization
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use rayon::prelude::*;
 use std::sync::Arc;
 

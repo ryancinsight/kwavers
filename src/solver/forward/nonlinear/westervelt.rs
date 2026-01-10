@@ -37,7 +37,7 @@
 //!    "Distortion and harmonic generation in the nearfield of a finite amplitude sound beam"
 //!    J. Acoust. Soc. Am., 75(3), 749-768.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;

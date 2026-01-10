@@ -4,7 +4,7 @@
 //! workspaces and pre-computes wavenumber vectors for efficient spectral
 //! derivative calculations.
 
-use crate::domain::core::constants::numerical::FFT_K_SCALING;
+use crate::core::constants::numerical::FFT_K_SCALING;
 use crate::domain::grid::Grid;
 use crate::domain::math::fft::{get_fft_for_grid, Fft3d};
 use ndarray::{Array1, Array3, Zip};

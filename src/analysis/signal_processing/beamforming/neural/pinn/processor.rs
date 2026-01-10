@@ -39,7 +39,7 @@
 //! - Van Veen & Buckley (1988): "Beamforming: A versatile approach to spatial filtering"
 //! - Szabo (2004): "Diagnostic Ultrasound Imaging: Inside Out"
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array3, Array4, ArrayView3};
 use std::collections::HashMap;
 

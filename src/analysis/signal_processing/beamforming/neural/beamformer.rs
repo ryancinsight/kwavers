@@ -49,7 +49,7 @@
 
 use ndarray::{Array3, Array4};
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 
 use super::config::{NeuralBeamformingConfig, NeuralBeamformingMode};
 use super::features;

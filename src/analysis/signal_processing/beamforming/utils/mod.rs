@@ -147,7 +147,7 @@
 //!   discrete Fourier transform." *Proceedings of the IEEE*, 66(1), 51-83.
 //!   DOI: 10.1109/PROC.1978.10837
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
 use num_complex::Complex64;
 use std::f64::consts::PI;

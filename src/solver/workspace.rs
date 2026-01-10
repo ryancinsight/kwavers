@@ -8,7 +8,7 @@
 //! - **Memory Efficiency**: 30-50% reduction in allocations
 
 #[allow(unused_imports)]
-use crate::domain::core::error::{KwaversError, KwaversResult, SystemError};
+use crate::core::error::{KwaversError, KwaversResult, SystemError};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use num_complex::Complex;

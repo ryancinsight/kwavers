@@ -16,7 +16,7 @@
 //! - Dimension mismatches, singular systems, or invalid denominators are explicit errors.
 //! - No fallback to `steering.clone()` is permitted.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;

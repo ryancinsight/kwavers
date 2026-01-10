@@ -86,7 +86,7 @@ impl HIFUTreatmentPlan {
         &self,
         transducer: &HIFUTransducer,
     ) -> Result<(), crate::domain::core::error::KwaversError> {
-        use crate::domain::core::error::{KwaversError, ValidationError};
+        use crate::core::error::{KwaversError, ValidationError};
 
         // Check target is within accessible region
         if self.target.center[2] < transducer.focal_length * 0.5 {

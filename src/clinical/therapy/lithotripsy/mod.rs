@@ -22,7 +22,7 @@
 //! - Coleman et al. (2011): "The physics and physiology of shock wave lithotripsy"
 //! - Cleveland et al. (2000): "The physics of shock wave lithotripsy"
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 

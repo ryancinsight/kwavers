@@ -1,6 +1,6 @@
 //! Tone burst signal implementation
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::signal::window::{window_value, WindowType};
 use crate::domain::signal::Signal;
 use std::f64::consts::PI;

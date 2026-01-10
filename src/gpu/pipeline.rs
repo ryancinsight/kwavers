@@ -3,7 +3,7 @@
 //! Implements streaming pipelines for real-time ultrasound imaging with
 //! GPU acceleration, adaptive beamforming, and interactive visualization.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::gpu::memory::{MemoryPoolType, UnifiedMemoryManager};
 use ndarray::{Array3, Array4};
 use std::collections::VecDeque;

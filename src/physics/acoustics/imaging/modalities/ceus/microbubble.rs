@@ -24,7 +24,7 @@
 //! - de Jong et al. (2002): "Principles and recent developments in ultrasound
 //!   contrast agents." Ultrasonics 40, 71-78.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 pub use crate::domain::imaging::ultrasound::ceus::{Microbubble, MicrobubblePopulation};
 
 /// Microbubble dynamics simulation

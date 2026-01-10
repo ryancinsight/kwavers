@@ -14,7 +14,7 @@
 //! - Courant-Friedrichs-Lewy (CFL) condition: c×dt/dx ≤ 1
 //! - Standard FDTD textbook implementations
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 
 /// FDTD solver configuration for 1D wave equation

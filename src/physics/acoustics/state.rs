@@ -3,7 +3,7 @@
 //! This module provides a single source of truth for physics field states,
 //! eliminating the need for dummy fields scattered across implementations.
 
-use crate::domain::core::error::{KwaversResult, PhysicsError};
+use crate::core::error::{KwaversResult, PhysicsError};
 use crate::domain::grid::Grid;
 use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
 use std::collections::HashMap;

@@ -14,7 +14,7 @@ pub use memory::{BandwidthOptimizer, MemoryOptimizer, PrefetchStrategy};
 pub use parallel::ParallelOptimizer;
 pub use simd::SimdOptimizer;
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 
 /// Stencil kernel for finite difference computations
 #[derive(Debug, Clone)]

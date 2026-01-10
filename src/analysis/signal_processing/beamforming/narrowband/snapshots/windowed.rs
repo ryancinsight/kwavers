@@ -28,7 +28,7 @@
 //!   extraction, we keep raw FFT bin values; any global scaling cancels in MVDR spectrum ratios,
 //!   but relative scaling across snapshots matters. Windowing is applied consistently across sensors.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
 use rustfft::FftPlanner;

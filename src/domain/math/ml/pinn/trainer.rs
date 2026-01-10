@@ -1,4 +1,4 @@
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::ml::pinn::wave_equation_1d::TrainingMetrics;
 use std::collections::HashMap;
 use tokio::sync::mpsc;

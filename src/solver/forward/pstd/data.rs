@@ -3,7 +3,7 @@
 //! Internal data structures for the generalized spectral solver.
 //! following GRASP principle of cohesive, focused modules.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::math::fft::Complex64;
 use crate::domain::medium::Medium;

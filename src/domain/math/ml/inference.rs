@@ -1,6 +1,6 @@
 //! Neural network inference engine for real-time predictions
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2, Array3, Axis};
 use rand::Rng;
 

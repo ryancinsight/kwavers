@@ -3,7 +3,7 @@
 //! This module implements reconstruction algorithms for linear sensor arrays,
 //! commonly used in ultrasound imaging.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::solver::reconstruction::{
     ReconstructionConfig, Reconstructor, UniversalBackProjection, WeightFunction,

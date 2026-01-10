@@ -11,7 +11,7 @@
 //! - **Mobile Optimization**: Battery-aware processing for portable devices
 //! - **Clinical Workflows**: Automated diagnosis and recommendations
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::infra::api::auth::AuthenticatedUser;
 use crate::infra::api::{
     APIError, ClinicalAnalysisRequest, ClinicalAnalysisResponse, DICOMIntegrationRequest,

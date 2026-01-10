@@ -3,7 +3,7 @@
 //! Reference: Goodman (2005) "Introduction to Fourier Optics"
 
 use super::HASConfig;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::Array3;

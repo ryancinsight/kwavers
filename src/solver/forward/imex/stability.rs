@@ -1,7 +1,7 @@
 //! Stability analysis for IMEX schemes
 
 use super::IMEXSchemeType;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 use std::f64::consts::PI;
 

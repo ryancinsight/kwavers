@@ -3,7 +3,7 @@
 //! This module defines the common interfaces for time integration methods,
 //! following the Interface Segregation Principle (ISP).
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::fmt::Debug;

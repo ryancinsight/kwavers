@@ -29,7 +29,7 @@ pub use config::PhotoacousticConfig;
 pub use filters::Filters;
 pub use iterative::IterativeAlgorithm;
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::solver::reconstruction::Reconstructor;
 use ndarray::{Array2, Array3};
 

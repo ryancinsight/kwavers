@@ -3,7 +3,7 @@
 //! Implements conformal prediction to provide distribution-free uncertainty
 //! bounds with guaranteed coverage probabilities.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
 use ndarray::{Array1, Array2};

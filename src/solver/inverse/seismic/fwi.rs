@@ -4,7 +4,7 @@
 //! Reference: Tarantola (1984): "Inversion of seismic reflection data in the acoustic approximation"
 
 use super::parameters::FwiParameters;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::source::grid_source::GridSource;
 use crate::solver::interface::solver::Solver;
@@ -265,7 +265,7 @@ impl FwiProcessor {
 
     /// Apply physical constraints to velocity model
     fn apply_model_constraints(&self, model: &mut Array3<f64>) {
-        use crate::domain::core::constants::SOUND_SPEED_WATER;
+        use crate::core::constants::SOUND_SPEED_WATER;
 
         // Ensure physically reasonable velocity bounds
         let min_velocity = SOUND_SPEED_WATER * 0.5; // 750 m/s

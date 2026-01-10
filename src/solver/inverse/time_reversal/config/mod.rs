@@ -2,7 +2,7 @@
 //!
 //! Provides configuration structures for time-reversal reconstruction algorithms.
 
-use crate::domain::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 
 /// Configuration for time-reversal reconstruction
 #[derive(Debug, Clone)]

@@ -10,7 +10,7 @@ use num_traits::Zero;
 use super::conventional::BeamformingAlgorithm;
 use super::matrix_utils::{eigen_hermitian, invert_matrix};
 use super::source_estimation::{estimate_num_sources, SourceEstimationCriterion};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 
 /// MUSIC (Multiple Signal Classification) algorithm
 ///

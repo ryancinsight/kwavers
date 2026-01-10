@@ -16,7 +16,7 @@ pub use phase::PhaseModulation;
 pub use pulse_width::PulseWidthModulation;
 pub use quadrature::QuadratureAmplitudeModulation;
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 
 /// Common trait for all modulation schemes
 pub trait Modulation {

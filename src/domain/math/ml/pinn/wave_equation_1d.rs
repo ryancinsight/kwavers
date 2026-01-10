@@ -20,7 +20,7 @@
 //! - Raissi et al. (2019): Original PINN framework
 //! - Manual autodiff implementation following numerical differentiation best practices
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 
 /// Configuration for 1D Wave Equation PINN

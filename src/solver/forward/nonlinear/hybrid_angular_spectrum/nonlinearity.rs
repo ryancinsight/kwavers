@@ -3,7 +3,7 @@
 //! Reference: Hamilton & Blackstock (1998) "Nonlinear Acoustics"
 
 use super::HASConfig;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Nonlinear operator for Burgers equation

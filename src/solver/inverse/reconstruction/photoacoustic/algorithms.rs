@@ -3,7 +3,7 @@
 //! This module implements the main reconstruction algorithms for
 //! photoacoustic imaging.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayView2};
 

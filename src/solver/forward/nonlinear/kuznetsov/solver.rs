@@ -7,7 +7,7 @@ use super::config::KuznetsovConfig;
 use super::diffusion::compute_diffusive_term_workspace;
 use super::nonlinear::compute_nonlinear_term_workspace;
 use super::workspace::KuznetsovWorkspace;
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;

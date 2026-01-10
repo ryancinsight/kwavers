@@ -35,7 +35,7 @@ pub use multi_gpu::{GpuAffinity, MultiGpuContext};
 pub use pipeline::{ComputePipeline, PipelineLayout};
 pub use shaders::neural_network::NeuralNetworkShader;
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 
 /// GPU device capabilities
 #[derive(Debug, Clone)]

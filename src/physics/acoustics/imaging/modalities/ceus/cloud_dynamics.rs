@@ -34,7 +34,7 @@
 //!   standing wave." *Phys. Fluids*, 13(8), 2219-2226.
 
 use super::microbubble::{BubbleDynamics, BubbleResponse, Microbubble};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::collections::HashMap;

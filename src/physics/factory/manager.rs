@@ -3,7 +3,7 @@
 //! Follows Manager pattern for complex physics plugin coordination
 
 use super::config::PhysicsConfig;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::solver::plugin::PluginManager;
 
 /// Specialized physics manager following Manager pattern from GRASP

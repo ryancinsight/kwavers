@@ -4,7 +4,7 @@
 //! caching, parallelization, and optimized memory access patterns.
 
 use super::coefficients::{FDCoefficients, SpatialOrder};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayView3};
 use num_traits::Float;

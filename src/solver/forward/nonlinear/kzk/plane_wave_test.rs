@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::core::constants::SOUND_SPEED_WATER;
+    use crate::core::constants::SOUND_SPEED_WATER;
     use crate::solver::forward::nonlinear::kzk::{
         constants::*, parabolic_diffraction::KzkDiffractionOperator, KZKConfig,
     };

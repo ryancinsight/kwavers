@@ -1,9 +1,9 @@
-use crate::domain::core::error::DataError;
+use crate::core::error::DataError;
 /// NIFTI file format support for medical imaging data
 ///
 /// Implements NIFTI-1 and NIFTI-2 format readers using the `nifti` crate
 /// for robust handling of medical imaging data formats.
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::path::Path;
 

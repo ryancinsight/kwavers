@@ -11,7 +11,7 @@ pub mod photoacoustic;
 pub mod plane_recon;
 pub mod seismic;
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array2, Array3};
 use serde::{Deserialize, Serialize};

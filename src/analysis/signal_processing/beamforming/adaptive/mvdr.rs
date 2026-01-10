@@ -81,7 +81,7 @@
 //! to `analysis::signal_processing::beamforming::adaptive::mvdr` as part of the
 //! architectural purification effort (ADR 003). The API remains unchanged.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;

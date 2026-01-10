@@ -1,7 +1,7 @@
 //! Quadrature Amplitude Modulation (QAM)
 
 use super::{Modulation, ModulationParams};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 
 /// QAM implementation
 #[derive(Debug, Clone)]

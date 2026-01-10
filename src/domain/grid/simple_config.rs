@@ -2,7 +2,7 @@
 //!
 //! Domain-focused configuration management following SOLID principles
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use serde::{Deserialize, Serialize};
 
 /// Grid configuration with comprehensive validation

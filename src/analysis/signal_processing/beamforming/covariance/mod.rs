@@ -149,7 +149,7 @@
 //!
 //! All covariance operations should now use this module (SSOT enforcement).
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 use num_complex::Complex64;
 

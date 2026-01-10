@@ -1,7 +1,7 @@
 //! Multi-Element Transducer Field Calculator Plugin
 //! Based on Jensen & Svendsen (1992): "Calculation of pressure fields from arbitrarily shaped transducers"
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::{AcousticProperties, Medium};
 use crate::domain::plugin::{PluginMetadata, PluginState};

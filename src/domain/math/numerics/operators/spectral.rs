@@ -47,7 +47,7 @@
 //!   *Spectral Methods: Fundamentals in Single Domains*. Springer.
 //!   DOI: 10.1007/978-3-540-30726-6
 
-use crate::domain::core::error::{KwaversResult, NumericalError};
+use crate::core::error::{KwaversResult, NumericalError};
 use ndarray::{Array1, Array3, ArrayView3};
 use std::f64::consts::PI;
 

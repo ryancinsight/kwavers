@@ -10,7 +10,7 @@ pub use field_access::{FieldAccessor, PluginFields};
 pub use metadata::PluginMetadata;
 
 use crate::domain::boundary::Boundary;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;

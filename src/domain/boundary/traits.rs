@@ -31,7 +31,7 @@
 //! - **Passivity**: Energy can only be absorbed or reflected, never created
 //! - **Causality**: Boundary response depends only on past/present fields
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::{Grid, GridTopology};
 use ndarray::{Array3, ArrayViewMut3};
 use rustfft::num_complex::Complex;

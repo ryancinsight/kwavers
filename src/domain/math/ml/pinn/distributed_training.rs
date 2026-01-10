@@ -3,7 +3,7 @@
 //! This module provides distributed training coordination, gradient aggregation,
 //! checkpoint management, and fault tolerance for multi-GPU PINN training.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::ml::pinn::{BurnPINN2DWave, BurnTrainingMetrics2D, Geometry2D};
 use burn::tensor::backend::AutodiffBackend;
 // Removed unused imports

@@ -1,6 +1,6 @@
 //! Interface geometry for domain coupling
 
-use crate::domain::core::error::{KwaversResult, ValidationError};
+use crate::core::error::{KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::solver::hybrid::domain_decomposition::DomainRegion;
 use serde::{Deserialize, Serialize};

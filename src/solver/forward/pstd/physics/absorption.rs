@@ -7,7 +7,7 @@
 //! - Treeby & Cox (2010), Eq. 9-10
 //! - Caputo (1967) for fractional derivatives
 
-use crate::domain::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::domain::math::fft::Complex64;
 use crate::domain::medium::Medium;

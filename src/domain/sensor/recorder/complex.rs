@@ -1,8 +1,8 @@
 // recorder/implementation.rs - Main recorder implementation
 
-use crate::domain::core::error::KwaversResult;
-use crate::domain::core::error::{KwaversError, ValidationError};
-use crate::domain::core::time::Time;
+use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, ValidationError};
+use crate::core::time::Time;
 use crate::domain::field::indices::{BUBBLE_RADIUS_IDX, LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
 use crate::domain::field::BubbleStateFields;
 use crate::domain::grid::Grid;

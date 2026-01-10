@@ -3,7 +3,7 @@
 //! This module provides multi-GPU context management, device affinity,
 //! and cross-GPU communication for distributed computing.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::gpu::{GpuCapabilities, GpuContext};
 use std::collections::HashMap;
 

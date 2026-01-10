@@ -19,11 +19,11 @@
 //!    - Thermal effects in bubble dynamics
 
 use super::{BubbleState, KellerMiksisModel};
-use crate::domain::core::error::{KwaversResult, PhysicsError};
+use crate::core::error::{KwaversResult, PhysicsError};
 use ndarray::Array1;
 use std::sync::Arc;
 
-use crate::domain::core::constants::thermodynamic::{
+use crate::core::constants::thermodynamic::{
     NUSSELT_CONSTANT, NUSSELT_PECLET_COEFF, NUSSELT_PECLET_EXPONENT, R_GAS,
     SHERWOOD_PECLET_EXPONENT, T_AMBIENT, VAPOR_DIFFUSION_COEFFICIENT,
 };
@@ -279,7 +279,7 @@ impl BubbleIMEXIntegrator {
 
     /// Calculate effective polytropic index for thermal model
     fn calculate_effective_polytropic_index(&self, state: &BubbleState) -> f64 {
-        use crate::domain::core::constants::cavitation::{
+        use crate::core::constants::cavitation::{
             MIN_PECLET_NUMBER, PECLET_SCALING_FACTOR,
         };
 

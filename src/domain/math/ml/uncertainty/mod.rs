@@ -80,7 +80,7 @@ pub use conformal_prediction::{ConformalConfig, ConformalPredictor, ConformalRes
 pub use ensemble_methods::{EnsembleConfig, EnsembleQuantifier, EnsembleResult};
 pub use sensitivity_analysis::{SensitivityAnalyzer, SensitivityConfig, SensitivityIndices};
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
 #[cfg(feature = "pinn")]

@@ -1,7 +1,7 @@
 //! Stiffness detection for IMEX schemes
 
 use super::traits::StiffnessIndicator;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::{Array3, Zip};
 
 /// Stiffness metric information

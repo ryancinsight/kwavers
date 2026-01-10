@@ -40,7 +40,7 @@ pub use rkyv_impl::*;
 
 #[cfg(feature = "zero-copy")]
 mod rkyv_impl {
-    use crate::domain::core::error::{KwaversError, KwaversResult};
+    use crate::core::error::{KwaversError, KwaversResult};
     use crate::domain::grid::Grid;
     use rkyv::{
         check_archived_root,
@@ -245,7 +245,7 @@ mod rkyv_impl {
 pub mod stub {
     //! Stub implementations when zero-copy feature is disabled
 
-    use crate::domain::core::error::KwaversResult;
+    use crate::core::error::KwaversResult;
     use crate::domain::grid::Grid;
 
     /// Zero-copy serialization not available - enable "zero-copy" feature

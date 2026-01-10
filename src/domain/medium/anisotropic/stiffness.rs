@@ -3,8 +3,8 @@
 //! Implements stiffness matrices in Voigt notation for various symmetries
 
 use super::types::AnisotropyType;
-use crate::domain::core::constants::{LAME_TO_STIFFNESS_FACTOR, SYMMETRY_TOLERANCE};
-use crate::domain::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::core::constants::{LAME_TO_STIFFNESS_FACTOR, SYMMETRY_TOLERANCE};
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use ndarray::Array2;
 
 /// Full elastic stiffness tensor (6x6 in Voigt notation)

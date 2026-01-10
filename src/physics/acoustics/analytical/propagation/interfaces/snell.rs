@@ -3,7 +3,7 @@
 //! Implements Snell's law of refraction: n₁sin(θ₁) = n₂sin(θ₂)
 
 use super::Interface;
-use crate::domain::core::error::{KwaversError, KwaversResult, PhysicsError};
+use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
 use std::f64::consts::PI;
 
 /// Critical angles for wave propagation

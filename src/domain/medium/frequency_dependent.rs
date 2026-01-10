@@ -10,7 +10,7 @@
 //!   wave propagation in biological tissue" Journal of the Acoustical
 //!   Society of America, 88(3), 1584-1591.
 
-use crate::domain::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use ndarray::Array3;
 
 /// Frequency-dependent tissue properties

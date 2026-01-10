@@ -1,6 +1,6 @@
 // domain/sensor/recorder/traits.rs - Core recorder traits
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array4;
 

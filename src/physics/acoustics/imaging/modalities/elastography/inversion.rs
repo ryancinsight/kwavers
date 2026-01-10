@@ -37,7 +37,7 @@
 //! - Parker, K. J., et al. (2011). "Sonoelasticity of organs: Shear waves ring a bell."
 //!   *Journal of Ultrasound in Medicine*, 30(4), 507-515.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::physics::imaging::elastography::displacement::DisplacementField;
 use crate::physics::imaging::elastography::HarmonicDisplacementField;

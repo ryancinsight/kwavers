@@ -4,8 +4,8 @@
 //! Runge-Kutta and Adams-Bashforth schemes.
 
 use super::traits::{TimeStepper, TimeStepperConfig};
-use crate::domain::core::error::KwaversResult;
-use crate::domain::core::error::{KwaversError, SystemError};
+use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, SystemError};
 use crate::domain::grid::Grid;
 use ndarray::{Array3, Zip};
 use std::collections::VecDeque;

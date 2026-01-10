@@ -5,7 +5,7 @@
 //! - Golub & Van Loan (2013): "Matrix Computations"
 
 use super::csr::CompressedSparseRowMatrix;
-use crate::domain::core::error::{KwaversError, KwaversResult, NumericalError};
+use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::Array1;
 
 /// Eigenvalue solver for sparse matrices

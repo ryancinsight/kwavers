@@ -1,6 +1,6 @@
 //! GPU buffer management
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 

@@ -37,7 +37,7 @@ pub mod biot;
 pub mod properties;
 pub mod waves;
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 
 pub use biot::BiotTheory;

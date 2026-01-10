@@ -26,7 +26,7 @@
 //! # }
 //! ```
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use wgpu::util::DeviceExt;
 
 /// Buffer usage flags for GPU buffers

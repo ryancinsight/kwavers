@@ -8,7 +8,7 @@ pub mod multilateration;
 pub mod tdoa;
 pub mod triangulation;
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};
 

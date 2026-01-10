@@ -3,7 +3,7 @@
 #[cfg(test)]
 use super::*;
 #[cfg(test)]
-use crate::domain::core::constants::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
+use crate::core::constants::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
 
 #[test]
 fn test_modulation_schemes() {

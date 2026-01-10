@@ -1,6 +1,6 @@
 //! Therapy calculator orchestration
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::therapy::metrics::TreatmentMetrics;

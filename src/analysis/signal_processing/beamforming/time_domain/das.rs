@@ -80,7 +80,7 @@
 use crate::analysis::signal_processing::beamforming::time_domain::delay_reference::{
     relative_delays_s, DelayReference,
 };
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
 /// Apply time-domain DAS given **absolute** propagation delays and an explicit delay reference.

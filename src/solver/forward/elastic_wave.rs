@@ -3,7 +3,7 @@
 //! This module contains the core solving routines for elastic wave propagation,
 //! separated from the main module to maintain GRASP principles.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;

@@ -3,7 +3,7 @@
 //! Defines the physical geometry of transducer elements including
 //! dimensions, spacing, and aspect ratios.
 
-use crate::domain::core::error::{ConfigError, KwaversError, KwaversResult};
+use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Element geometry parameters for transducer design
 ///

@@ -27,7 +27,7 @@
 //! - **Clinical Accuracy**: >95% diagnostic accuracy validation
 //! - **Scalability**: Support for multiple concurrent examinations
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::imaging::photoacoustic::PhotoacousticResult;
 use crate::domain::imaging::ultrasound::elastography::ElasticityMap;
 use crate::domain::sensor::beamforming::BeamformingConfig3D;

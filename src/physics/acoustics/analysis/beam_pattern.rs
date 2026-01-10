@@ -1,6 +1,6 @@
 //! Beam pattern analysis and directivity calculations
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array2, ArrayView3};
 use std::f64::consts::PI;

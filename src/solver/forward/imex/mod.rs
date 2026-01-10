@@ -66,7 +66,7 @@ pub mod traits;
 #[cfg(test)]
 mod tests;
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::sync::Arc;

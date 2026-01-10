@@ -3,7 +3,7 @@
 // Runtime boundary conditions live under `simulation::environment`.
 // This module must not depend on crate-root re-exports; use direct imports only.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayViewMut3};
 use std::fmt::Debug;

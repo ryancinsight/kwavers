@@ -1,11 +1,11 @@
 //! Homogeneous medium implementation with uniform properties
 
-use crate::domain::core::constants::{
+use crate::core::constants::{
     AIR_POLYTROPIC_INDEX, ATMOSPHERIC_PRESSURE, BLOOD_VISCOSITY_37C, REFERENCE_FREQUENCY_MHZ,
     WATER_ABSORPTION_ALPHA_0, WATER_ABSORPTION_POWER, WATER_SPECIFIC_HEAT,
     WATER_SURFACE_TENSION_20C, WATER_THERMAL_CONDUCTIVITY, WATER_VAPOR_PRESSURE_20C,
 };
-use crate::domain::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::{
     acoustic::AcousticProperties,
@@ -138,7 +138,7 @@ impl HomogeneousMedium {
 
     /// Create a tissue medium with standard properties (Legacy compatibility)
     pub fn tissue(grid: &Grid) -> Self {
-        use crate::domain::core::constants::{DENSITY_TISSUE, SOUND_SPEED_TISSUE};
+        use crate::core::constants::{DENSITY_TISSUE, SOUND_SPEED_TISSUE};
         let mut medium = Self::new(DENSITY_TISSUE, SOUND_SPEED_TISSUE, 0.75, 15.0, grid);
         let shape = (grid.nx, grid.ny, grid.nz);
         medium.grid_shape = shape;

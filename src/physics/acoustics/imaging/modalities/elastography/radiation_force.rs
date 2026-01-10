@@ -23,7 +23,7 @@
 //! - Palmeri, M. L., et al. (2005). "Ultrasonic tracking of acoustic radiation
 //!   force-induced displacements." *IEEE TUFFC*, 52(8), 1300-1313.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::Array3;

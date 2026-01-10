@@ -62,7 +62,7 @@
 //!   matched layer improved at grazing incidence for the seismic wave equation."
 //!   *Geophysics*, 72(5), SM155-SM167.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::Array3;

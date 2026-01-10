@@ -1,6 +1,6 @@
 //! Model training pipeline with data augmentation
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::ml::models::TissueClassifierModel;
 use ndarray::{Array1, Array2, Array3, Axis};
 use rand::seq::SliceRandom;

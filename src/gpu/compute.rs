@@ -1,7 +1,7 @@
 //! GPU compute operations
 
 #[allow(unused_imports)]
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 #[allow(unused_imports)]
 use wgpu::util::DeviceExt;
 

@@ -28,7 +28,7 @@
 //! - We clamp eigenvalues below `floor = relative_floor * λ_max` to avoid `ln(0)` while
 //!   keeping the clamp explicit and controlled.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::linear_algebra::LinearAlgebra;
 use ndarray::Array2;
 use num_complex::Complex64;

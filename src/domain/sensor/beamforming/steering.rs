@@ -6,7 +6,7 @@
 //! **Focused Beam**: Combines phase delays for beam focusing at specific point
 
 use crate::analysis::signal_processing::beamforming::utils::delays;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::math::geometry::distance3;
 use ndarray::Array1;
 

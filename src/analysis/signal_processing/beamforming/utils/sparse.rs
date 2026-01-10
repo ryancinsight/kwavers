@@ -121,7 +121,7 @@
 //! - [ ] Block-sparse structures (subarray processing)
 //! - [ ] Compressive sensing solvers (ADMM, FISTA)
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::linear_algebra::sparse::{CompressedSparseRowMatrix, CoordinateMatrix};
 use ndarray::Array2;
 use num_complex::Complex64;

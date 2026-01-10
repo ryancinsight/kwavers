@@ -3,7 +3,7 @@
 //! Reference: Cattaneo, C. (1958). "A form of heat conduction equation which eliminates
 //! the paradox of instantaneous propagation." Comptes Rendus, 247, 431-433.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::{Array3, Zip};

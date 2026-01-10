@@ -3,7 +3,7 @@
 //! High-performance compute shaders using wgpu for cross-platform GPU acceleration.
 //! Supports both integrated and discrete GPUs with automatic fallback.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid;
 use ndarray::Array3;
 use wgpu::util::DeviceExt;

@@ -1,6 +1,6 @@
 //! Interpolation schemes for inter-domain coupling
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};
 

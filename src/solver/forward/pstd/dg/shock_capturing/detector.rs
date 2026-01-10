@@ -2,11 +2,11 @@
 //!
 //! Provides various indicators to detect discontinuities and shocks in the solution.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, Array4};
 
-use crate::domain::core::constants::numerical::EPSILON;
+use crate::core::constants::numerical::EPSILON;
 
 /// Shock detector with multiple indicators
 #[derive(Debug, Clone)]

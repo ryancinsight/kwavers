@@ -3,7 +3,7 @@
 //! This module provides fundamental traits that all medium types must implement,
 //! establishing a Single Source of Truth (SSOT) for medium behaviors.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 use std::fmt::Debug;

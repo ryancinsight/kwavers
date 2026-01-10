@@ -3,7 +3,7 @@
 //! Implements Bayesian neural networks using Monte Carlo dropout for
 //! uncertainty estimation in physics-informed neural networks.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
 #[cfg(not(feature = "pinn"))]

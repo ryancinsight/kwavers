@@ -36,7 +36,7 @@ pub mod diffraction;
 pub mod nonlinearity;
 pub mod solver;
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::f64::consts::PI;

@@ -5,7 +5,7 @@
 
 #![allow(deprecated)]
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 

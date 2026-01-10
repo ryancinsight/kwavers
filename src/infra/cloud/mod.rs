@@ -3,7 +3,7 @@
 //! This module provides cloud-agnostic deployment capabilities for Physics-Informed Neural Networks,
 //! enabling seamless deployment across major cloud platforms (AWS, GCP, Azure) with enterprise features.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 #[cfg(feature = "pinn")]
 use std::sync::Arc;

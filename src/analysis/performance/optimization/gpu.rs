@@ -1,6 +1,6 @@
 //! GPU optimization strategies
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 
 /// GPU optimizer for accelerated computation
 #[derive(Debug)]

@@ -9,7 +9,7 @@
 use super::bubble_state::{BubbleParameters, BubbleState};
 use super::energy_balance::EnergyBalanceCalculator;
 use super::thermodynamics::{MassTransferModel, ThermodynamicsCalculator, VaporPressureModel};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 
 /// Keller-Miksis equation solver (compressible)
 ///
@@ -204,7 +204,7 @@ impl KellerMiksisModel {
     ///
     /// Reference: Qin et al. (2023), "Numerical investigation on acoustic cavitation"
     fn calculate_vdw_pressure(&self, state: &BubbleState) -> KwaversResult<f64> {
-        use crate::domain::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
+        use crate::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
 
         let volume = (4.0 / 3.0) * std::f64::consts::PI * state.radius.powi(3);
         let n_total = state.n_gas + state.n_vapor;
@@ -315,7 +315,7 @@ impl KellerMiksisModel {
     /// * `state` - Current bubble state
     /// * `dt` - Time step \[s\]
     pub fn update_mass_transfer(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
-        use crate::domain::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS, M_WATER};
+        use crate::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS, M_WATER};
 
         // Calculate saturation vapor pressure at current temperature
         let p_sat = self.thermo_calc.vapor_pressure(state.temperature);

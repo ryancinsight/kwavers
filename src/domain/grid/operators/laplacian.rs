@@ -3,7 +3,7 @@
 //! Unified Laplacian operator implementation for discretized grids.
 
 use super::coefficients::{FDCoefficients, SpatialOrder};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{s, Array3, ArrayView3, ArrayViewMut3, Zip};
 

@@ -1,6 +1,6 @@
 //! Beamforming configuration (core, unified)
 
-use crate::domain::core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
+use crate::core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
 
 /// Core configuration for beamforming operations across array-processing consumers.
 ///

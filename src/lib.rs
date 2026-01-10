@@ -38,9 +38,10 @@ use std::collections::HashMap;
 // Validation constants to replace magic numbers
 // Removed unused validation constants - use constants module instead
 
-// Core modules
-// Core infrastructure
-// Core infrastructure
+// Core infrastructure (foundational layer)
+pub mod core;
+
+// Infrastructure services
 pub mod infra;
 
 // NOTE:
@@ -55,7 +56,7 @@ pub mod simulation;
 pub mod solver;
 
 // API surface: domain-relevant types re-exported at crate boundaries for ergonomics
-pub use crate::domain::core::error::{KwaversError, KwaversResult};
+pub use crate::core::error::{KwaversError, KwaversResult};
 pub use crate::domain::grid::Grid;
 pub use crate::domain::medium::traits::Medium;
 
@@ -89,10 +90,10 @@ pub mod boundary {
     pub use crate::domain::boundary::{PMLBoundary, PMLConfig};
 }
 pub mod error {
-    pub use crate::domain::core::error::{GridError, KwaversError, KwaversResult};
+    pub use crate::core::error::{GridError, KwaversError, KwaversResult};
 }
 pub mod time {
-    pub use crate::domain::core::time::Time;
+    pub use crate::core::time::Time;
 }
 
 /// Core infrastructure re-exports for testing support
@@ -245,7 +246,7 @@ pub fn get_version_info() -> HashMap<String, String> {
 mod tests {
     use super::*;
 
-    use crate::domain::core::error::{self};
+    use crate::core::error::{self};
     use crate::domain::medium::core::CoreMedium;
 
     #[test]

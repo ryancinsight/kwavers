@@ -1,6 +1,6 @@
 //! Implicit solvers for IMEX schemes
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array3, Zip};
 use std::fmt::Debug;
 

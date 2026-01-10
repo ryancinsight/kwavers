@@ -2,7 +2,7 @@
 //!
 //! This module provides different execution strategies for running plugins.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::plugin::{Plugin, PluginContext};

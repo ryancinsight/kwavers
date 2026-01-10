@@ -1,6 +1,6 @@
 //! GPU context and resource management
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::visualization::VisualizationConfig;
 use wgpu::util::DeviceExt;
 

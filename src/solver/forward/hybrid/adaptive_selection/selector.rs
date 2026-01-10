@@ -2,7 +2,7 @@
 
 use super::criteria::SelectionCriteria;
 use super::metrics::{ComputationalMetrics, MaterialMetrics, SpectralMetrics};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, Array4};
 

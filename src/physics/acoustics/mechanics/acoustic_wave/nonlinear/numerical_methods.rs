@@ -2,8 +2,8 @@
 //!
 //! This module contains the core numerical algorithms for solving nonlinear acoustic equations.
 
-use crate::domain::core::constants::numerical;
-use crate::domain::core::error::KwaversResult;
+use crate::core::constants::numerical;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::math::fft::{fft_3d_array, ifft_3d_array};
 use crate::domain::medium::Medium;

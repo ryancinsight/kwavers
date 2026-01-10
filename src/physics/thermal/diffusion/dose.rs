@@ -4,7 +4,7 @@
 //! cancer therapy." International Journal of Radiation Oncology Biology Physics,
 //! 10(6), 787-800.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::{Array3, Zip};
 
 pub mod thresholds {

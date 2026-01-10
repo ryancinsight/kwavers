@@ -4,7 +4,7 @@
 //! - Saad (2003): "Iterative methods for sparse linear systems"
 
 use super::csr::CompressedSparseRowMatrix;
-use crate::domain::core::error::{KwaversError, KwaversResult, NumericalError};
+use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::{Array1, ArrayView1};
 
 /// Solver configuration

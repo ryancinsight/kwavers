@@ -3,7 +3,7 @@
 //! This plugin implements acoustic wave physics following SOLID principles.
 //! It depends only on abstractions and is completely decoupled from the solver.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;

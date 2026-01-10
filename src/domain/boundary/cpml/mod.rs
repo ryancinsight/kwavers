@@ -28,7 +28,7 @@ pub use update::CPMLUpdater;
 
 use crate::domain::boundary::traits::{AbsorbingBoundary, BoundaryCondition, BoundaryDirections};
 use crate::domain::boundary::Boundary;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::{Grid, GridTopology};
 use ndarray::{Array3, ArrayViewMut3, Zip};
 use rustfft::num_complex::Complex;

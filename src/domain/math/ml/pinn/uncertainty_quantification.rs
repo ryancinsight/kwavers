@@ -3,7 +3,7 @@
 //! This module implements Bayesian neural networks and uncertainty estimation techniques
 //! for Physics-Informed Neural Networks, providing reliable confidence bounds for predictions.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use burn::tensor::backend::{AutodiffBackend, Backend};
 use ndarray::Array1;
 

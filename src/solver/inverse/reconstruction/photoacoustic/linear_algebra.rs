@@ -3,7 +3,7 @@
 //! This module provides efficient and numerically stable linear algebra
 //! operations for solving the inverse problems in photoacoustic imaging.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2, ArrayView1};
 
 /// Linear algebra solver with various regularization methods

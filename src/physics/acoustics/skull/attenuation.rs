@@ -3,7 +3,7 @@
 //! Reference: Pinton et al. (2012) "Attenuation, scattering, and absorption
 //! of ultrasound in the skull bone"
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 

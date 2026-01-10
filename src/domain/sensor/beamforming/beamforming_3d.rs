@@ -25,7 +25,7 @@
 //!   Acquisition   Management    (WGSL)              Interpolation      Enhancement
 //! ```
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::sensor::beamforming::config::BeamformingConfig;
 use ndarray::{Array3, Array4};
 

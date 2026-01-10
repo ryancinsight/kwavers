@@ -13,7 +13,7 @@
 //! - Mixed precision support (FP16/FP32)
 //! - Performance profiling and monitoring
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;

@@ -46,7 +46,7 @@
 //! # }
 //! ```
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::{CylindricalTopology, Grid};
 use crate::domain::medium::Medium;
 use ndarray::{Array2, ArrayView2};

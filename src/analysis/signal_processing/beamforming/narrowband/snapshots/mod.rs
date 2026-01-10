@@ -29,7 +29,7 @@
 //! Use `extract_narrowband_snapshots(...)` with `SnapshotSelection::Auto(...)` to automatically pick
 //! the best available method based on scenario metadata.
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
 use rustfft::FftPlanner;

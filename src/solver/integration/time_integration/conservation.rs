@@ -3,7 +3,7 @@
 //! This module tracks conservation of mass, momentum, energy, and angular momentum
 //! to ensure physical accuracy of multi-physics simulations.
 
-use crate::domain::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::{grid::Grid, medium::Medium};
 use log::warn;
 use ndarray::{Array3, Zip};

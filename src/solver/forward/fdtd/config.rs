@@ -1,8 +1,8 @@
 //! FDTD solver configuration
 
 use crate::analysis::validation::ValidationResult;
-use crate::domain::core::constants::numerical::CFL_SAFETY_FACTOR;
-use crate::domain::core::error::ValidationError;
+use crate::core::constants::numerical::CFL_SAFETY_FACTOR;
+use crate::core::error::ValidationError;
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};
 

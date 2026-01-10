@@ -6,7 +6,7 @@
 //! 3. Power Law Absorption (Fractional Laplacian method)
 //! 4. PML application to density
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::math::fft::Complex64;
 use crate::solver::forward::pstd::solver::PSTDSolver;
 use ndarray::Zip;

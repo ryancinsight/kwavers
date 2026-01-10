@@ -13,7 +13,7 @@
 //! This prevents “working but incorrect” behavior (e.g. returning `0` sources due to a numerical
 //! routine not being available).
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 use num_complex::Complex64;
 

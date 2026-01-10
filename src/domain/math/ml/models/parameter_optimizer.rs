@@ -1,7 +1,7 @@
 //! Parameter optimization model
 
 use super::{MLModel, ModelMetadata};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::math::ml::inference::InferenceEngine;
 use ndarray::{Array1, Array2};
 

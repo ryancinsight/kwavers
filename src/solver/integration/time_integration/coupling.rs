@@ -3,7 +3,7 @@
 //! This module provides different strategies for coupling physics
 //! components that evolve at different time scales.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::collections::HashMap;

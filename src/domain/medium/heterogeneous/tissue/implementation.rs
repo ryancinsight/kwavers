@@ -1,7 +1,7 @@
 //! `HeterogeneousTissueMedium` implementation
 
 use super::{TissueMap, TissueRegion};
-use crate::domain::core::error::{KwaversResult, ValidationError};
+use crate::core::error::{KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::absorption::TissueType;
 use crate::domain::medium::{

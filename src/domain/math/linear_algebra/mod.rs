@@ -11,7 +11,7 @@
 
 pub mod sparse;
 
-use crate::domain::core::error::{KwaversError, KwaversResult, NumericalError};
+use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::{Array1, Array2};
 use num_complex::Complex;
 use num_traits::{Float, NumCast, Zero};

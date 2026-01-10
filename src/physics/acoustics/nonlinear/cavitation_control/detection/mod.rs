@@ -27,7 +27,7 @@ pub mod traits;
 pub mod types;
 
 // Re-export main types for convenience.
-pub use crate::domain::core::constants::*;
+pub use crate::core::constants::*;
 pub use broadband::BroadbandDetector;
 pub use spectral::SpectralDetector;
 pub use subharmonic::SubharmonicDetector;

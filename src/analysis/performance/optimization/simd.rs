@@ -1,7 +1,7 @@
 //! SIMD optimization implementations
 
 use super::config::SimdLevel;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 
 /// SIMD optimizer for vectorized operations
 #[derive(Debug)]

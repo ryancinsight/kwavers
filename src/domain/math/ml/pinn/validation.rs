@@ -11,7 +11,7 @@
 //! - Maximum Pointwise Error
 //! - Correlation Coefficient
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::ml::pinn::fdtd_reference::{FDTD1DWaveSolver, FDTDConfig};
 use crate::domain::math::ml::pinn::wave_equation_1d::{PINN1DWave, ValidationMetrics};
 use ndarray::{Array1, Array2};

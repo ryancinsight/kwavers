@@ -19,7 +19,7 @@
 //! - Van Trees (2002), "Optimum Array Processing"
 //! - Stoica & Nehorai (1990), "MUSIC, maximum likelihood, and Cramer-Rao bound"
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 

@@ -1,7 +1,7 @@
 //! Parameter validation for the control system
 
 use super::parameter::{ParameterType, ParameterValue};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 
 /// Result of parameter validation
 #[derive(Debug, Clone)]

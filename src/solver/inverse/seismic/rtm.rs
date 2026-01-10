@@ -4,7 +4,7 @@
 //! Reference: Baysal et al. (1983): "Reverse time migration"
 
 use super::parameters::{ImagingCondition, RtmSettings};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 

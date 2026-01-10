@@ -6,7 +6,7 @@ pub mod memory;
 pub use file::FileStorage;
 pub use memory::MemoryStorage;
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Storage backend trait

@@ -4,7 +4,7 @@ use ndarray::Array4;
 use std::fmt::Debug;
 
 use super::{FdtdConfig, FdtdSolver};
-use crate::domain::core::error::{KwaversError, KwaversResult, PhysicsError};
+use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;

@@ -4,7 +4,7 @@
 //! heap allocations in the main simulation loop.
 
 use super::spectral::SpectralOperator;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 

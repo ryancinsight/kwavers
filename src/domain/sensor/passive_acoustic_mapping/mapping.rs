@@ -7,7 +7,7 @@
 //! This module depends on `super::beamforming_config::PamBeamformingConfig` (policy)
 //! rather than any PAM-local beamforming implementation.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 use rustfft::{num_complex::Complex, FftPlanner};
 

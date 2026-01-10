@@ -107,7 +107,7 @@
 //! - WGPU backend requires Vulkan, DirectX 12, or Metal support
 //! - 2D problems require more collocation points than 1D for equivalent accuracy
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "gpu")]
 use burn::tensor::activation::{relu, sigmoid, tanh};
 use burn::{

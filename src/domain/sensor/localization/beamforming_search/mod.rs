@@ -37,7 +37,7 @@ use crate::analysis::signal_processing::beamforming::narrowband::{
     capon_spatial_spectrum_point, capon_spatial_spectrum_point_complex_baseband,
     CaponSpectrumConfig,
 };
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::sensor::beamforming::BeamformingProcessor;
 use crate::domain::sensor::localization::Position;
 use ndarray::Array3;

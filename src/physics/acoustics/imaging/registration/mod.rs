@@ -33,7 +33,7 @@
 //! - **Multi-Modal Registration**: "Multi-modal image registration" by Sotiras et al. (2013)
 //! - **Temporal Synchronization**: "Real-time multi-modal imaging" in IEEE TMI (2018)
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2, Array3};
 
 /// Spatial transformation types for image registration

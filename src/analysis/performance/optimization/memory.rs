@@ -1,6 +1,6 @@
 //! Memory optimization strategies
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use std::alloc::{alloc, dealloc, Layout};
 
 /// Prefetch strategy for memory access

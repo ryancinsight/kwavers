@@ -1,6 +1,6 @@
 // localization/multilateration/core.rs - Generalized multilateration (LS/WLS/ML)
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::sensor::localization::{Position, SensorArray, TrilaterationSolver};
 
 /// Multilateration methods for range-based localization

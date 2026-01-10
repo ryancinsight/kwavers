@@ -3,7 +3,7 @@
 //! This module defines the fundamental solver trait that all
 //! solver implementations must implement.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::sensor::GridSensorSet;

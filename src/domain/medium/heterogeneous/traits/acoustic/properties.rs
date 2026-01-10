@@ -3,7 +3,7 @@
 //! **Single Responsibility**: Pure acoustic property access per SOLID principles
 //! **Evidence-Based**: Following Hamilton & Blackstock (1998) acoustic theory
 
-use crate::domain::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::{
     core::HeterogeneousMedium, interpolation::TrilinearInterpolator,

@@ -9,7 +9,7 @@
 //! - Windowing functions
 
 use self::window::get_win;
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;

@@ -3,7 +3,7 @@
 //! This module provides the main `FlexibleTransducerArray` struct that
 //! integrates configuration, geometry, and calibration components.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::signal::Signal;
 use crate::domain::source::Source;

@@ -12,7 +12,7 @@
 //! - **Multi-Backend Support**: CPU, WGPU, CUDA (via Burn backends)
 //! - **Scientific Computing**: Optimized for PDEs, wave propagation, and physics simulations
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use burn::prelude::*;
 use burn::tensor::{backend::Backend, Tensor};
 use ndarray::Array3;

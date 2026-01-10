@@ -5,7 +5,7 @@
 use super::execution::{ExecutionStrategy, SequentialStrategy};
 use crate::analysis::performance::metrics::PerformanceMetrics;
 use crate::domain::boundary::Boundary;
-use crate::domain::core::error::{KwaversError, KwaversResult, PhysicsError, ValidationError};
+use crate::core::error::{KwaversError, KwaversResult, PhysicsError, ValidationError};
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;

@@ -3,7 +3,7 @@
 //! This module contains parameter structures and metrics for chemical simulations
 //! following the Single Responsibility Principle.
 
-use crate::domain::core::error::{KwaversResult, PhysicsError};
+use crate::core::error::{KwaversResult, PhysicsError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::Array3;

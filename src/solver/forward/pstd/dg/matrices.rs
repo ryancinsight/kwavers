@@ -1,8 +1,8 @@
 //! Matrix computation utilities for DG methods
 
 use super::basis::BasisType;
-use crate::domain::core::error::KwaversResult;
-use crate::domain::core::error::{KwaversError, NumericalError};
+use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, NumericalError};
 use ndarray::{Array1, Array2};
 
 /// Compute mass matrix using quadrature

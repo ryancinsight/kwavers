@@ -3,7 +3,7 @@
 //! This module implements the momentum conservation equation:
 //! du/dt = -1/rho0 * grad(p)
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::math::fft::Complex64;
 use crate::solver::forward::pstd::solver::PSTDSolver;
 use ndarray::Zip;

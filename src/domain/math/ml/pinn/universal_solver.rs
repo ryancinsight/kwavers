@@ -13,7 +13,7 @@
 //! - Performance monitoring and convergence tracking
 //! - Validation against analytical and literature benchmarks
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::ml::pinn::physics::{
     BoundaryConditionSpec, InitialConditionSpec, PhysicsDomain, PhysicsDomainRegistry,
     PhysicsLossWeights, PhysicsParameters, PhysicsValidationMetric,

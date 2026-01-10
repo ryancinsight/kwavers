@@ -1,7 +1,7 @@
 // localization/triangulation.rs - Triangulation methods
 
 use super::{Position, SensorArray};
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 
 /// Triangulator for position estimation
 #[derive(Debug)]

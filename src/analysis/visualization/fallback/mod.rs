@@ -2,7 +2,7 @@
 //!
 //! Provides CPU-based fallback rendering when GPU is not available.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use log::{info, warn};

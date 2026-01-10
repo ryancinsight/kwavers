@@ -8,7 +8,7 @@
 // This file must not re-implement beamforming (DAS/MVDR/steering) logic.
 
 use super::{LocalizationConfig, LocalizationResult, Position, SensorArray};
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use serde::{Deserialize, Serialize};
 
 /// Localization method

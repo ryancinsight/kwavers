@@ -169,7 +169,7 @@
 //! - **Before**: Lived in domain layer with ad-hoc eigensolvers and silent fallbacks
 //! - **After**: Analysis layer with strict SSOT routing and explicit error handling
 
-use crate::domain::core::error::{KwaversError, KwaversResult, NumericalError};
+use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use crate::domain::math::linear_algebra::LinearAlgebra;
 use ndarray::{s, Array1, Array2};
 use num_complex::Complex64;

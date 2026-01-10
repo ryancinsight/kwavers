@@ -3,7 +3,7 @@
 //! Provides a high-level API for simulating and reconstructing shear wave elastography
 //! experiments, integrating wave propagation and inversion algorithms.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::imaging::ultrasound::elastography::{ElasticityMap, InversionMethod};
 use crate::domain::medium::Medium;

@@ -2,7 +2,7 @@
 //!
 //! This module contains implementations of various traits for the `NonlinearWave` struct.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;

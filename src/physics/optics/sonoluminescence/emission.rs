@@ -41,7 +41,7 @@ use super::{
     cherenkov::{calculate_cherenkov_emission, CherenkovModel},
     spectral::{EmissionSpectrum, SpectralAnalyzer, SpectralRange},
 };
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::physics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use ndarray::{s, Array1, Array3, Array4};

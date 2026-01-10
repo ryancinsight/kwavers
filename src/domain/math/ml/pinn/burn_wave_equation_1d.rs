@@ -101,7 +101,7 @@
 //! - Larger hidden layers (50-100 neurons) improve accuracy but increase computation
 //! - WGPU backend requires Vulkan, DirectX 12, or Metal support
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use burn::{
     module::Module,
     nn::{Linear, LinearConfig},

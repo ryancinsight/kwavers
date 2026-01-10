@@ -1,7 +1,7 @@
 //! Beamforming processor
 
 use super::config::BeamformingConfig;
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2, Array3};
 

@@ -22,7 +22,7 @@
 //! - Add convergence criteria and adaptive learning rates
 //! - Extend to multi-physics coupling scenarios
 
-use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::math::ml::pinn::burn_wave_equation_2d::{
     BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, SimpleOptimizer2D,
 };

@@ -125,7 +125,7 @@
 //!   ultrasound imaging." *IEEE Trans. Ultrason., Ferroelect., Freq. Control*, 56(8).
 //!   DOI: 10.1109/TUFFC.2009.1263
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 

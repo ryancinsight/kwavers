@@ -3,7 +3,7 @@
 //! This module implements various iterative reconstruction algorithms
 //! including SIRT, ART, and OSEM.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2, Array3, ArrayView2, Zip};
 
 use super::config::PhotoacousticConfig;

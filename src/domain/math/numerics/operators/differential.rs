@@ -52,7 +52,7 @@
 //!   *IEEE Transactions on Antennas and Propagation*, 14(3), 302-307.
 //!   DOI: 10.1109/TAP.1966.1138693
 
-use crate::domain::core::error::{KwaversResult, NumericalError};
+use crate::core::error::{KwaversResult, NumericalError};
 use ndarray::{Array3, ArrayView3};
 
 /// Trait for differential operators

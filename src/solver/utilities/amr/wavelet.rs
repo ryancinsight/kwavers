@@ -1,6 +1,6 @@
 //! Wavelet transforms for multiresolution analysis
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Wavelet basis functions

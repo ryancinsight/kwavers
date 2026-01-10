@@ -16,7 +16,7 @@
 //! - Kasai, C., et al. (1985). "Real-time two-dimensional blood flow imaging
 //!   using an autocorrelation technique." *IEEE Trans. Sonics Ultrason.*, 32(3), 458-464.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 

@@ -46,7 +46,7 @@
 //! - de Boor, C. (2001). *A Practical Guide to Splines*. Springer.
 //!   DOI: 10.1007/978-1-4612-6333-3
 
-use crate::domain::core::error::{KwaversResult, NumericalError};
+use crate::core::error::{KwaversResult, NumericalError};
 use ndarray::{Array1, Array3, ArrayView1, ArrayView3};
 
 /// Trait for interpolation operators

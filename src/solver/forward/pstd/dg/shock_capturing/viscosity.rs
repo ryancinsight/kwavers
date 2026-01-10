@@ -2,11 +2,11 @@
 //!
 //! Implements various artificial viscosity approaches to stabilize shocks in spectral methods.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, Array4, Axis};
 
-use crate::domain::core::constants::numerical::{
+use crate::core::constants::numerical::{
     LINEAR_VISCOSITY_COEFF, MAX_VISCOSITY_LIMIT, QUADRATIC_VISCOSITY_COEFF,
     VON_NEUMANN_RICHTMYER_COEFF,
 };

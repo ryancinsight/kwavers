@@ -1,6 +1,6 @@
 //! CEUS domain definitions
 
-use crate::domain::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use ndarray::Array3;
 
 /// CEUS imaging parameters

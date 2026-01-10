@@ -51,7 +51,7 @@
 //! - Nightingale, K. R., et al. (2015). "Acoustic Radiation Force Impulse (ARFI)
 //!   imaging: A review." *Current Medical Imaging Reviews*, 11(1), 22-32.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::Array3;

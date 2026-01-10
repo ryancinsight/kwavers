@@ -168,7 +168,7 @@
 //! The old location `domain::sensor::beamforming::adaptive` will continue to exist
 //! with deprecation warnings for one minor version cycle.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 

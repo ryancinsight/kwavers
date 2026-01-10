@@ -9,8 +9,8 @@
 //! California Institute of Technology.
 
 use super::{BubbleParameters, BubbleState};
-use crate::domain::core::constants::ATMOSPHERIC_PRESSURE;
-use crate::domain::core::error::KwaversResult;
+use crate::core::constants::ATMOSPHERIC_PRESSURE;
+use crate::core::error::KwaversResult;
 
 /// Gilmore equation solver for high-amplitude bubble dynamics
 #[derive(Debug)]

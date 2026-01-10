@@ -3,7 +3,7 @@
 //! Implements ensemble-based uncertainty estimation using bagging and
 //! bootstrap aggregation for robust uncertainty bounds.
 
-use crate::domain::core::error::KwaversResult;
+use crate::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
 #[cfg(not(feature = "pinn"))]
