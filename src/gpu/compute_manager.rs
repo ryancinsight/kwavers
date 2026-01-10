@@ -304,73 +304,25 @@ impl ComputeManager {
 
 #[cfg(test)]
 mod tests {
-    // **ARCHITECTURAL NOTE**: Tests require tokio async runtime and physics constants refactoring
-    // Current state: Tests disabled pending dependency consolidation (Sprint 125+ roadmap)
-    // Reason: Adding tokio to dev-dependencies would increase build time; physics::constants
-    // module requires refactoring for consistent import paths across workspace
-    //
-    // **Impact**: Non-blocking - GPU functionality validated through integration tests
-    // **Tracking**: See docs/backlog.md Sprint 125+ GPU test infrastructure
-
-    /*
     use super::*;
-    use crate::core::constants::{tissue, water};
+    use ndarray::Array3;
 
-    #[tokio::test]
-    async fn test_compute_manager_creation() {
-        let _manager = ComputeManager::new().await.unwrap();
-        // Manager should always succeed, with or without GPU
-        assert!(true);
-    }
-
-    #[tokio::test]
-    async fn test_cfl_validation() {
-        let manager = ComputeManager::new().await.unwrap();
-
-        let mut pressure = Array3::zeros((10, 10, 10));
-        let velocity_x = Array3::zeros((10, 10, 10));
-        let velocity_y = Array3::zeros((10, 10, 10));
-        let velocity_z = Array3::zeros((10, 10, 10));
-
-        // Test with invalid CFL
-        let result = manager.fdtd_update(
-            &mut pressure,
-            &velocity_x,
-            &velocity_y,
-            &velocity_z,
-            1e-3, // dx
-            1e-3, // dy
-            1e-3, // dz
-            1e-3, // dt (too large)
-            water::SOUND_SPEED,
-            water::DENSITY,
-        );
-
-        assert!(result.is_err());
-    }
-    */
-
-    /*
-    // **ARCHITECTURAL NOTE**: Test disabled pending tissue module constant imports refactoring
-    // See above for rationale on physics::constants consolidation work
     #[test]
-    fn test_absorption_decay() {
-        use ndarray::Array3;
+    fn test_absorption_cpu_decay_is_applied() {
+        let manager =
+            ComputeManager::new_blocking().expect("ComputeManager::new_blocking should succeed");
+        let dt: f64 = 1e-3;
 
-        let mut pressure = Array3::from_elem((5, 5, 5), 1.0);
-        let absorption = Array3::from_elem((5, 5, 5), tissue::ABSORPTION_COEFFICIENT);
-        let dt = 1e-6;
+        let mut pressure = Array3::from_elem((2, 2, 2), 1.0);
+        let absorption = Array3::from_elem((2, 2, 2), 2.0);
+        let expected = (-2.0_f64 * dt).exp();
 
-        // After absorption, pressure should decrease
-        let initial_sum: f64 = pressure.sum();
+        manager
+            .absorption_cpu(&mut pressure, &absorption, dt)
+            .expect("absorption_cpu should succeed");
 
-        // Apply exponential decay manually for comparison
-        let expected_decay = (-tissue::ABSORPTION_COEFFICIENT * dt).exp();
-        let expected_sum = initial_sum * expected_decay;
-
-        // Verify decay is physical
-        assert!(expected_decay < 1.0);
-        assert!(expected_decay > 0.0);
+        for &p in pressure.iter() {
+            assert!((p - expected).abs() <= 1e-12);
+        }
     }
-    */
 }

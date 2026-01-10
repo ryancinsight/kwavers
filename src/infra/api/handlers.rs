@@ -183,7 +183,7 @@ pub async fn run_inference(
     #[cfg(feature = "pinn")]
     {
         let _ = stored_model;
-        return Err((
+        Err((
             StatusCode::SERVICE_UNAVAILABLE,
             JsonResponse(APIError {
                 error: crate::api::APIErrorType::ServiceUnavailable,

@@ -30,7 +30,6 @@ use crate::core::error::KwaversResult;
 use crate::domain::boundary::traits::{BoundaryCondition, FieldType};
 use crate::domain::grid::{Grid, GridTopology};
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
-use std::sync::Arc;
 
 /// Field updater that applies boundary conditions during solver steps
 ///
@@ -287,14 +286,24 @@ impl GradientFieldUpdater {
     }
 
     /// Get immutable views of gradient components
-    pub fn gradients(&self) -> (ArrayView3<f64>, ArrayView3<f64>, ArrayView3<f64>) {
+    pub fn gradients(
+        &self,
+    ) -> (
+        ArrayView3<'_, f64>,
+        ArrayView3<'_, f64>,
+        ArrayView3<'_, f64>,
+    ) {
         (self.grad_x.view(), self.grad_y.view(), self.grad_z.view())
     }
 
     /// Get mutable views of gradient components
     pub fn gradients_mut(
         &mut self,
-    ) -> (ArrayViewMut3<f64>, ArrayViewMut3<f64>, ArrayViewMut3<f64>) {
+    ) -> (
+        ArrayViewMut3<'_, f64>,
+        ArrayViewMut3<'_, f64>,
+        ArrayViewMut3<'_, f64>,
+    ) {
         (
             self.grad_x.view_mut(),
             self.grad_y.view_mut(),
@@ -357,6 +366,12 @@ impl GradientFieldUpdater {
 /// while still benefiting from the new boundary trait system.
 pub struct LegacyFieldUpdater<B: BoundaryCondition> {
     inner: FieldUpdater<B>,
+}
+
+impl<B: BoundaryCondition> std::fmt::Debug for LegacyFieldUpdater<B> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LegacyFieldUpdater").finish_non_exhaustive()
+    }
 }
 
 impl<B: BoundaryCondition> LegacyFieldUpdater<B> {

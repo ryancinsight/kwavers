@@ -27,7 +27,7 @@ impl MediumBuilder {
                 config,
                 grid,
             ),
-            MediumType::Heterogeneous { .. } => Self::build_heterogeneous(config, grid),
+            MediumType::Heterogeneous => Self::build_heterogeneous(config, grid),
             MediumType::Layered => Self::build_layered(&config.layers, grid),
             MediumType::Anisotropic => Self::build_anisotropic(config, grid),
             _ => {
@@ -164,6 +164,6 @@ impl MediumBuilder {
             grid,
         );
 
-        return Ok(Box::new(medium));
+        Ok(Box::new(medium))
     }
 }

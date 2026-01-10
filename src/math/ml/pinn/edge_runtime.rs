@@ -481,7 +481,7 @@ impl EdgeRuntime {
                     }
 
                     let weight_simd_vec = f32x16::from_array(weight_simd);
-                    sum_chunk = sum_chunk + weight_simd_vec * f32x16::splat(input_val);
+                    sum_chunk += weight_simd_vec * f32x16::splat(input_val);
                 }
 
                 let sums = sum_chunk.as_array();

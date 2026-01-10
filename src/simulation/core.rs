@@ -295,6 +295,12 @@ impl<'a, M: Medium> SimulationBuilder<'a, M> {
     }
 }
 
+impl<'a, M: Medium> Default for SimulationBuilder<'a, M> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -311,11 +317,12 @@ mod tests {
 
         let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0));
         let source = PointSource::new((0.032, 0.032, 0.032), signal);
+        let sources: Vec<Arc<dyn Source>> = vec![Arc::new(source)];
 
-        let mut simulation = CoreSimulation::new(
+        let simulation = CoreSimulation::new(
             grid,
             &medium,
-            vec![Arc::new(source) as Arc<dyn Source>],
+            sources,
             vec![],
             Box::new(crate::solver::progress::ConsoleProgressReporter::default()),
         )
@@ -358,11 +365,12 @@ mod tests {
 
         let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0));
         let source = PointSource::new((0.016, 0.016, 0.016), signal);
+        let source: Arc<dyn Source> = Arc::new(source);
 
         let simulation = SimulationBuilder::new()
             .with_grid(grid)
             .with_medium(&medium)
-            .with_source(Arc::new(source) as Arc<dyn Source>)
+            .with_source(source)
             .with_feature(SolverFeature::Reconstruction)
             .build();
 

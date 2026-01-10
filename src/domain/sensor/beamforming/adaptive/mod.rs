@@ -42,9 +42,6 @@ pub mod legacy;
 
 pub mod algorithms;
 
-#[cfg(feature = "legacy_algorithms")]
-pub(crate) mod algorithms_old;
-
 pub mod array_geometry;
 pub mod beamformer;
 pub mod conventional;
@@ -53,12 +50,6 @@ pub mod conventional;
 // Keep `matrix_utils` available only for legacy-compat shims, not for public SSOT use.
 #[cfg(feature = "legacy_algorithms")]
 pub mod matrix_utils;
-
-#[cfg(feature = "legacy_algorithms")]
-pub mod opast;
-
-#[cfg(feature = "legacy_algorithms")]
-pub mod past;
 
 #[cfg(feature = "legacy_algorithms")]
 pub mod source_estimation;
@@ -84,27 +75,11 @@ pub use beamformer::AdaptiveBeamformer;
 pub use conventional::{BeamformingAlgorithm as ConventionalAlgorithm, DelayAndSum as DsLegacy};
 
 #[cfg(feature = "legacy_algorithms")]
-pub use opast::OrthonormalSubspaceTracker;
-
-#[cfg(feature = "legacy_algorithms")]
-pub use past::SubspaceTracker;
-
-#[cfg(feature = "legacy_algorithms")]
 pub use source_estimation::SourceEstimationCriterion;
 
 pub use steering::{SteeringMatrix, SteeringVector};
 pub use tapering::CovarianceTaper;
 pub use weights::{WeightCalculator, WeightingScheme};
-
-// Legacy algorithms and any legacy numerics are gated explicitly.
-#[cfg(feature = "legacy_algorithms")]
-pub use algorithms_old::{
-    CovarianceTaper as LegacyCovarianceTaper, DelayAndSum as LegacyDelayAndSum,
-    EigenspaceMV as LegacyEigenspaceMV, MinimumVariance as LegacyMinimumVariance2,
-    OrthonormalSubspaceTracker as LegacyOrthonormalSubspaceTracker,
-    RobustCapon as LegacyRobustCapon2, SubspaceTracker as LegacySubspaceTracker,
-    MUSIC as LegacyMUSIC,
-};
 
 // ============================================================================
 // DEPRECATED RE-EXPORTS FROM NEW ANALYSIS LAYER LOCATION

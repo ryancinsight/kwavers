@@ -148,7 +148,7 @@ pub struct ElasticWaveConfig {
     /// - ARFI excitation is a *body force source term* in the momentum equation, not an
     ///   arbitrary displacement initialization.
     /// - If enabled, the solver integrates
-    ///     ρ ∂v/∂t = ∇·σ + f
+    ///   ρ ∂v/∂t = ∇·σ + f
     ///   where `f` has units N/m³.
     pub body_force: Option<ElasticBodyForceConfig>,
 }
@@ -2149,9 +2149,10 @@ impl ElasticWaveSolver {
                                 // Compute correlation at this time step:
                                 // corr = Σ_{τ=0..L-1} buffer[newest-τ] * template[τ]
                                 let mut corr = 0.0;
-                                for tau in 0..mf_len {
+                                for (tau, &template_tau) in template.iter().take(mf_len).enumerate()
+                                {
                                     let idx = (mf_head_this_step + mf_len - tau) % mf_len;
-                                    corr += tracker.mf_buffer[base + idx] * template[tau];
+                                    corr += tracker.mf_buffer[base + idx] * template_tau;
                                 }
 
                                 if corr.is_finite() && corr >= *min_corr {

@@ -4,8 +4,8 @@
 
 use crate::{
     core::error::{KwaversError, KwaversResult},
-    physics::field_mapping::UnifiedFieldType as FieldType,
-    simulation::environment::grid::Grid,
+    domain::field::UnifiedFieldType as FieldType,
+    domain::grid::Grid,
 };
 use log::{debug, info, warn};
 use ndarray::{Array3, Array4};

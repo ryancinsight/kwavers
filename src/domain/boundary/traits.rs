@@ -33,7 +33,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::{Grid, GridTopology};
-use ndarray::{Array3, ArrayView3, ArrayViewMut3};
+use ndarray::{Array3, ArrayViewMut3};
 use rustfft::num_complex::Complex;
 use std::fmt::Debug;
 

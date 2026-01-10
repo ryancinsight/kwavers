@@ -2,6 +2,8 @@
 //!
 //! Configuration structures for the axisymmetric k-space pseudospectral solver.
 
+#![allow(deprecated)]
+
 use serde::{Deserialize, Serialize};
 
 /// Configuration for axisymmetric solver

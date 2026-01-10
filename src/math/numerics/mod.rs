@@ -65,7 +65,10 @@ mod tests {
 
     #[test]
     fn test_module_structure() {
-        // Verify module is loadable
-        assert!(true);
+        let _ = (
+            std::any::TypeId::of::<dyn DifferentialOperator>(),
+            std::any::TypeId::of::<dyn Interpolator>(),
+            std::any::TypeId::of::<dyn SpectralOperator>(),
+        );
     }
 }

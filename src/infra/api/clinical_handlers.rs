@@ -218,6 +218,12 @@ impl DICOMService {
     }
 }
 
+impl Default for DICOMService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// DICOM network node
 #[derive(Debug, Clone)]
 pub struct DICOMNode {

@@ -155,6 +155,24 @@ impl Grid {
         Ok(grid)
     }
 
+    pub(crate) fn k_squared(&self) -> &Array3<f64> {
+        self.k_squared_cache.get_or_init(|| {
+            let mut k2 = Array3::<f64>::zeros((self.nx, self.ny, self.nz));
+            for i in 0..self.nx {
+                for j in 0..self.ny {
+                    for k in 0..self.nz {
+                        let kx = std::f64::consts::PI * (i as f64) / (self.nx as f64 * self.dx);
+                        let ky = std::f64::consts::PI * (j as f64) / (self.ny as f64 * self.dy);
+                        let kz = std::f64::consts::PI * (k as f64) / (self.nz as f64 * self.dz);
+                        k2[[i, j, k]] = kx * kx + ky * ky + kz * kz;
+                    }
+                }
+            }
+            k2
+        })
+    }
+}
+
     /// Creates a new grid with the same spacing in all directions
     pub fn uniform(n: usize, spacing: f64) -> Result<Self, GridError> {
         Self::new(n, n, n, spacing, spacing, spacing)

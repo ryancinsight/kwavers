@@ -1,5 +1,46 @@
 //! Beamforming Algorithms for Ultrasound Arrays
 //!
+//! ⚠️ **DEPRECATION NOTICE** ⚠️
+//!
+//! This module is **deprecated** and will be removed in version 3.0.0.
+//!
+//! **New Location:** [`crate::analysis::signal_processing::beamforming`]
+//!
+//! # Migration Guide
+//!
+//! Beamforming algorithms have been moved to the analysis layer to enforce proper
+//! architectural layering. The domain layer should only contain sensor geometry
+//! and hardware-specific primitives, not signal processing algorithms.
+//!
+//! ## Quick Migration
+//!
+//! **Old (deprecated):**
+//! ```rust,ignore
+//! use kwavers::domain::sensor::beamforming::adaptive::MinimumVariance;
+//! use kwavers::domain::sensor::beamforming::time_domain::DelayAndSum;
+//! ```
+//!
+//! **New (canonical):**
+//! ```rust,ignore
+//! use kwavers::analysis::signal_processing::beamforming::adaptive::MinimumVariance;
+//! use kwavers::analysis::signal_processing::beamforming::time_domain::DelayAndSum;
+//! ```
+//!
+//! ## Migration Timeline
+//!
+//! - **Version 2.1.0** (current): Deprecation warnings, backward compatibility maintained
+//! - **Version 2.2.0**: Continued support with deprecation warnings
+//! - **Version 3.0.0**: Old location removed entirely
+//!
+//! ## Documentation
+//!
+//! See `docs/refactor/BEAMFORMING_MIGRATION_GUIDE.md` for complete migration instructions,
+//! examples, and architectural rationale.
+//!
+//! ---
+//!
+//! # Original Documentation (Deprecated)
+//!
 //! This module implements state-of-the-art beamforming algorithms for ultrasound
 //! imaging and passive acoustic mapping, following established literature and
 //! designed for large-scale array processing.

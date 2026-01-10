@@ -138,7 +138,7 @@ impl GPUEMSolver {
 
     /// Validate solver configuration
     fn validate_config(config: &EMConfig) -> KwaversResult<()> {
-        if config.grid_size.iter().any(|&s| s == 0) {
+        if config.grid_size.contains(&0) {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::ConstraintViolation {
                     message: "grid_size must be positive in all dimensions".to_string(),
@@ -252,15 +252,15 @@ impl GPUEMSolver {
         // Upload initial field data to GPU
         self.compute_manager.write_buffer(
             &electric_buffer,
-            &field_data.electric_field.as_slice().unwrap(),
+            field_data.electric_field.as_slice().unwrap(),
         )?;
         self.compute_manager.write_buffer(
             &magnetic_buffer,
-            &field_data.magnetic_field.as_slice().unwrap(),
+            field_data.magnetic_field.as_slice().unwrap(),
         )?;
         self.compute_manager.write_buffer(
             &current_density_buffer,
-            &field_data.current_density.as_slice().unwrap(),
+            field_data.current_density.as_slice().unwrap(),
         )?;
 
         // Store GPU buffers in HashMap
@@ -304,7 +304,7 @@ impl GPUEMSolver {
             let field_data = self.field_data.as_ref().unwrap();
             self.compute_manager.write_buffer(
                 current_density_buffer,
-                &field_data.current_density.as_slice().unwrap(),
+                field_data.current_density.as_slice().unwrap(),
             )?;
         }
 

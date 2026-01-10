@@ -3,6 +3,8 @@
 //! Handles the mapping between physical cylindrical coordinates (r, z)
 //! and the 2D computational grid.
 
+#![allow(deprecated)]
+
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;

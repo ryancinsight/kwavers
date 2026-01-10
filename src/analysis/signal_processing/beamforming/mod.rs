@@ -206,27 +206,55 @@
 //!
 //! ## Status
 //!
-//! **Current:** 🟢 Phase 3B complete - Subspace methods (MUSIC, ESMV) migrated
-//! **Next:** Phase 4 - Deprecation sweep and migration guide
-//! **Timeline:** Week 4-5 execution
+//! **Current:** 🟢 Phase 2 complete - Infrastructure setup (traits, covariance, utils)
+//! **Next:** Phase 3 - Algorithm migration from `domain::sensor::beamforming`
+//! **Timeline:** Sprint 4, Phase 3 (Week 4-5 execution)
+//!
+//! ## Phase 2 Deliverables (Sprint 4, ✅ COMPLETE)
+//!
+//! - [x] Core trait hierarchy (`traits.rs`) ✅
+//! - [x] Covariance matrix estimation (`covariance/`) ✅
+//! - [x] Utility functions (`utils/`) ✅
+//! - [x] Narrowband module placeholder (`narrowband/`) ✅
+//! - [x] Experimental module placeholder (`experimental/`) ✅
+//! - [x] Module structure and re-exports ✅
+
+// Core trait hierarchy
+pub mod traits;
 
 // Algorithm implementations
 pub mod adaptive;
 pub mod time_domain;
 
+// Infrastructure modules (Phase 2 - Sprint 4)
+pub mod covariance; // Covariance matrix estimation
+pub mod utils; // Steering vectors, windows, interpolation
+
+// Future algorithm modules (planned for Phase 3)
+pub mod experimental;
+pub mod narrowband; // Frequency-domain beamforming (awaiting migration) // Neural/ML beamforming (research-grade)
+
 // Test utilities (shared accessor layer for test modules)
 #[cfg(test)]
 pub mod test_utilities;
-
-// Future modules (planned)
-// pub mod narrowband;       // Frequency-domain beamforming
-// pub mod neural;           // Neural network beamforming (experimental)
-// pub mod utils;            // Utility functions
 
 // Re-exports for convenience
 pub use adaptive::{AdaptiveBeamformer, EigenspaceMV, MinimumVariance, MUSIC};
 pub use time_domain::{
     alignment_shifts_s, delay_and_sum, relative_delays_s, DelayReference, DEFAULT_DELAY_REFERENCE,
+};
+
+// Trait re-exports
+pub use traits::{Beamformer, BeamformerConfig, FrequencyDomainBeamformer, TimeDomainBeamformer};
+
+// Utility re-exports
+pub use covariance::{
+    estimate_forward_backward_covariance, estimate_sample_covariance, is_hermitian, trace,
+    validate_covariance_matrix,
+};
+pub use utils::{
+    blackman_window, focused_steering_vector, hamming_window, hanning_window, linear_interpolate,
+    plane_wave_steering_vector,
 };
 
 #[cfg(test)]

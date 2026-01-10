@@ -7,12 +7,12 @@ use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 use std::f64::consts::PI;
 
-use kwavers::domain::sensor::beamforming::MinimumVariance;
+use kwavers::analysis::signal_processing::beamforming::adaptive::MinimumVariance;
 
 #[cfg(feature = "legacy_algorithms")]
-use kwavers::domain::sensor::beamforming::adaptive::adaptive::LCMV;
-#[cfg(feature = "legacy_algorithms")]
 use kwavers::domain::sensor::beamforming::adaptive::conventional::BeamformingAlgorithm;
+#[cfg(feature = "legacy_algorithms")]
+use kwavers::domain::sensor::beamforming::adaptive::legacy::LCMV;
 #[cfg(feature = "legacy_algorithms")]
 use kwavers::domain::sensor::beamforming::{SourceEstimationCriterion, MUSIC};
 

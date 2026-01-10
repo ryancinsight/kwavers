@@ -43,7 +43,7 @@ mod rkyv_impl {
     use crate::core::error::{KwaversError, KwaversResult};
     use crate::domain::grid::Grid;
     use rkyv::{
-        archived_root,
+        check_archived_root,
         ser::{serializers::AllocSerializer, Serializer},
         Archive, Deserialize, Infallible, Serialize,
     };
@@ -134,14 +134,8 @@ mod rkyv_impl {
     /// Callers must ensure bytes originate from a trusted source or use
     /// rkyv::check_archived_root for explicit validation.
     pub fn deserialize_grid(bytes: &[u8]) -> KwaversResult<Grid> {
-        // SAFETY: The `archived_root` call is unsafe because it assumes the byte slice
-        // contains valid archived data. This is safe in our use case because:
-        // 1. The #[archive(check_bytes)] attribute enables CheckBytes validation support
-        // 2. Bytes are expected to come from our own serialization via to_bytes()
-        // 3. The byte slice lifetime ensures the archived data remains valid during access
-        // 4. Invalid data will cause deserialization errors rather than UB
-        // Note: For untrusted data, use rkyv::check_archived_root explicitly before this call
-        let archived = unsafe { archived_root::<SerializableGrid>(bytes) };
+        let archived = check_archived_root::<SerializableGrid>(bytes)
+            .map_err(|e| KwaversError::InvalidInput(format!("Invalid archived grid: {e}")))?;
 
         let deserialized: SerializableGrid = archived
             .deserialize(&mut Infallible)
@@ -191,14 +185,8 @@ mod rkyv_impl {
         /// Assumes bytes are valid rkyv-serialized data from a trusted source.
         /// For untrusted data, use rkyv::check_archived_root explicitly.
         pub fn from_bytes(bytes: &[u8]) -> KwaversResult<Self> {
-            // SAFETY: The `archived_root` call is unsafe because it assumes the byte slice
-            // contains valid archived data. This is safe in our use case because:
-            // 1. The #[archive(check_bytes)] attribute enables CheckBytes validation support
-            // 2. Bytes are expected to come from our own serialization via to_bytes()
-            // 3. The byte slice lifetime ensures the archived data remains valid during access
-            // 4. Invalid data will cause deserialization errors rather than UB
-            // Note: For untrusted data, use rkyv::check_archived_root explicitly before this call
-            let archived = unsafe { archived_root::<SimulationData>(bytes) };
+            let archived = check_archived_root::<SimulationData>(bytes)
+                .map_err(|e| KwaversError::InvalidInput(format!("Invalid archived data: {e}")))?;
 
             archived
                 .deserialize(&mut Infallible)

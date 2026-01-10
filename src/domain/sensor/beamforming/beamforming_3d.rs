@@ -228,13 +228,13 @@ impl BeamformingProcessor3D {
         #[cfg(feature = "gpu")]
         let delay_sum_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("3D Delay-and-Sum Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/beamforming_3d.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(super::shaders::BEAMFORMING_3D_SHADER.into()),
         });
 
         #[cfg(feature = "gpu")]
         let dynamic_focus_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("3D Dynamic Focus Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/dynamic_focus_3d.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(super::shaders::DYNAMIC_FOCUS_3D_SHADER.into()),
         });
 
         // Create bind group layout
@@ -576,6 +576,17 @@ impl BeamformingProcessor3D {
         apodization_window: &ApodizationWindow,
         apodization_weights: &Array3<f32>,
     ) -> KwaversResult<Array3<f32>> {
+        if dynamic_focusing {
+            let _ = &self.dynamic_focus_pipeline;
+            return Err(KwaversError::System(
+                crate::core::error::SystemError::FeatureNotAvailable {
+                    feature: "3D dynamic focusing".to_string(),
+                    reason:
+                        "Dynamic focusing compute pipeline is not yet wired (missing delay tables and aperture mask buffers)"
+                            .to_string(),
+                },
+            ));
+        }
         let rf_dims = rf_data.dim();
         let frames = rf_dims.0;
         let _channels = rf_dims.1;

@@ -434,9 +434,9 @@ impl MinimumVariance {
             )));
         }
         if steering.len() != n {
-            return Err(KwaversError::InvalidInput(format!(
-                "MVDR pseudospectrum: steering length mismatch"
-            )));
+            return Err(KwaversError::InvalidInput(
+                "MVDR pseudospectrum: steering length mismatch".to_string(),
+            ));
         }
 
         // Apply diagonal loading

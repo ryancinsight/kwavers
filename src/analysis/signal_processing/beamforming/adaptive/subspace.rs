@@ -771,8 +771,7 @@ mod tests {
 
         // At least one should work; high loading should be more robust
         assert!(result_low.is_ok() || result_high.is_ok());
-        if result_high.is_ok() {
-            let weights = result_high.unwrap();
+        if let Ok(weights) = result_high {
             for &w in &weights {
                 assert!(w.is_finite());
             }

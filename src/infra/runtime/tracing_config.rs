@@ -96,7 +96,6 @@ mod tracing_impl {
     /// // Simulation step here - time is automatically recorded
     /// # }
     /// ```
-    #[must_use]
     pub fn timed_span(name: &'static str) -> tracing::span::EnteredSpan {
         tracing::info_span!("{}", name).entered()
     }

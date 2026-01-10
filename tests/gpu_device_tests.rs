@@ -182,8 +182,7 @@ async fn test_device_queue_operations() {
     // Submit and wait (ensures queue is working)
     device.device().poll(wgpu::Maintain::Wait);
 
-    // If we get here without errors, queue operations work
-    assert!(true);
+    assert_eq!(buffer.size(), 256);
 }
 
 #[test]

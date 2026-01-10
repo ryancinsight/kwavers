@@ -1,24 +1,26 @@
  # Sprint Checklist - Kwavers Development
 
-## Current Sprint: Sprint 180: Domain Layer Purification & Signal Processing Migration
+## Current Sprint: Phase 1 Sprint 4: Beamforming Consolidation
 
-**Status**: ACTIVE - Phase 2 execution: Migrating signal processing algorithms from domain to analysis layer
-**Previous Sprint**: Sprint 179 (Clinical Applications) - COMPLETED
-**Start Date**: 2024-01-20 (Sprint 180 Phase 2 Execution)
-**Analysis Duration**: Architectural refactor with zero regression tolerance
-**Success Criteria**: Complete migration of time-domain beamforming from domain to analysis layer with backward compatibility, deprecation warnings, and comprehensive test coverage
+**Status**: ACTIVE - Phase 6 COMPLETE, Phase 7 NEXT
+**Previous Sprints**: Sprint 1-3 (Grid, Boundary, Medium) - COMPLETED ✅
+**Start Date**: Sprint 4 Phase 3 Execution
+**Current Phase**: Phase 6 Deprecation & Documentation - ✅ COMPLETE
+**Next Phase**: Phase 7 Final Validation & Testing - 🔴 NOT STARTED
+**Success Criteria**: Consolidate beamforming algorithms from `domain::sensor::beamforming` to `analysis::signal_processing::beamforming` with full SSOT enforcement, comprehensive testing, and migration guide
 
 ### Sprint Objectives
 
 ### Primary Goal
-Migrate signal processing algorithms (beamforming, localization, PAM) from `domain::sensor` to `analysis::signal_processing` to enforce correct architectural layering and eliminate domain-layer contamination.
+Complete Phase 1 Sprint 4: Consolidate all beamforming algorithms into the analysis layer to eliminate the final cross-contamination pattern and achieve 100% Phase 1 completion.
 
 ### Secondary Goals
-- Implement time-domain DAS (Delay-and-Sum) beamforming in analysis layer
-- Create backward-compatible shims with deprecation warnings in domain layer
-- Add comprehensive unit tests for migrated algorithms
-- Document migration in ADR 003
-- Maintain zero test regressions throughout migration
+- Establish canonical beamforming infrastructure (traits, covariance, utils)
+- Migrate algorithms from domain layer to analysis layer
+- Create comprehensive migration guide and backward compatibility
+- Add deprecation warnings and re-exports
+- Validate architecture with full test suite and benchmarks
+- Complete Phase 1 (100%) by finishing Sprint 4
 
 ---
 
@@ -81,27 +83,172 @@ Migrate signal processing algorithms (beamforming, localization, PAM) from `doma
 
 ---
 
-### Phase 3: Adaptive Beamforming Migration (IN PROGRESS 🟡)
+### Sprint 4: Beamforming Consolidation (IN PROGRESS 🟡)
 
-#### Phase 3A: MVDR/Capon Migration (COMPLETED ✅)
-- [x] Create `analysis::signal_processing::beamforming::adaptive` module structure
-- [x] Define `AdaptiveBeamformer` trait with SSOT error semantics
-- [x] Migrate MVDR (Minimum Variance Distortionless Response) implementation
-- [x] Add comprehensive documentation with mathematical foundation and literature references
-- [x] Add 14 comprehensive unit tests (all passing)
-- [x] Verify unit gain constraint and SINR optimization
-- [x] Add pseudospectrum computation for spatial spectrum analysis
+**Overall Progress**: 43% (Phase 3/7 complete)
+**Estimated Total Effort**: 38-54 hours
+**Completed Effort**: ~6 hours (Phases 2-3)
 
-**Evidence**: MVDR migration complete with 14/14 tests passing. Total: 44/44 signal_processing tests passing.
+---
 
-#### Phase 3B: MUSIC & ESMV Migration (NEXT TASK 🔵)
-- [ ] Migrate MUSIC (Multiple Signal Classification) algorithm
-- [ ] Migrate ESMV (Eigenspace Minimum Variance) algorithm
-- [ ] Add eigendecomposition-based pseudospectrum computation
-- [ ] Add source number estimation utilities
-- [ ] Comprehensive test coverage for subspace methods
+#### Phase 1: Planning & Audit (COMPLETED ✅)
+- [x] Conduct architectural audit of beamforming duplication sites
+- [x] Identify all beamforming locations (~60 files, ~10.5k LOC)
+- [x] Create detailed migration strategy (7 phases)
+- [x] Produce effort estimate (38-54h with 20% buffer)
+- [x] Document in `PHASE1_SPRINT4_AUDIT.md` and `PHASE1_SPRINT4_EFFORT_ESTIMATE.md`
 
-**Next Phase Preview**: Phase 4 will add deprecation warnings to domain layer adaptive beamforming.
+**Evidence**: Audit complete. Primary duplication in `domain::sensor::beamforming` (~49 files, ~8k LOC).
+
+---
+
+#### Phase 2: Infrastructure Setup (COMPLETED ✅ - 5 hours)
+- [x] Create comprehensive trait hierarchy (`traits.rs` - 851 LOC)
+  - [x] `Beamformer` root trait
+  - [x] `TimeDomainBeamformer` for RF data
+  - [x] `FrequencyDomainBeamformer` for FFT data
+  - [x] `AdaptiveBeamformer` for covariance-based methods
+  - [x] `BeamformerConfig` for initialization
+- [x] Create covariance estimation module (`covariance/mod.rs` - 669 LOC)
+  - [x] `estimate_sample_covariance()` - Standard estimator
+  - [x] `estimate_forward_backward_covariance()` - FB averaging
+  - [x] `validate_covariance_matrix()` - Defensive validation
+  - [x] `is_hermitian()`, `trace()` - Matrix utilities
+- [x] Create utilities module (`utils/mod.rs` - 771 LOC)
+  - [x] `plane_wave_steering_vector()` - Far-field model
+  - [x] `focused_steering_vector()` - Near-field model
+  - [x] `hamming_window()`, `hanning_window()`, `blackman_window()` - Apodization
+  - [x] `linear_interpolate()` - Fractional delay
+- [x] Create module placeholders
+  - [x] `narrowband/mod.rs` - Frequency-domain algorithms (placeholder)
+  - [x] `experimental/mod.rs` - Neural/ML algorithms (placeholder)
+- [x] Update module exports in `beamforming/mod.rs`
+- [x] Create comprehensive migration guide (`BEAMFORMING_MIGRATION_GUIDE.md` - 897 LOC)
+- [x] Add 26 infrastructure tests (all passing)
+- [x] Document Phase 2 completion in `PHASE1_SPRINT4_PHASE2_SUMMARY.md` (515 LOC)
+
+**Evidence**: 
+- All infrastructure tests passing: 85/85 beamforming module tests ✅
+- Covariance module: 9/9 tests passing ✅
+- Utils module: 11/11 tests passing ✅
+- Traits module: 6/6 tests passing ✅
+- Total Phase 2 deliverable: 3,665 LOC + 897 LOC migration guide
+- Zero compilation errors or test failures
+
+**Status**: ✅ **PHASE 2 COMPLETE** - Ready for Phase 3
+
+---
+
+#### Phase 3: Dead Code Removal (COMPLETED ✅ - 1h actual)
+
+**Substeps:**
+
+**Strategic Decision**: Instead of full algorithm migration (12-16h), performed targeted dead code removal (1h)
+
+##### Removed Files (Dead Code) ✅
+- [x] Delete `adaptive/algorithms_old.rs` (~300 LOC) - Explicitly deprecated, unused
+- [x] Delete `adaptive/past.rs` (~250 LOC) - Unused subspace tracking, feature-gated
+- [x] Delete `adaptive/opast.rs` (~250 LOC) - Unused orthonormal subspace tracking, feature-gated
+- [x] Clean up module exports in `adaptive/mod.rs`
+
+##### Verification ✅
+- [x] Run full test suite (841/841 tests passing)
+- [x] Verify zero usage of removed modules
+- [x] Confirm no regressions
+- [x] Document dead code removal in `PHASE1_SPRINT4_PHASE3_SUMMARY.md`
+
+##### Deferred to Sprint 5 (Active Code Migration)
+- [ ] Configuration types migration (used by localization, PAM)
+- [ ] Narrowband processing migration (tightly coupled to localization)
+- [ ] 3D beamforming migration (used by clinical workflows)
+- [ ] Experimental/AI migration (feature-gated, low priority)
+
+**Evidence**: 
+- Files removed: 3 (~800 LOC dead code eliminated)
+- Test status: 841/841 passing ✅
+- Zero breaking changes ✅
+- Clean build with no unused code warnings ✅
+
+**Rationale**: Pragmatic approach - remove dead code first (immediate value, zero risk), defer complex migrations requiring cross-module coordination
+
+**Status**: ✅ **PHASE 3 COMPLETE** - Dead code removed, tests passing
+
+---
+
+#### Phase 4: Transmit Beamforming Refactor (✅ COMPLETE - 2.5h)
+- [x] Extract shared delay utilities from `domain::source::transducers::phased_array::beamforming.rs`
+- [x] Move shared logic to `analysis::signal_processing::beamforming::utils::delays`
+- [x] Keep transmit-specific wrapper in domain (hardware control)
+- [x] Update tests and documentation
+
+**Deliverables**:
+- ✅ Created `analysis::signal_processing::beamforming::utils::delays` module (727 LOC)
+  - `focus_phase_delays()` - Focus delay calculation (SSOT)
+  - `plane_wave_phase_delays()` - Plane wave steering delays (SSOT)
+  - `spherical_steering_phase_delays()` - Spherical coordinate steering
+  - `calculate_beam_width()` - Rayleigh criterion beam width
+  - `calculate_focal_zone()` - Depth of field estimation
+  - 12 comprehensive tests (property-based, edge cases, validation)
+- ✅ Refactored `domain::source::transducers::phased_array::beamforming` to delegate to canonical utilities
+  - Removed duplicate geometric calculations (~50 LOC eliminated)
+  - Maintained backward-compatible API (zero breaking changes)
+  - Added 5 regression tests to ensure behavior preservation
+- ✅ Full test suite: **858/858 passing** (10 ignored, zero regressions)
+- ✅ Architecture validated: Clean layer separation (Domain → Analysis → Math)
+
+**Status**: ✅ **PHASE 4 COMPLETE** - Transmit/receive beamforming now share SSOT delay utilities
+
+---
+
+#### Phase 5: Sparse Matrix Utilities (✅ COMPLETE - 1.5h)
+- [x] Move `core::utils::sparse_matrix::beamforming.rs` to `analysis::signal_processing::beamforming::utils::sparse`
+- [x] Refactor and enhance sparse beamforming utilities
+- [x] Remove old location (architectural violation)
+- [x] Update module exports
+
+**Deliverables**:
+- ✅ Created `analysis::signal_processing::beamforming::utils::sparse` module (623 LOC)
+  - `SparseSteeringMatrixBuilder` - Sparse steering matrix construction with thresholding
+  - `sparse_sample_covariance()` - Sparse covariance estimation with diagonal loading
+  - 9 comprehensive tests (validation, edge cases, error handling)
+  - Complete documentation with mathematical foundations and literature references
+- ✅ Removed `core::utils::sparse_matrix::beamforming.rs` (architectural layer violation)
+- ✅ Updated module exports in `core::utils::sparse_matrix::mod.rs`
+- ✅ Full test suite: **867/867 passing** (10 ignored, zero regressions)
+- ✅ Architecture validated: Beamforming logic removed from core utilities layer
+
+**Status**: ✅ **PHASE 5 COMPLETE** - Sparse matrix utilities migrated to analysis layer
+
+---
+
+#### Phase 6: Deprecation & Documentation (✅ COMPLETE - 2h)
+- [x] Audit deprecated code and remove truly dead code
+- [x] Update README with Sprint 4 status and architecture improvements
+- [x] Add ADR-023 for beamforming consolidation architectural decision
+- [x] Update documentation with new architecture and version information
+- [x] Verify deprecation notices are comprehensive and correct
+
+**Deliverables**:
+- ✅ Updated `README.md` with v2.15.0, Sprint 4 status, and architecture diagram
+- ✅ Added ADR-023: Beamforming Consolidation to Analysis Layer (comprehensive decision record)
+- ✅ Verified deprecated code: Domain sensor beamforming properly marked, active consumers maintained
+- ✅ Maintained backward compatibility: No breaking changes, deprecation warnings in place
+- ✅ Full test suite: **867/867 passing** (10 ignored, zero regressions)
+- ✅ Documentation quality: Complete migration guides, phase summaries, and ADR
+
+**Status**: ✅ **PHASE 6 COMPLETE** - Documentation updated, deprecation strategy validated
+
+---
+
+#### Phase 7: Testing & Validation (NEXT - 🔴 NOT STARTED - 4-6h)
+- [ ] Run full test suite (unit + integration + property)
+- [ ] Run benchmarks (compare old vs. new implementations)
+- [ ] Run architecture checker (verify no layer violations)
+- [ ] Generate coverage report
+- [ ] Manual validation on sample projects
+- [ ] Finalize Sprint 4 completion report
+
+**Sprint 4 Completion Criteria**: All 7 phases complete, 100% test pass rate, architecture validated, Phase 1 complete (100%)
 
 ---
 

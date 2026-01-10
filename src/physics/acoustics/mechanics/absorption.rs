@@ -5,9 +5,10 @@
 use serde::{Deserialize, Serialize};
 
 /// Absorption models supported by solvers
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum AbsorptionMode {
     /// No absorption
+    #[default]
     Lossless,
     /// Stokes absorption (frequency squared)
     Stokes,
@@ -30,10 +31,4 @@ pub enum AbsorptionMode {
         relaxation_times: Vec<f64>, // Multiple relaxation times [s]
         alpha_0: f64,               // Low-frequency absorption [Np/m]
     },
-}
-
-impl Default for AbsorptionMode {
-    fn default() -> Self {
-        Self::Lossless
-    }
 }

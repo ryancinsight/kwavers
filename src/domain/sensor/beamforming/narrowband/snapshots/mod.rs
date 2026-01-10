@@ -148,19 +148,19 @@ fn analytic_signal_hilbert(signal: &[f64]) -> KwaversResult<Vec<Complex64>> {
 
         if n.is_multiple_of(2) {
             // even
-            for k in 1..half {
-                spectrum[k] *= 2.0;
+            for v in spectrum.iter_mut().take(half).skip(1) {
+                *v *= 2.0;
             }
-            for k in (half + 1)..n {
-                spectrum[k] = Complex64::new(0.0, 0.0);
+            for v in spectrum.iter_mut().skip(half + 1) {
+                *v = Complex64::new(0.0, 0.0);
             }
         } else {
             // odd
-            for k in 1..=half {
-                spectrum[k] *= 2.0;
+            for v in spectrum.iter_mut().take(half + 1).skip(1) {
+                *v *= 2.0;
             }
-            for k in (half + 1)..n {
-                spectrum[k] = Complex64::new(0.0, 0.0);
+            for v in spectrum.iter_mut().skip(half + 1) {
+                *v = Complex64::new(0.0, 0.0);
             }
         }
     }

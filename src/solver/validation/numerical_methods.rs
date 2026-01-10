@@ -93,13 +93,11 @@ mod tests {
         let dt = solver.get_timestep();
         let steps = (wavelength / (1500.0 * dt)) as usize;
         let initial = solver.fields.p.clone();
-        let mut time = 0.0;
 
         println!("Propagating for {} steps, dt = {:.2e}", steps, dt);
 
         for step in 0..steps {
             solver.step_forward().unwrap();
-            time += dt;
 
             if step < 5 || step % 100 == 0 {
                 let max_p = solver
@@ -179,7 +177,7 @@ mod tests {
         // Test numerical dispersion for different PPW values
         let frequencies = vec![0.5e6, 1e6, 2e6, 5e6];
         let dx = 1e-3;
-        let n = 64;
+        let _n = 64;
 
         for freq in frequencies {
             let wavelength = 1500.0 / freq;
@@ -236,7 +234,7 @@ mod tests {
 
         // Verify stability of multirate scheme with reduced grid for testing
         let n = 8; // Reduced from 32 to 8 for faster testing
-        let steps_acoustic = 100; // Reduced from 1000
+        let _steps_acoustic = 100; // Reduced from 1000
         let steps_thermal = 2; // Fixed small number for testing
 
         let mut acoustic_state = Array3::zeros((n, n, n));
@@ -261,7 +259,7 @@ mod tests {
 
         // Multirate evolution with proper time stepping
         let dt_slow = dt_thermal;
-        for slow_step in 0..steps_thermal {
+        for _slow_step in 0..steps_thermal {
             // Multiple fast steps per slow step (capped for testing)
             let fast_per_slow = (time_scale_ratio as usize).clamp(1, 10);
 
@@ -367,7 +365,7 @@ mod tests {
     fn test_spectral_dg_shock_detection() {
         // Validate shock capturing (Persson & Peraire 2006)
         let n = 64;
-        let dx = 1e-3;
+        let _dx = 1e-3;
 
         // Create discontinuous field (shock)
         let mut field = Array3::zeros((n, 1, 1));
@@ -395,7 +393,7 @@ mod tests {
 
         for i in 2..n - 2 {
             // Modal decay indicator
-            let local_vals = vec![
+            let local_vals = [
                 field[[i - 2, 0, 0]],
                 field[[i - 1, 0, 0]],
                 field[[i, 0, 0]],
@@ -405,8 +403,13 @@ mod tests {
 
             // Compute local smoothness indicator (variance-based per Jiang & Shu 1996)
             // Estimates local polynomial variation for shock detection
-            let mean = local_vals.iter().sum::<f64>() / 5.0;
-            let variance = local_vals.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / 5.0;
+            let mean = local_vals.iter().copied().sum::<f64>() / 5.0;
+            let variance = local_vals
+                .iter()
+                .copied()
+                .map(|x| (x - mean).powi(2))
+                .sum::<f64>()
+                / 5.0;
 
             // High variance indicates discontinuity
             smoothness[[i, 0, 0]] = variance.sqrt();

@@ -1,4 +1,8 @@
 pub mod config;
-pub mod numerical_methods;
 pub use config::ValidationParameters;
+
+#[cfg(test)]
+pub mod numerical_methods;
+
+#[cfg(test)]
 pub use numerical_methods::*;

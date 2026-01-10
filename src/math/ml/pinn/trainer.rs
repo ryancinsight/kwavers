@@ -132,7 +132,7 @@ impl PINNTrainer {
                 estimated_remaining: 0, // Simplified
             };
 
-            if let Err(_) = progress_sender.send(progress).await {
+            if (progress_sender.send(progress).await).is_err() {
                 break; // Receiver dropped
             }
         }

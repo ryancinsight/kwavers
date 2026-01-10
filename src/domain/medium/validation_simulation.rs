@@ -24,7 +24,7 @@ impl MediumValidator {
                     mu_s_prime,
                 )?;
             }
-            MediumType::Heterogeneous { .. } => {
+            MediumType::Heterogeneous => {
                 Self::validate_heterogeneous(&config.tissue_file)?;
             }
             MediumType::Layered => {

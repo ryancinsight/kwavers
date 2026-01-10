@@ -2,8 +2,9 @@
 //!
 //! Main solver implementation for axisymmetric wave propagation.
 
+#![allow(deprecated)]
+
 use super::config::AxisymmetricConfig;
-#[allow(deprecated)]
 use super::config::AxisymmetricMedium;
 use super::coordinates::CylindricalGrid;
 use super::transforms::DiscreteHankelTransform;

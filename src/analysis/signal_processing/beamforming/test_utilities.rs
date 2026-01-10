@@ -190,6 +190,7 @@ pub fn create_steering_vector(n: usize, angle_rad: f64) -> Array1<Complex64> {
 ///     .with_diagonal_loading(0.05)
 ///     .build();
 /// ```
+#[derive(Debug)]
 pub struct TestCovarianceBuilder {
     n: usize,
     decay: f64,

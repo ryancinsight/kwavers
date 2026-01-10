@@ -947,6 +947,7 @@ pub struct BurnPINN2DTrainer<B: AutodiffBackend> {
 /// - SIMD operations for CPU vectorization
 /// - Memory pooling to eliminate allocations
 /// - Batch processing for efficient throughput
+///
 /// Neural network state for Burn-based GPU inference
 #[cfg(feature = "gpu")]
 #[derive(Debug, Clone)]
@@ -2114,9 +2115,7 @@ impl<B: Backend> RealTimePINNInference<B> {
         }
 
         // Extract final output
-        for i in 0..batch_size {
-            output[i] = current_input[i];
-        }
+        output.copy_from_slice(&current_input[..batch_size]);
 
         Ok(output)
     }
@@ -2150,13 +2149,13 @@ impl<B: Backend> RealTimePINNInference<B> {
 
                     let input_simd = f32x16::splat(input_val);
                     let weight_simd = f32x16::splat(weight_val);
-                    sum = sum + input_simd * weight_simd;
+                    sum += input_simd * weight_simd;
                 }
 
                 // Add bias and reduce
                 let bias_val = biases[out_idx] as f32 * bias_scale;
                 let bias_simd = f32x16::splat(bias_val);
-                sum = sum + bias_simd;
+                sum += bias_simd;
 
                 // Horizontal sum (this is approximate for SIMD)
                 let mut total = 0.0;
@@ -2183,9 +2182,7 @@ impl<B: Backend> RealTimePINNInference<B> {
 
             // Convert to SIMD vector
             let mut simd_vals = [0.0; 16];
-            for j in 0..chunk.len() {
-                simd_vals[j] = chunk[j];
-            }
+            simd_vals[..chunk.len()].copy_from_slice(chunk);
             let simd_vec = f32x16::from_array(simd_vals);
 
             // Apply activation
@@ -2213,9 +2210,7 @@ impl<B: Backend> RealTimePINNInference<B> {
 
             // Store results
             let activated_array = activated_simd.as_array();
-            for j in 0..chunk.len() {
-                output[i + j] = activated_array[j];
-            }
+            output[i..(chunk.len() + i)].copy_from_slice(&activated_array[..chunk.len()]);
         }
 
         output

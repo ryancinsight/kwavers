@@ -299,6 +299,12 @@ impl FeatureManager {
     }
 }
 
+impl Default for FeatureManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Configuration for feature-based solver selection
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeatureBasedConfig {

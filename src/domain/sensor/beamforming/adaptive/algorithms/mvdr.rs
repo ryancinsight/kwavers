@@ -87,20 +87,7 @@ impl BeamformingAlgorithm for MinimumVariance {
         covariance: &Array2<Complex64>,
         steering: &Array1<Complex64>,
     ) -> KwaversResult<Array1<Complex64>> {
-        let n = covariance.nrows();
-        if n == 0 || covariance.ncols() != n {
-            return Err(KwaversError::InvalidInput(format!(
-                "MVDR: covariance must be non-empty and square; got {}x{}",
-                covariance.nrows(),
-                covariance.ncols()
-            )));
-        }
-        if steering.len() != n {
-            return Err(KwaversError::InvalidInput(format!(
-                "MVDR: steering length ({}) must match covariance dimension ({n})",
-                steering.len()
-            )));
-        }
+        let n = super::validate_covariance_and_steering(covariance, steering, "MVDR")?;
         if !self.diagonal_loading.is_finite() || self.diagonal_loading < 0.0 {
             return Err(KwaversError::InvalidInput(
                 "MVDR: diagonal_loading must be finite and >= 0".to_string(),

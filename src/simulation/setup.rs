@@ -22,6 +22,17 @@ pub struct SimulationComponents {
     pub sensors: Vec<GridSensorSet>,
 }
 
+impl std::fmt::Debug for SimulationComponents {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SimulationComponents")
+            .field("grid", &self.grid)
+            .field("medium_type", &std::any::type_name_of_val(&*self.medium))
+            .field("sources_len", &self.sources.len())
+            .field("sensors_len", &self.sensors.len())
+            .finish()
+    }
+}
+
 /// Simulation setup orchestrator
 #[derive(Debug)]
 pub struct SimulationSetup;

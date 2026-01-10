@@ -33,7 +33,7 @@ use crate::domain::field::wave::WaveFields;
 use crate::domain::medium::MaterialFields;
 
 #[derive(Debug, Clone)]
-enum CentralDifferenceOperator {
+pub(crate) enum CentralDifferenceOperator {
     Order2(CentralDifference2),
     Order4(CentralDifference4),
     Order6(CentralDifference6),

@@ -12,13 +12,13 @@ pub fn is_optimal_fft_size(n: usize) -> bool {
         return true;
     }
     let mut num = n;
-    while num % 2 == 0 {
+    while num.is_multiple_of(2) {
         num /= 2;
     }
-    while num % 3 == 0 {
+    while num.is_multiple_of(3) {
         num /= 3;
     }
-    while num % 5 == 0 {
+    while num.is_multiple_of(5) {
         num /= 5;
     }
     num == 1

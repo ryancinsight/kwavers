@@ -216,7 +216,7 @@ impl PseudospectralDerivative {
     /// Compute spectral derivative in X direction
     ///
     /// Computes ∂u/∂x using Fourier differentiation
-    pub fn derivative_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    pub fn derivative_x(&self, _field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         // For now, return error indicating not yet implemented
         // Full FFT implementation requires integration with math::fft module
         Err(NumericalError::NotImplemented {
@@ -226,7 +226,7 @@ impl PseudospectralDerivative {
     }
 
     /// Compute spectral derivative in Y direction
-    pub fn derivative_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    pub fn derivative_y(&self, _field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         Err(NumericalError::NotImplemented {
             feature: "Spectral derivative (requires FFT integration)".to_string(),
         }
@@ -234,7 +234,7 @@ impl PseudospectralDerivative {
     }
 
     /// Compute spectral derivative in Z direction
-    pub fn derivative_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    pub fn derivative_z(&self, _field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         Err(NumericalError::NotImplemented {
             feature: "Spectral derivative (requires FFT integration)".to_string(),
         }
@@ -256,7 +256,7 @@ impl SpectralOperator for PseudospectralDerivative {
         (PI / self.dx, PI / self.dy, PI / self.dz)
     }
 
-    fn apply_antialias_filter(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    fn apply_antialias_filter(&self, _field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         // Anti-aliasing filter: low-pass filter at 2/3 Nyquist
         // Full implementation requires FFT operations
         Err(NumericalError::NotImplemented {
@@ -320,7 +320,7 @@ impl SpectralFilter {
     }
 
     /// Apply filter to field in k-space
-    pub fn apply(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    pub fn apply(&self, _field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         // Placeholder: requires FFT integration
         Err(NumericalError::NotImplemented {
             feature: "Spectral filtering (requires FFT integration)".to_string(),

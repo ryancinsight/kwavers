@@ -66,7 +66,7 @@ impl ModelRegistry {
             let mut user_models = self.user_models.write();
             user_models
                 .entry(user_id.to_string())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(model_id.to_string());
         }
 
