@@ -1,7 +1,7 @@
 //! Quadrature rules for DG methods
 
-use crate::core::error::KwaversResult;
-use crate::core::error::{ConfigError, KwaversError};
+use crate::domain::core::error::KwaversResult;
+use crate::domain::core::error::{ConfigError, KwaversError};
 use ndarray::Array1;
 
 /// Compute Gauss-Lobatto-Legendre (GLL) quadrature nodes and weights

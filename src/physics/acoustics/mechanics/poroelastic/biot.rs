@@ -2,7 +2,7 @@
 //!
 //! Reference: Biot (1956) "Theory of propagation of elastic waves"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::physics::mechanics::poroelastic::{PoroelasticMaterial, WaveSpeeds};
 use std::f64::consts::PI;
 

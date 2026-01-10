@@ -18,7 +18,7 @@
 
 use super::structure::Grid;
 use super::topology::{CartesianTopology, GridTopology, TopologyDimension};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Adapter that implements `GridTopology` for the legacy `Grid` struct

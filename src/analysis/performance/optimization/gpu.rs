@@ -1,6 +1,6 @@
 //! GPU optimization strategies
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 
 /// GPU optimizer for accelerated computation
 #[derive(Debug)]
@@ -15,7 +15,7 @@ impl GpuOptimizer {
         // Check for GPU availability
         if !Self::is_gpu_available() {
             return Err(KwaversError::Config(
-                crate::core::error::ConfigError::InvalidValue {
+                crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "gpu".to_string(),
                     value: "unavailable".to_string(),
                     constraint: "GPU device required".to_string(),
@@ -56,7 +56,7 @@ impl GpuOptimizer {
     /// Transfer data to GPU
     pub fn upload_to_gpu<T>(&self, _data: &[T]) -> KwaversResult<GpuBuffer> {
         Err(KwaversError::Config(
-            crate::core::error::ConfigError::InvalidValue {
+            crate::domain::core::error::ConfigError::InvalidValue {
                 parameter: "gpu_upload".to_string(),
                 value: "unimplemented".to_string(),
                 constraint: "GPU support not yet implemented".to_string(),
@@ -67,7 +67,7 @@ impl GpuOptimizer {
     /// Transfer data from GPU
     pub fn download_from_gpu<T>(&self, _buffer: &GpuBuffer) -> KwaversResult<Vec<T>> {
         Err(KwaversError::Config(
-            crate::core::error::ConfigError::InvalidValue {
+            crate::domain::core::error::ConfigError::InvalidValue {
                 parameter: "gpu_download".to_string(),
                 value: "unimplemented".to_string(),
                 constraint: "GPU support not yet implemented".to_string(),

@@ -45,7 +45,7 @@
 /// - **Hybrid**: Good balance, combines traditional + neural refinement
 /// - **PhysicsInformed**: Best quality, enforces wave equation constraints
 /// - **Adaptive**: Robust, switches based on signal quality metrics
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum NeuralBeamformingMode {
     /// Pure neural network beamforming without traditional preprocessing.
     ///
@@ -61,6 +61,7 @@ pub enum NeuralBeamformingMode {
     /// **Speed**: ★★★★☆
     /// **Quality**: ★★★★☆
     /// **Physics consistency**: ★★★★☆
+    #[default]
     Hybrid,
 
     /// Physics-informed neural networks (PINN) enforcing wave equation.
@@ -81,12 +82,6 @@ pub enum NeuralBeamformingMode {
     /// **Quality**: ★★★★☆
     /// **Physics consistency**: ★★★★☆
     Adaptive,
-}
-
-impl Default for NeuralBeamformingMode {
-    fn default() -> Self {
-        Self::Hybrid
-    }
 }
 
 /// Physics constraint parameters for neural beamforming.
@@ -395,8 +390,8 @@ impl NeuralBeamformingConfig {
     /// - Learning rate is non-positive
     /// - Batch size is zero
     /// - Sensor geometry has < 2 elements
-    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
-        use crate::core::error::KwaversError;
+    pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
+        use crate::domain::core::error::KwaversError;
 
         // Network architecture validation
         if self.network_architecture.len() < 2 {
@@ -515,8 +510,10 @@ mod tests {
 
     #[test]
     fn test_config_validation_invalid_architecture() {
-        let mut config = NeuralBeamformingConfig::default();
-        config.network_architecture = vec![5]; // Only 1 layer
+        let config = NeuralBeamformingConfig {
+            network_architecture: vec![5],
+            ..Default::default()
+        };
         assert!(config.validate().is_err());
     }
 
@@ -536,8 +533,10 @@ mod tests {
 
     #[test]
     fn test_config_validation_invalid_batch_size() {
-        let mut config = NeuralBeamformingConfig::default();
-        config.batch_size = 0;
+        let config = NeuralBeamformingConfig {
+            batch_size: 0,
+            ..Default::default()
+        };
         assert!(config.validate().is_err());
     }
 

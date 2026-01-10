@@ -28,8 +28,8 @@
 //! - We clamp eigenvalues below `floor = relative_floor * λ_max` to avoid `ln(0)` while
 //!   keeping the clamp explicit and controlled.
 
-use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::linear_algebra::LinearAlgebra;
+use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::domain::math::linear_algebra::LinearAlgebra;
 use ndarray::Array2;
 use num_complex::Complex64;
 
@@ -101,7 +101,7 @@ pub fn estimate_num_sources(
     for (i, &x) in lambda.iter().enumerate() {
         if !x.is_finite() {
             return Err(KwaversError::Numerical(
-                crate::core::error::NumericalError::NaN {
+                crate::domain::core::error::NumericalError::NaN {
                     operation: "estimate_num_sources: eigenvalues".to_string(),
                     inputs: format!("non-finite eigenvalue at index {i}"),
                 },
@@ -109,7 +109,7 @@ pub fn estimate_num_sources(
         }
         if x < 0.0 {
             return Err(KwaversError::Numerical(
-                crate::core::error::NumericalError::InvalidOperation(
+                crate::domain::core::error::NumericalError::InvalidOperation(
                     "estimate_num_sources: negative eigenvalue; covariance is not PSD under strict SSOT"
                         .to_string(),
                 ),
@@ -149,7 +149,7 @@ pub fn estimate_num_sources(
         let a_k = sum / (noise_dim as f64);
         if !(a_k.is_finite()) || a_k <= 0.0 {
             return Err(KwaversError::Numerical(
-                crate::core::error::NumericalError::InvalidOperation(
+                crate::domain::core::error::NumericalError::InvalidOperation(
                     "estimate_num_sources: non-positive or non-finite arithmetic mean of noise eigenvalues"
                         .to_string(),
                 ),
@@ -160,7 +160,7 @@ pub fn estimate_num_sources(
         let g_k = (sum_log / (noise_dim as f64)).exp();
         if !(g_k.is_finite()) || g_k <= 0.0 {
             return Err(KwaversError::Numerical(
-                crate::core::error::NumericalError::InvalidOperation(
+                crate::domain::core::error::NumericalError::InvalidOperation(
                     "estimate_num_sources: non-positive or non-finite geometric mean of noise eigenvalues"
                         .to_string(),
                 ),
@@ -171,7 +171,7 @@ pub fn estimate_num_sources(
         let ratio = g_k / a_k;
         if !(ratio.is_finite()) || ratio <= 0.0 {
             return Err(KwaversError::Numerical(
-                crate::core::error::NumericalError::InvalidOperation(
+                crate::domain::core::error::NumericalError::InvalidOperation(
                     "estimate_num_sources: invalid g_k / a_k ratio".to_string(),
                 ),
             ));
@@ -188,7 +188,7 @@ pub fn estimate_num_sources(
 
         if !score.is_finite() {
             return Err(KwaversError::Numerical(
-                crate::core::error::NumericalError::NaN {
+                crate::domain::core::error::NumericalError::NaN {
                     operation: "estimate_num_sources: criterion".to_string(),
                     inputs: "non-finite score".to_string(),
                 },

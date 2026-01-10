@@ -1,6 +1,6 @@
 // src/physics/traits.rs stub/reconstruction
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 

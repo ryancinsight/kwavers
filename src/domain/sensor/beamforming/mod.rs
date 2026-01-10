@@ -69,10 +69,9 @@ pub mod adaptive;
 pub mod ai_integration;
 mod beamforming_3d;
 mod config;
-mod covariance;
+pub mod covariance;
 #[cfg(feature = "experimental_neural")]
 pub mod experimental;
-pub mod narrowband;
 mod processor;
 #[cfg(feature = "gpu")]
 mod shaders;
@@ -91,12 +90,6 @@ pub use beamforming_3d::{
 pub use config::{BeamformingConfig, BeamformingCoreConfig};
 pub use covariance::{
     CovarianceEstimator, CovariancePostProcess, SpatialSmoothing, SpatialSmoothingComplex,
-};
-pub use narrowband::{
-    capon_spatial_spectrum_point, capon_spatial_spectrum_point_complex_baseband,
-    extract_complex_baseband_snapshots, extract_narrowband_snapshots, BasebandSnapshotConfig,
-    CaponSpectrumConfig, NarrowbandSteering, NarrowbandSteeringVector, SnapshotMethod,
-    SnapshotScenario, SnapshotSelection, StftBinConfig, WindowFunction,
 };
 pub use processor::BeamformingProcessor;
 pub use steering::{SteeringVector, SteeringVectorMethod};

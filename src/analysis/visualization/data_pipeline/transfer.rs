@@ -1,7 +1,7 @@
 //! Core data transfer pipeline implementation
 
 use super::{ProcessingOperation, TransferStatistics};
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::gpu::GpuContext;
 use crate::visualization::FieldType;
 use log::{debug, info};

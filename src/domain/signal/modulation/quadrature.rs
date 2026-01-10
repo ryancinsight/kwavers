@@ -1,7 +1,7 @@
 //! Quadrature Amplitude Modulation (QAM)
 
 use super::{Modulation, ModulationParams};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 
 /// QAM implementation
 #[derive(Debug, Clone)]
@@ -33,7 +33,7 @@ impl Modulation for QuadratureAmplitudeModulation {
         use ndarray::Array1;
 
         if carrier.len() != t.len() {
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Carrier and time arrays must have same length".to_string(),
             ));
         }

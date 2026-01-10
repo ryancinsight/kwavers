@@ -5,7 +5,7 @@
 //! - Kuznetsov (1971): "Equations of nonlinear acoustics"
 
 use crate::domain::grid::Grid;
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use super::ValidationMetrics;
 
 /// Validator for nonlinear acoustic phenomena

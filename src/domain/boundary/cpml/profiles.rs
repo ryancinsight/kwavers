@@ -1,7 +1,7 @@
 //! CPML profile computation and management
 
 use super::config::CPMLConfig;
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array1;
 

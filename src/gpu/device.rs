@@ -23,7 +23,7 @@
 //! # }
 //! ```
 
-use crate::core::error::{ConfigError, KwaversError, KwaversResult};
+use crate::domain::core::error::{ConfigError, KwaversError, KwaversResult};
 use std::sync::Arc;
 
 /// Information about a GPU device

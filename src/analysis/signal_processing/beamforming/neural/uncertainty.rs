@@ -15,7 +15,7 @@
 //! - Gal & Ghahramani (2016): "Dropout as a Bayesian Approximation"
 //! - Kendall & Gal (2017): "What Uncertainties Do We Need in Bayesian Deep Learning?"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Uncertainty estimator for neural beamforming using dropout-based methods.

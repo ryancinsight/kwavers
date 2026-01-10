@@ -1,6 +1,6 @@
 //! Parallel execution optimization
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use rayon::prelude::*;
 use std::sync::Arc;
 
@@ -34,8 +34,8 @@ impl ParallelOptimizer {
             .num_threads(threads)
             .build_global()
             .map_err(|e| {
-                crate::core::error::KwaversError::System(
-                    crate::core::error::SystemError::ThreadCreation {
+                crate::domain::core::error::KwaversError::System(
+                    crate::domain::core::error::SystemError::ThreadCreation {
                         reason: e.to_string(),
                     },
                 )

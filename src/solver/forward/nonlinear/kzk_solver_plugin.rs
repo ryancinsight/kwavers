@@ -1,10 +1,10 @@
 //! KZK Equation Solver Plugin
 //! Based on Lee & Hamilton (1995): "Time-domain modeling of pulsed finite-amplitude sound beams"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::physics::plugin::{PluginMetadata, PluginState};
+use crate::domain::plugin::{PluginMetadata, PluginState};
 use ndarray::Array3;
 
 /// Frequency domain operator for KZK equation
@@ -127,17 +127,16 @@ impl KzkSolverPlugin {
         use crate::domain::medium::AcousticProperties;
 
         // Validate operators are initialized
-        let operators =
-            self.frequency_operators
-                .as_ref()
-                .ok_or(crate::core::error::KwaversError::Physics(
-                    crate::core::error::PhysicsError::InvalidParameter {
-                        parameter: "frequency_operators".to_string(),
-                        value: 0.0,
-                        reason: "KZK operators not initialized - call initialize_operators first"
-                            .to_string(),
-                    },
-                ))?;
+        let operators = self.frequency_operators.as_ref().ok_or(
+            crate::domain::core::error::KwaversError::Physics(
+                crate::domain::core::error::PhysicsError::InvalidParameter {
+                    parameter: "frequency_operators".to_string(),
+                    value: 0.0,
+                    reason: "KZK operators not initialized - call initialize_operators first"
+                        .to_string(),
+                },
+            ),
+        )?;
 
         // Real-valued field representation (complex field requires FFT infrastructure)
         // Suitable for weakly nonlinear regime per Collins (1970)
@@ -292,7 +291,7 @@ impl KzkSolverPlugin {
 }
 
 // Plugin trait implementation
-impl crate::physics::plugin::Plugin for KzkSolverPlugin {
+impl crate::domain::plugin::Plugin for KzkSolverPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -320,7 +319,7 @@ impl crate::physics::plugin::Plugin for KzkSolverPlugin {
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        _context: &mut crate::physics::plugin::PluginContext<'_>,
+        _context: &mut crate::domain::plugin::PluginContext<'_>,
     ) -> KwaversResult<()> {
         use crate::domain::field::mapping::UnifiedFieldType;
 

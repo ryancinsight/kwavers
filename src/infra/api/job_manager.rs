@@ -6,7 +6,7 @@
 use crate::infra::api::{APIError, APIErrorType, JobStatus, PINNTrainingRequest, TrainingProgress};
 // PINN imports are conditional on the pinn feature
 #[cfg(feature = "pinn")]
-use crate::math::ml::pinn::{PINNConfig, PINNTrainer, TrainingMetrics};
+use crate::domain::math::ml::pinn::{PINNConfig, PINNTrainer, TrainingMetrics};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;

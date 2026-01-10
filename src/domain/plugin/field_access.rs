@@ -4,11 +4,28 @@
 //! they have declared as required or provided, preventing accidental access
 //! to unrelated fields and improving encapsulation.
 
-use crate::core::error::{KwaversResult, PhysicsError};
+use crate::domain::core::error::{KwaversResult, PhysicsError};
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::physics::state::{FieldView, PhysicsState};
-use ndarray::{Array4, ArrayView3, ArrayViewMut3};
+use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3};
 use std::collections::HashSet;
+
+#[derive(Debug, Clone)]
+pub struct PluginFields {
+    data: Array3<f64>,
+}
+
+impl PluginFields {
+    #[must_use]
+    pub fn new(data: Array3<f64>) -> Self {
+        Self { data }
+    }
+
+    #[must_use]
+    pub fn view(&self) -> ArrayView3<'_, f64> {
+        self.data.view()
+    }
+}
 
 /// Safe field accessor for plugins
 ///
@@ -33,6 +50,8 @@ pub struct PluginFieldAccessMut<'a> {
     /// Fields this plugin is allowed to write
     writable_fields: HashSet<UnifiedFieldType>,
 }
+
+pub type FieldAccessor<'a> = PluginFieldAccess<'a>;
 
 impl<'a> PluginFieldAccess<'a> {
     /// Create a new field accessor for a plugin

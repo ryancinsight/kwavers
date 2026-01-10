@@ -2,7 +2,7 @@
 
 use super::{ConservationEnforcer, QualityMonitor, TransferOperators};
 use super::{InterfaceGeometry, InterpolationManager, InterpolationScheme};
-use crate::core::error::{ConfigError, KwaversError, KwaversResult};
+use crate::domain::core::error::{ConfigError, KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::solver::hybrid::domain_decomposition::DomainRegion;
 use ndarray::{s, Array3, Array4};

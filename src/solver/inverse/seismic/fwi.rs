@@ -4,7 +4,7 @@
 //! Reference: Tarantola (1984): "Inversion of seismic reflection data in the acoustic approximation"
 
 use super::parameters::FwiParameters;
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::source::grid_source::GridSource;
 use crate::solver::interface::solver::Solver;
@@ -32,7 +32,7 @@ impl FwiProcessor {
         initial_model: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        use crate::math::linear_algebra::norm_l2;
+        use crate::domain::math::linear_algebra::norm_l2;
 
         let mut current_model = initial_model.clone();
         let mut prev_misfit = f64::INFINITY;
@@ -230,7 +230,7 @@ impl FwiProcessor {
         observed_data: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<f64> {
-        use crate::math::linear_algebra::norm_l2;
+        use crate::domain::math::linear_algebra::norm_l2;
 
         let mut step_size = self.parameters.step_size;
         let c1 = 1e-4; // Armijo condition constant
@@ -265,7 +265,7 @@ impl FwiProcessor {
 
     /// Apply physical constraints to velocity model
     fn apply_model_constraints(&self, model: &mut Array3<f64>) {
-        use crate::core::constants::SOUND_SPEED_WATER;
+        use crate::domain::core::constants::SOUND_SPEED_WATER;
 
         // Ensure physically reasonable velocity bounds
         let min_velocity = SOUND_SPEED_WATER * 0.5; // 750 m/s

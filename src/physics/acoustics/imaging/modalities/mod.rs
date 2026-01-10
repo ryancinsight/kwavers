@@ -5,7 +5,8 @@ pub mod elastography;
 // pub mod photoacoustic;
 pub mod ultrasound;
 
-pub use ceus::{ContrastEnhancedUltrasound, PerfusionMap};
-pub use elastography::{ElasticityMap, InversionMethod};
+pub use crate::domain::imaging::ultrasound::elastography::{ElasticityMap, InversionMethod};
+pub use ceus::{ContrastImage, PerfusionModel};
 // pub use photoacoustic::{PhotoacousticParameters, PhotoacousticResult, PhotoacousticSimulator};
-pub use ultrasound::{UltrasoundConfig, UltrasoundMode};
+pub use crate::domain::imaging::ultrasound::ceus::PerfusionMap;
+pub use crate::domain::imaging::ultrasound::{UltrasoundConfig, UltrasoundMode};

@@ -7,7 +7,7 @@
 //! - Dependency Inversion: Depends on abstractions (traits) not concrete types
 //! - Single Responsibility: Each component has one clear purpose
 
-use crate::core::error::{KwaversResult, ValidationError};
+use crate::domain::core::error::{KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::physics::traits::ChemicalModelTrait;
 use log::debug;

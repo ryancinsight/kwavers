@@ -12,8 +12,8 @@
 //! The global time step is set by the SLOWEST component to maximize efficiency.
 
 use super::traits::MultiRateConfig;
-use crate::core::error::KwaversResult;
-use crate::core::error::{KwaversError, ValidationError};
+use crate::domain::core::error::KwaversResult;
+use crate::domain::core::error::{KwaversError, ValidationError};
 use log::{debug, info};
 use std::collections::HashMap;
 

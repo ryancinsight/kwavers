@@ -1,7 +1,7 @@
 //! Sensor calibration for localization
 
 use super::{CalibrationData, PhantomMeasurement, SensorArray};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 
 /// Sensor calibration data
 #[derive(Debug, Clone, Default)]

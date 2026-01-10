@@ -23,11 +23,13 @@
 //! - Palmeri, M. L., et al. (2005). "Ultrasonic tracking of acoustic radiation
 //!   force-induced displacements." *IEEE TUFFC*, 52(8), 1300-1313.
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::Array3;
 use std::f64::consts::PI;
+
+use super::elastic_wave_solver::ElasticBodyForceConfig;
 
 /// Acoustic radiation force push pulse parameters
 ///
@@ -82,7 +84,7 @@ impl PushPulseParameters {
     ) -> KwaversResult<Self> {
         if frequency <= 0.0 {
             return Err(KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "frequency".to_string(),
                     value: frequency,
                     reason: "must be positive".to_string(),
@@ -91,7 +93,7 @@ impl PushPulseParameters {
         }
         if duration <= 0.0 {
             return Err(KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "duration".to_string(),
                     value: duration,
                     reason: "must be positive".to_string(),
@@ -100,7 +102,7 @@ impl PushPulseParameters {
         }
         if intensity <= 0.0 {
             return Err(KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "intensity".to_string(),
                     value: intensity,
                     reason: "must be positive".to_string(),
@@ -199,7 +201,7 @@ impl AcousticRadiationForce {
     pub fn push_pulse_body_force(
         &self,
         push_location: [f64; 3],
-    ) -> KwaversResult<crate::physics::imaging::elastography::ElasticBodyForceConfig> {
+    ) -> KwaversResult<ElasticBodyForceConfig> {
         // Calculate radiation force density magnitude (N/m³)
         // f = (2αI)/c
         let force_density = (2.0 * self.absorption * self.parameters.intensity) / self.sound_speed;
@@ -230,16 +232,14 @@ impl AcousticRadiationForce {
         // model the beam axis as +z.
         let direction = [0.0, 0.0, 1.0];
 
-        Ok(
-            crate::physics::imaging::elastography::ElasticBodyForceConfig::GaussianImpulse {
-                center_m: push_location,
-                sigma_m: [sigma_lateral, sigma_lateral, sigma_axial],
-                direction,
-                t0_s: 0.0,
-                sigma_t_s,
-                impulse_n_per_m3_s,
-            },
-        )
+        Ok(ElasticBodyForceConfig::GaussianImpulse {
+            center_m: push_location,
+            sigma_m: [sigma_lateral, sigma_lateral, sigma_axial],
+            direction,
+            t0_s: 0.0,
+            sigma_t_s,
+            impulse_n_per_m3_s,
+        })
     }
 
     /// Legacy API: Apply push pulse and return an initial displacement.
@@ -343,15 +343,14 @@ impl AcousticRadiationForce {
     pub fn multi_directional_body_forces(
         &self,
         push_sequence: &MultiDirectionalPush,
-    ) -> KwaversResult<Vec<crate::physics::imaging::elastography::ElasticBodyForceConfig>> {
+    ) -> KwaversResult<Vec<ElasticBodyForceConfig>> {
         let mut forces = Vec::with_capacity(push_sequence.pushes.len());
         for push in &push_sequence.pushes {
             let mut cfg = self.push_pulse_body_force(push.location)?;
             // Apply amplitude weighting by scaling impulse density (impulse density is ∫ f dt).
             match &mut cfg {
-                crate::physics::imaging::elastography::ElasticBodyForceConfig::GaussianImpulse {
-                    impulse_n_per_m3_s,
-                    ..
+                ElasticBodyForceConfig::GaussianImpulse {
+                    impulse_n_per_m3_s, ..
                 } => {
                     *impulse_n_per_m3_s *= push.amplitude_weight;
                 }
@@ -891,9 +890,8 @@ mod tests {
         assert_eq!(forces.len(), pattern.pushes.len());
         for cfg in &forces {
             match cfg {
-                crate::physics::imaging::elastography::ElasticBodyForceConfig::GaussianImpulse {
-                    impulse_n_per_m3_s,
-                    ..
+                ElasticBodyForceConfig::GaussianImpulse {
+                    impulse_n_per_m3_s, ..
                 } => {
                     assert!(*impulse_n_per_m3_s > 0.0);
                 }

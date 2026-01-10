@@ -1,11 +1,11 @@
 //! Mixed-Domain Propagation Plugin
 //! Based on Pinton et al. (2009): "A heterogeneous nonlinear attenuating full-wave model"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
+use crate::domain::math::fft::FFT_CACHE;
 use crate::domain::medium::Medium;
-use crate::math::fft::FFT_CACHE;
-use crate::physics::plugin::{PluginMetadata, PluginState};
+use crate::domain::plugin::{PluginMetadata, PluginState};
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;
 
@@ -194,7 +194,7 @@ pub enum DomainSelection {
 }
 
 // Plugin trait implementation
-impl crate::physics::plugin::Plugin for MixedDomainPropagationPlugin {
+impl crate::domain::plugin::Plugin for MixedDomainPropagationPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -222,7 +222,7 @@ impl crate::physics::plugin::Plugin for MixedDomainPropagationPlugin {
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        _context: &mut crate::physics::plugin::PluginContext<'_>,
+        _context: &mut crate::domain::plugin::PluginContext<'_>,
     ) -> KwaversResult<()> {
         use crate::domain::field::mapping::UnifiedFieldType;
 

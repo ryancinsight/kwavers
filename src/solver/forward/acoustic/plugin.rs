@@ -3,11 +3,11 @@
 //! This plugin implements acoustic wave physics following SOLID principles.
 //! It depends only on abstractions and is completely decoupled from the solver.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::physics::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
+use crate::domain::plugin::{PluginContext, PluginMetadata, PluginState};
 use ndarray::Array3;
 use ndarray::Array4;
 
@@ -122,7 +122,7 @@ impl AcousticWavePlugin {
     }
 }
 
-impl Plugin for AcousticWavePlugin {
+impl crate::domain::plugin::Plugin for AcousticWavePlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

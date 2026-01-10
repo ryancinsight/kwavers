@@ -1,6 +1,6 @@
 //! Volume rendering implementation
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::visualization::{ColorScheme, FieldType, VisualizationConfig};
 use ndarray::Array3;

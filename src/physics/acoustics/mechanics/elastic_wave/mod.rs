@@ -11,7 +11,7 @@ pub mod properties;
 pub mod spectral_fields;
 pub mod tests;
 
-use crate::core::error::{KwaversResult, PhysicsError};
+use crate::domain::core::error::{KwaversResult, PhysicsError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 

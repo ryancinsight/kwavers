@@ -6,10 +6,9 @@
 //! 3. Adapt existing components as plugins
 
 use kwavers::{
-    domain::field::mapping::UnifiedFieldType,
-    medium::HomogeneousMedium,
-    physics::plugin::{Plugin, PluginContext, PluginManager, PluginMetadata, PluginState},
-    Grid, KwaversResult,
+    domain::field::mapping::UnifiedFieldType, domain::plugin::PluginState,
+    medium::HomogeneousMedium, Grid, KwaversResult, Plugin, PluginContext, PluginManager,
+    PluginMetadata,
 };
 use ndarray::Array4;
 use std::collections::HashMap;

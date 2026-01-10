@@ -7,7 +7,7 @@
 mod tests {
 
     use crate::physics::bubble_dynamics::{BubbleParameters, BubbleState, RayleighPlessetSolver};
-    use crate::core::constants::*;
+    use crate::domain::core::constants::*;
     use approx::assert_relative_eq;
 
     /// Validate linear bubble oscillations against Prosperetti's analytical solution

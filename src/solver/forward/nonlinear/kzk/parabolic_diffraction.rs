@@ -7,7 +7,7 @@
 //! - Lee & Hamilton (1995) "Parametric array in air", Eq. 2.23
 //! - Kamakura et al. (1992) "Nonlinear acoustic beam propagation"
 
-use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
+use crate::domain::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::{Array2, ArrayViewMut2};
 use std::f64::consts::PI;
 
@@ -139,11 +139,11 @@ impl KzkDiffractionOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::SOUND_SPEED_WATER;
-    use crate::physics::validation::measure_beam_radius;
+    use crate::domain::core::constants::SOUND_SPEED_WATER;
     use crate::solver::forward::nonlinear::kzk::constants::{
         DEFAULT_BEAM_WAIST, DEFAULT_FREQUENCY, DEFAULT_GRID_SIZE, DEFAULT_WAVELENGTH,
     };
+    use crate::solver::validation::measure_beam_radius;
     use approx::assert_relative_eq;
 
     #[test]

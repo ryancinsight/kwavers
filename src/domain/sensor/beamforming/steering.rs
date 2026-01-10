@@ -5,7 +5,9 @@
 //! **Spherical Wave**: a(r) = exp(j k |r - r₀|) / |r - r₀| for near-field sources
 //! **Focused Beam**: Combines phase delays for beam focusing at specific point
 
-use crate::core::error::KwaversResult;
+use crate::analysis::signal_processing::beamforming::utils::delays;
+use crate::domain::core::error::KwaversResult;
+use crate::domain::math::geometry::distance3;
 use ndarray::Array1;
 
 /// Steering vector calculation methods
@@ -32,12 +34,12 @@ impl SteeringVector {
     ) -> Array1<num_complex::Complex<f64>> {
         use num_complex::Complex;
 
-        let wavenumber = 2.0 * std::f64::consts::PI * frequency / speed_of_sound;
-        let direction_unit = crate::domain::sensor::math::normalize3(direction);
+        let phase_delays =
+            delays::plane_wave_phase_delays(sensor_positions, direction, frequency, speed_of_sound)
+                .expect("plane wave phase delays must be valid");
 
         let mut steering_vector = Array1::zeros(sensor_positions.len());
-        for (i, &pos) in sensor_positions.iter().enumerate() {
-            let phase = wavenumber * crate::domain::sensor::math::dot3(pos, direction_unit);
+        for (i, &phase) in phase_delays.iter().enumerate() {
             steering_vector[i] = Complex::new(0.0, phase).exp();
         }
 
@@ -55,6 +57,30 @@ impl SteeringVector {
     ) -> KwaversResult<Array1<num_complex::Complex<f64>>> {
         use num_complex::Complex;
 
+        if !frequency.is_finite() || frequency <= 0.0 {
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                "frequency must be finite and > 0".to_string(),
+            ));
+        }
+        if !speed_of_sound.is_finite() || speed_of_sound <= 0.0 {
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                "speed_of_sound must be finite and > 0".to_string(),
+            ));
+        }
+        if sensor_positions.is_empty() {
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                "sensor_positions must be non-empty".to_string(),
+            ));
+        }
+        if sensor_positions
+            .iter()
+            .any(|p| !p.iter().all(|v| v.is_finite()))
+        {
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                "sensor_positions must be finite 3D coordinates".to_string(),
+            ));
+        }
+
         let wavenumber = 2.0 * std::f64::consts::PI * frequency / speed_of_sound;
         let num_sensors = sensor_positions.len();
 
@@ -71,13 +97,18 @@ impl SteeringVector {
             }
 
             SteeringVectorMethod::SphericalWave { source_position } => {
+                if source_position.iter().any(|v| !v.is_finite()) {
+                    return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                        "source_position must be finite".to_string(),
+                    ));
+                }
                 // Spherical wave steering: a_i = exp(j k |r_i - r₀|) / |r_i - r₀|
                 // where r₀ is the source position
                 for (i, &pos) in sensor_positions.iter().enumerate() {
-                    let distance = crate::domain::sensor::math::distance3(pos, *source_position);
+                    let distance = distance3(pos, *source_position);
                     if distance.abs() < 1e-12 {
-                        return Err(crate::core::error::KwaversError::Numerical(
-                            crate::core::error::NumericalError::InvalidOperation(
+                        return Err(crate::domain::core::error::KwaversError::Numerical(
+                            crate::domain::core::error::NumericalError::InvalidOperation(
                                 format!("Sensor at source position (distance = {:.2e}) - spherical wave steering undefined", distance)
                             )
                         ));
@@ -89,11 +120,13 @@ impl SteeringVector {
             }
 
             SteeringVectorMethod::Focused { focal_point } => {
-                // Focused beam: phase delays to focus at focal_point
-                for (i, &pos) in sensor_positions.iter().enumerate() {
-                    let distance_to_focus =
-                        crate::domain::sensor::math::distance3(pos, *focal_point);
-                    let phase = wavenumber * distance_to_focus;
+                let phase_delays = delays::focus_phase_delays(
+                    sensor_positions,
+                    *focal_point,
+                    frequency,
+                    speed_of_sound,
+                )?;
+                for (i, &phase) in phase_delays.iter().enumerate() {
                     steering_vector[i] = Complex::new(0.0, phase).exp();
                 }
             }
@@ -135,7 +168,7 @@ impl SteeringVector {
             sensor_positions,
             speed_of_sound,
         )
-        .unwrap_or_else(|_| Array1::ones(sensor_positions.len()))
+        .expect("broadside steering computation must succeed")
     }
 
     /// Compute endfire steering vector (along array axis)
@@ -153,6 +186,6 @@ impl SteeringVector {
             sensor_positions,
             speed_of_sound,
         )
-        .unwrap_or_else(|_| Array1::ones(sensor_positions.len()))
+        .expect("endfire steering computation must succeed")
     }
 }

@@ -3,21 +3,18 @@
 //! This module configures the complete REST API router for both PINN operations
 //! and clinical ultrasound integration, including middleware and route organization.
 
-use crate::infra::api::{
-    handlers::{
-        delete_model, get_job_info, get_model_info, health_check, list_models, run_inference,
-        train_pinn_model, AppState,
-    },
+use crate::infra::api::handlers::{
+    delete_model, get_job_info, get_model_info, health_check, list_models, run_inference,
+    train_pinn_model, AppState,
 };
 use axum::{
-    middleware,
-    routing::{delete, get, post, put},
+    routing::{delete, get, post},
     Router,
 };
 use tower_http::{
     compression::CompressionLayer,
     cors::{Any, CorsLayer},
-    request_id::{MakeRequestUuid, SetRequestIdLayer},
+    request_id::SetRequestIdLayer,
     trace::TraceLayer,
 };
 

@@ -6,7 +6,7 @@ use super::{
     BackingLayer, DirectivityPattern, ElementGeometry, FrequencyResponse, MatchingLayer,
     PiezoMaterial, TransducerSensitivity,
 };
-use crate::core::error::{ConfigError, KwaversError, KwaversResult};
+use crate::domain::core::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Complete transducer design specification
 #[derive(Debug, Clone)]

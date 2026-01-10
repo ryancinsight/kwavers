@@ -1,7 +1,7 @@
 //! Frequency Modulation (FM)
 
 use super::{Modulation, ModulationParams};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 
 /// Frequency modulation implementation
 #[derive(Debug, Clone)]

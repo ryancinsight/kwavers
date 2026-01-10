@@ -19,11 +19,11 @@
 //!    - Thermal effects in bubble dynamics
 
 use super::{BubbleState, KellerMiksisModel};
-use crate::core::error::{KwaversResult, PhysicsError};
+use crate::domain::core::error::{KwaversResult, PhysicsError};
 use ndarray::Array1;
 use std::sync::Arc;
 
-use crate::core::constants::thermodynamic::{
+use crate::domain::core::constants::thermodynamic::{
     NUSSELT_CONSTANT, NUSSELT_PECLET_COEFF, NUSSELT_PECLET_EXPONENT, R_GAS,
     SHERWOOD_PECLET_EXPONENT, T_AMBIENT, VAPOR_DIFFUSION_COEFFICIENT,
 };
@@ -279,7 +279,9 @@ impl BubbleIMEXIntegrator {
 
     /// Calculate effective polytropic index for thermal model
     fn calculate_effective_polytropic_index(&self, state: &BubbleState) -> f64 {
-        use crate::core::constants::cavitation::{MIN_PECLET_NUMBER, PECLET_SCALING_FACTOR};
+        use crate::domain::core::constants::cavitation::{
+            MIN_PECLET_NUMBER, PECLET_SCALING_FACTOR,
+        };
 
         let params = self.solver.params();
         let thermal_diffusivity =
@@ -299,7 +301,7 @@ impl BubbleIMEXIntegrator {
         let b = 1730.63;
         let c = 233.426;
 
-        let t_celsius = crate::core::constants::kelvin_to_celsius(temperature);
+        let t_celsius = crate::domain::core::constants::kelvin_to_celsius(temperature);
         let log10_p = a - b / (c + t_celsius);
 
         // Convert from mmHg to Pa

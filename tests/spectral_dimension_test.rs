@@ -11,10 +11,12 @@ fn test_spectral_solver_1d_equivalent() {
     let grid = Grid::new(64, 2, 2, 1e-3, 1e-3, 1e-3).unwrap();
     let medium = HomogeneousMedium::water(&grid);
 
-    let mut config = PSTDConfig::default();
-    config.dt = 1e-7;
-    config.nt = 100;
-    config.boundary = BoundaryConfig::None;
+    let config = PSTDConfig {
+        dt: 1e-7,
+        nt: 100,
+        boundary: BoundaryConfig::None,
+        ..Default::default()
+    };
 
     let mut p0 = Array3::zeros((64, 2, 2));
     // Gaussian pulse in X
@@ -26,8 +28,10 @@ fn test_spectral_solver_1d_equivalent() {
         p0[[i, 1, 1]] = p0[[i, 0, 0]];
     }
 
-    let mut source = PSTDSource::default();
-    source.p0 = Some(p0);
+    let source = PSTDSource {
+        p0: Some(p0),
+        ..Default::default()
+    };
 
     let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
 
@@ -46,14 +50,18 @@ fn test_spectral_solver_2d_equivalent() {
     let grid = Grid::new(32, 32, 2, 1e-3, 1e-3, 1e-3).unwrap();
     let medium = HomogeneousMedium::water(&grid);
 
-    let mut config = PSTDConfig::default();
-    config.boundary = BoundaryConfig::None;
+    let config = PSTDConfig {
+        boundary: BoundaryConfig::None,
+        ..Default::default()
+    };
     let mut p0 = Array3::zeros((32, 32, 2));
     p0[[16, 16, 0]] = 1e6;
     p0[[16, 16, 1]] = 1e6;
 
-    let mut source = PSTDSource::default();
-    source.p0 = Some(p0);
+    let source = PSTDSource {
+        p0: Some(p0),
+        ..Default::default()
+    };
 
     let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
     solver.run(5).unwrap();

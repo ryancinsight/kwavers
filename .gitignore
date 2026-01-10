@@ -55,6 +55,20 @@ test_octree
 *.html
 *.log
 
+# Build logs and error files (Sprint Audit 2025-01-10)
+errors.txt
+baseline_*.log
+baseline_*.txt
+build_log*.txt
+build_errors.txt
+check_tests.log
+test_errors.txt
+check_errors*.txt
+check_output*.txt
+build_phase*.log
+migration_*.log
+phase_*.log
+
 # Root build/test logs
 build_log*.txt
 build_errors.txt

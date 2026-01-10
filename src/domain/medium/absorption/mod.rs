@@ -38,7 +38,7 @@ pub use power_law::{PowerLawAbsorption, PowerLawModel};
 pub use stokes::{StokesAbsorption, StokesParameters};
 pub use tissue::{TissueAbsorption, TissueType, TISSUE_PROPERTIES};
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Main absorption calculator that orchestrates different models

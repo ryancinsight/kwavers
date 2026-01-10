@@ -1,3 +1,3 @@
 //! Medium-related error types
 
-pub use crate::core::error::MediumError;
+pub use crate::domain::core::error::MediumError;

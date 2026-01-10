@@ -1,6 +1,6 @@
 //! Implicit solvers for IMEX schemes
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array3, Zip};
 use std::fmt::Debug;
 
@@ -72,7 +72,7 @@ impl ImplicitSolver for LinearSolver {
         }
 
         Err(KwaversError::Physics(
-            crate::core::error::PhysicsError::ConvergenceFailure {
+            crate::domain::core::error::PhysicsError::ConvergenceFailure {
                 solver: "LinearSolver".to_string(),
                 iterations: self.max_iterations,
                 residual: last_norm,
@@ -252,7 +252,7 @@ impl ImplicitSolver for NonlinearSolver {
         }
 
         Err(KwaversError::Physics(
-            crate::core::error::PhysicsError::ConvergenceFailure {
+            crate::domain::core::error::PhysicsError::ConvergenceFailure {
                 solver: "NonlinearSolver".to_string(),
                 iterations: self.max_iterations,
                 residual: last_norm,

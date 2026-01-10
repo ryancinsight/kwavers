@@ -1,10 +1,10 @@
 //! Physics plugin implementation for hybrid solver
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
+use crate::domain::plugin::{PluginMetadata, PluginState};
 use crate::solver::hybrid::{HybridConfig, HybridSolver};
 use ndarray::Array4;
 
@@ -38,7 +38,7 @@ impl HybridPlugin {
     }
 }
 
-impl crate::physics::plugin::Plugin for HybridPlugin {
+impl crate::domain::plugin::Plugin for HybridPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -61,10 +61,10 @@ impl crate::physics::plugin::Plugin for HybridPlugin {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        context: &mut PluginContext<'_>,
+        context: &mut crate::domain::plugin::PluginContext<'_>,
     ) -> KwaversResult<()> {
         let solver = self.solver.as_mut().ok_or_else(|| {
-            crate::core::error::KwaversError::InternalError(
+            crate::domain::core::error::KwaversError::InternalError(
                 "Hybrid solver not initialized".to_string(),
             )
         })?;

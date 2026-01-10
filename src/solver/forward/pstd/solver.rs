@@ -3,21 +3,21 @@
 //! Main solver implementation following GRASP principles.
 //! This module focuses solely on the core solving logic.
 
-use crate::core::error::KwaversResult;
 use crate::domain::boundary::{Boundary, CPMLBoundary, PMLBoundary};
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
+use crate::domain::math::fft::Complex64;
 use crate::domain::medium::Medium;
-use crate::math::fft::Complex64;
 use ndarray::{Array2, Array3, Zip};
 
 use super::config::{BoundaryConfig, CompatibilityMode, PSTDConfig};
 use super::numerics::operators::initialize_spectral_operators;
 use super::numerics::spectral_correction::CorrectionMethod;
 use super::physics::absorption::initialize_absorption_operators;
+use crate::domain::math::fft::ProcessorFft3d;
 use crate::domain::sensor::recorder::simple::SensorRecorder;
 use crate::domain::source::{GridSource, SourceMode};
 use crate::domain::source::{Source, SourceField};
-use crate::math::fft::ProcessorFft3d;
 use crate::solver::fdtd::SourceHandler;
 use std::sync::Arc;
 
@@ -278,7 +278,7 @@ impl PSTDSolver {
             source_handler,
             dynamic_sources: Vec::new(),
             time_step_index: 0,
-            fft: crate::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz),
+            fft: crate::domain::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz),
             kappa,
             k_vec,
             filter: k_ops.filter,

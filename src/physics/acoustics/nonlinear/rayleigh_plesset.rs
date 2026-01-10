@@ -30,8 +30,8 @@
 
 use super::bubble_state::{BubbleParameters, BubbleState};
 use super::thermodynamics::{ThermodynamicsCalculator, VaporPressureModel};
-use crate::core::constants::cavitation::{BAR_L2_TO_PA_M6, L_TO_M3};
-use crate::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
+use crate::domain::core::constants::cavitation::{BAR_L2_TO_PA_M6, L_TO_M3};
+use crate::domain::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
 
 // Remove duplicate constant definitions - they're now imported from constants module
 
@@ -165,7 +165,7 @@ pub fn integrate_bubble_dynamics_stable(
     dp_dt: f64,
     dt: f64,
     t: f64,
-) -> crate::core::error::KwaversResult<()> {
+) -> crate::domain::core::error::KwaversResult<()> {
     use super::adaptive_integration::integrate_bubble_dynamics_adaptive;
 
     // Use adaptive integration with sub-cycling (no Mutex needed anymore)

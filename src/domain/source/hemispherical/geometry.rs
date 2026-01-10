@@ -2,7 +2,7 @@
 
 use super::constants::MAX_ELEMENT_DENSITY;
 use super::element::ElementConfiguration;
-use crate::core::error::{ConfigError, KwaversError, KwaversResult};
+use crate::domain::core::error::{ConfigError, KwaversError, KwaversResult};
 use std::f64::consts::PI;
 
 /// Hemisphere geometry definition

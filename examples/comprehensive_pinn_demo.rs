@@ -53,8 +53,6 @@ use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 mod pinn_demo {
-    use super::*;
-
     /// Demonstrate basic 2D wave equation PINN training
     pub fn demonstrate_basic_pinn() {
         println!("🧠 Basic 2D PINN Training Demonstration");
@@ -365,7 +363,23 @@ fn main() {
         "--applications" => {
             pinn_demo::demonstrate_applications();
         }
-        "--all" | _ => {
+        "--all" => {
+            println!("🎭 Running Complete Ecosystem Demonstration");
+            println!("===========================================");
+            println!();
+
+            pinn_demo::demonstrate_basic_pinn();
+            pinn_demo::demonstrate_distributed_training();
+            pinn_demo::demonstrate_jit_inference();
+            pinn_demo::demonstrate_quantization();
+            pinn_demo::demonstrate_physics_domains();
+            pinn_demo::demonstrate_meta_learning();
+            pinn_demo::demonstrate_uncertainty();
+            pinn_demo::demonstrate_cloud_deployment();
+            pinn_demo::demonstrate_performance();
+            pinn_demo::demonstrate_applications();
+        }
+        _ => {
             println!("🎭 Running Complete Ecosystem Demonstration");
             println!("===========================================");
             println!();

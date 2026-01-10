@@ -14,7 +14,7 @@ pub use pipeline::{ComputePipeline, RenderPipeline};
 pub use uniforms::VolumeUniforms;
 pub use volume::VolumeRenderer;
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::visualization::{FieldType, VisualizationConfig};
 use ndarray::Array3;

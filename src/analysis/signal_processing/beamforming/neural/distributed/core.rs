@@ -44,12 +44,12 @@
 //! - Raina et al. (2009): "Large-scale deep unsupervised learning using graphics processors"
 //! - Dean et al. (2012): "Large scale distributed deep networks"
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use ndarray::Array4;
 use std::collections::{HashMap, VecDeque};
 
 #[cfg(feature = "pinn")]
-use crate::math::ml::pinn::multi_gpu_manager::{
+use crate::domain::math::ml::pinn::multi_gpu_manager::{
     CommunicationChannel, DecompositionStrategy, LoadBalancingAlgorithm, MultiGpuManager,
 };
 
@@ -202,6 +202,22 @@ impl DistributedNeuralBeamformingProcessor {
         })
     }
 
+    pub fn gpu_manager(&self) -> &MultiGpuManager {
+        &self.gpu_manager
+    }
+
+    pub fn decomposition_strategy(&self) -> &DecompositionStrategy {
+        &self.decomposition_strategy
+    }
+
+    pub fn load_balancer(&self) -> &LoadBalancingAlgorithm {
+        &self.load_balancer
+    }
+
+    pub fn communication_channels(&self) -> &HashMap<(usize, usize), CommunicationChannel> {
+        &self.communication_channels
+    }
+
     /// Initialize communication channels between GPUs.
     ///
     /// # Communication Topology
@@ -278,7 +294,7 @@ impl DistributedNeuralBeamformingProcessor {
     ) -> KwaversResult<DistributedNeuralBeamformingResult> {
         // Placeholder implementation
         Err(KwaversError::System(
-            crate::core::error::SystemError::FeatureNotAvailable {
+            crate::domain::core::error::SystemError::FeatureNotAvailable {
                 feature: "distributed_processing".to_string(),
                 reason: "Full distributed implementation in progress".to_string(),
             },

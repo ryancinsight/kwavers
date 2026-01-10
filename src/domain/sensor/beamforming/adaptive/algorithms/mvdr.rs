@@ -17,8 +17,8 @@
 //! - Callers must decide how to handle failure; this module will not return `steering` as a
 //!   disguised fallback.
 
-use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::linear_algebra::LinearAlgebra;
+use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::domain::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
@@ -115,7 +115,7 @@ impl BeamformingAlgorithm for MinimumVariance {
         let denom_re = denom.re;
         if !denom_re.is_finite() || denom_re <= 0.0 {
             return Err(KwaversError::Numerical(
-                crate::core::error::NumericalError::InvalidOperation(
+                crate::domain::core::error::NumericalError::InvalidOperation(
                     "MVDR: non-positive or non-finite denominator a^H R^{-1} a".to_string(),
                 ),
             ));

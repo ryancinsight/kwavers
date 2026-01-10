@@ -79,9 +79,9 @@ pub enum InterfaceTypeParameters {
 
 impl MediumParameters {
     /// Validate medium parameters
-    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
+    pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
         if self.density <= 0.0 {
-            return Err(crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::ConfigError::InvalidValue {
                 parameter: "density".to_string(),
                 value: self.density.to_string(),
                 constraint: "Must be positive".to_string(),
@@ -91,7 +91,7 @@ impl MediumParameters {
 
         if let Some(c) = self.sound_speed {
             if c <= 0.0 {
-                return Err(crate::core::error::ConfigError::InvalidValue {
+                return Err(crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "sound_speed".to_string(),
                     value: c.to_string(),
                     constraint: "Must be positive".to_string(),
@@ -102,7 +102,7 @@ impl MediumParameters {
 
         if let (Some(min), Some(max)) = (self.sound_speed_min, self.sound_speed_max) {
             if !(min.is_finite() && max.is_finite()) {
-                return Err(crate::core::error::ConfigError::InvalidValue {
+                return Err(crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "sound_speed_range".to_string(),
                     value: format!("{min}..{max}"),
                     constraint: "Must be finite".to_string(),
@@ -110,7 +110,7 @@ impl MediumParameters {
                 .into());
             }
             if min <= 0.0 || max <= 0.0 || min > max {
-                return Err(crate::core::error::ConfigError::InvalidValue {
+                return Err(crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "sound_speed_range".to_string(),
                     value: format!("{min}..{max}"),
                     constraint: "Must be positive and min <= max".to_string(),
@@ -120,7 +120,7 @@ impl MediumParameters {
         }
 
         if self.absorption < 0.0 {
-            return Err(crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::ConfigError::InvalidValue {
                 parameter: "absorption".to_string(),
                 value: self.absorption.to_string(),
                 constraint: "Must be non-negative".to_string(),
@@ -129,7 +129,7 @@ impl MediumParameters {
         }
 
         if !self.absorption_power.is_finite() || self.absorption_power < 0.0 {
-            return Err(crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::ConfigError::InvalidValue {
                 parameter: "absorption_power".to_string(),
                 value: self.absorption_power.to_string(),
                 constraint: "Must be finite and non-negative".to_string(),
@@ -138,7 +138,7 @@ impl MediumParameters {
         }
 
         if !self.nonlinearity.is_finite() || self.nonlinearity < 0.0 {
-            return Err(crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::ConfigError::InvalidValue {
                 parameter: "nonlinearity".to_string(),
                 value: self.nonlinearity.to_string(),
                 constraint: "Must be finite and non-negative".to_string(),
@@ -148,7 +148,7 @@ impl MediumParameters {
 
         if let Some(mu_a) = self.properties.get("mu_a").copied() {
             if !mu_a.is_finite() || mu_a < 0.0 {
-                return Err(crate::core::error::ConfigError::InvalidValue {
+                return Err(crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "mu_a".to_string(),
                     value: mu_a.to_string(),
                     constraint: "Must be finite and non-negative".to_string(),
@@ -159,7 +159,7 @@ impl MediumParameters {
 
         if let Some(mu_s_prime) = self.properties.get("mu_s_prime").copied() {
             if !mu_s_prime.is_finite() || mu_s_prime < 0.0 {
-                return Err(crate::core::error::ConfigError::InvalidValue {
+                return Err(crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "mu_s_prime".to_string(),
                     value: mu_s_prime.to_string(),
                     constraint: "Must be finite and non-negative".to_string(),
@@ -169,7 +169,7 @@ impl MediumParameters {
         }
 
         if matches!(self.medium_type, MediumType::Layered) && self.layers.is_empty() {
-            return Err(crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::ConfigError::InvalidValue {
                 parameter: "layers".to_string(),
                 value: "empty".to_string(),
                 constraint: "At least one layer is required".to_string(),
@@ -179,7 +179,7 @@ impl MediumParameters {
 
         for (idx, layer) in self.layers.iter().enumerate() {
             if !(layer.thickness.is_finite() && layer.thickness > 0.0) {
-                return Err(crate::core::error::ConfigError::InvalidValue {
+                return Err(crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: format!("layers[{idx}].thickness"),
                     value: layer.thickness.to_string(),
                     constraint: "Must be finite and positive".to_string(),
@@ -187,7 +187,7 @@ impl MediumParameters {
                 .into());
             }
             if !(layer.density.is_finite() && layer.density > 0.0) {
-                return Err(crate::core::error::ConfigError::InvalidValue {
+                return Err(crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: format!("layers[{idx}].density"),
                     value: layer.density.to_string(),
                     constraint: "Must be finite and positive".to_string(),
@@ -195,7 +195,7 @@ impl MediumParameters {
                 .into());
             }
             if !(layer.sound_speed.is_finite() && layer.sound_speed > 0.0) {
-                return Err(crate::core::error::ConfigError::InvalidValue {
+                return Err(crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: format!("layers[{idx}].sound_speed"),
                     value: layer.sound_speed.to_string(),
                     constraint: "Must be finite and positive".to_string(),
@@ -203,7 +203,7 @@ impl MediumParameters {
                 .into());
             }
             if !(layer.absorption.is_finite() && layer.absorption >= 0.0) {
-                return Err(crate::core::error::ConfigError::InvalidValue {
+                return Err(crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: format!("layers[{idx}].absorption"),
                     value: layer.absorption.to_string(),
                     constraint: "Must be finite and non-negative".to_string(),
@@ -215,7 +215,7 @@ impl MediumParameters {
                 InterfaceTypeParameters::Smooth(width)
                 | InterfaceTypeParameters::Gradient(width) => {
                     if !(width.is_finite() && width > 0.0) {
-                        return Err(crate::core::error::ConfigError::InvalidValue {
+                        return Err(crate::domain::core::error::ConfigError::InvalidValue {
                             parameter: format!("layers[{idx}].interface_width"),
                             value: width.to_string(),
                             constraint: "Must be finite and positive".to_string(),
@@ -228,14 +228,14 @@ impl MediumParameters {
 
         if matches!(self.medium_type, MediumType::Anisotropic) {
             let Some(tensor_file) = self.tensor_file.as_deref() else {
-                return Err(crate::core::error::ConfigError::MissingParameter {
+                return Err(crate::domain::core::error::ConfigError::MissingParameter {
                     parameter: "tensor_file".to_string(),
                     section: "medium".to_string(),
                 }
                 .into());
             };
             if tensor_file.is_empty() {
-                return Err(crate::core::error::ConfigError::InvalidValue {
+                return Err(crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "tensor_file".to_string(),
                     value: "empty".to_string(),
                     constraint: "Must not be empty".to_string(),

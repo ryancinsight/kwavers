@@ -9,7 +9,7 @@
 // New code must use `beamforming_search::BeamformSearch`.
 
 use super::{Position, SensorArray};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::Array2;
 use num_complex::Complex64;
 

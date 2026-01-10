@@ -12,11 +12,11 @@
 
 #[cfg(feature = "pinn")]
 use burn::backend::{Autodiff, NdArray};
-use kwavers::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::physics::PhysicsParameters;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::universal_solver::{UniversalPINNSolver, UniversalTrainingConfig};
+use kwavers::KwaversResult;
 #[cfg(feature = "pinn")]
 use std::time::Instant;
 

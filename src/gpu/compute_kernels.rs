@@ -3,7 +3,7 @@
 //! High-performance compute shaders using wgpu for cross-platform GPU acceleration.
 //! Supports both integrated and discrete GPUs with automatic fallback.
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid;
 use ndarray::Array3;
 use wgpu::util::DeviceExt;
@@ -33,9 +33,11 @@ impl AcousticFieldKernel {
             })
             .await
             .ok_or_else(|| {
-                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
-                    resource: "GPU adapter".to_string(),
-                })
+                KwaversError::System(
+                    crate::domain::core::error::SystemError::ResourceUnavailable {
+                        resource: "GPU adapter".to_string(),
+                    },
+                )
             })?;
 
         let (device, queue) = adapter
@@ -50,9 +52,11 @@ impl AcousticFieldKernel {
             )
             .await
             .map_err(|e| {
-                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
-                    resource: format!("GPU device: {}", e),
-                })
+                KwaversError::System(
+                    crate::domain::core::error::SystemError::ResourceUnavailable {
+                        resource: format!("GPU device: {}", e),
+                    },
+                )
             })?;
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -275,14 +279,18 @@ impl AcousticFieldKernel {
         receiver
             .recv()
             .map_err(|_| {
-                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
-                    resource: "GPU buffer mapping channel".to_string(),
-                })
+                KwaversError::System(
+                    crate::domain::core::error::SystemError::ResourceUnavailable {
+                        resource: "GPU buffer mapping channel".to_string(),
+                    },
+                )
             })?
             .map_err(|_| {
-                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
-                    resource: "GPU buffer mapping".to_string(),
-                })
+                KwaversError::System(
+                    crate::domain::core::error::SystemError::ResourceUnavailable {
+                        resource: "GPU buffer mapping".to_string(),
+                    },
+                )
             })?;
 
         let data = buffer_slice.get_mapped_range();

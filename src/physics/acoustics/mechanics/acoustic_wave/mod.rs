@@ -64,12 +64,12 @@ impl SpatialOrder {
     }
 
     /// Convert from usize, returning an error for invalid orders
-    pub fn from_usize(order: usize) -> Result<Self, crate::core::error::KwaversError> {
+    pub fn from_usize(order: usize) -> Result<Self, crate::domain::core::error::KwaversError> {
         match order {
             2 => Ok(SpatialOrder::Second),
             4 => Ok(SpatialOrder::Fourth),
             6 => Ok(SpatialOrder::Sixth),
-            _ => Err(crate::core::error::ConfigError::InvalidValue {
+            _ => Err(crate::domain::core::error::ConfigError::InvalidValue {
                 parameter: "spatial_order".to_string(),
                 value: order.to_string(),
                 constraint: "must be 2, 4, or 6".to_string(),

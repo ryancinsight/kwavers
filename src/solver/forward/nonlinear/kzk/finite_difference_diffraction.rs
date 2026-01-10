@@ -3,7 +3,7 @@
 //! Implements the angular spectrum method for beam diffraction.
 //! Reference: Vecchio & Lewin (1994) "Finite amplitude acoustic propagation"
 
-use crate::math::fft::{fft_1d_complex, ifft_1d_complex, Complex64};
+use crate::domain::math::fft::{fft_1d_complex, ifft_1d_complex, Complex64};
 use ndarray::{Array1, Array2, ArrayViewMut2};
 use std::f64::consts::PI;
 

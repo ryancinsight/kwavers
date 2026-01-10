@@ -9,7 +9,7 @@ use super::core::{
 
 /// Default quantization levels for phase control
 const DEFAULT_QUANTIZATION_LEVELS: u32 = 256;
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
@@ -58,9 +58,9 @@ impl PhaseShifter {
         let angle_rad = steering_angle.to_radians();
 
         if angle_rad.abs() > MAX_STEERING_ANGLE.to_radians() {
-            return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                "Steering angle exceeds maximum of {MAX_STEERING_ANGLE} degrees"
-            )));
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                format!("Steering angle exceeds maximum of {MAX_STEERING_ANGLE} degrees"),
+            ));
         }
 
         let k = 2.0 * PI / self.wavelength;
@@ -88,9 +88,9 @@ impl PhaseShifter {
             (focal_point[0].powi(2) + focal_point[1].powi(2) + focal_point[2].powi(2)).sqrt();
 
         if focal_distance < MIN_FOCAL_DISTANCE / 1000.0 {
-            return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                "Focal distance below minimum of {MIN_FOCAL_DISTANCE} mm"
-            )));
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                format!("Focal distance below minimum of {MIN_FOCAL_DISTANCE} mm"),
+            ));
         }
 
         let k = 2.0 * PI / self.wavelength;
@@ -120,9 +120,9 @@ impl PhaseShifter {
         focal_points: &[Vec<f64>],
     ) -> KwaversResult<Array1<f64>> {
         if focal_points.len() > MAX_FOCAL_POINTS {
-            return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                "Number of focal points exceeds maximum of {MAX_FOCAL_POINTS}"
-            )));
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                format!("Number of focal points exceeds maximum of {MAX_FOCAL_POINTS}"),
+            ));
         }
 
         let k = 2.0 * PI / self.wavelength;
@@ -131,7 +131,7 @@ impl PhaseShifter {
 
         for focal_point in focal_points {
             if focal_point.len() != 3 {
-                return Err(crate::core::error::KwaversError::InvalidInput(
+                return Err(crate::domain::core::error::KwaversError::InvalidInput(
                     "Focal points must be 3D coordinates".to_string(),
                 ));
             }
@@ -172,7 +172,7 @@ impl PhaseShifter {
         match self.strategy {
             ShiftingStrategy::Linear => {
                 if target.len() != 1 {
-                    return Err(crate::core::error::KwaversError::InvalidInput(
+                    return Err(crate::domain::core::error::KwaversError::InvalidInput(
                         "Linear steering requires single angle".to_string(),
                     ));
                 }
@@ -180,16 +180,15 @@ impl PhaseShifter {
             }
             ShiftingStrategy::Custom => {
                 if target.len() != 3 {
-                    return Err(crate::core::error::KwaversError::InvalidInput(
+                    return Err(crate::domain::core::error::KwaversError::InvalidInput(
                         "Spherical focusing requires 3D point".to_string(),
                     ));
                 }
                 self.calculate_spherical_phases(&[target[0], target[1], target[2]])
             }
-            _ => Err(crate::core::error::KwaversError::NotImplemented(format!(
-                "Strategy {:?} not yet implemented",
-                self.strategy
-            ))),
+            _ => Err(crate::domain::core::error::KwaversError::NotImplemented(
+                format!("Strategy {:?} not yet implemented", self.strategy),
+            )),
         }
     }
 }

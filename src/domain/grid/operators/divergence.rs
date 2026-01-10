@@ -1,7 +1,7 @@
 //! Divergence operations module
 
 use super::coefficients::{FDCoefficients, SpatialOrder};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayView3};
 use num_traits::Float;
@@ -22,8 +22,8 @@ where
 
     // Validate grid compatibility and vector field consistency
     if (nx, ny, nz) != (grid.nx, grid.ny, grid.nz) {
-        return Err(crate::core::error::KwaversError::Grid(
-            crate::core::error::GridError::DimensionMismatch {
+        return Err(crate::domain::core::error::KwaversError::Grid(
+            crate::domain::core::error::GridError::DimensionMismatch {
                 expected: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
                 actual: format!("({}, {}, {})", nx, ny, nz),
             },
@@ -31,8 +31,8 @@ where
     }
 
     if vy.shape() != shape || vz.shape() != shape {
-        return Err(crate::core::error::KwaversError::Grid(
-            crate::core::error::GridError::DimensionMismatch {
+        return Err(crate::domain::core::error::KwaversError::Grid(
+            crate::domain::core::error::GridError::DimensionMismatch {
                 expected: "Vector field components must have same dimensions".to_string(),
                 actual: format!(
                     "vx: {:?}, vy: {:?}, vz: {:?}",

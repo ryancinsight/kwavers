@@ -1,7 +1,7 @@
 //! Beam steering and focusing control
 
 use super::element::ElementConfiguration;
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::signal::Signal;
 use ndarray::Array3;

@@ -1,6 +1,6 @@
 // localization/multilateration/core.rs - Generalized multilateration (LS/WLS/ML)
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::sensor::localization::{Position, SensorArray, TrilaterationSolver};
 
 /// Multilateration methods for range-based localization
@@ -28,12 +28,12 @@ impl MultilaterationSolver {
     pub fn solve_ranges(&self, ranges: &[f64], array: &SensorArray) -> KwaversResult<Position> {
         // Input validation: finite, non-negative ranges
         if !ranges.iter().all(|&r| r.is_finite() && r >= 0.0) {
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Ranges must be finite and non-negative".to_string(),
             ));
         }
         if ranges.len() < 3 || array.num_sensors() < 3 {
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Need at least 3 ranges and sensors for 3D multilateration".to_string(),
             ));
         }
@@ -60,22 +60,22 @@ impl MultilaterationSolver {
     ) -> KwaversResult<Position> {
         // Input validation: ranges and weights must be finite; weights non-negative (inverse variances)
         if !ranges.iter().all(|&r| r.is_finite() && r >= 0.0) {
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Ranges must be finite and non-negative".to_string(),
             ));
         }
         if !weights.iter().all(|&w| w.is_finite() && w >= 0.0) {
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Weights must be finite and non-negative".to_string(),
             ));
         }
         if ranges.len() != weights.len() {
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Weights length must match ranges length".to_string(),
             ));
         }
         if ranges.len() < 3 || array.num_sensors() < 3 {
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Need at least 3 ranges and sensors for 3D multilateration".to_string(),
             ));
         }
@@ -97,7 +97,7 @@ impl MultilaterationSolver {
     ) -> KwaversResult<Position> {
         let n = ranges.len().min(array.num_sensors());
         if n < 3 {
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Insufficient measurements".to_string(),
             ));
         }

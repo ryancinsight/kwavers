@@ -8,8 +8,7 @@ use super::config::AxisymmetricConfig;
 use super::config::AxisymmetricMedium;
 use super::coordinates::CylindricalGrid;
 use super::transforms::DiscreteHankelTransform;
-use crate::core::error::KwaversResult;
-use crate::domain::grid::CylindricalTopology;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::medium::adapters::CylindricalMediumProjection;
 use crate::domain::medium::Medium;
 use ndarray::{Array1, Array2, Axis};
@@ -95,15 +94,15 @@ impl AxisymmetricSolver {
     ///
     /// let config = AxisymmetricConfig::default();
     /// let solver = AxisymmetricSolver::new_with_projection(config, &projection)?;
-    /// # Ok::<(), kwavers::core::error::KwaversError>(())
+    /// # Ok::<(), kwavers::domain::core::error::KwaversError>(())
     /// ```
     pub fn new_with_projection<M: Medium>(
         config: AxisymmetricConfig,
         projection: &CylindricalMediumProjection<M>,
     ) -> KwaversResult<Self> {
         config.validate().map_err(|e| {
-            crate::core::error::KwaversError::Config(
-                crate::core::error::ConfigError::InvalidValue {
+            crate::domain::core::error::KwaversError::Config(
+                crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "config".to_string(),
                     value: "invalid".to_string(),
                     constraint: e,
@@ -114,8 +113,8 @@ impl AxisymmetricSolver {
         // Verify projection dimensions match config
         let (nz_proj, nr_proj) = projection.sound_speed_field().dim();
         if nz_proj != config.nz || nr_proj != config.nr {
-            return Err(crate::core::error::KwaversError::Config(
-                crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Config(
+                crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "projection dimensions".to_string(),
                     value: format!("({}, {})", nz_proj, nr_proj),
                     constraint: format!(
@@ -183,8 +182,8 @@ impl AxisymmetricSolver {
     )]
     pub fn new(config: AxisymmetricConfig, medium: AxisymmetricMedium) -> KwaversResult<Self> {
         config.validate().map_err(|e| {
-            crate::core::error::KwaversError::Config(
-                crate::core::error::ConfigError::InvalidValue {
+            crate::domain::core::error::KwaversError::Config(
+                crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "config".to_string(),
                     value: "invalid".to_string(),
                     constraint: e,
@@ -635,6 +634,7 @@ impl AxisymmetricSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::grid::CylindricalTopology;
 
     #[test]
     fn test_solver_creation_legacy() {

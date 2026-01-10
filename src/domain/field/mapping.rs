@@ -4,9 +4,6 @@
 //! and their indices in the global fields array. This prevents data corruption
 //! from incorrect field indexing.
 
-use crate::domain::field::indices;
-use std::fmt;
-
 pub use crate::domain::field::UnifiedFieldType;
 
 /// Type-safe field accessor to prevent index confusion

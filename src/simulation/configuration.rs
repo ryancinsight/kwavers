@@ -44,15 +44,15 @@ pub struct Configuration {
 
 impl Configuration {
     /// Load configuration from TOML file
-    pub fn from_file<P: AsRef<Path>>(path: P) -> crate::core::error::KwaversResult<Self> {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> crate::domain::core::error::KwaversResult<Self> {
         let contents = std::fs::read_to_string(path.as_ref()).map_err(|_e| {
-            crate::core::error::ConfigError::FileNotFound {
+            crate::domain::core::error::ConfigError::FileNotFound {
                 path: path.as_ref().display().to_string(),
             }
         })?;
 
         toml::from_str(&contents).map_err(|e| {
-            crate::core::error::ConfigError::ParseError {
+            crate::domain::core::error::ConfigError::ParseError {
                 line: 0, // toml error doesn't provide line info directly
                 message: e.to_string(),
             }
@@ -61,16 +61,19 @@ impl Configuration {
     }
 
     /// Save configuration to TOML file
-    pub fn to_file<P: AsRef<Path>>(&self, path: P) -> crate::core::error::KwaversResult<()> {
+    pub fn to_file<P: AsRef<Path>>(
+        &self,
+        path: P,
+    ) -> crate::domain::core::error::KwaversResult<()> {
         let contents = toml::to_string_pretty(self).map_err(|e| {
-            crate::core::error::ConfigError::ParseError {
+            crate::domain::core::error::ConfigError::ParseError {
                 line: 0,
                 message: e.to_string(),
             }
         })?;
 
         std::fs::write(path, contents).map_err(|_e| {
-            crate::core::error::ConfigError::FileNotFound {
+            crate::domain::core::error::ConfigError::FileNotFound {
                 path: "config file".to_string(),
             }
             .into()
@@ -78,8 +81,8 @@ impl Configuration {
     }
 
     /// Validate configuration for consistency
-    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
-        let mut multi_error = crate::core::error::MultiError::new();
+    pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
+        let mut multi_error = crate::domain::core::error::MultiError::new();
 
         // Validate each component - collect errors instead of returning early
         if let Err(e) = self.simulation.validate() {
@@ -119,8 +122,8 @@ impl Configuration {
     }
 
     /// Validate cross-component dependencies
-    fn validate_cross_dependencies(&self) -> crate::core::error::KwaversResult<()> {
-        let mut multi_error = crate::core::error::MultiError::new();
+    fn validate_cross_dependencies(&self) -> crate::domain::core::error::KwaversResult<()> {
+        let mut multi_error = crate::domain::core::error::MultiError::new();
 
         // CFL condition check - require necessary values to be present
         if let Some(dt) = self.simulation.dt {
@@ -134,7 +137,7 @@ impl Configuration {
 
                 if cfl_actual > self.simulation.cfl {
                     multi_error.add(
-                        crate::core::error::ConfigError::InvalidValue {
+                        crate::domain::core::error::ConfigError::InvalidValue {
                             parameter: "dt".to_string(),
                             value: format!("{dt}"),
                             constraint: format!(
@@ -147,7 +150,7 @@ impl Configuration {
                 }
             } else {
                 multi_error.add(
-                    crate::core::error::ConfigError::MissingParameter {
+                    crate::domain::core::error::ConfigError::MissingParameter {
                         parameter: "medium.sound_speed_max".to_string(),
                         section: "Required for CFL validation when dt is specified".to_string(),
                     }
@@ -167,7 +170,7 @@ impl Configuration {
             let min_ppw = min_wavelength / max_spacing;
 
             if min_ppw < 2.0 {
-                multi_error.add(crate::core::error::ConfigError::InvalidValue {
+                multi_error.add(crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "grid.spacing".to_string(),
                     value: format!("{:?}", self.grid.spacing),
                     constraint: format!(
@@ -178,7 +181,7 @@ impl Configuration {
             }
         } else {
             multi_error.add(
-                crate::core::error::ConfigError::MissingParameter {
+                crate::domain::core::error::ConfigError::MissingParameter {
                     parameter: "medium.sound_speed_min".to_string(),
                     section: "Required for Nyquist validation".to_string(),
                 }

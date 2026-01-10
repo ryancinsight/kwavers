@@ -3,10 +3,10 @@
 //! This module implements high-order spectral methods using FFT
 //! for solving PDEs in smooth regions.
 
-use crate::core::error::KwaversResult;
-use crate::core::error::{KwaversError, ValidationError};
+use crate::domain::core::error::KwaversResult;
+use crate::domain::core::error::{KwaversError, ValidationError};
 use crate::domain::grid::Grid;
-use crate::math::fft::ProcessorFft3d;
+use crate::domain::math::fft::ProcessorFft3d;
 use crate::solver::pstd::utils::{compute_anti_aliasing_filter, compute_wavenumbers};
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;

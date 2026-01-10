@@ -1,6 +1,6 @@
 //! Validation test suite
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 
 /// Hybrid validation test suite
 #[derive(Debug)]

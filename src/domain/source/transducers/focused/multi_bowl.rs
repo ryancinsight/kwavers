@@ -3,7 +3,7 @@
 //! Provides arrays of bowl transducers for complex field synthesis.
 
 use super::bowl::{BowlConfig, BowlTransducer};
-use crate::{core::error::KwaversResult, domain::grid::Grid};
+use crate::{domain::core::error::KwaversResult, domain::grid::Grid};
 use ndarray::{Array3, Zip};
 use std::f64::consts::PI;
 

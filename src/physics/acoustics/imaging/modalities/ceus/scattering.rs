@@ -3,8 +3,8 @@
 //! Implements harmonic generation, subharmonic emission, and nonlinear
 //! acoustic scattering from microbubble contrast agents.
 
-use crate::core::error::KwaversResult;
-use crate::physics::imaging::ceus::MicrobubblePopulation;
+use super::microbubble::MicrobubblePopulation;
+use crate::domain::core::error::KwaversResult;
 
 /// Nonlinear scattering model for microbubbles
 #[derive(Debug)]
@@ -44,8 +44,8 @@ impl NonlinearScattering {
             return Ok(0.0);
         }
 
-        // Base linear scattering
-        let linear_scattering = population.effective_scattering(frequency);
+        let linear_scattering =
+            population.effective_scattering(frequency, 101_325.0, 1_000.0, 1_500.0, 0.001)?;
 
         // Nonlinear enhancement based on acoustic pressure
         let pressure_factor = (acoustic_pressure / 100_000.0).min(1.0); // Normalize to 100 kPa

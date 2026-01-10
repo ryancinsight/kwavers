@@ -1,6 +1,6 @@
 //! GPU buffer management
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 
@@ -68,7 +68,7 @@ impl GpuBuffer {
     pub async fn read<T: bytemuck::Pod>(&self) -> KwaversResult<Vec<T>> {
         if !self.usage.contains(wgpu::BufferUsages::MAP_READ) {
             return Err(KwaversError::System(
-                crate::core::error::SystemError::InvalidOperation {
+                crate::domain::core::error::SystemError::InvalidOperation {
                     operation: "Buffer reading".to_string(),
                     reason: "Buffer not created with MAP_READ usage".to_string(),
                 },
@@ -84,7 +84,7 @@ impl GpuBuffer {
 
         // Wait for mapping to complete
         let result = rx.recv_async().await.map_err(|e| {
-            KwaversError::System(crate::core::error::SystemError::InvalidOperation {
+            KwaversError::System(crate::domain::core::error::SystemError::InvalidOperation {
                 operation: "Buffer mapping channel".to_string(),
                 reason: format!("Failed: {}", e),
             })
@@ -136,7 +136,7 @@ impl BufferManager {
     ) -> KwaversResult<&GpuBuffer> {
         if self.buffers.contains_key(name) {
             return Err(KwaversError::System(
-                crate::core::error::SystemError::InvalidOperation {
+                crate::domain::core::error::SystemError::InvalidOperation {
                     operation: format!("Buffer '{}' creation", name),
                     reason: "Buffer already exists".to_string(),
                 },
@@ -148,8 +148,8 @@ impl BufferManager {
         self.buffers.insert(name.to_string(), buffer);
 
         self.buffers.get(name).ok_or_else(|| {
-            crate::core::error::KwaversError::System(
-                crate::core::error::SystemError::ResourceExhausted {
+            crate::domain::core::error::KwaversError::System(
+                crate::domain::core::error::SystemError::ResourceExhausted {
                     resource: format!("GPU buffer '{}'", name),
                     reason: "Buffer not found after creation".to_string(),
                 },

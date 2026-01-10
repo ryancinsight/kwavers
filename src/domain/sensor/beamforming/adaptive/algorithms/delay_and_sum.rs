@@ -20,7 +20,7 @@ impl BeamformingAlgorithm for DelayAndSum {
         &self,
         _covariance: &Array2<Complex64>,
         steering: &Array1<Complex64>,
-    ) -> crate::core::error::KwaversResult<Array1<Complex64>> {
+    ) -> crate::domain::core::error::KwaversResult<Array1<Complex64>> {
         // Conventional beamforming: w = a (steering vector)
         Ok(steering.clone())
     }

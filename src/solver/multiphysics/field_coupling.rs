@@ -3,7 +3,7 @@
 //! This module implements different strategies for coupling fields between
 //! different physics domains (acoustic, optical, thermal).
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::field::indices::*;
 use ndarray::Array3;
 

@@ -26,8 +26,8 @@
 //! CPMLBoundary / PMLBoundary / etc.
 //! ```
 
-use crate::core::error::KwaversResult;
 use crate::domain::boundary::traits::{BoundaryCondition, FieldType};
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::{Grid, GridTopology};
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 
@@ -99,8 +99,8 @@ impl<B: BoundaryCondition> FieldUpdater<B> {
         dt: f64,
     ) -> KwaversResult<()> {
         if !self.boundary.supports_field_type(self.field_type) {
-            return Err(crate::core::error::KwaversError::Config(
-                crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Config(
+                crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "field_type".to_string(),
                     value: format!("{:?}", self.field_type),
                     constraint: format!(

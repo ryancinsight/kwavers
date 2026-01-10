@@ -141,10 +141,10 @@ impl<'a> TrilaterationSolver<'a> {
         &self,
         ranges_m: [f64; 3],
         sensor_indices: [usize; 3],
-    ) -> crate::core::error::KwaversResult<TrilaterationResult> {
+    ) -> crate::domain::core::error::KwaversResult<TrilaterationResult> {
         // Input validation: non-negative, finite ranges
         if !ranges_m.iter().all(|&r| r.is_finite() && r >= 0.0) {
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Ranges must be finite and non-negative".to_string(),
             ));
         }
@@ -165,7 +165,7 @@ impl<'a> TrilaterationSolver<'a> {
         if d < 1e-12 {
             #[cfg(feature = "structured-logging")]
             tracing::warn!(d, "Degenerate sensor configuration: p1 and p2 coincide");
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Degenerate sensor configuration: p1 and p2 coincide".to_string(),
             ));
         }
@@ -280,13 +280,13 @@ impl<'a> TrilaterationSolver<'a> {
         ranges_m: [f64; 3],
         sensor_indices: [usize; 3],
         fourth: (usize, f64),
-    ) -> crate::core::error::KwaversResult<TrilaterationResult> {
+    ) -> crate::domain::core::error::KwaversResult<TrilaterationResult> {
         // Input validation: non-negative, finite ranges including fourth
         if !(ranges_m.iter().all(|&r| r.is_finite() && r >= 0.0)
             && fourth.1.is_finite()
             && fourth.1 >= 0.0)
         {
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Ranges must be finite and non-negative".to_string(),
             ));
         }
@@ -305,7 +305,7 @@ impl<'a> TrilaterationSolver<'a> {
         if d < 1e-12 {
             #[cfg(feature = "structured-logging")]
             tracing::warn!(d, "Degenerate sensor configuration: p1 and p2 coincide");
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Degenerate sensor configuration: p1 and p2 coincide".to_string(),
             ));
         }
@@ -390,7 +390,7 @@ impl<'a> TrilaterationSolver<'a> {
         &self,
         ranges_m: [f64; 3],
         sensor_indices: [usize; 3],
-    ) -> crate::core::error::KwaversResult<TrilaterationResult> {
+    ) -> crate::domain::core::error::KwaversResult<TrilaterationResult> {
         // Build a subset SensorArray with just the three sensors to avoid spurious constraints.
         let subset_sensors = vec![
             crate::domain::sensor::localization::array::Sensor::new(

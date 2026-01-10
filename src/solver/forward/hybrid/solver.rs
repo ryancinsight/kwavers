@@ -1,7 +1,7 @@
 //! Core hybrid PSTD/FDTD solver implementation
 
-use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::boundary::Boundary;
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::GridSource;
@@ -553,7 +553,7 @@ impl HybridSolver {
 
             if self.config.validation.check_nan_inf {
                 return Err(KwaversError::Validation(
-                    crate::core::error::ValidationError::FieldValidation {
+                    crate::domain::core::error::ValidationError::FieldValidation {
                         field: "pressure".to_string(),
                         value: format!("NaN: {has_nan}, Inf: {has_inf}"),
                         constraint: "Must be finite".to_string(),

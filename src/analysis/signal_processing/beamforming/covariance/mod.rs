@@ -28,7 +28,7 @@
 //! analysis::signal_processing::beamforming::covariance (Layer 7)
 //!   ↓ imports from
 //! math::linear_algebra (Layer 1) - matrix operations, eigendecomposition
-//! core::error (Layer 0) - error types
+//! domain::core::error (Layer 0) - error types
 //! ```
 //!
 //! # Mathematical Foundation
@@ -149,7 +149,7 @@
 //!
 //! All covariance operations should now use this module (SSOT enforcement).
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 use num_complex::Complex64;
 

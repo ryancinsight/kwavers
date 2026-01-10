@@ -2,8 +2,8 @@
 //!
 //! Implements comprehensive validation following literature standards
 
-use super::config::{InterfaceTypeParameters, LayerParameters, MediumParameters, MediumType};
-use crate::core::error::{ConfigError, KwaversResult};
+use super::config::{LayerParameters, MediumParameters, MediumType};
+use crate::domain::core::error::{ConfigError, KwaversResult};
 
 /// Specialized medium validator following Single Responsibility Principle  
 #[derive(Debug)]

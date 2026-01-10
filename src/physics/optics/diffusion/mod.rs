@@ -9,7 +9,9 @@ use crate::physics::wave_propagation::scattering::ScatteringCalculator;
 use log::debug;
 use ndarray::{Array3, Array4, Axis};
 
-use crate::core::constants::optical::{DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF};
+use crate::domain::core::constants::optical::{
+    DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF,
+};
 use crate::physics::traits::LightDiffusionModelTrait;
 
 /// Physical optical properties of a medium for photon diffusion calculations

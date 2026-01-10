@@ -3,7 +3,7 @@
 //! Core time-reversal reconstruction implementation.
 
 use crate::{
-    core::error::KwaversResult,
+    domain::core::error::KwaversResult,
     domain::{
         grid::Grid,
         medium::Medium,
@@ -255,8 +255,8 @@ impl TimeReversalReconstructor {
         let pressure_field = solver
             .get_field(crate::domain::field::mapping::UnifiedFieldType::Pressure)
             .ok_or_else(|| {
-                crate::core::error::KwaversError::Validation(
-                    crate::core::error::ValidationError::FieldValidation {
+                crate::domain::core::error::KwaversError::Validation(
+                    crate::domain::core::error::ValidationError::FieldValidation {
                         field: "pressure_field".to_string(),
                         value: "missing".to_string(),
                         constraint: "pressure field not found in solver".to_string(),

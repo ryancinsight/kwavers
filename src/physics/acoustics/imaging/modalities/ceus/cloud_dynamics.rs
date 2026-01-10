@@ -34,7 +34,7 @@
 //!   standing wave." *Phys. Fluids*, 13(8), 2219-2226.
 
 use super::microbubble::{BubbleDynamics, BubbleResponse, Microbubble};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -143,7 +143,7 @@ impl CloudDynamics {
             let z = self.config.dimensions[2] * rand::random::<f64>();
 
             // Create bubble with typical contrast agent properties
-            let mut properties = Microbubble::contrast_agent();
+            let mut properties = Microbubble::sono_vue();
             // Add size distribution (log-normal)
             let size_factor = 0.5 + rand::random::<f64>(); // 0.5-1.5 μm radius
             properties.radius_eq *= size_factor;

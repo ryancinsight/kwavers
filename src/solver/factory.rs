@@ -3,7 +3,7 @@
 //! This module provides the `SolverFactory` which creates the appropriate solver
 //! instance based on configuration and problem characteristics.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::GridSource;

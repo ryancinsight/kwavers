@@ -31,6 +31,7 @@
     clippy::too_many_arguments,  // Will fix in refactoring
     clippy::type_complexity,      // Will simplify types
 )]
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 
@@ -39,7 +40,7 @@ use std::collections::HashMap;
 
 // Core modules
 // Core infrastructure
-pub mod core;
+// Core infrastructure
 pub mod infra;
 
 // NOTE:
@@ -49,13 +50,12 @@ pub mod infra;
 // Domain logic
 pub mod clinical;
 pub mod domain;
-pub mod math;
 pub mod physics;
 pub mod simulation;
 pub mod solver;
 
 // API surface: domain-relevant types re-exported at crate boundaries for ergonomics
-pub use crate::core::error::{KwaversError, KwaversResult};
+pub use crate::domain::core::error::{KwaversError, KwaversResult};
 pub use crate::domain::grid::Grid;
 pub use crate::domain::medium::traits::Medium;
 
@@ -89,10 +89,10 @@ pub mod boundary {
     pub use crate::domain::boundary::{PMLBoundary, PMLConfig};
 }
 pub mod error {
-    pub use crate::core::error::{GridError, KwaversError, KwaversResult};
+    pub use crate::domain::core::error::{GridError, KwaversError, KwaversResult};
 }
 pub mod time {
-    pub use crate::core::time::Time;
+    pub use crate::domain::core::time::Time;
 }
 
 /// Core infrastructure re-exports for testing support
@@ -100,8 +100,8 @@ pub mod testing {
     pub use crate::analysis::testing::*;
 }
 
+pub use domain::math::ml;
 pub use domain::signal::{Signal, SineWave};
-pub use math::ml;
 
 // Analysis and tools
 pub mod analysis;
@@ -128,7 +128,7 @@ pub use analysis::visualization;
 // Intentionally no crate-root type re-exports. Import from the defining modules directly.
 // Example patterns:
 //
-// - Errors: crate::core::error::{KwaversResult, KwaversError, ValidationError, ...}
+// - Errors: crate::domain::core::error::{KwaversResult, KwaversError, ValidationError, ...}
 // - Grid: crate::domain::grid::Grid
 // - Medium: crate::domain::medium::Medium
 // - Boundaries: crate::domain::boundary::{Boundary, PMLBoundary, CPMLBoundary, ...}
@@ -140,8 +140,9 @@ pub use domain::field::indices as field_indices;
 pub use domain::field::mapping::{
     FieldAccessor as UnifiedFieldAccessor, FieldAccessorMut, UnifiedFieldType,
 };
-pub use physics::plugin::{Plugin, PluginContext, PluginManager, PluginMetadata};
+pub use domain::plugin::{Plugin, PluginContext, PluginMetadata};
 pub use physics::state::{FieldView, FieldViewMut, PhysicsState};
+pub use solver::plugin::{PluginExecutor, PluginManager};
 
 // Re-export spectral-DG components
 pub use solver::pstd::dg::shock_capturing::{ArtificialViscosity, ShockDetector, WENOLimiter};
@@ -194,7 +195,7 @@ pub use domain::source::{HanningApodization, LinearArray};
 // Re-export configuration types
 pub use domain::sensor::recorder::RecorderConfig;
 /// Initialize logging for the kwavers library
-pub fn init_logging() -> crate::core::error::KwaversResult<()> {
+pub fn init_logging() -> crate::domain::core::error::KwaversResult<()> {
     env_logger::init();
     Ok(())
 }
@@ -244,7 +245,7 @@ pub fn get_version_info() -> HashMap<String, String> {
 mod tests {
     use super::*;
 
-    use crate::core::error::{self};
+    use crate::domain::core::error::{self};
     use crate::domain::medium::core::CoreMedium;
 
     #[test]

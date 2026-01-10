@@ -21,7 +21,7 @@
 //!   cavitation for drug delivery." Nat. Rev. Drug Discov. 9, 527-536.
 
 use super::bubble_state::{BubbleParameters, BubbleState};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 
 /// Shell properties for encapsulated bubbles
 #[derive(Debug, Clone)]

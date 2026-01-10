@@ -40,7 +40,7 @@
 //! - **Duck (1990)**: Physical Properties of Tissue
 //! - **Nightingale (2015)**: Quantitative Ultrasound in Soft Tissues
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::{Array2, Array3, Array4};
 use std::collections::HashMap;
 

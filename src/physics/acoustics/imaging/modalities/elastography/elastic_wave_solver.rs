@@ -62,7 +62,7 @@
 //!   matched layer improved at grazing incidence for the seismic wave equation."
 //!   *Geophysics*, 72(5), SM155-SM167.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::Array3;
@@ -412,8 +412,8 @@ impl ElasticWaveSolver {
     ) -> KwaversResult<Vec<ElasticWaveField>> {
         let dt = self.config.dt.unwrap_or_else(|| self.calculate_time_step());
         if !dt.is_finite() || dt <= 0.0 {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "dt".to_string(),
                     value: dt,
                     reason: "Time step must be finite and positive".to_string(),
@@ -421,8 +421,8 @@ impl ElasticWaveSolver {
             ));
         }
         if self.config.save_every == 0 {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "save_every".to_string(),
                     value: self.config.save_every as f64,
                     reason: "save_every must be >= 1".to_string(),
@@ -488,8 +488,8 @@ impl ElasticWaveSolver {
 
         // Validate that elastic properties are properly defined
         if lambda.iter().any(|&x| x < 0.0) || mu.iter().any(|&x| x < 0.0) {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "elastic_properties".to_string(),
                     value: 0.0,
                     reason: "Lamé parameters must be non-negative".to_string(),
@@ -611,8 +611,8 @@ impl ElasticWaveSolver {
     ) -> KwaversResult<Vec<ElasticWaveField>> {
         let dt = self.config.dt.unwrap_or_else(|| self.calculate_time_step());
         if !dt.is_finite() || dt <= 0.0 {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "dt".to_string(),
                     value: dt,
                     reason: "Time step must be finite and positive".to_string(),
@@ -620,8 +620,8 @@ impl ElasticWaveSolver {
             ));
         }
         if self.config.save_every == 0 {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "save_every".to_string(),
                     value: self.config.save_every as f64,
                     reason: "save_every must be >= 1".to_string(),
@@ -755,8 +755,8 @@ impl ElasticWaveSolver {
                 ..
             } => {
                 if sigma_m[0] <= 0.0 || sigma_m[1] <= 0.0 || sigma_m[2] <= 0.0 {
-                    return Err(crate::core::error::KwaversError::Validation(
-                        crate::core::error::ValidationError::InvalidValue {
+                    return Err(crate::domain::core::error::KwaversError::Validation(
+                        crate::domain::core::error::ValidationError::InvalidValue {
                             parameter: "body_force.sigma_m".to_string(),
                             value: 0.0,
                             reason: "sigma_m components must be > 0".to_string(),
@@ -764,8 +764,8 @@ impl ElasticWaveSolver {
                     ));
                 }
                 if *sigma_t_s <= 0.0 {
-                    return Err(crate::core::error::KwaversError::Validation(
-                        crate::core::error::ValidationError::InvalidValue {
+                    return Err(crate::domain::core::error::KwaversError::Validation(
+                        crate::domain::core::error::ValidationError::InvalidValue {
                             parameter: "body_force.sigma_t_s".to_string(),
                             value: *sigma_t_s,
                             reason: "sigma_t_s must be > 0".to_string(),
@@ -773,8 +773,8 @@ impl ElasticWaveSolver {
                     ));
                 }
                 if !impulse_n_per_m3_s.is_finite() {
-                    return Err(crate::core::error::KwaversError::Validation(
-                        crate::core::error::ValidationError::InvalidValue {
+                    return Err(crate::domain::core::error::KwaversError::Validation(
+                        crate::domain::core::error::ValidationError::InvalidValue {
                             parameter: "body_force.impulse_n_per_m3_s".to_string(),
                             value: *impulse_n_per_m3_s,
                             reason: "impulse must be finite".to_string(),
@@ -785,8 +785,8 @@ impl ElasticWaveSolver {
                     + direction[1] * direction[1]
                     + direction[2] * direction[2];
                 if !norm2.is_finite() || norm2 <= 0.0 {
-                    return Err(crate::core::error::KwaversError::Validation(
-                        crate::core::error::ValidationError::InvalidValue {
+                    return Err(crate::domain::core::error::KwaversError::Validation(
+                        crate::domain::core::error::ValidationError::InvalidValue {
                             parameter: "body_force.direction".to_string(),
                             value: norm2,
                             reason: "direction must be non-zero and finite".to_string(),
@@ -796,8 +796,8 @@ impl ElasticWaveSolver {
                 let norm = norm2.sqrt();
                 // Enforce unit direction within numerical tolerance.
                 if (norm - 1.0).abs() > 1e-9 {
-                    return Err(crate::core::error::KwaversError::Validation(
-                        crate::core::error::ValidationError::InvalidValue {
+                    return Err(crate::domain::core::error::KwaversError::Validation(
+                        crate::domain::core::error::ValidationError::InvalidValue {
                             parameter: "body_force.direction".to_string(),
                             value: norm,
                             reason: "direction must be unit-length".to_string(),
@@ -1401,8 +1401,8 @@ impl ElasticWaveSolver {
     ) -> KwaversResult<(Vec<ElasticWaveField>, WaveFrontTracker)> {
         let dt = self.config.dt.unwrap_or_else(|| self.calculate_time_step());
         if !dt.is_finite() || dt <= 0.0 {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "dt".to_string(),
                     value: dt,
                     reason: "Time step must be finite and positive".to_string(),
@@ -1410,8 +1410,8 @@ impl ElasticWaveSolver {
             ));
         }
         if self.config.save_every == 0 {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "save_every".to_string(),
                     value: self.config.save_every as f64,
                     reason: "save_every must be >= 1".to_string(),
@@ -1518,8 +1518,8 @@ impl ElasticWaveSolver {
         sources: &[VolumetricSource],
     ) -> KwaversResult<(Vec<ElasticWaveField>, WaveFrontTracker)> {
         if body_forces.len() != push_times.len() {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "body_forces/push_times".to_string(),
                     value: body_forces.len() as f64,
                     reason: "body_forces and push_times must have the same length".to_string(),
@@ -1527,8 +1527,8 @@ impl ElasticWaveSolver {
             ));
         }
         if sources.len() != body_forces.len() {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "sources/body_forces".to_string(),
                     value: sources.len() as f64,
                     reason: "sources and body_forces must have the same length".to_string(),
@@ -1536,8 +1536,8 @@ impl ElasticWaveSolver {
             ));
         }
         if sources.is_empty() {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "sources".to_string(),
                     value: 0.0,
                     reason: "sources must contain at least one entry".to_string(),
@@ -1548,8 +1548,8 @@ impl ElasticWaveSolver {
         // Validate body-force configs (fail-fast).
         for (idx, src) in body_forces.iter().enumerate() {
             Self::validate_body_force_config(src).map_err(|e| {
-                crate::core::error::KwaversError::Validation(
-                    crate::core::error::ValidationError::InvalidValue {
+                crate::domain::core::error::KwaversError::Validation(
+                    crate::domain::core::error::ValidationError::InvalidValue {
                         parameter: format!("body_forces[{idx}]"),
                         value: idx as f64,
                         reason: format!("{e}"),
@@ -1560,8 +1560,8 @@ impl ElasticWaveSolver {
 
         let dt = self.config.dt.unwrap_or_else(|| self.calculate_time_step());
         if !dt.is_finite() || dt <= 0.0 {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "dt".to_string(),
                     value: dt,
                     reason: "Time step must be finite and positive".to_string(),
@@ -1569,8 +1569,8 @@ impl ElasticWaveSolver {
             ));
         }
         if self.config.save_every == 0 {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::InvalidValue {
                     parameter: "save_every".to_string(),
                     value: self.config.save_every as f64,
                     reason: "save_every must be >= 1".to_string(),

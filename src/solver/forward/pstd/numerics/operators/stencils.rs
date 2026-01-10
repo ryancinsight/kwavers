@@ -6,7 +6,7 @@
 
 use ndarray::Array1;
 
-use crate::core::error::{KwaversError, ValidationError};
+use crate::domain::core::error::{KwaversError, ValidationError};
 
 /// Stencil weights for finite differences
 #[derive(Debug, Clone)]

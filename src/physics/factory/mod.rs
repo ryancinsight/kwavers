@@ -22,7 +22,7 @@ impl PhysicsFactory {
     /// Create physics plugin manager from configuration
     pub fn create_physics(
         config: &PhysicsConfig,
-    ) -> crate::core::error::KwaversResult<crate::physics::plugin::PluginManager> {
+    ) -> crate::domain::core::error::KwaversResult<crate::solver::plugin::PluginManager> {
         // Validate through specialized validator
         config.validate()?;
 

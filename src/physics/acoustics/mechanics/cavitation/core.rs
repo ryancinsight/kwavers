@@ -3,7 +3,7 @@
 //! This module provides fundamental cavitation detection and modeling
 //! based on acoustic pressure thresholds and bubble dynamics.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::{Array3, Zip};
 
 /// Core cavitation detection and modeling

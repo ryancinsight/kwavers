@@ -3,7 +3,7 @@
 //! This module provides spatial filtering operations including
 //! Gaussian and bilateral filters for noise reduction and edge preservation.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::Array3;
 use std::f64::consts::PI;
 

@@ -3,8 +3,8 @@
 //! Implements comprehensive validation following senior engineering standards
 
 use super::simple_config::GridConfig;
-use crate::core::constants::numerical::MIN_DX;
-use crate::core::error::{ConfigError, KwaversResult};
+use crate::domain::core::constants::numerical::MIN_DX;
+use crate::domain::core::error::{ConfigError, KwaversResult};
 
 /// Specialized grid validator following Single Responsibility Principle
 #[derive(Debug)]

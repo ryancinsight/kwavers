@@ -11,14 +11,13 @@
 //! Showcases the proper use of kwavers factory patterns with advanced transducer modeling.
 
 use kwavers::{
-    core::error::KwaversResult,
     domain::{
         grid::Grid,
         medium::homogeneous::HomogeneousMedium,
         source::{BeamformingMode, PhasedArrayConfig, PhasedArrayTransducer},
     },
     source::Source,
-    SineWave,
+    KwaversResult, SineWave,
 };
 use std::sync::Arc;
 

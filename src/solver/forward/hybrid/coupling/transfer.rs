@@ -1,7 +1,7 @@
 //! Transfer operators for field coupling
 
 use super::InterfaceGeometry;
-use crate::core::error::{KwaversResult, ValidationError};
+use crate::domain::core::error::{KwaversResult, ValidationError};
 use ndarray::Array3;
 use std::collections::HashMap;
 

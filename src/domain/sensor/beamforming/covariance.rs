@@ -24,7 +24,7 @@
 //! This file provides explicit enums for covariance post-processing so higher layers can select
 //! appropriate conditioning and coherent-source handling without reimplementing numerics.
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2};
 use num_complex::Complex64;
 

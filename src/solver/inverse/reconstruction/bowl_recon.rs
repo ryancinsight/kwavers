@@ -3,7 +3,7 @@
 //! This module implements reconstruction algorithms for bowl-shaped (hemispherical) sensor arrays,
 //! commonly used in photoacoustic tomography and focused ultrasound applications.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::solver::reconstruction::{
     ReconstructionConfig, Reconstructor, UniversalBackProjection, WeightFunction,

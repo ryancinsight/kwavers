@@ -1,6 +1,6 @@
 //! Isosurface extraction using marching cubes
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Isosurface extractor using marching cubes algorithm

@@ -7,7 +7,7 @@
 //! - Hamilton & Blackstock (1998) "Nonlinear Acoustics"
 //! - Aanonsen et al. (1984) "Distortion and harmonic generation"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::Array3;

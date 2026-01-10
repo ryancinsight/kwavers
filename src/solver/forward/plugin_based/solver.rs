@@ -3,15 +3,16 @@
 //! Orchestrates physics simulations using a plugin architecture.
 //! Follows SOLID principles with clear separation of concerns.
 
-use crate::core::error::KwaversResult;
-use crate::core::time::Time;
 use crate::domain::boundary::Boundary;
+use crate::domain::core::error::KwaversResult;
+use crate::domain::core::time::Time;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
+use crate::domain::plugin::Plugin;
 use crate::domain::sensor::recorder::traits::RecorderTrait;
 use crate::domain::source::{Source, SourceField};
-use crate::physics::plugin::{Plugin, PluginManager};
+use crate::solver::plugin::PluginManager;
 use log::{debug, info};
 use ndarray::Array3;
 use std::sync::Arc;

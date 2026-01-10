@@ -49,39 +49,67 @@
 
 use ndarray::Array3;
 
-/// Extract all feature types from an image.
+/// Extract all feature types from an image as summary statistics.
 ///
-/// Returns a vector of 5 feature maps:
-/// 1. Identity (original image)
-/// 2. Local texture (standard deviation)
-/// 3. Gradient magnitude (edges)
-/// 4. Laplacian (structural)
-/// 5. Local entropy (information content)
+/// Returns a 1D vector of 6 scalar features:
+/// 1. Mean intensity
+/// 2. Standard deviation (texture)
+/// 3. Mean gradient magnitude (edges)
+/// 4. Mean Laplacian (structural)
+/// 5. Entropy (information content)
+/// 6. Peak intensity
+///
+/// These summary statistics capture global image properties for neural network input.
 ///
 /// # Arguments
 ///
-/// * `image` - Input image as Array3<f32> (frames, height, width)
+/// * `image` - Input image as Array3<f32> (frames, angles, samples)
 ///
 /// # Returns
 ///
-/// Vector of 5 feature maps, each with same dimensions as input.
+/// Array1<f32> of 6 summary features.
 ///
 /// # Example
 ///
 /// ```rust,ignore
 /// use ndarray::Array3;
-/// let image = Array3::<f32>::zeros((1, 256, 256));
+/// let image = Array3::<f32>::zeros((1, 1, 256));
 /// let features = extract_all_features(&image);
-/// assert_eq!(features.len(), 5);
+/// assert_eq!(features.len(), 6);
 /// ```
-pub fn extract_all_features(image: &Array3<f32>) -> Vec<Array3<f32>> {
-    vec![
-        image.clone(),                   // 1. Identity
-        compute_local_std(image),        // 2. Texture
-        compute_spatial_gradient(image), // 3. Edges
-        compute_laplacian(image),        // 4. Structural
-        compute_local_entropy(image),    // 5. Information
-    ]
+pub fn extract_all_features(image: &Array3<f32>) -> ndarray::Array1<f32> {
+    use ndarray::Array1;
+
+    // 1. Mean intensity
+    let mean_intensity = image.mean().unwrap_or(0.0);
+
+    // 2. Standard deviation (global texture)
+    let std_map = compute_local_std(image);
+    let mean_std = std_map.mean().unwrap_or(0.0);
+
+    // 3. Mean gradient magnitude (edge strength)
+    let gradient_map = compute_spatial_gradient(image);
+    let mean_gradient = gradient_map.mean().unwrap_or(0.0);
+
+    // 4. Mean Laplacian (structural complexity)
+    let laplacian_map = compute_laplacian(image);
+    let mean_laplacian = laplacian_map.mean().unwrap_or(0.0);
+
+    // 5. Entropy (information content)
+    let entropy_map = compute_local_entropy(image);
+    let mean_entropy = entropy_map.mean().unwrap_or(0.0);
+
+    // 6. Peak intensity (dynamic range)
+    let peak_intensity = image.iter().cloned().fold(0.0f32, f32::max);
+
+    Array1::from_vec(vec![
+        mean_intensity,
+        mean_std,
+        mean_gradient,
+        mean_laplacian,
+        mean_entropy,
+        peak_intensity,
+    ])
 }
 
 /// Compute local standard deviation (texture feature).
@@ -411,9 +439,11 @@ mod tests {
     fn test_extract_all_features() {
         let image = create_test_image();
         let features = extract_all_features(&image);
-        assert_eq!(features.len(), 5);
-        for feature in features {
-            assert_eq!(feature.dim(), (1, 10, 10));
+        // Should return 6 summary statistics: mean, std, gradient, laplacian, entropy, peak
+        assert_eq!(features.len(), 6);
+        // All features should be non-negative (or reasonable values)
+        for &feature_val in features.iter() {
+            assert!(feature_val.is_finite());
         }
     }
 
@@ -457,8 +487,13 @@ mod tests {
 
     #[test]
     fn test_normalize_features() {
+        // Create multiple feature maps for normalization testing
         let image = create_test_image();
-        let mut features = extract_all_features(&image);
+        let mut features = vec![
+            image.clone(),
+            compute_local_std(&image),
+            compute_spatial_gradient(&image),
+        ];
         normalize_features(&mut features);
 
         for feature in &features {
@@ -471,10 +506,15 @@ mod tests {
 
     #[test]
     fn test_concatenate_features() {
+        // Create multiple feature maps for concatenation testing
         let image = create_test_image();
-        let features = extract_all_features(&image);
+        let features = vec![
+            image.clone(),
+            compute_local_std(&image),
+            compute_spatial_gradient(&image),
+        ];
         let stacked = concatenate_features(&features);
-        assert_eq!(stacked.shape(), &[1, 5, 10, 10]);
+        assert_eq!(stacked.shape(), &[1, 3, 10, 10]);
     }
 
     #[test]
@@ -489,20 +529,27 @@ mod tests {
         let image = Array3::from_elem((1, 10, 10), 0.5);
         let features = extract_all_features(&image);
 
-        // Uniform image should have zero texture/gradient/laplacian
-        assert!(features[1][[0, 5, 5]].abs() < 1e-6); // std
-        assert!(features[2][[0, 5, 5]].abs() < 1e-6); // gradient
-        assert!(features[3][[0, 5, 5]].abs() < 1e-6); // laplacian
+        // Uniform image should have:
+        // - Mean = 0.5
+        // - Zero std/gradient/laplacian
+        // - Low entropy
+        // - Peak = 0.5
+        assert!((features[0] - 0.5).abs() < 1e-6); // mean
+        assert!(features[1].abs() < 1e-6); // std
+        assert!(features[2].abs() < 1e-6); // gradient
+        assert!(features[3].abs() < 1e-6); // laplacian
+                                           // Entropy can be > 0 for uniform (depends on binning)
+        assert!((features[5] - 0.5).abs() < 1e-6); // peak
     }
 
     #[test]
     fn test_zero_image() {
         let image = Array3::zeros((1, 10, 10));
         let features = extract_all_features(&image);
-        assert_eq!(features.len(), 5);
+        assert_eq!(features.len(), 6);
         // All features should be zero for zero image
-        for feature in features {
-            assert!(feature.iter().all(|&v| v.abs() < 1e-6));
+        for &feature_val in features.iter() {
+            assert!(feature_val.abs() < 1e-6);
         }
     }
 }

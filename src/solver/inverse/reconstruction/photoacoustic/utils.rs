@@ -3,7 +3,7 @@
 //! This module provides utility functions used across different
 //! reconstruction algorithms.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::Array2;
 
 /// Utility functions for photoacoustic reconstruction

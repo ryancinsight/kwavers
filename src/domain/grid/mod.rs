@@ -8,14 +8,14 @@ pub mod config;
 pub mod coordinates;
 pub mod error;
 // field_ops moved to domain/field/operations.rs
-use crate::math::fft::kspace;
+use crate::domain::math::fft::kspace;
 pub mod operators;
 pub mod simple_config;
 pub mod stability;
 pub mod structure;
 pub mod topology;
 pub mod validation;
-use crate::math::fft::utils as fft_utils;
+use crate::domain::math::fft::utils as fft_utils;
 
 // Re-exports for convenience
 pub use adapter::{GridAdapter, GridTopologyExt};

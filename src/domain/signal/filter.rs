@@ -3,7 +3,7 @@
 //! This module provides tools for temporal filtering of signals,
 //! including bandpass, lowpass, and highpass filters using FFT.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::fmt::Debug;
 

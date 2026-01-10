@@ -4,7 +4,7 @@
 //! used throughout the phase shifting subsystem. Implements SSOT principle
 //! for phase-related computations.
 
-use crate::core::constants::SOUND_SPEED_WATER;
+use crate::domain::core::constants::SOUND_SPEED_WATER;
 use std::f64::consts::{PI, TAU};
 
 /// Maximum number of focal points supported

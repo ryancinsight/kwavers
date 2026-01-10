@@ -5,7 +5,7 @@
 
 #![allow(deprecated)]
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
@@ -45,8 +45,8 @@ impl CylindricalGrid {
     /// * `dr` - Radial grid spacing (m)
     pub fn new(nz: usize, nr: usize, dz: f64, dr: f64) -> KwaversResult<Self> {
         if nz == 0 || nr == 0 {
-            return Err(crate::core::error::KwaversError::Config(
-                crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Config(
+                crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "grid dimensions".to_string(),
                     value: format!("nz={}, nr={}", nz, nr),
                     constraint: "Must be positive".to_string(),

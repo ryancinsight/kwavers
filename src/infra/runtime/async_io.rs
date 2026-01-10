@@ -34,7 +34,7 @@ pub use tokio_impl::*;
 
 #[cfg(feature = "async-runtime")]
 mod tokio_impl {
-    use crate::core::error::{KwaversError, KwaversResult};
+    use crate::domain::core::error::{KwaversError, KwaversResult};
     use ndarray::Array3;
     use std::path::{Path, PathBuf};
     use tokio::fs::File;

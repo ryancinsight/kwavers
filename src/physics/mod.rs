@@ -6,14 +6,22 @@
 pub mod acoustics;
 pub mod chemistry;
 pub mod optics;
-// pub mod plugin; // Split into domain/plugin, solver/plugin, physics/acoustics/transducer
 pub mod thermal;
 // pub mod factory; // Removed
 pub mod constants {
-    pub use crate::core::constants::*;
+    pub use crate::domain::core::constants::*;
 }
 
 pub use acoustics::*;
+
+pub mod plugin {
+    pub use crate::domain::plugin::*;
+}
+
+pub mod imaging {
+    pub use crate::physics::acoustics::imaging::modalities::{ceus, elastography, ultrasound};
+    pub use crate::physics::acoustics::imaging::*;
+}
 
 // Backward-compatible re-exports for moved modules
 // These ensure existing code continues to work during refactoring

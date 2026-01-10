@@ -1,8 +1,8 @@
 //! Conservation enforcement for interface coupling
 
 use super::InterfaceGeometry;
-use crate::core::constants::numerical::SYMMETRIC_CORRECTION_FACTOR;
-use crate::core::error::KwaversResult;
+use crate::domain::core::constants::numerical::SYMMETRIC_CORRECTION_FACTOR;
+use crate::domain::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Conservation enforcer for interface coupling

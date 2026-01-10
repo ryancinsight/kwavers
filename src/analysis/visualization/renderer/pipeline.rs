@@ -1,6 +1,6 @@
 //! Rendering and compute pipelines
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 
 /// Render pipeline for visualization
 #[derive(Debug)]

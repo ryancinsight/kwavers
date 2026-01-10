@@ -67,7 +67,7 @@
 //! to `analysis::signal_processing::beamforming::time_domain::delay_reference` as part of
 //! the architectural purification effort (ADR 003). The API remains unchanged.
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 
 /// Policy for selecting a delay datum / reference when converting absolute TOF delays to relative delays.
 ///

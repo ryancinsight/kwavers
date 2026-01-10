@@ -33,7 +33,7 @@
 //! - **Multi-Modal Registration**: "Multi-modal image registration" by Sotiras et al. (2013)
 //! - **Temporal Synchronization**: "Real-time multi-modal imaging" in IEEE TMI (2018)
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2, Array3};
 
 /// Spatial transformation types for image registration
@@ -166,7 +166,7 @@ impl ImageRegistration {
     ) -> KwaversResult<RegistrationResult> {
         if fixed_landmarks.nrows() != moving_landmarks.nrows() {
             return Err(KwaversError::Validation(
-                crate::core::error::ValidationError::ConstraintViolation {
+                crate::domain::core::error::ValidationError::ConstraintViolation {
                     message: "Fixed and moving landmark arrays must have same number of points"
                         .to_string(),
                 },
@@ -175,7 +175,7 @@ impl ImageRegistration {
 
         if fixed_landmarks.ncols() != 3 || moving_landmarks.ncols() != 3 {
             return Err(KwaversError::Validation(
-                crate::core::error::ValidationError::ConstraintViolation {
+                crate::domain::core::error::ValidationError::ConstraintViolation {
                     message: "Landmark arrays must have 3 columns (x, y, z)".to_string(),
                 },
             ));

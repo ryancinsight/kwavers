@@ -1,6 +1,6 @@
 //! Cache optimization strategies
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 
 /// Memory access pattern types
 #[derive(Debug, Clone, Copy, PartialEq)]

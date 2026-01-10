@@ -8,7 +8,7 @@
 // This file must not re-implement beamforming (DAS/MVDR/steering) logic.
 
 use super::{LocalizationConfig, LocalizationResult, Position, SensorArray};
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use serde::{Deserialize, Serialize};
 
 /// Localization method
@@ -110,7 +110,7 @@ impl LocalizationAlgorithmImpl for TDOAAlgorithm {
 
         let n_sensors = array.num_sensors();
         if n_sensors < 2 {
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "TDOA requires at least 2 sensors".to_string(),
             ));
         }
@@ -136,7 +136,7 @@ impl LocalizationAlgorithmImpl for TDOAAlgorithm {
                 }
             }
             _ => {
-                return Err(crate::core::error::KwaversError::InvalidInput(format!(
+                return Err(crate::domain::core::error::KwaversError::InvalidInput(format!(
                     "Unsupported TDOA measurement layout: got {}, expected {} (TOA) or {} (TDOA diffs)",
                     measurements.len(),
                     n_sensors,
@@ -184,11 +184,13 @@ impl LocalizationAlgorithmImpl for TOAAlgorithm {
         // Interpret measurements as per-sensor time-of-arrival (seconds) from a known emission time,
         // or directly as ranges (meters) if values appear already scaled. We map to ranges by c*t.
         if measurements.len() != array.num_sensors() {
-            return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                "TOA requires {} measurements (one per sensor), got {}",
-                array.num_sensors(),
-                measurements.len()
-            )));
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                format!(
+                    "TOA requires {} measurements (one per sensor), got {}",
+                    array.num_sensors(),
+                    measurements.len()
+                ),
+            ));
         }
 
         // Convert to ranges using sound speed.

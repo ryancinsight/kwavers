@@ -35,7 +35,7 @@ pub mod attenuation;
 pub mod ct_based;
 pub mod heterogeneous;
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 

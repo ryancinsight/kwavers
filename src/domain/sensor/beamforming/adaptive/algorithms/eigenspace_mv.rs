@@ -23,8 +23,8 @@
 //! - Gershman et al. (1999), robust adaptive beamforming in subspaces
 //! - Shahbazpanahi et al. (2003), generalized Capon / subspace localization
 
-use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::linear_algebra::LinearAlgebra;
+use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::domain::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
@@ -183,7 +183,7 @@ impl EigenspaceMV {
         let denom_re = denom.re;
         if !denom_re.is_finite() || denom_re <= 0.0 {
             return Err(KwaversError::Numerical(
-                crate::core::error::NumericalError::InvalidOperation(
+                crate::domain::core::error::NumericalError::InvalidOperation(
                     "EigenspaceMV::compute_weights_ssot: non-positive or non-finite denominator a^H P_s R^{-1} P_s a".to_string(),
                 ),
             ));

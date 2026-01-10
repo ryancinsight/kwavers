@@ -40,8 +40,6 @@ use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 mod physics_demo {
-    use super::*;
-
     /// Demonstrate Navier-Stokes fluid dynamics
     pub fn demonstrate_navier_stokes() {
         println!("🌊 Navier-Stokes Fluid Dynamics PINN");
@@ -268,7 +266,18 @@ fn main() {
         "--industrial" => {
             physics_demo::demonstrate_industrial_applications();
         }
-        "--all" | _ => {
+        "--all" => {
+            println!("🎭 Complete Advanced Physics Demonstration");
+            println!("==========================================");
+            println!();
+
+            physics_demo::demonstrate_navier_stokes();
+            physics_demo::demonstrate_heat_transfer();
+            physics_demo::demonstrate_structural_mechanics();
+            physics_demo::demonstrate_multi_physics();
+            physics_demo::demonstrate_industrial_applications();
+        }
+        _ => {
             println!("🎭 Complete Advanced Physics Demonstration");
             println!("==========================================");
             println!();

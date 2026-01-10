@@ -3,7 +3,7 @@
 //! Provides arc-shaped transducer geometry for 2D simulations.
 
 use crate::{
-    core::{constants::SOUND_SPEED_WATER, error::KwaversResult},
+    domain::core::{constants::SOUND_SPEED_WATER, error::KwaversResult},
     domain::grid::Grid,
 };
 use ndarray::{s, Array2, Array3, Zip};

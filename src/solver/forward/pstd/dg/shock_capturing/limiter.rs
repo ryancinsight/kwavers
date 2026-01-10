@@ -2,10 +2,10 @@
 //!
 //! Implements Weighted Essentially Non-Oscillatory (WENO) limiters for handling shocks.
 
-use crate::core::error::{ConfigError, KwaversError, KwaversResult, ValidationError};
+use crate::domain::core::error::{ConfigError, KwaversError, KwaversResult, ValidationError};
 use ndarray::Array3;
 
-use crate::core::constants::numerical::{
+use crate::domain::core::constants::numerical::{
     NUMERICAL_SHOCK_DETECTION_THRESHOLD, STENCIL_COEFF_1_4, WENO_EPSILON, WENO_WEIGHT_0,
     WENO_WEIGHT_1, WENO_WEIGHT_2,
 };

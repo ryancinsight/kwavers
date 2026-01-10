@@ -39,14 +39,12 @@
 //! - Van Veen & Buckley (1988): "Beamforming: A versatile approach to spatial filtering"
 //! - Szabo (2004): "Diagnostic Ultrasound Imaging: Inside Out"
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array3, Array4, ArrayView3};
 use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
-use crate::math::ml::pinn::{
-    uncertainty_quantification::BayesianPINN, BurnPINN1DWave,
-};
+use crate::domain::math::ml::pinn::{uncertainty_quantification::BayesianPINN, BurnPINN1DWave};
 
 use crate::domain::sensor::beamforming::SteeringVector;
 
@@ -105,6 +103,10 @@ impl NeuralBeamformingProcessor {
         }
 
         Ok(processor)
+    }
+
+    pub fn steering_cache_len(&self) -> usize {
+        self.steering_cache.len()
     }
 
     /// Initialize PINN model for beamforming optimization.
@@ -222,7 +224,7 @@ impl NeuralBeamformingProcessor {
         _sample_idx: usize,
     ) -> KwaversResult<f64> {
         Err(KwaversError::System(
-            crate::core::error::SystemError::FeatureNotAvailable {
+            crate::domain::core::error::SystemError::FeatureNotAvailable {
                 feature: "pinn".to_string(),
                 reason: "PINN beamforming requires 'pinn' feature".to_string(),
             },

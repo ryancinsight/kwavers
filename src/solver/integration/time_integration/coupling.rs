@@ -3,7 +3,7 @@
 //! This module provides different strategies for coupling physics
 //! components that evolve at different time scales.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -15,7 +15,7 @@ pub trait TimeCoupling: Send + Sync + Debug {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::domain::plugin::Plugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         grid: &Grid,
@@ -42,7 +42,7 @@ impl TimeCoupling for SubcyclingStrategy {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::domain::plugin::Plugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         _grid: &Grid,
@@ -62,8 +62,8 @@ impl TimeCoupling for SubcyclingStrategy {
                 // Check if this component should be updated in this cycle
                 if cycle % (max_cycles / n_subcycles) == 0 {
                     let field = fields.get_mut(name).ok_or_else(|| {
-                        crate::core::error::KwaversError::Validation(
-                            crate::core::error::ValidationError::FieldValidation {
+                        crate::domain::core::error::KwaversError::Validation(
+                            crate::domain::core::error::ValidationError::FieldValidation {
                                 field: "fields".to_string(),
                                 value: name.clone(),
                                 constraint: "Field not found".to_string(),
@@ -76,8 +76,8 @@ impl TimeCoupling for SubcyclingStrategy {
 
                     // Get initial field value for temporal interpolation
                     let field_initial = initial_fields.get(name).ok_or_else(|| {
-                        crate::core::error::KwaversError::Validation(
-                            crate::core::error::ValidationError::FieldValidation {
+                        crate::domain::core::error::KwaversError::Validation(
+                            crate::domain::core::error::ValidationError::FieldValidation {
                                 field: "initial_fields".to_string(),
                                 value: name.clone(),
                                 constraint: "Initial field not found".to_string(),
@@ -224,7 +224,7 @@ impl TimeCoupling for AveragingStrategy {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::domain::plugin::Plugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         _grid: &Grid,
@@ -242,8 +242,8 @@ impl TimeCoupling for AveragingStrategy {
             let _local_dt = global_dt / n_subcycles as f64;
 
             let _field = fields.get_mut(name).ok_or_else(|| {
-                crate::core::error::KwaversError::Validation(
-                    crate::core::error::ValidationError::FieldValidation {
+                crate::domain::core::error::KwaversError::Validation(
+                    crate::domain::core::error::ValidationError::FieldValidation {
                         field: "fields".to_string(),
                         value: name.clone(),
                         constraint: "Field not found".to_string(),
@@ -334,7 +334,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::domain::plugin::Plugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         _grid: &Grid,
@@ -362,8 +362,8 @@ impl TimeCoupling for PredictorCorrectorStrategy {
                 let _local_dt = global_dt / n_subcycles as f64;
 
                 let _field = fields.get_mut(name).ok_or_else(|| {
-                    crate::core::error::KwaversError::Validation(
-                        crate::core::error::ValidationError::FieldValidation {
+                    crate::domain::core::error::KwaversError::Validation(
+                        crate::domain::core::error::ValidationError::FieldValidation {
                             field: "fields".to_string(),
                             value: name.clone(),
                             constraint: "Field not found".to_string(),

@@ -1,5 +1,5 @@
-use crate::core::error::{ConfigError, KwaversError, KwaversResult, ValidationError};
 use crate::domain::boundary::Boundary;
+use crate::domain::core::error::{ConfigError, KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use log::trace;
 use ndarray::{Array3, ArrayViewMut3};
@@ -234,7 +234,7 @@ impl Boundary for PMLBoundary {
         mut field: ArrayViewMut3<f64>,
         grid: &Grid,
         time_step: usize,
-    ) -> crate::core::error::KwaversResult<()> {
+    ) -> crate::domain::core::error::KwaversResult<()> {
         trace!("Applying spatial acoustic PML at step {}", time_step);
         let dx = grid.dx;
         let (nx, ny, nz) = grid.dimensions();
@@ -404,7 +404,7 @@ impl Boundary for PMLBoundary {
         field: &mut Array3<Complex<f64>>,
         grid: &Grid,
         time_step: usize,
-    ) -> crate::core::error::KwaversResult<()> {
+    ) -> crate::domain::core::error::KwaversResult<()> {
         trace!(
             "Applying frequency domain acoustic PML at step {}",
             time_step

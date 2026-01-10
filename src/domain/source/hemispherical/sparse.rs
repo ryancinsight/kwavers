@@ -1,6 +1,6 @@
 //! Sparse array optimization
 
-use crate::core::error::{ConfigError, KwaversError, KwaversResult};
+use crate::domain::core::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Sparse array optimizer
 #[derive(Debug, Clone)]

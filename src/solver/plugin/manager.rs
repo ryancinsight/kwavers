@@ -2,14 +2,14 @@
 //!
 //! This module provides the main plugin manager that coordinates plugin execution.
 
-use super::{ExecutionStrategy, Plugin, PluginContext, PluginFields, SequentialStrategy};
+use super::execution::{ExecutionStrategy, SequentialStrategy};
 use crate::analysis::performance::metrics::PerformanceMetrics;
-use crate::core::error::{KwaversError, KwaversResult, PhysicsError, ValidationError};
 use crate::domain::boundary::Boundary;
-use crate::domain::field::indices;
+use crate::domain::core::error::{KwaversError, KwaversResult, PhysicsError, ValidationError};
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
+use crate::domain::plugin::{Plugin, PluginContext, PluginFields};
 use crate::domain::source::Source;
 use ndarray::Array3;
 use ndarray::Array4;
@@ -43,7 +43,7 @@ impl PluginManager {
         &mut self,
         grid: &crate::domain::grid::Grid,
         medium: &dyn crate::domain::medium::Medium,
-    ) -> crate::core::error::KwaversResult<()> {
+    ) -> crate::domain::core::error::KwaversResult<()> {
         for plugin in &mut self.plugins {
             plugin.initialize(grid, medium)?;
         }

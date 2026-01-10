@@ -3,7 +3,7 @@
 //! This module defines elastic material properties and their relationships,
 //! providing a single source of truth for material definitions.
 
-use crate::core::error::{KwaversResult, PhysicsError};
+use crate::domain::core::error::{KwaversResult, PhysicsError};
 
 /// Elastic material properties following SSOT principle
 /// Single source of truth for material property definitions

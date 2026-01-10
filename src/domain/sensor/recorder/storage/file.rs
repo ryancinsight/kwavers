@@ -1,7 +1,7 @@
 //! File-based storage backend
 
 use super::StorageBackend;
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::fs::File;
 use std::io::Write;

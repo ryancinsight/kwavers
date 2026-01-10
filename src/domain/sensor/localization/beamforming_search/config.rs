@@ -36,7 +36,7 @@
 //! This module makes the covariance/snapshot domain an explicit policy choice for localization
 //! scoring to prevent silent fallback behavior.
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::domain::sensor::beamforming::{
     BeamformingCoreConfig, SteeringVectorMethod, TimeDomainDelayReference,
 };

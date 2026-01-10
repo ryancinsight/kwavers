@@ -67,6 +67,7 @@ impl Default for BenchmarkConfig {
 
 /// Performance benchmark results
 #[derive(Debug)]
+#[allow(dead_code)]
 struct BenchmarkResult {
     simulation_type: String,
     grid_size: (usize, usize, usize),
@@ -92,6 +93,7 @@ impl PerformanceBenchmarkSuite {
     }
 
     /// Run complete benchmark suite
+    #[allow(dead_code)]
     fn run_full_suite(&mut self) -> KwaversResult<()> {
         println!("Starting Comprehensive Performance Benchmark Suite");
         println!("==================================================");
@@ -919,6 +921,7 @@ impl PerformanceBenchmarkSuite {
         // Simplified FDTD velocity update
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn update_pressure_fdtd(
         &self,
         _p: &mut Array3<f32>,
@@ -932,6 +935,7 @@ impl PerformanceBenchmarkSuite {
         // Simplified FDTD pressure update
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn update_pressure_nonlinear(
         &self,
         _p: &mut Array3<f32>,

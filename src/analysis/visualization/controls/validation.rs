@@ -1,7 +1,7 @@
 //! Parameter validation for the control system
 
 use super::parameter::{ParameterType, ParameterValue};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 
 /// Result of parameter validation
 #[derive(Debug, Clone)]
@@ -146,7 +146,7 @@ impl ParameterValidator {
         if result.is_valid {
             Ok(result.corrected_value.unwrap_or(value))
         } else {
-            Err(crate::core::error::KwaversError::InvalidInput(
+            Err(crate::domain::core::error::KwaversError::InvalidInput(
                 result
                     .message
                     .unwrap_or_else(|| "Validation failed".to_string()),

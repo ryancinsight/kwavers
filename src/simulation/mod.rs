@@ -10,7 +10,9 @@ pub mod setup; // New setup module
                // pub mod components; // Removed, moved to domain
                // pub mod environment; // (Removed, moved to domain)
                // pub mod factory; // Removed
-pub mod modalities; // Keep this as it's re-exported below
+pub mod imaging;
+pub mod modalities;
+pub mod therapy; // Keep this as it's re-exported below
 
 // Re-exports
 pub use crate::domain::sensor::recorder;

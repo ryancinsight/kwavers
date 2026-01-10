@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 
 #[derive(Debug, Clone, Copy)]
 pub enum WindowType {

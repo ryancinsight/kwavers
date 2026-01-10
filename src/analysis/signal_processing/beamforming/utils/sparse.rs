@@ -26,9 +26,9 @@
 //! ```text
 //! analysis::signal_processing::beamforming::utils::sparse (Layer 7)
 //!   ↓ imports from
-//! core::utils::sparse_matrix (Layer 2) - Generic sparse matrix types (CSR, COO)
+//! math::linear_algebra::sparse (Layer 1) - Generic sparse matrix types (CSR, COO)
 //! analysis::signal_processing::beamforming::utils::delays (Layer 7) - Delay calculations
-//! core::error (Layer 0) - Error types
+//! domain::core::error (Layer 0) - Error types
 //! ```
 //!
 //! # Use Cases
@@ -121,8 +121,8 @@
 //! - [ ] Block-sparse structures (subarray processing)
 //! - [ ] Compressive sensing solvers (ADMM, FISTA)
 
-use crate::core::error::{KwaversError, KwaversResult};
-use crate::core::utils::sparse_matrix::{CompressedSparseRowMatrix, CoordinateMatrix};
+use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::domain::math::linear_algebra::sparse::{CompressedSparseRowMatrix, CoordinateMatrix};
 use ndarray::Array2;
 use num_complex::Complex64;
 use std::f64::consts::PI;

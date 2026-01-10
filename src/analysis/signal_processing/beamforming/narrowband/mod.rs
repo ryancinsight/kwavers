@@ -13,11 +13,10 @@
 //! 3. **Frequency-Domain Operations**: FFT-based processing pipeline
 //! 4. **Explicit Failure**: No silent fallbacks or error masking
 //!
-//! ## Migration Target
+//! ## Migration Status
 //!
-//! This module will consolidate narrowband algorithms from:
-//! - `domain::sensor::beamforming::narrowband/*` (49 files, ~4k LOC)
-//! - Inline frequency-domain operations scattered across adaptive beamformers
+//! ✅ **COMPLETE** - This module is the canonical location for narrowband beamforming.
+//! The deprecated `domain::sensor::beamforming::narrowband` location has been removed in v3.0.0.
 //!
 //! ## SSOT Enforcement (Strict)
 //!
@@ -35,7 +34,7 @@
 //! analysis::signal_processing::beamforming::{traits, covariance, utils} (Layer 7)
 //! math::linear_algebra (Layer 1) - matrix operations
 //! math::fft (Layer 1) - Fourier transforms
-//! core::error (Layer 0) - error types
+//! domain::core::error (Layer 0) - error types
 //! ```
 //!
 //! # Mathematical Foundation
@@ -163,9 +162,9 @@
 //!
 //! # Implementation Status
 //!
-//! **Current:** 🟡 Module structure created, awaiting migration
-//! **Next:** Phase 3 - Migrate algorithms from `domain::sensor::beamforming::narrowband`
-//! **Timeline:** Week 4 (Sprint 4, Phase 3)
+//! **Current:** ✅ Core migration complete (v3.0.0)
+//! **Migrated:** Steering vectors, snapshot extraction (STFT/windowed), Capon/MVDR spectrum
+//! **Next:** Additional algorithms (conventional beamformer, LCMV, Root-MUSIC, ESPRIT)
 //!
 //! # Migration Plan
 //!
@@ -201,9 +200,18 @@
 //! - [ ] Root-MUSIC
 //! - [ ] ESPRIT
 //! - [ ] Integration tests with time-domain equivalents
-//! - [ ] Benchmarks vs domain::sensor::beamforming::narrowband
-//! - [ ] Deprecation notices in old location
+//! - [x] Benchmarks (performance validated)
+//! - [x] Deprecated code removed (v3.0.0)
 //! - [ ] Migration guide
+
+// Algorithm implementations (Phase 3B - Sprint 1)
+pub mod capon; // Capon/MVDR spatial spectrum (migrated from domain::sensor)
+pub mod snapshots; // Narrowband snapshot extraction (migrated from domain::sensor)
+pub mod steering; // Narrowband steering vectors (migrated from domain::sensor)
+
+// Integration tests (Day 4)
+#[cfg(test)]
+mod integration_tests;
 
 // Future algorithm implementations (Phase 3B)
 // pub mod conventional;   // Delay-and-sum in frequency domain
@@ -212,7 +220,93 @@
 // pub mod root_music;    // Root-MUSIC (polynomial rooting)
 // pub mod fft_utils;     // FFT/IFFT utilities
 
+// Re-exports for convenience
+pub use capon::{
+    capon_spatial_spectrum_point, capon_spatial_spectrum_point_complex_baseband,
+    CaponSpectrumConfig,
+};
+pub use snapshots::{
+    extract_complex_baseband_snapshots, extract_narrowband_snapshots, extract_stft_bin_snapshots,
+    extract_windowed_snapshots, BasebandSnapshotConfig, SnapshotMethod, SnapshotScenario,
+    SnapshotSelection, StftBinConfig, WindowFunction,
+};
+pub use steering::{steering_from_delays_s, NarrowbandSteering, NarrowbandSteeringVector};
+
 #[cfg(test)]
 mod tests {
-    // Integration tests will be added during migration
+    use super::*;
+
+    #[test]
+    fn steering_module_exports_accessible() {
+        // Verify steering module is correctly exported
+        let positions = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0]];
+        let steering = NarrowbandSteering::new(positions, 1500.0).expect("steering init");
+        assert_eq!(steering.num_sensors(), 2);
+        assert_eq!(steering.sound_speed_m_per_s(), 1500.0);
+    }
+
+    #[test]
+    fn snapshots_module_exports_accessible() {
+        // Verify snapshots module is correctly exported
+        use ndarray::Array3;
+
+        let n_sensors = 2;
+        let n_samples = 128;
+        let mut data = Array3::<f64>::zeros((n_sensors, 1, n_samples));
+        for s in 0..n_sensors {
+            for t in 0..n_samples {
+                data[(s, 0, t)] = (s as f64) + (t as f64) * 1e-3;
+            }
+        }
+
+        let scenario = SnapshotScenario {
+            frequency_hz: 100_000.0,
+            sampling_frequency_hz: 1_000_000.0,
+            fractional_bandwidth: Some(0.05),
+            prefer_robustness: true,
+            prefer_time_resolution: false,
+        };
+
+        let selection = SnapshotSelection::Auto(scenario);
+        let snaps = extract_narrowband_snapshots(&data, &selection).expect("snapshots");
+        assert_eq!(snaps.nrows(), n_sensors);
+        assert!(snaps.ncols() > 0);
+    }
+
+    #[test]
+    fn capon_module_exports_accessible() {
+        // Verify capon module is correctly exported
+        use ndarray::Array3;
+
+        let n_sensors = 2;
+        let n_samples = 64;
+        let mut x = Array3::<f64>::zeros((n_sensors, 1, n_samples));
+        for t in 0..n_samples {
+            x[(0, 0, t)] = 1.0;
+            x[(1, 0, t)] = 1.0;
+        }
+
+        let positions = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0]];
+        let cfg = CaponSpectrumConfig {
+            frequency_hz: 1e6,
+            sound_speed: 1500.0,
+            diagonal_loading: 1e-3,
+            covariance: crate::domain::sensor::beamforming::CovarianceEstimator {
+                forward_backward_averaging: false,
+                num_snapshots: 1,
+                post_process: crate::domain::sensor::beamforming::CovariancePostProcess::None,
+            },
+            steering: crate::domain::sensor::beamforming::SteeringVectorMethod::SphericalWave {
+                source_position: [0.0, 0.0, 0.02],
+            },
+            sampling_frequency_hz: None,
+            snapshot_selection: None,
+            baseband_snapshot_step_samples: None,
+        };
+
+        let p =
+            capon_spatial_spectrum_point(&x, &positions, [0.0, 0.0, 0.02], &cfg).expect("spectrum");
+        assert!(p.is_finite());
+        assert!(p > 0.0);
+    }
 }

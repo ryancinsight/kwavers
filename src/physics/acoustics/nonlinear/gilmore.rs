@@ -9,8 +9,8 @@
 //! California Institute of Technology.
 
 use super::{BubbleParameters, BubbleState};
-use crate::core::constants::ATMOSPHERIC_PRESSURE;
-use crate::core::error::KwaversResult;
+use crate::domain::core::constants::ATMOSPHERIC_PRESSURE;
+use crate::domain::core::error::KwaversResult;
 
 /// Gilmore equation solver for high-amplitude bubble dynamics
 #[derive(Debug)]
@@ -117,11 +117,13 @@ impl GilmoreSolver {
 
         // Avoid singularity when u approaches c
         if u_c.abs() > 0.99 {
-            return Err(crate::core::error::PhysicsError::NumericalInstability {
-                timestep: 0.0,
-                cfl_limit: u_c.abs(),
-            }
-            .into());
+            return Err(
+                crate::domain::core::error::PhysicsError::NumericalInstability {
+                    timestep: 0.0,
+                    cfl_limit: u_c.abs(),
+                }
+                .into(),
+            );
         }
 
         let lhs_coeff = r * (1.0 - u_c);

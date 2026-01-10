@@ -20,7 +20,7 @@ use uom::si::time::second;
 
 use super::bubble_state::BubbleState;
 use super::BubbleParameters;
-use crate::core::constants::GAS_CONSTANT as R_GAS;
+use crate::domain::core::constants::GAS_CONSTANT as R_GAS;
 
 /// Energy balance calculator for bubble dynamics
 #[derive(Debug, Clone)]

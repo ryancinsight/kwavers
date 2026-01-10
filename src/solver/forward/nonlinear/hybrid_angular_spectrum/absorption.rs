@@ -3,7 +3,7 @@
 //! Reference: Szabo (1994) "Time domain wave equations for lossy media"
 
 use super::HASConfig;
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Absorption operator for power law attenuation

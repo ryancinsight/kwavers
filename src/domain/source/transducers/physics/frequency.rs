@@ -3,7 +3,7 @@
 //! Models the frequency-dependent behavior of transducers including
 //! bandwidth, sensitivity, and impedance characteristics.
 
-use crate::core::error::{ConfigError, KwaversError, KwaversResult};
+use crate::domain::core::error::{ConfigError, KwaversError, KwaversResult};
 use ndarray::Array1;
 use num_complex::Complex64;
 

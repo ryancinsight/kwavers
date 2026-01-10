@@ -17,15 +17,15 @@
 
 use super::keller_miksis::KellerMiksisModel;
 use super::BubbleState;
-use crate::core::constants::cavitation::{MAX_RADIUS, MIN_RADIUS};
-use crate::core::constants::numerical::{
+use crate::domain::core::constants::cavitation::{MAX_RADIUS, MIN_RADIUS};
+use crate::domain::core::constants::numerical::{
     DEFAULT_ABSOLUTE_TOLERANCE, DEFAULT_RELATIVE_TOLERANCE, ERROR_CONTROL_EXPONENT,
     HALF_STEP_FACTOR, INITIAL_TIME_STEP_FRACTION, MAX_RADIUS_SAFETY_FACTOR, MAX_SUBSTEPS,
     MAX_TEMPERATURE, MAX_TIME_STEP, MAX_TIME_STEP_DECREASE, MAX_TIME_STEP_INCREASE,
     MAX_VELOCITY_FRACTION, MIN_NUMERICAL_TIME_STEP, MIN_RADIUS_SAFETY_FACTOR, MIN_TEMPERATURE,
     SAFETY_FACTOR,
 };
-use crate::core::error::{KwaversResult, PhysicsError};
+use crate::domain::core::error::{KwaversResult, PhysicsError};
 
 /// Configuration for adaptive bubble integration
 #[derive(Debug, Clone)]
@@ -387,8 +387,8 @@ mod tests {
         if let Err(e) = &result {
             println!("Integration stopped with error: {:?}", e);
             // Accept convergence failures with small residuals as success
-            if let crate::core::error::KwaversError::Physics(
-                crate::core::error::PhysicsError::ConvergenceFailure { residual, .. },
+            if let crate::domain::core::error::KwaversError::Physics(
+                crate::domain::core::error::PhysicsError::ConvergenceFailure { residual, .. },
             ) = e
             {
                 assert!(

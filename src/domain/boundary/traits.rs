@@ -31,7 +31,7 @@
 //! - **Passivity**: Energy can only be absorbed or reflected, never created
 //! - **Causality**: Boundary response depends only on past/present fields
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::{Grid, GridTopology};
 use ndarray::{Array3, ArrayViewMut3};
 use rustfft::num_complex::Complex;
@@ -292,8 +292,8 @@ pub trait AbsorbingBoundary: BoundaryCondition {
         let min_thickness = (wavelength / (4.0 * min_spacing)).ceil() as usize;
 
         if self.thickness() < min_thickness.max(10) {
-            return Err(crate::core::error::KwaversError::Config(
-                crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::KwaversError::Config(
+                crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "boundary thickness".to_string(),
                     value: self.thickness().to_string(),
                     constraint: format!("Must be at least {} points", min_thickness.max(10)),

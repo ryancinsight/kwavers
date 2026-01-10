@@ -14,163 +14,97 @@
 //!
 //! # Key Components
 //!
-//! - `HIFUTransducer`: Focused transducer design and acoustic field computation
-//! - `HIFUTreatmentPlan`: Treatment planning and monitoring
+//! - `compute_pressure_field`: Acoustic field computation
 //! - `ThermalDose`: Thermal modeling and bio-heat transfer
-//! - `CavitationModel`: Bubble dynamics and cavitation effects
 
-use crate::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::Array3;
 
-/// HIFU transducer configuration
-#[derive(Debug, Clone)]
-pub struct HIFUTransducer {
-    /// Transducer geometry
-    pub geometry: TransducerGeometry,
-    /// Operating frequency (Hz)
-    pub frequency: f64,
-    /// Acoustic power (W)
-    pub acoustic_power: f64,
-    /// Focal length (m)
-    pub focal_length: f64,
-    /// Aperture radius (m)
-    pub aperture_radius: f64,
-    /// Duty cycle (0-1)
-    pub duty_cycle: f64,
+// Import domain types
+use crate::domain::imaging::ultrasound::hifu::HIFUTransducer;
+
+/// Compute acoustic pressure field for a HIFU transducer
+///
+/// Uses Rayleigh-Sommerfeld integral for focused transducer field computation.
+///
+/// # References
+///
+/// O'Neil (1949): Theory of focusing radiators
+pub fn compute_pressure_field(
+    transducer: &HIFUTransducer,
+    grid: &Grid,
+    medium: &dyn Medium,
+) -> KwaversResult<Array3<f64>> {
+    let (nx, ny, nz) = grid.dimensions();
+    let mut pressure = Array3::zeros((nx, ny, nz));
+
+    // Focus location (geometric focus)
+    let focus_x = 0.0;
+    let focus_y = 0.0;
+    let focus_z = transducer.focal_length;
+
+    // Compute pressure field using focused ultrasound beam approximation
+    // Reference: O'Neil (1949), Theory of focused ultrasonic fields
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
+
+                // Distance from geometric focus point (paraxial approximation)
+                let r =
+                    ((x - focus_x).powi(2) + (y - focus_y).powi(2) + (z - focus_z).powi(2)).sqrt();
+
+                if r > 1e-6 {
+                    // Focused ultrasound field: Gaussian beam profile approximation
+                    let wavenumber = 2.0 * std::f64::consts::PI * transducer.frequency
+                        / medium.sound_speed(0, 0, 0);
+
+                    // Focal gain based on aperture and focal length
+                    let focal_gain =
+                        (transducer.aperture_radius / (transducer.focal_length * wavenumber)).abs();
+
+                    // Pressure amplitude based on acoustic power and spherical spreading
+                    let pressure_amplitude = (transducer.acoustic_power
+                        / (4.0 * std::f64::consts::PI * r.powi(2)))
+                    .sqrt()
+                        * focal_gain;
+
+                    // Phase factor
+                    let phase = -wavenumber * r;
+
+                    pressure[[i, j, k]] = pressure_amplitude * phase.cos();
+                }
+            }
+        }
+    }
+
+    Ok(pressure)
 }
 
-/// Transducer geometry types
-#[derive(Debug, Clone, PartialEq)]
-pub enum TransducerGeometry {
-    /// Single-element focused transducer
-    SingleElement,
-    /// Phased array transducer
-    PhasedArray {
-        /// Number of elements
-        n_elements: usize,
-        /// Element spacing (m)
-        element_spacing: f64,
-    },
-    /// Annular array transducer
-    AnnularArray {
-        /// Number of rings
-        n_rings: usize,
-        /// Ring radii (m)
-        ring_radii: Vec<f64>,
-    },
-}
+/// Compute acoustic intensity field (W/m²)
+pub fn compute_intensity_field(
+    transducer: &HIFUTransducer,
+    grid: &Grid,
+    medium: &dyn Medium,
+) -> KwaversResult<Array3<f64>> {
+    let pressure = compute_pressure_field(transducer, grid, medium)?;
 
-/// Treatment planning and execution
-#[derive(Debug, Clone)]
-pub struct HIFUTreatmentPlan {
-    /// Target region definition
-    pub target: TreatmentTarget,
-    /// Treatment protocol
-    pub protocol: TreatmentProtocol,
-    /// Safety margins and constraints
-    pub safety: SafetyConstraints,
-    /// Monitoring configuration
-    pub monitoring: MonitoringConfig,
-}
+    // Intensity = (pressure²) / (ρc) for plane waves
+    // For focused fields, this is a simplification
+    let mut intensity = Array3::zeros(pressure.dim());
+    let rho = medium.density(0, 0, 0);
+    let c = medium.sound_speed(0, 0, 0);
+    let impedance = rho * c;
 
-/// Treatment target specification
-#[derive(Debug, Clone)]
-pub struct TreatmentTarget {
-    /// Target center position (m)
-    pub center: [f64; 3],
-    /// Target dimensions (m)
-    pub dimensions: [f64; 3],
-    /// Target shape
-    pub shape: TargetShape,
-}
+    for (i, &p) in pressure.iter().enumerate() {
+        intensity.as_slice_mut().unwrap()[i] = p.powi(2) / impedance;
+    }
 
-/// Target shape types
-#[derive(Debug, Clone, PartialEq)]
-pub enum TargetShape {
-    /// Spherical target
-    Sphere,
-    /// Cylindrical target
-    Cylinder,
-    /// Custom shape defined by mask
-    Custom,
-}
-
-/// Treatment protocol parameters
-#[derive(Debug, Clone)]
-pub struct TreatmentProtocol {
-    /// Total treatment time (s)
-    pub total_duration: f64,
-    /// Pulse duration (s)
-    pub pulse_duration: f64,
-    /// Pulse repetition frequency (Hz)
-    pub prf: f64,
-    /// Cooling periods between pulses (s)
-    pub cooling_period: f64,
-    /// Treatment phases
-    pub phases: Vec<TreatmentPhase>,
-}
-
-/// Treatment phase definition
-#[derive(Debug, Clone)]
-pub struct TreatmentPhase {
-    /// Phase name
-    pub name: String,
-    /// Phase duration (s)
-    pub duration: f64,
-    /// Acoustic power during phase (W)
-    pub power: f64,
-    /// Focus position offset from target center (m)
-    pub focus_offset: [f64; 3],
-}
-
-/// Safety constraints
-#[derive(Debug, Clone)]
-pub struct SafetyConstraints {
-    /// Maximum temperature (°C)
-    pub max_temperature: f64,
-    /// Maximum thermal dose (CEM43)
-    pub max_thermal_dose: f64,
-    /// Maximum acoustic intensity (W/cm²)
-    pub max_intensity: f64,
-    /// Critical structure avoidance zones
-    pub avoidance_zones: Vec<AvoidanceZone>,
-}
-
-/// Avoidance zone for critical structures
-#[derive(Debug, Clone)]
-pub struct AvoidanceZone {
-    /// Zone center (m)
-    pub center: [f64; 3],
-    /// Zone radius (m)
-    pub radius: f64,
-    /// Maximum allowed temperature rise (°C)
-    pub max_temp_rise: f64,
-}
-
-/// Monitoring configuration
-#[derive(Debug, Clone)]
-pub struct MonitoringConfig {
-    /// Temperature monitoring points
-    pub temperature_points: Vec<[f64; 3]>,
-    /// Acoustic feedback channels
-    pub feedback_channels: Vec<FeedbackChannel>,
-    /// Real-time adjustment parameters
-    pub real_time_adjustment: bool,
-}
-
-/// Feedback channel types
-#[derive(Debug, Clone, PartialEq)]
-pub enum FeedbackChannel {
-    /// Magnetic Resonance Imaging
-    MRI,
-    /// Ultrasound imaging
-    Ultrasound,
-    /// Thermocouple
-    Thermocouple,
-    /// Infrared thermography
-    Infrared,
+    Ok(intensity)
 }
 
 /// Thermal dose calculation (CEM43 metric)
@@ -182,177 +116,6 @@ pub struct ThermalDose {
     temperature_history: Vec<Array3<f64>>,
     /// Time points for temperature history
     time_points: Vec<f64>,
-}
-
-impl HIFUTransducer {
-    /// Create a new single-element focused transducer
-    pub fn new_single_element(
-        frequency: f64,
-        acoustic_power: f64,
-        focal_length: f64,
-        aperture_radius: f64,
-    ) -> Self {
-        Self {
-            geometry: TransducerGeometry::SingleElement,
-            frequency,
-            acoustic_power,
-            focal_length,
-            aperture_radius,
-            duty_cycle: 1.0,
-        }
-    }
-
-    /// Compute acoustic pressure field
-    ///
-    /// Uses Rayleigh-Sommerfeld integral for focused transducer field computation.
-    ///
-    /// # References
-    ///
-    /// O'Neil (1949): Theory of focusing radiators
-    pub fn compute_pressure_field(
-        &self,
-        grid: &Grid,
-        medium: &dyn Medium,
-    ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = grid.dimensions();
-        let mut pressure = Array3::zeros((nx, ny, nz));
-
-        // Focus location (geometric focus)
-        let focus_x = 0.0;
-        let focus_y = 0.0;
-        let focus_z = self.focal_length;
-
-        // Compute pressure field using focused ultrasound beam approximation
-        // Reference: O'Neil (1949), Theory of focused ultrasonic fields
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
-
-                    // Distance from geometric focus point (paraxial approximation)
-                    let r = ((x - focus_x).powi(2) + (y - focus_y).powi(2) + (z - focus_z).powi(2))
-                        .sqrt();
-
-                    if r > 1e-6 {
-                        // Focused ultrasound field: Gaussian beam profile approximation
-                        let wavenumber = 2.0 * std::f64::consts::PI * self.frequency
-                            / medium.sound_speed(0, 0, 0);
-
-                        // Focal gain based on aperture and focal length
-                        let focal_gain =
-                            (self.aperture_radius / (self.focal_length * wavenumber)).abs();
-
-                        // Pressure amplitude based on acoustic power and spherical spreading
-                        let pressure_amplitude =
-                            (self.acoustic_power / (4.0 * std::f64::consts::PI * r.powi(2))).sqrt()
-                                * focal_gain;
-
-                        // Phase factor
-                        let phase = -wavenumber * r;
-
-                        pressure[[i, j, k]] = pressure_amplitude * phase.cos();
-                    }
-                }
-            }
-        }
-
-        Ok(pressure)
-    }
-
-    /// Compute acoustic intensity field (W/m²)
-    pub fn compute_intensity_field(
-        &self,
-        grid: &Grid,
-        medium: &dyn Medium,
-    ) -> KwaversResult<Array3<f64>> {
-        let pressure = self.compute_pressure_field(grid, medium)?;
-
-        // Intensity = (pressure²) / (ρc) for plane waves
-        // For focused fields, this is a simplification
-        let mut intensity = Array3::zeros(pressure.dim());
-        let rho = medium.density(0, 0, 0);
-        let c = medium.sound_speed(0, 0, 0);
-        let impedance = rho * c;
-
-        for (i, &p) in pressure.iter().enumerate() {
-            intensity.as_slice_mut().unwrap()[i] = p.powi(2) / impedance;
-        }
-
-        Ok(intensity)
-    }
-}
-
-impl HIFUTreatmentPlan {
-    /// Create a new treatment plan
-    pub fn new(target: TreatmentTarget, protocol: TreatmentProtocol) -> Self {
-        Self {
-            target,
-            protocol,
-            safety: SafetyConstraints::default(),
-            monitoring: MonitoringConfig::default(),
-        }
-    }
-
-    /// Validate treatment plan against safety constraints
-    pub fn validate(
-        &self,
-        _grid: &Grid,
-        _medium: &dyn Medium,
-        transducer: &HIFUTransducer,
-    ) -> KwaversResult<()> {
-        // Check target is within accessible region
-        if self.target.center[2] < transducer.focal_length * 0.5 {
-            return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "target.center.z".to_string(),
-                value: self.target.center[2],
-                reason: "Target too close to transducer".to_string(),
-            }));
-        }
-
-        // Check thermal constraints
-        if self.safety.max_temperature > 100.0 {
-            return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "safety.max_temperature".to_string(),
-                value: self.safety.max_temperature,
-                reason: "Maximum temperature exceeds safe limit".to_string(),
-            }));
-        }
-
-        // Check acoustic intensity limits
-        if self.safety.max_intensity > 1000.0 {
-            // 1000 W/cm² = 10^7 W/m²
-            return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "safety.max_intensity".to_string(),
-                value: self.safety.max_intensity,
-                reason: "Maximum intensity exceeds safe limit".to_string(),
-            }));
-        }
-
-        Ok(())
-    }
-}
-
-impl Default for SafetyConstraints {
-    fn default() -> Self {
-        Self {
-            max_temperature: 85.0,   // °C
-            max_thermal_dose: 240.0, // CEM43
-            max_intensity: 1000.0,   // W/cm²
-            avoidance_zones: Vec::new(),
-        }
-    }
-}
-
-impl Default for MonitoringConfig {
-    fn default() -> Self {
-        Self {
-            temperature_points: Vec::new(),
-            feedback_channels: vec![FeedbackChannel::Ultrasound],
-            real_time_adjustment: true,
-        }
-    }
 }
 
 impl ThermalDose {
@@ -417,6 +180,9 @@ impl ThermalDose {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::imaging::ultrasound::hifu::{
+        HIFUTreatmentPlan, TargetShape, TreatmentPhase, TreatmentProtocol, TreatmentTarget,
+    };
     use crate::domain::medium::homogeneous::HomogeneousMedium;
 
     #[test]
@@ -435,7 +201,7 @@ mod tests {
         let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
         let transducer = HIFUTransducer::new_single_element(1e6, 50.0, 0.08, 0.04);
 
-        let pressure = transducer.compute_pressure_field(&grid, &medium)?;
+        let pressure = compute_pressure_field(&transducer, &grid, &medium)?;
 
         // Check dimensions
         assert_eq!(pressure.dim(), grid.dimensions());
@@ -497,11 +263,12 @@ mod tests {
         let plan = HIFUTreatmentPlan::new(target, protocol);
 
         let grid = Grid::new(32, 32, 32, 0.002, 0.002, 0.002)?;
-        let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
+        let _medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
         let transducer = HIFUTransducer::new_single_element(1e6, 50.0, 0.08, 0.04);
 
-        // Should validate successfully
-        assert!(plan.validate(&grid, &medium, &transducer).is_ok());
+        // Note: validate is now a method on plan, taking transducer reference.
+        // Original validate used to take _grid and _medium but ignored them.
+        assert!(plan.validate(&transducer).is_ok());
 
         Ok(())
     }

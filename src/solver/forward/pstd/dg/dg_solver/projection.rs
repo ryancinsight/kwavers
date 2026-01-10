@@ -4,8 +4,8 @@
 //! related operations for discontinuous Galerkin methods.
 
 use super::core::DGSolver;
-use crate::core::error::KwaversError;
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversError;
+use crate::domain::core::error::KwaversResult;
 use ndarray::Array3;
 
 impl DGSolver {

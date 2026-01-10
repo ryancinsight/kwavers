@@ -4,15 +4,15 @@
 //! for acoustic wave propagation using the finite-difference time-domain method.
 
 use crate::analysis::performance::simd_safe::operations::SimdOps;
-use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::boundary::cpml::CPMLBoundary;
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
-use crate::domain::medium::Medium;
-use crate::domain::source::{Source, SourceField};
-use crate::math::numerics::operators::{
+use crate::domain::math::numerics::operators::{
     CentralDifference2, CentralDifference4, CentralDifference6, DifferentialOperator,
     StaggeredGridOperator,
 };
+use crate::domain::medium::Medium;
+use crate::domain::source::{Source, SourceField};
 use crate::physics::mechanics::acoustic_wave::SpatialOrder;
 use log::info;
 use ndarray::{s, Array3, ArrayView3, Zip};
@@ -622,7 +622,7 @@ impl crate::solver::interface::Solver for FdtdSolver {
             crate::solver::interface::SolverFeature::GpuAcceleration => {
                 if !cfg!(all(feature = "gpu", feature = "pinn")) {
                     return Err(KwaversError::Config(
-                        crate::core::error::ConfigError::InvalidValue {
+                        crate::domain::core::error::ConfigError::InvalidValue {
                             parameter: "feature".to_string(),
                             value: "GpuAcceleration".to_string(),
                             constraint: "Requires crate features: gpu + pinn".to_string(),

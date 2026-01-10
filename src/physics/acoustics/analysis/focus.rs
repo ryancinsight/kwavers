@@ -1,6 +1,6 @@
 //! Focus finding and beam width calculations
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::{Array1, ArrayView3};
 
@@ -39,7 +39,7 @@ pub fn find_focal_plane(
         1 => grid.ny,
         2 => grid.nz,
         _ => {
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Invalid axis: must be 0, 1, or 2".to_string(),
             ))
         }
@@ -102,7 +102,7 @@ pub fn calculate_beam_width(
         1 => grid.ny,
         2 => grid.nz,
         _ => {
-            return Err(crate::core::error::KwaversError::InvalidInput(
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Invalid axis: must be 0, 1, or 2".to_string(),
             ))
         }

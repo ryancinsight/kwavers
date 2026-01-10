@@ -7,10 +7,10 @@
 //! - Norton (1980) "Reconstruction from projections"
 //! - Kostli et al. (2001) "Temporal backward projection of optoacoustic pressure"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
+use crate::domain::math::fft::FFT_CACHE;
 use crate::domain::signal::window_value;
 use crate::domain::signal::WindowType;
-use crate::math::fft::FFT_CACHE;
 use ndarray::{Array1, Array2, Array3, ArrayView2};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;

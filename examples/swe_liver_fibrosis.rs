@@ -27,13 +27,15 @@
 //! - Tissue: Viscoelastic model (E = 2-12 kPa, η = 1-5 Pa·s)
 //! - Reconstruction: Time-of-flight method with phase gradient refinement
 
-use kwavers::core::error::KwaversResult;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
-use kwavers::physics::imaging::elastography::{
-    AcousticRadiationForce, DisplacementEstimator, InversionMethod, PushPulseParameters,
-    ShearWaveInversion,
-};
+use kwavers::physics::imaging::elastography::displacement::DisplacementEstimator;
+use kwavers::physics::imaging::elastography::radiation_force::PushPulseParameters;
+use kwavers::physics::imaging::elastography::{AcousticRadiationForce, ShearWaveInversion};
+use kwavers::physics::imaging::ElasticityMap;
+use kwavers::physics::imaging::InversionMethod;
+use kwavers::KwaversError;
+use kwavers::KwaversResult;
 use ndarray::Array3;
 use std::time::Instant;
 
@@ -102,11 +104,11 @@ fn main() -> KwaversResult<()> {
     let min_disp = tracked_displacement
         .magnitude()
         .iter()
-        .fold(f64::INFINITY, |a, &b| a.min(b));
+        .fold(f64::INFINITY, |a: f64, &b| a.min(b));
     let max_disp = tracked_displacement
         .magnitude()
         .iter()
-        .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        .fold(f64::NEG_INFINITY, |a: f64, &b| a.max(b));
     println!(
         "   ✓ Displacement range: {:.3} - {:.3} μm",
         min_disp * 1e6,
@@ -116,10 +118,10 @@ fn main() -> KwaversResult<()> {
     // Debug: check initial displacement
     let initial_min = displacement_field
         .iter()
-        .fold(f64::INFINITY, |a, &b| a.min(b));
+        .fold(f64::INFINITY, |a: f64, &b| a.min(b));
     let initial_max = displacement_field
         .iter()
-        .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        .fold(f64::NEG_INFINITY, |a: f64, &b| a.max(b));
     println!(
         "   ✓ Initial displacement range: {:.3} - {:.3} μm",
         initial_min * 1e6,
@@ -228,10 +230,10 @@ fn track_shear_wave_propagation(
 
 /// Analyze stiffness distribution for clinical interpretation
 fn analyze_stiffness_distribution(
-    elasticity_map: &kwavers::physics::imaging::elastography::ElasticityMap,
+    elasticity_map: &ElasticityMap,
 ) -> KwaversResult<StiffnessStatistics> {
     let mut values: Vec<f64> = elasticity_map.youngs_modulus.iter().cloned().collect();
-    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    values.sort_by(|a: &f64, b: &f64| a.partial_cmp(b).unwrap());
 
     let n = values.len();
     let mean = values.iter().sum::<f64>() / n as f64;
@@ -285,7 +287,7 @@ fn interpret_fibrosis_stage(mean_stiffness: f64) -> FibrosisStage {
 
 /// Validate against phantom studies and clinical benchmarks
 fn validate_against_phantom(
-    elasticity_map: &kwavers::physics::imaging::elastography::ElasticityMap,
+    elasticity_map: &ElasticityMap,
     stats: &StiffnessStatistics,
 ) -> KwaversResult<()> {
     // Expected phantom stiffness ranges (CIRS model 039)
@@ -345,7 +347,7 @@ fn validate_against_phantom(
 
 /// Extract mean stiffness from a specific region
 fn extract_region_stiffness(
-    elasticity_map: &kwavers::physics::imaging::elastography::ElasticityMap,
+    elasticity_map: &ElasticityMap,
     _x_min: f64,
     _x_max: f64,
     _y_min: f64,
@@ -370,7 +372,7 @@ fn extract_region_stiffness(
     }
 
     if count == 0 {
-        return Err(kwavers::core::error::KwaversError::InvalidInput(
+        return Err(KwaversError::InvalidInput(
             "No points found in specified region".to_string(),
         ));
     }

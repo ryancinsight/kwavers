@@ -1,7 +1,7 @@
 //! Pulse Width Modulation (PWM)
 
 use super::{Modulation, ModulationParams};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 
 /// PWM implementation
 #[derive(Debug, Clone)]

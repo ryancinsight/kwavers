@@ -108,4 +108,28 @@ impl HybridSpectralDGSolver {
             // artificial_viscosity: None,
         }
     }
+
+    pub fn config(&self) -> &HybridSpectralDGConfig {
+        &self.config
+    }
+
+    pub fn detector(&self) -> &DiscontinuityDetector {
+        &self.detector
+    }
+
+    pub fn spectral_solver(&self) -> &RegionPSTDSolver {
+        &self.spectral_solver
+    }
+
+    pub fn dg_solver(&self) -> &DGSolver {
+        &self.dg_solver
+    }
+
+    pub fn coupler(&self) -> &HybridCoupler {
+        &self.coupler
+    }
+
+    pub fn discontinuity_mask(&self) -> Option<&Array3<bool>> {
+        self.discontinuity_mask.as_ref()
+    }
 }

@@ -4,11 +4,11 @@ use ndarray::Array4;
 use std::fmt::Debug;
 
 use super::{PSTDConfig, PSTDSolver, PSTDSource};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
+use crate::domain::plugin::{PluginContext, PluginMetadata, PluginState};
 
 /// PSTD solver plugin
 #[derive(Debug)]
@@ -39,7 +39,7 @@ impl PSTDPlugin {
     }
 }
 
-impl crate::physics::plugin::Plugin for PSTDPlugin {
+impl crate::domain::plugin::Plugin for PSTDPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -90,7 +90,7 @@ impl crate::physics::plugin::Plugin for PSTDPlugin {
         _context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         let solver = self.solver.as_mut().ok_or_else(|| {
-            crate::core::error::KwaversError::InternalError(
+            crate::domain::core::error::KwaversError::InternalError(
                 "PSTD solver not initialized".to_string(),
             )
         })?;

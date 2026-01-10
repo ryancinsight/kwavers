@@ -16,7 +16,7 @@
 //! - Coordinate transformations must be bijective within grid bounds
 //! - Wavenumber computations must respect Nyquist limits
 
-use crate::core::error::{ConfigError, KwaversError, KwaversResult};
+use crate::domain::core::error::{ConfigError, KwaversError, KwaversResult};
 use ndarray::{Array1, Array2, Array3};
 use std::f64::consts::PI;
 

@@ -4,12 +4,13 @@
 //! Refactored following GRASP principles - maintains backward compatibility
 //! Based on Claerbout (1985): "Imaging the Earth's Interior"
 
-use crate::core::error::KwaversResult;
-use crate::physics::plugin::{PluginMetadata, PluginState}; // Note: Keeping Plugin dependency here, which is in physics. Cycle?
-                                                           // Solver -> Physics (traits/plugins) is OK.
-                                                           // Physics (modules) -> Solver is BAD.
-                                                           // So this plugin calling into solver is OK, because it lives in solver now?
-                                                           // Yes, Plugin implementation in Solver is fine.
+use crate::domain::core::error::KwaversResult;
+use crate::domain::plugin::{PluginMetadata, PluginState};
+// Note: Keeping Plugin dependency here, which is in physics. Cycle?
+// Solver -> Physics (traits/plugins) is OK.
+// Physics (modules) -> Solver is BAD.
+// So this plugin calling into solver is OK, because it lives in solver now?
+// Yes, Plugin implementation in Solver is fine.
 
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -80,8 +81,8 @@ impl SeismicImagingPlugin {
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         let processor = self.rtm_processor.as_ref().ok_or_else(|| {
-            crate::core::error::KwaversError::Physics(
-                crate::core::error::PhysicsError::InvalidConfiguration {
+            crate::domain::core::error::KwaversError::Physics(
+                crate::domain::core::error::PhysicsError::InvalidConfiguration {
                     parameter: "rtm_processor".to_string(),
                     reason: "RTM processor not configured".to_string(),
                 },
@@ -105,8 +106,8 @@ impl SeismicImagingPlugin {
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         let processor = self.fwi_processor.as_ref().ok_or_else(|| {
-            crate::core::error::KwaversError::Physics(
-                crate::core::error::PhysicsError::InvalidConfiguration {
+            crate::domain::core::error::KwaversError::Physics(
+                crate::domain::core::error::PhysicsError::InvalidConfiguration {
                     parameter: "fwi_processor".to_string(),
                     reason: "FWI processor not configured".to_string(),
                 },

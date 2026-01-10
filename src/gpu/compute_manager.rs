@@ -3,8 +3,8 @@
 //! Provides high-level interface for GPU compute operations
 
 use crate::analysis::performance::simd_auto::SimdAuto;
-use crate::core::constants::numerical;
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::constants::numerical;
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::gpu::shaders;
 use ndarray::Array3;
 #[allow(unused_imports)]
@@ -67,18 +67,22 @@ impl ComputeManager {
     /// Get device reference (error if GPU unavailable)
     pub fn device(&self) -> KwaversResult<&wgpu::Device> {
         self.device.as_ref().ok_or_else(|| {
-            KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
-                resource: "GPU device".to_string(),
-            })
+            KwaversError::System(
+                crate::domain::core::error::SystemError::ResourceUnavailable {
+                    resource: "GPU device".to_string(),
+                },
+            )
         })
     }
 
     /// Get queue reference (error if GPU unavailable)
     pub fn queue(&self) -> KwaversResult<&wgpu::Queue> {
         self.queue.as_ref().ok_or_else(|| {
-            KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
-                resource: "GPU queue".to_string(),
-            })
+            KwaversError::System(
+                crate::domain::core::error::SystemError::ResourceUnavailable {
+                    resource: "GPU queue".to_string(),
+                },
+            )
         })
     }
 

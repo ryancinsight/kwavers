@@ -10,7 +10,7 @@ use num_traits::Zero;
 use super::conventional::BeamformingAlgorithm;
 use super::matrix_utils::{eigen_hermitian, invert_matrix};
 use super::source_estimation::{estimate_num_sources, SourceEstimationCriterion};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 
 /// MUSIC (Multiple Signal Classification) algorithm
 ///
@@ -415,10 +415,9 @@ mod tests {
         let mvdr = super::super::algorithms::MinimumVariance::default();
         let espmv = EigenspaceMV::new(n); // Full rank = equivalent to MVDR
 
-        let weights_mvdr = super::super::algorithms::BeamformingAlgorithm::compute_weights(
-            &mvdr, &cov, &steering,
-        )
-        .expect("MVDR weights must compute for SPD test covariance");
+        let weights_mvdr =
+            super::super::algorithms::BeamformingAlgorithm::compute_weights(&mvdr, &cov, &steering)
+                .expect("MVDR weights must compute for SPD test covariance");
         let weights_espmv = super::super::conventional::BeamformingAlgorithm::compute_weights(
             &espmv, &cov, &steering,
         );

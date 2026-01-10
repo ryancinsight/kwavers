@@ -14,7 +14,7 @@
 //!   and Planetary Interiors*
 //! - Tarantola (1984): "Inversion of seismic reflection data in the acoustic approximation"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::signal::analytic::{
     hilbert_transform, instantaneous_envelope_2d, instantaneous_phase_2d,
 };

@@ -1,6 +1,6 @@
 //! Octree data structure for 3D adaptive mesh refinement
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Bounds;
 use ndarray::Array3;
 

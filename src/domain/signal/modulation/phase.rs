@@ -1,7 +1,7 @@
 //! Phase Modulation (PM)
 
 use super::{Modulation, ModulationParams};
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 
 /// Phase modulation implementation
 #[derive(Debug, Clone)]

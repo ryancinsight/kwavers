@@ -67,7 +67,7 @@
 //!   ↓ imports from
 //! math::linear_algebra (Layer 1) - linear solvers, eigendecomposition
 //! domain::sensor (Layer 2) - sensor array geometry
-//! core::error (Layer 0) - error types
+//! domain::core::error (Layer 0) - error types
 //! ```
 //!
 //! # Algorithm Categories
@@ -168,7 +168,7 @@
 //! The old location `domain::sensor::beamforming::adaptive` will continue to exist
 //! with deprecation warnings for one minor version cycle.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 

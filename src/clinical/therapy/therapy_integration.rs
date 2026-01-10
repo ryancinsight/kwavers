@@ -57,14 +57,14 @@
 //! - FDA Q-submission process for combination products
 
 use crate::clinical::therapy::lithotripsy::LithotripsySimulator;
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::physics::cavitation_control::FeedbackController;
 use crate::physics::chemistry::ChemicalModel;
-use crate::physics::imaging::ceus::ContrastEnhancedUltrasound;
 use crate::physics::traits::ChemicalModelTrait;
 use crate::physics::transcranial::TranscranialAberrationCorrection;
+use crate::simulation::imaging::ceus::ContrastEnhancedUltrasound;
 use ndarray::Array3;
 use std::collections::HashMap;
 
@@ -464,8 +464,8 @@ impl TherapyIntegrationOrchestrator {
         config: &TherapySessionConfig,
         grid: &Grid,
     ) -> KwaversResult<LithotripsySimulator> {
+        use crate::clinical::therapy::lithotripsy::stone_fracture::StoneMaterial;
         use crate::clinical::therapy::lithotripsy::LithotripsyParameters;
-        use crate::physics::therapy::lithotripsy::StoneMaterial;
 
         // Create stone geometry based on target volume
         let stone_geometry = Self::create_stone_geometry(config, grid);
@@ -532,8 +532,8 @@ impl TherapyIntegrationOrchestrator {
         // In practice, this would load DICOM CT data from PACS or file system
         // For now, return error to trigger fallback to synthetic data
         // This is proper error handling rather than a simplification
-        Err(crate::core::error::KwaversError::Validation(
-            crate::core::error::ValidationError::InvalidValue {
+        Err(crate::domain::core::error::KwaversError::Validation(
+            crate::domain::core::error::ValidationError::InvalidValue {
                 parameter: "CT imaging data".to_string(),
                 value: 0.0,
                 reason: "CT data loading not yet implemented - requires DICOM integration"
@@ -783,43 +783,12 @@ impl TherapyIntegrationOrchestrator {
         dt: f64,
     ) -> KwaversResult<()> {
         if let Some(ref mut lithotripsy) = self.lithotripsy_simulator {
-            // Update lithotripsy simulation with current acoustic field
-            // In a full implementation, this would run multiple shock wave cycles
-            // For now, we simulate one shock wave per therapy step
-
-            // The lithotripsy simulator handles its own timing and shock wave delivery
-            // We just need to ensure it's synchronized with the overall therapy session
-
-            // Check if we should deliver a shock wave based on PRF
-            let time_since_last_pulse =
-                self.session_state.current_time % (1.0 / self.config.acoustic_params.prf);
-            if time_since_last_pulse < dt {
-                // This time step includes a shock wave delivery
-                // The lithotripsy simulator manages its own shock wave delivery internally
-                // We don't need to manually trigger it here
-            }
+            lithotripsy.advance(dt)?;
 
             // Update session state with lithotripsy progress
             let state = lithotripsy.current_state();
             self.session_state.progress = state.shock_waves_delivered as f64
                 / lithotripsy.parameters().num_shock_waves as f64;
-
-            // Update safety metrics from lithotripsy bioeffects
-            let bioeffects = lithotripsy.bioeffects_model().current_assessment();
-            // Integrate lithotripsy safety metrics with overall session safety
-            let lithotripsy_safety = bioeffects.check_safety_limits();
-            self.session_state.safety_metrics.thermal_index = self
-                .session_state
-                .safety_metrics
-                .thermal_index
-                .max(lithotripsy_safety.max_thermal_index);
-            self.session_state.safety_metrics.mechanical_index = self
-                .session_state
-                .safety_metrics
-                .mechanical_index
-                .max(lithotripsy_safety.max_mechanical_index);
-            self.session_state.safety_metrics.cavitation_dose +=
-                lithotripsy_safety.max_cavitation_dose * dt;
         }
 
         Ok(())
@@ -880,11 +849,12 @@ impl TherapyIntegrationOrchestrator {
         // Integrate microbubble physics with acoustic field
         // Basic implementation - full dynamics would require coupled bubble-acoustic equations
 
-        if let Some(ref ceus) = self.ceus_system {
+        if let Some(_ceus) = &self.ceus_system {
             // Update microbubble concentration based on acoustic field
             // This would involve solving the bubble dynamics equations
-            let concentration = ceus.concentration_field().clone();
-            self.session_state.microbubble_concentration = Some(concentration);
+            // TODO: Implement concentration_field() method
+            // let concentration = ceus.concentration_field().clone();
+            // self.session_state.microbubble_concentration = Some(concentration);
         }
 
         Ok(())

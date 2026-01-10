@@ -9,13 +9,12 @@
 //! - Windowing functions
 
 use self::window::get_win;
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use rand_distr::{Distribution, Normal};
 use std::f64::consts::PI;
-use std::fmt::Debug;
 
 pub mod amplitude;
 pub mod analytic;

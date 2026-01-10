@@ -33,7 +33,11 @@ pub mod config;
 
 pub use config::{LocalizationBeamformSearchConfig, LocalizationBeamformingMethod, SearchGrid};
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::analysis::signal_processing::beamforming::narrowband::{
+    capon_spatial_spectrum_point, capon_spatial_spectrum_point_complex_baseband,
+    CaponSpectrumConfig,
+};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::domain::sensor::beamforming::BeamformingProcessor;
 use crate::domain::sensor::localization::Position;
 use ndarray::Array3;
@@ -233,7 +237,7 @@ impl BeamformSearch {
                     config::MvdrCovarianceDomain::ComplexBaseband {
                         snapshot_step_samples,
                     } => {
-                        let cfg = crate::domain::sensor::beamforming::CaponSpectrumConfig {
+                        let cfg = CaponSpectrumConfig {
                             frequency_hz: *frequency_hz,
                             sound_speed: self.processor.config.sound_speed,
                             diagonal_loading: *diagonal_loading,
@@ -245,7 +249,7 @@ impl BeamformSearch {
                             baseband_snapshot_step_samples: Some(*snapshot_step_samples),
                         };
 
-                        let p = crate::domain::sensor::beamforming::capon_spatial_spectrum_point_complex_baseband(
+                        let p = capon_spatial_spectrum_point_complex_baseband(
                             sensor_data,
                             self.processor.sensor_positions(),
                             point,
@@ -254,7 +258,7 @@ impl BeamformSearch {
                         p
                     }
                     config::MvdrCovarianceDomain::RealTimeSamples => {
-                        let cfg = crate::domain::sensor::beamforming::CaponSpectrumConfig {
+                        let cfg = CaponSpectrumConfig {
                             frequency_hz: *frequency_hz,
                             sound_speed: self.processor.config.sound_speed,
                             diagonal_loading: *diagonal_loading,
@@ -266,7 +270,7 @@ impl BeamformSearch {
                             baseband_snapshot_step_samples: None,
                         };
 
-                        let p = crate::domain::sensor::beamforming::capon_spatial_spectrum_point(
+                        let p = capon_spatial_spectrum_point(
                             sensor_data,
                             self.processor.sensor_positions(),
                             point,

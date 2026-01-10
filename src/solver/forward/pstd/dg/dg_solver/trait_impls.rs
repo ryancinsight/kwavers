@@ -5,7 +5,7 @@
 
 use super::super::traits::{DGOperations, NumericalSolver};
 use super::core::DGSolver;
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
@@ -126,12 +126,12 @@ impl DGSolver {
                 }
                 Ok(())
             } else {
-                Err(crate::core::error::KwaversError::InvalidInput(
+                Err(crate::domain::core::error::KwaversError::InvalidInput(
                     "Invalid element ID or data size".to_string(),
                 ))
             }
         } else {
-            Err(crate::core::error::KwaversError::InvalidInput(
+            Err(crate::domain::core::error::KwaversError::InvalidInput(
                 "Modal coefficients not initialized".to_string(),
             ))
         }

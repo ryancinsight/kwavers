@@ -1,6 +1,6 @@
 //! GPU context and resource management
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::visualization::VisualizationConfig;
 use wgpu::util::DeviceExt;
 
@@ -34,9 +34,11 @@ impl GpuContext {
                     force_fallback_adapter: false,
                 }))
                 .ok_or_else(|| {
-                    KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
-                        resource: "GPU adapter".to_string(),
-                    })
+                    KwaversError::System(
+                        crate::domain::core::error::SystemError::ResourceUnavailable {
+                            resource: "GPU adapter".to_string(),
+                        },
+                    )
                 })?;
 
             let (device, queue) = pollster::block_on(adapter.request_device(
@@ -49,9 +51,11 @@ impl GpuContext {
                 None,
             ))
             .map_err(|e| {
-                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
-                    resource: format!("GPU device: {}", e),
-                })
+                KwaversError::System(
+                    crate::domain::core::error::SystemError::ResourceUnavailable {
+                        resource: format!("GPU device: {}", e),
+                    },
+                )
             })?;
 
             Ok(Self {

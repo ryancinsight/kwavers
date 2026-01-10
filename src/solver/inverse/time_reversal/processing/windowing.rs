@@ -2,7 +2,7 @@
 //!
 //! Implements spatial windowing functions for time-reversal reconstruction.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::signal::window::{window_value, WindowType};
 use ndarray::Array3;

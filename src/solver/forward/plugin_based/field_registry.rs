@@ -3,7 +3,7 @@
 //! Provides type-safe field management with O(1) access using direct indexing.
 //! Follows SOLID principles with single responsibility for field storage.
 
-use crate::core::error::{FieldError, KwaversResult};
+use crate::domain::core::error::{FieldError, KwaversResult};
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use log::{debug, info};

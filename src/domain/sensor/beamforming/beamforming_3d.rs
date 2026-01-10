@@ -25,7 +25,7 @@
 //!   Acquisition   Management    (WGSL)              Interpolation      Enhancement
 //! ```
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::domain::sensor::beamforming::config::BeamformingConfig;
 use ndarray::{Array3, Array4};
 
@@ -201,9 +201,11 @@ impl BeamformingProcessor3D {
             })
             .await
             .ok_or_else(|| {
-                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
-                    resource: "GPU adapter for 3D beamforming".to_string(),
-                })
+                KwaversError::System(
+                    crate::domain::core::error::SystemError::ResourceUnavailable {
+                        resource: "GPU adapter for 3D beamforming".to_string(),
+                    },
+                )
             })?;
 
         #[cfg(feature = "gpu")]
@@ -219,9 +221,11 @@ impl BeamformingProcessor3D {
             )
             .await
             .map_err(|e| {
-                KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
-                    resource: format!("GPU device for 3D beamforming: {}", e),
-                })
+                KwaversError::System(
+                    crate::domain::core::error::SystemError::ResourceUnavailable {
+                        resource: format!("GPU device for 3D beamforming: {}", e),
+                    },
+                )
             })?;
 
         // Load WGSL shaders
@@ -355,7 +359,7 @@ impl BeamformingProcessor3D {
 
         #[cfg(not(feature = "gpu"))]
         return Err(KwaversError::System(
-            crate::core::error::SystemError::FeatureNotAvailable {
+            crate::domain::core::error::SystemError::FeatureNotAvailable {
                 feature: "gpu".to_string(),
                 reason: "GPU acceleration required for 3D beamforming. Enable with --features gpu"
                     .to_string(),
@@ -393,7 +397,7 @@ impl BeamformingProcessor3D {
             } => self.process_mvdr_3d(rf_data, *diagonal_loading as f32, *subarray_size)?,
             BeamformingAlgorithm3D::SAFT3D { .. } => {
                 return Err(KwaversError::System(
-                    crate::core::error::SystemError::FeatureNotAvailable {
+                    crate::domain::core::error::SystemError::FeatureNotAvailable {
                         feature: "SAFT 3D beamforming".to_string(),
                         reason: "SAFT 3D beamforming not yet implemented".to_string(),
                     },
@@ -424,7 +428,7 @@ impl BeamformingProcessor3D {
         // Reference: Van Veen & Buckley (1988) "Beamforming: A versatile approach to spatial filtering"
         // Full GPU implementation available in gpu_accelerated module
         Err(KwaversError::System(
-            crate::core::error::SystemError::FeatureNotAvailable {
+            crate::domain::core::error::SystemError::FeatureNotAvailable {
                 feature: "gpu".to_string(),
                 reason: "GPU acceleration required for 3D beamforming. Enable with --features gpu"
                     .to_string(),
@@ -473,7 +477,7 @@ impl BeamformingProcessor3D {
         _rf_frame: &Array3<f32>,
         _algorithm: &BeamformingAlgorithm3D,
     ) -> KwaversResult<Option<Array3<f32>>> {
-        Err(KwaversError::System(crate::core::error::SystemError::FeatureNotAvailable {
+        Err(KwaversError::System(crate::domain::core::error::SystemError::FeatureNotAvailable {
             feature: "gpu".to_string(),
             reason: "GPU acceleration required for streaming 3D beamforming. Enable with --features gpu".to_string(),
         }))
@@ -533,7 +537,7 @@ impl BeamformingProcessor3D {
         _subarray_size: [usize; 3],
     ) -> KwaversResult<Array3<f32>> {
         Err(KwaversError::System(
-            crate::core::error::SystemError::FeatureNotAvailable {
+            crate::domain::core::error::SystemError::FeatureNotAvailable {
                 feature: "MVDR 3D beamforming".to_string(),
                 reason: "MVDR 3D beamforming not yet implemented. Requires adaptive spatial filtering module.".to_string(),
             },
@@ -579,7 +583,7 @@ impl BeamformingProcessor3D {
         if dynamic_focusing {
             let _ = &self.dynamic_focus_pipeline;
             return Err(KwaversError::System(
-                crate::core::error::SystemError::FeatureNotAvailable {
+                crate::domain::core::error::SystemError::FeatureNotAvailable {
                     feature: "3D dynamic focusing".to_string(),
                     reason:
                         "Dynamic focusing compute pipeline is not yet wired (missing delay tables and aperture mask buffers)"
@@ -923,7 +927,7 @@ impl BeamformingProcessor3D {
         _sub_volume_size: Option<(usize, usize, usize)>,
     ) -> KwaversResult<Array3<f32>> {
         Err(KwaversError::System(
-            crate::core::error::SystemError::FeatureNotAvailable {
+            crate::domain::core::error::SystemError::FeatureNotAvailable {
                 feature: "gpu".to_string(),
                 reason: "GPU acceleration required for 3D beamforming. Enable with --features gpu"
                     .to_string(),
@@ -1074,7 +1078,7 @@ impl BeamformingProcessor3D {
         _sub_volume_size: (usize, usize, usize),
     ) -> KwaversResult<Array3<f32>> {
         Err(KwaversError::System(
-            crate::core::error::SystemError::FeatureNotAvailable {
+            crate::domain::core::error::SystemError::FeatureNotAvailable {
                 feature: "gpu".to_string(),
                 reason: "GPU acceleration required for 3D beamforming. Enable with --features gpu"
                     .to_string(),

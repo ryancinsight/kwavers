@@ -15,7 +15,7 @@ use plotly::{HeatMap, Layout, Plot, Scatter, Surface};
 #[cfg(feature = "plotting")]
 mod plotting_impl {
     #[allow(unused_imports)]
-    use crate::core::time::Time;
+    use crate::domain::core::time::Time;
     #[allow(unused_imports)]
     use crate::domain::field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
     use crate::domain::grid::Grid;

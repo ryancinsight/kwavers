@@ -1,7 +1,7 @@
 //! Wavefield modeling for FWI
 //! Based on Virieux (1986): "P-SV wave propagation in heterogeneous media"
 
-use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
+use crate::domain::core::error::{KwaversError, KwaversResult, PhysicsError};
 use ndarray::{Array1, Array2, Array3, Zip};
 
 /// Configuration for wavefield modeling
@@ -210,7 +210,7 @@ impl WavefieldModeler {
     /// Get stored forward wavefield
     pub fn get_forward_wavefield(&self) -> KwaversResult<Array3<f64>> {
         self.forward_wavefield.clone().ok_or_else(|| {
-            crate::core::error::KwaversError::InvalidInput(
+            crate::domain::core::error::KwaversError::InvalidInput(
                 "Forward wavefield not computed".to_string(),
             )
         })

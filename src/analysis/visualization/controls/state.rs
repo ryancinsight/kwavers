@@ -2,7 +2,7 @@
 
 use super::parameter::{ParameterDefinition, ParameterValue};
 use super::validation::ParameterValidator;
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use log::{debug, info, warn};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};

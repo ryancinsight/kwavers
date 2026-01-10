@@ -1,5 +1,6 @@
+pub mod config;
 pub mod numerical_accuracy;
 pub mod physics_benchmarks;
 
-pub use numerical_accuracy::*;
+pub use config::*;
 pub use physics_benchmarks::*;

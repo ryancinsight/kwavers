@@ -7,10 +7,10 @@
 //! - Treeby & Cox (2010), Eq. 9-10
 //! - Caputo (1967) for fractional derivatives
 
-use crate::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::domain::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
+use crate::domain::math::fft::Complex64;
 use crate::domain::medium::Medium;
-use crate::math::fft::Complex64;
 use crate::physics::acoustics::mechanics::absorption::AbsorptionMode;
 use crate::solver::forward::pstd::config::PSTDConfig;
 use crate::solver::pstd::PSTDSolver;

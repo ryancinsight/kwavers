@@ -1,5 +1,5 @@
 // src/physics/traits.rs
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;
@@ -75,13 +75,13 @@ pub trait CavitationModelBehavior: Debug + Send + Sync {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-    ) -> crate::core::error::KwaversResult<()>;
+    ) -> crate::domain::core::error::KwaversResult<()>;
 
     /// Returns the 3D array of bubble radii (meters).
-    fn bubble_radius(&self) -> crate::core::error::KwaversResult<Array3<f64>>;
+    fn bubble_radius(&self) -> crate::domain::core::error::KwaversResult<Array3<f64>>;
 
     /// Returns the 3D array of bubble wall velocities (m/s).
-    fn bubble_velocity(&self) -> crate::core::error::KwaversResult<Array3<f64>>;
+    fn bubble_velocity(&self) -> crate::domain::core::error::KwaversResult<Array3<f64>>;
 
     /// Returns the 3D array of light emission from sonoluminescence (W/m³).
     fn light_emission(&self) -> Array3<f64>;

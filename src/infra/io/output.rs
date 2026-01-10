@@ -1,5 +1,5 @@
 // output/mod.rs
-use crate::core::time::Time;
+use crate::domain::core::time::Time;
 use crate::domain::field::indices::LIGHT_IDX;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::sensor::recorder::Recorder;

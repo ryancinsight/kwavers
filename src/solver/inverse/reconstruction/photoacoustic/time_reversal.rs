@@ -7,9 +7,9 @@
 //! - Xu & Wang (2005) "Time-reversal reconstruction algorithm"
 //! - Treeby et al. (2010) "MATLAB toolbox"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::math::fft::get_fft_for_grid;
+use crate::domain::math::fft::get_fft_for_grid;
 use ndarray::{Array3, ArrayView2, Zip};
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -66,8 +66,8 @@ impl TimeReversal {
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
         let cfl = c0 * dt / dx_min;
         if cfl > 1.0 / f64::sqrt(3.0) {
-            return Err(crate::core::error::KwaversError::Numerical(
-                crate::core::error::NumericalError::Instability {
+            return Err(crate::domain::core::error::KwaversError::Numerical(
+                crate::domain::core::error::NumericalError::Instability {
                     operation: "Time reversal CFL".to_string(),
                     condition: cfl,
                 },
@@ -156,7 +156,7 @@ impl TimeReversal {
         _k_squared: &Array3<f64>,
         _c0: f64,
         _dt: f64,
-        fft: &crate::math::fft::Fft3d,
+        fft: &crate::domain::math::fft::Fft3d,
     ) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = self.grid_size;
 

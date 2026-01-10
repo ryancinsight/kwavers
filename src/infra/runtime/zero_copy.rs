@@ -40,7 +40,7 @@ pub use rkyv_impl::*;
 
 #[cfg(feature = "zero-copy")]
 mod rkyv_impl {
-    use crate::core::error::{KwaversError, KwaversResult};
+    use crate::domain::core::error::{KwaversError, KwaversResult};
     use crate::domain::grid::Grid;
     use rkyv::{
         check_archived_root,
@@ -245,19 +245,19 @@ mod rkyv_impl {
 pub mod stub {
     //! Stub implementations when zero-copy feature is disabled
 
-    use crate::core::error::KwaversResult;
+    use crate::domain::core::error::KwaversResult;
     use crate::domain::grid::Grid;
 
     /// Zero-copy serialization not available - enable "zero-copy" feature
     pub fn serialize_grid(_grid: &Grid) -> KwaversResult<Vec<u8>> {
-        Err(crate::core::error::KwaversError::InvalidInput(
+        Err(crate::domain::core::error::KwaversError::InvalidInput(
             "zero-copy feature not enabled".to_string(),
         ))
     }
 
     /// Zero-copy serialization not available - enable "zero-copy" feature
     pub fn deserialize_grid(_bytes: &[u8]) -> KwaversResult<Grid> {
-        Err(crate::core::error::KwaversError::InvalidInput(
+        Err(crate::domain::core::error::KwaversError::InvalidInput(
             "zero-copy feature not enabled".to_string(),
         ))
     }

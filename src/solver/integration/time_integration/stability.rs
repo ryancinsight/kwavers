@@ -3,7 +3,7 @@
 //! This module provides stability analysis and CFL condition computation
 //! for time integration methods.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
@@ -24,7 +24,7 @@ impl StabilityAnalyzer {
     /// Compute stable time step based on CFL condition
     pub fn compute_stable_dt(
         &self,
-        _physics: &dyn crate::physics::plugin::Plugin,
+        _physics: &dyn crate::domain::plugin::Plugin,
         _field: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<f64> {

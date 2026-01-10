@@ -38,7 +38,7 @@ fn main() -> KwaversResult<()> {
     println!("Source: Using null source for demonstration");
 
     // Create time configuration
-    use kwavers::core::time::Time;
+    use kwavers::time::Time;
     let time = Time::new(dt, num_steps);
 
     // Create boundary (using PML for absorption)

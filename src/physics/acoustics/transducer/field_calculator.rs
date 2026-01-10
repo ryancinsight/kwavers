@@ -1,10 +1,10 @@
 //! Multi-Element Transducer Field Calculator Plugin
 //! Based on Jensen & Svendsen (1992): "Calculation of pressure fields from arbitrarily shaped transducers"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::{AcousticProperties, Medium};
-use crate::physics::plugin::{PluginMetadata, PluginState};
+use crate::domain::plugin::{PluginMetadata, PluginState};
 use ndarray::{Array2, Array3};
 use std::collections::HashMap;
 
@@ -137,7 +137,7 @@ impl TransducerFieldCalculatorPlugin {
     ) -> KwaversResult<Array3<f64>> {
         // Angular spectrum method implementation
         // Reference: Zeng & McGough (2008) "Evaluation of the angular spectrum approach"
-        use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
+        use crate::domain::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
         use ndarray::Array2;
 
         let mut pressure_field = Array3::zeros(grid.dimensions());
@@ -361,7 +361,7 @@ impl TransducerFieldCalculatorPlugin {
 }
 
 // Plugin trait implementation
-impl crate::physics::plugin::Plugin for TransducerFieldCalculatorPlugin {
+impl crate::domain::plugin::Plugin for TransducerFieldCalculatorPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -389,7 +389,7 @@ impl crate::physics::plugin::Plugin for TransducerFieldCalculatorPlugin {
         medium: &dyn Medium,
         _dt: f64,
         t: f64,
-        _context: &mut crate::physics::plugin::PluginContext<'_>,
+        _context: &mut crate::domain::plugin::PluginContext<'_>,
     ) -> KwaversResult<()> {
         use crate::domain::field::indices;
         use crate::domain::field::mapping::UnifiedFieldType;

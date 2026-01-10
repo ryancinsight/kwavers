@@ -4,12 +4,12 @@ use ndarray::Array4;
 use std::fmt::Debug;
 
 use super::{FdtdConfig, FdtdSolver};
-use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
+use crate::domain::core::error::{KwaversError, KwaversResult, PhysicsError};
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
+use crate::domain::plugin::{PluginContext, PluginMetadata, PluginState};
 use crate::domain::source::GridSource;
-use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
 
 /// FDTD solver plugin
 #[derive(Debug)]
@@ -55,7 +55,7 @@ impl FdtdPlugin {
     }
 }
 
-impl crate::physics::plugin::Plugin for FdtdPlugin {
+impl crate::domain::plugin::Plugin for FdtdPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -103,8 +103,8 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
     ) -> KwaversResult<()> {
         // Ensure fields have correct dimensions
         if fields.dim().0 <= UnifiedFieldType::VelocityZ.index() {
-            return Err(crate::core::error::KwaversError::Physics(
-                crate::core::error::PhysicsError::InvalidFieldDimensions {
+            return Err(crate::domain::core::error::KwaversError::Physics(
+                crate::domain::core::error::PhysicsError::InvalidFieldDimensions {
                     expected: "pressure + 3 velocity components".to_string(),
                     actual: format!("{} components", fields.dim().0),
                 },
@@ -112,8 +112,8 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
         }
 
         let solver = self.solver.as_mut().ok_or_else(|| {
-            crate::core::error::KwaversError::Physics(
-                crate::core::error::PhysicsError::ModelNotInitialized {
+            crate::domain::core::error::KwaversError::Physics(
+                crate::domain::core::error::PhysicsError::ModelNotInitialized {
                     model: "FDTD Solver".to_string(),
                     reason: "Solver not initialized by plugin lifecycle".to_string(),
                 },

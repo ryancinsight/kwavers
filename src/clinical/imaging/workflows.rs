@@ -27,13 +27,11 @@
 //! - **Clinical Accuracy**: >95% diagnostic accuracy validation
 //! - **Scalability**: Support for multiple concurrent examinations
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::domain::imaging::photoacoustic::PhotoacousticResult;
+use crate::domain::imaging::ultrasound::elastography::ElasticityMap;
 use crate::domain::sensor::beamforming::BeamformingConfig3D;
-use crate::physics::imaging::{
-    elastography::ElasticityMap,
-    fusion::{FusedImageResult, FusionConfig, MultiModalFusion},
-};
+use crate::physics::imaging::fusion::{FusedImageResult, FusionConfig, MultiModalFusion};
 use ndarray::Array3;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -367,7 +365,7 @@ impl ClinicalWorkflowOrchestrator {
             && acquisition_time > Duration::from_millis(self.config.max_latency_ms / 3)
         {
             return Err(KwaversError::Validation(
-                crate::core::error::ValidationError::ConstraintViolation {
+                crate::domain::core::error::ValidationError::ConstraintViolation {
                     message: format!(
                         "Acquisition time {}ms exceeds real-time constraint",
                         acquisition_time.as_millis()
@@ -408,7 +406,7 @@ impl ClinicalWorkflowOrchestrator {
             && processing_time > Duration::from_millis(self.config.max_latency_ms / 3)
         {
             return Err(KwaversError::Validation(
-                crate::core::error::ValidationError::ConstraintViolation {
+                crate::domain::core::error::ValidationError::ConstraintViolation {
                     message: format!(
                         "Processing time {}ms exceeds real-time constraint",
                         processing_time.as_millis()
@@ -485,7 +483,7 @@ impl ClinicalWorkflowOrchestrator {
         // This coordinates with ultrasound acquisition hardware/systems
 
         use crate::domain::sensor::beamforming::BeamformingConfig3D;
-        use crate::physics::imaging::ultrasound::{
+        use crate::physics::acoustics::imaging::modalities::ultrasound::{
             compute_bmode_image, UltrasoundConfig, UltrasoundMode,
         };
         use ndarray::{Array2, Array3};

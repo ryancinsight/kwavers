@@ -7,8 +7,12 @@
 //! - End-to-end NL-SWE workflow
 
 pub use kwavers::domain::grid::Grid;
+pub use kwavers::domain::imaging::ultrasound::elastography::{
+    InversionMethod, NonlinearInversionMethod, NonlinearParameterMap,
+};
 pub use kwavers::domain::medium::HomogeneousMedium;
 pub use kwavers::physics::imaging::modalities::elastography::*;
+pub use kwavers::simulation::imaging::elastography::ShearWaveElastography;
 pub use ndarray::{Array3, Array4};
 pub use std::f64::consts::PI;
 

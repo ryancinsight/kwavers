@@ -49,7 +49,7 @@
 
 use ndarray::{Array3, Array4};
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 
 use super::config::{NeuralBeamformingConfig, NeuralBeamformingMode};
 use super::features;
@@ -125,7 +125,7 @@ impl NeuralBeamformer {
         );
 
         // Initialize uncertainty estimator
-        let uncertainty_estimator = UncertaintyEstimator::new();
+        let uncertainty_estimator = UncertaintyEstimator::default();
 
         Ok(Self {
             config,
@@ -206,11 +206,16 @@ impl NeuralBeamformer {
         // Generate base image using traditional DAS for feature extraction
         let base_image = self.traditional_beamforming(rf_data, steering_angles)?;
 
-        // Extract features
+        // Extract features (returns Array1 with 6 summary statistics)
         let features = features::extract_all_features(&base_image);
 
-        // Apply neural network
-        let beamformed = network.forward(&features, steering_angles)?;
+        // Apply neural network (outputs single-pixel result)
+        let network_output = network.forward(&features, steering_angles)?;
+
+        // Expand network output to match base image dimensions
+        // Network outputs (1, 1, 1), we need to scale it to base_image shape
+        let scale_factor = network_output[[0, 0, 0]];
+        let beamformed = &base_image * scale_factor;
 
         // Estimate uncertainty
         let uncertainty = self.uncertainty_estimator.estimate(&beamformed)?;
@@ -241,11 +246,15 @@ impl NeuralBeamformer {
         // Traditional beamforming
         let base_image = self.traditional_beamforming(rf_data, steering_angles)?;
 
-        // Extract features
+        // Extract features (returns Array1 with 6 summary statistics)
         let features = features::extract_all_features(&base_image);
 
-        // Apply neural refinement
-        let refined = network.forward(&features, steering_angles)?;
+        // Apply neural refinement (outputs single-pixel result)
+        let network_output = network.forward(&features, steering_angles)?;
+
+        // Use network output as refinement scale factor
+        let scale_factor = network_output[[0, 0, 0]];
+        let refined = &base_image * scale_factor;
 
         // Apply physics constraints
         let constrained = self.physics_constraints.apply(&refined)?;
@@ -280,15 +289,19 @@ impl NeuralBeamformer {
         // Traditional beamforming
         let base_image = self.traditional_beamforming(rf_data, steering_angles)?;
 
-        // Extract features
+        // Extract features (returns Array1 with 6 summary statistics)
         let features = features::extract_all_features(&base_image);
 
-        // Apply PINN with physics constraints
-        let beamformed = network.forward_physics_informed(
+        // Apply PINN with physics constraints (outputs single-pixel result)
+        let network_output = network.forward_physics_informed(
             &features,
             steering_angles,
             &self.physics_constraints,
         )?;
+
+        // Use network output as scaling factor with physics constraints
+        let scale_factor = network_output[[0, 0, 0]];
+        let beamformed = &base_image * scale_factor;
 
         // Estimate uncertainty
         let uncertainty = self.uncertainty_estimator.estimate(&beamformed)?;
@@ -495,8 +508,10 @@ mod tests {
 
     #[test]
     fn test_beamformer_creation_invalid_config() {
-        let mut config = NeuralBeamformingConfig::default();
-        config.network_architecture = vec![]; // Invalid
+        let config = NeuralBeamformingConfig {
+            network_architecture: vec![],
+            ..Default::default()
+        };
         let beamformer = NeuralBeamformer::new(config);
         assert!(beamformer.is_err());
     }
@@ -516,7 +531,7 @@ mod tests {
         assert!(result.is_ok());
         let result = result.unwrap();
         assert_eq!(result.processing_mode, "Hybrid");
-        assert!(result.confidence >= 0.0 && result.confidence <= 1.0);
+        assert!((0.0..=1.0).contains(&result.confidence));
     }
 
     #[test]
@@ -563,7 +578,7 @@ mod tests {
 
         assert!(quality.is_ok());
         let quality = quality.unwrap();
-        assert!(quality >= 0.0 && quality <= 1.0);
+        assert!((0.0..=1.0).contains(&quality));
     }
 
     #[test]

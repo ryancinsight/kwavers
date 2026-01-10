@@ -3,7 +3,7 @@
 //! Implements the nonlinear term: -(β/ρ₀c₀⁴)∂²p²/∂t²
 //! where β = 1 + B/2A is the nonlinearity coefficient
 
-use crate::core::constants::{B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET};
+use crate::domain::core::constants::{B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET};
 use ndarray::{Array3, Zip};
 
 /// Compute the nonlinear term for the Kuznetsov equation using workspace

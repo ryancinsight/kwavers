@@ -19,7 +19,7 @@
 //! - The shared beamforming core config does **not** carry apodization or focal point; those are
 //!   consumer-level concerns.
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::domain::sensor::beamforming::BeamformingCoreConfig;
 
 /// Beamforming method selection for PAM.

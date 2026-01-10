@@ -4,7 +4,7 @@
 //! with proper error handling and adaptive timestepping.
 
 use super::bubble_state::{BubbleParameters, BubbleState};
-use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
+use crate::domain::core::error::{KwaversError, KwaversResult, PhysicsError};
 
 /// Integrate bubble dynamics using stable numerical methods
 ///

@@ -3,8 +3,8 @@
 //! This module implements the Fast Nearfield Method for computing acoustic pressure
 //! fields from transducer elements with O(n) complexity.
 
+use crate::domain::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use crate::domain::source::transducers::rectangular::RectangularTransducer;
-use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::{s, Array2, Array3, Axis};
 use std::collections::HashMap;
 use std::f64::consts::PI;

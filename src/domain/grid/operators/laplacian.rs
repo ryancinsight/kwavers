@@ -3,7 +3,7 @@
 //! Unified Laplacian operator implementation for discretized grids.
 
 use super::coefficients::{FDCoefficients, SpatialOrder};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{s, Array3, ArrayView3, ArrayViewMut3, Zip};
 
@@ -87,11 +87,13 @@ impl LaplacianOperator {
         mut output: ArrayViewMut3<f64>,
     ) -> KwaversResult<()> {
         if input.dim() != output.dim() {
-            return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                "Output dimensions {:?} don't match input {:?}",
-                output.dim(),
-                input.dim()
-            )));
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                format!(
+                    "Output dimensions {:?} don't match input {:?}",
+                    output.dim(),
+                    input.dim()
+                ),
+            ));
         }
 
         let (center_coeff, side_coeffs) = (

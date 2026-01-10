@@ -28,7 +28,7 @@
 //! use kwavers::domain::medium::{HomogeneousMedium, adapters::CylindricalMediumProjection};
 //! use kwavers::domain::grid::{Grid, CylindricalTopology};
 //!
-//! # fn example() -> kwavers::core::error::KwaversResult<()> {
+//! # fn example() -> kwavers::domain::core::error::KwaversResult<()> {
 //! // Create 3D medium
 //! let grid = Grid::new(128, 128, 128, 0.0001, 0.0001, 0.0001)?;
 //! let medium = HomogeneousMedium::water(&grid);
@@ -46,7 +46,7 @@
 //! # }
 //! ```
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::{CylindricalTopology, Grid};
 use crate::domain::medium::Medium;
 use ndarray::{Array2, ArrayView2};
@@ -120,7 +120,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
     /// ```rust
     /// # use kwavers::domain::medium::{HomogeneousMedium, adapters::CylindricalMediumProjection};
     /// # use kwavers::domain::grid::{Grid, CylindricalTopology};
-    /// # fn example() -> kwavers::core::error::KwaversResult<()> {
+    /// # fn example() -> kwavers::domain::core::error::KwaversResult<()> {
     /// let grid = Grid::new(64, 64, 64, 0.0001, 0.0001, 0.0001)?;
     /// let medium = HomogeneousMedium::water(&grid);
     /// let topology = CylindricalTopology::new(64, 32, 0.0001, 0.0001)?;
@@ -168,7 +168,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
 
                 // Get grid indices for Cartesian coordinates
                 let (i, j, k) = grid.coordinates_to_indices(x, y, z).ok_or_else(|| {
-                    KwaversError::Config(crate::core::error::ConfigError::InvalidValue {
+                    KwaversError::Config(crate::domain::core::error::ConfigError::InvalidValue {
                         parameter: "cylindrical topology".to_string(),
                         value: format!(
                             "iz={}, ir={} -> x={}, y={}, z={} (out of bounds)",
@@ -200,7 +200,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
                 // Validate physical constraints
                 if c <= 0.0 || !c.is_finite() {
                     return Err(KwaversError::Config(
-                        crate::core::error::ConfigError::InvalidValue {
+                        crate::domain::core::error::ConfigError::InvalidValue {
                             parameter: "sound_speed".to_string(),
                             value: c.to_string(),
                             constraint: "Must be positive and finite".to_string(),
@@ -210,7 +210,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
 
                 if rho <= 0.0 || !rho.is_finite() {
                     return Err(KwaversError::Config(
-                        crate::core::error::ConfigError::InvalidValue {
+                        crate::domain::core::error::ConfigError::InvalidValue {
                             parameter: "density".to_string(),
                             value: rho.to_string(),
                             constraint: "Must be positive and finite".to_string(),
@@ -220,7 +220,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
 
                 if alpha < 0.0 || !alpha.is_finite() {
                     return Err(KwaversError::Config(
-                        crate::core::error::ConfigError::InvalidValue {
+                        crate::domain::core::error::ConfigError::InvalidValue {
                             parameter: "absorption".to_string(),
                             value: alpha.to_string(),
                             constraint: "Must be non-negative and finite".to_string(),
@@ -432,7 +432,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
         // Check max bound
         if self.max_sound_speed > c_3d_max {
             return Err(KwaversError::Config(
-                crate::core::error::ConfigError::InvalidValue {
+                crate::domain::core::error::ConfigError::InvalidValue {
                     parameter: "projection max_sound_speed".to_string(),
                     value: self.max_sound_speed.to_string(),
                     constraint: format!("Must not exceed 3D medium max: {}", c_3d_max),
@@ -444,7 +444,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
         for &c in self.sound_speed_2d.iter() {
             if c <= 0.0 || !c.is_finite() {
                 return Err(KwaversError::Config(
-                    crate::core::error::ConfigError::InvalidValue {
+                    crate::domain::core::error::ConfigError::InvalidValue {
                         parameter: "projected sound_speed".to_string(),
                         value: c.to_string(),
                         constraint: "Must be positive and finite".to_string(),
@@ -456,7 +456,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
         for &rho in self.density_2d.iter() {
             if rho <= 0.0 || !rho.is_finite() {
                 return Err(KwaversError::Config(
-                    crate::core::error::ConfigError::InvalidValue {
+                    crate::domain::core::error::ConfigError::InvalidValue {
                         parameter: "projected density".to_string(),
                         value: rho.to_string(),
                         constraint: "Must be positive and finite".to_string(),
@@ -468,7 +468,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
         for &alpha in self.absorption_2d.iter() {
             if alpha < 0.0 || !alpha.is_finite() {
                 return Err(KwaversError::Config(
-                    crate::core::error::ConfigError::InvalidValue {
+                    crate::domain::core::error::ConfigError::InvalidValue {
                         parameter: "projected absorption".to_string(),
                         value: alpha.to_string(),
                         constraint: "Must be non-negative and finite".to_string(),
@@ -789,7 +789,7 @@ mod tests {
             // Check all values are in physical range for B/A (typically 1-20)
             for &b_over_a in nonlin_field.iter() {
                 assert!(
-                    b_over_a >= 0.0 && b_over_a <= 100.0,
+                    (0.0..=100.0).contains(&b_over_a),
                     "B/A out of physical range"
                 );
             }

@@ -4,7 +4,7 @@
 //! coefficients at dielectric interfaces.
 
 use super::Polarization;
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use std::f64::consts::PI;
 
 /// Fresnel coefficients for reflection and transmission

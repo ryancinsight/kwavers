@@ -2,7 +2,7 @@
 //!
 //! Reference: Fellah & Depollier (2000) "Transient acoustic wave propagation"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::physics::mechanics::poroelastic::{BiotTheory, PoroelasticMaterial};
 

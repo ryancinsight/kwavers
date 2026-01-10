@@ -3,7 +3,7 @@
 //! This module contains mock implementations used for testing acoustic wave physics.
 
 #[cfg(test)]
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 #[cfg(test)]
 use crate::domain::grid::Grid;
 #[cfg(test)]

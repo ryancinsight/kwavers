@@ -4,7 +4,7 @@
 //! caching, parallelization, and optimized memory access patterns.
 
 use super::coefficients::{FDCoefficients, SpatialOrder};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayView3};
 use num_traits::Float;
@@ -96,8 +96,8 @@ where
 
     // Validate grid compatibility
     if (nx, ny, nz) != (grid.nx, grid.ny, grid.nz) {
-        return Err(crate::core::error::KwaversError::Grid(
-            crate::core::error::GridError::DimensionMismatch {
+        return Err(crate::domain::core::error::KwaversError::Grid(
+            crate::domain::core::error::GridError::DimensionMismatch {
                 expected: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
                 actual: format!("({}, {}, {})", nx, ny, nz),
             },
@@ -204,8 +204,8 @@ where
 
     // Validate grid compatibility
     if (nx, ny, nz) != (grid.nx, grid.ny, grid.nz) {
-        return Err(crate::core::error::KwaversError::Grid(
-            crate::core::error::GridError::DimensionMismatch {
+        return Err(crate::domain::core::error::KwaversError::Grid(
+            crate::domain::core::error::GridError::DimensionMismatch {
                 expected: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
                 actual: format!("({}, {}, {})", nx, ny, nz),
             },
@@ -233,7 +233,11 @@ where
                     None
                 } else {
                     let last = (len - 1) as isize;
-                    let mirrored = if idx < 0 { (-idx).min(last) } else { (2 * last - idx).max(0) };
+                    let mirrored = if idx < 0 {
+                        (-idx).min(last)
+                    } else {
+                        (2 * last - idx).max(0)
+                    };
                     Some(mirrored as usize)
                 }
             }
@@ -279,27 +283,21 @@ where
                 let mut gx = T::zero();
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = (n + 1) as isize;
-                    gx = gx
-                        + *coeff
-                            * (get(ii + offset, jj, kk) - get(ii - offset, jj, kk));
+                    gx = gx + *coeff * (get(ii + offset, jj, kk) - get(ii - offset, jj, kk));
                 }
                 grad_x[[i, j, k]] = gx * dx_inv;
 
                 let mut gy = T::zero();
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = (n + 1) as isize;
-                    gy = gy
-                        + *coeff
-                            * (get(ii, jj + offset, kk) - get(ii, jj - offset, kk));
+                    gy = gy + *coeff * (get(ii, jj + offset, kk) - get(ii, jj - offset, kk));
                 }
                 grad_y[[i, j, k]] = gy * dy_inv;
 
                 let mut gz = T::zero();
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = (n + 1) as isize;
-                    gz = gz
-                        + *coeff
-                            * (get(ii, jj, kk + offset) - get(ii, jj, kk - offset));
+                    gz = gz + *coeff * (get(ii, jj, kk + offset) - get(ii, jj, kk - offset));
                 }
                 grad_z[[i, j, k]] = gz * dz_inv;
             }

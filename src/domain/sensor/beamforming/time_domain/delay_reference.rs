@@ -47,9 +47,6 @@
 pub use crate::analysis::signal_processing::beamforming::time_domain::delay_reference::*;
 
 // Keep original implementation as internal fallback (will be removed in v0.3.0)
-#[allow(deprecated)]
-use crate::core::error::{KwaversError, KwaversResult};
-
 // All functionality has been moved to analysis::signal_processing::beamforming::time_domain::delay_reference
 // Tests are now in the new location
 

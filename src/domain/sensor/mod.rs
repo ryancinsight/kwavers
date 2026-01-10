@@ -9,7 +9,6 @@
 pub mod beamforming;
 pub mod grid_sampling;
 pub mod localization;
-pub(crate) mod math;
 pub mod passive_acoustic_mapping; // Multi-lateration localization system
 pub mod recorder; // Shared sensor recording logic
 pub mod sonoluminescence; // Sonoluminescence detector

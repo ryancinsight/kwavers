@@ -50,7 +50,7 @@
 //! - He et al. (2015): "Delving Deep into Rectifiers"
 //! - LeCun et al. (1998): "Efficient BackProp"
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2, Array3};
 use rand::distributions::{Distribution, Uniform};
 

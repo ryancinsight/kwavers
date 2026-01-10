@@ -1,7 +1,7 @@
 //! Amplitude Modulation (AM)
 
 use super::{Modulation, ModulationParams};
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 
 /// Amplitude modulation implementation
 #[derive(Debug, Clone)]

@@ -49,9 +49,9 @@ pub enum TimeScheme {
 
 impl SolverParameters {
     /// Validate solver parameters
-    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
+    pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
         if self.spatial_order == 0 || self.spatial_order > 16 {
-            return Err(crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::ConfigError::InvalidValue {
                 parameter: "spatial_order".to_string(),
                 value: self.spatial_order.to_string(),
                 constraint: "Must be between 1 and 16".to_string(),
@@ -60,7 +60,7 @@ impl SolverParameters {
         }
 
         if self.max_iterations == 0 {
-            return Err(crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::ConfigError::InvalidValue {
                 parameter: "max_iterations".to_string(),
                 value: "0".to_string(),
                 constraint: "Must be positive".to_string(),
@@ -69,7 +69,7 @@ impl SolverParameters {
         }
 
         if self.tolerance <= 0.0 || self.tolerance >= 1.0 {
-            return Err(crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::ConfigError::InvalidValue {
                 parameter: "tolerance".to_string(),
                 value: self.tolerance.to_string(),
                 constraint: "Must be in (0, 1)".to_string(),

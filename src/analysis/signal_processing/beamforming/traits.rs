@@ -20,7 +20,7 @@
 //!   ↓ imports from
 //! domain::sensor (Layer 2) - array geometry (read-only)
 //! math::linear_algebra (Layer 1) - numerical operations
-//! core::error (Layer 0) - error types
+//! domain::core::error (Layer 0) - error types
 //! ```
 //!
 //! # Trait Hierarchy
@@ -125,7 +125,7 @@
 //!   ultrasound imaging." *IEEE Trans. Ultrason., Ferroelect., Freq. Control*, 56(8).
 //!   DOI: 10.1109/TUFFC.2009.1263
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
@@ -752,7 +752,7 @@ mod tests {
         fn focus_at_point(&self, data: &Array2<f64>, focal_point: [f64; 3]) -> KwaversResult<f64> {
             self.validate_input(data)?;
             if !focal_point.iter().all(|x| x.is_finite()) {
-                return Err(crate::core::error::KwaversError::InvalidInput(
+                return Err(crate::domain::core::error::KwaversError::InvalidInput(
                     "Focal point contains non-finite values".into(),
                 ));
             }

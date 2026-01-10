@@ -18,14 +18,14 @@ mod sparse;
 mod steering;
 mod validation;
 
-pub use crate::core::constants::*;
+pub use crate::domain::core::constants::*;
 pub use element::{ElementConfiguration, ElementState};
 pub use geometry::{ElementPlacement, HemisphereGeometry};
 pub use sparse::{ElementSelection, SparseArrayOptimizer};
 pub use steering::{FocalPoint, SteeringController};
 pub use validation::{ArrayValidator, PerformanceMetrics};
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::signal::{Signal, SineWave};
 use crate::domain::source::Source;

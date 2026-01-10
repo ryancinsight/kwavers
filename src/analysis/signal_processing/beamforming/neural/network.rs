@@ -31,12 +31,14 @@
 //! - Glorot & Bengio (2010): "Understanding the difficulty of training deep feedforward neural networks"
 //! - LeCun et al. (1998): "Efficient BackProp"
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array3, Axis};
 
 use super::layer::NeuralLayer;
-use super::physics::PhysicsConstraints;
 use super::types::BeamformingFeedback;
+
+#[cfg(feature = "pinn")]
+use super::physics::PhysicsConstraints;
 
 /// Feedforward neural network for beamforming optimization.
 #[derive(Debug)]
@@ -72,7 +74,7 @@ impl NeuralBeamformingNetwork {
             ));
         }
 
-        if architecture.iter().any(|&size| size == 0) {
+        if architecture.contains(&0) {
             return Err(KwaversError::InvalidInput(
                 "All layer sizes must be > 0".to_string(),
             ));
@@ -100,7 +102,7 @@ impl NeuralBeamformingNetwork {
     ///
     /// # Arguments
     ///
-    /// * `features` - Input feature maps
+    /// * `features` - Input feature vector (6 summary statistics)
     /// * `steering_angles` - Beam steering angles (degrees)
     ///
     /// # Returns
@@ -109,15 +111,15 @@ impl NeuralBeamformingNetwork {
     ///
     /// # Process
     ///
-    /// 1. Concatenate input features
+    /// 1. Concatenate input features with steering angle
     /// 2. Forward through each layer with tanh activation
     /// 3. Return output (no final activation)
     pub fn forward(
         &self,
-        features: &[Array3<f32>],
+        features: &ndarray::Array1<f32>,
         steering_angles: &[f64],
     ) -> KwaversResult<Array3<f32>> {
-        // Concatenate features and flatten for neural network input
+        // Concatenate features with steering angle into 3D input
         let input = self.concatenate_features(features, steering_angles)?;
         let mut output = input;
 
@@ -136,7 +138,7 @@ impl NeuralBeamformingNetwork {
     ///
     /// # Arguments
     ///
-    /// * `features` - Input feature maps
+    /// * `features` - Input feature vector (6 summary statistics)
     /// * `steering_angles` - Beam steering angles
     /// * `constraints` - Physics constraints to enforce
     ///
@@ -146,7 +148,7 @@ impl NeuralBeamformingNetwork {
     #[cfg(feature = "pinn")]
     pub fn forward_physics_informed(
         &self,
-        features: &[Array3<f32>],
+        features: &ndarray::Array1<f32>,
         steering_angles: &[f64],
         constraints: &PhysicsConstraints,
     ) -> KwaversResult<Array3<f32>> {
@@ -184,30 +186,32 @@ impl NeuralBeamformingNetwork {
         Ok(())
     }
 
-    /// Concatenate multiple feature maps into a single tensor.
+    /// Concatenate feature vector with steering angle into network input.
     ///
     /// # Process
     ///
-    /// 1. Concatenate all feature arrays along the feature dimension (axis 2)
-    /// 2. Append steering angle information as an additional feature channel
+    /// 1. Take 6 feature statistics
+    /// 2. Append steering angle as 7th feature
+    /// 3. Reshape to (1, 1, 7) for layer processing
     ///
     /// # Arguments
     ///
-    /// * `features` - Array of feature maps (each frame × lateral × features)
+    /// * `features` - Feature vector (6 elements: mean, std, gradient, laplacian, entropy, peak)
     /// * `steering_angles` - Beam steering angles to encode
     ///
     /// # Returns
     ///
-    /// Concatenated feature tensor.
+    /// Input tensor shaped (1, 1, 7) for network processing.
     fn concatenate_features(
         &self,
-        features: &[Array3<f32>],
+        features: &ndarray::Array1<f32>,
         steering_angles: &[f64],
     ) -> KwaversResult<Array3<f32>> {
-        if features.is_empty() {
-            return Err(KwaversError::InvalidInput(
-                "No features provided".to_string(),
-            ));
+        if features.len() != 6 {
+            return Err(KwaversError::InvalidInput(format!(
+                "Expected 6 features, got {}",
+                features.len()
+            )));
         }
 
         if steering_angles.is_empty() {
@@ -216,33 +220,14 @@ impl NeuralBeamformingNetwork {
             ));
         }
 
-        // Start with first feature map
-        let mut concatenated = features[0].clone();
+        // Create input vector: [6 features + 1 angle] = 7 elements
+        let mut input_vec = features.to_vec();
+        input_vec.push(steering_angles[0] as f32); // Use first steering angle
 
-        // Concatenate remaining features
-        for feature in features.iter().skip(1) {
-            concatenated.append(Axis(2), feature.view()).map_err(|e| {
-                KwaversError::InternalError(format!("Feature concatenation failed: {}", e))
-            })?;
-        }
-
-        // Encode steering angles as additional feature channels
-        let angle_feature = Array3::from_elem(
-            (
-                concatenated.shape()[0],
-                concatenated.shape()[1],
-                steering_angles.len(),
-            ),
-            steering_angles[0] as f32, // Simplified: broadcast first angle
-        );
-
-        concatenated
-            .append(Axis(2), angle_feature.view())
-            .map_err(|e| {
-                KwaversError::InternalError(format!("Angle concatenation failed: {}", e))
-            })?;
-
-        Ok(concatenated)
+        // Reshape to (1, 1, 7) for layer processing
+        // This represents 1 batch item with 1 spatial location and 7 features
+        Array3::from_shape_vec((1, 1, 7), input_vec)
+            .map_err(|e| KwaversError::InternalError(format!("Failed to reshape input: {}", e)))
     }
 }
 
@@ -269,25 +254,27 @@ mod tests {
 
     #[test]
     fn test_feature_concatenation() {
-        let net = NeuralBeamformingNetwork::new(&[10, 5]).unwrap();
+        let net = NeuralBeamformingNetwork::new(&[7, 5]).unwrap();
 
-        let feature1 = Array3::ones((2, 3, 3));
-        let feature2 = Array3::from_elem((2, 3, 2), 2.0);
-        let features = vec![feature1, feature2];
-        let angles = vec![15.0, 30.0];
+        // 6 feature statistics + 1 angle = 7 input features
+        use ndarray::Array1;
+        let features = Array1::from_vec(vec![0.5, 0.1, 0.2, 0.05, 0.3, 0.8]);
+        let angles = vec![15.0];
 
         let concatenated = net.concatenate_features(&features, &angles).unwrap();
 
-        // 3 + 2 + 2 (angles) = 7 features
-        assert_eq!(concatenated.dim(), (2, 3, 7));
+        // Should be (1, 1, 7): 6 features + 1 angle
+        assert_eq!(concatenated.dim(), (1, 1, 7));
     }
 
     #[test]
     fn test_network_forward() {
-        let net = NeuralBeamformingNetwork::new(&[8, 4, 2]).unwrap();
+        let net = NeuralBeamformingNetwork::new(&[7, 4, 2]).unwrap();
 
-        let features = vec![Array3::ones((2, 3, 6))];
-        let angles = vec![15.0, 30.0];
+        // 6 feature statistics
+        use ndarray::Array1;
+        let features = Array1::from_vec(vec![0.5, 0.1, 0.2, 0.05, 0.3, 0.8]);
+        let angles = vec![15.0];
 
         let output = net.forward(&features, &angles).unwrap();
 

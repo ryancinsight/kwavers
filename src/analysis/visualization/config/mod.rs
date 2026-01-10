@@ -2,7 +2,7 @@
 //!
 //! Provides configuration structures for visualization and rendering.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 
 // Constants for visualization
 pub const DEFAULT_TARGET_FPS: f64 = 60.0;
@@ -135,8 +135,8 @@ impl VisualizationConfig {
     /// Validate configuration parameters
     pub fn validate(&self) -> KwaversResult<()> {
         if self.target_fps <= 0.0 {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::OutOfRange {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::OutOfRange {
                     value: self.target_fps,
                     min: 0.0,
                     max: f64::INFINITY,
@@ -145,8 +145,8 @@ impl VisualizationConfig {
         }
 
         if self.max_texture_size == 0 {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::OutOfRange {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::OutOfRange {
                     value: self.max_texture_size as f64,
                     min: 1.0,
                     max: f64::INFINITY,

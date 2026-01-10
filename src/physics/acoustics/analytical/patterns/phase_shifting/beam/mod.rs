@@ -5,7 +5,7 @@
 //! References:
 //! - Wooh & Shi (1999): "A simulation study of the beam steering characteristics for linear phased arrays"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
@@ -46,9 +46,9 @@ impl BeamSteering {
     /// Set steering angles (azimuth and elevation in degrees)
     pub fn set_steering_angles(&mut self, azimuth: f64, elevation: f64) -> KwaversResult<()> {
         if azimuth.abs() > MAX_STEERING_ANGLE || elevation.abs() > MAX_STEERING_ANGLE {
-            return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                "Steering angles exceed maximum of {MAX_STEERING_ANGLE} degrees"
-            )));
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                format!("Steering angles exceed maximum of {MAX_STEERING_ANGLE} degrees"),
+            ));
         }
 
         self.steering_angles = (azimuth, elevation);

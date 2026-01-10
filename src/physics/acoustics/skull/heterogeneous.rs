@@ -3,7 +3,7 @@
 //! Reference: Marquet et al. (2009) "Non-invasive transcranial ultrasound
 //! therapy based on a 3D CT scan"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::physics::skull::SkullProperties;
 use ndarray::Array3;

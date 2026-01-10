@@ -3,7 +3,7 @@
 //! Patient-specific treatment planning using CT scans for skull characterization
 //! and optimal trajectory calculation for brain targets.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use num_complex::Complex;
@@ -349,8 +349,8 @@ impl TreatmentPlanner {
         // Check temperature limits
         for &temp in temperature.iter() {
             if temp > constraints.max_brain_temp {
-                return Err(crate::core::error::KwaversError::Validation(
-                    crate::core::error::ValidationError::ConstraintViolation {
+                return Err(crate::domain::core::error::KwaversError::Validation(
+                    crate::domain::core::error::ValidationError::ConstraintViolation {
                         message: format!(
                             "Brain temperature {:.1}°C exceeds limit {:.1}°C",
                             temp, constraints.max_brain_temp
@@ -375,8 +375,8 @@ impl TreatmentPlanner {
         };
 
         if mi > constraints.max_mi {
-            return Err(crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::ConstraintViolation {
+            return Err(crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::ConstraintViolation {
                     message: format!(
                         "Mechanical index {:.2} exceeds limit {:.2}",
                         mi, constraints.max_mi

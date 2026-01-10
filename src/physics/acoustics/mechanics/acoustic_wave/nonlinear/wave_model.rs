@@ -2,7 +2,7 @@
 //!
 //! This module contains the core `NonlinearWave` struct and its basic implementation.
 
-use crate::core::constants::numerical::{
+use crate::domain::core::constants::numerical::{
     CHUNKED_PROCESSING_THRESHOLD, CHUNK_SIZE_LARGE, CHUNK_SIZE_MEDIUM, CHUNK_SIZE_SMALL,
     LARGE_GRID_THRESHOLD, MEDIUM_GRID_THRESHOLD, PRESSURE_LIMIT,
 };

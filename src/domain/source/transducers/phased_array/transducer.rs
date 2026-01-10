@@ -4,7 +4,7 @@ use super::beamforming::{BeamformingCalculator, BeamformingMode};
 use super::config::PhasedArrayConfig;
 use super::crosstalk::CrosstalkModel;
 use super::element::TransducerElement;
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::signal::Signal;
@@ -41,8 +41,8 @@ impl PhasedArrayTransducer {
     ) -> KwaversResult<Self> {
         // Validate configuration
         config.validate().map_err(|e| {
-            crate::core::error::KwaversError::Validation(
-                crate::core::error::ValidationError::FieldValidation {
+            crate::domain::core::error::KwaversError::Validation(
+                crate::domain::core::error::ValidationError::FieldValidation {
                     field: "phased_array_config".to_string(),
                     value: format!("{config:?}"),
                     constraint: e,

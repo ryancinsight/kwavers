@@ -1,6 +1,6 @@
 //! CPML configuration and validation
 
-use crate::core::error::{ConfigError, KwaversResult};
+use crate::domain::core::error::{ConfigError, KwaversResult};
 use serde::{Deserialize, Serialize};
 
 /// Minimum cosine theta value to prevent division by zero in reflection estimation

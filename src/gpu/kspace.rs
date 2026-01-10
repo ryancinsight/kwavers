@@ -1,6 +1,6 @@
 //! GPU-accelerated k-space methods
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 #[allow(unused_imports)]

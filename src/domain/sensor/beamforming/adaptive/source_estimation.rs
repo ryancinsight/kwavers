@@ -13,7 +13,7 @@
 //! This prevents “working but incorrect” behavior (e.g. returning `0` sources due to a numerical
 //! routine not being available).
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 use num_complex::Complex64;
 
@@ -73,7 +73,7 @@ pub fn estimate_num_sources(
     let _ = criterion; // retained for API stability
 
     Err(KwaversError::Numerical(
-        crate::core::error::NumericalError::UnsupportedOperation {
+        crate::domain::core::error::NumericalError::UnsupportedOperation {
             operation: "estimate_num_sources (complex Hermitian eigendecomposition)".to_string(),
             reason: "SSOT complex eigendecomposition is not implemented; implement it in crate::utils::linear_algebra and route source model-order selection through it".to_string(),
         },

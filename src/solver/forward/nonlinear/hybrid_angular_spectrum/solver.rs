@@ -2,7 +2,7 @@
 //!
 //! Reference: Zemp et al. (2003) "k-space pseudospectral method"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 

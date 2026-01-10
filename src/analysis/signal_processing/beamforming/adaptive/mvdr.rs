@@ -81,8 +81,8 @@
 //! to `analysis::signal_processing::beamforming::adaptive::mvdr` as part of the
 //! architectural purification effort (ADR 003). The API remains unchanged.
 
-use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::linear_algebra::LinearAlgebra;
+use crate::domain::core::error::{KwaversError, KwaversResult};
+use crate::domain::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
@@ -361,7 +361,7 @@ impl MinimumVariance {
         let denom_re = denom.re;
         if !denom_re.is_finite() {
             return Err(KwaversError::Numerical(
-                crate::core::error::NumericalError::InvalidOperation(
+                crate::domain::core::error::NumericalError::InvalidOperation(
                     "MVDR: non-finite denominator a^H R^{-1} a (covariance may be ill-conditioned)"
                         .to_string(),
                 ),
@@ -369,7 +369,7 @@ impl MinimumVariance {
         }
         if denom_re <= 0.0 {
             return Err(KwaversError::Numerical(
-                crate::core::error::NumericalError::InvalidOperation(format!(
+                crate::domain::core::error::NumericalError::InvalidOperation(format!(
                     "MVDR: non-positive denominator a^H R^{{-1}} a = {} (covariance may not be Hermitian PD)",
                     denom_re
                 )),
@@ -461,7 +461,7 @@ impl MinimumVariance {
         let denom_re = denom.re;
         if !denom_re.is_finite() || denom_re <= 0.0 {
             return Err(KwaversError::Numerical(
-                crate::core::error::NumericalError::InvalidOperation(
+                crate::domain::core::error::NumericalError::InvalidOperation(
                     "MVDR pseudospectrum: invalid denominator".to_string(),
                 ),
             ));

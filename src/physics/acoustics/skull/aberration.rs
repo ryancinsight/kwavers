@@ -3,7 +3,7 @@
 //! Reference: Aubry et al. (2003) "Experimental demonstration of noninvasive
 //! transskull adaptive focusing"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::physics::skull::HeterogeneousSkull;
 use ndarray::Array3;

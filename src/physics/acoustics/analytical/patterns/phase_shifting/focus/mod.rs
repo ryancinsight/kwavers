@@ -5,7 +5,7 @@
 //! References:
 //! - Ebbini & Cain (1989): "Multiple-focus ultrasound phased-array pattern synthesis"
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
@@ -47,9 +47,9 @@ impl DynamicFocusing {
         let focal_distance = (x * x + y * y + z * z).sqrt();
 
         if focal_distance < MIN_FOCAL_DISTANCE / 1000.0 {
-            return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                "Focal distance below minimum of {MIN_FOCAL_DISTANCE} mm"
-            )));
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                format!("Focal distance below minimum of {MIN_FOCAL_DISTANCE} mm"),
+            ));
         }
 
         self.focal_points = vec![[x, y, z]];
@@ -60,17 +60,17 @@ impl DynamicFocusing {
     /// Set multiple focal points
     pub fn set_multiple_focal_points(&mut self, points: Vec<[f64; 3]>) -> KwaversResult<()> {
         if points.len() > MAX_FOCAL_POINTS {
-            return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                "Number of focal points exceeds maximum of {MAX_FOCAL_POINTS}"
-            )));
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                format!("Number of focal points exceeds maximum of {MAX_FOCAL_POINTS}"),
+            ));
         }
 
         for point in &points {
             let focal_distance = (point[0].powi(2) + point[1].powi(2) + point[2].powi(2)).sqrt();
             if focal_distance < MIN_FOCAL_DISTANCE / 1000.0 {
-                return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                    "Focal distance below minimum of {MIN_FOCAL_DISTANCE} mm"
-                )));
+                return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                    format!("Focal distance below minimum of {MIN_FOCAL_DISTANCE} mm"),
+                ));
             }
         }
 

@@ -53,9 +53,9 @@ pub enum FieldType {
 
 impl OutputParameters {
     /// Validate output parameters
-    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
+    pub fn validate(&self) -> crate::domain::core::error::KwaversResult<()> {
         if self.save_interval == 0 {
-            return Err(crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::ConfigError::InvalidValue {
                 parameter: "save_interval".to_string(),
                 value: "0".to_string(),
                 constraint: "Must be positive".to_string(),
@@ -64,7 +64,7 @@ impl OutputParameters {
         }
 
         if self.fields.is_empty() {
-            return Err(crate::core::error::ConfigError::InvalidValue {
+            return Err(crate::domain::core::error::ConfigError::InvalidValue {
                 parameter: "fields".to_string(),
                 value: "empty".to_string(),
                 constraint: "Must specify at least one field to output".to_string(),

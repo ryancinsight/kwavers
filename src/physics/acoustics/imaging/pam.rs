@@ -1,11 +1,11 @@
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
+use crate::domain::plugin::{PluginContext, PluginMetadata, PluginState};
 use crate::domain::sensor::passive_acoustic_mapping::{
     ArrayGeometry, PAMConfig, PassiveAcousticMapper,
 };
-use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
 use ndarray::{Array3, Array4};
 
 #[derive(Debug)]
@@ -34,7 +34,7 @@ impl PAMPlugin {
     }
 }
 
-impl crate::physics::plugin::Plugin for PAMPlugin {
+impl crate::domain::plugin::Plugin for PAMPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

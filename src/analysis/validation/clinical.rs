@@ -30,7 +30,7 @@
 //! - **IEC 60601-2-37 (2015)**. "Medical electrical equipment - Part 2-37: Particular requirements for the basic safety and essential performance of ultrasonic medical diagnostic and monitoring equipment"
 //! - **FDA (2019)**. "Information for Manufacturers Seeking Marketing Clearance of Diagnostic Ultrasound Systems and Transducers"
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
 /// Clinical validation standards
@@ -270,9 +270,11 @@ impl ClinicalValidator {
             .requirements
             .get(&(ClinicalStandard::FDA510k, ClinicalCategory::BMode))
             .ok_or_else(|| {
-                KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
-                    message: "FDA 510(k) B-mode requirements not found".to_string(),
-                })
+                KwaversError::Validation(
+                    crate::domain::core::error::ValidationError::ConstraintViolation {
+                        message: "FDA 510(k) B-mode requirements not found".to_string(),
+                    },
+                )
             })?;
 
         let mut passed = true;
@@ -438,9 +440,11 @@ impl ClinicalValidator {
             .requirements
             .get(&(ClinicalStandard::IEC60601_2_37, ClinicalCategory::Safety))
             .ok_or_else(|| {
-                KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
-                    message: "IEC 60601-2-37 safety requirements not found".to_string(),
-                })
+                KwaversError::Validation(
+                    crate::domain::core::error::ValidationError::ConstraintViolation {
+                        message: "IEC 60601-2-37 safety requirements not found".to_string(),
+                    },
+                )
             })?;
 
         let mut passed = true;

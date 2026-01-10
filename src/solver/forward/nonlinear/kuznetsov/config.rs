@@ -3,7 +3,7 @@
 //! This module provides configuration options for the Kuznetsov equation solver,
 //! including numerical parameters, physical constants, and equation mode selection.
 
-use crate::core::error::{KwaversError, ValidationError};
+use crate::domain::core::error::{KwaversError, ValidationError};
 use crate::domain::grid::Grid;
 
 // Physical constants and numerical parameters

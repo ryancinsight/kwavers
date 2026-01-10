@@ -2,7 +2,7 @@
 
 use super::parameter::{ParameterType, ParameterValue};
 use super::state::InteractiveControls;
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use std::collections::HashMap;
 
 /// Configuration for the control panel

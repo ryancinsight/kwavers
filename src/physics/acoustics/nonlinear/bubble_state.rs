@@ -150,7 +150,7 @@ impl GasSpecies {
     /// not derived from gamma to maintain consistency with real gas models.
     #[must_use]
     pub fn molar_heat_capacity_cv(&self) -> f64 {
-        use crate::core::constants::GAS_CONSTANT as R_GAS;
+        use crate::domain::core::constants::GAS_CONSTANT as R_GAS;
 
         match self {
             // For diatomic gases (Air, N2, O2): Cv = (5/2)R

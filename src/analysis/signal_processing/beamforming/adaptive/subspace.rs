@@ -60,7 +60,7 @@
 //! analysis::signal_processing::beamforming::adaptive::subspace (Layer 7)
 //!   ↓ imports from
 //! math::linear_algebra::LinearAlgebra (Layer 1) - SSOT eigendecomposition
-//! core::error (Layer 0) - error handling
+//! domain::core::error (Layer 0) - error handling
 //! ```
 //!
 //! ## SSOT Enforcement (Strict)
@@ -169,8 +169,8 @@
 //! - **Before**: Lived in domain layer with ad-hoc eigensolvers and silent fallbacks
 //! - **After**: Analysis layer with strict SSOT routing and explicit error handling
 
-use crate::core::error::{KwaversError, KwaversResult, NumericalError};
-use crate::math::linear_algebra::LinearAlgebra;
+use crate::domain::core::error::{KwaversError, KwaversResult, NumericalError};
+use crate::domain::math::linear_algebra::LinearAlgebra;
 use ndarray::{s, Array1, Array2};
 use num_complex::Complex64;
 use num_traits::Zero;

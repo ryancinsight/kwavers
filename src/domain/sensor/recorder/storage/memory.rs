@@ -1,7 +1,7 @@
 //! Memory-based storage backend
 
 use super::StorageBackend;
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use ndarray::Array3;
 use std::collections::HashMap;
 

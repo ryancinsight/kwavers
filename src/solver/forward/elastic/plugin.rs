@@ -3,15 +3,15 @@
 //! This plugin integrates elastic wave propagation into the solver framework,
 //! providing full support for P-waves, S-waves, and mode conversion.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
+use crate::domain::plugin::{PluginContext, PluginMetadata, PluginState};
 use crate::domain::source::Source;
 use crate::physics::mechanics::elastic_wave::{
     ElasticStressFields, ElasticVelocityFields, ElasticWave,
 };
-use crate::physics::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
 use ndarray::{Array3, Array4};
 
 /// Elastic wave physics plugin
@@ -253,7 +253,7 @@ impl ElasticWavePlugin {
     }
 }
 
-impl Plugin for ElasticWavePlugin {
+impl crate::domain::plugin::Plugin for ElasticWavePlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

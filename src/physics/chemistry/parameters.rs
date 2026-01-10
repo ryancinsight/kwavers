@@ -3,7 +3,7 @@
 //! This module contains parameter structures and metrics for chemical simulations
 //! following the Single Responsibility Principle.
 
-use crate::core::error::{KwaversResult, PhysicsError};
+use crate::domain::core::error::{KwaversResult, PhysicsError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::Array3;
@@ -39,10 +39,12 @@ impl<'a> ChemicalUpdateParams<'a> {
     ) -> KwaversResult<Self> {
         // Validate parameters
         if dt <= 0.0 {
-            return Err(crate::core::error::NumericalError::InvalidOperation(
-                "Time step must be positive".to_string(),
-            )
-            .into());
+            return Err(
+                crate::domain::core::error::NumericalError::InvalidOperation(
+                    "Time step must be positive".to_string(),
+                )
+                .into(),
+            );
         }
 
         if frequency <= 0.0 {
@@ -59,9 +61,11 @@ impl<'a> ChemicalUpdateParams<'a> {
         let pressure_shape = pressure.dim();
 
         if pressure_shape != grid_shape {
-            return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                "Pressure array shape {pressure_shape:?} doesn't match grid {grid_shape:?}"
-            )));
+            return Err(crate::domain::core::error::KwaversError::InvalidInput(
+                format!(
+                    "Pressure array shape {pressure_shape:?} doesn't match grid {grid_shape:?}"
+                ),
+            ));
         }
 
         Ok(Self {

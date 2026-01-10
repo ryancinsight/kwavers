@@ -7,7 +7,7 @@ use super::imex_rk::{IMEXRKConfig, IMEXRKType, IMEXRK};
 #[cfg(test)]
 use super::*;
 #[cfg(test)]
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 #[cfg(test)]
 use crate::domain::grid::Grid;
 #[cfg(test)]

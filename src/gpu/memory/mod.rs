@@ -3,7 +3,7 @@
 //! Provides unified memory, memory pooling, streaming transfers, and compression
 //! for optimal multi-GPU performance.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use std::collections::HashMap;
 
 /// Memory pool types for different usage patterns

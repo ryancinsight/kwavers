@@ -1,7 +1,7 @@
 //! Array validation and performance metrics
 
 use super::constants::{GRATING_LOBE_THRESHOLD_RATIO, MAX_STEERING_ANGLE_RAD};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 
 /// Array validator for safety and performance checks
 #[derive(Debug, Clone)]

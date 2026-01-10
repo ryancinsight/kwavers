@@ -18,10 +18,11 @@
 //! - **Scalability**: Weak/strong scaling with grid size
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use kwavers::domain::imaging::ultrasound::elastography::InversionMethod;
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::imaging::modalities::elastography::ElasticWaveConfig;
-use kwavers::physics::imaging::modalities::elastography::{InversionMethod, ShearWaveElastography};
+use kwavers::simulation::imaging::elastography::ShearWaveElastography;
 // Simple finite difference derivative for benchmarking
 fn compute_derivative(field: &Array1<f64>, dx: f64, derivative: &mut Array1<f64>) {
     for i in 1..field.len() - 1 {

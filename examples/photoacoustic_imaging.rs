@@ -6,12 +6,12 @@
 //! - Acoustic wave propagation
 //! - Image reconstruction and validation
 
-use kwavers::core::error::KwaversResult;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::simulation::modalities::photoacoustic::{
     OpticalProperties, PhotoacousticParameters, PhotoacousticSimulator,
 };
+use kwavers::KwaversResult;
 use std::time::Instant;
 
 fn main() -> KwaversResult<()> {

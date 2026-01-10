@@ -9,7 +9,7 @@
 use super::bubble_state::{BubbleParameters, BubbleState};
 use super::energy_balance::EnergyBalanceCalculator;
 use super::thermodynamics::{MassTransferModel, ThermodynamicsCalculator, VaporPressureModel};
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 
 /// Keller-Miksis equation solver (compressible)
 ///
@@ -124,11 +124,13 @@ impl KellerMiksisModel {
         // Check for numerical stability (wall velocity approaching sound speed)
         // K-M equation becomes singular when Ṙ → c
         if mach > 0.95 {
-            return Err(crate::core::error::PhysicsError::NumericalInstability {
-                timestep: 0.0,
-                cfl_limit: mach,
-            }
-            .into());
+            return Err(
+                crate::domain::core::error::PhysicsError::NumericalInstability {
+                    timestep: 0.0,
+                    cfl_limit: mach,
+                }
+                .into(),
+            );
         }
 
         // Acoustic forcing with proper phase
@@ -170,11 +172,13 @@ impl KellerMiksisModel {
 
         // Check for division by zero (should not occur if mach < 0.95)
         if lhs_coeff.abs() < 1e-12 {
-            return Err(crate::core::error::PhysicsError::NumericalInstability {
-                timestep: 0.0,
-                cfl_limit: mach,
-            }
-            .into());
+            return Err(
+                crate::domain::core::error::PhysicsError::NumericalInstability {
+                    timestep: 0.0,
+                    cfl_limit: mach,
+                }
+                .into(),
+            );
         }
 
         let acceleration = (pressure_term + radiation_term - nonlinear_term) / lhs_coeff;
@@ -200,7 +204,7 @@ impl KellerMiksisModel {
     ///
     /// Reference: Qin et al. (2023), "Numerical investigation on acoustic cavitation"
     fn calculate_vdw_pressure(&self, state: &BubbleState) -> KwaversResult<f64> {
-        use crate::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
+        use crate::domain::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
 
         let volume = (4.0 / 3.0) * std::f64::consts::PI * state.radius.powi(3);
         let n_total = state.n_gas + state.n_vapor;
@@ -227,7 +231,7 @@ impl KellerMiksisModel {
 
         // Check for physical validity
         if volume <= excluded_volume {
-            return Err(crate::core::error::PhysicsError::InvalidParameter {
+            return Err(crate::domain::core::error::PhysicsError::InvalidParameter {
                 parameter: "bubble_volume".to_string(),
                 value: volume,
                 reason: format!(
@@ -311,7 +315,7 @@ impl KellerMiksisModel {
     /// * `state` - Current bubble state
     /// * `dt` - Time step \[s\]
     pub fn update_mass_transfer(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
-        use crate::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS, M_WATER};
+        use crate::domain::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS, M_WATER};
 
         // Calculate saturation vapor pressure at current temperature
         let p_sat = self.thermo_calc.vapor_pressure(state.temperature);
@@ -345,7 +349,7 @@ impl KellerMiksisModel {
         // Check physical bounds
         let n_total_new = state.n_gas + state.n_vapor;
         if n_total_new < 0.0 || n_total_new.is_nan() || n_total_new.is_infinite() {
-            return Err(crate::core::error::PhysicsError::InvalidParameter {
+            return Err(crate::domain::core::error::PhysicsError::InvalidParameter {
                 parameter: "vapor_content".to_string(),
                 value: state.n_vapor,
                 reason: format!(
@@ -448,7 +452,7 @@ impl KellerMiksisModel {
 
         // Physical bounds checking
         if !(0.0..=50000.0).contains(&t_new) || t_new.is_nan() || t_new.is_infinite() {
-            return Err(crate::core::error::PhysicsError::InvalidParameter {
+            return Err(crate::domain::core::error::PhysicsError::InvalidParameter {
                 parameter: "bubble_temperature".to_string(),
                 value: t_new,
                 reason: format!(
@@ -617,8 +621,8 @@ mod tests {
             assert!(
                 matches!(
                     e,
-                    crate::core::error::KwaversError::Physics(
-                        crate::core::error::PhysicsError::NumericalInstability { .. }
+                    crate::domain::core::error::KwaversError::Physics(
+                        crate::domain::core::error::PhysicsError::NumericalInstability { .. }
                     )
                 ),
                 "Should be numerical instability error"

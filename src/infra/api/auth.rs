@@ -12,7 +12,7 @@
 //! - Rate limiting integration
 //! - Audit logging for security events
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::core::error::{KwaversError, KwaversResult};
 use crate::infra::api::{APIError, APIErrorType};
 use axum::extract::FromRequestParts;
 use axum::http::{header::AUTHORIZATION, request::Parts, StatusCode};
@@ -367,10 +367,12 @@ impl AuthMiddleware {
             &self.jwt_encoding_key,
         )
         .map_err(|e| {
-            KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
-                parameter: "jwt_token_generation".to_string(),
-                reason: format!("Failed to generate JWT token: {}", e),
-            })
+            KwaversError::System(
+                crate::domain::core::error::SystemError::InvalidConfiguration {
+                    parameter: "jwt_token_generation".to_string(),
+                    reason: format!("Failed to generate JWT token: {}", e),
+                },
+            )
         })
     }
 

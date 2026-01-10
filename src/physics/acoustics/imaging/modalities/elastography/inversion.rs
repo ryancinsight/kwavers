@@ -37,119 +37,16 @@
 //! - Parker, K. J., et al. (2011). "Sonoelasticity of organs: Shear waves ring a bell."
 //!   *Journal of Ultrasound in Medicine*, 30(4), 507-515.
 
-use crate::core::error::KwaversResult;
+use crate::domain::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::physics::imaging::elastography::displacement::DisplacementField;
-use crate::physics::imaging::elastography::harmonic_detection::HarmonicDisplacementField;
+use crate::physics::imaging::elastography::HarmonicDisplacementField;
 use ndarray::Array3;
 use std::f64::consts::PI;
 
-/// Inversion method for elasticity reconstruction
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InversionMethod {
-    /// Time-of-flight method (simple, fast)
-    TimeOfFlight,
-    /// Phase gradient method (more accurate)
-    PhaseGradient,
-    /// Direct inversion (most accurate, computationally expensive)
-    DirectInversion,
-    /// 3D volumetric time-of-flight (for 3D SWE)
-    VolumetricTimeOfFlight,
-    /// 3D phase gradient with directional analysis
-    DirectionalPhaseGradient,
-}
-
-/// Nonlinear inversion method for advanced parameter estimation
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NonlinearInversionMethod {
-    /// Harmonic ratio method (B/A from A₂/A₁)
-    HarmonicRatio,
-    /// Iterative nonlinear least squares
-    NonlinearLeastSquares,
-    /// Bayesian inversion with uncertainty quantification
-    BayesianInversion,
-}
-
-/// Elasticity map containing reconstructed tissue properties
-#[derive(Debug, Clone)]
-pub struct ElasticityMap {
-    /// Young's modulus (Pa)
-    pub youngs_modulus: Array3<f64>,
-    /// Shear modulus (Pa) - related to Young's modulus
-    pub shear_modulus: Array3<f64>,
-    /// Shear wave speed (m/s)
-    pub shear_wave_speed: Array3<f64>,
-}
-
-/// Nonlinear parameter map for advanced tissue characterization
-#[derive(Debug, Clone)]
-pub struct NonlinearParameterMap {
-    /// Acoustic nonlinearity parameter B/A (dimensionless)
-    pub nonlinearity_parameter: Array3<f64>,
-    /// Higher-order elastic constants A, B, C, D (Pa)
-    pub elastic_constants: Vec<Array3<f64>>,
-    /// Uncertainty in nonlinearity parameter estimation
-    pub nonlinearity_uncertainty: Array3<f64>,
-    /// Signal quality metrics for nonlinear estimation
-    pub estimation_quality: Array3<f64>,
-}
-
-impl ElasticityMap {
-    /// Create elasticity map from shear wave speed
-    ///
-    /// # Arguments
-    ///
-    /// * `shear_wave_speed` - Shear wave speed field (m/s)
-    /// * `density` - Tissue density (kg/m³), typically 1000 kg/m³
-    ///
-    /// # Returns
-    ///
-    /// Elasticity map with derived properties
-    ///
-    /// # Physics
-    ///
-    /// For incompressible isotropic tissue:
-    /// - Shear modulus: μ = ρcs²
-    /// - Young's modulus: E = 3μ = 3ρcs² (Poisson's ratio ≈ 0.5)
-    pub fn from_shear_wave_speed(shear_wave_speed: Array3<f64>, density: f64) -> Self {
-        let (nx, ny, nz) = shear_wave_speed.dim();
-        let mut shear_modulus = Array3::zeros((nx, ny, nz));
-        let mut youngs_modulus = Array3::zeros((nx, ny, nz));
-
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    let cs = shear_wave_speed[[i, j, k]];
-                    shear_modulus[[i, j, k]] = density * cs * cs;
-                    youngs_modulus[[i, j, k]] = 3.0 * density * cs * cs;
-                }
-            }
-        }
-
-        Self {
-            youngs_modulus,
-            shear_modulus,
-            shear_wave_speed,
-        }
-    }
-
-    /// Get elasticity statistics (min, max, mean)
-    #[must_use]
-    pub fn statistics(&self) -> (f64, f64, f64) {
-        let min = self
-            .youngs_modulus
-            .iter()
-            .cloned()
-            .fold(f64::INFINITY, f64::min);
-        let max = self
-            .youngs_modulus
-            .iter()
-            .cloned()
-            .fold(f64::NEG_INFINITY, f64::max);
-        let mean = self.youngs_modulus.mean().unwrap_or(0.0);
-        (min, max, mean)
-    }
-}
+use crate::domain::imaging::ultrasound::elastography::{
+    ElasticityMap, InversionMethod, NonlinearInversionMethod, NonlinearParameterMap,
+};
 
 /// Shear wave inversion algorithm
 #[derive(Debug)]
@@ -278,7 +175,7 @@ impl ShearWaveInversion {
                             let cs = distance / arrival_time;
 
                             // Clamp to realistic range for soft tissue (0.5-10 m/s)
-                            shear_wave_speed[[i, j, k]] = cs.clamp(0.5, 10.0);
+                            shear_wave_speed[[i, j, k]] = cs.clamp(0.5f64, 10.0f64);
                         } else {
                             // At push location, use default speed
                             shear_wave_speed[[i, j, k]] = 3.0;
@@ -389,7 +286,7 @@ impl ShearWaveInversion {
             let frequency = 100.0; // Assume 100 Hz (typical for SWE)
             let cs = 2.0 * std::f64::consts::PI * frequency / wavenumber.abs().max(0.1);
 
-            Some(cs.clamp(0.5, 10.0))
+            Some(cs.clamp(0.5f64, 10.0f64))
         } else {
             None
         }
@@ -545,7 +442,7 @@ impl ShearWaveInversion {
 
                                 let arrival_time = distance / (normalized_amp * 10.0);
                                 let cs = distance / arrival_time;
-                                speed_estimates.push(cs.clamp(0.5, 10.0));
+                                speed_estimates.push(cs.clamp(0.5f64, 10.0f64));
                             }
                         }
 
@@ -631,7 +528,7 @@ impl ShearWaveInversion {
                         let dominant_k = kx.max(ky).max(kz).max(0.1);
                         let cs = angular_freq / dominant_k;
 
-                        shear_wave_speed[[i, j, k]] = cs.clamp(0.5, 10.0);
+                        shear_wave_speed[[i, j, k]] = cs.clamp(0.5f64, 10.0f64);
                     } else {
                         shear_wave_speed[[i, j, k]] = 3.0; // Default
                     }
@@ -768,8 +665,8 @@ impl ShearWaveInversion {
                     let z_dir = (speed_field[[i, j, k - 1]] + speed_field[[i, j, k + 1]]) / 2.0;
 
                     // Combine with directional weighting
-                    smoothed[[i, j, k]] =
-                        (center * 0.4 + x_dir * 0.2 + y_dir * 0.2 + z_dir * 0.2).clamp(0.5, 10.0);
+                    smoothed[[i, j, k]] = (center * 0.4 + x_dir * 0.2 + y_dir * 0.2 + z_dir * 0.2)
+                        .clamp(0.5f64, 10.0f64);
                 }
             }
         }
@@ -903,7 +800,7 @@ impl NonlinearInversion {
                         // Estimate uncertainty based on SNR
                         let snr = harmonic_field.harmonic_snrs[0][[i, j, k]];
                         nonlinearity_uncertainty[[i, j, k]] = if snr > 0.0 {
-                            (10.0 / snr).clamp(0.1, 5.0) // Relative uncertainty
+                            (10.0_f64 / snr).clamp(0.1_f64, 5.0_f64) // Relative uncertainty
                         } else {
                             1.0 // Default uncertainty
                         };
@@ -1181,6 +1078,7 @@ impl NonlinearParameterMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::Array3;
 
     #[test]
     fn test_elasticity_map_from_speed() {

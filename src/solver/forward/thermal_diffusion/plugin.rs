@@ -1,12 +1,9 @@
+use crate::domain::core::error::KwaversResult;
 use crate::domain::field::mapping::UnifiedFieldType;
-use crate::{
-    core::error::KwaversResult,
-    domain::{grid::Grid, medium::Medium},
-    physics::{
-        plugin::{PluginContext, PluginMetadata, PluginState},
-        thermal::diffusion::ThermalDiffusionConfig,
-    },
-};
+use crate::domain::grid::Grid;
+use crate::domain::medium::Medium;
+use crate::domain::plugin::{PluginContext, PluginMetadata, PluginState};
+use crate::physics::thermal::diffusion::ThermalDiffusionConfig;
 use ndarray::Array4;
 
 use super::solver::ThermalDiffusionSolver;
@@ -40,7 +37,7 @@ impl ThermalDiffusionPlugin {
     }
 }
 
-impl crate::physics::plugin::Plugin for ThermalDiffusionPlugin {
+impl crate::domain::plugin::Plugin for ThermalDiffusionPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

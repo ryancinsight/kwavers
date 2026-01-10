@@ -17,8 +17,8 @@
 use kwavers::domain::boundary::{PMLBoundary, PMLConfig};
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
-use kwavers::physics::plugin::PluginManager;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
+use kwavers::PluginManager;
 use ndarray::{s, Array4};
 
 /// Test CFL stability condition
@@ -33,7 +33,7 @@ fn test_cfl_stability_condition() {
     let medium = HomogeneousMedium::water(&grid);
 
     // Test stable CFL (should remain bounded)
-    let mut fields = Array4::zeros((17, nx, nx, nx));
+    let mut fields: Array4<f64> = Array4::zeros((17, nx, nx, nx));
     fields[[0, nx / 2, nx / 2, nx / 2]] = 1e6;
 
     let config = FdtdConfig {
@@ -99,7 +99,7 @@ fn test_energy_conservation() {
     let grid = Grid::new(nx, nx, nx, dx, dx, dx).expect("Failed to create grid");
     let medium = HomogeneousMedium::water(&grid);
 
-    let mut fields = Array4::zeros((17, nx, nx, nx));
+    let mut fields: Array4<f64> = Array4::zeros((17, nx, nx, nx));
 
     // Initialize Gaussian pulse
     let center = nx / 2;
