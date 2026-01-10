@@ -77,16 +77,23 @@ fn run_fdtd_simulation_with_time(
     initial_pressure: &Array3<f64>,
     t_end: f64,
 ) -> Array3<f64> {
+    let cfl_factor = 0.95;
+    let c = 1500.0;
+    let dt = cfl_factor * grid.dx.min(grid.dy).min(grid.dz) / c;
+    let n_steps = (t_end / dt).ceil() as usize;
+
     let config = FdtdConfig {
         spatial_order: 4,
         staggered_grid: true,
-        cfl_factor: 0.95,
+        cfl_factor,
         subgridding: false,
         subgrid_factor: 2,
         enable_gpu_acceleration: false,
+        nt: n_steps,
+        dt,
+        sensor_mask: None,
     };
 
-    let cfl_factor = config.cfl_factor;
     let mut plugin_manager = PluginManager::new();
     plugin_manager
         .add_plugin(Box::new(FdtdPlugin::new(config, grid).unwrap()))
@@ -97,11 +104,6 @@ fn run_fdtd_simulation_with_time(
     fields
         .slice_mut(ndarray::s![0, .., .., ..])
         .assign(initial_pressure);
-
-    // Time stepping
-    let c = 1500.0; // sound speed
-    let dt = cfl_factor * grid.dx.min(grid.dy).min(grid.dz) / c;
-    let n_steps = (t_end / dt).ceil() as usize;
 
     plugin_manager.initialize(grid, medium).unwrap();
 

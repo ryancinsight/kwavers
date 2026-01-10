@@ -53,6 +53,9 @@ fn test_fdtd_solver() {
     let center = TEST_GRID_SIZE / 2;
     fields[[0, center, center, center]] = TEST_PRESSURE_AMPLITUDE; // Point source in pressure field
 
+    let c = TEST_SOUND_SPEED;
+    let dt = FDTD_CFL_FACTOR * TEST_GRID_SPACING / c;
+
     let config = FdtdConfig {
         spatial_order: 2,
         staggered_grid: true,
@@ -60,6 +63,9 @@ fn test_fdtd_solver() {
         subgridding: false,
         subgrid_factor: DEFAULT_SUBGRID_FACTOR,
         enable_gpu_acceleration: false,
+        nt: TEST_STEPS_SHORT + 1,
+        dt,
+        sensor_mask: None,
     };
 
     let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");
@@ -72,8 +78,6 @@ fn test_fdtd_solver() {
         .initialize(&grid, &medium)
         .expect("Failed to initialize plugins");
 
-    let c = TEST_SOUND_SPEED;
-    let dt = FDTD_CFL_FACTOR * TEST_GRID_SPACING / c;
     let sources: Vec<Box<dyn Source>> = Vec::new();
     let mut boundary = PMLBoundary::new(PMLConfig {
         thickness: DEFAULT_PML_STENCIL_SIZE,
@@ -259,6 +263,8 @@ fn test_wave_propagation() {
     // Test FDTD
     {
         let mut fields_fdtd = initial_fields.clone();
+        let c = TEST_SOUND_SPEED;
+        let dt = FDTD_CFL_FACTOR * TEST_GRID_SPACING / c;
         let config = FdtdConfig {
             spatial_order: 2,
             staggered_grid: true,
@@ -266,6 +272,9 @@ fn test_wave_propagation() {
             subgridding: false,
             subgrid_factor: DEFAULT_SUBGRID_FACTOR,
             enable_gpu_acceleration: false,
+            nt: TEST_STEPS_MEDIUM + 1,
+            dt,
+            sensor_mask: None,
         };
 
         let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");
@@ -277,8 +286,6 @@ fn test_wave_propagation() {
             .initialize(&grid, &medium)
             .expect("Failed to initialize plugins");
 
-        let c = TEST_SOUND_SPEED;
-        let dt = FDTD_CFL_FACTOR * TEST_GRID_SPACING / c;
         let sources: Vec<Box<dyn Source>> = Vec::new();
         let mut boundary = PMLBoundary::new(PMLConfig {
             thickness: DEFAULT_PML_STENCIL_SIZE,

@@ -10,11 +10,11 @@ use std::f64::consts::PI;
 use kwavers::analysis::signal_processing::beamforming::adaptive::MinimumVariance;
 
 #[cfg(feature = "legacy_algorithms")]
-use kwavers::domain::sensor::beamforming::adaptive::conventional::BeamformingAlgorithm;
-#[cfg(feature = "legacy_algorithms")]
 use kwavers::domain::sensor::beamforming::adaptive::legacy::LCMV;
 #[cfg(feature = "legacy_algorithms")]
-use kwavers::domain::sensor::beamforming::{SourceEstimationCriterion, MUSIC};
+use kwavers::domain::sensor::beamforming::adaptive::{
+    LegacyMinimumVariance, SourceEstimationCriterion, MUSIC,
+};
 
 /// Create a simple test covariance matrix
 fn create_test_covariance(n: usize) -> Array2<Complex64> {
@@ -159,7 +159,7 @@ mod tests {
         let n = 8;
         let cov = create_test_covariance(n);
 
-        let condition_number = MinimumVariance::covariance_condition_number(&cov);
+        let condition_number = LegacyMinimumVariance::covariance_condition_number(&cov);
 
         // Should be finite and positive
         assert!(condition_number > 0.0);

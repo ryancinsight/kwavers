@@ -183,7 +183,7 @@ pub mod uncertainty;
 #[cfg(feature = "pinn")]
 pub mod pinn;
 
-#[cfg(all(feature = "pinn", feature = "gpu"))]
+#[cfg(feature = "pinn")]
 pub mod distributed;
 
 // Re-export primary types for convenience
