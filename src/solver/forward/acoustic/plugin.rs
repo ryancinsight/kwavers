@@ -9,6 +9,7 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::physics::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
 use ndarray::Array3;
+use ndarray::Array4;
 
 /// Acoustic wave propagation plugin
 #[derive(Debug)]
