@@ -150,7 +150,7 @@
 //! All covariance operations should now use this module (SSOT enforcement).
 
 use crate::core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array2, Axis};
+use ndarray::Array2;
 use num_complex::Complex64;
 
 /// Estimate sample covariance matrix from multi-snapshot sensor data.

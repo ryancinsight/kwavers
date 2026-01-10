@@ -4,8 +4,6 @@
 //! spectral solver.
 
 use super::numerics::spectral_correction::SpectralCorrectionConfig;
-use crate::core::error::{ConfigError, KwaversError};
-use crate::domain::grid::Grid;
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};
 

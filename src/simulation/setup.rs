@@ -9,7 +9,6 @@ use crate::domain::medium::{Medium, MediumBuilder};
 use crate::domain::sensor::GridSensorSet;
 use crate::domain::source::{Source, SourceFactory};
 use crate::simulation::configuration::Configuration;
-use crate::simulation::core::CoreSimulation;
 use std::sync::Arc;
 
 /// Container for simulation components

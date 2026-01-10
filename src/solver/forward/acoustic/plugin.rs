@@ -4,12 +4,11 @@
 //! It depends only on abstractions and is completely decoupled from the solver.
 
 use crate::core::error::KwaversResult;
-use crate::domain::field::indices;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::physics::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
-use ndarray::{Array3, Array4};
+use ndarray::Array3;
 
 /// Acoustic wave propagation plugin
 #[derive(Debug)]

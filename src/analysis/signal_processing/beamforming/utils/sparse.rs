@@ -123,7 +123,7 @@
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::core::utils::sparse_matrix::{CompressedSparseRowMatrix, CoordinateMatrix};
-use ndarray::{Array1, Array2};
+use ndarray::Array2;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 

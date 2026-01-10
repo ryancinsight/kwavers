@@ -126,7 +126,7 @@
 //!   DOI: 10.1109/TUFFC.2009.1263
 
 use crate::core::error::KwaversResult;
-use ndarray::{Array1, Array2, Array3};
+use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
 /// Root trait for all beamforming algorithms.

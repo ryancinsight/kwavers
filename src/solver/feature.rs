@@ -32,7 +32,6 @@ pub enum SolverFeature {
     ExperimentalFeatures,
 }
 
-/// Feature set using bitflags for efficient storage and operations
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
     pub struct SolverFeatureSet: u32 {

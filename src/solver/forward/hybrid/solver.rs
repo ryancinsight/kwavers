@@ -13,7 +13,6 @@ use crate::solver::hybrid::config::{DecompositionStrategy, HybridConfig};
 use crate::solver::hybrid::coupling::CouplingInterface;
 use crate::solver::hybrid::domain_decomposition::{DomainDecomposer, DomainRegion, DomainType};
 use crate::solver::hybrid::metrics::{HybridMetrics, ValidationResults};
-use crate::solver::interface::Solver;
 use log::{debug, info};
 use ndarray::{s, Array4};
 use std::sync::Arc;

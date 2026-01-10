@@ -5,4 +5,4 @@ pub use config::ValidationParameters;
 pub mod numerical_methods;
 
 #[cfg(test)]
-pub use numerical_methods::*;
+pub use numerical_methods;

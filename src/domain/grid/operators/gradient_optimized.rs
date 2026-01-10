@@ -217,7 +217,7 @@ where
     let mut grad_z = Array3::<T>::zeros((nx, ny, nz));
 
     let coeffs = FDCoefficients::first_derivative::<T>(order);
-    let stencil_radius = coeffs.len();
+    let _stencil_radius = coeffs.len();
     let dx_inv = T::one() / T::from(grid.dx).unwrap();
     let dy_inv = T::one() / T::from(grid.dy).unwrap();
     let dz_inv = T::one() / T::from(grid.dz).unwrap();

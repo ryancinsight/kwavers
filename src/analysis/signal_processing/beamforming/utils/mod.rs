@@ -148,7 +148,7 @@
 //!   DOI: 10.1109/PROC.1978.10837
 
 use crate::core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2};
+use ndarray::Array1;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 

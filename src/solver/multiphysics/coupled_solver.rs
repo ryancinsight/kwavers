@@ -2,11 +2,10 @@
 //!
 //! This module implements a unified solver for coupled acoustic-optical-thermal simulations.
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::error::KwaversResult;
 use crate::domain::field::indices::*;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::solver::interface::Solver;
 use crate::solver::multiphysics::field_coupling::{CouplingStrategy, FieldCoupler};
 use ndarray::Array3;
 use std::sync::Arc;

@@ -171,7 +171,6 @@ impl Grid {
             k2
         })
     }
-}
 
     /// Creates a new grid with the same spacing in all directions
     pub fn uniform(n: usize, spacing: f64) -> Result<Self, GridError> {

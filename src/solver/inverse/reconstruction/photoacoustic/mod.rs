@@ -30,8 +30,6 @@ pub use filters::Filters;
 pub use iterative::IterativeAlgorithm;
 
 use crate::core::error::KwaversResult;
-use crate::domain::grid::Grid;
-use crate::domain::medium::Medium;
 use crate::solver::reconstruction::Reconstructor;
 use ndarray::{Array2, Array3};
 

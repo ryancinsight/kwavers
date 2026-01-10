@@ -279,7 +279,7 @@ impl AdaptiveBeamformer for EigenspaceMV {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::analysis::signal_processing::beamforming::test_utilities::{self, angle};
+    use crate::analysis::signal_processing::beamforming::test_utilities;
     use approx::assert_relative_eq;
 
     #[test]

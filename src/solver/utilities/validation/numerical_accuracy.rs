@@ -6,8 +6,6 @@
 
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
-use crate::solver::interface::Solver;
-use ndarray::Array3;
 
 /// Validation results for numerical accuracy tests
 #[derive(Debug, Clone, Default)]

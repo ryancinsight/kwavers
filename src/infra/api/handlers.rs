@@ -190,7 +190,7 @@ pub async fn run_inference(
                 message: "PINN inference is not available: stored model artifacts are not yet deserializable into an executable model".to_string(),
                 details: None,
             }),
-        ));
+        ))
     }
 
     #[cfg(not(feature = "pinn"))]

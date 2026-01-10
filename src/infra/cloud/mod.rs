@@ -451,7 +451,7 @@ impl CloudPINNService {
         use aws_sdk_sagemaker::{types::ProductionVariant, Client as SageMakerClient};
 
         // Load AWS configuration
-        let shared_config = aws_config::defaults(BehaviorVersion::v2025_01_17())
+        let shared_config = aws_config::defaults(BehaviorVersion::v2025_08_07())
             .region(aws_config::Region::new(config.region.clone()))
             .load()
             .await;
@@ -660,7 +660,7 @@ impl CloudPINNService {
             })
         })?;
 
-        let shared_config = aws_config::defaults(BehaviorVersion::v2025_01_17())
+        let shared_config = aws_config::defaults(BehaviorVersion::v2025_08_07())
             .region(aws_config::Region::new(region.clone()))
             .load()
             .await;
