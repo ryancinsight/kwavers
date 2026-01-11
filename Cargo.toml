@@ -79,7 +79,7 @@ pollster = { version = "0.4", optional = true }
 
 # Machine Learning (Sprint 143 - PINNs with burn integration)
 # Updated to burn 0.18.0 (bincode compatibility resolved)
-burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu", "train"], optional = true }
+burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu"], optional = true }
 
 # Visualization (optional)
 plotly = { version = "0.8", optional = true }

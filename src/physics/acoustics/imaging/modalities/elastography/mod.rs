@@ -20,10 +20,17 @@ pub mod radiation_force;
 
 // Re-exports
 pub use displacement::DisplacementField;
-pub use elastic_wave_solver::{
+
+// Solver components now correctly located in solver/forward/elastic/swe
+// Re-export for convenience
+pub use crate::solver::forward::elastic::swe::{
     ArrivalDetection, ElasticBodyForceConfig, ElasticWaveConfig, ElasticWaveField,
-    ElasticWaveSolver, VolumetricSource, VolumetricWaveConfig, WaveFrontTracker,
+    ElasticWaveSolver, PMLBoundary, PMLConfig, StressDerivatives, TimeIntegrator,
+    VolumetricQualityMetrics, VolumetricSource, VolumetricWaveConfig, WaveFrontTracker,
 };
+
+// Legacy compatibility: elastic_wave_solver.rs still exists temporarily
+pub use elastic_wave_solver::ElasticWaveSolver as LegacyElasticWaveSolver;
 pub use gpu_accelerated_3d::{AdaptiveResolution, GPUDevice, GPUElasticWaveSolver3D};
 pub use harmonic_detection::{
     HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField,

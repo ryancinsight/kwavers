@@ -45,6 +45,8 @@ pub enum SolverType {
     FDTD,
     /// Pseudo-spectral Time Domain
     PSTD,
+    /// Hybrid solver combining PSTD and FDTD
+    Hybrid,
     /// k-space pseudo-spectral
     KSpace,
     /// Discontinuous Galerkin

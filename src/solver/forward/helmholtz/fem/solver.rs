@@ -5,6 +5,7 @@
 //! approximations fail.
 
 use crate::core::error::KwaversResult;
+use crate::domain::boundary::FemBoundaryManager;
 use crate::domain::medium::Medium;
 use crate::domain::mesh::TetrahedralMesh;
 use ndarray::{Array1, ArrayView2};
@@ -47,6 +48,8 @@ pub struct FemHelmholtzSolver {
     config: FemHelmholtzConfig,
     /// Tetrahedral mesh
     mesh: TetrahedralMesh,
+    /// Boundary condition manager
+    boundary_manager: FemBoundaryManager,
     /// Global system matrix (simplified dense for now)
     system_matrix: Array1<f64>,
     /// Right-hand side vector
@@ -62,6 +65,7 @@ impl FemHelmholtzSolver {
         Self {
             config,
             mesh,
+            boundary_manager: FemBoundaryManager::new(),
             system_matrix: Array1::zeros(num_dofs),
             rhs: Array1::zeros(num_dofs),
             solution: Array1::zeros(num_dofs),
@@ -76,7 +80,7 @@ impl FemHelmholtzSolver {
 
         // Initialize with basic Helmholtz operator
         for i in 0..num_dofs {
-            self.system_matrix[i] = self.config.wavenumber.powi(2) as f64;
+            self.system_matrix[i] = self.config.wavenumber.powi(2);
         }
 
         Ok(())
@@ -92,21 +96,23 @@ impl FemHelmholtzSolver {
     }
 
     /// Interpolate solution at query points (placeholder)
-    pub fn interpolate_solution(&self, _query_points: ArrayView2<f64>) -> KwaversResult<Array1<Complex64>> {
+    pub fn interpolate_solution(
+        &self,
+        _query_points: ArrayView2<f64>,
+    ) -> KwaversResult<Array1<Complex64>> {
         Ok(self.solution.clone())
     }
-}
 
-impl Default for FemHelmholtzConfig {
-    fn default() -> Self {
-        Self {
-            polynomial_degree: 1,
-            wavenumber: 1.0,
-            tolerance: 1e-8,
-            max_iterations: 1000,
-            preconditioner: PreconditionerType::Diagonal,
-            radiation_boundary: true,
-        }
+    /// Get mutable reference to boundary condition manager
+    #[must_use]
+    pub fn boundary_manager(&mut self) -> &mut FemBoundaryManager {
+        &mut self.boundary_manager
+    }
+
+    /// Get reference to boundary condition manager
+    #[must_use]
+    pub fn boundary_manager_ref(&self) -> &FemBoundaryManager {
+        &self.boundary_manager
     }
 }
 

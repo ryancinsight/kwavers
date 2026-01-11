@@ -18,7 +18,7 @@
 
 #[cfg(feature = "gpu")]
 use kwavers::{
-    sensor::beamforming::{
+    domain::sensor::beamforming::{
         ApodizationWindow, BeamformingAlgorithm3D, BeamformingConfig3D, BeamformingProcessor3D,
     },
     KwaversResult,
@@ -114,8 +114,8 @@ async fn demonstrate_delay_and_sum() -> KwaversResult<()> {
     println!("  Volume dimensions: {}×{}×{}", nx, ny, nz);
     println!(
         "  Volume range: {:.3} to {:.3}",
-        volume.iter().fold(f32::INFINITY, |a, &b| a.min(b)),
-        volume.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b))
+        volume.iter().copied().fold(f32::INFINITY, f32::min),
+        volume.iter().copied().fold(f32::NEG_INFINITY, f32::max)
     );
 
     // Get performance metrics
@@ -171,7 +171,10 @@ async fn demonstrate_dynamic_focusing() -> KwaversResult<()> {
 
         // Calculate basic quality metrics
         let mean_signal = volume.mean().unwrap_or(0.0);
-        let max_signal = volume.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+        let max_signal = volume
+            .iter()
+            .copied()
+            .fold(f32::NEG_INFINITY, f32::max);
         let dynamic_range = if mean_signal != 0.0 {
             20.0 * (max_signal / mean_signal.abs()).log10()
         } else {

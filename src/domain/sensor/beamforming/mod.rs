@@ -1,76 +1,78 @@
-//! Beamforming Algorithms for Ultrasound Arrays
+//! Domain-Specific Beamforming Operations for Ultrasound Sensors
 //!
-//! ⚠️ **DEPRECATION NOTICE** ⚠️
+//! This module handles **sensor-specific beamforming operations** that are tightly coupled
+//! to hardware characteristics and array geometry. It provides the domain layer interface
+//! for beamforming while delegating algorithmic complexity to the analysis layer.
 //!
-//! This module is **deprecated** and will be removed in version 3.0.0.
+//! ## Architectural Role
 //!
-//! **New Location:** [`crate::analysis::signal_processing::beamforming`]
+//! **Domain Layer Responsibilities:**
+//! - Sensor geometry and array configuration
+//! - Hardware-specific delay calculations
+//! - Array-specific optimizations and constraints
+//! - Real-time processing interfaces
 //!
-//! # Migration Guide
+//! **Analysis Layer Delegation:**
+//! - General-purpose beamforming algorithms ([`crate::analysis::signal_processing::beamforming`])
+//! - Mathematical optimizations and transformations
+//! - Advanced signal processing techniques
 //!
-//! Beamforming algorithms have been moved to the analysis layer to enforce proper
-//! architectural layering. The domain layer should only contain sensor geometry
-//! and hardware-specific primitives, not signal processing algorithms.
+//! ## Design Principles
 //!
-//! ## Quick Migration
+//! - **Hardware Coupling**: Operations tied to specific sensor geometries and hardware constraints
+//! - **Accessor Pattern**: Uses analysis algorithms through well-defined interfaces
+//! - **Performance Focus**: Optimized for real-time processing with specific array types
+//! - **Zero Abstraction**: Minimal indirection for time-critical operations
 //!
-//! **Old (deprecated):**
+//! ## Usage Pattern
+//!
 //! ```rust,ignore
-//! use kwavers::domain::sensor::beamforming::adaptive::MinimumVariance;
-//! use kwavers::domain::sensor::beamforming::time_domain::DelayAndSum;
-//! ```
+//! use kwavers::domain::sensor::{GridSensorSet, beamforming::SensorBeamformer};
 //!
-//! **New (canonical):**
-//! ```rust,ignore
-//! use kwavers::analysis::signal_processing::beamforming::adaptive::MinimumVariance;
+//! // 1. Configure sensor array (domain layer)
+//! let sensors = GridSensorSet::new(sensor_positions, sampling_rate)?;
+//!
+//! // 2. Create sensor-specific beamformer (domain layer)
+//! let beamformer = SensorBeamformer::new(&sensors);
+//!
+//! // 3. Delegate to analysis algorithms through accessor pattern
+//! let delays = beamformer.calculate_delays(&image_grid, sound_speed)?;
+//! let weights = beamformer.apply_windowing(delays, WindowType::Hanning)?;
+//!
+//! // 4. Process with analysis algorithms
 //! use kwavers::analysis::signal_processing::beamforming::time_domain::DelayAndSum;
+//! let processor = DelayAndSum::new();
+//! let image = processor.process(&rf_data, &weights, &image_grid)?;
 //! ```
 //!
-//! ## Migration Timeline
+//! ## Layer Separation
 //!
-//! - **Version 2.1.0** (current): Deprecation warnings, backward compatibility maintained
-//! - **Version 2.2.0**: Continued support with deprecation warnings
-//! - **Version 3.0.0**: Old location removed entirely
+//! | Concern | Domain Layer | Analysis Layer |
+//! |---------|-------------|----------------|
+//! | Sensor geometry | ✅ Owns | Uses interface |
+//! | Delay calculations | ✅ Hardware-specific | General algorithms |
+//! | Steering vectors | ✅ Array-optimized | Mathematical primitives |
+//! | Beamforming algorithms | Delegates | ✅ Owns |
+//! | Optimization | Hardware constraints | Mathematical methods |
 //!
-//! ## Documentation
+//! ## References
 //!
-//! See `docs/refactor/BEAMFORMING_MIGRATION_GUIDE.md` for complete migration instructions,
-//! examples, and architectural rationale.
-//!
-//! ---
-//!
-//! # Original Documentation (Deprecated)
-//!
-//! This module implements state-of-the-art beamforming algorithms for ultrasound
-//! imaging and passive acoustic mapping, following established literature and
-//! designed for large-scale array processing.
-//!
-//! # Design Principles
-//! - **Literature-Based**: All algorithms follow established papers
-//! - **Zero-Copy**: Efficient `ArrayView` usage throughout
-//! - **Sparse Operations**: Designed for large arrays with sparse matrices
-//! - **Modular Design**: Plugin-compatible architecture
-//!
-//! # Field jargon / capability map
-//! - **A (broadband / transient)**: time-domain **DAS / SRP-DAS** via `time_domain` with an explicit
-//!   **delay datum / delay reference** (recommended default: reference sensor 0).
-//! - **B (narrowband / adaptive)**: point-steered **MVDR/Capon spatial spectrum** via `narrowband`
-//!   plus subspace methods (MUSIC/ESMV) via `adaptive` + steering + covariance estimation.
-//!
-//! # Literature References
-//! - Van Veen & Buckley (1988): "Beamforming: A versatile approach to spatial filtering"
-//! - Li et al. (2003): "Robust Capon beamforming"
-//! - Schmidt (1986): "Multiple emitter location and signal parameter estimation"
-//! - Capon (1969): "High-resolution frequency-wavenumber spectrum analysis"
-//! - Frost (1972): "An algorithm for linearly constrained adaptive array processing"
+//! - Van Trees, H. L. (2002). *Optimum Array Processing*. Wiley-Interscience.
+//! - Capon, J. (1969). "High-resolution frequency-wavenumber spectrum analysis."
+//!   *Proceedings of the IEEE*, 57(8), 1408-1418.
 
+// Domain-specific beamforming interface
+pub mod sensor_beamformer;
+
+// Legacy modules (being phased out - use analysis layer instead)
+// These remain for backward compatibility but delegate to analysis algorithms
 pub mod adaptive;
 #[cfg(any(feature = "experimental_neural", feature = "pinn"))]
 pub mod ai_integration;
 mod beamforming_3d;
 mod config;
 pub mod covariance;
-#[cfg(feature = "experimental_neural")]
+#[cfg(any(feature = "experimental_neural", feature = "pinn"))]
 pub mod experimental;
 mod processor;
 #[cfg(feature = "gpu")]
@@ -78,6 +80,10 @@ mod shaders;
 mod steering;
 pub mod time_domain;
 
+// Domain-specific interface (recommended for new code)
+pub use sensor_beamformer::{SensorBeamformer, SensorProcessingParams, WindowType};
+
+// Legacy re-exports (deprecated - use analysis layer directly)
 pub use adaptive::{
     AdaptiveBeamformer, ArrayGeometry, BeamformingAlgorithm as AdaptiveBeamformingAlgorithm,
     CovarianceTaper, DelayAndSum, MinimumVariance, SteeringMatrix,

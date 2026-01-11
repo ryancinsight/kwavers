@@ -2,16 +2,18 @@
 
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, ArrayView1, ArrayView2};
+use num_traits::Zero;
+use std::ops::{AddAssign, Mul};
 
 /// Compressed Sparse Row matrix format
 #[derive(Debug, Clone)]
-pub struct CompressedSparseRowMatrix {
+pub struct CompressedSparseRowMatrix<T = f64> {
     /// Number of rows
     pub rows: usize,
     /// Number of columns  
     pub cols: usize,
     /// Non-zero values
-    pub values: Vec<f64>,
+    pub values: Vec<T>,
     /// Column indices for each value
     pub col_indices: Vec<usize>,
     /// Row pointers (start index for each row)
@@ -20,20 +22,11 @@ pub struct CompressedSparseRowMatrix {
     pub nnz: usize,
 }
 
-impl CompressedSparseRowMatrix {
-    /// Create CSR matrix with specified dimensions
-    #[must_use]
-    pub fn create(rows: usize, cols: usize) -> Self {
-        Self {
-            rows,
-            cols,
-            values: Vec::new(),
-            col_indices: Vec::new(),
-            row_pointers: vec![0; rows + 1],
-            nnz: 0,
-        }
-    }
+pub trait CsrScalar: Copy + Zero + AddAssign + Mul<Output = Self> {
+    fn magnitude(self) -> f64;
+}
 
+impl CompressedSparseRowMatrix<f64> {
     /// Create CSR matrix from dense matrix with sparsity threshold
     #[must_use]
     pub fn from_dense(dense: ArrayView2<f64>, threshold: f64) -> Self {
@@ -63,9 +56,52 @@ impl CompressedSparseRowMatrix {
             nnz,
         }
     }
+}
+
+impl CsrScalar for f64 {
+    fn magnitude(self) -> f64 {
+        self.abs()
+    }
+}
+
+impl CsrScalar for num_complex::Complex64 {
+    fn magnitude(self) -> f64 {
+        self.norm()
+    }
+}
+
+impl<T> CompressedSparseRowMatrix<T> {
+    /// Create CSR matrix with specified dimensions
+    #[must_use]
+    pub fn create(rows: usize, cols: usize) -> Self {
+        Self {
+            rows,
+            cols,
+            values: Vec::new(),
+            col_indices: Vec::new(),
+            row_pointers: vec![0; rows + 1],
+            nnz: 0,
+        }
+    }
+
+    /// Create CSR matrix with pre-allocated capacity
+    #[must_use]
+    pub fn with_capacity(rows: usize, cols: usize, capacity: usize) -> Self {
+        Self {
+            rows,
+            cols,
+            values: Vec::with_capacity(capacity),
+            col_indices: Vec::with_capacity(capacity),
+            row_pointers: vec![0; rows + 1],
+            nnz: 0,
+        }
+    }
 
     /// Matrix-vector multiplication: y = A * x
-    pub fn multiply_vector(&self, x: ArrayView1<f64>) -> KwaversResult<Array1<f64>> {
+    pub fn multiply_vector(&self, x: ArrayView1<T>) -> KwaversResult<Array1<T>>
+    where
+        T: CsrScalar,
+    {
         if x.len() != self.cols {
             return Err(crate::core::error::KwaversError::Numerical(
                 crate::core::error::NumericalError::Instability {
@@ -75,10 +111,10 @@ impl CompressedSparseRowMatrix {
             ));
         }
 
-        let mut y = Array1::zeros(self.rows);
+        let mut y = Array1::from_elem(self.rows, T::zero());
 
         for i in 0..self.rows {
-            let mut sum = 0.0;
+            let mut sum = T::zero();
             for j in self.row_pointers[i]..self.row_pointers[i + 1] {
                 sum += self.values[j] * x[self.col_indices[j]];
             }
@@ -90,7 +126,7 @@ impl CompressedSparseRowMatrix {
 
     /// Get row as slice
     #[must_use]
-    pub fn get_row(&self, row: usize) -> (&[f64], &[usize]) {
+    pub fn get_row(&self, row: usize) -> (&[T], &[usize]) {
         let start = self.row_pointers[row];
         let end = self.row_pointers[row + 1];
         (&self.values[start..end], &self.col_indices[start..end])
@@ -98,8 +134,15 @@ impl CompressedSparseRowMatrix {
 
     /// Compute Frobenius norm
     #[must_use]
-    pub fn frobenius_norm(&self) -> f64 {
-        self.values.iter().map(|v| v * v).sum::<f64>().sqrt()
+    pub fn frobenius_norm(&self) -> f64
+    where
+        T: CsrScalar,
+    {
+        self.values
+            .iter()
+            .map(|&v| v.magnitude().powi(2))
+            .sum::<f64>()
+            .sqrt()
     }
 
     /// Get sparsity ratio
@@ -110,8 +153,11 @@ impl CompressedSparseRowMatrix {
 
     /// Convert to dense matrix
     #[must_use]
-    pub fn to_dense(&self) -> ndarray::Array2<f64> {
-        let mut dense = ndarray::Array2::zeros((self.rows, self.cols));
+    pub fn to_dense(&self) -> ndarray::Array2<T>
+    where
+        T: Copy + Zero,
+    {
+        let mut dense = ndarray::Array2::from_elem((self.rows, self.cols), T::zero());
 
         for i in 0..self.rows {
             for j in self.row_pointers[i]..self.row_pointers[i + 1] {
@@ -123,7 +169,10 @@ impl CompressedSparseRowMatrix {
     }
 
     /// Add value to matrix at (row, col) position
-    pub fn add_value(&mut self, row: usize, col: usize, value: f64) {
+    pub fn add_value(&mut self, row: usize, col: usize, value: T)
+    where
+        T: Copy + AddAssign,
+    {
         // Find position in row
         let row_start = self.row_pointers[row];
         let row_end = self.row_pointers[row + 1];
@@ -149,13 +198,19 @@ impl CompressedSparseRowMatrix {
     }
 
     /// Set diagonal entry
-    pub fn set_diagonal(&mut self, row: usize, value: f64) {
+    pub fn set_diagonal(&mut self, row: usize, value: T)
+    where
+        T: Copy + AddAssign,
+    {
         self.add_value(row, row, value);
     }
 
     /// Get diagonal entry
     #[must_use]
-    pub fn get_diagonal(&self, row: usize) -> f64 {
+    pub fn get_diagonal(&self, row: usize) -> T
+    where
+        T: Copy + Zero,
+    {
         let row_start = self.row_pointers[row];
         let row_end = self.row_pointers[row + 1];
 
@@ -165,7 +220,7 @@ impl CompressedSparseRowMatrix {
             }
         }
 
-        0.0 // Zero if not found
+        T::zero()
     }
 
     /// Zero out row (except diagonal)
@@ -212,10 +267,13 @@ impl CompressedSparseRowMatrix {
     }
 
     /// Compress matrix by removing near-zero entries
-    pub fn compress(&mut self, tolerance: f64) {
+    pub fn compress(&mut self, tolerance: f64)
+    where
+        T: CsrScalar,
+    {
         let mut i = 0;
         while i < self.values.len() {
-            if self.values[i].abs() < tolerance {
+            if self.values[i].magnitude() < tolerance {
                 // Remove entry
                 self.values.remove(i);
                 self.col_indices.remove(i);

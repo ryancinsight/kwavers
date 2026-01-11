@@ -38,6 +38,9 @@ use std::collections::HashMap;
 // Validation constants to replace magic numbers
 // Removed unused validation constants - use constants module instead
 
+// Architecture standards and quality guidelines
+pub mod architecture;
+
 // Core infrastructure (foundational layer)
 pub mod core;
 
@@ -86,7 +89,7 @@ pub mod source {
 pub mod sensor {
     pub use crate::domain::sensor::GridSensorSet;
     pub mod beamforming {
-        pub use crate::domain::sensor::beamforming::BeamformingCoreConfig;
+        pub use crate::domain::sensor::beamforming::{SensorBeamformer, SensorProcessingParams, WindowType};
     }
 }
 pub mod boundary {

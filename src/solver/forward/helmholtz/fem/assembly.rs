@@ -4,6 +4,7 @@
 //! Provides efficient sparse matrix construction and boundary condition application.
 
 use crate::core::error::KwaversResult;
+use crate::domain::mesh::Tetrahedron;
 use crate::math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use ndarray::Array1;
 use num_complex::Complex64;
@@ -23,11 +24,7 @@ impl FemAssembly {
 
     /// Estimate sparsity pattern for efficient memory allocation
     #[must_use]
-    pub fn estimate_sparsity_pattern(
-        &self,
-        num_nodes: usize,
-        elements: &[super::Tetrahedron],
-    ) -> usize {
+    pub fn estimate_sparsity_pattern(&self, num_nodes: usize, _elements: &[Tetrahedron]) -> usize {
         // Estimate number of non-zeros based on tetrahedral connectivity
         // Each node connects to ~20-30 other nodes in 3D tetrahedral mesh
 
@@ -39,7 +36,7 @@ impl FemAssembly {
     pub fn preallocate_matrices(
         &self,
         num_nodes: usize,
-        elements: &[super::Tetrahedron],
+        elements: &[Tetrahedron],
     ) -> (
         CompressedSparseRowMatrix<Complex64>,
         CompressedSparseRowMatrix<Complex64>,
@@ -56,7 +53,7 @@ impl FemAssembly {
     /// Assemble global matrices from element contributions (parallel version)
     pub fn assemble_global_matrices_parallel(
         &self,
-        elements: &[super::Tetrahedron],
+        elements: &[Tetrahedron],
         element_stiffness: &[ndarray::Array2<Complex64>],
         element_mass: &[ndarray::Array2<Complex64>],
         element_rhs: &[Array1<Complex64>],
@@ -101,7 +98,7 @@ impl FemAssembly {
     /// Assemble single element contribution
     fn assemble_single_element(
         &self,
-        element: &super::Tetrahedron,
+        element: &Tetrahedron,
         elem_stiffness: &ndarray::Array2<Complex64>,
         elem_mass: &ndarray::Array2<Complex64>,
         elem_rhs: &Array1<Complex64>,
@@ -213,7 +210,7 @@ impl FemAssembly {
     }
 
     /// Find maximum node index in mesh
-    fn find_max_node_index(&self, elements: &[super::Tetrahedron]) -> usize {
+    fn find_max_node_index(&self, elements: &[Tetrahedron]) -> usize {
         elements
             .iter()
             .flat_map(|elem| elem.nodes.iter())

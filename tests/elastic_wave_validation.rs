@@ -7,14 +7,10 @@
 
 use approx::assert_relative_eq;
 use kwavers::domain::boundary::{PMLBoundary, PMLConfig};
+use kwavers::domain::plugin::PluginFields;
 use kwavers::domain::source::Source;
-use kwavers::{
-    grid::Grid,
-    medium::{thermal::ThermalField, ElasticProperties},
-    physics::plugin::{
-        elastic_wave_plugin::ElasticWavePlugin, Plugin, PluginContext, PluginFields,
-    },
-};
+use kwavers::solver::forward::elastic::ElasticWavePlugin;
+use kwavers::{grid::Grid, Plugin, PluginContext};
 use ndarray::Array4;
 
 /// Test P-wave velocity in isotropic elastic medium
@@ -142,7 +138,7 @@ impl TestElasticMedium {
 // Implement required traits for TestElasticMedium
 use kwavers::domain::medium::{
     AcousticProperties, ArrayAccess, BubbleProperties, BubbleState, CoreMedium, ElasticArrayAccess,
-    OpticalProperties, ThermalProperties, ViscousProperties,
+    ElasticProperties, OpticalProperties, ThermalField, ThermalProperties, ViscousProperties,
 };
 
 impl CoreMedium for TestElasticMedium {
@@ -188,7 +184,7 @@ impl ElasticProperties for TestElasticMedium {
 
 // Implement other required traits with defaults
 impl ArrayAccess for TestElasticMedium {
-    fn density_array(&self) -> ndarray::ArrayView3<f64> {
+    fn density_array(&self) -> ndarray::ArrayView3<'_, f64> {
         // For test purposes, create a small array and return view
         // In production, this would return a view of stored data
         panic!("ArrayAccess not implemented for test medium - use CoreMedium methods")

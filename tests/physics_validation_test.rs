@@ -3,7 +3,7 @@
 //! These tests verify that the physics implementations are correct
 //! by comparing against analytical solutions and known results.
 
-use kwavers::domain::grid;
+use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::{core::CoreMedium, homogeneous::HomogeneousMedium};
 use std::f64::consts::PI;
 

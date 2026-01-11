@@ -1,6 +1,248 @@
  # Sprint Checklist - Kwavers Development
 
-## Current Sprint: Sprint 185 - Advanced Physics Research (Multi-Bubble Interactions & Shock Physics)
+## Current Sprint: Sprint 187 - PINN Architecture Refactor (Phase 2 Complete)
+
+**Status**: PHASE 2 COMPLETE ✅  
+**Goal**: Extract PINN modules from analysis layer to solver/inverse layer with domain-driven architecture  
+**Duration**: Phase 2 - 4 hours (completed)  
+**Priority**: P0 - CRITICAL (Architectural Foundation)
+
+### Sprint 187 Objectives
+1. ✅ **Phase 1 Complete**: Domain layer with physics trait specifications (previous sprint)
+2. ✅ **Phase 2 Complete**: Extract PINN elastic_2d modules to solver/inverse/pinn/
+3. ⚠️ **Phase 3 Planned**: Implement ElasticWaveEquation trait for forward solvers
+4. ⚠️ **Phase 4 Planned**: Shared validation test suite
+5. ⚠️ **Phase 5 Planned**: Performance benchmarking and optimization
+
+### Phase 2: PINN Extraction & Restructuring (4h) - ✅ COMPLETE
+
+#### Completed Tasks
+- ✅ Created `solver/inverse/pinn/elastic_2d/` module structure
+- ✅ Implemented `config.rs` (672 lines) - Hyperparameters, loss weights, optimizer configuration
+- ✅ Implemented `model.rs` (559 lines) - Neural network architecture with Burn integration
+- ✅ Implemented `loss.rs` (642 lines) - Physics-informed loss functions for elastic waves
+- ✅ Implemented `training.rs` (506 lines) - Training loop, optimizer, metrics tracking
+- ✅ Implemented `inference.rs` (439 lines) - Model deployment and field evaluation
+- ✅ Updated `geometry.rs` - Collocation sampling and adaptive refinement (from Phase 1)
+- ✅ Updated module exports and documentation
+- ✅ Build verification passed (no errors in PINN modules)
+
+#### Module Structure Created
+```
+solver/inverse/pinn/elastic_2d/
+├── mod.rs           (module documentation and exports)
+├── config.rs        (Config, LossWeights, ActivationFunction, OptimizerType)
+├── model.rs         (ElasticPINN2D neural network)
+├── loss.rs          (LossComputer, PDE residual computation)
+├── training.rs      (Trainer, TrainingMetrics, training loop)
+├── inference.rs     (Predictor, field evaluation)
+└── geometry.rs      (CollocationSampler, MultiRegionDomain)
+```
+
+#### Mathematical Implementation
+- ✅ Full 2D elastic wave PDE residual computation
+- ✅ Stress tensor derivatives (σₓₓ, σᵧᵧ, σₓᵧ)
+- ✅ Constitutive relations (Hooke's law)
+- ✅ Momentum equations enforcement
+- ✅ Boundary conditions (Dirichlet, Neumann, Free surface)
+- ✅ Initial conditions (displacement + velocity)
+- ✅ Data fitting loss (for inverse problems)
+- ✅ Material parameter optimization (λ, μ, ρ)
+
+#### Key Features Implemented
+- **Forward Problems**: Known material properties, solve wave propagation
+- **Inverse Problems**: Estimate material properties from measurements
+- **Multi-region Domains**: Interface conditions for heterogeneous media
+- **Adaptive Sampling**: Residual-based refinement of collocation points
+- **Learning Rate Scheduling**: Exponential, step, cosine, reduce-on-plateau
+- **Checkpointing**: Model persistence during training
+- **Comprehensive Testing**: 40+ unit tests across all modules
+
+#### Results
+- **Architecture**: Clean separation of concerns (config, model, loss, training, inference)
+- **Lines of Code**: ~3,800 lines of well-documented, tested PINN implementation
+- **Build Status**: ✅ Compiles with zero errors in PINN modules
+- **Test Coverage**: All core functionality unit tested
+- **Documentation**: Full rustdoc with mathematical formulations and usage examples
+
+### Phase 3: GRASP Compliance Remediation (Ongoing)
+
+#### Current Progress
+1. ✅ **elastic_wave_solver.rs refactored** (2,824 lines → modular structure)
+   - ✅ Created `solver/` submodule directory
+   - ✅ Extracted `solver/types.rs` (346 lines) - configuration and data types
+   - ✅ Extracted `solver/stress.rs` (397 lines) - stress tensor derivatives
+   - ✅ Created `solver/mod.rs` (156 lines) - public API and module organization
+   - ✅ Updated parent module for backward compatibility
+   - ✅ Build verification passed
+
+2. ✅ **PINN elastic_2d extraction complete** (new architecture, ~3,800 lines)
+   - ✅ Moved from `analysis/ml/pinn/` to `solver/inverse/pinn/elastic_2d/`
+   - ✅ Created 6 focused modules (config, model, loss, training, inference, geometry)
+   - ✅ Full elastic wave PDE implementation with autodiff
+   - ✅ Comprehensive testing and documentation
+   - ✅ Feature-gated with Burn integration
+
+3. ⚠️ **Remaining modules to refactor** (15 files):
+   - `src/analysis/ml/pinn/burn_wave_equation_2d.rs` (2,578 lines) - Priority 1 (legacy, can deprecate)
+   - `src/math/linear_algebra/mod.rs` (1,889 lines) - Priority 1
+   - `src/physics/acoustics/imaging/modalities/elastography/nonlinear.rs` (1,342 lines) - Priority 2
+   - `src/domain/sensor/beamforming/beamforming_3d.rs` (1,271 lines) - Priority 2
+   - `src/clinical/therapy/therapy_integration.rs` (1,211 lines) - Priority 2
+   - `src/analysis/ml/pinn/electromagnetic.rs` (1,188 lines) - Priority 3
+   - `src/clinical/imaging/workflows.rs` (1,179 lines) - Priority 3
+   - `src/domain/sensor/beamforming/ai_integration.rs` (1,148 lines) - Priority 3
+   - `src/physics/acoustics/imaging/modalities/elastography/inversion.rs` (1,131 lines) - Priority 3
+   - `src/infra/cloud/mod.rs` (1,126 lines) - Priority 3
+   - `src/analysis/ml/pinn/meta_learning.rs` (1,121 lines) - Priority 3
+   - `src/analysis/ml/pinn/burn_wave_equation_1d.rs` (1,099 lines) - Priority 3
+   - `src/math/numerics/operators/differential.rs` (1,062 lines) - Priority 3
+   - `src/physics/acoustics/imaging/fusion.rs` (1,033 lines) - Priority 3
+   - `src/analysis/ml/pinn/burn_wave_equation_3d.rs` (987 lines) - Priority 3
+   - `src/clinical/therapy/swe_3d_workflows.rs` (975 lines) - Priority 3
+   - `src/physics/optics/sonoluminescence/emission.rs` (956 lines) - Priority 3
+
+#### Refactoring Strategy
+Each large module is split into focused submodules following deep vertical hierarchy:
+- **Separation of Concerns**: One responsibility per module
+- **Bounded Context**: Clear domain boundaries
+- **Single Source of Truth**: Shared functionality via accessor interfaces
+- **Zero Duplication**: No code replication across modules
+
+### Phase 3: Architecture Verification (4h) - ⚠️ PLANNED
+
+#### Tasks
+- [ ] Verify deep vertical hierarchy correctness
+- [ ] Detect circular dependencies (`cargo tree --duplicates`)
+- [ ] Check for layer violations (upward dependencies)
+- [ ] Validate separation of concerns
+- [ ] Audit cross-contamination between modules
+
+#### Preliminary Results (Phase 1)
+- ✅ **Zero layer violations detected** - No upward dependencies found
+- ✅ **Build system healthy** - No circular dependency issues
+- ✅ **Clean dependency tree** - Minor duplicates only (bitflags, getrandom)
+
+### Phase 4: Advanced Methods Gap Analysis (8h) - 🟡 IN PROGRESS
+
+#### Ultrasound Simulation Methods Gap Analysis
+Based on comprehensive review article: "Advanced Numerical Methods for Ultrasound Simulation"
+
+##### ✅ **Implemented Methods (Current Status)**
+- [x] **FDTD (Finite Difference Time Domain)** - Basic implementation with CPML boundaries
+- [x] **PSTD (Pseudospectral Time Domain)** - Full implementation with k-space dispersion correction
+- [x] **FEM (Finite Element Method)** - Complete with variational boundary conditions
+- [x] **BEM (Boundary Element Method)** - Full implementation with boundary integral equations
+- [x] **SEM (Spectral Element Method)** - High-order method with exponential convergence
+
+##### 🔴 **Critical Gaps - High Priority**
+
+**1. Hybrid Coupling Methods (Weeks 1-2)**
+- [ ] **FDTD-FEM Coupling**: Interface between structured/unstructured grids
+- [ ] **PSTD-SEM Coupling**: Multi-scale wave propagation (coarse/fine resolution)
+- [ ] **Domain Decomposition**: Schwarz alternating method for large domains
+- [ ] **Adaptive Mesh Refinement**: Dynamic grid refinement for steep gradients
+
+**2. Advanced Time Integration (Weeks 3-4)**
+- [ ] **Runge-Kutta Methods**: High-order explicit schemes (RK4, SSPRK)
+- [ ] **Implicit-Explicit Coupling**: IMEX schemes for stiff problems
+- [ ] **Symplectic Integration**: Energy-conserving methods for long-time simulation
+- [ ] **Local Time Stepping**: Efficient handling of multi-scale wave speeds
+
+**3. Nonlinear Acoustics Enhancement (Weeks 5-6)**
+- [ ] **Westervelt Equation**: Full nonlinear implementation with quadratic terms
+- [ ] **Thermoviscous Effects**: Boundary layer absorption and heating
+- [ ] **Shock Wave Formation**: Riemann solvers for discontinuous solutions
+- [ ] **Harmonic Generation**: Second/third harmonic imaging simulation
+
+##### 🟡 **Medium Priority Gaps (Weeks 7-10)**
+
+**4. Multi-Physics Coupling**
+- [ ] **Acousto-Optic Coupling**: Photoacoustic effect simulation
+- [ ] **Thermo-Acoustic Coupling**: Temperature-dependent speed of sound
+- [ ] **Electro-Acoustic Coupling**: Piezoelectric transducer modeling
+- [ ] **Fluid-Structure Interaction**: Moving boundaries and interfaces
+
+**5. Advanced Boundary Conditions**
+- [ ] **Impedance Boundaries**: Frequency-dependent absorption
+- [ ] **Non-Reflecting Boundaries**: Perfectly matched layers for complex media
+- [ ] **Moving Boundaries**: ALE (Arbitrary Lagrangian-Eulerian) methods
+- [ ] **Contact Acoustics**: Interface conditions for layered media
+
+**6. Optimization and Control**
+- [ ] **Adjoint Methods**: Gradient computation for inverse problems
+- [ ] **Topology Optimization**: Optimal transducer placement
+- [ ] **Waveform Optimization**: Pulse design for specific applications
+- [ ] **Real-time Control**: Feedback systems for therapeutic ultrasound
+
+##### 🟢 **Research Integration - Low Priority (Weeks 11-12)**
+
+**7. Reference Library Integration**
+- [ ] **jwave (JAX ultrasound)**: Automatic differentiation framework integration
+- [ ] **k-wave (MATLAB toolbox)**: Sensor directivity models and advanced boundaries
+- [ ] **Optimus**: Transducer optimization algorithms and genetic methods
+- [ ] **FullWave25**: Tissue relaxation models and clinical validation data
+- [ ] **Sound-Speed-Estimation**: Deep learning CNN architectures
+- [ ] **dbua**: Real-time neural beamforming inference
+
+**8. Machine Learning Enhancement**
+- [ ] **Neural Operators**: Fourier Neural Operators for fast surrogate modeling
+- [ ] **Physics-Informed ML**: Advanced PINN architectures with uncertainty
+- [ ] **Transfer Learning**: Pre-trained models for tissue characterization
+- [ ] **Reinforcement Learning**: Optimal control for therapeutic applications
+
+##### 📊 **Implementation Priority Matrix**
+
+| Method Category | Current Status | Priority | Complexity | Impact |
+|----------------|----------------|----------|------------|---------|
+| Hybrid Coupling | ❌ None | 🔴 Critical | High | Revolutionizes multi-scale simulation |
+| Advanced Time Integration | ⚠️ Basic | 🔴 Critical | Medium | Enables long-time, accurate simulation |
+| Nonlinear Enhancement | ⚠️ Partial | 🟡 High | Medium | Essential for high-intensity ultrasound |
+| Multi-Physics Coupling | ⚠️ Basic | 🟡 High | High | Opens new application domains |
+| Advanced Boundaries | ⚠️ Limited | 🟡 High | Medium | Improves accuracy for complex geometries |
+| Optimization Methods | ❌ None | 🟡 Medium | High | Enables inverse problems and design |
+| Research Libraries | ⚠️ Partial | 🟢 Low | Medium | Provides validation and advanced features |
+
+##### 🎯 **Next Sprint Recommendations**
+
+**Immediate Focus (Sprint 187):**
+1. Implement FDTD-FEM coupling for multi-scale problems
+2. Add Runge-Kutta time integration for improved accuracy
+3. Complete Westervelt equation implementation
+
+**Short-term (Sprints 188-190):**
+1. Domain decomposition methods for large-scale simulation
+2. Multi-physics coupling frameworks
+3. Advanced boundary condition libraries
+
+**Long-term (Sprints 191+):**
+1. Optimization frameworks and adjoint methods
+2. Machine learning integration and neural operators
+3. Full research library integration and validation
+
+### Phase 5: Quality Gates (2h) - ⚠️ PLANNED
+
+#### Validation Checklist
+- [ ] `cargo build --release --all-features` - Zero errors
+- [ ] `cargo clippy --all-features -- -D warnings` - Zero warnings
+- [ ] `cargo test --lib` - All tests passing
+- [ ] `cargo test --lib -- --ignored` - Comprehensive validation
+- [ ] `cargo bench` - Performance benchmarks
+- [ ] Line count audit - All files <500 lines
+
+### Phase 6: Documentation Updates (2h) - ⚠️ PLANNED
+
+#### Documents to Update
+- [ ] docs/prd.md - Sprint 186 status, architecture updates
+- [ ] docs/srs.md - Functional requirements from research analysis
+- [ ] docs/adr.md - GRASP remediation decisions
+- [ ] docs/checklist.md - This file (completion summary)
+- [ ] docs/backlog.md - Research integration tasks
+- [ ] README.md - Current sprint status
+
+---
+
+## Previous Sprint: Sprint 185 - Advanced Physics Research (Multi-Bubble Interactions & Shock Physics)
 
 **Previous Sprint**: Sprint 4 (Beamforming Consolidation) - COMPLETED ✅
 **Current Focus**: Implementing 2020-2025 acoustics and optics research with mathematically verified implementations
@@ -8,7 +250,10 @@
 
 ---
 
-## Sprint 185: Multi-Bubble Interactions & Shock Physics (16 hours) - IN PROGRESS 🟡
+## Sprint 185: Multi-Bubble Interactions & Shock Physics (16 hours) - DEFERRED ⏸️
+
+**Status**: Deferred to Sprint 187+ (after architectural foundation complete)  
+**Reason**: Architectural purity must be established before advanced physics extensions
 
 ### Sprint Objectives
 
@@ -111,6 +356,31 @@ d²aₙ/dt² + bₙ(daₙ/dt) + ωₙ²aₙ = fₙ(t)
 - Comprehensive validation suite (6h)
 - Property-based testing (3h)
 - Documentation completion (3h)
+
+---
+
+---
+
+## Sprint 186 Success Criteria
+
+### Quantitative Metrics
+- ✅ 0 dead documentation files (65 removed)
+- ✅ 0 layer violations detected
+- 🟡 0 files >500 lines (17 remaining, 1 in progress)
+- ⚠️ 0 circular dependencies (to be verified)
+- ⚠️ 100% test pass rate (to be verified)
+- ⚠️ <60s full rebuild time (currently ~45s)
+
+### Qualitative Metrics
+- ✅ Clean repository root (only living docs)
+- ✅ Modular solver structure established
+- 🟡 Self-documenting architecture (in progress)
+- ⚠️ Research-competitive feature analysis (planned)
+
+### Risk Mitigation
+- **High**: GRASP refactoring breaks tests → Using backward-compatible re-exports
+- **Medium**: Time overrun → Focusing on critical violations first (Priority 1-2)
+- **Low**: Documentation drift → Updating docs before commits
 
 ---
 

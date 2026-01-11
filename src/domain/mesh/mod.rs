@@ -7,4 +7,4 @@
 
 pub mod tetrahedral;
 
-pub use tetrahedral::*;
+pub use tetrahedral::{BoundingBox, BoundaryType, MeshNode, MeshStatistics, Tetrahedron, TetrahedralMesh};

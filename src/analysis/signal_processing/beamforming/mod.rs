@@ -1,62 +1,56 @@
-//! # Beamforming Module
+//! # Analysis Layer Beamforming Algorithms
 //!
-//! This module provides beamforming algorithms for array signal processing and
-//! ultrasound image formation. Beamforming combines signals from multiple sensors
-//! to form directional sensitivity patterns.
+//! This module provides **general-purpose beamforming algorithms** for array signal
+//! processing and ultrasound image formation. It implements the mathematical and
+//! signal processing aspects of beamforming while remaining agnostic to specific
+//! sensor geometries and hardware characteristics.
 //!
-//! ## Overview
+//! ## Architectural Separation
 //!
-//! Beamforming is a signal processing technique used in sensor arrays for:
-//! - **Spatial Filtering**: Enhance signals from specific directions
-//! - **Image Formation**: Convert RF data to B-mode images
-//! - **Source Localization**: Identify signal origins
-//! - **Interference Rejection**: Suppress noise and artifacts
+//! ### Analysis Layer Responsibilities (THIS MODULE)
+//! - **Mathematical Algorithms**: Delay-and-sum, MVDR, MUSIC, adaptive methods
+//! - **Signal Processing**: Filtering, windowing, optimization techniques
+//! - **Image Formation**: Reconstruction algorithms and pipelines
+//! - **Performance Optimization**: SIMD, parallelization, caching strategies
+//!
+//! ### Domain Layer Responsibilities ([`crate::domain::sensor::beamforming`])
+//! - **Hardware Coupling**: Sensor-specific optimizations and constraints
+//! - **Geometry Integration**: Array-specific delay calculations and positioning
+//! - **Real-time Interfaces**: Hardware-accelerated processing pipelines
+//! - **Configuration Management**: Sensor-specific parameter validation
+//!
+//! ### Accessor Pattern
+//! ```rust,ignore
+//! // 1. Domain layer handles sensor-specific concerns
+//! let sensors = GridSensorSet::new(positions, sampling_rate)?;
+//! let beamformer = SensorBeamformer::new(&sensors);
+//!
+//! // 2. Analysis layer provides algorithms through interfaces
+//! let processor = DelayAndSum::new();
+//! let image = processor.process(&rf_data, &beamformer.geometry(), &grid)?;
+//! ```
 //!
 //! ## Algorithm Categories
 //!
 //! ### Time-Domain Beamforming
-//! - **Delay-and-Sum (DAS)**: Apply geometric delays and sum signals
-//! - **Synthetic Aperture**: Reconstruct full aperture from sub-arrays
+//! - **Delay-and-Sum (DAS)**: Geometric delay compensation and coherent summation
+//! - **Dynamic Focusing**: Real-time focal point adjustment during reception
+//! - **Synthetic Aperture**: Virtual array expansion through motion
 //!
 //! ### Frequency-Domain Beamforming
-//! - **Minimum Variance (Capon)**: Adaptive weights minimize output power
-//! - **MUSIC**: Multiple signal classification via eigenanalysis
+//! - **Minimum Variance (Capon)**: Adaptive weighting for interference rejection
+//! - **MUSIC**: High-resolution source localization via subspace methods
+//! - **Robust Capon**: Diagonal loading for improved stability
 //!
 //! ### Adaptive Beamforming
-//! - **Sample Matrix Inversion (SMI)**: Data-adaptive weight calculation
-//! - **Robust Capon**: Diagonal loading for stability
-//! - **ESMV**: Eigenspace-based minimum variance
+//! - **Sample Matrix Inversion (SMI)**: Data-dependent weight calculation
+//! - **Eigenspace Methods**: Signal subspace exploitation
+//! - **Constrained Optimization**: User-defined beam pattern constraints
 //!
 //! ### Advanced Methods
-//! - **Neural Beamforming**: Deep learning-based beamforming
-//! - **Compressive Beamforming**: Sparse reconstruction
-//!
-//! ## Migration from `domain::sensor::beamforming`
-//!
-//! This module is the new home for beamforming algorithms, previously located in
-//! `domain::sensor::beamforming`. The old location violated architectural layering
-//! by mixing domain primitives (sensor geometry) with analysis algorithms.
-//!
-//! ### Migration Timeline
-//!
-//! - **Week 2 (Current)**: Module structure created, documentation in place
-//! - **Week 3-4**: Gradual algorithm migration with backward compatibility
-//! - **Week 5+**: Remove deprecated `domain::sensor::beamforming`
-//!
-//! ### What to Migrate Here
-//!
-//! ✅ **Should be in `analysis::signal_processing::beamforming`:**
-//! - Delay-and-sum algorithms
-//! - Adaptive beamforming (Capon, MUSIC)
-//! - Neural beamforming
-//! - Image formation algorithms
-//! - Beamforming processors and pipelines
-//!
-//! ❌ **Should stay in `domain::sensor`:**
-//! - Sensor array geometry
-//! - Element positions
-//! - Sampling parameters
-//! - Sensor data recording
+//! - **Neural Beamforming**: Deep learning-based adaptive processing
+//! - **Compressive Sensing**: Sparse reconstruction techniques
+//! - **Differentiable Beamforming**: Gradient-based optimization
 //!
 //! ## Architecture
 //!

@@ -79,6 +79,10 @@ pub mod burn_wave_equation_1d;
 #[cfg(feature = "pinn")]
 pub mod burn_wave_equation_2d;
 
+// Sprint 186: Modular 2D Wave Equation PINN (GRASP-compliant refactor)
+#[cfg(feature = "pinn")]
+pub mod wave_equation_2d;
+
 // Sprint 173: 3D Wave Equation PINN extension for heterogeneous media
 #[cfg(feature = "pinn")]
 pub mod burn_wave_equation_3d;

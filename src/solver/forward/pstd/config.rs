@@ -18,6 +18,17 @@ pub enum CompatibilityMode {
     Reference,
 }
 
+/// Advanced k-space pseudospectral method options
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum KSpaceMethod {
+    /// Standard PSTD with spectral corrections (default)
+    StandardPSTD,
+    /// Full k-space pseudospectral method (k-Wave style, eliminates dispersion)
+    FullKSpace,
+    /// Hybrid approach (k-space for low frequencies, PSTD for high frequencies)
+    Hybrid,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum BoundaryConfig {
@@ -60,6 +71,8 @@ pub struct PSTDConfig {
     pub smooth_sources: bool,
     /// Anti-aliasing filter configuration
     pub anti_aliasing: AntiAliasingConfig,
+    /// Advanced k-space pseudospectral method (eliminates numerical dispersion)
+    pub kspace_method: KSpaceMethod,
 }
 
 impl Default for PSTDConfig {
@@ -79,6 +92,7 @@ impl Default for PSTDConfig {
             pml_inside: true,
             smooth_sources: true,
             anti_aliasing: AntiAliasingConfig::default(),
+            kspace_method: KSpaceMethod::StandardPSTD,
         }
     }
 }

@@ -4,6 +4,7 @@
 //! Supports linear (P1) and quadratic (P2) Lagrange basis functions.
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::mesh::Tetrahedron;
 use ndarray::Array2;
 
 /// Gauss quadrature points and weights for tetrahedral elements
@@ -208,9 +209,9 @@ impl BasisFunction {
 
 /// Gauss quadrature for tetrahedral integration
 #[derive(Debug)]
-pub struct FemAssembly;
+pub struct GaussQuadrature;
 
-impl FemAssembly {
+impl GaussQuadrature {
     /// Create new assembly helper
     #[must_use]
     pub fn new() -> Self {
@@ -240,7 +241,6 @@ impl FemAssembly {
         let a = (5.0 - 3.0_f64.sqrt()) / 20.0;
         let b = (5.0 + 3.0_f64.sqrt()) / 20.0;
         let w_a = (1.0 / 6.0) * (5.0 / 12.0);
-        let w_b = (1.0 / 6.0) * (8.0 / 12.0);
 
         vec![
             // Point 1
@@ -279,7 +279,7 @@ impl FemAssembly {
         elem_stiffness: &ndarray::Array2<num_complex::Complex64>,
         elem_mass: &ndarray::Array2<num_complex::Complex64>,
         elem_rhs: &ndarray::Array1<num_complex::Complex64>,
-        element: &super::Tetrahedron,
+        element: &Tetrahedron,
         _basis: &BasisFunction,
     ) -> KwaversResult<()> {
         // Add element contributions to global matrices

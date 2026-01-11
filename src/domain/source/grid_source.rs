@@ -29,3 +29,10 @@ pub struct GridSource {
     pub u_signal: Option<Array3<f64>>, // [3, num_sources, time_steps]
     pub u_mode: SourceMode,
 }
+
+impl GridSource {
+    #[must_use]
+    pub fn new_empty() -> Self {
+        Self::default()
+    }
+}
