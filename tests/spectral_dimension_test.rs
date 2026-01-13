@@ -1,7 +1,9 @@
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
+use kwavers::domain::source::GridSource;
 use kwavers::solver::forward::pstd::config::BoundaryConfig;
-use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver, PSTDSource};
+use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver};
+use kwavers::solver::interface::Solver;
 use ndarray::Array3;
 
 #[test]
@@ -28,7 +30,7 @@ fn test_spectral_solver_1d_equivalent() {
         p0[[i, 1, 1]] = p0[[i, 0, 0]];
     }
 
-    let source = PSTDSource {
+    let source = GridSource {
         p0: Some(p0),
         ..Default::default()
     };
@@ -36,7 +38,7 @@ fn test_spectral_solver_1d_equivalent() {
     let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
 
     // Step forward
-    solver.run(10).unwrap();
+    solver.run_orchestrated(10).unwrap();
 
     let p = &solver.fields.p;
     let max_p = p.iter().fold(0.0f64, |a: f64, &b: &f64| a.max(b.abs()));
@@ -58,13 +60,13 @@ fn test_spectral_solver_2d_equivalent() {
     p0[[16, 16, 0]] = 1e6;
     p0[[16, 16, 1]] = 1e6;
 
-    let source = PSTDSource {
+    let source = GridSource {
         p0: Some(p0),
         ..Default::default()
     };
 
     let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
-    solver.run(5).unwrap();
+    solver.run_orchestrated(5).unwrap();
 
     let p = &solver.fields.p;
     let max_p = p.iter().fold(0.0f64, |a: f64, &b: &f64| a.max(b.abs()));

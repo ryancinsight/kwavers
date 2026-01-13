@@ -14,7 +14,7 @@ pub use kwavers::domain::medium::HomogeneousMedium;
 pub use kwavers::physics::imaging::modalities::elastography::*;
 pub use kwavers::simulation::imaging::elastography::ShearWaveElastography;
 pub use kwavers::solver::forward::elastic::{ElasticWaveConfig, ElasticWaveSolver};
-pub use kwavers::solver::inverse::elastography::NonlinearInversion;
+pub use kwavers::solver::inverse::elastography::{NonlinearInversion, NonlinearInversionConfig, NonlinearParameterMapExt};
 pub use ndarray::{Array3, Array4};
 pub use std::f64::consts::PI;
 
@@ -245,7 +245,7 @@ mod nonlinear_inversion_tests {
     #[test]
     fn test_nonlinear_inversion_creation() {
         let method = NonlinearInversionMethod::HarmonicRatio;
-        let inversion = NonlinearInversion::new(method);
+        let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(method));
 
         // Test passes if creation succeeds
         assert_eq!(inversion.method(), method);
@@ -253,7 +253,7 @@ mod nonlinear_inversion_tests {
 
     #[test]
     fn test_harmonic_ratio_inversion() {
-        let inversion = NonlinearInversion::new(NonlinearInversionMethod::HarmonicRatio);
+        let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio));
 
         // Create synthetic harmonic field
         let mut harmonic_field = HarmonicDisplacementField::new(6, 6, 6, 2, 50);
@@ -265,7 +265,7 @@ mod nonlinear_inversion_tests {
 
         let grid = Grid::new(6, 6, 6, 0.001, 0.001, 0.001).unwrap();
 
-        let result = inversion.reconstruct_nonlinear(&harmonic_field, &grid);
+        let result = inversion.reconstruct(&harmonic_field, &grid);
         assert!(result.is_ok(), "Harmonic ratio inversion should succeed");
 
         let param_map = result.unwrap();
@@ -282,7 +282,7 @@ mod nonlinear_inversion_tests {
 
     #[test]
     fn test_nonlinear_least_squares_inversion() {
-        let inversion = NonlinearInversion::new(NonlinearInversionMethod::NonlinearLeastSquares);
+        let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::NonlinearLeastSquares));
 
         // Create test harmonic field
         let mut harmonic_field = HarmonicDisplacementField::new(4, 4, 4, 1, 32);
@@ -293,7 +293,7 @@ mod nonlinear_inversion_tests {
 
         let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
 
-        let result = inversion.reconstruct_nonlinear(&harmonic_field, &grid);
+        let result = inversion.reconstruct(&harmonic_field, &grid);
         assert!(result.is_ok(), "Nonlinear least squares should succeed");
 
         let param_map = result.unwrap();
@@ -302,7 +302,7 @@ mod nonlinear_inversion_tests {
 
     #[test]
     fn test_bayesian_inversion() {
-        let inversion = NonlinearInversion::new(NonlinearInversionMethod::BayesianInversion);
+        let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::BayesianInversion));
 
         // Create test data
         let mut harmonic_field = HarmonicDisplacementField::new(4, 4, 4, 1, 32);
@@ -313,7 +313,7 @@ mod nonlinear_inversion_tests {
 
         let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
 
-        let result = inversion.reconstruct_nonlinear(&harmonic_field, &grid);
+        let result = inversion.reconstruct(&harmonic_field, &grid);
         assert!(result.is_ok(), "Bayesian inversion should succeed");
 
         let param_map = result.unwrap();
@@ -399,9 +399,9 @@ mod end_to_end_tests {
             .unwrap();
 
         // Step 3: Nonlinear inversion
-        let nonlinear_inversion = NonlinearInversion::new(NonlinearInversionMethod::HarmonicRatio);
+        let nonlinear_inversion = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio));
         let nonlinear_params = nonlinear_inversion
-            .reconstruct_nonlinear(&harmonic_field, &grid)
+            .reconstruct(&harmonic_field, &grid)
             .unwrap();
 
         // Verify results
@@ -547,8 +547,8 @@ mod convergence_tests {
             NonlinearInversionMethod::NonlinearLeastSquares,
             NonlinearInversionMethod::BayesianInversion,
         ] {
-            let inversion = NonlinearInversion::new(method);
-            let result = inversion.reconstruct_nonlinear(&harmonic_field, &grid);
+            let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(method));
+            let result = inversion.reconstruct(&harmonic_field, &grid);
             assert!(result.is_ok(), "Method {:?} should succeed", method);
 
             let param_map = result.unwrap();

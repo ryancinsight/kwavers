@@ -38,7 +38,7 @@ use kwavers::physics::imaging::modalities::elastography::{
 };
 use kwavers::simulation::imaging::elastography::ShearWaveElastography;
 use kwavers::solver::forward::elastic::ElasticWaveConfig;
-use kwavers::solver::inverse::elastography::NonlinearInversion;
+use kwavers::solver::inverse::elastography::{NonlinearInversion, NonlinearInversionConfig};
 use ndarray::Array3;
 
 /// Benchmark hyperelastic constitutive model evaluation
@@ -111,21 +111,21 @@ pub fn bench_nonlinear_inversion(c: &mut Criterion) {
 
     let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
 
-    let harmonic_ratio_inv = NonlinearInversion::new(NonlinearInversionMethod::HarmonicRatio);
+    let harmonic_ratio_inv = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio));
     let least_squares_inv =
-        NonlinearInversion::new(NonlinearInversionMethod::NonlinearLeastSquares);
-    let bayesian_inv = NonlinearInversion::new(NonlinearInversionMethod::BayesianInversion);
+        NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::NonlinearLeastSquares));
+    let bayesian_inv = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::BayesianInversion));
 
     c.bench_function("harmonic_ratio_inversion", |b| {
-        b.iter(|| black_box(harmonic_ratio_inv.reconstruct_nonlinear(&harmonic_field, &grid)))
+        b.iter(|| black_box(harmonic_ratio_inv.reconstruct(&harmonic_field, &grid)))
     });
 
     c.bench_function("nonlinear_least_squares_inversion", |b| {
-        b.iter(|| black_box(least_squares_inv.reconstruct_nonlinear(&harmonic_field, &grid)))
+        b.iter(|| black_box(least_squares_inv.reconstruct(&harmonic_field, &grid)))
     });
 
     c.bench_function("bayesian_inversion", |b| {
-        b.iter(|| black_box(bayesian_inv.reconstruct_nonlinear(&harmonic_field, &grid)))
+        b.iter(|| black_box(bayesian_inv.reconstruct(&harmonic_field, &grid)))
     });
 }
 
@@ -216,9 +216,9 @@ pub fn bench_end_to_end_workflow(c: &mut Criterion) {
             let harmonic_field = detector.analyze_harmonics(&time_series, 1000.0).unwrap();
 
             // Step 4: Nonlinear inversion
-            let inversion = NonlinearInversion::new(NonlinearInversionMethod::HarmonicRatio);
+            let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio));
             let _nonlinear_params = inversion
-                .reconstruct_nonlinear(&harmonic_field, &grid)
+                .reconstruct(&harmonic_field, &grid)
                 .unwrap();
 
             black_box(())

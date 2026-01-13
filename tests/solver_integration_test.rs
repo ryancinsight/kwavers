@@ -1,7 +1,9 @@
 use kwavers::domain::boundary::PMLConfig;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
-use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver, PSTDSource};
+use kwavers::domain::source::GridSource;
+use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver};
+use kwavers::solver::interface::Solver;
 use kwavers::solver::pstd::config::BoundaryConfig;
 use ndarray::Array3;
 
@@ -16,7 +18,7 @@ fn test_kspace_solver_init_and_step() {
     let medium = HomogeneousMedium::water(&grid);
 
     // 3. Setup Config
-    let mut config = PSTDConfig {
+    let config = PSTDConfig {
         dt: 50e-9, // 50 ns
         boundary: BoundaryConfig::PML(PMLConfig {
             thickness: 4,
@@ -27,7 +29,7 @@ fn test_kspace_solver_init_and_step() {
     };
 
     // 4. Initialize Solver
-    let mut solver = PSTDSolver::new(config, grid.clone(), &medium, PSTDSource::default())
+    let mut solver = PSTDSolver::new(config, grid.clone(), &medium, GridSource::default())
         .expect("Failed to create solver");
 
     // 5. Add initial pressure source (Gaussian pulse in center)
