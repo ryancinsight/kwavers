@@ -319,7 +319,7 @@ pub mod acoustic_wave_validation {
 pub mod swe_validation {
     use super::*;
     use kwavers::physics::imaging::elastography::DisplacementField;
-    use kwavers::solver::inverse::elastography::ShearWaveInversion;
+    use kwavers::solver::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig};
 
     /// Validate SWE elasticity reconstruction accuracy
     ///
@@ -332,7 +332,8 @@ pub mod swe_validation {
         let start_time = std::time::Instant::now();
 
         // Create SWE workflow
-        let swe = ShearWaveInversion::new(InversionMethod::TimeOfFlight);
+        let config = kwavers::solver::inverse::elastography::ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight);
+        let swe = ShearWaveInversion::new(config);
 
         // Generate synthetic shear wave displacement field (Gaussian around push)
         let push_location = [grid.dx * 10.0, grid.dy * 10.0, grid.dz * 10.0];
