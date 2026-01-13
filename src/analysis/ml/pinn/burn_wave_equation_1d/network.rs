@@ -392,7 +392,8 @@ mod tests {
         assert_eq!(u.dims(), [3, 1]);
 
         // All outputs should be finite
-        let u_vals = u.to_data().as_slice::<f32>().unwrap();
+        let binding = u.to_data();
+        let u_vals = binding.as_slice::<f32>().unwrap();
         for &val in u_vals {
             assert!(val.is_finite());
         }

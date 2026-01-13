@@ -331,6 +331,32 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
         device: &B::Device,
         epochs: usize,
     ) -> KwaversResult<BurnTrainingMetrics> {
+        self.train_with_callback(
+            x_data,
+            t_data,
+            u_data,
+            wave_speed,
+            device,
+            epochs,
+            |_, _| true,
+        )
+    }
+
+    /// Train the PINN with a callback for progress reporting
+    #[allow(clippy::too_many_arguments)]
+    pub fn train_with_callback<F>(
+        &mut self,
+        x_data: &Array1<f64>,
+        t_data: &Array1<f64>,
+        u_data: &Array2<f64>,
+        wave_speed: f64,
+        device: &B::Device,
+        epochs: usize,
+        mut callback: F,
+    ) -> KwaversResult<BurnTrainingMetrics>
+    where
+        F: FnMut(usize, &BurnTrainingMetrics) -> bool,
+    {
         use std::time::Instant;
 
         // Validate input dimensions
@@ -424,10 +450,15 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
                 || !pde_val.is_finite()
                 || !bc_val.is_finite()
             {
-                return Err(KwaversError::NumericalInstability(format!(
-                    "Encountered NaN/Inf in loss at epoch {}: total={}, data={}, pde={}, bc={}",
-                    epoch, total_val, data_val, pde_val, bc_val
-                )));
+                return Err(KwaversError::Numerical(
+                    crate::core::error::NumericalError::NaN {
+                        operation: "training_loss".to_string(),
+                        inputs: format!(
+                            "epoch {}: total={}, data={}, pde={}, bc={}",
+                            epoch, total_val, data_val, pde_val, bc_val
+                        ),
+                    },
+                ));
             }
 
             // Record epoch metrics
@@ -450,6 +481,10 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
                     pde_val,
                     bc_val
                 );
+            }
+
+            if !callback(epoch, &metrics) {
+                break;
             }
         }
 
