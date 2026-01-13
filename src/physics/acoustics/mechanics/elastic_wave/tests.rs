@@ -3,6 +3,8 @@
 #[cfg(test)]
 use crate::domain::field::mapping::UnifiedFieldType;
 #[cfg(test)]
+use crate::domain::field::indices as field_indices;
+#[cfg(test)]
 use crate::domain::grid::Grid;
 #[cfg(test)]
 use crate::domain::medium::homogeneous::HomogeneousMedium;
@@ -29,7 +31,7 @@ fn test_elastic_wave_single_step() {
     let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
     let source = NullSource::new();
 
-    let mut fields = Array4::<f64>::zeros((crate::solver::TOTAL_FIELDS, 32, 32, 32));
+    let mut fields = Array4::<f64>::zeros((field_indices::TOTAL_FIELDS, 32, 32, 32));
 
     // Set initial conditions
     fields[[UnifiedFieldType::VelocityX.index(), 16, 16, 16]] = 1.0;

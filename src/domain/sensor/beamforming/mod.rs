@@ -70,8 +70,6 @@ pub mod adaptive;
 mod beamforming_3d;
 mod config;
 pub mod covariance;
-#[cfg(any(feature = "experimental_neural", feature = "pinn"))]
-pub mod experimental;
 pub mod neural;
 mod processor;
 #[cfg(feature = "gpu")]
@@ -100,12 +98,6 @@ pub use steering::{SteeringVector, SteeringVectorMethod};
 // Note: time_domain submodules (das, delay_reference) have been removed.
 // Use analysis::signal_processing::beamforming::time_domain instead.
 
-#[cfg(feature = "experimental_neural")]
-pub use experimental::{
-    BeamformingFeedback, HybridBeamformingMetrics, HybridBeamformingResult,
-    NeuralBeamformingNetwork, NeuralLayer, PhysicsConstraints, UncertaintyEstimator,
-};
-
 // Note: NeuralBeamformer and NeuralBeamformingConfig are NOT YET MIGRATED.
 // These high-level API types remain in the old monolithic file and will be
 // extracted in a future sprint. Use the lower-level primitives directly:
@@ -121,11 +113,5 @@ pub use neural::{
 };
 
 // Processor requires PINN feature
-#[cfg(feature = "pinn")]
-pub use experimental::{
-    DistributedNeuralBeamformingMetrics, DistributedNeuralBeamformingProcessor,
-    DistributedNeuralBeamformingResult, FaultToleranceState, ModelParallelConfig,
-    NeuralBeamformingProcessor, PINNBeamformingConfig, PinnBeamformingResult, PipelineStage,
-};
 #[cfg(feature = "pinn")]
 pub use neural::AIEnhancedBeamformingProcessor;

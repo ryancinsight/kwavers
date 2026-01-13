@@ -1,12 +1,9 @@
 //! Therapy calculator orchestration
 
-use crate::clinical::therapy::metrics::TreatmentMetrics;
-use crate::clinical::therapy::modalities::TherapyModality;
-use crate::clinical::therapy::parameters::TherapyParameters;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-// use crate::physics::acoustics::therapy::cavitation::TherapyCavitationDetector; // TODO: Module missing
+use crate::domain::therapy::types::{TherapyModality, TherapyParameters, TreatmentMetrics};
 use crate::physics::thermal::PennesSolver;
 use ndarray::{Array3, Zip};
 use std::sync::Arc;
@@ -20,8 +17,6 @@ pub struct TherapyCalculator {
     pub parameters: TherapyParameters,
     /// Thermal calculator (optional)
     pub thermal: Option<PennesSolver>,
-    /// Cavitation detector (optional)
-    // pub cavitation: Option<TherapyCavitationDetector>, // TODO: Module missing
     /// Treatment metrics
     pub metrics: TreatmentMetrics,
     /// Grid reference
@@ -61,16 +56,6 @@ impl TherapyCalculator {
             None
         };
 
-        // TODO: Restore when cavitation module is available
-        // let cavitation = if modality.has_cavitation() {
-        //     Some(TherapyCavitationDetector::new(
-        //         parameters.frequency,
-        //         parameters.peak_negative_pressure,
-        //     ))
-        // } else {
-        //     None
-        // };
-
         Self {
             modality,
             parameters,
@@ -103,14 +88,6 @@ impl TherapyCalculator {
             self.metrics.thermal_dose += TreatmentMetrics::calculate_thermal_dose(temperature, dt);
             self.metrics.update_peak_temperature(temperature);
         }
-
-        // Detect and track cavitation if applicable
-        // TODO: Restore when cavitation module is available
-        // if let Some(ref cavitation_detector) = self.cavitation {
-        //     let cavitation_field = cavitation_detector.detect(pressure);
-        //     self.metrics.cavitation_dose +=
-        //         TreatmentMetrics::calculate_cavitation_dose(&cavitation_field, dt);
-        // }
 
         // Update safety and efficiency metrics
         self.metrics.calculate_safety_index();

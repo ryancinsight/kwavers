@@ -47,6 +47,7 @@
 //! ```
 
 pub mod microbubble;
+pub mod types;
 
 // Re-export commonly used types
 pub use microbubble::{
@@ -54,3 +55,4 @@ pub use microbubble::{
     MarmottantShellProperties, MicrobubbleState, Position3D, RadiationForce, ShellState,
     Velocity3D,
 };
+pub use types::{TherapyMechanism, TherapyModality, TherapyParameters, TreatmentMetrics};

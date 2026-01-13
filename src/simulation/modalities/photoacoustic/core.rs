@@ -21,9 +21,7 @@
 //! - **Dependency Inversion**: Simulator depends on abstractions (Grid, Medium traits)
 //! - **Testability**: Each component can be tested independently
 
-use crate::clinical::imaging::photoacoustic::{
-    InitialPressure, PhotoacousticParameters, PhotoacousticResult,
-};
+use crate::domain::imaging::photoacoustic::{InitialPressure, PhotoacousticParameters, PhotoacousticResult};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::properties::OpticalPropertyData;

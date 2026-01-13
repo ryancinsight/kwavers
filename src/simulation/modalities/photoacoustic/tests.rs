@@ -28,7 +28,7 @@
 
 use super::core::PhotoacousticSimulator;
 use super::reconstruction;
-use crate::clinical::imaging::photoacoustic::PhotoacousticOpticalProperties;
+use crate::domain::imaging::photoacoustic::PhotoacousticOpticalProperties;
 use crate::domain::grid::Grid;
 use crate::domain::medium::homogeneous::HomogeneousMedium;
 use approx::assert_relative_eq;
@@ -38,7 +38,7 @@ use ndarray::Array3;
 fn test_photoacoustic_creation() {
     let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-    let parameters = crate::clinical::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
 
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium);
     assert!(simulator.is_ok());
@@ -48,7 +48,7 @@ fn test_photoacoustic_creation() {
 fn test_fluence_computation() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-    let parameters = crate::clinical::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
     let fluence = simulator.compute_fluence();
@@ -76,7 +76,7 @@ fn test_fluence_computation() {
 fn test_initial_pressure_computation() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-    let parameters = crate::clinical::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
     let fluence = simulator.compute_fluence().unwrap();
@@ -98,7 +98,7 @@ fn test_initial_pressure_computation() {
 fn test_simulation() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-    let parameters = crate::clinical::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     let mut simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
     let fluence = simulator.compute_fluence().unwrap();
@@ -159,7 +159,7 @@ fn test_optical_properties() {
 fn test_analytical_validation() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-    let parameters = crate::clinical::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
     let error = simulator.validate_analytical();
@@ -174,7 +174,7 @@ fn test_analytical_validation() {
 fn test_universal_back_projection_algorithm() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-    let parameters = crate::clinical::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
 
     // Create synthetic pressure fields (spherical wave from point source)
     // Increase time duration to allow wave to reach detectors
@@ -303,7 +303,7 @@ fn test_detector_interpolation_accuracy() {
 fn test_spherical_spreading_correction() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-    let parameters = crate::clinical::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
     // Create a single pressure field with constant value
@@ -341,7 +341,7 @@ fn test_multi_wavelength_fluence() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
     let mut parameters =
-        crate::clinical::imaging::photoacoustic::PhotoacousticParameters::default();
+        crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     parameters.wavelengths = vec![700.0, 750.0, 800.0];
 
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
@@ -370,7 +370,7 @@ fn test_multi_wavelength_simulation() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
     let mut parameters =
-        crate::clinical::imaging::photoacoustic::PhotoacousticParameters::default();
+        crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     parameters.wavelengths = vec![700.0, 800.0];
 
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
@@ -418,7 +418,7 @@ fn test_detector_positions() {
 fn test_accessor_methods() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-    let parameters = crate::clinical::imaging::photoacoustic::PhotoacousticParameters::default();
+    let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid.clone(), parameters.clone(), &medium).unwrap();
 
     // Test accessor methods

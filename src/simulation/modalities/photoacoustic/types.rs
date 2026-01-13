@@ -6,7 +6,7 @@
 //!
 //! ## Design Philosophy
 //!
-//! - **Single Source of Truth**: Core types defined in `crate::clinical::imaging::photoacoustic`
+//! - **Single Source of Truth**: Core types defined in `crate::domain::imaging::photoacoustic`
 //! - **Domain-Driven Design**: Types follow ubiquitous language from photoacoustic imaging domain
 //! - **Separation of Concerns**: Domain models separated from simulation infrastructure
 //!
@@ -30,8 +30,7 @@
 //! println!("Wavelengths: {:?}", params.wavelengths);
 //! ```
 
-// Re-export types from clinical domain (SSOT)
-pub use crate::clinical::imaging::photoacoustic::{
+pub use crate::domain::imaging::photoacoustic::{
     InitialPressure, PhotoacousticOpticalProperties, PhotoacousticParameters, PhotoacousticResult,
 };
 

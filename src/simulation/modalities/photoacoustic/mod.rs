@@ -185,8 +185,7 @@ pub mod types;
 // Re-export main simulator
 pub use core::PhotoacousticSimulator;
 
-// Re-export types from clinical module for convenience
-pub use crate::clinical::imaging::photoacoustic::{
+pub use crate::domain::imaging::photoacoustic::{
     InitialPressure, PhotoacousticOpticalProperties, PhotoacousticParameters, PhotoacousticResult,
 };
 

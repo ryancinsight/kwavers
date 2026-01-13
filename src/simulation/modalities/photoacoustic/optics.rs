@@ -71,7 +71,7 @@ pub fn initialize_optical_properties(
     let (nx, ny, nz) = grid.dimensions();
     let mut properties = Array3::from_elem(
         (nx, ny, nz),
-        crate::clinical::imaging::photoacoustic::PhotoacousticOpticalProperties::soft_tissue(750.0),
+        crate::domain::imaging::photoacoustic::PhotoacousticOpticalProperties::soft_tissue(750.0),
     );
 
     // Add blood vessels and tumor regions
@@ -87,7 +87,7 @@ pub fn initialize_optical_properties(
                 if vessel_dist < 0.002 {
                     // 2mm diameter vessel
                     properties[[i, j, k]] =
-                        crate::clinical::imaging::photoacoustic::PhotoacousticOpticalProperties::blood(
+                        crate::domain::imaging::photoacoustic::PhotoacousticOpticalProperties::blood(
                             750.0,
                         );
                 }
@@ -98,7 +98,7 @@ pub fn initialize_optical_properties(
                 if tumor_dist < 0.005 {
                     // 5mm diameter tumor
                     properties[[i, j, k]] =
-                        crate::clinical::imaging::photoacoustic::PhotoacousticOpticalProperties::tumor(
+                        crate::domain::imaging::photoacoustic::PhotoacousticOpticalProperties::tumor(
                             750.0,
                         );
                 }

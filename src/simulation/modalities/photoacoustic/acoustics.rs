@@ -59,7 +59,7 @@
 //! - Cox & Beard (2005): "Fast calculation of pulsed photoacoustic fields"
 //!   *Journal of the Acoustical Society of America* 117(6), 3616-3627. DOI: 10.1121/1.1920227
 
-use crate::clinical::imaging::photoacoustic::InitialPressure;
+use crate::domain::imaging::photoacoustic::InitialPressure;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::properties::OpticalPropertyData;
