@@ -8,14 +8,14 @@
 //!
 //! ```text
 //! Layer 0: core       - Primitives (errors, constants, time)
-//! Layer 1: infra      - Infrastructure (IO, runtime, API)
-//! Layer 2: domain     - Domain primitives (grid, medium, boundary)
-//! Layer 3: math       - Mathematical operations
+//! Layer 1: math       - Mathematical primitives and numerics
+//! Layer 2: domain     - Domain primitives (grid, medium, boundary, sources)
+//! Layer 3: infra      - Infrastructure (IO, runtime, API building blocks)
 //! Layer 4: physics    - Physics models
 //! Layer 5: solver     - Numerical solvers
 //! Layer 6: simulation - Simulation orchestration
-//! Layer 7: clinical   - Clinical applications
-//! Layer 8: analysis   - Post-processing
+//! Layer 7: analysis   - Post-processing and algorithms
+//! Layer 8: clinical   - Clinical applications and workflows
 //! Layer 9: gpu        - Hardware acceleration (optional)
 //! ```
 //!
@@ -35,14 +35,14 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Layer {
     Core = 0,
-    Infra = 1,
+    Math = 1,
     Domain = 2,
-    Math = 3,
+    Infra = 3,
     Physics = 4,
     Solver = 5,
     Simulation = 6,
-    Clinical = 7,
-    Analysis = 8,
+    Analysis = 7,
+    Clinical = 8,
     Gpu = 9,
 }
 
@@ -56,14 +56,14 @@ impl Layer {
 
         match components[1] {
             "core" => Some(Layer::Core),
-            "infra" => Some(Layer::Infra),
-            "domain" => Some(Layer::Domain),
             "math" => Some(Layer::Math),
+            "domain" => Some(Layer::Domain),
+            "infra" => Some(Layer::Infra),
             "physics" => Some(Layer::Physics),
             "solver" => Some(Layer::Solver),
             "simulation" => Some(Layer::Simulation),
-            "clinical" => Some(Layer::Clinical),
             "analysis" => Some(Layer::Analysis),
+            "clinical" => Some(Layer::Clinical),
             "gpu" => Some(Layer::Gpu),
             _ => None,
         }
@@ -73,14 +73,14 @@ impl Layer {
     pub fn name(&self) -> &'static str {
         match self {
             Layer::Core => "core",
-            Layer::Infra => "infra",
-            Layer::Domain => "domain",
             Layer::Math => "math",
+            Layer::Domain => "domain",
+            Layer::Infra => "infra",
             Layer::Physics => "physics",
             Layer::Solver => "solver",
             Layer::Simulation => "simulation",
-            Layer::Clinical => "clinical",
             Layer::Analysis => "analysis",
+            Layer::Clinical => "clinical",
             Layer::Gpu => "gpu",
         }
     }
@@ -94,11 +94,10 @@ impl Layer {
 
         // GPU is optional and can depend on most layers
         if *self == Layer::Gpu {
-            return *other <= Layer::Analysis;
+            return *other == Layer::Gpu || *other <= Layer::Clinical;
         }
 
-        // Otherwise, can only depend on strictly lower layers
-        (*self as u8) > (*other as u8)
+        (*self as u8) >= (*other as u8)
     }
 }
 
@@ -473,16 +472,21 @@ mod tests {
 
     #[test]
     fn test_layer_ordering() {
-        assert!(Layer::Core < Layer::Domain);
-        assert!(Layer::Domain < Layer::Physics);
+        assert!(Layer::Core < Layer::Math);
+        assert!(Layer::Math < Layer::Domain);
+        assert!(Layer::Domain < Layer::Infra);
+        assert!(Layer::Infra < Layer::Physics);
         assert!(Layer::Physics < Layer::Solver);
         assert!(Layer::Solver < Layer::Simulation);
+        assert!(Layer::Simulation < Layer::Analysis);
+        assert!(Layer::Analysis < Layer::Clinical);
     }
 
     #[test]
     fn test_layer_dependencies() {
         // Domain can depend on Core
         assert!(Layer::Domain.can_depend_on(&Layer::Core));
+        assert!(Layer::Domain.can_depend_on(&Layer::Math));
 
         // Solver can depend on Domain and Math
         assert!(Layer::Solver.can_depend_on(&Layer::Domain));
@@ -493,6 +497,9 @@ mod tests {
 
         // Core cannot depend on anything except itself
         assert!(!Layer::Core.can_depend_on(&Layer::Domain));
+
+        // GPU can depend on itself
+        assert!(Layer::Gpu.can_depend_on(&Layer::Gpu));
     }
 
     #[test]

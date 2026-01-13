@@ -3,10 +3,9 @@
 //! Provides asynchronous job queuing, execution, and monitoring for PINN training tasks.
 //! Implements proper concurrency controls and resource management.
 
-use crate::infra::api::{APIError, APIErrorType, JobStatus, PINNTrainingRequest, TrainingProgress};
-// PINN imports are conditional on the pinn feature
-#[cfg(feature = "pinn")]
-use crate::analysis::ml::pinn::{PINNConfig, PINNTrainer, TrainingMetrics};
+use crate::infra::api::{
+    APIError, APIErrorType, JobStatus, PINNTrainingRequest, TrainingMetrics, TrainingProgress,
+};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -266,22 +265,6 @@ impl JobManager {
             })?
         };
 
-        // Convert API request to PINN configuration
-        let config = PINNConfig {
-            physics_domain: job.request.physics_domain.clone(),
-            geometry: job.request.geometry.clone().into(),
-            physics_params: job.request.physics_params.clone().into(),
-            training_config: job.request.training_config.clone().into(),
-            use_gpu: job.request.training_config.use_gpu,
-        };
-
-        // Create trainer
-        let mut trainer = PINNTrainer::new(config).map_err(|e| APIError {
-            error: APIErrorType::InternalError,
-            message: format!("Failed to create PINN trainer: {}", e),
-            details: None,
-        })?;
-
         // Execute training with progress updates
         let progress_sender = {
             let jobs = self.jobs.clone();
@@ -303,15 +286,7 @@ impl JobManager {
             tx
         };
 
-        // Run training
-        let training_result = trainer
-            .train_with_progress(progress_sender)
-            .await
-            .map_err(|e| APIError {
-                error: APIErrorType::InternalError,
-                message: format!("Training failed: {}", e),
-                details: None,
-            })?;
+        let training_result = execute_training_with_progress(&job.request, progress_sender).await?;
 
         // Create model metadata
         let model_metadata = crate::api::ModelMetadata {
@@ -319,11 +294,11 @@ impl JobManager {
             physics_domain: job.request.physics_domain.clone(),
             created_at: chrono::Utc::now(),
             training_config: job.request.training_config.clone(),
-            performance_metrics: training_result.metrics.clone().into(),
+            performance_metrics: training_result.metrics.clone(),
             geometry_spec: job.request.geometry.clone(),
         };
 
-        // Serialize model (placeholder - would serialize actual model)
+        // Serialize model (interface-level payload for now)
         let model_data = serde_json::to_vec(&training_result).map_err(|e| APIError {
             error: APIErrorType::InternalError,
             message: format!("Failed to serialize model: {}", e),
@@ -351,70 +326,6 @@ impl JobManager {
 impl Default for JobManager {
     fn default() -> Self {
         Self::new(5) // Default to 5 concurrent jobs
-    }
-}
-
-#[cfg(feature = "pinn")]
-impl From<crate::api::GeometrySpec> for crate::ml::pinn::Geometry {
-    fn from(spec: crate::api::GeometrySpec) -> Self {
-        Self {
-            bounds: spec.bounds,
-            obstacles: spec.obstacles.into_iter().map(|o| o.into()).collect(),
-            boundary_conditions: spec
-                .boundary_conditions
-                .into_iter()
-                .map(|b| b.into())
-                .collect(),
-        }
-    }
-}
-
-#[cfg(feature = "pinn")]
-impl From<crate::api::ObstacleSpec> for crate::ml::pinn::trainer::Obstacle {
-    fn from(spec: crate::api::ObstacleSpec) -> Self {
-        Self {
-            shape: spec.shape,
-            center: spec.center,
-            parameters: spec.parameters,
-        }
-    }
-}
-
-#[cfg(feature = "pinn")]
-impl From<crate::api::BoundaryConditionSpec> for crate::ml::pinn::trainer::BoundaryCondition {
-    fn from(spec: crate::api::BoundaryConditionSpec) -> Self {
-        Self {
-            boundary: spec.boundary,
-            condition_type: spec.condition_type,
-            value: spec.value,
-        }
-    }
-}
-
-#[cfg(feature = "pinn")]
-impl From<crate::api::PhysicsParameters> for crate::ml::pinn::PhysicsParams {
-    fn from(params: crate::api::PhysicsParameters) -> Self {
-        Self {
-            material_properties: params.material_properties,
-            boundary_values: params.boundary_values,
-            initial_values: params.initial_values,
-            domain_params: params.domain_params,
-        }
-    }
-}
-
-#[cfg(feature = "pinn")]
-impl From<crate::api::TrainingConfig> for crate::ml::pinn::TrainingConfig {
-    fn from(config: crate::api::TrainingConfig) -> Self {
-        Self {
-            collocation_points: config.collocation_points,
-            batch_size: config.batch_size,
-            epochs: config.epochs,
-            learning_rate: config.learning_rate,
-            hidden_layers: config.hidden_layers,
-            adaptive_sampling: config.adaptive_sampling,
-            use_gpu: config.use_gpu,
-        }
     }
 }
 

@@ -31,9 +31,104 @@
 //! ```
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::gpu::compute_manager::ComputeManager;
 use ndarray::{Array4, Array5};
 use std::collections::HashMap;
+
+#[derive(Debug)]
+struct ComputeManager {
+    device: Option<wgpu::Device>,
+    queue: Option<wgpu::Queue>,
+}
+
+impl ComputeManager {
+    pub async fn new() -> KwaversResult<Self> {
+        match Self::init_gpu().await {
+            Ok((device, queue)) => Ok(Self {
+                device: Some(device),
+                queue: Some(queue),
+            }),
+            Err(_) => Ok(Self {
+                device: None,
+                queue: None,
+            }),
+        }
+    }
+
+    pub fn new_blocking() -> KwaversResult<Self> {
+        pollster::block_on(Self::new())
+    }
+
+    pub fn has_gpu(&self) -> bool {
+        self.device.is_some() && self.queue.is_some()
+    }
+
+    pub fn device(&self) -> KwaversResult<&wgpu::Device> {
+        self.device.as_ref().ok_or_else(|| {
+            KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
+                resource: "GPU device".to_string(),
+            })
+        })
+    }
+
+    pub fn queue(&self) -> KwaversResult<&wgpu::Queue> {
+        self.queue.as_ref().ok_or_else(|| {
+            KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
+                resource: "GPU queue".to_string(),
+            })
+        })
+    }
+
+    pub fn create_buffer(
+        &self,
+        size_bytes: usize,
+        usage: wgpu::BufferUsages,
+    ) -> KwaversResult<wgpu::Buffer> {
+        let device = self.device()?;
+        Ok(device.create_buffer(&wgpu::BufferDescriptor {
+            label: None,
+            size: size_bytes as u64,
+            usage,
+            mapped_at_creation: false,
+        }))
+    }
+
+    pub fn write_buffer<T: bytemuck::Pod>(&self, buffer: &wgpu::Buffer, data: &[T]) -> KwaversResult<()> {
+        let queue = self.queue()?;
+        queue.write_buffer(buffer, 0, bytemuck::cast_slice(data));
+        Ok(())
+    }
+
+    async fn init_gpu() -> KwaversResult<(wgpu::Device, wgpu::Queue)> {
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::all(),
+            ..Default::default()
+        });
+
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::HighPerformance,
+                compatible_surface: None,
+                force_fallback_adapter: false,
+            })
+            .await
+            .ok_or_else(|| KwaversError::GpuError("No GPU adapter found".into()))?;
+
+        let (device, queue) = adapter
+            .request_device(
+                &wgpu::DeviceDescriptor {
+                    label: Some("Kwavers EM Compute Device"),
+                    required_features: wgpu::Features::empty(),
+                    required_limits: wgpu::Limits::default(),
+                    memory_hints: Default::default(),
+                },
+                None,
+            )
+            .await
+            .map_err(|e| KwaversError::GpuError(format!("Failed to create device: {e}")))?;
+
+        Ok((device, queue))
+    }
+}
 
 /// GPU-accelerated electromagnetic solver configuration
 #[derive(Debug, Clone)]
@@ -225,6 +320,16 @@ impl GPUEMSolver {
             return Ok(());
         }
 
+        let electric_field = field_data.electric_field.as_slice().ok_or_else(|| {
+            KwaversError::GpuError("Electric field storage not contiguous".into())
+        })?;
+        let magnetic_field = field_data.magnetic_field.as_slice().ok_or_else(|| {
+            KwaversError::GpuError("Magnetic field storage not contiguous".into())
+        })?;
+        let current_density = field_data.current_density.as_slice().ok_or_else(|| {
+            KwaversError::GpuError("Current density storage not contiguous".into())
+        })?;
+
         // Create GPU buffers for electromagnetic field components
         let electric_buffer = self.compute_manager.create_buffer(
             field_data.electric_field.len() * std::mem::size_of::<f64>(),
@@ -248,18 +353,12 @@ impl GPUEMSolver {
         )?;
 
         // Upload initial field data to GPU
-        self.compute_manager.write_buffer(
-            &electric_buffer,
-            field_data.electric_field.as_slice().unwrap(),
-        )?;
-        self.compute_manager.write_buffer(
-            &magnetic_buffer,
-            field_data.magnetic_field.as_slice().unwrap(),
-        )?;
-        self.compute_manager.write_buffer(
-            &current_density_buffer,
-            field_data.current_density.as_slice().unwrap(),
-        )?;
+        self.compute_manager
+            .write_buffer(&electric_buffer, electric_field)?;
+        self.compute_manager
+            .write_buffer(&magnetic_buffer, magnetic_field)?;
+        self.compute_manager
+            .write_buffer(&current_density_buffer, current_density)?;
 
         // Store GPU buffers in HashMap
         self.gpu_buffers
@@ -299,10 +398,18 @@ impl GPUEMSolver {
 
         // Update GPU buffers if available
         if let Some(current_density_buffer) = self.gpu_buffers.get("current_density") {
-            let field_data = self.field_data.as_ref().unwrap();
+            let field_data = self.field_data.as_ref().ok_or_else(|| {
+                KwaversError::System(crate::core::error::SystemError::InvalidOperation {
+                    operation: "add_current_source".to_string(),
+                    reason: "Fields not initialized".to_string(),
+                })
+            })?;
+            let current_density = field_data.current_density.as_slice().ok_or_else(|| {
+                KwaversError::GpuError("Current density storage not contiguous".into())
+            })?;
             self.compute_manager.write_buffer(
                 current_density_buffer,
-                field_data.current_density.as_slice().unwrap(),
+                current_density,
             )?;
         }
 
@@ -323,7 +430,12 @@ impl GPUEMSolver {
         // Copy results back from GPU
         self.download_results()?;
 
-        Ok(self.field_data.as_ref().unwrap())
+        self.field_data.as_ref().ok_or_else(|| {
+            KwaversError::System(crate::core::error::SystemError::InvalidOperation {
+                operation: "solve".to_string(),
+                reason: "Fields not initialized".to_string(),
+            })
+        })
     }
 
     /// Perform a single time step
@@ -337,9 +449,15 @@ impl GPUEMSolver {
 
     /// GPU implementation of electromagnetic time stepping using FDTD
     fn time_step_gpu(&mut self, _step: usize) -> KwaversResult<()> {
-        let electric_buffer = self.gpu_buffers.get("electric").unwrap();
-        let magnetic_buffer = self.gpu_buffers.get("magnetic").unwrap();
-        let current_density_buffer = self.gpu_buffers.get("current_density").unwrap();
+        let electric_buffer = self.gpu_buffers.get("electric").ok_or_else(|| {
+            KwaversError::GpuError("Missing electric GPU buffer".into())
+        })?;
+        let magnetic_buffer = self.gpu_buffers.get("magnetic").ok_or_else(|| {
+            KwaversError::GpuError("Missing magnetic GPU buffer".into())
+        })?;
+        let current_density_buffer = self.gpu_buffers.get("current_density").ok_or_else(|| {
+            KwaversError::GpuError("Missing current_density GPU buffer".into())
+        })?;
         let device = self.compute_manager.device()?;
         let queue = self.compute_manager.queue()?;
 

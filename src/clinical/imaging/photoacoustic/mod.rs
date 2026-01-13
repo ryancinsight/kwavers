@@ -51,7 +51,7 @@
 //!
 //! ```rust,no_run
 //! use kwavers::clinical::imaging::photoacoustic::{
-//!     PhotoacousticParameters, OpticalProperties
+//!     PhotoacousticOpticalProperties, PhotoacousticParameters
 //! };
 //!
 //! // Configure PA imaging parameters

@@ -6,8 +6,9 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::GridSource;
 use crate::domain::source::Source;
-use crate::solver::forward::pstd::PSTDSource;
-use crate::solver::forward::{FdtdSolver, PSTDSolver};
+
+use crate::solver::forward::fdtd::FdtdSolver;
+use crate::solver::forward::pstd::PSTDSolver;
 use crate::solver::hybrid::adaptive_selection::AdaptiveSelector;
 use crate::solver::hybrid::config::{DecompositionStrategy, HybridConfig};
 use crate::solver::hybrid::coupling::CouplingInterface;
@@ -82,7 +83,7 @@ impl HybridSolver {
             config.pstd_config.clone(),
             grid.clone(),
             medium,
-            PSTDSource::default(),
+            GridSource::default(),
         )?;
         let fdtd_solver = FdtdSolver::new(
             config.fdtd_config.clone(),

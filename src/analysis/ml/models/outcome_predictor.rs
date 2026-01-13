@@ -37,7 +37,28 @@ impl MLModel for OutcomePredictorModel {
         // **Implementation**: Basic statistical prediction (mean-based heuristic)
         // Suitable for template/development purposes, not production medical predictions
         // **Future**: Replace with trained neural network (Sprint 127+ ML infrastructure)
-        let mean = input.mean_axis(ndarray::Axis(1)).unwrap();
+
+        // Validate input is not empty
+        if input.is_empty() {
+            return Err(crate::core::error::KwaversError::Validation(
+                crate::core::error::ValidationError::FieldValidation {
+                    field: "input".to_string(),
+                    value: "empty array".to_string(),
+                    constraint: "array must not be empty".to_string(),
+                },
+            ));
+        }
+
+        let mean = input.mean_axis(ndarray::Axis(1)).ok_or_else(|| {
+            crate::core::error::KwaversError::Validation(
+                crate::core::error::ValidationError::FieldValidation {
+                    field: "input".to_string(),
+                    value: format!("shape {:?}", input.shape()),
+                    constraint: "cannot compute mean across empty axis".to_string(),
+                },
+            )
+        })?;
+
         let mut output = Array2::zeros((input.nrows(), 3));
         for (i, &m) in mean.iter().enumerate() {
             output[[i, 0]] = m.clamp(0.0, 1.0);

@@ -1,5 +1,7 @@
 use ndarray::Array3;
 
+pub use crate::physics::acoustics::mechanics::elastic_wave::ElasticBodyForceConfig;
+
 /// Configuration for elastic wave simulation
 #[derive(Debug, Clone)]
 pub struct ElasticWaveConfig {
@@ -72,25 +74,6 @@ impl ElasticWaveField {
         out.mapv_inplace(f64::sqrt);
         out
     }
-}
-
-/// Configuration for body force excitation
-#[derive(Debug, Clone)]
-pub enum ElasticBodyForceConfig {
-    GaussianImpulse {
-        /// Center position [x, y, z] (m)
-        center_m: [f64; 3],
-        /// Spatial width [sigma_x, sigma_y, sigma_z] (m)
-        sigma_m: [f64; 3],
-        /// Force direction vector [x, y, z] (normalized)
-        direction: [f64; 3],
-        /// Center time (s)
-        t0_s: f64,
-        /// Temporal width (s)
-        sigma_t_s: f64,
-        /// Impulse magnitude (N·s/m³)
-        impulse_n_per_m3_s: f64,
-    },
 }
 
 #[derive(Debug, Clone)]

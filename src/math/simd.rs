@@ -75,11 +75,13 @@ impl SimdConfig {
         // Check for portable SIMD first (nightly feature)
         #[cfg(feature = "nightly")]
         {
-            if std::simd::SimdElement::LANES > 1 {
+            // Use f32x4 as a representative SIMD type
+            use std::simd::f32x4;
+            if f32x4::LEN > 1 {
                 return Self {
                     level: SimdLevel::Portable,
-                    vector_width: std::simd::SimdElement::LANES,
-                    alignment: std::mem::align_of::<std::simd::f32x4>(),
+                    vector_width: f32x4::LEN,
+                    alignment: std::mem::align_of::<f32x4>(),
                     enabled: true,
                 };
             }

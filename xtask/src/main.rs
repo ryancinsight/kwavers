@@ -59,13 +59,25 @@ fn main() -> Result<()> {
     }
 }
 
+fn workspace_root() -> PathBuf {
+    let xtask_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    xtask_dir
+        .parent()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| xtask_dir)
+}
+
+fn src_root() -> PathBuf {
+    workspace_root().join("src")
+}
+
 /// Check module sizes against GRASP principles (<500 lines)
 fn check_module_sizes() -> Result<()> {
     println!("🔍 Checking module sizes (GRASP: <500 lines)...");
 
     let mut violations = Vec::new();
 
-    for entry in WalkDir::new("../src").into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(src_root()).into_iter().filter_map(|e| e.ok()) {
         if entry.path().extension().map_or(false, |ext| ext == "rs") {
             let content = fs::read_to_string(entry.path())
                 .with_context(|| format!("Failed to read {}", entry.path().display()))?;
@@ -117,7 +129,7 @@ fn audit_naming() -> Result<()> {
         "property_based", // Contains _proper but is valid module name
     ];
 
-    for entry in WalkDir::new("src").into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(src_root()).into_iter().filter_map(|e| e.ok()) {
         if entry.path().extension().map_or(false, |ext| ext == "rs") {
             let content = fs::read_to_string(entry.path())
                 .with_context(|| format!("Failed to read {}", entry.path().display()))?;
@@ -212,7 +224,7 @@ fn check_stubs() -> Result<()> {
         "not implemented",
     ];
 
-    for entry in WalkDir::new("src").into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(src_root()).into_iter().filter_map(|e| e.ok()) {
         if entry.path().extension().map_or(false, |ext| ext == "rs") {
             // Skip xtask and tool files to avoid false positives
             if entry.path().to_string_lossy().contains("xtask")
@@ -264,7 +276,7 @@ fn check_configs() -> Result<()> {
     let mut config_count = 0;
     let mut configs = Vec::new();
 
-    for entry in WalkDir::new("src").into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(src_root()).into_iter().filter_map(|e| e.ok()) {
         if entry.path().extension().map_or(false, |ext| ext == "rs") {
             let content = fs::read_to_string(entry.path())
                 .with_context(|| format!("Failed to read {}", entry.path().display()))?;
@@ -301,11 +313,10 @@ fn check_configs() -> Result<()> {
 
 /// Check architecture for layer violations and cross-contamination
 fn check_architecture(markdown: bool, strict: bool) -> Result<()> {
-    let src_root = PathBuf::from("../src");
+    let src_root = src_root();
 
     if !src_root.exists() {
         eprintln!("❌ Source directory not found: {}", src_root.display());
-        eprintln!("   Run from xtask directory or adjust path");
         std::process::exit(1);
     }
 
@@ -317,7 +328,7 @@ fn check_architecture(markdown: bool, strict: bool) -> Result<()> {
     if markdown {
         // Generate markdown report
         let md = report.to_markdown();
-        let output_path = PathBuf::from("../ARCHITECTURE_VALIDATION_REPORT.md");
+        let output_path = workspace_root().join("ARCHITECTURE_VALIDATION_REPORT.md");
         fs::write(&output_path, md).context("Failed to write markdown report")?;
         println!("📄 Markdown report written to: {}", output_path.display());
     } else {

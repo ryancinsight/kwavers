@@ -1,4 +1,3 @@
-
 /// Activation Function Types
 #[derive(Debug, Clone, Copy)]
 pub enum ActivationType {

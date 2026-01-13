@@ -5,6 +5,7 @@
 
 pub mod lithotripsy;
 pub mod metrics;
+pub mod microbubble_dynamics;
 pub mod modalities;
 pub mod parameters;
 pub mod swe_3d_workflows;
@@ -15,6 +16,7 @@ pub use crate::physics::acoustics::therapy::cavitation::{
     CavitationDetectionMethod, TherapyCavitationDetector,
 };
 pub use metrics::TreatmentMetrics;
+pub use microbubble_dynamics::MicrobubbleDynamicsService;
 pub use modalities::{TherapyMechanism, TherapyModality};
 pub use parameters::TherapyParameters;
 pub use swe_3d_workflows::*;

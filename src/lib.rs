@@ -31,7 +31,9 @@
     clippy::too_many_arguments,  // Will fix in refactoring
     clippy::type_complexity,      // Will simplify types
 )]
-#![allow(dead_code)]
+// Dead code warnings are now enforced at crate level.
+// Individual items that are intentionally unused (e.g., future APIs, internal utilities)
+// should use #[allow(dead_code)] with inline justification comments.
 
 use std::collections::HashMap;
 
@@ -159,7 +161,7 @@ pub use solver::pstd::dg::{HybridSpectralDGConfig, HybridSpectralDGSolver};
 
 // Re-export Spectral and FDTD solvers
 pub use solver::fdtd::{FdtdConfig, FdtdPlugin, FdtdSolver};
-pub use solver::pstd::{PSTDConfig, PSTDPlugin, PSTDSolver, PSTDSource};
+pub use solver::pstd::{PSTDConfig, PSTDPlugin, PSTDSolver};
 
 // Re-export GPU-related items only when feature enabled
 

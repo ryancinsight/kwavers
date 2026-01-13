@@ -33,8 +33,8 @@ use kwavers::physics::imaging::elastography::displacement::DisplacementEstimator
 use kwavers::physics::imaging::elastography::radiation_force::PushPulseParameters;
 use kwavers::physics::imaging::elastography::AcousticRadiationForce;
 use kwavers::physics::imaging::ElasticityMap;
-use kwavers::physics::imaging::InversionMethod;
-use kwavers::solver::inverse::elastography::ShearWaveInversion;
+use kwavers::domain::imaging::ultrasound::elastography::InversionMethod;
+use kwavers::solver::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig};
 use kwavers::KwaversError;
 use kwavers::KwaversResult;
 use ndarray::Array3;
@@ -131,7 +131,8 @@ fn main() -> KwaversResult<()> {
 
     // Reconstruct elasticity map
     println!("\n🧮 Reconstructing Elasticity Map...");
-    let inversion = ShearWaveInversion::new(InversionMethod::TimeOfFlight);
+    let config = ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight);
+    let inversion = ShearWaveInversion::new(config);
     let elasticity_map = inversion.reconstruct(&tracked_displacement, &grid)?;
 
     // Analyze results

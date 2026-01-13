@@ -223,23 +223,7 @@ impl BeamformingProcessor {
         Ok(output)
     }
 
-    /// Deprecated alias for `mvdr_unsteered_weights_time_series`.
-    ///
-    /// # Deprecation rationale
-    /// This function name previously implied a **Capon spatial spectrum**, but it is **not steered**
-    /// (it uses a uniform steering vector) and therefore cannot be used as a point-dependent
-    /// `P_Capon(p)` scorer for localization.
-    #[deprecated(
-        since = "2.14.0",
-        note = "renamed to mvdr_unsteered_weights_time_series; this is not a steered Capon spatial spectrum"
-    )]
-    pub fn capon_with_uniform(
-        &self,
-        sensor_data: &Array3<f64>,
-        diagonal_loading: f64,
-    ) -> KwaversResult<Array3<f64>> {
-        self.mvdr_unsteered_weights_time_series(sensor_data, diagonal_loading)
-    }
+
 }
 
 #[cfg(test)]
@@ -302,7 +286,7 @@ mod tests {
         // Backward-compat alias: old name should behave identically.
         #[allow(deprecated)]
         let out_alias = bf
-            .capon_with_uniform(&data, 0.1)
+            .mvdr_unsteered_weights_time_series(&data, 0.1)
             .expect("Capon-uniform alias should succeed");
         for t in 0..n_samples {
             assert!((out_alias[[0, 0, t]] - out[[0, 0, t]]).abs() < 1e-12);

@@ -165,7 +165,7 @@ impl NumericalValidator {
         use crate::domain::source::GridSource;
         use crate::solver::fdtd::{FdtdConfig, FdtdSolver};
         use crate::solver::forward::nonlinear::kuznetsov::{KuznetsovConfig, KuznetsovWave};
-        use crate::solver::pstd::{PSTDConfig, PSTDSolver, PSTDSource};
+        use crate::solver::pstd::{PSTDConfig, PSTDSolver};
         use std::f64::consts::PI;
 
         // Test parameters
@@ -178,12 +178,9 @@ impl NumericalValidator {
 
         // PSTD (Spectral) dispersion test
         let pstd_config = PSTDConfig::default();
-        let pstd_solver = PSTDSolver::new(
-            pstd_config,
-            self.grid.clone(),
-            &self.medium,
-            PSTDSource::default(),
-        )?;
+        let pstd_source = GridSource::default();
+        let pstd_solver =
+            PSTDSolver::new(pstd_config, self.grid.clone(), &self.medium, pstd_source)?;
         let pstd_phase_error = self.compute_phase_error(&pstd_solver, k, omega, dt)?;
 
         // FDTD dispersion test

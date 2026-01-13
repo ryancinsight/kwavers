@@ -5,8 +5,8 @@
 //! **Spherical Wave**: a(r) = exp(j k |r - r₀|) / |r - r₀| for near-field sources
 //! **Focused Beam**: Combines phase delays for beam focusing at specific point
 
-use crate::analysis::signal_processing::beamforming::utils::delays;
 use crate::core::error::KwaversResult;
+use crate::math::geometry::delays;
 use crate::math::geometry::distance3;
 use ndarray::Array1;
 
@@ -31,19 +31,18 @@ impl SteeringVector {
         frequency: f64,
         sensor_positions: &[[f64; 3]],
         speed_of_sound: f64,
-    ) -> Array1<num_complex::Complex<f64>> {
+    ) -> KwaversResult<Array1<num_complex::Complex<f64>>> {
         use num_complex::Complex;
 
         let phase_delays =
-            delays::plane_wave_phase_delays(sensor_positions, direction, frequency, speed_of_sound)
-                .expect("plane wave phase delays must be valid");
+            delays::plane_wave_phase_delays(sensor_positions, direction, frequency, speed_of_sound)?;
 
         let mut steering_vector = Array1::zeros(sensor_positions.len());
         for (i, &phase) in phase_delays.iter().enumerate() {
             steering_vector[i] = Complex::new(0.0, phase).exp();
         }
 
-        steering_vector
+        Ok(steering_vector)
     }
 
     /// Compute steering vector for given direction and sensor positions
@@ -93,7 +92,7 @@ impl SteeringVector {
                     frequency,
                     sensor_positions,
                     speed_of_sound,
-                );
+                )?;
             }
 
             SteeringVectorMethod::SphericalWave { source_position } => {

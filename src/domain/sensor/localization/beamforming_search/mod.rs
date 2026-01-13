@@ -33,10 +33,6 @@ pub mod config;
 
 pub use config::{LocalizationBeamformSearchConfig, LocalizationBeamformingMethod, SearchGrid};
 
-use crate::analysis::signal_processing::beamforming::narrowband::{
-    capon_spatial_spectrum_point, capon_spatial_spectrum_point_complex_baseband,
-    CaponSpectrumConfig,
-};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::sensor::beamforming::BeamformingProcessor;
 use crate::domain::sensor::localization::Position;
@@ -185,15 +181,13 @@ impl BeamformSearch {
                 let delays_s = self.processor.compute_delays(point);
                 let weights = vec![1.0; self.processor.num_sensors()];
 
-                // SSOT: time-domain DAS with explicit delay reference policy lives in beamforming.
-                let out =
-                    crate::domain::sensor::beamforming::delay_and_sum_time_domain_with_reference(
-                        sensor_data,
-                        self.processor.config.sampling_frequency,
-                        &delays_s,
-                        &weights,
-                        *delay_reference,
-                    )?;
+                let out = crate::domain::sensor::beamforming::time_domain::delay_and_sum(
+                    sensor_data,
+                    self.processor.config.sampling_frequency,
+                    &delays_s,
+                    &weights,
+                    *delay_reference,
+                )?;
 
                 let (ox, oy, ot) = out.dim();
                 if ox != 1 || oy != 1 {
@@ -215,77 +209,11 @@ impl BeamformSearch {
                 Ok(power)
             }
 
-            config::LocalizationBeamformingMethod::CaponMvdrSpectrum {
-                frequency_hz,
-                diagonal_loading,
-                steering,
-                covariance_domain,
-            } => {
-                // B) Point-steered MVDR/Capon spatial spectrum
-                //
-                // Field jargon:
-                //   P_Capon(p) = 1 / (a(p)^H R^{-1} a(p))
-                //
-                // SSOT:
-                // - Complex baseband (canonical narrowband): analytic signal + downconversion -> snapshots
-                //   -> Hermitian covariance R = (1/K) Σ x xᴴ.
-                // - Real time-samples (baseline): real covariance built directly from time samples.
-                //
-                // Critical invariant: the covariance-domain choice is an explicit policy; do not silently
-                // fall back to a different domain.
-                let p = match covariance_domain {
-                    config::MvdrCovarianceDomain::ComplexBaseband {
-                        snapshot_step_samples,
-                    } => {
-                        let cfg = CaponSpectrumConfig {
-                            frequency_hz: *frequency_hz,
-                            sound_speed: self.processor.config.sound_speed,
-                            diagonal_loading: *diagonal_loading,
-                            covariance:
-                                crate::domain::sensor::beamforming::CovarianceEstimator::default(),
-                            steering: steering.clone(),
-                            sampling_frequency_hz: Some(self.processor.config.sampling_frequency),
-                            snapshot_selection: None,
-                            baseband_snapshot_step_samples: Some(*snapshot_step_samples),
-                        };
-
-                        let p = capon_spatial_spectrum_point_complex_baseband(
-                            sensor_data,
-                            self.processor.sensor_positions(),
-                            point,
-                            &cfg,
-                        )?;
-                        p
-                    }
-                    config::MvdrCovarianceDomain::RealTimeSamples => {
-                        let cfg = CaponSpectrumConfig {
-                            frequency_hz: *frequency_hz,
-                            sound_speed: self.processor.config.sound_speed,
-                            diagonal_loading: *diagonal_loading,
-                            covariance:
-                                crate::domain::sensor::beamforming::CovarianceEstimator::default(),
-                            steering: steering.clone(),
-                            sampling_frequency_hz: None,
-                            snapshot_selection: None,
-                            baseband_snapshot_step_samples: None,
-                        };
-
-                        let p = capon_spatial_spectrum_point(
-                            sensor_data,
-                            self.processor.sensor_positions(),
-                            point,
-                            &cfg,
-                        )?;
-                        p
-                    }
-                };
-
-                // Optional normalization to reduce dependence on array size.
-                if self.cfg.normalize_by_sensor_count && self.processor.num_sensors() > 0 {
-                    Ok(p / self.processor.num_sensors() as f64)
-                } else {
-                    Ok(p)
-                }
+            config::LocalizationBeamformingMethod::CaponMvdrSpectrum { .. } => {
+                Err(KwaversError::InvalidInput(
+                    "MVDR/Capon scoring is an analysis-layer algorithm and is not available from domain::sensor::localization::beamforming_search. Use analysis::signal_processing::beamforming::narrowband APIs for MVDR/Capon spatial spectrum evaluation."
+                        .to_string(),
+                ))
             }
         }
     }
@@ -304,7 +232,7 @@ mod tests {
 
     #[test]
     fn centered_cube_generates_points() {
-        use crate::domain::sensor::beamforming::TimeDomainDelayReference;
+        use crate::domain::sensor::beamforming::time_domain::DelayReference as TimeDomainDelayReference;
 
         let processor = make_processor(4);
 

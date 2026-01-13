@@ -4,10 +4,18 @@
 //! including device discovery, domain decomposition, load balancing, and communication protocols.
 
 use crate::core::error::{KwaversError, KwaversResult};
-#[cfg(feature = "gpu")]
-use crate::gpu::GpuCapabilities;
 use std::collections::{HashMap, VecDeque};
 // Removed unused imports
+
+#[cfg(feature = "gpu")]
+#[derive(Debug, Clone)]
+pub struct GpuCapabilities {
+    pub max_buffer_size: u64,
+    pub max_workgroup_size: [u32; 3],
+    pub max_compute_invocations: u32,
+    pub supports_f64: bool,
+    pub supports_atomics: bool,
+}
 
 /// Information about a GPU device
 #[derive(Debug, Clone)]

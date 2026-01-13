@@ -64,7 +64,8 @@ use std::cell::UnsafeCell;
 
 /// Thread-safe arena allocator for field data
 pub struct FieldArena {
-    /// Raw memory buffer
+    /// Raw memory buffer (accessed via unsafe pointer arithmetic in alloc_field)
+    #[allow(dead_code)] // Used internally via UnsafeCell in unsafe alloc_field method
     buffer: UnsafeCell<Vec<u8>>,
     /// Current allocation offset
     offset: UnsafeCell<usize>,

@@ -276,4 +276,94 @@ impl Source for PhasedArrayTransducer {
 
         total_pressure
     }
+
+    // ==================== Focal Properties Implementation ====================
+
+    fn focal_point(&self) -> Option<(f64, f64, f64)> {
+        // Extract focal point from beamforming mode
+        match &self.beamforming_mode {
+            BeamformingMode::Focus { target } => Some(*target),
+            _ => None, // Non-focused modes don't have a focal point
+        }
+    }
+
+    fn focal_depth(&self) -> Option<f64> {
+        let focal_point = self.focal_point()?;
+
+        // Calculate distance from array center to focal point
+        let (cx, cy, cz) = self.config.center_position;
+        let dx = focal_point.0 - cx;
+        let dy = focal_point.1 - cy;
+        let dz = focal_point.2 - cz;
+
+        let depth = (dx * dx + dy * dy + dz * dz).sqrt();
+        Some(depth)
+    }
+
+    fn spot_size(&self) -> Option<f64> {
+        // Spot size for phased arrays: approximately λ * F#
+        // where F# = focal_depth / aperture_size
+        let focal_depth = self.focal_depth()?;
+        let aperture_size = self.config.aperture_size();
+
+        if aperture_size > 0.0 {
+            let wavelength = self.sound_speed / self.config.frequency;
+            let f_number = focal_depth / aperture_size;
+            let spot_size = wavelength * f_number;
+            Some(spot_size)
+        } else {
+            None
+        }
+    }
+
+    fn f_number(&self) -> Option<f64> {
+        let focal_depth = self.focal_depth()?;
+        let aperture_size = self.config.aperture_size();
+
+        if aperture_size > 0.0 {
+            Some(focal_depth / aperture_size)
+        } else {
+            None
+        }
+    }
+
+    fn rayleigh_range(&self) -> Option<f64> {
+        // Rayleigh range for focused transducers: approximately λ * F#²
+        let f_num = self.f_number()?;
+        let wavelength = self.sound_speed / self.config.frequency;
+        let z_r = wavelength * f_num * f_num;
+        Some(z_r)
+    }
+
+    fn numerical_aperture(&self) -> Option<f64> {
+        // NA = 1 / (2 * F#) for circular apertures
+        // Or NA = sin(θ) where θ is half-angle of convergence
+        let f_num = self.f_number()?;
+
+        if f_num > 0.0 {
+            // Use geometric approximation: NA = 1 / (2*F#)
+            let na = 1.0 / (2.0 * f_num);
+            Some(na.min(1.0)) // NA cannot exceed 1.0
+        } else {
+            None
+        }
+    }
+
+    fn focal_gain(&self) -> Option<f64> {
+        // Focal gain for phased arrays: approximately N (number of elements)
+        // for ideal constructive interference at focus
+        // More accurately: gain ≈ (aperture_area / spot_size²)
+        let spot_size = self.spot_size()?;
+        let aperture_size = self.config.aperture_size();
+
+        if spot_size > 0.0 {
+            // 1D array: aperture_area ~ aperture_size * element_width
+            let aperture_area = aperture_size * self.config.element_width;
+            let focal_area = spot_size * spot_size;
+            let gain = aperture_area / focal_area;
+            Some(gain)
+        } else {
+            None
+        }
+    }
 }

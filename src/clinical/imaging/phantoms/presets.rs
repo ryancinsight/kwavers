@@ -1,7 +1,7 @@
+use super::builder::PhantomBuilder;
 use crate::domain::grid::GridDimensions;
 use crate::domain::medium::properties::OpticalPropertyData;
 use crate::physics::optics::map_builder::OpticalPropertyMap;
-use super::builder::PhantomBuilder;
 
 /// Predefined clinical phantoms
 #[derive(Debug)]

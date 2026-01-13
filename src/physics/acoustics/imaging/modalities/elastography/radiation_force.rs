@@ -26,10 +26,9 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
+use crate::physics::acoustics::mechanics::elastic_wave::ElasticBodyForceConfig;
 use ndarray::Array3;
 use std::f64::consts::PI;
-
-use crate::solver::forward::elastic::swe::ElasticBodyForceConfig;
 
 /// Acoustic radiation force push pulse parameters
 ///
@@ -242,20 +241,6 @@ impl AcousticRadiationForce {
         })
     }
 
-    /// Legacy API: Apply push pulse and return an initial displacement.
-    ///
-    /// # Correctness warning
-    ///
-    /// This method is maintained for compatibility but is not physically faithful: ARFI is a
-    /// body-force excitation, not an instantaneous displacement assignment. Prefer
-    /// [`push_pulse_body_force`] and configure the solver to use body-force sources.
-    #[deprecated(
-        note = "ARFI should be modeled as a body-force source term; use push_pulse_body_force instead."
-    )]
-    pub fn apply_push_pulse(&self, push_location: [f64; 3]) -> KwaversResult<Array3<f64>> {
-        self.push_pulse_pseudo_displacement(push_location)
-    }
-
     fn push_pulse_pseudo_displacement(
         &self,
         push_location: [f64; 3],
@@ -302,40 +287,7 @@ impl AcousticRadiationForce {
         Ok(displacement)
     }
 
-    /// Apply multi-directional push pulses for 3D SWE
-    ///
-    /// # Arguments
-    ///
-    /// * `push_sequence` - Sequence of push locations and directions
-    ///
-    /// # Returns
-    ///
-    /// Combined initial displacement field from all push pulses
-    #[deprecated(
-        note = "ARFI should be modeled as a body-force source term; use multi_directional_body_forces instead."
-    )]
-    pub fn apply_multi_directional_push(
-        &self,
-        push_sequence: &MultiDirectionalPush,
-    ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = self.grid.dimensions();
-        let mut total_displacement = Array3::zeros((nx, ny, nz));
 
-        for push in &push_sequence.pushes {
-            let displacement = self.push_pulse_pseudo_displacement(push.location)?;
-            // Add displacement with directional weighting
-            for k in 0..nz {
-                for j in 0..ny {
-                    for i in 0..nx {
-                        total_displacement[[i, j, k]] +=
-                            displacement[[i, j, k]] * push.amplitude_weight;
-                    }
-                }
-            }
-        }
-
-        Ok(total_displacement)
-    }
 
     /// Create per-push body-force configs for a multi-directional push sequence.
     ///

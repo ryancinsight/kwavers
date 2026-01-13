@@ -19,16 +19,16 @@
 //!
 //! # Example
 //!
-//! ```no_run
+//! ```rust,no_run
 //! use kwavers::physics::optics::map_builder::{OpticalPropertyMapBuilder, Region};
 //! use kwavers::domain::medium::properties::OpticalPropertyData;
-//! use kwavers::domain::grid::Grid3D;
+//! use kwavers::domain::grid::{Grid3D, GridDimensions};
 //!
 //! // Create a 3D grid
-//! let grid = Grid3D::new(50, 50, 50, 0.001)?;
+//! let grid = Grid3D::new(50, 50, 50, 0.001, 0.001, 0.001)?;
 //!
 //! // Build heterogeneous optical map
-//! let mut builder = OpticalPropertyMapBuilder::new(grid.dimensions());
+//! let mut builder = OpticalPropertyMapBuilder::new(GridDimensions::from_grid(&grid));
 //!
 //! // Background: soft tissue
 //! builder.set_background(OpticalPropertyData::soft_tissue());

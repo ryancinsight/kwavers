@@ -24,8 +24,8 @@
 //! - E ∈ ℝᴹˣᴺ: Extinction coefficient matrix (εⱼ(λᵢ))
 //! - C ∈ ℝᴺ: Chromophore concentrations [C₁, ..., Cₙ]ᵀ
 
-pub mod solver;
+pub mod solvers;
 pub mod types;
 
-pub use solver::SpectralUnmixer;
+pub use solvers::unmixer::SpectralUnmixer;
 pub use types::{SpectralUnmixingConfig, UnmixingResult, VolumetricUnmixingResult};

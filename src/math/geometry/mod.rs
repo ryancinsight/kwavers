@@ -20,6 +20,8 @@
 //! - Treeby, B. E., & Cox, B. T. (2010). "MATLAB toolbox for the simulation
 //!   and reconstruction of photoacoustic wave fields." J. Biomed. Opt. 15(2), 021314.
 
+pub mod delays;
+
 use crate::{core::error::KwaversResult, domain::grid::Grid};
 use ndarray::Array3;
 
@@ -351,9 +353,7 @@ pub(crate) fn normalize3(v: [f64; 3]) -> [f64; 3] {
     [v[0] / mag, v[1] / mag, v[2] / mag]
 }
 
-pub(crate) fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
+
 
 pub(crate) fn distance3(a: [f64; 3], b: [f64; 3]) -> f64 {
     let dx = a[0] - b[0];

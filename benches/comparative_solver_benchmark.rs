@@ -8,7 +8,7 @@ use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::source::GridSource;
 use kwavers::solver::forward::fdtd::{FdtdConfig, FdtdSolver};
-use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver, PSTDSource};
+use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers::solver::interface::Solver;
 use ndarray::{Array2, Array3, ArrayView3};
 
@@ -131,7 +131,7 @@ fn run_pstd_benchmark(
     let mut config = PSTDConfig::default();
     config.nt = time_steps.saturating_add(1);
     config.dt = 1e-7;
-    let pstd_source = PSTDSource::default();
+    let pstd_source = GridSource::default();
     let mut solver = PSTDSolver::new(config, grid.clone(), medium, pstd_source).unwrap();
 
     let start = std::time::Instant::now();

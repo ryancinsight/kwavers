@@ -47,7 +47,7 @@ use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::source::GridSource;
 use kwavers::domain::source::SourceMode;
 use kwavers::solver::forward::fdtd::{FdtdConfig, FdtdSolver};
-use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver, PSTDSource};
+use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers::solver::interface::solver::Solver;
 use ndarray::{Array2, Array3};
 use proptest::prelude::*;

@@ -2,11 +2,11 @@
 
 use super::{ProcessingOperation, TransferStatistics};
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::gpu::GpuContext;
 use crate::visualization::FieldType;
 use log::{debug, info};
 use ndarray::Array3;
 use std::collections::HashMap;
+#[cfg(feature = "gpu-visualization")]
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -47,8 +47,6 @@ impl Default for TransferOptions {
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct DataPipeline {
-    gpu_context: Arc<GpuContext>,
-
     #[cfg(feature = "gpu-visualization")]
     device: Arc<Device>,
     #[cfg(feature = "gpu-visualization")]
@@ -69,7 +67,7 @@ pub struct DataPipeline {
 
 impl DataPipeline {
     /// Create a new data pipeline
-    pub async fn new(_gpu_context: Arc<GpuContext>) -> KwaversResult<Self> {
+    pub async fn new() -> KwaversResult<Self> {
         info!("Initializing GPU data pipeline for visualization");
 
         #[cfg(feature = "gpu-visualization")]
@@ -83,7 +81,6 @@ impl DataPipeline {
         #[cfg(not(feature = "gpu-visualization"))]
         {
             Ok(Self {
-                gpu_context: _gpu_context,
                 field_dimensions: HashMap::new(),
                 field_ranges: HashMap::new(),
                 processing_operations: HashMap::new(),

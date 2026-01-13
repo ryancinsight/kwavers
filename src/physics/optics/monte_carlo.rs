@@ -53,14 +53,18 @@
 //!
 //! # Example
 //!
-//! ```no_run
+//! ```rust,no_run
 //! use kwavers::physics::optics::monte_carlo::{MonteCarloSolver, PhotonSource, SimulationConfig};
 //! use kwavers::domain::grid::Grid3D;
-//! use kwavers::physics::optics::OpticalPropertyMap;
+//! use kwavers::domain::grid::GridDimensions;
+//! use kwavers::domain::medium::properties::OpticalPropertyData;
+//! use kwavers::physics::optics::map_builder::OpticalPropertyMapBuilder;
 //!
 //! // Create solver
-//! let grid = Grid3D::new(50, 50, 50, 0.001)?;
-//! let optical_map = /* ... construct map ... */;
+//! let grid = Grid3D::new(50, 50, 50, 0.001, 0.001, 0.001)?;
+//! let optical_map = OpticalPropertyMapBuilder::new(GridDimensions::from_grid(&grid))
+//!     .set_background(OpticalPropertyData::soft_tissue())
+//!     .build();
 //! let solver = MonteCarloSolver::new(grid, optical_map);
 //!
 //! // Configure simulation
@@ -73,7 +77,7 @@
 //!
 //! // Run simulation
 //! let result = solver.simulate(&source, &config)?;
-//! println!("Absorbed energy: {:.3e} J", result.absorbed_energy());
+//! println!("Absorbed energy: {:.3e} J", result.total_absorbed_energy());
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 

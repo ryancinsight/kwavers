@@ -272,7 +272,7 @@ mod tests {
     #[test]
     fn test_fft_based_absorption_reduces_amplitude() {
         use crate::domain::medium::HomogeneousMedium;
-        use crate::solver::pstd::PSTDSource;
+        use crate::domain::source::GridSource;
 
         let grid = Grid::new(32, 32, 32, 1e-4, 1e-4, 1e-4).unwrap();
         let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, &grid);
@@ -306,7 +306,7 @@ mod tests {
         };
 
         let mut solver =
-            PSTDSolver::new(config, grid.clone(), &medium, PSTDSource::default()).unwrap();
+            PSTDSolver::new(config, grid.clone(), &medium, GridSource::default()).unwrap();
 
         // Set density to our test field (absorption acts on rho)
         solver.rho.assign(&p);
@@ -336,7 +336,7 @@ mod tests {
     #[test]
     fn test_fft_absorption_energy_dissipation() {
         use crate::domain::medium::HomogeneousMedium;
-        use crate::solver::pstd::PSTDSource;
+        use crate::domain::source::GridSource;
 
         let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4).unwrap();
         let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, &grid);
@@ -362,7 +362,7 @@ mod tests {
         };
 
         let mut solver =
-            PSTDSolver::new(config, grid.clone(), &medium, PSTDSource::default()).unwrap();
+            PSTDSolver::new(config, grid.clone(), &medium, GridSource::default()).unwrap();
         solver.rho.assign(&rho);
 
         // Compute initial energy (L2 norm)
@@ -385,7 +385,7 @@ mod tests {
     #[test]
     fn test_lossless_mode_no_absorption() {
         use crate::domain::medium::HomogeneousMedium;
-        use crate::solver::pstd::PSTDSource;
+        use crate::domain::source::GridSource;
 
         let grid = Grid::new(32, 32, 32, 1e-4, 1e-4, 1e-4).unwrap();
         let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, &grid);
@@ -402,7 +402,7 @@ mod tests {
         };
 
         let mut solver =
-            PSTDSolver::new(config, grid.clone(), &medium, PSTDSource::default()).unwrap();
+            PSTDSolver::new(config, grid.clone(), &medium, GridSource::default()).unwrap();
         solver.rho.assign(&rho);
 
         // Apply absorption (should be no-op)

@@ -38,8 +38,9 @@
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::sensor::beamforming::{
-    BeamformingCoreConfig, SteeringVectorMethod, TimeDomainDelayReference,
+    BeamformingCoreConfig, SteeringVectorMethod,
 };
+use crate::domain::sensor::beamforming::time_domain::DelayReference as TimeDomainDelayReference;
 
 /// Covariance / snapshot domain policy for narrowband MVDR/Capon scoring.
 ///

@@ -36,13 +36,11 @@ pub mod equations; // Electromagnetic wave equation specifications
                    // pub mod optics; // Moved to physics::optics
 pub mod photoacoustic;
 pub mod plasmonics;
-pub mod solvers;
 
 // Re-export physics implementations
 // Optics exports moved to physics::optics
 pub use photoacoustic::{GruneisenParameter, OpticalAbsorption, PhotoacousticSolver};
 pub use plasmonics::{MieTheory, NanoparticleArray, PlasmonicEnhancement};
-pub use solvers::{ElectromagneticSolver, FdtdElectromagneticSolver, FemElectromagneticSolver};
 
 // Re-export electromagnetic equation specifications for convenience
 // Note: EMSource and related types are now in domain::source::electromagnetic

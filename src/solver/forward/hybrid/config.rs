@@ -1,9 +1,9 @@
 //! Configuration structures for hybrid PSTD/FDTD solver
 
-use crate::solver::fdtd::FdtdConfig;
-use crate::solver::hybrid::adaptive_selection::SelectionCriteria;
-use crate::solver::hybrid::domain_decomposition::DomainRegion;
-use crate::solver::pstd::PSTDConfig;
+use crate::solver::forward::fdtd::FdtdConfig;
+use crate::solver::forward::hybrid::adaptive_selection::SelectionCriteria;
+use crate::solver::forward::hybrid::domain_decomposition::DomainRegion;
+use crate::solver::forward::pstd::PSTDConfig;
 use serde::{Deserialize, Serialize};
 
 /// Domain decomposition strategy
@@ -25,7 +25,7 @@ pub struct HybridConfig {
     /// Spectral solver configuration
     pub pstd_config: PSTDConfig,
 
-    /// FDTD solver configuration  
+    /// FDTD solver configuration
     pub fdtd_config: FdtdConfig,
 
     /// Domain decomposition strategy

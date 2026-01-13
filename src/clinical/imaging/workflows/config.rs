@@ -1,4 +1,3 @@
-
 // Simple config structs for clinical workflows
 #[derive(Debug, Clone)]
 pub struct PhotoacousticConfig {

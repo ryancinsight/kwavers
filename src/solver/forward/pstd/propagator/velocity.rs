@@ -5,7 +5,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::math::fft::Complex64;
-use crate::solver::forward::pstd::solver::PSTDSolver;
+use crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use ndarray::Zip;
 
 impl PSTDSolver {

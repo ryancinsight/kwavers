@@ -22,6 +22,18 @@ use properties::AnisotropicElasticProperties;
 // Re-export key types for convenience
 pub use fields::{StressFields as ElasticStressFields, VelocityFields as ElasticVelocityFields};
 
+#[derive(Debug, Clone)]
+pub enum ElasticBodyForceConfig {
+    GaussianImpulse {
+        center_m: [f64; 3],
+        sigma_m: [f64; 3],
+        direction: [f64; 3],
+        t0_s: f64,
+        sigma_t_s: f64,
+        impulse_n_per_m3_s: f64,
+    },
+}
+
 /// Core elastic wave solver implementing spectral methods
 /// Follows SOLID principles with clear separation of concerns
 #[derive(Debug, Clone)]

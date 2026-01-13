@@ -8,7 +8,7 @@ use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::source::GridSource;
 use kwavers::solver::forward::fdtd::{FdtdConfig, FdtdSolver};
-use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver, PSTDSource};
+use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers::solver::interface::solver::Solver;
 use ndarray::Array3;
 
@@ -166,7 +166,7 @@ fn run_pstd_quick(grid: &Grid, medium: &HomogeneousMedium, time_steps: usize) ->
 
     let mut config = PSTDConfig::default();
     config.boundary = kwavers::solver::forward::pstd::config::BoundaryConfig::None;
-    let pstd_source = PSTDSource::default();
+    let pstd_source = GridSource::default();
     let mut solver = PSTDSolver::new(config, grid.clone(), medium, pstd_source).unwrap();
 
     // Run simulation

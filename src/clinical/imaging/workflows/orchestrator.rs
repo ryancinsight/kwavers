@@ -168,7 +168,7 @@ impl ClinicalWorkflowOrchestrator {
         self.fusion_processor
             .register_ultrasound(&acquisition.ultrasound_data)?;
         self.fusion_processor
-            .register_photoacoustic(&acquisition.photoacoustic_result)?;
+            .register_photoacoustic(&acquisition.photoacoustic_result.reconstructed_image)?;
         self.fusion_processor
             .register_elastography(&acquisition.elastography_result)?;
 

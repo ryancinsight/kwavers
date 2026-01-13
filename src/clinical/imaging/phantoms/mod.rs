@@ -9,11 +9,11 @@ pub mod types;
 pub mod utils;
 
 pub use builder::{
-    PhantomBuilder, BloodOxygenationPhantomBuilder, LayeredTissuePhantomBuilder,
+    BloodOxygenationPhantomBuilder, LayeredTissuePhantomBuilder, PhantomBuilder,
     TumorDetectionPhantomBuilder, VascularPhantomBuilder,
 };
 pub use presets::ClinicalPhantoms;
-pub use types::{PhantomType, VesselSpec, TumorSpec, LayerSpec, TissueType};
+pub use types::{LayerSpec, PhantomType, TissueType, TumorSpec, VesselSpec};
 
 #[cfg(test)]
 mod tests {

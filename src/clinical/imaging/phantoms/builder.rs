@@ -1,11 +1,11 @@
+use super::types::*;
+use super::utils::*;
 use crate::clinical::imaging::chromophores::HemoglobinDatabase;
 use crate::domain::grid::GridDimensions;
 use crate::domain::medium::properties::OpticalPropertyData;
 use crate::physics::optics::map_builder::{
     Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, Region,
 };
-use super::types::*;
-use super::utils::*;
 
 /// Clinical phantom builder with domain-specific presets
 #[derive(Debug)]

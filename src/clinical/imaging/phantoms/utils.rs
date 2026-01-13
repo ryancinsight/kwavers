@@ -1,6 +1,6 @@
+use super::types::TissueType;
 use crate::clinical::imaging::chromophores::HemoglobinDatabase;
 use crate::domain::medium::properties::OpticalPropertyData;
-use super::types::TissueType;
 
 /// Compute blood optical properties from hemoglobin database
 pub fn compute_blood_properties(

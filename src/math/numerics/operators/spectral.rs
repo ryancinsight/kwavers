@@ -119,12 +119,6 @@ pub trait SpectralOperator: Send + Sync {
 /// - Liu, Q. H. (1997). Microwave Opt. Technol. Lett., 15(3), 158-165.
 #[derive(Debug)]
 pub struct PseudospectralDerivative {
-    /// Number of grid points in X
-    nx: usize,
-    /// Number of grid points in Y
-    ny: usize,
-    /// Number of grid points in Z
-    nz: usize,
     /// Wavenumber grid in X direction (rad/m)
     kx: Array1<f64>,
     /// Wavenumber grid in Y direction (rad/m)
@@ -169,9 +163,6 @@ impl PseudospectralDerivative {
         let kz = Self::wavenumber_vector(nz, dz);
 
         Ok(Self {
-            nx,
-            ny,
-            nz,
             kx,
             ky,
             kz,
@@ -378,11 +369,7 @@ mod tests {
     fn test_pseudospectral_creation() {
         let op = PseudospectralDerivative::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
 
-        assert_eq!(op.nx, 64);
-        assert_eq!(op.ny, 64);
-        assert_eq!(op.nz, 64);
-
-        // Check wavenumber grids are populated
+        // Check wavenumber grids are populated with correct dimensions
         assert_eq!(op.kx.len(), 64);
         assert_eq!(op.ky.len(), 64);
         assert_eq!(op.kz.len(), 64);

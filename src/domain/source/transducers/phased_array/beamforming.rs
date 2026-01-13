@@ -13,7 +13,7 @@
 //!   ↓ hardware control API
 //!   ↓ transducer configuration
 //!   ↓ uses (accessor pattern)
-//! Analysis Layer (beamforming::utils::delays)
+//! Math Layer (geometry::delays)
 //!   ↓ pure geometric delay calculations
 //!   ↓ mathematical foundations
 //! ```
@@ -25,14 +25,14 @@
 //!   - Transducer control interface
 //!   - Configuration and state management
 //!
-//! - **Analysis Layer** (`analysis::signal_processing::beamforming::utils::delays`):
+//! - **Math Layer** (`math::geometry::delays`):
 //!   - Pure geometric calculations (SSOT)
 //!   - Shared by transmit AND receive beamforming
 //!   - No hardware coupling
 //!
 //! ## SSOT Enforcement
 //!
-//! - ✅ **Geometric delay calculations**: Delegated to `analysis::signal_processing::beamforming::utils::delays`
+//! - ✅ **Geometric delay calculations**: Delegated to `math::geometry::delays`
 //! - ✅ **No duplicate implementations**: Distance, phase delay, steering computations unified
 //! - ✅ **Domain-specific logic**: Hardware modes, element configuration remain here
 //!
@@ -52,7 +52,7 @@
 //! let delays = calculator.calculate_delays(&element_positions, &mode)?;
 //! ```
 
-use crate::analysis::signal_processing::beamforming::utils::delays;
+use crate::math::geometry::delays;
 
 /// Beamforming modes for phased array control.
 ///
@@ -101,7 +101,7 @@ pub enum BeamformingMode {
 ///
 /// # Mathematical Foundation
 ///
-/// Delegates geometric calculations to `analysis::signal_processing::beamforming::utils::delays`
+/// Delegates geometric calculations to `math::geometry::delays`
 /// (SSOT). This wrapper maintains hardware-specific API and conversions.
 ///
 /// # Invariants
@@ -170,7 +170,7 @@ impl BeamformingCalculator {
     ///
     /// # Delegation
     ///
-    /// Delegates to `analysis::signal_processing::beamforming::utils::delays::focus_phase_delays`.
+    /// Delegates to `math::geometry::delays::focus_phase_delays`.
     pub fn calculate_focus_delays(
         &self,
         element_positions: &[(f64, f64, f64)],
@@ -221,7 +221,7 @@ impl BeamformingCalculator {
     ///
     /// # Delegation
     ///
-    /// Delegates to `analysis::signal_processing::beamforming::utils::delays::spherical_steering_phase_delays`.
+    /// Delegates to `math::geometry::delays::spherical_steering_phase_delays`.
     #[must_use]
     pub fn calculate_steering_delays(
         &self,
@@ -263,7 +263,7 @@ impl BeamformingCalculator {
     ///
     /// # Delegation
     ///
-    /// Delegates to `analysis::signal_processing::beamforming::utils::delays::plane_wave_phase_delays`.
+    /// Delegates to `math::geometry::delays::plane_wave_phase_delays`.
     #[must_use]
     pub fn calculate_plane_wave_delays(
         &self,
@@ -307,7 +307,7 @@ impl BeamformingCalculator {
     ///
     /// # Delegation
     ///
-    /// Delegates to `analysis::signal_processing::beamforming::utils::delays::calculate_beam_width`.
+    /// Delegates to `math::geometry::delays::calculate_beam_width`.
     #[must_use]
     pub fn calculate_beam_width(&self, aperture_size: f64) -> f64 {
         delays::calculate_beam_width(aperture_size, self.frequency, self.sound_speed)
@@ -337,7 +337,7 @@ impl BeamformingCalculator {
     ///
     /// # Delegation
     ///
-    /// Delegates to `analysis::signal_processing::beamforming::utils::delays::calculate_focal_zone`.
+    /// Delegates to `math::geometry::delays::calculate_focal_zone`.
     #[must_use]
     pub fn calculate_focal_zone(&self, aperture_size: f64, focal_distance: f64) -> f64 {
         delays::calculate_focal_zone(

@@ -40,8 +40,6 @@
 #[path = "adaptive.rs"]
 pub mod legacy;
 
-pub mod algorithms;
-
 pub mod array_geometry;
 pub mod beamformer;
 pub mod conventional;
@@ -64,15 +62,11 @@ pub mod subspace;
 pub mod tapering;
 pub mod weights;
 
-// Re-export SSOT-correct main algorithm types.
-pub use algorithms::{BeamformingAlgorithm, DelayAndSum, MinimumVariance};
-
 #[cfg(feature = "legacy_algorithms")]
 pub use legacy::{MinimumVariance as LegacyMinimumVariance, RobustCapon as LegacyRobustCapon};
 
 pub use array_geometry::{ArrayGeometry, ElementPosition};
 pub use beamformer::AdaptiveBeamformer;
-pub use conventional::{BeamformingAlgorithm as ConventionalAlgorithm, DelayAndSum as DsLegacy};
 
 #[cfg(feature = "legacy_algorithms")]
 pub use source_estimation::SourceEstimationCriterion;
@@ -80,27 +74,3 @@ pub use source_estimation::SourceEstimationCriterion;
 pub use steering::{SteeringMatrix, SteeringVector};
 pub use tapering::CovarianceTaper;
 pub use weights::{WeightCalculator, WeightingScheme};
-
-// ============================================================================
-// DEPRECATED RE-EXPORTS FROM NEW ANALYSIS LAYER LOCATION
-// ============================================================================
-
-#[cfg(feature = "legacy_algorithms")]
-pub use subspace::MUSIC;
-
-#[cfg(not(feature = "legacy_algorithms"))]
-#[deprecated(
-    since = "2.14.0",
-    note = "Moved to `analysis::signal_processing::beamforming::adaptive::MUSIC`. Update your imports."
-)]
-pub use crate::analysis::signal_processing::beamforming::adaptive::MUSIC;
-
-/// DEPRECATED: Use `analysis::signal_processing::beamforming::adaptive::EigenspaceMV` instead.
-///
-/// This re-export provides backward compatibility during migration (Phase 3B).
-/// It will be removed in the next minor version.
-#[deprecated(
-    since = "2.14.0",
-    note = "Moved to `analysis::signal_processing::beamforming::adaptive::EigenspaceMV`. Update your imports."
-)]
-pub use crate::analysis::signal_processing::beamforming::adaptive::EigenspaceMV;

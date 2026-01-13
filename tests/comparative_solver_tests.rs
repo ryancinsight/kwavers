@@ -30,7 +30,7 @@ use kwavers::domain::medium::{CoreMedium, HomogeneousMedium, Medium};
 use kwavers::domain::source::{GridSource, Source};
 use kwavers::math::numerics::operators::CentralDifference2;
 use kwavers::solver::forward::fdtd::{FdtdConfig, FdtdSolver};
-use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver, PSTDSource};
+use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers::solver::interface::solver::Solver;
 use ndarray::{Array3, ArrayView3, Zip};
 use std::collections::HashMap;

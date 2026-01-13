@@ -10,8 +10,8 @@ use crate::domain::source::GridSource;
 use crate::solver::config::{SolverConfiguration, SolverType};
 use crate::solver::forward::fdtd::FdtdConfig;
 use crate::solver::forward::hybrid::config::HybridConfig;
-use crate::solver::forward::pstd::{PSTDConfig, PSTDSource};
-use crate::solver::forward::{FdtdSolver, HybridSolver, PSTDSolver};
+use crate::solver::forward::pstd::{PSTDConfig, PSTDSolver};
+use crate::solver::forward::{FdtdSolver, HybridSolver};
 use crate::solver::interface::Solver;
 
 use log::info;
@@ -52,7 +52,7 @@ impl SolverFactory {
             }
             SolverType::PSTD => {
                 let pstd_config = PSTDConfig::default();
-                let source = PSTDSource::default();
+                let source = GridSource::default();
                 let solver = PSTDSolver::new(pstd_config, grid.clone(), medium, source)?;
                 Ok(Box::new(solver))
             }

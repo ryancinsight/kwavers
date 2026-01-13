@@ -89,27 +89,7 @@ impl CPMLBoundary {
             .apply_gradient_correction(gradient, &self.memory, component, &self.profiles);
     }
 
-    /// Update acoustic memory for gradient component
-    /// # Deprecated - Use update_and_apply_gradient_correction instead
-    #[deprecated(
-        since = "3.0.0",
-        note = "Use `update_and_apply_gradient_correction` for the complete CPML update"
-    )]
-    pub fn update_acoustic_memory(&mut self, gradient: &ndarray::Array3<f64>, component: usize) {
-        self.updater
-            .update_memory_component(&mut self.memory, gradient, component, &self.profiles);
-    }
 
-    /// Apply CPML gradient correction
-    /// # Deprecated - Use update_and_apply_gradient_correction instead
-    #[deprecated(
-        since = "3.0.0",
-        note = "Use `update_and_apply_gradient_correction` for the complete CPML update"
-    )]
-    pub fn apply_cpml_gradient(&mut self, gradient: &mut ndarray::Array3<f64>, component: usize) {
-        self.updater
-            .apply_gradient_correction(gradient, &self.memory, component, &self.profiles);
-    }
 
     /// Get configuration
     #[must_use]
@@ -157,17 +137,7 @@ impl Clone for CPMLBoundary {
     }
 }
 
-impl CPMLBoundary {
-    /// Creates a new `CPMLBoundary` from the existing configuration,
-    /// with a fresh (zeroed) state.
-    ///
-    /// # Deprecated
-    /// Use `.clone()` instead of `recreate` for better ergonomics and standard Rust idioms.
-    #[deprecated(since = "3.1.0", note = "Use `.clone()` instead of `recreate`")]
-    pub fn recreate(&self, grid: &Grid, sound_speed: f64) -> KwaversResult<Self> {
-        Self::new(self.config.clone(), grid, sound_speed)
-    }
-}
+
 
 impl Boundary for CPMLBoundary {
     fn apply_acoustic(

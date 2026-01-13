@@ -12,7 +12,7 @@ use crate::math::numerics::operators::{
 use crate::physics::electromagnetic::equations::{
     EMDimension, EMMaterialDistribution, ElectromagneticWaveEquation,
 };
-use ndarray::{Array3, ArrayD};
+use ndarray::{Array3, Array4};
 
 /// Electromagnetic FDTD solver using Yee's algorithm
 ///
@@ -40,6 +40,8 @@ pub struct ElectromagneticFdtdSolver {
     hx: Array3<f64>,
     hy: Array3<f64>,
     hz: Array3<f64>,
+    /// Cell-centered electromagnetic fields (derived from Yee grid)
+    fields_cache: EMFields,
     /// Spatial derivative operators
     dx_operator: Box<dyn DifferentialOperator>,
     dy_operator: Box<dyn DifferentialOperator>,
@@ -102,6 +104,9 @@ impl ElectromagneticFdtdSolver {
             _ => unreachable!(),
         };
 
+        // Cache grid dimensions before moving grid
+        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+
         Ok(Self {
             grid,
             materials,
@@ -113,10 +118,76 @@ impl ElectromagneticFdtdSolver {
             hx,
             hy,
             hz,
+            fields_cache: EMFields {
+                electric: Array4::zeros((nx, ny, nz, 3)).into_dyn(),
+                magnetic: Array4::zeros((nx, ny, nz, 3)).into_dyn(),
+                displacement: None,
+                flux_density: None,
+            },
             dx_operator,
             dy_operator,
             dz_operator,
         })
+    }
+
+    fn update_field_cache(&mut self) {
+        for i in 0..self.grid.nx {
+            for j in 0..self.grid.ny {
+                for k in 0..self.grid.nz {
+                    let ex_c = 0.25
+                        * (self.ex[[i, j, k]]
+                            + self.ex[[i, j + 1, k]]
+                            + self.ex[[i, j, k + 1]]
+                            + self.ex[[i, j + 1, k + 1]]);
+                    let ey_c = 0.25
+                        * (self.ey[[i, j, k]]
+                            + self.ey[[i + 1, j, k]]
+                            + self.ey[[i, j, k + 1]]
+                            + self.ey[[i + 1, j, k + 1]]);
+                    let ez_c = 0.25
+                        * (self.ez[[i, j, k]]
+                            + self.ez[[i + 1, j, k]]
+                            + self.ez[[i, j + 1, k]]
+                            + self.ez[[i + 1, j + 1, k]]);
+
+                    let hx_c = 0.5 * (self.hx[[i, j, k]] + self.hx[[i + 1, j, k]]);
+                    let hy_c = 0.5 * (self.hy[[i, j, k]] + self.hy[[i, j + 1, k]]);
+                    let hz_c = 0.5 * (self.hz[[i, j, k]] + self.hz[[i, j, k + 1]]);
+
+                    self.fields_cache.electric[ndarray::IxDyn(&[i, j, k, 0])] = ex_c;
+                    self.fields_cache.electric[ndarray::IxDyn(&[i, j, k, 1])] = ey_c;
+                    self.fields_cache.electric[ndarray::IxDyn(&[i, j, k, 2])] = ez_c;
+
+                    self.fields_cache.magnetic[ndarray::IxDyn(&[i, j, k, 0])] = hx_c;
+                    self.fields_cache.magnetic[ndarray::IxDyn(&[i, j, k, 1])] = hy_c;
+                    self.fields_cache.magnetic[ndarray::IxDyn(&[i, j, k, 2])] = hz_c;
+                }
+            }
+        }
+    }
+
+    fn permittivity_at(&self, i: usize, j: usize, k: usize) -> f64 {
+        self.materials
+            .permittivity
+            .get(ndarray::IxDyn(&[i, j, k]))
+            .copied()
+            .unwrap_or(1.0)
+    }
+
+    fn conductivity_at(&self, i: usize, j: usize, k: usize) -> f64 {
+        self.materials
+            .conductivity
+            .get(ndarray::IxDyn(&[i, j, k]))
+            .copied()
+            .unwrap_or(0.0)
+    }
+
+    fn permeability_at(&self, i: usize, j: usize, k: usize) -> f64 {
+        self.materials
+            .permeability
+            .get(ndarray::IxDyn(&[i, j, k]))
+            .copied()
+            .unwrap_or(1.0)
     }
 
     /// Update electric fields using Faraday's law: ∂E/∂t = (1/ε) ∇ × H - (σ/ε) E
@@ -133,9 +204,11 @@ impl ElectromagneticFdtdSolver {
                     let curl_h_x = (self.hz[[i, j, k]] - self.hz[[i, j - 1, k]]) / dy
                         - (self.hy[[i, j, k]] - self.hy[[i, j, k - 1]]) / dz;
 
-                    // Get material properties (simplified for now - assuming uniform vacuum)
-                    let eps = 1.0; // Vacuum permittivity (normalized)
-                    let sigma = 0.0; // No conductivity for now
+                    let mi = i;
+                    let mj = j - 1;
+                    let mk = k - 1;
+                    let eps = self.permittivity_at(mi, mj, mk);
+                    let sigma = self.conductivity_at(mi, mj, mk);
 
                     // Update equation: ∂E/∂t = (1/ε) ∇×H - (σ/ε) E
                     let decay_term = if sigma > 0.0 {
@@ -155,18 +228,8 @@ impl ElectromagneticFdtdSolver {
                     let curl_h_y = (self.hx[[i, j, k]] - self.hx[[i, j, k - 1]]) / dz
                         - (self.hz[[i, j, k]] - self.hz[[i - 1, j, k]]) / dx;
 
-                    let eps = self
-                        .materials
-                        .permittivity
-                        .get(ndarray::IxDyn(&[i, j, k]))
-                        .copied()
-                        .unwrap_or(1.0);
-                    let sigma = self
-                        .materials
-                        .conductivity
-                        .get(ndarray::IxDyn(&[i, j, k]))
-                        .copied()
-                        .unwrap_or(0.0);
+                    let eps = self.permittivity_at(i - 1, j, k - 1);
+                    let sigma = self.conductivity_at(i - 1, j, k - 1);
 
                     let decay_term = if sigma > 0.0 {
                         (sigma / eps) * self.ey[[i, j, k]]
@@ -185,18 +248,8 @@ impl ElectromagneticFdtdSolver {
                     let curl_h_z = (self.hy[[i, j, k]] - self.hy[[i - 1, j, k]]) / dx
                         - (self.hx[[i, j, k]] - self.hx[[i, j - 1, k]]) / dy;
 
-                    let eps = self
-                        .materials
-                        .permittivity
-                        .get(ndarray::IxDyn(&[i, j, k]))
-                        .copied()
-                        .unwrap_or(1.0);
-                    let sigma = self
-                        .materials
-                        .conductivity
-                        .get(ndarray::IxDyn(&[i, j, k]))
-                        .copied()
-                        .unwrap_or(0.0);
+                    let eps = self.permittivity_at(i - 1, j - 1, k);
+                    let sigma = self.conductivity_at(i - 1, j - 1, k);
 
                     let decay_term = if sigma > 0.0 {
                         (sigma / eps) * self.ez[[i, j, k]]
@@ -222,7 +275,7 @@ impl ElectromagneticFdtdSolver {
                     let curl_e_x = (self.ez[[i, j + 1, k]] - self.ez[[i, j, k]]) / dy
                         - (self.ey[[i, j, k + 1]] - self.ey[[i, j, k]]) / dz;
 
-                    let mu = 1.0; // Vacuum permeability (normalized)
+                    let mu = self.permeability_at(i - 1, j, k);
                     self.hx[[i, j, k]] -= self.dt * curl_e_x / mu;
                 }
             }
@@ -235,7 +288,7 @@ impl ElectromagneticFdtdSolver {
                     let curl_e_y = (self.ex[[i, j, k + 1]] - self.ex[[i, j, k]]) / dz
                         - (self.ez[[i + 1, j, k]] - self.ez[[i, j, k]]) / dx;
 
-                    let mu = 1.0; // Vacuum permeability (normalized)
+                    let mu = self.permeability_at(i, j - 1, k);
                     self.hy[[i, j, k]] -= self.dt * curl_e_y / mu;
                 }
             }
@@ -248,7 +301,7 @@ impl ElectromagneticFdtdSolver {
                     let curl_e_z = (self.ey[[i + 1, j, k]] - self.ey[[i, j, k]]) / dx
                         - (self.ex[[i, j + 1, k]] - self.ex[[i, j, k]]) / dz;
 
-                    let mu = 1.0; // Vacuum permeability (normalized)
+                    let mu = self.permeability_at(i, j, k - 1);
                     self.hz[[i, j, k]] -= self.dt * curl_e_z / mu;
                 }
             }
@@ -278,25 +331,7 @@ impl ElectromagneticWaveEquation for ElectromagneticFdtdSolver {
     }
 
     fn em_fields(&self) -> &EMFields {
-        // Create EMFields from current arrays
-        // This is a simplified implementation - full version would handle Yee grid properly
-        static FIELDS: std::sync::OnceLock<EMFields> = std::sync::OnceLock::new();
-        FIELDS.get_or_init(|| EMFields {
-            electric: ArrayD::zeros(ndarray::IxDyn(&[
-                3,
-                self.grid.nx,
-                self.grid.ny,
-                self.grid.nz,
-            ])),
-            magnetic: ArrayD::zeros(ndarray::IxDyn(&[
-                3,
-                self.grid.nx,
-                self.grid.ny,
-                self.grid.nz,
-            ])),
-            displacement: None,
-            flux_density: None,
-        })
+        &self.fields_cache
     }
 
     fn step_maxwell(&mut self, dt: f64) -> Result<(), String> {
@@ -304,20 +339,30 @@ impl ElectromagneticWaveEquation for ElectromagneticFdtdSolver {
         self.update_electric_fields();
         self.update_magnetic_fields();
         self.time_step += 1;
+        self.update_field_cache();
         Ok(())
     }
 
-    fn apply_em_boundary_conditions(&mut self, _fields: &mut EMFields) {
-        // Apply boundary conditions (PML, periodic, etc.)
-        // Implementation would depend on boundary type
-        // For now, use simple PEC (perfect electric conductor) boundaries
+    fn apply_em_boundary_conditions(&mut self, fields: &mut EMFields) {
         self.apply_pec_boundaries();
+        self.update_field_cache();
+        *fields = self.fields_cache.clone();
     }
 
-    fn check_em_constraints(&self, _fields: &EMFields) -> Result<(), String> {
-        // Check Maxwell's equations constraints
-        // For example, divergence conditions: ∇·E = ρ/ε₀, ∇·B = 0
-        // This is a placeholder implementation
+    fn check_em_constraints(&self, fields: &EMFields) -> Result<(), String> {
+        let all_finite = self.ex.iter().all(|v| v.is_finite())
+            && self.ey.iter().all(|v| v.is_finite())
+            && self.ez.iter().all(|v| v.is_finite())
+            && self.hx.iter().all(|v| v.is_finite())
+            && self.hy.iter().all(|v| v.is_finite())
+            && self.hz.iter().all(|v| v.is_finite())
+            && fields.electric.iter().all(|v| v.is_finite())
+            && fields.magnetic.iter().all(|v| v.is_finite());
+
+        if !all_finite {
+            return Err("non-finite values detected in EM fields".to_string());
+        }
+
         Ok(())
     }
 }
@@ -325,18 +370,36 @@ impl ElectromagneticWaveEquation for ElectromagneticFdtdSolver {
 impl ElectromagneticFdtdSolver {
     /// Apply Perfect Electric Conductor (PEC) boundary conditions
     fn apply_pec_boundaries(&mut self) {
-        // PEC: E_tangential = 0 at boundaries
-        // This is a simplified implementation
+        let nx = self.grid.nx;
+        let ny = self.grid.ny;
+        let nz = self.grid.nz;
 
-        // Bottom boundary (z=0): Ez = 0
-        for i in 0..self.grid.nx + 1 {
-            for j in 0..self.grid.ny + 1 {
-                self.ez[[i, j, 0]] = 0.0;
+        for j in 0..ny {
+            for k in 0..nz {
+                self.ey[[0, j, k]] = 0.0;
+                self.ey[[nx, j, k]] = 0.0;
+                self.ez[[0, j, k]] = 0.0;
+                self.ez[[nx, j, k]] = 0.0;
             }
         }
 
-        // Similar for other boundaries...
-        // Full implementation would handle all six boundaries
+        for i in 0..nx {
+            for k in 0..nz {
+                self.ex[[i, 0, k]] = 0.0;
+                self.ex[[i, ny, k]] = 0.0;
+                self.ez[[i, 0, k]] = 0.0;
+                self.ez[[i, ny, k]] = 0.0;
+            }
+        }
+
+        for i in 0..nx {
+            for j in 0..ny {
+                self.ex[[i, j, 0]] = 0.0;
+                self.ex[[i, j, nz]] = 0.0;
+                self.ey[[i, j, 0]] = 0.0;
+                self.ey[[i, j, nz]] = 0.0;
+            }
+        }
     }
 }
 

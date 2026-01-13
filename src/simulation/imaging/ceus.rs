@@ -50,6 +50,11 @@ impl ContrastEnhancedUltrasound {
         })
     }
 
+    /// Get microbubble concentration
+    pub fn get_concentration(&self) -> f64 {
+        self.microbubbles.get_concentration()
+    }
+
     pub fn simulate_imaging_sequence(
         &mut self,
         injection_rate: f64,

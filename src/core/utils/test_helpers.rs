@@ -3,40 +3,7 @@
 //! This module consolidates test utilities to avoid duplication
 //! and maintain SSOT (Single Source of Truth) principle.
 
-use crate::domain::grid::Grid;
-use crate::domain::medium::homogeneous::HomogeneousMedium;
 use ndarray::Array3;
-
-/// Create a standard test grid with specified dimensions
-///
-/// This function provides a consistent grid for testing across modules
-pub fn create_test_grid(nx: usize, ny: usize, nz: usize) -> Grid {
-    Grid::new(
-        nx,
-        ny,
-        nz,
-        crate::physics::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
-        crate::physics::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
-        crate::physics::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
-    )
-    .unwrap()
-}
-
-/// Create a standard test grid with default dimensions (32x32x32)
-pub fn create_default_test_grid() -> Grid {
-    create_test_grid(32, 32, 32)
-}
-
-/// Create a standard test medium for the given grid
-pub fn create_test_medium(grid: &Grid) -> HomogeneousMedium {
-    HomogeneousMedium::new(
-        crate::physics::constants::DENSITY_WATER,
-        crate::physics::constants::SOUND_SPEED_WATER,
-        0.1,
-        1.0,
-        grid,
-    )
-}
 
 /// Create a test field with specified dimensions
 pub fn create_test_field(nx: usize, ny: usize, nz: usize) -> Array3<f64> {

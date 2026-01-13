@@ -20,7 +20,7 @@
 //! 3. **Thin Adaptation**: Minimal logic, primarily type conversion
 //! 4. **Zero Duplication**: No domain concepts redefined in PINN layer
 
-use crate::domain::source::{Source, SourceField};
+use crate::domain::source::{Source, SourceField, FocalProperties as DomainFocalProperties};
 use std::sync::Arc;
 
 /// Acoustic source specification for PINN training
@@ -58,13 +58,31 @@ pub enum PinnSourceClass {
     Distributed,
 }
 
-/// Focal properties for focused sources
+/// Focal properties for focused sources (PINN adapter type)
+///
+/// This is a simplified version for PINN boundary conditions.
+/// The complete focal properties are available in `domain::source::FocalProperties`.
 #[derive(Debug, Clone, Copy)]
 pub struct FocalProperties {
     /// Focal length (m)
     pub focal_length: f64,
-    /// Aperture size (m) if applicable
-    pub aperture: Option<f64>,
+    /// Spot size at focus (m) - beam waist or FWHM
+    pub spot_size: f64,
+    /// F-number (dimensionless)
+    pub f_number: Option<f64>,
+    /// Focal gain (dimensionless)
+    pub focal_gain: Option<f64>,
+}
+
+impl From<DomainFocalProperties> for FocalProperties {
+    fn from(props: DomainFocalProperties) -> Self {
+        Self {
+            focal_length: props.focal_depth,
+            spot_size: props.spot_size,
+            f_number: props.f_number,
+            focal_gain: props.focal_gain,
+        }
+    }
 }
 
 impl PinnAcousticSource {
@@ -146,12 +164,11 @@ impl PinnAcousticSource {
 
     /// Extract focal properties from domain source
     ///
-    /// This requires inspecting the source type. In a fully implemented system,
-    /// domain sources would expose focal properties through traits.
-    fn extract_focal_properties(_source: &dyn Source) -> Option<FocalProperties> {
-        // TODO: Once domain sources expose focal properties, extract them here
-        // For now, return None (non-focused)
-        None
+    /// Uses the `Source` trait's focal property methods to extract focusing characteristics.
+    /// Returns `None` for unfocused sources (plane waves, point sources, etc.)
+    fn extract_focal_properties(source: &dyn Source) -> Option<FocalProperties> {
+        // Use the Source trait's get_focal_properties() method
+        source.get_focal_properties().map(|props| props.into())
     }
 
     /// Convert to source term coefficient for PINN PDE residual
@@ -280,5 +297,57 @@ mod tests {
         assert_eq!(pinn_sources.len(), 2);
         assert!((pinn_sources[0].frequency - 1e6).abs() < 1e-6);
         assert!((pinn_sources[1].frequency - 2e6).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_focal_properties_extraction() {
+        use crate::domain::source::wavefront::gaussian::{GaussianConfig, GaussianSource};
+
+        // Create a focused Gaussian source
+        let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0));
+        let config = GaussianConfig {
+            focal_point: (0.0, 0.0, 0.05), // 5cm focal depth
+            waist_radius: 1e-3,             // 1mm waist
+            wavelength: 1.5e-3,             // 1.5mm (1MHz in water)
+            direction: (0.0, 0.0, 1.0),
+            ..Default::default()
+        };
+        let gaussian_source = GaussianSource::new(config, signal);
+
+        // Adapt to PINN format
+        let pinn_source = PinnAcousticSource::from_domain_source(&gaussian_source, 0.0)
+            .expect("Should adapt Gaussian source");
+
+        // Verify focal properties were extracted
+        assert!(pinn_source.focal_properties.is_some(), "Gaussian source should have focal properties");
+
+        let focal_props = pinn_source.focal_properties.unwrap();
+
+        // Check focal length is approximately 5cm
+        assert!((focal_props.focal_length - 0.05).abs() < 1e-3,
+                "Focal length should be ~5cm, got {}", focal_props.focal_length);
+
+        // Check spot size is 1mm (waist radius)
+        assert!((focal_props.spot_size - 1e-3).abs() < 1e-6,
+                "Spot size should be 1mm, got {}", focal_props.spot_size);
+
+        // Check F-number exists
+        assert!(focal_props.f_number.is_some(), "F-number should be available");
+
+        // Check focal gain exists
+        assert!(focal_props.focal_gain.is_some(), "Focal gain should be available");
+    }
+
+    #[test]
+    fn test_unfocused_source_no_focal_properties() {
+        let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0));
+        let point_source = PointSource::new((0.0, 0.0, 0.0), signal);
+
+        let pinn_source = PinnAcousticSource::from_domain_source(&point_source, 0.0)
+            .expect("Should adapt point source");
+
+        // Point sources should not have focal properties
+        assert!(pinn_source.focal_properties.is_none(),
+                "Point source should not have focal properties");
     }
 }

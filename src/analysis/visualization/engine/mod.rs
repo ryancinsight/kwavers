@@ -75,15 +75,11 @@ impl VisualizationEngine {
 
         #[cfg(feature = "gpu-visualization")]
         {
-            use std::sync::Arc;
-            // Create GPU context using wgpu
-            let gpu_context = Arc::new(crate::gpu::GpuContext::new().await?);
-
             // Initialize renderer with GPU context
             self.renderer = Some(renderer::Renderer3D::create(self.config.clone())?);
 
             // Initialize data pipeline for efficient GPU transfers
-            self.data_pipeline = Some(data_pipeline::DataPipeline::new(gpu_context).await?);
+            self.data_pipeline = Some(data_pipeline::DataPipeline::new().await?);
 
             // Initialize interactive controls
             self.controls = Some(controls::InteractiveControls::create(&self.config)?);

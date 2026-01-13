@@ -324,3 +324,6 @@ required-features = ["legacy_algorithms"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+
+[workspace]
+members = ["xtask"]

@@ -3,7 +3,7 @@
 //! This module contains the main `FdtdSolver` struct and its implementation
 //! for acoustic wave propagation using the finite-difference time-domain method.
 
-use crate::analysis::performance::simd_safe::operations::SimdOps;
+use crate::math::simd_safe::SimdOps;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::boundary::cpml::CPMLBoundary;
 use crate::domain::grid::Grid;

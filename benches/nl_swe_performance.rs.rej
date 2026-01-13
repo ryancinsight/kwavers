@@ -1,0 +1,42 @@
+--- benches/nl_swe_performance.rs
++++ benches/nl_swe_performance.rs
+@@ -111,16 +111,16 @@
+     let harmonic_field = HarmonicDisplacementField::new(nx, ny, nz, 2, grid.nx);
+ 
+     group.bench_function("harmonic_ratio", |b| {
+-        let method = NonlinearInversionMethod::HarmonicRatio;
+-        let inversion = NonlinearInversion::new(method);
+-        let inversion2 = NonlinearInversion::new(method);
+-        let inversion3 = NonlinearInversion::new(method);
++        let config1 = kwavers::solver::inverse::elastography::NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio);
++        let config2 = kwavers::solver::inverse::elastography::NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio);
++        let config3 = kwavers::solver::inverse::elastography::NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio);
++        let inversion = NonlinearInversion::new(config1);
++        let inversion2 = NonlinearInversion::new(config2);
++        let inversion3 = NonlinearInversion::new(config3);
+         b.iter(|| {
+-            black_box(inversion.reconstruct_nonlinear(&harmonic_field, &grid).unwrap());
+-        });
+-        b.iter(|| {
+-            black_box(inversion2.reconstruct_nonlinear(&harmonic_field, &grid).unwrap());
+-            black_box(inversion3.reconstruct_nonlinear(&harmonic_field, &grid).unwrap());
++            black_box(inversion.reconstruct(&harmonic_field, &grid).unwrap());
++            black_box(inversion2.reconstruct(&harmonic_field, &grid).unwrap());
++            black_box(inversion3.reconstruct(&harmonic_field, &grid).unwrap());
+         });
+     });
+ 
+@@ -216,10 +216,10 @@
+     let harmonic_field = HarmonicDisplacementField::new(nx, ny, nz, 2, grid.nx);
+ 
+     group.bench_function("all_methods", |b| {
+-        let method = NonlinearInversionMethod::HarmonicRatio;
+-        let inversion = NonlinearInversion::new(method);
++        let config = kwavers::solver::inverse::elastography::NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio);
++        let inversion = NonlinearInversion::new(config);
+         b.iter(|| {
+-            black_box(inversion.reconstruct_nonlinear(&harmonic_field, &grid).unwrap());
++            black_box(inversion.reconstruct(&harmonic_field, &grid).unwrap());
+         });
+     });
+ 

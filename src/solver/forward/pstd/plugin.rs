@@ -3,12 +3,13 @@
 use ndarray::Array4;
 use std::fmt::Debug;
 
-use super::{PSTDConfig, PSTDSolver, PSTDSource};
+use super::{PSTDConfig, PSTDSolver};
 use crate::core::error::KwaversResult;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::plugin::{PluginContext, PluginMetadata, PluginState};
+use crate::domain::source::GridSource;
 
 /// PSTD solver plugin
 #[derive(Debug)]
@@ -73,7 +74,7 @@ impl crate::domain::plugin::Plugin for PSTDPlugin {
     }
 
     fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
-        let source = PSTDSource::default();
+        let source = GridSource::default();
         let solver = PSTDSolver::new(self.config.clone(), grid.clone(), medium, source)?;
         self.solver = Some(solver);
         self.state = PluginState::Initialized;

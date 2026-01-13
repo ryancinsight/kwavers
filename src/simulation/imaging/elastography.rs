@@ -14,6 +14,7 @@ use crate::physics::acoustics::imaging::modalities::elastography::radiation_forc
 use crate::solver::forward::elastic::swe::{
     ElasticBodyForceConfig, ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
 };
+use crate::solver::inverse::elastography::ShearWaveInversionConfig;
 use crate::solver::inverse::elastography::ShearWaveInversion;
 
 /// High-level orchestrator for shear wave elastography simulations
@@ -45,7 +46,7 @@ impl ShearWaveElastography {
         config: ElasticWaveConfig,
     ) -> KwaversResult<Self> {
         let solver = ElasticWaveSolver::new(grid, medium, config)?;
-        let inversion = ShearWaveInversion::new(method);
+        let inversion = ShearWaveInversion::new(ShearWaveInversionConfig::new(method));
 
         Ok(Self {
             grid: grid.clone(),

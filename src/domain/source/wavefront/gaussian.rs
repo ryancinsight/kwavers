@@ -172,6 +172,53 @@ impl Source for GaussianSource {
         let temporal_amplitude = self.signal.amplitude(t);
         spatial_amplitude * temporal_amplitude
     }
+
+    // ==================== Focal Properties Implementation ====================
+
+    fn focal_point(&self) -> Option<(f64, f64, f64)> {
+        Some(self.config.focal_point)
+    }
+
+    fn focal_depth(&self) -> Option<f64> {
+        // For Gaussian beams, focal depth is typically measured from z=0 to focal point
+        // along the propagation direction
+        let (fx, fy, fz) = self.config.focal_point;
+        let focal_distance = (fx * fx + fy * fy + fz * fz).sqrt();
+        Some(focal_distance)
+    }
+
+    fn spot_size(&self) -> Option<f64> {
+        // Spot size is the beam waist w0
+        Some(self.config.waist_radius)
+    }
+
+    fn f_number(&self) -> Option<f64> {
+        // For Gaussian beams, F# can be approximated from beam divergence
+        // F# ≈ z_R / w0 = (π * w0² / λ) / w0 = π * w0 / λ
+        let f_num = PI * self.config.waist_radius / self.config.wavelength;
+        Some(f_num)
+    }
+
+    fn rayleigh_range(&self) -> Option<f64> {
+        // Rayleigh range: z_R = π * w0² / λ
+        Some(self.rayleigh_range)
+    }
+
+    fn numerical_aperture(&self) -> Option<f64> {
+        // NA ≈ λ / (π * w0) for Gaussian beams
+        // This is the approximate half-angle divergence
+        let na = self.config.wavelength / (PI * self.config.waist_radius);
+        Some(na.min(1.0)) // NA cannot exceed 1.0 in air/water
+    }
+
+    fn focal_gain(&self) -> Option<f64> {
+        // For Gaussian beams, the intensity gain at focus depends on the
+        // beam parameters. Approximate as the ratio of beam area at large
+        // distance to area at waist: gain ≈ (w(z)/w0)² at far field
+        // For simplicity, use a conservative estimate based on focusing geometry
+        let gain = 2.0 * PI * self.rayleigh_range / self.config.wavelength;
+        Some(gain)
+    }
 }
 
 /// Builder pattern for Gaussian beam source

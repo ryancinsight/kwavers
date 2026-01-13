@@ -67,13 +67,12 @@ pub mod sensor_beamformer;
 // Legacy modules (being phased out - use analysis layer instead)
 // These remain for backward compatibility but delegate to analysis algorithms
 pub mod adaptive;
-#[cfg(any(feature = "experimental_neural", feature = "pinn"))]
-pub mod ai_integration;
 mod beamforming_3d;
 mod config;
 pub mod covariance;
 #[cfg(any(feature = "experimental_neural", feature = "pinn"))]
 pub mod experimental;
+pub mod neural;
 mod processor;
 #[cfg(feature = "gpu")]
 mod shaders;
@@ -85,8 +84,7 @@ pub use sensor_beamformer::{SensorBeamformer, SensorProcessingParams, WindowType
 
 // Legacy re-exports (deprecated - use analysis layer directly)
 pub use adaptive::{
-    AdaptiveBeamformer, ArrayGeometry, BeamformingAlgorithm as AdaptiveBeamformingAlgorithm,
-    CovarianceTaper, DelayAndSum, MinimumVariance, SteeringMatrix,
+    AdaptiveBeamformer, ArrayGeometry, CovarianceTaper, SteeringMatrix,
     SteeringVector as AdaptiveSteeringVector, WeightCalculator, WeightingScheme,
 };
 pub use beamforming_3d::{
@@ -99,10 +97,8 @@ pub use covariance::{
 };
 pub use processor::BeamformingProcessor;
 pub use steering::{SteeringVector, SteeringVectorMethod};
-pub use time_domain::das::{delay_and_sum_time_domain_with_reference, DEFAULT_DELAY_REFERENCE};
-pub use time_domain::{
-    relative_delays_s as relative_tof_delays_s, DelayReference as TimeDomainDelayReference,
-};
+// Note: time_domain submodules (das, delay_reference) have been removed.
+// Use analysis::signal_processing::beamforming::time_domain instead.
 
 #[cfg(feature = "experimental_neural")]
 pub use experimental::{
@@ -117,14 +113,19 @@ pub use experimental::{
 // - PhysicsConstraints (for physics-informed constraints)
 // - UncertaintyEstimator (for uncertainty quantification)
 
-#[cfg(any(feature = "experimental_neural", feature = "pinn"))]
-pub use ai_integration::{
-    AIBeamformingConfig, AIBeamformingResult, AIEnhancedBeamformingProcessor,
-    ClinicalDecisionSupport, DiagnosisAlgorithm, FeatureExtractor, RealTimeWorkflow,
+// Neural beamforming with modular architecture
+pub use neural::{
+    AIBeamformingConfig, AIBeamformingResult, ClinicalAnalysis, ClinicalDecisionSupport,
+    ClinicalThresholds, DiagnosisAlgorithm, FeatureConfig, FeatureExtractor, FeatureMap,
+    LesionDetection, PerformanceMetrics, RealTimeWorkflow, TissueClassification,
 };
+
+// Processor requires PINN feature
 #[cfg(feature = "pinn")]
 pub use experimental::{
     DistributedNeuralBeamformingMetrics, DistributedNeuralBeamformingProcessor,
     DistributedNeuralBeamformingResult, FaultToleranceState, ModelParallelConfig,
     NeuralBeamformingProcessor, PINNBeamformingConfig, PinnBeamformingResult, PipelineStage,
 };
+#[cfg(feature = "pinn")]
+pub use neural::AIEnhancedBeamformingProcessor;

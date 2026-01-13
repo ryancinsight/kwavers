@@ -28,6 +28,7 @@ use std::path::PathBuf;
 pub fn validate_architecture(
     src_root: PathBuf,
 ) -> Result<ArchitectureReport, Box<dyn std::error::Error>> {
+    let report_src_root = src_root.clone();
     let mut checker = DependencyChecker::new(src_root.clone());
     checker.check_all()?;
 
@@ -35,6 +36,7 @@ pub fn validate_architecture(
     let contamination = contamination_detector.check();
 
     Ok(ArchitectureReport {
+        src_root: report_src_root,
         dependency_violations: checker.violations().to_vec(),
         cross_contamination: contamination,
     })
@@ -43,6 +45,7 @@ pub fn validate_architecture(
 /// Complete architecture validation report
 #[derive(Debug)]
 pub struct ArchitectureReport {
+    src_root: PathBuf,
     pub dependency_violations: Vec<Violation>,
     pub cross_contamination: Vec<DetectedContamination>,
 }
@@ -93,7 +96,7 @@ impl ArchitectureReport {
                 self.cross_contamination.len()
             );
 
-            let detector = CrossContaminationDetector::new(PathBuf::from("src"));
+            let detector = CrossContaminationDetector::new(self.src_root.clone());
             detector.print_report(&self.cross_contamination);
         }
 

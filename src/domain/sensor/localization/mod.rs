@@ -16,15 +16,6 @@ use serde::{Deserialize, Serialize};
 pub use algorithms::{LocalizationMethod, LocalizationProcessor as AlgorithmProcessor};
 pub use array::{ArrayGeometry, SensorArray};
 
-/// Legacy direction-of-arrival (DOA) scan beamformer.
-///
-/// Prefer `BeamformSearch` for SSOT-compliant beamforming-based localization.
-#[deprecated(
-    note = "Use `kwavers::sensor::localization::BeamformSearch` + `LocalizationBeamformSearchConfig`. \
-This legacy DOA Beamformer will be removed as part of sensor-module redundancy elimination."
-)]
-pub use beamforming::Beamformer;
-
 // Beamforming-based localization: keep orchestration in localization, keep numerics in beamforming SSOT.
 //
 // NOTE: method naming must follow field jargon:

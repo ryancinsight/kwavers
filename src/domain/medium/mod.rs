@@ -53,7 +53,7 @@ pub use thermal::{ThermalField, ThermalProperties};
 // Re-export canonical property data structures (SSOT)
 pub use properties::{
     AcousticPropertyData, ElasticPropertyData, ElectromagneticPropertyData, MaterialProperties,
-    MaterialPropertiesBuilder, StrengthPropertyData, ThermalPropertyData,
+    MaterialPropertiesBuilder, OpticalPropertyData, StrengthPropertyData, ThermalPropertyData,
 };
 pub use traits::Medium;
 pub use viscous::ViscousProperties;

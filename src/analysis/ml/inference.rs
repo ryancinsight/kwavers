@@ -74,7 +74,18 @@ impl InferenceEngine {
 
         // Convert back to 2D
         let (batch, classes, _) = output_3d.dim();
-        Ok(output_3d.into_shape_with_order((batch, classes)).unwrap())
+        let output_shape = format!("{:?}", output_3d.shape());
+        output_3d
+            .into_shape_with_order((batch, classes))
+            .map_err(|e| {
+                crate::core::error::KwaversError::Validation(
+                    crate::core::error::ValidationError::ConstraintViolation {
+                        message: format!(
+                            "Failed to reshape inference output from {output_shape} to ({batch}, {classes}): {e}"
+                        ),
+                    },
+                )
+            })
     }
 
     /// Run inference on a 3-D tensor with shape *(batch, features, 1)* (the

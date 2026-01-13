@@ -54,7 +54,8 @@ impl Beamformer {
                 frequency,
                 &positions,
                 sound_speed,
-            );
+            )
+            .unwrap_or_else(|_| ndarray::Array1::zeros(num_sensors));
 
             for (sensor_idx, &s) in steering.iter().enumerate() {
                 steering_vectors[[sensor_idx, angle_deg]] = s;

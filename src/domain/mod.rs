@@ -111,6 +111,7 @@ pub mod sensor;
 pub mod signal;
 pub mod source;
 pub mod tensor;
+pub mod therapy;
 
 // Re-export key domain types for convenience
 pub use geometry::{Dimension, GeometricDomain, PointLocation, RectangularDomain, SphericalDomain};
