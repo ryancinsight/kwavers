@@ -31,13 +31,13 @@ pub mod solver;
 pub mod validation;
 
 // Re-export main types
-pub use bem_fem_coupling::{BemFemCouplingConfig, BemFemCoupler, BemFemInterface, BemFemSolver};
+pub use bem_fem_coupling::{BemFemCoupler, BemFemCouplingConfig, BemFemInterface, BemFemSolver};
 pub use config::{
     CouplingInterfaceConfig, DecompositionStrategy, HybridConfig, OptimizationConfig,
     ValidationConfig,
 };
-pub use fdtd_fem_coupling::{FdtdFemCouplingConfig, FdtdFemCoupler, FdtdFemSolver};
+pub use fdtd_fem_coupling::{FdtdFemCoupler, FdtdFemCouplingConfig, FdtdFemSolver};
 pub use metrics::{EfficiencyMetrics, HybridMetrics, ValidationResults};
 pub use plugin::HybridPlugin;
-pub use pstd_sem_coupling::{PstdSemCouplingConfig, PstdSemCoupler, PstdSemSolver};
+pub use pstd_sem_coupling::{PstdSemCoupler, PstdSemCouplingConfig, PstdSemSolver};
 pub use solver::HybridSolver;

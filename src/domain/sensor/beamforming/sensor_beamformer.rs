@@ -4,10 +4,10 @@
 //! specific sensor geometries and hardware characteristics. This serves as
 //! the accessor layer between domain sensor concerns and analysis algorithms.
 
-use crate::core::error::{KwaversResult, KwaversError};
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::domain::sensor::localization::array::SensorArray;
 use crate::domain::sensor::grid_sampling::GridSensorSet;
+use crate::domain::sensor::localization::array::SensorArray;
 use ndarray::Array2;
 
 /// Sensor-specific beamforming operations tied to hardware geometry
@@ -27,7 +27,8 @@ impl SensorBeamformer {
     /// Create a new sensor beamformer for the given array
     #[must_use]
     pub fn new(sensor_array: SensorArray, sampling_frequency: f64) -> Self {
-        let sensor_positions = sensor_array.get_sensor_positions()
+        let sensor_positions = sensor_array
+            .get_sensor_positions()
             .into_iter()
             .map(|pos| [pos.x, pos.y, pos.z])
             .collect();
@@ -42,8 +43,13 @@ impl SensorBeamformer {
 
     /// Create a sensor beamformer with grid sampling capability
     #[must_use]
-    pub fn with_grid_sensors(sensor_array: SensorArray, grid_sensors: GridSensorSet, sampling_frequency: f64) -> Self {
-        let sensor_positions = sensor_array.get_sensor_positions()
+    pub fn with_grid_sensors(
+        sensor_array: SensorArray,
+        grid_sensors: GridSensorSet,
+        sampling_frequency: f64,
+    ) -> Self {
+        let sensor_positions = sensor_array
+            .get_sensor_positions()
             .into_iter()
             .map(|pos| [pos.x, pos.y, pos.z])
             .collect();
@@ -66,17 +72,28 @@ impl SensorBeamformer {
     ///
     /// This is hardware-specific as it depends on the exact sensor positions
     /// and assumes a specific coordinate system and timing reference.
-    pub fn calculate_delays(&self, image_grid: &Grid, sound_speed: f64) -> KwaversResult<Array2<f64>> {
+    pub fn calculate_delays(
+        &self,
+        image_grid: &Grid,
+        _sound_speed: f64,
+    ) -> KwaversResult<Array2<f64>> {
         // For now, return empty delays - proper implementation needed
         // TODO: Implement proper delay calculation
-        Ok(Array2::zeros((self.sensor_positions.len(), image_grid.size())))
+        Ok(Array2::zeros((
+            self.sensor_positions.len(),
+            image_grid.size(),
+        )))
     }
 
     /// Apply apodization window specific to this sensor array
     ///
     /// Windowing may depend on array geometry, element directivity, and
     /// hardware-specific constraints.
-    pub fn apply_windowing(&self, delays: &Array2<f64>, window_type: WindowType) -> KwaversResult<Array2<f64>> {
+    pub fn apply_windowing(
+        &self,
+        delays: &Array2<f64>,
+        _window_type: WindowType,
+    ) -> KwaversResult<Array2<f64>> {
         // For now, return unmodified delays - proper windowing implementation needed
         // TODO: Implement proper windowing functions
         Ok(delays.clone())
@@ -86,7 +103,11 @@ impl SensorBeamformer {
     ///
     /// This provides hardware-specific steering that accounts for
     /// element directivity patterns and array manifold characteristics.
-    pub fn calculate_steering(&self, angles: &[f64], frequency: f64) -> KwaversResult<Array2<f64>> {
+    pub fn calculate_steering(
+        &self,
+        _angles: &[f64],
+        _frequency: f64,
+    ) -> KwaversResult<Array2<f64>> {
         // For now, return identity matrix - proper steering vector implementation needed
         // TODO: Implement proper steering vector calculations
         Ok(Array2::eye(self.sensor_positions.len()))
@@ -117,9 +138,10 @@ impl SensorBeamformer {
         for i in 0..self.sensor_positions.len() - 1 {
             let pos1 = self.sensor_positions[i];
             let pos2 = self.sensor_positions[i + 1];
-            let spacing = ((pos1[0] - pos2[0]).powi(2) +
-                          (pos1[1] - pos2[1]).powi(2) +
-                          (pos1[2] - pos2[2]).powi(2)).sqrt();
+            let spacing = ((pos1[0] - pos2[0]).powi(2)
+                + (pos1[1] - pos2[1]).powi(2)
+                + (pos1[2] - pos2[2]).powi(2))
+            .sqrt();
             total_spacing += spacing;
             count += 1;
         }

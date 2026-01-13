@@ -5,7 +5,7 @@
 //!
 //! Where Q is the heat source from ultrasound absorption.
 
-use super::ThermalProperties;
+use crate::domain::medium::properties::ThermalPropertyData;
 use ndarray::Array3;
 
 /// Pennes bioheat equation solver
@@ -25,12 +25,22 @@ pub struct PennesSolver {
     dz: f64,
     /// Time step (s)
     dt: f64,
-    /// Tissue properties
-    properties: ThermalProperties,
+    /// Material thermal properties
+    properties: ThermalPropertyData,
+    /// Arterial blood temperature (°C) - simulation parameter
+    arterial_temperature: f64,
+    /// Metabolic heat generation (W/m³) - simulation parameter
+    metabolic_heat: f64,
 }
 
 impl PennesSolver {
     /// Create new Pennes solver
+    ///
+    /// # Arguments
+    ///
+    /// * `properties` - Material thermal properties (conductivity, specific heat, density, perfusion)
+    /// * `arterial_temperature` - Arterial blood temperature (°C) for perfusion term
+    /// * `metabolic_heat` - Metabolic heat generation rate (W/m³)
     pub fn new(
         nx: usize,
         ny: usize,
@@ -39,10 +49,19 @@ impl PennesSolver {
         dy: f64,
         dz: f64,
         dt: f64,
-        properties: ThermalProperties,
+        properties: ThermalPropertyData,
+        arterial_temperature: f64,
+        metabolic_heat: f64,
     ) -> Result<Self, String> {
+        // Validate bio-heat parameters if needed
+        if !properties.has_bioheat_parameters() {
+            return Err(
+                "ThermalPropertyData must have blood_perfusion and blood_specific_heat for Pennes solver".to_string()
+            );
+        }
+
         // Check stability (3D diffusion)
-        let alpha = properties.k / (properties.rho * properties.c);
+        let alpha = properties.thermal_diffusivity();
         let stability = alpha * dt * (1.0 / (dx * dx) + 1.0 / (dy * dy) + 1.0 / (dz * dz));
 
         if stability > 0.5 {
@@ -51,8 +70,8 @@ impl PennesSolver {
             ));
         }
 
-        // Initialize with body temperature
-        let temperature = Array3::from_elem((nx, ny, nz), properties.t_a);
+        // Initialize with arterial temperature
+        let temperature = Array3::from_elem((nx, ny, nz), arterial_temperature);
         let temperature_prev = temperature.clone();
 
         Ok(Self {
@@ -66,15 +85,26 @@ impl PennesSolver {
             dz,
             dt,
             properties,
+            arterial_temperature,
+            metabolic_heat,
         })
     }
 
     /// Update temperature for one time step
     /// `heat_source`: volumetric heat deposition rate (W/m³)
     pub fn step(&mut self, heat_source: &Array3<f64>) {
-        let alpha = self.properties.k / (self.properties.rho * self.properties.c);
-        let perfusion_term =
-            self.properties.w_b * self.properties.c_b / (self.properties.rho * self.properties.c);
+        let alpha = self.properties.thermal_diffusivity();
+
+        // Perfusion coefficient: w_b * c_b / (ρ * c)
+        let w_b = self
+            .properties
+            .blood_perfusion
+            .expect("blood_perfusion validated in constructor");
+        let c_b = self
+            .properties
+            .blood_specific_heat
+            .expect("blood_specific_heat validated in constructor");
+        let perfusion_term = w_b * c_b / (self.properties.density * self.properties.specific_heat);
 
         // Store current temperature
         self.temperature_prev.assign(&self.temperature);
@@ -101,11 +131,14 @@ impl PennesSolver {
 
                     let laplacian = laplacian_x + laplacian_y + laplacian_z;
 
-                    // Pennes equation
+                    // Pennes equation: ρc ∂T/∂t = ∇·(k∇T) + w_b c_b (T_a - T) + Q_m + Q
                     let t = self.temperature_prev[[i, j, k]];
-                    let dt_dt = alpha * laplacian - perfusion_term * (t - self.properties.t_a)
-                        + self.properties.q_m / (self.properties.rho * self.properties.c)
-                        + heat_source[[i, j, k]] / (self.properties.rho * self.properties.c);
+                    let dt_dt = alpha * laplacian
+                        - perfusion_term * (t - self.arterial_temperature)
+                        + self.metabolic_heat
+                            / (self.properties.density * self.properties.specific_heat)
+                        + heat_source[[i, j, k]]
+                            / (self.properties.density * self.properties.specific_heat);
 
                     self.temperature[[i, j, k]] = t + self.dt * dt_dt;
                 }
@@ -159,7 +192,7 @@ impl PennesSolver {
     /// Get temperature rise above baseline
     #[must_use]
     pub fn get_temperature_rise(&self) -> Array3<f64> {
-        &self.temperature - self.properties.t_a
+        &self.temperature - self.arterial_temperature
     }
 
     /// Calculate heat source from acoustic intensity
@@ -179,16 +212,42 @@ mod tests {
 
     #[test]
     fn test_pennes_solver_creation() {
-        let properties = ThermalProperties::default();
-        let solver = PennesSolver::new(32, 32, 32, 1e-3, 1e-3, 1e-3, 0.01, properties);
+        let properties = ThermalPropertyData::soft_tissue();
+        let arterial_temp = 37.0;
+        let metabolic_heat = 400.0;
+        let solver = PennesSolver::new(
+            32,
+            32,
+            32,
+            1e-3,
+            1e-3,
+            1e-3,
+            0.01,
+            properties,
+            arterial_temp,
+            metabolic_heat,
+        );
         assert!(solver.is_ok());
     }
 
     #[test]
     fn test_steady_state_temperature() {
-        let properties = ThermalProperties::default();
-        let mut solver =
-            PennesSolver::new(16, 16, 16, 1e-3, 1e-3, 1e-3, 0.001, properties).unwrap();
+        let properties = ThermalPropertyData::soft_tissue();
+        let arterial_temp = 37.0;
+        let metabolic_heat = 400.0;
+        let mut solver = PennesSolver::new(
+            16,
+            16,
+            16,
+            1e-3,
+            1e-3,
+            1e-3,
+            0.001,
+            properties,
+            arterial_temp,
+            metabolic_heat,
+        )
+        .unwrap();
 
         // No heat source - should remain at body temperature
         let zero_source = Array3::zeros((16, 16, 16));
@@ -207,13 +266,33 @@ mod tests {
 
     #[test]
     fn test_heating_with_source() {
-        let properties = ThermalProperties {
-            w_b: 0.0, // No perfusion for simple test
-            ..Default::default()
-        };
+        // Create properties without perfusion for simple test
+        let properties = ThermalPropertyData::new(
+            0.5,          // conductivity
+            3600.0,       // specific_heat
+            1050.0,       // density
+            Some(0.0),    // No perfusion
+            Some(3617.0), // blood_specific_heat (required for validation)
+        )
+        .unwrap();
+
+        let arterial_temp = 37.0;
+        let metabolic_heat = 0.0; // No metabolic heat for simple test
 
         // Use larger time step for faster heating
-        let mut solver = PennesSolver::new(16, 16, 16, 1e-3, 1e-3, 1e-3, 0.01, properties).unwrap();
+        let mut solver = PennesSolver::new(
+            16,
+            16,
+            16,
+            1e-3,
+            1e-3,
+            1e-3,
+            0.01,
+            properties,
+            arterial_temp,
+            metabolic_heat,
+        )
+        .unwrap();
 
         // Apply heat source at center
         let mut heat_source = Array3::zeros((16, 16, 16));

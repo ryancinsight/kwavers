@@ -39,7 +39,7 @@
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
-use crate::math::numerics::operators::{Interpolator, TrilinearInterpolator};
+use crate::math::numerics::operators::TrilinearInterpolator;
 use ndarray::{Array3, ArrayView3};
 use std::collections::HashMap;
 
@@ -115,7 +115,7 @@ pub trait CoupledPhysicsSolver: Send + Sync {
     fn grid(&self) -> &Grid;
 
     /// Get current field values
-    fn get_field(&self, field_name: &str) -> KwaversResult<ArrayView3<f64>>;
+    fn get_field(&self, field_name: &str) -> KwaversResult<ArrayView3<'_, f64>>;
 
     /// Set field values (for coupling updates)
     fn set_field(&mut self, field_name: &str, field: ArrayView3<f64>) -> KwaversResult<()>;
@@ -124,10 +124,17 @@ pub trait CoupledPhysicsSolver: Send + Sync {
     fn step(&mut self, dt: f64) -> KwaversResult<()>;
 
     /// Get coupling source terms from this physics domain
-    fn get_coupling_source(&self, target_domain: PhysicsDomain) -> KwaversResult<Option<Array3<f64>>>;
+    fn get_coupling_source(
+        &self,
+        target_domain: PhysicsDomain,
+    ) -> KwaversResult<Option<Array3<f64>>>;
 
     /// Apply coupling source terms to this physics domain
-    fn apply_coupling_source(&mut self, source_domain: PhysicsDomain, source: ArrayView3<f64>) -> KwaversResult<()>;
+    fn apply_coupling_source(
+        &mut self,
+        source_domain: PhysicsDomain,
+        source: ArrayView3<f64>,
+    ) -> KwaversResult<()>;
 }
 
 /// Field coupling manager for conservative interpolation between domains
@@ -162,11 +169,8 @@ impl FieldCoupler {
         let key = (source_domain, target_domain);
 
         // Create interpolator for this domain pair
-        let interpolator = TrilinearInterpolator::new(
-            target_grid.dx,
-            target_grid.dy,
-            target_grid.dz,
-        );
+        let interpolator =
+            TrilinearInterpolator::new(target_grid.dx, target_grid.dy, target_grid.dz);
 
         // Define coupling interface (simplified - would need proper interface detection)
         let interface = CouplingInterface::new(source_grid, target_grid)?;
@@ -187,7 +191,7 @@ impl FieldCoupler {
         target_solver: &mut dyn CoupledPhysicsSolver,
         relaxation: f64,
     ) -> KwaversResult<f64> {
-        let key = (source_domain, target_domain);
+        let _key = (source_domain, target_domain);
 
         // Get source field
         let source_field = source_solver.get_field(field_name)?;
@@ -225,9 +229,7 @@ pub struct ConservationEnforcer {
 impl ConservationEnforcer {
     /// Create new conservation enforcer
     pub fn new() -> Self {
-        Self {
-            tolerance: 1e-10,
-        }
+        Self { tolerance: 1e-10 }
     }
 
     /// Apply conservative interpolation between grids
@@ -254,7 +256,10 @@ impl ConservationEnforcer {
                     let source_j = ((y / source_grid.dy) as usize).min(source_grid.ny - 1);
                     let source_k = ((z / source_grid.dz) as usize).min(source_grid.nz - 1);
 
-                    if source_i < source_grid.nx && source_j < source_grid.ny && source_k < source_grid.nz {
+                    if source_i < source_grid.nx
+                        && source_j < source_grid.ny
+                        && source_k < source_grid.nz
+                    {
                         result[[i, j, k]] = source_field[[source_i, source_j, source_k]];
                     }
                 }
@@ -279,7 +284,7 @@ impl CouplingInterface {
     pub fn new(_source_grid: &Grid, _target_grid: &Grid) -> KwaversResult<Self> {
         // Simplified interface - in practice would detect overlapping regions
         Ok(Self {
-            area: 1.0, // Placeholder
+            area: 1.0,               // Placeholder
             normal: (1.0, 0.0, 0.0), // Placeholder
         })
     }
@@ -292,6 +297,21 @@ pub struct MultiPhysicsSolver {
     coupler: FieldCoupler,
     convergence_history: Vec<f64>,
     time_step: usize,
+}
+
+impl std::fmt::Debug for MultiPhysicsSolver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MultiPhysicsSolver")
+            .field("config", &self.config)
+            .field("solvers", &format!("{} solvers", self.solvers.len()))
+            .field("coupler", &self.coupler)
+            .field(
+                "convergence_history",
+                &format!("{} entries", self.convergence_history.len()),
+            )
+            .field("time_step", &self.time_step)
+            .finish()
+    }
 }
 
 impl MultiPhysicsSolver {
@@ -312,9 +332,10 @@ impl MultiPhysicsSolver {
 
         // Check for duplicate domains
         if self.solvers.contains_key(&domain) {
-            return Err(KwaversError::InvalidInput(
-                format!("Solver for domain {:?} already exists", domain)
-            ));
+            return Err(KwaversError::InvalidInput(format!(
+                "Solver for domain {:?} already exists",
+                domain
+            )));
         }
 
         self.solvers.insert(domain, solver);
@@ -327,15 +348,19 @@ impl MultiPhysicsSolver {
         source_domain: PhysicsDomain,
         target_domain: PhysicsDomain,
     ) -> KwaversResult<()> {
-        let source_solver = self.solvers.get(&source_domain)
-            .ok_or_else(|| KwaversError::InvalidInput(
-                format!("Source solver for domain {:?} not found", source_domain)
-            ))?;
+        let source_solver = self.solvers.get(&source_domain).ok_or_else(|| {
+            KwaversError::InvalidInput(format!(
+                "Source solver for domain {:?} not found",
+                source_domain
+            ))
+        })?;
 
-        let target_solver = self.solvers.get(&target_domain)
-            .ok_or_else(|| KwaversError::InvalidInput(
-                format!("Target solver for domain {:?} not found", target_domain)
-            ))?;
+        let target_solver = self.solvers.get(&target_domain).ok_or_else(|| {
+            KwaversError::InvalidInput(format!(
+                "Target solver for domain {:?} not found",
+                target_domain
+            ))
+        })?;
 
         self.coupler.add_coupling(
             source_domain,
@@ -350,18 +375,10 @@ impl MultiPhysicsSolver {
         self.convergence_history.clear();
 
         match self.config.coupling_strategy {
-            CouplingStrategy::Explicit => {
-                self.solve_explicit_coupling(dt)
-            }
-            CouplingStrategy::Implicit => {
-                self.solve_implicit_coupling(dt)
-            }
-            CouplingStrategy::Partitioned => {
-                self.solve_partitioned_coupling(dt)
-            }
-            CouplingStrategy::Monolithic => {
-                self.solve_monolithic_coupling(dt)
-            }
+            CouplingStrategy::Explicit => self.solve_explicit_coupling(dt),
+            CouplingStrategy::Implicit => self.solve_implicit_coupling(dt),
+            CouplingStrategy::Partitioned => self.solve_partitioned_coupling(dt),
+            CouplingStrategy::Monolithic => self.solve_monolithic_coupling(dt),
         }
     }
 
@@ -402,16 +419,14 @@ impl MultiPhysicsSolver {
         let domains: Vec<PhysicsDomain> = self.solvers.keys().cloned().collect();
 
         for &domain in &domains {
-            if let Some(solver) = self.solvers.get_mut(&domain) {
-                solver.step(dt)?;
-            }
+            let Some(mut source_solver) = self.solvers.remove(&domain) else {
+                continue;
+            };
+            source_solver.step(dt)?;
 
             // Update coupling for remaining solvers
             for &target_domain in &domains {
                 if target_domain != domain {
-                    let Some(source_solver) = self.solvers.get(&domain) else {
-                        continue;
-                    };
                     let Some(mut target_solver) = self.solvers.remove(&target_domain) else {
                         continue;
                     };
@@ -427,6 +442,8 @@ impl MultiPhysicsSolver {
                     self.solvers.insert(target_domain, target_solver);
                 }
             }
+
+            self.solvers.insert(domain, source_solver);
         }
 
         Ok(0.0) // Simplified
@@ -436,7 +453,7 @@ impl MultiPhysicsSolver {
     fn solve_monolithic_coupling(&mut self, _dt: f64) -> KwaversResult<f64> {
         // Placeholder - would implement monolithic Newton solver
         Err(KwaversError::NotImplemented(
-            "Monolithic coupling not yet implemented".to_string()
+            "Monolithic coupling not yet implemented".to_string(),
         ))
     }
 
@@ -470,7 +487,11 @@ mod tests {
     impl MockSolver {
         fn new(domain: PhysicsDomain, grid: Grid) -> Self {
             let field = Array3::zeros((grid.nx, grid.ny, grid.nz));
-            Self { domain, grid, field }
+            Self {
+                domain,
+                grid,
+                field,
+            }
         }
     }
 
@@ -483,7 +504,7 @@ mod tests {
             &self.grid
         }
 
-        fn get_field(&self, _field_name: &str) -> KwaversResult<ArrayView3<f64>> {
+        fn get_field(&self, _field_name: &str) -> KwaversResult<ArrayView3<'_, f64>> {
             Ok(self.field.view())
         }
 
@@ -498,11 +519,18 @@ mod tests {
             Ok(())
         }
 
-        fn get_coupling_source(&self, _target_domain: PhysicsDomain) -> KwaversResult<Option<Array3<f64>>> {
+        fn get_coupling_source(
+            &self,
+            _target_domain: PhysicsDomain,
+        ) -> KwaversResult<Option<Array3<f64>>> {
             Ok(Some(self.field.clone()))
         }
 
-        fn apply_coupling_source(&mut self, _source_domain: PhysicsDomain, source: ArrayView3<f64>) -> KwaversResult<()> {
+        fn apply_coupling_source(
+            &mut self,
+            _source_domain: PhysicsDomain,
+            source: ArrayView3<f64>,
+        ) -> KwaversResult<()> {
             self.field += &source;
             Ok(())
         }

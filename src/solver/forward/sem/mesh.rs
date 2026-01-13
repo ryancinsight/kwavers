@@ -68,11 +68,24 @@ impl MeshQuality {
 
             // Calculate element aspect ratio (simplified)
             let dims = element.nodes.outer_iter().fold(
-                [f64::INFINITY, f64::INFINITY, f64::INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY],
+                [
+                    f64::INFINITY,
+                    f64::INFINITY,
+                    f64::INFINITY,
+                    f64::NEG_INFINITY,
+                    f64::NEG_INFINITY,
+                    f64::NEG_INFINITY,
+                ],
                 |[min_x, min_y, min_z, max_x, max_y, max_z], node| {
-                    [min_x.min(node[0]), min_y.min(node[1]), min_z.min(node[2]),
-                     max_x.max(node[0]), max_y.max(node[1]), max_z.max(node[2])]
-                }
+                    [
+                        min_x.min(node[0]),
+                        min_y.min(node[1]),
+                        min_z.min(node[2]),
+                        max_x.max(node[0]),
+                        max_y.max(node[1]),
+                        max_z.max(node[2]),
+                    ]
+                },
             );
 
             let length_x = dims[3] - dims[0];
@@ -81,7 +94,11 @@ impl MeshQuality {
 
             let max_len = length_x.max(length_y).max(length_z);
             let min_len = length_x.min(length_y).min(length_z);
-            let aspect_ratio = if min_len > 0.0 { max_len / min_len } else { f64::INFINITY };
+            let aspect_ratio = if min_len > 0.0 {
+                max_len / min_len
+            } else {
+                f64::INFINITY
+            };
             aspect_ratios.push(aspect_ratio);
         }
 
@@ -100,13 +117,14 @@ impl MeshQuality {
     /// Check if mesh quality is acceptable
     #[must_use]
     pub fn is_acceptable(&self) -> bool {
-        self.min_scaled_jacobian > 0.1 &&
-        self.negative_jacobians == 0 &&
-        self.aspect_ratios.iter().all(|&ar| ar < 10.0)
+        self.min_scaled_jacobian > 0.1
+            && self.negative_jacobians == 0
+            && self.aspect_ratios.iter().all(|&ar| ar < 10.0)
     }
 }
 
 /// Utilities for creating SEM meshes from standard formats
+#[derive(Debug)]
 pub struct MeshBuilder;
 
 impl MeshBuilder {
@@ -132,22 +150,33 @@ impl MeshBuilder {
     ///
     /// Creates a single hexahedral element spanning [0,Lx] × [0,Ly] × [0,Lz]
     #[must_use]
-    pub fn create_rectangular_mesh(
-        lx: f64,
-        ly: f64,
-        lz: f64,
-        polynomial_degree: usize,
-    ) -> SemMesh {
+    pub fn create_rectangular_mesh(lx: f64, ly: f64, lz: f64, polynomial_degree: usize) -> SemMesh {
         // Define 8 corner nodes of a cube
         let mut node_coords = Array2::<f64>::zeros((8, 3));
-        node_coords[[0, 0]] = 0.0; node_coords[[0, 1]] = 0.0; node_coords[[0, 2]] = 0.0; // (0,0,0)
-        node_coords[[1, 0]] = lx;  node_coords[[1, 1]] = 0.0; node_coords[[1, 2]] = 0.0;  // (Lx,0,0)
-        node_coords[[2, 0]] = lx;  node_coords[[2, 1]] = ly;  node_coords[[2, 2]] = 0.0;  // (Lx,Ly,0)
-        node_coords[[3, 0]] = 0.0; node_coords[[3, 1]] = ly;  node_coords[[3, 2]] = 0.0;  // (0,Ly,0)
-        node_coords[[4, 0]] = 0.0; node_coords[[4, 1]] = 0.0; node_coords[[4, 2]] = lz;  // (0,0,Lz)
-        node_coords[[5, 0]] = lx;  node_coords[[5, 1]] = 0.0; node_coords[[5, 2]] = lz;  // (Lx,0,Lz)
-        node_coords[[6, 0]] = lx;  node_coords[[6, 1]] = ly;  node_coords[[6, 2]] = lz;  // (Lx,Ly,Lz)
-        node_coords[[7, 0]] = 0.0; node_coords[[7, 1]] = ly;  node_coords[[7, 2]] = lz;  // (0,Ly,Lz)
+        node_coords[[0, 0]] = 0.0;
+        node_coords[[0, 1]] = 0.0;
+        node_coords[[0, 2]] = 0.0; // (0,0,0)
+        node_coords[[1, 0]] = lx;
+        node_coords[[1, 1]] = 0.0;
+        node_coords[[1, 2]] = 0.0; // (Lx,0,0)
+        node_coords[[2, 0]] = lx;
+        node_coords[[2, 1]] = ly;
+        node_coords[[2, 2]] = 0.0; // (Lx,Ly,0)
+        node_coords[[3, 0]] = 0.0;
+        node_coords[[3, 1]] = ly;
+        node_coords[[3, 2]] = 0.0; // (0,Ly,0)
+        node_coords[[4, 0]] = 0.0;
+        node_coords[[4, 1]] = 0.0;
+        node_coords[[4, 2]] = lz; // (0,0,Lz)
+        node_coords[[5, 0]] = lx;
+        node_coords[[5, 1]] = 0.0;
+        node_coords[[5, 2]] = lz; // (Lx,0,Lz)
+        node_coords[[6, 0]] = lx;
+        node_coords[[6, 1]] = ly;
+        node_coords[[6, 2]] = lz; // (Lx,Ly,Lz)
+        node_coords[[7, 0]] = 0.0;
+        node_coords[[7, 1]] = ly;
+        node_coords[[7, 2]] = lz; // (0,Ly,Lz)
 
         // Single element connectivity (0-based node indices)
         let connectivity = vec![vec![0, 1, 2, 3, 4, 5, 6, 7]];
@@ -161,10 +190,10 @@ impl MeshBuilder {
         let quality = MeshQuality::assess(mesh);
 
         if !quality.is_acceptable() {
-            return Err(crate::core::error::KwaversError::InvalidInput(
-                format!("Mesh quality unacceptable: min Jacobian = {:.3}, {} negative Jacobians",
-                       quality.min_scaled_jacobian, quality.negative_jacobians)
-            ));
+            return Err(crate::core::error::KwaversError::InvalidInput(format!(
+                "Mesh quality unacceptable: min Jacobian = {:.3}, {} negative Jacobians",
+                quality.min_scaled_jacobian, quality.negative_jacobians
+            )));
         }
 
         Ok(quality)

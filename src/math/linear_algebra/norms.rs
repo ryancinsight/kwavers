@@ -6,6 +6,7 @@
 use ndarray::Array3;
 
 /// Vector norms and basic operations
+#[derive(Debug)]
 pub struct VectorOperations;
 
 impl VectorOperations {
@@ -113,7 +114,8 @@ mod tests {
 
     #[test]
     fn test_norm_l2() {
-        let array = Array3::from_shape_vec((2, 2, 2), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]).unwrap();
+        let array = Array3::from_shape_vec((2, 2, 2), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])
+            .unwrap();
         let norm = VectorOperations::norm_l2(&array);
 
         // Expected: sqrt(1² + 2² + ... + 8²) = sqrt(204) ≈ 14.282856857

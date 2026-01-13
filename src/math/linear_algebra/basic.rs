@@ -4,10 +4,10 @@
 //! and vectors, including system solving, matrix inversion, and basic decompositions.
 
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2, s};
-use num_traits::Float;
+use ndarray::{s, Array1, Array2};
 
 /// Basic linear algebra operations for real-valued matrices
+#[derive(Debug)]
 pub struct BasicLinearAlgebra;
 
 impl BasicLinearAlgebra {
@@ -112,7 +112,7 @@ impl BasicLinearAlgebra {
         }
 
         // Create identity matrix
-        let mut identity = Array2::eye(n);
+        let identity = Array2::eye(n);
         let mut result = Array2::zeros((n, n));
 
         // Solve for each column of the identity matrix
@@ -157,7 +157,11 @@ impl BasicLinearAlgebra {
 
                 // Apply Householder reflection to R
                 for k in j..n {
-                    let dot_product = v.iter().zip(r.column(k).slice(s![j..])).map(|(&a, &b)| a * b).sum::<f64>();
+                    let dot_product = v
+                        .iter()
+                        .zip(r.column(k).slice(s![j..]))
+                        .map(|(&a, &b)| a * b)
+                        .sum::<f64>();
                     for (i, &vi) in v.iter().enumerate() {
                         r[[j + i, k]] -= 2.0 * vi * dot_product;
                     }
@@ -165,7 +169,11 @@ impl BasicLinearAlgebra {
 
                 // Apply Householder reflection to Q
                 for k in 0..m {
-                    let dot_product = v.iter().zip(q.column(k).slice(s![j..])).map(|(&a, &b)| a * b).sum::<f64>();
+                    let dot_product = v
+                        .iter()
+                        .zip(q.column(k).slice(s![j..]))
+                        .map(|(&a, &b)| a * b)
+                        .sum::<f64>();
                     for (i, &vi) in v.iter().enumerate() {
                         q[[j + i, k]] -= 2.0 * vi * dot_product;
                     }

@@ -26,11 +26,12 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers::core::error::KwaversResult;
 use kwavers::domain::grid::Grid;
-use kwavers::domain::medium::{HomogeneousMedium, Medium};
+use kwavers::domain::medium::{CoreMedium, HomogeneousMedium, Medium};
 use kwavers::domain::source::{GridSource, Source};
 use kwavers::math::numerics::operators::CentralDifference2;
 use kwavers::solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver, PSTDSource};
+use kwavers::solver::interface::solver::Solver;
 use ndarray::{Array3, ArrayView3, Zip};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -170,7 +171,7 @@ pub fn run_comparative_tests() -> KwaversResult<ComparativeResults> {
         Ok(results)
     } else {
         Err(kwavers::core::error::KwaversError::InvalidInput(
-            "No test problems defined".to_string()
+            "No test problems defined".to_string(),
         ))
     }
 }
@@ -189,9 +190,8 @@ fn create_test_problems() -> Vec<TestProblem> {
 fn create_plane_wave_problem() -> TestProblem {
     let grid = Grid::new(128, 8, 8, 0.001, 0.01, 0.01).unwrap(); // Effectively 1D
     let medium = HomogeneousMedium::water(&grid);
-    let mut source = GridSource::default();
-    source.set_frequency(1e6); // 1 MHz
-    source.set_amplitude(1e5); // 100 kPa
+    // Use default GridSource (no frequency/amplitude setters)
+    let source = GridSource::default();
 
     TestProblem {
         name: "1D Plane Wave".to_string(),
@@ -213,9 +213,8 @@ fn create_plane_wave_problem() -> TestProblem {
 fn create_gaussian_pulse_problem() -> TestProblem {
     let grid = Grid::new(256, 4, 4, 0.0005, 0.01, 0.01).unwrap(); // High resolution 1D
     let medium = HomogeneousMedium::water(&grid);
-    let mut source = GridSource::default();
-    source.set_frequency(2e6); // 2 MHz
-    source.set_amplitude(2e5); // 200 kPa
+    // Use default GridSource (no frequency/amplitude setters)
+    let source = GridSource::default();
 
     TestProblem {
         name: "Gaussian Pulse".to_string(),
@@ -224,7 +223,7 @@ fn create_gaussian_pulse_problem() -> TestProblem {
         source,
         analytical_solution: Some(AnalyticalSolution::GaussianPulse {
             amplitude: 2e5,
-            width: 1e-3, // 1mm pulse width
+            width: 1e-3,           // 1mm pulse width
             center_position: 0.01, // 10mm from start
         }),
         simulation_time: 5e-6, // 5 microseconds
@@ -236,9 +235,8 @@ fn create_gaussian_pulse_problem() -> TestProblem {
 fn create_spherical_wave_problem() -> TestProblem {
     let grid = Grid::new(64, 64, 32, 0.002, 0.002, 0.004).unwrap(); // 3D spherical
     let medium = HomogeneousMedium::water(&grid);
-    let mut source = GridSource::default();
-    source.set_frequency(1e6);
-    source.set_amplitude(1e5);
+    // Use default GridSource (no frequency/amplitude setters)
+    let source = GridSource::default();
 
     TestProblem {
         name: "3D Spherical Wave".to_string(),
@@ -260,9 +258,8 @@ fn create_layered_medium_problem() -> TestProblem {
     let grid = Grid::new(128, 16, 16, 0.001, 0.01, 0.01).unwrap();
     let medium = HomogeneousMedium::water(&grid); // Would use heterogeneous in full implementation
 
-    let mut source = GridSource::default();
-    source.set_frequency(1.5e6);
-    source.set_amplitude(1.5e5);
+    // Use default GridSource (no frequency/amplitude setters)
+    let source = GridSource::default();
 
     TestProblem {
         name: "Layered Medium".to_string(),
@@ -296,7 +293,11 @@ fn run_problem_comparison(problem: &TestProblem) -> KwaversResult<ComparativeRes
 
     // Validation against analytical solution
     let validation = if let Some(analytical) = &problem.analytical_solution {
-        Some(validate_against_analytical(&solver_results, analytical, problem)?)
+        Some(validate_against_analytical(
+            &solver_results,
+            analytical,
+            problem,
+        )?)
     } else {
         None
     };
@@ -317,9 +318,14 @@ fn run_fdtd_solver(problem: &TestProblem) -> KwaversResult<SolverResult> {
     let start_time = Instant::now();
 
     let config = FdtdConfig::default();
-    let mut solver = FdtdSolver::new(config, &problem.grid, &problem.medium, problem.source.clone())?;
+    let mut solver = FdtdSolver::new(
+        config,
+        &problem.grid,
+        &problem.medium,
+        problem.source.clone(),
+    )?;
 
-    let dt = solver.max_stable_dt(problem.medium.sound_speed(0, 0, 0)) / 2.0; // Conservative
+    let _dt = solver.max_stable_dt(problem.medium.sound_speed(0, 0, 0)) / 2.0; // Conservative
 
     // Run simulation
     for _step in 0..problem.time_steps {
@@ -329,7 +335,7 @@ fn run_fdtd_solver(problem: &TestProblem) -> KwaversResult<SolverResult> {
     let execution_time = start_time.elapsed();
 
     // Extract final field
-    let final_field = solver.pressure().to_owned();
+    let final_field = solver.pressure_field().to_owned();
 
     // Calculate energy conservation (simplified)
     let energy_conserved = calculate_energy_conservation(&final_field);
@@ -353,15 +359,22 @@ fn run_fdtd_solver(problem: &TestProblem) -> KwaversResult<SolverResult> {
 fn run_pstd_solver(problem: &TestProblem) -> KwaversResult<SolverResult> {
     let start_time = Instant::now();
 
-    let config = PSTDConfig::default();
-    let pstd_source = PSTDSource::default();
-    let mut solver = PSTDSolver::new(config, problem.grid.clone(), &problem.medium, pstd_source)?;
+    let mut config = PSTDConfig::default();
+    config.nt = problem.time_steps.saturating_add(1);
+    config.dt = 1e-7;
+    config.boundary = kwavers::solver::forward::pstd::config::BoundaryConfig::None;
+    let mut solver = PSTDSolver::new(
+        config,
+        problem.grid.clone(),
+        &problem.medium,
+        problem.source.clone(),
+    )?;
 
-    let dt = 1e-7; // PSTD typically uses smaller time steps
+    let _dt = 1e-7; // PSTD typically uses smaller time steps
 
     // Run simulation
     for _step in 0..problem.time_steps {
-        solver.step_forward(dt)?;
+        solver.step_forward()?;
     }
 
     let execution_time = start_time.elapsed();
@@ -388,7 +401,9 @@ fn run_pstd_solver(problem: &TestProblem) -> KwaversResult<SolverResult> {
 }
 
 /// Compare results between different solvers
-fn compare_solver_results(results: &HashMap<String, SolverResult>) -> KwaversResult<Vec<MethodComparison>> {
+fn compare_solver_results(
+    results: &HashMap<String, SolverResult>,
+) -> KwaversResult<Vec<MethodComparison>> {
     let mut comparisons = Vec::new();
     let method_names: Vec<String> = results.keys().cloned().collect();
 
@@ -417,19 +432,21 @@ fn compare_two_methods(
 ) -> KwaversResult<MethodComparison> {
     // Ensure fields have same dimensions
     if result1.final_field.dim() != result2.final_field.dim() {
-        return Err(kwavers::core::error::KwaversError::InvalidInput(
-            format!("Field dimensions don't match: {} vs {}", result1.final_field.dim(), result2.final_field.dim())
-        ));
+        return Err(kwavers::core::error::KwaversError::InvalidInput(format!(
+            "Field dimensions don't match: {:?} vs {:?}",
+            result1.final_field.dim(),
+            result2.final_field.dim()
+        )));
     }
 
     // Calculate differences
-    let mut l2_sum = 0.0;
-    let mut max_diff = 0.0;
-    let mut sum1 = 0.0;
-    let mut sum2 = 0.0;
-    let mut sum1_sq = 0.0;
-    let mut sum2_sq = 0.0;
-    let mut sum_prod = 0.0;
+    let mut l2_sum: f64 = 0.0;
+    let mut max_diff: f64 = 0.0;
+    let mut sum1: f64 = 0.0;
+    let mut sum2: f64 = 0.0;
+    let mut sum1_sq: f64 = 0.0;
+    let mut sum2_sq: f64 = 0.0;
+    let mut sum_prod: f64 = 0.0;
 
     Zip::from(&result1.final_field)
         .and(&result2.final_field)
@@ -449,10 +466,12 @@ fn compare_two_methods(
     let l2_difference = (l2_sum / n).sqrt();
 
     // Relative difference (normalized by maximum absolute value)
-    let max_abs = result1.final_field.iter()
+    let max_abs = result1
+        .final_field
+        .iter()
         .chain(result2.final_field.iter())
         .map(|&x| x.abs())
-        .fold(0.0, |a, b| a.max(b));
+        .fold(0.0f64, |a, b| a.max(b));
 
     let relative_difference = if max_abs > 1e-12 {
         max_diff / max_abs
@@ -462,8 +481,8 @@ fn compare_two_methods(
 
     // Correlation coefficient
     let correlation = if sum1_sq > 1e-12 && sum2_sq > 1e-12 {
-        (n * sum_prod - sum1 * sum2) /
-        ((n * sum1_sq - sum1 * sum1) * (n * sum2_sq - sum2 * sum2)).sqrt()
+        (n * sum_prod - sum1 * sum2)
+            / ((n * sum1_sq - sum1 * sum1) * (n * sum2_sq - sum2 * sum2)).sqrt()
     } else {
         1.0
     };
@@ -479,7 +498,9 @@ fn compare_two_methods(
 }
 
 /// Analyze performance characteristics
-fn analyze_performance(results: &HashMap<String, SolverResult>) -> KwaversResult<PerformanceReport> {
+fn analyze_performance(
+    results: &HashMap<String, SolverResult>,
+) -> KwaversResult<PerformanceReport> {
     let mut execution_times = HashMap::new();
     let mut memory_usage = HashMap::new();
 
@@ -490,9 +511,7 @@ fn analyze_performance(results: &HashMap<String, SolverResult>) -> KwaversResult
 
     // Rank by execution time (fastest first)
     let mut ranking: Vec<String> = results.keys().cloned().collect();
-    ranking.sort_by(|a, b| {
-        results[a].execution_time.cmp(&results[b].execution_time)
-    });
+    ranking.sort_by(|a, b| results[a].execution_time.cmp(&results[b].execution_time));
 
     Ok(PerformanceReport {
         execution_times,
@@ -512,11 +531,12 @@ fn validate_against_analytical(
     let mut convergence_rates = HashMap::new();
 
     for (method, result) in results {
-        let analytical_field = generate_analytical_field(analytical, &problem.grid, problem.simulation_time)?;
+        let analytical_field =
+            generate_analytical_field(analytical, &problem.grid, problem.simulation_time)?;
 
         // Calculate errors
-        let mut l2_sum = 0.0;
-        let mut max_error = 0.0;
+        let mut l2_sum: f64 = 0.0;
+        let mut max_error: f64 = 0.0;
 
         Zip::from(&result.final_field)
             .and(&analytical_field)
@@ -557,12 +577,18 @@ fn generate_analytical_field(
     let mut field = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
     match analytical {
-        AnalyticalSolution::PlaneWave { amplitude, wavenumber, frequency, phase } => {
+        AnalyticalSolution::PlaneWave {
+            amplitude,
+            wavenumber,
+            frequency,
+            phase,
+        } => {
             // 1D plane wave along x-direction
             for i in 0..grid.nx {
                 let x = i as f64 * grid.dx;
                 let argument = wavenumber * (x - 1482.0 * time) + *phase; // c = 1482 m/s for water
-                let value = amplitude * (frequency * 2.0 * std::f64::consts::PI * time + argument).sin();
+                let value =
+                    amplitude * (frequency * 2.0 * std::f64::consts::PI * time + argument).sin();
                 for j in 0..grid.ny {
                     for k in 0..grid.nz {
                         field[[i, j, k]] = value;
@@ -570,7 +596,11 @@ fn generate_analytical_field(
                 }
             }
         }
-        AnalyticalSolution::GaussianPulse { amplitude, width, center_position } => {
+        AnalyticalSolution::GaussianPulse {
+            amplitude,
+            width,
+            center_position,
+        } => {
             // 1D Gaussian pulse
             for i in 0..grid.nx {
                 let x = i as f64 * grid.dx;
@@ -584,7 +614,11 @@ fn generate_analytical_field(
                 }
             }
         }
-        AnalyticalSolution::SphericalWave { amplitude, frequency, center } => {
+        AnalyticalSolution::SphericalWave {
+            amplitude,
+            frequency,
+            center,
+        } => {
             // 3D spherical wave
             for i in 0..grid.nx {
                 for j in 0..grid.ny {
@@ -593,10 +627,11 @@ fn generate_analytical_field(
                         let dx = x - center.0;
                         let dy = y - center.1;
                         let dz = z - center.2;
-                        let r = (dx*dx + dy*dy + dz*dz).sqrt();
+                        let r = (dx * dx + dy * dy + dz * dz).sqrt();
 
                         if r > 1e-12 {
-                            let argument = frequency * 2.0 * std::f64::consts::PI * (time - r / 1482.0);
+                            let argument =
+                                frequency * 2.0 * std::f64::consts::PI * (time - r / 1482.0);
                             field[[i, j, k]] = amplitude * argument.sin() / r;
                         }
                     }
@@ -612,7 +647,7 @@ fn generate_analytical_field(
 fn calculate_energy_conservation(field: &Array3<f64>) -> f64 {
     // Simplified energy calculation (pressure squared as proxy for energy)
     let total_energy: f64 = field.iter().map(|&p| p * p).sum();
-    let max_energy: f64 = field.iter().map(|&p| p * p).fold(0.0, |a, b| a.max(b));
+    let max_energy: f64 = field.iter().map(|&p| p * p).fold(0.0f64, |a, b| a.max(b));
 
     if max_energy > 1e-12 {
         total_energy / max_energy // Normalized energy
@@ -634,13 +669,14 @@ fn calculate_stability_metric(field: &Array3<f64>) -> f64 {
         let mut gradient_sum = 0.0;
         let mut value_sum = 0.0;
 
-        for i in 1..field.nrows() - 1 {
-            for j in 1..field.ncols() - 1 {
-                for k in 1..field.dim().2 - 1 {
+        let (nx, ny, nz) = field.dim();
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
                     let center = field[[i, j, k]];
-                    let grad_x = (field[[i+1, j, k]] - field[[i-1, j, k]]).abs();
-                    let grad_y = (field[[i, j+1, k]] - field[[i, j-1, k]]).abs();
-                    let grad_z = (field[[i, j, k+1]] - field[[i, j, k-1]]).abs();
+                    let grad_x = (field[[i + 1, j, k]] - field[[i - 1, j, k]]).abs();
+                    let grad_y = (field[[i, j + 1, k]] - field[[i, j - 1, k]]).abs();
+                    let grad_z = (field[[i, j, k + 1]] - field[[i, j, k - 1]]).abs();
 
                     gradient_sum += (grad_x + grad_y + grad_z).sqrt();
                     value_sum += center.abs();
@@ -667,25 +703,31 @@ fn report_discrepancies(comparisons: &[MethodComparison]) -> KwaversResult<()> {
     let mut significant_discrepancies = 0;
 
     for comparison in comparisons {
-        let status = if comparison.relative_difference > RELATIVE_TOLERANCE ||
-                      comparison.l2_difference > L2_TOLERANCE {
+        let status = if comparison.relative_difference > RELATIVE_TOLERANCE
+            || comparison.l2_difference > L2_TOLERANCE
+        {
             significant_discrepancies += 1;
             "❌ SIGNIFICANT DISCREPANCY"
         } else {
             "✅ Agreement"
         };
 
-        println!("  {} vs {}: {} (rel={:.2e}, L2={:.2e}, corr={:.3f})",
-                comparison.method1,
-                comparison.method2,
-                status,
-                comparison.relative_difference,
-                comparison.l2_difference,
-                comparison.correlation);
+        println!(
+            "  {} vs {}: {} (rel={:.2e}, L2={:.2e}, corr={:.3})",
+            comparison.method1,
+            comparison.method2,
+            status,
+            comparison.relative_difference,
+            comparison.l2_difference,
+            comparison.correlation
+        );
     }
 
     if significant_discrepancies > 0 {
-        println!("\n⚠️  WARNING: {} significant discrepancies detected!", significant_discrepancies);
+        println!(
+            "\n⚠️  WARNING: {} significant discrepancies detected!",
+            significant_discrepancies
+        );
         println!("   This may indicate implementation bugs or numerical instabilities.");
         println!("   Check individual method implementations and convergence properties.");
     } else {
@@ -717,14 +759,20 @@ fn generate_summary_report(all_results: &HashMap<String, ComparativeResults>) ->
         println!("  Performance ranking: {:?}", results.performance.ranking);
 
         // Discrepancy count
-        let problem_discrepancies = results.comparisons.iter()
+        let problem_discrepancies = results
+            .comparisons
+            .iter()
             .filter(|c| c.relative_difference > 1e-3 || c.l2_difference > 1e-2)
             .count();
 
         total_discrepancies += problem_discrepancies;
         total_comparisons += results.comparisons.len();
 
-        println!("  Discrepancies found: {}/{}", problem_discrepancies, results.comparisons.len());
+        println!(
+            "  Discrepancies found: {}/{}",
+            problem_discrepancies,
+            results.comparisons.len()
+        );
 
         // Validation results
         if let Some(validation) = &results.validation {
@@ -745,7 +793,11 @@ fn generate_summary_report(all_results: &HashMap<String, ComparativeResults>) ->
     };
 
     println!("Total method comparisons: {}", total_comparisons);
-    println!("Significant discrepancies: {} ({:.1}%)", total_discrepancies, discrepancy_rate * 100.0);
+    println!(
+        "Significant discrepancies: {} ({:.1}%)",
+        total_discrepancies,
+        discrepancy_rate * 100.0
+    );
 
     if discrepancy_rate > 0.1 {
         println!("⚠️  HIGH DISCREPANCY RATE - Implementation issues likely");
@@ -777,7 +829,10 @@ mod tests {
     fn test_comparative_test_execution() {
         // Run a quick test with minimal configuration
         let result = run_comparative_tests();
-        assert!(result.is_ok(), "Comparative tests should execute successfully");
+        assert!(
+            result.is_ok(),
+            "Comparative tests should execute successfully"
+        );
     }
 
     #[test]
@@ -791,6 +846,9 @@ mod tests {
     fn test_stability_metric_calculation() {
         let field = Array3::from_elem((10, 10, 10), 1.0);
         let stability = calculate_stability_metric(&field);
-        assert!(stability >= 0.0 && stability <= 1.0, "Stability metric should be in [0,1]");
+        assert!(
+            stability >= 0.0 && stability <= 1.0,
+            "Stability metric should be in [0,1]"
+        );
     }
 }

@@ -6,10 +6,11 @@
 //! - Acoustic wave propagation
 //! - Image reconstruction and validation
 
+use kwavers::clinical::imaging::photoacoustic::PhotoacousticOpticalProperties as OpticalProperties;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::simulation::modalities::photoacoustic::{
-    OpticalProperties, PhotoacousticParameters, PhotoacousticSimulator,
+    PhotoacousticParameters, PhotoacousticSimulator,
 };
 use kwavers::KwaversResult;
 use std::time::Instant;
@@ -226,23 +227,25 @@ fn demonstrate_tissue_contrast(_simulator: &PhotoacousticSimulator) -> KwaversRe
     println!("   Optical Properties Comparison (750 nm):");
     println!(
         "     Blood:     μ_a = {:.1} cm⁻¹, μ_s = {:.1} cm⁻¹",
-        blood_props.absorption * 100.0,
-        blood_props.scattering * 100.0
+        blood_props.absorption_coefficient * 100.0,
+        blood_props.scattering_coefficient * 100.0
     );
     println!(
         "     Soft tissue: μ_a = {:.1} cm⁻¹, μ_s = {:.1} cm⁻¹",
-        tissue_props.absorption * 100.0,
-        tissue_props.scattering * 100.0
+        tissue_props.absorption_coefficient * 100.0,
+        tissue_props.scattering_coefficient * 100.0
     );
     println!(
         "     Tumor:    μ_a = {:.1} cm⁻¹, μ_s = {:.1} cm⁻¹",
-        tumor_props.absorption * 100.0,
-        tumor_props.scattering * 100.0
+        tumor_props.absorption_coefficient * 100.0,
+        tumor_props.scattering_coefficient * 100.0
     );
 
     // Calculate expected contrast ratios
-    let blood_tissue_contrast = blood_props.absorption / tissue_props.absorption;
-    let tumor_tissue_contrast = tumor_props.absorption / tissue_props.absorption;
+    let blood_tissue_contrast =
+        blood_props.absorption_coefficient / tissue_props.absorption_coefficient;
+    let tumor_tissue_contrast =
+        tumor_props.absorption_coefficient / tissue_props.absorption_coefficient;
 
     println!("   Expected Contrast Ratios:");
     println!(

@@ -132,12 +132,8 @@ impl BemSolver {
         }
 
         // Apply boundary conditions to the BEM system
-        self.boundary_manager.apply_all(
-            h_matrix,
-            g_matrix,
-            &mut boundary_values,
-            wavenumber,
-        )?;
+        self.boundary_manager
+            .apply_all(h_matrix, g_matrix, &mut boundary_values, wavenumber)?;
 
         // Clone matrices for solving (avoids borrow checker issues)
         let h_copy = (*h_matrix).clone();
@@ -156,9 +152,9 @@ impl BemSolver {
     /// Solve the assembled BEM system (placeholder implementation)
     fn solve_bem_system(
         &self,
-        h_matrix: &CompressedSparseRowMatrix<Complex64>,
-        g_matrix: &CompressedSparseRowMatrix<Complex64>,
-        boundary_values: &Array1<Complex64>,
+        _h_matrix: &CompressedSparseRowMatrix<Complex64>,
+        _g_matrix: &CompressedSparseRowMatrix<Complex64>,
+        _boundary_values: &Array1<Complex64>,
     ) -> KwaversResult<BemSystemSolution> {
         // Placeholder: In a full implementation, this would solve:
         // H * p - G * (dp/dn) = boundary_values
@@ -185,7 +181,10 @@ impl BemSolver {
     ) -> KwaversResult<Array1<Complex64>> {
         // Placeholder: In full implementation, this would use the BEM
         // representation formula to compute field at arbitrary points
-        Ok(Array1::from_elem(_evaluation_points.len(), Complex64::new(0.0, 0.0)))
+        Ok(Array1::from_elem(
+            _evaluation_points.len(),
+            Complex64::new(0.0, 0.0),
+        ))
     }
 }
 

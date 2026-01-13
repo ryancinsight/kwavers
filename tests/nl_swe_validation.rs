@@ -13,6 +13,8 @@ pub use kwavers::domain::imaging::ultrasound::elastography::{
 pub use kwavers::domain::medium::HomogeneousMedium;
 pub use kwavers::physics::imaging::modalities::elastography::*;
 pub use kwavers::simulation::imaging::elastography::ShearWaveElastography;
+pub use kwavers::solver::forward::elastic::{ElasticWaveConfig, ElasticWaveSolver};
+pub use kwavers::solver::inverse::elastography::NonlinearInversion;
 pub use ndarray::{Array3, Array4};
 pub use std::f64::consts::PI;
 

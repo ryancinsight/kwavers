@@ -33,14 +33,16 @@
 //!   for contrast enhanced ultrasound (CEUS) in the liver." *Ultrasound in Medicine & Biology*
 //! - Barr, R. G., et al. (2019). "Elastography assessment of liver fibrosis." *Abdominal Radiology*
 
-use kwavers::clinical::swe_3d_workflows::{
+use kwavers::clinical::therapy::swe_3d_workflows::{
     ClinicalDecisionSupport, ElasticityMap3D, MultiPlanarReconstruction, VolumetricROI,
 };
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::heterogeneous::HeterogeneousMedium;
-use kwavers::physics::imaging::elastography::{
-    AcousticRadiationForce, ArrivalDetection, ElasticWaveSolver, MultiDirectionalPush,
-    VolumetricSource, VolumetricWaveConfig, WaveFrontTracker,
+use kwavers::physics::acoustics::imaging::modalities::elastography::{
+    AcousticRadiationForce, MultiDirectionalPush,
+};
+use kwavers::solver::forward::elastic::{
+    ArrivalDetection, ElasticWaveSolver, VolumetricSource, VolumetricWaveConfig, WaveFrontTracker,
 };
 use ndarray::Array3;
 
@@ -163,7 +165,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
     println!(
         "   Simulated {} time steps of wave propagation",
-        displacement_history.len()
+        displacement_history.len() as usize
     );
     println!("   Wave front tracking completed\n");
 
@@ -248,10 +250,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Volumetric quality assessment:");
     println!("   Coverage: {:.1}%", quality_metrics.coverage * 100.0);
     println!("   Average quality: {:.2}", quality_metrics.average_quality);
-    println!(
-        "   Maximum interference: {:.0}",
-        quality_metrics.max_interference
-    );
     println!(
         "   Valid tracking points: {}\n",
         quality_metrics.valid_tracking_points
@@ -495,7 +493,7 @@ fn display_slice_statistics(mpr: &MultiPlanarReconstruction) {
 
 /// Calculate statistics for a set of slices
 fn calculate_slice_stats(
-    slices: &[kwavers::clinical::swe_3d_workflows::ElasticityMap2D],
+    slices: &[kwavers::clinical::therapy::swe_3d_workflows::ElasticityMap2D],
 ) -> SliceStats {
     let mut total_stiffness = 0.0;
     let mut total_voxels = 0;

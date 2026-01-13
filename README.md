@@ -2,53 +2,67 @@
 
 [![Version](https://img.shields.io/badge/version-2.15.0-blue.svg)](https://github.com/kwavers/kwavers)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/build-status%20varies-yellow.svg)](https://github.com/kwavers/kwavers/actions)
 [![Documentation](https://img.shields.io/badge/docs-available-blue.svg)](https://docs.rs/kwavers)
 [![Rust](https://img.shields.io/badge/rust-2021+-orange.svg)](https://www.rust-lang.org/)
 
-**The world's most advanced interdisciplinary ultrasound-light physics simulation platform.** Kwavers uniquely models the complete pathway from acoustic waves to optical emissions through cavitation and sonoluminescence, bridging ultrasound and light physics for revolutionary multi-modal imaging and energy conversion research.
+**An interdisciplinary ultrasound-light physics simulation library.** Kwavers models acoustic wave propagation, cavitation dynamics, and sonoluminescence for multi-modal imaging research and physics studies.
 
 ![Physics Pipeline](https://via.placeholder.com/800x200/4A90E2/FFFFFF?text=Ultrasound+→+Cavitation+→+Sonoluminescence+→+Multi-modal+Imaging)
 
-## 🌟 Key Features
+## 📋 Library Components
 
-### Core Physics Engines
-- **Ultrasound Propagation**: High-fidelity acoustic wave simulation with nonlinear effects
-- **Cavitation Dynamics**: Advanced bubble physics with Rayleigh-Plesset equations
-- **Sonoluminescence**: Light emission modeling from cavitation collapse
-- **Multi-Modal Coupling**: Complete acoustic-to-optic energy conversion
+### Physics Models
+- **Acoustic Wave Propagation**: Linear and nonlinear wave equations
+- **Cavitation Dynamics**: Bubble physics implementations
+- **Multi-Physics Coupling**: Basic acoustic-thermal interactions
+- **Electromagnetic Models**: Wave propagation in various media
 
 ### Numerical Methods
-- **FDTD/PSTD/DG Solvers**: Industry-standard finite difference, pseudospectral, and discontinuous Galerkin methods
-- **CPML Boundaries**: Convolutional perfectly matched layers for accurate domain truncation
-- **Adaptive Mesh Refinement**: Wavelet-based error estimation with automatic grid refinement
-- **GPU Acceleration**: WGPU-based parallel computing for real-time simulations
+- **FDTD Solver**: Finite difference time domain implementation
+- **PSTD Solver**: Pseudospectral time domain method
+- **PINN Support**: Physics-informed neural networks (experimental)
+- **Boundary Conditions**: Various absorbing and reflecting boundaries
 
-### Advanced Applications
-- **Medical Imaging**: Photoacoustic imaging, ultrasound elastography, beamforming
-- **Therapeutics**: HIFU tumor ablation, cavitation-enhanced drug delivery
-- **Research**: Fundamental studies in sonochemistry and multi-physics phenomena
-- **Industrial**: Non-destructive testing, underwater acoustics
+### Application Areas
+- **Research Simulations**: Acoustic wave propagation studies
+- **Imaging Algorithms**: Basic beamforming and reconstruction
+- **Material Modeling**: Acoustic properties of different media
+- **Signal Processing**: Filtering and analysis utilities
 
-## 📊 Project Status
+## 📊 Current Development Status
 
-**Current Phase**: Sprint 4 - Beamforming Consolidation (71% complete)
+**Current Focus**: PINN Phase 4 - Validation & Benchmarking
 
-This repository has completed major architectural refactoring to enforce clean layer separation and eliminate code duplication.
+The library is under active development with ongoing work to improve physics-informed neural network implementations and validation frameworks.
 
-| Metric | Status | Notes |
-|--------|--------|-------|
-| **Core library** | ✅ Builds | The `kwavers` library compiles successfully with 867/867 tests passing. |
-| **Architecture** | ✅ Clean | Layer violations resolved, SSOT enforced for beamforming operations. |
-| **Test Coverage** | ✅ Comprehensive | 867 tests passing (10 ignored), zero regressions detected. |
-| **Documentation** | ✅ Complete | API docs, migration guides, and ADRs up to date. |
+| Component | Status | Notes |
+|-----------|--------|-------|
+| **Core Library** | ✅ Compiles | Basic functionality operational |
+| **Architecture** | 🟡 Evolving | Layer separation implemented, ongoing refinement |
+| **Test Suite** | 🟡 Active | Tests exist, ongoing improvements and fixes |
+| **Documentation** | 🟡 Developing | API docs available, guides in progress |
+| **Physics Models** | 🟡 Implemented | Core models present, validation ongoing |
 
-### Recent Architectural Improvements
+### Architecture Overview
 
-- ✅ **Beamforming Consolidation** (Sprint 4, Phases 1-5): Migrated beamforming algorithms from `domain::sensor::beamforming` to `analysis::signal_processing::beamforming` for correct layer separation
-- ✅ **SSOT Enforcement**: Unified delay calculations, covariance estimation, and sparse matrix utilities
-- ✅ **Layer Violation Fixes**: Removed beamforming logic from core utilities layer
-- ✅ **Zero Breaking Changes**: Maintained backward compatibility with deprecation notices
+Kwavers follows a layered architecture designed for scientific computing:
+
+```
+Clinical Layer     → Research applications, safety compliance
+Analysis Layer     → Signal processing, imaging algorithms
+Simulation Layer   → Multi-physics orchestration
+Solver Layer       → Numerical methods (FDTD, PSTD, PINN)
+Physics Layer      → Mathematical specifications
+Domain Layer       → Problem geometry, materials, sources
+Math Layer         → Linear algebra, FFT, numerical primitives
+Core Layer         → Fundamental types, error handling
+```
+
+Key architectural decisions:
+- **Layer Separation**: Unidirectional dependencies prevent circular imports
+- **Domain Purity**: Core entities remain free of application logic
+- **Trait-Based Design**: Physics specifications defined as traits for testability
+- **Feature Flags**: Optional components (GPU, PINN, API) can be enabled as needed
 
 ## 🚀 Quick Start
 
@@ -68,171 +82,151 @@ For GPU acceleration and advanced features:
 kwavers = { version = "2.15.0", features = ["gpu", "pinn"] }
 ```
 
-### Basic Usage
+### Example 1: Basic Grid Setup
 
 ```rust
-use kwavers::core::error::KwaversResult;
 use kwavers::domain::grid::Grid;
-use kwavers::domain::medium::{CoreMedium, HomogeneousMedium};
 
-fn main() -> KwaversResult<()> {
-    // Create computational grid
-    let grid = Grid::new(200, 200, 200, 1e-3, 1e-3, 1e-3)?;
-
-    // Define tissue medium properties
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
-
-    let c0 = medium.sound_speed(0, 0, 0);
-    let rho0 = medium.density(0, 0, 0);
-
-    println!("Grid: {}×{}×{}, dx={} m", grid.nx, grid.ny, grid.nz, grid.dx);
-    println!("Medium: c0={} m/s, rho0={} kg/m^3", c0, rho0);
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create a 3D computational grid
+    let grid = Grid::new(100, 100, 100, 0.001, 0.001, 0.001)?;
+    println!("Created grid: {}×{}×{} points", grid.nx, grid.ny, grid.nz);
+    println!("Grid spacing: {} m", grid.dx);
     Ok(())
 }
 ```
 
-### Advanced Example: Multi-Physics Sonoluminescence
+### Example 2: Material Properties
 
 ```rust
-use kwavers::core::error::KwaversResult;
-use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::HomogeneousMedium;
 
-#[cfg(feature = "pinn")]
-fn main() -> KwaversResult<()> {
-    let grid = Grid::new(100, 100, 100, 1e-4, 1e-4, 1e-4)?;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Define acoustic properties for water
+    let density = 1000.0;      // kg/m³
+    let sound_speed = 1500.0;  // m/s
+    let absorption = 0.0;      // dB/cm/MHz (water)
+    let nonlinearity = 0.0;    // B/A parameter
 
-    println!("Grid created for multi-physics pipelines: {}×{}×{}", grid.nx, grid.ny, grid.nz);
+    // Note: Medium creation requires a grid reference
+    // This is a simplified example showing property values
+    println!("Water properties:");
+    println!("  Density: {} kg/m³", density);
+    println!("  Sound speed: {} m/s", sound_speed);
+    println!("  Acoustic impedance: {} MPa·s/m", density * sound_speed / 1e6);
+
     Ok(())
 }
+```
 
-#[cfg(not(feature = "pinn"))]
-fn main() -> KwaversResult<()> {
-    println!("Enable 'pinn' feature for multi-physics examples");
-    Ok(())
+### Example 3: Basic Acoustic Calculations
+
+```rust
+// Basic acoustic property calculations
+fn main() {
+    // Acoustic impedance calculation: Z = ρc
+    let density_water = 1000.0;     // kg/m³
+    let speed_water = 1500.0;       // m/s
+    let impedance_water = density_water * speed_water; // Pa·s/m
+
+    println!("Water acoustic impedance: {:.0} Pa·s/m", impedance_water);
+
+    // Reflection coefficient: R = (Z2 - Z1)/(Z2 + Z1)
+    let density_air = 1.2;          // kg/m³
+    let speed_air = 343.0;          // m/s
+    let impedance_air = density_air * speed_air;
+
+    let reflection_coeff = (impedance_air - impedance_water) /
+                          (impedance_air + impedance_water);
+
+    println!("Air-water reflection coefficient: {:.4}", reflection_coeff);
 }
 ```
 
 ## 📚 Documentation
 
-### 📖 Guides & Resources
+### 📖 Documentation
 
-- **[API Reference](https://docs.rs/kwavers)** - Complete Rust documentation
-- **[User Guide](docs/)** - Getting started and tutorials
-- **[Technical Documentation](docs/technical/)** - Physics and numerical methods
-- **[Examples](examples/)** - Working code samples
-- **[Benchmarks](benches/)** - Performance characteristics
+- **[API Reference](https://docs.rs/kwavers)** - Generated Rust documentation
+- **[Examples](examples/)** - Basic usage examples
+- **Development Docs** - See `docs/` directory for planning and design documents
 
-### 📋 Key Documents
+### 🎯 Basic Usage
 
-| Document | Description | Link |
-|----------|-------------|------|
-| **PRD** | Product Requirements & Vision | [`docs/prd.md`](docs/prd.md) |
-| **SRS** | Software Requirements Specification | [`docs/srs.md`](docs/srs.md) |
-| **ADR** | Architecture Decision Records | [`docs/adr.md`](docs/adr.md) |
-| **Checklist** | Development Progress & Status | [`docs/checklist.md`](docs/checklist.md) |
-| **Backlog** | Sprint Planning & Tasks | [`docs/backlog.md`](docs/backlog.md) |
-
-### 🎯 Examples
-
-Explore our comprehensive example collection:
+See the `examples/` directory for basic usage patterns:
 
 ```bash
-# Basic acoustic simulation
+# List available examples
+cargo run --example
+
+# Run a basic example (if available)
 cargo run --example basic_simulation
+```
 
-# Advanced ultrasound imaging
-cargo run --example advanced_ultrasound_imaging
-
-# Multi-physics sonoluminescence (requires pinn feature)
-cargo run --example multiphysics_sonoluminescence --features pinn
-
-# Performance benchmarks
-cargo bench
+**Basic Test**: Check compilation
+```bash
+cargo check
 ```
 
 ### 🏗️ Architecture
 
-Kwavers follows modern software engineering principles with strict layer separation:
+Kwavers is structured with layered separation intended to support scientific computing workflows:
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│ Application Layer: Clinical workflows, APIs             │
-└──────────────────────┬──────────────────────────────────┘
-                       ↓
-┌─────────────────────────────────────────────────────────┐
-│ Analysis Layer: Signal processing, beamforming (SSOT)  │
-└──────────────────────┬──────────────────────────────────┘
-                       ↓
-┌─────────────────────────────────────────────────────────┐
-│ Domain Layer: Sensors, sources, medium, grid           │
-└──────────────────────┬──────────────────────────────────┘
-                       ↓
-┌─────────────────────────────────────────────────────────┐
-│ Core Layer: Generic utilities, error handling          │
-└─────────────────────────────────────────────────────────┘
+```
+Clinical Applications    → Research use cases, safety monitoring
+Analysis & Imaging       → Signal processing, reconstruction algorithms
+Simulation Orchestration → Multi-physics coupling, time integration
+Numerical Solvers        → FDTD, PSTD, PINN, spectral methods
+Physics Specifications   → Wave equations, constitutive relations
+Problem Domain           → Geometry, materials, boundary conditions
+Mathematical Primitives  → Linear algebra, FFT, interpolation
+Core Infrastructure      → Error handling, memory management
 ```
 
-| Principle | Implementation | Benefit |
-|-----------|----------------|---------|
-| **GRASP** | Modules <500 lines each | Maintainable, focused code |
-| **SOLID** | Single responsibility, dependency injection | Extensible, testable design |
-| **SSOT** | Canonical implementations, zero duplication | Single source of truth for algorithms |
-| **Layer Separation** | Strict architectural boundaries | Clear dependencies, no violations |
-| **CUPID** | Composable, unix-like interfaces | Intuitive, powerful APIs |
-| **Zero-Cost Abstractions** | Compile-time optimization | Performance without overhead |
+The architecture aims to separate concerns while maintaining flexibility for different research applications. Layer boundaries help organize code but are not strictly enforced in all areas during active development.
 
-### 🔧 Feature Flags
-
-| Feature | Description | Dependencies |
-|---------|-------------|--------------|
-| `gpu` | WGPU-based GPU acceleration | `wgpu`, `bytemuck` |
-| `pinn` | Physics-Informed Neural Networks | `burn` |
-| `api` | REST API for clinical deployment | `axum`, `tokio` |
-| `plotting` | Data visualization | `plotly` |
-| `full` | All features enabled | All above |
 
 ## 🤝 Contributing
 
-We welcome contributions! Kwavers maintains strict code quality standards:
+This is an active research project under development. Contributions are welcome but the codebase is evolving.
 
-### 📝 Guidelines
+### 📝 Development Notes
 
-- **Code Quality**: Modules must be <500 lines (GRASP compliance)
-- **Physics Validation**: All implementations must be literature-validated
-- **Testing**: Complete test coverage with property-based tests
-- **Documentation**: Comprehensive docs with physics references
-- **Safety**: All unsafe code must be fully documented
+- **Architecture**: Layered design with separation between physics, solvers, and applications
+- **Testing**: Unit tests exist for core functionality
+- **Documentation**: API documentation available, guides are developing
+- **Code Style**: Standard Rust conventions
 
 ### 🚀 Getting Started
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes with comprehensive tests
-4. Run the full test suite: `cargo test --all-features`
-5. Ensure clippy compliance: `cargo clippy -- -D warnings`
-6. Submit a pull request
+1. Check the current sprint status in `checklist.md`
+2. Review `backlog.md` for planned work
+3. Run tests: `cargo test`
+4. Check compilation: `cargo check`
 
-### 📊 Development Workflow
+### 📊 Current Development
 
-We use evidence-based sprint methodology with comprehensive quality metrics:
-
-- **Automated Testing**: 505+ tests with 100% pass rate
-- **Performance Benchmarks**: 7 benchmark suites tracking optimization
-- **Code Quality**: Zero warnings, literature-validated physics
-- **Documentation**: 100% API coverage with physics references
+The project uses sprint-based development with focus on:
+- Physics model implementation and validation
+- Architecture refinement
+- Test coverage improvement
+- Documentation development
 
 ## 📄 License
 
 Kwavers is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
 
-## 🙏 Acknowledgments
+## 📚 References
 
-Kwavers builds upon decades of research in acoustic and optical physics:
+### Key Physics Texts
+- Hamilton, M.F. & Blackstock, D.T. - Nonlinear Acoustics
+- Szabo, T.L. - Diagnostic Ultrasound Imaging
+- Duck, F.A. - Physical Properties of Tissues
 
-- **Ultrasound Physics**: Based on works by Hamilton, Blackstock, and Duck
-- **Cavitation Dynamics**: Rayleigh-Plesset, Keller-Miksis, Gilmore models
-- **Numerical Methods**: FDTD (Yee 1966), PSTD (Liu 1997), DG (Hesthaven 2007)
-- **Beamforming**: Van Trees, Capon, MUSIC algorithms
+### Numerical Methods
+- Yee, K.S. (1966) - FDTD method
+- Liu, Q.H. (1997) - PSTD method
+- Hesthaven, J.S. (2007) - DG methods
 
 ## 📞 Contact & Support
 
@@ -242,10 +236,4 @@ Kwavers builds upon decades of research in acoustic and optical physics:
 
 ---
 
-<p align="center">
-  <strong>Bridging ultrasound and light physics for revolutionary multi-modal imaging</strong>
-</p>
-
-<p align="center">
-  <img src="https://via.placeholder.com/600x100/4A90E2/FFFFFF?text=Ultrasound+•+Cavitation+•+Sonoluminescence" alt="Physics Bridge" />
-</p>
+**A research library for acoustic and optical physics simulations.**

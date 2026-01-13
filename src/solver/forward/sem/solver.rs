@@ -10,10 +10,8 @@ use crate::core::error::KwaversResult;
 use crate::domain::boundary::FemBoundaryManager;
 use crate::math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use ndarray::{Array1, Array2};
-use num_complex::Complex64;
 use std::sync::Arc;
 
-use super::basis::SemBasis;
 use super::elements::SemMesh;
 use super::integration::NewmarkIntegrator;
 
@@ -311,7 +309,7 @@ impl SemSolver {
     }
 
     /// Interpolate solution at a single point
-    fn interpolate_at_point(&self, point: [f64; 3]) -> KwaversResult<f64> {
+    fn interpolate_at_point(&self, _point: [f64; 3]) -> KwaversResult<f64> {
         // Find element containing the point (simplified - would need proper search)
         if let Some(element) = self.mesh.elements.first() {
             // For simplicity, assume point is in first element
@@ -366,6 +364,7 @@ impl SemSolver {
 mod tests {
     use super::*;
     use crate::solver::forward::sem::mesh::MeshBuilder;
+    use num_complex::Complex64;
 
     #[test]
     fn test_sem_solver_creation() {

@@ -63,6 +63,9 @@
 //! ```
 
 #[cfg(feature = "pinn")]
+pub mod adapters;
+
+#[cfg(feature = "pinn")]
 pub mod fdtd_reference;
 
 #[cfg(feature = "pinn")]
@@ -94,6 +97,10 @@ pub mod burn_wave_equation_3d;
 // Sprint 150: Advanced neural architectures for improved PINN convergence
 #[cfg(feature = "pinn")]
 pub mod advanced_architectures;
+
+// Sprint 191: Burn autodiff utilities for gradient computation patterns
+#[cfg(feature = "pinn")]
+pub mod autodiff_utils;
 
 // Sprint 151: Transfer learning for PINN adaptation and fine-tuning
 #[cfg(feature = "pinn")]
@@ -225,18 +232,23 @@ pub use transfer_learning::{
 
 // Sprint 156: Advanced Physics Domains
 #[cfg(feature = "pinn")]
+pub use adapters::source::{
+    adapt_sources, AdapterError, FocalProperties, PinnAcousticSource, PinnSourceClass,
+};
+
+#[cfg(feature = "pinn")]
+pub use adapters::electromagnetic::{adapt_em_sources, EMAdapterError, PinnEMSource};
+
+#[cfg(feature = "pinn")]
 pub use acoustic_wave::{
-    AcousticBoundarySpec, AcousticBoundaryType, AcousticProblemType, AcousticSource,
-    AcousticSourceParameters, AcousticSourceType, AcousticWaveDomain,
+    AcousticBoundarySpec, AcousticBoundaryType, AcousticProblemType, AcousticWaveDomain,
 };
 
 #[cfg(feature = "pinn")]
 pub use cavitation_coupled::{CavitationCoupledDomain, CavitationCouplingConfig};
 
 #[cfg(feature = "pinn")]
-pub use electromagnetic::{
-    CurrentSource, EMProblemType, ElectromagneticBoundarySpec, ElectromagneticDomain,
-};
+pub use electromagnetic::{EMProblemType, ElectromagneticBoundarySpec, ElectromagneticDomain};
 
 #[cfg(feature = "pinn")]
 pub use sonoluminescence_coupled::{SonoluminescenceCoupledDomain, SonoluminescenceCouplingConfig};

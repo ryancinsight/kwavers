@@ -126,8 +126,8 @@
 //! ```text
 //! solver/inverse/pinn/
 //!     mod.rs              ← This file (PINN framework)
+//!     geometry.rs         ← Collocation sampling, interface conditions
 //!     elastic_2d/         ← 2D elastic wave PINN
-//!         geometry.rs     ← Collocation sampling, interface conditions
 //!         config.rs       ← Training hyperparameters
 //!         model.rs        ← Neural network architecture
 //!         loss.rs         ← Physics-informed loss functions
@@ -162,9 +162,10 @@
 //!   DOI: 10.1137/20M1318043
 
 pub mod elastic_2d;
+pub mod geometry;
 
 // Re-export key types for convenience
-pub use elastic_2d::geometry::{
+pub use geometry::{
     AdaptiveRefinement, CollocationSampler, InterfaceCondition, MultiRegionDomain, SamplingStrategy,
 };
 

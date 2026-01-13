@@ -16,45 +16,63 @@ guidelines:
     Concurrency: Send+Sync, Actor patterns (tokio), Rayon parallelism, Async streams.
     Memory: Smart pointers (Arc/Rc) with intent, Arena allocation where applicable.
   organization: |
-    Structure: Deep vertical module trees; Bounded Contexts per crate; Files < 500 lines.
-    Deep Vertical File Tree: Self-documenting architecture where directory structure and naming reveal component relationships and domain hierarchies without requiring file inspection. Domain-driven folder hierarchy with clear separation of concerns.
-    - Architectural Layers: crate/module/feature boundaries that mirror domain concepts
-      - Lower layers: Core abstractions, primitive operations, and shared accessors that encapsulate domain invariants (e.g., domain/math, domain/core, domain/storage)
-      - Middle layers: Compositional building blocks that orchestrate lower-layer primitives (e.g., domain/services, domain/workflows)
-      - Upper layers: Domain-specific components that compose middle-layer behaviors without reimplementing shared logic (e.g., domain/applications, domain/interfaces)
-      - Access Pattern: Components access shared functionality through well-defined accessor interfaces, ensuring consistent behavior and reducing duplication
-    - Structural Clarity: File tree provides immediate understanding of component relationships
-      - Directory names reflect domain contexts (authentication, payment, inventory)
-      - Module names indicate responsibilities (validation, transformation, persistence)
-      - File names are domain-relevant and descriptive (user_session.rs, payment_processor.rs)
-      - Hierarchical depth reveals architectural dependencies and abstraction levels
-    Boundary Control: Prevent namespace bleeding through selective re-exports; avoid excess thin wrapping by composing directly at appropriate abstraction levels.
-    - Module Interfaces: Explicit pub declarations for external APIs only; internal modules remain private
-    - Wrapper Avoidance: No unnecessary newtypes or trait objects for simple delegation; compose through accessor methods instead of inheritance-like patterns
-    - Import Discipline: Qualified imports over glob imports; re-export only domain-relevant types at crate boundaries; no aliasing of imports or types
-    - Dependency Isolation: No circular imports or cross-contamination between domains or distinct components; strict unidirectional dependencies with clear architectural boundaries
-    Naming: Stable, descriptive names without version progression (no Basic/Advanced/Optimized prefixes/suffixes). Direct replacement over incremental naming. Domain-driven folder hierarchy.
-    Separation: Strict SRP, SoC, and Dependency Injection with accessor-based composition patterns.
+    Architectural Foundations: Clean Architecture layers with DDD bounded contexts and CQRS/event sourcing patterns.
+    - Clean Architecture: Domain → Application → Infrastructure → Presentation layers with dependency inversion
+    - CQRS: Command/write models separate from query/read models with explicit mapping
+    - Event Sourcing: Domain events as primary storage with projections for read models
+    - Observer Pattern: Event-driven communication between bounded contexts
+    DDD Structure: Bounded contexts as crate boundaries; ubiquitous language enforced through naming.
+    - Domain Modeling: Entities, value objects, aggregates, domain services, repositories, factories
+    - Context Mapping: Partnership, shared kernel, customer-supplier, conformist, anticorruption layer relationships
+    - Strategic Patterns: Core domain identification, domain vision statements, highlighted core, domain distillation
+    Code Organization: Deep vertical module trees; bounded contexts per crate; files < 500 lines.
+    - Deep Vertical File Tree: Self-documenting hierarchy revealing component relationships and domain structure
+      - Domain Layer: Pure business logic, entities, value objects, domain services (no external dependencies)
+      - Application Layer: Use cases, application services, command/query handlers, event handlers
+      - Infrastructure Layer: Repository implementations, external service adapters, framework integrations
+      - Presentation Layer: API endpoints, UI components, external interface adapters
+      - Access Pattern: Dependency inversion through algebraic interfaces; outer layers depend on inner abstractions
+    - Structural Clarity: Directory/module/file naming reveals architecture
+      - Directory names: Domain contexts (authentication, payment, inventory)
+      - Module names: Responsibilities (validation, transformation, persistence)
+      - File names: Domain-relevant and descriptive (user_session.rs, payment_processor.rs)
+      - Hierarchy depth: Architectural dependencies and abstraction levels
+    Boundary Control: Strict isolation between domains and components.
+    - Module Interfaces: Explicit pub declarations for external APIs only; internal modules private
+    - Import Discipline: Qualified imports over globs; domain-relevant re-exports only; no aliasing
+    - Dependency Isolation: No circular imports or cross-contamination; unidirectional dependencies only
+    - Wrapper Avoidance: Direct composition through accessor methods; no unnecessary newtypes/trait objects
+    Naming & Separation: Stable, descriptive names; strict SRP/SoC with accessor-based composition.
   docs: |
+    Spec-Driven Documentation: Living specifications that evolve with domain understanding.
+    - Formal Specifications: Mathematical theorems, behavioral contracts, invariant proofs
+    - Domain Language: Ubiquitous language enforced through consistent terminology
+    - Traceability: Every implementation links back to specifications via tests
     Rustdoc-first: Intra-doc links, mathematical invariants, concise examples.
     Sync: README, PRD, SRS, ADR, checklist, and backlog must match code behavior exactly.
   testing: |
+    TDD Cycle: Red-Green-Refactor with mathematical specifications as acceptance criteria.
+    - Red: Write failing test from mathematical theorem/specification
+    - Green: Implement minimal correct solution
+    - Refactor: Improve design while maintaining correctness proofs
     Math Spec → Property Tests (Proptest) → Unit/Integration → Performance (Criterion).
     Validation: Output verification against analytical models is mandatory.
+    Spec-Driven: All implementation derives from formal specifications with traceable test coverage.
   tracing: |
-    Structured logging: Spans/Events for invariants, performance metrics, and error contexts.
+    Structured logging with spans/events for invariants, performance metrics, and error contexts.
 
 principles:
   design: |
-    SOLID, GRASP, DRY, YAGNI.
+    SOLID/GRASP/DRY/YAGNI: Fundamental design principles.
     Architectural Purity: Explicit invariants, clear ownership, bounded contexts.
+    Pattern Integration: Clean Architecture, CQRS, event sourcing, observer pattern, repository/service abstractions.
   rust_specific: |
     Safety: Ownership/Borrowing, Send/Sync, Zero-cost abstractions.
     Async: Composable futures, backpressure-aware streams, cancellation safety.
     Unsafe: Justified, isolated, audited, and strictly minimal.
   testing_strategy: |
-    Verification: Tests derived from mathematical theorems/specs.
-    Coverage: Boundary, Adversarial, Property-based. Compilation != Correctness.
+    Verification Hierarchy: Mathematical theorems/specs → property tests → unit/integration → performance.
+    Coverage Requirements: Boundary, adversarial, property-based testing. Compilation ≠ correctness.
   development_philosophy: |
     Correctness > Functionality.
     Transparency: Fix root causes, document limitations, never mask errors.
@@ -71,8 +89,17 @@ sprint:
     Source: README/PRD/SRS/ADR + Codebase Analysis.
     Artifacts: backlog.md (Strategy), checklist.md (Tactics), gap_audit.md (Findings).
   implementation_strategy: |
-    Micro-sprint: Research (Thm) → Design (Type) → Implement (Rust) → Verify (Test) → Document.
-    Vertical Slices: Complete, mathematically justified, well-tested features.
+    Architectural-First Development: Design patterns before implementation details.
+    - Layer Design: Clean architecture layers with algebraic interfaces and contracts
+    - Pattern Selection: CQRS, event sourcing, observer patterns based on domain needs
+    - Interface Design: Algebraic interfaces (traits) capturing domain contracts
+    - Dependency Flow: Unidirectional dependencies with dependency inversion
+    Spec-Driven Development: Formal specifications precede all implementation.
+    - Mathematical Specification: Theorems, invariants, behavioral contracts
+    - Test-First: Acceptance/property tests from specifications
+    - Domain Modeling: Ubiquitous language and domain models
+    - TDD Cycles: Red-Green-Refactor within specification boundaries
+    Delivery Model: Vertical slices of complete, mathematically justified, well-tested features with specification traceability.
   docs_lifecycle: |
     Single Source of Truth: Code + Tests + In-sync Artifacts.
     Reconciliation: Continuous alignment of specs (ADR/SRS) with reality.
@@ -89,9 +116,13 @@ operation:
   iteration_loop: |
     1) Load Artifacts: checklist, backlog, gap_audit. Determine Phase.
     2) Prioritize: Select highest severity gap or pending checklist item.
-    3) R&D: Define mathematical/architectural basis & verification plan.
-    4) Execute: Atomic Implementation (Code + Test + Doc).
-    5) Sync: Update progress in artifacts. Push complex items to backlog.
+    3) Audit: Research codebase for existing implementations before assuming gaps.
+    4) Architectural Design: Define clean architecture layers, select patterns (CQRS, event sourcing), establish dependency flows.
+    5) Domain Analysis: Refine ubiquitous language and bounded context relationships.
+    6) Specification: Write formal mathematical specifications and behavioral contracts.
+    7) Test-First: Implement acceptance tests and property tests from specifications.
+    8) TDD Implementation: Red-Green-Refactor cycles within specification boundaries.
+    9) Sync: Update progress in artifacts. Push complex items to backlog.
 
 interaction_policy:
   autonomy: |

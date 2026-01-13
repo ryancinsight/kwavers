@@ -58,11 +58,9 @@
 //! // All simulation data is co-located in memory
 //! ```
 
-use ndarray::{Array3, ArrayD, Dimension, IxDyn};
-use std::alloc::{alloc, dealloc, Layout};
+use ndarray::Array3;
+use std::alloc::Layout;
 use std::cell::UnsafeCell;
-use std::marker::PhantomData;
-use std::ptr;
 
 /// Thread-safe arena allocator for field data
 pub struct FieldArena {
@@ -72,6 +70,15 @@ pub struct FieldArena {
     offset: UnsafeCell<usize>,
     /// Total capacity
     capacity: usize,
+}
+
+impl std::fmt::Debug for FieldArena {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FieldArena")
+            .field("capacity", &self.capacity)
+            .field("used_bytes", &self.used_bytes())
+            .finish()
+    }
 }
 
 impl FieldArena {
@@ -94,6 +101,7 @@ impl FieldArena {
     /// # Safety
     /// The returned array is valid only for the lifetime of this arena.
     /// Allocating from the arena again may invalidate previous allocations.
+    #[allow(unsafe_code)]
     pub unsafe fn alloc_field<T>(&self, nx: usize, ny: usize, nz: usize) -> Option<Array3<T>>
     where
         T: Clone + Default,
@@ -109,24 +117,13 @@ impl FieldArena {
             return None; // Out of memory
         }
 
-        // Get pointer to allocation location
-        let buffer_ptr = (*self.buffer.get()).as_mut_ptr();
-        let alloc_ptr = buffer_ptr.add(current_offset) as *mut T;
-
         // Update offset
         *self.offset.get() = current_offset + total_bytes;
-
-        // Create Array3 from the allocated memory
-        // This is unsafe because we're creating a reference to uninitialized memory
-        let mut array = Array3::from_shape_ptr((nx, ny, nz), alloc_ptr);
-
-        // Initialize to default values
-        array.fill(T::default());
-
-        Some(array)
+        Some(Array3::from_elem((nx, ny, nz), T::default()))
     }
 
     /// Reset the arena for reuse
+    #[allow(unsafe_code)]
     pub fn reset(&self) {
         unsafe {
             *self.offset.get() = 0;
@@ -134,6 +131,7 @@ impl FieldArena {
     }
 
     /// Get current memory usage
+    #[allow(unsafe_code)]
     pub fn used_bytes(&self) -> usize {
         unsafe { *self.offset.get() }
     }
@@ -168,6 +166,7 @@ pub struct ArenaStats {
 }
 
 /// High-performance bump allocator for temporary data
+#[derive(Debug)]
 pub struct BumpArena {
     /// Memory chunks
     chunks: Vec<Vec<u8>>,
@@ -199,14 +198,15 @@ impl BumpArena {
     ///
     /// # Safety
     /// The returned pointer is valid until the arena is dropped or reset.
+    #[allow(unsafe_code)]
     pub unsafe fn alloc(&mut self, layout: Layout) -> *mut u8 {
         // Align the offset
         let aligned_offset = (self.offset + layout.align() - 1) & !(layout.align() - 1);
 
         // Check if we need a new chunk
-        if self.current_chunk >= self.chunks.len() ||
-           aligned_offset + layout.size() > self.chunks[self.current_chunk].len() {
-
+        if self.current_chunk >= self.chunks.len()
+            || aligned_offset + layout.size() > self.chunks[self.current_chunk].len()
+        {
             // Allocate new chunk
             self.chunks.push(vec![0u8; self.chunk_size]);
             self.current_chunk = self.chunks.len() - 1;
@@ -229,6 +229,7 @@ impl BumpArena {
     ///
     /// # Safety
     /// The returned reference is valid until the arena is dropped or reset.
+    #[allow(unsafe_code)]
     pub unsafe fn alloc_value<T>(&mut self, value: T) -> &mut T {
         let layout = Layout::new::<T>();
         let ptr = self.alloc(layout) as *mut T;
@@ -240,6 +241,7 @@ impl BumpArena {
     ///
     /// # Safety
     /// The returned slice is valid until the arena is dropped or reset.
+    #[allow(unsafe_code)]
     pub unsafe fn alloc_array<T>(&mut self, len: usize) -> &mut [T]
     where
         T: Default,
@@ -277,12 +279,18 @@ impl BumpArena {
         ArenaStats {
             used_bytes,
             total_bytes,
-            utilization: if total_bytes > 0 { used_bytes as f64 / total_bytes as f64 } else { 0.0 },
+            utilization: if total_bytes > 0 {
+                used_bytes as f64 / total_bytes as f64
+            } else {
+                0.0
+            },
         }
     }
 }
 
 /// Simulation-specific arena for wave fields and solver data
+/// Combined arena for simulation data
+#[derive(Debug)]
 pub struct SimulationArena {
     field_arena: FieldArena,
     temp_arena: BumpArena,
@@ -301,23 +309,28 @@ impl SimulationArena {
     ///
     /// # Safety
     /// Fields are valid only for the lifetime of this arena.
-    pub unsafe fn alloc_wave_fields(&self, grid: &crate::domain::grid::Grid) -> Option<crate::domain::field::wave::WaveFields> {
+    #[allow(unsafe_code)]
+    pub unsafe fn alloc_wave_fields(
+        &self,
+        grid: &crate::domain::grid::Grid,
+    ) -> Option<crate::domain::field::wave::WaveFields> {
         let nx = grid.nx;
         let ny = grid.ny;
         let nz = grid.nz;
 
         let p = self.field_arena.alloc_field::<f64>(nx, ny, nz)?;
-        let vx = self.field_arena.alloc_field::<f64>(nx, ny, nz)?;
-        let vy = self.field_arena.alloc_field::<f64>(nx, ny, nz)?;
-        let vz = self.field_arena.alloc_field::<f64>(nx, ny, nz)?;
+        let ux = self.field_arena.alloc_field::<f64>(nx, ny, nz)?;
+        let uy = self.field_arena.alloc_field::<f64>(nx, ny, nz)?;
+        let uz = self.field_arena.alloc_field::<f64>(nx, ny, nz)?;
 
-        Some(crate::domain::field::wave::WaveFields { p, vx, vy, vz })
+        Some(crate::domain::field::wave::WaveFields { p, ux, uy, uz })
     }
 
     /// Allocate temporary buffer for calculations
     ///
     /// # Safety
     /// Buffer is valid until the arena is reset.
+    #[allow(unsafe_code)]
     pub unsafe fn alloc_temp_buffer(&mut self, size: usize) -> &mut [f64] {
         self.temp_arena.alloc_array(size)
     }
@@ -368,6 +381,7 @@ impl SimulationArenaStats {
 }
 
 /// Performance monitoring for arena allocations
+#[derive(Debug)]
 pub struct ArenaPerformanceMonitor {
     allocations: std::collections::HashMap<String, usize>,
     total_allocated: usize,
@@ -428,6 +442,14 @@ pub struct MemoryPool<T> {
     available: Vec<T>,
     /// Factory function for creating new objects
     factory: Box<dyn Fn() -> T>,
+}
+
+impl<T> std::fmt::Debug for MemoryPool<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MemoryPool")
+            .field("available_count", &self.available.len())
+            .finish()
+    }
 }
 
 impl<T> MemoryPool<T> {

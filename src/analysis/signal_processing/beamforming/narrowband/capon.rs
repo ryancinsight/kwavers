@@ -50,8 +50,8 @@ use crate::analysis::signal_processing::beamforming::narrowband::snapshots::{
 };
 use crate::analysis::signal_processing::beamforming::narrowband::steering::NarrowbandSteering;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::sensor::beamforming::{SteeringVector, SteeringVectorMethod};
 use crate::domain::sensor::beamforming::CovarianceEstimator;
+use crate::domain::sensor::beamforming::{SteeringVector, SteeringVectorMethod};
 use crate::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
@@ -504,7 +504,8 @@ mod tests {
             covariance: CovarianceEstimator {
                 forward_backward_averaging: false,
                 num_snapshots: 1,
-                post_process: crate::domain::sensor::beamforming::covariance::CovariancePostProcess::None,
+                post_process:
+                    crate::domain::sensor::beamforming::covariance::CovariancePostProcess::None,
             },
             steering: SteeringVectorMethod::SphericalWave {
                 source_position: [0.0, 0.0, 0.02],
@@ -546,7 +547,8 @@ mod tests {
             covariance: CovarianceEstimator {
                 forward_backward_averaging: false,
                 num_snapshots: 1,
-                post_process: crate::domain::sensor::beamforming::covariance::CovariancePostProcess::None,
+                post_process:
+                    crate::domain::sensor::beamforming::covariance::CovariancePostProcess::None,
             },
             steering: SteeringVectorMethod::SphericalWave {
                 source_position: true_source,

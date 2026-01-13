@@ -65,20 +65,32 @@ use std::fmt::Debug;
 
 pub mod bem;
 pub mod config;
+pub mod coupling;
 pub mod cpml;
 pub mod fem;
 pub mod field_updater;
 pub mod pml;
 pub mod traits;
+pub mod types;
 
 pub use bem::{BemBoundaryCondition, BemBoundaryManager};
 pub use config::{BoundaryParameters, BoundaryType};
+pub use coupling::{
+    AdaptiveBoundary, ImpedanceBoundary, MaterialInterface, MultiPhysicsInterface, SchwarzBoundary,
+};
 pub use fem::{FemBoundaryCondition, FemBoundaryManager};
 pub use field_updater::{FieldUpdater, GradientFieldUpdater, LegacyFieldUpdater};
 pub use traits::{
     AbsorbingBoundary, BoundaryCondition, BoundaryDirections, BoundaryDomain, BoundaryLayer,
     BoundaryLayerManager, FieldType, PeriodicBoundary, ReflectiveBoundary,
 };
+pub use types::{
+    AcousticBoundaryType, BoundaryComponent, BoundaryFace, BoundarySpec, ElasticBoundaryType,
+    ElectromagneticBoundaryType,
+};
+// Note: BoundaryType from types module is canonical SSOT
+// BoundaryType from config module is legacy - will be deprecated
+pub use types::BoundaryType as CanonicalBoundaryType;
 
 /// Trait for runtime boundary condition implementations.
 ///

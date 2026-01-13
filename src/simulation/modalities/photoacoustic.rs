@@ -38,16 +38,22 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::GridSource;
+use crate::physics::optics::diffusion::solver::{
+    DiffusionBoundaryCondition, DiffusionBoundaryConditions,
+};
+use crate::physics::optics::diffusion::solver::{DiffusionSolver, DiffusionSolverConfig};
 use crate::solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use crate::solver::inverse::reconstruction::photoacoustic::{
     PhotoacousticAlgorithm, PhotoacousticConfig, PhotoacousticReconstructor,
 };
 use crate::solver::reconstruction::Reconstructor;
 
-pub use crate::domain::imaging::photoacoustic::{
-    InitialPressure, OpticalProperties, PhotoacousticParameters, PhotoacousticResult,
+pub use crate::clinical::imaging::photoacoustic::{
+    InitialPressure, PhotoacousticParameters, PhotoacousticResult,
 };
+pub use crate::domain::medium::properties::OpticalPropertyData;
 use ndarray::{Array2, Array3};
+use rayon::prelude::*;
 
 /// Photoacoustic Imaging Simulator
 #[derive(Debug)]
@@ -57,7 +63,7 @@ pub struct PhotoacousticSimulator {
     /// Simulation parameters
     parameters: PhotoacousticParameters,
     /// Optical properties field
-    optical_properties: Array3<OpticalProperties>,
+    optical_properties: Array3<OpticalPropertyData>,
     /// FDTD acoustic wave solver
     fdtd_solver: FdtdSolver,
 }
@@ -101,9 +107,14 @@ impl PhotoacousticSimulator {
     fn initialize_optical_properties(
         grid: &Grid,
         _medium: &dyn Medium,
-    ) -> KwaversResult<Array3<OpticalProperties>> {
+    ) -> KwaversResult<Array3<OpticalPropertyData>> {
         let (nx, ny, nz) = grid.dimensions();
-        let mut properties = Array3::from_elem((nx, ny, nz), OpticalProperties::soft_tissue(750.0));
+        let mut properties = Array3::from_elem(
+            (nx, ny, nz),
+            crate::clinical::imaging::photoacoustic::PhotoacousticOpticalProperties::soft_tissue(
+                750.0,
+            ),
+        );
 
         // Add blood vessels and tumor regions
         for i in 0..nx {
@@ -117,7 +128,7 @@ impl PhotoacousticSimulator {
                     let vessel_dist = ((x - 0.025).powi(2) + (y - 0.025).powi(2)).sqrt();
                     if vessel_dist < 0.002 {
                         // 2mm diameter vessel
-                        properties[[i, j, k]] = OpticalProperties::blood(750.0);
+                        properties[[i, j, k]] = crate::clinical::imaging::photoacoustic::PhotoacousticOpticalProperties::blood(750.0);
                     }
 
                     // Add spherical tumor
@@ -125,7 +136,7 @@ impl PhotoacousticSimulator {
                         ((x - 0.02).powi(2) + (y - 0.02).powi(2) + (z - 0.015).powi(2)).sqrt();
                     if tumor_dist < 0.005 {
                         // 5mm diameter tumor
-                        properties[[i, j, k]] = OpticalProperties::tumor(750.0);
+                        properties[[i, j, k]] = crate::clinical::imaging::photoacoustic::PhotoacousticOpticalProperties::tumor(750.0);
                     }
                 }
             }
@@ -136,27 +147,103 @@ impl PhotoacousticSimulator {
     }
 
     /// Compute optical fluence distribution using diffusion approximation
+    ///
+    /// Solves the steady-state diffusion equation: ∇·(D∇Φ) - μₐΦ = -S
+    /// using the finite-difference diffusion solver from physics layer.
+    ///
+    /// # Returns
+    ///
+    /// Optical fluence field Φ(r) in W/m² (or J/m² for pulsed illumination)
     pub fn compute_fluence(&self) -> KwaversResult<Array3<f64>> {
+        self.compute_fluence_at_wavelength(
+            self.parameters
+                .wavelengths
+                .first()
+                .copied()
+                .unwrap_or(750.0),
+        )
+    }
+
+    /// Compute optical fluence for a specific wavelength
+    ///
+    /// # Arguments
+    ///
+    /// - `wavelength_nm`: Optical wavelength in nanometers
+    ///
+    /// # Returns
+    ///
+    /// Optical fluence field at the specified wavelength
+    pub fn compute_fluence_at_wavelength(&self, _wavelength_nm: f64) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = self.grid.dimensions();
-        let mut fluence = Array3::zeros((nx, ny, nz));
 
-        // Simplified: assume uniform illumination from top
-        // In full implementation, this would solve the diffusion equation
-        for k in 0..nz {
-            let depth = k as f64 * self.grid.dz;
-            let attenuation = (-depth * 0.1).exp(); // Simple exponential decay
+        // Convert optical properties to domain SSOT format (already OpticalPropertyData)
+        let optical_map = self.optical_properties.clone();
 
-            for i in 0..nx {
-                for j in 0..ny {
-                    fluence[[i, j, k]] = self.parameters.laser_fluence * attenuation;
-                }
+        // Configure diffusion solver
+        let config = DiffusionSolverConfig {
+            max_iterations: 10000,
+            tolerance: 1e-6,
+            boundary_parameter: 2.0, // Tissue-air interface
+            boundary_conditions: Some(DiffusionBoundaryConditions {
+                x_min: DiffusionBoundaryCondition::ZeroFlux,
+                x_max: DiffusionBoundaryCondition::ZeroFlux,
+                y_min: DiffusionBoundaryCondition::ZeroFlux,
+                y_max: DiffusionBoundaryCondition::ZeroFlux,
+                z_min: DiffusionBoundaryCondition::Extrapolated { a: 2.0 },
+                z_max: DiffusionBoundaryCondition::ZeroFlux,
+            }),
+            verbose: false,
+        };
+
+        // Create diffusion solver
+        let solver = DiffusionSolver::new(self.grid.clone(), optical_map, config)?;
+
+        // Create source term: uniform illumination from top surface (z=0)
+        // Source units: W/m³ for steady-state (or J/m³ for pulsed)
+        let mut source = Array3::zeros((nx, ny, nz));
+
+        // Top surface illumination (first layer in z)
+        let source_strength = self.parameters.laser_fluence / self.grid.dz; // Convert surface fluence to volumetric source
+        for i in 0..nx {
+            for j in 0..ny {
+                source[[i, j, 0]] = source_strength;
             }
         }
+
+        // Solve diffusion equation
+        let fluence = solver.solve(&source)?;
 
         Ok(fluence)
     }
 
-    /// Compute initial pressure distribution from optical absorption
+    /// Compute fluence for all wavelengths in parallel
+    ///
+    /// # Returns
+    ///
+    /// Vector of fluence fields, one per wavelength
+    pub fn compute_multi_wavelength_fluence(&self) -> KwaversResult<Vec<Array3<f64>>> {
+        // Parallel computation over wavelengths using Rayon
+        let fluence_fields: Result<Vec<_>, _> = self
+            .parameters
+            .wavelengths
+            .par_iter()
+            .map(|&wavelength| self.compute_fluence_at_wavelength(wavelength))
+            .collect();
+
+        fluence_fields
+    }
+
+    /// Compute initial pressure distribution from optical absorption at single wavelength
+    ///
+    /// Uses photoacoustic equation: p₀(r) = Γ · μₐ(r) · Φ(r)
+    ///
+    /// # Arguments
+    ///
+    /// - `fluence`: Optical fluence field Φ(r) in W/m² or J/m²
+    ///
+    /// # Returns
+    ///
+    /// Initial pressure distribution with metadata
     pub fn compute_initial_pressure(
         &self,
         fluence: &Array3<f64>,
@@ -217,7 +304,7 @@ impl PhotoacousticSimulator {
                     // "The photoacoustic pressure is proportional to the Grüneisen parameter,
                     // the optical absorption coefficient, and the optical fluence."
                     let local_pressure =
-                        gruneisen_parameter * props.absorption * fluence[[i, j, k]];
+                        gruneisen_parameter * props.absorption_coefficient * fluence[[i, j, k]];
 
                     pressure[[i, j, k]] = local_pressure;
                     max_pressure = max_pressure.max(local_pressure);
@@ -230,6 +317,48 @@ impl PhotoacousticSimulator {
             max_pressure,
             fluence: fluence.clone(),
         })
+    }
+
+    /// Compute multi-wavelength initial pressure distributions
+    ///
+    /// # Arguments
+    ///
+    /// - `fluence_fields`: Vector of fluence fields, one per wavelength
+    ///
+    /// # Returns
+    ///
+    /// Vector of initial pressure distributions
+    pub fn compute_multi_wavelength_pressure(
+        &self,
+        fluence_fields: &[Array3<f64>],
+    ) -> KwaversResult<Vec<InitialPressure>> {
+        fluence_fields
+            .iter()
+            .map(|fluence| self.compute_initial_pressure(fluence))
+            .collect()
+    }
+
+    /// Run multi-wavelength photoacoustic simulation (parallel)
+    ///
+    /// Computes fluence and initial pressure for all wavelengths in parallel.
+    ///
+    /// # Returns
+    ///
+    /// Vector of (fluence, initial_pressure) tuples for each wavelength
+    pub fn simulate_multi_wavelength(&self) -> KwaversResult<Vec<(Array3<f64>, InitialPressure)>> {
+        // Compute fluence for all wavelengths in parallel
+        let fluence_fields = self.compute_multi_wavelength_fluence()?;
+
+        // Compute initial pressure for each wavelength
+        let results: Result<Vec<_>, _> = fluence_fields
+            .iter()
+            .map(|fluence| {
+                self.compute_initial_pressure(fluence)
+                    .map(|pressure| (fluence.clone(), pressure))
+            })
+            .collect();
+
+        results
     }
 
     /// Run photoacoustic simulation with numerically stable acoustic propagation
@@ -367,7 +496,7 @@ impl PhotoacousticSimulator {
     }
 
     /// Get optical properties reference
-    pub fn optical_properties(&self) -> &Array3<OpticalProperties> {
+    pub fn optical_properties(&self) -> &Array3<OpticalPropertyData> {
         &self.optical_properties
     }
 
@@ -593,7 +722,7 @@ impl PhotoacousticSimulator {
         // Analytical pressure using photoacoustic generation formula
         // p = Γ μ_a Φ, where Γ is Grüneisen parameter, μ_a is absorption, Φ is fluence
         let analytical_pressure =
-            props_at_center.anisotropy * props_at_center.absorption * fluence_at_center;
+            props_at_center.anisotropy * props_at_center.absorption_coefficient * fluence_at_center;
 
         // Calculate relative error
         let error = if analytical_pressure > 0.0 {
@@ -679,14 +808,16 @@ mod tests {
 
     #[test]
     fn test_optical_properties() {
-        let blood_props = OpticalProperties::blood(750.0);
-        let tissue_props = OpticalProperties::soft_tissue(750.0);
-        let tumor_props = OpticalProperties::tumor(750.0);
+        use crate::clinical::imaging::photoacoustic::PhotoacousticOpticalProperties;
+
+        let blood_props = PhotoacousticOpticalProperties::blood(750.0);
+        let tissue_props = PhotoacousticOpticalProperties::soft_tissue(750.0);
+        let tumor_props = PhotoacousticOpticalProperties::tumor(750.0);
 
         // Blood should have higher absorption than soft tissue
-        assert!(blood_props.absorption > tissue_props.absorption);
+        assert!(blood_props.absorption_coefficient > tissue_props.absorption_coefficient);
         // Tumor should have higher absorption than normal tissue
-        assert!(tumor_props.absorption > tissue_props.absorption);
+        assert!(tumor_props.absorption_coefficient > tissue_props.absorption_coefficient);
     }
 
     #[test]

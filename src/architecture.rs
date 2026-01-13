@@ -77,6 +77,7 @@
 //! - Feature flags for optional functionality
 
 /// Architecture compliance checker
+#[derive(Debug)]
 pub struct ArchitectureChecker;
 
 /// Code quality metrics
@@ -90,6 +91,7 @@ pub struct CodeQualityMetrics {
 }
 
 /// Module organization standards
+#[derive(Debug)]
 pub struct ModuleStandards;
 
 impl ModuleStandards {
@@ -116,7 +118,9 @@ impl ModuleStandards {
             ));
         }
 
-        if module_name.contains('-') || module_name.contains('_') && module_name.contains(char::is_uppercase) {
+        if module_name.contains('-')
+            || module_name.contains('_') && module_name.contains(char::is_uppercase)
+        {
             return Err(format!(
                 "Module name '{}' has inconsistent casing",
                 module_name
@@ -171,6 +175,7 @@ fn is_sorted(strings: &[String]) -> bool {
 }
 
 /// Performance optimization standards
+#[derive(Debug)]
 pub struct PerformanceStandards;
 
 impl PerformanceStandards {
@@ -198,6 +203,7 @@ impl PerformanceStandards {
 }
 
 /// Testing infrastructure standards
+#[derive(Debug)]
 pub struct TestingStandards;
 
 impl TestingStandards {
@@ -225,6 +231,7 @@ impl TestingStandards {
 }
 
 /// Documentation standards
+#[derive(Debug)]
 pub struct DocumentationStandards;
 
 impl DocumentationStandards {
@@ -251,6 +258,7 @@ impl DocumentationStandards {
 }
 
 /// Error handling standards
+#[derive(Debug)]
 pub struct ErrorHandlingStandards;
 
 impl ErrorHandlingStandards {
@@ -278,6 +286,7 @@ impl ErrorHandlingStandards {
 }
 
 /// Build system standards
+#[derive(Debug)]
 pub struct BuildStandards;
 
 impl BuildStandards {
@@ -285,35 +294,46 @@ impl BuildStandards {
     pub fn feature_flag_categories() -> std::collections::HashMap<String, Vec<String>> {
         let mut categories = std::collections::HashMap::new();
 
-        categories.insert("core_features".to_string(), vec![
-            "parallel".to_string(),
-            "async-runtime".to_string(),
-            "structured-logging".to_string(),
-        ]);
+        categories.insert(
+            "core_features".to_string(),
+            vec![
+                "parallel".to_string(),
+                "async-runtime".to_string(),
+                "structured-logging".to_string(),
+            ],
+        );
 
-        categories.insert("gpu_acceleration".to_string(), vec![
-            "gpu".to_string(),
-            "pinn-gpu".to_string(),
-            "gpu-visualization".to_string(),
-        ]);
+        categories.insert(
+            "gpu_acceleration".to_string(),
+            vec![
+                "gpu".to_string(),
+                "pinn-gpu".to_string(),
+                "gpu-visualization".to_string(),
+            ],
+        );
 
-        categories.insert("advanced_physics".to_string(), vec![
-            "pinn".to_string(),
-            "nifti".to_string(),
-            "simd".to_string(),
-        ]);
+        categories.insert(
+            "advanced_physics".to_string(),
+            vec!["pinn".to_string(), "nifti".to_string(), "simd".to_string()],
+        );
 
-        categories.insert("deployment".to_string(), vec![
-            "api".to_string(),
-            "cloud".to_string(),
-            "zero-copy".to_string(),
-        ]);
+        categories.insert(
+            "deployment".to_string(),
+            vec![
+                "api".to_string(),
+                "cloud".to_string(),
+                "zero-copy".to_string(),
+            ],
+        );
 
-        categories.insert("development".to_string(), vec![
-            "plotting".to_string(),
-            "advanced-visualization".to_string(),
-            "legacy_algorithms".to_string(),
-        ]);
+        categories.insert(
+            "development".to_string(),
+            vec![
+                "plotting".to_string(),
+                "advanced-visualization".to_string(),
+                "legacy_algorithms".to_string(),
+            ],
+        );
 
         categories
     }
@@ -322,44 +342,60 @@ impl BuildStandards {
     pub fn dependency_categories() -> std::collections::HashMap<String, Vec<String>> {
         let mut categories = std::collections::HashMap::new();
 
-        categories.insert("core_runtime".to_string(), vec![
-            "ndarray".to_string(),
-            "rayon".to_string(),
-            "thiserror".to_string(),
-            "anyhow".to_string(),
-        ]);
+        categories.insert(
+            "core_runtime".to_string(),
+            vec![
+                "ndarray".to_string(),
+                "rayon".to_string(),
+                "thiserror".to_string(),
+                "anyhow".to_string(),
+            ],
+        );
 
-        categories.insert("mathematics".to_string(), vec![
-            "rustfft".to_string(),
-            "num-complex".to_string(),
-            "num-traits".to_string(),
-            "nalgebra".to_string(),
-        ]);
+        categories.insert(
+            "mathematics".to_string(),
+            vec![
+                "rustfft".to_string(),
+                "num-complex".to_string(),
+                "num-traits".to_string(),
+                "nalgebra".to_string(),
+            ],
+        );
 
-        categories.insert("serialization".to_string(), vec![
-            "serde".to_string(),
-            "serde_json".to_string(),
-            "toml".to_string(),
-            "rkyv".to_string(),
-        ]);
+        categories.insert(
+            "serialization".to_string(),
+            vec![
+                "serde".to_string(),
+                "serde_json".to_string(),
+                "toml".to_string(),
+                "rkyv".to_string(),
+            ],
+        );
 
-        categories.insert("gpu_compute".to_string(), vec![
-            "wgpu".to_string(),
-            "bytemuck".to_string(),
-            "burn".to_string(),
-        ]);
+        categories.insert(
+            "gpu_compute".to_string(),
+            vec![
+                "wgpu".to_string(),
+                "bytemuck".to_string(),
+                "burn".to_string(),
+            ],
+        );
 
-        categories.insert("networking".to_string(), vec![
-            "reqwest".to_string(),
-            "axum".to_string(),
-            "tower".to_string(),
-        ]);
+        categories.insert(
+            "networking".to_string(),
+            vec![
+                "reqwest".to_string(),
+                "axum".to_string(),
+                "tower".to_string(),
+            ],
+        );
 
         categories
     }
 }
 
 /// Code quality checker
+#[derive(Debug)]
 pub struct CodeQualityChecker;
 
 impl CodeQualityChecker {
@@ -428,11 +464,20 @@ impl CodeQualityReport {
         summary.push_str("Code Quality Report\n");
         summary.push_str("===================\n\n");
 
-        summary.push_str(&format!("Overall Compliance: {}\n\n",
-            if self.is_compliant() { "✅ PASSED" } else { "❌ FAILED" }));
+        summary.push_str(&format!(
+            "Overall Compliance: {}\n\n",
+            if self.is_compliant() {
+                "✅ PASSED"
+            } else {
+                "❌ FAILED"
+            }
+        ));
 
         if !self.module_size_violations.is_empty() {
-            summary.push_str(&format!("Module Size Violations: {}\n", self.module_size_violations.len()));
+            summary.push_str(&format!(
+                "Module Size Violations: {}\n",
+                self.module_size_violations.len()
+            ));
             for violation in &self.module_size_violations {
                 summary.push_str(&format!("  • {}\n", violation));
             }
@@ -440,7 +485,10 @@ impl CodeQualityReport {
         }
 
         if !self.naming_violations.is_empty() {
-            summary.push_str(&format!("Naming Violations: {}\n", self.naming_violations.len()));
+            summary.push_str(&format!(
+                "Naming Violations: {}\n",
+                self.naming_violations.len()
+            ));
             for violation in &self.naming_violations {
                 summary.push_str(&format!("  • {}\n", violation));
             }
@@ -448,7 +496,10 @@ impl CodeQualityReport {
         }
 
         if !self.documentation_gaps.is_empty() {
-            summary.push_str(&format!("Documentation Gaps: {}\n", self.documentation_gaps.len()));
+            summary.push_str(&format!(
+                "Documentation Gaps: {}\n",
+                self.documentation_gaps.len()
+            ));
             for gap in &self.documentation_gaps {
                 summary.push_str(&format!("  • {}\n", gap));
             }
@@ -456,7 +507,10 @@ impl CodeQualityReport {
         }
 
         if !self.test_coverage_gaps.is_empty() {
-            summary.push_str(&format!("Test Coverage Gaps: {}\n", self.test_coverage_gaps.len()));
+            summary.push_str(&format!(
+                "Test Coverage Gaps: {}\n",
+                self.test_coverage_gaps.len()
+            ));
             for gap in &self.test_coverage_gaps {
                 summary.push_str(&format!("  • {}\n", gap));
             }
@@ -508,7 +562,7 @@ mod tests {
             "std::collections::HashMap".to_string(),
         ];
         assert!(invalid_imports.len() > 1); // Ensure we have imports to check
-        // Note: This test would need more sophisticated checking
+                                            // Note: This test would need more sophisticated checking
     }
 
     #[test]

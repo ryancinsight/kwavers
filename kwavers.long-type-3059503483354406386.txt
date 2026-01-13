@@ -1,2 +1,0 @@
-solver::inverse::pinn::elastic_2d::model::ElasticPINN2D<<B as burn::tensor::backend::AutodiffBackend>::InnerBackend>
-solver::inverse::pinn::elastic_2d::model::ElasticPINN2D<<B as burn::tensor::backend::AutodiffBackend>::InnerBackend>: burn::module::AutodiffModule<B>

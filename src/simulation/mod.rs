@@ -25,8 +25,8 @@ pub use core::{CoreSimulation, SimulationBuilder, SimulationResult, SimulationSt
 pub use manager::PhysicsManager;
 pub use modalities::{PhotoacousticParameters, PhotoacousticResult, PhotoacousticSimulator};
 pub use multi_physics::{
-    CoupledPhysicsSolver, FieldCoupler, MultiPhysicsConfig, MultiPhysicsSolver,
-    PhysicsDomain, CouplingStrategy,
+    CoupledPhysicsSolver, CouplingStrategy, FieldCoupler, MultiPhysicsConfig, MultiPhysicsSolver,
+    PhysicsDomain,
 };
 pub use parameters::SimulationParameters;
 pub use setup::{SimulationComponents, SimulationSetup};

@@ -26,8 +26,8 @@
 //! - **ComplianceValidator**: IEC standard compliance checking
 //! - **AuditLogger**: Comprehensive safety event logging
 
+use crate::clinical::therapy::parameters::TherapyParameters;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::therapy::parameters::TherapyParameters;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -67,18 +67,19 @@ pub struct SafetyLimits {
 impl Default for SafetyLimits {
     fn default() -> Self {
         Self {
-            max_power: 100.0,        // 100W maximum
-            max_intensity: 3.0,      // 3 W/cm² (FDA limit for therapeutic ultrasound)
+            max_power: 100.0,          // 100W maximum acoustic power
+            max_intensity: 3.0,        // 3 W/cm² (FDA limit for therapeutic ultrasound)
             max_temperature_rise: 5.0, // 5°C maximum temperature rise
-            max_session_time: 1800.0, // 30 minutes maximum
-            max_total_dose: 10000.0, // 10kJ maximum per course
-            min_standoff: 5.0,       // 5mm minimum standoff
-            max_bnur: 6.0,           // 6:1 maximum beam non-uniformity
+            max_session_time: 1800.0,  // 30 minutes maximum per session
+            max_total_dose: 10000.0,   // 10kJ maximum per treatment course
+            min_standoff: 5.0,         // 5mm minimum standoff distance
+            max_bnur: 6.0,             // 6:1 maximum beam non-uniformity ratio
         }
     }
 }
 
 /// Real-time safety monitor for therapeutic ultrasound
+#[derive(Debug)]
 pub struct SafetyMonitor {
     limits: SafetyLimits,
     current_state: SafetyLevel,
@@ -111,13 +112,15 @@ impl SafetyMonitor {
         self.violations.clear();
         let mut new_state = SafetyLevel::Normal;
 
-        // Check peak negative pressure (related to acoustic power)
-        let estimated_power = params.peak_negative_pressure * params.peak_negative_pressure * 1e-6; // Rough estimate
-        if estimated_power > self.limits.max_power {
+        // Check peak negative pressure directly (FDA limit ~3 MPa for therapeutic ultrasound)
+        // IEC 60601-2-37 and FDA guidance recommend MI-based limits rather than direct pressure
+        // We check MI below, which is the proper safety metric
+        const MAX_PEAK_NEGATIVE_PRESSURE: f64 = 3.0e6; // 3 MPa
+        if params.peak_negative_pressure > MAX_PEAK_NEGATIVE_PRESSURE {
             self.violations.push(SafetyViolation {
                 parameter: "peak_negative_pressure".to_string(),
                 measured_value: params.peak_negative_pressure,
-                limit_value: (self.limits.max_power * 1e6).sqrt(),
+                limit_value: MAX_PEAK_NEGATIVE_PRESSURE,
                 severity: SafetyLevel::Critical,
                 timestamp: Instant::now(),
                 message: "Peak negative pressure exceeds maximum safe limit".to_string(),
@@ -212,6 +215,7 @@ pub struct SafetyViolation {
 }
 
 /// Hardware/software interlock system
+#[derive(Debug)]
 pub struct InterlockSystem {
     interlocks: HashMap<String, Interlock>,
     system_enabled: bool,
@@ -253,7 +257,7 @@ impl InterlockSystem {
     pub fn enable_system(&mut self) -> KwaversResult<()> {
         if !self.check_interlocks()? {
             return Err(KwaversError::InvalidInput(
-                "Cannot enable system: interlock conditions not satisfied".to_string()
+                "Cannot enable system: interlock conditions not satisfied".to_string(),
             ));
         }
 
@@ -290,6 +294,15 @@ pub struct Interlock {
     pub check_function: Arc<dyn Fn() -> KwaversResult<bool> + Send + Sync>,
 }
 
+impl std::fmt::Debug for Interlock {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Interlock")
+            .field("description", &self.description)
+            .field("check_function", &"<function>")
+            .finish()
+    }
+}
+
 impl Interlock {
     /// Create new interlock
     pub fn new<F>(description: String, check_function: F) -> Self
@@ -309,6 +322,7 @@ impl Interlock {
 }
 
 /// Treatment dose controller with IEC compliance
+#[derive(Debug)]
 pub struct DoseController {
     safety_limits: SafetyLimits,
     accumulated_dose: f64,
@@ -331,7 +345,7 @@ impl DoseController {
     pub fn start_session(&mut self, patient_id: String, protocol: String) -> KwaversResult<()> {
         if self.accumulated_dose >= self.safety_limits.max_total_dose {
             return Err(KwaversError::InvalidInput(
-                "Cannot start session: maximum total dose already reached".to_string()
+                "Cannot start session: maximum total dose already reached".to_string(),
             ));
         }
 
@@ -351,13 +365,17 @@ impl DoseController {
     }
 
     /// Update delivered dose during treatment
-    pub fn update_dose(&mut self, incremental_dose: f64, params: &TherapyParameters) -> KwaversResult<()> {
+    pub fn update_dose(
+        &mut self,
+        incremental_dose: f64,
+        params: &TherapyParameters,
+    ) -> KwaversResult<()> {
         // Check against session time limit
         if let Some(start_time) = self.session_start_time {
             let session_duration = start_time.elapsed().as_secs_f64();
             if session_duration > self.safety_limits.max_session_time {
                 return Err(KwaversError::InvalidInput(
-                    "Session time limit exceeded".to_string()
+                    "Session time limit exceeded".to_string(),
                 ));
             }
         }
@@ -365,7 +383,7 @@ impl DoseController {
         // Check against total dose limit
         if self.accumulated_dose + incremental_dose > self.safety_limits.max_total_dose {
             return Err(KwaversError::InvalidInput(
-                "Total dose limit would be exceeded".to_string()
+                "Total dose limit would be exceeded".to_string(),
             ));
         }
 
@@ -380,7 +398,10 @@ impl DoseController {
         // Log treatment parameters for audit trail
         log::info!(
             "Dose update: +{:.1} J (total: {:.1} J), Pressure: {:.1} Pa, MI: {:.2}",
-            incremental_dose, self.accumulated_dose, params.peak_negative_pressure, params.mechanical_index
+            incremental_dose,
+            self.accumulated_dose,
+            params.peak_negative_pressure,
+            params.mechanical_index
         );
 
         Ok(())
@@ -393,7 +414,10 @@ impl DoseController {
         }
 
         self.session_start_time = None;
-        log::info!("Treatment session ended. Total accumulated dose: {:.1} J", self.accumulated_dose);
+        log::info!(
+            "Treatment session ended. Total accumulated dose: {:.1} J",
+            self.accumulated_dose
+        );
         Ok(())
     }
 
@@ -432,6 +456,7 @@ pub struct TreatmentRecord {
 }
 
 /// IEC 60601-2-37 compliance validator
+#[derive(Debug)]
 pub struct ComplianceValidator {
     standard_version: String,
     compliance_checks: Vec<ComplianceCheck>,
@@ -449,7 +474,10 @@ impl ComplianceValidator {
     }
 
     /// Run all compliance checks
-    pub fn validate_compliance(&mut self, system_config: &SystemConfiguration) -> KwaversResult<ComplianceReport> {
+    pub fn validate_compliance(
+        &mut self,
+        system_config: &SystemConfiguration,
+    ) -> KwaversResult<ComplianceReport> {
         self.validation_results.clear();
 
         for check in &self.compliance_checks {
@@ -483,12 +511,13 @@ impl ComplianceValidator {
             ComplianceCheck {
                 id: "safety_limits".to_string(),
                 name: "Safety Limits Implementation".to_string(),
-                requirement: "Clause 201.12 - Essential performance: acoustic output control".to_string(),
+                requirement: "Clause 201.12 - Essential performance: acoustic output control"
+                    .to_string(),
                 validation_function: Arc::new(|config| {
                     // Check if safety limits are properly implemented
                     let passed = config.safety_limits.max_intensity <= 3.0
-                               && config.safety_limits.max_power <= 100.0
-                               && config.safety_limits.max_temperature_rise <= 5.0;
+                        && config.safety_limits.max_power <= 100.0
+                        && config.safety_limits.max_temperature_rise <= 5.0;
 
                     Ok(ComplianceResult {
                         passed,
@@ -497,11 +526,14 @@ impl ComplianceValidator {
                         } else {
                             "Safety limits exceed IEC maximum values".to_string()
                         },
-                        severity: if passed { SafetyLevel::Normal } else { SafetyLevel::Critical },
+                        severity: if passed {
+                            SafetyLevel::Normal
+                        } else {
+                            SafetyLevel::Critical
+                        },
                     })
                 }),
             },
-
             ComplianceCheck {
                 id: "monitoring".to_string(),
                 name: "Real-time Monitoring".to_string(),
@@ -517,11 +549,14 @@ impl ComplianceValidator {
                         } else {
                             "Monitoring or interlocks not properly configured".to_string()
                         },
-                        severity: if passed { SafetyLevel::Normal } else { SafetyLevel::Critical },
+                        severity: if passed {
+                            SafetyLevel::Normal
+                        } else {
+                            SafetyLevel::Critical
+                        },
                     })
                 }),
             },
-
             ComplianceCheck {
                 id: "emergency_stop".to_string(),
                 name: "Emergency Stop Functionality".to_string(),
@@ -544,11 +579,22 @@ struct ComplianceCheck {
     id: String,
     name: String,
     requirement: String,
-    validation_function: Arc<dyn Fn(&SystemConfiguration) -> KwaversResult<ComplianceResult> + Send + Sync>,
+    validation_function:
+        Arc<dyn Fn(&SystemConfiguration) -> KwaversResult<ComplianceResult> + Send + Sync>,
+}
+
+impl std::fmt::Debug for ComplianceCheck {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ComplianceCheck")
+            .field("id", &self.id)
+            .field("name", &self.name)
+            .field("requirement", &self.requirement)
+            .finish()
+    }
 }
 
 /// Result of a compliance check
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ComplianceResult {
     /// Whether the check passed
     pub passed: bool,
@@ -559,6 +605,7 @@ pub struct ComplianceResult {
 }
 
 /// Compliance validation report
+#[derive(Debug)]
 pub struct ComplianceReport {
     /// IEC standard version
     pub standard_version: String,
@@ -571,6 +618,7 @@ pub struct ComplianceReport {
 }
 
 /// System configuration for compliance validation
+#[derive(Debug)]
 pub struct SystemConfiguration {
     pub safety_limits: SafetyLimits,
     pub monitoring_enabled: bool,
@@ -579,6 +627,7 @@ pub struct SystemConfiguration {
 }
 
 /// Comprehensive audit logger for safety events
+#[derive(Debug)]
 pub struct SafetyAuditLogger {
     log_entries: Arc<Mutex<Vec<AuditEntry>>>,
     max_entries: usize,
@@ -594,7 +643,12 @@ impl SafetyAuditLogger {
     }
 
     /// Log a safety event
-    pub fn log_event(&self, event_type: SafetyEventType, message: String, metadata: HashMap<String, String>) {
+    pub fn log_event(
+        &self,
+        event_type: SafetyEventType,
+        message: String,
+        metadata: HashMap<String, String>,
+    ) {
         let entry = AuditEntry {
             timestamp: Instant::now(),
             event_type,
@@ -615,11 +669,18 @@ impl SafetyAuditLogger {
     pub fn log_violation(&self, violation: &SafetyViolation) {
         let mut metadata = HashMap::new();
         metadata.insert("parameter".to_string(), violation.parameter.clone());
-        metadata.insert("measured_value".to_string(), violation.measured_value.to_string());
+        metadata.insert(
+            "measured_value".to_string(),
+            violation.measured_value.to_string(),
+        );
         metadata.insert("limit_value".to_string(), violation.limit_value.to_string());
         metadata.insert("severity".to_string(), format!("{:?}", violation.severity));
 
-        self.log_event(SafetyEventType::Violation, violation.message.clone(), metadata);
+        self.log_event(
+            SafetyEventType::Violation,
+            violation.message.clone(),
+            metadata,
+        );
     }
 
     /// Log system state change
@@ -628,7 +689,10 @@ impl SafetyAuditLogger {
         metadata.insert("old_state".to_string(), format!("{:?}", old_state));
         metadata.insert("new_state".to_string(), format!("{:?}", new_state));
 
-        let message = format!("System safety state changed from {:?} to {:?}", old_state, new_state);
+        let message = format!(
+            "System safety state changed from {:?} to {:?}",
+            old_state, new_state
+        );
         self.log_event(SafetyEventType::StateChange, message, metadata);
     }
 
@@ -645,7 +709,7 @@ impl SafetyAuditLogger {
 }
 
 /// Audit log entry
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AuditEntry {
     /// Event timestamp
     pub timestamp: Instant,
@@ -658,7 +722,7 @@ pub struct AuditEntry {
 }
 
 /// Types of safety events
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum SafetyEventType {
     /// Safety violation detected
     Violation,
@@ -677,7 +741,7 @@ pub enum SafetyEventType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::therapy::parameters::TherapyParameters;
+    use crate::clinical::therapy::parameters::TherapyParameters;
 
     #[test]
     fn test_safety_limits_creation() {
@@ -735,8 +799,8 @@ mod tests {
             "power_supply".to_string(),
             Interlock::new(
                 "Power supply OK".to_string(),
-                || Ok(true) // Always passes for test
-            )
+                || Ok(true), // Always passes for test
+            ),
         );
 
         assert!(interlocks.check_interlocks().unwrap());
@@ -749,7 +813,9 @@ mod tests {
         let limits = SafetyLimits::default();
         let mut controller = DoseController::new(limits);
 
-        assert!(controller.start_session("patient_001".to_string(), "hifu_ablation".to_string()).is_ok());
+        assert!(controller
+            .start_session("patient_001".to_string(), "hifu_ablation".to_string())
+            .is_ok());
 
         let params = TherapyParameters::hifu();
         assert!(controller.update_dose(100.0, &params).is_ok());

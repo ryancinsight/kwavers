@@ -198,7 +198,7 @@ impl HyperelasticValidator {
         let model = HyperelasticModel::neo_hookean_soft_tissue();
 
         // Uniaxial compression: λ₁ = λ, λ₂ = λ₃ = 1/√λ
-        let lambda = 0.8; // 20% compression
+        let lambda: f64 = 0.8; // 20% compression
         let f = [
             [lambda, 0.0, 0.0],
             [0.0, 1.0 / lambda.sqrt(), 0.0],
@@ -228,7 +228,7 @@ impl HyperelasticValidator {
         };
 
         // Simple uniaxial stretch
-        let lambda_x = 1.2;
+        let lambda_x: f64 = 1.2;
         let lambda_y = 1.0 / lambda_x.sqrt();
         let lambda_z = lambda_y;
 
@@ -562,7 +562,7 @@ mod convergence_tests {
 
         // Uniaxial compression: λ₁ = λ₂ = λ₃^(-1/2) for incompressible material
         // Compression ratio: λ₃ = 0.9 (10% compression)
-        let lambda3 = 0.9;
+        let lambda3: f64 = 0.9;
         let lambda1 = lambda3.sqrt().recip(); // λ₁ = λ₃^(-1/2) for incompressibility
 
         // Deformation gradient for uniaxial compression along z-direction

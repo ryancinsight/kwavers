@@ -1,0 +1,472 @@
+# Architecture Validation Report
+
+**Generated**: 2026-01-12 11:18:11
+
+## Summary
+
+- **Layer Dependency Violations**: 428
+- **Cross-Contamination Patterns**: 3
+- **Overall Status**: ❌ VIOLATIONS DETECTED
+
+## Layer Dependency Violations
+
+Found 428 violations of the layered architecture:
+
+- `../src\analysis\ml\mod.rs:45` - analysis → analysis : `use crate::analysis::ml::models::TissueClassifierModel;`
+- `../src\analysis\ml\mod.rs:72` - analysis → analysis : `use crate::analysis::ml::models::TissueClassifierModel;`
+- `../src\analysis\ml\models\parameter_optimizer.rs:4` - analysis → analysis : `use crate::analysis::ml::inference::InferenceEngine;`
+- `../src\analysis\ml\models\tissue_classifier.rs:4` - analysis → analysis : `use crate::analysis::ml::inference::InferenceEngine;`
+- `../src\analysis\ml\pinn\acoustic_wave.rs:25` - analysis → analysis : `use crate::analysis::ml::pinn::physics::{`
+- `../src\analysis\ml\pinn\adaptive_sampling.rs:484` - analysis → analysis : `use crate::analysis::ml::pinn::physics::PhysicsParameters;`
+- `../src\analysis\ml\pinn\cavitation_coupled.rs:20` - analysis → analysis : `use crate::analysis::ml::pinn::physics::{`
+- `../src\analysis\ml\pinn\distributed_training.rs:6` - analysis → analysis : `use crate::analysis::ml::pinn::{BurnPINN2DWave, BurnTrainingMetrics2D, Geometry2D};`
+- `../src\analysis\ml\pinn\edge_runtime.rs:6` - analysis → analysis : `use crate::analysis::ml::pinn::quantization::LayerInfo;`
+- `../src\analysis\ml\pinn\edge_runtime.rs:7` - analysis → analysis : `use crate::analysis::ml::pinn::QuantizedModel;`
+- `../src\analysis\ml\pinn\electromagnetic.rs:24` - analysis → analysis : `use crate::analysis::ml::pinn::physics::{`
+- `../src\analysis\ml\pinn\electromagnetic.rs:35` - analysis → analysis : `use crate::analysis::ml::pinn::electromagnetic_gpu::EMConfig;`
+- `../src\analysis\ml\pinn\electromagnetic_gpu.rs:34` - analysis → gpu : `use crate::gpu::compute_manager::ComputeManager;`
+- `../src\analysis\ml\pinn\jit_compiler.rs:6` - analysis → analysis : `use crate::analysis::ml::pinn::Geometry2D;`
+- `../src\analysis\ml\pinn\meta_learning.rs:25` - analysis → analysis : `use crate::analysis::ml::pinn::burn_wave_equation_2d::{`
+- `../src\analysis\ml\pinn\meta_learning.rs:28` - analysis → analysis : `use crate::analysis::ml::pinn::Geometry2D;`
+- `../src\analysis\ml\pinn\multi_gpu_manager.rs:8` - analysis → gpu : `use crate::gpu::GpuCapabilities;`
+- `../src\analysis\ml\pinn\quantization.rs:6` - analysis → analysis : `use crate::analysis::ml::pinn::BurnPINN2DWave;`
+- `../src\analysis\ml\pinn\sonoluminescence_coupled.rs:21` - analysis → analysis : `use crate::analysis::ml::pinn::physics::{`
+- `../src\analysis\ml\pinn\trainer.rs:1` - analysis → analysis : `use crate::analysis::ml::pinn::wave_equation_1d::TrainingMetrics;`
+- `../src\analysis\ml\pinn\universal_solver.rs:16` - analysis → analysis : `use crate::analysis::ml::pinn::physics::{`
+- `../src\analysis\ml\pinn\validation.rs:14` - analysis → analysis : `use crate::analysis::ml::pinn::fdtd_reference::{FDTD1DWaveSolver, FDTDConfig};`
+- `../src\analysis\ml\pinn\validation.rs:15` - analysis → analysis : `use crate::analysis::ml::pinn::wave_equation_1d::{PINN1DWave, ValidationMetrics};`
+- `../src\analysis\ml\pinn\validation.rs:271` - analysis → analysis : `use crate::analysis::ml::pinn::wave_equation_1d::PINNConfig;`
+- `../src\analysis\ml\training.rs:3` - analysis → analysis : `use crate::analysis::ml::models::TissueClassifierModel;`
+- `../src\analysis\performance\benchmarks.rs:6` - analysis → analysis : `use crate::analysis::performance::safe_vectorization::SafeVectorOps;`
+- `../src\analysis\signal_processing\beamforming\adaptive\mod.rs:284` - analysis → analysis : `use crate::analysis::signal_processing::beamforming::test_utilities;`
+- `../src\analysis\signal_processing\beamforming\adaptive\mvdr.rs:478` - analysis → analysis : `use crate::analysis::signal_processing::beamforming::test_utilities;`
+- `../src\analysis\signal_processing\beamforming\adaptive\subspace.rs:617` - analysis → analysis : `use crate::analysis::signal_processing::beamforming::test_utilities;`
+- `../src\analysis\signal_processing\beamforming\narrowband\capon.rs:47` - analysis → analysis : `use crate::analysis::signal_processing::beamforming::narrowband::snapshots::{`
+- `../src\analysis\signal_processing\beamforming\narrowband\capon.rs:51` - analysis → analysis : `use crate::analysis::signal_processing::beamforming::narrowband::steering::NarrowbandSteering;`
+- `../src\analysis\signal_processing\beamforming\neural\distributed\core.rs:52` - analysis → analysis : `use crate::analysis::ml::pinn::multi_gpu_manager::{`
+- `../src\analysis\signal_processing\beamforming\neural\distributed\core.rs:56` - analysis → analysis : `use crate::analysis::signal_processing::beamforming::neural::pinn::NeuralBeamformingProcessor;`
+- `../src\analysis\signal_processing\beamforming\neural\distributed\core.rs:57` - analysis → analysis : `use crate::analysis::signal_processing::beamforming::neural::types::{`
+- `../src\analysis\signal_processing\beamforming\neural\pinn\processor.rs:47` - analysis → analysis : `use crate::analysis::ml::pinn::{uncertainty_quantification::BayesianPINN, BurnPINN1DWave};`
+- `../src\analysis\signal_processing\beamforming\neural\types.rs:9` - analysis → analysis : `use crate::analysis::ml::pinn::{BurnPINNConfig, BurnTrainingMetrics};`
+- `../src\analysis\signal_processing\beamforming\neural\types.rs:12` - analysis → analysis : `use crate::analysis::ml::pinn::uncertainty_quantification::PinnUncertaintyConfig;`
+- `../src\analysis\signal_processing\beamforming\time_domain\das.rs:80` - analysis → analysis : `use crate::analysis::signal_processing::beamforming::time_domain::delay_reference::{`
+- `../src\analysis\visualization\data_pipeline\transfer.rs:5` - analysis → gpu : `use crate::gpu::GpuContext;`
+- `../src\clinical\imaging\workflows.rs:30` - clinical → clinical : `use crate::clinical::imaging::photoacoustic::PhotoacousticResult;`
+- `../src\clinical\safety.rs:29` - clinical → clinical : `use crate::clinical::therapy::parameters::TherapyParameters;`
+- `../src\clinical\safety.rs:732` - clinical → clinical : `use crate::clinical::therapy::parameters::TherapyParameters;`
+- `../src\clinical\therapy\therapy_integration.rs:59` - clinical → clinical : `use crate::clinical::therapy::lithotripsy::LithotripsySimulator;`
+- `../src\clinical\therapy\therapy_integration.rs:674` - clinical → clinical : `use crate::clinical::therapy::lithotripsy::stone_fracture::StoneMaterial;`
+- `../src\clinical\therapy\therapy_integration.rs:675` - clinical → clinical : `use crate::clinical::therapy::lithotripsy::LithotripsyParameters;`
+- `../src\core\utils\test_helpers.rs:6` - core → domain : `use crate::domain::grid::Grid;`
+- `../src\core\utils\test_helpers.rs:7` - core → domain : `use crate::domain::medium::homogeneous::HomogeneousMedium;`
+- `../src\domain\boundary\bem.rs:45` - domain → math : `use crate::math::linear_algebra::sparse::CompressedSparseRowMatrix;`
+- `../src\domain\boundary\bem.rs:252` - domain → math : `use crate::math::linear_algebra::sparse::CompressedSparseRowMatrix;`
+- `../src\domain\boundary\coupling.rs:24` - domain → domain : `use crate::domain::boundary::traits::{BoundaryCondition, BoundaryDirections, FieldType};`
+- `../src\domain\boundary\coupling.rs:25` - domain → domain : `use crate::domain::grid::{Grid, GridTopology};`
+- `../src\domain\boundary\coupling.rs:26` - domain → domain : `use crate::domain::medium::properties::AcousticPropertyData;`
+- `../src\domain\boundary\cpml\memory.rs:4` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\boundary\cpml\mod.rs:30` - domain → domain : `use crate::domain::boundary::traits::{AbsorbingBoundary, BoundaryCondition, BoundaryDirections};`
+- `../src\domain\boundary\cpml\mod.rs:31` - domain → domain : `use crate::domain::boundary::Boundary;`
+- `../src\domain\boundary\cpml\mod.rs:32` - domain → domain : `use crate::domain::grid::{Grid, GridTopology};`
+- `../src\domain\boundary\cpml\profiles.rs:5` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\boundary\fem.rs:41` - domain → math : `use crate::math::linear_algebra::sparse::CompressedSparseRowMatrix;`
+- `../src\domain\boundary\fem.rs:241` - domain → math : `use crate::math::linear_algebra::sparse::CompressedSparseRowMatrix;`
+- `../src\domain\boundary\field_updater.rs:30` - domain → domain : `use crate::domain::boundary::traits::{BoundaryCondition, FieldType};`
+- `../src\domain\boundary\field_updater.rs:31` - domain → domain : `use crate::domain::grid::{Grid, GridTopology};`
+- `../src\domain\boundary\field_updater.rs:393` - domain → domain : `use crate::domain::grid::GridTopologyExt;`
+- `../src\domain\boundary\field_updater.rs:413` - domain → domain : `use crate::domain::boundary::cpml::{CPMLBoundary, CPMLConfig};`
+- `../src\domain\boundary\field_updater.rs:414` - domain → domain : `use crate::domain::grid::{CartesianTopology, Grid};`
+- `../src\domain\boundary\mod.rs:62` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\boundary\pml.rs:2` - domain → domain : `use crate::domain::boundary::Boundary;`
+- `../src\domain\boundary\pml.rs:3` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\boundary\traits.rs:35` - domain → domain : `use crate::domain::grid::{Grid, GridTopology};`
+- `../src\domain\field\operations.rs:5` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\field\type.rs:7` - domain → domain : `use crate::domain::field::indices as field_indices;`
+- `../src\domain\grid\coordinates.rs:5` - domain → domain : `use crate::domain::grid::structure::{Dimension, Grid};`
+- `../src\domain\grid\mod.rs:11` - domain → math : `use crate::math::fft::kspace;`
+- `../src\domain\grid\mod.rs:18` - domain → math : `use crate::math::fft::utils as fft_utils;`
+- `../src\domain\grid\operators\curl.rs:5` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\grid\operators\divergence.rs:5` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\grid\operators\gradient.rs:5` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\grid\operators\gradient_optimized.rs:8` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\grid\operators\laplacian.rs:7` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\grid\operators\laplacian.rs:257` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\grid\stability.rs:6` - domain → domain : `use crate::domain::grid::structure::Grid;`
+- `../src\domain\medium\acoustic.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\acoustic.rs:7` - domain → domain : `use crate::domain::medium::absorption::TissueType;`
+- `../src\domain\medium\acoustic.rs:8` - domain → domain : `use crate::domain::medium::core::CoreMedium;`
+- `../src\domain\medium\adapters\cylindrical.rs:50` - domain → domain : `use crate::domain::grid::{CylindricalTopology, Grid};`
+- `../src\domain\medium\adapters\cylindrical.rs:51` - domain → domain : `use crate::domain::medium::Medium;`
+- `../src\domain\medium\adapters\cylindrical.rs:500` - domain → domain : `use crate::domain::medium::heterogeneous::HeterogeneousMedium;`
+- `../src\domain\medium\adapters\cylindrical.rs:501` - domain → domain : `use crate::domain::medium::{CoreMedium, HomogeneousMedium};`
+- `../src\domain\medium\anisotropic\fiber.rs:52` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\bubble.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\bubble.rs:7` - domain → domain : `use crate::domain::medium::core::CoreMedium;`
+- `../src\domain\medium\builder.rs:7` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\builder.rs:8` - domain → domain : `use crate::domain::medium::{homogeneous::HomogeneousMedium, Medium};`
+- `../src\domain\medium\core.rs:7` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\elastic.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\elastic.rs:7` - domain → domain : `use crate::domain::medium::core::{ArrayAccess, CoreMedium};`
+- `../src\domain\medium\heterogeneous\core\structure.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\heterogeneous\core\structure.rs:7` - domain → domain : `use crate::domain::medium::homogeneous::HomogeneousMedium;`
+- `../src\domain\medium\heterogeneous\core\structure.rs:8` - domain → domain : `use crate::domain::medium::{`
+- `../src\domain\medium\heterogeneous\factory\tissue.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\heterogeneous\factory\tissue.rs:7` - domain → domain : `use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;`
+- `../src\domain\medium\heterogeneous\interpolation\trilinear.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\heterogeneous\tissue\implementation.rs:5` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\heterogeneous\tissue\implementation.rs:6` - domain → domain : `use crate::domain::medium::absorption::TissueType;`
+- `../src\domain\medium\heterogeneous\tissue\implementation.rs:7` - domain → domain : `use crate::domain::medium::{`
+- `../src\domain\medium\heterogeneous\tissue\properties.rs:3` - domain → domain : `use crate::domain::medium::absorption::{TissueType, TISSUE_PROPERTIES};`
+- `../src\domain\medium\heterogeneous\tissue\region.rs:4` - domain → domain : `use crate::domain::medium::absorption::TissueType;`
+- `../src\domain\medium\heterogeneous\traits\acoustic\properties.rs:7` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\heterogeneous\traits\acoustic\properties.rs:8` - domain → domain : `use crate::domain::medium::heterogeneous::{`
+- `../src\domain\medium\heterogeneous\traits\acoustic\properties.rs:11` - domain → domain : `use crate::domain::medium::{`
+- `../src\domain\medium\heterogeneous\traits\bubble\properties.rs:3` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\heterogeneous\traits\bubble\properties.rs:4` - domain → domain : `use crate::domain::medium::{`
+- `../src\domain\medium\heterogeneous\traits\elastic\properties.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\heterogeneous\traits\elastic\properties.rs:7` - domain → domain : `use crate::domain::medium::elastic::{ElasticArrayAccess, ElasticProperties};`
+- `../src\domain\medium\heterogeneous\traits\elastic\properties.rs:8` - domain → domain : `use crate::domain::medium::heterogeneous::{`
+- `../src\domain\medium\heterogeneous\traits\optical\properties.rs:3` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\heterogeneous\traits\optical\properties.rs:4` - domain → domain : `use crate::domain::medium::heterogeneous::{`
+- `../src\domain\medium\heterogeneous\traits\optical\properties.rs:7` - domain → domain : `use crate::domain::medium::optical::OpticalProperties;`
+- `../src\domain\medium\heterogeneous\traits\thermal\properties.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\heterogeneous\traits\thermal\properties.rs:7` - domain → domain : `use crate::domain::medium::{`
+- `../src\domain\medium\heterogeneous\traits\viscous\properties.rs:3` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\heterogeneous\traits\viscous\properties.rs:4` - domain → domain : `use crate::domain::medium::core::MIN_PHYSICAL_DENSITY;`
+- `../src\domain\medium\heterogeneous\traits\viscous\properties.rs:5` - domain → domain : `use crate::domain::medium::heterogeneous::{`
+- `../src\domain\medium\heterogeneous\traits\viscous\properties.rs:8` - domain → domain : `use crate::domain::medium::viscous::ViscousProperties;`
+- `../src\domain\medium\homogeneous\implementation.rs:9` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\homogeneous\implementation.rs:10` - domain → domain : `use crate::domain::medium::{`
+- `../src\domain\medium\homogeneous\implementation.rs:578` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\interface.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\interface.rs:7` - domain → domain : `use crate::domain::medium::core::{ArrayAccess, CoreMedium};`
+- `../src\domain\medium\mod.rs:72` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\optical.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\optical.rs:7` - domain → domain : `use crate::domain::medium::core::CoreMedium;`
+- `../src\domain\medium\thermal.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\thermal.rs:7` - domain → domain : `use crate::domain::medium::core::CoreMedium;`
+- `../src\domain\medium\viscous.rs:5` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\viscous.rs:6` - domain → domain : `use crate::domain::medium::core::CoreMedium;`
+- `../src\domain\medium\wrapper.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\medium\wrapper.rs:7` - domain → domain : `use crate::domain::medium::{continuous_to_discrete, CoreMedium, Medium};`
+- `../src\domain\plugin\field_access.rs:7` - domain → domain : `use crate::domain::field::mapping::UnifiedFieldType;`
+- `../src\domain\plugin\metadata.rs:5` - domain → analysis : `use crate::analysis::validation::ValidationResult;`
+- `../src\domain\plugin\mod.rs:13` - domain → domain : `use crate::domain::boundary::Boundary;`
+- `../src\domain\plugin\mod.rs:14` - domain → domain : `use crate::domain::field::mapping::UnifiedFieldType;`
+- `../src\domain\plugin\mod.rs:15` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\plugin\mod.rs:16` - domain → domain : `use crate::domain::medium::Medium;`
+- `../src\domain\plugin\mod.rs:17` - domain → domain : `use crate::domain::source::Source;`
+- `../src\domain\sensor\beamforming\adaptive\algorithms\eigenspace_mv.rs:27` - domain → math : `use crate::math::linear_algebra::LinearAlgebra;`
+- `../src\domain\sensor\beamforming\adaptive\algorithms\robust_capon.rs:20` - domain → math : `use crate::math::linear_algebra::LinearAlgebra;`
+- `../src\domain\sensor\beamforming\adaptive\algorithms\source_estimation.rs:32` - domain → math : `use crate::math::linear_algebra::LinearAlgebra;`
+- `../src\domain\sensor\beamforming\adaptive\matrix_utils.rs:10` - domain → math : `use crate::math::linear_algebra::LinearAlgebra;`
+- `../src\domain\sensor\beamforming\ai_integration.rs:28` - domain → domain : `use crate::domain::sensor::beamforming::{BeamformingConfig, BeamformingProcessor};`
+- `../src\domain\sensor\beamforming\ai_integration.rs:34` - domain → analysis : `use crate::analysis::ml::pinn::burn_wave_equation_2d::RealTimePINNInference;`
+- `../src\domain\sensor\beamforming\beamforming_3d.rs:29` - domain → domain : `use crate::domain::sensor::beamforming::config::BeamformingConfig;`
+- `../src\domain\sensor\beamforming\config.rs:69` - domain → domain : `use crate::domain::sensor::passive_acoustic_mapping::beamforming_config::PamBeamformingMethod;`
+- `../src\domain\sensor\beamforming\config.rs:88` - domain → domain : `use crate::domain::sensor::passive_acoustic_mapping::beamforming_config::{`
+- `../src\domain\sensor\beamforming\processor.rs:5` - domain → math : `use crate::math::linear_algebra::LinearAlgebra;`
+- `../src\domain\sensor\beamforming\sensor_beamformer.rs:8` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\sensor\beamforming\sensor_beamformer.rs:9` - domain → domain : `use crate::domain::sensor::grid_sampling::GridSensorSet;`
+- `../src\domain\sensor\beamforming\sensor_beamformer.rs:10` - domain → domain : `use crate::domain::sensor::localization::array::SensorArray;`
+- `../src\domain\sensor\beamforming\steering.rs:8` - domain → analysis : `use crate::analysis::signal_processing::beamforming::utils::delays;`
+- `../src\domain\sensor\beamforming\steering.rs:10` - domain → math : `use crate::math::geometry::distance3;`
+- `../src\domain\sensor\localization\algorithms.rs:211` - domain → domain : `use crate::domain::sensor::localization::{MultilaterationMethod, MultilaterationSolver};`
+- `../src\domain\sensor\localization\algorithms.rs:270` - domain → domain : `use crate::domain::sensor::localization::array::{ArrayGeometry, Sensor};`
+- `../src\domain\sensor\localization\beamforming_search\config.rs:40` - domain → domain : `use crate::domain::sensor::beamforming::{`
+- `../src\domain\sensor\localization\beamforming_search\mod.rs:36` - domain → analysis : `use crate::analysis::signal_processing::beamforming::narrowband::{`
+- `../src\domain\sensor\localization\beamforming_search\mod.rs:41` - domain → domain : `use crate::domain::sensor::beamforming::BeamformingProcessor;`
+- `../src\domain\sensor\localization\beamforming_search\mod.rs:42` - domain → domain : `use crate::domain::sensor::localization::Position;`
+- `../src\domain\sensor\localization\beamforming_search\mod.rs:297` - domain → domain : `use crate::domain::sensor::beamforming::BeamformingCoreConfig;`
+- `../src\domain\sensor\localization\beamforming_search\mod.rs:307` - domain → domain : `use crate::domain::sensor::beamforming::TimeDomainDelayReference;`
+- `../src\domain\sensor\localization\multilateration\core.rs:4` - domain → domain : `use crate::domain::sensor::localization::{Position, SensorArray, TrilaterationSolver};`
+- `../src\domain\sensor\localization\multilateration\core.rs:338` - domain → domain : `use crate::domain::sensor::localization::array::{ArrayGeometry, Sensor};`
+- `../src\domain\sensor\localization\multilateration\trilateration.rs:56` - domain → domain : `use crate::domain::sensor::localization::{Position, SensorArray};`
+- `../src\domain\sensor\localization\multilateration\trilateration.rs:484` - domain → domain : `use crate::domain::sensor::localization::array::{ArrayGeometry, Sensor};`
+- `../src\domain\sensor\passive_acoustic_mapping\beamforming_config.rs:23` - domain → domain : `use crate::domain::sensor::beamforming::BeamformingCoreConfig;`
+- `../src\domain\sensor\passive_acoustic_mapping\mod.rs:35` - domain → domain : `use crate::domain::sensor::beamforming::BeamformingProcessor;`
+- `../src\domain\sensor\recorder\complex.rs:6` - domain → domain : `use crate::domain::field::indices::{BUBBLE_RADIUS_IDX, LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};`
+- `../src\domain\sensor\recorder\complex.rs:7` - domain → domain : `use crate::domain::field::BubbleStateFields;`
+- `../src\domain\sensor\recorder\complex.rs:8` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\sensor\recorder\complex.rs:9` - domain → domain : `use crate::domain::sensor::sonoluminescence::{SonoluminescenceDetector, SonoluminescenceEvent};`
+- `../src\domain\sensor\recorder\complex.rs:10` - domain → domain : `use crate::domain::sensor::GridSensorSet;`
+- `../src\domain\sensor\recorder\config.rs:3` - domain → domain : `use crate::domain::sensor::sonoluminescence::DetectorConfig;`
+- `../src\domain\sensor\recorder\events.rs:3` - domain → domain : `use crate::domain::sensor::sonoluminescence::SonoluminescenceEvent;`
+- `../src\domain\sensor\recorder\traits.rs:4` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\signal\frequency_sweep\chirp.rs:7` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\frequency_sweep\exponential.rs:7` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\frequency_sweep\hyperbolic.rs:7` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\frequency_sweep\logarithmic.rs:7` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\frequency_sweep\mod.rs:10` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\frequency_sweep\stepped.rs:7` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\modulation\frequency.rs:48` - domain → domain : `use crate::domain::signal::analytic::instantaneous_frequency;`
+- `../src\domain\signal\modulation\phase.rs:31` - domain → domain : `use crate::domain::signal::analytic::instantaneous_phase;`
+- `../src\domain\signal\modulation\quadrature.rs:32` - domain → domain : `use crate::domain::signal::analytic::hilbert_transform;`
+- `../src\domain\signal\pulse\gaussian.rs:3` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\pulse\rectangular.rs:3` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\pulse\ricker.rs:3` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\pulse\tone_burst.rs:4` - domain → domain : `use crate::domain::signal::window::{window_value, WindowType};`
+- `../src\domain\signal\pulse\tone_burst.rs:5` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\pulse\train.rs:3` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\special\null_signal.rs:6` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\special\null_signal.rs:45` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\special\time_varying.rs:6` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\special\time_varying.rs:113` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\signal\waveform\sine_wave.rs:3` - domain → domain : `use crate::domain::signal::{`
+- `../src\domain\signal\waveform\square_wave.rs:1` - domain → domain : `use crate::domain::signal::{`
+- `../src\domain\signal\waveform\triangle_wave.rs:1` - domain → domain : `use crate::domain::signal::{`
+- `../src\domain\source\basic\linear_array.rs:1` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\basic\linear_array.rs:2` - domain → domain : `use crate::domain::medium::Medium;`
+- `../src\domain\source\basic\linear_array.rs:3` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\source\basic\linear_array.rs:4` - domain → domain : `use crate::domain::source::{Apodization, Source};`
+- `../src\domain\source\basic\matrix_array.rs:1` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\basic\matrix_array.rs:2` - domain → domain : `use crate::domain::medium::Medium;`
+- `../src\domain\source\basic\matrix_array.rs:3` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\source\basic\matrix_array.rs:4` - domain → domain : `use crate::domain::source::{Apodization, Source};`
+- `../src\domain\source\basic\piston.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\basic\piston.rs:7` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\source\basic\piston.rs:8` - domain → domain : `use crate::domain::source::{Source, SourceField};`
+- `../src\domain\source\config.rs:7` - domain → domain : `use crate::domain::source::types::SourceField;`
+- `../src\domain\source\custom\mod.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\custom\mod.rs:7` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\source\custom\mod.rs:8` - domain → domain : `use crate::domain::source::{Source, SourceField};`
+- `../src\domain\source\factory.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\factory.rs:7` - domain → domain : `use crate::domain::signal::{Signal, SineWave, ToneBurst, WindowType};`
+- `../src\domain\source\factory.rs:8` - domain → domain : `use crate::domain::source::{`
+- `../src\domain\source\flexible\array.rs:7` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\flexible\array.rs:8` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\source\flexible\array.rs:9` - domain → domain : `use crate::domain::source::Source;`
+- `../src\domain\source\hemispherical\mod.rs:29` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\hemispherical\mod.rs:30` - domain → domain : `use crate::domain::signal::{Signal, SineWave};`
+- `../src\domain\source\hemispherical\mod.rs:31` - domain → domain : `use crate::domain::source::Source;`
+- `../src\domain\source\hemispherical\steering.rs:5` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\hemispherical\steering.rs:6` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\source\optical\fiber.rs:5` - domain → domain : `use crate::domain::source::optical::OpticalSource;`
+- `../src\domain\source\optical\laser.rs:5` - domain → domain : `use crate::domain::signal::{Signal, TimeVaryingSignal};`
+- `../src\domain\source\optical\led.rs:5` - domain → domain : `use crate::domain::source::optical::OpticalSource;`
+- `../src\domain\source\structs.rs:1` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\structs.rs:2` - domain → domain : `use crate::domain::signal::{NullSignal, Signal, TimeVaryingSignal};`
+- `../src\domain\source\structs.rs:3` - domain → domain : `use crate::domain::source::types::Source;`
+- `../src\domain\source\transducers\apodization\mod.rs:3` - domain → domain : `use crate::domain::signal::{window_value, WindowType};`
+- `../src\domain\source\transducers\focused\utils.rs:69` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\transducers\phased_array\beamforming.rs:55` - domain → analysis : `use crate::analysis::signal_processing::beamforming::utils::delays;`
+- `../src\domain\source\transducers\phased_array\transducer.rs:8` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\transducers\phased_array\transducer.rs:9` - domain → domain : `use crate::domain::medium::Medium;`
+- `../src\domain\source\transducers\phased_array\transducer.rs:10` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\source\transducers\phased_array\transducer.rs:11` - domain → domain : `use crate::domain::source::Source;`
+- `../src\domain\source\types.rs:7` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\types.rs:8` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\source\wavefront\bessel.rs:7` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\wavefront\bessel.rs:8` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\source\wavefront\bessel.rs:9` - domain → domain : `use crate::domain::source::{Source, SourceField};`
+- `../src\domain\source\wavefront\gaussian.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\wavefront\gaussian.rs:7` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\source\wavefront\gaussian.rs:8` - domain → domain : `use crate::domain::source::{Source, SourceField};`
+- `../src\domain\source\wavefront\plane_wave.rs:6` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\wavefront\plane_wave.rs:7` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\source\wavefront\plane_wave.rs:8` - domain → domain : `use crate::domain::source::{Source, SourceField};`
+- `../src\domain\source\wavefront\spherical.rs:7` - domain → domain : `use crate::domain::grid::Grid;`
+- `../src\domain\source\wavefront\spherical.rs:8` - domain → domain : `use crate::domain::signal::Signal;`
+- `../src\domain\source\wavefront\spherical.rs:9` - domain → domain : `use crate::domain::source::{Source, SourceField};`
+- `../src\gpu\compute_manager.rs:8` - gpu → gpu : `use crate::gpu::shaders;`
+- `../src\gpu\multi_gpu.rs:7` - gpu → gpu : `use crate::gpu::{GpuCapabilities, GpuContext};`
+- `../src\gpu\pipeline.rs:7` - gpu → gpu : `use crate::gpu::memory::{MemoryPoolType, UnifiedMemoryManager};`
+- `../src\gpu\shaders\neural_network.rs:7` - gpu → gpu : `use crate::gpu::device::GpuDevice;`
+- `../src\infra\api\auth.rs:16` - infra → infra : `use crate::infra::api::{APIError, APIErrorType};`
+- `../src\infra\api\clinical_handlers.rs:15` - infra → infra : `use crate::infra::api::auth::AuthenticatedUser;`
+- `../src\infra\api\clinical_handlers.rs:16` - infra → infra : `use crate::infra::api::{`
+- `../src\infra\api\clinical_handlers.rs:33` - infra → domain : `use crate::domain::sensor::beamforming::ai_integration::{`
+- `../src\infra\api\handlers.rs:6` - infra → infra : `use crate::infra::api::auth::AuthenticatedUser;`
+- `../src\infra\api\handlers.rs:7` - infra → infra : `use crate::infra::api::{`
+- `../src\infra\api\job_manager.rs:6` - infra → infra : `use crate::infra::api::{APIError, APIErrorType, JobStatus, PINNTrainingRequest, TrainingProgress};`
+- `../src\infra\api\job_manager.rs:9` - infra → analysis : `use crate::analysis::ml::pinn::{PINNConfig, PINNTrainer, TrainingMetrics};`
+- `../src\infra\api\job_manager.rs:424` - infra → infra : `use crate::infra::api::{GeometrySpec, PhysicsParameters, TrainingConfig};`
+- `../src\infra\api\middleware.rs:6` - infra → infra : `use crate::infra::api::auth::AuthMiddleware;`
+- `../src\infra\api\middleware.rs:7` - infra → infra : `use crate::infra::api::rate_limiter::RateLimiter;`
+- `../src\infra\api\middleware.rs:8` - infra → infra : `use crate::infra::api::APIErrorType;`
+- `../src\infra\api\models.rs:14` - infra → infra : `use crate::infra::api::TrainingConfig;`
+- `../src\infra\api\model_registry.rs:6` - infra → infra : `use crate::infra::api::{APIError, APIErrorType, ModelMetadata};`
+- `../src\infra\api\model_registry.rs:203` - infra → infra : `use crate::infra::api::TrainingConfig;`
+- `../src\infra\api\rate_limiter.rs:10` - infra → infra : `use crate::infra::api::{APIError, APIErrorType, RateLimitInfo};`
+- `../src\infra\api\router.rs:6` - infra → infra : `use crate::infra::api::handlers::{`
+- `../src\infra\api\router.rs:22` - infra → infra : `use crate::infra::api::clinical_handlers::{`
+- `../src\infra\io\output.rs:3` - infra → domain : `use crate::domain::field::indices::LIGHT_IDX;`
+- `../src\infra\io\output.rs:4` - infra → domain : `use crate::domain::field::mapping::UnifiedFieldType;`
+- `../src\infra\io\output.rs:5` - infra → domain : `use crate::domain::sensor::recorder::Recorder;`
+- `../src\infra\runtime\zero_copy.rs:44` - infra → domain : `use crate::domain::grid::Grid;`
+- `../src\infra\runtime\zero_copy.rs:200` - infra → domain : `use crate::domain::grid::Grid;`
+- `../src\infra\runtime\zero_copy.rs:249` - infra → domain : `use crate::domain::grid::Grid;`
+- `../src\physics\acoustics\analytical\patterns\phase_shifting\array\mod.rs:10` - physics → physics : `use crate::physics::phase_modulation::phase_shifting::beam::BeamSteering;`
+- `../src\physics\acoustics\analytical\patterns\phase_shifting\array\mod.rs:11` - physics → physics : `use crate::physics::phase_modulation::phase_shifting::core::{`
+- `../src\physics\acoustics\analytical\patterns\phase_shifting\array\mod.rs:14` - physics → physics : `use crate::physics::phase_modulation::phase_shifting::focus::DynamicFocusing;`
+- `../src\physics\acoustics\analytical\patterns\phase_shifting\array\mod.rs:15` - physics → physics : `use crate::physics::phase_modulation::phase_shifting::shifter::PhaseShifter;`
+- `../src\physics\acoustics\analytical\patterns\phase_shifting\beam\mod.rs:13` - physics → physics : `use crate::physics::phase_modulation::phase_shifting::core::{`
+- `../src\physics\acoustics\analytical\patterns\phase_shifting\focus\mod.rs:12` - physics → physics : `use crate::physics::phase_modulation::phase_shifting::core::{`
+- `../src\physics\acoustics\analytical\propagation\calculator.rs:7` - physics → physics : `use crate::physics::acoustics::analytical::propagation::{`
+- `../src\physics\acoustics\analytical\propagation\calculator.rs:204` - physics → physics : `use crate::physics::acoustics::analytical::propagation::{`
+- `../src\physics\acoustics\analytical\propagation\heterogeneity\mod.rs:52` - physics → physics : `use crate::physics::traits::HeterogeneityModelTrait;`
+- `../src\physics\acoustics\analytical\propagation\interfaces\interface.rs:6` - physics → physics : `use crate::physics::acoustics::analytical::propagation::AnalyticalMediumProperties;`
+- `../src\physics\acoustics\analytical\propagation\interfaces\snell.rs:142` - physics → physics : `use crate::physics::acoustics::analytical::propagation::{`
+- `../src\physics\acoustics\imaging\fusion.rs:29` - physics → clinical : `use crate::clinical::imaging::photoacoustic::PhotoacousticResult;`
+- `../src\physics\acoustics\imaging\fusion.rs:282` - physics → physics : `use crate::physics::imaging::registration::ImageRegistration;`
+- `../src\physics\acoustics\imaging\fusion.rs:667` - physics → physics : `use crate::physics::imaging::registration::ImageRegistration;`
+- `../src\physics\acoustics\imaging\modalities\elastography\radiation_force.rs:32` - physics → solver : `use crate::solver::forward::elastic::swe::ElasticBodyForceConfig;`
+- `../src\physics\acoustics\mechanics\acoustic_wave\nonlinear\trait_impl.rs:9` - physics → physics : `use crate::physics::traits::AcousticWaveModel;`
+- `../src\physics\acoustics\mechanics\cavitation\damage.rs:11` - physics → physics : `use crate::physics::bubble_dynamics::bubble_field::BubbleStateFields;`
+- `../src\physics\acoustics\mechanics\elastic_wave\tests.rs:12` - physics → physics : `use crate::physics::mechanics::elastic_wave::ElasticWave;`
+- `../src\physics\acoustics\mechanics\elastic_wave\tests.rs:14` - physics → physics : `use crate::physics::traits::AcousticWaveModel;`
+- `../src\physics\acoustics\mechanics\poroelastic\biot.rs:6` - physics → physics : `use crate::physics::mechanics::poroelastic::{PoroelasticMaterial, WaveSpeeds};`
+- `../src\physics\acoustics\mechanics\poroelastic\properties.rs:5` - physics → physics : `use crate::physics::mechanics::poroelastic::PoroelasticMaterial;`
+- `../src\physics\acoustics\mechanics\streaming\mod.rs:60` - physics → physics : `use crate::physics::traits::StreamingModelTrait;`
+- `../src\physics\acoustics\mechanics\viscosity\shear_viscosity.rs:2` - physics → physics : `use crate::physics::mechanics::viscosity::ViscosityModel;`
+- `../src\physics\acoustics\nonlinear\adaptive_integration.rs:351` - physics → physics : `use crate::physics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};`
+- `../src\physics\acoustics\nonlinear\cavitation_control\feedback\config.rs:4` - physics → physics : `use crate::physics::cavitation_control::pid_controller::PIDGains;`
+- `../src\physics\acoustics\nonlinear\encapsulated\model.rs:3` - physics → physics : `use crate::physics::acoustics::nonlinear::bubble_state::{BubbleParameters, BubbleState};`
+- `../src\physics\acoustics\nonlinear\imex_integration.rs:392` - physics → physics : `use crate::physics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};`
+- `../src\physics\acoustics\nonlinear\interactions.rs:192` - physics → physics : `use crate::physics::bubble_dynamics::bubble_state::BubbleParameters;`
+- `../src\physics\acoustics\nonlinear\keller_miksis\equation.rs:3` - physics → physics : `use crate::physics::acoustics::nonlinear::bubble_state::BubbleState;`
+- `../src\physics\acoustics\nonlinear\keller_miksis\mod.rs:15` - physics → physics : `use crate::physics::acoustics::nonlinear::bubble_state::{BubbleParameters, BubbleState};`
+- `../src\physics\acoustics\nonlinear\keller_miksis\mod.rs:16` - physics → physics : `use crate::physics::acoustics::nonlinear::energy_balance::EnergyBalanceCalculator;`
+- `../src\physics\acoustics\nonlinear\keller_miksis\mod.rs:17` - physics → physics : `use crate::physics::acoustics::nonlinear::thermodynamics::{`
+- `../src\physics\acoustics\nonlinear\keller_miksis\thermodynamics.rs:3` - physics → physics : `use crate::physics::acoustics::nonlinear::bubble_state::BubbleState;`
+- `../src\physics\acoustics\nonlinear\keller_miksis\validation.rs:2` - physics → physics : `use crate::physics::acoustics::nonlinear::bubble_state::{BubbleParameters, BubbleState};`
+- `../src\physics\acoustics\skull\aberration.rs:8` - physics → physics : `use crate::physics::skull::HeterogeneousSkull;`
+- `../src\physics\acoustics\skull\ct_based.rs:8` - physics → physics : `use crate::physics::skull::HeterogeneousSkull;`
+- `../src\physics\acoustics\skull\heterogeneous.rs:8` - physics → physics : `use crate::physics::skull::SkullProperties;`
+- `../src\physics\acoustics\transcranial\aberration_correction.rs:431` - physics → physics : `use crate::physics::skull::CTBasedSkullModel;`
+- `../src\physics\chemistry\mod.rs:12` - physics → physics : `use crate::physics::traits::ChemicalModelTrait;`
+- `../src\physics\electromagnetic\photoacoustic.rs:7` - physics → physics : `use crate::physics::electromagnetic::equations::{`
+- `../src\physics\electromagnetic\photoacoustic.rs:314` - physics → physics : `use crate::physics::electromagnetic::equations::EMMaterialProperties;`
+- `../src\physics\electromagnetic\solvers.rs:9` - physics → physics : `use crate::physics::electromagnetic::equations::{`
+- `../src\physics\electromagnetic\solvers.rs:12` - physics → solver : `use crate::solver::forward::fdtd::ElectromagneticFdtdSolver;`
+- `../src\physics\optics\diffusion\mod.rs:5` - physics → physics : `use crate::physics::optics::polarization::LinearPolarization;`
+- `../src\physics\optics\diffusion\mod.rs:6` - physics → physics : `use crate::physics::optics::PolarizationModel as PolarizationModelTrait;`
+- `../src\physics\optics\diffusion\mod.rs:7` - physics → physics : `use crate::physics::thermal::PennesSolver;`
+- `../src\physics\optics\diffusion\mod.rs:8` - physics → physics : `use crate::physics::wave_propagation::scattering::ScatteringCalculator;`
+- `../src\physics\optics\diffusion\mod.rs:13` - physics → physics : `use crate::physics::traits::LightDiffusionModelTrait;`
+- `../src\physics\optics\diffusion\mod.rs:176` - physics → physics : `use crate::physics::thermal::ThermalPropertyData;`
+- `../src\physics\optics\sonoluminescence\emission.rs:45` - physics → physics : `use crate::physics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};`
+- `../src\physics\optics\sonoluminescence\emission.rs:46` - physics → physics : `use crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel;`
+- `../src\physics\plugin\field_access.rs:9` - physics → physics : `use crate::physics::state::{FieldView, PhysicsState};`
+- `../src\simulation\configuration.rs:18` - simulation → simulation : `use crate::simulation::parameters::SimulationParameters;`
+- `../src\simulation\configuration.rs:200` - simulation → simulation : `use crate::simulation::parameters::SimulationParameters;`
+- `../src\simulation\factory.rs:5` - simulation → simulation : `use crate::simulation::manager::PhysicsManager;`
+- `../src\simulation\setup.rs:11` - simulation → simulation : `use crate::simulation::configuration::Configuration;`
+- `../src\simulation\therapy\calculator.rs:3` - simulation → clinical : `use crate::clinical::therapy::metrics::TreatmentMetrics;`
+- `../src\simulation\therapy\calculator.rs:4` - simulation → clinical : `use crate::clinical::therapy::modalities::TherapyModality;`
+- `../src\simulation\therapy\calculator.rs:5` - simulation → clinical : `use crate::clinical::therapy::parameters::TherapyParameters;`
+- `../src\solver\factory.rs:10` - solver → solver : `use crate::solver::config::{SolverConfiguration, SolverType};`
+- `../src\solver\factory.rs:11` - solver → solver : `use crate::solver::forward::fdtd::FdtdConfig;`
+- `../src\solver\factory.rs:12` - solver → solver : `use crate::solver::forward::hybrid::config::HybridConfig;`
+- `../src\solver\factory.rs:13` - solver → solver : `use crate::solver::forward::pstd::{PSTDConfig, PSTDSource};`
+- `../src\solver\factory.rs:14` - solver → solver : `use crate::solver::forward::{FdtdSolver, HybridSolver, PSTDSolver};`
+- `../src\solver\factory.rs:15` - solver → solver : `use crate::solver::interface::Solver;`
+- `../src\solver\factory.rs:102` - solver → solver : `use crate::solver::config::SolverConfiguration;`
+- `../src\solver\forward\fdtd\config.rs:3` - solver → analysis : `use crate::analysis::validation::ValidationResult;`
+- `../src\solver\forward\fdtd\solver.rs:6` - solver → analysis : `use crate::analysis::performance::simd_safe::operations::SimdOps;`
+- `../src\solver\forward\fdtd\solver.rs:22` - solver → gpu : `use crate::gpu::burn_accelerator::{BurnGpuAccelerator, GpuConfig, MemoryStrategy, Precision};`
+- `../src\solver\forward\helmholtz\born_series\convergent.rs:74` - solver → gpu : `use crate::gpu::compute_manager::ComputeManager;`
+- `../src\solver\forward\helmholtz\born_series\convergent.rs:481` - solver → solver : `use crate::solver::forward::helmholtz::BornConfig;`
+- `../src\solver\forward\helmholtz\born_series\iterative.rs:405` - solver → solver : `use crate::solver::forward::helmholtz::BornConfig;`
+- `../src\solver\forward\helmholtz\born_series\modified.rs:537` - solver → solver : `use crate::solver::forward::helmholtz::BornConfig;`
+- `../src\solver\forward\helmholtz\preconditioners\diagonal.rs:9` - solver → solver : `use crate::solver::forward::helmholtz::Preconditioner;`
+- `../src\solver\forward\helmholtz\preconditioners\sor.rs:10` - solver → solver : `use crate::solver::forward::helmholtz::Preconditioner;`
+- `../src\solver\forward\hybrid\config.rs:3` - solver → solver : `use crate::solver::fdtd::FdtdConfig;`
+- `../src\solver\forward\hybrid\config.rs:4` - solver → solver : `use crate::solver::hybrid::adaptive_selection::SelectionCriteria;`
+- `../src\solver\forward\hybrid\config.rs:5` - solver → solver : `use crate::solver::hybrid::domain_decomposition::DomainRegion;`
+- `../src\solver\forward\hybrid\config.rs:6` - solver → solver : `use crate::solver::pstd::PSTDConfig;`
+- `../src\solver\forward\hybrid\coupling\geometry.rs:5` - solver → solver : `use crate::solver::hybrid::domain_decomposition::DomainRegion;`
+- `../src\solver\forward\hybrid\coupling\interface.rs:7` - solver → solver : `use crate::solver::hybrid::domain_decomposition::DomainRegion;`
+- `../src\solver\forward\hybrid\domain_decomposition\mod.rs:41` - solver → solver : `use crate::solver::hybrid::config::DecompositionStrategy;`
+- `../src\solver\forward\hybrid\domain_decomposition\partitioner.rs:7` - solver → solver : `use crate::solver::hybrid::config::DecompositionStrategy;`
+- `../src\solver\forward\hybrid\plugin.rs:8` - solver → solver : `use crate::solver::hybrid::{HybridConfig, HybridSolver};`
+- `../src\solver\forward\hybrid\solver.rs:9` - solver → solver : `use crate::solver::forward::pstd::PSTDSource;`
+- `../src\solver\forward\hybrid\solver.rs:10` - solver → solver : `use crate::solver::forward::{FdtdSolver, PSTDSolver};`
+- `../src\solver\forward\hybrid\solver.rs:11` - solver → solver : `use crate::solver::hybrid::adaptive_selection::AdaptiveSelector;`
+- `../src\solver\forward\hybrid\solver.rs:12` - solver → solver : `use crate::solver::hybrid::config::{DecompositionStrategy, HybridConfig};`
+- `../src\solver\forward\hybrid\solver.rs:13` - solver → solver : `use crate::solver::hybrid::coupling::CouplingInterface;`
+- `../src\solver\forward\hybrid\solver.rs:14` - solver → solver : `use crate::solver::hybrid::domain_decomposition::{DomainDecomposer, DomainRegion, DomainType};`
+- `../src\solver\forward\hybrid\solver.rs:15` - solver → solver : `use crate::solver::hybrid::metrics::{HybridMetrics, ValidationResults};`
+- `../src\solver\forward\nonlinear\kzk\complex_parabolic_diffraction.rs:109` - solver → solver : `use crate::solver::forward::nonlinear::kzk::constants::{`
+- `../src\solver\forward\nonlinear\kzk\complex_parabolic_diffraction.rs:112` - solver → solver : `use crate::solver::validation::measure_beam_radius;`
+- `../src\solver\forward\nonlinear\kzk\parabolic_diffraction.rs:143` - solver → solver : `use crate::solver::forward::nonlinear::kzk::constants::{`
+- `../src\solver\forward\nonlinear\kzk\parabolic_diffraction.rs:146` - solver → solver : `use crate::solver::validation::measure_beam_radius;`
+- `../src\solver\forward\nonlinear\kzk\plane_wave_test.rs:6` - solver → solver : `use crate::solver::forward::nonlinear::kzk::{`
+- `../src\solver\forward\nonlinear\kzk\validation.rs:8` - solver → solver : `use crate::solver::forward::nonlinear::kzk::constants::*;`
+- `../src\solver\forward\plugin_based\solver.rs:15` - solver → solver : `use crate::solver::plugin::PluginManager;`
+- `../src\solver\forward\pstd\dg\mod.rs:30` - solver → solver : `use crate::solver::constants::{`
+- `../src\solver\forward\pstd\dg\spectral_solver.rs:10` - solver → solver : `use crate::solver::pstd::utils::{compute_anti_aliasing_filter, compute_wavenumbers};`
+- `../src\solver\forward\pstd\mod.rs:25` - solver → solver : `use crate::solver::fdtd::SourceHandler;`
+- `../src\solver\forward\pstd\numerics\operators\spectral.rs:16` - solver → solver : `use crate::solver::forward::pstd::config::PSTDConfig;`
+- `../src\solver\forward\pstd\numerics\operators\spectral.rs:17` - solver → solver : `use crate::solver::forward::pstd::numerics::spectral_correction::CorrectionMethod;`
+- `../src\solver\forward\pstd\numerics\operators\spectral.rs:29` - solver → solver : `use crate::solver::pstd::utils::{`
+- `../src\solver\forward\pstd\physics\absorption.rs:15` - solver → solver : `use crate::solver::forward::pstd::config::PSTDConfig;`
+- `../src\solver\forward\pstd\physics\absorption.rs:16` - solver → solver : `use crate::solver::pstd::PSTDSolver;`
+- `../src\solver\forward\pstd\physics\absorption.rs:275` - solver → solver : `use crate::solver::pstd::PSTDSource;`
+- `../src\solver\forward\pstd\physics\absorption.rs:339` - solver → solver : `use crate::solver::pstd::PSTDSource;`
+- `../src\solver\forward\pstd\physics\absorption.rs:388` - solver → solver : `use crate::solver::pstd::PSTDSource;`
+- `../src\solver\forward\pstd\propagator\pressure.rs:11` - solver → solver : `use crate::solver::forward::pstd::solver::PSTDSolver;`
+- `../src\solver\forward\pstd\propagator\velocity.rs:8` - solver → solver : `use crate::solver::forward::pstd::solver::PSTDSolver;`
+- `../src\solver\forward\pstd\solver.rs:183` - solver → solver : `use crate::solver::fdtd::SourceHandler;`
+- `../src\solver\forward\sem\solver.rs:368` - solver → solver : `use crate::solver::forward::sem::mesh::MeshBuilder;`
+- `../src\solver\integration\time_integration\tests.rs:14` - solver → solver : `use crate::solver::time_integration::coupling::SubcyclingStrategy;`
+- `../src\solver\interface\solver.rs:11` - solver → solver : `use crate::solver::interface::feature::SolverFeature;`
+- `../src\solver\inverse\pinn\elastic_2d\inference.rs:303` - solver → solver : `use crate::solver::inverse::pinn::elastic_2d::Config;`
+- `../src\solver\inverse\pinn\elastic_2d\loss.rs:36` - solver → solver : `use crate::solver::inverse::pinn::elastic_2d::config::LossWeights;`
+- `../src\solver\inverse\pinn\elastic_2d\loss.rs:740` - solver → solver : `use crate::solver::inverse::pinn::elastic_2d::config::LossWeights;`
+- `../src\solver\inverse\pinn\elastic_2d\physics_impl.rs:483` - solver → solver : `use crate::solver::inverse::pinn::elastic_2d::Config;`
+- `../src\solver\inverse\reconstruction\arc_recon.rs:7` - solver → solver : `use crate::solver::reconstruction::{`
+- `../src\solver\inverse\reconstruction\bowl_recon.rs:8` - solver → solver : `use crate::solver::reconstruction::{`
+- `../src\solver\inverse\reconstruction\line_recon.rs:8` - solver → solver : `use crate::solver::reconstruction::{`
+- `../src\solver\inverse\reconstruction\photoacoustic\filters\core.rs:7` - solver → analysis : `use crate::analysis::signal_processing::filtering::FrequencyFilter;`
+- `../src\solver\inverse\reconstruction\photoacoustic\filters\core.rs:10` - solver → solver : `use crate::solver::reconstruction::FilterType;`
+- `../src\solver\inverse\reconstruction\photoacoustic\filters\core.rs:15` - solver → solver : `use crate::solver::reconstruction::photoacoustic::config::PhotoacousticConfig;`
+- `../src\solver\inverse\reconstruction\photoacoustic\mod.rs:33` - solver → solver : `use crate::solver::reconstruction::Reconstructor;`
+- `../src\solver\inverse\reconstruction\plane_recon.rs:8` - solver → solver : `use crate::solver::reconstruction::{`
+- `../src\solver\inverse\reconstruction\seismic\config.rs:3` - solver → solver : `use crate::solver::reconstruction::{InterpolationMethod, ReconstructionConfig};`
+- `../src\solver\inverse\reconstruction\seismic\rtm.rs:20` - solver → solver : `use crate::solver::reconstruction::{ReconstructionConfig, Reconstructor};`
+- `../src\solver\inverse\seismic\fwi.rs:10` - solver → solver : `use crate::solver::interface::solver::Solver;`
+- `../src\solver\inverse\seismic\fwi.rs:292` - solver → solver : `use crate::solver::fdtd::{FdtdConfig, FdtdSolver};`
+- `../src\solver\inverse\seismic\fwi.rs:366` - solver → solver : `use crate::solver::fdtd::{FdtdConfig, FdtdSolver};`
+- `../src\solver\multiphysics\coupled_solver.rs:9` - solver → solver : `use crate::solver::multiphysics::field_coupling::{CouplingStrategy, FieldCoupler};`
+- `../src\solver\plugin\manager.rs:6` - solver → analysis : `use crate::analysis::performance::metrics::PerformanceMetrics;`
+- `../src\solver\utilities\validation\numerical_accuracy.rs:166` - solver → solver : `use crate::solver::fdtd::{FdtdConfig, FdtdSolver};`
+- `../src\solver\utilities\validation\numerical_accuracy.rs:167` - solver → solver : `use crate::solver::forward::nonlinear::kuznetsov::{KuznetsovConfig, KuznetsovWave};`
+- `../src\solver\utilities\validation\numerical_accuracy.rs:168` - solver → solver : `use crate::solver::pstd::{PSTDConfig, PSTDSolver, PSTDSource};`
+- `../src\solver\utilities\validation\numerical_accuracy.rs:291` - solver → solver : `use crate::solver::time_integration::conservation::ConservationMonitor;`
+- `../src\solver\validation\numerical_accuracy.rs:13` - solver → solver : `use crate::solver::amr::AMRSolver;`
+- `../src\solver\validation\numerical_accuracy.rs:14` - solver → solver : `use crate::solver::pstd::PSTDSolver;`
+- `../src\solver\validation\numerical_accuracy.rs:36` - solver → solver : `use crate::solver::pstd::PSTDConfig as PstdConfig;`
+- `../src\solver\validation\physics_benchmarks\nonlinear_acoustics.rs:6` - solver → solver : `use crate::solver::forward::nonlinear::kuznetsov::config::{AcousticEquationMode, KuznetsovConfig};`
+- `../src\solver\validation\physics_benchmarks\nonlinear_acoustics.rs:7` - solver → solver : `use crate::solver::forward::nonlinear::kuznetsov::solver::KuznetsovWave;`
+- `../src\solver\validation\physics_benchmarks\nonlinear_acoustics.rs:29` - solver → solver : `use crate::solver::forward::nonlinear::kuznetsov::AcousticEquationMode;`
+
+## Cross-Contamination Patterns
+
+### Grid Operations [HIGH]
+
+**Primary Location**: `domain/grid/`
+
+**Contaminated Locations**:
+
+- `solver/forward/axisymmetric/coordinates.rs`
+- `math/numerics/operators/differential.rs`
+
+### Beamforming Algorithms [HIGH]
+
+**Primary Location**: `analysis/signal_processing/beamforming/`
+
+**Contaminated Locations**:
+
+- `domain/sensor/beamforming/`
+- `domain/source/transducers/phased_array/beamforming.rs`
+
+### Medium Properties [CRITICAL]
+
+**Primary Location**: `domain/medium/`
+
+**Contaminated Locations**:
+
+- `solver/forward/axisymmetric/config.rs`
+- `physics/acoustics/`
+

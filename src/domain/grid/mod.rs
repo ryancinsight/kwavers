@@ -28,6 +28,52 @@ pub use structure::{Bounds, Dimension, Grid};
 pub use topology::{CartesianTopology, CylindricalTopology, GridTopology, TopologyDimension};
 pub use validation::GridValidator;
 
+pub type Grid3D = Grid;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GridDimensions {
+    pub nx: usize,
+    pub ny: usize,
+    pub nz: usize,
+    pub dx: f64,
+    pub dy: f64,
+    pub dz: f64,
+}
+
+impl GridDimensions {
+    #[must_use]
+    pub fn new(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> Self {
+        assert!(
+            nx > 0 && ny > 0 && nz > 0,
+            "Grid dimensions must be non-zero"
+        );
+        assert!(
+            dx.is_finite() && dy.is_finite() && dz.is_finite() && dx > 0.0 && dy > 0.0 && dz > 0.0,
+            "Grid spacing must be finite and positive"
+        );
+        Self {
+            nx,
+            ny,
+            nz,
+            dx,
+            dy,
+            dz,
+        }
+    }
+
+    #[must_use]
+    pub fn from_grid(grid: &Grid) -> Self {
+        Self {
+            nx: grid.nx,
+            ny: grid.ny,
+            nz: grid.nz,
+            dx: grid.dx,
+            dy: grid.dy,
+            dz: grid.dz,
+        }
+    }
+}
+
 // Extension methods for Grid (compatibility layer)
 impl Grid {
     /// Get minimum spacing

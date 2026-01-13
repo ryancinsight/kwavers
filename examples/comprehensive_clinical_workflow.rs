@@ -29,23 +29,59 @@ use kwavers::domain::grid::Grid;
 use kwavers::domain::imaging::ultrasound::elastography::{
     NonlinearInversionMethod, NonlinearParameterMap,
 };
+use kwavers::domain::medium::Medium;
 use kwavers::domain::medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium};
 #[cfg(feature = "gpu")]
 use kwavers::gpu::memory::UnifiedMemoryManager;
 use kwavers::ml::uncertainty::{UncertaintyConfig, UncertaintyMethod, UncertaintyQuantifier};
-use kwavers::physics::imaging::ceus::PerfusionModel;
-use kwavers::physics::imaging::elastography::radiation_force::PushPulseParameters;
-use kwavers::physics::imaging::elastography::{
-    AcousticRadiationForce, DisplacementField, ElasticWaveConfig, ElasticWaveField,
-    ElasticWaveSolver, HarmonicDetectionConfig, HarmonicDetector, NonlinearInversion,
-    ShearWaveInversion,
+use kwavers::physics::acoustics::imaging::modalities::elastography::radiation_force::PushPulseParameters;
+use kwavers::physics::acoustics::imaging::modalities::elastography::{
+    AcousticRadiationForce, DisplacementField, HarmonicDetectionConfig, HarmonicDetector,
 };
+use kwavers::physics::imaging::ceus::PerfusionModel;
 use kwavers::physics::imaging::InversionMethod;
 use kwavers::physics::transcranial::safety_monitoring::SafetyMonitor;
 use kwavers::simulation::imaging::ceus::ContrastEnhancedUltrasound;
+use kwavers::solver::forward::elastic::{ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver};
+use kwavers::solver::inverse::elastography::{NonlinearInversion, ShearWaveInversion};
 use kwavers::KwaversResult;
 use ndarray::{s, Array3, Array4};
 use std::time::Instant;
+
+fn estimate_elastic_time_step(grid: &Grid, medium: &dyn Medium, config: &ElasticWaveConfig) -> f64 {
+    if config.time_step > 0.0 {
+        return config.time_step;
+    }
+
+    let min_dx = grid.dx.min(grid.dy).min(grid.dz);
+    let mut max_c: f64 = 0.0;
+
+    for k in 0..grid.nz {
+        for j in 0..grid.ny {
+            for i in 0..grid.nx {
+                let rho = medium.density(i, j, k);
+                if rho <= 0.0 {
+                    continue;
+                }
+
+                let (x, y, z) = grid.indices_to_coordinates(i, j, k);
+                let lambda = medium.lame_lambda(x, y, z, grid);
+                let mu = medium.lame_mu(x, y, z, grid);
+
+                let cs = (mu / rho).sqrt();
+                let cp = ((lambda + 2.0 * mu) / rho).sqrt();
+                max_c = max_c.max(cs.max(cp));
+            }
+        }
+    }
+
+    if max_c <= 0.0 {
+        return 0.0;
+    }
+
+    let cfl_dt = min_dx / (3.0_f64.sqrt() * max_c);
+    cfl_dt * config.cfl_factor
+}
 
 /// Comprehensive liver assessment workflow
 pub struct LiverAssessmentWorkflow {
@@ -277,11 +313,10 @@ impl LiverAssessmentWorkflow {
         )?);
         let initial_displacement = arfi.apply_push_pulse(push_location)?;
 
-        let solver = ElasticWaveSolver::new(
-            &self.liver_grid,
-            &self.liver_tissue,
-            ElasticWaveConfig::default(),
-        )?;
+        let solver_config = ElasticWaveConfig::default();
+        let dt = estimate_elastic_time_step(&self.liver_grid, &self.liver_tissue, &solver_config);
+
+        let solver = ElasticWaveSolver::new(&self.liver_grid, &self.liver_tissue, solver_config)?;
         let displacement_history = solver.propagate_waves(&initial_displacement)?;
 
         // Inversion: estimate elasticity from displacement field
@@ -306,8 +341,6 @@ impl LiverAssessmentWorkflow {
             disp_ts.slice_mut(s![.., .., .., t]).assign(&field.uz);
         }
 
-        // Estimate sampling frequency from solver's stable time step
-        let dt = solver.calculate_time_step();
         let sampling_frequency = 1.0 / dt;
 
         let detector = HarmonicDetector::new(HarmonicDetectionConfig::default());

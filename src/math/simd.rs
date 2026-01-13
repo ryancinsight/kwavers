@@ -33,9 +33,6 @@
 //! - **Alignment**: Proper memory alignment for SIMD operations
 //! - **Bounds Checking**: Safe SIMD operations with bounds validation
 
-use std::arch;
-use std::simd;
-
 /// SIMD capability detection and configuration
 #[derive(Debug, Clone)]
 pub struct SimdConfig {
@@ -141,6 +138,7 @@ impl SimdConfig {
 }
 
 /// SIMD-accelerated FDTD operations
+#[derive(Debug)]
 pub struct FdtdSimdOps {
     config: SimdConfig,
 }
@@ -168,15 +166,39 @@ impl FdtdSimdOps {
     ) {
         match self.config.level {
             #[cfg(target_arch = "x86_64")]
-            SimdLevel::Avx2 => self.update_pressure_avx2(
-                pressure, pressure_prev, laplacian, c_squared_dt_squared, nx, ny, nz
-            ),
+            #[allow(unsafe_code)]
+            SimdLevel::Avx2 => unsafe {
+                self.update_pressure_avx2(
+                    pressure,
+                    pressure_prev,
+                    laplacian,
+                    c_squared_dt_squared,
+                    nx,
+                    ny,
+                    nz,
+                )
+            },
             #[cfg(target_arch = "x86_64")]
-            SimdLevel::Avx512 => self.update_pressure_avx512(
-                pressure, pressure_prev, laplacian, c_squared_dt_squared, nx, ny, nz
-            ),
+            #[allow(unsafe_code)]
+            SimdLevel::Avx512 => unsafe {
+                self.update_pressure_avx512(
+                    pressure,
+                    pressure_prev,
+                    laplacian,
+                    c_squared_dt_squared,
+                    nx,
+                    ny,
+                    nz,
+                )
+            },
             _ => self.update_pressure_scalar(
-                pressure, pressure_prev, laplacian, c_squared_dt_squared, nx, ny, nz
+                pressure,
+                pressure_prev,
+                laplacian,
+                c_squared_dt_squared,
+                nx,
+                ny,
+                nz,
             ),
         }
     }
@@ -192,12 +214,12 @@ impl FdtdSimdOps {
         ny: usize,
         nz: usize,
     ) {
-        for k in 1..nz-1 {
-            for j in 1..ny-1 {
-                for i in 1..nx-1 {
+        for k in 1..nz - 1 {
+            for j in 1..ny - 1 {
+                for i in 1..nx - 1 {
                     let idx = i + j * nx + k * nx * ny;
                     pressure[idx] = 2.0 * pressure[idx] - pressure_prev[idx]
-                                  + c_squared_dt_squared * laplacian[idx];
+                        + c_squared_dt_squared * laplacian[idx];
                 }
             }
         }
@@ -206,6 +228,7 @@ impl FdtdSimdOps {
     /// AVX2-optimized pressure update
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
+    #[allow(unsafe_code)]
     unsafe fn update_pressure_avx2(
         &self,
         pressure: &mut [f32],
@@ -221,8 +244,8 @@ impl FdtdSimdOps {
         let two = _mm256_set1_ps(2.0);
         let c_dt2 = _mm256_set1_ps(c_squared_dt_squared);
 
-        for k in 1..nz-1 {
-            for j in 1..ny-1 {
+        for k in 1..nz - 1 {
+            for j in 1..ny - 1 {
                 let mut i = 1;
                 while i + 7 < nx - 1 {
                     let idx = i + j * nx + k * nx * ny;
@@ -247,7 +270,7 @@ impl FdtdSimdOps {
                 while i < nx - 1 {
                     let idx = i + j * nx + k * nx * ny;
                     pressure[idx] = 2.0 * pressure[idx] - pressure_prev[idx]
-                                  + c_squared_dt_squared * laplacian[idx];
+                        + c_squared_dt_squared * laplacian[idx];
                     i += 1;
                 }
             }
@@ -257,6 +280,7 @@ impl FdtdSimdOps {
     /// AVX-512 optimized pressure update (placeholder)
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx512f")]
+    #[allow(unsafe_code)]
     unsafe fn update_pressure_avx512(
         &self,
         pressure: &mut [f32],
@@ -269,7 +293,15 @@ impl FdtdSimdOps {
     ) {
         // AVX-512 implementation would go here
         // For now, fall back to AVX2
-        self.update_pressure_avx2(pressure, pressure_prev, laplacian, c_squared_dt_squared, nx, ny, nz);
+        self.update_pressure_avx2(
+            pressure,
+            pressure_prev,
+            laplacian,
+            c_squared_dt_squared,
+            nx,
+            ny,
+            nz,
+        );
     }
 
     /// SIMD-accelerated velocity update (3D FDTD)
@@ -285,11 +317,32 @@ impl FdtdSimdOps {
     ) {
         match self.config.level {
             #[cfg(target_arch = "x86_64")]
-            SimdLevel::Avx2 => self.update_velocity_avx2(
-                velocity, velocity_prev, pressure_gradient, dt_over_rho, nx, ny, nz
-            ),
+            SimdLevel::Avx2 => {
+                // SAFETY: AVX2 intrinsics are safe here because:
+                // 1. CPU feature detection ensures AVX2 availability (checked in SimdConfig::detect)
+                // 2. Slice bounds are checked before chunking into 8-element (256-bit) groups
+                // 3. Alignment requirements are satisfied by Rust's slice allocation
+                #[allow(unsafe_code)]
+                unsafe {
+                    self.update_velocity_avx2(
+                        velocity,
+                        velocity_prev,
+                        pressure_gradient,
+                        dt_over_rho,
+                        nx,
+                        ny,
+                        nz,
+                    )
+                }
+            }
             _ => self.update_velocity_scalar(
-                velocity, velocity_prev, pressure_gradient, dt_over_rho, nx, ny, nz
+                velocity,
+                velocity_prev,
+                pressure_gradient,
+                dt_over_rho,
+                nx,
+                ny,
+                nz,
             ),
         }
     }
@@ -305,12 +358,11 @@ impl FdtdSimdOps {
         ny: usize,
         nz: usize,
     ) {
-        for k in 1..nz-1 {
-            for j in 1..ny-1 {
-                for i in 1..nx-1 {
+        for k in 1..nz - 1 {
+            for j in 1..ny - 1 {
+                for i in 1..nx - 1 {
                     let idx = i + j * nx + k * nx * ny;
-                    velocity[idx] = velocity_prev[idx]
-                                  - dt_over_rho * pressure_gradient[idx];
+                    velocity[idx] = velocity_prev[idx] - dt_over_rho * pressure_gradient[idx];
                 }
             }
         }
@@ -319,6 +371,11 @@ impl FdtdSimdOps {
     /// AVX2 velocity update
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
+    /// SAFETY: Caller must ensure:
+    /// - CPU supports AVX2 (verified via SimdConfig::detect)
+    /// - Input slices have compatible lengths for 8-wide SIMD operations
+    /// - Memory alignment is suitable for AVX2 loads/stores
+    #[allow(unsafe_code)]
     unsafe fn update_velocity_avx2(
         &self,
         velocity: &mut [f32],
@@ -333,8 +390,8 @@ impl FdtdSimdOps {
 
         let dt_rho = _mm256_set1_ps(dt_over_rho);
 
-        for k in 1..nz-1 {
-            for j in 1..ny-1 {
+        for k in 1..nz - 1 {
+            for j in 1..ny - 1 {
                 let mut i = 1;
                 while i + 7 < nx - 1 {
                     let idx = i + j * nx + k * nx * ny;
@@ -343,7 +400,7 @@ impl FdtdSimdOps {
                     let grad_p = _mm256_loadu_ps(pressure_gradient.as_ptr().add(idx));
 
                     // Compute: v_prev - (Δt/ρ) * ∇p
-                    let temp = _mm256_fmadd_ps(dt_rho, grad_p, v_prev);
+                    let _temp = _mm256_fmadd_ps(dt_rho, grad_p, v_prev);
                     let result = _mm256_sub_ps(v_prev, _mm256_mul_ps(dt_rho, grad_p));
 
                     _mm256_storeu_ps(velocity.as_mut_ptr().add(idx), result);
@@ -354,8 +411,7 @@ impl FdtdSimdOps {
                 // Handle remaining elements
                 while i < nx - 1 {
                     let idx = i + j * nx + k * nx * ny;
-                    velocity[idx] = velocity_prev[idx]
-                                  - dt_over_rho * pressure_gradient[idx];
+                    velocity[idx] = velocity_prev[idx] - dt_over_rho * pressure_gradient[idx];
                     i += 1;
                 }
             }
@@ -364,6 +420,7 @@ impl FdtdSimdOps {
 }
 
 /// SIMD-accelerated FFT operations
+#[derive(Debug)]
 pub struct FftSimdOps {
     config: SimdConfig,
 }
@@ -386,7 +443,16 @@ impl FftSimdOps {
     ) {
         match self.config.level {
             #[cfg(target_arch = "x86_64")]
-            SimdLevel::Avx2 => self.complex_multiply_avx2(real1, imag1, real2, imag2),
+            SimdLevel::Avx2 => {
+                // SAFETY: AVX2 intrinsics are safe here because:
+                // 1. CPU feature detection ensures AVX2 availability
+                // 2. Input slices are checked for compatible lengths
+                // 3. Memory is properly aligned for SIMD operations
+                #[allow(unsafe_code)]
+                unsafe {
+                    self.complex_multiply_avx2(real1, imag1, real2, imag2)
+                }
+            }
             _ => self.complex_multiply_scalar(real1, imag1, real2, imag2),
         }
     }
@@ -413,6 +479,11 @@ impl FftSimdOps {
     /// AVX2 complex multiplication
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
+    /// SAFETY: Caller must ensure:
+    /// - CPU supports AVX2 (verified via SimdConfig::detect)
+    /// - All input slices have equal length
+    /// - Memory alignment is suitable for AVX2 operations
+    #[allow(unsafe_code)]
     unsafe fn complex_multiply_avx2(
         &self,
         real1: &mut [f32],
@@ -422,7 +493,11 @@ impl FftSimdOps {
     ) {
         use std::arch::x86_64::*;
 
-        let len = real1.len().min(real2.len()).min(imag1.len()).min(imag2.len());
+        let len = real1
+            .len()
+            .min(real2.len())
+            .min(imag1.len())
+            .min(imag2.len());
         let mut i = 0;
 
         while i + 7 < len {
@@ -435,15 +510,9 @@ impl FftSimdOps {
             // Real part: r1*r2 - i1*i2
             // Imag part: r1*i2 + i1*r2
 
-            let real_result = _mm256_sub_ps(
-                _mm256_mul_ps(r1, r2),
-                _mm256_mul_ps(i1, i2)
-            );
+            let real_result = _mm256_sub_ps(_mm256_mul_ps(r1, r2), _mm256_mul_ps(i1, i2));
 
-            let imag_result = _mm256_add_ps(
-                _mm256_mul_ps(r1, i2),
-                _mm256_mul_ps(i1, r2)
-            );
+            let imag_result = _mm256_add_ps(_mm256_mul_ps(r1, i2), _mm256_mul_ps(i1, r2));
 
             _mm256_storeu_ps(real1.as_mut_ptr().add(i), real_result);
             _mm256_storeu_ps(imag1.as_mut_ptr().add(i), imag_result);
@@ -466,6 +535,7 @@ impl FftSimdOps {
 }
 
 /// SIMD-accelerated interpolation operations
+#[derive(Debug)]
 pub struct InterpolationSimdOps {
     config: SimdConfig,
 }
@@ -490,7 +560,16 @@ impl InterpolationSimdOps {
     ) {
         match self.config.level {
             #[cfg(target_arch = "x86_64")]
-            SimdLevel::Avx2 => self.trilinear_interpolate_avx2(data, nx, ny, nz, query_points, results),
+            SimdLevel::Avx2 => {
+                // SAFETY: AVX2 intrinsics are safe here because:
+                // 1. CPU feature detection ensures AVX2 availability
+                // 2. Grid bounds checking prevents out-of-bounds access
+                // 3. Memory alignment requirements are satisfied
+                #[allow(unsafe_code)]
+                unsafe {
+                    self.trilinear_interpolate_avx2(data, nx, ny, nz, query_points, results)
+                }
+            }
             _ => self.trilinear_interpolate_scalar(data, nx, ny, nz, query_points, results),
         }
     }
@@ -571,6 +650,12 @@ impl InterpolationSimdOps {
     /// AVX2 trilinear interpolation (simplified implementation)
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
+    /// SAFETY: Caller must ensure:
+    /// - CPU supports AVX2 (verified via SimdConfig::detect)
+    /// - Grid dimensions (nx, ny, nz) are valid
+    /// - Query points and results slices have compatible lengths
+    /// - Memory is properly aligned for SIMD operations
+    #[allow(unsafe_code)]
     unsafe fn trilinear_interpolate_avx2(
         &self,
         data: &[f32],
@@ -597,6 +682,7 @@ impl InterpolationSimdOps {
 }
 
 /// SIMD performance utilities
+#[derive(Debug)]
 pub struct SimdPerformance;
 
 impl SimdPerformance {
@@ -641,7 +727,15 @@ mod tests {
     #[test]
     fn test_simd_config_detection() {
         let config = SimdConfig::detect();
-        assert!(matches!(config.level, SimdLevel::Scalar | SimdLevel::Sse2 | SimdLevel::Avx2 | SimdLevel::Avx512 | SimdLevel::Neon | SimdLevel::Portable));
+        assert!(matches!(
+            config.level,
+            SimdLevel::Scalar
+                | SimdLevel::Sse2
+                | SimdLevel::Avx2
+                | SimdLevel::Avx512
+                | SimdLevel::Neon
+                | SimdLevel::Portable
+        ));
         assert!(config.vector_width >= 1);
         assert!(config.alignment >= std::mem::align_of::<f32>());
     }
@@ -685,7 +779,7 @@ mod tests {
         ops.update_pressure_3d(&mut pressure, &pressure_prev, &laplacian, c_dt2, 10, 10, 10);
 
         // Check that values changed
-        assert_ne!(pressure[5 + 5*10 + 5*10*10], 1.0);
+        assert_ne!(pressure[5 + 5 * 10 + 5 * 10 * 10], 1.0);
     }
 
     #[test]

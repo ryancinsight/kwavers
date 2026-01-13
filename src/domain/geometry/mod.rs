@@ -1,34 +1,98 @@
-//! Geometric Domain Abstractions
+//! 🌍 **Spatial Domain Bounded Context**
 //!
-//! This module provides shared geometric primitives and domain representations
-//! that are agnostic to the solver type (forward numerical solvers vs inverse
-//! PINNs vs optimization methods).
+//! ## Ubiquitous Language
+//! - **Computational Domain**: Spatial region Ω ⊂ ℝⁿ where physics is defined
+//! - **Geometric Primitives**: Rectangles, spheres, custom shapes for domain definition
+//! - **Boundary Classification**: Interior points, boundary points, exterior regions
+//! - **Collocation Points**: Spatial locations for PDE evaluation (PINN, quadrature)
+//! - **Normal Vectors**: Outward unit normals at boundaries for boundary conditions
+//! - **Domain Measures**: Volume, area, surface area for normalization and scaling
 //!
-//! # Design Principle
+//! ## 🎯 Business Value
+//! The geometry bounded context enables **solver-agnostic spatial reasoning**:
+//! - **Grid Generation**: Forward solvers create computational meshes
+//! - **Collocation Sampling**: PINNs place training points strategically
+//! - **Boundary Enforcement**: All solvers apply BCs at same geometric locations
+//! - **Domain Decomposition**: Multi-region problems with interface conditions
 //!
-//! Geometry specifications define the spatial domain Ω ⊂ ℝⁿ where PDEs are solved,
-//! independent of HOW they are solved. This allows:
-//! - Forward solvers to use the same geometry for grid generation
-//! - PINNs to use the same geometry for collocation point sampling
-//! - Optimization methods to use the same geometry for parameter estimation
+//! ## 📐 Mathematical Foundation
 //!
-//! # Mathematical Foundation
+//! A computational domain Ω ⊂ ℝⁿ requires these capabilities:
 //!
-//! For a domain Ω with boundary ∂Ω, we need:
-//! - Point-in-domain test: (x₁, ..., xₙ) ∈ Ω
-//! - Boundary detection: (x₁, ..., xₙ) ∈ ∂Ω
-//! - Normal vector computation: n̂(x) for x ∈ ∂Ω
-//! - Domain measures: volume/area |Ω|, surface area/perimeter |∂Ω|
+//! ### Geometric Operations
+//! - **Membership Testing**: `x ∈ Ω` (point-in-domain classification)
+//! - **Boundary Detection**: `x ∈ ∂Ω` (boundary point identification)
+//! - **Normal Computation**: `n̂(x)` for `x ∈ ∂Ω` (outward unit normal vectors)
+//! - **Measure Calculation**: `|Ω|` (volume/area), `|∂Ω|` (surface/perimeter)
 //!
-//! # Architecture
+//! ### Sampling Operations
+//! - **Interior Sampling**: Generate points `xᵢ ∈ Ω` for PDE collocation
+//! - **Boundary Sampling**: Generate points `xᵢ ∈ ∂Ω` for boundary conditions
+//! - **Stratified Sampling**: Adaptive point placement for better convergence
+//!
+//! ## 🏗️ Architecture
 //!
 //! ```text
-//! Domain Layer (this module)
-//!     ↓
-//! Solver Layer
-//!     ├─ Forward Solvers  → use for grid/mesh generation
-//!     ├─ Inverse Solvers  → use for collocation sampling (PINN)
-//!     └─ Optimization     → use for parameter space definition
+//! GeometricDomain (trait)
+//! ├── dimension()           ← ℝⁿ dimension
+//! ├── contains()            ← x ∈ Ω
+//! ├── classify_point()      ← Interior/Boundary/Exterior
+//! ├── bounding_box()        ← AABB for optimization
+//! ├── normal()              ← n̂(x) at boundaries
+//! ├── measure()             ← |Ω| domain measure
+//! ├── sample_interior()     ← Collocation points in Ω
+//! └── sample_boundary()     ← Boundary condition points
+//! │
+//! ├── RectangularDomain     ← [x₀,x₁] × [y₀,y₁] × [z₀,z₁]
+//! ├── SphericalDomain       ← Balls, shells, spherical sectors
+//! └── CompositeDomain       ← Union/intersection of primitives
+//! ```
+//!
+//! ## 🔄 Solver Integration
+//!
+//! ### Forward Solvers (FD/FEM/Spectral)
+//! ```rust,ignore
+//! // Use geometry to build computational grid
+//! let geometry = RectangularDomain::new_3d(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
+//! let grid = Grid::from_geometry(&geometry, dx, dy, dz);
+//!
+//! // Apply boundary conditions at geometric boundaries
+//! for boundary_point in geometry.sample_boundary(n_boundary_points) {
+//!     apply_bc(&boundary_point, &geometry.normal(&boundary_point));
+//! }
+//! ```
+//!
+//! ### Inverse Solvers (PINN/Optimization)
+//! ```rust,ignore
+//! // Sample collocation points from geometry
+//! let interior_points = geometry.sample_interior(n_collocation);
+//! let boundary_points = geometry.sample_boundary(n_boundary);
+//!
+//! // Train PINN on geometric domain
+//! pinn.train_on_domain(&geometry, interior_points, boundary_points);
+//! ```
+//!
+//! ## 🎯 Design Patterns
+//!
+//! ### Strategy Pattern for Domain Types
+//! ```rust,ignore
+//! // Same algorithms work on any geometric domain
+//! fn solve_pde_on_domain<G: GeometricDomain>(domain: &G) {
+//!     let collocation = domain.sample_interior(1000);
+//!     let boundaries = domain.sample_boundary(100);
+//!     // ... PDE solution using domain abstraction
+//! }
+//!
+//! solve_pde_on_domain(&rectangular_domain);
+//! solve_pde_on_domain(&spherical_domain);
+//! ```
+//!
+//! ### Composite Pattern for Complex Domains
+//! ```rust,ignore
+//! // Build complex domains from primitives
+//! let liver = SphericalDomain::new(center, radius);
+//! let tumor = SphericalDomain::new(tumor_center, tumor_radius);
+//! let complex_domain = CompositeDomain::union(&liver, &tumor);
 //! ```
 
 use ndarray::{Array1, Array2};

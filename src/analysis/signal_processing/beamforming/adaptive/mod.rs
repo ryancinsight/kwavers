@@ -173,6 +173,7 @@ use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
 // Algorithm implementations
+pub mod music;
 pub mod mvdr;
 pub mod subspace;
 
@@ -181,8 +182,9 @@ pub mod subspace;
 // pub mod lcmv;            // Linearly Constrained Minimum Variance
 
 // Re-export main types
+pub use music::MUSIC;
 pub use mvdr::MinimumVariance;
-pub use subspace::{EigenspaceMV, MUSIC};
+pub use subspace::EigenspaceMV;
 
 /// Adaptive beamforming algorithm trait.
 ///

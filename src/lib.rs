@@ -89,7 +89,9 @@ pub mod source {
 pub mod sensor {
     pub use crate::domain::sensor::GridSensorSet;
     pub mod beamforming {
-        pub use crate::domain::sensor::beamforming::{SensorBeamformer, SensorProcessingParams, WindowType};
+        pub use crate::domain::sensor::beamforming::{
+            SensorBeamformer, SensorProcessingParams, WindowType,
+        };
     }
 }
 pub mod boundary {

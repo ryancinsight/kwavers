@@ -28,7 +28,7 @@ pub mod special;
 pub mod waveform;
 pub mod window;
 
-pub use filter::{Filter, FrequencyFilter};
+pub use filter::Filter;
 pub use special::{NullSignal, TimeVaryingSignal};
 
 // Core Signal trait moved to domain

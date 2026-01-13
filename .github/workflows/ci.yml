@@ -2,48 +2,89 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
 
 jobs:
+  pinn-validation:
+    name: PINN Feature Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-pinn-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check PINN feature compilation
+        run: cargo check --features pinn --lib
+
+      - name: Run PINN tests
+        run: cargo test --features pinn --lib
+
+      - name: Run PINN validation framework tests
+        run: cargo test --test validation_integration_test
+
+      - name: Run PINN convergence studies
+        run: cargo test --test pinn_convergence_studies
+
+      - name: Run clippy on PINN code
+        run: cargo clippy --features pinn --lib -- -D warnings
+        continue-on-error: true
+
   quality:
     name: Code Quality
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Install system dependencies
-      run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
-    
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: clippy, rustfmt
-    
-    - name: Cache cargo dependencies
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    
-    - name: Check formatting
-      run: cargo fmt -- --check
-    
-    - name: Run clippy (allowed to fail)
-      run: cargo clippy --lib --features="plotting" || true
-    
-    - name: Run xtask metrics
-      run: cargo run -p xtask -- metrics
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Run clippy (allowed to fail)
+        run: cargo clippy --lib --features="plotting" || true
+
+      - name: Run xtask metrics
+        run: cargo run -p xtask -- metrics
 
   build:
     name: Build & Test
@@ -52,127 +93,156 @@ jobs:
       matrix:
         rust: [stable, beta, nightly]
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Install system dependencies
-      run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
-    
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: ${{ matrix.rust }}
-    
-    - name: Cache cargo dependencies
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target/
-        key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    
-    - name: Build
-      run: cargo build --release --verbose --features="plotting"
-    
-    - name: Install nextest
-      uses: taiki-e/install-action@v2
-      with:
-        tool: nextest
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Run tests
-      run: cargo nextest run --profile ci --lib --release --verbose --features="plotting"
-    
-    - name: Run doc tests
-      run: cargo test --doc --verbose
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --release --verbose --features="plotting"
+
+      - name: Install nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+
+      - name: Run tests
+        run: cargo nextest run --profile ci --lib --release --verbose --features="plotting"
+
+      - name: Run doc tests
+        run: cargo test --doc --verbose
 
   security:
     name: Security Audit
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Install cargo-deny
-      run: cargo install cargo-deny
-    
-    - name: Run security audit
-      run: cargo deny check
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny
+
+      - name: Run security audit
+        run: cargo deny check
 
   memory-safety:
     name: Memory Safety (Miri)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Install Rust nightly with miri
-      uses: dtolnay/rust-toolchain@nightly
-      with:
-        components: miri
-    
-    - name: Setup miri
-      run: cargo +nightly miri setup
-    
-    - name: Run miri on configuration tests
-      run: cargo +nightly miri test --lib configuration::builder::tests
-      continue-on-error: true  # Allow to continue while fixing UB
-    
-    - name: Run miri on other safe tests
-      run: cargo +nightly miri test --lib --exclude configuration::builder::tests
-      continue-on-error: true
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust nightly with miri
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+
+      - name: Setup miri
+        run: cargo +nightly miri setup
+
+      - name: Run miri on configuration tests
+        run: cargo +nightly miri test --lib configuration::builder::tests
+        continue-on-error: true # Allow to continue while fixing UB
+
+      - name: Run miri on other safe tests
+        run: cargo +nightly miri test --lib --exclude configuration::builder::tests
+        continue-on-error: true
 
   benchmarks:
     name: Performance Benchmarks
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Install system dependencies
-      run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
-    
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-    
-    - name: Cache cargo dependencies
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target/
-        key: ${{ runner.os }}-bench-cargo-${{ hashFiles('**/Cargo.lock') }}
-    
-    - name: Run benchmarks
-      run: cargo bench --features="plotting"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-bench-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run benchmarks
+        run: cargo bench --features="plotting"
 
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Install system dependencies
-      run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
-    
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-    
-    - name: Install cargo-tarpaulin
-      run: cargo install cargo-tarpaulin
-    
-    - name: Generate coverage report
-      run: cargo tarpaulin --out xml --features="plotting" --timeout 300
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./cobertura.xml
-        fail_ci_if_error: true
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Generate coverage report
+        run: cargo tarpaulin --out xml --features="plotting" --timeout 300
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./cobertura.xml
+          fail_ci_if_error: true
+
+  pinn-convergence:
+    name: PINN Convergence Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-pinn-conv-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run convergence studies
+        run: cargo test --test pinn_convergence_studies --features pinn -- --test-threads=1
+
+      - name: Run validation integration tests
+        run: cargo test --test validation_integration_test -- --test-threads=1

@@ -88,12 +88,14 @@
 // Public modules
 // Public modules
 pub mod config;
+pub mod electromagnetic;
 pub mod metrics;
 pub mod plugin;
 pub mod solver;
 
 // Re-exports for convenience
 pub use config::FdtdConfig;
+pub use electromagnetic::ElectromagneticFdtdSolver;
 pub use plugin::FdtdPlugin;
 pub use solver::FdtdSolver;
 pub use source_handler::SourceHandler;

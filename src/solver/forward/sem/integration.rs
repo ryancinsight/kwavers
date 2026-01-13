@@ -5,8 +5,7 @@
 //! - Explicit schemes leveraging diagonal mass matrix
 //! - Stability-optimized integration parameters
 
-use crate::core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use ndarray::Array1;
 
 /// Newmark time integration scheme for SEM
 ///
@@ -85,8 +84,9 @@ impl NewmarkIntegrator {
         let dt2 = self.dt * self.dt;
 
         for i in 0..self.displacement.len() {
-            self.displacement[i] =
-                self.displacement_prev[i] + self.dt * self.velocity_prev[i] + 0.5 * dt2 * acceleration[i];
+            self.displacement[i] = self.displacement_prev[i]
+                + self.dt * self.velocity_prev[i]
+                + 0.5 * dt2 * acceleration[i];
         }
 
         for i in 0..self.velocity.len() {
@@ -119,8 +119,8 @@ impl NewmarkIntegrator {
                 + self.dt * self.velocity[i]
                 + dt2 * (0.5 - self.beta) * self.acceleration[i] / self.beta;
 
-            velocity_pred[i] = self.velocity[i]
-                + self.dt * (1.0 - self.gamma) * self.acceleration[i] / self.gamma;
+            velocity_pred[i] =
+                self.velocity[i] + self.dt * (1.0 - self.gamma) * self.acceleration[i] / self.gamma;
         }
 
         (displacement_pred, velocity_pred)
@@ -231,8 +231,8 @@ impl SemExplicitIntegrator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array1;
     use approx::assert_relative_eq;
+    use ndarray::Array1;
 
     #[test]
     fn test_newmark_average_acceleration() {
@@ -249,11 +249,25 @@ mod tests {
     #[test]
     fn test_newmark_stability() {
         // Test stable parameters
-        let integrator = NewmarkIntegrator::new(0.5, 0.25, 0.01, Array1::zeros(1), Array1::zeros(1), Array1::zeros(1));
+        let integrator = NewmarkIntegrator::new(
+            0.5,
+            0.25,
+            0.01,
+            Array1::zeros(1),
+            Array1::zeros(1),
+            Array1::zeros(1),
+        );
         assert!(integrator.is_stable());
 
         // Test unstable parameters
-        let unstable = NewmarkIntegrator::new(0.3, 0.1, 0.01, Array1::zeros(1), Array1::zeros(1), Array1::zeros(1));
+        let unstable = NewmarkIntegrator::new(
+            0.3,
+            0.1,
+            0.01,
+            Array1::zeros(1),
+            Array1::zeros(1),
+            Array1::zeros(1),
+        );
         assert!(!unstable.is_stable());
     }
 
@@ -273,7 +287,11 @@ mod tests {
         let expected_displacement = 0.5 * 1.0 * dt * dt;
         let expected_velocity = 1.0 * dt;
 
-        assert_relative_eq!(integrator.displacement[0], expected_displacement, epsilon = 1e-10);
+        assert_relative_eq!(
+            integrator.displacement[0],
+            expected_displacement,
+            epsilon = 1e-10
+        );
         assert_relative_eq!(integrator.velocity[0], expected_velocity, epsilon = 1e-10);
     }
 

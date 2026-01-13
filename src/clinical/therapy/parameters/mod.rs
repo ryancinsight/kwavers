@@ -1,152 +1,45 @@
-//! Therapy parameter definitions and presets
+//! Therapy Parameters Module
 //!
-//! Provides parameter structures and presets for different therapy modalities.
+//! This module provides configuration parameters for therapeutic ultrasound treatments.
+//! It contains treatment settings, safety limits, and validation logic.
+//!
+//! ## Architecture
+//!
+//! This module resides in the **clinical/therapy** layer because therapy parameters
+//! are application-level configuration, not domain primitives. They combine physics
+//! constraints with clinical protocols and safety regulations.
+//!
+//! ## Usage Example
+//!
+//! ```rust,no_run
+//! use kwavers::clinical::therapy::parameters::TherapyParameters;
+//!
+//! // Configure HIFU treatment
+//! let params = TherapyParameters::hifu();
+//! println!("Mechanical Index: {:.2}", params.mechanical_index);
+//!
+//! // Custom parameters
+//! let mut custom = TherapyParameters::new(1.5e6, 2.0e6, 10.0);
+//! if !custom.validate_safety() {
+//!     eprintln!("Warning: Parameters exceed safety limits");
+//! }
+//! ```
+//!
+//! ## Migration Notice
+//!
+//! **⚠️ IMPORTANT**: This module was moved from `domain::therapy::parameters` to
+//! `clinical::therapy::parameters` in Sprint 188 Phase 3 (Domain Layer Cleanup).
+//!
+//! ### Old Import (No Longer Valid)
+//! ```rust,ignore
+//! use crate::domain::therapy::parameters::TherapyParameters;
+//! ```
+//!
+//! ### New Import (Correct Location)
+//! ```rust,ignore
+//! use crate::clinical::therapy::parameters::TherapyParameters;
+//! ```
 
-use super::modalities::TherapyModality;
+pub mod types;
 
-/// Therapy treatment parameters
-#[derive(Debug, Clone)]
-pub struct TherapyParameters {
-    /// Acoustic frequency \[Hz\]
-    pub frequency: f64,
-    /// Peak negative pressure \[Pa\]
-    pub peak_negative_pressure: f64,
-    /// Peak positive pressure \[Pa\]
-    pub peak_positive_pressure: f64,
-    /// Pulse duration \[s\]
-    pub pulse_duration: f64,
-    /// Pulse repetition frequency \[Hz\]
-    pub prf: f64,
-    /// Duty cycle (0-1)
-    pub duty_cycle: f64,
-    /// Total treatment duration \[s\]
-    pub treatment_duration: f64,
-    /// Mechanical index (MI)
-    pub mechanical_index: f64,
-    /// Thermal index (TI)
-    pub thermal_index: f64,
-}
-
-impl Default for TherapyParameters {
-    fn default() -> Self {
-        Self {
-            frequency: 1e6,
-            peak_negative_pressure: 1e6,
-            peak_positive_pressure: 1e6,
-            pulse_duration: 1e-3,
-            prf: 100.0,
-            duty_cycle: 0.1,
-            treatment_duration: 60.0,
-            mechanical_index: 0.0,
-            thermal_index: 0.0,
-        }
-    }
-}
-
-impl TherapyParameters {
-    /// Create parameters for HIFU therapy
-    #[must_use]
-    pub fn hifu() -> Self {
-        Self {
-            frequency: 1.5e6,             // 1.5 MHz
-            peak_negative_pressure: 3e6,  // 3 MPa
-            peak_positive_pressure: 10e6, // 10 MPa
-            pulse_duration: 0.1,          // 100 ms continuous wave
-            prf: 10.0,                    // 10 Hz
-            duty_cycle: 1.0,              // 100% duty cycle (CW)
-            treatment_duration: 10.0,     // 10 seconds
-            mechanical_index: 0.0,
-            thermal_index: 0.0,
-        }
-    }
-
-    /// Create parameters for LIFU neuromodulation
-    #[must_use]
-    pub fn lifu() -> Self {
-        Self {
-            frequency: 0.5e6,              // 500 kHz
-            peak_negative_pressure: 0.3e6, // 0.3 MPa
-            peak_positive_pressure: 0.3e6, // 0.3 MPa
-            pulse_duration: 0.5,           // 500 ms
-            prf: 1.0,                      // 1 Hz
-            duty_cycle: 0.5,               // 50% duty cycle
-            treatment_duration: 300.0,     // 5 minutes
-            mechanical_index: 0.0,
-            thermal_index: 0.0,
-        }
-    }
-
-    /// Create parameters for histotripsy
-    #[must_use]
-    pub fn histotripsy() -> Self {
-        Self {
-            frequency: 1e6,               // 1 MHz
-            peak_negative_pressure: 30e6, // 30 MPa (very high)
-            peak_positive_pressure: 80e6, // 80 MPa
-            pulse_duration: 10e-6,        // 10 μs pulses
-            prf: 1000.0,                  // 1 kHz PRF
-            duty_cycle: 0.01,             // 1% duty cycle
-            treatment_duration: 60.0,     // 1 minute
-            mechanical_index: 0.0,
-            thermal_index: 0.0,
-        }
-    }
-
-    /// Create parameters for BBB opening
-    #[must_use]
-    pub fn bbb_opening() -> Self {
-        Self {
-            frequency: 0.25e6,             // 250 kHz
-            peak_negative_pressure: 0.3e6, // 0.3 MPa (with microbubbles)
-            peak_positive_pressure: 0.3e6, // 0.3 MPa
-            pulse_duration: 10e-3,         // 10 ms bursts
-            prf: 1.0,                      // 1 Hz
-            duty_cycle: 0.01,              // 1% duty cycle
-            treatment_duration: 120.0,     // 2 minutes
-            mechanical_index: 0.6,         // Safe with microbubbles
-            thermal_index: 0.3,
-        }
-    }
-
-    /// Create parameters from modality
-    #[must_use]
-    pub fn from_modality(modality: TherapyModality) -> Self {
-        match modality {
-            TherapyModality::HIFU => Self::hifu(),
-            TherapyModality::LIFU => Self::lifu(),
-            TherapyModality::Histotripsy => Self::histotripsy(),
-            TherapyModality::BBBOpening => Self::bbb_opening(),
-            _ => Self::default(),
-        }
-    }
-
-    /// Calculate mechanical index: MI = `P_neg` / sqrt(f)
-    pub fn calculate_mechanical_index(&mut self) {
-        self.mechanical_index = self.peak_negative_pressure / (self.frequency.sqrt() * 1e6);
-    }
-
-    /// Calculate thermal index per IEC 62359:2017 standard
-    /// TI approximates power deposition normalized to tissue heating threshold
-    ///
-    /// **Implementation**: Standard TI₀ calculation (intensity × duty cycle / reference power)
-    /// per IEC 62359:2017 §5.2. Full TI calculations (TIS, TIB, TIC) require detailed
-    /// beam geometry and tissue thermal models beyond scope of initial implementation.
-    ///
-    /// **References**:
-    /// - IEC 62359:2017 "Ultrasonics - Field characterization - Test methods for thermal index"
-    /// - Duck (2007) "Medical and Biological Standards for Ultrasound" §4.3
-    pub fn calculate_thermal_index(&mut self, intensity: f64) {
-        const POWER_REF: f64 = 1.0; // 1 W reference for soft tissue per IEC 62359:2017
-        self.thermal_index = intensity * self.duty_cycle / POWER_REF;
-    }
-
-    /// Validate safety parameters
-    #[must_use]
-    pub fn validate_safety(&self) -> bool {
-        // FDA guidelines: MI < 1.9, TI < 6.0
-        const MAX_MI: f64 = 1.9;
-        const MAX_TI: f64 = 6.0;
-
-        self.mechanical_index < MAX_MI && self.thermal_index < MAX_TI
-    }
-}
+pub use types::TherapyParameters;

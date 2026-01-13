@@ -18,97 +18,168 @@ pub use diffusion::ThermalDiffusionConfig;
 pub use pennes::PennesSolver;
 pub use thermal_dose::ThermalDose;
 
-/// Thermal properties of tissue
-#[derive(Debug, Clone)]
-pub struct ThermalProperties {
-    /// Thermal conductivity (W/m/K)
-    pub k: f64,
-    /// Specific heat capacity (J/kg/K)
-    pub c: f64,
-    /// Density (kg/m³)
-    pub rho: f64,
-    /// Blood perfusion rate (kg/m³/s)
-    pub w_b: f64,
-    /// Blood specific heat (J/kg/K)
-    pub c_b: f64,
-    /// Arterial blood temperature (°C)
-    pub t_a: f64,
-    /// Metabolic heat generation (W/m³)
-    pub q_m: f64,
-}
-
-impl Default for ThermalProperties {
-    fn default() -> Self {
-        // Default values for soft tissue
-        Self {
-            k: 0.5,      // W/m/K
-            c: 3600.0,   // J/kg/K
-            rho: 1050.0, // kg/m³
-            w_b: 0.5,    // kg/m³/s (moderate perfusion)
-            c_b: 3800.0, // J/kg/K (blood)
-            t_a: 37.0,   // °C (body temperature)
-            q_m: 400.0,  // W/m³ (basal metabolism)
-        }
-    }
-}
+// Re-export canonical domain type
+pub use crate::domain::medium::properties::ThermalPropertyData;
 
 /// Common tissue types with thermal properties
+///
+/// These constructors return canonical `ThermalPropertyData` from the domain layer.
+/// For Pennes solver simulations, also specify arterial temperature and metabolic heat
+/// as separate simulation parameters.
 pub mod tissues {
-    use super::ThermalProperties;
+    use crate::domain::medium::properties::ThermalPropertyData;
 
     /// Liver tissue properties
+    ///
+    /// Reference: Duck (1990) "Physical Properties of Tissue"
+    ///
+    /// # Typical Simulation Parameters
+    ///
+    /// - Arterial temperature: 37.0°C
+    /// - Metabolic heat: 33,800 W/m³ (high metabolic activity)
     #[must_use]
-    pub fn liver() -> ThermalProperties {
-        ThermalProperties {
-            k: 0.52,
-            c: 3540.0,
-            rho: 1060.0,
-            w_b: 16.7, // High perfusion
-            c_b: 3800.0,
-            t_a: 37.0,
-            q_m: 33800.0,
-        }
+    pub fn liver() -> ThermalPropertyData {
+        ThermalPropertyData::new(
+            0.52,         // conductivity (W/m/K)
+            3540.0,       // specific_heat (J/kg/K)
+            1060.0,       // density (kg/m³)
+            Some(16.7),   // blood_perfusion (kg/m³/s) - high perfusion
+            Some(3617.0), // blood_specific_heat (J/kg/K)
+        )
+        .expect("Liver tissue properties are valid")
     }
 
     /// Muscle tissue properties
+    ///
+    /// Reference: Duck (1990) "Physical Properties of Tissue"
+    ///
+    /// # Typical Simulation Parameters
+    ///
+    /// - Arterial temperature: 37.0°C
+    /// - Metabolic heat: 684 W/m³
     #[must_use]
-    pub fn muscle() -> ThermalProperties {
-        ThermalProperties {
-            k: 0.49,
-            c: 3421.0,
-            rho: 1090.0,
-            w_b: 0.54,
-            c_b: 3800.0,
-            t_a: 37.0,
-            q_m: 684.0,
-        }
+    pub fn muscle() -> ThermalPropertyData {
+        ThermalPropertyData::new(
+            0.49,         // conductivity (W/m/K)
+            3421.0,       // specific_heat (J/kg/K)
+            1090.0,       // density (kg/m³)
+            Some(0.54),   // blood_perfusion (kg/m³/s)
+            Some(3617.0), // blood_specific_heat (J/kg/K)
+        )
+        .expect("Muscle tissue properties are valid")
     }
 
     /// Fat tissue properties
+    ///
+    /// Reference: Duck (1990) "Physical Properties of Tissue"
+    ///
+    /// # Typical Simulation Parameters
+    ///
+    /// - Arterial temperature: 37.0°C
+    /// - Metabolic heat: 400 W/m³
     #[must_use]
-    pub fn fat() -> ThermalProperties {
-        ThermalProperties {
-            k: 0.21,
-            c: 2348.0,
-            rho: 911.0,
-            w_b: 0.3, // Low perfusion
-            c_b: 3800.0,
-            t_a: 37.0,
-            q_m: 400.0,
-        }
+    pub fn fat() -> ThermalPropertyData {
+        ThermalPropertyData::new(
+            0.21,         // conductivity (W/m/K)
+            2348.0,       // specific_heat (J/kg/K)
+            911.0,        // density (kg/m³)
+            Some(0.3),    // blood_perfusion (kg/m³/s) - low perfusion
+            Some(3617.0), // blood_specific_heat (J/kg/K)
+        )
+        .expect("Fat tissue properties are valid")
     }
 
     /// Tumor tissue properties (hypoxic)
+    ///
+    /// Reference: Clinical hyperthermia literature
+    ///
+    /// # Typical Simulation Parameters
+    ///
+    /// - Arterial temperature: 37.0°C
+    /// - Metabolic heat: 5,000 W/m³ (higher metabolism, poor perfusion)
     #[must_use]
-    pub fn tumor() -> ThermalProperties {
-        ThermalProperties {
-            k: 0.55,
-            c: 3600.0,
-            rho: 1050.0,
-            w_b: 0.2, // Poor perfusion
-            c_b: 3800.0,
-            t_a: 37.0,
-            q_m: 5000.0, // Higher metabolism
-        }
+    pub fn tumor() -> ThermalPropertyData {
+        ThermalPropertyData::new(
+            0.55,         // conductivity (W/m/K)
+            3600.0,       // specific_heat (J/kg/K)
+            1050.0,       // density (kg/m³)
+            Some(0.2),    // blood_perfusion (kg/m³/s) - poor perfusion
+            Some(3617.0), // blood_specific_heat (J/kg/K)
+        )
+        .expect("Tumor tissue properties are valid")
+    }
+
+    /// Soft tissue properties (generic)
+    ///
+    /// This is an alias for the canonical domain constructor.
+    ///
+    /// # Typical Simulation Parameters
+    ///
+    /// - Arterial temperature: 37.0°C
+    /// - Metabolic heat: 400 W/m³ (basal metabolism)
+    #[must_use]
+    pub fn soft_tissue() -> ThermalPropertyData {
+        ThermalPropertyData::soft_tissue()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tissue_constructors() {
+        let liver = tissues::liver();
+        assert_eq!(liver.conductivity, 0.52);
+        assert_eq!(liver.density, 1060.0);
+        assert!(liver.has_bioheat_parameters());
+
+        let muscle = tissues::muscle();
+        assert_eq!(muscle.conductivity, 0.49);
+        assert_eq!(muscle.density, 1090.0);
+        assert!(muscle.has_bioheat_parameters());
+
+        let fat = tissues::fat();
+        assert_eq!(fat.conductivity, 0.21);
+        assert_eq!(fat.density, 911.0);
+        assert!(fat.has_bioheat_parameters());
+
+        let tumor = tissues::tumor();
+        assert_eq!(tumor.conductivity, 0.55);
+        assert_eq!(tumor.density, 1050.0);
+        assert!(tumor.has_bioheat_parameters());
+
+        let soft = tissues::soft_tissue();
+        assert_eq!(soft.conductivity, 0.5);
+        assert_eq!(soft.density, 1050.0);
+        assert!(soft.has_bioheat_parameters());
+    }
+
+    #[test]
+    fn test_thermal_diffusivity() {
+        let liver = tissues::liver();
+        let alpha = liver.thermal_diffusivity();
+
+        // α = k / (ρc) = 0.52 / (1060 * 3540) ≈ 1.39e-7 m²/s
+        let expected = liver.conductivity / (liver.density * liver.specific_heat);
+        assert!((alpha - expected).abs() < 1e-12);
+
+        // Should be in reasonable range for tissue (10^-8 to 10^-6 m²/s)
+        assert!(alpha > 1e-8 && alpha < 1e-6);
+    }
+
+    #[test]
+    fn test_bioheat_parameters() {
+        let tissue = tissues::liver();
+
+        assert!(tissue.has_bioheat_parameters());
+        assert!(tissue.blood_perfusion.is_some());
+        assert!(tissue.blood_specific_heat.is_some());
+
+        let w_b = tissue.blood_perfusion.unwrap();
+        let c_b = tissue.blood_specific_heat.unwrap();
+
+        assert!(w_b > 0.0);
+        assert!(c_b > 0.0);
     }
 }

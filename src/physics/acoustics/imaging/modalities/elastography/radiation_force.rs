@@ -29,7 +29,7 @@ use crate::domain::medium::Medium;
 use ndarray::Array3;
 use std::f64::consts::PI;
 
-use super::elastic_wave_solver::ElasticBodyForceConfig;
+use crate::solver::forward::elastic::swe::ElasticBodyForceConfig;
 
 /// Acoustic radiation force push pulse parameters
 ///

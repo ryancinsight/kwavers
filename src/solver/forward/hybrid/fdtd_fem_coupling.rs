@@ -29,7 +29,7 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::mesh::tetrahedral::TetrahedralMesh;
-use crate::math::numerics::operators::{Interpolator, TrilinearInterpolator};
+use crate::math::numerics::operators::TrilinearInterpolator;
 use ndarray::{Array3, ArrayView3};
 
 /// Configuration for FDTD-FEM coupling
@@ -78,7 +78,8 @@ impl CouplingInterface {
         let (fdtd_indices, fem_indices) = Self::find_interface_nodes(fdtd_grid, fem_mesh)?;
 
         // Compute interpolation weights for conservative transfer
-        let interpolation_weights = Self::compute_interpolation_weights(&fdtd_indices, &fem_indices, fdtd_grid, fem_mesh)?;
+        let interpolation_weights =
+            Self::compute_interpolation_weights(&fdtd_indices, &fem_indices, fdtd_grid, fem_mesh)?;
 
         // Compute interface normals and areas
         let (normals, areas) = Self::compute_interface_geometry(&fdtd_indices, fdtd_grid)?;
@@ -93,7 +94,10 @@ impl CouplingInterface {
     }
 
     /// Find nodes at FDTD-FEM interface
-    fn find_interface_nodes(fdtd_grid: &Grid, fem_mesh: &TetrahedralMesh) -> KwaversResult<(Vec<(usize, usize, usize)>, Vec<usize>)> {
+    fn find_interface_nodes(
+        fdtd_grid: &Grid,
+        fem_mesh: &TetrahedralMesh,
+    ) -> KwaversResult<(Vec<(usize, usize, usize)>, Vec<usize>)> {
         let mut fdtd_indices = Vec::new();
         let mut fem_indices = Vec::new();
 
@@ -108,10 +112,11 @@ impl CouplingInterface {
                         let dx = x - node.coordinates[0];
                         let dy = y - node.coordinates[1];
                         let dz = z - node.coordinates[2];
-                        let distance = (dx*dx + dy*dy + dz*dz).sqrt();
+                        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
 
                         // If within interface thickness, add to interface
-                        if distance <= fdtd_grid.dx { // Conservative: one cell thickness
+                        if distance <= fdtd_grid.dx {
+                            // Conservative: one cell thickness
                             fdtd_indices.push((i, j, k));
                             fem_indices.push(node_idx);
                             break; // Only one FDTD point per FEM node
@@ -123,7 +128,7 @@ impl CouplingInterface {
 
         if fdtd_indices.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "No interface nodes found between FDTD and FEM domains".to_string()
+                "No interface nodes found between FDTD and FEM domains".to_string(),
             ));
         }
 
@@ -140,18 +145,19 @@ impl CouplingInterface {
         let mut weights = Vec::with_capacity(fdtd_indices.len());
 
         for (&fdtd_idx, &fem_idx) in fdtd_indices.iter().zip(fem_indices.iter()) {
-            let (fdtd_x, fdtd_y, fdtd_z) = fdtd_grid.indices_to_coordinates(fdtd_idx.0, fdtd_idx.1, fdtd_idx.2);
+            let (fdtd_x, fdtd_y, fdtd_z) =
+                fdtd_grid.indices_to_coordinates(fdtd_idx.0, fdtd_idx.1, fdtd_idx.2);
             let fem_node = &fem_mesh.nodes[fem_idx];
 
             // Distance-based interpolation weight
             let dx = fdtd_x - fem_node.coordinates[0];
             let dy = fdtd_y - fem_node.coordinates[1];
             let dz = fdtd_z - fem_node.coordinates[2];
-            let distance = (dx*dx + dy*dy + dz*dz).sqrt();
+            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
 
             // Weight decreases with distance (Gaussian kernel)
             let sigma = fdtd_grid.dx; // One cell standard deviation
-            let weight = (-distance*distance / (2.0*sigma*sigma)).exp();
+            let weight = (-distance * distance / (2.0 * sigma * sigma)).exp();
 
             weights.push(weight);
         }
@@ -199,7 +205,8 @@ impl FdtdFemCoupler {
         fem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<Self> {
         let interface = CouplingInterface::new(fdtd_grid, fem_mesh)?;
-        let fdtd_interpolator = TrilinearInterpolator::new(fdtd_grid.dx, fdtd_grid.dy, fdtd_grid.dz);
+        let fdtd_interpolator =
+            TrilinearInterpolator::new(fdtd_grid.dx, fdtd_grid.dy, fdtd_grid.dz);
         let fem_interpolator = TrilinearInterpolator::new(fdtd_grid.dx, fdtd_grid.dy, fdtd_grid.dz); // Approximation
 
         Ok(Self {
@@ -233,7 +240,8 @@ impl FdtdFemCoupler {
         let fem_interface_values = self.extract_fem_interface(fem_field)?;
 
         // 5. Update FDTD boundary conditions with FEM values (relaxed)
-        let residual = self.update_fdtd_boundary(fdtd_field, &fem_interface_values, fdtd_grid, iteration)?;
+        let residual =
+            self.update_fdtd_boundary(fdtd_field, &fem_interface_values, fdtd_grid, iteration)?;
 
         // Track convergence
         self.convergence_history.push(residual);
@@ -265,7 +273,7 @@ impl FdtdFemCoupler {
                 // Relaxed update: u_new = omega * u_fdtd + (1-omega) * u_old
                 let current_value = fem_field[fem_idx];
                 fem_field[fem_idx] = self.config.relaxation_factor * fdtd_value
-                                   + (1.0 - self.config.relaxation_factor) * current_value;
+                    + (1.0 - self.config.relaxation_factor) * current_value;
             }
         }
 
@@ -301,11 +309,15 @@ impl FdtdFemCoupler {
         for (&(i, j, k), &fem_value) in self.interface.fdtd_indices.iter().zip(fem_values.iter()) {
             let current_value = fdtd_field[[i, j, k]];
             let new_value = self.config.relaxation_factor * fem_value
-                          + (1.0 - self.config.relaxation_factor) * current_value;
+                + (1.0 - self.config.relaxation_factor) * current_value;
 
             // Compute residual for convergence check
             let residual = (new_value - current_value).abs();
-            max_residual = if residual > max_residual { residual } else { max_residual };
+            max_residual = if residual > max_residual {
+                residual
+            } else {
+                max_residual
+            };
 
             fdtd_field[[i, j, k]] = new_value;
         }
@@ -324,10 +336,13 @@ impl FdtdFemCoupler {
         for &(i, j, k) in &self.interface.fdtd_indices {
             if i > 0 && i < grid.nx - 1 && j > 0 && j < grid.ny - 1 && k > 0 && k < grid.nz - 1 {
                 // 3D Laplacian smoothing
-                let laplacian = field[[i-1, j, k]] + field[[i+1, j, k]]
-                              + field[[i, j-1, k]] + field[[i, j+1, k]]
-                              + field[[i, j, k-1]] + field[[i, j, k+1]]
-                              - 6.0 * field[[i, j, k]];
+                let laplacian = field[[i - 1, j, k]]
+                    + field[[i + 1, j, k]]
+                    + field[[i, j - 1, k]]
+                    + field[[i, j + 1, k]]
+                    + field[[i, j, k - 1]]
+                    + field[[i, j, k + 1]]
+                    - 6.0 * field[[i, j, k]];
 
                 // Apply small amount of smoothing
                 field[[i, j, k]] += 0.1 * laplacian;
@@ -410,14 +425,20 @@ impl FdtdFemSolver {
             )?;
 
             if residual < self.config.tolerance {
-                log::debug!("Schwarz iteration converged after {} iterations (residual: {:.2e})",
-                           iteration + 1, residual);
+                log::debug!(
+                    "Schwarz iteration converged after {} iterations (residual: {:.2e})",
+                    iteration + 1,
+                    residual
+                );
                 break;
             }
 
             if iteration == self.config.max_iterations - 1 {
-                log::warn!("Schwarz iteration did not converge after {} iterations (residual: {:.2e})",
-                          self.config.max_iterations, residual);
+                log::warn!(
+                    "Schwarz iteration did not converge after {} iterations (residual: {:.2e})",
+                    self.config.max_iterations,
+                    residual
+                );
             }
         }
 
@@ -426,7 +447,7 @@ impl FdtdFemSolver {
     }
 
     /// Get current FDTD field
-    pub fn fdtd_field(&self) -> ArrayView3<f64> {
+    pub fn fdtd_field(&self) -> ArrayView3<'_, f64> {
         self.fdtd_field.view()
     }
 
@@ -445,8 +466,8 @@ impl FdtdFemSolver {
 mod tests {
     use super::*;
     use crate::domain::grid::Grid;
-    use crate::domain::mesh::BoundaryType;
     use crate::domain::mesh::tetrahedral::TetrahedralMesh;
+    use crate::domain::mesh::BoundaryType;
 
     #[test]
     fn test_fdtd_fem_coupling_creation() {

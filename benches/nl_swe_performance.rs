@@ -33,10 +33,12 @@ use kwavers::domain::imaging::ultrasound::elastography::{
 use kwavers::grid::Grid;
 use kwavers::medium::HomogeneousMedium;
 use kwavers::physics::imaging::modalities::elastography::{
-    ElasticWaveConfig, HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField,
-    HyperelasticModel, NonlinearElasticWaveSolver, NonlinearInversion, NonlinearSWEConfig,
+    HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField, HyperelasticModel,
+    NonlinearElasticWaveSolver, NonlinearSWEConfig,
 };
 use kwavers::simulation::imaging::elastography::ShearWaveElastography;
+use kwavers::solver::forward::elastic::ElasticWaveConfig;
+use kwavers::solver::inverse::elastography::NonlinearInversion;
 use ndarray::Array3;
 
 /// Benchmark hyperelastic constitutive model evaluation

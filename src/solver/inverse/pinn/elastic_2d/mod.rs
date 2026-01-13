@@ -182,7 +182,7 @@
 //!
 //! # Module Structure
 //!
-//! - `geometry`: Collocation point sampling, interface conditions, adaptive refinement
+//! - `pinn::geometry`: Collocation point sampling, interface conditions, refinement
 //! - `config`: Hyperparameters and training configuration (to be implemented)
 //! - `model`: Neural network architecture (to be implemented)
 //! - `loss`: Physics-informed loss functions (to be implemented)
@@ -197,21 +197,29 @@
 //! - Rao et al. (2021): "Physics-informed deep learning for computational
 //!   elastodynamics without labeled data" - JEM 132:103448
 
+pub mod adaptive_sampling;
 pub mod config;
-pub mod geometry;
 pub mod inference;
 pub mod loss;
 pub mod model;
 pub mod physics_impl;
 pub mod training;
 
+#[cfg(all(test, feature = "pinn"))]
+mod tests;
+
 // Re-export key types
+#[cfg(feature = "pinn")]
+pub use adaptive_sampling::{
+    AdaptiveSampler, BatchIterator, SamplingStrategy as AdaptiveSamplingStrategy,
+};
+
+pub use super::geometry::{
+    AdaptiveRefinement, CollocationSampler, InterfaceCondition, MultiRegionDomain, SamplingStrategy,
+};
 pub use config::{
     ActivationFunction, Config, LearningRateScheduler, LossWeights, OptimizerType,
     SamplingStrategy as ConfigSamplingStrategy,
-};
-pub use geometry::{
-    AdaptiveRefinement, CollocationSampler, InterfaceCondition, MultiRegionDomain, SamplingStrategy,
 };
 
 #[cfg(feature = "pinn")]
@@ -226,7 +234,7 @@ pub use loss::{
 pub use model::ElasticPINN2D;
 
 #[cfg(feature = "pinn")]
-pub use training::{Trainer, TrainingData, TrainingMetrics};
+pub use training::{TrainingData, TrainingMetrics};
 
 #[cfg(feature = "pinn")]
 pub use physics_impl::ElasticPINN2DSolver;

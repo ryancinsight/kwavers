@@ -17,8 +17,8 @@ pub use solver::PSTDSolver;
 // Legacy re-exports/Compatibility
 // pub use physics::absorption at root if needed? No, use physics::absorption
 // pub use numerics::spectral_correction::SpectralCorrectionConfig at root?
-pub use numerics::SpectralCorrectionConfig;
 pub use config::KSpaceMethod;
+pub use numerics::SpectralCorrectionConfig;
 
 // Re-export shared source types as PSTD types for backward compatibility
 pub use crate::domain::source::{GridSource as PSTDSource, SourceMode};

@@ -47,13 +47,15 @@
 //! let time_series = predictor.time_series(x, y, &times)?;
 //! ```
 
-use super::model::ElasticPINN2D;
 use crate::error::{KwaversError, KwaversResult};
 
 use ndarray::{Array1, Array2, Array3};
 
 #[cfg(feature = "pinn")]
 use burn::tensor::{backend::Backend, Tensor};
+
+#[cfg(feature = "pinn")]
+use super::model::ElasticPINN2D;
 
 /// Predictor for trained PINN model
 ///
@@ -100,9 +102,9 @@ impl<B: Backend> Predictor<B> {
 
         // Extract values
         let data = output.to_data();
-        let slice = data.as_slice::<f32>().ok_or_else(|| {
-            KwaversError::InvalidInput("Failed to extract tensor data".to_string())
-        })?;
+        let slice = data
+            .as_slice::<f32>()
+            .map_err(|_| KwaversError::InvalidInput("Failed to extract tensor data".to_string()))?;
 
         Ok([slice[0] as f64, slice[1] as f64])
     }
@@ -140,9 +142,9 @@ impl<B: Backend> Predictor<B> {
 
         // Convert to ndarray
         let data = output.to_data();
-        let slice = data.as_slice::<f32>().ok_or_else(|| {
-            KwaversError::InvalidInput("Failed to extract tensor data".to_string())
-        })?;
+        let slice = data
+            .as_slice::<f32>()
+            .map_err(|_| KwaversError::InvalidInput("Failed to extract tensor data".to_string()))?;
 
         let values: Vec<f64> = slice.iter().map(|&v| v as f64).collect();
         Array2::from_shape_vec((n, 2), values)
@@ -260,6 +262,7 @@ impl<B: Backend> Predictor<B> {
 
 /// Non-Burn fallback
 #[cfg(not(feature = "pinn"))]
+#[derive(Debug)]
 pub struct Predictor {
     _phantom: std::marker::PhantomData<()>,
 }

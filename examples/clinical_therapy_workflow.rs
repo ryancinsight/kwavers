@@ -8,10 +8,11 @@
 //! 3. Real-time monitoring and safety control
 //! 4. Combined therapy approaches
 
-use kwavers::clinical::therapy_integration::*;
+use kwavers::clinical::therapy::therapy_integration::*;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use ndarray::Array3;
+use std::collections::HashMap;
 
 /// Example: Liver tumor treatment with combined histotripsy and sonodynamic therapy
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -229,7 +230,8 @@ fn report_therapy_progress(orchestrator: &TherapyIntegrationOrchestrator, target
 
     // Report modality-specific metrics
     if let Some(ref microbubbles) = state.microbubble_concentration {
-        let avg_concentration: f64 = microbubbles.mean().unwrap_or(0.0);
+        let microbubbles_arr: &Array3<f64> = microbubbles;
+        let avg_concentration: f64 = microbubbles_arr.mean().unwrap_or(0.0);
         println!(
             "   Microbubble Concentration: {:.2e} bubbles/mL",
             avg_concentration
@@ -237,13 +239,19 @@ fn report_therapy_progress(orchestrator: &TherapyIntegrationOrchestrator, target
     }
 
     if let Some(ref cavitation) = state.cavitation_activity {
-        let max_activity: f64 = cavitation.iter().cloned().fold(0.0f64, f64::max);
+        let cavitation_arr: &Array3<f64> = cavitation;
+        let max_activity: f64 = cavitation_arr
+            .iter()
+            .cloned()
+            .fold(0.0f64, |a: f64, b: f64| a.max(b));
         println!("   Peak Cavitation Activity: {:.3}", max_activity);
     }
 
     if let Some(ref chemicals) = state.chemical_concentrations {
-        if let Some(ros) = chemicals.get("H2O2") {
-            let avg_ros: f64 = ros.mean().unwrap_or(0.0);
+        let chemicals_map: &HashMap<String, Array3<f64>> = chemicals;
+        if let Some(ros) = chemicals_map.get("H2O2") {
+            let ros_arr: &Array3<f64> = ros;
+            let avg_ros: f64 = ros_arr.mean().unwrap_or(0.0);
             println!("   Average ROS Concentration: {:.2e} M", avg_ros);
         }
     }

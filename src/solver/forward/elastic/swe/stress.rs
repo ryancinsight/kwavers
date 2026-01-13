@@ -43,6 +43,7 @@ use crate::domain::grid::Grid;
 ///
 /// Computes spatial derivatives of stress tensor components using
 /// fourth-order accurate finite difference stencils.
+#[derive(Debug)]
 pub struct StressDerivatives<'a> {
     grid: &'a Grid,
 }

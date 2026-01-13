@@ -8,6 +8,7 @@ use ndarray::{Array1, Array2};
 use num_complex::Complex;
 
 /// Complex linear algebra operations for beamforming
+#[derive(Debug)]
 pub struct ComplexLinearAlgebra;
 
 impl ComplexLinearAlgebra {
@@ -64,16 +65,23 @@ impl ComplexLinearAlgebra {
 
             // Check for singularity
             if a_copy[[i, i]].norm() < 1e-12 {
-                return Err(KwaversError::Numerical(NumericalError::SingularMatrix));
+                return Err(KwaversError::Numerical(NumericalError::SingularMatrix {
+                    operation: "solve_linear_system_complex".to_string(),
+                    condition_number: f64::INFINITY,
+                }));
             }
+
+            let pivot = a_copy[[i, i]];
+            let pivot_row = a_copy.row(i).to_owned();
+            let pivot_b = b_copy[i];
 
             // Eliminate
             for k in (i + 1)..n {
-                let factor = a_copy[[k, i]] / a_copy[[i, i]];
+                let factor = a_copy[[k, i]] / pivot;
                 for j in i..n {
-                    a_copy[[k, j]] -= factor * a_copy[[i, j]];
+                    a_copy[[k, j]] -= factor * pivot_row[j];
                 }
-                b_copy[k] -= factor * b_copy[i];
+                b_copy[k] -= factor * pivot_b;
             }
         }
 
@@ -97,7 +105,9 @@ impl ComplexLinearAlgebra {
     ///
     /// # Returns
     /// Complex inverse matrix
-    pub fn matrix_inverse_complex(matrix: &Array2<Complex<f64>>) -> KwaversResult<Array2<Complex<f64>>> {
+    pub fn matrix_inverse_complex(
+        matrix: &Array2<Complex<f64>>,
+    ) -> KwaversResult<Array2<Complex<f64>>> {
         let n = matrix.nrows();
         if matrix.ncols() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
@@ -108,7 +118,7 @@ impl ComplexLinearAlgebra {
         }
 
         // Create identity matrix
-        let mut identity = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));
+        let identity = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));
         let mut result = Array2::zeros((n, n));
 
         // Solve for each column of the identity matrix
@@ -131,15 +141,18 @@ mod tests {
     #[test]
     fn test_solve_complex_linear_system() {
         // Simple 2×2 complex system
-        let a = Array2::from_shape_vec((2, 2), vec![
-            Complex::new(2.0, 1.0), Complex::new(1.0, 0.0),
-            Complex::new(1.0, 0.0), Complex::new(2.0, -1.0),
-        ]).unwrap();
+        let a = Array2::from_shape_vec(
+            (2, 2),
+            vec![
+                Complex::new(2.0, 1.0),
+                Complex::new(1.0, 0.0),
+                Complex::new(1.0, 0.0),
+                Complex::new(2.0, -1.0),
+            ],
+        )
+        .unwrap();
 
-        let b = Array1::from_vec(vec![
-            Complex::new(3.0, 1.0),
-            Complex::new(2.0, -1.0),
-        ]);
+        let b = Array1::from_vec(vec![Complex::new(3.0, 1.0), Complex::new(2.0, -1.0)]);
 
         let x = ComplexLinearAlgebra::solve_linear_system_complex(&a, &b).unwrap();
 

@@ -5,11 +5,12 @@
 //! - reference compatibility benchmarks
 //! - Physical accuracy tests
 
+use kwavers::clinical::imaging::photoacoustic::PhotoacousticOpticalProperties as OpticalProperties;
 use kwavers::core::error::KwaversResult;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::simulation::modalities::photoacoustic::{
-    OpticalProperties, PhotoacousticParameters, PhotoacousticSimulator,
+    PhotoacousticParameters, PhotoacousticSimulator,
 };
 
 /// Test photoacoustic pressure generation against analytical solution
@@ -44,7 +45,8 @@ fn test_photoacoustic_analytical_pressure() -> KwaversResult<()> {
     // Analytical pressure: p = Γ μ_a Φ
     // Grüneisen parameter for soft tissue at 750nm
     let gruneisen_parameter = 0.12; // Typical value for soft tissue
-    let analytical_pressure = gruneisen_parameter * center_props.absorption * center_fluence;
+    let analytical_pressure =
+        gruneisen_parameter * center_props.absorption_coefficient * center_fluence;
 
     // Check relative error
     let relative_error = ((center_pressure - analytical_pressure) / analytical_pressure).abs();
@@ -116,7 +118,8 @@ fn test_tissue_contrast_ratios() -> KwaversResult<()> {
     let tumor_props = OpticalProperties::tumor(750.0);
 
     // Blood should have much higher absorption than soft tissue
-    let blood_tissue_ratio = blood_props.absorption / tissue_props.absorption;
+    let blood_tissue_ratio =
+        blood_props.absorption_coefficient / tissue_props.absorption_coefficient;
     assert!(
         blood_tissue_ratio > 10.0,
         "Blood absorption ratio ({:.1}x) should be > 10x tissue",
@@ -124,7 +127,8 @@ fn test_tissue_contrast_ratios() -> KwaversResult<()> {
     );
 
     // Tumor should have higher absorption than normal tissue
-    let tumor_tissue_ratio = tumor_props.absorption / tissue_props.absorption;
+    let tumor_tissue_ratio =
+        tumor_props.absorption_coefficient / tissue_props.absorption_coefficient;
     assert!(
         tumor_tissue_ratio > 5.0,
         "Tumor absorption ratio ({:.1}x) should be > 5x tissue",
@@ -132,7 +136,8 @@ fn test_tissue_contrast_ratios() -> KwaversResult<()> {
     );
 
     // Scattering should be similar between tissues (within factor of 2)
-    let blood_scatter_ratio = blood_props.scattering / tissue_props.scattering;
+    let blood_scatter_ratio =
+        blood_props.scattering_coefficient / tissue_props.scattering_coefficient;
     assert!(
         blood_scatter_ratio > 0.5 && blood_scatter_ratio < 2.0,
         "Blood scattering ratio ({:.2}x) should be within 0.5-2.0x tissue",
@@ -198,15 +203,16 @@ fn test_heterogeneous_tissue_simulation() -> KwaversResult<()> {
 
     println!(
         "Center props: absorption={:.1}, scattering={:.1}",
-        center_props.absorption, center_props.scattering
+        center_props.absorption_coefficient, center_props.scattering_coefficient
     );
     println!(
         "Edge props: absorption={:.1}, scattering={:.1}",
-        edge_props.absorption, edge_props.scattering
+        edge_props.absorption_coefficient, edge_props.scattering_coefficient
     );
 
     // Properties should be different (simulator adds blood vessels and tumors)
-    let absorption_diff = (center_props.absorption - edge_props.absorption).abs();
+    let absorption_diff =
+        (center_props.absorption_coefficient - edge_props.absorption_coefficient).abs();
     println!("Absorption difference: {:.3}", absorption_diff);
 
     // For now, relax the requirement - the simulator might not create sufficient heterogeneity
@@ -218,14 +224,23 @@ fn test_heterogeneous_tissue_simulation() -> KwaversResult<()> {
 
     // For now, just check that the properties are reasonable values
     assert!(
-        center_props.absorption > 0.0,
+        center_props.absorption_coefficient > 0.0,
         "Absorption should be positive"
     );
-    assert!(edge_props.absorption > 0.0, "Absorption should be positive");
+    assert!(
+        edge_props.absorption_coefficient > 0.0,
+        "Absorption should be positive"
+    );
 
     println!("Heterogeneous simulation successful");
-    println!("Center absorption: {:.1} m⁻¹", center_props.absorption);
-    println!("Edge absorption: {:.1} m⁻¹", edge_props.absorption);
+    println!(
+        "Center absorption: {:.1} m⁻¹",
+        center_props.absorption_coefficient
+    );
+    println!(
+        "Edge absorption: {:.1} m⁻¹",
+        edge_props.absorption_coefficient
+    );
     println!("Absorption difference: {:.1} m⁻¹", absorption_diff);
 
     Ok(())

@@ -10,11 +10,11 @@ use crate::domain::medium::Medium;
 
 // Physics imports
 use crate::physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
-use crate::physics::acoustics::imaging::modalities::elastography::elastic_wave_solver::{
+use crate::physics::acoustics::imaging::modalities::elastography::radiation_force::AcousticRadiationForce;
+use crate::solver::forward::elastic::swe::{
     ElasticBodyForceConfig, ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
 };
-use crate::physics::acoustics::imaging::modalities::elastography::inversion::ShearWaveInversion;
-use crate::physics::acoustics::imaging::modalities::elastography::radiation_force::AcousticRadiationForce;
+use crate::solver::inverse::elastography::ShearWaveInversion;
 
 /// High-level orchestrator for shear wave elastography simulations
 #[derive(Debug)]

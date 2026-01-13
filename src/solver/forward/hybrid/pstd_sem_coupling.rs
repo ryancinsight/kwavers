@@ -89,14 +89,18 @@ impl SpectralCouplingInterface {
         config: &PstdSemCouplingConfig,
     ) -> KwaversResult<Self> {
         // Find overlapping interface region
-        let (pstd_points, sem_nodes) = Self::find_interface_region(pstd_grid, sem_mesh, config.overlap_thickness)?;
+        let (pstd_points, sem_nodes) =
+            Self::find_interface_region(pstd_grid, sem_mesh, config.overlap_thickness)?;
 
         // Compute modal transformation matrices
-        let modal_transform = Self::compute_modal_transform(&pstd_points, &sem_nodes, pstd_grid, sem_mesh, config)?;
-        let projection_matrix = Self::compute_projection_matrix(&pstd_points, &sem_nodes, pstd_grid, sem_mesh, config)?;
+        let modal_transform =
+            Self::compute_modal_transform(&pstd_points, &sem_nodes, pstd_grid, sem_mesh, config)?;
+        let projection_matrix =
+            Self::compute_projection_matrix(&pstd_points, &sem_nodes, pstd_grid, sem_mesh, config)?;
 
         // Setup interface quadrature
-        let (quadrature_points, quadrature_weights) = Self::setup_interface_quadrature(&pstd_points, pstd_grid)?;
+        let (quadrature_points, quadrature_weights) =
+            Self::setup_interface_quadrature(&pstd_points, pstd_grid)?;
 
         Ok(Self {
             pstd_interface_points: pstd_points,
@@ -132,7 +136,7 @@ impl SpectralCouplingInterface {
                         let dx = x - node.coordinates[0];
                         let dy = y - node.coordinates[1];
                         let dz = z - node.coordinates[2];
-                        let distance = (dx*dx + dy*dy + dz*dz).sqrt();
+                        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
 
                         if distance < min_distance {
                             min_distance = distance;
@@ -157,7 +161,7 @@ impl SpectralCouplingInterface {
 
         if pstd_points.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "No interface points found between PSTD and SEM domains".to_string()
+                "No interface points found between PSTD and SEM domains".to_string(),
             ));
         }
 
@@ -248,14 +252,14 @@ impl SpectralCouplingInterface {
             let dx = x - node.coordinates[0];
             let dy = y - node.coordinates[1];
             let dz = z - node.coordinates[2];
-            let distance = (dx*dx + dy*dy + dz*dz).sqrt();
+            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
 
             // Spectral interpolation kernel (modified Gaussian)
             let sigma = config.coupling_order as f64 * 0.1; // Adaptive width
             let weight = if distance < 1e-12 {
                 1.0 // Exact match
             } else {
-                (-distance*distance / (2.0*sigma*sigma)).exp()
+                (-distance * distance / (2.0 * sigma * sigma)).exp()
             };
 
             weights.push(weight);
@@ -290,14 +294,14 @@ impl SpectralCouplingInterface {
             let dx = x - px;
             let dy = y - py;
             let dz = z - pz;
-            let distance = (dx*dx + dy*dy + dz*dz).sqrt();
+            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
 
             // Spectral interpolation kernel (modified Gaussian)
             let sigma = config.coupling_order as f64 * 0.1; // Adaptive width
             let weight = if distance < 1e-12 {
                 1.0 // Exact match
             } else {
-                (-distance*distance / (2.0*sigma*sigma)).exp()
+                (-distance * distance / (2.0 * sigma * sigma)).exp()
             };
 
             weights.push(weight);
@@ -334,7 +338,6 @@ impl SpectralCouplingInterface {
         Ok((points, weights))
     }
 }
-
 
 /// PSTD-SEM Spectral Coupler
 #[derive(Debug)]
@@ -441,9 +444,13 @@ impl PstdSemCoupler {
         let mut max_residual = 0.0;
 
         // Compute continuity residual
-        for (i, (&trans, &sem)) in transformed.iter().zip(sem_interface.iter()).enumerate() {
+        for (_i, (&trans, &sem)) in transformed.iter().zip(sem_interface.iter()).enumerate() {
             let residual = (trans - sem).abs();
-            max_residual = if residual > max_residual { residual } else { max_residual };
+            max_residual = if residual > max_residual {
+                residual
+            } else {
+                max_residual
+            };
 
             // Could apply correction here if needed
         }
@@ -467,7 +474,8 @@ impl PstdSemCoupler {
                 // Project to PSTD points
                 for (j, &(pi, pj, pk)) in self.interface.pstd_interface_points.iter().enumerate() {
                     if i < self.interface.projection_matrix.nrows()
-                        && j < self.interface.projection_matrix.ncols() {
+                        && j < self.interface.projection_matrix.ncols()
+                    {
                         let weight = self.interface.projection_matrix[[i, j]];
                         pstd_field[[pi, pj, pk]] += weight * sem_value;
                     }
@@ -484,10 +492,13 @@ impl PstdSemCoupler {
         for &(i, j, k) in &self.interface.pstd_interface_points {
             if i > 0 && i < grid.nx - 1 && j > 0 && j < grid.ny - 1 && k > 0 && k < grid.nz - 1 {
                 // Simple Laplacian stabilization
-                let laplacian = field[[i-1, j, k]] + field[[i+1, j, k]]
-                              + field[[i, j-1, k]] + field[[i, j+1, k]]
-                              + field[[i, j, k-1]] + field[[i, j, k+1]]
-                              - 6.0 * field[[i, j, k]];
+                let laplacian = field[[i - 1, j, k]]
+                    + field[[i + 1, j, k]]
+                    + field[[i, j - 1, k]]
+                    + field[[i, j + 1, k]]
+                    + field[[i, j, k - 1]]
+                    + field[[i, j, k + 1]]
+                    - 6.0 * field[[i, j, k]];
 
                 field[[i, j, k]] += self.config.stabilization_alpha * laplacian;
             }
@@ -568,7 +579,7 @@ impl PstdSemSolver {
     }
 
     /// Get current PSTD field
-    pub fn pstd_field(&self) -> ArrayView3<f64> {
+    pub fn pstd_field(&self) -> ArrayView3<'_, f64> {
         self.pstd_field.view()
     }
 
@@ -605,7 +616,10 @@ mod tests {
             for j in 8..16 {
                 for k in 8..16 {
                     let (x, y, z) = pstd_grid.indices_to_coordinates(i, j, k);
-                    sem_mesh.add_node([x, y, z], crate::domain::mesh::tetrahedral::BoundaryType::Interior);
+                    sem_mesh.add_node(
+                        [x, y, z],
+                        crate::domain::mesh::tetrahedral::BoundaryType::Interior,
+                    );
                 }
             }
         }
@@ -626,7 +640,10 @@ mod tests {
             for j in 6..12 {
                 for k in 6..12 {
                     let (x, y, z) = pstd_grid.indices_to_coordinates(i, j, k);
-                    sem_mesh.add_node([x, y, z], crate::domain::mesh::tetrahedral::BoundaryType::Interior);
+                    sem_mesh.add_node(
+                        [x, y, z],
+                        crate::domain::mesh::tetrahedral::BoundaryType::Interior,
+                    );
                 }
             }
         }
@@ -641,7 +658,10 @@ mod tests {
 
         // Check that coupling executed
         assert!(residual >= 0.0, "Residual should be non-negative");
-        assert!(!solver.convergence_history().is_empty(), "Should have convergence history");
+        assert!(
+            !solver.convergence_history().is_empty(),
+            "Should have convergence history"
+        );
     }
 
     #[test]
@@ -654,7 +674,10 @@ mod tests {
             for j in 5..10 {
                 for k in 5..10 {
                     let (x, y, z) = pstd_grid.indices_to_coordinates(i, j, k);
-                    sem_mesh.add_node([x, y, z], crate::domain::mesh::tetrahedral::BoundaryType::Interior);
+                    sem_mesh.add_node(
+                        [x, y, z],
+                        crate::domain::mesh::tetrahedral::BoundaryType::Interior,
+                    );
                 }
             }
         }
@@ -664,7 +687,13 @@ mod tests {
 
         assert!(interface.is_ok(), "Interface detection should succeed");
         let interface = interface.unwrap();
-        assert!(!interface.pstd_interface_points.is_empty(), "Should find interface points");
-        assert!(!interface.sem_interface_nodes.is_empty(), "Should find interface nodes");
+        assert!(
+            !interface.pstd_interface_points.is_empty(),
+            "Should find interface points"
+        );
+        assert!(
+            !interface.sem_interface_nodes.is_empty(),
+            "Should find interface nodes"
+        );
     }
 }

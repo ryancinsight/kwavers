@@ -171,10 +171,7 @@ async fn demonstrate_dynamic_focusing() -> KwaversResult<()> {
 
         // Calculate basic quality metrics
         let mean_signal = volume.mean().unwrap_or(0.0);
-        let max_signal = volume
-            .iter()
-            .copied()
-            .fold(f32::NEG_INFINITY, f32::max);
+        let max_signal = volume.iter().copied().fold(f32::NEG_INFINITY, f32::max);
         let dynamic_range = if mean_signal != 0.0 {
             20.0 * (max_signal / mean_signal.abs()).log10()
         } else {

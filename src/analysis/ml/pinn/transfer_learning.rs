@@ -170,13 +170,8 @@ impl<B: AutodiffBackend> TransferLearner<B> {
 
         for param in &params {
             // Compute weight magnitude (L2 norm)
-            let magnitude = param
-                .clone()
-                .powf_scalar(2.0)
-                .sum()
-                .sqrt()
-                .into_scalar()
-                .to_f32();
+            let magnitude_scalar = param.clone().powf_scalar(2.0).sum().sqrt().into_scalar();
+            let magnitude: f32 = magnitude_scalar.to_f32();
             _weight_magnitudes.push(magnitude);
 
             // Compute layer importance based on gradient magnitude and parameter sensitivity

@@ -113,7 +113,11 @@ impl PSTDKSOperators {
     }
 
     /// Apply Helmholtz operator: (∇² + k₀²)p
-    pub(super) fn apply_helmholtz(&self, field: &Array3<f64>, wavenumber: f64) -> KwaversResult<Array3<f64>> {
+    pub(super) fn apply_helmholtz(
+        &self,
+        field: &Array3<f64>,
+        wavenumber: f64,
+    ) -> KwaversResult<Array3<f64>> {
         // Forward FFT to wavenumber domain
         let field_k = self.forward_fft_3d(field)?;
 
@@ -137,7 +141,8 @@ impl PSTDKSOperators {
     /// Forward 3D FFT: spatial domain → wavenumber domain
     fn forward_fft_3d(&self, input: &Array3<f64>) -> KwaversResult<Array3<Complex64>> {
         // Get FFT processor
-        let fft = crate::math::fft::get_fft_for_grid(self.k_grid.nx, self.k_grid.ny, self.k_grid.nz);
+        let fft =
+            crate::math::fft::get_fft_for_grid(self.k_grid.nx, self.k_grid.ny, self.k_grid.nz);
 
         // Apply 3D FFT using the existing FFT infrastructure
         let mut output = Array3::<Complex64>::zeros(input.dim());
@@ -152,7 +157,8 @@ impl PSTDKSOperators {
     /// Inverse 3D FFT: wavenumber domain → spatial domain
     fn inverse_fft_3d(&self, input: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
         // Get FFT processor
-        let fft = crate::math::fft::get_fft_for_grid(self.k_grid.nx, self.k_grid.ny, self.k_grid.nz);
+        let fft =
+            crate::math::fft::get_fft_for_grid(self.k_grid.nx, self.k_grid.ny, self.k_grid.nz);
 
         // Apply inverse FFT using existing infrastructure
         let mut output = Array3::<f64>::zeros(input.dim());
@@ -654,11 +660,14 @@ impl PSTDSolver {
 
         // Check if k-space operators are available
         if self.kspace_operators.is_none() {
-            return Err(crate::core::error::KwaversError::Config(crate::core::error::ConfigError::InvalidValue {
-                parameter: "kspace_operators".to_string(),
-                value: "None".to_string(),
-                constraint: "k-space operators must be initialized for FullKSpace method".to_string(),
-            }));
+            return Err(crate::core::error::KwaversError::Config(
+                crate::core::error::ConfigError::InvalidValue {
+                    parameter: "kspace_operators".to_string(),
+                    value: "None".to_string(),
+                    constraint: "k-space operators must be initialized for FullKSpace method"
+                        .to_string(),
+                },
+            ));
         }
 
         // Get source term
@@ -895,9 +904,7 @@ mod tests {
         let mut config = PSTDConfig::default();
         config.kspace_method = KSpaceMethod::FullKSpace;
 
-        let medium = HomogeneousMedium::new(
-            1000.0, 1500.0, 0.0, 0.0, &grid,
-        );
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
 
         let source = GridSource::new_empty();
 
@@ -912,9 +919,7 @@ mod tests {
     fn test_standard_pstd_method() {
         let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
         let config = PSTDConfig::default(); // Standard PSTD
-        let medium = HomogeneousMedium::new(
-            1000.0, 1500.0, 0.0, 0.0, &grid,
-        );
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
         let source = GridSource::new_empty();
 
         let solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
@@ -931,9 +936,15 @@ mod tests {
         config.kspace_method = KSpaceMethod::FullKSpace;
         config.nt = 5; // Short simulation for test
 
-        let medium = HomogeneousMedium::new(
-            1000.0, 1500.0, 0.0, 0.0, &grid,
-        );
+        // Use smaller PML thickness for small grid (requirement: 2*thickness < nx)
+        // For nx=16, thickness must be < 8, so use 5
+        use crate::domain::boundary::PMLConfig;
+        config.boundary = crate::solver::forward::pstd::config::BoundaryConfig::PML(PMLConfig {
+            thickness: 5,
+            ..PMLConfig::default()
+        });
+
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
         let source = GridSource::new_empty();
 
         let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();

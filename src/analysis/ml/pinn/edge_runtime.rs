@@ -741,14 +741,24 @@ mod tests {
     fn test_hardware_capabilities() {
         let caps = EdgeRuntime::detect_hardware_capabilities();
 
-        // Should detect ARM64 with NEON
+        // Should detect architecture and capabilities based on current platform
         match caps.architecture {
-            Architecture::ARM64 => assert!(caps.has_fpu),
-            _ => panic!("Expected ARM64 architecture"),
+            Architecture::ARM64 | Architecture::ARM => {
+                assert!(caps.has_fpu, "ARM architectures should have FPU");
+            }
+            Architecture::X86_64 | Architecture::X86 => {
+                assert!(caps.has_fpu, "x86 architectures should have FPU");
+            }
+            Architecture::RISCV | Architecture::Other(_) => {
+                // Other architectures may have different capabilities
+            }
         }
 
-        assert!(caps.simd_width >= 64); // At least basic SIMD
-        assert!(caps.total_memory_mb > 0);
+        assert!(
+            caps.simd_width >= 64 || matches!(caps.architecture, Architecture::Other(_)),
+            "Should have at least basic SIMD or be other architecture"
+        );
+        assert!(caps.total_memory_mb > 0, "Should detect non-zero memory");
     }
 
     #[test]

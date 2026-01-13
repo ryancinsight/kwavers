@@ -163,8 +163,8 @@ impl BemBoundaryManager {
     /// for the known derivative values in the boundary integral equation.
     fn apply_neumann(
         &self,
-        h_matrix: &mut CompressedSparseRowMatrix<Complex64>,
-        g_matrix: &mut CompressedSparseRowMatrix<Complex64>,
+        _h_matrix: &mut CompressedSparseRowMatrix<Complex64>,
+        _g_matrix: &mut CompressedSparseRowMatrix<Complex64>,
         boundary_values: &mut Array1<Complex64>,
         node_derivatives: &[(usize, Complex64)],
     ) -> KwaversResult<()> {
@@ -184,15 +184,16 @@ impl BemBoundaryManager {
     fn apply_robin(
         &self,
         h_matrix: &mut CompressedSparseRowMatrix<Complex64>,
-        g_matrix: &mut CompressedSparseRowMatrix<Complex64>,
+        _g_matrix: &mut CompressedSparseRowMatrix<Complex64>,
         boundary_values: &mut Array1<Complex64>,
         node_conditions: &[(usize, f64, Complex64)],
     ) -> KwaversResult<()> {
         for &(node_idx, alpha, g_value) in node_conditions {
             // For Robin BC ∂p/∂n + αp = g:
             // Modify the H matrix diagonal: H_ii += α
-            let current_h_diag = h_matrix.get_diagonal(node_idx);
-            h_matrix.set_diagonal(node_idx, current_h_diag + Complex64::new(alpha, 0.0));
+            // Note: set_diagonal actually adds to existing value (via add_value),
+            // so we just pass alpha directly
+            h_matrix.set_diagonal(node_idx, Complex64::new(alpha, 0.0));
 
             // Set boundary value
             boundary_values[node_idx] = g_value;
@@ -208,7 +209,7 @@ impl BemBoundaryManager {
     fn apply_radiation(
         &self,
         h_matrix: &mut CompressedSparseRowMatrix<Complex64>,
-        g_matrix: &mut CompressedSparseRowMatrix<Complex64>,
+        _g_matrix: &mut CompressedSparseRowMatrix<Complex64>,
         wavenumber: f64,
         nodes: &[usize],
     ) -> KwaversResult<()> {
@@ -218,8 +219,9 @@ impl BemBoundaryManager {
 
         for &node_idx in nodes {
             // Modify H matrix diagonal to account for radiation condition
-            let current_h_diag = h_matrix.get_diagonal(node_idx);
-            h_matrix.set_diagonal(node_idx, current_h_diag + radiation_term);
+            // Note: set_diagonal actually adds to existing value (via add_value),
+            // so we just pass the radiation term directly
+            h_matrix.set_diagonal(node_idx, radiation_term);
         }
 
         Ok(())

@@ -154,11 +154,11 @@
 //! Update your imports to the new location to avoid deprecation warnings.
 
 pub mod beamforming;
+pub mod filtering;
 pub mod localization;
 pub mod pam;
 
 // Future modules (planned)
-// pub mod filtering;      // Frequency-domain filtering
 // pub mod spectral;       // Spectral analysis (FFT, STFT, etc.)
 // pub mod deconvolution;  // Point spread function deconvolution
 // pub mod reconstruction; // Image reconstruction algorithms
@@ -167,6 +167,7 @@ pub mod pam;
 pub use beamforming::{
     alignment_shifts_s, delay_and_sum, relative_delays_s, DelayReference, DEFAULT_DELAY_REFERENCE,
 };
+pub use filtering::FrequencyFilter;
 
 // Future re-exports (will be populated as modules are implemented)
 // pub use beamforming::{Beamformer, BeamformingConfig, MinimumVariance, MUSIC};

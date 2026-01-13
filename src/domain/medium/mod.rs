@@ -20,6 +20,7 @@ pub mod homogeneous;
 pub mod interface;
 pub mod material_fields;
 pub mod optical;
+pub mod properties;
 pub mod thermal;
 pub mod traits;
 pub mod viscous;
@@ -48,6 +49,12 @@ pub use core::{ArrayAccess, CoreMedium};
 pub use elastic::{ElasticArrayAccess, ElasticProperties};
 pub use optical::OpticalProperties;
 pub use thermal::{ThermalField, ThermalProperties};
+
+// Re-export canonical property data structures (SSOT)
+pub use properties::{
+    AcousticPropertyData, ElasticPropertyData, ElectromagneticPropertyData, MaterialProperties,
+    MaterialPropertiesBuilder, StrengthPropertyData, ThermalPropertyData,
+};
 pub use traits::Medium;
 pub use viscous::ViscousProperties;
 

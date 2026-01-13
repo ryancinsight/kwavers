@@ -108,7 +108,7 @@ impl SemElement {
         let n7 = (1.0 + xi) * (1.0 + eta) * (1.0 + zeta) / 8.0;
         let n8 = (1.0 - xi) * (1.0 + eta) * (1.0 + zeta) / 8.0;
 
-        let shape_functions = [n1, n2, n3, n4, n5, n6, n7, n8];
+        let _shape_functions = [n1, n2, n3, n4, n5, n6, n7, n8];
 
         // Derivatives of shape functions w.r.t. reference coordinates
         let dn_dxi = [
@@ -284,12 +284,42 @@ impl SemMesh {
             }
 
             let faces = [
-                [connectivity[0], connectivity[1], connectivity[2], connectivity[3]],
-                [connectivity[4], connectivity[5], connectivity[6], connectivity[7]],
-                [connectivity[0], connectivity[1], connectivity[5], connectivity[4]],
-                [connectivity[1], connectivity[2], connectivity[6], connectivity[5]],
-                [connectivity[2], connectivity[3], connectivity[7], connectivity[6]],
-                [connectivity[3], connectivity[0], connectivity[4], connectivity[7]],
+                [
+                    connectivity[0],
+                    connectivity[1],
+                    connectivity[2],
+                    connectivity[3],
+                ],
+                [
+                    connectivity[4],
+                    connectivity[5],
+                    connectivity[6],
+                    connectivity[7],
+                ],
+                [
+                    connectivity[0],
+                    connectivity[1],
+                    connectivity[5],
+                    connectivity[4],
+                ],
+                [
+                    connectivity[1],
+                    connectivity[2],
+                    connectivity[6],
+                    connectivity[5],
+                ],
+                [
+                    connectivity[2],
+                    connectivity[3],
+                    connectivity[7],
+                    connectivity[6],
+                ],
+                [
+                    connectivity[3],
+                    connectivity[0],
+                    connectivity[4],
+                    connectivity[7],
+                ],
             ];
 
             for mut face in faces {

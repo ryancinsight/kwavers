@@ -22,6 +22,7 @@
 //! - β: nonlinearity coefficient (dimensionless)
 //! - ρ₀: equilibrium density (kg/m³)
 
+use crate::analysis::ml::pinn::adapters::source::PinnAcousticSource;
 use crate::analysis::ml::pinn::physics::{
     BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface, CouplingType,
     InitialConditionSpec, PhysicsDomain, PhysicsLossWeights, PhysicsParameters,
@@ -37,41 +38,6 @@ pub enum AcousticProblemType {
     Linear,
     /// Nonlinear acoustic wave equation (Kuznetsov)
     Nonlinear,
-}
-
-/// Acoustic source specification
-#[derive(Debug, Clone)]
-pub struct AcousticSource {
-    /// Source position (x, y, z)
-    pub position: (f64, f64, f64),
-    /// Source type
-    pub source_type: AcousticSourceType,
-    /// Source parameters
-    pub parameters: AcousticSourceParameters,
-}
-
-/// Acoustic source types
-#[derive(Debug, Clone)]
-pub enum AcousticSourceType {
-    /// Monopole source (pressure source)
-    Monopole,
-    /// Dipole source (velocity source)
-    Dipole,
-    /// Focused transducer
-    FocusedTransducer,
-}
-
-/// Acoustic source parameters
-#[derive(Debug, Clone)]
-pub struct AcousticSourceParameters {
-    /// Frequency (Hz)
-    pub frequency: f64,
-    /// Amplitude (Pa for pressure, m/s for velocity)
-    pub amplitude: f64,
-    /// Phase (radians)
-    pub phase: f64,
-    /// Focal length for focused sources (m)
-    pub focal_length: Option<f64>,
 }
 
 /// Acoustic boundary condition specification
@@ -111,8 +77,8 @@ pub struct AcousticWaveDomain {
     nonlinearity_coefficient: Option<f64>,
     /// Boundary conditions
     boundary_conditions: Vec<AcousticBoundarySpec>,
-    /// Sources
-    sources: Vec<AcousticSource>,
+    /// Sources (adapted from domain layer)
+    sources: Vec<PinnAcousticSource>,
 }
 
 impl AcousticWaveDomain {
@@ -138,8 +104,8 @@ impl AcousticWaveDomain {
         self.boundary_conditions.push(boundary);
     }
 
-    /// Add acoustic source
-    pub fn add_source(&mut self, source: AcousticSource) {
+    /// Add acoustic source (adapted from domain source)
+    pub fn add_source(&mut self, source: PinnAcousticSource) {
         self.sources.push(source);
     }
 

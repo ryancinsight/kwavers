@@ -41,7 +41,7 @@
 //!     └─ Inverse Solvers  → use DifferentiableTensor (Burn)
 //! ```
 
-use ndarray::{Array, ArrayD, Dimension, IxDyn};
+use ndarray::{ArrayD, IxDyn};
 use std::fmt;
 
 /// Tensor shape specification

@@ -43,8 +43,8 @@ impl<B: Backend> FourierFeatures<B> {
             .map(|_| rand::random::<f32>() * scale)
             .collect();
 
-        let frequencies = Tensor::<B, 2>::from_floats(freq_data.as_slice(), device)
-            .reshape([input_dim as i64, num_features as i64]);
+        let frequencies = Tensor::<B, 1>::from_floats(freq_data.as_slice(), device)
+            .reshape([input_dim, num_features]);
 
         Self {
             frequencies: Param::from_tensor(frequencies),

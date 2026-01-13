@@ -182,8 +182,9 @@ impl FemBoundaryManager {
         for &(node_idx, alpha, g_value) in node_conditions {
             // Robin: ∂u/∂n + αu = g
             // Modify diagonal: K_ii += α
-            let current_diag = stiffness.get_diagonal(node_idx);
-            stiffness.set_diagonal(node_idx, current_diag + Complex64::new(alpha, 0.0));
+            // Note: set_diagonal actually adds to existing value (via add_value),
+            // so we just pass alpha directly
+            stiffness.set_diagonal(node_idx, Complex64::new(alpha, 0.0));
 
             // Modify RHS: f_i += g
             rhs[node_idx] += g_value;
@@ -207,8 +208,9 @@ impl FemBoundaryManager {
         for &node_idx in nodes {
             // Sommerfeld ABC: ∂u/∂n - iku ≈ 0
             // Approximate by modifying diagonal: K_ii -= ik
-            let current_diag = stiffness.get_diagonal(node_idx);
-            stiffness.set_diagonal(node_idx, current_diag + radiation_term);
+            // Note: set_diagonal actually adds to existing value (via add_value),
+            // so we just pass the radiation term directly
+            stiffness.set_diagonal(node_idx, radiation_term);
         }
 
         Ok(())

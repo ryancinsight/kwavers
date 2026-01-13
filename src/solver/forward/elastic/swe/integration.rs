@@ -60,6 +60,7 @@ use ndarray::Array3;
 /// Time integration engine for elastic waves
 ///
 /// Implements velocity-Verlet scheme with optional body forces and PML damping.
+#[derive(Debug)]
 pub struct TimeIntegrator<'a> {
     grid: &'a Grid,
     lambda: &'a Array3<f64>,
@@ -160,6 +161,73 @@ impl<'a> TimeIntegrator<'a> {
         Ok(())
     }
 
+    pub fn step_with_body_forces(
+        &self,
+        field: &mut ElasticWaveField,
+        dt: f64,
+        body_forces: &[ElasticBodyForceConfig],
+    ) -> KwaversResult<()> {
+        let (nx, ny, nz) = field.ux.dim();
+
+        let mut ax = Array3::<f64>::zeros((nx, ny, nz));
+        let mut ay = Array3::<f64>::zeros((nx, ny, nz));
+        let mut az = Array3::<f64>::zeros((nx, ny, nz));
+
+        self.compute_acceleration_with_body_forces(
+            field,
+            &mut ax,
+            &mut ay,
+            &mut az,
+            body_forces,
+            field.time,
+        )?;
+
+        let dt_half = 0.5 * dt;
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    field.vx[[i, j, k]] += dt_half * ax[[i, j, k]];
+                    field.vy[[i, j, k]] += dt_half * ay[[i, j, k]];
+                    field.vz[[i, j, k]] += dt_half * az[[i, j, k]];
+                }
+            }
+        }
+
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    field.ux[[i, j, k]] += dt * field.vx[[i, j, k]];
+                    field.uy[[i, j, k]] += dt * field.vy[[i, j, k]];
+                    field.uz[[i, j, k]] += dt * field.vz[[i, j, k]];
+                }
+            }
+        }
+
+        let new_time = field.time + dt;
+        self.compute_acceleration_with_body_forces(
+            field,
+            &mut ax,
+            &mut ay,
+            &mut az,
+            body_forces,
+            new_time,
+        )?;
+
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    field.vx[[i, j, k]] += dt_half * ax[[i, j, k]];
+                    field.vy[[i, j, k]] += dt_half * ay[[i, j, k]];
+                    field.vz[[i, j, k]] += dt_half * az[[i, j, k]];
+                }
+            }
+        }
+
+        self.apply_pml_damping(field, dt);
+
+        Ok(())
+    }
+
     /// Compute acceleration from stress divergence and body forces
     ///
     /// ## Formula
@@ -202,11 +270,43 @@ impl<'a> TimeIntegrator<'a> {
         Ok(())
     }
 
+    fn compute_acceleration_with_body_forces(
+        &self,
+        field: &ElasticWaveField,
+        ax: &mut Array3<f64>,
+        ay: &mut Array3<f64>,
+        az: &mut Array3<f64>,
+        body_forces: &[ElasticBodyForceConfig],
+        time: f64,
+    ) -> KwaversResult<()> {
+        let (nx, ny, nz) = field.ux.dim();
+
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    let div = self.stress_calc.stress_divergence(i, j, k, field);
+
+                    let mut force = [0.0, 0.0, 0.0];
+                    for bf in body_forces {
+                        let f = self.evaluate_body_force(bf, i, j, k, time)?;
+                        force[0] += f[0];
+                        force[1] += f[1];
+                        force[2] += f[2];
+                    }
+
+                    let rho = self.density[[i, j, k]];
+                    ax[[i, j, k]] = (div[0] + force[0]) / rho;
+                    ay[[i, j, k]] = (div[1] + force[1]) / rho;
+                    az[[i, j, k]] = (div[2] + force[2]) / rho;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Evaluate body force at a spatial location and time
     ///
-    /// ## Body Force Types
-    /// - **GaussianPulse**: Spatially Gaussian, temporally rectangular
-    /// - **RectangularPulse**: Spatially rectangular, temporally rectangular
     fn evaluate_body_force(
         &self,
         body_force: &ElasticBodyForceConfig,
@@ -220,80 +320,57 @@ impl<'a> TimeIntegrator<'a> {
         let z = k as f64 * self.grid.dz;
 
         match body_force {
-            ElasticBodyForceConfig::GaussianPulse {
+            ElasticBodyForceConfig::GaussianImpulse {
                 center_m,
                 sigma_m,
-                amplitude_n_per_m3,
-                start_time_s,
-                end_time_s,
                 direction,
+                t0_s,
+                sigma_t_s,
+                impulse_n_per_m3_s,
             } => {
-                // Temporal profile (rectangular pulse)
-                if time < *start_time_s || time > *end_time_s {
+                if !sigma_t_s.is_finite() || *sigma_t_s <= 0.0 {
                     return Ok([0.0, 0.0, 0.0]);
                 }
 
-                // Spatial profile (Gaussian)
                 let dx = x - center_m[0];
                 let dy = y - center_m[1];
                 let dz = z - center_m[2];
-                let r_squared = dx * dx + dy * dy + dz * dz;
-                let spatial_factor = (-r_squared / (2.0 * sigma_m * sigma_m)).exp();
 
-                // Normalize direction
+                let sx = sigma_m[0];
+                let sy = sigma_m[1];
+                let sz = sigma_m[2];
+                if !sx.is_finite()
+                    || !sy.is_finite()
+                    || !sz.is_finite()
+                    || sx <= 0.0
+                    || sy <= 0.0
+                    || sz <= 0.0
+                {
+                    return Ok([0.0, 0.0, 0.0]);
+                }
+
+                let spatial_factor = (-0.5
+                    * ((dx / sx) * (dx / sx) + (dy / sy) * (dy / sy) + (dz / sz) * (dz / sz)))
+                    .exp();
+
+                let dt = time - *t0_s;
+                let temporal_factor = (-(dt * dt) / (2.0 * sigma_t_s * sigma_t_s)).exp()
+                    / (sigma_t_s * (2.0 * std::f64::consts::PI).sqrt());
+
                 let dir_norm = (direction[0] * direction[0]
                     + direction[1] * direction[1]
                     + direction[2] * direction[2])
                     .sqrt();
-
-                if dir_norm < 1e-10 {
+                if !dir_norm.is_finite() || dir_norm < 1e-12 {
                     return Ok([0.0, 0.0, 0.0]);
                 }
 
-                let fx = amplitude_n_per_m3 * spatial_factor * direction[0] / dir_norm;
-                let fy = amplitude_n_per_m3 * spatial_factor * direction[1] / dir_norm;
-                let fz = amplitude_n_per_m3 * spatial_factor * direction[2] / dir_norm;
-
-                Ok([fx, fy, fz])
-            }
-
-            ElasticBodyForceConfig::RectangularPulse {
-                bbox_min_m,
-                bbox_max_m,
-                amplitude_n_per_m3,
-                start_time_s,
-                end_time_s,
-                direction,
-            } => {
-                // Temporal profile
-                if time < *start_time_s || time > *end_time_s {
-                    return Ok([0.0, 0.0, 0.0]);
-                }
-
-                // Spatial profile (inside bounding box)
-                let inside_x = x >= bbox_min_m[0] && x <= bbox_max_m[0];
-                let inside_y = y >= bbox_min_m[1] && y <= bbox_max_m[1];
-                let inside_z = z >= bbox_min_m[2] && z <= bbox_max_m[2];
-
-                if !inside_x || !inside_y || !inside_z {
-                    return Ok([0.0, 0.0, 0.0]);
-                }
-
-                // Normalize direction
-                let dir_norm = (direction[0] * direction[0]
-                    + direction[1] * direction[1]
-                    + direction[2] * direction[2])
-                    .sqrt();
-
-                if dir_norm < 1e-10 {
-                    return Ok([0.0, 0.0, 0.0]);
-                }
-
-                let fx = amplitude_n_per_m3 * direction[0] / dir_norm;
-                let fy = amplitude_n_per_m3 * direction[1] / dir_norm;
-                let fz = amplitude_n_per_m3 * direction[2] / dir_norm;
-
-                Ok([fx, fy, fz])
+                let scale = impulse_n_per_m3_s * spatial_factor * temporal_factor / dir_norm;
+                Ok([
+                    scale * direction[0],
+                    scale * direction[1],
+                    scale * direction[2],
+                ])
             }
         }
     }

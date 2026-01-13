@@ -1,11 +1,17 @@
 // src/physics/optics/mod.rs
 pub mod diffusion;
+pub mod map_builder;
+pub mod monte_carlo;
 pub mod polarization;
 pub mod scattering;
 pub mod sonoluminescence;
 
 // Re-export commonly used types
 pub use diffusion::{LightDiffusion, OpticalProperties};
+pub use map_builder::{
+    Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, PropertyStats, Region,
+};
+pub use monte_carlo::{MCResult, MonteCarloSolver, PhotonSource, SimulationConfig};
 pub use polarization::{
     JonesMatrix, JonesPolarizationModel, JonesVector, LinearPolarization, PolarizationModel,
 };

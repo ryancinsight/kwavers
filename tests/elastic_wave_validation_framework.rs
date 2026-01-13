@@ -22,7 +22,7 @@
 //! Level 4: Energy Conservation (Hamiltonian invariance)
 //! Level 5: Analytical Solution Convergence (plane waves, Lamb's problem)
 
-use kwavers::domain::physics::wave_equation::{
+use kwavers::physics::foundations::wave_equation::{
     AutodiffElasticWaveEquation, BoundaryCondition, Domain, ElasticWaveEquation,
 };
 use ndarray::{s, Array2, ArrayD};
@@ -139,7 +139,7 @@ pub fn validate_material_properties<T: ElasticWaveEquation>(solver: &T) -> Valid
     }
 
     // Check thermodynamic stability: λ > -2μ/3
-    let mut max_violation = 0.0;
+    let mut max_violation: f64 = 0.0;
     for (l, m) in lambda.iter().zip(mu.iter()) {
         let bound = -2.0 * m / 3.0;
         if l < &bound {
@@ -247,7 +247,7 @@ pub fn validate_material_properties_autodiff<T: AutodiffElasticWaveEquation>(
     }
 
     // Check thermodynamic stability: λ > -2μ/3
-    let mut max_violation = 0.0;
+    let mut max_violation: f64 = 0.0;
     for (l, m) in lambda.iter().zip(mu.iter()) {
         let bound = -2.0 * m / 3.0;
         if l < &bound {
@@ -350,8 +350,14 @@ pub fn validate_wave_speeds<T: ElasticWaveEquation>(
     let cp_l2 = (cp_error.iter().map(|x| x * x).sum::<f64>() / cp_error.len() as f64).sqrt();
     let cs_l2 = (cs_error.iter().map(|x| x * x).sum::<f64>() / cs_error.len() as f64).sqrt();
 
-    let cp_linf = cp_error.iter().cloned().fold(0.0, |a, b| a.max(b.abs()));
-    let cs_linf = cs_error.iter().cloned().fold(0.0, |a, b| a.max(b.abs()));
+    let cp_linf = cp_error
+        .iter()
+        .cloned()
+        .fold(0.0_f64, |a, b| a.max(b.abs()));
+    let cs_linf = cs_error
+        .iter()
+        .cloned()
+        .fold(0.0_f64, |a, b| a.max(b.abs()));
 
     let total_l2 = (cp_l2 * cp_l2 + cs_l2 * cs_l2).sqrt();
     let total_linf = cp_linf.max(cs_linf);
@@ -401,8 +407,14 @@ pub fn validate_wave_speeds_autodiff<T: AutodiffElasticWaveEquation>(
     let cp_l2 = (cp_error.iter().map(|x| x * x).sum::<f64>() / cp_error.len() as f64).sqrt();
     let cs_l2 = (cs_error.iter().map(|x| x * x).sum::<f64>() / cs_error.len() as f64).sqrt();
 
-    let cp_linf = cp_error.iter().cloned().fold(0.0, |a, b| a.max(b.abs()));
-    let cs_linf = cs_error.iter().cloned().fold(0.0, |a, b| a.max(b.abs()));
+    let cp_linf = cp_error
+        .iter()
+        .cloned()
+        .fold(0.0_f64, |a, b| a.max(b.abs()));
+    let cs_linf = cs_error
+        .iter()
+        .cloned()
+        .fold(0.0_f64, |a, b| a.max(b.abs()));
 
     let total_l2 = (cp_l2 * cp_l2 + cs_l2 * cs_l2).sqrt();
     let total_linf = cp_linf.max(cs_linf);
@@ -584,7 +596,7 @@ pub fn validate_plane_wave_pde<T: ElasticWaveEquation>(
     let dy = (y_max - y_min) / (ny - 1) as f64;
 
     let mut residual_sum = 0.0;
-    let mut max_residual = 0.0;
+    let mut max_residual: f64 = 0.0;
     let mut count = 0;
 
     // Sample at interior points (avoid boundaries)

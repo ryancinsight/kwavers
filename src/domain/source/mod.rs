@@ -2,6 +2,7 @@
 
 pub mod basic;
 pub mod custom;
+pub mod electromagnetic;
 pub mod optical;
 pub mod transducers;
 pub mod wavefront;
@@ -17,7 +18,7 @@ pub use config::{EnvelopeType, PulseParameters, PulseType, SourceModel, SourcePa
 pub use factory::SourceFactory;
 pub use grid_source::{GridSource, SourceMode};
 pub use structs::{CompositeSource, NullSource, PointSource, TimeVaryingSource};
-pub use types::{Source, SourceField, SourceType};
+pub use types::{EMWaveType, Polarization, Source, SourceField, SourceType};
 
 // Re-export submodules
 pub use basic::{
@@ -28,6 +29,7 @@ pub use basic::{
 pub use custom::{
     CustomSourceBuilder, FunctionSource, SimpleCustomSource, SimpleCustomSourceBuilder,
 };
+pub use electromagnetic::{EMSource, PlaneWaveEMSource, PointEMSource};
 pub use optical::laser::{GaussianLaser, LaserConfig, LaserSource};
 pub use transducers::{
     apodization::{

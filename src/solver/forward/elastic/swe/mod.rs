@@ -119,6 +119,8 @@
 
 // Submodules (alphabetical order)
 pub mod boundary;
+pub mod core;
+pub mod gpu;
 pub mod integration;
 pub mod stress;
 pub mod types;
@@ -130,6 +132,8 @@ pub use types::{
 };
 
 pub use boundary::{PMLBoundary, PMLConfig};
+pub use core::ElasticWaveSolver;
+pub use gpu::{AdaptiveResolution, GPUDevice, GPUElasticWaveSolver3D};
 pub use integration::TimeIntegrator;
 pub use stress::StressDerivatives;
 
@@ -140,16 +144,11 @@ pub use stress::StressDerivatives;
 // - Numerical solvers belong in solver/forward/elastic/
 // - Physics models belong in physics/acoustics/imaging/modalities/elastography/
 //
-// Refactoring Progress (Original: 2,824 lines):
-// ✅ types.rs (346 lines) - Configuration and data types
-// ✅ stress.rs (397 lines) - Stress tensor derivatives
-// ✅ integration.rs (434 lines) - Time integration schemes
-// ✅ boundary.rs (461 lines) - PML boundary conditions
-// 🔄 core.rs - Main solver orchestration (planned ~400 lines)
-// 🔄 tracking.rs - Wave-front tracking (planned ~400 lines)
-//
-// Current status: 58% complete (1,638/2,824 lines extracted to correct location)
-
-// Temporary re-export from legacy location until refactoring is complete
-// This maintains backward compatibility during the transition
-pub use crate::physics::acoustics::imaging::modalities::elastography::elastic_wave_solver::ElasticWaveSolver;
+// Refactoring Progress:
+// ✅ types.rs - Configuration and data types
+// ✅ stress.rs - Stress tensor derivatives
+// ✅ integration.rs - Time integration schemes
+// ✅ boundary.rs - PML boundary conditions
+// ✅ core.rs - Main solver orchestration
+// ✅ gpu.rs - GPU acceleration support
+// 🔄 tracking.rs - Wave-front tracking (planned)

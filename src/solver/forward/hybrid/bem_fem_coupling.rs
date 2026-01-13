@@ -35,11 +35,9 @@
 //! - Johnson, C. & Nédélec, J. C. (1980). "On the coupling of boundary integral
 //!   and finite element methods"
 
-use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::grid::Grid;
+use crate::core::error::KwaversResult;
 use crate::domain::mesh::tetrahedral::TetrahedralMesh;
-use crate::math::numerics::operators::{Interpolator, TrilinearInterpolator};
-use ndarray::{Array2, Array3, ArrayView3};
+use crate::math::numerics::operators::TrilinearInterpolator;
 use std::collections::HashMap;
 
 /// Configuration for BEM-FEM coupling
@@ -109,7 +107,8 @@ impl BemFemInterface {
         }
 
         // Generate interface geometry
-        let (quadrature_points, quadrature_weights) = Self::generate_interface_quadrature(&fem_interface_nodes, fem_mesh);
+        let (quadrature_points, quadrature_weights) =
+            Self::generate_interface_quadrature(&fem_interface_nodes, fem_mesh);
         let interface_normals = Self::compute_interface_normals(&fem_interface_nodes, fem_mesh);
 
         Ok(Self {
@@ -153,7 +152,11 @@ impl BemFemInterface {
 
         for &node_idx in fem_nodes {
             if let Some(node) = fem_mesh.nodes.get(node_idx) {
-                points.push((node.coordinates[0], node.coordinates[1], node.coordinates[2]));
+                points.push((
+                    node.coordinates[0],
+                    node.coordinates[1],
+                    node.coordinates[2],
+                ));
                 weights.push(1.0 / fem_nodes.len() as f64); // Equal weights
             }
         }
@@ -276,13 +279,15 @@ impl BemFemCoupler {
         for (i, &fem_value) in fem_values.iter().enumerate() {
             if i < self.interface.fem_interface_nodes.len() {
                 let fem_node_idx = self.interface.fem_interface_nodes[i];
-                if let Some(&bem_element_idx) = self.interface.node_element_mapping.get(&fem_node_idx) {
+                if let Some(&bem_element_idx) =
+                    self.interface.node_element_mapping.get(&fem_node_idx)
+                {
                     if bem_element_idx < bem_boundary_values.len() {
                         // Apply with relaxation for stability
                         let current_value = bem_boundary_values[bem_element_idx];
-                        bem_boundary_values[bem_element_idx] =
-                            self.config.relaxation_factor * fem_value +
-                            (1.0 - self.config.relaxation_factor) * current_value;
+                        bem_boundary_values[bem_element_idx] = self.config.relaxation_factor
+                            * fem_value
+                            + (1.0 - self.config.relaxation_factor) * current_value;
                     }
                 }
             }
@@ -313,7 +318,7 @@ impl BemFemCoupler {
         fem_field: &mut Vec<f64>,
         _fem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<f64> {
-        let mut max_residual = 0.0;
+        let mut max_residual: f64 = 0.0;
 
         // Apply BEM values to FEM interface nodes
         for (i, &bem_value) in bem_values.iter().enumerate() {
@@ -321,8 +326,8 @@ impl BemFemCoupler {
                 let fem_node_idx = self.interface.fem_interface_nodes[i];
                 if fem_node_idx < fem_field.len() {
                     let current_value = fem_field[fem_node_idx];
-                    let new_value = self.config.relaxation_factor * bem_value +
-                                  (1.0 - self.config.relaxation_factor) * current_value;
+                    let new_value = self.config.relaxation_factor * bem_value
+                        + (1.0 - self.config.relaxation_factor) * current_value;
 
                     // Compute residual for convergence
                     let residual = (new_value - current_value).abs();
@@ -337,7 +342,11 @@ impl BemFemCoupler {
     }
 
     /// Solve BEM system (placeholder)
-    fn solve_bem_system(&self, _bem_boundary_values: &mut Vec<f64>, _wavenumber: f64) -> KwaversResult<()> {
+    fn solve_bem_system(
+        &self,
+        _bem_boundary_values: &mut Vec<f64>,
+        _wavenumber: f64,
+    ) -> KwaversResult<()> {
         // Placeholder for BEM system solution
         // In practice, this would solve the boundary integral equations
         // using the BEM matrices and the boundary values
@@ -345,7 +354,11 @@ impl BemFemCoupler {
     }
 
     /// Solve FEM system (placeholder)
-    fn solve_fem_system(&self, _fem_field: &mut Vec<f64>, _fem_mesh: &TetrahedralMesh) -> KwaversResult<()> {
+    fn solve_fem_system(
+        &self,
+        _fem_field: &mut Vec<f64>,
+        _fem_mesh: &TetrahedralMesh,
+    ) -> KwaversResult<()> {
         // Placeholder for FEM system solution
         // In practice, this would solve the finite element system
         // using the FEM stiffness/mass matrices
@@ -409,7 +422,11 @@ impl BemFemSolver {
     }
 
     /// Solve the coupled BEM-FEM system
-    pub fn solve(&mut self, fem_initial_guess: Vec<f64>, bem_boundary_guess: Vec<f64>) -> KwaversResult<()> {
+    pub fn solve(
+        &mut self,
+        fem_initial_guess: Vec<f64>,
+        bem_boundary_guess: Vec<f64>,
+    ) -> KwaversResult<()> {
         self.coupler.solve_coupled(
             &mut fem_initial_guess.clone(),
             &mut bem_boundary_guess.clone(),

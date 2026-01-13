@@ -125,7 +125,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
             points.push(rand::random::<f32>()); // t
         }
 
-        Ok(Tensor::from_data(points.as_slice(), &device))
+        Ok(Tensor::<B, 1>::from_floats(points.as_slice(), &device).reshape([total_points, 3]))
     }
 
     /// Resample collocation points based on current model

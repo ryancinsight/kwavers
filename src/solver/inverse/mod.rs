@@ -18,6 +18,7 @@
 //! - Traditional methods: Optimization, adjoint methods, iterative reconstruction
 //! - PINN methods: Neural network approximation with physics-informed loss
 
+pub mod elastography;
 pub mod pinn;
 pub mod reconstruction;
 pub mod seismic;

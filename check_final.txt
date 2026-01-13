@@ -1,0 +1,77 @@
+error[E0252]: the name `PlasmonicEnhancement` is defined multiple times
+  --> src\physics\electromagnetic\mod.rs:56:73
+   |
+51 | pub use plasmonics::{MieTheory, NanoparticleArray, PlasmonicEnhancement};
+   |                                                    -------------------- previous import of the type `PlasmonicEnhancement` here
+...
+56 | pub use equations::{ElectromagneticWaveEquation, PhotoacousticCoupling, PlasmonicEnhancement, EMMaterialUtils, EMFieldUtils};
+   |                                                                         ^^^^^^^^^^^^^^^^^^^^ `PlasmonicEnhancement` reimported here
+   |
+   = note: `PlasmonicEnhancement` must be defined only once in the type namespace of this module
+help: you can use `as` to change the binding name of the import
+   |
+56 | pub use equations::{ElectromagneticWaveEquation, PhotoacousticCoupling, PlasmonicEnhancement as OtherPlasmonicEnhancement, EMMaterialUtils, EMFieldUtils};
+   |                                                                                              ++++++++++++++++++++++++++++
+
+error[E0432]: unresolved imports `crate::physics::electromagnetic::equations::EMFields`, `crate::physics::electromagnetic::equations::EMMaterialProperties`
+ --> src\physics\electromagnetic\photoacoustic.rs:8:5
+  |
+8 |     EMFields, EMMaterialProperties, ElectromagneticWaveEquation, PhotoacousticCoupling,
+  |     ^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^ no `EMMaterialProperties` in `physics::electromagnetic::equations`
+  |     |
+  |     no `EMFields` in `physics::electromagnetic::equations`
+  |
+  = help: consider importing this struct through its public re-export instead:
+          crate::domain::field::EMFields
+
+error[E0432]: unresolved imports `crate::physics::electromagnetic::equations::EMFields`, `crate::physics::electromagnetic::equations::EMMaterialProperties`
+  --> src\physics\electromagnetic\solvers.rs:10:18
+   |
+10 |     EMDimension, EMFields, EMMaterialProperties, ElectromagneticWaveEquation,
+   |                  ^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^ no `EMMaterialProperties` in `physics::electromagnetic::equations`
+   |                  |
+   |                  no `EMFields` in `physics::electromagnetic::equations`
+   |
+   = help: consider importing this struct through its public re-export instead:
+           crate::domain::field::EMFields
+
+error[E0432]: unresolved imports `crate::physics::electromagnetic::equations::EMFields`, `crate::physics::electromagnetic::equations::EMMaterialProperties`
+  --> src\solver\forward\fdtd\electromagnetic.rs:12:18
+   |
+12 |     EMDimension, EMFields, EMMaterialProperties, ElectromagneticWaveEquation,
+   |                  ^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^ no `EMMaterialProperties` in `physics::electromagnetic::equations`
+   |                  |
+   |                  no `EMFields` in `physics::electromagnetic::equations`
+   |
+   = help: consider importing this struct through its public re-export instead:
+           crate::domain::field::EMFields
+
+warning: unused import: `EMFields`
+  --> src\physics\electromagnetic\equations\fields.rs:6:28
+   |
+ 6 | use crate::domain::field::{EMFields, PoyntingVector};
+   |                            ^^^^^^^^
+   |
+note: the lint level is defined here
+  --> src\lib.rs:13:5
+   |
+13 |     unused_imports,
+   |     ^^^^^^^^^^^^^^
+
+warning: unused import: `PlasmonicEnhancement`
+  --> src\physics\electromagnetic\mod.rs:51:52
+   |
+51 | pub use plasmonics::{MieTheory, NanoparticleArray, PlasmonicEnhancement};
+   |                                                    ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `surface_normal`
+   --> src\domain\field\electromagnetic.rs:272:31
+    |
+272 |     pub fn total_power(&self, surface_normal: &[f64], surface_area: f64) -> f64 {
+    |                               ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_surface_normal`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+Some errors have detailed explanations: E0252, E0432.
+For more information about an error, try `rustc --explain E0252`.
+error: could not compile `kwavers` (lib) due to 4 previous errors; 3 warnings emitted

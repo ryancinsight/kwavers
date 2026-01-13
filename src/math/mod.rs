@@ -34,4 +34,6 @@ pub mod simd;
 pub use fft::{Fft1d, Fft2d, Fft3d, KSpaceCalculator};
 pub use geometry::*;
 pub use linear_algebra::sparse;
-pub use simd::{FdtdSimdOps, FftSimdOps, InterpolationSimdOps, SimdConfig, SimdLevel, SimdPerformance};
+pub use simd::{
+    FdtdSimdOps, FftSimdOps, InterpolationSimdOps, SimdConfig, SimdLevel, SimdPerformance,
+};

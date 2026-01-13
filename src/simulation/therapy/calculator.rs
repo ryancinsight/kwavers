@@ -1,11 +1,11 @@
 //! Therapy calculator orchestration
 
+use crate::clinical::therapy::metrics::TreatmentMetrics;
+use crate::clinical::therapy::modalities::TherapyModality;
+use crate::clinical::therapy::parameters::TherapyParameters;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::domain::therapy::metrics::TreatmentMetrics;
-use crate::domain::therapy::modalities::TherapyModality;
-use crate::domain::therapy::parameters::TherapyParameters;
 // use crate::physics::acoustics::therapy::cavitation::TherapyCavitationDetector; // TODO: Module missing
 use crate::physics::thermal::PennesSolver;
 use ndarray::{Array3, Zip};
@@ -33,19 +33,28 @@ impl TherapyCalculator {
     pub fn new(modality: TherapyModality, parameters: TherapyParameters, grid: &Grid) -> Self {
         // Initialize components based on modality
         let thermal = if modality.has_thermal_effects() {
-            use crate::physics::thermal::ThermalProperties;
-            let properties = ThermalProperties {
-                k: 0.5,      // thermal conductivity
-                rho: 1050.0, // density
-                c: 3600.0,   // specific heat
-                w_b: 0.5e-3, // perfusion rate
-                c_b: 3800.0, // blood specific heat
-                t_a: 37.0,   // arterial temperature
-                q_m: 420.0,  // metabolic heat
-            };
+            use crate::physics::thermal::ThermalPropertyData;
+            let properties = ThermalPropertyData::new(
+                0.5,          // conductivity (W/m/K)
+                3600.0,       // specific_heat (J/kg/K)
+                1050.0,       // density (kg/m³)
+                Some(0.5e-3), // blood_perfusion (kg/m³/s)
+                Some(3617.0), // blood_specific_heat (J/kg/K)
+            )
+            .expect("Valid thermal properties");
+            let arterial_temperature = 37.0; // °C
+            let metabolic_heat = 420.0; // W/m³
             PennesSolver::new(
-                grid.nx, grid.ny, grid.nz, grid.dx, grid.dy, grid.dz, 0.001, // dt = 1ms
+                grid.nx,
+                grid.ny,
+                grid.nz,
+                grid.dx,
+                grid.dy,
+                grid.dz,
+                0.001, // dt = 1ms
                 properties,
+                arterial_temperature,
+                metabolic_heat,
             )
             .ok()
         } else {

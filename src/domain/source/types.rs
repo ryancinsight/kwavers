@@ -23,6 +23,36 @@ pub enum SourceField {
     VelocityZ,
 }
 
+/// Electromagnetic polarization state
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Polarization {
+    /// Linear polarization along x-axis
+    LinearX,
+    /// Linear polarization along y-axis
+    LinearY,
+    /// Linear polarization along z-axis
+    LinearZ,
+    /// Right circular polarization
+    RightCircular,
+    /// Left circular polarization
+    LeftCircular,
+    /// Elliptical polarization (ratio, phase difference)
+    Elliptical { ratio: f64, phase_diff: f64 },
+}
+
+/// Electromagnetic wave type
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum EMWaveType {
+    /// Transverse electromagnetic (no longitudinal components)
+    TEM,
+    /// Transverse electric (E_z = 0)
+    TE,
+    /// Transverse magnetic (H_z = 0)
+    TM,
+    /// Hybrid mode (both E_z, H_z nonzero)
+    Hybrid,
+}
+
 pub type SourceType = SourceField;
 
 /// Efficient source trait using mask-based approach

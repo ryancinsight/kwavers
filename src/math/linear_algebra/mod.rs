@@ -42,6 +42,13 @@ impl LinearAlgebra {
         ComplexLinearAlgebra::solve_linear_system_complex(a, b)
     }
 
+    /// Compute inverse of a complex matrix (backward compatibility)
+    pub fn matrix_inverse_complex(
+        matrix: &Array2<Complex<f64>>,
+    ) -> KwaversResult<Array2<Complex<f64>>> {
+        ComplexLinearAlgebra::matrix_inverse_complex(matrix)
+    }
+
     /// Compute eigendecomposition of symmetric matrix (backward compatibility)
     pub fn eigendecomposition(matrix: &Array2<f64>) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
         EigenDecomposition::eigendecomposition(matrix)
@@ -248,7 +255,11 @@ mod tests {
 
     #[test]
     fn test_norm_l2_convenience_function() {
-        let array = ndarray::Array3::from_shape_vec((2, 2, 2), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]).unwrap();
+        let array = ndarray::Array3::from_shape_vec(
+            (2, 2, 2),
+            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+        )
+        .unwrap();
         let norm = norm_l2(&array);
 
         // Expected: sqrt(1² + 2² + ... + 8²) = sqrt(204) ≈ 14.282856857

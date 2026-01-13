@@ -2,7 +2,7 @@
 //!
 //! This module defines metadata structures and configuration traits for plugins.
 
-use crate::analysis::validation::ValidationResult;
+use crate::core::error::KwaversResult;
 use std::any::Any;
 use std::fmt::Debug;
 
@@ -26,7 +26,7 @@ pub struct PluginMetadata {
 /// Configuration for a physics plugin
 pub trait PluginConfig: Debug + Send + Sync {
     /// Validate the configuration
-    fn validate(&self) -> ValidationResult;
+    fn validate(&self) -> KwaversResult<()>;
 
     /// Clone the configuration as a boxed Any for type erasure
     fn clone_boxed(&self) -> Box<dyn Any + Send + Sync>;

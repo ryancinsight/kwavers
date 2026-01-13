@@ -23,6 +23,7 @@
 //!   partial differential equations in complex geometries" - Neurocomputing 317:28-41
 
 use std::f64::consts::PI;
+use std::sync::Arc;
 
 /// Interface conditions between regions in multi-region domains
 ///
@@ -67,7 +68,7 @@ pub enum InterfaceCondition {
     /// Returns: residual that should be zero when interface condition is satisfied
     Custom {
         /// Interface condition function
-        condition: Box<dyn Fn(f64, f64, (f64, f64), (f64, f64)) -> f64 + Send + Sync>,
+        condition: Arc<dyn Fn(f64, f64, (f64, f64), (f64, f64)) -> f64 + Send + Sync>,
     },
 }
 
@@ -152,9 +153,9 @@ pub enum Geometry2D {
     /// Point-in-domain test uses winding number algorithm.
     ParametricCurve {
         /// Parametric function x(t)
-        x_func: Box<dyn Fn(f64) -> f64 + Send + Sync>,
+        x_func: Arc<dyn Fn(f64) -> f64 + Send + Sync>,
         /// Parametric function y(t)
-        y_func: Box<dyn Fn(f64) -> f64 + Send + Sync>,
+        y_func: Arc<dyn Fn(f64) -> f64 + Send + Sync>,
         /// Parameter range minimum
         t_min: f64,
         /// Parameter range maximum
@@ -276,8 +277,8 @@ impl Geometry2D {
     /// - `t_min`, `t_max`: Parameter range
     /// - `bounds`: Bounding box for interior sampling (x_min, x_max, y_min, y_max)
     pub fn parametric_curve(
-        x_func: Box<dyn Fn(f64) -> f64 + Send + Sync>,
-        y_func: Box<dyn Fn(f64) -> f64 + Send + Sync>,
+        x_func: Arc<dyn Fn(f64) -> f64 + Send + Sync>,
+        y_func: Arc<dyn Fn(f64) -> f64 + Send + Sync>,
         t_min: f64,
         t_max: f64,
         bounds: (f64, f64, f64, f64),

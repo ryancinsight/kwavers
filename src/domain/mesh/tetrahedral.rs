@@ -244,7 +244,10 @@ impl TetrahedralMesh {
             sorted_face.sort();
 
             // Update face-to-element mapping
-            let entry = self.face_elements.entry(sorted_face).or_insert_with(Vec::new);
+            let entry = self
+                .face_elements
+                .entry(sorted_face)
+                .or_insert_with(Vec::new);
             entry.push(element_idx);
             if entry.len() > 2 {
                 return Err(KwaversError::InvalidInput(format!(
@@ -255,13 +258,15 @@ impl TetrahedralMesh {
 
             match entry.len() {
                 1 => {
-                    self.boundary_faces.insert(sorted_face, (element_idx, face_idx));
+                    self.boundary_faces
+                        .insert(sorted_face, (element_idx, face_idx));
                 }
                 2 => {
                     self.boundary_faces.remove(&sorted_face);
 
                     let other_idx = entry[0];
-                    if other_idx != element_idx && !self.adjacency[element_idx].contains(&other_idx) {
+                    if other_idx != element_idx && !self.adjacency[element_idx].contains(&other_idx)
+                    {
                         self.adjacency[element_idx].push(other_idx);
                     }
                     if other_idx != element_idx {

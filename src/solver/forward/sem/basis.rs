@@ -18,7 +18,6 @@
 //! Gauss-Lobatto-Legendre points include the endpoints (-1, 1) and are optimal
 //! for spectral element methods due to their interpolation properties.
 
-use crate::core::error::{KwaversResult, KwaversError};
 use ndarray::Array1;
 
 /// Spectral element basis functions using Lagrange polynomials on GLL points
@@ -116,16 +115,14 @@ impl SemBasis {
             let n_interior = n_points - 2;
             for i in 0..n_interior {
                 // Initial guess using Chebyshev points
-                let xi = -((std::f64::consts::PI * (i + 1) as f64) /
-                          (n_interior + 1) as f64).cos();
+                let xi = -((std::f64::consts::PI * (i + 1) as f64) / (n_interior + 1) as f64).cos();
 
                 // Newton iteration to find GLL point
                 let mut x = xi;
                 for _ in 0..10 {
                     let (p, dp) = Self::legendre_and_derivative(n_points - 1, x);
                     let numerator = (1.0 - x * x) * dp;
-                    let denominator = -2.0 * x * dp + (n_points - 1) as f64 *
-                                    (n_points) as f64 * p;
+                    let denominator = -2.0 * x * dp + (n_points - 1) as f64 * (n_points) as f64 * p;
 
                     if denominator.abs() > 1e-15 {
                         x += numerator / denominator;
@@ -170,8 +167,8 @@ impl SemBasis {
 
         for k in 1..n {
             let p2 = ((2 * k + 1) as f64 * x * p1 - k as f64 * p0) / (k + 1) as f64;
-            let dp2 = ((2 * k + 1) as f64 * p1 + (2 * k + 1) as f64 * x * dp1 -
-                      k as f64 * dp0) / (k + 1) as f64;
+            let dp2 = ((2 * k + 1) as f64 * p1 + (2 * k + 1) as f64 * x * dp1 - k as f64 * dp0)
+                / (k + 1) as f64;
 
             p0 = p1;
             p1 = p2;
@@ -195,8 +192,7 @@ impl SemBasis {
                     matrix[[i, j]] = 1.0;
                     for k in 0..n {
                         if k != i && k != j {
-                            matrix[[i, j]] *= (points[j] - points[k]) /
-                                             (points[i] - points[k]);
+                            matrix[[i, j]] *= (points[j] - points[k]) / (points[i] - points[k]);
                         }
                     }
                 }
@@ -229,8 +225,7 @@ impl SemBasis {
                             let mut term = 1.0;
                             for m in 0..n {
                                 if m != i && m != k && m != j {
-                                    term *= (points[j] - points[m]) /
-                                           (points[i] - points[m]);
+                                    term *= (points[j] - points[m]) / (points[i] - points[m]);
                                 }
                             }
                             sum += term;

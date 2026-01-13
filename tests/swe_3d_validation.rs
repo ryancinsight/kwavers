@@ -37,16 +37,23 @@
 //! - Palmeri, M. L., et al. (2011). "Quantifying hepatic shear modulus in vivo using
 //!   acoustic radiation force." *Ultrasound in Medicine & Biology*, 37(4), 546-558.
 
-use kwavers::clinical::swe_3d_workflows::{
+use kwavers::clinical::therapy::swe_3d_workflows::{
     ClinicalDecisionSupport, ElasticityMap3D, VolumetricROI,
 };
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::heterogeneous::HeterogeneousMedium;
 use kwavers::domain::medium::HomogeneousMedium;
-use kwavers::physics::imaging::elastography::{
-    AcousticRadiationForce, AdaptiveResolution, ArrivalDetection, ElasticBodyForceConfig,
-    ElasticWaveSolver, GPUDevice, GPUElasticWaveSolver3D, MultiDirectionalPush,
-    VolumetricWaveConfig, WaveFrontTracker,
+#[cfg(feature = "gpu")]
+use kwavers::gpu::GPUDevice;
+use kwavers::physics::acoustics::imaging::modalities::elastography::{
+    AcousticRadiationForce, MultiDirectionalPush,
+};
+use kwavers::solver::forward::elastic::swe::AdaptiveResolution;
+#[cfg(feature = "gpu")]
+use kwavers::solver::forward::elastic::GPUElasticWaveSolver3D;
+use kwavers::solver::forward::elastic::{
+    ArrivalDetection, ElasticBodyForceConfig, ElasticWaveConfig, ElasticWaveField,
+    ElasticWaveSolver, VolumetricSource, VolumetricWaveConfig, WaveFrontTracker,
 };
 use ndarray::Array3;
 use std::default::Default;
@@ -68,7 +75,7 @@ fn test_analytical_homogeneous_validation() {
     // Correctness-first:
     // - ARFI excitation is a body-force source term; do not inject an arbitrary initial displacement.
     // - This test validates model-consistent invariants and sanity properties of the PDE evolution.
-    let solver_config = kwavers::physics::imaging::elastography::ElasticWaveConfig {
+    let solver_config = kwavers::solver::forward::elastic::ElasticWaveConfig {
         pml_thickness: 4,
         simulation_time: 6e-3,
         cfl_factor: 0.5,
@@ -157,12 +164,12 @@ fn test_volumetric_phantom_validation() {
 
     // Propagate with volumetric tracking
     let push_times: Vec<f64> = push_pattern.time_delays.clone();
-    let sources: Vec<kwavers::physics::imaging::elastography::VolumetricSource> = push_pattern
+    let sources: Vec<kwavers::solver::forward::elastic::VolumetricSource> = push_pattern
         .pushes
         .iter()
         .zip(push_pattern.time_delays.iter())
         .map(
-            |(push, &t)| kwavers::physics::imaging::elastography::VolumetricSource {
+            |(push, &t)| kwavers::solver::forward::elastic::VolumetricSource {
                 location_m: push.location,
                 time_offset_s: t,
             },
@@ -211,12 +218,12 @@ fn test_clinical_liver_fibrosis_accuracy() {
     // Clinical examination (ARFI-as-forcing)
     let body_forces = arf.multi_directional_body_forces(&push_pattern).unwrap();
     let push_times: Vec<f64> = push_pattern.time_delays.clone();
-    let sources: Vec<kwavers::physics::imaging::elastography::VolumetricSource> = push_pattern
+    let sources: Vec<kwavers::solver::forward::elastic::VolumetricSource> = push_pattern
         .pushes
         .iter()
         .zip(push_pattern.time_delays.iter())
         .map(
-            |(push, &t)| kwavers::physics::imaging::elastography::VolumetricSource {
+            |(push, &t)| kwavers::solver::forward::elastic::VolumetricSource {
                 location_m: push.location,
                 time_offset_s: t,
             },
@@ -262,6 +269,7 @@ fn test_clinical_liver_fibrosis_accuracy() {
 
 /// Test GPU acceleration performance
 #[test]
+#[cfg(feature = "gpu")]
 #[ignore = "Long-running benchmark-style validation; excluded under nextest per-test 30s timeout policy"]
 fn test_gpu_acceleration_performance() {
     println!("Testing GPU acceleration performance...");
@@ -502,12 +510,12 @@ fn test_literature_benchmark_comparison() {
     let body_forces = arf.multi_directional_body_forces(&push_pattern).unwrap();
     let push_times: Vec<f64> = push_pattern.time_delays.clone();
 
-    let sources: Vec<kwavers::physics::imaging::elastography::VolumetricSource> = push_pattern
+    let sources: Vec<kwavers::solver::forward::elastic::VolumetricSource> = push_pattern
         .pushes
         .iter()
         .zip(push_pattern.time_delays.iter())
         .map(
-            |(push, &t)| kwavers::physics::imaging::elastography::VolumetricSource {
+            |(push, &t)| kwavers::solver::forward::elastic::VolumetricSource {
                 location_m: push.location,
                 time_offset_s: t,
             },
@@ -553,7 +561,7 @@ fn test_literature_benchmark_comparison() {
 // Helper functions
 
 fn estimate_wave_speed_from_history(
-    history: &[kwavers::physics::imaging::elastography::ElasticWaveField],
+    history: &[kwavers::solver::forward::elastic::ElasticWaveField],
     grid: &Grid,
     source_location: [f64; 3],
 ) -> f64 {

@@ -8,6 +8,7 @@ use ndarray::{Array1, Array2};
 use num_complex::Complex;
 
 /// Eigenvalue decomposition operations
+#[derive(Debug)]
 pub struct EigenDecomposition;
 
 impl EigenDecomposition {
@@ -35,9 +36,9 @@ impl EigenDecomposition {
         for i in 0..n {
             for j in (i + 1)..n {
                 if (matrix[[i, j]] - matrix[[j, i]]).abs() > 1e-10 {
-                return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
-                    "Matrix must be symmetric for real eigendecomposition".to_string(),
-                )));
+                    return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
+                        "Matrix must be symmetric for real eigendecomposition".to_string(),
+                    )));
                 }
             }
         }
@@ -47,7 +48,7 @@ impl EigenDecomposition {
         let mut eigenvalues = Array1::zeros(n);
 
         // Jacobi eigenvalue algorithm
-        let mut max_iterations = 100;
+        let max_iterations = 100;
         let tolerance = 1e-10;
 
         for _ in 0..max_iterations {
@@ -75,7 +76,8 @@ impl EigenDecomposition {
             let theta = if a[[p, p]] == a[[q, q]] {
                 std::f64::consts::PI / 4.0
             } else {
-                0.5 * (a[[q, q]] - a[[p, p]]) / a[[p, q]].atan2((a[[q, q]] - a[[p, p]]) / (2.0 * a[[p, q]]))
+                0.5 * (a[[q, q]] - a[[p, p]])
+                    / a[[p, q]].atan2((a[[q, q]] - a[[p, p]]) / (2.0 * a[[p, q]]))
             };
 
             let c = theta.cos();
