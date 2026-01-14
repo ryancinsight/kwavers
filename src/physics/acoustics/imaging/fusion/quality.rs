@@ -7,6 +7,74 @@
 use crate::domain::imaging::ultrasound::elastography::ElasticityMap;
 use ndarray::Array3;
 
+struct ImageMetrics {
+    snr: f64,
+    cnr: f64,
+}
+
+fn calculate_image_metrics(data: &Array3<f64>) -> ImageMetrics {
+    if data.is_empty() {
+        return ImageMetrics { snr: 0.0, cnr: 0.0 };
+    }
+
+    let mut values: Vec<f64> = data
+        .iter()
+        .cloned()
+        .filter(|x| !x.is_nan())
+        .collect();
+
+    // Sort to determine signal and background regions
+    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    let count = values.len();
+
+    // Define ROI (Region of Interest) and Background
+    // Heuristic: Signal is top 10%, Background is bottom 50%
+    let signal_threshold_idx = (count as f64 * 0.9).floor() as usize;
+    let background_threshold_idx = (count as f64 * 0.5).floor() as usize;
+
+    // Handle edge case where image is too small or flat
+    if count < 10 || signal_threshold_idx >= count || background_threshold_idx == 0 {
+        // Fallback to simple mean/std
+        let mean: f64 = values.iter().sum::<f64>() / count as f64;
+        let variance: f64 = values
+            .iter()
+            .map(|x| (x - mean).powi(2))
+            .sum::<f64>()
+            / count as f64;
+        let std_dev = variance.sqrt();
+        let snr = if std_dev > 0.0 { mean / std_dev } else { 0.0 };
+        return ImageMetrics { snr, cnr: 0.0 };
+    }
+
+    let signal_values = &values[signal_threshold_idx..];
+    let background_values = &values[..background_threshold_idx];
+
+    let signal_mean: f64 = signal_values.iter().sum::<f64>() / signal_values.len() as f64;
+
+    let bg_mean: f64 = background_values.iter().sum::<f64>() / background_values.len() as f64;
+    let bg_variance: f64 = background_values
+        .iter()
+        .map(|x| (x - bg_mean).powi(2))
+        .sum::<f64>()
+        / background_values.len() as f64;
+    let bg_std = bg_variance.sqrt();
+
+    let snr = if bg_std > 0.0 {
+        signal_mean / bg_std
+    } else {
+        0.0 // Avoid division by zero
+    };
+
+    let cnr = if bg_std > 0.0 {
+        (signal_mean - bg_mean).abs() / bg_std
+    } else {
+        0.0
+    };
+
+    ImageMetrics { snr, cnr }
+}
+
 /// Compute photoacoustic image quality score
 ///
 /// Evaluates the quality of photoacoustic imaging data based on
@@ -19,15 +87,18 @@ use ndarray::Array3;
 /// # Returns
 ///
 /// Quality score in range [0, 1]
-pub fn compute_pa_quality(_reconstructed_image: &Array3<f64>) -> f64 {
-    // TODO: Implement comprehensive quality metrics:
-    // - Signal-to-noise ratio (SNR)
-    // - Artifact detection (clutter, reverberations)
-    // - Temporal stability
-    // - Spatial consistency
+pub fn compute_pa_quality(reconstructed_image: &Array3<f64>) -> f64 {
+    let metrics = calculate_image_metrics(reconstructed_image);
 
-    // Placeholder: moderate quality
-    0.78
+    // Score components
+    // SNR: Expecting > 20 for good quality. Linear saturation.
+    let snr_score = (metrics.snr / 20.0).min(1.0);
+
+    // CNR: Expecting > 5 for good contrast.
+    let cnr_score = (metrics.cnr / 5.0).min(1.0);
+
+    // Weighted combination
+    0.6 * snr_score + 0.4 * cnr_score
 }
 
 /// Compute elastography image quality score
@@ -42,15 +113,19 @@ pub fn compute_pa_quality(_reconstructed_image: &Array3<f64>) -> f64 {
 /// # Returns
 ///
 /// Quality score in range [0, 1]
-pub fn compute_elastography_quality(_elasticity_map: &ElasticityMap) -> f64 {
-    // TODO: Implement comprehensive quality metrics:
-    // - Strain estimation accuracy
-    // - Spatial resolution
-    // - Motion artifact detection
-    // - Boundary consistency
+pub fn compute_elastography_quality(elasticity_map: &ElasticityMap) -> f64 {
+    // Elastography quality depends heavily on the stiffness contrast
+    let metrics = calculate_image_metrics(&elasticity_map.youngs_modulus);
 
-    // Placeholder: moderate quality
-    0.72
+    // SNR is less critical than CNR in elastography (contrast is key)
+    let snr_score = (metrics.snr / 15.0).min(1.0);
+    let cnr_score = (metrics.cnr / 4.0).min(1.0);
+
+    // Add a sanity check for physically realistic values (e.g. non-negative)
+    let (min_e, _max_e, _mean_e) = elasticity_map.statistics();
+    let realism_score = if min_e >= 0.0 { 1.0 } else { 0.5 };
+
+    0.3 * snr_score + 0.5 * cnr_score + 0.2 * realism_score
 }
 
 /// Compute optical image quality score
@@ -239,6 +314,89 @@ pub fn compute_confidence_map(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_calculate_image_metrics() {
+        // Create a simple image with signal and background
+        // Background: 10 +/- 1
+        // Signal: 50
+        let mut data = Array3::<f64>::from_elem((10, 10, 1), 10.0);
+        // Add some noise to background (bottom 50% of values)
+        // Ensure these indices don't overlap with signal (diagonal)
+        // Diagonal is (0,0), (1,1)...(9,9).
+        // (0,1) and (1,0) are safe.
+        data[[0, 1, 0]] = 9.0;
+        data[[1, 0, 0]] = 11.0;
+
+        // Add signal (top 10% = 10 pixels) on diagonal
+        for i in 0..10 {
+            data[[i, i, 0]] = 50.0;
+        }
+
+        let metrics = calculate_image_metrics(&data);
+
+        // Signal mean should be 50.0
+        // Background mean approx 10.0
+        // Background std approx > 0 because of 9.0 and 11.0
+
+        assert!(metrics.snr > 1.0);
+        assert!(metrics.cnr > 1.0);
+    }
+
+    #[test]
+    fn test_compute_pa_quality() {
+        let mut data = Array3::<f64>::from_elem((10, 10, 1), 1.0);
+        // Add background noise to ensure non-zero std dev
+        data[[0, 1, 0]] = 0.9;
+        data[[1, 0, 0]] = 1.1;
+
+        // High quality signal
+        data[[5, 5, 0]] = 100.0; // Peak
+
+        let quality = compute_pa_quality(&data);
+        assert!(quality > 0.0 && quality <= 1.0);
+
+        // Compare with flat image (zero variance -> zero SNR/CNR -> quality 0.0)
+        let flat_data = Array3::<f64>::from_elem((10, 10, 1), 1.0);
+        let flat_quality = compute_pa_quality(&flat_data);
+        assert!(quality > flat_quality);
+    }
+
+    #[test]
+    fn test_compute_elastography_quality() {
+        let youngs = Array3::<f64>::from_elem((10, 10, 1), 1000.0);
+        let shear = Array3::<f64>::zeros((10, 10, 1));
+        let speed = Array3::<f64>::zeros((10, 10, 1));
+
+        // Add noise to background
+        let mut youngs = youngs;
+        youngs[[0, 1, 0]] = 900.0;
+        youngs[[1, 0, 0]] = 1100.0;
+
+        let mut map = ElasticityMap {
+            youngs_modulus: youngs,
+            shear_modulus: shear,
+            shear_wave_speed: speed,
+        };
+
+        // Add stiff inclusion
+        map.youngs_modulus[[5, 5, 0]] = 5000.0;
+
+        let quality = compute_elastography_quality(&map);
+        assert!(quality > 0.0 && quality <= 1.0);
+
+        // Test negative values penalty
+        // We need to keep the background noise/signal structure to keep SNR/CNR similar
+        // but introduce a negative value to trigger the penalty.
+        let mut bad_map = map.clone();
+        bad_map.youngs_modulus[[9, 0, 0]] = -100.0;
+        // Note: -100.0 will likely be in the background (lowest value),
+        // increasing background variance, which reduces SNR and CNR.
+        // Combined with the realism penalty, the score should drop significantly.
+
+        let bad_quality = compute_elastography_quality(&bad_map);
+        assert!(bad_quality < quality);
+    }
 
     #[test]
     fn test_compute_optical_quality_visible_light() {
