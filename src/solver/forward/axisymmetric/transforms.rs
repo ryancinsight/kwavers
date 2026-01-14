@@ -89,7 +89,7 @@ impl DiscreteHankelTransform {
 
     /// Compute zeros of J0 Bessel function using McMahon's approximation
     fn bessel_j0_zeros(n: usize) -> Vec<f64> {
-        let mut zeros = vec![0.0]; // j_{0,0} = 0 (not actually a zero, placeholder)
+        let mut zeros = vec![0.0]; // TODO: j_{0,0} = 0 (not actually a zero, placeholder)
 
         for m in 1..=n {
             // McMahon's asymptotic approximation for large m

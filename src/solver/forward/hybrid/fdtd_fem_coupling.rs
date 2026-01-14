@@ -234,7 +234,7 @@ impl FdtdFemCoupler {
         self.update_fem_boundary(fem_field, &fdtd_interface_values, fem_mesh)?;
 
         // 3. Solve FEM domain (placeholder - would call actual FEM solver)
-        // self.solve_fem_domain(fem_field, fem_mesh)?;
+        // TODO: self.solve_fem_domain(fem_field, fem_mesh)?;
 
         // 4. Transfer FEM solution back to FDTD interface
         let fem_interface_values = self.extract_fem_interface(fem_field)?;
