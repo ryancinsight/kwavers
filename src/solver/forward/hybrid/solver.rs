@@ -5,7 +5,7 @@ use crate::domain::boundary::Boundary;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::GridSource;
-use crate::domain::source::Source;
+use crate::domain::source::{Source, SourceField};
 
 use crate::solver::forward::fdtd::FdtdSolver;
 use crate::solver::forward::pstd::PSTDSolver;
@@ -15,7 +15,7 @@ use crate::solver::hybrid::coupling::CouplingInterface;
 use crate::solver::hybrid::domain_decomposition::{DomainDecomposer, DomainRegion, DomainType};
 use crate::solver::hybrid::metrics::{HybridMetrics, ValidationResults};
 use log::{debug, info};
-use ndarray::{s, Array4};
+use ndarray::{s, Array4, Zip};
 use std::sync::Arc;
 use std::time::Instant;
 /// Context for regional solver application
@@ -272,7 +272,7 @@ impl HybridSolver {
         &mut self,
         fields: &mut Array4<f64>,
         medium: &dyn Medium,
-        _source: &dyn Source,
+        source: &dyn Source,
         _boundary: &mut dyn Boundary,
         _dt: f64,
         t: f64,
@@ -328,17 +328,15 @@ impl HybridSolver {
             .assign(&fields.index_axis(ndarray::Axis(0), vz_idx));
 
         // 2. Apply sources
-        // We assume sources are additive and apply them to the solver states before stepping
-        // Note: This simplifies source handling by treating component solvers as propagators
-        // For FDTD
-        // We need a way to apply 'source' to 'fdtd_pressure'.
-        // Since 'source' is dyn Source, we assume it has an apply method or similar.
-        // But 'Source' trait definition is in 'crate::source'.
-        // Assuming 'source.apply' works on Array4, we might need to wrap fdtd fields in Array4 temporarily or manually apply.
-        // For now, we skip explicit source application here if the solvers handle it or if fields already contain source terms (e.g. initial conditions).
-        // However, continuous sources need to be added.
-        // Note: Continuous sources are handled by the component solvers' step_forward methods
-        // if they were added via add_source. Explicit manual application is not required here.
+        // Apply the external source to the FDTD solver pressure field
+        // This ensures that sources passed via the update method (e.g. from plugins) are respected
+        let amp = source.amplitude(t);
+        if amp.abs() > 1e-12 && source.source_type() == SourceField::Pressure {
+            let mask = source.create_mask(&self.grid);
+            Zip::from(&mut self.fdtd_solver.fields.p)
+                .and(&mask)
+                .for_each(|p, &m| *p += m * amp);
+        }
 
         // 3. Step Solvers
         // PSTD Solver
