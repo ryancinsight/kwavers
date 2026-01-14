@@ -1,5 +1,11 @@
+use crate::analysis::ml::pinn::burn_wave_equation_1d::{BurnPINNConfig, BurnPINNTrainer};
+use crate::analysis::ml::pinn::burn_wave_equation_2d::{
+    BurnPINN2DConfig, BurnPINN2DTrainer, Geometry2D,
+};
 use crate::analysis::ml::pinn::wave_equation_1d::TrainingMetrics;
 use crate::core::error::{KwaversError, KwaversResult};
+use burn::backend::{Autodiff, NdArray};
+use ndarray::{Array1, Array2};
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 
@@ -95,50 +101,156 @@ impl PINNTrainer {
             )));
         }
 
-        // NOTE: This implementation currently focuses on the interface structure.
-        // The actual training logic dispatching to BurnPINN or PINN1DWave is
-        // pending full integration of the ML backend.
-        // For now, we simulate training loop progress to validate the async interface.
+        let config = self.config.clone();
 
-        let epochs = self.config.training_config.epochs;
-        let mut metrics = TrainingMetrics {
-            total_loss: Vec::new(),
-            data_loss: Vec::new(),
-            pde_loss: Vec::new(),
-            bc_loss: Vec::new(),
-            training_time_secs: 0.0,
-            epochs_completed: 0,
-        };
+        // Offload training to blocking thread
+        let result = tokio::task::spawn_blocking(move || {
+            let is_2d = config.geometry.bounds.len() >= 4;
 
-        let start_time = std::time::Instant::now();
+            if is_2d {
+                train_2d(config, progress_sender)
+            } else {
+                train_1d(config, progress_sender)
+            }
+        })
+        .await
+        .map_err(|e| KwaversError::InternalError(e.to_string()))??;
 
-        for epoch in 0..epochs {
-            // Simulate computation
-            // In a real implementation, this would call self.model.train_step()
-            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        Ok(result)
+    }
+}
 
-            // Update metrics
-            let current_loss = (-((epoch as f64) / 100.0)).exp(); // Dummy decay
-            metrics.total_loss.push(current_loss);
-            metrics.epochs_completed = epoch + 1;
+fn train_1d(
+    config: PINNConfig,
+    sender: mpsc::Sender<crate::api::TrainingProgress>,
+) -> KwaversResult<TrainingResult> {
+    type Backend = Autodiff<NdArray<f32>>;
+    let device = Default::default();
 
-            // Report progress
+    let burn_config = BurnPINNConfig {
+        hidden_layers: config.training_config.hidden_layers.clone(),
+        learning_rate: config.training_config.learning_rate,
+        loss_weights: Default::default(),
+        num_collocation_points: config.training_config.collocation_points,
+    };
+
+    let mut trainer = BurnPINNTrainer::<Backend>::new(burn_config, &device)?;
+
+    let n = config.training_config.batch_size;
+    let x_min = config.geometry.bounds.first().copied().unwrap_or(-1.0);
+    let x_max = config.geometry.bounds.get(1).copied().unwrap_or(1.0);
+    let x_data = Array1::linspace(x_min, x_max, n);
+    let t_data = Array1::linspace(0.0, 1.0, n);
+    let u_data = Array2::zeros((n, 1));
+    let wave_speed = config
+        .physics_params
+        .material_properties
+        .get("wave_speed")
+        .cloned()
+        .unwrap_or(1500.0);
+
+    let start_time = std::time::Instant::now();
+
+    let metrics = trainer.train_with_callback(
+        &x_data,
+        &t_data,
+        &u_data,
+        wave_speed,
+        &device,
+        config.training_config.epochs,
+        |epoch, metrics| {
             let progress = crate::api::TrainingProgress {
                 current_epoch: epoch + 1,
-                total_epochs: epochs,
-                current_loss,
-                best_loss: current_loss, // Simplified
+                total_epochs: config.training_config.epochs,
+                current_loss: metrics.total_loss.last().cloned().unwrap_or(0.0),
+                best_loss: 0.0, // simplified
                 elapsed_seconds: start_time.elapsed().as_secs(),
-                estimated_remaining: 0, // Simplified
+                estimated_remaining: 0,
             };
+            sender.blocking_send(progress).is_ok()
+        },
+    )?;
 
-            if (progress_sender.send(progress).await).is_err() {
-                break; // Receiver dropped
-            }
-        }
+    Ok(TrainingResult {
+        metrics: TrainingMetrics {
+            total_loss: metrics.total_loss,
+            data_loss: metrics.data_loss,
+            pde_loss: metrics.pde_loss,
+            bc_loss: metrics.bc_loss,
+            training_time_secs: metrics.training_time_secs,
+            epochs_completed: metrics.epochs_completed,
+        },
+    })
+}
 
-        metrics.training_time_secs = start_time.elapsed().as_secs_f64();
+fn train_2d(
+    config: PINNConfig,
+    sender: mpsc::Sender<crate::api::TrainingProgress>,
+) -> KwaversResult<TrainingResult> {
+    type Backend = Autodiff<NdArray<f32>>;
+    let device = Default::default();
 
-        Ok(TrainingResult { metrics })
-    }
+    let burn_config = BurnPINN2DConfig {
+        hidden_layers: config.training_config.hidden_layers.clone(),
+        learning_rate: config.training_config.learning_rate,
+        loss_weights: Default::default(),
+        num_collocation_points: config.training_config.collocation_points,
+        boundary_condition: Default::default(),
+    };
+
+    let x_min = config.geometry.bounds.first().copied().unwrap_or(-1.0);
+    let x_max = config.geometry.bounds.get(1).copied().unwrap_or(1.0);
+    let y_min = config.geometry.bounds.get(2).copied().unwrap_or(-1.0);
+    let y_max = config.geometry.bounds.get(3).copied().unwrap_or(1.0);
+
+    let geometry = Geometry2D::new(x_min, x_max, y_min, y_max);
+
+    let mut trainer = BurnPINN2DTrainer::<Backend>::new_trainer(burn_config, geometry, &device)?;
+
+    let n = config.training_config.batch_size;
+    let x_data = Array1::linspace(x_min, x_max, n);
+    let y_data = Array1::linspace(y_min, y_max, n);
+    let t_data = Array1::linspace(0.0, 1.0, n);
+    let u_data = Array2::zeros((n, 1));
+    let wave_speed = config
+        .physics_params
+        .material_properties
+        .get("wave_speed")
+        .cloned()
+        .unwrap_or(1500.0);
+
+    let start_time = std::time::Instant::now();
+
+    let metrics = trainer.train_with_callback(
+        &x_data,
+        &y_data,
+        &t_data,
+        &u_data,
+        wave_speed,
+        trainer.pinn.config(),
+        &device,
+        config.training_config.epochs,
+        |epoch, metrics| {
+            let progress = crate::api::TrainingProgress {
+                current_epoch: epoch + 1,
+                total_epochs: config.training_config.epochs,
+                current_loss: metrics.total_loss.last().cloned().unwrap_or(0.0),
+                best_loss: 0.0, // simplified
+                elapsed_seconds: start_time.elapsed().as_secs(),
+                estimated_remaining: 0,
+            };
+            sender.blocking_send(progress).is_ok()
+        },
+    )?;
+
+    Ok(TrainingResult {
+        metrics: TrainingMetrics {
+            total_loss: metrics.total_loss,
+            data_loss: metrics.data_loss,
+            pde_loss: metrics.pde_loss,
+            bc_loss: metrics.bc_loss,
+            training_time_secs: metrics.training_time_secs,
+            epochs_completed: metrics.epochs_completed,
+        },
+    })
 }

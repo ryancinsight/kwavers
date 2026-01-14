@@ -46,6 +46,35 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
         device: &B::Device,
         epochs: usize,
     ) -> KwaversResult<BurnTrainingMetrics2D> {
+        self.train_with_callback(
+            x_data,
+            y_data,
+            t_data,
+            u_data,
+            wave_speed,
+            config,
+            device,
+            epochs,
+            |_, _| true,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn train_with_callback<F>(
+        &mut self,
+        x_data: &Array1<f64>,
+        y_data: &Array1<f64>,
+        t_data: &Array1<f64>,
+        u_data: &Array2<f64>,
+        wave_speed: f64,
+        config: &BurnPINN2DConfig,
+        device: &B::Device,
+        epochs: usize,
+        mut callback: F,
+    ) -> KwaversResult<BurnTrainingMetrics2D>
+    where
+        F: FnMut(usize, &BurnTrainingMetrics2D) -> bool,
+    {
         use std::time::Instant;
 
         if x_data.len() != y_data.len()
@@ -129,6 +158,23 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
             let bc_val = bc_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
             let ic_val = ic_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
 
+            if !total_val.is_finite()
+                || !data_val.is_finite()
+                || !pde_val.is_finite()
+                || !bc_val.is_finite()
+                || !ic_val.is_finite()
+            {
+                return Err(KwaversError::Numerical(
+                    crate::core::error::NumericalError::NaN {
+                        operation: "training_loss_2d".to_string(),
+                        inputs: format!(
+                            "epoch {}: total={}, data={}, pde={}, bc={}, ic={}",
+                            epoch, total_val, data_val, pde_val, bc_val, ic_val
+                        ),
+                    },
+                ));
+            }
+
             metrics.total_loss.push(total_val);
             metrics.data_loss.push(data_val);
             metrics.pde_loss.push(pde_val);
@@ -141,6 +187,10 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
 
             if epoch % 100 == 0 {
                 log::info!("Epoch {}/{}: total_loss={:.6e}", epoch, epochs, total_val);
+            }
+
+            if !callback(epoch, &metrics) {
+                break;
             }
         }
 
