@@ -9,10 +9,11 @@ fn logging_benchmark(c: &mut Criterion) {
     // Ensure cleanup from previous runs
     let _ = fs::remove_file(file_path);
 
-    let file = File::create(file_path).unwrap();
-    let logger = CombinedLogger::new(false, file);
+    // Setup for Info logs (buffered)
+    let file_info = File::create(file_path).unwrap();
+    let logger_info = CombinedLogger::new(false, file_info);
 
-    let record = Record::builder()
+    let record_info = Record::builder()
         .args(format_args!("This is a benchmark log message"))
         .level(Level::Info)
         .target("benchmark")
@@ -21,9 +22,30 @@ fn logging_benchmark(c: &mut Criterion) {
         .module_path(Some("benchmark"))
         .build();
 
-    c.bench_function("log_message", |b| {
+    c.bench_function("log_message_info_buffered", |b| {
         b.iter(|| {
-            logger.log(black_box(&record));
+            logger_info.log(black_box(&record_info));
+        })
+    });
+
+    // Setup for Error logs (flushed)
+    // Re-create file/logger to reset state, although Mutex protects it.
+    let _ = fs::remove_file(file_path);
+    let file_error = File::create(file_path).unwrap();
+    let logger_error = CombinedLogger::new(false, file_error);
+
+    let record_error = Record::builder()
+        .args(format_args!("This is a benchmark error message"))
+        .level(Level::Error)
+        .target("benchmark")
+        .file(Some("benchmark.rs"))
+        .line(Some(2))
+        .module_path(Some("benchmark"))
+        .build();
+
+    c.bench_function("log_message_error_flushed", |b| {
+        b.iter(|| {
+            logger_error.log(black_box(&record_error));
         })
     });
 

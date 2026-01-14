@@ -1,6 +1,6 @@
 // log/file.rs
 use crate::core::log::format_record;
-use log::{LevelFilter, Log, Metadata, Record};
+use log::{Level, LevelFilter, Log, Metadata, Record};
 use std::fs::OpenOptions;
 use std::io::{self, BufWriter, Write};
 use std::sync::Mutex;
@@ -31,6 +31,9 @@ impl Log for CombinedLogger {
             let message = format_record(record);
             if let Ok(mut file) = self.file.lock() {
                 let _ = writeln!(file, "{message}");
+                if record.level() <= Level::Warn {
+                    let _ = file.flush();
+                }
             }
             if self.console {
                 println!("{message}");
