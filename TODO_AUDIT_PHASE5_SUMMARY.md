@@ -502,18 +502,18 @@ Dispersion analysis methods use simplified polynomial approximations for numeric
 pub fn fdtd_dispersion(k: f64, dx: f64, dt: f64, c: f64) -> f64 {
     let cfl = c * dt / dx;
     let kx_dx = k * dx;
-    
+
     // Von Neumann stability analysis result
     let sin_half_omega_dt = (cfl * kx_dx.sin()).asin();
     let omega_numerical = 2.0 * sin_half_omega_dt / dt;
     let omega_exact = k * c;
-    
+
     (omega_numerical - omega_exact) / omega_exact
 }
 
 pub fn pstd_dispersion(k: f64, dx: f64, order: usize) -> f64 {
     let kx_dx = k * dx;
-    
+
     match order {
         2 => 0.02 * kx_dx.powi(2),  // Second-order correction
         4 => 0.001 * kx_dx.powi(4), // Fourth-order correction
@@ -539,15 +539,15 @@ pub fn fdtd_dispersion_3d(
     let cfl_x = c * dt / dx;
     let cfl_y = c * dt / dy;
     let cfl_z = c * dt / dz;
-    
+
     let sin_term = (cfl_x * (kx*dx/2.0).sin()).powi(2)
                  + (cfl_y * (ky*dy/2.0).sin()).powi(2)
                  + (cfl_z * (kz*dz/2.0).sin()).powi(2);
-    
+
     let omega_numerical = (2.0 / dt) * sin_term.sqrt().asin();
     let k_mag = (kx.powi(2) + ky.powi(2) + kz.powi(2)).sqrt();
     let omega_exact = k_mag * c;
-    
+
     (omega_numerical - omega_exact) / omega_exact
 }
 ```
