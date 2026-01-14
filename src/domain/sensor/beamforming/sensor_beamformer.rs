@@ -83,14 +83,45 @@ impl SensorBeamformer {
     pub fn calculate_delays(
         &self,
         image_grid: &Grid,
-        _sound_speed: f64,
+        sound_speed: f64,
     ) -> KwaversResult<Array2<f64>> {
-        // TODO: Replace with proper delay calculation
-        // Current: Returns zero-filled placeholder - INVALID for production use
-        Ok(Array2::zeros((
-            self.sensor_positions.len(),
-            image_grid.size(),
-        )))
+        if sound_speed <= 0.0 {
+            return Err(crate::core::error::KwaversError::InvalidInput(format!(
+                "Sound speed must be positive, got {}",
+                sound_speed
+            )));
+        }
+
+        let (nx, ny, nz) = image_grid.dimensions();
+        let (dx, dy, dz) = image_grid.spacing();
+        let origin = image_grid.origin;
+
+        let mut delays = Array2::zeros((self.sensor_positions.len(), image_grid.size()));
+
+        for (sensor_idx, sensor_pos) in self.sensor_positions.iter().enumerate() {
+            let mut grid_idx = 0;
+            // Iterate in memory order (row-major for C/ndarray default)
+            // ndarray::Array3 [i, j, k] corresponds to idx = i*(ny*nz) + j*nz + k
+            for i in 0..nx {
+                let x = origin[0] + i as f64 * dx;
+                for j in 0..ny {
+                    let y = origin[1] + j as f64 * dy;
+                    for k in 0..nz {
+                        let z = origin[2] + k as f64 * dz;
+
+                        let dist = ((x - sensor_pos[0]).powi(2)
+                            + (y - sensor_pos[1]).powi(2)
+                            + (z - sensor_pos[2]).powi(2))
+                        .sqrt();
+
+                        delays[[sensor_idx, grid_idx]] = dist / sound_speed;
+                        grid_idx += 1;
+                    }
+                }
+            }
+        }
+
+        Ok(delays)
     }
 
     /// Apply apodization window specific to this sensor array
