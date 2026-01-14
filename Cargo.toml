@@ -323,6 +323,10 @@ harness = false
 required-features = ["legacy_algorithms"]
 
 [[bench]]
+name = "logging_benchmark"
+harness = false
+
+[[bench]]
 name = "hilbert_benchmark"
 harness = false
 
