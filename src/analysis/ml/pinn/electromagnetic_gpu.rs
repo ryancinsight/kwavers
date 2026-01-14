@@ -214,6 +214,12 @@ pub struct GPUEMSolver {
     field_data: Option<EMFieldData>,
     /// GPU buffers
     gpu_buffers: HashMap<String, wgpu::Buffer>,
+    /// Compute pipeline
+    compute_pipeline: Option<wgpu::ComputePipeline>,
+    /// Bind group layout
+    bind_group_layout: Option<wgpu::BindGroupLayout>,
+    /// Bind group
+    bind_group: Option<wgpu::BindGroup>,
 }
 
 impl GPUEMSolver {
@@ -230,6 +236,9 @@ impl GPUEMSolver {
             compute_manager,
             field_data: None,
             gpu_buffers: HashMap::new(),
+            compute_pipeline: None,
+            bind_group_layout: None,
+            bind_group: None,
         })
     }
 
@@ -372,6 +381,140 @@ impl GPUEMSolver {
         self.gpu_buffers
             .insert("current_density".to_string(), current_density_buffer);
 
+        self.ensure_pipeline_resources()?;
+        self.create_bind_group()?;
+
+        Ok(())
+    }
+
+    /// Ensure that compute pipeline resources are created
+    fn ensure_pipeline_resources(&mut self) -> KwaversResult<()> {
+        if self.compute_pipeline.is_some() && self.bind_group_layout.is_some() {
+            return Ok(());
+        }
+
+        let device = self.compute_manager.device()?;
+
+        // Create bind group layout
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("EM Time Step Layout"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+        });
+
+        // Create compute pipeline with electromagnetic shader
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("EM Time Step Shader"),
+            source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(include_str!(
+                "../../../gpu/shaders/electromagnetic.wgsl"
+            ))),
+        });
+
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("EM Pipeline Layout"),
+            bind_group_layouts: &[&bind_group_layout],
+            push_constant_ranges: &[],
+        });
+
+        let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("EM Time Step Pipeline"),
+            layout: Some(&pipeline_layout),
+            module: &shader,
+            entry_point: "main",
+            compilation_options: Default::default(),
+            cache: None,
+        });
+
+        self.bind_group_layout = Some(bind_group_layout);
+        self.compute_pipeline = Some(compute_pipeline);
+
+        Ok(())
+    }
+
+    /// Create bind group using current buffers
+    fn create_bind_group(&mut self) -> KwaversResult<()> {
+        let electric_buffer = self
+            .gpu_buffers
+            .get("electric")
+            .ok_or_else(|| KwaversError::GpuError("Missing electric GPU buffer".into()))?;
+        let magnetic_buffer = self
+            .gpu_buffers
+            .get("magnetic")
+            .ok_or_else(|| KwaversError::GpuError("Missing magnetic GPU buffer".into()))?;
+        let current_density_buffer = self
+            .gpu_buffers
+            .get("current_density")
+            .ok_or_else(|| KwaversError::GpuError("Missing current_density GPU buffer".into()))?;
+
+        let device = self.compute_manager.device()?;
+        let bind_group_layout = self.bind_group_layout.as_ref().ok_or_else(|| {
+            KwaversError::GpuError("Bind group layout not initialized".into())
+        })?;
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("EM Time Step Bind Group"),
+            layout: bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: electric_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: magnetic_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: current_density_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: electric_buffer.as_entire_binding(),
+                },
+            ],
+        });
+
+        self.bind_group = Some(bind_group);
         Ok(())
     }
 
@@ -451,113 +594,16 @@ impl GPUEMSolver {
 
     /// GPU implementation of electromagnetic time stepping using FDTD
     fn time_step_gpu(&mut self, _step: usize) -> KwaversResult<()> {
-        let electric_buffer = self
-            .gpu_buffers
-            .get("electric")
-            .ok_or_else(|| KwaversError::GpuError("Missing electric GPU buffer".into()))?;
-        let magnetic_buffer = self
-            .gpu_buffers
-            .get("magnetic")
-            .ok_or_else(|| KwaversError::GpuError("Missing magnetic GPU buffer".into()))?;
-        let current_density_buffer = self
-            .gpu_buffers
-            .get("current_density")
-            .ok_or_else(|| KwaversError::GpuError("Missing current_density GPU buffer".into()))?;
         let device = self.compute_manager.device()?;
         let queue = self.compute_manager.queue()?;
 
-        // Create bind group for the electromagnetic shader
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("EM Time Step Layout"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
-        });
+        let compute_pipeline = self.compute_pipeline.as_ref().ok_or_else(|| {
+            KwaversError::GpuError("Compute pipeline not initialized".into())
+        })?;
 
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("EM Time Step Bind Group"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: electric_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: magnetic_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: current_density_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: electric_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        // Create compute pipeline with electromagnetic shader
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("EM Time Step Shader"),
-            source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(include_str!(
-                "../../../gpu/shaders/electromagnetic.wgsl"
-            ))),
-        });
-
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("EM Pipeline Layout"),
-            bind_group_layouts: &[&bind_group_layout],
-            push_constant_ranges: &[],
-        });
-
-        let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("EM Time Step Pipeline"),
-            layout: Some(&pipeline_layout),
-            module: &shader,
-            entry_point: "main",
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let bind_group = self.bind_group.as_ref().ok_or_else(|| {
+            KwaversError::GpuError("Bind group not initialized".into())
+        })?;
 
         // Execute compute pass
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -569,8 +615,8 @@ impl GPUEMSolver {
                 label: Some("EM Time Step Pass"),
                 timestamp_writes: None,
             });
-            compute_pass.set_pipeline(&compute_pipeline);
-            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.set_pipeline(compute_pipeline);
+            compute_pass.set_bind_group(0, bind_group, &[]);
 
             let [nx, ny, nz] = self.config.grid_size;
             let workgroups_x = (nx / 8).max(1);
