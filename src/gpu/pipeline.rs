@@ -242,22 +242,9 @@ impl RealtimeImagingPipeline {
     fn beamform(&self, rf_data: &Array4<f32>) -> KwaversResult<Array3<f32>> {
         // Simplified beamforming for real-time processing
         // In practice, this would use the full beamforming pipeline
-        let (n_tx, n_rx, n_samples, n_frames) = rf_data.dim();
-
         // Sum across transmitters for simple delay-and-sum
-        let mut beamformed = Array3::zeros((n_rx, n_samples, n_frames));
-
-        for tx in 0..n_tx {
-            for rx in 0..n_rx {
-                for sample in 0..n_samples {
-                    for frame in 0..n_frames {
-                        beamformed[[rx, sample, frame]] += rf_data[[tx, rx, sample, frame]];
-                    }
-                }
-            }
-        }
-
-        Ok(beamformed)
+        use ndarray::Axis;
+        Ok(rf_data.sum_axis(Axis(0)))
     }
 
     /// Envelope detection
