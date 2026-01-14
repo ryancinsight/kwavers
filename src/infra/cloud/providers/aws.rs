@@ -166,45 +166,60 @@ pub async fn deploy_to_aws<B: burn::tensor::backend::AutodiffBackend>(
             })
         })?;
 
-    // TODO: HARDCODED INFRASTRUCTURE IDs - NOT PRODUCTION READY
-    // Current implementation uses placeholder subnet and security group IDs
-    //
-    // Required implementation:
-    // - Load subnet IDs from deployment_config or environment variables
-    // - Load security group IDs from deployment_config
-    // - Support multi-AZ deployment with proper subnet selection
-    // - Validate VPC configuration and network topology
-    // - Implement proper security group rules for HTTPS ingress
-    //
-    // Configuration should include:
-    // - config["vpc_id"] - VPC for deployment
-    // - config["subnet_ids"] - Comma-separated list of subnet IDs (multi-AZ)
-    // - config["security_group_ids"] - Security groups for load balancer
-    // - config["certificate_arn"] - SSL/TLS certificate for HTTPS
-    //
-    // References:
-    // - AWS Well-Architected Framework: Network design
-    // - VPC Best Practices: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-best-practices.html
-    //
-    // Estimated effort: 4-6 hours (VPC configuration management)
-    // Priority: P0 before production deployment
+    // Load network configuration
+    let subnet_ids: Vec<String> = config
+        .get("subnet_ids")
+        .ok_or_else(|| {
+            KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                parameter: "subnet_ids".to_string(),
+                reason: "Missing subnet_ids in config".to_string(),
+            })
+        })?
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .collect();
+
+    let security_group_ids: Vec<String> = config
+        .get("security_group_ids")
+        .ok_or_else(|| {
+            KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                parameter: "security_group_ids".to_string(),
+                reason: "Missing security_group_ids in config".to_string(),
+            })
+        })?
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .collect();
+
+    if subnet_ids.is_empty() {
+        return Err(KwaversError::System(
+            crate::core::error::SystemError::InvalidConfiguration {
+                parameter: "subnet_ids".to_string(),
+                reason: "At least one subnet ID is required".to_string(),
+            },
+        ));
+    }
 
     // Create Application Load Balancer for the endpoint
-    let _load_balancer = elb_client
+    let mut load_balancer_builder = elb_client
         .create_load_balancer()
         .name(format!("kwavers-pinn-alb-{}", deployment_id))
-        .subnets("subnet-12345678") // TODO: Replace with config["subnet_ids"]
-        .subnets("subnet-87654321") // TODO: Replace with config["subnet_ids"]
-        .security_groups("sg-12345678") // TODO: Replace with config["security_group_ids"]
-        .scheme(aws_sdk_elasticloadbalancingv2::types::LoadBalancerSchemeEnum::InternetFacing)
-        .send()
-        .await
-        .map_err(|e| {
-            KwaversError::System(crate::core::error::SystemError::ExternalServiceError {
-                service: "AWS ELB".to_string(),
-                error: e.to_string(),
-            })
-        })?;
+        .scheme(aws_sdk_elasticloadbalancingv2::types::LoadBalancerSchemeEnum::InternetFacing);
+
+    for subnet in subnet_ids {
+        load_balancer_builder = load_balancer_builder.subnets(subnet);
+    }
+
+    for sg in security_group_ids {
+        load_balancer_builder = load_balancer_builder.security_groups(sg);
+    }
+
+    let _load_balancer = load_balancer_builder.send().await.map_err(|e| {
+        KwaversError::System(crate::core::error::SystemError::ExternalServiceError {
+            service: "AWS ELB".to_string(),
+            error: e.to_string(),
+        })
+    })?;
 
     let endpoint_url = format!(
         "https://{}.sagemaker.{}.amazonaws.com",
