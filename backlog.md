@@ -1,19 +1,20 @@
 # Development Backlog - Kwavers Acoustic Simulation Library
 
 **Last Updated**: 2025-01-14  
-**Current Sprint**: Sprint 208 Phase 4 ✅ COMPLETE  
+**Current Sprint**: Sprint 208 Phase 5 ✅ COMPLETE  
 **Next Sprint**: Sprint 209 - TODO Resolution & Implementation
 
-## 🚨 TODO AUDIT PHASE 4 COMPLETED (2025-01-14)
+## 🚨 TODO AUDIT PHASE 5 COMPLETED (2025-01-14)
 
-**Status**: ✅ Comprehensive audit complete - Placeholder physics & default implementations identified  
+**Status**: ✅ Comprehensive audit complete - Critical infrastructure gaps identified  
 **Reports**: 
 - `TODO_AUDIT_REPORT.md` (534 lines, Phases 1-2)
 - `TODO_AUDIT_PHASE2_SUMMARY.md` (Phase 2 detailed)
 - `TODO_AUDIT_PHASE3_SUMMARY.md` (Phase 3 detailed)
-- `TODO_AUDIT_PHASE4_SUMMARY.md` (Phase 4 detailed - NEW)
+- `TODO_AUDIT_PHASE4_SUMMARY.md` (Phase 4 detailed)
+- `TODO_AUDIT_PHASE5_SUMMARY.md` (Phase 5 detailed - NEW)
 **Files Modified**: 25 files total with comprehensive TODO tags  
-**Total Effort Estimated**: 394-547 hours for full resolution (140-194 hours added in Phase 4)
+**Total Effort Estimated**: 432-602 hours for full resolution (38-55 hours added in Phase 5)
 
 ### Sprint 208 Phase Summary
 - ✅ Phase 1: Deprecated Code Elimination (Complete)
@@ -22,6 +23,36 @@
 - ✅ Phase 4: Extended TODO Audit Phase 2 (Complete - 2025-01-14)
 - ✅ Phase 5: Extended TODO Audit Phase 3 (Complete - 2025-01-14)
 - ✅ Phase 6: Extended TODO Audit Phase 4 - Placeholder Physics (Complete - 2025-01-14)
+- ✅ Phase 7: Extended TODO Audit Phase 5 - Critical Infrastructure (Complete - 2025-01-14)
+
+### Phase 5 New Findings - Critical Infrastructure Gaps (NEW - 2025-01-14)
+**Files audited**: `src/math/numerics/operators/spectral.rs`, `src/domain/medium/elastic.rs`, `src/analysis/ml/pinn/burn_wave_equation_3d/solver.rs`
+**Focus**: Type-unsafe defaults and non-functional solver backends
+
+**Critical Issues Found (P0)**:
+1. **Pseudospectral Derivative Operators** - All 3 spatial derivatives return NotImplemented
+   - `derivative_x()`, `derivative_y()`, `derivative_z()` (10-14 hours total)
+   - Blocks: Entire PSTD solver backend
+   - Sprint 210 assignment (FFT integration required)
+
+**High Severity Issues (P1)**:
+2. **Elastic Medium Shear Sound Speed** - Zero-returning default trait implementation (4-6 hours)
+   - Type-unsafe: compiles but produces zero c_s → simulation failure
+   - Sprint 211 assignment (remove default, require implementation)
+3. **BurnPINN 3D Boundary Condition Loss** - Hardcoded zero tensor (10-14 hours)
+   - Training loss incorrect, no BC enforcement
+   - Sprint 211 assignment (implement BC sampling + violation computation)
+4. **BurnPINN 3D Initial Condition Loss** - Hardcoded zero tensor (8-12 hours)
+   - Training loss incorrect, no IC enforcement
+   - Sprint 211 assignment (implement IC sampling + temporal derivative)
+
+**Medium Severity Issues (P2)**:
+5. **Elastic Shear Viscosity Default** - Zero default acceptable but needs documentation (2-3 hours)
+   - Sprint 212 assignment (documentation + helper method)
+6. **Dispersion Correction Simplified** - Polynomial approximations instead of full 3D analysis (4-6 hours)
+   - Sprint 213 assignment (enhancement, current implementation functional)
+
+**Total Phase 5 Effort**: 38-55 hours
 
 ### Phase 4 New Findings - Additional TODO Tags Added (Batch 1)
 **Files audited and annotated**: 6 additional source files
@@ -91,11 +122,33 @@
    - Effort: 22-30 hours (includes Neumann flux continuity 4-6h, Robin BC 6-8h, Material interface 12-16h)
    - **Sprint 210 Priority**
 
-6. **Pseudospectral Derivatives** (`src/math/numerics/operators/spectral.rs`) - NEW Phase 5
+6. **Pseudospectral Derivatives** (`src/math/numerics/operators/spectral.rs`) - Phase 5 Finding
    - derivative_x(), derivative_y(), derivative_z() return NotImplemented errors
-   - Impact: Blocks pseudospectral solver backend entirely
-   - Effort: 10-14 hours (X-derivative 6-8h, Y/Z derivatives 2-3h each)
-   - **Sprint 210 Priority**
+   - Impact: Blocks pseudospectral solver backend entirely (4-8x performance boost unavailable)
+   - Dependencies: rustfft, ndarray-fft crates
+   - Mathematical Spec: ∂u/∂x = F⁻¹[i·kₓ·F[u]] (Fourier differentiation theorem)
+   - Validation: Spectral accuracy test (L∞ error < 1e-12 for smooth functions)
+   - Effort: 10-14 hours (X-derivative 6-8h with FFT integration, Y/Z derivatives 2-3h each)
+   - **Sprint 210 Priority** (Immediate - unblocks PSTD solver)
+
+7. **Elastic Medium Shear Sound Speed** (`src/domain/medium/elastic.rs`) - Phase 5 Finding
+   - Default trait implementation returns Array3::zeros (type-unsafe)
+   - Impact: Zero shear speed → infinite time step → NaN/division errors
+   - Physics violation: Shear waves require non-zero c_s = √(μ/ρ)
+   - Applications blocked: Elastography, shear wave imaging, seismology
+   - Recommended fix: Remove default implementation, make method required (type safety)
+   - Effort: 4-6 hours (remove default, update all implementations, validation tests)
+   - **Sprint 211 Priority**
+
+8. **BurnPINN 3D BC/IC Loss Placeholders** (`src/analysis/ml/pinn/burn_wave_equation_3d/solver.rs`) - Phase 5 Finding
+   - Boundary condition loss: hardcoded zero tensor (10-14 hours)
+   - Initial condition loss: hardcoded zero tensor (8-12 hours)
+   - Impact: PINN training loss incorrect, predictions violate BC/IC constraints
+   - BC implementation: Sample 6 boundary faces, compute Dirichlet/Neumann/Robin violations
+   - IC implementation: Sample spatial domain at t=0, enforce u(t=0) and ∂u/∂t(t=0)
+   - Mathematical Spec: L_BC = Σ|u(x_bc) - u_D|², L_IC = Σ|u(t=0) - u₀|² + Σ|∂u/∂t(t=0) - v₀|²
+   - Total Effort: 18-26 hours
+   - **Sprint 211 Priority**
 
 ### Advanced Research Features (P1 - Phase 4+5+6 Findings)
 7. **Electromagnetic PINN Residuals** (`src/analysis/ml/pinn/electromagnetic/residuals.rs`)
