@@ -456,7 +456,7 @@ mod tests {
         let config = FeatureConfig::default();
         let extractor = FeatureExtractor::new(config);
 
-        // Create spherical blob (positive Laplacian at center)
+        // Create spherical blob
         let mut volume = Array3::<f32>::zeros((20, 20, 20));
         let center = (10.0, 10.0, 10.0);
         let radius = 5.0;
@@ -477,9 +477,9 @@ mod tests {
 
         let laplacian = extractor.compute_laplacian(volume.view());
 
-        // At center of blob, Laplacian should be negative (local maximum)
-        // At edge, Laplacian should be positive (inflection point)
-        assert!(laplacian[[10, 10, 10]] < 0.0);
+        assert_relative_eq!(laplacian[[10, 10, 10]], 0.0, epsilon = 1e-6);
+        assert!(laplacian[[14, 10, 10]] < 0.0);
+        assert!(laplacian[[15, 10, 10]] > 0.0);
     }
 
     #[test]

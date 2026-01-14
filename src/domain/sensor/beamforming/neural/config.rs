@@ -131,7 +131,7 @@ impl Default for FeatureConfig {
             morphological_features: true,
             spectral_features: true,
             texture_features: true,
-            window_size: 32,
+            window_size: 31,
             overlap: 0.5,
         }
     }

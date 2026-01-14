@@ -207,6 +207,56 @@ impl PseudospectralDerivative {
     ///
     /// Computes ∂u/∂x using Fourier differentiation
     pub fn derivative_x(&self, _field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        // TODO_AUDIT: P0 - Pseudospectral X-Derivative - FFT Integration Required
+        //
+        // PROBLEM:
+        // Returns NotImplemented error. Spectral derivative computation is not functional,
+        // blocking pseudospectral solver backend entirely.
+        //
+        // IMPACT:
+        // - Pseudospectral solver cannot compute spatial derivatives
+        // - Blocks high-order accurate wave equation solutions
+        // - Prevents frequency-domain acoustic simulations
+        // - Clinical therapy planning cannot use pseudospectral methods
+        // - Severity: P0 (blocks major solver backend)
+        //
+        // REQUIRED IMPLEMENTATION:
+        // 1. Forward FFT: F[u] = FFT(u) to transform field to k-space
+        // 2. Multiply by wavenumber: F[∂u/∂x] = i·kx·F[u]
+        // 3. Inverse FFT: ∂u/∂x = IFFT(F[∂u/∂x])
+        // 4. Handle boundary conditions (periodic assumed by FFT)
+        //
+        // MATHEMATICAL SPECIFICATION:
+        // Fourier differentiation:
+        //   ∂u/∂x = F⁻¹[i·kx·F[u]]
+        // where kx = 2π·n/Lx for n = 0, 1, ..., N-1 (or shifted for centered spectrum)
+        //
+        // Wavenumber vector construction (already implemented in compute_wavenumber_x):
+        //   kx[n] = 2π·(n - N/2)/Lx for centered spectrum
+        //
+        // VALIDATION CRITERIA:
+        // - Test: ∂(sin(kx))/∂x = k·cos(kx) → verify L∞ error < 1e-12
+        // - Test: ∂(exp(ikx))/∂x = ik·exp(ikx) → verify spectral accuracy
+        // - Test: Derivative of constant → should be zero to machine precision
+        // - Convergence: Spectral (exponential) for smooth functions
+        //
+        // REFERENCES:
+        // - Boyd, J.P., "Chebyshev and Fourier Spectral Methods" (2nd ed.), Chapter 2
+        // - Trefethen, L.N., "Spectral Methods in MATLAB" (2000), Chapter 3
+        //
+        // ESTIMATED EFFORT: 6-8 hours
+        // - FFT integration: 3-4 hours (use rustfft crate)
+        // - Wavenumber multiplication: 1-2 hours
+        // - Testing & validation: 2-3 hours
+        // - Documentation: 1 hour
+        //
+        // DEPENDENCIES:
+        // - rustfft crate (add to Cargo.toml)
+        // - ndarray-fft for multidimensional FFTs
+        //
+        // ASSIGNED: Sprint 210 (Solver Infrastructure)
+        // PRIORITY: P0 (Blocks pseudospectral solver)
+
         // For now, return error indicating not yet implemented
         // Full FFT implementation requires integration with math::fft module
         Err(NumericalError::NotImplemented {
@@ -217,6 +267,11 @@ impl PseudospectralDerivative {
 
     /// Compute spectral derivative in Y direction
     pub fn derivative_y(&self, _field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        // TODO_AUDIT: P0 - Pseudospectral Y-Derivative - FFT Integration Required
+        // Same as derivative_x but operates on Y-axis. See derivative_x for full specification.
+        // EFFORT: 2-3 hours (reuse X-derivative implementation)
+        // ASSIGNED: Sprint 210
+        // PRIORITY: P0
         Err(NumericalError::NotImplemented {
             feature: "Spectral derivative (requires FFT integration)".to_string(),
         }
@@ -225,6 +280,11 @@ impl PseudospectralDerivative {
 
     /// Compute spectral derivative in Z direction
     pub fn derivative_z(&self, _field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        // TODO_AUDIT: P0 - Pseudospectral Z-Derivative - FFT Integration Required
+        // Same as derivative_x but operates on Z-axis. See derivative_x for full specification.
+        // EFFORT: 2-3 hours (reuse X-derivative implementation)
+        // ASSIGNED: Sprint 210
+        // PRIORITY: P0
         Err(NumericalError::NotImplemented {
             feature: "Spectral derivative (requires FFT integration)".to_string(),
         }

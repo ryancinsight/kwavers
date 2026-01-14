@@ -395,6 +395,58 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
 
     /// Identify regions with high PDE residual for targeted sampling
     fn identify_high_residual_regions(&self) -> Vec<HighResidualRegion> {
+        // TODO_AUDIT: P1 - Adaptive Sampling Residual Region Identification - Simplified Grid Implementation
+        //
+        // PROBLEM:
+        // Returns a fixed 2×2×2 grid of regions with hardcoded residual magnitude (0.8) instead of
+        // computing actual PDE residuals and clustering high-error points. This defeats the purpose
+        // of adaptive sampling.
+        //
+        // IMPACT:
+        // - Adaptive sampling is effectively uniform sampling (no adaptation)
+        // - No computational savings from focusing on high-error regions
+        // - PINN training inefficiency: wastes collocation points in well-converged areas
+        // - Cannot handle sharp gradients, discontinuities, or localized features
+        // - Blocks high-accuracy solutions for complex physics
+        //
+        // REQUIRED IMPLEMENTATION:
+        // 1. Evaluate PDE residuals at all current collocation points:
+        //    - Forward pass through model to get predictions
+        //    - Compute residual: R = |PDE(u) - 0| for each point
+        // 2. Cluster points by spatial proximity and residual magnitude:
+        //    - Use DBSCAN or k-means clustering on (x, y, t, residual) space
+        //    - Weight spatial distance vs. residual distance (e.g., 70% spatial, 30% residual)
+        // 3. Identify high-residual regions:
+        //    - Threshold: regions where mean residual > 0.8 * max_residual
+        //    - Compute region bounding boxes (min/max x, y, t for clustered points)
+        // 4. Sort regions by residual magnitude (descending)
+        // 5. Return top N regions (e.g., top 20% or regions above threshold)
+        //
+        // MATHEMATICAL SPECIFICATION:
+        // For each collocation point (xᵢ, yᵢ, tᵢ):
+        //   Rᵢ = |∇²u - (1/c²)∂²u/∂t² - f(x,y,t)|
+        // Clustering objective:
+        //   Minimize: Σᵢ min_j [α·||pᵢ - cⱼ||² + (1-α)·(Rᵢ - R̄ⱼ)²]
+        // where:
+        //   - pᵢ = (xᵢ, yᵢ, tᵢ) is point location
+        //   - cⱼ is cluster j center
+        //   - R̄ⱼ is mean residual in cluster j
+        //   - α = 0.7 is spatial weighting factor
+        //
+        // VALIDATION CRITERIA:
+        // 1. Unit test: known high-residual region (e.g., discontinuity) is identified
+        // 2. Property test: identified regions contain points with above-average residuals
+        // 3. Convergence test: adaptive sampling converges faster than uniform (fewer iterations)
+        // 4. Visual test: plot residual heatmap and identified regions (should align)
+        //
+        // REFERENCES:
+        // - Lu et al. (2021). "DeepXDE: A deep learning library for solving PDEs"
+        // - Nabian & Meidani (2021). "Physics-informed regularization of deep neural networks"
+        // - backlog.md: Sprint 212 Adaptive Sampling Enhancement
+        //
+        // EFFORT: ~14-18 hours (residual evaluation, clustering algorithm, validation)
+        // SPRINT: Sprint 212 (PINN training optimization)
+        //
         // Evaluate residuals at current points to find high-residual regions
         // For now, return a simple grid of regions - in practice this would
         // cluster points based on residual magnitude

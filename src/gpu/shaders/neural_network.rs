@@ -152,6 +152,80 @@ impl NeuralNetworkShader {
             );
         }
 
+        // TODO_AUDIT: P1 - GPU Neural Network Inference Shader - Not Implemented
+        //
+        // PROBLEM:
+        // Returns FeatureNotAvailable error. GPU-accelerated neural network inference
+        // is not implemented. Only CPU fallback with quantized operations is available.
+        //
+        // IMPACT:
+        // - Cannot leverage GPU acceleration for PINN inference
+        // - CPU inference is 10-100x slower than GPU for large models
+        // - Blocks real-time PINN applications (adaptive beamforming, field prediction)
+        // - Edge devices cannot use GPU acceleration (mobile, embedded)
+        // - Severity: P1 (performance optimization, CPU fallback available)
+        //
+        // REQUIRED IMPLEMENTATION:
+        // 1. GPU shader development (WGSL):
+        //    - Matrix multiplication kernel (GEMM)
+        //    - Activation functions (ReLU, tanh, sigmoid)
+        //    - Batch normalization
+        // 2. GPU buffer management:
+        //    - Upload weights and biases to GPU memory
+        //    - Allocate output buffers
+        //    - Efficient memory layout (row-major vs column-major)
+        // 3. Compute pipeline:
+        //    - Create compute pipeline with shaders
+        //    - Bind buffers to shader binding groups
+        //    - Dispatch workgroups (optimal thread block size)
+        // 4. Synchronization:
+        //    - Command buffer submission
+        //    - Read back results from GPU
+        // 5. Quantization support:
+        //    - INT8 quantized inference on GPU
+        //    - De-quantization in shader
+        //
+        // MATHEMATICAL SPECIFICATION:
+        // Matrix multiplication (GEMM):
+        //   Y = W·X + b
+        // where W ∈ ℝ^(out×in), X ∈ ℝ^(in×batch), b ∈ ℝ^out
+        //
+        // Quantized inference:
+        //   Y_int8 = (W_int8·X_int8) >> shift + b_int8
+        //   Y_fp32 = Y_int8 × scale
+        //
+        // Workgroup layout (example for 256 threads):
+        //   @workgroup_size(16, 16, 1)
+        //   Each thread computes one output element
+        //
+        // VALIDATION CRITERIA:
+        // - Test: Small network (32x32) → verify GPU output matches CPU within 1e-5
+        // - Test: Quantized inference → verify GPU matches CPU quantized output
+        // - Performance: GPU should be > 10x faster than CPU for networks > 1024x1024
+        // - Memory: Verify no GPU memory leaks (buffer cleanup)
+        // - Correctness: Compare against reference BLAS implementation
+        //
+        // REFERENCES:
+        // - WebGPU Specification: https://www.w3.org/TR/webgpu/
+        // - WGSL Specification: https://www.w3.org/TR/WGSL/
+        // - Nvidia CUTLASS: High-performance GEMM templates
+        // - ARM Mali GPU optimization guide
+        //
+        // ESTIMATED EFFORT: 16-24 hours
+        // - WGSL shader development: 8-10 hours (GEMM, activations, quantization)
+        // - GPU buffer and pipeline setup: 4-6 hours (wgpu integration)
+        // - Optimization: 3-5 hours (workgroup size tuning, memory coalescing)
+        // - Testing & validation: 2-4 hours (correctness, performance benchmarks)
+        // - Documentation: 1-2 hours
+        //
+        // DEPENDENCIES:
+        // - wgpu crate (already in Cargo.toml)
+        // - GPU device with compute shader support
+        // - WGSL shader compiler
+        //
+        // ASSIGNED: Sprint 211-212 (GPU Optimization)
+        // PRIORITY: P1 (Performance optimization - CPU fallback available)
+
         // GPU implementation would go here
         Err(KwaversError::FeatureNotAvailable(
             "GPU neural network inference not yet implemented".into(),

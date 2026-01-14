@@ -18,6 +18,79 @@ pub struct CTBasedSkullModel {
 impl CTBasedSkullModel {
     /// Load from NIFTI file
     pub fn from_file(path: &str) -> KwaversResult<Self> {
+        // TODO_AUDIT: P1 - CT-Based Skull Model NIFTI Loading - Not Implemented
+        //
+        // PROBLEM:
+        // Returns InvalidInput error instead of loading CT data from NIFTI files.
+        // Cannot use patient-specific skull geometry for transcranial ultrasound therapy planning.
+        //
+        // IMPACT:
+        // - Cannot load real CT scans for skull acoustic modeling
+        // - Transcranial focused ultrasound (tcFUS) planning relies on generic phantoms
+        // - No patient-specific aberration correction for brain therapy
+        // - Blocks clinical applications: transcranial HIFU, neuromodulation, blood-brain barrier opening
+        // - Severity: P1 (clinical feature - synthetic fallback available via from_ct_data)
+        //
+        // REQUIRED IMPLEMENTATION:
+        // 1. NIFTI file parsing:
+        //    - Use nifti crate to load .nii or .nii.gz files
+        //    - Extract voxel data (Hounsfield Units for CT)
+        //    - Read header metadata (voxel spacing, dimensions, orientation)
+        // 2. Coordinate system handling:
+        //    - Parse affine transformation matrix
+        //    - Convert to grid coordinates matching acoustic simulation domain
+        //    - Handle different orientations (RAS, LPS, etc.)
+        // 3. Data validation:
+        //    - Verify modality is CT (not MRI or other)
+        //    - Check HU value range is reasonable (-1000 to +3000)
+        //    - Validate dimensions match expected brain/skull coverage
+        // 4. Preprocessing:
+        //    - Optional: Resample to match acoustic grid resolution
+        //    - Optional: Apply smoothing filter to reduce artifacts
+        //    - Optional: Segment skull from soft tissue
+        //
+        // MATHEMATICAL SPECIFICATION:
+        // Hounsfield Unit (HU) definition:
+        //   HU = 1000 × (μ - μ_water) / (μ_water - μ_air)
+        // where μ is linear attenuation coefficient
+        //
+        // Typical HU ranges:
+        //   Air: -1000 HU
+        //   Water: 0 HU
+        //   Soft tissue: 20-70 HU
+        //   Bone (skull): 700-3000 HU
+        //
+        // HU to acoustic properties (Aubry et al., 2003):
+        //   c_skull(HU) = 2800 + (HU - 700) × 0.5 m/s
+        //   ρ_skull(HU) = 1700 + (HU - 700) × 0.2 kg/m³
+        //   α_skull(HU) = 40 + (HU - 700) × 0.05 Np/m
+        //
+        // VALIDATION CRITERIA:
+        // - Test: Load synthetic NIFTI file with known HU values → verify correct array shape
+        // - Test: Load real CT scan → verify skull HU values in 700-3000 range
+        // - Test: Affine transformation → verify spatial coordinates match patient space
+        // - Test: Missing/corrupted file → should return proper error, not panic
+        // - Integration: Loaded CT should produce valid HeterogeneousSkull via to_heterogeneous()
+        //
+        // REFERENCES:
+        // - Marquet et al., "Non-invasive transcranial ultrasound therapy based on a 3D CT scan" (2009)
+        // - Aubry et al., "Experimental demonstration of noninvasive transskull adaptive focusing" (2003)
+        // - NIFTI-1 Data Format: https://nifti.nimh.nih.gov/nifti-1/
+        //
+        // ESTIMATED EFFORT: 8-12 hours
+        // - NIFTI parsing: 3-4 hours (integrate nifti crate, extract data)
+        // - Coordinate transformation: 2-3 hours (affine matrix, orientation handling)
+        // - Validation & preprocessing: 2-3 hours (HU range checks, resampling)
+        // - Testing: 2-3 hours (synthetic and real CT data)
+        // - Documentation: 1 hour
+        //
+        // DEPENDENCIES:
+        // - nifti crate (already in Cargo.toml)
+        // - ndarray for array operations
+        //
+        // ASSIGNED: Sprint 211 (Clinical Imaging Integration)
+        // PRIORITY: P1 (Clinical feature - synthetic CT data available as fallback)
+
         // Placeholder - would use nifti crate in production
         Err(KwaversError::InvalidInput(format!(
             "CT loading not yet implemented for path: {}",

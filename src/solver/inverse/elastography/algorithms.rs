@@ -329,17 +329,22 @@ mod tests {
     #[test]
     fn test_fill_boundaries() {
         let mut array = Array3::zeros((10, 10, 10));
-        array[[5, 5, 5]] = 42.0;
+        array[[1, 5, 5]] = 1.0;
+        array[[8, 5, 5]] = 2.0;
+        array[[5, 1, 5]] = 3.0;
+        array[[5, 8, 5]] = 4.0;
+        array[[5, 5, 1]] = 5.0;
+        array[[5, 5, 8]] = 6.0;
 
         fill_boundaries(&mut array);
 
         // Check that boundaries are filled
-        assert_ne!(array[[0, 5, 5]], 0.0);
-        assert_ne!(array[[9, 5, 5]], 0.0);
-        assert_ne!(array[[5, 0, 5]], 0.0);
-        assert_ne!(array[[5, 9, 5]], 0.0);
-        assert_ne!(array[[5, 5, 0]], 0.0);
-        assert_ne!(array[[5, 5, 9]], 0.0);
+        assert_eq!(array[[0, 5, 5]], 1.0);
+        assert_eq!(array[[9, 5, 5]], 2.0);
+        assert_eq!(array[[5, 0, 5]], 3.0);
+        assert_eq!(array[[5, 9, 5]], 4.0);
+        assert_eq!(array[[5, 5, 0]], 5.0);
+        assert_eq!(array[[5, 5, 9]], 6.0);
     }
 
     #[test]

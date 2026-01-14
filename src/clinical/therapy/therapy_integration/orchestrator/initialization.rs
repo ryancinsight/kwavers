@@ -313,6 +313,77 @@ fn create_stone_geometry(config: &TherapySessionConfig, grid: &Grid) -> Array3<f
 ///
 /// Error indicating DICOM integration not yet implemented
 fn load_ct_imaging_data(_config: &TherapySessionConfig) -> KwaversResult<Array3<f64>> {
+    // TODO_AUDIT: P1 - DICOM CT Data Loading - Not Implemented
+    //
+    // PROBLEM:
+    // Returns validation error instead of loading real CT imaging data.
+    // Clinical therapy planning cannot use patient-specific anatomy.
+    //
+    // IMPACT:
+    // - Cannot load CT scans for patient-specific treatment planning
+    // - Therapy planning relies on synthetic phantom data only
+    // - No integration with hospital PACS systems
+    // - Blocks personalized medicine applications (tumor targeting, skull modeling)
+    // - Severity: P1 (clinical feature, moderate priority - synthetic fallback exists)
+    //
+    // REQUIRED IMPLEMENTATION:
+    // 1. DICOM file reading:
+    //    - Use dicom crate for file parsing
+    //    - Extract CT image slices (pixel data, spacing, position)
+    //    - Reconstruct 3D volume from DICOM series
+    // 2. PACS integration (optional):
+    //    - Query PACS server (C-FIND, C-MOVE) for patient studies
+    //    - Retrieve CT series matching therapy session
+    // 3. Hounsfield Unit (HU) conversion:
+    //    - Apply rescale slope and intercept
+    //    - Convert HU to acoustic properties (density, sound speed)
+    // 4. Metadata extraction:
+    //    - Patient orientation and position
+    //    - Slice thickness and spacing
+    //    - Image dimensions and field of view
+    // 5. Error handling:
+    //    - Validate DICOM tags (Modality = "CT")
+    //    - Handle incomplete series
+    //    - Fallback to synthetic if loading fails
+    //
+    // MATHEMATICAL SPECIFICATION:
+    // HU to density conversion (Schneider et al., 1996):
+    //   ρ(HU) = ρ_water × (1 + HU/1000)  for HU ≥ 0
+    //   ρ(HU) = ρ_water × (1 + HU/975)   for HU < 0
+    // where ρ_water = 1000 kg/m³
+    //
+    // HU to sound speed (simplified):
+    //   c(HU) = c_water + α·HU
+    // where c_water = 1540 m/s, α ≈ 2.5 (m/s)/HU for soft tissue
+    //
+    // VALIDATION CRITERIA:
+    // - Test: Load synthetic DICOM series, verify volume dimensions match expected
+    // - Test: Load multi-slice CT, verify correct spatial ordering and orientation
+    // - Test: Verify HU values in known regions (air ≈ -1000, water ≈ 0, bone ≈ +1000)
+    // - Test: Missing DICOM files → should trigger fallback to synthetic data
+    // - Integration: PACS connection with authentication and query/retrieve
+    //
+    // REFERENCES:
+    // - DICOM Standard PS3.3-2023 - Information Object Definitions (CT Image IOD)
+    // - Schneider et al., "Correlation between CT numbers and tissue parameters" (1996)
+    // - IEC 62220-1 - Medical electrical equipment (digital radiography)
+    //
+    // ESTIMATED EFFORT: 12-16 hours
+    // - DICOM parsing: 4-6 hours (integrate dicom crate, extract metadata)
+    // - Volume reconstruction: 3-4 hours (slice ordering, interpolation)
+    // - HU conversion: 2-3 hours (acoustic property mapping)
+    // - PACS integration: 3-5 hours (optional, query/retrieve)
+    // - Testing: 2-3 hours (synthetic DICOM, real CT validation)
+    // - Documentation: 1 hour
+    //
+    // DEPENDENCIES:
+    // - dicom crate (add to Cargo.toml)
+    // - Optional: dicom-ul crate for PACS networking
+    // - Optional: Hospital PACS credentials and test environment
+    //
+    // ASSIGNED: Sprint 211 (Clinical Integration)
+    // PRIORITY: P1 (Clinical feature - synthetic fallback available)
+
     // In practice, this would load DICOM CT data from PACS or file system
     // Current implementation triggers fallback to synthetic data
     Err(crate::core::error::KwaversError::Validation(

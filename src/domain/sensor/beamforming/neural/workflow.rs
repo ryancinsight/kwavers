@@ -68,6 +68,14 @@ impl RealTimeWorkflow {
             quality_metrics: HashMap::new(),
         }
     }
+
+    pub fn record_processing_time_ms(&mut self, time_ms: f64) {
+        self.performance_history.push(time_ms);
+        if self.performance_history.len() > 100 {
+            let drain_end = self.performance_history.len() - 100;
+            self.performance_history.drain(0..drain_end);
+        }
+    }
 }
 
 impl Default for RealTimeWorkflow {
@@ -105,13 +113,7 @@ impl RealTimeWorkflow {
         let result = processor.process_ai_enhanced(rf_data, angles)?;
 
         // Update performance history
-        self.performance_history
-            .push(result.performance.total_time_ms);
-
-        // Maintain rolling window of last 100 measurements
-        if self.performance_history.len() > 100 {
-            self.performance_history.remove(0);
-        }
+        self.record_processing_time_ms(result.performance.total_time_ms);
 
         // Update quality metrics
         self.quality_metrics.insert(
@@ -307,7 +309,7 @@ mod tests {
 
         // Add 150 measurements
         for i in 0..150 {
-            workflow.performance_history.push(i as f64);
+            workflow.record_processing_time_ms(i as f64);
         }
 
         // Should maintain only last 100

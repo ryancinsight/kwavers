@@ -327,6 +327,66 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
                         / self.config.bubble_params.rho_liquid as f32)
                         .sqrt();
 
+                // TODO_AUDIT: P1 - Cavitation Bubble Scattering - Simplified Resonance Model
+                //
+                // PROBLEM:
+                // Uses simplified resonance scattering with basic amplitude scaling instead of full
+                // Mie scattering theory. The scattering cross-section is approximated as (ka)³/(1+(ka)²)
+                // with hardcoded 0.1 amplitude scaling, ignoring:
+                // - Multiple scattering between bubbles
+                // - Frequency-dependent scattering phase
+                // - Bubble oscillation dynamics (Rayleigh-Plesset equation)
+                // - Viscous and thermal damping
+                //
+                // IMPACT:
+                // - Inaccurate bubble-acoustic field coupling for cavitation physics
+                // - Cannot predict bubble cloud behavior (shielding, focusing)
+                // - Scattering phase errors → incorrect interference patterns
+                // - Blocks high-fidelity histotripsy/cavitation simulations
+                // - Quantitative predictions unreliable (off by factors of 2-10)
+                //
+                // REQUIRED IMPLEMENTATION:
+                // 1. Replace with full Mie scattering for spherical bubbles:
+                //    - Compute scattering coefficients a_n, b_n for all multipole orders
+                //    - Sum partial wave series: f(θ) = Σ (2n+1)/(n(n+1)) · (a_n·π_n + b_n·τ_n)
+                // 2. Include Rayleigh-Plesset dynamics for bubble radius R(t):
+                //    - ρ_L[R·R̈ + (3/2)Ṙ²] = (P_g - P_∞) - 4μ_L·Ṙ/R - 2σ/R
+                //    - Couple R(t) to acoustic pressure: P_g = P_0(R_0/R)^(3γ)
+                // 3. Account for multiple scattering:
+                //    - Lippmann-Schwinger equation for T-matrix approach
+                //    - Or use coupled Rayleigh-Plesset equations for bubble cluster
+                // 4. Add viscous damping: δ_vis = 4μ_L/(ρ_L·ω·R²)
+                // 5. Add thermal damping: δ_th = (γ-1)/(γ) · (3κ/(ρ_L·c_p·ω·R²))
+                //
+                // MATHEMATICAL SPECIFICATION:
+                // Mie scattering cross-section for bubble:
+                //   σ_s = (4π/k²) · Σ_{n=1}^∞ (2n+1) · (|a_n|² + |b_n|²)
+                // where:
+                //   a_n, b_n are Mie coefficients (functions of ka, impedance contrast)
+                //   k = ω/c is wave number
+                //   a = R(t) is time-varying bubble radius
+                //
+                // Rayleigh-Plesset equation (linearized):
+                //   R̈ + (ω_0²)R = -(P_ac/ρ_L·R_0)
+                // where:
+                //   ω_0 = sqrt(3γP_0/ρ_L - 2σ/ρ_L·R_0) / R_0 is Minnaert frequency
+                //
+                // VALIDATION CRITERIA:
+                // 1. Unit test: single bubble scattering → compare with analytical Minnaert resonance
+                // 2. Verify resonance frequency: f_0 = (1/2πR_0)·sqrt(3γP_0/ρ_L)
+                // 3. Scattering cross-section at resonance: σ_s,max = 4π·R_0²·Q
+                // 4. Bubble cluster test: verify shielding (front bubbles reduce back bubble excitation)
+                // 5. Compare with experimental data: Church (1995) bubble scattering measurements
+                //
+                // REFERENCES:
+                // - Leighton, T.G. (1994). "The Acoustic Bubble", Cambridge University Press, Ch. 4
+                // - Church, C.C. (1995). "The effects of an elastic solid surface layer on cavitation"
+                // - Louisnard, O. (2012). "A simple model of ultrasound propagation in cavitation field"
+                // - backlog.md: Sprint 212-213 Cavitation Physics Enhancement
+                //
+                // EFFORT: ~24-32 hours (Mie theory, R-P solver, multiple scattering, validation)
+                // SPRINT: Sprint 212-213 (advanced cavitation physics)
+                //
                 // Scattering amplitude (simplified resonance scattering)
                 // Real implementation would use full Mie scattering theory
                 let wave_number =
@@ -340,6 +400,28 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
                 let scattering_contribution =
                     scattering_amplitude / dist_val * (phase.cos() - phase.sin()) * 0.1_f32; // Amplitude scaling
 
+                // TODO_AUDIT: P2 - Cavitation Scattering Field Accumulation - Simplified Linear Model
+                //
+                // PROBLEM:
+                // Scattering contribution is computed as simple product: acoustic_field × scattering_coefficient,
+                // assuming linear superposition. This ignores:
+                // - Nonlinear bubble oscillations (amplitude-dependent response)
+                // - Time delay from scattering (instantaneous assumption)
+                // - Directionality of scattering pattern (assumes isotropic)
+                //
+                // IMPACT:
+                // - Incorrect scattering field amplitude at high driving pressures
+                // - Missing constructive/destructive interference effects
+                // - Cannot model focused cavitation clouds or standing wave patterns
+                //
+                // REQUIRED IMPLEMENTATION:
+                // 1. Add time-retarded contribution: field(r,t) = scatter(r,t-|r-r_bubble|/c)
+                // 2. Include scattering directionality: multiply by phase function P(θ,φ)
+                // 3. For nonlinear regime: add harmonic generation terms (2ω, 3ω components)
+                //
+                // EFFORT: ~6-8 hours (directional patterns, time delay, harmonics)
+                // SPRINT: Sprint 212 (with main scattering TODO above)
+                //
                 // Add to scattering field (accumulate contributions)
                 // Assuming scattering driven by field at receiver (simplified model from original code)
                 let contribution =
@@ -369,6 +451,41 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for CavitationCoupledDomain<B> {
         // Get acoustic field from model
         let acoustic_field = model.forward(x.clone(), y.clone(), t.clone());
 
+        // TODO_AUDIT: P1 - Cavitation Bubble Position Tensor - Simplified Spatial Assumption
+        //
+        // PROBLEM:
+        // Bubble positions are constructed by concatenating input coordinates (x, y), effectively
+        // assuming bubbles are located at evaluation points. This is incorrect because:
+        // - Bubble nucleation sites are physics-driven (pressure threshold, impurities)
+        // - Bubbles should have fixed or dynamically-tracked positions separate from collocation points
+        // - Current approach creates N_collocation "bubbles" at arbitrary locations
+        //
+        // IMPACT:
+        // - Bubble cloud geometry is meaningless (not physics-based)
+        // - Cannot model realistic cavitation patterns (e.g., prefocal bubble cloud)
+        // - Scattering computation uses wrong source locations
+        // - Blocks validation against experimental bubble distributions
+        //
+        // REQUIRED IMPLEMENTATION:
+        // 1. Add bubble_locations field to CavitationCoupledDomain:
+        //    - Vec<(f64, f64, f64)> for static bubble positions
+        //    - Or dynamically tracked via pressure threshold detection
+        // 2. Nucleation model: detect where P < P_Blake (Blake threshold)
+        // 3. Convert bubble locations to Tensor for scattering computation
+        // 4. Pass actual bubble positions to scattering residual function
+        //
+        // MATHEMATICAL SPECIFICATION:
+        // Blake threshold for cavitation nucleation:
+        //   P_Blake = P_0 + (2σ/R_n)·[(2σ/3R_n·P_0)^(1/2) - 1]
+        // where R_n is nucleus radius (typically 1-10 μm)
+        //
+        // VALIDATION:
+        // - Verify bubbles nucleate only in negative pressure regions (P < P_Blake)
+        // - Compare spatial distribution with experimental cavitation images
+        //
+        // EFFORT: ~8-10 hours (nucleation model, position tracking, integration)
+        // SPRINT: Sprint 212 (cavitation physics)
+        //
         // Create bubble position tensor (simplified - would be based on actual bubble locations)
         let bubble_positions = Tensor::cat(vec![x.clone(), y.clone()], 1);
 

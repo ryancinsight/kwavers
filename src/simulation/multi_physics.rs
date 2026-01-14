@@ -451,6 +451,81 @@ impl MultiPhysicsSolver {
 
     /// Monolithic coupling (would require unified system matrix)
     fn solve_monolithic_coupling(&mut self, _dt: f64) -> KwaversResult<f64> {
+        // TODO_AUDIT: P1 - Multi-Physics Monolithic Coupling - Not Implemented
+        //
+        // PROBLEM:
+        // Returns NotImplemented error. Monolithic coupling strategy for tightly-coupled
+        // multi-physics problems is not available. Only sequential and iterative coupling
+        // strategies are implemented.
+        //
+        // IMPACT:
+        // - Cannot solve strongly-coupled multi-physics problems requiring simultaneous solution
+        // - Reduced accuracy for problems with strong bidirectional coupling (e.g., fluid-structure interaction with large deformations)
+        // - Iterative coupling may fail to converge for stiff problems
+        // - Blocks applications: shock-wave lithotripsy (acoustic-mechanical-thermal), HIFU with boiling (acoustic-thermal-cavitation)
+        // - Severity: P1 (advanced coupling method, iterative fallback available)
+        //
+        // REQUIRED IMPLEMENTATION:
+        // 1. Assemble unified system matrix:
+        //    - Block structure: [A_acoustic, C_ac-thermal; C_thermal-ac, A_thermal]
+        //    - Coupling matrices C capture bidirectional interactions
+        // 2. Implement monolithic Newton solver:
+        //    - Compute Jacobian: J = ∂F/∂u for combined state vector u = [u_acoustic; u_thermal; ...]
+        //    - Newton iteration: J·Δu = -F, u^(k+1) = u^k + Δu
+        //    - Line search or trust region for robustness
+        // 3. Preconditioner:
+        //    - Block-diagonal preconditioner: P = [A_acoustic^-1, 0; 0, A_thermal^-1]
+        //    - Physics-based preconditioner (approximate Schur complement)
+        // 4. Linear solver:
+        //    - Use GMRES or BiCGSTAB for large sparse systems
+        //    - Exploit block structure for efficient matrix-vector products
+        // 5. Convergence criteria:
+        //    - Combined residual: ||F|| < tol_abs or ||F||/||F_0|| < tol_rel
+        //    - Individual physics convergence checks
+        //
+        // MATHEMATICAL SPECIFICATION:
+        // Monolithic system for acoustic-thermal coupling:
+        //   [∇²p - (1/c²)∂²p/∂t²     ,  -α·∂T/∂t        ] [p]   [S_acoustic]
+        //   [β·|∇p|²/(ρc_p)          ,  ∇·(κ∇T) - ρc_p·∂T/∂t] [T] = [S_thermal ]
+        //
+        // Newton iteration:
+        //   J^k·Δu^k = -F(u^k)
+        //   u^(k+1) = u^k + λ^k·Δu^k  (λ from line search)
+        //
+        // Where:
+        //   F = [F_acoustic(p,T); F_thermal(p,T)] is combined residual vector
+        //   J is the Jacobian matrix with partial derivatives ∂F_i/∂u_j
+        //
+        // VALIDATION CRITERIA:
+        // - Test: Coupled acoustic-thermal problem with analytical solution
+        //   → Verify ||u_numerical - u_exact|| < tol for small Δt
+        // - Test: Convergence rate → should be quadratic near solution (Newton)
+        // - Test: Strong coupling benchmark (high coupling coefficients)
+        //   → Monolithic should converge where iterative fails
+        // - Performance: Compare iterations vs. iterative coupling (should be fewer but more expensive per iteration)
+        // - Robustness: Verify convergence for stiff problems (large time steps)
+        //
+        // REFERENCES:
+        // - Keyes et al., "Multiphysics simulations: Challenges and opportunities" (2013)
+        // - Quarteroni & Valli, "Domain Decomposition Methods for Partial Differential Equations" (1999), Chapter 8
+        // - Farhat et al., "Load and motion transfer algorithms for fluid/structure interaction problems" (1998)
+        //
+        // ESTIMATED EFFORT: 20-28 hours
+        // - System assembly: 6-8 hours (block matrix structure, coupling terms)
+        // - Newton solver: 8-10 hours (Jacobian computation, line search)
+        // - Preconditioner: 4-6 hours (block-diagonal or Schur complement)
+        // - Linear solver integration: 2-3 hours (GMRES/BiCGSTAB with preconditioner)
+        // - Testing & validation: 3-4 hours (convergence studies, benchmark problems)
+        // - Documentation: 1-2 hours
+        //
+        // DEPENDENCIES:
+        // - Sparse linear solver (ndarray-linalg or nalgebra)
+        // - Krylov methods (GMRES, BiCGSTAB)
+        // - Jacobian computation infrastructure (autodiff or finite differences)
+        //
+        // ASSIGNED: Sprint 212-213 (Advanced Multi-Physics Coupling)
+        // PRIORITY: P1 (Advanced coupling method - iterative coupling available as fallback)
+
         // Placeholder - would implement monolithic Newton solver
         Err(KwaversError::NotImplemented(
             "Monolithic coupling not yet implemented".to_string(),

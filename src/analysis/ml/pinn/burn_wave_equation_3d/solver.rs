@@ -353,9 +353,98 @@ impl<B: Backend> BurnPINN3DWave<B> {
                 });
         let pde_loss = pde_residual.powf_scalar(2.0).mean();
 
+        // TODO_AUDIT: P1 - BurnPINN 3D Boundary Condition Loss - Zero Placeholder
+        //
+        // PROBLEM:
+        // Boundary condition loss is hardcoded to zero tensor, completely bypassing BC enforcement
+        // in 3D PINN training. The model is not constrained to satisfy boundary conditions.
+        //
+        // IMPACT:
+        // - PINN predictions violate boundary conditions (e.g., non-zero pressure at sound-soft walls)
+        // - Training loss is incorrect (missing BC penalty term)
+        // - No learning signal from boundaries → poor accuracy near domain edges
+        // - Cannot solve problems with essential BCs (Dirichlet, Neumann, Robin)
+        // - Blocks applications: room acoustics, waveguide simulations, scattering problems
+        //
+        // REQUIRED IMPLEMENTATION:
+        // 1. Sample points on each boundary face (6 faces for 3D domain):
+        //    - x=0, x=L_x, y=0, y=L_y, z=0, z=L_z
+        //    - Generate N_bc points per face (e.g., 100-500 points)
+        // 2. For each boundary, compute violation based on BC type:
+        //    - Dirichlet: |u(x_bc) - u_bc|²
+        //    - Neumann: |∂u/∂n(x_bc) - g_bc|² (requires gradient computation)
+        //    - Robin: |α·u + β·∂u/∂n - g_bc|²
+        // 3. Aggregate: bc_loss = Σ_faces MSE(violations)
+        // 4. Weight by importance: bc_loss *= weights.bc_weight
+        //
+        // MATHEMATICAL SPECIFICATION:
+        // For Dirichlet BC on face Γ_D:
+        //   L_BC = (1/N_bc) Σ_{x∈Γ_D} |u(x) - u_D(x)|²
+        // For Neumann BC on face Γ_N:
+        //   L_BC = (1/N_bc) Σ_{x∈Γ_N} |∂u/∂n(x) - g_N(x)|²
+        // where n is the outward normal vector.
+        //
+        // VALIDATION CRITERIA:
+        // 1. Unit test: known solution with Dirichlet BC (e.g., u=0 on boundaries)
+        // 2. Verify bc_loss decreases during training
+        // 3. Check predictions at boundaries match BC values (error < 1e-3)
+        // 4. Test all BC types (Dirichlet, Neumann, Robin)
+        //
+        // REFERENCES:
+        // - Raissi et al. (2019). "Physics-informed neural networks", Equation 10
+        // - backlog.md: Sprint 211 Advanced Boundary Conditions
+        //
+        // EFFORT: ~10-14 hours (BC sampling, gradient computation, multi-face handling)
+        // SPRINT: Sprint 211 (3D PINN BC enforcement)
+        //
         // Boundary condition loss (placeholder: to be implemented with BC enforcement)
         let bc_loss = Tensor::<B, 1>::zeros([1], &u_pred.device());
 
+        // TODO_AUDIT: P1 - BurnPINN 3D Initial Condition Loss - Zero Placeholder
+        //
+        // PROBLEM:
+        // Initial condition loss is hardcoded to zero tensor, bypassing IC enforcement in 3D PINN
+        // training. The model is not constrained to match initial state at t=0.
+        //
+        // IMPACT:
+        // - PINN predictions violate initial conditions (wrong field distribution at t=0)
+        // - Training loss underestimates error (missing IC penalty)
+        // - Temporal evolution starts from incorrect state → accumulated error over time
+        // - Cannot solve time-dependent problems requiring specific initial fields
+        // - Blocks applications: transient analysis, impulse response, time-domain propagation
+        //
+        // REQUIRED IMPLEMENTATION:
+        // 1. Sample points in spatial domain at t=0:
+        //    - Generate N_ic points: (x, y, z, t=0) where (x,y,z) ∈ Ω
+        //    - Typical: 500-2000 IC points for 3D domain
+        // 2. Evaluate model predictions: u_pred(x, y, z, t=0)
+        // 3. Compute initial field u_0(x, y, z) from problem specification
+        // 4. For wave equation, enforce both u and ∂u/∂t at t=0:
+        //    - IC1: |u(x,y,z,0) - u_0(x,y,z)|² (initial displacement)
+        //    - IC2: |∂u/∂t(x,y,z,0) - v_0(x,y,z)|² (initial velocity)
+        // 5. Aggregate: ic_loss = MSE(IC1) + MSE(IC2)
+        //
+        // MATHEMATICAL SPECIFICATION:
+        // For wave equation with initial conditions:
+        //   u(x, y, z, 0) = u₀(x, y, z)
+        //   ∂u/∂t(x, y, z, 0) = v₀(x, y, z)
+        // Loss:
+        //   L_IC = (1/N_ic) Σᵢ [|u(xᵢ, yᵢ, zᵢ, 0) - u₀(xᵢ, yᵢ, zᵢ)|²
+        //                    + |∂u/∂t(xᵢ, yᵢ, zᵢ, 0) - v₀(xᵢ, yᵢ, zᵢ)|²]
+        //
+        // VALIDATION CRITERIA:
+        // 1. Unit test: known IC (e.g., Gaussian pulse) → verify u(x,y,z,0) matches
+        // 2. Check ic_loss decreases during training to < 1e-4
+        // 3. Temporal derivative test: ∂u/∂t at t=0 matches v₀
+        // 4. Visual: plot u(x,y,z,0) vs. u₀(x,y,z) → should overlay
+        //
+        // REFERENCES:
+        // - Raissi et al. (2019). "Physics-informed neural networks", Section 2.2
+        // - backlog.md: Sprint 211 IC Enforcement
+        //
+        // EFFORT: ~8-12 hours (IC sampling, temporal derivative, validation)
+        // SPRINT: Sprint 211 (3D PINN IC enforcement)
+        //
         // Initial condition loss (placeholder: to be implemented with IC enforcement)
         let ic_loss = Tensor::<B, 1>::zeros([1], &u_pred.device());
 
