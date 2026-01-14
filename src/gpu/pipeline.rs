@@ -280,21 +280,27 @@ impl RealtimeImagingPipeline {
         // Hilbert transform for envelope detection
         let mut envelope = Array3::zeros(beamformed.dim());
 
+        // Pre-allocate buffers for signal processing to avoid allocation in loop
+        let signal_len = beamformed.shape()[1];
+        let mut analytic = Vec::with_capacity(signal_len);
+        let mut hilbert_output = Vec::with_capacity(signal_len);
+        let mut spectrum_scratch = Vec::with_capacity(signal_len);
+
         for i in 0..beamformed.shape()[0] {
             for k in 0..beamformed.dim().2 {
                 // Simplified envelope detection (magnitude of analytic signal)
-                let mut analytic = vec![];
+                analytic.clear();
 
                 for j in 0..beamformed.shape()[1] {
                     analytic.push(beamformed[[i, j, k]] as f64);
                 }
 
                 // Apply Hilbert transform for analytic signal
-                let hilbert = self.hilbert_transform(&analytic);
+                self.hilbert_transform(&analytic, &mut hilbert_output, &mut spectrum_scratch);
 
-                for j in 0..hilbert.len() {
+                for j in 0..hilbert_output.len() {
                     envelope[[i, j, k]] =
-                        ((beamformed[[i, j, k]] as f64).powi(2) + hilbert[j].powi(2)).sqrt() as f32;
+                        ((beamformed[[i, j, k]] as f64).powi(2) + hilbert_output[j].powi(2)).sqrt() as f32;
                 }
             }
         }
@@ -309,16 +315,21 @@ impl RealtimeImagingPipeline {
     /// Hilbert Transform: H[f](t) = (1/π) ∫ f(τ)/(t-τ) dτ
     /// FFT-based implementation: Multiply FFT by sign function in frequency domain
     /// Reference: Oppenheim & Schafer, Discrete-Time Signal Processing (3rd ed.)
-    fn hilbert_transform(&mut self, signal: &[f64]) -> Vec<f64> {
+    fn hilbert_transform(
+        &mut self,
+        signal: &[f64],
+        output: &mut Vec<f64>,
+        spectrum: &mut Vec<Complex<f64>>,
+    ) {
         let fft = self.fft_planner.plan_fft_forward(signal.len());
         let ifft = self.fft_planner.plan_fft_inverse(signal.len());
 
-        // Convert to complex
-        let mut spectrum: Vec<Complex<f64>> =
-            signal.iter().map(|&x| Complex::new(x, 0.0)).collect();
+        // Convert to complex using scratch buffer
+        spectrum.clear();
+        spectrum.extend(signal.iter().map(|&x| Complex::new(x, 0.0)));
 
         // Forward FFT
-        fft.process(&mut spectrum);
+        fft.process(spectrum);
 
         // Apply Hilbert transform in frequency domain
         let n = spectrum.len();
@@ -333,10 +344,11 @@ impl RealtimeImagingPipeline {
         }
 
         // Inverse FFT
-        ifft.process(&mut spectrum);
+        ifft.process(spectrum);
 
         // Return imaginary part (Hilbert transform result)
-        spectrum.iter().map(|c| c.im / n as f64).collect()
+        output.clear();
+        output.extend(spectrum.iter().map(|c| c.im / n as f64));
     }
 
     /// Log compression
