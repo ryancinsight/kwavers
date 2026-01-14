@@ -68,10 +68,184 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
 use num_complex::Complex64;
+use rustfft::{Fft, FftPlanner};
 use std::f64::consts::PI;
+use std::sync::Arc;
 
 #[cfg(feature = "gpu")]
 use crate::gpu::compute_manager::ComputeManager;
+
+/// Helper struct for 3D FFT operations
+struct FftHelper {
+    fft_x: Arc<dyn Fft<f64>>,
+    fft_y: Arc<dyn Fft<f64>>,
+    fft_z: Arc<dyn Fft<f64>>,
+    ifft_x: Arc<dyn Fft<f64>>,
+    ifft_y: Arc<dyn Fft<f64>>,
+    ifft_z: Arc<dyn Fft<f64>>,
+    scratch_fft: Vec<Complex64>,
+    scratch_line: Vec<Complex64>,
+    nx: usize,
+    ny: usize,
+    nz: usize,
+}
+
+impl std::fmt::Debug for FftHelper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FftHelper")
+            .field("nx", &self.nx)
+            .field("ny", &self.ny)
+            .field("nz", &self.nz)
+            .finish()
+    }
+}
+
+impl FftHelper {
+    fn new(nx: usize, ny: usize, nz: usize) -> Self {
+        let mut planner = FftPlanner::new();
+
+        let fft_x = planner.plan_fft_forward(nx);
+        let fft_y = planner.plan_fft_forward(ny);
+        let fft_z = planner.plan_fft_forward(nz);
+
+        let ifft_x = planner.plan_fft_inverse(nx);
+        let ifft_y = planner.plan_fft_inverse(ny);
+        let ifft_z = planner.plan_fft_inverse(nz);
+
+        // Calculate max scratch size needed
+        let max_fft_scratch = [
+            fft_x.get_inplace_scratch_len(),
+            fft_y.get_inplace_scratch_len(),
+            fft_z.get_inplace_scratch_len(),
+            ifft_x.get_inplace_scratch_len(),
+            ifft_y.get_inplace_scratch_len(),
+            ifft_z.get_inplace_scratch_len(),
+        ]
+        .into_iter()
+        .max()
+        .unwrap_or(0);
+
+        let max_dim = [nx, ny, nz].into_iter().max().unwrap_or(0);
+
+        Self {
+            fft_x,
+            fft_y,
+            fft_z,
+            ifft_x,
+            ifft_y,
+            ifft_z,
+            scratch_fft: vec![Complex64::default(); max_fft_scratch],
+            scratch_line: vec![Complex64::default(); max_dim],
+            nx,
+            ny,
+            nz,
+        }
+    }
+
+    fn forward(&mut self, data: &mut Array3<Complex64>) {
+        // FFT along Z (contiguous)
+        for i in 0..self.nx {
+            for j in 0..self.ny {
+                let mut row = data.slice_mut(ndarray::s![i, j, ..]);
+                if let Some(slice) = row.as_slice_mut() {
+                    self.fft_z
+                        .process_with_scratch(slice, &mut self.scratch_fft);
+                }
+            }
+        }
+
+        // FFT along Y (strided)
+        for i in 0..self.nx {
+            for k in 0..self.nz {
+                // Copy column to scratch
+                for j in 0..self.ny {
+                    self.scratch_line[j] = data[[i, j, k]];
+                }
+
+                // Process
+                self.fft_y.process_with_scratch(
+                    &mut self.scratch_line[0..self.ny],
+                    &mut self.scratch_fft,
+                );
+
+                // Copy back
+                for j in 0..self.ny {
+                    data[[i, j, k]] = self.scratch_line[j];
+                }
+            }
+        }
+
+        // FFT along X (strided)
+        for j in 0..self.ny {
+            for k in 0..self.nz {
+                // Copy column to scratch
+                for i in 0..self.nx {
+                    self.scratch_line[i] = data[[i, j, k]];
+                }
+
+                // Process
+                self.fft_x.process_with_scratch(
+                    &mut self.scratch_line[0..self.nx],
+                    &mut self.scratch_fft,
+                );
+
+                // Copy back
+                for i in 0..self.nx {
+                    data[[i, j, k]] = self.scratch_line[i];
+                }
+            }
+        }
+    }
+
+    fn inverse(&mut self, data: &mut Array3<Complex64>) {
+        // IFFT along X
+        for j in 0..self.ny {
+            for k in 0..self.nz {
+                for i in 0..self.nx {
+                    self.scratch_line[i] = data[[i, j, k]];
+                }
+                self.ifft_x.process_with_scratch(
+                    &mut self.scratch_line[0..self.nx],
+                    &mut self.scratch_fft,
+                );
+                for i in 0..self.nx {
+                    data[[i, j, k]] = self.scratch_line[i];
+                }
+            }
+        }
+
+        // IFFT along Y
+        for i in 0..self.nx {
+            for k in 0..self.nz {
+                for j in 0..self.ny {
+                    self.scratch_line[j] = data[[i, j, k]];
+                }
+                self.ifft_y.process_with_scratch(
+                    &mut self.scratch_line[0..self.ny],
+                    &mut self.scratch_fft,
+                );
+                for j in 0..self.ny {
+                    data[[i, j, k]] = self.scratch_line[j];
+                }
+            }
+        }
+
+        // IFFT along Z
+        for i in 0..self.nx {
+            for j in 0..self.ny {
+                let mut row = data.slice_mut(ndarray::s![i, j, ..]);
+                if let Some(slice) = row.as_slice_mut() {
+                    self.ifft_z
+                        .process_with_scratch(slice, &mut self.scratch_fft);
+                }
+            }
+        }
+
+        // Scaling
+        let scale = 1.0 / (self.nx * self.ny * self.nz) as f64;
+        data.map_inplace(|x| *x = *x * scale);
+    }
+}
 
 /// Convergent Born Series solver for Helmholtz equation
 #[derive(Debug)]
@@ -88,6 +262,8 @@ pub struct ConvergentBornSolver {
     incident_field: Array3<Complex64>,
     /// Current iteration field
     current_field: Array3<Complex64>,
+    /// FFT helper for 3D FFT operations
+    fft_helper: Option<FftHelper>,
     /// GPU compute manager (when GPU feature is enabled)
     #[cfg(feature = "gpu")]
     gpu_manager: Option<ComputeManager>,
@@ -98,6 +274,12 @@ impl ConvergentBornSolver {
     pub fn new(config: super::BornConfig, grid: Grid) -> Self {
         let workspace = super::BornWorkspace::new(grid.nx, grid.ny, grid.nz);
         let shape = (grid.nx, grid.ny, grid.nz);
+        let fft_helper = if config.use_fft_green {
+            Some(FftHelper::new(grid.nx, grid.ny, grid.nz))
+        } else {
+            None
+        };
+
         Self {
             config,
             grid,
@@ -105,6 +287,7 @@ impl ConvergentBornSolver {
             workspace,
             incident_field: Array3::zeros(shape),
             current_field: Array3::zeros(shape),
+            fft_helper,
             #[cfg(feature = "gpu")]
             gpu_manager: None,
         }
@@ -296,74 +479,48 @@ impl ConvergentBornSolver {
         if self.workspace.fft_temp.is_empty() {
             // Allocate FFT temporary arrays
             let temp1 = Array3::<Complex64>::zeros((self.grid.nx, self.grid.ny, self.grid.nz));
-            let temp2 = Array3::<Complex64>::zeros((self.grid.nx, self.grid.ny, self.grid.nz));
             self.workspace.fft_temp.push(temp1);
-            self.workspace.fft_temp.push(temp2);
         }
 
-        // Forward FFT of source field
-        let mut source_fft = self.workspace.fft_temp[0].clone();
-        self.forward_fft_3d(
-            &self.workspace.heterogeneity_workspace.view(),
-            &mut source_fft,
-        )?;
+        // Get access to temporary buffer
+        // Note: we need to access fields directly to avoid multiple mutable borrows of self
+        let fft_temp = &mut self.workspace.fft_temp[0];
+
+        // Copy heterogeneity to fft_temp
+        fft_temp.assign(&self.workspace.heterogeneity_workspace);
+
+        // Perform Forward FFT
+        if let Some(helper) = &mut self.fft_helper {
+            helper.forward(fft_temp);
+        } else {
+            return Err(crate::core::error::KwaversError::System(
+                crate::core::error::SystemError::FeatureNotAvailable {
+                    feature: "FFT Green's Function".to_string(),
+                    reason: "FFT helper not initialized".to_string(),
+                },
+            ));
+        }
 
         // Element-wise multiplication with Green's function in k-space
-        let mut result_fft = self.workspace.fft_temp[1].view_mut();
-        Zip::indexed(&mut result_fft).and(&source_fft).for_each(
-            |(i, j, k), result_val, &source_val| {
-                // Get corresponding Green's function value
-                // For now, use the precomputed k-space Green's function
-                if let Some(green_fft) = &self.green_fft {
-                    let green_val = green_fft[[i, j, k]];
-                    *result_val = source_val * green_val;
-                } else {
-                    // Fallback to direct method if no precomputed Green's function
-                    *result_val = source_val * Complex64::new(0.1, 0.0);
-                }
-            },
-        );
+        // We can do this in-place on fft_temp
+        let green_fft_opt = self.green_fft.as_ref();
+        Zip::indexed(&mut *fft_temp).for_each(|(i, j, k), val| {
+            if let Some(green_fft) = green_fft_opt {
+                let green_val = green_fft[[i, j, k]];
+                *val = *val * green_val;
+            } else {
+                // Fallback to direct method if no precomputed Green's function
+                *val = *val * Complex64::new(0.1, 0.0);
+            }
+        });
 
         // Inverse FFT to get spatial domain result
-        // For now, copy result to green workspace (FFT implementation pending)
-        self.workspace.green_workspace.assign(&result_fft);
+        if let Some(helper) = &mut self.fft_helper {
+            helper.inverse(fft_temp);
+        }
 
-        Ok(())
-    }
-
-    /// 3D Forward FFT
-    fn forward_fft_3d(
-        &self,
-        input: &ArrayView3<Complex64>,
-        output: &mut Array3<Complex64>,
-    ) -> KwaversResult<()> {
-        // Placeholder for FFT implementation
-        // In production, this would use rustfft or similar
-        // For now, copy input to output (no-op)
-        output.assign(input);
-
-        // TODO: Implement actual 3D FFT using rustfft:
-        // - Create FFT planners for each dimension
-        // - Apply sequential FFTs: x -> y -> z
-        // - Handle FFT normalization and scaling
-
-        Ok(())
-    }
-
-    /// 3D Inverse FFT
-    fn inverse_fft_3d(
-        &self,
-        input: &ArrayView3<Complex64>,
-        output: &mut Array3<Complex64>,
-    ) -> KwaversResult<()> {
-        // Placeholder for inverse FFT implementation
-        // In production, this would use rustfft or similar
-        // For now, copy input to output (no-op)
-        output.assign(input);
-
-        // TODO: Implement actual 3D inverse FFT:
-        // - Apply sequential inverse FFTs: z -> y -> x
-        // - Handle FFT normalization (1/N factor)
+        // Copy result to green workspace
+        self.workspace.green_workspace.assign(fft_temp);
 
         Ok(())
     }
@@ -488,5 +645,55 @@ mod tests {
         let solver = ConvergentBornSolver::new(config, grid);
         assert_eq!(solver.config.max_iterations, 50);
         assert_eq!(solver.grid.nx, 32);
+    }
+
+    #[test]
+    fn test_fft_helper_roundtrip() {
+        // Create small grid
+        let nx = 16;
+        let ny = 16;
+        let nz = 16;
+
+        let mut helper = FftHelper::new(nx, ny, nz);
+
+        // Create input data (Gaussian pulse)
+        let mut data = Array3::<Complex64>::zeros((nx, ny, nz));
+        let cx = nx as f64 / 2.0;
+        let cy = ny as f64 / 2.0;
+        let cz = nz as f64 / 2.0;
+        let sigma = 2.0;
+
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let dist_sq =
+                        (i as f64 - cx).powi(2) + (j as f64 - cy).powi(2) + (k as f64 - cz).powi(2);
+                    let val = (-dist_sq / (2.0 * sigma * sigma)).exp();
+                    data[[i, j, k]] = Complex64::new(val, 0.0);
+                }
+            }
+        }
+
+        let original = data.clone();
+
+        // Forward FFT
+        helper.forward(&mut data);
+
+        // Inverse FFT
+        helper.inverse(&mut data);
+
+        // Check roundtrip accuracy
+        // Since we scale by 1/N in inverse, it should match original
+        let epsilon = 1e-10;
+        Zip::from(&data).and(&original).for_each(|&res, &orig| {
+            let diff = (res - orig).norm();
+            assert!(
+                diff < epsilon,
+                "Mismatch: got {}, expected {}, diff {}",
+                res,
+                orig,
+                diff
+            );
+        });
     }
 }
