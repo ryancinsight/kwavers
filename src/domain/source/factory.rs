@@ -229,6 +229,8 @@ impl SourceFactory {
                     EnvelopeType::Rectangular => WindowType::Rectangular,
                     EnvelopeType::Gaussian => WindowType::Gaussian,
                     EnvelopeType::Tukey => WindowType::Tukey { alpha: 0.5 },
+                    EnvelopeType::Blackman => WindowType::Blackman,
+                    EnvelopeType::Hamming => WindowType::Hamming,
                 };
 
                 // ToneBurst creation

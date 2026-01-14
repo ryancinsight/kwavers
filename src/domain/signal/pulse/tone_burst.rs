@@ -93,23 +93,26 @@ impl ToneBurst {
         self.num_cycles / self.center_frequency
     }
 
-    fn window(&self, t: f64) -> f64 {
+    fn window(&self, t: f64) -> (f64, f64) {
         let relative_time = t - self.start_time;
         let duration = self.duration_seconds();
 
         if relative_time < 0.0 || relative_time > duration {
-            return 0.0;
+            return (0.0, relative_time);
         }
 
         let normalized_time = relative_time / duration;
-        window_value(self.window_type, normalized_time)
+        (
+            window_value(self.window_type, normalized_time),
+            relative_time,
+        )
     }
 }
 
 impl Signal for ToneBurst {
     fn amplitude(&self, t: f64) -> f64 {
-        let window = self.window(t);
-        let carrier = (2.0 * PI * self.center_frequency * t + self.phase).sin();
+        let (window, relative_time) = self.window(t);
+        let carrier = (2.0 * PI * self.center_frequency * relative_time + self.phase).sin();
         self.amplitude * window * carrier
     }
 

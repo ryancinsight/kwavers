@@ -101,6 +101,10 @@ pub enum EnvelopeType {
     Hanning,
     /// Tukey window
     Tukey,
+    /// Blackman window
+    Blackman,
+    /// Hamming window
+    Hamming,
 }
 
 impl SourceParameters {
