@@ -167,13 +167,13 @@ impl PerformanceBenchmarkSuite {
             let mut velocity_y = Array3::<f32>::zeros(grid.dimensions());
             let mut velocity_z = Array3::<f32>::zeros(grid.dimensions());
 
-            // Simple FDTD time stepping (simplified for benchmark)
+            // TODO: SIMPLIFIED BENCHMARK - using stub update functions, not real physics
             let dt = grid.dx / 1500.0 * 0.5; // CFL condition
             let n_steps = (sim_time / dt) as usize;
 
             for _ in 0..n_steps.min(1000) {
                 // Limit for benchmarking
-                // Add source (simplified)
+                // TODO: SIMPLIFIED - point source only, no geometry
                 pressure[[nx / 2, ny / 2, nz / 2]] += 1e5;
 
                 // Update velocity from pressure
@@ -213,7 +213,7 @@ impl PerformanceBenchmarkSuite {
             execution_time: avg_time,
             memory_usage,
             throughput,
-            accuracy_metric: 0.99, // Simplified accuracy metric
+            accuracy_metric: 0.99, // TODO: SIMPLIFIED - hardcoded accuracy, should compute from validation
         })
     }
 
@@ -234,8 +234,7 @@ impl PerformanceBenchmarkSuite {
         for _ in 0..self.config.repetitions {
             let start = Instant::now();
 
-            // PSTD implementation would use FFT-based propagation
-            // Simplified benchmark focusing on FFT operations
+            // TODO: SIMPLIFIED BENCHMARK - timing FFT overhead only, not real PSTD physics
             let mut field = Array3::<f32>::zeros(grid.dimensions());
 
             // Simulate FFT-based time stepping
@@ -291,8 +290,7 @@ impl PerformanceBenchmarkSuite {
         for _ in 0..self.config.repetitions {
             let start = Instant::now();
 
-            // HAS uses angular spectrum factorization
-            // Simplified benchmark focusing on angular spectrum operations
+            // TODO: SIMPLIFIED BENCHMARK - timing angular spectrum overhead only, not real HAS physics
             let mut field = Array3::<f32>::zeros(grid.dimensions());
 
             let dt = grid.dx / 1500.0 * 0.9;
@@ -443,8 +441,7 @@ impl PerformanceBenchmarkSuite {
     fn benchmark_swe(&self, nx: usize, ny: usize, nz: usize) -> KwaversResult<BenchmarkResult> {
         let start = Instant::now();
 
-        // SWE involves multiple time steps with elastic wave propagation
-        // Simplified benchmark focusing on computational complexity
+        // TODO: SIMPLIFIED BENCHMARK - using stub functions, not real elastography physics
 
         let grid = Grid::new(nx, ny, nz, 2e-4, 2e-4, 2e-4)?; // 0.2mm for SWE
         let mut displacement_field = Array3::<f32>::zeros((nx, ny, nz));
@@ -460,7 +457,7 @@ impl PerformanceBenchmarkSuite {
             self.simulate_displacement_tracking(&displacement_field, step);
         }
 
-        // Estimate stiffness (simplified)
+        // TODO: SIMPLIFIED - using clone stub, not real inverse problem solver
         let _stiffness_map = self.simulate_stiffness_estimation(&displacement_field);
 
         let execution_time = start.elapsed();
@@ -606,7 +603,7 @@ impl PerformanceBenchmarkSuite {
         // GPU-accelerated FDTD benchmark
         let start = Instant::now();
 
-        // Initialize GPU context (simplified)
+        // TODO: SIMPLIFIED - GPU context created but not used for actual computation
         let _gpu_context = pollster::block_on(kwavers::gpu::GpuContext::new())?;
 
         let grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
@@ -616,7 +613,7 @@ impl PerformanceBenchmarkSuite {
         let memory_transfer_time = Duration::from_micros((nx * ny * nz * 4) as u64 / 10000); // Estimate
         std::thread::sleep(memory_transfer_time);
 
-        // GPU computation (simplified)
+        // TODO: SIMPLIFIED - simulated timing with sleep, not real GPU kernels
         let compute_time = Duration::from_micros(n_steps as u64 * 10); // Estimate
         std::thread::sleep(compute_time);
 
@@ -652,7 +649,7 @@ impl PerformanceBenchmarkSuite {
 
         for _gpu in 0..n_gpus {
             for domain in 0..domains_per_gpu {
-                // Process domain on GPU (simplified)
+                // TODO: SIMPLIFIED - simulated with sleep, not real multi-GPU work
                 let domain_start = Instant::now();
                 std::thread::sleep(Duration::from_micros(5000)); // Simulate GPU work
                 let _domain_time = domain_start.elapsed();
@@ -715,7 +712,7 @@ impl PerformanceBenchmarkSuite {
             // Simulate PINN prediction with dropout
             let mut prediction = Array3::<f32>::from_elem((nx, ny, nz), 1.0);
 
-            // Apply dropout (simplified)
+            // TODO: SIMPLIFIED - basic random dropout, not real PINN uncertainty quantification
             for i in 0..nx {
                 for j in 0..ny {
                     for k in 0..nz {
@@ -908,6 +905,13 @@ impl PerformanceBenchmarkSuite {
     }
 
     // Helper methods for benchmark implementations
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // This is a placeholder for benchmark timing purposes only.
+    // Real implementation requires:
+    // - Staggered grid velocity update: v^(n+1/2) = v^(n-1/2) - (dt/ρ) * ∇p^n
+    // - Proper spatial derivatives with appropriate boundary handling
+    // - Grid spacing normalization (dx, dy, dz)
+    // This stub intentionally does nothing to isolate benchmark overhead.
     fn update_velocity_fdtd(
         &self,
         _vx: &mut Array3<f32>,
@@ -922,6 +926,13 @@ impl PerformanceBenchmarkSuite {
     }
 
     #[allow(clippy::too_many_arguments)]
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // This is a placeholder for benchmark timing purposes only.
+    // Real implementation requires:
+    // - Pressure update: p^(n+1) = p^n - (ρc²) * dt * ∇·v^(n+1/2)
+    // - Divergence calculation with staggered grid velocities
+    // - CFL stability condition enforcement
+    // This stub intentionally does nothing to isolate benchmark overhead.
     fn update_pressure_fdtd(
         &self,
         _p: &mut Array3<f32>,
@@ -936,6 +947,14 @@ impl PerformanceBenchmarkSuite {
     }
 
     #[allow(clippy::too_many_arguments)]
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // This is a placeholder for benchmark timing purposes only.
+    // Real implementation requires:
+    // - Westervelt equation: ∂²p/∂t² = c²∇²p + (β/ρc⁴)∂²(p²)/∂t² + (δ/ρc²)∂³p/∂t³
+    // - Nonlinearity parameter β (B/A coefficient)
+    // - Absorption term with frequency-dependent attenuation
+    // - Second-order pressure terms for harmonic generation
+    // This stub intentionally does nothing to isolate benchmark overhead.
     fn update_pressure_nonlinear(
         &self,
         _p: &mut Array3<f32>,
@@ -951,14 +970,20 @@ impl PerformanceBenchmarkSuite {
         // Simplified nonlinear pressure update with Westervelt terms
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Placeholder for FFT timing in PSTD benchmarks.
     fn simulate_fft_operations(&self, _field: &mut Array3<f32>) {
         // Simulate FFT-based operations
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Placeholder for angular spectrum method timing.
     fn simulate_angular_spectrum_propagation(&self, _field: &mut Array3<f32>, _dt: f64) {
         // Simulate angular spectrum propagation
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Placeholder for elastic wave equation timing.
     fn simulate_elastic_wave_step(
         &self,
         _displacement: &mut Array3<f32>,
@@ -968,28 +993,40 @@ impl PerformanceBenchmarkSuite {
         // Simulate elastic wave propagation step
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Placeholder for displacement tracking timing.
     fn simulate_displacement_tracking(&self, _displacement: &Array3<f32>, _step: usize) {
         // Simulate displacement tracking
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Returns placeholder clone. Real implementation requires inverse problem solving.
     fn simulate_stiffness_estimation(&self, displacement: &Array3<f32>) -> Array3<f32> {
         // Simulate stiffness estimation
         displacement.clone()
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Placeholder for microbubble dynamics timing.
     fn simulate_microbubble_scattering(&self, _signal: &mut Array3<f32>, _time: f64) {
         // Simulate microbubble scattering
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Placeholder for perfusion modeling timing.
     fn simulate_tissue_perfusion(&self, _signal: &mut Array3<f32>, _time: f64) {
         // Simulate tissue perfusion
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Returns placeholder clone.
     fn simulate_perfusion_analysis(&self, signal: &Array3<f32>) -> Array3<f32> {
         // Simulate perfusion analysis
         signal.clone()
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Placeholder for transducer element field calculation.
     fn simulate_transducer_element(
         &self,
         _field: &mut Array3<f32>,
@@ -1000,24 +1037,34 @@ impl PerformanceBenchmarkSuite {
         // Simulate transducer element contribution
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Placeholder for skull aberration modeling.
     fn simulate_skull_transmission(&self, _field: &mut Array3<f32>, _grid: &Grid) {
         // Simulate skull transmission effects
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Placeholder for thermal dose calculation.
     fn simulate_thermal_monitoring(&self, _field: &Array3<f32>) {
         // Simulate thermal safety monitoring
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Returns zero-filled placeholder. Real implementation requires variance/confidence interval calculation.
     fn compute_uncertainty_statistics(&self, _predictions: &[Array3<f32>]) -> Array3<f32> {
         // Compute uncertainty statistics
         Array3::zeros((10, 10, 10)) // Placeholder
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Returns zero-filled placeholder. Real implementation requires element-wise averaging.
     fn compute_ensemble_mean(&self, _predictions: &[Array3<f32>]) -> Array3<f32> {
         // Compute ensemble mean
         Array3::zeros((10, 10, 10)) // Placeholder
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Returns zero-filled placeholder. Real implementation requires variance calculation.
     fn compute_ensemble_variance(
         &self,
         _predictions: &[Array3<f32>],
@@ -1027,11 +1074,15 @@ impl PerformanceBenchmarkSuite {
         Array3::zeros((10, 10, 10)) // Placeholder
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Returns placeholder 0.0. Real implementation requires conformal prediction scoring.
     fn compute_conformity_score(&self, _prediction: &Array3<f32>, _target: &Array3<f32>) -> f64 {
         // Compute conformity score
         0.0 // Placeholder
     }
 
+    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
+    // Returns placeholder clones. Real implementation requires quantile-based interval calculation.
     fn compute_prediction_interval(
         &self,
         prediction: &Array3<f32>,

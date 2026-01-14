@@ -341,7 +341,8 @@ pub fn calculate_acoustic_streaming_velocity(
     let v_magnitude = re * mach_sq * radius_equilibrium * omega * decay;
 
     // Normalize direction
-    let dir_mag = (direction.0 * direction.0 + direction.1 * direction.1 + direction.2 * direction.2).sqrt();
+    let dir_mag =
+        (direction.0 * direction.0 + direction.1 * direction.1 + direction.2 * direction.2).sqrt();
     if dir_mag < 1e-10 {
         return Ok(StreamingVelocity::zero());
     }
@@ -434,7 +435,7 @@ mod tests {
     #[test]
     fn test_primary_bjerknes_expanded_bubble() {
         let radius = 2.0e-6; // Expanded to 2 μm
-        let r0 = 1.0e-6;     // Equilibrium 1 μm
+        let r0 = 1.0e-6; // Equilibrium 1 μm
         let grad_p = (1e5, 0.0, 0.0);
 
         let force = calculate_primary_bjerknes_force(radius, r0, grad_p).unwrap();
@@ -463,11 +464,12 @@ mod tests {
     fn test_streaming_velocity_zero_at_surface() {
         let r0 = 1.0e-6;
         let u_wall = 10.0; // m/s
-        let freq = 1e6;    // 1 MHz
+        let freq = 1e6; // 1 MHz
         let distance = r0; // At surface
         let direction = (1.0, 0.0, 0.0);
 
-        let v = calculate_acoustic_streaming_velocity(r0, u_wall, freq, distance, direction).unwrap();
+        let v =
+            calculate_acoustic_streaming_velocity(r0, u_wall, freq, distance, direction).unwrap();
 
         assert_eq!(v.vx, 0.0);
         assert_eq!(v.vy, 0.0);
@@ -482,7 +484,8 @@ mod tests {
         let distance = 10.0 * r0; // 10 radii away
         let direction = (1.0, 0.0, 0.0);
 
-        let v = calculate_acoustic_streaming_velocity(r0, u_wall, freq, distance, direction).unwrap();
+        let v =
+            calculate_acoustic_streaming_velocity(r0, u_wall, freq, distance, direction).unwrap();
 
         // Should have velocity in x direction
         assert!(v.vx > 0.0);
@@ -491,7 +494,9 @@ mod tests {
 
         // Should decay with distance
         let distance_far = 20.0 * r0;
-        let v_far = calculate_acoustic_streaming_velocity(r0, u_wall, freq, distance_far, direction).unwrap();
+        let v_far =
+            calculate_acoustic_streaming_velocity(r0, u_wall, freq, distance_far, direction)
+                .unwrap();
         assert!(v_far.vx < v.vx);
     }
 

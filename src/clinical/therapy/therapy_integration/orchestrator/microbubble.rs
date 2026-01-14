@@ -153,8 +153,11 @@ pub fn update_microbubble_dynamics(
 
     // Sample acoustic field at bubble position
     let grid_spacing = (0.001, 0.001, 0.001); // Assume 1mm grid spacing
-    let (acoustic_pressure, pressure_gradient) =
-        sample_acoustic_field_at_position(&bubble.position, &acoustic_field.pressure, grid_spacing)?;
+    let (acoustic_pressure, pressure_gradient) = sample_acoustic_field_at_position(
+        &bubble.position,
+        &acoustic_field.pressure,
+        grid_spacing,
+    )?;
 
     // Update bubble dynamics for this timestep
     service.update_bubble_dynamics(

@@ -42,7 +42,8 @@ use kwavers::physics::acoustics::imaging::modalities::elastography::{
     AcousticRadiationForce, MultiDirectionalPush,
 };
 use kwavers::solver::forward::elastic::{
-    ArrivalDetection, ElasticWaveSolver, VolumetricSource, VolumetricWaveConfig, WaveFrontTracker,
+    ArrivalDetection, ElasticBodyForceConfig, ElasticWaveSolver, VolumetricSource,
+    VolumetricWaveConfig, WaveFrontTracker,
 };
 use ndarray::Array3;
 
@@ -134,16 +135,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     solver.set_volumetric_config(volumetric_config);
 
-    // Generate initial displacement field from multi-directional pushes
-    let initial_displacement = arf.apply_multi_directional_push(&push_pattern)?;
-    println!("   Initial displacement field generated");
+    let body_forces = arf.multi_directional_body_forces(&push_pattern)?;
+    let max_impulse_n_per_m3_s = body_forces
+        .iter()
+        .map(|cfg| match cfg {
+            ElasticBodyForceConfig::GaussianImpulse {
+                impulse_n_per_m3_s,
+                ..
+            } => *impulse_n_per_m3_s,
+        })
+        .fold(f64::NEG_INFINITY, f64::max);
+    println!("   Generated {} ARFI body-force sources", body_forces.len());
     println!(
-        "   Maximum displacement: {:.2} μm",
-        initial_displacement
-            .iter()
-            .cloned()
-            .fold(0.0_f64, |a, b| a.max(b.abs()))
-            * 1e6
+        "   Maximum impulse density: {:.3e} N·s/m³",
+        max_impulse_n_per_m3_s
     );
 
     // Propagate waves with volumetric tracking
@@ -158,11 +163,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .collect();
 
-    let (displacement_history, tracker) = solver.propagate_volumetric_waves_with_sources(
-        &[initial_displacement],
-        &push_times,
-        &sources,
-    )?;
+    let (displacement_history, tracker) =
+        solver.propagate_volumetric_waves_with_body_forces(&body_forces, &push_times, &sources)?;
     println!(
         "   Simulated {} time steps of wave propagation",
         displacement_history.len() as usize

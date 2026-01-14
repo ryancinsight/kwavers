@@ -1,9 +1,9 @@
 //! Core Spectral Unmixer Implementation
 
+use super::tikhonov::{estimate_condition_number, tikhonov_solve};
 use crate::clinical::imaging::spectroscopy::types::{
     SpectralUnmixingConfig, UnmixingResult, VolumetricUnmixingResult,
 };
-use super::tikhonov::{estimate_condition_number, tikhonov_solve};
 use anyhow::Result;
 use ndarray::{Array1, Array2, Array3};
 
@@ -55,7 +55,8 @@ impl SpectralUnmixer {
         }
 
         let condition = estimate_condition_number(&extinction_matrix)?;
-        if condition > 1.0 / config.min_condition_number { // Note: min_condition_number is 1e-6 in config
+        if condition > 1.0 / config.min_condition_number {
+            // Note: min_condition_number is 1e-6 in config
             tracing::warn!(
                 "Extinction matrix is poorly conditioned (cond ≈ {:.2e}).",
                 condition
@@ -176,7 +177,13 @@ impl SpectralUnmixer {
         })
     }
 
-    pub fn wavelengths(&self) -> &[f64] { &self.wavelengths }
-    pub fn chromophore_names(&self) -> &[String] { &self.chromophore_names }
-    pub fn extinction_matrix(&self) -> &Array2<f64> { &self.extinction_matrix }
+    pub fn wavelengths(&self) -> &[f64] {
+        &self.wavelengths
+    }
+    pub fn chromophore_names(&self) -> &[String] {
+        &self.chromophore_names
+    }
+    pub fn extinction_matrix(&self) -> &Array2<f64> {
+        &self.extinction_matrix
+    }
 }

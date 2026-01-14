@@ -65,5 +65,7 @@ impl ExtinctionSpectrum {
         Some((min, max))
     }
 
-    pub fn name(&self) -> &str { &self.name }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }

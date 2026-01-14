@@ -161,6 +161,13 @@ fn run_pstd_benchmark(
 }
 
 /// Calculate total energy in field (simplified)
+///
+/// # TODO: SIMPLIFIED BENCHMARK METRIC - NOT RIGOROUS PHYSICS
+/// This uses L2 norm as energy proxy. Real acoustic energy requires:
+/// - Kinetic energy: ∫(1/2)ρ|v|² dV (particle velocity field)
+/// - Potential energy: ∫(1/2)p²/(ρc²) dV (pressure field)
+/// - Proper spatial integration with grid spacing
+/// Current implementation: sqrt(Σ p²) - dimensionally incorrect, missing ρc² normalization
 fn calculate_energy(field: ArrayView3<f64>) -> f64 {
     field.iter().map(|&x| x * x).sum::<f64>().sqrt()
 }

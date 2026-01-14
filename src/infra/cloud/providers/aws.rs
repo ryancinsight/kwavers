@@ -166,13 +166,36 @@ pub async fn deploy_to_aws<B: burn::tensor::backend::AutodiffBackend>(
             })
         })?;
 
+    // TODO: HARDCODED INFRASTRUCTURE IDs - NOT PRODUCTION READY
+    // Current implementation uses placeholder subnet and security group IDs
+    //
+    // Required implementation:
+    // - Load subnet IDs from deployment_config or environment variables
+    // - Load security group IDs from deployment_config
+    // - Support multi-AZ deployment with proper subnet selection
+    // - Validate VPC configuration and network topology
+    // - Implement proper security group rules for HTTPS ingress
+    //
+    // Configuration should include:
+    // - config["vpc_id"] - VPC for deployment
+    // - config["subnet_ids"] - Comma-separated list of subnet IDs (multi-AZ)
+    // - config["security_group_ids"] - Security groups for load balancer
+    // - config["certificate_arn"] - SSL/TLS certificate for HTTPS
+    //
+    // References:
+    // - AWS Well-Architected Framework: Network design
+    // - VPC Best Practices: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-best-practices.html
+    //
+    // Estimated effort: 4-6 hours (VPC configuration management)
+    // Priority: P0 before production deployment
+
     // Create Application Load Balancer for the endpoint
     let _load_balancer = elb_client
         .create_load_balancer()
         .name(format!("kwavers-pinn-alb-{}", deployment_id))
-        .subnets("subnet-12345678") // Would be configured from environment
-        .subnets("subnet-87654321") // Would be configured from environment
-        .security_groups("sg-12345678") // Would be configured from environment
+        .subnets("subnet-12345678") // TODO: Replace with config["subnet_ids"]
+        .subnets("subnet-87654321") // TODO: Replace with config["subnet_ids"]
+        .security_groups("sg-12345678") // TODO: Replace with config["security_group_ids"]
         .scheme(aws_sdk_elasticloadbalancingv2::types::LoadBalancerSchemeEnum::InternetFacing)
         .send()
         .await

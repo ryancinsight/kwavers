@@ -189,7 +189,6 @@ impl TaskSampler {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,8 +1,149 @@
 # Development Backlog - Kwavers Acoustic Simulation Library
 
-**Last Updated**: 2025-01-13  
-**Current Sprint**: Sprint 207 Phase 1 ✅ COMPLETE  
-**Next Sprint**: Sprint 208 - Deprecated Code Elimination & Large File Refactoring
+**Last Updated**: 2025-01-14  
+**Current Sprint**: Sprint 208 Phase 4 ✅ COMPLETE  
+**Next Sprint**: Sprint 209 - TODO Resolution & Implementation
+
+## 🚨 TODO AUDIT PHASE 2 COMPLETED (2025-01-14)
+
+**Status**: ✅ Extended audit complete, all remaining gaps documented and tagged  
+**Report**: `TODO_AUDIT_REPORT.md` (534 lines, full specifications)  
+**Files Modified**: 14 files total with comprehensive TODO tags  
+**Total Effort Estimated**: 186-255 hours for full resolution (79-108 hours added in Phase 2)
+
+### Sprint 208 Phase 4 Summary
+- ✅ Phase 1: Deprecated Code Elimination (Complete)
+- ✅ Phase 2: Critical TODO Resolution (Complete)
+- ✅ Phase 3: Closure & Verification (Complete)
+- ✅ Phase 4: Extended TODO Audit (Complete - 2025-01-14)
+
+### Phase 4 New Findings - Additional TODO Tags Added
+**Files audited and annotated**: 6 additional source files
+1. `src/analysis/ml/pinn/electromagnetic/residuals.rs` - Electromagnetic PINN residuals (P1, 32-42 hours)
+2. `src/analysis/ml/pinn/meta_learning/learner.rs` - Boundary/IC data generation (P1, 14-22 hours)
+3. `src/clinical/therapy/therapy_integration/acoustic.rs` - Therapy acoustic solver (P0, 20-28 hours)
+4. `src/domain/boundary/coupling.rs` - Material interface physics (P0, 22-30 hours)
+5. `src/domain/sensor/beamforming/beamforming_3d/processing.rs` - SAFT/MVDR 3D (P1, 36-44 hours)
+6. `src/analysis/ml/pinn/transfer_learning.rs` - BC evaluation (P1, 8-12 hours)
+
+### Critical Findings (P0 - Production Code - Original Audit)
+1. **Sensor Beamforming** (`src/domain/sensor/beamforming/sensor_beamformer.rs`)
+   - 3 methods return placeholder values (zeros, identity, unmodified input)
+   - Impact: Invalid beamforming outputs → incorrect image reconstruction
+   - Effort: 6-8 hours
+   - **Sprint 209 Priority**
+
+2. **Source Factory** (`src/domain/source/factory.rs`)
+   - 4 source models not implemented (LinearArray, MatrixArray, Focused, Custom)
+   - Impact: Cannot simulate array transducers (clinical standard)
+   - Effort: 28-36 hours
+   - **Sprint 209-210 Priority**
+
+### Benchmark Simplifications (P1)
+- 5 benchmark files with 35+ stub implementations
+- Decision needed: Implement real physics OR remove until ready
+- Effort: 73-103 hours if implemented, 2-3 hours if removed
+
+### Critical Findings (P0 - Production Code - Phase 4 Extended Audit)
+4. **Clinical Therapy Acoustic Solver** (`src/clinical/therapy/therapy_integration/acoustic.rs`)
+   - Stub constructor, no solver backend initialization
+   - Impact: Cannot simulate therapeutic ultrasound fields, blocks HIFU/lithotripsy planning
+   - Effort: 20-28 hours
+   - **Sprint 210-211 Priority**
+
+5. **Material Interface Boundary Condition** (`src/domain/boundary/coupling.rs`)
+   - Simplified transmission conditions, no reflection/transmission physics
+   - Impact: Invalid multi-material simulations (tissue layers, water/tissue interfaces)
+   - Effort: 22-30 hours (includes Neumann flux continuity 4-6h, Robin BC 6-8h, Material interface 12-16h)
+   - **Sprint 210 Priority**
+
+### Advanced Research Features (P1 - Phase 4 Findings)
+6. **Electromagnetic PINN Residuals** (`src/analysis/ml/pinn/electromagnetic/residuals.rs`)
+   - Quasi-static and wave propagation residuals return zeros (stubs)
+   - Impact: Cannot train PINNs for electromagnetic problems (waveguides, antennas, eddy currents)
+   - Effort: 32-42 hours (quasi-static 12-16h, wave propagation 16-20h, charge/current density 4-6h)
+   - **Sprint 212-213 Priority**
+
+7. **Meta-Learning Data Generation** (`src/analysis/ml/pinn/meta_learning/learner.rs`)
+   - Boundary and initial condition data generation returns single dummy points
+   - Impact: Meta-learner cannot adapt to BC/IC structure
+   - Effort: 14-22 hours (boundary 8-12h, initial conditions 6-10h)
+   - **Sprint 212 Priority**
+
+8. **3D Advanced Beamforming** (`src/domain/sensor/beamforming/beamforming_3d/processing.rs`)
+   - SAFT 3D and MVDR 3D beamforming not implemented
+   - Impact: No synthetic aperture or adaptive beamforming for 3D volumetric imaging
+   - Effort: 36-44 hours (SAFT 16-20h, MVDR 20-24h)
+   - **Sprint 211-212 Priority**
+
+9. **Transfer Learning BC Evaluation** (`src/analysis/ml/pinn/transfer_learning.rs`)
+   - Boundary condition evaluation returns NotImplemented
+   - Impact: Cannot assess BC compatibility for transfer learning
+   - Effort: 8-12 hours
+   - **Sprint 212 Priority**
+
+### Action Items for Sprint 209 (Immediate - Original P0)
+- [ ] Implement sensor beamforming methods (calculate_delays, apply_windowing, calculate_steering)
+- [ ] Implement LinearArray source model
+- [ ] Begin MatrixArray/Focused implementations
+- [ ] Decision on benchmark approach (implement vs. remove)
+
+### Action Items for Sprint 210 (Short-term - Phase 4 P0)
+- [ ] Implement clinical therapy acoustic solver backend (FDTD/pseudospectral integration)
+- [ ] Implement material interface boundary conditions (reflection/transmission physics)
+- [ ] Implement Neumann flux continuity for Schwarz boundaries
+- [ ] Implement proper Robin boundary conditions with gradient computation
+- [ ] Fix AWS provider hardcoded infrastructure IDs
+- [ ] Implement Azure ML deployment REST API calls
+
+### Action Items for Sprint 211-212 (Medium-term - Advanced Features)
+- [ ] Implement 3D SAFT beamforming (synthetic aperture)
+- [ ] Implement 3D MVDR adaptive beamforming
+- [ ] Implement GCP Vertex AI deployment
+- [ ] Implement cloud scaling features (Azure, GCP)
+
+### Action Items for Sprint 212-213 (Research Features)
+- [ ] Implement electromagnetic PINN quasi-static residuals
+- [ ] Implement electromagnetic PINN wave propagation residuals
+- [ ] Implement meta-learning boundary data generation
+- [ ] Implement meta-learning initial condition data generation
+- [ ] Implement transfer learning BC evaluation
+
+See `TODO_AUDIT_REPORT.md` for complete specifications, mathematical requirements, and validation criteria for original findings.
+Phase 4 TODO tags contain inline specifications with mathematical formulas, validation criteria, and implementation guidance.
+
+### Cloud Infrastructure Gaps (P0)
+3. **AWS Provider - Hardcoded Infrastructure IDs** 🔴 P0 CRITICAL
+   - Location: `src/infra/cloud/providers/aws.rs:169-198`
+   - Issue: Load balancer creation uses placeholder subnet and security group IDs
+   - Impact: Cannot deploy to real AWS infrastructure
+   - **Status**: TODO tags added, configuration management needed
+   - Required: Load VPC, subnet, security group IDs from config
+   - Estimated effort: 4-6 hours
+   - **Reference**: TODO_AUDIT_REPORT.md Section 3
+   - **Sprint 210 Priority 1**
+
+4. **Azure Provider - Missing Deployment Implementation** 🔴 P0 CRITICAL
+   - Location: `src/infra/cloud/providers/azure.rs:87-109`
+   - Issue: deploy_to_azure() creates fake endpoint without Azure ML API calls
+   - Impact: Deployment returns fake URL, no actual Azure resources created
+   - **Status**: TODO tags added, Azure ML REST API integration needed
+   - Required: Model registration, endpoint creation, model deployment
+   - Estimated effort: 10-12 hours (deployment), 6-8 hours (scaling)
+   - **Reference**: TODO_AUDIT_REPORT.md Section 4
+   - **Sprint 210 Priority 2**
+
+5. **GCP Provider - Missing Deployment Implementation** 🔴 P0 CRITICAL
+   - Location: `src/infra/cloud/providers/gcp.rs:92-115`
+   - Issue: deploy_to_gcp() creates fake endpoint without Vertex AI API calls
+   - Impact: Deployment returns fake URL, no actual GCP resources created
+   - **Status**: TODO tags added, Vertex AI REST API integration needed
+   - Required: Model upload, endpoint creation, model deployment
+   - Estimated effort: 10-12 hours (deployment), 8-10 hours (scaling)
+   - **Reference**: TODO_AUDIT_REPORT.md Section 5
+   - **Sprint 210-211 Priority**
+
+---
 
 ## Comprehensive Audit & Enhancement Backlog
 **Audit Date**: January 10, 2026
@@ -111,16 +252,36 @@
    - Implement complex sparse matrix operations
    - Estimated effort: 4-6 hours
 
-6. **SensorBeamformer Method Implementations** 🟡
+6. **SensorBeamformer Method Implementations** 🔴 P0 CRITICAL
    - Location: `domain/sensor/beamforming/sensor_beamformer.rs`
    - Implement: calculate_delays(), apply_windowing(), calculate_steering()
-   - Currently return placeholder values
+   - **Status**: TODO tags added, full specifications documented
+   - Currently return placeholder values (zeros, identity, unmodified)
+   - Impact: Invalid beamforming → incorrect imaging
    - Estimated effort: 6-8 hours
+   - **Reference**: TODO_AUDIT_REPORT.md Section 1
+   - **Sprint 209 Priority 1**
 
-7. **Source Factory Missing Types** 🟡
-   - Location: `domain/source/factory.rs:130-134`
+7. **Source Factory Missing Types** 🔴 P0 CRITICAL
+   - Location: `domain/source/factory.rs:132-156`
    - Implement: LinearArray, MatrixArray, Focused, Custom
-   - Estimated effort: 8-10 hours
+   - **Status**: TODO tags added with detailed specifications
+   - Impact: Cannot simulate array transducers (most clinical devices)
+   - Estimated effort: 28-36 hours
+   - **Reference**: TODO_AUDIT_REPORT.md Section 2
+   - **Sprint 209-210 Priority**
+
+8. **Cloud Scaling Not Implemented** 🟡 P1 HIGH
+   - Locations:
+     - `src/infra/cloud/providers/azure.rs:121-247` - scale_azure_deployment()
+     - `src/infra/cloud/providers/gcp.rs:129-261` - scale_gcp_deployment()
+   - Issue: Both functions return FeatureNotAvailable error instead of scaling
+   - Impact: No auto-scaling capability for cloud deployments
+   - **Status**: TODO tags added with comprehensive implementation specs
+   - Required: Azure ML and Vertex AI REST API integration for replica scaling
+   - Estimated effort: 14-18 hours total (6-8h Azure + 8-10h GCP)
+   - **Reference**: TODO_AUDIT_REPORT.md Sections 4.2, 5.2
+   - **Sprint 211 Priority**
 
 ---
 

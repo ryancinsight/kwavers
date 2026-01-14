@@ -287,8 +287,6 @@ impl AcousticRadiationForce {
         Ok(displacement)
     }
 
-
-
     /// Create per-push body-force configs for a multi-directional push sequence.
     ///
     /// This is the correctness-first replacement for summing scalar “initial displacements”.

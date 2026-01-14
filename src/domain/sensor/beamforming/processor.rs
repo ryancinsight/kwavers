@@ -222,8 +222,6 @@ impl BeamformingProcessor {
 
         Ok(output)
     }
-
-
 }
 
 #[cfg(test)]

@@ -92,7 +92,11 @@ impl ComputeManager {
         }))
     }
 
-    pub fn write_buffer<T: bytemuck::Pod>(&self, buffer: &wgpu::Buffer, data: &[T]) -> KwaversResult<()> {
+    pub fn write_buffer<T: bytemuck::Pod>(
+        &self,
+        buffer: &wgpu::Buffer,
+        data: &[T],
+    ) -> KwaversResult<()> {
         let queue = self.queue()?;
         queue.write_buffer(buffer, 0, bytemuck::cast_slice(data));
         Ok(())
@@ -407,10 +411,8 @@ impl GPUEMSolver {
             let current_density = field_data.current_density.as_slice().ok_or_else(|| {
                 KwaversError::GpuError("Current density storage not contiguous".into())
             })?;
-            self.compute_manager.write_buffer(
-                current_density_buffer,
-                current_density,
-            )?;
+            self.compute_manager
+                .write_buffer(current_density_buffer, current_density)?;
         }
 
         Ok(())
@@ -449,15 +451,18 @@ impl GPUEMSolver {
 
     /// GPU implementation of electromagnetic time stepping using FDTD
     fn time_step_gpu(&mut self, _step: usize) -> KwaversResult<()> {
-        let electric_buffer = self.gpu_buffers.get("electric").ok_or_else(|| {
-            KwaversError::GpuError("Missing electric GPU buffer".into())
-        })?;
-        let magnetic_buffer = self.gpu_buffers.get("magnetic").ok_or_else(|| {
-            KwaversError::GpuError("Missing magnetic GPU buffer".into())
-        })?;
-        let current_density_buffer = self.gpu_buffers.get("current_density").ok_or_else(|| {
-            KwaversError::GpuError("Missing current_density GPU buffer".into())
-        })?;
+        let electric_buffer = self
+            .gpu_buffers
+            .get("electric")
+            .ok_or_else(|| KwaversError::GpuError("Missing electric GPU buffer".into()))?;
+        let magnetic_buffer = self
+            .gpu_buffers
+            .get("magnetic")
+            .ok_or_else(|| KwaversError::GpuError("Missing magnetic GPU buffer".into()))?;
+        let current_density_buffer = self
+            .gpu_buffers
+            .get("current_density")
+            .ok_or_else(|| KwaversError::GpuError("Missing current_density GPU buffer".into()))?;
         let device = self.compute_manager.device()?;
         let queue = self.compute_manager.queue()?;
 

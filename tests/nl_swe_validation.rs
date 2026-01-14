@@ -14,7 +14,9 @@ pub use kwavers::domain::medium::HomogeneousMedium;
 pub use kwavers::physics::imaging::modalities::elastography::*;
 pub use kwavers::simulation::imaging::elastography::ShearWaveElastography;
 pub use kwavers::solver::forward::elastic::{ElasticWaveConfig, ElasticWaveSolver};
-pub use kwavers::solver::inverse::elastography::{NonlinearInversion, NonlinearInversionConfig, NonlinearParameterMapExt};
+pub use kwavers::solver::inverse::elastography::{
+    NonlinearInversion, NonlinearInversionConfig, NonlinearParameterMapExt,
+};
 pub use ndarray::{Array3, Array4};
 pub use std::f64::consts::PI;
 
@@ -253,7 +255,9 @@ mod nonlinear_inversion_tests {
 
     #[test]
     fn test_harmonic_ratio_inversion() {
-        let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio));
+        let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(
+            NonlinearInversionMethod::HarmonicRatio,
+        ));
 
         // Create synthetic harmonic field
         let mut harmonic_field = HarmonicDisplacementField::new(6, 6, 6, 2, 50);
@@ -282,7 +286,9 @@ mod nonlinear_inversion_tests {
 
     #[test]
     fn test_nonlinear_least_squares_inversion() {
-        let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::NonlinearLeastSquares));
+        let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(
+            NonlinearInversionMethod::NonlinearLeastSquares,
+        ));
 
         // Create test harmonic field
         let mut harmonic_field = HarmonicDisplacementField::new(4, 4, 4, 1, 32);
@@ -302,7 +308,9 @@ mod nonlinear_inversion_tests {
 
     #[test]
     fn test_bayesian_inversion() {
-        let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::BayesianInversion));
+        let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(
+            NonlinearInversionMethod::BayesianInversion,
+        ));
 
         // Create test data
         let mut harmonic_field = HarmonicDisplacementField::new(4, 4, 4, 1, 32);
@@ -399,7 +407,9 @@ mod end_to_end_tests {
             .unwrap();
 
         // Step 3: Nonlinear inversion
-        let nonlinear_inversion = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio));
+        let nonlinear_inversion = NonlinearInversion::new(NonlinearInversionConfig::new(
+            NonlinearInversionMethod::HarmonicRatio,
+        ));
         let nonlinear_params = nonlinear_inversion
             .reconstruct(&harmonic_field, &grid)
             .unwrap();

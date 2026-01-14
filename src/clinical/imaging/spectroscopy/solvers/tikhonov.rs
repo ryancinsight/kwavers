@@ -1,6 +1,6 @@
 //! Tikhonov-regularized Least Squares Solver
 //!
-//! Provides mathematically rigorous solutions for potentially ill-conditioned 
+//! Provides mathematically rigorous solutions for potentially ill-conditioned
 //! linear systems in spectroscopic unmixing.
 
 use anyhow::{Context, Result};
@@ -37,7 +37,8 @@ pub fn tikhonov_solve(e: &Array2<f64>, mu: &Array1<f64>, lambda: f64) -> Result<
 
     // Solve (EᵀE + λI)C = Eᵀμ using Cholesky decomposition (LLᵀ)
     // Cholesky is more stable and efficient for SPD systems than Gaussian elimination
-    cholesky_solve(&ete_reg, &et_mu).context("Failed to solve Tikhonov system via Cholesky decomposition")
+    cholesky_solve(&ete_reg, &et_mu)
+        .context("Failed to solve Tikhonov system via Cholesky decomposition")
 }
 
 /// Solve symmetric positive-definite system Ax = b using Cholesky decomposition (LLᵀ)
@@ -55,7 +56,7 @@ fn cholesky_solve(A: &Array2<f64>, b: &Array1<f64>) -> Result<Array1<f64>> {
     // 1. Compute Cholesky Factor L where A = LLᵀ
     // Using the Cholesky-Banachiewicz algorithm
     let mut L = Array2::zeros((n, n));
-    
+
     for i in 0..n {
         for j in 0..=i {
             let mut sum = 0.0;
@@ -113,7 +114,9 @@ pub fn estimate_condition_number(A: &Array2<f64>) -> Result<f64> {
     for _ in 0..20 {
         let v_new = ata.dot(&v);
         let norm = v_new.iter().map(|&x| x * x).sum::<f64>().sqrt();
-        if norm < 1e-15 { break; }
+        if norm < 1e-15 {
+            break;
+        }
         v = v_new / norm;
     }
     let lambda_max = v.dot(&ata.dot(&v));

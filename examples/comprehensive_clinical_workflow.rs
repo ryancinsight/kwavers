@@ -43,7 +43,9 @@ use kwavers::physics::imaging::InversionMethod;
 use kwavers::physics::transcranial::safety_monitoring::SafetyMonitor;
 use kwavers::simulation::imaging::ceus::ContrastEnhancedUltrasound;
 use kwavers::solver::forward::elastic::{ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver};
-use kwavers::solver::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig, NonlinearInversion, NonlinearInversionConfig};
+use kwavers::solver::inverse::elastography::{
+    NonlinearInversion, NonlinearInversionConfig, ShearWaveInversion, ShearWaveInversionConfig,
+};
 use kwavers::KwaversResult;
 use ndarray::{s, Array3, Array4};
 use std::time::Instant;
@@ -311,13 +313,14 @@ impl LiverAssessmentWorkflow {
             push_location[2],
             2.0, // focal sigma (mm)
         )?);
-        let initial_displacement = arfi.apply_push_pulse(push_location)?;
+        let body_force = arfi.push_pulse_body_force(push_location)?;
 
         let solver_config = ElasticWaveConfig::default();
         let dt = estimate_elastic_time_step(&self.liver_grid, &self.liver_tissue, &solver_config);
 
         let solver = ElasticWaveSolver::new(&self.liver_grid, &self.liver_tissue, solver_config)?;
-        let displacement_history = solver.propagate_waves(&initial_displacement)?;
+        let displacement_history =
+            solver.propagate_waves_with_body_force_only_override(Some(&body_force))?;
 
         // Inversion: estimate elasticity from displacement field
         let last = displacement_history
@@ -329,7 +332,9 @@ impl LiverAssessmentWorkflow {
         disp.uy.assign(&last.uy);
         disp.uz.assign(&last.uz);
 
-        let config = kwavers::solver::inverse::elastography::ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight);
+        let config = kwavers::solver::inverse::elastography::ShearWaveInversionConfig::new(
+            InversionMethod::TimeOfFlight,
+        );
         let inversion = ShearWaveInversion::new(config);
         let elasticity = inversion.reconstruct(&disp, &self.liver_grid)?;
         let stiffness_map = elasticity.youngs_modulus.mapv(|e| (e / 1e3) as f32); // kPa
@@ -347,7 +352,9 @@ impl LiverAssessmentWorkflow {
         let detector = HarmonicDetector::new(HarmonicDetectionConfig::default());
         let harmonic_field = detector.analyze_harmonics(&disp_ts, sampling_frequency)?;
 
-        let nl_config = kwavers::solver::inverse::elastography::NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio);
+        let nl_config = kwavers::solver::inverse::elastography::NonlinearInversionConfig::new(
+            NonlinearInversionMethod::HarmonicRatio,
+        );
         let nl_inv = NonlinearInversion::new(nl_config);
         let nonlinear_analysis = nl_inv.reconstruct(&harmonic_field, &self.liver_grid)?;
 

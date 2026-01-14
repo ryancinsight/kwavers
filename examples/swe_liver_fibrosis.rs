@@ -28,12 +28,13 @@
 //! - Reconstruction: Time-of-flight method with phase gradient refinement
 
 use kwavers::domain::grid::Grid;
+use kwavers::domain::imaging::ultrasound::elastography::InversionMethod;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::imaging::elastography::displacement::DisplacementEstimator;
 use kwavers::physics::imaging::elastography::radiation_force::PushPulseParameters;
 use kwavers::physics::imaging::elastography::AcousticRadiationForce;
 use kwavers::physics::imaging::ElasticityMap;
-use kwavers::domain::imaging::ultrasound::elastography::InversionMethod;
+use kwavers::solver::forward::elastic::swe::{ElasticWaveConfig, ElasticWaveSolver};
 use kwavers::solver::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig};
 use kwavers::KwaversError;
 use kwavers::KwaversResult;
@@ -79,7 +80,17 @@ fn main() -> KwaversResult<()> {
         push_location[2],
         2.0,
     )?);
-    let displacement_field = arfi.apply_push_pulse(push_location)?;
+    let body_force = arfi.push_pulse_body_force(push_location)?;
+    let elastic_solver = ElasticWaveSolver::new(&grid, &medium, ElasticWaveConfig::default())?;
+    let displacement_history =
+        elastic_solver.propagate_waves_with_body_force_only_override(Some(&body_force))?;
+    let displacement_field = displacement_history
+        .last()
+        .ok_or_else(|| {
+            KwaversError::InvalidInput("Elastic displacement history is empty".to_string())
+        })?
+        .uz
+        .clone();
 
     println!(
         "   ✓ ARFI push applied at [{:.1}, {:.1}, {:.1}] mm",

@@ -92,6 +92,24 @@ pub async fn deploy_to_gcp<B: burn::tensor::backend::AutodiffBackend>(
         })
     })?;
 
+    // TODO: INCOMPLETE GCP DEPLOYMENT - Missing actual Vertex AI API calls
+    // Current implementation generates placeholder endpoint URL without:
+    // - Uploading model to Cloud Storage
+    // - Creating Vertex AI model resource
+    // - Creating Vertex AI endpoint
+    // - Deploying model to endpoint
+    // - Configuring machine type and accelerators
+    //
+    // Required Vertex AI REST API calls:
+    // 1. POST /v1/projects/{project}/locations/{location}/models - Upload model
+    // 2. POST /v1/projects/{project}/locations/{location}/endpoints - Create endpoint
+    // 3. POST /v1/projects/{project}/locations/{location}/endpoints/{endpoint}:deployModel - Deploy
+    // 4. PATCH /v1/projects/{project}/locations/{location}/endpoints/{endpoint} - Update config
+    //
+    // See AWS implementation in aws.rs for reference pattern
+    // Estimated effort: 10-12 hours
+    // Priority: P0 for production GCP deployments
+
     // Deploy model to Vertex AI with proper endpoint configuration
     let endpoint_url = format!(
         "https://{}-{}.aiplatform.googleapis.com/v1/projects/{}/locations/{}/endpoints/{}",
@@ -111,9 +129,95 @@ pub async fn deploy_to_gcp<B: burn::tensor::backend::AutodiffBackend>(
 
 /// Scale GCP Vertex AI deployment
 ///
-/// Updates the endpoint configuration with a new instance count.
-/// Currently returns a feature unavailability error as GCP scaling
-/// requires additional client dependencies.
+/// # TODO: NOT IMPLEMENTED - GCP Scaling Feature Missing
+///
+/// **Status**: 🔴 CRITICAL - Returns error, no actual scaling performed
+///
+/// **Problem**: This function returns a `FeatureNotAvailable` error instead of
+/// performing actual Vertex AI endpoint scaling.
+///
+/// **Impact**:
+/// - Cannot scale GCP deployments under load
+/// - Manual intervention required for capacity management
+/// - No auto-scaling capability in production
+///
+/// **Required Implementation**:
+///
+/// 1. **Vertex AI REST API Integration**
+///    - Use Vertex AI REST API for deployed model updates
+///    - Endpoint: `PATCH https://{region}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}/endpoints/{endpoint}`
+///    - Update `deployedModels[].dedicatedResources.minReplicaCount` and `maxReplicaCount`
+///
+/// 2. **Configuration Requirements**
+///    ```rust
+///    config["project_id"]       // GCP project
+///    config["location"]         // Region (us-central1, etc.)
+///    config["access_token"]     // OAuth2 bearer token
+///    config["deployed_model_id"] // Specific model deployment to scale
+///    ```
+///
+/// 3. **Scaling Algorithm**
+///    ```rust
+///    // Get current endpoint configuration
+///    GET /v1/projects/{project}/locations/{location}/endpoints/{endpoint}
+///
+///    // Update deployed model replica count
+///    PATCH /v1/projects/{project}/locations/{location}/endpoints/{endpoint}
+///    {
+///      "deployedModels": [{
+///        "id": deployed_model_id,
+///        "dedicatedResources": {
+///          "minReplicaCount": target_instances,
+///          "maxReplicaCount": target_instances * 2  // Allow headroom
+///        }
+///      }]
+///    }
+///
+///    // Poll operation until complete
+///    GET /v1/{operation_name}
+///    ```
+///
+/// 4. **Auto-Scaling Policy**
+///    - Option A: Manual scaling (set min=max)
+///    - Option B: Auto-scaling (set min < max, let Vertex AI manage)
+///    - Configure target CPU utilization (50-80%)
+///    - Configure scale-down delay (300s default)
+///
+/// 5. **Error Handling**
+///    - Validate target_instances ∈ [1, 100]
+///    - Handle quota limits (402 Payment Required)
+///    - Retry with exponential backoff for transient failures
+///    - Validate OAuth token expiry (refresh if needed)
+///
+/// 6. **Metrics Update**
+///    - Update `handle.metrics.instance_count` after successful scaling
+///    - Track operation long-running status
+///    - Log scaling duration for monitoring
+///
+/// **Mathematical Specification**:
+/// - Scaling capacity: N_replicas ∈ [1, max_replicas]
+/// - Scaling time: T_scale ≈ 3-7 minutes (Vertex AI provisioning)
+/// - Cost model: C_total = Σ(N_replicas × machine_type_price × uptime)
+///
+/// **Validation Requirements**:
+/// - Unit test: Mock Vertex AI API responses
+/// - Integration test: Real Vertex AI endpoint (requires GCP project)
+/// - Load test: Scale from 1→10→1 replicas
+/// - Property test: Verify min ≤ current ≤ max invariant
+///
+/// **Estimated Effort**: 8-10 hours
+/// - 2h: Vertex AI REST API client implementation
+/// - 2h: Long-running operation polling
+/// - 2h: OAuth token management and refresh
+/// - 2h: Error handling and retry logic
+/// - 2h: Testing and validation
+///
+/// **Priority**: P1 - Required for production auto-scaling
+///
+/// **References**:
+/// - Vertex AI REST API: https://cloud.google.com/vertex-ai/docs/reference/rest
+/// - Endpoint Management: https://cloud.google.com/vertex-ai/docs/predictions/deploy-model-api
+/// - Auto-scaling: https://cloud.google.com/vertex-ai/docs/predictions/autoscaling
 ///
 /// # Arguments
 ///
@@ -124,14 +228,7 @@ pub async fn deploy_to_gcp<B: burn::tensor::backend::AutodiffBackend>(
 /// # Errors
 ///
 /// Returns `FeatureNotAvailable` error indicating GCP scaling requires
-/// additional Vertex AI client dependencies.
-///
-/// # Future Work
-///
-/// Full implementation requires:
-/// - Google Cloud Vertex AI client SDK
-/// - Endpoint update API integration
-/// - Auto-scaling policy configuration
+/// Vertex AI REST API integration
 ///
 /// # Example
 ///
@@ -153,10 +250,12 @@ pub async fn scale_gcp_deployment(
     _handle: &mut DeploymentHandle,
     _target_instances: usize,
 ) -> KwaversResult<()> {
+    // TODO: Replace with actual Vertex AI scaling implementation
+    // Current: Returns error - NO SCALING PERFORMED
     Err(KwaversError::System(
         crate::core::error::SystemError::FeatureNotAvailable {
             feature: "GCP Vertex AI scaling".to_string(),
-            reason: "GCP scaling requires a Vertex AI client dependency that is not enabled"
+            reason: "GCP scaling requires Vertex AI REST API integration (see TODO above for implementation details)"
                 .to_string(),
         },
     ))

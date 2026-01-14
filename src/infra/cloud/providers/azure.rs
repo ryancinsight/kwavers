@@ -87,6 +87,24 @@ pub async fn deploy_to_azure<B: burn::tensor::backend::AutodiffBackend>(
     // Create Azure Machine Learning endpoint
     let endpoint_name = format!("kwavers-pinn-endpoint-{}", deployment_id);
 
+    // TODO: INCOMPLETE AZURE DEPLOYMENT - Missing actual Azure ML API calls
+    // Current implementation generates placeholder endpoint URL without:
+    // - Creating Azure ML model resource
+    // - Registering model in workspace
+    // - Creating online endpoint
+    // - Deploying model to endpoint
+    // - Configuring auto-scaling policies
+    //
+    // Required Azure ML REST API calls:
+    // 1. PUT /models/{modelName} - Register model
+    // 2. PUT /onlineEndpoints/{endpointName} - Create endpoint
+    // 3. PUT /onlineEndpoints/{endpointName}/deployments/{deploymentName} - Deploy
+    // 4. PATCH /onlineEndpoints/{endpointName} - Update traffic allocation
+    //
+    // See AWS implementation in aws.rs for reference pattern
+    // Estimated effort: 10-12 hours
+    // Priority: P0 for production Azure deployments
+
     // Deploy model to Azure ML with proper endpoint configuration
     let endpoint_url = format!("https://{}.azureml.ms/score", endpoint_name);
 
@@ -103,9 +121,89 @@ pub async fn deploy_to_azure<B: burn::tensor::backend::AutodiffBackend>(
 
 /// Scale Azure ML deployment
 ///
-/// Updates the endpoint configuration with a new instance count.
-/// Currently returns a feature unavailability error as Azure scaling
-/// requires additional client dependencies.
+/// # TODO: NOT IMPLEMENTED - Azure Scaling Feature Missing
+///
+/// **Status**: 🔴 CRITICAL - Returns error, no actual scaling performed
+///
+/// **Problem**: This function returns a `FeatureNotAvailable` error instead of
+/// performing actual Azure ML endpoint scaling.
+///
+/// **Impact**:
+/// - Cannot scale Azure deployments under load
+/// - Manual intervention required for capacity management
+/// - No auto-scaling capability in production
+///
+/// **Required Implementation**:
+///
+/// 1. **Azure Machine Learning REST API Integration**
+///    - Use Azure Resource Manager REST API for endpoint updates
+///    - Endpoint: `PUT https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.MachineLearningServices/workspaces/{workspaceName}/onlineEndpoints/{endpointName}/deployments/{deploymentName}?api-version=2022-05-01`
+///    - Update `sku.capacity` property in deployment configuration
+///
+/// 2. **Configuration Requirements**
+///    ```rust
+///    config["subscription_id"]     // Azure subscription
+///    config["resource_group"]      // Resource group name
+///    config["workspace_name"]      // ML workspace name
+///    config["deployment_name"]     // Specific deployment to scale
+///    config["azure_access_token"]  // Bearer token for authentication
+///    ```
+///
+/// 3. **Scaling Algorithm**
+///    ```rust
+///    // Get current deployment configuration
+///    GET /deployments/{deploymentName}
+///
+///    // Update SKU capacity
+///    PUT /deployments/{deploymentName}
+///    {
+///      "sku": {
+///        "name": "Standard_DS3_v2",
+///        "capacity": target_instances  // New instance count
+///      }
+///    }
+///
+///    // Poll until scaling complete
+///    while deployment.provisioningState == "Updating" {
+///      sleep(5 seconds)
+///      GET /deployments/{deploymentName}
+///    }
+///    ```
+///
+/// 4. **Error Handling**
+///    - Validate target_instances within Azure limits (1-100 typical)
+///    - Handle rate limiting (429 Too Many Requests)
+///    - Retry with exponential backoff for transient failures
+///    - Validate authentication token expiry
+///
+/// 5. **Metrics Update**
+///    - Update `handle.metrics.instance_count` after successful scaling
+///    - Track provisioning state transitions
+///    - Log scaling duration for monitoring
+///
+/// **Mathematical Specification**:
+/// - Scaling capacity: N_instances ∈ [1, max_capacity]
+/// - Scaling time: T_scale ≈ 2-5 minutes per instance (Azure provisioning)
+/// - Cost model: C_total = N_instances × price_per_instance × uptime
+///
+/// **Validation Requirements**:
+/// - Unit test: Mock Azure API responses
+/// - Integration test: Real Azure ML workspace (requires credentials)
+/// - Load test: Scale from 1→10→1 instances
+/// - Property test: Verify idempotency (scaling to same count is no-op)
+///
+/// **Estimated Effort**: 6-8 hours
+/// - 2h: Azure REST API client implementation
+/// - 2h: Async polling and state management
+/// - 2h: Error handling and retry logic
+/// - 2h: Testing and validation
+///
+/// **Priority**: P1 - Required for production auto-scaling
+///
+/// **References**:
+/// - Azure ML REST API: https://learn.microsoft.com/en-us/rest/api/azureml/
+/// - Azure SDK Design Guidelines: https://azure.github.io/azure-sdk/general_introduction.html
+/// - Deployment scaling: https://learn.microsoft.com/en-us/azure/machine-learning/how-to-deploy-online-endpoints
 ///
 /// # Arguments
 ///
@@ -117,13 +215,6 @@ pub async fn deploy_to_azure<B: burn::tensor::backend::AutodiffBackend>(
 ///
 /// Returns `FeatureNotAvailable` error indicating Azure scaling requires
 /// additional Azure AI client dependencies.
-///
-/// # Future Work
-///
-/// Full implementation requires:
-/// - Azure Machine Learning SDK for Rust
-/// - Endpoint update API integration
-/// - Auto-scaling policy configuration
 ///
 /// # Example
 ///
@@ -145,10 +236,12 @@ pub async fn scale_azure_deployment(
     _handle: &mut DeploymentHandle,
     _target_instances: usize,
 ) -> KwaversResult<()> {
+    // TODO: Replace with actual Azure ML scaling implementation
+    // Current: Returns error - NO SCALING PERFORMED
     Err(KwaversError::System(
         crate::core::error::SystemError::FeatureNotAvailable {
             feature: "Azure ML scaling".to_string(),
-            reason: "Azure scaling requires an Azure AI client dependency that is not enabled"
+            reason: "Azure scaling requires Azure ML REST API integration (see TODO above for implementation details)"
                 .to_string(),
         },
     ))

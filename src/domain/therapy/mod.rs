@@ -51,8 +51,7 @@ pub mod types;
 
 // Re-export commonly used types
 pub use microbubble::{
-    calculate_primary_bjerknes_force, DrugLoadingMode, DrugPayload,
-    MarmottantShellProperties, MicrobubbleState, Position3D, RadiationForce, ShellState,
-    Velocity3D,
+    calculate_primary_bjerknes_force, DrugLoadingMode, DrugPayload, MarmottantShellProperties,
+    MicrobubbleState, Position3D, RadiationForce, ShellState, Velocity3D,
 };
 pub use types::{TherapyMechanism, TherapyModality, TherapyParameters, TreatmentMetrics};

@@ -14,8 +14,8 @@ use crate::physics::acoustics::imaging::modalities::elastography::radiation_forc
 use crate::solver::forward::elastic::swe::{
     ElasticBodyForceConfig, ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
 };
-use crate::solver::inverse::elastography::ShearWaveInversionConfig;
 use crate::solver::inverse::elastography::ShearWaveInversion;
+use crate::solver::inverse::elastography::ShearWaveInversionConfig;
 
 /// High-level orchestrator for shear wave elastography simulations
 #[derive(Debug)]

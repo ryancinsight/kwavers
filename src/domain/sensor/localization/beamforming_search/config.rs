@@ -37,10 +37,8 @@
 //! scoring to prevent silent fallback behavior.
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::sensor::beamforming::{
-    BeamformingCoreConfig, SteeringVectorMethod,
-};
-use crate::domain::sensor::beamforming::time_domain::DelayReference as TimeDomainDelayReference;
+use crate::domain::sensor::beamforming::time_domain::DelayReference;
+use crate::domain::sensor::beamforming::{BeamformingCoreConfig, SteeringVectorMethod};
 
 /// Covariance / snapshot domain policy for narrowband MVDR/Capon scoring.
 ///
@@ -90,7 +88,7 @@ pub enum LocalizationBeamformingMethod {
     /// the alignment convention, then scores energy of the steered output.
     SrpDasTimeDomain {
         /// Delay datum / delay reference policy (recommended default: reference sensor 0).
-        delay_reference: TimeDomainDelayReference,
+        delay_reference: DelayReference,
     },
 
     /// **Capon/MVDR spatial spectrum** (narrowband, adaptive).
@@ -274,7 +272,7 @@ impl LocalizationBeamformSearchConfig {
         Self {
             core: BeamformingCoreConfig::default(),
             method: LocalizationBeamformingMethod::SrpDasTimeDomain {
-                delay_reference: TimeDomainDelayReference::recommended_default(),
+                delay_reference: DelayReference::recommended_default(),
             },
             grid: SearchGrid::CenteredCube {
                 search_radius_m: 1.0,

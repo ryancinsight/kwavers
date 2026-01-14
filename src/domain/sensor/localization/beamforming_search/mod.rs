@@ -232,14 +232,14 @@ mod tests {
 
     #[test]
     fn centered_cube_generates_points() {
-        use crate::domain::sensor::beamforming::time_domain::DelayReference as TimeDomainDelayReference;
+        use crate::domain::sensor::beamforming::time_domain::DelayReference;
 
         let processor = make_processor(4);
 
         // Field-jargon correct default: SRP-DAS (time-domain DAS) with explicit delay datum.
         let cfg = LocalizationBeamformSearchConfig {
             method: LocalizationBeamformingMethod::SrpDasTimeDomain {
-                delay_reference: TimeDomainDelayReference::recommended_default(),
+                delay_reference: DelayReference::recommended_default(),
             },
             ..Default::default()
         };

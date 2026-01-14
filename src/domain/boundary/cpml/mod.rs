@@ -89,8 +89,6 @@ impl CPMLBoundary {
             .apply_gradient_correction(gradient, &self.memory, component, &self.profiles);
     }
 
-
-
     /// Get configuration
     #[must_use]
     pub fn config(&self) -> &CPMLConfig {
@@ -136,8 +134,6 @@ impl Clone for CPMLBoundary {
         }
     }
 }
-
-
 
 impl Boundary for CPMLBoundary {
     fn apply_acoustic(

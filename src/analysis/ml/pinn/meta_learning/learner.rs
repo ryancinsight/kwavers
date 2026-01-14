@@ -8,7 +8,7 @@ use crate::analysis::ml::pinn::burn_wave_equation_2d::{
 };
 use crate::analysis::ml::pinn::meta_learning::config::MetaLearningConfig;
 use crate::analysis::ml::pinn::meta_learning::gradient::{GradientApplicator, GradientExtractor};
-use crate::analysis::ml::pinn::meta_learning::metrics::{MetaLoss, MetaLearningStats};
+use crate::analysis::ml::pinn::meta_learning::metrics::{MetaLearningStats, MetaLoss};
 use crate::analysis::ml::pinn::meta_learning::optimizer::MetaOptimizer;
 use crate::analysis::ml::pinn::meta_learning::sampling::TaskSampler;
 use crate::analysis::ml::pinn::meta_learning::types::{PhysicsTask, TaskData};
@@ -388,6 +388,53 @@ impl<B: AutodiffBackend> MetaLearner<B> {
         _geometry: &Arc<crate::ml::pinn::Geometry2D>,
         _conditions: &[crate::ml::pinn::BoundaryCondition2D],
     ) -> Vec<(f64, f64, f64, f64)> {
+        // TODO_AUDIT: P1 - Meta-Learning Boundary Data Generation - Simplified Stub
+        //
+        // PROBLEM:
+        // Returns a single dummy boundary point (0,0,0,0) regardless of geometry or boundary conditions.
+        // Meta-learner cannot adapt to tasks with specific boundary constraints.
+        //
+        // IMPACT:
+        // - Meta-learned model initialization ignores boundary condition structure
+        // - Transfer learning to new tasks with different BCs requires full retraining
+        // - Defeats purpose of meta-learning for boundary-dominated problems
+        // - Blocks applications: Dirichlet/Neumann/Robin BC adaptation, complex geometry handling
+        // - Severity: P1 (advanced research feature)
+        //
+        // REQUIRED IMPLEMENTATION:
+        // 1. Parse geometry to extract boundary curves/surfaces
+        // 2. Sample points uniformly along boundary (e.g., 100-500 points depending on complexity)
+        // 3. For each boundary condition type:
+        //    - Dirichlet: (x, y, t, u_bc) where u_bc is prescribed value
+        //    - Neumann: (x, y, t, ∂u/∂n) where ∂u/∂n is prescribed normal derivative
+        //    - Robin: (x, y, t, αu + β∂u/∂n) mixed condition
+        // 4. Return Vec<(x, y, t, bc_value)> with proper spatial/temporal sampling
+        //
+        // MATHEMATICAL SPECIFICATION:
+        // Boundary sampling strategy:
+        //   - Spatial: Arc-length parameterization s ∈ [0, L] with uniform Δs
+        //   - Temporal: t ∈ [0, T_max] with uniform Δt (if time-dependent BCs)
+        //   - Target: O(√N) boundary points for N interior collocation points
+        //
+        // VALIDATION CRITERIA:
+        // - Test: Rectangular domain [0,1]×[0,1] with Dirichlet u=0 on all sides
+        //   Should return ~100 boundary points with bc_value=0
+        // - Test: Circle with Neumann ∂u/∂r = 1
+        //   Should return points on circumference with bc_value=1
+        // - Coverage: Boundary point spacing < 2× interior collocation spacing
+        //
+        // REFERENCES:
+        // - Finn et al., "Model-Agnostic Meta-Learning for Fast Adaptation" (ICML 2017)
+        // - Raissi et al., "Physics-informed neural networks" (boundary sampling strategies)
+        //
+        // ESTIMATED EFFORT: 8-12 hours
+        // - Implementation: 6-8 hours (geometry parsing, sampling, BC application)
+        // - Testing: 2-3 hours (geometric primitives, BC types)
+        // - Documentation: 1 hour
+        //
+        // ASSIGNED: Sprint 212 (Meta-Learning Enhancement)
+        // PRIORITY: P1 (Research feature - meta-learning BC adaptation)
+
         // Generate boundary points and apply conditions
         // This is a simplified implementation
         vec![
@@ -400,6 +447,58 @@ impl<B: AutodiffBackend> MetaLearner<B> {
         &self,
         _geometry: &Arc<crate::ml::pinn::Geometry2D>,
     ) -> Vec<(f64, f64, f64, f64, f64)> {
+        // TODO_AUDIT: P1 - Meta-Learning Initial Condition Data Generation - Simplified Stub
+        //
+        // PROBLEM:
+        // Returns a single dummy initial condition point (0,0,0,0,0) regardless of geometry.
+        // Meta-learner cannot adapt to tasks with specific initial conditions.
+        //
+        // IMPACT:
+        // - Meta-learned model initialization ignores IC structure (Gaussian pulse, plane wave, etc.)
+        // - Transfer learning to new ICs requires full retraining from scratch
+        // - Reduces meta-learning effectiveness for time-dependent problems
+        // - Blocks applications: IC-sensitive dynamics (wave packets, thermal pulses, shock initialization)
+        // - Severity: P1 (advanced research feature)
+        //
+        // REQUIRED IMPLEMENTATION:
+        // 1. Sample spatial points (x, y) uniformly or quasi-randomly within geometry
+        // 2. Set t = 0 for all initial condition points
+        // 3. Compute initial values u(x,y,0) from specified IC function:
+        //    - For wave equation: u₀(x,y) and ∂u/∂t|_{t=0} = v₀(x,y)
+        //    - For diffusion: u₀(x,y) only
+        //    - For general hyperbolic: u₀(x,y) and higher time derivatives if needed
+        // 4. Return Vec<(x, y, t=0, u₀, v₀)> with sufficient spatial coverage
+        //
+        // MATHEMATICAL SPECIFICATION:
+        // Initial condition sampling:
+        //   - Spatial coverage: N_ic = O(√N) where N is total collocation points
+        //   - Sampling methods: Uniform grid, Sobol sequence, or Latin hypercube
+        //   - For wave equation: Both u(x,y,0) and ∂u/∂t(x,y,0) required
+        //
+        // Common IC patterns to support:
+        //   - Gaussian pulse: u₀(x,y) = A exp(-((x-x₀)² + (y-y₀)²)/(2σ²))
+        //   - Plane wave: u₀(x,y) = A sin(k_x·x + k_y·y)
+        //   - Dirac delta (smoothed): u₀(x,y) = δ_ε(x-x₀, y-y₀)
+        //
+        // VALIDATION CRITERIA:
+        // - Test: 2D domain [0,1]×[0,1] with Gaussian IC centered at (0.5, 0.5)
+        //   Should return ~100 points with u₀ = exp(-r²/2σ²), v₀ = 0
+        // - Test: Plane wave IC with k = (2π, 0)
+        //   Should return u₀ = sin(2πx), v₀ computed from dispersion relation
+        // - Coverage: At least 50-200 IC points for typical 2D problems
+        //
+        // REFERENCES:
+        // - Raissi et al., "Physics-informed neural networks" (initial condition handling)
+        // - Finn et al., "Model-Agnostic Meta-Learning" (MAML algorithm)
+        //
+        // ESTIMATED EFFORT: 6-10 hours
+        // - Implementation: 4-6 hours (spatial sampling, IC function evaluation)
+        // - Testing: 2-3 hours (Gaussian, plane wave, custom ICs)
+        // - Documentation: 1 hour
+        //
+        // ASSIGNED: Sprint 212 (Meta-Learning Enhancement)
+        // PRIORITY: P1 (Research feature - meta-learning IC adaptation)
+
         // Generate initial condition data
         // This is a simplified implementation
         vec![

@@ -21,9 +21,11 @@
 //! - **Dependency Inversion**: Simulator depends on abstractions (Grid, Medium traits)
 //! - **Testability**: Each component can be tested independently
 
-use crate::domain::imaging::photoacoustic::{InitialPressure, PhotoacousticParameters, PhotoacousticResult};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
+use crate::domain::imaging::photoacoustic::{
+    InitialPressure, PhotoacousticParameters, PhotoacousticResult,
+};
 use crate::domain::medium::properties::OpticalPropertyData;
 use crate::domain::medium::Medium;
 use crate::domain::source::GridSource;
@@ -55,7 +57,7 @@ use super::reconstruction;
 /// use kwavers::simulation::modalities::photoacoustic::PhotoacousticSimulator;
 /// use kwavers::domain::grid::Grid;
 /// use kwavers::domain::medium::homogeneous::HomogeneousMedium;
-/// use kwavers::clinical::imaging::photoacoustic::PhotoacousticParameters;
+/// use kwavers::domain::imaging::photoacoustic::PhotoacousticParameters;
 ///
 /// # fn main() -> kwavers::core::error::KwaversResult<()> {
 /// let grid = Grid::new(64, 64, 32, 0.001, 0.001, 0.001)?;
@@ -152,7 +154,7 @@ impl PhotoacousticSimulator {
     /// # use kwavers::simulation::modalities::photoacoustic::PhotoacousticSimulator;
     /// # use kwavers::domain::grid::Grid;
     /// # use kwavers::domain::medium::homogeneous::HomogeneousMedium;
-    /// # use kwavers::clinical::imaging::photoacoustic::PhotoacousticParameters;
+    /// # use kwavers::domain::imaging::photoacoustic::PhotoacousticParameters;
     /// # fn main() -> kwavers::core::error::KwaversResult<()> {
     /// # let grid = Grid::new(32, 32, 16, 0.001, 0.001, 0.001)?;
     /// # let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);

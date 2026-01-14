@@ -50,11 +50,13 @@ use crate::domain::therapy::microbubble::{
     calculate_primary_bjerknes_force, DrugPayload, MarmottantShellProperties, MicrobubbleState,
     Position3D,
 };
-use crate::physics::acoustics::nonlinear::bubble_state::{BubbleParameters, BubbleState, GasSpecies};
-use std::collections::HashMap;
-use crate::physics::acoustics::nonlinear::keller_miksis::KellerMiksisModel;
 use crate::physics::acoustics::nonlinear::adaptive_integration::integrate_bubble_dynamics_adaptive;
+use crate::physics::acoustics::nonlinear::bubble_state::{
+    BubbleParameters, BubbleState, GasSpecies,
+};
+use crate::physics::acoustics::nonlinear::keller_miksis::KellerMiksisModel;
 use ndarray::Array3;
+use std::collections::HashMap;
 
 /// Microbubble dynamics simulation service
 ///
@@ -210,8 +212,14 @@ impl MicrobubbleDynamicsService {
         const SPECIFIC_HEAT: f64 = 4186.0; // Water [J/(kg·K)]
 
         let mut gas_composition = HashMap::new();
-        gas_composition.insert(crate::physics::acoustics::nonlinear::bubble_state::GasType::N2, 0.79);
-        gas_composition.insert(crate::physics::acoustics::nonlinear::bubble_state::GasType::O2, 0.21);
+        gas_composition.insert(
+            crate::physics::acoustics::nonlinear::bubble_state::GasType::N2,
+            0.79,
+        );
+        gas_composition.insert(
+            crate::physics::acoustics::nonlinear::bubble_state::GasType::O2,
+            0.21,
+        );
 
         Ok(BubbleParameters {
             r0: state.radius_equilibrium,
@@ -367,7 +375,8 @@ mod tests {
         let mut bubble = MicrobubbleState::sono_vue(position).unwrap();
         let mut shell = MarmottantShellProperties::sono_vue(bubble.radius_equilibrium).unwrap();
         let volume = bubble.volume();
-        let mut drug = DrugPayload::new(50.0, volume, DrugLoadingMode::ShellEmbedded, 0.01).unwrap();
+        let mut drug =
+            DrugPayload::new(50.0, volume, DrugLoadingMode::ShellEmbedded, 0.01).unwrap();
 
         let service = MicrobubbleDynamicsService::from_microbubble_state(&bubble).unwrap();
 
@@ -430,7 +439,8 @@ mod tests {
         let mut bubble = MicrobubbleState::sono_vue(position).unwrap();
         let mut shell = MarmottantShellProperties::sono_vue(bubble.radius_equilibrium).unwrap();
         let volume = bubble.volume();
-        let mut drug = DrugPayload::new(100.0, volume, DrugLoadingMode::ShellEmbedded, 0.1).unwrap();
+        let mut drug =
+            DrugPayload::new(100.0, volume, DrugLoadingMode::ShellEmbedded, 0.1).unwrap();
 
         let service = MicrobubbleDynamicsService::from_microbubble_state(&bubble).unwrap();
 
@@ -471,7 +481,15 @@ mod tests {
         bubble.radius = bubble.radius_equilibrium * 2.0; // Exceeds rupture threshold
 
         service
-            .update_bubble_dynamics(&mut bubble, &mut shell, &mut drug, 0.0, (0.0, 0.0, 0.0), 0.0, 1e-6)
+            .update_bubble_dynamics(
+                &mut bubble,
+                &mut shell,
+                &mut drug,
+                0.0,
+                (0.0, 0.0, 0.0),
+                0.0,
+                1e-6,
+            )
             .unwrap();
 
         assert!(shell.is_ruptured());
@@ -486,7 +504,8 @@ mod tests {
         let position = Position3D::new(0.005, 0.005, 0.005);
         let grid_spacing = (0.001, 0.001, 0.001);
 
-        let (p, grad) = sample_acoustic_field_at_position(&position, &pressure, grid_spacing).unwrap();
+        let (p, grad) =
+            sample_acoustic_field_at_position(&position, &pressure, grid_spacing).unwrap();
 
         assert_eq!(p, 1e5);
         // Gradient should be non-zero if there's spatial variation

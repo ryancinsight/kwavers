@@ -153,8 +153,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let absorption = 0.0;      // dB/cm/MHz (water)
     let nonlinearity = 0.0;    // B/A parameter
 
+    // TODO: SIMPLIFIED DOCUMENTATION EXAMPLE - For tutorial purposes only
     // Note: Medium creation requires a grid reference
-    // This is a simplified example showing property values
+    // This simplified example shows property values without full Medium object creation
+    // For production use, see: kwavers::domain::medium::HomogeneousMedium::new()
     println!("Water properties:");
     println!("  Density: {} kg/m³", density);
     println!("  Sound speed: {} m/s", sound_speed);

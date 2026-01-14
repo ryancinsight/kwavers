@@ -77,10 +77,7 @@ pub fn relative_delays_s(delays_s: &[f64], reference: DelayReference) -> Kwavers
     reference.compute_relative_delays(delays_s)
 }
 
-pub fn alignment_shifts_s(
-    delays_s: &[f64],
-    reference: DelayReference,
-) -> KwaversResult<Vec<f64>> {
+pub fn alignment_shifts_s(delays_s: &[f64], reference: DelayReference) -> KwaversResult<Vec<f64>> {
     reference.compute_alignment_shifts(delays_s)
 }
 

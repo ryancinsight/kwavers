@@ -353,8 +353,6 @@ pub(crate) fn normalize3(v: [f64; 3]) -> [f64; 3] {
     [v[0] / mag, v[1] / mag, v[2] / mag]
 }
 
-
-
 pub(crate) fn distance3(a: [f64; 3], b: [f64; 3]) -> f64 {
     let dx = a[0] - b[0];
     let dy = a[1] - b[1];

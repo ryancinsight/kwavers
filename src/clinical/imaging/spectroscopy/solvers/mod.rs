@@ -3,5 +3,5 @@
 pub mod tikhonov;
 pub mod unmixer;
 
-pub use unmixer::SpectralUnmixer;
 pub use tikhonov::tikhonov_solve;
+pub use unmixer::SpectralUnmixer;

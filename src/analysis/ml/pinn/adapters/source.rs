@@ -20,7 +20,7 @@
 //! 3. **Thin Adaptation**: Minimal logic, primarily type conversion
 //! 4. **Zero Duplication**: No domain concepts redefined in PINN layer
 
-use crate::domain::source::{Source, SourceField, FocalProperties as DomainFocalProperties};
+use crate::domain::source::{FocalProperties as DomainFocalProperties, Source, SourceField};
 use std::sync::Arc;
 
 /// Acoustic source specification for PINN training
@@ -307,8 +307,8 @@ mod tests {
         let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0));
         let config = GaussianConfig {
             focal_point: (0.0, 0.0, 0.05), // 5cm focal depth
-            waist_radius: 1e-3,             // 1mm waist
-            wavelength: 1.5e-3,             // 1.5mm (1MHz in water)
+            waist_radius: 1e-3,            // 1mm waist
+            wavelength: 1.5e-3,            // 1.5mm (1MHz in water)
             direction: (0.0, 0.0, 1.0),
             ..Default::default()
         };
@@ -319,23 +319,38 @@ mod tests {
             .expect("Should adapt Gaussian source");
 
         // Verify focal properties were extracted
-        assert!(pinn_source.focal_properties.is_some(), "Gaussian source should have focal properties");
+        assert!(
+            pinn_source.focal_properties.is_some(),
+            "Gaussian source should have focal properties"
+        );
 
         let focal_props = pinn_source.focal_properties.unwrap();
 
         // Check focal length is approximately 5cm
-        assert!((focal_props.focal_length - 0.05).abs() < 1e-3,
-                "Focal length should be ~5cm, got {}", focal_props.focal_length);
+        assert!(
+            (focal_props.focal_length - 0.05).abs() < 1e-3,
+            "Focal length should be ~5cm, got {}",
+            focal_props.focal_length
+        );
 
         // Check spot size is 1mm (waist radius)
-        assert!((focal_props.spot_size - 1e-3).abs() < 1e-6,
-                "Spot size should be 1mm, got {}", focal_props.spot_size);
+        assert!(
+            (focal_props.spot_size - 1e-3).abs() < 1e-6,
+            "Spot size should be 1mm, got {}",
+            focal_props.spot_size
+        );
 
         // Check F-number exists
-        assert!(focal_props.f_number.is_some(), "F-number should be available");
+        assert!(
+            focal_props.f_number.is_some(),
+            "F-number should be available"
+        );
 
         // Check focal gain exists
-        assert!(focal_props.focal_gain.is_some(), "Focal gain should be available");
+        assert!(
+            focal_props.focal_gain.is_some(),
+            "Focal gain should be available"
+        );
     }
 
     #[test]
@@ -347,7 +362,9 @@ mod tests {
             .expect("Should adapt point source");
 
         // Point sources should not have focal properties
-        assert!(pinn_source.focal_properties.is_none(),
-                "Point source should not have focal properties");
+        assert!(
+            pinn_source.focal_properties.is_none(),
+            "Point source should not have focal properties"
+        );
     }
 }

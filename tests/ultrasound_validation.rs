@@ -332,7 +332,9 @@ pub mod swe_validation {
         let start_time = std::time::Instant::now();
 
         // Create SWE workflow
-        let config = kwavers::solver::inverse::elastography::ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight);
+        let config = kwavers::solver::inverse::elastography::ShearWaveInversionConfig::new(
+            InversionMethod::TimeOfFlight,
+        );
         let swe = ShearWaveInversion::new(config);
 
         // Generate synthetic shear wave displacement field (Gaussian around push)

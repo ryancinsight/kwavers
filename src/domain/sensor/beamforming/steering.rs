@@ -34,8 +34,12 @@ impl SteeringVector {
     ) -> KwaversResult<Array1<num_complex::Complex<f64>>> {
         use num_complex::Complex;
 
-        let phase_delays =
-            delays::plane_wave_phase_delays(sensor_positions, direction, frequency, speed_of_sound)?;
+        let phase_delays = delays::plane_wave_phase_delays(
+            sensor_positions,
+            direction,
+            frequency,
+            speed_of_sound,
+        )?;
 
         let mut steering_vector = Array1::zeros(sensor_positions.len());
         for (i, &phase) in phase_delays.iter().enumerate() {

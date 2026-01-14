@@ -1,9 +1,9 @@
 // src/physics/mechanics/elastic_wave/tests.rs
 
 #[cfg(test)]
-use crate::domain::field::mapping::UnifiedFieldType;
-#[cfg(test)]
 use crate::domain::field::indices as field_indices;
+#[cfg(test)]
+use crate::domain::field::mapping::UnifiedFieldType;
 #[cfg(test)]
 use crate::domain::grid::Grid;
 #[cfg(test)]

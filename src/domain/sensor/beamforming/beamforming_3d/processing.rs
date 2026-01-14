@@ -50,6 +50,64 @@ impl BeamformingProcessor3D {
                 subarray_size,
             } => self.process_mvdr_3d(rf_data, *diagonal_loading as f32, *subarray_size)?,
             BeamformingAlgorithm3D::SAFT3D { .. } => {
+                // TODO_AUDIT: P1 - 3D SAFT Beamforming - Not Implemented
+                //
+                // PROBLEM:
+                // Synthetic Aperture Focusing Technique (SAFT) for 3D volumetric reconstruction
+                // is not implemented. Returns FeatureNotAvailable error.
+                //
+                // IMPACT:
+                // - Cannot perform high-resolution 3D SAFT imaging
+                // - Blocks advanced array processing techniques (coherent compounding)
+                // - Prevents offline processing of sequentially acquired RF data
+                // - No support for sparse array imaging (virtual element synthesis)
+                // - Severity: P1 (advanced imaging feature, not production-critical)
+                //
+                // REQUIRED IMPLEMENTATION:
+                // 1. Extract SAFT parameters from BeamformingAlgorithm3D::SAFT3D variant
+                // 2. For each voxel (x, y, z) in reconstruction volume:
+                //    a. Compute time-of-flight from each transmit position to voxel to receive element
+                //    b. Extract RF sample at computed time index for each TX-RX pair
+                //    c. Apply phase correction for synthetic aperture coherence
+                //    d. Sum coherently across all virtual aperture positions
+                // 3. Apply apodization weighting for sidelobe suppression
+                // 4. Compute coherence factor for adaptive weighting
+                //
+                // MATHEMATICAL SPECIFICATION:
+                // SAFT reconstruction for voxel r = (x, y, z):
+                //   I_SAFT(r) = |Σᵢ Σⱼ wᵢⱼ · RF[i,j,t(i,j,r)]|²
+                // where:
+                //   t(i,j,r) = (|rᵢ - r| + |r - rⱼ|) / c
+                //   wᵢⱼ = apodization weight for TX i, RX j
+                //   i, j iterate over transmit and receive positions
+                //
+                // Coherence factor (optional quality metric):
+                //   CF(r) = |Σᵢⱼ sᵢⱼ(r)|² / (N · Σᵢⱼ |sᵢⱼ(r)|²)
+                //
+                // VALIDATION CRITERIA:
+                // - Test: Point scatterer at known location → PSF width matches diffraction limit
+                // - Test: Resolution phantom (wire targets) → lateral/axial resolution < λ/2
+                // - Test: Coherence factor map → CF > 0.9 at target, CF < 0.3 in speckle
+                // - Performance: 128×128×128 volume with 64 TX positions < 5 seconds on GPU
+                //
+                // REFERENCES:
+                // - Frazier & O'Brien, "Synthetic Aperture Techniques with a Virtual Source Element" (1998)
+                // - Karaman et al., "Synthetic aperture imaging for small scale systems" (1995)
+                // - Nikolov & Jensen, "Virtual ultrasound sources in high-resolution ultrasound imaging" (2002)
+                //
+                // ESTIMATED EFFORT: 16-20 hours
+                // - Implementation: 10-12 hours (time-of-flight, coherent summation, phase correction)
+                // - GPU optimization: 4-6 hours (parallel voxel processing, memory coalescing)
+                // - Testing: 2-3 hours (point targets, resolution phantoms)
+                // - Documentation: 1 hour
+                //
+                // DEPENDENCIES:
+                // - Requires accurate geometry/transducer position information
+                // - May need migration correction for sound speed heterogeneity
+                //
+                // ASSIGNED: Sprint 211-212 (Advanced 3D Imaging)
+                // PRIORITY: P1 (Research/advanced imaging capability)
+
                 return Err(KwaversError::System(
                     crate::core::error::SystemError::FeatureNotAvailable {
                         feature: "SAFT 3D beamforming".to_string(),
@@ -252,8 +310,73 @@ impl BeamformingProcessor3D {
         &mut self,
         _rf_data: &Array4<f32>,
         _diagonal_loading: f32,
-        _subarray_size: [usize; 3],
+        _subarray_size: usize,
     ) -> KwaversResult<Array3<f32>> {
+        // TODO_AUDIT: P1 - 3D MVDR Beamforming - Not Implemented
+        //
+        // PROBLEM:
+        // Minimum Variance Distortionless Response (MVDR) adaptive beamforming for 3D
+        // volumetric imaging is not implemented. Returns FeatureNotAvailable error.
+        //
+        // IMPACT:
+        // - Cannot perform adaptive 3D beamforming with clutter suppression
+        // - No sidelobe/artifact reduction through spatial filtering
+        // - Blocks high-contrast imaging in presence of strong scatterers
+        // - Prevents optimal SNR in heterogeneous tissue environments
+        // - Severity: P1 (advanced imaging feature, not production-critical)
+        //
+        // REQUIRED IMPLEMENTATION:
+        // 1. For each voxel (x, y, z):
+        //    a. Extract subarray RF data (spatial window of size subarray_size³)
+        //    b. Compute spatial covariance matrix R = E[x(t)·xᴴ(t)]
+        //    c. Add diagonal loading: R̃ = R + δI (δ = diagonal_loading)
+        //    d. Compute steering vector a for look direction toward voxel
+        //    e. Compute MVDR weights: w = R̃⁻¹a / (aᴴR̃⁻¹a)
+        //    f. Apply weights: y(r) = wᴴ · x(r)
+        // 2. Accumulate coherent output across time samples
+        // 3. Compute output power: I_MVDR(r) = |y(r)|²
+        //
+        // MATHEMATICAL SPECIFICATION:
+        // MVDR beamformer (Capon beamformer):
+        //   Minimize: wᴴRw
+        //   Subject to: wᴴa = 1
+        //   Solution: w_MVDR = R⁻¹a / (aᴴR⁻¹a)
+        // where:
+        //   R = (1/L)Σₗ x(tₗ)xᴴ(tₗ) is spatial covariance (L time samples)
+        //   a(θ,φ) = [exp(jk·r₁), exp(jk·r₂), ..., exp(jk·rₙ)]ᵀ is steering vector
+        //   k = 2π/λ is wavenumber
+        //
+        // Diagonal loading (for numerical stability):
+        //   R̃ = R + δI, typical δ = 0.01·trace(R)/N
+        //
+        // VALIDATION CRITERIA:
+        // - Test: Single point target → verify unity gain in look direction
+        // - Test: Two closely spaced targets → resolution improvement over DAS
+        // - Test: Strong off-axis scatterer → verify sidelobe suppression > 20 dB
+        // - Test: Eigenvalue spread of R → verify diagonal loading prevents ill-conditioning
+        // - Performance: 64³ volume with 32-element subarray < 10 seconds
+        // - Convergence: Covariance estimation with L ≥ 2N time samples (N = subarray size)
+        //
+        // REFERENCES:
+        // - Capon, J., "High-resolution frequency-wavenumber spectrum analysis" (1969)
+        // - Van Veen & Buckley, "Beamforming: A versatile approach to spatial filtering" (1988)
+        // - Synnevag et al., "Adaptive beamforming applied to medical ultrasound imaging" (2007)
+        // - Holfort et al., "Broadband minimum variance beamforming for ultrasound imaging" (2009)
+        //
+        // ESTIMATED EFFORT: 20-24 hours
+        // - Implementation: 12-14 hours (covariance estimation, matrix inversion, weight computation)
+        // - GPU optimization: 6-8 hours (batched matrix ops, parallel voxel processing)
+        // - Testing: 3-4 hours (synthetic apertures, resolution phantoms, numerical stability)
+        // - Documentation: 1-2 hours
+        //
+        // DEPENDENCIES:
+        // - Requires robust matrix inversion (SVD or Cholesky with pivoting)
+        // - May need GPU BLAS library (cuBLAS/rocBLAS) for batched matrix operations
+        // - Covariance smoothing across subarrays for better estimation
+        //
+        // ASSIGNED: Sprint 211-212 (Advanced 3D Adaptive Beamforming)
+        // PRIORITY: P1 (Research/advanced imaging capability)
+
         Err(KwaversError::System(
             crate::core::error::SystemError::FeatureNotAvailable {
                 feature: "MVDR 3D beamforming".to_string(),

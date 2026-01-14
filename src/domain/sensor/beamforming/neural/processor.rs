@@ -327,8 +327,8 @@ impl AIEnhancedBeamformingProcessor {
                 "PINN inference enabled but no PinnInferenceEngine available".to_string(),
             )
         })?;
-        let (_predictions, uncertainties) = self
-            .predict_realtime(&x_coords, &y_coords, &t_coords)?;
+        let (_predictions, uncertainties) =
+            self.predict_realtime(&x_coords, &y_coords, &t_coords)?;
 
         // Interpolate results back to full volume resolution
         let mut uncertainty_volume = Array3::<f32>::zeros((nx, ny, nz));
@@ -457,7 +457,8 @@ mod tests {
         let mut config = AIBeamformingConfig::default();
         config.enable_realtime_pinn = false;
         let sensor_positions = vec![[0.0, 0.0, 0.0]; 64];
-        let processor = AIEnhancedBeamformingProcessor::new(config, sensor_positions, None).unwrap();
+        let processor =
+            AIEnhancedBeamformingProcessor::new(config, sensor_positions, None).unwrap();
 
         let memory_mb = processor.estimate_memory_usage();
         assert!(memory_mb > 0.0);
@@ -469,7 +470,8 @@ mod tests {
         let mut config = AIBeamformingConfig::default();
         config.enable_realtime_pinn = false;
         let sensor_positions = vec![[0.0, 0.0, 0.0]; 64];
-        let processor = AIEnhancedBeamformingProcessor::new(config, sensor_positions, None).unwrap();
+        let processor =
+            AIEnhancedBeamformingProcessor::new(config, sensor_positions, None).unwrap();
 
         let retrieved_config = processor.config();
         assert_eq!(retrieved_config.performance_target_ms, 100.0);
@@ -480,7 +482,8 @@ mod tests {
         let mut config = AIBeamformingConfig::default();
         config.enable_realtime_pinn = false;
         let sensor_positions = vec![[0.0, 0.0, 0.0]; 64];
-        let processor = AIEnhancedBeamformingProcessor::new(config, sensor_positions, None).unwrap();
+        let processor =
+            AIEnhancedBeamformingProcessor::new(config, sensor_positions, None).unwrap();
 
         let rf_data = Array4::<f32>::from_elem((100, 10, 20, 1), 1.0);
         let angles = vec![0.0; 20];

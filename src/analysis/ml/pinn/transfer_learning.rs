@@ -452,6 +452,59 @@ impl<B: AutodiffBackend> TransferLearner<B> {
         _model: &crate::ml::pinn::BurnPINN2DWave<B>,
         _condition: &crate::ml::pinn::BoundaryCondition2D,
     ) -> KwaversResult<f64> {
+        // TODO_AUDIT: P1 - Transfer Learning Boundary Condition Evaluation - Not Implemented
+        //
+        // PROBLEM:
+        // Returns NotImplemented error instead of evaluating boundary condition satisfaction.
+        // Transfer learner cannot assess how well source model satisfies target problem BCs.
+        //
+        // IMPACT:
+        // - Cannot quantify BC violation magnitude for transfer learning decisions
+        // - No guidance on whether source model initialization is compatible with target BCs
+        // - Blocks BC-aware fine-tuning strategies
+        // - Prevents adaptive transfer based on boundary condition similarity
+        // - Severity: P1 (advanced research feature)
+        //
+        // REQUIRED IMPLEMENTATION:
+        // 1. Parse BoundaryCondition2D to extract type and prescribed values
+        // 2. For each BC type:
+        //    a. Dirichlet (u = g): Evaluate |u_model(x_bc, y_bc, t) - g(x_bc, y_bc, t)|
+        //    b. Neumann (∂u/∂n = h): Compute ∂u_model/∂n and evaluate |∂u_model/∂n - h|
+        //    c. Robin (αu + β∂u/∂n = γ): Evaluate |αu + β∂u/∂n - γ|
+        // 3. Sample boundary points (50-200 points uniformly distributed)
+        // 4. Return mean or max BC violation across all boundary samples
+        //
+        // MATHEMATICAL SPECIFICATION:
+        // BC violation metric:
+        //   ε_BC = (1/N_bc) Σᵢ |BC_residual(xᵢ, yᵢ, tᵢ)|²
+        // where BC_residual depends on boundary condition type.
+        //
+        // For Dirichlet: BC_residual = u_model - u_prescribed
+        // For Neumann: BC_residual = ∂u_model/∂n - (∂u/∂n)_prescribed
+        // For Robin: BC_residual = αu_model + β(∂u_model/∂n) - γ
+        //
+        // VALIDATION CRITERIA:
+        // - Test: Model satisfying Dirichlet u=0 on all boundaries → ε_BC < 1e-6
+        // - Test: Model with u=sin(πx) on y=0, evaluate BC error
+        // - Test: Neumann BC ∂u/∂n=1 → verify gradient computation accuracy
+        // - Convergence: BC error decreases with model training epochs
+        //
+        // REFERENCES:
+        // - Raissi et al., "Physics-informed neural networks" (boundary condition handling)
+        // - Wang et al., "Understanding and mitigating gradient flow pathologies in physics-informed neural networks" (2021)
+        //
+        // ESTIMATED EFFORT: 8-12 hours
+        // - Implementation: 6-8 hours (BC parsing, residual computation, sampling)
+        // - Testing: 2-3 hours (all BC types, edge cases)
+        // - Documentation: 1 hour
+        //
+        // DEPENDENCIES:
+        // - Requires gradient computation infrastructure (already available)
+        // - Needs BoundaryCondition2D to carry prescribed function values (may need struct enhancement)
+        //
+        // ASSIGNED: Sprint 212 (Transfer Learning Enhancement)
+        // PRIORITY: P1 (Research feature - transfer learning BC compatibility assessment)
+
         // Simplified boundary condition evaluation
         // In practice, this would evaluate the specific boundary condition type
         Err(KwaversError::NotImplemented(

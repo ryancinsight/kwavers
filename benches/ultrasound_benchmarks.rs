@@ -206,7 +206,14 @@ fn bench_clinical_workflow(c: &mut Criterion) {
             // Reconstruct elasticity
             let elasticity_map = swe.reconstruct_elasticity(&displacement).unwrap();
 
-            // Clinical analysis (simplified)
+            // TODO: SIMPLIFIED BENCHMARK - basic statistics only, not clinical workflow
+            // Real clinical analysis requires:
+            // - ROI (Region of Interest) selection and segmentation
+            // - Lesion detection and boundary delineation
+            // - Multi-parameter analysis (stiffness, strain ratio, dispersion)
+            // - Clinical reporting with diagnostic thresholds
+            // - Quality metrics (SNR, CNR, confidence intervals)
+            // Current: mean/std only for benchmark timing
             let mean_stiffness = elasticity_map.youngs_modulus.mean().unwrap();
             let std_stiffness = {
                 let variance = elasticity_map

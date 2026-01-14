@@ -212,10 +212,10 @@ impl MarmottantShellProperties {
     pub fn sono_vue(radius_equilibrium: f64) -> KwaversResult<Self> {
         Self::new(
             radius_equilibrium,
-            0.5,  // N/m
+            0.5,    // N/m
             0.8e-9, // Pa·s
-            0.85, // 15% compression to buckle
-            1.6,  // 60% expansion to rupture
+            0.85,   // 15% compression to buckle
+            1.6,    // 60% expansion to rupture
         )
     }
 
@@ -223,10 +223,10 @@ impl MarmottantShellProperties {
     pub fn definity(radius_equilibrium: f64) -> KwaversResult<Self> {
         Self::new(
             radius_equilibrium,
-            1.0,  // N/m (stiffer)
+            1.0,    // N/m (stiffer)
             1.2e-9, // Pa·s
-            0.90, // 10% compression to buckle
-            1.8,  // 80% expansion to rupture
+            0.90,   // 10% compression to buckle
+            1.8,    // 80% expansion to rupture
         )
     }
 
@@ -234,10 +234,10 @@ impl MarmottantShellProperties {
     pub fn drug_delivery(radius_equilibrium: f64) -> KwaversResult<Self> {
         Self::new(
             radius_equilibrium,
-            0.3,  // N/m (weak)
+            0.3,    // N/m (weak)
             0.5e-9, // Pa·s
-            0.80, // 20% compression to buckle
-            1.4,  // 40% expansion to rupture (easy to break)
+            0.80,   // 20% compression to buckle
+            1.4,    // 40% expansion to rupture (easy to break)
         )
     }
 

@@ -44,7 +44,10 @@ impl MultiModalFusion {
     }
 
     /// Register photoacoustic data for fusion
-    pub fn register_photoacoustic(&mut self, reconstructed_image: &Array3<f64>) -> KwaversResult<()> {
+    pub fn register_photoacoustic(
+        &mut self,
+        reconstructed_image: &Array3<f64>,
+    ) -> KwaversResult<()> {
         let registered_data = RegisteredModality {
             data: reconstructed_image.clone(),
             quality_score: quality::compute_pa_quality(reconstructed_image),

@@ -214,6 +214,59 @@ pub fn quasi_static_residual<B: AutodiffBackend>(
     _sigma: f64,
     _physics_params: &PhysicsParameters,
 ) -> Tensor<B, 2> {
+    // TODO_AUDIT: P1 - PINN Electromagnetic Quasi-Static Residual - Stub Implementation
+    //
+    // PROBLEM:
+    // This function returns zero residuals, effectively bypassing quasi-static Maxwell equation
+    // enforcement in PINN training for electromagnetic problems.
+    //
+    // IMPACT:
+    // - PINN cannot learn quasi-static electromagnetic field distributions
+    // - Training loss components related to quasi-static physics are always zero
+    // - No enforcement of ∇×E = -∂B/∂t and ∇×H = J + ∂D/∂t in low-frequency regime
+    // - Blocks applications: eddy current simulation, transformer modeling, ELF field computation
+    // - Severity: P1 (research/advanced feature, not production-critical)
+    //
+    // REQUIRED IMPLEMENTATION:
+    // 1. Compute E and H fields from model outputs (or through coupled forward passes)
+    // 2. Compute spatial derivatives using autodiff:
+    //    - ∇×E for Faraday's law residual
+    //    - ∇×H for Ampère's law residual
+    // 3. Compute time derivatives ∂B/∂t and ∂D/∂t using autodiff
+    // 4. Form quasi-static Maxwell residuals:
+    //    R_E = ∇×E + ∂B/∂t
+    //    R_H = ∇×H - J - ∂D/∂t
+    // 5. Return combined residual norm or concatenated residuals
+    //
+    // MATHEMATICAL SPECIFICATION:
+    // Quasi-static Maxwell equations in 2D (Ez, Hz modes):
+    //   ∂Ez/∂y - ∂Ey/∂z = -μ ∂Hz/∂t     (Faraday's law, z-component)
+    //   ∂Hz/∂y - ∂Hy/∂z = Jz + ε ∂Ez/∂t  (Ampère's law, z-component)
+    // For 2D problems, assume Ez(x,y,t) and Hz(x,y,t) are primary fields.
+    //
+    // VALIDATION CRITERIA:
+    // - Property test: Residual should converge to zero for analytical quasi-static solutions
+    // - Test case: Parallel-plate capacitor with known E field distribution
+    // - Test case: Solenoid with known H field distribution
+    // - Convergence: L2 norm of residual < 1e-3 after 1000 training epochs on analytical solution
+    //
+    // REFERENCES:
+    // - Jackson, J.D., "Classical Electrodynamics" (3rd ed.), Chapter 5: Magnetostatics, Chapter 6: Time-Varying Fields
+    // - Griffiths, D.J., "Introduction to Electrodynamics" (4th ed.), Chapter 7: Electrodynamics
+    // - Raissi et al., "Physics-informed neural networks: A deep learning framework for solving forward and inverse problems"
+    //
+    // ESTIMATED EFFORT: 12-16 hours
+    // - Implementation: 8-10 hours (curl operators, time derivatives, residual assembly)
+    // - Testing: 3-4 hours (analytical validation cases)
+    // - Documentation: 1-2 hours
+    //
+    // DEPENDENCIES:
+    // - Requires proper gradient computation infrastructure (already available via Burn autodiff)
+    // - May need coupled field solver if Ez and Hz are separate model outputs
+    //
+    // ASSIGNED: Sprint 212-213 (Research Features)
+    // PRIORITY: P1 (Advanced electromagnetic simulation capability)
+
     // Assume outputs are coupled [Ez, Hz]
     // Note: In real setup, we would need to access the model to compute gradients properly.
     // But here we are given outputs. Wait, we cannot compute derivatives w.r.t x,y,t
@@ -252,6 +305,69 @@ pub fn wave_propagation_residual<B: AutodiffBackend>(
     sigma: f64,
     physics_params: &PhysicsParameters,
 ) -> Tensor<B, 2> {
+    // TODO_AUDIT: P1 - PINN Electromagnetic Wave Propagation Residual - Stub Implementation
+    //
+    // PROBLEM:
+    // This function returns zero residuals, completely bypassing electromagnetic wave equation
+    // enforcement in PINN training for time-dependent Maxwell problems.
+    //
+    // IMPACT:
+    // - PINN cannot learn electromagnetic wave propagation dynamics
+    // - Training loss for wave physics is always zero (no learning signal)
+    // - No enforcement of full Maxwell equations: ∇×E = -∂B/∂t, ∇×H = J + ∂D/∂t, ∇·D = ρ, ∇·B = 0
+    // - Blocks applications: waveguide simulation, antenna radiation, RF propagation, photonics
+    // - Severity: P1 (research/advanced feature, not production-critical)
+    //
+    // REQUIRED IMPLEMENTATION:
+    // 1. Compute E(x,y,t) and H(x,y,t) fields from model outputs or coupled models
+    // 2. Compute spatial curl operators using autodiff:
+    //    - ∇×E = (∂Ez/∂y - ∂Ey/∂z, ∂Ex/∂z - ∂Ez/∂x, ∂Ey/∂x - ∂Ex/∂y)
+    //    - ∇×H = (∂Hz/∂y - ∂Hy/∂z, ∂Hx/∂z - ∂Hz/∂x, ∂Hy/∂x - ∂Hx/∂y)
+    // 3. Compute time derivatives ∂E/∂t and ∂H/∂t using autodiff
+    // 4. Form Maxwell equation residuals:
+    //    R_Faraday = ∇×E + μ ∂H/∂t
+    //    R_Ampere = ∇×H - σE - ε ∂E/∂t - J_ext
+    // 5. Optionally enforce Gauss's laws: ∇·D = ρ, ∇·B = 0
+    // 6. Return combined residual (e.g., L2 norm or concatenated components)
+    //
+    // MATHEMATICAL SPECIFICATION:
+    // Full time-dependent Maxwell equations in 2D (TE/TM modes):
+    //   TE mode (Ez, Hx, Hy):
+    //     ∂Hz/∂y - ∂Hy/∂x = σEz + ε ∂Ez/∂t + Jz
+    //     ∂Ez/∂x = -μ ∂Hy/∂t
+    //     ∂Ez/∂y =  μ ∂Hx/∂t
+    //   TM mode (Hz, Ex, Ey):
+    //     ∂Ey/∂x - ∂Ex/∂y = σ_m Hz + μ ∂Hz/∂t + Mz
+    //     ∂Hz/∂x = ε ∂Ey/∂t
+    //     ∂Hz/∂y = -ε ∂Ex/∂t
+    //
+    // VALIDATION CRITERIA:
+    // - Property test: Residual → 0 for analytical plane wave solutions
+    // - Test case: TE₁₀ mode in rectangular waveguide (analytical dispersion relation)
+    // - Test case: Gaussian pulse propagation in free space (verify c = 1/√(με))
+    // - Test case: Reflection/transmission at dielectric interface (verify Fresnel coefficients)
+    // - Convergence: Residual L2 norm < 1e-3 for analytical solutions after training
+    // - Energy conservation: ∂/∂t ∫(εE²/2 + μH²/2)dV + ∫σE²dV + ∫S·n̂dA = 0 (Poynting theorem)
+    //
+    // REFERENCES:
+    // - Jackson, J.D., "Classical Electrodynamics" (3rd ed.), Chapter 7: Plane Electromagnetic Waves
+    // - Pozar, D.M., "Microwave Engineering" (4th ed.), Chapter 1: Electromagnetic Theory
+    // - Taflove & Hagness, "Computational Electrodynamics: The Finite-Difference Time-Domain Method" (3rd ed.)
+    // - Raissi et al., "Physics-informed neural networks"
+    //
+    // ESTIMATED EFFORT: 16-20 hours
+    // - Implementation: 10-12 hours (curl operators, time derivatives, mode handling, residual assembly)
+    // - Testing: 4-6 hours (waveguide modes, plane waves, interface validation)
+    // - Documentation: 2 hours
+    //
+    // DEPENDENCIES:
+    // - Requires proper vector field autodiff (curl, divergence operators)
+    // - May need separate models for E and H fields, or coupled multi-output model
+    // - Coordinate system handling for 2D mode decomposition (TE/TM)
+    //
+    // ASSIGNED: Sprint 212-213 (Research Features)
+    // PRIORITY: P1 (Advanced electromagnetic wave simulation capability)
+
     // Similar to quasi-static, this requires computing derivatives.
     // I will implement a placeholder that returns a zero tensor,
     // effectively matching the behavior of the "simplified" original methods.
@@ -266,6 +382,11 @@ pub fn wave_propagation_residual<B: AutodiffBackend>(
 }
 
 /// Compute charge density (placeholder)
+///
+/// TODO_AUDIT: P2 - Charge Density Computation - Placeholder
+/// Returns zero charge density. Real implementation would compute ρ = ∇·D from electric field.
+/// Required for: Space charge effects, plasma simulation, semiconductor device modeling.
+/// Effort: 4-6 hours. Priority: P2 (low - typically zero in dielectrics).
 pub fn compute_charge_density<B: AutodiffBackend>(
     x: &Tensor<B, 2>,
     _y: &Tensor<B, 2>,
@@ -275,6 +396,11 @@ pub fn compute_charge_density<B: AutodiffBackend>(
 }
 
 /// Compute current density z (placeholder)
+///
+/// TODO_AUDIT: P2 - Current Density Computation - Placeholder
+/// Returns zero current density. Real implementation would compute J from conductivity and E field,
+/// or from external sources. Required for: Driven systems, antenna excitation, current source modeling.
+/// Effort: 4-6 hours. Priority: P2 (moderate - often specified as boundary condition).
 pub fn compute_current_density_z<B: AutodiffBackend>(
     x: &Tensor<B, 2>,
     _y: &Tensor<B, 2>,

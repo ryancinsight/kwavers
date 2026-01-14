@@ -14,6 +14,15 @@ use num_complex::Complex64;
 use std::f64::consts::PI;
 
 /// Simplified Rayleigh-Sommerfeld implementation for comparison
+///
+/// # TODO: SIMPLIFIED BENCHMARK - NOT PRODUCTION CODE
+/// This is a reference implementation for O(n²) complexity comparison only.
+/// Real Rayleigh-Sommerfeld integral requires:
+/// - Full spatial integration over transducer surface
+/// - Green's function: G(r) = (1/4π) * exp(ikr)/r with obliquity factor
+/// - Proper handling of near-field, far-field, and transition regions
+/// - Element subdivision for accurate numerical integration
+/// This simplified version is for benchmark timing purposes to demonstrate FNM speedup.
 struct RayleighSommerfeldSolver {
     transducer: RectangularTransducer,
     c0: f64,

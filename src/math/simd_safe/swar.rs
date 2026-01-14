@@ -6,10 +6,8 @@ pub fn add_fields_swar(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) 
     if let (Some(a_slice), Some(b_slice), Some(out_slice)) =
         (a.as_slice(), b.as_slice(), out.as_slice_mut())
     {
-        for ((a_val, b_val), out_val) in a_slice
-            .iter()
-            .zip(b_slice.iter())
-            .zip(out_slice.iter_mut())
+        for ((a_val, b_val), out_val) in
+            a_slice.iter().zip(b_slice.iter()).zip(out_slice.iter_mut())
         {
             *out_val = a_val + b_val;
         }
@@ -37,10 +35,8 @@ pub fn multiply_fields_swar(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f
     if let (Some(a_slice), Some(b_slice), Some(out_slice)) =
         (a.as_slice(), b.as_slice(), out.as_slice_mut())
     {
-        for ((a_val, b_val), out_val) in a_slice
-            .iter()
-            .zip(b_slice.iter())
-            .zip(out_slice.iter_mut())
+        for ((a_val, b_val), out_val) in
+            a_slice.iter().zip(b_slice.iter()).zip(out_slice.iter_mut())
         {
             *out_val = a_val * b_val;
         }
@@ -51,10 +47,8 @@ pub fn subtract_fields_swar(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f
     if let (Some(a_slice), Some(b_slice), Some(out_slice)) =
         (a.as_slice(), b.as_slice(), out.as_slice_mut())
     {
-        for ((a_val, b_val), out_val) in a_slice
-            .iter()
-            .zip(b_slice.iter())
-            .zip(out_slice.iter_mut())
+        for ((a_val, b_val), out_val) in
+            a_slice.iter().zip(b_slice.iter()).zip(out_slice.iter_mut())
         {
             *out_val = a_val - b_val;
         }

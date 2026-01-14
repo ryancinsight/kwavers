@@ -155,8 +155,8 @@ impl DrugPayload {
 
         // Set permeability based on loading mode
         let (baseline_permeability, strain_enhancement_factor) = match loading_mode {
-            DrugLoadingMode::SurfaceAttached => (0.1, 2.0),  // Easy release, moderate enhancement
-            DrugLoadingMode::ShellEmbedded => (0.05, 5.0),   // Moderate release, strong enhancement
+            DrugLoadingMode::SurfaceAttached => (0.1, 2.0), // Easy release, moderate enhancement
+            DrugLoadingMode::ShellEmbedded => (0.05, 5.0),  // Moderate release, strong enhancement
             DrugLoadingMode::CoreEncapsulated => (0.01, 10.0), // Slow release, very strong enhancement
         };
 
@@ -176,7 +176,7 @@ impl DrugPayload {
     /// Doxorubicin (chemotherapy drug) typical loading: 10-100 μg/mL
     pub fn doxorubicin(bubble_volume: f64) -> KwaversResult<Self> {
         const CONCENTRATION: f64 = 50.0; // kg/m³ (50 μg/mL)
-        const RELEASE_RATE: f64 = 0.01;  // 1/s (fast release)
+        const RELEASE_RATE: f64 = 0.01; // 1/s (fast release)
 
         Self::new(
             CONCENTRATION,
@@ -365,13 +365,8 @@ mod tests {
     fn test_create_drug_payload() {
         let volume = 1e-15; // 1 femtoliter
         let concentration = 50.0; // kg/m³
-        let payload = DrugPayload::new(
-            concentration,
-            volume,
-            DrugLoadingMode::ShellEmbedded,
-            0.01,
-        )
-        .unwrap();
+        let payload =
+            DrugPayload::new(concentration, volume, DrugLoadingMode::ShellEmbedded, 0.01).unwrap();
 
         assert_eq!(payload.concentration, concentration);
         assert_eq!(payload.released_mass, 0.0);
@@ -423,7 +418,8 @@ mod tests {
     #[test]
     fn test_release_no_permeability() {
         let volume = 1e-15;
-        let mut payload = DrugPayload::new(50.0, volume, DrugLoadingMode::CoreEncapsulated, 0.0).unwrap();
+        let mut payload =
+            DrugPayload::new(50.0, volume, DrugLoadingMode::CoreEncapsulated, 0.0).unwrap();
 
         let released = payload
             .update_release(volume, ShellState::Elastic, 0.0, 1.0)
@@ -439,13 +435,8 @@ mod tests {
         let volume = 1e-15;
         let concentration = 100.0;
         let k = 0.1; // 1/s
-        let mut payload = DrugPayload::new(
-            concentration,
-            volume,
-            DrugLoadingMode::SurfaceAttached,
-            k,
-        )
-        .unwrap();
+        let mut payload =
+            DrugPayload::new(concentration, volume, DrugLoadingMode::SurfaceAttached, k).unwrap();
 
         let dt = 1.0; // 1 second
         let permeability = payload.permeability_factor(ShellState::Elastic, 0.0);
@@ -463,13 +454,8 @@ mod tests {
     fn test_release_mass_conservation() {
         let volume = 1e-15;
         let concentration = 100.0;
-        let mut payload = DrugPayload::new(
-            concentration,
-            volume,
-            DrugLoadingMode::ShellEmbedded,
-            0.1,
-        )
-        .unwrap();
+        let mut payload =
+            DrugPayload::new(concentration, volume, DrugLoadingMode::ShellEmbedded, 0.1).unwrap();
 
         let initial_mass = payload.initial_mass;
 
@@ -490,13 +476,8 @@ mod tests {
     #[test]
     fn test_release_complete_on_rupture() {
         let volume = 1e-15;
-        let mut payload = DrugPayload::new(
-            100.0,
-            volume,
-            DrugLoadingMode::CoreEncapsulated,
-            0.5,
-        )
-        .unwrap();
+        let mut payload =
+            DrugPayload::new(100.0, volume, DrugLoadingMode::CoreEncapsulated, 0.5).unwrap();
 
         // Ruptured shell -> full permeability
         // Run enough timesteps to achieve >99% release
@@ -520,7 +501,8 @@ mod tests {
     #[test]
     fn test_release_fraction() {
         let volume = 1e-15;
-        let mut payload = DrugPayload::new(100.0, volume, DrugLoadingMode::ShellEmbedded, 0.1).unwrap();
+        let mut payload =
+            DrugPayload::new(100.0, volume, DrugLoadingMode::ShellEmbedded, 0.1).unwrap();
 
         assert_eq!(payload.release_fraction(), 0.0);
 
@@ -539,7 +521,8 @@ mod tests {
     #[test]
     fn test_is_depleted() {
         let volume = 1e-15;
-        let mut payload = DrugPayload::new(1e-9, volume, DrugLoadingMode::ShellEmbedded, 1.0).unwrap();
+        let mut payload =
+            DrugPayload::new(1e-9, volume, DrugLoadingMode::ShellEmbedded, 1.0).unwrap();
 
         assert!(!payload.is_depleted());
 
@@ -562,14 +545,8 @@ mod tests {
 
     #[test]
     fn test_loading_mode_display() {
-        assert_eq!(
-            format!("{}", DrugLoadingMode::SurfaceAttached),
-            "Surface"
-        );
+        assert_eq!(format!("{}", DrugLoadingMode::SurfaceAttached), "Surface");
         assert_eq!(format!("{}", DrugLoadingMode::ShellEmbedded), "Shell");
-        assert_eq!(
-            format!("{}", DrugLoadingMode::CoreEncapsulated),
-            "Core"
-        );
+        assert_eq!(format!("{}", DrugLoadingMode::CoreEncapsulated), "Core");
     }
 }

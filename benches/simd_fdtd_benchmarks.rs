@@ -97,8 +97,13 @@ fn bench_simd_vs_scalar(c: &mut Criterion) {
             &(pressure, divergence, density, sound_speed),
             |b, (p, div, rho, c)| {
                 b.iter(|| {
-                    // This would use the actual SIMD FDTD implementation
-                    // For now, using scalar as placeholder until proper SIMD integration
+                    // TODO: SIMPLIFIED BENCHMARK - SIMD implementation not integrated
+                    // This uses scalar fallback for timing comparison only.
+                    // Real SIMD implementation requires:
+                    // - Vectorized pressure update using SIMD intrinsics (AVX2/AVX-512)
+                    // - Aligned memory layout for optimal SIMD load/store
+                    // - Proper handling of array boundaries and remainder elements
+                    // Current: scalar_pressure_update as placeholder
                     let result = scalar_pressure_update(p.clone(), div, rho, c, dt);
                     black_box(result);
                 });

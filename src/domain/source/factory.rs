@@ -129,11 +129,35 @@ impl SourceFactory {
                 };
                 Ok(Box::new(PistonSource::new(piston_config, signal)))
             }
-            // TODO: Implement LinearArray, MatrixArray, Focused, Custom
+            // TODO: INCOMPLETE IMPLEMENTATION - Missing Source Models
+            // The following source models are not yet implemented:
+            //
+            // 1. LinearArray: Linear array of transducer elements
+            //    - Requires: Element positions, element size, steering angles
+            //    - Physics: Array factor calculation, element directivity
+            //    - Estimated effort: 8-10 hours
+            //
+            // 2. MatrixArray: 2D matrix array of elements
+            //    - Requires: Element grid layout, steering in 2D
+            //    - Physics: 2D array factor, elevation/azimuth control
+            //    - Estimated effort: 10-12 hours
+            //
+            // 3. Focused: Focused transducer with geometric/electronic focusing
+            //    - Requires: Focal point, F-number, aperture
+            //    - Physics: Rayleigh-Sommerfeld diffraction, focal gain
+            //    - Estimated effort: 6-8 hours
+            //
+            // 4. Custom: User-defined source pattern
+            //    - Requires: Custom field calculation callback/function
+            //    - Architecture: Trait-based extension point
+            //    - Estimated effort: 4-6 hours
+            //
+            // See backlog.md item #7 for full specifications
+            // Total effort: 28-36 hours for complete implementation
             _ => Err(ConfigError::InvalidValue {
                 parameter: "model".to_string(),
                 value: format!("{:?}", config.model),
-                constraint: "Source model not currently supported by factory".to_string(),
+                constraint: "Source model not currently supported by factory - TODO: Implement LinearArray, MatrixArray, Focused, Custom".to_string(),
             }
             .into()),
         }

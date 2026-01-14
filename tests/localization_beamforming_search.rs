@@ -15,7 +15,8 @@
 //!   is the reference sensor at index 0 (`SensorIndex(0)`), which is the SSOT recommended default.
 //! - **B (narrowband/adaptive)** is covered by separate tests (Capon/MVDR spatial spectrum), not here.
 
-use kwavers::domain::sensor::beamforming::{BeamformingCoreConfig, TimeDomainDelayReference};
+use kwavers::domain::sensor::beamforming::time_domain::DelayReference;
+use kwavers::domain::sensor::beamforming::BeamformingCoreConfig;
 use kwavers::domain::sensor::localization::array::{ArrayGeometry, Sensor};
 use kwavers::domain::sensor::localization::{
     BeamformingLocalizationInput, LocalizationBeamformSearchConfig, LocalizationBeamformingMethod,
@@ -52,7 +53,7 @@ fn synth_impulse_sensor_data_with_delay_reference(
     source: Position,
     sample_rate: f64,
     n_samples: usize,
-    delay_reference: TimeDomainDelayReference,
+    delay_reference: DelayReference,
     emission_index: usize,
 ) -> Array3<f64> {
     // Shape: (n_sensors, 1, n_samples)
@@ -71,13 +72,9 @@ fn synth_impulse_sensor_data_with_delay_reference(
 
     // Resolve τ_ref according to the explicit policy (match SSOT behavior).
     let tau_ref = match delay_reference {
-        TimeDomainDelayReference::SensorIndex(idx) => delays_s[idx],
-        TimeDomainDelayReference::EarliestArrival => {
-            delays_s.iter().copied().fold(f64::INFINITY, f64::min)
-        }
-        TimeDomainDelayReference::LatestArrival => {
-            delays_s.iter().copied().fold(f64::NEG_INFINITY, f64::max)
-        }
+        DelayReference::SensorIndex(idx) => delays_s[idx],
+        DelayReference::EarliestArrival => delays_s.iter().copied().fold(f64::INFINITY, f64::min),
+        DelayReference::LatestArrival => delays_s.iter().copied().fold(f64::NEG_INFINITY, f64::max),
     };
 
     // Emit impulses at t = emission_index + round((τ_i - τ_ref) * fs).
@@ -108,7 +105,7 @@ fn beamforming_localization_finds_source_near_true_position() {
     let true_source = Position::new(0.0, 0.01, 0.0);
 
     // Field-jargon correct default for SRP-DAS: fixed delay datum at reference sensor 0.
-    let delay_reference = TimeDomainDelayReference::recommended_default();
+    let delay_reference = DelayReference::recommended_default();
 
     // Place the emission away from the start so relative delays stay in-bounds.
     let sensor_data = synth_impulse_sensor_data_with_delay_reference(
@@ -176,7 +173,7 @@ fn beamforming_localization_rejects_sampling_frequency_mismatch() {
     let array = make_array(sound_speed);
     let true_source = Position::new(0.0, 0.01, 0.0);
 
-    let delay_reference = TimeDomainDelayReference::recommended_default();
+    let delay_reference = DelayReference::recommended_default();
     let sensor_data = synth_impulse_sensor_data_with_delay_reference(
         &array,
         true_source,

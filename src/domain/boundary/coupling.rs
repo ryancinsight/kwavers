@@ -401,11 +401,66 @@ impl SchwarzBoundary {
                 });
             }
             TransmissionCondition::Neumann => {
+                // TODO_AUDIT: P1 - Schwarz Neumann Transmission - Simplified Zero Flux
+                //
+                // PROBLEM:
+                // Assumes zero flux (∂u/∂n = 0) instead of computing actual normal gradient
+                // for flux continuity across domain interface.
+                //
+                // IMPACT:
+                // - Incorrect flux transmission between subdomains
+                // - Breaks conservation laws at interfaces (mass, energy, momentum)
+                // - Domain decomposition convergence degraded
+                // - Severity: P1 (accuracy issue for domain decomposition)
+                //
+                // REQUIRED IMPLEMENTATION:
+                // 1. Compute ∂u/∂n on both sides using centered differences
+                // 2. Apply flux continuity: κ₁(∂u₁/∂n) = κ₂(∂u₂/∂n)
+                // 3. Update interface values to satisfy flux matching
+                //
+                // ESTIMATED EFFORT: 4-6 hours
+                // ASSIGNED: Sprint 211
+                // PRIORITY: P1
+
                 // Flux continuity - would need gradient computation
                 // Simplified: assume zero flux for now
                 // Real implementation would compute ∂u/∂n
             }
             TransmissionCondition::Robin { alpha, beta: _ } => {
+                // TODO_AUDIT: P1 - Schwarz Boundary Robin Condition - Simplified Implementation
+                //
+                // PROBLEM:
+                // Current implementation uses simplified weighted average that ignores β parameter
+                // and doesn't properly implement Robin boundary condition ∂u/∂n + αu = β.
+                //
+                // IMPACT:
+                // - Incorrect domain coupling for Robin-type transmission conditions
+                // - Parameter β is ignored, breaking physical accuracy
+                // - No gradient (∂u/∂n) computation, only field value averaging
+                // - Blocks accurate multi-physics coupling with surface reactions
+                // - Severity: P1 (domain decomposition accuracy)
+                //
+                // REQUIRED IMPLEMENTATION:
+                // 1. Compute normal gradient ∂u/∂n at interface using finite differences
+                // 2. Apply proper Robin condition: ∂u/∂n + αu = β
+                // 3. Solve for interface value: u_interface = (β - ∂u_neighbor/∂n) / α
+                // 4. Update both sides of interface consistently
+                //
+                // MATHEMATICAL SPECIFICATION:
+                // Robin condition at interface Γ between Ω₁ and Ω₂:
+                //   ∂u₁/∂n + α₁u₁ = β₁  on Γ (from Ω₁ side)
+                //   ∂u₂/∂n + α₂u₂ = β₂  on Γ (from Ω₂ side)
+                // Coupling: Ensure continuity or prescribed jump conditions.
+                //
+                // VALIDATION CRITERIA:
+                // - Test: 1D heat equation with Robin BC at x=L/2
+                //   ∂T/∂x + αT = β, verify T(L/2) matches analytical steady-state
+                // - Convergence: Error < 1e-6 for α ∈ [0.1, 10], β ∈ [0, 100]
+                //
+                // ESTIMATED EFFORT: 6-8 hours
+                // ASSIGNED: Sprint 211 (Domain Decomposition Enhancement)
+                // PRIORITY: P1
+
                 // Robin condition: weighted average
                 // Simplified implementation
                 if alpha > 0.0 {
@@ -443,6 +498,61 @@ impl BoundaryCondition for MaterialInterface {
         _time_step: usize,
         _dt: f64,
     ) -> KwaversResult<()> {
+        // TODO_AUDIT: P0 - Material Interface Boundary Condition - Stub Implementation
+        //
+        // PROBLEM:
+        // This method computes reflection/transmission coefficients but doesn't apply them
+        // to the field. Material interface physics (acoustic/optical/EM) is not enforced.
+        //
+        // IMPACT:
+        // - No wave reflection/transmission at material boundaries
+        // - Acoustic impedance mismatches are ignored
+        // - Blocks accurate multi-material simulations (tissue layers, water/tissue, bone/soft tissue)
+        // - Safety calculations invalid (energy deposition at interfaces)
+        // - Severity: P0 (production-blocking for multi-material domains)
+        //
+        // REQUIRED IMPLEMENTATION:
+        // 1. Identify interface voxels from grid geometry/material map
+        // 2. For each interface point:
+        //    a. Determine incident wave direction and amplitude
+        //    b. Compute reflected amplitude: A_r = R · A_i
+        //    c. Compute transmitted amplitude: A_t = T · A_i
+        //    d. Update field: u = u_incident + u_reflected (on side 1)
+        //                     u = u_transmitted (on side 2)
+        // 3. Ensure energy conservation: |R|² + |T|² = 1 (lossless interface)
+        // 4. Handle oblique incidence with Snell's law for refraction angles
+        //
+        // MATHEMATICAL SPECIFICATION:
+        // Acoustic interface conditions (normal incidence):
+        //   Pressure continuity: p₁ = p₂ at interface
+        //   Velocity continuity: v₁ = v₂ at interface
+        //   Reflection coefficient: R = (Z₂ - Z₁)/(Z₂ + Z₁)
+        //   Transmission coefficient: T = 2Z₂/(Z₂ + Z₁)
+        // where Z = ρc is acoustic impedance.
+        //
+        // Oblique incidence (Snell's law):
+        //   sin(θ₁)/c₁ = sin(θ₂)/c₂
+        //   R(θ) and T(θ) depend on incident angle and polarization
+        //
+        // VALIDATION CRITERIA:
+        // - Test: Normal incidence on water/tissue interface
+        //   Z_water ≈ 1.5 MRayl, Z_tissue ≈ 1.6 MRayl → R ≈ 0.032, T ≈ 0.968
+        // - Test: Total internal reflection at θ > θ_critical
+        // - Energy conservation: Verify ∫(I_incident)dA = ∫(I_reflected + I_transmitted)dA
+        // - Convergence: Interface error < 1e-4 for Δx → 0
+        //
+        // REFERENCES:
+        // - Kinsler et al., "Fundamentals of Acoustics" (4th ed.), Chapter 5: Reflection and Transmission
+        // - IEC 61391-1:2006 - Ultrasonics pulse-echo scanners (material interface handling)
+        //
+        // ESTIMATED EFFORT: 12-16 hours
+        // - Implementation: 8-10 hours (interface detection, coefficient application, oblique angles)
+        // - Testing: 3-4 hours (normal/oblique incidence, multi-layer media)
+        // - Documentation: 1-2 hours
+        //
+        // ASSIGNED: Sprint 210 (Material Interface Physics)
+        // PRIORITY: P0 (Production-blocking for multi-material acoustic simulations)
+
         // Apply material interface conditions
         // This is a simplified implementation - real version would need
         // proper interpolation and transmission conditions

@@ -48,7 +48,7 @@
 //! - [`optics`]: Optical fluence computation using diffusion approximation
 //! - [`acoustics`]: Acoustic pressure generation and wave propagation
 //! - [`reconstruction`]: Image reconstruction algorithms (UBP, time-reversal)
-//! - [`types`]: Type definitions and re-exports from clinical module
+//! - [`types`]: Type definitions and re-exports from domain module
 //!
 //! ## Usage Example
 //!
@@ -56,7 +56,7 @@
 //! use kwavers::simulation::modalities::photoacoustic::PhotoacousticSimulator;
 //! use kwavers::domain::grid::Grid;
 //! use kwavers::domain::medium::homogeneous::HomogeneousMedium;
-//! use kwavers::clinical::imaging::photoacoustic::PhotoacousticParameters;
+//! use kwavers::domain::imaging::photoacoustic::PhotoacousticParameters;
 //!
 //! # fn main() -> kwavers::core::error::KwaversResult<()> {
 //! // Create computational grid
@@ -92,7 +92,7 @@
 //! # use kwavers::simulation::modalities::photoacoustic::PhotoacousticSimulator;
 //! # use kwavers::domain::grid::Grid;
 //! # use kwavers::domain::medium::homogeneous::HomogeneousMedium;
-//! # use kwavers::clinical::imaging::photoacoustic::PhotoacousticParameters;
+//! # use kwavers::domain::imaging::photoacoustic::PhotoacousticParameters;
 //! # fn main() -> kwavers::core::error::KwaversResult<()> {
 //! # let grid = Grid::new(32, 32, 16, 0.001, 0.001, 0.001)?;
 //! # let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);

@@ -28,8 +28,8 @@
 
 use super::core::PhotoacousticSimulator;
 use super::reconstruction;
-use crate::domain::imaging::photoacoustic::PhotoacousticOpticalProperties;
 use crate::domain::grid::Grid;
+use crate::domain::imaging::photoacoustic::PhotoacousticOpticalProperties;
 use crate::domain::medium::homogeneous::HomogeneousMedium;
 use approx::assert_relative_eq;
 use ndarray::Array3;
@@ -340,8 +340,7 @@ fn test_spherical_spreading_correction() {
 fn test_multi_wavelength_fluence() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-    let mut parameters =
-        crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
+    let mut parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     parameters.wavelengths = vec![700.0, 750.0, 800.0];
 
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
@@ -369,8 +368,7 @@ fn test_multi_wavelength_fluence() {
 fn test_multi_wavelength_simulation() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-    let mut parameters =
-        crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
+    let mut parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     parameters.wavelengths = vec![700.0, 800.0];
 
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();

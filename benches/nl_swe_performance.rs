@@ -111,10 +111,15 @@ pub fn bench_nonlinear_inversion(c: &mut Criterion) {
 
     let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
 
-    let harmonic_ratio_inv = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio));
-    let least_squares_inv =
-        NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::NonlinearLeastSquares));
-    let bayesian_inv = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::BayesianInversion));
+    let harmonic_ratio_inv = NonlinearInversion::new(NonlinearInversionConfig::new(
+        NonlinearInversionMethod::HarmonicRatio,
+    ));
+    let least_squares_inv = NonlinearInversion::new(NonlinearInversionConfig::new(
+        NonlinearInversionMethod::NonlinearLeastSquares,
+    ));
+    let bayesian_inv = NonlinearInversion::new(NonlinearInversionConfig::new(
+        NonlinearInversionMethod::BayesianInversion,
+    ));
 
     c.bench_function("harmonic_ratio_inversion", |b| {
         b.iter(|| black_box(harmonic_ratio_inv.reconstruct(&harmonic_field, &grid)))
@@ -216,10 +221,10 @@ pub fn bench_end_to_end_workflow(c: &mut Criterion) {
             let harmonic_field = detector.analyze_harmonics(&time_series, 1000.0).unwrap();
 
             // Step 4: Nonlinear inversion
-            let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio));
-            let _nonlinear_params = inversion
-                .reconstruct(&harmonic_field, &grid)
-                .unwrap();
+            let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(
+                NonlinearInversionMethod::HarmonicRatio,
+            ));
+            let _nonlinear_params = inversion.reconstruct(&harmonic_field, &grid).unwrap();
 
             black_box(())
         })

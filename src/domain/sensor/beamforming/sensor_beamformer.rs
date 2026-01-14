@@ -72,13 +72,21 @@ impl SensorBeamformer {
     ///
     /// This is hardware-specific as it depends on the exact sensor positions
     /// and assumes a specific coordinate system and timing reference.
+    ///
+    /// # TODO: INCOMPLETE IMPLEMENTATION
+    /// This method returns zero-filled placeholder values. Complete implementation requires:
+    /// - Geometric distance calculation from each sensor to each image grid point
+    /// - Time-of-flight calculation using sound_speed parameter
+    /// - Reference time correction based on array geometry
+    /// - Validation against physical constraints (causality, array aperture limits)
+    /// See backlog.md item #6 for specifications (6-8 hour effort estimate)
     pub fn calculate_delays(
         &self,
         image_grid: &Grid,
         _sound_speed: f64,
     ) -> KwaversResult<Array2<f64>> {
-        // For now, return empty delays - proper implementation needed
-        // TODO: Implement proper delay calculation
+        // TODO: Replace with proper delay calculation
+        // Current: Returns zero-filled placeholder - INVALID for production use
         Ok(Array2::zeros((
             self.sensor_positions.len(),
             image_grid.size(),
@@ -89,13 +97,23 @@ impl SensorBeamformer {
     ///
     /// Windowing may depend on array geometry, element directivity, and
     /// hardware-specific constraints.
+    ///
+    /// # TODO: INCOMPLETE IMPLEMENTATION
+    /// This method returns unmodified input - no actual windowing applied. Complete implementation requires:
+    /// - Hanning window implementation (raised cosine)
+    /// - Hamming window implementation (modified raised cosine)
+    /// - Blackman window implementation (optimal side lobe suppression)
+    /// - Rectangular window (pass-through, current behavior)
+    /// - Window coefficient calculation based on array geometry
+    /// - Element-wise multiplication of delays with window coefficients
+    /// See backlog.md item #6 for specifications (6-8 hour effort estimate)
     pub fn apply_windowing(
         &self,
         delays: &Array2<f64>,
         _window_type: WindowType,
     ) -> KwaversResult<Array2<f64>> {
-        // For now, return unmodified delays - proper windowing implementation needed
-        // TODO: Implement proper windowing functions
+        // TODO: Replace with proper windowing implementation
+        // Current: Returns unmodified input - no apodization applied (INVALID for production)
         Ok(delays.clone())
     }
 
@@ -103,13 +121,23 @@ impl SensorBeamformer {
     ///
     /// This provides hardware-specific steering that accounts for
     /// element directivity patterns and array manifold characteristics.
+    ///
+    /// # TODO: INCOMPLETE IMPLEMENTATION
+    /// This method returns identity matrix placeholder. Complete implementation requires:
+    /// - Array manifold calculation: exp(-j * 2π * f * delay(θ,φ) / c)
+    /// - Phase delays for each sensor element at given angles
+    /// - Frequency-dependent steering vector computation
+    /// - Element directivity pattern incorporation
+    /// - Validation against physical array manifold properties (unitary, Hermitian symmetry)
+    /// Mathematical basis: Van Trees (2002) "Optimum Array Processing", Chapter 2
+    /// See backlog.md item #6 for specifications (6-8 hour effort estimate)
     pub fn calculate_steering(
         &self,
         _angles: &[f64],
         _frequency: f64,
     ) -> KwaversResult<Array2<f64>> {
-        // For now, return identity matrix - proper steering vector implementation needed
-        // TODO: Implement proper steering vector calculations
+        // TODO: Replace with proper steering vector calculation
+        // Current: Returns identity matrix - INVALID for adaptive beamforming (no actual steering)
         Ok(Array2::eye(self.sensor_positions.len()))
     }
 

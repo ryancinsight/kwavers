@@ -93,7 +93,9 @@ impl TherapyModality {
     pub fn primary_mechanism(&self) -> TherapyMechanism {
         match self {
             Self::HIFU => TherapyMechanism::Thermal,
-            Self::Histotripsy | Self::BBBOpening | Self::Sonoporation => TherapyMechanism::Mechanical,
+            Self::Histotripsy | Self::BBBOpening | Self::Sonoporation => {
+                TherapyMechanism::Mechanical
+            }
             Self::LIFU | Self::Sonodynamic => TherapyMechanism::Combined,
         }
     }
@@ -129,7 +131,8 @@ impl TherapyParameters {
 
     pub fn calculate_mechanical_index(&mut self) {
         if self.frequency > 0.0 {
-            self.mechanical_index = (self.peak_negative_pressure / 1e6) / (self.frequency / 1e6).sqrt();
+            self.mechanical_index =
+                (self.peak_negative_pressure / 1e6) / (self.frequency / 1e6).sqrt();
         }
     }
 
@@ -143,4 +146,3 @@ impl TherapyParameters {
         true
     }
 }
-
