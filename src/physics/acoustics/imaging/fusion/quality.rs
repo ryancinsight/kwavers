@@ -17,11 +17,7 @@ fn calculate_image_metrics(data: &Array3<f64>) -> ImageMetrics {
         return ImageMetrics { snr: 0.0, cnr: 0.0 };
     }
 
-    let mut values: Vec<f64> = data
-        .iter()
-        .cloned()
-        .filter(|x| !x.is_nan())
-        .collect();
+    let mut values: Vec<f64> = data.iter().cloned().filter(|x| !x.is_nan()).collect();
 
     // Sort to determine signal and background regions
     values.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -37,11 +33,7 @@ fn calculate_image_metrics(data: &Array3<f64>) -> ImageMetrics {
     if count < 10 || signal_threshold_idx >= count || background_threshold_idx == 0 {
         // Fallback to simple mean/std
         let mean: f64 = values.iter().sum::<f64>() / count as f64;
-        let variance: f64 = values
-            .iter()
-            .map(|x| (x - mean).powi(2))
-            .sum::<f64>()
-            / count as f64;
+        let variance: f64 = values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / count as f64;
         let std_dev = variance.sqrt();
         let snr = if std_dev > 0.0 { mean / std_dev } else { 0.0 };
         return ImageMetrics { snr, cnr: 0.0 };

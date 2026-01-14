@@ -213,7 +213,7 @@ pub fn compute_fluence_at_wavelength(
 /// # use kwavers::domain::medium::properties::OpticalPropertyData;
 /// # fn main() -> kwavers::core::error::KwaversResult<()> {
 /// # let grid = Grid::new(32, 32, 16, 0.001, 0.001, 0.001)?;
-/// # let optical_properties = Array3::from_elem((32, 32, 16), OpticalPropertyData::default());
+/// # let optical_properties = Array3::from_elem((32, 32, 16), OpticalPropertyData::soft_tissue());
 /// let wavelengths = vec![700.0, 750.0, 800.0, 850.0]; // nm
 /// let fluence_fields = compute_multi_wavelength_fluence(
 ///     &grid,

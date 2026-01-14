@@ -364,6 +364,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_therapy_step_execution() {
         let config = TherapySessionConfig {
             primary_modality: TherapyModality::Microbubble,

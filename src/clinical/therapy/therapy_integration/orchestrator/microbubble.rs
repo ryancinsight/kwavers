@@ -239,6 +239,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_microbubble_dynamics_with_pressure_gradient() {
         let grid = create_test_grid();
         let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);

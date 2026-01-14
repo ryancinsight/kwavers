@@ -573,11 +573,9 @@ mod tests {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                     solver.workspace.heterogeneity_workspace[[i, j, k]] = Complex64::new(
-                         (i + j + k) as f64,
-                         ((i * j) as f64 * 0.1)
-                     );
-                     solver.absorption_field[[i, j, k]] = Complex64::new(0.0, 0.01 * (k as f64));
+                    solver.workspace.heterogeneity_workspace[[i, j, k]] =
+                        Complex64::new((i + j + k) as f64, ((i * j) as f64 * 0.1));
+                    solver.absorption_field[[i, j, k]] = Complex64::new(0.0, 0.01 * (k as f64));
                 }
             }
         }
@@ -632,8 +630,19 @@ mod tests {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    let diff = (solver.workspace.green_workspace[[i, j, k]] - expected_green[[i, j, k]]).norm();
-                    assert!(diff < 1e-10, "Mismatch at {},{},{}: actual {:?}, expected {:?}, diff {}", i,j,k, solver.workspace.green_workspace[[i,j,k]], expected_green[[i,j,k]], diff);
+                    let diff = (solver.workspace.green_workspace[[i, j, k]]
+                        - expected_green[[i, j, k]])
+                    .norm();
+                    assert!(
+                        diff < 1e-10,
+                        "Mismatch at {},{},{}: actual {:?}, expected {:?}, diff {}",
+                        i,
+                        j,
+                        k,
+                        solver.workspace.green_workspace[[i, j, k]],
+                        expected_green[[i, j, k]],
+                        diff
+                    );
                 }
             }
         }

@@ -96,7 +96,7 @@ use ndarray::Array3;
 /// # use kwavers::domain::medium::properties::OpticalPropertyData;
 /// # fn main() -> kwavers::core::error::KwaversResult<()> {
 /// # let grid = Grid::new(32, 32, 16, 0.001, 0.001, 0.001)?;
-/// # let optical_properties = Array3::from_elem((32, 32, 16), OpticalPropertyData::default());
+/// # let optical_properties = Array3::from_elem((32, 32, 16), OpticalPropertyData::soft_tissue());
 /// # let fluence = Array3::zeros((32, 32, 16));
 /// let initial_pressure = compute_initial_pressure(
 ///     &grid,

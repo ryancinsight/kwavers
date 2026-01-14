@@ -47,6 +47,7 @@
 //!
 //! ```rust
 //! use kwavers::solver::inverse::elastography::{NonlinearInversion, NonlinearInversionConfig};
+//! use kwavers::solver::inverse::elastography::NonlinearParameterMapExt;
 //! use kwavers::domain::imaging::ultrasound::elastography::NonlinearInversionMethod;
 //! use kwavers::domain::grid::Grid;
 //! use kwavers::physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
@@ -54,7 +55,7 @@
 //! # fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Create grid and harmonic displacement field
 //! let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001)?;
-//! let harmonic_field = HarmonicDisplacementField::zeros(50, 50, 50, 2);
+//! let harmonic_field = HarmonicDisplacementField::new(50, 50, 50, 2, 10);
 //!
 //! // Configure nonlinear inversion
 //! let config = NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio)

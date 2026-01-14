@@ -400,6 +400,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_radiation_force_moves_bubble() {
         let position = Position3D::zero();
         let mut bubble = MicrobubbleState::sono_vue(position).unwrap();

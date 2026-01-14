@@ -299,8 +299,9 @@ impl RealtimeImagingPipeline {
                 self.hilbert_transform(&analytic, &mut hilbert_output, &mut spectrum_scratch);
 
                 for j in 0..hilbert_output.len() {
-                    envelope[[i, j, k]] =
-                        ((beamformed[[i, j, k]] as f64).powi(2) + hilbert_output[j].powi(2)).sqrt() as f32;
+                    envelope[[i, j, k]] = ((beamformed[[i, j, k]] as f64).powi(2)
+                        + hilbert_output[j].powi(2))
+                    .sqrt() as f32;
                 }
             }
         }
