@@ -482,27 +482,31 @@ impl ConvergentBornSolver {
             self.workspace.fft_temp.push(temp1);
         }
 
+        // Retrieve FFT helper, error early if missing
+        let fft_helper = self
+            .fft_helper
+            .as_mut()
+            .ok_or_else(|| crate::core::error::KwaversError::System(
+                crate::core::error::SystemError::FeatureNotAvailable {
+                    feature: "FFT Green's Function".to_string(),
+                    reason: "FFT helper not initialized".to_string(),
+                },
+            ))?;
+
         // Get access to temporary buffer
-        // Note: we need to access fields directly to avoid multiple mutable borrows of self
         let fft_temp = &mut self.workspace.fft_temp[0];
 
         // Copy heterogeneity to fft_temp
         fft_temp.assign(&self.workspace.heterogeneity_workspace);
 
         // Perform Forward FFT
-        if let Some(helper) = &mut self.fft_helper {
-            helper.forward(fft_temp);
-        } else {
-            return Err(crate::core::error::KwaversError::System(
-                crate::core::error::SystemError::FeatureNotAvailable {
-                    feature: "FFT Green's Function".to_string(),
-                    reason: "FFT helper not initialized".to_string(),
-                },
-            ));
-        }
+        fft_helper.forward(fft_temp);
 
         // Element-wise multiplication with Green's function in k-space
         // We can do this in-place on fft_temp
+        // Note: we can't keep 'fft_helper' borrowed while accessing self.green_fft
+        // But since fft_helper and green_fft are disjoint fields, we can structure this to satisfy borrow checker
+        // or re-borrow. Since we already validated fft_helper exists, we can re-acquire it later safely.
         let green_fft_opt = self.green_fft.as_ref();
         Zip::indexed(&mut *fft_temp).for_each(|(i, j, k), val| {
             if let Some(green_fft) = green_fft_opt {
@@ -515,9 +519,8 @@ impl ConvergentBornSolver {
         });
 
         // Inverse FFT to get spatial domain result
-        if let Some(helper) = &mut self.fft_helper {
-            helper.inverse(fft_temp);
-        }
+        // Re-borrow fft_helper. Unwrap is safe because we checked it at the start.
+        self.fft_helper.as_mut().unwrap().inverse(fft_temp);
 
         // Copy result to green workspace
         self.workspace.green_workspace.assign(fft_temp);
