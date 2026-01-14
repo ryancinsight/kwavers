@@ -4,6 +4,7 @@
 //! and vectors, including system solving, matrix inversion, and basic decompositions.
 
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
+use nalgebra::DMatrix;
 use ndarray::{s, Array1, Array2};
 
 /// Basic linear algebra operations for real-valued matrices
@@ -190,27 +191,67 @@ impl BasicLinearAlgebra {
     /// * `matrix` - Input matrix (m×n)
     ///
     /// # Returns
-    /// Tuple (U, S, V) where U is (m×m), S is diagonal (min(m,n)), V is (n×n)
+    /// Tuple (U, S, V) where U is (m×m) or (m×min(m,n)), S is diagonal (min(m,n)), V is (n×n) or (n×min(m,n))
     pub fn svd(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array1<f64>, Array2<f64>)> {
-        // Use Golub-Kahan-Lanczos bidiagonalization followed by implicit QR
-        // This is a simplified implementation - for production use, consider LAPACK
         let (m, n) = (matrix.nrows(), matrix.ncols());
 
-        // For now, return a basic SVD using QR decomposition
-        // TODO: Implement proper SVD algorithm
-        let (q, r) = Self::qr_decomposition(matrix)?;
-
-        // Extract singular values from R diagonal
-        let min_dim = m.min(n);
-        let mut s = Array1::zeros(min_dim);
-        for i in 0..min_dim {
-            s[i] = r[[i, i]].abs();
+        // Convert ndarray to nalgebra DMatrix
+        let mut na_matrix = DMatrix::zeros(m, n);
+        for i in 0..m {
+            for j in 0..n {
+                na_matrix[(i, j)] = matrix[[i, j]];
+            }
         }
 
-        // U = Q, V = I (simplified)
-        let u = q;
-        let vt = Array2::eye(n);
+        // Compute SVD using nalgebra
+        // We request both U and V^T
+        let svd = na_matrix.svd(true, true);
 
+        // Extract U
+        let u_na = svd.u.ok_or_else(|| {
+            KwaversError::Numerical(NumericalError::SolverFailed {
+                method: "SVD".to_string(),
+                reason: "Failed to compute left singular vectors (U)".to_string(),
+            })
+        })?;
+
+        // Extract S
+        let s_na = svd.singular_values;
+
+        // Extract V^T (nalgebra returns V^T in v_t)
+        let vt_na = svd.v_t.ok_or_else(|| {
+            KwaversError::Numerical(NumericalError::SolverFailed {
+                method: "SVD".to_string(),
+                reason: "Failed to compute right singular vectors (V^T)".to_string(),
+            })
+        })?;
+
+        // Convert U to ndarray
+        let (u_rows, u_cols) = u_na.shape();
+        let mut u = Array2::zeros((u_rows, u_cols));
+        for i in 0..u_rows {
+            for j in 0..u_cols {
+                u[[i, j]] = u_na[(i, j)];
+            }
+        }
+
+        // Convert S to ndarray
+        let s_len = s_na.len();
+        let mut s = Array1::zeros(s_len);
+        for i in 0..s_len {
+            s[i] = s_na[i];
+        }
+
+        // Convert V^T to ndarray
+        let (vt_rows, vt_cols) = vt_na.shape();
+        let mut vt = Array2::zeros((vt_rows, vt_cols));
+        for i in 0..vt_rows {
+            for j in 0..vt_cols {
+                vt[[i, j]] = vt_na[(i, j)];
+            }
+        }
+
+        // Return (U, S, V). V = vt^T
         Ok((u, s, vt.t().to_owned()))
     }
 }
@@ -241,6 +282,53 @@ mod tests {
             for j in 0..2 {
                 let expected = if i == j { 1.0 } else { 0.0 };
                 assert!((identity[[i, j]] - expected).abs() < 1e-10);
+            }
+        }
+    }
+
+    #[test]
+    fn test_svd_reconstruction() {
+        let a = Array2::from_shape_vec((2, 2), vec![1.0, 2.0, 3.0, 4.0]).unwrap();
+        let (u, s, v) = BasicLinearAlgebra::svd(&a).unwrap();
+
+        // Check A = U * S * V^T
+        // Construct S as a diagonal matrix
+        let mut s_mat = Array2::zeros((2, 2));
+        for i in 0..2 {
+            s_mat[[i, i]] = s[i];
+        }
+
+        let reconstructed = u.dot(&s_mat).dot(&v.t());
+
+        // Check reconstruction error
+        for i in 0..2 {
+            for j in 0..2 {
+                assert!(
+                    (reconstructed[[i, j]] - a[[i, j]]).abs() < 1e-10,
+                    "Reconstruction mismatch at [{}, {}]: expected {}, got {}",
+                    i,
+                    j,
+                    a[[i, j]],
+                    reconstructed[[i, j]]
+                );
+            }
+        }
+
+        // Check U is orthogonal: U^T * U = I
+        let u_ortho = u.t().dot(&u);
+        for i in 0..2 {
+            for j in 0..2 {
+                let expected = if i == j { 1.0 } else { 0.0 };
+                assert!((u_ortho[[i, j]] - expected).abs() < 1e-10, "U not orthogonal");
+            }
+        }
+
+        // Check V is orthogonal: V^T * V = I
+        let v_ortho = v.t().dot(&v);
+        for i in 0..2 {
+            for j in 0..2 {
+                let expected = if i == j { 1.0 } else { 0.0 };
+                assert!((v_ortho[[i, j]] - expected).abs() < 1e-10, "V not orthogonal");
             }
         }
     }
