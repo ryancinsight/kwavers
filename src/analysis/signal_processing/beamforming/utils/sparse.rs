@@ -274,7 +274,7 @@ impl SparseSteeringMatrixBuilder {
         look_directions: &[[f64; 3]],
         frequency: f64,
         sound_speed: f64,
-    ) -> KwaversResult<CompressedSparseRowMatrix> {
+    ) -> KwaversResult<CompressedSparseRowMatrix<Complex64>> {
         // Validate inputs
         if sensor_positions.len() != self.num_elements {
             return Err(KwaversError::InvalidInput(format!(
@@ -310,6 +310,7 @@ impl SparseSteeringMatrixBuilder {
         let wavenumber = 2.0 * PI * frequency / sound_speed;
 
         // Build sparse matrix using COO format for efficient construction
+        // T will be inferred as Complex64 based on add_triplet call
         let mut coo = CoordinateMatrix::create(self.num_elements, self.num_directions);
 
         for (elem_idx, pos) in sensor_positions.iter().enumerate() {
@@ -350,10 +351,7 @@ impl SparseSteeringMatrixBuilder {
 
                 // Apply sparsification threshold (magnitude)
                 if coeff.norm() > self.threshold {
-                    // Store real and imaginary parts separately
-                    // Note: Current COO only supports f64, so we store magnitude
-                    // TODO: Extend to complex sparse matrices
-                    coo.add_triplet(elem_idx, dir_idx, coeff.norm());
+                    coo.add_triplet(elem_idx, dir_idx, coeff);
                 }
             }
         }
@@ -545,6 +543,12 @@ mod tests {
         // Verify dimensions
         assert_eq!(matrix.rows, 3);
         assert_eq!(matrix.cols, 2);
+
+        // Verify complex values
+        let has_complex = matrix.values.iter().any(|v| v.im != 0.0);
+        // At least one value should have non-zero imaginary part due to phase delay
+        // (unless all delays are multiples of wavelength/2, which is unlikely here)
+        assert!(has_complex, "Matrix should contain complex values with non-zero imaginary parts");
     }
 
     #[test]
