@@ -8,6 +8,7 @@ use crate::gpu::memory::{MemoryPoolType, UnifiedMemoryManager};
 use ndarray::{Array3, Array4};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
+use rand::Rng;
 use std::time::{Duration, Instant};
 
 /// Configuration for real-time imaging pipeline
@@ -482,21 +483,23 @@ impl StreamingDataSource {
     fn generate_rf_frame(config: &StreamingConfig) -> Array4<f32> {
         let (n_tx, n_rx, n_samples, n_frames) = config.frame_size;
         let mut rf_data = Array4::zeros((n_tx, n_rx, n_samples, n_frames));
+        let mut rng = rand::thread_rng();
 
         // Generate realistic ultrasound RF signals
         for tx in 0..n_tx {
             for rx in 0..n_rx {
+                let delay = (tx + rx) as f64 * 1e-7; // Inter-element delay
+
                 for sample in 0..n_samples {
+                    let time = sample as f64 * 1e-8; // 10 ns sampling
+
+                    // Generate signal base value (independent of frame)
+                    let signal = config.signal_amplitude
+                        * (-0.5 * ((time - delay) * 5e7).powi(2)).exp()
+                        * ((time - delay) * 3e7).cos();
+
                     for frame in 0..n_frames {
-                        let time = sample as f64 * 1e-8; // 10 ns sampling
-                        let delay = (tx + rx) as f64 * 1e-7; // Inter-element delay
-
-                        // Generate ultrasound pulse with noise
-                        let signal = config.signal_amplitude
-                            * (-0.5 * ((time - delay) * 5e7).powi(2)).exp()
-                            * ((time - delay) * 3e7).cos();
-
-                        let noise = config.noise_level * rand::random::<f64>();
+                        let noise = config.noise_level * rng.gen::<f64>();
                         rf_data[[tx, rx, sample, frame]] = (signal + noise) as f32;
                     }
                 }
