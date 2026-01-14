@@ -9,6 +9,7 @@ use crate::domain::grid::Grid;
 use crate::domain::sensor::grid_sampling::GridSensorSet;
 use crate::domain::sensor::localization::array::SensorArray;
 use ndarray::Array2;
+use num_complex::Complex;
 
 /// Sensor-specific beamforming operations tied to hardware geometry
 #[derive(Debug, Clone)]
@@ -153,23 +154,72 @@ impl SensorBeamformer {
     /// This provides hardware-specific steering that accounts for
     /// element directivity patterns and array manifold characteristics.
     ///
-    /// # TODO: INCOMPLETE IMPLEMENTATION
-    /// This method returns identity matrix placeholder. Complete implementation requires:
-    /// - Array manifold calculation: exp(-j * 2π * f * delay(θ,φ) / c)
-    /// - Phase delays for each sensor element at given angles
-    /// - Frequency-dependent steering vector computation
-    /// - Element directivity pattern incorporation
-    /// - Validation against physical array manifold properties (unitary, Hermitian symmetry)
-    /// Mathematical basis: Van Trees (2002) "Optimum Array Processing", Chapter 2
-    /// See backlog.md item #6 for specifications (6-8 hour effort estimate)
+    /// # Mathematical Basis
+    ///
+    /// Calculates array manifold vector $ \mathbf{v}(\theta, \phi) $:
+    /// $$ \mathbf{v}(\theta, \phi) = [e^{-j \mathbf{k}^T \mathbf{p}_1}, \dots, e^{-j \mathbf{k}^T \mathbf{p}_N}]^T $$
+    ///
+    /// where $\mathbf{k}$ is the wavenumber vector for direction $(\theta, \phi)$.
+    ///
+    /// # Arguments
+    ///
+    /// * `angles` - List of (theta, phi) pairs in radians
+    /// * `frequency` - Signal frequency in Hz
+    /// * `sound_speed` - Speed of sound in m/s
+    ///
+    /// # Returns
+    ///
+    /// Complex steering matrix where each column corresponds to a direction in `angles`.
+    /// Dimensions: (n_sensors, n_angles).
     pub fn calculate_steering(
         &self,
-        _angles: &[f64],
-        _frequency: f64,
-    ) -> KwaversResult<Array2<f64>> {
-        // TODO: Replace with proper steering vector calculation
-        // Current: Returns identity matrix - INVALID for adaptive beamforming (no actual steering)
-        Ok(Array2::eye(self.sensor_positions.len()))
+        angles: &[(f64, f64)],
+        frequency: f64,
+        sound_speed: f64,
+    ) -> KwaversResult<Array2<Complex<f64>>> {
+        if frequency <= 0.0 {
+            return Err(crate::core::error::KwaversError::InvalidInput(format!(
+                "Frequency must be positive, got {}",
+                frequency
+            )));
+        }
+        if sound_speed <= 0.0 {
+            return Err(crate::core::error::KwaversError::InvalidInput(format!(
+                "Sound speed must be positive, got {}",
+                sound_speed
+            )));
+        }
+
+        let n_sensors = self.sensor_positions.len();
+        let n_angles = angles.len();
+        let mut steering_matrix = Array2::zeros((n_sensors, n_angles));
+
+        for (idx, &(theta, phi)) in angles.iter().enumerate() {
+            // Convert spherical (theta, phi) to Cartesian direction unit vector
+            // Convention:
+            // x = sin(theta) * cos(phi)
+            // y = sin(theta) * sin(phi)
+            // z = cos(theta)
+            let sin_theta = theta.sin();
+            let x = sin_theta * phi.cos();
+            let y = sin_theta * phi.sin();
+            let z = theta.cos();
+            let direction = [x, y, z];
+
+            // Use the shared SteeringVector logic from steering.rs
+            // Note: compute_plane_wave returns Array1<Complex<f64>>
+            let vector = super::steering::SteeringVector::compute_plane_wave(
+                direction,
+                frequency,
+                &self.sensor_positions,
+                sound_speed,
+            )?;
+
+            // Assign to column
+            steering_matrix.column_mut(idx).assign(&vector);
+        }
+
+        Ok(steering_matrix)
     }
 
     /// Get sensor-specific processing parameters
