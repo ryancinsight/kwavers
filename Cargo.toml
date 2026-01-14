@@ -322,6 +322,10 @@ name = "opast_benchmarks"
 harness = false
 required-features = ["legacy_algorithms"]
 
+[[bench]]
+name = "hilbert_benchmark"
+harness = false
+
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 

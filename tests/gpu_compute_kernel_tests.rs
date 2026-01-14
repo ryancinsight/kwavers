@@ -8,7 +8,7 @@
 
 #![cfg(feature = "gpu")]
 
-use kwavers::domain::grid;
+use kwavers::domain::grid::Grid;
 use kwavers::gpu::compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
 use ndarray::Array3;
 

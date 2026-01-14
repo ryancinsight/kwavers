@@ -10,6 +10,9 @@ use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use rand::Rng;
 use std::time::{Duration, Instant};
+use std::fmt;
+use std::ops::{Deref, DerefMut};
+use rustfft::{num_complex::Complex, FftPlanner};
 
 /// Configuration for real-time imaging pipeline
 #[derive(Debug, Clone)]
@@ -41,6 +44,28 @@ pub struct PipelineLayout {
     layout: wgpu::PipelineLayout,
 }
 
+/// Wrapper for FftPlanner to implement Debug
+struct CachedFftPlanner(FftPlanner<f64>);
+
+impl fmt::Debug for CachedFftPlanner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "FftPlanner")
+    }
+}
+
+impl Deref for CachedFftPlanner {
+    type Target = FftPlanner<f64>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for CachedFftPlanner {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 /// Real-time imaging pipeline
 #[derive(Debug)]
 pub struct RealtimeImagingPipeline {
@@ -56,6 +81,8 @@ pub struct RealtimeImagingPipeline {
     stats: PipelineStats,
     /// Pipeline state
     state: PipelineState,
+    /// FFT Planner for Hilbert transform
+    fft_planner: CachedFftPlanner,
 }
 
 /// Pipeline processing statistics
@@ -98,6 +125,7 @@ impl RealtimeImagingPipeline {
             gpu_memory,
             stats: PipelineStats::default(),
             state: PipelineState::Stopped,
+            fft_planner: CachedFftPlanner(FftPlanner::new()),
         })
     }
 
@@ -222,7 +250,7 @@ impl RealtimeImagingPipeline {
     }
 
     /// Process a single frame through the imaging pipeline
-    fn process_frame(&self, rf_data: &Array4<f32>) -> KwaversResult<Array3<f32>> {
+    fn process_frame(&mut self, rf_data: &Array4<f32>) -> KwaversResult<Array3<f32>> {
         // Step 1: Beamforming
         let beamformed = self.beamform(rf_data)?;
 
@@ -248,7 +276,7 @@ impl RealtimeImagingPipeline {
     }
 
     /// Envelope detection
-    fn envelope_detection(&self, beamformed: &Array3<f32>) -> KwaversResult<Array3<f32>> {
+    fn envelope_detection(&mut self, beamformed: &Array3<f32>) -> KwaversResult<Array3<f32>> {
         // Hilbert transform for envelope detection
         let mut envelope = Array3::zeros(beamformed.dim());
 
@@ -281,12 +309,9 @@ impl RealtimeImagingPipeline {
     /// Hilbert Transform: H[f](t) = (1/π) ∫ f(τ)/(t-τ) dτ
     /// FFT-based implementation: Multiply FFT by sign function in frequency domain
     /// Reference: Oppenheim & Schafer, Discrete-Time Signal Processing (3rd ed.)
-    fn hilbert_transform(&self, signal: &[f64]) -> Vec<f64> {
-        use rustfft::{num_complex::Complex, FftPlanner};
-
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(signal.len());
-        let ifft = planner.plan_fft_inverse(signal.len());
+    fn hilbert_transform(&mut self, signal: &[f64]) -> Vec<f64> {
+        let fft = self.fft_planner.plan_fft_forward(signal.len());
+        let ifft = self.fft_planner.plan_fft_inverse(signal.len());
 
         // Convert to complex
         let mut spectrum: Vec<Complex<f64>> =
