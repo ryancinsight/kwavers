@@ -124,6 +124,17 @@ impl Fft3d {
         });
     }
 
+    /// Forward 3D FFT in-place (complex input/output)
+    pub fn forward_complex_inplace(&self, data: &mut Array3<Complex64>) {
+        self.transform_3d_complex_inplace(data, true);
+    }
+
+    /// Inverse 3D FFT in-place (complex input/output)
+    /// Note: Result is unnormalized. Caller must scale by 1/N.
+    pub fn inverse_complex_inplace(&self, data: &mut Array3<Complex64>) {
+        self.transform_3d_complex_inplace(data, false);
+    }
+
     /// Core 3D transform for real input
     fn transform_3d(&self, input: &Array3<f64>, forward: bool) -> Array3<Complex64> {
         // Convert to complex

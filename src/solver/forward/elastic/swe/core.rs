@@ -12,7 +12,8 @@ use super::types::{
 use crate::core::error::{KwaversResult, NumericalError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use ndarray::Array3;
+use crate::domain::sensor::recorder::simple::SensorRecorder;
+use ndarray::{Array2, Array3};
 
 /// 3D Elastic Wave Solver
 ///
@@ -44,6 +45,7 @@ pub struct ElasticWaveSolver {
     /// Simulation configuration
     config: ElasticWaveConfig,
     volumetric_config: VolumetricWaveConfig,
+    pub(crate) sensor_recorder: SensorRecorder,
 }
 
 impl ElasticWaveSolver {
@@ -83,6 +85,9 @@ impl ElasticWaveSolver {
 
         let pml = PMLBoundary::new(grid, pml_config);
 
+        let shape = (nx, ny, nz);
+        let sensor_recorder = SensorRecorder::new(config.sensor_mask.as_ref(), shape, 0)?;
+
         Ok(Self {
             grid: grid.clone(),
             density,
@@ -91,6 +96,7 @@ impl ElasticWaveSolver {
             pml,
             config,
             volumetric_config: VolumetricWaveConfig::default(),
+            sensor_recorder,
         })
     }
 
@@ -106,7 +112,7 @@ impl ElasticWaveSolver {
     /// * `duration` - Simulation duration (seconds)
     /// * `body_force` - Optional source term
     pub fn propagate(
-        &self,
+        &mut self,
         initial_field: &ElasticWaveField,
         duration: f64,
         body_force: Option<&ElasticBodyForceConfig>,
@@ -137,16 +143,34 @@ impl ElasticWaveSolver {
         }
 
         let steps = (duration / dt).ceil() as usize;
+        let save_every = self.config.save_every.max(1);
+        let recorded_steps = (steps + save_every - 1) / save_every;
+
+        // Initialize sensor recorder with correct number of steps
+        let (nx, ny, nz) = self.grid.dimensions();
+        self.sensor_recorder = SensorRecorder::new(
+            self.config.sensor_mask.as_ref(),
+            (nx, ny, nz),
+            recorded_steps,
+        )?;
 
         // Time stepping loop
-        for _step in 0..steps {
+        for step in 0..steps {
             integrator.step(&mut current_field, dt, body_force)?;
             current_field.time += dt;
 
-            // TODO: Implement result recording / snapshots here
+            if step % save_every == 0 {
+                // We record the 'uz' component (vertical displacement) as it is typically
+                // the primary component of interest in Shear Wave Elastography (SWE).
+                self.sensor_recorder.record_step(&current_field.uz)?;
+            }
         }
 
         Ok(current_field)
+    }
+
+    pub fn extract_recorded_data(&self) -> Option<Array2<f64>> {
+        self.sensor_recorder.extract_pressure_data()
     }
 
     pub fn propagate_waves(
@@ -589,5 +613,56 @@ impl ElasticWaveSolver {
             amplitudes,
             tracking_quality,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::grid::Grid;
+    use crate::domain::medium::HomogeneousMedium;
+    use ndarray::Array3;
+
+    #[test]
+    fn test_elastic_wave_solver_recording() -> KwaversResult<()> {
+        // 1. Setup Grid
+        let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0)?;
+
+        // 2. Setup Medium
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+
+        // 3. Setup Config with Sensor Mask
+        let mut config = ElasticWaveConfig::default();
+        config.simulation_time = 1e-4; // Short simulation
+        config.time_step = 1e-5;      // Explicit time step
+        config.save_every = 2;        // Test subsampling
+
+        let mut sensor_mask = Array3::from_elem(grid.dimensions(), false);
+        sensor_mask[[5, 5, 5]] = true; // Place one sensor at center
+        config.sensor_mask = Some(sensor_mask);
+
+        // 4. Create Solver
+        let mut solver = ElasticWaveSolver::new(&grid, &medium, config)?;
+
+        // 5. Propagate
+        let initial_field = ElasticWaveField::new(10, 10, 10);
+        let mut initial_field = initial_field;
+        initial_field.uz[[5, 5, 5]] = 1.0;
+
+        let _final_field = solver.propagate(&initial_field, 1e-4, None)?;
+
+        // 6. Verify Recorded Data
+        let recorded_data = solver.extract_recorded_data();
+        assert!(recorded_data.is_some(), "Recorded data should be available");
+
+        let data = recorded_data.unwrap();
+        // Shape should be (num_sensors, num_steps)
+        // num_sensors = 1
+        // total_steps = 1e-4 / 1e-5 = 10
+        // save_every = 2
+        // recorded_steps = 10 / 2 = 5
+        assert_eq!(data.shape(), &[1, 5]);
+
+        Ok(())
     }
 }

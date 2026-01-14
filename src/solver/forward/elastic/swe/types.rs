@@ -13,6 +13,8 @@ pub struct ElasticWaveConfig {
     pub simulation_time: f64,
     pub save_every: usize,
     pub pml_thickness: usize,
+    /// Sensor mask for recording time series data at specific locations
+    pub sensor_mask: Option<Array3<bool>>,
 }
 
 impl Default for ElasticWaveConfig {
@@ -24,6 +26,7 @@ impl Default for ElasticWaveConfig {
             simulation_time: 10e-3,
             save_every: 10,
             pml_thickness: 10,
+            sensor_mask: None,
         }
     }
 }
