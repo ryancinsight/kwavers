@@ -14,11 +14,13 @@
 //! - Cobbold (2007): "Foundations of Biomedical Ultrasound"
 //! - Szabo (2014): "Diagnostic Ultrasound Imaging"
 
+pub mod adapter;
 pub mod arc;
 pub mod bowl;
 pub mod multi_bowl;
 pub mod utils;
 
+pub use adapter::FocusedSource;
 pub use arc::{ArcConfig, ArcSource};
 pub use bowl::{BowlConfig, BowlTransducer};
 pub use multi_bowl::MultiBowlArray;

@@ -6,7 +6,11 @@ use crate::core::error::{ConfigError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::signal::{Signal, SineWave, ToneBurst, WindowType};
 use crate::domain::source::{
-    basic::{PistonApodization, PistonConfig},
+    basic::{LinearArray, MatrixArray, PistonApodization, PistonConfig},
+    transducers::{
+        apodization::RectangularApodization,
+        focused::{BowlConfig, FocusedSource},
+    },
     wavefront::{
         BesselConfig, GaussianConfig, PlaneWaveConfig, SphericalConfig, SphericalWaveType,
     },
@@ -26,7 +30,7 @@ impl SourceFactory {
     /// Create a source from configuration
     pub fn create_source(
         config: &SourceParameters,
-        _grid: &Grid,
+        grid: &Grid,
     ) -> KwaversResult<Box<dyn Source>> {
         config.validate()?;
 
@@ -129,35 +133,80 @@ impl SourceFactory {
                 };
                 Ok(Box::new(PistonSource::new(piston_config, signal)))
             }
-            // TODO: INCOMPLETE IMPLEMENTATION - Missing Source Models
-            // The following source models are not yet implemented:
-            //
-            // 1. LinearArray: Linear array of transducer elements
-            //    - Requires: Element positions, element size, steering angles
-            //    - Physics: Array factor calculation, element directivity
-            //    - Estimated effort: 8-10 hours
-            //
-            // 2. MatrixArray: 2D matrix array of elements
-            //    - Requires: Element grid layout, steering in 2D
-            //    - Physics: 2D array factor, elevation/azimuth control
-            //    - Estimated effort: 10-12 hours
-            //
-            // 3. Focused: Focused transducer with geometric/electronic focusing
-            //    - Requires: Focal point, F-number, aperture
-            //    - Physics: Rayleigh-Sommerfeld diffraction, focal gain
-            //    - Estimated effort: 6-8 hours
-            //
-            // 4. Custom: User-defined source pattern
-            //    - Requires: Custom field calculation callback/function
-            //    - Architecture: Trait-based extension point
-            //    - Estimated effort: 4-6 hours
-            //
-            // See backlog.md item #7 for full specifications
-            // Total effort: 28-36 hours for complete implementation
-            _ => Err(ConfigError::InvalidValue {
+            SourceModel::LinearArray => {
+                let length = config.radius * 2.0;
+                let num_elements = config.num_elements.unwrap_or(32);
+                let mut array = LinearArray::new(
+                    length,
+                    num_elements,
+                    position,
+                    signal,
+                    DEFAULT_SOUND_SPEED,
+                    config.frequency,
+                    RectangularApodization,
+                );
+                if let Some(focus) = config.focus {
+                    array.adjust_focus(focus[0], focus[1], focus[2], DEFAULT_SOUND_SPEED);
+                }
+                Ok(Box::new(array))
+            }
+            SourceModel::MatrixArray => {
+                let width = config.radius * 2.0;
+                let height = config.radius * 2.0;
+                let n_total = config.num_elements.unwrap_or(256);
+                let n_side = (n_total as f64).sqrt().ceil() as usize;
+                let mut array = MatrixArray::new(
+                    width,
+                    height,
+                    n_side,
+                    n_side,
+                    position,
+                    signal,
+                    DEFAULT_SOUND_SPEED,
+                    config.frequency,
+                    RectangularApodization,
+                );
+                if let Some(focus) = config.focus {
+                    array.adjust_focus(focus[0], focus[1], focus[2], DEFAULT_SOUND_SPEED);
+                }
+                Ok(Box::new(array))
+            }
+            SourceModel::Focused => {
+                // Determine focus. Default to direction-based.
+                let focus = match config.focus {
+                    Some(f) => [f[0], f[1], f[2]],
+                    None => {
+                         // Extrapolate from center + direction * radius
+                         [position.0, position.1, position.2 + 0.05]
+                    }
+                };
+
+                // Approximate radius of curvature as distance to focus
+                let r_curv = ((focus[0] - position.0).powi(2)
+                    + (focus[1] - position.1).powi(2)
+                    + (focus[2] - position.2).powi(2))
+                .sqrt();
+
+                // Avoid zero radius
+                let r_curv = if r_curv < 1e-6 { 0.05 } else { r_curv };
+
+                let bowl_config = BowlConfig {
+                    radius_of_curvature: r_curv,
+                    diameter: config.radius * 2.0,
+                    center: config.position,
+                    focus,
+                    frequency: config.frequency,
+                    amplitude: config.amplitude,
+                    phase: config.phase,
+                    element_size: None, // Auto-calculate
+                    apply_directivity: true,
+                };
+                Ok(Box::new(FocusedSource::new(bowl_config, signal, grid)?))
+            }
+            SourceModel::Custom => Err(ConfigError::InvalidValue {
                 parameter: "model".to_string(),
-                value: format!("{:?}", config.model),
-                constraint: "Source model not currently supported by factory - TODO: Implement LinearArray, MatrixArray, Focused, Custom".to_string(),
+                value: "Custom".to_string(),
+                constraint: "Custom source requires programmatic creation via Builder, not supported via config file.".to_string(),
             }
             .into()),
         }

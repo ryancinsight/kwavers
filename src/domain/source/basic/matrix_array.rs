@@ -1,11 +1,10 @@
 use crate::domain::grid::Grid;
-use crate::domain::medium::Medium;
 use crate::domain::signal::Signal;
 use crate::domain::source::{Apodization, Source};
 use log::debug;
 use rayon::prelude::*;
-use std::f64::consts::PI;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct MatrixArray {
@@ -13,9 +12,11 @@ pub struct MatrixArray {
     height: f64,
     num_x: usize,
     num_y: usize,
+    x_pos: f64,
+    y_pos: f64,
     z_pos: f64,
-    signal: Box<dyn Signal>,
-    phase_delays: Vec<f64>,
+    signal: Arc<dyn Signal>,
+    time_delays: Vec<f64>, // Changed from phase_delays to time_delays
     apodization_weights: Vec<f64>,
 }
 
@@ -26,9 +27,11 @@ impl Clone for MatrixArray {
             height: self.height,
             num_x: self.num_x,
             num_y: self.num_y,
+            x_pos: self.x_pos,
+            y_pos: self.y_pos,
             z_pos: self.z_pos,
-            signal: self.signal.clone_box(),
-            phase_delays: self.phase_delays.clone(),
+            signal: self.signal.clone(),
+            time_delays: self.time_delays.clone(),
             apodization_weights: self.apodization_weights.clone(),
         }
     }
@@ -41,15 +44,14 @@ impl MatrixArray {
         height: f64,
         num_x: usize,
         num_y: usize,
-        z_pos: f64,
-        signal: Box<dyn Signal>,
-        medium: &dyn Medium,
-        grid: &Grid,
+        position: (f64, f64, f64),
+        signal: Arc<dyn Signal>,
+        sound_speed: f64,
         frequency: f64,
         apodization: A,
     ) -> Self {
         assert!(width > 0.0 && height > 0.0 && num_x > 0 && num_y > 0);
-        let c = crate::domain::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
+        let c = sound_speed;
         let wavelength = c / frequency;
         let optimal_dx = wavelength / 2.0;
         let optimal_dy = wavelength / 2.0;
@@ -85,9 +87,11 @@ impl MatrixArray {
             height,
             num_x,
             num_y,
-            z_pos,
+            x_pos: position.0,
+            y_pos: position.1,
+            z_pos: position.2,
             signal,
-            phase_delays: vec![0.0; num_x * num_y],
+            time_delays: vec![0.0; num_x * num_y],
             apodization_weights,
         }
     }
@@ -98,10 +102,9 @@ impl MatrixArray {
         height: f64,
         num_x: usize,
         num_y: usize,
-        z_pos: f64,
-        signal: Box<dyn Signal>,
-        medium: &dyn Medium,
-        grid: &Grid,
+        position: (f64, f64, f64),
+        signal: Arc<dyn Signal>,
+        sound_speed: f64,
         frequency: f64,
         focus_x: f64,
         focus_y: f64,
@@ -113,42 +116,42 @@ impl MatrixArray {
             height,
             num_x,
             num_y,
-            z_pos,
+            position,
             signal,
-            medium,
-            grid,
+            sound_speed,
             frequency,
             apodization,
         );
-        array.adjust_focus(frequency, focus_x, focus_y, focus_z, medium, grid);
+        array.adjust_focus(focus_x, focus_y, focus_z, sound_speed);
         array
     }
 
     pub fn adjust_focus(
         &mut self,
-        frequency: f64,
         focus_x: f64,
         focus_y: f64,
         focus_z: f64,
-        medium: &dyn Medium,
-        grid: &Grid,
+        sound_speed: f64,
     ) {
-        let c = crate::domain::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
+        let c = sound_speed;
         let dx = self.element_spacing_x();
         let dy = self.element_spacing_y();
-        self.phase_delays
+        let start_x = self.x_pos - self.width / 2.0;
+        let start_y = self.y_pos - self.height / 2.0;
+
+        self.time_delays
             .par_iter_mut()
             .enumerate()
             .for_each(|(idx, delay)| {
                 let ix = idx % self.num_x;
                 let iy = idx / self.num_x;
-                let x_elem = ix as f64 * dx - self.width / 2.0;
-                let y_elem = iy as f64 * dy - self.height / 2.0;
+                let x_elem = start_x + ix as f64 * dx;
+                let y_elem = start_y + iy as f64 * dy;
                 let distance = ((x_elem - focus_x).powi(2)
                     + (y_elem - focus_y).powi(2)
                     + (self.z_pos - focus_z).powi(2))
                 .sqrt();
-                *delay = 2.0 * PI * frequency * (distance / c);
+                *delay = distance / c;
             });
         debug!("Adjusted focus to ({}, {}, {})", focus_x, focus_y, focus_z);
     }
@@ -166,11 +169,13 @@ impl Source for MatrixArray {
         let mut mask = ndarray::Array3::zeros((grid.nx, grid.ny, grid.nz));
         let dx = self.element_spacing_x();
         let dy = self.element_spacing_y();
+        let start_x = self.x_pos - self.width / 2.0;
+        let start_y = self.y_pos - self.height / 2.0;
 
         for iy in 0..self.num_y {
             for ix in 0..self.num_x {
-                let x_elem = ix as f64 * dx - self.width / 2.0;
-                let y_elem = iy as f64 * dy - self.height / 2.0;
+                let x_elem = start_x + ix as f64 * dx;
+                let y_elem = start_y + iy as f64 * dy;
                 let idx = iy * self.num_x + ix;
 
                 if let Some((gx, gy, gz)) = grid.position_to_indices(x_elem, y_elem, self.z_pos) {
@@ -190,37 +195,53 @@ impl Source for MatrixArray {
         let dx = self.element_spacing_x();
         let dy = self.element_spacing_y();
         let tolerance = grid.dx.max(grid.dy) * 0.5;
-        (0..self.num_y * self.num_x)
-            .into_par_iter()
-            .map(|idx| {
-                let ix = idx % self.num_x;
-                let iy = idx / self.num_x;
-                let x_elem = ix as f64 * dx - self.width / 2.0;
-                let y_elem = iy as f64 * dy - self.height / 2.0;
-                if (x - x_elem).abs() < tolerance
-                    && (y - y_elem).abs() < tolerance
-                    && (z - self.z_pos).abs() < tolerance
-                {
-                    let temporal_amplitude = self.signal.amplitude(t);
-                    let temporal_phase = self.signal.phase(t);
-                    let spatial_phase = self.phase_delays[idx];
-                    let spatial_weight = self.apodization_weights[idx];
-                    temporal_amplitude * (temporal_phase + spatial_phase).cos() * spatial_weight
-                } else {
-                    0.0
+        let start_x = self.x_pos - self.width / 2.0;
+        let start_y = self.y_pos - self.height / 2.0;
+
+        // Optimized spatial lookup
+        if (z - self.z_pos).abs() >= tolerance {
+            return 0.0;
+        }
+
+        let mut sum_val = 0.0;
+
+        // Calculate theoretical index of element closest to x, y
+        // x = start_x + ix*dx -> ix = (x - start_x)/dx
+        let ix_f = (x - start_x) / dx;
+        let iy_f = (y - start_y) / dy;
+
+        let ix_center = ix_f.round() as isize;
+        let iy_center = iy_f.round() as isize;
+
+        // Check 3x3 neighborhood
+        for iy in (iy_center - 1)..=(iy_center + 1) {
+            for ix in (ix_center - 1)..=(ix_center + 1) {
+                if ix >= 0 && ix < self.num_x as isize && iy >= 0 && iy < self.num_y as isize {
+                    let idx = (iy as usize) * self.num_x + (ix as usize);
+                    let x_elem = start_x + (ix as f64) * dx;
+                    let y_elem = start_y + (iy as f64) * dy;
+
+                    if (x - x_elem).abs() < tolerance && (y - y_elem).abs() < tolerance {
+                        let delay = self.time_delays[idx];
+                        let weight = self.apodization_weights[idx];
+                        sum_val += weight * self.signal.amplitude(t - delay);
+                    }
                 }
-            })
-            .sum()
+            }
+        }
+        sum_val
     }
 
     fn positions(&self) -> Vec<(f64, f64, f64)> {
         let dx = self.element_spacing_x();
         let dy = self.element_spacing_y();
+        let start_x = self.x_pos - self.width / 2.0;
+        let start_y = self.y_pos - self.height / 2.0;
         let mut positions = Vec::with_capacity(self.num_x * self.num_y);
         for iy in 0..self.num_y {
             for ix in 0..self.num_x {
-                let x = ix as f64 * dx - self.width / 2.0;
-                let y = iy as f64 * dy - self.height / 2.0;
+                let x = start_x + ix as f64 * dx;
+                let y = start_y + iy as f64 * dy;
                 positions.push((x, y, self.z_pos));
             }
         }
@@ -228,6 +249,6 @@ impl Source for MatrixArray {
     }
 
     fn signal(&self) -> &dyn Signal {
-        &*self.signal
+        self.signal.as_ref()
     }
 }
