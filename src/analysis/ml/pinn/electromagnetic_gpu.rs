@@ -830,7 +830,7 @@ impl GPUEMSolver {
     /// Export field data to VTK format for visualization
     pub fn export_vtk(&self, filename: &str, time_index: usize) -> KwaversResult<()> {
         use std::fs::File;
-        use std::io::Write;
+        use std::io::{BufWriter, Write};
 
         let field_data = self.field_data.as_ref().ok_or_else(|| {
             KwaversError::System(crate::core::error::SystemError::InvalidOperation {
@@ -847,7 +847,8 @@ impl GPUEMSolver {
             ));
         }
 
-        let mut file = File::create(filename)?;
+        let file = File::create(filename)?;
+        let mut file = BufWriter::new(file);
 
         // VTK header
         writeln!(file, "# vtk DataFile Version 3.0")?;
@@ -904,6 +905,8 @@ impl GPUEMSolver {
                 }
             }
         }
+
+        file.flush()?;
 
         Ok(())
     }
