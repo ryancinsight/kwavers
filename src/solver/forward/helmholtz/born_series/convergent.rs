@@ -350,7 +350,7 @@ impl ConvergentBornSolver {
             fft_processor,
             &workspace.fft_temp[1].view(),
             &mut workspace.green_workspace,
-            n
+            n,
         );
 
         Ok(())
@@ -542,10 +542,14 @@ mod tests {
         let mut ifft_output = Array3::<Complex64>::zeros((16, 16, 16));
 
         // Forward FFT
-        solver.forward_fft_3d(&input.view(), &mut fft_output).unwrap();
+        solver
+            .forward_fft_3d(&input.view(), &mut fft_output)
+            .unwrap();
 
         // Inverse FFT
-        solver.inverse_fft_3d(&fft_output.view(), &mut ifft_output).unwrap();
+        solver
+            .inverse_fft_3d(&fft_output.view(), &mut ifft_output)
+            .unwrap();
 
         // Check reconstruction (should match input)
         for ((i, j, k), &val) in ifft_output.indexed_iter() {

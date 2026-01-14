@@ -634,8 +634,8 @@ mod tests {
         // 3. Setup Config with Sensor Mask
         let mut config = ElasticWaveConfig::default();
         config.simulation_time = 1e-4; // Short simulation
-        config.time_step = 1e-5;      // Explicit time step
-        config.save_every = 2;        // Test subsampling
+        config.time_step = 1e-5; // Explicit time step
+        config.save_every = 2; // Test subsampling
 
         let mut sensor_mask = Array3::from_elem(grid.dimensions(), false);
         sensor_mask[[5, 5, 5]] = true; // Place one sensor at center

@@ -140,8 +140,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .map(|cfg| match cfg {
             ElasticBodyForceConfig::GaussianImpulse {
-                impulse_n_per_m3_s,
-                ..
+                impulse_n_per_m3_s, ..
             } => *impulse_n_per_m3_s,
         })
         .fold(f64::NEG_INFINITY, f64::max);

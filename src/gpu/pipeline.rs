@@ -6,13 +6,13 @@
 use crate::core::error::KwaversResult;
 use crate::gpu::memory::{MemoryPoolType, UnifiedMemoryManager};
 use ndarray::{Array3, Array4};
-use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
 use rand::Rng;
-use std::time::{Duration, Instant};
+use rustfft::{num_complex::Complex, FftPlanner};
+use std::collections::VecDeque;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
-use rustfft::{num_complex::Complex, FftPlanner};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// Configuration for real-time imaging pipeline
 #[derive(Debug, Clone)]

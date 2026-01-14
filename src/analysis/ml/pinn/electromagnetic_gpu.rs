@@ -487,9 +487,10 @@ impl GPUEMSolver {
             .ok_or_else(|| KwaversError::GpuError("Missing current_density GPU buffer".into()))?;
 
         let device = self.compute_manager.device()?;
-        let bind_group_layout = self.bind_group_layout.as_ref().ok_or_else(|| {
-            KwaversError::GpuError("Bind group layout not initialized".into())
-        })?;
+        let bind_group_layout = self
+            .bind_group_layout
+            .as_ref()
+            .ok_or_else(|| KwaversError::GpuError("Bind group layout not initialized".into()))?;
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("EM Time Step Bind Group"),
@@ -597,13 +598,15 @@ impl GPUEMSolver {
         let device = self.compute_manager.device()?;
         let queue = self.compute_manager.queue()?;
 
-        let compute_pipeline = self.compute_pipeline.as_ref().ok_or_else(|| {
-            KwaversError::GpuError("Compute pipeline not initialized".into())
-        })?;
+        let compute_pipeline = self
+            .compute_pipeline
+            .as_ref()
+            .ok_or_else(|| KwaversError::GpuError("Compute pipeline not initialized".into()))?;
 
-        let bind_group = self.bind_group.as_ref().ok_or_else(|| {
-            KwaversError::GpuError("Bind group not initialized".into())
-        })?;
+        let bind_group = self
+            .bind_group
+            .as_ref()
+            .ok_or_else(|| KwaversError::GpuError("Bind group not initialized".into()))?;
 
         // Execute compute pass
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {

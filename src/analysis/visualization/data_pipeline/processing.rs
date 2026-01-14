@@ -43,9 +43,6 @@ impl ProcessingStage {
             ProcessingOperation::LogScale => self.log_scale(data),
             ProcessingOperation::GradientMagnitude => self.gradient_magnitude(data),
             ProcessingOperation::GaussianSmooth => self.gaussian_smooth(data),
-            ProcessingOperation::IsosurfaceExtraction => {
-                // Isosurface extraction would modify data for marching cubes
-            }
         }
     }
 

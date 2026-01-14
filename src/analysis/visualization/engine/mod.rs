@@ -110,7 +110,7 @@ impl VisualizationEngine {
 
                 // Render the field
                 let render_start = Instant::now();
-                renderer.render_volume(field_type, grid).await?;
+                renderer.render_volume(field, field_type, grid).await?;
                 let render_time =
                     render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
 

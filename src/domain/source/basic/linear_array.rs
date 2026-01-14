@@ -77,13 +77,7 @@ impl LinearArray {
 
     /// Adjust focus using proper time delays for broadband signals
     /// This replaces the incorrect phase delay approach
-    pub fn adjust_focus(
-        &mut self,
-        focus_x: f64,
-        focus_y: f64,
-        focus_z: f64,
-        sound_speed: f64,
-    ) {
+    pub fn adjust_focus(&mut self, focus_x: f64, focus_y: f64, focus_z: f64, sound_speed: f64) {
         let c = sound_speed;
         let spacing = self.element_spacing();
         let start_x = self.x_pos - self.length / 2.0;

@@ -4,8 +4,8 @@ use crate::domain::source::transducers::focused::bowl::{BowlConfig, BowlTransduc
 use crate::domain::source::{Source, SourceField};
 use ndarray::Array3;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct FocusedSource {
@@ -28,8 +28,8 @@ impl FocusedSource {
         let mut element_map = HashMap::new();
         let tolerance = grid.dx.max(grid.dy).max(grid.dz) * 0.5;
         let _tol2 = tolerance * tolerance; // unused? used in get_source_term optimization if we store it.
-        // But here we just build the map.
-        // Actually, we build map based on grid.position_to_indices.
+                                           // But here we just build the map.
+                                           // Actually, we build map based on grid.position_to_indices.
 
         for (i, &pos) in transducer.element_positions.iter().enumerate() {
             // Find grid index closest to element
@@ -72,7 +72,11 @@ impl Source for FocusedSource {
     }
 
     fn positions(&self) -> Vec<(f64, f64, f64)> {
-        self.transducer.element_positions.iter().map(|p| (p[0], p[1], p[2])).collect()
+        self.transducer
+            .element_positions
+            .iter()
+            .map(|p| (p[0], p[1], p[2]))
+            .collect()
     }
 
     fn signal(&self) -> &dyn Signal {

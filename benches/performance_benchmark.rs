@@ -1,39 +1,47 @@
 //! Comprehensive Performance Benchmark Suite
 //!
-//! This benchmark suite evaluates the computational performance of kwavers
-//! across different simulation types, hardware configurations, and optimization levels.
+//! ## STATUS: BENCHMARKS DISABLED (Sprint 209 Phase 2)
 //!
-//! ## Benchmark Categories
+//! **Date**: 2025-01-14
+//! **Reason**: Benchmark stubs measured placeholder operations instead of real physics
+//! **Decision**: Remove stubs per Dev rules (Correctness > Functionality, No Placeholders)
+//! **Future**: Re-enable after physics implementations complete (Sprint 211-213)
 //!
-//! ### 1. Wave Propagation Benchmarks
-//! - **FDTD Acoustic**: Standard finite difference time domain
-//! - **PSTD**: Pseudospectral time domain with k-space corrections
-//! - **HAS**: Hybrid angular spectrum method
-//! - **Nonlinear Westervelt**: Nonlinear acoustic wave propagation
+//! See:
+//! - `BENCHMARK_STUB_REMEDIATION_PLAN.md` for detailed remediation plan
+//! - `TODO_AUDIT_PHASE6_SUMMARY.md` Section 1.1 for audit findings
+//! - `backlog.md` Sprint 211-213 for implementation roadmap (189-263 hours)
 //!
-//! ### 2. Advanced Physics Benchmarks
-//! - **SWE**: Shear wave elastography (linear and nonlinear)
-//! - **CEUS**: Contrast-enhanced ultrasound with microbubble dynamics
-//! - **Transcranial FUS**: Aberration-corrected focused ultrasound
-//! - **Poroelastic**: Biphasic tissue modeling
+//! ---
 //!
-//! ### 3. GPU Acceleration Benchmarks
-//! - **Single GPU**: Maximum performance on individual GPU
-//! - **Multi-GPU**: Scaling across multiple GPUs
-//! - **Unified Memory**: Zero-copy memory transfers
-//! - **Memory Pooling**: Optimized memory allocation
+//! ## Original Benchmark Categories (DISABLED)
 //!
-//! ### 4. Uncertainty Quantification Benchmarks
-//! - **Monte Carlo Dropout**: Bayesian neural network uncertainty
-//! - **Ensemble Methods**: Bootstrap aggregation performance
-//! - **Conformal Prediction**: Distribution-free uncertainty bounds
+//! ### 1. Wave Propagation Benchmarks (DISABLED - Sprint 211)
+//! - **FDTD Acoustic**: Requires staggered grid velocity update (20-28h)
+//! - **PSTD**: Requires FFT-based k-space operators (15-20h)
+//! - **HAS**: Requires angular spectrum method (12-16h)
+//! - **Nonlinear Westervelt**: Requires β/ρc⁴ nonlinear term (10-12h)
 //!
-//! ## Performance Metrics
+//! ### 2. Advanced Physics Benchmarks (DISABLED - Sprint 212)
+//! - **SWE**: Requires elastic wave solver + inverse problem (24-32h)
+//! - **CEUS**: Requires Rayleigh-Plesset + perfusion model (16-22h)
+//! - **Transcranial FUS**: Requires Rayleigh integral + aberration (20-26h)
 //!
-//! - **Throughput**: Simulations per second
-//! - **Memory Efficiency**: Memory usage vs problem size
-//! - **Scaling**: Performance vs number of GPUs
-//! - **Accuracy**: Computational accuracy vs speed trade-offs
+//! ### 3. Uncertainty Quantification Benchmarks (DISABLED - Sprint 213)
+//! - **Monte Carlo Dropout**: Requires variance calculation (44-63h)
+//! - **Ensemble Methods**: Requires statistical aggregation
+//! - **Conformal Prediction**: Requires conformity scoring
+//!
+//! ## Why Benchmarks Were Removed
+//!
+//! Phase 6 TODO audit identified 18 stub helper methods that measured placeholder
+//! operations instead of real physics, violating Dev rules:
+//! - "Absolute Prohibition: TODOs, stubs, dummy data, zero-filled placeholders"
+//! - "Correctness > Functionality"
+//! - "No Potemkin Villages"
+//!
+//! Invalid benchmarks produce misleading performance data and waste optimization
+//! effort on incorrect baselines.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers::error::KwaversResult;
@@ -92,60 +100,29 @@ impl PerformanceBenchmarkSuite {
         }
     }
 
-    /// Run complete benchmark suite
+    /// DISABLED - Run complete benchmark suite (Sprint 209 Phase 2)
+    ///
+    /// All benchmarks disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md
     #[allow(dead_code)]
-    fn run_full_suite(&mut self) -> KwaversResult<()> {
-        println!("Starting Comprehensive Performance Benchmark Suite");
-        println!("==================================================");
-
-        // Wave propagation benchmarks
-        self.run_wave_propagation_benchmarks()?;
-
-        // Advanced physics benchmarks
-        self.run_advanced_physics_benchmarks()?;
-
-        // GPU acceleration benchmarks
-        #[cfg(feature = "gpu")]
-        self.run_gpu_acceleration_benchmarks()?;
-
-        // Uncertainty quantification benchmarks
-        self.run_uncertainty_benchmarks()?;
-
-        // Generate performance report
-        self.generate_performance_report();
-
-        Ok(())
+    fn run_full_suite_DISABLED(&mut self) -> KwaversResult<()> {
+        panic!("Benchmarks disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    /// Run wave propagation benchmarks
-    fn run_wave_propagation_benchmarks(&mut self) -> KwaversResult<()> {
-        println!("\n--- Wave Propagation Benchmarks ---");
-
-        for &(nx, ny, nz) in &self.config.grid_sizes {
-            for &sim_time in &self.config.simulation_times {
-                // FDTD benchmark
-                let result = self.benchmark_fdtd_wave(nx, ny, nz, sim_time)?;
-                self.results.push(result);
-
-                // PSTD benchmark
-                let result = self.benchmark_pstd_wave(nx, ny, nz, sim_time)?;
-                self.results.push(result);
-
-                // HAS benchmark
-                let result = self.benchmark_has_wave(nx, ny, nz, sim_time)?;
-                self.results.push(result);
-
-                // Nonlinear Westervelt benchmark
-                let result = self.benchmark_westervelt_wave(nx, ny, nz, sim_time)?;
-                self.results.push(result);
-            }
-        }
-
-        Ok(())
+    /// DISABLED - Run wave propagation benchmarks (Sprint 209 Phase 2)
+    ///
+    /// Benchmarks disabled because they use stub implementations.
+    /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md
+    #[allow(dead_code)]
+    fn run_wave_propagation_benchmarks_DISABLED(&mut self) -> KwaversResult<()> {
+        panic!("Benchmarks disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    /// Benchmark FDTD acoustic wave propagation
-    fn benchmark_fdtd_wave(
+    /// DISABLED - Benchmark FDTD acoustic wave propagation (Sprint 209 Phase 2)
+    ///
+    /// Uses stub implementations: update_velocity_fdtd, update_pressure_fdtd
+    /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md Section "Phase 2A"
+    #[allow(dead_code)]
+    fn benchmark_fdtd_wave_DISABLED(
         &self,
         nx: usize,
         ny: usize,
@@ -173,30 +150,8 @@ impl PerformanceBenchmarkSuite {
 
             for _ in 0..n_steps.min(1000) {
                 // Limit for benchmarking
-                // TODO: SIMPLIFIED - point source only, no geometry
+                // DISABLED - stub implementations removed
                 pressure[[nx / 2, ny / 2, nz / 2]] += 1e5;
-
-                // Update velocity from pressure
-                self.update_velocity_fdtd(
-                    &mut velocity_x,
-                    &mut velocity_y,
-                    &mut velocity_z,
-                    &pressure,
-                    dt,
-                    &grid,
-                    &medium,
-                );
-
-                // Update pressure from velocity
-                self.update_pressure_fdtd(
-                    &mut pressure,
-                    &velocity_x,
-                    &velocity_y,
-                    &velocity_z,
-                    dt,
-                    &grid,
-                    &medium,
-                );
             }
 
             total_time += start.elapsed();
@@ -217,8 +172,12 @@ impl PerformanceBenchmarkSuite {
         })
     }
 
-    /// Benchmark PSTD wave propagation
-    fn benchmark_pstd_wave(
+    /// DISABLED - Benchmark PSTD wave propagation (Sprint 209 Phase 2)
+    ///
+    /// Uses stub implementations: simulate_fft_operations
+    /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md Section "Phase 2A"
+    #[allow(dead_code)]
+    fn benchmark_pstd_wave_DISABLED(
         &self,
         nx: usize,
         ny: usize,
@@ -250,9 +209,8 @@ impl PerformanceBenchmarkSuite {
 
                 field[[nx / 2, ny / 2, nz / 2]] += source_amplitude as f32;
 
-                // Simulate k-space operations (FFT-based)
-                // In practice, this would use actual FFT libraries
-                self.simulate_fft_operations(&mut field);
+                // DISABLED - stub implementation removed
+                let _ = &field;
             }
 
             total_time += start.elapsed();
@@ -273,8 +231,12 @@ impl PerformanceBenchmarkSuite {
         })
     }
 
-    /// Benchmark HAS wave propagation
-    fn benchmark_has_wave(
+    /// DISABLED - Benchmark HAS wave propagation (Sprint 209 Phase 2)
+    ///
+    /// Uses stub implementations: simulate_angular_spectrum_propagation
+    /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md Section "Phase 2A"
+    #[allow(dead_code)]
+    fn benchmark_has_wave_DISABLED(
         &self,
         nx: usize,
         ny: usize,
@@ -310,8 +272,9 @@ impl PerformanceBenchmarkSuite {
                     }
                 }
 
-                // Simulate angular spectrum propagation
-                self.simulate_angular_spectrum_propagation(&mut field, dt);
+                // DISABLED - stub implementation removed
+                let _ = &field;
+                let _ = dt;
             }
 
             total_time += start.elapsed();
@@ -334,8 +297,12 @@ impl PerformanceBenchmarkSuite {
         })
     }
 
-    /// Benchmark nonlinear Westervelt equation
-    fn benchmark_westervelt_wave(
+    /// DISABLED - Benchmark nonlinear Westervelt equation (Sprint 209 Phase 2)
+    ///
+    /// Uses stub implementations: update_velocity_fdtd, update_pressure_fdtd, update_pressure_nonlinear
+    /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md Section "Phase 2A"
+    #[allow(dead_code)]
+    fn benchmark_westervelt_wave_DISABLED(
         &self,
         nx: usize,
         ny: usize,
@@ -372,29 +339,7 @@ impl PerformanceBenchmarkSuite {
                     * (2.0 * std::f64::consts::PI * 1e6 * time).sin() as f32
                     * (-0.5 * (time * 1e6).powi(2)).exp() as f32;
 
-                // Update velocity (linear part)
-                self.update_velocity_fdtd(
-                    &mut velocity_x,
-                    &mut velocity_y,
-                    &mut velocity_z,
-                    &pressure,
-                    dt,
-                    &grid,
-                    &medium,
-                );
-
-                // Update pressure with nonlinear terms
-                self.update_pressure_nonlinear(
-                    &mut pressure,
-                    &velocity_x,
-                    &velocity_y,
-                    &velocity_z,
-                    dt,
-                    &grid,
-                    &medium,
-                    beta,
-                    absorption,
-                );
+                // DISABLED - stub implementations removed
             }
 
             total_time += start.elapsed();
@@ -415,30 +360,25 @@ impl PerformanceBenchmarkSuite {
         })
     }
 
-    /// Run advanced physics benchmarks
-    fn run_advanced_physics_benchmarks(&mut self) -> KwaversResult<()> {
-        println!("\n--- Advanced Physics Benchmarks ---");
-
-        // Use medium grid size for advanced physics
-        let (nx, ny, nz) = (128, 128, 64);
-
-        // SWE benchmark
-        let result = self.benchmark_swe(nx, ny, nz)?;
-        self.results.push(result);
-
-        // CEUS benchmark
-        let result = self.benchmark_ceus(nx, ny, nz)?;
-        self.results.push(result);
-
-        // Transcranial FUS benchmark
-        let result = self.benchmark_transcranial_fus(nx, ny, nz)?;
-        self.results.push(result);
-
-        Ok(())
+    /// DISABLED - Run advanced physics benchmarks (Sprint 209 Phase 2)
+    ///
+    /// All benchmarks disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md
+    #[allow(dead_code)]
+    fn run_advanced_physics_benchmarks_DISABLED(&mut self) -> KwaversResult<()> {
+        panic!("Benchmarks disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    /// Benchmark shear wave elastography
-    fn benchmark_swe(&self, nx: usize, ny: usize, nz: usize) -> KwaversResult<BenchmarkResult> {
+    /// DISABLED - Benchmark shear wave elastography (Sprint 209 Phase 2)
+    ///
+    /// Uses stub implementations: simulate_elastic_wave_step, simulate_displacement_tracking, simulate_stiffness_estimation
+    /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md Section "Phase 2A"
+    #[allow(dead_code)]
+    fn benchmark_swe_DISABLED(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+    ) -> KwaversResult<BenchmarkResult> {
         let start = Instant::now();
 
         // TODO: SIMPLIFIED BENCHMARK - using stub functions, not real elastography physics
@@ -450,15 +390,13 @@ impl PerformanceBenchmarkSuite {
         let n_time_steps = 500; // Typical for SWE
 
         for step in 0..n_time_steps {
-            // Simulate elastic wave propagation
-            self.simulate_elastic_wave_step(&mut displacement_field, step, &grid);
-
-            // Simulate displacement tracking
-            self.simulate_displacement_tracking(&displacement_field, step);
+            // DISABLED - stub implementations removed
+            let _ = step;
+            let _ = &displacement_field;
+            let _ = &grid;
         }
 
-        // TODO: SIMPLIFIED - using clone stub, not real inverse problem solver
-        let _stiffness_map = self.simulate_stiffness_estimation(&displacement_field);
+        // DISABLED - stub implementation removed
 
         let execution_time = start.elapsed();
         let memory_usage = displacement_field.len() * std::mem::size_of::<f32>() * 3; // Multiple components
@@ -474,8 +412,17 @@ impl PerformanceBenchmarkSuite {
         })
     }
 
-    /// Benchmark contrast-enhanced ultrasound
-    fn benchmark_ceus(&self, nx: usize, ny: usize, nz: usize) -> KwaversResult<BenchmarkResult> {
+    /// DISABLED - Benchmark contrast-enhanced ultrasound (Sprint 209 Phase 2)
+    ///
+    /// Uses stub implementations: simulate_microbubble_scattering, simulate_tissue_perfusion, simulate_perfusion_analysis
+    /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md Section "Phase 2A"
+    #[allow(dead_code)]
+    fn benchmark_ceus_DISABLED(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+    ) -> KwaversResult<BenchmarkResult> {
         let start = Instant::now();
 
         // CEUS involves microbubble dynamics and perfusion analysis
@@ -490,16 +437,18 @@ impl PerformanceBenchmarkSuite {
 
             // Simulate microbubble scattering
             for _ in 0..n_microbubbles.min(100) {
-                // Limit for benchmark
-                self.simulate_microbubble_scattering(&mut contrast_signal, time);
+                // DISABLED - stub implementation removed
+                let _ = &contrast_signal;
+                let _ = time;
             }
 
-            // Simulate tissue perfusion
-            self.simulate_tissue_perfusion(&mut contrast_signal, time);
+            // DISABLED - stub implementation removed
+            let _ = &contrast_signal;
+            let _ = time;
         }
 
-        // Perform perfusion analysis
-        let _perfusion_map = self.simulate_perfusion_analysis(&contrast_signal);
+        // DISABLED - stub implementation removed
+        let _ = &contrast_signal;
 
         let execution_time = start.elapsed();
         let memory_usage = contrast_signal.len() * std::mem::size_of::<f32>() * 2;
@@ -515,8 +464,12 @@ impl PerformanceBenchmarkSuite {
         })
     }
 
-    /// Benchmark transcranial focused ultrasound
-    fn benchmark_transcranial_fus(
+    /// DISABLED - Benchmark transcranial focused ultrasound (Sprint 209 Phase 2)
+    ///
+    /// Uses stub implementations: simulate_transducer_element, simulate_skull_transmission, simulate_thermal_monitoring
+    /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md Section "Phase 2A"
+    #[allow(dead_code)]
+    fn benchmark_transcranial_fus_DISABLED(
         &self,
         nx: usize,
         ny: usize,
@@ -535,15 +488,19 @@ impl PerformanceBenchmarkSuite {
         for time_step in 0..n_time_steps {
             // Simulate aberration correction
             for elem in 0..n_elements.min(64) {
-                // Limit for benchmark
-                self.simulate_transducer_element(&mut acoustic_field, elem, time_step, &grid);
+                // DISABLED - stub implementation removed
+                let _ = &acoustic_field;
+                let _ = elem;
+                let _ = time_step;
+                let _ = &grid;
             }
 
-            // Apply skull transmission effects
-            self.simulate_skull_transmission(&mut acoustic_field, &grid);
+            // DISABLED - stub implementation removed
+            let _ = &acoustic_field;
+            let _ = &grid;
 
-            // Monitor thermal safety
-            self.simulate_thermal_monitoring(&acoustic_field);
+            // DISABLED - stub implementation removed
+            let _ = &acoustic_field;
         }
 
         let execution_time = start.elapsed();
@@ -561,9 +518,10 @@ impl PerformanceBenchmarkSuite {
         })
     }
 
-    /// Run GPU acceleration benchmarks
+    /// DISABLED - Run GPU acceleration benchmarks (Sprint 209 Phase 2)
+    #[allow(dead_code)]
     #[cfg(feature = "gpu")]
-    fn run_gpu_acceleration_benchmarks(&mut self) -> KwaversResult<()> {
+    fn run_gpu_acceleration_benchmarks_DISABLED(&mut self) -> KwaversResult<()> {
         println!("\n--- GPU Acceleration Benchmarks ---");
 
         // Test different GPU configurations
@@ -675,8 +633,12 @@ impl PerformanceBenchmarkSuite {
         })
     }
 
-    /// Run uncertainty quantification benchmarks
-    fn run_uncertainty_benchmarks(&mut self) -> KwaversResult<()> {
+    /// DISABLED - Run uncertainty quantification benchmarks (Sprint 209 Phase 2)
+    ///
+    /// Uses stub implementations for all UQ computations
+    /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md Section "Phase 2A"
+    #[allow(dead_code)]
+    fn run_uncertainty_benchmarks_DISABLED(&mut self) -> KwaversResult<()> {
         println!("\n--- Uncertainty Quantification Benchmarks ---");
 
         let (nx, ny, nz) = (64, 64, 32); // Small grid for uncertainty tests
@@ -727,8 +689,8 @@ impl PerformanceBenchmarkSuite {
             predictions.push(prediction);
         }
 
-        // Compute uncertainty statistics
-        let _uncertainty = self.compute_uncertainty_statistics(&predictions);
+        // DISABLED - stub implementation removed
+        let _ = &predictions;
 
         let execution_time = start.elapsed();
         let memory_usage = nx * ny * nz * 4 * n_samples; // All samples in memory
@@ -772,10 +734,10 @@ impl PerformanceBenchmarkSuite {
             ensemble_predictions.push(prediction);
         }
 
-        // Compute ensemble statistics
-        let ensemble_mean = self.compute_ensemble_mean(&ensemble_predictions);
-        let _ensemble_variance =
-            self.compute_ensemble_variance(&ensemble_predictions, &ensemble_mean);
+        // DISABLED - stub implementation removed
+        let _ = &ensemble_predictions;
+        let ensemble_mean = Array3::<f32>::zeros((nx, ny, nz));
+        let _ensemble_variance = Array3::<f32>::zeros((nx, ny, nz));
 
         let execution_time = start.elapsed();
         let memory_usage = nx * ny * nz * 4 * n_models;
@@ -808,8 +770,10 @@ impl PerformanceBenchmarkSuite {
             let prediction = Array3::<f32>::from_elem((nx, ny, nz), rand::random::<f32>());
             let target = Array3::<f32>::from_elem((nx, ny, nz), rand::random::<f32>());
 
-            // Compute conformity score
-            let score = self.compute_conformity_score(&prediction, &target);
+            // DISABLED - stub implementation removed
+            let _ = &prediction;
+            let _ = &target;
+            let score = 0.0_f64;
             conformity_scores.push(score);
         }
 
@@ -820,8 +784,9 @@ impl PerformanceBenchmarkSuite {
         let n_test = 50;
         for _ in 0..n_test {
             let test_prediction = Array3::<f32>::from_elem((nx, ny, nz), rand::random::<f32>());
-            let _interval =
-                self.compute_prediction_interval(&test_prediction, &conformity_scores, 0.9);
+            // DISABLED - stub implementation removed
+            let _ = &test_prediction;
+            let _ = &conformity_scores;
         }
 
         let execution_time = start.elapsed();
@@ -904,15 +869,41 @@ impl PerformanceBenchmarkSuite {
         );
     }
 
-    // Helper methods for benchmark implementations
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // This is a placeholder for benchmark timing purposes only.
-    // Real implementation requires:
-    // - Staggered grid velocity update: v^(n+1/2) = v^(n-1/2) - (dt/ρ) * ∇p^n
-    // - Proper spatial derivatives with appropriate boundary handling
-    // - Grid spacing normalization (dx, dy, dz)
-    // This stub intentionally does nothing to isolate benchmark overhead.
-    fn update_velocity_fdtd(
+    // ========================================================================
+    // BENCHMARK STUBS DISABLED - Sprint 209 Phase 2 (2025-01-14)
+    // ========================================================================
+    //
+    // The following helper methods were REMOVED because they measured placeholder
+    // operations instead of real physics, violating Dev rules:
+    // - "Absolute Prohibition: TODOs, stubs, dummy data, zero-filled placeholders"
+    // - "Correctness > Functionality"
+    //
+    // See: BENCHMARK_STUB_REMEDIATION_PLAN.md for implementation roadmap
+    // Implementation effort: 189-263 hours (Sprint 211-213)
+    //
+    // ========================================================================
+
+    /// DISABLED - Awaiting Real Implementation (Sprint 211 - 20-28h)
+    ///
+    /// This benchmark stub was removed because it measured placeholder operations
+    /// instead of real FDTD physics.
+    ///
+    /// Required implementation:
+    /// - Staggered grid velocity update: v^(n+1/2) = v^(n-1/2) - (dt/ρ) * ∇p^n
+    /// - Spatial derivatives: (p[i+1,j,k] - p[i,j,k])/dx
+    /// - Boundary handling for grid edges
+    /// - CFL stability: dt ≤ dx/(c√3)
+    ///
+    /// Validation:
+    /// - Plane wave test: p(x,t) = A sin(kx - ωt), v(x,t) = (A/ρc) sin(kx - ωt)
+    /// - Energy conservation: E = ∫(p²/2ρc² + ρ|v|²/2)dV = const
+    ///
+    /// Related:
+    /// - TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #1
+    /// - backlog.md Sprint 211 "FDTD Benchmarks"
+    /// - Production implementation: src/solver/fdtd/
+    #[allow(dead_code)]
+    fn update_velocity_fdtd_DISABLED(
         &self,
         _vx: &mut Array3<f32>,
         _vy: &mut Array3<f32>,
@@ -922,18 +913,21 @@ impl PerformanceBenchmarkSuite {
         _grid: &Grid,
         _medium: &HomogeneousMedium,
     ) {
-        // Simplified FDTD velocity update
+        // DISABLED - Benchmark removed, awaiting real FDTD implementation
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
+    /// DISABLED - Awaiting Real Implementation (Sprint 211 - 20-28h)
+    ///
+    /// Required implementation:
+    /// - Pressure update: p^(n+1) = p^n - (ρc²) * dt * ∇·v^(n+1/2)
+    /// - Divergence: ∇·v = (vx[i,j,k]-vx[i-1,j,k])/dx + (vy[i,j,k]-vy[i,j-1,k])/dy + (vz[i,j,k]-vz[i,j,k-1])/dz
+    /// - Staggered grid indexing
+    ///
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #2
+    #[allow(dead_code)]
     #[allow(clippy::too_many_arguments)]
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // This is a placeholder for benchmark timing purposes only.
-    // Real implementation requires:
-    // - Pressure update: p^(n+1) = p^n - (ρc²) * dt * ∇·v^(n+1/2)
-    // - Divergence calculation with staggered grid velocities
-    // - CFL stability condition enforcement
-    // This stub intentionally does nothing to isolate benchmark overhead.
-    fn update_pressure_fdtd(
+    fn update_pressure_fdtd_DISABLED(
         &self,
         _p: &mut Array3<f32>,
         _vx: &Array3<f32>,
@@ -943,19 +937,22 @@ impl PerformanceBenchmarkSuite {
         _grid: &Grid,
         _medium: &HomogeneousMedium,
     ) {
-        // Simplified FDTD pressure update
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
+    /// DISABLED - Awaiting Real Implementation (Sprint 211 - 10-12h)
+    ///
+    /// Required implementation:
+    /// - Westervelt equation: ∂²p/∂t² = c²∇²p + (β/ρc⁴)∂²(p²)/∂t² + (δ/ρc²)∂³p/∂t³
+    /// - Nonlinear term: N = (β/ρc⁴)∂²(p²)/∂t²
+    /// - Shock-capturing scheme
+    ///
+    /// Validation: Fubini solution p(x,σ) = p₀ sin(σ)/(1 + Γσ cos(σ))
+    ///
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #3
+    #[allow(dead_code)]
     #[allow(clippy::too_many_arguments)]
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // This is a placeholder for benchmark timing purposes only.
-    // Real implementation requires:
-    // - Westervelt equation: ∂²p/∂t² = c²∇²p + (β/ρc⁴)∂²(p²)/∂t² + (δ/ρc²)∂³p/∂t³
-    // - Nonlinearity parameter β (B/A coefficient)
-    // - Absorption term with frequency-dependent attenuation
-    // - Second-order pressure terms for harmonic generation
-    // This stub intentionally does nothing to isolate benchmark overhead.
-    fn update_pressure_nonlinear(
+    fn update_pressure_nonlinear_DISABLED(
         &self,
         _p: &mut Array3<f32>,
         _vx: &Array3<f32>,
@@ -967,158 +964,211 @@ impl PerformanceBenchmarkSuite {
         _beta: f64,
         _absorption: f64,
     ) {
-        // Simplified nonlinear pressure update with Westervelt terms
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Placeholder for FFT timing in PSTD benchmarks.
-    fn simulate_fft_operations(&self, _field: &mut Array3<f32>) {
-        // Simulate FFT-based operations
+    /// DISABLED - Awaiting Real Implementation (Sprint 211 - 15-20h)
+    ///
+    /// Required: rustfft integration, k-space operators
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #4
+    #[allow(dead_code)]
+    fn simulate_fft_operations_DISABLED(&self, _field: &mut Array3<f32>) {
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Placeholder for angular spectrum method timing.
-    fn simulate_angular_spectrum_propagation(&self, _field: &mut Array3<f32>, _dt: f64) {
-        // Simulate angular spectrum propagation
+    /// DISABLED - Awaiting Real Implementation (Sprint 211 - 12-16h)
+    ///
+    /// Required: Angular spectrum method implementation
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #5
+    #[allow(dead_code)]
+    fn simulate_angular_spectrum_propagation_DISABLED(&self, _field: &mut Array3<f32>, _dt: f64) {
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Placeholder for elastic wave equation timing.
-    fn simulate_elastic_wave_step(
+    /// DISABLED - Awaiting Real Implementation (Sprint 212 - 12-16h)
+    ///
+    /// Required: Elastic wave equation solver
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #6
+    #[allow(dead_code)]
+    fn simulate_elastic_wave_step_DISABLED(
         &self,
         _displacement: &mut Array3<f32>,
         _step: usize,
         _grid: &Grid,
     ) {
-        // Simulate elastic wave propagation step
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Placeholder for displacement tracking timing.
-    fn simulate_displacement_tracking(&self, _displacement: &Array3<f32>, _step: usize) {
-        // Simulate displacement tracking
+    /// DISABLED - Awaiting Real Implementation (Sprint 212 - 6-8h)
+    ///
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #7
+    #[allow(dead_code)]
+    fn simulate_displacement_tracking_DISABLED(&self, _displacement: &Array3<f32>, _step: usize) {
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Returns placeholder clone. Real implementation requires inverse problem solving.
-    fn simulate_stiffness_estimation(&self, displacement: &Array3<f32>) -> Array3<f32> {
-        // Simulate stiffness estimation
-        displacement.clone()
+    /// DISABLED - Awaiting Real Implementation (Sprint 212 - 6-8h)
+    ///
+    /// Required: Inverse problem solver (time-of-flight, direct inversion, FEM)
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #8
+    #[allow(dead_code)]
+    fn simulate_stiffness_estimation_DISABLED(&self, _displacement: &Array3<f32>) -> Array3<f32> {
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Placeholder for microbubble dynamics timing.
-    fn simulate_microbubble_scattering(&self, _signal: &mut Array3<f32>, _time: f64) {
-        // Simulate microbubble scattering
+    /// DISABLED - Awaiting Real Implementation (Sprint 212 - 8-12h)
+    ///
+    /// Required: Rayleigh-Plesset dynamics, scattering
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #9
+    #[allow(dead_code)]
+    fn simulate_microbubble_scattering_DISABLED(&self, _signal: &mut Array3<f32>, _time: f64) {
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Placeholder for perfusion modeling timing.
-    fn simulate_tissue_perfusion(&self, _signal: &mut Array3<f32>, _time: f64) {
-        // Simulate tissue perfusion
+    /// DISABLED - Awaiting Real Implementation (Sprint 212 - 4-6h)
+    ///
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #10
+    #[allow(dead_code)]
+    fn simulate_tissue_perfusion_DISABLED(&self, _signal: &mut Array3<f32>, _time: f64) {
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Returns placeholder clone.
-    fn simulate_perfusion_analysis(&self, signal: &Array3<f32>) -> Array3<f32> {
-        // Simulate perfusion analysis
-        signal.clone()
+    /// DISABLED - Awaiting Real Implementation (Sprint 212 - 4-4h)
+    ///
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #11
+    #[allow(dead_code)]
+    fn simulate_perfusion_analysis_DISABLED(&self, _signal: &Array3<f32>) -> Array3<f32> {
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Placeholder for transducer element field calculation.
-    fn simulate_transducer_element(
+    /// DISABLED - Awaiting Real Implementation (Sprint 212 - 8-10h)
+    ///
+    /// Required: Rayleigh integral implementation
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #12
+    #[allow(dead_code)]
+    fn simulate_transducer_element_DISABLED(
         &self,
         _field: &mut Array3<f32>,
         _elem: usize,
         _time_step: usize,
         _grid: &Grid,
     ) {
-        // Simulate transducer element contribution
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Placeholder for skull aberration modeling.
-    fn simulate_skull_transmission(&self, _field: &mut Array3<f32>, _grid: &Grid) {
-        // Simulate skull transmission effects
+    /// DISABLED - Awaiting Real Implementation (Sprint 212 - 8-12h)
+    ///
+    /// Required: Skull aberration physics
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #13
+    #[allow(dead_code)]
+    fn simulate_skull_transmission_DISABLED(&self, _field: &mut Array3<f32>, _grid: &Grid) {
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Placeholder for thermal dose calculation.
-    fn simulate_thermal_monitoring(&self, _field: &Array3<f32>) {
-        // Simulate thermal safety monitoring
+    /// DISABLED - Awaiting Real Implementation (Sprint 212 - 4-4h)
+    ///
+    /// Required: CEM43 thermal dose calculation
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #14
+    #[allow(dead_code)]
+    fn simulate_thermal_monitoring_DISABLED(&self, _field: &Array3<f32>) {
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Returns zero-filled placeholder. Real implementation requires variance/confidence interval calculation.
-    fn compute_uncertainty_statistics(&self, _predictions: &[Array3<f32>]) -> Array3<f32> {
-        // Compute uncertainty statistics
-        Array3::zeros((10, 10, 10)) // Placeholder
+    /// DISABLED - Awaiting Real Implementation (Sprint 213 - 8-12h)
+    ///
+    /// Required: Variance/confidence interval calculation
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #15
+    #[allow(dead_code)]
+    fn compute_uncertainty_statistics_DISABLED(&self, _predictions: &[Array3<f32>]) -> Array3<f32> {
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Returns zero-filled placeholder. Real implementation requires element-wise averaging.
-    fn compute_ensemble_mean(&self, _predictions: &[Array3<f32>]) -> Array3<f32> {
-        // Compute ensemble mean
-        Array3::zeros((10, 10, 10)) // Placeholder
+    /// DISABLED - Awaiting Real Implementation (Sprint 213 - 4-6h)
+    ///
+    /// Required: Element-wise averaging
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #16
+    #[allow(dead_code)]
+    fn compute_ensemble_mean_DISABLED(&self, _predictions: &[Array3<f32>]) -> Array3<f32> {
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Returns zero-filled placeholder. Real implementation requires variance calculation.
-    fn compute_ensemble_variance(
+    /// DISABLED - Awaiting Real Implementation (Sprint 213 - 6-8h)
+    ///
+    /// Required: Variance calculation
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #17
+    #[allow(dead_code)]
+    fn compute_ensemble_variance_DISABLED(
         &self,
         _predictions: &[Array3<f32>],
         _mean: &Array3<f32>,
     ) -> Array3<f32> {
-        // Compute ensemble variance
-        Array3::zeros((10, 10, 10)) // Placeholder
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Returns placeholder 0.0. Real implementation requires conformal prediction scoring.
-    fn compute_conformity_score(&self, _prediction: &Array3<f32>, _target: &Array3<f32>) -> f64 {
-        // Compute conformity score
-        0.0 // Placeholder
-    }
-
-    // TODO: SIMPLIFIED BENCHMARK STUB - NOT PRODUCTION CODE
-    // Returns placeholder clones. Real implementation requires quantile-based interval calculation.
-    fn compute_prediction_interval(
+    /// DISABLED - Awaiting Real Implementation (Sprint 213 - 10-14h)
+    ///
+    /// Required: Conformal prediction scoring
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #18
+    #[allow(dead_code)]
+    fn compute_conformity_score_DISABLED(
         &self,
-        prediction: &Array3<f32>,
+        _prediction: &Array3<f32>,
+        _target: &Array3<f32>,
+    ) -> f64 {
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
+    }
+
+    /// DISABLED - Awaiting Real Implementation (Sprint 213 - 16-23h)
+    ///
+    /// Required: Quantile-based interval calculation
+    /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #19
+    #[allow(dead_code)]
+    fn compute_prediction_interval_DISABLED(
+        &self,
+        _prediction: &Array3<f32>,
         _scores: &[f64],
         _confidence: f64,
     ) -> (Array3<f32>, Array3<f32>) {
-        // Compute prediction interval
-        (prediction.clone(), prediction.clone()) // Placeholder
+        panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 }
 
-fn benchmark_wave_propagation(c: &mut Criterion) {
-    let mut suite = PerformanceBenchmarkSuite::new();
+// ============================================================================
+// BENCHMARKS DISABLED - Sprint 209 Phase 2 (2025-01-14)
+// ============================================================================
+//
+// All benchmarks in this file have been disabled because they measured
+// placeholder operations instead of real physics, violating Dev rules.
+//
+// See: BENCHMARK_STUB_REMEDIATION_PLAN.md for implementation roadmap
+// Estimated effort: 189-263 hours (Sprint 211-213)
+//
+// ============================================================================
 
-    c.bench_function("wave_propagation_suite", |b| {
+#[allow(dead_code)]
+fn benchmark_wave_propagation_DISABLED(_c: &mut Criterion) {
+    panic!("Benchmarks disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
+}
+
+#[allow(dead_code)]
+fn benchmark_advanced_physics_DISABLED(_c: &mut Criterion) {
+    panic!("Benchmarks disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
+}
+
+// Criterion registration commented out - no benchmarks to run
+// All benchmarks disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md
+//
+// Providing a dummy benchmark to satisfy criterion_group! macro requirements
+
+fn dummy_benchmark(c: &mut Criterion) {
+    c.bench_function("disabled_placeholder", |b| {
         b.iter(|| {
-            suite.run_wave_propagation_benchmarks().unwrap();
-            black_box(());
+            // All real benchmarks disabled - this is a placeholder to allow compilation
+            // See BENCHMARK_STUB_REMEDIATION_PLAN.md for implementation roadmap
+            black_box(1 + 1);
         });
     });
 }
 
-fn benchmark_advanced_physics(c: &mut Criterion) {
-    let mut suite = PerformanceBenchmarkSuite::new();
-
-    c.bench_function("advanced_physics_suite", |b| {
-        b.iter(|| {
-            suite.run_advanced_physics_benchmarks().unwrap();
-            black_box(());
-        });
-    });
-}
-
-criterion_group!(
-    benches,
-    benchmark_wave_propagation,
-    benchmark_advanced_physics
-);
+criterion_group!(benches, dummy_benchmark);
 criterion_main!(benches);

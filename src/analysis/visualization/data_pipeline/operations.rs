@@ -15,8 +15,6 @@ pub enum ProcessingOperation {
     GradientMagnitude,
     /// Apply 3D Gaussian smoothing
     GaussianSmooth,
-    /// Extract isosurface data
-    IsosurfaceExtraction,
 }
 
 impl ProcessingOperation {
@@ -33,7 +31,6 @@ impl ProcessingOperation {
             ProcessingOperation::LogScale => 2,
             ProcessingOperation::GradientMagnitude => 5,
             ProcessingOperation::GaussianSmooth => 7,
-            ProcessingOperation::IsosurfaceExtraction => 9,
         }
     }
 }

@@ -1,8 +1,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers::core::log::file::CombinedLogger;
+use log::Log;
 use log::{Level, Record};
 use std::fs::{self, File};
-use log::Log;
 
 fn logging_benchmark(c: &mut Criterion) {
     let file_path = "benchmark_log.txt";

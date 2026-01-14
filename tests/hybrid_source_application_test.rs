@@ -1,14 +1,12 @@
+use kwavers::domain::boundary::PMLConfig;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::domain::plugin::{Plugin, PluginContext, PluginFields};
-use kwavers::domain::source::{GaussianBuilder, Source};
 use kwavers::domain::signal::SineWave;
-use kwavers::solver::hybrid::{
-    DecompositionStrategy, HybridConfig, HybridPlugin,
-};
-use kwavers::solver::hybrid::domain_decomposition::{DomainRegion, DomainType};
+use kwavers::domain::source::{GaussianBuilder, Source};
 use kwavers::solver::forward::pstd::config::{BoundaryConfig as PSTDBoundaryConfig, PSTDConfig};
-use kwavers::domain::boundary::PMLConfig;
+use kwavers::solver::hybrid::domain_decomposition::{DomainRegion, DomainType};
+use kwavers::solver::hybrid::{DecompositionStrategy, HybridConfig, HybridPlugin};
 use ndarray::{Array3, Array4};
 use std::sync::Arc;
 
@@ -77,13 +75,21 @@ fn test_hybrid_source_application() {
         extra_fields: &extra_fields,
     };
 
-    plugin.update(&mut fields, &grid, &medium, dt, t, &mut context).expect("Update failed");
+    plugin
+        .update(&mut fields, &grid, &medium, dt, t, &mut context)
+        .expect("Update failed");
 
     // 6. Assert
     let p_idx = 0; // Pressure
-    // Check max pressure
-    let max_p = fields.index_axis(ndarray::Axis(0), p_idx).iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+                   // Check max pressure
+    let max_p = fields
+        .index_axis(ndarray::Axis(0), p_idx)
+        .iter()
+        .fold(0.0f64, |a, &b| a.max(b.abs()));
 
     println!("Max pressure: {}", max_p);
-    assert!(max_p > 1e-10, "Pressure field should be non-zero after applying source (expected ~1.0)");
+    assert!(
+        max_p > 1e-10,
+        "Pressure field should be non-zero after applying source (expected ~1.0)"
+    );
 }

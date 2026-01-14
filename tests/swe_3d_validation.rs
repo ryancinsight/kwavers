@@ -43,14 +43,14 @@ use kwavers::clinical::therapy::swe_3d_workflows::{
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::heterogeneous::HeterogeneousMedium;
 use kwavers::domain::medium::HomogeneousMedium;
-#[cfg(feature = "gpu")]
-use kwavers::gpu::GPUDevice;
 use kwavers::physics::acoustics::imaging::modalities::elastography::{
     AcousticRadiationForce, MultiDirectionalPush,
 };
 use kwavers::solver::forward::elastic::swe::AdaptiveResolution;
 #[cfg(feature = "gpu")]
-use kwavers::solver::forward::elastic::GPUElasticWaveSolver3D;
+use kwavers::solver::forward::elastic::swe::GPUDevice;
+#[cfg(feature = "gpu")]
+use kwavers::solver::forward::elastic::swe::GPUElasticWaveSolver3D;
 use kwavers::solver::forward::elastic::{
     ArrivalDetection, ElasticBodyForceConfig, ElasticWaveConfig, ElasticWaveField,
     ElasticWaveSolver, VolumetricSource, VolumetricWaveConfig, WaveFrontTracker,

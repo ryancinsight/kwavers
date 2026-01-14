@@ -1,18 +1,15 @@
 //! Volume rendering implementation
 
+use crate::analysis::visualization::{ColorScheme, FieldType, VisualizationConfig};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::visualization::{ColorScheme, FieldType, VisualizationConfig};
 use ndarray::Array3;
 
 /// Volume renderer for 3D fields
-/// NOTE: Some fields currently unused - part of future volume rendering implementation
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct VolumeRenderer {
     config: VisualizationConfig,
     transfer_function: TransferFunction,
-    ray_marcher: RayMarcher,
 }
 
 impl VolumeRenderer {
@@ -21,7 +18,6 @@ impl VolumeRenderer {
         Ok(Self {
             config: config.clone(),
             transfer_function: TransferFunction::new(&config.color_scheme),
-            ray_marcher: RayMarcher::new(config.ray_samples),
         })
     }
 
@@ -61,27 +57,43 @@ impl VolumeRenderer {
         field: &Array3<f64>,
         _field_type: FieldType,
         _grid: &Grid,
-        _samples: usize,
+        samples: usize,
     ) -> KwaversResult<Vec<u8>> {
         let (nx, ny, nz) = field.dim();
         let mut image = vec![0u8; nx * ny * 4]; // RGBA
 
-        // Maximum intensity projection (MIP) per Levoy (1988)
-        // Standard volume rendering technique for medical visualization
-        // Alternative: direct volume rendering with ray marching (see Sprint 125+ roadmap)
+        let global_max = field
+            .iter()
+            .fold(0.0_f32, |acc, &v| acc.max(v.abs() as f32));
+
+        let step = if samples == 0 {
+            1
+        } else {
+            (nz / samples).max(1)
+        };
+
         for i in 0..nx {
             for j in 0..ny {
                 let mut max_val = 0.0_f32;
-                for k in 0..nz {
+                for k in (0..nz).step_by(step) {
                     max_val = max_val.max(field[[i, j, k]].abs() as f32);
                 }
 
-                let color = self.transfer_function.map_value(max_val);
+                let normalized = if global_max > 0.0 {
+                    max_val / global_max
+                } else {
+                    0.0
+                };
+                let color = self.transfer_function.map_value(normalized);
                 let idx = (j * nx + i) * 4;
                 image[idx] = (color[0] * 255.0) as u8;
                 image[idx + 1] = (color[1] * 255.0) as u8;
                 image[idx + 2] = (color[2] * 255.0) as u8;
-                image[idx + 3] = 255;
+                image[idx + 3] = if self.config.enable_transparency {
+                    (normalized.clamp(0.0, 1.0) * 255.0) as u8
+                } else {
+                    255
+                };
             }
         }
 
@@ -223,53 +235,5 @@ impl TransferFunction {
             [0.8, 0.8, 0.8, 1.0],
             [1.0, 1.0, 1.0, 1.0],
         ]
-    }
-}
-
-/// Ray marching for volume rendering
-#[derive(Debug)]
-struct RayMarcher {
-    _samples: usize,
-}
-
-impl RayMarcher {
-    /// Create a new ray marcher
-    fn new(samples: usize) -> Self {
-        Self { _samples: samples }
-    }
-
-    /// March a ray through the volume
-    ///
-    /// Note: This method is reserved for future volume rendering implementation.
-    /// It implements basic ray marching for 3D volume visualization per Levoy (1988).
-    ///
-    /// **Reference**: Levoy (1988) "Display of Surfaces from Volume Data" IEEE CG&A
-    #[allow(dead_code)]
-    fn march_ray(&self, origin: [f32; 3], direction: [f32; 3], volume: &Array3<f64>) -> f32 {
-        // Basic ray marching with uniform sampling (future: adaptive sampling)
-        let mut accumulated = 0.0;
-        let step = 1.0 / self._samples as f32;
-
-        for i in 0..self._samples {
-            let t = i as f32 * step;
-            let pos = [
-                origin[0] + t * direction[0],
-                origin[1] + t * direction[1],
-                origin[2] + t * direction[2],
-            ];
-
-            // Sample volume at position (with bounds checking)
-            if pos[0] >= 0.0 && pos[1] >= 0.0 && pos[2] >= 0.0 {
-                let ix = pos[0] as usize;
-                let iy = pos[1] as usize;
-                let iz = pos[2] as usize;
-
-                if ix < volume.dim().0 && iy < volume.dim().1 && iz < volume.dim().2 {
-                    accumulated += volume[[ix, iy, iz]].abs() as f32 * step;
-                }
-            }
-        }
-
-        accumulated
     }
 }

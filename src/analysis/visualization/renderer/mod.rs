@@ -14,9 +14,9 @@ pub use pipeline::{ComputePipeline, RenderPipeline};
 pub use uniforms::VolumeUniforms;
 pub use volume::VolumeRenderer;
 
+use crate::analysis::visualization::{FieldType, RenderQuality, VisualizationConfig};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::visualization::{FieldType, VisualizationConfig};
 use ndarray::Array3;
 
 /// Main 3D renderer orchestrator
@@ -56,24 +56,12 @@ impl Renderer3D {
         grid: &Grid,
     ) -> KwaversResult<Vec<u8>> {
         match self.config.render_quality {
-            crate::visualization::RenderQuality::Draft => {
-                self.volume.render_draft(field, field_type, grid)
-            }
-            crate::visualization::RenderQuality::Low => {
-                self.volume.render_draft(field, field_type, grid)
-            }
-            crate::visualization::RenderQuality::Medium => {
-                self.volume.render_production(field, field_type, grid)
-            }
-            crate::visualization::RenderQuality::High => {
-                self.volume.render_production(field, field_type, grid)
-            }
-            crate::visualization::RenderQuality::Production => {
-                self.volume.render_production(field, field_type, grid)
-            }
-            crate::visualization::RenderQuality::Publication => {
-                self.volume.render_publication(field, field_type, grid)
-            }
+            RenderQuality::Draft => self.volume.render_draft(field, field_type, grid),
+            RenderQuality::Low => self.volume.render_draft(field, field_type, grid),
+            RenderQuality::Medium => self.volume.render_production(field, field_type, grid),
+            RenderQuality::High => self.volume.render_production(field, field_type, grid),
+            RenderQuality::Production => self.volume.render_production(field, field_type, grid),
+            RenderQuality::Publication => self.volume.render_publication(field, field_type, grid),
         }
     }
 
@@ -98,41 +86,63 @@ impl Renderer3D {
         Self::new(config)
     }
 
-    /// Render volume data
-    ///
-    /// **Implementation Status**: Interface defined for volume rendering integration
-    /// **Future**: Sprint 127+ will integrate with VolumeRenderer for MIP/ray marching
-    /// **Current**: Returns empty buffer maintaining API contract for integration testing
     pub async fn render_volume(
         &mut self,
-        _field_type: FieldType,
-        _grid: &Grid,
+        field: &Array3<f64>,
+        field_type: FieldType,
+        grid: &Grid,
     ) -> KwaversResult<Vec<u8>> {
-        // API contract maintained for integration testing
-        Ok(vec![])
+        self.render_field(field, field_type, grid)
     }
 
-    /// Render multiple volume fields
-    ///
-    /// **Implementation Status**: Interface defined for multi-field visualization
-    /// **Future**: Sprint 127+ will support composite rendering with multiple colormaps
-    /// **Current**: Returns empty buffer maintaining API contract for integration testing
     pub async fn render_multi_volume(
         &mut self,
-        _fields: Vec<(FieldType, &Array3<f64>)>,
-        _grid: &Grid,
+        fields: Vec<(FieldType, &Array3<f64>)>,
+        grid: &Grid,
     ) -> KwaversResult<Vec<u8>> {
-        // API contract maintained for integration testing
-        Ok(vec![])
-    }
+        let mut iter = fields.into_iter();
+        let (first_type, first_field) = iter.next().ok_or_else(|| {
+            crate::core::error::KwaversError::InvalidInput("no fields".to_string())
+        })?;
 
-    /// Export rendered frame
-    ///
-    /// **Implementation Status**: Interface defined for frame export
-    /// **Future**: Sprint 127+ will support PNG/JPEG export via image crate
-    /// Current: No-op maintaining API contract
-    pub fn export_frame(&self, _path: &std::path::Path) -> KwaversResult<()> {
-        // API contract maintained for integration testing
-        Ok(())
+        let mut out = self.render_field(first_field, first_type, grid)?;
+        if !self.config.enable_transparency {
+            return Ok(out);
+        }
+
+        for (field_type, field) in iter {
+            let src = self.render_field(field, field_type, grid)?;
+            alpha_over_in_place(&mut out, &src)?;
+        }
+
+        Ok(out)
     }
+}
+
+fn alpha_over_in_place(dst: &mut [u8], src: &[u8]) -> KwaversResult<()> {
+    if dst.len() != src.len() {
+        return Err(crate::core::error::KwaversError::InvalidInput(
+            "image size mismatch".to_string(),
+        ));
+    }
+    for (d_px, s_px) in dst.chunks_exact_mut(4).zip(src.chunks_exact(4)) {
+        let sa = (s_px[3] as f32) / 255.0;
+        let da = (d_px[3] as f32) / 255.0;
+        let out_a = sa + da * (1.0 - sa);
+        if out_a <= 0.0 {
+            d_px[0] = 0;
+            d_px[1] = 0;
+            d_px[2] = 0;
+            d_px[3] = 0;
+            continue;
+        }
+        for c in 0..3 {
+            let sc = (s_px[c] as f32) / 255.0;
+            let dc = (d_px[c] as f32) / 255.0;
+            let out_c = (sc * sa + dc * da * (1.0 - sa)) / out_a;
+            d_px[c] = (out_c.clamp(0.0, 1.0) * 255.0) as u8;
+        }
+        d_px[3] = (out_a.clamp(0.0, 1.0) * 255.0) as u8;
+    }
+    Ok(())
 }

@@ -28,10 +28,7 @@ pub struct SourceFactory;
 
 impl SourceFactory {
     /// Create a source from configuration
-    pub fn create_source(
-        config: &SourceParameters,
-        grid: &Grid,
-    ) -> KwaversResult<Box<dyn Source>> {
+    pub fn create_source(config: &SourceParameters, grid: &Grid) -> KwaversResult<Box<dyn Source>> {
         config.validate()?;
 
         // Create signal

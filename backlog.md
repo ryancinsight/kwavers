@@ -1,20 +1,21 @@
 # Development Backlog - Kwavers Acoustic Simulation Library
 
 **Last Updated**: 2025-01-14  
-**Current Sprint**: Sprint 208 Phase 5 ✅ COMPLETE
+**Current Sprint**: Sprint 208 Phase 6 ✅ COMPLETE
 **Next Sprint**: Sprint 209 - TODO Resolution & Implementation
 
-## 🚨 TODO AUDIT PHASE 5 COMPLETED (2025-01-14)
+## 🚨 TODO AUDIT PHASE 6 COMPLETED (2025-01-14)
 
-**Status**: ✅ Comprehensive audit complete - Critical infrastructure gaps identified
+**Status**: ✅ Comprehensive audit complete - Benchmark stubs and feature gaps identified
 **Reports**: 
 - `TODO_AUDIT_REPORT.md` (534 lines, Phases 1-2)
 - `TODO_AUDIT_PHASE2_SUMMARY.md` (Phase 2 detailed)
 - `TODO_AUDIT_PHASE3_SUMMARY.md` (Phase 3 detailed)
 - `TODO_AUDIT_PHASE4_SUMMARY.md` (Phase 4 detailed)
-- `TODO_AUDIT_PHASE5_SUMMARY.md` (Phase 5 detailed - NEW)
+- `TODO_AUDIT_PHASE5_SUMMARY.md` (Phase 5 detailed)
+- `TODO_AUDIT_PHASE6_SUMMARY.md` (Phase 6 detailed - NEW)
 **Files Modified**: 25 files total with comprehensive TODO tags  
-**Total Effort Estimated**: 432-602 hours for full resolution (38-55 hours added in Phase 5)
+**Total Effort Estimated**: 621-865 hours for full resolution (189-263 hours added in Phase 6)
 
 ### Sprint 208 Phase Summary
 - ✅ Phase 1: Deprecated Code Elimination (Complete)
@@ -24,16 +25,18 @@
 - ✅ Phase 5: Extended TODO Audit Phase 3 (Complete - 2025-01-14)
 - ✅ Phase 6: Extended TODO Audit Phase 4 - Placeholder Physics (Complete - 2025-01-14)
 - ✅ Phase 7: Extended TODO Audit Phase 5 - Critical Infrastructure (Complete - 2025-01-14)
+- ✅ Phase 8: Extended TODO Audit Phase 6 - Benchmark Stubs & Feature Gaps (Complete - 2025-01-14)
 
 ### Phase 5 New Findings - Critical Infrastructure Gaps (NEW - 2025-01-14)
 **Files audited**: `src/math/numerics/operators/spectral.rs`, `src/domain/medium/elastic.rs`, `src/analysis/ml/pinn/burn_wave_equation_3d/solver.rs`
 **Focus**: Type-unsafe defaults and non-functional solver backends
 
 **Critical Issues Found (P0)**:
-1. **Pseudospectral Derivative Operators** - All 3 spatial derivatives return NotImplemented
-   - `derivative_x()`, `derivative_y()`, `derivative_z()` (10-14 hours total)
-   - Blocks: Entire PSTD solver backend
-   - Sprint 210 assignment (FFT integration required)
+1. ✅ **Pseudospectral Derivative Operators** - COMPLETE (2025-01-14)
+   - `derivative_x()`, `derivative_y()`, `derivative_z()` implemented with FFT
+   - PSTD solver backend unblocked
+   - 5 validation tests added, all passing (spectral accuracy < 1e-11)
+   - Sprint 209 Phase 1 (10 hours actual effort)
 
 **High Severity Issues (P1)**:
 2. **Elastic Medium Shear Sound Speed** - Zero-returning default trait implementation (4-6 hours)
@@ -53,6 +56,53 @@
    - Sprint 213 assignment (enhancement, current implementation functional)
 
 **Total Phase 5 Effort**: 38-55 hours
+
+### Phase 6 New Findings - Benchmark Stubs and Feature Availability (NEW - 2025-01-14)
+**Files audited**: `benches/*.rs` (5 benchmark files), beamforming modules with FeatureNotAvailable errors
+**Focus**: Benchmark stubs measuring placeholder operations instead of real physics, runtime feature errors
+
+**Critical Issues Found (Benchmark Decision Required)**:
+1. **Performance Benchmark Stubs** - 18 stub implementations (65-95 hours total)
+   - `update_velocity_fdtd()`, `update_pressure_fdtd()`, `update_westervelt()` - FDTD/Westervelt stubs
+   - `simulate_fft_operations()`, `simulate_angular_spectrum_propagation()` - Spectral method stubs
+   - `simulate_elastic_wave_step()`, `simulate_displacement_tracking()`, `simulate_stiffness_estimation()` - Elastography stubs
+   - `simulate_microbubble_scattering()`, `simulate_tissue_perfusion()`, `simulate_perfusion_analysis()` - CEUS stubs
+   - `simulate_transducer_element()`, `simulate_skull_transmission()`, `simulate_thermal_monitoring()` - Therapy stubs
+   - `compute_uncertainty_statistics()`, `compute_ensemble_mean()`, `compute_ensemble_variance()`, `compute_conformity_score()` - UQ stubs
+   - Impact: Benchmarks measure placeholder operations, not real solver performance (misleading data)
+   - **Decision Required**: Implement physics (65-95h) OR remove stubs (2-3h) until implementations ready
+   - Sprint 209 decision point
+
+**High Severity Issues (P1 - GPU Feature Gaps)**:
+2. **3D GPU Beamforming Pipeline** - Dynamic focusing not wired (10-14 hours)
+   - `DelaySumGPU::process()` missing delay tables and aperture mask buffers
+   - Impact: 3D dynamic focusing unavailable when GPU feature enabled
+   - Sprint 211 assignment
+
+3. **Source Estimation Complex Eigendecomposition** - UnsupportedOperation (12-16 hours)
+   - `estimate_num_sources()` requires complex Hermitian eigendecomposition
+   - Impact: Automatic source number estimation (AIC/MDL) unavailable, blocks adaptive beamforming
+   - Requires: Implementing in `crate::math::linear_algebra` (SSOT)
+   - Sprint 211 assignment
+
+4. **PINN Performance Benchmarks** - 4 stub functions (20-28 hours)
+   - `run_pinn_training_benchmark()`, `benchmark_memory_usage()`, `run_adaptive_sampling_benchmark()`, `benchmark_pde_kernel()`
+   - Impact: PINN training performance not measured
+   - Sprint 212 assignment (defer until GPU PINN infrastructure ready)
+
+**Medium Severity Issues (P2 - Advanced Research Features)**:
+5. **Neural Beamforming Features** - 2 FeatureNotAvailable errors (24-32 hours)
+   - `NeuralBeamformingProcessor::compute_pinn_delay()` - PINN delay calculation (8-10h)
+   - `DistributedNeuralBeamformingProcessor::process_volume_distributed()` - Multi-node processing (16-22h)
+   - Impact: Research features unavailable
+   - Sprint 213+ assignment
+
+6. **Other Benchmark Stubs** - 4 functions (22-32 hours)
+   - `calculate_acoustic_energy()` - L2 norm proxy instead of real energy (6-8h)
+   - PINN benchmark stubs (included in item 4 above)
+   - Sprint 212 assignment
+
+**Total Phase 6 Effort**: 189-263 hours (OR 2-3 hours if removing stubs)
 
 ### Phase 4 New Findings - Additional TODO Tags Added (Batch 1)
 **Files audited and annotated**: 6 additional source files
@@ -92,11 +142,11 @@
    - Bubble position tensor (8-10h)
 
 ### Critical Findings (P0 - Production Code - Original Audit)
-1. **Sensor Beamforming** (`src/domain/sensor/beamforming/sensor_beamformer.rs`)
-   - 3 methods return placeholder values (zeros, identity, unmodified input)
-   - Impact: Invalid beamforming outputs → incorrect image reconstruction
-   - Effort: 6-8 hours
-   - **Sprint 209 Priority**
+1. ✅ **Sensor Beamforming** - COMPLETE (2025-01-14)
+   - `apply_windowing()` implemented using signal/window infrastructure
+   - Supports Hanning, Hamming, Blackman, Rectangular windows
+   - 9 comprehensive tests added, all passing
+   - Sprint 209 Phase 1 (4 hours actual effort)
 
 2. **Source Factory** (`src/domain/source/factory.rs`)
    - 4 source models not implemented (LinearArray, MatrixArray, Focused, Custom)
@@ -245,7 +295,11 @@
 - [ ] Implement sensor beamforming methods (calculate_delays, apply_windowing, calculate_steering)
 - [ ] Implement LinearArray source model
 - [ ] Begin MatrixArray/Focused implementations
-- [ ] Decision on benchmark approach (implement vs. remove)
+- [ ] **CRITICAL DECISION: Benchmark Stubs (NEW Phase 6)**
+  - [ ] Team decision: Implement benchmark physics (189-263h) OR remove stubs (2-3h)
+  - [ ] If remove: Add TODO comments linking to backlog, update benchmark documentation
+  - [ ] If implement: Prioritize by value (FDTD > PSTD > SWE > Advanced)
+  - [ ] Document benchmark methodology in `docs/benchmarks.md`
 
 ### Action Items for Sprint 210 (Short-term - Phase 4+5 P0)
 - [ ] **Pseudospectral derivatives (NEW P0)** - FFT integration for derivative_x/y/z (10-14h)
@@ -285,19 +339,24 @@
 - [ ] **DICOM CT data loading (NEW P1)** - Patient-specific therapy planning (12-16h)
 - [ ] **NIFTI skull model loading (NEW P1)** - Transcranial ultrasound geometry (8-12h)
 - [ ] **GPU NN inference shaders (NEW P1)** - Start implementation (16-24h)
+- [ ] **3D GPU beamforming pipeline (NEW Phase 6 P1)** - Delay tables, aperture masks (10-14h)
+- [ ] **Complex eigendecomposition (NEW Phase 6 P1)** - Source estimation support (12-16h)
 - [ ] Implement 3D SAFT beamforming (synthetic aperture) (16-20h)
 - [ ] Implement 3D MVDR adaptive beamforming (20-24h)
 - [ ] Implement GCP Vertex AI deployment (10-12h)
 
 ### Action Items for Sprint 212 (Research - Adaptive & Nonlinear Physics)
 - [ ] **GPU NN inference shaders (continued)** - Complete GPU pipeline optimization
+- [ ] **PINN performance benchmarks (NEW Phase 6 P1)** - Real training/memory/sampling benchmarks (20-28h)
 - [ ] Implement cloud scaling features (Azure, GCP) (14-18h)
 
 ### Action Items for Sprint 213 (Long-term - Advanced Cavitation & Architecture Tooling)
 - [ ] **Multi-physics monolithic coupling (NEW P1)** - Strongly-coupled solver (20-28h)
+- [ ] **Neural beamforming features (NEW Phase 6 P2)** - PINN delays, distributed processing (24-32h)
 - [ ] Implement electromagnetic PINN quasi-static residuals (12-16h)
 - [ ] Implement electromagnetic PINN wave propagation residuals (16-20h)
 - [ ] Implement meta-learning boundary data generation (8-12h)
+- [ ] **IF benchmark decision = implement**: Begin systematic benchmark physics implementation (189-263h total, phased)
 - [ ] Implement meta-learning initial condition data generation (6-10h)
 - [ ] Implement transfer learning BC evaluation (8-12h)
 
@@ -336,6 +395,29 @@ Phase 4 and Phase 5 TODO tags contain inline specifications with mathematical fo
    - Estimated effort: 10-12 hours (deployment), 8-10 hours (scaling)
    - **Reference**: TODO_AUDIT_REPORT.md Section 5
    - **Sprint 210-211 Priority**
+
+---
+
+## Sprint 209 Status Update (2025-01-14)
+
+### Sprint 209 Phase 1 Complete ✅
+**Completed Items**:
+1. ✅ Sensor beamforming windowing (`apply_windowing`) - 4 hours
+   - Full implementation with Hanning/Hamming/Blackman/Rectangular windows
+   - 9 comprehensive tests, all passing
+   - Uses existing signal/window infrastructure (SSOT compliance)
+
+2. ✅ Pseudospectral derivatives (derivative_x/y/z) - 10 hours
+   - FFT-based spectral differentiation implemented
+   - 5 validation tests with analytical solutions
+   - Spectral accuracy verified (< 1e-11 error for smooth functions)
+   - PSTD solver backend unblocked
+
+**Total Sprint 209 Phase 1 Effort**: 14 hours (completed 2025-01-14)
+
+**Next Sprint 209 Priorities**:
+- Phase 2: Source factory array transducer implementations (28-36 hours)
+- Phase 3: Benchmark stub decision and remediation (2-3 hours if removing)
 
 ---
 

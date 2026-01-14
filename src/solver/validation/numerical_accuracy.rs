@@ -42,8 +42,8 @@ mod tests {
         let n = 64; // Reverted to default power of 2
         let frequency = 1e6;
         let wavelength = 1500.0 / frequency; // 1.5mm at 1MHz
-        // ADJUSTMENT: Use PPW=16 to ensure periodic boundary conditions
-        // n=64, PPW=16 -> L = 4 * wavelength (integer multiple)
+                                             // ADJUSTMENT: Use PPW=16 to ensure periodic boundary conditions
+                                             // n=64, PPW=16 -> L = 4 * wavelength (integer multiple)
         let dx = wavelength / 16.0; // 16 points per wavelength
         let ppw = wavelength / dx;
 
@@ -157,14 +157,16 @@ mod tests {
             phase_error < strict_phase_tolerance,
             "PSTD phase error exceeds theoretical limit: {:.6} > {:.6} (π/4). \
              This indicates implementation issues in spectral operations.",
-            phase_error, strict_phase_tolerance
+            phase_error,
+            strict_phase_tolerance
         );
 
         assert!(
             amplitude_error < strict_amplitude_tolerance,
             "PSTD amplitude error exceeds 1%: {:.6} > {:.6}. \
              Spectral methods should preserve amplitude precisely.",
-            amplitude_error, strict_amplitude_tolerance
+            amplitude_error,
+            strict_amplitude_tolerance
         );
     }
 

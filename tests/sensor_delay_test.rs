@@ -51,7 +51,9 @@ fn test_geometric_delay_calculation() {
     // We can just check the values match expected distances.
 
     // 3. Calculate Delays
-    let delays = beamformer.calculate_delays(&grid, sound_speed).expect("calculate_delays failed");
+    let delays = beamformer
+        .calculate_delays(&grid, sound_speed)
+        .expect("calculate_delays failed");
 
     // 4. Verification
     // delays shape: (2, 4)

@@ -1,7 +1,7 @@
 //! GPU context and resource management
 
+use crate::analysis::visualization::VisualizationConfig;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::visualization::VisualizationConfig;
 use wgpu::util::DeviceExt;
 
 /// GPU context for accelerated rendering

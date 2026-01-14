@@ -113,7 +113,9 @@ impl InteractiveControls {
     }
 
     /// Create a control system with configuration (alias for new)
-    pub fn create(_config: &crate::visualization::VisualizationConfig) -> KwaversResult<Self> {
+    pub fn create(
+        _config: &crate::analysis::visualization::VisualizationConfig,
+    ) -> KwaversResult<Self> {
         Ok(Self::new())
     }
 

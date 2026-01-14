@@ -319,7 +319,10 @@ mod tests {
         for i in 0..2 {
             for j in 0..2 {
                 let expected = if i == j { 1.0 } else { 0.0 };
-                assert!((u_ortho[[i, j]] - expected).abs() < 1e-10, "U not orthogonal");
+                assert!(
+                    (u_ortho[[i, j]] - expected).abs() < 1e-10,
+                    "U not orthogonal"
+                );
             }
         }
 
@@ -328,7 +331,10 @@ mod tests {
         for i in 0..2 {
             for j in 0..2 {
                 let expected = if i == j { 1.0 } else { 0.0 };
-                assert!((v_ortho[[i, j]] - expected).abs() < 1e-10, "V not orthogonal");
+                assert!(
+                    (v_ortho[[i, j]] - expected).abs() < 1e-10,
+                    "V not orthogonal"
+                );
             }
         }
     }

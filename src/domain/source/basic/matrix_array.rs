@@ -126,13 +126,7 @@ impl MatrixArray {
         array
     }
 
-    pub fn adjust_focus(
-        &mut self,
-        focus_x: f64,
-        focus_y: f64,
-        focus_z: f64,
-        sound_speed: f64,
-    ) {
+    pub fn adjust_focus(&mut self, focus_x: f64, focus_y: f64, focus_z: f64, sound_speed: f64) {
         let c = sound_speed;
         let dx = self.element_spacing_x();
         let dy = self.element_spacing_y();

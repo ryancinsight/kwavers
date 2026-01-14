@@ -8,6 +8,7 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::sensor::grid_sampling::GridSensorSet;
 use crate::domain::sensor::localization::array::SensorArray;
+use crate::domain::signal::window as signal_window;
 use ndarray::Array2;
 use num_complex::Complex;
 
@@ -127,26 +128,52 @@ impl SensorBeamformer {
 
     /// Apply apodization window specific to this sensor array
     ///
-    /// Windowing may depend on array geometry, element directivity, and
-    /// hardware-specific constraints.
+    /// Applies element-wise windowing to the delay matrix to reduce side lobes
+    /// and improve image quality. The window is applied across the sensor dimension
+    /// (rows of the delay matrix), with each column (image point) windowed independently.
     ///
-    /// # TODO: INCOMPLETE IMPLEMENTATION
-    /// This method returns unmodified input - no actual windowing applied. Complete implementation requires:
-    /// - Hanning window implementation (raised cosine)
-    /// - Hamming window implementation (modified raised cosine)
-    /// - Blackman window implementation (optimal side lobe suppression)
-    /// - Rectangular window (pass-through, current behavior)
-    /// - Window coefficient calculation based on array geometry
-    /// - Element-wise multiplication of delays with window coefficients
-    /// See backlog.md item #6 for specifications (6-8 hour effort estimate)
+    /// # Mathematical Basis
+    ///
+    /// For each image point $p$, the windowed delays are:
+    /// $$ d'_i(p) = w_i \cdot d_i(p) $$
+    /// where $w_i$ is the window coefficient for sensor $i$ and $d_i(p)$ is the
+    /// geometric delay from sensor $i$ to point $p$.
+    ///
+    /// # Arguments
+    ///
+    /// * `delays` - Delay matrix (n_sensors × n_image_points)
+    /// * `window_type` - Type of apodization window to apply
+    ///
+    /// # Returns
+    ///
+    /// Windowed delay matrix with same dimensions as input
     pub fn apply_windowing(
         &self,
         delays: &Array2<f64>,
-        _window_type: WindowType,
+        window_type: WindowType,
     ) -> KwaversResult<Array2<f64>> {
-        // TODO: Replace with proper windowing implementation
-        // Current: Returns unmodified input - no apodization applied (INVALID for production)
-        Ok(delays.clone())
+        let n_sensors = delays.nrows();
+
+        // Convert WindowType to signal_window::WindowType
+        let signal_window_type = match window_type {
+            WindowType::Hanning => signal_window::WindowType::Hann,
+            WindowType::Hamming => signal_window::WindowType::Hamming,
+            WindowType::Blackman => signal_window::WindowType::Blackman,
+            WindowType::Rectangular => signal_window::WindowType::Rectangular,
+        };
+
+        // Generate window coefficients for the sensor array (symmetric=true for apodization)
+        let window_coeffs = signal_window::get_win(signal_window_type, n_sensors, true);
+
+        // Apply window to each column (image point) independently
+        let mut windowed_delays = delays.clone();
+        for mut col in windowed_delays.columns_mut() {
+            for (sensor_idx, window_coeff) in window_coeffs.iter().enumerate() {
+                col[sensor_idx] *= window_coeff;
+            }
+        }
+
+        Ok(windowed_delays)
     }
 
     /// Calculate steering vectors for adaptive beamforming
@@ -282,16 +309,22 @@ impl SensorBeamformer {
     }
 }
 
-/// Windowing functions for sensor arrays
+/// Windowing functions for sensor array apodization
+///
+/// Apodization windows reduce side lobes in beamformed images by tapering
+/// the contribution of elements toward the edges of the array aperture.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum WindowType {
     /// Hanning window (smooth, good side lobe suppression)
+    /// $ w(n) = 0.5 - 0.5 \cos(2\pi n / (N-1)) $
     Hanning,
     /// Hamming window (similar to Hanning, slightly higher side lobes)
+    /// $ w(n) = 0.54 - 0.46 \cos(2\pi n / (N-1)) $
     Hamming,
     /// Blackman window (excellent side lobe suppression)
+    /// $ w(n) = 0.42 - 0.5 \cos(2\pi n / (N-1)) + 0.08 \cos(4\pi n / (N-1)) $
     Blackman,
-    /// Rectangular window (no windowing)
+    /// Rectangular window (no windowing, uniform weighting)
     Rectangular,
 }
 
@@ -319,5 +352,214 @@ impl SensorProcessingParams {
     #[must_use]
     pub fn max_spatial_frequency(&self, sound_speed: f64) -> f64 {
         sound_speed / (2.0 * self.element_spacing)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
+    use crate::domain::sensor::localization::Position;
+    use approx::assert_relative_eq;
+    use ndarray::Array2;
+
+    fn create_test_array(n_sensors: usize) -> SensorArray {
+        let sensors: Vec<Sensor> = (0..n_sensors)
+            .map(|i| {
+                let position = Position {
+                    x: i as f64 * 0.001,
+                    y: 0.0,
+                    z: 0.0,
+                };
+                Sensor::new(i, position)
+            })
+            .collect();
+        SensorArray::new(sensors, 1540.0, ArrayGeometry::Linear)
+    }
+
+    #[test]
+    fn test_windowing_preserves_dimensions() {
+        let array = create_test_array(8);
+        let beamformer = SensorBeamformer::new(array, 1e6);
+
+        let delays = Array2::ones((8, 100));
+
+        for window_type in [
+            WindowType::Hanning,
+            WindowType::Hamming,
+            WindowType::Blackman,
+            WindowType::Rectangular,
+        ] {
+            let windowed = beamformer.apply_windowing(&delays, window_type).unwrap();
+            assert_eq!(windowed.shape(), delays.shape());
+        }
+    }
+
+    #[test]
+    fn test_rectangular_window_is_identity() {
+        let array = create_test_array(8);
+        let beamformer = SensorBeamformer::new(array, 1e6);
+
+        let delays = Array2::from_shape_fn((8, 100), |(i, j)| i as f64 + j as f64 * 0.1);
+
+        let windowed = beamformer
+            .apply_windowing(&delays, WindowType::Rectangular)
+            .unwrap();
+
+        // Rectangular window should be all ones, so output equals input
+        for i in 0..8 {
+            for j in 0..100 {
+                assert_relative_eq!(windowed[[i, j]], delays[[i, j]], epsilon = 1e-12);
+            }
+        }
+    }
+
+    #[test]
+    fn test_window_reduces_edge_elements() {
+        let array = create_test_array(16);
+        let beamformer = SensorBeamformer::new(array, 1e6);
+
+        let delays = Array2::ones((16, 50));
+
+        for window_type in [
+            WindowType::Hanning,
+            WindowType::Hamming,
+            WindowType::Blackman,
+        ] {
+            let windowed = beamformer.apply_windowing(&delays, window_type).unwrap();
+
+            // Check that edge elements are reduced (window should taper to ~0 at edges)
+            // For symmetric windows, first and last elements should be equal
+            assert_relative_eq!(windowed[[0, 0]], windowed[[15, 0]], epsilon = 1e-10);
+
+            // Edge elements should be smaller than center elements
+            let center_val = windowed[[8, 0]];
+            let edge_val = windowed[[0, 0]];
+            assert!(
+                edge_val < center_val,
+                "Edge value {} should be less than center value {} for {:?}",
+                edge_val,
+                center_val,
+                window_type
+            );
+        }
+    }
+
+    #[test]
+    fn test_hanning_window_has_zero_endpoints() {
+        let array = create_test_array(8);
+        let beamformer = SensorBeamformer::new(array, 1e6);
+
+        let delays = Array2::ones((8, 10));
+        let windowed = beamformer
+            .apply_windowing(&delays, WindowType::Hanning)
+            .unwrap();
+
+        // Hanning window should have values very close to zero at endpoints
+        assert!(windowed[[0, 0]].abs() < 1e-10);
+        assert!(windowed[[7, 0]].abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_windowing_applied_per_column() {
+        let array = create_test_array(4);
+        let beamformer = SensorBeamformer::new(array, 1e6);
+
+        // Create delays with different values per column
+        let mut delays = Array2::zeros((4, 3));
+        delays.column_mut(0).fill(1.0);
+        delays.column_mut(1).fill(2.0);
+        delays.column_mut(2).fill(3.0);
+
+        let windowed = beamformer
+            .apply_windowing(&delays, WindowType::Hamming)
+            .unwrap();
+
+        // Each column should be scaled by the same window coefficients
+        // So ratios within columns should be preserved
+        for col_idx in 0..3 {
+            for row_idx in 0..4 {
+                let original_val = delays[[row_idx, col_idx]];
+                let windowed_val = windowed[[row_idx, col_idx]];
+                let ratio = windowed_val / original_val;
+
+                // This ratio should be the same for all columns (same row)
+                if col_idx > 0 {
+                    let prev_ratio =
+                        windowed[[row_idx, col_idx - 1]] / delays[[row_idx, col_idx - 1]];
+                    assert_relative_eq!(ratio, prev_ratio, epsilon = 1e-10);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_blackman_window_has_better_sidelobe_suppression() {
+        let array = create_test_array(32);
+        let beamformer = SensorBeamformer::new(array, 1e6);
+
+        let delays = Array2::ones((32, 1));
+
+        let hanning = beamformer
+            .apply_windowing(&delays, WindowType::Hanning)
+            .unwrap();
+        let blackman = beamformer
+            .apply_windowing(&delays, WindowType::Blackman)
+            .unwrap();
+
+        // Blackman should taper more aggressively at edges
+        // (lower values at edge elements compared to Hanning)
+        let edge_idx = 1; // Near edge but not exactly at zero
+        assert!(
+            blackman[[edge_idx, 0]] < hanning[[edge_idx, 0]],
+            "Blackman window should suppress edge more than Hanning"
+        );
+    }
+
+    #[test]
+    fn test_windowing_with_zero_delays() {
+        let array = create_test_array(8);
+        let beamformer = SensorBeamformer::new(array, 1e6);
+
+        let delays = Array2::zeros((8, 10));
+        let windowed = beamformer
+            .apply_windowing(&delays, WindowType::Hanning)
+            .unwrap();
+
+        // Windowing zeros should produce zeros
+        for i in 0..8 {
+            for j in 0..10 {
+                assert_eq!(windowed[[i, j]], 0.0);
+            }
+        }
+    }
+
+    #[test]
+    fn test_processing_params_f_number() {
+        let params = SensorProcessingParams {
+            n_sensors: 64,
+            sampling_frequency: 1e6,
+            element_spacing: 0.3e-3,
+            array_aperture: 19.2e-3,
+        };
+
+        let focal_length = 50e-3;
+        let f_num = params.f_number(focal_length);
+        assert_relative_eq!(f_num, 50e-3 / 19.2e-3, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_processing_params_max_spatial_frequency() {
+        let params = SensorProcessingParams {
+            n_sensors: 64,
+            sampling_frequency: 1e6,
+            element_spacing: 0.3e-3,
+            array_aperture: 19.2e-3,
+        };
+
+        let sound_speed = 1540.0;
+        let max_freq = params.max_spatial_frequency(sound_speed);
+        let expected = sound_speed / (2.0 * 0.3e-3);
+        assert_relative_eq!(max_freq, expected, epsilon = 1e-6);
     }
 }

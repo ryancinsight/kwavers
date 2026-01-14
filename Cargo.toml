@@ -172,10 +172,10 @@ panic = "abort"
 [profile.test]
 # SRS NFR-002 compliant: optimize for fast compilation (<30s total)
 opt-level = 0          # Minimize optimization time
-debug = false          # Reduce binary size and compilation time
-codegen-units = 256    # Maximize parallelization
+debug = true
+codegen-units = 16
 incremental = true     # Enable incremental compilation
-debug-assertions = false # Skip expensive debug checks
+debug-assertions = true
 
 # SRS NFR-002 Compliant Test Configuration Strategy
 # ================================================
