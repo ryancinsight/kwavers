@@ -42,7 +42,9 @@ mod tests {
         let n = 64; // Reverted to default power of 2
         let frequency = 1e6;
         let wavelength = 1500.0 / frequency; // 1.5mm at 1MHz
-        let dx = wavelength / (PPW_MINIMUM as f64 * 2.0); // 12 points per wavelength
+        // ADJUSTMENT: Use PPW=16 to ensure periodic boundary conditions
+        // n=64, PPW=16 -> L = 4 * wavelength (integer multiple)
+        let dx = wavelength / 16.0; // 16 points per wavelength
         let ppw = wavelength / dx;
 
         // EXACT ASSERTION: Must meet minimum sampling requirement
@@ -71,10 +73,17 @@ mod tests {
         for i in 0..n {
             for j in 0..n {
                 let x = i as f64 * dx;
-                solver.fields.p[[i, j, 0]] = (k * x).sin();
+                let p_val = (k * x).sin();
+                solver.fields.p[[i, j, 0]] = p_val;
+
+                // Fix: Initialize density consistent with pressure
+                // p = c^2 * rho => rho = p / c^2
+                // medium c = 1500.0, rho0 = 1000.0
+                solver.rho[[i, j, 0]] = p_val / (1500.0 * 1500.0);
+
                 // Initialize velocity consistently with a rightward-propagating wave
                 // For a plane wave: v_x = p/(ρc)
-                solver.fields.ux[[i, j, 0]] = (k * x).sin() / (1000.0 * 1500.0);
+                solver.fields.ux[[i, j, 0]] = p_val / (1000.0 * 1500.0);
             }
         }
 
@@ -106,26 +115,36 @@ mod tests {
 
         let pressure = solver.fields.p.clone();
 
-        // Calculate phase error
-        let mut phase_error = 0.0;
-        let mut amplitude_error = 0.0;
+        // Calculate phase error using least squares fit to y = a*sin(kx) + b*cos(kx)
+        // This is robust against pointwise variations and accurately extracts phase/amplitude
+        let mut sum_y_sin = 0.0;
+        let mut sum_y_cos = 0.0;
+        let mut sum_sin2 = 0.0;
+        let mut sum_cos2 = 0.0;
+        let mut sum_sin_cos = 0.0;
 
         for i in n / 4..3 * n / 4 {
-            // Avoid boundaries
-            let expected = initial[[i, n / 2, 0]];
-            let actual = pressure[[i, n / 2, 0]];
+            let x = i as f64 * dx;
+            let val = pressure[[i, n / 2, 0]];
+            let s = (k * x).sin();
+            let c = (k * x).cos();
 
-            // Cross-correlation for phase (clamp to avoid NaN from acos)
-            let correlation = (actual * expected).clamp(-1.0, 1.0);
-            let phase_shift = correlation.acos();
-            phase_error += phase_shift.abs();
-
-            // Amplitude preservation
-            amplitude_error += (actual.abs() - expected.abs()).abs();
+            sum_y_sin += val * s;
+            sum_y_cos += val * c;
+            sum_sin2 += s * s;
+            sum_cos2 += c * c;
+            sum_sin_cos += s * c;
         }
 
-        phase_error /= (n / 2) as f64;
-        amplitude_error /= (n / 2) as f64;
+        let det = sum_sin2 * sum_cos2 - sum_sin_cos * sum_sin_cos;
+        let a = (sum_y_sin * sum_cos2 - sum_y_cos * sum_sin_cos) / det;
+        let b = (sum_y_cos * sum_sin2 - sum_y_sin * sum_sin_cos) / det;
+
+        // y = a*sin + b*cos = R*sin(kx + phi)
+        // a = R*cos(phi), b = R*sin(phi)
+        let phase_error = b.atan2(a).abs();
+        let amplitude = (a * a + b * b).sqrt();
+        let amplitude_error = (amplitude - 1.0).abs();
 
         // RIGOROUS VALIDATION: Spectral methods should have minimal dispersion
         // EXACT TOLERANCE: For well-sampled problems, phase error should be < π/4
@@ -133,37 +152,20 @@ mod tests {
         let strict_amplitude_tolerance = 0.01; // 1% amplitude error max
 
         // EVIDENCE-BASED ASSERTION: If this fails, PSTD implementation needs fixing
-        // FIXME: PSTD phase error check is failing after config refactor (error ~1.57).
-        // Likely due to boundary discontinuity or default config changes.
-        // Temporarily relaxed for refactor verification.
-        if phase_error >= strict_phase_tolerance {
-            eprintln!(
-                "WARNING: PSTD phase error exceeds theoretical limit: {:.6} > {:.6}",
-                phase_error, strict_phase_tolerance
-            );
-        }
-        /*
+        // CHECK: PSTD phase error should be minimal with periodic boundaries and consistent initialization
         assert!(
             phase_error < strict_phase_tolerance,
             "PSTD phase error exceeds theoretical limit: {:.6} > {:.6} (π/4). \
              This indicates implementation issues in spectral operations.",
             phase_error, strict_phase_tolerance
         );
-        */
-        if amplitude_error >= strict_amplitude_tolerance {
-            eprintln!(
-                "WARNING: PSTD amplitude error exceeds 1%: {:.6} > {:.6}",
-                amplitude_error, strict_amplitude_tolerance
-            );
-        }
-        /*
+
         assert!(
             amplitude_error < strict_amplitude_tolerance,
             "PSTD amplitude error exceeds 1%: {:.6} > {:.6}. \
              Spectral methods should preserve amplitude precisely.",
             amplitude_error, strict_amplitude_tolerance
         );
-        */
     }
 
     #[test]
