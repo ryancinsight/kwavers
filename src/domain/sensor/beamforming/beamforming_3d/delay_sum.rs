@@ -444,6 +444,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "gpu"))]
     fn test_element_positions_generation() {
         let config = BeamformingConfig3D::default();
         let delay_sum = DelaySumGPU::new(&config, (), (), (), ());

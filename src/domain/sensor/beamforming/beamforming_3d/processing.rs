@@ -310,7 +310,7 @@ impl BeamformingProcessor3D {
         &mut self,
         _rf_data: &Array4<f32>,
         _diagonal_loading: f32,
-        _subarray_size: usize,
+        _subarray_size: [usize; 3],
     ) -> KwaversResult<Array3<f32>> {
         // TODO_AUDIT: P1 - 3D MVDR Beamforming - Not Implemented
         //

@@ -302,7 +302,7 @@ impl FdtdSolver {
     /// Update pressure field using velocity divergence
     pub fn update_pressure(&mut self, dt: f64) -> KwaversResult<()> {
         // Use GPU acceleration if available and enabled
-        #[cfg(feature = "gpu")]
+        #[cfg(all(feature = "gpu", feature = "pinn"))]
         if self.config.enable_gpu_acceleration {
             if let Some(accelerator) = self.gpu_accelerator.as_ref() {
                 let new_pressure = self.update_pressure_gpu(accelerator, dt)?;
@@ -380,7 +380,7 @@ impl FdtdSolver {
     }
 
     /// Burn-based GPU implementation of pressure update
-    #[cfg(feature = "gpu")]
+    #[cfg(all(feature = "gpu", feature = "pinn"))]
     fn update_pressure_gpu(
         &self,
         accelerator: &BurnGpuAccelerator<Autodiff<Wgpu<f32>>>,
