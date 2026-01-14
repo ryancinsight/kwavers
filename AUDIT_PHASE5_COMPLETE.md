@@ -398,6 +398,7 @@ Implement full 3D Von Neumann analysis with anisotropic dispersion handling.
 **Estimated Effort**: 4-6 hours (enhancement)
 
 **Sprint Assignment**: Sprint 213 (Advanced Numerics)
+**Sprint Assignment**: Sprint 213 (Advanced Numerics)  
 **Priority**: P2 (Enhancement, current implementation functional)
 
 ---
