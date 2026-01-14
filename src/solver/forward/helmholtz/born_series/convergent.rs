@@ -66,6 +66,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
+use crate::math::fft::fft_processor::Fft3d;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -88,6 +89,8 @@ pub struct ConvergentBornSolver {
     incident_field: Array3<Complex64>,
     /// Current iteration field
     current_field: Array3<Complex64>,
+    /// FFT processor for accelerated Green's function application
+    fft_processor: Option<Fft3d>,
     /// GPU compute manager (when GPU feature is enabled)
     #[cfg(feature = "gpu")]
     gpu_manager: Option<ComputeManager>,
@@ -98,6 +101,13 @@ impl ConvergentBornSolver {
     pub fn new(config: super::BornConfig, grid: Grid) -> Self {
         let workspace = super::BornWorkspace::new(grid.nx, grid.ny, grid.nz);
         let shape = (grid.nx, grid.ny, grid.nz);
+        // Initialize FFT processor if FFT Green's function is requested
+        let fft_processor = if config.use_fft_green {
+            Some(Fft3d::new(grid.nx, grid.ny, grid.nz))
+        } else {
+            None
+        };
+
         Self {
             config,
             grid,
@@ -105,6 +115,7 @@ impl ConvergentBornSolver {
             workspace,
             incident_field: Array3::zeros(shape),
             current_field: Array3::zeros(shape),
+            fft_processor,
             #[cfg(feature = "gpu")]
             gpu_manager: None,
         }
@@ -309,26 +320,58 @@ impl ConvergentBornSolver {
         )?;
 
         // Element-wise multiplication with Green's function in k-space
-        let mut result_fft = self.workspace.fft_temp[1].view_mut();
-        Zip::indexed(&mut result_fft).and(&source_fft).for_each(
-            |(i, j, k), result_val, &source_val| {
-                // Get corresponding Green's function value
-                // For now, use the precomputed k-space Green's function
-                if let Some(green_fft) = &self.green_fft {
-                    let green_val = green_fft[[i, j, k]];
-                    *result_val = source_val * green_val;
-                } else {
-                    // Fallback to direct method if no precomputed Green's function
-                    *result_val = source_val * Complex64::new(0.1, 0.0);
-                }
-            },
-        );
+        {
+            let mut result_fft = self.workspace.fft_temp[1].view_mut();
+            Zip::indexed(&mut result_fft).and(&source_fft).for_each(
+                |(i, j, k), result_val, &source_val| {
+                    // Get corresponding Green's function value
+                    // For now, use the precomputed k-space Green's function
+                    if let Some(green_fft) = &self.green_fft {
+                        let green_val = green_fft[[i, j, k]];
+                        *result_val = source_val * green_val;
+                    } else {
+                        // Fallback to direct method if no precomputed Green's function
+                        *result_val = source_val * Complex64::new(0.1, 0.0);
+                    }
+                },
+            );
+        }
 
         // Inverse FFT to get spatial domain result
-        // For now, copy result to green workspace (FFT implementation pending)
-        self.workspace.green_workspace.assign(&result_fft);
+        // We need to handle borrows carefully here:
+        // - fft_processor (immutable)
+        // - workspace.fft_temp (immutable)
+        // - workspace.green_workspace (mutable)
+        let n = (self.grid.nx * self.grid.ny * self.grid.nz) as f64;
+        let fft_processor = self.fft_processor.as_ref();
+        let workspace = &mut self.workspace;
+
+        Self::perform_inverse_fft(
+            fft_processor,
+            &workspace.fft_temp[1].view(),
+            &mut workspace.green_workspace,
+            n
+        );
 
         Ok(())
+    }
+
+    /// Helper for inverse FFT to avoid borrow checker issues
+    fn perform_inverse_fft(
+        fft_processor: Option<&Fft3d>,
+        input: &ArrayView3<Complex64>,
+        output: &mut Array3<Complex64>,
+        grid_size: f64,
+    ) {
+        output.assign(input);
+
+        if let Some(fft) = fft_processor {
+            fft.inverse_complex_inplace(output);
+
+            // Normalize by 1/N
+            let scale = 1.0 / grid_size;
+            output.mapv_inplace(|x| x * scale);
+        }
     }
 
     /// 3D Forward FFT
@@ -337,15 +380,11 @@ impl ConvergentBornSolver {
         input: &ArrayView3<Complex64>,
         output: &mut Array3<Complex64>,
     ) -> KwaversResult<()> {
-        // Placeholder for FFT implementation
-        // In production, this would use rustfft or similar
-        // For now, copy input to output (no-op)
         output.assign(input);
 
-        // TODO: Implement actual 3D FFT using rustfft:
-        // - Create FFT planners for each dimension
-        // - Apply sequential FFTs: x -> y -> z
-        // - Handle FFT normalization and scaling
+        if let Some(fft) = &self.fft_processor {
+            fft.forward_complex_inplace(output);
+        }
 
         Ok(())
     }
@@ -356,15 +395,8 @@ impl ConvergentBornSolver {
         input: &ArrayView3<Complex64>,
         output: &mut Array3<Complex64>,
     ) -> KwaversResult<()> {
-        // Placeholder for inverse FFT implementation
-        // In production, this would use rustfft or similar
-        // For now, copy input to output (no-op)
-        output.assign(input);
-
-        // TODO: Implement actual 3D inverse FFT:
-        // - Apply sequential inverse FFTs: z -> y -> x
-        // - Handle FFT normalization (1/N factor)
-
+        let n = (self.grid.nx * self.grid.ny * self.grid.nz) as f64;
+        Self::perform_inverse_fft(self.fft_processor.as_ref(), input, output, n);
         Ok(())
     }
 
@@ -488,5 +520,40 @@ mod tests {
         let solver = ConvergentBornSolver::new(config, grid);
         assert_eq!(solver.config.max_iterations, 50);
         assert_eq!(solver.grid.nx, 32);
+    }
+
+    #[test]
+    fn test_inverse_fft_normalization() {
+        use approx::assert_relative_eq;
+        use ndarray::Array3;
+        use num_complex::Complex64;
+
+        // Setup
+        let mut config = BornConfig::default();
+        config.use_fft_green = true;
+        let grid = Grid::new(16, 16, 16, 0.1, 0.1, 0.1).unwrap();
+        let solver = ConvergentBornSolver::new(config, grid);
+
+        // Create input field (impulse)
+        let mut input = Array3::<Complex64>::zeros((16, 16, 16));
+        input[[8, 8, 8]] = Complex64::new(1.0, 0.0);
+
+        let mut fft_output = Array3::<Complex64>::zeros((16, 16, 16));
+        let mut ifft_output = Array3::<Complex64>::zeros((16, 16, 16));
+
+        // Forward FFT
+        solver.forward_fft_3d(&input.view(), &mut fft_output).unwrap();
+
+        // Inverse FFT
+        solver.inverse_fft_3d(&fft_output.view(), &mut ifft_output).unwrap();
+
+        // Check reconstruction (should match input)
+        for ((i, j, k), &val) in ifft_output.indexed_iter() {
+            assert_relative_eq!(val.re, input[[i, j, k]].re, epsilon = 1e-10);
+            assert_relative_eq!(val.im, input[[i, j, k]].im, epsilon = 1e-10);
+        }
+
+        // Additional check: verify impulse magnitude
+        assert_relative_eq!(ifft_output[[8, 8, 8]].re, 1.0, epsilon = 1e-10);
     }
 }
