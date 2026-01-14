@@ -47,8 +47,9 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use ndarray::{Array3, ArrayView3, ArrayViewMut3};
+use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
 use num_complex::Complex64;
+use rayon::prelude::*;
 use std::f64::consts::PI;
 
 /// Modified Born series solver for viscoacoustic media
@@ -252,53 +253,65 @@ impl ModifiedBornSolver {
         let ny = self.grid.ny;
         let nz = self.grid.nz;
 
-        // Clear result array
-        self.workspace
-            .green_workspace
-            .fill(Complex64::new(0.0, 0.0));
+        // Immutable views for parallel access
+        let heterogeneity = self.workspace.heterogeneity_workspace.view();
+        let absorption_field = self.absorption_field.view();
 
-        // Sequential computation for now to avoid borrowing issues
-        // TODO: Implement proper parallel Green's function computation
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let source_val = self.workspace.heterogeneity_workspace[[i, j, k]];
-                    let absorption = self.absorption_field[[i, j, k]];
+        let dx = self.grid.dx;
+        let dy = self.grid.dy;
+        let dz = self.grid.dz;
 
-                    // Self-contribution with absorption regularization
-                    let k_complex = Complex64::new(wavenumber, absorption.im);
-                    let self_green = Complex64::new(0.5, 0.0) / k_complex.norm_sqr();
-                    self.workspace.green_workspace[[i, j, k]] += self_green * source_val;
+        Zip::indexed(&mut self.workspace.green_workspace).par_for_each(|(i, j, k), green_val| {
+            let mut sum = Complex64::new(0.0, 0.0);
 
-                    // Contributions from nearest neighbors with absorption
-                    let neighbors = [
-                        (i.saturating_sub(1), j, k),
-                        ((i + 1).min(nx - 1), j, k),
-                        (i, j.saturating_sub(1), k),
-                        (i, (j + 1).min(ny - 1), k),
-                        (i, j, k.saturating_sub(1)),
-                        (i, j, (k + 1).min(nz - 1)),
-                    ];
+            // 1. Self-contribution (Gather from self)
+            {
+                let source_val = heterogeneity[[i, j, k]];
+                let absorption = absorption_field[[i, j, k]];
+                let k_complex = Complex64::new(wavenumber, absorption.im);
+                let self_green = Complex64::new(0.5, 0.0) / k_complex.norm_sqr();
+                sum += self_green * source_val;
+            }
 
-                    for (ni, nj, nk) in neighbors {
-                        let dx = (ni as f64 - i as f64) * self.grid.dx;
-                        let dy = (nj as f64 - j as f64) * self.grid.dy;
-                        let dz = (nk as f64 - k as f64) * self.grid.dz;
-                        let r = (dx * dx + dy * dy + dz * dz).sqrt();
+            // 2. Neighbor contributions (Gather from neighbors)
+            let neighbors = [
+                (i.saturating_sub(1), j, k),
+                ((i + 1).min(nx - 1), j, k),
+                (i, j.saturating_sub(1), k),
+                (i, (j + 1).min(ny - 1), k),
+                (i, j, k.saturating_sub(1)),
+                (i, j, (k + 1).min(nz - 1)),
+            ];
 
-                        if r > 1e-12 {
-                            // Viscoacoustic Green's function: exp(ik_complex * r)/(4πr)
-                            let kr_real = wavenumber * r;
-                            let kr_imag = absorption.im * r;
-                            let exp_factor = Complex64::from_polar(1.0, kr_real)
-                                * Complex64::exp(Complex64::new(0.0, -kr_imag));
-                            let green_val = exp_factor / (4.0 * PI * r);
-                            self.workspace.green_workspace[[ni, nj, nk]] += green_val * source_val;
-                        }
-                    }
+            for (ni, nj, nk) in neighbors {
+                // Skip self (handled above)
+                if ni == i && nj == j && nk == k {
+                    continue;
+                }
+
+                // Distance from source (ni, nj, nk) to target (i, j, k)
+                let dist_x = (i as f64 - ni as f64) * dx;
+                let dist_y = (j as f64 - nj as f64) * dy;
+                let dist_z = (k as f64 - nk as f64) * dz;
+                let r = (dist_x * dist_x + dist_y * dist_y + dist_z * dist_z).sqrt();
+
+                if r > 1e-12 {
+                    let source_val = heterogeneity[[ni, nj, nk]];
+                    // Absorption at the source location
+                    let absorption = absorption_field[[ni, nj, nk]];
+
+                    let kr_real = wavenumber * r;
+                    let kr_imag = absorption.im * r;
+                    let exp_factor = Complex64::from_polar(1.0, kr_real)
+                        * Complex64::exp(Complex64::new(0.0, -kr_imag));
+                    let g_val = exp_factor / (4.0 * PI * r);
+
+                    sum += g_val * source_val;
                 }
             }
-        }
+
+            *green_val = sum;
+        });
 
         Ok(())
     }
@@ -544,5 +557,85 @@ mod tests {
         let solver = ModifiedBornSolver::new(config, grid);
         assert_eq!(solver.config.max_iterations, 50);
         assert_eq!(solver.grid.nx, 16);
+    }
+
+    #[test]
+    fn test_parallel_green_consistency() {
+        let config = BornConfig::default();
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
+        let mut solver = ModifiedBornSolver::new(config, grid.clone());
+
+        // Setup random/test data
+        let nx = grid.nx;
+        let ny = grid.ny;
+        let nz = grid.nz;
+
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                     solver.workspace.heterogeneity_workspace[[i, j, k]] = Complex64::new(
+                         (i + j + k) as f64,
+                         ((i * j) as f64 * 0.1)
+                     );
+                     solver.absorption_field[[i, j, k]] = Complex64::new(0.0, 0.01 * (k as f64));
+                }
+            }
+        }
+
+        // Expected result calculation (Sequential reference copy)
+        let mut expected_green = Array3::<Complex64>::zeros((nx, ny, nz));
+        let wavenumber = 10.0;
+
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let source_val = solver.workspace.heterogeneity_workspace[[i, j, k]];
+                    let absorption = solver.absorption_field[[i, j, k]];
+
+                    // Self-contribution
+                    let k_complex = Complex64::new(wavenumber, absorption.im);
+                    let self_green = Complex64::new(0.5, 0.0) / k_complex.norm_sqr();
+                    expected_green[[i, j, k]] += self_green * source_val;
+
+                    let neighbors = [
+                        (i.saturating_sub(1), j, k),
+                        ((i + 1).min(nx - 1), j, k),
+                        (i, j.saturating_sub(1), k),
+                        (i, (j + 1).min(ny - 1), k),
+                        (i, j, k.saturating_sub(1)),
+                        (i, j, (k + 1).min(nz - 1)),
+                    ];
+
+                    for (ni, nj, nk) in neighbors {
+                        let dx = (ni as f64 - i as f64) * grid.dx;
+                        let dy = (nj as f64 - j as f64) * grid.dy;
+                        let dz = (nk as f64 - k as f64) * grid.dz;
+                        let r = (dx * dx + dy * dy + dz * dz).sqrt();
+
+                        if r > 1e-12 {
+                            let kr_real = wavenumber * r;
+                            let kr_imag = absorption.im * r;
+                            let exp_factor = Complex64::from_polar(1.0, kr_real)
+                                * Complex64::exp(Complex64::new(0.0, -kr_imag));
+                            let green_val = exp_factor / (4.0 * PI * r);
+                            expected_green[[ni, nj, nk]] += green_val * source_val;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Run actual method
+        solver.apply_viscoacoustic_green(wavenumber, 0.0).unwrap();
+
+        // Compare
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let diff = (solver.workspace.green_workspace[[i, j, k]] - expected_green[[i, j, k]]).norm();
+                    assert!(diff < 1e-10, "Mismatch at {},{},{}: actual {:?}, expected {:?}, diff {}", i,j,k, solver.workspace.green_workspace[[i,j,k]], expected_green[[i,j,k]], diff);
+                }
+            }
+        }
     }
 }
