@@ -10,7 +10,7 @@
 
 ---
 
-## Active Sprint: Sprint 188 - Architecture Enhancement & Quality Assurance
+## Active Sprint: Sprint 212 Phase 2 - BurnPINN Physics Constraints & GPU Pipeline
 
 ### Sprint 188: Architecture Enhancement & Quality Assurance (5 Phases) - ✅ COMPLETE
 
@@ -662,6 +662,84 @@ Kwavers possesses world-class ultrasound simulation capabilities exceeding comme
 
 ---
 
+## Sprint 211/212 Completion Summary
+
+### Sprint 211: Clinical Therapy Acoustic Solver - ✅ COMPLETE (2025-01-14)
+
+**Objective**: Implement clinical acoustic solver with backend abstraction for therapeutic ultrasound applications.
+
+**Achievements**:
+- ✅ Strategy Pattern backend abstraction via `AcousticSolverBackend` trait
+- ✅ FDTD backend adapter implemented and integrated
+- ✅ 21 comprehensive tests (initialization, stepping, field access, safety validation)
+- ✅ Full API compatibility maintained with existing solver infrastructure
+- ✅ Clinical safety features: intensity limits, thermal index monitoring
+- ✅ Mathematical foundations documented with wave equation specifications
+
+**Deliverables**:
+- `src/clinical/therapy/acoustic/solver.rs` - Main solver implementation
+- `src/clinical/therapy/acoustic/backend.rs` - Backend trait definition
+- `src/clinical/therapy/acoustic/fdtd_backend.rs` - FDTD adapter
+- `tests/clinical_acoustic_integration.rs` - Integration tests
+
+**Test Results**: 1554/1554 passing (100% pass rate)
+
+**Known Limitations** (documented):
+- Dynamic source registration not supported (requires FdtdSolver API enhancement)
+- Backend selection currently hardcoded to FDTD (PSTD/nonlinear planned)
+
+**Time**: ~11 hours (8h initial + 3h API fixes/tests)
+
+---
+
+### Sprint 212 Phase 1: Elastic Shear Speed Implementation - ✅ COMPLETE (2025-01-15)
+
+**Objective**: Remove unsafe zero-default for shear sound speed; implement mathematically correct computation across all medium types.
+
+**Problem**: `ElasticArrayAccess::shear_sound_speed_array()` returned `Array3::zeros()` by default - physically incorrect and masks missing implementations.
+
+**Solution**: Made method required; implemented c_s = sqrt(μ / ρ) for all concrete types.
+
+**Achievements**:
+- ✅ Removed unsafe trait default (type-system enforcement)
+- ✅ Implemented shear speed for `HomogeneousMedium`: c_s = sqrt(μ / ρ)
+- ✅ Implemented shear speed for `HeterogeneousMedium`: returns stored field
+- ✅ Implemented shear speed for `HeterogeneousTissueMedium`: per-voxel computation
+- ✅ Updated all test mocks and medium implementations
+- ✅ Added 10 validation tests: mathematical identity, physical ranges, edge cases
+- ✅ Full regression suite: 1554/1554 tests passing (zero regressions)
+- ✅ Mathematical specification documented with references (Landau, Graff)
+
+**Mathematical Specification**:
+```
+Shear wave speed: c_s = sqrt(μ / ρ)
+where:
+  μ = Lamé second parameter (shear modulus) [Pa]
+  ρ = density [kg/m³]
+  
+Physical ranges:
+  Soft tissue: 1-5 m/s
+  Liver/kidney: 1-3 m/s
+  Muscle: 2-4 m/s
+  Water: c_s = 0 (no shear elasticity)
+```
+
+**Files Modified**:
+- `src/domain/medium/elastic.rs` - Trait definition (removed default)
+- `src/domain/medium/homogeneous/implementation.rs` - Homogeneous impl
+- `src/domain/medium/heterogeneous/implementation.rs` - Heterogeneous impl
+- `src/domain/medium/heterogeneous/tissue/implementation.rs` - Tissue impl
+- `tests/elastic_shear_speed_validation.rs` - New validation suite (10 tests)
+
+**Impact**:
+- Type safety: Compile-time enforcement of shear speed implementation
+- Correctness: No more silent zero-defaults masking missing physics
+- Applications enabled: Shear wave elastography, elastic wave imaging
+
+**Time**: ~5.5 hours
+
+---
+
 ## Current Sprint Context
 
 ### Evidence-Based Project State (Tool Outputs Validated)
@@ -787,9 +865,208 @@ Kwavers possesses world-class ultrasound simulation capabilities exceeding comme
 
 ---
 
-## Current Priorities
+## Sprint 212 Phase 2: Active Priorities
 
-### Ultra High Priority (P0) - Sensor Architecture Consolidation (4 Hours) - PLANNED
+### Ultra High Priority (P1) - BurnPINN Boundary Condition Loss (10-14 Hours) - 🔄 IN PROGRESS
+
+**Objective**: Implement physics-correct boundary condition enforcement for BurnPINN 3D wave equation solver.
+
+**Problem**: `compute_bc_loss()` currently returns zero-tensor placeholder - BC violations are not penalized during training, leading to physically invalid solutions.
+
+**Mathematical Specification**:
+```
+Boundary Condition Loss:
+L_BC = (1/N_∂Ω) Σ ||u(x,t) - g(x,t)||² for x ∈ ∂Ω
+
+where:
+  ∂Ω = domain boundary
+  u(x,t) = PINN output
+  g(x,t) = prescribed BC (Dirichlet/Neumann)
+  N_∂Ω = number of boundary samples
+```
+
+**Implementation Tasks**:
+1. **BC Sampling** (3-4h):
+   - Sample points on domain boundaries (6 faces for 3D box)
+   - Generate spatiotemporal coordinates (x,y,z,t) for BC points
+   - Support Dirichlet (value) and Neumann (derivative) conditions
+
+2. **BC Loss Computation** (4-5h):
+   - Evaluate PINN at boundary points
+   - Compute BC violation: ||u - g||² for Dirichlet
+   - Compute gradient for Neumann: ||∂u/∂n - h||²
+   - Aggregate over all boundary points
+
+3. **Training Integration** (2-3h):
+   - Add BC loss to total training loss with weighting factor
+   - Ensure backward pass propagates gradients
+   - Validate loss decrease during training
+
+4. **Validation Tests** (2-3h):
+   - Test with known Dirichlet BC (u=0 on boundary)
+   - Test with Neumann BC (∂u/∂n = 0, rigid wall)
+   - Verify BC satisfaction improves with training
+   - Compare against analytical solutions
+
+**Success Criteria**:
+- ✅ BC loss decreases during training
+- ✅ Boundary violations < 1% of domain interior error
+- ✅ Works with Dirichlet and Neumann conditions
+- ✅ Validated against analytical test cases
+
+**Files to Modify**:
+- `src/analysis/ml/pinn/burn_wave_equation_3d/solver.rs` (line 333-395)
+- `src/analysis/ml/pinn/burn_wave_equation_3d/training.rs` (loss aggregation)
+- `tests/pinn_bc_validation.rs` (new validation suite)
+
+**Priority**: P1 (critical for PINN correctness)
+**Effort**: 10-14 hours
+**Dependencies**: None (Sprint 211/212 Phase 1 complete)
+
+---
+
+### Ultra High Priority (P1) - BurnPINN Initial Condition Loss (8-12 Hours) - PLANNED
+
+**Objective**: Implement physics-correct initial condition enforcement for BurnPINN 3D wave equation solver.
+
+**Problem**: `compute_ic_loss()` currently returns zero-tensor placeholder - IC violations are not penalized, leading to incorrect temporal evolution.
+
+**Mathematical Specification**:
+```
+Initial Condition Loss:
+L_IC = (1/N_Ω) [Σ ||u(x,0) - u₀(x)||² + Σ ||∂u/∂t(x,0) - v₀(x)||²]
+
+where:
+  u(x,0) = initial displacement
+  u₀(x) = prescribed initial displacement
+  ∂u/∂t(x,0) = initial velocity
+  v₀(x) = prescribed initial velocity
+  N_Ω = number of domain samples at t=0
+```
+
+**Implementation Tasks**:
+1. **IC Sampling** (2-3h):
+   - Sample points at t=0 across entire domain
+   - Generate spatial coordinates (x,y,z) for IC points
+   - Support both displacement and velocity ICs
+
+2. **Temporal Derivative** (3-4h):
+   - Compute ∂u/∂t via automatic differentiation
+   - Evaluate temporal derivative at t=0
+   - Handle initial velocity matching
+
+3. **IC Loss Computation** (2-3h):
+   - Evaluate PINN at t=0 for displacement
+   - Compute temporal derivative for velocity
+   - Aggregate IC violations: ||u - u₀||² + ||∂u/∂t - v₀||²
+
+4. **Validation Tests** (2-3h):
+   - Test with Gaussian initial pulse
+   - Test with plane wave ICs
+   - Verify IC satisfaction after training
+   - Compare temporal evolution against analytical solutions
+
+**Success Criteria**:
+- ✅ IC loss decreases during training
+- ✅ Initial conditions satisfied within 1% error
+- ✅ Temporal evolution physically accurate
+- ✅ Works with various IC types (Gaussian, plane wave, etc.)
+
+**Files to Modify**:
+- `src/analysis/ml/pinn/burn_wave_equation_3d/solver.rs` (line 397-455)
+- `src/analysis/ml/pinn/burn_wave_equation_3d/training.rs` (loss aggregation)
+- `tests/pinn_ic_validation.rs` (new validation suite)
+
+**Priority**: P1 (critical for PINN correctness)
+**Effort**: 8-12 hours
+**Dependencies**: BC loss implementation (can be done in parallel)
+
+---
+
+### High Priority (P1) - 3D GPU Beamforming Pipeline (10-14 Hours) - PLANNED
+
+**Objective**: Complete GPU-accelerated 3D beamforming with delay tables, aperture masking, and kernel launch.
+
+**Scope**:
+1. **Delay Table Computation** (3-4h):
+   - Implement geometric delay calculation for dynamic focusing
+   - Support arbitrary focal point and aperture geometry
+   - Cache delay tables for real-time performance
+
+2. **Aperture Mask Buffer** (2-3h):
+   - Handle active element masking
+   - Support sparse array configurations
+   - Optimize memory layout for GPU access
+
+3. **GPU Kernel Launch** (3-4h):
+   - Wire up compute shader execution
+   - Implement delay-and-sum beamforming kernel
+   - Handle buffer synchronization
+
+4. **Validation** (2-3h):
+   - Test against CPU reference implementation
+   - Verify focal gain and resolution
+   - Benchmark performance vs CPU
+
+**Success Criteria**:
+- ✅ 10-100× speedup vs CPU beamforming
+- ✅ Identical output to CPU implementation (< 0.1% error)
+- ✅ Supports arbitrary focal configurations
+- ✅ Real-time performance for clinical arrays
+
+**Priority**: P1 (enables real-time 3D imaging)
+**Effort**: 10-14 hours
+
+---
+
+### High Priority (P1) - Source Estimation Eigendecomposition (12-16 Hours) - PLANNED
+
+**Objective**: Implement complex Hermitian eigendecomposition to enable automatic source number estimation (AIC/MDL).
+
+**Scope**:
+1. **Complex Hermitian Eigendecomposition** (6-8h):
+   - Implement in `src/math/linear_algebra/decomposition/eigen.rs`
+   - Handle complex-valued matrices
+   - Use LAPACK bindings (ndarray-linalg) for efficiency
+   - Validate against known eigensystems
+
+2. **AIC/MDL Criteria** (3-4h):
+   - Implement Akaike Information Criterion
+   - Implement Minimum Description Length
+   - Automatic source number selection from eigenvalue spectrum
+
+3. **Integration with MUSIC** (2-3h):
+   - Wire eigendecomposition into `sensor/beamforming/subspace/music.rs`
+   - Enable automatic source estimation
+   - Remove hardcoded source number assumptions
+
+4. **Validation Tests** (2-3h):
+   - Test with synthetic multi-source scenarios
+   - Verify correct source number detection
+   - Compare against ground truth
+
+**Success Criteria**:
+- ✅ Correct eigenvalues/eigenvectors for test matrices
+- ✅ AIC/MDL correctly identify source number
+- ✅ MUSIC works without manual source count
+- ✅ Performance: <10ms for typical array sizes
+
+**Priority**: P1 (enables robust subspace methods)
+**Effort**: 12-16 hours
+
+---
+
+## Previous Priorities (Completed)
+
+### Ultra High Priority (P0) - Sprint 211: Clinical Acoustic Solver - ✅ COMPLETE
+
+See Sprint 211 completion summary above.
+
+### Ultra High Priority (P0) - Sprint 212 Phase 1: Elastic Shear Speed - ✅ COMPLETE
+
+See Sprint 212 Phase 1 completion summary above.
+
+### Ultra High Priority (P0) - Sensor Architecture Consolidation (4 Hours) - DEFERRED
 
 **OBJECTIVE**: Consolidate array processing under `sensor/beamforming` and treat `localization`/`passive_acoustic_mapping` as consumers of a unified Processor, per ADR `docs/ADR/sensor_architecture_consolidation.md`.
 

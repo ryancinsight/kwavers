@@ -29,7 +29,7 @@ use super::config::BurnPINN3DConfig;
 ///
 /// This network learns to approximate solutions u(x, y, z, t) to the 3D wave equation
 /// using physics-informed training with PDE residual enforcement.
-#[derive(Module, Debug, Clone)]
+#[derive(Module, Debug)]
 pub struct PINN3DNetwork<B: Backend> {
     /// Input layer: (x, y, z, t) → hidden[0]
     input_layer: Linear<B>,

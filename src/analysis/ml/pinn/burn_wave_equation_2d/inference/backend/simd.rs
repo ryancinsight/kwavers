@@ -1,7 +1,14 @@
 #[cfg(all(feature = "simd", feature = "nightly"))]
+use crate::analysis::ml::pinn::burn_wave_equation_2d::inference::types::{
+    ActivationType, MemoryPool, QuantizedNetwork,
+};
+#[cfg(all(feature = "simd", feature = "nightly"))]
+use crate::core::error::KwaversResult;
+#[cfg(all(feature = "simd", feature = "nightly"))]
 use std::simd::f32x16;
 
 #[cfg(all(feature = "simd", feature = "nightly"))]
+#[derive(Debug)]
 pub struct SimdExecutor {
     pub lanes: usize,
 }

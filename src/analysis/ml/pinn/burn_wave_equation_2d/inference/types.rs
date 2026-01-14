@@ -45,6 +45,8 @@ pub struct SIMDProcessor {
 
 /// Neural network state for Burn-based GPU inference
 #[cfg(feature = "gpu")]
+use burn::tensor::{backend::Backend, Tensor};
+#[cfg(feature = "gpu")]
 #[derive(Debug, Clone)]
 pub struct BurnNeuralNetwork<B: Backend> {
     pub weights: Vec<Tensor<B, 2>>,

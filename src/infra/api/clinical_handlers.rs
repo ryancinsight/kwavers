@@ -30,9 +30,7 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 
 #[cfg(feature = "pinn")]
-use crate::domain::sensor::beamforming::ai_integration::{
-    AIBeamformingConfig, AIEnhancedBeamformingProcessor,
-};
+use crate::domain::sensor::beamforming::{AIBeamformingConfig, AIEnhancedBeamformingProcessor};
 
 /// Clinical API application state
 #[derive(Debug, Clone)]
@@ -68,6 +66,7 @@ impl ClinicalAppState {
         let ai_processor = Arc::new(Mutex::new(AIEnhancedBeamformingProcessor::new(
             config,
             sensor_positions,
+            None,
         )?));
 
         Ok(Self {
@@ -682,7 +681,7 @@ pub async fn get_session_status(
 #[cfg(feature = "pinn")]
 fn clinical_analysis_from_beamforming_result(
     request: &ClinicalAnalysisRequest,
-    result: crate::domain::sensor::beamforming::ai_integration::AIBeamformingResult,
+    result: crate::domain::sensor::beamforming::AIBeamformingResult,
     processing_time: u64,
 ) -> ClinicalAnalysisResponse {
     // Convert findings from beamforming result

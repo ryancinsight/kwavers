@@ -44,7 +44,7 @@ impl<B: Backend> RealTimePINNInference<B> {
         let simd_executor = SimdExecutor::new(16);
 
         #[cfg(feature = "gpu")]
-        let gpu_engine = BurnNeuralNetwork::new(&quantized_network, device).ok();
+        let gpu_engine = BurnNeuralNetwork::new(&quantized_network, _device).ok();
 
         Ok(Self {
             _burn_pinn: burn_pinn,

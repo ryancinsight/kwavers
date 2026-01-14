@@ -1,123 +1,291 @@
  # Sprint Checklist - Kwavers Development
 
-## Current Sprint: Sprint 188 - Architecture Enhancement & Quality Assurance
+## Current Sprint: Sprint 212 Phase 2 - BurnPINN Physics Constraints & GPU Pipeline
 
-**Status**: ✅ Phase 5 Complete - 100% Test Pass Rate Achieved  
-**Goal**: Achieve mathematically verified correctness with zero test failures  
-**Duration**: 5 phases completed  
-**Priority**: P0 - CRITICAL (Quality & Correctness)
+**Status**: 🔄 IN PROGRESS  
+**Goal**: Implement BC/IC loss enforcement and complete GPU beamforming pipeline  
+**Duration**: 3-4 work days (30-40 hours)  
+**Priority**: P1 - CRITICAL (PINN Correctness & Performance)
 
-### Sprint 188 Overview
+### Sprint 212 Phase 2 Overview
 
-**Problem**: Significant architectural violations detected:
-1. `domain/physics/` redundancy - Physics specs duplicated in domain vs physics layer
-2. Circular dependencies - `physics/` ↔ `solver/` (2 violations)
-3. Domain scope creep - Application concerns (imaging, therapy) in domain layer
-4. Unclear module boundaries causing confusion
+**Context**: Sprint 211 (Clinical Acoustic Solver) and Sprint 212 Phase 1 (Elastic Shear Speed) completed successfully with 1554/1554 tests passing.
 
-**Solution**: 5-phase refactoring to achieve clean architecture with unidirectional dependencies
+**Remaining P1 Blockers** (from Phase 5 audit):
+1. BurnPINN BC loss returns zero-tensor placeholder → BC violations not penalized
+2. BurnPINN IC loss returns zero-tensor placeholder → IC violations not penalized
+3. GPU beamforming pipeline incomplete → Dynamic focusing missing
+4. Eigendecomposition missing → Source estimation requires manual count
 
-**Evidence**: `docs/architecture_audit_cross_contamination.md` (590 lines)
-- 8 dependency patterns analyzed
-- 4 major violations identified
-- 15 hours estimated across 5 phases
+**Solution**: 4 parallel implementation tracks with mathematical specifications
 
 ---
 
-## Sprint 188 Phase 1: Physics Consolidation - ✅ COMPLETE
+## Sprint 211: Clinical Therapy Acoustic Solver - ✅ COMPLETE (2025-01-14)
 
 ### Completed Tasks
-- [x] Create comprehensive architecture audit (`docs/architecture_audit_cross_contamination.md`)
-- [x] Reorganize physics module structure
-- [x] Move physics specifications to proper layers
-- [x] Update all import paths
-- [x] Verify compilation and tests
+- [x] Design Strategy Pattern backend abstraction (`AcousticSolverBackend` trait)
+- [x] Implement FDTD backend adapter
+- [x] Create clinical acoustic solver with safety validation
+- [x] Add 21 comprehensive tests (initialization, stepping, field access, clinical parameters)
+- [x] Validate API compatibility with existing solver infrastructure
+- [x] Document mathematical foundations and wave equation specifications
+- [x] Create completion report (`SPRINT_211_COMPLETION_REPORT.md`)
+
+### Results
+- **Test Pass Rate**: 1554/1554 (100%)
+- **API Compatibility**: ✅ Maintained
+- **Safety Features**: Intensity limits, thermal index monitoring
+- **Time**: ~11 hours (8h initial + 3h API fixes)
+
+### Known Limitations (Documented)
+- Dynamic source registration not supported (requires FdtdSolver API enhancement)
+- Backend selection currently hardcoded to FDTD (PSTD/nonlinear planned)
 
 ---
 
-## Sprint 188 Phase 2: Dependency Cleanup - ✅ COMPLETE
+## Sprint 212 Phase 1: Elastic Shear Speed Implementation - ✅ COMPLETE (2025-01-15)
 
 ### Completed Tasks
-- [x] Eliminate circular dependencies between physics and solver layers
-- [x] Establish unidirectional dependency flow
-- [x] Verify no layer violations
-- [x] Update dependency documentation
+- [x] Remove unsafe `Array3::zeros()` default from `ElasticArrayAccess::shear_sound_speed_array()`
+- [x] Make method required (type-system enforcement)
+- [x] Implement c_s = sqrt(μ / ρ) for `HomogeneousMedium`
+- [x] Implement shear speed return for `HeterogeneousMedium` (stored field)
+- [x] Implement per-voxel computation for `HeterogeneousTissueMedium`
+- [x] Update all test mocks and medium implementations
+- [x] Add 10 validation tests (mathematical identity, physical ranges, edge cases)
+- [x] Verify full regression suite (1554/1554 passing)
+- [x] Document mathematical specification with literature references
+- [x] Create completion report (`SPRINT_212_PHASE1_ELASTIC_SHEAR_SPEED.md`)
+
+### Results
+- **Test Pass Rate**: 1554/1554 (100%, zero regressions)
+- **Type Safety**: ✅ Compile-time enforcement
+- **Physical Correctness**: ✅ No silent zero-defaults
+- **Applications Enabled**: Shear wave elastography, elastic wave imaging
+- **Time**: ~5.5 hours
+
+### Mathematical Specification
+```
+Shear wave speed: c_s = sqrt(μ / ρ)
+Physical ranges: Soft tissue 1-5 m/s, Water c_s = 0
+```
 
 ---
 
-## Sprint 188 Phase 3: Domain Layer Purity - ✅ COMPLETE
+## Sprint 212 Phase 2: Active Tasks - 🔄 IN PROGRESS
 
-### Completed Tasks
-- [x] Move signal filtering to `analysis::signal_processing::filtering`
-- [x] Move photoacoustic imaging to `clinical::imaging::photoacoustic`
-- [x] Move therapy concerns to `clinical::therapy`
-- [x] Verify domain layer contains only pure business logic
-- [x] Update all dependent modules
+### Task 1: BurnPINN Boundary Condition Loss (10-14h) - 🔄 IN PROGRESS
 
----
+**Priority**: P1 - Critical for PINN correctness
 
-## Sprint 188 Phase 4: Test Error Resolution - ✅ COMPLETE
+**Mathematical Specification**:
+```
+L_BC = (1/N_∂Ω) Σ ||u(x,t) - g(x,t)||² for x ∈ ∂Ω
+```
 
-### Completed Tasks
-- [x] Fix 9 critical test failures with mathematical verification
-- [x] Clinical safety monitor (pressure vs. power thresholds)
-- [x] Material interface energy conservation
-- [x] Plasmonic enhancement (physical bounds)
-- [x] Second harmonic generation (perturbation limits)
-- [x] Boundary conditions (Robin & Radiation BEM/FEM)
-- [x] Test pass rate: 1069/1084 (98.6%)
-
----
-
-## Sprint 188 Phase 5: Development & Enhancement - ✅ COMPLETE
-
-### Completed Tasks
-- [x] **Fix 1**: Signal processing time window (closed interval semantics)
-  - File: `src/analysis/signal_processing/filtering/frequency_filter.rs`
-  - Issue: Test expected exclusive range, implementation uses closed interval
-  - Solution: Corrected test assertion to `windowed[10..=30]`
-  - Mathematical spec: Time windows use closed intervals [t_min, t_max]
+**Subtasks**:
+- [ ] BC Sampling (3-4h)
+  - [ ] Sample points on 6 domain boundary faces (3D box)
+  - [ ] Generate spatiotemporal coordinates (x,y,z,t)
+  - [ ] Support Dirichlet and Neumann conditions
   
-- [x] **Fix 2**: Electromagnetic dimension enum discriminants
-  - File: `src/physics/electromagnetic/equations.rs`
-  - Issue: Default discriminants (0,1,2) didn't match dimensions (1,2,3)
-  - Solution: Added explicit discriminants `One=1, Two=2, Three=3`
-  - Mathematical spec: Spatial dimensions are natural numbers d ∈ ℕ₊
+- [ ] BC Loss Computation (4-5h)
+  - [ ] Evaluate PINN at boundary points
+  - [ ] Compute Dirichlet violation: ||u - g||²
+  - [ ] Compute Neumann gradient: ||∂u/∂n - h||²
+  - [ ] Aggregate over all boundary points
   
-- [x] **Fix 3**: PML volume fraction grid sizing
-  - File: `src/solver/forward/elastic/swe/boundary.rs`
-  - Issue: 32³ grid with t=5 gave f_PML=67.5% > 60% threshold
-  - Solution: Increased to 50³ grid giving f_PML=48.8% < 60%
-  - Mathematical spec: n > 7.6t ensures f_PML < 0.6
+- [ ] Training Integration (2-3h)
+  - [ ] Add BC loss to total training loss with weighting
+  - [ ] Verify backward pass gradient propagation
+  - [ ] Validate loss decrease during training
   
-- [x] **Fix 4**: PML theoretical reflection coefficient
-  - File: `src/solver/forward/elastic/swe/boundary.rs`
-  - Issue: σ_max=100 too small, gave R=99.87% reflection
-  - Solution: Use optimization formula σ_max = -ln(R)·c_max/(2·L_PML)
-  - Mathematical spec: R = exp(-2·σ_max·L_PML/c_max) < 0.01
+- [ ] Validation Tests (2-3h)
+  - [ ] Test with Dirichlet BC (u=0 on boundary)
+  - [ ] Test with Neumann BC (∂u/∂n=0, rigid wall)
+  - [ ] Verify BC satisfaction improves with training
+  - [ ] Compare against analytical solutions
 
-- [x] Create Phase 5 audit document (`docs/sprint_188_phase5_audit.md`)
-- [x] Create Phase 5 completion report (`docs/sprint_188_phase5_complete.md`)
-- [x] Update README with Phase 5 status and 100% test pass rate
-- [x] Verify full test suite: **1073 passing, 0 failing, 11 ignored**
+**Files**:
+- `src/analysis/ml/pinn/burn_wave_equation_3d/solver.rs` (line 333-395)
+- `tests/pinn_bc_validation.rs` (new)
 
-### Final Results
-- **Test Pass Rate**: 100% (1073/1073 tests passing)
-- **Build Status**: ✅ Passing
-- **Architecture**: ✅ Clean (unidirectional dependencies)
-- **Documentation**: ✅ Complete and synchronized
-- **Mathematical Verification**: ✅ All fixes formally verified
+**Success Criteria**:
+- ✅ BC loss decreases during training
+- ✅ Boundary violations < 1% of interior error
+- ✅ Works with Dirichlet and Neumann BCs
+- ✅ Validated against analytical test cases
 
 ---
 
-## Next Steps: Phase 6 Planning
+### Task 2: BurnPINN Initial Condition Loss (8-12h) - PLANNED
 
-### Proposed Phase 6 Goals
-- [ ] CI/CD pipeline setup (automated testing, clippy enforcement)
-- [ ] API enhancement (sparse matrix set vs. add semantics)
-- [ ] Solver interface standardization (canonical traits)
-- [ ] Performance optimization (SIMD, GPU, benchmarks)
-- [ ] Documentation finalization (ADRs, migration guides, examples)
+**Priority**: P1 - Critical for PINN correctness
+
+**Mathematical Specification**:
+```
+L_IC = (1/N_Ω) [Σ ||u(x,0) - u₀(x)||² + Σ ||∂u/∂t(x,0) - v₀(x)||²]
+```
+
+**Subtasks**:
+- [ ] IC Sampling (2-3h)
+  - [ ] Sample points at t=0 across domain
+  - [ ] Generate spatial coordinates (x,y,z)
+  - [ ] Support displacement and velocity ICs
+  
+- [ ] Temporal Derivative (3-4h)
+  - [ ] Compute ∂u/∂t via automatic differentiation
+  - [ ] Evaluate at t=0
+  - [ ] Handle initial velocity matching
+  
+- [ ] IC Loss Computation (2-3h)
+  - [ ] Evaluate PINN at t=0 for displacement
+  - [ ] Compute temporal derivative for velocity
+  - [ ] Aggregate: ||u - u₀||² + ||∂u/∂t - v₀||²
+  
+- [ ] Validation Tests (2-3h)
+  - [ ] Test with Gaussian initial pulse
+  - [ ] Test with plane wave ICs
+  - [ ] Verify IC satisfaction after training
+  - [ ] Compare temporal evolution vs analytical
+
+**Files**:
+- `src/analysis/ml/pinn/burn_wave_equation_3d/solver.rs` (line 397-455)
+- `tests/pinn_ic_validation.rs` (new)
+
+**Success Criteria**:
+- ✅ IC loss decreases during training
+- ✅ Initial conditions satisfied within 1% error
+- ✅ Temporal evolution physically accurate
+- ✅ Works with various IC types
+
+---
+
+### Task 3: 3D GPU Beamforming Pipeline (10-14h) - PLANNED
+
+**Priority**: P1 - Enables real-time 3D imaging
+
+**Subtasks**:
+- [ ] Delay Table Computation (3-4h)
+  - [ ] Implement geometric delay calculation
+  - [ ] Support arbitrary focal point and aperture
+  - [ ] Cache delay tables for real-time performance
+  
+- [ ] Aperture Mask Buffer (2-3h)
+  - [ ] Handle active element masking
+  - [ ] Support sparse array configurations
+  - [ ] Optimize memory layout for GPU
+  
+- [ ] GPU Kernel Launch (3-4h)
+  - [ ] Wire up compute shader execution
+  - [ ] Implement delay-and-sum kernel
+  - [ ] Handle buffer synchronization
+  
+- [ ] Validation (2-3h)
+  - [ ] Test against CPU reference
+  - [ ] Verify focal gain and resolution
+  - [ ] Benchmark performance
+
+**Success Criteria**:
+- ✅ 10-100× speedup vs CPU
+- ✅ Identical output to CPU (< 0.1% error)
+- ✅ Supports arbitrary focal configurations
+- ✅ Real-time performance for clinical arrays
+
+---
+
+### Task 4: Source Estimation Eigendecomposition (12-16h) - PLANNED
+
+**Priority**: P1 - Enables robust subspace methods
+
+**Subtasks**:
+- [ ] Complex Hermitian Eigendecomposition (6-8h)
+  - [ ] Implement in `src/math/linear_algebra/decomposition/eigen.rs`
+  - [ ] Handle complex-valued matrices
+  - [ ] Use LAPACK bindings (ndarray-linalg)
+  - [ ] Validate against known eigensystems
+  
+- [ ] AIC/MDL Criteria (3-4h)
+  - [ ] Implement Akaike Information Criterion
+  - [ ] Implement Minimum Description Length
+  - [ ] Automatic source number selection
+  
+- [ ] MUSIC Integration (2-3h)
+  - [ ] Wire into `sensor/beamforming/subspace/music.rs`
+  - [ ] Enable automatic source estimation
+  - [ ] Remove hardcoded source count
+  
+- [ ] Validation Tests (2-3h)
+  - [ ] Test with synthetic multi-source scenarios
+  - [ ] Verify correct source number detection
+  - [ ] Compare against ground truth
+
+**Success Criteria**:
+- ✅ Correct eigenvalues/eigenvectors
+- ✅ AIC/MDL correctly identify source number
+- ✅ MUSIC works without manual source count
+- ✅ Performance: <10ms for typical arrays
+
+---
+
+## Progress Tracking
+
+### Sprint 212 Phase 2 Status
+- **BC Loss**: 🔄 0% (starting implementation)
+- **IC Loss**: ⏸️ 0% (pending BC completion)
+- **GPU Beamforming**: ⏸️ 0% (planned)
+- **Eigendecomposition**: ⏸️ 0% (planned)
+
+### Test Status
+- **Current**: 1554/1554 passing (100%)
+- **Target**: Maintain 100% pass rate through all changes
+
+### Time Tracking
+- **Sprint 211**: 11h (complete)
+- **Sprint 212 Phase 1**: 5.5h (complete)
+- **Sprint 212 Phase 2**: 0h / 40-56h estimated
+
+---
+
+## Quality Gates
+
+### Pre-Commit Validation
+- [ ] All tests pass: `cargo test --all-features`
+- [ ] Zero compilation errors: `cargo check --all-features`
+- [ ] Clippy clean: `cargo clippy --all-features`
+- [ ] Documentation builds: `cargo doc --no-deps`
+
+### Mathematical Verification
+- [ ] BC loss derivation documented
+- [ ] IC loss derivation documented
+- [ ] Physical plausibility tests pass
+- [ ] Convergence validated against analytical solutions
+
+### Documentation Updates
+- [ ] Update `backlog.md` with Phase 2 progress
+- [ ] Update `README.md` with new capabilities
+- [ ] Create Phase 2 completion report
+- [ ] Archive sprint documentation
+
+---
+
+## Previous Sprints (Completed)
+
+### Sprint 188: Architecture Enhancement - ✅ COMPLETE
+- Clean architecture with unidirectional dependencies
+- 100% test pass rate achieved
+- Mathematical verification complete
+
+### Sprint 207: Repository Cleanup - ✅ COMPLETE
+- 34GB build artifacts removed
+- 19 sprint docs archived
+- 12 compiler warnings fixed
+
+### Sprint 208: Deprecated Code & TODOs - ✅ COMPLETE
+- 17 deprecated items eliminated
+- All P0 critical tasks complete
+- Zero technical debt
 
 ### Cleanup Tasks
 - [ ] Update `domain/mod.rs` to remove physics re-exports

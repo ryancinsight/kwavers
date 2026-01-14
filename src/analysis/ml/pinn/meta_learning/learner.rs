@@ -16,6 +16,7 @@ use crate::core::error::KwaversResult;
 use burn::module::{Module, ModuleMapper};
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use std::sync::Arc;
 
 pub struct MetaLearner<B: AutodiffBackend> {
     /// Base model acting as meta-parameters
@@ -107,20 +108,17 @@ impl<B: AutodiffBackend> MetaLearner<B> {
 
         // Sum gradients from all tasks
         for (i, task_grad_set) in aggregated_grads.iter().enumerate() {
-            let mut extractor = GradientExtractor {
-                grads: task_grad_set,
-                collected: Vec::new(),
-            };
+            let mut extractor = GradientExtractor::new(task_grad_set);
             // Map over model structure to extract gradients in order
             self.base_model.clone().map(&mut extractor);
-            let task_grads_flat = extractor.collected;
+            let task_grads_flat = extractor.into_gradients();
 
             if i == 0 {
                 accumulated_grads = task_grads_flat;
             } else {
                 for (acc, new) in accumulated_grads.iter_mut().zip(task_grads_flat.iter()) {
                     if let (Some(a), Some(b)) = (acc.as_mut(), new.as_ref()) {
-                        *a = a.clone().add(b.clone());
+                        *a = a.clone() + b.clone();
                     } else if acc.is_none() && new.is_some() {
                         *acc = new.clone();
                     }
@@ -633,7 +631,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
         task_gradients: &[Vec<Tensor<B, 2>>],
         task_losses: &[f64],
     ) -> Vec<Option<Tensor<B, 2>>> {
-        let num_params = self._meta_optimizer._m.len();
+        let num_params = self.base_model.parameters().len();
         if task_gradients.is_empty() || task_losses.is_empty() {
             return vec![None; num_params];
         }

@@ -317,6 +317,12 @@ name = "pinn_elastic_2d_training"
 harness = false
 required-features = ["pinn"]
 
+# PINN Validation Tests (Sprint 212 Phase 2)
+[[test]]
+name = "pinn_bc_validation"
+harness = true
+required-features = ["pinn"]
+
 [[bench]]
 name = "opast_benchmarks"
 harness = false

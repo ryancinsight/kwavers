@@ -227,7 +227,7 @@ fn train_2d(
         &t_data,
         &u_data,
         wave_speed,
-        trainer.pinn.config(),
+        &burn_config,
         &device,
         config.training_config.epochs,
         |epoch, metrics| {

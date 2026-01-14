@@ -245,6 +245,25 @@ impl elastic::ElasticArrayAccess for HeterogeneousMediumMock {
     fn lame_mu_array(&self) -> Array3<f64> {
         self.bubble_radius.clone()
     }
+
+    fn shear_sound_speed_array(&self) -> Array3<f64> {
+        // Mathematical specification: c_s = sqrt(μ / ρ)
+        // Note: This mock uses bubble_radius field as μ (shear modulus)
+        // and density field for ρ
+        let mu_arr = self.bubble_radius.clone();
+        let rho_arr = self.density.clone();
+        let mut cs_arr = Array3::zeros(mu_arr.dim());
+
+        for ((i, j, k), mu_val) in mu_arr.indexed_iter() {
+            let rho_val = rho_arr[[i, j, k]];
+            cs_arr[[i, j, k]] = if rho_val > 0.0 {
+                (mu_val / rho_val).sqrt()
+            } else {
+                0.0
+            };
+        }
+        cs_arr
+    }
 }
 
 // Thermal properties

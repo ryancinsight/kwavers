@@ -321,7 +321,7 @@ pub mod utils {
         grads: Vec<Option<Tensor<B::InnerBackend, 1>>>,
         max_norm: f64,
     ) -> Vec<Option<Tensor<B::InnerBackend, 1>>> {
-        let norm = gradient_norm(&grads);
+        let norm = gradient_norm::<B>(&grads);
 
         if norm > max_norm {
             let scale = max_norm / norm;

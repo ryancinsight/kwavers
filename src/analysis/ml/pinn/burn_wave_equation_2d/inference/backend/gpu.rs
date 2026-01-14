@@ -1,7 +1,13 @@
 #[cfg(feature = "gpu")]
 use super::super::types::BurnNeuralNetwork;
 #[cfg(feature = "gpu")]
+use super::super::types::QuantizedNetwork;
+#[cfg(feature = "gpu")]
+use crate::core::error::{KwaversError, KwaversResult};
+#[cfg(feature = "gpu")]
 use burn::tensor::activation::{relu, sigmoid, tanh};
+#[cfg(feature = "gpu")]
+use burn::tensor::{backend::Backend, Tensor, TensorData};
 
 #[cfg(feature = "gpu")]
 impl<B: Backend> BurnNeuralNetwork<B> {
@@ -59,10 +65,9 @@ impl<B: Backend> BurnNeuralNetwork<B> {
             input_data.push(t[i]);
         }
 
-        // Access the device from the first weight tensor
-        let device = &self.weights[0].device();
+        let device = self.weights[0].device();
         let data = TensorData::new(input_data, [batch_size, 3]);
-        let mut input = Tensor::<B, 2>::from_data(data, device);
+        let mut input = Tensor::<B, 2>::from_data(data, &device);
 
         for (layer_idx, (weight, bias)) in self.weights.iter().zip(&self.biases).enumerate() {
             input = input.matmul(weight.clone()) + bias.clone().unsqueeze();

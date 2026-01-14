@@ -20,7 +20,7 @@
 //! 3. **Thin Adaptation**: Minimal logic, primarily type conversion
 //! 4. **Zero Duplication**: No domain concepts redefined in PINN layer
 
-use crate::domain::source::{FocalProperties as DomainFocalProperties, Source, SourceField};
+use crate::domain::source::{types::FocalProperties as DomainFocalProperties, Source, SourceField};
 use std::sync::Arc;
 
 /// Acoustic source specification for PINN training

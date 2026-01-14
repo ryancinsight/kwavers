@@ -240,6 +240,17 @@ impl ElasticArrayAccess for TestElasticMedium {
     fn lame_mu_array(&self) -> ndarray::Array3<f64> {
         ndarray::Array3::from_elem((10, 10, 10), self.lame_mu)
     }
+
+    fn shear_sound_speed_array(&self) -> ndarray::Array3<f64> {
+        // Mathematical specification: c_s = sqrt(μ / ρ)
+        // where μ is shear modulus (Pa) and ρ is density (kg/m³)
+        let shear_speed = if self.density > 0.0 {
+            (self.lame_mu / self.density).sqrt()
+        } else {
+            0.0
+        };
+        ndarray::Array3::from_elem((10, 10, 10), shear_speed)
+    }
 }
 
 impl ThermalProperties for TestElasticMedium {

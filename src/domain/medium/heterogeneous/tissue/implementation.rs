@@ -256,6 +256,27 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
         }
         arr
     }
+
+    fn shear_sound_speed_array(&self) -> Array3<f64> {
+        // Mathematical specification: c_s = sqrt(μ / ρ)
+        // Compute shear wave speed from tissue properties at each grid point
+        let mut arr = Array3::zeros(self.tissue_map.dim());
+        for ((i, j, k), tissue_type) in self.tissue_map.indexed_iter() {
+            if let Some(props) = TISSUE_PROPERTIES.get(tissue_type) {
+                // Get density from tissue properties
+                let density = props.density;
+                let mu = props.lame_mu;
+
+                // Compute shear wave speed: c_s = sqrt(μ / ρ)
+                arr[[i, j, k]] = if density > 0.0 {
+                    (mu / density).sqrt()
+                } else {
+                    0.0
+                };
+            }
+        }
+        arr
+    }
 }
 
 impl ThermalProperties for HeterogeneousTissueMedium {

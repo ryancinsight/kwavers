@@ -69,7 +69,6 @@ pub trait PinnInferenceEngine: Send + Sync {
 /// let result = processor.process_ai_enhanced(rf_data.view(), &angles)?;
 /// println!("Processing time: {:.2}ms", result.performance.total_time_ms);
 /// ```
-#[derive(Debug)]
 pub struct AIEnhancedBeamformingProcessor {
     /// Base beamforming processor
     _beamforming_processor: BeamformingProcessor,
@@ -85,6 +84,17 @@ pub struct AIEnhancedBeamformingProcessor {
 
     /// Configuration
     config: AIBeamformingConfig,
+}
+
+impl std::fmt::Debug for AIEnhancedBeamformingProcessor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AIEnhancedBeamformingProcessor")
+            .field("_beamforming_processor", &self._beamforming_processor)
+            .field("feature_extractor", &self.feature_extractor)
+            .field("clinical_support", &self.clinical_support)
+            .field("config", &self.config)
+            .finish_non_exhaustive()
+    }
 }
 
 impl AIEnhancedBeamformingProcessor {
@@ -109,14 +119,11 @@ impl AIEnhancedBeamformingProcessor {
     ) -> KwaversResult<Self> {
         // Validate configuration
         config.validate().map_err(|e| {
-            crate::core::error::KwaversError::ValidationError(format!(
-                "Invalid AI beamforming config: {}",
-                e
-            ))
+            crate::core::error::KwaversError::InvalidInput(format!("Invalid AI beamforming config: {e}"))
         })?;
 
         if config.enable_realtime_pinn && pinn_engine.is_none() {
-            return Err(crate::core::error::KwaversError::ValidationError(
+            return Err(crate::core::error::KwaversError::InvalidInput(
                 "PINN inference enabled but no PinnInferenceEngine provided".to_string(),
             ));
         }
@@ -323,12 +330,12 @@ impl AIEnhancedBeamformingProcessor {
 
         // Perform batched PINN inference
         let pinn_engine = self.pinn_engine.as_mut().ok_or_else(|| {
-            crate::core::error::KwaversError::ValidationError(
+            crate::core::error::KwaversError::InvalidInput(
                 "PINN inference enabled but no PinnInferenceEngine available".to_string(),
             )
         })?;
         let (_predictions, uncertainties) =
-            self.predict_realtime(&x_coords, &y_coords, &t_coords)?;
+            pinn_engine.predict_realtime(&x_coords, &y_coords, &t_coords)?;
 
         // Interpolate results back to full volume resolution
         let mut uncertainty_volume = Array3::<f32>::zeros((nx, ny, nz));

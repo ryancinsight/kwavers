@@ -16,7 +16,7 @@
 //! - Automatic differentiation compatibility
 //! - Module hierarchy inspection
 
-use burn::module::{AutodiffModule, Devices, Module};
+use burn::module::{AutodiffModule, Devices, Module, ModuleMapper, ModuleVisitor};
 use burn::tensor::{backend::AutodiffBackend, backend::Backend, Tensor};
 use std::sync::Arc;
 
@@ -33,7 +33,7 @@ use std::sync::Arc;
 ///
 /// * `func` - CPU closure for wave speed evaluation
 /// * `grid` - Optional device-resident tensor for fast lookup
-#[derive(Module, Clone)]
+#[derive(Clone)]
 pub struct WaveSpeedFn3D<B: Backend> {
     /// CPU function: c(x, y, z) → wave_speed
     pub func: Arc<dyn Fn(f32, f32, f32) -> f32 + Send + Sync>,
@@ -131,6 +131,54 @@ impl<B: Backend> std::fmt::Debug for WaveSpeedFn3D<B> {
             .finish()
     }
 }
+
+impl<B: Backend> Module<B> for WaveSpeedFn3D<B> {
+    type Record = ();
+
+    fn collect_devices(&self, mut devices: Devices<B>) -> Devices<B> {
+        if let Some(grid) = &self.grid {
+            devices.push(grid.device());
+        }
+        devices
+    }
+
+    fn to_device(self, device: &B::Device) -> Self {
+        Self {
+            func: self.func,
+            grid: self.grid.map(|g| g.to_device(device)),
+        }
+    }
+
+    fn visit<V: ModuleVisitor<B>>(&self, visitor: &mut V) {
+        if let Some(grid) = &self.grid {
+            visitor.visit(grid);
+        }
+    }
+
+    fn map<M: ModuleMapper<B>>(self, mapper: &mut M) -> Self {
+        Self {
+            func: self.func,
+            grid: self.grid.map(|g| mapper.map(g)),
+        }
+    }
+
+    fn load_record(self, _record: Self::Record) -> Self {
+        self
+    }
+
+    fn into_record(self) -> Self::Record {}
+}
+
+impl<B: Backend> burn::module::ModuleDisplayDefault for WaveSpeedFn3D<B> {
+    fn content(
+        &self,
+        content: burn::module::Content,
+    ) -> std::option::Option<burn::module::Content> {
+        Some(content)
+    }
+}
+
+impl<B: Backend> burn::module::ModuleDisplay for WaveSpeedFn3D<B> {}
 
 impl<B: AutodiffBackend> AutodiffModule<B> for WaveSpeedFn3D<B> {
     type InnerModule = WaveSpeedFn3D<B::InnerBackend>;
