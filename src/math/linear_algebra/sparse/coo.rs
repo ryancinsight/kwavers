@@ -1,10 +1,10 @@
 //! Coordinate (COO) sparse matrix format
 
-use super::csr::CompressedSparseRowMatrix;
+use super::csr::{CompressedSparseRowMatrix, CsrScalar};
 
 /// Coordinate format sparse matrix (triplet format)
 #[derive(Debug, Clone)]
-pub struct CoordinateMatrix {
+pub struct CoordinateMatrix<T = f64> {
     /// Number of rows
     pub rows: usize,
     /// Number of columns
@@ -14,10 +14,13 @@ pub struct CoordinateMatrix {
     /// Column indices
     pub col_indices: Vec<usize>,
     /// Values
-    pub values: Vec<f64>,
+    pub values: Vec<T>,
 }
 
-impl CoordinateMatrix {
+impl<T> CoordinateMatrix<T>
+where
+    T: CsrScalar,
+{
     /// Create coordinate matrix
     #[must_use]
     pub fn create(rows: usize, cols: usize) -> Self {
@@ -31,8 +34,8 @@ impl CoordinateMatrix {
     }
 
     /// Add triplet (row, col, value)
-    pub fn add_triplet(&mut self, row: usize, col: usize, value: f64) {
-        if row < self.rows && col < self.cols && value.abs() > 1e-14 {
+    pub fn add_triplet(&mut self, row: usize, col: usize, value: T) {
+        if row < self.rows && col < self.cols && value.magnitude() > 1e-14 {
             self.row_indices.push(row);
             self.col_indices.push(col);
             self.values.push(value);
@@ -41,9 +44,9 @@ impl CoordinateMatrix {
 
     /// Convert to CSR format
     #[must_use]
-    pub fn to_csr(&self) -> CompressedSparseRowMatrix {
+    pub fn to_csr(&self) -> CompressedSparseRowMatrix<T> {
         // Sort by row, then column
-        let mut triplets: Vec<(usize, usize, f64)> = self
+        let mut triplets: Vec<(usize, usize, T)> = self
             .row_indices
             .iter()
             .zip(&self.col_indices)
