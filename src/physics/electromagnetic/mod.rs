@@ -33,7 +33,8 @@
 //! properties; solvers provide numerical algorithms.
 
 pub mod equations; // Electromagnetic wave equation specifications
-                   // pub mod optics; // Moved to physics::optics
+pub mod maxwell;
+// pub mod optics; // Moved to physics::optics
 pub mod photoacoustic;
 pub mod plasmonics;
 

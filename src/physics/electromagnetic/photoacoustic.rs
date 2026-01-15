@@ -324,7 +324,7 @@ impl PulsedLaser {
 mod tests {
     use super::*;
     use crate::domain::grid::Grid;
-    // use crate::physics::electromagnetic::maxwell::FDTD; // TODO: maxwell module doesn't exist yet
+    use crate::physics::electromagnetic::maxwell::FDTD;
     use crate::physics::electromagnetic::equations::EMMaterialDistribution;
 
     #[test]
@@ -362,28 +362,26 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Requires maxwell::FDTD module which doesn't exist yet
     fn test_photoacoustic_solver() {
         // Create mock EM solver
-        let _grid = Grid::new(10, 10, 10, 1e-3, 1e-3, 1e-3).unwrap();
+        let grid = Grid::new(10, 10, 10, 1e-3, 1e-3, 1e-3).unwrap();
         // Use canonical domain composition pattern
-        let _materials = EMMaterialDistribution::vacuum(&[1]);
+        let materials = EMMaterialDistribution::vacuum(&[10, 10, 10]);
 
-        // let em_solver = FDTD::new(grid, materials, 1e-12).unwrap();
+        let em_solver = FDTD::new(grid, materials, 1e-12).unwrap();
 
-        // TODO: Uncomment when maxwell::FDTD module is implemented
-        // // Create photoacoustic solver
-        // let gruneisen = GruneisenParameter::new(0.5);
-        // let optical_props = OpticalAbsorption::new(10.0, 50.0, 0.9, 800e-9);
-        //
-        // let mut pa_solver = PhotoacousticSolver::new(em_solver, gruneisen, optical_props);
-        //
-        // // Test fluence to pressure conversion
-        // let fluence = ArrayD::from_elem(ndarray::IxDyn(&[5, 5, 5]), 100.0); // 100 J/m²
-        // let pressure = pa_solver.compute_initial_pressure(&fluence).unwrap();
-        //
-        // // Pressure should be positive and proportional to fluence
-        // assert!(pressure.iter().all(|&p| p > 0.0));
-        // assert!(pressure.iter().any(|&p| p > 10.0)); // Should be significant pressure
+        // Create photoacoustic solver
+        let gruneisen = GruneisenParameter::new(0.5);
+        let optical_props = OpticalAbsorption::new(10.0, 50.0, 0.9, 800e-9);
+
+        let mut pa_solver = PhotoacousticSolver::new(em_solver, gruneisen, optical_props);
+
+        // Test fluence to pressure conversion
+        let fluence = ArrayD::from_elem(ndarray::IxDyn(&[5, 5, 5]), 100.0); // 100 J/m²
+        let pressure = pa_solver.compute_initial_pressure(&fluence).unwrap();
+
+        // Pressure should be positive and proportional to fluence
+        assert!(pressure.iter().all(|&p| p > 0.0));
+        assert!(pressure.iter().any(|&p| p > 10.0)); // Should be significant pressure
     }
 }
