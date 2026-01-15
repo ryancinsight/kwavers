@@ -205,7 +205,7 @@ pub fn magnetostatic_residual<B: AutodiffBackend>(
 
 /// Compute quasi-static residual
 pub fn quasi_static_residual<B: AutodiffBackend>(
-    _outputs: &Tensor<B, 2>,
+    model: &BurnPINN2DWave<B>,
     x: &Tensor<B, 2>,
     _y: &Tensor<B, 2>,
     _t: &Tensor<B, 2>,
@@ -267,21 +267,8 @@ pub fn quasi_static_residual<B: AutodiffBackend>(
     // ASSIGNED: Sprint 212-213 (Research Features)
     // PRIORITY: P1 (Advanced electromagnetic simulation capability)
 
-    // Assume outputs are coupled [Ez, Hz]
-    // Note: In real setup, we would need to access the model to compute gradients properly.
-    // But here we are given outputs. Wait, we cannot compute derivatives w.r.t x,y,t
-    // just from outputs tensor unless we use `grad`.
-    // The original code called `self.compute_hz_at` etc. which presumably called model forward.
-    // To fix this properly, we need the MODEL passed in, not just outputs.
-    // However, to match the trait signature which might perform the forward pass internally...
-    // Check original: `quasi_static_residual` took `&outputs`.
-    // But it CALLED `self.compute_hz_at` which was implemented as "Simplified - would need model access -> Tensor::zeros_like".
-    // So the original code was actually broken/stubbed!
-    // We should accept `model` here to be correct, or replicate the stub structure.
-    // Given the instruction is to REFACTOR, we should improve if possible, but definitely not break signature compatibility if specific trait enforces it.
-    // The trait `PhysicsDomain::pde_residual` provides `model`.
-    // So we can pass `model` down.
-    // I'll update the signature to take `model` instead of `outputs` (or both).
+    // Updated to accept model for future implementation of gradients
+    let _ = model;
 
     // STUB for now as per original code logic, but using Tensor operations
     let _batch_size = x.shape().dims[0];
@@ -289,9 +276,6 @@ pub fn quasi_static_residual<B: AutodiffBackend>(
     // Given the original code was stubbed partial implementation, we will perform a basic placeholder
     // calculation to satisfy compilation and type checking.
 
-    // Real implementation requires re-forwarding model at perturbed coordinates.
-    // Since `model` is not passed in this signature in my current draft, I must change it.
-    // I will change signature below.
     Tensor::zeros_like(x)
 }
 
