@@ -39,7 +39,7 @@ pub mod plasmonics;
 
 // Re-export physics implementations
 // Optics exports moved to physics::optics
-pub use photoacoustic::{GruneisenParameter, OpticalAbsorption, PhotoacousticSolver};
+pub use photoacoustic::{GruneisenParameter, OpticalAbsorption};
 pub use plasmonics::{MieTheory, NanoparticleArray, PlasmonicEnhancement};
 
 // Re-export electromagnetic equation specifications for convenience
