@@ -127,7 +127,7 @@ impl BemFemInterface {
         _bem_boundary: &[usize],
         _fem_mesh: &TetrahedralMesh,
     ) -> bool {
-        // Simplified geometric check - in practice would check if node
+        // TODO: Simplified geometric check - in practice would check if node
         // coordinates lie on the boundary surface defined by BEM elements
         // For now, assume some nodes are on the interface
         false // Placeholder - would need actual geometric computation
@@ -138,7 +138,7 @@ impl BemFemInterface {
         _node: &crate::domain::mesh::tetrahedral::MeshNode,
         _bem_boundary: &[usize],
     ) -> usize {
-        // Simplified mapping - in practice would find closest BEM element
+        // TODO: Simplified mapping - in practice would find closest BEM element
         0 // Placeholder
     }
 
@@ -173,7 +173,7 @@ impl BemFemInterface {
 
         for &node_idx in fem_nodes {
             if let Some(_node) = fem_mesh.nodes.get(node_idx) {
-                // Compute normal vector pointing outward from FEM domain
+                // TODO: Compute normal vector pointing outward from FEM domain
                 // In practice, this would involve surface normal computation
                 normals.push((0.0, 0.0, 1.0)); // Placeholder normal
             }
@@ -347,7 +347,7 @@ impl BemFemCoupler {
         _bem_boundary_values: &mut Vec<f64>,
         _wavenumber: f64,
     ) -> KwaversResult<()> {
-        // Placeholder for BEM system solution
+        // TODO: Placeholder for BEM system solution
         // In practice, this would solve the boundary integral equations
         // using the BEM matrices and the boundary values
         Ok(())
@@ -359,7 +359,7 @@ impl BemFemCoupler {
         _fem_field: &mut Vec<f64>,
         _fem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<()> {
-        // Placeholder for FEM system solution
+        // TODO: Placeholder for FEM system solution
         // In practice, this would solve the finite element system
         // using the FEM stiffness/mass matrices
         Ok(())

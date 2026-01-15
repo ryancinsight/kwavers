@@ -401,7 +401,7 @@ impl FwiProcessor {
         solver.run(self.parameters.nt)?;
 
         // Return gradients (simplified: gradient = forward * backward interaction)
-        // Here we return the backward wavefield as a placeholder for gradient computation
+        // TODO: Here we return the backward wavefield as a placeholder for gradient computation
         Ok(solver.fields.p.clone())
     }
 
