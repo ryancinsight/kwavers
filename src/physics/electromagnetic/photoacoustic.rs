@@ -324,7 +324,7 @@ impl PulsedLaser {
 mod tests {
     use super::*;
     use crate::domain::grid::Grid;
-    use crate::physics::electromagnetic::maxwell::FDTD;
+    use crate::solver::forward::fdtd::ElectromagneticFdtdSolver;
     use crate::physics::electromagnetic::equations::EMMaterialDistribution;
 
     #[test]
@@ -368,7 +368,8 @@ mod tests {
         // Use canonical domain composition pattern
         let materials = EMMaterialDistribution::vacuum(&[10, 10, 10]);
 
-        let em_solver = FDTD::new(grid, materials, 1e-12).unwrap();
+        // Use standard FDTD solver from solver module
+        let em_solver = ElectromagneticFdtdSolver::new(grid, materials, 1e-12, 4).unwrap();
 
         // Create photoacoustic solver
         let gruneisen = GruneisenParameter::new(0.5);
