@@ -43,15 +43,13 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain<B> {
             .copied()
             .unwrap_or(self.conductivity);
 
-        let outputs = model.forward(x.clone(), y.clone(), t.clone());
-
         match self.problem_type {
             EMProblemType::Electrostatic => {
                 electrostatic_residual(model, x, y, eps, physics_params)
             }
             EMProblemType::Magnetostatic => magnetostatic_residual(model, x, y, mu, physics_params),
             EMProblemType::QuasiStatic => {
-                quasi_static_residual(&outputs, x, y, t, eps, mu, sigma, physics_params)
+                quasi_static_residual(model, x, y, t, eps, mu, sigma, physics_params)
             }
             EMProblemType::WavePropagation => {
                 wave_propagation_residual(model, x, y, t, eps, mu, sigma, physics_params)
