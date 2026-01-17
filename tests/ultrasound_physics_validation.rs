@@ -498,12 +498,13 @@ fn validate_sonoluminescence_bubble_temperature() {
     // No need for thermo object, function is standalone
 
     // Test extreme collapse ratio (typical for sonoluminescence)
-    let collapse_ratio = 0.001; // Bubble compressed to 0.1% of original radius
+    let collapse_ratio: f64 = 0.001; // Bubble compressed to 0.1% of original radius
     let temperature = calculate_collapse_temperature(&params, collapse_ratio);
 
     // For air bubble with γ=1.4, extreme collapse can reach >10,000K
     // Theoretical calculation: T_final = T0 * (R0/R)^(3(γ-1))
-    let expected_temp = params.t0 * (1.0 / collapse_ratio).powf(3.0 * (params.gamma - 1.0));
+    let expected_temp =
+        params.t0 * (1.0f64 / collapse_ratio).powf(3.0f64 * (params.gamma - 1.0f64));
 
     assert!(
         temperature > 5000.0,
@@ -518,7 +519,7 @@ fn validate_sonoluminescence_bubble_temperature() {
     );
 
     // Test that temperature increases with greater compression
-    let less_collapse_ratio = 0.01; // Less extreme collapse
+    let less_collapse_ratio: f64 = 0.01; // Less extreme collapse
     let less_temp = calculate_collapse_temperature(&params, less_collapse_ratio);
     assert!(
         temperature > less_temp,
@@ -1171,13 +1172,13 @@ fn validate_multi_modal_spatial_registration() {
         }) => {
             // Rotation matrix should have reasonable values
             assert!(
-                rotation.iter().all(|&r| r.abs() <= 2.0),
+                rotation.iter().all(|&r: &f64| r.abs() <= 2.0),
                 "Rotation matrix elements should be reasonable"
             );
 
             // Translation should be reasonable
             assert!(
-                translation.iter().all(|&t| t.abs() < 100.0),
+                translation.iter().all(|&t: &f64| t.abs() < 100.0),
                 "Translation should be reasonable"
             );
         }

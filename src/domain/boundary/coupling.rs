@@ -133,7 +133,7 @@ use std::fmt::Debug;
 ///
 /// ```no_run
 /// use kwavers::domain::boundary::coupling::MaterialInterface;
-/// use kwavers::domain::medium::properties::acoustic::AcousticPropertyData;
+/// use kwavers::domain::medium::properties::AcousticPropertyData;
 ///
 /// // Water properties
 /// let water = AcousticPropertyData {
@@ -556,7 +556,7 @@ impl SchwarzBoundary {
     /// - For general interfaces, would need to project gradient onto normal vector
     /// - Accuracy: O(Δx²) for centered difference, O(Δx) at boundaries
     fn compute_normal_gradient(field: &Array3<f64>, i: usize, j: usize, k: usize) -> f64 {
-        let (nx, ny, nz) = field.dim();
+        let (nx, _ny, _nz) = field.dim();
 
         // Centered difference in x-direction (assuming x-normal interface)
         // For a general implementation, would need to determine normal direction

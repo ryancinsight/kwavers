@@ -193,7 +193,7 @@ mod tests {
         let corner_weight = weights[[0, 0, 0]];
         // For Hann window, corner weight depends on normalized radius
         assert!(
-            corner_weight >= 0.0 && corner_weight <= 1.0,
+            (0.0..=1.0).contains(&corner_weight),
             "Corner weight: {}",
             corner_weight
         );

@@ -71,6 +71,7 @@ mod beamforming_3d;
 mod config;
 pub mod covariance;
 pub mod neural;
+pub use neural as ai_integration;
 mod processor;
 #[cfg(feature = "gpu")]
 mod shaders;

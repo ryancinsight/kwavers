@@ -425,7 +425,7 @@ fn sobol_direction_numbers(dim: usize) -> Vec<[u32; 32]> {
 fn sobol_direction_numbers_from_params(s: usize, a: u32, m: &[u32]) -> [u32; 32] {
     const MAX_BITS: usize = 32;
     assert_eq!(m.len(), s);
-    assert!(s >= 1 && s < MAX_BITS);
+    assert!((1..MAX_BITS).contains(&s));
 
     let mut v = [0u32; MAX_BITS];
     for i in 0..s {

@@ -541,7 +541,7 @@ fn validate_against_analytical(
         Zip::from(&result.final_field)
             .and(&analytical_field)
             .for_each(|&numerical, &analytic| {
-                let error = numerical - analytic;
+                let error: f64 = numerical - analytic;
                 l2_sum += error * error;
                 max_error = max_error.max(error.abs());
             });
@@ -627,7 +627,7 @@ fn generate_analytical_field(
                         let dx = x - center.0;
                         let dy = y - center.1;
                         let dz = z - center.2;
-                        let r = (dx * dx + dy * dy + dz * dz).sqrt();
+                        let r: f64 = (dx * dx + dy * dy + dz * dz).sqrt();
 
                         if r > 1e-12 {
                             let argument =

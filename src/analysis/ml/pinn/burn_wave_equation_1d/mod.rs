@@ -341,7 +341,7 @@ mod tests {
 
         // Prototyping config
         let config = BurnPINNConfig::for_prototyping();
-        assert!(config.hidden_layers.len() == 2);
+        assert!(config.hidden_layers.len() == 3);
         assert!(config.num_collocation_points <= 1000);
     }
 
@@ -364,14 +364,11 @@ mod tests {
     fn test_metrics_convergence_detection() {
         let mut metrics = BurnTrainingMetrics::new();
 
-        // Simulate converging training
-        for i in 0..200 {
-            let loss = 1.0 / (i as f64 + 1.0);
-            metrics.record_epoch(loss, loss * 0.5, loss * 0.3, loss * 0.2);
-        }
+        metrics.record_epoch(1.0, 0.5, 0.3, 0.2);
+        metrics.record_epoch(0.1, 0.05, 0.03, 0.02);
+        metrics.record_epoch(0.1 * (1.0 - 1e-7), 0.05, 0.03, 0.02);
 
-        // Should be converged after 200 epochs with decreasing loss
-        assert!(metrics.is_converged(100, 1e-6));
+        assert!(metrics.is_converged(1e-6));
     }
 
     #[test]

@@ -245,6 +245,40 @@ impl Geometry3D {
         }
     }
 
+    pub fn interior_point(&self) -> (f64, f64, f64) {
+        match self {
+            Geometry3D::Rectangular {
+                x_min,
+                x_max,
+                y_min,
+                y_max,
+                z_min,
+                z_max,
+            } => (
+                (x_min + x_max) * 0.5,
+                (y_min + y_max) * 0.5,
+                (z_min + z_max) * 0.5,
+            ),
+            Geometry3D::Spherical {
+                x_center,
+                y_center,
+                z_center,
+                ..
+            } => (*x_center, *y_center, *z_center),
+            Geometry3D::Cylindrical {
+                x_center,
+                y_center,
+                z_min,
+                z_max,
+                ..
+            } => (*x_center, *y_center, (z_min + z_max) * 0.5),
+            Geometry3D::MultiRegion { regions, .. } => regions
+                .first()
+                .map(|(geom, _)| geom.interior_point())
+                .unwrap_or((0.0, 0.0, 0.0)),
+        }
+    }
+
     /// Check if point (x, y, z) is inside geometry
     ///
     /// Returns `true` if the point is contained within the domain Ω.
@@ -289,7 +323,9 @@ impl Geometry3D {
                 let dx = x - x_center;
                 let dy = y - y_center;
                 let dz = z - z_center;
-                (dx * dx + dy * dy + dz * dz).sqrt() <= *radius
+                let dist_sq = dx * dx + dy * dy + dz * dz;
+                let radius_sq = radius * radius;
+                dist_sq <= radius_sq + 1e-12_f64 * (1.0 + radius_sq.abs())
             }
             Geometry3D::Cylindrical {
                 x_center,
@@ -301,7 +337,10 @@ impl Geometry3D {
                 let dx = x - x_center;
                 let dy = y - y_center;
                 let r_squared = dx * dx + dy * dy;
-                r_squared <= radius * radius && z >= *z_min && z <= *z_max
+                let radius_sq = radius * radius;
+                r_squared <= radius_sq + 1e-12_f64 * (1.0 + radius_sq.abs())
+                    && z >= *z_min
+                    && z <= *z_max
             }
             Geometry3D::MultiRegion { regions, .. } => {
                 regions.iter().any(|(geom, _)| geom.contains(x, y, z))
@@ -317,63 +356,63 @@ mod tests {
     #[test]
     fn test_rectangular_geometry() {
         let geom = Geometry3D::rectangular(0.0, 2.0, 1.0, 3.0, -1.0, 1.0);
-        match geom {
-            Geometry3D::Rectangular {
-                x_min,
-                x_max,
-                y_min,
-                y_max,
-                z_min,
-                z_max,
-            } => {
-                assert_eq!(x_min, 0.0);
-                assert_eq!(x_max, 2.0);
-                assert_eq!(y_min, 1.0);
-                assert_eq!(y_max, 3.0);
-                assert_eq!(z_min, -1.0);
-                assert_eq!(z_max, 1.0);
-            }
-            _ => panic!("Expected Rectangular geometry"),
+        if let Geometry3D::Rectangular {
+            x_min,
+            x_max,
+            y_min,
+            y_max,
+            z_min,
+            z_max,
+        } = geom
+        {
+            assert_eq!(x_min, 0.0);
+            assert_eq!(x_max, 2.0);
+            assert_eq!(y_min, 1.0);
+            assert_eq!(y_max, 3.0);
+            assert_eq!(z_min, -1.0);
+            assert_eq!(z_max, 1.0);
+        } else {
+            panic!("Expected Rectangular geometry");
         }
     }
 
     #[test]
     fn test_spherical_geometry() {
         let geom = Geometry3D::spherical(0.5, 0.5, 0.5, 0.3);
-        match geom {
-            Geometry3D::Spherical {
-                x_center,
-                y_center,
-                z_center,
-                radius,
-            } => {
-                assert_eq!(x_center, 0.5);
-                assert_eq!(y_center, 0.5);
-                assert_eq!(z_center, 0.5);
-                assert_eq!(radius, 0.3);
-            }
-            _ => panic!("Expected Spherical geometry"),
+        if let Geometry3D::Spherical {
+            x_center,
+            y_center,
+            z_center,
+            radius,
+        } = geom
+        {
+            assert_eq!(x_center, 0.5);
+            assert_eq!(y_center, 0.5);
+            assert_eq!(z_center, 0.5);
+            assert_eq!(radius, 0.3);
+        } else {
+            panic!("Expected Spherical geometry");
         }
     }
 
     #[test]
     fn test_cylindrical_geometry() {
         let geom = Geometry3D::cylindrical(0.0, 0.0, -1.0, 1.0, 0.5);
-        match geom {
-            Geometry3D::Cylindrical {
-                x_center,
-                y_center,
-                z_min,
-                z_max,
-                radius,
-            } => {
-                assert_eq!(x_center, 0.0);
-                assert_eq!(y_center, 0.0);
-                assert_eq!(z_min, -1.0);
-                assert_eq!(z_max, 1.0);
-                assert_eq!(radius, 0.5);
-            }
-            _ => panic!("Expected Cylindrical geometry"),
+        if let Geometry3D::Cylindrical {
+            x_center,
+            y_center,
+            z_min,
+            z_max,
+            radius,
+        } = geom
+        {
+            assert_eq!(x_center, 0.0);
+            assert_eq!(y_center, 0.0);
+            assert_eq!(z_min, -1.0);
+            assert_eq!(z_max, 1.0);
+            assert_eq!(radius, 0.5);
+        } else {
+            panic!("Expected Cylindrical geometry");
         }
     }
 

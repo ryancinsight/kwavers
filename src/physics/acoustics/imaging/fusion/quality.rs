@@ -375,7 +375,7 @@ mod tests {
         map.youngs_modulus[[5, 5, 0]] = 5000.0;
 
         let quality = compute_elastography_quality(&map);
-        assert!(quality > 0.0 && quality <= 1.0);
+        assert!(quality > 0.0 && (0.0..=1.0).contains(&quality));
 
         // Test negative values penalty
         // We need to keep the background noise/signal structure to keep SNR/CNR similar
@@ -397,7 +397,7 @@ mod tests {
 
         let quality = compute_optical_quality(&intensity, wavelength);
 
-        assert!(quality >= 0.0 && quality <= 1.0);
+        assert!((0.0..=1.0).contains(&quality));
         assert!(quality > 0.6); // Should be reasonably high
     }
 
@@ -408,7 +408,7 @@ mod tests {
 
         let quality = compute_optical_quality(&intensity, wavelength);
 
-        assert!(quality >= 0.0 && quality <= 1.0);
+        assert!((0.0..=1.0).contains(&quality));
     }
 
     #[test]
@@ -456,7 +456,7 @@ mod tests {
         let (mean, uncertainty) = bayesian_fusion_single_voxel(&values, &weights);
 
         assert!((mean - 2.0).abs() < 1e-10); // Mean of 1, 2, 3
-        assert!(uncertainty >= 0.0 && uncertainty <= 1.0);
+        assert!((0.0..=1.0).contains(&uncertainty));
         assert!(uncertainty > 0.0); // Should have some uncertainty due to variance
     }
 

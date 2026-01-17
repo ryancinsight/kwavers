@@ -7,7 +7,7 @@
 //! ## Architecture
 //!
 //! - Input layer: (x, y, z, t) → hidden_dim
-//! - Hidden layers: Fully connected with ReLU activation
+//! - Hidden layers: Fully connected with tanh activation
 //! - Output layer: hidden_dim → u (scalar field)
 //!
 //! ## PDE Residual Computation
@@ -20,8 +20,10 @@
 //! step size to balance numerical stability and accuracy.
 
 use burn::module::Module;
-use burn::nn::{Linear, LinearConfig, Relu};
+use burn::nn::{Linear, LinearConfig};
 use burn::tensor::{backend::Backend, Tensor, TensorData};
+
+use crate::core::error::{KwaversError, KwaversResult, SystemError, ValidationError};
 
 use super::config::BurnPINN3DConfig;
 
@@ -33,8 +35,8 @@ use super::config::BurnPINN3DConfig;
 pub struct PINN3DNetwork<B: Backend> {
     /// Input layer: (x, y, z, t) → hidden[0]
     input_layer: Linear<B>,
-    /// Hidden layers with ReLU activation
-    hidden_layers: Vec<(Linear<B>, Relu)>,
+    /// Hidden layers
+    hidden_layers: Vec<Linear<B>>,
     /// Output layer: hidden[last] → u
     output_layer: Linear<B>,
 }
@@ -68,30 +70,44 @@ impl<B: Backend> PINN3DNetwork<B> {
     /// let config = BurnPINN3DConfig::default();
     /// let network = PINN3DNetwork::<Backend>::new(&config, &device);
     /// ```
-    pub fn new(config: &BurnPINN3DConfig, device: &B::Device) -> Self {
+    pub fn new(config: &BurnPINN3DConfig, device: &B::Device) -> KwaversResult<Self> {
+        config.validate()?;
         let input_size = 4; // (x, y, z, t)
         let output_size = 1; // u
 
         // Input layer: 4D → hidden[0]
-        let input_layer = LinearConfig::new(input_size, config.hidden_layers[0]).init(device);
+        let first_hidden = *config
+            .hidden_layers
+            .first()
+            .ok_or_else(|| KwaversError::InvalidInput("Hidden layers must be non-empty".into()))?;
+        let input_layer = LinearConfig::new(input_size, first_hidden).init(device);
 
-        // Hidden layers: hidden[i] → hidden[i+1] with ReLU
+        // Hidden layers: hidden[i] → hidden[i+1] with tanh activation
         let mut hidden_layers = Vec::new();
-        for i in 0..config.hidden_layers.len() - 1 {
-            let layer = LinearConfig::new(config.hidden_layers[i], config.hidden_layers[i + 1])
-                .init(device);
-            hidden_layers.push((layer, Relu::new()));
+        for window in config.hidden_layers.windows(2) {
+            let [in_features, out_features] = window else {
+                continue;
+            };
+            let layer = LinearConfig::new(*in_features, *out_features).init(device);
+            hidden_layers.push(layer)
         }
 
         // Output layer: hidden[last] → 1D
-        let output_layer =
-            LinearConfig::new(*config.hidden_layers.last().unwrap(), output_size).init(device);
+        let last_hidden = *config
+            .hidden_layers
+            .last()
+            .ok_or_else(|| KwaversError::InvalidInput("Hidden layers must be non-empty".into()))?;
+        let output_layer = LinearConfig::new(last_hidden, output_size).init(device);
 
-        Self {
+        Ok(Self {
             input_layer,
             hidden_layers,
             output_layer,
-        }
+        })
+    }
+
+    pub fn hidden_layer_count(&self) -> usize {
+        self.hidden_layers.len()
     }
 
     /// Forward pass through the network
@@ -111,7 +127,7 @@ impl<B: Backend> PINN3DNetwork<B> {
     ///
     /// u = NN(x, y, z, t) = σ(W_L σ(...σ(W_1[x,y,z,t] + b_1)...) + b_L)
     ///
-    /// where σ is the ReLU activation function.
+    /// where σ is the tanh activation function.
     pub fn forward(
         &self,
         x: Tensor<B, 2>,
@@ -123,12 +139,10 @@ impl<B: Backend> PINN3DNetwork<B> {
         let input = Tensor::cat(vec![x, y, z, t], 1);
 
         // Input layer
-        let mut output = self.input_layer.forward(input);
+        let mut output = self.input_layer.forward(input).tanh();
 
-        // Hidden layers with ReLU activation
-        for (layer, relu) in &self.hidden_layers {
-            output = layer.forward(output);
-            output = relu.forward(output);
+        for layer in &self.hidden_layers {
+            output = layer.forward(output).tanh();
         }
 
         // Output layer (no activation for regression)
@@ -180,13 +194,9 @@ impl<B: Backend> PINN3DNetwork<B> {
         y: Tensor<B, 2>,
         z: Tensor<B, 2>,
         t: Tensor<B, 2>,
-        wave_speed: impl Fn(f32, f32, f32) -> f32,
-    ) -> Tensor<B, 2> {
-        // Adaptive step size: balance numerical stability and accuracy
-        // ε = sqrt(machine epsilon) × scale_factor
-        let base_eps = (f32::EPSILON).sqrt();
-        let scale_factor = 1e-2_f32;
-        let eps = base_eps * scale_factor;
+        wave_speed: impl Fn(f32, f32, f32) -> KwaversResult<f32>,
+    ) -> KwaversResult<Tensor<B, 2>> {
+        let eps = 1e-3_f32;
 
         // Base prediction
         let u = self.forward(x.clone(), y.clone(), z.clone(), t.clone());
@@ -234,35 +244,26 @@ impl<B: Backend> PINN3DNetwork<B> {
             .div_scalar(eps * eps);
 
         // Compute wave speed c(x,y,z) at each collocation point
-        let batch_size = x.shape().dims[0];
-        let c_values: Vec<f32> = (0..batch_size)
-            .map(|i| {
-                // Extract scalar coordinates from tensors
-                let x_val = x
-                    .clone()
-                    .slice([i..i + 1, 0..1])
-                    .into_data()
-                    .as_slice::<f32>()
-                    .unwrap()[0];
-                let y_val = y
-                    .clone()
-                    .slice([i..i + 1, 0..1])
-                    .into_data()
-                    .as_slice::<f32>()
-                    .unwrap()[0];
-                let z_val = z
-                    .clone()
-                    .slice([i..i + 1, 0..1])
-                    .into_data()
-                    .as_slice::<f32>()
-                    .unwrap()[0];
-                wave_speed(x_val, y_val, z_val)
-            })
-            .collect();
+        let x_vals = Self::extract_column_f32(&x)?;
+        let y_vals = Self::extract_column_f32(&y)?;
+        let z_vals = Self::extract_column_f32(&z)?;
+        let c_values: Vec<f32> = x_vals
+            .into_iter()
+            .zip(y_vals)
+            .zip(z_vals)
+            .map(|((xv, yv), zv)| wave_speed(xv, yv, zv))
+            .collect::<KwaversResult<Vec<f32>>>()?;
 
-        // Convert wave speed to tensor and compute c²
+        for &c in &c_values {
+            if !c.is_finite() || c <= 0.0 {
+                return Err(KwaversError::InvalidInput(
+                    "Wave speed values must be finite and positive".into(),
+                ));
+            }
+        }
+
         let c_tensor =
-            Tensor::<B, 2>::from_data(TensorData::from(c_values.as_slice()), &x.device())
+            Tensor::<B, 1>::from_data(TensorData::from(c_values.as_slice()), &x.device())
                 .unsqueeze_dim(1);
         let c_squared = c_tensor.powf_scalar(2.0);
 
@@ -270,7 +271,45 @@ impl<B: Backend> PINN3DNetwork<B> {
         let laplacian = u_xx.add(u_yy).add(u_zz);
 
         // PDE residual: R = ∂²u/∂t² - c²∇²u
-        u_tt.sub(laplacian.mul(c_squared))
+        Ok(u_tt.sub(laplacian.mul(c_squared)))
+    }
+
+    fn extract_column_f32(t: &Tensor<B, 2>) -> KwaversResult<Vec<f32>> {
+        let shape = t.shape();
+        let dims = shape.dims.as_slice();
+        let [n, m] = dims else {
+            return Err(KwaversError::Validation(
+                ValidationError::DimensionMismatch {
+                    expected: "[N, 1]".to_string(),
+                    actual: format!("{dims:?}"),
+                },
+            ));
+        };
+        if *m != 1 {
+            return Err(KwaversError::Validation(
+                ValidationError::DimensionMismatch {
+                    expected: "[N, 1]".to_string(),
+                    actual: format!("{dims:?}"),
+                },
+            ));
+        }
+
+        let data = t.clone().into_data();
+        let slice = data.as_slice::<f32>().map_err(|e| {
+            KwaversError::System(SystemError::InvalidOperation {
+                operation: "tensor_to_f32_slice".to_string(),
+                reason: format!("{e:?}"),
+            })
+        })?;
+        if slice.len() != *n {
+            return Err(KwaversError::Validation(
+                ValidationError::DimensionMismatch {
+                    expected: format!("len={n}"),
+                    actual: format!("len={}", slice.len()),
+                },
+            ));
+        }
+        Ok(slice.to_vec())
     }
 }
 
@@ -282,28 +321,29 @@ mod tests {
     type TestBackend = NdArray<f32>;
 
     #[test]
-    fn test_network_creation() {
+    fn test_network_creation() -> KwaversResult<()> {
         let device = Default::default();
         let config = BurnPINN3DConfig {
             hidden_layers: vec![128, 128],
             ..Default::default()
         };
 
-        let network = PINN3DNetwork::<TestBackend>::new(&config, &device);
+        let network = PINN3DNetwork::<TestBackend>::new(&config, &device)?;
 
         // Verify architecture
         assert_eq!(network.hidden_layers.len(), 1); // 2 hidden dims → 1 connection
+        Ok(())
     }
 
     #[test]
-    fn test_forward_pass() {
+    fn test_forward_pass() -> KwaversResult<()> {
         let device = Default::default();
         let config = BurnPINN3DConfig {
             hidden_layers: vec![32, 32],
             ..Default::default()
         };
 
-        let network = PINN3DNetwork::<TestBackend>::new(&config, &device);
+        let network = PINN3DNetwork::<TestBackend>::new(&config, &device)?;
 
         // Create batch of 10 points
         let batch_size = 10;
@@ -316,17 +356,18 @@ mod tests {
 
         // Verify output shape
         assert_eq!(output.shape().dims, [batch_size, 1]);
+        Ok(())
     }
 
     #[test]
-    fn test_pde_residual_shape() {
+    fn test_pde_residual_shape() -> KwaversResult<()> {
         let device = Default::default();
         let config = BurnPINN3DConfig {
             hidden_layers: vec![16, 16],
             ..Default::default()
         };
 
-        let network = PINN3DNetwork::<TestBackend>::new(&config, &device);
+        let network = PINN3DNetwork::<TestBackend>::new(&config, &device)?;
 
         // Create collocation points
         let n_points = 5;
@@ -336,23 +377,24 @@ mod tests {
         let t = Tensor::<TestBackend, 2>::zeros([n_points, 1], &device);
 
         // Constant wave speed
-        let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
+        let wave_speed = |_x: f32, _y: f32, _z: f32| Ok(1500.0);
 
-        let residual = network.compute_pde_residual(x, y, z, t, wave_speed);
+        let residual = network.compute_pde_residual(x, y, z, t, wave_speed)?;
 
         // Verify residual shape matches input
         assert_eq!(residual.shape().dims, [n_points, 1]);
+        Ok(())
     }
 
     #[test]
-    fn test_pde_residual_heterogeneous_medium() {
+    fn test_pde_residual_heterogeneous_medium() -> KwaversResult<()> {
         let device = Default::default();
         let config = BurnPINN3DConfig {
             hidden_layers: vec![16],
             ..Default::default()
         };
 
-        let network = PINN3DNetwork::<TestBackend>::new(&config, &device);
+        let network = PINN3DNetwork::<TestBackend>::new(&config, &device)?;
 
         // Create points in two different regions
         let x_data = vec![0.25, 0.75]; // Left and right regions
@@ -360,35 +402,42 @@ mod tests {
         let z_data = vec![0.5, 0.5];
         let t_data = vec![0.1, 0.1];
 
-        let x = Tensor::<TestBackend, 2>::from_data(TensorData::from(x_data.as_slice()), &device)
+        let x = Tensor::<TestBackend, 1>::from_data(TensorData::from(x_data.as_slice()), &device)
             .unsqueeze_dim(1);
-        let y = Tensor::<TestBackend, 2>::from_data(TensorData::from(y_data.as_slice()), &device)
+        let y = Tensor::<TestBackend, 1>::from_data(TensorData::from(y_data.as_slice()), &device)
             .unsqueeze_dim(1);
-        let z = Tensor::<TestBackend, 2>::from_data(TensorData::from(z_data.as_slice()), &device)
+        let z = Tensor::<TestBackend, 1>::from_data(TensorData::from(z_data.as_slice()), &device)
             .unsqueeze_dim(1);
-        let t = Tensor::<TestBackend, 2>::from_data(TensorData::from(t_data.as_slice()), &device)
+        let t = Tensor::<TestBackend, 1>::from_data(TensorData::from(t_data.as_slice()), &device)
             .unsqueeze_dim(1);
 
         // Layered medium: different speeds in left/right halves
-        let wave_speed = |x: f32, _y: f32, _z: f32| if x < 0.5 { 1500.0 } else { 3000.0 };
+        let wave_speed = |x: f32, _y: f32, _z: f32| Ok(if x < 0.5 { 1500.0 } else { 3000.0 });
 
-        let residual = network.compute_pde_residual(x, y, z, t, wave_speed);
+        let residual = network.compute_pde_residual(x, y, z, t, wave_speed)?;
 
         // Verify residual is computed (non-trivial)
         assert_eq!(residual.shape().dims, [2, 1]);
-        let residual_data = residual.into_data().as_slice::<f32>().unwrap().to_vec();
+        let residual_data = residual.into_data();
+        let residual_data = residual_data.as_slice::<f32>().map_err(|e| {
+            KwaversError::System(SystemError::InvalidOperation {
+                operation: "tensor_to_f32_slice".to_string(),
+                reason: format!("{e:?}"),
+            })
+        })?;
         assert!(residual_data.iter().all(|&r| r.is_finite()));
+        Ok(())
     }
 
     #[test]
-    fn test_network_forward_deterministic() {
+    fn test_network_forward_deterministic() -> KwaversResult<()> {
         let device = Default::default();
         let config = BurnPINN3DConfig {
             hidden_layers: vec![8],
             ..Default::default()
         };
 
-        let network = PINN3DNetwork::<TestBackend>::new(&config, &device);
+        let network = PINN3DNetwork::<TestBackend>::new(&config, &device)?;
 
         let x = Tensor::<TestBackend, 2>::ones([3, 1], &device);
         let y = Tensor::<TestBackend, 2>::ones([3, 1], &device);
@@ -399,9 +448,22 @@ mod tests {
         let output1 = network.forward(x.clone(), y.clone(), z.clone(), t.clone());
         let output2 = network.forward(x, y, z, t);
 
-        let data1 = output1.into_data().as_slice::<f32>().unwrap().to_vec();
-        let data2 = output2.into_data().as_slice::<f32>().unwrap().to_vec();
+        let output1_data = output1.into_data();
+        let data1 = output1_data.as_slice::<f32>().map_err(|e| {
+            KwaversError::System(SystemError::InvalidOperation {
+                operation: "tensor_to_f32_slice".to_string(),
+                reason: format!("{e:?}"),
+            })
+        })?;
+        let output2_data = output2.into_data();
+        let data2 = output2_data.as_slice::<f32>().map_err(|e| {
+            KwaversError::System(SystemError::InvalidOperation {
+                operation: "tensor_to_f32_slice".to_string(),
+                reason: format!("{e:?}"),
+            })
+        })?;
 
         assert_eq!(data1, data2);
+        Ok(())
     }
 }

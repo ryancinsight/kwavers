@@ -648,8 +648,10 @@ mod tests {
             }
         }
 
-        let mut config = PstdSemCouplingConfig::default();
-        config.projection_tolerance = 1e-10;
+        let config = PstdSemCouplingConfig {
+            projection_tolerance: 1e-10,
+            ..Default::default()
+        };
 
         let mut solver = PstdSemSolver::new(config, pstd_grid, sem_mesh).unwrap();
 

@@ -744,23 +744,17 @@ mod tests {
 
     #[test]
     fn test_fdtd_simd_ops_creation() {
-        let ops = FdtdSimdOps::new();
-        // Should not panic
-        assert!(true);
+        let _ = FdtdSimdOps::new();
     }
 
     #[test]
     fn test_fft_simd_ops_creation() {
-        let ops = FftSimdOps::new();
-        // Should not panic
-        assert!(true);
+        let _ = FftSimdOps::new();
     }
 
     #[test]
     fn test_interpolation_simd_ops_creation() {
-        let ops = InterpolationSimdOps::new();
-        // Should not panic
-        assert!(true);
+        let _ = InterpolationSimdOps::new();
     }
 
     #[test]

@@ -49,7 +49,6 @@
 
 use crate::core::error::{KwaversResult, NumericalError};
 use ndarray::{Array1, Array3, ArrayView3, Axis};
-use num_complex::Complex;
 use rustfft::{num_complex::Complex64, FftPlanner};
 use std::f64::consts::PI;
 

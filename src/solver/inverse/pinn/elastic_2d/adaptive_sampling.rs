@@ -164,6 +164,7 @@ impl Default for SamplingStrategy {
 /// - Stratified sampling for boundary/initial conditions
 /// - Memory-efficient point storage
 #[cfg(feature = "pinn")]
+#[derive(Debug)]
 pub struct AdaptiveSampler {
     /// Sampling strategy
     pub strategy: SamplingStrategy,
@@ -453,6 +454,7 @@ impl AdaptiveSampler {
 
 /// Iterator over mini-batches of collocation point indices
 #[cfg(feature = "pinn")]
+#[derive(Debug)]
 pub struct BatchIterator {
     indices: Vec<usize>,
     batch_size: usize,
@@ -564,8 +566,8 @@ mod tests {
 
         // Create high-contrast residuals: indices 0-9 have much higher residuals
         let mut residuals = vec![0.01; 100];
-        for i in 0..10 {
-            residuals[i] = 100.0; // 10,000x higher residual
+        for r in residuals.iter_mut().take(10) {
+            *r = 100.0;
         }
 
         // Verify sampling completes successfully
@@ -627,8 +629,8 @@ mod tests {
         );
 
         let mut residuals = vec![0.1; 100];
-        for i in 0..40 {
-            residuals[i] = 2.0; // 40 points above threshold
+        for r in residuals.iter_mut().take(40) {
+            *r = 2.0;
         }
 
         let indices = sampler.resample(&residuals).unwrap();
@@ -650,8 +652,8 @@ mod tests {
         );
 
         let mut residuals = vec![0.1; 200];
-        for i in 0..20 {
-            residuals[i] = 10.0;
+        for r in residuals.iter_mut().take(20) {
+            *r = 10.0;
         }
 
         let indices = sampler.resample(&residuals).unwrap();

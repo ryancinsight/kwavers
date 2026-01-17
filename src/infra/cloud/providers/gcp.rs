@@ -401,8 +401,7 @@ mod tests {
 
     #[test]
     fn test_gcp_provider_compilation() {
-        // Compilation test to ensure GCP provider module compiles
-        assert!(true);
+        let _ = CloudProvider::GCP;
     }
 
     #[cfg(feature = "pinn")]

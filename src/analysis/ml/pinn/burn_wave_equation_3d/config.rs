@@ -7,6 +7,8 @@
 //!
 //! All types are pure domain logic with sensible defaults for common use cases.
 
+use crate::core::error::{KwaversError, KwaversResult};
+
 /// Configuration for 3D PINN solver
 ///
 /// Defines network architecture, training hyperparameters, and loss weights
@@ -105,6 +107,51 @@ impl Default for BurnPINN3DConfig {
     }
 }
 
+impl BurnPINN3DConfig {
+    pub fn validate(&self) -> KwaversResult<()> {
+        if self.hidden_layers.is_empty() {
+            return Err(KwaversError::InvalidInput(
+                "Configuration must have at least one hidden layer".into(),
+            ));
+        }
+        for (i, &size) in self.hidden_layers.iter().enumerate() {
+            if size == 0 {
+                return Err(KwaversError::InvalidInput(format!(
+                    "Hidden layer size at index {i} must be non-zero"
+                )));
+            }
+        }
+
+        if !self.learning_rate.is_finite() || self.learning_rate <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "Learning rate must be positive and finite (got {})",
+                self.learning_rate
+            )));
+        }
+
+        if self.num_collocation_points == 0 {
+            return Err(KwaversError::InvalidInput(
+                "Number of collocation points must be non-zero".into(),
+            ));
+        }
+
+        if self.batch_size == 0 {
+            return Err(KwaversError::InvalidInput(
+                "Batch size must be non-zero".into(),
+            ));
+        }
+
+        if !self.max_grad_norm.is_finite() || self.max_grad_norm <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "Max grad norm must be positive and finite (got {})",
+                self.max_grad_norm
+            )));
+        }
+
+        self.loss_weights.validate()
+    }
+}
+
 /// Loss weights for 3D PINN training
 ///
 /// Defines the relative importance of different loss components in the
@@ -182,6 +229,24 @@ impl Default for BurnLossWeights3D {
             bc_weight: 1.0,
             ic_weight: 1.0,
         }
+    }
+}
+
+impl BurnLossWeights3D {
+    pub fn validate(&self) -> KwaversResult<()> {
+        for (name, v) in [
+            ("data_weight", self.data_weight),
+            ("pde_weight", self.pde_weight),
+            ("bc_weight", self.bc_weight),
+            ("ic_weight", self.ic_weight),
+        ] {
+            if !v.is_finite() || v < 0.0 {
+                return Err(KwaversError::InvalidInput(format!(
+                    "{name} must be non-negative and finite (got {v})"
+                )));
+            }
+        }
+        Ok(())
     }
 }
 
@@ -327,9 +392,11 @@ mod tests {
 
     #[test]
     fn test_metrics_update() {
-        let mut metrics = BurnTrainingMetrics3D::default();
+        let mut metrics = BurnTrainingMetrics3D {
+            epochs_completed: 100,
+            ..Default::default()
+        };
 
-        metrics.epochs_completed = 100;
         metrics.total_loss.push(0.1);
         metrics.total_loss.push(0.05);
         metrics.data_loss.push(0.04);
@@ -359,9 +426,11 @@ mod tests {
 
     #[test]
     fn test_metrics_clone() {
-        let mut metrics1 = BurnTrainingMetrics3D::default();
+        let mut metrics1 = BurnTrainingMetrics3D {
+            epochs_completed: 50,
+            ..Default::default()
+        };
         metrics1.total_loss.push(0.123);
-        metrics1.epochs_completed = 50;
 
         let metrics2 = metrics1.clone();
 

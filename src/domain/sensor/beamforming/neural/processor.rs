@@ -32,7 +32,7 @@ use crate::domain::sensor::beamforming::neural::types::{
     AIBeamformingResult, FeatureMap, PerformanceMetrics,
 };
 use crate::domain::sensor::beamforming::BeamformingProcessor;
-use ndarray::{Array3, ArrayView3, ArrayView4};
+use ndarray::{Array3, ArrayView4};
 use std::time::Instant;
 
 pub trait PinnInferenceEngine: Send + Sync {
@@ -119,7 +119,9 @@ impl AIEnhancedBeamformingProcessor {
     ) -> KwaversResult<Self> {
         // Validate configuration
         config.validate().map_err(|e| {
-            crate::core::error::KwaversError::InvalidInput(format!("Invalid AI beamforming config: {e}"))
+            crate::core::error::KwaversError::InvalidInput(format!(
+                "Invalid AI beamforming config: {e}"
+            ))
         })?;
 
         if config.enable_realtime_pinn && pinn_engine.is_none() {
@@ -413,7 +415,7 @@ impl AIEnhancedBeamformingProcessor {
     /// Returns error if configuration is invalid
     pub fn update_config(&mut self, config: AIBeamformingConfig) -> KwaversResult<()> {
         config.validate().map_err(|e| {
-            crate::core::error::KwaversError::ValidationError(format!(
+            crate::core::error::KwaversError::InvalidInput(format!(
                 "Invalid AI beamforming config: {}",
                 e
             ))
@@ -451,8 +453,10 @@ mod tests {
 
     #[test]
     fn test_processor_creation() {
-        let mut config = AIBeamformingConfig::default();
-        config.enable_realtime_pinn = false;
+        let config = AIBeamformingConfig {
+            enable_realtime_pinn: false,
+            ..Default::default()
+        };
         let sensor_positions = vec![[0.0, 0.0, 0.0]; 64];
 
         let result = AIEnhancedBeamformingProcessor::new(config, sensor_positions, None);
@@ -461,8 +465,10 @@ mod tests {
 
     #[test]
     fn test_memory_estimation() {
-        let mut config = AIBeamformingConfig::default();
-        config.enable_realtime_pinn = false;
+        let config = AIBeamformingConfig {
+            enable_realtime_pinn: false,
+            ..Default::default()
+        };
         let sensor_positions = vec![[0.0, 0.0, 0.0]; 64];
         let processor =
             AIEnhancedBeamformingProcessor::new(config, sensor_positions, None).unwrap();
@@ -474,8 +480,10 @@ mod tests {
 
     #[test]
     fn test_config_access() {
-        let mut config = AIBeamformingConfig::default();
-        config.enable_realtime_pinn = false;
+        let config = AIBeamformingConfig {
+            enable_realtime_pinn: false,
+            ..Default::default()
+        };
         let sensor_positions = vec![[0.0, 0.0, 0.0]; 64];
         let processor =
             AIEnhancedBeamformingProcessor::new(config, sensor_positions, None).unwrap();
@@ -486,8 +494,10 @@ mod tests {
 
     #[test]
     fn test_beamforming() {
-        let mut config = AIBeamformingConfig::default();
-        config.enable_realtime_pinn = false;
+        let config = AIBeamformingConfig {
+            enable_realtime_pinn: false,
+            ..Default::default()
+        };
         let sensor_positions = vec![[0.0, 0.0, 0.0]; 64];
         let processor =
             AIEnhancedBeamformingProcessor::new(config, sensor_positions, None).unwrap();
@@ -504,8 +514,10 @@ mod tests {
 
     #[test]
     fn test_full_pipeline() {
-        let mut config = AIBeamformingConfig::default();
-        config.enable_realtime_pinn = true;
+        let config = AIBeamformingConfig {
+            enable_realtime_pinn: true,
+            ..Default::default()
+        };
         let sensor_positions = vec![[0.0, 0.0, 0.0]; 64];
         let mut processor = AIEnhancedBeamformingProcessor::new(
             config,

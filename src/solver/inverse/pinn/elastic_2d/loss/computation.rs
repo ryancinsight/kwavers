@@ -18,6 +18,7 @@ use super::data::LossComponents;
 
 /// Computes all loss components for PINN training
 #[cfg(feature = "pinn")]
+#[derive(Debug)]
 pub struct LossComputer {
     /// Loss weights
     pub weights: LossWeights,

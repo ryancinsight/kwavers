@@ -318,7 +318,7 @@ impl BurnPINNConfig {
 
         // Output layer: last hidden → 1 output
         let last_hidden = self.hidden_layers[self.hidden_layers.len() - 1];
-        total += last_hidden * 1 + 1; // weights + biases
+        total += last_hidden + 1; // weights + biases
 
         total
     }

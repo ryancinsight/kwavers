@@ -71,6 +71,9 @@ pub use beamformer::AdaptiveBeamformer;
 #[cfg(feature = "legacy_algorithms")]
 pub use source_estimation::SourceEstimationCriterion;
 
+#[cfg(feature = "legacy_algorithms")]
+pub use subspace::{EigenspaceMV, MUSIC};
+
 pub use steering::{SteeringMatrix, SteeringVector};
 pub use tapering::CovarianceTaper;
 pub use weights::{WeightCalculator, WeightingScheme};

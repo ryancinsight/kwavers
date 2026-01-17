@@ -61,6 +61,7 @@ use super::model::ElasticPINN2D;
 ///
 /// Provides high-level interface for model inference and evaluation.
 #[cfg(feature = "pinn")]
+#[derive(Debug)]
 pub struct Predictor<B: Backend> {
     /// Trained PINN model
     model: ElasticPINN2D<B>,

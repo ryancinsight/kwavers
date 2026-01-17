@@ -488,7 +488,6 @@ mod tests {
 
     #[test]
     fn test_aws_provider_compilation() {
-        // Compilation test to ensure AWS provider module compiles
-        assert!(true);
+        let _ = CloudProvider::AWS;
     }
 }

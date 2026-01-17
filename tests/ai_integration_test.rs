@@ -31,7 +31,7 @@ mod pinn_tests {
 
         // This will fail in test environment without proper PINN setup
         // but the API should be testable
-        let result = AIEnhancedBeamformingProcessor::new(config, sensor_positions);
+        let result = AIEnhancedBeamformingProcessor::new(config, sensor_positions, None);
         assert!(result.is_err() || result.is_ok()); // Either way, API works
     }
 

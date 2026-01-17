@@ -632,14 +632,15 @@ mod tests {
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
 
         // 3. Setup Config with Sensor Mask
-        let mut config = ElasticWaveConfig::default();
-        config.simulation_time = 1e-4; // Short simulation
-        config.time_step = 1e-5; // Explicit time step
-        config.save_every = 2; // Test subsampling
-
         let mut sensor_mask = Array3::from_elem(grid.dimensions(), false);
         sensor_mask[[5, 5, 5]] = true; // Place one sensor at center
-        config.sensor_mask = Some(sensor_mask);
+        let config = ElasticWaveConfig {
+            simulation_time: 1e-4,
+            time_step: 1e-5,
+            save_every: 2,
+            sensor_mask: Some(sensor_mask),
+            ..Default::default()
+        };
 
         // 4. Create Solver
         let mut solver = ElasticWaveSolver::new(&grid, &medium, config)?;

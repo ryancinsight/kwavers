@@ -377,10 +377,12 @@ mod tests {
 
     #[test]
     fn test_selective_feature_extraction() {
-        let mut config = FeatureConfig::default();
-        config.morphological_features = true;
-        config.spectral_features = false;
-        config.texture_features = false;
+        let config = FeatureConfig {
+            morphological_features: true,
+            spectral_features: false,
+            texture_features: false,
+            ..Default::default()
+        };
 
         let extractor = FeatureExtractor::new(config);
         let volume = Array3::<f32>::from_elem((10, 10, 10), 1.0);

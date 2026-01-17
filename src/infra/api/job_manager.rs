@@ -11,6 +11,81 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
+#[cfg(feature = "pinn")]
+async fn execute_training_with_progress(
+    request: &PINNTrainingRequest,
+    progress_sender: mpsc::Sender<TrainingProgress>,
+) -> Result<crate::analysis::ml::pinn::trainer::TrainingResult, APIError> {
+    use crate::analysis::ml::pinn::trainer::{
+        BoundaryCondition, Geometry, Obstacle, PINNConfig, PINNTrainer, PhysicsParams,
+        TrainingConfig,
+    };
+
+    let geometry = Geometry {
+        bounds: request.geometry.bounds.clone(),
+        obstacles: request
+            .geometry
+            .obstacles
+            .iter()
+            .map(|o| Obstacle {
+                shape: o.shape.clone(),
+                center: o.center.clone(),
+                parameters: o.parameters.clone(),
+            })
+            .collect(),
+        boundary_conditions: request
+            .geometry
+            .boundary_conditions
+            .iter()
+            .map(|bc| BoundaryCondition {
+                boundary: bc.boundary.clone(),
+                condition_type: bc.condition_type.clone(),
+                value: bc.value,
+            })
+            .collect(),
+    };
+
+    let physics_params = PhysicsParams {
+        material_properties: request.physics_params.material_properties.clone(),
+        boundary_values: request.physics_params.boundary_values.clone(),
+        initial_values: request.physics_params.initial_values.clone(),
+        domain_params: request.physics_params.domain_params.clone(),
+    };
+
+    let training_config = TrainingConfig {
+        collocation_points: request.training_config.collocation_points,
+        batch_size: request.training_config.batch_size,
+        epochs: request.training_config.epochs,
+        learning_rate: request.training_config.learning_rate,
+        hidden_layers: request.training_config.hidden_layers.clone(),
+        adaptive_sampling: request.training_config.adaptive_sampling,
+        use_gpu: request.training_config.use_gpu,
+    };
+
+    let pinn_config = PINNConfig {
+        physics_domain: request.physics_domain.clone(),
+        geometry,
+        physics_params,
+        training_config,
+        use_gpu: request.training_config.use_gpu,
+    };
+
+    let mut trainer = PINNTrainer::new(pinn_config).map_err(|e| APIError {
+        error: APIErrorType::InternalError,
+        message: e.to_string(),
+        details: None,
+    })?;
+
+    trainer
+        .train_with_progress(progress_sender)
+        .await
+        .map_err(|e| APIError {
+            error: APIErrorType::InternalError,
+            message: e.to_string(),
+            details: None,
+        })
+}
+
 /// Training job state
 #[derive(Debug, Clone)]
 pub struct TrainingJob {
@@ -294,7 +369,7 @@ impl JobManager {
             physics_domain: job.request.physics_domain.clone(),
             created_at: chrono::Utc::now(),
             training_config: job.request.training_config.clone(),
-            performance_metrics: training_result.metrics.clone(),
+            performance_metrics: training_result.metrics.clone().into(),
             geometry_spec: job.request.geometry.clone(),
         };
 
@@ -307,7 +382,7 @@ impl JobManager {
 
         Ok(TrainingResult {
             model: model_data,
-            metrics: training_result.metrics,
+            metrics: training_result.metrics.into(),
             model_metadata,
         })
     }

@@ -1,8 +1,6 @@
 use super::quantization::Quantizer;
 #[cfg(feature = "gpu")]
 use super::types::BurnNeuralNetwork;
-#[cfg(feature = "simd")]
-use super::types::SIMDProcessor;
 use super::types::{ActivationType, MemoryPool, QuantizedNetwork};
 use crate::analysis::ml::pinn::burn_wave_equation_2d::model::BurnPINN2DWave;
 use crate::core::error::{KwaversError, KwaversResult};

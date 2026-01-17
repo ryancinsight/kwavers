@@ -353,7 +353,7 @@ where
     B: AutodiffBackend,
     F: Fn(Tensor<B, 2>) -> Tensor<B, 2>,
 {
-    if spatial_dim < 1 || spatial_dim > 2 {
+    if !(1..=2).contains(&spatial_dim) {
         return Err(crate::error::KwaversError::InvalidInput(format!(
             "spatial_dim must be 1 (x) or 2 (y), got {}",
             spatial_dim
@@ -567,18 +567,44 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use burn::backend::{Autodiff, NdArray};
 
     #[test]
-    #[cfg(feature = "pinn")]
-    fn test_spatial_dim_validation() {
-        // This test validates input parameter checking
-        // Actual gradient computation tests require a trained model
-        assert!(true); // Placeholder for compilation
-    }
+    fn test_time_derivative_matches_analytic() -> crate::core::error::KwaversResult<()> {
+        type B = Autodiff<NdArray<f32>>;
 
-    #[test]
-    fn test_module_compiles() {
-        // Ensures module compiles without pinn feature
-        assert!(true);
+        let device = Default::default();
+
+        let input = Tensor::<B, 2>::from_floats([[0.2, 0.4, 0.6], [0.7, 0.1, 0.9]], &device);
+
+        let forward = |input: Tensor<B, 2>| {
+            let batch = input.dims()[0];
+            let t = input.clone().slice([0..batch, 0..1]);
+            let x = input.clone().slice([0..batch, 1..2]);
+            let y = input.slice([0..batch, 2..3]);
+
+            let u0 = t.clone().powf_scalar(2.0) + x.clone() + y.clone();
+            let u1 = t.clone() * 2.0 + x * 3.0 - y;
+
+            Tensor::cat(vec![u0, u1], 1)
+        };
+
+        let du0_dt = compute_time_derivative::<B, _>(forward, &input, 0)?;
+        let data = du0_dt.into_data();
+        let values = data.as_slice::<f32>().map_err(|e| {
+            crate::core::error::KwaversError::System(
+                crate::core::error::SystemError::InvalidOperation {
+                    operation: "tensor_to_f32_slice".to_string(),
+                    reason: format!("{e:?}"),
+                },
+            )
+        })?;
+
+        let expected = [0.4_f32, 1.4_f32];
+        for (got, exp) in values.iter().copied().zip(expected) {
+            assert!((got - exp).abs() < 1e-4);
+        }
+
+        Ok(())
     }
 }

@@ -1,7 +1,11 @@
+#[cfg(feature = "gpu")]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+#[cfg(feature = "gpu")]
 use kwavers::gpu::pipeline::{RealtimeImagingPipeline, RealtimePipelineConfig};
+#[cfg(feature = "gpu")]
 use ndarray::Array4;
 
+#[cfg(feature = "gpu")]
 fn bench_pipeline_process(c: &mut Criterion) {
     let config = RealtimePipelineConfig {
         target_fps: 30.0,
@@ -37,5 +41,10 @@ fn bench_pipeline_process(c: &mut Criterion) {
     pipeline.stop().unwrap();
 }
 
+#[cfg(feature = "gpu")]
 criterion_group!(benches, bench_pipeline_process);
+#[cfg(feature = "gpu")]
 criterion_main!(benches);
+
+#[cfg(not(feature = "gpu"))]
+fn main() {}

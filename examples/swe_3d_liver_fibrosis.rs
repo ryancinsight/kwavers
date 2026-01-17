@@ -280,10 +280,16 @@ fn create_fibrotic_liver_medium(grid: &Grid) -> HeterogeneousMedium {
 
     // Add fibrotic regions (higher stiffness)
     let (cx, cy, cz) = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
-    let fibrotic_regions = vec![
-        (cx - 10, cy - 5, cz, 8, 12000.0),     // F3 fibrosis
-        (cx + 5, cy + 8, cz - 5, 6, 18000.0),  // F4 fibrosis
-        (cx - 5, cy - 10, cz + 8, 5, 15000.0), // F3-F4 fibrosis
+    let fibrotic_regions: Vec<(usize, usize, usize, usize, f64)> = vec![
+        (cx.saturating_sub(10), cy.saturating_sub(5), cz, 8, 12000.0), // F3 fibrosis
+        (cx + 5, cy + 8, cz.saturating_sub(5), 6, 18000.0),            // F4 fibrosis
+        (
+            cx.saturating_sub(5),
+            cy.saturating_sub(10),
+            cz + 8,
+            5,
+            15000.0,
+        ), // F3-F4 fibrosis
     ];
 
     for (rx, ry, rz, radius, stiff) in fibrotic_regions {

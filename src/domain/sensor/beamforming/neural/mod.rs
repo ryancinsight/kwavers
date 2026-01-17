@@ -151,31 +151,48 @@ mod tests {
     fn test_feature_extractor_creation() {
         let config = FeatureConfig::default();
         let extractor = FeatureExtractor::new(config);
-        // FeatureExtractor successfully created with default config
-        assert!(true);
+        let volume = ndarray::Array3::<f32>::zeros((5, 5, 5));
+        let features = extractor.extract_features(volume.view()).unwrap();
+        assert!(!features.is_empty());
     }
 
     #[test]
     fn test_clinical_decision_support_creation() {
         let thresholds = ClinicalThresholds::default();
         let support = ClinicalDecisionSupport::new(thresholds);
-        // ClinicalDecisionSupport successfully created with default thresholds
-        assert!(true);
+        let volume = ndarray::Array3::<f32>::zeros((5, 5, 5));
+        let features = FeatureMap::new();
+        let uncertainty = ndarray::Array3::<f32>::zeros((5, 5, 5));
+        let confidence = ndarray::Array3::<f32>::ones((5, 5, 5));
+        let analysis = support
+            .analyze_clinical(
+                volume.view(),
+                &features,
+                uncertainty.view(),
+                confidence.view(),
+            )
+            .unwrap();
+        assert!(!analysis.has_lesions());
+        assert!((0.0..=1.0).contains(&analysis.diagnostic_confidence));
     }
 
     #[test]
     fn test_diagnosis_algorithm_creation() {
         let algorithm = DiagnosisAlgorithm::new();
         let default_algorithm = DiagnosisAlgorithm::default();
-        // DiagnosisAlgorithm successfully created
-        assert!(true);
+        let features = FeatureMap::new();
+        let analysis = ClinicalAnalysis::empty();
+        let diagnosis_1 = algorithm.diagnose(&features, &analysis).unwrap();
+        let diagnosis_2 = default_algorithm.diagnose(&features, &analysis).unwrap();
+        assert!(!diagnosis_1.is_empty());
+        assert!(!diagnosis_2.is_empty());
     }
 
     #[test]
     fn test_workflow_creation() {
         let workflow = RealTimeWorkflow::new();
-        // RealTimeWorkflow successfully created
-        assert!(true);
+        assert!(workflow.performance_history.is_empty());
+        assert!(!workflow.meets_performance_target());
     }
 
     #[test]

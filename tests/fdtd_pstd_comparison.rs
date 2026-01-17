@@ -22,12 +22,20 @@ fn test_plane_wave_propagation() {
 
     // Run with FDTD - just verify it doesn't crash
     let fdtd_result = run_fdtd_simulation(&grid, &medium, &initial_pressure);
-    let fdtd_max = fdtd_result.mapv(f64::abs).fold(0.0f64, |a, &b| a.max(b));
+    let fdtd_max = fdtd_result
+        .mapv(f64::abs)
+        .iter()
+        .copied()
+        .fold(0.0_f64, |a, b| a.max(b));
     assert!(fdtd_max >= 0.0, "FDTD should complete without NaN");
 
     // Run with PSTD - just verify it doesn't crash
     let pstd_result = run_pstd_simulation(&grid, &medium, &initial_pressure);
-    let pstd_max = pstd_result.mapv(f64::abs).fold(0.0f64, |a, &b| a.max(b));
+    let pstd_max = pstd_result
+        .mapv(f64::abs)
+        .iter()
+        .copied()
+        .fold(0.0_f64, |a, b| a.max(b));
     assert!(pstd_max >= 0.0, "PSTD should complete without NaN");
 }
 

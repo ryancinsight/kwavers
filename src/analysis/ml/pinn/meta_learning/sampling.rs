@@ -8,6 +8,7 @@ use crate::analysis::ml::pinn::meta_learning::types::{PdeType, PhysicsTask};
 use crate::analysis::ml::pinn::Geometry2D;
 use crate::core::error::{KwaversError, KwaversResult};
 
+#[derive(Debug)]
 pub enum SamplingStrategy {
     /// Random sampling
     Random,
@@ -19,6 +20,7 @@ pub enum SamplingStrategy {
     Diversity,
 }
 
+#[derive(Debug)]
 pub struct TaskSampler {
     /// Available physics tasks
     task_pool: Vec<PhysicsTask>,

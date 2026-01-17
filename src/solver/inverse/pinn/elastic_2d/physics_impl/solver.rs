@@ -32,6 +32,7 @@ use burn::tensor::{backend::Backend, Tensor};
 /// * `mu` - Shear modulus [Pa] (may be learned or fixed)
 /// * `rho` - Density [kg/m³] (may be learned or fixed)
 #[cfg(feature = "pinn")]
+#[derive(Debug)]
 pub struct ElasticPINN2DSolver<B: Backend> {
     /// Neural network model
     pub model: ElasticPINN2D<B>,

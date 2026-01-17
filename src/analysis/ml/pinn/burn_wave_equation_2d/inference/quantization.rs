@@ -4,6 +4,7 @@ use crate::core::error::KwaversResult;
 use burn::tensor::backend::Backend;
 use burn::tensor::Tensor;
 
+#[derive(Debug)]
 pub struct Quantizer;
 
 impl Quantizer {

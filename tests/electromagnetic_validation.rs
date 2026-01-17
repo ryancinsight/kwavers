@@ -19,6 +19,8 @@ use kwavers::ml::pinn::physics::{
     BoundaryConditionSpec, BoundaryPosition, PhysicsDomain, PhysicsParameters,
 };
 #[cfg(feature = "pinn")]
+use kwavers::ml::pinn::PinnEMSource;
+#[cfg(feature = "pinn")]
 use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
@@ -119,8 +121,8 @@ fn validate_electrostatic_poisson_equation() {
 
     // Test that charge density computation doesn't panic
     let device = Default::default();
-    let x = Tensor::<TestBackend, 1>::from_floats([0.25, 0.5, 0.75, 1.0], &device).reshape([4, 1]);
-    let y = Tensor::<TestBackend, 1>::from_floats([0.25, 0.5, 0.75, 1.0], &device).reshape([4, 1]);
+    let x = Tensor::<TestBackend, 2>::from_floats([0.25, 0.5, 0.75, 1.0], &device).reshape([4, 1]);
+    let y = Tensor::<TestBackend, 2>::from_floats([0.25, 0.5, 0.75, 1.0], &device).reshape([4, 1]);
 
     let physics_params = PhysicsParameters {
         material_properties: HashMap::new(),
@@ -130,7 +132,11 @@ fn validate_electrostatic_poisson_equation() {
     };
 
     // Test charge density computation (should return zeros for now)
-    let rho = domain.compute_charge_density(&x, &y, &physics_params);
+    let rho = kwavers::ml::pinn::electromagnetic::residuals::compute_charge_density(
+        &x,
+        &y,
+        &physics_params,
+    );
     assert_eq!(
         rho.shape().dims,
         &[4, 1],
@@ -166,8 +172,8 @@ fn validate_magnetostatic_vector_potential() {
 
     // Test current density computation
     let device = Default::default();
-    let x = Tensor::<TestBackend, 1>::from_floats([0.25, 0.5, 0.75, 1.0], &device).reshape([4, 1]);
-    let y = Tensor::<TestBackend, 1>::from_floats([0.25, 0.5, 0.75, 1.0], &device).reshape([4, 1]);
+    let x = Tensor::<TestBackend, 2>::from_floats([0.25, 0.5, 0.75, 1.0], &device).reshape([4, 1]);
+    let y = Tensor::<TestBackend, 2>::from_floats([0.25, 0.5, 0.75, 1.0], &device).reshape([4, 1]);
 
     let physics_params = PhysicsParameters {
         material_properties: HashMap::new(),
@@ -177,7 +183,11 @@ fn validate_magnetostatic_vector_potential() {
     };
 
     // Test z-component current density computation
-    let j_z = domain.compute_current_density_z(&x, &y, &physics_params);
+    let j_z = kwavers::ml::pinn::electromagnetic::residuals::compute_current_density_z(
+        &x,
+        &y,
+        &physics_params,
+    );
     assert_eq!(
         j_z.shape().dims,
         &[4, 1],
@@ -433,7 +443,14 @@ fn validate_domain_builder_methods() {
 
     let domain: ElectromagneticDomain<TestBackend> = ElectromagneticDomain::default()
         .with_problem_type(EMProblemType::QuasiStatic)
-        .add_current_source((0.5, 0.5), vec![1e6, 0.0], 0.1)
+        .add_current_source(PinnEMSource {
+            position: (0.5, 0.5, 0.0),
+            current_density: [1e6, 0.0, 0.0],
+            spatial_extent: 0.1,
+            frequency: 0.0,
+            amplitude: 1e6,
+            phase: 0.0,
+        })
         .add_pec_boundary(BoundaryPosition::Left)
         .add_pmc_boundary(BoundaryPosition::Right);
 
@@ -443,9 +460,9 @@ fn validate_domain_builder_methods() {
 
     // Test current source properties
     let source = &domain.current_sources[0];
-    assert_eq!(source.position, (0.5, 0.5));
-    assert_eq!(source.current_density, vec![1e6, 0.0]);
-    assert!((source.radius - 0.1).abs() < 1e-10);
+    assert_eq!(source.position, (0.5, 0.5, 0.0));
+    assert_eq!(source.current_density, [1e6, 0.0, 0.0]);
+    assert!((source.spatial_extent - 0.1).abs() < 1e-10);
 
     assert!(domain.validate().is_ok());
 }

@@ -780,7 +780,7 @@ mod tests {
         let geom = Geometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
         let points = geom.sample_boundary(100);
 
-        assert!(points.len() > 0);
+        assert!(!points.is_empty());
 
         // All points should be on the boundary
         for (x, y) in &points {

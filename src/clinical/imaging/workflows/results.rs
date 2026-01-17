@@ -70,6 +70,7 @@ pub struct PerformanceMetrics {
 }
 
 /// Acquisition result from multi-modal scanning
+#[derive(Debug)]
 pub struct AcquisitionResult {
     pub ultrasound_data: Array3<f64>,
     pub photoacoustic_result: PhotoacousticResult,
@@ -79,6 +80,7 @@ pub struct AcquisitionResult {
 }
 
 /// Processing result after real-time processing
+#[derive(Debug)]
 pub struct ProcessingResult {
     #[allow(dead_code)]
     pub quality_metrics: HashMap<String, f64>,
@@ -87,6 +89,7 @@ pub struct ProcessingResult {
 }
 
 /// AI analysis result
+#[derive(Debug)]
 pub struct AnalysisResult {
     pub tissue_properties: HashMap<String, Array3<f64>>,
     pub recommendations: Vec<DiagnosticRecommendation>,

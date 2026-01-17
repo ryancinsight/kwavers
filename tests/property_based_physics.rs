@@ -4,9 +4,9 @@
 //! **Literature**: FSE 2025 "Property-Based Testing for Rust Safety"
 //! **Validation**: All properties verified against known physical constraints
 
-use kwavers::testing::acoustic_properties::*;
-use kwavers::testing::grid_properties::*;
-use kwavers::testing::medium_properties::*;
+use kwavers::analysis::testing::property_based::acoustic_properties::*;
+use kwavers::analysis::testing::property_based::grid_properties::*;
+use kwavers::analysis::testing::property_based::medium_properties::*;
 use kwavers::{
     domain::medium::{CoreMedium, HomogeneousMedium},
     Grid,
@@ -360,7 +360,7 @@ proptest! {
         speed in SOUND_SPEED_RANGE.0..SOUND_SPEED_RANGE.1
     ) {
         let wavelength = speed / freq;
-        let wave_number = 2.0 * std::f64::consts::PI / wavelength;
+        let wave_number: f64 = 2.0 * std::f64::consts::PI / wavelength;
 
         prop_assert!(wave_number.is_finite(),
             "Wave number k = 2π/λ must be finite");

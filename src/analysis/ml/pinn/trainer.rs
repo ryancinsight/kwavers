@@ -1,6 +1,6 @@
 use crate::analysis::ml::pinn::burn_wave_equation_1d::{BurnPINNConfig, BurnPINNTrainer};
 use crate::analysis::ml::pinn::burn_wave_equation_2d::{
-    BurnPINN2DConfig, BurnPINN2DTrainer, Geometry2D,
+    BoundaryCondition2D, BurnPINN2DConfig, BurnPINN2DTrainer, Geometry2D,
 };
 use crate::analysis::ml::pinn::wave_equation_1d::TrainingMetrics;
 use crate::core::error::{KwaversError, KwaversResult};
@@ -195,7 +195,7 @@ fn train_2d(
         learning_rate: config.training_config.learning_rate,
         loss_weights: Default::default(),
         num_collocation_points: config.training_config.collocation_points,
-        boundary_condition: Default::default(),
+        boundary_condition: BoundaryCondition2D::Dirichlet,
     };
 
     let x_min = config.geometry.bounds.first().copied().unwrap_or(-1.0);
@@ -203,9 +203,10 @@ fn train_2d(
     let y_min = config.geometry.bounds.get(2).copied().unwrap_or(-1.0);
     let y_max = config.geometry.bounds.get(3).copied().unwrap_or(1.0);
 
-    let geometry = Geometry2D::new(x_min, x_max, y_min, y_max);
+    let geometry = Geometry2D::rectangular(x_min, x_max, y_min, y_max);
 
-    let mut trainer = BurnPINN2DTrainer::<Backend>::new_trainer(burn_config, geometry, &device)?;
+    let mut trainer =
+        BurnPINN2DTrainer::<Backend>::new_trainer(burn_config.clone(), geometry, &device)?;
 
     let n = config.training_config.batch_size;
     let x_data = Array1::linspace(x_min, x_max, n);

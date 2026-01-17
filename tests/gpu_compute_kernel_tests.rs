@@ -41,7 +41,7 @@ async fn test_acoustic_field_kernel_creation() {
 
 #[tokio::test]
 async fn test_compute_propagation_gaussian() {
-    let kernel = match AcousticFieldKernel::new().await {
+    let kernel: AcousticFieldKernel = match AcousticFieldKernel::new().await {
         Ok(k) => k,
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -90,7 +90,7 @@ async fn test_compute_propagation_gaussian() {
 
 #[tokio::test]
 async fn test_compute_propagation_zero_field() {
-    let kernel = match AcousticFieldKernel::new().await {
+    let kernel: AcousticFieldKernel = match AcousticFieldKernel::new().await {
         Ok(k) => k,
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -128,7 +128,7 @@ async fn test_wave_equation_gpu_creation() {
 
 #[tokio::test]
 async fn test_wave_equation_step() {
-    let solver = match WaveEquationGpu::new().await {
+    let solver: WaveEquationGpu = match WaveEquationGpu::new().await {
         Ok(s) => s,
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -157,11 +157,11 @@ async fn test_wave_equation_step() {
 
             // Check that fields have reasonable values
             assert!(
-                new_pressure.iter().all(|&x| x.is_finite()),
+                new_pressure.iter().all(|&x: &f64| x.is_finite()),
                 "Pressure should be finite"
             );
             assert!(
-                new_velocity.iter().all(|&x| x.is_finite()),
+                new_velocity.iter().all(|&x: &f64| x.is_finite()),
                 "Velocity should be finite"
             );
         }
@@ -173,7 +173,7 @@ async fn test_wave_equation_step() {
 
 #[tokio::test]
 async fn test_compute_propagation_different_sizes() {
-    let kernel = match AcousticFieldKernel::new().await {
+    let kernel: AcousticFieldKernel = match AcousticFieldKernel::new().await {
         Ok(k) => k,
         Err(_) => {
             eprintln!("GPU not available, skipping test");

@@ -259,12 +259,7 @@ impl VisualizationEngine {
 
         #[cfg(feature = "gpu-visualization")]
         {
-            use std::path::Path;
-            if let Some(renderer) = &self.renderer {
-                renderer.export_frame(Path::new(filename))?;
-            } else {
-                super::fallback::export_field(field, field_type, filename)?;
-            }
+            super::fallback::export_field(field, field_type, filename)?;
         }
 
         #[cfg(not(feature = "gpu-visualization"))]

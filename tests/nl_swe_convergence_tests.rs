@@ -690,7 +690,7 @@ mod convergence_tests {
 
         for model in models {
             // Test at reference state (no deformation)
-            let identity = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
+            let identity: [[f64; 3]; 3] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
             let stress_ref = model.cauchy_stress(&identity);
 
             // At reference state, stress should be zero
@@ -707,7 +707,7 @@ mod convergence_tests {
             }
 
             // Test extreme compression (50% strain)
-            let compression_extreme = [
+            let compression_extreme: [[f64; 3]; 3] = [
                 [0.5, 0.0, 0.0],
                 [0.0, 0.5, 0.0],
                 [0.0, 0.0, 2.0], // J = 0.5, extreme compression
@@ -731,7 +731,7 @@ mod convergence_tests {
             }
 
             // Test simple shear deformation
-            let shear = [
+            let shear: [[f64; 3]; 3] = [
                 [1.0, 0.1, 0.0], // Small shear strain
                 [0.0, 1.0, 0.0],
                 [0.0, 0.0, 1.0],
@@ -766,7 +766,7 @@ mod convergence_tests {
         let model = HyperelasticModel::neo_hookean_soft_tissue();
 
         // Test with nearly singular deformation gradient (very small determinant)
-        let nearly_singular = [[1e-6, 0.0, 0.0], [0.0, 1e-6, 0.0], [0.0, 0.0, 1e-6]];
+        let nearly_singular: [[f64; 3]; 3] = [[1e-6, 0.0, 0.0], [0.0, 1e-6, 0.0], [0.0, 0.0, 1e-6]];
 
         // This should not crash or produce infinite values
         let result = std::panic::catch_unwind(|| model.cauchy_stress(&nearly_singular));
@@ -790,7 +790,7 @@ mod convergence_tests {
         }
 
         // Test with very large deformation (hyperelastic limit)
-        let large_deformation = [
+        let large_deformation: [[f64; 3]; 3] = [
             [10.0, 0.0, 0.0], // 10x extension
             [0.0, 10.0, 0.0],
             [0.0, 0.0, 0.1], // 10x compression to maintain J=1
@@ -815,7 +815,7 @@ mod convergence_tests {
         let model = HyperelasticModel::neo_hookean_soft_tissue();
 
         // Test identity matrix
-        let identity = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
+        let identity: [[f64; 3]; 3] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
         let eigenvals_identity = model.matrix_eigenvalues(&identity);
 
         for &val in &eigenvals_identity {
@@ -827,7 +827,7 @@ mod convergence_tests {
         }
 
         // Test diagonal matrix with zeros
-        let diagonal_zero = [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 2.0]];
+        let diagonal_zero: [[f64; 3]; 3] = [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 2.0]];
         let eigenvals_zero = model.matrix_eigenvalues(&diagonal_zero);
 
         assert!(
@@ -844,7 +844,7 @@ mod convergence_tests {
         );
 
         // Test matrix with repeated eigenvalues
-        let repeated_eigen = [[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]];
+        let repeated_eigen: [[f64; 3]; 3] = [[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]];
         let eigenvals_repeated = model.matrix_eigenvalues(&repeated_eigen);
 
         for &val in &eigenvals_repeated {
@@ -862,7 +862,7 @@ mod convergence_tests {
         let grid = Grid::new(16, 16, 16, 0.001, 0.001, 0.001).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
-        let configs = vec![
+        let configs: Vec<NonlinearSWEConfig> = vec![
             NonlinearSWEConfig::default(),
             NonlinearSWEConfig {
                 nonlinearity_parameter: 0.05,

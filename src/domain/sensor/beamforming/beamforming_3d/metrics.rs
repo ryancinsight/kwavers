@@ -125,11 +125,15 @@ mod tests {
 
     #[test]
     fn test_memory_scales_with_config() {
-        let mut config1 = BeamformingConfig3D::default();
-        config1.volume_dims = (64, 64, 64);
+        let config1 = BeamformingConfig3D {
+            volume_dims: (64, 64, 64),
+            ..Default::default()
+        };
 
-        let mut config2 = BeamformingConfig3D::default();
-        config2.volume_dims = (128, 128, 128);
+        let config2 = BeamformingConfig3D {
+            volume_dims: (128, 128, 128),
+            ..Default::default()
+        };
 
         let mem1 = calculate_gpu_memory_usage(&config1);
         let mem2 = calculate_gpu_memory_usage(&config2);

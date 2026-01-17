@@ -323,12 +323,13 @@ mod tests {
 
     #[test]
     fn test_feature_config_validation() {
-        let mut config = FeatureConfig::default();
-
         // Test: at least one feature type required
-        config.morphological_features = false;
-        config.spectral_features = false;
-        config.texture_features = false;
+        let mut config = FeatureConfig {
+            morphological_features: false,
+            spectral_features: false,
+            texture_features: false,
+            ..Default::default()
+        };
         assert!(config.validate().is_err());
 
         // Test: window size must be odd and >= 3
@@ -355,10 +356,11 @@ mod tests {
 
     #[test]
     fn test_clinical_thresholds_validation() {
-        let mut thresholds = ClinicalThresholds::default();
-
         // Test: probability thresholds in [0, 1]
-        thresholds.lesion_confidence_threshold = 1.5;
+        let mut thresholds = ClinicalThresholds {
+            lesion_confidence_threshold: 1.5,
+            ..Default::default()
+        };
         assert!(thresholds.validate().is_err());
 
         thresholds.lesion_confidence_threshold = -0.1;
@@ -398,10 +400,11 @@ mod tests {
 
     #[test]
     fn test_ai_config_validation() {
-        let mut config = AIBeamformingConfig::default();
-
         // Test: performance target must be positive
-        config.performance_target_ms = 0.0;
+        let mut config = AIBeamformingConfig {
+            performance_target_ms: 0.0,
+            ..Default::default()
+        };
         assert!(config.validate().is_err());
 
         config.performance_target_ms = -10.0;

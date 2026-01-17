@@ -644,7 +644,7 @@ mod tests {
         assert!(speed.is_some(), "Should compute speed from valid profile");
 
         let cs = speed.unwrap();
-        assert!(cs >= 0.5 && cs <= 10.0, "Speed should be in valid range");
+        assert!((0.5..=10.0).contains(&cs), "Speed should be in valid range");
     }
 
     #[test]

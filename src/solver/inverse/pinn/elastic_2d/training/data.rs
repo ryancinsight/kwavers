@@ -16,7 +16,7 @@ use burn::tensor::backend::AutodiffBackend;
 ///
 /// Aggregates all data required for PINN training.
 #[cfg(feature = "pinn")]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TrainingData<B: AutodiffBackend> {
     /// Interior collocation points for PDE residual
     pub collocation: CollocationData<B>,

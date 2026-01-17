@@ -10,14 +10,16 @@ use crate::analysis::ml::pinn::meta_learning::config::MetaLearningConfig;
 use crate::analysis::ml::pinn::meta_learning::gradient::{GradientApplicator, GradientExtractor};
 use crate::analysis::ml::pinn::meta_learning::metrics::{MetaLearningStats, MetaLoss};
 use crate::analysis::ml::pinn::meta_learning::optimizer::MetaOptimizer;
+use crate::analysis::ml::pinn::meta_learning::sampling::SamplingStrategy;
 use crate::analysis::ml::pinn::meta_learning::sampling::TaskSampler;
 use crate::analysis::ml::pinn::meta_learning::types::{PhysicsTask, TaskData};
 use crate::core::error::KwaversResult;
-use burn::module::{Module, ModuleMapper};
+use burn::module::Module;
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::sync::Arc;
 
+#[derive(Debug)]
 pub struct MetaLearner<B: AutodiffBackend> {
     /// Base model acting as meta-parameters
     base_model: BurnPINN2DWave<B>,
@@ -133,11 +135,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
             .collect();
 
         // Apply averaged gradients to base model
-        let mut applicator = GradientApplicator {
-            grads: averaged_grads,
-            index: 0,
-            lr: self.config.outer_lr,
-        };
+        let mut applicator = GradientApplicator::new(averaged_grads, self.config.outer_lr);
 
         self.base_model = self.base_model.clone().map(&mut applicator);
 

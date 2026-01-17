@@ -380,8 +380,10 @@ mod tests {
     #[test]
     fn test_sem_system_assembly() {
         let mesh = MeshBuilder::create_rectangular_mesh(1.0, 1.0, 1.0, 2);
-        let mut config = SemConfig::default();
-        config.polynomial_degree = 2;
+        let config = SemConfig {
+            polynomial_degree: 2,
+            ..Default::default()
+        };
 
         let mut solver = SemSolver::new(config, Arc::new(mesh)).unwrap();
 
@@ -394,10 +396,12 @@ mod tests {
     #[test]
     fn test_sem_time_stepping() {
         let mesh = MeshBuilder::create_rectangular_mesh(0.1, 0.1, 0.1, 2);
-        let mut config = SemConfig::default();
-        config.polynomial_degree = 2;
-        config.n_steps = 5;
-        config.dt = 1e-8; // Very small time step for stability
+        let config = SemConfig {
+            polynomial_degree: 2,
+            n_steps: 5,
+            dt: 1e-8,
+            ..Default::default()
+        };
 
         let mut solver = SemSolver::new(config, Arc::new(mesh)).unwrap();
         solver.assemble_system().unwrap();
@@ -414,8 +418,10 @@ mod tests {
     #[test]
     fn test_boundary_condition_management() {
         let mesh = MeshBuilder::create_rectangular_mesh(1.0, 1.0, 1.0, 2);
-        let mut config = SemConfig::default();
-        config.polynomial_degree = 2;
+        let config = SemConfig {
+            polynomial_degree: 2,
+            ..Default::default()
+        };
 
         let mut solver = SemSolver::new(config, Arc::new(mesh)).unwrap();
 

@@ -200,7 +200,7 @@ impl<B: AutodiffBackend> BurnPINN1DWave<B> {
         let grad_u_x = u_for_x_deriv.backward();
 
         // Extract ∂u/∂x (first derivative)
-        let du_dx = x_grad
+        let _du_dx = x_grad
             .grad(&grad_u_x)
             .unwrap_or_else(|| Tensor::zeros(x.shape(), &x.device()));
 
@@ -711,14 +711,8 @@ mod tests {
         let x_vals: Vec<f32> = (0..n).map(|i| (i as f32) / (n as f32)).collect();
         let t_vals: Vec<f32> = (0..n).map(|i| (i as f32) / (n as f32) * 0.5).collect();
 
-        let x = Tensor::<TestBackend, 2>::from_floats(
-            x_vals.iter().map(|&v| [v]).collect::<Vec<_>>().as_slice(),
-            &device,
-        );
-        let t = Tensor::<TestBackend, 2>::from_floats(
-            t_vals.iter().map(|&v| [v]).collect::<Vec<_>>().as_slice(),
-            &device,
-        );
+        let x = Tensor::<TestBackend, 1>::from_floats(x_vals.as_slice(), &device).reshape([n, 1]);
+        let t = Tensor::<TestBackend, 1>::from_floats(t_vals.as_slice(), &device).reshape([n, 1]);
 
         let residual = pinn.compute_pde_residual(x, t, 343.0);
 

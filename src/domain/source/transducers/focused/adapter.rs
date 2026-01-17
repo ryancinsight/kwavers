@@ -1,7 +1,7 @@
 use crate::domain::grid::Grid;
 use crate::domain::signal::Signal;
 use crate::domain::source::transducers::focused::bowl::{BowlConfig, BowlTransducer};
-use crate::domain::source::{Source, SourceField};
+use crate::domain::source::Source;
 use ndarray::Array3;
 use std::collections::HashMap;
 use std::fmt::Debug;

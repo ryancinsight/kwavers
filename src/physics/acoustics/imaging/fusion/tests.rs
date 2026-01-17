@@ -168,8 +168,10 @@ fn test_confidence_map_generation() {
 
 #[test]
 fn test_uncertainty_quantification_enabled() {
-    let mut config = FusionConfig::default();
-    config.uncertainty_quantification = true;
+    let config = FusionConfig {
+        uncertainty_quantification: true,
+        ..Default::default()
+    };
 
     let mut fusion = MultiModalFusion::new(config);
     let shape = (4, 4, 2);
@@ -199,8 +201,10 @@ fn test_uncertainty_quantification_enabled() {
 
 #[test]
 fn test_uncertainty_quantification_disabled() {
-    let mut config = FusionConfig::default();
-    config.uncertainty_quantification = false;
+    let config = FusionConfig {
+        uncertainty_quantification: false,
+        ..Default::default()
+    };
 
     let mut fusion = MultiModalFusion::new(config);
     let shape = (4, 4, 2);
@@ -360,14 +364,15 @@ fn test_affine_transform_composition() {
 
 #[test]
 fn test_fusion_with_custom_weights() {
-    let mut config = FusionConfig::default();
-    config.modality_weights.clear();
-    config
-        .modality_weights
-        .insert("ultrasound".to_string(), 0.7);
-    config
-        .modality_weights
-        .insert("photoacoustic".to_string(), 0.3);
+    let config = FusionConfig {
+        modality_weights: [
+            ("ultrasound".to_string(), 0.7),
+            ("photoacoustic".to_string(), 0.3),
+        ]
+        .into_iter()
+        .collect(),
+        ..Default::default()
+    };
 
     let mut fusion = MultiModalFusion::new(config);
     let shape = (4, 4, 2);
@@ -394,8 +399,10 @@ fn test_fusion_with_custom_weights() {
 
 #[test]
 fn test_probabilistic_fusion_uncertainty() {
-    let mut config = FusionConfig::default();
-    config.fusion_method = FusionMethod::Probabilistic;
+    let config = FusionConfig {
+        fusion_method: FusionMethod::Probabilistic,
+        ..Default::default()
+    };
 
     let mut fusion = MultiModalFusion::new(config);
     let shape = (4, 4, 2);

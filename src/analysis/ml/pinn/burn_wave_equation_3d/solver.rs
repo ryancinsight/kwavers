@@ -33,6 +33,8 @@ use burn::tensor::{backend::AutodiffBackend, backend::Backend, Tensor, TensorDat
 use std::marker::PhantomData;
 use std::time::Instant;
 
+use crate::core::error::{KwaversError, KwaversResult, SystemError, ValidationError};
+
 use super::config::{BurnLossWeights3D, BurnPINN3DConfig, BurnTrainingMetrics3D};
 use super::geometry::Geometry3D;
 use super::network::PINN3DNetwork;
@@ -99,28 +101,29 @@ impl<B: Backend> BurnPINN3DWave<B> {
     /// let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
     /// let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
     ///
-    /// let solver = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed, &device);
+    /// let solver = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed, &device)?;
     /// ```
     pub fn new<F>(
         config: BurnPINN3DConfig,
         geometry: Geometry3D,
         wave_speed_fn: F,
         device: &B::Device,
-    ) -> Self
+    ) -> KwaversResult<Self>
     where
         F: Fn(f32, f32, f32) -> f32 + Send + Sync + 'static,
     {
-        let pinn = PINN3DNetwork::new(&config, device);
+        config.validate()?;
+        let pinn = PINN3DNetwork::new(&config, device)?;
         let optimizer = SimpleOptimizer3D::new(config.learning_rate as f32);
 
-        Self {
+        Ok(Self {
             pinn,
             geometry: Ignored(geometry),
             wave_speed_fn: Some(WaveSpeedFn3D::new(std::sync::Arc::new(wave_speed_fn))),
             optimizer: Ignored(optimizer),
             config: Ignored(config),
             _backend: PhantomData,
-        }
+        })
     }
 
     /// Get wave speed at a specific location
@@ -133,12 +136,21 @@ impl<B: Backend> BurnPINN3DWave<B> {
     ///
     /// # Returns
     ///
-    /// Wave speed c(x, y, z) in m/s, or 343.0 (air) as default
-    pub fn get_wave_speed(&self, x: f32, y: f32, z: f32) -> f32 {
-        self.wave_speed_fn
+    /// Wave speed c(x, y, z) in m/s
+    pub fn get_wave_speed(&self, x: f32, y: f32, z: f32) -> KwaversResult<f32> {
+        let wave_speed = self
+            .wave_speed_fn
             .as_ref()
-            .map(|f| f.get(x, y, z))
-            .unwrap_or(343.0)
+            .ok_or_else(|| KwaversError::InvalidInput("Wave speed function is missing".into()))?
+            .get(x, y, z);
+        if !wave_speed.is_finite() || wave_speed <= 0.0 {
+            return Err(KwaversError::Validation(ValidationError::InvalidValue {
+                parameter: "wave_speed".to_string(),
+                value: wave_speed as f64,
+                reason: "must be finite and > 0".to_string(),
+            }));
+        }
+        Ok(wave_speed)
     }
 
     /// Train the PINN on reference data
@@ -184,32 +196,49 @@ impl<B: Backend> BurnPINN3DWave<B> {
         u_data: &[f32],
         device: &B::Device,
         epochs: usize,
-    ) -> Result<BurnTrainingMetrics3D, String>
+    ) -> KwaversResult<BurnTrainingMetrics3D>
     where
         B: AutodiffBackend,
     {
         let start_time = Instant::now();
         let mut metrics = BurnTrainingMetrics3D::default();
 
-        // Convert data to tensors
+        let n_data = x_data.len();
+        if n_data == 0 {
+            return Err(KwaversError::InvalidInput(
+                "Training data must be non-empty".into(),
+            ));
+        }
+        if y_data.len() != n_data
+            || z_data.len() != n_data
+            || t_data.len() != n_data
+            || u_data.len() != n_data
+        {
+            return Err(KwaversError::InvalidInput(
+                "x_data, y_data, z_data, t_data, and u_data must have equal length".into(),
+            ));
+        }
+
         let x_data_tensor =
-            Tensor::<B, 2>::from_data(TensorData::from(x_data), device).unsqueeze_dim(1);
+            Tensor::<B, 2>::from_data(TensorData::new(x_data.to_vec(), [n_data, 1]), device);
         let y_data_tensor =
-            Tensor::<B, 2>::from_data(TensorData::from(y_data), device).unsqueeze_dim(1);
+            Tensor::<B, 2>::from_data(TensorData::new(y_data.to_vec(), [n_data, 1]), device);
         let z_data_tensor =
-            Tensor::<B, 2>::from_data(TensorData::from(z_data), device).unsqueeze_dim(1);
+            Tensor::<B, 2>::from_data(TensorData::new(z_data.to_vec(), [n_data, 1]), device);
         let t_data_tensor =
-            Tensor::<B, 2>::from_data(TensorData::from(t_data), device).unsqueeze_dim(1);
+            Tensor::<B, 2>::from_data(TensorData::new(t_data.to_vec(), [n_data, 1]), device);
         let u_data_tensor =
-            Tensor::<B, 2>::from_data(TensorData::from(u_data), device).unsqueeze_dim(1);
+            Tensor::<B, 2>::from_data(TensorData::new(u_data.to_vec(), [n_data, 1]), device);
 
         // Generate collocation points for PDE residual
         let (x_colloc, y_colloc, z_colloc, t_colloc) =
             self.generate_collocation_points(&self.config.0, device);
+        let (x_ic, y_ic, z_ic, t_ic, u_ic) = Self::extract_initial_condition_tensors(
+            x_data, y_data, z_data, t_data, u_data, device,
+        )?;
 
         // Training loop with physics-informed loss
         for epoch in 0..epochs {
-            // Compute physics-informed loss
             let (total_loss, data_loss, pde_loss, bc_loss, ic_loss) = self.compute_physics_loss(
                 x_data_tensor.clone(),
                 y_data_tensor.clone(),
@@ -220,15 +249,20 @@ impl<B: Backend> BurnPINN3DWave<B> {
                 y_colloc.clone(),
                 z_colloc.clone(),
                 t_colloc.clone(),
+                x_ic.clone(),
+                y_ic.clone(),
+                z_ic.clone(),
+                t_ic.clone(),
+                u_ic.clone(),
                 &self.config.0.loss_weights,
-            );
+            )?;
 
             // Convert to f64 for metrics
-            let total_val = total_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let data_val = data_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let pde_val = pde_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let bc_val = bc_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let ic_val = ic_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
+            let total_val = Self::scalar_f32(&total_loss)? as f64;
+            let data_val = Self::scalar_f32(&data_loss)? as f64;
+            let pde_val = Self::scalar_f32(&pde_loss)? as f64;
+            let bc_val = Self::scalar_f32(&bc_loss)? as f64;
+            let ic_val = Self::scalar_f32(&ic_loss)? as f64;
 
             metrics.total_loss.push(total_val);
             metrics.data_loss.push(data_val);
@@ -246,11 +280,11 @@ impl<B: Backend> BurnPINN3DWave<B> {
                     "Epoch {}/{}: total_loss={:.6e}, data_loss={:.6e}, pde_loss={:.6e}, bc_loss={:.6e}, ic_loss={:.6e}",
                     epoch,
                     epochs,
-                    metrics.total_loss.last().unwrap(),
-                    metrics.data_loss.last().unwrap(),
-                    metrics.pde_loss.last().unwrap(),
-                    metrics.bc_loss.last().unwrap(),
-                    metrics.ic_loss.last().unwrap()
+                    total_val,
+                    data_val,
+                    pde_val,
+                    bc_val,
+                    ic_val
                 );
             }
         }
@@ -290,14 +324,26 @@ impl<B: Backend> BurnPINN3DWave<B> {
         z: &[f32],
         t: &[f32],
         device: &B::Device,
-    ) -> Result<Vec<f32>, String> {
-        let x_tensor = Tensor::<B, 2>::from_data(TensorData::from(x), device).unsqueeze_dim(1);
-        let y_tensor = Tensor::<B, 2>::from_data(TensorData::from(y), device).unsqueeze_dim(1);
-        let z_tensor = Tensor::<B, 2>::from_data(TensorData::from(z), device).unsqueeze_dim(1);
-        let t_tensor = Tensor::<B, 2>::from_data(TensorData::from(t), device).unsqueeze_dim(1);
+    ) -> KwaversResult<Vec<f32>> {
+        let n = x.len();
+        if n == 0 {
+            return Err(KwaversError::InvalidInput(
+                "Prediction inputs must be non-empty".into(),
+            ));
+        }
+        if y.len() != n || z.len() != n || t.len() != n {
+            return Err(KwaversError::InvalidInput(
+                "x, y, z, and t must have equal length".into(),
+            ));
+        }
+
+        let x_tensor = Tensor::<B, 2>::from_data(TensorData::new(x.to_vec(), [n, 1]), device);
+        let y_tensor = Tensor::<B, 2>::from_data(TensorData::new(y.to_vec(), [n, 1]), device);
+        let z_tensor = Tensor::<B, 2>::from_data(TensorData::new(z.to_vec(), [n, 1]), device);
+        let t_tensor = Tensor::<B, 2>::from_data(TensorData::new(t.to_vec(), [n, 1]), device);
 
         let u_pred = self.pinn.forward(x_tensor, y_tensor, z_tensor, t_tensor);
-        let u_vec = u_pred.into_data().as_slice::<f32>().unwrap().to_vec();
+        let u_vec = Self::tensor_column_vec_f32(&u_pred)?;
 
         Ok(u_vec)
     }
@@ -319,8 +365,8 @@ impl<B: Backend> BurnPINN3DWave<B> {
     ///
     /// - **data_loss**: MSE(u_pred, u_data)
     /// - **pde_loss**: MSE(R) where R = ∂²u/∂t² - c²∇²u
-    /// - **bc_loss**: Boundary condition violations (placeholder: zero)
-    /// - **ic_loss**: Initial condition violations (placeholder: zero)
+    /// - **bc_loss**: Boundary condition violations
+    /// - **ic_loss**: Initial condition violations
     /// - **total_loss**: Weighted sum of all components
     fn compute_physics_loss(
         &self,
@@ -333,14 +379,19 @@ impl<B: Backend> BurnPINN3DWave<B> {
         y_colloc: Tensor<B, 2>,
         z_colloc: Tensor<B, 2>,
         t_colloc: Tensor<B, 2>,
+        x_ic: Tensor<B, 2>,
+        y_ic: Tensor<B, 2>,
+        z_ic: Tensor<B, 2>,
+        t_ic: Tensor<B, 2>,
+        u_ic: Tensor<B, 2>,
         weights: &BurnLossWeights3D,
-    ) -> (
+    ) -> KwaversResult<(
         Tensor<B, 1>,
         Tensor<B, 1>,
         Tensor<B, 1>,
         Tensor<B, 1>,
         Tensor<B, 1>,
-    ) {
+    )> {
         // Data loss: MSE between predictions and training data
         let u_pred = self.pinn.forward(x_data, y_data, z_data, t_data);
         let data_loss = (u_pred.clone() - u_data).powf_scalar(2.0).mean();
@@ -352,7 +403,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
             z_colloc.clone(),
             t_colloc.clone(),
             |x, y, z| self.get_wave_speed(x, y, z),
-        );
+        )?;
         let pde_loss = pde_residual.powf_scalar(2.0).mean();
 
         // Boundary condition loss: Enforce BC on all domain boundaries
@@ -364,53 +415,8 @@ impl<B: Backend> BurnPINN3DWave<B> {
         // evaluate PINN predictions, compute BC violations based on type
         let bc_loss = self.compute_bc_loss_internal(&x_colloc, &y_colloc, &z_colloc, &t_colloc);
 
-        // TODO_AUDIT: P1 - BurnPINN 3D Initial Condition Loss - Zero Placeholder
-        //
-        // PROBLEM:
-        // Initial condition loss is hardcoded to zero tensor, bypassing IC enforcement in 3D PINN
-        // training. The model is not constrained to match initial state at t=0.
-        //
-        // IMPACT:
-        // - PINN predictions violate initial conditions (wrong field distribution at t=0)
-        // - Training loss underestimates error (missing IC penalty)
-        // - Temporal evolution starts from incorrect state → accumulated error over time
-        // - Cannot solve time-dependent problems requiring specific initial fields
-        // - Blocks applications: transient analysis, impulse response, time-domain propagation
-        //
-        // REQUIRED IMPLEMENTATION:
-        // 1. Sample points in spatial domain at t=0:
-        //    - Generate N_ic points: (x, y, z, t=0) where (x,y,z) ∈ Ω
-        //    - Typical: 500-2000 IC points for 3D domain
-        // 2. Evaluate model predictions: u_pred(x, y, z, t=0)
-        // 3. Compute initial field u_0(x, y, z) from problem specification
-        // 4. For wave equation, enforce both u and ∂u/∂t at t=0:
-        //    - IC1: |u(x,y,z,0) - u_0(x,y,z)|² (initial displacement)
-        //    - IC2: |∂u/∂t(x,y,z,0) - v_0(x,y,z)|² (initial velocity)
-        // 5. Aggregate: ic_loss = MSE(IC1) + MSE(IC2)
-        //
-        // MATHEMATICAL SPECIFICATION:
-        // For wave equation with initial conditions:
-        //   u(x, y, z, 0) = u₀(x, y, z)
-        //   ∂u/∂t(x, y, z, 0) = v₀(x, y, z)
-        // Loss:
-        //   L_IC = (1/N_ic) Σᵢ [|u(xᵢ, yᵢ, zᵢ, 0) - u₀(xᵢ, yᵢ, zᵢ)|²
-        //                    + |∂u/∂t(xᵢ, yᵢ, zᵢ, 0) - v₀(xᵢ, yᵢ, zᵢ)|²]
-        //
-        // VALIDATION CRITERIA:
-        // 1. Unit test: known IC (e.g., Gaussian pulse) → verify u(x,y,z,0) matches
-        // 2. Check ic_loss decreases during training to < 1e-4
-        // 3. Temporal derivative test: ∂u/∂t at t=0 matches v₀
-        // 4. Visual: plot u(x,y,z,0) vs. u₀(x,y,z) → should overlay
-        //
-        // REFERENCES:
-        // - Raissi et al. (2019). "Physics-informed neural networks", Section 2.2
-        // - backlog.md: Sprint 211 IC Enforcement
-        //
-        // EFFORT: ~8-12 hours (IC sampling, temporal derivative, validation)
-        // SPRINT: Sprint 211 (3D PINN IC enforcement)
-        //
-        // Initial condition loss (placeholder: to be implemented with IC enforcement)
-        let ic_loss = Tensor::<B, 1>::zeros([1], &u_pred.device());
+        let u_ic_pred = self.pinn.forward(x_ic, y_ic, z_ic, t_ic);
+        let ic_loss = (u_ic_pred - u_ic).powf_scalar(2.0).mean();
 
         // Total weighted loss
         let total_loss = weights.data_weight * data_loss.clone()
@@ -418,7 +424,122 @@ impl<B: Backend> BurnPINN3DWave<B> {
             + weights.bc_weight * bc_loss.clone()
             + weights.ic_weight * ic_loss.clone();
 
-        (total_loss, data_loss, pde_loss, bc_loss, ic_loss)
+        Ok((total_loss, data_loss, pde_loss, bc_loss, ic_loss))
+    }
+
+    fn extract_initial_condition_tensors(
+        x_data: &[f32],
+        y_data: &[f32],
+        z_data: &[f32],
+        t_data: &[f32],
+        u_data: &[f32],
+        device: &B::Device,
+    ) -> KwaversResult<(
+        Tensor<B, 2>,
+        Tensor<B, 2>,
+        Tensor<B, 2>,
+        Tensor<B, 2>,
+        Tensor<B, 2>,
+    )> {
+        let min_t = t_data.iter().copied().fold(f32::INFINITY, |a, b| a.min(b));
+        if !min_t.is_finite() {
+            return Err(KwaversError::InvalidInput(
+                "Training time coordinates must be finite".into(),
+            ));
+        }
+
+        let eps = 1e-6_f32;
+        let mut x_ic = Vec::new();
+        let mut y_ic = Vec::new();
+        let mut z_ic = Vec::new();
+        let mut u_ic = Vec::new();
+
+        for i in 0..t_data.len() {
+            if (t_data[i] - min_t).abs() <= eps {
+                x_ic.push(x_data[i]);
+                y_ic.push(y_data[i]);
+                z_ic.push(z_data[i]);
+                u_ic.push(u_data[i]);
+            }
+        }
+
+        if x_ic.is_empty() {
+            return Err(KwaversError::InvalidInput(
+                "No initial-condition samples found in training data".into(),
+            ));
+        }
+
+        let n_ic = x_ic.len();
+        let t_ic = vec![min_t; n_ic];
+
+        Ok((
+            Tensor::<B, 2>::from_data(TensorData::new(x_ic, [n_ic, 1]), device),
+            Tensor::<B, 2>::from_data(TensorData::new(y_ic, [n_ic, 1]), device),
+            Tensor::<B, 2>::from_data(TensorData::new(z_ic, [n_ic, 1]), device),
+            Tensor::<B, 2>::from_data(TensorData::new(t_ic, [n_ic, 1]), device),
+            Tensor::<B, 2>::from_data(TensorData::new(u_ic, [n_ic, 1]), device),
+        ))
+    }
+
+    fn scalar_f32(t: &Tensor<B, 1>) -> KwaversResult<f32> {
+        let data = t.clone().into_data();
+        let slice = data.as_slice::<f32>().map_err(|e| {
+            KwaversError::System(SystemError::InvalidOperation {
+                operation: "tensor_to_f32_slice".to_string(),
+                reason: format!("{e:?}"),
+            })
+        })?;
+        if slice.len() != 1 {
+            return Err(KwaversError::Validation(
+                ValidationError::DimensionMismatch {
+                    expected: "len=1".to_string(),
+                    actual: format!("len={}", slice.len()),
+                },
+            ));
+        }
+        slice.first().copied().ok_or_else(|| {
+            KwaversError::System(SystemError::InvalidOperation {
+                operation: "tensor_scalar_extract".to_string(),
+                reason: "missing scalar element".to_string(),
+            })
+        })
+    }
+
+    fn tensor_column_vec_f32(t: &Tensor<B, 2>) -> KwaversResult<Vec<f32>> {
+        let shape = t.shape();
+        let dims = shape.dims.as_slice();
+        let [n, m] = dims else {
+            return Err(KwaversError::Validation(
+                ValidationError::DimensionMismatch {
+                    expected: "[N, 1]".to_string(),
+                    actual: format!("{dims:?}"),
+                },
+            ));
+        };
+        if *m != 1 {
+            return Err(KwaversError::Validation(
+                ValidationError::DimensionMismatch {
+                    expected: "[N, 1]".to_string(),
+                    actual: format!("{dims:?}"),
+                },
+            ));
+        }
+        let data = t.clone().into_data();
+        let slice = data.as_slice::<f32>().map_err(|e| {
+            KwaversError::System(SystemError::InvalidOperation {
+                operation: "tensor_to_f32_slice".to_string(),
+                reason: format!("{e:?}"),
+            })
+        })?;
+        if slice.len() != *n {
+            return Err(KwaversError::Validation(
+                ValidationError::DimensionMismatch {
+                    expected: format!("len={n}"),
+                    actual: format!("len={}", slice.len()),
+                },
+            ));
+        }
+        Ok(slice.to_vec())
     }
 
     /// Generate collocation points for PDE residual computation
@@ -444,7 +565,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
     /// - Time domain: [0, 1] (normalized)
     /// - Spatial domain: From geometry bounding box
     /// - Points may be fewer than requested if geometry is complex
-    fn generate_collocation_points(
+    pub(crate) fn generate_collocation_points(
         &self,
         config: &BurnPINN3DConfig,
         device: &B::Device,
@@ -474,13 +595,21 @@ impl<B: Backend> BurnPINN3DWave<B> {
             }
         }
 
-        let x_tensor = Tensor::<B, 2>::from_data(TensorData::from(x_points.as_slice()), device)
+        if x_points.is_empty() {
+            let (x, y, z) = self.geometry.0.interior_point();
+            x_points.push(x as f32);
+            y_points.push(y as f32);
+            z_points.push(z as f32);
+            t_points.push(0.0);
+        }
+
+        let x_tensor = Tensor::<B, 1>::from_data(TensorData::from(x_points.as_slice()), device)
             .unsqueeze_dim(1);
-        let y_tensor = Tensor::<B, 2>::from_data(TensorData::from(y_points.as_slice()), device)
+        let y_tensor = Tensor::<B, 1>::from_data(TensorData::from(y_points.as_slice()), device)
             .unsqueeze_dim(1);
-        let z_tensor = Tensor::<B, 2>::from_data(TensorData::from(z_points.as_slice()), device)
+        let z_tensor = Tensor::<B, 1>::from_data(TensorData::from(z_points.as_slice()), device)
             .unsqueeze_dim(1);
-        let t_tensor = Tensor::<B, 2>::from_data(TensorData::from(t_points.as_slice()), device)
+        let t_tensor = Tensor::<B, 1>::from_data(TensorData::from(t_points.as_slice()), device)
             .unsqueeze_dim(1);
 
         (x_tensor, y_tensor, z_tensor, t_tensor)
@@ -524,7 +653,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
         let t_samples = 5; // Sample at multiple time points
 
         for t_idx in 0..t_samples {
-            let t = (t_idx as f64 / (t_samples - 1) as f64).max(0.0).min(1.0);
+            let t = (t_idx as f64 / (t_samples - 1) as f64).clamp(0.0, 1.0);
 
             // Face 1: x = x_min
             for _ in 0..n_bc_per_face {
@@ -577,13 +706,13 @@ impl<B: Backend> BurnPINN3DWave<B> {
 
         // Convert to tensors
         let device = _x_colloc.device();
-        let x_bc = Tensor::<B, 2>::from_data(TensorData::from(bc_points_x.as_slice()), &device)
+        let x_bc = Tensor::<B, 1>::from_data(TensorData::from(bc_points_x.as_slice()), &device)
             .unsqueeze_dim(1);
-        let y_bc = Tensor::<B, 2>::from_data(TensorData::from(bc_points_y.as_slice()), &device)
+        let y_bc = Tensor::<B, 1>::from_data(TensorData::from(bc_points_y.as_slice()), &device)
             .unsqueeze_dim(1);
-        let z_bc = Tensor::<B, 2>::from_data(TensorData::from(bc_points_z.as_slice()), &device)
+        let z_bc = Tensor::<B, 1>::from_data(TensorData::from(bc_points_z.as_slice()), &device)
             .unsqueeze_dim(1);
-        let t_bc = Tensor::<B, 2>::from_data(TensorData::from(bc_points_t.as_slice()), &device)
+        let t_bc = Tensor::<B, 1>::from_data(TensorData::from(bc_points_t.as_slice()), &device)
             .unsqueeze_dim(1);
 
         // Evaluate PINN at boundary points
@@ -603,33 +732,35 @@ mod tests {
     type TestBackend = Autodiff<NdArray>;
 
     #[test]
-    fn test_solver_creation() {
+    fn test_solver_creation() -> KwaversResult<()> {
         let device = Default::default();
         let config = BurnPINN3DConfig::default();
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device);
+        let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
-        assert!(!solver.pinn.hidden_layers.is_empty());
+        assert!(solver.pinn.hidden_layer_count() > 0);
         assert!(solver.wave_speed_fn.is_some());
+        Ok(())
     }
 
     #[test]
-    fn test_solver_get_wave_speed() {
+    fn test_solver_get_wave_speed() -> KwaversResult<()> {
         let device = Default::default();
         let config = BurnPINN3DConfig::default();
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, z: f32| if z < 0.5 { 1500.0 } else { 3000.0 };
 
-        let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device);
+        let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
-        assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.3), 1500.0);
-        assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.7), 3000.0);
+        assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.3)?, 1500.0);
+        assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.7)?, 3000.0);
+        Ok(())
     }
 
     #[test]
-    fn test_solver_training_smoke() {
+    fn test_solver_training_smoke() -> KwaversResult<()> {
         let device = Default::default();
         let config = BurnPINN3DConfig {
             hidden_layers: vec![8],
@@ -639,7 +770,7 @@ mod tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device);
+        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
         // Minimal training data
         let x_data = vec![0.5, 0.6];
@@ -648,16 +779,14 @@ mod tests {
         let t_data = vec![0.1, 0.2];
         let u_data = vec![0.0, 0.0];
 
-        let result = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 5);
-
-        assert!(result.is_ok());
-        let metrics = result.unwrap();
+        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 5)?;
         assert_eq!(metrics.epochs_completed, 5);
         assert_eq!(metrics.total_loss.len(), 5);
+        Ok(())
     }
 
     #[test]
-    fn test_solver_prediction() {
+    fn test_solver_prediction() -> KwaversResult<()> {
         let device = Default::default();
         let config = BurnPINN3DConfig {
             hidden_layers: vec![8],
@@ -666,23 +795,21 @@ mod tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device);
+        let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
         let x_test = vec![0.5, 0.6];
         let y_test = vec![0.5, 0.5];
         let z_test = vec![0.5, 0.5];
         let t_test = vec![0.1, 0.2];
 
-        let result = solver.predict(&x_test, &y_test, &z_test, &t_test, &device);
-
-        assert!(result.is_ok());
-        let predictions = result.unwrap();
+        let predictions = solver.predict(&x_test, &y_test, &z_test, &t_test, &device)?;
         assert_eq!(predictions.len(), 2);
         assert!(predictions.iter().all(|&p| p.is_finite()));
+        Ok(())
     }
 
     #[test]
-    fn test_collocation_points_generation() {
+    fn test_collocation_points_generation() -> KwaversResult<()> {
         let device = Default::default();
         let config = BurnPINN3DConfig {
             num_collocation_points: 50,
@@ -692,21 +819,43 @@ mod tests {
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
         let solver =
-            BurnPINN3DWave::<TestBackend>::new(config.clone(), geometry, wave_speed, &device);
+            BurnPINN3DWave::<TestBackend>::new(config.clone(), geometry, wave_speed, &device)?;
 
         let (x_colloc, y_colloc, z_colloc, t_colloc) =
             solver.generate_collocation_points(&config, &device);
 
         // Should generate approximately the requested number (some may be filtered)
-        let n_generated = x_colloc.shape().dims[0];
+        let n_generated = match x_colloc.shape().dims.as_slice() {
+            [n, _] => *n,
+            dims => {
+                return Err(KwaversError::System(SystemError::InvalidOperation {
+                    operation: "generate_collocation_points".to_string(),
+                    reason: format!("Expected 2D tensor shape, got dims {dims:?}"),
+                }));
+            }
+        };
         assert!(n_generated > 0 && n_generated <= config.num_collocation_points);
-        assert_eq!(y_colloc.shape().dims[0], n_generated);
-        assert_eq!(z_colloc.shape().dims[0], n_generated);
-        assert_eq!(t_colloc.shape().dims[0], n_generated);
+        for (name, tensor) in [
+            ("y_colloc", &y_colloc),
+            ("z_colloc", &z_colloc),
+            ("t_colloc", &t_colloc),
+        ] {
+            let n = match tensor.shape().dims.as_slice() {
+                [n, _] => *n,
+                dims => {
+                    return Err(KwaversError::System(SystemError::InvalidOperation {
+                        operation: "generate_collocation_points".to_string(),
+                        reason: format!("Expected 2D tensor shape for {name}, got dims {dims:?}"),
+                    }));
+                }
+            };
+            assert_eq!(n, n_generated);
+        }
+        Ok(())
     }
 
     #[test]
-    fn test_collocation_points_spherical_geometry() {
+    fn test_collocation_points_spherical_geometry() -> KwaversResult<()> {
         let device = Default::default();
         let config = BurnPINN3DConfig {
             num_collocation_points: 100,
@@ -716,19 +865,28 @@ mod tests {
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
         let solver =
-            BurnPINN3DWave::<TestBackend>::new(config.clone(), geometry, wave_speed, &device);
+            BurnPINN3DWave::<TestBackend>::new(config.clone(), geometry, wave_speed, &device)?;
 
         let (x_colloc, _y_colloc, _z_colloc, _t_colloc) =
             solver.generate_collocation_points(&config, &device);
 
         // Spherical geometry filters many points, so expect fewer than requested
-        let n_generated = x_colloc.shape().dims[0];
+        let n_generated = match x_colloc.shape().dims.as_slice() {
+            [n, _] => *n,
+            dims => {
+                return Err(KwaversError::System(SystemError::InvalidOperation {
+                    operation: "generate_collocation_points".to_string(),
+                    reason: format!("Expected 2D tensor shape, got dims {dims:?}"),
+                }));
+            }
+        };
         assert!(n_generated > 0);
         assert!(n_generated < config.num_collocation_points);
+        Ok(())
     }
 
     #[test]
-    fn test_training_loss_components() {
+    fn test_training_loss_components() -> KwaversResult<()> {
         let device = Default::default();
         let config = BurnPINN3DConfig {
             hidden_layers: vec![8],
@@ -738,7 +896,7 @@ mod tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device);
+        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
         let x_data = vec![0.5];
         let y_data = vec![0.5];
@@ -746,10 +904,7 @@ mod tests {
         let t_data = vec![0.1];
         let u_data = vec![0.0];
 
-        let result = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 3);
-
-        assert!(result.is_ok());
-        let metrics = result.unwrap();
+        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 3)?;
 
         // Verify all loss components are present
         assert_eq!(metrics.total_loss.len(), 3);
@@ -762,5 +917,6 @@ mod tests {
         assert!(metrics.total_loss.iter().all(|&l| l.is_finite()));
         assert!(metrics.data_loss.iter().all(|&l| l.is_finite()));
         assert!(metrics.pde_loss.iter().all(|&l| l.is_finite()));
+        Ok(())
     }
 }

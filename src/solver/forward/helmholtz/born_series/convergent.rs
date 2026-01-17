@@ -529,8 +529,10 @@ mod tests {
         use num_complex::Complex64;
 
         // Setup
-        let mut config = BornConfig::default();
-        config.use_fft_green = true;
+        let config = BornConfig {
+            use_fft_green: true,
+            ..Default::default()
+        };
         let grid = Grid::new(16, 16, 16, 0.1, 0.1, 0.1).unwrap();
         let solver = ConvergentBornSolver::new(config, grid);
 

@@ -8,7 +8,7 @@
 
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
-use kwavers::physics::imaging::modalities::elastography::*;
+use kwavers::physics::acoustics::imaging::modalities::elastography::*;
 use ndarray::Array3;
 use std::prelude::v1::*;
 

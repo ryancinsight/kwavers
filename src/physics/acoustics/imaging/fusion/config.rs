@@ -132,7 +132,7 @@ mod tests {
         ];
 
         for method in &methods {
-            assert!(format!("{:?}", method).len() > 0);
+            assert!(!format!("{:?}", method).is_empty());
         }
     }
 
@@ -146,7 +146,7 @@ mod tests {
         ];
 
         for method in &methods {
-            assert!(format!("{:?}", method).len() > 0);
+            assert!(!format!("{:?}", method).is_empty());
         }
     }
 }

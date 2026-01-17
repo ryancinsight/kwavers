@@ -140,7 +140,7 @@ impl<B: AutodiffBackend> MetaOptimizer<B> {
     /// Create meta-optimizer with custom momentum
     pub fn with_momentum(lr: f64, num_params: usize, momentum: f64) -> Self {
         assert!(
-            momentum >= 0.0 && momentum < 1.0,
+            (0.0..1.0).contains(&momentum),
             "Momentum must be in [0, 1), got {}",
             momentum
         );

@@ -371,7 +371,7 @@ impl MultiGpuContext {
 
         // Simple load balancing - return GPU with most available memory
         let mut best_gpu = 0;
-        let mut max_memory = 0;
+        let mut max_memory: u64 = 0;
 
         for (i, context) in self.contexts.iter().enumerate() {
             let available_memory = context.capabilities.max_buffer_size.saturating_sub(0); // Would track actual usage
@@ -386,12 +386,12 @@ impl MultiGpuContext {
 
     /// Get performance summary
     pub fn get_performance_summary(&self) -> MultiGpuPerformanceSummary {
-        let mut total_memory = 0;
+        let mut total_memory: u64 = 0;
         let mut total_bandwidth = 0.0;
         let mut p2p_pairs = 0;
 
         for context in &self.contexts {
-            total_memory += context.capabilities.max_buffer_size;
+            total_memory = total_memory.saturating_add(context.capabilities.max_buffer_size);
         }
 
         for channel in self.communication_channels.values() {

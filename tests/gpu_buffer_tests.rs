@@ -104,7 +104,7 @@ async fn test_buffer_read_write_roundtrip() {
     .unwrap();
 
     // Read back data
-    let read_data: Vec<f32> = buffer.read_to_vec(&device, &queue).await.unwrap();
+    let read_data: Vec<f32> = buffer.read_to_vec::<f32>(&device, &queue).await.unwrap();
 
     // Verify data matches
     assert_eq!(read_data.len(), original_data.len());
@@ -175,7 +175,7 @@ async fn test_buffer_large_data() {
     )
     .unwrap();
 
-    let read_data: Vec<f32> = buffer.read_to_vec(&device, &queue).await.unwrap();
+    let read_data: Vec<f32> = buffer.read_to_vec::<f32>(&device, &queue).await.unwrap();
 
     // Verify first, middle, and last elements
     assert_eq!(read_data[0], 0.0);
@@ -244,7 +244,7 @@ async fn test_buffer_sequential_writes() {
     buffer.write(&queue, &data1);
     device.poll(wgpu::Maintain::Wait);
 
-    let read1: Vec<f32> = buffer.read_to_vec(&device, &queue).await.unwrap();
+    let read1: Vec<f32> = buffer.read_to_vec::<f32>(&device, &queue).await.unwrap();
     assert!(read1.iter().all(|&x| (x - 1.0).abs() < 1e-6));
 
     // Second write
@@ -252,6 +252,6 @@ async fn test_buffer_sequential_writes() {
     buffer.write(&queue, &data2);
     device.poll(wgpu::Maintain::Wait);
 
-    let read2: Vec<f32> = buffer.read_to_vec(&device, &queue).await.unwrap();
+    let read2: Vec<f32> = buffer.read_to_vec::<f32>(&device, &queue).await.unwrap();
     assert!(read2.iter().all(|&x| (x - 2.0).abs() < 1e-6));
 }

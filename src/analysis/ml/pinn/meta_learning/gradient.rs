@@ -67,7 +67,7 @@
 //! let updated_model = model.map(&mut applicator);
 //! ```
 
-use burn::module::{Module, ModuleMapper};
+use burn::module::ModuleMapper;
 use burn::tensor::{backend::AutodiffBackend, Bool, Int, Tensor};
 
 /// Gradient extractor for MAML inner-loop adaptation
@@ -420,7 +420,7 @@ mod tests {
 
         let grads: Vec<Option<Tensor<<TestBackend as AutodiffBackend>::InnerBackend, 1>>> =
             Vec::new();
-        let norm = utils::gradient_norm(&grads);
+        let norm = utils::gradient_norm::<TestBackend>(&grads);
         assert_eq!(norm, 0.0);
     }
 }

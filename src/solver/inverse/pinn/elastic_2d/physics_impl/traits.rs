@@ -225,14 +225,14 @@ impl<B: Backend> AutodiffElasticWaveEquation for ElasticPINN2DSolver<B> {
         let spacing = self.domain.spacing();
         let dx = spacing[0];
         let dy = spacing[1];
-        let dA = dx * dy;
+        let d_a = dx * dy;
 
         for j in 1..ny - 1 {
             for i in 1..nx - 1 {
                 // Kinetic energy density: ½ρ|v|²
                 let vx = velocity[[i, j, 0]];
                 let vy = velocity[[i, j, 1]];
-                kinetic_energy += 0.5 * rho * (vx * vx + vy * vy) * dA;
+                kinetic_energy += 0.5 * rho * (vx * vx + vy * vy) * d_a;
 
                 // Strain energy density: ½σ:ε
                 let sxx = stress[[i, j, 0]];
@@ -242,7 +242,7 @@ impl<B: Backend> AutodiffElasticWaveEquation for ElasticPINN2DSolver<B> {
                 let eyy = strain[[i, j, 1]];
                 let exy = strain[[i, j, 2]];
 
-                strain_energy += 0.5 * (sxx * exx + syy * eyy + 2.0 * sxy * exy) * dA;
+                strain_energy += 0.5 * (sxx * exx + syy * eyy + 2.0 * sxy * exy) * d_a;
             }
         }
 

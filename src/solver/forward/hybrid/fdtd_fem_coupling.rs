@@ -506,9 +506,11 @@ mod tests {
             }
         }
 
-        let mut config = FdtdFemCouplingConfig::default();
-        config.max_iterations = 5;
-        config.tolerance = 1e-8;
+        let config = FdtdFemCouplingConfig {
+            max_iterations: 5,
+            tolerance: 1e-8,
+            ..Default::default()
+        };
 
         let mut solver = FdtdFemSolver::new(config, fdtd_grid, fem_mesh).unwrap();
 

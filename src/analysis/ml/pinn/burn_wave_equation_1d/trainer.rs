@@ -173,6 +173,7 @@ use super::{
 ///     1000    // epochs
 /// )?;
 /// ```
+#[derive(Debug)]
 pub struct BurnPINNTrainer<B: AutodiffBackend> {
     /// The physics-informed neural network
     pinn: BurnPINN1DWave<B>,
@@ -397,7 +398,7 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
             .map(|i| (i as f32 / n_colloc as f32) * 2.0 - 1.0) // Map to [-1, 1]
             .collect();
         let t_colloc_vec: Vec<f32> = (0..n_colloc)
-            .map(|i| (i as f32 / n_colloc as f32)) // Map to [0, 1]
+            .map(|i| i as f32 / n_colloc as f32) // Map to [0, 1]
             .collect();
 
         let x_colloc_tensor =
@@ -663,7 +664,7 @@ mod tests {
         let config = BurnPINNConfig {
             hidden_layers: vec![5, 5],
             learning_rate: 0.01,
-            num_collocation_points: 50,
+            num_collocation_points: 100,
             ..Default::default()
         };
 

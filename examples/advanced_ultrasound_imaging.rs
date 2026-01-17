@@ -191,7 +191,7 @@ fn demonstrate_coded_excitation() -> Result<(), Box<dyn std::error::Error>> {
     println!("-----------------------------------------");
 
     // Configure coded excitation
-    let codes = vec![
+    let codes: Vec<(&str, ExcitationCode)> = vec![
         (
             "Chirp",
             ExcitationCode::Chirp {

@@ -194,7 +194,7 @@ mod tests {
         let size_bytes = buffer.rf_buffer_size_bytes();
 
         // 4 frames × 8 channels × 16 samples × 1 × 4 bytes/f32
-        let expected_size = 4 * 8 * 16 * 1 * 4;
+        let expected_size = (4 * 8 * 16) * 4;
         assert_eq!(size_bytes, expected_size);
     }
 }

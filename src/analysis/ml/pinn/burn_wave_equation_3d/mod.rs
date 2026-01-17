@@ -82,6 +82,7 @@
 //! use kwavers::analysis::ml::pinn::burn_wave_equation_3d::{
 //!     BurnPINN3DWave, BurnPINN3DConfig, Geometry3D
 //! };
+//! use kwavers::core::error::KwaversResult;
 //!
 //! // Create PINN with NdArray backend (CPU)
 //! type Backend = NdArray<f32>;
@@ -90,7 +91,8 @@
 //! let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0); // Unit cube
 //! let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0; // Constant speed
 //!
-//! let mut pinn = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed, &device);
+//! fn run() -> KwaversResult<()> {
+//!     let mut pinn = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed, &device)?;
 //!
 //! // Train on reference data
 //! let x_data = vec![0.5, 0.6, 0.7];
@@ -102,16 +104,20 @@
 //! let metrics = pinn.train(
 //!     &x_data, &y_data, &z_data, &t_data, &u_data,
 //!     &device, 1000
-//! ).unwrap();
+//! )?;
 //!
-//! println!("Final loss: {:.6e}", metrics.total_loss.last().unwrap());
+//! if let Some(final_loss) = metrics.total_loss.last() {
+//!     println!("Final loss: {:.6e}", final_loss);
+//! }
 //!
 //! // Predict at new points
 //! let x_test = vec![0.5, 0.6];
 //! let y_test = vec![0.5, 0.5];
 //! let z_test = vec![0.5, 0.5];
 //! let t_test = vec![0.5, 0.6];
-//! let u_pred = pinn.predict(&x_test, &y_test, &z_test, &t_test, &device).unwrap();
+//! let u_pred = pinn.predict(&x_test, &y_test, &z_test, &t_test, &device)?;
+//!     Ok(())
+//! }
 //! ```
 //!
 //! ### Heterogeneous Media (Layered)
@@ -136,11 +142,11 @@
 //! let config = BurnPINN3DConfig::default();
 //! let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
 //!
-//! let pinn = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed, &device);
+//! let pinn = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed, &device)?;
 //!
 //! // Verify wave speeds
-//! assert_eq!(pinn.get_wave_speed(0.5, 0.5, 0.3), 1500.0);
-//! assert_eq!(pinn.get_wave_speed(0.5, 0.5, 0.7), 3000.0);
+//! assert_eq!(pinn.get_wave_speed(0.5, 0.5, 0.3)?, 1500.0);
+//! assert_eq!(pinn.get_wave_speed(0.5, 0.5, 0.7)?, 3000.0);
 //! ```
 //!
 //! ### Complex Geometry (Spherical)
@@ -163,7 +169,7 @@
 //!     ..Default::default()
 //! };
 //!
-//! let pinn = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed, &device);
+//! let pinn = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed, &device)?;
 //! ```
 //!
 //! ## Feature Flags

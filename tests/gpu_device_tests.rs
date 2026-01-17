@@ -4,6 +4,7 @@
 
 #![cfg(feature = "gpu")]
 
+use kwavers::core::error::KwaversResult;
 use kwavers::gpu::device::{DeviceInfo, GpuDevice};
 
 #[tokio::test]
@@ -136,8 +137,10 @@ async fn test_device_features() {
 #[tokio::test]
 async fn test_device_multiple_instances() {
     // Test creating multiple device instances
-    let device1 = GpuDevice::create(wgpu::PowerPreference::HighPerformance).await;
-    let device2 = GpuDevice::create(wgpu::PowerPreference::HighPerformance).await;
+    let device1: KwaversResult<GpuDevice> =
+        GpuDevice::create(wgpu::PowerPreference::HighPerformance).await;
+    let device2: KwaversResult<GpuDevice> =
+        GpuDevice::create(wgpu::PowerPreference::HighPerformance).await;
 
     match (device1, device2) {
         (Ok(d1), Ok(d2)) => {
@@ -156,7 +159,7 @@ async fn test_device_multiple_instances() {
 
 #[tokio::test]
 async fn test_device_queue_operations() {
-    let device = match GpuDevice::create(wgpu::PowerPreference::HighPerformance).await {
+    let device: GpuDevice = match GpuDevice::create(wgpu::PowerPreference::HighPerformance).await {
         Ok(d) => d,
         Err(_) => {
             eprintln!("GPU not available, skipping test");

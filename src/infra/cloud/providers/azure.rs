@@ -390,8 +390,7 @@ mod tests {
 
     #[test]
     fn test_azure_provider_compilation() {
-        // Compilation test to ensure Azure provider module compiles
-        assert!(true);
+        let _ = CloudProvider::Azure;
     }
 
     #[cfg(feature = "pinn")]

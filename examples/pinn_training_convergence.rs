@@ -334,30 +334,36 @@ fn validate_gradients(
     let eps = 1e-5;
 
     // Create input tensor
+    let input_data: [f32; 3] = test_point.map(|v| v as f32);
     let input =
-        Tensor::<AutodiffBackend, 2>::from_floats([test_point].as_slice(), device).reshape([1, 3]);
+        Tensor::<AutodiffBackend, 2>::from_floats(input_data.as_ref(), device).reshape([1, 3]);
 
     // Autodiff gradient (∂u/∂x)
     let input_grad = input.clone().require_grad();
     let output = model.forward(input_grad.clone());
     let u_x = output.slice([0..1, 0..1]);
     let grads = u_x.backward();
-    let autodiff_grad_x = input_grad.grad(&grads).slice([0..1, 1..2]).into_scalar();
+    let input_grad_tensor = input_grad
+        .grad(&grads)
+        .ok_or::<Box<dyn Error>>("missing gradient for input tensor".into())?;
+    let autodiff_grad_x: f64 = f64::from(input_grad_tensor.slice([0..1, 1..2]).into_scalar());
 
     // Finite-difference gradient
     let mut point_plus = test_point;
     point_plus[1] += eps;
+    let input_plus_data: [f32; 3] = point_plus.map(|v| v as f32);
     let input_plus =
-        Tensor::<AutodiffBackend, 2>::from_floats([point_plus].as_slice(), device).reshape([1, 3]);
+        Tensor::<AutodiffBackend, 2>::from_floats(input_plus_data.as_ref(), device).reshape([1, 3]);
     let output_plus = model.forward(input_plus);
-    let u_plus = output_plus.slice([0..1, 0..1]).into_scalar();
+    let u_plus: f64 = f64::from(output_plus.slice([0..1, 0..1]).into_scalar());
 
     let mut point_minus = test_point;
     point_minus[1] -= eps;
-    let input_minus =
-        Tensor::<AutodiffBackend, 2>::from_floats([point_minus].as_slice(), device).reshape([1, 3]);
+    let input_minus_data: [f32; 3] = point_minus.map(|v| v as f32);
+    let input_minus = Tensor::<AutodiffBackend, 2>::from_floats(input_minus_data.as_ref(), device)
+        .reshape([1, 3]);
     let output_minus = model.forward(input_minus);
-    let u_minus = output_minus.slice([0..1, 0..1]).into_scalar();
+    let u_minus: f64 = f64::from(output_minus.slice([0..1, 0..1]).into_scalar());
 
     let fd_grad_x = (u_plus - u_minus) / (2.0 * eps);
 
@@ -379,10 +385,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("=============================================================\n");
 
     // Physical parameters (water-like medium)
-    let density = 1000.0; // kg/m³
-    let lambda = 2.25e9; // Pa (Lamé first parameter)
-    let mu = 0.0; // Pa (shear modulus, ~0 for fluids)
-    let c_p = ((lambda + 2.0 * mu) / density).sqrt(); // P-wave speed ≈ 1500 m/s
+    let density: f64 = 1000.0; // kg/m³
+    let lambda: f64 = 2.25e9; // Pa (Lamé first parameter)
+    let mu: f64 = 0.0; // Pa (shear modulus, ~0 for fluids)
+    let c_p: f64 = ((lambda + 2.0 * mu) / density).sqrt(); // P-wave speed ≈ 1500 m/s
 
     println!("Physical Parameters:");
     println!("  Density: {} kg/m³", density);

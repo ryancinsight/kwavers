@@ -35,7 +35,7 @@ use kwavers::ml::pinn::physics::{BoundaryPosition, PhysicsParameters};
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::universal_solver::Geometry2D;
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::{UniversalPINNSolver, UniversalTrainingConfig};
+use kwavers::ml::pinn::{PinnEMSource, UniversalPINNSolver, UniversalTrainingConfig};
 #[cfg(feature = "pinn")]
 use std::collections::HashMap;
 
@@ -111,7 +111,14 @@ pub fn magnetostatic_wire_example() -> KwaversResult<()> {
         0.0,
         vec![0.02, 0.02], // 2cm x 2cm domain
     )
-    .add_current_source((0.01, 0.01), vec![1e6, 0.0], 0.001); // 1MA current at center
+    .add_current_source(PinnEMSource {
+        position: (0.01, 0.01, 0.0),
+        current_density: [1e6, 0.0, 0.0],
+        spatial_extent: 0.001,
+        frequency: 0.0,
+        amplitude: 1e6,
+        phase: 0.0,
+    }); // 1MA current at center
 
     let geometry = Geometry2D::rectangle(0.0, 0.02, 0.0, 0.02);
 
@@ -238,7 +245,14 @@ pub fn quasi_static_induction_example() -> KwaversResult<()> {
         5.8e7,            // Copper conductivity
         vec![0.03, 0.03], // 3cm x 3cm domain
     )
-    .add_current_source((0.015, 0.015), vec![1e5, 0.0], 0.005); // Primary coil
+    .add_current_source(PinnEMSource {
+        position: (0.015, 0.015, 0.0),
+        current_density: [1e5, 0.0, 0.0],
+        spatial_extent: 0.005,
+        frequency: 1e6,
+        amplitude: 1e5,
+        phase: 0.0,
+    }); // Primary coil
 
     let geometry = Geometry2D::rectangle(0.0, 0.03, 0.0, 0.03);
 

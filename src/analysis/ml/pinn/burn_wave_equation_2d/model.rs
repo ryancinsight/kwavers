@@ -23,11 +23,94 @@ impl<B: Backend> WaveSpeedFn<B> {
     }
 
     /// Create a new wave speed function from a device-resident grid
-    pub fn from_grid(grid: Tensor<B, 2>) -> Self {
-        Self {
-            func: Arc::new(|_, _| 0.0), // Dummy function
-            grid: Some(grid),
+    pub fn from_grid(grid: Tensor<B, 2>) -> KwaversResult<Self> {
+        let shape = grid.shape();
+        let dims = match shape.dims.as_slice() {
+            [nx, ny] => [*nx, *ny],
+            _ => {
+                return Err(KwaversError::System(
+                    crate::core::error::SystemError::InvalidConfiguration {
+                        parameter: "wave_speed_grid".to_string(),
+                        reason: format!(
+                            "Expected wave speed grid with 2 dimensions, got {:?}",
+                            shape.dims
+                        ),
+                    },
+                ))
+            }
+        };
+
+        let [nx, ny] = dims;
+        if nx == 0 || ny == 0 {
+            return Err(KwaversError::System(
+                crate::core::error::SystemError::InvalidConfiguration {
+                    parameter: "wave_speed_grid".to_string(),
+                    reason: format!("Grid dimensions must be non-zero, got {dims:?}"),
+                },
+            ));
         }
+
+        let data = grid.clone().to_data();
+        let slice = data.as_slice::<f32>().map_err(|e| {
+            KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                parameter: "wave_speed_grid".to_string(),
+                reason: format!("Expected f32 tensor data for wave speed grid: {e:?}"),
+            })
+        })?;
+
+        let expected_len = nx.checked_mul(ny).ok_or_else(|| {
+            KwaversError::System(crate::core::error::SystemError::InvalidConfiguration {
+                parameter: "wave_speed_grid".to_string(),
+                reason: format!("Grid size overflows usize: {dims:?}"),
+            })
+        })?;
+        if slice.len() != expected_len {
+            return Err(KwaversError::System(
+                crate::core::error::SystemError::InvalidConfiguration {
+                    parameter: "wave_speed_grid".to_string(),
+                    reason: format!(
+                        "Wave speed grid data length mismatch: expected {expected_len}, got {}",
+                        slice.len()
+                    ),
+                },
+            ));
+        }
+
+        let data_cpu = Arc::new(slice.to_vec());
+        let func = Arc::new(move |x: f32, y: f32| -> f32 {
+            let x = x.clamp(0.0, 1.0);
+            let y = y.clamp(0.0, 1.0);
+
+            let fx = if nx <= 1 { 0.0 } else { x * ((nx - 1) as f32) };
+            let fy = if ny <= 1 { 0.0 } else { y * ((ny - 1) as f32) };
+
+            let fx0 = fx.floor();
+            let fy0 = fy.floor();
+
+            let x0 = (fx0 as isize).clamp(0, (nx - 1) as isize) as usize;
+            let y0 = (fy0 as isize).clamp(0, (ny - 1) as isize) as usize;
+            let x1 = (x0 + 1).min(nx - 1);
+            let y1 = (y0 + 1).min(ny - 1);
+
+            let wx = (fx - fx0).clamp(0.0, 1.0);
+            let wy = (fy - fy0).clamp(0.0, 1.0);
+
+            let at = |ix: usize, iy: usize| -> f32 { data_cpu[(ix * ny) + iy] };
+
+            let c00 = at(x0, y0);
+            let c10 = at(x1, y0);
+            let c01 = at(x0, y1);
+            let c11 = at(x1, y1);
+
+            let c0 = c00 + wx * (c10 - c00);
+            let c1 = c01 + wx * (c11 - c01);
+            c0 + wy * (c1 - c0)
+        });
+
+        Ok(Self {
+            func,
+            grid: Some(grid),
+        })
     }
 
     /// Get wave speed at coordinates (x, y)
@@ -215,7 +298,7 @@ impl<B: Backend> BurnPINN2DWave<B> {
         for i in 0..self.config.0.hidden_layers.len() - 1 {
             hidden_params += self.config.0.hidden_layers[i] * self.config.0.hidden_layers[i + 1];
         }
-        let output_params = self.config.0.hidden_layers.last().unwrap() * 1; // last_hidden -> 1
+        let output_params = *self.config.0.hidden_layers.last().unwrap(); // last_hidden -> 1
 
         // Add bias terms
         let bias_count: usize = self.config.0.hidden_layers.iter().sum::<usize>() + 1;

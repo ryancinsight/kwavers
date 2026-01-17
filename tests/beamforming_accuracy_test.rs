@@ -116,9 +116,7 @@ mod tests {
         let steering = create_steering_vector(n, 0.0);
 
         let music = MUSIC::new(1);
-        let spectrum = music
-            .pseudospectrum(&cov, &steering)
-            .expect("MUSIC pseudospectrum");
+        let spectrum = music.pseudospectrum(&cov, &steering);
 
         // Pseudospectrum should be positive
         assert!(spectrum >= 0.0);

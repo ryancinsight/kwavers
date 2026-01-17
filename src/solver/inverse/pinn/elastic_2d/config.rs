@@ -630,11 +630,16 @@ mod tests {
 
     #[test]
     fn test_invalid_learning_rate() {
-        let mut config = Config::default();
-        config.learning_rate = 0.0;
+        let config = Config {
+            learning_rate: 0.0,
+            ..Default::default()
+        };
         assert!(config.validate().is_err());
 
-        config.learning_rate = 1.5;
+        let config = Config {
+            learning_rate: 1.5,
+            ..Default::default()
+        };
         assert!(config.validate().is_err());
     }
 

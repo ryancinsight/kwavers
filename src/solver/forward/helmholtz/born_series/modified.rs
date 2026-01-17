@@ -49,7 +49,6 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
 use num_complex::Complex64;
-use rayon::prelude::*;
 use std::f64::consts::PI;
 
 /// Modified Born series solver for viscoacoustic media

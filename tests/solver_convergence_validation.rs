@@ -95,7 +95,7 @@ fn test_cfl_stability_condition() {
 #[test]
 fn test_energy_conservation() {
     let nx = 32;
-    let dx = 1e-3;
+    let dx: f64 = 1e-3;
     let grid = Grid::new(nx, nx, nx, dx, dx, dx).expect("Failed to create grid");
     let medium = HomogeneousMedium::water(&grid);
 

@@ -656,7 +656,7 @@ mod tests {
     #[test]
     fn test_import_validation() {
         // Valid sorted imports should pass
-        let valid_imports = vec![
+        let valid_imports = [
             "std::collections::HashMap".to_string(),
             "std::sync::Arc".to_string(),
             "ndarray::Array3".to_string(),
@@ -665,12 +665,11 @@ mod tests {
         assert!(ModuleStandards::validate_imports(&valid_imports).is_ok());
 
         // Unsorted imports should fail
-        let invalid_imports = vec![
+        let invalid_imports = [
             "std::sync::Arc".to_string(),
             "std::collections::HashMap".to_string(),
         ];
-        assert!(invalid_imports.len() > 1); // Ensure we have imports to check
-                                            // Note: This test would need more sophisticated checking
+        assert!(ModuleStandards::validate_imports(&invalid_imports).is_err());
     }
 
     #[test]

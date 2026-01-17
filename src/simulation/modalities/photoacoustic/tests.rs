@@ -340,8 +340,10 @@ fn test_spherical_spreading_correction() {
 fn test_multi_wavelength_fluence() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-    let mut parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
-    parameters.wavelengths = vec![700.0, 750.0, 800.0];
+    let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters {
+        wavelengths: vec![700.0, 750.0, 800.0],
+        ..Default::default()
+    };
 
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
@@ -368,8 +370,10 @@ fn test_multi_wavelength_fluence() {
 fn test_multi_wavelength_simulation() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-    let mut parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
-    parameters.wavelengths = vec![700.0, 800.0];
+    let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters {
+        wavelengths: vec![700.0, 800.0],
+        ..Default::default()
+    };
 
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
