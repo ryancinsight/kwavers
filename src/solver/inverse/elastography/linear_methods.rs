@@ -366,7 +366,7 @@ fn direct_inversion(
     grid: &Grid,
     density: f64,
 ) -> KwaversResult<ElasticityMap> {
-    // Simplified implementation: fall back to TOF for now
+    // TODO: Simplified implementation: fall back to TOF for now
     // Full implementation would use optimization methods
     time_of_flight_inversion(displacement, grid, density)
 }

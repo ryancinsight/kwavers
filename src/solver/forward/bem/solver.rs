@@ -82,7 +82,7 @@ impl BemSolver {
     /// In a full implementation, this would compute the boundary integrals
     /// to assemble the H and G matrices from the boundary element method.
     pub fn assemble_system(&mut self) -> KwaversResult<()> {
-        // Create placeholder matrices (in full implementation, these would
+        // TODO: Create placeholder matrices (in full implementation, these would
         // be computed from boundary integrals over the surface mesh)
         let n = self.boundary_nodes;
 
@@ -139,7 +139,7 @@ impl BemSolver {
         let h_copy = (*h_matrix).clone();
         let g_copy = (*g_matrix).clone();
 
-        // Solve the BEM system (placeholder - would implement actual solver)
+        // TODO: Solve the BEM system (placeholder - would implement actual solver)
         let solution = self.solve_bem_system(&h_copy, &g_copy, &boundary_values)?;
 
         Ok(BemSolution {
@@ -156,7 +156,7 @@ impl BemSolver {
         _g_matrix: &CompressedSparseRowMatrix<Complex64>,
         _boundary_values: &Array1<Complex64>,
     ) -> KwaversResult<BemSystemSolution> {
-        // Placeholder: In a full implementation, this would solve:
+        // TODO: Placeholder: In a full implementation, this would solve:
         // H * p - G * (dp/dn) = boundary_values
         // or similar depending on the BEM formulation
 
@@ -179,7 +179,7 @@ impl BemSolver {
         _evaluation_points: &Array1<[f64; 3]>,
         _solution: &BemSolution,
     ) -> KwaversResult<Array1<Complex64>> {
-        // Placeholder: In full implementation, this would use the BEM
+        // TODO: Placeholder: In full implementation, this would use the BEM
         // representation formula to compute field at arbitrary points
         Ok(Array1::from_elem(
             _evaluation_points.len(),

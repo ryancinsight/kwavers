@@ -74,7 +74,7 @@ impl FemHelmholtzSolver {
 
     /// Assemble global system matrices (simplified version)
     pub fn assemble_system<M: Medium>(&mut self, _medium: &M) -> KwaversResult<()> {
-        // Simplified assembly for demonstration
+        // TODO: Simplified assembly for demonstration
         // In full implementation, this would assemble element matrices
         let num_dofs = self.mesh.nodes.len();
 
@@ -88,7 +88,7 @@ impl FemHelmholtzSolver {
 
     /// Solve the assembled system (placeholder)
     pub fn solve_system(&mut self) -> KwaversResult<()> {
-        // Placeholder: simple solution for demonstration
+        // TODO: Placeholder: simple solution for demonstration
         for i in 0..self.solution.len() {
             self.solution[i] = Complex64::new(1.0, 0.0); // Dummy solution
         }
@@ -100,6 +100,7 @@ impl FemHelmholtzSolver {
         &self,
         _query_points: ArrayView2<f64>,
     ) -> KwaversResult<Array1<Complex64>> {
+        // TODO: Placeholder implementation
         Ok(self.solution.clone())
     }
 

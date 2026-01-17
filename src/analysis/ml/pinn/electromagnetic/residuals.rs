@@ -205,94 +205,74 @@ pub fn magnetostatic_residual<B: AutodiffBackend>(
 
 /// Compute quasi-static residual
 pub fn quasi_static_residual<B: AutodiffBackend>(
-    _outputs: &Tensor<B, 2>,
+    model: &BurnPINN2DWave<B>,
     x: &Tensor<B, 2>,
-    _y: &Tensor<B, 2>,
-    _t: &Tensor<B, 2>,
-    _eps: f64,
-    _mu: f64,
-    _sigma: f64,
-    _physics_params: &PhysicsParameters,
+    y: &Tensor<B, 2>,
+    t: &Tensor<B, 2>,
+    eps: f64,
+    mu: f64,
+    sigma: f64,
+    physics_params: &PhysicsParameters,
 ) -> Tensor<B, 2> {
-    // TODO_AUDIT: P1 - PINN Electromagnetic Quasi-Static Residual - Stub Implementation
-    //
-    // PROBLEM:
-    // This function returns zero residuals, effectively bypassing quasi-static Maxwell equation
-    // enforcement in PINN training for electromagnetic problems.
-    //
-    // IMPACT:
-    // - PINN cannot learn quasi-static electromagnetic field distributions
-    // - Training loss components related to quasi-static physics are always zero
-    // - No enforcement of ∇×E = -∂B/∂t and ∇×H = J + ∂D/∂t in low-frequency regime
-    // - Blocks applications: eddy current simulation, transformer modeling, ELF field computation
-    // - Severity: P1 (research/advanced feature, not production-critical)
-    //
-    // REQUIRED IMPLEMENTATION:
-    // 1. Compute E and H fields from model outputs (or through coupled forward passes)
-    // 2. Compute spatial derivatives using autodiff:
-    //    - ∇×E for Faraday's law residual
-    //    - ∇×H for Ampère's law residual
-    // 3. Compute time derivatives ∂B/∂t and ∂D/∂t using autodiff
-    // 4. Form quasi-static Maxwell residuals:
-    //    R_E = ∇×E + ∂B/∂t
-    //    R_H = ∇×H - J - ∂D/∂t
-    // 5. Return combined residual norm or concatenated residuals
-    //
-    // MATHEMATICAL SPECIFICATION:
-    // Quasi-static Maxwell equations in 2D (Ez, Hz modes):
-    //   ∂Ez/∂y - ∂Ey/∂z = -μ ∂Hz/∂t     (Faraday's law, z-component)
-    //   ∂Hz/∂y - ∂Hy/∂z = Jz + ε ∂Ez/∂t  (Ampère's law, z-component)
-    // For 2D problems, assume Ez(x,y,t) and Hz(x,y,t) are primary fields.
-    //
-    // VALIDATION CRITERIA:
-    // - Property test: Residual should converge to zero for analytical quasi-static solutions
-    // - Test case: Parallel-plate capacitor with known E field distribution
-    // - Test case: Solenoid with known H field distribution
-    // - Convergence: L2 norm of residual < 1e-3 after 1000 training epochs on analytical solution
-    //
-    // REFERENCES:
-    // - Jackson, J.D., "Classical Electrodynamics" (3rd ed.), Chapter 5: Magnetostatics, Chapter 6: Time-Varying Fields
-    // - Griffiths, D.J., "Introduction to Electrodynamics" (4th ed.), Chapter 7: Electrodynamics
-    // - Raissi et al., "Physics-informed neural networks: A deep learning framework for solving forward and inverse problems"
-    //
-    // ESTIMATED EFFORT: 12-16 hours
-    // - Implementation: 8-10 hours (curl operators, time derivatives, residual assembly)
-    // - Testing: 3-4 hours (analytical validation cases)
-    // - Documentation: 1-2 hours
-    //
-    // DEPENDENCIES:
-    // - Requires proper gradient computation infrastructure (already available via Burn autodiff)
-    // - May need coupled field solver if Ez and Hz are separate model outputs
-    //
-    // ASSIGNED: Sprint 212-213 (Research Features)
-    // PRIORITY: P1 (Advanced electromagnetic simulation capability)
+    // Implemented scalar wave/diffusion equation residual for quasi-static regime
+    // Assumes model output u represents a scalar field component (e.g. Ez or Az)
+    // Equation: ∇²u - μσ(∂u/∂t) - με(∂²u/∂t²) = -μJ
 
-    // Assume outputs are coupled [Ez, Hz]
-    // Note: In real setup, we would need to access the model to compute gradients properly.
-    // But here we are given outputs. Wait, we cannot compute derivatives w.r.t x,y,t
-    // just from outputs tensor unless we use `grad`.
-    // The original code called `self.compute_hz_at` etc. which presumably called model forward.
-    // To fix this properly, we need the MODEL passed in, not just outputs.
-    // However, to match the trait signature which might perform the forward pass internally...
-    // Check original: `quasi_static_residual` took `&outputs`.
-    // But it CALLED `self.compute_hz_at` which was implemented as "Simplified - would need model access -> Tensor::zeros_like".
-    // So the original code was actually broken/stubbed!
-    // We should accept `model` here to be correct, or replicate the stub structure.
-    // Given the instruction is to REFACTOR, we should improve if possible, but definitely not break signature compatibility if specific trait enforces it.
-    // The trait `PhysicsDomain::pde_residual` provides `model`.
-    // So we can pass `model` down.
-    // I'll update the signature to take `model` instead of `outputs` (or both).
+    let eps_fd = (f32::EPSILON).sqrt() * 1e-2_f32;
+    let two = 2.0;
 
-    // STUB for now as per original code logic, but using Tensor operations
-    let _batch_size = x.shape().dims[0];
-    // We need to return a tensor of shape [batch_size, 1]
-    // Given the original code was stubbed partial implementation, we will perform a basic placeholder
-    // calculation to satisfy compilation and type checking.
+    // Center point
+    let u = model.forward(x.clone(), y.clone(), t.clone());
 
-    // Real implementation requires re-forwarding model at perturbed coordinates.
-    // Since `model` is not passed in this signature in my current draft, I must change it.
-    // I will change signature below.
-    Tensor::zeros_like(x)
+    // 1. Compute Laplacian ∇²u = ∂²u/∂x² + ∂²u/∂y²
+
+    // ∂²u/∂x²
+    let u_x_plus = model.forward(x.clone().add_scalar(eps_fd), y.clone(), t.clone());
+    let u_x_minus = model.forward(x.clone().sub_scalar(eps_fd), y.clone(), t.clone());
+    let u_xx = u_x_plus
+        .add(u_x_minus)
+        .sub(u.clone().mul_scalar(two))
+        .div_scalar(eps_fd * eps_fd);
+
+    // ∂²u/∂y²
+    let u_y_plus = model.forward(x.clone(), y.clone().add_scalar(eps_fd), t.clone());
+    let u_y_minus = model.forward(x.clone(), y.clone().sub_scalar(eps_fd), t.clone());
+    let u_yy = u_y_plus
+        .add(u_y_minus)
+        .sub(u.clone().mul_scalar(two))
+        .div_scalar(eps_fd * eps_fd);
+
+    let laplacian = u_xx.add(u_yy);
+
+    // 2. Compute time derivatives
+
+    // ∂u/∂t
+    let u_t_plus = model.forward(x.clone(), y.clone(), t.clone().add_scalar(eps_fd));
+    let u_t_minus = model.forward(x.clone(), y.clone(), t.clone().sub_scalar(eps_fd));
+    let u_t = u_t_plus
+        .clone()
+        .sub(u_t_minus.clone())
+        .div_scalar(two * eps_fd);
+
+    // ∂²u/∂t²
+    let u_tt = u_t_plus
+        .add(u_t_minus)
+        .sub(u.clone().mul_scalar(two))
+        .div_scalar(eps_fd * eps_fd);
+
+    // 3. Assemble residual
+    // LHS = ∇²u - μσ(∂u/∂t) - με(∂²u/∂t²)
+    let term_diffusion = u_t.mul_scalar(mu as f32 * sigma as f32);
+    let term_wave = u_tt.mul_scalar(mu as f32 * eps as f32);
+
+    let lhs = laplacian.sub(term_diffusion).sub(term_wave);
+
+    // RHS source term: -μJ
+    // Residual = LHS + μJ
+    let j_z = compute_current_density_z(x, y, physics_params);
+    let source_term = j_z.mul_scalar(mu as f32);
+
+    lhs.add(source_term)
 }
 
 pub fn wave_propagation_residual<B: AutodiffBackend>(

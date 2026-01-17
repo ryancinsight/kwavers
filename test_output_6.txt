@@ -1,0 +1,982 @@
+   Compiling kwavers v3.0.0 (/app)
+warning: usage of an `unsafe` block
+   --> src/core/arena.rs:516:9
+    |
+516 | /         unsafe {
+517 | |             let field = arena.alloc_field::<f64>(10, 10, 10);
+518 | |             assert!(field.is_some());
+...   |
+525 | |             assert_eq!(arena.used_bytes(), 0);
+526 | |         }
+    | |_________^
+    |
+note: the lint level is defined here
+   --> src/lib.rs:28:9
+    |
+ 28 | #![warn(unsafe_code)]
+    |         ^^^^^^^^^^^
+
+warning: usage of an `unsafe` block
+   --> src/core/arena.rs:540:9
+    |
+540 | /         unsafe {
+541 | |             let array = arena.alloc_array::<f64>(100);
+542 | |             assert_eq!(array.len(), 100);
+...   |
+548 | |             assert!(stats.used_bytes > 0);
+549 | |         }
+    | |_________^
+
+warning: unused import: `num_complex::Complex`
+  --> src/math/numerics/operators/spectral.rs:52:5
+   |
+52 | use num_complex::Complex;
+   |     ^^^^^^^^^^^^^^^^^^^^
+   |
+note: the lint level is defined here
+  --> src/lib.rs:13:5
+   |
+13 |     unused_imports,
+   |     ^^^^^^^^^^^^^^
+
+warning: unused import: `crate::domain::sensor::beamforming::config::BeamformingConfig`
+  --> src/domain/sensor/beamforming/beamforming_3d/metrics.rs:93:9
+   |
+93 |     use crate::domain::sensor::beamforming::config::BeamformingConfig;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `super::*`
+   --> src/domain/sensor/beamforming/beamforming_3d/processing.rs:392:9
+    |
+392 |     use super::*;
+    |         ^^^^^^^^
+
+warning: unused import: `crate::domain::sensor::beamforming::config::BeamformingConfig`
+   --> src/domain/sensor/beamforming/beamforming_3d/processing.rs:393:9
+    |
+393 |     use crate::domain::sensor::beamforming::config::BeamformingConfig;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::domain::source::types::Polarization`
+   --> src/domain/source/electromagnetic/mod.rs:239:9
+    |
+239 |     use crate::domain::source::types::Polarization;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `SourceField`
+ --> src/domain/source/transducers/focused/adapter.rs:4:37
+  |
+4 | use crate::domain::source::{Source, SourceField};
+  |                                     ^^^^^^^^^^^
+
+warning: unused import: `arr1`
+   --> src/domain/tensor/mod.rs:295:19
+    |
+295 |     use ndarray::{arr1, arr2};
+    |                   ^^^^
+
+warning: unused import: `approx::assert_relative_eq`
+   --> src/physics/optics/diffusion/solver.rs:656:9
+    |
+656 |     use approx::assert_relative_eq;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unnecessary parentheses around function argument
+   --> src/solver/forward/helmholtz/born_series/modified.rs:577:60
+    |
+577 |                         Complex64::new((i + j + k) as f64, ((i * j) as f64 * 0.1));
+    |                                                            ^                    ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+577 -                         Complex64::new((i + j + k) as f64, ((i * j) as f64 * 0.1));
+577 +                         Complex64::new((i + j + k) as f64, (i * j) as f64 * 0.1);
+    |
+
+warning: unused import: `super::*`
+   --> src/solver/inverse/pinn/elastic_2d/training/loop.rs:158:9
+    |
+158 |     use super::*;
+    |         ^^^^^^^^
+
+warning: trivial cast: `Box<domain::geometry::RectangularDomain>` as `Box<dyn domain::geometry::GeometricDomain>`
+   --> src/solver/inverse/pinn/geometry.rs:582:13
+    |
+582 |             Box::new(RectangularDomain::new_2d(0.0, 1.0, 0.0, 1.0)) as Box<dyn GeometricDomain>;
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: cast can be replaced by coercion; this might require a temporary variable
+note: the lint level is defined here
+   --> src/lib.rs:26:9
+    |
+ 26 | #![warn(trivial_casts, trivial_numeric_casts)]
+    |         ^^^^^^^^^^^^^
+
+warning: trivial cast: `Box<domain::geometry::RectangularDomain>` as `Box<dyn domain::geometry::GeometricDomain>`
+   --> src/solver/inverse/pinn/geometry.rs:584:13
+    |
+584 |             Box::new(RectangularDomain::new_2d(1.0, 2.0, 0.0, 1.0)) as Box<dyn GeometricDomain>;
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: cast can be replaced by coercion; this might require a temporary variable
+
+warning: unused import: `types::ElasticityMapExt`
+   --> src/solver/inverse/elastography/mod.rs:315:13
+    |
+315 |         use types::ElasticityMapExt;
+    |             ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `rayon::prelude`
+  --> src/solver/forward/helmholtz/born_series/modified.rs:52:5
+   |
+52 | use rayon::prelude::*;
+   |     ^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> src/core/arena.rs:531:13
+    |
+531 |         let mut arena = BumpArena::new();
+    |             ----^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+note: the lint level is defined here
+   --> src/lib.rs:14:5
+    |
+ 14 |     unused_mut,
+    |     ^^^^^^^^^^
+
+warning: unused variable: `grad_backward`
+   --> src/math/numerics/operators/differential/tests.rs:192:9
+    |
+192 |     let grad_backward = op.apply_backward_x(field.view()).unwrap();
+    |         ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_grad_backward`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `error_near`
+   --> src/math/numerics/operators/differential/tests.rs:372:9
+    |
+372 |     let error_near = (grad[[near_boundary_i, 2, 2]] - exact_near).abs();
+    |         ^^^^^^^^^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+372 |     let _error_near = (grad[[near_boundary_i, 2, 2]] - exact_near).abs();
+    |         +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+372 -     let error_near = (grad[[near_boundary_i, 2, 2]] - exact_near).abs();
+372 +     let analysis::validation::constants::CFL_LIMIT_3D = (grad[[near_boundary_i, 2, 2]] - exact_near).abs();
+    |
+
+warning: unused variable: `ops`
+   --> src/math/simd.rs:747:13
+    |
+747 |         let ops = FdtdSimdOps::new();
+    |             ^^^ help: if this is intentional, prefix it with an underscore: `_ops`
+
+warning: unused variable: `ops`
+   --> src/math/simd.rs:754:13
+    |
+754 |         let ops = FftSimdOps::new();
+    |             ^^^ help: if this is intentional, prefix it with an underscore: `_ops`
+
+warning: unused variable: `ops`
+   --> src/math/simd.rs:761:13
+    |
+761 |         let ops = InterpolationSimdOps::new();
+    |             ^^^ help: if this is intentional, prefix it with an underscore: `_ops`
+
+warning: unused variable: `initial_x`
+   --> src/clinical/therapy/microbubble_dynamics/service.rs:413:13
+    |
+413 |         let initial_x = bubble.position.x;
+    |             ^^^^^^^^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+413 |         let _initial_x = bubble.position.x;
+    |             +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+413 -         let initial_x = bubble.position.x;
+413 +         let analysis::validation::constants::CFL_LIMIT_3D = bubble.position.x;
+    |
+
+warning: unused variable: `grad`
+   --> src/clinical/therapy/microbubble_dynamics/service.rs:508:17
+    |
+508 |         let (p, grad) =
+    |                 ^^^^ help: if this is intentional, prefix it with an underscore: `_grad`
+
+warning: unused variable: `ny`
+   --> src/domain/boundary/coupling.rs:559:18
+    |
+559 |         let (nx, ny, nz) = field.dim();
+    |                  ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+559 |         let (nx, _ny, nz) = field.dim();
+    |                  +
+help: you might have meant to pattern match on the similarly named constant `SIMD_LANES`
+    |
+559 -         let (nx, ny, nz) = field.dim();
+559 +         let (nx, analysis::performance::simd_operations::SIMD_LANES, nz) = field.dim();
+    |
+
+warning: unused variable: `nz`
+   --> src/domain/boundary/coupling.rs:559:22
+    |
+559 |         let (nx, ny, nz) = field.dim();
+    |                      ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+559 |         let (nx, ny, _nz) = field.dim();
+    |                      +
+help: you might have meant to pattern match on the similarly named constant `SIMD_LANES`
+    |
+559 -         let (nx, ny, nz) = field.dim();
+559 +         let (nx, ny, analysis::performance::simd_operations::SIMD_LANES) = field.dim();
+    |
+
+warning: unused variable: `extractor`
+   --> src/domain/sensor/beamforming/neural/mod.rs:153:13
+    |
+153 |         let extractor = FeatureExtractor::new(config);
+    |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_extractor`
+
+warning: unused variable: `support`
+   --> src/domain/sensor/beamforming/neural/mod.rs:161:13
+    |
+161 |         let support = ClinicalDecisionSupport::new(thresholds);
+    |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_support`
+
+warning: unused variable: `algorithm`
+   --> src/domain/sensor/beamforming/neural/mod.rs:168:13
+    |
+168 |         let algorithm = DiagnosisAlgorithm::new();
+    |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_algorithm`
+
+warning: unused variable: `default_algorithm`
+   --> src/domain/sensor/beamforming/neural/mod.rs:169:13
+    |
+169 |         let default_algorithm = DiagnosisAlgorithm::default();
+    |             ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_default_algorithm`
+
+warning: unused variable: `workflow`
+   --> src/domain/sensor/beamforming/neural/mod.rs:176:13
+    |
+176 |         let workflow = RealTimeWorkflow::new();
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_workflow`
+
+warning: unused variable: `ny`
+   --> src/domain/source/basic/piston.rs:105:18
+    |
+105 |             (nx, ny, nz) if nx.abs() > 0.5 => {
+    |                  ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+105 |             (nx, _ny, nz) if nx.abs() > 0.5 => {
+    |                  +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+105 -             (nx, ny, nz) if nx.abs() > 0.5 => {
+105 +             (nx, analysis::validation::constants::CFL_LIMIT_3D, nz) if nx.abs() > 0.5 => {
+    |
+
+warning: unused variable: `nz`
+   --> src/domain/source/basic/piston.rs:105:22
+    |
+105 |             (nx, ny, nz) if nx.abs() > 0.5 => {
+    |                      ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+105 |             (nx, ny, _nz) if nx.abs() > 0.5 => {
+    |                      +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+105 -             (nx, ny, nz) if nx.abs() > 0.5 => {
+105 +             (nx, ny, analysis::validation::constants::CFL_LIMIT_3D) if nx.abs() > 0.5 => {
+    |
+
+warning: unused variable: `nx`
+   --> src/domain/source/basic/piston.rs:109:14
+    |
+109 |             (nx, ny, nz) if ny.abs() > 0.5 => {
+    |              ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+109 |             (_nx, ny, nz) if ny.abs() > 0.5 => {
+    |              +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+109 -             (nx, ny, nz) if ny.abs() > 0.5 => {
+109 +             (analysis::validation::constants::CFL_LIMIT_3D, ny, nz) if ny.abs() > 0.5 => {
+    |
+
+warning: unused variable: `nz`
+   --> src/domain/source/basic/piston.rs:109:22
+    |
+109 |             (nx, ny, nz) if ny.abs() > 0.5 => {
+    |                      ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+109 |             (nx, ny, _nz) if ny.abs() > 0.5 => {
+    |                      +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+109 -             (nx, ny, nz) if ny.abs() > 0.5 => {
+109 +             (nx, ny, analysis::validation::constants::CFL_LIMIT_3D) if ny.abs() > 0.5 => {
+    |
+
+warning: unused variable: `nx`
+   --> src/domain/source/wavefront/bessel.rs:135:14
+    |
+135 |             (nx, ny, nz) if nz.abs() > 0.5 => {
+    |              ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+135 |             (_nx, ny, nz) if nz.abs() > 0.5 => {
+    |              +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+135 -             (nx, ny, nz) if nz.abs() > 0.5 => {
+135 +             (analysis::validation::constants::CFL_LIMIT_3D, ny, nz) if nz.abs() > 0.5 => {
+    |
+
+warning: unused variable: `ny`
+   --> src/domain/source/wavefront/bessel.rs:135:18
+    |
+135 |             (nx, ny, nz) if nz.abs() > 0.5 => {
+    |                  ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+135 |             (nx, _ny, nz) if nz.abs() > 0.5 => {
+    |                  +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+135 -             (nx, ny, nz) if nz.abs() > 0.5 => {
+135 +             (nx, analysis::validation::constants::CFL_LIMIT_3D, nz) if nz.abs() > 0.5 => {
+    |
+
+warning: unused variable: `nx`
+   --> src/domain/source/wavefront/bessel.rs:139:14
+    |
+139 |             (nx, ny, nz) if ny.abs() > 0.5 => {
+    |              ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+139 |             (_nx, ny, nz) if ny.abs() > 0.5 => {
+    |              +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+139 -             (nx, ny, nz) if ny.abs() > 0.5 => {
+139 +             (analysis::validation::constants::CFL_LIMIT_3D, ny, nz) if ny.abs() > 0.5 => {
+    |
+
+warning: unused variable: `nz`
+   --> src/domain/source/wavefront/bessel.rs:139:22
+    |
+139 |             (nx, ny, nz) if ny.abs() > 0.5 => {
+    |                      ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+139 |             (nx, ny, _nz) if ny.abs() > 0.5 => {
+    |                      +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+139 -             (nx, ny, nz) if ny.abs() > 0.5 => {
+139 +             (nx, ny, analysis::validation::constants::CFL_LIMIT_3D) if ny.abs() > 0.5 => {
+    |
+
+warning: unused variable: `nx`
+   --> src/domain/source/wavefront/bessel.rs:151:14
+    |
+151 |             (nx, ny, nz) if nz.abs() > 0.5 => dz,
+    |              ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+151 |             (_nx, ny, nz) if nz.abs() > 0.5 => dz,
+    |              +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+151 -             (nx, ny, nz) if nz.abs() > 0.5 => dz,
+151 +             (analysis::validation::constants::CFL_LIMIT_3D, ny, nz) if nz.abs() > 0.5 => dz,
+    |
+
+warning: unused variable: `ny`
+   --> src/domain/source/wavefront/bessel.rs:151:18
+    |
+151 |             (nx, ny, nz) if nz.abs() > 0.5 => dz,
+    |                  ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+151 |             (nx, _ny, nz) if nz.abs() > 0.5 => dz,
+    |                  +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+151 -             (nx, ny, nz) if nz.abs() > 0.5 => dz,
+151 +             (nx, analysis::validation::constants::CFL_LIMIT_3D, nz) if nz.abs() > 0.5 => dz,
+    |
+
+warning: unused variable: `nx`
+   --> src/domain/source/wavefront/bessel.rs:152:14
+    |
+152 |             (nx, ny, nz) if ny.abs() > 0.5 => dy,
+    |              ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+152 |             (_nx, ny, nz) if ny.abs() > 0.5 => dy,
+    |              +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+152 -             (nx, ny, nz) if ny.abs() > 0.5 => dy,
+152 +             (analysis::validation::constants::CFL_LIMIT_3D, ny, nz) if ny.abs() > 0.5 => dy,
+    |
+
+warning: unused variable: `nz`
+   --> src/domain/source/wavefront/bessel.rs:152:22
+    |
+152 |             (nx, ny, nz) if ny.abs() > 0.5 => dy,
+    |                      ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+152 |             (nx, ny, _nz) if ny.abs() > 0.5 => dy,
+    |                      +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+152 -             (nx, ny, nz) if ny.abs() > 0.5 => dy,
+152 +             (nx, ny, analysis::validation::constants::CFL_LIMIT_3D) if ny.abs() > 0.5 => dy,
+    |
+
+warning: unused variable: `nx`
+   --> src/domain/source/wavefront/gaussian.rs:101:14
+    |
+101 |             (nx, ny, nz) if nz.abs() > 0.5 => {
+    |              ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+101 |             (_nx, ny, nz) if nz.abs() > 0.5 => {
+    |              +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+101 -             (nx, ny, nz) if nz.abs() > 0.5 => {
+101 +             (analysis::validation::constants::CFL_LIMIT_3D, ny, nz) if nz.abs() > 0.5 => {
+    |
+
+warning: unused variable: `ny`
+   --> src/domain/source/wavefront/gaussian.rs:101:18
+    |
+101 |             (nx, ny, nz) if nz.abs() > 0.5 => {
+    |                  ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+101 |             (nx, _ny, nz) if nz.abs() > 0.5 => {
+    |                  +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+101 -             (nx, ny, nz) if nz.abs() > 0.5 => {
+101 +             (nx, analysis::validation::constants::CFL_LIMIT_3D, nz) if nz.abs() > 0.5 => {
+    |
+
+warning: unused variable: `nx`
+   --> src/domain/source/wavefront/gaussian.rs:105:14
+    |
+105 |             (nx, ny, nz) if ny.abs() > 0.5 => {
+    |              ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+105 |             (_nx, ny, nz) if ny.abs() > 0.5 => {
+    |              +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+105 -             (nx, ny, nz) if ny.abs() > 0.5 => {
+105 +             (analysis::validation::constants::CFL_LIMIT_3D, ny, nz) if ny.abs() > 0.5 => {
+    |
+
+warning: unused variable: `nz`
+   --> src/domain/source/wavefront/gaussian.rs:105:22
+    |
+105 |             (nx, ny, nz) if ny.abs() > 0.5 => {
+    |                      ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+105 |             (nx, ny, _nz) if ny.abs() > 0.5 => {
+    |                      +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+105 -             (nx, ny, nz) if ny.abs() > 0.5 => {
+105 +             (nx, ny, analysis::validation::constants::CFL_LIMIT_3D) if ny.abs() > 0.5 => {
+    |
+
+warning: unused variable: `nx`
+   --> src/domain/source/wavefront/gaussian.rs:117:14
+    |
+117 |             (nx, ny, nz) if nz.abs() > 0.5 => dz,
+    |              ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+117 |             (_nx, ny, nz) if nz.abs() > 0.5 => dz,
+    |              +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+117 -             (nx, ny, nz) if nz.abs() > 0.5 => dz,
+117 +             (analysis::validation::constants::CFL_LIMIT_3D, ny, nz) if nz.abs() > 0.5 => dz,
+    |
+
+warning: unused variable: `ny`
+   --> src/domain/source/wavefront/gaussian.rs:117:18
+    |
+117 |             (nx, ny, nz) if nz.abs() > 0.5 => dz,
+    |                  ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+117 |             (nx, _ny, nz) if nz.abs() > 0.5 => dz,
+    |                  +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+117 -             (nx, ny, nz) if nz.abs() > 0.5 => dz,
+117 +             (nx, analysis::validation::constants::CFL_LIMIT_3D, nz) if nz.abs() > 0.5 => dz,
+    |
+
+warning: unused variable: `nx`
+   --> src/domain/source/wavefront/gaussian.rs:118:14
+    |
+118 |             (nx, ny, nz) if ny.abs() > 0.5 => dy,
+    |              ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+118 |             (_nx, ny, nz) if ny.abs() > 0.5 => dy,
+    |              +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+118 -             (nx, ny, nz) if ny.abs() > 0.5 => dy,
+118 +             (analysis::validation::constants::CFL_LIMIT_3D, ny, nz) if ny.abs() > 0.5 => dy,
+    |
+
+warning: unused variable: `nz`
+   --> src/domain/source/wavefront/gaussian.rs:118:22
+    |
+118 |             (nx, ny, nz) if ny.abs() > 0.5 => dy,
+    |                      ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+118 |             (nx, ny, _nz) if ny.abs() > 0.5 => dy,
+    |                      +
+help: you might have meant to pattern match on the similarly named constant `CFL_LIMIT_3D`
+    |
+118 -             (nx, ny, nz) if ny.abs() > 0.5 => dy,
+118 +             (nx, ny, analysis::validation::constants::CFL_LIMIT_3D) if ny.abs() > 0.5 => dy,
+    |
+
+warning: unused variable: `back_to_ref`
+   --> src/physics/thermal/properties.rs:227:13
+    |
+227 |         let back_to_ref = update_properties(&elevated, 37.0);
+    |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_back_to_ref`
+
+warning: unused variable: `initial`
+  --> src/solver/validation/numerical_accuracy.rs:98:13
+   |
+98 |         let initial = solver.fields.p.clone();
+   |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_initial`
+
+warning: field `check_interval` is never read
+  --> src/clinical/safety.rs:89:5
+   |
+83 | pub struct SafetyMonitor {
+   |            ------------- field in this struct
+...
+89 |     check_interval: Duration,
+   |     ^^^^^^^^^^^^^^
+   |
+   = note: `SafetyMonitor` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `attenuation` is never read
+  --> src/clinical/therapy/lithotripsy/shock_wave.rs:84:5
+   |
+83 | pub struct ShockWavePropagation {
+   |            -------------------- field in this struct
+84 |     attenuation: f64,
+   |     ^^^^^^^^^^^
+   |
+   = note: `ShockWavePropagation` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `k_squared_cache` is never read
+  --> src/domain/grid/structure.rs:70:16
+   |
+50 | pub struct Grid {
+   |            ---- field in this struct
+...
+70 |     pub(crate) k_squared_cache: OnceLock<Array3<f64>>,
+   |                ^^^^^^^^^^^^^^^
+   |
+   = note: `Grid` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: method `k_squared` is never used
+   --> src/domain/grid/structure.rs:158:19
+    |
+ 97 | impl Grid {
+    | --------- method in this implementation
+...
+158 |     pub(crate) fn k_squared(&self) -> &Array3<f64> {
+    |                   ^^^^^^^^^
+
+warning: fields `sensor_array` and `grid_sensors` are never read
+  --> src/domain/sensor/beamforming/sensor_beamformer.rs:19:5
+   |
+17 | pub struct SensorBeamformer {
+   |            ---------------- fields in this struct
+18 |     /// Sensor array geometry
+19 |     sensor_array: SensorArray,
+   |     ^^^^^^^^^^^^
+20 |     /// Grid sensor set for sampling (if applicable)
+21 |     grid_sensors: Option<GridSensorSet>,
+   |     ^^^^^^^^^^^^
+   |
+   = note: `SensorBeamformer` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: methods `process` and `process_subvolume` are never used
+   --> src/domain/sensor/beamforming/beamforming_3d/delay_sum.rs:310:12
+    |
+ 38 | impl<'a> DelaySumGPU<'a> {
+    | ------------------------ methods in this implementation
+...
+310 |     pub fn process(
+    |            ^^^^^^^
+...
+348 |     pub fn process_subvolume(
+    |            ^^^^^^^^^^^^^^^^^
+
+warning: methods `validate_input` and `process_delay_and_sum` are never used
+   --> src/domain/sensor/beamforming/beamforming_3d/processing.rs:217:19
+    |
+ 12 | impl BeamformingProcessor3D {
+    | --------------------------- methods in this implementation
+...
+217 |     pub(super) fn validate_input(&self, rf_data: &Array4<f32>) -> KwaversResult<()> {
+    |                   ^^^^^^^^^^^^^^
+...
+284 |     pub(super) fn process_delay_and_sum(
+    |                   ^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `config` is never read
+  --> src/domain/sensor/beamforming/beamforming_3d/processor.rs:26:16
+   |
+24 | pub struct BeamformingProcessor3D {
+   |            ---------------------- field in this struct
+25 |     /// Configuration
+26 |     pub(crate) config: BeamformingConfig3D,
+   |                ^^^^^^
+   |
+   = note: `BeamformingProcessor3D` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: methods `create_apodization_weights`, `calculate_gpu_memory_usage`, and `calculate_cpu_memory_usage` are never used
+   --> src/domain/sensor/beamforming/beamforming_3d/processor.rs:263:19
+    |
+ 49 | impl BeamformingProcessor3D {
+    | --------------------------- methods in this implementation
+...
+263 |     pub(super) fn create_apodization_weights(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+321 |     pub(super) fn calculate_gpu_memory_usage(&self) -> f64 {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+333 |     pub(super) fn calculate_cpu_memory_usage(&self) -> f64 {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `get_volume_data` is never used
+   --> src/domain/sensor/beamforming/beamforming_3d/streaming.rs:108:12
+    |
+ 34 | impl StreamingBuffer {
+    | -------------------- method in this implementation
+...
+108 |     pub fn get_volume_data(&self) -> &Array4<f32> {
+    |            ^^^^^^^^^^^^^^^
+
+warning: field `laser` is never read
+   --> src/domain/source/optical/laser.rs:104:5
+    |
+103 | pub struct LaserSource {
+    |            ----------- field in this struct
+104 |     laser: GaussianLaser,
+    |     ^^^^^
+    |
+    = note: `LaserSource` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `wave_number` is never read
+  --> src/domain/source/wavefront/bessel.rs:60:5
+   |
+57 | pub struct BesselSource {
+   |            ------------ field in this struct
+...
+60 |     wave_number: f64,
+   |     ^^^^^^^^^^^
+   |
+   = note: `BesselSource` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `lambda`, `mu`, and `density` are never read
+  --> src/physics/acoustics/imaging/modalities/elastography/nonlinear/solver.rs:58:5
+   |
+50 | pub struct NonlinearElasticWaveSolver {
+   |            -------------------------- fields in this struct
+...
+58 |     lambda: Array3<f64>,
+   |     ^^^^^^
+59 |     /// Linear elastic properties (for comparison)
+60 |     mu: Array3<f64>,
+   |     ^^
+61 |     /// Density field
+62 |     density: Array3<f64>,
+   |     ^^^^^^^
+   |
+   = note: `NonlinearElasticWaveSolver` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `grid` and `material` are never read
+   --> src/physics/acoustics/mechanics/poroelastic/mod.rs:240:5
+    |
+239 | pub struct PoroelasticSimulation {
+    |            --------------------- fields in this struct
+240 |     grid: Grid,
+    |     ^^^^
+241 |     material: PoroelasticMaterial,
+    |     ^^^^^^^^
+    |
+    = note: `PoroelasticSimulation` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `tolerance` is never read
+   --> src/simulation/multi_physics.rs:226:5
+    |
+224 | pub struct ConservationEnforcer {
+    |            -------------------- field in this struct
+225 |     /// Conservation tolerance
+226 |     tolerance: f64,
+    |     ^^^^^^^^^
+    |
+    = note: `ConservationEnforcer` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: function `apply_radial_laplacian` is never used
+   --> src/solver/forward/axisymmetric/transforms.rs:270:8
+    |
+270 | pub fn apply_radial_laplacian(f_k: &Array1<f64>, k: &Array1<f64>) -> Array1<f64> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `config` is never read
+  --> src/solver/forward/bem/solver.rs:41:5
+   |
+39 | pub struct BemSolver {
+   |            --------- field in this struct
+40 |     /// Solver configuration
+41 |     config: BemConfig,
+   |     ^^^^^^
+   |
+   = note: `BemSolver` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `dx_operator`, `dy_operator`, and `dz_operator` are never read
+  --> src/solver/forward/fdtd/electromagnetic.rs:46:5
+   |
+26 | pub struct ElectromagneticFdtdSolver {
+   |            ------------------------- fields in this struct
+...
+46 |     dx_operator: Box<dyn DifferentialOperator>,
+   |     ^^^^^^^^^^^
+47 |     dy_operator: Box<dyn DifferentialOperator>,
+   |     ^^^^^^^^^^^
+48 |     dz_operator: Box<dyn DifferentialOperator>,
+   |     ^^^^^^^^^^^
+
+warning: method `apply_green_gpu` is never used
+   --> src/solver/forward/helmholtz/born_series/convergent.rs:422:8
+    |
+ 99 | impl ConvergentBornSolver {
+    | ------------------------- method in this implementation
+...
+422 |     fn apply_green_gpu(&mut self) -> KwaversResult<()> {
+    |        ^^^^^^^^^^^^^^^
+
+warning: field `rhs` is never read
+  --> src/solver/forward/helmholtz/fem/solver.rs:56:5
+   |
+46 | pub struct FemHelmholtzSolver {
+   |            ------------------ field in this struct
+...
+56 |     rhs: Array1<Complex64>,
+   |     ^^^
+   |
+   = note: `FemHelmholtzSolver` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `omega`, `iterations`, and `temp_field` are never read
+  --> src/solver/forward/helmholtz/preconditioners/sor.rs:18:5
+   |
+16 | pub struct SorPreconditioner {
+   |            ----------------- fields in this struct
+17 |     /// Relaxation parameter (ω = 1.0 for Gauss-Seidel, ω > 1.0 for SOR)
+18 |     omega: f64,
+   |     ^^^^^
+19 |     /// Number of SOR iterations
+20 |     iterations: usize,
+   |     ^^^^^^^^^^
+21 |     /// Temporary storage for SOR iterations
+22 |     temp_field: Array3<Complex64>,
+   |     ^^^^^^^^^^
+   |
+   = note: `SorPreconditioner` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: method `sor_iteration` is never used
+  --> src/solver/forward/helmholtz/preconditioners/sor.rs:69:8
+   |
+67 | impl SorPreconditioner {
+   | ---------------------- method in this implementation
+68 |     /// Perform one SOR iteration
+69 |     fn sor_iteration(&self, field: &mut Array3<Complex64>) -> KwaversResult<()> {
+   |        ^^^^^^^^^^^^^
+
+warning: field `fem_interpolator` is never read
+   --> src/solver/forward/hybrid/bem_fem_coupling.rs:191:5
+    |
+188 | pub struct BemFemCoupler {
+    |            ------------- field in this struct
+...
+191 |     fem_interpolator: TrilinearInterpolator,
+    |     ^^^^^^^^^^^^^^^^
+    |
+    = note: `BemFemCoupler` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `bem_boundary_elements` is never read
+   --> src/solver/forward/hybrid/bem_fem_coupling.rs:401:5
+    |
+397 | pub struct BemFemSolver {
+    |            ------------ field in this struct
+...
+401 |     bem_boundary_elements: Vec<usize>,
+    |     ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `BemFemSolver` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `fdtd_interpolator` and `fem_interpolator` are never read
+   --> src/solver/forward/hybrid/fdtd_fem_coupling.rs:195:5
+    |
+192 | pub struct FdtdFemCoupler {
+    |            -------------- fields in this struct
+...
+195 |     fdtd_interpolator: TrilinearInterpolator,
+    |     ^^^^^^^^^^^^^^^^^
+196 |     fem_interpolator: TrilinearInterpolator,
+    |     ^^^^^^^^^^^^^^^^
+    |
+    = note: `FdtdFemCoupler` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `quadrature_points` and `quadrature_weights` are never read
+  --> src/solver/forward/hybrid/pstd_sem_coupling.rs:80:5
+   |
+70 | pub struct SpectralCouplingInterface {
+   |            ------------------------- fields in this struct
+...
+80 |     quadrature_points: Vec<(f64, f64, f64)>,
+   |     ^^^^^^^^^^^^^^^^^
+81 |     quadrature_weights: Vec<f64>,
+   |     ^^^^^^^^^^^^^^^^^^
+   |
+   = note: `SpectralCouplingInterface` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `materials` is never read
+  --> src/solver/forward/hybrid/solver.rs:49:5
+   |
+33 | pub struct HybridSolver {
+   |            ------------ field in this struct
+...
+49 |     materials: MaterialFields,
+   |     ^^^^^^^^^
+   |
+   = note: `HybridSolver` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `stiffness_matrix` is never read
+  --> src/solver/forward/sem/solver.rs:58:5
+   |
+50 | pub struct SemSolver {
+   |            --------- field in this struct
+...
+58 |     stiffness_matrix: CompressedSparseRowMatrix<f64>,
+   |     ^^^^^^^^^^^^^^^^
+   |
+   = note: `SemSolver` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: constant `MAX_BITS` is never used
+   --> src/solver/inverse/pinn/geometry.rs:373:11
+    |
+373 |     const MAX_BITS: usize = 32;
+    |           ^^^^^^^^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src/clinical/imaging/workflows/results.rs:73:1
+   |
+73 | / pub struct AcquisitionResult {
+74 | |     pub ultrasound_data: Array3<f64>,
+75 | |     pub photoacoustic_result: PhotoacousticResult,
+76 | |     pub elastography_result: ElasticityMap,
+77 | |     #[allow(dead_code)]
+78 | |     pub acquisition_time: Duration,
+79 | | }
+   | |_^
+   |
+note: the lint level is defined here
+  --> src/lib.rs:24:9
+   |
+24 | #![warn(missing_debug_implementations)]
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src/clinical/imaging/workflows/results.rs:82:1
+   |
+82 | / pub struct ProcessingResult {
+83 | |     #[allow(dead_code)]
+84 | |     pub quality_metrics: HashMap<String, f64>,
+85 | |     #[allow(dead_code)]
+86 | |     pub processing_time: Duration,
+87 | | }
+   | |_^
+
+warning: type does not implement `std::fmt::Debug`; consider adding `#[derive(Debug)]` or a manual implementation
+  --> src/clinical/imaging/workflows/results.rs:90:1
+   |
+90 | / pub struct AnalysisResult {
+91 | |     pub tissue_properties: HashMap<String, Array3<f64>>,
+92 | |     pub recommendations: Vec<DiagnosticRecommendation>,
+93 | |     pub confidence_score: f64,
+94 | | }
+   | |_^
+
+warning: `kwavers` (lib test) generated 85 warnings (run `cargo fix --lib -p kwavers --tests` to apply 35 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.93s
+     Running unittests src/lib.rs (target/debug/deps/kwavers-9d21af9455c54214)
+
+running 1 test
+test solver::forward::pstd::implementation::core::stepper::tests::test_anti_aliasing_runs ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1547 filtered out; finished in 9.42s

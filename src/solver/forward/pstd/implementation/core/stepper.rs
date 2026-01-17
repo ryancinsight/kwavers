@@ -3,6 +3,7 @@
 use super::orchestrator::PSTDSolver;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::source::SourceField;
+use crate::math::fft::Complex64;
 
 use crate::solver::forward::pstd::config::KSpaceMethod;
 use crate::solver::forward::pstd::implementation::k_space::PSTDKSOperators;
@@ -49,10 +50,9 @@ impl PSTDSolver {
 
         self.update_pressure();
 
-        // TODO: Implement apply_anti_aliasing_filter method
-        // if self.filter.is_some() {
-        //     self.apply_anti_aliasing_filter()?;
-        // }
+        if self.filter.is_some() {
+            self.apply_anti_aliasing_filter()?;
+        }
 
         self.apply_boundary(time_index)?;
         self.sensor_recorder.record_step(&self.fields.p)?;
@@ -146,5 +146,97 @@ impl PSTDSolver {
                 }
             }
         }
+    }
+
+    /// Apply anti-aliasing filter to field variables
+    ///
+    /// This removes high-frequency spatial components that can cause
+    /// instability or aliasing when using PSTD with nonlinearities.
+    pub(crate) fn apply_anti_aliasing_filter(&mut self) -> KwaversResult<()> {
+        if let Some(filter) = &self.filter {
+            // Apply filter to pressure
+            // Use p_k as transform buffer and ux_k as scratch for inverse
+            self.fft.forward_into(&self.fields.p, &mut self.p_k);
+            Zip::from(&mut self.p_k)
+                .and(filter)
+                .for_each(|val, &f| *val *= Complex64::new(f, 0.0));
+            self.fft
+                .inverse_into(&self.p_k, &mut self.fields.p, &mut self.ux_k);
+
+            // Apply filter to density
+            // Use p_k as transform buffer and ux_k as scratch
+            self.fft.forward_into(&self.rho, &mut self.p_k);
+            Zip::from(&mut self.p_k)
+                .and(filter)
+                .for_each(|val, &f| *val *= Complex64::new(f, 0.0));
+            self.fft
+                .inverse_into(&self.p_k, &mut self.rho, &mut self.ux_k);
+
+            // Apply filter to Ux
+            // Use ux_k as transform buffer and p_k as scratch
+            self.fft.forward_into(&self.fields.ux, &mut self.ux_k);
+            Zip::from(&mut self.ux_k)
+                .and(filter)
+                .for_each(|val, &f| *val *= Complex64::new(f, 0.0));
+            self.fft
+                .inverse_into(&self.ux_k, &mut self.fields.ux, &mut self.p_k);
+
+            // Apply filter to Uy
+            // Use uy_k as transform buffer and p_k as scratch
+            self.fft.forward_into(&self.fields.uy, &mut self.uy_k);
+            Zip::from(&mut self.uy_k)
+                .and(filter)
+                .for_each(|val, &f| *val *= Complex64::new(f, 0.0));
+            self.fft
+                .inverse_into(&self.uy_k, &mut self.fields.uy, &mut self.p_k);
+
+            // Apply filter to Uz
+            // Use uz_k as transform buffer and p_k as scratch
+            self.fft.forward_into(&self.fields.uz, &mut self.uz_k);
+            Zip::from(&mut self.uz_k)
+                .and(filter)
+                .for_each(|val, &f| *val *= Complex64::new(f, 0.0));
+            self.fft
+                .inverse_into(&self.uz_k, &mut self.fields.uz, &mut self.p_k);
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::grid::Grid;
+    use crate::domain::medium::HomogeneousMedium;
+    use crate::domain::source::GridSource;
+    use crate::solver::forward::pstd::config::{AntiAliasingConfig, PSTDConfig};
+
+    #[test]
+    fn test_anti_aliasing_runs() {
+        // Setup configuration
+        let mut config = PSTDConfig::default();
+        config.anti_aliasing = AntiAliasingConfig {
+            enabled: true,
+            cutoff: 0.8,
+            order: 4,
+        };
+        config.dt = 1e-8;
+        config.nt = 10;
+
+        // Create Grid
+        let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
+
+        // Create Medium
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+
+        // Create Source (empty)
+        let source = GridSource::new_empty();
+
+        // Create Solver
+        let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
+
+        // Run one step
+        let result = solver.step_forward();
+        assert!(result.is_ok(), "Step forward failed with anti-aliasing enabled: {:?}", result.err());
     }
 }

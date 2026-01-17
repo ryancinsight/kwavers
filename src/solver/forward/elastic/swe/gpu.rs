@@ -178,6 +178,8 @@ pub struct MemoryStats {
 }
 
 /// GPU-accelerated 3D elastic wave solver
+///
+/// TODO: This is a simulation of GPU functionality. Actual CUDA/OpenCL/wgpu implementation is needed.
 #[derive(Debug)]
 pub struct GPUElasticWaveSolver3D {
     /// GPU device information
@@ -356,6 +358,8 @@ impl GPUElasticWaveSolver3D {
     }
 
     /// Simulate kernel execution time (placeholder for real GPU implementation)
+    ///
+    /// TODO: Replace simulation with actual GPU kernel execution
     fn simulate_kernel_execution(
         &self,
         kernel_name: &str,
@@ -380,6 +384,8 @@ impl GPUElasticWaveSolver3D {
     }
 
     /// Simulate data transfer time
+    ///
+    /// TODO: Replace simulation with actual PCIe transfer measurement
     fn simulate_data_transfer(&self, bytes: usize) -> f64 {
         // PCIe 4.0 x16 bandwidth: ~32 GB/s
         let pcie_bandwidth = 32.0 * 1024.0 * 1024.0 * 1024.0; // bytes/second
