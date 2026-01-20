@@ -90,7 +90,6 @@ pub fn calculate_cpu_memory_usage(_streaming_buffer: &Option<()>) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::sensor::beamforming::config::BeamformingConfig;
 
     #[test]
     fn test_gpu_memory_calculation() {

@@ -29,7 +29,7 @@
 //! - Support for complex geometries in FEM domain
 //!
 //! ## Literature References
-////
+//!
 //! - Wu, T. (2000). "Pre-asymptotic error analysis of BEM and FEM coupling"
 //! - Costabel, M. (1987). "Boundary integral operators for the heat equation"
 //! - Johnson, C. & Nédélec, J. C. (1980). "On the coupling of boundary integral
@@ -188,6 +188,7 @@ impl BemFemInterface {
 pub struct BemFemCoupler {
     config: BemFemCouplingConfig,
     interface: BemFemInterface,
+    #[allow(dead_code)]
     fem_interpolator: TrilinearInterpolator,
     convergence_history: Vec<f64>,
     iteration_count: usize,
@@ -226,22 +227,23 @@ impl BemFemCoupler {
 
         for iteration in 0..self.config.max_iterations {
             // 1. Extract FEM solution at interface
-            let fem_interface_values = self.extract_fem_interface(fem_field)?;
+            let fem_interface_values = self.extract_fem_interface(fem_field.as_slice())?;
 
             // 2. Apply to BEM boundary conditions
-            self.apply_to_bem_boundary(&fem_interface_values, bem_boundary_values)?;
+            self.apply_to_bem_boundary(&fem_interface_values, bem_boundary_values.as_mut_slice())?;
 
             // 3. Solve BEM system (placeholder - would call actual BEM solver)
-            self.solve_bem_system(bem_boundary_values, wavenumber)?;
+            self.solve_bem_system(bem_boundary_values.as_mut_slice(), wavenumber)?;
 
             // 4. Extract BEM solution at interface
-            let bem_interface_values = self.extract_bem_interface(bem_boundary_values)?;
+            let bem_interface_values = self.extract_bem_interface(bem_boundary_values.as_slice())?;
 
             // 5. Apply to FEM boundary conditions with relaxation
-            residual = self.apply_to_fem_boundary(&bem_interface_values, fem_field, fem_mesh)?;
+            residual =
+                self.apply_to_fem_boundary(&bem_interface_values, fem_field.as_mut_slice(), fem_mesh)?;
 
             // 6. Solve FEM system (placeholder - would call actual FEM solver)
-            self.solve_fem_system(fem_field, fem_mesh)?;
+            self.solve_fem_system(fem_field.as_mut_slice(), fem_mesh)?;
 
             self.convergence_history.push(residual);
             self.iteration_count = iteration + 1;
@@ -259,11 +261,14 @@ impl BemFemCoupler {
         let mut interface_values = Vec::new();
 
         for &node_idx in &self.interface.fem_interface_nodes {
-            if node_idx < fem_field.len() {
-                interface_values.push(fem_field[node_idx]);
-            } else {
-                interface_values.push(0.0);
-            }
+            let value = fem_field.get(node_idx).ok_or_else(|| {
+                crate::core::error::KwaversError::InvalidInput(format!(
+                    "FEM interface node index {} is out of bounds (fem_field len {})",
+                    node_idx,
+                    fem_field.len()
+                ))
+            })?;
+            interface_values.push(*value);
         }
 
         Ok(interface_values)
@@ -273,7 +278,7 @@ impl BemFemCoupler {
     fn apply_to_bem_boundary(
         &self,
         fem_values: &[f64],
-        bem_boundary_values: &mut Vec<f64>,
+        bem_boundary_values: &mut [f64],
     ) -> KwaversResult<()> {
         // Map FEM interface values to BEM boundary values
         for (i, &fem_value) in fem_values.iter().enumerate() {
@@ -301,11 +306,14 @@ impl BemFemCoupler {
         let mut interface_values = Vec::new();
 
         for &bem_element_idx in &self.interface.bem_interface_elements {
-            if bem_element_idx < bem_boundary_values.len() {
-                interface_values.push(bem_boundary_values[bem_element_idx]);
-            } else {
-                interface_values.push(0.0);
-            }
+            let value = bem_boundary_values.get(bem_element_idx).ok_or_else(|| {
+                crate::core::error::KwaversError::InvalidInput(format!(
+                    "BEM interface element index {} is out of bounds (bem_boundary_values len {})",
+                    bem_element_idx,
+                    bem_boundary_values.len()
+                ))
+            })?;
+            interface_values.push(*value);
         }
 
         Ok(interface_values)
@@ -315,7 +323,7 @@ impl BemFemCoupler {
     fn apply_to_fem_boundary(
         &self,
         bem_values: &[f64],
-        fem_field: &mut Vec<f64>,
+        fem_field: &mut [f64],
         _fem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<f64> {
         let mut max_residual: f64 = 0.0;
@@ -344,7 +352,7 @@ impl BemFemCoupler {
     /// Solve BEM system (placeholder)
     fn solve_bem_system(
         &self,
-        _bem_boundary_values: &mut Vec<f64>,
+        _bem_boundary_values: &mut [f64],
         _wavenumber: f64,
     ) -> KwaversResult<()> {
         // TODO: Placeholder for BEM system solution
@@ -356,7 +364,7 @@ impl BemFemCoupler {
     /// Solve FEM system (placeholder)
     fn solve_fem_system(
         &self,
-        _fem_field: &mut Vec<f64>,
+        _fem_field: &mut [f64],
         _fem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<()> {
         // TODO: Placeholder for FEM system solution
@@ -398,6 +406,7 @@ pub struct BemFemSolver {
     config: BemFemCouplingConfig,
     coupler: BemFemCoupler,
     fem_mesh: TetrahedralMesh,
+    #[allow(dead_code)]
     bem_boundary_elements: Vec<usize>,
     wavenumber: f64,
 }

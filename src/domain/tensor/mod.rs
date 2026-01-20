@@ -292,7 +292,7 @@ pub mod convert {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::{arr1, arr2};
+    use ndarray::arr2;
 
     #[test]
     fn test_shape() {

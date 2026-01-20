@@ -79,10 +79,12 @@ pub fn electrostatic_capacitor_example() -> KwaversResult<()> {
         .domain_params
         .insert("voltage_bottom".to_string(), 0.0); // Ground
 
-    let mut config = UniversalTrainingConfig::default();
-    config.epochs = 200;
-    config.learning_rate = 1e-3;
-    config.collocation_points = 512;
+    let config = UniversalTrainingConfig {
+        epochs: 200,
+        learning_rate: 1e-3,
+        collocation_points: 512,
+        ..Default::default()
+    };
 
     let mut solver = UniversalPINNSolver::<Backend>::new()?;
     solver.register_physics_domain(domain)?;
@@ -124,10 +126,12 @@ pub fn magnetostatic_wire_example() -> KwaversResult<()> {
 
     let physics_params = empty_physics_parameters();
 
-    let mut config = UniversalTrainingConfig::default();
-    config.epochs = 150;
-    config.learning_rate = 1e-3;
-    config.collocation_points = 512;
+    let config = UniversalTrainingConfig {
+        epochs: 150,
+        learning_rate: 1e-3,
+        collocation_points: 512,
+        ..Default::default()
+    };
 
     let mut solver = UniversalPINNSolver::<Backend>::new()?;
     solver.register_physics_domain(domain)?;
@@ -167,10 +171,12 @@ pub fn wave_propagation_example() -> KwaversResult<()> {
         .domain_params
         .insert("source_position".to_string(), 0.05); // Center
 
-    let mut config = UniversalTrainingConfig::default();
-    config.epochs = 200;
-    config.learning_rate = 5e-4;
-    config.collocation_points = 1024;
+    let config = UniversalTrainingConfig {
+        epochs: 200,
+        learning_rate: 5e-4,
+        collocation_points: 1024,
+        ..Default::default()
+    };
 
     let mut solver = UniversalPINNSolver::<Backend>::new()?;
     solver.register_physics_domain(domain)?;
@@ -213,10 +219,12 @@ pub fn lossy_waveguide_example() -> KwaversResult<()> {
         .domain_params
         .insert("input_power".to_string(), 1.0); // 1W input
 
-    let mut config = UniversalTrainingConfig::default();
-    config.epochs = 200;
-    config.learning_rate = 1e-3;
-    config.collocation_points = 1024;
+    let config = UniversalTrainingConfig {
+        epochs: 200,
+        learning_rate: 1e-3,
+        collocation_points: 1024,
+        ..Default::default()
+    };
 
     let mut solver = UniversalPINNSolver::<Backend>::new()?;
     solver.register_physics_domain(domain)?;
@@ -264,10 +272,12 @@ pub fn quasi_static_induction_example() -> KwaversResult<()> {
         .domain_params
         .insert("frequency".to_string(), 1e6); // 1MHz
 
-    let mut config = UniversalTrainingConfig::default();
-    config.epochs = 200;
-    config.learning_rate = 8e-4;
-    config.collocation_points = 1024;
+    let config = UniversalTrainingConfig {
+        epochs: 200,
+        learning_rate: 8e-4,
+        collocation_points: 1024,
+        ..Default::default()
+    };
 
     let mut solver = UniversalPINNSolver::<Backend>::new()?;
     solver.register_physics_domain(domain)?;

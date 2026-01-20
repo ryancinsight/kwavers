@@ -9,7 +9,7 @@
 
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
-use kwavers::physics::imaging::elastography::*;
+use kwavers::physics::imaging::modalities::elastography::*;
 use std::f64::consts::PI;
 
 /// Simple demonstration of convergence testing
@@ -111,7 +111,7 @@ fn validate_ogden_principal_stretches() -> Result<(), Box<dyn std::error::Error>
         && principal_stretches[1] <= principal_stretches[2];
     let max_error = principal_stretches
         .iter()
-        .zip(&[lambda_y, lambda_y, lambda_x])
+        .zip([lambda_y, lambda_y, lambda_x].iter())
         .map(|(&computed, &expected)| (computed - expected).abs() / expected.abs())
         .fold(0.0, f64::max);
 

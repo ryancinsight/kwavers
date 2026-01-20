@@ -15,10 +15,13 @@ use num_complex::Complex64;
 #[derive(Debug)]
 pub struct SorPreconditioner {
     /// Relaxation parameter (ω = 1.0 for Gauss-Seidel, ω > 1.0 for SOR)
+    #[allow(dead_code)]
     omega: f64,
     /// Number of SOR iterations
+    #[allow(dead_code)]
     iterations: usize,
     /// Temporary storage for SOR iterations
+    #[allow(dead_code)]
     temp_field: Array3<Complex64>,
 }
 
@@ -66,6 +69,7 @@ impl Preconditioner for SorPreconditioner {
 
 impl SorPreconditioner {
     /// Perform one SOR iteration
+    #[allow(dead_code)]
     fn sor_iteration(&self, field: &mut Array3<Complex64>) -> KwaversResult<()> {
         // Simplified: this method is not used in the current trait implementation
         // as we switched to Jacobi iteration for the preconditioner

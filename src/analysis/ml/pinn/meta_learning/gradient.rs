@@ -296,12 +296,10 @@ pub mod utils {
     pub fn gradient_norm<B: AutodiffBackend>(grads: &[Option<Tensor<B::InnerBackend, 1>>]) -> f64 {
         let mut sum_squares = 0.0;
 
-        for grad_opt in grads {
-            if let Some(grad) = grad_opt {
-                let grad_data = grad.to_data();
-                let values = grad_data.as_slice::<f32>().unwrap_or(&[]);
-                sum_squares += values.iter().map(|&g| (g as f64).powi(2)).sum::<f64>();
-            }
+        for grad in grads.iter().flatten() {
+            let grad_data = grad.to_data();
+            let values = grad_data.as_slice::<f32>().unwrap_or(&[]);
+            sum_squares += values.iter().map(|&g| (g as f64).powi(2)).sum::<f64>();
         }
 
         sum_squares.sqrt()

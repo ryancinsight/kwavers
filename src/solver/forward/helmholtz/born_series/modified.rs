@@ -573,7 +573,7 @@ mod tests {
             for j in 0..ny {
                 for k in 0..nz {
                     solver.workspace.heterogeneity_workspace[[i, j, k]] =
-                        Complex64::new((i + j + k) as f64, ((i * j) as f64 * 0.1));
+                        Complex64::new((i + j + k) as f64, (i * j) as f64 * 0.1);
                     solver.absorption_field[[i, j, k]] = Complex64::new(0.0, 0.01 * (k as f64));
                 }
             }

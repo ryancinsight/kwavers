@@ -329,15 +329,33 @@ impl Default for TrainingMetrics {
 }
 
 #[cfg(feature = "pinn")]
-impl From<crate::ml::pinn::wave_equation_1d::TrainingMetrics> for TrainingMetrics {
-    fn from(m: crate::ml::pinn::wave_equation_1d::TrainingMetrics) -> Self {
-        Self {
-            final_loss: m.total_loss.last().copied().unwrap_or(0.0),
-            best_loss: m.total_loss.iter().fold(f64::INFINITY, |a, &b| a.min(b)),
-            total_epochs: m.epochs_completed,
-            training_time_seconds: m.training_time_secs as u64,
-            convergence_epoch: None,
-            final_validation_error: None,
+impl From<crate::analysis::ml::pinn::trainer::TrainingMetrics> for TrainingMetrics {
+    fn from(metrics: crate::analysis::ml::pinn::trainer::TrainingMetrics) -> Self {
+        match metrics {
+            crate::analysis::ml::pinn::trainer::TrainingMetrics::OneD(m) => Self {
+                final_loss: m.total_loss.last().copied().unwrap_or(0.0),
+                best_loss: m
+                    .total_loss
+                    .iter()
+                    .copied()
+                    .fold(f64::INFINITY, |acc: f64, value| acc.min(value)),
+                total_epochs: m.epochs_completed,
+                training_time_seconds: m.training_time_secs as u64,
+                convergence_epoch: None,
+                final_validation_error: None,
+            },
+            crate::analysis::ml::pinn::trainer::TrainingMetrics::TwoD(m) => Self {
+                final_loss: m.total_loss.last().copied().unwrap_or(0.0),
+                best_loss: m
+                    .total_loss
+                    .iter()
+                    .copied()
+                    .fold(f64::INFINITY, |acc: f64, value| acc.min(value)),
+                total_epochs: m.epochs_completed,
+                training_time_seconds: m.training_time_secs as u64,
+                convergence_epoch: None,
+                final_validation_error: None,
+            },
         }
     }
 }

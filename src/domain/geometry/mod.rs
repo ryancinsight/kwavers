@@ -508,15 +508,15 @@ impl GeometricDomain for SphericalDomain {
                 let mut point = vec![0.0; dim];
                 let mut r_sq = 0.0;
 
-                for j in 0..dim {
-                    let coord = rng.gen_range(-self.radius..self.radius);
-                    point[j] = coord;
-                    r_sq += coord * coord;
+                for coord in point.iter_mut().take(dim) {
+                    let v = rng.gen_range(-self.radius..self.radius);
+                    *coord = v;
+                    r_sq += v * v;
                 }
 
                 if r_sq <= self.radius * self.radius {
-                    for j in 0..dim {
-                        points[[i, j]] = self.center[j] + point[j];
+                    for (j, coord) in point.iter().enumerate().take(dim) {
+                        points[[i, j]] = self.center[j] + coord;
                     }
                     break;
                 }

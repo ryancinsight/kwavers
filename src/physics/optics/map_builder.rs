@@ -412,10 +412,7 @@ impl OpticalPropertyMapBuilder {
         let total_voxels = nx * ny * nz;
         let mut data = Vec::with_capacity(total_voxels);
 
-        let default_props = self
-            .background
-            .clone()
-            .unwrap_or_else(OpticalPropertyData::soft_tissue);
+        let default_props = self.background.unwrap_or_else(OpticalPropertyData::soft_tissue);
 
         for k in 0..nz {
             for j in 0..ny {
@@ -427,19 +424,19 @@ impl OpticalPropertyMapBuilder {
                     let point = [x, y, z];
 
                     // Start with background
-                    let mut props = default_props.clone();
+                    let mut props = default_props;
 
                     // Apply layers (stratified media)
                     for layer in &self.layers {
                         if layer.contains_z(z) {
-                            props = layer.properties.clone();
+                            props = layer.properties;
                         }
                     }
 
                     // Apply regions (in order, last wins)
                     for (region, region_props) in &self.regions {
                         if region.contains(point) {
-                            props = region_props.clone();
+                            props = *region_props;
                         }
                     }
 

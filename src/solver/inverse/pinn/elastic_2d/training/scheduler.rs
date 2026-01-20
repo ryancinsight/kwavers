@@ -109,7 +109,7 @@ impl LRScheduler {
                 self.current_lr = self.initial_lr * decay_rate.powf(self.epoch as f64);
             }
             LearningRateScheduler::Step { factor, step_size } => {
-                if self.epoch % step_size == 0 {
+                if self.epoch.is_multiple_of(*step_size) {
                     self.current_lr *= factor;
                 }
             }

@@ -155,6 +155,12 @@ impl FieldArena {
     }
 }
 
+impl Default for FieldArena {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // FieldArena is not Send/Sync because it contains UnsafeCell
 // This is correct - arenas should not be shared between threads
 
@@ -289,6 +295,12 @@ impl BumpArena {
     }
 }
 
+impl Default for BumpArena {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Simulation-specific arena for wave fields and solver data
 /// Combined arena for simulation data
 #[derive(Debug)]
@@ -347,6 +359,12 @@ impl SimulationArena {
             field_stats: self.field_arena.stats(),
             temp_stats: self.temp_arena.stats(),
         }
+    }
+}
+
+impl Default for SimulationArena {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -437,6 +455,12 @@ impl ArenaPerformanceMonitor {
     }
 }
 
+impl Default for ArenaPerformanceMonitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Memory pool for frequently allocated objects
 pub struct MemoryPool<T> {
     /// Available objects
@@ -509,6 +533,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn test_field_arena_allocation() {
         let arena = FieldArena::with_capacity(1024 * 1024); // 1MB
 
@@ -528,12 +553,13 @@ mod tests {
 
     #[test]
     fn test_bump_arena_creation() {
-        let mut arena = BumpArena::new();
+        let arena = BumpArena::new();
         let stats = arena.stats();
         assert_eq!(stats.used_bytes, 0);
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn test_bump_arena_allocation() {
         let mut arena = BumpArena::new();
 

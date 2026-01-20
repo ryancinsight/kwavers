@@ -390,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_azure_provider_compilation() {
-        let _ = CloudProvider::Azure;
+        let _ = crate::infra::cloud::CloudProvider::Azure;
     }
 
     #[cfg(feature = "pinn")]

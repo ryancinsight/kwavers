@@ -185,7 +185,7 @@ impl DiffusionSolver {
         let (nx, ny, nz) = grid.dimensions();
 
         // Validate dimensions
-        if optical_properties.shape() != &[nx, ny, nz] {
+        if optical_properties.dim() != (nx, ny, nz) {
             anyhow::bail!(
                 "Optical property map dimensions {:?} do not match grid dimensions ({}, {}, {})",
                 optical_properties.shape(),
@@ -256,7 +256,7 @@ impl DiffusionSolver {
         let (nx, ny, nz) = self.grid.dimensions();
 
         // Validate source dimensions
-        if source.shape() != &[nx, ny, nz] {
+        if source.dim() != (nx, ny, nz) {
             anyhow::bail!(
                 "Source dimensions {:?} do not match grid dimensions ({}, {}, {})",
                 source.shape(),
@@ -653,7 +653,6 @@ pub mod analytical {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
 
     #[test]
     fn test_analytical_infinite_medium() {

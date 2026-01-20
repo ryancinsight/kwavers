@@ -25,7 +25,7 @@
 use kwavers::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::burn_wave_equation_2d::{
-    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, Geometry2D,
+    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DTrainer, BurnPINN2DWave, Geometry2D,
 };
 #[cfg(feature = "pinn")]
 use ndarray::{Array1, Array2};
@@ -267,8 +267,7 @@ fn main() -> KwaversResult<()> {
         println!("   Test points: {}", x_test.len());
 
         // Create trainer
-        let trainer =
-            BurnPINN2DWave::<Backend>::new_trainer(pinn_config.clone(), geometry, &device)?;
+        let trainer = BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config.clone(), geometry, &device)?;
         println!("✅ PINN Trainer: Created successfully");
         println!();
 

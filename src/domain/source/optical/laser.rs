@@ -101,6 +101,7 @@ impl super::OpticalSource for GaussianLaser {
 /// Laser source implementation
 #[derive(Debug)]
 pub struct LaserSource {
+    #[allow(dead_code)]
     laser: GaussianLaser,
 }
 

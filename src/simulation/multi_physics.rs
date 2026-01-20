@@ -37,7 +37,7 @@
 //! let result = solver.solve_coupled(&initial_conditions, time_span)?;
 //! ```
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::math::numerics::operators::TrilinearInterpolator;
 use ndarray::{Array3, ArrayView3};
@@ -219,6 +219,12 @@ impl FieldCoupler {
     }
 }
 
+impl Default for FieldCoupler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Conservation enforcement for multi-physics coupling
 #[derive(Debug)]
 pub struct ConservationEnforcer {
@@ -239,6 +245,25 @@ impl ConservationEnforcer {
         source_grid: &Grid,
         target_grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
+        let expected_source_dim = (source_grid.nx, source_grid.ny, source_grid.nz);
+        let actual_source_dim = source_field.dim();
+        if actual_source_dim != expected_source_dim {
+            return Err(KwaversError::Validation(ValidationError::DimensionMismatch {
+                expected: format!("{expected_source_dim:?}"),
+                actual: format!("{actual_source_dim:?}"),
+            }));
+        }
+
+        let same_grid = source_grid.nx == target_grid.nx
+            && source_grid.ny == target_grid.ny
+            && source_grid.nz == target_grid.nz
+            && (source_grid.dx - target_grid.dx).abs() <= self.tolerance
+            && (source_grid.dy - target_grid.dy).abs() <= self.tolerance
+            && (source_grid.dz - target_grid.dz).abs() <= self.tolerance;
+        if same_grid {
+            return Ok(source_field.to_owned());
+        }
+
         // For now, use simple trilinear interpolation
         // In a full implementation, this would use conservative remapping
         // to preserve integral quantities across domain interfaces
@@ -267,6 +292,12 @@ impl ConservationEnforcer {
         }
 
         Ok(result)
+    }
+}
+
+impl Default for ConservationEnforcer {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

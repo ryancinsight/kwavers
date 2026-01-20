@@ -67,6 +67,7 @@ pub struct Grid {
     /// Maximum wavenumber supported by the grid
     pub k_max: f64,
     /// Cache for `k_squared` computation
+    #[allow(dead_code)]
     pub(crate) k_squared_cache: OnceLock<Array3<f64>>,
 }
 
@@ -155,6 +156,7 @@ impl Grid {
         Ok(grid)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn k_squared(&self) -> &Array3<f64> {
         self.k_squared_cache.get_or_init(|| {
             let mut k2 = Array3::<f64>::zeros((self.nx, self.ny, self.nz));

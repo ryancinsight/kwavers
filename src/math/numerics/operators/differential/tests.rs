@@ -189,7 +189,7 @@ fn test_staggered_conservation() {
     }
 
     let grad_forward = op.apply_forward_x(field.view()).unwrap();
-    let grad_backward = op.apply_backward_x(field.view()).unwrap();
+    let _grad_backward = op.apply_backward_x(field.view()).unwrap();
 
     // Sum of forward differences should relate to boundary values
     let mut sum_forward = 0.0;
@@ -381,8 +381,9 @@ fn test_boundary_accuracy_degradation() {
     );
     assert!(
         error_boundary > error_interior * 10.0,
-        "Boundary error should be much larger: boundary={}, interior={}",
+        "Boundary error should be much larger: boundary={}, near={}, interior={}",
         error_boundary,
+        error_near,
         error_interior
     );
 }

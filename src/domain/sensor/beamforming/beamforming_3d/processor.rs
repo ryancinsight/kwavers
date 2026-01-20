@@ -35,6 +35,7 @@ pub struct BeamformingProcessor3D {
     pub(crate) delay_sum_pipeline: wgpu::ComputePipeline,
     #[cfg(feature = "gpu")]
     /// Compute pipeline for dynamic focusing
+    #[allow(dead_code)]
     pub(crate) dynamic_focus_pipeline: wgpu::ComputePipeline,
     #[cfg(feature = "gpu")]
     /// Bind group layouts

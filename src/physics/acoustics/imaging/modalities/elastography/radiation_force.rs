@@ -129,8 +129,10 @@ pub struct AcousticRadiationForce {
     /// Medium absorption coefficient (Np/m)
     absorption: f64,
     /// Medium density (kg/m³)
+    #[allow(dead_code)]
     density: f64,
     /// Computational grid
+    #[allow(dead_code)]
     grid: Grid,
 }
 
@@ -241,6 +243,7 @@ impl AcousticRadiationForce {
         })
     }
 
+    #[allow(dead_code)]
     fn push_pulse_pseudo_displacement(
         &self,
         push_location: [f64; 3],

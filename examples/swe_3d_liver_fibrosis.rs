@@ -166,7 +166,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         solver.propagate_volumetric_waves_with_body_forces(&body_forces, &push_times, &sources)?;
     println!(
         "   Simulated {} time steps of wave propagation",
-        displacement_history.len() as usize
+        displacement_history.len()
     );
     println!("   Wave front tracking completed\n");
 

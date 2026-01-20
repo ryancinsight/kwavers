@@ -33,7 +33,6 @@ use kwavers::domain::medium::elastic::{ElasticArrayAccess, ElasticProperties};
 use kwavers::domain::medium::heterogeneous::tissue::{HeterogeneousTissueMedium, TissueType};
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::domain::medium::ArrayAccess;
-use ndarray::Array3;
 
 /// Relative tolerance for floating-point comparisons
 const REL_TOL: f64 = 1e-12;
@@ -101,7 +100,7 @@ fn test_homogeneous_medium_physical_ranges() {
 
         // Shear speed should be reasonable (0 to 5000 m/s for any material)
         assert!(
-            cs >= 0.0 && cs < 5000.0,
+            (0.0..5000.0).contains(&cs),
             "{}: Shear speed {} m/s outside plausible range [0, 5000] m/s",
             name,
             cs
@@ -190,7 +189,7 @@ fn test_tissue_medium_different_tissue_types() {
 
         // Verify physical validity
         assert!(
-            first_val >= 0.0 && first_val < 5000.0,
+            (0.0..5000.0).contains(&first_val),
             "Tissue {:?}: shear speed {} m/s outside plausible range",
             tissue_type,
             first_val

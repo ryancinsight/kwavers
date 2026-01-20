@@ -6,7 +6,7 @@
 //! Reference: Treeby et al., "Modeling power law absorption and dispersion
 //! for acoustic propagation using the fractional Laplacian", JASA 2010
 
-use kwavers::core::validation::constants::SOUND_SPEED_WATER;
+use kwavers::core::constants::SOUND_SPEED_WATER;
 
 // Define tissue sound speed constant locally since it's not exported
 const TISSUE_SOUND_SPEED: f64 = 1540.0;

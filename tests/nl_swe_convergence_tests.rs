@@ -31,8 +31,7 @@ use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::physics::imaging::elastography::nonlinear::{
     HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
 };
-use kwavers::physics::imaging::elastography::*;
-use ndarray::{Array3, Array4};
+use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Analytical test case for simple harmonic wave propagation
@@ -276,7 +275,6 @@ impl HarmonicValidator {
 
         // Create fundamental frequency input
         let mut initial_disp = Array3::zeros((32, 8, 8));
-        let omega = 2.0 * PI * 50.0; // 50 Hz
         let k = 2.0 * PI / 0.01; // λ = 1 cm
 
         for i in 0..32 {

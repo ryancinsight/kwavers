@@ -226,7 +226,7 @@ impl TetrahedralMesh {
         }
 
         let quality = 6.0 * 2.0_f64.sqrt() * volume / edge_sum_sq.powf(1.5);
-        Ok(quality.min(1.0).max(0.0))
+        Ok(quality.clamp(0.0, 1.0))
     }
 
     /// Update mesh connectivity information
@@ -247,7 +247,7 @@ impl TetrahedralMesh {
             let entry = self
                 .face_elements
                 .entry(sorted_face)
-                .or_insert_with(Vec::new);
+                .or_default();
             entry.push(element_idx);
             if entry.len() > 2 {
                 return Err(KwaversError::InvalidInput(format!(
@@ -297,9 +297,9 @@ impl TetrahedralMesh {
 
     /// Update bounding box with new point
     fn update_bounding_box(&mut self, point: [f64; 3]) {
-        for i in 0..3 {
-            self.bounding_box.min[i] = self.bounding_box.min[i].min(point[i]);
-            self.bounding_box.max[i] = self.bounding_box.max[i].max(point[i]);
+        for (i, coord) in point.iter().enumerate() {
+            self.bounding_box.min[i] = self.bounding_box.min[i].min(*coord);
+            self.bounding_box.max[i] = self.bounding_box.max[i].max(*coord);
         }
     }
 

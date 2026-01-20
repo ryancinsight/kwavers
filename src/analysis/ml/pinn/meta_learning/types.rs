@@ -383,7 +383,7 @@ impl PhysicsTask {
 /// 3. **Sequential Sampling**: For time-dependent problems
 ///    - Causal training: respect temporal causality
 ///    - Wang, S., et al. (2020). "When and why PINNs fail to train"
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct TaskData {
     /// Collocation points (x, y, t) for PDE residual evaluation
     ///
@@ -406,16 +406,6 @@ pub struct TaskData {
     /// For diffusion equations, only u is needed.
     /// Typical: 100-1000 points
     pub initial_data: Vec<(f64, f64, f64, f64, f64)>,
-}
-
-impl Default for TaskData {
-    fn default() -> Self {
-        Self {
-            collocation_points: Vec::new(),
-            boundary_data: Vec::new(),
-            initial_data: Vec::new(),
-        }
-    }
 }
 
 impl TaskData {

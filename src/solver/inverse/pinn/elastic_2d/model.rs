@@ -70,7 +70,6 @@ use super::config::Config;
 use crate::error::{KwaversError, KwaversResult};
 
 #[cfg(feature = "pinn")]
-#[cfg(feature = "pinn")]
 use burn::{
     module::{Module, Param},
     nn::{Linear, LinearConfig},
@@ -449,7 +448,6 @@ impl ElasticPINN2D {
 #[cfg(all(test, feature = "pinn"))]
 mod tests {
     use super::*;
-    use crate::solver::inverse::elastic_2d::ActivationFunction;
     use burn::backend::NdArray;
 
     type TestBackend = NdArray<f32>;

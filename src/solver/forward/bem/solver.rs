@@ -38,6 +38,7 @@ impl Default for BemConfig {
 #[derive(Debug)]
 pub struct BemSolver {
     /// Solver configuration
+    #[allow(dead_code)]
     config: BemConfig,
     /// Boundary mesh (simplified representation)
     boundary_nodes: usize,

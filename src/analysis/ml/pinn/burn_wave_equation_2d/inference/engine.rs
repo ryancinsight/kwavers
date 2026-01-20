@@ -92,6 +92,7 @@ impl<B: Backend> RealTimePINNInference<B> {
         self.predict_quantized_cpu(x, y, t)
     }
 
+    #[allow(dead_code)]
     fn predict_quantized_cpu(
         &mut self,
         x: &[f32],
@@ -110,6 +111,7 @@ impl<B: Backend> RealTimePINNInference<B> {
         Ok((predictions, uncertainties))
     }
 
+    #[allow(dead_code)]
     fn forward_quantized_single(&mut self, input: &[f32]) -> KwaversResult<f32> {
         let num_layers = self.quantized_network.weights.len();
 

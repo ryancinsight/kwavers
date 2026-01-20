@@ -722,9 +722,6 @@ pub struct PerformanceSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use burn::backend::NdArray;
-
-    type TestBackend = burn::backend::Autodiff<NdArray<f32>>;
 
     #[tokio::test]
     async fn test_multi_gpu_manager_creation() {

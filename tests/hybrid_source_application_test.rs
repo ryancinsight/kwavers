@@ -24,11 +24,13 @@ fn test_hybrid_source_application() {
         1.0,
     );
 
-    let mut pstd_config = PSTDConfig::default();
-    pstd_config.boundary = PSTDBoundaryConfig::PML(PMLConfig {
-        thickness: 4,
+    let pstd_config = PSTDConfig {
+        boundary: PSTDBoundaryConfig::PML(PMLConfig {
+            thickness: 4,
+            ..Default::default()
+        }),
         ..Default::default()
-    });
+    };
 
     let config = HybridConfig {
         decomposition_strategy: DecompositionStrategy::UserDefined(vec![region]),

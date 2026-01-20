@@ -81,9 +81,7 @@ impl<'a> StressDerivatives<'a> {
             // Second-order one-sided stencil at boundaries
             if i == 0 {
                 (field.ux[[i + 1, j, k]] - field.ux[[i, j, k]]) / dx
-            } else if i == 1 {
-                (field.ux[[i + 1, j, k]] - field.ux[[i - 1, j, k]]) / (2.0 * dx)
-            } else if i == nx - 2 {
+            } else if i == 1 || i == nx - 2 {
                 (field.ux[[i + 1, j, k]] - field.ux[[i - 1, j, k]]) / (2.0 * dx)
             } else {
                 (field.ux[[i, j, k]] - field.ux[[i - 1, j, k]]) / dx
@@ -113,9 +111,7 @@ impl<'a> StressDerivatives<'a> {
             // Second-order stencil at boundaries
             if j == 0 {
                 (field.ux[[i, j + 1, k]] - field.ux[[i, j, k]]) / dy
-            } else if j == 1 {
-                (field.ux[[i, j + 1, k]] - field.ux[[i, j - 1, k]]) / (2.0 * dy)
-            } else if j == ny - 2 {
+            } else if j == 1 || j == ny - 2 {
                 (field.ux[[i, j + 1, k]] - field.ux[[i, j - 1, k]]) / (2.0 * dy)
             } else {
                 (field.ux[[i, j, k]] - field.ux[[i, j - 1, k]]) / dy
@@ -145,9 +141,7 @@ impl<'a> StressDerivatives<'a> {
             // Second-order stencil at boundaries
             if k == 0 {
                 (field.ux[[i, j, k + 1]] - field.ux[[i, j, k]]) / dz
-            } else if k == 1 {
-                (field.ux[[i, j, k + 1]] - field.ux[[i, j, k - 1]]) / (2.0 * dz)
-            } else if k == nz - 2 {
+            } else if k == 1 || k == nz - 2 {
                 (field.ux[[i, j, k + 1]] - field.ux[[i, j, k - 1]]) / (2.0 * dz)
             } else {
                 (field.ux[[i, j, k]] - field.ux[[i, j, k - 1]]) / dz
@@ -176,9 +170,7 @@ impl<'a> StressDerivatives<'a> {
         if i < 2 || i >= nx - 2 {
             if i == 0 {
                 (field.uy[[i + 1, j, k]] - field.uy[[i, j, k]]) / dx
-            } else if i == 1 {
-                (field.uy[[i + 1, j, k]] - field.uy[[i - 1, j, k]]) / (2.0 * dx)
-            } else if i == nx - 2 {
+            } else if i == 1 || i == nx - 2 {
                 (field.uy[[i + 1, j, k]] - field.uy[[i - 1, j, k]]) / (2.0 * dx)
             } else {
                 (field.uy[[i, j, k]] - field.uy[[i - 1, j, k]]) / dx
@@ -206,9 +198,7 @@ impl<'a> StressDerivatives<'a> {
         if j < 2 || j >= ny - 2 {
             if j == 0 {
                 (field.uy[[i, j + 1, k]] - field.uy[[i, j, k]]) / dy
-            } else if j == 1 {
-                (field.uy[[i, j + 1, k]] - field.uy[[i, j - 1, k]]) / (2.0 * dy)
-            } else if j == ny - 2 {
+            } else if j == 1 || j == ny - 2 {
                 (field.uy[[i, j + 1, k]] - field.uy[[i, j - 1, k]]) / (2.0 * dy)
             } else {
                 (field.uy[[i, j, k]] - field.uy[[i, j - 1, k]]) / dy
@@ -236,9 +226,7 @@ impl<'a> StressDerivatives<'a> {
         if k < 2 || k >= nz - 2 {
             if k == 0 {
                 (field.uy[[i, j, k + 1]] - field.uy[[i, j, k]]) / dz
-            } else if k == 1 {
-                (field.uy[[i, j, k + 1]] - field.uy[[i, j, k - 1]]) / (2.0 * dz)
-            } else if k == nz - 2 {
+            } else if k == 1 || k == nz - 2 {
                 (field.uy[[i, j, k + 1]] - field.uy[[i, j, k - 1]]) / (2.0 * dz)
             } else {
                 (field.uy[[i, j, k]] - field.uy[[i, j, k - 1]]) / dz
@@ -266,9 +254,7 @@ impl<'a> StressDerivatives<'a> {
         if i < 2 || i >= nx - 2 {
             if i == 0 {
                 (field.uz[[i + 1, j, k]] - field.uz[[i, j, k]]) / dx
-            } else if i == 1 {
-                (field.uz[[i + 1, j, k]] - field.uz[[i - 1, j, k]]) / (2.0 * dx)
-            } else if i == nx - 2 {
+            } else if i == 1 || i == nx - 2 {
                 (field.uz[[i + 1, j, k]] - field.uz[[i - 1, j, k]]) / (2.0 * dx)
             } else {
                 (field.uz[[i, j, k]] - field.uz[[i - 1, j, k]]) / dx
@@ -296,9 +282,7 @@ impl<'a> StressDerivatives<'a> {
         if j < 2 || j >= ny - 2 {
             if j == 0 {
                 (field.uz[[i, j + 1, k]] - field.uz[[i, j, k]]) / dy
-            } else if j == 1 {
-                (field.uz[[i, j + 1, k]] - field.uz[[i, j - 1, k]]) / (2.0 * dy)
-            } else if j == ny - 2 {
+            } else if j == 1 || j == ny - 2 {
                 (field.uz[[i, j + 1, k]] - field.uz[[i, j - 1, k]]) / (2.0 * dy)
             } else {
                 (field.uz[[i, j, k]] - field.uz[[i, j - 1, k]]) / dy
@@ -326,9 +310,7 @@ impl<'a> StressDerivatives<'a> {
         if k < 2 || k >= nz - 2 {
             if k == 0 {
                 (field.uz[[i, j, k + 1]] - field.uz[[i, j, k]]) / dz
-            } else if k == 1 {
-                (field.uz[[i, j, k + 1]] - field.uz[[i, j, k - 1]]) / (2.0 * dz)
-            } else if k == nz - 2 {
+            } else if k == 1 || k == nz - 2 {
                 (field.uz[[i, j, k + 1]] - field.uz[[i, j, k - 1]]) / (2.0 * dz)
             } else {
                 (field.uz[[i, j, k]] - field.uz[[i, j, k - 1]]) / dz

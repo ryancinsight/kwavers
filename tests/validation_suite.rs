@@ -28,7 +28,7 @@ mod plane_wave_validation {
         let dx = 0.1e-3; // 0.1 mm
         let freq = 1e6; // 1 MHz
         let c0 = 1500.0; // m/s
-        let rho0 = 1000.0; // kg/m³
+        let _rho0 = 1000.0; // kg/m³
 
         let _grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
         let wavelength = c0 / freq;

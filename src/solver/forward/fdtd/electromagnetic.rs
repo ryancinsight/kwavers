@@ -43,8 +43,11 @@ pub struct ElectromagneticFdtdSolver {
     /// Cell-centered electromagnetic fields (derived from Yee grid)
     fields_cache: EMFields,
     /// Spatial derivative operators
+    #[allow(dead_code)]
     dx_operator: Box<dyn DifferentialOperator>,
+    #[allow(dead_code)]
     dy_operator: Box<dyn DifferentialOperator>,
+    #[allow(dead_code)]
     dz_operator: Box<dyn DifferentialOperator>,
 }
 

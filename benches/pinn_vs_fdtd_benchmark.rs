@@ -18,7 +18,7 @@ use ndarray::{Array1, Array2};
 use burn::backend::NdArray;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::burn_wave_equation_2d::{
-    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, Geometry2D,
+    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DTrainer, Geometry2D,
 };
 
 /// Benchmark configuration for different problem sizes
@@ -272,7 +272,7 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                     );
 
                     let trainer =
-                        BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)
+                        BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config, geometry, &device)
                             .expect("PINN trainer creation failed");
 
                     black_box(trainer)
@@ -309,7 +309,7 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                     );
 
                     let mut trainer =
-                        BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)
+                        BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config.clone(), geometry, &device)
                             .expect("PINN trainer creation failed");
 
                     // Generate training data
@@ -317,7 +317,6 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                         generate_training_data(config, wave_speed, 100);
 
                     // Train PINN
-                    let train_config = trainer.pinn().config().clone();
                     let _metrics = trainer
                         .train(
                             &x_data,
@@ -325,7 +324,7 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                             &t_data,
                             &u_data,
                             wave_speed,
-                            &train_config,
+                            &pinn_config,
                             &device,
                             config.pinn_epochs,
                         )
@@ -358,7 +357,7 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                     );
 
                     let trainer =
-                        BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)
+                        BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config, geometry, &device)
                             .expect("PINN trainer creation failed");
 
                     // Generate test points
@@ -439,7 +438,7 @@ fn memory_usage_benchmark(c: &mut Criterion) {
             };
 
             let geometry = Geometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
-            let trainer = BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)
+            let trainer = BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config, geometry, &device)
                 .expect("PINN trainer creation failed");
 
             black_box(trainer)
@@ -549,14 +548,13 @@ fn accuracy_benchmark(c: &mut Criterion) {
             );
 
             let mut trainer =
-                BurnPINN2DWave::<Backend>::new_trainer(pinn_config, geometry, &device)
+                BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config.clone(), geometry, &device)
                     .expect("PINN trainer creation failed");
 
             // Generate training data
             let (x_data, y_data, t_data, u_data) = generate_training_data(&config, wave_speed, 200);
 
             // Train PINN
-            let train_config = trainer.pinn().config().clone();
             let _metrics = trainer
                 .train(
                     &x_data,
@@ -564,7 +562,7 @@ fn accuracy_benchmark(c: &mut Criterion) {
                     &t_data,
                     &u_data,
                     wave_speed,
-                    &train_config,
+                    &pinn_config,
                     &device,
                     config.pinn_epochs,
                 )

@@ -11,10 +11,19 @@
 //! - Maximum Pointwise Error
 //! - Correlation Coefficient
 
+use crate::analysis::ml::pinn::burn_wave_equation_1d::BurnPINN1DWave;
 use crate::analysis::ml::pinn::fdtd_reference::{FDTD1DWaveSolver, FDTDConfig};
-use crate::analysis::ml::pinn::wave_equation_1d::{PINN1DWave, ValidationMetrics};
 use crate::core::error::{KwaversError, KwaversResult};
+use burn::tensor::backend::AutodiffBackend;
 use ndarray::{Array1, Array2};
+
+#[derive(Debug, Clone)]
+pub struct ValidationMetrics {
+    pub mean_absolute_error: f64,
+    pub rmse: f64,
+    pub relative_l2_error: f64,
+    pub max_error: f64,
+}
 
 /// Comprehensive validation results comparing PINN vs FDTD
 #[derive(Debug, Clone)]
@@ -100,21 +109,24 @@ impl ValidationReport {
 /// ```no_run
 /// # #[cfg(feature = "pinn")]
 /// # {
-/// use kwavers::ml::pinn::{PINN1DWave, PINNConfig};
+/// use burn::backend::{Autodiff, NdArray};
+/// use kwavers::ml::pinn::{BurnPINN1DWave, BurnPINNConfig};
 /// use kwavers::ml::pinn::fdtd_reference::FDTDConfig;
 /// use kwavers::ml::pinn::validation::validate_pinn_vs_fdtd;
 ///
-/// let mut pinn = PINN1DWave::new(1500.0, PINNConfig::default())?;
-/// // Train PINN...
+/// type Backend = Autodiff<NdArray<f32>>;
+/// let device = Default::default();
+/// let pinn = BurnPINN1DWave::<Backend>::new(BurnPINNConfig::default(), &device)?;
 ///
 /// let fdtd_config = FDTDConfig::default();
-/// let report = validate_pinn_vs_fdtd(&pinn, fdtd_config)?;
+/// let report = validate_pinn_vs_fdtd(&pinn, &device, fdtd_config)?;
 /// println!("{}", report.summary());
 /// # Ok::<(), kwavers::error::KwaversError>(())
 /// # }
 /// ```
-pub fn validate_pinn_vs_fdtd(
-    pinn: &PINN1DWave,
+pub fn validate_pinn_vs_fdtd<B: AutodiffBackend>(
+    pinn: &BurnPINN1DWave<B>,
+    device: &B::Device,
     fdtd_config: FDTDConfig,
 ) -> KwaversResult<ValidationReport> {
     use std::time::Instant;
@@ -127,17 +139,32 @@ pub fn validate_pinn_vs_fdtd(
 
     // Generate PINN prediction
     let pinn_start = Instant::now();
-    let x = Array1::linspace(
+    let x_coords = Array1::linspace(
         0.0,
         (fdtd_config.nx - 1) as f64 * fdtd_config.dx,
         fdtd_config.nx,
     );
-    let t = Array1::linspace(
+    let t_coords = Array1::linspace(
         0.0,
         (fdtd_config.nt - 1) as f64 * fdtd_config.dt,
         fdtd_config.nt,
     );
-    let pinn_prediction = pinn.predict(&x, &t);
+    let mut x = Vec::with_capacity(fdtd_config.nx * fdtd_config.nt);
+    let mut t = Vec::with_capacity(fdtd_config.nx * fdtd_config.nt);
+    for x_val in x_coords.iter() {
+        for t_val in t_coords.iter() {
+            x.push(*x_val);
+            t.push(*t_val);
+        }
+    }
+    let x = Array1::from_vec(x);
+    let t = Array1::from_vec(t);
+    let pinn_prediction_flat = pinn.predict(&x, &t, device)?;
+    let pinn_prediction = Array2::from_shape_vec(
+        (fdtd_config.nx, fdtd_config.nt),
+        pinn_prediction_flat.iter().copied().collect(),
+    )
+    .map_err(|err| KwaversError::InternalError(err.to_string()))?;
     let pinn_time = pinn_start.elapsed().as_secs_f64();
 
     // Compute validation metrics
@@ -268,7 +295,8 @@ fn compute_mean_relative_error(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::analysis::ml::pinn::wave_equation_1d::PINNConfig;
+    use burn::backend::{Autodiff, NdArray};
+    use crate::analysis::ml::pinn::BurnPINNConfig;
 
     #[test]
     fn test_compute_validation_metrics() {
@@ -343,12 +371,9 @@ mod tests {
 
     #[test]
     fn test_validate_pinn_vs_fdtd() {
-        let config = PINNConfig::default();
-        let mut pinn = PINN1DWave::new(1500.0, config).unwrap();
-
-        // Train on dummy data
-        let reference_data = Array2::from_elem((50, 50), 0.5);
-        pinn.train(&reference_data, 10).unwrap();
+        type Backend = Autodiff<NdArray<f32>>;
+        let device = Default::default();
+        let pinn = BurnPINN1DWave::<Backend>::new(BurnPINNConfig::default(), &device).unwrap();
 
         let fdtd_config = FDTDConfig {
             wave_speed: 1500.0,
@@ -359,7 +384,7 @@ mod tests {
             ..Default::default()
         };
 
-        let report = validate_pinn_vs_fdtd(&pinn, fdtd_config);
+        let report = validate_pinn_vs_fdtd(&pinn, &device, fdtd_config);
         assert!(report.is_ok());
 
         let report = report.unwrap();

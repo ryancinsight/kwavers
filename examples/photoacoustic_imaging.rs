@@ -140,31 +140,18 @@ fn create_tissue_medium(grid: &Grid) -> KwaversResult<HomogeneousMedium> {
 
 /// Configure photoacoustic simulation parameters
 fn create_photoacoustic_parameters() -> KwaversResult<PhotoacousticParameters> {
-    let mut params = PhotoacousticParameters::default();
-
-    // Multi-wavelength configuration for spectroscopic imaging
-    params.wavelengths = vec![532.0, 650.0, 750.0, 850.0, 950.0]; // Visible to NIR
-
-    // Realistic optical properties (wavelength-dependent)
-    params.absorption_coefficients = vec![
-        50.0, // 532nm - hemoglobin absorption peak
-        25.0, // 650nm - isosbestic point
-        15.0, // 750nm - deoxy-Hb absorption
-        10.0, // 850nm - NIR window
-        8.0,  // 950nm - water absorption increases
-    ];
-
-    params.scattering_coefficients = vec![120.0, 100.0, 80.0, 60.0, 50.0];
-    params.anisotropy_factors = vec![0.92, 0.88, 0.85, 0.82, 0.80];
-
-    // Grüneisen parameter (thermoelastic efficiency) - tissue-dependent
-    params.gruneisen_parameters = vec![0.15, 0.12, 0.10, 0.08, 0.06];
-
-    // Laser parameters for clinical PAI
-    params.pulse_duration = 5e-9; // 5 ns pulses (FWHM)
-    params.laser_fluence = 20.0; // 20 mJ/cm² (ANSI safety limit)
-
-    Ok(params)
+    Ok(PhotoacousticParameters {
+        wavelengths: vec![532.0, 650.0, 750.0, 850.0, 950.0],
+        absorption_coefficients: vec![
+            50.0, 25.0, 15.0, 10.0, 8.0,
+        ],
+        scattering_coefficients: vec![120.0, 100.0, 80.0, 60.0, 50.0],
+        anisotropy_factors: vec![0.92, 0.88, 0.85, 0.82, 0.80],
+        gruneisen_parameters: vec![0.15, 0.12, 0.10, 0.08, 0.06],
+        pulse_duration: 5e-9,
+        laser_fluence: 20.0,
+        ..Default::default()
+    })
 }
 
 /// Analyze simulation results and extract quantitative metrics

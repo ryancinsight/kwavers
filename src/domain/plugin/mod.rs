@@ -10,6 +10,7 @@ pub use fields::PluginFields;
 pub use metadata::PluginMetadata;
 
 use crate::core::error::KwaversResult;
+use crate::core::time::StabilityConstraints;
 use crate::domain::boundary::Boundary;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
@@ -111,8 +112,8 @@ pub trait Plugin: Debug + Send + Sync {
     }
 
     /// Get stability constraints for time stepping
-    fn stability_constraints(&self) -> TransformationStabilityConstraints {
-        TransformationStabilityConstraints::default()
+    fn stability_constraints(&self) -> StabilityConstraints {
+        StabilityConstraints::default()
     }
 
     /// Get plugin priority
@@ -130,18 +131,4 @@ pub trait Plugin: Debug + Send + Sync {
 
     /// Convert to mutable Any for downcasting
     fn as_any_mut(&mut self) -> &mut dyn Any;
-}
-
-// Support struct for stability - usually imported from solver but we can define basic needs here or import
-// Since this is domain, it shouldn't import from solver.
-// We will use a simplified struct or move StabilityConstraints to domain if needed.
-// For now, let's assume we can define a simple one or use an associated type.
-// But checking the original code, it imported `crate::solver::time_integration::StabilityConstraints`.
-// This is a dependency inversion violation if domain -> solver.
-// We should probably move StabilityConstraints to domain too or use a generic.
-// For now, I'll stub it here to break the dependency chain.
-
-#[derive(Debug, Clone, Default)]
-pub struct TransformationStabilityConstraints {
-    pub cfl_limit: Option<f64>,
 }

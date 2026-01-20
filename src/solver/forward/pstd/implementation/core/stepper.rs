@@ -214,14 +214,16 @@ mod tests {
     #[test]
     fn test_anti_aliasing_runs() {
         // Setup configuration
-        let mut config = PSTDConfig::default();
-        config.anti_aliasing = AntiAliasingConfig {
-            enabled: true,
-            cutoff: 0.8,
-            order: 4,
+        let config = PSTDConfig {
+            anti_aliasing: AntiAliasingConfig {
+                enabled: true,
+                cutoff: 0.8,
+                order: 4,
+            },
+            dt: 1e-8,
+            nt: 10,
+            ..Default::default()
         };
-        config.dt = 1e-8;
-        config.nt = 10;
 
         // Create Grid
         let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();

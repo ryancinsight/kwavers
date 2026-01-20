@@ -455,8 +455,6 @@ impl Default for UncertaintyStats {
 mod tests {
     use super::*;
 
-    type TestBackend = burn::backend::NdArray<f32>;
-
     #[test]
     fn test_uncertainty_config() {
         let config = PinnUncertaintyConfig {

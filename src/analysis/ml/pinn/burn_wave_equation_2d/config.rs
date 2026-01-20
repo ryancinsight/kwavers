@@ -70,7 +70,7 @@ impl Default for BurnLossWeights2D {
 }
 
 /// Training metrics for monitorining convergence in 2D
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct BurnTrainingMetrics2D {
     /// Total loss history
     pub total_loss: Vec<f64>,

@@ -483,7 +483,7 @@ impl AcousticWaveSolver {
     ///
     /// Returns `(nx, ny, nz)` grid point counts.
     pub fn grid_dimensions(&self) -> (usize, usize, usize) {
-        self.backend.get_grid_dimensions()
+        (self.grid.nx, self.grid.ny, self.grid.nz)
     }
 }
 

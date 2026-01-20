@@ -24,7 +24,7 @@
 use kwavers::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::burn_wave_equation_2d::{
-    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, Geometry2D,
+    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DTrainer, Geometry2D,
 };
 #[cfg(feature = "pinn")]
 use ndarray::{Array1, Array2};
@@ -126,7 +126,7 @@ fn compute_l2_error(
 
     for i in 0..n {
         let u_analytical = analytical_solution_2d(x_pred[i], y_pred[i], t_pred[i], wave_speed);
-        let u_predicted = u_pred[[i, 0]] as f64;
+        let u_predicted = u_pred[[i, 0]];
         let error = (u_predicted - u_analytical).powi(2);
         error_sum += error;
     }
@@ -194,7 +194,8 @@ fn main() -> KwaversResult<()> {
     println!();
 
     // Create PINN trainer
-    let trainer = BurnPINN2DWave::<Backend>::new_trainer(pinn_config.clone(), geometry, &device)?;
+    let trainer =
+        BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config.clone(), geometry, &device)?;
     println!("✅ PINN Trainer: Created successfully");
     println!();
 

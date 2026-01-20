@@ -4,11 +4,10 @@ use kwavers::domain::boundary::{PMLBoundary, PMLConfig};
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::domain::source::Source;
-use kwavers::physics::plugin::PluginManager;
+use kwavers::PluginManager;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
-use kwavers::solver::spectral::config::BoundaryConfig;
-use kwavers::solver::spectral::SpectralConfig;
-use kwavers::solver::spectral::SpectralPlugin;
+use kwavers::solver::pstd::config::BoundaryConfig;
+use kwavers::solver::pstd::{PSTDConfig, PSTDPlugin};
 use ndarray::{s, Array4, Zip};
 
 // Named constants for test configuration
@@ -153,7 +152,7 @@ fn test_pstd_solver() {
 
     let c = TEST_SOUND_SPEED;
     let dt = PSTD_CFL_FACTOR * TEST_GRID_SPACING / c;
-    let config = SpectralConfig {
+    let config = PSTDConfig {
         nt: TEST_STEPS_SHORT + 1,
         dt,
         boundary: BoundaryConfig::PML(PMLConfig {
@@ -163,7 +162,7 @@ fn test_pstd_solver() {
         ..Default::default()
     };
 
-    let plugin = SpectralPlugin::new(config, &grid).expect("Failed to create spectral plugin");
+    let plugin = PSTDPlugin::new(config, &grid).expect("Failed to create PSTD plugin");
     let mut plugin_manager = PluginManager::new();
     plugin_manager
         .add_plugin(Box::new(plugin))
@@ -326,7 +325,7 @@ fn test_wave_propagation() {
 
         let c = TEST_SOUND_SPEED;
         let dt = PSTD_CFL_FACTOR * TEST_GRID_SPACING / c;
-        let config = SpectralConfig {
+        let config = PSTDConfig {
             nt: TEST_STEPS_MEDIUM + 1,
             dt,
             boundary: BoundaryConfig::PML(PMLConfig {
@@ -336,7 +335,7 @@ fn test_wave_propagation() {
             ..Default::default()
         };
 
-        let plugin = SpectralPlugin::new(config, &grid).expect("Failed to create spectral plugin");
+        let plugin = PSTDPlugin::new(config, &grid).expect("Failed to create PSTD plugin");
         let mut plugin_manager = PluginManager::new();
         plugin_manager
             .add_plugin(Box::new(plugin))

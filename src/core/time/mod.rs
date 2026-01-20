@@ -9,6 +9,14 @@ pub struct Time {
     pub t_max: f64,     // Total duration (seconds)
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct StabilityConstraints {
+    pub max_dt: Option<f64>,
+    pub cfl_number: Option<f64>,
+    pub max_wave_speed: Option<f64>,
+    pub diffusion_coefficient: Option<f64>,
+}
+
 impl Time {
     #[must_use]
     pub fn new(dt: f64, n_steps: usize) -> Self {

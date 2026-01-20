@@ -330,9 +330,9 @@ impl CollocationSampler {
             let point: Vec<f64> = points.row(i).iter().cloned().collect();
             let loc = self.domain.classify_point(&point, tolerance);
 
-            if boundary && loc == PointLocation::Boundary {
-                valid_points.push(point);
-            } else if !boundary && loc == PointLocation::Interior {
+            let include =
+                (boundary && loc == PointLocation::Boundary) || (!boundary && loc == PointLocation::Interior);
+            if include {
                 valid_points.push(point);
             }
         }
@@ -370,7 +370,6 @@ impl CollocationSampler {
 }
 
 fn sobol_unit_hypercube_points(n_points: usize, dim: usize, seed: Option<u64>) -> Vec<Vec<f64>> {
-    const MAX_BITS: usize = 32;
     assert!(
         (1..=3).contains(&dim),
         "Sobol sequence is supported only for 1..=3 dimensions"
@@ -407,8 +406,8 @@ fn sobol_direction_numbers(dim: usize) -> Vec<[u32; 32]> {
     let mut dirs: Vec<[u32; MAX_BITS]> = Vec::with_capacity(dim);
 
     let mut v1 = [0u32; MAX_BITS];
-    for i in 0..MAX_BITS {
-        v1[i] = 1u32 << (31 - i);
+    for (i, v) in v1.iter_mut().enumerate() {
+        *v = 1u32 << (31 - i);
     }
     dirs.push(v1);
 
@@ -578,10 +577,10 @@ mod tests {
 
     #[test]
     fn test_multi_region_locate() {
-        let region1 =
-            Box::new(RectangularDomain::new_2d(0.0, 1.0, 0.0, 1.0)) as Box<dyn GeometricDomain>;
-        let region2 =
-            Box::new(RectangularDomain::new_2d(1.0, 2.0, 0.0, 1.0)) as Box<dyn GeometricDomain>;
+        let region1: Box<dyn GeometricDomain> =
+            Box::new(RectangularDomain::new_2d(0.0, 1.0, 0.0, 1.0));
+        let region2: Box<dyn GeometricDomain> =
+            Box::new(RectangularDomain::new_2d(1.0, 2.0, 0.0, 1.0));
 
         let multi = MultiRegionDomain::new(
             vec![region1, region2],

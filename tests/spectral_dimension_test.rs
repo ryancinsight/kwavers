@@ -3,7 +3,6 @@ use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::domain::source::GridSource;
 use kwavers::solver::forward::pstd::config::BoundaryConfig;
 use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver};
-use kwavers::solver::interface::Solver;
 use ndarray::Array3;
 
 #[test]

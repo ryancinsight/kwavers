@@ -390,7 +390,6 @@ impl BeamformingProcessor3D {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::sensor::beamforming::config::BeamformingConfig;
 
     #[test]
     fn test_validate_input_empty_data() {

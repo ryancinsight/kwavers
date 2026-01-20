@@ -1,8 +1,9 @@
-use crate::analysis::ml::pinn::burn_wave_equation_1d::{BurnPINNConfig, BurnPINNTrainer};
-use crate::analysis::ml::pinn::burn_wave_equation_2d::{
-    BoundaryCondition2D, BurnPINN2DConfig, BurnPINN2DTrainer, Geometry2D,
+use crate::analysis::ml::pinn::burn_wave_equation_1d::{
+    BurnPINNConfig, BurnPINNTrainer, BurnTrainingMetrics,
 };
-use crate::analysis::ml::pinn::wave_equation_1d::TrainingMetrics;
+use crate::analysis::ml::pinn::burn_wave_equation_2d::{
+    BoundaryCondition2D, BurnPINN2DConfig, BurnPINN2DTrainer, BurnTrainingMetrics2D, Geometry2D,
+};
 use crate::core::error::{KwaversError, KwaversResult};
 use burn::backend::{Autodiff, NdArray};
 use ndarray::{Array1, Array2};
@@ -74,6 +75,12 @@ pub struct TrainingConfig {
 pub struct TrainingResult {
     pub metrics: TrainingMetrics,
     // Add other fields as needed, e.g., model weights
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TrainingMetrics {
+    OneD(BurnTrainingMetrics),
+    TwoD(BurnTrainingMetrics2D),
 }
 
 /// PINN Trainer
@@ -172,14 +179,7 @@ fn train_1d(
     )?;
 
     Ok(TrainingResult {
-        metrics: TrainingMetrics {
-            total_loss: metrics.total_loss,
-            data_loss: metrics.data_loss,
-            pde_loss: metrics.pde_loss,
-            bc_loss: metrics.bc_loss,
-            training_time_secs: metrics.training_time_secs,
-            epochs_completed: metrics.epochs_completed,
-        },
+        metrics: TrainingMetrics::OneD(metrics),
     })
 }
 
@@ -245,13 +245,6 @@ fn train_2d(
     )?;
 
     Ok(TrainingResult {
-        metrics: TrainingMetrics {
-            total_loss: metrics.total_loss,
-            data_loss: metrics.data_loss,
-            pde_loss: metrics.pde_loss,
-            bc_loss: metrics.bc_loss,
-            training_time_secs: metrics.training_time_secs,
-            epochs_completed: metrics.epochs_completed,
-        },
+        metrics: TrainingMetrics::TwoD(metrics),
     })
 }

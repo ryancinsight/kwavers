@@ -17,10 +17,12 @@ use std::f64::consts::PI;
 #[test]
 fn test_rayleigh_collapse_time() -> Result<(), kwavers::KwaversError> {
     // Rayleigh collapse time: τ = 0.915 * R₀ * sqrt(ρ/Δp)
-    let mut params = BubbleParameters::default();
-    params.r0 = 100e-6; // 100 μm bubble
-    params.use_thermal_effects = false; // Isothermal for Rayleigh
-    params.use_compressibility = false; // Incompressible for Rayleigh
+    let params = BubbleParameters {
+        r0: 100e-6,
+        use_thermal_effects: false,
+        use_compressibility: false,
+        ..Default::default()
+    };
 
     let model = KellerMiksisModel::new(params.clone());
     let mut state = BubbleState::new(&params);
@@ -50,7 +52,7 @@ fn test_rayleigh_collapse_time() -> Result<(), kwavers::KwaversError> {
 
     // Calculate theoretical Rayleigh collapse time
     let delta_p = p_acoustic.abs();
-    let rayleigh_time = 0.915 * params.r0 * ((params.rho_liquid / delta_p) as f64).sqrt();
+    let rayleigh_time = 0.915 * params.r0 * (params.rho_liquid / delta_p).sqrt();
 
     // Should match within 10% (accounting for numerical discretization)
     let error = (collapse_time - rayleigh_time).abs() / rayleigh_time;
@@ -113,17 +115,17 @@ fn test_elastic_wave_velocities() {
     let _grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3).unwrap();
 
     // Rock properties (typical granite)
-    let rho = 2700.0; // kg/m³
-    let vp = 6000.0; // m/s (P-wave)
-    let vs = 3500.0; // m/s (S-wave)
+    let rho: f64 = 2700.0; // kg/m³
+    let vp: f64 = 6000.0; // m/s (P-wave)
+    let vs: f64 = 3500.0; // m/s (S-wave)
 
     // Calculate Lamé parameters from velocities
     let mu = rho * vs * vs;
     let lambda = rho * vp * vp - 2.0 * mu;
 
     // Verify relationships
-    let vp_calc = ((lambda + 2.0 * mu) / rho as f64).sqrt();
-    let vs_calc = (mu / rho as f64).sqrt();
+    let vp_calc = ((lambda + 2.0 * mu) / rho).sqrt();
+    let vs_calc = (mu / rho).sqrt();
 
     assert!((vp_calc - vp).abs() < 1.0, "P-wave velocity mismatch");
     assert!((vs_calc - vs).abs() < 1.0, "S-wave velocity mismatch");
@@ -138,10 +140,12 @@ fn test_elastic_wave_velocities() {
 /// Journal of Fluid Mechanics, 222, 587-616.
 #[test]
 fn test_thermal_diffusion_in_bubble() {
-    let mut params = BubbleParameters::default();
-    params.use_thermal_effects = true;
-    params.thermal_conductivity = 0.6; // W/(m·K) for water
-    params.specific_heat_liquid = 4182.0; // J/(kg·K)
+    let params = BubbleParameters {
+        use_thermal_effects: true,
+        thermal_conductivity: 0.6,
+        specific_heat_liquid: 4182.0,
+        ..Default::default()
+    };
 
     let _model = KellerMiksisModel::new(params.clone());
     let mut state = BubbleState::new(&params);

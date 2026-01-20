@@ -104,7 +104,7 @@ impl PerformanceBenchmarkSuite {
     ///
     /// All benchmarks disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md
     #[allow(dead_code)]
-    fn run_full_suite_DISABLED(&mut self) -> KwaversResult<()> {
+    fn run_full_suite_disabled(&mut self) -> KwaversResult<()> {
         panic!("Benchmarks disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -113,7 +113,7 @@ impl PerformanceBenchmarkSuite {
     /// Benchmarks disabled because they use stub implementations.
     /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md
     #[allow(dead_code)]
-    fn run_wave_propagation_benchmarks_DISABLED(&mut self) -> KwaversResult<()> {
+    fn run_wave_propagation_benchmarks_disabled(&mut self) -> KwaversResult<()> {
         panic!("Benchmarks disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -122,7 +122,7 @@ impl PerformanceBenchmarkSuite {
     /// Uses stub implementations: update_velocity_fdtd, update_pressure_fdtd
     /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md Section "Phase 2A"
     #[allow(dead_code)]
-    fn benchmark_fdtd_wave_DISABLED(
+    fn benchmark_fdtd_wave_disabled(
         &self,
         nx: usize,
         ny: usize,
@@ -177,7 +177,7 @@ impl PerformanceBenchmarkSuite {
     /// Uses stub implementations: simulate_fft_operations
     /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md Section "Phase 2A"
     #[allow(dead_code)]
-    fn benchmark_pstd_wave_DISABLED(
+    fn benchmark_pstd_wave_disabled(
         &self,
         nx: usize,
         ny: usize,
@@ -236,7 +236,7 @@ impl PerformanceBenchmarkSuite {
     /// Uses stub implementations: simulate_angular_spectrum_propagation
     /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md Section "Phase 2A"
     #[allow(dead_code)]
-    fn benchmark_has_wave_DISABLED(
+    fn benchmark_has_wave_disabled(
         &self,
         nx: usize,
         ny: usize,
@@ -638,7 +638,7 @@ impl PerformanceBenchmarkSuite {
     /// Uses stub implementations for all UQ computations
     /// See: BENCHMARK_STUB_REMEDIATION_PLAN.md Section "Phase 2A"
     #[allow(dead_code)]
-    fn run_uncertainty_benchmarks_DISABLED(&mut self) -> KwaversResult<()> {
+    fn run_uncertainty_benchmarks_disabled(&mut self) -> KwaversResult<()> {
         println!("\n--- Uncertainty Quantification Benchmarks ---");
 
         let (nx, ny, nz) = (64, 64, 32); // Small grid for uncertainty tests
@@ -903,7 +903,7 @@ impl PerformanceBenchmarkSuite {
     /// - backlog.md Sprint 211 "FDTD Benchmarks"
     /// - Production implementation: src/solver/fdtd/
     #[allow(dead_code)]
-    fn update_velocity_fdtd_DISABLED(
+    fn update_velocity_fdtd_disabled(
         &self,
         _vx: &mut Array3<f32>,
         _vy: &mut Array3<f32>,
@@ -927,7 +927,7 @@ impl PerformanceBenchmarkSuite {
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #2
     #[allow(dead_code)]
     #[allow(clippy::too_many_arguments)]
-    fn update_pressure_fdtd_DISABLED(
+    fn update_pressure_fdtd_disabled(
         &self,
         _p: &mut Array3<f32>,
         _vx: &Array3<f32>,
@@ -952,7 +952,7 @@ impl PerformanceBenchmarkSuite {
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #3
     #[allow(dead_code)]
     #[allow(clippy::too_many_arguments)]
-    fn update_pressure_nonlinear_DISABLED(
+    fn update_pressure_nonlinear_disabled(
         &self,
         _p: &mut Array3<f32>,
         _vx: &Array3<f32>,
@@ -972,7 +972,7 @@ impl PerformanceBenchmarkSuite {
     /// Required: rustfft integration, k-space operators
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #4
     #[allow(dead_code)]
-    fn simulate_fft_operations_DISABLED(&self, _field: &mut Array3<f32>) {
+    fn simulate_fft_operations_disabled(&self, _field: &mut Array3<f32>) {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -981,7 +981,11 @@ impl PerformanceBenchmarkSuite {
     /// Required: Angular spectrum method implementation
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #5
     #[allow(dead_code)]
-    fn simulate_angular_spectrum_propagation_DISABLED(&self, _field: &mut Array3<f32>, _dt: f64) {
+    fn simulate_angular_spectrum_propagation_disabled(
+        &self,
+        _field: &mut Array3<f32>,
+        _dt: f64,
+    ) {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -990,7 +994,7 @@ impl PerformanceBenchmarkSuite {
     /// Required: Elastic wave equation solver
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #6
     #[allow(dead_code)]
-    fn simulate_elastic_wave_step_DISABLED(
+    fn simulate_elastic_wave_step_disabled(
         &self,
         _displacement: &mut Array3<f32>,
         _step: usize,
@@ -1003,7 +1007,11 @@ impl PerformanceBenchmarkSuite {
     ///
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #7
     #[allow(dead_code)]
-    fn simulate_displacement_tracking_DISABLED(&self, _displacement: &Array3<f32>, _step: usize) {
+    fn simulate_displacement_tracking_disabled(
+        &self,
+        _displacement: &Array3<f32>,
+        _step: usize,
+    ) {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -1012,7 +1020,10 @@ impl PerformanceBenchmarkSuite {
     /// Required: Inverse problem solver (time-of-flight, direct inversion, FEM)
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #8
     #[allow(dead_code)]
-    fn simulate_stiffness_estimation_DISABLED(&self, _displacement: &Array3<f32>) -> Array3<f32> {
+    fn simulate_stiffness_estimation_disabled(
+        &self,
+        _displacement: &Array3<f32>,
+    ) -> Array3<f32> {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -1021,7 +1032,11 @@ impl PerformanceBenchmarkSuite {
     /// Required: Rayleigh-Plesset dynamics, scattering
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #9
     #[allow(dead_code)]
-    fn simulate_microbubble_scattering_DISABLED(&self, _signal: &mut Array3<f32>, _time: f64) {
+    fn simulate_microbubble_scattering_disabled(
+        &self,
+        _signal: &mut Array3<f32>,
+        _time: f64,
+    ) {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -1029,7 +1044,7 @@ impl PerformanceBenchmarkSuite {
     ///
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #10
     #[allow(dead_code)]
-    fn simulate_tissue_perfusion_DISABLED(&self, _signal: &mut Array3<f32>, _time: f64) {
+    fn simulate_tissue_perfusion_disabled(&self, _signal: &mut Array3<f32>, _time: f64) {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -1037,7 +1052,7 @@ impl PerformanceBenchmarkSuite {
     ///
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #11
     #[allow(dead_code)]
-    fn simulate_perfusion_analysis_DISABLED(&self, _signal: &Array3<f32>) -> Array3<f32> {
+    fn simulate_perfusion_analysis_disabled(&self, _signal: &Array3<f32>) -> Array3<f32> {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -1046,7 +1061,7 @@ impl PerformanceBenchmarkSuite {
     /// Required: Rayleigh integral implementation
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #12
     #[allow(dead_code)]
-    fn simulate_transducer_element_DISABLED(
+    fn simulate_transducer_element_disabled(
         &self,
         _field: &mut Array3<f32>,
         _elem: usize,
@@ -1061,7 +1076,7 @@ impl PerformanceBenchmarkSuite {
     /// Required: Skull aberration physics
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #13
     #[allow(dead_code)]
-    fn simulate_skull_transmission_DISABLED(&self, _field: &mut Array3<f32>, _grid: &Grid) {
+    fn simulate_skull_transmission_disabled(&self, _field: &mut Array3<f32>, _grid: &Grid) {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -1070,7 +1085,7 @@ impl PerformanceBenchmarkSuite {
     /// Required: CEM43 thermal dose calculation
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #14
     #[allow(dead_code)]
-    fn simulate_thermal_monitoring_DISABLED(&self, _field: &Array3<f32>) {
+    fn simulate_thermal_monitoring_disabled(&self, _field: &Array3<f32>) {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -1079,7 +1094,10 @@ impl PerformanceBenchmarkSuite {
     /// Required: Variance/confidence interval calculation
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #15
     #[allow(dead_code)]
-    fn compute_uncertainty_statistics_DISABLED(&self, _predictions: &[Array3<f32>]) -> Array3<f32> {
+    fn compute_uncertainty_statistics_disabled(
+        &self,
+        _predictions: &[Array3<f32>],
+    ) -> Array3<f32> {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -1088,7 +1106,7 @@ impl PerformanceBenchmarkSuite {
     /// Required: Element-wise averaging
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #16
     #[allow(dead_code)]
-    fn compute_ensemble_mean_DISABLED(&self, _predictions: &[Array3<f32>]) -> Array3<f32> {
+    fn compute_ensemble_mean_disabled(&self, _predictions: &[Array3<f32>]) -> Array3<f32> {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -1097,7 +1115,7 @@ impl PerformanceBenchmarkSuite {
     /// Required: Variance calculation
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #17
     #[allow(dead_code)]
-    fn compute_ensemble_variance_DISABLED(
+    fn compute_ensemble_variance_disabled(
         &self,
         _predictions: &[Array3<f32>],
         _mean: &Array3<f32>,
@@ -1110,7 +1128,7 @@ impl PerformanceBenchmarkSuite {
     /// Required: Conformal prediction scoring
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #18
     #[allow(dead_code)]
-    fn compute_conformity_score_DISABLED(
+    fn compute_conformity_score_disabled(
         &self,
         _prediction: &Array3<f32>,
         _target: &Array3<f32>,
@@ -1123,7 +1141,7 @@ impl PerformanceBenchmarkSuite {
     /// Required: Quantile-based interval calculation
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #19
     #[allow(dead_code)]
-    fn compute_prediction_interval_DISABLED(
+    fn compute_prediction_interval_disabled(
         &self,
         _prediction: &Array3<f32>,
         _scores: &[f64],
@@ -1146,12 +1164,12 @@ impl PerformanceBenchmarkSuite {
 // ============================================================================
 
 #[allow(dead_code)]
-fn benchmark_wave_propagation_DISABLED(_c: &mut Criterion) {
+fn benchmark_wave_propagation_disabled(_c: &mut Criterion) {
     panic!("Benchmarks disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
 }
 
 #[allow(dead_code)]
-fn benchmark_advanced_physics_DISABLED(_c: &mut Criterion) {
+fn benchmark_advanced_physics_disabled(_c: &mut Criterion) {
     panic!("Benchmarks disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
 }
 

@@ -53,6 +53,7 @@ pub struct FemHelmholtzSolver {
     /// Global system matrix (simplified dense for now)
     system_matrix: Array1<f64>,
     /// Right-hand side vector
+    #[allow(dead_code)]
     rhs: Array1<Complex64>,
     /// Solution vector
     solution: Array1<Complex64>,

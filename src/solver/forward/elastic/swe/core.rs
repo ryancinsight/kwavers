@@ -144,7 +144,7 @@ impl ElasticWaveSolver {
 
         let steps = (duration / dt).ceil() as usize;
         let save_every = self.config.save_every.max(1);
-        let recorded_steps = (steps + save_every - 1) / save_every;
+        let recorded_steps = steps.div_ceil(save_every);
 
         // Initialize sensor recorder with correct number of steps
         let (nx, ny, nz) = self.grid.dimensions();
@@ -264,10 +264,11 @@ impl ElasticWaveSolver {
             }
         }
 
-        if history
-            .last()
-            .map_or(true, |f| f.time != current_field.time)
-        {
+        let needs_final_snapshot = match history.last() {
+            None => true,
+            Some(f) => f.time != current_field.time,
+        };
+        if needs_final_snapshot {
             history.push(current_field.clone());
         }
 
@@ -342,10 +343,11 @@ impl ElasticWaveSolver {
             }
         }
 
-        if history
-            .last()
-            .map_or(true, |f| f.time != current_field.time)
-        {
+        let needs_final_snapshot = match history.last() {
+            None => true,
+            Some(f) => f.time != current_field.time,
+        };
+        if needs_final_snapshot {
             history.push(current_field.clone());
         }
 
@@ -460,10 +462,11 @@ impl ElasticWaveSolver {
             }
         }
 
-        if history
-            .last()
-            .map_or(true, |f| f.time != current_field.time)
-        {
+        let needs_final_snapshot = match history.last() {
+            None => true,
+            Some(f) => f.time != current_field.time,
+        };
+        if needs_final_snapshot {
             history.push(current_field.clone());
         }
 

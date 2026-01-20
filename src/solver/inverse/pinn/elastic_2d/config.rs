@@ -538,7 +538,7 @@ impl Config {
             return Err("Must have at least one hidden layer".to_string());
         }
 
-        if self.hidden_layers.iter().any(|&n| n == 0) {
+        if self.hidden_layers.contains(&0) {
             return Err("Hidden layer sizes must be positive".to_string());
         }
 

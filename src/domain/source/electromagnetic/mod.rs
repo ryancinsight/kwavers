@@ -59,7 +59,7 @@ impl PointEMSource {
 
 impl EMSource for PointEMSource {
     fn polarization(&self) -> Polarization {
-        self.polarization.clone()
+        self.polarization
     }
 
     fn wave_type(&self) -> EMWaveType {
@@ -165,7 +165,7 @@ impl PlaneWaveEMSource {
 
 impl EMSource for PlaneWaveEMSource {
     fn polarization(&self) -> Polarization {
-        self.polarization.clone()
+        self.polarization
     }
 
     fn wave_type(&self) -> EMWaveType {
@@ -236,7 +236,6 @@ impl EMSource for PlaneWaveEMSource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::source::types::Polarization;
 
     #[test]
     fn test_point_source_creation() {

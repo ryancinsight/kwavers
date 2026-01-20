@@ -187,6 +187,8 @@ impl LiverAssessmentWorkflow {
         let start_time = Instant::now();
         println!("\n=== Starting Comprehensive Liver Assessment ===");
         println!("Patient ID: {}", self.patient_id);
+        #[cfg(feature = "gpu")]
+        let _gpu_stats = self.gpu_memory.statistics();
 
         // Phase 1: B-mode imaging and initial assessment
         println!("\n--- Phase 1: B-mode Imaging ---");
@@ -332,9 +334,7 @@ impl LiverAssessmentWorkflow {
         disp.uy.assign(&last.uy);
         disp.uz.assign(&last.uz);
 
-        let config = kwavers::solver::inverse::elastography::ShearWaveInversionConfig::new(
-            InversionMethod::TimeOfFlight,
-        );
+        let config = ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight);
         let inversion = ShearWaveInversion::new(config);
         let elasticity = inversion.reconstruct(&disp, &self.liver_grid)?;
         let stiffness_map = elasticity.youngs_modulus.mapv(|e| (e / 1e3) as f32); // kPa
@@ -352,9 +352,7 @@ impl LiverAssessmentWorkflow {
         let detector = HarmonicDetector::new(HarmonicDetectionConfig::default());
         let harmonic_field = detector.analyze_harmonics(&disp_ts, sampling_frequency)?;
 
-        let nl_config = kwavers::solver::inverse::elastography::NonlinearInversionConfig::new(
-            NonlinearInversionMethod::HarmonicRatio,
-        );
+        let nl_config = NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio);
         let nl_inv = NonlinearInversion::new(nl_config);
         let nonlinear_analysis = nl_inv.reconstruct(&harmonic_field, &self.liver_grid)?;
 
@@ -537,6 +535,8 @@ impl LiverAssessmentWorkflow {
 
     /// Perform comprehensive safety assessment
     fn perform_safety_assessment(&self) -> KwaversResult<SafetyAssessment> {
+        let _status = self.safety_monitor.safety_status();
+
         // Assess acoustic safety limits
         let max_pressure = 1e5; // 100 kPa (conservative for liver imaging)
         let max_mi = max_pressure / 1e6 / (2e6f64).sqrt(); // MI calculation

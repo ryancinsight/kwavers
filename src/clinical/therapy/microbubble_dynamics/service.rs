@@ -288,9 +288,7 @@ impl MicrobubbleDynamicsService {
     /// For a sphere in incompressible fluid: m_eff = (4π/3)ρR³ + (2π/3)ρR³
     fn effective_bubble_mass(radius: f64) -> f64 {
         const WATER_DENSITY: f64 = 1000.0; // kg/m³
-        let _volume = (4.0 / 3.0) * std::f64::consts::PI * radius.powi(3);
-        let added_mass = (2.0 / 3.0) * std::f64::consts::PI * WATER_DENSITY * radius.powi(3);
-        added_mass // Bubble mass negligible compared to added mass
+        (2.0 / 3.0) * std::f64::consts::PI * WATER_DENSITY * radius.powi(3)
     }
 }
 
@@ -410,7 +408,7 @@ mod tests {
 
         let service = MicrobubbleDynamicsService::from_microbubble_state(&bubble).unwrap();
 
-        let initial_x = bubble.position.x;
+        let _initial_x = bubble.position.x;
         let pressure_gradient = (1e6, 0.0, 0.0); // Strong gradient
 
         // Simulate multiple steps (reduced to 10 to avoid timeout with adaptive integration)
@@ -505,7 +503,7 @@ mod tests {
         let position = Position3D::new(0.005, 0.005, 0.005);
         let grid_spacing = (0.001, 0.001, 0.001);
 
-        let (p, grad) =
+        let (p, _grad) =
             sample_acoustic_field_at_position(&position, &pressure, grid_spacing).unwrap();
 
         assert_eq!(p, 1e5);

@@ -48,8 +48,10 @@ pub struct CheckpointManager {
     /// Maximum number of checkpoints to keep
     max_checkpoints: usize,
     /// Checkpoint interval (epochs)
+    #[allow(dead_code)]
     checkpoint_interval: usize,
     /// Auto-save enabled
+    #[allow(dead_code)]
     auto_save: bool,
 }
 
@@ -59,8 +61,10 @@ pub struct TrainingCoordinator<B: AutodiffBackend> {
     /// Model replicas (one per GPU)
     model_replicas: Vec<BurnPINN2DWave<B>>,
     /// Device assignments
+    #[allow(dead_code)]
     device_assignments: Vec<usize>,
     /// Gradient aggregation strategy
+    #[allow(dead_code)]
     gradient_aggregation: GradientAggregation,
     /// Checkpoint manager
     checkpoint_manager: CheckpointManager,

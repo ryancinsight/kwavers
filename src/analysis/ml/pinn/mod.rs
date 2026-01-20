@@ -40,16 +40,17 @@
 //! ```no_run
 //! # #[cfg(feature = "pinn")]
 //! # {
-//! use kwavers::ml::pinn::{PINN1DWave, PINNConfig};
+//! use kwavers::ml::pinn::{BurnPINN1DWave, BurnPINNConfig};
 //! use kwavers::ml::pinn::fdtd_reference::FDTDConfig;
 //! use kwavers::ml::pinn::validation::validate_pinn_vs_fdtd;
 //!
 //! // Create 1D wave equation PINN
-//! let config = PINNConfig::default();
-//! let mut pinn = PINN1DWave::new(1500.0, config)?; // 1500 m/s wave speed
+//! let device = Default::default();
+//! let config = BurnPINNConfig::default();
+//! let mut pinn = BurnPINN1DWave::new(config, &device)?; // 1500 m/s wave speed
 //!
 //! // Train on reference data
-//! let metrics = pinn.train(&reference_data, 1000)?;
+//! let metrics = pinn.train(&x_points, &t_points, &reference_data, 1500.0, &device, 1000)?;
 //!
 //! // Validate against FDTD
 //! let fdtd_config = FDTDConfig::default();
@@ -57,7 +58,7 @@
 //! println!("{}", report.summary());
 //!
 //! // Fast inference (1000× speedup)
-//! let prediction = pinn.predict(&x_points, &t_points);
+//! let prediction = pinn.predict(&x_points, &t_points, &device)?;
 //! # Ok::<(), kwavers::error::KwaversError>(())
 //! # }
 //! ```
@@ -71,9 +72,6 @@ pub mod fdtd_reference;
 #[cfg(feature = "pinn")]
 pub mod validation;
 
-#[cfg(feature = "pinn")]
-pub mod wave_equation_1d;
-
 // Sprint 143 Phase 2: Burn-based PINN with automatic differentiation
 #[cfg(feature = "pinn")]
 pub mod burn_wave_equation_1d;
@@ -81,10 +79,6 @@ pub mod burn_wave_equation_1d;
 // Sprint 144: 2D Wave Equation PINN extension
 #[cfg(feature = "pinn")]
 pub mod burn_wave_equation_2d;
-
-// Sprint 186: Modular 2D Wave Equation PINN (GRASP-compliant refactor)
-#[cfg(feature = "pinn")]
-pub mod wave_equation_2d;
 
 // Sprint 173: 3D Wave Equation PINN extension for heterogeneous media
 #[cfg(feature = "pinn")]
@@ -105,11 +99,6 @@ pub mod autodiff_utils;
 // Sprint 151: Transfer learning for PINN adaptation and fine-tuning
 #[cfg(feature = "pinn")]
 pub mod transfer_learning;
-
-#[cfg(feature = "pinn")]
-pub use wave_equation_1d::{
-    LossWeights, PINN1DWave, PINNConfig as LegacyPINNConfig, TrainingMetrics, ValidationMetrics,
-};
 
 #[cfg(feature = "pinn")]
 pub use burn_wave_equation_1d::{

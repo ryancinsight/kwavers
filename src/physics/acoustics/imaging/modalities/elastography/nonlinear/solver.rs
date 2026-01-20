@@ -55,10 +55,13 @@ pub struct NonlinearElasticWaveSolver {
     /// Configuration
     config: NonlinearSWEConfig,
     /// Linear elastic properties (for comparison)
+    #[allow(dead_code)]
     lambda: Array3<f64>,
     /// Linear elastic properties (for comparison)
+    #[allow(dead_code)]
     mu: Array3<f64>,
     /// Density field
+    #[allow(dead_code)]
     density: Array3<f64>,
     /// Attenuation coefficient (Np/m)
     attenuation_np_per_m: f64,
@@ -525,6 +528,7 @@ impl NonlinearElasticWaveSolver {
 
     /// Calculate stable time step using CFL condition
     #[must_use]
+    #[allow(dead_code)]
     fn calculate_time_step(&self) -> f64 {
         self.calculate_time_step_for_amplitude(self.config.max_strain * 1e-3)
     }

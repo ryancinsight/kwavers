@@ -96,7 +96,7 @@ fn test_diagnosis_algorithm() {
 #[cfg(feature = "pinn")]
 #[test]
 fn test_realtime_workflow() {
-    let mut workflow = RealTimeWorkflow::new();
+    let workflow = RealTimeWorkflow::new();
 
     // Test performance statistics
     let stats = workflow.get_performance_stats();
@@ -158,7 +158,7 @@ fn test_feature_extraction_comprehensive() {
 
     // Verify features are computed
     assert!(features.morphological.len() >= 2); // gradient_magnitude, laplacian
-    assert!(features.spectral.len() >= 1); // local_frequency
+    assert!(!features.spectral.is_empty()); // local_frequency
     assert!(features.texture.len() >= 2); // speckle_variance, homogeneity
 
     // Check that features have expected dimensions

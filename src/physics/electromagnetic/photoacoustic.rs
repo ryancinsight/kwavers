@@ -3,8 +3,6 @@
 //! This module implements photoacoustic coupling physics, including
 //! optical absorption, thermal expansion, and pressure wave generation.
 
-use crate::physics::electromagnetic::equations::PhotoacousticCoupling;
-
 /// Grüneisen parameter for thermoelastic coupling
 #[derive(Debug, Clone)]
 pub struct GruneisenParameter {

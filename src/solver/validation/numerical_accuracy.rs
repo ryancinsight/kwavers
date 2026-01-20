@@ -95,7 +95,7 @@ mod tests {
 
         let dt = solver.get_timestep();
         let steps = (wavelength / (1500.0 * dt)) as usize;
-        let initial = solver.fields.p.clone();
+        let _initial = solver.fields.p.clone();
 
         println!("Propagating for {} steps, dt = {:.2e}", steps, dt);
 

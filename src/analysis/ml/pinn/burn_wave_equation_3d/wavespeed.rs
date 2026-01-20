@@ -372,7 +372,7 @@ impl<B: Backend> Module<B> for WaveSpeedFn3D<B> {
     }
 
     fn into_record(self) -> Self::Record {
-        ()
+        {}
     }
 }
 

@@ -154,7 +154,7 @@ impl FeatureConfig {
             return Err("Window size must be >= 3".to_string());
         }
 
-        if self.window_size % 2 == 0 {
+        if self.window_size.is_multiple_of(2) {
             return Err("Window size must be odd".to_string());
         }
 

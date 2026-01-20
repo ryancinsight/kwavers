@@ -157,7 +157,7 @@ fn demo_tumor_detection() -> Result<()> {
 
     let dims = GridDimensions::new(35, 35, 35, 0.001, 0.001, 0.001);
 
-    let phantom = PhantomBuilder::tumor_detection()
+    let _phantom = PhantomBuilder::tumor_detection()
         .dimensions(dims)
         .wavelength(800.0)
         .background(OpticalPropertyData::fat()) // Breast tissue approximation
@@ -190,7 +190,7 @@ fn demo_vascular_network() -> Result<()> {
     let cx = dims.dx * (dims.nx as f64) / 2.0;
     let cy = dims.dy * (dims.ny as f64) / 2.0;
 
-    let phantom = PhantomBuilder::vascular()
+    let _phantom = PhantomBuilder::vascular()
         .dimensions(dims)
         .wavelength(800.0)
         .background(OpticalPropertyData::soft_tissue())
@@ -282,7 +282,7 @@ fn demo_custom_regions() -> Result<()> {
         OpticalPropertyData::liver(),
     );
 
-    let phantom = builder.build();
+    let _phantom = builder.build();
 
     println!("  Grid: {}×{}×{} voxels", dims.nx, dims.ny, dims.nz);
     println!("  Custom regions:");
@@ -309,7 +309,7 @@ fn demo_predefined_phantoms() -> Result<()> {
 
     // Standard blood oxygenation phantom
     println!("  6a. Standard Blood Oxygenation Phantom");
-    let phantom1 = ClinicalPhantoms::standard_blood_oxygenation(dims);
+    let _phantom1 = ClinicalPhantoms::standard_blood_oxygenation(dims);
     println!("      Contains: artery (sO₂=98%), vein (sO₂=65%), tumor (sO₂=55%)");
     println!("      Use: Multi-wavelength spectroscopy validation");
     println!();
@@ -317,7 +317,7 @@ fn demo_predefined_phantoms() -> Result<()> {
     // Skin tissue phantom
     let dims_skin = GridDimensions::new(30, 30, 50, 0.001, 0.001, 0.001);
     println!("  6b. Skin Tissue Phantom");
-    let phantom2 = ClinicalPhantoms::skin_tissue(dims_skin);
+    let _phantom2 = ClinicalPhantoms::skin_tissue(dims_skin);
     println!("      Layers: epidermis/dermis/fat/muscle");
     println!("      Use: Depth profiling and layer detection");
     println!();
@@ -325,7 +325,7 @@ fn demo_predefined_phantoms() -> Result<()> {
     // Breast tumor phantom
     println!("  6c. Breast Tumor Phantom");
     let tumor_center = [0.0175, 0.0175, 0.0175];
-    let phantom3 = ClinicalPhantoms::breast_tumor(dims, tumor_center);
+    let _phantom3 = ClinicalPhantoms::breast_tumor(dims, tumor_center);
     println!("      Background: Fat (breast tissue)");
     println!("      Lesion: 8 mm hypoxic tumor");
     println!("      Use: Tumor detection algorithm validation");
@@ -333,7 +333,7 @@ fn demo_predefined_phantoms() -> Result<()> {
 
     // Vascular network phantom
     println!("  6d. Vascular Network Phantom");
-    let phantom4 = ClinicalPhantoms::vascular_network(dims);
+    let _phantom4 = ClinicalPhantoms::vascular_network(dims);
     println!("      Contains: Arterial tree and venous drainage");
     println!("      Use: Angiogenesis and perfusion studies");
     println!();

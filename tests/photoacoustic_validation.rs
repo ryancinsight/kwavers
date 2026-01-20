@@ -21,8 +21,10 @@ fn test_photoacoustic_analytical_pressure() -> KwaversResult<()> {
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
     // Configure photoacoustic parameters
-    let mut params = PhotoacousticParameters::default();
-    params.laser_fluence = 10.0; // 10 mJ/cm²
+    let params = PhotoacousticParameters {
+        laser_fluence: 10.0,
+        ..Default::default()
+    };
 
     let simulator = PhotoacousticSimulator::new(grid, params, &medium)?;
 
@@ -158,9 +160,11 @@ fn test_multiwavelength_simulation() -> KwaversResult<()> {
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
     // Multi-wavelength parameters
-    let mut params = PhotoacousticParameters::default();
-    params.wavelengths = vec![532.0, 650.0, 750.0, 850.0];
-    params.absorption_coefficients = vec![50.0, 25.0, 15.0, 10.0];
+    let params = PhotoacousticParameters {
+        wavelengths: vec![532.0, 650.0, 750.0, 850.0],
+        absorption_coefficients: vec![50.0, 25.0, 15.0, 10.0],
+        ..Default::default()
+    };
 
     let simulator = PhotoacousticSimulator::new(grid, params, &medium)?;
 
@@ -261,8 +265,10 @@ fn test_reference_toolbox_compatibility() -> KwaversResult<()> {
     let grid = Grid::new(32, 32, 16, 0.0005, 0.0005, 0.001)?;
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
-    let mut params = PhotoacousticParameters::default();
-    params.laser_fluence = 5.0; // 5 mJ/cm² - typical k-Wave example
+    let params = PhotoacousticParameters {
+        laser_fluence: 5.0,
+        ..Default::default()
+    };
 
     let simulator = PhotoacousticSimulator::new(grid.clone(), params, &medium)?;
     let fluence = simulator.compute_fluence()?;

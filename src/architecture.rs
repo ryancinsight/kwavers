@@ -401,21 +401,12 @@ pub struct CodeQualityChecker;
 impl CodeQualityChecker {
     /// Run comprehensive code quality checks
     pub fn run_quality_checks() -> Result<CodeQualityReport, String> {
-        let mut report = CodeQualityReport::default();
-
-        // Check module sizes
-        report.module_size_violations = Self::check_module_sizes()?;
-
-        // Check naming conventions
-        report.naming_violations = Self::check_naming_conventions()?;
-
-        // Check documentation coverage
-        report.documentation_gaps = Self::check_documentation_coverage()?;
-
-        // Check test coverage
-        report.test_coverage_gaps = Self::check_test_coverage()?;
-
-        Ok(report)
+        Ok(CodeQualityReport {
+            module_size_violations: Self::check_module_sizes()?,
+            naming_violations: Self::check_naming_conventions()?,
+            documentation_gaps: Self::check_documentation_coverage()?,
+            test_coverage_gaps: Self::check_test_coverage()?,
+        })
     }
 
     fn check_module_sizes() -> Result<Vec<String>, String> {

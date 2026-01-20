@@ -95,7 +95,7 @@ use std::time::Duration;
 ///
 /// metrics.training_time_secs = start_time.elapsed().as_secs_f64();
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct BurnTrainingMetrics {
     /// Total loss history (L_total = λ_data·L_data + λ_pde·L_pde + λ_bc·L_bc)
     ///

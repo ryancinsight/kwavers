@@ -5,14 +5,11 @@
 
 #[cfg(feature = "pinn")]
 use kwavers::core::error::KwaversResult;
-#[cfg(all(feature = "pinn", feature = "gpu"))]
-use kwavers::gpu::MultiGpuContext;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::distributed_training::DistributedTrainingConfig;
 #[cfg(feature = "pinn")]
 use kwavers::ml::pinn::{
-    BurnLossWeights2D, BurnPINN2DConfig, DecompositionStrategy, DistributedPinnTrainer, Geometry2D,
-    LoadBalancingAlgorithm, MultiGpuManager,
+    BurnLossWeights2D, BurnPINN2DConfig, DecompositionStrategy, Geometry2D, LoadBalancingAlgorithm,
 };
 #[cfg(feature = "pinn")]
 use std::time::Instant;
@@ -39,12 +36,12 @@ fn main() -> KwaversResult<()> {
 
     // Show decomposition strategies
     println!("🏗️  Domain Decomposition Strategies:");
-    let spatial = DecompositionStrategy::Spatial {
+    let _spatial = DecompositionStrategy::Spatial {
         dimensions: 2,
         overlap: 0.05,
     };
-    let temporal = DecompositionStrategy::Temporal { steps_per_gpu: 100 };
-    let hybrid = DecompositionStrategy::Hybrid {
+    let _temporal = DecompositionStrategy::Temporal { steps_per_gpu: 100 };
+    let _hybrid = DecompositionStrategy::Hybrid {
         spatial_dims: 2,
         temporal_steps: 50,
         overlap: 0.03,
@@ -56,12 +53,12 @@ fn main() -> KwaversResult<()> {
 
     // Show load balancing algorithms
     println!("⚖️  Load Balancing Algorithms:");
-    let static_lb = LoadBalancingAlgorithm::Static;
-    let dynamic_lb = LoadBalancingAlgorithm::Dynamic {
+    let _static_lb = LoadBalancingAlgorithm::Static;
+    let _dynamic_lb = LoadBalancingAlgorithm::Dynamic {
         imbalance_threshold: 0.1,
         migration_interval: 30.0,
     };
-    let predictive_lb = LoadBalancingAlgorithm::Predictive {
+    let _predictive_lb = LoadBalancingAlgorithm::Predictive {
         history_window: 100,
         prediction_horizon: 10,
     };
@@ -90,7 +87,7 @@ fn main() -> KwaversResult<()> {
     // Create geometry
     println!("🏗️  Setting up Complex Geometry:");
     let l_shape = Geometry2D::l_shaped(0.0, 1.0, 0.0, 1.0, 0.6, 0.6);
-    let geometry = l_shape; // Use L-shaped domain for demonstration
+    let _geometry = l_shape;
     println!("   ✅ L-shaped geometry created");
     println!();
 

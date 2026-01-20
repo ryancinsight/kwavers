@@ -16,8 +16,10 @@ use num_complex::Complex;
 #[derive(Debug, Clone)]
 pub struct SensorBeamformer {
     /// Sensor array geometry
+    #[allow(dead_code)]
     sensor_array: SensorArray,
     /// Grid sensor set for sampling (if applicable)
+    #[allow(dead_code)]
     grid_sensors: Option<GridSensorSet>,
     /// Cached sensor positions for performance
     sensor_positions: Vec<[f64; 3]>,
@@ -81,7 +83,7 @@ impl SensorBeamformer {
     /// - Time-of-flight calculation using sound_speed parameter
     /// - Reference time correction based on array geometry
     /// - Validation against physical constraints (causality, array aperture limits)
-    /// See backlog.md item #6 for specifications (6-8 hour effort estimate)
+    ///   See backlog.md item #6 for specifications (6-8 hour effort estimate)
     pub fn calculate_delays(
         &self,
         image_grid: &Grid,

@@ -192,7 +192,9 @@ impl CouplingInterface {
 pub struct FdtdFemCoupler {
     config: FdtdFemCouplingConfig,
     interface: CouplingInterface,
+    #[allow(dead_code)]
     fdtd_interpolator: TrilinearInterpolator,
+    #[allow(dead_code)]
     fem_interpolator: TrilinearInterpolator,
     convergence_history: Vec<f64>,
 }
@@ -231,13 +233,13 @@ impl FdtdFemCoupler {
         let fdtd_interface_values = self.extract_fdtd_interface(fdtd_field)?;
 
         // 2. Update FEM boundary conditions with FDTD values
-        self.update_fem_boundary(fem_field, &fdtd_interface_values, fem_mesh)?;
+        self.update_fem_boundary(fem_field.as_mut_slice(), &fdtd_interface_values, fem_mesh)?;
 
         // 3. Solve FEM domain (placeholder - would call actual FEM solver)
         // TODO: self.solve_fem_domain(fem_field, fem_mesh)?;
 
         // 4. Transfer FEM solution back to FDTD interface
-        let fem_interface_values = self.extract_fem_interface(fem_field)?;
+        let fem_interface_values = self.extract_fem_interface(fem_field.as_slice())?;
 
         // 5. Update FDTD boundary conditions with FEM values (relaxed)
         let residual =
@@ -263,7 +265,7 @@ impl FdtdFemCoupler {
     /// Update FEM boundary conditions with FDTD interface values
     fn update_fem_boundary(
         &self,
-        fem_field: &mut Vec<f64>,
+        fem_field: &mut [f64],
         fdtd_values: &[f64],
         _fem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<()> {
@@ -281,15 +283,18 @@ impl FdtdFemCoupler {
     }
 
     /// Extract FEM field values at interface
-    fn extract_fem_interface(&self, fem_field: &Vec<f64>) -> KwaversResult<Vec<f64>> {
+    fn extract_fem_interface(&self, fem_field: &[f64]) -> KwaversResult<Vec<f64>> {
         let mut interface_values = Vec::with_capacity(self.interface.fem_indices.len());
 
         for &fem_idx in &self.interface.fem_indices {
-            if fem_idx < fem_field.len() {
-                interface_values.push(fem_field[fem_idx]);
-            } else {
-                interface_values.push(0.0); // Default value
-            }
+            let value = fem_field.get(fem_idx).ok_or_else(|| {
+                crate::core::error::KwaversError::InvalidInput(format!(
+                    "FEM interface node index {} is out of bounds (fem_field len {})",
+                    fem_idx,
+                    fem_field.len()
+                ))
+            })?;
+            interface_values.push(*value);
         }
 
         Ok(interface_values)

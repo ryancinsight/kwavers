@@ -206,9 +206,7 @@ impl PlasmonicEnhancement {
                 //        (1-f) (host_dielectric - eps_eff)/(host_dielectric + 2 eps_eff) = 0
 
                 // Simplified approximation
-                let eps_avg =
-                    f * eps_particle + (1.0 - f) * num_complex::Complex::new(host_dielectric, 0.0);
-                eps_avg
+                f * eps_particle + (1.0 - f) * num_complex::Complex::new(host_dielectric, 0.0)
             }
         }
     }

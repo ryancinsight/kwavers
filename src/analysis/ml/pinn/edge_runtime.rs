@@ -716,8 +716,6 @@ impl MemoryAllocator {
 mod tests {
     use super::*;
 
-    type TestBackend = burn::backend::NdArray<f32>;
-
     #[test]
     fn test_edge_runtime_creation() {
         let runtime = EdgeRuntime::new(64); // 64MB limit

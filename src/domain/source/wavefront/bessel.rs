@@ -57,6 +57,7 @@ impl Default for BesselConfig {
 pub struct BesselSource {
     config: BesselConfig,
     signal: Arc<dyn Signal>,
+    #[allow(dead_code)]
     wave_number: f64,
 }
 

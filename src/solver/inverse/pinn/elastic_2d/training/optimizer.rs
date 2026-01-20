@@ -345,6 +345,7 @@ impl<'a, B: AutodiffBackend> burn::module::ModuleMapper<B> for SGDUpdateMapper<'
 
 /// Mapper for Adam parameter updates with persistent state
 #[cfg(feature = "pinn")]
+#[allow(dead_code)]
 struct PersistentAdamMapper<'a, B: AutodiffBackend> {
     learning_rate: f64,
     weight_decay: f64,

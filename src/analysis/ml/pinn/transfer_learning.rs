@@ -582,8 +582,6 @@ impl<B: AutodiffBackend> DomainAdapter<B> {
 mod tests {
     use super::*;
 
-    type TestBackend = burn::backend::NdArray<f32>;
-
     #[test]
     fn test_transfer_learning_config() {
         let config = TransferLearningConfig {

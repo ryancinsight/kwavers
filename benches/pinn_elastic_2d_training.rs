@@ -41,7 +41,7 @@ use burn::{
 #[cfg(feature = "pinn")]
 use kwavers::solver::inverse::pinn::elastic_2d::{
     BoundaryData, BoundaryType, CollocationData, Config, ElasticPINN2D, InitialData, LossComputer,
-    Trainer, TrainingData,
+    TrainingData,
 };
 
 #[cfg(feature = "pinn")]
@@ -263,7 +263,6 @@ fn bench_training_epoch(c: &mut Criterion) {
     let device = Default::default();
     let mut config = Config::default();
     config.hidden_layers = vec![64, 64, 64];
-    config.n_epochs = 1; // Single epoch for benchmarking
     config.n_collocation_interior = 1000;
     config.n_collocation_boundary = 100;
     config.n_collocation_initial = 100;
@@ -273,9 +272,8 @@ fn bench_training_epoch(c: &mut Criterion) {
 
     group.bench_function("single_epoch", |b| {
         b.iter(|| {
-            let model =
+            let mut model =
                 ElasticPINN2D::<Backend>::new(&config, &device).expect("Failed to create model");
-            let mut trainer = Trainer::<Backend>::new(model, config.clone());
 
             // Create synthetic training data
             let n_colloc = config.n_collocation_interior;
@@ -346,7 +344,32 @@ fn bench_training_epoch(c: &mut Criterion) {
                 observations: None,
             };
 
-            let metrics = trainer.train(&training_data).expect("Training failed");
+            let mut optimizer = kwavers::solver::inverse::pinn::elastic_2d::training::optimizer::PINNOptimizer::adam(
+                &model,
+                config.learning_rate,
+                0.0,
+                0.9,
+                0.999,
+                1e-8,
+            );
+            let mut scheduler =
+                kwavers::solver::inverse::pinn::elastic_2d::training::scheduler::LRScheduler::constant(
+                    config.learning_rate,
+                );
+            let loop_config = kwavers::solver::inverse::pinn::elastic_2d::training::r#loop::TrainingConfig {
+                max_epochs: 1,
+                convergence_tolerance: 1e-6,
+                convergence_window: 10,
+                log_every: 1,
+                checkpoint_every: 1000,
+            };
+            let metrics = kwavers::solver::inverse::pinn::elastic_2d::training::r#loop::train_pinn(
+                &mut model,
+                &training_data,
+                &mut optimizer,
+                &mut scheduler,
+                &loop_config,
+            );
             black_box(metrics)
         });
     });

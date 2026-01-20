@@ -390,6 +390,7 @@ impl ConvergentBornSolver {
     }
 
     /// 3D Inverse FFT
+    #[allow(dead_code)]
     fn inverse_fft_3d(
         &self,
         input: &ArrayView3<Complex64>,
@@ -415,13 +416,6 @@ impl ConvergentBornSolver {
                 feature: "Green's operator GPU acceleration".to_string(),
                 reason: "ComputeManager kernels are not wired for Born Green operator".to_string(),
             },
-        ))
-    }
-
-    #[cfg(not(feature = "gpu"))]
-    fn apply_green_gpu(&mut self) -> KwaversResult<()> {
-        Err(crate::core::error::KwaversError::System(
-            crate::core::error::SystemError::GpuNotAvailable,
         ))
     }
 

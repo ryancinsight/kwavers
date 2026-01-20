@@ -155,7 +155,8 @@ pub fn train_simple<B: AutodiffBackend>(
 #[cfg(test)]
 mod tests {
     use super::super::data::TrainingMetrics;
-    use super::*;
+    #[cfg(feature = "pinn")]
+    use super::TrainingConfig;
 
     #[cfg(feature = "pinn")]
     #[test]

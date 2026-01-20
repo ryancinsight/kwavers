@@ -237,7 +237,9 @@ impl PoroelasticMaterial {
 /// ```
 #[derive(Debug)]
 pub struct PoroelasticSimulation {
+    #[allow(dead_code)]
     grid: Grid,
+    #[allow(dead_code)]
     material: PoroelasticMaterial,
     biot: BiotTheory,
 }

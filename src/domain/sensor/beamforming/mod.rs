@@ -67,6 +67,7 @@ pub mod sensor_beamformer;
 // Legacy modules (being phased out - use analysis layer instead)
 // These remain for backward compatibility but delegate to analysis algorithms
 pub mod adaptive;
+#[cfg(feature = "gpu")]
 mod beamforming_3d;
 mod config;
 pub mod covariance;
@@ -86,6 +87,7 @@ pub use adaptive::{
     AdaptiveBeamformer, ArrayGeometry, CovarianceTaper, SteeringMatrix,
     SteeringVector as AdaptiveSteeringVector, WeightCalculator, WeightingScheme,
 };
+#[cfg(feature = "gpu")]
 pub use beamforming_3d::{
     ApodizationWindow, BeamformingAlgorithm3D, BeamformingConfig3D, BeamformingMetrics,
     BeamformingProcessor3D,

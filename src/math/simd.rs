@@ -421,6 +421,12 @@ impl FdtdSimdOps {
     }
 }
 
+impl Default for FdtdSimdOps {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// SIMD-accelerated FFT operations
 #[derive(Debug)]
 pub struct FftSimdOps {
@@ -533,6 +539,12 @@ impl FftSimdOps {
             imag1[i] = r1 * i2 + i1 * r2;
             i += 1;
         }
+    }
+}
+
+impl Default for FftSimdOps {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -680,6 +692,12 @@ impl InterpolationSimdOps {
         } else {
             0.0
         }
+    }
+}
+
+impl Default for InterpolationSimdOps {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

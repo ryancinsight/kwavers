@@ -20,15 +20,6 @@ pub mod multi_rate_controller;
 pub mod stability;
 pub mod time_scale_separation;
 pub mod time_stepper;
-
-/// Stability constraints for time stepping
-#[derive(Debug, Clone, Default)]
-pub struct StabilityConstraints {
-    /// Maximum stable time step
-    pub max_dt: Option<f64>,
-    /// CFL number constraint
-    pub cfl_number: Option<f64>,
-}
 pub mod traits;
 
 // Re-export main types
@@ -171,14 +162,41 @@ impl MultiRateTimeIntegrator {
                 })?;
 
                 // Get stability constraints from the component
-                let _constraints = component.stability_constraints();
+                let constraints = component.stability_constraints();
+                let mut constraint_map = std::collections::HashMap::new();
+                if let Some(max_wave_speed) = constraints.max_wave_speed {
+                    constraint_map.insert("max_wave_speed".to_string(), max_wave_speed);
+                }
+                if let Some(diffusion_coefficient) = constraints.diffusion_coefficient {
+                    constraint_map.insert(
+                        "diffusion_coefficient".to_string(),
+                        diffusion_coefficient,
+                    );
+                }
 
                 // Compute CFL-limited time step
-                let max_dt = self.stability_analyzer.compute_stable_dt_from_constraints(
+                let mut max_dt = self.stability_analyzer.compute_stable_dt_from_constraints(
                     field,
                     grid,
-                    &std::collections::HashMap::new(),
+                    &constraint_map,
                 )?;
+
+                if let Some(cfl_number) = constraints.cfl_number {
+                    let max_speed = constraint_map
+                        .get("max_wave_speed")
+                        .copied()
+                        .unwrap_or_else(|| {
+                            let max_val = field.iter().map(|v| v.abs()).fold(0.0, f64::max);
+                            max_val.max(1500.0)
+                        });
+                    let dx_min = grid.dx.min(grid.dy).min(grid.dz);
+                    let cfl_dt = dx_min * cfl_number / max_speed.max(1e-10);
+                    max_dt = max_dt.min(cfl_dt);
+                }
+
+                if let Some(max_dt_limit) = constraints.max_dt {
+                    max_dt = max_dt.min(max_dt_limit);
+                }
 
                 Ok((name.clone(), max_dt * self.cfl_safety_factor))
             })

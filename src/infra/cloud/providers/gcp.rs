@@ -401,7 +401,7 @@ mod tests {
 
     #[test]
     fn test_gcp_provider_compilation() {
-        let _ = CloudProvider::GCP;
+        let _ = crate::infra::cloud::CloudProvider::GCP;
     }
 
     #[cfg(feature = "pinn")]

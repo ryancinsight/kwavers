@@ -92,13 +92,14 @@ pub struct SafetyMonitor {
 impl SafetyMonitor {
     /// Create new safety monitor
     pub fn new(limits: SafetyLimits) -> Self {
+        let check_interval = Duration::from_millis(100);
         Self {
             limits,
             current_state: SafetyLevel::Normal,
             violations: Vec::new(),
             monitoring_enabled: true,
-            last_check: Instant::now(),
-            check_interval: Duration::from_millis(100), // 10Hz monitoring
+            last_check: Instant::now() - check_interval,
+            check_interval, // 10Hz monitoring
         }
     }
 
@@ -106,6 +107,11 @@ impl SafetyMonitor {
     pub fn check_safety(&mut self, params: &TherapyParameters) -> SafetyLevel {
         if !self.monitoring_enabled {
             return SafetyLevel::Normal;
+        }
+
+        let now = Instant::now();
+        if now.duration_since(self.last_check) < self.check_interval {
+            return self.current_state;
         }
 
         // Reset violations for this check
@@ -171,7 +177,7 @@ impl SafetyMonitor {
 
         // Update state
         self.current_state = new_state;
-        self.last_check = Instant::now();
+        self.last_check = now;
 
         new_state
     }
@@ -282,6 +288,12 @@ impl InterlockSystem {
     /// Check if system is enabled for operation
     pub fn is_system_enabled(&self) -> bool {
         self.system_enabled && !self.emergency_stop_active
+    }
+}
+
+impl Default for InterlockSystem {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -571,6 +583,12 @@ impl ComplianceValidator {
                 }),
             },
         ]
+    }
+}
+
+impl Default for ComplianceValidator {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

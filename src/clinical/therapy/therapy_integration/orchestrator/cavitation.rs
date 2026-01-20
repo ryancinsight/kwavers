@@ -188,7 +188,7 @@ mod tests {
         assert!(activity.iter().any(|&a| a > 0.0));
 
         // Activity should be bounded [0, 1]
-        assert!(activity.iter().all(|&a| a >= 0.0 && a <= 1.0));
+        assert!(activity.iter().all(|&a| (0.0..=1.0).contains(&a)));
     }
 
     #[test]
@@ -248,6 +248,6 @@ mod tests {
         assert!(center_activity >= edge_activity);
 
         // All activity values should be in valid range
-        assert!(activity.iter().all(|&a| a >= 0.0 && a <= 1.0));
+        assert!(activity.iter().all(|&a| (0.0..=1.0).contains(&a)));
     }
 }

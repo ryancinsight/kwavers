@@ -267,6 +267,7 @@ impl DiscreteHankelTransform {
 /// (1/r) d/dr (r df/dr) = d²f/dr² + (1/r) df/dr
 ///
 /// In k-space this becomes: -k² F(k)
+#[allow(dead_code)]
 pub fn apply_radial_laplacian(f_k: &Array1<f64>, k: &Array1<f64>) -> Array1<f64> {
     let mut result = Array1::zeros(f_k.len());
     for i in 0..f_k.len() {

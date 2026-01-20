@@ -194,8 +194,6 @@ impl TaskSampler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::analysis::ml::pinn::meta_learning::types::{PhysicsParameters, TaskData};
-    use std::sync::Arc;
 
     #[test]
     fn test_task_sampler_creation() {

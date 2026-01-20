@@ -484,10 +484,8 @@ pub async fn terminate_aws_deployment(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_aws_provider_compilation() {
-        let _ = CloudProvider::AWS;
+        let _ = crate::infra::cloud::CloudProvider::AWS;
     }
 }

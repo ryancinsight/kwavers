@@ -57,10 +57,11 @@ fn pam_config_for(
     sample_rate: f64,
     sound_speed: f64,
 ) -> PAMConfig {
-    let mut core = BeamformingCoreConfig::default();
-    // SSOT: sampling & sound speed must be consistent between delay computation and band mapping.
-    core.sampling_frequency = sample_rate;
-    core.sound_speed = sound_speed;
+    let core = BeamformingCoreConfig {
+        sampling_frequency: sample_rate,
+        sound_speed,
+        ..Default::default()
+    };
 
     let beamforming = PamBeamformingConfig {
         core,

@@ -96,9 +96,7 @@ impl ShockWavePropagation {
         field: &Array3<f64>,
         _frequency: f64,
     ) -> KwaversResult<Array3<f64>> {
-        // Placeholder for propagation logic
-        // Just return the input field for now (linear propagation assumption / already focused)
-        // In reality this would apply nonlinear steeping and attenuation
-        Ok(field.clone())
+        let factor = (-self.attenuation).exp();
+        Ok(field.mapv(|p| p * factor))
     }
 }

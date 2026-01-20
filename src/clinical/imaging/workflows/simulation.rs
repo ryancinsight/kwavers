@@ -1,43 +1,40 @@
 use super::config::{ElastographyConfig, PhotoacousticConfig};
 use crate::core::error::KwaversResult;
-use crate::domain::sensor::beamforming::BeamformingConfig3D;
 use ndarray::Array3;
-// use ndarray_stats::QuantileExt; // Removed - not in dependencies
 
-/// Generate realistic RF data for ultrasound simulation
-pub fn generate_realistic_rf_data(config: &BeamformingConfig3D) -> Array3<f64> {
-    let (num_depth, num_lat, num_elev) = config.volume_dims;
+#[cfg(feature = "gpu")]
+use crate::domain::sensor::beamforming::BeamformingConfig3D;
 
+pub fn generate_realistic_rf_volume(
+    volume_dims: (usize, usize, usize),
+    sound_speed: f64,
+    sampling_frequency: f64,
+    center_frequency: f64,
+) -> Array3<f64> {
+    let (num_depth, num_lat, num_elev) = volume_dims;
     let mut rf_data = Array3::zeros((num_depth, num_lat, num_elev));
 
-    // Generate realistic ultrasound RF signals
-    // This simulates backscattered echoes with tissue-like properties
     for elev in 0..num_elev {
         for lat in 0..num_lat {
             for depth in 0..num_depth {
-                // Distance from transducer element to voxel
-                let distance = ((depth as f64 * config.sound_speed / config.sampling_frequency)
+                let distance = ((depth as f64 * sound_speed / sampling_frequency)
                     + (lat as f64 - num_lat as f64 / 2.0).powi(2) * 0.0001
                     + (elev as f64 - num_elev as f64 / 2.0).powi(2) * 0.0001)
                     .sqrt();
 
-                // Attenuation with depth
-                let attenuation = (-0.5 * distance * 100.0).exp(); // 0.5 dB/cm/MHz
-
-                // Tissue scattering with some randomness
+                let attenuation = (-0.5 * distance * 100.0).exp();
                 let scattering = (rand::random::<f64>() - 0.5) * 0.1;
 
-                // Generate RF signal with realistic envelope
-                let t = depth as f64 / config.sampling_frequency;
-                let envelope = (-((t - distance / config.sound_speed)
-                    * config.center_frequency
+                let t = depth as f64 / sampling_frequency;
+                let envelope = (-((t - distance / sound_speed)
+                    * center_frequency
                     * 2.0
                     * std::f64::consts::PI)
                     .powi(2)
                     * 0.5)
                     .exp();
                 let rf_signal = envelope
-                    * (2.0 * std::f64::consts::PI * config.center_frequency * t).sin()
+                    * (2.0 * std::f64::consts::PI * center_frequency * t).sin()
                     * attenuation
                     * (1.0 + scattering);
 
@@ -47,6 +44,16 @@ pub fn generate_realistic_rf_data(config: &BeamformingConfig3D) -> Array3<f64> {
     }
 
     rf_data
+}
+
+#[cfg(feature = "gpu")]
+pub fn generate_realistic_rf_data(config: &BeamformingConfig3D) -> Array3<f64> {
+    generate_realistic_rf_volume(
+        config.volume_dims,
+        config.sound_speed,
+        config.sampling_frequency,
+        config.center_frequency,
+    )
 }
 
 /// Generate realistic photoacoustic data

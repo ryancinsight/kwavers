@@ -26,13 +26,14 @@ unsafe fn add_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {
 }
 
 #[inline]
-pub unsafe fn multiply_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
-    unsafe {
-        multiply_fields_avx2_inner(
-            a.as_slice().unwrap(),
-            b.as_slice().unwrap(),
-            out.as_slice_mut().unwrap(),
-        );
+pub fn multiply_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
+    if let (Some(a_slice), Some(b_slice), Some(out_slice)) =
+        (a.as_slice(), b.as_slice(), out.as_slice_mut())
+    {
+        #[allow(unsafe_code)]
+        unsafe {
+            multiply_fields_avx2_inner(a_slice, b_slice, out_slice);
+        }
     }
 }
 
@@ -58,13 +59,14 @@ unsafe fn multiply_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {
 }
 
 #[inline]
-pub unsafe fn subtract_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
-    unsafe {
-        subtract_fields_avx2_inner(
-            a.as_slice().unwrap(),
-            b.as_slice().unwrap(),
-            out.as_slice_mut().unwrap(),
-        );
+pub fn subtract_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
+    if let (Some(a_slice), Some(b_slice), Some(out_slice)) =
+        (a.as_slice(), b.as_slice(), out.as_slice_mut())
+    {
+        #[allow(unsafe_code)]
+        unsafe {
+            subtract_fields_avx2_inner(a_slice, b_slice, out_slice);
+        }
     }
 }
 

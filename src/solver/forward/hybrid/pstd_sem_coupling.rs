@@ -77,7 +77,9 @@ pub struct SpectralCouplingInterface {
     /// Conservative projection matrix (SEM → PSTD)
     projection_matrix: Array2<f64>,
     /// Interface quadrature points and weights
+    #[allow(dead_code)]
     quadrature_points: Vec<(f64, f64, f64)>,
+    #[allow(dead_code)]
     quadrature_weights: Vec<f64>,
 }
 
@@ -375,7 +377,7 @@ impl PstdSemCoupler {
     ) -> KwaversResult<f64> {
         // 1. Extract interface values
         let pstd_interface = self.extract_pstd_interface(pstd_field)?;
-        let sem_interface = self.extract_sem_interface(sem_field)?;
+        let sem_interface = self.extract_sem_interface(sem_field.as_slice())?;
 
         // 2. Apply modal transformation (PSTD spectral → SEM modal)
         let transformed_field = self.apply_modal_transform(&pstd_interface)?;
@@ -384,7 +386,7 @@ impl PstdSemCoupler {
         let residual = self.enforce_continuity(&transformed_field, &sem_interface)?;
 
         // 4. Apply conservative projection (SEM → PSTD)
-        self.apply_conservative_projection(pstd_field, sem_field, pstd_grid, sem_mesh)?;
+        self.apply_conservative_projection(pstd_field, sem_field.as_mut_slice(), pstd_grid, sem_mesh)?;
 
         // 5. Apply stabilization if needed
         if self.config.stabilization_alpha > 0.0 {
@@ -409,15 +411,18 @@ impl PstdSemCoupler {
     }
 
     /// Extract SEM field values at interface
-    fn extract_sem_interface(&self, sem_field: &Vec<f64>) -> KwaversResult<Vec<f64>> {
+    fn extract_sem_interface(&self, sem_field: &[f64]) -> KwaversResult<Vec<f64>> {
         let mut interface_values = Vec::with_capacity(self.interface.sem_interface_nodes.len());
 
         for &node_idx in &self.interface.sem_interface_nodes {
-            if node_idx < sem_field.len() {
-                interface_values.push(sem_field[node_idx]);
-            } else {
-                interface_values.push(0.0);
-            }
+            let value = sem_field.get(node_idx).ok_or_else(|| {
+                KwaversError::InvalidInput(format!(
+                    "SEM interface node index {} is out of bounds (sem_field len {})",
+                    node_idx,
+                    sem_field.len()
+                ))
+            })?;
+            interface_values.push(*value);
         }
 
         Ok(interface_values)
@@ -429,10 +434,12 @@ impl PstdSemCoupler {
 
         // Matrix-vector multiplication: T * v
         for i in 0..self.interface.modal_transform.nrows() {
-            for j in 0..self.interface.modal_transform.ncols() {
-                if i < pstd_values.len() {
-                    transformed[j] += self.interface.modal_transform[[i, j]] * pstd_values[i];
-                }
+            let pstd_value = match pstd_values.get(i) {
+                Some(v) => *v,
+                None => continue,
+            };
+            for (j, transformed_j) in transformed.iter_mut().enumerate() {
+                *transformed_j += self.interface.modal_transform[[i, j]] * pstd_value;
             }
         }
 
@@ -444,7 +451,7 @@ impl PstdSemCoupler {
         let mut max_residual = 0.0;
 
         // Compute continuity residual
-        for (_i, (&trans, &sem)) in transformed.iter().zip(sem_interface.iter()).enumerate() {
+        for (&trans, &sem) in transformed.iter().zip(sem_interface.iter()) {
             let residual = (trans - sem).abs();
             max_residual = if residual > max_residual {
                 residual
@@ -462,23 +469,27 @@ impl PstdSemCoupler {
     fn apply_conservative_projection(
         &mut self,
         pstd_field: &mut Array3<f64>,
-        sem_field: &mut Vec<f64>,
+        sem_field: &mut [f64],
         _pstd_grid: &Grid,
         _sem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<()> {
         // Apply projection matrix to transfer SEM values to PSTD
         for (i, &sem_node) in self.interface.sem_interface_nodes.iter().enumerate() {
-            if sem_node < sem_field.len() {
-                let sem_value = sem_field[sem_node];
+            let sem_value = *sem_field.get(sem_node).ok_or_else(|| {
+                KwaversError::InvalidInput(format!(
+                    "SEM interface node index {} is out of bounds (sem_field len {})",
+                    sem_node,
+                    sem_field.len()
+                ))
+            })?;
 
-                // Project to PSTD points
-                for (j, &(pi, pj, pk)) in self.interface.pstd_interface_points.iter().enumerate() {
-                    if i < self.interface.projection_matrix.nrows()
-                        && j < self.interface.projection_matrix.ncols()
-                    {
-                        let weight = self.interface.projection_matrix[[i, j]];
-                        pstd_field[[pi, pj, pk]] += weight * sem_value;
-                    }
+            // Project to PSTD points
+            for (j, &(pi, pj, pk)) in self.interface.pstd_interface_points.iter().enumerate() {
+                if i < self.interface.projection_matrix.nrows()
+                    && j < self.interface.projection_matrix.ncols()
+                {
+                    let weight = self.interface.projection_matrix[[i, j]];
+                    pstd_field[[pi, pj, pk]] += weight * sem_value;
                 }
             }
         }

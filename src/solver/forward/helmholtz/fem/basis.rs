@@ -304,6 +304,12 @@ impl GaussQuadrature {
     }
 }
 
+impl Default for GaussQuadrature {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Default for BasisFunction {
     fn default() -> Self {
         Self::new(1) // Linear elements by default

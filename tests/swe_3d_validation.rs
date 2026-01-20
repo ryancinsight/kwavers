@@ -52,8 +52,8 @@ use kwavers::solver::forward::elastic::swe::GPUDevice;
 #[cfg(feature = "gpu")]
 use kwavers::solver::forward::elastic::swe::GPUElasticWaveSolver3D;
 use kwavers::solver::forward::elastic::{
-    ArrivalDetection, ElasticBodyForceConfig, ElasticWaveConfig, ElasticWaveField,
-    ElasticWaveSolver, VolumetricSource, VolumetricWaveConfig, WaveFrontTracker,
+    ArrivalDetection, ElasticBodyForceConfig, ElasticWaveSolver, VolumetricWaveConfig,
+    WaveFrontTracker,
 };
 use ndarray::Array3;
 use std::default::Default;
@@ -560,6 +560,7 @@ fn test_literature_benchmark_comparison() {
 
 // Helper functions
 
+#[allow(dead_code)]
 fn estimate_wave_speed_from_history(
     history: &[kwavers::solver::forward::elastic::ElasticWaveField],
     grid: &Grid,
@@ -603,8 +604,6 @@ fn estimate_wave_speed_from_history(
 
             let mut max_amp: f64 = 0.0;
             for field in history.iter() {
-                let time = field.time;
-
                 let ux = field.ux[[i, j, k]];
                 let uy = field.uy[[i, j, k]];
                 let uz = field.uz[[i, j, k]];

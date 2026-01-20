@@ -361,11 +361,11 @@ impl MonteCarloSolver {
         ];
 
         // Check each axis
-        for axis in 0..3 {
-            if new_pos[axis] < 0.0 || new_pos[axis] >= bounds[axis] {
+        for (axis, bound) in bounds.iter().enumerate() {
+            if new_pos[axis] < 0.0 || new_pos[axis] >= *bound {
                 // Compute distance to boundary
                 let t = if dir[axis] > 0.0 {
-                    (bounds[axis] - pos[axis]) / dir[axis]
+                    (*bound - pos[axis]) / dir[axis]
                 } else if dir[axis] < 0.0 {
                     -pos[axis] / dir[axis]
                 } else {
@@ -389,10 +389,10 @@ impl MonteCarloSolver {
             self.grid.dz * self.grid.nz as f64,
         ];
 
-        for axis in 0..3 {
+        for (axis, bound) in bounds.iter().enumerate() {
             if photon.position[axis] <= 0.0 {
                 photon.direction[axis] = photon.direction[axis].abs();
-            } else if photon.position[axis] >= bounds[axis] {
+            } else if photon.position[axis] >= *bound {
                 photon.direction[axis] = -photon.direction[axis].abs();
             }
         }

@@ -463,8 +463,7 @@ impl MultiPhysicsInterface {
             }
             CouplingType::ElectromagneticThermal => {
                 // Photothermal coupling
-                let optical_to_thermal = 0.9; // High efficiency
-                optical_to_thermal
+                0.9 // High efficiency
             }
             CouplingType::Custom => 1.0, // User-defined
         }
@@ -1055,8 +1054,9 @@ mod tests {
 
         // High energy - should increase absorption
         boundary.adapt_to_energy(10.0, 0.001);
-        assert!(boundary.current_absorption() > 0.1);
-        assert!(boundary.current_absorption() <= 1.0);
+        let absorption = boundary.current_absorption();
+        assert!(absorption > 0.1);
+        assert!((0.0..=1.0).contains(&absorption));
     }
 
     #[test]
@@ -1073,7 +1073,7 @@ mod tests {
 
         let transmission = interface.transmission_coefficient(1e6);
         assert!(transmission > 0.0);
-        assert!(transmission <= 1.0);
+        assert!((0.0..=1.0).contains(&transmission));
     }
 
     #[test]
@@ -1200,7 +1200,7 @@ mod tests {
         // may be outside the [interface, neighbor] range due to gradient corrections
         // Just verify it's in a reasonable range
         assert!(
-            corrected_value >= 0.0 && corrected_value <= 30.0,
+            (0.0..=30.0).contains(&corrected_value),
             "Robin condition produced unreasonable value: {}",
             corrected_value
         );
@@ -1400,7 +1400,7 @@ mod tests {
         // The implementation blends multiple contributions including gradients,
         // so the result may be outside the [interface, neighbor] range
         assert!(
-            corrected_center > 0.0 && corrected_center < 500.0,
+            (0.0..500.0).contains(&corrected_center),
             "Robin condition should produce reasonable coupled value: {} (from {})",
             corrected_center,
             original_center
@@ -1816,7 +1816,7 @@ mod tests {
                 for k in 0..nz {
                     let val = interface_field[[i, j, k]];
                     assert!(
-                        val >= 0.0 && val <= 15.0,
+                        (0.0..=15.0).contains(&val),
                         "Robin condition produced unstable value: {}",
                         val
                     );

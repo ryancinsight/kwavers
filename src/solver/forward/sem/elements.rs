@@ -220,9 +220,9 @@ impl SemElement {
 
         let shape_functions = [n1, n2, n3, n4, n5, n6, n7, n8];
 
-        for i in 0..3 {
-            for j in 0..8 {
-                x[i] += shape_functions[j] * self.nodes[[j, i]];
+        for (i, x_i) in x.iter_mut().enumerate() {
+            for (j, n_j) in shape_functions.iter().enumerate() {
+                *x_i += n_j * self.nodes[[j, i]];
             }
         }
 

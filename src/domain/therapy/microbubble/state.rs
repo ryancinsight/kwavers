@@ -453,9 +453,7 @@ impl MicrobubbleState {
         const POLYTROPIC_INDEX: f64 = 1.4;
 
         let numerator = 3.0 * POLYTROPIC_INDEX * AMBIENT_PRESSURE / WATER_DENSITY;
-        let f0 = numerator.sqrt() / (2.0 * std::f64::consts::PI * self.radius_equilibrium);
-
-        f0
+        numerator.sqrt() / (2.0 * std::f64::consts::PI * self.radius_equilibrium)
     }
 
     /// Encapsulated drug mass [kg]

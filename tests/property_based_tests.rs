@@ -52,8 +52,8 @@ use kwavers::solver::interface::solver::Solver;
 use ndarray::{Array2, Array3};
 use proptest::prelude::*;
 
-/// Test configuration for property-based tests
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct PropertyTestConfig {
     grid_range: (usize, usize),
     time_steps_range: (usize, usize),
@@ -210,10 +210,12 @@ proptest! {
         let mut p_signal = Array2::<f64>::zeros((1, time_steps + 2));
         p_signal[[0, 0]] = 1.0;
 
-        let mut source = GridSource::default();
-        source.p_mask = Some(p_mask);
-        source.p_signal = Some(p_signal);
-        source.p_mode = SourceMode::Additive;
+        let source = GridSource {
+            p_mask: Some(p_mask),
+            p_signal: Some(p_signal),
+            p_mode: SourceMode::Additive,
+            ..Default::default()
+        };
 
         // Run FDTD
         let fdtd_config = FdtdConfig::default();
@@ -225,8 +227,10 @@ proptest! {
         let fdtd_final = fdtd_solver.pressure_field().to_owned();
 
         // Run PSTD
-        let mut pstd_config = PSTDConfig::default();
-        pstd_config.boundary = kwavers::solver::forward::pstd::config::BoundaryConfig::None;
+        let pstd_config = PSTDConfig {
+            boundary: kwavers::solver::forward::pstd::config::BoundaryConfig::None,
+            ..Default::default()
+        };
         let mut pstd_solver =
             PSTDSolver::new(pstd_config, grid.clone(), &medium, source.clone()).unwrap();
 
@@ -336,7 +340,6 @@ proptest! {
     }
 }
 
-/// Medium property consistency
 proptest! {
     #[test]
     fn test_medium_property_consistency(
@@ -367,7 +370,6 @@ proptest! {
     }
 }
 
-/// Grid convergence test
 proptest! {
     #[test]
     fn test_grid_convergence(
@@ -396,10 +398,12 @@ proptest! {
             let mut p_signal = Array2::<f64>::zeros((1, 6));
             p_signal[[0, 0]] = 1.0;
 
-            let mut source = GridSource::default();
-            source.p_mask = Some(p_mask);
-            source.p_signal = Some(p_signal);
-            source.p_mode = SourceMode::Additive;
+            let source = GridSource {
+                p_mask: Some(p_mask),
+                p_signal: Some(p_signal),
+                p_mode: SourceMode::Additive,
+                ..Default::default()
+            };
 
             let config = FdtdConfig::default();
             let mut solver = FdtdSolver::new(config, &grid, &medium, source).unwrap();

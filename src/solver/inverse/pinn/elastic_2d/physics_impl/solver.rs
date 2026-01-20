@@ -112,6 +112,7 @@ impl<B: Backend> ElasticPINN2DSolver<B> {
     /// # Returns
     ///
     /// Displacement field [N, 2] where columns are (uₓ, uᵧ)
+    #[allow(dead_code)]
     fn evaluate_field(&self, x: &[f64], y: &[f64], t: &[f64]) -> ArrayD<f64> {
         assert_eq!(x.len(), y.len());
         assert_eq!(y.len(), t.len());

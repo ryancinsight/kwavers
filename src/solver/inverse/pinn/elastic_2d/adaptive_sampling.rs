@@ -443,7 +443,7 @@ impl AdaptiveSampler {
         if self.batch_size == 0 {
             1
         } else {
-            (self.n_points + self.batch_size - 1) / self.batch_size
+            self.n_points.div_ceil(self.batch_size)
         }
     }
 }

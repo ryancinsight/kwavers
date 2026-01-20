@@ -23,9 +23,9 @@
 //! Level 5: Analytical Solution Convergence (plane waves, Lamb's problem)
 
 use kwavers::physics::foundations::wave_equation::{
-    AutodiffElasticWaveEquation, BoundaryCondition, Domain, ElasticWaveEquation,
+    AutodiffElasticWaveEquation, ElasticWaveEquation,
 };
-use ndarray::{s, Array2, ArrayD};
+use ndarray::ArrayD;
 
 // ============================================================================
 // Validation Result Types
@@ -559,13 +559,17 @@ impl PlaneWaveSolution {
         let sin_phase = phase.sin();
 
         // ∂uᵢ/∂xⱼ
-        let mut grad = [[0.0; 2]; 2];
-        for i in 0..2 {
-            for j in 0..2 {
-                grad[i][j] = -self.amplitude * polarization[i] * self.wave_vector[j] * sin_phase;
-            }
-        }
-        grad
+        let scale = -self.amplitude * sin_phase;
+        [
+            [
+                scale * polarization[0] * self.wave_vector[0],
+                scale * polarization[0] * self.wave_vector[1],
+            ],
+            [
+                scale * polarization[1] * self.wave_vector[0],
+                scale * polarization[1] * self.wave_vector[1],
+            ],
+        ]
     }
 }
 
@@ -615,7 +619,7 @@ pub fn validate_plane_wave_pde<T: ElasticWaveEquation>(
             let grad = solution.displacement_gradient(x, y, time);
 
             // Divergence: ∇·u = ∂uₓ/∂x + ∂uᵧ/∂y
-            let div_u = grad[0][0] + grad[1][1];
+            let _div_u = grad[0][0] + grad[1][1];
 
             // Laplacian components (from analytical derivatives)
             let k2 = solution.wave_vector[0].powi(2) + solution.wave_vector[1].powi(2);
@@ -701,13 +705,10 @@ pub fn run_full_validation_suite<T: ElasticWaveEquation>(
     solver: &T,
     test_name: &str,
 ) -> Vec<ValidationResult> {
-    let mut results = Vec::new();
-
-    // Level 1: Material properties
-    results.push(validate_material_properties(solver));
-
-    // Level 2: Wave speeds
-    results.push(validate_wave_speeds(solver, 1e-12));
+    let results = vec![
+        validate_material_properties(solver),
+        validate_wave_speeds(solver, 1e-12),
+    ];
 
     // Report summary
     let passed = results.iter().filter(|r| r.passed).count();
@@ -733,13 +734,10 @@ pub fn run_full_validation_suite_autodiff<T: AutodiffElasticWaveEquation>(
     solver: &T,
     test_name: &str,
 ) -> Vec<ValidationResult> {
-    let mut results = Vec::new();
-
-    // Level 1: Material properties
-    results.push(validate_material_properties_autodiff(solver));
-
-    // Level 2: Wave speeds
-    results.push(validate_wave_speeds_autodiff(solver, 1e-12));
+    let results = vec![
+        validate_material_properties_autodiff(solver),
+        validate_wave_speeds_autodiff(solver, 1e-12),
+    ];
 
     // Report summary
     let passed = results.iter().filter(|r| r.passed).count();

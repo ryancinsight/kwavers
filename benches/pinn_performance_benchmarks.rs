@@ -371,7 +371,7 @@ fn benchmark_weak_scaling(gpus: usize, problem_size: usize) -> f64 {
 }
 
 #[cfg(feature = "pinn")]
-fn benchmark_strong_scaling(gpus: usize, total_problem_size: usize) -> f64 {
+fn benchmark_strong_scaling(gpus: usize, _total_problem_size: usize) -> f64 {
     // Strong scaling: fixed problem size, increasing GPUs
     let single_gpu_time = 10.0; // seconds for 1 GPU
     let efficiency = 0.75; // Lower efficiency for strong scaling

@@ -45,6 +45,7 @@ use crate::domain::sensor::beamforming::steering::{SteeringVector, SteeringVecto
 /// - c is the sound speed
 /// - r_i is the position of element i
 /// - d is the unit direction vector to the voxel
+#[allow(dead_code)]
 pub fn compute_steering_vector_3d(
     config: &BeamformingConfig3D,
     voxel_pos: &[f32; 3],

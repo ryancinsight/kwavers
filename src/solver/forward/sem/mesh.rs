@@ -44,13 +44,13 @@ impl MeshQuality {
                     for k in 0..n_gll {
                         let det = element.jacobian_det[[i, j, k]];
                         let mut col_norms = [0.0; 3];
-                        for col in 0..3 {
+                        for (col, col_norm) in col_norms.iter_mut().enumerate() {
                             let mut s = 0.0;
                             for row in 0..3 {
                                 let v = element.jacobian[[i, j, k, row, col]];
                                 s += v * v;
                             }
-                            col_norms[col] = s.sqrt();
+                            *col_norm = s.sqrt();
                         }
                         let denom = col_norms[0] * col_norms[1] * col_norms[2];
                         let scaled = if denom > 0.0 { det / denom } else { 0.0 };

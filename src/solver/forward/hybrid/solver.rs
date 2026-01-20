@@ -46,6 +46,7 @@ pub struct HybridSolver {
     fdtd_solver: FdtdSolver,
 
     /// Material properties cache
+    #[allow(dead_code)]
     materials: MaterialFields,
 
     // Unified Fields

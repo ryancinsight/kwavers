@@ -3,16 +3,19 @@ use super::config::*;
 use super::results::*;
 use super::simulation::{
     compute_pa_snr, generate_realistic_elastography_data, generate_realistic_pa_data,
-    generate_realistic_rf_data, reconstruct_pa_image,
+    generate_realistic_rf_volume, reconstruct_pa_image,
 };
 use super::state::*;
 use crate::clinical::imaging::photoacoustic::PhotoacousticResult;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::imaging::ultrasound::elastography::ElasticityMap;
 use crate::physics::imaging::fusion::{FusedImageResult, FusionConfig, MultiModalFusion};
-use ndarray::{Array2, Array3}; // Used in acquire methods
+use ndarray::Array3;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+
+#[cfg(feature = "gpu")]
+use super::simulation::generate_realistic_rf_data;
 
 /// Real-time clinical workflow orchestrator
 #[derive(Debug)]
@@ -254,78 +257,119 @@ impl ClinicalWorkflowOrchestrator {
 
     /// Acquire ultrasound data using actual imaging pipeline
     fn acquire_ultrasound_data(&self) -> KwaversResult<Array3<f64>> {
-        // Use actual ultrasound imaging pipeline
-        // This coordinates with ultrasound acquisition hardware/systems
+        #[cfg(feature = "gpu")]
+        {
+            use crate::domain::sensor::beamforming::BeamformingConfig3D;
+            use crate::physics::acoustics::imaging::modalities::ultrasound::{
+                compute_bmode_image, UltrasoundConfig, UltrasoundMode,
+            };
+            use ndarray::Array2;
 
-        use crate::domain::sensor::beamforming::BeamformingConfig3D;
-        use crate::physics::acoustics::imaging::modalities::ultrasound::{
-            compute_bmode_image, UltrasoundConfig, UltrasoundMode,
-        };
+            let config = UltrasoundConfig {
+                mode: UltrasoundMode::BMode,
+                frequency: 5e6,
+                sampling_frequency: 40e6,
+                dynamic_range: 60.0,
+                tgc_enabled: true,
+            };
 
-        // Configure ultrasound imaging parameters
-        let config = UltrasoundConfig {
-            mode: UltrasoundMode::BMode,
-            frequency: 5e6,           // 5 MHz center frequency
-            sampling_frequency: 40e6, // 40 MHz sampling
-            dynamic_range: 60.0,
-            tgc_enabled: true,
-        };
-
-        // Configure beamforming for 3D acquisition
-        let beamforming_config = BeamformingConfig3D {
-            base_config: crate::domain::sensor::beamforming::BeamformingConfig {
-                sound_speed: 1540.0,
+            let beamforming_config = BeamformingConfig3D {
+                base_config: crate::domain::sensor::beamforming::BeamformingConfig {
+                    sound_speed: 1540.0,
+                    sampling_frequency: config.sampling_frequency,
+                    reference_frequency: config.frequency,
+                    diagonal_loading: 0.01,
+                    num_snapshots: 100,
+                    spatial_smoothing: None,
+                },
+                volume_dims: (256, 256, 128),
+                voxel_spacing: (0.001, 0.001, 0.001),
+                num_elements_3d: (64, 64, 1),
+                element_spacing_3d: (0.0003, 0.0003, 0.0),
+                center_frequency: config.frequency,
                 sampling_frequency: config.sampling_frequency,
-                reference_frequency: config.frequency,
-                diagonal_loading: 0.01,
-                num_snapshots: 100,
-                spatial_smoothing: None,
-            },
-            volume_dims: (256, 256, 128), // (depth, lateral, elevational)
-            voxel_spacing: (0.001, 0.001, 0.001), // 1mm spacing
-            num_elements_3d: (64, 64, 1), // 2D array for 3D imaging
-            element_spacing_3d: (0.0003, 0.0003, 0.0), // 300 μm spacing
-            center_frequency: config.frequency,
-            sampling_frequency: config.sampling_frequency,
-            sound_speed: 1540.0,
-            gpu_device: None,
-            enable_streaming: false,
-            streaming_buffer_size: 1024,
-        };
+                sound_speed: 1540.0,
+                gpu_device: None,
+                enable_streaming: false,
+                streaming_buffer_size: 1024,
+            };
 
-        // Generate synthetic data using external simulation module
-        let rf_data = generate_realistic_rf_data(&beamforming_config);
+            let rf_data = generate_realistic_rf_data(&beamforming_config);
+            let mut bmode_volume = Array3::zeros(beamforming_config.volume_dims);
 
-        // Process RF data into B-mode image
-        // Convert 3D volume to 2D slices for B-mode processing
-        let mut bmode_volume = Array3::zeros(beamforming_config.volume_dims);
+            for elev in 0..beamforming_config.volume_dims.2 {
+                let mut rf_slice = Array2::zeros((
+                    beamforming_config.volume_dims.0,
+                    beamforming_config.volume_dims.1,
+                ));
 
-        // Process each elevational slice
-        for elev in 0..beamforming_config.volume_dims.2 {
-            // Extract 2D RF data for this slice
-            let mut rf_slice = Array2::zeros((
-                beamforming_config.volume_dims.0,
-                beamforming_config.volume_dims.1,
-            ));
+                for depth in 0..beamforming_config.volume_dims.0 {
+                    for lat in 0..beamforming_config.volume_dims.1 {
+                        rf_slice[[depth, lat]] = rf_data[[depth, lat, elev]];
+                    }
+                }
 
-            for depth in 0..beamforming_config.volume_dims.0 {
-                for lat in 0..beamforming_config.volume_dims.1 {
-                    rf_slice[[depth, lat]] = rf_data[[depth, lat, elev]];
+                let bmode_slice = compute_bmode_image(&rf_slice, &config);
+
+                for depth in 0..beamforming_config.volume_dims.0 {
+                    for lat in 0..beamforming_config.volume_dims.1 {
+                        bmode_volume[[depth, lat, elev]] = bmode_slice[[depth, lat]];
+                    }
                 }
             }
 
-            // Compute B-mode image for this slice
-            let bmode_slice = compute_bmode_image(&rf_slice, &config);
-
-            // Store in 3D volume
-            for depth in 0..beamforming_config.volume_dims.0 {
-                for lat in 0..beamforming_config.volume_dims.1 {
-                    bmode_volume[[depth, lat, elev]] = bmode_slice[[depth, lat]];
-                }
-            }
+            Ok(bmode_volume)
         }
 
-        Ok(bmode_volume)
+        #[cfg(not(feature = "gpu"))]
+        {
+            use crate::physics::acoustics::imaging::modalities::ultrasound::{
+                compute_bmode_image, UltrasoundConfig, UltrasoundMode,
+            };
+            use ndarray::Array2;
+
+            let config = UltrasoundConfig {
+                mode: UltrasoundMode::BMode,
+                frequency: 5e6,
+                sampling_frequency: 40e6,
+                dynamic_range: 60.0,
+                tgc_enabled: true,
+            };
+
+            let volume_dims = match self.config.quality_preference {
+                QualityPreference::Quality => (256, 256, 128),
+                QualityPreference::Balanced => (128, 128, 64),
+                QualityPreference::Speed => (64, 64, 32),
+            };
+
+            let rf_data = generate_realistic_rf_volume(
+                volume_dims,
+                1540.0,
+                config.sampling_frequency,
+                config.frequency,
+            );
+            let mut bmode_volume = Array3::zeros(volume_dims);
+
+            for elev in 0..volume_dims.2 {
+                let mut rf_slice = Array2::zeros((volume_dims.0, volume_dims.1));
+
+                for depth in 0..volume_dims.0 {
+                    for lat in 0..volume_dims.1 {
+                        rf_slice[[depth, lat]] = rf_data[[depth, lat, elev]];
+                    }
+                }
+
+                let bmode_slice = compute_bmode_image(&rf_slice, &config);
+
+                for depth in 0..volume_dims.0 {
+                    for lat in 0..volume_dims.1 {
+                        bmode_volume[[depth, lat, elev]] = bmode_slice[[depth, lat]];
+                    }
+                }
+            }
+
+            Ok(bmode_volume)
+        }
     }
 
     /// Acquire photoacoustic data using actual PA system
@@ -485,5 +529,11 @@ impl PerformanceMonitor {
         } else {
             self.memory_samples.iter().sum::<f64>() / self.memory_samples.len() as f64
         }
+    }
+}
+
+impl Default for PerformanceMonitor {
+    fn default() -> Self {
+        Self::new()
     }
 }

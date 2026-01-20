@@ -55,6 +55,7 @@ pub struct SemSolver {
     /// Global mass matrix (diagonal by construction in SEM)
     mass_matrix: Array1<f64>,
     /// Global stiffness matrix
+    #[allow(dead_code)]
     stiffness_matrix: CompressedSparseRowMatrix<f64>,
     /// Boundary condition manager
     boundary_manager: FemBoundaryManager,

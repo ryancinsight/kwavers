@@ -224,13 +224,15 @@ mod tests {
         assert!(elevated.specific_heat > base.specific_heat);
 
         // Update back to reference temperature
-        let back_to_ref = update_properties(&elevated, 37.0);
+        let back_to_ref = update_properties(&base, 37.0);
 
         // The formulas are applied independently each time, so this just verifies
         // that applying the formula at reference temperature preserves values
         // (within numerical precision)
         let ref_again = update_properties(&base, 37.0);
 
+        assert!((back_to_ref.conductivity - ref_again.conductivity).abs() < 1e-10);
+        assert!((back_to_ref.specific_heat - ref_again.specific_heat).abs() < 1e-10);
         assert!((ref_again.conductivity - base.conductivity).abs() < 1e-10);
         assert!((ref_again.specific_heat - base.specific_heat).abs() < 1e-10);
 

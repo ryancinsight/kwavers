@@ -150,6 +150,7 @@ burn-cuda = ["pinn"]                 # Burn CUDA backend support (for cfg checks
 experimental_neural = ["pinn"]        # Gate experimental neural beamforming atop PINN deps
 # Adaptive Beamforming Refactor - Sprint ADR-001
 legacy_algorithms = []               # Legacy beamforming algorithms (deprecated)
+opast = []                           # OPAST benchmarks (Criterion)
 # Sprint 159 - Enterprise API for production deployment
 api = ["dep:axum", "dep:tower", "dep:tower-http", "async-runtime", "structured-logging", "dep:jsonwebtoken", "dep:sha2", "dep:uuid", "dep:prometheus"]  # REST API for clinical ultrasound with cloud deployment
 cloud = ["dep:reqwest", "dep:uuid", "async-runtime", "structured-logging"]
@@ -322,11 +323,6 @@ required-features = ["pinn"]
 name = "pinn_bc_validation"
 harness = true
 required-features = ["pinn"]
-
-[[bench]]
-name = "opast_benchmarks"
-harness = false
-required-features = ["legacy_algorithms"]
 
 [[bench]]
 name = "logging_benchmark"

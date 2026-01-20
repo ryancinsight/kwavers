@@ -312,7 +312,6 @@ mod tests {
 
     #[test]
     fn test_elasticity_statistics() {
-        use types::ElasticityMapExt;
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
         let displacement = DisplacementField::zeros(10, 10, 10);
 
