@@ -622,7 +622,7 @@ impl crate::solver::interface::Solver for FdtdSolver {
     }
 }
 
-pub trait FdtdGpuAccelerator: Send + Sync {
+pub trait FdtdGpuAccelerator: Send + Sync + std::fmt::Debug {
     fn propagate_acoustic_wave(
         &self,
         pressure: &Array3<f64>,
