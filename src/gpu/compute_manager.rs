@@ -2,7 +2,6 @@
 //!
 //! Provides high-level interface for GPU compute operations
 
-use crate::analysis::performance::simd_auto::SimdAuto;
 use crate::core::constants::numerical;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::gpu::shaders;
@@ -294,7 +293,6 @@ impl ComputeManager {
     ) -> KwaversResult<()> {
         // Use SIMD for element-wise operations
         let decay = absorption.mapv(|a| (-a * dt).exp());
-        let _simd_dispatcher = SimdAuto::new();
         // Apply decay using element-wise multiplication instead of scale_inplace
         pressure.zip_mut_with(&decay, |p, &d| *p *= d);
 

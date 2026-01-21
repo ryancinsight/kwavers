@@ -4,7 +4,6 @@
 //! filtering operations (bandpass, envelope detection, FBP filters).
 
 use super::spatial;
-use crate::analysis::signal_processing::filtering::FrequencyFilter;
 use crate::core::error::KwaversResult;
 use crate::domain::signal::{analytic, window_value, WindowType};
 use crate::solver::reconstruction::FilterType;
@@ -72,10 +71,25 @@ impl Filters {
         high_freq: f64,
         sampling_freq: f64,
     ) -> KwaversResult<Array1<f64>> {
-        let filter = FrequencyFilter::new();
-        let dt = 1.0 / sampling_freq;
-        let filtered = filter.bandpass(signal.as_slice().unwrap(), dt, low_freq, high_freq)?;
-        Ok(Array1::from_vec(filtered))
+        let n = signal.len();
+        if n == 0 {
+            return Ok(signal);
+        }
+
+        let df = sampling_freq / n as f64;
+        let mut filter = Array1::zeros(n);
+        for i in 0..n {
+            let freq = if i <= n / 2 {
+                i as f64 * df
+            } else {
+                (n - i) as f64 * df
+            };
+            if freq >= low_freq && freq <= high_freq {
+                filter[i] = 1.0;
+            }
+        }
+
+        self.apply_filter_1d(signal, &filter)
     }
 
     /// Apply envelope detection using Hilbert transform

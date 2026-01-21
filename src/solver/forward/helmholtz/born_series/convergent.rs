@@ -71,9 +71,6 @@ use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
 use num_complex::Complex64;
 use std::f64::consts::PI;
 
-#[cfg(feature = "gpu")]
-use crate::gpu::compute_manager::ComputeManager;
-
 /// Convergent Born Series solver for Helmholtz equation
 #[derive(Debug)]
 pub struct ConvergentBornSolver {
@@ -91,9 +88,6 @@ pub struct ConvergentBornSolver {
     current_field: Array3<Complex64>,
     /// FFT processor for accelerated Green's function application
     fft_processor: Option<Fft3d>,
-    /// GPU compute manager (when GPU feature is enabled)
-    #[cfg(feature = "gpu")]
-    gpu_manager: Option<ComputeManager>,
 }
 
 impl ConvergentBornSolver {
@@ -116,29 +110,7 @@ impl ConvergentBornSolver {
             incident_field: Array3::zeros(shape),
             current_field: Array3::zeros(shape),
             fft_processor,
-            #[cfg(feature = "gpu")]
-            gpu_manager: None,
         }
-    }
-
-    /// Initialize GPU acceleration
-    #[cfg(feature = "gpu")]
-    pub fn enable_gpu(&mut self) -> KwaversResult<()> {
-        self.gpu_manager = Some(ComputeManager::new_blocking()?);
-        Ok(())
-    }
-
-    /// Check if GPU acceleration is available and enabled
-    #[cfg(feature = "gpu")]
-    #[must_use]
-    pub fn gpu_enabled(&self) -> bool {
-        self.gpu_manager.is_some()
-    }
-
-    #[cfg(not(feature = "gpu"))]
-    #[must_use]
-    pub fn gpu_enabled(&self) -> bool {
-        false
     }
 
     /// Precompute FFT-accelerated Green's function
@@ -285,11 +257,6 @@ impl ConvergentBornSolver {
 
     /// Apply Green's operator (GPU > FFT > direct)
     fn apply_green_operator(&mut self) -> KwaversResult<()> {
-        #[cfg(feature = "gpu")]
-        if self.gpu_enabled() {
-            return self.apply_green_gpu();
-        }
-
         if self.green_fft.is_some() {
             self.apply_green_fft()
         } else {
@@ -399,24 +366,6 @@ impl ConvergentBornSolver {
         let n = (self.grid.nx * self.grid.ny * self.grid.nz) as f64;
         Self::perform_inverse_fft(self.fft_processor.as_ref(), input, output, n);
         Ok(())
-    }
-
-    /// Apply Green's function using GPU acceleration
-    #[cfg(feature = "gpu")]
-    fn apply_green_gpu(&mut self) -> KwaversResult<()> {
-        let _ = self
-            .gpu_manager
-            .as_ref()
-            .ok_or(crate::core::error::KwaversError::System(
-                crate::core::error::SystemError::GpuNotAvailable,
-            ))?;
-
-        Err(crate::core::error::KwaversError::System(
-            crate::core::error::SystemError::FeatureNotAvailable {
-                feature: "Green's operator GPU acceleration".to_string(),
-                reason: "ComputeManager kernels are not wired for Born Green operator".to_string(),
-            },
-        ))
     }
 
     /// Apply Green's function using direct computation

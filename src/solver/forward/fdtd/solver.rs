@@ -18,11 +18,6 @@ use log::info;
 use ndarray::{s, Array3, ArrayView3, Zip};
 use std::sync::Arc;
 
-#[cfg(all(feature = "gpu", feature = "pinn"))]
-use crate::gpu::burn_accelerator::{BurnGpuAccelerator, GpuConfig, MemoryStrategy, Precision};
-#[cfg(all(feature = "gpu", feature = "pinn"))]
-use burn::backend::{Autodiff, Wgpu};
-
 use super::config::FdtdConfig;
 use super::metrics::FdtdMetrics;
 use super::source_handler::SourceHandler;
@@ -103,9 +98,7 @@ pub struct FdtdSolver {
     pub(crate) cpml_boundary: Option<CPMLBoundary>,
     /// Spatial order enum (validated at construction)
     spatial_order: SpatialOrder,
-    /// Burn-based GPU accelerator (when feature enabled)
-    #[cfg(all(feature = "gpu", feature = "pinn"))]
-    gpu_accelerator: Option<BurnGpuAccelerator<Autodiff<Wgpu<f32>>>>,
+    gpu_accelerator: Option<Arc<dyn FdtdGpuAccelerator>>,
 
     // Shared components for source handling and sensor recording
     pub(crate) source_handler: SourceHandler,
@@ -138,21 +131,6 @@ impl FdtdSolver {
         let central_operator =
             CentralDifferenceOperator::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;
         let staggered_operator = StaggeredGridOperator::new(grid.dx, grid.dy, grid.dz)?;
-
-        // Initialize Burn GPU accelerator if feature is enabled
-        #[cfg(all(feature = "gpu", feature = "pinn"))]
-        let gpu_accelerator = if config.enable_gpu_acceleration {
-            info!("Initializing Burn-based GPU acceleration for FDTD solver");
-            let gpu_config = GpuConfig {
-                enable_gpu: true,
-                backend: "wgpu".to_string(),
-                memory_strategy: MemoryStrategy::Dynamic,
-                precision: Precision::F32,
-            };
-            Some(BurnGpuAccelerator::new(&gpu_config)?)
-        } else {
-            None
-        };
 
         let source_handler = SourceHandler::new(source, grid)?;
         let sensor_recorder = SensorRecorder::new(
@@ -187,8 +165,7 @@ impl FdtdSolver {
             metrics: FdtdMetrics::new(),
             cpml_boundary: None,
             spatial_order,
-            #[cfg(all(feature = "gpu", feature = "pinn"))]
-            gpu_accelerator,
+            gpu_accelerator: None,
             source_handler,
             dynamic_sources: Vec::new(),
             sensor_recorder,
@@ -196,6 +173,10 @@ impl FdtdSolver {
             fields,
             materials,
         })
+    }
+
+    pub fn set_gpu_accelerator(&mut self, accelerator: Arc<dyn FdtdGpuAccelerator>) {
+        self.gpu_accelerator = Some(accelerator);
     }
 
     /// Enable C-PML boundary conditions
@@ -301,14 +282,20 @@ impl FdtdSolver {
 
     /// Update pressure field using velocity divergence
     pub fn update_pressure(&mut self, dt: f64) -> KwaversResult<()> {
-        // Use GPU acceleration if available and enabled
-        #[cfg(all(feature = "gpu", feature = "pinn"))]
         if self.config.enable_gpu_acceleration {
-            if let Some(accelerator) = self.gpu_accelerator.as_ref() {
-                let new_pressure = self.update_pressure_gpu(accelerator, dt)?;
-                self.fields.p = new_pressure;
-                return Ok(());
-            }
+            let accelerator =
+                self.gpu_accelerator
+                    .as_ref()
+                    .ok_or_else(|| KwaversError::Config(
+                        crate::core::error::ConfigError::InvalidValue {
+                            parameter: "enable_gpu_acceleration".to_string(),
+                            value: "true".to_string(),
+                            constraint: "GPU accelerator must be configured".to_string(),
+                        },
+                    ))?;
+            let new_pressure = self.update_pressure_gpu(accelerator.as_ref(), dt)?;
+            self.fields.p = new_pressure;
+            return Ok(());
         }
 
         // Fall back to CPU implementation
@@ -379,11 +366,9 @@ impl FdtdSolver {
         *pressure = SimdOps::subtract_fields(pressure, &update_term);
     }
 
-    /// Burn-based GPU implementation of pressure update
-    #[cfg(all(feature = "gpu", feature = "pinn"))]
     fn update_pressure_gpu(
         &self,
-        accelerator: &BurnGpuAccelerator<Autodiff<Wgpu<f32>>>,
+        accelerator: &dyn FdtdGpuAccelerator,
         dt: f64,
     ) -> KwaversResult<Array3<f64>> {
         accelerator.propagate_acoustic_wave(
@@ -610,7 +595,7 @@ impl crate::solver::interface::Solver for FdtdSolver {
         ) || (matches!(
             feature,
             crate::solver::interface::SolverFeature::GpuAcceleration
-        ) && cfg!(all(feature = "gpu", feature = "pinn")))
+        ) && self.gpu_accelerator.is_some())
     }
 
     fn enable_feature(
@@ -620,12 +605,12 @@ impl crate::solver::interface::Solver for FdtdSolver {
     ) -> KwaversResult<()> {
         match feature {
             crate::solver::interface::SolverFeature::GpuAcceleration => {
-                if !cfg!(all(feature = "gpu", feature = "pinn")) {
+                if enable && self.gpu_accelerator.is_none() {
                     return Err(KwaversError::Config(
                         crate::core::error::ConfigError::InvalidValue {
-                            parameter: "feature".to_string(),
-                            value: "GpuAcceleration".to_string(),
-                            constraint: "Requires crate features: gpu + pinn".to_string(),
+                            parameter: "enable_gpu_acceleration".to_string(),
+                            value: "true".to_string(),
+                            constraint: "GPU accelerator must be configured".to_string(),
                         },
                     ));
                 }
@@ -635,4 +620,20 @@ impl crate::solver::interface::Solver for FdtdSolver {
             _ => Ok(()), // Ignore unsupported for now or error
         }
     }
+}
+
+pub trait FdtdGpuAccelerator: Send + Sync {
+    fn propagate_acoustic_wave(
+        &self,
+        pressure: &Array3<f64>,
+        velocity_x: &Array3<f64>,
+        velocity_y: &Array3<f64>,
+        velocity_z: &Array3<f64>,
+        density: &Array3<f64>,
+        sound_speed: &Array3<f64>,
+        dt: f64,
+        dx: f64,
+        dy: f64,
+        dz: f64,
+    ) -> KwaversResult<Array3<f64>>;
 }

@@ -13,6 +13,7 @@
 //! - **Scientific Computing**: Optimized for PDEs, wave propagation, and physics simulations
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::solver::forward::fdtd::FdtdGpuAccelerator;
 use burn::prelude::*;
 use burn::tensor::{backend::Backend, Tensor};
 use ndarray::Array3;
@@ -486,6 +487,36 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         _params: &PhysicsParameters,
     ) -> Tensor<B, 3> {
         Tensor::zeros([1, 1, 1], &self.device)
+    }
+}
+
+impl<B: Backend> FdtdGpuAccelerator for BurnGpuAccelerator<B> {
+    fn propagate_acoustic_wave(
+        &self,
+        pressure: &Array3<f64>,
+        velocity_x: &Array3<f64>,
+        velocity_y: &Array3<f64>,
+        velocity_z: &Array3<f64>,
+        density: &Array3<f64>,
+        sound_speed: &Array3<f64>,
+        dt: f64,
+        dx: f64,
+        dy: f64,
+        dz: f64,
+    ) -> KwaversResult<Array3<f64>> {
+        BurnGpuAccelerator::propagate_acoustic_wave(
+            self,
+            pressure,
+            velocity_x,
+            velocity_y,
+            velocity_z,
+            density,
+            sound_speed,
+            dt,
+            dx,
+            dy,
+            dz,
+        )
     }
 }
 

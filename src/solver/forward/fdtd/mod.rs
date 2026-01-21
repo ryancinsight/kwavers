@@ -97,6 +97,7 @@ pub mod solver;
 pub use config::FdtdConfig;
 pub use electromagnetic::ElectromagneticFdtdSolver;
 pub use plugin::FdtdPlugin;
+pub use solver::FdtdGpuAccelerator;
 pub use solver::FdtdSolver;
 pub use source_handler::SourceHandler;
 

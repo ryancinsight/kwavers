@@ -26,7 +26,6 @@
 //! 3. `core` is accessible to all layers
 //! 4. Optional features (gpu) cannot be required by core functionality
 
-use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -128,20 +127,14 @@ impl Violation {
 pub struct DependencyChecker {
     src_root: PathBuf,
     violations: Vec<Violation>,
-    use_pattern: Regex,
 }
 
 impl DependencyChecker {
     /// Create a new dependency checker
     pub fn new(src_root: PathBuf) -> Self {
-        // Regex to match Rust use statements
-        let use_pattern =
-            Regex::new(r"(?m)^\s*use\s+(?:crate|super|self)::[^;]+;").expect("Invalid regex");
-
         Self {
             src_root,
             violations: Vec::new(),
-            use_pattern,
         }
     }
 
@@ -237,19 +230,7 @@ impl DependencyChecker {
                 let rest = &trimmed[start + 7..]; // Skip "crate::"
                 if let Some(end) = rest.find("::").or_else(|| rest.find(";")) {
                     let module = &rest[..end];
-                    return match module {
-                        "core" => Some(Layer::Core),
-                        "infra" => Some(Layer::Infra),
-                        "domain" => Some(Layer::Domain),
-                        "math" => Some(Layer::Math),
-                        "physics" => Some(Layer::Physics),
-                        "solver" => Some(Layer::Solver),
-                        "simulation" => Some(Layer::Simulation),
-                        "clinical" => Some(Layer::Clinical),
-                        "analysis" => Some(Layer::Analysis),
-                        "gpu" => Some(Layer::Gpu),
-                        _ => None,
-                    };
+                    return Layer::from_module_path(&format!("crate::{module}"));
                 }
             }
         }
@@ -262,68 +243,6 @@ impl DependencyChecker {
         &self.violations
     }
 
-    /// Print a report of all violations
-    pub fn print_report(&self) {
-        if self.violations.is_empty() {
-            println!("✅ No architecture violations found!");
-            return;
-        }
-
-        println!(
-            "❌ Found {} architecture violation(s):\n",
-            self.violations.len()
-        );
-
-        // Group violations by layer pair
-        let mut by_layers: HashMap<(Layer, Layer), Vec<&Violation>> = HashMap::new();
-        for violation in &self.violations {
-            by_layers
-                .entry((violation.from_layer, violation.to_layer))
-                .or_insert_with(Vec::new)
-                .push(violation);
-        }
-
-        for ((from, to), violations) in by_layers.iter() {
-            println!(
-                "Layer {} → Layer {} ({} violations):",
-                from.name(),
-                to.name(),
-                violations.len()
-            );
-            for v in violations.iter().take(5) {
-                println!("  {}", v.format());
-            }
-            if violations.len() > 5 {
-                println!("  ... and {} more", violations.len() - 5);
-            }
-            println!();
-        }
-    }
-
-    /// Generate a summary report
-    pub fn summary(&self) -> String {
-        if self.violations.is_empty() {
-            return "✅ Architecture: CLEAN - No layer violations detected".to_string();
-        }
-
-        let mut summary = format!("❌ Architecture: {} VIOLATIONS\n", self.violations.len());
-
-        // Count violations by layer
-        let mut from_layer_counts: HashMap<Layer, usize> = HashMap::new();
-        for v in &self.violations {
-            *from_layer_counts.entry(v.from_layer).or_insert(0) += 1;
-        }
-
-        summary.push_str("\nViolations by source layer:\n");
-        let mut sorted_layers: Vec<_> = from_layer_counts.iter().collect();
-        sorted_layers.sort_by_key(|(layer, _)| *layer);
-
-        for (layer, count) in sorted_layers {
-            summary.push_str(&format!("  {}: {}\n", layer.name(), count));
-        }
-
-        summary
-    }
 }
 
 /// Check for cross-contamination patterns
@@ -342,7 +261,6 @@ pub struct ContaminationPattern {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
-    Low,
     Medium,
     High,
     Critical,
@@ -351,7 +269,6 @@ pub enum Severity {
 impl Severity {
     pub fn as_str(&self) -> &'static str {
         match self {
-            Severity::Low => "LOW",
             Severity::Medium => "MEDIUM",
             Severity::High => "HIGH",
             Severity::Critical => "CRITICAL",
