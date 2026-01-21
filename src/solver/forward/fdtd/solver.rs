@@ -84,7 +84,6 @@ impl CentralDifferenceOperator {
 }
 
 /// FDTD solver for acoustic wave propagation
-#[derive(Debug)]
 pub struct FdtdSolver {
     /// Configuration
     pub(crate) config: FdtdConfig,
@@ -523,6 +522,30 @@ impl FdtdSolver {
         let mask = source.create_mask(&self.grid);
         self.dynamic_sources.push((source, mask));
         Ok(())
+    }
+}
+
+impl std::fmt::Debug for FdtdSolver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FdtdSolver")
+            .field("config", &self.config)
+            .field("grid", &self.grid)
+            .field("central_operator", &self.central_operator)
+            .field("staggered_operator", &self.staggered_operator)
+            .field("metrics", &self.metrics)
+            .field("cpml_boundary", &self.cpml_boundary)
+            .field("spatial_order", &self.spatial_order)
+            .field("gpu_accelerator", &self.gpu_accelerator.as_ref().map(|_| "GpuAccelerator"))
+            .field("source_handler", &self.source_handler)
+            // dynamic_sources contains Arc<dyn Source> which might not impl Debug properly if not supertrait
+            // If it worked with derive, it should work here.
+            // But to be safe and minimalistic, I'll print count.
+            .field("dynamic_sources_count", &self.dynamic_sources.len())
+            .field("sensor_recorder", &self.sensor_recorder)
+            .field("time_step_index", &self.time_step_index)
+            .field("fields", &self.fields)
+            .field("materials", &self.materials)
+            .finish()
     }
 }
 

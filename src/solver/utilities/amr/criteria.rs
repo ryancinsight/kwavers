@@ -1,7 +1,7 @@
 //! Refinement criteria and error estimation
 
 use crate::core::error::KwaversResult;
-use ndarray::Array3;
+use ndarray::{Array2, Array3, Axis};
 
 /// Refinement criterion types
 #[derive(Debug, Clone, Copy)]
@@ -282,32 +282,71 @@ impl ErrorEstimator {
     /// Apply smoothing to reduce noise
     fn smooth_field(&self, field: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
-        let smooth = field.clone();
+        if nx < 3 || ny < 3 || nz < 3 {
+            return Ok(());
+        }
+
+        // Use a sliding window approach to avoid full 3D clone
+        // buffers store the (i-1)-th, i-th, and (i+1)-th slices
+        let mut prev_plane = field.index_axis(Axis(0), 0).to_owned();
+        let mut curr_plane = field.index_axis(Axis(0), 1).to_owned();
+        let mut next_plane = Array2::<f64>::zeros((ny, nz));
 
         // Simple 3x3x3 averaging filter
         for i in 1..nx - 1 {
+            // Load next plane
+            next_plane.assign(&field.index_axis(Axis(0), i + 1));
+
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
                     let mut sum = 0.0;
-                    let mut count = 0;
 
-                    for di in -1..=1 {
-                        for dj in -1..=1 {
-                            for dk in -1..=1 {
-                                let ii = (i as isize + di) as usize;
-                                let jj = (j as isize + dj) as usize;
-                                let kk = (k as isize + dk) as usize;
+                    // Sum 3x3 window from prev_plane (slice i-1)
+                    sum += prev_plane[[j - 1, k - 1]]
+                        + prev_plane[[j - 1, k]]
+                        + prev_plane[[j - 1, k + 1]]
+                        + prev_plane[[j, k - 1]]
+                        + prev_plane[[j, k]]
+                        + prev_plane[[j, k + 1]]
+                        + prev_plane[[j + 1, k - 1]]
+                        + prev_plane[[j + 1, k]]
+                        + prev_plane[[j + 1, k + 1]];
 
-                                sum += smooth[[ii, jj, kk]];
-                                count += 1;
-                            }
-                        }
-                    }
+                    // Sum 3x3 window from curr_plane (slice i)
+                    sum += curr_plane[[j - 1, k - 1]]
+                        + curr_plane[[j - 1, k]]
+                        + curr_plane[[j - 1, k + 1]]
+                        + curr_plane[[j, k - 1]]
+                        + curr_plane[[j, k]]
+                        + curr_plane[[j, k + 1]]
+                        + curr_plane[[j + 1, k - 1]]
+                        + curr_plane[[j + 1, k]]
+                        + curr_plane[[j + 1, k + 1]];
 
-                    field[[i, j, k]] = (1.0 - self.smoothing) * field[[i, j, k]]
-                        + self.smoothing * (sum / f64::from(count));
+                    // Sum 3x3 window from next_plane (slice i+1)
+                    sum += next_plane[[j - 1, k - 1]]
+                        + next_plane[[j - 1, k]]
+                        + next_plane[[j - 1, k + 1]]
+                        + next_plane[[j, k - 1]]
+                        + next_plane[[j, k]]
+                        + next_plane[[j, k + 1]]
+                        + next_plane[[j + 1, k - 1]]
+                        + next_plane[[j + 1, k]]
+                        + next_plane[[j + 1, k + 1]];
+
+                    let count = 27.0;
+
+                    let old_val = curr_plane[[j, k]];
+                    field[[i, j, k]] = (1.0 - self.smoothing) * old_val
+                        + self.smoothing * (sum / count);
                 }
             }
+
+            // Cycle buffers: prev -> next (recycle), curr -> prev, next -> curr
+            let temp = prev_plane;
+            prev_plane = curr_plane;
+            curr_plane = next_plane;
+            next_plane = temp;
         }
 
         Ok(())
