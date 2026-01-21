@@ -78,7 +78,7 @@ impl IterativeMethods {
                     x = self.sirt_iteration(&system_matrix, &x, &y)?;
                 }
                 IterativeAlgorithm::ART => {
-                    x = self.art_iteration(&system_matrix, &x, &y)?;
+                    self.art_iteration(&system_matrix, &mut x, &y)?;
                 }
                 IterativeAlgorithm::OSEM { subsets } => {
                     self.osem_iteration(&system_matrix, &mut x, &y, *subsets)?;
@@ -203,26 +203,24 @@ impl IterativeMethods {
     fn art_iteration(
         &self,
         a: &Array2<f64>,
-        x: &Array1<f64>,
+        x: &mut Array1<f64>,
         y: &Array1<f64>,
-    ) -> KwaversResult<Array1<f64>> {
-        let mut x_next = x.clone();
-
+    ) -> KwaversResult<()> {
         // Process each equation sequentially
         for (i, row) in a.rows().into_iter().enumerate() {
-            let ax_i = row.dot(&x_next);
+            let ax_i = row.dot(x);
             let residual = y[i] - ax_i;
             let row_norm_sq = row.dot(&row);
 
             if row_norm_sq > 0.0 {
                 let update_factor = self.relaxation_factor * residual / row_norm_sq;
-                Zip::from(&mut x_next).and(&row).for_each(|x_val, &a_val| {
+                Zip::from(&mut *x).and(&row).for_each(|x_val, &a_val| {
                     *x_val += update_factor * a_val;
                 });
             }
         }
 
-        Ok(x_next)
+        Ok(())
     }
 
     /// OSEM (Ordered Subset Expectation Maximization) iteration

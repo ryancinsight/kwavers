@@ -120,4 +120,31 @@ mod tests {
         );
         assert!(result.is_ok());
     }
+
+    #[test]
+    fn test_art_reconstruction() {
+        let config = PhotoacousticConfig {
+            algorithm: PhotoacousticAlgorithm::Iterative {
+                algorithm: IterativeAlgorithm::ART,
+                iterations: 2,
+                relaxation_factor: 1.0,
+            },
+            sensor_positions: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
+            grid_size: [10, 10, 10],
+            sound_speed: 1500.0,
+            sampling_frequency: 10e6,
+            envelope_detection: false,
+            bandpass_filter: None,
+            regularization_parameter: 0.0,
+        };
+
+        let reconstructor = PhotoacousticReconstructor::new(config);
+        let sensor_data = Array2::zeros((2, 100)); // Sensors x Time
+        let result = reconstructor.iterative_reconstruction(
+            sensor_data.view(),
+            &reconstructor.config.sensor_positions,
+            [10, 10, 10],
+        );
+        assert!(result.is_ok());
+    }
 }
