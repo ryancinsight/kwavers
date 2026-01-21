@@ -81,7 +81,7 @@ impl IterativeMethods {
                     x = self.art_iteration(&system_matrix, &x, &y)?;
                 }
                 IterativeAlgorithm::OSEM { subsets } => {
-                    x = self.osem_iteration(&system_matrix, &x, &y, *subsets)?;
+                    self.osem_iteration(&system_matrix, &mut x, &y, *subsets)?;
                 }
             }
 
@@ -229,15 +229,14 @@ impl IterativeMethods {
     fn osem_iteration(
         &self,
         a: &Array2<f64>,
-        x: &Array1<f64>,
+        x: &mut Array1<f64>,
         y: &Array1<f64>,
         subsets: usize,
-    ) -> KwaversResult<Array1<f64>> {
+    ) -> KwaversResult<()> {
         let (n_measurements, n_voxels) = a.dim();
-        let mut x_next = x.clone();
 
         // Ensure positivity constraint for EM algorithms
-        x_next.mapv_inplace(|v| v.max(1e-10));
+        x.mapv_inplace(|v| v.max(1e-10));
 
         // Divide measurements into ordered subsets
         let subset_size = n_measurements.div_ceil(subsets);
@@ -255,7 +254,7 @@ impl IterativeMethods {
             let sensitivity = a_subset.sum_axis(ndarray::Axis(0));
 
             // Forward projection for this subset
-            let forward_proj = a_subset.dot(&x_next);
+            let forward_proj = a_subset.dot(x);
 
             // Compute ratio of measured to expected
             let mut ratio = Array1::zeros(end_idx - start_idx);
@@ -273,12 +272,12 @@ impl IterativeMethods {
             // Update with normalization
             for i in 0..n_voxels {
                 if sensitivity[i] > 1e-10 {
-                    x_next[i] *= correction[i] / sensitivity[i];
+                    x[i] *= correction[i] / sensitivity[i];
                 }
             }
         }
 
-        Ok(x_next)
+        Ok(())
     }
 
     /// Apply regularization with proper gradient-based methods

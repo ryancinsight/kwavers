@@ -77,13 +77,8 @@ impl SensorBeamformer {
     /// This is hardware-specific as it depends on the exact sensor positions
     /// and assumes a specific coordinate system and timing reference.
     ///
-    /// # TODO: INCOMPLETE IMPLEMENTATION
-    /// This method returns zero-filled placeholder values. Complete implementation requires:
-    /// - Geometric distance calculation from each sensor to each image grid point
-    /// - Time-of-flight calculation using sound_speed parameter
-    /// - Reference time correction based on array geometry
-    /// - Validation against physical constraints (causality, array aperture limits)
-    ///   See backlog.md item #6 for specifications (6-8 hour effort estimate)
+    /// Calculates the one-way time-of-flight from each sensor element to each
+    /// grid point based on Euclidean distance and constant sound speed.
     pub fn calculate_delays(
         &self,
         image_grid: &Grid,
@@ -96,22 +91,32 @@ impl SensorBeamformer {
             )));
         }
 
-        let (nx, ny, nz) = image_grid.dimensions();
-        let (dx, dy, dz) = image_grid.spacing();
         let origin = image_grid.origin;
 
         let mut delays = Array2::zeros((self.sensor_positions.len(), image_grid.size()));
+
+        // Pre-calculate coordinates to avoid re-calculating inside loops
+        // Use Grid's coordinate iterators but remember to add origin offset
+        let x_coords: Vec<f64> = image_grid
+            .coordinates(crate::domain::grid::Dimension::X)
+            .collect();
+        let y_coords: Vec<f64> = image_grid
+            .coordinates(crate::domain::grid::Dimension::Y)
+            .collect();
+        let z_coords: Vec<f64> = image_grid
+            .coordinates(crate::domain::grid::Dimension::Z)
+            .collect();
 
         for (sensor_idx, sensor_pos) in self.sensor_positions.iter().enumerate() {
             let mut grid_idx = 0;
             // Iterate in memory order (row-major for C/ndarray default)
             // ndarray::Array3 [i, j, k] corresponds to idx = i*(ny*nz) + j*nz + k
-            for i in 0..nx {
-                let x = origin[0] + i as f64 * dx;
-                for j in 0..ny {
-                    let y = origin[1] + j as f64 * dy;
-                    for k in 0..nz {
-                        let z = origin[2] + k as f64 * dz;
+            for &x_rel in &x_coords {
+                let x = origin[0] + x_rel;
+                for &y_rel in &y_coords {
+                    let y = origin[1] + y_rel;
+                    for &z_rel in &z_coords {
+                        let z = origin[2] + z_rel;
 
                         let dist = ((x - sensor_pos[0]).powi(2)
                             + (y - sensor_pos[1]).powi(2)
@@ -563,5 +568,28 @@ mod tests {
         let max_freq = params.max_spatial_frequency(sound_speed);
         let expected = sound_speed / (2.0 * 0.3e-3);
         assert_relative_eq!(max_freq, expected, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn test_calculate_delays_logic() {
+        let sensors: Vec<Sensor> = vec![
+            Sensor::new(0, Position { x: 0.0, y: 0.0, z: 0.0 }),
+            Sensor::new(1, Position { x: 1.0, y: 0.0, z: 0.0 }),
+        ];
+        let array = SensorArray::new(sensors, 1540.0, ArrayGeometry::Linear);
+        let beamformer = SensorBeamformer::new(array, 1e6);
+
+        let grid = crate::domain::grid::Grid::new(
+            2, 1, 1,
+            1.0, 1.0, 1.0
+        ).unwrap();
+
+        let sound_speed = 1.0;
+        let delays = beamformer.calculate_delays(&grid, sound_speed).unwrap();
+
+        assert_relative_eq!(delays[[0, 0]], 0.0);
+        assert_relative_eq!(delays[[0, 1]], 1.0);
+        assert_relative_eq!(delays[[1, 0]], 1.0);
+        assert_relative_eq!(delays[[1, 1]], 0.0);
     }
 }

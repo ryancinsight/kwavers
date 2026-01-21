@@ -164,13 +164,13 @@ impl PSTDSolver {
                 .inverse_into(&self.p_k, &mut self.fields.p, &mut self.ux_k);
 
             // Apply filter to density
-            // Use p_k as transform buffer and ux_k as scratch
+            // Use p_k as transform buffer and uy_k as scratch
             self.fft.forward_into(&self.rho, &mut self.p_k);
             Zip::from(&mut self.p_k)
                 .and(filter)
                 .for_each(|val, &f| *val *= Complex64::new(f, 0.0));
             self.fft
-                .inverse_into(&self.p_k, &mut self.rho, &mut self.ux_k);
+                .inverse_into(&self.p_k, &mut self.rho, &mut self.uy_k);
 
             // Apply filter to Ux
             // Use ux_k as transform buffer and p_k as scratch
