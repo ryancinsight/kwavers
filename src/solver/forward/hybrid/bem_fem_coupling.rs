@@ -101,7 +101,7 @@ impl BemFemInterface {
 
                 // Find corresponding BEM element (simplified)
                 // In practice, this would involve more sophisticated geometric queries
-                let bem_element = Self::find_corresponding_bem_element(node, bem_boundary);
+                let bem_element = Self::find_corresponding_bem_element(node, bem_boundary, fem_mesh);
                 node_element_mapping.insert(node_idx, bem_element);
             }
         }
@@ -135,11 +135,32 @@ impl BemFemInterface {
 
     /// Find corresponding BEM element for a FEM node
     fn find_corresponding_bem_element(
-        _node: &crate::domain::mesh::tetrahedral::MeshNode,
-        _bem_boundary: &[usize],
+        node: &crate::domain::mesh::tetrahedral::MeshNode,
+        bem_boundary: &[usize],
+        fem_mesh: &TetrahedralMesh,
     ) -> usize {
-        // TODO: Simplified mapping - in practice would find closest BEM element
-        0 // Placeholder
+        let mut min_dist_sq = f64::MAX;
+        let mut closest_idx = if !bem_boundary.is_empty() {
+            bem_boundary[0]
+        } else {
+            0
+        };
+
+        for &bem_idx in bem_boundary {
+            if let Some(bem_node) = fem_mesh.nodes.get(bem_idx) {
+                let dx = node.coordinates[0] - bem_node.coordinates[0];
+                let dy = node.coordinates[1] - bem_node.coordinates[1];
+                let dz = node.coordinates[2] - bem_node.coordinates[2];
+                let dist_sq = dx * dx + dy * dy + dz * dz;
+
+                if dist_sq < min_dist_sq {
+                    min_dist_sq = dist_sq;
+                    closest_idx = bem_idx;
+                }
+            }
+        }
+
+        closest_idx
     }
 
     /// Generate quadrature points and weights for interface integration
@@ -525,5 +546,33 @@ mod tests {
         assert_eq!(config.max_iterations, 50);
         assert!(config.convergence_tolerance > 0.0);
         assert!(config.relaxation_factor > 0.0 && config.relaxation_factor <= 1.0);
+    }
+
+    #[test]
+    fn test_find_corresponding_bem_element() {
+        let mut fem_mesh = TetrahedralMesh::new();
+
+        // Node 0: Origin (Query node)
+        let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
+
+        // Node 1: (1, 0, 0)
+        let n1 = fem_mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
+
+        // Node 2: (2, 0, 0)
+        let n2 = fem_mesh.add_node([2.0, 0.0, 0.0], BoundaryType::Interior);
+
+        // Node 3: (0.5, 0, 0) - Closest
+        let n3 = fem_mesh.add_node([0.5, 0.0, 0.0], BoundaryType::Interior);
+
+        // BEM boundary candidates: n1, n2, n3
+        let bem_boundary = vec![n1, n2, n3];
+
+        let query_node = fem_mesh.nodes[n0];
+
+        // Access the private function via the associated function on the struct
+        // Since we are in a child module, we can access private items of parent
+        let closest_idx = BemFemInterface::find_corresponding_bem_element(&query_node, &bem_boundary, &fem_mesh);
+
+        assert_eq!(closest_idx, n3, "Should find the node at distance 0.5");
     }
 }
