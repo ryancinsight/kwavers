@@ -63,15 +63,18 @@ impl WaveletTransform {
             let size = nx >> level;
 
             // Transform in x-direction
+            let mut row = Vec::with_capacity(size);
+            let mut result_buf = vec![0.0; size];
+
             for j in 0..ny {
                 for k in 0..nz {
-                    let mut row = Vec::with_capacity(size);
+                    row.clear();
                     for i in 0..size {
                         row.push(data[[i, j, k]]);
                     }
 
-                    let transformed = self.haar_1d_forward(&row);
-                    for (i, val) in transformed.iter().enumerate() {
+                    self.haar_1d_forward(&row, &mut result_buf);
+                    for (i, val) in result_buf.iter().enumerate() {
                         data[[i, j, k]] = *val;
                     }
                 }
@@ -84,9 +87,8 @@ impl WaveletTransform {
     }
 
     /// 1D Haar forward transform
-    fn haar_1d_forward(&self, data: &[f64]) -> Vec<f64> {
+    fn haar_1d_forward(&self, data: &[f64], result: &mut [f64]) {
         let n = data.len();
-        let mut result = vec![0.0; n];
 
         // Compute averages and differences
         for i in 0..n / 2 {
@@ -97,7 +99,9 @@ impl WaveletTransform {
             result[n / 2 + i] = diff;
         }
 
-        result
+        if n % 2 != 0 {
+            result[n - 1] = 0.0;
+        }
     }
 
     /// Haar wavelet inverse transform
