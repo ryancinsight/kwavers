@@ -1,6 +1,6 @@
 use super::shell::ShellProperties;
 use crate::core::error::KwaversResult;
-use crate::physics::acoustics::nonlinear::bubble_state::{BubbleParameters, BubbleState};
+use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 
 /// Church model for encapsulated bubbles with elastic shell
 ///

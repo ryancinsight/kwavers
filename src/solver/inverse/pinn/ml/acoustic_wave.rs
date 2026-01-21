@@ -206,7 +206,7 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
             .copied()
             .unwrap_or(self.wave_speed);
         let c_squared = c * c;
-        let mut residual = p_tt - c_squared * laplacian;
+        let mut residual = p_tt.clone() - c_squared * laplacian;
 
         // Add nonlinear term if specified
         if let AcousticProblemType::Nonlinear = self.problem_type {
@@ -219,60 +219,36 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
                     .unwrap_or(self.density);
                 let coeff = beta / (rho_0 * c_squared * c_squared);
 
-                // TODO_AUDIT: P1 - PINN Acoustic Nonlinearity Term - Placeholder Zero Gradient
-                //
-                // PROBLEM:
-                // The second time derivative of p² (p2_tt) is hardcoded to zero, bypassing nonlinear
-                // acoustic wave equation enforcement. The nonlinearity term β/(ρ₀c⁴) · ∂²(p²)/∂t² is
-                // always zero regardless of the actual pressure field.
-                //
-                // IMPACT:
-                // - PINN cannot learn nonlinear acoustic propagation (shock waves, harmonic generation)
-                // - Training loss underestimates true PDE residual for high-amplitude fields
-                // - Predictions are limited to linear acoustics even when nonlinearity is configured
-                // - Blocks applications: histotripsy, oncotripsy, shock wave lithotripsy
-                //
-                // REQUIRED IMPLEMENTATION:
-                // 1. Compute p² from pressure field: p_squared = p * p
-                // 2. Compute first time derivative: ∂(p²)/∂t using autodiff on p_squared w.r.t. t
-                // 3. Compute second time derivative: ∂²(p²)/∂t² using autodiff on ∂(p²)/∂t w.r.t. t
-                // 4. Scale by coefficient: β/(ρ₀c⁴) and add to residual
-                // 5. Use Burn's gradient API:
-                //    ```
-                //    let p_squared = p.clone().mul(p.clone());
-                //    let p2_t_grad = t_grad.grad(&p_squared).unwrap();
-                //    let p2_tt = t_grad_2.grad(&p2_t_grad).unwrap();
-                //    ```
+                // Nonlinear term implementation: ∂²(p²)/∂t²
                 //
                 // MATHEMATICAL SPECIFICATION:
-                // Nonlinear wave equation (Westervelt):
-                //   ∇²p - (1/c²)∂²p/∂t² = β/(ρ₀c⁴) · ∂²(p²)/∂t²
-                // where:
-                //   - β = B/2A is the nonlinearity coefficient
-                //   - B/A is the parameter of nonlinearity (material property)
-                //   - ρ₀ is the ambient density
-                //   - c is the sound speed
+                // Westervelt equation: ∇²p - (1/c²)∂²p/∂t² = β/(ρ₀c⁴) · ∂²(p²)/∂t²
                 //
-                // VALIDATION CRITERIA:
-                // 1. Unit test: known nonlinear solution (e.g., Fubini solution for plane wave)
-                // 2. Property test: p2_tt should be proportional to amplitude squared
-                // 3. Convergence test: residual decreases during training with nonlinearity
-                // 4. Compare with analytical harmonic generation for sinusoidal source
-                // 5. Verify gradient flow: check that p2_tt.backward() updates model parameters
+                // Using chain rule: ∂²(p²)/∂t² = 2(p · ∂²p/∂t² + (∂p/∂t)²)
+                // This avoids nested autodiff which is computationally expensive.
+                //
+                // Derivation:
+                //   Let f = p²
+                //   ∂f/∂t = 2p · ∂p/∂t                    (chain rule)
+                //   ∂²f/∂t² = 2(∂p/∂t · ∂p/∂t + p · ∂²p/∂t²)    (product rule)
+                //         = 2((∂p/∂t)² + p · ∂²p/∂t²)
                 //
                 // REFERENCES:
-                // - Westervelt, P.J. (1963). "Parametric Acoustic Array"
+                // - Westervelt, P.J. (1963). "Parametric Acoustic Array", JASA 35(4), 535-537
                 // - Hamilton & Blackstock (2008). "Nonlinear Acoustics", Ch. 3
-                // - backlog.md: Sprint 212-213 Advanced Features
-                //
-                // EFFORT: ~12-16 hours (gradient computation, testing, validation)
-                // SPRINT: Sprint 212 (nonlinear acoustics enhancement)
-                //
-                // Compute p² and its second time derivative
-                let _p_squared = p.clone() * p.clone();
-                // Placeholder for nonlinear wave equation gradients
-                let _p2_t = Tensor::zeros_like(t);
-                let p2_tt = Tensor::zeros_like(t);
+
+                // We already have p and p_tt from above calculations
+                // Compute ∂p/∂t using first derivative
+                let t_grad_for_pt = t.clone().require_grad();
+                let p_for_pt = model.forward(x.clone(), y.clone(), t_grad_for_pt.clone());
+                let grad_p_t_calc = p_for_pt.backward();
+                let p_t = t_grad_for_pt
+                    .grad(&grad_p_t_calc)
+                    .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
+                    .unwrap_or_else(|| t.zeros_like());
+
+                // Compute ∂²(p²)/∂t² = 2((∂p/∂t)² + p · ∂²p/∂t²)
+                let p2_tt = (p_t.clone() * p_t.clone() + p.clone() * p_tt.clone()).mul_scalar(2.0);
 
                 residual = residual + coeff * p2_tt;
             }

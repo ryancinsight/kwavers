@@ -8,82 +8,25 @@ use crate::infra::api::{
 };
 use parking_lot::RwLock;
 use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
-#[cfg(feature = "pinn")]
-async fn execute_training_with_progress(
-    request: &PINNTrainingRequest,
-    progress_sender: mpsc::Sender<TrainingProgress>,
-) -> Result<crate::solver::inverse::pinn::ml::trainer::TrainingResult, APIError> {
-    use crate::solver::inverse::pinn::ml::trainer::{
-        BoundaryCondition, Geometry, Obstacle, PINNConfig, PINNTrainer, PhysicsParams,
-        TrainingConfig,
-    };
+#[derive(Debug)]
+pub struct TrainingOutput {
+    pub model: Vec<u8>,
+    pub metrics: TrainingMetrics,
+}
 
-    let geometry = Geometry {
-        bounds: request.geometry.bounds.clone(),
-        obstacles: request
-            .geometry
-            .obstacles
-            .iter()
-            .map(|o| Obstacle {
-                shape: o.shape.clone(),
-                center: o.center.clone(),
-                parameters: o.parameters.clone(),
-            })
-            .collect(),
-        boundary_conditions: request
-            .geometry
-            .boundary_conditions
-            .iter()
-            .map(|bc| BoundaryCondition {
-                boundary: bc.boundary.clone(),
-                condition_type: bc.condition_type.clone(),
-                value: bc.value,
-            })
-            .collect(),
-    };
+pub type TrainingFuture = Pin<Box<dyn Future<Output = Result<TrainingOutput, APIError>> + Send>>;
 
-    let physics_params = PhysicsParams {
-        material_properties: request.physics_params.material_properties.clone(),
-        boundary_values: request.physics_params.boundary_values.clone(),
-        initial_values: request.physics_params.initial_values.clone(),
-        domain_params: request.physics_params.domain_params.clone(),
-    };
-
-    let training_config = TrainingConfig {
-        collocation_points: request.training_config.collocation_points,
-        batch_size: request.training_config.batch_size,
-        epochs: request.training_config.epochs,
-        learning_rate: request.training_config.learning_rate,
-        hidden_layers: request.training_config.hidden_layers.clone(),
-        adaptive_sampling: request.training_config.adaptive_sampling,
-        use_gpu: request.training_config.use_gpu,
-    };
-
-    let pinn_config = PINNConfig {
-        physics_domain: request.physics_domain.clone(),
-        geometry,
-        physics_params,
-        training_config,
-        use_gpu: request.training_config.use_gpu,
-    };
-
-    let mut trainer = PINNTrainer::new(pinn_config).map_err(|e| APIError {
-        error: APIErrorType::InternalError,
-        message: e.to_string(),
-        details: None,
-    })?;
-
-    trainer
-        .train_with_progress(progress_sender)
-        .await
-        .map_err(|e| APIError {
-            error: APIErrorType::InternalError,
-            message: e.to_string(),
-            details: None,
-        })
+pub trait TrainingExecutor: Send + Sync + std::fmt::Debug {
+    fn execute(
+        &self,
+        request: PINNTrainingRequest,
+        progress_sender: mpsc::Sender<TrainingProgress>,
+    ) -> TrainingFuture;
 }
 
 /// Training job state
@@ -142,12 +85,13 @@ pub struct JobManager {
     max_concurrent_jobs: usize,
     /// Active job count
     active_jobs: Arc<RwLock<usize>>,
+    training_executor: Arc<dyn TrainingExecutor>,
 }
 
 impl JobManager {
     /// Create a new job manager
     #[must_use]
-    pub fn new(max_concurrent_jobs: usize) -> Self {
+    pub fn new(max_concurrent_jobs: usize, training_executor: Arc<dyn TrainingExecutor>) -> Self {
         let (job_sender, job_receiver) = mpsc::unbounded_channel();
 
         let manager = Self {
@@ -155,6 +99,7 @@ impl JobManager {
             job_sender,
             max_concurrent_jobs,
             active_jobs: Arc::new(RwLock::new(0)),
+            training_executor,
         };
 
         // Start job processing task
@@ -361,7 +306,10 @@ impl JobManager {
             tx
         };
 
-        let training_result = execute_training_with_progress(&job.request, progress_sender).await?;
+        let training_output = self
+            .training_executor
+            .execute(job.request.clone(), progress_sender)
+            .await?;
 
         // Create model metadata
         let model_metadata = crate::api::ModelMetadata {
@@ -369,20 +317,13 @@ impl JobManager {
             physics_domain: job.request.physics_domain.clone(),
             created_at: chrono::Utc::now(),
             training_config: job.request.training_config.clone(),
-            performance_metrics: training_result.metrics.clone().into(),
+            performance_metrics: training_output.metrics.clone(),
             geometry_spec: job.request.geometry.clone(),
         };
 
-        // Serialize model (interface-level payload for now)
-        let model_data = serde_json::to_vec(&training_result).map_err(|e| APIError {
-            error: APIErrorType::InternalError,
-            message: format!("Failed to serialize model: {}", e),
-            details: None,
-        })?;
-
         Ok(TrainingResult {
-            model: model_data,
-            metrics: training_result.metrics.into(),
+            model: training_output.model,
+            metrics: training_output.metrics,
             model_metadata,
         })
     }
@@ -398,20 +339,34 @@ impl JobManager {
     }
 }
 
-impl Default for JobManager {
-    fn default() -> Self {
-        Self::new(5) // Default to 5 concurrent jobs
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::infra::api::{GeometrySpec, PhysicsParameters, TrainingConfig};
+    use std::sync::Arc;
+
+    #[derive(Debug)]
+    struct TestTrainingExecutor;
+
+    impl TrainingExecutor for TestTrainingExecutor {
+        fn execute(
+            &self,
+            _request: PINNTrainingRequest,
+            _progress_sender: mpsc::Sender<TrainingProgress>,
+        ) -> TrainingFuture {
+            Box::pin(async move {
+                Err(APIError {
+                    error: APIErrorType::InternalError,
+                    message: "Test training executor invoked".to_string(),
+                    details: None,
+                })
+            })
+        }
+    }
 
     #[tokio::test]
     async fn test_job_submission() {
-        let manager = JobManager::new(2);
+        let manager = JobManager::new(2, Arc::new(TestTrainingExecutor));
 
         let request = PINNTrainingRequest {
             physics_domain: "acoustic_wave".to_string(),
@@ -441,7 +396,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_job_cancellation() {
-        let manager = JobManager::new(2);
+        let manager = JobManager::new(2, Arc::new(TestTrainingExecutor));
 
         let request = PINNTrainingRequest {
             physics_domain: "acoustic_wave".to_string(),
@@ -472,7 +427,7 @@ mod tests {
 
     #[test]
     fn test_user_jobs_filtering() {
-        let manager = JobManager::new(2);
+        let manager = JobManager::new(2, Arc::new(TestTrainingExecutor));
 
         // Add a job manually for testing
         let job = TrainingJob {

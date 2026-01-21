@@ -55,11 +55,11 @@ pub mod imaging {
 /// Re-export wave_propagation from its new location
 pub use acoustics::analytical::propagation as wave_propagation;
 
-/// Re-export bubble_dynamics from its new location (now at nonlinear root level files)
-pub use acoustics::nonlinear as bubble_dynamics;
+/// Re-export bubble_dynamics from its new location
+pub use acoustics::bubble_dynamics;
 
 /// Re-export cavitation_control from its new location
-pub use acoustics::nonlinear::cavitation_control;
+pub use acoustics::bubble_dynamics::cavitation_control;
 
 /// Re-export phase_modulation from its new location
 pub use acoustics::analytical::patterns as phase_modulation;

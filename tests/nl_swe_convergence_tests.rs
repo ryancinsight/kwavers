@@ -28,7 +28,7 @@
 
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
-use kwavers::physics::imaging::elastography::nonlinear::{
+use kwavers::physics::acoustics::imaging::modalities::elastography::{
     HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
 };
 use ndarray::Array3;

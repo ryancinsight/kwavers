@@ -283,16 +283,13 @@ impl FdtdSolver {
     /// Update pressure field using velocity divergence
     pub fn update_pressure(&mut self, dt: f64) -> KwaversResult<()> {
         if self.config.enable_gpu_acceleration {
-            let accelerator =
-                self.gpu_accelerator
-                    .as_ref()
-                    .ok_or_else(|| KwaversError::Config(
-                        crate::core::error::ConfigError::InvalidValue {
-                            parameter: "enable_gpu_acceleration".to_string(),
-                            value: "true".to_string(),
-                            constraint: "GPU accelerator must be configured".to_string(),
-                        },
-                    ))?;
+            let accelerator = self.gpu_accelerator.as_ref().ok_or_else(|| {
+                KwaversError::Config(crate::core::error::ConfigError::InvalidValue {
+                    parameter: "enable_gpu_acceleration".to_string(),
+                    value: "true".to_string(),
+                    constraint: "GPU accelerator must be configured".to_string(),
+                })
+            })?;
             let new_pressure = self.update_pressure_gpu(accelerator.as_ref(), dt)?;
             self.fields.p = new_pressure;
             return Ok(());
@@ -622,7 +619,7 @@ impl crate::solver::interface::Solver for FdtdSolver {
     }
 }
 
-pub trait FdtdGpuAccelerator: Send + Sync {
+pub trait FdtdGpuAccelerator: Send + Sync + std::fmt::Debug {
     fn propagate_acoustic_wave(
         &self,
         pressure: &Array3<f64>,

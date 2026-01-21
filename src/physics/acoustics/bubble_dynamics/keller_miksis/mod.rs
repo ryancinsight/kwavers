@@ -12,9 +12,9 @@ pub mod thermodynamics;
 pub mod validation;
 
 use crate::core::error::KwaversResult;
-use crate::physics::acoustics::nonlinear::bubble_state::{BubbleParameters, BubbleState};
-use crate::physics::acoustics::nonlinear::energy_balance::EnergyBalanceCalculator;
-use crate::physics::acoustics::nonlinear::thermodynamics::{
+use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
+use crate::physics::acoustics::bubble_dynamics::energy_balance::EnergyBalanceCalculator;
+use crate::physics::acoustics::bubble_dynamics::thermodynamics::{
     MassTransferModel, ThermodynamicsCalculator, VaporPressureModel,
 };
 

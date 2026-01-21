@@ -28,7 +28,7 @@ use kwavers::clinical::imaging::workflows::blood_oxygenation::{
 };
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::properties::OpticalPropertyData;
-use kwavers::physics::optics::diffusion::solver::{DiffusionSolver, DiffusionSolverConfig};
+use kwavers::solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
 use ndarray::Array3;
 use std::time::Instant;
 

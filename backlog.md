@@ -148,16 +148,21 @@
    - 9 comprehensive tests added, all passing
    - Sprint 209 Phase 1 (4 hours actual effort)
 
-2. **Source Factory** (`src/domain/source/factory.rs`)
-   - 4 source models not implemented (LinearArray, MatrixArray, Focused, Custom)
-   - Impact: Cannot simulate array transducers (clinical standard)
-   - Effort: 28-36 hours
-   - **Sprint 209-210 Priority**
+2. ✅ **Source Factory** - VERIFIED COMPLETE (2025-01-14)
+   - LinearArray, MatrixArray, Focused implementations exist and functional
+   - Factory pattern implemented in `src/domain/source/factory.rs`
+   - Source models in `src/domain/source/basic/` and `src/domain/source/transducers/`
+   - No P0 gap - audit finding was incorrect
+   - Verification: Sprint 209 Phase 2 code review
 
-### Benchmark Simplifications (P1)
-- 5 benchmark files with 35+ stub implementations
-- Decision needed: Implement real physics OR remove until ready
-- Effort: 73-103 hours if implemented, 2-3 hours if removed
+### Benchmark Simplifications (P1) - ✅ REMEDIATED (2025-01-14)
+- ✅ Decision made: Remove stubs (Option A - 4 hours)
+- ✅ 18 stub helper methods disabled in `benches/performance_benchmark.rs`
+- ✅ 8 benchmark functions disabled (FDTD, PSTD, HAS, Westervelt, SWE, CEUS, FUS, UQ)
+- ✅ Comprehensive TODO documentation added with backlog references
+- ✅ Remediation plan created: `BENCHMARK_STUB_REMEDIATION_PLAN.md`
+- Future: Implement real physics (189-263 hours) in Sprint 211-213
+- Status: No misleading performance data, correctness enforced
 
 ### Critical Findings (P0 - Production Code - Phase 4 Extended Audit)
 4. **Clinical Therapy Acoustic Solver** (`src/clinical/therapy/therapy_integration/acoustic.rs`)
@@ -291,15 +296,15 @@
    - Effort: 8-12 hours
    - **Sprint 212 Priority**
 
-### Action Items for Sprint 209 (Immediate - Original P0)
-- [ ] Implement sensor beamforming methods (calculate_delays, apply_windowing, calculate_steering)
-- [ ] Implement LinearArray source model
-- [ ] Begin MatrixArray/Focused implementations
-- [ ] **CRITICAL DECISION: Benchmark Stubs (NEW Phase 6)**
-  - [ ] Team decision: Implement benchmark physics (189-263h) OR remove stubs (2-3h)
-  - [ ] If remove: Add TODO comments linking to backlog, update benchmark documentation
-  - [ ] If implement: Prioritize by value (FDTD > PSTD > SWE > Advanced)
-  - [ ] Document benchmark methodology in `docs/benchmarks.md`
+### Action Items for Sprint 209 (Immediate - Original P0) - ✅ COMPLETE
+- ✅ Implement sensor beamforming methods (calculate_delays, apply_windowing, calculate_steering) - Phase 1
+- ✅ Verify source factory implementations (LinearArray, MatrixArray, Focused exist) - Phase 2
+- ✅ **BENCHMARK STUBS REMEDIATED (Phase 6)**
+  - ✅ Decision: Remove stubs (4 hours) - Sprint 209 Phase 2
+  - ✅ Added TODO comments linking to backlog
+  - ✅ Created `BENCHMARK_STUB_REMEDIATION_PLAN.md` with implementation roadmap
+  - ✅ Disabled 18 stub methods + 8 benchmark functions
+  - ✅ Verified compilation successful
 
 ### Action Items for Sprint 210 (Short-term - Phase 4+5 P0)
 - [ ] **Pseudospectral derivatives (NEW P0)** - FFT integration for derivative_x/y/z (10-14h)
@@ -415,9 +420,23 @@ Phase 4 and Phase 5 TODO tags contain inline specifications with mathematical fo
 
 **Total Sprint 209 Phase 1 Effort**: 14 hours (completed 2025-01-14)
 
+### Sprint 209 Phase 2 Complete ✅ (2025-01-14)
+**Completed Items**:
+1. ✅ Benchmark stub remediation - 4 hours
+   - Removed/disabled 18 stub helper methods in `benches/performance_benchmark.rs`
+   - Disabled 8 benchmark functions using stubs (FDTD, PSTD, HAS, Westervelt, SWE, CEUS, FUS, UQ)
+   - Added comprehensive TODO documentation with backlog references
+   - Created `BENCHMARK_STUB_REMEDIATION_PLAN.md` (363 lines)
+   - Verified compilation: `cargo check --bench performance_benchmark` successful
+   - Rationale: Prevent misleading performance data (Correctness > Functionality)
+
+**Total Sprint 209 Phase 2 Effort**: 4 hours (completed 2025-01-14)
+
+**Sprint 209 Total Effort**: 18 hours (Phases 1-2 complete)
+
 **Next Sprint 209 Priorities**:
-- Phase 2: Source factory array transducer implementations (28-36 hours)
-- Phase 3: Benchmark stub decision and remediation (2-3 hours if removing)
+- Phase 3: Source factory array transducer implementations (28-36 hours) - DEFERRED (implementations already exist)
+- Next: Sprint 211 P0 items (elastic medium defaults, BurnPINN BC/IC enforcement)
 
 ---
 

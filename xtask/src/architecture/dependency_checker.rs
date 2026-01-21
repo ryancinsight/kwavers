@@ -26,7 +26,6 @@
 //! 3. `core` is accessible to all layers
 //! 4. Optional features (gpu) cannot be required by core functionality
 
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 

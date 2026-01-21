@@ -7,6 +7,7 @@ use crate::infra::api::handlers::{
     delete_model, get_job_info, get_model_info, health_check, list_models, run_inference,
     train_pinn_model, AppState,
 };
+use crate::infra::api::job_manager::TrainingExecutor;
 use axum::{
     routing::{delete, get, post},
     Router,
@@ -25,7 +26,7 @@ use crate::infra::api::clinical_handlers::{
 };
 
 /// Create the complete API router
-pub fn create_router() -> Router<()> {
+pub fn create_router(training_executor: std::sync::Arc<dyn TrainingExecutor>) -> Router<()> {
     // Create application states
     // Correctness + security invariant:
     // Router construction MUST NOT rely on `AuthMiddleware::default()`, because that allows
@@ -49,7 +50,10 @@ pub fn create_router() -> Router<()> {
     let pinn_state = AppState {
         version: env!("CARGO_PKG_VERSION").to_string(),
         start_time: std::time::Instant::now(),
-        job_manager: std::sync::Arc::new(crate::api::job_manager::JobManager::new(5)),
+        job_manager: std::sync::Arc::new(crate::api::job_manager::JobManager::new(
+            5,
+            training_executor,
+        )),
         model_registry: std::sync::Arc::new(crate::api::model_registry::ModelRegistry::new()),
         auth_middleware: std::sync::Arc::new(
             crate::api::auth::AuthMiddleware::new(
@@ -163,13 +167,33 @@ mod tests {
     use axum::body::Body;
     use axum::http::Request;
     use tower::util::ServiceExt;
+    use tokio::sync::mpsc;
+
+    #[derive(Debug)]
+    struct TestTrainingExecutor;
+
+    impl TrainingExecutor for TestTrainingExecutor {
+        fn execute(
+            &self,
+            _request: crate::infra::api::PINNTrainingRequest,
+            _progress_sender: mpsc::Sender<crate::infra::api::TrainingProgress>,
+        ) -> crate::infra::api::job_manager::TrainingFuture {
+            Box::pin(async move {
+                Err(crate::infra::api::APIError {
+                    error: crate::infra::api::APIErrorType::InternalError,
+                    message: "Test training executor invoked".to_string(),
+                    details: None,
+                })
+            })
+        }
+    }
 
     #[tokio::test]
     async fn test_router_creation() {
         // `create_router()` requires an explicit secret via KWAVERS_JWT_SECRET.
         std::env::set_var("KWAVERS_JWT_SECRET", "test-secret-do-not-use-in-production");
 
-        let router = create_router();
+        let router = create_router(std::sync::Arc::new(TestTrainingExecutor));
 
         // Validate health endpoint responds OK
         let request: Request<Body> = Request::get("/health").body(Body::empty()).unwrap();

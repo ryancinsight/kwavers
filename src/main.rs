@@ -2,7 +2,7 @@
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::source::GridSource;
-use kwavers::solver::forward::pstd::config::{AntiAliasingConfig, PSTDConfig, CompatibilityMode};
+use kwavers::solver::forward::pstd::config::{CompatibilityMode, PSTDConfig};
 use kwavers::solver::forward::pstd::PSTDSolver;
 
 fn main() {

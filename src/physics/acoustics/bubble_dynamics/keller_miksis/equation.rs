@@ -1,6 +1,6 @@
 use super::KellerMiksisModel;
 use crate::core::error::KwaversResult;
-use crate::physics::acoustics::nonlinear::bubble_state::BubbleState;
+use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 
 /// Calculate bubble wall acceleration using Keller-Miksis equation
 pub(crate) fn calculate_acceleration(

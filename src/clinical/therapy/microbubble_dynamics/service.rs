@@ -50,11 +50,11 @@ use crate::domain::therapy::microbubble::{
     calculate_primary_bjerknes_force, DrugPayload, MarmottantShellProperties, MicrobubbleState,
     Position3D,
 };
-use crate::physics::acoustics::nonlinear::adaptive_integration::integrate_bubble_dynamics_adaptive;
-use crate::physics::acoustics::nonlinear::bubble_state::{
+use crate::physics::acoustics::bubble_dynamics::adaptive_integration::integrate_bubble_dynamics_adaptive;
+use crate::physics::acoustics::bubble_dynamics::bubble_state::{
     BubbleParameters, BubbleState, GasSpecies,
 };
-use crate::physics::acoustics::nonlinear::keller_miksis::KellerMiksisModel;
+use crate::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use ndarray::Array3;
 use std::collections::HashMap;
 
@@ -213,11 +213,11 @@ impl MicrobubbleDynamicsService {
 
         let mut gas_composition = HashMap::new();
         gas_composition.insert(
-            crate::physics::acoustics::nonlinear::bubble_state::GasType::N2,
+            crate::physics::acoustics::bubble_dynamics::bubble_state::GasType::N2,
             0.79,
         );
         gas_composition.insert(
-            crate::physics::acoustics::nonlinear::bubble_state::GasType::O2,
+            crate::physics::acoustics::bubble_dynamics::bubble_state::GasType::O2,
             0.21,
         );
 

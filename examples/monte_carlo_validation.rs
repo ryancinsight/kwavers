@@ -30,9 +30,9 @@ use anyhow::Result;
 use kwavers::clinical::imaging::phantoms::PhantomBuilder;
 use kwavers::domain::grid::{Grid3D, GridDimensions};
 use kwavers::domain::medium::properties::OpticalPropertyData;
-use kwavers::physics::optics::diffusion::solver::{DiffusionSolver, DiffusionSolverConfig};
 use kwavers::physics::optics::map_builder::OpticalPropertyMap;
 use kwavers::physics::optics::monte_carlo::{MonteCarloSolver, PhotonSource, SimulationConfig};
+use kwavers::solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
 use ndarray::Array3;
 use std::time::Instant;
 

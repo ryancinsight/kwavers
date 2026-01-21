@@ -1,4 +1,13 @@
-//! Nonlinear Shear Wave Elastography (NL-SWE) Module
+//! Nonlinear Shear Wave Elastography (NL-SWE) Solver
+//!
+//! Numerical solver for nonlinear elastic wave propagation in soft tissue.
+//!
+//! ## Architectural Note
+//!
+//! This module was moved from `physics/acoustics/imaging/modalities/elastography/nonlinear/`
+//! to enforce proper separation of concerns:
+//! - **Solver layer** (HERE): Numerical methods, discretization, time integration
+//! - **Physics layer**: Material models, constitutive equations, physics specifications
 //!
 //! Implements nonlinear elastic wave propagation for advanced tissue characterization.
 //!

@@ -13,6 +13,7 @@ pub mod helmholtz;
 pub mod hybrid;
 pub mod imex;
 pub mod nonlinear;
+pub mod optical;
 pub mod plugin_based;
 pub mod poroelastic;
 pub mod pstd;

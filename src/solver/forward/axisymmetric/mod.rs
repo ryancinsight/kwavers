@@ -35,9 +35,8 @@
 //!
 //! # Grid Topology
 //!
-//! This module now uses the unified `CylindricalTopology` from `domain::grid::topology`
-//! for consistent grid handling across the codebase. The legacy `CylindricalGrid` type
-//! is deprecated and will be removed in a future release.
+//! This module uses the unified `CylindricalTopology` from `domain::grid::topology`
+//! for consistent grid handling across the codebase.
 //!
 //! # References
 //!
@@ -46,7 +45,6 @@
 //! - `kspaceFirstOrderAS` documentation
 
 mod config;
-mod coordinates;
 mod solver;
 mod transforms;
 
@@ -56,13 +54,6 @@ pub use config::AxisymmetricMedium;
 
 // Re-export the unified topology from domain
 pub use crate::domain::grid::CylindricalTopology;
-
-// Deprecated re-export for backward compatibility
-#[deprecated(
-    since = "2.15.0",
-    note = "Use `domain::grid::CylindricalTopology` instead"
-)]
-pub use coordinates::CylindricalGrid;
 
 pub use solver::AxisymmetricSolver;
 pub use transforms::DiscreteHankelTransform;

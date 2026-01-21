@@ -6,7 +6,7 @@
 use approx::assert_relative_eq;
 use kwavers::{
     grid::Grid,
-    physics::bubble_dynamics::{BubbleParameters, KellerMiksisModel},
+    physics::acoustics::bubble_dynamics::{BubbleParameters, EpsteinPlessetStabilitySolver, OscillationType, KellerMiksisModel},
 };
 use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
@@ -144,6 +144,102 @@ mod bubble_dynamics_validation {
 
         // Allow 1% relative error
         assert_relative_eq!(f_minnaert, expected_freq, max_relative = 0.01);
+    }
+
+    /// Test Epstein-Plesset stability theorem implementation
+    /// Reference: Epstein & Plesset (1953) "On the stability of gas bubbles in liquid-gas solutions"
+    /// Journal of Chemical Physics, 18(11), 1505-1509
+    #[test]
+    fn test_epstein_plesset_stability_theorem() {
+        let params = BubbleParameters {
+            r0: 1e-3, // 1 mm bubble
+            p0: 101325.0, // 1 atm
+            rho_liquid: 1000.0, // water density
+            sigma: 0.072, // water surface tension
+            mu_liquid: 0.001, // water viscosity
+            gamma: 1.4, // air polytropic index
+            ..Default::default()
+        };
+
+        let solver = EpsteinPlessetStabilitySolver::new(params);
+        let analysis = solver.analyze_stability();
+
+        // Epstein-Plesset theorem: For air bubbles in water, oscillations should be stable
+        assert!(analysis.is_stable, "Air bubbles in water should be stable according to Epstein-Plesset theorem");
+        assert_eq!(analysis.oscillation_type, OscillationType::StableHarmonic);
+
+        // Resonance frequency should match Minnaert formula
+        let minnaert_freq = (1.0 / (2.0 * PI * params.r0)) * ((3.0 * params.gamma * params.p0) / params.rho_liquid).sqrt();
+        assert_relative_eq!(analysis.resonance_frequency, minnaert_freq, epsilon = 1e-10);
+
+        // Quality factor should be reasonable (>1 for underdamped oscillations)
+        assert!(analysis.quality_factor > 1.0, "Quality factor should be > 1 for stable oscillations");
+
+        // Stability parameter should be positive for stable oscillations
+        assert!(analysis.stability_parameter > 0.0, "Stability parameter should be positive for stable oscillations");
+
+        // Damping coefficient should be positive and reasonable
+        assert!(analysis.damping_coefficient > 0.0, "Damping coefficient should be positive");
+        assert!(analysis.damping_coefficient < 1e6, "Damping coefficient should be reasonable");
+    }
+
+    /// Test Epstein-Plesset stability boundaries
+    /// Tests the transition from stable to unstable oscillations
+    #[test]
+    fn test_epstein_plesset_stability_boundaries() {
+        // Test case 1: High viscosity (should be more stable due to damping)
+        let high_viscosity_params = BubbleParameters {
+            r0: 1e-4, // 100 μm bubble
+            p0: 101325.0,
+            rho_liquid: 1000.0,
+            sigma: 0.072,
+            mu_liquid: 0.01, // High viscosity (10x water)
+            gamma: 1.4,
+            ..Default::default()
+        };
+
+        let high_visc_solver = EpsteinPlessetStabilitySolver::new(high_viscosity_params);
+        let high_visc_analysis = high_visc_solver.analyze_stability();
+
+        // Should still be stable with high viscosity
+        assert!(high_visc_analysis.is_stable);
+
+        // Test case 2: Low surface tension (less stable)
+        let low_sigma_params = BubbleParameters {
+            r0: 1e-4,
+            p0: 101325.0,
+            rho_liquid: 1000.0,
+            sigma: 0.001, // Very low surface tension
+            mu_liquid: 0.001,
+            gamma: 1.4,
+            ..Default::default()
+        };
+
+        let low_sigma_solver = EpsteinPlessetStabilitySolver::new(low_sigma_params);
+        let low_sigma_analysis = low_sigma_solver.analyze_stability();
+
+        // May be unstable with very low surface tension
+        // (This depends on the specific parameter values and Epstein-Plesset criteria)
+
+        // Test case 3: Very small bubble (surface effects dominate)
+        let small_bubble_params = BubbleParameters {
+            r0: 1e-6, // 1 μm bubble
+            p0: 101325.0,
+            rho_liquid: 1000.0,
+            sigma: 0.072,
+            mu_liquid: 0.001,
+            gamma: 1.4,
+            ..Default::default()
+        };
+
+        let small_solver = EpsteinPlessetStabilitySolver::new(small_bubble_params);
+        let small_analysis = small_solver.analyze_stability();
+
+        // Small bubbles should be stable due to surface tension dominance
+        assert!(small_analysis.is_stable, "Microbubbles should be stable per Epstein-Plesset theorem");
+
+        // Higher resonance frequency for smaller bubbles
+        assert!(small_analysis.resonance_frequency > high_visc_analysis.resonance_frequency);
     }
 
     /// Test Keller-Miksis model against Rayleigh-Plesset for low Mach numbers

@@ -6,9 +6,9 @@
 
 use super::config::AxisymmetricConfig;
 use super::config::AxisymmetricMedium;
-use super::coordinates::CylindricalGrid;
 use super::transforms::DiscreteHankelTransform;
 use crate::core::error::KwaversResult;
+use crate::domain::grid::CylindricalTopology;
 use crate::domain::medium::adapters::CylindricalMediumProjection;
 use crate::domain::medium::Medium;
 use ndarray::{Array1, Array2, Axis};
@@ -44,7 +44,7 @@ pub struct AxisymmetricSolver {
     /// Medium properties
     medium: AxisymmetricMedium,
     /// Cylindrical grid
-    grid: CylindricalGrid,
+    grid: CylindricalTopology,
     /// Discrete Hankel transform for radial direction
     dht: DiscreteHankelTransform,
     /// Pressure field (nz x nr)
@@ -201,7 +201,7 @@ impl AxisymmetricSolver {
         }
 
         // Create grid
-        let grid = CylindricalGrid::new(config.nz, config.nr, config.dz, config.dr)?;
+        let grid = CylindricalTopology::new(config.nz, config.nr, config.dz, config.dr)?;
 
         // Create Hankel transform
         let dht = DiscreteHankelTransform::new(config.nr, grid.r_max());
@@ -290,7 +290,7 @@ impl AxisymmetricSolver {
 
     /// Compute k-space correction operator
     fn compute_kspace_correction(
-        grid: &CylindricalGrid,
+        grid: &CylindricalTopology,
         _medium: &AxisymmetricMedium,
         config: &AxisymmetricConfig,
     ) -> Array2<f64> {
@@ -300,12 +300,12 @@ impl AxisymmetricSolver {
         if config.use_kspace_correction {
             let c_ref = config.c_ref;
             let dt = config.dt;
+            let kz = grid.kz_wavenumbers();
+            let kr = grid.kr_wavenumbers();
 
             for i in 0..nz {
-                let kz = grid.kz[i];
                 for j in 0..nr {
-                    let kr = grid.kr[j];
-                    let k = (kz * kz + kr * kr).sqrt();
+                    let k = (kz[i] * kz[i] + kr[j] * kr[j]).sqrt();
 
                     if k > 0.0 {
                         // k-space correction: sinc(c_ref * k * dt / 2)
@@ -465,8 +465,9 @@ impl AxisymmetricSolver {
             let mut spectrum = Self::fft_1d(&col);
 
             // Multiply by i*kz
-            for (i, val) in spectrum.iter_mut().enumerate().take(nz) {
-                *val *= Complex64::new(0.0, self.grid.kz[i]);
+        let kz = self.grid.kz_wavenumbers();
+        for (i, val) in spectrum.iter_mut().enumerate().take(nz) {
+            *val *= Complex64::new(0.0, kz[i]);
             }
 
             // Inverse FFT
@@ -621,7 +622,7 @@ impl AxisymmetricSolver {
     }
 
     /// Get the grid
-    pub fn grid(&self) -> &CylindricalGrid {
+    pub fn grid(&self) -> &CylindricalTopology {
         &self.grid
     }
 

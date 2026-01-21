@@ -1,10 +1,12 @@
 //! Optical Diffusion Module
 //!
-//! Provides diffusion approximation solvers for photon transport in scattering media.
+//! Provides diffusion approximation for photon transport in scattering media.
 //!
 //! # Modules
 //!
-//! - `solver`: Steady-state diffusion equation solver with finite difference discretization
+//! - Solver components have been moved to `crate::solver::forward::optical::diffusion`
+//!   to enforce proper separation between physics layer (equations/models) and
+//!   solver layer (numerical methods/discretization)
 //! - Main module: Time-domain light diffusion for sonoluminescence and coupled physics
 //!
 //! # Mathematical Foundation
@@ -12,7 +14,10 @@
 //! The diffusion approximation is valid when scattering dominates absorption (μ_s' ≫ μ_a)
 //! and distance from boundaries is much larger than transport mean free path.
 
-pub mod solver;
+// Backward compatibility re-export (solver moved to solver layer)
+pub use crate::solver::forward::optical::diffusion::{
+    DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,
+};
 
 // physics/optics/diffusion/mod.rs
 use crate::domain::field::indices::LIGHT_IDX;

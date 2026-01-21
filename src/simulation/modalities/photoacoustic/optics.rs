@@ -37,7 +37,7 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::properties::OpticalPropertyData;
 use crate::domain::medium::Medium;
-use crate::physics::optics::diffusion::solver::{
+use crate::solver::forward::optical::diffusion::{
     DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,
 };
 use ndarray::Array3;

@@ -1,6 +1,6 @@
 use super::KellerMiksisModel;
 use crate::core::error::KwaversResult;
-use crate::physics::acoustics::nonlinear::bubble_state::BubbleState;
+use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 
 /// Calculate Van der Waals pressure for thermal effects
 ///
@@ -14,19 +14,19 @@ pub(crate) fn calculate_vdw_pressure(state: &BubbleState) -> KwaversResult<f64> 
 
     // Get Van der Waals constants based on gas species
     let (a, b, _mol_weight) = match state.gas_species {
-        crate::physics::acoustics::nonlinear::bubble_state::GasSpecies::Air => {
+        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Air => {
             (1.37, 0.0387, 0.029)
         }
-        crate::physics::acoustics::nonlinear::bubble_state::GasSpecies::Argon => {
+        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Argon => {
             (1.355, 0.0320, 0.040)
         }
-        crate::physics::acoustics::nonlinear::bubble_state::GasSpecies::Xenon => {
+        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Xenon => {
             (4.250, 0.0510, 0.131)
         }
-        crate::physics::acoustics::nonlinear::bubble_state::GasSpecies::Nitrogen => {
+        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Nitrogen => {
             (1.370, 0.0387, 0.028)
         }
-        crate::physics::acoustics::nonlinear::bubble_state::GasSpecies::Oxygen => {
+        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Oxygen => {
             (1.382, 0.0319, 0.032)
         }
         _ => (1.37, 0.0387, 0.029), // Default to air

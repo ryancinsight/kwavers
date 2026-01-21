@@ -276,6 +276,7 @@ pub use uncertainty_quantification::{
 
 // Placeholder when pinn feature is not enabled
 #[cfg(not(feature = "pinn"))]
+#[derive(Debug)]
 pub struct PINN1DWave;
 
 #[cfg(not(feature = "pinn"))]

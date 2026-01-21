@@ -1,9 +1,11 @@
 use super::analysis::{calculate_confidence_score, generate_diagnostic_recommendations};
 use super::config::*;
 use super::results::*;
+#[allow(unused_imports)]
+use super::simulation::generate_realistic_rf_volume;
 use super::simulation::{
     compute_pa_snr, generate_realistic_elastography_data, generate_realistic_pa_data,
-    generate_realistic_rf_volume, reconstruct_pa_image,
+    reconstruct_pa_image,
 };
 use super::state::*;
 use crate::clinical::imaging::photoacoustic::PhotoacousticResult;

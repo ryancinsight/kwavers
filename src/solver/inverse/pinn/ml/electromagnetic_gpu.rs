@@ -446,7 +446,7 @@ impl GPUEMSolver {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("EM Time Step Shader"),
             source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(include_str!(
-                "../../../gpu/shaders/electromagnetic.wgsl"
+                "../../../../gpu/shaders/electromagnetic.wgsl"
             ))),
         });
 

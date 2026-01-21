@@ -1,5 +1,5 @@
 use super::KellerMiksisModel;
-use crate::physics::acoustics::nonlinear::bubble_state::{BubbleParameters, BubbleState};
+use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 
 #[test]
 fn test_keller_miksis_creation() {

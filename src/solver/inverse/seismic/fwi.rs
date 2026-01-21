@@ -7,7 +7,6 @@ use super::parameters::FwiParameters;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::source::grid_source::GridSource;
-use crate::solver::interface::solver::Solver;
 use ndarray::Array3;
 
 /// Full Waveform Inversion processor

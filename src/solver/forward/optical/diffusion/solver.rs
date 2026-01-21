@@ -167,7 +167,7 @@ impl DiffusionSolver {
     /// ```no_run
     /// use kwavers::domain::grid::Grid;
     /// use kwavers::domain::medium::properties::OpticalPropertyData;
-    /// use kwavers::physics::optics::diffusion::solver::{DiffusionSolver, DiffusionSolverConfig};
+    /// use kwavers::solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
     /// use ndarray::Array3;
     ///
     /// let grid = Grid::new(50, 50, 50, 1e-3, 1e-3, 1e-3).unwrap();
@@ -596,6 +596,7 @@ pub mod analytical {
     ///
     /// # Reference
     /// - Contini et al. (1997): "Photon migration through a turbid slab"
+    #[allow(dead_code)]
     pub fn infinite_medium_point_source(
         r: f64,
         source_power: f64,
@@ -622,6 +623,7 @@ pub mod analytical {
     /// Φ(ρ, z) = (3P₀ μ_tr / (4π)) [exp(-μ_eff r₁)/r₁ - exp(-μ_eff r₂)/r₂]
     /// ```
     /// where r₁ = √(ρ² + (z - z₀)²), r₂ = √(ρ² + (z + z₀ + 4AD)²)
+    #[allow(dead_code)]
     pub fn semi_infinite_medium(
         rho: f64,
         z: f64,

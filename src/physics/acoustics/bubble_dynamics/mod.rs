@@ -14,6 +14,7 @@ pub mod bubble_state;
 pub mod cavitation_control;
 pub mod encapsulated; // NEW: Encapsulated bubbles with shell dynamics (Church, Marmottant)
 pub mod energy_balance;
+pub mod epstein_plesset; // NEW: Epstein-Plesset stability theorem implementation
 pub mod gilmore; // Gilmore equation for violent collapse // NEW: Comprehensive energy balance model
 pub mod imex_integration;
 pub mod integration; // NEW: Stable integration utilities extracted from monolithic file
@@ -33,6 +34,7 @@ pub use cavitation_control::{
     CavitationMetrics, ControlOutput, ControlStrategy, FeedbackConfig, FeedbackController,
 };
 pub use encapsulated::{ChurchModel, MarmottantModel, ShellProperties}; // NEW: Encapsulated bubble models
+pub use epstein_plesset::EpsteinPlessetStabilitySolver; // NEW: Epstein-Plesset stability analysis
 pub use imex_integration::{
     integrate_bubble_dynamics_imex, BubbleIMEXConfig, BubbleIMEXIntegrator,
 };

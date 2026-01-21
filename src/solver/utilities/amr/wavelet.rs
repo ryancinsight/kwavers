@@ -99,7 +99,7 @@ impl WaveletTransform {
             result[n / 2 + i] = diff;
         }
 
-        if n % 2 != 0 {
+        if !n.is_multiple_of(2) {
             result[n - 1] = 0.0;
         }
     }
