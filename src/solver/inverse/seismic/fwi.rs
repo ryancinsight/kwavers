@@ -39,7 +39,7 @@ impl FwiProcessor {
 
         for iteration in 0..self.parameters.max_iterations {
             // 1. Forward modeling
-            let synthetic_data = self.forward_model(&current_model, grid)?;
+            let (synthetic_data, forward_history) = self.forward_model(&current_model, grid)?;
 
             // 2. Calculate data misfit
             let residual = observed_data - &synthetic_data;
@@ -58,13 +58,14 @@ impl FwiProcessor {
 
             // 4. Adjoint computation
             let adjoint_source = self.compute_adjoint_source(&residual);
-            let adjoint_field = self.adjoint_model(&adjoint_source, grid)?;
+            let gradient = self.adjoint_model(&adjoint_source, grid, &forward_history)?;
 
-            // 5. Gradient calculation
-            let gradient = self.calculate_gradient(&synthetic_data, &adjoint_field);
+            // 5. Gradient processing (smoothing)
+            let smoothed_gradient = self.smooth_gradient(gradient);
 
             // 6. Apply regularization
-            let regularized_gradient = self.apply_regularization(&gradient, &current_model)?;
+            let regularized_gradient =
+                self.apply_regularization(&smoothed_gradient, &current_model)?;
 
             // 7. Line search for optimal step size
             let step_size =
@@ -89,23 +90,18 @@ impl FwiProcessor {
         Ok(current_model)
     }
 
-    /// Calculate gradient for FWI
-    /// Based on Plessix (2006): "A review of the adjoint-state method"
+    /// Calculate interaction between two fields (used for testing gradient kernel)
     #[must_use]
-    pub fn calculate_gradient(
+    pub fn calculate_interaction(
         &self,
         forward_field: &Array3<f64>,
         adjoint_field: &Array3<f64>,
     ) -> Array3<f64> {
         use ndarray::Zip;
 
-        // Gradient calculation for velocity model update
-        // g(x) = -∫ ∂²u/∂t² * λ dt
-        // where u is forward field and λ is adjoint field
-
         let mut gradient = Array3::zeros(forward_field.dim());
 
-        // Compute time integral of forward and adjoint field product
+        // Compute interaction
         Zip::from(&mut gradient)
             .and(forward_field)
             .and(adjoint_field)
@@ -237,7 +233,7 @@ impl FwiProcessor {
         let max_iterations = 10;
 
         // Current function value
-        let synthetic_current = self.forward_model(model, grid)?;
+        let (synthetic_current, _) = self.forward_model(model, grid)?;
         let residual_current = observed_data - &synthetic_current;
         let current_misfit = norm_l2(&residual_current);
 
@@ -247,7 +243,7 @@ impl FwiProcessor {
         for _ in 0..max_iterations {
             // Test model with current step size
             let test_model = model - &(gradient * step_size);
-            let synthetic_test = self.forward_model(&test_model, grid)?;
+            let (synthetic_test, _) = self.forward_model(&test_model, grid)?;
             let residual_test = observed_data - &synthetic_test;
             let test_misfit = norm_l2(&residual_test);
 
@@ -288,7 +284,11 @@ impl FwiProcessor {
     ///
     /// # References
     /// * Virieux (1986): "P-SV wave propagation in heterogeneous media"
-    fn forward_model(&self, model: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
+    fn forward_model(
+        &self,
+        model: &Array3<f64>,
+        grid: &Grid,
+    ) -> KwaversResult<(Array3<f64>, Vec<Array3<f64>>)> {
         use crate::solver::fdtd::{FdtdConfig, FdtdSolver};
         // Removed bad ndarray import (already imported)
 
@@ -324,6 +324,9 @@ impl FwiProcessor {
         // FWI updates the velocity model (c0)
         solver.materials.c0.assign(model);
 
+        // History storage
+        let mut history = Vec::with_capacity(self.parameters.nt);
+
         // Time stepping for forward propagation
         // Inject source (Ricker wavelet)
         for t in 0..self.parameters.nt {
@@ -338,10 +341,11 @@ impl FwiProcessor {
                 *p += src_val;
             }
             solver.step_forward()?;
+            history.push(solver.fields.p.clone());
         }
 
-        // Return synthetic data (recorded wavefield)
-        Ok(solver.fields.p.clone())
+        // Return synthetic data (recorded wavefield) and history
+        Ok((solver.fields.p.clone(), history))
     }
 
     /// Adjoint modeling using time-reversed FDTD
@@ -362,9 +366,10 @@ impl FwiProcessor {
         &self,
         adjoint_source: &Array3<f64>,
         grid: &Grid,
+        forward_history: &[Array3<f64>],
     ) -> KwaversResult<Array3<f64>> {
         use crate::solver::fdtd::{FdtdConfig, FdtdSolver};
-        // Removed bad ndarray import
+        use ndarray::Zip;
 
         // Assume constant density and sound speed for adjoint
         let (nx, ny, nz) = grid.dimensions();
@@ -398,11 +403,27 @@ impl FwiProcessor {
         // In real FWI this would be a time-reversed source injection
         solver.fields.p.assign(adjoint_source);
 
-        solver.run(self.parameters.nt)?;
+        let mut gradient = Array3::zeros((nx, ny, nz));
 
-        // Return gradients (simplified: gradient = forward * backward interaction)
-        // TODO: Here we return the backward wavefield as a placeholder for gradient computation
-        Ok(solver.fields.p.clone())
+        for t in 0..self.parameters.nt {
+            solver.step_forward()?;
+
+            if t < forward_history.len() {
+                let fwd_idx = forward_history.len() - 1 - t;
+                let fwd = &forward_history[fwd_idx];
+
+                // Gradient accumulation: g += -u * lambda
+                Zip::from(&mut gradient)
+                    .and(fwd)
+                    .and(&solver.fields.p)
+                    .for_each(|g, &u, &adj| {
+                        *g -= u * adj;
+                    });
+            }
+        }
+
+        // Return gradients
+        Ok(gradient)
     }
 
     /// Calculate stable timestep for FDTD solver
@@ -453,7 +474,7 @@ mod tests {
         let forward_field = Array3::ones((10, 10, 10));
         let adjoint_field = Array3::from_elem((10, 10, 10), 2.0);
 
-        let gradient = processor.calculate_gradient(&forward_field, &adjoint_field);
+        let gradient = processor.calculate_interaction(&forward_field, &adjoint_field);
 
         // Expected: -1.0 * 2.0 = -2.0 (after smoothing, will be close to -2.0)
         assert!((gradient[[5, 5, 5]] + 2.0).abs() < 0.1); // Allow for smoothing effects
