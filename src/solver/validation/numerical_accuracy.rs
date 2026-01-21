@@ -9,6 +9,7 @@
 #[cfg(test)]
 mod tests {
     use crate::domain::grid::Grid;
+    use crate::domain::medium::core::CoreMedium;
     use crate::domain::medium::HomogeneousMedium;
     use crate::solver::amr::AMRSolver;
     use crate::solver::pstd::PSTDSolver;
@@ -69,6 +70,8 @@ mod tests {
 
         // Initialize plane wave in the solver
         let k = 2.0 * PI / wavelength;
+        let c0 = medium.sound_speed(0, 0, 0);
+        let rho0 = medium.density(0, 0, 0);
 
         for i in 0..n {
             for j in 0..n {
@@ -76,14 +79,13 @@ mod tests {
                 let p_val = (k * x).sin();
                 solver.fields.p[[i, j, 0]] = p_val;
 
-                // Fix: Initialize density consistent with pressure
+                // Initialize density consistent with pressure
                 // p = c^2 * rho => rho = p / c^2
-                // medium c = 1500.0, rho0 = 1000.0
-                solver.rho[[i, j, 0]] = p_val / (1500.0 * 1500.0);
+                solver.rho[[i, j, 0]] = p_val / (c0 * c0);
 
                 // Initialize velocity consistently with a rightward-propagating wave
                 // For a plane wave: v_x = p/(ρc)
-                solver.fields.ux[[i, j, 0]] = p_val / (1000.0 * 1500.0);
+                solver.fields.ux[[i, j, 0]] = p_val / (rho0 * c0);
             }
         }
 
