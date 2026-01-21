@@ -32,7 +32,6 @@
 
 pub mod arena;
 pub mod benchmarks;
-pub mod metrics;
 pub mod optimization;
 pub mod profiling;
 pub mod safe_vectorization;

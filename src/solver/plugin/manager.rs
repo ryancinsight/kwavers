@@ -3,7 +3,6 @@
 //! This module provides the main plugin manager that coordinates plugin execution.
 
 use super::execution::{ExecutionStrategy, SequentialStrategy};
-use crate::analysis::performance::metrics::PerformanceMetrics;
 use crate::core::error::{KwaversError, KwaversResult, PhysicsError, ValidationError};
 use crate::domain::boundary::Boundary;
 use crate::domain::field::mapping::UnifiedFieldType;
@@ -16,6 +15,42 @@ use ndarray::Array3;
 use ndarray::Array4;
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
+
+#[derive(Debug, Clone, Default)]
+pub struct PerformanceMetrics {
+    plugin_times: HashMap<String, std::time::Duration>,
+    total_time: std::time::Duration,
+}
+
+impl PerformanceMetrics {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn record_plugin_execution(&mut self, plugin_id: &str, duration: std::time::Duration) {
+        self.plugin_times.insert(plugin_id.to_string(), duration);
+    }
+
+    pub fn record_total_execution(&mut self, duration: std::time::Duration) {
+        self.total_time = duration;
+    }
+
+    #[must_use]
+    pub fn get_plugin_time(&self, plugin_id: &str) -> Option<std::time::Duration> {
+        self.plugin_times.get(plugin_id).copied()
+    }
+
+    #[must_use]
+    pub fn get_total_time(&self) -> std::time::Duration {
+        self.total_time
+    }
+
+    #[must_use]
+    pub fn get_all_plugin_times(&self) -> &HashMap<String, std::time::Duration> {
+        &self.plugin_times
+    }
+}
 
 /// Plugin manager for orchestrating plugin lifecycle and execution
 pub struct PluginManager {
