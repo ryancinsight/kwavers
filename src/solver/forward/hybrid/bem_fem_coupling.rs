@@ -101,7 +101,7 @@ impl BemFemInterface {
 
                 // Find corresponding BEM element (simplified)
                 // In practice, this would involve more sophisticated geometric queries
-                let bem_element = Self::find_corresponding_bem_element(node, bem_boundary, fem_mesh);
+                let bem_element = Self::find_corresponding_bem_element(node, bem_boundary, fem_mesh)?;
                 node_element_mapping.insert(node_idx, bem_element);
             }
         }
@@ -138,29 +138,26 @@ impl BemFemInterface {
         node: &crate::domain::mesh::tetrahedral::MeshNode,
         bem_boundary: &[usize],
         fem_mesh: &TetrahedralMesh,
-    ) -> usize {
-        let mut min_dist_sq = f64::MAX;
-        let mut closest_idx = if !bem_boundary.is_empty() {
-            bem_boundary[0]
-        } else {
-            0
-        };
-
-        for &bem_idx in bem_boundary {
-            if let Some(bem_node) = fem_mesh.nodes.get(bem_idx) {
-                let dx = node.coordinates[0] - bem_node.coordinates[0];
-                let dy = node.coordinates[1] - bem_node.coordinates[1];
-                let dz = node.coordinates[2] - bem_node.coordinates[2];
-                let dist_sq = dx * dx + dy * dy + dz * dz;
-
-                if dist_sq < min_dist_sq {
-                    min_dist_sq = dist_sq;
-                    closest_idx = bem_idx;
-                }
-            }
-        }
-
-        closest_idx
+    ) -> KwaversResult<usize> {
+        bem_boundary
+            .iter()
+            .copied()
+            .filter_map(|idx| {
+                fem_mesh.nodes.get(idx).map(|bem_node| {
+                    let dx = node.coordinates[0] - bem_node.coordinates[0];
+                    let dy = node.coordinates[1] - bem_node.coordinates[1];
+                    let dz = node.coordinates[2] - bem_node.coordinates[2];
+                    let dist_sq = dx * dx + dy * dy + dz * dz;
+                    (dist_sq, idx)
+                })
+            })
+            .min_by(|(d1, _), (d2, _)| d1.partial_cmp(d2).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(_, idx)| idx)
+            .ok_or_else(|| {
+                crate::core::error::KwaversError::InvalidInput(
+                    "Could not find corresponding BEM element: boundary list empty or invalid indices".to_string(),
+                )
+            })
     }
 
     /// Generate quadrature points and weights for interface integration
@@ -573,6 +570,6 @@ mod tests {
         // Since we are in a child module, we can access private items of parent
         let closest_idx = BemFemInterface::find_corresponding_bem_element(&query_node, &bem_boundary, &fem_mesh);
 
-        assert_eq!(closest_idx, n3, "Should find the node at distance 0.5");
+        assert_eq!(closest_idx.unwrap(), n3, "Should find the node at distance 0.5");
     }
 }
