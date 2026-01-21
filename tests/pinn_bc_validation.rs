@@ -25,7 +25,7 @@
 mod bc_loss_tests {
     use burn::backend::{Autodiff, NdArray};
     use kwavers::core::error::KwaversResult;
-    use kwavers::analysis::ml::pinn::burn_wave_equation_3d::{
+    use kwavers::solver::inverse::pinn::ml::burn_wave_equation_3d::{
         BurnLossWeights3D, BurnPINN3DConfig, BurnPINN3DWave, Geometry3D,
     };
 

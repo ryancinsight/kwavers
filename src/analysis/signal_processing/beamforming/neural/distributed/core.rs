@@ -49,7 +49,7 @@ use ndarray::Array4;
 use std::collections::{HashMap, VecDeque};
 
 #[cfg(feature = "pinn")]
-use crate::analysis::ml::pinn::multi_gpu_manager::{
+use crate::solver::inverse::pinn::ml::multi_gpu_manager::{
     CommunicationChannel, DecompositionStrategy, LoadBalancingAlgorithm, MultiGpuManager,
 };
 

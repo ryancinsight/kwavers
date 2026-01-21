@@ -163,6 +163,7 @@
 
 pub mod elastic_2d;
 pub mod geometry;
+pub mod ml;
 
 // Re-export key types for convenience
 pub use geometry::{

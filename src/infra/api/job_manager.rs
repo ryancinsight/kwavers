@@ -15,8 +15,8 @@ use tokio::sync::mpsc;
 async fn execute_training_with_progress(
     request: &PINNTrainingRequest,
     progress_sender: mpsc::Sender<TrainingProgress>,
-) -> Result<crate::analysis::ml::pinn::trainer::TrainingResult, APIError> {
-    use crate::analysis::ml::pinn::trainer::{
+) -> Result<crate::solver::inverse::pinn::ml::trainer::TrainingResult, APIError> {
+    use crate::solver::inverse::pinn::ml::trainer::{
         BoundaryCondition, Geometry, Obstacle, PINNConfig, PINNTrainer, PhysicsParams,
         TrainingConfig,
     };

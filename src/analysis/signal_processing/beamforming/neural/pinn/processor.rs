@@ -44,7 +44,7 @@ use ndarray::{s, Array3, Array4, ArrayView3};
 use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
-use crate::analysis::ml::pinn::{uncertainty_quantification::BayesianPINN, BurnPINN1DWave};
+use crate::solver::inverse::pinn::ml::{uncertainty_quantification::BayesianPINN, BurnPINN1DWave};
 
 use crate::domain::sensor::beamforming::SteeringVector;
 

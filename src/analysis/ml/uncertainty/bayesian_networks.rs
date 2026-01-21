@@ -64,7 +64,7 @@ impl BayesianPINN {
     #[cfg(feature = "pinn")]
     pub fn quantify_uncertainty<B: Backend>(
         &self,
-        pinn: &crate::ml::pinn::BurnPINN1DWave<B>,
+        pinn: &crate::solver::inverse::pinn::ml::BurnPINN1DWave<B>,
         inputs: &Array2<f32>,
     ) -> KwaversResult<PredictionWithUncertainty> {
         let mut predictions = Vec::new();
@@ -92,7 +92,7 @@ impl BayesianPINN {
     #[cfg(feature = "pinn")]
     fn apply_dropout_mask<B: Backend>(
         &self,
-        _pinn: &crate::ml::pinn::BurnPINN1DWave<B>,
+        _pinn: &crate::solver::inverse::pinn::ml::BurnPINN1DWave<B>,
     ) -> KwaversResult<()> {
         Ok(())
     }

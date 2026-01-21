@@ -209,7 +209,7 @@ impl UncertaintyQuantifier {
     #[cfg(feature = "pinn")]
     pub fn quantify_pinn_uncertainty<B: Backend>(
         &self,
-        pinn: &crate::ml::pinn::BurnPINN1DWave<B>,
+        pinn: &crate::solver::inverse::pinn::ml::BurnPINN1DWave<B>,
         inputs: &Array2<f32>,
         ground_truth: Option<&Array2<f32>>,
     ) -> KwaversResult<PredictionWithUncertainty> {

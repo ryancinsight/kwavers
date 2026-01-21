@@ -141,7 +141,7 @@ impl CloudPINNService {
     #[cfg(feature = "pinn")]
     pub async fn deploy_model<B: burn::tensor::backend::AutodiffBackend>(
         &mut self,
-        model: &crate::ml::pinn::BurnPINN2DWave<B>,
+        model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
         deployment_config: DeploymentConfig,
     ) -> KwaversResult<Arc<DeploymentHandle>> {
         // Validate configuration

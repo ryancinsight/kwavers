@@ -187,8 +187,8 @@ pub fn compute_stress_from_strain<B: AutodiffBackend>(
     mu: f64,
 ) -> (Tensor<B, 2>, Tensor<B, 2>, Tensor<B, 2>) {
     let device = epsilon_xx.device();
-    let lambda_tensor = Tensor::from_floats([lambda as f32], &device);
-    let mu_tensor = Tensor::from_floats([mu as f32], &device);
+    let lambda_tensor = Tensor::from_floats([[lambda as f32]], &device);
+    let mu_tensor = Tensor::from_floats([[mu as f32]], &device);
     let two_mu = mu_tensor.clone() * 2.0;
 
     // σ_xx = (λ + 2μ) ε_xx + λ ε_yy
@@ -241,17 +241,13 @@ pub fn compute_stress_divergence<B: AutodiffBackend>(
         .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
         .unwrap_or_else(|| x.zeros_like());
 
-    // ∂σ_xy/∂y
-    let grads_sxy_y = sigma_xy.clone().backward();
+    let grads_sxy = sigma_xy.clone().backward();
     let dsxy_dy = y
-        .grad(&grads_sxy_y)
+        .grad(&grads_sxy)
         .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
         .unwrap_or_else(|| y.zeros_like());
-
-    // ∂σ_xy/∂x
-    let grads_sxy_x = sigma_xy.backward();
     let dsxy_dx = x
-        .grad(&grads_sxy_x)
+        .grad(&grads_sxy)
         .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
         .unwrap_or_else(|| x.zeros_like());
 
@@ -488,12 +484,12 @@ mod tests {
         type B = Autodiff<NdArray<f32>>;
         let device = Default::default();
 
-        let x = Tensor::<B, 2>::from_floats([[0.1_f32], [0.2_f32]], &device).require_grad();
-        let y = Tensor::<B, 2>::from_floats([[0.3_f32], [0.4_f32]], &device).require_grad();
+        let x = Tensor::<B, 2>::from_floats([[0.1_f32]], &device).require_grad();
+        let y = Tensor::<B, 2>::from_floats([[0.3_f32]], &device).require_grad();
 
-        let sigma_xx = x.clone().mul_scalar(0.0).add_scalar(1.0);
-        let sigma_yy = x.clone().mul_scalar(0.0).add_scalar(1.0);
-        let sigma_xy = y.clone().mul_scalar(0.0).add_scalar(1.0);
+        let sigma_xx = x.clone().mul_scalar(2.0);
+        let sigma_yy = x.clone().mul_scalar(3.0);
+        let sigma_xy = y.clone().mul_scalar(-2.0);
 
         let (div_x, div_y) = compute_stress_divergence(sigma_xx, sigma_xy, sigma_yy, x, y);
 

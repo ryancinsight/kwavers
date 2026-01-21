@@ -329,10 +329,10 @@ impl Default for TrainingMetrics {
 }
 
 #[cfg(feature = "pinn")]
-impl From<crate::analysis::ml::pinn::trainer::TrainingMetrics> for TrainingMetrics {
-    fn from(metrics: crate::analysis::ml::pinn::trainer::TrainingMetrics) -> Self {
+impl From<crate::solver::inverse::pinn::ml::trainer::TrainingMetrics> for TrainingMetrics {
+    fn from(metrics: crate::solver::inverse::pinn::ml::trainer::TrainingMetrics) -> Self {
         match metrics {
-            crate::analysis::ml::pinn::trainer::TrainingMetrics::OneD(m) => Self {
+            crate::solver::inverse::pinn::ml::trainer::TrainingMetrics::OneD(m) => Self {
                 final_loss: m.total_loss.last().copied().unwrap_or(0.0),
                 best_loss: m
                     .total_loss
@@ -344,7 +344,7 @@ impl From<crate::analysis::ml::pinn::trainer::TrainingMetrics> for TrainingMetri
                 convergence_epoch: None,
                 final_validation_error: None,
             },
-            crate::analysis::ml::pinn::trainer::TrainingMetrics::TwoD(m) => Self {
+            crate::solver::inverse::pinn::ml::trainer::TrainingMetrics::TwoD(m) => Self {
                 final_loss: m.total_loss.last().copied().unwrap_or(0.0),
                 best_loss: m
                     .total_loss

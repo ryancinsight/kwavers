@@ -6,10 +6,10 @@
 use ndarray::Array3;
 
 #[cfg(feature = "pinn")]
-use crate::analysis::ml::pinn::{BurnPINNConfig, BurnTrainingMetrics};
+use crate::solver::inverse::pinn::ml::{BurnPINNConfig, BurnTrainingMetrics};
 
 #[cfg(feature = "pinn")]
-use crate::analysis::ml::pinn::uncertainty_quantification::PinnUncertaintyConfig;
+use crate::solver::inverse::pinn::ml::uncertainty_quantification::PinnUncertaintyConfig;
 
 use crate::domain::sensor::beamforming::BeamformingConfig;
 

@@ -175,7 +175,7 @@ pub async fn load_provider_config(
 /// ```
 #[cfg(feature = "pinn")]
 pub async fn serialize_model_for_deployment<B: burn::tensor::backend::AutodiffBackend>(
-    model: &crate::ml::pinn::BurnPINN2DWave<B>,
+    model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
     provider: &CloudProvider,
 ) -> KwaversResult<ModelDeploymentData> {
     use burn::module::Module;

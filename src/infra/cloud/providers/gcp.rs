@@ -75,7 +75,7 @@ use crate::infra::cloud::{
 /// ```
 #[cfg(feature = "pinn")]
 pub async fn deploy_to_gcp<B: burn::tensor::backend::AutodiffBackend>(
-    _model: &crate::ml::pinn::BurnPINN2DWave<B>,
+    _model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
     config: &HashMap<String, String>,
     deployment_config: &DeploymentConfig,
     _model_data: &crate::infra::cloud::ModelDeploymentData,
