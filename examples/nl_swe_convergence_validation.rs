@@ -9,7 +9,9 @@
 
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
-use kwavers::physics::imaging::modalities::elastography::*;
+use kwavers::solver::forward::elastic::nonlinear::{
+    HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
+};
 use std::f64::consts::PI;
 
 /// Simple demonstration of convergence testing

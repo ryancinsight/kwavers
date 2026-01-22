@@ -13,9 +13,9 @@ use crate::domain::medium::config::MediumParameters;
 
 // Import relocated parameters
 use crate::domain::source::SourceParameters;
-use crate::infra::io::config::OutputParameters;
-use crate::infra::runtime::PerformanceParameters;
-use crate::simulation::parameters::SimulationParameters;
+use crate::simulation::parameters::{
+    OutputParameters, PerformanceParameters, SimulationParameters,
+};
 use crate::solver::config::SolverConfiguration;
 use crate::solver::validation::ValidationParameters;
 

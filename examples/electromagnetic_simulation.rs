@@ -29,13 +29,15 @@ use burn::backend::{Autodiff, NdArray};
 #[cfg(feature = "pinn")]
 use kwavers::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::electromagnetic::{EMProblemType, ElectromagneticDomain};
+use kwavers::solver::inverse::pinn::ml::electromagnetic::{EMProblemType, ElectromagneticDomain};
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::physics::{BoundaryPosition, PhysicsParameters};
+use kwavers::solver::inverse::pinn::ml::physics::{BoundaryPosition, PhysicsParameters};
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::universal_solver::Geometry2D;
+use kwavers::solver::inverse::pinn::ml::universal_solver::Geometry2D;
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::{PinnEMSource, UniversalPINNSolver, UniversalTrainingConfig};
+use kwavers::solver::inverse::pinn::ml::{
+    PinnEMSource, UniversalPINNSolver, UniversalTrainingConfig,
+};
 #[cfg(feature = "pinn")]
 use std::collections::HashMap;
 

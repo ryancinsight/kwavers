@@ -8,8 +8,7 @@ use crate::core::error::KwaversResult;
 use crate::domain::boundary::config::BoundaryParameters;
 use crate::domain::medium::config::MediumParameters;
 use crate::domain::source::config::SourceParameters;
-use crate::infra::io::config::OutputParameters;
-use crate::infra::runtime::PerformanceParameters;
+use crate::simulation::parameters::{OutputParameters, PerformanceParameters};
 use crate::solver::config::SolverConfiguration;
 use crate::solver::validation::ValidationParameters;
 

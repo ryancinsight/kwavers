@@ -23,7 +23,7 @@
 #[cfg(feature = "pinn")]
 use kwavers::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::burn_wave_equation_2d::{
+use kwavers::solver::inverse::pinn::ml::burn_wave_equation_2d::{
     BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DTrainer, Geometry2D,
 };
 #[cfg(feature = "pinn")]

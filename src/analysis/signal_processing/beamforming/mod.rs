@@ -230,6 +230,8 @@ pub mod neural; // Neural/ML beamforming (PINN, distributed) // Experimental/res
 
 // Future algorithm modules (planned for Phase 3)
 pub mod narrowband; // Frequency-domain beamforming (awaiting migration)
+pub mod three_dimensional;  // 3D beamforming algorithms
+pub mod adaptive_domain;  // Domain-layer adaptive algorithms
 
 // Test utilities (shared accessor layer for test modules)
 #[cfg(test)]
@@ -248,10 +250,6 @@ pub use traits::{Beamformer, BeamformerConfig, FrequencyDomainBeamformer, TimeDo
 pub use covariance::{
     estimate_forward_backward_covariance, estimate_sample_covariance, is_hermitian, trace,
     validate_covariance_matrix,
-};
-pub use utils::{
-    blackman_window, focused_steering_vector, hamming_window, hanning_window, linear_interpolate,
-    plane_wave_steering_vector,
 };
 
 #[cfg(test)]

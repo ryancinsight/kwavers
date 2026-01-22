@@ -12,11 +12,13 @@ pub use kwavers::domain::imaging::ultrasound::elastography::{
 };
 pub use kwavers::domain::medium::HomogeneousMedium;
 pub use kwavers::physics::imaging::modalities::elastography::{
-    HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField, HyperelasticModel,
-    NonlinearElasticWaveSolver, NonlinearSWEConfig,
+    HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField,
 };
 pub use kwavers::simulation::imaging::elastography::ShearWaveElastography;
-pub use kwavers::solver::forward::elastic::{ElasticWaveConfig, ElasticWaveSolver};
+pub use kwavers::solver::forward::elastic::{
+    ElasticWaveConfig, ElasticWaveSolver, HyperelasticModel, NonlinearElasticWaveSolver,
+    NonlinearSWEConfig,
+};
 pub use kwavers::solver::inverse::elastography::{
     NonlinearInversion, NonlinearInversionConfig, NonlinearParameterMapExt,
 };

@@ -20,6 +20,7 @@ pub mod orchestrator;
 pub mod results;
 pub mod simulation;
 pub mod state;
+pub mod neural;
 
 // Re-export core types to maintain API compatibility
 pub use config::{

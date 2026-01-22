@@ -4,6 +4,7 @@
 //! physics models and solvers for clinical imaging applications.
 
 pub mod chromophores;
+pub mod doppler;
 pub mod phantoms;
 pub mod photoacoustic;
 pub mod spectroscopy;

@@ -70,6 +70,7 @@ pub mod cpml;
 pub mod fem;
 pub mod field_updater;
 pub mod pml;
+pub mod smoothing;
 pub mod traits;
 pub mod types;
 

@@ -24,11 +24,9 @@
 //! - `zero-copy`: Enable rkyv serialization
 
 pub mod async_io;
-pub mod config;
 pub mod tracing_config;
 pub mod zero_copy;
 
-pub use config::PerformanceParameters;
 
 // Re-export key types explicitly to avoid ambiguous glob imports
 #[cfg(feature = "async-runtime")]

@@ -44,4 +44,8 @@ pub enum ValidationError {
         value: f64,
         reason: String,
     },
+
+    /// Invalid parameter
+    #[error("Invalid parameter '{parameter}': {reason}")]
+    InvalidParameter { parameter: String, reason: String },
 }

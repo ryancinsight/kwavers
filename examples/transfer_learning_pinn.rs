@@ -6,11 +6,13 @@
 #[cfg(feature = "pinn")]
 use burn::backend::{Autodiff, NdArray};
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::transfer_learning::{
+use kwavers::solver::inverse::pinn::ml::transfer_learning::{
     FreezeStrategy, TransferLearner, TransferLearningConfig,
 };
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::{BoundaryCondition2D, BurnPINN2DConfig, BurnPINN2DWave, Geometry2D};
+use kwavers::solver::inverse::pinn::ml::{
+    BoundaryCondition2D, BurnPINN2DConfig, BurnPINN2DWave, Geometry2D,
+};
 
 #[cfg(feature = "pinn")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {

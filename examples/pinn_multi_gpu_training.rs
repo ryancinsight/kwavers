@@ -6,9 +6,9 @@
 #[cfg(feature = "pinn")]
 use kwavers::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::distributed_training::DistributedTrainingConfig;
+use kwavers::solver::inverse::pinn::ml::distributed_training::DistributedTrainingConfig;
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::{
+use kwavers::solver::inverse::pinn::ml::{
     BurnLossWeights2D, BurnPINN2DConfig, DecompositionStrategy, Geometry2D, LoadBalancingAlgorithm,
 };
 #[cfg(feature = "pinn")]
@@ -71,7 +71,7 @@ fn main() -> KwaversResult<()> {
     println!("🧠 Distributed Training Configuration:");
     let training_config = DistributedTrainingConfig {
         num_gpus: 1, // Fallback to single GPU
-        gradient_aggregation: kwavers::ml::pinn::GradientAggregation::Average,
+        gradient_aggregation: kwavers::solver::inverse::pinn::ml::GradientAggregation::Average,
         checkpoint_config: Default::default(),
         communication_config: Default::default(),
         fault_tolerance: Default::default(),
@@ -103,7 +103,7 @@ fn main() -> KwaversResult<()> {
             initial: 20.0,
         },
         num_collocation_points: 20000,
-        boundary_condition: kwavers::ml::pinn::BoundaryCondition2D::Dirichlet,
+        boundary_condition: kwavers::solver::inverse::pinn::ml::BoundaryCondition2D::Dirichlet,
     };
     println!("   ✅ Hidden layers: {:?}", pinn_config.hidden_layers);
     println!(

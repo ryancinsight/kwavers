@@ -82,7 +82,12 @@ impl DicomReader {
         }
 
         // Open and parse DICOM file
-        let dicom_obj = FileDicomObject::open_file(&path)?;
+        let dicom_obj = FileDicomObject::open_file(&path).map_err(|err| {
+            KwaversError::Data(DataError::FormatError {
+                format: "DICOM".to_string(),
+                reason: err.to_string(),
+            })
+        })?;
 
         // Validate DICOM conformance
         self.validate_dicom_object(&dicom_obj)?;
@@ -134,10 +139,7 @@ impl DicomReader {
                 .and_then(|v| v.as_string())
                 .unwrap_or_else(|| "unknown".to_string());
 
-            series_map
-                .entry(series_uid)
-                .or_insert_with(Vec::new)
-                .push(dicom_obj);
+            series_map.entry(series_uid).or_default().push(dicom_obj);
         }
 
         // Convert to DicomSeries objects
@@ -252,7 +254,7 @@ impl DicomReader {
 
         for (name, tag) in tags_to_extract {
             if let Ok(element) = obj.element(tag) {
-                let value = self.element_to_dicom_value(&element);
+                let value = self.element_to_dicom_value(element);
                 metadata.insert(name.to_string(), value);
             }
         }
@@ -496,7 +498,7 @@ impl DicomStudy {
                 s.metadata
                     .get("Modality")
                     .and_then(|v| v.as_string())
-                    .map_or(false, |modality| modality == "US")
+                    .is_some_and(|modality| modality == "US")
             })
             .collect()
     }
@@ -510,7 +512,7 @@ impl DicomStudy {
                 s.metadata
                     .get("Modality")
                     .and_then(|v| v.as_string())
-                    .map_or(false, |m| m == modality)
+                    .is_some_and(|m| m == modality)
             })
             .collect()
     }

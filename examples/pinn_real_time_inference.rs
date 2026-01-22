@@ -6,7 +6,7 @@
 #[cfg(feature = "pinn")]
 use kwavers::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::{
+use kwavers::solver::inverse::pinn::ml::{
     BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, CompilerStats, EdgeRuntime, Geometry2D,
     HardwareCapabilities, JitCompiler, OptimizationLevel, OptimizedRuntime, PerformanceMonitor,
     QuantizationScheme, QuantizedModel, Quantizer,
@@ -39,7 +39,7 @@ fn main() -> KwaversResult<()> {
             initial: 5.0,
         },
         num_collocation_points: 10000,
-        boundary_condition: kwavers::ml::pinn::BoundaryCondition2D::Dirichlet,
+        boundary_condition: kwavers::solver::inverse::pinn::ml::BoundaryCondition2D::Dirichlet,
     };
 
     println!("🧠 Model Configuration:");

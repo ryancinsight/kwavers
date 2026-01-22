@@ -261,7 +261,7 @@ impl ClinicalWorkflowOrchestrator {
     fn acquire_ultrasound_data(&self) -> KwaversResult<Array3<f64>> {
         #[cfg(feature = "gpu")]
         {
-            use crate::domain::sensor::beamforming::BeamformingConfig3D;
+            use crate::analysis::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
             use crate::physics::acoustics::imaging::modalities::ultrasound::{
                 compute_bmode_image, UltrasoundConfig, UltrasoundMode,
             };

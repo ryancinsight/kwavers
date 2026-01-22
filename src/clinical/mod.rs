@@ -13,6 +13,10 @@ pub use imaging::{
     QualityPreference, WorkflowPriority, WorkflowState,
 };
 pub use safety::{
+    mechanical_index::{
+        MechanicalIndexCalculator, MechanicalIndexResult, SafetyStatus as MISafetyStatus,
+        TissueType as MITissueType,
+    },
     AuditEntry, ComplianceReport, ComplianceResult, ComplianceValidator, DoseController, Interlock,
     InterlockSystem, SafetyAuditLogger, SafetyEventType, SafetyLevel, SafetyLimits, SafetyMonitor,
     SafetyViolation, SystemConfiguration, TreatmentRecord,

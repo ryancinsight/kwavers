@@ -235,6 +235,7 @@ pub use steering::{steering_from_delays_s, NarrowbandSteering, NarrowbandSteerin
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::sensor::beamforming::covariance::CovariancePostProcess;
 
     #[test]
     fn steering_module_exports_accessible() {
@@ -294,7 +295,7 @@ mod tests {
             covariance: crate::domain::sensor::beamforming::CovarianceEstimator {
                 forward_backward_averaging: false,
                 num_snapshots: 1,
-                post_process: crate::domain::sensor::beamforming::CovariancePostProcess::None,
+                post_process: CovariancePostProcess::None,
             },
             steering: crate::domain::sensor::beamforming::SteeringVectorMethod::SphericalWave {
                 source_position: [0.0, 0.0, 0.02],

@@ -30,7 +30,8 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 
 #[cfg(feature = "pinn")]
-use crate::domain::sensor::beamforming::{AIBeamformingConfig, AIEnhancedBeamformingProcessor};
+use crate::analysis::signal_processing::beamforming::neural::processor::AIEnhancedBeamformingProcessor;
+use crate::analysis::signal_processing::beamforming::neural::config::FeatureConfig;
 
 /// Clinical API application state
 #[derive(Debug, Clone)]
@@ -549,7 +550,38 @@ pub async fn dicom_integrate(
 ) -> Result<JsonResponse<DICOMIntegrationResponse>, (StatusCode, JsonResponse<APIError>)> {
     let dicom_service = state.dicom_service.read().await;
 
-    // Try to read actual DICOM data from configured sources
+    let dicom_obj = dicom_service
+        .read_instance(
+            &request.study_instance_uid,
+            &request.series_instance_uid,
+            &request.sop_instance_uid,
+        )
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                JsonResponse(APIError {
+                    error: crate::api::APIErrorType::InternalError,
+                    message: format!("Failed to read DICOM instance: {}", e),
+                    details: None,
+                }),
+            )
+        })?
+        .ok_or_else(|| {
+            (
+                StatusCode::NOT_FOUND,
+                JsonResponse(APIError {
+                    error: crate::api::APIErrorType::ResourceNotFound,
+                    message: format!(
+                        "DICOM instance not found for study '{}' series '{}' instance '{}'",
+                        request.study_instance_uid,
+                        request.series_instance_uid,
+                        request.sop_instance_uid
+                    ),
+                    details: None,
+                }),
+            )
+        })?;
+
     let mut metadata: HashMap<String, crate::api::DICOMValue> = HashMap::new();
     let mut pixel_data = None;
     let mut study_info = crate::api::DICOMStudyInfo {
@@ -560,7 +592,6 @@ pub async fn dicom_integrate(
         institution_name: None,
     };
 
-    // Convert DICOM metadata to API format (populate study_info)
     study_info.patient_id = dicom_obj.metadata.get("PatientID")
         .and_then(|v| v.as_string())
         .unwrap_or_else(|| "UNKNOWN".to_string());
@@ -576,7 +607,6 @@ pub async fn dicom_integrate(
     study_info.institution_name = dicom_obj.metadata.get("InstitutionName")
         .and_then(|v| v.as_string());
 
-    // Convert DICOM metadata to API format
     for (key, value) in &dicom_obj.metadata {
         let api_value = match value {
             crate::infra::io::DicomValue::String(s) => crate::api::DICOMValue::String(s.clone()),
@@ -585,42 +615,29 @@ pub async fn dicom_integrate(
         };
         metadata.insert(key.clone(), api_value);
     }
-    };
 
-    // Convert DICOM metadata to API format
-        for (key, value) in &dicom_obj.metadata {
-            let api_value = match value {
-                crate::infra::io::DicomValue::String(s) => crate::api::DICOMValue::String(s.clone()),
-                crate::infra::io::DicomValue::Integer(i) => crate::api::DICOMValue::Integer(*i),
-                crate::infra::io::DicomValue::Float(f) => crate::api::DICOMValue::Number(*f),
-            };
-            metadata.insert(key.clone(), api_value);
-        }
-
-    // Extract pixel data if requested
     if request.include_pixel_data {
         if let Some(pixel_info) = &dicom_obj.pixel_data {
-            // Encode pixel data as base64 for API response
             pixel_data = Some(general_purpose::STANDARD.encode(&pixel_info.pixel_data_raw));
         }
     }
 
-    // Extract requested tags
-    let mut extracted_metadata: HashMap<String, crate::api::DICOMValue> = HashMap::new();
-    for tag in &request.requested_tags {
-        if let Some(value) = metadata.get(tag) {
-            extracted_metadata.insert(tag.clone(), value.clone());
-        }
-    }
+    let extracted_metadata: HashMap<String, crate::api::DICOMValue> =
+        if request.requested_tags.is_empty() {
+            metadata.clone()
+        } else {
+            let mut extracted = HashMap::new();
+            for tag in &request.requested_tags {
+                if let Some(value) = metadata.get(tag) {
+                    extracted.insert(tag.clone(), value.clone());
+                }
+            }
+            extracted
+        };
 
     let response = DICOMIntegrationResponse {
         metadata: extracted_metadata,
-        pixel_data: if request.include_pixel_data {
-            // Simulate pixel data (would be actual DICOM pixel data)
-            Some(general_purpose::STANDARD.encode(vec![0u8; 1024 * 1024]))
-        } else {
-            None
-        },
+        pixel_data,
         study_info,
     };
 

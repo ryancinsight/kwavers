@@ -4,8 +4,9 @@
 //! against established literature references and mathematical theorems.
 
 use kwavers::analysis::signal_processing::beamforming::MinimumVariance;
+use kwavers::domain::sensor::beamforming::covariance::SpatialSmoothing;
 use kwavers::domain::sensor::beamforming::{
-    CovarianceEstimator, SpatialSmoothing, SteeringVector, SteeringVectorMethod,
+    CovarianceEstimator, SteeringVector, SteeringVectorMethod,
 };
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;

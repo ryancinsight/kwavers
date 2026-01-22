@@ -24,7 +24,7 @@ fn test_geometric_delay_calculation() {
     let ny = 2;
     let nz = 1; // 2x2x1 flat grid for simplicity
     let spacing = 1.0;
-    let mut grid = Grid::new(nx, ny, nz, spacing, spacing, spacing).unwrap();
+    let grid = Grid::new(nx, ny, nz, spacing, spacing, spacing).unwrap();
     // Ensure origin is (0,0,0) which is default
 
     // Grid points:

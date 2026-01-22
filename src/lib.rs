@@ -31,6 +31,8 @@
     clippy::too_many_arguments,  // Will fix in refactoring
     clippy::type_complexity,      // Will simplify types
 )]
+// Allow unexpected cfg values for intentional feature flags (e.g., disabled tests)
+#![allow(unexpected_cfgs)]
 // Dead code warnings are now enforced at crate level.
 // Individual items that are intentionally unused (e.g., future APIs, internal utilities)
 // should use #[allow(dead_code)] with inline justification comments.

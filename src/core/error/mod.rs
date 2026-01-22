@@ -164,7 +164,7 @@ pub enum KwaversError {
     /// DICOM format errors
     #[cfg(feature = "dicom")]
     #[error("DICOM format error: {0}")]
-    Dicom(#[from] dicom::object::ReadError),
+    Dicom(#[from] dicom::dicom_object::ReadError),
 
     /// Feature not yet implemented
     #[error("Feature not yet implemented: {0}")]
@@ -173,10 +173,6 @@ pub enum KwaversError {
     /// GPU computation errors
     #[error("GPU error: {0}")]
     GpuError(String),
-
-    /// DICOM format errors
-    #[error("DICOM format error: {0}")]
-    Dicom(#[from] dicom::object::ReadError),
 
     /// Resource limit exceeded (GPU memory, etc.)
     #[error("Resource limit exceeded: {message}")]

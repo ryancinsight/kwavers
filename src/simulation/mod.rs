@@ -28,5 +28,7 @@ pub use multi_physics::{
     CoupledPhysicsSolver, CouplingStrategy, FieldCoupler, MultiPhysicsConfig, MultiPhysicsSolver,
     PhysicsDomain,
 };
-pub use parameters::SimulationParameters;
+pub use parameters::{
+    FieldType, OutputFormat, OutputParameters, PerformanceParameters, SimulationParameters,
+};
 pub use setup::{SimulationComponents, SimulationSetup};

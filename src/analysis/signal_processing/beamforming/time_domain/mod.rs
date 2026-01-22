@@ -200,7 +200,7 @@
 //!
 //! ```rust,ignore
 //! // Old (deprecated):
-//! use crate::domain::sensor::beamforming::time_domain::das::delay_and_sum_time_domain_with_reference;
+//! use crate::analysis::signal_processing::beamforming::time_domain::das::delay_and_sum_time_domain_with_reference;
 //!
 //! // New (correct):
 //! use crate::analysis::signal_processing::beamforming::time_domain::delay_and_sum;

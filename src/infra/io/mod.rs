@@ -9,7 +9,5 @@ pub use dicom::{DicomObject, DicomReader, DicomSeries, DicomStudy, DicomValue};
 pub use nifti::{NiftiHeader, NiftiInfo, NiftiReader};
 
 // Re-export output functions
-pub mod config;
-pub use config::OutputParameters;
 mod output;
 pub use output::{generate_summary, save_light_data, save_pressure_data};

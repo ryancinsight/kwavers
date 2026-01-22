@@ -27,17 +27,18 @@
 //! - **Memory efficiency**: < 8 bytes per grid point for storage
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use kwavers::domain::grid::Grid;
 use kwavers::domain::imaging::ultrasound::elastography::{
     InversionMethod, NonlinearInversionMethod,
 };
-use kwavers::grid::Grid;
-use kwavers::medium::HomogeneousMedium;
+use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::physics::imaging::modalities::elastography::{
-    HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField, HyperelasticModel,
-    NonlinearElasticWaveSolver, NonlinearSWEConfig,
+    HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField,
 };
 use kwavers::simulation::imaging::elastography::ShearWaveElastography;
-use kwavers::solver::forward::elastic::ElasticWaveConfig;
+use kwavers::solver::forward::elastic::{
+    ElasticWaveConfig, HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
+};
 use kwavers::solver::inverse::elastography::{NonlinearInversion, NonlinearInversionConfig};
 use ndarray::Array3;
 

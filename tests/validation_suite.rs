@@ -6,8 +6,11 @@
 use approx::assert_relative_eq;
 use kwavers::{
     grid::Grid,
-    physics::acoustics::bubble_dynamics::{BubbleParameters, EpsteinPlessetStabilitySolver, OscillationType, KellerMiksisModel},
+    physics::acoustics::bubble_dynamics::{
+        BubbleParameters, EpsteinPlessetStabilitySolver, KellerMiksisModel,
+    },
 };
+use kwavers::physics::acoustics::bubble_dynamics::epstein_plesset::OscillationType;
 use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
 

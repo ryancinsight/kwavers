@@ -120,5 +120,5 @@ pub fn celsius_to_kelvin(celsius: f64) -> f64 {
     celsius - ABSOLUTE_ZERO_C
 }
 
-// Re-export R_GAS for convenience
-pub use crate::physics::constants::GAS_CONSTANT as R_GAS;
+// Gas constant is available in fundamental.rs
+pub use super::fundamental::GAS_CONSTANT as R_GAS;

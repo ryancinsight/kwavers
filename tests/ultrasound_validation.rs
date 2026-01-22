@@ -319,7 +319,7 @@ pub mod acoustic_wave_validation {
 pub mod swe_validation {
     use super::*;
     use kwavers::physics::imaging::elastography::DisplacementField;
-    use kwavers::solver::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig};
+    use kwavers::solver::inverse::elastography::ShearWaveInversion;
 
     /// Validate SWE elasticity reconstruction accuracy
     ///

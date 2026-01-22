@@ -4,7 +4,7 @@
 //! Target: >2x speedup over scalar implementation for FDTD pressure updates
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use kwavers::analysis::performance::simd_safe::operations::SimdOps;
+use kwavers::math::simd_safe::SimdOps;
 use ndarray::Array3;
 
 /// Generate test data for FDTD benchmarking

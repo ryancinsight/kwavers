@@ -3,6 +3,12 @@
 //! This module implements the safety and regulatory compliance framework for clinical
 //! ultrasound therapy systems, following IEC 60601-2-37 standards for therapeutic ultrasound equipment.
 //!
+//! ## Safety Metrics
+//!
+//! - **Mechanical Index (MI)**: Cavitation risk assessment
+//! - **Thermal Index (TI)**: Tissue heating risk assessment
+//! - **Dose Monitoring**: Treatment dose verification
+//!
 //! ## IEC 60601-2-37 Requirements
 //!
 //! ### Essential Performance
@@ -25,6 +31,8 @@
 //! - **DoseController**: Treatment dose calculation and control
 //! - **ComplianceValidator**: IEC standard compliance checking
 //! - **AuditLogger**: Comprehensive safety event logging
+
+pub mod mechanical_index;
 
 use crate::clinical::therapy::parameters::TherapyParameters;
 use crate::core::error::{KwaversError, KwaversResult};

@@ -181,7 +181,7 @@ impl BeamformSearch {
                 let delays_s = self.processor.compute_delays(point);
                 let weights = vec![1.0; self.processor.num_sensors()];
 
-                let out = crate::domain::sensor::beamforming::time_domain::delay_and_sum(
+                let out = crate::analysis::signal_processing::beamforming::time_domain::delay_and_sum(
                     sensor_data,
                     self.processor.config.sampling_frequency,
                     &delays_s,
@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn centered_cube_generates_points() {
-        use crate::domain::sensor::beamforming::time_domain::DelayReference;
+        use crate::analysis::signal_processing::beamforming::time_domain::DelayReference;
 
         let processor = make_processor(4);
 

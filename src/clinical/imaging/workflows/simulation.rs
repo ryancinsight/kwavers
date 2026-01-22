@@ -3,7 +3,7 @@ use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 #[cfg(feature = "gpu")]
-use crate::domain::sensor::beamforming::BeamformingConfig3D;
+use crate::analysis::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
 
 pub fn generate_realistic_rf_volume(
     volume_dims: (usize, usize, usize),

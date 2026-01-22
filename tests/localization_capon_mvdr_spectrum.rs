@@ -33,9 +33,8 @@
 use kwavers::analysis::signal_processing::beamforming::narrowband::capon::{
     capon_spatial_spectrum_point_complex_baseband, CaponSpectrumConfig,
 };
-use kwavers::domain::sensor::beamforming::{
-    CovarianceEstimator, CovariancePostProcess, SteeringVectorMethod,
-};
+use kwavers::domain::sensor::beamforming::covariance::CovariancePostProcess;
+use kwavers::domain::sensor::beamforming::{CovarianceEstimator, SteeringVectorMethod};
 use kwavers::domain::sensor::localization::Position;
 use ndarray::Array3;
 
