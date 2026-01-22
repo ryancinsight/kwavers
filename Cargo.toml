@@ -345,3 +345,7 @@ harness = false
 [[bench]]
 name = "art_benchmark"
 harness = false
+
+[[bench]]
+name = "amr_interpolation"
+harness = false
