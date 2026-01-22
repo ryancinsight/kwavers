@@ -58,12 +58,44 @@ impl ConservativeInterpolator {
 
         // Create output field with same dimensions initially
         // Will be refined where octree indicates refinement
+        // We use clone() here as it is optimized (malloc + memcpy)
         let mut refined_field = field.clone();
 
         // Traverse octree and interpolate refined regions
         self.interpolate_node(octree.root(), field, &mut refined_field, nx, ny, nz)?;
 
         Ok(refined_field)
+    }
+
+    /// Interpolate field to refined mesh using octree structure into existing buffer
+    ///
+    /// This method allows reusing a buffer to avoid allocation overhead.
+    /// The output buffer must have the same dimensions as the field.
+    pub fn interpolate_into(
+        &self,
+        octree: &Octree,
+        field: &Array3<f64>,
+        output: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        let (nx, ny, nz) = field.dim();
+
+        if output.dim() != (nx, ny, nz) {
+            return Err(crate::core::error::KwaversError::DimensionMismatch(
+                format!("Output dimensions {:?} do not match field dimensions {:?}", output.dim(), field.dim())
+            ));
+        }
+
+        // Copy initial values.
+        // We must copy because 'interpolate_node' modifies 'output' in place,
+        // and we want unrefined regions to match 'field'.
+        if let (Some(out_slice), Some(in_slice)) = (output.as_slice_mut(), field.as_slice()) {
+            out_slice.copy_from_slice(in_slice);
+        } else {
+            output.assign(field);
+        }
+
+        // Traverse octree and interpolate refined regions
+        self.interpolate_node(octree.root(), field, output, nx, ny, nz)
     }
 
     /// Recursively interpolate field values for octree nodes
