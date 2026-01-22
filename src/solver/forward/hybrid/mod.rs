@@ -5,6 +5,7 @@
 //!
 //! ## Overview
 //!
+a	pub mod plugin;$a
 //! The hybrid solver leverages the advantages of both Pseudo-Spectral Time Domain (PSTD)
 //! and Finite-Difference Time Domain (FDTD) methods:
 //!
@@ -25,7 +26,6 @@ pub mod domain_decomposition;
 pub mod fdtd_fem_coupling; // FDTD-FEM coupling for multi-scale problems
 pub mod metrics;
 pub mod mixed_domain;
-pub mod plugin;
 pub mod pstd_sem_coupling; // PSTD-SEM coupling for spectral accuracy
 pub mod solver;
 pub mod validation;

@@ -303,12 +303,12 @@ impl crate::solver::interface::Solver for PSTDSolver {
             max_velocity: max_v,
         }
     }
-    fn supports_feature(&self, _feature: crate::solver::interface::feature::SolverFeature) -> bool {
+    fn supports_feature(&self, _feature: crate::solver::feature::SolverFeature) -> bool {
         true
     }
     fn enable_feature(
         &mut self,
-        _feature: crate::solver::interface::feature::SolverFeature,
+        _feature: crate::solver::feature::SolverFeature,
         _enable: bool,
     ) -> KwaversResult<()> {
         Ok(())

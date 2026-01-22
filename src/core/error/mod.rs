@@ -161,6 +161,11 @@ pub enum KwaversError {
     #[error("NIFTI format error")]
     Nifti(#[from] nifti::error::NiftiError),
 
+    /// DICOM format errors
+    #[cfg(feature = "dicom")]
+    #[error("DICOM format error: {0}")]
+    Dicom(#[from] dicom::object::ReadError),
+
     /// Feature not yet implemented
     #[error("Feature not yet implemented: {0}")]
     NotImplemented(String),
@@ -168,6 +173,10 @@ pub enum KwaversError {
     /// GPU computation errors
     #[error("GPU error: {0}")]
     GpuError(String),
+
+    /// DICOM format errors
+    #[error("DICOM format error: {0}")]
+    Dicom(#[from] dicom::object::ReadError),
 
     /// Resource limit exceeded (GPU memory, etc.)
     #[error("Resource limit exceeded: {message}")]

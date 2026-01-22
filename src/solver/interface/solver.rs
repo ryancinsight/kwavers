@@ -8,7 +8,7 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::sensor::GridSensorSet;
 use crate::domain::source::Source;
-use crate::solver::interface::feature::SolverFeature;
+use crate::solver::feature::SolverFeature;
 use std::fmt::Debug;
 
 /// Fundamental solver trait

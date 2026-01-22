@@ -5,6 +5,7 @@
 //!
 //! # Theory
 //!
+a	pub mod plugin;$a
 //! The FDTD method discretizes both space and time using finite differences.
 //! Key features include:
 //!
@@ -90,7 +91,6 @@
 pub mod config;
 pub mod electromagnetic;
 pub mod metrics;
-pub mod plugin;
 pub mod solver;
 
 // Re-exports for convenience

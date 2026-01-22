@@ -45,6 +45,7 @@ rand_distr = "0.4"
 rand_chacha = "0.3"
 regex = "1.8"
 nifti = "0.17.0"
+dicom = { version = "0.7", features = ["pixeldata"] }
 chrono = { version = "0.4", features = ["serde"] }
 base64 = "0.22"
 
@@ -129,6 +130,7 @@ parallel = ["ndarray/rayon"] # Add back parallel feature
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster"]
 plotting = ["dep:plotly"]
 # Additional features referenced in code
+dicom = []             # Medical imaging support
 nifti = []             # Medical imaging support
 nightly = []           # Nightly Rust features
 simd = []              # SIMD acceleration support
@@ -154,7 +156,7 @@ opast = []                           # OPAST benchmarks (Criterion)
 # Sprint 159 - Enterprise API for production deployment
 api = ["dep:axum", "dep:tower", "dep:tower-http", "async-runtime", "structured-logging", "dep:jsonwebtoken", "dep:sha2", "dep:uuid", "dep:prometheus"]  # REST API for clinical ultrasound with cloud deployment
 cloud = ["dep:reqwest", "dep:uuid", "async-runtime", "structured-logging"]
-full = ["gpu", "plotting", "parallel", "nifti", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn", "api", "cloud"]
+full = ["gpu", "plotting", "parallel", "dicom", "nifti", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn", "api", "cloud"]
 
 [profile.dev]
 # Fast development builds

@@ -638,13 +638,13 @@ impl crate::solver::interface::Solver for HybridSolver {
         }
     }
 
-    fn supports_feature(&self, _feature: crate::solver::interface::feature::SolverFeature) -> bool {
+    fn supports_feature(&self, _feature: crate::solver::feature::SolverFeature) -> bool {
         true
     }
 
     fn enable_feature(
         &mut self,
-        _feature: crate::solver::interface::feature::SolverFeature,
+        _feature: crate::solver::feature::SolverFeature,
         _enable: bool,
     ) -> KwaversResult<()> {
         Ok(())

@@ -5,10 +5,10 @@
 pub mod config;
 pub mod data;
 pub mod dg;
+a	pub mod plugin;$a
 pub mod implementation;
 pub mod numerics;
 pub mod physics;
-pub mod plugin;
 pub mod propagator;
 pub mod utils;
 

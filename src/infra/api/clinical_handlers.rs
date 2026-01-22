@@ -215,6 +215,60 @@ impl DICOMService {
             dicom_nodes: HashMap::new(),
         }
     }
+
+    /// Read DICOM study from configured storage directories
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if DICOM files cannot be read or parsed
+    pub fn read_study(&self, study_uid: &str) -> KwaversResult<Option<crate::infra::io::DicomStudy>> {
+        let dicom_reader = crate::infra::io::DicomReader::new();
+
+        // Search through configured DICOM nodes for storage directories
+        for node in self.dicom_nodes.values() {
+            if let Some(storage_dir) = &node.storage_directory {
+                let study_path = std::path::Path::new(storage_dir).join(study_uid);
+                if study_path.exists() {
+                    let study = dicom_reader.read_directory(&study_path)?;
+                    return Ok(Some(study));
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// Read DICOM series from configured storage directories
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if DICOM files cannot be read or parsed
+    pub fn read_series(&self, study_uid: &str, series_uid: &str) -> KwaversResult<Option<crate::infra::io::DicomSeries>> {
+        if let Some(study) = self.read_study(study_uid)? {
+            let series = study.series.into_iter()
+                .find(|s| s.series_instance_uid == series_uid);
+            Ok(series)
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Read DICOM instance from configured storage directories
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if DICOM file cannot be read or parsed
+    pub fn read_instance(&self, study_uid: &str, series_uid: &str, instance_uid: &str) -> KwaversResult<Option<crate::infra::io::DicomObject>> {
+        if let Some(series) = self.read_series(study_uid, series_uid)? {
+            let instance = series.instances.into_iter()
+                .find(|i| i.metadata.get("SOPInstanceUID")
+                    .and_then(|v| v.as_string())
+                    .map_or(false, |uid| uid == instance_uid));
+            Ok(instance)
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 impl Default for DICOMService {
@@ -236,6 +290,8 @@ pub struct DICOMNode {
     pub port: u16,
     /// Last seen
     pub last_seen: DateTime<Utc>,
+    /// DICOM storage directory (for file-based access)
+    pub storage_directory: Option<String>,
 }
 
 /// Mobile device optimization engine
@@ -491,46 +547,66 @@ pub async fn dicom_integrate(
     _auth: AuthenticatedUser,
     Json(request): Json<DICOMIntegrationRequest>,
 ) -> Result<JsonResponse<DICOMIntegrationResponse>, (StatusCode, JsonResponse<APIError>)> {
-    let _dicom_service = state.dicom_service.read().await;
+    let dicom_service = state.dicom_service.read().await;
 
-    // Simulate DICOM query/retrieve (in production would connect to PACS)
-    let metadata = HashMap::from([
-        (
-            "StudyInstanceUID".to_string(),
-            crate::api::DICOMValue::String(request.study_instance_uid.clone()),
-        ),
-        (
-            "SeriesInstanceUID".to_string(),
-            crate::api::DICOMValue::String(request.series_instance_uid.clone()),
-        ),
-        (
-            "SOPInstanceUID".to_string(),
-            crate::api::DICOMValue::String(request.sop_instance_uid.clone()),
-        ),
-        (
-            "PatientID".to_string(),
-            crate::api::DICOMValue::String("ANON123".to_string()),
-        ),
-        (
-            "StudyDate".to_string(),
-            crate::api::DICOMValue::String("20241104".to_string()),
-        ),
-        (
-            "Modality".to_string(),
-            crate::api::DICOMValue::String("US".to_string()),
-        ),
-    ]);
-
-    let study_info = crate::api::DICOMStudyInfo {
-        patient_id: "ANON123".to_string(),
-        study_date: "20241104".to_string(),
-        study_description: "Point-of-care ultrasound".to_string(),
-        modality: "US".to_string(),
-        institution_name: Some("POC Ultrasound Center".to_string()),
+    // Try to read actual DICOM data from configured sources
+    let mut metadata: HashMap<String, crate::api::DICOMValue> = HashMap::new();
+    let mut pixel_data = None;
+    let mut study_info = crate::api::DICOMStudyInfo {
+        patient_id: "UNKNOWN".to_string(),
+        study_date: "UNKNOWN".to_string(),
+        study_description: "DICOM Study".to_string(),
+        modality: "UNKNOWN".to_string(),
+        institution_name: None,
     };
 
+    // Convert DICOM metadata to API format (populate study_info)
+    study_info.patient_id = dicom_obj.metadata.get("PatientID")
+        .and_then(|v| v.as_string())
+        .unwrap_or_else(|| "UNKNOWN".to_string());
+    study_info.study_date = dicom_obj.metadata.get("StudyDate")
+        .and_then(|v| v.as_string())
+        .unwrap_or_else(|| "UNKNOWN".to_string());
+    study_info.study_description = dicom_obj.metadata.get("StudyDescription")
+        .and_then(|v| v.as_string())
+        .unwrap_or_else(|| "DICOM Study".to_string());
+    study_info.modality = dicom_obj.metadata.get("Modality")
+        .and_then(|v| v.as_string())
+        .unwrap_or_else(|| "UNKNOWN".to_string());
+    study_info.institution_name = dicom_obj.metadata.get("InstitutionName")
+        .and_then(|v| v.as_string());
+
+    // Convert DICOM metadata to API format
+    for (key, value) in &dicom_obj.metadata {
+        let api_value = match value {
+            crate::infra::io::DicomValue::String(s) => crate::api::DICOMValue::String(s.clone()),
+            crate::infra::io::DicomValue::Integer(i) => crate::api::DICOMValue::Integer(*i),
+            crate::infra::io::DicomValue::Float(f) => crate::api::DICOMValue::Number(*f),
+        };
+        metadata.insert(key.clone(), api_value);
+    }
+    };
+
+    // Convert DICOM metadata to API format
+        for (key, value) in &dicom_obj.metadata {
+            let api_value = match value {
+                crate::infra::io::DicomValue::String(s) => crate::api::DICOMValue::String(s.clone()),
+                crate::infra::io::DicomValue::Integer(i) => crate::api::DICOMValue::Integer(*i),
+                crate::infra::io::DicomValue::Float(f) => crate::api::DICOMValue::Number(*f),
+            };
+            metadata.insert(key.clone(), api_value);
+        }
+
+    // Extract pixel data if requested
+    if request.include_pixel_data {
+        if let Some(pixel_info) = &dicom_obj.pixel_data {
+            // Encode pixel data as base64 for API response
+            pixel_data = Some(general_purpose::STANDARD.encode(&pixel_info.pixel_data_raw));
+        }
+    }
+
     // Extract requested tags
-    let mut extracted_metadata = HashMap::new();
+    let mut extracted_metadata: HashMap<String, crate::api::DICOMValue> = HashMap::new();
     for tag in &request.requested_tags {
         if let Some(value) = metadata.get(tag) {
             extracted_metadata.insert(tag.clone(), value.clone());

@@ -13,11 +13,11 @@
 //!
 //! The diffusion approximation is valid when scattering dominates absorption (μ_s' ≫ μ_a)
 //! and distance from boundaries is much larger than transport mean free path.
-
-// Backward compatibility re-export (solver moved to solver layer)
-pub use crate::solver::forward::optical::diffusion::{
-    DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,
-};
+//!
+// Removed backward compatibility re-export to avoid circular dependency (physics → solver)
+// Users should import directly from solver layer:
+// - DiffusionSolver: crate::solver::forward::optical::diffusion::DiffusionSolver
+// - DiffusionSolverConfig: crate::solver::forward::optical::diffusion::DiffusionSolverConfig
 
 // physics/optics/diffusion/mod.rs
 use crate::domain::field::indices::LIGHT_IDX;
