@@ -189,13 +189,9 @@ pub use infra::io::{generate_summary, save_light_data, save_pressure_data};
 pub use crate::infra::api;
 
 // Re-export performance optimization
-// Re-export performance optimization
 pub use analysis::performance::{
-    profiling::{
-        CacheProfile, MemoryProfile, PerformanceProfiler, ProfileReport, RooflineAnalysis,
-        TimingScope,
-    },
-    OptimizationConfig, PerformanceOptimizer, SimdLevel,
+    CacheProfile, MemoryProfile, OptimizationConfig, PerformanceOptimizer, PerformanceProfiler,
+    ProfileReport, RooflineAnalysis, SimdLevel, TimingScope,
 };
 
 // Re-export signal types

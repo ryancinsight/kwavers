@@ -10,7 +10,6 @@
 pub mod engine;
 pub mod inference;
 pub mod models;
-pub mod optimization;
 pub mod training;
 pub mod types;
 pub mod uncertainty;
@@ -20,11 +19,6 @@ pub use engine::MLEngine;
 pub use types::{
     InferencePrecision, MLBackend, MLConfig, MLModel, Model, ModelMetadata, ModelType,
     PerformanceMetrics,
-};
-
-pub use optimization::{
-    AcousticEvent, CavitationEvent, ConvergencePredictor, ParameterOptimizer, PatternRecognizer,
-    PatternSummary, SimulationPatterns,
 };
 
 #[cfg(test)]

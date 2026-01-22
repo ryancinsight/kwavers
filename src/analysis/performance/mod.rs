@@ -65,6 +65,17 @@
 //!    pub mod simd_portable;
 //!    pub mod simd_safe;
 
+pub mod arena;
+pub mod benchmarks;
+pub mod optimization;
+pub mod profiling;
+pub mod safe_vectorization;
+pub mod simd;
+pub mod simd_auto;
+pub mod simd_operations;
+pub mod simd_portable;
+pub mod simd_safe;
+
 pub use optimization::{
     AccessPattern, BandwidthOptimizer, CacheOptimizer, OptimizationConfig, PerformanceOptimizer,
     PrefetchStrategy, SimdLevel, StencilKernel,

@@ -5,7 +5,6 @@
 //!
 //! # Theory
 //!
-a	pub mod plugin;$a
 //! The FDTD method discretizes both space and time using finite differences.
 //! Key features include:
 //!
@@ -87,10 +86,10 @@ a	pub mod plugin;$a
 //! - YAGNI: Implements only necessary features for acoustic simulation
 
 // Public modules
-// Public modules
 pub mod config;
 pub mod electromagnetic;
 pub mod metrics;
+pub mod plugin;
 pub mod solver;
 
 // Re-exports for convenience

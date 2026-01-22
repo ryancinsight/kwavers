@@ -15,7 +15,7 @@
 use crate::core::error::{DataError, KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use dicom::core::{DataElement, Tag, VR};
-use dicom::object::{FileDicomObject, InMemDicomObject, ReadError};
+use dicom::object::{FileDicomObject, InMemDicomObject};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
