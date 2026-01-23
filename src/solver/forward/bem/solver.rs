@@ -7,6 +7,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::boundary::BemBoundaryManager;
 use crate::math::linear_algebra::sparse::CompressedSparseRowMatrix;
+use crate::math::linear_algebra::sparse::solver::{IterativeSolver, SolverConfig, Preconditioner};
 use ndarray::Array1;
 use num_complex::Complex64;
 
@@ -121,54 +122,45 @@ impl BemSolver {
             self.assemble_system()?;
         }
 
-        let h_matrix = self.h_matrix.as_mut().unwrap();
-        let g_matrix = self.g_matrix.as_mut().unwrap();
+        let h_matrix = self.h_matrix.as_ref().unwrap();
+        let g_matrix = self.g_matrix.as_ref().unwrap();
 
-        // Initialize boundary values vector
-        let mut boundary_values = Array1::zeros(self.boundary_nodes);
+        // Assemble system using boundary manager (non-destructive)
+        let (a_matrix, mut b_vector) = self.boundary_manager.assemble_bem_system(h_matrix, g_matrix, wavenumber)?;
 
-        // Apply source terms if provided
+        // Apply source terms if provided (additive to RHS)
         if let Some(sources) = source_terms {
-            boundary_values.assign(sources);
+            b_vector = b_vector + sources;
         }
 
-        // Apply boundary conditions to the BEM system
-        self.boundary_manager
-            .apply_all(h_matrix, g_matrix, &mut boundary_values, wavenumber)?;
+        // Solve the BEM system
+        let x = self.solve_bem_system(&a_matrix, &b_vector)?;
 
-        // Clone matrices for solving (avoids borrow checker issues)
-        let h_copy = (*h_matrix).clone();
-        let g_copy = (*g_matrix).clone();
-
-        // TODO: Solve the BEM system (placeholder - would implement actual solver)
-        let solution = self.solve_bem_system(&h_copy, &g_copy, &boundary_values)?;
+        // Reconstruct full solution
+        let (boundary_pressure, boundary_velocity) = self.boundary_manager.reconstruct_solution(&x, wavenumber);
 
         Ok(BemSolution {
-            boundary_pressure: solution.boundary_pressure,
-            boundary_velocity: solution.boundary_velocity,
+            boundary_pressure,
+            boundary_velocity,
             wavenumber,
         })
     }
 
-    /// Solve the assembled BEM system (placeholder implementation)
+    /// Solve the assembled BEM system
     fn solve_bem_system(
         &self,
-        _h_matrix: &CompressedSparseRowMatrix<Complex64>,
-        _g_matrix: &CompressedSparseRowMatrix<Complex64>,
-        _boundary_values: &Array1<Complex64>,
-    ) -> KwaversResult<BemSystemSolution> {
-        // TODO: Placeholder: In a full implementation, this would solve:
-        // H * p - G * (dp/dn) = boundary_values
-        // or similar depending on the BEM formulation
+        a_matrix: &CompressedSparseRowMatrix<Complex64>,
+        b_vector: &Array1<Complex64>,
+    ) -> KwaversResult<Array1<Complex64>> {
+        let solver_config = SolverConfig {
+            max_iterations: self.config.max_iterations,
+            tolerance: self.config.tolerance,
+            preconditioner: Preconditioner::None,
+            verbose: false,
+        };
+        let solver = IterativeSolver::create(solver_config);
 
-        let n = self.boundary_nodes;
-        let boundary_pressure = Array1::from_elem(n, Complex64::new(1.0, 0.0));
-        let boundary_velocity = Array1::from_elem(n, Complex64::new(0.0, 1.0));
-
-        Ok(BemSystemSolution {
-            boundary_pressure,
-            boundary_velocity,
-        })
+        solver.bicgstab_complex(a_matrix, b_vector.view(), None)
     }
 
     /// Compute scattered field at evaluation points
@@ -200,11 +192,6 @@ pub struct BemSolution {
     pub wavenumber: f64,
 }
 
-/// Internal solution structure for BEM system
-struct BemSystemSolution {
-    boundary_pressure: Array1<Complex64>,
-    boundary_velocity: Array1<Complex64>,
-}
 
 #[cfg(test)]
 mod tests {
@@ -253,5 +240,41 @@ mod tests {
         assert_eq!(solution.boundary_pressure.len(), 10);
         assert_eq!(solution.boundary_velocity.len(), 10);
         assert_eq!(solution.wavenumber, 1.0);
+    }
+
+    #[test]
+    fn test_bem_solve_values() {
+        // Test with simple diagonal matrices
+        // H = 0.5 I, G = I
+        // Node 0: Dirichlet p=1.0. Eq: 0.5*p - 1.0*q = 0 => q = 0.5
+        // Node 1: Neumann q=0.0. Eq: 0.5*p - 1.0*q = 0 => p = 0.0
+
+        let config = BemConfig::default();
+        let mut solver = BemSolver::new(config, 2);
+
+        // Configure boundary conditions
+        {
+            let bc_manager = solver.boundary_manager();
+            bc_manager.add_dirichlet(vec![(0, Complex64::new(1.0, 0.0))]);
+            bc_manager.add_neumann(vec![(1, Complex64::new(0.0, 0.0))]);
+        }
+
+        // Assemble (creates placeholder matrices)
+        solver.assemble_system().unwrap();
+
+        // Solve
+        let solution = solver.solve(1.0, None).unwrap();
+
+        // Verify Node 0
+        let p0 = solution.boundary_pressure[0];
+        let v0 = solution.boundary_velocity[0];
+        assert!((p0 - Complex64::new(1.0, 0.0)).norm() < 1e-6);
+        assert!((v0 - Complex64::new(0.5, 0.0)).norm() < 1e-6);
+
+        // Verify Node 1
+        let p1 = solution.boundary_pressure[1];
+        let v1 = solution.boundary_velocity[1];
+        assert!((p1 - Complex64::new(0.0, 0.0)).norm() < 1e-6);
+        assert!((v1 - Complex64::new(0.0, 0.0)).norm() < 1e-6);
     }
 }
