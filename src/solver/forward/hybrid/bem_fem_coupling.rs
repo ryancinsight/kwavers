@@ -124,14 +124,32 @@ impl BemFemInterface {
 
     /// Check if a FEM node lies on the BEM interface
     fn is_node_on_interface(
-        _node: &crate::domain::mesh::tetrahedral::MeshNode,
-        _bem_boundary: &[usize],
-        _fem_mesh: &TetrahedralMesh,
+        node: &crate::domain::mesh::tetrahedral::MeshNode,
+        bem_boundary: &[usize],
+        fem_mesh: &TetrahedralMesh,
     ) -> bool {
-        // TODO: Simplified geometric check - in practice would check if node
-        // coordinates lie on the boundary surface defined by BEM elements
-        // For now, assume some nodes are on the interface
-        false // Placeholder - would need actual geometric computation
+        // Fast path: if the node index is explicitly in the boundary list
+        if bem_boundary.contains(&node.index) {
+            return true;
+        }
+
+        // Geometric check: check if node coordinates lie on the boundary surface defined by BEM elements
+        // Since bem_boundary contains node indices, we check proximity to any of these nodes.
+        let tolerance_sq = 1e-12; // Corresponding to 1e-6 distance
+
+        for &bem_node_idx in bem_boundary {
+            if let Some(bem_node) = fem_mesh.nodes.get(bem_node_idx) {
+                let dx = node.coordinates[0] - bem_node.coordinates[0];
+                let dy = node.coordinates[1] - bem_node.coordinates[1];
+                let dz = node.coordinates[2] - bem_node.coordinates[2];
+
+                if dx * dx + dy * dy + dz * dz < tolerance_sq {
+                    return true;
+                }
+            }
+        }
+
+        false
     }
 
     /// Find corresponding BEM element for a FEM node
@@ -576,6 +594,29 @@ mod tests {
 
         // Interface creation should succeed even with simplified geometry
         assert!(interface.is_ok());
+        let interface = interface.unwrap();
+        assert_eq!(interface.fem_interface_nodes.len(), 3);
+        // Verify node 3 is NOT in interface
+        assert!(!interface.fem_interface_nodes.contains(&3));
+    }
+
+    #[test]
+    fn test_bem_fem_interface_geometric_match() {
+        let mut fem_mesh = TetrahedralMesh::new();
+        // Node 0: on boundary
+        let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
+        // Node 1: duplicate of n0, but different index. Should be detected via geometric check.
+        let n1 = fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
+
+        // BEM boundary uses only n0
+        let bem_boundary = vec![n0];
+
+        let interface = BemFemInterface::new(&fem_mesh, &bem_boundary).unwrap();
+
+        // Both n0 (index match) and n1 (geometric match) should be in interface
+        assert!(interface.fem_interface_nodes.contains(&n0));
+        assert!(interface.fem_interface_nodes.contains(&n1));
+        assert_eq!(interface.fem_interface_nodes.len(), 2);
     }
 
     #[test]
