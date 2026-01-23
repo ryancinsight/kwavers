@@ -351,3 +351,7 @@ harness = false
 [[bench]]
 name = "fnm_performance_benchmark"
 harness = false
+
+[[bench]]
+name = "amr_criteria_benchmark"
+harness = false

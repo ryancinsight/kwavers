@@ -1,7 +1,7 @@
 //! Refinement criteria and error estimation
 
 use crate::core::error::KwaversResult;
-use ndarray::{Array2, Array3, Axis};
+use ndarray::{s, Array2, Array3, Axis, Zip};
 
 /// Refinement criterion types
 #[derive(Debug, Clone, Copy)]
@@ -59,17 +59,20 @@ impl ErrorEstimator {
         let mut error = Array3::zeros(field.dim());
 
         // Compute gradient magnitude
-        for i in 1..nx - 1 {
-            for j in 1..ny - 1 {
-                for k in 1..nz - 1 {
-                    let dx = field[[i + 1, j, k]] - field[[i - 1, j, k]];
-                    let dy = field[[i, j + 1, k]] - field[[i, j - 1, k]];
-                    let dz = field[[i, j, k + 1]] - field[[i, j, k - 1]];
+        Zip::from(error.slice_mut(s![1..-1, 1..-1, 1..-1]))
+            .and(field.slice(s![2.., 1..-1, 1..-1]))
+            .and(field.slice(s![..-2, 1..-1, 1..-1]))
+            .and(field.slice(s![1..-1, 2.., 1..-1]))
+            .and(field.slice(s![1..-1, ..-2, 1..-1]))
+            .and(field.slice(s![1..-1, 1..-1, 2..]))
+            .and(field.slice(s![1..-1, 1..-1, ..-2]))
+            .for_each(|err, &xp, &xm, &yp, &ym, &zp, &zm| {
+                let dx = xp - xm;
+                let dy = yp - ym;
+                let dz = zp - zm;
 
-                    error[[i, j, k]] = (dx * dx + dy * dy + dz * dz).sqrt();
-                }
-            }
-        }
+                *err = (dx * dx + dy * dy + dz * dz).sqrt();
+            });
 
         // Apply smoothing
         if self.smoothing > 0.0 {
