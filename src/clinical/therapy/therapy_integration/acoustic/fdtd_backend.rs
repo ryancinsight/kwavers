@@ -306,6 +306,13 @@ impl AcousticSolverBackend for FdtdBackend {
         Ok(intensity)
     }
 
+    fn get_impedance_field(&self) -> KwaversResult<Array3<f64>> {
+        // Compute acoustic impedance Z = ρc
+        let rho = &self.solver.materials.rho0;
+        let c = &self.solver.materials.c0;
+        Ok(rho * c)
+    }
+
     fn get_dt(&self) -> f64 {
         self.solver.config.dt
     }
