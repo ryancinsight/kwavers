@@ -1,0 +1,47 @@
+   Compiling kwavers v3.0.0 (/app)
+    Finished `bench` profile [optimized] target(s) in 2m 18s
+     Running benches/fnm_performance_benchmark.rs (target/release/deps/fnm_performance_benchmark-4940f4efddc3a465)
+Benchmarking FNM Precomputation/FNM_Precompute_10mm
+Benchmarking FNM Precomputation/FNM_Precompute_10mm: Warming up for 3.0000 s
+Benchmarking FNM Precomputation/FNM_Precompute_10mm: Collecting 100 samples in estimated 5.0583 s (146k iterations)
+Benchmarking FNM Precomputation/FNM_Precompute_10mm: Analyzing
+FNM Precomputation/FNM_Precompute_10mm
+                        time:   [34.651 µs 35.100 µs 35.824 µs]
+                        change: [-39.799% -37.184% -34.708%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 14 outliers among 100 measurements (14.00%)
+  1 (1.00%) low mild
+  2 (2.00%) high mild
+  11 (11.00%) high severe
+Benchmarking FNM Precomputation/FNM_Precompute_25mm
+Benchmarking FNM Precomputation/FNM_Precompute_25mm: Warming up for 3.0000 s
+Benchmarking FNM Precomputation/FNM_Precompute_25mm: Collecting 100 samples in estimated 5.0004 s (141k iterations)
+Benchmarking FNM Precomputation/FNM_Precompute_25mm: Analyzing
+FNM Precomputation/FNM_Precompute_25mm
+                        time:   [34.850 µs 35.107 µs 35.390 µs]
+                        change: [-37.681% -36.157% -34.812%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 10 outliers among 100 measurements (10.00%)
+  8 (8.00%) high mild
+  2 (2.00%) high severe
+Benchmarking FNM Precomputation/FNM_Precompute_50mm
+Benchmarking FNM Precomputation/FNM_Precompute_50mm: Warming up for 3.0000 s
+Benchmarking FNM Precomputation/FNM_Precompute_50mm: Collecting 100 samples in estimated 5.1540 s (146k iterations)
+Benchmarking FNM Precomputation/FNM_Precompute_50mm: Analyzing
+FNM Precomputation/FNM_Precompute_50mm
+                        time:   [35.077 µs 35.277 µs 35.482 µs]
+                        change: [-40.422% -38.222% -35.954%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 5 outliers among 100 measurements (5.00%)
+  5 (5.00%) high severe
+Benchmarking FNM Precomputation/FNM_Precompute_100mm
+Benchmarking FNM Precomputation/FNM_Precompute_100mm: Warming up for 3.0000 s
+Benchmarking FNM Precomputation/FNM_Precompute_100mm: Collecting 100 samples in estimated 5.0303 s (146k iterations)
+Benchmarking FNM Precomputation/FNM_Precompute_100mm: Analyzing
+FNM Precomputation/FNM_Precompute_100mm
+                        time:   [34.401 µs 34.469 µs 34.549 µs]
+                        change: [-35.636% -35.094% -34.385%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 3 outliers among 100 measurements (3.00%)
+  1 (1.00%) high mild
+  2 (2.00%) high severe
