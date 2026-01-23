@@ -28,9 +28,12 @@
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
+use crate::domain::medium::HomogeneousMedium;
 use crate::domain::mesh::tetrahedral::TetrahedralMesh;
 use crate::math::numerics::operators::TrilinearInterpolator;
+use crate::solver::forward::helmholtz::fem::solver::{FemHelmholtzConfig, FemHelmholtzSolver};
 use ndarray::{Array3, ArrayView3};
+use num_complex::Complex64;
 
 /// Configuration for FDTD-FEM coupling
 #[derive(Debug, Clone)]
@@ -196,6 +199,7 @@ pub struct FdtdFemCoupler {
     fdtd_interpolator: TrilinearInterpolator,
     #[allow(dead_code)]
     fem_interpolator: TrilinearInterpolator,
+    fem_solver: FemHelmholtzSolver,
     convergence_history: Vec<f64>,
 }
 
@@ -211,11 +215,14 @@ impl FdtdFemCoupler {
             TrilinearInterpolator::new(fdtd_grid.dx, fdtd_grid.dy, fdtd_grid.dz);
         let fem_interpolator = TrilinearInterpolator::new(fdtd_grid.dx, fdtd_grid.dy, fdtd_grid.dz); // Approximation
 
+        let fem_solver = FemHelmholtzSolver::new(FemHelmholtzConfig::default(), fem_mesh.clone());
+
         Ok(Self {
             config,
             interface,
             fdtd_interpolator,
             fem_interpolator,
+            fem_solver,
             convergence_history: Vec::new(),
         })
     }
@@ -235,8 +242,8 @@ impl FdtdFemCoupler {
         // 2. Update FEM boundary conditions with FDTD values
         self.update_fem_boundary(fem_field.as_mut_slice(), &fdtd_interface_values, fem_mesh)?;
 
-        // 3. Solve FEM domain (placeholder - would call actual FEM solver)
-        // TODO: self.solve_fem_domain(fem_field, fem_mesh)?;
+        // 3. Solve FEM domain
+        self.solve_fem_domain(fem_field, fem_mesh, fdtd_grid)?;
 
         // 4. Transfer FEM solution back to FDTD interface
         let fem_interface_values = self.extract_fem_interface(fem_field.as_slice())?;
@@ -249,6 +256,45 @@ impl FdtdFemCoupler {
         self.convergence_history.push(residual);
 
         Ok(residual)
+    }
+
+    /// Solve FEM domain using coupled values
+    fn solve_fem_domain(
+        &mut self,
+        fem_field: &mut [f64],
+        _fem_mesh: &TetrahedralMesh,
+        grid: &Grid,
+    ) -> KwaversResult<()> {
+        // 1. Reset boundary conditions
+        self.fem_solver.boundary_manager().clear();
+
+        // 2. Set Dirichlet boundary conditions from current field values
+        // Use values updated in update_fem_boundary
+        let mut dirichlet_bcs = Vec::new();
+        for &fem_idx in &self.interface.fem_indices {
+            if fem_idx < fem_field.len() {
+                let value = Complex64::new(fem_field[fem_idx], 0.0);
+                dirichlet_bcs.push((fem_idx, value));
+            }
+        }
+        self.fem_solver.boundary_manager().add_dirichlet(dirichlet_bcs);
+
+        // 3. Assemble and solve system
+        // Create a dummy medium (e.g. water) to satisfy the interface
+        let medium = HomogeneousMedium::water(grid);
+
+        self.fem_solver.assemble_system(&medium)?;
+        self.fem_solver.solve_system()?;
+
+        // 4. Update FEM field with real part of solution
+        let solution = self.fem_solver.solution();
+        for (i, val) in solution.iter().enumerate() {
+            if i < fem_field.len() {
+                fem_field[i] = val.re;
+            }
+        }
+
+        Ok(())
     }
 
     /// Extract FDTD field values at interface

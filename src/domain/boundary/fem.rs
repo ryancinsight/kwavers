@@ -70,6 +70,11 @@ impl FemBoundaryManager {
         }
     }
 
+    /// Clear all boundary conditions
+    pub fn clear(&mut self) {
+        self.conditions.clear();
+    }
+
     /// Add Dirichlet boundary condition
     pub fn add_dirichlet(&mut self, node_values: Vec<(usize, Complex64)>) {
         self.conditions
