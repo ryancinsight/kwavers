@@ -116,6 +116,12 @@ impl FemHelmholtzSolver {
     pub fn boundary_manager_ref(&self) -> &FemBoundaryManager {
         &self.boundary_manager
     }
+
+    /// Get current solution vector
+    #[must_use]
+    pub fn solution(&self) -> &Array1<Complex64> {
+        &self.solution
+    }
 }
 
 impl Default for FemHelmholtzConfig {

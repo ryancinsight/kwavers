@@ -67,7 +67,7 @@ pub enum BoundaryType {
 }
 
 /// Tetrahedral mesh for 3D FEM
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TetrahedralMesh {
     /// Mesh nodes
     pub nodes: Vec<MeshNode>,
