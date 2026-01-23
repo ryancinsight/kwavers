@@ -209,7 +209,8 @@ impl IterativeSolver {
 
         for iteration in 0..self.config.max_iterations {
             let rho_prev = rho;
-            rho = r0.dot(&r); // Non-conjugated dot product for BiCG orthogonality
+            // Conjugated dot product (r0^H * r) for BiCG orthogonality
+            rho = r0.iter().zip(r.iter()).map(|(a, b)| a.conj() * b).sum::<Complex64>();
 
             if rho.norm() < 1e-14 {
                 if self.config.verbose {
@@ -223,7 +224,8 @@ impl IterativeSolver {
 
             v = a.multiply_vector(p.view())?;
 
-            let r0_v = r0.dot(&v);
+            // Conjugated dot product (r0^H * v)
+            let r0_v = r0.iter().zip(v.iter()).map(|(a, b)| a.conj() * b).sum::<Complex64>();
             if r0_v.norm() < 1e-14 {
                  // Prevent division by zero
                  alpha = Complex64::new(1.0, 0.0);
