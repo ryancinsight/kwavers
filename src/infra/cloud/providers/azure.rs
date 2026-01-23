@@ -1,5 +1,10 @@
 //! Azure Cloud Provider Implementation
 //!
+//! **STATUS: INCOMPLETE / EXPERIMENTAL**
+//!
+//! This module provides a placeholder implementation for Azure cloud deployment.
+//! Actual Azure ML API integration is not yet implemented (see TODOs below).
+//!
 //! This module implements cloud deployment operations for Microsoft Azure,
 //! using Azure Machine Learning for model hosting and Azure Functions for
 //! serverless inference.

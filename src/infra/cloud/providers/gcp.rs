@@ -1,5 +1,10 @@
 //! GCP Cloud Provider Implementation
 //!
+//! **STATUS: INCOMPLETE / EXPERIMENTAL**
+//!
+//! This module provides a placeholder implementation for GCP cloud deployment.
+//! Actual Vertex AI API integration is not yet implemented (see TODOs below).
+//!
 //! This module implements cloud deployment operations for Google Cloud Platform (GCP),
 //! using Vertex AI for model hosting and Cloud Functions for serverless inference.
 //!

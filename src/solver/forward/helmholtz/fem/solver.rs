@@ -1,5 +1,11 @@
 //! FEM Helmholtz Solver Implementation
 //!
+//! **STATUS: STUB / INCOMPLETE**
+//!
+//! This is a simplified demonstration FEM implementation.
+//! Full mesh integration and proper assembly are not yet implemented.
+//! See TODO comments in assemble_system() for missing functionality.
+//!
 //! Core solver for the Helmholtz equation using finite element discretization.
 //! Provides high-fidelity solutions for complex geometries where Born series
 //! approximations fail.

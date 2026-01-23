@@ -1,5 +1,11 @@
 //! BEM Solver Implementation
 //!
+//! **STATUS: STUB / INCOMPLETE**
+//!
+//! This is a placeholder BEM implementation with simplified matrices.
+//! Actual boundary integral assembly is not yet implemented.
+//! See TODO comments in solve() method for missing functionality.
+//!
 //! Core implementation of the Boundary Element Method for acoustic problems.
 //! This solver handles the boundary integral formulation and integrates
 //! with the domain boundary condition system.
