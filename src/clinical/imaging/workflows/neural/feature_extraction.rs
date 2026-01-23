@@ -16,16 +16,16 @@
 //! - Local frequency: Window-based variance estimation
 //! - Speckle analysis: Local statistical moments
 //! - Homogeneity: Gray-level co-occurrence matrix approximation
-//! TODO_AUDIT: P2 - Advanced Clinical Image Analysis - Implement full radiomics and deep learning feature extraction for diagnostic AI
-//! DEPENDS ON: clinical/imaging/radiomics.rs, clinical/imaging/deep_learning.rs, clinical/imaging/texture_analysis.rs
-//! MISSING: Full GLCM (Gray-Level Co-occurrence Matrix) with all Haralick features
-//! MISSING: Deep learning feature extraction with convolutional neural networks
-//! MISSING: Radiomics feature standardization (IBSI guidelines compliance)
-//! MISSING: Multi-scale texture analysis with wavelet transforms
-//! MISSING: Shape-based features for lesion characterization
-//! THEOREM: Haralick features: 14 statistical measures from GLCM matrix
-//! THEOREM: Radiomics quality score: RQS = Σ (compliance_score * weight) for feature reliability
-//! REFERENCES: IBSI (Image Biomarker Standardization Initiative) guidelines; Haralick et al. (1973)
+//!   TODO_AUDIT: P2 - Advanced Clinical Image Analysis - Implement full radiomics and deep learning feature extraction for diagnostic AI
+//!   DEPENDS ON: clinical/imaging/radiomics.rs, clinical/imaging/deep_learning.rs, clinical/imaging/texture_analysis.rs
+//!   MISSING: Full GLCM (Gray-Level Co-occurrence Matrix) with all Haralick features
+//!   MISSING: Deep learning feature extraction with convolutional neural networks
+//!   MISSING: Radiomics feature standardization (IBSI guidelines compliance)
+//!   MISSING: Multi-scale texture analysis with wavelet transforms
+//!   MISSING: Shape-based features for lesion characterization
+//!   THEOREM: Haralick features: 14 statistical measures from GLCM matrix
+//!   THEOREM: Radiomics quality score: RQS = Σ (compliance_score * weight) for feature reliability
+//!   REFERENCES: IBSI (Image Biomarker Standardization Initiative) guidelines; Haralick et al. (1973)
 //!
 //! # Literature References
 //!

@@ -68,14 +68,14 @@ impl BeamformingProcessor3D {
         #[cfg(not(feature = "gpu"))]
         {
             let _ = config;
-            return Err(KwaversError::System(
+            Err(KwaversError::System(
                 crate::core::error::SystemError::FeatureNotAvailable {
                     feature: "gpu".to_string(),
                     reason:
                         "GPU acceleration required for 3D beamforming. Enable with --features gpu"
                             .to_string(),
                 },
-            ));
+            ))
         }
 
         #[cfg(feature = "gpu")]

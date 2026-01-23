@@ -6,13 +6,13 @@
 //! - Interface Segregation: Traits for specific chemical behaviors
 //! - Dependency Inversion: Depends on abstractions (traits) not concrete types
 //! - Single Responsibility: Each component has one clear purpose
-//! TODO_AUDIT: P2 - Sonochemistry Coupling - Add comprehensive sonochemistry module with complete reaction kinetics and free radical production tracking, expanding beyond current simplified models
-//! DEPENDS ON: physics/chemistry/kinetics/master_equation.rs, physics/chemistry/radicals/diffusion.rs
-//! MISSING: Master equation for radical kinetics: d[N]/dt = ∑ kᵢⱼ [N]ⱼ with full reaction network
-//! MISSING: Smoluchowski diffusion equation for radical recombination: ∂[R]/∂t = D∇²[R] - 2k[R]²
-//! MISSING: Multiple radical species: OH•, H•, HO₂•, O₂⁻•, eₐq⁻ with cross-reactions
-//! MISSING: Temperature-dependent reaction rates: k(T) = A exp(-Eₐ/RT) with Arrhenius kinetics
-//! MISSING: pH-dependent speciation and acid-base equilibria affecting radical yields
+//!   TODO_AUDIT: P2 - Sonochemistry Coupling - Add comprehensive sonochemistry module with complete reaction kinetics and free radical production tracking, expanding beyond current simplified models
+//!   DEPENDS ON: physics/chemistry/kinetics/master_equation.rs, physics/chemistry/radicals/diffusion.rs
+//!   MISSING: Master equation for radical kinetics: d[N]/dt = ∑ kᵢⱼ [N]ⱼ with full reaction network
+//!   MISSING: Smoluchowski diffusion equation for radical recombination: ∂[R]/∂t = D∇²[R] - 2k[R]²
+//!   MISSING: Multiple radical species: OH•, H•, HO₂•, O₂⁻•, eₐq⁻ with cross-reactions
+//!   MISSING: Temperature-dependent reaction rates: k(T) = A exp(-Eₐ/RT) with Arrhenius kinetics
+//!   MISSING: pH-dependent speciation and acid-base equilibria affecting radical yields
 
 use crate::core::error::{KwaversResult, ValidationError};
 use crate::domain::grid::Grid;

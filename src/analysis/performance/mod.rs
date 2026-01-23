@@ -6,17 +6,17 @@
 //! ## Literature References
 //!
 //! 1. **Williams, S., Waterman, A., & Patterson, D. (2009)**. "Roofline: an
-//!   insightful visual performance model for multicore architectures."
-//!   *Communications of ACM*, 52(4), 65-76. DOI: 10.1145/1498765.1498785.
+//!    insightful visual performance model for multicore architectures."
+//!    *Communications of ACM*, 52(4), 65-76. DOI: 10.1145/1498765.1498785.
 //!
 //! 2. **Datta, K., et al. (2008)**. "Stencil computation optimization and
-//!   auto-tuning on state-of-the-art multicore architectures." *SC'08:
-//!   Proceedings of the 2008 ACM/IEEE conference on Supercomputing* (pp. 1-12).
-//!   DOI: 10.1109/SC.2008.5222004.
+//!    auto-tuning on state-of-the-art multicore architectures." *SC'08:
+//!    Proceedings of the 2008 ACM/IEEE conference on Supercomputing* (pp. 1-12).
+//!    DOI: 10.1109/SC.2008.5222004.
 //!
 //! 3. **Kamil, S., et al. (2010)**. "An auto-tuning framework for parallel
-//!   multicore stencil computations." *2010 IEEE International Symposium on
-//!   Parallel & Distributed Processing* (pp. 1-12). DOI: 10.1109/IPDPS.2010.5470421.
+//!    multicore stencil computations." *2010 IEEE International Symposium on
+//!    Parallel & Distributed Processing* (pp. 1-12). DOI: 10.1109/IPDPS.2010.5470421.
 //!
 //! ## Optimization Techniques
 //!

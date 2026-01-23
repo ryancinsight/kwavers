@@ -6,13 +6,13 @@
 //! - **Optical/Infrared**: Light diffusion, scattering, polarization (optics submodule)
 //! - **Photoacoustic**: EM-acoustic coupling for imaging
 //! - **Plasmonics**: Surface plasmon effects and nanophotonics
-//! TODO_AUDIT: P2 - Electromagnetic Propagation - Implement full Maxwell's equations solver for electromagnetic propagation of sonoluminescence light, adding time-domain FDTD for light waves
-//! DEPENDS ON: solver/fdtd/electromagnetic.rs, physics/electromagnetic/boundary/pml.rs
-//! MISSING: Time-domain Maxwell's equations: ∂E/∂t = (∇×H - J)/ε, ∂H/∂t = -∇×E/μ
-//! MISSING: Perfectly Matched Layer (PML) absorbing boundaries for open domain problems
-//! MISSING: Dispersive material models: ε(ω), μ(ω) for broadband sonoluminescence spectra
-//! MISSING: Nonlinear optics effects for intense sonoluminescence pulses
-//! MISSING: Photon transport equation coupling with radiative transfer
+//!   TODO_AUDIT: P2 - Electromagnetic Propagation - Implement full Maxwell's equations solver for electromagnetic propagation of sonoluminescence light, adding time-domain FDTD for light waves
+//!   DEPENDS ON: solver/fdtd/electromagnetic.rs, physics/electromagnetic/boundary/pml.rs
+//!   MISSING: Time-domain Maxwell's equations: ∂E/∂t = (∇×H - J)/ε, ∂H/∂t = -∇×E/μ
+//!   MISSING: Perfectly Matched Layer (PML) absorbing boundaries for open domain problems
+//!   MISSING: Dispersive material models: ε(ω), μ(ω) for broadband sonoluminescence spectra
+//!   MISSING: Nonlinear optics effects for intense sonoluminescence pulses
+//!   MISSING: Photon transport equation coupling with radiative transfer
 //!
 //! ## Hierarchical Organization
 //!

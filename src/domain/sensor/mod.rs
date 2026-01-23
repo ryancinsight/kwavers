@@ -13,6 +13,10 @@ pub mod passive_acoustic_mapping; // Multi-lateration localization system
 pub mod recorder; // Shared sensor recording logic
 pub mod sonoluminescence; // Sonoluminescence detector
 
+// Ultrafast ultrasound imaging (plane wave compounding, high frame rate)
+// Based on: Nouhoum et al. (2021), Tanter & Fink (2014), Montaldo et al. (2009)
+pub mod ultrafast;
+
 // Canonical high-level probe set (supports both acoustics + optics).
 pub use grid_sampling::{GridPoint, GridSensorSet};
 

@@ -19,7 +19,7 @@
 //! - Adiabatic approximation breaks down at extreme compression ratios
 //! - Neglects thermal conduction and mass transfer effects
 //! - Single-bubble approximation (no bubble-bubble interactions)
-//! TODO_AUDIT: P1 - Quantum Emission Models - Implement full quantum mechanical bremsstrahlung and Cherenkov radiation with relativistic corrections, replacing classical approximations
+//!   TODO_AUDIT: P1 - Quantum Emission Models - Implement full quantum mechanical bremsstrahlung and Cherenkov radiation with relativistic corrections, replacing classical approximations
 //!
 //! **References:**
 //! - Prosperetti (1991): "Bubble dynamics in a compressible liquid"

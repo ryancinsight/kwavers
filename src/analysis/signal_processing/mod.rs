@@ -158,6 +158,10 @@ pub mod filtering;
 pub mod localization;
 pub mod pam;
 
+// Clutter filtering for Doppler and functional ultrasound
+// Based on: Demené et al. (2015), Nouhoum et al. (2021)
+pub mod clutter_filter;
+
 // Future modules (planned)
 // pub mod spectral;       // Spectral analysis (FFT, STFT, etc.)
 // pub mod deconvolution;  // Point spread function deconvolution
