@@ -227,6 +227,216 @@ impl BemBoundaryManager {
         Ok(())
     }
 
+    /// Assemble the linear system Ax = b for the BEM solver
+    ///
+    /// This method constructs the system matrix A and RHS vector b by combining
+    /// H and G matrices according to the boundary conditions.
+    pub fn assemble_bem_system(
+        &self,
+        h_matrix: &CompressedSparseRowMatrix<Complex64>,
+        g_matrix: &CompressedSparseRowMatrix<Complex64>,
+        wavenumber: f64,
+    ) -> KwaversResult<(CompressedSparseRowMatrix<Complex64>, Array1<Complex64>)> {
+        let n = h_matrix.rows;
+
+        // Build BC lookup table
+        #[derive(Clone, Copy)]
+        enum NodeBc {
+            None,
+            Dirichlet(Complex64),
+            Neumann(Complex64),
+            Robin(f64, Complex64),
+            Radiation,
+        }
+
+        let mut bc_map = vec![NodeBc::None; n];
+        for condition in &self.conditions {
+            match condition {
+                BemBoundaryCondition::Dirichlet(nodes) => {
+                    for &(idx, val) in nodes {
+                        if idx < n { bc_map[idx] = NodeBc::Dirichlet(val); }
+                    }
+                }
+                BemBoundaryCondition::Neumann(nodes) => {
+                    for &(idx, val) in nodes {
+                        if idx < n { bc_map[idx] = NodeBc::Neumann(val); }
+                    }
+                }
+                BemBoundaryCondition::Robin(nodes) => {
+                    for &(idx, alpha, val) in nodes {
+                        if idx < n { bc_map[idx] = NodeBc::Robin(alpha, val); }
+                    }
+                }
+                BemBoundaryCondition::Radiation(nodes) => {
+                    for &idx in nodes {
+                        if idx < n { bc_map[idx] = NodeBc::Radiation; }
+                    }
+                }
+            }
+        }
+
+        let mut a_values = Vec::new();
+        let mut a_col_indices = Vec::new();
+        let mut a_row_pointers = vec![0; n + 1];
+        let mut b = Array1::zeros(n);
+        let mut a_nnz = 0;
+
+        for i in 0..n {
+            a_row_pointers[i] = a_values.len();
+
+            // Collect entries for row i
+            let mut row_entries: Vec<(usize, Complex64)> = Vec::new();
+
+            // Process H row (H * p)
+            let (h_vals, h_cols) = h_matrix.get_row(i);
+            for (&val, &col) in h_vals.iter().zip(h_cols.iter()) {
+                 match bc_map[col] {
+                     NodeBc::Dirichlet(p_known) => {
+                         // H_ij * p_j term. p_j is known. Move to RHS.
+                         b[i] -= val * p_known;
+                     },
+                     NodeBc::Neumann(_) | NodeBc::Robin(_, _) | NodeBc::Radiation | NodeBc::None => {
+                         // p_j is unknown (or depends on unknown). Add to A.
+                         row_entries.push((col, val));
+                     },
+                 }
+            }
+
+            // Process G row (-G * q)
+            let (g_vals, g_cols) = g_matrix.get_row(i);
+            for (&val, &col) in g_vals.iter().zip(g_cols.iter()) {
+                // Term is -G_ij * q_j
+                 match bc_map[col] {
+                     NodeBc::Dirichlet(_) => {
+                         // q_j is unknown. Add -G_ij to A.
+                         row_entries.push((col, -val));
+                     },
+                     NodeBc::Neumann(q_known) => {
+                         // q_j is known. Move -G_ij * q_known to RHS => b[i] += G_ij * q_known.
+                         b[i] += val * q_known;
+                     },
+                     NodeBc::Robin(alpha, g_known) => {
+                         // q_j = g_known - alpha * p_j.
+                         // Term: -G_ij * (g_known - alpha * p_j) = -G_ij * g_known + alpha * G_ij * p_j.
+                         // -G_ij * g_known goes to RHS => b[i] += G_ij * g_known.
+                         b[i] += val * g_known;
+                         // alpha * G_ij * p_j adds to A_ij coefficient for p_j.
+                         row_entries.push((col, val * alpha));
+                     },
+                     NodeBc::Radiation => {
+                         // Radiation: q_j = ik * p_j (outgoing wave approximation)
+                         // Term: -G_ij * (ik * p_j) = -ik * G_ij * p_j
+                         let ik = Complex64::new(0.0, wavenumber);
+                         row_entries.push((col, -val * ik));
+                     },
+                     NodeBc::None => {
+                         // Default: Neumann with 0 flux (Hard wall). q_j = 0.
+                         // No contribution.
+                     }
+                 }
+            }
+
+            // Merge and sum duplicate column entries
+            row_entries.sort_by_key(|e| e.0);
+            for (col, val) in row_entries {
+                 if !a_col_indices.is_empty() && *a_col_indices.last().unwrap() == col && a_values.len() > a_row_pointers[i] {
+                     let last_idx = a_values.len() - 1;
+                     a_values[last_idx] += val;
+                 } else {
+                     a_values.push(val);
+                     a_col_indices.push(col);
+                     a_nnz += 1;
+                 }
+            }
+        }
+        a_row_pointers[n] = a_values.len();
+
+        let a_matrix = CompressedSparseRowMatrix {
+            rows: n,
+            cols: n,
+            values: a_values,
+            col_indices: a_col_indices,
+            row_pointers: a_row_pointers,
+            nnz: a_nnz,
+        };
+
+        Ok((a_matrix, b))
+    }
+
+    /// Reconstruct full pressure and velocity fields from the solver solution
+    pub fn reconstruct_solution(
+        &self,
+        x: &Array1<Complex64>,
+        wavenumber: f64,
+    ) -> (Array1<Complex64>, Array1<Complex64>) {
+        let n = x.len();
+        let mut pressure = Array1::zeros(n);
+        let mut velocity = Array1::zeros(n);
+
+        // Build BC lookup table (same as assemble)
+        #[derive(Clone, Copy)]
+        enum NodeBc {
+            None,
+            Dirichlet(Complex64),
+            Neumann(Complex64),
+            Robin(f64, Complex64),
+            Radiation,
+        }
+
+        let mut bc_map = vec![NodeBc::None; n];
+        for condition in &self.conditions {
+            match condition {
+                BemBoundaryCondition::Dirichlet(nodes) => {
+                    for &(idx, val) in nodes {
+                        if idx < n { bc_map[idx] = NodeBc::Dirichlet(val); }
+                    }
+                }
+                BemBoundaryCondition::Neumann(nodes) => {
+                    for &(idx, val) in nodes {
+                        if idx < n { bc_map[idx] = NodeBc::Neumann(val); }
+                    }
+                }
+                BemBoundaryCondition::Robin(nodes) => {
+                    for &(idx, alpha, val) in nodes {
+                        if idx < n { bc_map[idx] = NodeBc::Robin(alpha, val); }
+                    }
+                }
+                BemBoundaryCondition::Radiation(nodes) => {
+                    for &idx in nodes {
+                        if idx < n { bc_map[idx] = NodeBc::Radiation; }
+                    }
+                }
+            }
+        }
+
+        for i in 0..n {
+            match bc_map[i] {
+                NodeBc::Dirichlet(p_known) => {
+                    pressure[i] = p_known;
+                    velocity[i] = x[i]; // x_i is q_i
+                },
+                NodeBc::Neumann(q_known) => {
+                    pressure[i] = x[i]; // x_i is p_i
+                    velocity[i] = q_known;
+                },
+                NodeBc::Robin(alpha, g_known) => {
+                    pressure[i] = x[i]; // x_i is p_i
+                    velocity[i] = g_known - alpha * x[i];
+                },
+                NodeBc::Radiation => {
+                    pressure[i] = x[i]; // x_i is p_i
+                    velocity[i] = Complex64::new(0.0, wavenumber) * x[i];
+                },
+                NodeBc::None => {
+                    pressure[i] = x[i]; // x_i is p_i
+                    velocity[i] = Complex64::default();
+                }
+            }
+        }
+
+        (pressure, velocity)
+    }
+
     /// Get the number of boundary conditions
     #[must_use]
     pub fn len(&self) -> usize {
