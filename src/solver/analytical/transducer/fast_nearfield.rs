@@ -62,17 +62,49 @@ pub struct FastNearfieldSolver {
     c0: f64,
     /// Density (kg/m³)
     rho0: f64,
+    /// Precomputed kx coordinates
+    kx: Vec<f64>,
+    /// Precomputed ky coordinates
+    ky: Vec<f64>,
 }
 
 impl FastNearfieldSolver {
     /// Create new FNM solver
     pub fn new(config: FNMConfig) -> Result<Self, String> {
+        let (n_kx, n_ky) = config.angular_spectrum_size;
+        let dkx = 2.0 * PI / (config.dx * n_kx as f64);
+        let dky = 2.0 * PI / (config.dy * n_ky as f64);
+
+        let mut kx = Vec::with_capacity(n_kx);
+        let mut ky = Vec::with_capacity(n_ky);
+
+        // Create k-space coordinates (centered at zero)
+        for i in 0..n_kx {
+            let i_centered = if i < n_kx / 2 {
+                i as f64
+            } else {
+                i as f64 - n_kx as f64
+            };
+            kx.push(i_centered * dkx);
+        }
+
+        for i in 0..n_ky {
+            let i_centered = if i < n_ky / 2 {
+                i as f64
+            } else {
+                i as f64 - n_ky as f64
+            };
+            ky.push(i_centered * dky);
+        }
+
         Ok(Self {
             config,
             cached_factors: HashMap::new(),
             transducer: None,
             c0: 1500.0,   // Default water speed
             rho0: 1000.0, // Default water density
+            kx,
+            ky,
         })
     }
 
@@ -117,41 +149,12 @@ impl FastNearfieldSolver {
         let (n_kx, n_ky) = self.config.angular_spectrum_size;
         let k = transducer.wavenumber(self.c0);
 
-        // Create k-space grid
-        let dkx = 2.0 * PI / (self.config.dx * n_kx as f64);
-        let dky = 2.0 * PI / (self.config.dx * n_ky as f64);
-
-        let _kx_max = self.config.k_max_factor * PI / self.config.dx;
-        let _ky_max = self.config.k_max_factor * PI / self.config.dy;
-
-        let mut kx = Vec::with_capacity(n_kx);
-        let mut ky = Vec::with_capacity(n_ky);
-
-        // Create k-space coordinates (centered at zero)
-        for i in 0..n_kx {
-            let i_centered = if i < n_kx / 2 {
-                i as f64
-            } else {
-                i as f64 - n_kx as f64
-            };
-            kx.push(i_centered * dkx);
-        }
-
-        for i in 0..n_ky {
-            let i_centered = if i < n_ky / 2 {
-                i as f64
-            } else {
-                i as f64 - n_ky as f64
-            };
-            ky.push(i_centered * dky);
-        }
-
         // Compute angular spectrum of Green's function
         // Based on McGough (2004) and Kelly & McGough (2006)
         let mut green_spectrum = Array2::<Complex64>::zeros((n_kx, n_ky));
 
-        for (i, &kx_val) in kx.iter().enumerate() {
-            for (j, &ky_val) in ky.iter().enumerate() {
+        for (i, &kx_val) in self.kx.iter().enumerate() {
+            for (j, &ky_val) in self.ky.iter().enumerate() {
                 let k_rho_squared = kx_val * kx_val + ky_val * ky_val;
 
                 if k_rho_squared < k * k {
@@ -185,8 +188,8 @@ impl FastNearfieldSolver {
         Ok(AngularSpectrumFactors {
             z,
             green_spectrum,
-            kx,
-            ky,
+            kx: self.kx.clone(),
+            ky: self.ky.clone(),
         })
     }
 
@@ -320,6 +323,10 @@ impl FastNearfieldSolver {
             total += factors.ky.len() * std::mem::size_of::<f64>();
         }
 
+        // Base memory for precomputed vectors
+        total += self.kx.len() * std::mem::size_of::<f64>();
+        total += self.ky.len() * std::mem::size_of::<f64>();
+
         total
     }
 }
@@ -412,7 +419,7 @@ mod tests {
     #[test]
     fn test_memory_usage() {
         let config = FNMConfig::default();
-        let mut solver = FastNearfieldSolver::new(config).unwrap();
+        let mut solver = FastNearfieldSolver::new(config.clone()).unwrap();
 
         let transducer = RectangularTransducer {
             width: 10e-3,
@@ -430,6 +437,11 @@ mod tests {
         // Clear cache and check memory drops
         solver.clear_cache();
         let usage_after_clear = solver.memory_usage();
-        assert_eq!(usage_after_clear, 0);
+
+        // Usage should not be zero anymore due to precomputed vectors
+        // Default config: 512x512 -> kx=512, ky=512 -> 1024 * 8 bytes = 8192 bytes
+        let (n_kx, n_ky) = config.angular_spectrum_size;
+        let expected_base_usage = (n_kx + n_ky) * std::mem::size_of::<f64>();
+        assert_eq!(usage_after_clear, expected_base_usage);
     }
 }

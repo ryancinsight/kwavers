@@ -6,6 +6,7 @@
 use super::csr::CompressedSparseRowMatrix;
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::{Array1, ArrayView1};
+use num_complex::Complex64;
 
 /// Solver configuration
 #[derive(Debug, Clone)]
@@ -184,5 +185,149 @@ impl IterativeSolver {
             iterations: self.config.max_iterations,
             error: final_residual,
         }))
+    }
+
+    /// Solve complex system using `BiCGSTAB`
+    pub fn bicgstab_complex(
+        &self,
+        a: &CompressedSparseRowMatrix<Complex64>,
+        b: ArrayView1<Complex64>,
+        x0: Option<ArrayView1<Complex64>>,
+    ) -> KwaversResult<Array1<Complex64>> {
+        let n = a.rows;
+        let mut x = x0.map_or_else(|| Array1::from_elem(n, Complex64::default()), |v| v.to_owned());
+
+        let mut r = b.to_owned() - a.multiply_vector(x.view())?;
+        let r0 = r.clone();
+
+        let mut rho = Complex64::new(1.0, 0.0);
+        let mut alpha = Complex64::new(1.0, 0.0);
+        let mut omega = Complex64::new(1.0, 0.0);
+
+        let mut v = Array1::from_elem(n, Complex64::default());
+        let mut p = Array1::from_elem(n, Complex64::default());
+
+        for iteration in 0..self.config.max_iterations {
+            let rho_prev = rho;
+            // Conjugated dot product (r0^H * r) for BiCG orthogonality
+            rho = r0.iter().zip(r.iter()).map(|(a, b)| a.conj() * b).sum::<Complex64>();
+
+            if rho.norm() < 1e-14 {
+                if self.config.verbose {
+                    log::info!("BiCGSTAB (Complex) converged/breakdown in {} iterations", iteration);
+                }
+                break;
+            }
+
+            let beta = (rho / rho_prev) * (alpha / omega);
+            p = &r + beta * (&p - omega * &v);
+
+            v = a.multiply_vector(p.view())?;
+
+            // Conjugated dot product (r0^H * v)
+            let r0_v = r0.iter().zip(v.iter()).map(|(a, b)| a.conj() * b).sum::<Complex64>();
+            if r0_v.norm() < 1e-14 {
+                 // Prevent division by zero
+                 alpha = Complex64::new(1.0, 0.0);
+            } else {
+                 alpha = rho / r0_v;
+            }
+
+            let s = &r - alpha * &v;
+
+            let s_norm = s.iter().map(|c| c.norm_sqr()).sum::<f64>().sqrt();
+            if s_norm < self.config.tolerance {
+                x = x + alpha * p;
+                return Ok(x);
+            }
+
+            let t = a.multiply_vector(s.view())?;
+
+            // Minimize residual norm: omega = (t, s) / (t, t) with conjugate inner product
+            let t_norm_sqr = t.iter().map(|c| c.norm_sqr()).sum::<f64>();
+            let t_s_dot = t.iter().zip(s.iter()).map(|(ti, si)| ti.conj() * si).sum::<Complex64>();
+
+            if t_norm_sqr < 1e-14 {
+                omega = Complex64::new(0.0, 0.0);
+            } else {
+                omega = t_s_dot / t_norm_sqr; // t_norm_sqr is real
+            }
+
+            x = x + alpha * &p + omega * &s;
+            r = s - omega * t;
+
+            let residual_norm = r.iter().map(|c| c.norm_sqr()).sum::<f64>().sqrt();
+            if residual_norm < self.config.tolerance {
+                if self.config.verbose {
+                    log::info!(
+                        "BiCGSTAB (Complex) converged in {} iterations, residual: {:.2e}",
+                        iteration + 1,
+                        residual_norm
+                    );
+                }
+                return Ok(x);
+            }
+        }
+
+        let final_residual = r.iter().map(|c| c.norm_sqr()).sum::<f64>().sqrt();
+        if self.config.verbose {
+            log::warn!(
+                "BiCGSTAB (Complex) failed to converge after {} iterations, residual: {:.2e}",
+                self.config.max_iterations,
+                final_residual
+            );
+        }
+
+        Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
+            method: "bicgstab_complex".to_string(),
+            iterations: self.config.max_iterations,
+            error: final_residual,
+        }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::math::linear_algebra::sparse::CompressedSparseRowMatrix;
+    use num_complex::Complex64;
+
+    #[test]
+    fn test_bicgstab_complex_identity() {
+        // Solve I * x = b
+        let mut a = CompressedSparseRowMatrix::<Complex64>::create(2, 2);
+        a.set_diagonal(0, Complex64::new(1.0, 0.0));
+        a.set_diagonal(1, Complex64::new(1.0, 0.0));
+
+        let b = Array1::from_vec(vec![Complex64::new(1.0, 1.0), Complex64::new(2.0, 2.0)]);
+
+        let config = SolverConfig::default();
+        let solver = IterativeSolver::create(config);
+
+        let x = solver.bicgstab_complex(&a, b.view(), None).unwrap();
+
+        assert!((x[0] - Complex64::new(1.0, 1.0)).norm() < 1e-6);
+        assert!((x[1] - Complex64::new(2.0, 2.0)).norm() < 1e-6);
+    }
+
+    #[test]
+    fn test_bicgstab_complex_diagonal() {
+        // Solve A * x = b where A = diag(2+i, 3+2i)
+        // We choose values to ensure b dot b != 0 (avoid breakdown)
+        let mut a = CompressedSparseRowMatrix::<Complex64>::create(2, 2);
+        a.set_diagonal(0, Complex64::new(2.0, 1.0));
+        a.set_diagonal(1, Complex64::new(3.0, 2.0));
+
+        // Let target x = (1, 1)
+        // b = A * x = (2+i, 3+2i)
+        let b = Array1::from_vec(vec![Complex64::new(2.0, 1.0), Complex64::new(3.0, 2.0)]);
+
+        let config = SolverConfig::default();
+        let solver = IterativeSolver::create(config);
+
+        let x = solver.bicgstab_complex(&a, b.view(), None).unwrap();
+
+        assert!((x[0] - Complex64::new(1.0, 0.0)).norm() < 1e-6);
+        assert!((x[1] - Complex64::new(1.0, 0.0)).norm() < 1e-6);
     }
 }

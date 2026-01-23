@@ -92,6 +92,8 @@ pub struct AcousticWaveSolver {
     backend: Box<dyn AcousticSolverBackend>,
     /// Computational grid
     grid: Grid,
+    /// Accumulated squared pressure for temporal averaging (Pa²)
+    accumulated_p_squared: Array3<f64>,
 }
 
 impl AcousticWaveSolver {
@@ -152,10 +154,12 @@ impl AcousticWaveSolver {
         // Phase 1 implementation: Always use FDTD backend
         // Phase 2 (Sprint 212) will add PSTD backend selection logic
         let backend = Self::create_fdtd_backend(grid, medium)?;
+        let dims = (grid.nx, grid.ny, grid.nz);
 
         Ok(Self {
             backend,
             grid: grid.clone(),
+            accumulated_p_squared: Array3::zeros(dims),
         })
     }
 
@@ -210,7 +214,14 @@ impl AcousticWaveSolver {
     /// }
     /// ```
     pub fn step(&mut self) -> KwaversResult<()> {
-        self.backend.step()
+        self.backend.step()?;
+
+        // Accumulate squared pressure for SPTA calculation
+        let p = self.backend.get_pressure_field();
+        self.accumulated_p_squared
+            .zip_mut_with(p, |acc, &val| *acc += val * val);
+
+        Ok(())
     }
 
     /// Advance simulation by specified time duration
@@ -396,12 +407,33 @@ impl AcousticWaveSolver {
     ///     println!("Within FDA diagnostic limits");
     /// }
     /// ```
-    pub fn spta_intensity(&self, _averaging_time: f64) -> KwaversResult<f64> {
-        // TODO: Implement temporal averaging (requires field history buffer)
-        // Current implementation returns instantaneous spatial peak
-        let intensity = self.intensity_field()?;
-        let spatial_peak = intensity.iter().cloned().fold(0.0, f64::max);
-        Ok(spatial_peak / 1e4) // Convert W/m² to W/cm²
+    pub fn spta_intensity(&self, averaging_time: f64) -> KwaversResult<f64> {
+        if averaging_time <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "Averaging time must be positive".into(),
+            ));
+        }
+
+        // Retrieve impedance map from backend (Z = ρc)
+        let impedance = self.backend.get_impedance_field()?;
+        let dt = self.backend.get_dt();
+
+        // Compute temporal average intensity field
+        // I_ta = (1/T_avg) * ∫ (p²/Z) dt  ≈ (dt/T_avg) * Σ(p²)/Z
+        // Note: accumulated_p_squared stores Σ(p²)
+        let normalization = dt / averaging_time;
+
+        // Compute max intensity directly or via map
+        // I = accumulated * normalization / impedance
+        let i_spta = self.accumulated_p_squared
+            .iter()
+            .zip(impedance.iter())
+            .fold(0.0_f64, |max_val, (&acc_p2, &z)| {
+                let val = (acc_p2 * normalization) / z;
+                if val.is_nan() { max_val } else { max_val.max(val) }
+            });
+
+        Ok(i_spta / 1e4) // Convert W/m² to W/cm²
     }
 
     /// Add dynamic source to simulation
@@ -622,5 +654,20 @@ mod tests {
         // Zero duration should succeed without stepping
         solver.advance(0.0).expect("Zero advance failed");
         assert_eq!(solver.current_time(), 0.0);
+    }
+
+    #[test]
+    fn test_spta_intensity_validation() {
+        let grid = create_test_grid();
+        let medium = create_water_medium(&grid);
+        let solver = AcousticWaveSolver::new(&grid, &medium).unwrap();
+
+        // Should return error for negative or zero time
+        assert!(solver.spta_intensity(-1.0).is_err());
+        assert!(solver.spta_intensity(0.0).is_err());
+
+        // Should return OK for positive time (even with zero field)
+        assert!(solver.spta_intensity(1.0).is_ok());
+        assert_eq!(solver.spta_intensity(1.0).unwrap(), 0.0);
     }
 }

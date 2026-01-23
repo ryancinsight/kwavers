@@ -38,6 +38,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::mesh::tetrahedral::TetrahedralMesh;
 use crate::math::numerics::operators::TrilinearInterpolator;
+use nalgebra::Vector3;
 use std::collections::HashMap;
 
 /// Configuration for BEM-FEM coupling
@@ -124,14 +125,32 @@ impl BemFemInterface {
 
     /// Check if a FEM node lies on the BEM interface
     fn is_node_on_interface(
-        _node: &crate::domain::mesh::tetrahedral::MeshNode,
-        _bem_boundary: &[usize],
-        _fem_mesh: &TetrahedralMesh,
+        node: &crate::domain::mesh::tetrahedral::MeshNode,
+        bem_boundary: &[usize],
+        fem_mesh: &TetrahedralMesh,
     ) -> bool {
-        // TODO: Simplified geometric check - in practice would check if node
-        // coordinates lie on the boundary surface defined by BEM elements
-        // For now, assume some nodes are on the interface
-        false // Placeholder - would need actual geometric computation
+        // Fast path: if the node index is explicitly in the boundary list
+        if bem_boundary.contains(&node.index) {
+            return true;
+        }
+
+        // Geometric check: check if node coordinates lie on the boundary surface defined by BEM elements
+        // Since bem_boundary contains node indices, we check proximity to any of these nodes.
+        let tolerance_sq = 1e-12; // Corresponding to 1e-6 distance
+
+        for &bem_node_idx in bem_boundary {
+            if let Some(bem_node) = fem_mesh.nodes.get(bem_node_idx) {
+                let dx = node.coordinates[0] - bem_node.coordinates[0];
+                let dy = node.coordinates[1] - bem_node.coordinates[1];
+                let dz = node.coordinates[2] - bem_node.coordinates[2];
+
+                if dx * dx + dy * dy + dz * dz < tolerance_sq {
+                    return true;
+                }
+            }
+        }
+
+        false
     }
 
     /// Find corresponding BEM element for a FEM node
@@ -189,12 +208,80 @@ impl BemFemInterface {
         fem_mesh: &TetrahedralMesh,
     ) -> Vec<(f64, f64, f64)> {
         let mut normals = Vec::new();
+        let mut accumulated_normals: HashMap<usize, Vector3<f64>> = HashMap::new();
+
+        // Accumulate weighted normals from boundary faces
+        for (face_nodes, &(elem_idx, _)) in &fem_mesh.boundary_faces {
+            // Get element to determine orientation
+            if let Some(element) = fem_mesh.elements.get(elem_idx) {
+                // Get face vertices
+                // Note: face_nodes are sorted, so we can't trust winding order from them.
+                // We use local_face_idx to get proper winding if needed, or check against 4th node.
+                // Let's get the 3 nodes of the face.
+                let n1_idx = face_nodes[0];
+                let n2_idx = face_nodes[1];
+                let n3_idx = face_nodes[2];
+
+                if let (Some(n1), Some(n2), Some(n3)) = (
+                    fem_mesh.nodes.get(n1_idx),
+                    fem_mesh.nodes.get(n2_idx),
+                    fem_mesh.nodes.get(n3_idx),
+                ) {
+                    let v1 = Vector3::from(n1.coordinates);
+                    let v2 = Vector3::from(n2.coordinates);
+                    let v3 = Vector3::from(n3.coordinates);
+
+                    // Compute face normal (unnormalized to weight by area)
+                    let edge1 = v2 - v1;
+                    let edge2 = v3 - v1;
+                    let mut face_normal = edge1.cross(&edge2);
+
+                    // Identify the 4th node (opposite node)
+                    // element.nodes has 4 indices. face_nodes has 3.
+                    // The one missing in face_nodes is the opposite node.
+                    let opp_node_idx = element
+                        .nodes
+                        .iter()
+                        .find(|&&idx| !face_nodes.contains(&idx))
+                        .copied();
+
+                    if let Some(opp_idx) = opp_node_idx {
+                        if let Some(opp_node) = fem_mesh.nodes.get(opp_idx) {
+                            let v_opp = Vector3::from(opp_node.coordinates);
+                            // Vector from a face vertex to opposite node
+                            let to_interior = v_opp - v1;
+
+                            // If normal points towards interior (dot > 0), flip it
+                            if face_normal.dot(&to_interior) > 0.0 {
+                                face_normal = -face_normal;
+                            }
+                        }
+                    }
+
+                    // Accumulate to vertices
+                    for &idx in face_nodes {
+                        accumulated_normals
+                            .entry(idx)
+                            .and_modify(|n| *n += face_normal)
+                            .or_insert(face_normal);
+                    }
+                }
+            }
+        }
 
         for &node_idx in fem_nodes {
-            if let Some(_node) = fem_mesh.nodes.get(node_idx) {
-                // TODO: Compute normal vector pointing outward from FEM domain
-                // In practice, this would involve surface normal computation
-                normals.push((0.0, 0.0, 1.0)); // Placeholder normal
+            if let Some(normal) = accumulated_normals.get(&node_idx) {
+                let norm = normal.norm();
+                if norm > 1e-12 {
+                    let n = normal / norm;
+                    normals.push((n.x, n.y, n.z));
+                } else {
+                    normals.push((0.0, 0.0, 1.0)); // Fallback for degenerate geometry
+                }
+            } else {
+                // Node might not be on the boundary mesh stored in boundary_faces
+                // or mesh connectivity issue. Return default.
+                normals.push((0.0, 0.0, 1.0));
             }
         }
 
@@ -522,6 +609,29 @@ mod tests {
 
         // Interface creation should succeed even with simplified geometry
         assert!(interface.is_ok());
+        let interface = interface.unwrap();
+        assert_eq!(interface.fem_interface_nodes.len(), 3);
+        // Verify node 3 is NOT in interface
+        assert!(!interface.fem_interface_nodes.contains(&3));
+    }
+
+    #[test]
+    fn test_bem_fem_interface_geometric_match() {
+        let mut fem_mesh = TetrahedralMesh::new();
+        // Node 0: on boundary
+        let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
+        // Node 1: duplicate of n0, but different index. Should be detected via geometric check.
+        let n1 = fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
+
+        // BEM boundary uses only n0
+        let bem_boundary = vec![n0];
+
+        let interface = BemFemInterface::new(&fem_mesh, &bem_boundary).unwrap();
+
+        // Both n0 (index match) and n1 (geometric match) should be in interface
+        assert!(interface.fem_interface_nodes.contains(&n0));
+        assert!(interface.fem_interface_nodes.contains(&n1));
+        assert_eq!(interface.fem_interface_nodes.len(), 2);
     }
 
     #[test]
@@ -591,5 +701,59 @@ mod tests {
             n3,
             "Should find the node at distance 0.5"
         );
+    }
+
+    #[test]
+    fn test_compute_interface_normals_calculation() {
+        let mut fem_mesh = TetrahedralMesh::new();
+
+        // Create a single tetrahedron
+        // n0=(0,0,0), n1=(1,0,0), n2=(0,1,0), n3=(0,0,1)
+        // Orientation: right-hand rule
+        let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
+        let n1 = fem_mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
+        let n2 = fem_mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior);
+        let n3 = fem_mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior);
+
+        // Add element. This will compute adjacency and boundary faces.
+        fem_mesh.add_element([n0, n1, n2, n3], 0).unwrap();
+
+        // We want to test normals for the boundary nodes.
+        // All 4 nodes are on the boundary of this single tetrahedron.
+        let nodes = vec![n0, n1, n2, n3];
+
+        let normals = BemFemInterface::compute_interface_normals(&nodes, &fem_mesh);
+
+        assert_eq!(normals.len(), 4);
+
+        // Check n0 (origin).
+        // Shared by z=0, y=0, x=0 faces.
+        // Normals: (0,0,-1), (0,-1,0), (-1,0,0). Area weighted (0.5 each).
+        // Sum direction should be (-1, -1, -1).
+        let normal_n0 = normals[0];
+        let val = -1.0 / 3.0_f64.sqrt();
+        assert!((normal_n0.0 - val).abs() < 1e-6, "n0 x failed: expected {}, got {}", val, normal_n0.0);
+        assert!((normal_n0.1 - val).abs() < 1e-6, "n0 y failed: expected {}, got {}", val, normal_n0.1);
+        assert!((normal_n0.2 - val).abs() < 1e-6, "n0 z failed: expected {}, got {}", val, normal_n0.2);
+
+        // Check n3 (0,0,1).
+        // Shared by faces with normals (-1,0,0), (0,-1,0), (1,1,1).
+        // Weighted sum is (0,0,1).
+        let normal_n3 = normals[3];
+        assert!((normal_n3.0 - 0.0).abs() < 1e-6, "n3 x failed");
+        assert!((normal_n3.1 - 0.0).abs() < 1e-6, "n3 y failed");
+        assert!((normal_n3.2 - 1.0).abs() < 1e-6, "n3 z failed");
+
+        // Similarly for n1 (1,0,0) -> (1, 0, 0)
+        let normal_n1 = normals[1];
+        assert!((normal_n1.0 - 1.0).abs() < 1e-6, "n1 x failed");
+        assert!((normal_n1.1 - 0.0).abs() < 1e-6, "n1 y failed");
+        assert!((normal_n1.2 - 0.0).abs() < 1e-6, "n1 z failed");
+
+        // Similarly for n2 (0,1,0) -> (0, 1, 0)
+        let normal_n2 = normals[2];
+        assert!((normal_n2.0 - 0.0).abs() < 1e-6, "n2 x failed");
+        assert!((normal_n2.1 - 1.0).abs() < 1e-6, "n2 y failed");
+        assert!((normal_n2.2 - 0.0).abs() < 1e-6, "n2 z failed");
     }
 }
