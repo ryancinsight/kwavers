@@ -227,6 +227,16 @@ pub trait AcousticSolverBackend: Debug {
     /// New `Array3<f64>` with intensity in W/m². Convert to W/cm² by dividing by 10⁴.
     fn get_intensity_field(&self) -> KwaversResult<Array3<f64>>;
 
+    /// Get acoustic impedance field (kg/(m²·s))
+    ///
+    /// Returns the acoustic impedance field `Z = ρ₀c₀`. This is required for
+    /// computing intensity from pressure fields when using the plane wave approximation.
+    ///
+    /// # Return Value
+    ///
+    /// New `Array3<f64>` with impedance in Rayls (kg/(m²·s)).
+    fn get_impedance_field(&self) -> KwaversResult<Array3<f64>>;
+
     /// Get simulation time step (s)
     ///
     /// Returns the time step `dt` used by the backend for time integration.
@@ -359,6 +369,14 @@ mod tests {
             // I = p²/(ρc) with ρc = 1.5 MRayl for water
             let rho_c = 1.5e6;
             Ok(self.pressure.mapv(|p| p * p / rho_c))
+        }
+
+        fn get_impedance_field(&self) -> KwaversResult<Array3<f64>> {
+            // Return constant impedance for mock backend (1.5 MRayl)
+            Ok(Array3::from_elem(
+                (self.nx, self.ny, self.nz),
+                1.5e6,
+            ))
         }
 
         fn get_dt(&self) -> f64 {
