@@ -23,9 +23,9 @@
 //! - Pratt (2007): "Digital Image Processing" (4th ed.)
 //! - Gonzalez & Woods (2008): "Digital Image Processing"
 
+use super::types::FeatureMap;
+use crate::analysis::signal_processing::beamforming::neural::config::FeatureConfig;
 use crate::core::error::KwaversResult;
-use super::config::FeatureConfig;
-use crate::clinical::imaging::workflows::neural::types::FeatureMap;
 use ndarray::{Array3, ArrayView3};
 use std::collections::HashMap;
 

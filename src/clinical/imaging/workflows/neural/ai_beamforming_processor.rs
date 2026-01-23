@@ -24,13 +24,12 @@
 //! - Raissi et al. (2019): "Physics-informed neural networks"
 //! - Van Veen & Buckley (1988): "Beamforming: A versatile approach"
 
-use crate::core::error::KwaversResult;
-use crate::clinical::imaging::workflows::neural::ClinicalDecisionSupport;
-use super::config::FeatureConfig;
-use super::clinical_features::FeatureExtractor;
-use crate::clinical::imaging::workflows::neural::types::{
-    AIBeamformingResult, FeatureMap, PerformanceMetrics,
+use super::feature_extraction::FeatureExtractor;
+use super::{
+    types::{AIBeamformingConfig, AIBeamformingResult, FeatureMap, PerformanceMetrics},
+    ClinicalDecisionSupport,
 };
+use crate::core::error::KwaversResult;
 use crate::domain::sensor::beamforming::BeamformingProcessor;
 use ndarray::{Array3, ArrayView4};
 use std::time::Instant;
@@ -432,8 +431,8 @@ impl AIEnhancedBeamformingProcessor {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::config::FeatureConfig;
+    use super::*;
     use ndarray::Array4;
 
     #[derive(Debug)]

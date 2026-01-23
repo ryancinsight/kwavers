@@ -24,17 +24,22 @@
 //! replace clinical judgment and must be used in accordance with institutional protocols
 //! and regulatory requirements.
 
+pub mod ai_beamforming_processor;
 pub mod clinical;
 pub mod diagnosis;
+pub mod feature_extraction;
 pub mod workflow;
 
 // Public re-exports for convenient access
+pub use ai_beamforming_processor::{AIEnhancedBeamformingProcessor, PinnInferenceEngine};
 pub use clinical::ClinicalDecisionSupport;
 pub use diagnosis::DiagnosisAlgorithm;
+pub use feature_extraction::FeatureExtractor;
 pub use workflow::RealTimeWorkflow;
 
 // Type re-exports
 pub mod types;
 pub use types::{
-    ClinicalAnalysis, ClinicalThresholds, FeatureMap, LesionDetection, TissueClassification,
+    AIBeamformingConfig, AIBeamformingResult, ClinicalAnalysis, ClinicalThresholds, FeatureMap,
+    LesionDetection, PerformanceMetrics, TissueClassification,
 };

@@ -230,8 +230,7 @@ pub mod neural; // Neural/ML beamforming (PINN, distributed) // Experimental/res
 
 // Future algorithm modules (planned for Phase 3)
 pub mod narrowband; // Frequency-domain beamforming (awaiting migration)
-pub mod three_dimensional;  // 3D beamforming algorithms
-pub mod adaptive_domain;  // Domain-layer adaptive algorithms
+pub mod three_dimensional; // 3D beamforming algorithms
 
 // Test utilities (shared accessor layer for test modules)
 #[cfg(test)]
