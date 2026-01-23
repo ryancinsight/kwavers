@@ -237,6 +237,16 @@ fn run_comprehensive_simulation(
         let compression_ratio = r0 / r;
 
         // Estimate particle velocity from collapse dynamics (simplified)
+        // TODO_AUDIT: P1 - Complete Sonoluminescence Physics - Implement full quantum sonoluminescence with plasma kinetics and light emission
+        // DEPENDS ON: physics/optics/sonoluminescence/plasma_chemistry.rs, physics/optics/sonoluminescence/quantum_emission.rs
+        // MISSING: Saha-Boltzmann plasma ionization with partial LTE departure
+        // MISSING: Quantum mechanical bremsstrahlung and Cherenkov radiation
+        // MISSING: Multi-species plasma chemistry (H₂O dissociation, ion recombination)
+        // MISSING: Non-adiabatic bubble thermodynamics with shock heating
+        // MISSING: Light emission spectroscopy matching Brenner et al. (2002) experiments
+        // THEOREM: Rayleigh-Plesset equation: R̈ = (p_gas - p∞)/ρ - (3/2)(Ṙ)²/R - (4μṘ)/(ρR) - (2σ)/(ρR) - p_rad
+        // THEOREM: Gilkey-Lambrakis equation: T_max ∝ (P_ac * R_0)^{1/3} for inertial collapse
+        // REFERENCES: Brenner et al. (2002) Rev. Mod. Phys. 74, 425; Yasui (1997) Phys. Rev. E 56, 6750
         let velocity_estimate = if step > 0 {
             let dt_step = results.times[step] - results.times[step - 1];
             let dr = results.radii[step] - results.radii[step - 1];

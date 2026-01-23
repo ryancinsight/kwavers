@@ -231,6 +231,16 @@ impl LinearAlgebraExt<Complex<f64>> for Array2<Complex<f64>> {
     fn eig(&self) -> KwaversResult<(Array1<Complex<f64>>, Array2<Complex<f64>>)> {
         // For complex matrices, we need to return complex eigenvalues
         // This is a simplified implementation - in practice you'd use proper complex eigendecomposition
+        // TODO_AUDIT: P2 - Advanced Linear Algebra - Implement complete numerical linear algebra with iterative solvers and preconditioners
+        // DEPENDS ON: math/linear_algebra/iterative_solvers.rs, math/linear_algebra/preconditioners.rs, math/linear_algebra/sparse_matrices.rs
+        // MISSING: Krylov subspace methods (GMRES, BiCGSTAB) for large sparse systems
+        // MISSING: Algebraic multigrid preconditioners for elliptic PDEs
+        // MISSING: Sparse matrix formats (CSR, CSC, COO) with optimized operations
+        // MISSING: Eigenvalue algorithms for large matrices (ARPACK interface)
+        // MISSING: SVD and QR decompositions for least squares problems
+        // THEOREM: Conjugate gradient convergence: κ(A) = λ_max/λ_min bounds iteration count
+        // THEOREM: GMRES optimality: Residual minimized in Krylov subspace of dimension m
+        // REFERENCES: Saad (2003) Iterative Methods for Sparse Linear Systems; Golub & Van Loan (2013)
         Err(KwaversError::Numerical(NumericalError::NotImplemented {
             feature: "Complex eigendecomposition".to_string(),
         }))

@@ -120,6 +120,14 @@ impl crate::domain::plugin::Plugin for PSTDPlugin {
             .assign(&fields.index_axis(ndarray::Axis(0), vz_idx));
 
         // Sync density from pressure (Linear EOS approximation) to ensure consistency
+        // TODO_AUDIT: P2 - Advanced PSTD Methods - Implement high-order PSTD with nonlinear EOS and multi-scale coupling
+        // DEPENDS ON: solver/forward/pstd/nonlinear_eos.rs, solver/forward/pstd/multi_scale.rs, solver/forward/pstd/dispersion_correction.rs
+        // MISSING: Higher-order PSTD schemes (4th-order k-space derivatives)
+        // MISSING: Nonlinear equation of state (Tait, stiffened gas) for shock formation
+        // MISSING: Multi-scale coupling between different frequency bands
+        // MISSING: Anisotropic dispersion correction for broadband pulses
+        // MISSING: Perfectly matched layer (PML) absorbing boundaries
+        // MISSING: GPU acceleration for large-scale 3D PSTD simulations
         // rho = p / c0^2
         ndarray::Zip::from(&mut solver.rho)
             .and(&solver.fields.p)

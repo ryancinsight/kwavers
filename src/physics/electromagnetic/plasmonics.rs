@@ -191,6 +191,16 @@ impl PlasmonicEnhancement {
             CouplingModel::DipoleDipole => {
                 // Include dipole coupling effects
                 // This is a simplified model - real implementation would be more complex
+                // TODO_AUDIT: P2 - Advanced Plasmonics - Implement full electromagnetic plasmonics with quantum corrections and non-local effects
+                // DEPENDS ON: physics/electromagnetic/plasmonics/quantum.rs, physics/electromagnetic/plasmonics/nonlocal.rs, physics/electromagnetic/plasmonics/hydrodynamic.rs
+                // MISSING: Quantum plasmonics with electron spill-out and image charges
+                // MISSING: Non-local hydrodynamic Drude model for high frequencies
+                // MISSING: Surface plasmon polariton dispersion with retardation effects
+                // MISSING: Plasmon-exciton coupling in hybrid nanostructures
+                // MISSING: Finite element method for complex geometries beyond Mie theory
+                // THEOREM: Drude model: ε(ω) = ε_∞ - ω_p²/(ω² + jγω) with quantum corrections
+                // THEOREM: Plasmon dispersion: ω(k) = ω_p/√(1 + α k + β k²) with non-local parameter α
+                // REFERENCES: Maier (2007) Plasmonics; Novotny & Hecht (2006) Principles of Nano-Optics
                 let eps_particle = (self.mie_theory.particle_dielectric)(wavelength);
                 let lorentz_factor =
                     (3.0 * host_dielectric) / (eps_particle + 2.0 * host_dielectric);

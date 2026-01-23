@@ -280,6 +280,16 @@ impl FdtdSimdOps {
     }
 
     /// AVX-512 optimized pressure update (placeholder)
+    /// TODO_AUDIT: P2 - Advanced SIMD Vectorization - Implement full SIMD ecosystem with auto-vectorization and architecture-specific optimizations
+    /// DEPENDS ON: math/simd/avx512.rs, math/simd/neon.rs, math/simd/wasm_simd.rs, math/simd/auto_vectorize.rs
+    /// MISSING: Auto-vectorization compiler hints and loop transformations
+    /// MISSING: Architecture-specific instruction selection (AVX-512, AVX2, SSE4.2, NEON)
+    /// MISSING: Memory alignment optimizations and cache-aware algorithms
+    /// MISSING: SIMD transcendental functions (sin, cos, exp, log) implementations
+    /// MISSING: Gather/scatter operations for sparse matrix operations
+    /// THEOREM: Roofline model: Performance = min(Memory bandwidth × Operational intensity, Peak FLOPS)
+    /// THEOREM: SIMD efficiency: Speedup ≤ (SIMD width) / (1 + overhead_factor) for vector operations
+    /// REFERENCES: Intel AVX-512 Architecture Manual; ARM NEON Programming Reference
     /// TODO_AUDIT: P2 - SIMD Vectorization - Implement full AVX-512/AVX2 vectorization for FDTD wave propagation
     /// DEPENDS ON: math/simd/avx512.rs, math/simd/autovec.rs
     /// MISSING: AVX-512 gather/scatter operations for irregular grid access

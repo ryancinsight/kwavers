@@ -233,6 +233,14 @@
 //! ## Future Implementations
 //!
 //! This module is currently a placeholder. Algorithms will be migrated from
+//! TODO_AUDIT: P1 - Passive Acoustic Mapping - Implement full PAM algorithms for cavitation monitoring and sonoluminescence detection
+//! DEPENDS ON: analysis/signal_processing/pam/delay_sum.rs, analysis/signal_processing/pam/capon.rs, analysis/signal_processing/pam/das.rs
+//! MISSING: Time-reversal PAM for cavitation bubble localization (Montaldo et al. 2009)
+//! MISSING: Robust Capon beamforming for coherent cavitation noise suppression
+//! MISSING: MUSIC algorithm for super-resolution bubble detection
+//! MISSING: Subharmonic and ultraharmonic filtering for contrast agent differentiation
+//! MISSING: Real-time PAM with GPU acceleration for clinical feedback
+//! MISSING: PAM calibration using known cavitation sources (hydrophone validation)
 //! `domain::sensor::passive_acoustic_mapping` in Phase 2 execution:
 //!
 //! - [ ] Define `PassiveAcousticMapper` trait

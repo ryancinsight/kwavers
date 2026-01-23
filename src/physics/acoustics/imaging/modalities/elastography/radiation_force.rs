@@ -230,6 +230,16 @@ impl AcousticRadiationForce {
         let sigma_t_s = (self.parameters.duration / 6.0).max(1e-12);
 
         // Direction: ARFI primarily pushes along the beam axis. In this simplified geometry, we
+        // TODO_AUDIT: P2 - Advanced Radiation Force Elastography - Implement full acoustic radiation force with absorption, scattering, and streaming effects
+        // DEPENDS ON: physics/acoustics/imaging/elastography/radiation_force_exact.rs, physics/acoustics/imaging/elastography/streaming.rs
+        // MISSING: Complete radiation force: F = (α I / c) + (3V₀/4π) Re[(p₁p₂*)/(ρc²)] for monopole + dipole terms
+        // MISSING: Acoustic streaming effects with Reynolds stress tensor contributions
+        // MISSING: Nonlinear absorption and scattering contributions to radiation force
+        // MISSING: Frequency-dependent radiation force with dispersion effects
+        // MISSING: Multi-frequency radiation force for improved SNR and depth penetration
+        // THEOREM: Acoustic radiation pressure: P_rad = (α I₀)/(ρc) for plane waves in absorbing media
+        // THEOREM: Gor'kov potential: U = -V₀ [ (p²/(2ρ₀c₀²)) - (3/2) ρ₀ v² ] for particle displacement
+        // REFERENCES: Wu & Nyborg (1990) JASA 87, 84; Sarvazyan et al. (1998) Ultrasound Med Biol
         // model the beam axis as +z.
         let direction = [0.0, 0.0, 1.0];
 

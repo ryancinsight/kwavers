@@ -111,6 +111,14 @@ impl MicrobubbleDynamicsService {
     /// 3. Solve ODE: R, Ṙ, R̈ for next timestep
     /// 4. Calculate radiation force from ∇P
     /// 5. Update bubble position (F = ma, simplified)
+    /// TODO_AUDIT: P2 - Advanced Microbubble Dynamics - Implement full Marmottant shell model with viscoelastic effects and drug release kinetics
+    /// DEPENDS ON: clinical/therapy/microbubble/marmottant_shell.rs, clinical/therapy/microbubble/viscoelastic.rs, clinical/therapy/microbubble/drug_release.rs
+    /// MISSING: Marmottant shell viscosity and elasticity with strain-dependent properties
+    /// MISSING: Nonlinear shell compression and buckling instability modeling
+    /// MISSING: Drug encapsulation and triggered release mechanisms (pH, temperature, ultrasound)
+    /// MISSING: Multi-bubble interactions and acoustic streaming effects
+    /// MISSING: Size distribution evolution and coalescence/fragmentation
+    /// MISSING: Acoustic contrast enhancement quantification and optimization
     /// 6. Update drug release kinetics
     /// 7. Convert back to domain state
     /// 8. Check for cavitation events

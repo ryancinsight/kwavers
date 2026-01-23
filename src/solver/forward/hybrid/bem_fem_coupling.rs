@@ -101,7 +101,8 @@ impl BemFemInterface {
 
                 // Find corresponding BEM element (simplified)
                 // In practice, this would involve more sophisticated geometric queries
-                let bem_element = Self::find_corresponding_bem_element(node, bem_boundary, fem_mesh)?;
+                let bem_element =
+                    Self::find_corresponding_bem_element(node, bem_boundary, fem_mesh)?;
                 node_element_mapping.insert(node_idx, bem_element);
             }
         }
@@ -254,11 +255,15 @@ impl BemFemCoupler {
             self.solve_bem_system(bem_boundary_values.as_mut_slice(), wavenumber)?;
 
             // 4. Extract BEM solution at interface
-            let bem_interface_values = self.extract_bem_interface(bem_boundary_values.as_slice())?;
+            let bem_interface_values =
+                self.extract_bem_interface(bem_boundary_values.as_slice())?;
 
             // 5. Apply to FEM boundary conditions with relaxation
-            residual =
-                self.apply_to_fem_boundary(&bem_interface_values, fem_field.as_mut_slice(), fem_mesh)?;
+            residual = self.apply_to_fem_boundary(
+                &bem_interface_values,
+                fem_field.as_mut_slice(),
+                fem_mesh,
+            )?;
 
             // 6. Solve FEM system (placeholder - would call actual FEM solver)
             self.solve_fem_system(fem_field.as_mut_slice(), fem_mesh)?;
@@ -368,6 +373,16 @@ impl BemFemCoupler {
     }
 
     /// Solve BEM system (placeholder)
+    /// TODO_AUDIT: P2 - Advanced Hybrid Methods - Implement full BEM-FEM coupling with optimized preconditioners and parallel domain decomposition
+    /// DEPENDS ON: solver/forward/hybrid/bem_fem/preconditioners.rs, solver/forward/hybrid/bem_fem/domain_decomp.rs, solver/forward/hybrid/bem_fem/optimization.rs
+    /// MISSING: Fast multipole method (FMM) for efficient BEM matrix-vector products
+    /// MISSING: FETI-DP domain decomposition for parallel BEM-FEM coupling
+    /// MISSING: Optimized Schwarz alternating methods for convergence acceleration
+    /// MISSING: Adaptive mesh refinement at BEM-FEM interfaces
+    /// MISSING: GPU acceleration for large-scale hybrid simulations
+    /// THEOREM: Fast multipole method: O(N) complexity vs O(N²) for direct BEM
+    /// THEOREM: FETI-DP: Interface problem ensures continuity across subdomains
+    /// REFERENCES: Rokhlin (1985) J Comput Phys; Farhat & Roux (1991) Int J Numer Methods Eng
     fn solve_bem_system(
         &self,
         _bem_boundary_values: &mut [f64],
@@ -568,8 +583,13 @@ mod tests {
 
         // Access the private function via the associated function on the struct
         // Since we are in a child module, we can access private items of parent
-        let closest_idx = BemFemInterface::find_corresponding_bem_element(&query_node, &bem_boundary, &fem_mesh);
+        let closest_idx =
+            BemFemInterface::find_corresponding_bem_element(&query_node, &bem_boundary, &fem_mesh);
 
-        assert_eq!(closest_idx.unwrap(), n3, "Should find the node at distance 0.5");
+        assert_eq!(
+            closest_idx.unwrap(),
+            n3,
+            "Should find the node at distance 0.5"
+        );
     }
 }

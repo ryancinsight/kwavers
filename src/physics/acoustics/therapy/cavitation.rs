@@ -10,6 +10,16 @@ const WATER_VAPOR_PRESSURE: f64 = 2.34e3; // Pa at 20°C
 const ATMOSPHERIC_PRESSURE: f64 = 101325.0; // Pa
 
 /// Cavitation detector for therapy
+/// TODO_AUDIT: P1 - Advanced Cavitation Detection - Implement multi-modal cavitation monitoring with real-time feedback and control
+/// DEPENDS ON: physics/acoustics/therapy/cavitation/passive.rs, physics/acoustics/therapy/cavitation/active.rs, physics/acoustics/therapy/cavitation/feedback.rs
+/// MISSING: Passive acoustic mapping (PAM) for 3D cavitation localization (see PAM TODO in analysis/signal_processing/pam/mod.rs)
+/// MISSING: Active cavitation detection with dual-frequency excitation
+/// MISSING: Real-time feedback control for cavitation-enhanced therapy
+/// MISSING: Cavitation bubble size distribution characterization
+/// MISSING: Nonlinear acoustic emissions analysis (harmonics, subharmonics, ultraharmonics)
+/// THEOREM: Blake threshold: P_B = P_0 + P_A where P_0 = (4σ/3R_0) and P_A = (2σ/R_0) for stable bubbles
+/// THEOREM: Rayleigh-Plesset: R̈ = (1/ρ)(p_gas - p_∞ - viscous terms) - (3/2)(Ṙ)²/R - surface tension
+/// REFERENCES: Apfel (1981) JASA 69, 1624; Flynn (1982) JASA 72, 1926; Leighton (1994) The Acoustic Bubble
 #[derive(Debug)]
 pub struct TherapyCavitationDetector {
     /// Frequency \[Hz\]

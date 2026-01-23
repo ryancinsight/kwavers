@@ -79,6 +79,16 @@ impl CavitationCloudDynamics {
     /// Evolve cloud dynamics for a time step.
     pub fn evolve_cloud(&mut self, dt: f64, _time: f64) {
         // Simple growth/collapse logic placeholder
+        // TODO_AUDIT: P2 - Advanced Cavitation Cloud Dynamics - Implement full cavitation cloud modeling with shock wave interactions and cloud stability
+        // DEPENDS ON: clinical/therapy/lithotripsy/cloud_dynamics.rs, clinical/therapy/lithotripsy/shock_interactions.rs, clinical/therapy/lithotripsy/cloud_stability.rs
+        // MISSING: Gilmore equation for compressible bubble dynamics with Mach number effects
+        // MISSING: Shock-bubble interactions with Richtmyer-Meshkov instability
+        // MISSING: Cavitation cloud stability analysis with Rayleigh-Taylor instability
+        // MISSING: Multi-bubble coupling through pressure fields and acoustic emissions
+        // MISSING: Cloud expansion and collapse dynamics with mass transfer
+        // THEOREM: Rayleigh-Plesset equation with compressibility: R̈ = (1/R)(p_gas - p∞ - viscous terms) - (Mach corrections)
+        // THEOREM: Richtmyer-Meshkov: Interface acceleration creates vorticity and mixing
+        // REFERENCES: Gilmore (1952) Hydrodynamics; Brenner et al. (2002) Rev Mod Phys
         // Updates density field and accumulates erosion
         // Erosion proportional to collapse energy ~ density * dt
         let erosion_rate = 1e-6; // kg / (bubble * s)

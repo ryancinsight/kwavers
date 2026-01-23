@@ -173,6 +173,15 @@ impl FieldCoupler {
             TrilinearInterpolator::new(target_grid.dx, target_grid.dy, target_grid.dz);
 
         // Define coupling interface (simplified - would need proper interface detection)
+        // TODO_AUDIT: P1 - Advanced Multi-Physics Coupling - Implement conservative coupling schemes with energy/momentum conservation
+        // DEPENDS ON: simulation/multi_physics/conservative_coupling.rs, simulation/multi_physics/domain_decomposition.rs
+        // MISSING: Conservative interpolation schemes (Sprague-Grundy theorem compliance)
+        // MISSING: Domain decomposition with Schwarz alternating methods
+        // MISSING: Energy-momentum conservation across physics interfaces
+        // MISSING: Adaptive time stepping for multi-scale coupling
+        // MISSING: Jacobian-free Newton-Krylov methods for nonlinear coupling
+        // THEOREM: Sprague-Grundy theorem: Conservative interpolation requires specific stencil weights
+        // THEOREM: Schwarz alternating method convergence: spectral radius ρ < 1 for convergence
         let interface = CouplingInterface::new(source_grid, target_grid)?;
 
         self.interpolators.insert(key, interpolator);
@@ -248,10 +257,12 @@ impl ConservationEnforcer {
         let expected_source_dim = (source_grid.nx, source_grid.ny, source_grid.nz);
         let actual_source_dim = source_field.dim();
         if actual_source_dim != expected_source_dim {
-            return Err(KwaversError::Validation(ValidationError::DimensionMismatch {
-                expected: format!("{expected_source_dim:?}"),
-                actual: format!("{actual_source_dim:?}"),
-            }));
+            return Err(KwaversError::Validation(
+                ValidationError::DimensionMismatch {
+                    expected: format!("{expected_source_dim:?}"),
+                    actual: format!("{actual_source_dim:?}"),
+                },
+            ));
         }
 
         let same_grid = source_grid.nx == target_grid.nx

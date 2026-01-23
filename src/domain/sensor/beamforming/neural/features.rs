@@ -16,6 +16,16 @@
 //! - Local frequency: Window-based variance estimation
 //! - Speckle analysis: Local statistical moments
 //! - Homogeneity: Gray-level co-occurrence matrix approximation
+//! TODO_AUDIT: P2 - Advanced Neural Beamforming Features - Implement comprehensive feature extraction for deep learning beamformers
+//! DEPENDS ON: domain/sensor/beamforming/neural/features_advanced.rs, domain/sensor/beamforming/neural/temporal_features.rs
+//! MISSING: Temporal coherence features for phase aberration correction
+//! MISSING: Spatial frequency domain features for resolution enhancement
+//! MISSING: Learned feature representations using autoencoders
+//! MISSING: Multi-modal feature fusion (acoustic + optical + thermal)
+//! MISSING: Attention-based feature weighting for adaptive beamforming
+//! THEOREM: Parseval's theorem: ∫ |f(t)|² dt = (1/(2π)) ∫ |F(ω)|² dω for energy conservation in Fourier domain
+//! THEOREM: Wiener-Khinchin theorem: Power spectral density S(ω) = ∫ R(τ) e^{-jωτ} dτ for autocorrelation
+//! REFERENCES: Van Trees (2002) Optimum Array Processing; Johnson & Dudgeon (1993) Array Signal Processing
 //!
 //! # Literature References
 //!

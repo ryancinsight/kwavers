@@ -728,6 +728,14 @@ impl SafetyAuditLogger {
     }
 
     /// Export audit log to file (placeholder)
+    /// TODO_AUDIT: P2 - Safety Audit Compliance - Implement comprehensive safety audit logging and regulatory compliance reporting
+    /// DEPENDS ON: clinical/safety/audit/fda_510k.rs, clinical/safety/audit/iec_62304.rs, clinical/safety/audit/dicom_sr.rs
+    /// MISSING: FDA 510(k) acoustic output reporting for pre-market submissions
+    /// MISSING: IEC 62304 medical device software lifecycle management
+    /// MISSING: DICOM Structured Reporting (SR) for safety measurements
+    /// MISSING: Automatic risk assessment using FMEA (Failure Mode Effects Analysis)
+    /// MISSING: Patient exposure tracking and cumulative dose monitoring
+    /// MISSING: Automated compliance checking against regional regulations (FDA, CE, CFDA)
     pub fn export_log(&self, _filename: &str) -> KwaversResult<()> {
         // Would implement file export
         Ok(())

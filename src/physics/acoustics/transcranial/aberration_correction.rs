@@ -204,6 +204,16 @@ impl TranscranialAberrationCorrection {
 
         // Focal gain improvement ≈ 20*log10(2π / delay_range_radians)
         // Simplified approximation
+        // TODO_AUDIT: P1 - Advanced Transcranial Aberration Correction - Implement full aberration correction with adaptive optics and time-reversal focusing
+        // DEPENDS ON: physics/acoustics/transcranial/adaptive_optics.rs, physics/acoustics/transcranial/time_reversal.rs, physics/acoustics/transcranial/phase_conjugation.rs
+        // MISSING: Time-reversal mirror for perfect focusing through aberrating media
+        // MISSING: Phase conjugation for real-time aberration compensation
+        // MISSING: Adaptive optics with deformable mirror correction
+        // MISSING: Multi-element array optimization for skull transmission
+        // MISSING: Patient-specific skull acoustic property characterization
+        // THEOREM: Time-reversal invariance: Wave equation ∂²u/∂t² - c²∇²u = 0 is time-reversal symmetric
+        // THEOREM: Phase conjugation: If u(t) is aberrated wave, then u*(-t) focuses perfectly at source
+        // REFERENCES: Fink (1992) IEEE Trans Ultrason Ferroelectr Freq Control; Tanter et al. (2007) Nat Rev Drug Discov
         if delay_range > 0.0 {
             20.0 * (2.0 * std::f64::consts::PI / delay_range).log10()
         } else {

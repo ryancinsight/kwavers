@@ -350,6 +350,12 @@ pub trait AcousticThermalCoupling: MultiPhysicsCoupling {
 
     /// Compute acoustic pressure source from temperature rate ∂T/∂t
     /// ∂p/∂t = β ρ c² ∂T/∂t (simplified thermoacoustic coupling)
+    /// TODO_AUDIT: P2 - Multi-Physics Coupling - Implement complete thermoacoustic, acousto-optic, and electromagnetic-acoustic coupling
+    /// DEPENDS ON: physics/foundations/coupling/thermoacoustic.rs, physics/foundations/coupling/acoustooptic.rs
+    /// MISSING: Full Navier-Stokes thermoacoustic coupling with viscous heating
+    /// MISSING: Acousto-optic Bragg diffraction and phase modulation
+    /// MISSING: Piezoelectric coupling for transducer modeling
+    /// MISSING: Magnetoacoustic coupling for contrast agents
     fn pressure_source_from_temperature(
         &self,
         temperature_rate: &ArrayD<f64>,

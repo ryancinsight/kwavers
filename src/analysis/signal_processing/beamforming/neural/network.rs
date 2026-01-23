@@ -159,6 +159,14 @@ impl NeuralBeamformingNetwork {
     /// Adapt network weights based on performance feedback.
     ///
     /// Simple gradient descent update (placeholder for full backpropagation).
+    /// TODO_AUDIT: P2 - Advanced Neural Beamforming - Implement full deep learning beamforming with attention mechanisms and transformer architectures
+    /// DEPENDS ON: analysis/beamforming/neural/transformer.rs, analysis/beamforming/neural/attention.rs, analysis/beamforming/neural/contrastive.rs
+    /// MISSING: Transformer-based beamforming with self-attention on channel correlations
+    /// MISSING: Contrastive learning for improved generalization across transducer geometries
+    /// MISSING: Meta-learning for fast adaptation to new imaging scenarios
+    /// MISSING: Physics-informed neural networks with wave equation constraints
+    /// MISSING: Uncertainty quantification using Monte Carlo dropout
+    /// MISSING: Multi-task learning for simultaneous beamforming and aberration correction
     ///
     /// # Arguments
     ///

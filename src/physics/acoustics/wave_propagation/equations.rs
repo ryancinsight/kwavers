@@ -60,6 +60,16 @@
 //! NonlinearWavePropagation (trait)
 //! ├── burgers_equation()           ← Nonlinear acoustic wave equation
 //! ├── kzk_equation()               ← Parabolic approximation
+//! TODO_AUDIT: P1 - Complete Nonlinear Acoustics - Implement full nonlinear wave propagation with shock formation and harmonic generation
+//! DEPENDS ON: physics/acoustics/wave_propagation/nonlinear/shock_formation.rs, physics/acoustics/wave_propagation/nonlinear/harmonics.rs, physics/acoustics/wave_propagation/nonlinear/saturation.rs
+//! MISSING: Khokhlov-Zabolotskaya-Kuznetsov equation with exact dispersion
+//! MISSING: Weak shock theory for finite amplitude waves
+//! MISSING: Higher-order harmonics and subharmonics generation
+//! MISSING: Acoustic saturation and amplitude limiting effects
+//! MISSING: Self-demodulation and nonlinear distortion
+//! THEOREM: Burgers equation: ∂p/∂τ + p ∂p/∂σ = (1/(2ρc³)) ∂²p/∂σ² for 1D nonlinear acoustics
+//! THEOREM: KZK equation: ∂²p/∂z∂τ = (c₀/2) ∇_⊥²p + (δ/2c₀³) ∂³p/∂τ³ + (β/c₀³) ∂²p²/∂τ² for parabolic approximation
+//! REFERENCES: Hamilton & Blackstock (1998) Nonlinear Acoustics; Beyer (1997) Nonlinear Acoustics in Fluids
 //! ├── harmonic_generation()        ← Second/third harmonic amplitudes
 //! ├── shock_formation()            ← Shock distance and amplitude
 //! ├── self_demodulation()          ← Amplitude modulation effects

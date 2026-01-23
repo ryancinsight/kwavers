@@ -3,6 +3,17 @@
 //! **STATUS: INCOMPLETE / EXPERIMENTAL**
 //!
 //! This module provides a placeholder implementation for GCP cloud deployment.
+//! TODO_AUDIT: P2 - Cloud-Native Architecture - Implement complete cloud-native deployment with Kubernetes, service mesh, and auto-scaling
+//! DEPENDS ON: infra/cloud/kubernetes.rs, infra/cloud/service_mesh.rs, infra/cloud/auto_scaling.rs, infra/cloud/monitoring.rs
+//! MISSING: Kubernetes operator for ultrasound simulation workloads
+//! MISSING: Service mesh (Istio/Linkerd) for microservice communication
+//! MISSING: Horizontal pod autoscaling based on computational load
+//! MISSING: Cloud-native monitoring with Prometheus and Grafana
+//! MISSING: Distributed tracing with OpenTelemetry across services
+//! MISSING: Multi-cloud deployment with failover and load balancing
+//! THEOREM: CAP theorem: Consistency + Availability + Partition tolerance (choose 2)
+//! THEOREM: Amdahl's law: Speedup ≤ 1/(S + P/N) for parallel systems
+//! REFERENCES: Kubernetes documentation; Google Cloud Architecture Framework; AWS Well-Architected Framework
 //! Actual Vertex AI API integration is not yet implemented (see TODOs below).
 //!
 //! This module implements cloud deployment operations for Google Cloud Platform (GCP),

@@ -15,6 +15,16 @@ pub struct ConservationMetrics {
 }
 
 /// Validate energy conservation: ∫E(t)dV = ∫E(0)dV + work done
+/// TODO_AUDIT: P1 - Advanced Conservation Laws - Implement complete conservation validation with entropy production and multi-physics coupling
+/// DEPENDS ON: physics/conservation/entropy.rs, physics/conservation/multi_physics.rs, physics/conservation/numerical_dissipation.rs
+/// MISSING: Entropy production rate: dS/dt = ∫ σ:∇v dV + heat transfer terms
+/// MISSING: Multi-physics energy coupling (acoustic-thermal-electromagnetic)
+/// MISSING: Numerical dissipation analysis for stability assessment
+/// MISSING: Noether's theorem verification for symmetry preservation
+/// MISSING: Casimir invariants for nonlinear wave systems
+/// THEOREM: First law of thermodynamics: dU = δQ - δW + μ dN for open systems
+/// THEOREM: Second law: dS/dt ≥ 0 with equality for reversible processes
+/// THEOREM: Noether: Every continuous symmetry yields a conservation law
 pub fn validate_energy_conservation(
     pressure: &Array3<f64>,
     velocity_x: &Array3<f64>,

@@ -23,6 +23,16 @@ use super::BubbleParameters;
 use crate::core::constants::GAS_CONSTANT as R_GAS;
 
 /// Energy balance calculator for bubble dynamics
+/// TODO_AUDIT: P1 - Complete Energy Balance - Implement full thermodynamic energy balance with chemical reactions and plasma effects
+/// DEPENDS ON: physics/acoustics/bubble_dynamics/energy_balance/chemical.rs, physics/acoustics/bubble_dynamics/energy_balance/plasma.rs, physics/acoustics/bubble_dynamics/energy_balance/phase_change.rs
+/// MISSING: Chemical reaction enthalpy changes in sonochemistry
+/// MISSING: Plasma ionization and recombination energy losses
+/// MISSING: Phase change latent heat during nucleation and condensation
+/// MISSING: Non-adiabatic heat transfer with radiation losses
+/// MISSING: Kinetic energy coupling between bubble and surrounding flow
+/// THEOREM: First law of thermodynamics: dU = δQ - δW + Σ μ_i dN_i for open systems
+/// THEOREM: Gibbs free energy: ΔG = ΔH - TΔS for reaction spontaneity
+/// REFERENCES: Prosperetti (1984) J Fluid Mech; Storey & Szeri (2000) J Fluid Mech
 #[derive(Debug, Clone)]
 pub struct EnergyBalanceCalculator {
     /// Thermal conductivity of the liquid

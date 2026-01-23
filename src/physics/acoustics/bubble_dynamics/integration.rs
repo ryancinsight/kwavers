@@ -7,6 +7,16 @@ use super::bubble_state::{BubbleParameters, BubbleState};
 use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
 
 /// Integrate bubble dynamics using stable numerical methods
+/// TODO_AUDIT: P1 - Advanced Bubble Integration - Implement symplectic integrators and geometric numerical methods for long-time bubble dynamics
+/// DEPENDS ON: physics/acoustics/bubble_dynamics/integration/symplectic.rs, physics/acoustics/bubble_dynamics/integration/geometric.rs, physics/acoustics/bubble_dynamics/integration/adaptive.rs
+/// MISSING: Symplectic integrators preserving energy and phase space volume
+/// MISSING: Geometric integration for Hamiltonian bubble dynamics
+/// MISSING: Adaptive timestepping with error control for stiffness
+/// MISSING: Implicit-explicit (IMEX) methods for multi-scale coupling
+/// MISSING: Structure-preserving algorithms for conservation laws
+/// THEOREM: Symplectic integrators: Preserve Poincaré invariants and Hamiltonian structure
+/// THEOREM: Dahlquist barriers: A-stable linear multistep methods limited to order 2
+/// REFERENCES: Hairer et al. (2006) Geometric Numerical Integration; Leimkuhler & Reich (2004) Simulating Hamiltonian Dynamics
 ///
 /// This function provides a stable integration scheme for bubble dynamics
 /// with proper error handling and numerical stability checks.

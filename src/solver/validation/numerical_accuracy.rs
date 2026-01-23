@@ -266,6 +266,14 @@ mod tests {
             for _ in 0..fast_per_slow {
                 // Acoustic wave propagation using proper wave equation
                 // ∂²p/∂t² = c²∇²p with finite difference approximation
+                // TODO_AUDIT: P2 - Advanced Numerical Validation - Implement comprehensive numerical accuracy testing with manufactured solutions and convergence studies
+                // DEPENDS ON: solver/validation/manufactured_solutions.rs, solver/validation/convergence_analysis.rs, solver/validation/error_estimation.rs
+                // MISSING: Manufactured solutions for nonlinear wave equations (exact analytical solutions)
+                // MISSING: Richardson extrapolation for convergence rate estimation
+                // MISSING: Grid convergence studies with adaptive refinement
+                // MISSING: Stability analysis using von Neumann method for all schemes
+                // MISSING: Error estimation using adjoint methods for optimization problems
+                // MISSING: Benchmarking against reference implementations (k-Wave, FOCUS, etc.)
                 let acoustic_3d = acoustic_state.view();
                 let acoustic_1d = Array1::from_iter(acoustic_3d.iter().cloned());
                 let laplacian_1d = compute_laplacian_1d(&acoustic_1d, dx);

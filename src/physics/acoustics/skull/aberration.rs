@@ -10,6 +10,16 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Aberration correction using time-reversal methods
+/// TODO_AUDIT: P1 - Advanced Skull Aberration Correction - Implement full time-reversal focusing with adaptive optics and patient-specific optimization
+/// DEPENDS ON: physics/acoustics/skull/aberration/adaptive_optics.rs, physics/acoustics/skull/aberration/time_reversal.rs, physics/acoustics/skull/aberration/optimization.rs
+/// MISSING: Full time-reversal mirror implementation with iterative focusing
+/// MISSING: Adaptive optics with deformable mirror integration
+/// MISSING: Patient-specific aberration profile characterization
+/// MISSING: Multi-frequency aberration correction for broadband pulses
+/// MISSING: Real-time aberration tracking during therapy
+/// THEOREM: Time-reversal reciprocity: Wave equation is invariant under t → -t, x → -x
+/// THEOREM: Phase conjugation: u*(t) compensates for aberrated u(t)
+/// REFERENCES: Aubry et al. (2003) JASA 113, 84; Fink et al. (2003) IEEE Trans Ultrason Ferroelectr Freq Control
 #[derive(Debug)]
 pub struct AberrationCorrection<'a> {
     grid: &'a Grid,

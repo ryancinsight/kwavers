@@ -194,6 +194,14 @@
 //! ## Future Implementations
 //!
 //! This module is currently a placeholder. Algorithms will be migrated from
+//! TODO_AUDIT: P1 - Source Localization Algorithms - Implement advanced acoustic source localization for cavitation bubble tracking
+//! DEPENDS ON: analysis/signal_processing/localization/trilateration.rs, analysis/signal_processing/localization/music.rs, analysis/signal_processing/localization/bayes.rs
+//! MISSING: MUSIC (MUltiple SIgnal Classification) algorithm for super-resolution localization
+//! MISSING: Bayesian filtering with particle filters for bubble trajectory tracking
+//! MISSING: Time-difference-of-arrival (TDOA) with iterative least squares refinement
+//! MISSING: Wavefront curvature analysis for range estimation
+//! MISSING: Multi-path interference rejection using coherence analysis
+//! MISSING: Real-time localization with Kalman filtering for continuous tracking
 //! `domain::sensor::localization` in Phase 2 execution:
 //!
 //! - [ ] Define `Localizer` trait

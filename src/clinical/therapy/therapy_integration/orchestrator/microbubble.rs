@@ -90,6 +90,14 @@ use super::super::state::AcousticField;
 /// # Implementation Notes
 ///
 /// This is a simplified implementation that:
+/// TODO_AUDIT: P2 - Population Microbubble Modeling - Implement full bubble population dynamics with spatial distribution and interactions
+/// DEPENDS ON: clinical/therapy/orchestrator/population_dynamics.rs, clinical/therapy/orchestrator/bjerknes_forces.rs, clinical/therapy/orchestrator/microstreaming.rs
+/// MISSING: Individual bubble tracking with Lagrangian particle methods
+/// MISSING: Spatial concentration gradients and diffusion modeling
+/// MISSING: Secondary Bjerknes forces between bubbles of different sizes
+/// MISSING: Acoustic microstreaming and boundary layer effects
+/// MISSING: Bubble coalescence and fragmentation under high pressure
+/// MISSING: Multi-scale coupling between individual bubbles and bulk concentration fields
 /// 1. Creates a representative microbubble at domain center
 /// 2. Simulates its dynamics using full physics models
 /// 3. Returns uniform concentration field (future: track bubble population)

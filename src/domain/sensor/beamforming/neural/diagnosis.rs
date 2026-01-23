@@ -6,6 +6,16 @@
 //! # Current Status
 //!
 //! This is a simplified implementation that provides rule-based diagnostic
+//! TODO_AUDIT: P2 - Neural Beamforming Diagnostics - Implement AI-powered beamforming optimization and quality assessment
+//! DEPENDS ON: domain/sensor/beamforming/neural/diagnostics.rs, domain/sensor/beamforming/neural/optimization.rs
+//! MISSING: Neural network-based beamformer design optimization
+//! MISSING: Real-time quality assessment using deep learning
+//! MISSING: Adaptive parameter tuning based on tissue properties
+//! MISSING: Aberration correction using learned phase compensation
+//! MISSING: Speckle reduction through neural post-processing
+//! THEOREM: Cramer-Rao bound: Var(θ) ≥ (∂²L/∂θ²)^{-1} for parameter estimation limits
+//! THEOREM: Matched filtering: SNR gain = √(2B T) for coherent integration
+//! REFERENCES: Capon (1969) High-resolution frequency-wavenumber spectrum analysis; Van Trees (2002)
 //! recommendations. In production, this would integrate trained ML models
 //! for more sophisticated diagnostic reasoning.
 //!

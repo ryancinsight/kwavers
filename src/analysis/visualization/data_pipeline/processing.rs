@@ -91,6 +91,14 @@ impl ProcessingStage {
     /// Apply Gaussian smoothing
     fn gaussian_smooth(&self, data: &mut Array3<f64>) {
         // Box filter approximation to Gaussian smoothing (Gonzalez & Woods 2008, §3.6)
+        // TODO_AUDIT: P2 - Advanced Visualization - Implement advanced volume rendering with ray marching, multi-modal fusion, and real-time GPU processing
+        // DEPENDS ON: analysis/visualization/ray_marching.rs, analysis/visualization/gpu_volume.rs, analysis/visualization/fusion.rs
+        // MISSING: Ray marching volume rendering with physically-based lighting
+        // MISSING: Multi-modal data fusion (B-mode + Doppler + elastography)
+        // MISSING: GPU-accelerated real-time rendering with CUDA/OpenGL interop
+        // MISSING: Adaptive sampling based on viewing parameters and data complexity
+        // MISSING: Transfer function optimization using machine learning
+        // MISSING: Interactive slicing and measurement tools for clinical workflows
         // Provides computationally efficient 3×3×3 local averaging for visualization
         let shape = data.dim();
         let mut smoothed = data.clone();

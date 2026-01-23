@@ -23,6 +23,17 @@
 //!
 //! ### Hyperelastic Constitutive Models
 //!
+//! TODO_AUDIT: P2 - Advanced Nonlinear Elasticity - Implement complete finite strain hyperelasticity with higher-order elastic constants and viscoelastic coupling
+//! DEPENDS ON: solver/forward/elastic/nonlinear/hyperelastic.rs, solver/forward/elastic/nonlinear/acoustoelastic.rs, solver/forward/elastic/nonlinear/viscoelastic.rs
+//! MISSING: Ogden hyperelastic model: W = Σ (μᵢ/αᵢ) (λ₁^αⁱ + λ₂^αⁱ + λ₃^αⁱ - 3) for compressible materials
+//! MISSING: Acoustoelastic tensor: cᵢⱼₖₗ + cᵢⱼₖₗ^(AE) with prestress dependence
+//! MISSING: Fractional viscoelasticity: σ(t) = ∫ G(t-τ) dε(τ)/dτ dτ with fractional derivatives
+//! MISSING: Higher-order elastic constants M, N for third-order nonlinearity
+//! MISSING: Wave mixing and harmonic generation in prestressed media
+//! THEOREM: Piola-Kirchhoff stress: P = J σ F^{-T} for finite deformation
+//! THEOREM: Acoustoelastic effect: Δc/c = (1/2μ) σ (l² + m² - 2λ/μ) for isotropic solids
+//! REFERENCES: Brugger (1964) Phys Rev; Thurston & Brugger (1964) Phys Rev; Man & Ogilvy (1997) J Phys D
+//!
 //! **Neo-Hookean Model:**
 //! W = C₁(I₁ - 3) + D₁(J - 1)²
 //!

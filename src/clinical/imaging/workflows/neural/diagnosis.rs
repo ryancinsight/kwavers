@@ -6,6 +6,16 @@
 //! # Current Status
 //!
 //! This is a simplified implementation that provides rule-based diagnostic
+//! TODO_AUDIT: P2 - Clinical AI Diagnostic Systems - Implement full machine learning diagnostic pipeline with uncertainty quantification
+//! DEPENDS ON: clinical/imaging/ml/diagnosis.rs, clinical/imaging/ml/uncertainty.rs, clinical/imaging/ml/validation.rs
+//! MISSING: Ensemble learning with multiple ML models for robust diagnosis
+//! MISSING: Uncertainty quantification using Monte Carlo dropout and Bayesian methods
+//! MISSING: Clinical validation against ground truth datasets (AUC, sensitivity, specificity)
+//! MISSING: Explainable AI (XAI) with feature importance and decision rationale
+//! MISSING: Integration with clinical decision support systems (CDSS)
+//! THEOREM: Bayes' theorem for diagnostic probability: P(disease|symptoms) = P(symptoms|disease) × P(disease) / P(symptoms)
+//! THEOREM: ROC analysis: AUC = ∫ sensitivity × d(1-specificity) for classification performance
+//! REFERENCES: FDA AI/ML guidance documents; ISO 13485 for medical device software
 //! recommendations. In production, this would integrate trained ML models
 //! for more sophisticated diagnostic reasoning.
 //!

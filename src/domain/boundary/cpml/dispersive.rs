@@ -59,6 +59,15 @@ impl DispersiveParameters {
         let delta_total = epsilon_s - epsilon_inf;
 
         // Use 3-pole expansion for better Cole-Cole approximation
+        // TODO_AUDIT: P2 - Advanced Absorbing Boundaries - Implement multi-pole CPML with frequency-dependent material dispersion
+        // DEPENDS ON: domain/boundary/cpml/multi_pole.rs, physics/materials/dispersion.rs
+        // MISSING: Multi-pole CPML for broadband frequency content (1-100 MHz ultrasound)
+        // MISSING: Dispersive material modeling with Kramers-Kronig relations
+        // MISSING: Anisotropic CPML for directional wave absorption
+        // MISSING: Optimized CPML parameters using genetic algorithms
+        // MISSING: Uniaxial perfectly matched layer (UPML) for evanescent waves
+        // THEOREM: Cole-Cole relaxation: ε(ω) = ε_∞ + Σ Δε/(1+(jωτ)^(1-α)) for viscoelastic tissues
+        // THEOREM: Kramers-Kronig: ε''(ω) = (2/π) ∫ ε'(ω')/(ω'-ω) dω' for causality
         // For Cole-Cole: ε(ω) = ε∞ + Σ Δε_i / (1 + (iωτ_i)^α)
         // Choose time constants to span the frequency range of interest
         let weights: [f64; 3] = [0.3, 0.4, 0.3];

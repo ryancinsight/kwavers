@@ -190,9 +190,8 @@ impl MechanicalIndexCalculator {
 
         // Apply attenuation for in-situ pressure
         // P_in_situ = P_measured × 10^(-α × f × z / 20)
-        let attenuation_factor = 10.0_f64.powf(
-            -(self.attenuation_coeff * self.center_frequency_mhz * focal_distance_cm) / 20.0,
-        );
+        let attenuation_factor = 10.0_f64
+            .powf(-(self.attenuation_coeff * self.center_frequency_mhz * focal_distance_cm) / 20.0);
         let peak_rarefactional_in_situ = peak_rarefactional_mpa * attenuation_factor;
 
         // Calculate MI: MI = P_r / √f_c
@@ -323,9 +322,7 @@ mod tests {
 
         let result = mi_calc.calculate(&pressure, 5.0).unwrap();
 
-        let expected_mi = (1.0
-            * 10.0_f64.powf(-(0.5 * 5.0 * 5.0) / 20.0))
-            / 5.0_f64.sqrt();
+        let expected_mi = (1.0 * 10.0_f64.powf(-(0.5 * 5.0 * 5.0) / 20.0)) / 5.0_f64.sqrt();
         assert!((result.mi - expected_mi).abs() < 1e-6);
         assert_eq!(result.center_frequency_mhz, 5.0);
         assert!(result.is_safe()); // Well below 1.9 limit

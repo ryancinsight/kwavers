@@ -30,6 +30,12 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Architecture layer definition
+/// TODO_AUDIT: P2 - Architecture Enforcement - Add compile-time dependency validation and cyclic import detection
+/// DEPENDS ON: xtask/architecture/cyclic_deps.rs, xtask/architecture/dead_code.rs
+/// MISSING: AST-level import analysis for indirect dependencies
+/// MISSING: Module cohesion and coupling metrics calculation
+/// MISSING: Architecture violation reporting with suggested fixes
+/// MISSING: Integration with rustc for compile-time enforcement
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Layer {
     Core = 0,
@@ -241,7 +247,6 @@ impl DependencyChecker {
     pub fn violations(&self) -> &[Violation] {
         &self.violations
     }
-
 }
 
 /// Check for cross-contamination patterns

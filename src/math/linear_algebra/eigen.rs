@@ -146,6 +146,16 @@ impl EigenDecomposition {
         }
 
         // For complex Hermitian matrices, we use a simplified Jacobi-like algorithm
+        // TODO_AUDIT: P2 - Advanced Eigenvalue Methods - Implement state-of-the-art eigenvalue algorithms with parallel computing
+        // DEPENDS ON: math/linear_algebra/eigen_parallel.rs, math/linear_algebra/eigen_sparse.rs, math/linear_algebra/eigen_generalized.rs
+        // MISSING: QR algorithm with Wilkinson shift for dense matrices
+        // MISSING: Lanczos method for sparse symmetric eigenvalue problems
+        // MISSING: Jacobi-Davidson method for interior eigenvalues
+        // MISSING: Parallel eigenvalue solvers using ScaLAPACK or Elemental
+        // MISSING: Generalized eigenvalue problems (A - λB)v = 0
+        // THEOREM: Rayleigh-Schrödinger perturbation theory: λ = λ₀ + ⟨ψ₀|H'|ψ₀⟩ + Σ corrections for small perturbations
+        // THEOREM: Gerschgorin circle theorem: Eigenvalues lie in ∪ᵢ {|z - aᵢᵢ| ≤ Σⱼ≠ᵢ |aᵢⱼ|}
+        // REFERENCES: Parlett (1998) The Symmetric Eigenvalue Problem; Stewart (2001) Matrix Algorithms
         // In practice, LAPACK would be used for production code
         let mut a = matrix.clone();
         let mut eigenvectors = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));

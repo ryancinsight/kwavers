@@ -27,6 +27,15 @@ enum Command {
     /// Audit naming conventions for neutral naming
     AuditNaming,
     /// Check for stub implementations and placeholders
+    /// TODO_AUDIT: P2 - Advanced Build Infrastructure - Implement comprehensive code quality and architecture enforcement tools
+    /// DEPENDS ON: xtask/code_quality.rs, xtask/architecture/complexity_analysis.rs, xtask/testing/property_based.rs
+    /// MISSING: Cyclomatic complexity analysis with McCabe metrics
+    /// MISSING: Architecture violation detection with graph algorithms
+    /// MISSING: Property-based testing integration with QuickCheck/Proptest
+    /// MISSING: Code coverage analysis with branch coverage metrics
+    /// MISSING: Performance regression testing with statistical analysis
+    /// THEOREM: McCabe cyclomatic complexity: M = E - N + 2P (edges - nodes + connected components)
+    /// THEOREM: Halstead complexity: Effort = (n1 + n2) log₂(n1 + n2) / (2 n2) for maintainability
     CheckStubs,
     /// Count configuration structs for SSOT violations
     CheckConfigs,

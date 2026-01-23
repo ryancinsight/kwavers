@@ -72,6 +72,18 @@ pub struct TherapySessionConfig {
     /// and clinical assessment. Critical for treatment planning and
     /// safety monitoring.
     pub patient_params: PatientParameters,
+
+    /// Path to medical imaging data (CT, MRI)
+    ///
+    /// Optional path to patient imaging data in NIFTI (.nii, .nii.gz) or
+    /// DICOM (.dcm) format. When provided, enables patient-specific
+    /// treatment planning with actual anatomical data.
+    ///
+    /// - NIFTI files: Single-file CT/MRI volumes (supported with 'nifti' feature)
+    /// - DICOM files: Individual slices or series (future implementation)
+    ///
+    /// If not provided, synthetic phantom data will be used for planning.
+    pub imaging_data_path: Option<String>,
 }
 
 /// Therapy modality enumeration

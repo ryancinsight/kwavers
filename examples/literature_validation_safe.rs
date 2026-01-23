@@ -135,6 +135,16 @@ fn validate_greens_function() -> KwaversResult<ValidationResult> {
         let t = step as f64 * dt;
 
         // Apply delta function source (Gaussian pulse approximation)
+        // TODO_AUDIT: P1 - Literature Validation Suite - Implement comprehensive validation against acoustic physics literature with experimental benchmarks
+        // DEPENDS ON: validation/literature/fundamentals.rs, validation/literature/experimental.rs, validation/literature/numerical_benchmarks.rs
+        // MISSING: Blackstock nonlinear acoustics validation (1972)
+        // MISSING: Hamilton-Kozloff dispersion relation validation (1998)
+        // MISSING: Zabolotskaya-Kuznetsov parabolic approximation validation
+        // MISSING: Experimental ultrasound transducer field validation (O'Neil 1949)
+        // MISSING: Cavitation threshold validation against Apfel (1981) theory
+        // THEOREM: Blackstock: p = p₀ + (β p₀/ρ c₀²) p² for quadratic nonlinearity
+        // THEOREM: Hamilton: α(f) = α₀ f² / (1 + f²/f_relax²) for relaxation absorption
+        // REFERENCES: Hamilton & Blackstock (1998) Nonlinear Acoustics; Apfel (1981) JASA 69, 1624
         if step < (pulse_width / dt) as usize {
             let pulse_amplitude =
                 source_strength * (-((t - pulse_width / 2.0) / (pulse_width / 4.0)).powi(2)).exp();

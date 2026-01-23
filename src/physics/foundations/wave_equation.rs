@@ -4,6 +4,14 @@
 //! These traits specify the mathematical structure of wave propagation PDEs
 //! without committing to a particular numerical method (finite difference,
 //! finite element, spectral, or neural network approximation).
+//! TODO_AUDIT: P1 - Generalized Wave Physics - Implement complete wave equation hierarchy with nonlinear, dispersive, and multi-physics coupling
+//! DEPENDS ON: physics/foundations/wave_equations/nonlinear.rs, physics/foundations/wave_equations/dispersive.rs, physics/foundations/wave_equations/coupled.rs
+//! MISSING: Nonlinear wave equations (KZK, Westervelt) with exact dispersion relations
+//! MISSING: Dispersive media modeling with Kramers-Kronig relations
+//! MISSING: Multi-physics coupling (thermoacoustic, acousto-optic, piezoelectric)
+//! MISSING: Fractional wave equations for anomalous dispersion
+//! MISSING: Time-reversal acoustics for focusing and imaging
+//! MISSING: Quantum acoustic effects for extreme conditions
 //!
 //! # Design Principle
 //!

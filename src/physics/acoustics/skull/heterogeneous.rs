@@ -9,6 +9,16 @@ use crate::physics::skull::SkullProperties;
 use ndarray::Array3;
 
 /// Heterogeneous skull model with spatially varying acoustic properties
+/// TODO_AUDIT: P1 - Advanced Skull Modeling - Implement full patient-specific skull characterization with anisotropic properties and healing effects
+/// DEPENDS ON: physics/acoustics/skull/anisotropic.rs, physics/acoustics/skull/healing.rs, physics/acoustics/skull/microstructure.rs
+/// MISSING: Anisotropic acoustic properties accounting for diploe structure (trabecular bone)
+/// MISSING: Age-related changes in skull acoustic properties
+/// MISSING: Microstructural modeling of Haversian systems and osteons
+/// MISSING: Healing and remodeling effects post-trauma
+/// MISSING: Temperature-dependent skull properties for thermal therapy
+/// THEOREM: Bone anisotropy: c_L > c_T where L is longitudinal, T is transverse wave speed
+/// THEOREM: Osteon structure: Acoustic waves guided by cylindrical microstructure
+/// REFERENCES: Marquet et al. (2009) Phys Med Biol; Clement et al. (2004) Ultrasound Med Biol
 #[derive(Debug, Clone)]
 pub struct HeterogeneousSkull {
     /// Sound speed distribution (m/s)

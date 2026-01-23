@@ -91,6 +91,18 @@ mod tests;
 /// # Mathematical Properties
 ///
 /// - **Order**: Accuracy order of the finite difference approximation
+/// TODO_AUDIT: P2 - Advanced Numerical Methods - Implement high-order finite difference and spectral methods for PDE solving
+/// DEPENDS ON: math/numerics/spectral_methods.rs, math/numerics/finite_elements.rs, math/numerics/weno_schemes.rs
+/// MISSING: Weighted essentially non-oscillatory (WENO) schemes for shock capturing
+/// MISSING: Discontinuous Galerkin finite element methods
+/// MISSING: Spectral element methods with Gauss-Lobatto quadrature
+/// MISSING: Compact finite difference schemes for reduced dispersion
+/// MISSING: Arbitrary high-order Runge-Kutta methods for time integration
+/// MISSING: Adaptive mesh refinement with solution-based error estimation
+/// THEOREM: Lax equivalence theorem: Consistent + stable = convergent for well-posed PDEs
+/// THEOREM: Godunov theorem: Linear monotone schemes cannot exceed first-order accuracy
+/// THEOREM: Dahlquist barriers: A-stable linear multistep methods limited to order 2
+/// REFERENCES: LeVeque (2002) Finite Volume Methods; Hesthaven (2007) Spectral Methods
 /// - **Stencil Width**: Number of grid points used in the stencil
 /// - **Conservation**: Whether the operator preserves conservation laws
 /// - **Adjoint Consistency**: Whether the operator is consistent with its adjoint

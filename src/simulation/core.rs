@@ -94,6 +94,15 @@ impl<'a, M: Medium> CoreSimulation<'a, M> {
         self.progress_reporter.on_start(num_steps, dt);
 
         // This is a placeholder for the actual solver integration
+        // TODO_AUDIT: P1 - Advanced Simulation Orchestration - Implement full simulation workflow with adaptive algorithms and error control
+        // DEPENDS ON: simulation/core/adaptive_time_stepping.rs, simulation/core/error_control.rs, simulation/core/workflow_engine.rs
+        // MISSING: Adaptive time stepping with embedded Runge-Kutta methods
+        // MISSING: Error control using Richardson extrapolation and PI controllers
+        // MISSING: Workflow orchestration with dependency graphs and parallel execution
+        // MISSING: Checkpoint/restart capabilities for long-running simulations
+        // MISSING: Multi-scale time integration (Gear's method for stiff systems)
+        // THEOREM: Richardson extrapolation: error ~ h^p, extrapolated error ~ h^(2p)
+        // THEOREM: PI controller: dt_{n+1} = dt_n * (tolerance/error)^(1/(p+1)) * (error_prev/error)^(k_i/(p+1))
         // In a real implementation, this would call the appropriate solver
         // based on the configured features and run the simulation
 

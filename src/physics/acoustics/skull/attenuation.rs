@@ -8,6 +8,16 @@ use crate::domain::grid::Grid;
 use ndarray::Array3;
 
 /// Skull attenuation calculator
+/// TODO_AUDIT: P1 - Advanced Skull Attenuation - Implement frequency-dependent attenuation with scattering and dispersion effects for accurate transcranial propagation
+/// DEPENDS ON: physics/acoustics/skull/attenuation/scattering.rs, physics/acoustics/skull/attenuation/dispersion.rs, physics/acoustics/skull/attenuation/temperature.rs
+/// MISSING: Scattering losses due to trabecular microstructure
+/// MISSING: Frequency dispersion in cancellous vs cortical bone
+/// MISSING: Temperature-dependent attenuation changes
+/// MISSING: Anisotropic attenuation due to preferred orientations
+/// MISSING: Non-linear attenuation at high intensities
+/// THEOREM: Kramers-Kronig dispersion: ε''(ω) ∝ ∫ ε'(ω')/(ω'-ω) dω' for causality
+/// THEOREM: Multiple scattering: α_total = α_absorption + α_scattering with interference effects
+/// REFERENCES: Pinton et al. (2012) JASA 131, 4694; White et al. (2006) Ultrasound Med Biol
 #[derive(Debug)]
 pub struct SkullAttenuation {
     /// Base attenuation coefficient (Np/m/MHz)

@@ -264,6 +264,16 @@ impl ElasticityMap3D {
         let std_modulus = (sum_squared_diff / valid_points as f64).sqrt();
 
         // Simple median approximation (could be improved)
+        // TODO_AUDIT: P2 - Advanced SWE Analysis - Implement full shear wave elastography with dispersion analysis and multi-directional wave tracking
+        // DEPENDS ON: clinical/imaging/swe/dispersion_analysis.rs, clinical/imaging/swe/multi_directional.rs, clinical/imaging/swe/wave_tracking.rs
+        // MISSING: Shear wave dispersion analysis: c(f) = c₀ + α f^β for viscoelastic characterization
+        // MISSING: Multi-directional shear wave generation and tracking (SWEI, SSI)
+        // MISSING: Phase velocity estimation with 2D Fourier transforms
+        // MISSING: Attenuation coefficient estimation from wave amplitude decay
+        // MISSING: Anisotropic elasticity tensor reconstruction
+        // THEOREM: Kelvin-Voigt viscoelasticity: σ = E ε + η ∂ε/∂t with complex modulus μ(ω) = E + jωη
+        // THEOREM: Shear wave speed in incompressible media: c_s = √(μ/ρ) for elastic solids
+        // REFERENCES: Sarvazyan et al. (1998) Ultrasound Med Biol; Palmeri et al. (2008) IEEE Trans Ultrason Ferroelectr Freq Control
         let median_modulus = mean_modulus; // Placeholder
 
         let total_roi_voxels = (max_x - min_x + 1) * (max_y - min_y + 1) * (max_z - min_z + 1);

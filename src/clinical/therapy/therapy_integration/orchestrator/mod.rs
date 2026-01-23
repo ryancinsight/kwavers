@@ -346,6 +346,7 @@ mod tests {
                 },
                 risk_organs: vec![],
             },
+            imaging_data_path: None,
         };
 
         let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
@@ -394,6 +395,7 @@ mod tests {
                 },
                 risk_organs: vec![],
             },
+            imaging_data_path: None,
         };
 
         let grid = Grid::new(16, 16, 16, 0.002, 0.002, 0.002).unwrap();
@@ -421,6 +423,7 @@ mod tests {
         let config = TherapySessionConfig {
             primary_modality: TherapyModality::Transcranial,
             secondary_modalities: vec![],
+            imaging_data_path: None,
             duration: 10.0,
             acoustic_params: AcousticTherapyParams {
                 frequency: 0.5e6,

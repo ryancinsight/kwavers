@@ -25,6 +25,8 @@ use crate::domain::medium::Medium;
 use crate::physics::cavitation_control::{ControlStrategy, FeedbackConfig, FeedbackController};
 use crate::physics::chemistry::ChemicalModel;
 use crate::physics::transcranial::TranscranialAberrationCorrection;
+#[cfg(feature = "nifti")]
+use crate::physics::skull::CTBasedSkullModel;
 use crate::simulation::imaging::ceus::ContrastEnhancedUltrasound;
 use ndarray::Array3;
 
@@ -311,22 +313,52 @@ fn create_stone_geometry(config: &TherapySessionConfig, grid: &Grid) -> Array3<f
 ///
 /// # Returns
 ///
-/// Error indicating DICOM integration not yet implemented
-fn load_ct_imaging_data(_config: &TherapySessionConfig) -> KwaversResult<Array3<f64>> {
-    // TODO_AUDIT: P1 - DICOM CT Data Loading - Not Implemented
+/// 3D array of Hounsfield Units, or error if loading fails
+///
+/// # Implementation Status
+///
+/// ✅ IMPLEMENTED: NIFTI file loading with CTBasedSkullModel
+/// 🔄 TODO: DICOM series loading and PACS integration
+fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f64>> {
+    // Try to load from NIFTI file if path is provided
+    if let Some(ct_path) = &config.imaging_data_path {
+        if ct_path.ends_with(".nii") || ct_path.ends_with(".nii.gz") {
+            #[cfg(feature = "nifti")]
+            {
+                match CTBasedSkullModel::from_file(ct_path) {
+                    Ok(ct_model) => {
+                        let metadata = ct_model.metadata();
+                        eprintln!(
+                            "Loaded CT scan: {} voxels, {:.2}mm spacing, HU range [{:.0}, {:.0}]",
+                            format!("{}×{}×{}", metadata.dimensions.0, metadata.dimensions.1, metadata.dimensions.2),
+                            metadata.voxel_spacing_mm.0,
+                            metadata.hu_range.0,
+                            metadata.hu_range.1
+                        );
+                        return Ok(ct_model.ct_data().clone());
+                    }
+                    Err(e) => {
+                        eprintln!("Warning: Failed to load NIFTI CT data: {}. Using synthetic fallback.", e);
+                    }
+                }
+            }
+
+            #[cfg(not(feature = "nifti"))]
+            {
+                eprintln!("Warning: NIFTI feature not enabled. Rebuild with --features nifti to load {}. Using synthetic fallback.", ct_path);
+            }
+        } else if ct_path.ends_with(".dcm") {
+            // DICOM loading - future implementation
+            eprintln!("Warning: DICOM loading not yet implemented for {}. Using synthetic fallback.", ct_path);
+        }
+    }
+
+    // Fallback: Generate synthetic CT data
+    // TODO_AUDIT: P2 - DICOM CT Data Loading - Partial Implementation
     //
-    // PROBLEM:
-    // Returns validation error instead of loading real CT imaging data.
-    // Clinical therapy planning cannot use patient-specific anatomy.
+    // STATUS: NIFTI loading complete, DICOM loading pending
     //
-    // IMPACT:
-    // - Cannot load CT scans for patient-specific treatment planning
-    // - Therapy planning relies on synthetic phantom data only
-    // - No integration with hospital PACS systems
-    // - Blocks personalized medicine applications (tumor targeting, skull modeling)
-    // - Severity: P1 (clinical feature, moderate priority - synthetic fallback exists)
-    //
-    // REQUIRED IMPLEMENTATION:
+    // REMAINING WORK:
     // 1. DICOM file reading:
     //    - Use dicom crate for file parsing
     //    - Extract CT image slices (pixel data, spacing, position)
@@ -334,27 +366,9 @@ fn load_ct_imaging_data(_config: &TherapySessionConfig) -> KwaversResult<Array3<
     // 2. PACS integration (optional):
     //    - Query PACS server (C-FIND, C-MOVE) for patient studies
     //    - Retrieve CT series matching therapy session
-    // 3. Hounsfield Unit (HU) conversion:
-    //    - Apply rescale slope and intercept
-    //    - Convert HU to acoustic properties (density, sound speed)
-    // 4. Metadata extraction:
-    //    - Patient orientation and position
-    //    - Slice thickness and spacing
-    //    - Image dimensions and field of view
-    // 5. Error handling:
-    //    - Validate DICOM tags (Modality = "CT")
-    //    - Handle incomplete series
-    //    - Fallback to synthetic if loading fails
-    //
-    // MATHEMATICAL SPECIFICATION:
-    // HU to density conversion (Schneider et al., 1996):
-    //   ρ(HU) = ρ_water × (1 + HU/1000)  for HU ≥ 0
-    //   ρ(HU) = ρ_water × (1 + HU/975)   for HU < 0
-    // where ρ_water = 1000 kg/m³
-    //
-    // HU to sound speed (simplified):
-    //   c(HU) = c_water + α·HU
-    // where c_water = 1540 m/s, α ≈ 2.5 (m/s)/HU for soft tissue
+    // 3. Enhanced HU conversion:
+    //    - Apply DICOM rescale slope and intercept
+    //    - Validate modality tag (should be "CT")
     //
     // VALIDATION CRITERIA:
     // - Test: Load synthetic DICOM series, verify volume dimensions match expected

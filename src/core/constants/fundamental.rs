@@ -3,6 +3,16 @@
 /// Speed of sound in water at 20°C (m/s)
 /// Value: 1482.0 m/s (more precise value)
 /// Reference: National Physical Laboratory acoustic properties database
+/// TODO_AUDIT: P1 - Temperature-Dependent Physical Constants - Implement full thermodynamic state dependence for all physical constants
+/// DEPENDS ON: core/constants/state_dependent.rs, physics/thermodynamics/equations_of_state.rs
+/// MISSING: Temperature-dependent speed of sound: c(T) = c₀(1 + α(T-T₀)) for liquids (Del Grosso 1972)
+/// MISSING: Pressure-dependent speed of sound: c(p) = c₀(1 + βp) for compressibility effects
+/// MISSING: Frequency-dependent attenuation: α(f) = α₀ fᵇ with temperature corrections
+/// MISSING: Nonlinear parameter B/A with temperature dependence for shock formation
+/// MISSING: Surface tension σ(T) = σ₀(1 - γ(T-T_c)) near critical point
+/// MISSING: Viscosity η(T) following Arrhenius law: η = η₀ exp(Eₐ/RT)
+/// THEOREM: Del Grosso's temperature dependence: dc/dT ≈ 3.0 m/s/K for water
+/// THEOREM: Stokes-Einstein relation: D = kT/(6πηr) for diffusion-viscosity coupling
 pub const SOUND_SPEED_WATER: f64 = 1482.0;
 
 /// Speed of sound in soft tissue (m/s)

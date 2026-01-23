@@ -345,6 +345,16 @@ impl StoneFractureModel {
     ///
     /// Fragment size analysis is performed by post-processing the damage field
     /// to identify connected fractured regions. Currently placeholder.
+    /// TODO_AUDIT: P2 - Advanced Stone Fracture Modeling - Implement biomechanical stone fracture with crack propagation and stress analysis
+    /// DEPENDS ON: clinical/therapy/lithotripsy/biomechanics.rs, clinical/therapy/lithotripsy/crack_propagation.rs, clinical/therapy/lithotripsy/material_fatigue.rs
+    /// MISSING: Griffith's criterion for crack initiation: σ√(πa) ≥ 2γE / (1-ν²) for brittle fracture
+    /// MISSING: Paris-Erdogan law for fatigue crack growth: da/dN = C(ΔK)^m with stress intensity
+    /// MISSING: Anisotropic material properties for different stone compositions
+    /// MISSING: Multi-scale fracture modeling from micro-cracks to macroscopic failure
+    /// MISSING: Ultrasonic cavitation-enhanced fracture with bubble collapse pressures
+    /// THEOREM: Griffith criterion: Fracture occurs when elastic energy release ≥ surface energy increase
+    /// THEOREM: Paris law: Fatigue crack growth rate proportional to stress intensity range
+    /// REFERENCES: Griffith (1921) Phil Trans Roy Soc; Paris & Erdogan (1963) J Basic Eng
     #[inline]
     pub fn fragment_sizes(&self) -> &[f64] {
         &self.fragment_sizes

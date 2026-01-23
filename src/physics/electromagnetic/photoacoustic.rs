@@ -4,6 +4,16 @@
 //! optical absorption, thermal expansion, and pressure wave generation.
 
 /// Grüneisen parameter for thermoelastic coupling
+/// TODO_AUDIT: P2 - Advanced Photoacoustic Physics - Implement complete photoacoustic wave generation with nonlinear thermoelasticity and acoustic saturation
+/// DEPENDS ON: physics/electromagnetic/photoacoustic/nonlinear_thermoelastic.rs, physics/electromagnetic/photoacoustic/saturation.rs, physics/electromagnetic/photoacoustic/broadband.rs
+/// MISSING: Nonlinear Grüneisen parameter: Γ(T,p) = Γ₀ (1 + α ΔT + β Δp) with temperature/pressure dependence
+/// MISSING: Acoustic saturation effects at high laser fluences (>100 mJ/cm²)
+/// MISSING: Broadband photoacoustic signals with frequency-dependent absorption
+/// MISSING: Stress confinement vs thermal confinement regime analysis
+/// MISSING: Multi-wavelength photoacoustic spectroscopy with chemical specificity
+/// THEOREM: Photoacoustic pressure: p₀ = Γ μₐ Φ / C_p where Γ = β c² / (C_p ρ) is Grüneisen parameter
+/// THEOREM: Thermal confinement: μₐ δ_th << 1 where δ_th = √(κ t_p) is thermal diffusion length
+/// REFERENCES: Oraevsky & Karabutov (2003) Biomedical Photonics; Wang & Wu (2007) Biomedical Optics
 #[derive(Debug, Clone)]
 pub struct GruneisenParameter {
     /// Grüneisen parameter Γ (dimensionless)
