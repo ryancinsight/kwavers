@@ -2,10 +2,11 @@
 //!
 //! Design principles:
 //! - Separation of Concerns: Each sub-module handles a specific aspect
-//! - Open/Closed: Easy to add new reaction types without modifying existing code  
+//! - Open/Closed: Easy to add new reaction types without modifying existing code
 //! - Interface Segregation: Traits for specific chemical behaviors
 //! - Dependency Inversion: Depends on abstractions (traits) not concrete types
 //! - Single Responsibility: Each component has one clear purpose
+//! TODO_AUDIT: P2 - Sonochemistry Coupling - Add comprehensive sonochemistry module with complete reaction kinetics and free radical production tracking, expanding beyond current simplified models
 
 use crate::core::error::{KwaversResult, ValidationError};
 use crate::domain::grid::Grid;

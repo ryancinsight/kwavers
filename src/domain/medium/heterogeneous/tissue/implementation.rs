@@ -17,6 +17,7 @@ use crate::domain::medium::{
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 
 /// Heterogeneous tissue medium with spatial tissue type variations
+/// TODO_AUDIT: P2 - Tissue Attenuation - Add realistic tissue attenuation models (frequency-dependent, temperature-dependent) for accurate ultrasound propagation, replacing simplified constant absorption
 #[derive(Debug, Clone)]
 pub struct HeterogeneousTissueMedium {
     /// 3D map of tissue types

@@ -14,6 +14,7 @@ pub const SPEED_OF_LIGHT: f64 = 2.99792458e8; // m/s
 pub const BOLTZMANN_CONSTANT: f64 = 1.380649e-23; // J/K
 
 /// Bremsstrahlung radiation model
+/// TODO_AUDIT: P1 - Plasma Kinetics - Add complete Saha-Boltzmann ionization kinetics with partial LTE for accurate plasma modeling, replacing simplified ionization fraction calculation
 #[derive(Debug, Clone)]
 pub struct BremsstrahlungModel {
     /// Average ion charge number

@@ -84,6 +84,7 @@ impl CentralDifferenceOperator {
 }
 
 /// FDTD solver for acoustic wave propagation
+/// TODO_AUDIT: P1 - Advanced Wave Propagation - Implement full 3D nonlinear wave propagation with exact dispersion correction for high-frequency ultrasound (>10 MHz), adding frequency-dependent attenuation and nonlinear effects
 pub struct FdtdSolver {
     /// Configuration
     pub(crate) config: FdtdConfig,
@@ -532,7 +533,10 @@ impl std::fmt::Debug for FdtdSolver {
             .field("metrics", &self.metrics)
             .field("cpml_boundary", &self.cpml_boundary)
             .field("spatial_order", &self.spatial_order)
-            .field("gpu_accelerator", &self.gpu_accelerator.as_ref().map(|_| "GpuAccelerator"))
+            .field(
+                "gpu_accelerator",
+                &self.gpu_accelerator.as_ref().map(|_| "GpuAccelerator"),
+            )
             .field("source_handler", &self.source_handler)
             // dynamic_sources contains Arc<dyn Source> which might not impl Debug properly if not supertrait
             // If it worked with derive, it should work here.

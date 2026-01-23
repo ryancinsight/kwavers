@@ -22,6 +22,7 @@ use crate::physics::acoustics::bubble_dynamics::thermodynamics::{
 ///
 /// **Literature**: Keller & Miksis (1980), Hamilton & Blackstock Ch.11
 /// **Note**: Thermodynamic calculators reserved for future implementation
+/// TODO_AUDIT: P1 - Multi-Bubble Interactions - Implement Bjerknes forces, coalescence, and fragmentation for dense bubble clouds, replacing single-bubble approximation
 #[derive(Debug, Clone)]
 pub struct KellerMiksisModel {
     pub(crate) params: BubbleParameters,

@@ -3,6 +3,7 @@ use crate::core::error::KwaversResult;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 
 /// Calculate bubble wall acceleration using Keller-Miksis equation
+/// TODO_AUDIT: P1 - Bubble Shape Instability - Add non-spherical deformation models (shape instabilities, jet formation) for realistic cavitation dynamics, replacing spherical approximation
 pub(crate) fn calculate_acceleration(
     model: &KellerMiksisModel,
     state: &mut BubbleState,
