@@ -52,6 +52,11 @@ impl BeamformingProcessor3D {
             } => self.process_mvdr_3d(rf_data, *diagonal_loading as f32, *subarray_size)?,
             BeamformingAlgorithm3D::SAFT3D { .. } => {
                 // TODO_AUDIT: P1 - 3D SAFT Beamforming - Not Implemented
+                // DEPENDS ON: analysis/beamforming/saft/3d.rs, math/geometry/spherical_harmonics.rs
+                // MISSING: 3D Synthetic Aperture Focusing: beamformed_signal = ∑ wᵢ * sᵢ(τᵢ) where τᵢ = ||r - rᵢ||/c
+                // MISSING: Spherical wave summation with proper phase delays and apodization
+                // MISSING: Dynamic focusing for varying depths with F-number control
+                // MISSING: Coherence factor weighting for resolution enhancement
                 //
                 // PROBLEM:
                 // Synthetic Aperture Focusing Technique (SAFT) for 3D volumetric reconstruction

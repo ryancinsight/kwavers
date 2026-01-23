@@ -114,6 +114,11 @@ pub(crate) fn update_mass_transfer(
 }
 
 /// Update bubble temperature through thermodynamic processes
+/// TODO_AUDIT: P1 - Non-Adiabatic Thermodynamics - Implement full thermal conduction and radiation losses, replacing adiabatic approximation
+/// DEPENDS ON: physics/thermodynamics/heat_transfer.rs, physics/optics/radiation.rs
+/// MISSING: Fourier heat conduction equation: ∂T/∂t = α∇²T with interface coupling
+/// MISSING: Stefan-Boltzmann radiation: q = εσ(T⁴ - T₀⁴) for extreme temperatures
+/// MISSING: Kirchhoff's law for thermal radiation in plasma regime
 pub(crate) fn update_temperature(
     model: &KellerMiksisModel,
     state: &mut BubbleState,

@@ -363,6 +363,13 @@ pub fn wave_propagation_residual<B: AutodiffBackend>(
 
 /// Compute charge density (placeholder)
 ///
+/// TODO_AUDIT: P1 - Maxwell's Equations PINN - Implement complete time-domain Maxwell's equations with proper constitutive relations
+/// DEPENDS ON: physics/electromagnetic/equations/time_domain.rs, physics/materials/permittivity.rs
+/// MISSING: Faraday's law: ∇×E = -∂B/∂t with proper vector calculus in PINN framework
+/// MISSING: Ampere's law: ∇×H = J + ∂D/∂t with displacement current and magnetization
+/// MISSING: Gauss's laws: ∇·D = ρ, ∇·B = 0 with charge conservation
+/// MISSING: Constitutive relations: D = εE, B = μH, J = σE for dispersive media
+/// MISSING: Poynting theorem for energy conservation: ∇·S = -∂u/∂t - J·E
 /// TODO_AUDIT: P2 - Charge Density Computation - Placeholder
 /// Returns zero charge density. Real implementation would compute ρ = ∇·D from electric field.
 /// Required for: Space charge effects, plasma simulation, semiconductor device modeling.

@@ -75,6 +75,10 @@ impl CherenkovModel {
 
     /// Spectral intensity with inverse frequency dependence for numerical stability
     /// Returns 0 below threshold.
+    /// TODO_AUDIT: P1 - Quantum Cherenkov - Add Frank-Tamm relativistic corrections and quantum electrodynamics effects
+    /// DEPENDS ON: physics/optics/quantum.rs (QED framework), physics/constants/relativistic.rs
+    /// MISSING: Frank-Tamm formula: dN/dx/dω = (α/ħ) * (1 - 1/(n²β²)) * (ω/c) * (1/β²) * sin²θ
+    /// MISSING: Quantum corrections for high-energy regime (v → c)
     #[must_use]
     pub fn spectral_intensity(&self, frequency_hz: f64, velocity: f64, charge: f64) -> f64 {
         if !self.exceeds_threshold(velocity) || frequency_hz <= 0.0 {

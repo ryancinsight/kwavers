@@ -85,6 +85,11 @@ impl CentralDifferenceOperator {
 
 /// FDTD solver for acoustic wave propagation
 /// TODO_AUDIT: P1 - Advanced Wave Propagation - Implement full 3D nonlinear wave propagation with exact dispersion correction for high-frequency ultrasound (>10 MHz), adding frequency-dependent attenuation and nonlinear effects
+/// DEPENDS ON: physics/acoustics/nonlinear/westervelt.rs, physics/acoustics/attenuation/frequency_power_law.rs
+/// MISSING: Westervelt equation: ∂²p/∂t² - c₀²∇²p = (β/c₀²)(∂²p²/∂t²) for finite amplitude waves
+/// MISSING: Power-law attenuation: α = α₀ fᵇ with b=1.1 for soft tissues, b=2 for relaxation
+/// MISSING: Khokhlov-Zabolotskaya-Kuznetsov (KZK) equation for parabolic approximation in focused beams
+/// MISSING: Phase velocity dispersion correction for broadband pulses
 pub struct FdtdSolver {
     /// Configuration
     pub(crate) config: FdtdConfig,

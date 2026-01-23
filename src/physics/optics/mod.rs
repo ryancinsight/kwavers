@@ -1,4 +1,15 @@
 // src/physics/optics/mod.rs
+//! # Optics Module
+//!
+//! Implements optical physics for biomedical imaging and light-matter interactions.
+//! TODO_AUDIT: P1 - Quantum Optics Framework - Implement quantum electrodynamics framework for extreme light-matter interactions in sonoluminescence
+//! DEPENDS ON: physics/quantum/qed.rs, physics/optics/quantum_emission.rs
+//! MISSING: Photon number states and quantum field operators for intense light fields
+//! MISSING: Jaynes-Cummings model for atom-light coupling in hot plasma
+//! MISSING: Quantum cascade effects in multi-photon emission processes
+//! MISSING: Entanglement generation in Cherenkov radiation from coherent electron beams
+//! MISSING: Quantum corrections to classical emission spectra (Lamb shift, spontaneous emission)
+
 pub mod diffusion;
 pub mod map_builder;
 pub mod monte_carlo;

@@ -18,6 +18,11 @@ use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 
 /// Heterogeneous tissue medium with spatial tissue type variations
 /// TODO_AUDIT: P2 - Tissue Attenuation - Add realistic tissue attenuation models (frequency-dependent, temperature-dependent) for accurate ultrasound propagation, replacing simplified constant absorption
+/// DEPENDS ON: physics/acoustics/attenuation/biot.rs, physics/temperature/thermoelastic.rs
+/// MISSING: Frequency power law: α(f) = α₀ fᵇ where b ∈ [1.0, 2.0] for different tissues
+/// MISSING: Temperature dependence: α(T) = α₀ (1 + γ(T-T₀)) for thermal expansion effects
+/// MISSING: Multiple relaxation mechanisms: α(f) = ∑ αᵢ / (1 + (f/fᵢ)²) for viscoelastic tissues
+/// MISSING: Nonlinear parameter B/A with temperature dependence for high-intensity applications
 #[derive(Debug, Clone)]
 pub struct HeterogeneousTissueMedium {
     /// 3D map of tissue types

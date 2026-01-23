@@ -16,16 +16,25 @@ use crate::solver::forward::pstd::config::PSTDConfig;
 use crate::solver::pstd::PSTDSolver;
 use ndarray::{Array3, Zip};
 
-/// Initialize absorption operators τ and η
+/// Initialize absorption operators τ, η, and spatially-varying exponent y
+///
+/// Returns (tau, eta, y_field) where y_field contains the spatially-varying power law exponent.
+/// For homogeneous media, y_field will be constant. For heterogeneous media (e.g., tissue),
+/// y can vary spatially for more realistic absorption modeling.
+///
+/// References:
+/// - Treeby & Cox (2010): k-Wave absorption formulation
+/// - fullwave25: Spatially-varying absorption exponent implementation
 pub fn initialize_absorption_operators(
     config: &PSTDConfig,
     grid: &Grid,
     medium: &dyn Medium,
     _k_max: f64,
     _c_ref: f64,
-) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
+) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
     let mut tau = Array3::zeros((grid.nx, grid.ny, grid.nz));
     let mut eta = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let mut y_field = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
     match &config.absorption_mode {
         AbsorptionMode::Lossless => {
@@ -43,8 +52,8 @@ pub fn initialize_absorption_operators(
             alpha_coeff,
             alpha_power,
         } => {
-            let y = *alpha_power;
-            if (y - 1.0).abs() < 1e-12 {
+            let y_default = *alpha_power;
+            if (y_default - 1.0).abs() < 1e-12 {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
                         message: "alpha_power must not be 1.0 for fractional Laplacian formulation"
@@ -53,18 +62,29 @@ pub fn initialize_absorption_operators(
                 ));
             }
             // Calculate absorption terms from medium properties
+            // Now supports spatially-varying exponent from heterogeneous media
             for k in 0..grid.nz {
                 for j in 0..grid.ny {
                     for i in 0..grid.nx {
                         let (x, y_coord, z) = grid.indices_to_coordinates(i, j, k);
 
-                        // Use medium properties for spatially varying absorption
+                        // Use medium properties for spatially varying absorption coefficient
                         let alpha_0_medium = medium.alpha_coefficient(x, y_coord, z, grid);
                         let alpha_0 = if alpha_0_medium.abs() > 0.0 {
                             alpha_0_medium
                         } else {
                             *alpha_coeff
                         };
+
+                        // Use medium properties for spatially varying absorption exponent
+                        // This is the key enhancement from fullwave25
+                        let y_medium = medium.alpha_power(x, y_coord, z, grid);
+                        let y = if y_medium.abs() > 1e-12 && (y_medium - 1.0).abs() > 1e-12 {
+                            y_medium
+                        } else {
+                            y_default
+                        };
+
                         let c0_val = medium.sound_speed(i, j, k);
 
                         // Calculate tau and eta based on Treeby & Cox (2010)
@@ -77,6 +97,7 @@ pub fn initialize_absorption_operators(
 
                         tau[[i, j, k]] = tau_val;
                         eta[[i, j, k]] = eta_val;
+                        y_field[[i, j, k]] = y;
                     }
                 }
             }
@@ -91,7 +112,7 @@ pub fn initialize_absorption_operators(
         }
     }
 
-    Ok((tau, eta))
+    Ok((tau, eta, y_field))
 }
 
 impl PSTDSolver {

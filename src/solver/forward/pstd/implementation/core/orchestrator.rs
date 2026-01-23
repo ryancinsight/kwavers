@@ -53,6 +53,7 @@ pub struct PSTDSolver {
     pub(crate) grad_rho0_z: Array3<f64>,
     pub(crate) absorb_tau: Array3<f64>,
     pub(crate) absorb_eta: Array3<f64>,
+    pub(crate) absorb_y: Array3<f64>, // Spatially-varying absorption exponent
     pub(crate) kspace_operators: Option<PSTDKSOperators>,
     // Temporary scratch arrays for gradient/divergence computations
     pub(crate) dpx: Array3<f64>,
@@ -87,7 +88,7 @@ impl PSTDSolver {
             BoundaryConfig::None => None,
         };
 
-        let (absorb_tau, absorb_eta) =
+        let (absorb_tau, absorb_eta, absorb_y) =
             initialize_absorption_operators(&config, &grid, medium, k_max, c_ref)?;
         let field_arrays =
             crate::solver::forward::pstd::data::initialize_field_arrays(&grid, medium)?;
@@ -147,6 +148,7 @@ impl PSTDSolver {
             grad_rho0_z: Array3::zeros(shape),
             absorb_tau,
             absorb_eta,
+            absorb_y,
             kspace_operators: None,
             dpx: Array3::zeros(shape),
             dpy: Array3::zeros(shape),

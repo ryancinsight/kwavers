@@ -46,6 +46,13 @@ pub enum Dimension {
 }
 
 /// Defines a 3D Cartesian grid for the simulation domain
+/// TODO_AUDIT: P2 - Adaptive Meshing - Implement adaptive mesh refinement for bubble collapse regions to capture extreme compression ratios (>100), replacing uniform grid spacing
+/// DEPENDS ON: grid/amr/hierarchical.rs, grid/amr/error_estimation.rs, solver/amr/wavelet.rs
+/// MISSING: Hierarchical grid structure with 2:1 refinement ratio constraints
+/// MISSING: Error estimation based on wavelet coefficients for adaptive refinement
+/// MISSING: Load balancing for parallel AMR across multiple bubbles
+/// MISSING: Interpolation operators for grid transfer (restriction/prolongation)
+/// MISSING: Stability criteria for AMR in compressible flow (CFL condition preservation)
 #[derive(Debug, Clone)]
 pub struct Grid {
     /// Number of points in x-direction

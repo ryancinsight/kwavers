@@ -41,6 +41,13 @@ use super::super::state::AcousticField;
 /// # Field Model
 ///
 /// Uses Gaussian beam approximation:
+/// TODO_AUDIT: P2 - Nonlinear Ultrasound Therapy - Implement full nonlinear ultrasound propagation for high-intensity therapy applications, replacing Gaussian beam approximation
+/// DEPENDS ON: physics/acoustics/nonlinear/kzk.rs, physics/acoustics/shock_formation.rs
+/// MISSING: Khokhlov-Zabolotskaya-Kuznetsov equation for focused beam nonlinear propagation
+/// MISSING: Shock wave formation criteria and evolution tracking
+/// MISSING: Cavitation threshold modeling with Bjerknes forces
+/// MISSING: Thermal dose accumulation with nonlinear heating effects
+/// MISSING: Standing wave pattern formation in therapy chambers
 /// - Pressure amplitude: P(r) = P₀ * exp(-r²/w²)
 /// - where r is distance from focal point, w is beam width
 /// - Focal point at specified depth along x-axis

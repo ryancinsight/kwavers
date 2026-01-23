@@ -412,7 +412,9 @@ impl OpticalPropertyMapBuilder {
         let total_voxels = nx * ny * nz;
         let mut data = Vec::with_capacity(total_voxels);
 
-        let default_props = self.background.unwrap_or_else(OpticalPropertyData::soft_tissue);
+        let default_props = self
+            .background
+            .unwrap_or_else(OpticalPropertyData::soft_tissue);
 
         for k in 0..nz {
             for j in 0..ny {
