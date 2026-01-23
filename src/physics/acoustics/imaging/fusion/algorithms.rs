@@ -3,6 +3,18 @@
 //! This module implements various fusion strategies for combining data from
 //! multiple imaging modalities, including weighted averaging, probabilistic
 //! fusion, feature-based methods, and machine learning approaches.
+//!
+//! TODO_AUDIT: P2 - Advanced Multi-Modal Fusion - Implement complete fusion algorithms including deep learning, feature-based, and probabilistic methods
+//! DEPENDS ON: physics/acoustics/imaging/fusion/deep_learning.rs, physics/acoustics/imaging/fusion/feature_extraction.rs, physics/acoustics/imaging/fusion/probabilistic.rs
+//! MISSING: Deep learning fusion with U-Net architectures and attention mechanisms
+//! MISSING: Feature-based fusion with tissue classification and correlation analysis
+//! MISSING: Probabilistic fusion using Bayesian methods and uncertainty quantification
+//! MISSING: Real-time fusion for streaming multi-modal data
+//! MISSING: Quality assessment and fusion confidence metrics
+//! SEVERITY: HIGH (enables advanced clinical imaging workflows)
+//! THEOREM: Information fusion: H(fused) ≤ min(H_i) where H is entropy, for complementary modalities
+//! THEOREM: Bayesian fusion: P(fused|data) ∝ ∏ P(data_i|fused) P(fused) for independent measurements
+//! REFERENCES: Blum & Liu (2006) Multi-Sensor Image Fusion; Ma et al. (2019) Medical Image Fusion
 
 use super::config::{FusionConfig, FusionMethod, RegistrationMethod};
 use super::quality;

@@ -67,6 +67,7 @@
 //! MISSING: Higher-order harmonics and subharmonics generation
 //! MISSING: Acoustic saturation and amplitude limiting effects
 //! MISSING: Self-demodulation and nonlinear distortion
+//! SEVERITY: CRITICAL (fundamental for HIFU and lithotripsy simulations)
 //! THEOREM: Burgers equation: ∂p/∂τ + p ∂p/∂σ = (1/(2ρc³)) ∂²p/∂σ² for 1D nonlinear acoustics
 //! THEOREM: KZK equation: ∂²p/∂z∂τ = (c₀/2) ∇_⊥²p + (δ/2c₀³) ∂³p/∂τ³ + (β/c₀³) ∂²p²/∂τ² for parabolic approximation
 //! REFERENCES: Hamilton & Blackstock (1998) Nonlinear Acoustics; Beyer (1997) Nonlinear Acoustics in Fluids

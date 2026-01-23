@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn centered_cube_generates_points() {
-        use crate::analysis::signal_processing::beamforming::time_domain::DelayReference;
+        use crate::domain::sensor::beamforming::time_domain::DelayReference;
 
         let processor = make_processor(4);
 

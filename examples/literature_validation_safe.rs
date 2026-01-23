@@ -142,6 +142,7 @@ fn validate_greens_function() -> KwaversResult<ValidationResult> {
         // MISSING: Zabolotskaya-Kuznetsov parabolic approximation validation
         // MISSING: Experimental ultrasound transducer field validation (O'Neil 1949)
         // MISSING: Cavitation threshold validation against Apfel (1981) theory
+        // SEVERITY: CRITICAL (ensures scientific accuracy and credibility)
         // THEOREM: Blackstock: p = p₀ + (β p₀/ρ c₀²) p² for quadratic nonlinearity
         // THEOREM: Hamilton: α(f) = α₀ f² / (1 + f²/f_relax²) for relaxation absorption
         // REFERENCES: Hamilton & Blackstock (1998) Nonlinear Acoustics; Apfel (1981) JASA 69, 1624

@@ -10,6 +10,7 @@
 //! MISSING: Telemetry integration for error monitoring and alerting
 //! MISSING: Error simulation and injection for resilience testing
 //! MISSING: Internationalization support for error messages
+//! SEVERITY: HIGH (critical for production reliability)
 //! THEOREM: Error propagation: P(error_recovery) = ∏ (1 - P(component_failure)) for independent components
 //! THEOREM: Mean time between failures: MTBF = ∫ R(t) dt where R(t) is reliability function
 //! REFERENCES: Nygard (2007) Release It!; Gunther (2013) Guerrilla Capacity Planning
@@ -176,7 +177,7 @@ pub enum KwaversError {
     /// DICOM format errors
     #[cfg(feature = "dicom")]
     #[error("DICOM format error: {0}")]
-    Dicom(#[from] dicom::dicom_object::ReadError),
+    DicomError(String),
 
     /// Feature not yet implemented
     #[error("Feature not yet implemented: {0}")]

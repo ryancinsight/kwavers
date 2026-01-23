@@ -7,6 +7,9 @@
 //! - [`crate::analysis::signal_processing::beamforming::time_domain`]
 
 // Re-export the canonical DelayReference from the analysis layer
+// Re-export DelayReference from analysis layer for backward compatibility
+// TODO_AUDIT: P2 - Move DelayReference to domain layer as it's a configuration type
+// RATIONALE: Configuration types should be in domain layer, not analysis layer
 pub use crate::analysis::signal_processing::beamforming::time_domain::DelayReference;
 
 /// Default delay reference (sensor index 0)

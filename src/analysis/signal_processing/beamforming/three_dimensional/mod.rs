@@ -41,7 +41,7 @@
 //! - Synnevåg et al. (2005) "Adaptive beamforming applied to medical ultrasound imaging"
 
 mod apodization;
-mod config;
+pub mod config;
 mod delay_sum;
 mod metrics;
 mod processing;

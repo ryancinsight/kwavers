@@ -14,6 +14,7 @@ use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
 /// MISSING: Adaptive timestepping with error control for stiffness
 /// MISSING: Implicit-explicit (IMEX) methods for multi-scale coupling
 /// MISSING: Structure-preserving algorithms for conservation laws
+/// SEVERITY: CRITICAL (required for accurate sonoluminescence and cavitation modeling)
 /// THEOREM: Symplectic integrators: Preserve Poincaré invariants and Hamiltonian structure
 /// THEOREM: Dahlquist barriers: A-stable linear multistep methods limited to order 2
 /// REFERENCES: Hairer et al. (2006) Geometric Numerical Integration; Leimkuhler & Reich (2004) Simulating Hamiltonian Dynamics

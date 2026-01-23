@@ -18,6 +18,7 @@
 //! MISSING: Hessian-based preconditioning for acceleration and regularization
 //! MISSING: Uncertainty quantification using ensemble methods and Monte Carlo sampling
 //! MISSING: Source encoding and simultaneous source inversion for efficiency
+//! SEVERITY: HIGH (enables quantitative seismic imaging)
 //! THEOREM: Born approximation: δu ≈ G δm u⁰ for small perturbations, where G is Green's function
 //! THEOREM: Gauss-Newton: ∇²L ≈ J^T J where J is Jacobian of forward operator
 //! REFERENCES: Tarantola (1984) Inverse Problem Theory; Virieux & Operto (2009) Geophysics; Fichtner (2011) Full Seismic Waveform Modelling and Inversion

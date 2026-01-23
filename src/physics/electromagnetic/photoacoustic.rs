@@ -11,6 +11,7 @@
 /// MISSING: Broadband photoacoustic signals with frequency-dependent absorption
 /// MISSING: Stress confinement vs thermal confinement regime analysis
 /// MISSING: Multi-wavelength photoacoustic spectroscopy with chemical specificity
+/// SEVERITY: HIGH (enables quantitative photoacoustic imaging)
 /// THEOREM: Photoacoustic pressure: p₀ = Γ μₐ Φ / C_p where Γ = β c² / (C_p ρ) is Grüneisen parameter
 /// THEOREM: Thermal confinement: μₐ δ_th << 1 where δ_th = √(κ t_p) is thermal diffusion length
 /// REFERENCES: Oraevsky & Karabutov (2003) Biomedical Photonics; Wang & Wu (2007) Biomedical Optics

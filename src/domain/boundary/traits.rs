@@ -32,7 +32,7 @@
 //! - **Causality**: Boundary response depends only on past/present fields
 
 use crate::core::error::KwaversResult;
-use crate::domain::grid::{Grid, GridTopology};
+use crate::domain::grid::GridTopology;
 use ndarray::{Array3, ArrayViewMut3};
 use rustfft::num_complex::Complex;
 use std::fmt::Debug;
@@ -476,22 +476,6 @@ impl BoundaryLayerManager {
 
         total
     }
-}
-
-/// Backward compatibility adapter for legacy `Boundary` trait
-///
-/// This allows gradual migration from the old trait to the new trait system.
-#[deprecated(
-    since = "2.15.0",
-    note = "Use the new BoundaryCondition trait system instead"
-)]
-pub trait LegacyBoundaryCompat {
-    fn apply_acoustic_legacy(
-        &mut self,
-        field: ArrayViewMut3<f64>,
-        grid: &Grid,
-        time_step: usize,
-    ) -> KwaversResult<()>;
 }
 
 #[cfg(test)]

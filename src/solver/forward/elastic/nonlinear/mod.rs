@@ -30,6 +30,7 @@
 //! MISSING: Fractional viscoelasticity: σ(t) = ∫ G(t-τ) dε(τ)/dτ dτ with fractional derivatives
 //! MISSING: Higher-order elastic constants M, N for third-order nonlinearity
 //! MISSING: Wave mixing and harmonic generation in prestressed media
+//! SEVERITY: HIGH (enables advanced tissue characterization)
 //! THEOREM: Piola-Kirchhoff stress: P = J σ F^{-T} for finite deformation
 //! THEOREM: Acoustoelastic effect: Δc/c = (1/2μ) σ (l² + m² - 2λ/μ) for isotropic solids
 //! REFERENCES: Brugger (1964) Phys Rev; Thurston & Brugger (1964) Phys Rev; Man & Ogilvy (1997) J Phys D

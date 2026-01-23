@@ -96,6 +96,9 @@ pub use config::{BeamformingConfig, BeamformingCoreConfig};
 // Processor (shared with analysis layer)
 mod processor;
 pub use processor::BeamformingProcessor;
+// GPU shaders (shared with analysis layer)
+#[cfg(feature = "gpu")]
+pub mod shaders;
 // Covariance and steering (shared with analysis layer)
 pub mod covariance;
 pub mod steering;

@@ -22,6 +22,7 @@ pub struct ConservationMetrics {
 /// MISSING: Numerical dissipation analysis for stability assessment
 /// MISSING: Noether's theorem verification for symmetry preservation
 /// MISSING: Casimir invariants for nonlinear wave systems
+/// SEVERITY: CRITICAL (validates physical correctness of all simulations)
 /// THEOREM: First law of thermodynamics: dU = δQ - δW + μ dN for open systems
 /// THEOREM: Second law: dS/dt ≥ 0 with equality for reversible processes
 /// THEOREM: Noether: Every continuous symmetry yields a conservation law

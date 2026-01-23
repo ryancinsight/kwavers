@@ -78,7 +78,7 @@ impl GhostCellMethod {
                             let interior_values =
                                 self.collect_interior_neighbors(property, geometry, i, j, k);
 
-                            if interior_values.len() >= order + 1 {
+                            if interior_values.len() > order {
                                 let extrapolated = self.extrapolate_value(&interior_values, order);
                                 smoothed[[i, j, k]] = extrapolated;
                             }

@@ -26,9 +26,9 @@ use std::collections::HashMap;
 #[cfg(feature = "pinn")]
 use crate::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
-use crate::analysis::signal_processing::beamforming::neural::processor::AIEnhancedBeamformingProcessor;
+use super::AIEnhancedBeamformingProcessor;
 #[cfg(feature = "pinn")]
-use super::types::ClinicalAnalysis;
+use super::types::AIBeamformingResult;
 #[cfg(feature = "pinn")]
 use ndarray::ArrayView4;
 

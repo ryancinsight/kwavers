@@ -432,7 +432,6 @@ impl AIEnhancedBeamformingProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::analysis::signal_processing::beamforming::neural::config::FeatureConfig;
     use ndarray::Array4;
 
     #[derive(Debug)]

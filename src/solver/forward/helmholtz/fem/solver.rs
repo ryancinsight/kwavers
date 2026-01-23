@@ -4,7 +4,18 @@
 //!
 //! This is a simplified demonstration FEM implementation.
 //! Full mesh integration and proper assembly are not yet implemented.
-//! See TODO comments in assemble_system() for missing functionality.
+//! TODO_AUDIT: P1 - Complete FEM Helmholtz Solver - Implement full finite element discretization with proper mesh integration, element assembly, and boundary conditions
+//! DEPENDS ON: domain/mesh/tetrahedral.rs, domain/boundary/fem_boundary.rs, math/linear_algebra/sparse_solvers.rs
+//! MISSING: Element matrix assembly for tetrahedral elements with basis functions
+//! MISSING: Proper mesh integration with quadrature rules
+//! MISSING: Boundary condition enforcement (Dirichlet/Neumann/Robin)
+//! MISSING: Sparse matrix storage and efficient solvers
+//! MISSING: Higher-order polynomial basis functions
+//! MISSING: Radiation boundary conditions for unbounded domains
+//! SEVERITY: HIGH (critical for complex geometry acoustic simulations)
+//! THEOREM: Galerkin method: Find u ∈ V such that a(u,v) = f(v) ∀v ∈ V for variational form
+//! THEOREM: Helmholtz weak form: ∫ (∇u·∇v - k²uv) dΩ = ∫ ∂u/∂n v dΓ for boundary value problems
+//! REFERENCES: Wu (1995) Pre-asymptotic error analysis of FEM; Ihlenburg (1998) FEM for Helmholtz equation
 //!
 //! Core solver for the Helmholtz equation using finite element discretization.
 //! Provides high-fidelity solutions for complex geometries where Born series

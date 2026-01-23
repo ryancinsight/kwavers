@@ -221,11 +221,9 @@ impl DiagnosisAlgorithm {
     }
 }
 
-// TODO: Tests disabled - types module doesn't exist in this context
-// Need to refactor tests to use actual types or create test-specific fixtures
-#[cfg(all(test, feature = "disabled_pending_refactor"))]
+#[cfg(test)]
 mod tests {
-    use super::types::{LesionDetection, TissueClassification};
+    use super::super::types::{LesionDetection, TissueClassification};
     use super::*;
 
     #[test]
@@ -245,7 +243,7 @@ mod tests {
             lesions: Vec::new(),
             tissue_classification: TissueClassification::empty(),
             recommendations: Vec::new(),
-            diagnostic_confidence: 0.9,
+            diagnostic_confidence: 0.9_f32,
         };
 
         let diagnosis = algorithm.diagnose(&features, &clinical_data).unwrap();
@@ -259,14 +257,14 @@ mod tests {
         let clinical_data = ClinicalAnalysis {
             lesions: vec![LesionDetection {
                 center: (10, 10, 10),
-                size_mm: 5.0,
-                confidence: 0.95,
+                size_mm: 5.0_f32,
+                confidence: 0.95_f32,
                 lesion_type: "Solid".to_string(),
-                clinical_significance: 0.85,
+                clinical_significance: 0.85_f32,
             }],
             tissue_classification: TissueClassification::empty(),
             recommendations: Vec::new(),
-            diagnostic_confidence: 0.9,
+            diagnostic_confidence: 0.9_f32,
         };
 
         let diagnosis = algorithm.diagnose(&features, &clinical_data).unwrap();
@@ -282,29 +280,29 @@ mod tests {
             lesions: vec![
                 LesionDetection {
                     center: (10, 10, 10),
-                    size_mm: 5.0,
-                    confidence: 0.95,
+                    size_mm: 5.0_f32,
+                    confidence: 0.95_f32,
                     lesion_type: "Solid".to_string(),
-                    clinical_significance: 0.85,
+                    clinical_significance: 0.85_f32,
                 },
                 LesionDetection {
                     center: (20, 20, 20),
-                    size_mm: 3.0,
-                    confidence: 0.90,
+                    size_mm: 3.0_f32,
+                    confidence: 0.90_f32,
                     lesion_type: "Cyst".to_string(),
-                    clinical_significance: 0.70,
+                    clinical_significance: 0.70_f32,
                 },
                 LesionDetection {
                     center: (30, 30, 30),
-                    size_mm: 4.0,
-                    confidence: 0.85,
+                    size_mm: 4.0_f32,
+                    confidence: 0.85_f32,
                     lesion_type: "Complex".to_string(),
-                    clinical_significance: 0.75,
+                    clinical_significance: 0.75_f32,
                 },
             ],
             tissue_classification: TissueClassification::empty(),
             recommendations: Vec::new(),
-            diagnostic_confidence: 0.9,
+            diagnostic_confidence: 0.9_f32,
         };
 
         let diagnosis = algorithm.diagnose(&features, &clinical_data).unwrap();
@@ -319,14 +317,14 @@ mod tests {
         let urgent_data = ClinicalAnalysis {
             lesions: vec![LesionDetection {
                 center: (10, 10, 10),
-                size_mm: 5.0,
-                confidence: 0.95,
+                size_mm: 5.0_f32,
+                confidence: 0.95_f32,
                 lesion_type: "Solid".to_string(),
-                clinical_significance: 0.90,
+                clinical_significance: 0.90_f32,
             }],
             tissue_classification: TissueClassification::empty(),
             recommendations: Vec::new(),
-            diagnostic_confidence: 0.9,
+            diagnostic_confidence: 0.9_f32,
         };
         assert_eq!(algorithm.assess_priority(&urgent_data), "URGENT");
 
@@ -335,7 +333,7 @@ mod tests {
             lesions: Vec::new(),
             tissue_classification: TissueClassification::empty(),
             recommendations: Vec::new(),
-            diagnostic_confidence: 0.95,
+            diagnostic_confidence: 0.95_f32,
         };
         assert_eq!(algorithm.assess_priority(&negative_data), "NEGATIVE");
 
@@ -343,14 +341,14 @@ mod tests {
         let high_data = ClinicalAnalysis {
             lesions: vec![LesionDetection {
                 center: (10, 10, 10),
-                size_mm: 3.0,
-                confidence: 0.75,
+                size_mm: 3.0_f32,
+                confidence: 0.75_f32,
                 lesion_type: "Cyst".to_string(),
-                clinical_significance: 0.60,
+                clinical_significance: 0.60_f32,
             }],
             tissue_classification: TissueClassification::empty(),
             recommendations: Vec::new(),
-            diagnostic_confidence: 0.8,
+            diagnostic_confidence: 0.8_f32,
         };
         assert_eq!(algorithm.assess_priority(&high_data), "HIGH");
     }
@@ -361,14 +359,14 @@ mod tests {
         let clinical_data = ClinicalAnalysis {
             lesions: vec![LesionDetection {
                 center: (10, 10, 10),
-                size_mm: 5.0,
-                confidence: 0.95,
+                size_mm: 5.0_f32,
+                confidence: 0.95_f32,
                 lesion_type: "Solid".to_string(),
-                clinical_significance: 0.85,
+                clinical_significance: 0.85_f32,
             }],
             tissue_classification: TissueClassification::empty(),
             recommendations: Vec::new(),
-            diagnostic_confidence: 0.9,
+            diagnostic_confidence: 0.9_f32,
         };
 
         let report = algorithm.generate_report(&clinical_data);
@@ -386,7 +384,7 @@ mod tests {
             lesions: Vec::new(),
             tissue_classification: TissueClassification::empty(),
             recommendations: Vec::new(),
-            diagnostic_confidence: 0.95,
+            diagnostic_confidence: 0.95_f32,
         };
 
         let report = algorithm.generate_report(&clinical_data);

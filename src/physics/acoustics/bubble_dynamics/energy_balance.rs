@@ -30,6 +30,7 @@ use crate::core::constants::GAS_CONSTANT as R_GAS;
 /// MISSING: Phase change latent heat during nucleation and condensation
 /// MISSING: Non-adiabatic heat transfer with radiation losses
 /// MISSING: Kinetic energy coupling between bubble and surrounding flow
+/// SEVERITY: CRITICAL (essential for accurate sonoluminescence energy conversion)
 /// THEOREM: First law of thermodynamics: dU = δQ - δW + Σ μ_i dN_i for open systems
 /// THEOREM: Gibbs free energy: ΔG = ΔH - TΔS for reaction spontaneity
 /// REFERENCES: Prosperetti (1984) J Fluid Mech; Storey & Szeri (2000) J Fluid Mech

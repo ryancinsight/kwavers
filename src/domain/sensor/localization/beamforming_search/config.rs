@@ -37,7 +37,7 @@
 //! scoring to prevent silent fallback behavior.
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::analysis::signal_processing::beamforming::time_domain::DelayReference;
+use crate::domain::sensor::beamforming::time_domain::DelayReference;
 use crate::domain::sensor::beamforming::{BeamformingCoreConfig, SteeringVectorMethod};
 
 /// Covariance / snapshot domain policy for narrowband MVDR/Capon scoring.

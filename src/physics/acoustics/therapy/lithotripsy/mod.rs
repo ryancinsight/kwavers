@@ -16,13 +16,16 @@
 //! - Cavitation cloud dynamics
 //! - Bioeffects assessment and safety monitoring
 
-// TODO: Implement lithotripsy submodules
-// See: DEEP_VERTICAL_HIERARCHY_REFACTORING_AUDIT.md Phase 1, Task 1.1.1
-// Required implementations:
-// - bioeffects: Tissue damage assessment, safety criteria
-// - cavitation_cloud: Bubble cloud dynamics in lithotripsy
-// - shock_wave: Shock wave generation and propagation physics
-// - stone_fracture: Stone material properties and fracture mechanics
+// TODO_AUDIT: P1 - Complete Lithotripsy Physics Implementation - Implement full extracorporeal shock wave lithotripsy simulation with shock waves, stone fracture, and bioeffects
+// DEPENDS ON: physics/acoustics/therapy/lithotripsy/shock_wave.rs, physics/acoustics/therapy/lithotripsy/stone_fracture.rs, physics/acoustics/therapy/lithotripsy/cavitation_cloud.rs, physics/acoustics/therapy/lithotripsy/bioeffects.rs
+// MISSING: Shock wave generation with nonlinear propagation and focusing
+// MISSING: Stone fracture mechanics with material properties and stress analysis
+// MISSING: Cavitation cloud dynamics with bubble-bubble interactions
+// MISSING: Bioeffects assessment with tissue damage and safety monitoring
+// SEVERITY: CRITICAL (essential for lithotripsy treatment planning and safety)
+// THEOREM: Shock wave propagation: ∂²p/∂t² = c² ∇²p + nonlinear terms for finite amplitude waves
+// THEOREM: Stone fracture: σ > σ_critical where σ = stress concentration factor * acoustic pressure
+// REFERENCES: Coleman et al. (1987) J Urol; Sass et al. (1991) Ultrasound Med Biol; Cleveland et al. (2007) J Acoust Soc Am
 
 /// Placeholder for lithotripsy configuration
 #[derive(Debug, Clone)]

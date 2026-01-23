@@ -28,7 +28,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::boundary::traits::{BoundaryCondition, FieldType};
-use crate::domain::grid::{Grid, GridTopology};
+use crate::domain::grid::GridTopology;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 
 /// Field updater that applies boundary conditions during solver steps
@@ -360,53 +360,6 @@ impl GradientFieldUpdater {
     }
 }
 
-/// Boundary-aware field updater for legacy Grid compatibility
-///
-/// This provides backward compatibility with code using the legacy `Grid` struct
-/// while still benefiting from the new boundary trait system.
-pub struct LegacyFieldUpdater<B: BoundaryCondition> {
-    inner: FieldUpdater<B>,
-}
-
-impl<B: BoundaryCondition> std::fmt::Debug for LegacyFieldUpdater<B> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LegacyFieldUpdater").finish_non_exhaustive()
-    }
-}
-
-impl<B: BoundaryCondition> LegacyFieldUpdater<B> {
-    /// Create from boundary condition
-    pub fn new(boundary: B) -> Self {
-        Self {
-            inner: FieldUpdater::new(boundary),
-        }
-    }
-
-    /// Apply to scalar field using legacy Grid
-    pub fn apply_to_scalar_field_legacy(
-        &mut self,
-        field: &mut Array3<f64>,
-        grid: &Grid,
-        time_step: usize,
-        dt: f64,
-    ) -> KwaversResult<()> {
-        use crate::domain::grid::GridTopologyExt;
-        let adapter = grid.as_topology();
-        self.inner
-            .apply_to_scalar_field(field, &adapter, time_step, dt)
-    }
-
-    /// Get inner updater
-    pub fn inner(&self) -> &FieldUpdater<B> {
-        &self.inner
-    }
-
-    /// Get mutable inner updater
-    pub fn inner_mut(&mut self) -> &mut FieldUpdater<B> {
-        &mut self.inner
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -484,18 +437,4 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_legacy_compatibility() {
-        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
-        let config = CPMLConfig::with_thickness(10);
-        let boundary = CPMLBoundary::new(config, &grid, 1500.0).unwrap();
-
-        let mut updater = LegacyFieldUpdater::new(boundary);
-        let mut field = Array3::ones((64, 64, 64));
-
-        // Should not panic
-        updater
-            .apply_to_scalar_field_legacy(&mut field, &grid, 0, 1e-7)
-            .unwrap();
-    }
 }

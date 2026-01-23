@@ -92,7 +92,7 @@ pub struct DopplerDefaults;
 impl DopplerDefaults {
     /// Cardiac imaging parameters (lower frequency, deeper penetration)
     pub const CARDIAC_FREQUENCY: f64 = 2.5e6; // 2.5 MHz
-    pub const CARDIAC_PRF: f64 = 3e3; // 3 kHz
+    pub const CARDIAC_PRF: f64 = 4e3; // 4 kHz
     pub const CARDIAC_ENSEMBLE_SIZE: usize = 12;
 
     /// Vascular imaging parameters (higher frequency, better resolution)

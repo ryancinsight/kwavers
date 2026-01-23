@@ -15,6 +15,8 @@
 
 use super::config::{BeamformingConfig3D, BeamformingMetrics};
 use crate::core::error::{KwaversError, KwaversResult};
+#[cfg(feature = "gpu")]
+use crate::domain::sensor::beamforming::shaders;
 
 #[cfg(feature = "gpu")]
 use wgpu;
@@ -119,16 +121,12 @@ impl BeamformingProcessor3D {
             // Load WGSL compute shaders
             let delay_sum_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("3D Delay-and-Sum Shader"),
-                source: wgpu::ShaderSource::Wgsl(
-                    super::super::shaders::BEAMFORMING_3D_SHADER.into(),
-                ),
+                source: wgpu::ShaderSource::Wgsl(shaders::BEAMFORMING_3D_SHADER.into()),
             });
 
             let dynamic_focus_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("3D Dynamic Focus Shader"),
-                source: wgpu::ShaderSource::Wgsl(
-                    super::super::shaders::DYNAMIC_FOCUS_3D_SHADER.into(),
-                ),
+                source: wgpu::ShaderSource::Wgsl(shaders::DYNAMIC_FOCUS_3D_SHADER.into()),
             });
 
             // Create bind group layout for GPU buffers

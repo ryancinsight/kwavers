@@ -467,6 +467,7 @@ impl BemFemCoupler {
     /// MISSING: Optimized Schwarz alternating methods for convergence acceleration
     /// MISSING: Adaptive mesh refinement at BEM-FEM interfaces
     /// MISSING: GPU acceleration for large-scale hybrid simulations
+    /// SEVERITY: HIGH (improves performance for large-scale acoustic simulations)
     /// THEOREM: Fast multipole method: O(N) complexity vs O(N²) for direct BEM
     /// THEOREM: FETI-DP: Interface problem ensures continuity across subdomains
     /// REFERENCES: Rokhlin (1985) J Comput Phys; Farhat & Roux (1991) Int J Numer Methods Eng
@@ -732,9 +733,24 @@ mod tests {
         // Sum direction should be (-1, -1, -1).
         let normal_n0 = normals[0];
         let val = -1.0 / 3.0_f64.sqrt();
-        assert!((normal_n0.0 - val).abs() < 1e-6, "n0 x failed: expected {}, got {}", val, normal_n0.0);
-        assert!((normal_n0.1 - val).abs() < 1e-6, "n0 y failed: expected {}, got {}", val, normal_n0.1);
-        assert!((normal_n0.2 - val).abs() < 1e-6, "n0 z failed: expected {}, got {}", val, normal_n0.2);
+        assert!(
+            (normal_n0.0 - val).abs() < 1e-6,
+            "n0 x failed: expected {}, got {}",
+            val,
+            normal_n0.0
+        );
+        assert!(
+            (normal_n0.1 - val).abs() < 1e-6,
+            "n0 y failed: expected {}, got {}",
+            val,
+            normal_n0.1
+        );
+        assert!(
+            (normal_n0.2 - val).abs() < 1e-6,
+            "n0 z failed: expected {}, got {}",
+            val,
+            normal_n0.2
+        );
 
         // Check n3 (0,0,1).
         // Shared by faces with normals (-1,0,0), (0,-1,0), (1,1,1).

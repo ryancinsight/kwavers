@@ -50,14 +50,8 @@ impl BeamformingProcessor3D {
                 subarray_size,
             } => self.process_mvdr_3d(rf_data, *diagonal_loading as f32, *subarray_size)?,
             BeamformingAlgorithm3D::SAFT3D { .. } => {
-                // TODO_AUDIT: P1 - 3D SAFT Beamforming - Not Implemented
-                //
-                // PROBLEM:
-                // Synthetic Aperture Focusing Technique (SAFT) for 3D volumetric reconstruction
-                // is not implemented. Returns FeatureNotAvailable error.
-                //
-                // IMPACT:
-                // - Cannot perform high-resolution 3D SAFT imaging
+                // SEE ALSO: analysis/signal_processing/beamforming/three_dimensional/processing.rs for detailed TODO_AUDIT
+                // TODO_AUDIT: P1 - 3D SAFT Beamforming - Not Implemented (duplicate - see analysis layer implementation)
                 // - Blocks advanced array processing techniques (coherent compounding)
                 // - Prevents offline processing of sequentially acquired RF data
                 // - No support for sparse array imaging (virtual element synthesis)
@@ -312,14 +306,8 @@ impl BeamformingProcessor3D {
         _diagonal_loading: f32,
         _subarray_size: [usize; 3],
     ) -> KwaversResult<Array3<f32>> {
-        // TODO_AUDIT: P1 - 3D MVDR Beamforming - Not Implemented
-        //
-        // PROBLEM:
-        // Minimum Variance Distortionless Response (MVDR) adaptive beamforming for 3D
-        // volumetric imaging is not implemented. Returns FeatureNotAvailable error.
-        //
-        // IMPACT:
-        // - Cannot perform adaptive 3D beamforming with clutter suppression
+        // SEE ALSO: analysis/signal_processing/beamforming/three_dimensional/processing.rs for detailed TODO_AUDIT
+        // TODO_AUDIT: P1 - 3D MVDR Beamforming - Not Implemented (duplicate - see analysis layer implementation)
         // - No sidelobe/artifact reduction through spatial filtering
         // - Blocks high-contrast imaging in presence of strong scatterers
         // - Prevents optimal SNR in heterogeneous tissue environments

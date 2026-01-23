@@ -4,7 +4,17 @@
 //!
 //! This is a placeholder BEM implementation with simplified matrices.
 //! Actual boundary integral assembly is not yet implemented.
-//! See TODO comments in solve() method for missing functionality.
+//! TODO_AUDIT: P1 - Complete BEM Solver Implementation - Implement full boundary element method with boundary integral assembly and Green's function evaluation
+//! DEPENDS ON: math/green_function.rs, domain/boundary/bem_boundary.rs, math/numerics/integration/surface_quadrature.rs
+//! MISSING: Boundary integral assembly for H and G matrices
+//! MISSING: Green's function evaluation for Helmholtz equation
+//! MISSING: Surface quadrature rules for curved elements
+//! MISSING: Efficient matrix-vector products for large systems
+//! MISSING: Fast multipole method acceleration
+//! SEVERITY: HIGH (essential for radiation and scattering problems)
+//! THEOREM: Boundary integral equation: c(r)u(r) + ∫_Γ ∂G/∂n u dΓ = ∫_Γ G ∂u/∂n dΓ for Helmholtz equation
+//! THEOREM: Green's function: G(r,r') = exp(ik|r-r'|)/(4π|r-r'|) for 3D free space Helmholtz
+//! REFERENCES: Wu (2000) Preconditioned GMRES for BEM; Colton & Kress (1998) Inverse Acoustic Problems
 //!
 //! Core implementation of the Boundary Element Method for acoustic problems.
 //! This solver handles the boundary integral formulation and integrates
@@ -12,8 +22,8 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::boundary::BemBoundaryManager;
+use crate::math::linear_algebra::sparse::solver::{IterativeSolver, Preconditioner, SolverConfig};
 use crate::math::linear_algebra::sparse::CompressedSparseRowMatrix;
-use crate::math::linear_algebra::sparse::solver::{IterativeSolver, SolverConfig, Preconditioner};
 use ndarray::Array1;
 use num_complex::Complex64;
 
@@ -132,18 +142,21 @@ impl BemSolver {
         let g_matrix = self.g_matrix.as_ref().unwrap();
 
         // Assemble system using boundary manager (non-destructive)
-        let (a_matrix, mut b_vector) = self.boundary_manager.assemble_bem_system(h_matrix, g_matrix, wavenumber)?;
+        let (a_matrix, mut b_vector) = self
+            .boundary_manager
+            .assemble_bem_system(h_matrix, g_matrix, wavenumber)?;
 
         // Apply source terms if provided (additive to RHS)
         if let Some(sources) = source_terms {
-            b_vector = b_vector + sources;
+            b_vector += sources;
         }
 
         // Solve the BEM system
         let x = self.solve_bem_system(&a_matrix, &b_vector)?;
 
         // Reconstruct full solution
-        let (boundary_pressure, boundary_velocity) = self.boundary_manager.reconstruct_solution(&x, wavenumber);
+        let (boundary_pressure, boundary_velocity) =
+            self.boundary_manager.reconstruct_solution(&x, wavenumber);
 
         Ok(BemSolution {
             boundary_pressure,
@@ -197,7 +210,6 @@ pub struct BemSolution {
     /// Wavenumber used in solution
     pub wavenumber: f64,
 }
-
 
 #[cfg(test)]
 mod tests {

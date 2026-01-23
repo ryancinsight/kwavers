@@ -211,6 +211,7 @@ impl TranscranialAberrationCorrection {
         // MISSING: Adaptive optics with deformable mirror correction
         // MISSING: Multi-element array optimization for skull transmission
         // MISSING: Patient-specific skull acoustic property characterization
+        // SEVERITY: CRITICAL (enables transcranial therapeutic ultrasound)
         // THEOREM: Time-reversal invariance: Wave equation ∂²u/∂t² - c²∇²u = 0 is time-reversal symmetric
         // THEOREM: Phase conjugation: If u(t) is aberrated wave, then u*(-t) focuses perfectly at source
         // REFERENCES: Fink (1992) IEEE Trans Ultrason Ferroelectr Freq Control; Tanter et al. (2007) Nat Rev Drug Discov

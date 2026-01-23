@@ -30,8 +30,11 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 
 #[cfg(feature = "pinn")]
-use crate::analysis::signal_processing::beamforming::neural::processor::AIEnhancedBeamformingProcessor;
-use crate::analysis::signal_processing::beamforming::neural::config::FeatureConfig;
+use crate::clinical::imaging::workflows::neural::AIBeamformingResult;
+#[cfg(feature = "pinn")]
+use crate::clinical::imaging::workflows::neural::{
+    AIBeamformingConfig, AIEnhancedBeamformingProcessor,
+};
 
 /// Clinical API application state
 #[derive(Debug, Clone)]
@@ -222,7 +225,10 @@ impl DICOMService {
     /// # Errors
     ///
     /// Returns an error if DICOM files cannot be read or parsed
-    pub fn read_study(&self, study_uid: &str) -> KwaversResult<Option<crate::infra::io::DicomStudy>> {
+    pub fn read_study(
+        &self,
+        study_uid: &str,
+    ) -> KwaversResult<Option<crate::infra::io::DicomStudy>> {
         let dicom_reader = crate::infra::io::DicomReader::new();
 
         // Search through configured DICOM nodes for storage directories
@@ -244,9 +250,15 @@ impl DICOMService {
     /// # Errors
     ///
     /// Returns an error if DICOM files cannot be read or parsed
-    pub fn read_series(&self, study_uid: &str, series_uid: &str) -> KwaversResult<Option<crate::infra::io::DicomSeries>> {
+    pub fn read_series(
+        &self,
+        study_uid: &str,
+        series_uid: &str,
+    ) -> KwaversResult<Option<crate::infra::io::DicomSeries>> {
         if let Some(study) = self.read_study(study_uid)? {
-            let series = study.series.into_iter()
+            let series = study
+                .series
+                .into_iter()
                 .find(|s| s.series_instance_uid == series_uid);
             Ok(series)
         } else {
@@ -259,12 +271,19 @@ impl DICOMService {
     /// # Errors
     ///
     /// Returns an error if DICOM file cannot be read or parsed
-    pub fn read_instance(&self, study_uid: &str, series_uid: &str, instance_uid: &str) -> KwaversResult<Option<crate::infra::io::DicomObject>> {
+    pub fn read_instance(
+        &self,
+        study_uid: &str,
+        series_uid: &str,
+        instance_uid: &str,
+    ) -> KwaversResult<Option<crate::infra::io::DicomObject>> {
         if let Some(series) = self.read_series(study_uid, series_uid)? {
-            let instance = series.instances.into_iter()
-                .find(|i| i.metadata.get("SOPInstanceUID")
+            let instance = series.instances.into_iter().find(|i| {
+                i.metadata
+                    .get("SOPInstanceUID")
                     .and_then(|v| v.as_string())
-                    .map_or(false, |uid| uid == instance_uid));
+                    .map_or(false, |uid| uid == instance_uid)
+            });
             Ok(instance)
         } else {
             Ok(None)
@@ -592,19 +611,29 @@ pub async fn dicom_integrate(
         institution_name: None,
     };
 
-    study_info.patient_id = dicom_obj.metadata.get("PatientID")
+    study_info.patient_id = dicom_obj
+        .metadata
+        .get("PatientID")
         .and_then(|v| v.as_string())
         .unwrap_or_else(|| "UNKNOWN".to_string());
-    study_info.study_date = dicom_obj.metadata.get("StudyDate")
+    study_info.study_date = dicom_obj
+        .metadata
+        .get("StudyDate")
         .and_then(|v| v.as_string())
         .unwrap_or_else(|| "UNKNOWN".to_string());
-    study_info.study_description = dicom_obj.metadata.get("StudyDescription")
+    study_info.study_description = dicom_obj
+        .metadata
+        .get("StudyDescription")
         .and_then(|v| v.as_string())
         .unwrap_or_else(|| "DICOM Study".to_string());
-    study_info.modality = dicom_obj.metadata.get("Modality")
+    study_info.modality = dicom_obj
+        .metadata
+        .get("Modality")
         .and_then(|v| v.as_string())
         .unwrap_or_else(|| "UNKNOWN".to_string());
-    study_info.institution_name = dicom_obj.metadata.get("InstitutionName")
+    study_info.institution_name = dicom_obj
+        .metadata
+        .get("InstitutionName")
         .and_then(|v| v.as_string());
 
     for (key, value) in &dicom_obj.metadata {
@@ -774,7 +803,7 @@ pub async fn get_session_status(
 #[cfg(feature = "pinn")]
 fn clinical_analysis_from_beamforming_result(
     request: &ClinicalAnalysisRequest,
-    result: crate::domain::sensor::beamforming::AIBeamformingResult,
+    result: AIBeamformingResult,
     processing_time: u64,
 ) -> ClinicalAnalysisResponse {
     // Convert findings from beamforming result

@@ -173,9 +173,8 @@ where
     input_plus = Tensor::cat(vec![t_plus.clone(), x_col.clone(), y_col.clone()], 1);
 
     // u(t-eps)
-    let mut input_minus = input.clone();
     let t_minus = t_col.sub_scalar(eps);
-    input_minus = Tensor::cat(vec![t_minus, x_col.clone(), y_col.clone()], 1);
+    let input_minus = Tensor::cat(vec![t_minus, x_col.clone(), y_col.clone()], 1);
 
     // u(t)
     let output = forward_fn(input.clone());

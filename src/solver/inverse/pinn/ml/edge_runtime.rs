@@ -464,7 +464,7 @@ impl EdgeRuntime {
         let weights = weight_tensor.dequantize();
         let biases = bias_tensor.dequantize();
 
-        #[cfg(feature = "simd")]
+        #[cfg(all(feature = "simd", feature = "nightly"))]
         {
             use std::simd::f32x16;
 
@@ -498,7 +498,7 @@ impl EdgeRuntime {
             }
         }
 
-        #[cfg(not(feature = "simd"))]
+        #[cfg(not(all(feature = "simd", feature = "nightly")))]
         {
             for out_idx in 0..output.len() {
                 let mut sum = 0.0f32;

@@ -237,7 +237,8 @@ mod tests {
     #[test]
     fn test_power_law_initialization() {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid); // Lossless by default
+        let mut medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+        medium.set_acoustic_properties(0.75, 1.5, 5.0).unwrap();
 
         let config = PSTDConfig {
             dt: 1e-7,

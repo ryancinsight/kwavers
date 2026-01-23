@@ -80,7 +80,7 @@ pub use coupling::{
     AdaptiveBoundary, ImpedanceBoundary, MaterialInterface, MultiPhysicsInterface, SchwarzBoundary,
 };
 pub use fem::{FemBoundaryCondition, FemBoundaryManager};
-pub use field_updater::{FieldUpdater, GradientFieldUpdater, LegacyFieldUpdater};
+pub use field_updater::{FieldUpdater, GradientFieldUpdater};
 pub use traits::{
     AbsorbingBoundary, BoundaryCondition, BoundaryDirections, BoundaryDomain, BoundaryLayer,
     BoundaryLayerManager, FieldType, PeriodicBoundary, ReflectiveBoundary,
