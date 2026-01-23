@@ -180,6 +180,13 @@
 //! - Manual gradient manipulation (Burn limitation)
 //! - Memory inefficient for large models (copies model M times)
 //!
+//! TODO_AUDIT: P1 - MAML Gradient Computation - Replace finite difference approximation with automatic differentiation
+//! DEPENDS ON: burn/autodiff.rs, solver/pinn/ml/autodiff_meta.rs
+//! MISSING: Full second-order MAML with Hessian-vector products
+//! MISSING: Reverse-mode AD for meta-gradients (d²L/dθdθ')
+//! MISSING: Gradient checkpointing to reduce memory overhead
+//! MISSING: Mixed precision training for large meta-batches
+//!
 //! # Future Improvements
 //!
 //! - [ ] Full automatic differentiation for meta-gradients

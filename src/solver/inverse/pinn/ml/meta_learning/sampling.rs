@@ -3,10 +3,10 @@
 //! Implements curriculum learning, diversity-based sampling, and balanced sampling
 //! for meta-learning task distribution.
 
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::meta_learning::config::MetaLearningConfig;
 use crate::solver::inverse::pinn::ml::meta_learning::types::{PdeType, PhysicsTask};
 use crate::solver::inverse::pinn::ml::Geometry2D;
-use crate::core::error::{KwaversError, KwaversResult};
 
 #[derive(Debug)]
 pub enum SamplingStrategy {

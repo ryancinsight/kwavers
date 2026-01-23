@@ -3,17 +3,19 @@
 //! Implements the MAML (Model-Agnostic Meta-Learning) algorithm for Physics-Informed
 //! Neural Networks, enabling fast adaptation to new physics problems.
 
+use crate::core::error::KwaversResult;
 use crate::solver::inverse::pinn::ml::burn_wave_equation_2d::{
     BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, SimpleOptimizer2D,
 };
 use crate::solver::inverse::pinn::ml::meta_learning::config::MetaLearningConfig;
-use crate::solver::inverse::pinn::ml::meta_learning::gradient::{GradientApplicator, GradientExtractor};
+use crate::solver::inverse::pinn::ml::meta_learning::gradient::{
+    GradientApplicator, GradientExtractor,
+};
 use crate::solver::inverse::pinn::ml::meta_learning::metrics::{MetaLearningStats, MetaLoss};
 use crate::solver::inverse::pinn::ml::meta_learning::optimizer::MetaOptimizer;
 use crate::solver::inverse::pinn::ml::meta_learning::sampling::SamplingStrategy;
 use crate::solver::inverse::pinn::ml::meta_learning::sampling::TaskSampler;
 use crate::solver::inverse::pinn::ml::meta_learning::types::{PhysicsTask, TaskData};
-use crate::core::error::KwaversResult;
 use burn::module::Module;
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};

@@ -280,6 +280,12 @@ impl FdtdSimdOps {
     }
 
     /// AVX-512 optimized pressure update (placeholder)
+    /// TODO_AUDIT: P2 - SIMD Vectorization - Implement full AVX-512/AVX2 vectorization for FDTD wave propagation
+    /// DEPENDS ON: math/simd/avx512.rs, math/simd/autovec.rs
+    /// MISSING: AVX-512 gather/scatter operations for irregular grid access
+    /// MISSING: FMA (fused multiply-add) instructions for nonlinear terms
+    /// MISSING: SIMD transcendental functions (sin, cos, exp) for source terms
+    /// MISSING: Memory prefetching and cache blocking for optimal performance
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx512f")]
     #[allow(unsafe_code)]

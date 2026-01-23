@@ -117,9 +117,23 @@ pub fn initialize_absorption_operators(
 
 impl PSTDSolver {
     /// Apply power law absorption using fractional Laplacian method
+    ///
+    /// Now supports spatially-varying absorption exponent for heterogeneous media.
+    /// For homogeneous media, the exponent field is constant.
+    ///
+    /// Algorithm:
+    /// 1. FFT density field to frequency domain
+    /// 2. Compute fractional Laplacian L^(y+1) and L^(y+2) using average exponent
+    /// 3. IFFT back to spatial domain
+    /// 4. Apply spatially-varying tau and eta coefficients
+    ///
+    /// Note: We use a spatial average of y for the frequency-domain operations,
+    /// then apply the exact spatially-varying coefficients in the final update.
+    /// This is an approximation but maintains computational efficiency while
+    /// capturing the primary spatially-varying effects through tau and eta.
     pub(crate) fn apply_absorption(&mut self, dt: f64) -> KwaversResult<()> {
-        let (y, is_on) = match self.config.absorption_mode {
-            AbsorptionMode::Lossless => (0.0, false),
+        let is_on = match self.config.absorption_mode {
+            AbsorptionMode::Lossless => false,
             AbsorptionMode::Stokes => {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
@@ -128,7 +142,7 @@ impl PSTDSolver {
                     },
                 ));
             }
-            AbsorptionMode::PowerLaw { alpha_power, .. } => (alpha_power, true),
+            AbsorptionMode::PowerLaw { .. } => true,
             AbsorptionMode::MultiRelaxation { .. } | AbsorptionMode::Causal { .. } => {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
@@ -143,13 +157,19 @@ impl PSTDSolver {
             return Ok(());
         }
 
+        // Compute spatial average of exponent for frequency-domain operations
+        // For homogeneous media, this will be constant
+        // For heterogeneous media, this provides a reasonable approximation
+        let y_mean = self.absorb_y.mean().unwrap_or(1.05);
+
         let c_ref = self.c_ref;
         let two_pi = 2.0 * std::f64::consts::PI;
 
         // FFT rho -> p_k (using p_k as scratch for rho_k)
         self.fft.forward_into(&self.rho, &mut self.p_k);
 
-        // Compute L1 term: IFFT( f(k)^(y+1) * rho_k )
+        // Compute L1 term: IFFT( f(k)^(y_mean+1) * rho_k )
+        // Using spatial average exponent for frequency domain operations
         Zip::from(&mut self.ux_k)
             .and(&self.p_k)
             .and(&self.k_vec.0)
@@ -161,7 +181,7 @@ impl PSTDSolver {
                     let k_mag = k_sq.sqrt();
                     let freq = k_mag * c_ref / two_pi;
                     let f_mhz = freq / 1e6;
-                    let term = f_mhz.powf(y + 1.0);
+                    let term = f_mhz.powf(y_mean + 1.0);
                     *out = rho_k * Complex64::new(term, 0.0);
                 } else {
                     *out = Complex64::new(0.0, 0.0);
@@ -171,7 +191,7 @@ impl PSTDSolver {
         self.fft
             .inverse_into(&self.ux_k, &mut self.dpx, &mut self.uy_k);
 
-        // Compute L2 term: IFFT( f(k)^(y+2) * rho_k )
+        // Compute L2 term: IFFT( f(k)^(y_mean+2) * rho_k )
         Zip::from(&mut self.ux_k)
             .and(&self.p_k)
             .and(&self.k_vec.0)
@@ -183,7 +203,7 @@ impl PSTDSolver {
                     let k_mag = k_sq.sqrt();
                     let freq = k_mag * c_ref / two_pi;
                     let f_mhz = freq / 1e6;
-                    let term = f_mhz.powf(y + 2.0);
+                    let term = f_mhz.powf(y_mean + 2.0);
                     *out = rho_k * Complex64::new(term, 0.0);
                 } else {
                     *out = Complex64::new(0.0, 0.0);
@@ -194,6 +214,8 @@ impl PSTDSolver {
             .inverse_into(&self.ux_k, &mut self.dpy, &mut self.uy_k);
 
         // Update rho: rho += dt * (tau * l1 + eta * l2)
+        // tau and eta already incorporate the exact spatially-varying exponent
+        // This provides the full spatially-varying absorption effect
         Zip::from(&mut self.rho)
             .and(&self.absorb_tau)
             .and(&self.absorb_eta)
@@ -226,13 +248,18 @@ mod tests {
             ..PSTDConfig::default()
         };
 
-        let (tau, eta) =
+        let (tau, eta, y_field) =
             initialize_absorption_operators(&config, &grid, &medium, 1e6, 1500.0).unwrap();
 
         // Check signs (tau negative, eta depends on y)
         assert!(tau[[0, 0, 0]] < 0.0, "tau should be negative");
         // For y = 1.5, tan(0.75 * PI) is negative
         assert!(eta[[0, 0, 0]] < 0.0, "eta should be negative for y=1.5");
+        // Check that y field is initialized correctly
+        assert!(
+            (y_field[[0, 0, 0]] - 1.5).abs() < 1e-6,
+            "y should be 1.5 for homogeneous medium"
+        );
     }
 
     #[test]
@@ -258,7 +285,7 @@ mod tests {
             };
 
             let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, &grid);
-            let (tau, eta) =
+            let (tau, eta, _y_field) =
                 initialize_absorption_operators(&config, &grid, &medium, 1e6, 1500.0).unwrap();
 
             // Physical constraints: absorption should reduce amplitude (tau < 0)

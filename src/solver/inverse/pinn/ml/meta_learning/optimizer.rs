@@ -62,6 +62,12 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 /// # Optimization Strategy
 ///
 /// The meta-optimizer uses a simplified SGD update rule:
+/// TODO_AUDIT: P2 - Advanced Meta-Optimizers - Implement Adam, RMSProp, and second-order methods for meta-training
+/// DEPENDS ON: solver/inverse/pinn/ml/optimizer/adam_meta.rs, math/optimization/quasi_newton.rs
+/// MISSING: Adaptive moment estimation for meta-parameters
+/// MISSING: BFGS quasi-Newton method for meta-optimization
+/// MISSING: Trust-region methods for meta-learning stability
+/// MISSING: Line search algorithms for optimal step sizes
 /// ```text
 /// θ ← θ - α∇L_meta
 /// ```
