@@ -33,8 +33,8 @@ pub mod config;
 
 pub use config::{LocalizationBeamformSearchConfig, LocalizationBeamformingMethod, SearchGrid};
 
+use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::sensor::beamforming::BeamformingProcessor;
 use crate::domain::sensor::localization::Position;
 use ndarray::Array3;
 
@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn centered_cube_generates_points() {
-        use crate::domain::sensor::beamforming::time_domain::DelayReference;
+        use crate::analysis::signal_processing::beamforming::time_domain::DelayReference;
 
         let processor = make_processor(4);
 

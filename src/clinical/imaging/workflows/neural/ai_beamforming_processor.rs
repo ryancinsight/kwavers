@@ -29,8 +29,8 @@ use super::{
     types::{AIBeamformingConfig, AIBeamformingResult, FeatureMap, PerformanceMetrics},
     ClinicalDecisionSupport,
 };
+use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
 use crate::core::error::KwaversResult;
-use crate::domain::sensor::beamforming::BeamformingProcessor;
 use ndarray::{Array3, ArrayView4};
 use std::time::Instant;
 

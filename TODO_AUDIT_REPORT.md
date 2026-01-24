@@ -39,10 +39,13 @@ These can be resolved quickly or documented properly:
 ### Phase 2: Prioritize P1 Items (Next Sprint)
 Focus on items that enhance core capabilities:
 
-#### Signal Processing & Clutter Filtering (P2)
+#### Signal Processing & Clutter Filtering (P2) - COMPLETED
 - [x] **Polynomial Regression Filter** - Implemented polynomial-based clutter rejection
 - [x] **IIR High-Pass Filter** - Implemented recursive high-pass filtering
-- [ ] **Adaptive Clutter Filter** - Spatially-adaptive filtering techniques
+- [x] **Adaptive Clutter Filter** - Eigenfilter-based adaptive clutter rejection with CBR estimation
+
+#### Beamforming Integration Tests (P0) - COMPLETED
+- [x] **Narrowband Beamforming Tests** - Re-enabled 6 integration tests after architecture consolidation
 
 #### Physics Completeness (P1)
 - [ ] **Nonlinear Acoustics** - Shock formation, harmonic generation
@@ -297,13 +300,15 @@ Dependencies: Reaction kinetics databases
 
 ### TODO Growth Rate
 - **Initial audit**: 138 TODOs
-- **Current**: 136 TODOs (2 resolved)
+- **Current**: 135 TODOs (3 resolved)
 - **Target reduction**: 10-15 TODOs per sprint
 - **Goal**: <50 TODOs within 3 months
 
 ### Recently Completed (2026-01-24)
-- ✅ Polynomial Regression Clutter Filter (P2)
-- ✅ IIR High-Pass Clutter Filter (P2)
+- ✅ Polynomial Regression Clutter Filter (P2) - 395 lines
+- ✅ IIR High-Pass Clutter Filter (P2) - 402 lines
+- ✅ Adaptive Clutter Filter (P2) - 564 lines with eigendecomposition
+- ✅ Narrowband Beamforming Integration Tests (P0) - 6 tests re-enabled
 
 ### Quality Metrics
 - ✅ All TODOs have priority and description

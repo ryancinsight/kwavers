@@ -31,8 +31,8 @@ pub use beamforming_config::{ApodizationType, PamBeamformingConfig, PamBeamformi
 pub use geometry::{ArrayElement, ArrayGeometry};
 pub use mapping::{PAMConfig, PAMProcessor};
 
+use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::sensor::beamforming::BeamformingProcessor;
 use ndarray::{Array3, Axis};
 
 /// Main PAM interface

@@ -17,6 +17,16 @@
 //! - **Literature-Grounded**: Expected behaviors based on signal processing theory
 //! - **Minimal Mocking**: Use real implementations where possible
 //!
+//! # Tests Status
+//!
+//! **Status**: Re-enabled after beamforming architecture consolidation
+//! **Date**: 2026-01-24
+//! **Architecture**: Uses consolidated analysis layer beamforming APIs
+//!
+//! These tests validate the narrowband beamforming pipeline after the architecture refactor:
+//! - Uses `analysis::signal_processing::beamforming::covariance::*`
+//! - Uses `analysis::signal_processing::beamforming::utils::steering::*`
+//! - All imports updated for new API organization
 #[cfg(test)]
 mod tests {
     use super::super::{

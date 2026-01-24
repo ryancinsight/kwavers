@@ -298,7 +298,7 @@ mod tests {
                     num_snapshots: 1,
                     post_process: CovariancePostProcess::None,
                 },
-            steering: crate::domain::sensor::beamforming::SteeringVectorMethod::SphericalWave {
+            steering: crate::analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod::SphericalWave {
                 source_position: [0.0, 0.0, 0.02],
             },
             sampling_frequency_hz: None,

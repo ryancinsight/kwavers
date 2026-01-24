@@ -191,21 +191,21 @@
 //! - `svd_filter`: Spatiotemporal SVD clutter filtering ✅
 //! - `polynomial_filter`: Polynomial regression filtering ✅
 //! - `iir_filter`: IIR high-pass filtering ✅
-//! - `adaptive_filter`: Adaptive clutter rejection (future)
+//! - `adaptive_filter`: Adaptive clutter rejection ✅
 
 // Implemented clutter filters
+pub mod adaptive_filter;
 pub mod iir_filter;
 pub mod polynomial_filter;
 pub mod svd_filter;
 
 // Public API re-exports
+pub use adaptive_filter::{
+    AdaptiveFilter, AdaptiveFilterConfig, CbrEstimationMethod, SubspaceSeparationMethod,
+};
 pub use iir_filter::{IirFilter, IirFilterConfig};
 pub use polynomial_filter::{PolynomialFilter, PolynomialFilterConfig};
 pub use svd_filter::{SvdClutterFilter, SvdClutterFilterConfig};
-
-// Future implementations
-// TODO_AUDIT: P2 - Adaptive Clutter Rejection - Implement signal-dependent filtering
-// pub mod adaptive_filter;
 
 #[cfg(test)]
 mod tests {

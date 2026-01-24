@@ -131,20 +131,7 @@ pub mod shaders;
 pub use sensor_beamformer::{SensorBeamformer, SensorProcessingParams, WindowType};
 
 // Re-exports for backward compatibility (migrated to analysis layer)
-pub use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
-pub use crate::analysis::signal_processing::beamforming::utils::steering::{
-    SteeringVector, SteeringVectorMethod,
-};
-
-// Re-export covariance module
-pub mod covariance {
-    pub use crate::analysis::signal_processing::beamforming::covariance::*;
-}
-
-// Re-export time_domain module
-pub mod time_domain {
-    pub use crate::analysis::signal_processing::beamforming::time_domain::*;
-}
+pub use crate::analysis::signal_processing::beamforming::utils::SteeringVectorMethod;
 
 // NOTE: All beamforming algorithms have been migrated to:
 // - Analysis layer: crate::analysis::signal_processing::beamforming
@@ -154,4 +141,3 @@ pub mod time_domain {
 // - SensorBeamformer: Hardware-specific array geometry interface
 // - BeamformingConfig: Shared configuration types
 // - GPU shaders: Hardware-accelerated kernels
-// - Re-exports: Backward compatibility for common types

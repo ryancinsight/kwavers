@@ -15,7 +15,7 @@
 //!   is the reference sensor at index 0 (`SensorIndex(0)`), which is the SSOT recommended default.
 //! - **B (narrowband/adaptive)** is covered by separate tests (Capon/MVDR spatial spectrum), not here.
 
-use kwavers::domain::sensor::beamforming::time_domain::DelayReference;
+use kwavers::analysis::signal_processing::beamforming::time_domain::DelayReference;
 use kwavers::domain::sensor::beamforming::BeamformingCoreConfig;
 use kwavers::domain::sensor::localization::array::{ArrayGeometry, Sensor};
 use kwavers::domain::sensor::localization::{

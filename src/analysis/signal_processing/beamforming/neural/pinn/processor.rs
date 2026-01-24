@@ -46,7 +46,7 @@ use std::collections::HashMap;
 #[cfg(feature = "pinn")]
 use crate::solver::inverse::pinn::ml::{uncertainty_quantification::BayesianPINN, BurnPINN1DWave};
 
-use crate::domain::sensor::beamforming::SteeringVector;
+use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVector;
 
 use super::super::types::{NeuralBeamformingMetrics, PINNBeamformingConfig, PinnBeamformingResult};
 use super::inference;

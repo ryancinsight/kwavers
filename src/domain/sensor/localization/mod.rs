@@ -7,6 +7,7 @@ pub mod multilateration;
 pub mod tdoa;
 pub mod triangulation;
 
+use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};
@@ -215,7 +216,7 @@ impl LocalizationProcessor {
             .map(|p| p.to_array())
             .collect();
 
-        let beamformer = crate::domain::sensor::beamforming::BeamformingProcessor::new(
+        let beamformer = BeamformingProcessor::new(
             search_cfg.core.clone(),
             sensor_positions,
         );

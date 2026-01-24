@@ -439,6 +439,7 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::analysis::signal_processing::beamforming::covariance::CovariancePostProcess;
     use approx::assert_abs_diff_eq;
     use ndarray::Array3;
 
@@ -507,8 +508,7 @@ mod tests {
             covariance: CovarianceEstimator {
                 forward_backward_averaging: false,
                 num_snapshots: 1,
-                post_process:
-                    crate::domain::sensor::beamforming::covariance::CovariancePostProcess::None,
+                post_process: CovariancePostProcess::None,
             },
             steering: SteeringVectorMethod::SphericalWave {
                 source_position: [0.0, 0.0, 0.02],
@@ -550,8 +550,7 @@ mod tests {
             covariance: CovarianceEstimator {
                 forward_backward_averaging: false,
                 num_snapshots: 1,
-                post_process:
-                    crate::domain::sensor::beamforming::covariance::CovariancePostProcess::None,
+                post_process: CovariancePostProcess::None,
             },
             steering: SteeringVectorMethod::SphericalWave {
                 source_position: true_source,
@@ -597,8 +596,7 @@ mod tests {
             covariance: CovarianceEstimator {
                 forward_backward_averaging: false,
                 num_snapshots: 1,
-                post_process:
-                    crate::domain::sensor::beamforming::covariance::CovariancePostProcess::None,
+                post_process: CovariancePostProcess::None,
             },
             steering: SteeringVectorMethod::SphericalWave {
                 source_position: true_source,
@@ -637,8 +635,7 @@ mod tests {
             covariance: CovarianceEstimator {
                 forward_backward_averaging: false,
                 num_snapshots: 1,
-                post_process:
-                    crate::domain::sensor::beamforming::covariance::CovariancePostProcess::None,
+                post_process: CovariancePostProcess::None,
             },
             steering: SteeringVectorMethod::SphericalWave {
                 source_position: true_source,
