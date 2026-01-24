@@ -159,7 +159,8 @@ impl SvdClutterFilter {
         }
 
         // Step 2: Compute SVD: S = UΣV^T
-        let (u, mut sigma, vt) = LinearAlgebra::svd(&centered_data)?;
+        // Note: LinearAlgebra::svd returns (U, Σ, V), not (U, Σ, V^T)
+        let (u, mut sigma, v) = LinearAlgebra::svd(&centered_data)?;
 
         // Step 3: Determine clutter rank
         let clutter_rank = if self.config.auto_rank_selection {
@@ -176,7 +177,7 @@ impl SvdClutterFilter {
         // Step 5: Reconstruct filtered signal: S_filtered = U * Σ * V^T
         // SVD returns U (n_pixels × min(n_pixels, n_frames))
         //             Σ (min(n_pixels, n_frames))
-        //             V^T (min(n_pixels, n_frames) × n_frames)
+        //             V (n_frames × min(n_pixels, n_frames))
 
         let rank = sigma.len();
 
@@ -189,7 +190,7 @@ impl SvdClutterFilter {
         }
 
         // Then compute (U * Σ) * V^T
-        let filtered_data = u_sigma.dot(&vt);
+        let filtered_data = u_sigma.dot(&v.t());
 
         // Step 6: Add back temporal means
         let mut final_data = filtered_data;
@@ -318,7 +319,6 @@ impl SvdClutterFilter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
     use ndarray::Array2;
 
     #[test]
