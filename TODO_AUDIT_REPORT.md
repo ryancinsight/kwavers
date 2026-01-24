@@ -47,6 +47,12 @@ Focus on items that enhance core capabilities:
 #### Beamforming Integration Tests (P0) - COMPLETED
 - [x] **Narrowband Beamforming Tests** - Re-enabled 6 integration tests after architecture consolidation
 
+#### PINN Training Optimization (P1) - COMPLETED
+- [x] **Adaptive Sampling** - Grid-based residual clustering with priority weighting (improved from hardcoded grid)
+
+#### Clinical Monitoring (P1) - FOUNDATION COMPLETE
+- [x] **Passive Acoustic Mapping (PAM)** - Delay-and-sum beamforming for cavitation detection (479 lines, 6 tests)
+
 #### Physics Completeness (P1)
 - [ ] **Nonlinear Acoustics** - Shock formation, harmonic generation
 - [ ] **Bubble Dynamics** - Multi-bubble interactions, non-spherical deformation
@@ -300,15 +306,27 @@ Dependencies: Reaction kinetics databases
 
 ### TODO Growth Rate
 - **Initial audit**: 138 TODOs
-- **Current**: 135 TODOs (3 resolved)
+- **Current**: 133 TODOs (5 resolved)
 - **Target reduction**: 10-15 TODOs per sprint
 - **Goal**: <50 TODOs within 3 months
+- **Progress**: 3.6% reduction (on track)
 
 ### Recently Completed (2026-01-24)
+
+#### Session 1 - Signal Processing
 - ✅ Polynomial Regression Clutter Filter (P2) - 395 lines
 - ✅ IIR High-Pass Clutter Filter (P2) - 402 lines
 - ✅ Adaptive Clutter Filter (P2) - 564 lines with eigendecomposition
 - ✅ Narrowband Beamforming Integration Tests (P0) - 6 tests re-enabled
+
+#### Session 2 - P1 Priority Items
+- ✅ Adaptive Sampling Improvements (P1) - Grid-based residual clustering
+- ✅ Passive Acoustic Mapping Foundation (P1) - 479 lines, 6 tests
+  * Delay-and-sum beamforming algorithm
+  * Cavitation event detection
+  * Multiple apodization windows (Hamming, Hanning, Blackman)
+  * Coherence factor weighting
+- ✅ MAML Autodiff Documentation (P1) - Future work requirements documented
 
 ### Quality Metrics
 - ✅ All TODOs have priority and description

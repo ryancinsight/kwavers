@@ -19,8 +19,8 @@ use crate::solver::inverse::pinn::ml::meta_learning::types::{PhysicsTask, TaskDa
 use burn::module::Module;
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
-use std::sync::Arc;
 use std::f64::consts::PI;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct MetaLearner<B: AutodiffBackend> {
@@ -485,24 +485,25 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                 }
             }
             crate::solver::inverse::pinn::ml::Geometry2D::Polygonal { vertices, holes } => {
-                let mut sample_edges = |poly: &[(f64, f64)], points: &mut Vec<(f64, f64, f64, f64)>| {
-                    if poly.len() < 2 {
-                        return;
-                    }
-                    let n_edges = poly.len();
-                    let n = (base_count / n_edges.max(1)).max(10);
-                    for i in 0..n_edges {
-                        let (x0, y0) = poly[i];
-                        let (x1, y1) = poly[(i + 1) % n_edges];
-                        for j in 0..n {
-                            let s = j as f64 / (n - 1) as f64;
-                            let t = s;
-                            let x = x0 + (x1 - x0) * s;
-                            let y = y0 + (y1 - y0) * s;
-                            push_point(points, x, y, t);
+                let mut sample_edges =
+                    |poly: &[(f64, f64)], points: &mut Vec<(f64, f64, f64, f64)>| {
+                        if poly.len() < 2 {
+                            return;
                         }
-                    }
-                };
+                        let n_edges = poly.len();
+                        let n = (base_count / n_edges.max(1)).max(10);
+                        for i in 0..n_edges {
+                            let (x0, y0) = poly[i];
+                            let (x1, y1) = poly[(i + 1) % n_edges];
+                            for j in 0..n {
+                                let s = j as f64 / (n - 1) as f64;
+                                let t = s;
+                                let x = x0 + (x1 - x0) * s;
+                                let y = y0 + (y1 - y0) * s;
+                                push_point(points, x, y, t);
+                            }
+                        }
+                    };
                 sample_edges(vertices, &mut data);
                 for hole in holes {
                     sample_edges(hole, &mut data);
@@ -524,18 +525,16 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                     push_point(&mut data, x, y, s);
                 }
             }
-            crate::solver::inverse::pinn::ml::Geometry2D::AdaptiveMesh { base_geometry, .. } => {
-                data.extend(self.generate_boundary_data(
-                    &Arc::new((**base_geometry).clone()),
-                    conditions,
-                ));
+            crate::solver::inverse::pinn::ml::Geometry2D::AdaptiveMesh {
+                base_geometry, ..
+            } => {
+                data.extend(
+                    self.generate_boundary_data(&Arc::new((**base_geometry).clone()), conditions),
+                );
             }
             crate::solver::inverse::pinn::ml::Geometry2D::MultiRegion { regions, .. } => {
                 for (region, _) in regions {
-                    data.extend(self.generate_boundary_data(
-                        &Arc::new(region.clone()),
-                        conditions,
-                    ));
+                    data.extend(self.generate_boundary_data(&Arc::new(region.clone()), conditions));
                 }
             }
         }
@@ -758,6 +757,20 @@ impl<B: AutodiffBackend> MetaLearner<B> {
     }
 
     /// Compute gradients for inner-loop adaptation using finite differences
+    ///
+    /// NOTE: This is a simplified implementation using finite differences.
+    /// For production use, this should be replaced with proper automatic differentiation
+    /// using Burn's autodiff capabilities to compute gradients through the computational graph.
+    ///
+    /// FUTURE WORK:
+    /// - Use model.forward() with autodiff backend to get gradients
+    /// - Implement proper second-order MAML with Hessian-vector products
+    /// - Add gradient checkpointing to reduce memory overhead
+    /// - Support mixed precision training for large meta-batches
+    ///
+    /// REFERENCES:
+    /// - Finn et al. (2017). "Model-Agnostic Meta-Learning for Fast Adaptation"
+    /// - Nichol et al. (2018). "On First-Order Meta-Learning Algorithms"
     fn _compute_gradients(
         &self,
         params: &[Tensor<B, 2>],

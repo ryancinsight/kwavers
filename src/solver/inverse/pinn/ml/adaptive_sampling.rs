@@ -383,7 +383,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
 
     /// Identify regions with high PDE residual for targeted sampling
     fn identify_high_residual_regions(&self) -> Vec<HighResidualRegion> {
-        // TODO_AUDIT: P1 - Adaptive Sampling Residual Region Identification - Simplified Grid Implementation
+        // IMPROVED: Grid-based clustering with actual priority-weighted residuals
         //
         // PROBLEM:
         // Returns a fixed 2×2×2 grid of regions with hardcoded residual magnitude (0.8) instead of
@@ -439,27 +439,79 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         // For now, return a simple grid of regions - in practice this would
         // cluster points based on residual magnitude
 
+        // IMPLEMENTATION: Grid-based spatial clustering with priority-weighted residuals
+        // Uses actual priority values (which track residuals) instead of hardcoded values
+
+        const GRID_SIZE: usize = 4; // 4x4x4 grid = 64 cells
+        const MIN_POINTS_PER_REGION: usize = 3; // Require at least 3 points to form a region
+        const TOP_REGION_FRACTION: f32 = 0.3; // Keep top 30% of regions
+
+        // Extract points and priorities
+        let points_data = self.active_points.clone().into_data();
+        let points_vec: Vec<f32> = points_data.to_vec().unwrap_or_default();
+        let priorities_data = self.priorities.clone().into_data();
+        let priorities_vec: Vec<f32> = priorities_data.to_vec().unwrap_or_default();
+
+        if points_vec.len() < 3 || points_vec.len() / 3 != priorities_vec.len() {
+            // Fallback to simple uniform grid if data is malformed
+            return self.create_fallback_regions();
+        }
+
+        let num_points = points_vec.len() / 3;
+
+        // Create grid cells and aggregate residuals
+        let mut grid_cells: std::collections::HashMap<
+            (usize, usize, usize),
+            (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>),
+        > = std::collections::HashMap::new();
+
+        for i in 0..num_points {
+            let x = points_vec[i * 3];
+            let y = points_vec[i * 3 + 1];
+            let t = points_vec[i * 3 + 2];
+            let priority = priorities_vec[i];
+
+            // Map to grid cell (clamp to [0, GRID_SIZE-1])
+            let gx = ((x * GRID_SIZE as f32).floor() as usize).min(GRID_SIZE - 1);
+            let gy = ((y * GRID_SIZE as f32).floor() as usize).min(GRID_SIZE - 1);
+            let gt = ((t * GRID_SIZE as f32).floor() as usize).min(GRID_SIZE - 1);
+
+            let cell = grid_cells.entry((gx, gy, gt)).or_insert((
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+            ));
+            cell.0.push(x);
+            cell.1.push(y);
+            cell.2.push(t);
+            cell.3.push(priority);
+        }
+
+        // Compute regions from cells with high mean priority
         let mut regions = Vec::new();
 
-        // Create a 2x2x2 grid of regions covering the domain
-        for i in 0..2 {
-            for j in 0..2 {
-                for k in 0..2 {
-                    let center_x = (i as f32 + 0.5) / 2.0;
-                    let center_y = (j as f32 + 0.5) / 2.0;
-                    let center_t = (k as f32 + 0.5) / 2.0;
-
-                    regions.push(HighResidualRegion {
-                        center_x,
-                        center_y,
-                        center_t,
-                        size_x: 0.25,
-                        size_y: 0.25,
-                        size_t: 0.25,
-                        residual_magnitude: 0.8, // Placeholder - would compute actual residual
-                    });
-                }
+        for ((gx, gy, gt), (xs, ys, ts, prios)) in grid_cells.iter() {
+            if xs.len() < MIN_POINTS_PER_REGION {
+                continue;
             }
+
+            let mean_x: f32 = xs.iter().sum::<f32>() / xs.len() as f32;
+            let mean_y: f32 = ys.iter().sum::<f32>() / ys.len() as f32;
+            let mean_t: f32 = ts.iter().sum::<f32>() / ts.len() as f32;
+            let mean_priority: f32 = prios.iter().sum::<f32>() / prios.len() as f32;
+
+            let cell_size = 1.0 / GRID_SIZE as f32;
+
+            regions.push(HighResidualRegion {
+                center_x: mean_x,
+                center_y: mean_y,
+                center_t: mean_t,
+                size_x: cell_size * 1.5, // Slightly larger for overlap
+                size_y: cell_size * 1.5,
+                size_t: cell_size * 1.5,
+                residual_magnitude: mean_priority,
+            });
         }
 
         // Sort by residual magnitude (highest first)
@@ -468,6 +520,38 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
                 .partial_cmp(&a.residual_magnitude)
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
+
+        // Keep only top regions (adaptive threshold)
+        if !regions.is_empty() {
+            let keep_count = ((regions.len() as f32 * TOP_REGION_FRACTION).ceil() as usize)
+                .max(2) // At least 2 regions
+                .min(regions.len());
+            regions.truncate(keep_count);
+        }
+
+        regions
+    }
+
+    /// Fallback to uniform grid when data is insufficient
+    fn create_fallback_regions(&self) -> Vec<HighResidualRegion> {
+        let mut regions = Vec::new();
+
+        // Create a simple 2x2x2 grid with uniform priorities
+        for i in 0..2 {
+            for j in 0..2 {
+                for k in 0..2 {
+                    regions.push(HighResidualRegion {
+                        center_x: (i as f32 + 0.5) / 2.0,
+                        center_y: (j as f32 + 0.5) / 2.0,
+                        center_t: (k as f32 + 0.5) / 2.0,
+                        size_x: 0.5,
+                        size_y: 0.5,
+                        size_t: 0.5,
+                        residual_magnitude: 1.0,
+                    });
+                }
+            }
+        }
 
         regions
     }
@@ -568,9 +652,7 @@ mod tests {
     fn test_adaptive_sampler_creation() {
         type TestBackend = Autodiff<NdArray<f32>>;
 
-        let domain: Box<
-            dyn crate::solver::inverse::pinn::ml::physics::PhysicsDomain<TestBackend>,
-        > =
+        let domain: Box<dyn crate::solver::inverse::pinn::ml::physics::PhysicsDomain<TestBackend>> =
             Box::new(MockPhysicsDomain);
         let strategy = SamplingStrategy::default();
 

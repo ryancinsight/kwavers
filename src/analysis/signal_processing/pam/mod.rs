@@ -230,15 +230,16 @@
 //! - Spatial targeting verification
 //! - Safety threshold monitoring
 //!
+//! ## Implemented Algorithms
+//!
+//! - ✅ **Delay-and-Sum PAM**: Time-domain beamforming for cavitation localization
+//!
 //! ## Future Implementations
 //!
-//! This module is currently a placeholder. Algorithms will be migrated from
-//! TODO_AUDIT: P1 - Passive Acoustic Mapping - Implement full PAM algorithms for cavitation monitoring and sonoluminescence detection
-//! DEPENDS ON: analysis/signal_processing/pam/delay_sum.rs, analysis/signal_processing/pam/capon.rs, analysis/signal_processing/pam/das.rs
-//! MISSING: Time-reversal PAM for cavitation bubble localization (Montaldo et al. 2009)
-//! MISSING: Robust Capon beamforming for coherent cavitation noise suppression
-//! MISSING: MUSIC algorithm for super-resolution bubble detection
-//! MISSING: Subharmonic and ultraharmonic filtering for contrast agent differentiation
+//! - [ ] Time-reversal PAM for cavitation bubble localization (Montaldo et al. 2009)
+//! - [ ] Robust Capon beamforming for coherent cavitation noise suppression
+//! - [ ] MUSIC algorithm for super-resolution bubble detection
+//! - [ ] Subharmonic and ultraharmonic filtering for contrast agent differentiation
 //! MISSING: Real-time PAM with GPU acceleration for clinical feedback
 //! MISSING: PAM calibration using known cavitation sources (hydrophone validation)
 //! `domain::sensor::passive_acoustic_mapping` in Phase 2 execution:
@@ -258,14 +259,13 @@
 //! **Next:** Migrate PAM algorithms from domain layer
 //! **Timeline:** Week 3-4 execution
 
-// Placeholder for future trait definitions
-// pub mod traits;
+// Implemented PAM algorithms
+pub mod delay_and_sum;
 
-// Placeholder for algorithm implementations
-// pub mod delay_and_sum;
+// Public API exports
+pub use delay_and_sum::{ApodizationType, CavitationEvent, DelayAndSumConfig, DelayAndSumPAM};
+
+// Future implementations
 // pub mod robust_capon;
 // pub mod detection;
-
-// Placeholder for utility functions
-// pub mod utils;
 // pub mod spectral;
