@@ -51,7 +51,6 @@ base64 = "0.22"
 
 # Async runtime (Sprint 138 - Persona Requirements)
 tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "sync", "time", "fs", "io-util"], optional = true }
-futures = "0.3"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"], optional = true }
 
 # Zero-copy serialization (Sprint 138 - Persona Requirements)

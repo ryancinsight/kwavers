@@ -20,6 +20,7 @@ use burn::module::Module;
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::sync::Arc;
+use std::f64::consts::PI;
 
 #[derive(Debug)]
 pub struct MetaLearner<B: AutodiffBackend> {
@@ -349,7 +350,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
         let boundary_data = self.generate_boundary_data(&task.geometry, &task.boundary_conditions);
 
         // Generate initial data
-        let initial_data = self.generate_initial_data(&task.geometry);
+        let initial_data = self.generate_initial_data(task);
 
         Ok(TaskData {
             collocation_points,
@@ -441,10 +442,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
     }
 
     /// Generate initial data
-    fn generate_initial_data(
-        &self,
-        _geometry: &Arc<crate::solver::inverse::pinn::ml::Geometry2D>,
-    ) -> Vec<(f64, f64, f64, f64, f64)> {
+    fn generate_initial_data(&self, task: &PhysicsTask) -> Vec<(f64, f64, f64, f64, f64)> {
         // TODO_AUDIT: P1 - Meta-Learning Initial Condition Data Generation - Simplified Stub
         //
         // PROBLEM:
@@ -497,11 +495,68 @@ impl<B: AutodiffBackend> MetaLearner<B> {
         // ASSIGNED: Sprint 212 (Meta-Learning Enhancement)
         // PRIORITY: P1 (Research feature - meta-learning IC adaptation)
 
-        // Generate initial condition data
-        // This is a simplified implementation
-        vec![
-            (0.0, 0.0, 0.0, 0.0, 0.0), // Example initial point (x, y, t, u, du/dt)
-        ]
+        let geometry = &task.geometry;
+        let n_ic = 200;
+        let (x_samples, y_samples) = geometry.sample_points(n_ic);
+        let (x_min, x_max, y_min, y_max) = geometry.bounding_box();
+        let span_x = (x_max - x_min).abs().max(1e-12);
+        let span_y = (y_max - y_min).abs().max(1e-12);
+        let center_x = (x_min + x_max) * 0.5;
+        let center_y = (y_min + y_max) * 0.5;
+        let min_span = span_x.min(span_y).max(1e-12);
+        let base_sigma = 0.15 * min_span;
+        let delta_sigma = 0.05 * min_span;
+        let amplitude = 1.0;
+        let mut hash: u64 = 0;
+        for byte in task.id.as_bytes() {
+            hash = hash.wrapping_mul(131).wrapping_add(*byte as u64);
+        }
+        let pattern = (hash % 3) as u8;
+        let kx = 2.0 * PI / span_x;
+        let ky = 2.0 * PI / span_y;
+        let k_norm = (kx * kx + ky * ky).sqrt();
+        let omega = task.physics_params.wave_speed * k_norm;
+        let mut data = Vec::with_capacity(n_ic);
+
+        for i in 0..n_ic {
+            let x = x_samples[i];
+            let y = y_samples[i];
+            let t = 0.0;
+            let (u0, v0) = match pattern {
+                0 => {
+                    let dx = x - center_x;
+                    let dy = y - center_y;
+                    let r2 = dx * dx + dy * dy;
+                    let u0 = amplitude * (-r2 / (2.0 * base_sigma * base_sigma)).exp();
+                    (u0, 0.0)
+                }
+                1 => {
+                    let phase = kx * (x - center_x) + ky * (y - center_y);
+                    let u0 = amplitude * phase.sin();
+                    let v0 = if matches!(
+                        task.pde_type,
+                        crate::solver::inverse::pinn::ml::meta_learning::types::PdeType::Wave
+                            | crate::solver::inverse::pinn::ml::meta_learning::types::PdeType::Acoustic
+                            | crate::solver::inverse::pinn::ml::meta_learning::types::PdeType::Elastic
+                    ) {
+                        -omega * amplitude * phase.cos()
+                    } else {
+                        0.0
+                    };
+                    (u0, v0)
+                }
+                _ => {
+                    let dx = x - center_x;
+                    let dy = y - center_y;
+                    let r2 = dx * dx + dy * dy;
+                    let u0 = amplitude * (-r2 / (2.0 * delta_sigma * delta_sigma)).exp();
+                    (u0, 0.0)
+                }
+            };
+            data.push((x, y, t, u0, v0));
+        }
+
+        data
     }
 
     /// Compute task-specific loss using actual PINN forward pass

@@ -5177,7 +5177,6 @@ dependencies = [
  "egui",
  "env_logger",
  "flume",
- "futures",
  "hmac",
  "jsonwebtoken",
  "log",
