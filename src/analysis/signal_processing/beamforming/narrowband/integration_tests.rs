@@ -24,9 +24,9 @@ mod tests {
         snapshots::{extract_narrowband_snapshots, SnapshotScenario, SnapshotSelection},
         steering::NarrowbandSteering,
     };
-    use crate::domain::sensor::beamforming::{
+    use crate::analysis::signal_processing::beamforming::{
         covariance::{CovarianceEstimator, CovariancePostProcess},
-        steering::SteeringVectorMethod,
+        utils::steering::SteeringVectorMethod,
     };
     use ndarray::Array3;
     use num_complex::Complex64;

@@ -139,19 +139,19 @@
 //!
 //! # Module Organization
 //!
-//! - [`neuronavigation`]: Brain GPS and automatic probe positioning
-//! - [`registration`]: Vascular atlas registration and alignment
-//! - [`ulm`]: Ultrasound localization microscopy for super-resolution imaging
-//! - [`analysis`]: Functional connectivity and statistical analysis
+//! - `neuronavigation`: Brain GPS and automatic probe positioning (planned - see ulm/mod.rs)
+//! - `registration`: Vascular atlas registration and alignment (planned - see registration/mod.rs)
+//! - `ulm`: Ultrasound localization microscopy for super-resolution imaging (planned - see ulm/mod.rs)
+//! - `analysis`: Functional connectivity and statistical analysis (planned)
 
-// TODO: Uncomment when modules are implemented
-// pub mod neuronavigation;
-// pub mod registration;
-// pub mod ulm;
-// pub mod analysis;
-
-// Placeholder module exports
-// These will be uncommented as modules are implemented
+// Module stub declarations - awaiting implementation
+// See individual module files for TODO_AUDIT tracking:
+// - registration/mod.rs: TODO_AUDIT P1 items for atlas registration
+// - ulm/mod.rs: TODO_AUDIT P1 items for super-resolution imaging
+// pub mod neuronavigation; // Not yet created
+// pub mod registration;    // Stub with TODO_AUDIT markers
+// pub mod ulm;             // Stub with TODO_AUDIT markers
+// pub mod analysis;        // Not yet created
 
 #[cfg(test)]
 mod tests {
