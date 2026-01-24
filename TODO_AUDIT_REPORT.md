@@ -39,6 +39,11 @@ These can be resolved quickly or documented properly:
 ### Phase 2: Prioritize P1 Items (Next Sprint)
 Focus on items that enhance core capabilities:
 
+#### Signal Processing & Clutter Filtering (P2)
+- [x] **Polynomial Regression Filter** - Implemented polynomial-based clutter rejection
+- [x] **IIR High-Pass Filter** - Implemented recursive high-pass filtering
+- [ ] **Adaptive Clutter Filter** - Spatially-adaptive filtering techniques
+
 #### Physics Completeness (P1)
 - [ ] **Nonlinear Acoustics** - Shock formation, harmonic generation
 - [ ] **Bubble Dynamics** - Multi-bubble interactions, non-spherical deformation
@@ -292,8 +297,13 @@ Dependencies: Reaction kinetics databases
 
 ### TODO Growth Rate
 - **Initial audit**: 138 TODOs
+- **Current**: 136 TODOs (2 resolved)
 - **Target reduction**: 10-15 TODOs per sprint
 - **Goal**: <50 TODOs within 3 months
+
+### Recently Completed (2026-01-24)
+- ✅ Polynomial Regression Clutter Filter (P2)
+- ✅ IIR High-Pass Clutter Filter (P2)
 
 ### Quality Metrics
 - ✅ All TODOs have priority and description
