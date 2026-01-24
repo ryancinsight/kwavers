@@ -218,14 +218,13 @@
 //! **Next:** Migrate trilateration algorithm from domain layer
 //! **Timeline:** Week 3 execution
 
-// Placeholder for future trait definitions
-// pub mod traits;
+// Implemented localization algorithms
+pub mod trilateration;
 
-// Placeholder for algorithm implementations
-// pub mod trilateration;
+// Public API exports
+pub use trilateration::{LocalizationResult, Trilateration, TrilaterationConfig};
+
+// Future implementations
 // pub mod multilateration;
 // pub mod beamforming_search;
 // pub mod maximum_likelihood;
-
-// Placeholder for utility functions
-// pub mod utils;

@@ -52,6 +52,7 @@ Focus on items that enhance core capabilities:
 
 #### Clinical Monitoring (P1) - FOUNDATION COMPLETE
 - [x] **Passive Acoustic Mapping (PAM)** - Delay-and-sum beamforming for cavitation detection (479 lines, 6 tests)
+- [x] **Source Localization** - Time-of-arrival trilateration for acoustic source positioning (366 lines, 3 tests)
 
 #### Physics Completeness (P1)
 - [ ] **Nonlinear Acoustics** - Shock formation, harmonic generation
@@ -306,10 +307,10 @@ Dependencies: Reaction kinetics databases
 
 ### TODO Growth Rate
 - **Initial audit**: 138 TODOs
-- **Current**: 133 TODOs (5 resolved)
+- **Current**: 132 TODOs (6 resolved)
 - **Target reduction**: 10-15 TODOs per sprint
 - **Goal**: <50 TODOs within 3 months
-- **Progress**: 3.6% reduction (on track)
+- **Progress**: 4.3% reduction (on track)
 
 ### Recently Completed (2026-01-24)
 
@@ -327,6 +328,14 @@ Dependencies: Reaction kinetics databases
   * Multiple apodization windows (Hamming, Hanning, Blackman)
   * Coherence factor weighting
 - ✅ MAML Autodiff Documentation (P1) - Future work requirements documented
+
+#### Session 3 - Source Localization
+- ✅ Trilateration Algorithm (P1) - 366 lines, 3 tests
+  * Time-of-arrival (TOA) based localization
+  * Time-difference-of-arrival (TDOA) formulation
+  * Gauss-Newton iterative solver
+  * Uncertainty quantification
+  * Tikhonov regularization for numerical stability
 
 ### Quality Metrics
 - ✅ All TODOs have priority and description
