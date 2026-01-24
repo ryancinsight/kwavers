@@ -1,7 +1,8 @@
 //! Beamforming processor
 
-use super::config::BeamformingConfig;
+// Import config from domain layer (single source of truth for configuration)
 use crate::core::error::KwaversResult;
+use crate::domain::sensor::beamforming::BeamformingConfig;
 use crate::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array1, Array2, Array3};
 

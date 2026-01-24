@@ -50,8 +50,11 @@ use crate::analysis::signal_processing::beamforming::narrowband::snapshots::{
 };
 use crate::analysis::signal_processing::beamforming::narrowband::steering::NarrowbandSteering;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::sensor::beamforming::covariance::CovarianceEstimator;
-use crate::domain::sensor::beamforming::steering::{SteeringVector, SteeringVectorMethod};
+// Import from analysis layer (canonical location)
+use crate::analysis::signal_processing::beamforming::covariance::CovarianceEstimator;
+use crate::analysis::signal_processing::beamforming::utils::steering::{
+    SteeringVector, SteeringVectorMethod,
+};
 use crate::math::linear_algebra::LinearAlgebra;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;

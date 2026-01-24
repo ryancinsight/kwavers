@@ -153,6 +153,10 @@ use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 use num_complex::Complex64;
 
+// Re-export CovarianceEstimator and related types from sensor_covariance submodule
+mod sensor_covariance;
+pub use sensor_covariance::{CovarianceEstimator, CovariancePostProcess};
+
 /// Estimate sample covariance matrix from multi-snapshot sensor data.
 ///
 /// Computes the standard sample covariance estimator with optional diagonal loading

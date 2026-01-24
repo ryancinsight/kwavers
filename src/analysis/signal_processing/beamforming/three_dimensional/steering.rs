@@ -18,7 +18,9 @@ use ndarray::Array1;
 use num_complex::Complex;
 
 use super::config::BeamformingConfig3D;
-use crate::domain::sensor::beamforming::steering::{SteeringVector, SteeringVectorMethod};
+use crate::analysis::signal_processing::beamforming::utils::steering::{
+    SteeringVector, SteeringVectorMethod,
+};
 
 /// Compute 3D steering vector for MVDR beamforming
 ///

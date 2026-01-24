@@ -292,11 +292,12 @@ mod tests {
             frequency_hz: 1e6,
             sound_speed: 1500.0,
             diagonal_loading: 1e-3,
-            covariance: crate::domain::sensor::beamforming::CovarianceEstimator {
-                forward_backward_averaging: false,
-                num_snapshots: 1,
-                post_process: CovariancePostProcess::None,
-            },
+            covariance:
+                crate::analysis::signal_processing::beamforming::covariance::CovarianceEstimator {
+                    forward_backward_averaging: false,
+                    num_snapshots: 1,
+                    post_process: CovariancePostProcess::None,
+                },
             steering: crate::domain::sensor::beamforming::SteeringVectorMethod::SphericalWave {
                 source_position: [0.0, 0.0, 0.02],
             },

@@ -193,8 +193,11 @@
 //! - `iir_filter`: IIR high-pass filtering (future)
 //! - `adaptive_filter`: Adaptive clutter rejection (future)
 
-// TODO: Uncomment when implemented
-// pub mod svd_filter;
+// SVD clutter filter implementation (✅ IMPLEMENTED)
+pub mod svd_filter;
+pub use svd_filter::{SvdClutterFilter, SvdClutterFilterConfig};
+
+// TODO: Implement remaining filters
 // pub mod polynomial_filter;
 // pub mod iir_filter;
 // pub mod adaptive_filter;

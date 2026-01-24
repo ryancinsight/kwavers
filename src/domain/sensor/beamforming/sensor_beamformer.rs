@@ -240,9 +240,10 @@ impl SensorBeamformer {
             let z = theta.cos();
             let direction = [x, y, z];
 
-            // Use the shared SteeringVector logic from steering.rs
+            // Use the shared SteeringVector logic from analysis layer
             // Note: compute_plane_wave returns Array1<Complex<f64>>
-            let vector = super::steering::SteeringVector::compute_plane_wave(
+            use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVector;
+            let vector = SteeringVector::compute_plane_wave(
                 direction,
                 frequency,
                 &self.sensor_positions,
@@ -573,16 +574,27 @@ mod tests {
     #[test]
     fn test_calculate_delays_logic() {
         let sensors: Vec<Sensor> = vec![
-            Sensor::new(0, Position { x: 0.0, y: 0.0, z: 0.0 }),
-            Sensor::new(1, Position { x: 1.0, y: 0.0, z: 0.0 }),
+            Sensor::new(
+                0,
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+            ),
+            Sensor::new(
+                1,
+                Position {
+                    x: 1.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+            ),
         ];
         let array = SensorArray::new(sensors, 1540.0, ArrayGeometry::Linear);
         let beamformer = SensorBeamformer::new(array, 1e6);
 
-        let grid = crate::domain::grid::Grid::new(
-            2, 1, 1,
-            1.0, 1.0, 1.0
-        ).unwrap();
+        let grid = crate::domain::grid::Grid::new(2, 1, 1, 1.0, 1.0, 1.0).unwrap();
 
         let sound_speed = 1.0;
         let delays = beamformer.calculate_delays(&grid, sound_speed).unwrap();

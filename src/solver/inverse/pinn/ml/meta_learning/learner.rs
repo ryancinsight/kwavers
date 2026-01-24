@@ -384,61 +384,175 @@ impl<B: AutodiffBackend> MetaLearner<B> {
     /// Generate boundary data
     fn generate_boundary_data(
         &self,
-        _geometry: &Arc<crate::solver::inverse::pinn::ml::Geometry2D>,
-        _conditions: &[crate::solver::inverse::pinn::ml::BoundaryCondition2D],
+        geometry: &Arc<crate::solver::inverse::pinn::ml::Geometry2D>,
+        conditions: &[crate::solver::inverse::pinn::ml::BoundaryCondition2D],
     ) -> Vec<(f64, f64, f64, f64)> {
-        // TODO_AUDIT: P1 - Meta-Learning Boundary Data Generation - Simplified Stub
-        //
-        // PROBLEM:
-        // Returns a single dummy boundary point (0,0,0,0) regardless of geometry or boundary conditions.
-        // Meta-learner cannot adapt to tasks with specific boundary constraints.
-        //
-        // IMPACT:
-        // - Meta-learned model initialization ignores boundary condition structure
-        // - Transfer learning to new tasks with different BCs requires full retraining
-        // - Defeats purpose of meta-learning for boundary-dominated problems
-        // - Blocks applications: Dirichlet/Neumann/Robin BC adaptation, complex geometry handling
-        // - Severity: P1 (advanced research feature)
-        //
-        // REQUIRED IMPLEMENTATION:
-        // 1. Parse geometry to extract boundary curves/surfaces
-        // 2. Sample points uniformly along boundary (e.g., 100-500 points depending on complexity)
-        // 3. For each boundary condition type:
-        //    - Dirichlet: (x, y, t, u_bc) where u_bc is prescribed value
-        //    - Neumann: (x, y, t, ∂u/∂n) where ∂u/∂n is prescribed normal derivative
-        //    - Robin: (x, y, t, αu + β∂u/∂n) mixed condition
-        // 4. Return Vec<(x, y, t, bc_value)> with proper spatial/temporal sampling
-        //
-        // MATHEMATICAL SPECIFICATION:
-        // Boundary sampling strategy:
-        //   - Spatial: Arc-length parameterization s ∈ [0, L] with uniform Δs
-        //   - Temporal: t ∈ [0, T_max] with uniform Δt (if time-dependent BCs)
-        //   - Target: O(√N) boundary points for N interior collocation points
-        //
-        // VALIDATION CRITERIA:
-        // - Test: Rectangular domain [0,1]×[0,1] with Dirichlet u=0 on all sides
-        //   Should return ~100 boundary points with bc_value=0
-        // - Test: Circle with Neumann ∂u/∂r = 1
-        //   Should return points on circumference with bc_value=1
-        // - Coverage: Boundary point spacing < 2× interior collocation spacing
-        //
-        // REFERENCES:
-        // - Finn et al., "Model-Agnostic Meta-Learning for Fast Adaptation" (ICML 2017)
-        // - Raissi et al., "Physics-informed neural networks" (boundary sampling strategies)
-        //
-        // ESTIMATED EFFORT: 8-12 hours
-        // - Implementation: 6-8 hours (geometry parsing, sampling, BC application)
-        // - Testing: 2-3 hours (geometric primitives, BC types)
-        // - Documentation: 1 hour
-        //
-        // ASSIGNED: Sprint 212 (Meta-Learning Enhancement)
-        // PRIORITY: P1 (Research feature - meta-learning BC adaptation)
+        let condition_count = conditions.len().max(1);
+        let (x_min, x_max, y_min, y_max) = geometry.bounding_box();
+        let span_x = (x_max - x_min).abs();
+        let span_y = (y_max - y_min).abs();
+        let base_count = 200;
+        let mut data = Vec::new();
 
-        // Generate boundary points and apply conditions
-        // This is a simplified implementation
-        vec![
-            (0.0, 0.0, 0.0, 0.0), // Example boundary point
-        ]
+        let mut push_point = |points: &mut Vec<(f64, f64, f64, f64)>, x: f64, y: f64, t: f64| {
+            let idx = points.len() % condition_count;
+            let bc = conditions
+                .get(idx)
+                .copied()
+                .unwrap_or(crate::solver::inverse::pinn::ml::BoundaryCondition2D::Dirichlet);
+            let bc_value = match bc {
+                crate::solver::inverse::pinn::ml::BoundaryCondition2D::Dirichlet => 0.0,
+                crate::solver::inverse::pinn::ml::BoundaryCondition2D::Neumann => 0.0,
+                crate::solver::inverse::pinn::ml::BoundaryCondition2D::Periodic => 0.0,
+                crate::solver::inverse::pinn::ml::BoundaryCondition2D::Absorbing => 0.0,
+            };
+            points.push((x, y, t, bc_value));
+        };
+
+        match geometry.as_ref() {
+            crate::solver::inverse::pinn::ml::Geometry2D::Rectangular {
+                x_min,
+                x_max,
+                y_min,
+                y_max,
+            } => {
+                let n = (base_count / 4).max(25);
+                for i in 0..n {
+                    let s = i as f64 / (n - 1) as f64;
+                    let t = s;
+                    let x = x_min + (x_max - x_min) * s;
+                    push_point(&mut data, x, *y_min, t);
+                    push_point(&mut data, x, *y_max, t);
+                }
+                for i in 0..n {
+                    let s = i as f64 / (n - 1) as f64;
+                    let t = s;
+                    let y = y_min + (y_max - y_min) * s;
+                    push_point(&mut data, *x_min, y, t);
+                    push_point(&mut data, *x_max, y, t);
+                }
+            }
+            crate::solver::inverse::pinn::ml::Geometry2D::Circular {
+                x_center,
+                y_center,
+                radius,
+            } => {
+                let n = base_count.max(100);
+                for i in 0..n {
+                    let s = i as f64 / (n - 1) as f64;
+                    let theta = 2.0 * PI * s;
+                    let x = x_center + radius * theta.cos();
+                    let y = y_center + radius * theta.sin();
+                    push_point(&mut data, x, y, s);
+                }
+            }
+            crate::solver::inverse::pinn::ml::Geometry2D::LShaped {
+                x_min,
+                x_max,
+                y_min,
+                y_max,
+                notch_x,
+                notch_y,
+            } => {
+                let n = (base_count / 6).max(25);
+                for i in 0..n {
+                    let s = i as f64 / (n - 1) as f64;
+                    let t = s;
+                    let x = x_min + (x_max - x_min) * s;
+                    push_point(&mut data, x, *y_min, t);
+                    push_point(&mut data, x, *y_max, t);
+                }
+                for i in 0..n {
+                    let s = i as f64 / (n - 1) as f64;
+                    let t = s;
+                    let y = y_min + (y_max - y_min) * s;
+                    push_point(&mut data, *x_min, y, t);
+                    if y <= *notch_y {
+                        push_point(&mut data, *x_max, y, t);
+                    }
+                }
+                for i in 0..n {
+                    let s = i as f64 / (n - 1) as f64;
+                    let t = s;
+                    let x = notch_x + (x_max - notch_x) * s;
+                    push_point(&mut data, x, *notch_y, t);
+                }
+                for i in 0..n {
+                    let s = i as f64 / (n - 1) as f64;
+                    let t = s;
+                    let y = notch_y + (y_max - notch_y) * s;
+                    push_point(&mut data, *notch_x, y, t);
+                }
+            }
+            crate::solver::inverse::pinn::ml::Geometry2D::Polygonal { vertices, holes } => {
+                let mut sample_edges = |poly: &[(f64, f64)], points: &mut Vec<(f64, f64, f64, f64)>| {
+                    if poly.len() < 2 {
+                        return;
+                    }
+                    let n_edges = poly.len();
+                    let n = (base_count / n_edges.max(1)).max(10);
+                    for i in 0..n_edges {
+                        let (x0, y0) = poly[i];
+                        let (x1, y1) = poly[(i + 1) % n_edges];
+                        for j in 0..n {
+                            let s = j as f64 / (n - 1) as f64;
+                            let t = s;
+                            let x = x0 + (x1 - x0) * s;
+                            let y = y0 + (y1 - y0) * s;
+                            push_point(points, x, y, t);
+                        }
+                    }
+                };
+                sample_edges(vertices, &mut data);
+                for hole in holes {
+                    sample_edges(hole, &mut data);
+                }
+            }
+            crate::solver::inverse::pinn::ml::Geometry2D::ParametricCurve {
+                x_func,
+                y_func,
+                t_min,
+                t_max,
+                ..
+            } => {
+                let n = base_count.max(100);
+                for i in 0..n {
+                    let s = i as f64 / (n - 1) as f64;
+                    let t_param = t_min + (t_max - t_min) * s;
+                    let x = x_func(t_param);
+                    let y = y_func(t_param);
+                    push_point(&mut data, x, y, s);
+                }
+            }
+            crate::solver::inverse::pinn::ml::Geometry2D::AdaptiveMesh { base_geometry, .. } => {
+                data.extend(self.generate_boundary_data(
+                    &Arc::new((**base_geometry).clone()),
+                    conditions,
+                ));
+            }
+            crate::solver::inverse::pinn::ml::Geometry2D::MultiRegion { regions, .. } => {
+                for (region, _) in regions {
+                    data.extend(self.generate_boundary_data(
+                        &Arc::new(region.clone()),
+                        conditions,
+                    ));
+                }
+            }
+        }
+
+        if data.is_empty() {
+            let n = base_count.max(50);
+            let mut i = 0;
+            while i < n {
+                let s = i as f64 / (n - 1) as f64;
+                let x = x_min + span_x * s;
+                let y = y_min;
+                push_point(&mut data, x, y, s);
+                i += 1;
+            }
+        }
+
+        data
     }
 
     /// Generate initial data

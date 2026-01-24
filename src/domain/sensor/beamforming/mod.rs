@@ -10,29 +10,54 @@
 //!
 //! **Domain Layer Responsibilities (THIS MODULE):**
 //! - Sensor geometry and array configuration
-//! - Hardware-specific delay calculations
-//! - Array-specific optimizations and constraints
+//! - Hardware-specific delay calculations (transmit/receive geometry)
+//! - Array-specific apodization and constraints
 //! - Real-time processing interfaces
+//! - Physical sensor array characteristics
 //!
 //! **Analysis Layer Algorithms:** [`crate::analysis::signal_processing::beamforming`]
 //! - General-purpose beamforming algorithms (DAS, MVDR, MUSIC, etc.)
 //! - Mathematical optimizations and transformations
-//! - Advanced signal processing techniques
+//! - Advanced signal processing techniques (adaptive, frequency-domain)
 //! - Neural/ML beamforming methods
+//! - Receive beamforming signal processing
 //!
 //! **Clinical Layer Decision Support:** [`crate::clinical::imaging::workflows::neural`]
 //! - Lesion detection and tissue classification
 //! - Diagnostic recommendations
 //! - Clinical workflow orchestration
 //!
+//! ## Beamforming Concepts
+//!
+//! **Transmit Beamforming (Domain Layer):**
+//! - Hardware control for focusing transmitted energy
+//! - Array element excitation timing
+//! - Transmit aperture configuration
+//! - Physical delay line implementation
+//!
+//! **Receive Beamforming (Analysis Layer):**
+//! - Signal processing of received echoes
+//! - Delay-and-sum algorithms
+//! - Adaptive weighting (MVDR, Capon)
+//! - Image reconstruction
+//!
+//! **Array Geometry (Domain Layer):**
+//! - Sensor positions and spacing
+//! - Element characteristics
+//! - Coordinate system definitions
+//! - Hardware calibration data
+//!
 //! ## Layer Separation
 //!
 //! | Concern | Domain Layer | Analysis Layer | Clinical Layer |
 //! |---------|-------------|----------------|----------------|
 //! | Sensor geometry | ✅ Owns | Uses interface | - |
-//! | Beamforming algorithms | Delegates | ✅ Owns | - |
+//! | Transmit beamforming | ✅ Hardware control | - | - |
+//! | Receive beamforming | Hardware interface | ✅ Algorithms | - |
+//! | Array configuration | ✅ Owns | - | - |
+//! | Signal processing | - | ✅ Owns | - |
 //! | Clinical analysis | - | Feature extraction | ✅ Decision support |
-//! | 3D beamforming | Interface | ✅ Algorithms | - |
+//! | 3D beamforming | Geometry | ✅ Algorithms | - |
 //! | Neural beamforming | - | ✅ Algorithms | Clinical workflows |
 //!
 //! ## Migration Guide
@@ -64,47 +89,75 @@
 //! **For Sensor Interface (unchanged):** Keep using domain layer
 //! ```rust,ignore
 //! use kwavers::domain::sensor::beamforming::SensorBeamformer;  // ✅ Still in domain
+//! use kwavers::domain::sensor::beamforming::BeamformingConfig;  // ✅ Configuration
 //! ```
 //!
 //! ## Usage Example
 //!
 //! ```rust,ignore
 //! use kwavers::domain::sensor::{GridSensorSet, beamforming::SensorBeamformer};
-//! use kwavers::analysis::signal_processing::beamforming::time_domain::DelayAndSum;
+//! use kwavers::analysis::signal_processing::beamforming::time_domain::delay_and_sum;
 //!
 //! // 1. Configure sensor array (domain layer)
 //! let sensors = GridSensorSet::new(sensor_positions, sampling_rate)?;
 //!
 //! // 2. Create sensor-specific interface (domain layer)
-//! let beamformer = SensorBeamformer::new(&sensors);
+//! let beamformer = SensorBeamformer::new(sensor_array, sampling_rate);
 //!
-//! // 3. Use analysis algorithms
-//! let processor = DelayAndSum::new();
-//! let image = processor.process(&rf_data, beamformer.geometry(), &grid)?;
+//! // 3. Calculate hardware-specific delays (domain layer)
+//! let delays = beamformer.calculate_delays(&image_grid, sound_speed)?;
+//!
+//! // 4. Use analysis algorithms for receive beamforming (analysis layer)
+//! let image = delay_and_sum(&rf_data, &delays)?;
 //! ```
 //!
 //! ## References
 //!
 //! - Van Trees, H. L. (2002). *Optimum Array Processing*. Wiley-Interscience.
 //! - Capon, J. (1969). "High-resolution frequency-wavenumber spectrum analysis."
+//! - Szabo, T. L. (2004). *Diagnostic Ultrasound Imaging: Inside Out*. Academic Press.
 
 // Domain-specific sensor interface (core functionality)
 pub mod sensor_beamformer;
+
 // Configuration types (shared with analysis layer)
 mod config;
 pub use config::{BeamformingConfig, BeamformingCoreConfig};
-// Processor (shared with analysis layer)
-mod processor;
-pub use processor::BeamformingProcessor;
-// GPU shaders (shared with analysis layer)
+
+// GPU shaders (hardware-accelerated implementations)
 #[cfg(feature = "gpu")]
 pub mod shaders;
-// Covariance and steering (shared with analysis layer)
-pub mod covariance;
-pub mod steering;
-pub mod time_domain;
-pub use covariance::CovarianceEstimator;
-pub use steering::{SteeringVector, SteeringVectorMethod};
+
+// Re-exports from analysis layer for backward compatibility
+// These provide convenient access while maintaining proper layer separation
+
+// Steering vector utilities
+pub use crate::analysis::signal_processing::beamforming::utils::steering::{
+    SteeringVector, SteeringVectorMethod,
+};
+
+// Processor re-export for backward compatibility
+// The canonical implementation is in analysis::signal_processing::beamforming::domain_processor
+pub use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
+
+// Time-domain utilities re-exported for backward compatibility
+pub mod time_domain {
+    //! Re-exports from analysis layer for backward compatibility
+    pub use crate::analysis::signal_processing::beamforming::time_domain::DelayReference;
+    pub const DEFAULT_DELAY_REFERENCE: DelayReference = DelayReference::SensorIndex(0);
+}
+
+// Covariance module re-export
+pub mod covariance {
+    //! Re-exports from analysis layer for backward compatibility
+    pub use crate::analysis::signal_processing::beamforming::covariance::*;
+}
+
+// Steering module re-export
+pub mod steering {
+    //! Re-exports from analysis layer for backward compatibility
+    pub use crate::analysis::signal_processing::beamforming::utils::steering::*;
+}
 
 pub use sensor_beamformer::{SensorBeamformer, SensorProcessingParams, WindowType};
 
@@ -112,4 +165,8 @@ pub use sensor_beamformer::{SensorBeamformer, SensorProcessingParams, WindowType
 // - Analysis layer: crate::analysis::signal_processing::beamforming
 // - Clinical layer: crate::clinical::imaging::workflows::neural
 //
-// Only the sensor geometry interface (SensorBeamformer) remains in domain layer.
+// This domain module now contains only:
+// - SensorBeamformer: Hardware-specific array geometry interface
+// - BeamformingConfig: Shared configuration types
+// - GPU shaders: Hardware-accelerated kernels
+// - Re-exports: Backward compatibility for common types

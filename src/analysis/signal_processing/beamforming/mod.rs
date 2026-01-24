@@ -220,6 +220,9 @@ pub mod traits;
 pub mod adaptive;
 pub mod time_domain;
 
+// Domain processor (shared with domain layer via re-export)
+pub mod domain_processor;
+
 // Infrastructure modules (Phase 2 - Sprint 4)
 pub mod covariance; // Covariance matrix estimation
 pub mod utils; // Steering vectors, windows, interpolation
