@@ -128,37 +128,6 @@ pub use config::{BeamformingConfig, BeamformingCoreConfig};
 #[cfg(feature = "gpu")]
 pub mod shaders;
 
-// Re-exports from analysis layer for backward compatibility
-// These provide convenient access while maintaining proper layer separation
-
-// Steering vector utilities
-pub use crate::analysis::signal_processing::beamforming::utils::steering::{
-    SteeringVector, SteeringVectorMethod,
-};
-
-// Processor re-export for backward compatibility
-// The canonical implementation is in analysis::signal_processing::beamforming::domain_processor
-pub use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
-
-// Time-domain utilities re-exported for backward compatibility
-pub mod time_domain {
-    //! Re-exports from analysis layer for backward compatibility
-    pub use crate::analysis::signal_processing::beamforming::time_domain::DelayReference;
-    pub const DEFAULT_DELAY_REFERENCE: DelayReference = DelayReference::SensorIndex(0);
-}
-
-// Covariance module re-export
-pub mod covariance {
-    //! Re-exports from analysis layer for backward compatibility
-    pub use crate::analysis::signal_processing::beamforming::covariance::*;
-}
-
-// Steering module re-export
-pub mod steering {
-    //! Re-exports from analysis layer for backward compatibility
-    pub use crate::analysis::signal_processing::beamforming::utils::steering::*;
-}
-
 pub use sensor_beamformer::{SensorBeamformer, SensorProcessingParams, WindowType};
 
 // NOTE: All beamforming algorithms have been migrated to:
@@ -169,4 +138,3 @@ pub use sensor_beamformer::{SensorBeamformer, SensorProcessingParams, WindowType
 // - SensorBeamformer: Hardware-specific array geometry interface
 // - BeamformingConfig: Shared configuration types
 // - GPU shaders: Hardware-accelerated kernels
-// - Re-exports: Backward compatibility for common types

@@ -2,7 +2,6 @@
 
 pub mod algorithms;
 pub mod array;
-pub mod beamforming;
 pub mod beamforming_search;
 pub mod multilateration;
 pub mod tdoa;

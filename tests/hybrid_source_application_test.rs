@@ -4,9 +4,9 @@ use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::domain::plugin::{Plugin, PluginContext, PluginFields};
 use kwavers::domain::signal::SineWave;
 use kwavers::domain::source::{GaussianBuilder, Source};
+use kwavers::solver::forward::hybrid::domain_decomposition::{DomainRegion, DomainType};
+use kwavers::solver::forward::hybrid::{DecompositionStrategy, HybridConfig, HybridPlugin};
 use kwavers::solver::forward::pstd::config::{BoundaryConfig as PSTDBoundaryConfig, PSTDConfig};
-use kwavers::solver::hybrid::domain_decomposition::{DomainRegion, DomainType};
-use kwavers::solver::hybrid::{DecompositionStrategy, HybridConfig, HybridPlugin};
 use ndarray::{Array3, Array4};
 use std::sync::Arc;
 

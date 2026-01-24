@@ -4,7 +4,7 @@ use super::{ConservationEnforcer, QualityMonitor, TransferOperators};
 use super::{InterfaceGeometry, InterpolationManager, InterpolationScheme};
 use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
-use crate::solver::hybrid::domain_decomposition::DomainRegion;
+use crate::solver::forward::hybrid::domain_decomposition::DomainRegion;
 use ndarray::{s, Array3, Array4};
 
 /// Interface coupling data for a single boundary
@@ -12,7 +12,7 @@ use ndarray::{s, Array3, Array4};
 pub struct InterfaceCoupling {
     /// Source domain information
     pub source_domain: super::DomainInfo,
-    /// Target domain information  
+    /// Target domain information
     pub target_domain: super::DomainInfo,
     /// Interface geometry
     pub interface_geometry: InterfaceGeometry,

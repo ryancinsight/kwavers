@@ -9,9 +9,8 @@ use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
-use crate::domain::source::transducers::physics::MAX_STEERING_ANGLE;
-use crate::physics::phase_modulation::phase_shifting::core::{
-    calculate_wavelength, wrap_phase, SPEED_OF_SOUND,
+use crate::physics::acoustics::analytical::patterns::phase_shifting::core::{
+    calculate_wavelength, wrap_phase, MAX_STEERING_ANGLE, SPEED_OF_SOUND,
 };
 
 /// Beam steering controller

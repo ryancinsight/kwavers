@@ -25,9 +25,7 @@ pub mod composite;
 pub mod config;
 pub mod context;
 pub mod field;
-// pub mod grid; // Moved to domain
 pub mod io;
-// pub mod medium; // Moved to domain
 pub mod numerical;
 pub mod physics;
 pub mod system;

@@ -9,7 +9,6 @@ pub mod electromagnetic; // Electromagnetic wave implementations
 pub mod foundations; // Physics specifications and wave equation traits
 pub mod optics; // Optical physics (elevated from electromagnetic)
 pub mod thermal;
-// pub mod factory; // Removed
 pub mod constants {
     pub use crate::core::constants::*;
 }

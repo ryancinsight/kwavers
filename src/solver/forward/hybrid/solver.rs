@@ -8,12 +8,14 @@ use crate::domain::source::GridSource;
 use crate::domain::source::{Source, SourceField};
 
 use crate::solver::forward::fdtd::FdtdSolver;
+use crate::solver::forward::hybrid::adaptive_selection::AdaptiveSelector;
+use crate::solver::forward::hybrid::config::{DecompositionStrategy, HybridConfig};
+use crate::solver::forward::hybrid::coupling::CouplingInterface;
+use crate::solver::forward::hybrid::domain_decomposition::{
+    DomainDecomposer, DomainRegion, DomainType,
+};
+use crate::solver::forward::hybrid::metrics::{HybridMetrics, ValidationResults};
 use crate::solver::forward::pstd::PSTDSolver;
-use crate::solver::hybrid::adaptive_selection::AdaptiveSelector;
-use crate::solver::hybrid::config::{DecompositionStrategy, HybridConfig};
-use crate::solver::hybrid::coupling::CouplingInterface;
-use crate::solver::hybrid::domain_decomposition::{DomainDecomposer, DomainRegion, DomainType};
-use crate::solver::hybrid::metrics::{HybridMetrics, ValidationResults};
 use log::{debug, info};
 use ndarray::{s, Array4, Zip};
 use std::sync::Arc;

@@ -235,7 +235,7 @@ pub use steering::{steering_from_delays_s, NarrowbandSteering, NarrowbandSteerin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::sensor::beamforming::covariance::CovariancePostProcess;
+    use crate::analysis::signal_processing::beamforming::covariance::CovariancePostProcess;
 
     #[test]
     fn steering_module_exports_accessible() {
