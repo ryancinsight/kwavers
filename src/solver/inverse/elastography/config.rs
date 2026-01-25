@@ -12,6 +12,8 @@ pub struct ShearWaveInversionConfig {
     pub method: InversionMethod,
     /// Tissue density for elasticity calculation (kg/m³)
     pub density: f64,
+    /// Excitation frequency (Hz)
+    pub frequency: f64,
 }
 
 impl ShearWaveInversionConfig {
@@ -24,6 +26,7 @@ impl ShearWaveInversionConfig {
         Self {
             method,
             density: 1000.0, // Typical soft tissue density
+            frequency: 100.0, // Typical SWE frequency
         }
     }
 
@@ -34,6 +37,16 @@ impl ShearWaveInversionConfig {
     /// * `density` - Tissue density in kg/m³
     pub fn with_density(mut self, density: f64) -> Self {
         self.density = density;
+        self
+    }
+
+    /// Set excitation frequency
+    ///
+    /// # Arguments
+    ///
+    /// * `frequency` - Frequency in Hz
+    pub fn with_frequency(mut self, frequency: f64) -> Self {
+        self.frequency = frequency;
         self
     }
 
@@ -54,6 +67,13 @@ impl ShearWaveInversionConfig {
             return Err(format!(
                 "Density outside physiological range (100-10000 kg/m³): {} kg/m³",
                 self.density
+            ));
+        }
+
+        if self.frequency <= 0.0 {
+            return Err(format!(
+                "Frequency must be positive, got: {} Hz",
+                self.frequency
             ));
         }
 
@@ -185,15 +205,18 @@ mod tests {
     fn test_shear_wave_config_default() {
         let config = ShearWaveInversionConfig::default();
         assert_eq!(config.density, 1000.0);
+        assert_eq!(config.frequency, 100.0);
         assert!(matches!(config.method, InversionMethod::TimeOfFlight));
     }
 
     #[test]
     fn test_shear_wave_config_builder() {
-        let config =
-            ShearWaveInversionConfig::new(InversionMethod::PhaseGradient).with_density(1050.0);
+        let config = ShearWaveInversionConfig::new(InversionMethod::PhaseGradient)
+            .with_density(1050.0)
+            .with_frequency(150.0);
 
         assert_eq!(config.density, 1050.0);
+        assert_eq!(config.frequency, 150.0);
         assert!(matches!(config.method, InversionMethod::PhaseGradient));
     }
 
@@ -209,6 +232,10 @@ mod tests {
         let invalid_config2 =
             ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight).with_density(20000.0);
         assert!(invalid_config2.validate().is_err());
+
+        let invalid_config3 =
+            ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight).with_frequency(-10.0);
+        assert!(invalid_config3.validate().is_err());
     }
 
     #[test]
