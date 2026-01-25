@@ -277,12 +277,34 @@ pub async fn delete_model(
 mod tests {
     use super::*;
 
+    #[derive(Debug)]
+    struct DummyExecutor;
+
+    impl crate::api::job_manager::TrainingExecutor for DummyExecutor {
+        fn execute(
+            &self,
+            _request: crate::api::PINNTrainingRequest,
+            _progress_sender: tokio::sync::mpsc::Sender<crate::api::TrainingProgress>,
+        ) -> crate::api::job_manager::TrainingFuture {
+            Box::pin(async {
+                Err(crate::api::APIError {
+                    error: crate::api::APIErrorType::InternalError,
+                    message: "Dummy executor".to_string(),
+                    details: None,
+                })
+            })
+        }
+    }
+
     #[tokio::test]
     async fn test_health_check() {
         let state = AppState {
             version: "1.0.0".to_string(),
             start_time: std::time::Instant::now(),
-            job_manager: std::sync::Arc::new(crate::api::job_manager::JobManager::new(1)),
+            job_manager: std::sync::Arc::new(crate::api::job_manager::JobManager::new(
+                1,
+                std::sync::Arc::new(DummyExecutor),
+            )),
             model_registry: std::sync::Arc::new(crate::api::model_registry::ModelRegistry::new()),
             auth_middleware: std::sync::Arc::new(
                 crate::api::auth::AuthMiddleware::new(
