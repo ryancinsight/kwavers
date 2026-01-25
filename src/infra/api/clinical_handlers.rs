@@ -211,12 +211,15 @@ pub struct ClinicalSession {
 pub struct DICOMService {
     /// Connected DICOM nodes
     pub dicom_nodes: HashMap<String, DICOMNode>,
+    /// Cache for parsed studies
+    study_cache: std::sync::Mutex<HashMap<String, std::sync::Arc<crate::infra::io::DicomStudy>>>,
 }
 
 impl DICOMService {
     pub fn new() -> Self {
         Self {
             dicom_nodes: HashMap::new(),
+            study_cache: std::sync::Mutex::new(HashMap::new()),
         }
     }
 
@@ -228,7 +231,14 @@ impl DICOMService {
     pub fn read_study(
         &self,
         study_uid: &str,
-    ) -> KwaversResult<Option<crate::infra::io::DicomStudy>> {
+    ) -> KwaversResult<Option<std::sync::Arc<crate::infra::io::DicomStudy>>> {
+        // Check cache first
+        if let Ok(cache) = self.study_cache.lock() {
+            if let Some(study) = cache.get(study_uid) {
+                return Ok(Some(study.clone()));
+            }
+        }
+
         let dicom_reader = crate::infra::io::DicomReader::new();
 
         // Search through configured DICOM nodes for storage directories
@@ -237,7 +247,21 @@ impl DICOMService {
                 let study_path = std::path::Path::new(storage_dir).join(study_uid);
                 if study_path.exists() {
                     let study = dicom_reader.read_directory(&study_path)?;
-                    return Ok(Some(study));
+                    let study_arc = std::sync::Arc::new(study);
+
+                    // Update cache with simple capacity limit
+                    if let Ok(mut cache) = self.study_cache.lock() {
+                        // Prevent unbounded growth (production safety)
+                        // If cache exceeds limit, evict an arbitrary item
+                        if cache.len() >= 20 {
+                            if let Some(key) = cache.keys().next().cloned() {
+                                cache.remove(&key);
+                            }
+                        }
+                        cache.insert(study_uid.to_string(), study_arc.clone());
+                    }
+
+                    return Ok(Some(study_arc));
                 }
             }
         }
@@ -258,8 +282,9 @@ impl DICOMService {
         if let Some(study) = self.read_study(study_uid)? {
             let series = study
                 .series
-                .into_iter()
-                .find(|s| s.series_instance_uid == series_uid);
+                .iter()
+                .find(|s| s.series_instance_uid == series_uid)
+                .cloned();
             Ok(series)
         } else {
             Ok(None)
@@ -277,17 +302,26 @@ impl DICOMService {
         series_uid: &str,
         instance_uid: &str,
     ) -> KwaversResult<Option<crate::infra::io::DicomObject>> {
-        if let Some(series) = self.read_series(study_uid, series_uid)? {
-            let instance = series.instances.into_iter().find(|i| {
-                i.metadata
-                    .get("SOPInstanceUID")
-                    .and_then(|v| v.as_string())
-                    .map_or(false, |uid| uid == instance_uid)
-            });
-            Ok(instance)
-        } else {
-            Ok(None)
+        if let Some(study) = self.read_study(study_uid)? {
+            if let Some(series) = study
+                .series
+                .iter()
+                .find(|s| s.series_instance_uid == series_uid)
+            {
+                let instance = series
+                    .instances
+                    .iter()
+                    .find(|i| {
+                        i.metadata
+                            .get("SOPInstanceUID")
+                            .and_then(|v| v.as_string())
+                            .map_or(false, |uid| uid == instance_uid)
+                    })
+                    .cloned();
+                return Ok(instance);
+            }
         }
+        Ok(None)
     }
 }
 
@@ -1037,5 +1071,42 @@ mod tests {
             finding.finding_type,
             crate::api::FindingType::Lesion
         ));
+    }
+
+    #[test]
+    fn test_dicom_caching_behavior() {
+        // Setup temp dir and files
+        let temp_dir = std::env::temp_dir().join(format!("kwavers_dicom_test_{}", uuid::Uuid::new_v4()));
+        let study_uid = "study1";
+        let study_path = temp_dir.join(study_uid);
+        std::fs::create_dir_all(&study_path).unwrap();
+        // Create dummy files so read_directory finds something (though it returns empty study)
+        std::fs::write(study_path.join("file1.dcm"), b"dummy").unwrap();
+
+        // Setup service
+        let mut service = DICOMService::new();
+        service.dicom_nodes.insert(
+            "local".to_string(),
+            DICOMNode {
+                node_id: "local".to_string(),
+                ae_title: "LOCAL".to_string(),
+                host: "localhost".to_string(),
+                port: 104,
+                last_seen: Utc::now(),
+                storage_directory: Some(temp_dir.to_string_lossy().to_string()),
+            },
+        );
+
+        // First read
+        let study1 = service.read_study(study_uid).unwrap().unwrap();
+
+        // Second read
+        let study2 = service.read_study(study_uid).unwrap().unwrap();
+
+        // Check if they are same Arc
+        assert!(std::sync::Arc::ptr_eq(&study1, &study2), "Cache should return the same Arc");
+
+        // Cleanup
+        std::fs::remove_dir_all(temp_dir).unwrap();
     }
 }
