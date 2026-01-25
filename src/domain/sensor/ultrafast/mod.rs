@@ -26,15 +26,19 @@
 //! REFERENCES: Tanter & Fink (2014) "Ultrafast imaging in biomedical ultrasound" IEEE TUFFC
 //! REFERENCES: Montaldo et al. (2009) "Coherent plane-wave compounding for very high frame rate ultrasonography"
 //!
-//! TODO_AUDIT: P1 - Plane Wave Delay Calculation - Implement geometric delay computation
-//! DEPENDS ON: domain/sensor/ultrafast/plane_wave.rs (to be created)
-//! MISSING: Plane wave propagation delay calculation: τ(x,y,θ) = (x·sin(θ) + y·cos(θ))/c
-//! MISSING: Element-wise receive delays for plane wave beamforming
-//! MISSING: F-number dependent apodization for plane waves
-//! MISSING: Speed of sound compensation (1540 m/s tissue)
-//! SEVERITY: HIGH (required for correct beamforming)
-//! THEOREM: Delay surface: τ(x,y,θ) = (x·sin(θ) + y·cos(θ))/c for tilt angle θ
-//! REFERENCES: Jensen et al. (2006) "Synthetic aperture ultrasound imaging" Ultrasonics
+//! ✅ IMPLEMENTED: Plane Wave Delay Calculation - Complete geometric delay computation
+//!
+//! Fully implemented in `plane_wave.rs` module with:
+//! - Transmission delays: τ_tx(x,θ) = -x·sin(θ)/c
+//! - Reception delays: τ_rx(x,y,θ) = (x·sin(θ) + y·cos(θ))/c
+//! - Total beamforming delays: τ_total = (2x·sin(θ) + y·cos(θ))/c
+//! - F-number dependent Hann apodization
+//! - Speed of sound compensation (1540 m/s tissue default)
+//! - Delay surface computation for full image grids
+//! - Support for 11-angle compounding (-10° to +10°, 2° steps)
+//!
+//! See `plane_wave.rs` for complete API and tests.
+//! REFERENCES: Jensen et al. (2006), Montaldo et al. (2009), Tanter & Fink (2014)
 //!
 //! TODO_AUDIT: P2 - Diverging Wave Transmission - Implement synthetic transmit aperture
 //! DEPENDS ON: domain/sensor/ultrafast/diverging_wave.rs (to be created)
@@ -148,10 +152,15 @@
 //! - `diverging_wave`: Diverging wave transmission (future)
 //! - `sequencer`: Transmission sequence scheduling (future)
 
-// TODO: Uncomment when implemented
-// pub mod plane_wave;
+// Implemented modules
+pub mod plane_wave;
+
+// Future modules
 // pub mod diverging_wave;
 // pub mod sequencer;
+
+// Re-export main types
+pub use plane_wave::{PlaneWave, PlaneWaveConfig};
 
 #[cfg(test)]
 mod tests {
