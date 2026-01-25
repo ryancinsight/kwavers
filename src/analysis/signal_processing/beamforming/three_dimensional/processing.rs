@@ -405,8 +405,9 @@ mod tests {
         #[cfg(feature = "gpu")]
         {
             use super::super::processor::BeamformingProcessor3D;
-            let processor =
-                futures::executor::block_on(async { BeamformingProcessor3D::new(config).await });
+            let processor = tokio::runtime::Runtime::new()
+                .unwrap()
+                .block_on(async { BeamformingProcessor3D::new(config).await });
             if let Ok(proc) = processor {
                 let empty_data = Array4::<f32>::zeros((0, 0, 0, 0));
                 assert!(proc.validate_input(&empty_data).is_err());
@@ -426,8 +427,9 @@ mod tests {
         #[cfg(feature = "gpu")]
         {
             use super::super::processor::BeamformingProcessor3D;
-            let processor =
-                futures::executor::block_on(async { BeamformingProcessor3D::new(config).await });
+            let processor = tokio::runtime::Runtime::new()
+                .unwrap()
+                .block_on(async { BeamformingProcessor3D::new(config).await });
             if let Ok(proc) = processor {
                 // Wrong channel count
                 let bad_data = Array4::<f32>::zeros((1, 100, 1024, 1));

@@ -7,10 +7,10 @@ use crate::core::error::KwaversResult;
 use crate::gpu::memory::{MemoryPoolType, UnifiedMemoryManager};
 use ndarray::{Array3, Array4};
 use rand::Rng;
+use rayon::prelude::*;
 use rustfft::{num_complex::Complex, FftPlanner};
+use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::fmt;
-use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -44,28 +44,6 @@ pub struct PipelineLayout {
     layout: wgpu::PipelineLayout,
 }
 
-/// Wrapper for FftPlanner to implement Debug
-struct CachedFftPlanner(FftPlanner<f64>);
-
-impl fmt::Debug for CachedFftPlanner {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "FftPlanner")
-    }
-}
-
-impl Deref for CachedFftPlanner {
-    type Target = FftPlanner<f64>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for CachedFftPlanner {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
 /// Real-time imaging pipeline
 #[derive(Debug)]
 pub struct RealtimeImagingPipeline {
@@ -81,8 +59,6 @@ pub struct RealtimeImagingPipeline {
     stats: PipelineStats,
     /// Pipeline state
     state: PipelineState,
-    /// FFT Planner for Hilbert transform
-    fft_planner: CachedFftPlanner,
 }
 
 /// Pipeline processing statistics
@@ -125,7 +101,6 @@ impl RealtimeImagingPipeline {
             gpu_memory,
             stats: PipelineStats::default(),
             state: PipelineState::Stopped,
-            fft_planner: CachedFftPlanner(FftPlanner::new()),
         })
     }
 
@@ -280,77 +255,66 @@ impl RealtimeImagingPipeline {
         // Hilbert transform for envelope detection
         let mut envelope = Array3::zeros(beamformed.dim());
 
-        // Pre-allocate buffers for signal processing to avoid allocation in loop
-        let signal_len = beamformed.shape()[1];
-        let mut analytic = Vec::with_capacity(signal_len);
-        let mut hilbert_output = Vec::with_capacity(signal_len);
-        let mut spectrum_scratch = Vec::with_capacity(signal_len);
+        use ndarray::Axis;
 
-        for i in 0..beamformed.shape()[0] {
-            for k in 0..beamformed.dim().2 {
-                // Simplified envelope detection (magnitude of analytic signal)
-                analytic.clear();
-
-                for j in 0..beamformed.shape()[1] {
-                    analytic.push(beamformed[[i, j, k]] as f64);
+        // Parallel processing over Rx dimension (Axis 0)
+        envelope
+            .axis_iter_mut(Axis(0))
+            .zip(beamformed.axis_iter(Axis(0)))
+            .par_bridge()
+            .for_each(|(mut envelope_rx, beamformed_rx)| {
+                // Thread-local buffers to avoid allocation and planner re-creation
+                thread_local! {
+                    static BUFFERS: RefCell<(Vec<f64>, Vec<f64>, Vec<Complex<f64>>, FftPlanner<f64>)> =
+                        RefCell::new((Vec::new(), Vec::new(), Vec::new(), FftPlanner::new()));
                 }
 
-                // Apply Hilbert transform for analytic signal
-                self.hilbert_transform(&analytic, &mut hilbert_output, &mut spectrum_scratch);
+                BUFFERS.with(|buffers_cell| {
+                    let mut borrow = buffers_cell.borrow_mut();
+                    let (analytic, hilbert_output, spectrum_scratch, planner) = &mut *borrow;
 
-                for j in 0..hilbert_output.len() {
-                    envelope[[i, j, k]] = ((beamformed[[i, j, k]] as f64).powi(2)
-                        + hilbert_output[j].powi(2))
-                    .sqrt() as f32;
-                }
-            }
-        }
+                    // Iterate over Frames (k) - dim 1 of 2D slice
+                    for k in 0..beamformed_rx.dim().1 {
+                        // Iterate over Samples (j) - dim 0 of 2D slice
+                        analytic.clear();
+                        for j in 0..beamformed_rx.dim().0 {
+                            analytic.push(beamformed_rx[[j, k]] as f64);
+                        }
+
+                        // Inline Hilbert Transform logic using local planner
+                        let len = analytic.len();
+                        let fft = planner.plan_fft_forward(len);
+                        let ifft = planner.plan_fft_inverse(len);
+
+                        spectrum_scratch.clear();
+                        spectrum_scratch.extend(analytic.iter().map(|&x| Complex::new(x, 0.0)));
+
+                        fft.process(spectrum_scratch);
+
+                        let n = spectrum_scratch.len();
+                        for v in spectrum_scratch.iter_mut().take(n / 2).skip(1) {
+                            *v *= 2.0;
+                        }
+                        // DC and Nyquist remain unchanged
+
+                        ifft.process(spectrum_scratch);
+
+                        hilbert_output.clear();
+                        hilbert_output.extend(spectrum_scratch.iter().map(|c| c.im / n as f64));
+
+                        // Write back result
+                        for j in 0..hilbert_output.len() {
+                            envelope_rx[[j, k]] = ((beamformed_rx[[j, k]] as f64).powi(2)
+                                + hilbert_output[j].powi(2))
+                            .sqrt() as f32;
+                        }
+                    }
+                });
+            });
 
         Ok(envelope)
     }
 
-    /// Hilbert transform using FFT-based approach
-    /// Computes the analytic signal for envelope detection
-    ///
-    /// # Theorem Reference
-    /// Hilbert Transform: H[f](t) = (1/π) ∫ f(τ)/(t-τ) dτ
-    /// FFT-based implementation: Multiply FFT by sign function in frequency domain
-    /// Reference: Oppenheim & Schafer, Discrete-Time Signal Processing (3rd ed.)
-    fn hilbert_transform(
-        &mut self,
-        signal: &[f64],
-        output: &mut Vec<f64>,
-        spectrum: &mut Vec<Complex<f64>>,
-    ) {
-        let fft = self.fft_planner.plan_fft_forward(signal.len());
-        let ifft = self.fft_planner.plan_fft_inverse(signal.len());
-
-        // Convert to complex using scratch buffer
-        spectrum.clear();
-        spectrum.extend(signal.iter().map(|&x| Complex::new(x, 0.0)));
-
-        // Forward FFT
-        fft.process(spectrum);
-
-        // Apply Hilbert transform in frequency domain
-        let n = spectrum.len();
-        for v in spectrum.iter_mut().take(n / 2).skip(1) {
-            *v *= 2.0;
-        }
-        // DC and Nyquist remain unchanged
-        if !n.is_multiple_of(2) {
-            // For odd length, Nyquist frequency (if exists) remains unchanged
-        } else {
-            // For even length, Nyquist frequency remains unchanged
-        }
-
-        // Inverse FFT
-        ifft.process(spectrum);
-
-        // Return imaginary part (Hilbert transform result)
-        output.clear();
-        output.extend(spectrum.iter().map(|c| c.im / n as f64));
-    }
 
     /// Log compression
     fn log_compression(&self, envelope: &Array3<f32>) -> KwaversResult<Array3<f32>> {
