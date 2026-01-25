@@ -271,7 +271,7 @@ pub use delay_and_sum::{CavitationEvent, DelayAndSumConfig, DelayAndSumPAM};
 // pub mod spectral;
 
 use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
-use crate::core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
+
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::sensor::beamforming::BeamformingCoreConfig;
 use crate::domain::sensor::passive_acoustic_mapping::geometry::ArrayGeometry;
@@ -676,6 +676,7 @@ impl From<PamBeamformingConfig> for BeamformingCoreConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
 
     #[test]
     fn pam_policy_to_core_capon_loading_and_midpoint_frequency() {

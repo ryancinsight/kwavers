@@ -55,6 +55,7 @@ pub use config::{
     ApodizationWindow, BeamformingAlgorithm3D, BeamformingConfig3D, BeamformingMetrics,
 };
 pub use processor::BeamformingProcessor3D;
+pub use saft::{SaftConfig, SaftProcessor};
 
 #[cfg(test)]
 mod tests;

@@ -9,11 +9,11 @@
 
 | Metric | Value | Notes |
 |--------|-------|-------|
-| **Total TODOs** | 115 | Down from 132 (12.9% reduction) |
-| **P1 (High)** | 51 items | ~975-1415 hours |
+| **Total TODOs** | 114 | Down from 132 (13.6% reduction) |
+| **P1 (High)** | 50 items | ~950-1390 hours |
 | **P2 (Medium)** | 64 items | ~1105-1645 hours |
 | **P0 (Critical)** | 0 items | No blockers ✅ |
-| **Recent Completed** | 17 items | Clutter filters, PAM, localization |
+| **Recent Completed** | 18 items | Clutter filters, PAM, localization, SAFT |
 
 ---
 

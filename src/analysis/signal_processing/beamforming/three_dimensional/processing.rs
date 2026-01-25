@@ -241,7 +241,6 @@ impl BeamformingProcessor3D {
     /// Process MVDR 3D beamforming
     ///
     /// Minimum Variance Distortionless Response beamforming for adaptive spatial filtering.
-    /// Not yet fully implemented - requires covariance matrix estimation and inversion.
     ///
     /// # References
     /// - Van Veen & Buckley (1988) "Beamforming: A versatile approach to spatial filtering"
@@ -249,82 +248,17 @@ impl BeamformingProcessor3D {
     #[cfg(feature = "gpu")]
     pub(super) fn process_mvdr_3d(
         &mut self,
-        _rf_data: &Array4<f32>,
-        _diagonal_loading: f32,
-        _subarray_size: [usize; 3],
+        rf_data: &Array4<f32>,
+        diagonal_loading: f32,
+        subarray_size: [usize; 3],
     ) -> KwaversResult<Array3<f32>> {
-        // TODO_AUDIT: P1 - 3D MVDR Beamforming - Not Implemented
-        //
-        // PROBLEM:
-        // Minimum Variance Distortionless Response (MVDR) adaptive beamforming for 3D
-        // volumetric imaging is not implemented. Returns FeatureNotAvailable error.
-        //
-        // IMPACT:
-        // - Cannot perform adaptive 3D beamforming with clutter suppression
-        // - No sidelobe/artifact reduction through spatial filtering
-        // - Blocks high-contrast imaging in presence of strong scatterers
-        // - Prevents optimal SNR in heterogeneous tissue environments
-        // - Severity: P1 (advanced imaging feature, not production-critical)
-        //
-        // REQUIRED IMPLEMENTATION:
-        // 1. For each voxel (x, y, z):
-        //    a. Extract subarray RF data (spatial window of size subarray_size³)
-        //    b. Compute spatial covariance matrix R = E[x(t)·xᴴ(t)]
-        //    c. Add diagonal loading: R̃ = R + δI (δ = diagonal_loading)
-        //    d. Compute steering vector a for look direction toward voxel
-        //    e. Compute MVDR weights: w = R̃⁻¹a / (aᴴR̃⁻¹a)
-        //    f. Apply weights: y(r) = wᴴ · x(r)
-        // 2. Accumulate coherent output across time samples
-        // 3. Compute output power: I_MVDR(r) = |y(r)|²
-        //
-        // MATHEMATICAL SPECIFICATION:
-        // MVDR beamformer (Capon beamformer):
-        //   Minimize: wᴴRw
-        //   Subject to: wᴴa = 1
-        //   Solution: w_MVDR = R⁻¹a / (aᴴR⁻¹a)
-        // where:
-        //   R = (1/L)Σₗ x(tₗ)xᴴ(tₗ) is spatial covariance (L time samples)
-        //   a(θ,φ) = [exp(jk·r₁), exp(jk·r₂), ..., exp(jk·rₙ)]ᵀ is steering vector
-        //   k = 2π/λ is wavenumber
-        //
-        // Diagonal loading (for numerical stability):
-        //   R̃ = R + δI, typical δ = 0.01·trace(R)/N
-        //
-        // VALIDATION CRITERIA:
-        // - Test: Single point target → verify unity gain in look direction
-        // - Test: Two closely spaced targets → resolution improvement over DAS
-        // - Test: Strong off-axis scatterer → verify sidelobe suppression > 20 dB
-        // - Test: Eigenvalue spread of R → verify diagonal loading prevents ill-conditioning
-        // - Performance: 64³ volume with 32-element subarray < 10 seconds
-        // - Convergence: Covariance estimation with L ≥ 2N time samples (N = subarray size)
-        //
-        // REFERENCES:
-        // - Capon, J., "High-resolution frequency-wavenumber spectrum analysis" (1969)
-        // - Van Veen & Buckley, "Beamforming: A versatile approach to spatial filtering" (1988)
-        // - Synnevag et al., "Adaptive beamforming applied to medical ultrasound imaging" (2007)
-        // - Holfort et al., "Broadband minimum variance beamforming for ultrasound imaging" (2009)
-        //
-        // ESTIMATED EFFORT: 20-24 hours
-        // - Implementation: 12-14 hours (covariance estimation, matrix inversion, weight computation)
-        // - GPU optimization: 6-8 hours (batched matrix ops, parallel voxel processing)
-        // - Testing: 3-4 hours (synthetic apertures, resolution phantoms, numerical stability)
-        // - Documentation: 1-2 hours
-        //
-        // DEPENDENCIES:
-        // - Requires robust matrix inversion (SVD or Cholesky with pivoting)
-        // - May need GPU BLAS library (cuBLAS/rocBLAS) for batched matrix operations
-        // - Covariance smoothing across subarrays for better estimation
-        //
-        // ASSIGNED: Sprint 211-212 (Advanced 3D Adaptive Beamforming)
-        // PRIORITY: P1 (Research/advanced imaging capability)
-
-        Err(KwaversError::System(
-            crate::core::error::SystemError::FeatureNotAvailable {
-                feature: "MVDR 3D beamforming".to_string(),
-                reason: "MVDR 3D beamforming not yet implemented. Requires adaptive spatial filtering module."
-                    .to_string(),
-            },
-        ))
+        // Create MVDR processor and perform reconstruction
+        let algorithm = BeamformingAlgorithm3D::MVDR3D {
+            diagonal_loading,
+            subarray_size,
+        };
+        let mvdr_processor = mvdr::MvdrProcessor::from_algorithm(&algorithm, self.config)?;
+        mvdr_processor.reconstruct_volume(rf_data)
     }
 }
 

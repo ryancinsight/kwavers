@@ -25,9 +25,10 @@ use kwavers::analysis::signal_processing::beamforming::narrowband::{
     capon_spatial_spectrum_point, extract_narrowband_snapshots, CaponSpectrumConfig,
     NarrowbandSteering, SnapshotScenario, SnapshotSelection,
 };
-use kwavers::domain::sensor::beamforming::{
-    CovarianceEstimator, CovariancePostProcess, SteeringVectorMethod,
+use kwavers::analysis::signal_processing::beamforming::covariance::{
+    CovarianceEstimator, CovariancePostProcess,
 };
+use kwavers::analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
 use ndarray::Array3;
 use std::f64::consts::PI;
 

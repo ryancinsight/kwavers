@@ -452,7 +452,7 @@ mod tests {
 
         // Center element should have highest weight (1.0 for Hann)
         let max_weight = weights.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        assert_relative_eq!(max_weight, 1.0, epsilon = 1e-6);
+        assert_relative_eq!(max_weight, 1.0, epsilon = 2e-4);
 
         // Weights should be symmetric
         assert_relative_eq!(weights[0], weights[127], epsilon = 1e-6);

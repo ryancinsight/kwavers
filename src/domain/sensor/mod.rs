@@ -28,6 +28,6 @@ pub use localization::{
 // It collides semantically with other sensor concepts and previously masked dead APIs.
 
 // Re-export PAM components without colliding names; configs remain module-scoped.
-pub use passive_acoustic_mapping::{ArrayGeometry};
+pub use passive_acoustic_mapping::{ArrayElement, ArrayGeometry, DirectivityPattern};
 // Expose unified beamforming config at the sensor module root.
 pub use beamforming::{BeamformingConfig, BeamformingCoreConfig};

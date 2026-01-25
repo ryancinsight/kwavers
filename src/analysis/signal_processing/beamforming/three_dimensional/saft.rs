@@ -49,6 +49,7 @@ impl Default for SaftConfig {
 }
 
 /// SAFT processor for 3D volumetric reconstruction
+#[derive(Debug)]
 pub struct SaftProcessor {
     config: SaftConfig,
     beamforming_config: super::config::BeamformingConfig3D,
