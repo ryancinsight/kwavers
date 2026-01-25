@@ -105,19 +105,19 @@ impl ShearWaveInversion {
 
         match self.config.method {
             InversionMethod::TimeOfFlight => {
-                time_of_flight_inversion(displacement, grid, self.config.density)
+                time_of_flight_inversion(displacement, grid, self.config.density, self.config.frequency)
             }
             InversionMethod::PhaseGradient => {
-                phase_gradient_inversion(displacement, grid, self.config.density)
+                phase_gradient_inversion(displacement, grid, self.config.density, self.config.frequency)
             }
             InversionMethod::DirectInversion => {
-                direct_inversion(displacement, grid, self.config.density)
+                direct_inversion(displacement, grid, self.config.density, self.config.frequency)
             }
             InversionMethod::VolumetricTimeOfFlight => {
-                volumetric_time_of_flight_inversion(displacement, grid, self.config.density)
+                volumetric_time_of_flight_inversion(displacement, grid, self.config.density, self.config.frequency)
             }
             InversionMethod::DirectionalPhaseGradient => {
-                directional_phase_gradient_inversion(displacement, grid, self.config.density)
+                directional_phase_gradient_inversion(displacement, grid, self.config.density, self.config.frequency)
             }
         }
     }
@@ -154,6 +154,7 @@ fn time_of_flight_inversion(
     displacement: &DisplacementField,
     grid: &Grid,
     density: f64,
+    frequency: f64,
 ) -> KwaversResult<ElasticityMap> {
     let (nx, ny, nz) = displacement.uz.dim();
     let mut shear_wave_speed = Array3::zeros((nx, ny, nz));
@@ -263,6 +264,7 @@ fn phase_gradient_inversion(
     displacement: &DisplacementField,
     grid: &Grid,
     density: f64,
+    frequency: f64,
 ) -> KwaversResult<ElasticityMap> {
     let (nx, ny, nz) = displacement.uz.dim();
     let mut shear_wave_speed = Array3::zeros((nx, ny, nz));
@@ -276,7 +278,7 @@ fn phase_gradient_inversion(
                 profile.push(displacement.uz[[i, j, k]]);
             }
 
-            if let Some(cs) = compute_phase_gradient_speed(&profile, grid.dx) {
+            if let Some(cs) = compute_phase_gradient_speed(&profile, grid.dx, frequency) {
                 // Apply computed speed to entire row
                 for i in 0..nx {
                     shear_wave_speed[[i, j, k]] = cs;
@@ -306,7 +308,7 @@ fn phase_gradient_inversion(
 /// # Returns
 ///
 /// Estimated shear wave speed (m/s), or None if computation fails
-fn compute_phase_gradient_speed(profile: &[f64], dx: f64) -> Option<f64> {
+fn compute_phase_gradient_speed(profile: &[f64], dx: f64, frequency: f64) -> Option<f64> {
     if profile.len() < 4 {
         return None;
     }
@@ -332,7 +334,6 @@ fn compute_phase_gradient_speed(profile: &[f64], dx: f64) -> Option<f64> {
         let wavenumber = phase_gradient / max_amplitude;
 
         // Compute speed: cs = ω/k = 2πf/k
-        let frequency = 100.0; // Typical SWE frequency (Hz)
         let cs = 2.0 * PI * frequency / wavenumber.abs().max(0.1);
 
         Some(cs.clamp(0.5, 10.0))
@@ -343,14 +344,17 @@ fn compute_phase_gradient_speed(profile: &[f64], dx: f64) -> Option<f64> {
 
 /// Direct inversion (most accurate method)
 ///
-/// Solves inverse problem directly from wave equation. This is a placeholder
-/// implementation that falls back to TOF; full implementation would use
-/// optimization methods to minimize residual error.
+/// Solves inverse problem directly from wave equation using iterative optimization
+/// to minimize the residual error.
 ///
 /// # Theory
 ///
-/// Minimize ||∇²u - (ρ/μ)∂²u/∂t²|| subject to measured displacement u.
-/// Requires solving constrained optimization problem.
+/// Minimizes the functional J(k²) = ||∇²u + k²u||² + λ||∇(k²)||²
+/// where k = ω/cs is the wavenumber.
+///
+/// The optimization is solved using a Gauss-Seidel iterative scheme:
+/// θ_i = (λ Σ θ_j - u_i ∇²u_i) / (u_i² + 6λ)
+/// where θ = k².
 ///
 /// # Arguments
 ///
@@ -365,10 +369,127 @@ fn direct_inversion(
     displacement: &DisplacementField,
     grid: &Grid,
     density: f64,
+    frequency: f64,
 ) -> KwaversResult<ElasticityMap> {
-    // TODO: Simplified implementation: fall back to TOF for now
-    // Full implementation would use optimization methods
-    time_of_flight_inversion(displacement, grid, density)
+    let (nx, ny, nz) = displacement.uz.dim();
+    let mut shear_wave_speed = Array3::zeros((nx, ny, nz));
+
+    // 1. Compute Laplacian of displacement field
+    let laplacian = compute_laplacian(&displacement.uz, grid);
+
+    // 2. Initialize wavenumber squared (theta = k^2)
+    // Initial guess: typical soft tissue speed 3.0 m/s
+    // k = 2πf / cs
+    let omega = 2.0 * PI * frequency;
+    let initial_k = omega / 3.0;
+    let initial_theta = initial_k * initial_k;
+
+    let mut theta = Array3::from_elem((nx, ny, nz), initial_theta);
+
+    // 3. Optimization parameters
+    let max_iterations = 50;
+    // Regularization parameter lambda
+    // Should be scaled by characteristic displacement squared to be dimensionless
+    // Calculate mean squared displacement
+    let mean_sq_disp = displacement
+        .uz
+        .iter()
+        .map(|x| x * x)
+        .sum::<f64>()
+        / (nx * ny * nz) as f64;
+
+    // lambda approx 1.0 * mean_u^2 seems reasonable as a starting point
+    // This balances the data term (u*theta)^2 and smoothing term lambda*theta^2?
+    // Actually the update rule is derived from: J = (Lap u + u theta)^2 + lambda (grad theta)^2
+    // Derivative w.r.t theta: 2u(Lap u + u theta) + ...
+    // So terms are u*Lap u and u^2 theta.
+    // Smoothing term gives lambda * theta.
+    // So lambda should compare to u^2.
+    let lambda = mean_sq_disp.max(1e-18) * 1.0;
+
+    // 4. Iterative Optimization (Gauss-Seidel)
+    for _ in 0..max_iterations {
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
+                    let u_val = displacement.uz[[i, j, k]];
+                    let lap_val = laplacian[[i, j, k]];
+
+                    // Sum of neighbors' theta
+                    let sum_theta = theta[[i + 1, j, k]]
+                        + theta[[i - 1, j, k]]
+                        + theta[[i, j + 1, k]]
+                        + theta[[i, j - 1, k]]
+                        + theta[[i, j, k + 1]]
+                        + theta[[i, j, k - 1]];
+
+                    // Update rule derived from minimizing functional
+                    let numerator = lambda * sum_theta - u_val * lap_val;
+                    let denominator = u_val * u_val + 6.0 * lambda;
+
+                    theta[[i, j, k]] = numerator / denominator;
+                }
+            }
+        }
+    }
+
+    // 5. Convert back to speed
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let k_squared = theta[[i, j, k]];
+                // Ensure k_squared is positive and within reasonable bounds
+                // If k^2 < 0 or very small, it implies very high speed (or imaginary)
+                // If k^2 very large, implies very low speed
+
+                // Clamp k^2 to correspond to speed range [0.5, 20.0] m/s
+                // k = w/c => k^2 = w^2 / c^2
+                // c_min = 0.5 => k2_max = w^2 / 0.25
+                // c_max = 20.0 => k2_min = w^2 / 400.0
+
+                let w2 = omega * omega;
+                let k2_max = w2 / (0.5 * 0.5);
+                let k2_min = w2 / (20.0 * 20.0);
+
+                let valid_k2 = k_squared.clamp(k2_min, k2_max);
+
+                let cs = omega / valid_k2.sqrt();
+                shear_wave_speed[[i, j, k]] = cs;
+            }
+        }
+    }
+
+    // 6. Final smoothing and boundary filling
+    spatial_smoothing(&mut shear_wave_speed);
+    fill_boundaries(&mut shear_wave_speed);
+
+    Ok(elasticity_map_from_speed(shear_wave_speed, density))
+}
+
+/// Compute Laplacian of a scalar field using 7-point stencil
+fn compute_laplacian(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
+    let (nx, ny, nz) = field.dim();
+    let mut laplacian = Array3::zeros((nx, ny, nz));
+
+    let idx2 = 1.0 / (grid.dx * grid.dx);
+    let idy2 = 1.0 / (grid.dy * grid.dy);
+    let idz2 = 1.0 / (grid.dz * grid.dz);
+
+    for i in 1..nx - 1 {
+        for j in 1..ny - 1 {
+            for k in 1..nz - 1 {
+                let center = field[[i, j, k]];
+
+                let d2x = (field[[i + 1, j, k]] - 2.0 * center + field[[i - 1, j, k]]) * idx2;
+                let d2y = (field[[i, j + 1, k]] - 2.0 * center + field[[i, j - 1, k]]) * idy2;
+                let d2z = (field[[i, j, k + 1]] - 2.0 * center + field[[i, j, k - 1]]) * idz2;
+
+                laplacian[[i, j, k]] = d2x + d2y + d2z;
+            }
+        }
+    }
+
+    laplacian
 }
 
 /// 3D Volumetric time-of-flight inversion
@@ -403,6 +524,7 @@ fn volumetric_time_of_flight_inversion(
     displacement: &DisplacementField,
     grid: &Grid,
     density: f64,
+    frequency: f64,
 ) -> KwaversResult<ElasticityMap> {
     let (nx, ny, nz) = displacement.uz.dim();
     let mut shear_wave_speed = Array3::zeros((nx, ny, nz));
@@ -412,7 +534,7 @@ fn volumetric_time_of_flight_inversion(
 
     if push_locations.is_empty() {
         // Fallback to single push location method
-        return time_of_flight_inversion(displacement, grid, density);
+        return time_of_flight_inversion(displacement, grid, density, frequency);
     }
 
     // For each voxel, estimate speed using multi-directional information
@@ -512,6 +634,7 @@ fn directional_phase_gradient_inversion(
     displacement: &DisplacementField,
     grid: &Grid,
     density: f64,
+    frequency: f64,
 ) -> KwaversResult<ElasticityMap> {
     let (nx, ny, nz) = displacement.uz.dim();
     let mut shear_wave_speed = Array3::zeros((nx, ny, nz));
@@ -540,7 +663,6 @@ fn directional_phase_gradient_inversion(
                     let dominant_k = kx.max(ky).max(kz).max(0.1);
 
                     // Compute speed from dispersion relation: cs = ω/k
-                    let frequency = 100.0; // Hz (typical SWE frequency)
                     let angular_freq = 2.0 * PI * frequency;
                     let cs = angular_freq / dominant_k;
 
@@ -571,7 +693,7 @@ mod tests {
         let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
         let displacement = DisplacementField::zeros(20, 20, 20);
 
-        let result = time_of_flight_inversion(&displacement, &grid, 1000.0);
+        let result = time_of_flight_inversion(&displacement, &grid, 1000.0, 100.0);
         assert!(result.is_ok(), "TOF inversion should succeed");
     }
 
@@ -580,8 +702,47 @@ mod tests {
         let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
         let displacement = DisplacementField::zeros(20, 20, 20);
 
-        let result = phase_gradient_inversion(&displacement, &grid, 1000.0);
+        let result = phase_gradient_inversion(&displacement, &grid, 1000.0, 100.0);
         assert!(result.is_ok(), "Phase gradient inversion should succeed");
+    }
+
+    #[test]
+    fn test_direct_inversion_synthetic() {
+        // Create grid
+        let dx = 0.001;
+        let nx = 30;
+        let ny = 10;
+        let nz = 10;
+        let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
+
+        let mut displacement = DisplacementField::zeros(nx, ny, nz);
+
+        // Synthetic wave: plane wave along X with speed cs = 3.0 m/s at 100 Hz
+        // k = 2 * PI * f / cs = 2 * PI * 100 / 3.0
+        let frequency = 100.0;
+        let k_wave = 2.0 * PI * frequency / 3.0;
+
+        for i in 0..nx {
+            let x = i as f64 * dx;
+            let val = (k_wave * x).cos();
+
+            for j in 0..ny {
+                for k in 0..nz {
+                    displacement.uz[[i, j, k]] = val;
+                }
+            }
+        }
+
+        let result = direct_inversion(&displacement, &grid, 1000.0, frequency);
+        assert!(result.is_ok());
+
+        let elasticity_map = result.unwrap();
+        // Check center value
+        // Note: Boundary effects and smoothing might affect edges, check center
+        let center_val = elasticity_map.shear_wave_speed[[nx/2, ny/2, nz/2]];
+
+        // Allow some tolerance due to discrete derivative errors and smoothing
+        assert!((center_val - 3.0).abs() < 1.0, "Expected speed approx 3.0, got {}", center_val);
     }
 
     #[test]
@@ -613,7 +774,7 @@ mod tests {
         let mut displacement = DisplacementField::zeros(20, 20, 20);
         displacement.uz[[10, 10, 10]] = 5.0; // Single push location
 
-        let result = volumetric_time_of_flight_inversion(&displacement, &grid, 1000.0);
+        let result = volumetric_time_of_flight_inversion(&displacement, &grid, 1000.0, 100.0);
         assert!(result.is_ok(), "Volumetric TOF should handle single peak");
     }
 
@@ -631,7 +792,7 @@ mod tests {
             }
         }
 
-        let result = directional_phase_gradient_inversion(&displacement, &grid, 1000.0);
+        let result = directional_phase_gradient_inversion(&displacement, &grid, 1000.0, 100.0);
         assert!(result.is_ok(), "Directional phase gradient should succeed");
     }
 
@@ -640,7 +801,7 @@ mod tests {
         let profile = vec![0.0, 0.1, 0.2, 0.3, 0.2, 0.1, 0.0];
         let dx = 0.001;
 
-        let speed = compute_phase_gradient_speed(&profile, dx);
+        let speed = compute_phase_gradient_speed(&profile, dx, 100.0);
         assert!(speed.is_some(), "Should compute speed from valid profile");
 
         let cs = speed.unwrap();
@@ -652,7 +813,7 @@ mod tests {
         let profile = vec![0.0, 0.0];
         let dx = 0.001;
 
-        let speed = compute_phase_gradient_speed(&profile, dx);
+        let speed = compute_phase_gradient_speed(&profile, dx, 100.0);
         assert!(speed.is_none(), "Should return None for insufficient data");
     }
 
