@@ -3,9 +3,8 @@ use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::plugin::{PluginContext, PluginMetadata, PluginState};
-use crate::domain::sensor::passive_acoustic_mapping::{
-    ArrayGeometry, PAMConfig, PassiveAcousticMapper,
-};
+use crate::domain::sensor::passive_acoustic_mapping::{ArrayGeometry};
+use crate::analysis::signal_processing::pam::{PAMConfig, PassiveAcousticMapper};
 use ndarray::{Array3, Array4};
 
 #[derive(Debug)]

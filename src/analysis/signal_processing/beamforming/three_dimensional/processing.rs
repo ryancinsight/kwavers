@@ -51,75 +51,9 @@ impl BeamformingProcessor3D {
                 subarray_size,
             } => self.process_mvdr_3d(rf_data, *diagonal_loading as f32, *subarray_size)?,
             BeamformingAlgorithm3D::SAFT3D { .. } => {
-                // TODO_AUDIT: P1 - 3D SAFT Beamforming - Not Implemented
-                // DEPENDS ON: analysis/beamforming/saft/3d.rs, math/geometry/spherical_harmonics.rs
-                // MISSING: 3D Synthetic Aperture Focusing: beamformed_signal = ∑ wᵢ * sᵢ(τᵢ) where τᵢ = ||r - rᵢ||/c
-                // MISSING: Spherical wave summation with proper phase delays and apodization
-                // MISSING: Dynamic focusing for varying depths with F-number control
-                // MISSING: Coherence factor weighting for resolution enhancement
-                //
-                // PROBLEM:
-                // Synthetic Aperture Focusing Technique (SAFT) for 3D volumetric reconstruction
-                // is not implemented. Returns FeatureNotAvailable error.
-                //
-                // IMPACT:
-                // - Cannot perform high-resolution 3D SAFT imaging
-                // - Blocks advanced array processing techniques (coherent compounding)
-                // - Prevents offline processing of sequentially acquired RF data
-                // - No support for sparse array imaging (virtual element synthesis)
-                // - Severity: P1 (advanced imaging feature, not production-critical)
-                //
-                // REQUIRED IMPLEMENTATION:
-                // 1. Extract SAFT parameters from BeamformingAlgorithm3D::SAFT3D variant
-                // 2. For each voxel (x, y, z) in reconstruction volume:
-                //    a. Compute time-of-flight from each transmit position to voxel to receive element
-                //    b. Extract RF sample at computed time index for each TX-RX pair
-                //    c. Apply phase correction for synthetic aperture coherence
-                //    d. Sum coherently across all virtual aperture positions
-                // 3. Apply apodization weighting for sidelobe suppression
-                // 4. Compute coherence factor for adaptive weighting
-                //
-                // MATHEMATICAL SPECIFICATION:
-                // SAFT reconstruction for voxel r = (x, y, z):
-                //   I_SAFT(r) = |Σᵢ Σⱼ wᵢⱼ · RF[i,j,t(i,j,r)]|²
-                // where:
-                //   t(i,j,r) = (|rᵢ - r| + |r - rⱼ|) / c
-                //   wᵢⱼ = apodization weight for TX i, RX j
-                //   i, j iterate over transmit and receive positions
-                //
-                // Coherence factor (optional quality metric):
-                //   CF(r) = |Σᵢⱼ sᵢⱼ(r)|² / (N · Σᵢⱼ |sᵢⱼ(r)|²)
-                //
-                // VALIDATION CRITERIA:
-                // - Test: Point scatterer at known location → PSF width matches diffraction limit
-                // - Test: Resolution phantom (wire targets) → lateral/axial resolution < λ/2
-                // - Test: Coherence factor map → CF > 0.9 at target, CF < 0.3 in speckle
-                // - Performance: 128×128×128 volume with 64 TX positions < 5 seconds on GPU
-                //
-                // REFERENCES:
-                // - Frazier & O'Brien, "Synthetic Aperture Techniques with a Virtual Source Element" (1998)
-                // - Karaman et al., "Synthetic aperture imaging for small scale systems" (1995)
-                // - Nikolov & Jensen, "Virtual ultrasound sources in high-resolution ultrasound imaging" (2002)
-                //
-                // ESTIMATED EFFORT: 16-20 hours
-                // - Implementation: 10-12 hours (time-of-flight, coherent summation, phase correction)
-                // - GPU optimization: 4-6 hours (parallel voxel processing, memory coalescing)
-                // - Testing: 2-3 hours (point targets, resolution phantoms)
-                // - Documentation: 1 hour
-                //
-                // DEPENDENCIES:
-                // - Requires accurate geometry/transducer position information
-                // - May need migration correction for sound speed heterogeneity
-                //
-                // ASSIGNED: Sprint 211-212 (Advanced 3D Imaging)
-                // PRIORITY: P1 (Research/advanced imaging capability)
-
-                return Err(KwaversError::System(
-                    crate::core::error::SystemError::FeatureNotAvailable {
-                        feature: "SAFT 3D beamforming".to_string(),
-                        reason: "SAFT 3D beamforming not yet implemented".to_string(),
-                    },
-                ));
+                // Create SAFT processor and perform reconstruction
+                let saft_processor = saft::SaftProcessor::from_algorithm(algorithm, self.config)?;
+                saft_processor.reconstruct_volume(rf_data)
             }
         };
 
