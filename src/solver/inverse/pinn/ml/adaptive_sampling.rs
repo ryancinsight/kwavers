@@ -165,24 +165,9 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
 
         // Compute PDE residuals for each point
         // Process all points at once for efficiency
-        let points_data = self.active_points.to_data();
-        let values = points_data.to_vec::<f32>().unwrap_or_default();
-        let mut x_coords = Vec::with_capacity(self.total_points);
-        let mut y_coords = Vec::with_capacity(self.total_points);
-        let mut t_coords = Vec::with_capacity(self.total_points);
-
-        for chunk in values.chunks(3) {
-            if chunk.len() == 3 {
-                x_coords.push(chunk[0]);
-                y_coords.push(chunk[1]);
-                t_coords.push(chunk[2]);
-            }
-        }
-
-        let device = self.active_points.device();
-        let x = Tensor::<B, 1>::from_floats(x_coords.as_slice(), &device);
-        let y = Tensor::<B, 1>::from_floats(y_coords.as_slice(), &device);
-        let t = Tensor::<B, 1>::from_floats(t_coords.as_slice(), &device);
+        let x: Tensor<B, 1> = self.active_points.clone().slice([0..self.total_points, 0..1]).flatten(0, 1);
+        let y: Tensor<B, 1> = self.active_points.clone().slice([0..self.total_points, 1..2]).flatten(0, 1);
+        let t: Tensor<B, 1> = self.active_points.clone().slice([0..self.total_points, 2..3]).flatten(0, 1);
 
         // Compute PDE residual for this physics domain
         let residuals = self.domain.pde_residual(
