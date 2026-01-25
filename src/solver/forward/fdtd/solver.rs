@@ -118,6 +118,9 @@ pub struct FdtdSolver {
 
     // Material Properties (rho0, c0)
     pub(crate) materials: MaterialFields,
+
+    // Precomputed fields
+    rho_c_squared: Array3<f64>,
 }
 
 impl FdtdSolver {
@@ -162,6 +165,15 @@ impl FdtdSolver {
             }
         }
 
+        // Pre-compute rho * c^2 element-wise
+        let mut rho_c_squared = Array3::<f64>::zeros(shape);
+        Zip::from(&mut rho_c_squared)
+            .and(&materials.rho0)
+            .and(&materials.c0)
+            .for_each(|rho_c_sq, &rho, &c| {
+                *rho_c_sq = rho * c * c;
+            });
+
         Ok(Self {
             config,
             grid: grid.clone(),
@@ -177,6 +189,7 @@ impl FdtdSolver {
             time_step_index: 0,
             fields,
             materials,
+            rho_c_squared,
         })
     }
 
@@ -321,13 +334,7 @@ impl FdtdSolver {
         // update_pressure_simd takes &self? It access SimdOps (static?).
         // It takes pressure, divergence, density, c0.
 
-        Self::update_pressure_simd(
-            &mut self.fields.p,
-            &divergence,
-            self.materials.rho0.view(),
-            self.materials.c0.view(),
-            dt,
-        );
+        Self::update_pressure_simd(&mut self.fields.p, &divergence, &self.rho_c_squared, dt);
 
         // Apply C-PML if enabled
         // Note: C-PML boundary conditions are applied to the gradient terms
@@ -343,25 +350,14 @@ impl FdtdSolver {
     fn update_pressure_simd(
         pressure: &mut Array3<f64>,
         divergence: &Array3<f64>,
-        density: ArrayView3<f64>,
-        sound_speed: ArrayView3<f64>,
+        rho_c_squared: &Array3<f64>,
         dt: f64,
     ) {
         // Pre-compute the dt factor to avoid repeated multiplication
         let dt_factor = dt;
 
-        // Create temporary arrays for SIMD operations
-        // Compute rho * c^2 element-wise
-        let mut rho_c_squared = Array3::<f64>::zeros(density.dim());
-        Zip::from(&mut rho_c_squared)
-            .and(&density)
-            .and(&sound_speed)
-            .for_each(|rho_c_sq, &rho, &c| {
-                *rho_c_sq = rho * c * c;
-            });
-
         // Compute dt * rho * c^2 * div(v) using SIMD
-        let update_term = SimdOps::scale_field(&rho_c_squared, dt_factor);
+        let update_term = SimdOps::scale_field(rho_c_squared, dt_factor);
         let update_term = SimdOps::multiply_fields(&update_term, divergence);
 
         // Update pressure: p -= update_term using SIMD
