@@ -354,3 +354,8 @@ harness = false
 [[bench]]
 name = "amr_criteria_benchmark"
 harness = false
+
+[[bench]]
+name = "adaptive_sampling_opt"
+harness = false
+required-features = ["pinn"]
