@@ -1,40 +1,33 @@
-//! Signal Filtering Trait Interface
+//! Signal Filtering Module
 //!
-//! This module defines the `Filter` trait, which represents the interface for
-//! signal filtering operations. Implementations of this trait reside in the
-//! analysis layer.
+//! This module defines the `Filter` trait interface and provides basic
+//! signal filtering implementations used across the codebase.
 //!
 //! ## Architecture
 //!
-//! - **Domain Layer** (this file): Defines the `Filter` trait (interface/contract)
-//! - **Analysis Layer**: Contains filter implementations (`FrequencyFilter`, etc.)
+//! - **Domain Layer** (this module): Defines `Filter` trait and basic implementations
+//!   - `FrequencyFilter`: FFT-based bandpass/lowpass/highpass filtering
+//! - **Analysis Layer**: Advanced filter implementations (adaptive, ML-based, etc.)
 //!
-//! This separation follows the **Dependency Inversion Principle**:
-//! - High-level modules depend on abstractions (this trait)
-//! - Low-level implementations satisfy the abstraction
+//! ## Rationale for FrequencyFilter in Domain Layer
 //!
-//! ## Migration Notice
+//! `FrequencyFilter` is placed in the domain layer because:
+//! 1. It's a fundamental signal processing primitive (not high-level analysis)
+//! 2. Lower layers (solver, physics) need access to basic filtering
+//! 3. It has no dependencies on higher layers (only core + domain)
+//! 4. It implements the `Filter` trait which is already in domain
 //!
-//! **⚠️ IMPORTANT**: The `FrequencyFilter` implementation has been moved to the
-//! analysis layer as of Sprint 188 Phase 3 (Domain Layer Cleanup).
-//!
-//! ### Old Import (No Longer Valid)
-//! ```rust,ignore
-//! use crate::domain::signal::filter::FrequencyFilter;
-//! ```
-//!
-//! ### New Import (Correct Location)
-//! ```rust,ignore
-//! use crate::analysis::signal_processing::filtering::FrequencyFilter;
-//! ```
+//! This placement follows proper architectural layering:
+//! - Domain (Layer 2): Basic primitives and interfaces
+//! - Solver (Layer 4): Can use domain-layer filters
+//! - Analysis (Layer 7): Advanced processing, ML, experimental algorithms
 //!
 //! ## Usage
 //!
 //! The `Filter` trait can be used to write filter-agnostic code:
 //!
 //! ```rust,no_run
-//! use kwavers::domain::signal::Filter;
-//! use kwavers::analysis::signal_processing::filtering::FrequencyFilter;
+//! use kwavers::domain::signal::{Filter, FrequencyFilter};
 //! use kwavers::core::error::KwaversResult;
 //!
 //! fn process_signal(filter: &dyn Filter, signal: &[f64], dt: f64) -> KwaversResult<Vec<f64>> {
@@ -50,6 +43,10 @@
 //!     Ok(())
 //! }
 //! ```
+
+pub mod frequency_filter;
+
+pub use frequency_filter::FrequencyFilter;
 
 use crate::core::error::KwaversResult;
 use std::fmt::Debug;

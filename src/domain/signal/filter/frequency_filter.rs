@@ -6,22 +6,23 @@
 //!
 //! ## Architecture
 //!
-//! This module resides in the **analysis layer** (`analysis::signal_processing::filtering`)
-//! because filtering is a signal processing operation, not a domain primitive.
+//! This module resides in the **domain layer** (`domain::signal::filter`) because
+//! it provides a fundamental signal processing primitive needed by lower layers
+//! (solver, physics) without introducing circular dependencies.
 //!
 //! ### Layer Placement Rationale
 //!
-//! - **Domain Layer**: Contains the `Filter` trait (interface/contract)
-//! - **Analysis Layer**: Contains filter implementations (algorithms)
+//! - **Domain Layer** (this module): Basic filter implementations like `FrequencyFilter`
+//! - **Analysis Layer**: Advanced filters (adaptive, ML-based, experimental)
 //!
-//! This separation follows the **Dependency Inversion Principle**:
-//! - High-level modules depend on abstractions (Filter trait)
-//! - Low-level implementations (FrequencyFilter) satisfy the abstraction
+//! This placement prevents layer violations:
+//! - Solver layer (Layer 4) can use domain-layer filters (Layer 2) ✅
+//! - Solver cannot depend on analysis layer (Layer 7) ❌
 //!
 //! ## Usage Example
 //!
 //! ```rust,no_run
-//! use kwavers::analysis::signal_processing::filtering::FrequencyFilter;
+//! use kwavers::domain::signal::FrequencyFilter;
 //! use kwavers::core::error::KwaversResult;
 //!
 //! fn example() -> KwaversResult<()> {
@@ -99,9 +100,9 @@
 //!
 //! ## Migration Note
 //!
-//! This implementation was moved from `domain::signal::filter` to
-//! `analysis::signal_processing::filtering` in Sprint 188 Phase 3 to enforce
-//! proper architectural layering (domain = primitives, analysis = algorithms).
+//! This implementation was moved back to `domain::signal::filter` from
+//! `analysis::signal_processing::filtering` to fix layer violations. The solver
+//! layer (Layer 4) needs basic filtering, and cannot depend on analysis (Layer 7).
 
 use crate::core::error::KwaversResult;
 use crate::domain::signal::Filter;
@@ -116,7 +117,7 @@ use rustfft::{num_complex::Complex, FftPlanner};
 /// # Examples
 ///
 /// ```rust,no_run
-/// use kwavers::analysis::signal_processing::filtering::FrequencyFilter;
+/// use kwavers::domain::signal::FrequencyFilter;
 ///
 /// let filter = FrequencyFilter::new();
 /// let signal = vec![1.0, 0.5, -0.3, 0.8, -0.6];
@@ -144,7 +145,7 @@ impl FrequencyFilter {
     /// # Examples
     ///
     /// ```rust
-    /// use kwavers::analysis::signal_processing::filtering::FrequencyFilter;
+    /// use kwavers::domain::signal::FrequencyFilter;
     ///
     /// let filter = FrequencyFilter::new();
     /// ```
@@ -171,7 +172,7 @@ impl FrequencyFilter {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use kwavers::analysis::signal_processing::filtering::FrequencyFilter;
+    /// use kwavers::domain::signal::FrequencyFilter;
     ///
     /// let filter = FrequencyFilter::new();
     /// let signal = vec![1.0; 1000];
@@ -207,7 +208,7 @@ impl FrequencyFilter {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use kwavers::analysis::signal_processing::filtering::FrequencyFilter;
+    /// use kwavers::domain::signal::FrequencyFilter;
     ///
     /// let filter = FrequencyFilter::new();
     /// let signal = vec![1.0; 1000];
@@ -237,7 +238,7 @@ impl FrequencyFilter {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use kwavers::analysis::signal_processing::filtering::FrequencyFilter;
+    /// use kwavers::domain::signal::FrequencyFilter;
     ///
     /// let filter = FrequencyFilter::new();
     /// let signal = vec![1.0; 1000];
@@ -268,7 +269,7 @@ impl FrequencyFilter {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use kwavers::analysis::signal_processing::filtering::FrequencyFilter;
+    /// use kwavers::domain::signal::FrequencyFilter;
     ///
     /// let filter = FrequencyFilter::new();
     /// let signal = vec![1.0; 1000];

@@ -40,22 +40,19 @@
 //!
 //! ## Migration Note
 //!
-//! This module was created in Sprint 188 Phase 3 by moving filter implementations
-//! from `domain::signal::filter` to enforce proper architectural layering.
+//! **DEPRECATED**: This module is deprecated. `FrequencyFilter` has been moved back
+//! to `domain::signal::filter` to fix layer violations (solver layer cannot depend
+//! on analysis layer).
 //!
 //! ### Old Location (Deprecated)
 //! ```rust,ignore
-//! use crate::domain::signal::filter::FrequencyFilter;
+//! use crate::analysis::signal_processing::filtering::FrequencyFilter;
 //! ```
 //!
 //! ### New Location (Use This)
 //! ```rust,ignore
-//! use crate::analysis::signal_processing::filtering::FrequencyFilter;
+//! use crate::domain::signal::FrequencyFilter;
 //! ```
 
-pub mod frequency_filter;
-
-pub use frequency_filter::FrequencyFilter;
-
-// Re-export the Filter trait from domain for convenience
-pub use crate::domain::signal::Filter;
+// Re-export from domain for backward compatibility during migration
+pub use crate::domain::signal::{Filter, FrequencyFilter};

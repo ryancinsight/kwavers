@@ -32,7 +32,6 @@ pub use inverse::{
     ReconstructionConfig, Reconstructor, TimeReversalConfig, TimeReversalReconstructor,
 };
 pub use multiphysics::{CouplingStrategy, FieldCoupler, MultiPhysicsSolver};
-// pub use utilities::LinearAlgebra;
 
 // Constants module remains at root level for easy access
 pub mod constants;
@@ -51,5 +50,4 @@ pub use integration::time_integration;
 pub use inverse::reconstruction;
 pub use inverse::time_reversal;
 pub use utilities::amr;
-// pub use utilities::linear_algebra;
 pub mod validation;
