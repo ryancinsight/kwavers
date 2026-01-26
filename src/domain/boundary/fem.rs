@@ -147,8 +147,8 @@ impl FemBoundaryManager {
     ) -> KwaversResult<()> {
         for &(node_idx, bc_value) in node_values {
             // Set diagonal to 1 and zero off-diagonal elements in row
-            stiffness.set_diagonal(node_idx, Complex64::new(1.0, 0.0));
-            stiffness.zero_row_off_diagonals(node_idx);
+            stiffness.zero_row(node_idx);
+            stiffness.add_value(node_idx, node_idx, Complex64::new(1.0, 0.0));
             mass.zero_row(node_idx);
             rhs[node_idx] = bc_value;
         }
