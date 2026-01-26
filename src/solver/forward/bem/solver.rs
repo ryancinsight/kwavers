@@ -27,6 +27,7 @@ use crate::math::linear_algebra::sparse::solver::{IterativeSolver, Preconditione
 use crate::math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use ndarray::Array1;
 use num_complex::Complex64;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
@@ -345,15 +346,66 @@ impl BemSolver {
     /// using the BEM representation formula.
     pub fn compute_scattered_field(
         &self,
-        _evaluation_points: &Array1<[f64; 3]>,
-        _solution: &BemSolution,
+        evaluation_points: &Array1<[f64; 3]>,
+        solution: &BemSolution,
     ) -> KwaversResult<Array1<Complex64>> {
-        // TODO: Placeholder: In full implementation, this would use the BEM
-        // representation formula to compute field at arbitrary points
-        Ok(Array1::from_elem(
-            _evaluation_points.len(),
-            Complex64::new(0.0, 0.0),
-        ))
+        let k = solution.wavenumber;
+
+        // Use parallel iterator if possible
+        // We attempt to get a slice; if not contiguous, we can use to_vec (allocation) or standard iter
+        // Given Array1 is usually contiguous, this should be efficient.
+        let points_slice = evaluation_points.as_slice().ok_or_else(|| {
+            crate::core::error::KwaversError::InvalidInput(
+                "Evaluation points array must be contiguous for parallel processing".to_string(),
+            )
+        })?;
+
+        let results: Vec<Complex64> = points_slice
+            .par_iter()
+            .map(|&r_eval| {
+                let mut total_field = Complex64::new(0.0, 0.0);
+
+                // Loop over all boundary elements
+                for element_indices in &self.elements {
+                    let n1 = element_indices[0];
+                    let n2 = element_indices[1];
+                    let n3 = element_indices[2];
+
+                    let p1 = self.nodes[n1];
+                    let p2 = self.nodes[n2];
+                    let p3 = self.nodes[n3];
+
+                    // Use nonsingular integrals as evaluation points are assumed to be in the domain
+                    // TODO: Check for near-field singularities if point is close to element
+                    let (h_res, g_res) = compute_nonsingular_integrals(k, r_eval, [p1, p2, p3]);
+
+                    // Accumulate contribution from this element
+                    // Representation formula: u(x) = ∫ (G * q - ∂G/∂n * u) dΓ
+                    // h_res computes ∫ ∂G/∂n * shape_fn
+                    // g_res computes ∫ G * shape_fn
+
+                    let u_vals = [
+                        solution.boundary_pressure[n1],
+                        solution.boundary_pressure[n2],
+                        solution.boundary_pressure[n3],
+                    ];
+
+                    let q_vals = [
+                        solution.boundary_velocity[n1],
+                        solution.boundary_velocity[n2],
+                        solution.boundary_velocity[n3],
+                    ];
+
+                    for m in 0..3 {
+                        total_field += g_res[m] * q_vals[m] - h_res[m] * u_vals[m];
+                    }
+                }
+
+                total_field
+            })
+            .collect();
+
+        Ok(Array1::from_vec(results))
     }
 }
 
@@ -679,5 +731,38 @@ mod tests {
         assert_eq!(solution.boundary_pressure.len(), 4);
         assert_eq!(solution.boundary_velocity.len(), 4);
         assert_eq!(solution.wavenumber, 1.0);
+    }
+
+    #[test]
+    fn test_compute_scattered_field() {
+        let config = BemConfig::default();
+        let mesh = create_test_mesh();
+        let solver = BemSolver::new(config, &mesh).unwrap();
+
+        // Create a fake solution
+        // Assume simple constant pressure/velocity
+        let n = solver.nodes.len();
+        let boundary_pressure = Array1::from_elem(n, Complex64::new(1.0, 0.0));
+        let boundary_velocity = Array1::from_elem(n, Complex64::new(0.0, 0.0));
+
+        let solution = BemSolution {
+            boundary_pressure,
+            boundary_velocity,
+            wavenumber: 1.0,
+        };
+
+        // Evaluation point outside the tetrahedron
+        // Tetra nodes: (0,0,0), (1,0,0), (0,1,0), (0,0,1)
+        // Point (2,2,2) is outside
+        let points = Array1::from_vec(vec![[2.0, 2.0, 2.0]]);
+
+        let field = solver
+            .compute_scattered_field(&points, &solution)
+            .unwrap();
+
+        assert_eq!(field.len(), 1);
+        // Field should be non-zero because boundary pressure is non-zero
+        // Integral of dG/dn * u should not be zero
+        assert!(field[0].norm() > 1e-10, "Field should be non-zero");
     }
 }
