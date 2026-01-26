@@ -461,14 +461,162 @@ impl MultiModalFusion {
     /// Statistical estimation method that maximizes the likelihood of the
     /// observed multi-modal data given a noise model for each modality.
     fn fuse_maximum_likelihood(&self) -> KwaversResult<FusedImageResult> {
-        // TODO: Implement MLE fusion with:
-        // - Likelihood function modeling for each modality
-        // - Noise variance estimation
-        // - Iterative optimization (EM algorithm)
-        // - Cramér-Rao bound for uncertainty
+        let image_reg = ImageRegistration::default();
 
-        // For now, delegate to weighted average
-        self.fuse_weighted_average()
+        let mut modality_names: Vec<&String> = self.registered_data.keys().collect();
+        modality_names.sort();
+
+        let reference_name = modality_names.first().ok_or_else(|| {
+            KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
+                message: "No modalities available for fusion".to_string(),
+            })
+        })?;
+
+        let reference_modality = self.registered_data.get(*reference_name).ok_or_else(|| {
+            KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
+                message: "Reference modality missing".to_string(),
+            })
+        })?;
+
+        // Define target grid dimensions based on the reference modality's native grid
+        let ref_shape = reference_modality.data.dim();
+        let target_dims = (ref_shape.0, ref_shape.1, ref_shape.2);
+
+        let mut fused_intensity = Array3::<f64>::zeros(target_dims);
+        let mut confidence_map = Array3::<f64>::zeros(target_dims);
+        let mut uncertainty_map = Array3::<f64>::zeros(target_dims);
+
+        let mut registration_transforms = HashMap::new();
+        let mut modality_quality = HashMap::new();
+
+        // 1. Prepare and register all data
+        // We store: (resampled_data, current_variance)
+        struct ModalityContext {
+            data: Array3<f64>,
+            variance: f64,
+        }
+        let mut contexts = Vec::new();
+
+        let identity_transform = [
+            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+        ];
+
+        for modality_name in &modality_names {
+            let modality = self.registered_data.get(modality_name.as_str()).unwrap();
+            modality_quality.insert(modality_name.to_string(), modality.quality_score);
+
+            // Register
+            let registration_result = image_reg.intensity_registration_mutual_info(
+                &reference_modality.data,
+                &modality.data,
+                &identity_transform,
+            )?;
+
+            let affine_transform =
+                AffineTransform::from_homogeneous(&registration_result.transform_matrix);
+            registration_transforms.insert(modality_name.to_string(), affine_transform);
+
+            // Resample
+            let resampled_data = registration::resample_to_target_grid(
+                &modality.data,
+                &registration_result.transform_matrix,
+                target_dims,
+            );
+
+            // Initialize variance based on quality score
+            // Higher quality -> lower variance
+            // Avoid division by zero with small epsilon
+            let initial_variance = 1.0 / (modality.quality_score + 1e-6);
+
+            contexts.push(ModalityContext {
+                data: resampled_data,
+                variance: initial_variance,
+            });
+        }
+
+        // 2. EM Algorithm Loop
+        const MAX_ITERATIONS: usize = 10;
+        const CONVERGENCE_THRESHOLD: f64 = 1e-6;
+        const MIN_VARIANCE: f64 = 1e-9;
+        let num_voxels = (target_dims.0 * target_dims.1 * target_dims.2) as f64;
+
+        for _iter in 0..MAX_ITERATIONS {
+            let mut max_change = 0.0;
+
+            // E-Step: Estimate fused image using current variances
+            // fused = sum(data_i / var_i) / sum(1 / var_i)
+            let mut numerator = Array3::<f64>::zeros(target_dims);
+            let mut denominator = 0.0;
+
+            for ctx in &contexts {
+                let w = 1.0 / ctx.variance;
+                // Add weighted data
+                // ndarray ops
+                // We have to iterate manually or use zip because one is array, other is scalar
+                // But simpler to iterate over array since we need to accumulate
+                numerator = numerator + &ctx.data * w;
+                denominator += w;
+            }
+
+            let new_fused_intensity = numerator.mapv(|x| x / denominator);
+
+            // Check convergence on image
+            // We can use a simplified check: L2 norm difference or max difference
+            // Here using max difference
+            let diff = &new_fused_intensity - &fused_intensity;
+            for v in diff.iter() {
+                if v.abs() > max_change {
+                    max_change = v.abs();
+                }
+            }
+
+            fused_intensity = new_fused_intensity;
+
+            if max_change < CONVERGENCE_THRESHOLD {
+                break;
+            }
+
+            // M-Step: Update variances
+            // var_i = mean((data_i - fused)^2)
+            for ctx in &mut contexts {
+                let sum_sq_error: f64 = ctx
+                    .data
+                    .iter()
+                    .zip(fused_intensity.iter())
+                    .map(|(val, mean)| {
+                        let diff = val - mean;
+                        diff * diff
+                    })
+                    .sum();
+                ctx.variance = (sum_sq_error / num_voxels).max(MIN_VARIANCE);
+            }
+        }
+
+        // 3. Finalize Uncertainty and Confidence
+        // Cramér-Rao Bound (CRB): 1 / sum(1/var_i)
+        // This corresponds to the variance of the weighted mean estimator
+        let mut total_fisher_info = 0.0;
+        for ctx in &contexts {
+            total_fisher_info += 1.0 / ctx.variance;
+        }
+        let crb = 1.0 / total_fisher_info;
+
+        // Populate maps (uniform since our noise model is homoscedastic per modality)
+        uncertainty_map.fill(crb);
+        confidence_map.fill(total_fisher_info); // Fisher info as confidence measure
+
+        Ok(FusedImageResult {
+            intensity_image: fused_intensity,
+            tissue_properties: HashMap::new(),
+            confidence_map,
+            uncertainty_map: Some(uncertainty_map),
+            registration_transforms,
+            modality_quality,
+            coordinates: registration::generate_coordinate_arrays(
+                target_dims,
+                self.config.output_resolution,
+            ),
+        })
     }
 
     /// Extract tissue properties from fused imaging data
@@ -600,5 +748,62 @@ mod tests {
         assert!(properties.contains_key("tissue_classification"));
         assert!(properties.contains_key("oxygenation_index"));
         assert!(properties.contains_key("composite_stiffness"));
+    }
+
+    #[test]
+    fn test_maximum_likelihood_fusion() {
+        let mut config = FusionConfig::default();
+        config.fusion_method = FusionMethod::MaximumLikelihood;
+        let mut fusion = MultiModalFusion::new(config);
+
+        let shape = (10, 10, 2);
+
+        // Modality 1: "Clean", high quality. Value = 1.0.
+        // Expect low variance.
+        fusion.registered_data.insert(
+            "modality_clean".to_string(),
+            RegisteredModality {
+                data: Array3::from_elem(shape, 1.0),
+                quality_score: 0.95,
+            },
+        );
+
+        // Modality 2: "Noisy", low quality. Value = 2.0.
+        // Expect high variance.
+        fusion.registered_data.insert(
+            "modality_noisy".to_string(),
+            RegisteredModality {
+                data: Array3::from_elem(shape, 2.0),
+                quality_score: 0.05,
+            },
+        );
+
+        let fused = fusion.fuse().unwrap();
+
+        // 1. Verify dimensions
+        assert_eq!(fused.intensity_image.dim(), shape);
+
+        // 2. Verify fused value
+        // The fused value should be closer to 1.0 than 2.0 because "modality_clean" has higher quality (lower variance).
+        // Initial variance ~ 1/quality.
+        // var_clean ~ 1/0.95 = 1.05
+        // var_noisy ~ 1/0.05 = 20.0
+        // weight_clean ~ 0.95, weight_noisy ~ 0.05
+        // Expected mean ~ (1.0 * 0.95 + 2.0 * 0.05) / (0.95 + 0.05) = (0.95 + 0.1) / 1.0 = 1.05
+        // The actual EM might shift variances, but the trend should hold.
+        let val = fused.intensity_image[[0, 0, 0]];
+        println!("Fused value: {}", val);
+        assert!(val < 1.2, "Fused value {} should be close to 1.0", val);
+
+        // 3. Verify uncertainty
+        // Should be populated
+        assert!(fused.uncertainty_map.is_some());
+        let uncertainty = fused.uncertainty_map.as_ref().unwrap();
+        let u_val = uncertainty[[0, 0, 0]];
+        assert!(u_val > 0.0);
+
+        // CRB = 1 / (1/var_clean + 1/var_noisy)
+        // CRB < var_clean
+        // So uncertainty should be small
     }
 }
