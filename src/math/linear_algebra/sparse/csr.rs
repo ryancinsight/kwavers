@@ -226,10 +226,9 @@ impl<T> CompressedSparseRowMatrix<T> {
     /// Zero out row (except diagonal)
     pub fn zero_row_off_diagonals(&mut self, row: usize) {
         let row_start = self.row_pointers[row];
-        let row_end = self.row_pointers[row + 1];
 
         let mut i = row_start;
-        while i < row_end {
+        while i < self.row_pointers[row + 1] {
             if self.col_indices[i] != row {
                 // Remove off-diagonal entry
                 self.values.remove(i);

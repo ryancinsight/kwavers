@@ -498,4 +498,58 @@ mod tests {
         // Check p3
         assert_relative_eq!(result[2].re, 0.0, epsilon = 1e-10);
     }
+
+    #[test]
+    fn test_solve_system_one_element_dirichlet() {
+        // 1. Create mesh with one element
+        let mut mesh = TetrahedralMesh::new();
+        // Nodes: origin and unit vectors
+        let n0 = mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior); // Origin
+        let n1 = mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior); // X
+        let n2 = mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior); // Y
+        let n3 = mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior); // Z
+
+        mesh.add_element([n0, n1, n2, n3], 0).expect("Failed to add element");
+
+        // 2. Setup Solver (Laplace)
+        let mut config = FemHelmholtzConfig::default();
+        config.wavenumber = 0.0;
+        config.radiation_boundary = false;
+        config.tolerance = 1e-10;
+
+        let mut solver = FemHelmholtzSolver::new(config, mesh);
+
+        // 3. Add Boundary Conditions
+        // Set u = x:
+        // n0 (0,0,0) -> 0
+        // n1 (1,0,0) -> 1
+        // n2 (0,1,0) -> 0
+        // n3 (0,0,1) -> Should be 0 (minimizes Dirichlet energy for u = x + c*z)
+
+        solver.boundary_manager().add_dirichlet(vec![
+            (n0, Complex64::new(0.0, 0.0)),
+            (n1, Complex64::new(1.0, 0.0)),
+            (n2, Complex64::new(0.0, 0.0)),
+        ]);
+
+        // 4. Assemble
+        use crate::domain::grid::Grid;
+        use crate::domain::medium::HomogeneousMedium;
+        let grid = Grid::new(2, 2, 2, 1.0, 1.0, 1.0).unwrap();
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+
+        solver.assemble_system(&medium).expect("Assembly failed");
+
+        // 5. Solve
+        solver.solve_system().expect("Solve failed");
+
+        // 6. Check Solution at n3
+        let u3 = solver.solution()[n3];
+        assert_relative_eq!(u3.re, 0.0, epsilon = 1e-6);
+        assert_relative_eq!(u3.im, 0.0, epsilon = 1e-6);
+
+        // Check Solution at n1 (should be preserved)
+        let u1 = solver.solution()[n1];
+        assert_relative_eq!(u1.re, 1.0, epsilon = 1e-6);
+    }
 }
