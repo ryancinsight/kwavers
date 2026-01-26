@@ -59,7 +59,10 @@ impl ClinicalAppState {
     /// Create new clinical app state
     pub fn new(auth_middleware: Arc<crate::api::auth::AuthMiddleware>) -> KwaversResult<Self> {
         // Initialize AI processor with default config
-        let config = AIBeamformingConfig::default();
+        let mut config = AIBeamformingConfig::default();
+        // Disable PINN since we don't have an engine in the default constructor
+        config.enable_realtime_pinn = false;
+
         let sensor_positions = vec![
             [0.0, 0.0, 0.0],
             [0.001, 0.0, 0.0],
@@ -601,25 +604,40 @@ pub async fn dicom_integrate(
     _auth: AuthenticatedUser,
     Json(request): Json<DICOMIntegrationRequest>,
 ) -> Result<JsonResponse<DICOMIntegrationResponse>, (StatusCode, JsonResponse<APIError>)> {
-    let dicom_service = state.dicom_service.read().await;
+    // Clone Arc for blocking task
+    let dicom_service_arc = state.dicom_service.clone();
 
-    let dicom_obj = dicom_service
-        .read_instance(
-            &request.study_instance_uid,
-            &request.series_instance_uid,
-            &request.sop_instance_uid,
+    // Clone UIDs to move into blocking task
+    let study_uid = request.study_instance_uid.clone();
+    let series_uid = request.series_instance_uid.clone();
+    let instance_uid = request.sop_instance_uid.clone();
+
+    let dicom_obj = tokio::task::spawn_blocking(move || {
+        let dicom_service = dicom_service_arc.blocking_read();
+        dicom_service.read_instance(&study_uid, &series_uid, &instance_uid)
+    })
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            JsonResponse(APIError {
+                error: crate::api::APIErrorType::InternalError,
+                message: format!("DICOM service task failed: {}", e),
+                details: None,
+            }),
         )
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                JsonResponse(APIError {
-                    error: crate::api::APIErrorType::InternalError,
-                    message: format!("Failed to read DICOM instance: {}", e),
-                    details: None,
-                }),
-            )
-        })?
-        .ok_or_else(|| {
+    })?
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            JsonResponse(APIError {
+                error: crate::api::APIErrorType::InternalError,
+                message: format!("Failed to read DICOM instance: {}", e),
+                details: None,
+            }),
+        )
+    })?
+    .ok_or_else(|| {
             (
                 StatusCode::NOT_FOUND,
                 JsonResponse(APIError {
@@ -1108,5 +1126,80 @@ mod tests {
 
         // Cleanup
         std::fs::remove_dir_all(temp_dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_dicom_integrate_endpoint() {
+        // Setup auth middleware
+        let auth_middleware = Arc::new(
+            crate::api::auth::AuthMiddleware::new(
+                "test-secret-do-not-use-in-production",
+                crate::api::auth::JWTConfig::default(),
+            )
+            .expect("test auth middleware construction must succeed"),
+        );
+        let app_state = ClinicalAppState::new(auth_middleware).unwrap();
+
+        // Setup DICOM service with a temp directory
+        let temp_dir = std::env::temp_dir().join(format!("kwavers_dicom_test_blocking_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        // Create a dummy file to ensure directory reading happens
+        std::fs::write(temp_dir.join("test.dcm"), b"dummy content").unwrap();
+
+        {
+            let mut service = app_state.dicom_service.write().await;
+            service.dicom_nodes.insert(
+                "local".to_string(),
+                DICOMNode {
+                    node_id: "local".to_string(),
+                    ae_title: "LOCAL".to_string(),
+                    host: "localhost".to_string(),
+                    port: 104,
+                    last_seen: Utc::now(),
+                    storage_directory: Some(temp_dir.to_string_lossy().to_string()),
+                },
+            );
+        }
+
+        // Create request
+        let request = DICOMIntegrationRequest {
+            study_instance_uid: "study1".to_string(),
+            series_instance_uid: "series1".to_string(),
+            sop_instance_uid: "instance1".to_string(),
+            requested_tags: vec![],
+            include_pixel_data: false,
+        };
+
+        // Create dummy auth user
+        let auth_user = AuthenticatedUser {
+            user_id: "test_user".to_string(),
+            roles: vec![],
+            permissions: vec![],
+            auth_method: crate::infra::api::auth::AuthMethod::JWT,
+        };
+
+        // Call endpoint
+        let result = dicom_integrate(
+            State(app_state),
+            auth_user,
+            Json(request),
+        ).await;
+
+        // Expect Error (Not Found) or Internal Error (if parsing fails violently)
+        // DICOMReader read_directory skips non-dicom files, so it will return empty study.
+        // Then read_instance will fail to find study or series.
+        // read_study calls read_directory.
+        // If file is dummy, read_directory returns empty study (maybe).
+        // Then read_instance returns None -> mapped to 404.
+        match result {
+            Ok(_) => panic!("Expected error, got success"),
+            Err((status, _)) => {
+                // We expect NOT_FOUND because the instance won't be found
+                assert!(status == StatusCode::NOT_FOUND || status == StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        }
+
+        // Cleanup
+        let _ = std::fs::remove_dir_all(temp_dir);
     }
 }
