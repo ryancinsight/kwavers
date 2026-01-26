@@ -22,7 +22,7 @@ use super::registration;
 use super::types::{AffineTransform, FusedImageResult, RegisteredModality};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::imaging::registration::ImageRegistration;
-use ndarray::Array3;
+use ndarray::{Array3, Zip};
 use std::collections::HashMap;
 
 /// Multi-modal imaging fusion processor
@@ -550,11 +550,8 @@ impl MultiModalFusion {
 
             for ctx in &contexts {
                 let w = 1.0 / ctx.variance;
-                // Add weighted data
-                // ndarray ops
-                // We have to iterate manually or use zip because one is array, other is scalar
-                // But simpler to iterate over array since we need to accumulate
-                numerator = numerator + &ctx.data * w;
+                // Accumulate weighted data in place to avoid allocation
+                numerator.scaled_add(w, &ctx.data);
                 denominator += w;
             }
 
@@ -579,15 +576,12 @@ impl MultiModalFusion {
             // M-Step: Update variances
             // var_i = mean((data_i - fused)^2)
             for ctx in &mut contexts {
-                let sum_sq_error: f64 = ctx
-                    .data
-                    .iter()
-                    .zip(fused_intensity.iter())
-                    .map(|(val, mean)| {
+                let sum_sq_error: f64 = Zip::from(&ctx.data)
+                    .and(&fused_intensity)
+                    .fold(0.0, |acc, &val, &mean| {
                         let diff = val - mean;
-                        diff * diff
-                    })
-                    .sum();
+                        acc + diff * diff
+                    });
                 ctx.variance = (sum_sq_error / num_voxels).max(MIN_VARIANCE);
             }
         }
