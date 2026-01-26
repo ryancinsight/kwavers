@@ -219,12 +219,15 @@
 //! **Timeline:** Week 3 execution
 
 // Implemented localization algorithms
+pub mod multilateration;
+pub mod music;
 pub mod trilateration;
 
 // Public API exports
+pub use multilateration::{Multilateration, MultilaterationConfig};
+pub use music::{MusicConfig, MusicLocalizer, MusicResult};
 pub use trilateration::{LocalizationResult, Trilateration, TrilaterationConfig};
 
 // Future implementations
-// pub mod multilateration;
 // pub mod beamforming_search;
 // pub mod maximum_likelihood;
