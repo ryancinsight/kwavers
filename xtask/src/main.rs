@@ -12,6 +12,8 @@ use walkdir::WalkDir;
 mod architecture;
 use architecture::validate_architecture;
 
+mod fixes;
+
 #[derive(Parser)]
 #[command(name = "xtask")]
 #[command(about = "Kwavers automation tasks")]
@@ -369,16 +371,16 @@ fn generate_metrics() -> Result<()> {
 
 /// Fix all automated issues
 fn fix_all() -> Result<()> {
-    println!("🔧 Running automated fixes...");
+    // Run automated fixes first
+    fixes::apply_fixes()?;
 
-    // For now, just run metrics
-    // TODO: Implement automated fixes for Debug derives, etc.
+    // Then run metrics to show remaining issues
+    println!("\n📊 Generating updated metrics...");
     generate_metrics()?;
 
-    println!("\n🎯 Manual fixes required:");
+    println!("\n🎯 Manual fixes required (if any remaining):");
     println!("  - Refactor oversized modules");
     println!("  - Consolidate Config structs");
-    println!("  - Add missing Debug derives");
 
     Ok(())
 }
