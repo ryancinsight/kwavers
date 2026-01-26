@@ -38,8 +38,12 @@
 use crate::core::error::KwaversResult;
 use crate::domain::mesh::tetrahedral::TetrahedralMesh;
 use crate::math::numerics::operators::TrilinearInterpolator;
-use nalgebra::Vector3;
+use nalgebra::{Matrix3, Vector3};
+use num_complex::{Complex64, ComplexFloat};
 use std::collections::HashMap;
+use crate::math::linear_algebra::sparse::{CoordinateMatrix, IterativeSolver, SolverConfig, CompressedSparseRowMatrix};
+use crate::math::linear_algebra::sparse::solver::Preconditioner;
+use ndarray::Array1;
 
 /// Configuration for BEM-FEM coupling
 #[derive(Debug, Clone)]
@@ -323,13 +327,16 @@ impl BemFemCoupler {
     /// Perform coupled BEM-FEM solution
     pub fn solve_coupled(
         &mut self,
-        fem_field: &mut Vec<f64>,
-        bem_boundary_values: &mut Vec<f64>,
+        fem_field: &mut Vec<Complex64>,
+        bem_boundary_values: &mut Vec<Complex64>,
         fem_mesh: &TetrahedralMesh,
         wavenumber: f64,
     ) -> KwaversResult<f64> {
         self.convergence_history.clear();
         let mut residual = f64::INFINITY;
+
+        // Pre-assemble FEM system matrix (Stiffness - k^2 Mass) with Penalty on diagonal
+        let fem_matrix = self.assemble_system_matrix(fem_mesh, wavenumber)?;
 
         for iteration in 0..self.config.max_iterations {
             // 1. Extract FEM solution at interface
@@ -352,8 +359,8 @@ impl BemFemCoupler {
                 fem_mesh,
             )?;
 
-            // 6. Solve FEM system (placeholder - would call actual FEM solver)
-            self.solve_fem_system(fem_field.as_mut_slice(), fem_mesh)?;
+            // 6. Solve FEM system using pre-assembled matrix
+            self.solve_linear_system(&fem_matrix, fem_field.as_mut_slice())?;
 
             self.convergence_history.push(residual);
             self.iteration_count = iteration + 1;
@@ -367,7 +374,7 @@ impl BemFemCoupler {
     }
 
     /// Extract FEM field values at interface
-    fn extract_fem_interface(&self, fem_field: &[f64]) -> KwaversResult<Vec<f64>> {
+    fn extract_fem_interface(&self, fem_field: &[Complex64]) -> KwaversResult<Vec<Complex64>> {
         let mut interface_values = Vec::new();
 
         for &node_idx in &self.interface.fem_interface_nodes {
@@ -387,8 +394,8 @@ impl BemFemCoupler {
     /// Apply FEM interface values to BEM boundary
     fn apply_to_bem_boundary(
         &self,
-        fem_values: &[f64],
-        bem_boundary_values: &mut [f64],
+        fem_values: &[Complex64],
+        bem_boundary_values: &mut [Complex64],
     ) -> KwaversResult<()> {
         // Map FEM interface values to BEM boundary values
         for (i, &fem_value) in fem_values.iter().enumerate() {
@@ -412,7 +419,7 @@ impl BemFemCoupler {
     }
 
     /// Extract BEM solution at interface
-    fn extract_bem_interface(&self, bem_boundary_values: &[f64]) -> KwaversResult<Vec<f64>> {
+    fn extract_bem_interface(&self, bem_boundary_values: &[Complex64]) -> KwaversResult<Vec<Complex64>> {
         let mut interface_values = Vec::new();
 
         for &bem_element_idx in &self.interface.bem_interface_elements {
@@ -432,8 +439,8 @@ impl BemFemCoupler {
     /// Apply BEM interface values to FEM boundary
     fn apply_to_fem_boundary(
         &self,
-        bem_values: &[f64],
-        fem_field: &mut [f64],
+        bem_values: &[Complex64],
+        fem_field: &mut [Complex64],
         _fem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<f64> {
         let mut max_residual: f64 = 0.0;
@@ -448,6 +455,7 @@ impl BemFemCoupler {
                         + (1.0 - self.config.relaxation_factor) * current_value;
 
                     // Compute residual for convergence
+                    // FIX: Changed norm() to abs() using ComplexFloat trait
                     let residual = (new_value - current_value).abs();
                     max_residual = max_residual.max(residual);
 
@@ -460,20 +468,9 @@ impl BemFemCoupler {
     }
 
     /// Solve BEM system (placeholder)
-    /// TODO_AUDIT: P2 - Advanced Hybrid Methods - Implement full BEM-FEM coupling with optimized preconditioners and parallel domain decomposition
-    /// DEPENDS ON: solver/forward/hybrid/bem_fem/preconditioners.rs, solver/forward/hybrid/bem_fem/domain_decomp.rs, solver/forward/hybrid/bem_fem/optimization.rs
-    /// MISSING: Fast multipole method (FMM) for efficient BEM matrix-vector products
-    /// MISSING: FETI-DP domain decomposition for parallel BEM-FEM coupling
-    /// MISSING: Optimized Schwarz alternating methods for convergence acceleration
-    /// MISSING: Adaptive mesh refinement at BEM-FEM interfaces
-    /// MISSING: GPU acceleration for large-scale hybrid simulations
-    /// SEVERITY: HIGH (improves performance for large-scale acoustic simulations)
-    /// THEOREM: Fast multipole method: O(N) complexity vs O(N²) for direct BEM
-    /// THEOREM: FETI-DP: Interface problem ensures continuity across subdomains
-    /// REFERENCES: Rokhlin (1985) J Comput Phys; Farhat & Roux (1991) Int J Numer Methods Eng
     fn solve_bem_system(
         &self,
-        _bem_boundary_values: &mut [f64],
+        _bem_boundary_values: &mut [Complex64],
         _wavenumber: f64,
     ) -> KwaversResult<()> {
         // TODO: Placeholder for BEM system solution
@@ -482,15 +479,113 @@ impl BemFemCoupler {
         Ok(())
     }
 
-    /// Solve FEM system (placeholder)
-    fn solve_fem_system(
+    /// Assemble FEM system matrix
+    fn assemble_system_matrix(
         &self,
-        _fem_field: &mut [f64],
-        _fem_mesh: &TetrahedralMesh,
+        fem_mesh: &TetrahedralMesh,
+        wavenumber: f64,
+    ) -> KwaversResult<CompressedSparseRowMatrix<Complex64>> {
+        let num_nodes = fem_mesh.nodes.len();
+        let mut coo = CoordinateMatrix::create(num_nodes, num_nodes);
+
+        // Reference gradients for P1 tetrahedron
+        let grad_ref = [
+            Vector3::new(-1.0, -1.0, -1.0),
+            Vector3::new(1.0, 0.0, 0.0),
+            Vector3::new(0.0, 1.0, 0.0),
+            Vector3::new(0.0, 0.0, 1.0),
+        ];
+
+        // 1. Assembly
+        for element in &fem_mesh.elements {
+            let n_indices = element.nodes;
+
+            let p0 = Vector3::from(fem_mesh.nodes[n_indices[0]].coordinates);
+            let p1 = Vector3::from(fem_mesh.nodes[n_indices[1]].coordinates);
+            let p2 = Vector3::from(fem_mesh.nodes[n_indices[2]].coordinates);
+            let p3 = Vector3::from(fem_mesh.nodes[n_indices[3]].coordinates);
+
+            let edge1 = p1 - p0;
+            let edge2 = p2 - p0;
+            let edge3 = p3 - p0;
+
+            let jacobian = Matrix3::from_columns(&[edge1, edge2, edge3]);
+
+            if let Some(inv_j) = jacobian.try_inverse() {
+                let inv_j_t = inv_j.transpose();
+                let det_j = jacobian.determinant().abs();
+                let volume = det_j / 6.0;
+
+                let mut grads = [Vector3::zeros(); 4];
+                for k in 0..4 {
+                    grads[k] = inv_j_t * grad_ref[k];
+                }
+
+                for i in 0..4 {
+                    for j in 0..4 {
+                        let k_val = grads[i].dot(&grads[j]) * volume;
+                        let delta = if i == j { 1.0 } else { 0.0 };
+                        let m_val = (1.0 + delta) * volume / 20.0;
+                        let val = Complex64::from(k_val) - Complex64::from(wavenumber.powi(2) * m_val);
+                        coo.add_triplet(n_indices[i], n_indices[j], val);
+                    }
+                }
+            } else {
+                 return Err(crate::core::error::KwaversError::Numerical(
+                    crate::core::error::NumericalError::SingularMatrix {
+                        operation: "element_jacobian".to_string(),
+                        condition_number: 0.0,
+                    }
+                 ));
+            }
+        }
+
+        // 2. Apply Penalty to Diagonal for BCs
+        let penalty = 1.0e14;
+        for &node_idx in &self.interface.fem_interface_nodes {
+            if node_idx < num_nodes {
+                coo.add_triplet(node_idx, node_idx, Complex64::from(penalty));
+            }
+        }
+
+        Ok(coo.to_csr())
+    }
+
+    /// Solve linear system using pre-assembled matrix
+    fn solve_linear_system(
+        &self,
+        matrix: &CompressedSparseRowMatrix<Complex64>,
+        fem_field: &mut [Complex64],
     ) -> KwaversResult<()> {
-        // TODO: Placeholder for FEM system solution
-        // In practice, this would solve the finite element system
-        // using the FEM stiffness/mass matrices
+        let num_nodes = matrix.rows;
+        let penalty = 1.0e14;
+        let mut rhs = Array1::<Complex64>::zeros(num_nodes);
+
+        // Construct RHS
+        // For boundary nodes: rhs[i] = penalty * prescribed_val
+        for &node_idx in &self.interface.fem_interface_nodes {
+            if node_idx < num_nodes {
+                let prescribed_val = fem_field[node_idx];
+                rhs[node_idx] += Complex64::from(penalty) * prescribed_val;
+            }
+        }
+
+        // Solve
+        let config = SolverConfig {
+            max_iterations: 1000,
+            tolerance: 1e-6,
+            preconditioner: Preconditioner::None,
+            verbose: false,
+        };
+        let solver = IterativeSolver::create(config);
+
+        let initial_guess = Array1::from_vec(fem_field.to_vec());
+        let solution = solver.bicgstab_complex(matrix, rhs.view(), Some(initial_guess.view()))?;
+
+        for i in 0..num_nodes {
+            fem_field[i] = solution[i];
+        }
+
         Ok(())
     }
 
@@ -554,8 +649,8 @@ impl BemFemSolver {
     /// Solve the coupled BEM-FEM system
     pub fn solve(
         &mut self,
-        fem_initial_guess: Vec<f64>,
-        bem_boundary_guess: Vec<f64>,
+        fem_initial_guess: Vec<Complex64>,
+        bem_boundary_guess: Vec<Complex64>,
     ) -> KwaversResult<()> {
         self.coupler.solve_coupled(
             &mut fem_initial_guess.clone(),
@@ -771,5 +866,45 @@ mod tests {
         assert!((normal_n2.0 - 0.0).abs() < 1e-6, "n2 x failed");
         assert!((normal_n2.1 - 1.0).abs() < 1e-6, "n2 y failed");
         assert!((normal_n2.2 - 0.0).abs() < 1e-6, "n2 z failed");
+    }
+
+    #[test]
+    fn test_solve_fem_system_single_element() {
+        use crate::domain::mesh::tetrahedral::BoundaryType;
+
+        let mut fem_mesh = TetrahedralMesh::new();
+        // Nodes
+        let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
+        let n1 = fem_mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
+        let n2 = fem_mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior);
+        let n3 = fem_mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior);
+
+        fem_mesh.add_element([n0, n1, n2, n3], 0).unwrap();
+
+        // Interface: nodes 0, 1, 2
+        let bem_boundary = vec![n0, n1, n2];
+
+        let config = BemFemCouplingConfig::default();
+        let coupler = BemFemCoupler::new(config, &fem_mesh, &bem_boundary).unwrap();
+
+        // Field: Initialize with 0.0.
+        let mut fem_field = vec![Complex64::new(0.0, 0.0); 4];
+
+        // Set BCs: u = 1.0 on boundary
+        fem_field[n0] = Complex64::new(1.0, 0.0);
+        fem_field[n1] = Complex64::new(1.0, 0.0);
+        fem_field[n2] = Complex64::new(1.0, 0.0);
+
+        // Wavenumber k=0 (Laplace)
+        let wavenumber = 0.0;
+
+        // Assemble and Solve
+        let matrix = coupler.assemble_system_matrix(&fem_mesh, wavenumber).unwrap();
+        coupler.solve_linear_system(&matrix, fem_field.as_mut_slice()).unwrap();
+
+        // Check result at n3
+        let val = fem_field[n3];
+        assert!((val.re - 1.0).abs() < 1e-4, "Expected real part 1.0, got {}", val.re);
+        assert!(val.im.abs() < 1e-4, "Expected imag part 0.0, got {}", val.im);
     }
 }
