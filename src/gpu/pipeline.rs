@@ -472,28 +472,39 @@ impl StreamingDataSource {
     fn generate_rf_frame(config: &StreamingConfig) -> Array4<f32> {
         let (n_tx, n_rx, n_samples, n_frames) = config.frame_size;
         let mut rf_data = Array4::zeros((n_tx, n_rx, n_samples, n_frames));
-        let mut rng = rand::thread_rng();
+
+        use ndarray::Axis;
+        use rayon::prelude::*;
 
         // Generate realistic ultrasound RF signals
-        for tx in 0..n_tx {
-            for rx in 0..n_rx {
-                let delay = (tx + rx) as f64 * 1e-7; // Inter-element delay
+        rf_data
+            .axis_iter_mut(Axis(0))
+            .into_par_iter()
+            .enumerate()
+            .for_each(|(tx, mut tx_slice)| {
+                tx_slice
+                    .axis_iter_mut(Axis(0))
+                    .into_par_iter()
+                    .enumerate()
+                    .for_each(|(rx, mut rx_slice)| {
+                        let mut rng = rand::thread_rng();
+                        let delay = (tx + rx) as f64 * 1e-7; // Inter-element delay
 
-                for sample in 0..n_samples {
-                    let time = sample as f64 * 1e-8; // 10 ns sampling
+                        for sample in 0..n_samples {
+                            let time = sample as f64 * 1e-8; // 10 ns sampling
 
-                    // Generate signal base value (independent of frame)
-                    let signal = config.signal_amplitude
-                        * (-0.5 * ((time - delay) * 5e7).powi(2)).exp()
-                        * ((time - delay) * 3e7).cos();
+                            // Generate signal base value (independent of frame)
+                            let signal = config.signal_amplitude
+                                * (-0.5 * ((time - delay) * 5e7).powi(2)).exp()
+                                * ((time - delay) * 3e7).cos();
 
-                    for frame in 0..n_frames {
-                        let noise = config.noise_level * rng.gen::<f64>();
-                        rf_data[[tx, rx, sample, frame]] = (signal + noise) as f32;
-                    }
-                }
-            }
-        }
+                            for frame in 0..n_frames {
+                                let noise = config.noise_level * rng.gen::<f64>();
+                                rx_slice[[sample, frame]] = (signal + noise) as f32;
+                            }
+                        }
+                    });
+            });
 
         rf_data
     }
