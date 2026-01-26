@@ -178,6 +178,14 @@ impl BemSolver {
         &self.boundary_manager
     }
 
+    /// Get local BEM node index for a global mesh node index
+    ///
+    /// Returns `None` if the global node is not part of the BEM boundary.
+    #[must_use]
+    pub fn local_index(&self, global_idx: usize) -> Option<usize> {
+        self.global_to_local_node.get(&global_idx).copied()
+    }
+
     /// Assemble BEM system matrices
     ///
     /// Computes the boundary integrals to assemble the H and G matrices.
