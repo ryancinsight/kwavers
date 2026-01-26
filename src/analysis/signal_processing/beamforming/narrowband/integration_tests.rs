@@ -17,21 +17,16 @@
 //! - **Literature-Grounded**: Expected behaviors based on signal processing theory
 //! - **Minimal Mocking**: Use real implementations where possible
 //!
-//! # TODO: Tests Temporarily Disabled
-//! These tests need to be updated for the refactored beamforming architecture.
-//! The old imports (CovarianceEstimator, SteeringVectorMethod) have been reorganized
-//! into domain::sensor::beamforming. Tests should be rewritten to use the new API.
-
-#[cfg(all(test, feature = "disabled_pending_refactor"))]
+#[cfg(test)]
 mod tests {
     use super::super::{
         capon::{capon_spatial_spectrum_point, CaponSpectrumConfig},
         snapshots::{extract_narrowband_snapshots, SnapshotScenario, SnapshotSelection},
         steering::NarrowbandSteering,
     };
-    use crate::analysis::signal_processing::beamforming::{
+    use crate::domain::sensor::beamforming::{
         covariance::{CovarianceEstimator, CovariancePostProcess},
-        SteeringVectorMethod,
+        steering::SteeringVectorMethod,
     };
     use ndarray::Array3;
     use num_complex::Complex64;
@@ -405,7 +400,7 @@ mod tests {
             assert_eq!(sv.as_array().len(), n_sensors);
 
             for &element in sv.as_array().iter() {
-                let magnitude = element.norm();
+                let magnitude: f64 = element.norm();
                 assert!(
                     (magnitude - 1.0).abs() < 1e-10,
                     "Steering vector element should have unit magnitude, got {:.6}",
