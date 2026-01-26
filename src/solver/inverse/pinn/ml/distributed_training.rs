@@ -524,7 +524,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
             .checkpoint_dir
             .join(filename);
 
-        if path.exists() {
+        if tokio::fs::try_exists(&path).await.unwrap_or(false) {
             // In practice, deserialize checkpoint
             println!("Checkpoint loaded: {}", path.display());
             self.coordinator.training_state.current_epoch = epoch;
