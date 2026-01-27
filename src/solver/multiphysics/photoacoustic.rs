@@ -8,9 +8,7 @@ use crate::domain::field::EMFields;
 use crate::physics::electromagnetic::equations::{
     EMMaterialDistribution, ElectromagneticWaveEquation, PhotoacousticCoupling,
 };
-use crate::physics::electromagnetic::photoacoustic::{
-    GruneisenParameter, OpticalAbsorption,
-};
+use crate::physics::electromagnetic::photoacoustic::{GruneisenParameter, OpticalAbsorption};
 use ndarray::ArrayD;
 
 /// Photoacoustic solver implementation
@@ -139,8 +137,8 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticCoupling for PhotoacousticSolv
 mod tests {
     use super::*;
     use crate::domain::grid::Grid;
-    use crate::solver::forward::fdtd::ElectromagneticFdtdSolver;
     use crate::physics::electromagnetic::equations::EMMaterialDistribution;
+    use crate::solver::forward::fdtd::ElectromagneticFdtdSolver;
 
     #[test]
     fn test_photoacoustic_solver() {

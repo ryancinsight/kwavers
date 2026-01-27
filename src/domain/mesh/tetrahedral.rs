@@ -244,10 +244,7 @@ impl TetrahedralMesh {
             sorted_face.sort();
 
             // Update face-to-element mapping
-            let entry = self
-                .face_elements
-                .entry(sorted_face)
-                .or_default();
+            let entry = self.face_elements.entry(sorted_face).or_default();
             entry.push(element_idx);
             if entry.len() > 2 {
                 return Err(KwaversError::InvalidInput(format!(

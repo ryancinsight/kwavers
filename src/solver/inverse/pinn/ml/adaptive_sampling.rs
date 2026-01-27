@@ -165,9 +165,21 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
 
         // Compute PDE residuals for each point
         // Process all points at once for efficiency
-        let x: Tensor<B, 1> = self.active_points.clone().slice([0..self.total_points, 0..1]).flatten(0, 1);
-        let y: Tensor<B, 1> = self.active_points.clone().slice([0..self.total_points, 1..2]).flatten(0, 1);
-        let t: Tensor<B, 1> = self.active_points.clone().slice([0..self.total_points, 2..3]).flatten(0, 1);
+        let x: Tensor<B, 1> = self
+            .active_points
+            .clone()
+            .slice([0..self.total_points, 0..1])
+            .flatten(0, 1);
+        let y: Tensor<B, 1> = self
+            .active_points
+            .clone()
+            .slice([0..self.total_points, 1..2])
+            .flatten(0, 1);
+        let t: Tensor<B, 1> = self
+            .active_points
+            .clone()
+            .slice([0..self.total_points, 2..3])
+            .flatten(0, 1);
 
         // Compute PDE residual for this physics domain
         let residuals = self.domain.pde_residual(
@@ -491,7 +503,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         // Compute regions from cells with high mean priority
         let mut regions = Vec::new();
 
-        for ((gx, gy, gt), (xs, ys, ts, prios)) in grid_cells.iter() {
+        for ((_gx, _gy, _gt), (xs, ys, ts, prios)) in grid_cells.iter() {
             if xs.len() < MIN_POINTS_PER_REGION {
                 continue;
             }

@@ -23,11 +23,9 @@
 //! - Burnside et al. (2007): "Differentiating benign from malignant findings"
 //! - Noble & Boukerroui (2006): "Ultrasound image segmentation: a survey"
 
-use crate::core::error::KwaversResult;
 use super::types::ClinicalThresholds;
-use super::types::{
-    ClinicalAnalysis, FeatureMap, LesionDetection, TissueClassification,
-};
+use super::types::{ClinicalAnalysis, FeatureMap, LesionDetection, TissueClassification};
+use crate::core::error::KwaversResult;
 use ndarray::{Array3, ArrayView3};
 use std::collections::HashMap;
 

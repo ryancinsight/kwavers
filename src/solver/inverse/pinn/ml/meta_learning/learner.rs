@@ -20,7 +20,6 @@ use burn::module::Module;
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::f64::consts::PI;
-use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct MetaLearner<B: AutodiffBackend> {
@@ -344,13 +343,14 @@ impl<B: AutodiffBackend> MetaLearner<B> {
     /// Generate training data for a specific task
     fn generate_task_data(&self, task: &PhysicsTask) -> KwaversResult<TaskData> {
         // Generate collocation points
-        let collocation_points = self.generate_collocation_points(&task.geometry);
+        let collocation_points = self.generate_collocation_points(task.geometry.as_ref());
 
         // Generate boundary data
-        let boundary_data = self.generate_boundary_data(&task.geometry, &task.boundary_conditions);
+        let boundary_data =
+            self.generate_boundary_data(task.geometry.as_ref(), &task.boundary_conditions);
 
         // Generate initial data
-        let initial_data = self.generate_initial_data(task);
+        let initial_data = self.generate_initial_conditions(task);
 
         Ok(TaskData {
             collocation_points,
@@ -362,7 +362,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
     /// Generate collocation points within geometry
     fn generate_collocation_points(
         &self,
-        geometry: &Arc<crate::solver::inverse::pinn::ml::Geometry2D>,
+        geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
     ) -> Vec<(f64, f64, f64)> {
         let mut points = Vec::new();
         let num_points = 1000;
@@ -384,17 +384,17 @@ impl<B: AutodiffBackend> MetaLearner<B> {
     /// Generate boundary data
     fn generate_boundary_data(
         &self,
-        geometry: &Arc<crate::solver::inverse::pinn::ml::Geometry2D>,
+        geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
         conditions: &[crate::solver::inverse::pinn::ml::BoundaryCondition2D],
     ) -> Vec<(f64, f64, f64, f64)> {
         let condition_count = conditions.len().max(1);
         let (x_min, x_max, y_min, y_max) = geometry.bounding_box();
         let span_x = (x_max - x_min).abs();
-        let span_y = (y_max - y_min).abs();
+        let _span_y = (y_max - y_min).abs();
         let base_count = 200;
         let mut data = Vec::new();
 
-        let mut push_point = |points: &mut Vec<(f64, f64, f64, f64)>, x: f64, y: f64, t: f64| {
+        let push_point = |points: &mut Vec<(f64, f64, f64, f64)>, x: f64, y: f64, t: f64| {
             let idx = points.len() % condition_count;
             let bc = conditions
                 .get(idx)
@@ -409,27 +409,28 @@ impl<B: AutodiffBackend> MetaLearner<B> {
             points.push((x, y, t, bc_value));
         };
 
-        match geometry.as_ref() {
+        match geometry {
             crate::solver::inverse::pinn::ml::Geometry2D::Rectangular {
                 x_min,
                 x_max,
                 y_min,
                 y_max,
             } => {
+                let (x_min, x_max, y_min, y_max) = (*x_min, *x_max, *y_min, *y_max);
                 let n = (base_count / 4).max(25);
                 for i in 0..n {
                     let s = i as f64 / (n - 1) as f64;
                     let t = s;
                     let x = x_min + (x_max - x_min) * s;
-                    push_point(&mut data, x, *y_min, t);
-                    push_point(&mut data, x, *y_max, t);
+                    push_point(&mut data, x, y_min, t);
+                    push_point(&mut data, x, y_max, t);
                 }
                 for i in 0..n {
                     let s = i as f64 / (n - 1) as f64;
                     let t = s;
                     let y = y_min + (y_max - y_min) * s;
-                    push_point(&mut data, *x_min, y, t);
-                    push_point(&mut data, *x_max, y, t);
+                    push_point(&mut data, x_min, y, t);
+                    push_point(&mut data, x_max, y, t);
                 }
             }
             crate::solver::inverse::pinn::ml::Geometry2D::Circular {
@@ -437,6 +438,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                 y_center,
                 radius,
             } => {
+                let (x_center, y_center, radius) = (*x_center, *y_center, *radius);
                 let n = base_count.max(100);
                 for i in 0..n {
                     let s = i as f64 / (n - 1) as f64;
@@ -454,56 +456,57 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                 notch_x,
                 notch_y,
             } => {
+                let (x_min, x_max, y_min, y_max, notch_x, notch_y) =
+                    (*x_min, *x_max, *y_min, *y_max, *notch_x, *notch_y);
                 let n = (base_count / 6).max(25);
                 for i in 0..n {
                     let s = i as f64 / (n - 1) as f64;
                     let t = s;
                     let x = x_min + (x_max - x_min) * s;
-                    push_point(&mut data, x, *y_min, t);
-                    push_point(&mut data, x, *y_max, t);
+                    push_point(&mut data, x, y_min, t);
+                    push_point(&mut data, x, y_max, t);
                 }
                 for i in 0..n {
                     let s = i as f64 / (n - 1) as f64;
                     let t = s;
                     let y = y_min + (y_max - y_min) * s;
-                    push_point(&mut data, *x_min, y, t);
-                    if y <= *notch_y {
-                        push_point(&mut data, *x_max, y, t);
+                    push_point(&mut data, x_min, y, t);
+                    if y <= notch_y {
+                        push_point(&mut data, x_max, y, t);
                     }
                 }
                 for i in 0..n {
                     let s = i as f64 / (n - 1) as f64;
                     let t = s;
                     let x = notch_x + (x_max - notch_x) * s;
-                    push_point(&mut data, x, *notch_y, t);
+                    push_point(&mut data, x, notch_y, t);
                 }
                 for i in 0..n {
                     let s = i as f64 / (n - 1) as f64;
                     let t = s;
                     let y = notch_y + (y_max - notch_y) * s;
-                    push_point(&mut data, *notch_x, y, t);
+                    push_point(&mut data, notch_x, y, t);
                 }
             }
             crate::solver::inverse::pinn::ml::Geometry2D::Polygonal { vertices, holes } => {
-                let mut sample_edges =
-                    |poly: &[(f64, f64)], points: &mut Vec<(f64, f64, f64, f64)>| {
-                        if poly.len() < 2 {
-                            return;
+                let sample_edges = |poly: &[(f64, f64)], points: &mut Vec<(f64, f64, f64, f64)>| {
+                    if poly.len() < 2 {
+                        return;
+                    }
+                    let n_edges = poly.len();
+                    let n = (base_count / n_edges.max(1)).max(10);
+                    for i in 0..n_edges {
+                        let (x0, y0) = poly[i];
+                        let (x1, y1) = poly[(i + 1) % n_edges];
+                        for j in 0..n {
+                            let s = j as f64 / (n - 1) as f64;
+                            let t = s;
+                            let x = x0 + (x1 - x0) * s;
+                            let y = y0 + (y1 - y0) * s;
+                            push_point(points, x, y, t);
                         }
-                        let n_edges = poly.len();
-                        let n = (base_count / n_edges.max(1)).max(10);
-                        for i in 0..n_edges {
-                            let (x0, y0) = poly[i];
-                            let (x1, y1) = poly[(i + 1) % n_edges];
-                            for j in 0..n {
-                                let s = j as f64 / (n - 1) as f64;
-                                let t = s;
-                                let x = x0 + (x1 - x0) * s;
-                                let y = y0 + (y1 - y0) * s;
-                                push_point(points, x, y, t);
-                            }
-                        }
-                    };
+                    }
+                };
                 sample_edges(vertices, &mut data);
                 for hole in holes {
                     sample_edges(hole, &mut data);
@@ -516,6 +519,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                 t_max,
                 ..
             } => {
+                let (t_min, t_max) = (*t_min, *t_max);
                 let n = base_count.max(100);
                 for i in 0..n {
                     let s = i as f64 / (n - 1) as f64;
@@ -528,13 +532,11 @@ impl<B: AutodiffBackend> MetaLearner<B> {
             crate::solver::inverse::pinn::ml::Geometry2D::AdaptiveMesh {
                 base_geometry, ..
             } => {
-                data.extend(
-                    self.generate_boundary_data(&Arc::new((**base_geometry).clone()), conditions),
-                );
+                data.extend(self.generate_boundary_data(base_geometry.as_ref(), conditions));
             }
             crate::solver::inverse::pinn::ml::Geometry2D::MultiRegion { regions, .. } => {
                 for (region, _) in regions {
-                    data.extend(self.generate_boundary_data(&Arc::new(region.clone()), conditions));
+                    data.extend(self.generate_boundary_data(region, conditions));
                 }
             }
         }
@@ -576,7 +578,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
     ///
     /// - Raissi et al., "Physics-informed neural networks" (IC handling)
     /// - Finn et al., "Model-Agnostic Meta-Learning" (MAML algorithm)
-
+    fn generate_initial_conditions(&self, task: &PhysicsTask) -> Vec<(f64, f64, f64, f64, f64)> {
         let geometry = &task.geometry;
         let n_ic = 200;
         let (x_samples, y_samples) = geometry.sample_points(n_ic);

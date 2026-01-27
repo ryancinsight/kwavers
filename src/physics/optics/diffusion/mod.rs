@@ -26,7 +26,6 @@ use crate::domain::medium::properties::OpticalPropertyData;
 use crate::domain::medium::Medium;
 use crate::physics::optics::polarization::LinearPolarization;
 use crate::physics::optics::PolarizationModel as PolarizationModelTrait;
-use crate::physics::thermal::PennesSolver;
 use crate::physics::wave_propagation::scattering::ScatteringCalculator;
 use log::debug;
 use ndarray::{Array3, Array4, Axis};
@@ -126,12 +125,9 @@ pub struct LightDiffusion {
     _polarization: Option<Box<dyn PolarizationModelTrait>>,
     /// Scattering calculator (optional)
     _scattering: Option<ScatteringCalculator>,
-    /// Thermal solver (optional)
-    _thermal: Option<PennesSolver>,
     /// Feature flags
     _enable_polarization: bool,
     _enable_scattering: bool,
-    _enable_thermal: bool,
     // Performance metrics
     update_time: f64,
     fft_time: f64,
@@ -169,7 +165,6 @@ impl LightDiffusion {
         optical_properties: OpticalProperties,
         enable_polarization: bool,
         enable_scattering: bool,
-        enable_thermal: bool,
     ) -> Self {
         let (nx, ny, nz) = grid.dimensions();
 
@@ -201,37 +196,8 @@ impl LightDiffusion {
             } else {
                 None
             },
-            _thermal: if enable_thermal {
-                use crate::physics::thermal::ThermalPropertyData;
-                let properties = ThermalPropertyData::new(
-                    0.5,          // conductivity (W/m/K)
-                    3600.0,       // specific_heat (J/kg/K)
-                    1050.0,       // density (kg/m³)
-                    Some(0.5e-3), // blood_perfusion (kg/m³/s)
-                    Some(3617.0), // blood_specific_heat (J/kg/K)
-                )
-                .expect("Valid thermal properties");
-                let arterial_temperature = 37.0; // °C
-                let metabolic_heat = 420.0; // W/m³
-                PennesSolver::new(
-                    grid.nx,
-                    grid.ny,
-                    grid.nz,
-                    grid.dx,
-                    grid.dy,
-                    grid.dz,
-                    0.001,
-                    properties,
-                    arterial_temperature,
-                    metabolic_heat,
-                )
-                .ok()
-            } else {
-                None
-            },
             _enable_polarization: enable_polarization,
             _enable_scattering: enable_scattering,
-            _enable_thermal: enable_thermal,
             update_time: 0.0,
             fft_time: 0.0,
             diffusion_time: 0.0,
@@ -417,7 +383,6 @@ mod tests {
             optical_props,
             false, // no polarization
             false, // no scattering
-            false, // no thermal
         );
 
         // Check that fluence rate has correct dimensions

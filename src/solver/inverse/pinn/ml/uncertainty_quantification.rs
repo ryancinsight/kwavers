@@ -342,10 +342,7 @@ pub struct ConformalPredictor<B: Backend> {
 
 impl<B: Backend> ConformalPredictor<B> {
     /// Create a new conformal predictor
-    pub fn new(
-        model: crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
-        alpha: f64,
-    ) -> Self {
+    pub fn new(model: crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>, alpha: f64) -> Self {
         let alpha = alpha.clamp(f64::EPSILON, 1.0 - f64::EPSILON);
         Self {
             model,

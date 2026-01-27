@@ -245,7 +245,8 @@ mod bc_loss_tests {
         };
         let geometry1 = Geometry3D::rectangular(0.0, 0.5, 0.0, 0.5, 0.0, 0.5);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
-        let mut solver1 = BurnPINN3DWave::<TestBackend>::new(config1, geometry1, wave_speed, &device)?;
+        let mut solver1 =
+            BurnPINN3DWave::<TestBackend>::new(config1, geometry1, wave_speed, &device)?;
 
         // Large domain
         let config2 = BurnPINN3DConfig {
@@ -254,7 +255,8 @@ mod bc_loss_tests {
             ..Default::default()
         };
         let geometry2 = Geometry3D::rectangular(0.0, 2.0, 0.0, 2.0, 0.0, 2.0);
-        let mut solver2 = BurnPINN3DWave::<TestBackend>::new(config2, geometry2, wave_speed, &device)?;
+        let mut solver2 =
+            BurnPINN3DWave::<TestBackend>::new(config2, geometry2, wave_speed, &device)?;
 
         let x_data = vec![0.25];
         let y_data = vec![0.25];

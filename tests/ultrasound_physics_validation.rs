@@ -3,11 +3,13 @@
 //! This test suite validates the MVDR beamforming implementation
 //! against established literature references and mathematical theorems.
 
-use kwavers::analysis::signal_processing::beamforming::MinimumVariance;
-use kwavers::domain::sensor::beamforming::covariance::SpatialSmoothing;
-use kwavers::domain::sensor::beamforming::{
-    CovarianceEstimator, SteeringVector, SteeringVectorMethod,
+use kwavers::analysis::signal_processing::beamforming::covariance::{
+    CovarianceEstimator, SpatialSmoothing,
 };
+use kwavers::analysis::signal_processing::beamforming::utils::{
+    SteeringVector, SteeringVectorMethod,
+};
+use kwavers::analysis::signal_processing::beamforming::MinimumVariance;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
@@ -49,7 +51,7 @@ fn validate_mvdr_beamforming_basic() {
     let gain: Complex64 = weights
         .iter()
         .zip(steering_vector.iter())
-        .map(|(w, a)| w.conj() * *a)
+        .map(|(w, a): (&Complex64, &Complex64)| w.conj() * *a)
         .sum();
     assert!(
         (gain - Complex64::new(1.0, 0.0)).norm() <= 1e-6,
@@ -242,7 +244,7 @@ fn validate_mvdr_numerical_stability() {
     let gain: Complex64 = weights_with_loading
         .iter()
         .zip(steering_vector.iter())
-        .map(|(w, a)| w.conj() * a)
+        .map(|(w, a): (&Complex64, &Complex64)| w.conj() * *a)
         .sum();
     assert!(
         (gain - Complex64::new(1.0, 0.0)).norm() <= 1e-6,

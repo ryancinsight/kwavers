@@ -6,8 +6,6 @@
 //! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
-// Enable portable SIMD for cross-platform performance
-#![cfg_attr(feature = "nightly", feature(portable_simd))]
 // Strict warning configuration for code quality
 #![warn(
     unused_imports,

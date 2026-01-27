@@ -19,10 +19,12 @@ fn add_missing_debug_derives() -> Result<()> {
     let src_root = crate::src_root();
 
     // Regex to match struct or enum definitions
-    let struct_re = Regex::new(r"^(\s*)(pub(?:\([^)]+\))?\s+)?(struct|enum)\s+([A-Za-z0-9_]+)").unwrap();
+    let struct_re =
+        Regex::new(r"^(\s*)(pub(?:\([^)]+\))?\s+)?(struct|enum)\s+([A-Za-z0-9_]+)").unwrap();
 
     // Regex to detect manual Debug implementations
-    let manual_impl_re = Regex::new(r"impl\s+(?:<[^>]*>\s*)?(?:std::fmt::)?Debug\s+for\s+([A-Za-z0-9_]+)").unwrap();
+    let manual_impl_re =
+        Regex::new(r"impl\s+(?:<[^>]*>\s*)?(?:std::fmt::)?Debug\s+for\s+([A-Za-z0-9_]+)").unwrap();
 
     let mut modified_count = 0;
 
@@ -49,7 +51,7 @@ fn add_missing_debug_derives() -> Result<()> {
 
             if content != new_content {
                 if let Err(e) = fs::write(path, new_content) {
-                     eprintln!("Failed to write {}: {}", path.display(), e);
+                    eprintln!("Failed to write {}: {}", path.display(), e);
                 } else {
                     modified_count += 1;
                 }
@@ -61,7 +63,11 @@ fn add_missing_debug_derives() -> Result<()> {
     Ok(())
 }
 
-fn process_file_content(content: &str, struct_re: &Regex, manual_impls: &HashSet<String>) -> String {
+fn process_file_content(
+    content: &str,
+    struct_re: &Regex,
+    manual_impls: &HashSet<String>,
+) -> String {
     let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
     let mut i = 0;
 
@@ -106,8 +112,12 @@ fn process_file_content(content: &str, struct_re: &Regex, manual_impls: &HashSet
                     continue;
                 }
 
-                if line.starts_with("///") || line.starts_with("/*") || line.starts_with("*") || line.starts_with("*/") {
-                     continue;
+                if line.starts_with("///")
+                    || line.starts_with("/*")
+                    || line.starts_with("*")
+                    || line.starts_with("*/")
+                {
+                    continue;
                 }
 
                 break;
@@ -116,7 +126,7 @@ fn process_file_content(content: &str, struct_re: &Regex, manual_impls: &HashSet
             if let Some(idx) = derive_line_idx {
                 if !lines[idx].contains("Debug") {
                     if let Some(close_pos) = lines[idx].rfind(')') {
-                         lines[idx].insert_str(close_pos, ", Debug");
+                        lines[idx].insert_str(close_pos, ", Debug");
                     }
                 }
             } else {
@@ -153,7 +163,8 @@ fn has_problematic_fields(lines: &[String], start_idx: usize) -> bool {
             || line.contains("Fn(")
             || line.contains("FnMut(")
             || line.contains("FnOnce(")
-            || line.contains("FftPlanner") // Specific to this codebase
+            || line.contains("FftPlanner")
+        // Specific to this codebase
         {
             return true;
         }
@@ -184,7 +195,7 @@ fn has_problematic_fields(lines: &[String], start_idx: usize) -> bool {
     // Also check if it's a tuple struct on one line: `struct Foo(Box<dyn Bar>);`
     let first_line = &lines[start_idx];
     if !first_line.contains('{') && first_line.contains(';') {
-         if first_line.contains("Box<dyn")
+        if first_line.contains("Box<dyn")
             || first_line.contains("Arc<dyn")
             || first_line.contains("Rc<dyn")
             || first_line.contains("&dyn")

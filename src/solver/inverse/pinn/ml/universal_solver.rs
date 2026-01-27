@@ -13,11 +13,11 @@
 //! - Performance monitoring and convergence tracking
 //! - Validation against analytical and literature benchmarks
 
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::physics::{
     BoundaryConditionSpec, InitialConditionSpec, PhysicsDomain, PhysicsDomainRegistry,
     PhysicsLossWeights, PhysicsParameters, PhysicsValidationMetric,
 };
-use crate::core::error::{KwaversError, KwaversResult};
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use rand::rngs::StdRng;
@@ -624,9 +624,10 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
             Tensor::<B, 1>::from_floats(t_coords.as_slice(), &device).reshape([n_points, 1]);
 
         let mut loss_history = Vec::new();
-        let optimizer = crate::solver::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D::new(
-            config.learning_rate as f32,
-        );
+        let optimizer =
+            crate::solver::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D::new(
+                config.learning_rate as f32,
+            );
 
         // Training loop with autodiff and parameter updates
         for epoch in 0..config.epochs {

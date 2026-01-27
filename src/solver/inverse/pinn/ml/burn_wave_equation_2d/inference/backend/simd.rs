@@ -1,12 +1,9 @@
 #[cfg(all(feature = "simd", feature = "nightly"))]
+use crate::core::error::KwaversResult;
+#[cfg(all(feature = "simd", feature = "nightly"))]
 use crate::solver::inverse::pinn::ml::burn_wave_equation_2d::inference::types::{
     ActivationType, MemoryPool, QuantizedNetwork,
 };
-#[cfg(all(feature = "simd", feature = "nightly"))]
-use crate::core::error::KwaversResult;
-#[cfg(all(feature = "simd", feature = "nightly"))]
-use std::simd::f32x16;
-
 #[cfg(all(feature = "simd", feature = "nightly"))]
 #[derive(Debug)]
 pub struct SimdExecutor {
@@ -120,27 +117,14 @@ impl SimdExecutor {
 
         for batch_idx in 0..batch_size {
             for out_idx in 0..output_size {
-                let mut sum = f32x16::splat(0.0);
-
                 for i in 0..input_size {
                     let input_val = input[batch_idx * input_size + i];
                     let weight_val = weights[out_idx * input_size + i] as f32 * weight_scale;
-
-                    let input_simd = f32x16::splat(input_val);
-                    let weight_simd = f32x16::splat(weight_val);
-                    sum += input_simd * weight_simd;
+                    output[batch_idx * output_size + out_idx] += input_val * weight_val;
                 }
 
                 let bias_val = biases[out_idx] as f32 * bias_scale;
-                let bias_simd = f32x16::splat(bias_val);
-                sum += bias_simd;
-
-                let mut total = 0.0;
-                for &val in sum.as_array() {
-                    total += val;
-                }
-
-                output[batch_idx * output_size + out_idx] = total;
+                output[batch_idx * output_size + out_idx] += bias_val;
             }
         }
 
@@ -148,42 +132,14 @@ impl SimdExecutor {
     }
 
     fn apply_activation_simd(&self, input: &[f32], activation: ActivationType) -> Vec<f32> {
-        let lanes = 16;
-        let mut output = vec![0.0; input.len()];
-
-        for i in (0..input.len()).step_by(lanes) {
-            let end = (i + lanes).min(input.len());
-            let chunk = &input[i..end];
-
-            let mut simd_vals = [0.0; 16];
-            simd_vals[..chunk.len()].copy_from_slice(chunk);
-            let simd_vec = f32x16::from_array(simd_vals);
-
-            let activated_simd = match activation {
-                ActivationType::Tanh => {
-                    let vals = simd_vec.as_array();
-                    let mut out = [0.0f32; 16];
-                    for j in 0..chunk.len() {
-                        out[j] = vals[j].tanh();
-                    }
-                    f32x16::from_array(out)
-                }
-                ActivationType::Relu => {
-                    let vals = simd_vec.to_array();
-                    let mut out = [0.0f32; 16];
-                    for j in 0..16 {
-                        out[j] = vals[j].max(0.0);
-                    }
-                    f32x16::from_array(out)
-                }
-                ActivationType::Linear => simd_vec,
-            };
-
-            let activated_array = activated_simd.as_array();
-            output[i..(chunk.len() + i)].copy_from_slice(&activated_array[..chunk.len()]);
-        }
-
-        output
+        input
+            .iter()
+            .map(|&val| match activation {
+                ActivationType::Tanh => val.tanh(),
+                ActivationType::Relu => val.max(0.0),
+                ActivationType::Linear => val,
+            })
+            .collect()
     }
 }
 

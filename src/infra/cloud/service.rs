@@ -173,22 +173,20 @@ impl CloudPINNService {
                 ))
             }
             CloudProvider::GCP => {
-                super::providers::gcp::deploy_to_gcp(
-                    model,
-                    &self.config,
-                    &deployment_config,
-                    &model_data,
-                )
-                .await?
+                return Err(KwaversError::System(
+                    crate::core::error::SystemError::FeatureNotAvailable {
+                        feature: "GCP deployment".to_string(),
+                        reason: "GCP provider removed per ADR-011".to_string(),
+                    },
+                ))
             }
             CloudProvider::Azure => {
-                super::providers::azure::deploy_to_azure(
-                    model,
-                    &self.config,
-                    &deployment_config,
-                    &model_data,
-                )
-                .await?
+                return Err(KwaversError::System(
+                    crate::core::error::SystemError::FeatureNotAvailable {
+                        feature: "Azure deployment".to_string(),
+                        reason: "Azure provider removed per ADR-011".to_string(),
+                    },
+                ))
             }
         };
 
@@ -325,20 +323,20 @@ impl CloudPINNService {
                         ))
                     }
                     CloudProvider::GCP => {
-                        super::providers::gcp::scale_gcp_deployment(
-                            &config,
-                            handle,
-                            target_instances,
-                        )
-                        .await?;
+                        return Err(KwaversError::System(
+                            crate::core::error::SystemError::FeatureNotAvailable {
+                                feature: "GCP scaling".to_string(),
+                                reason: "GCP provider removed per ADR-011".to_string(),
+                            },
+                        ))
                     }
                     CloudProvider::Azure => {
-                        super::providers::azure::scale_azure_deployment(
-                            &config,
-                            handle,
-                            target_instances,
-                        )
-                        .await?;
+                        return Err(KwaversError::System(
+                            crate::core::error::SystemError::FeatureNotAvailable {
+                                feature: "Azure scaling".to_string(),
+                                reason: "Azure provider removed per ADR-011".to_string(),
+                            },
+                        ))
                     }
                 }
             }
@@ -408,10 +406,20 @@ impl CloudPINNService {
                 ))
             }
             CloudProvider::GCP => {
-                super::providers::gcp::terminate_gcp_deployment(&self.config, &handle).await?;
+                return Err(KwaversError::System(
+                    crate::core::error::SystemError::FeatureNotAvailable {
+                        feature: "GCP termination".to_string(),
+                        reason: "GCP provider removed per ADR-011".to_string(),
+                    },
+                ))
             }
             CloudProvider::Azure => {
-                super::providers::azure::terminate_azure_deployment(&self.config, &handle).await?;
+                return Err(KwaversError::System(
+                    crate::core::error::SystemError::FeatureNotAvailable {
+                        feature: "Azure termination".to_string(),
+                        reason: "Azure provider removed per ADR-011".to_string(),
+                    },
+                ))
             }
         }
 

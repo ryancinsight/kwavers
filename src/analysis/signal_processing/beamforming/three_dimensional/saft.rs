@@ -5,7 +5,7 @@
 //! events to achieve high-resolution imaging.
 //!
 //! # Mathematical Foundation
-//! 
+//!
 //! SAFT reconstruction for voxel r = (x, y, z):
 //!   I_SAFT(r) = |Σᵢ Σⱼ wᵢⱼ · RF[i,j,t(i,j,r)]|²
 //! where:
@@ -57,10 +57,7 @@ pub struct SaftProcessor {
 
 impl SaftProcessor {
     /// Create new SAFT processor
-    pub fn new(
-        saft_config: SaftConfig,
-        beamforming_config: BeamformingConfig3D,
-    ) -> Self {
+    pub fn new(saft_config: SaftConfig, beamforming_config: BeamformingConfig3D) -> Self {
         Self {
             config: saft_config,
             beamforming_config,
@@ -73,15 +70,13 @@ impl SaftProcessor {
         beamforming_config: BeamformingConfig3D,
     ) -> KwaversResult<Self> {
         match algorithm {
-            BeamformingAlgorithm3D::SAFT3D { virtual_sources } => {
-                Ok(Self::new(
-                    SaftConfig {
-                        virtual_sources: *virtual_sources,
-                        ..Default::default()
-                    },
-                    beamforming_config,
-                ))
-            }
+            BeamformingAlgorithm3D::SAFT3D { virtual_sources } => Ok(Self::new(
+                SaftConfig {
+                    virtual_sources: *virtual_sources,
+                    ..Default::default()
+                },
+                beamforming_config,
+            )),
             _ => Err(KwaversError::InvalidInput(
                 "Expected SAFT3D algorithm variant".to_string(),
             )),
@@ -111,12 +106,7 @@ impl SaftProcessor {
     }
 
     /// Extract RF sample at computed time index for each TX-RX pair
-    fn extract_rf_sample(
-        &self,
-        rf_data: &Array4<f64>,
-        element_idx: usize,
-        time_idx: usize,
-    ) -> f64 {
+    fn extract_rf_sample(&self, rf_data: &Array4<f64>, element_idx: usize, time_idx: usize) -> f64 {
         // Convert to f64 for processing
         rf_data[[0, element_idx, time_idx, 0]]
     }
@@ -226,7 +216,10 @@ impl SaftProcessor {
 
                             // Compute time-of-flight
                             let time_of_flight = self.compute_time_of_flight(
-                                tx_position, rx_position, voxel_position, sound_speed,
+                                tx_position,
+                                rx_position,
+                                voxel_position,
+                                sound_speed,
                             );
 
                             // Convert time to sample index
@@ -236,13 +229,14 @@ impl SaftProcessor {
                             if sample_idx < rf_data_f64.dim().2 {
                                 // Extract RF sample - for now, use a simple element index
                                 let element_idx = tx_idx * num_rx + rx_idx;
-                                let sample = self.extract_rf_sample(
-                                    &rf_data_f64, element_idx, sample_idx,
-                                );
+                                let sample =
+                                    self.extract_rf_sample(&rf_data_f64, element_idx, sample_idx);
 
                                 // Apply apodization weight
                                 let apod_weight = self.compute_apodization_weight(
-                                    tx_idx, rx_idx, num_tx * num_rx,
+                                    tx_idx,
+                                    rx_idx,
+                                    num_tx * num_rx,
                                 );
 
                                 // Apply phase correction (simplified for now)
@@ -262,7 +256,9 @@ impl SaftProcessor {
                     // Apply coherence factor if enabled
                     if self.config.coherence_factor_enabled && num_contributions > 0 {
                         let cf = self.compute_coherence_factor(
-                            coherent_sum, incoherent_sum, num_contributions,
+                            coherent_sum,
+                            incoherent_sum,
+                            num_contributions,
                         );
                         volume[[i, j, k]] = (intensity * cf) as f32;
                     } else {
@@ -272,7 +268,9 @@ impl SaftProcessor {
                     // Store coherence factor for debugging
                     if self.config.coherence_factor_enabled {
                         coherence_volume[[i, j, k]] = self.compute_coherence_factor(
-                            coherent_sum, incoherent_sum, num_contributions,
+                            coherent_sum,
+                            incoherent_sum,
+                            num_contributions,
                         ) as f32;
                     }
                 }
@@ -280,10 +278,7 @@ impl SaftProcessor {
         }
 
         let processing_time = start_time.elapsed().as_secs_f64() * 1000.0;
-        println!(
-            "SAFT reconstruction completed in {:.2} ms",
-            processing_time
-        );
+        println!("SAFT reconstruction completed in {:.2} ms", processing_time);
 
         Ok(volume)
     }
@@ -339,10 +334,7 @@ mod tests {
     fn test_saft_config_default() {
         let config = SaftConfig::default();
         assert_eq!(config.virtual_sources, 100);
-        assert!(matches!(
-            config.apodization,
-            ApodizationWindow::Hamming
-        ));
+        assert!(matches!(config.apodization, ApodizationWindow::Hamming));
         assert!(config.coherence_factor_enabled);
         assert_eq!(config.f_number, 1.5);
     }

@@ -1,7 +1,7 @@
 use super::types::{EMProblemType, ElectromagneticBoundarySpec};
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::adapters::electromagnetic::PinnEMSource;
 use crate::solver::inverse::pinn::ml::physics::BoundaryPosition;
-use crate::core::error::{KwaversError, KwaversResult};
 use burn::tensor::backend::AutodiffBackend;
 
 /// GPU acceleration flag for electromagnetic simulations

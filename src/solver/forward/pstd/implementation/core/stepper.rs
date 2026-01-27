@@ -239,6 +239,10 @@ mod tests {
 
         // Run one step
         let result = solver.step_forward();
-        assert!(result.is_ok(), "Step forward failed with anti-aliasing enabled: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Step forward failed with anti-aliasing enabled: {:?}",
+            result.err()
+        );
     }
 }

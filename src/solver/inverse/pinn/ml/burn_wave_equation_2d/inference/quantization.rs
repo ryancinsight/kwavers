@@ -1,6 +1,6 @@
 use super::types::{ActivationType, QuantizedNetwork};
-use crate::solver::inverse::pinn::ml::burn_wave_equation_2d::model::BurnPINN2DWave;
 use crate::core::error::KwaversResult;
+use crate::solver::inverse::pinn::ml::burn_wave_equation_2d::model::BurnPINN2DWave;
 use burn::tensor::backend::Backend;
 use burn::tensor::Tensor;
 

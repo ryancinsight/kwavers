@@ -425,12 +425,17 @@ impl AcousticWaveSolver {
 
         // Compute max intensity directly or via map
         // I = accumulated * normalization / impedance
-        let i_spta = self.accumulated_p_squared
+        let i_spta = self
+            .accumulated_p_squared
             .iter()
             .zip(impedance.iter())
             .fold(0.0_f64, |max_val, (&acc_p2, &z)| {
                 let val = (acc_p2 * normalization) / z;
-                if val.is_nan() { max_val } else { max_val.max(val) }
+                if val.is_nan() {
+                    max_val
+                } else {
+                    max_val.max(val)
+                }
             });
 
         Ok(i_spta / 1e4) // Convert W/m² to W/cm²

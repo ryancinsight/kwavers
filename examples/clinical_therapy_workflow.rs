@@ -57,6 +57,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             max_treatment_time: 600.0, // 10 minutes maximum
         },
         patient_params,
+        imaging_data_path: None,
     };
 
     println!("Therapy Configuration:");

@@ -25,7 +25,7 @@ impl ShearWaveInversionConfig {
     pub fn new(method: InversionMethod) -> Self {
         Self {
             method,
-            density: 1000.0, // Typical soft tissue density
+            density: 1000.0,  // Typical soft tissue density
             frequency: 100.0, // Typical SWE frequency
         }
     }

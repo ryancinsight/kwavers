@@ -26,30 +26,22 @@ fn benchmark_split_coordinates(c: &mut Criterion) {
         // Create random points tensor [size, 3]
         let device = Default::default();
         let points_data: Vec<f32> = (0..size * 3).map(|_| rand::random::<f32>()).collect();
-        let points = Tensor::<Backend, 1>::from_floats(points_data.as_slice(), &device)
-            .reshape([size, 3]);
+        let points =
+            Tensor::<Backend, 1>::from_floats(points_data.as_slice(), &device).reshape([size, 3]);
 
-        group.bench_with_input(
-            BenchmarkId::new("slow_cpu", size),
-            &size,
-            |b, _| {
-                b.iter(|| {
-                    let (x, y, t) = split_coordinates_slow(black_box(&points));
-                    black_box((x, y, t));
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("slow_cpu", size), &size, |b, _| {
+            b.iter(|| {
+                let (x, y, t) = split_coordinates_slow(black_box(&points));
+                black_box((x, y, t));
+            });
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("fast_gpu", size),
-            &size,
-            |b, _| {
-                b.iter(|| {
-                    let (x, y, t) = split_coordinates_fast(black_box(&points));
-                    black_box((x, y, t));
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("fast_gpu", size), &size, |b, _| {
+            b.iter(|| {
+                let (x, y, t) = split_coordinates_fast(black_box(&points));
+                black_box((x, y, t));
+            });
+        });
     }
 
     group.finish();

@@ -18,12 +18,12 @@
 //! 3. **Molecular Emission**: Excited species produce line spectra
 //! 4. **Electromagnetic Propagation**: Light waves propagate through the medium
 
+use crate::physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
 use crate::solver::inverse::pinn::ml::physics::{
     BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface, CouplingType,
     InitialConditionSpec, PhysicsDomain, PhysicsLossWeights, PhysicsParameters,
     PhysicsValidationMetric,
 };
-use crate::physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use ndarray::Array3;
 use std::collections::HashMap;

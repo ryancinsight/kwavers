@@ -504,8 +504,7 @@ impl MusicLocalizer {
         }
 
         // Sort peaks by value (descending)
-        let mut peak_pairs: Vec<([f64; 3], f64)> =
-            peaks.into_iter().zip(peak_values.into_iter()).collect();
+        let mut peak_pairs: Vec<([f64; 3], f64)> = peaks.into_iter().zip(peak_values).collect();
         peak_pairs.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
         // Apply peak separation constraint and limit to num_sources

@@ -14,7 +14,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use super::{
-    config::{RenderQuality, VisualizationConfig},
+    config::{RenderQuality, VisualizationConfig, MILLISECONDS_PER_SECOND},
     metrics::{MetricsTracker, VisualizationMetrics},
 };
 

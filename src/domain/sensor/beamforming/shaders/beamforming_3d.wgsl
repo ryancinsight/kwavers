@@ -194,9 +194,7 @@ fn apply_windowed_apodization(ex: u32, ey: u32, ez: u32, window_type: u32) -> f3
     return base_weight * window_weight;
 }
 
-/// Main delay-and-sum beamforming kernel
-@compute @workgroup_size(8, 8, 8)
-fn delay_and_sum_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+fn delay_and_sum_kernel(global_id: vec3<u32>) {
     let voxel_x = global_id.x;
     let voxel_y = global_id.y;
     let voxel_z = global_id.z;
@@ -264,12 +262,18 @@ fn delay_and_sum_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 }
 
+/// Main delay-and-sum beamforming kernel
+@compute @workgroup_size(8, 8, 8)
+fn delay_and_sum_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    delay_and_sum_kernel(global_id);
+}
+
 /// Optimized kernel for sub-volume processing
 @compute @workgroup_size(8, 8, 8)
 fn delay_and_sum_subvolume_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     // Similar to main kernel but processes only a sub-volume
     // Implementation would be optimized for smaller working sets
-    delay_and_sum_main(global_id);
+    delay_and_sum_kernel(global_id);
 }
 
 /// Kernel for calculating element positions from array geometry

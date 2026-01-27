@@ -141,7 +141,7 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
         let mut rng = rand::thread_rng();
         let mut locations = Vec::with_capacity(n_bubbles);
 
-        let lx = domain_dims.get(0).copied().unwrap_or(0.01);
+        let lx = domain_dims.first().copied().unwrap_or(0.01);
         let ly = domain_dims.get(1).copied().unwrap_or(0.01);
         let lz = domain_dims.get(2).copied().unwrap_or(0.01);
 

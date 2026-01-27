@@ -290,11 +290,11 @@ impl DelayAndSumPAM {
             let delay_idx = delay.round() as isize;
             let weight = apodization[sensor_idx];
 
-            for t in 0..window_size {
+            for (t, value) in summed_signal.iter_mut().enumerate().take(window_size) {
                 let sample_idx = (t as isize + delay_idx) as usize;
 
                 if sample_idx < num_samples {
-                    summed_signal[t] += weight * passive_data[[sensor_idx, sample_idx]];
+                    *value += weight * passive_data[[sensor_idx, sample_idx]];
                 }
             }
         }

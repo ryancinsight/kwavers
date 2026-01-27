@@ -267,7 +267,8 @@ fn main() -> KwaversResult<()> {
         println!("   Test points: {}", x_test.len());
 
         // Create trainer
-        let trainer = BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config.clone(), geometry, &device)?;
+        let trainer =
+            BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config.clone(), geometry, &device)?;
         println!("✅ PINN Trainer: Created successfully");
         println!();
 

@@ -308,9 +308,12 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                         (config.grid_size.1 - 1) as f64 * config.dx,
                     );
 
-                    let mut trainer =
-                        BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config.clone(), geometry, &device)
-                            .expect("PINN trainer creation failed");
+                    let mut trainer = BurnPINN2DTrainer::<Backend>::new_trainer(
+                        pinn_config.clone(),
+                        geometry,
+                        &device,
+                    )
+                    .expect("PINN trainer creation failed");
 
                     // Generate training data
                     let (x_data, y_data, t_data, u_data) =

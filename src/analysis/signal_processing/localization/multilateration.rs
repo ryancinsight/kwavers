@@ -513,8 +513,9 @@ impl Multilateration {
 
             for i in (k + 1)..3 {
                 let factor = aug[i][k] / aug[k][k];
-                for j in k..4 {
-                    aug[i][j] -= factor * aug[k][j];
+                let row_k = aug[k];
+                for (j, value) in aug[i].iter_mut().enumerate().skip(k) {
+                    *value -= factor * row_k[j];
                 }
             }
         }

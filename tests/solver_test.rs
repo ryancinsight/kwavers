@@ -4,10 +4,10 @@ use kwavers::domain::boundary::{PMLBoundary, PMLConfig};
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::domain::source::Source;
-use kwavers::PluginManager;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers::solver::pstd::config::BoundaryConfig;
 use kwavers::solver::pstd::{PSTDConfig, PSTDPlugin};
+use kwavers::PluginManager;
 use ndarray::{s, Array4, Zip};
 
 // Named constants for test configuration

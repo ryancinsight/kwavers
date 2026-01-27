@@ -118,8 +118,17 @@ impl ModelRegistry {
             }
 
             // Check user ownership
-            if let Some(user_model_ids) = user_models.get(user_id) {
-                if !user_model_ids.contains(&model_id.to_string()) {
+            match user_models.get(user_id) {
+                Some(user_model_ids) => {
+                    if !user_model_ids.iter().any(|id| id == model_id) {
+                        return Err(APIError {
+                            error: APIErrorType::AuthorizationFailed,
+                            message: "Not authorized to delete this model".to_string(),
+                            details: None,
+                        });
+                    }
+                }
+                None => {
                     return Err(APIError {
                         error: APIErrorType::AuthorizationFailed,
                         message: "Not authorized to delete this model".to_string(),

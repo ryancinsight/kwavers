@@ -178,8 +178,8 @@ mod tests {
     use super::*;
     use axum::body::Body;
     use axum::http::Request;
-    use tower::util::ServiceExt;
     use tokio::sync::mpsc;
+    use tower::util::ServiceExt;
 
     #[derive(Debug)]
     struct TestTrainingExecutor;

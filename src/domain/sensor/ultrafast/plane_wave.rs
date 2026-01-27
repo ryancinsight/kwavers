@@ -94,9 +94,10 @@ impl PlaneWave {
     ///
     /// Uses 11 tilted plane waves from -10° to +10° (2° steps) as in Nouhoum et al. (2021).
     pub fn functional_ultrasound(element_positions: Vec<f64>) -> Self {
-        let mut config = PlaneWaveConfig::default();
-        config.element_positions = element_positions;
-        Self::new(config)
+        Self::new(PlaneWaveConfig {
+            element_positions,
+            ..PlaneWaveConfig::default()
+        })
     }
 
     /// Compute plane wave transmission delays for array elements

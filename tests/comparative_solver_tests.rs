@@ -23,16 +23,14 @@
 //! Tracks execution time and memory usage for each method to identify
 //! performance regressions and optimization opportunities.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers::core::error::KwaversResult;
 use kwavers::domain::grid::Grid;
-use kwavers::domain::medium::{CoreMedium, HomogeneousMedium, Medium};
-use kwavers::domain::source::{GridSource, Source};
-use kwavers::math::numerics::operators::CentralDifference2;
+use kwavers::domain::medium::HomogeneousMedium;
+use kwavers::domain::source::GridSource;
 use kwavers::solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers::solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers::solver::interface::solver::Solver;
-use ndarray::{Array3, ArrayView3, Zip};
+use ndarray::{Array3, Zip};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 

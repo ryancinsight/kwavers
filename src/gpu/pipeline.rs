@@ -315,7 +315,6 @@ impl RealtimeImagingPipeline {
         Ok(envelope)
     }
 
-
     /// Log compression
     fn log_compression(&self, envelope: &Array3<f32>) -> KwaversResult<Array3<f32>> {
         let mut compressed = Array3::zeros(envelope.dim());

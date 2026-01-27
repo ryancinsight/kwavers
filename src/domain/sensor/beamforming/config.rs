@@ -46,4 +46,3 @@ impl Default for BeamformingCoreConfig {
 
 /// Backward-compatible alias for the unified core configuration.
 pub type BeamformingConfig = BeamformingCoreConfig;
-

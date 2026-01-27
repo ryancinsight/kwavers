@@ -24,9 +24,9 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::physics::cavitation_control::{ControlStrategy, FeedbackConfig, FeedbackController};
 use crate::physics::chemistry::ChemicalModel;
-use crate::physics::transcranial::TranscranialAberrationCorrection;
 #[cfg(feature = "nifti")]
 use crate::physics::skull::CTBasedSkullModel;
+use crate::physics::transcranial::TranscranialAberrationCorrection;
 use crate::simulation::imaging::ceus::ContrastEnhancedUltrasound;
 use ndarray::Array3;
 
@@ -330,7 +330,10 @@ fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f
                         let metadata = ct_model.metadata();
                         eprintln!(
                             "Loaded CT scan: {} voxels, {:.2}mm spacing, HU range [{:.0}, {:.0}]",
-                            format!("{}×{}×{}", metadata.dimensions.0, metadata.dimensions.1, metadata.dimensions.2),
+                            format_args!(
+                                "{}×{}×{}",
+                                metadata.dimensions.0, metadata.dimensions.1, metadata.dimensions.2
+                            ),
                             metadata.voxel_spacing_mm.0,
                             metadata.hu_range.0,
                             metadata.hu_range.1
@@ -338,7 +341,10 @@ fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f
                         return Ok(ct_model.ct_data().clone());
                     }
                     Err(e) => {
-                        eprintln!("Warning: Failed to load NIFTI CT data: {}. Using synthetic fallback.", e);
+                        eprintln!(
+                            "Warning: Failed to load NIFTI CT data: {}. Using synthetic fallback.",
+                            e
+                        );
                     }
                 }
             }
@@ -349,7 +355,10 @@ fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f
             }
         } else if ct_path.ends_with(".dcm") {
             // DICOM loading - future implementation
-            eprintln!("Warning: DICOM loading not yet implemented for {}. Using synthetic fallback.", ct_path);
+            eprintln!(
+                "Warning: DICOM loading not yet implemented for {}. Using synthetic fallback.",
+                ct_path
+            );
         }
     }
 

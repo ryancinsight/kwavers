@@ -240,9 +240,9 @@
 //! - [ ] Robust Capon beamforming for coherent cavitation noise suppression
 //! - [ ] MUSIC algorithm for super-resolution bubble detection
 //! - [ ] Subharmonic and ultraharmonic filtering for contrast agent differentiation
-//! MISSING: Real-time PAM with GPU acceleration for clinical feedback
-//! MISSING: PAM calibration using known cavitation sources (hydrophone validation)
-//! `domain::sensor::passive_acoustic_mapping` in Phase 2 execution:
+//! - MISSING: Real-time PAM with GPU acceleration for clinical feedback
+//! - MISSING: PAM calibration using known cavitation sources (hydrophone validation)
+//! - `domain::sensor::passive_acoustic_mapping` in Phase 2 execution:
 //!
 //! - [ ] Define `PassiveAcousticMapper` trait
 //! - [ ] Implement delay-and-sum PAM
@@ -513,10 +513,9 @@ impl PAMProcessor {
             let harmonic_idx = fundamental_idx * harmonic;
             if harmonic_idx < spectrum.len() {
                 let harmonic_power = spectrum[harmonic_idx];
-                if harmonic_power > self.config.threshold * 0.5 {
-                    if harmonic - 2 < output.shape()[2] {
-                        output[[ix, iy, harmonic - 2]] += harmonic_power;
-                    }
+                if harmonic_power > self.config.threshold * 0.5 && harmonic - 2 < output.shape()[2]
+                {
+                    output[[ix, iy, harmonic - 2]] += harmonic_power;
                 }
             }
         }

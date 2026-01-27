@@ -315,7 +315,7 @@ impl DICOMService {
                         i.metadata
                             .get("SOPInstanceUID")
                             .and_then(|v| v.as_string())
-                            .map_or(false, |uid| uid == instance_uid)
+                            .is_some_and(|uid| uid == instance_uid)
                     })
                     .cloned();
                 return Ok(instance);
@@ -1076,7 +1076,8 @@ mod tests {
     #[test]
     fn test_dicom_caching_behavior() {
         // Setup temp dir and files
-        let temp_dir = std::env::temp_dir().join(format!("kwavers_dicom_test_{}", uuid::Uuid::new_v4()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("kwavers_dicom_test_{}", uuid::Uuid::new_v4()));
         let study_uid = "study1";
         let study_path = temp_dir.join(study_uid);
         std::fs::create_dir_all(&study_path).unwrap();
@@ -1104,7 +1105,10 @@ mod tests {
         let study2 = service.read_study(study_uid).unwrap().unwrap();
 
         // Check if they are same Arc
-        assert!(std::sync::Arc::ptr_eq(&study1, &study2), "Cache should return the same Arc");
+        assert!(
+            std::sync::Arc::ptr_eq(&study1, &study2),
+            "Cache should return the same Arc"
+        );
 
         // Cleanup
         std::fs::remove_dir_all(temp_dir).unwrap();

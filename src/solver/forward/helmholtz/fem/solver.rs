@@ -21,8 +21,8 @@
 //! Provides high-fidelity solutions for complex geometries where Born series
 //! approximations fail.
 
-use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use super::assembly::FemAssembly;
+use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use crate::domain::boundary::FemBoundaryManager;
 use crate::domain::medium::Medium;
 use crate::domain::mesh::TetrahedralMesh;
@@ -200,6 +200,24 @@ impl FemHelmholtzSolver {
 
     /// Assemble global system matrices
     pub fn assemble_system<M: Medium>(&mut self, _medium: &M) -> KwaversResult<()> {
+        if self.mesh.elements.is_empty() {
+            let num_nodes = self.mesh.nodes.len();
+            let mut k_global = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
+            let mut m_global = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
+            let mut rhs_global = Array1::<Complex64>::zeros(num_nodes);
+
+            self.boundary_manager.apply_all(
+                &mut k_global,
+                &mut m_global,
+                &mut rhs_global,
+                self.config.wavenumber,
+            )?;
+
+            self.system_matrix = k_global;
+            self.rhs = rhs_global;
+            return Ok(());
+        }
+
         let (stiffness_vec, mass_vec, rhs_vec) = self.compute_element_matrices()?;
 
         let assembler = FemAssembly::new();
@@ -218,7 +236,7 @@ impl FemHelmholtzSolver {
         let k_sq = Complex64::from(self.config.wavenumber.powi(2));
 
         if k_global.values.len() != m_global.values.len() {
-             return Err(KwaversError::Numerical(NumericalError::Instability {
+            return Err(KwaversError::Numerical(NumericalError::Instability {
                 operation: "matrix_combination".to_string(),
                 condition: 0.0,
             }));
@@ -390,8 +408,8 @@ impl Default for FemHelmholtzConfig {
 mod tests {
     use super::*;
     use crate::domain::mesh::BoundaryType;
-    use ndarray::arr2;
     use approx::assert_relative_eq;
+    use ndarray::arr2;
 
     #[test]
     fn test_assembly_one_element() {
@@ -401,7 +419,8 @@ mod tests {
         let n1 = mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
         let n2 = mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior);
         let n3 = mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior);
-        mesh.add_element([n0, n1, n2, n3], 0).expect("Failed to add element");
+        mesh.add_element([n0, n1, n2, n3], 0)
+            .expect("Failed to add element");
 
         // 2. Config with k=0 (Laplace) to simplify check
         let mut config = FemHelmholtzConfig::default();
@@ -451,7 +470,8 @@ mod tests {
         let n3 = mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior); // Z
 
         // Add element
-        mesh.add_element([n0, n1, n2, n3], 0).expect("Failed to add element");
+        mesh.add_element([n0, n1, n2, n3], 0)
+            .expect("Failed to add element");
 
         // 2. Initialize Solver
         let config = FemHelmholtzConfig::default();
@@ -477,13 +497,10 @@ mod tests {
         // t = 1 - u - v - w = 0.25
         // Val = t*0 + u*1 + v*2 + w*3 = 0.25*6 = 1.5
 
-        let query_points = arr2(&[
-            [0.25, 0.25, 0.25],
-            [1.0, 0.0, 0.0],
-            [2.0, 2.0, 2.0],
-        ]);
+        let query_points = arr2(&[[0.25, 0.25, 0.25], [1.0, 0.0, 0.0], [2.0, 2.0, 2.0]]);
 
-        let result = solver.interpolate_solution(query_points.view())
+        let result = solver
+            .interpolate_solution(query_points.view())
             .expect("Interpolation failed");
 
         assert_eq!(result.len(), 3);
@@ -509,7 +526,8 @@ mod tests {
         let n2 = mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior); // Y
         let n3 = mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior); // Z
 
-        mesh.add_element([n0, n1, n2, n3], 0).expect("Failed to add element");
+        mesh.add_element([n0, n1, n2, n3], 0)
+            .expect("Failed to add element");
 
         // 2. Setup Solver (Laplace)
         let mut config = FemHelmholtzConfig::default();

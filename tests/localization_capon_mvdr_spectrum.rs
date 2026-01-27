@@ -30,11 +30,13 @@
 //! exercises the “advanced default” behavior by leaving snapshot selection as `None`, allowing the
 //! SSOT scorer to select a robust windowed snapshot method deterministically.
 
+use kwavers::analysis::signal_processing::beamforming::covariance::{
+    CovarianceEstimator, CovariancePostProcess,
+};
 use kwavers::analysis::signal_processing::beamforming::narrowband::capon::{
     capon_spatial_spectrum_point_complex_baseband, CaponSpectrumConfig,
 };
-use kwavers::domain::sensor::beamforming::covariance::CovariancePostProcess;
-use kwavers::domain::sensor::beamforming::{CovarianceEstimator, SteeringVectorMethod};
+use kwavers::analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
 use kwavers::domain::sensor::localization::Position;
 use ndarray::Array3;
 

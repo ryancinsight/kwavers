@@ -576,12 +576,13 @@ impl MultiModalFusion {
             // M-Step: Update variances
             // var_i = mean((data_i - fused)^2)
             for ctx in &mut contexts {
-                let sum_sq_error: f64 = Zip::from(&ctx.data)
-                    .and(&fused_intensity)
-                    .fold(0.0, |acc, &val, &mean| {
-                        let diff = val - mean;
-                        acc + diff * diff
-                    });
+                let sum_sq_error: f64 =
+                    Zip::from(&ctx.data)
+                        .and(&fused_intensity)
+                        .fold(0.0, |acc, &val, &mean| {
+                            let diff = val - mean;
+                            acc + diff * diff
+                        });
                 ctx.variance = (sum_sq_error / num_voxels).max(MIN_VARIANCE);
             }
         }

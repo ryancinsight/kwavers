@@ -58,7 +58,6 @@ use kwavers::solver::forward::elastic::{
 use ndarray::Array3;
 use std::default::Default;
 use std::println;
-use std::result::Result::{Err, Ok};
 use std::vec::Vec;
 
 /// Test analytical validation for homogeneous medium

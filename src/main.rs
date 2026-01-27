@@ -1,4 +1,3 @@
-
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::source::GridSource;

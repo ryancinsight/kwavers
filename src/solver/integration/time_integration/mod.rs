@@ -168,10 +168,8 @@ impl MultiRateTimeIntegrator {
                     constraint_map.insert("max_wave_speed".to_string(), max_wave_speed);
                 }
                 if let Some(diffusion_coefficient) = constraints.diffusion_coefficient {
-                    constraint_map.insert(
-                        "diffusion_coefficient".to_string(),
-                        diffusion_coefficient,
-                    );
+                    constraint_map
+                        .insert("diffusion_coefficient".to_string(), diffusion_coefficient);
                 }
 
                 // Compute CFL-limited time step

@@ -1,9 +1,9 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use kwavers::solver::inverse::reconstruction::photoacoustic::{
-    PhotoacousticConfig, PhotoacousticAlgorithm, PhotoacousticReconstructor, IterativeAlgorithm
-};
-use kwavers::solver::reconstruction::{Reconstructor, ReconstructionConfig};
 use kwavers::domain::grid::Grid;
+use kwavers::solver::inverse::reconstruction::photoacoustic::{
+    IterativeAlgorithm, PhotoacousticAlgorithm, PhotoacousticConfig, PhotoacousticReconstructor,
+};
+use kwavers::solver::reconstruction::{ReconstructionConfig, Reconstructor};
 use ndarray::Array2;
 
 fn art_reconstruction_benchmark(c: &mut Criterion) {
@@ -12,7 +12,9 @@ fn art_reconstruction_benchmark(c: &mut Criterion) {
 
     // Create random sensor data
     let sensor_data = Array2::zeros((n_sensors, 100)); // 100 samples
-    let sensor_positions: Vec<[f64; 3]> = (0..n_sensors).map(|i| [i as f64 * 0.001, 0.0, 0.0]).collect();
+    let sensor_positions: Vec<[f64; 3]> = (0..n_sensors)
+        .map(|i| [i as f64 * 0.001, 0.0, 0.0])
+        .collect();
 
     // Create ART config
     let config = PhotoacousticConfig {
@@ -35,14 +37,7 @@ fn art_reconstruction_benchmark(c: &mut Criterion) {
     let recon_config = ReconstructionConfig::default();
 
     c.bench_function("art_reconstruction", |b| {
-        b.iter(|| {
-            reconstructor.reconstruct(
-                &sensor_data,
-                &sensor_positions,
-                &grid,
-                &recon_config,
-            )
-        })
+        b.iter(|| reconstructor.reconstruct(&sensor_data, &sensor_positions, &grid, &recon_config))
     });
 }
 

@@ -336,8 +336,8 @@ impl ErrorEstimator {
                     let count = 27.0;
 
                     let old_val = curr_plane[[j, k]];
-                    field[[i, j, k]] = (1.0 - self.smoothing) * old_val
-                        + self.smoothing * (sum / count);
+                    field[[i, j, k]] =
+                        (1.0 - self.smoothing) * old_val + self.smoothing * (sum / count);
                 }
             }
 

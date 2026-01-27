@@ -72,21 +72,6 @@ impl Default for SimdConfig {
 impl SimdConfig {
     /// Detect available SIMD capabilities
     pub fn detect() -> Self {
-        // Check for portable SIMD first (nightly feature)
-        #[cfg(feature = "nightly")]
-        {
-            // Use f32x4 as a representative SIMD type
-            use std::simd::f32x4;
-            if f32x4::LEN > 1 {
-                return Self {
-                    level: SimdLevel::Portable,
-                    vector_width: f32x4::LEN,
-                    alignment: std::mem::align_of::<f32x4>(),
-                    enabled: true,
-                };
-            }
-        }
-
         // Check for x86 SIMD features
         #[cfg(target_arch = "x86_64")]
         {

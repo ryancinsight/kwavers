@@ -289,25 +289,36 @@ fn test_heterogeneous_skull_integration() {
     // Brain: ρ=1000, c=1500 → Z = 1.5e6
     // Skull (800 HU): ρ=1720, c=2850 → Z ≈ 4.9e6 (factor of 3.3x)
     assert_eq!(c_brain, 1500.0, "Brain should have water-like sound speed");
-    assert!(c_outer > 2800.0, "Outer skull should have bone-like sound speed: got {}", c_outer);
-    assert!(c_inner > 2800.0, "Inner skull should have bone-like sound speed: got {}", c_inner);
+    assert!(
+        c_outer > 2800.0,
+        "Outer skull should have bone-like sound speed: got {}",
+        c_outer
+    );
+    assert!(
+        c_inner > 2800.0,
+        "Inner skull should have bone-like sound speed: got {}",
+        c_inner
+    );
 
     assert!(
         z_outer > z_brain * 2.5,
         "Outer skull impedance ({:.2e}) should be much higher than brain ({:.2e})",
-        z_outer, z_brain
+        z_outer,
+        z_brain
     );
     assert!(
         z_inner > z_brain * 2.5,
         "Inner skull impedance ({:.2e}) should be much higher than brain ({:.2e})",
-        z_inner, z_brain
+        z_inner,
+        z_brain
     );
 
     // Impedance should vary across skull thickness due to HU gradient (800 → 1800 HU)
     assert!(
         (z_outer - z_inner).abs() > 5e4,
         "Impedance should vary across skull thickness: outer={:.2e}, inner={:.2e}",
-        z_outer, z_inner
+        z_outer,
+        z_inner
     );
 }
 

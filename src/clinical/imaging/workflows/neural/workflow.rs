@@ -24,11 +24,11 @@
 use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
-use crate::core::error::KwaversResult;
+use super::types::AIBeamformingResult;
 #[cfg(feature = "pinn")]
 use super::AIEnhancedBeamformingProcessor;
 #[cfg(feature = "pinn")]
-use super::types::AIBeamformingResult;
+use crate::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use ndarray::ArrayView4;
 

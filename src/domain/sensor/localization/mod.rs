@@ -216,10 +216,7 @@ impl LocalizationProcessor {
             .map(|p| p.to_array())
             .collect();
 
-        let beamformer = BeamformingProcessor::new(
-            search_cfg.core.clone(),
-            sensor_positions,
-        );
+        let beamformer = BeamformingProcessor::new(search_cfg.core.clone(), sensor_positions);
 
         let search = crate::domain::sensor::localization::beamforming_search::BeamformSearch::new(
             beamformer, search_cfg,

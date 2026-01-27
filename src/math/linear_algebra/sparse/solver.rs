@@ -120,6 +120,10 @@ impl IterativeSolver {
 
         let mut r = b.to_owned() - a.multiply_vector(x.view())?;
         let r0 = r.clone();
+        let initial_residual = r.dot(&r).sqrt();
+        if initial_residual < self.config.tolerance {
+            return Ok(x);
+        }
 
         let mut rho = 1.0;
         let mut alpha = 1.0;
@@ -195,10 +199,17 @@ impl IterativeSolver {
         x0: Option<ArrayView1<Complex64>>,
     ) -> KwaversResult<Array1<Complex64>> {
         let n = a.rows;
-        let mut x = x0.map_or_else(|| Array1::from_elem(n, Complex64::default()), |v| v.to_owned());
+        let mut x = x0.map_or_else(
+            || Array1::from_elem(n, Complex64::default()),
+            |v| v.to_owned(),
+        );
 
         let mut r = b.to_owned() - a.multiply_vector(x.view())?;
         let r0 = r.clone();
+        let initial_residual = r.iter().map(|c| c.norm_sqr()).sum::<f64>().sqrt();
+        if initial_residual < self.config.tolerance {
+            return Ok(x);
+        }
 
         let mut rho = Complex64::new(1.0, 0.0);
         let mut alpha = Complex64::new(1.0, 0.0);
@@ -210,11 +221,22 @@ impl IterativeSolver {
         for iteration in 0..self.config.max_iterations {
             let rho_prev = rho;
             // Conjugated dot product (r0^H * r) for BiCG orthogonality
-            rho = r0.iter().zip(r.iter()).map(|(a, b)| a.conj() * b).sum::<Complex64>();
+            rho = r0
+                .iter()
+                .zip(r.iter())
+                .map(|(a, b)| a.conj() * b)
+                .sum::<Complex64>();
 
             if rho.norm() < 1e-14 {
+                let residual_norm = r.iter().map(|c| c.norm_sqr()).sum::<f64>().sqrt();
+                if residual_norm < self.config.tolerance {
+                    return Ok(x);
+                }
                 if self.config.verbose {
-                    log::info!("BiCGSTAB (Complex) converged/breakdown in {} iterations", iteration);
+                    log::info!(
+                        "BiCGSTAB (Complex) breakdown in {} iterations",
+                        iteration
+                    );
                 }
                 break;
             }
@@ -225,12 +247,16 @@ impl IterativeSolver {
             v = a.multiply_vector(p.view())?;
 
             // Conjugated dot product (r0^H * v)
-            let r0_v = r0.iter().zip(v.iter()).map(|(a, b)| a.conj() * b).sum::<Complex64>();
+            let r0_v = r0
+                .iter()
+                .zip(v.iter())
+                .map(|(a, b)| a.conj() * b)
+                .sum::<Complex64>();
             if r0_v.norm() < 1e-14 {
-                 // Prevent division by zero
-                 alpha = Complex64::new(1.0, 0.0);
+                // Prevent division by zero
+                alpha = Complex64::new(1.0, 0.0);
             } else {
-                 alpha = rho / r0_v;
+                alpha = rho / r0_v;
             }
 
             let s = &r - alpha * &v;
@@ -245,7 +271,11 @@ impl IterativeSolver {
 
             // Minimize residual norm: omega = (t, s) / (t, t) with conjugate inner product
             let t_norm_sqr = t.iter().map(|c| c.norm_sqr()).sum::<f64>();
-            let t_s_dot = t.iter().zip(s.iter()).map(|(ti, si)| ti.conj() * si).sum::<Complex64>();
+            let t_s_dot = t
+                .iter()
+                .zip(s.iter())
+                .map(|(ti, si)| ti.conj() * si)
+                .sum::<Complex64>();
 
             if t_norm_sqr < 1e-14 {
                 omega = Complex64::new(0.0, 0.0);

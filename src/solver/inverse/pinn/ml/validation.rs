@@ -11,9 +11,9 @@
 //! - Maximum Pointwise Error
 //! - Correlation Coefficient
 
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::burn_wave_equation_1d::BurnPINN1DWave;
 use crate::solver::inverse::pinn::ml::fdtd_reference::{FDTD1DWaveSolver, FDTDConfig};
-use crate::core::error::{KwaversError, KwaversResult};
 use burn::tensor::backend::AutodiffBackend;
 use ndarray::{Array1, Array2};
 
@@ -295,8 +295,8 @@ fn compute_mean_relative_error(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use burn::backend::{Autodiff, NdArray};
     use crate::solver::inverse::pinn::ml::BurnPINNConfig;
+    use burn::backend::{Autodiff, NdArray};
 
     #[test]
     fn test_compute_validation_metrics() {

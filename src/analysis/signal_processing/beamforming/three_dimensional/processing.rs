@@ -8,6 +8,8 @@ use ndarray::{Array3, Array4};
 
 use super::config::{ApodizationWindow, BeamformingAlgorithm3D};
 use super::processor::BeamformingProcessor3D;
+#[cfg(feature = "gpu")]
+use super::SaftProcessor;
 
 #[allow(dead_code)] // Methods used only with GPU feature enabled
 impl BeamformingProcessor3D {
@@ -52,8 +54,8 @@ impl BeamformingProcessor3D {
             } => self.process_mvdr_3d(rf_data, *diagonal_loading as f32, *subarray_size)?,
             BeamformingAlgorithm3D::SAFT3D { .. } => {
                 // Create SAFT processor and perform reconstruction
-                let saft_processor = saft::SaftProcessor::from_algorithm(algorithm, self.config)?;
-                saft_processor.reconstruct_volume(rf_data)
+                let saft_processor = SaftProcessor::from_algorithm(algorithm, self.config.clone())?;
+                saft_processor.reconstruct_volume(rf_data)?
             }
         };
 
@@ -252,13 +254,13 @@ impl BeamformingProcessor3D {
         diagonal_loading: f32,
         subarray_size: [usize; 3],
     ) -> KwaversResult<Array3<f32>> {
-        // Create MVDR processor and perform reconstruction
-        let algorithm = BeamformingAlgorithm3D::MVDR3D {
-            diagonal_loading,
-            subarray_size,
-        };
-        let mvdr_processor = mvdr::MvdrProcessor::from_algorithm(&algorithm, self.config)?;
-        mvdr_processor.reconstruct_volume(rf_data)
+        let _ = (rf_data, diagonal_loading, subarray_size);
+        Err(KwaversError::System(
+            crate::core::error::SystemError::FeatureNotAvailable {
+                feature: "mvdr-3d".to_string(),
+                reason: "MVDR 3D reconstruction is not implemented".to_string(),
+            },
+        ))
     }
 }
 

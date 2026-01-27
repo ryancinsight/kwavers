@@ -1,10 +1,10 @@
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::burn_wave_equation_1d::{
     BurnPINNConfig, BurnPINNTrainer, BurnTrainingMetrics,
 };
 use crate::solver::inverse::pinn::ml::burn_wave_equation_2d::{
     BoundaryCondition2D, BurnPINN2DConfig, BurnPINN2DTrainer, BurnTrainingMetrics2D, Geometry2D,
 };
-use crate::core::error::{KwaversError, KwaversResult};
 use burn::backend::{Autodiff, NdArray};
 use ndarray::{Array1, Array2};
 use std::collections::HashMap;

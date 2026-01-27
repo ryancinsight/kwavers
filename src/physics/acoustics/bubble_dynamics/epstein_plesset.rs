@@ -306,7 +306,8 @@ impl EpsteinPlessetStabilitySolver {
         let q_factor_reasonable = analysis.quality_factor > 1.0 && analysis.quality_factor < 1000.0;
 
         // Test 3: Stability parameter should be positive for typical bubbles
-        let stability_reasonable = analysis.stability_parameter > -1e6 && analysis.stability_parameter < 1e12;
+        let stability_reasonable =
+            analysis.stability_parameter > -1e6 && analysis.stability_parameter < 1e12;
 
         Ok(ValidationResults {
             resonance_frequency_error: freq_error,
@@ -339,12 +340,12 @@ mod tests {
     fn test_epstein_plesset_stability_analysis() {
         // Standard air bubble parameters
         let params = BubbleParameters {
-            r0: 1e-3, // 1 mm bubble
-            p0: 101325.0, // 1 atm
+            r0: 1e-3,           // 1 mm bubble
+            p0: 101325.0,       // 1 atm
             rho_liquid: 1000.0, // water
-            sigma: 0.072, // water-air surface tension
-            mu_liquid: 0.001, // water viscosity
-            gamma: 1.4, // air
+            sigma: 0.072,       // water-air surface tension
+            mu_liquid: 0.001,   // water viscosity
+            gamma: 1.4,         // air
             ..Default::default()
         };
 
@@ -396,7 +397,12 @@ mod tests {
         let evolution = solver.predict_amplitude_evolution(1e-6); // 1 μm initial amplitude
 
         match evolution {
-            AmplitudeEvolution::Decaying { initial_amplitude, final_amplitude, decay_rate, time_constant } => {
+            AmplitudeEvolution::Decaying {
+                initial_amplitude,
+                final_amplitude,
+                decay_rate,
+                time_constant,
+            } => {
                 assert_eq!(initial_amplitude, 1e-6);
                 assert!(final_amplitude < initial_amplitude); // Should decay
                 assert!(decay_rate > 0.0); // Positive decay rate
@@ -448,8 +454,8 @@ mod tests {
         let analysis = solver.analyze_stability();
 
         // Minnaert frequency calculation
-        let minnaert_freq = (1.0 / (2.0 * std::f64::consts::PI * r0))
-            * ((3.0 * gamma * p0) / rho).sqrt();
+        let minnaert_freq =
+            (1.0 / (2.0 * std::f64::consts::PI * r0)) * ((3.0 * gamma * p0) / rho).sqrt();
 
         // Should match exactly
         assert_relative_eq!(analysis.resonance_frequency, minnaert_freq, epsilon = 1e-10);

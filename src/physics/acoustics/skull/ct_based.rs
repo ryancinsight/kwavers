@@ -9,7 +9,7 @@ use crate::physics::skull::HeterogeneousSkull;
 use ndarray::Array3;
 
 #[cfg(feature = "nifti")]
-use nifti::{NiftiObject, NiftiVolume, ReaderOptions, InMemNiftiObject, IntoNdArray};
+use nifti::{InMemNiftiObject, IntoNdArray, NiftiObject, NiftiVolume, ReaderOptions};
 
 /// CT-based skull model
 #[derive(Debug)]
@@ -248,7 +248,11 @@ impl CTBasedSkullModel {
 
         // Check dimensions match and convert to 3D array
         let data_shape = raw_data.shape();
-        if data_shape.len() != 3 || data_shape[0] != nx || data_shape[1] != ny || data_shape[2] != nz {
+        if data_shape.len() != 3
+            || data_shape[0] != nx
+            || data_shape[1] != ny
+            || data_shape[2] != nz
+        {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "dimensions".to_string(),
                 value: format!("{:?}", data_shape),
@@ -257,8 +261,11 @@ impl CTBasedSkullModel {
         }
 
         // Convert to Array3<f64>
-        let hounsfield = raw_data.into_dimensionality::<ndarray::Ix3>()
-            .map_err(|e| KwaversError::InvalidInput(format!("Failed to convert to 3D array: {}", e)))?;
+        let hounsfield = raw_data
+            .into_dimensionality::<ndarray::Ix3>()
+            .map_err(|e| {
+                KwaversError::InvalidInput(format!("Failed to convert to 3D array: {}", e))
+            })?;
 
         Ok(hounsfield)
     }
@@ -289,7 +296,10 @@ impl CTBasedSkullModel {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "hounsfield_units".to_string(),
                 value: format!("({:.0}, {:.0})", min_hu, max_hu),
-                constraint: format!("must be within valid CT range ({:.0}, {:.0})", MIN_VALID_HU, MAX_VALID_HU),
+                constraint: format!(
+                    "must be within valid CT range ({:.0}, {:.0})",
+                    MIN_VALID_HU, MAX_VALID_HU
+                ),
             }));
         }
 

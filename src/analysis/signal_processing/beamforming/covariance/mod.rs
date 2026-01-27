@@ -155,7 +155,9 @@ use num_complex::Complex64;
 
 // Re-export CovarianceEstimator and related types from sensor_covariance submodule
 mod sensor_covariance;
-pub use sensor_covariance::{CovarianceEstimator, CovariancePostProcess};
+pub use sensor_covariance::{
+    CovarianceEstimator, CovariancePostProcess, SpatialSmoothing, SpatialSmoothingComplex,
+};
 
 /// Estimate sample covariance matrix from multi-snapshot sensor data.
 ///

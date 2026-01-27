@@ -3,12 +3,12 @@
 //! Note: PSTD currently uses finite differences (not spectral methods) for stability.
 //! These tests verify that both solvers run without crashing and produce output.
 
-use kwavers::physics::mechanics::absorption::AbsorptionMode;
-use kwavers::core::error::KwaversResult;
-use kwavers::{FdtdConfig, FdtdPlugin, Grid, PluginManager, PSTDConfig, PSTDPlugin};
 use kwavers::boundary::{PMLBoundary, PMLConfig};
+use kwavers::core::error::KwaversResult;
 use kwavers::medium::HomogeneousMedium;
+use kwavers::physics::mechanics::absorption::AbsorptionMode;
 use kwavers::solver::pstd::numerics::spectral_correction::CorrectionMethod;
+use kwavers::{FdtdConfig, FdtdPlugin, Grid, PSTDConfig, PSTDPlugin, PluginManager};
 use ndarray::{Array3, Array4};
 
 /// Test that both solvers run without crashing
@@ -108,8 +108,7 @@ fn run_fdtd_simulation_with_time(
     };
 
     let mut plugin_manager = PluginManager::new();
-    plugin_manager
-        .add_plugin(Box::new(FdtdPlugin::new(config, grid)?))?;
+    plugin_manager.add_plugin(Box::new(FdtdPlugin::new(config, grid)?))?;
 
     // Initialize fields - must match UnifiedFieldType::COUNT
     let mut fields = Array4::zeros((17, grid.nx, grid.ny, grid.nz));
@@ -125,8 +124,7 @@ fn run_fdtd_simulation_with_time(
 
     for _step in 0..n_steps {
         let t = _step as f64 * dt;
-        plugin_manager
-            .execute(&mut fields, grid, medium, &sources, &mut boundary, dt, t)?;
+        plugin_manager.execute(&mut fields, grid, medium, &sources, &mut boundary, dt, t)?;
     }
 
     Ok(fields.slice(ndarray::s![0, .., .., ..]).to_owned())
@@ -149,15 +147,13 @@ fn run_pstd_simulation_with_time(
 ) -> KwaversResult<Array3<f64>> {
     let mut config = PSTDConfig::default();
     config.spectral_correction.enabled = true;
-    config.spectral_correction.method =
-        CorrectionMethod::SincSpatial;
+    config.spectral_correction.method = CorrectionMethod::SincSpatial;
     config.anti_aliasing.enabled = true;
     config.absorption_mode = AbsorptionMode::Lossless;
 
     let cfl_factor = 0.3;
     let mut plugin_manager = PluginManager::new();
-    plugin_manager
-        .add_plugin(Box::new(PSTDPlugin::new(config, grid)?))?;
+    plugin_manager.add_plugin(Box::new(PSTDPlugin::new(config, grid)?))?;
 
     // Initialize fields - must match UnifiedFieldType::COUNT
     let mut fields = Array4::zeros((17, grid.nx, grid.ny, grid.nz));
@@ -178,8 +174,7 @@ fn run_pstd_simulation_with_time(
 
     for _step in 0..n_steps {
         let t = _step as f64 * dt;
-        plugin_manager
-            .execute(&mut fields, grid, medium, &sources, &mut boundary, dt, t)?;
+        plugin_manager.execute(&mut fields, grid, medium, &sources, &mut boundary, dt, t)?;
     }
 
     Ok(fields.slice(ndarray::s![0, .., .., ..]).to_owned())

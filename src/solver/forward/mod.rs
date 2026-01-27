@@ -17,6 +17,7 @@ pub mod plugin_based;
 pub mod poroelastic;
 pub mod pstd;
 pub mod sem;
+pub mod thermal;
 pub mod thermal_diffusion;
 
 pub use bem::BemSolver;
@@ -34,3 +35,4 @@ pub use imex::IMEXIntegrator;
 pub use plugin_based::PluginBasedSolver;
 pub use pstd::PSTDSolver;
 pub use sem::SemSolver;
+pub use thermal::PennesSolver;

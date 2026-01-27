@@ -197,7 +197,7 @@ impl AdaptiveFilter {
         for i in 0..n_frames {
             for j in 0..n_frames {
                 // Estimate covariance from available lags
-                let lag = (i as i32 - j as i32).abs() as usize;
+                let lag = (i as i32 - j as i32).unsigned_abs() as usize;
                 let mut sum = 0.0;
                 let mut count = 0;
 

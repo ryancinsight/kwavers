@@ -3,9 +3,9 @@
 //! This module provides optimized runtime execution for quantized PINN models
 //! on resource-constrained edge devices including ARM, RISC-V, and embedded systems.
 
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::quantization::LayerInfo;
 use crate::solver::inverse::pinn::ml::QuantizedModel;
-use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
 /// Edge deployment runtime
@@ -464,57 +464,20 @@ impl EdgeRuntime {
         let weights = weight_tensor.dequantize();
         let biases = bias_tensor.dequantize();
 
-        #[cfg(all(feature = "simd", feature = "nightly"))]
-        {
-            use std::simd::f32x16;
-
-            let chunk_size = 16;
-            for chunk_start in (0..output.len()).step_by(chunk_size) {
-                let chunk_end = (chunk_start + chunk_size).min(output.len());
-                let mut sum_chunk = f32x16::splat(0.0);
-
-                for (j, &input_val) in input.iter().enumerate().take(input_len) {
-                    let mut weight_simd = [0.0f32; 16];
-
-                    for (lane, out_idx) in (chunk_start..chunk_end).enumerate() {
-                        let weight_index = j * layer.output_size + out_idx;
-                        if weight_index < weights.len() {
-                            weight_simd[lane] = weights[weight_index];
-                        }
-                    }
-
-                    let weight_simd_vec = f32x16::from_array(weight_simd);
-                    sum_chunk += weight_simd_vec * f32x16::splat(input_val);
-                }
-
-                let sums = sum_chunk.as_array();
-                for (lane, out_idx) in (chunk_start..chunk_end).enumerate() {
-                    let mut sum = sums[lane];
-                    if out_idx < biases.len() {
-                        sum += biases[out_idx];
-                    }
-                    output[out_idx] = sum.tanh();
+        for out_idx in 0..output.len() {
+            let mut sum = 0.0f32;
+            for (j, &input_val) in input.iter().enumerate().take(input_len) {
+                let weight_index = j * layer.output_size + out_idx;
+                if weight_index < weights.len() {
+                    sum += input_val * weights[weight_index];
                 }
             }
-        }
 
-        #[cfg(not(all(feature = "simd", feature = "nightly")))]
-        {
-            for out_idx in 0..output.len() {
-                let mut sum = 0.0f32;
-                for (j, &input_val) in input.iter().enumerate().take(input_len) {
-                    let weight_index = j * layer.output_size + out_idx;
-                    if weight_index < weights.len() {
-                        sum += input_val * weights[weight_index];
-                    }
-                }
-
-                if out_idx < biases.len() {
-                    sum += biases[out_idx];
-                }
-
-                output[out_idx] = sum.tanh();
+            if out_idx < biases.len() {
+                sum += biases[out_idx];
             }
+
+            output[out_idx] = sum.tanh();
         }
 
         Ok(output)

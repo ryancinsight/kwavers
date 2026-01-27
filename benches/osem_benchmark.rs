@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use kwavers::solver::inverse::reconstruction::photoacoustic::{
-    PhotoacousticConfig, PhotoacousticAlgorithm, PhotoacousticReconstructor, IterativeAlgorithm
+    IterativeAlgorithm, PhotoacousticAlgorithm, PhotoacousticConfig, PhotoacousticReconstructor,
 };
 use ndarray::Array2;
 
@@ -10,7 +10,9 @@ fn osem_reconstruction_benchmark(c: &mut Criterion) {
 
     // Create random sensor data
     let sensor_data = Array2::zeros((n_sensors, 100)); // 100 samples
-    let sensor_positions: Vec<[f64; 3]> = (0..n_sensors).map(|i| [i as f64 * 0.001, 0.0, 0.0]).collect();
+    let sensor_positions: Vec<[f64; 3]> = (0..n_sensors)
+        .map(|i| [i as f64 * 0.001, 0.0, 0.0])
+        .collect();
 
     // Create OSEM config
     let config = PhotoacousticConfig {
@@ -32,11 +34,7 @@ fn osem_reconstruction_benchmark(c: &mut Criterion) {
 
     c.bench_function("osem_reconstruction", |b| {
         b.iter(|| {
-            reconstructor.iterative_reconstruction(
-                sensor_data.view(),
-                &sensor_positions,
-                grid_size
-            )
+            reconstructor.iterative_reconstruction(sensor_data.view(), &sensor_positions, grid_size)
         })
     });
 }

@@ -386,7 +386,12 @@ impl PstdSemCoupler {
         let residual = self.enforce_continuity(&transformed_field, &sem_interface)?;
 
         // 4. Apply conservative projection (SEM → PSTD)
-        self.apply_conservative_projection(pstd_field, sem_field.as_mut_slice(), pstd_grid, sem_mesh)?;
+        self.apply_conservative_projection(
+            pstd_field,
+            sem_field.as_mut_slice(),
+            pstd_grid,
+            sem_mesh,
+        )?;
 
         // 5. Apply stabilization if needed
         if self.config.stabilization_alpha > 0.0 {

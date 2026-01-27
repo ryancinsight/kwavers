@@ -531,11 +531,32 @@ mod tests {
             mu: 2.6e10,
         };
 
+        assert!(params.amplitude > 0.0);
         let k = params.wave_number();
         assert!((k - 2.0 * std::f64::consts::PI / 0.01).abs() < 1e-10);
 
         let cp = params.p_wave_speed();
         let cs = params.s_wave_speed();
         assert!(cp > cs, "P-wave speed must exceed S-wave speed");
+    }
+
+    #[test]
+    fn test_analytical_solution_metadata() {
+        let params = SolutionParameters {
+            amplitude: 1e-6,
+            wavelength: 0.01,
+            omega: 0.0,
+            wave_speed: 5000.0,
+            density: 2700.0,
+            lambda: 5e10,
+            mu: 2.6e10,
+        };
+
+        let wave = analytical_solutions::PlaneWave2D::p_wave(1e-6, 0.01, [1.0, 0.0], params);
+        assert_eq!(wave.displacement_components(), 2);
+        assert!(wave.name().contains("P-wave"));
+
+        let wave_params = wave.parameters();
+        assert!((wave_params.amplitude - 1e-6).abs() < 1e-12);
     }
 }

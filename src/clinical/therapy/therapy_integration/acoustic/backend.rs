@@ -373,10 +373,7 @@ mod tests {
 
         fn get_impedance_field(&self) -> KwaversResult<Array3<f64>> {
             // Return constant impedance for mock backend (1.5 MRayl)
-            Ok(Array3::from_elem(
-                (self.nx, self.ny, self.nz),
-                1.5e6,
-            ))
+            Ok(Array3::from_elem((self.nx, self.ny, self.nz), 1.5e6))
         }
 
         fn get_dt(&self) -> f64 {

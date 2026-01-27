@@ -981,11 +981,7 @@ impl PerformanceBenchmarkSuite {
     /// Required: Angular spectrum method implementation
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #5
     #[allow(dead_code)]
-    fn simulate_angular_spectrum_propagation_disabled(
-        &self,
-        _field: &mut Array3<f32>,
-        _dt: f64,
-    ) {
+    fn simulate_angular_spectrum_propagation_disabled(&self, _field: &mut Array3<f32>, _dt: f64) {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -1007,11 +1003,7 @@ impl PerformanceBenchmarkSuite {
     ///
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #7
     #[allow(dead_code)]
-    fn simulate_displacement_tracking_disabled(
-        &self,
-        _displacement: &Array3<f32>,
-        _step: usize,
-    ) {
+    fn simulate_displacement_tracking_disabled(&self, _displacement: &Array3<f32>, _step: usize) {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -1020,10 +1012,7 @@ impl PerformanceBenchmarkSuite {
     /// Required: Inverse problem solver (time-of-flight, direct inversion, FEM)
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #8
     #[allow(dead_code)]
-    fn simulate_stiffness_estimation_disabled(
-        &self,
-        _displacement: &Array3<f32>,
-    ) -> Array3<f32> {
+    fn simulate_stiffness_estimation_disabled(&self, _displacement: &Array3<f32>) -> Array3<f32> {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -1032,11 +1021,7 @@ impl PerformanceBenchmarkSuite {
     /// Required: Rayleigh-Plesset dynamics, scattering
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #9
     #[allow(dead_code)]
-    fn simulate_microbubble_scattering_disabled(
-        &self,
-        _signal: &mut Array3<f32>,
-        _time: f64,
-    ) {
+    fn simulate_microbubble_scattering_disabled(&self, _signal: &mut Array3<f32>, _time: f64) {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 
@@ -1094,10 +1079,7 @@ impl PerformanceBenchmarkSuite {
     /// Required: Variance/confidence interval calculation
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #15
     #[allow(dead_code)]
-    fn compute_uncertainty_statistics_disabled(
-        &self,
-        _predictions: &[Array3<f32>],
-    ) -> Array3<f32> {
+    fn compute_uncertainty_statistics_disabled(&self, _predictions: &[Array3<f32>]) -> Array3<f32> {
         panic!("Benchmark disabled - see BENCHMARK_STUB_REMEDIATION_PLAN.md");
     }
 

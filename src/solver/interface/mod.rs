@@ -7,9 +7,9 @@
 pub mod progress;
 pub mod solver;
 
-pub use crate::solver::feature::{FeatureManager, SolverFeature};
 pub use self::progress::{
     ConsoleProgressReporter, FieldsSummary, ProgressData, ProgressReporter, ProgressUpdate,
 };
 pub use self::solver::{Solver, SolverStatistics};
 pub use crate::solver::config::SolverConfiguration as SolverConfig;
+pub use crate::solver::feature::{FeatureManager, SolverFeature};

@@ -330,8 +330,8 @@ impl CollocationSampler {
             let point: Vec<f64> = points.row(i).iter().cloned().collect();
             let loc = self.domain.classify_point(&point, tolerance);
 
-            let include =
-                (boundary && loc == PointLocation::Boundary) || (!boundary && loc == PointLocation::Interior);
+            let include = (boundary && loc == PointLocation::Boundary)
+                || (!boundary && loc == PointLocation::Interior);
             if include {
                 valid_points.push(point);
             }

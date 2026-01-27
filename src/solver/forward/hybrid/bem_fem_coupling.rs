@@ -37,14 +37,16 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::mesh::tetrahedral::TetrahedralMesh;
+use crate::math::linear_algebra::sparse::solver::Preconditioner;
+use crate::math::linear_algebra::sparse::{
+    CompressedSparseRowMatrix, CoordinateMatrix, IterativeSolver, SolverConfig,
+};
 use crate::math::numerics::operators::TrilinearInterpolator;
+use crate::solver::forward::bem::solver::{BemConfig, BemSolver};
 use nalgebra::{Matrix3, Vector3};
+use ndarray::Array1;
 use num_complex::{Complex64, ComplexFloat};
 use std::collections::HashMap;
-use crate::math::linear_algebra::sparse::{CoordinateMatrix, IterativeSolver, SolverConfig, CompressedSparseRowMatrix};
-use crate::math::linear_algebra::sparse::solver::Preconditioner;
-use crate::solver::forward::bem::solver::{BemConfig, BemSolver};
-use ndarray::Array1;
 
 /// Configuration for BEM-FEM coupling
 #[derive(Debug, Clone)]
@@ -425,7 +427,10 @@ impl BemFemCoupler {
     }
 
     /// Extract BEM solution at interface
-    fn extract_bem_interface(&self, bem_boundary_values: &[Complex64]) -> KwaversResult<Vec<Complex64>> {
+    fn extract_bem_interface(
+        &self,
+        bem_boundary_values: &[Complex64],
+    ) -> KwaversResult<Vec<Complex64>> {
         let mut interface_values = Vec::new();
 
         for &bem_element_idx in &self.interface.bem_interface_elements {
@@ -494,7 +499,9 @@ impl BemFemCoupler {
         }
 
         // Apply BCs
-        self.bem_solver.boundary_manager().add_dirichlet(dirichlet_bcs);
+        self.bem_solver
+            .boundary_manager()
+            .add_dirichlet(dirichlet_bcs);
 
         // Solve BEM system
         // Note: BemSolver updates its internal matrices if wavenumber changes
@@ -560,17 +567,18 @@ impl BemFemCoupler {
                         let k_val = grads[i].dot(&grads[j]) * volume;
                         let delta = if i == j { 1.0 } else { 0.0 };
                         let m_val = (1.0 + delta) * volume / 20.0;
-                        let val = Complex64::from(k_val) - Complex64::from(wavenumber.powi(2) * m_val);
+                        let val =
+                            Complex64::from(k_val) - Complex64::from(wavenumber.powi(2) * m_val);
                         coo.add_triplet(n_indices[i], n_indices[j], val);
                     }
                 }
             } else {
-                 return Err(crate::core::error::KwaversError::Numerical(
+                return Err(crate::core::error::KwaversError::Numerical(
                     crate::core::error::NumericalError::SingularMatrix {
                         operation: "element_jacobian".to_string(),
                         condition_number: 0.0,
-                    }
-                 ));
+                    },
+                ));
             }
         }
 
@@ -933,13 +941,25 @@ mod tests {
         let wavenumber = 0.0;
 
         // Assemble and Solve
-        let matrix = coupler.assemble_system_matrix(&fem_mesh, wavenumber).unwrap();
-        coupler.solve_linear_system(&matrix, fem_field.as_mut_slice()).unwrap();
+        let matrix = coupler
+            .assemble_system_matrix(&fem_mesh, wavenumber)
+            .unwrap();
+        coupler
+            .solve_linear_system(&matrix, fem_field.as_mut_slice())
+            .unwrap();
 
         // Check result at n3
         let val = fem_field[n3];
-        assert!((val.re - 1.0).abs() < 1e-4, "Expected real part 1.0, got {}", val.re);
-        assert!(val.im.abs() < 1e-4, "Expected imag part 0.0, got {}", val.im);
+        assert!(
+            (val.re - 1.0).abs() < 1e-4,
+            "Expected real part 1.0, got {}",
+            val.re
+        );
+        assert!(
+            val.im.abs() < 1e-4,
+            "Expected imag part 0.0, got {}",
+            val.im
+        );
     }
 
     #[test]
@@ -975,16 +995,16 @@ mod tests {
             &mut fem_field,
             &mut bem_boundary_values,
             &fem_mesh,
-            wavenumber
+            wavenumber,
         );
 
         match result {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 match e {
                     crate::core::error::KwaversError::Numerical(_) => {
                         // Accept numerical error from BEM solver as sign of connectivity
-                    },
+                    }
                     _ => panic!("Unexpected error type: {:?}", e),
                 }
             }

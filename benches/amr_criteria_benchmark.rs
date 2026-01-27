@@ -22,9 +22,7 @@ fn gradient_error_benchmark(c: &mut Criterion) {
     let estimator = ErrorEstimator::new();
 
     group.bench_function("gradient_error_64", |b| {
-        b.iter(|| {
-            estimator.estimate_error(&field).unwrap()
-        });
+        b.iter(|| estimator.estimate_error(&field).unwrap());
     });
 
     group.finish();

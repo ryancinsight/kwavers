@@ -9,13 +9,11 @@
 //! - ter Haar & Coussios (2007) "High intensity focused ultrasound"
 
 pub mod diffusion;
-pub mod pennes;
 pub mod perfusion;
 pub mod properties;
 pub mod thermal_dose;
 
 pub use diffusion::ThermalDiffusionConfig;
-pub use pennes::PennesSolver;
 pub use thermal_dose::ThermalDose;
 
 // Re-export canonical domain type

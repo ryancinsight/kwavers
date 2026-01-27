@@ -81,7 +81,6 @@ impl BemSolver {
     /// # Arguments
     /// * `config` - Solver configuration
     /// * `mesh` - Tetrahedral mesh from which to extract boundary
-    #[must_use]
     pub fn new(config: BemConfig, mesh: &TetrahedralMesh) -> KwaversResult<Self> {
         // Extract boundary faces
         let mut nodes = Vec::new();
@@ -119,19 +118,19 @@ impl BemSolver {
             let p2 = mesh.nodes[face_nodes[2]].coordinates;
             let p_in = mesh.nodes[interior_node].coordinates;
 
-            let v1 = [p1[0]-p0[0], p1[1]-p0[1], p1[2]-p0[2]];
-            let v2 = [p2[0]-p0[0], p2[1]-p0[1], p2[2]-p0[2]];
+            let v1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
+            let v2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
 
             // Normal
-            let nx = v1[1]*v2[2] - v1[2]*v2[1];
-            let ny = v1[2]*v2[0] - v1[0]*v2[2];
-            let nz = v1[0]*v2[1] - v1[1]*v2[0];
+            let nx = v1[1] * v2[2] - v1[2] * v2[1];
+            let ny = v1[2] * v2[0] - v1[0] * v2[2];
+            let nz = v1[0] * v2[1] - v1[1] * v2[0];
 
             // Vector from p0 to interior node
-            let v_in = [p_in[0]-p0[0], p_in[1]-p0[1], p_in[2]-p0[2]];
+            let v_in = [p_in[0] - p0[0], p_in[1] - p0[1], p_in[2] - p0[2]];
 
             // Dot product (Normal . v_in) should be negative for outward normal
-            let dot = nx*v_in[0] + ny*v_in[1] + nz*v_in[2];
+            let dot = nx * v_in[0] + ny * v_in[1] + nz * v_in[2];
 
             let final_face_nodes = if dot > 0.0 {
                 // Normal points inward. Flip winding: 0, 2, 1
@@ -424,21 +423,21 @@ fn compute_nonsingular_integrals(
     let v1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
     let v2 = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];
 
-    let nx = v1[1]*v2[2] - v1[2]*v2[1];
-    let ny = v1[2]*v2[0] - v1[0]*v2[2];
-    let nz = v1[0]*v2[1] - v1[1]*v2[0];
-    let cross_norm = (nx*nx + ny*ny + nz*nz).sqrt();
+    let nx = v1[1] * v2[2] - v1[2] * v2[1];
+    let ny = v1[2] * v2[0] - v1[0] * v2[2];
+    let nz = v1[0] * v2[1] - v1[1] * v2[0];
+    let cross_norm = (nx * nx + ny * ny + nz * nz).sqrt();
     let area = 0.5 * cross_norm;
-    let normal = [nx/cross_norm, ny/cross_norm, nz/cross_norm];
+    let normal = [nx / cross_norm, ny / cross_norm, nz / cross_norm];
 
     // 3-point Gaussian quadrature for triangle
     // (u, v, w) barycentric coordinates, weight = 1/3 * area
     // Points: (2/3, 1/6, 1/6), (1/6, 2/3, 1/6), (1/6, 1/6, 2/3) (permutations)
     // Or standard: (1/6, 1/6), (2/3, 1/6), (1/6, 2/3). Weights 1/3.
     let q_points = [
-        ([1.0/6.0, 1.0/6.0], 1.0/3.0),
-        ([2.0/3.0, 1.0/6.0], 1.0/3.0),
-        ([1.0/6.0, 2.0/3.0], 1.0/3.0),
+        ([1.0 / 6.0, 1.0 / 6.0], 1.0 / 3.0),
+        ([2.0 / 3.0, 1.0 / 6.0], 1.0 / 3.0),
+        ([1.0 / 6.0, 2.0 / 3.0], 1.0 / 3.0),
     ];
 
     let mut h_res = [Complex64::new(0.0, 0.0); 3];
@@ -450,16 +449,16 @@ fn compute_nonsingular_integrals(
         let shape_fn = [1.0 - u - v, u, v]; // N1, N2, N3
 
         // Global coordinate r
-        let rx = shape_fn[0]*p1[0] + shape_fn[1]*p2[0] + shape_fn[2]*p3[0];
-        let ry = shape_fn[0]*p1[1] + shape_fn[1]*p2[1] + shape_fn[2]*p3[1];
-        let rz = shape_fn[0]*p1[2] + shape_fn[1]*p2[2] + shape_fn[2]*p3[2];
+        let rx = shape_fn[0] * p1[0] + shape_fn[1] * p2[0] + shape_fn[2] * p3[0];
+        let ry = shape_fn[0] * p1[1] + shape_fn[1] * p2[1] + shape_fn[2] * p3[1];
+        let rz = shape_fn[0] * p1[2] + shape_fn[1] * p2[2] + shape_fn[2] * p3[2];
         let r = [rx, ry, rz];
 
         // Green's function G(r_i, r) and Gradient
         let (g_val, grad_g) = green_function(k, r_i, r);
 
         // ∂G/∂n = ∇G . n
-        let d_g_dn = grad_g[0]*normal[0] + grad_g[1]*normal[1] + grad_g[2]*normal[2];
+        let d_g_dn = grad_g[0] * normal[0] + grad_g[1] * normal[1] + grad_g[2] * normal[2];
 
         // Accumulate
         let weight = w * area;
@@ -509,19 +508,19 @@ fn compute_singular_integrals(
     // J cancels 1/R singularity (R has factor u).
     // G * J = e^ikR / (4π) * (2 Area / |...|)
 
-    let v10 = [p1[0]-p0[0], p1[1]-p0[1], p1[2]-p0[2]];
-    let v21 = [p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2]];
+    let v10 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
+    let v21 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
 
-    let cross_x = v10[1]*v21[2] - v10[2]*v21[1];
-    let cross_y = v10[2]*v21[0] - v10[0]*v21[2];
-    let cross_z = v10[0]*v21[1] - v10[1]*v21[0];
-    let area = 0.5 * (cross_x*cross_x + cross_y*cross_y + cross_z*cross_z).sqrt();
+    let cross_x = v10[1] * v21[2] - v10[2] * v21[1];
+    let cross_y = v10[2] * v21[0] - v10[0] * v21[2];
+    let cross_z = v10[0] * v21[1] - v10[1] * v21[0];
+    let area = 0.5 * (cross_x * cross_x + cross_y * cross_y + cross_z * cross_z).sqrt();
 
     // Use a tensor product quadrature on square [0,1]^2.
     // 3x3 Gauss points.
     let gauss_1d = [
         (0.1127016653792583, 0.2777777777777778),
-        (0.5000000000000000, 0.4444444444444444),
+        (0.5, 0.4444444444444444),
         (0.8872983346207417, 0.2777777777777778),
     ];
 
@@ -538,7 +537,7 @@ fn compute_singular_integrals(
             let _ry = p0[1] + u * dir_y;
             let _rz = p0[2] + u * dir_z;
 
-            let r_dist = u * (dir_x*dir_x + dir_y*dir_y + dir_z*dir_z).sqrt();
+            let r_dist = u * (dir_x * dir_x + dir_y * dir_y + dir_z * dir_z).sqrt();
 
             // Jacobian factor for geometry (differential area element in Duffy)
             // dA = 2 * Area * u du dv ?
@@ -553,7 +552,7 @@ fn compute_singular_integrals(
                 // Limit u->0. e^ikR -> 1. 4pi R.
                 // Term is e^ikR / (4pi R) * 2 Area u.
                 // = 1 / (4pi u |dir|) * 2 Area u = 2 Area / (4pi |dir|).
-                let dir_norm = (dir_x*dir_x + dir_y*dir_y + dir_z*dir_z).sqrt();
+                let dir_norm = (dir_x * dir_x + dir_y * dir_y + dir_z * dir_z).sqrt();
                 Complex64::new(2.0 * area / (4.0 * PI * dir_norm), 0.0)
             } else {
                 Complex64::new(0.0, k * r_dist).exp() / (4.0 * PI * r_dist) * jac
@@ -570,9 +569,9 @@ fn compute_singular_integrals(
             // Yes, this is the map I used above: p0 + u(p1-p0 + v(p2-p1)) = p0 + u(p1-p0) + uv(p2-p1).
             // = (1-u)p0 + u(1-v)p1 + uv p2.
             // So shape functions are:
-            let l0 = 1.0 - u;          // At P0
-            let l1 = u * (1.0 - v);    // At P1
-            let l2 = u * v;            // At P2
+            let l0 = 1.0 - u; // At P0
+            let l1 = u * (1.0 - v); // At P1
+            let l2 = u * v; // At P2
 
             let weight = wu * wv;
 
@@ -585,21 +584,24 @@ fn compute_singular_integrals(
     // Map back to original node order
     let mut g_res_final = [Complex64::new(0.0, 0.0); 3];
     match vertex_idx {
-        0 => { // P0 is node 0
+        0 => {
+            // P0 is node 0
             g_res_final[0] = g_res_reordered[0];
             g_res_final[1] = g_res_reordered[1];
             g_res_final[2] = g_res_reordered[2];
-        },
-        1 => { // P0 is node 1. P1 is node 2. P2 is node 0.
+        }
+        1 => {
+            // P0 is node 1. P1 is node 2. P2 is node 0.
             g_res_final[1] = g_res_reordered[0];
             g_res_final[2] = g_res_reordered[1];
             g_res_final[0] = g_res_reordered[2];
-        },
-        2 => { // P0 is node 2. P1 is node 0. P2 is node 1.
+        }
+        2 => {
+            // P0 is node 2. P1 is node 0. P2 is node 1.
             g_res_final[2] = g_res_reordered[0];
             g_res_final[0] = g_res_reordered[1];
             g_res_final[1] = g_res_reordered[2];
-        },
+        }
         _ => unreachable!(),
     }
 
@@ -612,7 +614,7 @@ fn green_function(k: f64, r_src: [f64; 3], r_obs: [f64; 3]) -> (Complex64, [Comp
     let dx = r_obs[0] - r_src[0];
     let dy = r_obs[1] - r_src[1];
     let dz = r_obs[2] - r_src[2];
-    let r_dist = (dx*dx + dy*dy + dz*dz).sqrt();
+    let r_dist = (dx * dx + dy * dy + dz * dz).sqrt();
 
     if r_dist < 1e-12 {
         // Singularity handling should be done by caller.
@@ -632,12 +634,8 @@ fn green_function(k: f64, r_src: [f64; 3], r_obs: [f64; 3]) -> (Complex64, [Comp
     // = e^ikR * (ik - 1/R) / R * ∇R / (4pi)
     // ∇R = (r - r') / R = [dx, dy, dz] / R.
 
-    let factor = (Complex64::new(0.0, k) - 1.0/r_dist) * term / r_dist;
-    let grad = [
-        factor * dx,
-        factor * dy,
-        factor * dz,
-    ];
+    let factor = (Complex64::new(0.0, k) - 1.0 / r_dist) * term / r_dist;
+    let grad = [factor * dx, factor * dy, factor * dz];
 
     (term, grad)
 }
@@ -656,7 +654,7 @@ pub struct BemSolution {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::mesh::tetrahedral::{TetrahedralMesh, BoundaryType};
+    use crate::domain::mesh::tetrahedral::{BoundaryType, TetrahedralMesh};
 
     fn create_test_mesh() -> TetrahedralMesh {
         let mut mesh = TetrahedralMesh::new();
@@ -756,9 +754,7 @@ mod tests {
         // Point (2,2,2) is outside
         let points = Array1::from_vec(vec![[2.0, 2.0, 2.0]]);
 
-        let field = solver
-            .compute_scattered_field(&points, &solution)
-            .unwrap();
+        let field = solver.compute_scattered_field(&points, &solution).unwrap();
 
         assert_eq!(field.len(), 1);
         // Field should be non-zero because boundary pressure is non-zero

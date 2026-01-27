@@ -103,7 +103,10 @@ impl<B: AutodiffBackend> TransferLearner<B> {
         &mut self,
         target_geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
         target_conditions: &[crate::solver::inverse::pinn::ml::BoundaryCondition2D],
-    ) -> KwaversResult<(crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>, TransferMetrics)> {
+    ) -> KwaversResult<(
+        crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
+        TransferMetrics,
+    )> {
         let start_time = std::time::Instant::now();
 
         // Extract source model features

@@ -3,8 +3,8 @@
 //! This module provides quantization strategies to reduce model size and improve inference
 //! speed while maintaining physics-informed accuracy for real-time applications.
 
-use crate::solver::inverse::pinn::ml::BurnPINN2DWave;
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::solver::inverse::pinn::ml::BurnPINN2DWave;
 use burn::tensor::{backend::Backend, Tensor};
 use std::collections::HashMap;
 

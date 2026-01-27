@@ -9,12 +9,16 @@ use kwavers::core::error::KwaversError;
 use kwavers::domain::grid::Grid;
 use kwavers::physics::skull::CTBasedSkullModel;
 use ndarray::Array3;
-use nifti::{NiftiHeader, InMemNiftiObject, writer::WriterOptions};
+use nifti::{writer::WriterOptions, InMemNiftiObject, NiftiHeader};
 use std::fs;
 use std::path::PathBuf;
 
 /// Helper to create synthetic NIFTI file for testing
-fn create_synthetic_nifti(path: &str, dims: (u16, u16, u16), hu_values: f64) -> std::io::Result<()> {
+fn create_synthetic_nifti(
+    path: &str,
+    dims: (u16, u16, u16),
+    hu_values: f64,
+) -> std::io::Result<()> {
     // Create a simple 3D volume
     let (nx, ny, nz) = dims;
     let volume = Array3::from_elem((nx as usize, ny as usize, nz as usize), hu_values);
@@ -59,7 +63,8 @@ fn create_skull_phantom_nifti(path: &str) -> std::io::Result<()> {
             for k in 0..dims.2 {
                 let r = ((i as f64 - center.0).powi(2)
                     + (j as f64 - center.1).powi(2)
-                    + (k as f64 - center.2).powi(2)).sqrt();
+                    + (k as f64 - center.2).powi(2))
+                .sqrt();
 
                 let hu = if r > outer_radius {
                     -1000.0 // Air
@@ -132,7 +137,10 @@ fn test_load_synthetic_nifti_bone() {
     let metadata = model.metadata();
 
     assert_eq!(metadata.dimensions, (16, 16, 16));
-    assert!(metadata.hu_range.1 >= 1500.0, "Should detect bone HU values");
+    assert!(
+        metadata.hu_range.1 >= 1500.0,
+        "Should detect bone HU values"
+    );
 
     // Verify sound speed calculation
     let c = model.sound_speed(8, 8, 8);
@@ -168,14 +176,17 @@ fn test_load_skull_phantom() {
     // Count skull voxels
     let skull_count = mask.iter().filter(|&&v| v > 0.5).count();
     assert!(skull_count > 1000, "Should detect substantial skull region");
-    assert!(skull_count < 64*64*64 / 2, "Skull should not be majority");
+    assert!(
+        skull_count < 64 * 64 * 64 / 2,
+        "Skull should not be majority"
+    );
 
     // Generate heterogeneous model
     let het = model.to_heterogeneous(&grid).unwrap();
 
     // Verify acoustic properties vary appropriately
     let c_center = het.sound_speed[[32, 32, 32]]; // Brain
-    let c_skull = het.sound_speed[[50, 32, 32]];  // Skull region
+    let c_skull = het.sound_speed[[50, 32, 32]]; // Skull region
 
     assert_eq!(c_center, 1500.0, "Brain should have water-like sound speed");
     assert!(c_skull > 2800.0, "Skull should have bone-like sound speed");
@@ -210,7 +221,9 @@ fn test_nifti_affine_transformation() {
     header.srow_z = [0.0, 0.0, 2.0, 30.0];
 
     let nifti = NiftiObject::from_header_and_data(header, volume);
-    WriterOptions::new(nifti_path.to_str().unwrap()).write_nifti(&nifti).unwrap();
+    WriterOptions::new(nifti_path.to_str().unwrap())
+        .write_nifti(&nifti)
+        .unwrap();
 
     let model = CTBasedSkullModel::from_file(nifti_path.to_str().unwrap()).unwrap();
     let metadata = model.metadata();
@@ -259,7 +272,10 @@ fn test_invalid_file_format() {
     assert!(result.is_err(), "Should fail to load non-NIFTI file");
 
     if let Err(KwaversError::InvalidInput(msg)) = result {
-        assert!(msg.contains("Failed to read"), "Error should mention read failure");
+        assert!(
+            msg.contains("Failed to read"),
+            "Error should mention read failure"
+        );
     }
 
     // Cleanup
@@ -283,7 +299,9 @@ fn test_nifti_dimension_validation() {
     header.dim[4] = 5; // time points
 
     let nifti = NiftiObject::from_header_and_data(header, volume);
-    WriterOptions::new(nifti_path.to_str().unwrap()).write_nifti(&nifti).unwrap();
+    WriterOptions::new(nifti_path.to_str().unwrap())
+        .write_nifti(&nifti)
+        .unwrap();
 
     let result = CTBasedSkullModel::from_file(nifti_path.to_str().unwrap());
     assert!(result.is_err(), "Should reject 4D volumes");
@@ -328,7 +346,9 @@ fn test_roundtrip_accuracy() {
     header.datatype = 16;
 
     let nifti = NiftiObject::from_header_and_data(header, original_ct.clone());
-    WriterOptions::new(nifti_path.to_str().unwrap()).write_nifti(&nifti).unwrap();
+    WriterOptions::new(nifti_path.to_str().unwrap())
+        .write_nifti(&nifti)
+        .unwrap();
 
     // Read back
     let model = CTBasedSkullModel::from_file(nifti_path.to_str().unwrap()).unwrap();

@@ -104,21 +104,36 @@ impl ShearWaveInversion {
         use crate::domain::imaging::ultrasound::elastography::InversionMethod;
 
         match self.config.method {
-            InversionMethod::TimeOfFlight => {
-                time_of_flight_inversion(displacement, grid, self.config.density, self.config.frequency)
-            }
-            InversionMethod::PhaseGradient => {
-                phase_gradient_inversion(displacement, grid, self.config.density, self.config.frequency)
-            }
-            InversionMethod::DirectInversion => {
-                direct_inversion(displacement, grid, self.config.density, self.config.frequency)
-            }
-            InversionMethod::VolumetricTimeOfFlight => {
-                volumetric_time_of_flight_inversion(displacement, grid, self.config.density, self.config.frequency)
-            }
-            InversionMethod::DirectionalPhaseGradient => {
-                directional_phase_gradient_inversion(displacement, grid, self.config.density, self.config.frequency)
-            }
+            InversionMethod::TimeOfFlight => time_of_flight_inversion(
+                displacement,
+                grid,
+                self.config.density,
+                self.config.frequency,
+            ),
+            InversionMethod::PhaseGradient => phase_gradient_inversion(
+                displacement,
+                grid,
+                self.config.density,
+                self.config.frequency,
+            ),
+            InversionMethod::DirectInversion => direct_inversion(
+                displacement,
+                grid,
+                self.config.density,
+                self.config.frequency,
+            ),
+            InversionMethod::VolumetricTimeOfFlight => volumetric_time_of_flight_inversion(
+                displacement,
+                grid,
+                self.config.density,
+                self.config.frequency,
+            ),
+            InversionMethod::DirectionalPhaseGradient => directional_phase_gradient_inversion(
+                displacement,
+                grid,
+                self.config.density,
+                self.config.frequency,
+            ),
         }
     }
 }
@@ -154,7 +169,7 @@ fn time_of_flight_inversion(
     displacement: &DisplacementField,
     grid: &Grid,
     density: f64,
-    frequency: f64,
+    _frequency: f64,
 ) -> KwaversResult<ElasticityMap> {
     let (nx, ny, nz) = displacement.uz.dim();
     let mut shear_wave_speed = Array3::zeros((nx, ny, nz));
@@ -391,12 +406,7 @@ fn direct_inversion(
     // Regularization parameter lambda
     // Should be scaled by characteristic displacement squared to be dimensionless
     // Calculate mean squared displacement
-    let mean_sq_disp = displacement
-        .uz
-        .iter()
-        .map(|x| x * x)
-        .sum::<f64>()
-        / (nx * ny * nz) as f64;
+    let mean_sq_disp = displacement.uz.iter().map(|x| x * x).sum::<f64>() / (nx * ny * nz) as f64;
 
     // lambda approx 1.0 * mean_u^2 seems reasonable as a starting point
     // This balances the data term (u*theta)^2 and smoothing term lambda*theta^2?
@@ -739,10 +749,14 @@ mod tests {
         let elasticity_map = result.unwrap();
         // Check center value
         // Note: Boundary effects and smoothing might affect edges, check center
-        let center_val = elasticity_map.shear_wave_speed[[nx/2, ny/2, nz/2]];
+        let center_val = elasticity_map.shear_wave_speed[[nx / 2, ny / 2, nz / 2]];
 
         // Allow some tolerance due to discrete derivative errors and smoothing
-        assert!((center_val - 3.0).abs() < 1.0, "Expected speed approx 3.0, got {}", center_val);
+        assert!(
+            (center_val - 3.0).abs() < 1.0,
+            "Expected speed approx 3.0, got {}",
+            center_val
+        );
     }
 
     #[test]

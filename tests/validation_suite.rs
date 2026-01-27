@@ -4,13 +4,13 @@
 //! solutions and published benchmarks from acoustic literature.
 
 use approx::assert_relative_eq;
+use kwavers::physics::acoustics::bubble_dynamics::epstein_plesset::OscillationType;
 use kwavers::{
     grid::Grid,
     physics::acoustics::bubble_dynamics::{
         BubbleParameters, EpsteinPlessetStabilitySolver, KellerMiksisModel,
     },
 };
-use kwavers::physics::acoustics::bubble_dynamics::epstein_plesset::OscillationType;
 use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
 
@@ -155,12 +155,12 @@ mod bubble_dynamics_validation {
     #[test]
     fn test_epstein_plesset_stability_theorem() {
         let params = BubbleParameters {
-            r0: 1e-3, // 1 mm bubble
-            p0: 101325.0, // 1 atm
+            r0: 1e-3,           // 1 mm bubble
+            p0: 101325.0,       // 1 atm
             rho_liquid: 1000.0, // water density
-            sigma: 0.072, // water surface tension
-            mu_liquid: 0.001, // water viscosity
-            gamma: 1.4, // air polytropic index
+            sigma: 0.072,       // water surface tension
+            mu_liquid: 0.001,   // water viscosity
+            gamma: 1.4,         // air polytropic index
             ..Default::default()
         };
 
@@ -168,22 +168,38 @@ mod bubble_dynamics_validation {
         let analysis = solver.analyze_stability();
 
         // Epstein-Plesset theorem: For air bubbles in water, oscillations should be stable
-        assert!(analysis.is_stable, "Air bubbles in water should be stable according to Epstein-Plesset theorem");
+        assert!(
+            analysis.is_stable,
+            "Air bubbles in water should be stable according to Epstein-Plesset theorem"
+        );
         assert_eq!(analysis.oscillation_type, OscillationType::StableHarmonic);
 
         // Resonance frequency should match Minnaert formula
-        let minnaert_freq = (1.0 / (2.0 * PI * params.r0)) * ((3.0 * params.gamma * params.p0) / params.rho_liquid).sqrt();
+        let minnaert_freq = (1.0 / (2.0 * PI * params.r0))
+            * ((3.0 * params.gamma * params.p0) / params.rho_liquid).sqrt();
         assert_relative_eq!(analysis.resonance_frequency, minnaert_freq, epsilon = 1e-10);
 
         // Quality factor should be reasonable (>1 for underdamped oscillations)
-        assert!(analysis.quality_factor > 1.0, "Quality factor should be > 1 for stable oscillations");
+        assert!(
+            analysis.quality_factor > 1.0,
+            "Quality factor should be > 1 for stable oscillations"
+        );
 
         // Stability parameter should be positive for stable oscillations
-        assert!(analysis.stability_parameter > 0.0, "Stability parameter should be positive for stable oscillations");
+        assert!(
+            analysis.stability_parameter > 0.0,
+            "Stability parameter should be positive for stable oscillations"
+        );
 
         // Damping coefficient should be positive and reasonable
-        assert!(analysis.damping_coefficient > 0.0, "Damping coefficient should be positive");
-        assert!(analysis.damping_coefficient < 1e6, "Damping coefficient should be reasonable");
+        assert!(
+            analysis.damping_coefficient > 0.0,
+            "Damping coefficient should be positive"
+        );
+        assert!(
+            analysis.damping_coefficient < 1e6,
+            "Damping coefficient should be reasonable"
+        );
     }
 
     /// Test Epstein-Plesset stability boundaries
@@ -239,7 +255,10 @@ mod bubble_dynamics_validation {
         let small_analysis = small_solver.analyze_stability();
 
         // Small bubbles should be stable due to surface tension dominance
-        assert!(small_analysis.is_stable, "Microbubbles should be stable per Epstein-Plesset theorem");
+        assert!(
+            small_analysis.is_stable,
+            "Microbubbles should be stable per Epstein-Plesset theorem"
+        );
 
         // Higher resonance frequency for smaller bubbles
         assert!(small_analysis.resonance_frequency > high_visc_analysis.resonance_frequency);

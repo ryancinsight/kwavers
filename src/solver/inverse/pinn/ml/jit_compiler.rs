@@ -3,8 +3,8 @@
 //! This module provides just-in-time compilation capabilities for Physics-Informed Neural Networks,
 //! enabling sub-millisecond inference latency through optimized kernel generation and execution.
 
-use crate::solver::inverse::pinn::ml::Geometry2D;
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::solver::inverse::pinn::ml::Geometry2D;
 use std::collections::HashMap;
 use std::sync::Arc;
 

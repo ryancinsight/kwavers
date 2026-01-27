@@ -277,7 +277,9 @@ impl FdtdFemCoupler {
                 dirichlet_bcs.push((fem_idx, value));
             }
         }
-        self.fem_solver.boundary_manager().add_dirichlet(dirichlet_bcs);
+        self.fem_solver
+            .boundary_manager()
+            .add_dirichlet(dirichlet_bcs);
 
         // 3. Assemble and solve system
         // Create a dummy medium (e.g. water) to satisfy the interface
@@ -546,16 +548,17 @@ mod tests {
     fn test_schwarz_iteration_convergence() {
         let fdtd_grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
 
-        // Create overlapping mesh
+        // Create overlapping mesh with a valid tetrahedral element
         let mut fem_mesh = TetrahedralMesh::new();
-        for i in 4..8 {
-            for j in 4..8 {
-                for k in 4..8 {
-                    let (x, y, z) = fdtd_grid.indices_to_coordinates(i, j, k);
-                    fem_mesh.add_node([x, y, z], BoundaryType::Interior);
-                }
-            }
-        }
+        let (x0, y0, z0) = fdtd_grid.indices_to_coordinates(4, 4, 4);
+        let (x1, y1, z1) = fdtd_grid.indices_to_coordinates(5, 4, 4);
+        let (x2, y2, z2) = fdtd_grid.indices_to_coordinates(4, 5, 4);
+        let (x3, y3, z3) = fdtd_grid.indices_to_coordinates(4, 4, 5);
+        let n0 = fem_mesh.add_node([x0, y0, z0], BoundaryType::Interior);
+        let n1 = fem_mesh.add_node([x1, y1, z1], BoundaryType::Interior);
+        let n2 = fem_mesh.add_node([x2, y2, z2], BoundaryType::Interior);
+        let n3 = fem_mesh.add_node([x3, y3, z3], BoundaryType::Interior);
+        fem_mesh.add_element([n0, n1, n2, n3], 0).unwrap();
 
         let config = FdtdFemCouplingConfig {
             max_iterations: 5,

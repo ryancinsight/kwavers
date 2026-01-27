@@ -43,11 +43,10 @@ use burn::tensor::Tensor;
 #[cfg(feature = "pinn")]
 use kwavers::core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "pinn")]
-use kwavers::solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D};
-#[cfg(feature = "pinn")]
 use kwavers::solver::inverse::pinn::elastic_2d::training::PINNOptimizer;
+#[cfg(feature = "pinn")]
+use kwavers::solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D};
 use std::time::Instant;
-
 
 #[cfg(feature = "pinn")]
 type AutodiffBackend = Autodiff<NdArray>;
@@ -152,7 +151,11 @@ fn train_pinn(
 ) -> KwaversResult<(ElasticPINN2D<AutodiffBackend>, Vec<f64>)> {
     println!("Starting PINN training...");
     println!("Configuration: {:?}", config);
-    println!("Training samples: {} (points/axis: {})", inputs.len(), config.num_points);
+    println!(
+        "Training samples: {} (points/axis: {})",
+        inputs.len(),
+        config.num_points
+    );
 
     let mut loss_history = Vec::new();
 
@@ -316,9 +319,9 @@ fn validate_gradients(
     let output = model.forward(x.clone(), y, t);
     let u_x = output.slice([0..1, 0..1]).mean();
     let grads = u_x.backward();
-    let x_grad_tensor = x.grad(&grads).ok_or_else(|| {
-        KwaversError::InvalidInput("missing gradient for x tensor".to_string())
-    })?;
+    let x_grad_tensor = x
+        .grad(&grads)
+        .ok_or_else(|| KwaversError::InvalidInput("missing gradient for x tensor".to_string()))?;
     let autodiff_grad_x: f64 = f64::from(x_grad_tensor.mean().into_scalar());
 
     // Finite-difference gradient
