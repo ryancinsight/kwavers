@@ -430,14 +430,196 @@ impl MultiModalFusion {
     /// This would implement sophisticated feature extraction and fusion
     /// based on known relationships between modalities.
     fn fuse_feature_based(&self) -> KwaversResult<FusedImageResult> {
-        // TODO: Implement feature-based fusion with:
-        // - Tissue classification from multi-modal features
-        // - Correlation analysis between modalities
-        // - Feature space fusion (e.g., PCA, ICA)
-        // - Adaptive weighting based on tissue type
+        let registration = ImageRegistration::default();
 
-        // For now, delegate to weighted average
-        self.fuse_weighted_average()
+        // 1. Setup Reference and Grid
+        // Sort keys to ensure deterministic reference selection
+        let mut modality_names: Vec<&String> = self.registered_data.keys().collect();
+        modality_names.sort();
+
+        let reference_name = modality_names.first().ok_or_else(|| {
+            KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
+                message: "No modalities available for fusion".to_string(),
+            })
+        })?;
+
+        let reference_modality = self
+            .registered_data
+            .get(*reference_name)
+            .ok_or_else(|| KwaversError::InvalidInput("Reference modality missing".to_string()))?;
+
+        let ref_shape = reference_modality.data.dim();
+        let target_dims = (ref_shape.0, ref_shape.1, ref_shape.2);
+
+        // 2. Register & Resample All Modalities
+        struct Channel {
+            name: String,
+            data: Array3<f64>,
+            quality: f64,
+            weight: f64,
+        }
+        let mut channels = Vec::new();
+        let identity = [
+            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+        ];
+
+        let mut registration_transforms = HashMap::new();
+        let mut modality_quality = HashMap::new();
+
+        for name in modality_names {
+            let modality = self.registered_data.get(name).unwrap();
+            let weight = self
+                .config
+                .modality_weights
+                .get(name)
+                .copied()
+                .unwrap_or(1.0);
+            modality_quality.insert(name.clone(), modality.quality_score);
+
+            let reg_result = registration.intensity_registration_mutual_info(
+                &reference_modality.data,
+                &modality.data,
+                &identity,
+            )?;
+
+            registration_transforms.insert(
+                name.clone(),
+                AffineTransform::from_homogeneous(&reg_result.transform_matrix),
+            );
+
+            let resampled = registration::resample_to_target_grid(
+                &modality.data,
+                &reg_result.transform_matrix,
+                target_dims,
+            );
+
+            channels.push(Channel {
+                name: name.clone(),
+                data: resampled,
+                quality: modality.quality_score,
+                weight,
+            });
+        }
+
+        // 3. Identify Feature Channels for Classification
+        let mut us_data: Option<Array3<f64>> = None;
+        let mut pa_data: Option<Array3<f64>> = None;
+        let mut elasto_data: Option<Array3<f64>> = None;
+
+        for ch in &channels {
+            if ch.name.contains("ultrasound") {
+                us_data = Some(normalize_data(&ch.data));
+            } else if ch.name.contains("photoacoustic") {
+                pa_data = Some(normalize_data(&ch.data));
+            } else if ch.name.contains("elastography") {
+                elasto_data = Some(normalize_data(&ch.data));
+            }
+        }
+
+        // 4. Fusion Loop
+        let mut fused_intensity = Array3::<f64>::zeros(target_dims);
+        let mut confidence_map = Array3::<f64>::zeros(target_dims);
+        let mut tissue_class_map = Array3::<f64>::zeros(target_dims);
+        let mut classification_confidence_map = Array3::<f64>::zeros(target_dims);
+
+        // Initialize uncertainty map if enabled
+        let mut uncertainty_map = if self.config.uncertainty_quantification {
+            Some(Array3::<f64>::zeros(target_dims))
+        } else {
+            None
+        };
+
+        for i in 0..target_dims.0 {
+            for j in 0..target_dims.1 {
+                for k in 0..target_dims.2 {
+                    // Extract normalized features for classification
+                    // Defaults: US=0.5 (mid), PA=0.0 (low), Stiffness=0.5 (mid)
+                    let us_val = us_data.as_ref().map_or(0.5, |d| d[[i, j, k]]);
+                    let pa_val = pa_data.as_ref().map_or(0.0, |d| d[[i, j, k]]);
+                    let stiff_val = elasto_data.as_ref().map_or(0.5, |d| d[[i, j, k]]);
+
+                    let (tissue_type, class_conf) = classify_voxel_features(us_val, pa_val, stiff_val);
+                    tissue_class_map[[i, j, k]] = tissue_type as f64;
+                    classification_confidence_map[[i, j, k]] = class_conf;
+
+                    // Compute Adaptive Weights
+                    let mut sum_weighted_val = 0.0;
+                    let mut sum_weights = 0.0;
+                    let mut sum_uncertainty = 0.0;
+
+                    for ch in &channels {
+                        let val = ch.data[[i, j, k]];
+
+                        // Base weight from config and quality
+                        let mut w = ch.weight * ch.quality;
+
+                        // Adaptive adjustment based on tissue type
+                        // 0: Fluid, 1: Soft, 2: Vessel, 3: Hard
+                        match tissue_type {
+                            0 => {
+                                // Fluid: Trust US, distrust PA (noise)
+                                if ch.name.contains("ultrasound") {
+                                    w *= 1.5;
+                                }
+                                if ch.name.contains("photoacoustic") {
+                                    w *= 0.5;
+                                }
+                            }
+                            2 => {
+                                // Vessel: Trust PA highly
+                                if ch.name.contains("photoacoustic") {
+                                    w *= 2.0;
+                                }
+                            }
+                            3 => {
+                                // Hard/Calcified: Trust Elastography and US
+                                if ch.name.contains("elastography") {
+                                    w *= 1.5;
+                                }
+                                if ch.name.contains("ultrasound") {
+                                    w *= 1.2;
+                                }
+                            }
+                            _ => {} // Soft tissue: default weights
+                        }
+
+                        sum_weighted_val += val * w;
+                        sum_weights += w;
+
+                        if let Some(_) = uncertainty_map {
+                            sum_uncertainty += (1.0 - ch.quality) * w;
+                        }
+                    }
+
+                    if sum_weights > 0.0 {
+                        fused_intensity[[i, j, k]] = sum_weighted_val / sum_weights;
+                        confidence_map[[i, j, k]] = sum_weights; // Proxy for confidence
+
+                        if let Some(ref mut u_map) = uncertainty_map {
+                            u_map[[i, j, k]] = sum_uncertainty / sum_weights;
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut tissue_properties = HashMap::new();
+        tissue_properties.insert("tissue_classification".to_string(), tissue_class_map);
+        tissue_properties
+            .insert("classification_confidence".to_string(), classification_confidence_map);
+
+        Ok(FusedImageResult {
+            intensity_image: fused_intensity,
+            tissue_properties,
+            confidence_map,
+            uncertainty_map,
+            registration_transforms,
+            modality_quality,
+            coordinates: registration::generate_coordinate_arrays(
+                target_dims,
+                self.config.output_resolution,
+            ),
+        })
     }
 
     /// Deep learning-based fusion
@@ -634,6 +816,72 @@ impl MultiModalFusion {
     }
 }
 
+/// Normalize data to [0, 1] range for feature comparison
+fn normalize_data(data: &Array3<f64>) -> Array3<f64> {
+    let mut min_val = f64::INFINITY;
+    let mut max_val = f64::NEG_INFINITY;
+
+    for &v in data.iter() {
+        if v.is_finite() {
+            if v < min_val {
+                min_val = v;
+            }
+            if v > max_val {
+                max_val = v;
+            }
+        }
+    }
+
+    if max_val <= min_val {
+        return Array3::zeros(data.dim());
+    }
+
+    let range = max_val - min_val;
+    data.mapv(|v| {
+        if v.is_finite() {
+            ((v - min_val) / range).max(0.0).min(1.0)
+        } else {
+            0.0
+        }
+    })
+}
+
+/// Classify tissue type based on multi-modal features
+///
+/// Returns (TissueType, Confidence)
+/// Tissue Types:
+/// 0: Fluid/Background (Low US, Low Stiffness)
+/// 1: Soft Tissue (Mid US, Mid Stiffness)
+/// 2: Vessel/Blood (High PA, Low Stiffness)
+/// 3: Hard Tissue/Calcification (High US, High Stiffness)
+fn classify_voxel_features(us: f64, pa: f64, stiffness: f64) -> (u8, f64) {
+    // Heuristic classification logic
+
+    // Check for Hard Tissue (High Stiffness is the strongest indicator)
+    if stiffness > 0.7 {
+        if us > 0.6 {
+            return (3, stiffness * us); // High US + High Stiffness -> Calcification/Bone
+        }
+        return (3, stiffness * 0.8); // High Stiffness -> Hard Tissue
+    }
+
+    // Check for Vessel/Blood (High PA is key)
+    if pa > 0.6 {
+        if stiffness < 0.4 {
+            return (2, pa * (1.0 - stiffness)); // High PA + Low Stiffness -> Vessel
+        }
+        return (2, pa * 0.7); // High PA -> Likely vessel
+    }
+
+    // Check for Fluid (Low signal across board, esp stiffness and US)
+    if us < 0.3 && stiffness < 0.3 {
+        return (0, (1.0 - us) * (1.0 - stiffness));
+    }
+
+    // Default to Soft Tissue
+    (1, 0.5)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -800,5 +1048,61 @@ mod tests {
         // CRB = 1 / (1/var_clean + 1/var_noisy)
         // CRB < var_clean
         // So uncertainty should be small
+    }
+
+    #[test]
+    fn test_fuse_feature_based_vessel() {
+        let mut config = FusionConfig::default();
+        config.fusion_method = FusionMethod::FeatureBased;
+        config.uncertainty_quantification = false; // Simplify test
+
+        let mut fusion = MultiModalFusion::new(config);
+        let shape = (4, 4, 2);
+
+        // Create data with full range [0, 1] to ensure normalization works as expected
+        // US: Low signal (0.2)
+        let mut us_data = Array3::<f64>::zeros(shape);
+        us_data[[0, 0, 0]] = 0.0;
+        us_data[[3, 3, 1]] = 1.0;
+        us_data[[1, 1, 0]] = 0.2;
+
+        // PA: High signal (0.8) -> Vessel indicator
+        let mut pa_data = Array3::<f64>::zeros(shape);
+        pa_data[[0, 0, 0]] = 0.0;
+        pa_data[[3, 3, 1]] = 1.0;
+        pa_data[[1, 1, 0]] = 0.8;
+
+        // Elasto: Low stiffness (0.3) -> Soft/Vessel
+        let mut elasto_data = Array3::<f64>::zeros(shape);
+        elasto_data[[0, 0, 0]] = 0.0;
+        elasto_data[[3, 3, 1]] = 1.0;
+        elasto_data[[1, 1, 0]] = 0.3;
+
+        fusion.register_ultrasound(&us_data).unwrap();
+        fusion.register_photoacoustic(&pa_data).unwrap();
+        fusion
+            .register_elastography(
+                &crate::domain::imaging::ultrasound::elastography::ElasticityMap {
+                    youngs_modulus: Array3::zeros(shape),
+                    shear_modulus: elasto_data,
+                    shear_wave_speed: Array3::zeros(shape),
+                },
+            )
+            .unwrap();
+
+        let result = fusion.fuse().unwrap();
+
+        // Check classification at [1,1,0]
+        // PA > 0.6, Stiffness < 0.4 => Type 2 (Vessel)
+        let classification = result
+            .tissue_properties
+            .get("tissue_classification")
+            .unwrap();
+        assert_eq!(classification[[1, 1, 0]], 2.0);
+
+        // Check confidence is populated
+        assert!(result
+            .tissue_properties
+            .contains_key("classification_confidence"));
     }
 }
