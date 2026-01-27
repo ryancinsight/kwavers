@@ -487,11 +487,18 @@ impl MultiModalFusion {
                 AffineTransform::from_homogeneous(&reg_result.transform_matrix),
             );
 
-            let resampled = registration::resample_to_target_grid(
-                &modality.data,
-                &reg_result.transform_matrix,
-                target_dims,
-            );
+            // Optimization: Skip resampling if transform is identity and dimensions match
+            let resampled = if modality.data.dim() == target_dims
+                && reg_result.transform_matrix == identity
+            {
+                modality.data.clone()
+            } else {
+                registration::resample_to_target_grid(
+                    &modality.data,
+                    &reg_result.transform_matrix,
+                    target_dims,
+                )
+            };
 
             channels.push(Channel {
                 name: name.clone(),
@@ -501,19 +508,18 @@ impl MultiModalFusion {
             });
         }
 
-        // 3. Identify Feature Channels for Classification
-        let mut us_data: Option<Array3<f64>> = None;
-        let mut pa_data: Option<Array3<f64>> = None;
-        let mut elasto_data: Option<Array3<f64>> = None;
+        // 3. Prepare Feature Channels for Classification
+        // Pre-compute normalization parameters to avoid full array copies
+        struct NormParams {
+            min: f64,
+            scale: f64,
+        }
+        let mut norm_params = Vec::new();
 
         for ch in &channels {
-            if ch.name.contains("ultrasound") {
-                us_data = Some(normalize_data(&ch.data));
-            } else if ch.name.contains("photoacoustic") {
-                pa_data = Some(normalize_data(&ch.data));
-            } else if ch.name.contains("elastography") {
-                elasto_data = Some(normalize_data(&ch.data));
-            }
+            let (min, max) = compute_robust_bounds(&ch.data);
+            let scale = if max > min { 1.0 / (max - min) } else { 0.0 };
+            norm_params.push(NormParams { min, scale });
         }
 
         // 4. Fusion Loop
@@ -532,11 +538,24 @@ impl MultiModalFusion {
         for i in 0..target_dims.0 {
             for j in 0..target_dims.1 {
                 for k in 0..target_dims.2 {
-                    // Extract normalized features for classification
-                    // Defaults: US=0.5 (mid), PA=0.0 (low), Stiffness=0.5 (mid)
-                    let us_val = us_data.as_ref().map_or(0.5, |d| d[[i, j, k]]);
-                    let pa_val = pa_data.as_ref().map_or(0.0, |d| d[[i, j, k]]);
-                    let stiff_val = elasto_data.as_ref().map_or(0.5, |d| d[[i, j, k]]);
+                    // Extract normalized features for classification on-the-fly
+                    let mut us_val = 0.5; // Default mid
+                    let mut pa_val = 0.0; // Default low
+                    let mut stiff_val = 0.5; // Default mid
+
+                    for (idx, ch) in channels.iter().enumerate() {
+                        let val = ch.data[[i, j, k]];
+                        let norm_val =
+                            ((val - norm_params[idx].min) * norm_params[idx].scale).max(0.0).min(1.0);
+
+                        if ch.name.contains("ultrasound") {
+                            us_val = norm_val;
+                        } else if ch.name.contains("photoacoustic") {
+                            pa_val = norm_val;
+                        } else if ch.name.contains("elastography") {
+                            stiff_val = norm_val;
+                        }
+                    }
 
                     let (tissue_type, class_conf) = classify_voxel_features(us_val, pa_val, stiff_val);
                     tissue_class_map[[i, j, k]] = tissue_type as f64;
@@ -816,34 +835,28 @@ impl MultiModalFusion {
     }
 }
 
-/// Normalize data to [0, 1] range for feature comparison
-fn normalize_data(data: &Array3<f64>) -> Array3<f64> {
-    let mut min_val = f64::INFINITY;
-    let mut max_val = f64::NEG_INFINITY;
+/// Compute robust normalization bounds (1st and 99th percentiles)
+fn compute_robust_bounds(data: &Array3<f64>) -> (f64, f64) {
+    let mut values: Vec<f64> = data.iter().cloned().filter(|v| v.is_finite()).collect();
 
-    for &v in data.iter() {
-        if v.is_finite() {
-            if v < min_val {
-                min_val = v;
-            }
-            if v > max_val {
-                max_val = v;
-            }
-        }
+    if values.is_empty() {
+        return (0.0, 0.0);
     }
+
+    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    let len = values.len();
+    let lower_idx = (len as f64 * 0.01).floor() as usize;
+    let upper_idx = (len as f64 * 0.99).ceil() as usize;
+
+    let min_val = values[lower_idx.min(len - 1)];
+    let max_val = values[upper_idx.min(len - 1)];
 
     if max_val <= min_val {
-        return Array3::zeros(data.dim());
+        (min_val, min_val + 1.0) // Avoid division by zero
+    } else {
+        (min_val, max_val)
     }
-
-    let range = max_val - min_val;
-    data.mapv(|v| {
-        if v.is_finite() {
-            ((v - min_val) / range).max(0.0).min(1.0)
-        } else {
-            0.0
-        }
-    })
 }
 
 /// Classify tissue type based on multi-modal features
