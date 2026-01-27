@@ -374,9 +374,13 @@ impl BemSolver {
                     let p2 = self.nodes[n2];
                     let p3 = self.nodes[n3];
 
-                    // Use nonsingular integrals as evaluation points are assumed to be in the domain
-                    // TODO: Check for near-field singularities if point is close to element
-                    let (h_res, g_res) = compute_nonsingular_integrals(k, r_eval, [p1, p2, p3]);
+                    let distance = point_to_triangle_distance(r_eval, p1, p2, p3);
+                    let element_size = triangle_characteristic_length(p1, p2, p3);
+                    let (h_res, g_res) = if distance < 0.2 * element_size {
+                        compute_nearfield_integrals(k, r_eval, [p1, p2, p3], distance, element_size)
+                    } else {
+                        compute_nonsingular_integrals(k, r_eval, [p1, p2, p3])
+                    };
 
                     // Accumulate contribution from this element
                     // Representation formula: u(x) = ∫ (G * q - ∂G/∂n * u) dΓ
@@ -406,6 +410,185 @@ impl BemSolver {
 
         Ok(Array1::from_vec(results))
     }
+}
+
+fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+fn add(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+}
+
+fn scale(a: [f64; 3], s: f64) -> [f64; 3] {
+    [a[0] * s, a[1] * s, a[2] * s]
+}
+
+fn triangle_characteristic_length(p1: [f64; 3], p2: [f64; 3], p3: [f64; 3]) -> f64 {
+    let d12 = dot(sub(p2, p1), sub(p2, p1)).sqrt();
+    let d23 = dot(sub(p3, p2), sub(p3, p2)).sqrt();
+    let d31 = dot(sub(p1, p3), sub(p1, p3)).sqrt();
+    d12.max(d23).max(d31)
+}
+
+fn barycentric_coords(p: [f64; 3], p1: [f64; 3], p2: [f64; 3], p3: [f64; 3]) -> [f64; 3] {
+    let v0 = sub(p2, p1);
+    let v1 = sub(p3, p1);
+    let v2 = sub(p, p1);
+    let dot00 = dot(v0, v0);
+    let dot01 = dot(v0, v1);
+    let dot02 = dot(v0, v2);
+    let dot11 = dot(v1, v1);
+    let dot12 = dot(v1, v2);
+    let denom = dot00 * dot11 - dot01 * dot01;
+    if denom.abs() < 1e-18 {
+        [1.0, 0.0, 0.0]
+    } else {
+        let inv_denom = 1.0 / denom;
+        let v = (dot11 * dot02 - dot01 * dot12) * inv_denom;
+        let w = (dot00 * dot12 - dot01 * dot02) * inv_denom;
+        let u = 1.0 - v - w;
+        [u, v, w]
+    }
+}
+
+fn point_to_triangle_distance(p: [f64; 3], p1: [f64; 3], p2: [f64; 3], p3: [f64; 3]) -> f64 {
+    let ab = sub(p2, p1);
+    let ac = sub(p3, p1);
+    let ap = sub(p, p1);
+    let d1 = dot(ab, ap);
+    let d2 = dot(ac, ap);
+    if d1 <= 0.0 && d2 <= 0.0 {
+        return dot(ap, ap).sqrt();
+    }
+
+    let bp = sub(p, p2);
+    let d3 = dot(ab, bp);
+    let d4 = dot(ac, bp);
+    if d3 >= 0.0 && d4 <= d3 {
+        return dot(bp, bp).sqrt();
+    }
+
+    let vc = d1 * d4 - d3 * d2;
+    if vc <= 0.0 && d1 >= 0.0 && d3 <= 0.0 {
+        let v = d1 / (d1 - d3);
+        let proj = add(p1, scale(ab, v));
+        return dot(sub(p, proj), sub(p, proj)).sqrt();
+    }
+
+    let cp = sub(p, p3);
+    let d5 = dot(ab, cp);
+    let d6 = dot(ac, cp);
+    if d6 >= 0.0 && d5 <= d6 {
+        return dot(cp, cp).sqrt();
+    }
+
+    let vb = d5 * d2 - d1 * d6;
+    if vb <= 0.0 && d2 >= 0.0 && d6 <= 0.0 {
+        let w = d2 / (d2 - d6);
+        let proj = add(p1, scale(ac, w));
+        return dot(sub(p, proj), sub(p, proj)).sqrt();
+    }
+
+    let va = d3 * d6 - d5 * d4;
+    if va <= 0.0 && (d4 - d3) >= 0.0 && (d5 - d6) >= 0.0 {
+        let w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+        let proj = add(p2, scale(sub(p3, p2), w));
+        return dot(sub(p, proj), sub(p, proj)).sqrt();
+    }
+
+    let denom = 1.0 / (va + vb + vc);
+    let v = vb * denom;
+    let w = vc * denom;
+    let proj = add(p1, add(scale(ab, v), scale(ac, w)));
+    dot(sub(p, proj), sub(p, proj)).sqrt()
+}
+
+fn compute_nearfield_integrals(
+    k: f64,
+    r_i: [f64; 3],
+    element_nodes: [[f64; 3]; 3],
+    distance: f64,
+    element_size: f64,
+) -> ([Complex64; 3], [Complex64; 3]) {
+    let p1 = element_nodes[0];
+    let p2 = element_nodes[1];
+    let p3 = element_nodes[2];
+
+    let v1 = sub(p2, p1);
+    let v2 = sub(p3, p1);
+    let nx = v1[1] * v2[2] - v1[2] * v2[1];
+    let ny = v1[2] * v2[0] - v1[0] * v2[2];
+    let nz = v1[0] * v2[1] - v1[1] * v2[0];
+    let cross_norm = (nx * nx + ny * ny + nz * nz).sqrt();
+    let normal = [nx / cross_norm, ny / cross_norm, nz / cross_norm];
+
+    let ratio = if distance > 0.0 {
+        element_size / distance
+    } else {
+        f64::INFINITY
+    };
+    let depth = if ratio > 50.0 {
+        3
+    } else if ratio > 20.0 {
+        2
+    } else {
+        1
+    };
+
+    let quad_points = [
+        ([1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0], 0.225),
+        ([0.059715871789770, 0.470142064105115, 0.470142064105115], 0.132394152788506),
+        ([0.470142064105115, 0.059715871789770, 0.470142064105115], 0.132394152788506),
+        ([0.470142064105115, 0.470142064105115, 0.059715871789770], 0.132394152788506),
+        ([0.101286507323456, 0.101286507323456, 0.797426985353087], 0.125939180544827),
+        ([0.101286507323456, 0.797426985353087, 0.101286507323456], 0.125939180544827),
+        ([0.797426985353087, 0.101286507323456, 0.101286507323456], 0.125939180544827),
+    ];
+
+    let mut h_res = [Complex64::new(0.0, 0.0); 3];
+    let mut g_res = [Complex64::new(0.0, 0.0); 3];
+
+    let mut stack = Vec::new();
+    stack.push((p1, p2, p3, 0usize));
+
+    while let Some((t1, t2, t3, level)) = stack.pop() {
+        if level < depth {
+            let m12 = scale(add(t1, t2), 0.5);
+            let m23 = scale(add(t2, t3), 0.5);
+            let m31 = scale(add(t3, t1), 0.5);
+            stack.push((t1, m12, m31, level + 1));
+            stack.push((m12, t2, m23, level + 1));
+            stack.push((m31, m23, t3, level + 1));
+            stack.push((m12, m23, m31, level + 1));
+            continue;
+        }
+
+        let tv1 = sub(t2, t1);
+        let tv2 = sub(t3, t1);
+        let tx = tv1[1] * tv2[2] - tv1[2] * tv2[1];
+        let ty = tv1[2] * tv2[0] - tv1[0] * tv2[2];
+        let tz = tv1[0] * tv2[1] - tv1[1] * tv2[0];
+        let area = 0.5 * (tx * tx + ty * ty + tz * tz).sqrt();
+
+        for (bary, weight) in quad_points {
+            let r = add(add(scale(t1, bary[0]), scale(t2, bary[1])), scale(t3, bary[2]));
+            let shape_fn = barycentric_coords(r, p1, p2, p3);
+            let (g_val, grad_g) = green_function(k, r_i, r);
+            let d_g_dn = grad_g[0] * normal[0] + grad_g[1] * normal[1] + grad_g[2] * normal[2];
+            let w = weight * area;
+            for m in 0..3 {
+                h_res[m] += d_g_dn * shape_fn[m] * w;
+                g_res[m] += g_val * shape_fn[m] * w;
+            }
+        }
+    }
+
+    (h_res, g_res)
 }
 
 /// Compute integrals for non-singular element

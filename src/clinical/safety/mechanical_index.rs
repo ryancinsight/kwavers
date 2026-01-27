@@ -159,7 +159,7 @@ impl MechanicalIndexCalculator {
     /// use ndarray::Array3;
     ///
     /// let mi_calc = MechanicalIndexCalculator::new(5.0, 0.5, TissueType::SoftTissue);
-    /// let pressure = Array3::from_elem((10, 10, 10), 1e5); // 0.1 MPa
+    /// let pressure = Array3::from_elem((10, 10, 10), -1e5);
     /// let result = mi_calc.calculate(&pressure, 5.0).unwrap();
     /// assert!(result.mi > 0.0);
     /// ```

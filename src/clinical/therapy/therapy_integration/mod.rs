@@ -113,6 +113,7 @@
 //!         },
 //!         risk_organs: vec![],
 //!     },
+//!     imaging_data_path: None,
 //! };
 //!
 //! // Create computational grid and medium
