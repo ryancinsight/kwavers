@@ -219,6 +219,7 @@
 //! **Timeline:** Week 3 execution
 
 // Implemented localization algorithms
+pub mod beamforming_search;
 pub mod multilateration;
 pub mod music;
 pub mod trilateration;
