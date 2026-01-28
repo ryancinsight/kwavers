@@ -29,12 +29,14 @@
 pub mod dispersion;
 pub mod fractional;
 pub mod power_law;
+pub mod spatially_varying;
 pub mod stokes;
 pub mod tissue;
 
 pub use dispersion::{DispersionCorrection, DispersionModel};
 pub use fractional::{FractionalDerivative, FractionalLaplacian};
 pub use power_law::{PowerLawAbsorption, PowerLawModel};
+pub use spatially_varying::{AbsorptionStatistics, SpatiallyVaryingAbsorption};
 pub use stokes::{StokesAbsorption, StokesParameters};
 pub use tissue::{TissueAbsorption, TissueType, TISSUE_PROPERTIES};
 
