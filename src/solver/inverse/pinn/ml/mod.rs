@@ -153,6 +153,10 @@ pub mod meta_learning;
 #[cfg(feature = "pinn")]
 pub mod physics;
 
+// Beamforming provider adapter (bridge to analysis layer)
+#[cfg(feature = "pinn")]
+pub mod beamforming_provider;
+
 #[cfg(feature = "pinn")]
 pub mod acoustic_wave;
 
@@ -218,6 +222,10 @@ pub use meta_learning::{
 pub use transfer_learning::{
     FreezeStrategy, TransferLearner, TransferLearningConfig, TransferLearningStats, TransferMetrics,
 };
+
+// Beamforming provider adapter (public API)
+#[cfg(feature = "pinn")]
+pub use beamforming_provider::{create_burn_beamforming_provider, BurnPinnBeamformingAdapter};
 
 // Sprint 156: Advanced Physics Domains
 #[cfg(feature = "pinn")]
