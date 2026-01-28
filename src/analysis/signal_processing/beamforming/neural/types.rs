@@ -2,16 +2,22 @@
 //!
 //! This module provides all result types, feedback structures, and performance
 //! metrics used throughout the neural beamforming pipeline.
+//!
+//! ## Layer Separation
+//!
+//! This module now uses solver-agnostic interfaces from `pinn_interface`
+//! instead of direct solver imports, maintaining clean layer separation.
 
 use ndarray::Array3;
 
-#[cfg(feature = "pinn")]
-use crate::solver::inverse::pinn::ml::{BurnPINNConfig, BurnTrainingMetrics};
-
-#[cfg(feature = "pinn")]
-use crate::solver::inverse::pinn::ml::uncertainty_quantification::PinnUncertaintyConfig;
-
 use crate::domain::sensor::beamforming::BeamformingConfig;
+
+// Use solver-agnostic interface instead of direct solver imports
+#[cfg(feature = "pinn")]
+use super::pinn_interface::{
+    PinnBeamformingConfig as InterfacePinnConfig, TrainingMetrics as InterfaceTrainingMetrics,
+    UncertaintyConfig as InterfaceUncertaintyConfig,
+};
 
 /// Result from hybrid neural-traditional beamforming.
 #[derive(Debug)]
@@ -61,16 +67,18 @@ impl HybridBeamformingMetrics {
 }
 
 /// Configuration for PINN-enhanced beamforming.
+///
+/// Uses solver-agnostic interface types to maintain layer separation.
 #[derive(Debug, Clone)]
 pub struct PINNBeamformingConfig {
     /// Base beamforming configuration
     pub base_config: BeamformingConfig,
-    /// PINN training configuration
+    /// PINN training configuration (solver-agnostic)
     #[cfg(feature = "pinn")]
-    pub pinn_config: BurnPINNConfig,
-    /// Uncertainty quantification settings
+    pub pinn_config: InterfacePinnConfig,
+    /// Uncertainty quantification settings (solver-agnostic)
     #[cfg(feature = "pinn")]
-    pub uncertainty_config: PinnUncertaintyConfig,
+    pub uncertainty_config: InterfaceUncertaintyConfig,
     /// Learning rate for PINN optimization
     pub learning_rate: f64,
     /// Number of training epochs
@@ -102,14 +110,13 @@ impl Default for PINNBeamformingConfig {
         Self {
             base_config: BeamformingConfig::default(),
             #[cfg(feature = "pinn")]
-            pinn_config: BurnPINNConfig::default(),
+            pinn_config: InterfacePinnConfig::default(),
             #[cfg(feature = "pinn")]
-            uncertainty_config: PinnUncertaintyConfig {
-                ensemble_size: 10,
+            uncertainty_config: InterfaceUncertaintyConfig {
+                bayesian_enabled: true,
                 mc_samples: 10,
-                dropout_prob: 0.1,
-                conformal_alpha: 0.05,
-                variance_threshold: 0.01,
+                dropout_rate: 0.1,
+                confidence_level: 0.95,
             },
             learning_rate: 0.001,
             num_epochs: 1000,
@@ -128,6 +135,8 @@ impl Default for PINNBeamformingConfig {
 }
 
 /// Result from PINN neural beamforming processing.
+///
+/// Uses solver-agnostic interface types to maintain layer separation.
 #[derive(Debug)]
 pub struct PinnBeamformingResult {
     /// Reconstructed volume
@@ -136,9 +145,9 @@ pub struct PinnBeamformingResult {
     pub uncertainty: Array3<f32>,
     /// Confidence scores per voxel
     pub confidence: Array3<f32>,
-    /// PINN optimization metrics
+    /// PINN optimization metrics (solver-agnostic)
     #[cfg(feature = "pinn")]
-    pub pinn_metrics: Option<BurnTrainingMetrics>,
+    pub pinn_metrics: Option<InterfaceTrainingMetrics>,
     #[cfg(not(feature = "pinn"))]
     pub pinn_metrics: Option<()>,
     /// Processing time (ms)

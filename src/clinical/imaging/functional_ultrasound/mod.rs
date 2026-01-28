@@ -153,11 +153,3 @@
 // pub mod ulm;             // Stub with TODO_AUDIT markers
 // pub mod analysis;        // Not yet created
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_module_structure() {
-        // Placeholder test to ensure module compiles
-        assert!(true);
-    }
-}

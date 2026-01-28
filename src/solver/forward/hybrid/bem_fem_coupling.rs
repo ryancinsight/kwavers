@@ -978,8 +978,10 @@ mod tests {
         let bem_boundary = vec![n0, n1, n2];
 
         // Config with few iterations
-        let mut config = BemFemCouplingConfig::default();
-        config.max_iterations = 2;
+        let config = BemFemCouplingConfig {
+            max_iterations: 2,
+            ..Default::default()
+        };
 
         let mut coupler = BemFemCoupler::new(config, &fem_mesh, &bem_boundary).unwrap();
 

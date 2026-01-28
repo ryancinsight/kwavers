@@ -423,9 +423,11 @@ mod tests {
             .expect("Failed to add element");
 
         // 2. Config with k=0 (Laplace) to simplify check
-        let mut config = FemHelmholtzConfig::default();
-        config.wavenumber = 0.0;
-        config.radiation_boundary = false; // Disable radiation BC to keep matrix pure K
+        let config = FemHelmholtzConfig {
+            wavenumber: 0.0,
+            radiation_boundary: false,
+            ..Default::default()
+        };
 
         let mut solver = FemHelmholtzSolver::new(config, mesh);
 
@@ -530,10 +532,12 @@ mod tests {
             .expect("Failed to add element");
 
         // 2. Setup Solver (Laplace)
-        let mut config = FemHelmholtzConfig::default();
-        config.wavenumber = 0.0;
-        config.radiation_boundary = false;
-        config.tolerance = 1e-10;
+        let config = FemHelmholtzConfig {
+            wavenumber: 0.0,
+            radiation_boundary: false,
+            tolerance: 1e-10,
+            ..Default::default()
+        };
 
         let mut solver = FemHelmholtzSolver::new(config, mesh);
 

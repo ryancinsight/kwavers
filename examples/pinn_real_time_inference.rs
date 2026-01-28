@@ -7,9 +7,8 @@
 use kwavers::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers::solver::inverse::pinn::ml::{
-    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave, CompilerStats, EdgeRuntime, Geometry2D,
-    HardwareCapabilities, JitCompiler, OptimizationLevel, OptimizedRuntime, PerformanceMonitor,
-    QuantizationScheme, QuantizedModel, Quantizer,
+    BurnLossWeights2D, BurnPINN2DConfig, EdgeRuntime, Geometry2D, JitCompiler, OptimizationLevel,
+    QuantizationScheme, Quantizer,
 };
 #[cfg(feature = "pinn")]
 use std::time::Instant;
@@ -19,7 +18,7 @@ fn main() -> KwaversResult<()> {
     println!("🚀 Real-Time PINN Inference Demonstration");
     println!("==========================================");
 
-    let wave_speed = 343.0; // m/s (speed of sound in air)
+    let _wave_speed = 343.0; // m/s (speed of sound in air)
 
     println!("📋 Performance Targets:");
     println!("   Single inference: <500μs");
@@ -55,7 +54,7 @@ fn main() -> KwaversResult<()> {
     println!();
 
     // Create geometry for wave equation
-    let geometry = Geometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
+    let _geometry = Geometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
     println!("🏗️  Geometry: Rectangular domain [0,1] × [0,1]");
     println!();
 
@@ -132,7 +131,7 @@ fn demonstrate_quantization() -> KwaversResult<()> {
     ];
 
     for (name, scheme) in schemes {
-        let quantizer = Quantizer::new(scheme);
+        let _quantizer = Quantizer::new(scheme);
         println!("   ✅ {}: Configured", name);
     }
 
@@ -236,7 +235,7 @@ fn simulate_memory_usage() -> usize {
     // - Weights: 100x100x4 bytes (int8 quantized)
     // - Biases: 100x4 bytes
     // - Working memory: 1024 bytes
-    let weight_memory = 100 * 100 * 1; // int8
+    let weight_memory = 100 * 100; // int8
     let bias_memory = 100 * 4; // f32
     let working_memory = 1024;
 

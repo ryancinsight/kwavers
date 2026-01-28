@@ -43,8 +43,9 @@ use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array3, Array4, ArrayView3};
 use std::collections::HashMap;
 
+// Use solver-agnostic interface instead of direct solver imports
 #[cfg(feature = "pinn")]
-use crate::solver::inverse::pinn::ml::{uncertainty_quantification::BayesianPINN, BurnPINN1DWave};
+use crate::analysis::signal_processing::beamforming::neural::pinn_interface::PinnBeamformingProvider;
 
 use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVector;
 
@@ -57,20 +58,32 @@ use super::inference;
 /// - Optimal delay calculation via eikonal equation
 /// - Adaptive weight computation with wave physics constraints
 /// - Uncertainty quantification via Bayesian inference
-#[derive(Debug)]
+///
+/// ## Architecture Note
+///
+/// This processor uses the `PinnBeamformingProvider` trait to decouple from
+/// specific PINN solver implementations, allowing different backends to be
+/// swapped at runtime without changing analysis layer code.
 pub struct NeuralBeamformingProcessor {
     /// Configuration
     config: PINNBeamformingConfig,
-    /// PINN model for beamforming optimization
+    /// PINN provider for beamforming (trait object, solver-agnostic)
     #[cfg(feature = "pinn")]
-    pinn_model: Option<BurnPINN1DWave<burn::backend::Autodiff<burn::backend::NdArray<f32>>>>,
-    /// Bayesian PINN for uncertainty quantification
-    #[cfg(feature = "pinn")]
-    bayesian_model: Option<BayesianPINN<burn::backend::Autodiff<burn::backend::NdArray<f32>>>>,
+    pinn_provider: Option<Box<dyn PinnBeamformingProvider>>,
     /// Steering vectors cache for performance
     steering_cache: HashMap<(usize, usize, usize), SteeringVector>,
     /// Performance metrics
     metrics: NeuralBeamformingMetrics,
+}
+
+impl std::fmt::Debug for NeuralBeamformingProcessor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NeuralBeamformingProcessor")
+            .field("config", &self.config)
+            .field("steering_cache_size", &self.steering_cache.len())
+            .field("metrics", &self.metrics)
+            .finish()
+    }
 }
 
 impl NeuralBeamformingProcessor {
@@ -86,43 +99,26 @@ impl NeuralBeamformingProcessor {
     /// - Initializes Bayesian uncertainty quantification
     /// - Allocates steering vector cache
     pub fn new(config: PINNBeamformingConfig) -> KwaversResult<Self> {
-        let mut processor = Self {
+        Ok(Self {
             config,
             #[cfg(feature = "pinn")]
-            pinn_model: None,
-            #[cfg(feature = "pinn")]
-            bayesian_model: None,
+            pinn_provider: None, // Provider must be set via set_provider()
             steering_cache: HashMap::new(),
             metrics: NeuralBeamformingMetrics::default(),
-        };
+        })
+    }
 
-        // Initialize PINN model if feature is enabled
-        #[cfg(feature = "pinn")]
-        {
-            processor.initialize_pinn_model()?;
-        }
-
-        Ok(processor)
+    /// Set the PINN provider for this processor.
+    ///
+    /// This allows dependency injection of the concrete PINN implementation
+    /// from the solver layer without creating a direct dependency.
+    #[cfg(feature = "pinn")]
+    pub fn set_provider(&mut self, provider: Box<dyn PinnBeamformingProvider>) {
+        self.pinn_provider = Some(provider);
     }
 
     pub fn steering_cache_len(&self) -> usize {
         self.steering_cache.len()
-    }
-
-    /// Initialize PINN model for beamforming optimization.
-    ///
-    /// Creates a 1D wave equation PINN with physics constraints and optional
-    /// Bayesian uncertainty quantification via Monte Carlo dropout.
-    #[cfg(feature = "pinn")]
-    fn initialize_pinn_model(&mut self) -> KwaversResult<()> {
-        type Backend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
-
-        let pinn =
-            BurnPINN1DWave::<Backend>::new(self.config.pinn_config.clone(), &Default::default())?;
-
-        self.pinn_model = Some(pinn);
-
-        Ok(())
     }
 
     /// Process 4D RF data volume with PINN-enhanced beamforming.
@@ -316,32 +312,14 @@ impl NeuralBeamformingProcessor {
     fn compute_uncertainty(&mut self, volume: &Array3<f32>) -> KwaversResult<Array3<f32>> {
         #[cfg(feature = "pinn")]
         {
-            if let (Some(bayesian), Some(_pinn)) = (&mut self.bayesian_model, &self.pinn_model) {
+            if let Some(provider) = &self.pinn_provider {
                 let uncertainty_start = std::time::Instant::now();
-                let mut uncertainty = Array3::zeros(volume.dim());
-                let (d0, d1, d2) = volume.dim();
 
-                for i in 0..d0 {
-                    for j in 0..d1 {
-                        for k in 0..d2 {
-                            // Normalize coordinates to [0, 1]
-                            let x = i as f32 / d0 as f32;
-                            let y = j as f32 / d1 as f32;
-                            let t = k as f32 / d2 as f32;
-
-                            let input = [x, y, t];
-                            let prediction =
-                                bayesian.predict_with_uncertainty(&input).map_err(|e| {
-                                    KwaversError::InternalError(format!("Inference error: {}", e))
-                                })?;
-
-                            // Variance (std²) as uncertainty
-                            if !prediction.std.is_empty() {
-                                uncertainty[[i, j, k]] = prediction.std[0].powi(2);
-                            }
-                        }
-                    }
-                }
+                // Use the provider's uncertainty estimation
+                let uncertainty = provider.estimate_uncertainty(
+                    &volume.clone().into_shape((volume.len(), 1, 1)).unwrap(),
+                    &self.config.uncertainty_config,
+                )?;
 
                 self.metrics.uncertainty_computation_time =
                     uncertainty_start.elapsed().as_millis() as f64;
@@ -398,7 +376,8 @@ impl NeuralBeamformingProcessor {
         let pinn_memory = if self.config.enable_pinn {
             #[cfg(feature = "pinn")]
             {
-                self.config.pinn_config.hidden_layers.iter().sum::<usize>() * 4 * 1024 * 1024
+                // Estimate based on typical PINN model size (~10MB per model)
+                10 * 1024 * 1024
             }
             #[cfg(not(feature = "pinn"))]
             {

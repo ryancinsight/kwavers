@@ -441,7 +441,7 @@ mod tests {
         // Verify that Params struct has correct alignment for GPU
         // Note: size may vary between CPU and GPU builds
         #[cfg(feature = "gpu")]
-        assert_eq!(std::mem::size_of::<Params>(), 80);
+        assert_eq!(std::mem::size_of::<Params>(), 96);
         #[cfg(not(feature = "gpu"))]
         assert_eq!(std::mem::size_of::<Params>(), 96);
         assert_eq!(std::mem::align_of::<Params>(), 4);

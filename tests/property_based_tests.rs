@@ -257,7 +257,6 @@ proptest! {
     }
 }
 
-/// Boundary condition enforcement
 proptest! {
     #[test]
     fn test_boundary_conditions_fdtd(
@@ -305,7 +304,6 @@ proptest! {
     }
 }
 
-/// Source term correctness
 proptest! {
     #[test]
     fn test_source_term_correctness(

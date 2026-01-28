@@ -16,8 +16,6 @@ use ndarray::{Array2, Array3, ArrayView3};
 #[derive(Debug, Clone)]
 struct BenchmarkConfig {
     grid_sizes: Vec<(usize, usize, usize)>,
-    time_steps: Vec<usize>,
-    problems: Vec<String>,
 }
 
 impl Default for BenchmarkConfig {
@@ -28,12 +26,6 @@ impl Default for BenchmarkConfig {
                 (64, 64, 64),   // Medium
                 (128, 128, 32), // Large 2D-like
             ],
-            time_steps: vec![10, 50, 100],
-            problems: vec![
-                "plane_wave".to_string(),
-                "gaussian_pulse".to_string(),
-                "spherical_wave".to_string(),
-            ],
         }
     }
 }
@@ -42,8 +34,6 @@ impl Default for BenchmarkConfig {
 #[derive(Debug)]
 struct BenchmarkResult {
     solver_name: String,
-    grid_size: (usize, usize, usize),
-    time_steps: usize,
     execution_time: std::time::Duration,
     memory_usage: usize,
     final_energy: f64,
@@ -91,16 +81,19 @@ fn run_fdtd_benchmark(
     source: &GridSource,
     time_steps: usize,
 ) -> BenchmarkResult {
-    let mut config = FdtdConfig::default();
-    config.nt = time_steps.saturating_add(1);
-    config.dt = 1e-7;
+    let config = FdtdConfig {
+        nt: time_steps.saturating_add(1),
+        dt: 1e-7,
+        ..Default::default()
+    };
     let mut solver = FdtdSolver::new(config, grid, medium, source.clone()).unwrap();
 
     let start = std::time::Instant::now();
 
     // Run simulation
     for _ in 0..time_steps {
-        black_box(solver.step_forward().unwrap());
+        solver.step_forward().unwrap();
+        black_box(());
     }
 
     let execution_time = start.elapsed();
@@ -113,8 +106,6 @@ fn run_fdtd_benchmark(
 
     BenchmarkResult {
         solver_name: "FDTD".to_string(),
-        grid_size: (grid.nx, grid.ny, grid.nz),
-        time_steps,
         execution_time,
         memory_usage,
         final_energy,
@@ -128,9 +119,11 @@ fn run_pstd_benchmark(
     medium: &HomogeneousMedium,
     time_steps: usize,
 ) -> BenchmarkResult {
-    let mut config = PSTDConfig::default();
-    config.nt = time_steps.saturating_add(1);
-    config.dt = 1e-7;
+    let config = PSTDConfig {
+        nt: time_steps.saturating_add(1),
+        dt: 1e-7,
+        ..Default::default()
+    };
     let pstd_source = GridSource::default();
     let mut solver = PSTDSolver::new(config, grid.clone(), medium, pstd_source).unwrap();
 
@@ -138,7 +131,8 @@ fn run_pstd_benchmark(
 
     // Run simulation
     for _ in 0..time_steps {
-        black_box(solver.step_forward().unwrap());
+        solver.step_forward().unwrap();
+        black_box(());
     }
 
     let execution_time = start.elapsed();
@@ -151,8 +145,6 @@ fn run_pstd_benchmark(
 
     BenchmarkResult {
         solver_name: "PSTD".to_string(),
-        grid_size: (grid.nx, grid.ny, grid.nz),
-        time_steps,
         execution_time,
         memory_usage,
         final_energy,
@@ -167,7 +159,7 @@ fn run_pstd_benchmark(
 /// - Kinetic energy: ∫(1/2)ρ|v|² dV (particle velocity field)
 /// - Potential energy: ∫(1/2)p²/(ρc²) dV (pressure field)
 /// - Proper spatial integration with grid spacing
-/// Current implementation: sqrt(Σ p²) - dimensionally incorrect, missing ρc² normalization
+///   Current implementation: sqrt(Σ p²) - dimensionally incorrect, missing ρc² normalization
 fn calculate_energy(field: ArrayView3<f64>) -> f64 {
     field.iter().map(|&x| x * x).sum::<f64>().sqrt()
 }

@@ -82,6 +82,7 @@ pub mod energy;
 pub mod error_metrics;
 
 use std::fmt;
+use std::prelude::v1::*;
 
 // ============================================================================
 // Core Validation Traits
@@ -538,6 +539,15 @@ mod tests {
         let cp = params.p_wave_speed();
         let cs = params.s_wave_speed();
         assert!(cp > cs, "P-wave speed must exceed S-wave speed");
+        assert!((params.period() - 2.0 * std::f64::consts::PI / params.omega).abs() < 1e-12);
+        assert!(
+            (params.poisson_ratio()
+                - params.lambda / (2.0 * (params.lambda + params.mu)))
+                .abs()
+                < 1e-12
+        );
+        assert!(params.wave_speed > 0.0);
+        assert!(params.omega > 0.0);
     }
 
     #[test]
@@ -558,5 +568,19 @@ mod tests {
 
         let wave_params = wave.parameters();
         assert!((wave_params.amplitude - 1e-6).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_wave_type_display() {
+        let variants = [
+            WaveType::PWave,
+            WaveType::SWave,
+            WaveType::SurfaceWave,
+            WaveType::Mixed,
+        ];
+        for variant in variants {
+            let rendered = format!("{}", variant);
+            assert!(!rendered.is_empty());
+        }
     }
 }

@@ -31,8 +31,9 @@
 
 use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
 use crate::analysis::signal_processing::beamforming::time_domain::DelayReference;
+use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::sensor::beamforming::{BeamformingCoreConfig, SteeringVectorMethod};
+use crate::domain::sensor::beamforming::BeamformingCoreConfig;
 use crate::domain::sensor::localization::{LocalizationMethod, LocalizationResult, Position, SensorArray};
 use ndarray::Array3;
 

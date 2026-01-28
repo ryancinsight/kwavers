@@ -164,9 +164,13 @@ pub use plane_wave::{PlaneWave, PlaneWaveConfig};
 
 #[cfg(test)]
 mod tests {
+    use super::PlaneWaveConfig;
+
     #[test]
     fn test_ultrafast_module() {
-        // Placeholder test
-        assert!(true);
+        let config = PlaneWaveConfig::default();
+        assert_eq!(config.tilt_angles.len(), 11);
+        assert!(config.sound_speed > 0.0);
+        assert!(config.f_number.is_some());
     }
 }

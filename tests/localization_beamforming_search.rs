@@ -1,7 +1,7 @@
 //! Release tests for SSOT-compliant beamforming-based localization.
 //!
 //! This test validates the dedicated API:
-//! - `LocalizationProcessor::localize_beamforming`
+//! - `localization::beamforming_search::localize_beamforming`
 //! - `localization::beamforming_search::{BeamformSearch, LocalizationBeamformSearchConfig, ...}`
 //!
 //! Key invariants enforced:
@@ -17,12 +17,12 @@
 
 use kwavers::analysis::signal_processing::beamforming::time_domain::DelayReference;
 use kwavers::domain::sensor::beamforming::BeamformingCoreConfig;
-use kwavers::domain::sensor::localization::array::{ArrayGeometry, Sensor};
-use kwavers::domain::sensor::localization::{
-    BeamformingLocalizationInput, LocalizationBeamformSearchConfig, LocalizationBeamformingMethod,
-    LocalizationConfig, LocalizationMethod, LocalizationProcessor, Position, SearchGrid,
-    SensorArray,
+use kwavers::analysis::signal_processing::localization::beamforming_search::{
+    localize_beamforming, BeamformingLocalizationInput, LocalizationBeamformSearchConfig,
+    LocalizationBeamformingMethod, SearchGrid,
 };
+use kwavers::domain::sensor::localization::array::{ArrayGeometry, Sensor};
+use kwavers::domain::sensor::localization::{Position, SensorArray};
 
 use ndarray::Array3;
 
@@ -117,17 +117,7 @@ fn beamforming_localization_finds_source_near_true_position() {
         256,
     );
 
-    let loc_cfg = LocalizationConfig {
-        sound_speed,
-        max_iterations: 100,
-        tolerance: 1e-6,
-        use_gpu: false,
-        method: LocalizationMethod::Beamforming,
-        frequency: 1e6,
-        search_radius: Some(0.05),
-    };
-
-    let processor = LocalizationProcessor::new(loc_cfg, array);
+    let array = make_array(sound_speed);
 
     let mut core = BeamformingCoreConfig::default();
     core.sound_speed = sound_speed;
@@ -150,9 +140,9 @@ fn beamforming_localization_finds_source_near_true_position() {
         sampling_frequency: sample_rate,
     };
 
-    let result = processor
-        .localize_beamforming(&input, search_cfg)
-        .expect("beamforming localization (SRP-DAS) should succeed");
+    let result =
+        localize_beamforming(&array, &input, search_cfg)
+            .expect("beamforming localization (SRP-DAS) should succeed");
 
     // The grid resolution is 1 cm, accept within ~1.5 grid steps.
     let err = result.position.distance_to(&true_source);
@@ -183,17 +173,7 @@ fn beamforming_localization_rejects_sampling_frequency_mismatch() {
         64,
     );
 
-    let loc_cfg = LocalizationConfig {
-        sound_speed,
-        max_iterations: 100,
-        tolerance: 1e-6,
-        use_gpu: false,
-        method: LocalizationMethod::Beamforming,
-        frequency: 1e6,
-        search_radius: Some(0.05),
-    };
-
-    let processor = LocalizationProcessor::new(loc_cfg, array);
+    let array = make_array(sound_speed);
 
     let mut core = BeamformingCoreConfig::default();
     core.sound_speed = sound_speed;
@@ -216,8 +196,7 @@ fn beamforming_localization_rejects_sampling_frequency_mismatch() {
         sampling_frequency: sample_rate,
     };
 
-    let err = processor
-        .localize_beamforming(&input, search_cfg)
+    let err = localize_beamforming(&array, &input, search_cfg)
         .expect_err("expected sampling frequency mismatch to be rejected");
 
     let msg = err.to_string();

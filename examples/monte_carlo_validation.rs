@@ -427,7 +427,7 @@ fn optical_property_map_to_array3(map: &OpticalPropertyMap) -> Array3<OpticalPro
         for j in 0..ny {
             for i in 0..nx {
                 if let Some(props) = map.get(i, j, k) {
-                    out[[i, j, k]] = props.clone();
+                    out[[i, j, k]] = *props;
                 }
             }
         }

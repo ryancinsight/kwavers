@@ -130,8 +130,6 @@ pub mod shaders;
 
 pub use sensor_beamformer::{SensorBeamformer, SensorProcessingParams, WindowType};
 
-// Re-exports for backward compatibility (migrated to analysis layer)
-pub use crate::analysis::signal_processing::beamforming::utils::SteeringVectorMethod;
 
 // NOTE: All beamforming algorithms have been migrated to:
 // - Analysis layer: crate::analysis::signal_processing::beamforming

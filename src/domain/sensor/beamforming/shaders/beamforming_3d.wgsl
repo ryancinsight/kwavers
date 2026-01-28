@@ -43,9 +43,6 @@ struct Params {
     num_samples: u32,
     dynamic_focusing: u32, // 0 = false, 1 = true
     apodization_window: u32, // 0=Rectangular, 1=Hamming, 2=Hann, 3=Blackman
-
-    // Time delays for dynamic focusing
-    time_delays: array<f32, 16384>, // Max 16K elements
 };
 
 @group(0) @binding(0)
@@ -96,22 +93,21 @@ fn calculate_delay(voxel_pos: vec3<f32>, element_pos: vec3<f32>) -> f32 {
     return time_of_flight * params.sampling_freq;
 }
 
-/// Linear interpolation for sub-sample delays
-fn interpolate_sample(rf_samples: array<f32, 1024>, delay: f32, num_samples: u32) -> f32 {
+/// Linear interpolation for sub-sample delays using direct storage buffer access
+fn interpolate_sample(frame: u32, element_idx: u32, delay: f32) -> f32 {
     let sample_idx = floor(delay);
     let fraction = delay - sample_idx;
 
-    if (u32(sample_idx) >= num_samples - 1u) {
-        return 0.0; // Out of bounds
+    if (u32(sample_idx) >= params.num_samples - 1u) {
+        return 0.0;
     }
 
     let idx0 = u32(sample_idx);
     let idx1 = idx0 + 1u;
 
-    let sample0 = rf_samples[idx0];
-    let sample1 = rf_samples[idx1];
+    let sample0 = rf_data[rf_data_index(frame, element_idx, idx0)];
+    let sample1 = rf_data[rf_data_index(frame, element_idx, idx1)];
 
-    // Linear interpolation
     return sample0 + fraction * (sample1 - sample0);
 }
 
@@ -227,7 +223,7 @@ fn delay_and_sum_kernel(global_id: vec3<u32>) {
                 // Apply dynamic focusing if enabled
                 if (params.dynamic_focusing == 1u) {
                     // For dynamic focusing, adjust delay based on depth
-                    let depth_factor = voxel_pos.z / (params.volume_dims.z * params.voxel_spacing.z);
+                    let depth_factor = voxel_pos.z / (f32(params.volume_dims.z) * params.voxel_spacing.z);
                     delay = delay * (1.0 + depth_factor * 0.1); // Example depth-dependent adjustment
                 }
 
@@ -236,16 +232,7 @@ fn delay_and_sum_kernel(global_id: vec3<u32>) {
 
                 // Sum across all frames and samples with delay
                 for (var frame: u32 = 0u; frame < params.num_frames; frame = frame + 1u) {
-                    // Collect RF samples for this element (simplified - in practice would use shared memory)
-                    var rf_samples: array<f32, 1024>;
-                    for (var s: u32 = 0u; s < min(1024u, params.num_samples); s = s + 1u) {
-                        rf_samples[s] = rf_data[rf_data_index(frame, element_idx, s)];
-                    }
-
-                    // Interpolate delayed sample
-                    let delayed_sample = interpolate_sample(rf_samples, delay, params.num_samples);
-
-                    // Accumulate with apodization
+                    let delayed_sample = interpolate_sample(frame, element_idx, delay);
                     sum = sum + delayed_sample * weight;
                     weight_sum = weight_sum + weight;
                 }

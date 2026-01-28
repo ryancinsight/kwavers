@@ -1008,8 +1008,10 @@ mod tests {
 
     #[test]
     fn test_maximum_likelihood_fusion() {
-        let mut config = FusionConfig::default();
-        config.fusion_method = FusionMethod::MaximumLikelihood;
+        let config = FusionConfig {
+            fusion_method: FusionMethod::MaximumLikelihood,
+            ..Default::default()
+        };
         let mut fusion = MultiModalFusion::new(config);
 
         let shape = (10, 10, 2);

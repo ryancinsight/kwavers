@@ -634,9 +634,12 @@ mod tests {
         assert_eq!(int_val.as_int(), Some(42));
         assert_eq!(int_val.as_string(), Some("42".to_string()));
 
-        let float_val = DicomValue::Float(3.14);
-        assert_eq!(float_val.as_float(), Some(3.14));
-        assert_eq!(float_val.as_string(), Some("3.14".to_string()));
+        let float_val = DicomValue::Float(std::f64::consts::PI);
+        assert_eq!(float_val.as_float(), Some(std::f64::consts::PI));
+        assert_eq!(
+            float_val.as_string(),
+            Some(std::f64::consts::PI.to_string())
+        );
     }
 
     #[test]

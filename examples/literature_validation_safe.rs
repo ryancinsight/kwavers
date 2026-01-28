@@ -59,14 +59,13 @@ pub fn main() -> KwaversResult<()> {
     println!("Comprehensive test suite using established analytical solutions");
     println!("=================================================================\n");
 
-    let mut results = Vec::new();
-
-    // Run all validation tests
-    results.push(validate_greens_function()?);
-    results.push(validate_rayleigh_sommerfeld_diffraction()?);
-    results.push(validate_lloyds_mirror_interference()?);
-    results.push(validate_absorption_attenuation()?);
-    results.push(validate_burgers_equation()?);
+    let results = vec![
+        validate_greens_function()?,
+        validate_rayleigh_sommerfeld_diffraction()?,
+        validate_lloyds_mirror_interference()?,
+        validate_absorption_attenuation()?,
+        validate_burgers_equation()?,
+    ];
 
     // Print comprehensive results
     print_validation_summary(&results);
@@ -130,6 +129,13 @@ fn validate_greens_function() -> KwaversResult<ValidationResult> {
     let mut sum_sq_error = 0.0;
     let mut n_samples = 0;
 
+    let update_scalars = WaveUpdateScalars { dt, dx, c0 };
+    let source_index = SourceIndex3 {
+        i: source_i,
+        j: source_j,
+        k: source_k,
+    };
+
     // Simulation loop with impulse source
     for step in 0..n_steps {
         let t = step as f64 * dt;
@@ -159,9 +165,7 @@ fn validate_greens_function() -> KwaversResult<ValidationResult> {
             &mut velocity_x,
             &mut velocity_y,
             &mut velocity_z,
-            dt,
-            dx,
-            c0,
+            update_scalars,
         )?;
 
         // Validate against analytical Green's function every 5 steps
@@ -172,9 +176,7 @@ fn validate_greens_function() -> KwaversResult<ValidationResult> {
                 source_strength,
                 c0,
                 &grid,
-                source_i,
-                source_j,
-                source_k,
+                source_index,
             );
             max_error = max_error.max(step_error);
             sum_sq_error += step_error * step_error;
@@ -211,6 +213,20 @@ fn validate_greens_function() -> KwaversResult<ValidationResult> {
     })
 }
 
+#[derive(Clone, Copy)]
+struct WaveUpdateScalars {
+    dt: f64,
+    dx: f64,
+    c0: f64,
+}
+
+#[derive(Clone, Copy)]
+struct SourceIndex3 {
+    i: usize,
+    j: usize,
+    k: usize,
+}
+
 /// Update 3D wave equation using safe vectorization
 fn update_3d_wave_equation_safe(
     pressure: &mut Array3<f64>,
@@ -218,18 +234,16 @@ fn update_3d_wave_equation_safe(
     velocity_x: &mut Array3<f64>,
     velocity_y: &mut Array3<f64>,
     velocity_z: &mut Array3<f64>,
-    dt: f64,
-    dx: f64,
-    c0: f64,
+    scalars: WaveUpdateScalars,
 ) -> KwaversResult<()> {
     let (nx, ny, nz) = pressure.dim();
     let rho0 = 1000.0; // Water density
 
     // Update velocities: ∂v/∂t = -1/ρ ∇p
     // Use safe vectorization for velocity updates
-    update_velocity_component_safe(velocity_x, pressure, dt, dx, rho0, 0)?;
-    update_velocity_component_safe(velocity_y, pressure, dt, dx, rho0, 1)?;
-    update_velocity_component_safe(velocity_z, pressure, dt, dx, rho0, 2)?;
+    update_velocity_component_safe(velocity_x, pressure, scalars.dt, scalars.dx, rho0, 0)?;
+    update_velocity_component_safe(velocity_y, pressure, scalars.dt, scalars.dx, rho0, 1)?;
+    update_velocity_component_safe(velocity_z, pressure, scalars.dt, scalars.dx, rho0, 2)?;
 
     // Update pressure: ∂p/∂t = -ρc² ∇·v
     let mut new_pressure = Array3::<f64>::zeros((nx, ny, nz));
@@ -237,11 +251,15 @@ fn update_3d_wave_equation_safe(
     for i in 1..nx - 1 {
         for j in 1..ny - 1 {
             for k in 1..nz - 1 {
-                let div_v = (velocity_x[[i + 1, j, k]] - velocity_x[[i - 1, j, k]]) / (2.0 * dx)
-                    + (velocity_y[[i, j + 1, k]] - velocity_y[[i, j - 1, k]]) / (2.0 * dx)
-                    + (velocity_z[[i, j, k + 1]] - velocity_z[[i, j, k - 1]]) / (2.0 * dx);
+                let div_v = (velocity_x[[i + 1, j, k]] - velocity_x[[i - 1, j, k]])
+                    / (2.0 * scalars.dx)
+                    + (velocity_y[[i, j + 1, k]] - velocity_y[[i, j - 1, k]])
+                        / (2.0 * scalars.dx)
+                    + (velocity_z[[i, j, k + 1]] - velocity_z[[i, j, k - 1]])
+                        / (2.0 * scalars.dx);
 
-                new_pressure[[i, j, k]] = pressure[[i, j, k]] - dt * rho0 * c0 * c0 * div_v;
+                new_pressure[[i, j, k]] =
+                    pressure[[i, j, k]] - scalars.dt * rho0 * scalars.c0 * scalars.c0 * div_v;
             }
         }
     }
@@ -315,9 +333,7 @@ fn validate_against_greens_function(
     source_strength: f64,
     c0: f64,
     grid: &Grid,
-    source_i: usize,
-    source_j: usize,
-    source_k: usize,
+    source_index: SourceIndex3,
 ) -> (f64, usize) {
     let mut max_error = 0.0f64;
     let mut samples = 0;
@@ -327,9 +343,9 @@ fn validate_against_greens_function(
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
-                let di = i as f64 - source_i as f64;
-                let dj = j as f64 - source_j as f64;
-                let dk = k as f64 - source_k as f64;
+                let di = i as f64 - source_index.i as f64;
+                let dj = j as f64 - source_index.j as f64;
+                let dk = k as f64 - source_index.k as f64;
                 let r = (di * di + dj * dj + dk * dk).sqrt() * grid.dx;
 
                 // Only check points where analytical solution is significant

@@ -234,9 +234,10 @@ pub mod core;
 
 // Re-export primary types
 #[cfg(feature = "pinn")]
-pub use core::{
-    DistributedNeuralBeamformingProcessor, FaultToleranceState, ModelParallelConfig, PipelineStage,
-};
+pub use core::{DistributedNeuralBeamformingProcessor, FaultToleranceState};
+
+// ModelParallelConfig and PipelineStage have been removed - they will be
+// reimplemented via the DistributedPinnProvider trait interface
 
 #[cfg(test)]
 mod tests {

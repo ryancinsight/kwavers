@@ -182,6 +182,9 @@ pub mod physics;
 pub mod types;
 pub mod uncertainty;
 
+// Solver-agnostic PINN interface (always available for type definitions)
+pub mod pinn_interface;
+
 // Feature-gated modules
 #[cfg(feature = "pinn")]
 pub mod pinn;

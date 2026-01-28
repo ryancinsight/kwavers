@@ -18,7 +18,6 @@
 
 use kwavers::clinical::imaging::doppler::{
     AutocorrelationConfig, AutocorrelationEstimator, ColorFlowConfig, ColorFlowImaging,
-    DopplerDefaults,
 };
 use ndarray::Array3;
 use num_complex::Complex64;
@@ -200,7 +199,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for depth in 40..90 {
         for beam in 20..45 {
             if variance[[depth, beam]] < 0.3 {
-                vessel_velocities.push(velocity[[depth, beam]]);
+                vessel_velocities.push(filtered_velocity[[depth, beam]]);
             }
         }
     }

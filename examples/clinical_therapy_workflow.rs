@@ -8,7 +8,11 @@
 //! 3. Real-time monitoring and safety control
 //! 4. Combined therapy approaches
 
-use kwavers::clinical::therapy::therapy_integration::*;
+use kwavers::clinical::therapy::therapy_integration::{
+    AcousticTherapyParams, PatientParameters, RiskOrgan, SafetyLimits, SafetyStatus, TargetVolume,
+    TherapyIntegrationOrchestrator, TherapyModality, TherapySessionConfig, TissuePropertyMap,
+    TissueType,
+};
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use ndarray::Array3;

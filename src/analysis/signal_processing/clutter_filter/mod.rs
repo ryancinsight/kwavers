@@ -207,11 +207,3 @@ pub use iir_filter::{IirFilter, IirFilterConfig};
 pub use polynomial_filter::{PolynomialFilter, PolynomialFilterConfig};
 pub use svd_filter::{SvdClutterFilter, SvdClutterFilterConfig};
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_clutter_filter_module() {
-        // Placeholder test
-        assert!(true);
-    }
-}

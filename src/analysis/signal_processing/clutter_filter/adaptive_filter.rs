@@ -398,19 +398,25 @@ mod tests {
     #[test]
     fn test_config_validation() {
         // Invalid noise floor threshold
-        let mut config = AdaptiveFilterConfig::default();
-        config.noise_floor_threshold = 1.5;
+        let config = AdaptiveFilterConfig {
+            noise_floor_threshold: 1.5,
+            ..Default::default()
+        };
         assert!(AdaptiveFilter::new(config).is_err());
 
         // Invalid smoothing window
-        let mut config = AdaptiveFilterConfig::default();
-        config.temporal_smoothing = true;
-        config.smoothing_window = 0;
+        let config = AdaptiveFilterConfig {
+            temporal_smoothing: true,
+            smoothing_window: 0,
+            ..Default::default()
+        };
         assert!(AdaptiveFilter::new(config).is_err());
 
         // Invalid fixed rank (zero)
-        let mut config = AdaptiveFilterConfig::default();
-        config.separation_method = SubspaceSeparationMethod::FixedRank { clutter_rank: 0 };
+        let config = AdaptiveFilterConfig {
+            separation_method: SubspaceSeparationMethod::FixedRank { clutter_rank: 0 },
+            ..Default::default()
+        };
         assert!(AdaptiveFilter::new(config).is_err());
     }
 

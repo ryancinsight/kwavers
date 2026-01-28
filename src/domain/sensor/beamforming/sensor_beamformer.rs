@@ -9,7 +9,7 @@ use crate::domain::grid::Grid;
 use crate::domain::sensor::grid_sampling::GridSensorSet;
 use crate::domain::sensor::localization::array::SensorArray;
 use crate::domain::signal::window as signal_window;
-use ndarray::Array2;
+use ndarray::{Array1, Array2};
 use num_complex::Complex;
 
 /// Sensor-specific beamforming operations tied to hardware geometry
@@ -240,15 +240,16 @@ impl SensorBeamformer {
             let z = theta.cos();
             let direction = [x, y, z];
 
-            // Use the shared SteeringVector logic from analysis layer
-            // Note: compute_plane_wave returns Array1<Complex<f64>>
-            use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVector;
-            let vector = SteeringVector::compute_plane_wave(
+            let phase_delays = crate::math::geometry::delays::plane_wave_phase_delays(
+                &self.sensor_positions,
                 direction,
                 frequency,
-                &self.sensor_positions,
                 sound_speed,
             )?;
+            let mut vector = Array1::<Complex<f64>>::zeros(n_sensors);
+            for (i, &phase) in phase_delays.iter().enumerate() {
+                vector[i] = Complex::new(0.0, phase).exp();
+            }
 
             // Assign to column
             steering_matrix.column_mut(idx).assign(&vector);

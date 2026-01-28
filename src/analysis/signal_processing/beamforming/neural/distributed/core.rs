@@ -46,11 +46,11 @@
 
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array4;
-use std::collections::{HashMap, VecDeque};
 
+// Use solver-agnostic interface instead of direct solver imports
 #[cfg(feature = "pinn")]
-use crate::solver::inverse::pinn::ml::multi_gpu_manager::{
-    CommunicationChannel, DecompositionStrategy, LoadBalancingAlgorithm, MultiGpuManager,
+use crate::analysis::signal_processing::beamforming::neural::pinn_interface::{
+    DecompositionStrategy, DistributedConfig, LoadBalancingStrategy,
 };
 
 use crate::analysis::signal_processing::beamforming::neural::pinn::NeuralBeamformingProcessor;
@@ -62,25 +62,41 @@ use crate::analysis::signal_processing::beamforming::neural::types::{
 ///
 /// Coordinates parallel beamforming across multiple GPUs with load balancing,
 /// fault tolerance, and communication optimization.
+///
+/// ## Architecture Note
+///
+/// This implementation uses solver-agnostic interface types for configuration
+/// but maintains an internal adapter to the concrete solver implementation.
+/// The adapter is created at runtime based on the available PINN backend.
+///
+/// ## Implementation Status
+///
+/// **TODO**: This module is being refactored to use the solver-agnostic interface.
+/// The current implementation is a placeholder that maintains the API surface
+/// while the underlying distributed GPU support is being implemented through
+/// the `PinnBeamformingProvider` trait.
 #[cfg(feature = "pinn")]
-#[derive(Debug)]
 pub struct DistributedNeuralBeamformingProcessor {
-    /// Multi-GPU manager for distributed processing
-    gpu_manager: MultiGpuManager,
+    /// Distributed configuration (solver-agnostic)
+    config: DistributedConfig,
     /// Individual neural beamforming processors (one per GPU)
     processors: Vec<NeuralBeamformingProcessor>,
-    /// Decomposition strategy for workload distribution
-    decomposition_strategy: DecompositionStrategy,
-    /// Load balancing algorithm
-    load_balancer: LoadBalancingAlgorithm,
-    /// Communication channels for data transfer
-    communication_channels: HashMap<(usize, usize), CommunicationChannel>,
-    /// Model parallelism configuration
-    model_parallel_config: Option<ModelParallelConfig>,
     /// Fault tolerance and load balancing state
     fault_tolerance: FaultToleranceState,
     /// Performance metrics
     metrics: DistributedNeuralBeamformingMetrics,
+}
+
+#[cfg(feature = "pinn")]
+impl std::fmt::Debug for DistributedNeuralBeamformingProcessor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DistributedNeuralBeamformingProcessor")
+            .field("config", &self.config)
+            .field("num_processors", &self.processors.len())
+            .field("fault_tolerance", &self.fault_tolerance)
+            .field("metrics", &self.metrics)
+            .finish()
+    }
 }
 
 /// Fault tolerance and dynamic load balancing state.
@@ -115,33 +131,8 @@ impl Default for FaultToleranceState {
     }
 }
 
-/// Model parallelism configuration for distributed PINN networks.
-#[cfg(feature = "pinn")]
-#[derive(Debug, Clone)]
-pub struct ModelParallelConfig {
-    /// Number of GPUs for model parallelism
-    pub num_model_gpus: usize,
-    /// Layer assignment to GPUs (layer_index -> gpu_index)
-    pub layer_assignments: HashMap<usize, usize>,
-    /// Pipeline stages for pipelined model parallelism
-    pub pipeline_stages: Vec<PipelineStage>,
-    /// Gradient accumulation steps
-    pub gradient_accumulation_steps: usize,
-}
-
-/// Pipeline stage for model parallelism.
-#[cfg(feature = "pinn")]
-#[derive(Debug, Clone)]
-pub struct PipelineStage {
-    /// Stage index
-    pub stage_id: usize,
-    /// GPU assigned to this stage
-    pub device_id: usize,
-    /// Layers in this stage
-    pub layer_indices: Vec<usize>,
-    /// Memory requirements for this stage (bytes)
-    pub memory_requirement: usize,
-}
+// ModelParallelConfig and PipelineStage removed - will be implemented via DistributedPinnProvider trait
+// when distributed support is fully integrated with the solver-agnostic interface
 
 #[cfg(feature = "pinn")]
 impl DistributedNeuralBeamformingProcessor {
@@ -157,31 +148,24 @@ impl DistributedNeuralBeamformingProcessor {
     /// # Returns
     ///
     /// Initialized distributed processor ready for processing.
-    pub async fn new(
-        config: PINNBeamformingConfig,
-        num_gpus: usize,
-        decomposition_strategy: DecompositionStrategy,
-        load_balancer: LoadBalancingAlgorithm,
+    pub fn new(
+        beamforming_config: PINNBeamformingConfig,
+        distributed_config: DistributedConfig,
     ) -> KwaversResult<Self> {
+        let num_gpus = distributed_config.gpu_devices.len();
+
         if num_gpus == 0 {
             return Err(KwaversError::InvalidInput(
                 "Must specify at least 1 GPU".to_string(),
             ));
         }
 
-        // Initialize multi-GPU manager
-        let gpu_manager =
-            MultiGpuManager::new(decomposition_strategy.clone(), load_balancer.clone()).await?;
-
         // Create individual processors for each GPU
         let mut processors = Vec::with_capacity(num_gpus);
         for _ in 0..num_gpus {
-            let processor = NeuralBeamformingProcessor::new(config.clone())?;
+            let processor = NeuralBeamformingProcessor::new(beamforming_config.clone())?;
             processors.push(processor);
         }
-
-        // Initialize communication channels
-        let communication_channels = Self::initialize_communication_channels(num_gpus)?;
 
         // Initialize fault tolerance state
         let fault_tolerance = FaultToleranceState {
@@ -191,65 +175,40 @@ impl DistributedNeuralBeamformingProcessor {
         };
 
         Ok(Self {
-            gpu_manager,
+            config: distributed_config,
             processors,
-            decomposition_strategy,
-            load_balancer,
-            communication_channels,
-            model_parallel_config: None,
             fault_tolerance,
             metrics: DistributedNeuralBeamformingMetrics::default(),
         })
     }
 
-    pub fn gpu_manager(&self) -> &MultiGpuManager {
-        &self.gpu_manager
+    /// Get the distributed configuration.
+    pub fn config(&self) -> &DistributedConfig {
+        &self.config
     }
 
+    /// Get the decomposition strategy.
     pub fn decomposition_strategy(&self) -> &DecompositionStrategy {
-        &self.decomposition_strategy
+        &self.config.decomposition
     }
 
-    pub fn load_balancer(&self) -> &LoadBalancingAlgorithm {
-        &self.load_balancer
+    /// Get the load balancing strategy.
+    pub fn load_balancing_strategy(&self) -> &LoadBalancingStrategy {
+        &self.config.load_balancing
     }
 
-    pub fn communication_channels(&self) -> &HashMap<(usize, usize), CommunicationChannel> {
-        &self.communication_channels
+    /// Get GPU device IDs.
+    pub fn gpu_devices(&self) -> &[usize] {
+        &self.config.gpu_devices
     }
 
-    /// Initialize communication channels between GPUs.
-    ///
-    /// # Communication Topology
-    ///
-    /// Creates full mesh topology with estimated bandwidth/latency:
-    /// - Same NUMA node: 50 GB/s, 5 µs latency
-    /// - Different NUMA node: 25 GB/s, 10 µs latency
-    fn initialize_communication_channels(
-        num_gpus: usize,
-    ) -> KwaversResult<HashMap<(usize, usize), CommunicationChannel>> {
-        let mut channels = HashMap::new();
-
-        for i in 0..num_gpus {
-            for j in (i + 1)..num_gpus {
-                // Estimate bandwidth and latency based on GPU proximity
-                let bandwidth = if i / 2 == j / 2 { 50.0 } else { 25.0 };
-                let latency = if i / 2 == j / 2 { 5.0 } else { 10.0 };
-
-                let channel = CommunicationChannel {
-                    bandwidth,
-                    latency,
-                    transfer_queue: VecDeque::new(),
-                    active_transfers: 0,
-                };
-
-                channels.insert((i, j), channel.clone());
-                channels.insert((j, i), channel);
-            }
-        }
-
-        Ok(channels)
+    /// Get number of active processors.
+    pub fn num_processors(&self) -> usize {
+        self.processors.len()
     }
+
+    // TODO: Implement communication channel initialization using the solver-agnostic interface
+    // This will be implemented once the concrete PINN provider supports distributed operations
 
     /// Get number of active GPUs.
     pub fn num_gpus(&self) -> usize {
@@ -266,10 +225,7 @@ impl DistributedNeuralBeamformingProcessor {
         &self.fault_tolerance
     }
 
-    /// Get model parallelism configuration.
-    pub fn model_parallel_config(&self) -> Option<&ModelParallelConfig> {
-        self.model_parallel_config.as_ref()
-    }
+    // Model parallelism configuration removed - will be implemented via DistributedPinnProvider trait
 
     /// Process RF data using distributed neural beamforming.
     ///

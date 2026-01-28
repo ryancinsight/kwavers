@@ -28,24 +28,12 @@
 //! ```rust
 //! use crate::analysis::signal_processing::beamforming::test_utilities::*;
 //!
-//! #[cfg(test)]
-//! mod tests {
-//!     use super::*;
+//! let cov = TestCovarianceBuilder::new(8)
+//!     .with_decay(0.2)
+//!     .with_diagonal_loading(0.1)
+//!     .build();
 //!
-//!     #[test]
-//!     fn my_beamforming_test() {
-//!         // Create standard test covariance matrix
-//!         let cov = TestCovarianceBuilder::new(8)
-//!             .with_decay(0.2)
-//!             .with_diagonal_loading(0.1)
-//!             .build();
-//!
-//!         // Create steering vector for broadside
-//!         let steering = create_steering_vector(8, 0.0);
-//!
-//!         // ... test code ...
-//!     }
-//! }
+//! let steering = create_steering_vector(8, 0.0);
 //! ```
 
 use ndarray::{Array1, Array2};

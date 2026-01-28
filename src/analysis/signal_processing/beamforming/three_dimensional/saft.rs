@@ -425,9 +425,11 @@ mod tests {
     #[test]
     fn test_reconstruct_volume_basic() {
         // Use smaller dimensions for faster testing
-        let mut beamforming_config = BeamformingConfig3D::default();
-        beamforming_config.volume_dims = (32, 32, 32); // Smaller volume
-        beamforming_config.num_elements_3d = (8, 8, 4); // Fewer elements
+        let beamforming_config = BeamformingConfig3D {
+            volume_dims: (32, 32, 32),
+            num_elements_3d: (8, 8, 4),
+            ..Default::default()
+        };
 
         let saft_config = SaftConfig::default();
         let processor = SaftProcessor::new(saft_config, beamforming_config);

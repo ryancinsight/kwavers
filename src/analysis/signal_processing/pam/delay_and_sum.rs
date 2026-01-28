@@ -441,7 +441,7 @@ mod tests {
             .unwrap();
 
         // Should detect at least the point with intensity 5.0
-        assert!(events.len() >= 1);
+        assert!(!events.is_empty());
         assert!(events[0].intensity > 2.0);
     }
 }
