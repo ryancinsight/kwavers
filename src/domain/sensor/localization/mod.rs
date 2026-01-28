@@ -1,4 +1,16 @@
-// sensor/localization/mod.rs - Unified acoustic source localization
+// sensor/localization/mod.rs - DEPRECATED: Use analysis::signal_processing::localization
+//
+// This module is deprecated and will be removed in a future release.
+// Localization algorithms belong in the analysis layer, not the domain layer.
+//
+// Migration path:
+// - Old: use crate::domain::sensor::localization::{...};
+// - New: use crate::analysis::signal_processing::localization::{...};
+
+#![deprecated(
+    since = "3.1.0",
+    note = "Use analysis::signal_processing::localization instead. This domain-layer location violates architectural boundaries."
+)]
 
 pub mod algorithms;
 pub mod array;
@@ -102,7 +114,6 @@ impl Default for LocalizationConfig {
         }
     }
 }
-
 
 /// Main localization processor
 #[derive(Debug)]

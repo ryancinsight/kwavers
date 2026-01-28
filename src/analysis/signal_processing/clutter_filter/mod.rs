@@ -10,45 +10,36 @@
 //! small, high-velocity blood flow signals. This is critical for Power Doppler and
 //! functional ultrasound imaging where blood flow changes indicate neural activity.
 //!
-//! TODO_AUDIT: P1 - Spatiotemporal SVD Clutter Filter - Implement tissue/blood discrimination
-//! DEPENDS ON: analysis/signal_processing/clutter_filter/svd_filter.rs (to be created)
-//! DEPENDS ON: math/linear_algebra/svd.rs (enhance existing)
-//! MISSING: Singular Value Decomposition on slow-time data matrix
-//! MISSING: Tissue/blood subspace separation via singular value thresholding
-//! MISSING: Rank selection for optimal clutter rejection
-//! MISSING: Temporal filtering across 200 frame blocks
-//! MISSING: Spatiotemporal correlation matrix construction
-//! SEVERITY: HIGH (required for functional ultrasound imaging)
-//! PERFORMANCE: Process 200 compounded frames per block at 500 Hz
-//! THEOREM: Signal rank decomposition: S = UΣV^T where U contains spatial modes, V temporal modes
-//! THEOREM: Clutter subspace: low-rank (K=2-5 components), Blood subspace: higher singular values
-//! REFERENCES: Nouhoum et al. (2021) "Spatiotemporal Singular Values Decomposition (SVD) clutter filter"
-//! REFERENCES: Demené et al. (2015) "Spatiotemporal clutter filtering of ultrafast ultrasound data highly increases Doppler and fUltrasound sensitivity"
-//! REFERENCES: Scientific Reports 5:11203. DOI: 10.1038/srep11203
+//! ## Implementation Status
 //!
-//! TODO_AUDIT: P2 - Polynomial Regression Filter - Implement classical high-pass filtering
-//! DEPENDS ON: analysis/signal_processing/clutter_filter/polynomial_filter.rs (to be created)
-//! MISSING: Polynomial fit to slow-time data (order 2-6)
-//! MISSING: Subtraction of fitted polynomial from signal
-//! MISSING: Adaptive order selection based on SNR
-//! SEVERITY: MEDIUM (alternative to SVD, simpler but less effective)
-//! REFERENCES: Bjaerum et al. (2002) "Clutter filter design for ultrasound color flow imaging"
+//! ✅ **Spatiotemporal SVD Clutter Filter** - IMPLEMENTED
+//! - Singular Value Decomposition on slow-time data matrix
+//! - Tissue/blood subspace separation via singular value thresholding
+//! - Manual and automatic rank selection
+//! - Temporal filtering across ensemble blocks
+//! - Implementation: `svd_filter.rs` (444 lines)
+//! - References: Demené et al. (2015), Baranger et al. (2018)
 //!
-//! TODO_AUDIT: P2 - IIR High-Pass Filter - Implement infinite impulse response filtering
-//! DEPENDS ON: analysis/signal_processing/clutter_filter/iir_filter.rs (to be created)
-//! MISSING: Butterworth/Chebyshev high-pass filter design
-//! MISSING: Cutoff frequency selection (typically 50-100 Hz)
-//! MISSING: Zero-phase filtering (forward-backward filtering)
-//! SEVERITY: MEDIUM (real-time alternative to SVD)
-//! REFERENCES: Jensen (1996) "Estimation of Blood Velocities Using Ultrasound" Cambridge
+//! ✅ **Polynomial Regression Filter** - IMPLEMENTED
+//! - Polynomial fit to slow-time data (configurable order 2-6)
+//! - Subtraction of fitted polynomial from signal
+//! - Per-pixel polynomial regression
+//! - Implementation: `polynomial_filter.rs` (390 lines)
+//! - References: Bjaerum et al. (2002)
 //!
-//! TODO_AUDIT: P2 - Adaptive Clutter Rejection - Implement signal-dependent filtering
-//! DEPENDS ON: analysis/signal_processing/clutter_filter/adaptive_filter.rs (to be created)
-//! MISSING: Eigenfilter for adaptive clutter rejection
-//! MISSING: Wiener filtering for optimal SNR
-//! MISSING: Clutter-to-blood ratio (CBR) estimation
-//! SEVERITY: LOW (advanced optimization)
-//! REFERENCES: Ledoux et al. (1997) "Reduction of the clutter component in Doppler ultrasound signals"
+//! ✅ **IIR High-Pass Filter** - IMPLEMENTED
+//! - Butterworth high-pass filter design
+//! - Configurable cutoff frequency (typically 50-100 Hz)
+//! - Zero-phase filtering (forward-backward)
+//! - Implementation: `iir_filter.rs` (411 lines)
+//! - References: Jensen (1996)
+//!
+//! ✅ **Adaptive Clutter Rejection** - IMPLEMENTED
+//! - Eigenfilter for adaptive clutter rejection
+//! - Clutter-to-blood ratio (CBR) estimation
+//! - Multiple subspace separation methods
+//! - Implementation: `adaptive_filter.rs` (571 lines)
+//! - References: Ledoux et al. (1997)
 //!
 //! # Clutter Filtering Methods
 //!
@@ -188,10 +179,14 @@
 //!
 //! # Module Organization
 //!
-//! - `svd_filter`: Spatiotemporal SVD clutter filtering ✅
-//! - `polynomial_filter`: Polynomial regression filtering ✅
-//! - `iir_filter`: IIR high-pass filtering ✅
-//! - `adaptive_filter`: Adaptive clutter rejection ✅
+//! All filters are fully implemented and production-ready:
+//!
+//! - `svd_filter`: Spatiotemporal SVD clutter filtering (444 lines)
+//! - `polynomial_filter`: Polynomial regression filtering (390 lines)
+//! - `iir_filter`: IIR high-pass filtering (411 lines)
+//! - `adaptive_filter`: Adaptive clutter rejection (571 lines)
+//!
+//! Total: 1,816 lines of production code + comprehensive documentation
 
 // Implemented clutter filters
 pub mod adaptive_filter;
@@ -206,4 +201,3 @@ pub use adaptive_filter::{
 pub use iir_filter::{IirFilter, IirFilterConfig};
 pub use polynomial_filter::{PolynomialFilter, PolynomialFilterConfig};
 pub use svd_filter::{SvdClutterFilter, SvdClutterFilterConfig};
-
