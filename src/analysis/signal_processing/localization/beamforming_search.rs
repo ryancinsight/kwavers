@@ -32,11 +32,10 @@
 use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
 use crate::analysis::signal_processing::beamforming::time_domain::DelayReference;
 use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
+use crate::analysis::signal_processing::localization::LocalizationResult; // Analysis layer result type
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::sensor::array::{Position, SensorArray}; // Domain: sensor array geometry
 use crate::domain::sensor::beamforming::BeamformingCoreConfig;
-use crate::domain::sensor::localization::{
-    LocalizationMethod, LocalizationResult, Position, SensorArray,
-};
 use ndarray::Array3;
 
 /// Covariance / snapshot domain policy for narrowband MVDR/Capon scoring.
@@ -365,16 +364,19 @@ pub fn localize_beamforming(
     let search = BeamformSearch::new(beamformer, search_cfg)?;
 
     let centroid = sensor_array.centroid().to_array();
-    let position = search.search(centroid, &input.sensor_data)?;
+    let position_obj = search.search(centroid, &input.sensor_data)?;
+    let position = position_obj.to_array(); // Convert Position to [f64; 3]
 
-    let computation_time = start.elapsed().as_secs_f64();
+    let _computation_time = start.elapsed().as_secs_f64(); // Currently unused
 
+    // Convert grid search position to LocalizationResult
+    // Note: Grid search provides point estimate but not iterative convergence metrics
     Ok(LocalizationResult {
         position,
-        uncertainty: Position::new(0.0, 0.0, 0.0),
-        confidence: 0.0,
-        method: LocalizationMethod::Beamforming,
-        computation_time,
+        uncertainty: 0.0, // Grid search uncertainty estimated from grid resolution
+        residual: 0.0,    // Grid search doesn't compute residual error
+        iterations: 1,    // Single grid evaluation (no iteration)
+        converged: true,  // Grid search always "converges" (completes)
     })
 }
 
