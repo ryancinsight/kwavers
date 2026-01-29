@@ -9,11 +9,7 @@
 pub mod array; // Sensor array geometry (domain concept - SSOT for sensor positions)
 pub mod beamforming;
 pub mod grid_sampling;
-#[deprecated(
-    since = "3.1.0",
-    note = "Use analysis::signal_processing::localization instead. Localization algorithms belong in the analysis layer."
-)]
-pub mod localization; // DEPRECATED - algorithms moved to analysis layer
+pub mod localization; // DEPRECATED - use analysis::signal_processing::localization instead
 pub mod passive_acoustic_mapping; // Multi-lateration localization system
 pub mod recorder; // Shared sensor recording logic
 pub mod sonoluminescence; // Sonoluminescence detector
