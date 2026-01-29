@@ -264,3 +264,49 @@ impl ContrastEnhancedUltrasound {
             .collect()
     }
 }
+
+// Implement domain CEUS orchestration interface
+impl crate::domain::imaging::CEUSOrchestrator for ContrastEnhancedUltrasound {
+    fn update(&mut self, pressure_field: &Array3<f64>, _time: f64) -> KwaversResult<Array3<f64>> {
+        // Simplified: use max pressure as representative
+        let max_pressure = pressure_field
+            .iter()
+            .max_by(|a, b| {
+                a.abs()
+                    .partial_cmp(&b.abs())
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .copied()
+            .unwrap_or(1.0);
+
+        let frequency = 1.0e6; // Default 1 MHz
+        self.simulate_acoustic_response(max_pressure, frequency, _time)
+    }
+
+    fn get_perfusion_data(&self) -> KwaversResult<Array3<f64>> {
+        // Return perfusion field as 3D concentration map
+        let (nx, ny, nz) = self.grid.dimensions();
+        let mut perfusion_map = Array3::zeros((nx, ny, nz));
+
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    perfusion_map[[i, j, k]] = self.perfusion.concentration(i, j, k);
+                }
+            }
+        }
+
+        Ok(perfusion_map)
+    }
+
+    fn get_concentration_map(&self) -> KwaversResult<Array3<f64>> {
+        // Return microbubble concentration map
+        let (nx, ny, nz) = self.grid.dimensions();
+        let concentration = self.get_concentration();
+        Ok(Array3::from_elem((nx, ny, nz), concentration))
+    }
+
+    fn name(&self) -> &str {
+        "SimulationCEUSOrchestrator"
+    }
+}
