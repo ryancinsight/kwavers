@@ -109,12 +109,17 @@ pub mod mesh;
 pub mod plugin;
 pub mod sensor;
 pub mod signal;
+pub mod signal_processing;
 pub mod source;
 pub mod tensor;
 pub mod therapy;
 
 // Re-export key domain types for convenience
 pub use geometry::{Dimension, GeometricDomain, PointLocation, RectangularDomain, SphericalDomain};
+pub use signal_processing::{
+    BeamformingConfig, BeamformingProcessor, BeamformingResult, FilterProcessor,
+    LocalizationProcessor, PAMProcessor,
+};
 pub use tensor::{
     convert, Backend as TensorBackend, DType, NdArrayTensor, Shape as TensorShape, TensorMut,
     TensorView,
