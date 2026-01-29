@@ -67,11 +67,11 @@
 //!   https://github.com/ProteusMRIgHIFU/BabelBrain
 //!   Uses monolithic thermal-acoustic coupling for safety verification
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::error::KwaversResult;
 use crate::domain::field::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::plugin::Plugin;
-use crate::solver::integration::nonlinear::{ConvergenceInfo, GMRESConfig, GMRESSolver};
+use crate::solver::integration::nonlinear::{GMRESConfig, GMRESSolver};
 use ndarray::Array3;
 use std::collections::HashMap;
 use std::time::Instant;
@@ -201,7 +201,7 @@ impl MonolithicCoupler {
         &mut self,
         fields: &mut HashMap<UnifiedFieldType, Array3<f64>>,
         dt: f64,
-        grid: &Grid,
+        _grid: &Grid,
     ) -> KwaversResult<CouplingConvergenceInfo> {
         let start_time = Instant::now();
         self.convergence_history.clear();
@@ -328,7 +328,7 @@ impl MonolithicCoupler {
         &self,
         u: &Array3<f64>,
         u_prev: &Array3<f64>,
-        dt: f64,
+        _dt: f64,
     ) -> KwaversResult<Array3<f64>> {
         // Placeholder: return difference for now
         // TODO: Integrate with actual physics plugins
