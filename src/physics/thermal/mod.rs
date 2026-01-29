@@ -8,11 +8,15 @@
 //! - Nyborg (1988) "Solutions of the bio-heat transfer equation"
 //! - ter Haar & Coussios (2007) "High intensity focused ultrasound"
 
+pub mod ablation;
+pub mod coupling;
 pub mod diffusion;
 pub mod perfusion;
 pub mod properties;
 pub mod thermal_dose;
 
+pub use ablation::{AblationField, AblationKinetics, AblationState};
+pub use coupling::{AcousticHeatingSource, TemperatureCoefficients, ThermalAcousticCoupling};
 pub use diffusion::ThermalDiffusionConfig;
 pub use thermal_dose::ThermalDose;
 

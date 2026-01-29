@@ -21,9 +21,21 @@ pub use safety::{
     InterlockSystem, SafetyAuditLogger, SafetyEventType, SafetyLevel, SafetyLimits, SafetyMonitor,
     SafetyViolation, SystemConfiguration, TreatmentRecord,
 };
-pub use therapy::{
-    AcousticField, AcousticTherapyParams, AcousticWaveSolver, PatientParameters, RiskOrgan,
-    SafetyLimits as TherapySafetyLimits, SafetyMetrics, SafetyStatus, TargetVolume,
-    TherapyIntegrationOrchestrator, TherapyModality, TherapySessionConfig, TherapySessionState,
-    TissuePropertyMap, TissueType,
-};
+pub use therapy::{TherapyMechanism, TherapyModality, TherapyParameters, TreatmentMetrics};
+
+// FIXME: These types are referenced but not yet implemented in the therapy module
+// They need to be added during architectural refactoring:
+// - AcousticField
+// - AcousticTherapyParams
+// - AcousticWaveSolver
+// - PatientParameters
+// - RiskOrgan
+// - SafetyLimits (therapy-specific)
+// - SafetyMetrics
+// - SafetyStatus
+// - TargetVolume
+// - TherapyIntegrationOrchestrator
+// - TherapySessionConfig
+// - TherapySessionState
+// - TissuePropertyMap
+// - TissueType

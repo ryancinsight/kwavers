@@ -13,6 +13,7 @@
 pub mod diffusion;
 pub mod map_builder;
 pub mod monte_carlo;
+pub mod nonlinear;
 pub mod polarization;
 pub mod scattering;
 pub mod sonoluminescence;
@@ -23,6 +24,7 @@ pub use map_builder::{
     Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, PropertyStats, Region,
 };
 pub use monte_carlo::{MCResult, MonteCarloSolver, PhotonSource, SimulationConfig};
+pub use nonlinear::{KerrEffect, PhotoacousticConversion};
 pub use polarization::{
     JonesMatrix, JonesPolarizationModel, JonesVector, LinearPolarization, PolarizationModel,
 };

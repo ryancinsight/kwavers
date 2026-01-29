@@ -29,6 +29,7 @@ pub mod radical_initiation;
 pub mod reaction_kinetics;
 pub mod reactions;
 pub mod ros_plasma;
+pub mod validation;
 
 // Re-export commonly used types from submodules
 pub use parameters::{ChemicalMetrics, ChemicalUpdateParams};
@@ -37,6 +38,7 @@ pub use reactions::{
     ReactionType, Species, ThermalDependence,
 };
 pub use ros_plasma::{ROSConcentrations, ROSSpecies, SonochemicalYield, SonochemistryModel};
+pub use validation::{ArrheniusValidator, LiteratureValue, ValidatedKinetics, ValidationResult};
 
 // Import submodule types for internal use
 use photochemistry::PhotochemicalEffects;

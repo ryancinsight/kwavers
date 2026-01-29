@@ -1,0 +1,169 @@
+name: Architecture Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  architecture-validation:
+    name: Validate Clean Architecture
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    - name: Cache cargo registry
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache cargo index
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache cargo build
+      uses: actions/cache@v4
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Make validation script executable
+      run: chmod +x scripts/validate_architecture.sh
+
+    - name: Run architecture validation
+      run: ./scripts/validate_architecture.sh
+
+    - name: Check formatting
+      run: cargo fmt -- --check
+
+    - name: Run clippy (strict mode)
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+    - name: Check for security vulnerabilities
+      run: |
+        cargo install cargo-audit
+        cargo audit
+      continue-on-error: true
+
+  layer-boundary-checks:
+    name: Layer Boundary Enforcement
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check domain → analysis violations
+      run: |
+        VIOLATIONS=$(grep -r "use crate::analysis" src/domain/ | wc -l || echo "0")
+        echo "Found $VIOLATIONS domain→analysis dependencies"
+        if [ "$VIOLATIONS" -gt "10" ]; then
+          echo "::error::Too many domain→analysis violations ($VIOLATIONS > 10 threshold)"
+          exit 1
+        fi
+
+    - name: Check domain → solver violations
+      run: |
+        VIOLATIONS=$(grep -r "use crate::solver" src/domain/ | wc -l || echo "0")
+        if [ "$VIOLATIONS" -gt "0" ]; then
+          echo "::error::Critical: domain→solver violations detected"
+          grep -rn "use crate::solver" src/domain/
+          exit 1
+        fi
+
+    - name: Check physics → domain violations
+      run: |
+        VIOLATIONS=$(grep -r "use crate::domain" src/physics/ | wc -l || echo "0")
+        if [ "$VIOLATIONS" -gt "0" ]; then
+          echo "::error::Critical: physics→domain violations detected"
+          grep -rn "use crate::domain" src/physics/
+          exit 1
+        fi
+
+    - name: Check solver → analysis violations
+      run: |
+        VIOLATIONS=$(grep -r "use crate::analysis" src/solver/ | wc -l || echo "0")
+        if [ "$VIOLATIONS" -gt "0" ]; then
+          echo "::error::Critical: solver→analysis violations detected"
+          grep -rn "use crate::analysis" src/solver/
+          exit 1
+        fi
+
+  build-matrix:
+    name: Build with Feature Combinations
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        features:
+          - minimal
+          - gpu
+          - plotting
+          - pinn
+          - api
+          - parallel
+          - full
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build with ${{ matrix.features }} features
+      run: |
+        if [ "${{ matrix.features }}" == "minimal" ]; then
+          cargo build --no-default-features --features minimal
+        elif [ "${{ matrix.features }}" == "full" ]; then
+          cargo build --all-features
+        else
+          cargo build --features ${{ matrix.features }}
+        fi
+
+  test-coverage:
+    name: Test Suite Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Run tests
+      run: cargo test --lib --all-features
+
+    - name: Run doc tests
+      run: cargo test --doc --all-features
+
+  documentation:
+    name: Documentation Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build documentation
+      run: cargo doc --no-deps --all-features
+      env:
+        RUSTDOCFLAGS: -D warnings

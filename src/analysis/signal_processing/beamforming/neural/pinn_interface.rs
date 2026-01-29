@@ -1,74 +1,117 @@
-//! PINN beamforming interface abstraction.
+#![deny(missing_docs)]
+//! PINN-Beamforming Interface
 //!
-//! This module provides trait-based abstractions for physics-informed neural network
-//! beamforming, decoupling the analysis layer from solver implementation details.
+//! This module provides integration between Physics-Informed Neural Networks (PINNs)
+//! and beamforming algorithms, enabling learned, physics-constrained acoustic imaging.
 //!
-//! ## Architecture
+//! # Architecture
 //!
-//! The interface follows the Dependency Inversion Principle:
-//! - Analysis layer depends on traits (abstractions)
-//! - Solver layer implements traits (concrete implementations)
-//! - No direct dependency from analysis → solver
+//! The PINN-beamforming interface bridges:
+//! - **PINN solvers** (`solver::inverse::pinn`): Neural network-based wave equation solvers
+//! - **Beamforming algorithms** (`analysis::signal_processing::beamforming`): Spatial filtering
 //!
-//! ## Layer Separation
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────┐
-//! │  Analysis Layer (Layer 7)                   │
-//! │  - Neural beamforming algorithms            │
-//! │  - Depends on: PinnBeamformingProvider      │
-//! └─────────────────────────────────────────────┘
-//!                     ↑ (trait)
-//!                     │
-//! ┌─────────────────────────────────────────────┐
-//! │  Solver Layer (Layer 4)                     │
-//! │  - PINN implementations                      │
-//! │  - Implements: PinnBeamformingProvider      │
-//! └─────────────────────────────────────────────┘
-//! ```
+//! This enables:
+//! - Learned beamforming weights from PINN-predicted fields
+//! - Uncertainty quantification in beamformed images
+//! - Physics-constrained neural beamforming
 
 use crate::core::error::KwaversResult;
 use ndarray::{Array3, Array4};
-use serde::{Deserialize, Serialize};
 
-/// Configuration for PINN-based beamforming (solver-agnostic).
-///
-/// This configuration type belongs to the analysis layer and contains
-/// only the parameters needed for beamforming, not solver-specific details.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Configuration for PINN-based beamforming.
+#[derive(Debug, Clone)]
 pub struct PinnBeamformingConfig {
-    /// Model inference configuration
+    /// PINN model configuration
+    pub model: PinnModelConfig,
+    /// Inference configuration
     pub inference: InferenceConfig,
     /// Uncertainty quantification settings
     pub uncertainty: UncertaintyConfig,
-    /// Physics constraint weights
-    pub physics_weights: PhysicsWeights,
-    /// Device configuration (CPU/GPU)
-    pub device: DeviceConfig,
 }
 
 impl Default for PinnBeamformingConfig {
     fn default() -> Self {
         Self {
+            model: PinnModelConfig::default(),
             inference: InferenceConfig::default(),
             uncertainty: UncertaintyConfig::default(),
-            physics_weights: PhysicsWeights::default(),
-            device: DeviceConfig::default(),
         }
     }
 }
 
-/// Inference configuration for PINN models.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// PINN model configuration.
+#[derive(Debug, Clone)]
+pub struct PinnModelConfig {
+    /// Model architecture type
+    pub architecture: ModelArchitecture,
+    /// Number of hidden layers
+    pub hidden_layers: usize,
+    /// Neurons per hidden layer
+    pub neurons_per_layer: usize,
+    /// Activation function
+    pub activation: ActivationFunction,
+    /// Model version
+    pub version: String,
+    /// Number of parameters
+    pub num_parameters: usize,
+    /// Supported dimensions (1D, 2D, 3D)
+    pub dimensions: Vec<usize>,
+    /// Is the model trained?
+    pub is_trained: bool,
+}
+
+impl Default for PinnModelConfig {
+    fn default() -> Self {
+        Self {
+            architecture: ModelArchitecture::Mlp,
+            hidden_layers: 4,
+            neurons_per_layer: 128,
+            activation: ActivationFunction::Tanh,
+            version: "1.0.0".to_string(),
+            num_parameters: 0,
+            dimensions: vec![1, 2, 3],
+            is_trained: false,
+        }
+    }
+}
+
+/// Model architecture types.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModelArchitecture {
+    /// Multi-layer perceptron
+    Mlp,
+    /// Fourier feature network
+    Fourier,
+    /// Physics-informed neural operator
+    Pino,
+    /// Deep operator network
+    DeepOnet,
+}
+
+/// Activation functions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActivationFunction {
+    /// Tanh activation
+    Tanh,
+    /// ReLU activation
+    Relu,
+    /// Sigmoid activation
+    Sigmoid,
+    /// Swish activation
+    Swish,
+    /// GELU activation
+    Gelu,
+}
+
+/// Inference configuration.
+#[derive(Debug, Clone)]
 pub struct InferenceConfig {
     /// Batch size for inference
     pub batch_size: usize,
-    /// Use mixed precision (FP16)
+    /// Use half-precision (FP16)
     pub use_fp16: bool,
-    /// Enable JIT compilation
-    pub jit_enabled: bool,
-    /// Model cache path
-    pub model_cache_path: Option<String>,
+    /// Device configuration
+    pub device: DeviceConfig,
 }
 
 impl Default for InferenceConfig {
@@ -76,23 +119,32 @@ impl Default for InferenceConfig {
         Self {
             batch_size: 32,
             use_fp16: false,
-            jit_enabled: false,
-            model_cache_path: None,
+            device: DeviceConfig::Cpu,
         }
     }
 }
 
+/// Device configuration for inference.
+#[derive(Debug, Clone)]
+pub enum DeviceConfig {
+    /// CPU inference
+    Cpu,
+    /// GPU inference with device ID
+    Gpu {
+        /// GPU device ID
+        device_id: usize,
+    },
+}
+
 /// Uncertainty quantification configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct UncertaintyConfig {
-    /// Enable Bayesian uncertainty estimation
+    /// Enable Bayesian inference
     pub bayesian_enabled: bool,
     /// Number of Monte Carlo samples
     pub mc_samples: usize,
-    /// Dropout rate for uncertainty estimation
-    pub dropout_rate: f32,
-    /// Confidence interval (e.g., 0.95 for 95%)
-    pub confidence_level: f32,
+    /// Confidence level (0-1)
+    pub confidence_level: f64,
 }
 
 impl Default for UncertaintyConfig {
@@ -100,174 +152,45 @@ impl Default for UncertaintyConfig {
         Self {
             bayesian_enabled: false,
             mc_samples: 100,
-            dropout_rate: 0.1,
             confidence_level: 0.95,
         }
     }
 }
 
-/// Physics constraint weights for PINN training/inference.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PhysicsWeights {
-    /// Wave equation residual weight
-    pub wave_equation: f32,
-    /// Boundary condition weight
-    pub boundary_condition: f32,
-    /// Reciprocity constraint weight
-    pub reciprocity: f32,
-    /// Coherence constraint weight
-    pub coherence: f32,
-}
-
-impl Default for PhysicsWeights {
-    fn default() -> Self {
-        Self {
-            wave_equation: 1.0,
-            boundary_condition: 1.0,
-            reciprocity: 0.1,
-            coherence: 0.1,
-        }
-    }
-}
-
-/// Device configuration for computation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DeviceConfig {
-    /// CPU computation
-    Cpu,
-    /// Single GPU
-    Gpu { device_id: usize },
-    /// Multiple GPUs
-    MultiGpu {
-        device_ids: Vec<usize>,
-        strategy: DistributionStrategy,
-    },
-}
-
-impl Default for DeviceConfig {
-    fn default() -> Self {
-        Self::Cpu
-    }
-}
-
-/// Strategy for distributing computation across GPUs.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum DistributionStrategy {
-    /// Split data spatially
-    DataParallel,
-    /// Split model layers
-    ModelParallel,
-    /// Hybrid data + model parallelism
-    Hybrid,
-}
-
-/// Training metrics from PINN model (solver-agnostic).
-#[derive(Debug, Clone, Default)]
-pub struct TrainingMetrics {
-    /// Total loss value
-    pub total_loss: f32,
-    /// Physics loss (PDE residual)
-    pub physics_loss: f32,
-    /// Data loss (fitting error)
-    pub data_loss: f32,
-    /// Training iterations completed
-    pub iterations: usize,
-    /// Training time (seconds)
-    pub training_time: f64,
-}
-
-/// Result from PINN beamforming inference.
+/// Result of PINN-based beamforming.
 #[derive(Debug, Clone)]
 pub struct PinnBeamformingResult {
     /// Beamformed image
     pub image: Array3<f32>,
-    /// Uncertainty map (optional)
+    /// Uncertainty map (if enabled)
     pub uncertainty: Option<Array3<f32>>,
-    /// Confidence scores per pixel
-    pub confidence: Option<Array3<f32>>,
-    /// Inference time (seconds)
-    pub inference_time: f64,
-    /// Model metrics
-    pub metrics: TrainingMetrics,
+    /// Confidence intervals
+    pub confidence_intervals: Option<(Array3<f32>, Array3<f32>)>,
+    /// Processing metadata
+    pub metadata: ProcessingMetadata,
 }
 
-/// Distributed PINN processing configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DistributedConfig {
-    /// GPU device IDs
-    pub gpu_devices: Vec<usize>,
-    /// Decomposition strategy
-    pub decomposition: DecompositionStrategy,
-    /// Load balancing algorithm
-    pub load_balancing: LoadBalancingStrategy,
-    /// Enable fault tolerance
-    pub fault_tolerance: bool,
-    /// Communication backend
-    pub communication: CommunicationBackend,
+/// Processing metadata.
+#[derive(Debug, Clone)]
+pub struct ProcessingMetadata {
+    /// Processing time in seconds
+    pub processing_time: f64,
+    /// Model version used
+    pub model_version: String,
+    /// Device used
+    pub device: String,
 }
 
-impl Default for DistributedConfig {
-    fn default() -> Self {
-        Self {
-            gpu_devices: vec![0],
-            decomposition: DecompositionStrategy::Spatial,
-            load_balancing: LoadBalancingStrategy::Static,
-            fault_tolerance: false,
-            communication: CommunicationBackend::Shared,
-        }
-    }
-}
-
-/// Strategy for decomposing workload.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum DecompositionStrategy {
-    /// Spatial domain decomposition
-    Spatial,
-    /// Temporal decomposition
-    Temporal,
-    /// Hybrid spatial-temporal
-    Hybrid,
-}
-
-/// Load balancing strategy.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum LoadBalancingStrategy {
-    /// Static assignment
-    Static,
-    /// Dynamic work stealing
-    Dynamic,
-    /// Prediction-based
-    Predictive,
-}
-
-/// Communication backend for multi-GPU.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum CommunicationBackend {
-    /// Shared memory (single node)
-    Shared,
-    /// NCCL (NVIDIA)
-    Nccl,
-    /// Gloo (cross-platform)
-    Gloo,
-}
-
-/// Provider trait for PINN-based beamforming.
+/// Trait for PINN beamforming providers.
 ///
-/// This trait abstracts the solver implementation details, allowing the
-/// analysis layer to work with any PINN implementation that satisfies
-/// this interface.
-///
-/// ## Implementation Notes
-///
-/// Implementations should be in the solver layer and registered with
-/// the analysis layer through dependency injection or feature flags.
+/// Implement this trait to integrate custom PINN models with the beamforming pipeline.
 pub trait PinnBeamformingProvider: Send + Sync {
-    /// Perform beamforming inference on RF data.
+    /// Perform beamforming using PINN-predicted fields.
     ///
     /// # Arguments
     ///
-    /// * `rf_data` - Raw RF channel data (channels × samples × frames)
-    /// * `config` - PINN beamforming configuration
+    /// * `rf_data` - Raw RF data from sensors (shape: `[batch, channels, time]`)
+    /// * `config` - Beamforming configuration
     ///
     /// # Returns
     ///
@@ -278,55 +201,22 @@ pub trait PinnBeamformingProvider: Send + Sync {
         config: &PinnBeamformingConfig,
     ) -> KwaversResult<PinnBeamformingResult>;
 
-    /// Train or fine-tune the PINN model.
-    ///
-    /// # Arguments
-    ///
-    /// * `training_data` - Training dataset (inputs × outputs)
-    /// * `config` - Training configuration
-    ///
-    /// # Returns
-    ///
-    /// Training metrics
-    fn train(
-        &mut self,
-        training_data: &[(Array3<f32>, Array3<f32>)],
-        config: &PinnBeamformingConfig,
-    ) -> KwaversResult<TrainingMetrics>;
-
-    /// Compute uncertainty estimates.
-    ///
-    /// # Arguments
-    ///
-    /// * `rf_data` - RF channel data
-    /// * `config` - Uncertainty configuration
-    ///
-    /// # Returns
-    ///
-    /// Uncertainty map
-    fn estimate_uncertainty(
-        &self,
-        rf_data: &Array3<f32>,
-        config: &UncertaintyConfig,
-    ) -> KwaversResult<Array3<f32>>;
-
     /// Get model information.
-    fn model_info(&self) -> ModelInfo;
+    fn model_info(&self) -> PinnModelConfig;
+
+    /// Check if model is loaded and ready.
+    fn is_ready(&self) -> bool;
 }
 
-/// Information about the PINN model.
+/// Distributed configuration for multi-GPU inference.
 #[derive(Debug, Clone)]
-pub struct ModelInfo {
-    /// Model name
-    pub name: String,
-    /// Model version
-    pub version: String,
-    /// Number of parameters
-    pub num_parameters: usize,
-    /// Supported dimensions (1D, 2D, 3D)
-    pub dimensions: Vec<usize>,
-    /// Is the model trained?
-    pub is_trained: bool,
+pub struct DistributedConfig {
+    /// Number of GPUs
+    pub num_gpus: usize,
+    /// GPU device IDs
+    pub device_ids: Vec<usize>,
+    /// Batch size per GPU
+    pub batch_size_per_gpu: usize,
 }
 
 /// Distributed PINN beamforming provider.
@@ -364,6 +254,14 @@ pub struct GpuMetrics {
 /// Allows registering and retrieving PINN implementations at runtime.
 pub struct PinnProviderRegistry {
     providers: std::collections::HashMap<String, Box<dyn PinnBeamformingProvider>>,
+}
+
+impl std::fmt::Debug for PinnProviderRegistry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PinnProviderRegistry")
+            .field("providers", &self.providers.keys().collect::<Vec<_>>())
+            .finish()
+    }
 }
 
 impl PinnProviderRegistry {

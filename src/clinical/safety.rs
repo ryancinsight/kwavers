@@ -792,6 +792,8 @@ mod tests {
 
         let params = TherapyParameters {
             frequency: 1.5e6,
+            pressure: 1.0e6,
+            duration: 600.0,
             peak_negative_pressure: 1.0e6,
             treatment_duration: 600.0,
             mechanical_index: 1.2,
@@ -811,6 +813,8 @@ mod tests {
 
         let params = TherapyParameters {
             frequency: 1.5e6,
+            pressure: 3.0e6,
+            duration: 600.0,
             peak_negative_pressure: 3.0e6, // High pressure = critical
             treatment_duration: 600.0,
             mechanical_index: 2.5, // Exceeds MI limit

@@ -230,6 +230,7 @@ pub mod utils; // Steering vectors, windows, interpolation
 // Advanced algorithm modules
 pub mod experimental;
 pub mod neural; // Neural/ML beamforming (PINN, distributed) // Experimental/research-grade algorithms
+pub mod slsc; // Short-Lag Spatial Coherence beamforming
 
 // Future algorithm modules (planned for Phase 3)
 pub mod narrowband; // Frequency-domain beamforming (awaiting migration)
@@ -290,3 +291,4 @@ mod tests {
         assert_eq!(esmv.diagonal_loading, 1e-4);
     }
 }
+
