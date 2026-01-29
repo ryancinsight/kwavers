@@ -6,9 +6,14 @@
 // collided semantically with domain-specific sensor recording types. They have been
 // removed to enforce a single source of truth and prevent accidental misuse.
 
+pub mod array; // Sensor array geometry (domain concept - SSOT for sensor positions)
 pub mod beamforming;
 pub mod grid_sampling;
-pub mod localization;
+#[deprecated(
+    since = "3.1.0",
+    note = "Use analysis::signal_processing::localization instead. Localization algorithms belong in the analysis layer."
+)]
+pub mod localization; // DEPRECATED - algorithms moved to analysis layer
 pub mod passive_acoustic_mapping; // Multi-lateration localization system
 pub mod recorder; // Shared sensor recording logic
 pub mod sonoluminescence; // Sonoluminescence detector
@@ -20,14 +25,12 @@ pub mod ultrafast;
 // Canonical high-level probe set (supports both acoustics + optics).
 pub use grid_sampling::{GridPoint, GridSensorSet};
 
-pub use localization::{
-    array::Sensor as LocalizationSensor, ArrayGeometry as LocalizationArrayGeometry,
-    LocalizationResult, SensorArray,
-};
-// NOTE: Do NOT re-export `localization::array::Sensor` as `Sensor` here.
-// It collides semantically with other sensor concepts and previously masked dead APIs.
+// Sensor array types (domain layer: hardware geometry)
+pub use array::{ArrayGeometry, Position, Sensor, SensorArray};
 
 // Re-export PAM components without colliding names; configs remain module-scoped.
-pub use passive_acoustic_mapping::{ArrayElement, ArrayGeometry, DirectivityPattern};
+pub use passive_acoustic_mapping::{
+    ArrayElement, ArrayGeometry as PAMArrayGeometry, DirectivityPattern,
+};
 // Expose unified beamforming config at the sensor module root.
 pub use beamforming::{BeamformingConfig, BeamformingCoreConfig};

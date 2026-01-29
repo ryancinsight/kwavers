@@ -6,8 +6,8 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
+use crate::domain::sensor::array::SensorArray;
 use crate::domain::sensor::grid_sampling::GridSensorSet;
-use crate::domain::sensor::localization::array::SensorArray;
 use crate::domain::signal::window as signal_window;
 use ndarray::{Array1, Array2};
 use num_complex::Complex;
@@ -367,8 +367,7 @@ impl SensorProcessingParams {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
-    use crate::domain::sensor::localization::Position;
+    use crate::domain::sensor::array::{ArrayGeometry, Position, Sensor, SensorArray};
     use approx::assert_relative_eq;
     use ndarray::Array2;
 
