@@ -59,6 +59,7 @@ impl Default for MUSICConfig {
 /// MUSIC processor for direction-of-arrival estimation
 #[derive(Debug)]
 pub struct MUSICProcessor {
+    #[allow(dead_code)]
     config: MUSICConfig,
 }
 
@@ -206,3 +207,4 @@ mod tests {
         assert_eq!(cov.dim(), (2, 2));
     }
 }
+

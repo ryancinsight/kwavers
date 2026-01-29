@@ -63,6 +63,7 @@ pub struct TargetingSystem {
     bregma: [f64; 3],
 
     /// Brain dimensions [mm]
+    #[allow(dead_code)]
     brain_dims: [f64; 3],
 }
 
@@ -217,3 +218,4 @@ mod tests {
         assert!((dist - 5.0).abs() < 0.01); // 3-4-5 triangle
     }
 }
+

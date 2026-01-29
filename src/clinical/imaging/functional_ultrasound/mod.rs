@@ -105,6 +105,7 @@ impl Default for RegistrationConfig {
 /// Registration engine for affine alignment to atlas
 #[derive(Debug)]
 pub struct RegistrationEngine {
+    #[allow(dead_code)]
     config: RegistrationConfig,
 }
 
@@ -151,6 +152,7 @@ pub struct FunctionalUltrasoundGPS {
     tracking: TrackingFilter,
 
     /// Current imaging grid
+    #[allow(dead_code)]
     grid: Grid,
 }
 
