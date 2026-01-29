@@ -60,6 +60,7 @@ impl LiteratureValue {
 }
 
 /// Validated kinetics database
+#[derive(Debug)]
 pub struct ValidatedKinetics {
     /// OH + OH → H2O2 rate constant
     pub oh_recombination: LiteratureValue,
@@ -179,6 +180,7 @@ impl ValidationResult {
 }
 
 /// Temperature-dependent Arrhenius kinetics validator
+#[derive(Debug)]
 pub struct ArrheniusValidator {
     /// Activation energy [J/mol]
     pub activation_energy: f64,

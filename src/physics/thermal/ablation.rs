@@ -149,7 +149,7 @@ pub struct AblationState {
 
 impl AblationState {
     /// Create new ablation state
-    pub fn new(temperature: f64, kinetics: &AblationKinetics) -> Self {
+    pub fn new(temperature: f64, _kinetics: &AblationKinetics) -> Self {
         Self {
             temperature,
             damage: 0.0,

@@ -8,8 +8,6 @@
 //! - Diels & Rudolph (2006) "Ultrashort Laser Pulse Phenomena"
 //! - Agrawal (2007) "Nonlinear Fiber Optics"
 
-use crate::core::error::KwaversResult;
-
 /// Kerr effect parameters
 ///
 /// The Kerr effect describes intensity-dependent refractive index change:
