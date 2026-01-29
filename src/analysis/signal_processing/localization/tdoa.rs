@@ -108,7 +108,7 @@ impl TDOAProcessor {
 
         let mut idx = 0;
         for i in 0..num_sensors {
-            for j in i + 1..num_sensors {
+            for _j in i + 1..num_sensors {
                 // Compute cross-correlation between signal i and j
                 // For now, placeholder returning zero
                 time_delays[idx] = 0.0;

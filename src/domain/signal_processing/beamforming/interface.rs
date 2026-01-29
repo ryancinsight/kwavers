@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn test_registry_basic() {
-        let mut registry = BeamformingRegistry::new();
+        let registry = BeamformingRegistry::new();
         assert!(registry.list_processors().is_empty());
     }
 }
