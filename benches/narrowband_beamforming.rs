@@ -262,7 +262,7 @@ fn bench_narrowband_localization_grid(c: &mut Criterion) {
                         source_position: candidate,
                     },
                     sampling_frequency_hz: Some(sampling_frequency),
-                    snapshot_selection: Some(SnapshotSelection::Auto(scenario.clone())),
+                    snapshot_selection: Some(SnapshotSelection::Auto(scenario)),
                     baseband_snapshot_step_samples: None,
                 };
 
@@ -324,7 +324,7 @@ fn bench_diagonal_loading_sensitivity(c: &mut Criterion) {
                 source_position: candidate,
             },
             sampling_frequency_hz: Some(sampling_frequency),
-            snapshot_selection: Some(SnapshotSelection::Auto(scenario.clone())),
+            snapshot_selection: Some(SnapshotSelection::Auto(scenario)),
             baseband_snapshot_step_samples: None,
         };
 

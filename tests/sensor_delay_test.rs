@@ -1,7 +1,6 @@
 use kwavers::domain::grid::Grid;
 use kwavers::domain::sensor::beamforming::SensorBeamformer;
-use kwavers::domain::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
-use kwavers::domain::sensor::localization::Position;
+use kwavers::domain::sensor::{ArrayGeometry, Position, Sensor, SensorArray};
 
 #[test]
 fn test_geometric_delay_calculation() {

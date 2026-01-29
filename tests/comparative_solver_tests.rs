@@ -846,7 +846,7 @@ mod tests {
         let field = Array3::from_elem((10, 10, 10), 1.0);
         let stability = calculate_stability_metric(&field);
         assert!(
-            stability >= 0.0 && stability <= 1.0,
+            (0.0..=1.0).contains(&stability),
             "Stability metric should be in [0,1]"
         );
     }

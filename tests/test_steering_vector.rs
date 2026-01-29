@@ -1,6 +1,5 @@
 use kwavers::domain::sensor::beamforming::sensor_beamformer::SensorBeamformer;
-use kwavers::domain::sensor::localization::array::{ArrayGeometry, Sensor, SensorArray};
-use kwavers::domain::sensor::localization::Position;
+use kwavers::domain::sensor::{ArrayGeometry, Position, Sensor, SensorArray};
 use std::f64::consts::PI;
 
 #[test]

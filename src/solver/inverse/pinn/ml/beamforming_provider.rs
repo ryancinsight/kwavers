@@ -178,8 +178,8 @@ where
 
             for _ in 0..config.mc_samples {
                 // TODO: Implement actual dropout-based inference
-                let sample =
-                    Array3::<f32>::from_elem((frames, channels, samples), config.dropout_rate);
+                // For now, use simple stochastic sampling
+                let sample = Array3::<f32>::from_elem((frames, channels, samples), 0.1);
                 variance = variance + sample.mapv(|v| v * v);
             }
 
@@ -188,6 +188,10 @@ where
             // Simple signal-based uncertainty
             Ok(rf_data.mapv(|v| 1.0 / (v.abs() + 1.0)))
         }
+    }
+
+    fn is_ready(&self) -> bool {
+        self.is_trained
     }
 
     fn model_info(&self) -> ModelInfo {

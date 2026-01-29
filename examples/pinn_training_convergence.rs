@@ -46,7 +46,6 @@ use kwavers::core::error::{KwaversError, KwaversResult};
 use kwavers::solver::inverse::pinn::elastic_2d::training::PINNOptimizer;
 #[cfg(feature = "pinn")]
 use kwavers::solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D};
-use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 type AutodiffBackend = Autodiff<NdArray>;

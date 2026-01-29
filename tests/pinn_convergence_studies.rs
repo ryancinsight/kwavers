@@ -447,7 +447,7 @@ mod convergence_studies {
     #[test]
     fn test_polynomial_convergence_exact() {
         // Test that polynomial test functions achieve machine precision
-        let analytical = QuadraticTest2D::new(1.0);
+        let _analytical = QuadraticTest2D::new(1.0);
 
         // For polynomial of degree p, methods of order >= p should be exact
         // Simulate this with very small errors

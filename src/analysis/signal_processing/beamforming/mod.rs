@@ -291,4 +291,3 @@ mod tests {
         assert_eq!(esmv.diagonal_loading, 1e-4);
     }
 }
-

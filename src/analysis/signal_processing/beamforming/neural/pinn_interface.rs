@@ -19,7 +19,7 @@ use crate::core::error::KwaversResult;
 use ndarray::{Array3, Array4};
 
 /// Configuration for PINN-based beamforming.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PinnBeamformingConfig {
     /// PINN model configuration
     pub model: PinnModelConfig,
@@ -27,16 +27,6 @@ pub struct PinnBeamformingConfig {
     pub inference: InferenceConfig,
     /// Uncertainty quantification settings
     pub uncertainty: UncertaintyConfig,
-}
-
-impl Default for PinnBeamformingConfig {
-    fn default() -> Self {
-        Self {
-            model: PinnModelConfig::default(),
-            inference: InferenceConfig::default(),
-            uncertainty: UncertaintyConfig::default(),
-        }
-    }
 }
 
 /// PINN model configuration.
@@ -164,10 +154,12 @@ pub struct PinnBeamformingResult {
     pub image: Array3<f32>,
     /// Uncertainty map (if enabled)
     pub uncertainty: Option<Array3<f32>>,
-    /// Confidence intervals
-    pub confidence_intervals: Option<(Array3<f32>, Array3<f32>)>,
-    /// Processing metadata
-    pub metadata: ProcessingMetadata,
+    /// Confidence map
+    pub confidence: Option<Array3<f32>>,
+    /// Inference time in seconds
+    pub inference_time: f64,
+    /// Training metrics (if available)
+    pub metrics: TrainingMetrics,
 }
 
 /// Processing metadata.
@@ -179,6 +171,36 @@ pub struct ProcessingMetadata {
     pub model_version: String,
     /// Device used
     pub device: String,
+}
+
+/// Training metrics from PINN optimization.
+#[derive(Debug, Clone)]
+pub struct TrainingMetrics {
+    /// Total loss value
+    pub total_loss: f64,
+    /// Physics-based loss component
+    pub physics_loss: f64,
+    /// Data-fitting loss component
+    pub data_loss: f64,
+    /// Number of iterations
+    pub iterations: usize,
+    /// Training time in seconds
+    pub training_time: f64,
+}
+
+/// Model information and metadata.
+#[derive(Debug, Clone)]
+pub struct ModelInfo {
+    /// Model name
+    pub name: String,
+    /// Model version
+    pub version: String,
+    /// Number of parameters
+    pub num_parameters: usize,
+    /// Supported dimensions
+    pub dimensions: Vec<usize>,
+    /// Whether model is trained
+    pub is_trained: bool,
 }
 
 /// Trait for PINN beamforming providers.
@@ -201,11 +223,65 @@ pub trait PinnBeamformingProvider: Send + Sync {
         config: &PinnBeamformingConfig,
     ) -> KwaversResult<PinnBeamformingResult>;
 
+    /// Train the PINN model with training data.
+    ///
+    /// # Arguments
+    ///
+    /// * `training_data` - Pairs of (input, target) training samples
+    /// * `config` - Training configuration
+    ///
+    /// # Returns
+    ///
+    /// Training metrics including loss values and convergence info
+    fn train(
+        &mut self,
+        training_data: &[(Array3<f32>, Array3<f32>)],
+        config: &PinnBeamformingConfig,
+    ) -> KwaversResult<TrainingMetrics>;
+
+    /// Estimate uncertainty in predictions.
+    ///
+    /// # Arguments
+    ///
+    /// * `rf_data` - Input RF data
+    /// * `config` - Uncertainty quantification configuration
+    ///
+    /// # Returns
+    ///
+    /// Uncertainty map (variance or standard deviation)
+    fn estimate_uncertainty(
+        &self,
+        rf_data: &Array3<f32>,
+        config: &UncertaintyConfig,
+    ) -> KwaversResult<Array3<f32>>;
+
     /// Get model information.
-    fn model_info(&self) -> PinnModelConfig;
+    fn model_info(&self) -> ModelInfo;
 
     /// Check if model is loaded and ready.
     fn is_ready(&self) -> bool;
+}
+
+/// Domain decomposition strategy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DecompositionStrategy {
+    /// Spatial decomposition (partition volume)
+    Spatial,
+    /// Temporal decomposition (partition frames)
+    Temporal,
+    /// Hybrid decomposition
+    Hybrid,
+}
+
+/// Load balancing strategy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LoadBalancingStrategy {
+    /// Static partitioning
+    Static,
+    /// Dynamic work stealing
+    Dynamic,
+    /// Adaptive based on GPU performance
+    Adaptive,
 }
 
 /// Distributed configuration for multi-GPU inference.
@@ -214,9 +290,13 @@ pub struct DistributedConfig {
     /// Number of GPUs
     pub num_gpus: usize,
     /// GPU device IDs
-    pub device_ids: Vec<usize>,
+    pub gpu_devices: Vec<usize>,
     /// Batch size per GPU
     pub batch_size_per_gpu: usize,
+    /// Decomposition strategy
+    pub decomposition: DecompositionStrategy,
+    /// Load balancing strategy
+    pub load_balancing: LoadBalancingStrategy,
 }
 
 /// Distributed PINN beamforming provider.
@@ -317,7 +397,7 @@ mod tests {
 
     #[test]
     fn test_provider_registry() {
-        let mut registry = PinnProviderRegistry::new();
+        let registry = PinnProviderRegistry::new();
         assert_eq!(registry.list_providers().len(), 0);
     }
 }

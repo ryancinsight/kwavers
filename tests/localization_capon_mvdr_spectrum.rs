@@ -37,7 +37,7 @@ use kwavers::analysis::signal_processing::beamforming::narrowband::capon::{
     capon_spatial_spectrum_point_complex_baseband, CaponSpectrumConfig,
 };
 use kwavers::analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
-use kwavers::domain::sensor::localization::Position;
+use kwavers::domain::sensor::Position;
 use ndarray::Array3;
 
 /// Construct a small 2D array (xy-plane, z=0) with modest aperture.

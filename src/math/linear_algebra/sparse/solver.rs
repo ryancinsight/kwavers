@@ -233,10 +233,7 @@ impl IterativeSolver {
                     return Ok(x);
                 }
                 if self.config.verbose {
-                    log::info!(
-                        "BiCGSTAB (Complex) breakdown in {} iterations",
-                        iteration
-                    );
+                    log::info!("BiCGSTAB (Complex) breakdown in {} iterations", iteration);
                 }
                 break;
             }

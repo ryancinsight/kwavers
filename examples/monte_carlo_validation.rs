@@ -292,7 +292,7 @@ fn validate_blood_vessel() -> Result<()> {
 fn compare_fluence(
     mc_fluence: &[f64],
     diff_fluence: &[f64],
-    dims: GridDimensions,
+    _dims: GridDimensions,
 ) -> (f64, f64, f64) {
     assert_eq!(mc_fluence.len(), diff_fluence.len());
 

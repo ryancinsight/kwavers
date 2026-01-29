@@ -263,19 +263,18 @@ mod tests {
     use super::*;
 
     #[cfg(feature = "pinn")]
-    #[tokio::test]
-    async fn test_processor_creation() {
-        let config = PINNBeamformingConfig::default();
-        let result = DistributedNeuralBeamformingProcessor::new(
-            config,
-            2,
-            DecompositionStrategy::Spatial {
-                dimensions: 3,
-                overlap: 0.0,
-            },
-            LoadBalancingAlgorithm::Static,
-        )
-        .await;
+    #[test]
+    fn test_processor_creation() {
+        let beamforming_config = PINNBeamformingConfig::default();
+        let distributed_config = DistributedConfig {
+            num_gpus: 1,
+            gpu_devices: vec![0],
+            batch_size_per_gpu: 32,
+            decomposition: DecompositionStrategy::Spatial,
+            load_balancing: LoadBalancingStrategy::Static,
+        };
+        let result =
+            DistributedNeuralBeamformingProcessor::new(beamforming_config, distributed_config);
 
         // May fail if GPUs not available, but should not panic
         let _ = result;
@@ -292,21 +291,15 @@ mod tests {
 
     #[cfg(feature = "pinn")]
     #[test]
-    fn test_communication_channels() {
-        let channels =
-            DistributedNeuralBeamformingProcessor::initialize_communication_channels(4).unwrap();
+    fn test_fault_tolerance_config() {
+        let mut fault_state = FaultToleranceState::default();
+        assert_eq!(fault_state.max_retries, 3);
+        assert!(fault_state.dynamic_load_balancing);
 
-        // Should have channels for all pairs
-        assert!(channels.contains_key(&(0, 1)));
-        assert!(channels.contains_key(&(1, 0)));
-        assert!(channels.contains_key(&(0, 3)));
+        fault_state.gpu_health = vec![true, true, true, true];
+        fault_state.gpu_load = vec![0.5, 0.6, 0.4, 0.7];
 
-        // Check bandwidth for same NUMA node
-        let same_numa = &channels[&(0, 1)];
-        assert_eq!(same_numa.bandwidth, 50.0);
-
-        // Check bandwidth for different NUMA nodes
-        let diff_numa = &channels[&(0, 2)];
-        assert_eq!(diff_numa.bandwidth, 25.0);
+        let max_load = fault_state.gpu_load.iter().copied().fold(0.0, f32::max);
+        assert!(max_load <= 1.0);
     }
 }

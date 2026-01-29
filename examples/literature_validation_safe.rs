@@ -253,10 +253,8 @@ fn update_3d_wave_equation_safe(
             for k in 1..nz - 1 {
                 let div_v = (velocity_x[[i + 1, j, k]] - velocity_x[[i - 1, j, k]])
                     / (2.0 * scalars.dx)
-                    + (velocity_y[[i, j + 1, k]] - velocity_y[[i, j - 1, k]])
-                        / (2.0 * scalars.dx)
-                    + (velocity_z[[i, j, k + 1]] - velocity_z[[i, j, k - 1]])
-                        / (2.0 * scalars.dx);
+                    + (velocity_y[[i, j + 1, k]] - velocity_y[[i, j - 1, k]]) / (2.0 * scalars.dx)
+                    + (velocity_z[[i, j, k + 1]] - velocity_z[[i, j, k - 1]]) / (2.0 * scalars.dx);
 
                 new_pressure[[i, j, k]] =
                     pressure[[i, j, k]] - scalars.dt * rho0 * scalars.c0 * scalars.c0 * div_v;

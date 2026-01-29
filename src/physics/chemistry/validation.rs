@@ -219,7 +219,7 @@ impl ArrheniusValidator {
     /// Validate Q10 is reasonable (typically 2-4)
     pub fn is_reasonable_q10(&self, temperature: f64) -> bool {
         let q10 = self.q10_factor(temperature);
-        q10 >= 1.5 && q10 <= 5.0
+        (1.5..=5.0).contains(&q10)
     }
 }
 

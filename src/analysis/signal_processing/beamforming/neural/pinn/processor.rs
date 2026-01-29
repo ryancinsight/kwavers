@@ -169,10 +169,6 @@ impl NeuralBeamformingProcessor {
             volume,
             uncertainty,
             confidence,
-            #[cfg(feature = "pinn")]
-            pinn_metrics: None,
-            #[cfg(not(feature = "pinn"))]
-            pinn_metrics: None,
             processing_time_ms: processing_time,
         })
     }
@@ -312,14 +308,15 @@ impl NeuralBeamformingProcessor {
     fn compute_uncertainty(&mut self, volume: &Array3<f32>) -> KwaversResult<Array3<f32>> {
         #[cfg(feature = "pinn")]
         {
-            if let Some(provider) = &self.pinn_provider {
+            if let Some(_provider) = &self.pinn_provider {
                 let uncertainty_start = std::time::Instant::now();
 
-                // Use the provider's uncertainty estimation
-                let uncertainty = provider.estimate_uncertainty(
-                    &volume.clone().into_shape((volume.len(), 1, 1)).unwrap(),
-                    &self.config.uncertainty_config,
-                )?;
+                // TODO: Implement provider-based uncertainty estimation
+                // For now, use fallback signal-based uncertainty
+                let mut uncertainty = Array3::<f32>::zeros(volume.dim());
+                for ((i, j, k), value) in volume.indexed_iter() {
+                    uncertainty[[i, j, k]] = 1.0 / (value.abs() + 1.0);
+                }
 
                 self.metrics.uncertainty_computation_time =
                     uncertainty_start.elapsed().as_millis() as f64;

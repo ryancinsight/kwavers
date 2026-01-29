@@ -130,7 +130,6 @@ pub mod shaders;
 
 pub use sensor_beamformer::{SensorBeamformer, SensorProcessingParams, WindowType};
 
-
 // NOTE: All beamforming algorithms have been migrated to:
 // - Analysis layer: crate::analysis::signal_processing::beamforming
 // - Clinical layer: crate::clinical::imaging::workflows::neural

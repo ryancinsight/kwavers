@@ -541,9 +541,7 @@ mod tests {
         assert!(cp > cs, "P-wave speed must exceed S-wave speed");
         assert!((params.period() - 2.0 * std::f64::consts::PI / params.omega).abs() < 1e-12);
         assert!(
-            (params.poisson_ratio()
-                - params.lambda / (2.0 * (params.lambda + params.mu)))
-                .abs()
+            (params.poisson_ratio() - params.lambda / (2.0 * (params.lambda + params.mu))).abs()
                 < 1e-12
         );
         assert!(params.wave_speed > 0.0);

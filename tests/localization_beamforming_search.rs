@@ -16,13 +16,12 @@
 //! - **B (narrowband/adaptive)** is covered by separate tests (Capon/MVDR spatial spectrum), not here.
 
 use kwavers::analysis::signal_processing::beamforming::time_domain::DelayReference;
-use kwavers::domain::sensor::beamforming::BeamformingCoreConfig;
 use kwavers::analysis::signal_processing::localization::beamforming_search::{
     localize_beamforming, BeamformingLocalizationInput, LocalizationBeamformSearchConfig,
     LocalizationBeamformingMethod, SearchGrid,
 };
-use kwavers::domain::sensor::localization::array::{ArrayGeometry, Sensor};
-use kwavers::domain::sensor::localization::{Position, SensorArray};
+use kwavers::domain::sensor::beamforming::BeamformingCoreConfig;
+use kwavers::domain::sensor::{ArrayGeometry, Position, Sensor, SensorArray};
 
 use ndarray::Array3;
 
@@ -66,7 +65,7 @@ fn synth_impulse_sensor_data_with_delay_reference(
     let mut delays_s: Vec<f64> = Vec::with_capacity(n_sensors);
     for i in 0..n_sensors {
         let sensor_pos = array.get_sensor_position(i);
-        let d = source.distance_to(sensor_pos);
+        let d = source.distance_to(&sensor_pos);
         delays_s.push(d / c);
     }
 
@@ -140,12 +139,12 @@ fn beamforming_localization_finds_source_near_true_position() {
         sampling_frequency: sample_rate,
     };
 
-    let result =
-        localize_beamforming(&array, &input, search_cfg)
-            .expect("beamforming localization (SRP-DAS) should succeed");
+    let result = localize_beamforming(&array, &input, search_cfg)
+        .expect("beamforming localization (SRP-DAS) should succeed");
 
     // The grid resolution is 1 cm, accept within ~1.5 grid steps.
-    let err = result.position.distance_to(&true_source);
+    let estimated_pos = Position::from_array(result.position);
+    let err = estimated_pos.distance_to(&true_source);
     assert!(
         err <= 0.02 + 1e-12,
         "expected localization error <= 2cm; got {err} (estimated={:?}, true={:?})",

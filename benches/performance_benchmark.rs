@@ -130,7 +130,7 @@ impl PerformanceBenchmarkSuite {
         sim_time: f64,
     ) -> KwaversResult<BenchmarkResult> {
         let grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+        let _medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
         let mut total_time = Duration::new(0, 0);
         let mut memory_usage = 0;
@@ -140,9 +140,9 @@ impl PerformanceBenchmarkSuite {
 
             // Initialize fields
             let mut pressure = Array3::<f32>::zeros(grid.dimensions());
-            let mut velocity_x = Array3::<f32>::zeros(grid.dimensions());
-            let mut velocity_y = Array3::<f32>::zeros(grid.dimensions());
-            let mut velocity_z = Array3::<f32>::zeros(grid.dimensions());
+            let _velocity_x = Array3::<f32>::zeros(grid.dimensions());
+            let _velocity_y = Array3::<f32>::zeros(grid.dimensions());
+            let _velocity_z = Array3::<f32>::zeros(grid.dimensions());
 
             // TODO: SIMPLIFIED BENCHMARK - using stub update functions, not real physics
             let dt = grid.dx / 1500.0 * 0.5; // CFL condition
@@ -310,7 +310,7 @@ impl PerformanceBenchmarkSuite {
         sim_time: f64,
     ) -> KwaversResult<BenchmarkResult> {
         let grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+        let _medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
 
         let mut total_time = Duration::new(0, 0);
         let mut memory_usage = 0;
@@ -319,13 +319,13 @@ impl PerformanceBenchmarkSuite {
             let start = Instant::now();
 
             let mut pressure = Array3::<f32>::zeros(grid.dimensions());
-            let mut velocity_x = Array3::<f32>::zeros(grid.dimensions());
-            let mut velocity_y = Array3::<f32>::zeros(grid.dimensions());
-            let mut velocity_z = Array3::<f32>::zeros(grid.dimensions());
+            let _velocity_x = Array3::<f32>::zeros(grid.dimensions());
+            let _velocity_y = Array3::<f32>::zeros(grid.dimensions());
+            let _velocity_z = Array3::<f32>::zeros(grid.dimensions());
 
             // Nonlinear parameters
-            let beta = 3.5; // Nonlinearity parameter
-            let absorption = 0.5; // dB/MHz/cm
+            let _beta = 3.5; // Nonlinearity parameter
+            let _absorption = 0.5; // dB/MHz/cm
 
             let dt = grid.dx / 1500.0 * 0.3; // Stricter CFL for nonlinear
             let n_steps = (sim_time / dt) as usize;
@@ -384,7 +384,7 @@ impl PerformanceBenchmarkSuite {
         // TODO: SIMPLIFIED BENCHMARK - using stub functions, not real elastography physics
 
         let grid = Grid::new(nx, ny, nz, 2e-4, 2e-4, 2e-4)?; // 0.2mm for SWE
-        let mut displacement_field = Array3::<f32>::zeros((nx, ny, nz));
+        let displacement_field = Array3::<f32>::zeros((nx, ny, nz));
 
         // Simulate ARFI push and shear wave propagation
         let n_time_steps = 500; // Typical for SWE
@@ -427,7 +427,7 @@ impl PerformanceBenchmarkSuite {
 
         // CEUS involves microbubble dynamics and perfusion analysis
         let _grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
-        let mut contrast_signal = Array3::<f32>::zeros((nx, ny, nz));
+        let contrast_signal = Array3::<f32>::zeros((nx, ny, nz));
 
         let n_time_points = 1000; // 10 seconds at 100 fps
         let n_microbubbles = 10000;
@@ -479,7 +479,7 @@ impl PerformanceBenchmarkSuite {
 
         // Transcranial FUS involves aberration correction and safety monitoring
         let grid = Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)?;
-        let mut acoustic_field = Array3::<f32>::zeros((nx, ny, nz));
+        let acoustic_field = Array3::<f32>::zeros((nx, ny, nz));
 
         // Simulate phased array focusing through skull
         let n_elements = 1024; // Typical hemispherical array
@@ -736,7 +736,7 @@ impl PerformanceBenchmarkSuite {
 
         // DISABLED - stub implementation removed
         let _ = &ensemble_predictions;
-        let ensemble_mean = Array3::<f32>::zeros((nx, ny, nz));
+        let _ensemble_mean = Array3::<f32>::zeros((nx, ny, nz));
         let _ensemble_variance = Array3::<f32>::zeros((nx, ny, nz));
 
         let execution_time = start.elapsed();

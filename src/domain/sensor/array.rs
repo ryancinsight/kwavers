@@ -144,6 +144,12 @@ impl SensorArray {
         self.sensors.iter().map(|s| s.position).collect()
     }
 
+    /// Get position of sensor by index
+    #[must_use]
+    pub fn get_sensor_position(&self, index: usize) -> Position {
+        self.sensors[index].position
+    }
+
     /// Get number of sensors
     #[must_use]
     pub fn num_sensors(&self) -> usize {

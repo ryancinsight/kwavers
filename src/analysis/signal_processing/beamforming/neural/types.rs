@@ -15,8 +15,7 @@ use crate::domain::sensor::beamforming::BeamformingConfig;
 // Use solver-agnostic interface instead of direct solver imports
 #[cfg(feature = "pinn")]
 use super::pinn_interface::{
-    PinnBeamformingConfig as InterfacePinnConfig, TrainingMetrics as InterfaceTrainingMetrics,
-    UncertaintyConfig as InterfaceUncertaintyConfig,
+    PinnBeamformingConfig as InterfacePinnConfig, UncertaintyConfig as InterfaceUncertaintyConfig,
 };
 
 /// Result from hybrid neural-traditional beamforming.
@@ -115,7 +114,6 @@ impl Default for PINNBeamformingConfig {
             uncertainty_config: InterfaceUncertaintyConfig {
                 bayesian_enabled: true,
                 mc_samples: 10,
-                dropout_rate: 0.1,
                 confidence_level: 0.95,
             },
             learning_rate: 0.001,
@@ -145,11 +143,6 @@ pub struct PinnBeamformingResult {
     pub uncertainty: Array3<f32>,
     /// Confidence scores per voxel
     pub confidence: Array3<f32>,
-    /// PINN optimization metrics (solver-agnostic)
-    #[cfg(feature = "pinn")]
-    pub pinn_metrics: Option<InterfaceTrainingMetrics>,
-    #[cfg(not(feature = "pinn"))]
-    pub pinn_metrics: Option<()>,
     /// Processing time (ms)
     pub processing_time_ms: f64,
 }

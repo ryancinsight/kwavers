@@ -13,9 +13,9 @@
 //! - **Large-Scale Problems**: 10K-100K collocation point scaling
 
 #[cfg(feature = "pinn")]
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 #[cfg(feature = "pinn")]
-use kwavers::ml::pinn::BurnPINN2DConfig;
+use kwavers::solver::inverse::pinn::ml::BurnPINN2DConfig;
 #[cfg(feature = "pinn")]
 use std::time::Duration;
 

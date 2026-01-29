@@ -164,7 +164,7 @@ mod bubble_dynamics_validation {
             ..Default::default()
         };
 
-        let solver = EpsteinPlessetStabilitySolver::new(params);
+        let solver = EpsteinPlessetStabilitySolver::new(params.clone());
         let analysis = solver.analyze_stability();
 
         // Epstein-Plesset theorem: For air bubbles in water, oscillations should be stable

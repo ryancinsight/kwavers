@@ -102,7 +102,7 @@ impl SpatiallyVaryingAbsorption {
 
         if gamma_field
             .iter()
-            .any(|&g| g < 0.0 || g > 3.0 || !g.is_finite())
+            .any(|&g| !(0.0..=3.0).contains(&g) || !g.is_finite())
         {
             return Err(KwaversError::InvalidInput(
                 "gamma_field contains invalid values (must be in [0, 3])".to_string(),
@@ -483,7 +483,7 @@ impl SpatiallyVaryingAbsorption {
         if self
             .gamma_field
             .iter()
-            .any(|&g| g < 0.0 || g > 3.0 || !g.is_finite())
+            .any(|&g| !(0.0..=3.0).contains(&g) || !g.is_finite())
         {
             return Err(KwaversError::InvalidInput(
                 "gamma field contains non-physical values".to_string(),

@@ -240,8 +240,9 @@ impl SlscBeamformer {
         // Compute spatial coherence for each sample
         for sample_idx in 0..n_samples {
             let sample_data = data.column(sample_idx);
-            coherence[sample_idx] =
-                self.compute_short_lag_coherence(sample_data.as_slice().unwrap(), max_lag);
+            // Handle the case where column data might not be contiguous
+            let slice: Vec<Complex64> = sample_data.iter().copied().collect();
+            coherence[sample_idx] = self.compute_short_lag_coherence(&slice, max_lag);
         }
 
         Ok(coherence)
@@ -273,7 +274,9 @@ impl SlscBeamformer {
             .into_par_iter()
             .map(|sample_idx| {
                 let sample_data = data.column(sample_idx);
-                self.compute_short_lag_coherence(sample_data.as_slice().unwrap(), max_lag)
+                // Handle the case where column data might not be contiguous
+                let slice: Vec<Complex64> = sample_data.iter().copied().collect();
+                self.compute_short_lag_coherence(&slice, max_lag)
             })
             .collect();
 
@@ -341,10 +344,7 @@ impl SlscBeamformer {
     ///
     /// # Returns
     /// * Coherence volume with shape (n_beams, n_samples)
-    pub fn process_volume(
-        &self,
-        data: &Array3<Complex64>,
-    ) -> KwaversResult<Array2<f64>> {
+    pub fn process_volume(&self, data: &Array3<Complex64>) -> KwaversResult<Array2<f64>> {
         let (n_elements, n_beams, n_samples) = (data.dim().0, data.dim().1, data.dim().2);
 
         if n_elements < 2 {
@@ -498,9 +498,7 @@ impl AdaptiveSlsc {
         let n_elements = data.nrows();
         let sample_idx = data.ncols() / 2; // Use center sample
 
-        let sample_data: Vec<Complex64> = (0..n_elements)
-            .map(|i| data[[i, sample_idx]])
-            .collect();
+        let sample_data: Vec<Complex64> = (0..n_elements).map(|i| data[[i, sample_idx]]).collect();
 
         // Find where coherence drops below threshold
         let threshold = 0.5;
@@ -614,13 +612,11 @@ pub fn process_slsc_batch(
             .to_owned()
             .into_dimensionality()
             .map_err(|_| {
-                KwaversError::Validation(
-                    crate::core::error::ValidationError::InvalidFormat {
-                        field: "frame_data".to_string(),
-                        expected: "Array2".to_string(),
-                        actual: "Array3 slice".to_string(),
-                    },
-                )
+                KwaversError::Validation(crate::core::error::ValidationError::InvalidFormat {
+                    field: "frame_data".to_string(),
+                    expected: "Array2".to_string(),
+                    actual: "Array3 slice".to_string(),
+                })
             })?;
 
         let coherence = slsc.process(&frame_data)?;
@@ -667,7 +663,7 @@ mod tests {
         assert_eq!(result.len(), n_samples);
         // Perfectly coherent signals should give high coherence values
         for &val in result.iter() {
-            assert!(val >= 0.0 && val <= 1.0, "Coherence should be in [0, 1]");
+            assert!((0.0..=1.0).contains(&val), "Coherence should be in [0, 1]");
         }
     }
 
