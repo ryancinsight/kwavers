@@ -49,11 +49,12 @@ impl AblationKinetics {
     }
 
     /// Protein denaturation kinetics (Henriques model)
-    /// Reference: Henriques (1947)
+    /// Reference: Henriques (1947) - thermal injury to skin
+    /// A = 1.0e44 [1/s], E_a = 284 kJ/mol
     pub fn protein_denaturation() -> Self {
         Self {
-            frequency_factor: 1.0e69,     // [1/s]
-            activation_energy: 576_500.0, // [J/mol] (137.9 kcal/mol)
+            frequency_factor: 1.0e44,     // [1/s]
+            activation_energy: 284_000.0, // [J/mol] (67.8 kcal/mol)
             damage_threshold: 1.0,
             ablation_threshold: 45.0,
         }
@@ -61,10 +62,11 @@ impl AblationKinetics {
 
     /// Collagen denaturation kinetics
     /// Reference: Lepock et al. (1993) - collagen triple helix dissociation
+    /// Lower activation energy than protein, faster denaturation
     pub fn collagen_denaturation() -> Self {
         Self {
-            frequency_factor: 1.0e53,     // [1/s]
-            activation_energy: 418_400.0, // [J/mol] (100 kcal/mol)
+            frequency_factor: 1.0e44,     // [1/s]
+            activation_energy: 250_000.0, // [J/mol] (59.8 kcal/mol) - lower than protein
             damage_threshold: 1.0,
             ablation_threshold: 55.0,
         }
@@ -72,10 +74,11 @@ impl AblationKinetics {
 
     /// HIFU ablation kinetics (tissue necrosis)
     /// Reference: Sapareto & Dewey (1984) - thermal dose model
+    /// Higher frequency factor for faster ablation kinetics
     pub fn hifu_ablation() -> Self {
         Self {
-            frequency_factor: 1.0e75,     // [1/s]
-            activation_energy: 628_000.0, // [J/mol] (150 kcal/mol)
+            frequency_factor: 1.0e47,     // [1/s] - higher for faster tissue necrosis
+            activation_energy: 284_000.0, // [J/mol] (67.8 kcal/mol)
             damage_threshold: 1.0,
             ablation_threshold: 50.0,
         }

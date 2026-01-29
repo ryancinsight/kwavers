@@ -241,9 +241,11 @@ impl NonlinearHeating {
     }
 
     /// Is nonlinear regime significant?
-    /// (σ > 0.01 generally indicates significant nonlinear effects)
+    /// (σ > 1e-4 generally indicates significant nonlinear effects)
+    /// This threshold is based on the acoustic nonlinearity coefficient (B/A)
+    /// being about 5-8 for most tissues, combined with typical therapeutic pressures
     pub fn is_nonlinear_significant(&self) -> bool {
-        self.shock_parameter() > 0.01
+        self.shock_parameter() > 1e-4
     }
 }
 
