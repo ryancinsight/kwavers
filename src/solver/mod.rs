@@ -2,6 +2,7 @@
 // Clean module structure focusing only on the plugin-based architecture
 
 // Hierarchical solver module structure
+// pub mod backend;  // TODO: Fix GPU backend wgpu dependency and error type mismatches
 pub mod config;
 pub mod factory;
 pub mod feature;

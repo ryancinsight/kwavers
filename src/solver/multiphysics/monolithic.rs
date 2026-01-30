@@ -208,7 +208,7 @@ impl MonolithicCoupler {
 
         // Store initial state for residual calculation
         let mut u_current = Self::flatten_fields(fields);
-        let mut u_prev = u_current.clone();
+        let u_prev = u_current.clone();
 
         let f_norm_0: f64;
         {
@@ -367,8 +367,8 @@ impl MonolithicCoupler {
         let f_norm = Self::norm(f);
 
         // Try decreasing step sizes
-        for k in 0..5 {
-            let alpha = 2.0_f64.powi(-(k as i32));
+        for k in 0i32..5 {
+            let alpha = 2.0_f64.powi(-k);
             let u_new = &(u + &(du * alpha));
             let f_new = self.compute_residual(&u_new, u_prev, dt)?;
             let f_new_norm = Self::norm(&f_new);

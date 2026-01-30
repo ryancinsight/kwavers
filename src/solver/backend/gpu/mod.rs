@@ -58,14 +58,26 @@
 
 pub mod buffers;
 pub mod init;
+pub mod performance_monitor;
+pub mod physics_kernels;
 pub mod pipeline;
+pub mod realtime_loop;
 
 use super::traits::{Backend, BackendCapabilities, BackendType, ComputeDevice};
 use crate::core::error::{KwaversError, KwaversResult};
 use buffers::BufferManager;
 use init::WGPUContext;
 use ndarray::Array3;
+use performance_monitor::PerformanceMonitor;
+use physics_kernels::{PhysicsDomain, PhysicsKernelRegistry};
 use pipeline::PipelineManager;
+use realtime_loop::{RealtimeConfig, RealtimeSimulationOrchestrator};
+use std::collections::HashMap;
+
+// Re-export key Phase 4 types for public API
+pub use performance_monitor::{BudgetAnalysis, PerformanceMetrics};
+pub use physics_kernels::{PhysicsKernel, WorkgroupConfig};
+pub use realtime_loop::{SimulationStatistics, StepResult};
 
 /// GPU backend using WGPU
 ///
@@ -259,6 +271,75 @@ impl Backend for GPUBackend {
 }
 
 impl GPUBackend {
+    /// Create a real-time multiphysics simulation orchestrator
+    ///
+    /// Initializes a GPU-accelerated real-time loop with performance monitoring,
+    /// physics kernel management, and budget enforcement for <10ms per-step execution.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Real-time configuration (budget_ms, adaptive timestepping, CFL safety)
+    ///
+    /// # Returns
+    ///
+    /// A new RealtimeSimulationOrchestrator ready for GPU timesteps
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let mut backend = GPUBackend::new()?;
+    /// let config = RealtimeConfig {
+    ///     budget_ms: 10.0,
+    ///     adaptive_timestepping: true,
+    ///     cfl_safety_factor: 0.9,
+    ///     ..Default::default()
+    /// };
+    /// let mut orchestrator = backend.create_realtime_orchestrator(config)?;
+    /// ```
+    pub fn create_realtime_orchestrator(
+        &self,
+        config: RealtimeConfig,
+    ) -> KwaversResult<RealtimeSimulationOrchestrator> {
+        let kernel_registry = PhysicsKernelRegistry::new();
+        RealtimeSimulationOrchestrator::new(config, kernel_registry)
+    }
+
+    /// Execute a single GPU multiphysics timestep
+    ///
+    /// Performs one coupled multiphysics update across acoustic, optical, and thermal
+    /// fields with async I/O support for checkpointing.
+    ///
+    /// # Arguments
+    ///
+    /// * `fields` - HashMap of field arrays indexed by domain name
+    /// * `dt` - Timestep size (seconds)
+    /// * `time` - Current simulation time (seconds)
+    /// * `grid` - Computational grid with spacing and extents
+    /// * `orchestrator` - Real-time orchestrator managing GPU execution
+    ///
+    /// # Returns
+    ///
+    /// StepResult containing execution time, budget status, and kernel count
+    ///
+    /// # Notes
+    ///
+    /// In production, this would:
+    /// - Upload fields to GPU memory
+    /// - Dispatch acoustic, optical, and thermal kernels
+    /// - Execute conservative interpolation for coupling
+    /// - Download results to CPU
+    /// - Handle potential budget violations with warnings
+    pub fn multiphysics_step(
+        &self,
+        fields: &mut HashMap<String, Array3<f64>>,
+        dt: f64,
+        time: f64,
+        grid: &crate::domain::grid::Grid,
+        orchestrator: &mut RealtimeSimulationOrchestrator,
+    ) -> KwaversResult<StepResult> {
+        orchestrator.step(fields, dt, time, grid)
+    }
+
     /// Estimate peak GPU performance (FLOPS)
     fn estimate_peak_performance(&self) -> f64 {
         // Conservative estimate: 5 TFLOPS for modern integrated GPU

@@ -64,18 +64,16 @@ impl PipelineManager {
         // Create bind group layout
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("fft-layout"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
                 },
-            ],
+                count: None,
+            }],
         });
 
         // Create pipeline layout
@@ -221,7 +219,7 @@ impl PipelineManager {
 
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("derivative-pipeline"),
-            layout: Some(&pipeline_layout"),
+            layout: Some(&pipeline_layout),
             module: &shader,
             entry_point: "spatial_derivative",
             compilation_options: Default::default(),
@@ -242,15 +240,12 @@ impl PipelineManager {
         buffer_manager: &BufferManager,
     ) -> KwaversResult<()> {
         // Get pipeline
-        let pipeline = self
-            .pipelines
-            .get(&PipelineType::FFT3D)
-            .ok_or_else(|| {
-                KwaversError::ConfigError(crate::core::error::ConfigError::MissingFeature {
-                    feature: "FFT3D pipeline".to_string(),
-                    help: "Pipeline not compiled".to_string(),
-                })
-            })?;
+        let pipeline = self.pipelines.get(&PipelineType::FFT3D).ok_or_else(|| {
+            KwaversError::ConfigError(crate::core::error::ConfigError::MissingFeature {
+                feature: "FFT3D pipeline".to_string(),
+                help: "Pipeline not compiled".to_string(),
+            })
+        })?;
 
         // Create buffer from data
         let shape = data.shape();
@@ -271,21 +266,24 @@ impl PipelineManager {
 
         // Create bind group
         let layout = self.layouts.get(&PipelineType::FFT3D).unwrap();
-        let bind_group = context.device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fft-bind-group"),
-            layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: buffer.as_entire_binding(),
-            }],
-        });
+        let bind_group = context
+            .device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("fft-bind-group"),
+                layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buffer.as_entire_binding(),
+                }],
+            });
 
         // Execute compute shader
-        let mut encoder = context
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("fft-encoder"),
-            });
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("fft-encoder"),
+                });
 
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -372,32 +370,38 @@ impl PipelineManager {
         buffer_manager.write_array_to_buffer(context.queue(), &buffer_b, b)?;
 
         // Create bind group
-        let layout = self.layouts.get(&PipelineType::ElementWiseMultiply).unwrap();
-        let bind_group = context.device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("multiply-bind-group"),
-            layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: buffer_a.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: buffer_b.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: buffer_out.as_entire_binding(),
-                },
-            ],
-        });
+        let layout = self
+            .layouts
+            .get(&PipelineType::ElementWiseMultiply)
+            .unwrap();
+        let bind_group = context
+            .device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("multiply-bind-group"),
+                layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: buffer_a.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: buffer_b.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: buffer_out.as_entire_binding(),
+                    },
+                ],
+            });
 
         // Execute
-        let mut encoder = context
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("multiply-encoder"),
-            });
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("multiply-encoder"),
+                });
 
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
