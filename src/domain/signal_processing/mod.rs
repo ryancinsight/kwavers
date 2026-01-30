@@ -1,13 +1,23 @@
 //! Signal Processing Domain Layer
 //!
-//! Provides domain-level abstractions for signal processing operations that are
-//! independent of implementation details (physics-based, neural network, etc.).
+//! **Deprecation Notice (Phase 2 Migration)**: This module provides domain-level abstractions
+//! for signal processing that are being migrated to more appropriate layers:
 //!
-//! This ensures clean architecture where:
-//! - Physics layer computes theoretical values
-//! - Analysis layer implements algorithms
-//! - Clinical layer applies results
-//! - All layers depend on domain abstractions, not on each other
+//! **Migration Guide:**
+//! - Beamforming interfaces → Analysis layer (`analysis::signal_processing::beamforming`)
+//! - Beamforming configs → Domain sensor module (`domain::sensor::beamforming`)
+//! - Filter processors → Analysis layer (`analysis::signal_processing::clutter_filter`)
+//! - Localization processors → Analysis layer (`analysis::signal_processing::localization`)
+//! - PAM processors → Analysis layer (`analysis::signal_processing::pam`)
+//!
+//! **Architecture Principle**:
+//! - Domain layer: Type definitions and core abstractions only
+//! - Analysis layer: Algorithm implementations and post-processing
+//! - Physics layer: Physical law computations (no dependencies on analysis)
+//! - Clinical layer: Application-specific workflows
+//!
+//! This module is kept for backward compatibility but new code should import from
+//! the analysis layer directly.
 
 pub mod beamforming;
 pub mod filtering;
