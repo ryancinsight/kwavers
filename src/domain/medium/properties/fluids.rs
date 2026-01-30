@@ -1,4 +1,4 @@
-//! Fluid properties - Acoustic and thermal characteristics
+//! Fluid property catalogs
 //!
 //! Provides standardized fluid property definitions for:
 //! - Biological fluids (blood, cerebrospinal fluid)
@@ -14,7 +14,7 @@
 //! Temperature: 37°C (body temperature) unless otherwise noted
 //! Pressure: 1 atm unless otherwise noted
 
-use super::MaterialProperties;
+use super::material::MaterialProperties;
 
 /// Fluid material properties type alias
 pub type FluidProperties = MaterialProperties;

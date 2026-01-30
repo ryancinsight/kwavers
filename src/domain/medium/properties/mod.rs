@@ -70,15 +70,20 @@ mod acoustic;
 mod composite;
 mod elastic;
 mod electromagnetic;
+pub mod fluids; // Fluid property catalogs
+pub mod implants;
+pub mod material; // Unified MaterialProperties (consolidated from physics/materials)
 mod optical;
 mod strength;
 mod thermal;
+pub mod tissue; // Tissue property catalogs // Implant property catalogs
 
 // Re-export all public types to maintain API compatibility
 pub use acoustic::AcousticPropertyData;
-pub use composite::{MaterialProperties, MaterialPropertiesBuilder};
+pub use composite::{MaterialProperties as CompositeProperties, MaterialPropertiesBuilder};
 pub use elastic::ElasticPropertyData;
 pub use electromagnetic::ElectromagneticPropertyData;
+pub use material::MaterialProperties; // SSOT for unified material properties
 pub use optical::OpticalPropertyData;
 pub use strength::StrengthPropertyData;
 pub use thermal::ThermalPropertyData;

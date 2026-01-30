@@ -5,28 +5,31 @@
 //!
 //! # Module Organization
 //!
-//! - `backend`: Trait interface for acoustic solver backends (Strategy pattern)
-//! - `fdtd_backend`: FDTD (Finite-Difference Time-Domain) solver adapter
-//! - `AcousticWaveSolver`: Main public API for clinical applications
+//! The `AcousticWaveSolver` is the main public API for clinical applications.
+//! It composes acoustic solver backends provided by the simulation layer.
 //!
 //! # Architecture
 //!
-//! The module uses the **Strategy Pattern** to enable polymorphic solver selection:
-//!
 //! ```text
-//! AcousticWaveSolver
-//!     ↓ uses
-//! Box<dyn AcousticSolverBackend>
-//!     ↑ implements
-//! ┌───────────┬──────────────┐
-//! │           │              │
-//! FdtdBackend  PstdBackend  NonlinearBackend (future)
+//! Clinical Layer (this module)
+//!     AcousticWaveSolver
+//!         ↓ uses
+//! Simulation Layer
+//!     simulation::backends::AcousticSolverBackend (trait)
+//!         ↑ implemented by
+//! simulation::backends::acoustic::FdtdBackend
+//!         ↓ wraps
+//! Solver Layer
+//!     solver::forward::fdtd::FdtdSolver
 //! ```
 //!
-//! This design allows:
-//! - Runtime backend selection based on problem characteristics
-//! - Easy addition of new solvers (GPU, nonlinear, etc.)
-//! - Unified API for clinical applications
+//! # Design Rationale
+//!
+//! By using simulation layer backends:
+//! - Clinical code never depends on solver layer (only simulation)
+//! - Clear layering: Clinical → Simulation → Solver
+//! - Solver changes don't propagate to clinical code
+//! - Simulation layer orchestrates solver access
 //!
 //! # Usage
 //!
@@ -37,22 +40,15 @@
 //! solver.step()?;
 //! let pressure = solver.pressure_field();
 //! ```
-//!
-//! Advanced users can implement custom backends via the `AcousticSolverBackend` trait.
-
-pub mod backend;
-pub mod fdtd_backend;
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;
 use crate::physics::mechanics::acoustic_wave::SpatialOrder;
+use crate::simulation::backends::acoustic::{AcousticSolverBackend, FdtdBackend};
 use ndarray::Array3;
 use std::sync::Arc;
-
-use backend::AcousticSolverBackend;
-use fdtd_backend::FdtdBackend;
 
 /// Acoustic wave solver for therapy applications
 ///

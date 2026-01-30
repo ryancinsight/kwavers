@@ -1,8 +1,8 @@
-//! Backend Abstraction for Acoustic Wave Solvers
+//! Backend abstraction trait for acoustic wave solvers
 //!
 //! This module defines the trait interface for acoustic solver backends,
-//! enabling the clinical therapy acoustic solver to delegate to different
-//! numerical methods (FDTD, PSTD, etc.) while maintaining a unified API.
+//! enabling the simulation layer to delegate to different numerical methods
+//! (FDTD, PSTD, etc.) while maintaining a unified API.
 //!
 //! # Design Pattern
 //!
@@ -36,7 +36,7 @@
 //! # Usage Example
 //!
 //! ```rust,ignore
-//! use crate::clinical::therapy::therapy_integration::acoustic::backend::AcousticSolverBackend;
+//! use crate::simulation::backends::AcousticSolverBackend;
 //!
 //! fn run_simulation(mut backend: Box<dyn AcousticSolverBackend>) -> KwaversResult<()> {
 //!     // Time stepping loop
@@ -64,13 +64,13 @@ use std::sync::Arc;
 /// Backend trait for acoustic wave solvers
 ///
 /// Defines the interface that all acoustic solver backends must implement
-/// to be usable by the clinical therapy acoustic solver. This trait enables
-/// polymorphic solver selection based on problem characteristics.
+/// to be usable by the simulation layer. This trait enables polymorphic solver
+/// selection based on problem characteristics.
 ///
 /// # Implementors
 ///
 /// - `FdtdBackend`: Adapts `crate::solver::forward::fdtd::FdtdSolver`
-/// - `PstdBackend`: Adapts `crate::solver::forward::pstd::PSTDSolver`
+/// - `PstdBackend`: Adapts `crate::solver::forward::pstd::PSTDSolver` (future)
 /// - `NonlinearBackend`: Future nonlinear acoustics support
 ///
 /// # Mathematical Foundations

@@ -2,6 +2,7 @@
 //!
 //! Provides the core simulation loop and orchestration of components.
 
+pub mod backends; // Solver backend adapters (simulation → solver interface)
 pub mod builder;
 pub mod configuration;
 pub mod core;

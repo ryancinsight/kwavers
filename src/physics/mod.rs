@@ -66,6 +66,11 @@ pub use acoustics::analytical::patterns as phase_modulation;
 /// Re-export sonoluminescence_detector from its new location in sensor module
 pub use crate::domain::sensor::sonoluminescence as sonoluminescence_detector;
 
+/// Re-export material properties from domain layer (SSOT for material specifications)
+/// This was previously in physics::materials but has been moved to domain::medium::properties
+/// as material property definitions belong in the domain layer, not physics.
+pub use crate::domain::medium::properties::{fluids, implants, tissue, MaterialProperties};
+
 // Note: optics is now a top-level physics module (line 9)
 // Provide backward-compatible re-exports for specific optics functionality
 pub mod optics_compat {

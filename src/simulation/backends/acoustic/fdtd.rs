@@ -1,14 +1,32 @@
-//! FDTD Backend Adapter for Clinical Acoustic Solver
+
+//! FDTD Backend Adapter for Simulation Layer
 //!
-//! This module provides an adapter that wraps the existing `FdtdSolver` to
-//! implement the `AcousticSolverBackend` trait, enabling it to be used by
-//! the clinical therapy acoustic solver.
+//! This module provides an adapter that wraps the low-level `FdtdSolver` to
+//! implement the `AcousticSolverBackend` trait, enabling it to be orchestrated
+//! by the simulation layer.
 //!
 //! # Design Pattern
 //!
 //! This is an **Adapter Pattern** implementation that bridges the gap between
-//! the generic `FdtdSolver` interface and the specialized `AcousticSolverBackend`
-//! trait required by clinical applications.
+//! the low-level `FdtdSolver` interface and the high-level `AcousticSolverBackend`
+//! trait required by simulation orchestration.
+//!
+//! # Layering
+//!
+//! ```text
+//! Simulation Layer (AcousticWaveSolver)
+//!     ↓ uses
+//! simulation::backends::AcousticSolverBackend (trait)
+//!     ↑ implemented by
+//! FdtdBackend (in simulation layer)
+//!     ↓ wraps
+//! solver::forward::fdtd::FdtdSolver (low-level numerics)
+//! ```
+//!
+//! This structure ensures:
+//! - **Clinical layer** depends only on simulation facades
+//! - **Simulation layer** knows about solvers but doesn't expose them upward
+//! - **Solver layer** provides numerical implementations without knowing about applications
 //!
 //! # FDTD Method
 //!
@@ -35,20 +53,6 @@
 //! - **Dispersion**: Numerical dispersion at high frequencies (requires 4-10 PPW)
 //! - **CFL Constraint**: Time step limited by stability condition
 //! - **Grid Resolution**: More points needed than spectral methods
-//!
-//! # Usage Example
-//!
-//! ```rust,ignore
-//! use crate::clinical::therapy::therapy_integration::acoustic::fdtd_backend::FdtdBackend;
-//! use crate::clinical::therapy::therapy_integration::acoustic::backend::AcousticSolverBackend;
-//!
-//! let backend = FdtdBackend::new(&grid, medium, spatial_order)?;
-//! let mut solver: Box<dyn AcousticSolverBackend> = Box::new(backend);
-//!
-//! for _ in 0..1000 {
-//!     solver.step()?;
-//! }
-//! ```
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
@@ -63,8 +67,8 @@ use super::backend::AcousticSolverBackend;
 
 /// FDTD solver backend adapter
 ///
-/// Wraps the existing `FdtdSolver` to provide the `AcousticSolverBackend`
-/// interface required by clinical therapy applications.
+/// Wraps the low-level `FdtdSolver` to provide the `AcousticSolverBackend`
+/// interface required by simulation orchestration.
 ///
 /// # Fields
 ///
@@ -93,8 +97,8 @@ pub struct FdtdBackend {
 impl FdtdBackend {
     /// Create new FDTD backend
     ///
-    /// Initializes an FDTD solver with appropriate configuration for clinical
-    /// therapy applications. The solver is configured with:
+    /// Initializes an FDTD solver with appropriate configuration for simulation
+    /// orchestration. The solver is configured with:
     ///
     /// - Automatic stable time step computation (CFL-based)
     /// - PML absorbing boundaries (20 grid points, alpha=2.0)
@@ -127,18 +131,6 @@ impl FdtdBackend {
     /// ```
     /// This ensures the CFL number is ≤ 0.5, well below the stability limit
     /// of 1/√3 ≈ 0.577 for 3D.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// use crate::physics::mechanics::acoustic_wave::SpatialOrder;
-    ///
-    /// // Create backend with 2nd-order accuracy
-    /// let backend = FdtdBackend::new(&grid, medium, SpatialOrder::Second)?;
-    ///
-    /// // Create backend with 4th-order accuracy (less dispersion)
-    /// let backend = FdtdBackend::new(&grid, medium, SpatialOrder::Fourth)?;
-    /// ```
     pub fn new(
         grid: &Grid,
         medium: &dyn Medium,
@@ -149,7 +141,7 @@ impl FdtdBackend {
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
         let dt = Self::compute_stable_timestep(dx_min, c_max);
 
-        // Configure FDTD solver for clinical applications
+        // Configure FDTD solver for simulation orchestration
         let spatial_order_value = match spatial_order {
             SpatialOrder::Second => 2,
             SpatialOrder::Fourth => 4,

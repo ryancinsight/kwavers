@@ -1,4 +1,4 @@
-//! Tissue properties - Acoustic and thermal characteristics
+//! Tissue property catalogs
 //!
 //! Provides standardized tissue property definitions based on:
 //! - Duck (1990) - Physical Properties of Tissues and Equivalent Systems for Ultrasound and Elastography
@@ -8,7 +8,7 @@
 //! Temperature: 37°C (body temperature)
 //! Pressure: 1 atm unless otherwise noted
 
-use super::MaterialProperties;
+use super::material::MaterialProperties;
 
 /// Tissue material properties type alias
 pub type TissueProperties = MaterialProperties;

@@ -29,6 +29,7 @@ use super::{
     types::{AIBeamformingConfig, AIBeamformingResult, FeatureMap, PerformanceMetrics},
     ClinicalDecisionSupport,
 };
+// Import from analysis layer (beamforming algorithms migrated from domain)
 use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
 use crate::core::error::KwaversResult;
 use ndarray::{Array3, ArrayView4};

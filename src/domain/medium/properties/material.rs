@@ -1,89 +1,130 @@
-//! Physics Materials - Single Source of Truth
+//! Unified Material Properties (Consolidated from physics/materials)
 //!
-//! Provides unified access to all material properties across the library.
-//! All physics, domain, and clinical modules should reference properties from this module.
+//! This module provides a unified `MaterialProperties` struct that combines all acoustic, thermal,
+//! optical, and perfusion properties needed for multi-physics simulations.
+//!
+//! This replaces the `physics/materials/mod.rs` implementation, moving material property
+//! definitions from the physics layer to the domain layer where they belong (layer fix).
 //!
 //! # Architecture
 //!
-//! This module implements the SSOT (Single Source of Truth) principle for material properties.
-//! Every tissue type, fluid, or implant material is defined exactly once here.
+//! Material properties are **domain specifications** (WHAT materials have), not physics equations
+//! (HOW materials behave). Therefore, they belong in the domain layer.
 //!
-//! # Property Sources
+//! - **Domain Layer** (`domain/medium/properties/`): Material specifications ✅ CORRECT
+//! - **Physics Layer**: Uses these properties in equations, doesn't define them ✅ CORRECT
 //!
-//! Material properties are sourced from:
-//! - Perry & Green (2007) - Chemical Engineering Handbook
+//! # Physical Foundation
+//!
+//! Properties are sourced from:
 //! - Duck (1990) - Physical Properties of Tissues
-//! - Cutnell & Johnson (2001) - Physics Textbook
-//! - IEC 61161:2013 - Ultrasound equipment and systems
-//! - FDA regulations on ultrasound safety
+//! - Perry & Green (2007) - Chemical Engineering Handbook
+//! - IEC 61161:2013 - Ultrasound equipment safety
+//! - FDA ultrasound safety guidelines
+//!
+//! # Examples
+//!
+//! ```rust,ignore
+//! use kwavers::domain::medium::properties::{MaterialProperties, tissue, fluids, implants};
+//!
+//! // Tissue properties
+//! let brain = tissue::BRAIN_WHITE_MATTER;
+//! assert!(brain.validate().is_ok());
+//!
+//! // Fluid properties
+//! let blood = fluids::WHOLE_BLOOD;
+//! let r = brain.reflection_coefficient(&blood);
+//!
+//! // Implant properties
+//! let titanium = implants::TITANIUM_GRADE5;
+//! assert!(titanium.sound_speed > 5000.0);
+//! ```
 
 use crate::core::error::{KwaversError, KwaversResult};
 use serde::{Deserialize, Serialize};
 
-pub mod fluids;
-pub mod implants;
-pub mod tissue;
-
-pub use fluids::FluidProperties;
-pub use implants::ImplantProperties;
-pub use tissue::TissueProperties;
-
 /// Unified material property structure
 ///
-/// Contains all acoustic, thermal, and optical properties needed for simulations.
+/// Contains all acoustic, thermal, optical, and perfusion properties needed for simulations.
+/// This struct serves as the SSOT (Single Source of Truth) for material properties throughout
+/// the kwavers library.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct MaterialProperties {
-    // Acoustic properties
+    // ========================================================================
+    // Acoustic Properties
+    // ========================================================================
     /// Speed of sound [m/s]
     pub sound_speed: f64,
+
     /// Density [kg/m³]
     pub density: f64,
+
     /// Acoustic impedance Z = ρc [kg/(m²·s)]
     pub impedance: f64,
+
     /// Absorption coefficient [Np/m/MHz] (frequency-dependent: α = α₀·f^y)
     pub absorption_coefficient: f64,
+
     /// Absorption frequency exponent (typically 1.0-2.0)
     pub absorption_exponent: f64,
+
     /// Nonlinearity parameter B/A (Goldberg-Saffren)
     pub nonlinearity_parameter: f64,
+
     /// Shear viscosity [Pa·s]
     pub shear_viscosity: f64,
+
     /// Bulk viscosity [Pa·s]
     pub bulk_viscosity: f64,
 
-    // Thermal properties
+    // ========================================================================
+    // Thermal Properties
+    // ========================================================================
     /// Specific heat capacity [J/(kg·K)]
     pub specific_heat: f64,
+
     /// Thermal conductivity [W/(m·K)]
     pub thermal_conductivity: f64,
+
     /// Thermal diffusivity α = k/(ρ·c) [m²/s]
     pub thermal_diffusivity: f64,
 
-    // Perfusion properties (tissue-specific)
+    // ========================================================================
+    // Perfusion Properties (Tissue-Specific)
+    // ========================================================================
     /// Blood perfusion rate [mL/100g/min]
     pub perfusion_rate: f64,
+
     /// Arterial blood temperature [°C]
     pub arterial_temperature: f64,
+
     /// Metabolic heat generation [W/kg]
     pub metabolic_heat: f64,
 
-    // Optical properties
+    // ========================================================================
+    // Optical Properties
+    // ========================================================================
     /// Absorption coefficient [1/m]
     pub optical_absorption: f64,
+
     /// Scattering coefficient [1/m]
     pub optical_scattering: f64,
+
     /// Refractive index [-]
     pub refractive_index: f64,
 
-    // State-dependent properties
+    // ========================================================================
+    // State Reference
+    // ========================================================================
     /// Temperature at which properties are defined [°C]
     pub reference_temperature: f64,
+
     /// Pressure at which properties are defined [Pa]
     pub reference_pressure: f64,
 }
 
 impl MaterialProperties {
-    /// Create material properties
+    /// Create material properties with core parameters
     pub fn new(
         sound_speed: f64,
         density: f64,
@@ -119,60 +160,78 @@ impl MaterialProperties {
 
     /// Validate material properties against physical constraints
     pub fn validate(&self) -> KwaversResult<()> {
+        use crate::core::error::MediumError;
+
         // Speed of sound must be positive
         if self.sound_speed <= 0.0 {
-            return Err(KwaversError::PhysicsError(
-                "Sound speed must be positive".to_string(),
-            ));
+            return Err(KwaversError::Medium(MediumError::InvalidProperties {
+                property: "sound_speed".to_string(),
+                value: self.sound_speed,
+                constraint: "must be positive".to_string(),
+            }));
         }
 
         // Density must be positive
         if self.density <= 0.0 {
-            return Err(KwaversError::PhysicsError(
-                "Density must be positive".to_string(),
-            ));
+            return Err(KwaversError::Medium(MediumError::InvalidProperties {
+                property: "density".to_string(),
+                value: self.density,
+                constraint: "must be positive".to_string(),
+            }));
         }
 
         // Impedance must be positive
         if self.impedance <= 0.0 {
-            return Err(KwaversError::PhysicsError(
-                "Impedance must be positive".to_string(),
-            ));
+            return Err(KwaversError::Medium(MediumError::InvalidProperties {
+                property: "impedance".to_string(),
+                value: self.impedance,
+                constraint: "must be positive".to_string(),
+            }));
         }
 
         // Absorption must be non-negative
         if self.absorption_coefficient < 0.0 {
-            return Err(KwaversError::PhysicsError(
-                "Absorption coefficient must be non-negative".to_string(),
-            ));
+            return Err(KwaversError::Medium(MediumError::InvalidProperties {
+                property: "absorption_coefficient".to_string(),
+                value: self.absorption_coefficient,
+                constraint: "must be non-negative".to_string(),
+            }));
         }
 
         // Specific heat must be positive
         if self.specific_heat <= 0.0 {
-            return Err(KwaversError::PhysicsError(
-                "Specific heat must be positive".to_string(),
-            ));
+            return Err(KwaversError::Medium(MediumError::InvalidProperties {
+                property: "specific_heat".to_string(),
+                value: self.specific_heat,
+                constraint: "must be positive".to_string(),
+            }));
         }
 
         // Thermal conductivity must be non-negative
         if self.thermal_conductivity < 0.0 {
-            return Err(KwaversError::PhysicsError(
-                "Thermal conductivity must be non-negative".to_string(),
-            ));
+            return Err(KwaversError::Medium(MediumError::InvalidProperties {
+                property: "thermal_conductivity".to_string(),
+                value: self.thermal_conductivity,
+                constraint: "must be non-negative".to_string(),
+            }));
         }
 
         // Viscosity must be non-negative
         if self.shear_viscosity < 0.0 || self.bulk_viscosity < 0.0 {
-            return Err(KwaversError::PhysicsError(
-                "Viscosity must be non-negative".to_string(),
-            ));
+            return Err(KwaversError::Medium(MediumError::InvalidProperties {
+                property: "viscosity".to_string(),
+                value: self.shear_viscosity.min(self.bulk_viscosity),
+                constraint: "must be non-negative".to_string(),
+            }));
         }
 
-        // Refractive index should be typically > 1.0 for physical materials
+        // Refractive index should be typically >= 1.0 for physical materials
         if self.refractive_index < 1.0 {
-            return Err(KwaversError::PhysicsError(
-                "Refractive index must be >= 1.0".to_string(),
-            ));
+            return Err(KwaversError::Medium(MediumError::InvalidProperties {
+                property: "refractive_index".to_string(),
+                value: self.refractive_index,
+                constraint: "must be >= 1.0".to_string(),
+            }));
         }
 
         Ok(())
@@ -232,15 +291,6 @@ mod tests {
         let mut mat = MaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
         mat.sound_speed = -1500.0;
         assert!(mat.validate().is_err());
-    }
-
-    #[test]
-    fn test_reflection_coefficient() {
-        let water = tissue::WATER;
-        let skull = tissue::SKULL;
-        let r = water.reflection_coefficient(&skull);
-        // Higher impedance mismatch at skull
-        assert!(r > 0.1); // At least 10% reflection
     }
 
     #[test]

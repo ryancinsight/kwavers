@@ -1,4 +1,4 @@
-//! Implant properties - Acoustic, thermal, and mechanical characteristics
+//! Implant property catalogs
 //!
 //! Provides standardized material properties for:
 //! - Metallic implants (titanium, stainless steel, platinum)
@@ -16,7 +16,7 @@
 //! Temperature: 37°C (body temperature) unless otherwise noted
 //! Pressure: 1 atm unless otherwise noted
 
-use super::MaterialProperties;
+use super::material::MaterialProperties;
 
 /// Implant material properties type alias
 pub type ImplantProperties = MaterialProperties;
@@ -393,8 +393,7 @@ mod tests {
 
     #[test]
     fn test_composite_properties_between_constituents() {
-        // CFRP should have properties between pure carbon (C) and resin
-        // Speed should be between silicon carbide (~10k m/s) and resin (~2k m/s)
+        // CFRP should have properties between pure carbon (~10k m/s) and resin (~2k m/s)
         assert!(CFRP.sound_speed > 2000.0);
         assert!(CFRP.sound_speed < 5000.0);
     }
