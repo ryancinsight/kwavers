@@ -143,7 +143,9 @@
 // Module declarations
 pub mod acoustic;
 pub mod config;
+pub mod intensity_tracker; // NEW: Real-time intensity monitoring
 pub mod orchestrator;
+pub mod safety_controller; // NEW: Real-time safety enforcement
 pub mod state;
 pub mod tissue;
 
@@ -153,6 +155,9 @@ pub use config::{
     AcousticTherapyParams, PatientParameters, RiskOrgan, SafetyLimits, TargetVolume,
     TherapyModality, TherapySessionConfig, TissueType,
 };
+pub use intensity_tracker::IntensityTracker;
 pub use orchestrator::TherapyIntegrationOrchestrator;
+pub use safety_controller::{SafetyAction, SafetyController};
+pub use safety_controller::{SafetyAction, SafetyController};
 pub use state::{AcousticField, SafetyMetrics, SafetyStatus, TherapySessionState};
 pub use tissue::TissuePropertyMap;
