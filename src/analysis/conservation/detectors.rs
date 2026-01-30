@@ -46,7 +46,8 @@ pub struct ConservationViolationDetector {
     /// Current timestep
     timestep: u64,
 
-    /// Maximum allowed violations before warning
+    /// Maximum allowed violations before warning (for future use)
+    #[allow(dead_code)]
     max_violations_before_warning: usize,
 }
 

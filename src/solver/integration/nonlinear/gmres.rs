@@ -92,6 +92,7 @@ impl Default for GMRESConfig {
 /// GMRES solver for linear systems A·x = b
 ///
 /// Uses restarted GMRES(m) with Modified Gram-Schmidt orthogonalization
+#[derive(Debug)]
 pub struct GMRESSolver {
     config: GMRESConfig,
     iteration_count: usize,
@@ -126,6 +127,7 @@ impl GMRESSolver {
     /// - Matrix-vector product fails
     /// - Convergence not achieved within max_iterations
     /// - Numerical breakdown (zero Krylov vector)
+    #[allow(non_snake_case)] // V and H are standard mathematical notation for Krylov basis and Hessenberg matrix
     pub fn solve<F>(
         &mut self,
         mut matvec: F,
