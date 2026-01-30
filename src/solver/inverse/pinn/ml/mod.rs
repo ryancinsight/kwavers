@@ -153,9 +153,8 @@ pub mod meta_learning;
 #[cfg(feature = "pinn")]
 pub mod physics;
 
-// Beamforming provider adapter (bridge to analysis layer)
-#[cfg(feature = "pinn")]
-pub mod beamforming_provider;
+// Beamforming provider adapter moved to analysis layer
+// See: src/analysis/signal_processing/beamforming/neural/backends/burn_adapter.rs
 
 #[cfg(feature = "pinn")]
 pub mod acoustic_wave;
@@ -223,9 +222,7 @@ pub use transfer_learning::{
     FreezeStrategy, TransferLearner, TransferLearningConfig, TransferLearningStats, TransferMetrics,
 };
 
-// Beamforming provider adapter (public API)
-#[cfg(feature = "pinn")]
-pub use beamforming_provider::{create_burn_beamforming_provider, BurnPinnBeamformingAdapter};
+// Beamforming provider adapter is now in analysis layer (no longer exported from solver)
 
 // Sprint 156: Advanced Physics Domains
 #[cfg(feature = "pinn")]

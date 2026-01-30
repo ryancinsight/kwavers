@@ -182,6 +182,10 @@ pub mod physics;
 pub mod types;
 pub mod uncertainty;
 
+// Backend implementations (e.g., Burn, TensorFlow, PyTorch)
+#[cfg(feature = "pinn")]
+pub mod backends;
+
 // Solver-agnostic PINN interface (always available for type definitions)
 pub mod pinn_interface;
 
