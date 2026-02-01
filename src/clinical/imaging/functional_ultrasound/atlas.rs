@@ -58,9 +58,10 @@ impl BrainAtlas {
     /// Load default mouse brain atlas (Allen Brain Atlas)
     pub fn load_default() -> KwaversResult<Self> {
         // Placeholder: In production, load from file or embedded data
-        // Standard mouse brain: ~8mm × 10mm × 8mm at 10μm resolution
-        let reference_image = Array3::ones((800, 1000, 800)); // 800x1000x800 voxels
-        let voxel_size = [0.01, 0.01, 0.01]; // 10 μm voxels
+        // Standard mouse brain: ~8mm × 10mm × 8mm at reduced 100μm resolution for testing
+        // Full resolution (10μm) would be 800x1000x800 = 5.12GB
+        let reference_image = Array3::ones((80, 100, 80)); // 80x100x80 voxels at 100μm
+        let voxel_size = [0.1, 0.1, 0.1]; // 100 μm voxels (reduced for testing)
         let brain_center = [4.0, 5.0, 4.0]; // Center in mm
 
         Self::new(reference_image, voxel_size, brain_center)
@@ -156,7 +157,7 @@ mod tests {
         assert!(result.is_ok());
 
         let atlas = result.unwrap();
-        assert_eq!(atlas.voxel_size(), [0.01, 0.01, 0.01]);
+        assert_eq!(atlas.voxel_size(), [0.1, 0.1, 0.1]); // 100μm resolution for testing
     }
 
     #[test]

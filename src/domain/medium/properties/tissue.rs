@@ -22,7 +22,7 @@ pub type TissueProperties = MaterialProperties;
 pub const WATER: TissueProperties = TissueProperties {
     sound_speed: 1480.0,
     density: 998.2,
-    impedance: 1480083.0,
+    impedance: 1477336.0, // density * sound_speed = 998.2 * 1480
     absorption_coefficient: 0.002,
     absorption_exponent: 2.0,
     nonlinearity_parameter: 5.0,

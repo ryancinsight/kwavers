@@ -972,8 +972,8 @@ mod tests {
         assert_eq!(fused.intensity_image.dim(), shape);
 
         let weights = &fusion.config.modality_weights;
-        let w_us = weights["ultrasound"];
-        let w_pa = weights["photoacoustic"];
+        let w_us = weights.get("ultrasound").copied().unwrap_or(1.0);
+        let w_pa = weights.get("photoacoustic").copied().unwrap_or(1.0);
         let expected = (w_us * 1.0 + w_pa * 3.0) / (w_us + w_pa);
 
         for v in fused.intensity_image.iter() {

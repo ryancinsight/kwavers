@@ -63,9 +63,19 @@ fn test_weighted_average_fusion_two_modalities() {
     assert_eq!(result.intensity_image.dim(), shape);
     assert_eq!(result.confidence_map.dim(), shape);
 
-    // Verify weighted average calculation
-    let w_us = fusion.config.modality_weights["ultrasound"];
-    let w_pa = fusion.config.modality_weights["photoacoustic"];
+    // Verify weighted average calculation (defaults to 1.0 for each modality)
+    let w_us = fusion
+        .config
+        .modality_weights
+        .get("ultrasound")
+        .copied()
+        .unwrap_or(1.0);
+    let w_pa = fusion
+        .config
+        .modality_weights
+        .get("photoacoustic")
+        .copied()
+        .unwrap_or(1.0);
     let expected = (w_us * 2.0 + w_pa * 4.0) / (w_us + w_pa);
 
     for value in result.intensity_image.iter() {
@@ -106,10 +116,25 @@ fn test_weighted_average_fusion_three_modalities() {
     assert_eq!(result.intensity_image.dim(), shape);
     assert_eq!(result.modality_quality.len(), 3);
 
-    // Verify all modalities contributed
-    let w_us = fusion.config.modality_weights["ultrasound"];
-    let w_pa = fusion.config.modality_weights["photoacoustic"];
-    let w_el = fusion.config.modality_weights["elastography"];
+    // Verify all modalities contributed (defaults to 1.0 for each modality)
+    let w_us = fusion
+        .config
+        .modality_weights
+        .get("ultrasound")
+        .copied()
+        .unwrap_or(1.0);
+    let w_pa = fusion
+        .config
+        .modality_weights
+        .get("photoacoustic")
+        .copied()
+        .unwrap_or(1.0);
+    let w_el = fusion
+        .config
+        .modality_weights
+        .get("elastography")
+        .copied()
+        .unwrap_or(1.0);
     let expected = (w_us * 1.0 + w_pa * 2.0 + w_el * 3.0) / (w_us + w_pa + w_el);
 
     for value in result.intensity_image.iter() {
@@ -155,9 +180,19 @@ fn test_confidence_map_generation() {
 
     let result = fusion.fuse().unwrap();
 
-    // Confidence map should reflect accumulated weights
-    let w_us = fusion.config.modality_weights["ultrasound"];
-    let w_pa = fusion.config.modality_weights["photoacoustic"];
+    // Confidence map should reflect accumulated weights (defaults to 1.0 for each)
+    let w_us = fusion
+        .config
+        .modality_weights
+        .get("ultrasound")
+        .copied()
+        .unwrap_or(1.0);
+    let w_pa = fusion
+        .config
+        .modality_weights
+        .get("photoacoustic")
+        .copied()
+        .unwrap_or(1.0);
     let expected_confidence = w_us + w_pa;
 
     for value in result.confidence_map.iter() {

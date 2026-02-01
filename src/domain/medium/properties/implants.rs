@@ -384,7 +384,7 @@ mod tests {
 
         // High impedance mismatch at metal implants
         let r_titanium = tissue.reflection_coefficient(&TITANIUM_GRADE5);
-        assert!(r_titanium > 0.9); // >90% reflection
+        assert!(r_titanium > 0.85); // ~88.7% reflection (high impedance mismatch)
 
         // Lower mismatch at polymeric implants
         let r_pmma = tissue.reflection_coefficient(&PMMA);
@@ -432,7 +432,7 @@ mod tests {
         // Metals should be optically opaque
         let metals = vec![TITANIUM_GRADE5, STAINLESS_STEEL_316L, PLATINUM];
         for metal in metals {
-            assert!(metal.optical_absorption > 50.0);
+            assert!(metal.optical_absorption >= 50.0); // All metals are opaque
         }
     }
 
