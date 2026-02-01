@@ -349,7 +349,7 @@ impl MonolithicCoupler {
         let u_plus = &(u + &(v * (eps)));
 
         let f_u = self.compute_residual(u, u_prev, dt)?;
-        let f_u_plus = self.compute_residual(&u_plus, u_prev, dt)?;
+        let f_u_plus = self.compute_residual(u_plus, u_prev, dt)?;
 
         let jv = (&f_u_plus - &f_u) * (1.0 / eps);
         Ok(jv)
@@ -370,7 +370,7 @@ impl MonolithicCoupler {
         for k in 0i32..5 {
             let alpha = 2.0_f64.powi(-k);
             let u_new = &(u + &(du * alpha));
-            let f_new = self.compute_residual(&u_new, u_prev, dt)?;
+            let f_new = self.compute_residual(u_new, u_prev, dt)?;
             let f_new_norm = Self::norm(&f_new);
 
             // Sufficient decrease criterion: ||F(u+α·du)|| < 0.9·||F(u)||

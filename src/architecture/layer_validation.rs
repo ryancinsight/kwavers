@@ -233,7 +233,7 @@ impl ArchitectureValidator {
 
         self.dependencies
             .entry(from_str)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(to_str);
     }
 

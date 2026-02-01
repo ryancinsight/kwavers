@@ -45,6 +45,7 @@ static SIMD_CONFIG: OnceLock<SimdConfig> = OnceLock::new();
 
 /// FDTD stencil optimization strategy
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum StencilStrategy {
     /// Scalar implementation (always available)
     Scalar,
@@ -56,14 +57,10 @@ pub enum StencilStrategy {
     Avx512,
 
     /// Automatic selection based on CPU
+    #[default]
     Auto,
 }
 
-impl Default for StencilStrategy {
-    fn default() -> Self {
-        Self::Auto
-    }
-}
 
 impl StencilStrategy {
     /// Get string representation

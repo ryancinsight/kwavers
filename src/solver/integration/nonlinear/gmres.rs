@@ -218,7 +218,7 @@ impl GMRESSolver {
                 H[j][j] = c * H[j][j] + s * H[j + 1][j];
                 H[j + 1][j] = 0.0;
                 gamma[j + 1] = -s * gamma[j];
-                gamma[j] = c * gamma[j];
+                gamma[j] *= c;
 
                 let residual = gamma[j + 1].abs();
                 self.residual_history.push(residual);

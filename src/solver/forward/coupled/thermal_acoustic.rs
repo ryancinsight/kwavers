@@ -639,7 +639,7 @@ mod tests {
         }
         // All temperatures should be in reasonable range
         for &t in coupler.temperature().iter() {
-            assert!(t >= 0.0 && t <= 100.0, "Temperature out of bounds: {}", t);
+            assert!((0.0..=100.0).contains(&t), "Temperature out of bounds: {}", t);
         }
     }
 

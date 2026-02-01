@@ -148,9 +148,9 @@ impl SimdStencilProcessor {
         let pressure_coeff = -c_sq * config.dt * config.dt / (config.dx * config.dx);
         let velocity_coeff = -config.dt / (config.density * config.dx);
 
-        let num_tiles_x = (nx + config.tile_size - 1) / config.tile_size;
-        let num_tiles_y = (ny + config.tile_size - 1) / config.tile_size;
-        let num_tiles_z = (nz + config.tile_size - 1) / config.tile_size;
+        let num_tiles_x = nx.div_ceil(config.tile_size);
+        let num_tiles_y = ny.div_ceil(config.tile_size);
+        let num_tiles_z = nz.div_ceil(config.tile_size);
 
         Ok(Self {
             config,

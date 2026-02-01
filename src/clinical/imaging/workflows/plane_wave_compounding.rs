@@ -259,7 +259,7 @@ impl PlaneWaveCompound {
             if z > 0.0 {
                 let propagation_phase = self.wavenumber * z;
                 let prop = Complex::new(propagation_phase.cos(), propagation_phase.sin());
-                *elem = *elem * prop;
+                *elem *= prop;
             }
         }
 
@@ -381,7 +381,7 @@ impl PlaneWaveCompound {
             }
 
             for ((i, j), &value) in self.angle_images[angle_idx].indexed_iter() {
-                self.compounded_image[[i, j]] = self.compounded_image[[i, j]] + value;
+                self.compounded_image[[i, j]] += value;
             }
         }
 
@@ -525,7 +525,7 @@ mod tests {
             assert!(!apod.is_empty());
             // Check normalized [0, 1]
             for &w in &apod {
-                assert!(w >= 0.0 && w <= 1.0);
+                assert!((0.0..=1.0).contains(&w));
             }
         }
     }
@@ -593,7 +593,7 @@ mod tests {
 
         // Check that values are in [0, 1] (normalized)
         for &v in image.iter() {
-            assert!(v >= 0.0 && v <= 1.0);
+            assert!((0.0..=1.0).contains(&v));
         }
     }
 }

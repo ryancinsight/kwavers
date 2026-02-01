@@ -799,7 +799,7 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
     // Test multi-modal fusion of ultrasound and optical data
     // Theorem: Multi-modal fusion enhances diagnostic accuracy through complementary information
 
-    use kwavers::physics::imaging::fusion::{
+    use kwavers::physics::acoustics::imaging::fusion::{
         FusionConfig, FusionMethod, MultiModalFusion, RegistrationMethod,
     };
     use kwavers::physics::optics::sonoluminescence::{
@@ -818,7 +818,8 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
         fusion_method: FusionMethod::WeightedAverage,
         registration_method: RegistrationMethod::RigidBody,
         modality_weights,
-        confidence_threshold: 0.7,
+        min_quality_threshold: 0.7,
+        adaptive_weighting: false,
         uncertainty_quantification: true,
     };
 
@@ -926,7 +927,7 @@ fn validate_fusion_registration_validation() {
     // Test validation of multi-modal registration accuracy
     // Theorem: Accurate spatial registration is critical for meaningful fusion
 
-    use kwavers::physics::imaging::fusion::{
+    use kwavers::physics::acoustics::imaging::fusion::{
         FusionConfig, FusionMethod, MultiModalFusion, RegistrationMethod,
     };
     use ndarray::Array3;
@@ -942,7 +943,8 @@ fn validate_fusion_registration_validation() {
         fusion_method: FusionMethod::FeatureBased,
         registration_method: RegistrationMethod::RigidBody,
         modality_weights,
-        confidence_threshold: 0.8,
+        min_quality_threshold: 0.8,
+        adaptive_weighting: false,
         uncertainty_quantification: false,
     };
 
@@ -1013,7 +1015,7 @@ fn validate_interdisciplinary_fusion_quality() {
     // Test quality assessment of interdisciplinary fusion
     // Theorem: Fusion quality depends on registration accuracy and modality complementarity
 
-    use kwavers::physics::imaging::fusion::{
+    use kwavers::physics::acoustics::imaging::fusion::{
         FusionConfig, FusionMethod, MultiModalFusion, RegistrationMethod,
     };
     use ndarray::Array3;
@@ -1052,7 +1054,8 @@ fn validate_interdisciplinary_fusion_quality() {
         fusion_method: FusionMethod::WeightedAverage,
         registration_method: RegistrationMethod::RigidBody,
         modality_weights,
-        confidence_threshold: 0.6,
+        min_quality_threshold: 0.6,
+        adaptive_weighting: false,
         uncertainty_quantification: true,
     };
 
@@ -1118,7 +1121,7 @@ fn validate_multi_modal_spatial_registration() {
     // Test spatial registration for multi-modal imaging alignment
     // Theorem: Accurate spatial registration enables meaningful multi-modal fusion
 
-    use kwavers::physics::imaging::registration::{ImageRegistration, SpatialTransform};
+    use kwavers::physics::acoustics::imaging::registration::{ImageRegistration, SpatialTransform};
     use ndarray::Array2;
 
     let registration = ImageRegistration::default();
@@ -1193,7 +1196,7 @@ fn validate_multi_modal_spatial_registration() {
 fn validate_temporal_synchronization_multi_modal() {
     // Test temporal synchronization for real-time multi-modal acquisition
 
-    use kwavers::physics::imaging::registration::ImageRegistration;
+    use kwavers::physics::acoustics::imaging::registration::ImageRegistration;
     use ndarray::Array1;
 
     let registration = ImageRegistration::default();

@@ -7,10 +7,12 @@ use std::fmt::Debug;
 
 /// Window function for beamforming (Hamming, Hann, etc.)
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Default)]
 pub enum WindowFunction {
     /// Rectangular window (no windowing)
     Rectangular,
     /// Hamming window
+    #[default]
     Hamming,
     /// Hann (Hanning) window
     Hann,
@@ -60,11 +62,6 @@ impl WindowFunction {
     }
 }
 
-impl Default for WindowFunction {
-    fn default() -> Self {
-        WindowFunction::Hamming
-    }
-}
 
 /// Beamforming configuration
 ///

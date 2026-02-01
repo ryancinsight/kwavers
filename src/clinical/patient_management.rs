@@ -374,6 +374,7 @@ impl ClinicalEncounter {
 
 /// Vital signs measurement
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct VitalSigns {
     /// Heart rate in beats per minute
     pub heart_rate_bpm: Option<u32>,
@@ -387,23 +388,12 @@ pub struct VitalSigns {
     pub oxygen_saturation_percent: Option<f64>,
 }
 
-impl Default for VitalSigns {
-    fn default() -> Self {
-        Self {
-            heart_rate_bpm: None,
-            blood_pressure: None,
-            temperature_celsius: None,
-            respiratory_rate_bpm: None,
-            oxygen_saturation_percent: None,
-        }
-    }
-}
 
 impl VitalSigns {
     /// Validate vital signs are within reasonable ranges
     pub fn validate(&self) -> KwaversResult<()> {
         if let Some(hr) = self.heart_rate_bpm {
-            if hr < 30 || hr > 200 {
+            if !(30..=200).contains(&hr) {
                 return Err(KwaversError::InvalidInput(
                     "Heart rate out of reasonable range".to_string(),
                 ));
@@ -411,7 +401,7 @@ impl VitalSigns {
         }
 
         if let Some((sys, dia)) = self.blood_pressure {
-            if sys < 70 || sys > 250 || dia < 40 || dia > 150 {
+            if !(70..=250).contains(&sys) || !(40..=150).contains(&dia) {
                 return Err(KwaversError::InvalidInput(
                     "Blood pressure out of reasonable range".to_string(),
                 ));
@@ -419,7 +409,7 @@ impl VitalSigns {
         }
 
         if let Some(temp) = self.temperature_celsius {
-            if temp < 35.0 || temp > 42.0 {
+            if !(35.0..=42.0).contains(&temp) {
                 return Err(KwaversError::InvalidInput(
                     "Temperature out of reasonable range".to_string(),
                 ));
@@ -427,7 +417,7 @@ impl VitalSigns {
         }
 
         if let Some(o2) = self.oxygen_saturation_percent {
-            if o2 < 50.0 || o2 > 100.0 {
+            if !(50.0..=100.0).contains(&o2) {
                 return Err(KwaversError::InvalidInput(
                     "Oxygen saturation out of range".to_string(),
                 ));

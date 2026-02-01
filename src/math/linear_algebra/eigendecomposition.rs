@@ -167,7 +167,7 @@ impl EigenSolver {
 
             // Apply QR iteration with shift: H - shift*I = QR, then H = R*Q + shift*I
             for i in 0..n {
-                h[[i, i]] = h[[i, i]] - Complex::new(shift, 0.0);
+                h[[i, i]] -= Complex::new(shift, 0.0);
             }
 
             // QR decomposition via Householder reflections
@@ -176,7 +176,7 @@ impl EigenSolver {
 
             // Restore shift
             for i in 0..n {
-                h[[i, i]] = h[[i, i]] + Complex::new(shift, 0.0);
+                h[[i, i]] += Complex::new(shift, 0.0);
             }
 
             // Update eigenvectors
@@ -408,7 +408,7 @@ impl EigenSolver {
                 continue;
             }
 
-            x[0] = x[0] + Complex::new(sigma, 0.0);
+            x[0] += Complex::new(sigma, 0.0);
             let x_norm = x.iter().map(|z| (z.norm()).powi(2)).sum::<f64>().sqrt();
 
             if x_norm.abs() < 1e-14 {
@@ -419,11 +419,11 @@ impl EigenSolver {
             for j in k..n {
                 let mut dot = Complex::new(0.0, 0.0);
                 for i in k..n {
-                    dot = dot + x[i - k].conj() * h[[i, j]];
+                    dot += x[i - k].conj() * h[[i, j]];
                 }
                 let factor = 2.0 * dot / (x_norm * x_norm);
                 for i in k..n {
-                    h[[i, j]] = h[[i, j]] - factor * x[i - k];
+                    h[[i, j]] -= factor * x[i - k];
                 }
             }
 
@@ -431,11 +431,11 @@ impl EigenSolver {
             for i in 0..n {
                 let mut dot = Complex::new(0.0, 0.0);
                 for j in k..n {
-                    dot = dot + x[j - k].conj() * q[[j, i]];
+                    dot += x[j - k].conj() * q[[j, i]];
                 }
                 let factor = 2.0 * dot / (x_norm * x_norm);
                 for j in k..n {
-                    q[[j, i]] = q[[j, i]] - factor * x[j - k];
+                    q[[j, i]] -= factor * x[j - k];
                 }
             }
         }

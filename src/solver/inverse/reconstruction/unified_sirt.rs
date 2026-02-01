@@ -345,7 +345,7 @@ impl SirtReconstructor {
         row_norms: &Array1<f64>,
     ) -> KwaversResult<()> {
         let (m, _n) = a.dim();
-        let subset_size = (m + num_subsets - 1) / num_subsets;
+        let subset_size = m.div_ceil(num_subsets);
 
         for subset_idx in 0..num_subsets {
             let start_row = subset_idx * subset_size;

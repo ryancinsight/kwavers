@@ -234,7 +234,7 @@ impl SpectralDerivativeOperator {
         dealiasing: &Array1<f64>,
         n_axis: usize,
     ) -> KwaversResult<Array3<f64>> {
-        if field.shape() != &[self.nx, self.ny, self.nz] {
+        if field.shape() != [self.nx, self.ny, self.nz] {
             return Err(KwaversError::InvalidInput(format!(
                 "Field shape {:?} mismatch grid {:?}",
                 field.shape(),

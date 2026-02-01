@@ -268,8 +268,8 @@ impl BurtonMillerAssembler {
 
         // Account for element Jacobian
         let element_area = self.triangle_area(node1, node2, node3);
-        h_cbie = h_cbie * element_area;
-        h_hbie = h_hbie * element_area;
+        h_cbie *= element_area;
+        h_hbie *= element_area;
 
         Ok((h_cbie, h_hbie))
     }
@@ -316,8 +316,8 @@ impl BurtonMillerAssembler {
         }
 
         let element_area = self.triangle_area(node1, node2, node3);
-        g_cbie = g_cbie * element_area;
-        g_hbie = g_hbie * element_area;
+        g_cbie *= element_area;
+        g_hbie *= element_area;
 
         Ok((g_cbie, g_hbie))
     }

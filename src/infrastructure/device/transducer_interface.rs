@@ -280,7 +280,7 @@ impl TransducerHardware for MockTransducer {
     fn send_command(&mut self, command: HardwareCommand) -> KwaversResult<HardwareResponse> {
         match command {
             HardwareCommand::SetPower(power) => {
-                if power < 0.0 || power > 100.0 {
+                if !(0.0..=100.0).contains(&power) {
                     self.last_error = Some("Power must be 0-100%".to_string());
                     return Err(KwaversError::InvalidInput(
                         "Invalid power range".to_string(),

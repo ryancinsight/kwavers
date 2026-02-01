@@ -11,7 +11,7 @@ pub use kwavers::domain::imaging::ultrasound::elastography::{
     InversionMethod, NonlinearInversionMethod, NonlinearParameterMap,
 };
 pub use kwavers::domain::medium::HomogeneousMedium;
-pub use kwavers::physics::imaging::modalities::elastography::{
+pub use kwavers::physics::acoustics::imaging::modalities::elastography::{
     HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField,
 };
 pub use kwavers::simulation::imaging::elastography::ShearWaveElastography;

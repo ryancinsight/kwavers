@@ -133,7 +133,7 @@ impl LsqrSolver {
             };
         }
 
-        u = u / beta;
+        u /= beta;
         let mut v = a_matrix.t().dot(&u);
         let mut alpha = norm_l2(&v);
 
@@ -149,7 +149,7 @@ impl LsqrSolver {
             };
         }
 
-        v = v / alpha;
+        v /= alpha;
 
         // Initialize QR-related quantities
         let mut w = v.clone();
@@ -172,14 +172,14 @@ impl LsqrSolver {
             let beta_new = norm_l2(&u_new);
 
             if beta_new > 1e-12 {
-                u_new = u_new / beta_new;
+                u_new /= beta_new;
             }
 
             let mut v_new = a_matrix.t().dot(&u_new) - beta_new * &v;
             let alpha_new = norm_l2(&v_new);
 
             if alpha_new > 1e-12 {
-                v_new = v_new / alpha_new;
+                v_new /= alpha_new;
             }
 
             // Least-squares solve on bidiagonal system

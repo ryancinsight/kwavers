@@ -380,7 +380,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(force.interaction_type, InteractionType::Attractive);
-        assert!(force.coalescing == false); // Distance > coalescence distance
+        assert!(!force.coalescing); // Distance > coalescence distance
     }
 
     #[test]
