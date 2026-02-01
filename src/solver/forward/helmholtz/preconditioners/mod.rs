@@ -8,5 +8,6 @@ pub mod sor;
 
 // Explicit re-exports of preconditioner types
 pub use diagonal::DiagonalPreconditioner;
-// TODO: Implement SORPreconditioner
-// pub use sor::SORPreconditioner;
+
+// Module planned but not yet implemented:
+// - SORPreconditioner: Successive Over-Relaxation preconditioner for iterative solvers

@@ -265,10 +265,10 @@ pub mod delay_and_sum;
 // Public API exports
 pub use delay_and_sum::{CavitationEvent, DelayAndSumConfig, DelayAndSumPAM};
 
-// Future implementations
-// pub mod robust_capon;
-// pub mod detection;
-// pub mod spectral;
+// Modules planned but not yet implemented:
+// - robust_capon: Adaptive Capon beamforming for coherent noise suppression
+// - detection: Advanced event detection with spectral signature analysis
+// - spectral: Frequency-domain analysis for cavitation characterization
 
 use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
 

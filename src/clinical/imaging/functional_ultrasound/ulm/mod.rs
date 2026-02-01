@@ -241,15 +241,18 @@
 //! # Module Organization
 //!
 //! - `microbubble_detection`: Detection and localization algorithms
+//! - `microbubble_detection`: Detection and localization algorithms
 //! - `tracking`: Hungarian assignment and trajectory linking
 //! - `super_resolution`: Accumulated rendering and visualization
-//! - `velocity_mapping`: Flow quantification from tracks (future)
-
-// TODO: Uncomment when implemented
-// pub mod microbubble_detection;
-// pub mod tracking;
-// pub mod super_resolution;
-// pub mod velocity_mapping;
+//! - `velocity_mapping`: Flow quantification from tracks
+//!
+//! # Implementation Status
+//!
+//! Modules planned but not yet implemented:
+//! - `microbubble_detection`: Spatiotemporal SVD, Gaussian fitting, radial symmetry localization
+//! - `tracking`: Hungarian algorithm for optimal assignment, multi-frame linking
+//! - `super_resolution`: 2D histogram accumulation, Gaussian rendering, density visualization
+//! - `velocity_mapping`: Optical flow from trajectories, wall shear stress estimation
 
 #[cfg(test)]
 mod tests {

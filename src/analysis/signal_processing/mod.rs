@@ -152,6 +152,13 @@
 //! - `analysis::signal_processing::beamforming` - NEW, use this
 //!
 //! Update your imports to the new location to avoid deprecation warnings.
+//!
+//! ## Planned Extensions
+//!
+//! Signal processing modules not yet implemented:
+//! - `spectral`: Spectral analysis (FFT, STFT, wavelets)
+//! - `deconvolution`: Point spread function deconvolution for resolution enhancement
+//! - `reconstruction`: Advanced image reconstruction algorithms
 
 pub mod beamforming;
 pub mod filtering;
@@ -161,11 +168,6 @@ pub mod pam;
 // Clutter filtering for Doppler and functional ultrasound
 // Based on: Demené et al. (2015), Nouhoum et al. (2021)
 pub mod clutter_filter;
-
-// Future modules (planned)
-// pub mod spectral;       // Spectral analysis (FFT, STFT, etc.)
-// pub mod deconvolution;  // Point spread function deconvolution
-// pub mod reconstruction; // Image reconstruction algorithms
 
 // Re-export main types from implemented modules
 pub use beamforming::{

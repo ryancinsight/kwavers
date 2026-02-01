@@ -170,10 +170,10 @@ pub use geometry::{
     AdaptiveRefinement, CollocationSampler, InterfaceCondition, MultiRegionDomain, SamplingStrategy,
 };
 
-// Future modules (to be implemented as needed):
-// pub mod elastic_3d;     // 3D elastic wave PINN
-// pub mod acoustic_2d;    // 2D acoustic wave PINN
-// pub mod acoustic_3d;    // 3D acoustic wave PINN
-// pub mod electromagnetic_2d; // 2D EM wave PINN
-// pub mod electromagnetic_3d; // 3D EM wave PINN
-// pub mod coupled;        // Multi-physics coupling (acoustic-elastic, etc.)
+// Modules planned but not yet implemented:
+// - elastic_3d: 3D elastic wave PINN solver
+// - acoustic_2d: 2D acoustic wave PINN solver
+// - acoustic_3d: 3D acoustic wave PINN solver
+// - electromagnetic_2d: 2D electromagnetic wave PINN solver
+// - electromagnetic_3d: 3D electromagnetic wave PINN solver
+// - coupled: Multi-physics coupling PINNs (acoustic-elastic, thermo-acoustic, etc.)

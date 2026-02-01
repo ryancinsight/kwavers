@@ -236,21 +236,13 @@
 //! - [ ] Benchmarks vs classical methods
 //! - [ ] Deprecation notices in old location
 //! - [ ] Migration guide for experimental features
-
-// Future algorithm implementations (Phase 3C - DEFERRED)
-//
-// #[cfg(feature = "experimental-neural")]
-// pub mod neural;           // Neural network beamformers
-//
-// #[cfg(feature = "experimental-ml")]
-// pub mod learned_apodization; // ML-based apodization
-//
-// #[cfg(feature = "experimental-compressive")]
-// pub mod compressive;      // Compressive sensing beamforming
-
-// Re-exports (feature-gated)
-// #[cfg(feature = "experimental-neural")]
-// pub use neural::NeuralBeamformer;
+//!
+//! # Planned Experimental Algorithms
+//!
+//! Modules planned but not yet implemented (Phase 3C - DEFERRED):
+//! - `neural`: Neural network-based beamformers (requires experimental-neural feature)
+//! - `learned_apodization`: ML-based window functions (requires experimental-ml feature)
+//! - `compressive`: Compressive sensing beamforming (requires experimental-compressive feature)
 
 #[cfg(test)]
 mod tests {

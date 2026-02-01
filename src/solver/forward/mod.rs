@@ -24,13 +24,12 @@ pub mod thermal_diffusion;
 pub use bem::BemSolver;
 pub use coupled::{ThermalAcousticConfig, ThermalAcousticCoupler};
 pub use fdtd::FdtdSolver;
-pub use helmholtz::born_series::{
-    ConvergentBornSolver,
-    IterativeBornSolver,
-    ModifiedBornSolver,
-    // TODO: Implement ConvergentBornStats, IterativeBornStats, ModifiedBornStats
-    // ConvergentBornStats, IterativeBornStats, ModifiedBornStats,
-};
+pub use helmholtz::born_series::{ConvergentBornSolver, IterativeBornSolver, ModifiedBornSolver};
+
+// Module planned but not yet implemented:
+// - ConvergentBornStats: Convergence statistics for convergent Born approximation
+// - IterativeBornStats: Iteration metrics for iterative Born series
+// - ModifiedBornStats: Performance statistics for modified Born approximation
 pub use hybrid::{
     BemFemCoupler, BemFemCouplingConfig, BemFemInterface, BemFemSolver, FdtdFemCoupler,
     FdtdFemCouplingConfig, FdtdFemSolver, HybridSolver, PstdSemCoupler, PstdSemCouplingConfig,

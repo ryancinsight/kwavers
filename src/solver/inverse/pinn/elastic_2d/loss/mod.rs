@@ -39,6 +39,9 @@ pub mod pde_residual;
 #[cfg(feature = "pinn")]
 pub use computation::LossComputer;
 
-// Data structures for loss computation
-// TODO: Implement missing data types: BoundaryData, CollocationData, InitialData, LossComponents, ObservationData
-// pub use data::{BoundaryData, CollocationData, InitialData, LossComponents, ObservationData};
+// Module planned but not yet implemented:
+// - BoundaryData: Training data for boundary condition constraints
+// - CollocationData: Spatial-temporal points for PDE residual evaluation
+// - InitialData: Initial condition data for time-dependent problems
+// - LossComponents: Individual loss terms (PDE, BC, IC, data) for monitoring
+// - ObservationData: Measured data for inverse/data-driven PINN problems

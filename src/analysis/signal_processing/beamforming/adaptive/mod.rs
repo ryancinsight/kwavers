@@ -167,6 +167,13 @@
 //!
 //! The old location `domain::sensor::beamforming::adaptive` will continue to exist
 //! with deprecation warnings for one minor version cycle.
+//!
+//! # Planned Extensions
+//!
+//! Future adaptive beamforming algorithms (not yet implemented):
+//! - `robust_capon`: Robust Capon beamformer with uncertainty quantification
+//! - `lcmv`: Linearly Constrained Minimum Variance beamformer with multiple constraints
+//! - `gsc`: Generalized Sidelobe Canceller for adaptive interference suppression
 
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
@@ -176,10 +183,6 @@ use num_complex::Complex64;
 pub mod music;
 pub mod mvdr;
 pub mod subspace;
-
-// Future implementations (planned)
-// pub mod robust_capon;    // Robust Capon with uncertainty
-// pub mod lcmv;            // Linearly Constrained Minimum Variance
 
 // Re-export main types
 pub use music::MUSIC;

@@ -148,16 +148,18 @@
 //!
 //! # Module Organization
 //!
-//! - `plane_wave`: Plane wave transmission and delay calculation
-//! - `diverging_wave`: Diverging wave transmission (future)
-//! - `sequencer`: Transmission sequence scheduling (future)
+//! - `plane_wave`: Plane wave transmission and delay calculation (implemented)
+//! - `diverging_wave`: Diverging wave transmission (planned)
+//! - `sequencer`: Transmission sequence scheduling (planned)
+//!
+//! # Implementation Status
+//!
+//! Modules planned but not yet implemented:
+//! - `diverging_wave`: Diverging wave from virtual point sources, synthetic transmit aperture
+//! - `sequencer`: Interleaved transmission sequences, flash angle scheduling, PRF management
 
 // Implemented modules
 pub mod plane_wave;
-
-// Future modules
-// pub mod diverging_wave;
-// pub mod sequencer;
 
 // Re-export main types
 pub use plane_wave::{PlaneWave, PlaneWaveConfig};

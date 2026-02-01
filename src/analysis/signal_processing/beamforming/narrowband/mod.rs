@@ -203,6 +203,15 @@
 //! - [x] Benchmarks (performance validated)
 //! - [x] Deprecated code removed (v3.0.0)
 //! - [ ] Migration guide
+//!
+//! # Planned Extensions
+//!
+//! Narrowband algorithms not yet implemented:
+//! - `conventional`: Delay-and-sum beamformer in frequency domain
+//! - `lcmv`: Linearly Constrained Minimum Variance beamformer
+//! - `esprit`: ESPRIT algorithm for DOA estimation
+//! - `root_music`: Root-MUSIC polynomial rooting variant
+//! - `fft_utils`: FFT/IFFT utilities for time-frequency conversion
 
 // Algorithm implementations (Phase 3B - Sprint 1)
 pub mod capon; // Capon/MVDR spatial spectrum (migrated from domain::sensor)
@@ -212,13 +221,6 @@ pub mod steering; // Narrowband steering vectors (migrated from domain::sensor)
 // Integration tests (Day 4)
 #[cfg(test)]
 mod integration_tests;
-
-// Future algorithm implementations (Phase 3B)
-// pub mod conventional;   // Delay-and-sum in frequency domain
-// pub mod lcmv;          // Linearly Constrained Minimum Variance
-// pub mod esprit;        // ESPRIT algorithm
-// pub mod root_music;    // Root-MUSIC (polynomial rooting)
-// pub mod fft_utils;     // FFT/IFFT utilities
 
 // Re-exports for convenience
 pub use capon::{

@@ -9,11 +9,11 @@ pub mod physics_benchmarks;
 /// Validation configuration
 pub use config::ValidationParameters;
 
-/// Analytical solutions for validation
-// TODO: Implement PlaneWaveSolution, PointSourceSolution, StandingWaveSolution
-// pub use physics_benchmarks::{PlaneWaveSolution, PointSourceSolution, StandingWaveSolution};
-
 /// Benchmark parameters
 pub use physics_benchmarks::GaussianBeamParameters;
-// TODO: Implement TissueProperties
-// pub use physics_benchmarks::TissueProperties;
+
+// Module planned but not yet implemented:
+// - PlaneWaveSolution: Analytical solution for plane wave propagation
+// - PointSourceSolution: Analytical solution for point source radiation
+// - StandingWaveSolution: Analytical solution for standing wave patterns
+// - TissueProperties: Tissue parameter definitions for benchmarking

@@ -2,7 +2,6 @@
 // Clean module structure focusing only on the plugin-based architecture
 
 // Hierarchical solver module structure
-// pub mod backend;  // TODO: Fix GPU backend wgpu dependency and error type mismatches
 pub mod config;
 pub mod factory;
 pub mod feature;
@@ -48,6 +47,9 @@ pub use forward::hybrid;
 pub use forward::plugin_based;
 pub use forward::pstd;
 pub use integration::time_integration;
+
+// Module planned but not yet implemented:
+// - backend: GPU backend with WGPU integration (pending dependency resolution)
 pub use inverse::reconstruction;
 pub use inverse::time_reversal;
 pub use utilities::amr;

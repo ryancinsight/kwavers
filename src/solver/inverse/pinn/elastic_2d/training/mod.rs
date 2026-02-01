@@ -32,14 +32,14 @@ pub mod scheduler;
 // EXPLICIT RE-EXPORTS (PINN Training API)
 // ============================================================================
 
-/// Training data and metrics
-// TODO: Implement TrainingData and TrainingMetrics
-// pub use data::{TrainingData, TrainingMetrics};
-
 /// Optimization algorithms and state
 pub use optimizer::OptimizerAlgorithm;
-// TODO: Implement PINNOptimizer and PersistentAdamState
-// pub use optimizer::{PINNOptimizer, PersistentAdamState};
 
 /// Learning rate scheduling
 pub use scheduler::{LRScheduler, LearningRateScheduler};
+
+// Module planned but not yet implemented:
+// - TrainingData: Structure for organizing PINN training batches
+// - TrainingMetrics: Loss tracking and convergence monitoring
+// - PINNOptimizer: High-level optimizer wrapper for PINN training
+// - PersistentAdamState: Adam optimizer state for checkpoint/resume
