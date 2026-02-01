@@ -41,14 +41,17 @@ pub mod constants {
 
     // Explicit re-exports for commonly used constants
     pub use crate::core::constants::acoustic_parameters::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
+    pub use crate::core::constants::chemistry::BASE_PHOTOCHEMICAL_RATE;
     pub use crate::core::constants::fundamental::{
         DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
     };
     pub use crate::core::constants::numerical::{
         B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET,
     };
-    pub use crate::core::constants::thermodynamic::kelvin_to_celsius;
-    pub use crate::core::constants::water::{
+    pub use crate::core::constants::thermodynamic::{
+        kelvin_to_celsius, WATER_LATENT_HEAT_VAPORIZATION,
+    };
+    pub use crate::core::constants::{
         BULK_MODULUS_WATER, C_WATER, SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
     };
 }
@@ -109,13 +112,16 @@ pub mod plugin;
 /// Users should prefer explicit imports: `use crate::physics::acoustics::mechanics::Type;`
 pub mod mechanics {
     /// Absorption models and modes
-    pub use crate::physics::acoustics::mechanics::absorption::{AbsorptionMode, AbsorptionModel};
+    pub use crate::physics::acoustics::mechanics::absorption::AbsorptionMode;
+    // Note: AbsorptionModel is implemented as a trait, not a struct
 
     /// Acoustic wave propagation
-    pub use crate::physics::acoustics::mechanics::acoustic_wave::{AcousticWave, SpatialOrder};
+    // Note: acoustic_wave module exists but types may be in submodules
+    pub use crate::physics::acoustics::mechanics::acoustic_wave::SpatialOrder;
 
     /// Elastic wave propagation
-    pub use crate::physics::acoustics::mechanics::elastic_wave::{ElasticWave, ElasticWaveConfig};
+    pub use crate::physics::acoustics::mechanics::elastic_wave::ElasticWave;
+    // Note: ElasticWaveConfig doesn't exist - configuration is via ElasticBodyForceConfig
 
     /// Cavitation models
     pub use crate::physics::acoustics::mechanics::cavitation::CavitationModel;
@@ -161,9 +167,8 @@ pub mod imaging {
     /// Image registration capabilities
     pub mod registration {
         /// Image registration algorithms
-        pub use crate::physics::acoustics::imaging::registration::{
-            ImageRegistration, RegistrationMethod, TransformParameters,
-        };
+        pub use crate::physics::acoustics::imaging::registration::ImageRegistration;
+        // Note: RegistrationMethod and TransformParameters don't exist as public types
     }
 }
 

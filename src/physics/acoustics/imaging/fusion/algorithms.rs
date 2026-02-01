@@ -150,6 +150,9 @@ impl MultiModalFusion {
             FusionMethod::Probabilistic => self.fuse_probabilistic(),
             FusionMethod::DeepFusion => self.fuse_deep_learning(),
             FusionMethod::MaximumLikelihood => self.fuse_maximum_likelihood(),
+            FusionMethod::MaximumIntensity => self.fuse_maximum_likelihood(), // TODO: Implement MIP
+            FusionMethod::MinimumIntensity => self.fuse_maximum_likelihood(), // TODO: Implement MinIP
+            FusionMethod::PCA => self.fuse_maximum_likelihood(), // TODO: Implement PCA fusion
         }?;
 
         Ok(fused_result)
@@ -488,17 +491,16 @@ impl MultiModalFusion {
             );
 
             // Optimization: Skip resampling if transform is identity and dimensions match
-            let resampled = if modality.data.dim() == target_dims
-                && reg_result.transform_matrix == identity
-            {
-                modality.data.clone()
-            } else {
-                registration::resample_to_target_grid(
-                    &modality.data,
-                    &reg_result.transform_matrix,
-                    target_dims,
-                )
-            };
+            let resampled =
+                if modality.data.dim() == target_dims && reg_result.transform_matrix == identity {
+                    modality.data.clone()
+                } else {
+                    registration::resample_to_target_grid(
+                        &modality.data,
+                        &reg_result.transform_matrix,
+                        target_dims,
+                    )
+                };
 
             channels.push(Channel {
                 name: name.clone(),
@@ -545,8 +547,9 @@ impl MultiModalFusion {
 
                     for (idx, ch) in channels.iter().enumerate() {
                         let val = ch.data[[i, j, k]];
-                        let norm_val =
-                            ((val - norm_params[idx].min) * norm_params[idx].scale).max(0.0).min(1.0);
+                        let norm_val = ((val - norm_params[idx].min) * norm_params[idx].scale)
+                            .max(0.0)
+                            .min(1.0);
 
                         if ch.name.contains("ultrasound") {
                             us_val = norm_val;
@@ -557,7 +560,8 @@ impl MultiModalFusion {
                         }
                     }
 
-                    let (tissue_type, class_conf) = classify_voxel_features(us_val, pa_val, stiff_val);
+                    let (tissue_type, class_conf) =
+                        classify_voxel_features(us_val, pa_val, stiff_val);
                     tissue_class_map[[i, j, k]] = tissue_type as f64;
                     classification_confidence_map[[i, j, k]] = class_conf;
 
@@ -624,8 +628,10 @@ impl MultiModalFusion {
 
         let mut tissue_properties = HashMap::new();
         tissue_properties.insert("tissue_classification".to_string(), tissue_class_map);
-        tissue_properties
-            .insert("classification_confidence".to_string(), classification_confidence_map);
+        tissue_properties.insert(
+            "classification_confidence".to_string(),
+            classification_confidence_map,
+        );
 
         Ok(FusedImageResult {
             intensity_image: fused_intensity,

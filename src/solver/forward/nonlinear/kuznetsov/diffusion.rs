@@ -3,8 +3,8 @@
 //! Implements the diffusive term: -(δ/c₀⁴)∂³p/∂t³
 //! where δ is the acoustic diffusivity
 
+use crate::core::constants::acoustic_parameters::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
 use crate::core::constants::numerical::THIRD_ORDER_DIFF_COEFF;
-use crate::core::constants::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
 use ndarray::{Array3, Zip};
 
 /// Compute the diffusive term for the Kuznetsov equation using workspace
@@ -12,7 +12,7 @@ use ndarray::{Array3, Zip};
 /// # Arguments
 /// * `pressure` - Current pressure field
 /// * `pressure_prev` - Previous time step pressure field
-/// * `pressure_prev2` - Two time steps ago pressure field  
+/// * `pressure_prev2` - Two time steps ago pressure field
 /// * `pressure_prev3` - Three time steps ago pressure field
 /// * `dt` - Time step size
 /// * `sound_speed` - Sound speed c₀

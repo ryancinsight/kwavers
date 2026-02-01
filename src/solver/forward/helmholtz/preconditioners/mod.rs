@@ -8,4 +8,5 @@ pub mod sor;
 
 // Explicit re-exports of preconditioner types
 pub use diagonal::DiagonalPreconditioner;
-pub use sor::SORPreconditioner;
+// TODO: Implement SORPreconditioner
+// pub use sor::SORPreconditioner;

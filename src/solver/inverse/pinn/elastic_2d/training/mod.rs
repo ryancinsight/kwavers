@@ -33,10 +33,13 @@ pub mod scheduler;
 // ============================================================================
 
 /// Training data and metrics
-pub use data::{TrainingData, TrainingMetrics};
+// TODO: Implement TrainingData and TrainingMetrics
+// pub use data::{TrainingData, TrainingMetrics};
 
 /// Optimization algorithms and state
-pub use optimizer::{OptimizerAlgorithm, PINNOptimizer, PersistentAdamState};
+pub use optimizer::OptimizerAlgorithm;
+// TODO: Implement PINNOptimizer and PersistentAdamState
+// pub use optimizer::{PINNOptimizer, PersistentAdamState};
 
 /// Learning rate scheduling
 pub use scheduler::{LRScheduler, LearningRateScheduler};

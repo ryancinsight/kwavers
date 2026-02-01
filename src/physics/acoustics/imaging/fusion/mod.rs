@@ -93,7 +93,7 @@ pub use properties::extract_tissue_properties;
 pub use crate::domain::imaging::fusion::{
     AffineTransform, FusedImageResult, FusionConfig, FusionMethod,
 };
-pub use types::RegisteredModality;
+// pub use types::RegisteredModality; // Made crate-public only - use types module directly
 
 #[cfg(test)]
 mod tests;

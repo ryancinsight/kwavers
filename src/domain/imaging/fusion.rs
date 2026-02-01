@@ -193,6 +193,26 @@ pub struct FusionConfig {
     ///
     /// If true, modality weights will be adjusted based on local quality scores.
     pub adaptive_weighting: bool,
+
+    /// Spatial resolution for fusion output (m) - [dx, dy, dz]
+    pub output_resolution: [f64; 3],
+
+    /// Registration method for aligning modalities
+    /// Note: This is a physics implementation detail but needed in config
+    pub registration_method: RegistrationMethod,
+}
+
+/// Registration method for image alignment
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RegistrationMethod {
+    /// Rigid body transformation
+    RigidBody,
+    /// Affine transformation
+    Affine,
+    /// Non-rigid deformation
+    NonRigid,
+    /// Automatic feature-based
+    Automatic,
 }
 
 impl Default for FusionConfig {
@@ -203,6 +223,8 @@ impl Default for FusionConfig {
             uncertainty_quantification: false,
             min_quality_threshold: 0.3,
             adaptive_weighting: false,
+            output_resolution: [1e-4, 1e-4, 1e-4], // 100μm isotropic
+            registration_method: RegistrationMethod::RigidBody,
         }
     }
 }
@@ -212,8 +234,14 @@ impl Default for FusionConfig {
 pub enum FusionMethod {
     /// Simple weighted average
     WeightedAverage,
+    /// Feature-based fusion using tissue properties
+    FeatureBased,
     /// Probabilistic fusion with Bayesian inference
     Probabilistic,
+    /// Deep learning-based fusion
+    DeepFusion,
+    /// Maximum likelihood estimation
+    MaximumLikelihood,
     /// Maximum intensity projection
     MaximumIntensity,
     /// Minimum intensity projection

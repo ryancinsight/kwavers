@@ -156,7 +156,7 @@ pub use domain::field::mapping::{
     FieldAccessor as UnifiedFieldAccessor, FieldAccessorMut, UnifiedFieldType,
 };
 pub use domain::plugin::{Plugin, PluginContext, PluginMetadata};
-pub use physics::state::{FieldView, FieldViewMut, PhysicsState};
+pub use physics::acoustics::state::{FieldView, FieldViewMut, PhysicsState};
 pub use solver::plugin::{PluginExecutor, PluginManager};
 
 // Re-export spectral-DG components
@@ -169,14 +169,14 @@ pub use solver::pstd::{PSTDConfig, PSTDPlugin, PSTDSolver};
 
 // Re-export GPU-related items only when feature enabled
 
-pub use physics::chemistry::ChemicalModel;
-pub use physics::mechanics::acoustic_wave::NonlinearWave;
-pub use physics::mechanics::elastic_wave::{
+pub use physics::acoustics::mechanics::acoustic_wave::nonlinear::NonlinearWave;
+pub use physics::acoustics::mechanics::elastic_wave::{
     mode_conversion::{
         MaterialSymmetry, ModeConversionConfig, StiffnessTensor, ViscoelasticConfig,
     },
     ElasticWave,
 };
+pub use physics::chemistry::ChemicalModel;
 pub use physics::mechanics::{CavitationModel, StreamingModel};
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
 pub use simulation::factory::PhysicsFactory;

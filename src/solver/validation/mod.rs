@@ -10,7 +10,10 @@ pub mod physics_benchmarks;
 pub use config::ValidationParameters;
 
 /// Analytical solutions for validation
-pub use physics_benchmarks::{PlaneWaveSolution, PointSourceSolution, StandingWaveSolution};
+// TODO: Implement PlaneWaveSolution, PointSourceSolution, StandingWaveSolution
+// pub use physics_benchmarks::{PlaneWaveSolution, PointSourceSolution, StandingWaveSolution};
 
 /// Benchmark parameters
-pub use physics_benchmarks::{GaussianBeamParameters, TissueProperties};
+pub use physics_benchmarks::GaussianBeamParameters;
+// TODO: Implement TissueProperties
+// pub use physics_benchmarks::TissueProperties;

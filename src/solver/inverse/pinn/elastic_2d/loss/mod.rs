@@ -39,5 +39,6 @@ pub mod pde_residual;
 #[cfg(feature = "pinn")]
 pub use computation::LossComputer;
 
-/// Data structures for loss computation
-pub use data::{BoundaryData, CollocationData, InitialData, LossComponents, ObservationData};
+// Data structures for loss computation
+// TODO: Implement missing data types: BoundaryData, CollocationData, InitialData, LossComponents, ObservationData
+// pub use data::{BoundaryData, CollocationData, InitialData, LossComponents, ObservationData};
