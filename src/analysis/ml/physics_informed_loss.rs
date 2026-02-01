@@ -483,6 +483,7 @@ impl PhysicsInformedLoss {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[allow(unused_imports)]
     use ndarray::Array;
 
     #[test]
@@ -594,10 +595,10 @@ mod tests {
             .with_schedule(WeightSchedule::Linear { total_epochs: 100 });
         let mut loss = PhysicsInformedLoss::new(config).unwrap();
 
-        let (lambda_data1, lambda_physics1) = loss.compute_weight_schedule(1.0, 1.0).unwrap();
+        let (_lambda_data1, lambda_physics1) = loss.compute_weight_schedule(1.0, 1.0).unwrap();
 
         loss.current_epoch = 50;
-        let (lambda_data2, lambda_physics2) = loss.compute_weight_schedule(1.0, 1.0).unwrap();
+        let (_lambda_data2, lambda_physics2) = loss.compute_weight_schedule(1.0, 1.0).unwrap();
 
         // Physics weight decreases linearly
         assert!(lambda_physics2 < lambda_physics1);
@@ -606,7 +607,7 @@ mod tests {
     #[test]
     fn test_weight_schedule_adaptive() {
         let config = PhysicsLossConfig::default().with_schedule(WeightSchedule::Adaptive);
-        let mut loss = PhysicsInformedLoss::new(config).unwrap();
+        let loss = PhysicsInformedLoss::new(config).unwrap();
 
         // Physics loss dominates
         let (_, lambda_physics) = loss.compute_weight_schedule(1.0, 100.0).unwrap();

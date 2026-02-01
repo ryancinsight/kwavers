@@ -22,7 +22,7 @@ mod tests {
         // These fields don't exist in the new domain FusionConfig
         // assert_eq!(config.modality_weights.len(), 3);
         // assert!(config.uncertainty_quantification);
-        assert_eq!(config.method, FusionMethod::WeightedAverage);
+        assert_eq!(config.fusion_method, FusionMethod::WeightedAverage);
     }
 
     #[test]

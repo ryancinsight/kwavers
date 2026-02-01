@@ -476,7 +476,7 @@ mod tests {
     #[test]
     fn test_shock_filter_application() {
         let config = ShockCapturingConfig::default();
-        let mut capture = ShockCapture::new(config);
+        let capture = ShockCapture::new(config);
 
         let mut pressure = Array2::zeros((64, 64));
         for i in 0..64 {

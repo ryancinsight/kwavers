@@ -9,8 +9,8 @@ pub mod physics_benchmarks;
 /// Validation configuration
 pub use config::ValidationParameters;
 
-/// Benchmark parameters
-pub use physics_benchmarks::GaussianBeamParameters;
+/// Benchmark parameters and utilities
+pub use physics_benchmarks::{measure_beam_radius, GaussianBeamParameters};
 
 // Module planned but not yet implemented:
 // - PlaneWaveSolution: Analytical solution for plane wave propagation

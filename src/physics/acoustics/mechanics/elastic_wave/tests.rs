@@ -11,7 +11,7 @@ use crate::domain::medium::homogeneous::HomogeneousMedium;
 #[cfg(test)]
 use crate::domain::source::NullSource;
 #[cfg(test)]
-use crate::physics::mechanics::elastic_wave::ElasticWave;
+use crate::physics::acoustics::mechanics::elastic_wave::ElasticWave;
 #[cfg(test)]
 use crate::physics::traits::AcousticWaveModel;
 #[cfg(test)]

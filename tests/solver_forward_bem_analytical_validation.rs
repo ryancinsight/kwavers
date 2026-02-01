@@ -109,7 +109,7 @@ impl MieScatteringSolution {
             return Err("Mie coefficients not computed".to_string());
         }
 
-        let ka = self.wavenumber * self.radius;
+        let _ka = self.wavenumber * self.radius;
         let kr = self.wavenumber * r;
 
         let mut p_scattered = num_complex::Complex64::new(0.0, 0.0);

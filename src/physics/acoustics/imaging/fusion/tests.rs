@@ -14,12 +14,11 @@ fn test_fusion_config_creation_and_defaults() {
     assert_eq!(config.output_resolution, [1e-4, 1e-4, 1e-4]);
     assert_eq!(config.fusion_method, FusionMethod::WeightedAverage);
     assert_eq!(config.registration_method, RegistrationMethod::RigidBody);
-    assert!(config.uncertainty_quantification);
-    assert_eq!(config.confidence_threshold, 0.7);
+    assert!(!config.uncertainty_quantification); // Default is false
+    assert_eq!(config.min_quality_threshold, 0.3);
 
-    // Verify default weights sum to 1.0
-    let total_weight: f64 = config.modality_weights.values().sum();
-    assert!((total_weight - 1.0).abs() < 1e-10);
+    // Default weights are empty (will be set when registering modalities)
+    assert_eq!(config.modality_weights.len(), 0);
 }
 
 #[test]

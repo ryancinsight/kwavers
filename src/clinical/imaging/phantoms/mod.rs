@@ -31,7 +31,7 @@ mod tests {
             .add_vein([0.015, 0.015, 0.020], 0.003, 0.65)
             .build();
 
-        assert_eq!(phantom.data.len(), 27000);
+        assert_eq!(phantom.mu_a.len(), 27000);
         let stats = phantom.absorption_stats();
         assert!(stats.max > stats.min);
     }
@@ -47,7 +47,7 @@ mod tests {
             .add_muscle_layer(0.010, 0.040)
             .build();
 
-        assert_eq!(phantom.data.len(), 16000);
+        assert_eq!(phantom.mu_a.len(), 16000);
 
         // Check first layer is skin (high absorption)
         let skin_props = phantom.get(10, 10, 1).unwrap();
@@ -68,7 +68,7 @@ mod tests {
             .add_tumor([0.0125, 0.0125, 0.0125], 0.003, 0.60)
             .build();
 
-        assert_eq!(phantom.data.len(), 15625);
+        assert_eq!(phantom.mu_a.len(), 15625);
     }
 
     #[test]
@@ -80,7 +80,7 @@ mod tests {
             .add_vessel([0.01, 0.01, 0.0], [0.01, 0.01, 0.03], 0.001, 0.95)
             .build();
 
-        assert_eq!(phantom.data.len(), 12000);
+        assert_eq!(phantom.mu_a.len(), 12000);
     }
 
     #[test]
@@ -88,7 +88,7 @@ mod tests {
         let dims = GridDimensions::new(30, 30, 30, 0.001, 0.001, 0.001);
         let phantom = ClinicalPhantoms::standard_blood_oxygenation(dims);
 
-        assert_eq!(phantom.data.len(), 27000);
+        assert_eq!(phantom.mu_a.len(), 27000);
         let stats = phantom.absorption_stats();
         assert!(stats.mean > 0.0);
     }
@@ -98,7 +98,7 @@ mod tests {
         let dims = GridDimensions::new(20, 20, 40, 0.001, 0.001, 0.001);
         let phantom = ClinicalPhantoms::skin_tissue(dims);
 
-        assert_eq!(phantom.data.len(), 16000);
+        assert_eq!(phantom.mu_a.len(), 16000);
     }
 
     #[test]
@@ -106,7 +106,7 @@ mod tests {
         let dims = GridDimensions::new(30, 30, 30, 0.001, 0.001, 0.001);
         let phantom = ClinicalPhantoms::breast_tumor(dims, [0.015, 0.015, 0.015]);
 
-        assert_eq!(phantom.data.len(), 27000);
+        assert_eq!(phantom.mu_a.len(), 27000);
     }
 
     #[test]
@@ -114,6 +114,6 @@ mod tests {
         let dims = GridDimensions::new(25, 25, 30, 0.001, 0.001, 0.001);
         let phantom = ClinicalPhantoms::vascular_network(dims);
 
-        assert_eq!(phantom.data.len(), 18750);
+        assert_eq!(phantom.mu_a.len(), 18750);
     }
 }

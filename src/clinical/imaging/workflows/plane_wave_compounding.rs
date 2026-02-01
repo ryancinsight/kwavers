@@ -544,7 +544,7 @@ mod tests {
     #[test]
     fn test_beamforming() {
         let config = PlaneWaveConfig::default();
-        let mut compounding = PlaneWaveCompound::new(config).unwrap();
+        let compounding = PlaneWaveCompound::new(config).unwrap();
 
         // Create synthetic received field
         let received = Array2::from_elem(

@@ -31,6 +31,9 @@ pub use fundamental::{
 pub use cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER};
 pub use fundamental::{BULK_MODULUS_WATER, C_WATER, DENSITY_WATER};
 
+// Cavitation control limits
+pub use cavitation::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
+
 // Acoustic parameters (most commonly used)
 pub use acoustic_parameters::{
     AIR_POLYTROPIC_INDEX, BLOOD_VISCOSITY_37C, DIAGNOSTIC_FREQ_MAX, DIAGNOSTIC_FREQ_MIN,

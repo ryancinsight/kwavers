@@ -105,6 +105,7 @@ pub trait Preconditioner {
 
 /// Born series solvers for scattering problems
 pub use born_series::{
+    BornConfig,           // Configuration for Born series methods
     BornWorkspace,        // Workspace for Born series computations
     ConvergentBornSolver, // Renormalized Born series
     IterativeBornSolver,  // Fixed-point Born iteration

@@ -34,6 +34,9 @@ use crate::analysis::ml::training::{
 };
 use crate::core::error::{KwaversError, KwaversResult};
 
+#[cfg(test)]
+use ndarray::Array2;
+
 /// Neural beamforming training state
 #[derive(Debug)]
 pub struct BeamformingTrainer {

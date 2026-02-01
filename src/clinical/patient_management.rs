@@ -1105,7 +1105,7 @@ mod tests {
         assert_eq!(pms.encounter_count(), 1);
 
         // Create treatment plan
-        let plan_id = pms
+        let _plan_id = pms
             .create_treatment_plan(encounter_id.clone(), "HIFU ablation", "Benign tumor", 4)
             .unwrap();
         assert_eq!(pms.treatment_plan_count(), 1);

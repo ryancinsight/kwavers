@@ -594,7 +594,7 @@ mod tests {
     #[test]
     fn test_fusion_engine_creation() {
         let params = FusionParameters::default();
-        let engine = FusionEngine::new(params);
+        let _engine = FusionEngine::new(params);
         // Engine created successfully
     }
 
