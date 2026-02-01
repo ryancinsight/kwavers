@@ -297,7 +297,8 @@ impl PlaneWaveCompound {
                         0.42 - 0.5 * (2.0 * PI * n_norm).cos() + 0.08 * (4.0 * PI * n_norm).cos();
                 }
             }
-            "rect" | _ => {
+            _ => {
+                // "rect" or any other apodization type
                 // Rectangular window (uniform)
                 for i in 0..n {
                     apod[i] = 1.0;

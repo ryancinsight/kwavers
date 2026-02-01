@@ -69,7 +69,7 @@ impl LocalizationConfig {
 
     /// Set confidence threshold
     pub fn with_confidence_threshold(mut self, threshold: f64) -> Self {
-        self.confidence_threshold = threshold.max(0.0).min(1.0);
+        self.confidence_threshold = threshold.clamp(0.0, 1.0);
         self
     }
 

@@ -177,7 +177,7 @@ impl WavefrontAnalyzer {
 
     /// Set plane wave detection threshold
     pub fn set_plane_wave_threshold(&mut self, threshold: f64) {
-        self.plane_wave_threshold = threshold.max(0.0).min(1.0);
+        self.plane_wave_threshold = threshold.clamp(0.0, 1.0);
     }
 }
 
