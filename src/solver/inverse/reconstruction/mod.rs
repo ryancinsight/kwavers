@@ -10,6 +10,9 @@
 pub mod photoacoustic;
 pub mod plane_recon;
 pub mod seismic;
+pub mod unified_sirt;
+
+pub use unified_sirt::{SirtAlgorithm, SirtConfig, SirtReconstructor, SirtResult};
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;

@@ -26,6 +26,13 @@ pub const SOUND_SPEED_AIR: f64 = 343.0;
 /// Reference: NIST Chemistry WebBook
 pub const DENSITY_WATER: f64 = 998.2;
 
+/// Sound speed in water at 20°C (m/s) - Alias for compatibility
+pub const C_WATER: f64 = SOUND_SPEED_WATER;
+
+/// Bulk modulus of water at 20°C (Pa)
+/// K = ρ * c², where ρ = 998.2 kg/m³, c = 1482 m/s
+pub const BULK_MODULUS_WATER: f64 = 2.19e9;
+
 /// Density of soft tissue (kg/m³)
 pub const DENSITY_TISSUE: f64 = 1050.0;
 

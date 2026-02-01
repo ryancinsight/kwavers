@@ -17,16 +17,32 @@ pub mod topology;
 pub mod validation;
 use crate::math::fft::utils as fft_utils;
 
-// Re-exports for convenience
-pub use adapter::{GridAdapter, GridTopologyExt};
-pub use config::{GridParameters, GridType};
-pub use coordinates::CoordinateSystem;
-pub use fft_utils::*;
-pub use kspace::KSpaceCalculator;
-pub use simple_config::GridConfig;
+// ============================================================================
+// EXPLICIT RE-EXPORTS (Grid API)
+// ============================================================================
+
+/// Core grid structure and dimensional types
 pub use structure::{Bounds, Dimension, Grid};
+
+/// Grid configuration types
+pub use config::{GridParameters, GridType};
+pub use simple_config::GridConfig;
+
+/// Coordinate systems
+pub use coordinates::CoordinateSystem;
+
+/// Topology definitions
 pub use topology::{CartesianTopology, CylindricalTopology, GridTopology, TopologyDimension};
+
+/// Grid adapter and extension traits
+pub use adapter::{GridAdapter, GridTopologyExt};
+
+/// Grid validation
 pub use validation::GridValidator;
+
+/// FFT utilities for k-space operations
+pub use fft_utils::{fft_shift_2d, get_optimal_fft_size, ifft_shift_2d, is_optimal_fft_size};
+pub use kspace::KSpaceCalculator;
 
 pub type Grid3D = Grid;
 

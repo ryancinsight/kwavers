@@ -2,11 +2,11 @@
 //!
 //! Infrastructure, I/O, and system resource error hierarchies
 
-pub mod io;
 pub mod grid;
+pub mod io;
 pub mod numerical;
 
-// Re-export system errors
-pub use io::*;
-pub use grid::*;
-pub use numerical::*;
+// Explicit re-exports of system error types
+pub use grid::GridErrorType;
+pub use io::IoErrorType;
+pub use numerical::NumericalErrorType;

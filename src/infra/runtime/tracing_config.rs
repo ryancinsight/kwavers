@@ -25,7 +25,7 @@
 //! # fn example() {
 //! // Initialize tracing with RUST_LOG support
 //! init_tracing();
-//!  
+//!
 //! // Use tracing macros
 //! tracing::info!("Starting simulation");
 //! tracing::debug!(grid_size = 256, "Created computational grid");
@@ -33,7 +33,7 @@
 //! ```
 
 #[cfg(feature = "structured-logging")]
-pub use tracing_impl::*;
+pub use tracing_impl::{init_tracing, init_tracing_production, timed_span};
 
 #[cfg(feature = "structured-logging")]
 mod tracing_impl {
@@ -153,4 +153,4 @@ pub mod stub {
 }
 
 #[cfg(not(feature = "structured-logging"))]
-pub use stub::*;
+pub use stub::{init_tracing, init_tracing_production, timed_span};

@@ -71,7 +71,7 @@ use rustfft::FftPlanner;
 /// - Aliasing control via 2/3-rule dealiasing
 /// - High-order accuracy (spectral)
 /// - Efficient computation using FFT
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct SpectralDerivativeOperator {
     /// Grid dimensions
     nx: usize,
@@ -79,9 +79,9 @@ pub struct SpectralDerivativeOperator {
     nz: usize,
 
     /// Grid spacings (m)
-    dx: f64,
-    dy: f64,
-    dz: f64,
+    _dx: f64,
+    _dy: f64,
+    _dz: f64,
 
     /// Wavenumber arrays (for multiplication in frequency domain)
     kx: Array1<f64>,
@@ -130,9 +130,9 @@ impl SpectralDerivativeOperator {
             nx,
             ny,
             nz,
-            dx,
-            dy,
-            dz,
+            _dx: dx,
+            _dy: dy,
+            _dz: dz,
             kx,
             ky,
             kz,

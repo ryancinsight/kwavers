@@ -86,9 +86,14 @@ pub mod types;
 
 // Public re-exports for convenience
 pub use algorithms::MultiModalFusion;
-pub use config::{FusionConfig, FusionMethod, RegistrationMethod};
+pub use config::RegistrationMethod;
 pub use properties::extract_tissue_properties;
-pub use types::{AffineTransform, FusedImageResult};
+
+// Re-export domain types (moved to domain layer for clean architecture)
+pub use crate::domain::imaging::fusion::{
+    AffineTransform, FusedImageResult, FusionConfig, FusionMethod,
+};
+pub use types::RegisteredModality;
 
 #[cfg(test)]
 mod tests;

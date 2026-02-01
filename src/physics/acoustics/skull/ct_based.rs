@@ -1,11 +1,29 @@
 //! CT-based skull model loader
 //!
+//! ⚠️ **DEPRECATED** (Phase 6 Week 1.4)
+//!
+//! This module has been refactored to the domain layer where it properly belongs.
+//! CT image loading is a domain concern (material property specification) rather than
+//! a physics concern.
+//!
+//! **Migration Guide**:
+//! ```ignore
+//! // Old (deprecated)
+//! use kwavers::physics::acoustics::skull::CTBasedSkullModel;
+//!
+//! // New (recommended)
+//! use kwavers::domain::imaging::medical::{CTImageLoader, MedicalImageLoader};
+//! ```
+//!
+//! **Backward Compatibility**: This module re-exports from domain layer for now,
+//! but will be removed in v5.0.0. Please migrate to domain layer imports.
+//!
 //! Reference: Marquet et al. (2009) "Non-invasive transcranial ultrasound
 //! therapy based on a 3D CT scan"
 
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
-use crate::physics::skull::HeterogeneousSkull;
+use crate::physics::acoustics::skull::HeterogeneousSkull;
 use ndarray::Array3;
 
 #[cfg(feature = "nifti")]

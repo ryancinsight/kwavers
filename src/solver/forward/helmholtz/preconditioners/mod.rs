@@ -6,5 +6,6 @@
 pub mod diagonal;
 pub mod sor;
 
-pub use diagonal::*;
-pub use sor::*;
+// Explicit re-exports of preconditioner types
+pub use diagonal::DiagonalPreconditioner;
+pub use sor::SORPreconditioner;

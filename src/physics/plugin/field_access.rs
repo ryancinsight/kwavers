@@ -6,7 +6,7 @@
 
 use crate::core::error::{KwaversResult, PhysicsError};
 use crate::domain::field::mapping::UnifiedFieldType;
-use crate::physics::state::{FieldView, PhysicsState};
+use crate::physics::acoustics::state::{FieldView, PhysicsState};
 use ndarray::{Array4, ArrayView3, ArrayViewMut3};
 use std::collections::HashSet;
 

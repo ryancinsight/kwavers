@@ -26,6 +26,7 @@ pub mod memory;
 pub mod multi_gpu;
 pub mod pipeline;
 pub mod shaders;
+pub mod thermal_acoustic;
 
 pub use backend::GpuBackend;
 pub use buffer::{BufferUsage, GpuBuffer as GpuBufferV2};
@@ -41,6 +42,9 @@ pub use memory::{MemoryPoolType, UnifiedMemoryManager};
 pub use multi_gpu::{GpuAffinity, MultiGpuContext};
 pub use pipeline::{ComputePipeline, PipelineLayout};
 pub use shaders::neural_network::NeuralNetworkShader;
+pub use thermal_acoustic::{
+    GpuThermalAcousticBuffers, GpuThermalAcousticConfig, GpuThermalAcousticSolver,
+};
 
 use crate::core::error::{KwaversError, KwaversResult};
 

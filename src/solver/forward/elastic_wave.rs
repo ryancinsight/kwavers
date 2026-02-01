@@ -7,13 +7,13 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;
-use crate::physics::mechanics::elastic_wave::{
+use crate::physics::acoustics::mechanics::elastic_wave::{
     fields::{StressFields, VelocityFields},
     parameters::{StressUpdateParams, VelocityUpdateParams},
     spectral_fields::{SpectralStressFields, SpectralVelocityFields},
     ElasticWave,
 };
-use crate::physics::traits::AcousticWaveModel;
+use crate::physics::acoustics::traits::AcousticWaveModel;
 use log::{debug, info};
 use ndarray::{Array3, Array4, Axis};
 use num_complex::Complex;

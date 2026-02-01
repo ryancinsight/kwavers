@@ -5,7 +5,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::physics::skull::HeterogeneousSkull;
+use crate::physics::acoustics::skull::HeterogeneousSkull;
 use ndarray::Array3;
 use std::f64::consts::PI;
 

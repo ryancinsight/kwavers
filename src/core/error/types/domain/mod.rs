@@ -2,11 +2,11 @@
 //!
 //! Physics, configuration, and validation error hierarchies
 
-pub mod physics;
 pub mod config;
+pub mod physics;
 pub mod validation;
 
-// Re-export domain errors
-pub use physics::*;
-pub use config::*;
-pub use validation::*;
+// Explicit re-exports of domain error types
+pub use config::ConfigErrorType;
+pub use physics::PhysicsErrorType;
+pub use validation::ValidationErrorType;

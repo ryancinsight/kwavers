@@ -30,7 +30,7 @@
 //! ```
 
 #[cfg(feature = "async-runtime")]
-pub use tokio_impl::*;
+pub use tokio_impl::{spawn_task, AsyncFileReader, AsyncFileWriter};
 
 #[cfg(feature = "async-runtime")]
 mod tokio_impl {
@@ -232,4 +232,4 @@ pub mod stub {
 }
 
 #[cfg(not(feature = "async-runtime"))]
-pub use stub::*;
+pub use stub::{AsyncFileReader, AsyncFileWriter};

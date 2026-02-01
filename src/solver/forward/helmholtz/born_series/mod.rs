@@ -53,10 +53,11 @@ pub mod iterative;
 pub mod modified;
 pub mod workspace;
 
-pub use convergent::*;
-pub use iterative::*;
-pub use modified::*;
-pub use workspace::*;
+// Explicit re-exports of Born series solver types
+pub use convergent::ConvergentBornSolver;
+pub use iterative::IterativeBornSolver;
+pub use modified::ModifiedBornSolver;
+pub use workspace::BornWorkspace;
 
 /// Born series approximation order
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

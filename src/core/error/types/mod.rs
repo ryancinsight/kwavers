@@ -7,6 +7,20 @@
 pub mod domain;
 pub mod system;
 
-// Re-export for hierarchical access
-pub use domain::*;
-pub use system::*;
+// ============================================================================
+// EXPLICIT RE-EXPORTS (Error Type API)
+// ============================================================================
+
+// Domain-specific error types
+pub use domain::{
+    ConfigErrorType,     // Configuration errors
+    PhysicsErrorType,    // Physics simulation errors
+    ValidationErrorType, // Validation errors
+};
+
+// System-level error types
+pub use system::{
+    GridErrorType,      // Grid-related errors
+    IoErrorType,        // I/O operation errors
+    NumericalErrorType, // Numerical computation errors
+};

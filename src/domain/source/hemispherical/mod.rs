@@ -18,7 +18,10 @@ mod sparse;
 mod steering;
 mod validation;
 
-pub use crate::core::constants::*;
+// Physical constants needed for array calculations
+pub use crate::core::constants::{C_WATER, PI};
+
+// Explicit re-exports of hemispherical array components
 pub use element::{ElementConfiguration, ElementState};
 pub use geometry::{ElementPlacement, HemisphereGeometry};
 pub use sparse::{ElementSelection, SparseArrayOptimizer};
@@ -127,4 +130,3 @@ impl Source for HemisphericalArray {
         self.signal.as_ref()
     }
 }
-

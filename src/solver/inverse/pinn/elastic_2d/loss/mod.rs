@@ -31,7 +31,13 @@ pub mod computation;
 pub mod data;
 pub mod pde_residual;
 
-// Re-export types and functions for convenience
+// ============================================================================
+// EXPLICIT RE-EXPORTS (PINN Loss API)
+// ============================================================================
+
+/// Loss computation engine
 #[cfg(feature = "pinn")]
 pub use computation::LossComputer;
-pub use data::*;
+
+/// Data structures for loss computation
+pub use data::{BoundaryData, CollocationData, InitialData, LossComponents, ObservationData};

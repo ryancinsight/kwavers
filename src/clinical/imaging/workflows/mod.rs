@@ -18,6 +18,7 @@ pub mod blood_oxygenation;
 pub mod config;
 pub mod neural;
 pub mod orchestrator;
+pub mod plane_wave_compounding;
 pub mod results;
 pub mod simulation;
 pub mod state;
@@ -28,6 +29,7 @@ pub use config::{
     WorkflowPriority,
 };
 pub use orchestrator::ClinicalWorkflowOrchestrator;
+pub use plane_wave_compounding::{PlaneWaveCompound, PlaneWaveConfig};
 pub use results::{
     ClinicalExaminationResult, DiagnosticRecommendation, DiagnosticUrgency, PerformanceMetrics,
 };

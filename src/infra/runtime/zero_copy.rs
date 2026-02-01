@@ -6,7 +6,7 @@
 //! ## Design Principles
 //!
 //! - **Zero-Copy**: Direct memory mapping without deserialization overhead
-//! - **Type Safety**: Validated archive access with compile-time guarantees  
+//! - **Type Safety**: Validated archive access with compile-time guarantees
 //! - **Performance**: 10-100× faster than serde for large datasets
 //! - **Portability**: Cross-platform binary format
 //!
@@ -36,7 +36,7 @@
 //! ```
 
 #[cfg(feature = "zero-copy")]
-pub use rkyv_impl::*;
+pub use rkyv_impl::{deserialize_grid, serialize_grid, SerializableGrid, SimulationData};
 
 #[cfg(feature = "zero-copy")]
 mod rkyv_impl {
@@ -56,7 +56,7 @@ mod rkyv_impl {
     pub struct SerializableGrid {
         /// Number of points in x direction
         pub nx: usize,
-        /// Number of points in y direction  
+        /// Number of points in y direction
         pub ny: usize,
         /// Number of points in z direction
         pub nz: usize,
@@ -264,4 +264,4 @@ pub mod stub {
 }
 
 #[cfg(not(feature = "zero-copy"))]
-pub use stub::*;
+pub use stub::{deserialize_grid, serialize_grid};

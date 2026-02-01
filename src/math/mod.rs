@@ -26,16 +26,37 @@
 
 pub mod fft;
 pub mod geometry;
+pub mod inverse_problems;
 pub mod linear_algebra;
 pub mod numerics;
 pub mod simd;
 pub mod simd_safe;
 
-// Re-export commonly used types for convenience
+// ============================================================================
+// EXPLICIT RE-EXPORTS (Core Mathematical API)
+// ============================================================================
+
+/// FFT operations for signal processing
 pub use fft::{Fft1d, Fft2d, Fft3d, KSpaceCalculator};
-pub use geometry::*;
+
+/// Geometric primitives and mask generation
+///
+/// Re-exports core geometry functions for creating spatial masks and regions.
+/// These functions match MATLAB k-Wave toolbox ergonomics.
+pub use geometry::{
+    make_ball,   // 3D spherical mask (MATLAB: makeBall)
+    make_disc,   // 2D circular mask (MATLAB: makeDisc)
+    make_line,   // Linear mask between two points (MATLAB: makeLine)
+    make_sphere, // Alias for make_ball (MATLAB: makeSphere)
+};
+
+/// Sparse linear algebra operations
 pub use linear_algebra::sparse;
+
+/// SIMD acceleration interfaces
 pub use simd::{
     FdtdSimdOps, FftSimdOps, InterpolationSimdOps, SimdConfig, SimdLevel, SimdPerformance,
 };
+
+/// Safe SIMD operations with runtime feature detection
 pub use simd_safe::SimdOps as SafeSimdOps;

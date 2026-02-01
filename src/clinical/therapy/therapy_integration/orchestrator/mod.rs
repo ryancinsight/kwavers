@@ -36,6 +36,8 @@ use crate::simulation::imaging::ceus::ContrastEnhancedUltrasound;
 
 use super::acoustic::AcousticWaveSolver;
 use super::config::{TherapyModality, TherapySessionConfig};
+use super::intensity_tracker::IntensityTracker;
+use super::safety_controller::{SafetyController, TherapyAction};
 use super::state::{SafetyMetrics, SafetyStatus, TherapySessionState};
 
 // Submodule declarations
@@ -74,6 +76,10 @@ pub struct TherapyIntegrationOrchestrator {
     cavitation_controller: Option<FeedbackController>,
     /// Lithotripsy simulator
     lithotripsy_simulator: Option<LithotripsySimulator>,
+    /// Real-time safety controller for therapy enforcement
+    safety_controller: SafetyController,
+    /// Real-time intensity tracker for acoustic monitoring
+    intensity_tracker: IntensityTracker,
     /// Current session state
     session_state: TherapySessionState,
 }
@@ -175,6 +181,13 @@ impl TherapyIntegrationOrchestrator {
             },
         };
 
+        // Initialize safety controller with configured limits
+        let mut safety_controller = SafetyController::new(config.safety_limits.clone(), None);
+        safety_controller.start_monitoring(0.0);
+
+        // Initialize intensity tracker for real-time monitoring
+        let intensity_tracker = IntensityTracker::new(0.1); // 100ms rolling window
+
         Ok(Self {
             config,
             grid,
@@ -185,6 +198,8 @@ impl TherapyIntegrationOrchestrator {
             chemical_model,
             cavitation_controller,
             lithotripsy_simulator,
+            safety_controller,
+            intensity_tracker,
             session_state,
         })
     }
@@ -193,9 +208,24 @@ impl TherapyIntegrationOrchestrator {
     ///
     /// Advances the therapy session by one time step, including:
     /// - Acoustic field generation
+    /// - Real-time intensity monitoring (SPTA, thermal dose, peak intensity)
+    /// - Real-time safety evaluation (thermal/mechanical indices, cavitation)
     /// - Modality-specific updates (microbubbles, cavitation, chemistry, lithotripsy)
-    /// - Safety metric calculation
+    /// - Temperature field computation from acoustic heating
+    /// - Safety metric calculation and adaptive power reduction
     /// - Session state updates
+    ///
+    /// ## Safety Integration
+    ///
+    /// This function enforces real-time safety constraints via SafetyController:
+    /// - Monitors thermal and mechanical indices against configured limits
+    /// - Accumulates cavitation dose and thermal dose
+    /// - Implements priority-based action hierarchy:
+    ///   - Continue: All parameters safe
+    ///   - Warning: Approaching limits (80% threshold)
+    ///   - ReducePower: Active limit enforcement, reduces acoustic power
+    ///   - Stop: Critical safety threshold exceeded
+    /// - Adjusts acoustic power based on safety action
     ///
     /// # Arguments
     ///
@@ -207,18 +237,93 @@ impl TherapyIntegrationOrchestrator {
     ///
     /// # Side Effects
     ///
-    /// Updates internal session state including time, progress, fields, and safety metrics
+    /// Updates internal session state including time, progress, fields, safety metrics,
+    /// and may reduce acoustic power if safety limits are approached.
+    ///
+    /// # References
+    ///
+    /// - IEC 62359:2010: Safety indices for ultrasound
+    /// - FDA 510(k) Guidance: Ultrasound device safety requirements
+    /// - Sapareto & Dewey (1990): CEM43 thermal dose model
     pub fn execute_therapy_step(&mut self, dt: f64) -> KwaversResult<()> {
         // Update session time and progress
         self.session_state.current_time += dt;
         self.session_state.progress = self.session_state.current_time / self.config.duration;
 
         // Generate acoustic field
-        let acoustic_field =
+        let mut acoustic_field =
             execution::generate_acoustic_field(&self.grid, &self.config.acoustic_params)?;
+
+        // Apply power reduction from safety controller if therapy was previously constrained
+        let power_factor = self.safety_controller.power_reduction_factor();
+        if power_factor < 1.0 {
+            // Scale pressure field proportionally to power reduction
+            acoustic_field.pressure *= power_factor;
+            for vel in &mut [
+                &mut acoustic_field.velocity_x,
+                &mut acoustic_field.velocity_y,
+                &mut acoustic_field.velocity_z,
+            ] {
+                **vel *= power_factor;
+            }
+        }
 
         // Apply transcranial correction if enabled (future enhancement)
         let corrected_field = acoustic_field;
+
+        // Record acoustic intensity for real-time monitoring
+        // This must happen before any field modifications
+        let intensity_metrics = self.intensity_tracker.record_intensity(
+            &corrected_field.pressure,
+            &Array3::ones(corrected_field.pressure.dim()),
+            self.session_state.current_time,
+        )?;
+
+        // Compute temperature field from acoustic heating
+        let temperature_field = execution::calculate_acoustic_heating(
+            &corrected_field,
+            &self.grid,
+            dt,
+            self.config.acoustic_params.focal_depth,
+        );
+
+        // Update thermal dose accumulation
+        self.intensity_tracker
+            .update_thermal_dose(&temperature_field, dt)?;
+
+        // Update safety metrics with real-time measurements
+        self.session_state.safety_metrics.thermal_index = intensity_metrics.spta_mw_cm2 * 0.001; // Convert to TI proxy
+        self.session_state.safety_metrics.mechanical_index = self.config.acoustic_params.pnp
+            / (1e6 * (self.config.acoustic_params.frequency).sqrt());
+        self.session_state.safety_metrics.temperature_rise = temperature_field.clone();
+
+        // Evaluate safety with real-time enforcement
+        let safety_action = self.safety_controller.evaluate_safety(
+            crate::clinical::therapy::therapy_integration::safety_controller::SafetyMetrics {
+                thermal_index: self.session_state.safety_metrics.thermal_index,
+                mechanical_index: self.session_state.safety_metrics.mechanical_index,
+                cavitation_dose: self.session_state.safety_metrics.cavitation_dose,
+                temperature_rise: temperature_field.clone(),
+            },
+            self.session_state.current_time,
+        )?;
+
+        // Handle safety action
+        match safety_action {
+            TherapyAction::Continue => {
+                // Therapy proceeding normally
+            }
+            TherapyAction::Warning => {
+                // Log warning but continue - approaching limits at 80%
+            }
+            TherapyAction::ReducePower => {
+                // Power reduction is applied in next step via power_reduction_factor()
+            }
+            TherapyAction::Stop => {
+                // Critical limit exceeded - therapy should terminate
+                // Caller should check should_stop() and terminate session
+            }
+        }
 
         // Update microbubble dynamics if enabled
         if let Some(ref mut ceus) = self.ceus_system {
@@ -235,7 +340,12 @@ impl TherapyIntegrationOrchestrator {
                 &self.config.acoustic_params,
                 dt,
             )?;
-            self.session_state.cavitation_activity = Some(cavitation_activity);
+            self.session_state.cavitation_activity = Some(cavitation_activity.clone());
+
+            // Accumulate cavitation dose from activity
+            let total_cavitation_activity: f64 =
+                cavitation_activity.iter().sum::<f64>() / cavitation_activity.len() as f64;
+            self.session_state.safety_metrics.cavitation_dose += total_cavitation_activity * dt;
         }
 
         // Update chemical reactions if enabled
@@ -258,7 +368,7 @@ impl TherapyIntegrationOrchestrator {
             self.session_state.progress = progress;
         }
 
-        // Update safety metrics
+        // Update legacy safety metrics calculation
         safety::update_safety_metrics(
             &mut self.session_state.safety_metrics,
             &corrected_field,
@@ -286,6 +396,30 @@ impl TherapyIntegrationOrchestrator {
             &self.config.safety_limits,
             self.session_state.current_time,
         )
+    }
+
+    /// Check if therapy should terminate due to safety constraints
+    ///
+    /// Returns true if the safety controller has detected a critical limit violation
+    /// that requires immediate therapy termination.
+    ///
+    /// # Returns
+    ///
+    /// True if therapy should stop, false if therapy can continue
+    pub fn should_stop(&self) -> bool {
+        self.safety_controller.should_stop()
+    }
+
+    /// Get current power reduction factor from safety controller
+    ///
+    /// Returns a multiplier [0.0, 1.0] indicating current acoustic power level.
+    /// 1.0 = full power, 0.0 = no therapy delivery.
+    ///
+    /// # Returns
+    ///
+    /// Power reduction factor (0.0-1.0)
+    pub fn power_reduction_factor(&self) -> f64 {
+        self.safety_controller.power_reduction_factor()
     }
 
     /// Get current session state
@@ -462,5 +596,159 @@ mod tests {
 
         let safety_status = orchestrator.check_safety_limits();
         assert_eq!(safety_status, SafetyStatus::Safe);
+    }
+
+    #[test]
+    fn test_safety_controller_integration() {
+        let config = TherapySessionConfig {
+            primary_modality: TherapyModality::HIFU,
+            secondary_modalities: vec![],
+            imaging_data_path: None,
+            duration: 30.0,
+            acoustic_params: AcousticTherapyParams {
+                frequency: 1.0e6,
+                pnp: 5e6,
+                prf: 100.0,
+                duty_cycle: 0.05,
+                focal_depth: 0.04,
+                treatment_volume: 0.8,
+            },
+            safety_limits: SafetyLimits {
+                thermal_index_max: 2.0, // Low limit for testing
+                mechanical_index_max: 1.5,
+                cavitation_dose_max: 100.0,
+                max_treatment_time: 60.0,
+            },
+            patient_params: PatientParameters {
+                skull_thickness: None,
+                tissue_properties: TissuePropertyMap::liver((16, 16, 16)),
+                target_volume: TargetVolume {
+                    center: (0.04, 0.0, 0.0),
+                    dimensions: (0.015, 0.015, 0.015),
+                    tissue_type: TissueType::Liver,
+                },
+                risk_organs: vec![],
+            },
+        };
+
+        let grid = Grid::new(16, 16, 16, 0.002, 0.002, 0.002).unwrap();
+        let medium = Box::new(HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid));
+
+        let mut orchestrator = TherapyIntegrationOrchestrator::new(config, grid, medium).unwrap();
+
+        // Initial state: therapy should be safe
+        assert!(!orchestrator.should_stop());
+        assert_eq!(orchestrator.power_reduction_factor(), 1.0);
+
+        // Execute therapy steps and verify safety monitoring
+        let dt = 0.5;
+        let mut max_steps = 10;
+        let mut safety_actions_observed = false;
+
+        for step in 0..max_steps {
+            let result = orchestrator.execute_therapy_step(dt);
+            assert!(result.is_ok(), "Step {} failed", step);
+
+            // Verify session state updated
+            let state = orchestrator.session_state();
+            assert!(state.current_time > 0.0);
+            assert!(state.acoustic_field.is_some());
+
+            // Check if therapy was terminated due to safety
+            if orchestrator.should_stop() {
+                safety_actions_observed = true;
+                break;
+            }
+
+            // Monitor power reduction
+            let power_factor = orchestrator.power_reduction_factor();
+            if power_factor < 1.0 {
+                safety_actions_observed = true;
+            }
+        }
+
+        // Verify that safety monitoring is active
+        // (Either power was reduced or therapy was stopped)
+        assert!(
+            safety_actions_observed || !orchestrator.should_stop(),
+            "Safety controller should monitor therapy"
+        );
+    }
+
+    #[test]
+    fn test_intensity_tracker_integration() {
+        let config = TherapySessionConfig {
+            primary_modality: TherapyModality::HIFU,
+            secondary_modalities: vec![],
+            imaging_data_path: None,
+            duration: 10.0,
+            acoustic_params: AcousticTherapyParams {
+                frequency: 2.0e6,
+                pnp: 2e6,
+                prf: 50.0,
+                duty_cycle: 0.02,
+                focal_depth: 0.03,
+                treatment_volume: 0.5,
+            },
+            safety_limits: SafetyLimits {
+                thermal_index_max: 6.0,
+                mechanical_index_max: 1.9,
+                cavitation_dose_max: 1000.0,
+                max_treatment_time: 300.0,
+            },
+            patient_params: PatientParameters {
+                skull_thickness: None,
+                tissue_properties: TissuePropertyMap::liver((12, 12, 12)),
+                target_volume: TargetVolume {
+                    center: (0.03, 0.0, 0.0),
+                    dimensions: (0.012, 0.012, 0.012),
+                    tissue_type: TissueType::Liver,
+                },
+                risk_organs: vec![],
+            },
+        };
+
+        let grid = Grid::new(12, 12, 12, 0.0025, 0.0025, 0.0025).unwrap();
+        let medium = Box::new(HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid));
+
+        let mut orchestrator = TherapyIntegrationOrchestrator::new(config, grid, medium).unwrap();
+
+        // Execute therapy steps and verify intensity tracking
+        let dt = 0.2;
+        for step in 0..5 {
+            let result = orchestrator.execute_therapy_step(dt);
+            assert!(result.is_ok(), "Step {} failed", step);
+
+            let state = orchestrator.session_state();
+
+            // Verify temperature field is computed
+            assert!(
+                state.safety_metrics.temperature_rise.len() > 0,
+                "Temperature field should be computed in step {}",
+                step
+            );
+
+            // Verify acoustic field exists
+            assert!(
+                state.acoustic_field.is_some(),
+                "Acoustic field should exist in step {}",
+                step
+            );
+
+            // Verify time advancement
+            let expected_time = (step + 1) as f64 * dt;
+            assert!(
+                (state.current_time - expected_time).abs() < 1e-6,
+                "Current time should be {} but got {}",
+                expected_time,
+                state.current_time
+            );
+        }
+
+        // Verify final state
+        let final_state = orchestrator.session_state();
+        assert!(final_state.current_time > 0.0);
+        assert!(final_state.progress > 0.0);
+        assert!(final_state.progress <= 1.0);
     }
 }

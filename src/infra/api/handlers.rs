@@ -15,9 +15,12 @@ use axum::{
     response::Json as JsonResponse,
 };
 
-// Re-export clinical handlers for router setup
+// Explicit re-exports of clinical handlers for router setup
 #[cfg(feature = "pinn")]
-pub use crate::infra::api::clinical_handlers::*;
+pub use crate::infra::api::clinical_handlers::{
+    analyze_clinical, dicom_integrate, get_device_status, get_session_status, list_devices,
+    optimize_mobile, register_device,
+};
 
 /// Application state shared across handlers
 #[derive(Debug, Clone)]

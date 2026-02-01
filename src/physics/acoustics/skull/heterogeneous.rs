@@ -5,7 +5,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::physics::skull::SkullProperties;
+use crate::physics::acoustics::skull::SkullProperties;
 use ndarray::Array3;
 
 /// Heterogeneous skull model with spatially varying acoustic properties

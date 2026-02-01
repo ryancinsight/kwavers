@@ -5,5 +5,5 @@
 
 pub mod property_based;
 
-// Re-export primary testing framework
-pub use property_based::*;
+// Explicit re-exports of testing framework
+pub use property_based::{acoustic_properties, grid_properties, medium_properties};

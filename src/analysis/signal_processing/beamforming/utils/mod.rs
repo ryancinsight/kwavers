@@ -5,4 +5,5 @@
 
 pub mod steering;
 
-pub use steering::*;
+// Explicit re-exports of beamforming utilities
+pub use steering::{SteeringVector, SteeringVectorMethod};

@@ -13,7 +13,7 @@ use crate::math::numerics::operators::{
     StaggeredGridOperator,
 };
 use crate::math::simd_safe::SimdOps;
-use crate::physics::mechanics::acoustic_wave::SpatialOrder;
+use crate::physics::acoustics::mechanics::acoustic_wave::SpatialOrder;
 use log::info;
 use ndarray::{s, Array3, ArrayView3, Zip};
 use std::sync::Arc;

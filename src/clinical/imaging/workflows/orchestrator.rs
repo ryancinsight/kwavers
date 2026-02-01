@@ -10,8 +10,9 @@ use super::simulation::{
 use super::state::*;
 use crate::clinical::imaging::photoacoustic::PhotoacousticResult;
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::imaging::fusion::{FusedImageResult, FusionConfig};
 use crate::domain::imaging::ultrasound::elastography::ElasticityMap;
-use crate::physics::imaging::fusion::{FusedImageResult, FusionConfig, MultiModalFusion};
+use crate::physics::acoustics::imaging::fusion::MultiModalFusion;
 use ndarray::Array3;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};

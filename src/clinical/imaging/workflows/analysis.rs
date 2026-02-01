@@ -1,6 +1,6 @@
 use super::results::{DiagnosticRecommendation, DiagnosticUrgency};
 use crate::core::error::KwaversResult;
-use crate::physics::imaging::fusion::FusedImageResult;
+use crate::domain::imaging::fusion::FusedImageResult;
 use ndarray::Array3;
 use std::collections::HashMap;
 

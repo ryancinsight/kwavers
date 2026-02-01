@@ -21,6 +21,8 @@
 pub mod basic;
 pub mod complex;
 pub mod eigen;
+pub mod eigendecomposition;
+pub mod iterative;
 pub mod norms;
 pub mod sparse;
 
@@ -28,6 +30,7 @@ pub mod sparse;
 pub use basic::BasicLinearAlgebra;
 pub use complex::ComplexLinearAlgebra;
 pub use eigen::EigenDecomposition;
+pub use eigendecomposition::{EigenResult, EigenSolver, EigenSolverConfig};
 pub use norms::VectorOperations;
 
 // Backward compatibility alias

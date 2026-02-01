@@ -9,6 +9,7 @@
 //! Based on the Keller-Miksis equation and extended models from literature
 
 pub mod adaptive_integration; // NEW: Adaptive time-stepping for stiff ODEs
+pub mod bjerknes_forces; // NEW: Bjerknes forces for bubble-bubble interactions
 pub mod bubble_field;
 pub mod bubble_state;
 pub mod cavitation_control;
@@ -28,6 +29,7 @@ pub use adaptive_integration::{
     integrate_bubble_dynamics_adaptive, AdaptiveBubbleConfig, AdaptiveBubbleIntegrator,
     IntegrationStatistics,
 };
+pub use bjerknes_forces::{BjerknesCalculator, BjerknesConfig, BjerknesForce, InteractionType}; // NEW: Bubble-bubble interaction forces
 pub use bubble_field::{BubbleCloud, BubbleField, BubbleStateFields};
 pub use bubble_state::{BubbleParameters, BubbleState, GasSpecies};
 pub use cavitation_control::{
@@ -39,6 +41,8 @@ pub use imex_integration::{
     integrate_bubble_dynamics_imex, BubbleIMEXConfig, BubbleIMEXIntegrator,
 };
 pub use integration::integrate_bubble_dynamics_stable; // NEW: Extracted integration utilities
-pub use interactions::{BjerknesForce, BubbleInteractions, CollectiveEffects};
+pub use interactions::{
+    BjerknesForce as InteractionBjerknesForce, BubbleInteractions, CollectiveEffects,
+};
 pub use keller_miksis::KellerMiksisModel; // NEW: Modular Keller-Miksis solver
 pub use rayleigh_plesset::RayleighPlessetSolver;

@@ -9,7 +9,7 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::plugin::{PluginContext, PluginMetadata, PluginState};
 use crate::domain::source::Source;
-use crate::physics::mechanics::elastic_wave::{
+use crate::physics::acoustics::mechanics::elastic_wave::{
     ElasticStressFields, ElasticVelocityFields, ElasticWave,
 };
 use ndarray::{Array3, Array4};

@@ -58,6 +58,18 @@ pub struct OpticalPropertyData {
 }
 
 impl OpticalPropertyData {
+    /// Calculate reduced scattering coefficient μ_s' = μ_s(1-g)
+    pub fn reduced_scattering_coefficient(&self) -> f64 {
+        self.scattering_coefficient * (1.0 - self.anisotropy)
+    }
+
+    /// Get anisotropy factor (alias for backward compatibility)
+    pub fn anisotropy_factor(&self) -> f64 {
+        self.anisotropy
+    }
+}
+
+impl OpticalPropertyData {
     /// Construct with validation of physical constraints
     pub fn new(
         absorption_coefficient: f64,

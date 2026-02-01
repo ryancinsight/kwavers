@@ -1,5 +1,5 @@
 // physics/mechanics/viscosity/shear_viscosity.rs
-use crate::physics::mechanics::viscosity::ViscosityModel;
+use crate::physics::acoustics::mechanics::viscosity::ViscosityModel;
 use log::debug;
 
 #[derive(Debug)]

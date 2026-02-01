@@ -1,4 +1,8 @@
-//! Configuration types for multi-modal imaging fusion.
+//! Configuration types for multi-modal imaging fusion
+//!
+//! Note: FusionConfig and FusionMethod have been moved to domain::imaging::fusion
+//! for clean architecture compliance. This module now only contains physics-specific
+//! registration configuration..
 //!
 //! This module defines the configuration structures and enums that control
 //! how different imaging modalities are combined, including fusion methods,

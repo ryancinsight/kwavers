@@ -32,7 +32,13 @@
 //! - **ComplianceValidator**: IEC standard compliance checking
 //! - **AuditLogger**: Comprehensive safety event logging
 
+pub mod compliance;
 pub mod mechanical_index;
+
+pub use compliance::{
+    ComplianceAudit, ComplianceCheck as EnhancedComplianceCheck, ComplianceConfig,
+    ComplianceStatus, EnhancedComplianceValidator, SessionMetrics,
+};
 
 use crate::clinical::therapy::parameters::TherapyParameters;
 use crate::core::error::{KwaversError, KwaversResult};

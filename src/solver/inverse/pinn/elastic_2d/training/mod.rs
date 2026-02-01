@@ -28,7 +28,15 @@ pub mod r#loop;
 pub mod optimizer;
 pub mod scheduler;
 
-// Re-export main types and functions for convenience
-pub use data::*;
-pub use optimizer::*;
-pub use scheduler::*;
+// ============================================================================
+// EXPLICIT RE-EXPORTS (PINN Training API)
+// ============================================================================
+
+/// Training data and metrics
+pub use data::{TrainingData, TrainingMetrics};
+
+/// Optimization algorithms and state
+pub use optimizer::{OptimizerAlgorithm, PINNOptimizer, PersistentAdamState};
+
+/// Learning rate scheduling
+pub use scheduler::{LRScheduler, LearningRateScheduler};

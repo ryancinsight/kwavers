@@ -54,6 +54,6 @@
 #[cfg(all(feature = "pinn", feature = "api"))]
 pub mod aws;
 
-// Re-export AWS provider implementation
+// Explicit re-exports of AWS provider functions
 #[cfg(all(feature = "pinn", feature = "api"))]
-pub use aws::*;
+pub use aws::{deploy_to_aws, scale_aws_deployment, terminate_aws_deployment};

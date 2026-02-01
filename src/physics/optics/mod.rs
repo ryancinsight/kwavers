@@ -20,9 +20,15 @@ pub mod sonoluminescence;
 
 // Re-export commonly used types
 pub use diffusion::{LightDiffusion, OpticalProperties};
-pub use map_builder::{
-    Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, PropertyStats, Region,
+
+// Re-export domain types for backwards compatibility
+pub use crate::domain::medium::optical_map::{
+    Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, Region,
 };
+
+// Re-export physics-specific analysis types
+pub use map_builder::PropertyStats;
+
 pub use monte_carlo::{MCResult, MonteCarloSolver, PhotonSource, SimulationConfig};
 pub use nonlinear::{KerrEffect, PhotoacousticConversion};
 pub use polarization::{

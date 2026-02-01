@@ -19,6 +19,7 @@
 
 pub mod adaptive_selection;
 pub mod bem_fem_coupling; // BEM-FEM coupling for unbounded domains
+pub mod bem_fem_enhanced; // Enhanced BEM-FEM with Burton-Miller formulation
 pub mod config;
 pub mod coupling; // Domain coupling interface
 pub mod domain_decomposition;
@@ -32,6 +33,9 @@ pub mod validation;
 
 // Re-export main types
 pub use bem_fem_coupling::{BemFemCoupler, BemFemCouplingConfig, BemFemInterface, BemFemSolver};
+pub use bem_fem_enhanced::{
+    EnhancedBemFemConfig, EnhancedBemFemSolver, InterfaceQuality, RefinementStep, ValidationResult,
+};
 pub use config::{
     CouplingInterfaceConfig, DecompositionStrategy, HybridConfig, OptimizationConfig,
     ValidationConfig,

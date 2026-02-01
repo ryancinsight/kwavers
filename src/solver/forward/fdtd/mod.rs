@@ -86,16 +86,24 @@
 //! - YAGNI: Implements only necessary features for acoustic simulation
 
 // Public modules
+pub mod avx512_stencil; // Phase 9.1: AVX-512 optimized FDTD stencil
 pub mod config;
+pub mod dispatch; // Phase 9.1: Runtime SIMD strategy dispatch
 pub mod electromagnetic;
 pub mod metrics;
 pub mod plugin;
+pub mod simd_stencil;
 pub mod solver;
 
 // Re-exports for convenience
+pub use avx512_stencil::{Avx512Config, Avx512Metrics, Avx512StencilProcessor};
 pub use config::FdtdConfig;
+pub use dispatch::{
+    get_simd_config, init_simd, DispatchMetrics, FdtdStencilDispatcher, StencilStrategy,
+};
 pub use electromagnetic::ElectromagneticFdtdSolver;
 pub use plugin::FdtdPlugin;
+pub use simd_stencil::SimdStencilProcessor;
 pub use solver::FdtdGpuAccelerator;
 pub use solver::FdtdSolver;
 pub use source_handler::SourceHandler;

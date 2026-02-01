@@ -5,6 +5,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
+use crate::physics::acoustics::analytical::patterns::phase_shifting::core::wrap_phase;
 use ndarray::Array3;
 use num_complex::Complex;
 
@@ -177,14 +178,8 @@ impl TranscranialAberrationCorrection {
         let mut residual_errors = Vec::new();
 
         for (&delay, &phase) in delays.iter().zip(phases.iter()) {
-            let residual = (delay + phase) % (2.0 * std::f64::consts::PI);
-            let residual_wrapped = if residual > std::f64::consts::PI {
-                residual - 2.0 * std::f64::consts::PI
-            } else if residual < -std::f64::consts::PI {
-                residual + 2.0 * std::f64::consts::PI
-            } else {
-                residual
-            };
+            // Use SSOT wrap_phase function to wrap to [-π, π] range
+            let residual_wrapped = wrap_phase(delay + phase);
             residual_errors.push(residual_wrapped.abs());
         }
 

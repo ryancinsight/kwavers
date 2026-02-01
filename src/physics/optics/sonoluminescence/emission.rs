@@ -165,14 +165,20 @@ impl SpectralField {
 }
 
 /// Integrated bubble dynamics and sonoluminescence emission
+///
+/// This struct encapsulates the sonoluminescence emission calculations and
+/// field management. Bubble dynamics parameters and models are passed as
+/// arguments to simulation methods, following the dependency injection pattern
+/// to maintain clean layer separation.
+///
+/// **Architecture Note**: Bubble dynamics models are NOT stored in this struct.
+/// Instead, they are passed as parameters to `simulate_step()`. This maintains
+/// the 9-layer architecture where optics layer depends on physics layer, not vice versa.
+/// See `simulate_step()` documentation for the expected bubble dynamics parameters.
 #[derive(Debug)]
 pub struct IntegratedSonoluminescence {
     /// Emission calculator
     pub emission: SonoluminescenceEmission,
-    /// Bubble dynamics model (Keller-Miksis equation)
-    pub bubble_model: KellerMiksisModel,
-    /// Bubble parameters
-    pub bubble_params: BubbleParameters,
     /// Acoustic pressure field driving bubble oscillations (Pa)
     pub acoustic_pressure: Array3<f64>,
     /// Temperature field from bubble dynamics (K)
@@ -212,6 +218,15 @@ pub struct SonoluminescenceEmission {
 
 impl IntegratedSonoluminescence {
     /// Create new integrated sonoluminescence calculator
+    ///
+    /// **Parameters**:
+    /// - `grid_shape`: (nx, ny, nz) spatial grid dimensions
+    /// - `bubble_params`: BubbleParameters used to initialize field values
+    /// - `emission_params`: EmissionParameters for light emission calculation
+    ///
+    /// **Note**: The `bubble_params` argument is used only to initialize the
+    /// radius field to the equilibrium radius (r0). The bubble dynamics model
+    /// itself is NOT stored. Pass it to `simulate_step()` instead.
     #[must_use]
     pub fn new(
         grid_shape: (usize, usize, usize),
@@ -219,12 +234,9 @@ impl IntegratedSonoluminescence {
         emission_params: EmissionParameters,
     ) -> Self {
         let emission = SonoluminescenceEmission::new(grid_shape, emission_params);
-        let bubble_model = KellerMiksisModel::new(bubble_params.clone());
 
         Self {
             emission,
-            bubble_model,
-            bubble_params: bubble_params.clone(),
             acoustic_pressure: Array3::zeros(grid_shape),
             temperature_field: Array3::from_elem(grid_shape, 300.0), // Ambient temperature
             pressure_field: Array3::from_elem(grid_shape, 101325.0), // Atmospheric pressure
@@ -247,14 +259,30 @@ impl IntegratedSonoluminescence {
     /// with the sonoluminescence emission models to provide physically accurate
     /// light emission calculations.
     ///
+    /// **Architecture Pattern**: Bubble dynamics models are passed as parameters
+    /// (dependency injection) rather than stored in `self`. This maintains clean
+    /// layer separation: optics layer uses physics layer models without owning them.
+    ///
     /// The process:
     /// 1. Use acoustic pressure to drive bubble oscillations (Keller-Miksis)
     /// 2. Calculate bubble wall temperature and pressure from dynamics
     /// 3. Use temperature/pressure/radius for light emission calculations
     ///
+    /// **Parameters**:
+    /// - `dt`: Time step (s)
+    /// - `time`: Current simulation time (s)
+    /// - `bubble_params`: Physical bubble parameters (from physics layer)
+    /// - `bubble_model`: Keller-Miksis dynamics model (from physics layer)
+    ///
     /// Reference: Brenner et al. (2002), "Single-bubble sonoluminescence"
-    pub fn simulate_step(&mut self, dt: f64, time: f64) -> KwaversResult<()> {
-        let omega = 2.0 * std::f64::consts::PI * self.bubble_params.driving_frequency;
+    pub fn simulate_step(
+        &mut self,
+        dt: f64,
+        time: f64,
+        bubble_params: &BubbleParameters,
+        bubble_model: &KellerMiksisModel,
+    ) -> KwaversResult<()> {
+        let omega = 2.0 * std::f64::consts::PI * bubble_params.driving_frequency;
 
         // For each spatial point, simulate bubble dynamics
         let (nx, ny, nz) = self.temperature_field.dim();
@@ -265,7 +293,7 @@ impl IntegratedSonoluminescence {
                     let p_amp = self.acoustic_pressure[[i, j, k]];
 
                     // Create bubble state for this location
-                    let mut state = BubbleState::new(&self.bubble_params);
+                    let mut state = BubbleState::new(bubble_params);
                     state.radius = self.radius_field[[i, j, k]];
                     state.wall_velocity = self.wall_velocity_field[[i, j, k]];
                     state.temperature = self.temperature_field[[i, j, k]];
@@ -278,9 +306,8 @@ impl IntegratedSonoluminescence {
 
                     // k1
                     let dp_dt_k1 = p_amp * omega * (omega * time).cos();
-                    let k1_v = self
-                        .bubble_model
-                        .calculate_acceleration(&mut state, p_amp, dp_dt_k1, time)?;
+                    let k1_v =
+                        bubble_model.calculate_acceleration(&mut state, p_amp, dp_dt_k1, time)?;
                     let k1_r = state.wall_velocity;
 
                     // k2
@@ -290,9 +317,9 @@ impl IntegratedSonoluminescence {
                     let mut state_k2 = state.clone();
                     state_k2.radius += 0.5 * dt * k1_r;
                     state_k2.wall_velocity += 0.5 * dt * k1_v;
-                    self.update_thermodynamics(&mut state_k2);
+                    self.update_thermodynamics(&mut state_k2, bubble_params);
 
-                    let k2_v = self.bubble_model.calculate_acceleration(
+                    let k2_v = bubble_model.calculate_acceleration(
                         &mut state_k2,
                         p_amp,
                         dp_dt_k2,
@@ -307,9 +334,9 @@ impl IntegratedSonoluminescence {
                     let mut state_k3 = state.clone();
                     state_k3.radius += 0.5 * dt * k2_r;
                     state_k3.wall_velocity += 0.5 * dt * k2_v;
-                    self.update_thermodynamics(&mut state_k3);
+                    self.update_thermodynamics(&mut state_k3, bubble_params);
 
-                    let k3_v = self.bubble_model.calculate_acceleration(
+                    let k3_v = bubble_model.calculate_acceleration(
                         &mut state_k3,
                         p_amp,
                         dp_dt_k3,
@@ -324,9 +351,9 @@ impl IntegratedSonoluminescence {
                     let mut state_k4 = state.clone();
                     state_k4.radius += dt * k3_r;
                     state_k4.wall_velocity += dt * k3_v;
-                    self.update_thermodynamics(&mut state_k4);
+                    self.update_thermodynamics(&mut state_k4, bubble_params);
 
-                    let k4_v = self.bubble_model.calculate_acceleration(
+                    let k4_v = bubble_model.calculate_acceleration(
                         &mut state_k4,
                         p_amp,
                         dp_dt_k4,
@@ -343,10 +370,10 @@ impl IntegratedSonoluminescence {
                     // Apply updates to state
                     state.radius = new_radius;
                     state.wall_velocity = new_velocity;
-                    self.update_thermodynamics(&mut state);
+                    self.update_thermodynamics(&mut state, bubble_params);
 
                     // Calculate auxiliary fields
-                    let compression_ratio = (self.bubble_params.r0 / new_radius).powi(3);
+                    let compression_ratio = (bubble_params.r0 / new_radius).powi(3);
 
                     // Particle velocity for Cherenkov (thermal electrons + wall motion)
                     // Use electron mass (9.109e-31 kg) instead of ion mass for radiation-relevant velocity
@@ -385,19 +412,24 @@ impl IntegratedSonoluminescence {
     }
 
     /// Helper to update thermodynamic state (T, P) based on current Radius
+    ///
     /// Uses adiabatic assumption: T ∝ R^(3(1-γ))
-    fn update_thermodynamics(&self, state: &mut BubbleState) {
+    ///
+    /// **Parameters**:
+    /// - `state`: BubbleState to update (temperature and pressure)
+    /// - `bubble_params`: Physical bubble parameters (from physics layer)
+    fn update_thermodynamics(&self, state: &mut BubbleState, bubble_params: &BubbleParameters) {
         // Prevent non-physical radius
         if state.radius <= 0.0 {
             state.radius = 1e-9; // Minimum radius to avoid NaN
         }
 
-        let gamma = self.bubble_params.gamma;
+        let gamma = bubble_params.gamma;
 
         // T = T0 * (R0/R)^(3(gamma-1))
         let adiabatic_exponent = 3.0 * (gamma - 1.0);
-        let radius_ratio = self.bubble_params.r0 / state.radius;
-        state.temperature = self.bubble_params.t0 * radius_ratio.powf(adiabatic_exponent);
+        let radius_ratio = bubble_params.r0 / state.radius;
+        state.temperature = bubble_params.t0 * radius_ratio.powf(adiabatic_exponent);
 
         // P = P0 * (R0/R)^(3gamma)
         // Note: This assumes P_gas >> P_vapor for simplicity in this helper.
@@ -405,7 +437,7 @@ impl IntegratedSonoluminescence {
         // But for adiabatic RK4 step, this is consistent with the physics model assumption.
         let compression_ratio = radius_ratio.powi(3);
         state.pressure_internal =
-            self.bubble_params.initial_gas_pressure * compression_ratio.powf(gamma);
+            bubble_params.initial_gas_pressure * compression_ratio.powf(gamma);
     }
 
     /// Get the current emission field
@@ -919,6 +951,7 @@ mod tests {
     fn test_bubble_dynamics_boundary_conditions() {
         // Test that bubble dynamics respect physical boundary conditions
         let params = BubbleParameters::default();
+        let bubble_model = KellerMiksisModel::new(params.clone());
         let mut integrated = IntegratedSonoluminescence::new(
             (5, 5, 5),
             params.clone(),
@@ -932,7 +965,7 @@ mod tests {
         // Run a few simulation steps
         for step in 0..10 {
             integrated
-                .simulate_step(1e-9, step as f64 * 1e-9)
+                .simulate_step(1e-9, step as f64 * 1e-9, &params, &bubble_model)
                 .expect("simulate_step should succeed");
         }
 

@@ -20,6 +20,7 @@ pub mod homogeneous;
 pub mod interface;
 pub mod material_fields;
 pub mod optical;
+pub mod optical_map;
 pub mod properties;
 pub mod thermal;
 pub mod traits;
@@ -37,6 +38,7 @@ pub use config::{InterfaceTypeParameters, LayerParameters, MediumParameters, Med
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
 pub use homogeneous::HomogeneousMedium;
 pub use material_fields::MaterialFields;
+pub use optical_map::{Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, Region};
 // pub use simulation_config::MediumConfig;
 pub use builder::MediumBuilder;
 pub use validation_simulation::MediumValidator;

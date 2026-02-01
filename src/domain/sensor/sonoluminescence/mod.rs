@@ -4,4 +4,7 @@
 
 pub mod detector;
 
-pub use detector::*;
+// Explicit re-exports of sonoluminescence detector types
+pub use detector::{
+    DetectorConfig, SonoluminescenceDetector, SonoluminescenceEvent, SonoluminescenceStatistics,
+};

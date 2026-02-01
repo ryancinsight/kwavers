@@ -249,9 +249,12 @@ mod plotting_impl {
     }
 }
 
-// Re-export functions when plotly feature is enabled
+// Explicit re-exports of plotting functions when feature is enabled
 #[cfg(feature = "plotting")]
-pub use plotting_impl::*;
+pub use plotting_impl::{
+    plot_field_comparison, plot_positions, plot_pressure_field_2d, plot_pressure_field_3d,
+    plot_recorder_data, plot_temporal_evolution,
+};
 
 // Provide fallback implementations when plotly feature is disabled
 #[cfg(not(feature = "plotting"))]

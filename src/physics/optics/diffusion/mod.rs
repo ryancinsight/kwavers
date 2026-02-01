@@ -31,7 +31,7 @@ use log::debug;
 use ndarray::{Array3, Array4, Axis};
 
 use crate::core::constants::optical::{DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF};
-use crate::physics::traits::LightDiffusionModelTrait;
+use crate::physics::acoustics::traits::LightDiffusionModelTrait;
 
 /// Physics-layer optical properties bridge for photon diffusion calculations
 ///

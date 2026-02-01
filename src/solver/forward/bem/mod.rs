@@ -47,6 +47,8 @@
 //! let solution = solver.solve(wavenumber, source_terms)?;
 //! ```
 
+pub mod burton_miller;
 pub mod solver;
 
+pub use burton_miller::{BurtonMillerAssembler, BurtonMillerConfig};
 pub use solver::{BemConfig, BemSolver};

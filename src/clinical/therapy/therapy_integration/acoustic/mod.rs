@@ -45,7 +45,8 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;
-use crate::physics::mechanics::acoustic_wave::SpatialOrder;
+// SpatialOrder is a domain-level discretization parameter
+use crate::domain::grid::operators::coefficients::SpatialOrder;
 use crate::simulation::backends::acoustic::{AcousticSolverBackend, FdtdBackend};
 use ndarray::Array3;
 use std::sync::Arc;

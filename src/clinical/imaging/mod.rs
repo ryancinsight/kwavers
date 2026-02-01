@@ -15,4 +15,9 @@ pub mod workflows;
 // DOI: 10.1038/s41598-021-94764-7
 pub mod functional_ultrasound;
 
-pub use workflows::*;
+// Explicit re-exports of clinical workflow types
+pub use workflows::{
+    ClinicalApplication, ClinicalExaminationResult, ClinicalProtocol, ClinicalWorkflowConfig,
+    ClinicalWorkflowOrchestrator, DiagnosticRecommendation, DiagnosticUrgency, PerformanceMetrics,
+    PlaneWaveCompound, PlaneWaveConfig, QualityPreference, WorkflowPriority, WorkflowState,
+};

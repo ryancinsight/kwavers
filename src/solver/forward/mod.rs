@@ -5,6 +5,7 @@
 
 pub mod acoustic;
 pub mod bem;
+pub mod coupled;
 pub mod elastic;
 pub mod elastic_wave;
 pub mod fdtd;
@@ -21,6 +22,7 @@ pub mod thermal;
 pub mod thermal_diffusion;
 
 pub use bem::BemSolver;
+pub use coupled::{ThermalAcousticConfig, ThermalAcousticCoupler};
 pub use fdtd::FdtdSolver;
 pub use helmholtz::born_series::{
     ConvergentBornSolver, ConvergentBornStats, IterativeBornSolver, IterativeBornStats,

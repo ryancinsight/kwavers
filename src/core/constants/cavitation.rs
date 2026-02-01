@@ -12,6 +12,9 @@ pub const SURFACE_TENSION_WATER: f64 = 0.0728;
 /// Viscosity of water at 20°C (Pa·s)
 pub const VISCOSITY_WATER: f64 = 1.002e-3;
 
+/// Vapor pressure of water at 20°C (Pa)
+pub const VAPOR_PRESSURE_WATER: f64 = 2339.0;
+
 /// Polytrophic exponent for air
 pub const POLYTROPIC_EXPONENT_AIR: f64 = 1.4;
 

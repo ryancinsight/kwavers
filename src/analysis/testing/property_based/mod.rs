@@ -5,5 +5,5 @@
 
 pub mod acoustic;
 
-// Re-export key testing utilities
+// Explicit re-exports of property-based test generators
 pub use acoustic::{acoustic_properties, grid_properties, medium_properties};

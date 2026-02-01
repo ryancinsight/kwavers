@@ -63,6 +63,9 @@ pub mod physics;
 pub mod simulation;
 pub mod solver;
 
+// Infrastructure and hardware abstraction layer
+pub mod infrastructure;
+
 // API surface: domain-relevant types re-exported at crate boundaries for ergonomics
 pub use crate::core::error::{KwaversError, KwaversResult};
 pub use crate::domain::grid::Grid;
@@ -108,7 +111,8 @@ pub mod time {
 
 /// Core infrastructure re-exports for testing support
 pub mod testing {
-    pub use crate::analysis::testing::*;
+    // Explicit re-exports of testing utilities
+    pub use crate::analysis::testing::{acoustic_properties, grid_properties, medium_properties};
 }
 
 pub use analysis::ml;

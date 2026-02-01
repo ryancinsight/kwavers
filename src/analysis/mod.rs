@@ -1,4 +1,5 @@
 pub mod conservation;
+pub mod distributed_processing; // Multi-threaded pipeline optimization
 pub mod imaging;
 pub mod ml;
 pub mod performance;

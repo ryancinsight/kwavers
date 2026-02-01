@@ -1,4 +1,3 @@
-
 //! FDTD Backend Adapter for Simulation Layer
 //!
 //! This module provides an adapter that wraps the low-level `FdtdSolver` to
@@ -58,7 +57,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::{GridSource, Source};
-use crate::physics::mechanics::acoustic_wave::SpatialOrder;
+use crate::physics::acoustics::mechanics::acoustic_wave::SpatialOrder;
 use crate::solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use ndarray::Array3;
 use std::sync::Arc;
