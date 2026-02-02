@@ -1,10 +1,69 @@
 # Development Backlog - Kwavers Acoustic Simulation Library
 
-**Last Updated**: 2026-02-04  
-**Current Sprint**: Sprint 215 Session 1 ✅ COMPLETE (Gradient Infrastructure, PINN User Guide)
-**Next Sprint**: Sprint 215 Session 2 - P0 Critical Fixes (Energy Conservation, Material Properties)
+**Last Updated**: 2026-01-31  
+**Current Sprint**: Sprint 216 Session 1 ✅ COMPLETE (Temperature-Dependent Properties, Compilation Fixes)
+**Next Sprint**: Sprint 216 Session 2 - P0 Energy Conservation & Diagnostics
 
-## 🎯 SPRINT 215: COMPREHENSIVE AUDIT, OPTIMIZATION & RESEARCH INTEGRATION 🔄 IN PROGRESS (2026-02-04)
+## 🎯 SPRINT 216: P0 CRITICAL PHYSICS FIXES & CODE QUALITY ✅ SESSION 1 COMPLETE (2026-01-31)
+
+### Sprint 216 Session 1: Compilation Fixes & Temperature-Dependent Properties ✅ COMPLETE (2026-01-31)
+
+**Objective**: Fix compilation errors, implement temperature-dependent material properties (P0 critical), and establish clean baseline for physics fixes.
+
+**Achievements**:
+- ✅ **Compilation Fixes**: Fixed 11 `crate::infra::` path errors → `crate::infrastructure::`
+- ✅ **GPU Fixes**: Fixed 2 thermal acoustic parameter mismatches (queue parameter naming)
+- ✅ **Temperature-Dependent Properties**: Full Duck (1990) implementation with mathematical validation
+- ✅ **Sound Speed Model**: c(T) = c₀[1 + β(T - T₀)] with tissue-specific coefficients
+- ✅ **Density Model**: ρ(T) = ρ₀[1 - α_T(T - T₀)] with thermal expansion
+- ✅ **Absorption Model**: α(T,f) = α₀ f^y [1 + γ(T - T₀)] with frequency dependence
+- ✅ **Tissue Presets**: Water, soft tissue, liver, muscle, fat with literature-validated parameters
+- ✅ **Test Coverage**: 9 new property tests added (1979/1979 total, 100% pass rate)
+- ✅ **Zero Regressions**: All existing tests remain green
+
+**Key Deliverables**:
+- Modified: `src/infrastructure/api/clinical_handlers.rs` (8 path corrections)
+- Modified: `src/infrastructure/api/router.rs` (4 path corrections)
+- Modified: `src/infrastructure/cloud/providers/aws.rs` (3 path corrections)
+- Modified: `src/gpu/thermal_acoustic.rs` (2 parameter fixes)
+- Modified: `src/domain/medium/properties/acoustic.rs` (added `fat()` preset)
+- Created: `src/domain/medium/properties/temperature_dependent.rs` (615 lines)
+- Created: `docs/sprints/SPRINT_216_SESSION_1_COMPREHENSIVE_AUDIT.md` (581 lines)
+
+**Mathematical Foundation**:
+```
+Sound Speed: c(T) = c₀[1 + β(T - T₀)]
+  β_water = 0.0020 K⁻¹ (Duck 1990)
+  β_tissue = 0.0016 K⁻¹ (Duck 1990)
+
+Density: ρ(T) = ρ₀[1 - α_T(T - T₀)]
+  α_T,water = 2.1×10⁻⁴ K⁻¹
+  α_T,tissue = 3.7×10⁻⁴ K⁻¹
+
+Absorption: α(T,f) = α₀ f^y [1 + γ(T - T₀)]
+  γ_tissue = 0.01-0.03 K⁻¹ (Duck 1990)
+
+Thermal Conductivity: k(T) = k₀[1 + κ₁(T - T₀) + κ₂(T - T₀)²]
+```
+
+**References Implemented**:
+- Duck (1990) "Physical Properties of Tissues" - Tables 2.1, 4.1-4.3
+- Bamber & Hill (1979) Ultrasound Med Biol 5(2):149-157
+- Szabo (2004) "Diagnostic Ultrasound Imaging"
+
+**Impact**:
+- ✅ Enables accurate thermal-acoustic coupling (P0 requirement)
+- ✅ Foundation for HIFU and thermal ablation simulations
+- ✅ Literature-validated tissue models for clinical applications
+- ✅ Type-safe temperature-dependent property access
+
+**Effort**: 3 hours (1h fixes + 2h temperature properties)
+
+**Next Steps**: Sprint 216 Session 2 - Energy Conservation & Conservation Diagnostics
+
+---
+
+## 🎯 SPRINT 215: COMPREHENSIVE AUDIT, OPTIMIZATION & RESEARCH INTEGRATION ✅ COMPLETE (2026-02-04)
 
 ### Sprint 215 Session 1: PINN Enhancement & Documentation ✅ COMPLETE (2026-02-04)
 
@@ -43,7 +102,7 @@
 
 **Effort**: 4 hours (1.5h infrastructure + 2.5h guide)
 
-**Next Steps**: Sprint 215 Session 2 - P0 Critical Fixes (Energy Conservation)
+**Next Steps**: Completed → Sprint 216 initiated for P0 physics fixes
 
 ---
 
