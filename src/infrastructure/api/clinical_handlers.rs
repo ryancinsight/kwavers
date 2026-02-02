@@ -212,7 +212,8 @@ pub struct DICOMService {
     /// Connected DICOM nodes
     pub dicom_nodes: HashMap<String, DICOMNode>,
     /// Cache for parsed studies
-    study_cache: std::sync::Mutex<HashMap<String, std::sync::Arc<crate::infra::io::DicomStudy>>>,
+    study_cache:
+        std::sync::Mutex<HashMap<String, std::sync::Arc<crate::infrastructure::io::DicomStudy>>>,
 }
 
 impl DICOMService {
@@ -231,7 +232,7 @@ impl DICOMService {
     pub fn read_study(
         &self,
         study_uid: &str,
-    ) -> KwaversResult<Option<std::sync::Arc<crate::infra::io::DicomStudy>>> {
+    ) -> KwaversResult<Option<std::sync::Arc<crate::infrastructure::io::DicomStudy>>> {
         // Check cache first
         if let Ok(cache) = self.study_cache.lock() {
             if let Some(study) = cache.get(study_uid) {
@@ -239,7 +240,7 @@ impl DICOMService {
             }
         }
 
-        let dicom_reader = crate::infra::io::DicomReader::new();
+        let dicom_reader = crate::infrastructure::io::DicomReader::new();
 
         // Search through configured DICOM nodes for storage directories
         for node in self.dicom_nodes.values() {
@@ -278,7 +279,7 @@ impl DICOMService {
         &self,
         study_uid: &str,
         series_uid: &str,
-    ) -> KwaversResult<Option<crate::infra::io::DicomSeries>> {
+    ) -> KwaversResult<Option<crate::infrastructure::io::DicomSeries>> {
         if let Some(study) = self.read_study(study_uid)? {
             let series = study
                 .series
@@ -301,7 +302,7 @@ impl DICOMService {
         study_uid: &str,
         series_uid: &str,
         instance_uid: &str,
-    ) -> KwaversResult<Option<crate::infra::io::DicomObject>> {
+    ) -> KwaversResult<Option<crate::infrastructure::io::DicomObject>> {
         if let Some(study) = self.read_study(study_uid)? {
             if let Some(series) = study
                 .series
@@ -672,9 +673,13 @@ pub async fn dicom_integrate(
 
     for (key, value) in &dicom_obj.metadata {
         let api_value = match value {
-            crate::infra::io::DicomValue::String(s) => crate::api::DICOMValue::String(s.clone()),
-            crate::infra::io::DicomValue::Integer(i) => crate::api::DICOMValue::Integer(*i),
-            crate::infra::io::DicomValue::Float(f) => crate::api::DICOMValue::Number(*f),
+            crate::infrastructure::io::DicomValue::String(s) => {
+                crate::api::DICOMValue::String(s.clone())
+            }
+            crate::infrastructure::io::DicomValue::Integer(i) => {
+                crate::api::DICOMValue::Integer(*i)
+            }
+            crate::infrastructure::io::DicomValue::Float(f) => crate::api::DICOMValue::Number(*f),
         };
         metadata.insert(key.clone(), api_value);
     }

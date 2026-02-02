@@ -80,7 +80,7 @@ pub async fn deploy_to_aws<B: burn::tensor::backend::AutodiffBackend>(
     _model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
     config: &HashMap<String, String>,
     deployment_config: &DeploymentConfig,
-    model_data: &crate::infra::cloud::ModelDeploymentData,
+    model_data: &crate::infrastructure::cloud::ModelDeploymentData,
 ) -> KwaversResult<DeploymentHandle> {
     use aws_config::BehaviorVersion;
     use aws_sdk_autoscaling::Client as AutoScalingClient;
@@ -228,7 +228,7 @@ pub async fn deploy_to_aws<B: burn::tensor::backend::AutodiffBackend>(
 
     Ok(DeploymentHandle {
         id: deployment_id,
-        provider: crate::infra::cloud::CloudProvider::AWS,
+        provider: crate::infrastructure::cloud::CloudProvider::AWS,
         endpoint: endpoint_url,
         status: DeploymentStatus::Active,
         metrics: Some(DeploymentMetrics::zero(
@@ -486,6 +486,6 @@ pub async fn terminate_aws_deployment(
 mod tests {
     #[test]
     fn test_aws_provider_compilation() {
-        let _ = crate::infra::cloud::CloudProvider::AWS;
+        let _ = crate::infrastructure::cloud::CloudProvider::AWS;
     }
 }

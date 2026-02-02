@@ -187,12 +187,12 @@ mod tests {
     impl TrainingExecutor for TestTrainingExecutor {
         fn execute(
             &self,
-            _request: crate::infra::api::PINNTrainingRequest,
-            _progress_sender: mpsc::Sender<crate::infra::api::TrainingProgress>,
-        ) -> crate::infra::api::job_manager::TrainingFuture {
+            _request: crate::infrastructure::api::PINNTrainingRequest,
+            _progress_sender: mpsc::Sender<crate::infrastructure::api::TrainingProgress>,
+        ) -> crate::infrastructure::api::job_manager::TrainingFuture {
             Box::pin(async move {
-                Err(crate::infra::api::APIError {
-                    error: crate::infra::api::APIErrorType::InternalError,
+                Err(crate::infrastructure::api::APIError {
+                    error: crate::infrastructure::api::APIErrorType::InternalError,
                     message: "Test training executor invoked".to_string(),
                     details: None,
                 })

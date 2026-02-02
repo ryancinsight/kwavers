@@ -370,7 +370,7 @@ impl GpuThermalAcousticSolver {
         config.validate()?;
 
         // Create buffers
-        let buffers = GpuThermalAcousticBuffers::new(device, &config)?;
+        let buffers = GpuThermalAcousticBuffers::new(device, queue, &config)?;
 
         // Create shader module with fused kernel
         let shader_source = Self::create_fused_shader();
@@ -758,7 +758,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     /// Execute one time step of coupled simulation
-    pub fn step(&self, device: &wgpu::Device, _queue: &wgpu::Queue) -> KwaversResult<()> {
+    pub fn step(&self, device: &wgpu::Device, queue: &wgpu::Queue) -> KwaversResult<()> {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Thermal-Acoustic Step Encoder"),
         });
