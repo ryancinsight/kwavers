@@ -7,21 +7,30 @@
 //! - **Data Persistence**: Patient records and treatment histories
 //! - **System Monitoring**: Performance metrics and diagnostic logging
 //! - **Configuration**: System-wide settings and device profiles
+//! - **API Services**: RESTful API for model training and inference
+//! - **Cloud Integration**: AWS, Azure, GCP deployment and orchestration
+//! - **I/O Operations**: DICOM integration and data formats
 //!
 //! ## Layer Position
 //!
 //! ```
-//! Application Layer (Clinical workflows, user interfaces)
+//! Layer 8: Infrastructure (Top layer)
 //!         ↓
-//! Infrastructure Layer (Hardware abstraction, data storage)
+//! Layer 7: Analysis (Post-processing)
 //!         ↓
-//! Clinical Layer (Safety, reconstruction, therapy)
+//! Layer 6: Clinical (Medical applications)
 //!         ↓
-//! Domain Layer (Abstractions, business rules)
+//! Layer 5: Simulation (Orchestration)
 //!         ↓
-//! Solver Layer (Algorithms, numerical methods)
+//! Layer 4: Solver (Algorithms)
 //!         ↓
-//! Core Layer (Types, errors, utilities)
+//! Layer 3: Physics (Implementation)
+//!         ↓
+//! Layer 2: Domain (SSOT)
+//!         ↓
+//! Layer 1: Math (Primitives)
+//!         ↓
+//! Layer 0: Core (Foundation)
 //! ```
 //!
 //! ## Architecture Principles
@@ -31,5 +40,14 @@
 //! - **Reliability**: Graceful degradation and error recovery
 //! - **Traceability**: Complete audit trail for regulatory compliance
 //! - **Performance**: Minimal overhead for real-time operations
+//! - **Service Orientation**: RESTful APIs for enterprise integration
+
+#[cfg(feature = "api")]
+pub mod api;
+
+#[cfg(feature = "cloud")]
+pub mod cloud;
 
 pub mod device;
+pub mod io;
+pub mod runtime;

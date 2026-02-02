@@ -28,12 +28,11 @@
 //! - Reconstruction: Time-of-flight method with phase gradient refinement
 
 use kwavers::domain::grid::Grid;
-use kwavers::domain::imaging::ultrasound::elastography::InversionMethod;
+use kwavers::domain::imaging::ultrasound::elastography::{ElasticityMap, InversionMethod};
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::imaging::elastography::displacement::DisplacementEstimator;
 use kwavers::physics::imaging::elastography::radiation_force::PushPulseParameters;
 use kwavers::physics::imaging::elastography::AcousticRadiationForce;
-use kwavers::physics::imaging::ElasticityMap;
 use kwavers::solver::forward::elastic::swe::{ElasticWaveConfig, ElasticWaveSolver};
 use kwavers::solver::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig};
 use kwavers::KwaversError;

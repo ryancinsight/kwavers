@@ -34,19 +34,19 @@ pub use safety::{
 };
 pub use therapy::{TherapyMechanism, TherapyModality, TherapyParameters, TreatmentMetrics};
 
-// FIXME: These types are referenced but not yet implemented in the therapy module
-// They need to be added during architectural refactoring:
-// - AcousticField
-// - AcousticTherapyParams
-// - AcousticWaveSolver
-// - PatientParameters
-// - RiskOrgan
-// - SafetyLimits (therapy-specific)
-// - SafetyMetrics
-// - SafetyStatus
-// - TargetVolume
-// - TherapyIntegrationOrchestrator
-// - TherapySessionConfig
-// - TherapySessionState
-// - TissuePropertyMap
-// - TissueType
+// NOTE: Therapy integration framework types are available but not re-exported here
+// due to ongoing architectural refactoring. Access them directly via:
+//
+//   use kwavers::clinical::therapy::therapy_integration::{
+//       TherapyIntegrationOrchestrator, TherapySessionConfig, AcousticTherapyParams,
+//       SafetyLimits, PatientParameters, TissuePropertyMap, TargetVolume, etc.
+//   };
+//
+// The therapy_integration module provides a comprehensive clinical therapy framework
+// with support for HIFU, histotripsy, lithotripsy, and other modalities. It includes:
+// - TherapyIntegrationOrchestrator: Main therapy orchestration
+// - AcousticField, AcousticWaveSolver: Acoustic simulation infrastructure
+// - SafetyMetrics, SafetyStatus, SafetyController: Real-time safety monitoring
+// - TissuePropertyMap, TissueType: Patient-specific tissue modeling
+//
+// Status: Implementation complete, undergoing final integration testing (Sprint 214)

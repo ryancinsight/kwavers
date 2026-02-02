@@ -154,8 +154,8 @@ impl RegistrationTransform {
 
         // Apply transformation
         let mut result = [0.0; 4];
-        for i in 0..4 {
-            result[i] = (0..4).map(|j| self.matrix[[i, j]] * p[j]).sum();
+        for (i, item) in result.iter_mut().enumerate() {
+            *item = (0..4).map(|j| self.matrix[[i, j]] * p[j]).sum();
         }
 
         // Convert back to 3D

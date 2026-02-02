@@ -38,8 +38,6 @@ pub use optimizer::OptimizerAlgorithm;
 /// Learning rate scheduling
 pub use scheduler::{LRScheduler, LearningRateScheduler};
 
-// Module planned but not yet implemented:
-// - TrainingData: Structure for organizing PINN training batches
-// - TrainingMetrics: Loss tracking and convergence monitoring
-// - PINNOptimizer: High-level optimizer wrapper for PINN training
-// - PersistentAdamState: Adam optimizer state for checkpoint/resume
+/// Re-export data structures from data module
+#[cfg(feature = "pinn")]
+pub use data::{TrainingData, TrainingMetrics};

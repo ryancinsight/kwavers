@@ -79,7 +79,7 @@
 #[cfg(feature = "pinn")]
 use super::loss::CollocationData;
 #[cfg(feature = "pinn")]
-use crate::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 
 #[cfg(feature = "pinn")]
 use burn::tensor::Tensor;

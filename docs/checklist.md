@@ -75,47 +75,59 @@ Physical ranges: Soft tissue 1-5 m/s, Water c_s = 0
 
 ## Sprint 212 Phase 2: Active Tasks - 🔄 IN PROGRESS
 
-### Task 1: BurnPINN Boundary Condition Loss (10-14h) - 🔄 IN PROGRESS
+### Task 1: BurnPINN Boundary Condition Loss (10-14h) - ⚠️ NEEDS FIX
 
-**Priority**: P1 - Critical for PINN correctness
+**Priority**: P0 - Critical for PINN correctness (BLOCKING)
 
 **Mathematical Specification**:
 ```
 L_BC = (1/N_∂Ω) Σ ||u(x,t) - g(x,t)||² for x ∈ ∂Ω
 ```
 
-**Subtasks**:
-- [ ] BC Sampling (3-4h)
-  - [ ] Sample points on 6 domain boundary faces (3D box)
-  - [ ] Generate spatiotemporal coordinates (x,y,z,t)
-  - [ ] Support Dirichlet and Neumann conditions
+**Implementation Status**:
+- ✅ BC Sampling (3-4h) - COMPLETE
+  - ✅ Sample points on 6 domain boundary faces (3D box)
+  - ✅ Generate spatiotemporal coordinates (x,y,z,t)
+  - ⚠️ Dirichlet conditions implemented (Neumann planned)
   
-- [ ] BC Loss Computation (4-5h)
-  - [ ] Evaluate PINN at boundary points
-  - [ ] Compute Dirichlet violation: ||u - g||²
-  - [ ] Compute Neumann gradient: ||∂u/∂n - h||²
-  - [ ] Aggregate over all boundary points
+- ✅ BC Loss Computation (4-5h) - COMPLETE
+  - ✅ Evaluate PINN at boundary points
+  - ✅ Compute Dirichlet violation: ||u - g||²
+  - ⏸️ Neumann gradient: ||∂u/∂n - h||² (future enhancement)
+  - ✅ Aggregate over all boundary points
   
-- [ ] Training Integration (2-3h)
-  - [ ] Add BC loss to total training loss with weighting
-  - [ ] Verify backward pass gradient propagation
-  - [ ] Validate loss decrease during training
+- ✅ Training Integration (2-3h) - COMPLETE
+  - ✅ Add BC loss to total training loss with weighting
+  - ✅ Backward pass gradient propagation implemented
+  - ❌ **CRITICAL BUG**: Loss explodes to infinity during training
   
-- [ ] Validation Tests (2-3h)
-  - [ ] Test with Dirichlet BC (u=0 on boundary)
-  - [ ] Test with Neumann BC (∂u/∂n=0, rigid wall)
-  - [ ] Verify BC satisfaction improves with training
-  - [ ] Compare against analytical solutions
+- ⚠️ Validation Tests (2-3h) - PARTIAL (5/7 passing)
+  - ✅ Test with Dirichlet BC (u=0 on boundary) - basic tests pass
+  - ⏸️ Test with Neumann BC (future enhancement)
+  - ❌ **FAILING**: BC loss increases instead of decreases (numerical instability)
+  - ⏸️ Analytical comparison deferred pending stability fix
+
+**Critical Issue Identified**:
+- BC loss explodes during training: initial=0.038 → final=1.7e31
+- Root cause: Likely gradient explosion or learning rate instability
+- Impact: PINN training is unstable and produces invalid solutions
+- Required fix: Add gradient clipping, learning rate schedule, or loss normalization
 
 **Files**:
-- `src/analysis/ml/pinn/burn_wave_equation_3d/solver.rs` (line 333-395)
-- `tests/pinn_bc_validation.rs` (new)
+- `src/solver/inverse/pinn/ml/burn_wave_equation_3d/solver.rs` (lines 634-724)
+- `tests/pinn_bc_validation.rs` (7 tests: 5 pass, 2 fail)
+
+**Next Steps**:
+1. Debug numerical instability (gradient explosion)
+2. Implement gradient clipping or adaptive learning rate
+3. Re-run validation tests to verify convergence
+4. Add analytical test case validation
 
 **Success Criteria**:
-- ✅ BC loss decreases during training
-- ✅ Boundary violations < 1% of interior error
-- ✅ Works with Dirichlet and Neumann BCs
-- ✅ Validated against analytical test cases
+- ❌ BC loss decreases during training (FAILING - explodes instead)
+- ⏸️ Boundary violations < 1% of interior error (cannot measure due to instability)
+- ⚠️ Works with Dirichlet BCs (implementation complete, but unstable)
+- ⏸️ Validated against analytical test cases (deferred pending fix)
 
 ---
 

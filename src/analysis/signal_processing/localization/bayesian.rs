@@ -170,8 +170,8 @@ impl BayesianFilter {
             let kalman_gain = self.covariance[0] / innovation_variance;
 
             // State update
-            for i in 0..3 {
-                self.state[i] += kalman_gain * innovation[i];
+            for (i, item) in innovation.iter().enumerate() {
+                self.state[i] += kalman_gain * item;
             }
 
             // Covariance update (simplified)

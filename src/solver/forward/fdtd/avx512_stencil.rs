@@ -380,25 +380,22 @@ impl Avx512StencilProcessor {
         // In production: use PML or custom BC
         for i in 0..self.nx {
             for j in 0..self.ny {
-                *p_new_ptr.add(0 * self.nx * self.ny + j * self.nx + i) = 0.0;
-                *p_new_ptr.add((self.nz - 1) * self.nx * self.ny + j * self.nx + i) =
-                    0.0;
+                *p_new_ptr.add(j * self.nx + i) = 0.0;
+                *p_new_ptr.add((self.nz - 1) * self.nx * self.ny + j * self.nx + i) = 0.0;
             }
         }
 
         for i in 0..self.nx {
             for k in 0..self.nz {
-                *p_new_ptr.add(k * self.nx * self.ny + 0 * self.nx + i) = 0.0;
-                *p_new_ptr.add(k * self.nx * self.ny + (self.ny - 1) * self.nx + i) =
-                    0.0;
+                *p_new_ptr.add(k * self.nx * self.ny + i) = 0.0;
+                *p_new_ptr.add(k * self.nx * self.ny + (self.ny - 1) * self.nx + i) = 0.0;
             }
         }
 
         for j in 0..self.ny {
             for k in 0..self.nz {
                 *p_new_ptr.add(k * self.nx * self.ny + j * self.nx) = 0.0;
-                *p_new_ptr.add(k * self.nx * self.ny + j * self.nx + self.nx - 1) =
-                    0.0;
+                *p_new_ptr.add(k * self.nx * self.ny + j * self.nx + self.nx - 1) = 0.0;
             }
         }
 

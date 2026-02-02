@@ -6,8 +6,7 @@
 use std::fmt::Debug;
 
 /// Window function for beamforming (Hamming, Hann, etc.)
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum WindowFunction {
     /// Rectangular window (no windowing)
     Rectangular,
@@ -31,14 +30,14 @@ impl WindowFunction {
                 // No windowing
             }
             WindowFunction::Hamming => {
-                for i in 0..n {
-                    data[i] *= 0.54
+                for (i, item) in data.iter_mut().enumerate().take(n) {
+                    *item *= 0.54
                         - 0.46 * (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos();
                 }
             }
             WindowFunction::Hann => {
-                for i in 0..n {
-                    data[i] *= 0.5
+                for (i, item) in data.iter_mut().enumerate().take(n) {
+                    *item *= 0.5
                         * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos());
                 }
             }
@@ -46,22 +45,21 @@ impl WindowFunction {
                 let a0 = 0.42;
                 let a1 = 0.5;
                 let a2 = 0.08;
-                for i in 0..n {
+                for (i, item) in data.iter_mut().enumerate().take(n) {
                     let x = 2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64;
-                    data[i] *= a0 - a1 * x.cos() + a2 * (2.0 * x).cos();
+                    *item *= a0 - a1 * x.cos() + a2 * (2.0 * x).cos();
                 }
             }
             WindowFunction::Kaiser(_beta) => {
                 // Simplified Kaiser window (placeholder for complex algorithm)
-                for i in 0..n {
-                    data[i] *= 0.54
+                for (i, item) in data.iter_mut().enumerate().take(n) {
+                    *item *= 0.54
                         - 0.46 * (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos();
                 }
             }
         }
     }
 }
-
 
 /// Beamforming configuration
 ///

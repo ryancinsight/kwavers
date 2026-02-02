@@ -34,16 +34,29 @@
 //! ensuring clean architecture and easy swapping of algorithms.
 
 pub mod bayesian;
+pub mod beamforming_search;
 pub mod config;
+pub mod model_order;
+pub mod multilateration;
 pub mod music;
 pub mod tdoa;
+pub mod trilateration;
 pub mod wavefront;
 
 // Re-export core types
 pub use bayesian::{BayesianFilter, KalmanFilterConfig};
+pub use beamforming_search::{
+    BeamformSearch, BeamformingLocalizationInput, LocalizationBeamformSearchConfig,
+    LocalizationBeamformingMethod, MvdrCovarianceDomain, SearchGrid,
+};
 pub use config::LocalizationConfig;
+pub use model_order::{
+    ModelOrderConfig, ModelOrderCriterion, ModelOrderEstimator, ModelOrderResult,
+};
+pub use multilateration::{Multilateration, MultilaterationConfig};
 pub use music::{MUSICConfig, MUSICProcessor};
 pub use tdoa::{TDOAConfig, TDOAProcessor};
+pub use trilateration::{LocalizationResult, Trilateration};
 pub use wavefront::WavefrontAnalyzer;
 
 use crate::core::error::KwaversResult;

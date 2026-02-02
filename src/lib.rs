@@ -49,9 +49,6 @@ pub mod core;
 // Pure mathematical primitives (foundational layer)
 pub mod math;
 
-// Infrastructure services
-pub mod infra;
-
 // NOTE:
 // Crate-level "convenience" re-exports are intentionally avoided to enforce direct imports
 // and prevent namespace bleeding across bounded contexts.
@@ -186,11 +183,10 @@ pub use solver::forward::nonlinear::kuznetsov::{KuznetsovConfig, KuznetsovWave};
 // Use domain::* and simulation::configuration explicitly instead
 
 // Re-export I/O functions
-// Re-export I/O functions
-pub use infra::io::{generate_summary, save_light_data, save_pressure_data};
+pub use infrastructure::io::{generate_summary, save_light_data, save_pressure_data};
 
 #[cfg(feature = "api")]
-pub use crate::infra::api;
+pub use crate::infrastructure::api;
 
 // Re-export performance optimization
 pub use analysis::performance::{

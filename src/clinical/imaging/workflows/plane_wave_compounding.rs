@@ -279,29 +279,29 @@ impl PlaneWaveCompound {
         match window_type {
             "hann" => {
                 // Hann window: w(n) = 0.5 - 0.5*cos(2πn/(N-1))
-                for i in 0..n {
-                    apod[i] = 0.5 - 0.5 * (2.0 * PI * i as f64 / (n as f64 - 1.0)).cos();
+                for (i, item) in apod.iter_mut().enumerate().take(n) {
+                    *item = 0.5 - 0.5 * (2.0 * PI * i as f64 / (n as f64 - 1.0)).cos();
                 }
             }
             "hamming" => {
                 // Hamming window: w(n) = 0.54 - 0.46*cos(2πn/(N-1))
-                for i in 0..n {
-                    apod[i] = 0.54 - 0.46 * (2.0 * PI * i as f64 / (n as f64 - 1.0)).cos();
+                for (i, item) in apod.iter_mut().enumerate().take(n) {
+                    *item = 0.54 - 0.46 * (2.0 * PI * i as f64 / (n as f64 - 1.0)).cos();
                 }
             }
             "blackman" => {
                 // Blackman window
-                for i in 0..n {
+                for (i, item) in apod.iter_mut().enumerate().take(n) {
                     let n_norm = i as f64 / (n as f64 - 1.0);
-                    apod[i] =
+                    *item =
                         0.42 - 0.5 * (2.0 * PI * n_norm).cos() + 0.08 * (4.0 * PI * n_norm).cos();
                 }
             }
             _ => {
                 // "rect" or any other apodization type
                 // Rectangular window (uniform)
-                for i in 0..n {
-                    apod[i] = 1.0;
+                for item in apod.iter_mut().take(n) {
+                    *item = 1.0;
                 }
             }
         }
@@ -312,7 +312,7 @@ impl PlaneWaveCompound {
             for elem in &mut apod {
                 *elem /= max_apod;
                 // Ensure strictly within [0, 1] due to floating point rounding
-                *elem = elem.max(0.0).min(1.0);
+                *elem = elem.clamp(0.0, 1.0);
             }
         }
 
@@ -400,7 +400,7 @@ impl PlaneWaveCompound {
 
             // Normalize to dynamic range [0, 1]
             let normalized = (db_value + self.config.dynamic_range) / self.config.dynamic_range;
-            self.display_image[[i, j]] = normalized.max(0.0).min(1.0);
+            self.display_image[[i, j]] = normalized.clamp(0.0, 1.0);
         }
 
         Ok(())

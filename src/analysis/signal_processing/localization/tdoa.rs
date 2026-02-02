@@ -158,8 +158,8 @@ impl TDOAProcessor {
             }
 
             // Update position (simplified - full implementation needs matrix inversion)
-            for i in 0..3 {
-                position[i] -= 0.1 * residuals.get(i).copied().unwrap_or(0.0);
+            for (i, item) in position.iter_mut().enumerate() {
+                *item -= 0.1 * residuals.get(i).copied().unwrap_or(0.0);
             }
         }
 

@@ -559,9 +559,8 @@ impl MultiModalFusion {
 
                     for (idx, ch) in channels.iter().enumerate() {
                         let val = ch.data[[i, j, k]];
-                        let norm_val = ((val - norm_params[idx].min) * norm_params[idx].scale)
-                            .max(0.0)
-                            .min(1.0);
+                        let norm_val =
+                            ((val - norm_params[idx].min) * norm_params[idx].scale).clamp(0.0, 1.0);
 
                         if ch.name.contains("ultrasound") {
                             us_val = norm_val;
@@ -621,7 +620,7 @@ impl MultiModalFusion {
                         sum_weighted_val += val * w;
                         sum_weights += w;
 
-                        if let Some(_) = uncertainty_map {
+                        if uncertainty_map.is_some() {
                             sum_uncertainty += (1.0 - ch.quality) * w;
                         }
                     }

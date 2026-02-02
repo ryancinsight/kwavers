@@ -22,10 +22,14 @@
 //! - **Uncertainty Quantification**: Confidence assessment for clinical decisions
 //! - **Clinical Validation**: Automated quality assurance and standards compliance
 
+use kwavers::analysis::ml::uncertainty::{
+    UncertaintyConfig, UncertaintyMethod, UncertaintyQuantifier,
+};
 use kwavers::analysis::validation::clinical::{
     ClinicalValidator, ImageQualityMetrics, MeasurementAccuracy, SafetyIndices,
 };
 use kwavers::domain::grid::Grid;
+use kwavers::domain::imaging::ultrasound::elastography::InversionMethod;
 use kwavers::domain::imaging::ultrasound::elastography::{
     NonlinearInversionMethod, NonlinearParameterMap,
 };
@@ -33,13 +37,11 @@ use kwavers::domain::medium::Medium;
 use kwavers::domain::medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium};
 #[cfg(feature = "gpu")]
 use kwavers::gpu::memory::UnifiedMemoryManager;
-use kwavers::ml::uncertainty::{UncertaintyConfig, UncertaintyMethod, UncertaintyQuantifier};
 use kwavers::physics::acoustics::imaging::modalities::elastography::radiation_force::PushPulseParameters;
 use kwavers::physics::acoustics::imaging::modalities::elastography::{
     AcousticRadiationForce, DisplacementField, HarmonicDetectionConfig, HarmonicDetector,
 };
 use kwavers::physics::imaging::ceus::PerfusionModel;
-use kwavers::physics::imaging::InversionMethod;
 use kwavers::physics::transcranial::safety_monitoring::SafetyMonitor;
 use kwavers::simulation::imaging::ceus::ContrastEnhancedUltrasound;
 use kwavers::solver::forward::elastic::{ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver};
@@ -426,10 +428,10 @@ impl LiverAssessmentWorkflow {
             .quantify_beamforming_uncertainty(&ceus_result.perfusion_map, 0.90)?;
 
         // Generate uncertainty report
-        let swe_clone = kwavers::ml::uncertainty::BeamformingUncertainty {
+        let swe_clone = kwavers::analysis::ml::uncertainty::BeamformingUncertainty {
             uncertainty_map: swe_uncertainty.uncertainty_map.clone(),
             confidence_score: swe_uncertainty.confidence_score,
-            reliability_metrics: kwavers::ml::uncertainty::ReliabilityMetrics {
+            reliability_metrics: kwavers::analysis::ml::uncertainty::ReliabilityMetrics {
                 signal_to_noise_ratio: swe_uncertainty.reliability_metrics.signal_to_noise_ratio,
                 contrast_to_noise_ratio: swe_uncertainty
                     .reliability_metrics
@@ -437,10 +439,10 @@ impl LiverAssessmentWorkflow {
                 spatial_resolution: swe_uncertainty.reliability_metrics.spatial_resolution,
             },
         };
-        let perf_clone = kwavers::ml::uncertainty::BeamformingUncertainty {
+        let perf_clone = kwavers::analysis::ml::uncertainty::BeamformingUncertainty {
             uncertainty_map: perfusion_uncertainty.uncertainty_map.clone(),
             confidence_score: perfusion_uncertainty.confidence_score,
-            reliability_metrics: kwavers::ml::uncertainty::ReliabilityMetrics {
+            reliability_metrics: kwavers::analysis::ml::uncertainty::ReliabilityMetrics {
                 signal_to_noise_ratio: perfusion_uncertainty
                     .reliability_metrics
                     .signal_to_noise_ratio,
@@ -450,7 +452,7 @@ impl LiverAssessmentWorkflow {
                 spatial_resolution: perfusion_uncertainty.reliability_metrics.spatial_resolution,
             },
         };
-        let _results: Vec<Box<dyn kwavers::ml::uncertainty::UncertaintyResult>> =
+        let _results: Vec<Box<dyn kwavers::analysis::ml::uncertainty::UncertaintyResult>> =
             vec![Box::new(swe_clone), Box::new(perf_clone)];
         println!(
             "Uncertainty analysis: SWE confidence = {:.1}%, CEUS confidence = {:.1}%",
@@ -703,8 +705,8 @@ pub struct CEUSResult {
 /// Uncertainty analysis results
 #[derive(Debug)]
 pub struct UncertaintyAnalysis {
-    pub swe_uncertainty: kwavers::ml::uncertainty::BeamformingUncertainty,
-    pub perfusion_uncertainty: kwavers::ml::uncertainty::BeamformingUncertainty,
+    pub swe_uncertainty: kwavers::analysis::ml::uncertainty::BeamformingUncertainty,
+    pub perfusion_uncertainty: kwavers::analysis::ml::uncertainty::BeamformingUncertainty,
 }
 
 /// Clinical diagnosis

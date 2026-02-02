@@ -32,6 +32,7 @@
 //! - Spectral signatures provide experimental discrimination
 
 use kwavers::domain::grid::Grid;
+use kwavers::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers::physics::bubble_dynamics::bubble_state::BubbleParameters;
 use kwavers::physics::optics::sonoluminescence::{EmissionParameters, IntegratedSonoluminescence};
 use ndarray::Array3;
@@ -190,6 +191,9 @@ fn run_comprehensive_simulation(
     let mut simulator =
         IntegratedSonoluminescence::new(grid.dimensions(), bubble_params.clone(), emission_params);
 
+    // Create Keller-Miksis model for bubble dynamics
+    let bubble_model = KellerMiksisModel::new(bubble_params.clone());
+
     // Extreme acoustic driving for sonoluminescence conditions
     let acoustic_pressure = Array3::from_elem(grid.dimensions(), 1e6); // 10 bar - extreme conditions
     simulator.set_acoustic_pressure(acoustic_pressure);
@@ -217,7 +221,7 @@ fn run_comprehensive_simulation(
     // Run simulation
     for step in 0..n_steps {
         let time = step as f64 * dt;
-        simulator.simulate_step(dt, time)?;
+        simulator.simulate_step(dt, time, bubble_params, &bubble_model)?;
 
         // Extract data at center point
         let dims = grid.dimensions();

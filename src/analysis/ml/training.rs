@@ -144,7 +144,7 @@ impl TrainingConfig {
 
     /// Builder pattern: set learning rate
     pub fn with_learning_rate(mut self, lr: f64) -> Self {
-        self.learning_rate = lr.max(1e-8).min(1.0);
+        self.learning_rate = lr.clamp(1e-8, 1.0);
         self
     }
 

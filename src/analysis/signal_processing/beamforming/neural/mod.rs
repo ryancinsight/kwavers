@@ -182,12 +182,15 @@ pub mod physics;
 pub mod types;
 pub mod uncertainty;
 
-// Backend implementations (e.g., Burn, TensorFlow, PyTorch)
-#[cfg(feature = "pinn")]
-pub mod backends;
-
 // Solver-agnostic PINN interface (always available for type definitions)
 pub mod pinn_interface;
+
+// Backend implementations are in solver layer to respect Clean Architecture
+// Re-export for convenience (Analysis can depend on Solver via trait)
+#[cfg(feature = "pinn")]
+pub use crate::solver::inverse::pinn::beamforming::{
+    create_burn_beamforming_provider, BurnPinnBeamformingAdapter,
+};
 
 // Feature-gated modules
 #[cfg(feature = "pinn")]

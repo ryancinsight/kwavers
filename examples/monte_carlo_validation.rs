@@ -416,18 +416,14 @@ fn optical_property_map_to_array3(map: &OpticalPropertyMap) -> Array3<OpticalPro
     let ny = map.dimensions.ny;
     let nz = map.dimensions.nz;
 
-    let background = map
-        .data
-        .first()
-        .cloned()
-        .unwrap_or_else(OpticalPropertyData::soft_tissue);
+    let background = OpticalPropertyData::soft_tissue();
     let mut out = Array3::from_elem((nx, ny, nz), background);
 
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
                 if let Some(props) = map.get(i, j, k) {
-                    out[[i, j, k]] = *props;
+                    out[[i, j, k]] = props;
                 }
             }
         }

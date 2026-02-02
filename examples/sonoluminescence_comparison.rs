@@ -29,6 +29,7 @@
 //! - Combined emission shows complex interplay of both mechanisms
 
 use kwavers::domain::grid::Grid;
+use kwavers::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers::physics::bubble_dynamics::bubble_state::BubbleParameters;
 use kwavers::physics::optics::sonoluminescence::{EmissionParameters, IntegratedSonoluminescence};
 use ndarray::Array3;
@@ -81,6 +82,9 @@ fn run_bremsstrahlung_dominant_scenario(
     let mut simulator =
         IntegratedSonoluminescence::new(grid.dimensions(), bubble_params.clone(), emission_params);
 
+    // Create Keller-Miksis model for bubble dynamics
+    let bubble_model = KellerMiksisModel::new(bubble_params.clone());
+
     // Setup moderate acoustic driving (non-relativistic)
     // Negative pressure starts with rarefaction -> growth -> collapse
     let acoustic_pressure = Array3::from_elem(grid.dimensions(), -1.25e5); // -1.25 bar
@@ -100,7 +104,7 @@ fn run_bremsstrahlung_dominant_scenario(
     // Simulate bubble dynamics
     println!("Simulating 1 full acoustic cycle (~38 µs) with high precision...");
     for step in 0..800000 {
-        simulator.simulate_step(5e-11, step as f64 * 5e-11)?;
+        simulator.simulate_step(5e-11, step as f64 * 5e-11, bubble_params, &bubble_model)?;
 
         // Check for peak temperature
         let current_max_temp = simulator
@@ -195,6 +199,9 @@ fn run_cherenkov_dominant_scenario(
     let mut simulator =
         IntegratedSonoluminescence::new(grid.dimensions(), bubble_params.clone(), emission_params);
 
+    // Create Keller-Miksis model for bubble dynamics
+    let bubble_model = KellerMiksisModel::new(bubble_params.clone());
+
     // Setup extreme acoustic driving (potentially relativistic)
     let acoustic_pressure = Array3::from_elem(grid.dimensions(), -1.28e5); // -1.28 bar (reduced from -1.35 to avoid Mach instability)
     simulator.set_acoustic_pressure(acoustic_pressure);
@@ -213,7 +220,7 @@ fn run_cherenkov_dominant_scenario(
     // Simulate with smaller timesteps for stability
     println!("Simulating 1 full acoustic cycle (~38 µs) with high precision...");
     for step in 0..800000 {
-        simulator.simulate_step(5e-11, step as f64 * 5e-11)?;
+        simulator.simulate_step(5e-11, step as f64 * 5e-11, bubble_params, &bubble_model)?;
 
         // Check for peak temperature
         let current_max_temp = simulator
@@ -317,6 +324,9 @@ fn run_combined_emission_scenario(
     let mut simulator =
         IntegratedSonoluminescence::new(grid.dimensions(), bubble_params.clone(), emission_params);
 
+    // Create Keller-Miksis model for bubble dynamics
+    let bubble_model = KellerMiksisModel::new(bubble_params.clone());
+
     // Setup intermediate acoustic driving
     let acoustic_pressure = Array3::from_elem(grid.dimensions(), -1.27e5); // -1.27 bar
     simulator.set_acoustic_pressure(acoustic_pressure);
@@ -335,7 +345,7 @@ fn run_combined_emission_scenario(
     // Simulate bubble dynamics
     println!("Simulating 1 full acoustic cycle (~38 µs) with high precision...");
     for step in 0..800000 {
-        simulator.simulate_step(5e-11, step as f64 * 5e-11)?;
+        simulator.simulate_step(5e-11, step as f64 * 5e-11, bubble_params, &bubble_model)?;
 
         // Check for peak temperature
         let current_max_temp = simulator

@@ -154,9 +154,7 @@ impl BurtonMillerAssembler {
                     self.element_contribution(&collocation_point, node1, node2, node3)?;
 
                 // Add contributions to matrix
-                for local_node_idx in 0..3 {
-                    let global_node_idx = elements[elem_idx][local_node_idx];
-
+                for &global_node_idx in &elements[elem_idx] {
                     // CBIE contribution (coefficient in direct integral equation)
                     h_matrix[[i, global_node_idx]] += h_cbie;
 
@@ -200,8 +198,7 @@ impl BurtonMillerAssembler {
                 let (g_cbie, g_hbie) =
                     self.element_contribution_g(&collocation_point, node1, node2, node3)?;
 
-                for local_node_idx in 0..3 {
-                    let global_node_idx = elements[elem_idx][local_node_idx];
+                for &global_node_idx in &elements[elem_idx] {
                     g_matrix[[i, global_node_idx]] += g_cbie + alpha * g_hbie;
                 }
             }

@@ -39,9 +39,8 @@ pub mod pde_residual;
 #[cfg(feature = "pinn")]
 pub use computation::LossComputer;
 
-// Module planned but not yet implemented:
-// - BoundaryData: Training data for boundary condition constraints
-// - CollocationData: Spatial-temporal points for PDE residual evaluation
-// - InitialData: Initial condition data for time-dependent problems
-// - LossComponents: Individual loss terms (PDE, BC, IC, data) for monitoring
-// - ObservationData: Measured data for inverse/data-driven PINN problems
+/// Re-export data structures from data module
+#[cfg(feature = "pinn")]
+pub use data::{
+    BoundaryData, BoundaryType, CollocationData, InitialData, LossComponents, ObservationData,
+};

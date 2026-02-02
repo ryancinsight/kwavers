@@ -47,7 +47,7 @@
 //! let time_series = predictor.time_series(x, y, &times)?;
 //! ```
 
-use crate::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 
 use ndarray::{Array1, Array2, Array3};
 

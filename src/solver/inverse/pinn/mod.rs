@@ -165,10 +165,16 @@ pub mod elastic_2d;
 pub mod geometry;
 pub mod ml;
 
+#[cfg(feature = "pinn")]
+pub mod beamforming;
+
 // Re-export key types for convenience
 pub use geometry::{
     AdaptiveRefinement, CollocationSampler, InterfaceCondition, MultiRegionDomain, SamplingStrategy,
 };
+
+#[cfg(feature = "pinn")]
+pub use beamforming::{create_burn_beamforming_provider, BurnPinnBeamformingAdapter};
 
 // Modules planned but not yet implemented:
 // - elastic_3d: 3D elastic wave PINN solver

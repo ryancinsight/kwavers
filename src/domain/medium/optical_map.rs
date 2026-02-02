@@ -74,6 +74,19 @@ impl OpticalPropertyMap {
     pub fn get(&self, i: usize, j: usize, k: usize) -> Option<OpticalPropertyData> {
         self.get_properties(i, j, k)
     }
+
+    /// Calculate the physical volume of the domain in cubic meters
+    pub fn volume(&self) -> f64 {
+        let GridDimensions {
+            nx,
+            ny,
+            nz,
+            dx,
+            dy,
+            dz,
+        } = self.dimensions;
+        (nx as f64) * dx * (ny as f64) * dy * (nz as f64) * dz
+    }
 }
 
 /// Spatial region definition for property assignment

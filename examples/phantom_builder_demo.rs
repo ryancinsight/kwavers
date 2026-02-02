@@ -267,18 +267,15 @@ fn demo_custom_regions() -> Result<()> {
         OpticalPropertyData::tumor(),
     );
 
-    // Half-space: layering boundary
+    // Additional box region: tissue boundary layer
     builder.add_region(
-        Region::half_space([0.0, 0.0, 0.010], [0.0, 0.0, 1.0]),
+        Region::box_region([0.0, 0.0, 0.010], [0.030, 0.030, 0.015]),
         OpticalPropertyData::muscle(),
     );
 
-    // Custom predicate: radial gradient
+    // Additional ellipsoid: elongated muscle fiber
     builder.add_region(
-        Region::custom(|p| {
-            let r = (p[0] * p[0] + p[1] * p[1]).sqrt();
-            r > 0.005 && r < 0.008
-        }),
+        Region::ellipsoid([0.022, 0.022, 0.008], [0.001, 0.001, 0.004]),
         OpticalPropertyData::liver(),
     );
 
@@ -290,12 +287,11 @@ fn demo_custom_regions() -> Result<()> {
     println!("    - Cylinder (blood vessel)");
     println!("    - Box (bone inclusion)");
     println!("    - Ellipsoid (elongated tumor)");
-    println!("    - Half-space (tissue boundary)");
-    println!("    - Custom predicate (radial gradient)");
+    println!("    - Box (tissue boundary layer)");
+    println!("    - Ellipsoid (muscle fiber)");
     println!("\n  Advantages:");
     println!("    - Full control over geometry");
-    println!("    - Combine multiple region types");
-    println!("    - Support arbitrary predicates\n");
+    println!("    - Combine multiple region types\n");
 
     Ok(())
 }

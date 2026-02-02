@@ -10,6 +10,55 @@
 
 ---
 
+## Active Sprint: Sprint 214 - GPU Validation & PINN Stability
+
+### Sprint 214 Session 6: BurnPINN BC Loss Stability Issue - ⚠️ CRITICAL ISSUE IDENTIFIED (2025-02-03)
+
+**Status**: ⚠️ BLOCKED - Critical numerical instability discovered
+**Priority**: P0 - Production Blocking
+**Duration**: 2 hours
+
+#### Critical Issue Discovered
+
+**Problem**: BurnPINN 3D Wave Equation training exhibits gradient explosion causing BC loss to diverge to infinity.
+
+**Symptoms**:
+- BC loss: initial=0.038 → final=1.7×10³¹ (50 epochs)
+- Test failures: 2/7 BC validation tests failing (test_bc_loss_decreases_with_training, test_dirichlet_bc_zero_boundary)
+- Impact: All PINN-based workflows blocked
+
+**Root Cause Analysis**:
+- Gradient explosion in training loop (no gradient clipping)
+- Learning rate too high for BC loss gradient magnitude
+- Loss scale imbalance (BC loss dominates other losses)
+- Random initialization produces large boundary violations
+
+**Completed Work**:
+- ✅ BC loss implementation verified (mathematically correct)
+- ✅ Training integration complete (weighted loss aggregation)
+- ✅ Test suite created (7 tests: 5 passing, 2 failing)
+- ✅ Numerical instability documented and analyzed
+
+**Required Fixes** (P0 - 6 hours):
+1. Implement gradient clipping (constrain norm < 1.0)
+2. Add adaptive learning rate schedule (decay on loss increase)
+3. Normalize loss components (balance scales to O(1))
+4. Re-run validation tests (achieve 100% pass rate)
+
+**Blocked Dependencies**:
+- Sprint 212 Phase 2 Task 2: IC Loss (requires stable training)
+- Sprint 212 Phase 2 Task 3: 3D GPU Beamforming (uses PINN)
+- Sprint 212 Phase 2 Task 4: Source Estimation (requires convergence)
+
+**Artifacts**:
+- `docs/sprints/SPRINT_214_SESSION_6_SUMMARY.md` - Full analysis and remediation plan
+- `docs/checklist.md` - Updated with BC loss status and critical issue
+- `tests/pinn_bc_validation.rs` - 7 tests documenting instability
+
+**Next Session**: Sprint 214 Session 7 - PINN Stability Remediation (6-8 hours)
+
+---
+
 ## Active Sprint: Sprint 212 Phase 2 - BurnPINN Physics Constraints & GPU Pipeline
 
 ### Sprint 188: Architecture Enhancement & Quality Assurance (5 Phases) - ✅ COMPLETE

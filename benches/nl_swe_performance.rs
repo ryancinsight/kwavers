@@ -32,7 +32,7 @@ use kwavers::domain::imaging::ultrasound::elastography::{
     InversionMethod, NonlinearInversionMethod,
 };
 use kwavers::domain::medium::HomogeneousMedium;
-use kwavers::physics::imaging::modalities::elastography::{
+use kwavers::physics::acoustics::imaging::modalities::elastography::{
     HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField,
 };
 use kwavers::simulation::imaging::elastography::ShearWaveElastography;

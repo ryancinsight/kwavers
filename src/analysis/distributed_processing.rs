@@ -509,7 +509,7 @@ impl WorkQueue {
 
         // Wait for all threads to finish
         for thread in self.threads.drain(..) {
-            if let Err(_) = thread.join() {
+            if thread.join().is_err() {
                 return Err(KwaversError::InvalidInput(
                     "Failed to join worker thread".to_string(),
                 ));

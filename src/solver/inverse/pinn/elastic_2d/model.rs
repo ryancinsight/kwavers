@@ -67,7 +67,7 @@
 //! ```
 
 use super::config::Config;
-use crate::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult};
 
 #[cfg(feature = "pinn")]
 use burn::{

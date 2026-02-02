@@ -18,8 +18,8 @@
 //! - **CEUS Standards**: Claudon et al. (2013), "Guidelines for CEUS in liver imaging"
 
 use kwavers::domain::grid::Grid;
+use kwavers::domain::imaging::ultrasound::elastography::InversionMethod;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
-use kwavers::physics::imaging::InversionMethod;
 use kwavers::KwaversResult;
 use ndarray::Array1;
 use std::f64::consts::PI;

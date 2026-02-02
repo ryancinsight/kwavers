@@ -54,8 +54,8 @@ impl TrackingFilter {
         };
 
         // State update
-        for i in 0..3 {
-            self.position[i] += gain * innovation[i];
+        for (i, item) in innovation.iter().enumerate() {
+            self.position[i] += gain * item;
         }
 
         // Covariance update

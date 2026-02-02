@@ -33,6 +33,7 @@
 pub mod beamforming_trainer;
 pub mod physics_informed_loss;
 pub mod training;
+pub mod uncertainty;
 
 pub use beamforming_trainer::BeamformingTrainer;
 pub use physics_informed_loss::{
@@ -40,4 +41,8 @@ pub use physics_informed_loss::{
 };
 pub use training::{
     Optimizer, PhysicsLoss, TrainingConfig, TrainingDataset, TrainingHistory, TrainingMetrics,
+};
+pub use uncertainty::{
+    BeamformingUncertainty, ReliabilityMetrics, UncertaintyConfig, UncertaintyMethod,
+    UncertaintyQuantifier, UncertaintyReport, UncertaintyResult, UncertaintySummary,
 };

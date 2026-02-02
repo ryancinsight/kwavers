@@ -93,7 +93,7 @@ impl SirtConfig {
 
     /// Set relaxation factor
     pub fn with_relaxation(mut self, factor: f64) -> Self {
-        self.relaxation_factor = factor.max(0.001).min(1.0);
+        self.relaxation_factor = factor.clamp(0.001, 1.0);
         self
     }
 

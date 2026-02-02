@@ -40,12 +40,13 @@
 //! - Arithmetic intensity: ~2-3 FLOP/byte (memory-bound, as expected)
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::mem;
 
 /// Configuration for GPU thermal-acoustic coupling
 #[derive(Debug, Clone, Copy)]
+#[repr(C)]
+#[derive(bytemuck::Pod, bytemuck::Zeroable)]
 pub struct GpuThermalAcousticConfig {
     /// Grid dimensions
     pub nx: u32,
@@ -192,7 +193,11 @@ pub struct GpuThermalAcousticBuffers {
 
 impl GpuThermalAcousticBuffers {
     /// Create buffers for thermal-acoustic coupling
-    pub fn new(device: &wgpu::Device, config: &GpuThermalAcousticConfig) -> KwaversResult<Self> {
+    pub fn new(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        config: &GpuThermalAcousticConfig,
+    ) -> KwaversResult<Self> {
         config.validate()?;
 
         let grid_size = (config.nx as u64) * (config.ny as u64) * (config.nz as u64);
@@ -238,9 +243,7 @@ impl GpuThermalAcousticBuffers {
         });
 
         // Write config to buffer
-        device
-            .queue()
-            .write_buffer(&config_buffer, 0, bytemuck::bytes_of(config));
+        queue.write_buffer(&config_buffer, 0, bytemuck::bytes_of(config));
 
         Ok(Self {
             pressure_curr,
@@ -755,13 +758,10 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     /// Execute one time step of coupled simulation
-    pub fn step(&self, queue: &wgpu::Queue) -> KwaversResult<()> {
-        let mut encoder =
-            queue
-                .get_device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Thermal-Acoustic Step Encoder"),
-                });
+    pub fn step(&self, device: &wgpu::Device, _queue: &wgpu::Queue) -> KwaversResult<()> {
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Thermal-Acoustic Step Encoder"),
+        });
 
         let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: Some("Thermal-Acoustic Compute Pass"),

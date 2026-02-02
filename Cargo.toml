@@ -362,3 +362,7 @@ harness = false
 name = "adaptive_sampling_opt"
 harness = false
 required-features = ["pinn"]
+
+[[bench]]
+name = "gpu_beamforming_benchmark"
+harness = false

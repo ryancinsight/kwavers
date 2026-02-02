@@ -84,7 +84,7 @@ impl ConservationViolationDetector {
             if !result.passed && result.relative_error > self.error_threshold {
                 // Calculate severity as normalized log of error ratio
                 let error_ratio = result.relative_error / self.error_threshold;
-                let severity = (error_ratio.ln() + 1.0).min(1.0).max(0.0);
+                let severity = (error_ratio.ln() + 1.0).clamp(0.0, 1.0);
 
                 let violation = ConservationViolation {
                     timestep: self.timestep,
