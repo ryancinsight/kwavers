@@ -772,9 +772,9 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         compute_pass.set_bind_group(0, &self.bind_group, &[]);
 
         // Dispatch computation: one workgroup per tile
-        let workgroups_x = (self.config.nx + self.workgroup_size[0] - 1) / self.workgroup_size[0];
-        let workgroups_y = (self.config.ny + self.workgroup_size[1] - 1) / self.workgroup_size[1];
-        let workgroups_z = (self.config.nz + self.workgroup_size[2] - 1) / self.workgroup_size[2];
+        let workgroups_x = self.config.nx.div_ceil(self.workgroup_size[0]);
+        let workgroups_y = self.config.ny.div_ceil(self.workgroup_size[1]);
+        let workgroups_z = self.config.nz.div_ceil(self.workgroup_size[2]);
 
         compute_pass.dispatch_workgroups(workgroups_x, workgroups_y, workgroups_z);
 
