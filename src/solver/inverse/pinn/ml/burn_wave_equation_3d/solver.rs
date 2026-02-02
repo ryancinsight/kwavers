@@ -195,6 +195,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
     /// * `z_data` - Z-coordinates of training data
     /// * `t_data` - Time coordinates of training data
     /// * `u_data` - Observed displacement/pressure values
+    /// * `v_data` - Optional initial velocity values (∂u/∂t at t=0)
     /// * `device` - Device for tensor operations
     /// * `epochs` - Number of training epochs
     ///
@@ -214,9 +215,10 @@ impl<B: Backend> BurnPINN3DWave<B> {
     /// let z_data = vec![0.5, 0.5, 0.5];
     /// let t_data = vec![0.1, 0.2, 0.3];
     /// let u_data = vec![0.0, 0.1, 0.0];
+    /// let v_data = None; // Optional velocity IC
     ///
     /// let metrics = solver.train(
-    ///     &x_data, &y_data, &z_data, &t_data, &u_data,
+    ///     &x_data, &y_data, &z_data, &t_data, &u_data, v_data.as_deref(),
     ///     &device, 1000
     /// )?;
     /// ```
@@ -227,6 +229,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
         z_data: &[f32],
         t_data: &[f32],
         u_data: &[f32],
+        v_data: Option<&[f32]>,
         device: &B::Device,
         epochs: usize,
     ) -> KwaversResult<BurnTrainingMetrics3D>
@@ -270,6 +273,15 @@ impl<B: Backend> BurnPINN3DWave<B> {
             x_data, y_data, z_data, t_data, u_data, device,
         )?;
 
+        // Extract velocity initial conditions if provided
+        let v_ic_opt = if let Some(v_data) = v_data {
+            Some(Self::extract_velocity_initial_condition_tensor(
+                x_data, y_data, z_data, t_data, v_data, device,
+            )?)
+        } else {
+            None
+        };
+
         // Adaptive learning rate: start with configured rate, decay on stagnation
         let mut current_lr = self.config.0.learning_rate as f32;
         let min_lr = (self.config.0.learning_rate * 0.001) as f32;
@@ -304,6 +316,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
                 z_ic.clone(),
                 t_ic.clone(),
                 u_ic.clone(),
+                v_ic_opt.as_ref(),
                 &self.config.0.loss_weights,
                 &mut loss_scales,
             )?;
@@ -480,6 +493,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
         z_ic: Tensor<B, 2>,
         t_ic: Tensor<B, 2>,
         u_ic: Tensor<B, 2>,
+        v_ic: Option<&Tensor<B, 2>>,
         weights: &BurnLossWeights3D,
         loss_scales: &mut LossScales,
     ) -> KwaversResult<(
@@ -512,8 +526,36 @@ impl<B: Backend> BurnPINN3DWave<B> {
         // evaluate PINN predictions, compute BC violations based on type
         let bc_loss_raw = self.compute_bc_loss_internal(&x_colloc, &y_colloc, &z_colloc, &t_colloc);
 
-        let u_ic_pred = self.pinn.forward(x_ic, y_ic, z_ic, t_ic);
-        let ic_loss_raw = (u_ic_pred - u_ic).powf_scalar(2.0).mean();
+        // Initial condition loss: Enforce displacement and velocity at t=0
+        // Mathematical specification:
+        //   L_IC = (1/N_Ω) [Σ ||u(x,0) - u₀(x)||² + Σ ||∂u/∂t(x,0) - v₀(x)||²]
+        //
+        // Displacement component
+        let u_ic_pred = self
+            .pinn
+            .forward(x_ic.clone(), y_ic.clone(), z_ic.clone(), t_ic.clone());
+        let ic_disp_loss = (u_ic_pred - u_ic).powf_scalar(2.0).mean();
+
+        // Velocity component (if provided)
+        let ic_loss_raw = if let Some(v_ic_tensor) = v_ic {
+            // Compute temporal derivative ∂u/∂t at t=0 via forward finite difference
+            let du_dt = self.compute_temporal_derivative_at_t0(
+                x_ic.clone(),
+                y_ic.clone(),
+                z_ic.clone(),
+                t_ic.clone(),
+            );
+            let ic_vel_loss = (du_dt - v_ic_tensor.clone()).powf_scalar(2.0).mean();
+
+            // Combined IC loss: equal weighting of displacement and velocity
+            ic_disp_loss
+                .clone()
+                .mul_scalar(0.5)
+                .add(ic_vel_loss.mul_scalar(0.5))
+        } else {
+            // Displacement only
+            ic_disp_loss
+        };
 
         // Extract scalar values for scale update
         let data_loss_val = Self::scalar_f32(&data_loss_raw).unwrap_or(1.0);
@@ -544,6 +586,101 @@ impl<B: Backend> BurnPINN3DWave<B> {
             pde_loss_raw,
             bc_loss_raw,
             ic_loss_raw,
+        ))
+    }
+
+    /// Compute temporal derivative ∂u/∂t at t=0 via forward finite difference
+    ///
+    /// Uses forward difference: ∂u/∂t(0) ≈ (u(ε) - u(0)) / ε
+    ///
+    /// # Arguments
+    ///
+    /// * `x` - X-coordinates at t=0
+    /// * `y` - Y-coordinates at t=0
+    /// * `z` - Z-coordinates at t=0
+    /// * `t` - Time coordinates (should be t=0)
+    ///
+    /// # Returns
+    ///
+    /// Tensor containing ∂u/∂t values at the specified points
+    fn compute_temporal_derivative_at_t0(
+        &self,
+        x: Tensor<B, 2>,
+        y: Tensor<B, 2>,
+        z: Tensor<B, 2>,
+        t: Tensor<B, 2>,
+    ) -> Tensor<B, 2> {
+        let eps = 1e-3_f32;
+
+        // u(t=0)
+        let u_t0 = self
+            .pinn
+            .forward(x.clone(), y.clone(), z.clone(), t.clone());
+
+        // u(t=ε)
+        let t_eps = t.add_scalar(eps);
+        let u_t_eps = self.pinn.forward(x, y, z, t_eps);
+
+        // Forward difference: ∂u/∂t ≈ (u(ε) - u(0)) / ε
+        u_t_eps.sub(u_t0).div_scalar(eps)
+    }
+
+    /// Extract velocity initial condition tensor from training data
+    ///
+    /// Finds all points at t=0 and extracts their velocity values.
+    ///
+    /// # Arguments
+    ///
+    /// * `x_data` - X-coordinates of training data
+    /// * `y_data` - Y-coordinates of training data
+    /// * `z_data` - Z-coordinates of training data
+    /// * `t_data` - Time coordinates of training data
+    /// * `v_data` - Velocity values (∂u/∂t)
+    /// * `device` - Target device
+    ///
+    /// # Returns
+    ///
+    /// Tensor [n_ic, 1] containing velocity IC values
+    fn extract_velocity_initial_condition_tensor(
+        _x_data: &[f32],
+        _y_data: &[f32],
+        _z_data: &[f32],
+        t_data: &[f32],
+        v_data: &[f32],
+        device: &B::Device,
+    ) -> KwaversResult<Tensor<B, 2>> {
+        if v_data.len() != t_data.len() {
+            return Err(KwaversError::InvalidInput(
+                "v_data and t_data must have equal length".into(),
+            ));
+        }
+
+        let min_t = t_data.iter().copied().fold(f32::INFINITY, |a, b| a.min(b));
+        if !min_t.is_finite() {
+            return Err(KwaversError::InvalidInput(
+                "Training time coordinates must be finite".into(),
+            ));
+        }
+
+        let eps = 1e-6_f32;
+        let mut v_ic = Vec::new();
+
+        for i in 0..t_data.len() {
+            if (t_data[i] - min_t).abs() <= eps {
+                v_ic.push(v_data[i]);
+            }
+        }
+
+        if v_ic.is_empty() {
+            return Err(KwaversError::InvalidInput(
+                "No initial-condition velocity samples found in training data".into(),
+            ));
+        }
+
+        let n_ic = v_ic.len();
+        Ok(Tensor::<B, 2>::from_data(
+            TensorData::new(v_ic, [n_ic, 1]),
+            device,
         ))
     }
 
@@ -892,14 +1029,15 @@ mod tests {
 
         let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
-        // Minimal training data
-        let x_data = vec![0.5, 0.6];
-        let y_data = vec![0.5, 0.5];
-        let z_data = vec![0.5, 0.5];
-        let t_data = vec![0.1, 0.2];
-        let u_data = vec![0.0, 0.0];
+        let x_data = vec![0.5, 0.5, 0.5];
+        let y_data = vec![0.5, 0.5, 0.5];
+        let z_data = vec![0.5, 0.5, 0.5];
+        let t_data = vec![0.0, 0.1, 0.2];
+        let u_data = vec![1.0, 0.9, 0.8];
 
-        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 5)?;
+        let metrics = solver.train(
+            &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 5,
+        )?;
         assert_eq!(metrics.epochs_completed, 5);
         assert_eq!(metrics.total_loss.len(), 5);
         Ok(())
@@ -1024,7 +1162,9 @@ mod tests {
         let t_data = vec![0.1];
         let u_data = vec![0.0];
 
-        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 3)?;
+        let metrics = solver.train(
+            &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 3,
+        )?;
 
         // Verify all loss components are present
         assert_eq!(metrics.total_loss.len(), 3);

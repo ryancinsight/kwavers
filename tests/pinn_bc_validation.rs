@@ -60,7 +60,9 @@ mod bc_loss_tests {
         let u_data = vec![0.0];
 
         // Train for 1 epoch to compute losses
-        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 1)?;
+        let metrics = solver.train(
+            &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 1,
+        )?;
 
         // BC loss should be non-zero for untrained network
         // (random initialization will not satisfy u=0 on boundaries)
@@ -119,7 +121,9 @@ mod bc_loss_tests {
         }
 
         // Train for multiple epochs
-        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 50)?;
+        let metrics = solver.train(
+            &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 50,
+        )?;
 
         // Verify BC loss decreases
         assert!(metrics.bc_loss.len() >= 2);
@@ -179,7 +183,9 @@ mod bc_loss_tests {
         let u_data = vec![0.0, 0.0, 0.0];
 
         // Train
-        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 100)?;
+        let metrics = solver.train(
+            &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 100,
+        )?;
 
         // Check BC loss trajectory
         let initial_bc = metrics.bc_loss[0];
@@ -223,7 +229,9 @@ mod bc_loss_tests {
         let u_data = vec![1.0]; // Non-zero interior value
 
         // Train for 1 epoch
-        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 1)?;
+        let metrics = solver.train(
+            &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 1,
+        )?;
 
         // BC loss should be non-zero (network predicts non-zero at boundaries)
         let bc_loss = metrics.bc_loss[0];
@@ -265,10 +273,14 @@ mod bc_loss_tests {
         let u_data = vec![0.0];
 
         let bc_loss1 = solver1
-            .train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 1)?
+            .train(
+                &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 1,
+            )?
             .bc_loss[0];
         let bc_loss2 = solver2
-            .train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 1)?
+            .train(
+                &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 1,
+            )?
             .bc_loss[0];
 
         // Both should have finite BC loss
@@ -299,7 +311,9 @@ mod bc_loss_tests {
         let u_data = vec![0.0];
 
         let epochs = 10;
-        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, epochs)?;
+        let metrics = solver.train(
+            &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, epochs,
+        )?;
 
         // Verify BC loss is recorded for each epoch
         assert_eq!(
@@ -347,7 +361,9 @@ mod bc_loss_tests {
         let t_data = vec![0.5];
         let u_data = vec![0.0];
 
-        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 1)?;
+        let metrics = solver.train(
+            &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 1,
+        )?;
 
         // Should still compute BC loss with minimal collocation points
         assert!(metrics.bc_loss[0].is_finite());

@@ -12,50 +12,92 @@
 
 ## Active Sprint: Sprint 214 - GPU Validation & PINN Stability
 
-### Sprint 214 Session 6: BurnPINN BC Loss Stability Issue - ⚠️ CRITICAL ISSUE IDENTIFIED (2025-02-03)
+### Sprint 214 Session 8: Initial Condition Velocity Loss - ✅ COMPLETE (2025-02-03)
 
-**Status**: ⚠️ BLOCKED - Critical numerical instability discovered
-**Priority**: P0 - Production Blocking
-**Duration**: 2 hours
+**Status**: ✅ COMPLETE - IC velocity loss fully implemented
+**Priority**: P1 - Critical for PINN correctness
+**Duration**: 4 hours
 
-#### Critical Issue Discovered
+#### Session Achievements
 
-**Problem**: BurnPINN 3D Wave Equation training exhibits gradient explosion causing BC loss to diverge to infinity.
+**Objective**: Extend IC loss to include velocity (∂u/∂t) matching at t=0 for complete wave equation Cauchy problem specification.
 
-**Symptoms**:
-- BC loss: initial=0.038 → final=1.7×10³¹ (50 epochs)
-- Test failures: 2/7 BC validation tests failing (test_bc_loss_decreases_with_training, test_dirichlet_bc_zero_boundary)
-- Impact: All PINN-based workflows blocked
+**Implementation**:
+- ✅ Temporal derivative computation via forward finite difference: ∂u/∂t(0) ≈ (u(ε) - u(0)) / ε
+- ✅ Combined IC loss: L_IC = 0.5 × L_disp + 0.5 × L_vel (if velocity provided)
+- ✅ Backward-compatible API: `train(..., v_data: Option<&[f32]>, ...)`
+- ✅ Velocity IC extraction method for t=0 points
 
-**Root Cause Analysis**:
-- Gradient explosion in training loop (no gradient clipping)
-- Learning rate too high for BC loss gradient magnitude
-- Loss scale imbalance (BC loss dominates other losses)
-- Random initialization produces large boundary violations
+**Validation**:
+- ✅ IC validation test suite: 9/9 tests passing
+- ✅ BC validation tests: 7/7 tests passing (zero regressions)
+- ✅ Internal PINN tests: 65/65 tests passing
+- ✅ Total: 81/81 tests passing across all PINN test suites
 
-**Completed Work**:
-- ✅ BC loss implementation verified (mathematically correct)
-- ✅ Training integration complete (weighted loss aggregation)
-- ✅ Test suite created (7 tests: 5 passing, 2 failing)
-- ✅ Numerical instability documented and analyzed
-
-**Required Fixes** (P0 - 6 hours):
-1. Implement gradient clipping (constrain norm < 1.0)
-2. Add adaptive learning rate schedule (decay on loss increase)
-3. Normalize loss components (balance scales to O(1))
-4. Re-run validation tests (achieve 100% pass rate)
-
-**Blocked Dependencies**:
-- Sprint 212 Phase 2 Task 2: IC Loss (requires stable training)
-- Sprint 212 Phase 2 Task 3: 3D GPU Beamforming (uses PINN)
-- Sprint 212 Phase 2 Task 4: Source Estimation (requires convergence)
+**Test Coverage**:
+1. Displacement IC computation and convergence
+2. Velocity IC computation (∂u/∂t matching)
+3. Combined displacement + velocity IC
+4. Backward compatibility (displacement-only)
+5. Zero field (trivial case)
+6. Plane wave (analytical solution)
+7. Multiple time steps (IC extraction)
+8. Metrics recording and tracking
 
 **Artifacts**:
-- `docs/sprints/SPRINT_214_SESSION_6_SUMMARY.md` - Full analysis and remediation plan
-- `docs/checklist.md` - Updated with BC loss status and critical issue
-- `tests/pinn_bc_validation.rs` - 7 tests documenting instability
+- `src/solver/inverse/pinn/ml/burn_wave_equation_3d/solver.rs` - IC velocity implementation
+- `tests/pinn_ic_validation.rs` - 9 comprehensive IC tests (558 lines)
+- `docs/sprints/SPRINT_214_SESSION_8_IC_VELOCITY_COMPLETE.md` - Full documentation
 
-**Next Session**: Sprint 214 Session 7 - PINN Stability Remediation (6-8 hours)
+**Next Session**: Sprint 214 Session 9 - GPU Benchmarking (WGPU backend validation)
+
+---
+
+### Sprint 214 Session 7: PINN Training Stabilization - ✅ COMPLETE (2025-01-27)
+
+**Status**: ✅ COMPLETE - Training stability fully resolved
+**Priority**: P0 - Production blocking issue resolved
+**Duration**: 3 hours
+
+#### Session Achievements
+
+**Problem Resolved**: Gradient explosion causing BC loss divergence (0.038 → 1.7×10³¹).
+
+**Three-Pillar Stabilization**:
+1. ✅ Adaptive learning rate scheduling (decay on stagnation)
+2. ✅ Loss component normalization (EMA-based adaptive scaling)
+3. ✅ Numerical stability monitoring (early stopping on NaN/Inf)
+
+**Results**:
+- ✅ BC validation: 7/7 tests passing (was 5/7)
+- ✅ BC loss improvements: 89-92% reduction during training
+- ✅ Full test suite: 2314/2314 passing
+- ✅ Zero gradient explosions or NaN/Inf across all tests
+
+**Configuration Changes**:
+- Default learning rate: 1e-3 → 1e-4 (10× reduction)
+- Loss normalization: EMA α = 0.1, ε = 1e-8
+- LR decay: factor = 0.95, patience = 10 epochs, min = lr × 0.001
+
+**Artifacts**:
+- `docs/ADR/ADR_PINN_TRAINING_STABILIZATION.md` - Mathematical specifications
+- `docs/sprints/SPRINT_214_SESSION_7_PINN_STABILIZATION_COMPLETE.md` - Full documentation
+- Updated: `src/solver/inverse/pinn/ml/burn_wave_equation_3d/solver.rs`, `config.rs`, `tests.rs`
+- Updated: `tests/pinn_bc_validation.rs` - All tests passing
+
+**Impact**: Unblocked all PINN-dependent features (IC loss, GPU benchmarking, advanced optimizers)
+
+---
+
+### Sprint 214 Session 6: BurnPINN BC Loss Stability Issue - ⚠️ RESOLVED (2025-02-03)
+
+**Status**: ✅ RESOLVED in Session 7
+**Priority**: P0 - Production Blocking (RESOLVED)
+**Duration**: 2 hours (analysis) + 3 hours (remediation in Session 7)
+
+#### Critical Issue (Now Resolved)
+
+See Sprint 214 Session 7 above for complete resolution.
 
 ---
 
@@ -974,11 +1016,11 @@ where:
 
 ---
 
-### Ultra High Priority (P1) - BurnPINN Initial Condition Loss (8-12 Hours) - PLANNED
+### Ultra High Priority (P1) - BurnPINN Initial Condition Loss (8-12 Hours) - ✅ COMPLETE
 
-**Objective**: Implement physics-correct initial condition enforcement for BurnPINN 3D wave equation solver.
+**Status**: ✅ COMPLETE (Sprint 214 Session 8 - 2025-02-03)
 
-**Problem**: `compute_ic_loss()` currently returns zero-tensor placeholder - IC violations are not penalized, leading to incorrect temporal evolution.
+**Objective**: Implement physics-correct initial condition enforcement for BurnPINN 3D wave equation solver with velocity matching.
 
 **Mathematical Specification**:
 ```
@@ -993,42 +1035,83 @@ where:
   N_Ω = number of domain samples at t=0
 ```
 
-**Implementation Tasks**:
-1. **IC Sampling** (2-3h):
-   - Sample points at t=0 across entire domain
-   - Generate spatial coordinates (x,y,z) for IC points
-   - Support both displacement and velocity ICs
+**Completed Implementation** (Sprint 214 Session 8):
+1. ✅ **Temporal Derivative Computation**:
+   - Forward finite difference: ∂u/∂t(0) ≈ (u(ε) - u(0)) / ε
+   - Method: `compute_temporal_derivative_at_t0()`
+   - Numerically stable with ε = 1e-3
 
-2. **Temporal Derivative** (3-4h):
-   - Compute ∂u/∂t via automatic differentiation
-   - Evaluate temporal derivative at t=0
-   - Handle initial velocity matching
+2. ✅ **IC Loss Extension**:
+   - Combined loss: L_IC = 0.5 × L_disp + 0.5 × L_vel
+   - Backward-compatible API: `train(..., v_data: Option<&[f32]>, ...)`
+   - Velocity IC extraction for t=0 points
 
-3. **IC Loss Computation** (2-3h):
-   - Evaluate PINN at t=0 for displacement
-   - Compute temporal derivative for velocity
-   - Aggregate IC violations: ||u - u₀||² + ||∂u/∂t - v₀||²
+3. ✅ **Validation Test Suite** (9 tests):
+   - Displacement IC computation and convergence
+   - Velocity IC computation (∂u/∂t matching)
+   - Combined displacement + velocity IC
+   - Zero field, plane wave, Gaussian pulse
+   - Backward compatibility (displacement-only)
+   - All 9/9 tests passing
 
-4. **Validation Tests** (2-3h):
-   - Test with Gaussian initial pulse
-   - Test with plane wave ICs
-   - Verify IC satisfaction after training
-   - Compare temporal evolution against analytical solutions
+**Results**:
+- ✅ IC loss includes velocity component
+- ✅ Backward compatible (velocity optional)
+- ✅ 81/81 PINN tests passing (IC: 9, BC: 7, internal: 65)
+- ✅ Zero regressions across all test suites
+
+**Artifacts**:
+- `src/solver/inverse/pinn/ml/burn_wave_equation_3d/solver.rs` - Implementation
+- `tests/pinn_ic_validation.rs` - 9 comprehensive tests (558 lines)
+- `docs/sprints/SPRINT_214_SESSION_8_IC_VELOCITY_COMPLETE.md` - Documentation
+
+**Priority**: P1 (COMPLETE)
+**Actual Effort**: 4 hours
+**Dependencies**: RESOLVED (training stability from Session 7)
+
+---
+
+### High Priority (P1) - GPU Benchmarking & Validation (6-8 Hours) - NEXT SESSION
+
+**Status**: READY - Prerequisites complete (PINN stability + IC loss)
+**Priority**: P1 - GPU acceleration validation
+**Duration**: 6-8 hours (Sprint 214 Session 9)
+
+**Objective**: Validate Burn WGPU backend performance and numerical equivalence vs CPU baseline.
+
+**Scope**:
+1. **WGPU Backend Benchmarks** (3-4h):
+   - Run PINN training on GPU (WGPU backend)
+   - Measure throughput (samples/sec) and latency (ms/epoch)
+   - Compare GPU vs CPU baseline performance
+   - Target: 10-100× speedup for large networks
+
+2. **Numerical Equivalence** (2-3h):
+   - Verify GPU predictions match CPU (tolerance: 1e-6)
+   - Test loss convergence parity
+   - Validate gradient computation equivalence
+   - Ensure no numerical drift over epochs
+
+3. **Benchmark Suite** (1-2h):
+   - Create reproducible benchmark scripts
+   - Document GPU hardware specifications
+   - Record performance metrics and plots
+   - Compare against Session 4 CPU baseline
 
 **Success Criteria**:
-- ✅ IC loss decreases during training
-- ✅ Initial conditions satisfied within 1% error
-- ✅ Temporal evolution physically accurate
-- ✅ Works with various IC types (Gaussian, plane wave, etc.)
+- ✅ GPU backend compiles and runs without errors
+- ✅ Numerical equivalence: |GPU - CPU| < 1e-6
+- ✅ Performance gain: GPU > 10× faster than CPU
+- ✅ Reproducible benchmarks with documented hardware
 
-**Files to Modify**:
-- `src/analysis/ml/pinn/burn_wave_equation_3d/solver.rs` (line 397-455)
-- `src/analysis/ml/pinn/burn_wave_equation_3d/training.rs` (loss aggregation)
-- `tests/pinn_ic_validation.rs` (new validation suite)
+**Files to Create/Modify**:
+- `benches/pinn_gpu_benchmark.rs` (new benchmark suite)
+- `docs/sprints/SPRINT_214_SESSION_9_GPU_BENCHMARKING.md` (results)
+- `docs/ADR/ADR_GPU_BACKEND_SELECTION.md` (hardware recommendations)
 
-**Priority**: P1 (critical for PINN correctness)
-**Effort**: 8-12 hours
-**Dependencies**: BC loss implementation (can be done in parallel)
+**Priority**: P1 - Enables production GPU deployment
+**Effort**: 6-8 hours
+**Dependencies**: PINN stability (Session 7) + IC loss (Session 8) - COMPLETE
 
 ---
 

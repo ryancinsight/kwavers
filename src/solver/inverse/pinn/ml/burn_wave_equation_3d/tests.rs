@@ -39,7 +39,9 @@ fn test_end_to_end_rectangular_domain() -> KwaversResult<()> {
     let u_data = vec![0.0, 0.1, 0.0];
 
     // Train
-    let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 10)?;
+    let metrics = solver.train(
+        &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 10,
+    )?;
     assert_eq!(metrics.epochs_completed, 10);
     assert!(metrics.training_time_secs > 0.0);
 
@@ -78,7 +80,9 @@ fn test_end_to_end_spherical_domain() -> KwaversResult<()> {
     let t_data = vec![0.1, 0.2];
     let u_data = vec![0.0, 0.0];
 
-    let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 5)?;
+    let metrics = solver.train(
+        &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 5,
+    )?;
     assert_eq!(metrics.epochs_completed, 5);
     Ok(())
 }
@@ -106,7 +110,9 @@ fn test_end_to_end_cylindrical_domain() -> KwaversResult<()> {
     let t_data = vec![0.1, 0.2];
     let u_data = vec![0.0, 0.0];
 
-    solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 5)?;
+    solver.train(
+        &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 5,
+    )?;
     Ok(())
 }
 
@@ -138,7 +144,9 @@ fn test_heterogeneous_layered_medium() -> KwaversResult<()> {
     let t_data = vec![0.1, 0.2, 0.1, 0.2];
     let u_data = vec![0.0, 0.0, 0.0, 0.0];
 
-    let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, 10)?;
+    let metrics = solver.train(
+        &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, 10,
+    )?;
     assert_eq!(metrics.epochs_completed, 10);
     Ok(())
 }
@@ -283,7 +291,9 @@ fn test_training_metrics_completeness() -> KwaversResult<()> {
     let u_data = vec![0.0];
 
     let epochs = 5;
-    let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, &device, epochs)?;
+    let metrics = solver.train(
+        &x_data, &y_data, &z_data, &t_data, &u_data, None, &device, epochs,
+    )?;
 
     // Verify metric completeness
     assert_eq!(metrics.epochs_completed, epochs);
