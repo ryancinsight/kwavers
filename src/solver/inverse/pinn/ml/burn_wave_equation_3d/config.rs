@@ -73,9 +73,9 @@ pub struct BurnPINN3DConfig {
     ///
     /// Controls the step size for gradient descent updates.
     ///
-    /// **Default**: 1e-3
+    /// **Default**: 1e-4
     ///
-    /// **Recommended range**: 1e-5 to 1e-2
+    /// **Recommended range**: 1e-5 to 1e-3
     pub learning_rate: f64,
 
     /// Batch size for training
@@ -100,7 +100,7 @@ impl Default for BurnPINN3DConfig {
             hidden_layers: vec![100, 100, 100],
             num_collocation_points: 10000,
             loss_weights: BurnLossWeights3D::default(),
-            learning_rate: 1e-3,
+            learning_rate: 1e-4,
             batch_size: 1000,
             max_grad_norm: 1.0,
         }
@@ -331,7 +331,7 @@ mod tests {
         let config = BurnPINN3DConfig::default();
         assert_eq!(config.hidden_layers, vec![100, 100, 100]);
         assert_eq!(config.num_collocation_points, 10000);
-        assert_eq!(config.learning_rate, 1e-3);
+        assert_eq!(config.learning_rate, 1e-4);
         assert_eq!(config.batch_size, 1000);
         assert_eq!(config.max_grad_norm, 1.0);
     }

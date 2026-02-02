@@ -401,7 +401,7 @@ fn test_config_defaults() {
 
     assert_eq!(config.hidden_layers, vec![100, 100, 100]);
     assert_eq!(config.num_collocation_points, 10000);
-    assert_eq!(config.learning_rate, 1e-3);
+    assert_eq!(config.learning_rate, 1e-4);
     assert_eq!(config.batch_size, 1000);
     assert_eq!(config.max_grad_norm, 1.0);
 

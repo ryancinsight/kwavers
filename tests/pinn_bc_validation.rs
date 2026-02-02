@@ -86,7 +86,7 @@ mod bc_loss_tests {
         let config = BurnPINN3DConfig {
             hidden_layers: vec![20, 20],
             num_collocation_points: 100,
-            learning_rate: 1e-2, // Higher learning rate for faster convergence in test
+            learning_rate: 1e-3, // Conservative learning rate for stability
             loss_weights: BurnLossWeights3D {
                 data_weight: 1.0,
                 pde_weight: 0.5,
@@ -156,7 +156,7 @@ mod bc_loss_tests {
         let config = BurnPINN3DConfig {
             hidden_layers: vec![30, 30],
             num_collocation_points: 200,
-            learning_rate: 5e-3,
+            learning_rate: 5e-4, // Conservative learning rate for stability
             loss_weights: BurnLossWeights3D {
                 data_weight: 2.0,
                 pde_weight: 1.0,

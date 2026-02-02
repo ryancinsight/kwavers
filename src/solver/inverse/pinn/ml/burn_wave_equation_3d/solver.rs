@@ -41,6 +41,39 @@ use super::network::PINN3DNetwork;
 use super::optimizer::SimpleOptimizer3D;
 use super::wavespeed::WaveSpeedFn3D;
 
+/// Adaptive loss scaling for normalization
+///
+/// Tracks exponential moving averages of loss component magnitudes
+/// to prevent any single component from dominating during training.
+///
+/// # Mathematical Specification
+///
+/// For each loss component L ∈ {data, pde, bc, ic}:
+///   scale_t = α × |L_t| + (1-α) × scale_{t-1}
+///
+/// Where α is the EMA smoothing factor (typically 0.1).
+///
+/// Normalized loss: L_norm = L / (scale + ε)
+#[derive(Debug, Clone)]
+struct LossScales {
+    data_scale: f32,
+    pde_scale: f32,
+    bc_scale: f32,
+    ic_scale: f32,
+    ema_alpha: f32,
+}
+
+impl LossScales {
+    /// Update scales with exponential moving average
+    fn update(&mut self, data_loss: f32, pde_loss: f32, bc_loss: f32, ic_loss: f32) {
+        let alpha = self.ema_alpha;
+        self.data_scale = alpha * data_loss.abs() + (1.0 - alpha) * self.data_scale;
+        self.pde_scale = alpha * pde_loss.abs() + (1.0 - alpha) * self.pde_scale;
+        self.bc_scale = alpha * bc_loss.abs() + (1.0 - alpha) * self.bc_scale;
+        self.ic_scale = alpha * ic_loss.abs() + (1.0 - alpha) * self.ic_scale;
+    }
+}
+
 /// Main solver for 3D wave equation PINN
 ///
 /// Orchestrates training and prediction by coordinating the network, optimizer,
@@ -237,6 +270,23 @@ impl<B: Backend> BurnPINN3DWave<B> {
             x_data, y_data, z_data, t_data, u_data, device,
         )?;
 
+        // Adaptive learning rate: start with configured rate, decay on stagnation
+        let mut current_lr = self.config.0.learning_rate as f32;
+        let min_lr = (self.config.0.learning_rate * 0.001) as f32;
+        let lr_decay_factor = 0.95_f32;
+        let lr_decay_patience = 10;
+        let mut epochs_without_improvement = 0;
+        let mut best_total_loss = f64::INFINITY;
+
+        // Loss normalization: track moving averages to normalize loss components
+        let mut loss_scales = LossScales {
+            data_scale: 1.0,
+            pde_scale: 1.0,
+            bc_scale: 1.0,
+            ic_scale: 1.0,
+            ema_alpha: 0.1, // Exponential moving average factor
+        };
+
         // Training loop with physics-informed loss
         for epoch in 0..epochs {
             let (total_loss, data_loss, pde_loss, bc_loss, ic_loss) = self.compute_physics_loss(
@@ -255,6 +305,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
                 t_ic.clone(),
                 u_ic.clone(),
                 &self.config.0.loss_weights,
+                &mut loss_scales,
             )?;
 
             // Convert to f64 for metrics
@@ -264,6 +315,23 @@ impl<B: Backend> BurnPINN3DWave<B> {
             let bc_val = Self::scalar_f32(&bc_loss)? as f64;
             let ic_val = Self::scalar_f32(&ic_loss)? as f64;
 
+            // Check for NaN/Inf - early stopping for numerical instability
+            if !total_val.is_finite()
+                || !data_val.is_finite()
+                || !pde_val.is_finite()
+                || !bc_val.is_finite()
+                || !ic_val.is_finite()
+            {
+                log::error!(
+                    "Numerical instability detected at epoch {}: total={:.6e}, data={:.6e}, pde={:.6e}, bc={:.6e}, ic={:.6e}",
+                    epoch, total_val, data_val, pde_val, bc_val, ic_val
+                );
+                return Err(KwaversError::InvalidInput(format!(
+                    "Training diverged at epoch {} (NaN/Inf detected)",
+                    epoch
+                )));
+            }
+
             metrics.total_loss.push(total_val);
             metrics.data_loss.push(data_val);
             metrics.pde_loss.push(pde_val);
@@ -271,20 +339,48 @@ impl<B: Backend> BurnPINN3DWave<B> {
             metrics.ic_loss.push(ic_val);
             metrics.epochs_completed = epoch + 1;
 
-            // Perform optimizer step to update model parameters
+            // Backward pass to compute gradients
             let grads = total_loss.backward();
+
+            // Update learning rate in optimizer (adaptive LR)
+            self.optimizer.0 = SimpleOptimizer3D::new(current_lr);
+
+            // Optimizer step with gradients
             self.pinn = self.optimizer.0.step(self.pinn.clone(), &grads);
+
+            // Adaptive learning rate: decay if no improvement
+            if total_val < best_total_loss * 0.999 {
+                // 0.1% improvement threshold
+                best_total_loss = total_val;
+                epochs_without_improvement = 0;
+            } else {
+                epochs_without_improvement += 1;
+                if epochs_without_improvement >= lr_decay_patience {
+                    let old_lr = current_lr;
+                    current_lr = (current_lr * lr_decay_factor).max(min_lr);
+                    if current_lr != old_lr {
+                        log::info!(
+                            "Learning rate decayed: {:.6e} → {:.6e} (no improvement for {} epochs)",
+                            old_lr,
+                            current_lr,
+                            lr_decay_patience
+                        );
+                    }
+                    epochs_without_improvement = 0;
+                }
+            }
 
             if epoch % 100 == 0 {
                 log::info!(
-                    "Epoch {}/{}: total_loss={:.6e}, data_loss={:.6e}, pde_loss={:.6e}, bc_loss={:.6e}, ic_loss={:.6e}",
+                    "Epoch {}/{}: total_loss={:.6e}, data_loss={:.6e}, pde_loss={:.6e}, bc_loss={:.6e}, ic_loss={:.6e}, lr={:.6e}",
                     epoch,
                     epochs,
                     total_val,
                     data_val,
                     pde_val,
                     bc_val,
-                    ic_val
+                    ic_val,
+                    current_lr
                 );
             }
         }
@@ -385,6 +481,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
         t_ic: Tensor<B, 2>,
         u_ic: Tensor<B, 2>,
         weights: &BurnLossWeights3D,
+        loss_scales: &mut LossScales,
     ) -> KwaversResult<(
         Tensor<B, 1>,
         Tensor<B, 1>,
@@ -394,7 +491,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
     )> {
         // Data loss: MSE between predictions and training data
         let u_pred = self.pinn.forward(x_data, y_data, z_data, t_data);
-        let data_loss = (u_pred.clone() - u_data).powf_scalar(2.0).mean();
+        let data_loss_raw = (u_pred.clone() - u_data).powf_scalar(2.0).mean();
 
         // PDE loss: MSE of PDE residual at collocation points
         let pde_residual = self.pinn.compute_pde_residual(
@@ -404,7 +501,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
             t_colloc.clone(),
             |x, y, z| self.get_wave_speed(x, y, z),
         )?;
-        let pde_loss = pde_residual.powf_scalar(2.0).mean();
+        let pde_loss_raw = pde_residual.powf_scalar(2.0).mean();
 
         // Boundary condition loss: Enforce BC on all domain boundaries
         // Mathematical specification:
@@ -413,18 +510,41 @@ impl<B: Backend> BurnPINN3DWave<B> {
         //
         // Implementation: Sample points on 6 faces of rectangular domain,
         // evaluate PINN predictions, compute BC violations based on type
-        let bc_loss = self.compute_bc_loss_internal(&x_colloc, &y_colloc, &z_colloc, &t_colloc);
+        let bc_loss_raw = self.compute_bc_loss_internal(&x_colloc, &y_colloc, &z_colloc, &t_colloc);
 
         let u_ic_pred = self.pinn.forward(x_ic, y_ic, z_ic, t_ic);
-        let ic_loss = (u_ic_pred - u_ic).powf_scalar(2.0).mean();
+        let ic_loss_raw = (u_ic_pred - u_ic).powf_scalar(2.0).mean();
 
-        // Total weighted loss
-        let total_loss = weights.data_weight * data_loss.clone()
-            + weights.pde_weight * pde_loss.clone()
-            + weights.bc_weight * bc_loss.clone()
-            + weights.ic_weight * ic_loss.clone();
+        // Extract scalar values for scale update
+        let data_loss_val = Self::scalar_f32(&data_loss_raw).unwrap_or(1.0);
+        let pde_loss_val = Self::scalar_f32(&pde_loss_raw).unwrap_or(1.0);
+        let bc_loss_val = Self::scalar_f32(&bc_loss_raw).unwrap_or(1.0);
+        let ic_loss_val = Self::scalar_f32(&ic_loss_raw).unwrap_or(1.0);
 
-        Ok((total_loss, data_loss, pde_loss, bc_loss, ic_loss))
+        // Update loss scales with exponential moving average
+        loss_scales.update(data_loss_val, pde_loss_val, bc_loss_val, ic_loss_val);
+
+        // Normalize losses by their scales to prevent dominance
+        let eps = 1e-8_f32;
+        let data_loss_normalized = data_loss_raw.clone() / (loss_scales.data_scale + eps);
+        let pde_loss_normalized = pde_loss_raw.clone() / (loss_scales.pde_scale + eps);
+        let bc_loss_normalized = bc_loss_raw.clone() / (loss_scales.bc_scale + eps);
+        let ic_loss_normalized = ic_loss_raw.clone() / (loss_scales.ic_scale + eps);
+
+        // Total weighted loss with normalized components
+        let total_loss = weights.data_weight * data_loss_normalized
+            + weights.pde_weight * pde_loss_normalized
+            + weights.bc_weight * bc_loss_normalized
+            + weights.ic_weight * ic_loss_normalized;
+
+        // Return raw (unnormalized) losses for metrics tracking
+        Ok((
+            total_loss,
+            data_loss_raw,
+            pde_loss_raw,
+            bc_loss_raw,
+            ic_loss_raw,
+        ))
     }
 
     fn extract_initial_condition_tensors(

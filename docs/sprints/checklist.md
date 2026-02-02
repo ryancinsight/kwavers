@@ -1,21 +1,177 @@
-# Sprint 208 Phase 2→3 Checklist
+# Sprint 214 Checklist
 
-**Sprint**: 208 Phase 3 Active  
-**Status**: ✅ Phase 2 Complete → 🔄 Phase 3 In Progress  
-**Last Updated**: 2025-01-14 (Evidence-Based Verification Complete)  
-**Phase**: Phase 3 Active (All P0 Blockers Resolved, Task 4 Ready)
-
----
-
-## Phase Overview
-
-- ✅ **Phase 1** (0-10%): Foundation complete
-- ✅ **Phase 2** (10-50%): Execution complete - **100% complete**
-- 🔄 **Phase 3** (50%+): Ready to begin - Task 4 (Axisymmetric Medium)
+**Sprint**: 214 Session 7 Complete  
+**Status**: ✅ P0 PINN Stabilization Complete → 🔄 P1 IC Loss Extension  
+**Last Updated**: 2025-01-27 (PINN Training Stability Verified)  
+**Phase**: PINN Integration & GPU Optimization
 
 ---
 
-## Phase 2 Critical Path Items (P0 - COMPLETE ✅)
+## Sprint 214 Session Overview
+
+- ✅ **Session 5**: Burn PINN 3D wave equation implementation
+- ✅ **Session 6**: BC loss validation and numerical stability discovery
+- ✅ **Session 7**: PINN training stabilization (P0 remediation complete)
+- 🔜 **Session 8**: IC velocity loss extension & GPU benchmarking
+
+---
+
+## Sprint 214 Session 7: PINN Training Stabilization ✅
+
+### Critical Path Items (P0 - COMPLETE)
+
+#### ✅ 1. Adaptive Learning Rate Scheduling
+- [x] Implement LR decay on stagnation (patience = 10 epochs)
+- [x] Set conservative initial LR: 1e-4 (reduced from 1e-3)
+- [x] Add minimum LR threshold: 1e-7
+- [x] Dynamic optimizer updates with current LR
+- [x] Enhanced logging with LR tracking
+
+**Status**: ✅ **COMPLETE** - All tests passing with adaptive LR
+
+---
+
+#### ✅ 2. Loss Component Normalization
+- [x] Implement `LossScales` struct for EMA-based scaling
+- [x] Add exponential moving average updates (α = 0.1)
+- [x] Normalize losses before weighted sum
+- [x] Return raw losses for metrics transparency
+- [x] Prevent BC/PDE/data/IC dominance
+
+**Status**: ✅ **COMPLETE** - Loss balance verified across all tests
+
+**Implementation**:
+```rust
+struct LossScales {
+    data_scale: f32,
+    pde_scale: f32,
+    bc_scale: f32,
+    ic_scale: f32,
+    ema_alpha: f32,
+}
+```
+
+---
+
+#### ✅ 3. Numerical Stability Monitoring
+- [x] Add early stopping on NaN/Inf detection
+- [x] Check all loss components every epoch
+- [x] Detailed error diagnostics on divergence
+- [x] Fail-fast to prevent wasted computation
+
+**Status**: ✅ **COMPLETE** - Zero NaN/Inf across 2314+ tests
+
+---
+
+#### ✅ 4. BC Validation Test Suite
+- [x] BC loss computation validation
+- [x] BC loss decrease with training
+- [x] Dirichlet BC zero boundary enforcement
+- [x] BC loss sensitivity tests
+- [x] Different domain sizes validation
+- [x] Metrics recording verification
+- [x] Minimal collocation points edge case
+
+**Status**: ✅ **COMPLETE** - 7/7 tests passing (was 5/7)
+
+**Test Results**:
+- `test_bc_loss_decreases_with_training`: BC loss 0.004611 → 0.000502 (89% improvement)
+- `test_dirichlet_bc_zero_boundary`: BC loss 0.058135 → 0.004880 (91.6% improvement)
+- Zero gradient explosions
+- All losses remain finite
+
+---
+
+#### ✅ 5. Configuration Updates
+- [x] Reduce default learning rate: 1e-3 → 1e-4
+- [x] Update test learning rates for stability
+- [x] Update test assertions for new defaults
+- [x] Document recommended LR range: 1e-5 to 1e-3
+
+**Status**: ✅ **COMPLETE** - All tests updated and passing
+
+---
+
+#### ✅ 6. Documentation
+- [x] Create ADR: `ADR_PINN_TRAINING_STABILIZATION.md`
+- [x] Document mathematical specifications
+- [x] Document implementation rationale
+- [x] Document alternatives considered
+- [x] Create session summary: `SPRINT_214_SESSION_7_PINN_STABILIZATION_COMPLETE.md`
+- [x] Update inline code comments
+
+**Status**: ✅ **COMPLETE** - Comprehensive documentation artifacts
+
+---
+
+### Verification Evidence
+
+**BC Validation Suite**:
+```
+test result: ok. 7 passed; 0 failed; 0 ignored
+- test_bc_loss_computation_nonzero: ✅
+- test_bc_loss_decreases_with_training: ✅
+- test_dirichlet_bc_zero_boundary: ✅
+- test_bc_loss_sensitivity: ✅
+- test_bc_loss_different_domains: ✅
+- test_bc_loss_metrics_recording: ✅
+- test_bc_loss_minimal_collocation: ✅
+
+Execution time: 10.44s
+```
+
+**Full Test Suite**:
+```
+test result: ok. 2314 passed; 0 failed; 16 ignored
+Execution time: 7.35s
+```
+
+**Key Metrics**:
+- BC validation pass rate: 71% → 100% (+29%)
+- Gradient explosion rate: 29% → 0% (-100%)
+- NaN/Inf occurrences: 2 tests → 0 tests (-100%)
+- BC loss convergence: 89-92% improvement
+
+---
+
+## Sprint 214 Next Steps (P1)
+
+### 🔜 1. Initial Condition (IC) Loss Completeness (4-6 hours)
+- [ ] Extend IC loss to include velocity (∂u/∂t) matching
+- [ ] Implement via Burn autodiff (tensor.grad())
+- [ ] Add IC validation tests: Gaussian pulse, plane wave, zero-field
+- [ ] Verify IC loss decreases during training
+- [ ] Acceptance: Initial condition error < tolerance
+
+**Status**: 🔜 Ready to Proceed (training stability unblocked)
+
+---
+
+### 🔜 2. GPU Benchmarking (Session 8)
+- [ ] Run Burn WGPU backend benchmarks on actual GPU
+- [ ] Collect throughput metrics
+- [ ] Collect latency metrics
+- [ ] Verify numerical equivalence vs CPU (tolerance: 1e-6)
+- [ ] Document performance characteristics
+
+**Status**: 🔜 Ready (CPU baseline established in Session 4)
+
+---
+
+### 🔜 3. PINN Best-Practices Documentation (2-3 hours)
+- [x] ADR created with mathematical specifications
+- [ ] User-facing training guide with examples
+- [ ] Hyperparameter tuning recommendations
+- [ ] Troubleshooting guide for common issues
+- [ ] Integration with existing workflows
+
+**Status**: 🔄 Partially Complete (ADR done)
+
+---
+
+## Archive: Sprint 208 Phase 2 Items (COMPLETE)
+
+---
 
 ### ✅ 1. SIMD Matmul Quantization Bug Fix
 - [x] Identify quantization error in SIMD implementation

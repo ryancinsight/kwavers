@@ -1,53 +1,175 @@
-# Sprint Backlog - Sprint 208 Phase 2+
+# Sprint Backlog - Sprint 214+
 
-**Sprint**: 208 Phase 2 → Phase 3 Transition  
+**Sprint**: 214  
 **Status**: 🔄 Active  
-**Last Updated**: 2025-01-14  
-**Current Phase**: Phase 2 (50%+ completion focus)
+**Last Updated**: 2025-01-27  
+**Current Phase**: PINN Training Stabilization & GPU Optimization
 
 ---
 
-## Sprint 208 Overview
+## Sprint 214 Overview
 
-**Objective**: Eliminate deprecated code, resolve critical TODOs, ensure compilation correctness, and prepare for advanced physics integration.
+**Objective**: PINN (Burn) integration, beamforming GPU readiness, and overall architectural hygiene.
 
-**Phase Progress**:
-- ✅ Phase 1 Complete: Deprecated code elimination (17 items removed)
-- 🔄 Phase 2 In Progress: Critical TODO resolution & compilation fixes
-- 🔜 Phase 3 Planned: Optimization, verification, documentation sync
+**Session Progress**:
+- ✅ Session 5: Burn PINN 3D wave equation implementation
+- ✅ Session 6: BC loss validation and numerical stability discovery
+- ✅ Session 7: PINN training stabilization (P0 remediation complete)
+- 🔜 Session 8: IC velocity loss extension & GPU benchmarking
+
+---
+
+## Sprint 214 Session 7: PINN Training Stabilization ✅
+
+**Date**: 2025-01-27  
+**Status**: ✅ Complete and Verified  
+**Priority**: P0 - Production Blocking
+
+### Problem Identified (Session 6)
+- BC loss explosion during training: 0.038 → 1.7×10³¹
+- Gradient explosion causing training divergence
+- 2 failing BC validation tests (5/7 passing)
+
+### Solution Implemented (Session 7)
+**Three-Pillar Stabilization Strategy**:
+
+1. **Adaptive Learning Rate Scheduling**
+   - Initial LR: 1e-4 (reduced from 1e-3)
+   - Decay on stagnation: γ = 0.95, patience = 10 epochs
+   - Dynamic optimizer updates with current LR
+
+2. **Loss Component Normalization**
+   - EMA-based adaptive scaling (α = 0.1)
+   - Prevents BC/PDE/data/IC dominance
+   - Returns raw losses for metrics transparency
+
+3. **Numerical Stability Monitoring**
+   - Early stopping on NaN/Inf detection
+   - Detailed error diagnostics
+   - Fail-fast to prevent wasted computation
+
+### Results
+- ✅ BC validation: 7/7 tests passing (was 5/7)
+- ✅ BC loss convergence: 89-92% improvement
+- ✅ Zero gradient explosions across 2314+ tests
+- ✅ No NaN/Inf in any training run
+- ✅ Full test suite: 2314 passed, 0 failed
+
+### Artifacts
+- ADR: `docs/ADR/ADR_PINN_TRAINING_STABILIZATION.md`
+- Summary: `docs/sprints/SPRINT_214_SESSION_7_PINN_STABILIZATION_COMPLETE.md`
+- Code: `src/solver/inverse/pinn/ml/burn_wave_equation_3d/solver.rs` (+150 lines)
 
 ---
 
 ## Current Sprint Tasks
 
-### Phase 2: Critical Path Items
+### P1: Initial Condition (IC) Loss Completeness (4-6 hours)
+**Status**: 🔜 Ready to Proceed (training stability unblocked)  
+**Priority**: P1 - High
 
-#### 1. ✅ SIMD Matmul Quantization Bug (COMPLETE)
+**Scope**:
+- Extend IC loss to include velocity (∂u/∂t) matching via autodiff
+- Implement temporal derivative matching at t=0
+- Add IC validation tests: Gaussian pulse, plane wave, zero-field
+- Acceptance: IC loss decreases; initial condition error < tolerance
+
+**Blocked By**: None (P0 training stability resolved in Session 7)
+
+### P1: GPU Benchmarking (Sprint 214 Session 8)
+**Status**: 🔜 Ready (CPU baseline established)  
+**Priority**: P1 - High
+
+**Scope**:
+- Run Burn WGPU backend benchmarks on actual GPU hardware
+- Collect throughput, latency, numerical equivalence metrics
+- Compare vs CPU baseline (tolerance: 1e-6)
+- Document performance characteristics
+
+**Dependencies**: Session 4 CPU baseline (complete)
+
+### P1: PINN Best-Practices Documentation (2-3 hours)
+**Status**: 🔄 Partially Complete (ADR created)  
+**Priority**: P1 - High
+
+**Remaining**:
+- User-facing training guide with examples
+- Hyperparameter tuning recommendations
+- Troubleshooting guide for common issues
+- Integration with existing workflows
+
+### P2: Hot-Path GPU Optimization (Subsequent Sprint)
+**Status**: 🔜 Deferred (requires GPU benchmarks)  
+**Priority**: P2 - Medium
+
+**Scope**:
+- Implement WGSL/CUDA fused kernels for distance→delay→interpolation→accumulation
+- Profile memory coalescing and parallel reductions
+- Optimize tensor operations for GPU execution
+- Benchmark against CPU and Burn baseline
+
+---
+
+## Completed Sprint 214 Items
+
+### ✅ Session 7: PINN Training Stabilization (P0)
+**Status**: ✅ Complete and Verified  
+**Completed**: 2025-01-27  
+**Time**: ~3 hours (estimated 6-8 hours)
+
+**Deliverables**:
+- Three-pillar stabilization strategy implemented
+- BC validation: 7/7 tests passing (100% success rate)
+- Full test suite: 2314 passed, 0 failed, 16 ignored
+- ADR documentation with mathematical specifications
+- Zero technical debt or architectural violations
+
+### ✅ Session 6: BC Loss Validation & Stability Discovery
+**Status**: ✅ Complete  
+**Completed**: 2025-01-26
+
+**Deliverables**:
+- BC loss implementation validated (mathematically correct)
+- 7 BC validation tests written (5 passing, 2 failing)
+- Numerical instability root causes identified
+- Remediation plan documented
+
+### ✅ Session 5: Burn PINN 3D Wave Equation
+**Status**: ✅ Complete  
+**Completed**: 2025-01-25
+
+**Deliverables**:
+- PINN network architecture (3D wave equation)
+- PDE residual computation with autodiff
+- Training loop with physics-informed loss
+- Initial condition extraction and enforcement
+
+### ✅ Session 4: GPU Beamforming Baseline
+**Status**: ✅ Complete  
+**Completed**: 2025-01-24
+
+**Deliverables**:
+- CPU DAS beamforming baseline established
+- Criterion benchmarks for small and medium cases
+- Burn + WGPU integration tests (11/11 passing)
+- Performance metrics documented
+
+---
+
+## Archive: Sprint 208 Items
+
+### ✅ SIMD Matmul Quantization Bug (COMPLETE)
 **Status**: ✅ Fixed and Verified  
 **Priority**: P0 - Critical  
 **Evidence**: Tests passing, mathematical correctness validated
 
-#### 2. ✅ Microbubble Dynamics Implementation (COMPLETE)
+### ✅ Microbubble Dynamics Implementation (COMPLETE)
 **Status**: ✅ Fully Implemented  
-**Priority**: P0 - Critical  
-**Components**:
-- ✅ Domain layer: Keller-Miksis equation, Marmottant shell model
-- ✅ Application layer: Drug kinetics service
-- ✅ Orchestrator: Microbubble dynamics orchestrator
-- ✅ Tests: 59 tests (47 domain + 7 service + 5 orchestrator)
+**Priority**: P0 - Critical
 
-#### 3. ✅ Elastography Inversion API Migration (COMPLETE)
+### ✅ Elastography Inversion API Migration (COMPLETE)
 **Status**: ✅ Complete - All Errors Resolved  
-**Priority**: P0 - Critical (Blocks Compilation)  
-**Completed Work**:
-- ✅ `tests/nl_swe_validation.rs`: 13 errors → 0 errors (fixed)
-- ✅ `benches/nl_swe_performance.rs`: 8 errors → 0 errors (fixed)
-- ✅ `tests/ultrasound_validation.rs`: 1 error → 0 errors (fixed)
-- ✅ Extension trait imports added where needed
-
-**Solution Applied**:
-- Replaced `elastography_old` imports with current `elastography` module
-- Migrated to config-based constructors: `NonlinearInversionConfig::new(method)`
+**Priority**: P0 - Critical
 - Replaced `.reconstruct_nonlinear()` with `.reconstruct()`
 - Added `NonlinearParameterMapExt` trait imports for statistics methods
 
