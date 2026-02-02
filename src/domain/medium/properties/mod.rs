@@ -75,6 +75,7 @@ pub mod implants;
 pub mod material; // Unified MaterialProperties (consolidated from physics/materials)
 mod optical;
 mod strength;
+pub mod temperature_dependent; // Temperature-dependent material properties
 mod thermal;
 pub mod tissue; // Tissue property catalogs // Implant property catalogs
 
@@ -86,4 +87,8 @@ pub use electromagnetic::ElectromagneticPropertyData;
 pub use material::MaterialProperties; // SSOT for unified material properties
 pub use optical::OpticalPropertyData;
 pub use strength::StrengthPropertyData;
+pub use temperature_dependent::{
+    MaterialPropertiesAtT, TemperatureDependentAcoustic, TemperatureDependentMaterial,
+    TemperatureDependentThermal,
+};
 pub use thermal::ThermalPropertyData;

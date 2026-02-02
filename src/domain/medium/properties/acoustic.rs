@@ -242,6 +242,23 @@ impl AcousticPropertyData {
             nonlinearity: 7.4,
         }
     }
+
+    /// Fat tissue acoustic properties
+    ///
+    /// Based on clinical measurements:
+    /// - Density: ~950 kg/m³ (lower than water)
+    /// - Sound speed: ~1450 m/s (lower than soft tissue)
+    /// - Attenuation: ~0.6 dB/(MHz·cm) = ~0.69 Np/(MHz·m)
+    /// - B/A: ~10.0 (higher nonlinearity than soft tissue)
+    pub fn fat() -> Self {
+        Self {
+            density: 950.0,
+            sound_speed: 1450.0,
+            absorption_coefficient: 0.69,
+            absorption_power: 1.0,
+            nonlinearity: 10.0,
+        }
+    }
 }
 
 impl fmt::Display for AcousticPropertyData {
