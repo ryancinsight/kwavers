@@ -10,6 +10,7 @@ pub mod array; // Sensor array geometry (domain concept - SSOT for sensor positi
 pub mod beamforming;
 pub mod grid_sampling;
 pub mod passive_acoustic_mapping; // Multi-lateration localization system
+pub mod point; // Point sensors for arbitrary position sampling
 pub mod recorder; // Shared sensor recording logic
 pub mod sonoluminescence; // Sonoluminescence detector
 
@@ -29,3 +30,6 @@ pub use passive_acoustic_mapping::{
 };
 // Expose unified beamforming config at the sensor module root.
 pub use beamforming::{BeamformingConfig, BeamformingCoreConfig};
+
+// Point sensors for hydrophone-equivalent arbitrary position sampling
+pub use point::{PointSensor, PointSensorConfig};

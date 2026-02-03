@@ -69,6 +69,7 @@ pub mod coupling;
 pub mod cpml;
 pub mod fem;
 pub mod field_updater;
+pub mod periodic;
 pub mod pml;
 pub mod smoothing;
 pub mod traits;
@@ -81,6 +82,7 @@ pub use coupling::{
 };
 pub use fem::{FemBoundaryCondition, FemBoundaryManager};
 pub use field_updater::{FieldUpdater, GradientFieldUpdater};
+pub use periodic::{PeriodicBoundaryCondition, PeriodicConfig};
 pub use traits::{
     AbsorbingBoundary, BoundaryCondition, BoundaryDirections, BoundaryDomain, BoundaryLayer,
     BoundaryLayerManager, FieldType, PeriodicBoundary, ReflectiveBoundary,
