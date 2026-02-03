@@ -6,6 +6,9 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;
 use crate::physics::traits::AcousticWaveModel;
+use crate::solver::forward::nonlinear::conservation::{
+    ConservationDiagnostics, ConservationTolerances, ConservationTracker, ViolationSeverity,
+};
 use ndarray::{Array3, Array4, Axis};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -33,6 +36,20 @@ pub struct WesterveltWave {
 
     // Performance tracking
     metrics: Arc<Mutex<PerformanceMetrics>>,
+
+    // Conservation diagnostics
+    conservation_tracker: Option<ConservationTracker>,
+    current_step: usize,
+    current_time: f64,
+    grid_cache: Option<Grid>,
+    medium_properties: Option<MediumProperties>,
+}
+
+/// Cached medium properties for conservation calculations
+#[derive(Debug, Clone)]
+struct MediumProperties {
+    rho0: f64,
+    c0: f64,
 }
 
 impl WesterveltWave {
@@ -51,7 +68,80 @@ impl WesterveltWave {
             ],
             buffer_indices: [0, 1, 2], // Initially: next=0, current=1, previous=2
             metrics: Arc::new(Mutex::new(PerformanceMetrics::new())),
+            conservation_tracker: None,
+            current_step: 0,
+            current_time: 0.0,
+            grid_cache: Some(grid.clone()),
+            medium_properties: None,
         }
+    }
+
+    /// Enable conservation diagnostics with specified tolerances
+    ///
+    /// # Arguments
+    ///
+    /// * `tolerances` - Conservation tolerance parameters (absolute/relative/check_interval)
+    /// * `medium` - Medium for extracting representative properties
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use kwavers::solver::forward::nonlinear::conservation::ConservationTolerances;
+    ///
+    /// let mut solver = WesterveltWave::new(&grid);
+    /// solver.enable_conservation_diagnostics(ConservationTolerances::default(), &medium);
+    /// ```
+    pub fn enable_conservation_diagnostics(
+        &mut self,
+        tolerances: ConservationTolerances,
+        medium: &dyn Medium,
+    ) {
+        // Cache medium properties
+        if let Some(ref grid) = self.grid_cache {
+            let center_x = grid.dx * (grid.nx as f64) / 2.0;
+            let center_y = grid.dy * (grid.ny as f64) / 2.0;
+            let center_z = grid.dz * (grid.nz as f64) / 2.0;
+            let rho0 =
+                crate::domain::medium::density_at(medium, center_x, center_y, center_z, grid);
+            let c0 =
+                crate::domain::medium::sound_speed_at(medium, center_x, center_y, center_z, grid);
+            self.medium_properties = Some(MediumProperties { rho0, c0 });
+        }
+
+        let initial_energy = self.calculate_total_energy();
+        let initial_momentum = self.calculate_total_momentum();
+        let initial_mass = self.calculate_total_mass();
+
+        self.conservation_tracker = Some(ConservationTracker::new(
+            initial_energy,
+            initial_momentum,
+            initial_mass,
+            tolerances,
+        ));
+    }
+
+    /// Disable conservation diagnostics
+    pub fn disable_conservation_diagnostics(&mut self) {
+        self.conservation_tracker = None;
+    }
+
+    /// Get conservation diagnostic summary
+    ///
+    /// Returns a summary of all conservation checks performed,
+    /// including maximum severity and error magnitudes.
+    pub fn get_conservation_summary(&self) -> Option<String> {
+        self.conservation_tracker
+            .as_ref()
+            .map(|tracker| tracker.summary().to_string())
+    }
+
+    /// Check if solution satisfies conservation constraints
+    ///
+    /// Returns `true` if all conservation violations are within acceptable limits.
+    pub fn is_solution_valid(&self) -> bool {
+        self.conservation_tracker
+            .as_ref()
+            .is_none_or(|tracker| tracker.is_solution_valid())
     }
 
     /// Check stability of the current configuration
@@ -270,6 +360,13 @@ impl AcousticWaveModel for WesterveltWave {
         // Rotate buffer indices for next iteration
         self.buffer_indices.rotate_right(1);
 
+        // Update step counters
+        self.current_step += 1;
+        self.current_time += dt;
+
+        // Conservation diagnostics (if enabled)
+        self.check_conservation_laws();
+
         Ok(())
     }
 
@@ -280,6 +377,77 @@ impl AcousticWaveModel for WesterveltWave {
 
     fn set_nonlinearity_scaling(&mut self, scaling: f64) {
         self.nonlinearity_scaling = scaling;
+    }
+}
+
+/// Check conservation laws and log diagnostics
+///
+/// Performs conservation checks at configured intervals and logs violations.
+/// Critical violations trigger warnings via tracing infrastructure.
+impl WesterveltWave {
+    fn check_conservation_laws(&mut self) {
+        // Check if we should perform diagnostics at this step
+        let should_check = self.conservation_tracker.as_ref().is_some_and(|tracker| {
+            self.current_step
+                .is_multiple_of(tracker.tolerances.check_interval)
+        });
+
+        if !should_check {
+            return;
+        }
+
+        // Compute diagnostics first (without holding mutable reference to tracker)
+        let (initial_energy, initial_momentum, initial_mass, tolerances) =
+            if let Some(ref tracker) = self.conservation_tracker {
+                (
+                    tracker.initial_energy,
+                    tracker.initial_momentum,
+                    tracker.initial_mass,
+                    tracker.tolerances,
+                )
+            } else {
+                return;
+            };
+
+        let diagnostics = self.check_all_conservation(
+            initial_energy,
+            initial_momentum,
+            initial_mass,
+            self.current_step,
+            self.current_time,
+            &tolerances,
+        );
+
+        // Now update tracker with diagnostics
+        if let Some(ref mut tracker) = self.conservation_tracker {
+            // Update max severity
+            for diag in &diagnostics {
+                if diag.severity > tracker.max_severity {
+                    tracker.max_severity = diag.severity;
+                }
+            }
+            // Store in history
+            tracker.history.extend(diagnostics.clone());
+        }
+
+        // Log diagnostics based on severity
+        for diag in diagnostics {
+            match diag.severity {
+                ViolationSeverity::Acceptable => {
+                    // Silent for acceptable violations
+                }
+                ViolationSeverity::Warning => {
+                    eprintln!("⚠️  Westervelt Wave Conservation Warning: {}", diag);
+                }
+                ViolationSeverity::Error => {
+                    eprintln!("❌ Westervelt Wave Conservation Error: {}", diag);
+                }
+                ViolationSeverity::Critical => {
+                    eprintln!("🔴 Westervelt Wave Conservation CRITICAL: {}", diag);
+                    eprintln!("   Solution may be physically invalid!");
+                }
+            }
+        }
     }
 }
 
@@ -307,4 +475,97 @@ fn compute_laplacian_fd(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
     }
 
     laplacian
+}
+
+/// Implementation of conservation diagnostics trait for Westervelt spectral solver
+impl ConservationDiagnostics for WesterveltWave {
+    fn calculate_total_energy(&self) -> f64 {
+        // Acoustic energy density: E = p²/(2ρ₀c₀²)
+        // Total energy: ∫∫∫ E dV
+        let mut total_energy = 0.0;
+
+        if let (Some(ref grid), Some(ref props)) = (&self.grid_cache, &self.medium_properties) {
+            let factor = 1.0 / (2.0 * props.rho0 * props.c0 * props.c0);
+            let dv = grid.dx * grid.dy * grid.dz; // Volume element
+
+            // Use current pressure buffer
+            let curr_idx = self.buffer_indices[1];
+            let pressure = &self.pressure_buffers[curr_idx];
+
+            for i in 0..grid.nx {
+                for j in 0..grid.ny {
+                    for k in 0..grid.nz {
+                        let p = pressure[[i, j, k]];
+                        total_energy += p * p * factor * dv;
+                    }
+                }
+            }
+        }
+
+        total_energy
+    }
+
+    fn calculate_total_momentum(&self) -> (f64, f64, f64) {
+        // Full 3D momentum calculation
+        // Momentum density: ρ₀ u where u = ∫ ∇p/(ρ₀) dt (acoustic approximation)
+        let mut px = 0.0;
+        let mut py = 0.0;
+        let mut pz = 0.0;
+
+        if let (Some(ref grid), Some(ref props)) = (&self.grid_cache, &self.medium_properties) {
+            let dv = grid.dx * grid.dy * grid.dz;
+
+            // Use current pressure buffer
+            let curr_idx = self.buffer_indices[1];
+            let pressure = &self.pressure_buffers[curr_idx];
+
+            // Compute momentum from pressure gradients
+            for i in 1..grid.nx - 1 {
+                for j in 1..grid.ny - 1 {
+                    for k in 1..grid.nz - 1 {
+                        // Pressure gradients (central difference)
+                        let dp_dx =
+                            (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]]) / (2.0 * grid.dx);
+                        let dp_dy =
+                            (pressure[[i, j + 1, k]] - pressure[[i, j - 1, k]]) / (2.0 * grid.dy);
+                        let dp_dz =
+                            (pressure[[i, j, k + 1]] - pressure[[i, j, k - 1]]) / (2.0 * grid.dz);
+
+                        // Momentum from pressure (acoustic approximation)
+                        px += (props.rho0 * dp_dx / props.c0) * dv;
+                        py += (props.rho0 * dp_dy / props.c0) * dv;
+                        pz += (props.rho0 * dp_dz / props.c0) * dv;
+                    }
+                }
+            }
+        }
+
+        (px, py, pz)
+    }
+
+    fn calculate_total_mass(&self) -> f64 {
+        // For acoustic waves: ρ = ρ₀(1 + p/(ρ₀c₀²))
+        // Total mass: ∫∫∫ ρ dV
+        let mut total_mass = 0.0;
+
+        if let (Some(ref grid), Some(ref props)) = (&self.grid_cache, &self.medium_properties) {
+            let dv = grid.dx * grid.dy * grid.dz;
+
+            // Use current pressure buffer
+            let curr_idx = self.buffer_indices[1];
+            let pressure = &self.pressure_buffers[curr_idx];
+
+            for i in 0..grid.nx {
+                for j in 0..grid.ny {
+                    for k in 0..grid.nz {
+                        let p = pressure[[i, j, k]];
+                        let rho = props.rho0 * (1.0 + p / (props.rho0 * props.c0 * props.c0));
+                        total_mass += rho * dv;
+                    }
+                }
+            }
+        }
+
+        total_mass
+    }
 }

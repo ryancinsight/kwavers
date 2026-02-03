@@ -59,7 +59,8 @@ use crate::domain::grid::Grid;
 /// Physical constants for validation
 pub mod constants {
     /// Speed of sound in water at 20°C (m/s) - NIST reference
-    pub const SOUND_SPEED_WATER: f64 = 1482.0;
+    /// SSOT: Re-exported from core::constants::fundamental
+    pub use crate::core::constants::fundamental::SOUND_SPEED_WATER;
 
     /// Absorption in water at 1 `MHz` (dB/cm/MHz²) - Pinkerton (1949)
     pub const WATER_ABSORPTION: f64 = 0.0022;

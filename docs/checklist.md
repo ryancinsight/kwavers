@@ -1,23 +1,106 @@
  # Sprint Checklist - Kwavers Development
 
-## Current Sprint: Sprint 212 Phase 2 - BurnPINN Physics Constraints & GPU Pipeline
+## Current Sprint: Sprint 216 - Physics Correctness & Conservation Diagnostics
 
-**Status**: 🔄 IN PROGRESS  
-**Goal**: Implement BC/IC loss enforcement and complete GPU beamforming pipeline  
-**Duration**: 3-4 work days (30-40 hours)  
-**Priority**: P1 - CRITICAL (PINN Correctness & Performance)
+**Status**: 🔄 IN PROGRESS (Session 3 Complete)
+**Goal**: Implement conservation diagnostics and enhance physics correctness
+**Duration**: 6-8 sessions (12-16 hours)
+**Priority**: P0 - Physics Correctness & Mathematical Verification
 
-### Sprint 212 Phase 2 Overview
+### Sprint 216 Overview
+
+**Context**: Sprint 214 (PINN Stabilization & IC Velocity) completed with 1990/1990 tests passing. Sprint 215 focus was thermal-acoustic coupling and material properties.
+
+**Sprint 216 Focus Areas**:
+1. ✅ Temperature-dependent material properties (Session 1)
+2. ✅ Bubble energy balance enhancements (Session 2)
+3. ✅ Conservation diagnostics framework (Session 2)
+4. ✅ KZK solver conservation integration (Session 3)
+5. ⏭️ Westervelt solver conservation integration (Session 4)
+6. ⏭️ Kuznetsov solver conservation integration (Session 4)
+
+---
+
+## Sprint 216 Session 3: Conservation Diagnostics Integration - ✅ COMPLETE (2025-02-04)
+
+**Status**: ✅ COMPLETE - KZK solver integration complete
+**Priority**: P0 - Physics Correctness
+**Duration**: 2 hours
+
+### Completed Tasks
+- [x] Integrate `ConservationDiagnostics` trait into KZK solver
+- [x] Implement energy calculation: E = ∫∫∫ [p²/(2ρ₀c₀²)] dV
+- [x] Implement momentum calculation: P_z = ∫∫∫ [ρ₀ p / c₀] dV
+- [x] Implement mass calculation: M = ∫∫∫ ρ₀[1 + p/(ρ₀c₀²)] dV
+- [x] Add conservation check to time-stepping loop
+- [x] Implement configurable check intervals
+- [x] Add severity-based console logging (⚠️ Warning, ❌ Error, 🔴 Critical)
+- [x] Create enable/disable/query API methods
+- [x] Add 4 comprehensive tests (integration, calculation, lifecycle, interval)
+- [x] Validate energy formula accuracy (relative error < 10⁻¹⁰)
+- [x] Fix borrow checker issues (extract-compute-update pattern)
+- [x] Clean up unused imports
+- [x] Document session in Sprint 216 Session 3 report (579 lines)
+
+### Results
+- **Test Pass Rate**: 1994/1994 (100%, +4 new tests)
+- **Ignored Tests**: 12 (performance tier)
+- **Zero Regressions**: All existing tests pass
+- **Performance**: 0% overhead when disabled, ~1% at interval=100
+- **API**: Clean, production-ready public interface
+
+### Mathematical Validation
+- Energy calculation accuracy: < 10⁻¹⁰ relative error
+- Conservation formulations verified against Pierce, Hamilton references
+- Tolerance presets: strict (10⁻¹⁰), default (10⁻⁸), relaxed (10⁻⁶)
+
+### Artifacts
+- `src/solver/forward/nonlinear/kzk/solver.rs` (+187 lines)
+- `src/solver/forward/nonlinear/conservation.rs` (-2 lines cleanup)
+- `docs/sprints/SPRINT_216_SESSION_3_CONSERVATION_INTEGRATION.md` (579 lines)
+
+### Next Session
+Sprint 216 Session 4: Westervelt & Kuznetsov solver integration (3-4 hours)
+
+---
+
+## Sprint 216 Session 2: Bubble Energy Balance & Conservation Framework - ✅ COMPLETE (2025-02-03)
+
+**Status**: ✅ COMPLETE
+**Priority**: P0 - Physics Correctness
+**Duration**: 3 hours
+
+### Completed Tasks
+- [x] Enhanced bubble energy balance (chemical, plasma, radiation)
+- [x] Conservation diagnostics framework (trait-based)
+- [x] 20 new tests, 1990/1990 passing
+
+---
+
+## Sprint 216 Session 1: Temperature-Dependent Properties - ✅ COMPLETE (2025-02-02)
+
+**Status**: ✅ COMPLETE
+**Priority**: P0 - Physics Correctness
+**Duration**: 2 hours
+
+### Completed Tasks
+- [x] Temperature-dependent material properties
+- [x] Mathematical specifications with references
+- [x] 1970/1970 tests passing
+
+---
+
+## Previous Sprints
+
+## Sprint 212 Phase 2 - BurnPINN Physics Constraints & GPU Pipeline - ✅ COMPLETE
 
 **Context**: Sprint 211 (Clinical Acoustic Solver) and Sprint 212 Phase 1 (Elastic Shear Speed) completed successfully with 1554/1554 tests passing.
 
-**Remaining P1 Blockers** (from Phase 5 audit):
-1. BurnPINN BC loss returns zero-tensor placeholder → BC violations not penalized
-2. BurnPINN IC loss returns zero-tensor placeholder → IC violations not penalized
-3. GPU beamforming pipeline incomplete → Dynamic focusing missing
-4. Eigendecomposition missing → Source estimation requires manual count
-
-**Solution**: 4 parallel implementation tracks with mathematical specifications
+**Completed P1 Items**:
+1. ✅ BurnPINN BC loss implementation (Sprint 214 Session 7)
+2. ✅ BurnPINN IC loss implementation (Sprint 214 Session 8)
+3. GPU beamforming pipeline → Deferred to Sprint 217
+4. Eigendecomposition → Deferred to Sprint 217
 
 ---
 

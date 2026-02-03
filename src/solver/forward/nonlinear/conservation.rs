@@ -53,7 +53,6 @@
 //! - Hamilton & Blackstock (1998) "Nonlinear Acoustics"
 //! - Pierce (1989) "Acoustics: An Introduction to Its Physical Principles"
 
-use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::fmt;
 

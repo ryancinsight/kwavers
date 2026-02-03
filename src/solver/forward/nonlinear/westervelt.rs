@@ -41,6 +41,9 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;
+use crate::solver::forward::nonlinear::conservation::{
+    ConservationDiagnostics, ConservationTolerances, ConservationTracker, ViolationSeverity,
+};
 use ndarray::{Array3, Zip};
 
 /// Configuration for Westervelt FDTD solver
@@ -79,19 +82,100 @@ pub struct WesterveltFdtd {
     pressure_prev2: Option<Array3<f64>>,
     /// Workspace for Laplacian calculation
     laplacian: Array3<f64>,
+    /// Conservation diagnostics tracker
+    conservation_tracker: Option<ConservationTracker>,
+    /// Current time step counter
+    current_step: usize,
+    /// Current simulation time
+    current_time: f64,
+    /// Grid reference for conservation calculations
+    grid: Grid,
+    /// Medium reference for conservation calculations
+    medium_properties: MediumProperties,
+}
+
+/// Cached medium properties for conservation calculations
+#[derive(Debug, Clone)]
+struct MediumProperties {
+    rho0: f64,
+    c0: f64,
 }
 
 impl WesterveltFdtd {
     /// Create a new Westervelt FDTD solver
-    pub fn new(config: WesterveltFdtdConfig, grid: &Grid) -> Self {
+    pub fn new(config: WesterveltFdtdConfig, grid: &Grid, medium: &dyn Medium) -> Self {
         let shape = (grid.nx, grid.ny, grid.nz);
+
+        // Get representative medium properties (center point)
+        let center_x = grid.dx * (grid.nx as f64) / 2.0;
+        let center_y = grid.dy * (grid.ny as f64) / 2.0;
+        let center_z = grid.dz * (grid.nz as f64) / 2.0;
+        let rho0 = crate::domain::medium::density_at(medium, center_x, center_y, center_z, grid);
+        let c0 = crate::domain::medium::sound_speed_at(medium, center_x, center_y, center_z, grid);
+
         Self {
             config,
             pressure: Array3::zeros(shape),
             pressure_prev: Array3::zeros(shape),
             pressure_prev2: None,
             laplacian: Array3::zeros(shape),
+            conservation_tracker: None,
+            current_step: 0,
+            current_time: 0.0,
+            grid: grid.clone(),
+            medium_properties: MediumProperties { rho0, c0 },
         }
+    }
+
+    /// Enable conservation diagnostics with specified tolerances
+    ///
+    /// # Arguments
+    ///
+    /// * `tolerances` - Conservation tolerance parameters (absolute/relative/check_interval)
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use kwavers::solver::forward::nonlinear::conservation::ConservationTolerances;
+    ///
+    /// let mut solver = WesterveltFdtd::new(config, &grid, &medium);
+    /// solver.enable_conservation_diagnostics(ConservationTolerances::default());
+    /// ```
+    pub fn enable_conservation_diagnostics(&mut self, tolerances: ConservationTolerances) {
+        let initial_energy = self.calculate_total_energy();
+        let initial_momentum = self.calculate_total_momentum();
+        let initial_mass = self.calculate_total_mass();
+
+        self.conservation_tracker = Some(ConservationTracker::new(
+            initial_energy,
+            initial_momentum,
+            initial_mass,
+            tolerances,
+        ));
+    }
+
+    /// Disable conservation diagnostics
+    pub fn disable_conservation_diagnostics(&mut self) {
+        self.conservation_tracker = None;
+    }
+
+    /// Get conservation diagnostic summary
+    ///
+    /// Returns a summary of all conservation checks performed,
+    /// including maximum severity and error magnitudes.
+    pub fn get_conservation_summary(&self) -> Option<String> {
+        self.conservation_tracker
+            .as_ref()
+            .map(|tracker| tracker.summary().to_string())
+    }
+
+    /// Check if solution satisfies conservation constraints
+    ///
+    /// Returns `true` if all conservation violations are within acceptable limits.
+    pub fn is_solution_valid(&self) -> bool {
+        self.conservation_tracker
+            .as_ref()
+            .is_none_or(|tracker| tracker.is_solution_valid())
     }
 
     /// Calculate the Laplacian using finite differences
@@ -340,7 +424,83 @@ impl WesterveltFdtd {
         self.pressure_prev = self.pressure.clone();
         self.pressure = pressure_next;
 
+        // Update step counters
+        self.current_step += 1;
+        self.current_time += dt;
+
+        // Conservation diagnostics (if enabled)
+        self.check_conservation_laws();
+
         Ok(())
+    }
+
+    /// Check conservation laws and log diagnostics
+    ///
+    /// Performs conservation checks at configured intervals and logs violations.
+    /// Critical violations trigger warnings via tracing infrastructure.
+    fn check_conservation_laws(&mut self) {
+        // Check if we should perform diagnostics at this step
+        let should_check = self.conservation_tracker.as_ref().is_some_and(|tracker| {
+            self.current_step
+                .is_multiple_of(tracker.tolerances.check_interval)
+        });
+
+        if !should_check {
+            return;
+        }
+
+        // Compute diagnostics first (without holding mutable reference to tracker)
+        let (initial_energy, initial_momentum, initial_mass, tolerances) =
+            if let Some(ref tracker) = self.conservation_tracker {
+                (
+                    tracker.initial_energy,
+                    tracker.initial_momentum,
+                    tracker.initial_mass,
+                    tracker.tolerances,
+                )
+            } else {
+                return;
+            };
+
+        let diagnostics = self.check_all_conservation(
+            initial_energy,
+            initial_momentum,
+            initial_mass,
+            self.current_step,
+            self.current_time,
+            &tolerances,
+        );
+
+        // Now update tracker with diagnostics
+        if let Some(ref mut tracker) = self.conservation_tracker {
+            // Update max severity
+            for diag in &diagnostics {
+                if diag.severity > tracker.max_severity {
+                    tracker.max_severity = diag.severity;
+                }
+            }
+            // Store in history
+            tracker.history.extend(diagnostics.clone());
+        }
+
+        // Log diagnostics based on severity
+        for diag in diagnostics {
+            match diag.severity {
+                ViolationSeverity::Acceptable => {
+                    // Silent for acceptable violations
+                }
+                ViolationSeverity::Warning => {
+                    eprintln!("⚠️  Westervelt FDTD Conservation Warning: {}", diag);
+                }
+                ViolationSeverity::Error => {
+                    eprintln!("❌ Westervelt FDTD Conservation Error: {}", diag);
+                }
+                ViolationSeverity::Critical => {
+                    eprintln!("🔴 Westervelt FDTD Conservation CRITICAL: {}", diag);
+                    eprintln!("   Solution may be physically invalid!");
+                }
+            }
+        }
     }
 
     /// Get the current pressure field
@@ -365,6 +525,85 @@ impl WesterveltFdtd {
     }
 }
 
+/// Implementation of conservation diagnostics trait for Westervelt FDTD solver
+impl ConservationDiagnostics for WesterveltFdtd {
+    fn calculate_total_energy(&self) -> f64 {
+        // Acoustic energy density: E = p²/(2ρ₀c₀²)
+        // Total energy: ∫∫∫ E dV
+        let mut total_energy = 0.0;
+        let rho0 = self.medium_properties.rho0;
+        let c0 = self.medium_properties.c0;
+        let factor = 1.0 / (2.0 * rho0 * c0 * c0);
+        let dv = self.grid.dx * self.grid.dy * self.grid.dz; // Volume element
+
+        for i in 0..self.grid.nx {
+            for j in 0..self.grid.ny {
+                for k in 0..self.grid.nz {
+                    let p = self.pressure[[i, j, k]];
+                    total_energy += p * p * factor * dv;
+                }
+            }
+        }
+
+        total_energy
+    }
+
+    fn calculate_total_momentum(&self) -> (f64, f64, f64) {
+        // Full 3D momentum calculation
+        // Momentum density: ρ₀ u where u = ∫ ∇p/(ρ₀) dt (acoustic approximation)
+        // For simplicity, use p/c₀ approximation for magnitude
+        let mut px = 0.0;
+        let mut py = 0.0;
+        let mut pz = 0.0;
+        let rho0 = self.medium_properties.rho0;
+        let c0 = self.medium_properties.c0;
+        let dv = self.grid.dx * self.grid.dy * self.grid.dz;
+
+        // Compute momentum from pressure gradients
+        for i in 1..self.grid.nx - 1 {
+            for j in 1..self.grid.ny - 1 {
+                for k in 1..self.grid.nz - 1 {
+                    // Pressure gradients (central difference)
+                    let dp_dx = (self.pressure[[i + 1, j, k]] - self.pressure[[i - 1, j, k]])
+                        / (2.0 * self.grid.dx);
+                    let dp_dy = (self.pressure[[i, j + 1, k]] - self.pressure[[i, j - 1, k]])
+                        / (2.0 * self.grid.dy);
+                    let dp_dz = (self.pressure[[i, j, k + 1]] - self.pressure[[i, j, k - 1]])
+                        / (2.0 * self.grid.dz);
+
+                    // Momentum from pressure (acoustic approximation)
+                    px += (rho0 * dp_dx / c0) * dv;
+                    py += (rho0 * dp_dy / c0) * dv;
+                    pz += (rho0 * dp_dz / c0) * dv;
+                }
+            }
+        }
+
+        (px, py, pz)
+    }
+
+    fn calculate_total_mass(&self) -> f64 {
+        // For acoustic waves: ρ = ρ₀(1 + p/(ρ₀c₀²))
+        // Total mass: ∫∫∫ ρ dV
+        let mut total_mass = 0.0;
+        let rho0 = self.medium_properties.rho0;
+        let c0 = self.medium_properties.c0;
+        let dv = self.grid.dx * self.grid.dy * self.grid.dz;
+
+        for i in 0..self.grid.nx {
+            for j in 0..self.grid.ny {
+                for k in 0..self.grid.nz {
+                    let p = self.pressure[[i, j, k]];
+                    let rho = rho0 * (1.0 + p / (rho0 * c0 * c0));
+                    total_mass += rho * dv;
+                }
+            }
+        }
+
+        total_mass
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -373,8 +612,9 @@ mod tests {
     #[test]
     fn test_westervelt_fdtd_creation() {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
         let config = WesterveltFdtdConfig::default();
-        let solver = WesterveltFdtd::new(config, &grid);
+        let solver = WesterveltFdtd::new(config, &grid, &medium);
 
         assert_eq!(solver.pressure.shape(), &[32, 32, 32]);
     }
@@ -392,7 +632,7 @@ mod tests {
             artificial_viscosity: 0.0,
             ..WesterveltFdtdConfig::default()
         };
-        let mut solver = WesterveltFdtd::new(config, &grid);
+        let mut solver = WesterveltFdtd::new(config, &grid, &medium);
 
         // Set initial Gaussian pulse
         let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
@@ -416,5 +656,82 @@ mod tests {
         // Check that energy is conserved (approximately) with no artificial viscosity
         let total_energy: f64 = solver.pressure.iter().map(|&p| p * p).sum();
         assert!(total_energy > 0.0);
+    }
+
+    #[test]
+    fn test_conservation_diagnostics_integration() {
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let config = WesterveltFdtdConfig::default();
+        let mut solver = WesterveltFdtd::new(config, &grid, &medium);
+
+        // Enable diagnostics
+        solver.enable_conservation_diagnostics(ConservationTolerances::default());
+
+        // Initial energy should be zero (no excitation)
+        let initial_energy = solver.calculate_total_energy();
+        assert!(initial_energy < 1e-10);
+
+        // Verify tracker is enabled
+        assert!(solver.conservation_tracker.is_some());
+        assert!(solver.is_solution_valid());
+
+        // Disable and check
+        solver.disable_conservation_diagnostics();
+        assert!(solver.conservation_tracker.is_none());
+    }
+
+    #[test]
+    fn test_energy_calculation_accuracy() {
+        let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let config = WesterveltFdtdConfig::default();
+        let mut solver = WesterveltFdtd::new(config, &grid, &medium);
+
+        // Set a known pressure field (uniform)
+        let p0 = 1000.0; // Pa
+        solver.pressure.fill(p0);
+
+        // Calculate energy
+        let energy = solver.calculate_total_energy();
+
+        // Expected energy: E = p²/(2ρ₀c₀²) * Volume
+        let rho0 = 1000.0;
+        let c0 = 1500.0;
+        let volume =
+            (grid.nx as f64) * grid.dx * (grid.ny as f64) * grid.dy * (grid.nz as f64) * grid.dz;
+        let expected_energy = (p0 * p0) / (2.0 * rho0 * c0 * c0) * volume;
+
+        let relative_error = (energy - expected_energy).abs() / expected_energy;
+        assert!(
+            relative_error < 1e-10,
+            "Energy calculation error: {}",
+            relative_error
+        );
+    }
+
+    #[test]
+    fn test_conservation_check_interval() {
+        let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let config = WesterveltFdtdConfig::default();
+        let mut solver = WesterveltFdtd::new(config, &grid, &medium);
+
+        // Enable diagnostics with check interval of 5
+        let tolerances = ConservationTolerances {
+            check_interval: 5,
+            ..ConservationTolerances::default()
+        };
+        solver.enable_conservation_diagnostics(tolerances);
+
+        // Simulate 20 steps
+        let dt = solver.calculate_dt(&medium, &grid).unwrap();
+        for _ in 0..20 {
+            solver.update(&medium, &grid, &[], 0.0, dt).unwrap();
+        }
+
+        // Should have 20/5 = 4 checks (steps 5, 10, 15, 20)
+        let summary = solver.get_conservation_summary().unwrap();
+        assert!(summary.contains("checks"));
     }
 }

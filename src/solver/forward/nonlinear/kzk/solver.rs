@@ -13,6 +13,9 @@ use super::finite_difference_diffraction::DiffractionOperator;
 use super::nonlinearity::NonlinearOperator;
 use super::parabolic_diffraction::KzkDiffractionOperator;
 use super::KZKConfig;
+use crate::solver::forward::nonlinear::conservation::{
+    ConservationDiagnostics, ConservationTolerances, ConservationTracker, ViolationSeverity,
+};
 
 /// KZK equation solver
 pub struct KZKSolver {
@@ -34,6 +37,12 @@ pub struct KZKSolver {
     absorption: AbsorptionOperator,
     /// Nonlinear operator
     nonlinear: NonlinearOperator,
+    /// Conservation diagnostics tracker
+    conservation_tracker: Option<ConservationTracker>,
+    /// Current z-step (for tracking propagation)
+    current_z_step: usize,
+    /// Current simulation time
+    current_time: f64,
 }
 
 impl std::fmt::Debug for KZKSolver {
@@ -64,6 +73,8 @@ impl std::fmt::Debug for KZKSolver {
             .field("use_kzk_diffraction", &self.use_kzk_diffraction)
             .field("absorption", &self.absorption)
             .field("nonlinear", &self.nonlinear)
+            .field("conservation_tracker", &self.conservation_tracker.is_some())
+            .field("current_z_step", &self.current_z_step)
             .finish()
     }
 }
@@ -102,7 +113,61 @@ impl KZKSolver {
             use_kzk_diffraction,
             absorption,
             nonlinear,
+            conservation_tracker: None,
+            current_z_step: 0,
+            current_time: 0.0,
         })
+    }
+
+    /// Enable conservation diagnostics with specified tolerances
+    ///
+    /// # Arguments
+    ///
+    /// * `tolerances` - Conservation tolerance parameters (absolute/relative/check_interval)
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use kwavers::solver::forward::nonlinear::conservation::ConservationTolerances;
+    ///
+    /// let mut solver = KZKSolver::new(config)?;
+    /// solver.enable_conservation_diagnostics(ConservationTolerances::default());
+    /// ```
+    pub fn enable_conservation_diagnostics(&mut self, tolerances: ConservationTolerances) {
+        let initial_energy = self.calculate_total_energy();
+        let initial_momentum = self.calculate_total_momentum();
+        let initial_mass = self.calculate_total_mass();
+
+        self.conservation_tracker = Some(ConservationTracker::new(
+            initial_energy,
+            initial_momentum,
+            initial_mass,
+            tolerances,
+        ));
+    }
+
+    /// Disable conservation diagnostics
+    pub fn disable_conservation_diagnostics(&mut self) {
+        self.conservation_tracker = None;
+    }
+
+    /// Get conservation diagnostic summary
+    ///
+    /// Returns a summary of all conservation checks performed,
+    /// including maximum severity and error magnitudes.
+    pub fn get_conservation_summary(&self) -> Option<String> {
+        self.conservation_tracker
+            .as_ref()
+            .map(|tracker| tracker.summary().to_string())
+    }
+
+    /// Check if solution satisfies conservation constraints
+    ///
+    /// Returns `true` if all conservation violations are within acceptable limits.
+    pub fn is_solution_valid(&self) -> bool {
+        self.conservation_tracker
+            .as_ref()
+            .map_or(true, |tracker| tracker.is_solution_valid())
     }
 
     /// Set initial condition (source plane at z=0)
@@ -165,6 +230,81 @@ impl KZKSolver {
 
         // Update history
         self.pressure_prev.assign(&self.pressure);
+
+        // Update step counters
+        self.current_z_step += 1;
+        self.current_time += dz / self.config.c0;
+
+        // Conservation diagnostics (if enabled)
+        self.check_conservation_laws();
+    }
+
+    /// Check conservation laws and log diagnostics
+    ///
+    /// Performs conservation checks at configured intervals and logs violations.
+    /// Critical violations trigger warnings via tracing infrastructure.
+    fn check_conservation_laws(&mut self) {
+        // Check if we should perform diagnostics at this step
+        let should_check = self.conservation_tracker.as_ref().map_or(false, |tracker| {
+            self.current_z_step % tracker.tolerances.check_interval == 0
+        });
+
+        if !should_check {
+            return;
+        }
+
+        // Compute diagnostics first (without holding mutable reference to tracker)
+        let (initial_energy, initial_momentum, initial_mass, tolerances) =
+            if let Some(ref tracker) = self.conservation_tracker {
+                (
+                    tracker.initial_energy,
+                    tracker.initial_momentum,
+                    tracker.initial_mass,
+                    tracker.tolerances,
+                )
+            } else {
+                return;
+            };
+
+        let diagnostics = self.check_all_conservation(
+            initial_energy,
+            initial_momentum,
+            initial_mass,
+            self.current_z_step,
+            self.current_time,
+            &tolerances,
+        );
+
+        // Now update tracker with diagnostics
+        if let Some(ref mut tracker) = self.conservation_tracker {
+            // Update max severity
+            for diag in &diagnostics {
+                if diag.severity > tracker.max_severity {
+                    tracker.max_severity = diag.severity;
+                }
+            }
+            // Store in history
+            tracker.history.extend(diagnostics.clone());
+        }
+
+        // Log diagnostics based on severity
+        for diag in diagnostics {
+            match diag.severity {
+                ViolationSeverity::Acceptable => {
+                    // Silent for acceptable violations
+                }
+                ViolationSeverity::Warning => {
+                    eprintln!("⚠️  KZK Conservation Warning: {}", diag);
+                }
+                ViolationSeverity::Error => {
+                    eprintln!("❌ KZK Conservation Error: {}", diag);
+                }
+                ViolationSeverity::Critical => {
+                    eprintln!("🔴 KZK Conservation CRITICAL: {}", diag);
+                    eprintln!("   Solution may be physically invalid!");
+                }
+            }
+        }
     }
 
     /// Apply diffraction operator using angular spectrum method
@@ -252,9 +392,76 @@ impl KZKSolver {
     }
 }
 
+/// Implementation of conservation diagnostics trait for KZK solver
+impl ConservationDiagnostics for KZKSolver {
+    fn calculate_total_energy(&self) -> f64 {
+        // Acoustic energy density: E = p²/(2ρ₀c₀²)
+        // Total energy: ∫∫∫ E dV
+        let mut total_energy = 0.0;
+        let rho0 = self.config.rho0;
+        let c0 = self.config.c0;
+        let factor = 1.0 / (2.0 * rho0 * c0 * c0);
+        let dv = self.config.dx * self.config.dx * self.config.dt * c0; // Volume element
+
+        for i in 0..self.config.nx {
+            for j in 0..self.config.ny {
+                for t in 0..self.config.nt {
+                    let p = self.pressure[[i, j, t]];
+                    total_energy += p * p * factor * dv;
+                }
+            }
+        }
+
+        total_energy
+    }
+
+    fn calculate_total_momentum(&self) -> (f64, f64, f64) {
+        // For KZK (parabolic approximation), momentum is primarily in z-direction
+        // Momentum density: ρ₀ u = p/c₀ (acoustic approximation)
+        let mut pz = 0.0;
+        let rho0 = self.config.rho0;
+        let c0 = self.config.c0;
+        let dv = self.config.dx * self.config.dx * self.config.dt * c0;
+
+        for i in 0..self.config.nx {
+            for j in 0..self.config.ny {
+                for t in 0..self.config.nt {
+                    let p = self.pressure[[i, j, t]];
+                    pz += (rho0 * p / c0) * dv;
+                }
+            }
+        }
+
+        // KZK assumes predominantly z-directed propagation
+        (0.0, 0.0, pz)
+    }
+
+    fn calculate_total_mass(&self) -> f64 {
+        // For acoustic waves: ρ = ρ₀(1 + p/(ρ₀c₀²))
+        // Total mass: ∫∫∫ ρ dV
+        let mut total_mass = 0.0;
+        let rho0 = self.config.rho0;
+        let c0 = self.config.c0;
+        let dv = self.config.dx * self.config.dx * self.config.dt * c0;
+
+        for i in 0..self.config.nx {
+            for j in 0..self.config.ny {
+                for t in 0..self.config.nt {
+                    let p = self.pressure[[i, j, t]];
+                    let rho = rho0 * (1.0 + p / (rho0 * c0 * c0));
+                    total_mass += rho * dv;
+                }
+            }
+        }
+
+        total_mass
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::solver::forward::nonlinear::conservation::ConservationTolerances;
     use ndarray::Array2;
 
     #[test]
@@ -355,5 +562,156 @@ mod tests {
         // Check that beam has propagated (peak should shift)
         let intensity = solver.get_intensity();
         assert!(intensity.sum() > 0.0);
+    }
+
+    #[test]
+    fn test_conservation_diagnostics_integration() {
+        let mut config = KZKConfig {
+            nx: 16,
+            ny: 16,
+            nz: 32,
+            nt: 20,
+            dx: 1e-3,
+            dz: 1e-3,
+            dt: 1e-8,
+            ..Default::default()
+        };
+        config.include_nonlinearity = false; // Linear case for energy conservation
+
+        let mut solver = KZKSolver::new(config.clone()).unwrap();
+
+        // Enable conservation diagnostics with strict tolerances
+        let tolerances = ConservationTolerances {
+            absolute_tolerance: 1e-6,
+            relative_tolerance: 1e-4,
+            check_interval: 2, // Check every 2 steps
+        };
+        solver.enable_conservation_diagnostics(tolerances);
+
+        // Create Gaussian source
+        let mut source = Array2::zeros((config.nx, config.ny));
+        let cx = config.nx as f64 / 2.0;
+        let cy = config.ny as f64 / 2.0;
+        let sigma: f64 = 3.0;
+
+        for j in 0..config.ny {
+            for i in 0..config.nx {
+                let r2 = ((i as f64 - cx).powi(2) + (j as f64 - cy).powi(2)) / sigma.powi(2);
+                source[[i, j]] = (-r2).exp();
+            }
+        }
+
+        solver.set_source(source, 1e6);
+
+        // Propagate and check conservation
+        for _ in 0..4 {
+            solver.step();
+        }
+
+        // Verify conservation tracking is working
+        assert!(solver.conservation_tracker.is_some());
+        assert!(solver.is_solution_valid());
+
+        // Get summary
+        let summary = solver.get_conservation_summary();
+        assert!(summary.is_some());
+    }
+
+    #[test]
+    fn test_conservation_energy_calculation() {
+        let config = KZKConfig {
+            nx: 8,
+            ny: 8,
+            nz: 16,
+            nt: 10,
+            dx: 1e-3,
+            dz: 1e-3,
+            dt: 1e-8,
+            ..Default::default()
+        };
+
+        let mut solver = KZKSolver::new(config.clone()).unwrap();
+
+        // Set uniform pressure field
+        solver.pressure.fill(1000.0); // 1 kPa
+
+        // Calculate energy
+        let energy = solver.calculate_total_energy();
+
+        // Energy should be positive
+        assert!(energy > 0.0);
+
+        // Energy should scale with pressure squared
+        let p = 1000.0;
+        let rho0 = config.rho0;
+        let c0 = config.c0;
+        let volume = (config.nx as f64 * config.dx)
+            * (config.ny as f64 * config.dx)
+            * (config.nt as f64 * config.dt * c0);
+        let expected = p * p / (2.0 * rho0 * c0 * c0) * volume;
+
+        let relative_error = (energy - expected).abs() / expected;
+        assert!(relative_error < 1e-10, "Energy calculation error too large");
+    }
+
+    #[test]
+    fn test_conservation_diagnostics_disable() {
+        let config = KZKConfig::default();
+        let mut solver = KZKSolver::new(config).unwrap();
+
+        // Enable then disable
+        solver.enable_conservation_diagnostics(ConservationTolerances::default());
+        assert!(solver.conservation_tracker.is_some());
+
+        solver.disable_conservation_diagnostics();
+        assert!(solver.conservation_tracker.is_none());
+
+        // Should not fail when disabled
+        solver.step();
+        assert!(solver.is_solution_valid()); // Returns true when disabled
+    }
+
+    #[test]
+    fn test_conservation_check_interval() {
+        let mut config = KZKConfig {
+            nx: 8,
+            ny: 8,
+            nz: 16,
+            nt: 10,
+            dx: 1e-3,
+            dz: 1e-3,
+            dt: 1e-8,
+            ..Default::default()
+        };
+        config.include_nonlinearity = false;
+
+        let mut solver = KZKSolver::new(config.clone()).unwrap();
+
+        // Enable with check interval of 5
+        let tolerances = ConservationTolerances {
+            check_interval: 5,
+            ..Default::default()
+        };
+        solver.enable_conservation_diagnostics(tolerances);
+
+        // Set simple source
+        let source = Array2::from_elem((config.nx, config.ny), 1000.0);
+        solver.set_source(source, 1e6);
+
+        // Step 4 times (shouldn't trigger check at step 4)
+        for _ in 0..4 {
+            solver.step();
+        }
+
+        // Step once more to reach step 5 (should trigger check)
+        solver.step();
+
+        // Verify tracking occurred
+        if let Some(ref tracker) = solver.conservation_tracker {
+            assert!(
+                !tracker.history.is_empty(),
+                "Conservation check should have been performed at step 5"
+            );
+        }
     }
 }

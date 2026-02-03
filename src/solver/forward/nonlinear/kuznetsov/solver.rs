@@ -12,6 +12,9 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;
 use crate::physics::traits::AcousticWaveModel;
+use crate::solver::forward::nonlinear::conservation::{
+    ConservationDiagnostics, ConservationTolerances, ConservationTracker, ViolationSeverity,
+};
 use log;
 use ndarray::{Array3, Array4, Zip};
 
@@ -29,6 +32,19 @@ pub struct KuznetsovWave {
     pressure_current: Array3<f64>,
     /// Flag to track if this is the first time step
     first_step: bool,
+    /// Conservation diagnostics tracker
+    conservation_tracker: Option<ConservationTracker>,
+    /// Current simulation time
+    current_time: f64,
+    /// Cached medium properties for conservation calculations
+    medium_properties: MediumProperties,
+}
+
+/// Cached medium properties for conservation calculations
+#[derive(Debug, Clone)]
+struct MediumProperties {
+    rho0: f64,
+    c0: f64,
 }
 
 impl KuznetsovWave {
@@ -37,6 +53,10 @@ impl KuznetsovWave {
         config.validate(grid)?;
         let workspace = KuznetsovWorkspace::new(grid)?;
         let shape = (grid.nx, grid.ny, grid.nz);
+
+        // Get representative medium properties (default to water)
+        let rho0 = 1000.0; // Default water density
+        let c0 = 1500.0; // Default water sound speed
 
         Ok(Self {
             config,
@@ -47,7 +67,75 @@ impl KuznetsovWave {
             pressure_prev: Array3::zeros(shape),
             pressure_current: Array3::zeros(shape),
             first_step: true,
+            conservation_tracker: None,
+            current_time: 0.0,
+            medium_properties: MediumProperties { rho0, c0 },
         })
+    }
+
+    /// Enable conservation diagnostics with specified tolerances
+    ///
+    /// # Arguments
+    ///
+    /// * `tolerances` - Conservation tolerance parameters (absolute/relative/check_interval)
+    /// * `medium` - Medium for extracting representative properties
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use kwavers::solver::forward::nonlinear::conservation::ConservationTolerances;
+    ///
+    /// let mut solver = KuznetsovWave::new(config, &grid)?;
+    /// solver.enable_conservation_diagnostics(ConservationTolerances::default(), &medium);
+    /// ```
+    pub fn enable_conservation_diagnostics(
+        &mut self,
+        tolerances: ConservationTolerances,
+        medium: &dyn Medium,
+    ) {
+        // Update medium properties from actual medium
+        let center_x = self.grid.dx * (self.grid.nx as f64) / 2.0;
+        let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
+        let center_z = self.grid.dz * (self.grid.nz as f64) / 2.0;
+        self.medium_properties.rho0 =
+            crate::domain::medium::density_at(medium, center_x, center_y, center_z, &self.grid);
+        self.medium_properties.c0 =
+            crate::domain::medium::sound_speed_at(medium, center_x, center_y, center_z, &self.grid);
+
+        let initial_energy = self.calculate_total_energy();
+        let initial_momentum = self.calculate_total_momentum();
+        let initial_mass = self.calculate_total_mass();
+
+        self.conservation_tracker = Some(ConservationTracker::new(
+            initial_energy,
+            initial_momentum,
+            initial_mass,
+            tolerances,
+        ));
+    }
+
+    /// Disable conservation diagnostics
+    pub fn disable_conservation_diagnostics(&mut self) {
+        self.conservation_tracker = None;
+    }
+
+    /// Get conservation diagnostic summary
+    ///
+    /// Returns a summary of all conservation checks performed,
+    /// including maximum severity and error magnitudes.
+    pub fn get_conservation_summary(&self) -> Option<String> {
+        self.conservation_tracker
+            .as_ref()
+            .map(|tracker| tracker.summary().to_string())
+    }
+
+    /// Check if solution satisfies conservation constraints
+    ///
+    /// Returns `true` if all conservation violations are within acceptable limits.
+    pub fn is_solution_valid(&self) -> bool {
+        self.conservation_tracker
+            .as_ref()
+            .is_none_or(|tracker| tracker.is_solution_valid())
     }
 
     /// Compute the right-hand side of the Kuznetsov equation
@@ -318,6 +406,11 @@ impl AcousticWaveModel for KuznetsovWave {
         }
 
         self.time_step_count += 1;
+        self.current_time += dt;
+
+        // Conservation diagnostics (if enabled)
+        self.check_conservation_laws();
+
         Ok(())
     }
 
@@ -341,5 +434,157 @@ impl AcousticWaveModel for KuznetsovWave {
 
     fn set_nonlinearity_scaling(&mut self, scaling: f64) {
         self.nonlinearity_scaling = scaling;
+    }
+}
+
+/// Check conservation laws and log diagnostics
+///
+/// Performs conservation checks at configured intervals and logs violations.
+/// Critical violations trigger warnings via tracing infrastructure.
+impl KuznetsovWave {
+    fn check_conservation_laws(&mut self) {
+        // Check if we should perform diagnostics at this step
+        let should_check = self.conservation_tracker.as_ref().is_some_and(|tracker| {
+            self.time_step_count
+                .is_multiple_of(tracker.tolerances.check_interval)
+        });
+
+        if !should_check {
+            return;
+        }
+
+        // Compute diagnostics first (without holding mutable reference to tracker)
+        let (initial_energy, initial_momentum, initial_mass, tolerances) =
+            if let Some(ref tracker) = self.conservation_tracker {
+                (
+                    tracker.initial_energy,
+                    tracker.initial_momentum,
+                    tracker.initial_mass,
+                    tracker.tolerances,
+                )
+            } else {
+                return;
+            };
+
+        let diagnostics = self.check_all_conservation(
+            initial_energy,
+            initial_momentum,
+            initial_mass,
+            self.time_step_count,
+            self.current_time,
+            &tolerances,
+        );
+
+        // Now update tracker with diagnostics
+        if let Some(ref mut tracker) = self.conservation_tracker {
+            // Update max severity
+            for diag in &diagnostics {
+                if diag.severity > tracker.max_severity {
+                    tracker.max_severity = diag.severity;
+                }
+            }
+            // Store in history
+            tracker.history.extend(diagnostics.clone());
+        }
+
+        // Log diagnostics based on severity
+        for diag in diagnostics {
+            match diag.severity {
+                ViolationSeverity::Acceptable => {
+                    // Silent for acceptable violations
+                }
+                ViolationSeverity::Warning => {
+                    eprintln!("⚠️  Kuznetsov Conservation Warning: {}", diag);
+                }
+                ViolationSeverity::Error => {
+                    eprintln!("❌ Kuznetsov Conservation Error: {}", diag);
+                }
+                ViolationSeverity::Critical => {
+                    eprintln!("🔴 Kuznetsov Conservation CRITICAL: {}", diag);
+                    eprintln!("   Solution may be physically invalid!");
+                }
+            }
+        }
+    }
+}
+
+/// Implementation of conservation diagnostics trait for Kuznetsov solver
+impl ConservationDiagnostics for KuznetsovWave {
+    fn calculate_total_energy(&self) -> f64 {
+        // Acoustic energy density: E = p²/(2ρ₀c₀²)
+        // Total energy: ∫∫∫ E dV
+        let mut total_energy = 0.0;
+        let rho0 = self.medium_properties.rho0;
+        let c0 = self.medium_properties.c0;
+        let factor = 1.0 / (2.0 * rho0 * c0 * c0);
+        let dv = self.grid.dx * self.grid.dy * self.grid.dz; // Volume element
+
+        for i in 0..self.grid.nx {
+            for j in 0..self.grid.ny {
+                for k in 0..self.grid.nz {
+                    let p = self.pressure_current[[i, j, k]];
+                    total_energy += p * p * factor * dv;
+                }
+            }
+        }
+
+        total_energy
+    }
+
+    fn calculate_total_momentum(&self) -> (f64, f64, f64) {
+        // Full 3D momentum calculation
+        // Momentum density: ρ₀ u where u = ∫ ∇p/(ρ₀) dt (acoustic approximation)
+        let mut px = 0.0;
+        let mut py = 0.0;
+        let mut pz = 0.0;
+        let rho0 = self.medium_properties.rho0;
+        let c0 = self.medium_properties.c0;
+        let dv = self.grid.dx * self.grid.dy * self.grid.dz;
+
+        // Compute momentum from pressure gradients
+        for i in 1..self.grid.nx - 1 {
+            for j in 1..self.grid.ny - 1 {
+                for k in 1..self.grid.nz - 1 {
+                    // Pressure gradients (central difference)
+                    let dp_dx = (self.pressure_current[[i + 1, j, k]]
+                        - self.pressure_current[[i - 1, j, k]])
+                        / (2.0 * self.grid.dx);
+                    let dp_dy = (self.pressure_current[[i, j + 1, k]]
+                        - self.pressure_current[[i, j - 1, k]])
+                        / (2.0 * self.grid.dy);
+                    let dp_dz = (self.pressure_current[[i, j, k + 1]]
+                        - self.pressure_current[[i, j, k - 1]])
+                        / (2.0 * self.grid.dz);
+
+                    // Momentum from pressure (acoustic approximation)
+                    px += (rho0 * dp_dx / c0) * dv;
+                    py += (rho0 * dp_dy / c0) * dv;
+                    pz += (rho0 * dp_dz / c0) * dv;
+                }
+            }
+        }
+
+        (px, py, pz)
+    }
+
+    fn calculate_total_mass(&self) -> f64 {
+        // For acoustic waves: ρ = ρ₀(1 + p/(ρ₀c₀²))
+        // Total mass: ∫∫∫ ρ dV
+        let mut total_mass = 0.0;
+        let rho0 = self.medium_properties.rho0;
+        let c0 = self.medium_properties.c0;
+        let dv = self.grid.dx * self.grid.dy * self.grid.dz;
+
+        for i in 0..self.grid.nx {
+            for j in 0..self.grid.ny {
+                for k in 0..self.grid.nz {
+                    let p = self.pressure_current[[i, j, k]];
+                    let rho = rho0 * (1.0 + p / (rho0 * c0 * c0));
+                    total_mass += rho * dv;
+                }
+            }
+        }
+
+        total_mass
     }
 }
