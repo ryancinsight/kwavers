@@ -1,0 +1,98 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "pykwavers"
+version = "0.1.0"
+description = "Python bindings for kwavers ultrasound simulation library"
+authors = [
+    {name = "Ryan Clanton PhD", email = "ryanclanton@outlook.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+keywords = ["ultrasound", "simulation", "acoustics", "k-wave", "medical-imaging"]
+
+dependencies = [
+    "numpy>=1.20,<2.0",
+    "scipy>=1.7",
+]
+
+[project.optional-dependencies]
+# Comparison and validation dependencies
+comparison = [
+    "matplotlib>=3.5",
+    "pandas>=1.3",
+]
+
+# k-Wave bridge (requires MATLAB Engine)
+kwave = [
+    "matlabengine>=9.13",  # MATLAB R2022b+
+]
+
+# Development and testing
+dev = [
+    "pytest>=7.0",
+    "pytest-benchmark>=4.0",
+    "black>=23.0",
+    "ruff>=0.1",
+    "mypy>=1.0",
+    "sphinx>=5.0",
+    "sphinx-rtd-theme>=1.0",
+]
+
+# Full installation with all features
+full = [
+    "pykwavers[comparison,kwave,dev]",
+]
+
+[project.urls]
+Homepage = "https://github.com/ryancinsight/kwavers"
+Repository = "https://github.com/ryancinsight/kwavers"
+Documentation = "https://github.com/ryancinsight/kwavers/tree/main/pykwavers"
+
+[tool.maturin]
+# Python source directory for pure Python code alongside Rust extension
+python-source = "python"
+# Module name
+module-name = "pykwavers._pykwavers"
+# Features to enable
+features = ["minimal"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --benchmark-disable"
+
+[tool.black]
+line-length = 100
+target-version = ["py38", "py39", "py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "DTZ", "T10", "DJ", "EM", "EXE", "ISC", "ICN", "G", "INP", "PIE", "T20", "PYI", "PT", "Q", "RSE", "RET", "SLF", "SIM", "TID", "TCH", "INT", "ARG", "PTH", "PD", "PGH", "PL", "TRY", "NPY", "RUF"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

@@ -30,7 +30,7 @@ Conduct comprehensive gap analysis between kwavers and k-Wave, then implement cr
 ### 1. Gap Analysis Document
 **File**: `docs/sprints/SPRINT_217_SESSION_9_KWAVE_GAP_ANALYSIS.md`  
 **Size**: 902 lines  
-**Status**: ✅ Complete
+**Structure**:
 
 #### Scope
 Comprehensive feature-by-feature comparison across 10 categories:
@@ -562,7 +562,211 @@ Test result: |p_recorded - p_analytical| < 1e-12
 - **Files Created**: 3
 - **Files Modified**: 2
 
-### Quality Metrics
+---
+
+## Phase 2: Python Integration via PyO3 (Session 9b)
+
+### Objective
+Implement Python bindings for kwavers with k-Wave-compatible API to enable direct comparison and validation.
+
+### Architectural Decision
+**Workspace Structure with Bounded Contexts** (ADR-012)
+
+**Rationale**:
+- Clean Architecture enforcement (Python = Layer 9 Infrastructure)
+- Domain-Driven Design: Python integration as separate bounded context
+- Dependency inversion: pykwavers → kwavers (unidirectional)
+- Independent versioning: kwavers v3.0.0, pykwavers v0.1.0
+
+### Implementation
+
+#### 1. Workspace Migration
+**File**: `Cargo.toml`
+- Updated workspace members: `["xtask", "pykwavers"]`
+- Maintains existing kwavers package structure
+
+#### 2. pykwavers Crate Structure
+**Directory**: `pykwavers/`
+```
+pykwavers/
+├── Cargo.toml              # PyO3 bindings crate
+├── pyproject.toml          # Python packaging (maturin)
+├── README.md               # 443 lines: API docs, examples, comparison
+├── src/
+│   └── lib.rs              # 729 lines: PyO3 bindings
+├── python/
+│   └── pykwavers/
+│       ├── __init__.py     # 99 lines: Public API
+│       └── kwave_bridge.py # 563 lines: k-Wave comparison (migrated)
+└── examples/
+    └── compare_plane_wave.py # 377 lines: Comparison example
+```
+
+#### 3. PyO3 API Implementation (`pykwavers/src/lib.rs`)
+**Lines**: 729  
+**Classes**: 6  
+**Status**: ✅ Compiles successfully
+
+**Public API**:
+- `Grid`: Computational domain (k-Wave `kWaveGrid` equivalent)
+  - Properties: nx, ny, nz, dx, dy, dz, lx(), ly(), lz()
+  - Methods: total_points(), dimensions(), spacing()
+  
+- `Medium`: Acoustic properties (k-Wave `medium` struct equivalent)
+  - Factory: `Medium.homogeneous(sound_speed, density, absorption, nonlinearity)`
+  
+- `Source`: Wave excitation (k-Wave `source` struct equivalent)
+  - Factories: `Source.plane_wave(...)`, `Source.point(...)`
+  
+- `Sensor`: Field recording (k-Wave `sensor` struct equivalent)
+  - Factories: `Sensor.point(position)`, `Sensor.grid()`
+  
+- `Simulation`: Main orchestrator (k-Wave `kspaceFirstOrder3D` equivalent)
+  - Method: `run(time_steps, dt=None)`
+  - Returns: `SimulationResult` with shape metadata
+  
+- `SimulationResult`: Output container
+  - Properties: shape, time_steps, dt, final_time
+
+**Design Principles**:
+- k-Wave API compatibility for easy comparison
+- Rust safety (no segfaults, data races, UB)
+- Zero-copy numpy integration (pending numpy 0.20 API resolution)
+- Mathematical documentation (wave equation, CFL, PML references)
+
+#### 4. Python Package Structure (`python/pykwavers/`)
+**File**: `__init__.py` (99 lines)
+- Re-exports from Rust extension module `_pykwavers`
+- NumPy-style docstring format
+- Clean public API: Grid, Medium, Source, Sensor, Simulation
+
+**File**: `kwave_bridge.py` (563 lines, migrated from `scripts/`)
+- MATLAB Engine integration for k-Wave comparison
+- Graceful degradation if MATLAB unavailable
+- Dataclasses: GridConfig, MediumConfig, SourceConfig, SensorConfig
+- Caching framework for reproducible comparisons
+
+#### 5. Comparison Example (`examples/compare_plane_wave.py`)
+**Lines**: 377  
+**Purpose**: Demonstrate identical plane wave simulation in k-Wave and pykwavers
+
+**Test Case**:
+- Grid: 64×64×64, 0.1 mm spacing (6.4 mm domain)
+- Medium: Water (c=1500 m/s, ρ=1000 kg/m³)
+- Source: 1 MHz plane wave, 100 kPa amplitude
+- Duration: 10 μs (15 wavelengths)
+- Sensor: Central point (32, 32, 32)
+
+**Expected Results**:
+- L2 error < 0.01 (relative)
+- L∞ error < 0.05 (relative)
+- Phase error < 0.1 rad
+- Performance: pykwavers target 2-3× faster than k-Wave
+
+**Features**:
+- Runs both simulators (k-Wave via MATLAB Engine, pykwavers via Rust)
+- Computes error metrics (L2, L∞, RMSE)
+- Visualization (pressure time series, error plots)
+- Saves results to `examples/results/plane_wave_comparison.png`
+
+#### 6. Documentation
+
+**File**: `pykwavers/README.md` (443 lines)
+**Sections**:
+- Architecture diagram (Clean Architecture layers)
+- Installation (PyPI, source, optional dependencies)
+- Quick start examples
+- API reference (Grid, Medium, Source, Sensor, Simulation)
+- Mathematical foundations (wave equation, CFL, PML, absorption)
+- k-Wave comparison table
+- Performance benchmarks (preliminary)
+- Development workflow
+- Roadmap (4 phases)
+
+**File**: `docs/architecture/ADR-012-pykwavers-workspace-architecture.md` (378 lines)
+**Sections**:
+- Context and problem statement
+- Options considered (module, separate crate, workspace)
+- Decision rationale (Clean Architecture, DDD, SRP)
+- API design: k-Wave compatibility mapping
+- Implementation details (PyO3, maturin, Python package)
+- Consequences (positive, negative, neutral)
+- Validation strategy
+- Comparison framework
+- Acceptance criteria
+- References (Clean Architecture, DDD, k-Wave, PyO3)
+
+#### 7. Build Configuration
+
+**File**: `pykwavers/Cargo.toml` (54 lines)
+- Crate type: `cdylib` (dynamic library for Python)
+- Dependencies: kwavers (path = ".."), pyo3 0.20, numpy 0.20
+- Features: minimal (default), gpu, plotting, full
+- Release profile: optimized for Python wheel size (strip = true)
+
+**File**: `pykwavers/pyproject.toml` (98 lines)
+- Build system: maturin (Rust/Python bridge)
+- Python ≥3.8 support (abi3-py38 for stable ABI)
+- Dependencies: numpy, scipy
+- Optional dependencies: comparison (matplotlib, pandas), kwave (matlabengine), dev (pytest, black, ruff, mypy)
+- Tools: pytest, black, ruff (line-length = 100)
+
+### Code Statistics
+
+**Lines of Code**:
+- Rust bindings: 729 lines (`pykwavers/src/lib.rs`)
+- Python package: 99 lines (`__init__.py`)
+- k-Wave bridge: 563 lines (`kwave_bridge.py`, migrated)
+- Comparison example: 377 lines (`compare_plane_wave.py`)
+- Documentation: 821 lines (README + ADR-012)
+- Configuration: 152 lines (Cargo.toml + pyproject.toml)
+- **Total**: 2,741 lines
+
+**Files Created**: 8
+- `pykwavers/Cargo.toml`
+- `pykwavers/pyproject.toml`
+- `pykwavers/src/lib.rs`
+- `pykwavers/python/pykwavers/__init__.py`
+- `pykwavers/python/pykwavers/kwave_bridge.py` (migrated)
+- `pykwavers/examples/compare_plane_wave.py`
+- `pykwavers/README.md`
+- `docs/architecture/ADR-012-pykwavers-workspace-architecture.md`
+
+**Files Modified**: 1
+- `Cargo.toml` (workspace members updated)
+
+### Compilation Status
+```bash
+cargo build -p pykwavers
+# ✅ SUCCESS: Compiles with 8 warnings (unused imports, addressed via --fix)
+```
+
+### Known Issues & Future Work
+
+1. **NumPy Array Returns** (High Priority)
+   - Current: Returns shape tuple (placeholder)
+   - Target: Return numpy arrays directly
+   - Issue: numpy 0.20 API incompatibility with ndarray conversion
+   - Solution: Investigate numpy 0.21+ or use raw buffer protocol
+
+2. **Simulation Backend Integration** (High Priority)
+   - Current: API skeleton only (placeholder data)
+   - Target: Wire pykwavers to kwavers FDTD/PSTD solvers
+   - Next: Implement `Simulation::run()` backend in Session 10
+
+3. **k-Wave Validation** (Medium Priority)
+   - Current: Comparison script ready, requires MATLAB Engine
+   - Target: Run plane wave validation, verify L2 < 0.01
+   - Dependency: Complete backend integration first
+
+4. **Performance Benchmarking** (Medium Priority)
+   - Current: Preliminary estimates in README
+   - Target: Criterion benchmarks, pytest-benchmark
+   - Metrics: Runtime, memory, throughput vs k-Wave/jwave
+
+### Quality Metrics (Phase 1: Gap Analysis + Implementations)
+
+**Phase 1 Code**:
 - Compilation: ✅ Pass (zero errors)
 - Tests: 17/19 passing (89.5%)
 - New Code Tests: 19/19 passing (100%)

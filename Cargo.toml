@@ -340,7 +340,7 @@ harness = false
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 
 [workspace]
-members = ["xtask"]
+members = ["xtask", "pykwavers"]
 
 [[bench]]
 name = "osem_benchmark"

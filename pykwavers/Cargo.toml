@@ -1,0 +1,54 @@
+[package]
+name = "pykwavers"
+version = "0.1.0"
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+description = "Python bindings for kwavers ultrasound simulation library"
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+keywords = ["ultrasound", "simulation", "python", "pyo3", "k-wave"]
+categories = ["science", "simulation", "medical"]
+
+[lib]
+name = "pykwavers"
+crate-type = ["cdylib"]  # Dynamic library for Python import
+
+[dependencies]
+# Core kwavers library
+kwavers = { path = "..", default-features = false, features = ["minimal"] }
+
+# PyO3 for Python bindings
+pyo3 = { version = "0.20", features = ["extension-module", "abi3-py38"] }
+numpy = "0.20"  # ndarray ↔ numpy conversions
+
+# Essential numerical computing (re-export from kwavers)
+ndarray = { version = "0.16", features = ["rayon", "serde"] }
+num-complex = "0.4"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Serialization for caching comparison results
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+# Python testing via pytest-benchmark will be used externally
+# No Rust dev dependencies needed for bindings
+
+[features]
+default = ["minimal"]
+minimal = []
+gpu = ["kwavers/gpu"]
+plotting = ["kwavers/plotting"]
+full = ["kwavers/full"]
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true  # Strip symbols for smaller Python wheels
