@@ -51,10 +51,8 @@
 //! Date: 2026-02-04
 //! Sprint: 217 Session 9 - Python Integration via PyO3
 
-use ndarray::Array3;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::PyList;
 
 // Re-exports from kwavers core
 use kwavers::core::error::KwaversError;
@@ -311,7 +309,7 @@ impl Medium {
 
     /// String representation.
     fn __repr__(&self) -> String {
-        format!("Medium.homogeneous(...)")
+        "Medium.homogeneous(...)".to_string()
     }
 
     /// Human-readable string.
@@ -619,7 +617,7 @@ impl Simulation {
     #[pyo3(signature = (time_steps, dt=None))]
     fn run<'py>(
         &self,
-        py: Python<'py>,
+        _py: Python<'py>,
         time_steps: usize,
         dt: Option<f64>,
     ) -> PyResult<SimulationResult> {
