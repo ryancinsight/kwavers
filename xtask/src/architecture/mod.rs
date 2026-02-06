@@ -164,7 +164,7 @@ impl ArchitectureReport {
                     v.import_statement
                 ));
             }
-            md.push_str("\n");
+            md.push('\n');
         }
 
         // Cross-contamination detail
@@ -182,7 +182,7 @@ impl ArchitectureReport {
                 for loc in &c.contaminated {
                     md.push_str(&format!("- `{}`\n", loc));
                 }
-                md.push_str("\n");
+                md.push('\n');
             }
         }
 

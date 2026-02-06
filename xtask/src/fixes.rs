@@ -29,7 +29,7 @@ fn add_missing_debug_derives() -> Result<()> {
     let mut modified_count = 0;
 
     for entry in WalkDir::new(src_root).into_iter().filter_map(|e| e.ok()) {
-        if entry.path().extension().map_or(false, |ext| ext == "rs") {
+        if entry.path().extension().is_some_and(|ext| ext == "rs") {
             let path = entry.path();
             let content = match fs::read_to_string(path) {
                 Ok(c) => c,
@@ -194,18 +194,18 @@ fn has_problematic_fields(lines: &[String], start_idx: usize) -> bool {
 
     // Also check if it's a tuple struct on one line: `struct Foo(Box<dyn Bar>);`
     let first_line = &lines[start_idx];
-    if !first_line.contains('{') && first_line.contains(';') {
-        if first_line.contains("Box<dyn")
+    if !first_line.contains('{')
+        && first_line.contains(';')
+        && (first_line.contains("Box<dyn")
             || first_line.contains("Arc<dyn")
             || first_line.contains("Rc<dyn")
             || first_line.contains("&dyn")
             || first_line.contains("Fn(")
             || first_line.contains("FnMut(")
             || first_line.contains("FnOnce(")
-            || first_line.contains("FftPlanner")
-        {
-            return true;
-        }
+            || first_line.contains("FftPlanner"))
+    {
+        return true;
     }
 
     false

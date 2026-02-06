@@ -1,0 +1,91 @@
+# ============================================================================
+# pykwavers Requirements
+# ============================================================================
+# Python dependencies for pykwavers ultrasound simulation library
+#
+# Installation:
+#   pip install -r requirements.txt
+#
+# Categories:
+#   - Core: Required for basic functionality
+#   - k-Wave: Comparison and validation frameworks
+#   - Visualization: Plotting and analysis
+#   - Development: Testing, formatting, type checking
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Core Dependencies (Required)
+# ----------------------------------------------------------------------------
+# Pin to versions with pre-built wheels available to avoid compilation
+# numpy 2.x required for Python 3.13+ (has pre-built wheels)
+numpy>=1.24.0
+scipy>=1.10.0
+
+# ----------------------------------------------------------------------------
+# k-Wave Comparison & Validation
+# ----------------------------------------------------------------------------
+# k-wave-python: Python bindings to precompiled k-Wave C++ binaries
+# Provides fast, validated acoustic simulations for comparison
+k-wave-python>=0.3.0
+
+# MATLAB Engine API (optional, for MATLAB k-Wave comparison)
+# Requires MATLAB R2022b+ installation
+# matlabengine>=9.13
+
+# HDF5 support for k-Wave data I/O
+h5py>=3.0
+
+# ----------------------------------------------------------------------------
+# Visualization & Analysis
+# ----------------------------------------------------------------------------
+matplotlib>=3.5
+pandas>=1.3
+seaborn>=0.11  # Statistical visualization
+
+# ----------------------------------------------------------------------------
+# Development & Testing
+# ----------------------------------------------------------------------------
+pytest>=7.0
+pytest-benchmark>=4.0
+pytest-cov>=4.0  # Coverage reporting
+
+# Code quality
+black>=23.0  # Code formatting
+ruff>=0.1    # Fast linter
+mypy>=1.0    # Type checking
+
+# Documentation
+sphinx>=5.0
+sphinx-rtd-theme>=1.0
+sphinx-autodoc-typehints>=1.19
+
+# ----------------------------------------------------------------------------
+# Optional: Advanced Features
+# ----------------------------------------------------------------------------
+# GPU acceleration (if available)
+# cupy>=10.0
+
+# Parallel processing
+joblib>=1.2
+
+# Progress bars
+tqdm>=4.64
+
+# Data validation
+pydantic>=2.0
+
+# ============================================================================
+# Platform-Specific Notes
+# ============================================================================
+# Windows:
+#   - k-wave-python requires Visual C++ Redistributable
+#   - MATLAB Engine requires MATLAB installation
+#
+# Linux:
+#   - k-wave-python requires libstdc++6 and libgomp1
+#   - Install: sudo apt-get install libstdc++6 libgomp1
+#
+# macOS:
+#   - k-wave-python requires Xcode Command Line Tools
+#   - Install: xcode-select --install
+# ============================================================================

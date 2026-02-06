@@ -74,6 +74,7 @@ from ._pykwavers import (
     Sensor,
     Simulation,
     SimulationResult,
+    SolverType,
     Source,
     __author__,
     __version__,
@@ -88,6 +89,7 @@ __all__ = [
     "Sensor",
     "Simulation",
     "SimulationResult",
+    "SolverType",
     # Metadata
     "__version__",
     "__author__",

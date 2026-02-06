@@ -30,7 +30,7 @@ classifiers = [
 keywords = ["ultrasound", "simulation", "acoustics", "k-wave", "medical-imaging"]
 
 dependencies = [
-    "numpy>=1.20,<2.0",
+    "numpy>=1.20,<3.0",
     "scipy>=1.7",
 ]
 

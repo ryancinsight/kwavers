@@ -23,7 +23,6 @@ Date: 2026-02-04
 Sprint: 217 Session 8 - k-Wave Comparison Framework
 """
 
-import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
@@ -38,10 +37,6 @@ try:
     MATLAB_AVAILABLE = True
 except ImportError:
     MATLAB_AVAILABLE = False
-    warnings.warn(
-        "MATLAB Engine not available. k-Wave comparisons will use cached results only.",
-        UserWarning,
-    )
 
 
 @dataclass

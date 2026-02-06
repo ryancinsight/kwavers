@@ -78,6 +78,9 @@ test_errors.txt
 # k-Wave example replication output directories
 kwave_replication_outputs_*/
 
+# External vendor repos
+external/
+
 # Build artifacts
 *.o
 *.so

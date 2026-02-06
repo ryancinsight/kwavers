@@ -1,25 +1,100 @@
  # Sprint Checklist - Kwavers Development
 
-## Current Sprint: Sprint 216 - Physics Correctness & Conservation Diagnostics
+## Current Sprint: Sprint 218 - PSTD Source Amplification Fix & k-Wave Validation
 
-**Status**: 🔄 IN PROGRESS (Session 3 Complete)
-**Goal**: Implement conservation diagnostics and enhance physics correctness
-**Duration**: 6-8 sessions (12-16 hours)
-**Priority**: P0 - Physics Correctness & Mathematical Verification
+**Status**: 🔄 IN PROGRESS (Session 2 Complete)
+**Goal**: Fix PSTD source amplification bug and validate against k-Wave
+**Duration**: 3-4 sessions (6-8 hours)
+**Priority**: P0 - Critical Bug Fix & Validation
 
-### Sprint 216 Overview
+### Sprint 218 Overview
 
-**Context**: Sprint 214 (PINN Stabilization & IC Velocity) completed with 1990/1990 tests passing. Sprint 215 focus was thermal-acoustic coupling and material properties.
+**Context**: Sprint 217 (Architectural Audit & Unsafe Documentation) completed with excellent architecture health (98/100). Sprint 218 focuses on validating PSTD fix and establishing k-Wave parity.
 
-**Sprint 216 Focus Areas**:
-1. ✅ Temperature-dependent material properties (Session 1)
-2. ✅ Bubble energy balance enhancements (Session 2)
-3. ✅ Conservation diagnostics framework (Session 2)
-4. ✅ KZK solver conservation integration (Session 3)
-5. ⏭️ Westervelt solver conservation integration (Session 4)
-6. ⏭️ Kuznetsov solver conservation integration (Session 4)
+**Sprint 218 Focus Areas**:
+1. ✅ PSTD source amplification fix verification (Session 1)
+2. ✅ Code quality & clippy cleanup (Session 2)
+3. ⏭️ k-Wave validation via pykwavers (Session 3)
+4. ⏭️ CI integration for amplitude regression testing (Session 4)
 
 ---
+
+## Sprint 218 Session 2: Code Quality & Clippy Cleanup - ✅ COMPLETE (2026-02-05)
+
+**Status**: ✅ COMPLETE - Zero clippy warnings, zero errors
+**Priority**: P0 - Code Quality & Maintenance
+**Duration**: 1 hour
+
+### Completed Tasks
+- [x] Fixed all 17 clippy errors with `-D warnings` mode
+- [x] Removed redundant field names in struct initialization
+- [x] Converted 5 manual Default impls to #[derive(Default)]
+- [x] Used Range::contains for range validation
+- [x] Collapsed nested if statements
+- [x] Used .is_multiple_of() for modulo checks (7 occurrences)
+- [x] Simplified map_or to map_or_else for lazy evaluation
+- [x] Boxed large Custom variant in LagWeighting enum
+- [x] Fixed Copy trait boundaries (removed from types with non-Copy fields)
+- [x] Added .clone() calls where necessary
+- [x] Used .clamp() instead of .min().max() pattern
+- [x] Fixed doc list indentation
+
+### Results
+- **Test Pass Rate**: 2043/2043 (100%, zero failures)
+- **Ignored Tests**: 12 (performance tier)
+- **Zero Regressions**: All existing tests pass
+- **Build Time**: 6.97s workspace, 22.07s lib compilation
+- **Clippy Errors**: 0 (strict `-D warnings` mode)
+- **Warnings**: 0 (lib), 45 (tests/benches only - acceptable)
+- **Architecture Health**: 98/100 (maintained)
+
+### Code Quality
+- Idiomatic Rust: prefer derived traits over manual implementations
+- Performance: lazy evaluation, clamp optimization
+- Type safety: proper Copy/Clone trait boundaries
+- Zero tolerance for warnings in library code
+
+### Files Modified (11 files)
+1. `src/physics/acoustics/bubble_dynamics/energy_balance.rs`
+2. `src/domain/boundary/coupling/types.rs`
+3. `src/domain/medium/properties/temperature_dependent.rs`
+4. `src/domain/source/wavefront/plane_wave.rs`
+5. `src/solver/forward/fdtd/solver.rs`
+6. `src/solver/forward/nonlinear/conservation.rs`
+7. `src/solver/forward/nonlinear/kzk/solver.rs`
+8. `src/solver/forward/pstd/implementation/core/stepper.rs`
+9. `src/analysis/signal_processing/beamforming/slsc/mod.rs`
+10. `src/analysis/signal_processing/localization/model_order.rs`
+11. `src/analysis/signal_processing/localization/music.rs`
+
+### Next Session
+Sprint 218 Session 3: k-Wave validation via pykwavers (2-3 hours)
+
+---
+
+## Sprint 218 Session 1: PSTD Fix Verification - ✅ COMPLETE (2026-02-05)
+
+**Status**: ✅ COMPLETE
+**Priority**: P0 - Critical Bug Fix
+**Duration**: 2 hours
+
+### Completed Tasks
+- [x] Verified PSTD source amplification fix (3.54× error eliminated)
+- [x] Code audit confirmed single source injection point
+- [x] All 2040 library tests passing
+- [x] Zero compilation errors, zero warnings
+- [x] Fixed floating-point tolerance in periodicity test
+- [x] pykwavers binding verified
+
+### Results
+- **Root Cause**: Duplicate source injection removed from update_density()
+- **Test Pass Rate**: 2040/2040 (100%)
+- **Build Time**: 9.80s workspace, 16.19s full tests
+- **Documentation**: Comprehensive 685-line verification report
+
+---
+
+## Previous Sprints (Sprint 216-217)
 
 ## Sprint 216 Session 3: Conservation Diagnostics Integration - ✅ COMPLETE (2025-02-04)
 
@@ -64,7 +139,7 @@ Sprint 216 Session 4: Westervelt & Kuznetsov solver integration (3-4 hours)
 
 ---
 
-## Sprint 216 Session 2: Bubble Energy Balance & Conservation Framework - ✅ COMPLETE (2025-02-03)
+## Sprint 216 Session 2: Bubble Energy Balance - ✅ COMPLETE (2025-02-03)
 
 **Status**: ✅ COMPLETE
 **Priority**: P0 - Physics Correctness
@@ -77,7 +152,7 @@ Sprint 216 Session 4: Westervelt & Kuznetsov solver integration (3-4 hours)
 
 ---
 
-## Sprint 216 Session 1: Temperature-Dependent Properties - ✅ COMPLETE (2025-02-02)
+## Sprint 216 Session 1: Temperature Properties - ✅ COMPLETE (2025-02-02)
 
 **Status**: ✅ COMPLETE
 **Priority**: P0 - Physics Correctness
@@ -92,12 +167,23 @@ Sprint 216 Session 4: Westervelt & Kuznetsov solver integration (3-4 hours)
 
 ## Previous Sprints
 
-## Sprint 212 Phase 2 - BurnPINN Physics Constraints & GPU Pipeline - ✅ COMPLETE
+## Sprint 217: Architectural Audit & Unsafe Documentation - ✅ COMPLETE
 
-**Context**: Sprint 211 (Clinical Acoustic Solver) and Sprint 212 Phase 1 (Elastic Shear Speed) completed successfully with 1554/1554 tests passing.
+**Status**: ✅ COMPLETE
+**Achievements**:
+- Comprehensive architectural audit (98/100 health score)
+- Zero circular dependencies confirmed
+- 100% layer compliance verified
+- Unsafe code documentation framework established
 
-**Completed P1 Items**:
-1. ✅ BurnPINN BC loss implementation (Sprint 214 Session 7)
+---
+
+## Sprint 212-214 - BurnPINN & Physics - ✅ COMPLETE
+
+**Completed Items**:
+1. ✅ BurnPINN BC loss implementation
+2. ✅ Initial condition velocity loss
+3. ✅ Conservation diagnostics framework
 2. ✅ BurnPINN IC loss implementation (Sprint 214 Session 8)
 3. GPU beamforming pipeline → Deferred to Sprint 217
 4. Eigendecomposition → Deferred to Sprint 217

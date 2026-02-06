@@ -4,9 +4,11 @@
 //! and complexity analysis following the problem statement requirements.
 
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand};
 use std::fs;
 use std::path::PathBuf;
+use std::time::Duration;
+use wait_timeout::ChildExt;
 use walkdir::WalkDir;
 
 mod architecture;
@@ -54,6 +56,36 @@ enum Command {
         #[arg(long)]
         strict: bool,
     },
+    /// Build pykwavers Python bindings with maturin
+    BuildPykwavers {
+        /// Build in release mode
+        #[arg(long, default_value_t = true, action = ArgAction::Set)]
+        release: bool,
+        /// Install into the active Python environment
+        #[arg(long)]
+        install: bool,
+    },
+    /// Install k-wave-python and Python dependencies
+    InstallKwave {
+        /// Skip install if k-wave-python is already available
+        #[arg(long)]
+        skip_existing: bool,
+    },
+    /// Run pykwavers Python test suite
+    TestPykwavers {
+        /// Skip building pykwavers with maturin
+        #[arg(long)]
+        skip_build: bool,
+        /// Skip automatic Python dependency installation
+        #[arg(long)]
+        no_install: bool,
+        /// Timeout in seconds for the pytest run
+        #[arg(long, default_value_t = 300)]
+        timeout_secs: u64,
+        /// Extra arguments passed through to pytest after `--`
+        #[arg(last = true)]
+        extra: Vec<String>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -67,6 +99,14 @@ fn main() -> Result<()> {
         Command::Metrics => generate_metrics(),
         Command::Fix => fix_all(),
         Command::CheckArchitecture { markdown, strict } => check_architecture(markdown, strict),
+        Command::BuildPykwavers { release, install } => build_pykwavers(release, install),
+        Command::InstallKwave { skip_existing } => install_kwave(skip_existing),
+        Command::TestPykwavers {
+            skip_build,
+            no_install,
+            timeout_secs,
+            extra,
+        } => test_pykwavers(skip_build, no_install, timeout_secs, extra),
     }
 }
 
@@ -89,7 +129,7 @@ fn check_module_sizes() -> Result<()> {
     let mut violations = Vec::new();
 
     for entry in WalkDir::new(src_root()).into_iter().filter_map(|e| e.ok()) {
-        if entry.path().extension().map_or(false, |ext| ext == "rs") {
+        if entry.path().extension().is_some_and(|ext| ext == "rs") {
             let content = fs::read_to_string(entry.path())
                 .with_context(|| format!("Failed to read {}", entry.path().display()))?;
             let line_count = content.lines().count();
@@ -141,7 +181,7 @@ fn audit_naming() -> Result<()> {
     ];
 
     for entry in WalkDir::new(src_root()).into_iter().filter_map(|e| e.ok()) {
-        if entry.path().extension().map_or(false, |ext| ext == "rs") {
+        if entry.path().extension().is_some_and(|ext| ext == "rs") {
             let content = fs::read_to_string(entry.path())
                 .with_context(|| format!("Failed to read {}", entry.path().display()))?;
 
@@ -236,7 +276,7 @@ fn check_stubs() -> Result<()> {
     ];
 
     for entry in WalkDir::new(src_root()).into_iter().filter_map(|e| e.ok()) {
-        if entry.path().extension().map_or(false, |ext| ext == "rs") {
+        if entry.path().extension().is_some_and(|ext| ext == "rs") {
             // Skip xtask and tool files to avoid false positives
             if entry.path().to_string_lossy().contains("xtask")
                 || entry.path().to_string_lossy().contains("main.rs")
@@ -288,7 +328,7 @@ fn check_configs() -> Result<()> {
     let mut configs = Vec::new();
 
     for entry in WalkDir::new(src_root()).into_iter().filter_map(|e| e.ok()) {
-        if entry.path().extension().map_or(false, |ext| ext == "rs") {
+        if entry.path().extension().is_some_and(|ext| ext == "rs") {
             let content = fs::read_to_string(entry.path())
                 .with_context(|| format!("Failed to read {}", entry.path().display()))?;
 
@@ -349,6 +389,147 @@ fn check_architecture(markdown: bool, strict: bool) -> Result<()> {
 
     if strict && !report.is_clean() {
         std::process::exit(report.exit_code());
+    }
+
+    Ok(())
+}
+
+/// Run pykwavers Python test suite
+fn test_pykwavers(
+    skip_build: bool,
+    no_install: bool,
+    timeout_secs: u64,
+    extra: Vec<String>,
+) -> Result<()> {
+    if !no_install {
+        install_kwave(true)?;
+    }
+
+    if !skip_build {
+        build_pykwavers(true, true)?;
+    }
+
+    let mut cmd = std::process::Command::new("python");
+    cmd.arg("-m").arg("pytest").arg("-v").arg("pykwavers");
+
+    if !extra.is_empty() {
+        cmd.args(extra);
+    }
+
+    let mut child = cmd
+        .current_dir(workspace_root())
+        .spawn()
+        .context("Failed to spawn pytest for pykwavers")?;
+
+    let timeout = Duration::from_secs(timeout_secs);
+    let status = match child
+        .wait_timeout(timeout)
+        .context("Failed while waiting on pytest")?
+    {
+        Some(status) => status,
+        None => {
+            child.kill().ok();
+            anyhow::bail!("pykwavers tests timed out after {} seconds", timeout_secs);
+        }
+    };
+
+    if !status.success() {
+        anyhow::bail!("pykwavers tests failed");
+    }
+
+    Ok(())
+}
+
+fn install_kwave(skip_existing: bool) -> Result<()> {
+    let status = std::process::Command::new("python")
+        .arg("-c")
+        .arg("import kwave")
+        .current_dir(workspace_root())
+        .status()
+        .context("Failed to check k-wave-python availability")?;
+
+    if status.success() && skip_existing {
+        println!("✅ k-wave-python already installed");
+        return Ok(());
+    }
+
+    if !status.success() {
+        println!("📦 k-wave-python not found. Installing dependencies...");
+    } else {
+        println!("📦 Re-installing Python dependencies...");
+    }
+
+    let requirements = workspace_root().join("pykwavers").join("requirements.txt");
+    let status = std::process::Command::new("python")
+        .arg("-m")
+        .arg("pip")
+        .arg("install")
+        .arg("-r")
+        .arg(requirements)
+        .current_dir(workspace_root())
+        .status()
+        .context("Failed to install Python dependencies for pykwavers")?;
+
+    if !status.success() {
+        anyhow::bail!("Python dependency installation failed");
+    }
+
+    Ok(())
+}
+
+fn build_pykwavers(release: bool, install: bool) -> Result<()> {
+    ensure_maturin_installed()?;
+
+    let pykwavers_dir = workspace_root().join("pykwavers");
+    let mut cmd = std::process::Command::new("maturin");
+
+    if install {
+        cmd.arg("develop");
+    } else {
+        cmd.arg("build");
+    }
+
+    if release {
+        cmd.arg("--release");
+    }
+
+    let status = cmd
+        .current_dir(pykwavers_dir)
+        .status()
+        .context("Failed to run maturin for pykwavers")?;
+
+    if !status.success() {
+        anyhow::bail!("maturin build failed");
+    }
+
+    Ok(())
+}
+
+fn ensure_maturin_installed() -> Result<()> {
+    let status = std::process::Command::new("maturin")
+        .arg("--version")
+        .current_dir(workspace_root())
+        .status();
+
+    if let Ok(status) = status {
+        if status.success() {
+            return Ok(());
+        }
+    }
+
+    println!("📦 maturin not found. Installing...");
+
+    let status = std::process::Command::new("python")
+        .arg("-m")
+        .arg("pip")
+        .arg("install")
+        .arg("maturin")
+        .current_dir(workspace_root())
+        .status()
+        .context("Failed to install maturin")?;
+
+    if !status.success() {
+        anyhow::bail!("maturin installation failed");
     }
 
     Ok(())

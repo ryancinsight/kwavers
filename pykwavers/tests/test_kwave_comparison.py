@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""
+k-Wave Python Comparison Tests
+
+These tests validate pykwavers simulations against k-wave-python for
+consistent numerical behavior in matched scenarios. The tests are
+expected to run by default when k-wave-python is available. To temporarily
+skip these tests, set:
+  KWAVERS_SKIP_KWAVE=1
+
+Author: Ryan Clanton (@ryancinsight)
+Date: 2026-02-06
+"""
+
+import os
+
+import pytest
+
+_ = pytest.importorskip("pykwavers")
+
+from pykwavers.comparison import (
+    SimulationConfig,
+    run_kwave_python,
+    run_pykwavers,
+)
+from pykwavers.kwave_python_bridge import KWAVE_PYTHON_AVAILABLE, compute_error_metrics
+
+
+if not KWAVE_PYTHON_AVAILABLE:
+    pytest.skip("k-wave-python not available", allow_module_level=True)
+
+if os.getenv("KWAVERS_SKIP_KWAVE", "0") == "1":
+    pytest.skip("KWAVERS_SKIP_KWAVE=1 set; skipping k-wave comparison tests", allow_module_level=True)
+
+
+def _build_config(
+    grid_shape=(32, 32, 32),
+    spacing=0.2e-3,
+    sound_speed=1500.0,
+    density=1000.0,
+    frequency=1e6,
+    amplitude=1e5,
+    duration=6e-6,
+    source_position=None,
+    sensor_position=(3.2e-3, 3.2e-3, 3.2e-3),
+    pml_size=6,
+):
+    dx = spacing
+    cfl = 0.3
+    dt = cfl * dx / sound_speed
+
+    return SimulationConfig(
+        grid_shape=grid_shape,
+        grid_spacing=(dx, dx, dx),
+        sound_speed=sound_speed,
+        density=density,
+        source_frequency=frequency,
+        source_amplitude=amplitude,
+        duration=duration,
+        source_position=source_position,
+        sensor_position=sensor_position,
+        pml_size=pml_size,
+        dt=dt,
+    )
+
+
+def _assert_metrics(metrics, l2_max=0.20, linf_max=0.50, corr_min=0.85):
+    assert metrics["l2_error"] < l2_max, (
+        f"L2 error {metrics['l2_error']:.3f} exceeds {l2_max:.3f}"
+    )
+    assert metrics["linf_error"] < linf_max, (
+        f"Linf error {metrics['linf_error']:.3f} exceeds {linf_max:.3f}"
+    )
+    assert metrics["correlation"] > corr_min, (
+        f"Correlation {metrics['correlation']:.3f} below {corr_min:.3f}"
+    )
+
+
+def test_plane_wave_fdtd_vs_kwave_python():
+    """Compare plane wave propagation between pykwavers (FDTD) and k-wave-python."""
+    config = _build_config(
+        grid_shape=(32, 32, 32),
+        spacing=0.2e-3,
+        duration=6e-6,
+        source_position=None,  # plane wave
+        sensor_position=(3.2e-3, 3.2e-3, 4.0e-3),
+    )
+
+    result_kw = run_kwave_python(config)
+    result_py = run_pykwavers(config, solver_type="fdtd")
+
+    metrics = compute_error_metrics(result_kw.pressure, result_py.pressure)
+    _assert_metrics(metrics)
+
+
+def test_point_source_fdtd_vs_kwave_python():
+    """Compare point source propagation between pykwavers (FDTD) and k-wave-python."""
+    dx = 0.2e-3
+    source_pos = (4 * dx, 16 * dx, 16 * dx)
+    sensor_pos = (24 * dx, 16 * dx, 16 * dx)
+
+    config = _build_config(
+        grid_shape=(32, 32, 32),
+        spacing=dx,
+        duration=8e-6,
+        source_position=source_pos,
+        sensor_position=sensor_pos,
+    )
+
+    result_kw = run_kwave_python(config)
+    result_py = run_pykwavers(config, solver_type="fdtd")
+
+    metrics = compute_error_metrics(result_kw.pressure, result_py.pressure)
+    _assert_metrics(metrics)

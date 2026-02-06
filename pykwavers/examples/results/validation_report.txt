@@ -1,0 +1,40 @@
+================================================================================
+VALIDATION REPORT
+================================================================================
+
+Reference: kwave_python
+
+Performance Summary:
+--------------------------------------------------------------------------------
+pykwavers_fdtd               5.123s  ( 9.65x vs reference)
+pykwavers_pstd              27.797s  ( 1.78x vs reference)
+pykwavers_hybrid            36.340s  ( 1.36x vs reference)
+kwave_python                49.427s  ( 1.00x vs reference)
+
+Accuracy Metrics:
+--------------------------------------------------------------------------------
+pykwavers_fdtd:
+  L2 error:     1.88e+01  [X] (< 0.01)
+  Linf error:   1.10e+01  [X] (< 0.05)
+  RMSE:         7.44e+04
+  Max error:    1.49e+05
+  Correlation:  0.6035
+  Overall:      [X] FAIL
+
+pykwavers_pstd:
+  L2 error:     6.39e+01  [X] (< 0.01)
+  Linf error:   3.49e+01  [X] (< 0.05)
+  RMSE:         2.53e+05
+  Max error:    4.74e+05
+  Correlation:  0.0237
+  Overall:      [X] FAIL
+
+pykwavers_hybrid:
+  L2 error:     6.39e+01  [X] (< 0.01)
+  Linf error:   3.49e+01  [X] (< 0.05)
+  RMSE:         2.53e+05
+  Max error:    4.74e+05
+  Correlation:  0.0237
+  Overall:      [X] FAIL
+
+================================================================================
