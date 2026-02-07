@@ -229,6 +229,7 @@ impl std::fmt::Display for FusionMethod {
 #[derive(Debug)]
 pub struct RegistrationEngine {
     /// Registration parameters
+    #[allow(dead_code)] // Used when registration optimization is implemented
     params: RegistrationParams,
 }
 
@@ -267,8 +268,8 @@ impl RegistrationEngine {
 
     /// Register floating image to reference image
     ///
-    /// This is a placeholder for actual registration algorithm (e.g., mutual information)
-    /// Real implementation would use gradient descent optimization
+    /// # Errors
+    /// Returns `KwaversError::NotImplemented` — mutual information registration pending.
     pub fn register(
         &self,
         reference: &ImageData,
@@ -281,19 +282,18 @@ impl RegistrationEngine {
             ));
         }
 
-        // Initialize identity transformation
-        let mut transform = RegistrationTransform::identity();
-        transform.transform_type = self.params.transform_type;
-
-        // Placeholder: would run actual registration optimization here
-        // For now, assume minimal error with identity transform
-        transform.registration_error_mm = 2.5; // mm typical alignment error
-        transform.iterations = 50;
-
-        Ok(transform)
+        Err(KwaversError::NotImplemented(
+            "Multimodality image registration not yet implemented. \
+             Requires mutual information metric and gradient descent \
+             optimization for rigid/affine transform estimation."
+                .into(),
+        ))
     }
 
     /// Register with landmark-based initialization
+    ///
+    /// # Errors
+    /// Returns `KwaversError::NotImplemented` — Procrustes analysis pending.
     pub fn register_with_landmarks(
         &self,
         reference: &ImageData,
@@ -307,12 +307,18 @@ impl RegistrationEngine {
             ));
         }
 
-        // Placeholder: would compute rigid transformation from landmarks
-        // using least-squares fit (Procrustes analysis)
-        let mut transform = self.register(reference, floating)?;
-        transform.registration_error_mm = 1.5; // Better error with landmarks
+        if reference.dimensions != floating.dimensions {
+            return Err(KwaversError::InvalidInput(
+                "Reference and floating images must have same dimensions".to_string(),
+            ));
+        }
 
-        Ok(transform)
+        Err(KwaversError::NotImplemented(
+            "Landmark-based registration not yet implemented. \
+             Requires Procrustes analysis (least-squares rigid transform \
+             from corresponding point sets)."
+                .into(),
+        ))
     }
 }
 
@@ -427,15 +433,23 @@ impl FusionEngine {
     }
 
     /// False color fusion: color-coded composite
+    ///
+    /// Proper false-color fusion requires mapping each modality to a separate
+    /// color channel (e.g., R=CT, G=PET, B=MRI) and returning a 4D RGBA array.
+    /// Current 3D output format cannot represent color information.
     fn fusion_false_color(&self, reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
-        // Placeholder: would use color mapping in real implementation
-        reference + floating
+        // Approximate: intensity-weighted blend (true color requires 4D output)
+        let ref_norm = reference / (reference.iter().copied().fold(f64::NEG_INFINITY, f64::max).max(1e-10));
+        let flt_norm = floating / (floating.iter().copied().fold(f64::NEG_INFINITY, f64::max).max(1e-10));
+        &ref_norm * (1.0 - self.params.blend_weight) + &flt_norm * self.params.blend_weight
     }
 
     /// Multi-channel fusion: R=ref, G=float, B=diff
+    ///
+    /// True multi-channel output requires a 4D array [nx, ny, nz, 3].
+    /// This returns a 3D weighted combination as an approximation.
     fn fusion_multi_channel(&self, reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
-        // Placeholder: would return 4D array for RGB in real implementation
-        // For now, return weighted average
+        // Weighted combination (true RGB requires 4D output format)
         reference * 0.4 + floating * 0.4 + (floating - reference).mapv(f64::abs) * 0.2
     }
 }

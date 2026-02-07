@@ -4,6 +4,7 @@
 //! uncertainty estimation in physics-informed neural networks.
 
 use crate::core::error::KwaversResult;
+use log::info;
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
 #[cfg(not(feature = "pinn"))]
@@ -213,7 +214,7 @@ impl BayesianPINN {
         let calibration_factor =
             mae / (stats.uncertainty.iter().sum::<f32>() / stats.uncertainty.len() as f32);
 
-        println!(
+        info!(
             "Uncertainty calibration: MAE = {:.4}, calibration factor = {:.4}",
             mae, calibration_factor
         );

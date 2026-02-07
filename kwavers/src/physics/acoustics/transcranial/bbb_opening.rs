@@ -4,6 +4,7 @@
 //! low-intensity focused ultrasound with microbubbles.
 
 use crate::core::error::KwaversResult;
+use log::info;
 use ndarray::Array3;
 
 /// Permeability enhancement data
@@ -86,10 +87,10 @@ impl BBBOpening {
 
     /// Simulate BBB opening process
     pub fn simulate_opening(&mut self) -> KwaversResult<()> {
-        println!("Simulating BBB opening with parameters:");
-        println!("  Frequency: {:.1} MHz", self.parameters.frequency / 1e6);
-        println!("  MI target: {:.2}", self.parameters.target_mi);
-        println!("  Duration: {:.1} s", self.parameters.duration);
+        info!("Simulating BBB opening with parameters:");
+        info!("  Frequency: {:.1} MHz", self.parameters.frequency / 1e6);
+        info!("  MI target: {:.2}", self.parameters.target_mi);
+        info!("  Duration: {:.1} s", self.parameters.duration);
 
         let (nx, ny, nz) = self.acoustic_pressure.dim();
 

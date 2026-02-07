@@ -27,6 +27,7 @@
 //!   *Proceedings of 2nd Workshop on General Purpose Processing on Graphics Processing Units*
 
 use crate::core::error::{KwaversError, KwaversResult};
+use log::info;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -357,9 +358,12 @@ impl GPUElasticWaveSolver3D {
         })
     }
 
-    /// Simulate kernel execution time (placeholder for real GPU implementation)
+    /// Estimate kernel execution time from thread count and assumed FLOP rate.
     ///
-    /// TODO: Replace simulation with actual GPU kernel execution
+    /// **Performance model only** — no real GPU kernel is launched.
+    /// Returns a synthetic execution time (seconds) derived from total thread
+    /// count and an assumed 10 TFLOPS throughput.  Replace with actual
+    /// `wgpu` / CUDA kernel dispatch once the GPU compute pipeline is wired up.
     fn simulate_kernel_execution(
         &self,
         kernel_name: &str,
@@ -383,9 +387,10 @@ impl GPUElasticWaveSolver3D {
         execution_time + 0.00001 // 10 microseconds overhead
     }
 
-    /// Simulate data transfer time
+    /// Estimate PCIe data transfer time.
     ///
-    /// TODO: Replace simulation with actual PCIe transfer measurement
+    /// **Performance model only** — assumes PCIe 4.0 x16 (~32 GB/s).
+    /// Replace with actual transfer measurement once GPU memory management is live.
     fn simulate_data_transfer(&self, bytes: usize) -> f64 {
         // PCIe 4.0 x16 bandwidth: ~32 GB/s
         let pcie_bandwidth = 32.0 * 1024.0 * 1024.0 * 1024.0; // bytes/second
@@ -633,7 +638,7 @@ impl AdaptiveResolution {
 
         // Start with coarsest resolution
         for (level, resolution_level) in self.resolution_levels.iter().enumerate() {
-            println!(
+            info!(
                 "Solving at resolution level {}: {}x{}x{}",
                 level, resolution_level.grid.nx, resolution_level.grid.ny, resolution_level.grid.nz
             );

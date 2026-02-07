@@ -10,6 +10,7 @@
 //! - SimSonic: Real-time HIFU simulation
 
 use crate::core::error::KwaversResult;
+use log::debug;
 use crate::domain::grid::Grid;
 use crate::domain::plugin::Plugin;
 use crate::solver::backend::gpu::realtime_loop::{RealtimeConfig, RealtimeSimulationOrchestrator};
@@ -113,7 +114,7 @@ impl GPUTimeIntegrator {
                 // If we exceeded budget, reduce timestep for next iteration
                 current_dt = current_dt * 0.95;
                 if self.config.verbose {
-                    eprintln!(
+                    debug!(
                         "Budget exceeded ({}ms), reducing dt to {:.3e}",
                         step_result.wall_time_ms, current_dt
                     );

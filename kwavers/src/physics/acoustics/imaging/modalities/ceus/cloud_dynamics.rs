@@ -35,6 +35,7 @@
 
 use super::microbubble::{BubbleDynamics, BubbleResponse, Microbubble};
 use crate::core::error::KwaversResult;
+use log::{debug, info};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -131,7 +132,7 @@ impl CloudDynamics {
         let actual_num_bubbles = (self.config.concentration * volume) as usize;
         let num_bubbles = actual_num_bubbles.min(self.config.num_bubbles);
 
-        println!(
+        info!(
             "Initializing cloud with {} bubbles in {:.2e} m³ volume",
             num_bubbles, volume
         );
@@ -174,7 +175,7 @@ impl CloudDynamics {
         let n_steps = (self.config.duration / self.config.dt) as usize;
         let mut responses = Vec::new();
 
-        println!(
+        info!(
             "Simulating cloud dynamics: {} steps, {} bubbles",
             n_steps,
             self.bubbles.len()
@@ -207,7 +208,7 @@ impl CloudDynamics {
 
             if step % 10000 == 0 {
                 let active_bubbles = self.bubbles.iter().filter(|b| b.active).count();
-                println!(
+                debug!(
                     "Step {}/{}, active bubbles: {}",
                     step, n_steps, active_bubbles
                 );

@@ -553,9 +553,10 @@ impl ImageRegistration {
         _moving: &Array3<f64>,
         _transform: &[f64; 16],
     ) -> f64 {
-        // Simplified mutual information computation
-        // In practice, this would compute joint and marginal histograms
-        0.8 // Placeholder - high mutual information indicates good alignment
+        // TODO_AUDIT: P1 - Implement Mattes mutual information via joint/marginal histograms
+        // Reference: Mattes et al. (2003) IEEE TMI, Viola & Wells (1997)
+        // For now, return NaN to avoid silently passing alignment checks
+        f64::NAN
     }
 
     fn compute_correlation(
@@ -564,8 +565,8 @@ impl ImageRegistration {
         _moving: &Array3<f64>,
         _transform: &[f64; 16],
     ) -> f64 {
-        // Simplified correlation computation
-        0.9 // Placeholder
+        // TODO_AUDIT: P1 - Implement Pearson correlation between transformed volumes
+        f64::NAN
     }
 
     fn compute_ncc(
@@ -574,8 +575,9 @@ impl ImageRegistration {
         _moving: &Array3<f64>,
         _transform: &[f64; 16],
     ) -> f64 {
-        // Simplified normalized cross-correlation
-        0.85 // Placeholder
+        // TODO_AUDIT: P1 - Implement normalized cross-correlation
+        // Reference: Avants et al. (2008) "Symmetric diffeomorphic image registration"
+        f64::NAN
     }
 
     fn generate_transform_perturbations(&self) -> Vec<[f64; 6]> {

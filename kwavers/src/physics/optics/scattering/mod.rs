@@ -32,6 +32,8 @@
 
 use std::f64::consts::PI;
 
+use crate::core::error::{KwaversError, KwaversResult};
+
 /// Physical constants for Mie scattering calculations
 pub mod constants {
     /// Speed of light in vacuum [m/s]
@@ -156,25 +158,23 @@ impl MieCalculator {
     /// # Returns
     /// Mie scattering results
     ///
-    /// # Panics
-    /// Panics if size parameter is too large for numerical stability
-    #[must_use]
-    pub fn calculate(&self, params: &MieParameters) -> MieResult {
+    /// # Errors
+    /// Returns `KwaversError::InvalidInput` if size parameter exceeds 100.0
+    pub fn calculate(&self, params: &MieParameters) -> KwaversResult<MieResult> {
         let x = params.size_parameter();
 
         // For small particles, use Rayleigh approximation
         if x < 0.1 {
-            return self.rayleigh_approximation(params);
+            return Ok(self.rayleigh_approximation(params));
         }
 
         let m = params.relative_index();
 
         // Check size parameter limits
         if x > 100.0 {
-            panic!(
-                "Size parameter x = {} too large for current implementation",
-                x
-            );
+            return Err(KwaversError::InvalidInput(format!(
+                "Size parameter x = {x} too large for current implementation (max 100.0)"
+            )));
         }
 
         // Determine number of multipole expansion terms needed
@@ -201,7 +201,7 @@ impl MieCalculator {
         // Calculate phase function at 180°
         let p_180 = self.phase_function_180(&an, &bn);
 
-        MieResult {
+        Ok(MieResult {
             size_parameter: x,
             scattering_efficiency: q_sca,
             extinction_efficiency: q_ext,
@@ -212,7 +212,7 @@ impl MieCalculator {
             absorption_cross_section: sigma_abs,
             asymmetry_parameter: g,
             phase_function_180: p_180,
-        }
+        })
     }
 
     /// Rayleigh approximation for small particles (x << 1)
@@ -527,7 +527,7 @@ mod tests {
         );
 
         let calculator = MieCalculator::default();
-        let result = calculator.calculate(&params);
+        let result = calculator.calculate(&params).unwrap();
 
         // Basic Mie result should be created
         assert!(result.size_parameter > 0.0);

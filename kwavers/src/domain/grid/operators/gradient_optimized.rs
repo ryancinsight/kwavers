@@ -46,16 +46,16 @@ where
 
     /// Get or create coefficients for a given spatial order
     pub fn get_coefficients(&self, order: SpatialOrder) -> Vec<T> {
-        let mut cache = self.coefficients_cache.write().unwrap();
+        let mut cache = self.coefficients_cache.write().unwrap_or_else(|e| e.into_inner());
 
         // Check if coefficients are already cached
         if let Some(coeffs) = cache.get(order as usize) {
-            *self.cache_hits.write().unwrap() += 1;
+            *self.cache_hits.write().unwrap_or_else(|e| e.into_inner()) += 1;
             return coeffs.clone();
         }
 
         // Coefficients not in cache - create and store them
-        *self.cache_misses.write().unwrap() += 1;
+        *self.cache_misses.write().unwrap_or_else(|e| e.into_inner()) += 1;
         let coeffs = FDCoefficients::first_derivative::<T>(order);
 
         // Ensure cache is large enough
@@ -69,15 +69,15 @@ where
 
     /// Get cache statistics
     pub fn cache_stats(&self) -> (usize, usize) {
-        let hits = *self.cache_hits.read().unwrap();
-        let misses = *self.cache_misses.read().unwrap();
+        let hits = *self.cache_hits.read().unwrap_or_else(|e| e.into_inner());
+        let misses = *self.cache_misses.read().unwrap_or_else(|e| e.into_inner());
         (hits, misses)
     }
 
     /// Reset cache statistics
     pub fn reset_stats(&self) {
-        *self.cache_hits.write().unwrap() = 0;
-        *self.cache_misses.write().unwrap() = 0;
+        *self.cache_hits.write().unwrap_or_else(|e| e.into_inner()) = 0;
+        *self.cache_misses.write().unwrap_or_else(|e| e.into_inner()) = 0;
     }
 }
 

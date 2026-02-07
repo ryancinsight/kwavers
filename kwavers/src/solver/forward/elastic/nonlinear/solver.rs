@@ -25,6 +25,7 @@
 //!   IEEE Trans. Medical Imaging, 32(5), 863-874.
 
 use crate::core::error::KwaversResult;
+use log::info;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::Array3;
@@ -176,7 +177,7 @@ impl NonlinearElasticWaveSolver {
         let n_steps = ((simulation_time / dt).ceil() as usize).max(2);
         let show_progress = std::env::var("KWAVERS_NLSWE_PROGRESS").is_ok();
         if show_progress {
-            println!(
+            info!(
                 "Nonlinear elastic wave propagation: {} steps, dt = {:.2e} s",
                 n_steps, dt
             );
@@ -213,7 +214,7 @@ impl NonlinearElasticWaveSolver {
             if (step + 1) % save_stride == 0 {
                 history.push(field.clone());
                 if show_progress {
-                    println!("Step {}/{}, time = {:.2e} s", step, n_steps, field.time);
+                    info!("Step {}/{}, time = {:.2e} s", step, n_steps, field.time);
                 }
             }
         }

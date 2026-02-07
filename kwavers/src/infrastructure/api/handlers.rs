@@ -152,7 +152,7 @@ pub async fn run_inference(
     let _start_time = std::time::Instant::now();
 
     // Get model from registry
-    let stored_model = match state.model_registry.get_model(&request.model_id) {
+    let _stored_model = match state.model_registry.get_model(&request.model_id) {
         Some(model) => model,
         None => {
             return Err((

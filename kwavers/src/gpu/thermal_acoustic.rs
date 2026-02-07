@@ -345,11 +345,14 @@ impl GpuThermalAcousticBuffers {
         let float_data: &[f32] = bytemuck::cast_slice(&data);
 
         // Convert to ndarray (simplified - returns pressure, zeros for velocity and temperature)
+        // KNOWN_LIMITATION: The current GPU shader only writes pressure output.
+        // Velocity and temperature fields require additional GPU output buffers
+        // and are returned as empty placeholders until multi-buffer readback is implemented.
         let pressure = ndarray::Array3::from_shape_vec((64, 64, 64), float_data.to_vec())
             .map_err(|e| KwaversError::GpuError(format!("Array creation error: {}", e)))?;
 
-        let velocity_x = ndarray::Array3::zeros((64, 64, 64));
-        let temperature = ndarray::Array3::zeros((64, 64, 64));
+        let velocity_x = ndarray::Array3::from_elem((64, 64, 64), f32::NAN);
+        let temperature = ndarray::Array3::from_elem((64, 64, 64), f32::NAN);
 
         Ok((pressure, velocity_x, temperature))
     }

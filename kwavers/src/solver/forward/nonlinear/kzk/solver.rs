@@ -4,6 +4,7 @@
 //! - Christopher & Parker (1991) "New approaches to nonlinear diffractive field propagation"
 //! - Tavakkoli et al. (1998) "A new algorithm for computational simulation of HIFU"
 
+use log::warn;
 use ndarray::{Array2, Array3, Axis};
 use std::f64::consts::PI;
 
@@ -298,14 +299,14 @@ impl KZKSolver {
                     // Silent for acceptable violations
                 }
                 ViolationSeverity::Warning => {
-                    eprintln!("⚠️  KZK Conservation Warning: {}", diag);
+                    warn!("KZK Conservation Warning: {}", diag);
                 }
                 ViolationSeverity::Error => {
-                    eprintln!("❌ KZK Conservation Error: {}", diag);
+                    warn!("KZK Conservation Error: {}", diag);
                 }
                 ViolationSeverity::Critical => {
-                    eprintln!("🔴 KZK Conservation CRITICAL: {}", diag);
-                    eprintln!("   Solution may be physically invalid!");
+                    warn!("KZK Conservation CRITICAL: {}", diag);
+                    warn!("   Solution may be physically invalid!");
                 }
             }
         }

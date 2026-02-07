@@ -29,6 +29,7 @@
 //! - Hudson, H. M., & Larkin, R. S. (1994). "Accelerated image reconstruction using ordered subsets"
 
 use crate::core::error::KwaversResult;
+use log::debug;
 use crate::math::inverse_problems::{ModelRegularizer3D, RegularizationConfig};
 use ndarray::{Array1, Array2, Array3};
 use std::fmt;
@@ -232,7 +233,7 @@ impl SirtReconstructor {
             residual_history.push(residual_norm);
 
             if self.config.verbose {
-                eprintln!(
+                debug!(
                     "Iteration {}: residual = {:.6e}",
                     iteration + 1,
                     residual_norm
@@ -249,7 +250,7 @@ impl SirtReconstructor {
                     || residual_norm < self.config.tolerance
                 {
                     if self.config.verbose {
-                        eprintln!("Converged after {} iterations", iteration + 1);
+                        debug!("Converged after {} iterations", iteration + 1);
                     }
                     return Ok(SirtResult {
                         image: self.reshape_to_3d(&x, grid_size),

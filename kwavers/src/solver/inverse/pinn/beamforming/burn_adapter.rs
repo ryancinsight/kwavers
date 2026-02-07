@@ -124,33 +124,17 @@ where
 {
     fn beamform(
         &self,
-        rf_data: &Array3<f32>,
+        _rf_data: &Array3<f32>,
         _config: &PinnBeamformingConfig,
     ) -> KwaversResult<PinnBeamformingResult> {
         self.ensure_model_initialized()?;
 
-        let start_time = std::time::Instant::now();
-        let (frames, channels, samples) = rf_data.dim();
-
-        // TODO: Implement actual PINN-based beamforming inference
-        // For now, return placeholder with correct dimensions
-        let image = Array3::<f32>::zeros((frames, channels, samples));
-        let uncertainty = Some(Array3::<f32>::ones((frames, channels, samples)) * 0.1);
-        let confidence = uncertainty.as_ref().map(|u| u.mapv(|v| 1.0 / (1.0 + v)));
-
-        Ok(PinnBeamformingResult {
-            image,
-            uncertainty,
-            confidence,
-            inference_time: start_time.elapsed().as_secs_f64(),
-            metrics: TrainingMetrics {
-                total_loss: 0.0,
-                physics_loss: 0.0,
-                data_loss: 0.0,
-                iterations: 0,
-                training_time: 0.0,
-            },
-        })
+        Err(KwaversError::NotImplemented(
+            "PINN-based beamforming inference not yet implemented. \
+             Model architecture exists but forward-pass integration with \
+             Burn autodiff backend is pending."
+                .into(),
+        ))
     }
 
     fn train(
@@ -160,19 +144,12 @@ where
     ) -> KwaversResult<TrainingMetrics> {
         self.ensure_model_initialized()?;
 
-        let start_time = std::time::Instant::now();
-
-        // TODO: Implement actual PINN training
-        self.is_trained = true;
-        self.metadata.is_trained = true;
-
-        Ok(TrainingMetrics {
-            total_loss: 0.001,
-            physics_loss: 0.0005,
-            data_loss: 0.0005,
-            iterations: 1000,
-            training_time: start_time.elapsed().as_secs_f64(),
-        })
+        Err(KwaversError::NotImplemented(
+            "PINN beamforming training loop not yet implemented. \
+             Model and optimizer infrastructure exists but gradient \
+             computation via Burn autodiff is pending."
+                .into(),
+        ))
     }
 
     fn estimate_uncertainty(
@@ -182,24 +159,18 @@ where
     ) -> KwaversResult<Array3<f32>> {
         self.ensure_model_initialized()?;
 
-        let (frames, channels, samples) = rf_data.dim();
-
         if config.bayesian_enabled {
-            // Monte Carlo dropout for Bayesian uncertainty
-            let mut variance = Array3::<f32>::zeros((frames, channels, samples));
-
-            for _ in 0..config.mc_samples {
-                // TODO: Implement actual dropout-based inference
-                // For now, use simple stochastic sampling
-                let sample = Array3::<f32>::from_elem((frames, channels, samples), 0.1);
-                variance = variance + sample.mapv(|v| v * v);
-            }
-
-            Ok(variance / (config.mc_samples as f32))
-        } else {
-            // Simple signal-based uncertainty
-            Ok(rf_data.mapv(|v| 1.0 / (v.abs() + 1.0)))
+            // Monte Carlo dropout for Bayesian uncertainty estimation
+            // Requires trained PINN model with dropout layers
+            return Err(KwaversError::NotImplemented(
+                "Bayesian uncertainty estimation via MC dropout not yet implemented. \
+                 Requires trained PINN model with dropout-based stochastic inference."
+                    .into(),
+            ));
         }
+
+        // Simple signal-based uncertainty (higher for weaker signals)
+        Ok(rf_data.mapv(|v| 1.0 / (v.abs() + 1.0)))
     }
 
     fn is_ready(&self) -> bool {

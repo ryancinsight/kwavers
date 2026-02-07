@@ -40,18 +40,16 @@ impl SolverFactory {
 
         match selected_type {
             SolverType::FDTD => {
-                // Initialize default FDTD config from generic config
-                // In a real scenario, we would map generic config to specific config
                 let fdtd_config = FdtdConfig::default();
-                // We need to construct the solver.
-                // Note: The constructors might require specific source types or other params.
-                // Assuming we can add sources later.
-                let source = GridSource::default(); // Placeholder source
+                // KNOWN_LIMITATION: Uses zero-amplitude default source.
+                // Callers must add actual sources via the Solver trait after creation.
+                let source = GridSource::default();
                 let solver = FdtdSolver::new(fdtd_config, grid, medium, source)?;
                 Ok(Box::new(solver))
             }
             SolverType::PSTD => {
                 let pstd_config = PSTDConfig::default();
+                // KNOWN_LIMITATION: Uses zero-amplitude default source.
                 let source = GridSource::default();
                 let solver = PSTDSolver::new(pstd_config, grid.clone(), medium, source)?;
                 Ok(Box::new(solver))

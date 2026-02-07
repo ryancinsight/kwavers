@@ -4,6 +4,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
+use log::{debug, warn};
 use ndarray::Array3;
 use std::collections::HashMap;
 
@@ -151,7 +152,7 @@ impl ConservationChecker {
         }
 
         if self.verbose {
-            eprintln!(
+            debug!(
                 "Conservation checker initialized with {} fields",
                 field_names.len()
             );
@@ -213,7 +214,7 @@ impl ConservationChecker {
                 results.insert(name.clone(), result);
 
                 if self.verbose && !passed {
-                    eprintln!("⚠️ {}", error_message.as_ref().unwrap());
+                    warn!("{}", error_message.as_ref().unwrap());
                 }
             }
         }

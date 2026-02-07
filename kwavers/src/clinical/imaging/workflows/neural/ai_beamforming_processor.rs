@@ -224,7 +224,7 @@ impl AIEnhancedBeamformingProcessor {
                 pinn_inference_time_ms: pinn_time,
                 clinical_analysis_time_ms: clinical_time,
                 memory_usage_mb: self.estimate_memory_usage(),
-                gpu_utilization_percent: 0.0, // Placeholder for future GPU monitoring
+                gpu_utilization_percent: f64::NAN, // Not measured — no GPU monitoring available
             },
         })
     }

@@ -50,15 +50,36 @@ impl WindowFunction {
                     *item *= a0 - a1 * x.cos() + a2 * (2.0 * x).cos();
                 }
             }
-            WindowFunction::Kaiser(_beta) => {
-                // Simplified Kaiser window (placeholder for complex algorithm)
+            WindowFunction::Kaiser(beta) => {
+                // Kaiser window: w(n) = I₀(β √(1 − ((2n/(N−1)) − 1)²)) / I₀(β)
+                // where I₀ is the zeroth-order modified Bessel function of the first kind
+                let i0_beta = bessel_i0(*beta);
                 for (i, item) in data.iter_mut().enumerate().take(n) {
-                    *item *= 0.54
-                        - 0.46 * (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos();
+                    let t = 2.0 * i as f64 / (n - 1) as f64 - 1.0; // −1..1
+                    let arg = beta * (1.0 - t * t).max(0.0).sqrt();
+                    *item *= bessel_i0(arg) / i0_beta;
                 }
             }
         }
     }
+}
+
+/// Zeroth-order modified Bessel function of the first kind I₀(x).
+///
+/// Uses the power series: I₀(x) = Σ_{k=0}^∞ [(x/2)^k / k!]²
+/// Converges very quickly — 25 terms gives >15 digits of precision for typical β values (0–40).
+fn bessel_i0(x: f64) -> f64 {
+    let mut sum = 1.0_f64;
+    let mut term = 1.0_f64;
+    let half_x = x / 2.0;
+    for k in 1..=25 {
+        term *= (half_x / k as f64) * (half_x / k as f64);
+        sum += term;
+        if term < sum * 1e-16 {
+            break;
+        }
+    }
+    sum
 }
 
 /// Beamforming configuration

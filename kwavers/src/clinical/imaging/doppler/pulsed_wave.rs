@@ -2,7 +2,7 @@
 //!
 //! Spectral Doppler analysis for velocity waveform extraction.
 
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
 
 /// Pulsed-wave Doppler configuration
@@ -41,8 +41,15 @@ impl PulsedWaveDoppler {
     }
 
     /// Extract velocity waveform at sample volume
+    ///
+    /// # Errors
+    /// Returns `KwaversError::NotImplemented` — spectral Doppler extraction pending.
     pub fn extract_waveform(&self, _n_samples: usize) -> KwaversResult<SpectralWaveform> {
-        // Placeholder implementation
-        Ok(Array1::zeros(256))
+        Err(KwaversError::NotImplemented(
+            "Pulsed-wave Doppler waveform extraction not yet implemented. \
+             Requires range-gated signal processing, wall filter, and \
+             FFT-based velocity estimation."
+                .into(),
+        ))
     }
 }

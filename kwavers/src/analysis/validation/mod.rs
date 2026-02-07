@@ -55,6 +55,7 @@ pub trait Validatable {
 // - published benchmarks for accuracy
 
 use crate::domain::grid::Grid;
+use log::info;
 
 /// Physical constants for validation
 pub mod constants {
@@ -204,20 +205,20 @@ pub fn validate_all(
     reports.push(validate_absorption_model(1e6, 0.0, medium, grid));
 
     // Print summary
-    println!("\n=== VALIDATION REPORT ===");
+    info!("=== VALIDATION REPORT ===");
     for report in &reports {
-        println!(
+        info!(
             "{}: {}",
             report.test_name,
             if report.passed {
-                "PASSED ✓"
+                "PASSED \u{2713}"
             } else {
-                "FAILED ✗"
+                "FAILED \u{2717}"
             }
         );
         if !report.passed {
-            println!("  L2 Error: {:.2e}", report.error_l2);
-            println!("  Reference: {}", report.reference);
+            info!("  L2 Error: {:.2e}", report.error_l2);
+            info!("  Reference: {}", report.reference);
         }
     }
 

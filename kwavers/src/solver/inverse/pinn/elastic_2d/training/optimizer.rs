@@ -212,7 +212,10 @@ impl<B: AutodiffBackend> PINNOptimizer<B> {
                 Self::sgd_step_impl(model, grads, learning_rate, weight_decay)
             }
             OptimizerAlgorithm::SGDMomentum => {
-                // Placeholder - implement momentum SGD
+                // KNOWN_LIMITATION: Momentum accumulation not yet implemented.
+                // Falls back to plain SGD. Full momentum requires storing
+                // per-parameter velocity tensors compatible with Burn's autodiff backend.
+                // TODO: Implement v_t = β * v_{t-1} + ∇L, θ_t = θ_{t-1} - lr * v_t
                 Self::sgd_step_impl(model, grads, learning_rate, weight_decay)
             }
             OptimizerAlgorithm::Adam => {

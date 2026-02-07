@@ -6,6 +6,7 @@
 
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
+use log::info;
 
 /// Validation results for numerical accuracy tests
 #[derive(Debug, Clone, Default)]
@@ -312,10 +313,10 @@ impl NumericalValidator {
         _omega: f64,
         _dt: f64,
     ) -> Result<f64, Box<dyn std::error::Error>> {
-        // Placeholder for dispersion validation test
-        // Future: Implement plane wave propagation with analytical comparison
+        // Phase error requires: propagate plane wave for N wavelengths, compare
+        // accumulated phase vs analytical kΔx, report |φ_num − φ_exact| / (kΔx).
         // Per Kreiss & Oliger (1973): "Methods for the Approximate Solution of Time Dependent Problems"
-        Ok(0.001)
+        Err("compute_phase_error: plane wave propagation + analytical phase comparison not yet implemented".into())
     }
 
     fn compute_phase_error_fdtd<S>(
@@ -325,8 +326,9 @@ impl NumericalValidator {
         _omega: f64,
         _dt: f64,
     ) -> Result<f64, Box<dyn std::error::Error>> {
-        // FDTD typically has higher dispersion
-        Ok(0.005)
+        // FDTD dispersion: compare numerical phase velocity c_num = ω/k_num vs c₀
+        // using von Neumann analysis of the discrete scheme.
+        Err("compute_phase_error_fdtd: FDTD dispersion analysis not yet implemented".into())
     }
 
     fn compute_phase_error_kuznetsov<S>(
@@ -336,8 +338,9 @@ impl NumericalValidator {
         _omega: f64,
         _dt: f64,
     ) -> Result<f64, Box<dyn std::error::Error>> {
-        // Kuznetsov with nonlinearity
-        Ok(0.002)
+        // Kuznetsov nonlinear phase error requires propagating a finite-amplitude wave
+        // and comparing harmonic growth vs Fubini solution.
+        Err("compute_phase_error_kuznetsov: nonlinear dispersion analysis not yet implemented".into())
     }
 
     fn test_stability_pstd(&self, dt: f64) -> Result<f64, Box<dyn std::error::Error>> {
@@ -405,12 +408,12 @@ impl NumericalValidator {
         &self,
         boundary_type: &str,
     ) -> Result<f64, Box<dyn std::error::Error>> {
-        match boundary_type {
-            "PML" => Ok(0.005),
-            "CPML" => Ok(0.0005),
-            "ABC" => Ok(0.05),
-            _ => Ok(0.1),
-        }
+        // Requires: inject pulse toward boundary, measure reflected energy ratio.
+        // Expected: PML ~−46 dB, CPML ~−66 dB, ABC ~−26 dB.
+        Err(format!(
+            "test_boundary_reflection({}): pulse injection + reflected energy measurement not yet implemented",
+            boundary_type
+        ).into())
     }
 
     fn calculate_absorption_coefficient(&self, solver: &str, _grid: &Grid) -> f64 {
@@ -463,21 +466,21 @@ impl Default for NumericalValidator {
 
 /// Report validation results
 pub fn report_validation_results(results: &ValidationResults) {
-    println!("=== Numerical Accuracy Validation Report ===");
+    info!("=== Numerical Accuracy Validation Report ===");
 
-    println!("Dispersion Analysis:");
-    println!(
+    info!("Dispersion Analysis:");
+    info!(
         "  PSTD   - Phase Error: {:.2e}, Wavelength: {:.2e}",
         results.dispersion_tests.pstd_phase_error, results.dispersion_tests.numerical_wavelength
     );
-    println!(
+    info!(
         "  FDTD   - Phase Error: {:.2e}, Group Velocity Error: {:.2e}",
         results.dispersion_tests.fdtd_phase_error, results.dispersion_tests.group_velocity_error
     );
-    println!(
+    info!(
         "  Kuznetsov - Phase Error: {:.2e}",
         results.dispersion_tests.kuznetsov_phase_error
     );
 
-    println!("✓ All validation tests PASSED");
+    info!("All validation tests PASSED");
 }

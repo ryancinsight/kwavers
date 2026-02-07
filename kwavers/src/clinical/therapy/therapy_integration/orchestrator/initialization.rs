@@ -20,6 +20,7 @@
 use crate::clinical::therapy::lithotripsy::stone_fracture::StoneMaterial;
 use crate::clinical::therapy::lithotripsy::{LithotripsyParameters, LithotripsySimulator};
 use crate::core::error::KwaversResult;
+use log::{info, warn};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::physics::cavitation_control::{ControlStrategy, FeedbackConfig, FeedbackController};
@@ -328,7 +329,7 @@ fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f
                 match CTBasedSkullModel::from_file(ct_path) {
                     Ok(ct_model) => {
                         let metadata = ct_model.metadata();
-                        eprintln!(
+                        info!(
                             "Loaded CT scan: {} voxels, {:.2}mm spacing, HU range [{:.0}, {:.0}]",
                             format_args!(
                                 "{}×{}×{}",
@@ -341,8 +342,8 @@ fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f
                         return Ok(ct_model.ct_data().clone());
                     }
                     Err(e) => {
-                        eprintln!(
-                            "Warning: Failed to load NIFTI CT data: {}. Using synthetic fallback.",
+                        warn!(
+                            "Failed to load NIFTI CT data: {}. Using synthetic fallback.",
                             e
                         );
                     }
@@ -351,12 +352,12 @@ fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f
 
             #[cfg(not(feature = "nifti"))]
             {
-                eprintln!("Warning: NIFTI feature not enabled. Rebuild with --features nifti to load {}. Using synthetic fallback.", ct_path);
+                warn!("NIFTI feature not enabled. Rebuild with --features nifti to load {}. Using synthetic fallback.", ct_path);
             }
         } else if ct_path.ends_with(".dcm") {
             // DICOM loading - future implementation
-            eprintln!(
-                "Warning: DICOM loading not yet implemented for {}. Using synthetic fallback.",
+            warn!(
+                "DICOM loading not yet implemented for {}. Using synthetic fallback.",
                 ct_path
             );
         }

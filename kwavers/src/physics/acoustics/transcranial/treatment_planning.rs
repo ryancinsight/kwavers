@@ -4,6 +4,7 @@
 //! and optimal trajectory calculation for brain targets.
 
 use crate::core::error::KwaversResult;
+use log::info;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use num_complex::Complex;
@@ -132,8 +133,8 @@ impl TreatmentPlanner {
         targets: &[TargetVolume],
         transducer_spec: &TransducerSpecification,
     ) -> KwaversResult<TreatmentPlan> {
-        println!("Generating tFUS treatment plan for patient: {}", patient_id);
-        println!("Planning for {} target volumes", targets.len());
+        info!("Generating tFUS treatment plan for patient: {}", patient_id);
+        info!("Planning for {} target volumes", targets.len());
 
         // Step 1: Analyze skull properties
         let _skull_properties = self.analyze_skull_properties()?;

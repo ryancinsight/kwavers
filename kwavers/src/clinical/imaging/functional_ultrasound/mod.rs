@@ -35,7 +35,7 @@ pub use targeting::{StereotacticCoordinates, TargetingSystem};
 pub use tracking::TrackingFilter;
 pub use vasculature::{VesselClassification, VesselSegmentation};
 
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
@@ -118,16 +118,20 @@ impl RegistrationEngine {
     }
 
     /// Register moving image to fixed reference image
-    /// TODO: Implement Mattes MI metric and CMA-ES optimization
+    ///
+    /// # Errors
+    /// Returns `KwaversError::NotImplemented` — Mattes MI registration pending.
     pub fn register(
         &self,
         _moving: &Array3<f64>,
         _fixed: &Array3<f64>,
         _config: &RegistrationConfig,
     ) -> KwaversResult<AffineTransform3D> {
-        // Placeholder: return identity transform
-        // TODO_AUDIT: P1 - Implement full Mattes MI registration pipeline
-        Ok(AffineTransform3D::identity())
+        Err(KwaversError::NotImplemented(
+            "Affine registration via Mattes mutual information metric \
+             and CMA-ES optimization not yet implemented."
+                .into(),
+        ))
     }
 }
 

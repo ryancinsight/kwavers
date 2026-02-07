@@ -14,6 +14,7 @@
 //! - Validation against analytical and literature benchmarks
 
 use crate::core::error::{KwaversError, KwaversResult};
+use log::info;
 use crate::solver::inverse::pinn::ml::physics::{
     BoundaryConditionSpec, InitialConditionSpec, PhysicsDomain, PhysicsDomainRegistry,
     PhysicsLossWeights, PhysicsParameters, PhysicsValidationMetric,
@@ -651,7 +652,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
 
             // Optional: print progress every 100 epochs
             if epoch % 100 == 0 && epoch > 0 {
-                println!("Epoch {}: PDE Loss = {:.6e}", epoch, loss_value);
+                info!("Epoch {}: PDE Loss = {:.6e}", epoch, loss_value);
             }
         }
 
@@ -662,7 +663,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
             HashMap::from([("pde".to_string(), 0.0), ("total".to_string(), 0.0)])
         };
 
-        println!(
+        info!(
             "PINN training completed in {:.2}s with physics-informed optimization",
             start_time.elapsed().as_secs_f64()
         );

@@ -56,11 +56,15 @@ impl BrainAtlas {
     }
 
     /// Load default mouse brain atlas (Allen Brain Atlas)
+    ///
+    /// **Test-only placeholder**: Returns a uniform-intensity reference volume
+    /// (80×100×80 at 100 μm resolution) with no anatomical annotation.
+    /// Production use requires loading the Allen Common Coordinate Framework
+    /// (CCFv3) from NIfTI or HDF5 files, which are ~5 GB at full 10 μm resolution.
     pub fn load_default() -> KwaversResult<Self> {
-        // Placeholder: In production, load from file or embedded data
         // Standard mouse brain: ~8mm × 10mm × 8mm at reduced 100μm resolution for testing
         // Full resolution (10μm) would be 800x1000x800 = 5.12GB
-        let reference_image = Array3::ones((80, 100, 80)); // 80x100x80 voxels at 100μm
+        let reference_image = Array3::ones((80, 100, 80)); // Uniform — no real anatomy
         let voxel_size = [0.1, 0.1, 0.1]; // 100 μm voxels (reduced for testing)
         let brain_center = [4.0, 5.0, 4.0]; // Center in mm
 

@@ -3,7 +3,8 @@
 //! Coordinates GPU-accelerated multiphysics timesteps with real-time budget
 //! enforcement, performance monitoring, and async I/O for checkpoints.
 
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
+use log::debug;
 use crate::domain::grid::Grid;
 use crate::solver::backend::gpu::performance_monitor::{
     BudgetAnalysis, PerformanceMetrics, PerformanceMonitor,
@@ -121,50 +122,23 @@ impl RealtimeSimulationOrchestrator {
     }
 
     /// Execute single multiphysics timestep on GPU
+    ///
+    /// **Not yet implemented** — returns `NotImplemented` error.
+    /// Actual GPU kernel dispatch requires wgpu compute pipeline integration.
+    /// The infrastructure (kernel registry, budget monitor, checkpoint system)
+    /// is ready; what's missing is the `wgpu` command encoder dispatch loop.
     pub fn step(
         &mut self,
         _fields: &mut HashMap<String, Array3<f64>>,
-        dt: f64,
-        time: f64,
+        _dt: f64,
+        _time: f64,
         _grid: &Grid,
     ) -> KwaversResult<StepResult> {
-        let step_start = Instant::now();
-
-        // Estimate kernel execution times
-        let num_elements = 256 * 256 * 256; // Typical 256³ grid
-        let estimated_time_ms = self.kernel_registry.estimate_total_time_ms(num_elements);
-
-        // Simulate step execution (placeholder)
-        // In production: actual GPU kernel dispatch and synchronization
-        let simulated_time_ms = estimated_time_ms.max(1.0).min(self.config.budget_ms * 1.5);
-
-        // Record metrics
-        let elapsed_ms = step_start.elapsed().as_secs_f64() * 1000.0 + simulated_time_ms;
-        self.monitor.record_step(elapsed_ms);
-
-        let within_budget = elapsed_ms <= self.config.budget_ms;
-
-        if self.config.verbose {
-            eprintln!(
-                "Step {}: dt={:.3e}, time={:.3e}, exec_time={:.2}ms, budget={:.2}ms, status={}",
-                self.step_count,
-                dt,
-                time,
-                elapsed_ms,
-                self.config.budget_ms,
-                if within_budget { "OK" } else { "EXCEEDED" }
-            );
-        }
-
-        self.step_count += 1;
-
-        Ok(StepResult {
-            dt,
-            time,
-            wall_time_ms: elapsed_ms,
-            within_budget,
-            kernels_executed: self.kernel_registry.list_kernels().len(),
-        })
+        Err(KwaversError::NotImplemented(
+            "GPU realtime_loop::step: wgpu compute kernel dispatch not yet wired up; \
+             infrastructure (kernel registry, budget monitor) is in place"
+                .to_string(),
+        ))
     }
 
     /// Run full simulation loop
@@ -197,7 +171,7 @@ impl RealtimeSimulationOrchestrator {
             // Checkpoint (placeholder for async I/O)
             if step % self.config.checkpoint_interval as u64 == 0 && self.config.enable_async_io {
                 if self.config.verbose {
-                    eprintln!("Checkpoint at step {} (time={:.3e})", step, t);
+                    debug!("Checkpoint at step {} (time={:.3e})", step, t);
                 }
             }
         }

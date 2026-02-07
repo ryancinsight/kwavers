@@ -1,6 +1,6 @@
 //! Validation test suite
 
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 
 /// Hybrid validation test suite
 #[derive(Debug)]
@@ -114,14 +114,16 @@ impl HybridValidationSuite {
 
     /// Compute numerical solution
     fn compute_solution(&self) -> KwaversResult<f64> {
-        // Would compute actual solution
-        Ok(1.0)
+        Err(KwaversError::NotImplemented(
+            "Hybrid solver numerical solution computation not yet implemented".into(),
+        ))
     }
 
     /// Get reference solution
     fn get_reference_solution(&self) -> KwaversResult<f64> {
-        // Would get analytical or high-resolution reference
-        Ok(1.0)
+        Err(KwaversError::NotImplemented(
+            "Analytical/high-resolution reference solution not yet implemented".into(),
+        ))
     }
 
     /// Compute relative error
@@ -135,8 +137,10 @@ impl HybridValidationSuite {
 
     /// Compute maximum eigenvalue for stability
     fn compute_max_eigenvalue(&self) -> KwaversResult<f64> {
-        // Would compute actual eigenvalue
-        Ok(1.0)
+        Err(KwaversError::NotImplemented(
+            "Maximum eigenvalue computation for hybrid solver stability analysis not yet implemented"
+                .into(),
+        ))
     }
 
     /// Compute time step

@@ -22,6 +22,7 @@
 //! therapy based on a 3D CT scan"
 
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
+use log::warn;
 use crate::domain::grid::Grid;
 use crate::physics::acoustics::skull::HeterogeneousSkull;
 use ndarray::Array3;
@@ -323,8 +324,8 @@ impl CTBasedSkullModel {
 
         // Warn if no bone is present (max_hu < 700)
         if max_hu < 700.0 {
-            eprintln!(
-                "Warning: No bone detected (max HU = {:.0}). Expected skull HU > 700.",
+            warn!(
+                "No bone detected (max HU = {:.0}). Expected skull HU > 700.",
                 max_hu
             );
         }

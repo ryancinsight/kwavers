@@ -4,6 +4,7 @@
 //! for optimal multi-GPU performance.
 
 use crate::core::error::KwaversResult;
+use log::debug;
 use std::collections::HashMap;
 
 /// Memory pool types for different usage patterns
@@ -306,7 +307,7 @@ impl StreamingTransferManager {
         region: &UnifiedMemoryRegion,
     ) -> KwaversResult<()> {
         // Implement zero-copy unified memory transfer
-        println!(
+        debug!(
             "Performing zero-copy unified memory transfer: {} bytes at {} GB/s",
             size, region.bandwidth
         );
@@ -328,7 +329,7 @@ impl StreamingTransferManager {
         };
 
         self.active_transfers.push(stream);
-        println!(
+        debug!(
             "Streaming transfer: GPU{} -> GPU{}, {} bytes",
             src.gpu_id, dst.gpu_id, size
         );

@@ -4,6 +4,7 @@
 //! checkpoint management, and fault tolerance for multi-GPU PINN training.
 
 use crate::core::error::{KwaversError, KwaversResult};
+use log::{info, warn};
 use crate::solver::inverse::pinn::ml::{BurnPINN2DWave, BurnTrainingMetrics2D, Geometry2D};
 use burn::tensor::backend::AutodiffBackend;
 // Removed unused imports
@@ -370,7 +371,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
                     .total_loss
                     .last()
                     .unwrap_or(&0.0);
-                println!(
+                info!(
                     "Epoch {}/{}: Global Loss = {:.6e}, Time = {:.2}s",
                     epoch + 1,
                     n_epochs,
@@ -391,30 +392,14 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         _initial_points: &[(f64, f64, f64)],
         _target_values: &[f64],
     ) -> KwaversResult<Vec<(BurnTrainingMetrics2D, Vec<f32>)>> {
-        let mut gpu_results = Vec::new();
-
-        // In practice, this would distribute work across actual GPUs
-        // For this implementation, we'll simulate distributed training
-        for (gpu_id, _model) in self.coordinator.model_replicas.iter_mut().enumerate() {
-            // Simulate per-GPU training step
-            let loss_value = 0.1 / (gpu_id + 1) as f64;
-            let metrics = BurnTrainingMetrics2D {
-                total_loss: vec![loss_value], // Simulated loss
-                data_loss: vec![0.05],
-                pde_loss: vec![0.03],
-                bc_loss: vec![0.015],
-                ic_loss: vec![0.005],
-                training_time_secs: 0.1,
-                epochs_completed: 1,
-            };
-
-            // Simulated gradients (would be actual parameter gradients)
-            let gradients = vec![0.01; 100]; // Placeholder
-
-            gpu_results.push((metrics, gradients));
-        }
-
-        Ok(gpu_results)
+        // Distributed GPU training requires actual CUDA/ROCm multi-GPU
+        // kernel execution with NCCL/MPI gradient communication.
+        Err(KwaversError::NotImplemented(
+            "Distributed multi-GPU training not yet implemented. \
+             Requires actual GPU kernel dispatch and NCCL/MPI-based \
+             gradient aggregation across devices."
+                .into(),
+        ))
     }
 
     /// Aggregate gradients from all GPUs and update models
@@ -508,7 +493,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
 
         // In practice, serialize and save checkpoint
         // For this implementation, we just log
-        println!("Checkpoint saved: {}", path.display());
+        info!("Checkpoint saved: {}", path.display());
 
         self.coordinator.training_state.last_checkpoint = checkpoint.epoch;
 
@@ -526,7 +511,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
 
         if tokio::fs::try_exists(&path).await.unwrap_or(false) {
             // In practice, deserialize checkpoint
-            println!("Checkpoint loaded: {}", path.display());
+            info!("Checkpoint loaded: {}", path.display());
             self.coordinator.training_state.current_epoch = epoch;
             self.coordinator.training_state.last_checkpoint = epoch;
         } else {
@@ -556,7 +541,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
             manager.handle_gpu_failure(failed_gpu_id)?;
 
             // Redistribute training work
-            println!(
+            warn!(
                 "GPU {} failed, redistributing work to remaining GPUs",
                 failed_gpu_id
             );

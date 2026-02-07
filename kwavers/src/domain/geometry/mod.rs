@@ -247,7 +247,7 @@ impl GeometricDomain for RectangularDomain {
             1 => Dimension::One,
             2 => Dimension::Two,
             3 => Dimension::Three,
-            _ => panic!("Invalid dimension"),
+            _ => unreachable!("RectangularDomain only constructed with 1-3 dimensions"),
         }
     }
 
@@ -431,7 +431,7 @@ impl GeometricDomain for SphericalDomain {
         match self.center.len() {
             2 => Dimension::Two,
             3 => Dimension::Three,
-            _ => panic!("Spherical domain only defined for 2D and 3D"),
+            _ => unreachable!("SphericalDomain only constructed with 2-3 dimensions"),
         }
     }
 
@@ -485,7 +485,7 @@ impl GeometricDomain for SphericalDomain {
         match self.center.len() {
             2 => PI * self.radius.powi(2),               // Area of disk
             3 => (4.0 / 3.0) * PI * self.radius.powi(3), // Volume of ball
-            _ => panic!("Invalid dimension"),
+            _ => unreachable!("SphericalDomain only constructed with 2-3 dimensions"),
         }
     }
 
@@ -562,7 +562,7 @@ impl GeometricDomain for SphericalDomain {
                         }
                     }
                 }
-                _ => panic!("Invalid dimension"),
+                _ => unreachable!("SphericalDomain only constructed with 2-3 dimensions"),
             }
         }
 

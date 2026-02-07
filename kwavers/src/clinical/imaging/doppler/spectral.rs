@@ -1,6 +1,6 @@
 //! Spectral Analysis for Doppler Signals
 
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
 
 /// Spectral analysis configuration
@@ -22,6 +22,7 @@ impl Default for SpectralConfig {
 /// Spectral analysis processor
 #[derive(Debug, Clone)]
 pub struct SpectralAnalysis {
+    #[allow(dead_code)] // Used when FFT-based PSD is implemented
     config: SpectralConfig,
 }
 
@@ -31,8 +32,15 @@ impl SpectralAnalysis {
     }
 
     /// Compute power spectral density
+    ///
+    /// # Errors
+    /// Returns `KwaversError::NotImplemented` — FFT-based spectral estimation pending.
     pub fn compute_psd(&self, _n_samples: usize) -> KwaversResult<Array1<f64>> {
-        // Placeholder implementation
-        Ok(Array1::zeros(self.config.fft_size))
+        Err(KwaversError::NotImplemented(
+            "Spectral Doppler PSD computation not yet implemented. \
+             Requires Welch’s method with configurable FFT size, \
+             windowing, and overlap."
+                .into(),
+        ))
     }
 }

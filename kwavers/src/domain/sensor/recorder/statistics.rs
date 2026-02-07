@@ -1,5 +1,7 @@
 // recorder/statistics.rs - Recording statistics
 
+use log::info;
+
 /// Statistics collected during recording
 #[derive(Debug, Clone, Default)]
 pub struct RecorderStatistics {
@@ -47,16 +49,16 @@ impl RecorderStatistics {
 
     /// Print summary of statistics
     pub fn print_summary(&self) {
-        println!("\n=== Recording Statistics ===");
-        println!("Total snapshots: {}", self.total_snapshots);
-        println!("Cavitation events: {}", self.total_cavitation_events);
-        println!("Sonoluminescence events: {}", self.total_sl_events);
-        println!("Thermal events: {}", self.total_thermal_events);
-        println!(
+        info!("=== Recording Statistics ===");
+        info!("Total snapshots: {}", self.total_snapshots);
+        info!("Cavitation events: {}", self.total_cavitation_events);
+        info!("Sonoluminescence events: {}", self.total_sl_events);
+        info!("Thermal events: {}", self.total_thermal_events);
+        info!(
             "Pressure range: {:.2e} to {:.2e} Pa",
             self.min_pressure, self.max_pressure
         );
-        println!("Max temperature: {:.2} K", self.max_temperature);
-        println!("Max light intensity: {:.2e} W/m²", self.max_light_intensity);
+        info!("Max temperature: {:.2} K", self.max_temperature);
+        info!("Max light intensity: {:.2e} W/m\u{00b2}", self.max_light_intensity);
     }
 }

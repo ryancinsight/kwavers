@@ -38,6 +38,7 @@
 //!    J. Acoust. Soc. Am., 75(3), 749-768.
 
 use crate::core::error::KwaversResult;
+use log::warn;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;
@@ -490,14 +491,14 @@ impl WesterveltFdtd {
                     // Silent for acceptable violations
                 }
                 ViolationSeverity::Warning => {
-                    eprintln!("⚠️  Westervelt FDTD Conservation Warning: {}", diag);
+                    warn!("Westervelt FDTD Conservation Warning: {}", diag);
                 }
                 ViolationSeverity::Error => {
-                    eprintln!("❌ Westervelt FDTD Conservation Error: {}", diag);
+                    warn!("Westervelt FDTD Conservation Error: {}", diag);
                 }
                 ViolationSeverity::Critical => {
-                    eprintln!("🔴 Westervelt FDTD Conservation CRITICAL: {}", diag);
-                    eprintln!("   Solution may be physically invalid!");
+                    warn!("Westervelt FDTD Conservation CRITICAL: {}", diag);
+                    warn!("   Solution may be physically invalid!");
                 }
             }
         }

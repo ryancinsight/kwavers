@@ -15,6 +15,7 @@ use crate::solver::backend::BackendContext;
 use crate::solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use crate::solver::forward::hybrid::{HybridConfig, HybridSolver};
 use crate::solver::forward::pstd::{PSTDConfig, PSTDSolver};
+use log::info;
 use ndarray::Array3;
 use std::time::Instant;
 
@@ -95,7 +96,7 @@ impl ExecutionEngine {
             // Progress reporting (every 10%)
             if step % (self.config.simulation.num_time_steps / 10).max(1) == 0 {
                 let progress = (step as f64 / self.config.simulation.num_time_steps as f64) * 100.0;
-                eprintln!("Progress: {:.1}%", progress);
+                info!("Progress: {:.1}%", progress);
             }
         }
 
@@ -175,7 +176,7 @@ impl ExecutionEngine {
             // Progress reporting (every 10%)
             if step % (self.config.simulation.num_time_steps / 10).max(1) == 0 {
                 let progress = (step as f64 / self.config.simulation.num_time_steps as f64) * 100.0;
-                eprintln!("PSTD Progress: {:.1}%", progress);
+                info!("PSTD Progress: {:.1}%", progress);
             }
         }
 
@@ -257,7 +258,7 @@ impl ExecutionEngine {
             // Progress reporting (every 10%)
             if step % (self.config.simulation.num_time_steps / 10).max(1) == 0 {
                 let progress = (step as f64 / self.config.simulation.num_time_steps as f64) * 100.0;
-                eprintln!("Hybrid Progress: {:.1}%", progress);
+                info!("Hybrid Progress: {:.1}%", progress);
             }
         }
 

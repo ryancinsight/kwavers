@@ -1,6 +1,7 @@
 //! Main Westervelt equation solver implementation
 
 use crate::core::error::KwaversResult;
+use log::warn;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -437,14 +438,14 @@ impl WesterveltWave {
                     // Silent for acceptable violations
                 }
                 ViolationSeverity::Warning => {
-                    eprintln!("⚠️  Westervelt Wave Conservation Warning: {}", diag);
+                    warn!("Westervelt Wave Conservation Warning: {}", diag);
                 }
                 ViolationSeverity::Error => {
-                    eprintln!("❌ Westervelt Wave Conservation Error: {}", diag);
+                    warn!("Westervelt Wave Conservation Error: {}", diag);
                 }
                 ViolationSeverity::Critical => {
-                    eprintln!("🔴 Westervelt Wave Conservation CRITICAL: {}", diag);
-                    eprintln!("   Solution may be physically invalid!");
+                    warn!("Westervelt Wave Conservation CRITICAL: {}", diag);
+                    warn!("   Solution may be physically invalid!");
                 }
             }
         }

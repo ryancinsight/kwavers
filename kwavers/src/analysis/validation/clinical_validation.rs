@@ -41,6 +41,7 @@
 //! - **Nightingale (2015)**: Quantitative Ultrasound in Soft Tissues
 
 use crate::core::error::KwaversResult;
+use log::info;
 use ndarray::{Array2, Array3, Array4};
 use std::collections::HashMap;
 
@@ -86,12 +87,12 @@ impl ClinicalValidationFramework {
 
     /// Run all clinical validation tests
     pub fn run_full_validation(&mut self) -> KwaversResult<ValidationReport> {
-        println!("Starting comprehensive clinical validation...");
+        info!("Starting comprehensive clinical validation...");
 
         let mut results = Vec::new();
 
         for (name, test_case) in &self.test_cases {
-            println!("Running test case: {}", name);
+            info!("Running test case: {}", name);
             let result = self.run_test_case(test_case)?;
             results.push((name.clone(), result));
         }
@@ -99,7 +100,7 @@ impl ClinicalValidationFramework {
         // Generate comprehensive report
         let report = self.generate_validation_report(results)?;
 
-        println!("Clinical validation completed successfully");
+        info!("Clinical validation completed successfully");
         Ok(report)
     }
 
@@ -481,12 +482,17 @@ impl ClinicalValidationFramework {
     }
 
     fn calculate_thermal_dose(&self, temperature: &Array3<f32>) -> KwaversResult<Array3<f32>> {
-        // Calculate CEM43 thermal dose
-        let mut dose = temperature.clone();
-        // Simplified thermal dose calculation
-        for elem in dose.iter_mut() {
-            *elem = (*elem - 43.0).exp() * 0.5; // Simplified CEM43
-        }
+        // Calculate CEM43 thermal dose (Sapareto & Dewey 1984):
+        //   CEM43 = Σ R^(43−T) · Δt
+        // where R = 0.25 for T < 43°C, R = 0.5 for T ≥ 43°C, Δt = 1 minute
+        // Each voxel holds a single temperature snapshot, so we compute the
+        // instantaneous dose-rate (equivalent minutes at 43°C per minute):
+        //   dose_rate = R^(43 − T)
+        let dose = temperature.mapv(|t| {
+            let t64 = t as f64;
+            let r: f64 = if t64 < 43.0 { 0.25 } else { 0.5 };
+            r.powf(43.0 - t64) as f32
+        });
         Ok(dose)
     }
 

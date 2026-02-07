@@ -5,7 +5,7 @@
 
 use super::super::traits::{DGOperations, NumericalSolver};
 use super::core::DGSolver;
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
@@ -63,27 +63,21 @@ impl DGOperations for DGSolver {
         }
     }
 
-    fn project_to_basis(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        // ARCHITECTURAL PLACEHOLDER: Full DG projection requires transformation to polynomial basis
-        // using quadrature rules and mass matrix inversion. Current implementation returns identity
-        // transformation as the hybrid solver uses spectral methods for smooth regions.
-        //
-        // Full implementation would compute: û = M^(-1) ∫ u(x) φ_i(x) dx
-        // where φ_i are the DG basis functions (Legendre/Lagrange polynomials).
-        //
+    fn project_to_basis(&self, _field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+        // Full DG projection requires: û = M^(-1) ∫ u(x) φ_i(x) dx
+        // where φ_i are Legendre/Lagrange basis functions and M is the mass matrix.
         // Deferred to Sprint 122+ for full discontinuous Galerkin solver expansion.
-        Ok(field.clone())
+        Err(KwaversError::NotImplemented(
+            "DG project_to_basis: Legendre polynomial projection with mass matrix inversion not yet implemented".to_string(),
+        ))
     }
 
-    fn reconstruct_from_basis(&self, coefficients: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        // ARCHITECTURAL PLACEHOLDER: Full DG reconstruction requires evaluation of polynomial
-        // expansion at quadrature points: u(x) = Σ û_i φ_i(x)
-        //
-        // Current implementation returns identity as the spectral-DG hybrid uses the coupling
-        // module for interface handling rather than explicit basis transformations.
-        //
+    fn reconstruct_from_basis(&self, _coefficients: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+        // Full DG reconstruction: u(x) = Σ û_i φ_i(x) evaluated at quadrature points.
         // Deferred to Sprint 122+ for full discontinuous Galerkin solver expansion.
-        Ok(coefficients.clone())
+        Err(KwaversError::NotImplemented(
+            "DG reconstruct_from_basis: polynomial expansion evaluation not yet implemented".to_string(),
+        ))
     }
 }
 

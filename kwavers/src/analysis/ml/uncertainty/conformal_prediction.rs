@@ -4,6 +4,7 @@
 //! bounds with guaranteed coverage probabilities.
 
 use crate::core::error::KwaversResult;
+use log::info;
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
 use ndarray::{Array1, Array2};
@@ -85,7 +86,7 @@ impl ConformalPredictor {
             .sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         self.is_calibrated = true;
-        println!(
+        info!(
             "Conformal predictor calibrated with {} samples",
             self.calibration_scores.len()
         );

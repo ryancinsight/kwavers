@@ -1,5 +1,6 @@
 // adaptive_selection/statistics.rs - Selection statistics tracking
 
+use log::info;
 use super::selector::SelectedMethod;
 use ndarray::Array3;
 
@@ -75,13 +76,13 @@ impl SelectionStatistics {
     pub fn print_summary(&self) {
         let (spectral_pct, fd_pct, dg_pct) = self.get_distribution();
 
-        println!("=== Adaptive Selection Statistics ===");
-        println!("Time steps: {}", self.time_steps);
-        println!("Method distribution:");
-        println!("  Spectral: {spectral_pct:.1}%");
-        println!("  Finite Difference: {fd_pct:.1}%");
-        println!("  Discontinuous Galerkin: {dg_pct:.1}%");
-        println!("Total switches: {}", self.total_switches);
-        println!("Switches per step: {:.2}", self.switches_per_step());
+        info!("=== Adaptive Selection Statistics ===");
+        info!("Time steps: {}", self.time_steps);
+        info!("Method distribution:");
+        info!("  Spectral: {spectral_pct:.1}%");
+        info!("  Finite Difference: {fd_pct:.1}%");
+        info!("  Discontinuous Galerkin: {dg_pct:.1}%");
+        info!("Total switches: {}", self.total_switches);
+        info!("Switches per step: {:.2}", self.switches_per_step());
     }
 }

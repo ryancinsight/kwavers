@@ -68,6 +68,7 @@
 //!   Uses monolithic thermal-acoustic coupling for safety verification
 
 use crate::core::error::KwaversResult;
+use log::{debug, warn};
 use crate::domain::field::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::plugin::Plugin;
@@ -292,7 +293,7 @@ impl MonolithicCoupler {
         }
 
         if self.newton_config.verbose {
-            eprintln!("Monolithic Newton initial residual: {:.3e}", f_norm_0);
+            debug!("Monolithic Newton initial residual: {:.3e}", f_norm_0);
         }
 
         // Newton iteration
@@ -308,7 +309,7 @@ impl MonolithicCoupler {
             let f_norm = Self::norm(&f);
 
             if self.newton_config.verbose {
-                eprintln!(
+                debug!(
                     "Newton iteration {}: ||F|| = {:.3e}, relative = {:.3e}",
                     k,
                     f_norm,
@@ -321,7 +322,7 @@ impl MonolithicCoupler {
             // Check convergence
             if f_norm < self.newton_config.newton_tolerance {
                 if self.newton_config.verbose {
-                    eprintln!("Converged in {} Newton iterations", newton_iter);
+                    debug!("Converged in {} Newton iterations", newton_iter);
                 }
                 converged = true;
                 break;
@@ -345,7 +346,7 @@ impl MonolithicCoupler {
                 Ok(conv_info) => {
                     total_gmres_iters += conv_info.iterations;
                     if self.newton_config.verbose {
-                        eprintln!(
+                        debug!(
                             "  GMRES: {} iterations, ||r|| = {:.3e}",
                             conv_info.iterations, conv_info.final_residual
                         );
@@ -353,7 +354,7 @@ impl MonolithicCoupler {
                 }
                 Err(e) => {
                     if self.newton_config.verbose {
-                        eprintln!("  GMRES failed: {:?}", e);
+                        warn!("  GMRES failed: {:?}", e);
                     }
                     // Continue with best attempt rather than failing
                 }
@@ -370,7 +371,7 @@ impl MonolithicCoupler {
             u_current = &u_current + &(&du * step_size);
 
             if self.newton_config.verbose {
-                eprintln!("  Step size: {:.4}", step_size);
+                debug!("  Step size: {:.4}", step_size);
             }
         }
 

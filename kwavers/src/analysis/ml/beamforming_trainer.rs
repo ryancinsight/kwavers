@@ -33,6 +33,7 @@ use crate::analysis::ml::training::{
     PhysicsLoss, TrainingConfig, TrainingDataset, TrainingHistory, TrainingMetrics,
 };
 use crate::core::error::{KwaversError, KwaversResult};
+use log::{debug, info};
 use ndarray::s;
 
 #[cfg(test)]
@@ -148,7 +149,7 @@ impl BeamformingTrainer {
             self.history.add_epoch(metrics.clone());
 
             if self.config.verbose && epoch % 10 == 0 {
-                eprintln!(
+                debug!(
                     "Epoch {}/{}: train_loss={:.6e}, val_loss={:.6e}, lr={:.6e}",
                     epoch + 1,
                     self.config.num_epochs,
@@ -167,11 +168,11 @@ impl BeamformingTrainer {
         self.history.total_time = start_time.elapsed().as_secs_f64();
 
         if self.config.verbose {
-            eprintln!(
-                "\nTraining complete. Best validation loss: {:.6e} at epoch {}",
+            info!(
+                "Training complete. Best validation loss: {:.6e} at epoch {}",
                 self.history.best_val_loss, self.history.best_epoch
             );
-            eprintln!(
+            info!(
                 "Total training time: {:.2}s ({:.2}s/epoch)",
                 self.history.total_time,
                 self.history.total_time / self.config.num_epochs as f64
@@ -338,7 +339,7 @@ impl BeamformingTrainer {
         })?;
 
         if self.config.verbose {
-            eprintln!("Saved checkpoint: {}", checkpoint_path);
+            debug!("Saved checkpoint: {}", checkpoint_path);
         }
 
         Ok(())

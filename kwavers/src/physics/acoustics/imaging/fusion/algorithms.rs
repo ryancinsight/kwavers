@@ -57,9 +57,16 @@ impl MultiModalFusion {
 
     /// Register ultrasound data for multi-modal image fusion
     pub fn register_ultrasound(&mut self, ultrasound_data: &Array3<f64>) -> KwaversResult<()> {
+        // Compute quality score from signal-to-noise ratio estimate
+        let mean = ultrasound_data.mean().unwrap_or(0.0);
+        let variance = ultrasound_data.mapv(|v| (v - mean).powi(2)).mean().unwrap_or(1.0);
+        let snr = if variance > 1e-15 { mean.abs() / variance.sqrt() } else { 0.0 };
+        // Map SNR to 0..1 quality score via sigmoid
+        let quality_score = 1.0 / (1.0 + (-0.5 * (snr - 5.0)).exp());
+
         let registered_data = RegisteredModality {
             data: ultrasound_data.clone(),
-            quality_score: 0.85, // Placeholder quality score
+            quality_score,
         };
 
         self.registered_data
@@ -162,9 +169,21 @@ impl MultiModalFusion {
             FusionMethod::Probabilistic => self.fuse_probabilistic(),
             FusionMethod::DeepFusion => self.fuse_deep_learning(),
             FusionMethod::MaximumLikelihood => self.fuse_maximum_likelihood(),
-            FusionMethod::MaximumIntensity => self.fuse_maximum_likelihood(), // TODO: Implement MIP
-            FusionMethod::MinimumIntensity => self.fuse_maximum_likelihood(), // TODO: Implement MinIP
-            FusionMethod::PCA => self.fuse_maximum_likelihood(), // TODO: Implement PCA fusion
+            FusionMethod::MaximumIntensity => {
+                return Err(KwaversError::NotImplemented(
+                    "Maximum Intensity Projection (MIP) fusion not yet implemented".into(),
+                ))
+            }
+            FusionMethod::MinimumIntensity => {
+                return Err(KwaversError::NotImplemented(
+                    "Minimum Intensity Projection (MinIP) fusion not yet implemented".into(),
+                ))
+            }
+            FusionMethod::PCA => {
+                return Err(KwaversError::NotImplemented(
+                    "PCA-based image fusion not yet implemented".into(),
+                ))
+            }
         }?;
 
         Ok(fused_result)
@@ -664,14 +683,12 @@ impl MultiModalFusion {
     /// Would implement architectures like U-Net or attention-based models
     /// for learning optimal fusion strategies from training data.
     fn fuse_deep_learning(&self) -> KwaversResult<FusedImageResult> {
-        // TODO: Implement deep learning fusion with:
-        // - U-Net style architecture for multi-modal inputs
-        // - Attention mechanisms for modality weighting
-        // - Multi-scale feature extraction
-        // - End-to-end training on clinical datasets
-
-        // For now, delegate to weighted average
-        self.fuse_weighted_average()
+        Err(KwaversError::NotImplemented(
+            "Deep learning fusion not yet implemented. \
+             Requires U-Net or attention-based architecture with \
+             multi-modal training data."
+                .into(),
+        ))
     }
 
     /// Maximum likelihood estimation fusion

@@ -369,7 +369,7 @@ fn bench_training_epoch(c: &mut Criterion) {
                 &mut optimizer,
                 &mut scheduler,
                 &loop_config,
-            );
+            ).ok();
             black_box(metrics)
         });
     });

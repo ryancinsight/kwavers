@@ -369,13 +369,14 @@ pub trait AcousticThermalCoupling: MultiPhysicsCoupling {
         temperature_rate.mapv(|dtdt| beta * rho * c * c * dtdt)
     }
 
-    /// Viscous dissipation heating rate (W/m³)
+    /// Viscous dissipation heating rate Q = μ (∂v_i/∂x_j + ∂v_j/∂x_i)²/2  (W/m³)
+    ///
+    /// **Default returns 0.0** — computing the rate-of-strain tensor requires
+    /// spatial derivatives of the velocity field and knowledge of the grid spacing,
+    /// which are not available from `ArrayD` alone. Override this method in
+    /// implementors that can supply proper gradient information.
     fn viscous_heating(&self, _velocity_field: &ArrayD<f64>, _position: &[f64]) -> f64 {
-        // Simplified: Q = μ ∇²v (viscous dissipation)
-        // Full implementation would compute velocity gradients
-        let mu = 0.001; // Pa·s (water viscosity approximation)
-                        // This is a placeholder - real implementation needs velocity gradients
-        mu * 1e6 // Rough approximation
+        0.0 // Override with actual strain-rate computation
     }
 
     /// Thermal conductivity effects on acoustic damping

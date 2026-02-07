@@ -976,7 +976,11 @@ fn clinical_analysis_from_beamforming_result(
             beamforming_time_ms: result.performance.beamforming_time_ms as u64,
             feature_extraction_time_ms: result.performance.feature_extraction_time_ms as u64,
             memory_usage_mb: result.performance.memory_usage_mb,
-            gpu_utilization_percent: Some(result.performance.gpu_utilization_percent),
+            gpu_utilization_percent: if result.performance.gpu_utilization_percent.is_nan() {
+                None
+            } else {
+                Some(result.performance.gpu_utilization_percent)
+            },
         },
         quality_indicators: crate::api::QualityIndicators {
             image_quality: 0.85,

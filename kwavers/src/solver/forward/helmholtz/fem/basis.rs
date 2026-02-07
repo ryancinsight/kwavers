@@ -23,18 +23,24 @@ pub struct BasisFunction {
 
 impl BasisFunction {
     /// Create basis functions of given polynomial degree
-    #[must_use]
-    pub fn new(degree: usize) -> Self {
+    ///
+    /// # Errors
+    /// Returns `KwaversError::InvalidInput` if degree is not 1 or 2.
+    pub fn new(degree: usize) -> KwaversResult<Self> {
         let num_functions = match degree {
             1 => 4,  // Linear tetrahedron: 4 nodes
             2 => 10, // Quadratic tetrahedron: 10 nodes
-            _ => panic!("Unsupported polynomial degree: {}", degree),
+            _ => {
+                return Err(KwaversError::InvalidInput(format!(
+                    "Unsupported polynomial degree: {degree}. Use 1 (linear) or 2 (quadratic)"
+                )))
+            }
         };
 
-        Self {
+        Ok(Self {
             degree,
             num_functions,
-        }
+        })
     }
 
     /// Get number of basis functions
@@ -312,6 +318,6 @@ impl Default for GaussQuadrature {
 
 impl Default for BasisFunction {
     fn default() -> Self {
-        Self::new(1) // Linear elements by default
+        Self::new(1).expect("Linear elements (degree=1) always valid")
     }
 }

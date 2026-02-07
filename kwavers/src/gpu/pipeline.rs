@@ -5,6 +5,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::gpu::memory::{MemoryPoolType, UnifiedMemoryManager};
+use log::{debug, info, warn};
 use ndarray::{Array3, Array4};
 use rand::Rng;
 use rayon::prelude::*;
@@ -106,8 +107,8 @@ impl RealtimeImagingPipeline {
 
     /// Start the imaging pipeline
     pub fn start(&mut self) -> KwaversResult<()> {
-        println!("Starting real-time imaging pipeline...");
-        println!(
+        info!("Starting real-time imaging pipeline...");
+        info!(
             "Target FPS: {:.1}, Max latency: {:.1} ms",
             self.config.target_fps, self.config.max_latency_ms
         );
@@ -122,13 +123,13 @@ impl RealtimeImagingPipeline {
         }
 
         self.state = PipelineState::Running;
-        println!("Pipeline started successfully");
+        info!("Pipeline started successfully");
         Ok(())
     }
 
     /// Stop the imaging pipeline
     pub fn stop(&mut self) -> KwaversResult<()> {
-        println!("Stopping real-time imaging pipeline...");
+        debug!("Stopping real-time imaging pipeline...");
         self.state = PipelineState::Stopping;
 
         // Clear buffers
@@ -142,7 +143,7 @@ impl RealtimeImagingPipeline {
         }
 
         self.state = PipelineState::Stopped;
-        println!("Pipeline stopped");
+        info!("Pipeline stopped");
         Ok(())
     }
 
@@ -159,7 +160,7 @@ impl RealtimeImagingPipeline {
         // Check buffer capacity
         if buffer.len() >= self.config.buffer_size {
             self.stats.dropped_frames += 1;
-            println!("Warning: Input buffer full, dropping frame");
+            warn!("Input buffer full, dropping frame");
             return Ok(());
         }
 
@@ -214,8 +215,8 @@ impl RealtimeImagingPipeline {
             // Check latency requirements
             let latency_ms = processing_time.as_secs_f64() * 1000.0;
             if latency_ms > self.config.max_latency_ms {
-                println!(
-                    "Warning: Processing latency {:.1}ms exceeds limit {:.1}ms",
+                warn!(
+                    "Processing latency {:.1}ms exceeds limit {:.1}ms",
                     latency_ms, self.config.max_latency_ms
                 );
             }

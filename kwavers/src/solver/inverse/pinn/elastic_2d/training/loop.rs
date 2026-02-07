@@ -11,6 +11,9 @@ use burn::tensor::backend::AutodiffBackend;
 #[cfg(feature = "pinn")]
 use super::{data::*, optimizer::*, scheduler::*};
 
+#[cfg(feature = "pinn")]
+use crate::core::error::{KwaversError, KwaversResult};
+
 /// Training configuration
 #[cfg(feature = "pinn")]
 #[derive(Debug, Clone)]
@@ -28,78 +31,37 @@ pub struct TrainingConfig {
 }
 
 /// Main training procedure for PINN
+///
+/// # Errors
+/// Returns `KwaversError::NotImplemented` — forward pass, loss computation, and
+/// gradient-based optimization are not yet wired to the Burn autodiff backend.
 #[cfg(feature = "pinn")]
 pub fn train_pinn<B: AutodiffBackend>(
     _model: &mut ElasticPINN2D<B>,
     _training_data: &TrainingData<B>,
     _optimizer: &mut PINNOptimizer<B>,
-    scheduler: &mut LRScheduler,
-    config: &TrainingConfig,
-) -> TrainingMetrics {
-    let mut metrics = TrainingMetrics::new();
-    let start_time = std::time::Instant::now();
-
-    for epoch in 0..config.max_epochs {
-        let epoch_start = std::time::Instant::now();
-
-        // Forward pass and loss computation would go here
-        // This is a simplified version - actual implementation would
-        // compute PDE residual loss, boundary loss, initial loss, etc.
-
-        // Placeholder loss values for demonstration
-        let total_loss = 1.0 / (epoch as f64 + 1.0); // Simulated decreasing loss
-        let pde_loss = total_loss * 0.6;
-        let boundary_loss = total_loss * 0.3;
-        let initial_loss = total_loss * 0.08;
-        let data_loss = total_loss * 0.02;
-
-        let current_lr = scheduler.get_lr();
-
-        // Record metrics
-        metrics.record_epoch(
-            total_loss,
-            pde_loss,
-            boundary_loss,
-            initial_loss,
-            data_loss,
-            current_lr,
-            epoch_start.elapsed().as_secs_f64(),
-        );
-
-        // Update learning rate
-        scheduler.step(Some(total_loss));
-
-        // Log progress
-        if epoch % config.log_every == 0 {
-            println!(
-                "Epoch {}/{}: Loss = {:.6e}, LR = {:.6e}",
-                epoch, config.max_epochs, total_loss, current_lr
-            );
-        }
-
-        // Check convergence
-        if metrics.has_converged(config.convergence_tolerance, config.convergence_window) {
-            println!("Convergence achieved at epoch {}", epoch);
-            break;
-        }
-
-        // Checkpoint model (simplified - would save to disk)
-        if epoch % config.checkpoint_every == 0 && epoch > 0 {
-            println!("Checkpoint saved at epoch {}", epoch);
-        }
-    }
-
-    metrics.total_time = start_time.elapsed().as_secs_f64();
-    metrics
+    _scheduler: &mut LRScheduler,
+    _config: &TrainingConfig,
+) -> KwaversResult<TrainingMetrics> {
+    Err(KwaversError::NotImplemented(
+        "PINN elastic 2D training loop not yet implemented. \
+         Model architecture, optimizer, and data pipeline exist but \
+         forward pass + PDE residual loss + backward pass via Burn \
+         autodiff backend are pending."
+            .into(),
+    ))
 }
 
 /// Simplified training function for basic use cases
+///
+/// # Errors
+/// Returns `KwaversError::NotImplemented` — delegates to `train_pinn`.
 #[cfg(feature = "pinn")]
 pub fn train_simple<B: AutodiffBackend>(
     model: &mut ElasticPINN2D<B>,
     max_epochs: usize,
     learning_rate: f64,
-) -> TrainingMetrics {
+) -> KwaversResult<TrainingMetrics> {
     let config = TrainingConfig {
         max_epochs,
         convergence_tolerance: 1e-6,

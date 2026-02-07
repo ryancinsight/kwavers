@@ -64,7 +64,7 @@
 //! - Gradient indicators for field variation
 //! - Equidistribution of error across interface
 
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::forward::bem::burton_miller::BurtonMillerConfig;
 
 /// Enhanced BEM-FEM coupling configuration with Burton-Miller support
@@ -274,27 +274,29 @@ impl EnhancedBemFemSolver {
     }
 
     /// Check for spurious resonances (for standard BEM without Burton-Miller)
+    ///
+    /// # Errors
+    /// Returns `KwaversError::NotImplemented` — condition number analysis pending.
     fn check_spurious_resonance(&self, _frequency: f64) -> KwaversResult<bool> {
-        // In a full implementation, would:
-        // 1. Assemble BEM system matrix
-        // 2. Compute condition number
-        // 3. Check if condition number exceeds threshold
-        // 4. Test at multiple frequencies to identify patterns
-
-        // For now, return false (no spurious resonances detected)
-        // In practice, spurious resonances occur at characteristic frequencies
-        Ok(false)
+        Err(KwaversError::NotImplemented(
+            "Spurious resonance detection not yet implemented. \
+             Requires BEM system matrix assembly and condition number \
+             analysis at characteristic frequencies."
+                .into(),
+        ))
     }
 
     /// Estimate error on coupling interface
+    ///
+    /// # Errors
+    /// Returns `KwaversError::NotImplemented` — residual analysis pending.
     fn estimate_interface_error(&self, _frequency: f64) -> KwaversResult<f64> {
-        // Placeholder: in full implementation would:
-        // 1. Solve coupled system
-        // 2. Compute residuals on interface elements
-        // 3. Estimate local and global error
-        // 4. Use error indicator for refinement
-
-        Ok(1e-5) // Placeholder error estimate
+        Err(KwaversError::NotImplemented(
+            "Interface error estimation not yet implemented. \
+             Requires coupled system solve, interface residual computation, \
+             and local/global error indicators."
+                .into(),
+        ))
     }
 
     /// Refine interface mesh at specified level

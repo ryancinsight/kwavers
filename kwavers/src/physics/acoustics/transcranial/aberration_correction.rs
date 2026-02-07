@@ -4,6 +4,7 @@
 //! phase aberrations in transcranial focused ultrasound.
 
 use crate::core::error::KwaversResult;
+use log::info;
 use crate::domain::grid::Grid;
 use crate::physics::acoustics::analytical::patterns::phase_shifting::core::wrap_phase;
 use ndarray::Array3;
@@ -53,7 +54,7 @@ impl TranscranialAberrationCorrection {
         transducer_positions: &[[f64; 3]],
         target_point: &[f64; 3],
     ) -> KwaversResult<PhaseCorrection> {
-        println!(
+        info!(
             "Calculating aberration correction for {} transducer elements",
             transducer_positions.len()
         );
@@ -235,7 +236,7 @@ impl TranscranialAberrationCorrection {
         // 2. Time-reverse the signal
         // 3. Back-propagate to get element phases
 
-        println!("Applying time-reversal aberration correction");
+        info!("Applying time-reversal aberration correction");
 
         // Placeholder implementation
         for i in 0..transducer_positions.len() {
@@ -249,10 +250,29 @@ impl TranscranialAberrationCorrection {
         }
 
         Ok(PhaseCorrection {
-            phases,
+            phases: phases.clone(),
             amplitudes,
-            focal_gain_db: 10.0, // Typical improvement
-            quality_metric: 0.8,
+            // Focal gain: coherent sum gain = 20·log₁₀(N) for N perfectly phased elements;
+            // reduce by phase variance penalty.
+            focal_gain_db: {
+                let n = phases.len() as f64;
+                let ideal_gain = 20.0 * n.log10();
+                // Phase variance — measures how far from perfect focus
+                let mean_phase = phases.iter().sum::<f64>() / n;
+                let phase_var = phases.iter().map(|p| (p - mean_phase).powi(2)).sum::<f64>() / n;
+                // Loss ≈ 1 − exp(−σ²/2) for small σ (Rayleigh 1945)
+                let coherence = (-phase_var / 2.0).exp();
+                ideal_gain * coherence
+            },
+            // Quality metric: coherent/incoherent ratio ∈ [0, 1]
+            quality_metric: {
+                let n = phases.len() as f64;
+                // |mean of unit phasors|: 1.0 when all phases aligned, ~0 when random
+                let (sum_cos, sum_sin) = phases
+                    .iter()
+                    .fold((0.0_f64, 0.0_f64), |(sc, ss), &p| (sc + p.cos(), ss + p.sin()));
+                (sum_cos * sum_cos + sum_sin * sum_sin).sqrt() / n
+            },
         })
     }
 

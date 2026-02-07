@@ -79,8 +79,16 @@ impl VesselSegmentation {
         let threshold = Self::otsu_threshold(&response);
         let mask = response.mapv(|v| if v > threshold { 1.0 } else { 0.0 });
 
-        // Classify vessels
-        let classification = Self::classify_vessels(image, &mask)?;
+        // Vessel classification is not yet implemented; default to Unknown.
+        // Once pulsatility-index analysis is available, this will classify
+        // vessels as Artery / Vein / Capillary.
+        let classification = Self::classify_vessels(image, &mask).unwrap_or(VesselClassification {
+            vessel_type: VesselType::Unknown,
+            confidence: 0.0,
+            diameter: 0.0,
+            orientation: [0.0, 0.0, 0.0],
+            flow_direction: None,
+        });
 
         // Count connected components via 6-connected flood-fill on the binary mask.
         // Each component is one vessel segment. Total length is approximated as
@@ -290,31 +298,45 @@ impl VesselSegmentation {
     }
 
     /// Classify vessels as arteries or veins
+    ///
+    /// # Errors
+    /// Returns `KwaversError::NotImplemented` — pulsatility-based classification pending.
     fn classify_vessels(
         _image: &Array3<f64>,
         _mask: &Array3<f64>,
     ) -> KwaversResult<VesselClassification> {
-        // Placeholder: Simple classification based on intensity
-        Ok(VesselClassification {
-            vessel_type: VesselType::Unknown,
-            confidence: 0.5,
-            diameter: 100.0, // Typical vessel diameter in μm
-            orientation: [0.0, 0.0, 1.0],
-            flow_direction: None,
-        })
+        Err(KwaversError::NotImplemented(
+            "Vessel artery/vein classification not yet implemented. \
+             Requires pulsatility index analysis and temporal signal \
+             decomposition to distinguish arterial from venous flow."
+                .into(),
+        ))
     }
 
     /// Extract vessel centerline
+    ///
+    /// # Errors
+    /// Returns `KwaversError::NotImplemented` — skeletonization pending.
     pub fn extract_centerline(&self) -> KwaversResult<Vec<[f64; 3]>> {
-        // Placeholder: Thinning operation to extract centerline
-        // Full implementation would use medial axis or skeletonization
-        Ok(Vec::new())
+        Err(KwaversError::NotImplemented(
+            "Vessel centerline extraction not yet implemented. \
+             Requires 3D medial axis transform or morphological \
+             skeletonization of the binary vessel mask."
+                .into(),
+        ))
     }
 
     /// Estimate blood flow velocity
+    ///
+    /// # Errors
+    /// Returns `KwaversError::NotImplemented` — Doppler-based flow estimation pending.
     pub fn estimate_flow_velocity(&self) -> KwaversResult<f64> {
-        // Placeholder: Would use Doppler information or signal processing
-        Ok(0.0)
+        Err(KwaversError::NotImplemented(
+            "Blood flow velocity estimation not yet implemented. \
+             Requires Doppler frequency shift analysis or \
+             speckle tracking velocimetry."
+                .into(),
+        ))
     }
 }
 
@@ -337,15 +359,12 @@ mod tests {
     }
 
     #[test]
-    fn test_vessel_classification() {
+    fn test_vessel_classification_not_implemented() {
         let image = Array3::ones((10, 10, 10));
         let mask = Array3::ones((10, 10, 10));
 
         let result = VesselSegmentation::classify_vessels(&image, &mask);
-        assert!(result.is_ok());
-
-        let classification = result.unwrap();
-        assert_eq!(classification.vessel_type, VesselType::Unknown);
+        assert!(result.is_err());
     }
 
     #[test]

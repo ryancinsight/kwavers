@@ -77,6 +77,7 @@ pub fn create_router(training_executor: std::sync::Arc<dyn TrainingExecutor>) ->
     };
 
     // Build router with middleware stack
+    #[allow(unused_mut)] // mut needed when `pinn` feature is enabled
     let mut router = Router::<AppState>::new()
         // Health and monitoring
         .route("/health", get(health_check))

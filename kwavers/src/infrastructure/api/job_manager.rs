@@ -76,6 +76,7 @@ pub struct TrainingResult {
 
 /// Job manager for coordinating PINN training tasks
 #[derive(Clone, Debug)]
+#[allow(dead_code)] // Field is used at runtime via self.training_executor.execute()
 pub struct JobManager {
     /// Active and completed jobs
     jobs: Arc<RwLock<HashMap<String, TrainingJob>>>,

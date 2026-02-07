@@ -485,7 +485,28 @@ impl ClinicalDecisionSupport {
                     };
 
                     dominant_tissue[[x, y, z]] = tissue_type.to_string();
-                    boundary_confidence[[x, y, z]] = 0.8; // Placeholder confidence
+
+                    // Compute boundary confidence from local intensity gradient magnitude
+                    // Higher gradient → closer to tissue boundary → lower confidence
+                    let grad_x = if x > 0 && x < nx - 1 {
+                        (volume[[x + 1, y, z]] - volume[[x - 1, y, z]]) / 2.0
+                    } else {
+                        0.0
+                    };
+                    let grad_y = if y > 0 && y < ny - 1 {
+                        (volume[[x, y + 1, z]] - volume[[x, y - 1, z]]) / 2.0
+                    } else {
+                        0.0
+                    };
+                    let grad_z = if z > 0 && z < nz - 1 {
+                        (volume[[x, y, z + 1]] - volume[[x, y, z - 1]]) / 2.0
+                    } else {
+                        0.0
+                    };
+                    let grad_mag = (grad_x * grad_x + grad_y * grad_y + grad_z * grad_z).sqrt();
+                    // Sigmoid mapping: high gradient → low confidence (near boundary)
+                    // confidence = 1 / (1 + k * |∇I|), with k=5 for typical ultrasound
+                    boundary_confidence[[x, y, z]] = 1.0 / (1.0 + 5.0 * grad_mag);
                 }
             }
         }

@@ -19,6 +19,7 @@
 //! - Nikolov & Jensen, "Virtual ultrasound sources in high-resolution ultrasound imaging" (2002)
 
 use crate::core::error::{KwaversError, KwaversResult};
+use log::info;
 use ndarray::{Array3, Array4};
 use std::f64::consts::PI;
 
@@ -278,7 +279,7 @@ impl SaftProcessor {
         }
 
         let processing_time = start_time.elapsed().as_secs_f64() * 1000.0;
-        println!("SAFT reconstruction completed in {:.2} ms", processing_time);
+        info!("SAFT reconstruction completed in {:.2} ms", processing_time);
 
         Ok(volume)
     }

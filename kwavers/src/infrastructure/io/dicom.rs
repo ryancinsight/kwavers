@@ -16,6 +16,7 @@ use crate::core::error::{DataError, KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use dicom::core::{DataElement, Tag, VR};
 use dicom::object::{FileDicomObject, InMemDicomObject};
+use log::debug;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -65,7 +66,7 @@ impl DicomReader {
     /// Returns an error if the file cannot be read, parsed, or contains invalid DICOM data
     pub fn read_file<P: AsRef<Path>>(&self, path: P) -> KwaversResult<DicomObject> {
         if self.verbose {
-            println!("Reading DICOM file: {:?}", path.as_ref());
+            debug!("Reading DICOM file: {:?}", path.as_ref());
         }
 
         // Check file size
@@ -110,7 +111,7 @@ impl DicomReader {
     /// Returns an error if files cannot be read or organized
     pub fn read_directory<P: AsRef<Path>>(&self, dir_path: P) -> KwaversResult<DicomStudy> {
         if self.verbose {
-            println!("Reading DICOM directory: {:?}", dir_path.as_ref());
+            debug!("Reading DICOM directory: {:?}", dir_path.as_ref());
         }
 
         let mut dicom_files = Vec::new();
@@ -126,7 +127,7 @@ impl DicomReader {
                 if let Ok(dicom_obj) = self.read_file(&path) {
                     dicom_files.push(dicom_obj);
                 } else if self.verbose {
-                    println!("Skipping non-DICOM file: {:?}", path);
+                    debug!("Skipping non-DICOM file: {:?}", path);
                 }
             }
         }
@@ -192,7 +193,7 @@ impl DicomReader {
                     // For now, accept common transfer syntaxes
                     // Could be extended with a whitelist if needed
                     if self.verbose {
-                        println!("Transfer syntax: {}", ts_uid);
+                        debug!("Transfer syntax: {}", ts_uid);
                     }
                 }
                 Err(_) => {

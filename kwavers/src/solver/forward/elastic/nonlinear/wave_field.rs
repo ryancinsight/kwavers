@@ -30,6 +30,7 @@
 //!   IEEE Transactions on Medical Imaging, 32(5), 863-874.
 //! - Hamilton, M. F., & Blackstock, D. T. (1998). "Nonlinear Acoustics", Academic Press.
 
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
 /// Nonlinear elastic wave field with harmonic components
@@ -181,6 +182,39 @@ impl NonlinearElasticWaveField {
                 harmonic_index,
                 self.num_harmonics()
             ),
+        }
+    }
+
+    /// Fallible version of [`get_harmonic`](Self::get_harmonic).
+    ///
+    /// Returns `Err(InvalidInput)` instead of panicking when the index is out of range.
+    pub fn try_get_harmonic(&self, harmonic_index: usize) -> KwaversResult<&Array3<f64>> {
+        match harmonic_index {
+            1 => Ok(&self.u_fundamental),
+            2 => Ok(&self.u_second),
+            n if n <= self.num_harmonics() => Ok(&self.u_harmonics[n - 3]),
+            _ => Err(KwaversError::InvalidInput(format!(
+                "Harmonic index {} out of range [1, {}]",
+                harmonic_index,
+                self.num_harmonics()
+            ))),
+        }
+    }
+
+    /// Fallible version of [`get_harmonic_mut`](Self::get_harmonic_mut).
+    ///
+    /// Returns `Err(InvalidInput)` instead of panicking when the index is out of range.
+    pub fn try_get_harmonic_mut(&mut self, harmonic_index: usize) -> KwaversResult<&mut Array3<f64>> {
+        let n_harmonics = self.num_harmonics();
+        match harmonic_index {
+            1 => Ok(&mut self.u_fundamental),
+            2 => Ok(&mut self.u_second),
+            n if n <= n_harmonics => Ok(&mut self.u_harmonics[n - 3]),
+            _ => Err(KwaversError::InvalidInput(format!(
+                "Harmonic index {} out of range [1, {}]",
+                harmonic_index,
+                n_harmonics
+            ))),
         }
     }
 

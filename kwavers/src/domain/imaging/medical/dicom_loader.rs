@@ -236,44 +236,16 @@ impl DicomImageLoader {
             )));
         }
 
-        // Placeholder implementation
-        // In production, would use dicom crate to parse files
-        let nx = 512;
-        let ny = 512;
-        let nz = dicom_files.len().max(1);
-
-        let image = Array3::zeros((nx, ny, nz));
-
-        // Create metadata from series
-        self.metadata = Some(DicomMetadata {
-            dimensions: (nx, ny, nz),
-            voxel_spacing_mm: (0.5, 0.5, 1.0),
-            voxel_spacing_m: (0.5e-3, 0.5e-3, 1.0e-3),
-            affine: Self::identity_affine(),
-            modality: DicomModality::CT,
-            patient_id: "UNKNOWN".to_string(),
-            patient_name: "UNKNOWN".to_string(),
-            patient_birth_date: None,
-            patient_sex: None,
-            study_date: "UNKNOWN".to_string(),
-            study_time: "UNKNOWN".to_string(),
-            study_description: "DICOM Study".to_string(),
-            series_description: "DICOM Series".to_string(),
-            series_instance_uid: "1.2.3.4".to_string(),
-            study_instance_uid: "1.2.3".to_string(),
-            num_slices: nz,
-            slice_thickness_mm: 1.0,
-            image_position: Some([0.0, 0.0, 0.0]),
-            image_orientation: Some([1.0, 0.0, 0.0, 0.0, 1.0, 0.0]),
-            intensity_range: (0.0, 4095.0),
-            window_center: Some(40.0),
-            window_width: Some(400.0),
-            rescale_intercept: Some(-1024.0),
-            rescale_slope: Some(1.0),
-        });
-
-        self.data = Some(image.clone());
-        Ok(image)
+        // DICOM pixel data parsing requires a DICOM codec library (e.g., `dicom` crate).
+        // Found {} .dcm files but cannot decode pixel data without DICOM transfer syntax support.
+        Err(KwaversError::NotImplemented(format!(
+            "DICOM pixel data parsing not yet implemented. \
+             Found {} .dcm files in '{}'. Requires DICOM transfer syntax \
+             codec (e.g., `dicom` crate) to decode pixel data, extract \
+             metadata, and reconstruct the 3D volume.",
+            dicom_files.len(),
+            dir_path
+        )))
     }
 
     fn identity_affine() -> [[f64; 4]; 4] {

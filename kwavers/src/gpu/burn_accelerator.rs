@@ -391,7 +391,7 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         u: &Tensor<B, 4>,
         params: &PhysicsParameters,
     ) -> Tensor<B, 3> {
-        let c = params.wave_speed.unwrap_or(343.0) as f32;
+        let c = params.wave_speed.unwrap_or(1480.0) as f32; // Default: water at ~25°C
 
         // Compute second derivatives using finite differences
         // u shape: [batch, nx, ny, nt]
