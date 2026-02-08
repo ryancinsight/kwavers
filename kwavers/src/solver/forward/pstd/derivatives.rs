@@ -62,7 +62,8 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array3, ArrayView3};
 use num_complex::Complex64;
-use rustfft::FftPlanner;
+use rustfft::{Fft, FftPlanner};
+use std::sync::Arc;
 
 /// Spectral derivative operator for 3D fields
 ///
@@ -70,29 +71,69 @@ use rustfft::FftPlanner;
 /// - Periodic and non-periodic boundary conditions
 /// - Aliasing control via 2/3-rule dealiasing
 /// - High-order accuracy (spectral)
-/// - Efficient computation using FFT
-#[derive(Debug, Clone)]
+/// - Efficient computation using cached FFT plans
+///
+/// # Performance
+///
+/// FFT plans and i*k*dealiasing multipliers are pre-computed at construction,
+/// eliminating per-call FftPlanner overhead and per-element Complex64 construction.
 pub struct SpectralDerivativeOperator {
     /// Grid dimensions
     nx: usize,
     ny: usize,
     nz: usize,
 
-    /// Grid spacings (m)
-    _dx: f64,
-    _dy: f64,
-    _dz: f64,
+    /// Cached FFT plans (Arc allows sharing across threads)
+    fft_x: Arc<dyn Fft<f64>>,
+    ifft_x: Arc<dyn Fft<f64>>,
+    fft_y: Arc<dyn Fft<f64>>,
+    ifft_y: Arc<dyn Fft<f64>>,
+    fft_z: Arc<dyn Fft<f64>>,
+    ifft_z: Arc<dyn Fft<f64>>,
 
-    /// Wavenumber arrays (for multiplication in frequency domain)
-    kx: Array1<f64>,
-    ky: Array1<f64>,
-    kz: Array1<f64>,
+    /// Pre-computed i*k*dealiasing multipliers (avoids per-element construction)
+    ikd_x: Vec<Complex64>,
+    ikd_y: Vec<Complex64>,
+    ikd_z: Vec<Complex64>,
 
-    /// Aliasing filter (2/3-rule for dealiasing)
-    /// 1.0 for kx < 2π/(3Δx), 0.0 otherwise
-    dealiasing_filter_x: Array1<f64>,
-    dealiasing_filter_y: Array1<f64>,
-    dealiasing_filter_z: Array1<f64>,
+    /// Cached normalization factors
+    inv_nx: f64,
+    inv_ny: f64,
+    inv_nz: f64,
+}
+
+impl std::fmt::Debug for SpectralDerivativeOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SpectralDerivativeOperator")
+            .field("nx", &self.nx)
+            .field("ny", &self.ny)
+            .field("nz", &self.nz)
+            .finish()
+    }
+}
+
+impl Clone for SpectralDerivativeOperator {
+    fn clone(&self) -> Self {
+        // Re-create FFT plans via planner (Arc<dyn Fft> isn't Clone)
+        let mut planner = FftPlanner::new();
+        Self {
+            nx: self.nx,
+            ny: self.ny,
+            nz: self.nz,
+            fft_x: planner.plan_fft_forward(self.nx),
+            ifft_x: planner.plan_fft_inverse(self.nx),
+            fft_y: planner.plan_fft_forward(self.ny),
+            ifft_y: planner.plan_fft_inverse(self.ny),
+            fft_z: planner.plan_fft_forward(self.nz),
+            ifft_z: planner.plan_fft_inverse(self.nz),
+            ikd_x: self.ikd_x.clone(),
+            ikd_y: self.ikd_y.clone(),
+            ikd_z: self.ikd_z.clone(),
+            inv_nx: self.inv_nx,
+            inv_ny: self.inv_ny,
+            inv_nz: self.inv_nz,
+        }
+    }
 }
 
 impl SpectralDerivativeOperator {
@@ -126,19 +167,42 @@ impl SpectralDerivativeOperator {
         let dealiasing_filter_y = Self::compute_dealiasing_filter(ny, dy);
         let dealiasing_filter_z = Self::compute_dealiasing_filter(nz, dz);
 
+        // Pre-compute i*k*dealiasing multipliers (eliminates per-element Complex64::new)
+        let ikd_x: Vec<Complex64> = (0..nx)
+            .map(|i| Complex64::new(0.0, kx[i] * dealiasing_filter_x[i]))
+            .collect();
+        let ikd_y: Vec<Complex64> = (0..ny)
+            .map(|i| Complex64::new(0.0, ky[i] * dealiasing_filter_y[i]))
+            .collect();
+        let ikd_z: Vec<Complex64> = (0..nz)
+            .map(|i| Complex64::new(0.0, kz[i] * dealiasing_filter_z[i]))
+            .collect();
+
+        // Cache FFT plans (most expensive to create, reused on every call)
+        let mut planner = FftPlanner::new();
+        let fft_x = planner.plan_fft_forward(nx);
+        let ifft_x = planner.plan_fft_inverse(nx);
+        let fft_y = planner.plan_fft_forward(ny);
+        let ifft_y = planner.plan_fft_inverse(ny);
+        let fft_z = planner.plan_fft_forward(nz);
+        let ifft_z = planner.plan_fft_inverse(nz);
+
         Self {
             nx,
             ny,
             nz,
-            _dx: dx,
-            _dy: dy,
-            _dz: dz,
-            kx,
-            ky,
-            kz,
-            dealiasing_filter_x,
-            dealiasing_filter_y,
-            dealiasing_filter_z,
+            fft_x,
+            ifft_x,
+            fft_y,
+            ifft_y,
+            fft_z,
+            ifft_z,
+            ikd_x,
+            ikd_y,
+            ikd_z,
+            inv_nx: 1.0 / nx as f64,
+            inv_ny: 1.0 / ny as f64,
+            inv_nz: 1.0 / nz as f64,
         }
     }
 
@@ -204,36 +268,34 @@ impl SpectralDerivativeOperator {
     ///
     /// Returns error if field dimensions don't match or contain NaN/Inf
     pub fn derivative_x(&self, field: &ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        self.derivative_along_axis(field, 0, &self.kx, &self.dealiasing_filter_x, self.nx)
+        self.validate_field(field)?;
+        let mut derivative = Array3::zeros([self.nx, self.ny, self.nz]);
+        self.derivative_along_x_impl(field, &mut derivative)?;
+        self.validate_output(&derivative)?;
+        Ok(derivative)
     }
 
     /// Compute y-derivative of 3D field via spectral method
     pub fn derivative_y(&self, field: &ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        self.derivative_along_axis(field, 1, &self.ky, &self.dealiasing_filter_y, self.ny)
+        self.validate_field(field)?;
+        let mut derivative = Array3::zeros([self.nx, self.ny, self.nz]);
+        self.derivative_along_y_impl(field, &mut derivative)?;
+        self.validate_output(&derivative)?;
+        Ok(derivative)
     }
 
     /// Compute z-derivative of 3D field via spectral method
     pub fn derivative_z(&self, field: &ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        self.derivative_along_axis(field, 2, &self.kz, &self.dealiasing_filter_z, self.nz)
+        self.validate_field(field)?;
+        let mut derivative = Array3::zeros([self.nx, self.ny, self.nz]);
+        self.derivative_along_z_impl(field, &mut derivative)?;
+        self.validate_output(&derivative)?;
+        Ok(derivative)
     }
 
-    /// Generic derivative along specified axis
-    ///
-    /// # Arguments
-    ///
-    /// - `field`: Input 3D field
-    /// - `axis`: 0=x, 1=y, 2=z
-    /// - `k`: Wavenumber array
-    /// - `dealiasing`: Dealiasing filter
-    /// - `n_axis`: Size along derivative axis
-    fn derivative_along_axis(
-        &self,
-        field: &ArrayView3<f64>,
-        axis: usize,
-        k: &Array1<f64>,
-        dealiasing: &Array1<f64>,
-        n_axis: usize,
-    ) -> KwaversResult<Array3<f64>> {
+    /// Validate input field dimensions and values
+    #[inline]
+    fn validate_field(&self, field: &ArrayView3<f64>) -> KwaversResult<()> {
         if field.shape() != [self.nx, self.ny, self.nz] {
             return Err(KwaversError::InvalidInput(format!(
                 "Field shape {:?} mismatch grid {:?}",
@@ -241,73 +303,57 @@ impl SpectralDerivativeOperator {
                 &[self.nx, self.ny, self.nz]
             )));
         }
-
-        // Check for NaN/Inf in input
         if !field.iter().all(|&x| x.is_finite()) {
             return Err(KwaversError::InvalidInput(
                 "Input field contains NaN or Inf values".into(),
             ));
         }
+        Ok(())
+    }
 
-        // Create output array
-        let mut derivative = Array3::zeros([self.nx, self.ny, self.nz]);
-
-        // Create FFT planner
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(n_axis);
-        let ifft = planner.plan_fft_inverse(n_axis);
-
-        match axis {
-            0 => self.derivative_along_x_impl(field, &mut derivative, fft, ifft, k, dealiasing)?,
-            1 => self.derivative_along_y_impl(field, &mut derivative, fft, ifft, k, dealiasing)?,
-            2 => self.derivative_along_z_impl(field, &mut derivative, fft, ifft, k, dealiasing)?,
-            _ => return Err(KwaversError::InvalidInput("Invalid axis".into())),
-        }
-
-        // Check for NaN/Inf in output
+    /// Validate output for numerical stability
+    #[inline]
+    fn validate_output(&self, derivative: &Array3<f64>) -> KwaversResult<()> {
         if !derivative.iter().all(|&x| x.is_finite()) {
             return Err(KwaversError::InvalidInput(
                 "Output field contains NaN or Inf values (numerical instability)".into(),
             ));
         }
-
-        Ok(derivative)
+        Ok(())
     }
 
     /// Derivative implementation for x-axis
+    ///
+    /// Uses a single reusable line buffer (no per-iteration allocation).
     fn derivative_along_x_impl(
         &self,
         field: &ArrayView3<f64>,
         derivative: &mut Array3<f64>,
-        fft: std::sync::Arc<dyn rustfft::Fft<f64>>,
-        ifft: std::sync::Arc<dyn rustfft::Fft<f64>>,
-        k: &Array1<f64>,
-        dealiasing: &Array1<f64>,
     ) -> KwaversResult<()> {
-        // For each y-z position, compute FFT along x, multiply by i*k, then IFFT
+        let mut line = vec![Complex64::default(); self.nx];
+        let inv_n = self.inv_nx;
+
         for j in 0..self.ny {
             for l in 0..self.nz {
-                // Extract x-line
-                let mut line = Vec::with_capacity(self.nx);
+                // Fill line buffer from field (reuse allocation)
                 for i in 0..self.nx {
-                    line.push(Complex64::new(field[[i, j, l]], 0.0));
+                    line[i] = Complex64::new(field[[i, j, l]], 0.0);
                 }
 
-                // FFT
-                fft.process(&mut line);
+                // Forward FFT (uses cached plan)
+                self.fft_x.process(&mut line);
 
-                // Multiply by i*k and apply dealiasing
+                // Multiply by pre-computed i*k*dealiasing
                 for i in 0..self.nx {
-                    let ikk = Complex64::new(0.0, k[i] * dealiasing[i]);
-                    line[i] *= ikk;
+                    line[i] *= self.ikd_x[i];
                 }
 
-                // IFFT
-                ifft.process(&mut line);
+                // Inverse FFT (uses cached plan)
+                self.ifft_x.process(&mut line);
 
-                // Store result (normalize by N for IFFT convention)
+                // Store result with cached normalization
                 for i in 0..self.nx {
-                    derivative[[i, j, l]] = line[i].re / self.nx as f64;
+                    derivative[[i, j, l]] = line[i].re * inv_n;
                 }
             }
         }
@@ -320,35 +366,26 @@ impl SpectralDerivativeOperator {
         &self,
         field: &ArrayView3<f64>,
         derivative: &mut Array3<f64>,
-        fft: std::sync::Arc<dyn rustfft::Fft<f64>>,
-        ifft: std::sync::Arc<dyn rustfft::Fft<f64>>,
-        k: &Array1<f64>,
-        dealiasing: &Array1<f64>,
     ) -> KwaversResult<()> {
-        // For each x-z position, compute FFT along y
+        let mut line = vec![Complex64::default(); self.ny];
+        let inv_n = self.inv_ny;
+
         for i in 0..self.nx {
             for l in 0..self.nz {
-                // Extract y-line
-                let mut line = Vec::with_capacity(self.ny);
                 for j in 0..self.ny {
-                    line.push(Complex64::new(field[[i, j, l]], 0.0));
+                    line[j] = Complex64::new(field[[i, j, l]], 0.0);
                 }
 
-                // FFT
-                fft.process(&mut line);
+                self.fft_y.process(&mut line);
 
-                // Multiply by i*k
                 for j in 0..self.ny {
-                    let ikk = Complex64::new(0.0, k[j] * dealiasing[j]);
-                    line[j] *= ikk;
+                    line[j] *= self.ikd_y[j];
                 }
 
-                // IFFT
-                ifft.process(&mut line);
+                self.ifft_y.process(&mut line);
 
-                // Store
                 for j in 0..self.ny {
-                    derivative[[i, j, l]] = line[j].re / self.ny as f64;
+                    derivative[[i, j, l]] = line[j].re * inv_n;
                 }
             }
         }
@@ -361,35 +398,26 @@ impl SpectralDerivativeOperator {
         &self,
         field: &ArrayView3<f64>,
         derivative: &mut Array3<f64>,
-        fft: std::sync::Arc<dyn rustfft::Fft<f64>>,
-        ifft: std::sync::Arc<dyn rustfft::Fft<f64>>,
-        k: &Array1<f64>,
-        dealiasing: &Array1<f64>,
     ) -> KwaversResult<()> {
-        // For each x-y position, compute FFT along z
+        let mut line = vec![Complex64::default(); self.nz];
+        let inv_n = self.inv_nz;
+
         for i in 0..self.nx {
             for j in 0..self.ny {
-                // Extract z-line
-                let mut line = Vec::with_capacity(self.nz);
                 for l in 0..self.nz {
-                    line.push(Complex64::new(field[[i, j, l]], 0.0));
+                    line[l] = Complex64::new(field[[i, j, l]], 0.0);
                 }
 
-                // FFT
-                fft.process(&mut line);
+                self.fft_z.process(&mut line);
 
-                // Multiply by i*k
                 for l in 0..self.nz {
-                    let ikk = Complex64::new(0.0, k[l] * dealiasing[l]);
-                    line[l] *= ikk;
+                    line[l] *= self.ikd_z[l];
                 }
 
-                // IFFT
-                ifft.process(&mut line);
+                self.ifft_z.process(&mut line);
 
-                // Store
                 for l in 0..self.nz {
-                    derivative[[i, j, l]] = line[l].re / self.nz as f64;
+                    derivative[[i, j, l]] = line[l].re * inv_n;
                 }
             }
         }

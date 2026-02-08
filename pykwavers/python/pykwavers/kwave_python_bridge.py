@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 k-wave-python Bridge for Automated Comparison and Validation
 

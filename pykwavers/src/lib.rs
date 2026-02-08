@@ -885,45 +885,44 @@ impl Simulation {
         }
 
         // Run simulation based on solver type
+        // Release GIL during the CPU-intensive simulation to allow other Python threads
         let shape = (self.grid.inner.nx, self.grid.inner.ny, self.grid.inner.nz);
-        let sensor_data = match self.solver_type {
-            SolverType::FDTD => Self::run_fdtd_impl(
-                &self.grid.inner,
-                &self.medium.inner,
-                time_steps,
-                dt_actual,
-                grid_source,
-                dynamic_sources,
-                &self.sensor,
-                self.pml_size,
-            )
-            .map_err(kwavers_error_to_py)?,
-            SolverType::PSTD => Self::run_pstd_impl(
-                &self.grid.inner,
-                &self.medium.inner,
-                time_steps,
-                dt_actual,
-                grid_source,
-                dynamic_sources,
-                &self.sensor,
-                self.pml_size,
-            )
-            .map_err(kwavers_error_to_py)?,
-            SolverType::Hybrid => {
-                // For now, use PSTD for Hybrid (full implementation would switch adaptively)
-                Self::run_pstd_impl(
-                    &self.grid.inner,
-                    &self.medium.inner,
+        let grid_clone = self.grid.inner.clone();
+        let medium_clone = self.medium.inner.clone();
+        let sensor_type = self.sensor.sensor_type.clone();
+        let sensor_position = self.sensor.position;
+        let pml_size = self.pml_size;
+        let solver_type = self.solver_type;
+
+        let sensor_ref = Sensor {
+            sensor_type: sensor_type,
+            position: sensor_position,
+        };
+
+        let sensor_data = py.detach(move || {
+            match solver_type {
+                SolverType::FDTD => Self::run_fdtd_impl(
+                    &grid_clone,
+                    &medium_clone,
                     time_steps,
                     dt_actual,
                     grid_source,
                     dynamic_sources,
-                    &self.sensor,
-                    self.pml_size,
-                )
-                .map_err(kwavers_error_to_py)?
+                    &sensor_ref,
+                    pml_size,
+                ),
+                SolverType::PSTD | SolverType::Hybrid => Self::run_pstd_impl(
+                    &grid_clone,
+                    &medium_clone,
+                    time_steps,
+                    dt_actual,
+                    grid_source,
+                    dynamic_sources,
+                    &sensor_ref,
+                    pml_size,
+                ),
             }
-        };
+        }).map_err(kwavers_error_to_py)?;
 
         Ok(SimulationResult {
             sensor_data: PyArray1::from_owned_array(py, sensor_data).into(),

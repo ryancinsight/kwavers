@@ -86,6 +86,21 @@ enum Command {
         #[arg(last = true)]
         extra: Vec<String>,
     },
+    /// Run parity validation tests (pykwavers vs k-wave-python)
+    ValidateParity {
+        /// Skip building pykwavers with maturin
+        #[arg(long)]
+        skip_build: bool,
+        /// Run only standalone pykwavers tests (no k-wave-python dependency)
+        #[arg(long)]
+        standalone_only: bool,
+        /// Test a specific component: grid, medium, source, sensor, solver, examples, utilities
+        #[arg(long)]
+        component: Option<String>,
+        /// Timeout in seconds for the pytest run
+        #[arg(long, default_value_t = 600)]
+        timeout_secs: u64,
+    },
 }
 
 fn main() -> Result<()> {
@@ -107,6 +122,12 @@ fn main() -> Result<()> {
             timeout_secs,
             extra,
         } => test_pykwavers(skip_build, no_install, timeout_secs, extra),
+        Command::ValidateParity {
+            skip_build,
+            standalone_only,
+            component,
+            timeout_secs,
+        } => validate_parity(skip_build, standalone_only, component, timeout_secs),
     }
 }
 
@@ -437,6 +458,88 @@ fn test_pykwavers(
         anyhow::bail!("pykwavers tests failed");
     }
 
+    Ok(())
+}
+
+/// Run parity validation tests (pykwavers vs k-wave-python)
+fn validate_parity(
+    skip_build: bool,
+    standalone_only: bool,
+    component: Option<String>,
+    timeout_secs: u64,
+) -> Result<()> {
+    install_kwave(true)?;
+
+    if !skip_build {
+        build_pykwavers(true, true)?;
+    }
+
+    println!("🔍 Running parity validation tests...\n");
+
+    let mut cmd = std::process::Command::new("python");
+    cmd.arg("-m").arg("pytest").arg("-v").arg("--tb=short");
+
+    // Select specific test files based on component
+    let test_dir = workspace_root().join("pykwavers").join("tests");
+    let test_files: Vec<String> = match component.as_deref() {
+        Some("grid") => vec!["test_grid_parity.py"],
+        Some("medium") => vec!["test_medium_parity.py"],
+        Some("source") => vec!["test_source_parity.py"],
+        Some("sensor") => vec!["test_sensor_parity.py"],
+        Some("solver") => vec!["test_solver_parity.py"],
+        Some("examples") => vec!["test_examples_parity.py"],
+        Some("utilities") => vec!["test_utilities.py"],
+        Some(name) => {
+            anyhow::bail!(
+                "Unknown component '{}'. Valid: grid, medium, source, sensor, solver, examples, utilities",
+                name
+            );
+        }
+        None => vec![
+            "test_grid_parity.py",
+            "test_medium_parity.py",
+            "test_source_parity.py",
+            "test_sensor_parity.py",
+            "test_solver_parity.py",
+            "test_examples_parity.py",
+            "test_utilities.py",
+        ],
+    }
+    .into_iter()
+    .map(|f| test_dir.join(f).to_string_lossy().to_string())
+    .collect();
+
+    cmd.args(&test_files);
+
+    if standalone_only {
+        cmd.arg("-m").arg("not requires_kwave");
+    }
+
+    let mut child = cmd
+        .current_dir(workspace_root())
+        .spawn()
+        .context("Failed to spawn pytest for parity validation")?;
+
+    let timeout = Duration::from_secs(timeout_secs);
+    let status = match child
+        .wait_timeout(timeout)
+        .context("Failed while waiting on pytest")?
+    {
+        Some(status) => status,
+        None => {
+            child.kill().ok();
+            anyhow::bail!(
+                "parity validation tests timed out after {} seconds",
+                timeout_secs
+            );
+        }
+    };
+
+    if !status.success() {
+        anyhow::bail!("parity validation tests failed");
+    }
+
+    println!("\n✅ Parity validation passed!");
     Ok(())
 }
 

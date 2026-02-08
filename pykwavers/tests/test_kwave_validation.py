@@ -29,9 +29,15 @@ except ImportError:
     HAS_KWAVE = False
 
 
+import os
+
 pytestmark = [
     pytest.mark.skipif(not HAS_PYKWAVERS, reason="pykwavers not installed"),
     pytest.mark.skipif(not HAS_KWAVE, reason="k-wave-python not installed"),
+    pytest.mark.skipif(
+        os.getenv("KWAVERS_RUN_SLOW", "0") != "1",
+        reason="Set KWAVERS_RUN_SLOW=1 to run slow k-wave-python tests",
+    ),
 ]
 
 
@@ -76,8 +82,12 @@ class TestPlaneWaveValidation:
         sensor.mask = np.zeros((nx, ny, 1), dtype=bool)
         sensor.mask[nx // 2, ny // 2, 0] = True
 
-        simulation_options = SimulationOptions(pml_auto=True, pml_inside=False)
-        execution_options = SimulationExecutionOptions(is_gpu_simulation=False, verbose_level=0)
+        simulation_options = SimulationOptions(
+            pml_auto=True, pml_inside=False, save_to_disk=True,
+        )
+        execution_options = SimulationExecutionOptions(
+            is_gpu_simulation=False, verbose_level=0, show_sim_log=False,
+        )
 
         sensor_data = kspaceFirstOrder3D(
             medium=medium,

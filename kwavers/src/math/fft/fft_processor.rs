@@ -167,35 +167,46 @@ impl Fft3d {
             Arc::clone(&self.ifft_z)
         };
 
-        // Transform along X axis (axis 0)
-        for j in 0..self.ny {
-            for k in 0..self.nz {
-                let mut line: Vec<Complex64> = (0..self.nx).map(|i| data[[i, j, k]]).collect();
-                fft_x.process(&mut line);
-                for (i, &val) in line.iter().enumerate() {
-                    data[[i, j, k]] = val;
+        let nx = self.nx;
+        let ny = self.ny;
+        let nz = self.nz;
+
+        // Transform along Z axis first (contiguous in memory for C-order arrays)
+        // Each row along z is contiguous, so process in-place via slicing
+        let raw = data.as_slice_mut().expect("Array3 must be contiguous");
+        raw.par_chunks_mut(nz).for_each(|chunk| {
+            fft_z.process(chunk);
+        });
+
+        // Transform along Y axis (axis 1) - sequential with reused buffer
+        // y-lines are strided, so we extract/scatter with a reusable buffer
+        {
+            let mut line = vec![Complex64::default(); ny];
+            for i in 0..nx {
+                for k in 0..nz {
+                    for j in 0..ny {
+                        line[j] = data[[i, j, k]];
+                    }
+                    fft_y.process(&mut line);
+                    for j in 0..ny {
+                        data[[i, j, k]] = line[j];
+                    }
                 }
             }
         }
 
-        // Transform along Y axis (axis 1)
-        for i in 0..self.nx {
-            for k in 0..self.nz {
-                let mut line: Vec<Complex64> = (0..self.ny).map(|j| data[[i, j, k]]).collect();
-                fft_y.process(&mut line);
-                for (j, &val) in line.iter().enumerate() {
-                    data[[i, j, k]] = val;
-                }
-            }
-        }
-
-        // Transform along Z axis (axis 2)
-        for i in 0..self.nx {
-            for j in 0..self.ny {
-                let mut line: Vec<Complex64> = (0..self.nz).map(|k| data[[i, j, k]]).collect();
-                fft_z.process(&mut line);
-                for (k, &val) in line.iter().enumerate() {
-                    data[[i, j, k]] = val;
+        // Transform along X axis (axis 0) - sequential with reused buffer
+        {
+            let mut line = vec![Complex64::default(); nx];
+            for j in 0..ny {
+                for k in 0..nz {
+                    for i in 0..nx {
+                        line[i] = data[[i, j, k]];
+                    }
+                    fft_x.process(&mut line);
+                    for i in 0..nx {
+                        data[[i, j, k]] = line[i];
+                    }
                 }
             }
         }

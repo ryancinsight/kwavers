@@ -49,6 +49,7 @@ kwave = [
 # Development and testing
 dev = [
     "pytest>=7.0",
+    "pytest-timeout>=2.2",
     "pytest-benchmark>=4.0",
     "black>=23.0",
     "ruff>=0.1",
@@ -80,7 +81,8 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --benchmark-disable"
+addopts = "-v --benchmark-disable --timeout=60"
+timeout_method = "thread"
 
 [tool.black]
 line-length = 100

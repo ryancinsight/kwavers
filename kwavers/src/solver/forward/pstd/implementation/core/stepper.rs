@@ -83,7 +83,19 @@ impl PSTDSolver {
         }
 
         // Dynamic sources (always additive in PSTD)
+        // mass_source_scale = 2·dt / (N·c₀·dx_min) converts Pa → density source rate.
+        // N, c₀, dx_min are all constant throughout the simulation.
         let t = time_index as f64 * dt;
+        let mass_source_scale = {
+            let dx_min = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
+            let n_dim = [self.grid.nx > 1, self.grid.ny > 1, self.grid.nz > 1]
+                .iter()
+                .filter(|&&d| d)
+                .count()
+                .max(1) as f64;
+            2.0 * dt / (n_dim * self.c_ref * dx_min)
+        };
+
         for (idx, (source, mask)) in self.dynamic_sources.iter().enumerate() {
             let amp = source.amplitude(t);
             if amp.abs() < 1e-12 {
@@ -99,7 +111,7 @@ impl PSTDSolver {
 
                 Zip::from(&mut self.dpx).and(mask).for_each(|p, &m| {
                     if m.abs() > 1e-12 {
-                        *p += m * amp * scale;
+                        *p += m * amp * scale * mass_source_scale;
                     }
                 });
                 has_sources = true;
@@ -164,29 +176,18 @@ impl PSTDSolver {
 
     /// Time step using full k-space pseudospectral method (dispersion-free)
     fn step_forward_kspace(&mut self, dt: f64, time_index: usize) -> KwaversResult<()> {
-        let ops = self
-            .kspace_operators
-            .as_ref()
-            .ok_or_else(|| {
-                KwaversError::Config(crate::core::error::ConfigError::InvalidValue {
-                    parameter: "kspace_operators".to_string(),
-                    value: "None".to_string(),
-                    constraint: "k-space operators must be initialized for FullKSpace method"
-                        .to_string(),
-                })
-            })?
-            .clone();
-
-        let mut source_term = Array3::<f64>::zeros(self.fields.p.dim());
+        // Reuse dpx as source_term scratch buffer (avoids per-step allocation)
+        self.dpx.fill(0.0);
 
         // Apply source_handler sources
         if self.source_handler.has_pressure_source() {
-            let mut temp_rho = Array3::<f64>::zeros(self.fields.p.dim());
+            // Reuse dpy as temp_rho scratch buffer
+            self.dpy.fill(0.0);
             self.source_handler
-                .inject_mass_source(time_index, &mut temp_rho, &self.materials.c0);
+                .inject_mass_source(time_index, &mut self.dpy, &self.materials.c0);
 
-            Zip::from(&mut source_term)
-                .and(&temp_rho)
+            Zip::from(&mut self.dpx)
+                .and(&self.dpy)
                 .and(&self.materials.c0)
                 .for_each(|s, &rho, &c| *s = rho * c * c);
         }
@@ -205,17 +206,14 @@ impl PSTDSolver {
 
                     match mode {
                         SourceInjectionMode::Boundary => {
-                            // Should not happen in PSTD, but handle gracefully
-                            // Treat as additive without normalization
-                            Zip::from(&mut source_term).and(mask).for_each(|s, &m| {
+                            Zip::from(&mut self.dpx).and(mask).for_each(|s, &m| {
                                 if m.abs() > 1e-12 {
                                     *s += m * amp;
                                 }
                             });
                         }
                         SourceInjectionMode::Additive { scale } => {
-                            // Additive sources with normalization
-                            Zip::from(&mut source_term).and(mask).for_each(|s, &m| {
+                            Zip::from(&mut self.dpx).and(mask).for_each(|s, &m| {
                                 if m.abs() > 1e-12 {
                                     *s += m * amp * scale;
                                 }
@@ -229,7 +227,26 @@ impl PSTDSolver {
             }
         }
 
+        // Temporarily take kspace_operators to break the borrow (avoids .clone() of arrays)
+        let ops = self
+            .kspace_operators
+            .take()
+            .ok_or_else(|| {
+                KwaversError::Config(crate::core::error::ConfigError::InvalidValue {
+                    parameter: "kspace_operators".to_string(),
+                    value: "None".to_string(),
+                    constraint: "k-space operators must be initialized for FullKSpace method"
+                        .to_string(),
+                })
+            })?;
+
+        // Swap source_term out of dpx to pass as separate argument
+        let source_term = std::mem::replace(&mut self.dpx, Array3::zeros((0, 0, 0)));
         self.propagate_kspace(dt, &source_term, &ops)?;
+        // Restore both (put full-size array back, discard empty placeholder)
+        self.dpx = source_term;
+        self.kspace_operators = Some(ops);
+
         self.apply_boundary(time_index)?;
         self.sensor_recorder.record_step(&self.fields.p)?;
         self.time_step_index += 1;
