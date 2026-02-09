@@ -51,9 +51,9 @@
 //!   Prentice Hall. ISBN: 978-0134494166
 
 // AWS SageMaker provider (production-ready)
-#[cfg(all(feature = "pinn", feature = "api"))]
+#[cfg(all(feature = "pinn", feature = "cloud-aws"))]
 pub mod aws;
 
 // Explicit re-exports of AWS provider functions
-#[cfg(all(feature = "pinn", feature = "api"))]
+#[cfg(all(feature = "pinn", feature = "cloud-aws"))]
 pub use aws::{deploy_to_aws, scale_aws_deployment, terminate_aws_deployment};

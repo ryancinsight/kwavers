@@ -60,6 +60,7 @@ pub struct CheckpointManager {
 #[derive(Debug)]
 pub struct TrainingCoordinator<B: AutodiffBackend> {
     /// Model replicas (one per GPU)
+    #[allow(dead_code)]
     model_replicas: Vec<BurnPINN2DWave<B>>,
     /// Device assignments
     #[allow(dead_code)]

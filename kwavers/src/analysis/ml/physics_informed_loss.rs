@@ -483,8 +483,6 @@ impl PhysicsInformedLoss {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[allow(unused_imports)]
-    use ndarray::Array;
 
     #[test]
     fn test_physics_loss_config_default() {

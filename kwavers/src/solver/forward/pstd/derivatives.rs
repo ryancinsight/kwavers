@@ -344,8 +344,8 @@ impl SpectralDerivativeOperator {
                 self.fft_x.process(&mut line);
 
                 // Multiply by pre-computed i*k*dealiasing
-                for i in 0..self.nx {
-                    line[i] *= self.ikd_x[i];
+                for (i, &ikd) in self.ikd_x.iter().enumerate() {
+                    line[i] *= ikd;
                 }
 
                 // Inverse FFT (uses cached plan)
@@ -378,8 +378,8 @@ impl SpectralDerivativeOperator {
 
                 self.fft_y.process(&mut line);
 
-                for j in 0..self.ny {
-                    line[j] *= self.ikd_y[j];
+                for (j, &ikd) in self.ikd_y.iter().enumerate() {
+                    line[j] *= ikd;
                 }
 
                 self.ifft_y.process(&mut line);
@@ -410,8 +410,8 @@ impl SpectralDerivativeOperator {
 
                 self.fft_z.process(&mut line);
 
-                for l in 0..self.nz {
-                    line[l] *= self.ikd_z[l];
+                for (l, &ikd) in self.ikd_z.iter().enumerate() {
+                    line[l] *= ikd;
                 }
 
                 self.ifft_z.process(&mut line);

@@ -178,37 +178,42 @@ impl Fft3d {
             fft_z.process(chunk);
         });
 
-        // Transform along Y axis (axis 1) - sequential with reused buffer
-        // y-lines are strided, so we extract/scatter with a reusable buffer
+        // Transform along Y axis (axis 1) - parallelized over X dimension
+        // Each x-slice (shape ny × nz) is independent
         {
-            let mut line = vec![Complex64::default(); ny];
-            for i in 0..nx {
-                for k in 0..nz {
-                    for j in 0..ny {
-                        line[j] = data[[i, j, k]];
+            data.axis_iter_mut(Axis(0))
+                .into_par_iter()
+                .for_each(|mut slice| {
+                    let mut line = vec![Complex64::default(); ny];
+                    for k in 0..nz {
+                        for j in 0..ny {
+                            line[j] = slice[[j, k]];
+                        }
+                        fft_y.process(&mut line);
+                        for j in 0..ny {
+                            slice[[j, k]] = line[j];
+                        }
                     }
-                    fft_y.process(&mut line);
-                    for j in 0..ny {
-                        data[[i, j, k]] = line[j];
-                    }
-                }
-            }
+                });
         }
 
-        // Transform along X axis (axis 0) - sequential with reused buffer
+        // Transform along X axis (axis 0) - parallelized over Y dimension
+        // Each y-slice (shape nx × nz) is independent
         {
-            let mut line = vec![Complex64::default(); nx];
-            for j in 0..ny {
-                for k in 0..nz {
-                    for i in 0..nx {
-                        line[i] = data[[i, j, k]];
+            data.axis_iter_mut(Axis(1))
+                .into_par_iter()
+                .for_each(|mut slice| {
+                    let mut line = vec![Complex64::default(); nx];
+                    for k in 0..nz {
+                        for i in 0..nx {
+                            line[i] = slice[[i, k]];
+                        }
+                        fft_x.process(&mut line);
+                        for i in 0..nx {
+                            slice[[i, k]] = line[i];
+                        }
                     }
-                    fft_x.process(&mut line);
-                    for i in 0..nx {
-                        data[[i, j, k]] = line[i];
-                    }
-                }
-            }
+                });
         }
     }
 

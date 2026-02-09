@@ -465,7 +465,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
             // 2. Adaptive LR (prevents explosion via rate reduction)
             // 3. EMA loss normalization (prevents component dominance)
             //
-            // TODO: Enable gradient norm logging when Burn API supports it
+            // KNOWN_LIMITATION: Gradient norm logging blocked on Burn parameter introspection API
 
             // Adaptive learning rate: decay if no improvement
             if total_val < best_total_loss * 0.999 {
@@ -859,8 +859,8 @@ impl<B: Backend> BurnPINN3DWave<B> {
         // For now, return an empty vector - gradient diagnostics will be disabled
         // until Burn provides parameter introspection API.
         //
-        // TODO: When Burn exposes parameter access, implement proper extraction
-        // Alternative: Track loss history and use loss gradient as proxy
+        // KNOWN_LIMITATION: Blocked on Burn parameter introspection API.
+        // Alternative: Track loss history and use loss gradient as proxy.
         Vec::new()
     }
 

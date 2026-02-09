@@ -7,8 +7,9 @@
 //! - **Performance**: Zero-allocation hot paths
 //! - **Memory Efficiency**: 30-50% reduction in allocations
 
-#[allow(unused_imports)]
-use crate::core::error::{KwaversError, KwaversResult, SystemError};
+use crate::core::error::KwaversResult;
+#[cfg(not(feature = "parallel"))]
+use crate::core::error::{KwaversError, SystemError};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use num_complex::Complex;

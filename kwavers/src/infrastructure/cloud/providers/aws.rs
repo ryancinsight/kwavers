@@ -75,7 +75,7 @@ use crate::infrastructure::cloud::{
 /// let handle = aws::deploy_to_aws(model, config, deployment_config, model_data).await.unwrap();
 /// # }
 /// ```
-#[cfg(all(feature = "pinn", feature = "api"))]
+#[cfg(all(feature = "pinn", feature = "cloud-aws"))]
 pub async fn deploy_to_aws<B: burn::tensor::backend::AutodiffBackend>(
     _model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
     config: &HashMap<String, String>,
@@ -268,7 +268,7 @@ pub async fn deploy_to_aws<B: burn::tensor::backend::AutodiffBackend>(
 /// aws::scale_aws_deployment(config, handle, 5).await.unwrap();
 /// # }
 /// ```
-#[cfg(all(feature = "pinn", feature = "api"))]
+#[cfg(all(feature = "pinn", feature = "cloud-aws"))]
 pub async fn scale_aws_deployment(
     config: &HashMap<String, String>,
     handle: &mut DeploymentHandle,
@@ -380,7 +380,7 @@ pub async fn scale_aws_deployment(
 /// aws::terminate_aws_deployment(config, handle).await.unwrap();
 /// # }
 /// ```
-#[cfg(all(feature = "pinn", feature = "api"))]
+#[cfg(all(feature = "pinn", feature = "cloud-aws"))]
 pub async fn terminate_aws_deployment(
     config: &HashMap<String, String>,
     handle: &DeploymentHandle,

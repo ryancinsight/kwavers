@@ -207,8 +207,8 @@ impl DistributedNeuralBeamformingProcessor {
         self.processors.len()
     }
 
-    // TODO: Implement communication channel initialization using the solver-agnostic interface
-    // This will be implemented once the concrete PINN provider supports distributed operations
+    // KNOWN_LIMITATION: Communication channel initialization requires distributed PINN provider support.
+    // Will be implemented once the concrete PINN provider supports distributed operations.
 
     /// Get number of active GPUs.
     pub fn num_gpus(&self) -> usize {

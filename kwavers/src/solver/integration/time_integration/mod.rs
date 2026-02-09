@@ -16,7 +16,6 @@
 pub mod adaptive_stepping;
 pub mod conservation;
 pub mod coupling;
-// pub mod gpu_integrator;  // TODO: Enable when GPU backend dependencies are resolved
 pub mod multi_rate_controller;
 pub mod stability;
 pub mod time_scale_separation;
@@ -27,7 +26,6 @@ pub mod traits;
 pub use adaptive_stepping::{AdaptiveTimeStepper, ErrorEstimator};
 pub use conservation::{ConservationError, ConservationMonitor, ConservedQuantities};
 pub use coupling::{SubcyclingStrategy, TimeCoupling};
-// pub use gpu_integrator::{GPUIntegrationStatistics, GPUTimeIntegrator};  // TODO: Enable when GPU backend is resolved
 pub use multi_rate_controller::MultiRateController;
 pub use stability::{CFLCondition, StabilityAnalyzer};
 pub use time_scale_separation::{TimeScale, TimeScaleSeparator};

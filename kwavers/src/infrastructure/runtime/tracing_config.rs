@@ -103,8 +103,7 @@ mod tracing_impl {
     /// Macro for instrumenting functions with tracing
     ///
     /// Re-export of tracing::instrument for convenience
-    #[allow(unused_imports)]
-    pub use tracing::instrument;
+
 
     #[cfg(test)]
     mod tests {

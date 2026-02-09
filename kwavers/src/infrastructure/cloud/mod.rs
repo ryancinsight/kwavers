@@ -169,7 +169,7 @@
 //! # Feature Flags
 //!
 //! - `pinn`: Required for all cloud deployment features
-//! - `api`: Required for AWS deployment (enables AWS SDK dependencies)
+//! - `cloud-aws`: Required for AWS deployment (enables AWS SDK dependencies)
 
 // Public API exports
 pub mod config;

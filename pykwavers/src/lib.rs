@@ -895,12 +895,12 @@ impl Simulation {
         let solver_type = self.solver_type;
 
         let sensor_ref = Sensor {
-            sensor_type: sensor_type,
+            sensor_type,
             position: sensor_position,
         };
 
-        let sensor_data = py.detach(move || {
-            match solver_type {
+        let sensor_data = py
+            .detach(move || match solver_type {
                 SolverType::FDTD => Self::run_fdtd_impl(
                     &grid_clone,
                     &medium_clone,
@@ -921,8 +921,8 @@ impl Simulation {
                     &sensor_ref,
                     pml_size,
                 ),
-            }
-        }).map_err(kwavers_error_to_py)?;
+            })
+            .map_err(kwavers_error_to_py)?;
 
         Ok(SimulationResult {
             sensor_data: PyArray1::from_owned_array(py, sensor_data).into(),

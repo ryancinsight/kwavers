@@ -6,8 +6,7 @@ use crate::core::constants::numerical;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::gpu::shaders;
 use ndarray::Array3;
-#[allow(unused_imports)]
-use wgpu::util::DeviceExt;
+
 
 /// GPU compute manager with automatic dispatch
 /// NOTE: Some fields currently unused - part of future GPU pipeline implementation

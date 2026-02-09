@@ -227,19 +227,10 @@
 //! - `atlas`: Anatomical atlas integration (future)
 //! - `inverse_kinematics`: Probe positioning solver (future)
 
-// TODO: Uncomment when implemented
-// pub mod mattes_mi;
-// pub mod affine_transform;
-// pub mod evolutionary_optimizer;
-// pub mod bspline_deform;
-// pub mod atlas;
-// pub mod inverse_kinematics;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_registration_module() {
-        // Placeholder test
-        assert!(true);
-    }
-}
+// Future modules (not yet implemented):
+// pub mod mattes_mi;           // Mattes mutual information metric
+// pub mod affine_transform;    // Affine transformation and composition
+// pub mod evolutionary_optimizer; // CMA-ES parameter optimization
+// pub mod bspline_deform;      // B-spline deformable registration
+// pub mod atlas;               // Anatomical atlas integration
+// pub mod inverse_kinematics;  // Probe positioning solver

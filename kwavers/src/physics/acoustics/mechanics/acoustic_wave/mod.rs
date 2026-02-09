@@ -15,8 +15,6 @@ pub use nonlinear::NonlinearWave;
 
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-#[allow(unused_imports)]
-use core::prelude::rust_2024::derive;
 use std::f64::consts::PI;
 
 // Physical constants
@@ -185,10 +183,6 @@ pub fn compute_nonlinearity_coefficient<M: Medium + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[allow(unused_imports)]
-    use core::prelude::rust_2024::test;
-    #[allow(unused_imports)]
-    use core::{assert, assert_eq};
 
     #[test]
     fn test_spatial_order_cfl_limits() {

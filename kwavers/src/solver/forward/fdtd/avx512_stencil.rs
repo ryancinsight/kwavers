@@ -630,7 +630,7 @@ impl Avx512StencilProcessor {
         //   2. PML (Perfectly Matched Layer): Absorbing BC to simulate infinite domain
         //      - Implementation: 10-20 grid points thick, gradual impedance matching
         //      - Performance: 5-10% overhead, eliminates reflections
-        //      - TODO: Implement PML as configurable option
+        //      - Future: PML as configurable option (see FdtdSolver's CPML implementation)
         //   3. Periodic BC: For problems with translational symmetry
         //   4. Robin BC: Mixed Dirichlet-Neumann for impedance matching
         //

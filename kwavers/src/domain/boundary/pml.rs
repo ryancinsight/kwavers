@@ -194,16 +194,6 @@ impl PMLBoundary {
         }
     }
 
-    /// Applies a pre-computed damping factor to a complex field value
-    #[inline]
-    fn apply_complex_damping(val: &mut Complex<f64>, damping: f64, dx: f64) {
-        if damping > 0.0 {
-            let decay = (-damping * dx).exp();
-            val.re *= decay;
-            val.im *= decay;
-        }
-    }
-
     #[inline]
     fn combine_damping(d_x: f64, d_y: f64, d_z: f64) -> f64 {
         d_x.max(d_y).max(d_z)
@@ -213,18 +203,35 @@ impl PMLBoundary {
     #[inline]
     fn get_damping(&self, idx: usize, profile: &[f64], max_dim: usize) -> f64 {
         if idx < self.thickness {
-            // Left/Bottom/Back boundary
             profile[idx]
         } else if idx >= max_dim - self.thickness {
-            // Right/Top/Front boundary
-            // Map idx to 0..thickness
-            // max_dim - 1 -> 0
-            // max_dim - thickness -> thickness - 1
             let dist = max_dim - 1 - idx;
             profile[dist]
         } else {
             0.0
         }
+    }
+
+    /// Precompute exponential decay factors for a damping profile.
+    /// Returns `exp(-damping[i] * dx)` for each profile entry, avoiding per-point exp() calls.
+    #[inline]
+    fn precompute_exp_factors(profile: &[f64], dx: f64) -> Vec<f64> {
+        profile
+            .iter()
+            .map(|&d| if d > 0.0 { (-d * dx).exp() } else { 1.0 })
+            .collect()
+    }
+
+    /// Precompute full-dimension exp factor array for a given axis.
+    /// Interior points get factor 1.0 (no damping), boundary points get precomputed decay.
+    #[inline]
+    fn precompute_full_exp_factors(exp_profile: &[f64], dim_size: usize, thickness: usize) -> Vec<f64> {
+        let mut factors = vec![1.0; dim_size];
+        for i in 0..thickness {
+            factors[i] = exp_profile[i];
+            factors[dim_size - 1 - i] = exp_profile[i];
+        }
+        factors
     }
 }
 
@@ -270,103 +277,71 @@ impl Boundary for PMLBoundary {
         let apply_y = ny > 1;
         let apply_z = nz > 1;
 
-        // Apply X boundaries
+        // Precompute all exp decay factors once — O(thickness) exp() calls instead of O(N²)
+        let exp_x = Self::precompute_exp_factors(&self.acoustic_damping_x, dx);
+        let exp_y_full = if apply_y {
+            Self::precompute_full_exp_factors(
+                &Self::precompute_exp_factors(&self.acoustic_damping_y, dx),
+                ny,
+                t,
+            )
+        } else {
+            vec![1.0; ny]
+        };
+        let exp_z_full = if apply_z {
+            Self::precompute_full_exp_factors(
+                &Self::precompute_exp_factors(&self.acoustic_damping_z, dx),
+                nz,
+                t,
+            )
+        } else {
+            vec![1.0; nz]
+        };
+
+        // Apply X boundaries (full Y-Z plane, includes corners)
         for i in 0..t {
+            let fx = exp_x[i];
             // Left boundary
-            let d_x = self.acoustic_damping_x[i];
             for j in 0..ny {
+                let fy = exp_y_full[j];
                 for k in 0..nz {
-                    // Add Y and Z damping if in corners
-                    let d_y = if apply_y {
-                        self.get_damping(j, &self.acoustic_damping_y, ny)
-                    } else {
-                        0.0
-                    };
-                    let d_z = if apply_z {
-                        self.get_damping(k, &self.acoustic_damping_z, nz)
-                    } else {
-                        0.0
-                    };
-                    Self::apply_damping(
-                        &mut field[[i, j, k]],
-                        Self::combine_damping(d_x, d_y, d_z),
-                        dx,
-                    );
+                    let fz = exp_z_full[k];
+                    // combine_damping uses max → exp(-max*dx) = min of individual factors
+                    field[[i, j, k]] *= fx.min(fy).min(fz);
                 }
             }
             // Right boundary
             let ri = nx - 1 - i;
-            let d_x_r = self.acoustic_damping_x[i];
             for j in 0..ny {
+                let fy = exp_y_full[j];
                 for k in 0..nz {
-                    let d_y = if apply_y {
-                        self.get_damping(j, &self.acoustic_damping_y, ny)
-                    } else {
-                        0.0
-                    };
-                    let d_z = if apply_z {
-                        self.get_damping(k, &self.acoustic_damping_z, nz)
-                    } else {
-                        0.0
-                    };
-                    Self::apply_damping(
-                        &mut field[[ri, j, k]],
-                        Self::combine_damping(d_x_r, d_y, d_z),
-                        dx,
-                    );
+                    let fz = exp_z_full[k];
+                    field[[ri, j, k]] *= fx.min(fy).min(fz);
                 }
             }
         }
 
-        // Apply Y boundaries (excluding X corners to avoid double counting)
-        // Correct approach: Iterate only the "bulk" of Y boundary that wasn't touched by X loop?
-        // No, standard approach: Iterate all boundary regions.
-        // Optimization:
-        // Region 1: X slabs (covers entire Y-Z plane for x in [0, t) and [nx-t, nx)) -> Done above.
-        // Region 2: Y slabs (y in [0, t) and [ny-t, ny)), but skip X slabs to avoid double application?
-        // Wait, if I simply iterate the volumes, I must be careful not to apply twice.
-        // The damping is Exp(-sigma*dx). Applying twice means Exp(-(s1+s2)*dx), which IS correct if we want to sum damping.
-        // BUT my logic above inside X loop included Y and Z damping components: `d_x + d_y + d_z`.
-        // So the corners are fully handled in the X loop!
-        // We only need to handle the regions NOT covered by X loop.
-
+        // Apply Y boundaries (excluding X corners already handled)
         let x_start = t;
         let x_end = nx - t;
 
         if apply_y && x_end > x_start {
-            // Apply Y boundaries
+            let exp_y = Self::precompute_exp_factors(&self.acoustic_damping_y, dx);
             for j in 0..t {
-                // Bottom
-                let d_y = self.acoustic_damping_y[j];
+                let fy = exp_y[j];
+                // Bottom boundary
                 for i in x_start..x_end {
                     for k in 0..nz {
-                        let d_z = if apply_z {
-                            self.get_damping(k, &self.acoustic_damping_z, nz)
-                        } else {
-                            0.0
-                        };
-                        Self::apply_damping(
-                            &mut field[[i, j, k]],
-                            Self::combine_damping(0.0, d_y, d_z),
-                            dx,
-                        );
+                        let fz = exp_z_full[k];
+                        field[[i, j, k]] *= fy.min(fz);
                     }
                 }
-                // Top
+                // Top boundary
                 let rj = ny - 1 - j;
-                let d_y_r = self.acoustic_damping_y[j];
                 for i in x_start..x_end {
                     for k in 0..nz {
-                        let d_z = if apply_z {
-                            self.get_damping(k, &self.acoustic_damping_z, nz)
-                        } else {
-                            0.0
-                        };
-                        Self::apply_damping(
-                            &mut field[[i, rj, k]],
-                            Self::combine_damping(0.0, d_y_r, d_z),
-                            dx,
-                        );
+                        let fz = exp_z_full[k];
+                        field[[i, rj, k]] *= fy.min(fz);
                     }
                 }
             }
@@ -374,22 +349,22 @@ impl Boundary for PMLBoundary {
             let y_start = t;
             let y_end = ny - t;
 
-            // Apply Z boundaries
+            // Apply Z boundaries (excluding X and Y corners)
             if apply_z && y_end > y_start {
+                let exp_z = Self::precompute_exp_factors(&self.acoustic_damping_z, dx);
                 for k in 0..t {
-                    // Front
-                    let d_z = self.acoustic_damping_z[k];
+                    let fz = exp_z[k];
+                    // Front boundary
                     for i in x_start..x_end {
                         for j in y_start..y_end {
-                            Self::apply_damping(&mut field[[i, j, k]], d_z, dx);
+                            field[[i, j, k]] *= fz;
                         }
                     }
-                    // Back
+                    // Back boundary
                     let rk = nz - 1 - k;
-                    let d_z_r = self.acoustic_damping_z[k];
                     for i in x_start..x_end {
                         for j in y_start..y_end {
-                            Self::apply_damping(&mut field[[i, j, rk]], d_z_r, dx);
+                            field[[i, j, rk]] *= fz;
                         }
                     }
                 }
@@ -443,47 +418,47 @@ impl Boundary for PMLBoundary {
         let apply_y = ny > 1;
         let apply_z = nz > 1;
 
+        // Precompute exp decay factors once
+        let exp_x = Self::precompute_exp_factors(&self.acoustic_damping_x, dx);
+        let exp_y_full = if apply_y {
+            Self::precompute_full_exp_factors(
+                &Self::precompute_exp_factors(&self.acoustic_damping_y, dx),
+                ny,
+                t,
+            )
+        } else {
+            vec![1.0; ny]
+        };
+        let exp_z_full = if apply_z {
+            Self::precompute_full_exp_factors(
+                &Self::precompute_exp_factors(&self.acoustic_damping_z, dx),
+                nz,
+                t,
+            )
+        } else {
+            vec![1.0; nz]
+        };
+
         // Apply X boundaries (full Y-Z plane) - Handles corners fully
         for i in 0..t {
-            let d_x = self.acoustic_damping_x[i];
+            let fx = exp_x[i];
             for j in 0..ny {
+                let fy = exp_y_full[j];
                 for k in 0..nz {
-                    let d_y = if apply_y {
-                        self.get_damping(j, &self.acoustic_damping_y, ny)
-                    } else {
-                        0.0
-                    };
-                    let d_z = if apply_z {
-                        self.get_damping(k, &self.acoustic_damping_z, nz)
-                    } else {
-                        0.0
-                    };
-                    Self::apply_complex_damping(
-                        &mut field[[i, j, k]],
-                        Self::combine_damping(d_x, d_y, d_z),
-                        dx,
-                    );
+                    let fz = exp_z_full[k];
+                    let decay = fx.min(fy).min(fz);
+                    field[[i, j, k]].re *= decay;
+                    field[[i, j, k]].im *= decay;
                 }
             }
             let ri = nx - 1 - i;
-            let d_x_r = self.acoustic_damping_x[i];
             for j in 0..ny {
+                let fy = exp_y_full[j];
                 for k in 0..nz {
-                    let d_y = if apply_y {
-                        self.get_damping(j, &self.acoustic_damping_y, ny)
-                    } else {
-                        0.0
-                    };
-                    let d_z = if apply_z {
-                        self.get_damping(k, &self.acoustic_damping_z, nz)
-                    } else {
-                        0.0
-                    };
-                    Self::apply_complex_damping(
-                        &mut field[[ri, j, k]],
-                        Self::combine_damping(d_x_r, d_y, d_z),
-                        dx,
-                    );
+                    let fz = exp_z_full[k];
+                    let decay = fx.min(fy).min(fz);
+                    field[[ri, j, k]].re *= decay;
+                    field[[ri, j, k]].im *= decay;
                 }
             }
         }
@@ -493,36 +468,24 @@ impl Boundary for PMLBoundary {
         let x_end = nx - t;
 
         if apply_y && x_end > x_start {
+            let exp_y = Self::precompute_exp_factors(&self.acoustic_damping_y, dx);
             for j in 0..t {
-                let d_y = self.acoustic_damping_y[j];
+                let fy = exp_y[j];
                 for i in x_start..x_end {
                     for k in 0..nz {
-                        let d_z = if apply_z {
-                            self.get_damping(k, &self.acoustic_damping_z, nz)
-                        } else {
-                            0.0
-                        };
-                        Self::apply_complex_damping(
-                            &mut field[[i, j, k]],
-                            Self::combine_damping(0.0, d_y, d_z),
-                            dx,
-                        );
+                        let fz = exp_z_full[k];
+                        let decay = fy.min(fz);
+                        field[[i, j, k]].re *= decay;
+                        field[[i, j, k]].im *= decay;
                     }
                 }
                 let rj = ny - 1 - j;
-                let d_y_r = self.acoustic_damping_y[j];
                 for i in x_start..x_end {
                     for k in 0..nz {
-                        let d_z = if apply_z {
-                            self.get_damping(k, &self.acoustic_damping_z, nz)
-                        } else {
-                            0.0
-                        };
-                        Self::apply_complex_damping(
-                            &mut field[[i, rj, k]],
-                            Self::combine_damping(0.0, d_y_r, d_z),
-                            dx,
-                        );
+                        let fz = exp_z_full[k];
+                        let decay = fy.min(fz);
+                        field[[i, rj, k]].re *= decay;
+                        field[[i, rj, k]].im *= decay;
                     }
                 }
             }
@@ -532,18 +495,20 @@ impl Boundary for PMLBoundary {
             let y_end = ny - t;
 
             if apply_z && y_end > y_start {
+                let exp_z = Self::precompute_exp_factors(&self.acoustic_damping_z, dx);
                 for k in 0..t {
-                    let d_z = self.acoustic_damping_z[k];
+                    let fz = exp_z[k];
                     for i in x_start..x_end {
                         for j in y_start..y_end {
-                            Self::apply_complex_damping(&mut field[[i, j, k]], d_z, dx);
+                            field[[i, j, k]].re *= fz;
+                            field[[i, j, k]].im *= fz;
                         }
                     }
                     let rk = nz - 1 - k;
-                    let d_z_r = self.acoustic_damping_z[k];
                     for i in x_start..x_end {
                         for j in y_start..y_end {
-                            Self::apply_complex_damping(&mut field[[i, j, rk]], d_z_r, dx);
+                            field[[i, j, rk]].re *= fz;
+                            field[[i, j, rk]].im *= fz;
                         }
                     }
                 }

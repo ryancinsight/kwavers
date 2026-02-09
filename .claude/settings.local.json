@@ -3,7 +3,22 @@
     "allow": [
       "mcp__acp__Bash",
       "mcp__acp__Write",
-      "mcp__acp__Edit"
+      "mcp__acp__Edit",
+      "mcp__desktop-commander__read_file",
+      "mcp__desktop-commander__list_directory",
+      "Bash(cargo build:*)",
+      "Bash(cargo xtask:*)",
+      "Bash(timeout 120 cargo test:*)",
+      "Bash(cargo run:*)",
+      "Bash(python -m pip install:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(find:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo test:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(.venv/Scripts/python.exe:*)"
     ]
   }
 }

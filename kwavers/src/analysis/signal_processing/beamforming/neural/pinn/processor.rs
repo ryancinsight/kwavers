@@ -45,7 +45,9 @@ use std::collections::HashMap;
 
 // Use solver-agnostic interface instead of direct solver imports
 #[cfg(feature = "pinn")]
-use crate::analysis::signal_processing::beamforming::neural::pinn_interface::PinnBeamformingProvider;
+use crate::analysis::signal_processing::beamforming::neural::pinn_interface::{
+    PinnBeamformingProvider, UncertaintyConfig,
+};
 
 use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVector;
 
@@ -308,15 +310,24 @@ impl NeuralBeamformingProcessor {
     fn compute_uncertainty(&mut self, volume: &Array3<f32>) -> KwaversResult<Array3<f32>> {
         #[cfg(feature = "pinn")]
         {
-            if let Some(_provider) = &self.pinn_provider {
+            if let Some(provider) = &self.pinn_provider {
                 let uncertainty_start = std::time::Instant::now();
 
-                // TODO: Implement provider-based uncertainty estimation
-                // For now, use fallback signal-based uncertainty
-                let mut uncertainty = Array3::<f32>::zeros(volume.dim());
-                for ((i, j, k), value) in volume.indexed_iter() {
-                    uncertainty[[i, j, k]] = 1.0 / (value.abs() + 1.0);
-                }
+                let uncertainty_config = UncertaintyConfig {
+                    bayesian_enabled: self.config.enable_uncertainty_quantification,
+                    ..Default::default()
+                };
+
+                let uncertainty = provider
+                    .estimate_uncertainty(volume, &uncertainty_config)
+                    .unwrap_or_else(|_| {
+                        // Fallback to signal-based uncertainty if provider fails
+                        let mut u = Array3::<f32>::zeros(volume.dim());
+                        for ((i, j, k), value) in volume.indexed_iter() {
+                            u[[i, j, k]] = 1.0 / (value.abs() + 1.0);
+                        }
+                        u
+                    });
 
                 self.metrics.uncertainty_computation_time =
                     uncertainty_start.elapsed().as_millis() as f64;

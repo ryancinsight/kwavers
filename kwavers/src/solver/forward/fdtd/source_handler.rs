@@ -204,12 +204,7 @@ impl SourceHandler {
     /// Precompute k-Wave compatible pressure source scaling for mass (rho) and pressure updates.
     ///
     /// This mirrors `scale_source_terms` in k-Wave for additive/dirichlet modes on a uniform grid.
-    pub fn prepare_pressure_source_scaling(
-        &mut self,
-        grid: &Grid,
-        c0: &Array3<f64>,
-        dt: f64,
-    ) {
+    pub fn prepare_pressure_source_scaling(&mut self, grid: &Grid, c0: &Array3<f64>, dt: f64) {
         if self.p_indices.is_empty() {
             self.p_scale_rho.clear();
             self.p_scale_p.clear();
@@ -226,7 +221,11 @@ impl SourceHandler {
         if grid.nz > 1 {
             dim_count += 1;
         }
-        let n_dim = if dim_count == 0 { 1.0 } else { dim_count as f64 };
+        let n_dim = if dim_count == 0 {
+            1.0
+        } else {
+            dim_count as f64
+        };
 
         // k-Wave uses dx for uniform grids; assume uniform spacing here.
         let dx = grid.dx;
@@ -343,7 +342,13 @@ impl SourceHandler {
                     SourceField::VelocityX => 0,
                     SourceField::VelocityY => 1,
                     SourceField::VelocityZ => 2,
-                    SourceField::Pressure => unreachable!(),
+                    SourceField::Pressure => {
+                        return Err(KwaversError::Validation(
+                            ValidationError::ConstraintViolation {
+                                message: "Pressure source cannot be used as velocity source in this context. Use add_source with Pressure source type in the pressure source branch.".to_string(),
+                            },
+                        ));
+                    }
                 };
                 for step in 0..nt {
                     let t = step as f64 * dt;

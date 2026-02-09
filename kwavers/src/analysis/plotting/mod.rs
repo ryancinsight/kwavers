@@ -8,25 +8,18 @@ use ndarray::Array3;
 
 // Note: Field indices imported from physics::field_indices for SSOT
 
-#[cfg(feature = "plotting")]
-#[allow(unused_imports)]
-use plotly::{HeatMap, Layout, Plot, Scatter, Surface};
+
 
 #[cfg(feature = "plotting")]
 mod plotting_impl {
-    #[allow(unused_imports)]
-    use crate::core::time::Time;
-    #[allow(unused_imports)]
-    use crate::domain::field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
+
     use crate::domain::grid::Grid;
     use crate::domain::sensor::recorder::Recorder;
     use log::info;
-    #[allow(unused_imports)]
-    use ndarray::{Array2, Array3, Axis};
-    #[allow(unused_imports)]
+    use ndarray::{Array2, Array3};
     use plotly::{
         common::{ColorBar, Mode, Title},
-        HeatMap, Layout, Plot, Scatter, Scatter3D, Surface,
+        HeatMap, Layout, Plot, Scatter, Scatter3D,
     };
 
     pub fn plot_positions(positions: &[(f64, f64, f64)], title: &str, filename: &str) {

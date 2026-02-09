@@ -411,32 +411,58 @@ class KWaveBridge:
         }
         input_args.update(kwargs)
 
-        # Convert input_args to MATLAB-compatible format
-        # k-Wave expects cell array of name-value pairs
-        # TODO: Implement proper MATLAB struct conversion
+        # Convert input_args to MATLAB name-value pairs for kspaceFirstOrder3D
+        matlab_args = []
+        for key, value in input_args.items():
+            matlab_args.append(key)
+            if isinstance(value, bool):
+                matlab_args.append(value)
+            elif isinstance(value, str):
+                matlab_args.append(value)
+            else:
+                matlab_args.append(float(value))
 
-        # Run k-Wave simulation (simplified call - needs proper struct handling)
-        # This is a placeholder - actual MATLAB call requires careful struct marshalling
         print(
             f"Running k-Wave simulation: {grid.Nx}×{grid.Ny}×{grid.Nz} grid, {nt} steps..."
         )
 
         try:
-            # NOTE: This is a simplified interface. Production code would use:
-            # sensor_data = self.engine.kspaceFirstOrder3D(
-            #     kgrid, medium_struct, source_struct, sensor_struct, input_args
-            # )
+            # Set up time stepping on kgrid
+            self.engine.workspace["kgrid"] = kgrid
+            self.engine.eval(f"kgrid.setTime({nt}, {dt});", nargout=0)
 
-            # For now, return mock result structure (to be replaced with actual k-Wave call)
+            # Assign medium, source, sensor to MATLAB workspace
+            self.engine.workspace["medium"] = medium_struct
+            self.engine.workspace["source"] = source_struct
+            self.engine.workspace["sensor"] = sensor_struct
+
+            # Build input_args string for MATLAB
+            args_str_parts = []
+            for key, value in input_args.items():
+                if isinstance(value, bool):
+                    args_str_parts.append(f"'{key}', {str(value).lower()}")
+                elif isinstance(value, str):
+                    args_str_parts.append(f"'{key}', '{value}'")
+                else:
+                    args_str_parts.append(f"'{key}', {value}")
+            args_str = ", ".join(args_str_parts)
+
+            # Run kspaceFirstOrder3D
+            self.engine.eval(
+                f"sensor_data = kspaceFirstOrder3D(kgrid, medium, source, sensor, {args_str});",
+                nargout=0,
+            )
+
+            # Extract results from MATLAB workspace
+            sensor_data_p = np.array(
+                self.engine.eval("sensor_data.p", nargout=1)
+            )
+
             elapsed_time = time.time() - start_time
 
-            # Create mock pressure data (to be replaced with actual sensor_data.p)
-            num_sensors = int(np.sum(sensor.mask))
-            pressure = np.zeros((num_sensors, nt))
-
             result = SimulationResult(
-                pressure=pressure,
-                time_array=np.arange(nt) * dt,
+                pressure=sensor_data_p,
+                time_array=np.arange(sensor_data_p.shape[-1]) * dt,
                 grid_config=grid,
                 execution_time=elapsed_time,
             )
@@ -445,7 +471,12 @@ class KWaveBridge:
             return result
 
         except Exception as e:
-            raise RuntimeError(f"k-Wave simulation failed: {e}")
+            raise RuntimeError(
+                f"k-Wave MATLAB simulation failed: {e}\n"
+                "Ensure k-Wave toolbox is on the MATLAB path.\n"
+                "For MATLAB-free comparison, use k-wave-python instead:\n"
+                "  pip install k-wave-python"
+            )
 
     def cache_result(self, result: SimulationResult, cache_key: str) -> Path:
         """

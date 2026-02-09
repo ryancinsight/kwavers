@@ -372,7 +372,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
 
         // Evaluate boundary condition satisfaction
         for condition in conditions {
-            let boundary_error = self.evaluate_boundary_condition(model, condition)?;
+            let boundary_error = self.evaluate_boundary_condition(model, condition, geometry)?;
             total_boundary_error += boundary_error * boundary_error;
         }
 
@@ -452,71 +452,97 @@ impl<B: AutodiffBackend> TransferLearner<B> {
         Ok(laplacian.abs())
     }
 
-    /// Evaluate boundary condition satisfaction
+    /// Evaluate boundary condition satisfaction by sampling boundary points.
+    ///
+    /// Computes the mean squared BC violation across uniformly sampled boundary points.
+    ///
+    /// For Dirichlet (u = 0): ε_BC = (1/N) Σ |u_model(x_bc, y_bc, 0)|²
+    /// For Neumann (∂u/∂n = 0): ε_BC = (1/N) Σ |∂u_model/∂n|²
+    /// For Periodic/Absorbing: Returns 0.0 (no simple pointwise residual)
     fn evaluate_boundary_condition(
         &self,
-        _model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
-        _condition: &crate::solver::inverse::pinn::ml::BoundaryCondition2D,
+        model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
+        condition: &crate::solver::inverse::pinn::ml::BoundaryCondition2D,
+        geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
     ) -> KwaversResult<f64> {
-        // TODO_AUDIT: P1 - Transfer Learning Boundary Condition Evaluation - Not Implemented
-        //
-        // PROBLEM:
-        // Returns NotImplemented error instead of evaluating boundary condition satisfaction.
-        // Transfer learner cannot assess how well source model satisfies target problem BCs.
-        //
-        // IMPACT:
-        // - Cannot quantify BC violation magnitude for transfer learning decisions
-        // - No guidance on whether source model initialization is compatible with target BCs
-        // - Blocks BC-aware fine-tuning strategies
-        // - Prevents adaptive transfer based on boundary condition similarity
-        // - Severity: P1 (advanced research feature)
-        //
-        // REQUIRED IMPLEMENTATION:
-        // 1. Parse BoundaryCondition2D to extract type and prescribed values
-        // 2. For each BC type:
-        //    a. Dirichlet (u = g): Evaluate |u_model(x_bc, y_bc, t) - g(x_bc, y_bc, t)|
-        //    b. Neumann (∂u/∂n = h): Compute ∂u_model/∂n and evaluate |∂u_model/∂n - h|
-        //    c. Robin (αu + β∂u/∂n = γ): Evaluate |αu + β∂u/∂n - γ|
-        // 3. Sample boundary points (50-200 points uniformly distributed)
-        // 4. Return mean or max BC violation across all boundary samples
-        //
-        // MATHEMATICAL SPECIFICATION:
-        // BC violation metric:
-        //   ε_BC = (1/N_bc) Σᵢ |BC_residual(xᵢ, yᵢ, tᵢ)|²
-        // where BC_residual depends on boundary condition type.
-        //
-        // For Dirichlet: BC_residual = u_model - u_prescribed
-        // For Neumann: BC_residual = ∂u_model/∂n - (∂u/∂n)_prescribed
-        // For Robin: BC_residual = αu_model + β(∂u_model/∂n) - γ
-        //
-        // VALIDATION CRITERIA:
-        // - Test: Model satisfying Dirichlet u=0 on all boundaries → ε_BC < 1e-6
-        // - Test: Model with u=sin(πx) on y=0, evaluate BC error
-        // - Test: Neumann BC ∂u/∂n=1 → verify gradient computation accuracy
-        // - Convergence: BC error decreases with model training epochs
-        //
-        // REFERENCES:
-        // - Raissi et al., "Physics-informed neural networks" (boundary condition handling)
-        // - Wang et al., "Understanding and mitigating gradient flow pathologies in physics-informed neural networks" (2021)
-        //
-        // ESTIMATED EFFORT: 8-12 hours
-        // - Implementation: 6-8 hours (BC parsing, residual computation, sampling)
-        // - Testing: 2-3 hours (all BC types, edge cases)
-        // - Documentation: 1 hour
-        //
-        // DEPENDENCIES:
-        // - Requires gradient computation infrastructure (already available)
-        // - Needs BoundaryCondition2D to carry prescribed function values (may need struct enhancement)
-        //
-        // ASSIGNED: Sprint 212 (Transfer Learning Enhancement)
-        // PRIORITY: P1 (Research feature - transfer learning BC compatibility assessment)
+        use crate::solver::inverse::pinn::ml::BoundaryCondition2D;
 
-        // Simplified boundary condition evaluation
-        // In practice, this would evaluate the specific boundary condition type
-        Err(KwaversError::NotImplemented(
-            "Boundary condition evaluation requires value-bearing boundary specifications"
-                .to_string(),
-        ))
+        let n_bc = 100; // Number of boundary sample points per edge
+        let (x_min, x_max, y_min, y_max) = geometry.bounding_box();
+        let device = model.device();
+        let eps = 1e-5; // For finite-difference normal derivatives
+
+        match condition {
+            BoundaryCondition2D::Dirichlet => {
+                // Dirichlet u = 0: sample all 4 edges and evaluate |u|²
+                let mut total_violation = 0.0;
+                let mut count = 0;
+
+                // Sample boundary points along all 4 edges
+                let boundary_points: Vec<(f64, f64)> = (0..n_bc)
+                    .flat_map(|i| {
+                        let frac = i as f64 / (n_bc - 1) as f64;
+                        let x = x_min + (x_max - x_min) * frac;
+                        let y = y_min + (y_max - y_min) * frac;
+                        vec![
+                            (x, y_min),         // bottom
+                            (x, y_max),         // top
+                            (x_min, y),          // left
+                            (x_max, y),          // right
+                        ]
+                    })
+                    .collect();
+
+                for (x, y) in &boundary_points {
+                    let x_arr = ndarray::Array1::from_vec(vec![*x]);
+                    let y_arr = ndarray::Array1::from_vec(vec![*y]);
+                    let t_arr = ndarray::Array1::from_vec(vec![0.0]);
+                    let u = model.predict(&x_arr, &y_arr, &t_arr, &device)?[[0, 0]];
+                    total_violation += u * u;
+                    count += 1;
+                }
+
+                Ok((total_violation / count as f64).sqrt())
+            }
+            BoundaryCondition2D::Neumann => {
+                // Neumann ∂u/∂n = 0: evaluate normal derivative at boundary
+                let mut total_violation = 0.0;
+                let mut count = 0;
+
+                for i in 0..n_bc {
+                    let frac = i as f64 / (n_bc - 1) as f64;
+                    let x = x_min + (x_max - x_min) * frac;
+                    let y = y_min + (y_max - y_min) * frac;
+
+                    // Bottom edge (normal = -y): ∂u/∂y at y_min
+                    let x_arr = ndarray::Array1::from_vec(vec![x]);
+                    let y0 = ndarray::Array1::from_vec(vec![y_min]);
+                    let y_eps = ndarray::Array1::from_vec(vec![y_min + eps]);
+                    let t_arr = ndarray::Array1::from_vec(vec![0.0]);
+                    let u0 = model.predict(&x_arr, &y0, &t_arr, &device)?[[0, 0]];
+                    let u_eps = model.predict(&x_arr, &y_eps, &t_arr, &device)?[[0, 0]];
+                    let dudn = (u_eps - u0) / eps;
+                    total_violation += dudn * dudn;
+                    count += 1;
+
+                    // Left edge (normal = -x): ∂u/∂x at x_min
+                    let x0 = ndarray::Array1::from_vec(vec![x_min]);
+                    let x_eps = ndarray::Array1::from_vec(vec![x_min + eps]);
+                    let y_arr = ndarray::Array1::from_vec(vec![y]);
+                    let u0 = model.predict(&x0, &y_arr, &t_arr, &device)?[[0, 0]];
+                    let u_eps = model.predict(&x_eps, &y_arr, &t_arr, &device)?[[0, 0]];
+                    let dudn = (u_eps - u0) / eps;
+                    total_violation += dudn * dudn;
+                    count += 1;
+                }
+
+                Ok((total_violation / count as f64).sqrt())
+            }
+            BoundaryCondition2D::Periodic | BoundaryCondition2D::Absorbing => {
+                // Periodic and absorbing BCs don't have simple pointwise residuals
+                Ok(0.0)
+            }
+        }
     }
 
     /// Get transfer learning statistics

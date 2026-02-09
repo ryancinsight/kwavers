@@ -1,0 +1,98 @@
+﻿mod.rs:1:pub mod arena;
+mod.rs:1:pub mod conservation;
+mod.rs:10:pub mod manager; // Moved from physics/factory
+mod.rs:10:pub mod therapy;
+mod.rs:102:pub mod boundary;
+mod.rs:103:pub mod field;
+mod.rs:104:pub mod geometry;
+mod.rs:105:pub mod grid;
+mod.rs:106:pub mod imaging;
+mod.rs:107:pub mod medium;
+mod.rs:108:pub mod mesh;
+mod.rs:108:pub mod plugin;
+mod.rs:109:pub mod plugin;
+mod.rs:11:pub mod analytical;
+mod.rs:11:pub mod multi_physics; // Multi-physics coupling orchestration
+mod.rs:11:pub mod visualization;
+mod.rs:110:pub mod sensor;
+mod.rs:111:pub mod signal;
+mod.rs:112:pub mod signal_processing;
+mod.rs:113:pub mod source;
+mod.rs:114:pub mod tensor;
+mod.rs:115:pub mod therapy;
+mod.rs:12:pub mod integration;
+mod.rs:12:pub mod parameters;
+mod.rs:13:pub mod backend;
+mod.rs:13:pub mod interface;
+mod.rs:13:pub mod setup; // New setup module
+mod.rs:14:pub mod buffer;
+mod.rs:14:pub mod inverse;
+mod.rs:15:pub mod buffers;
+mod.rs:15:pub mod multiphysics;
+mod.rs:16:pub mod plugin;
+mod.rs:17:pub mod burn_accelerator;
+mod.rs:17:pub mod imaging;
+mod.rs:17:pub mod utilities;
+mod.rs:18:pub mod compute;
+mod.rs:18:pub mod layer_validation;
+mod.rs:18:pub mod modalities;
+mod.rs:18:pub mod workspace;
+mod.rs:19:pub mod compute_kernels;
+mod.rs:19:pub mod therapy; // Keep this as it's re-exported below
+mod.rs:2:pub mod constants;
+mod.rs:2:pub mod distributed_processing; // Multi-threaded pipeline optimization
+mod.rs:20:pub mod compute_manager;
+mod.rs:21:pub mod device;
+mod.rs:22:pub mod fdtd;
+mod.rs:23:pub mod kernels;
+mod.rs:24:pub mod kspace;
+mod.rs:25:pub mod memory;
+mod.rs:26:pub mod multi_gpu;
+mod.rs:27:pub mod fft;
+mod.rs:27:pub mod pipeline;
+mod.rs:28:pub mod acoustics;
+mod.rs:28:pub mod geometry;
+mod.rs:28:pub mod shaders;
+mod.rs:29:pub mod chemistry;
+mod.rs:29:pub mod inverse_problems;
+mod.rs:29:pub mod thermal_acoustic;
+mod.rs:3:pub mod error;
+mod.rs:3:pub mod imaging;
+mod.rs:30:pub mod electromagnetic; // Electromagnetic wave implementations
+mod.rs:30:pub mod linear_algebra;
+mod.rs:31:pub mod foundations; // Physics specifications and wave equation traits
+mod.rs:31:pub mod numerics;
+mod.rs:32:pub mod optics; // Optical physics (elevated from electromagnetic)
+mod.rs:32:pub mod simd;
+mod.rs:33:pub mod simd_safe;
+mod.rs:33:pub mod thermal;
+mod.rs:37:pub mod constants;
+mod.rs:4:pub mod log;
+mod.rs:4:pub mod ml;
+mod.rs:46:pub mod api;
+mod.rs:49:pub mod cloud;
+mod.rs:5:pub mod backends; // Solver backend adapters (simulation → solver interface)
+mod.rs:5:pub mod config;
+mod.rs:5:pub mod performance;
+mod.rs:5:pub mod time;
+mod.rs:51:pub mod device;
+mod.rs:52:pub mod io;
+mod.rs:53:pub mod runtime;
+mod.rs:56:pub mod validation;
+mod.rs:6:pub mod builder;
+mod.rs:6:pub mod factory;
+mod.rs:6:pub mod imaging;
+mod.rs:6:pub mod plotting;
+mod.rs:6:pub mod utils;
+mod.rs:7:pub mod configuration;
+mod.rs:7:pub mod feature;
+mod.rs:7:pub mod patient_management; // Electronic health record and clinical workflow management
+mod.rs:7:pub mod signal_processing;
+mod.rs:8:pub mod core;
+mod.rs:8:pub mod forward;
+mod.rs:8:pub mod regulatory_documentation; // FDA 510(k) submission and compliance
+mod.rs:8:pub mod testing;
+mod.rs:9:pub mod factory; // Moved from physics
+mod.rs:9:pub mod progress;
+mod.rs:9:pub mod safety; // IEC 60601-2-37 compliance framework
+mod.rs:9:pub mod validation;

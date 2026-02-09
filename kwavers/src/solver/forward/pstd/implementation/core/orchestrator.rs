@@ -231,13 +231,11 @@ impl PSTDSolver {
         let Some(boundary) = &mut self.boundary else {
             return Ok(());
         };
+        // Only apply PML to pressure here; velocity (ux, uy, uz) and split-density
+        // (rhox, rhoy, rhoz) are already PML-damped inside update_velocity() and
+        // update_density() respectively. Applying PML again would double the decay
+        // rate, causing excessive absorption near boundaries.
         boundary.apply_acoustic(self.fields.p.view_mut(), &self.grid, time_index)?;
-        boundary.apply_acoustic(self.rhox.view_mut(), &self.grid, time_index)?;
-        boundary.apply_acoustic(self.rhoy.view_mut(), &self.grid, time_index)?;
-        boundary.apply_acoustic(self.rhoz.view_mut(), &self.grid, time_index)?;
-        boundary.apply_acoustic(self.fields.ux.view_mut(), &self.grid, time_index)?;
-        boundary.apply_acoustic(self.fields.uy.view_mut(), &self.grid, time_index)?;
-        boundary.apply_acoustic(self.fields.uz.view_mut(), &self.grid, time_index)?;
         Ok(())
     }
 

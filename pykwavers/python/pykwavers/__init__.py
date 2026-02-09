@@ -68,6 +68,8 @@ Repository: https://github.com/ryancinsight/kwavers
 """
 
 # Import Rust extension module
+# Import Python submodules for comparison and validation
+from . import comparison, kwave_bridge, kwave_python_bridge
 from ._pykwavers import (
     Grid,
     Medium,
@@ -90,6 +92,10 @@ __all__ = [
     "Simulation",
     "SimulationResult",
     "SolverType",
+    # Submodules
+    "comparison",
+    "kwave_python_bridge",
+    "kwave_bridge",
     # Metadata
     "__version__",
     "__author__",

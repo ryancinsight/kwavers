@@ -611,6 +611,10 @@ class KWavePythonBridge:
         """
         Create k-Wave grid object.
 
+        Uses setTime() instead of makeTime() to ensure the exact number of time
+        steps matches the caller's expectation. makeTime() adds +1 to account for
+        t=0 which causes a mismatch with pykwavers time stepping.
+
         Args:
             grid: Grid parameters
             medium: Medium parameters (for dt computation)
@@ -629,9 +633,9 @@ class KWavePythonBridge:
         else:
             dt = grid.dt
 
-        # Create k-Wave grid
+        # Create k-Wave grid with explicit time stepping
         kgrid = kWaveGrid([grid.Nx, grid.Ny, grid.Nz], [grid.dx, grid.dy, grid.dz])
-        kgrid.makeTime(medium.sound_speed, cfl=0.3, t_end=dt * nt)
+        kgrid.setTime(nt, dt)
 
         return kgrid
 

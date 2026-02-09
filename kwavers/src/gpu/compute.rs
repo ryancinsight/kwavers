@@ -1,9 +1,6 @@
 //! GPU compute operations
 
-#[allow(unused_imports)]
-use crate::core::error::KwaversResult;
-#[allow(unused_imports)]
-use wgpu::util::DeviceExt;
+
 
 /// GPU compute manager
 #[derive(Debug)]

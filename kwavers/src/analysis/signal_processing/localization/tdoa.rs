@@ -154,7 +154,6 @@ impl TDOAProcessor {
         let c = self.config.config.sound_speed;
 
         for _ in 0..self.config.refinement_iterations {
-            #[allow(unused_mut)]
             let mut jacobian = [[0.0; 3]; 16]; // Up to 16 sensors
             let mut residuals = vec![0.0; sensor_positions.len()];
             let n_sensors = sensor_positions.len().min(16);

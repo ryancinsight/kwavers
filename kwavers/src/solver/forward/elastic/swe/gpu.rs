@@ -180,7 +180,8 @@ pub struct MemoryStats {
 
 /// GPU-accelerated 3D elastic wave solver
 ///
-/// TODO: This is a simulation of GPU functionality. Actual CUDA/OpenCL/wgpu implementation is needed.
+/// KNOWN_LIMITATION: This is a CPU simulation of GPU functionality.
+/// Actual CUDA/OpenCL/wgpu implementation is needed for real GPU acceleration.
 #[derive(Debug)]
 pub struct GPUElasticWaveSolver3D {
     /// GPU device information

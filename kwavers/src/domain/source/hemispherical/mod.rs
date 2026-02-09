@@ -19,7 +19,8 @@ mod steering;
 mod validation;
 
 // Physical constants needed for array calculations
-pub use crate::core::constants::{C_WATER, PI};
+pub use crate::core::constants::C_WATER;
+pub use std::f64::consts::PI;
 
 // Explicit re-exports of hemispherical array components
 pub use element::{ElementConfiguration, ElementState};

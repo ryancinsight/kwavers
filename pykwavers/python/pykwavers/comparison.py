@@ -464,7 +464,7 @@ def run_kwave_python(config: SimulationConfig) -> SimulationResult:
 
 def run_kwave_matlab(config: SimulationConfig) -> SimulationResult:
     """
-    Run k-Wave MATLAB simulation.
+    Run k-Wave MATLAB simulation via the KWaveBridge.
 
     Args:
         config: Simulation configuration
@@ -475,8 +475,80 @@ def run_kwave_matlab(config: SimulationConfig) -> SimulationResult:
     if not KWAVE_MATLAB_AVAILABLE:
         raise RuntimeError("k-Wave MATLAB not available")
 
-    # TODO: Implement MATLAB bridge adapter
-    raise NotImplementedError("k-Wave MATLAB adapter not yet implemented")
+    from .kwave_bridge import GridConfig, MediumConfig, SourceConfig, SensorConfig
+
+    # Convert SimulationConfig to k-Wave bridge types
+    grid = GridConfig(
+        Nx=config.grid_shape[0],
+        Ny=config.grid_shape[1],
+        Nz=config.grid_shape[2],
+        dx=config.grid_spacing[0],
+        dy=config.grid_spacing[1],
+        dz=config.grid_spacing[2],
+        pml_size=config.pml_size,
+    )
+
+    medium = MediumConfig(
+        sound_speed=float(config.sound_speed)
+        if not isinstance(config.sound_speed, np.ndarray)
+        else config.sound_speed,
+        density=float(config.density)
+        if not isinstance(config.density, np.ndarray)
+        else config.density,
+        alpha_coeff=config.absorption_coeff,
+        alpha_power=config.absorption_power,
+    )
+
+    # Build source mask and signal
+    source_mask = np.zeros(config.grid_shape, dtype=np.float64)
+    if config.source_position is None:
+        # Plane wave source at z=0
+        source_mask[:, :, 0] = 1.0
+    else:
+        ix = int(config.source_position[0] / config.grid_spacing[0])
+        iy = int(config.source_position[1] / config.grid_spacing[1])
+        iz = int(config.source_position[2] / config.grid_spacing[2])
+        ix = max(0, min(config.grid_shape[0] - 1, ix))
+        iy = max(0, min(config.grid_shape[1] - 1, iy))
+        iz = max(0, min(config.grid_shape[2] - 1, iz))
+        source_mask[ix, iy, iz] = 1.0
+
+    c_max = (
+        float(np.max(config.sound_speed))
+        if isinstance(config.sound_speed, np.ndarray)
+        else config.sound_speed
+    )
+    dx_min = min(config.grid_spacing)
+    dt_actual = config.dt if config.dt is not None else (config.cfl * dx_min / c_max)
+    nt = config.num_time_steps
+
+    t = np.arange(nt) * dt_actual
+    p_signal = config.source_amplitude * np.sin(2 * np.pi * config.source_frequency * t)
+
+    source = SourceConfig(p_mask=source_mask, p_signal=p_signal)
+
+    # Build sensor mask
+    sensor_mask = np.zeros(config.grid_shape, dtype=np.float64)
+    sx = int(config.sensor_position[0] / config.grid_spacing[0])
+    sy = int(config.sensor_position[1] / config.grid_spacing[1])
+    sz = int(config.sensor_position[2] / config.grid_spacing[2])
+    sx = max(0, min(config.grid_shape[0] - 1, sx))
+    sy = max(0, min(config.grid_shape[1] - 1, sy))
+    sz = max(0, min(config.grid_shape[2] - 1, sz))
+    sensor_mask[sx, sy, sz] = 1.0
+
+    sensor = SensorConfig(mask=sensor_mask)
+
+    bridge = KWaveBridge()
+    result = bridge.run_simulation(grid, medium, source, sensor, nt=nt, dt=dt_actual)
+
+    return SimulationResult(
+        simulator=SimulatorType.KWAVE_MATLAB,
+        pressure=result.sensor_data.flatten() if result.sensor_data is not None else np.array([]),
+        time=result.time_array,
+        execution_time=result.execution_time,
+        metadata={"nt": nt, "dt": dt_actual},
+    )
 
 
 # ============================================================================

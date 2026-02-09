@@ -10,9 +10,11 @@ pub mod wavefront;
 
 pub mod config;
 pub mod factory;
+pub mod flexible;
 pub mod grid_source;
+pub mod hemispherical;
 pub mod structs;
-pub mod types; // New factory module
+pub mod types;
 
 // Export traits and types
 pub use config::{EnvelopeType, PulseParameters, PulseType, SourceModel, SourceParameters};
@@ -47,6 +49,14 @@ pub use transducers::{
         TransducerElement,
     },
     rectangular::RectangularTransducer,
+};
+pub use flexible::{
+    CalibrationData, CalibrationManager, FlexibleTransducerArray, FlexibleTransducerConfig,
+    GeometrySnapshot,
+};
+pub use hemispherical::{
+    ArrayValidator, ElementConfiguration, ElementState, FocalPoint, HemisphereGeometry,
+    HemisphericalArray, SparseArrayOptimizer, SteeringController,
 };
 pub use wavefront::{
     bessel::{BesselBuilder, BesselConfig, BesselSource},

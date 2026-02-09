@@ -173,12 +173,13 @@ impl Trilateration {
 
             // Check convergence
             let residual_norm = residuals.iter().map(|&r| r * r).sum::<f64>().sqrt();
+
             if residual_norm < self.config.convergence_tolerance {
                 converged = true;
                 break;
             }
 
-            // Solve normal equations: J^T J Δx = -J^T r
+            // Solve normal equations: (J^T J + λI) Δx = -J^T r
             let update = self.solve_least_squares(&jacobian, &residuals)?;
 
             // Update position
@@ -252,7 +253,7 @@ impl Trilateration {
         Ok((residuals, jacobian))
     }
 
-    /// Solve least squares: (J^T J)x = J^T b
+    /// Solve least squares with Levenberg-Marquardt damping: (J^T J + λI)x = J^T b
     fn solve_least_squares(
         &self,
         jacobian: &[[f64; 3]],
@@ -268,35 +269,39 @@ impl Trilateration {
             }
         }
 
-        // Compute J^T r (3x1 vector)
-        let mut jtr = [0.0; 3];
+        // Levenberg-Marquardt damping: λ = max(diag(J^T J)) * 1e-6
+        // This prevents singularity while keeping updates well-scaled
+        let max_diag = jtj[0][0].abs().max(jtj[1][1].abs()).max(jtj[2][2].abs());
+        let damping = (max_diag * 1e-6).max(1e-20);
+        jtj[0][0] += damping;
+        jtj[1][1] += damping;
+        jtj[2][2] += damping;
+
+        // Compute -J^T r (3x1 vector) — negative for Gauss-Newton descent direction
+        let mut neg_jtr = [0.0; 3];
         for (j_row, &r) in jacobian.iter().zip(residuals.iter()) {
             for i in 0..3 {
-                jtr[i] += j_row[i] * r;
+                neg_jtr[i] -= j_row[i] * r;
             }
         }
 
-        // Solve 3x3 system using Gaussian elimination
-        let x = self.solve_3x3(&jtj, &jtr)?;
+        // Solve 3x3 system: (J^T J + λI) Δx = -J^T r
+        let x = self.solve_3x3(&jtj, &neg_jtr)?;
 
         Ok(x)
     }
 
-    /// Solve 3x3 linear system Ax = b
+    /// Solve 3x3 linear system Ax = b via Gaussian elimination with partial pivoting
     fn solve_3x3(&self, a: &[[f64; 3]; 3], b: &[f64; 3]) -> KwaversResult<[f64; 3]> {
-        // Add small regularization to prevent singularity
-        const REGULARIZATION: f64 = 1e-10;
-
         let mut aug = [[0.0; 4]; 3];
         for i in 0..3 {
             for j in 0..3 {
                 aug[i][j] = a[i][j];
             }
-            aug[i][i] += REGULARIZATION; // Tikhonov regularization
             aug[i][3] = b[i];
         }
 
-        // Forward elimination
+        // Forward elimination with partial pivoting
         for k in 0..3 {
             // Find pivot
             let mut max_row = k;
@@ -312,7 +317,7 @@ impl Trilateration {
             }
 
             // Check for singularity
-            if aug[k][k].abs() < 1e-12 {
+            if aug[k][k].abs() < 1e-30 {
                 return Err(KwaversError::InvalidInput(
                     "Singular matrix in trilateration - sensors may be coplanar".to_string(),
                 ));
@@ -417,7 +422,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Improve conditioning for general off-axis sources
     fn test_localize_off_axis_source() {
         let c = 1540.0;
         let sensors = vec![

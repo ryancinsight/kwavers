@@ -576,6 +576,12 @@ impl HybridSolver {
     pub fn validation_results(&self) -> &ValidationResults {
         &self.validation_results
     }
+
+    /// Extract recorded sensor data from the internal FDTD solver.
+    /// Returns None if no sensors are configured or no data has been recorded.
+    pub fn extract_recorded_sensor_data(&self) -> Option<ndarray::Array2<f64>> {
+        self.fdtd_solver.extract_recorded_sensor_data()
+    }
 }
 
 impl crate::solver::interface::Solver for HybridSolver {

@@ -64,8 +64,6 @@ def test_plane_wave_injection():
     print(f"  [OK] Non-zero samples: {np.count_nonzero(result.sensor_data)}/{len(result.sensor_data)}")
     print()
 
-    return result
-
 
 def test_point_source_injection():
     """Test that point source injection produces non-zero sensor data."""
@@ -104,8 +102,6 @@ def test_point_source_injection():
     )
     print(f"  [OK] Non-zero samples: {np.count_nonzero(result.sensor_data)}/{len(result.sensor_data)}")
     print()
-
-    return result
 
 
 def test_wave_timing():
@@ -163,7 +159,6 @@ def test_wave_timing():
         print("  ⚠ Warning: No wave detected at sensor (may need longer simulation)")
 
     print()
-    return result
 
 
 def test_amplitude_scaling():

@@ -87,24 +87,32 @@ impl ElectromagneticFdtdSolver {
         let hy = Array3::zeros((grid.nx, grid.ny + 1, grid.nz));
         let hz = Array3::zeros((grid.nx, grid.ny, grid.nz + 1));
 
+        // Validate spatial order before creating operators
+        if spatial_order != 2 && spatial_order != 4 && spatial_order != 6 {
+            return Err(KwaversError::InvalidInput(format!(
+                "ElectromagneticFDTD: spatial_order must be 2, 4, or 6, got {}",
+                spatial_order
+            )));
+        }
+
         // Create spatial derivative operators
         let dx_operator: Box<dyn DifferentialOperator> = match spatial_order {
             2 => Box::new(CentralDifference2::new(grid.dx, grid.dy, grid.dz)?),
             4 => Box::new(CentralDifference4::new(grid.dx, grid.dy, grid.dz)?),
             6 => Box::new(CentralDifference6::new(grid.dx, grid.dy, grid.dz)?),
-            _ => unreachable!(),
+            _ => unreachable!("validated above"),
         };
         let dy_operator: Box<dyn DifferentialOperator> = match spatial_order {
             2 => Box::new(CentralDifference2::new(grid.dx, grid.dy, grid.dz)?),
             4 => Box::new(CentralDifference4::new(grid.dx, grid.dy, grid.dz)?),
             6 => Box::new(CentralDifference6::new(grid.dx, grid.dy, grid.dz)?),
-            _ => unreachable!(),
+            _ => unreachable!("validated above"),
         };
         let dz_operator: Box<dyn DifferentialOperator> = match spatial_order {
             2 => Box::new(CentralDifference2::new(grid.dx, grid.dy, grid.dz)?),
             4 => Box::new(CentralDifference4::new(grid.dx, grid.dy, grid.dz)?),
             6 => Box::new(CentralDifference6::new(grid.dx, grid.dy, grid.dz)?),
-            _ => unreachable!(),
+            _ => unreachable!("validated above"),
         };
 
         // Cache grid dimensions before moving grid
