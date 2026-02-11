@@ -247,7 +247,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_microbubble_dynamics_with_pressure_gradient() {
         let grid = create_test_grid();
         let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
@@ -271,8 +270,15 @@ mod tests {
             velocity_z: Array3::zeros((8, 8, 8)),
         };
 
+        // Verify microbubble dynamics handles pressure gradients correctly
         let result = update_microbubble_dynamics(&mut ceus, &acoustic_field, 1e-6);
         assert!(result.is_ok());
+        
+        // Verify concentration field is returned and all values are positive
+        if let Ok(Some(concentration)) = result {
+            assert_eq!(concentration.dim(), (8, 8, 8));
+            assert!(concentration.iter().all(|&c| c > 0.0));
+        }
     }
 
     #[test]
