@@ -499,7 +499,17 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore] // Integration test - requires full therapy simulation stack
+    /// Test therapy step execution
+    ///
+    /// Full integration test of the therapy orchestration system.
+    /// Currently ignored because:
+    /// 1. Requires complete acoustic field simulation (computationally expensive)
+    /// 2. Needs functional microbubble dynamics, thermal modeling, and safety monitoring
+    /// 3. Each therapy step involves multiple physics solvers  
+    /// 4. More suitable for integration test suite than unit tests
+    ///
+    /// To enable: move to integration tests or enable for nightly builds only
     fn test_therapy_step_execution() {
         let config = TherapySessionConfig {
             primary_modality: TherapyModality::Microbubble,

@@ -406,7 +406,16 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore] // Requires longer simulation time for measurable movement
+    /// Test radiation force bubble movement
+    ///
+    /// This test validates that radiation force causes bubble translation in a pressure gradient.
+    /// Currently ignored because:
+    /// 1. With only 10 steps and adaptive integration, movement is below measurement threshold
+    /// 2. Would require ~100+ steps or finer timesteps (1 μs) for detectable displacement
+    /// 3. Test is computationally expensive for routine CI runs
+    ///
+    /// To enable: increase iterations to 100+ and reduce dt to 1e-6, or use non-adaptive integrator
     fn test_radiation_force_moves_bubble() {
         let position = Position3D::zero();
         let mut bubble = MicrobubbleState::sono_vue(position).unwrap();
