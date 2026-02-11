@@ -16,13 +16,18 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // FusionConfig fields changed in domain layer
     fn test_fusion_config_default() {
         let config = FusionConfig::default();
-        // These fields don't exist in the new domain FusionConfig
-        // assert_eq!(config.modality_weights.len(), 3);
-        // assert!(config.uncertainty_quantification);
+        // Verify default fusion method
         assert_eq!(config.fusion_method, FusionMethod::WeightedAverage);
+        // Verify default registration method
+        assert_eq!(config.registration_method, RegistrationMethod::RigidBody);
+        // Verify modality weights map is empty initially
+        assert!(config.modality_weights.is_empty());
+        // Verify default uncertainty quantification setting
+        assert_eq!(config.uncertainty_quantification, false);
+        // Verify default quality threshold
+        assert_eq!(config.min_quality_threshold, 0.3);
     }
 
     #[test]
