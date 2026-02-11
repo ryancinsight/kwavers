@@ -18,7 +18,13 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(.venv/Scripts/python.exe:*)"
+      "Bash(.venv/Scripts/python.exe:*)",
+      "Bash(.venv/Scripts/pip install:*)",
+      "Bash(.venv/Scripts/maturin develop:*)",
+      "WebFetch(domain:www.k-wave.org)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.academia.edu)",
+      "WebFetch(domain:www.scribd.com)"
     ]
   }
 }

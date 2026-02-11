@@ -431,7 +431,12 @@ impl SourceHandler {
     pub fn inject_pressure_source(&self, time_index: usize, p: &mut Array3<f64>) {
         if let Some(signal) = &self.source.p_signal {
             if time_index < signal.shape()[1] {
-                let mode = if self.pressure_is_boundary_plane {
+                // For boundary plane sources, use Dirichlet mode (p = signal)
+                // unless the user explicitly requested additive mode.
+                // This matches k-Wave's default behaviour for boundary sources.
+                let mode = if self.pressure_is_boundary_plane
+                    && self.source.p_mode != SourceMode::AdditiveNoCorrection
+                {
                     SourceMode::Dirichlet
                 } else {
                     self.source.p_mode
@@ -518,9 +523,10 @@ impl SourceHandler {
         }
     }
 
-    /// Enforce Dirichlet pressure source after field updates (boundary sources)
+    /// Enforce Dirichlet pressure source after field updates.
+    /// Only enforces when the source mode is explicitly Dirichlet.
     pub fn enforce_pressure_dirichlet(&self, time_index: usize, p: &mut Array3<f64>) {
-        if !self.pressure_is_boundary_plane && self.source.p_mode != SourceMode::Dirichlet {
+        if self.source.p_mode != SourceMode::Dirichlet {
             return;
         }
 

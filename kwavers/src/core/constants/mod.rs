@@ -11,6 +11,7 @@ pub mod hounsfield;
 pub mod medical;
 pub mod numerical;
 pub mod optical;
+pub mod state_dependent;
 pub mod thermodynamic;
 pub mod water;
 
@@ -58,9 +59,13 @@ pub use numerical::{CFL_DEFAULT, CFL_SAFETY_FACTOR, EPSILON, SMALL_VALUE, SOLVER
 // Backward compatibility aliases
 pub use fundamental::GAS_CONSTANT as R_GAS;
 
+// State-dependent constants (NEW: addresses TODO_AUDIT P1)
+pub use state_dependent::StateDependentConstants;
+
 // For comprehensive access to all constants, use the submodule namespaces:
 // - `acoustic_parameters::*` - Acoustic pressure and intensity references
 // - `cavitation::*` - Cavitation thresholds and bubble constants
 // - `chemistry::*` - Chemical kinetics and ROS parameters
 // - `hounsfield::*` - Hounsfield unit mappings for CT data
 // - `optical::*` - Optical wavelengths and refractive indices
+// - `state_dependent::*` - Temperature/pressure-dependent constants (TODO_AUDIT P1)
