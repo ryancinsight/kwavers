@@ -302,8 +302,8 @@ impl NeuralNetworkShader {
             cpass.set_pipeline(&self.matmul_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
             // Workgroup size is (16,16,1) → ceil-divide
-            let wg_x = (batch_size as u32 + 15) / 16;
-            let wg_y = (output_size as u32 + 15) / 16;
+            let wg_x = (batch_size as u32).div_ceil(16);
+            let wg_y = (output_size as u32).div_ceil(16);
             cpass.dispatch_workgroups(wg_x, wg_y, 1);
         }
         encoder.copy_buffer_to_buffer(&output_buf, 0, &staging_buf, 0, output_bytes);
@@ -392,7 +392,7 @@ impl NeuralNetworkShader {
         let device = self.device.device();
         let queue = self.device.queue();
 
-        let data_bytes = (input.len() * std::mem::size_of::<f32>()) as u64;
+        let data_bytes = std::mem::size_of_val(input) as u64;
         if data_bytes == 0 {
             return Ok(Vec::new());
         }
@@ -452,7 +452,7 @@ impl NeuralNetworkShader {
             });
             cpass.set_pipeline(&self.activation_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
-            let wg_x = (input.len() as u32 + 255) / 256;
+            let wg_x = (input.len() as u32).div_ceil(256);
             cpass.dispatch_workgroups(wg_x, 1, 1);
         }
         encoder.copy_buffer_to_buffer(&output_buf, 0, &staging_buf, 0, data_bytes);
