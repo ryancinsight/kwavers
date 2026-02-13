@@ -10,41 +10,31 @@ use ndarray::Zip;
 
 impl PSTDSolver {
     /// Update velocity fields based on pressure gradients (Momentum Conservation)
+    ///
+    /// Uses staggered grid shift operators matching the C++ k-wave binary:
+    ///   grad_x(p) = IFFT( ddx_k_shift_pos[x] * kappa[i,j,k] * FFT(p)[i,j,k] )
     pub(crate) fn update_velocity(&mut self, dt: f64) -> KwaversResult<()> {
-        let i_img = Complex64::new(0.0, 1.0);
-
         // Transform pressure to k-space
         self.fft.forward_into(&self.fields.p, &mut self.p_k);
 
-        // Compute pressure gradients in k-space
-        // grad_p_k = i * k * kappa * p_k
-
-        // dx
-        Zip::from(&mut self.grad_x_k)
-            .and(&self.p_k)
-            .and(&self.k_vec.0)
-            .and(&self.kappa)
-            .for_each(|grad, &p, &k, &kap| {
-                *grad = i_img * k * kap * p;
-            });
-
-        // dy
-        Zip::from(&mut self.grad_y_k)
-            .and(&self.p_k)
-            .and(&self.k_vec.1)
-            .and(&self.kappa)
-            .for_each(|grad, &p, &k, &kap| {
-                *grad = i_img * k * kap * p;
-            });
-
-        // dz
-        Zip::from(&mut self.grad_z_k)
-            .and(&self.p_k)
-            .and(&self.k_vec.2)
-            .and(&self.kappa)
-            .for_each(|grad, &p, &k, &kap| {
-                *grad = i_img * k * kap * p;
-            });
+        // Compute pressure gradients in k-space with staggered grid shifts
+        // k-wave uses ddx_k_shift_pos for pressure→velocity (positive shift)
+        let (nx, ny, nz) = self.p_k.dim();
+        for i in 0..nx {
+            let shift_x = self.ddx_k_shift_pos[i];
+            for j in 0..ny {
+                let shift_y = self.ddy_k_shift_pos[j];
+                for k in 0..nz {
+                    let shift_z = self.ddz_k_shift_pos[k];
+                    let kap = Complex64::new(self.kappa[[i, j, k]], 0.0);
+                    let p_val = self.p_k[[i, j, k]];
+                    let e_kappa = kap * p_val;
+                    self.grad_x_k[[i, j, k]] = shift_x * e_kappa;
+                    self.grad_y_k[[i, j, k]] = shift_y * e_kappa;
+                    self.grad_z_k[[i, j, k]] = shift_z * e_kappa;
+                }
+            }
+        }
 
         // Transform gradients back to physical space and update velocity
 

@@ -42,7 +42,7 @@ pub enum BoundaryConfig {
 
 impl Default for BoundaryConfig {
     fn default() -> Self {
-        Self::PML(PMLConfig::default())
+        Self::CPML(CPMLConfig::default())
     }
 }
 
@@ -84,9 +84,9 @@ impl Default for PSTDConfig {
             spectral_correction: SpectralCorrectionConfig::default(),
             absorption_mode: AbsorptionMode::Lossless,
             nonlinearity: false,
-            boundary: BoundaryConfig::PML(PMLConfig {
+            boundary: BoundaryConfig::CPML(CPMLConfig {
                 thickness: 20,
-                ..PMLConfig::default()
+                ..CPMLConfig::default()
             }),
             sensor_mask: None,
             pml_inside: true,

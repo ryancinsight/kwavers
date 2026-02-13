@@ -13,7 +13,14 @@ use ndarray::Zip;
 
 impl PSTDSolver {
     /// Update pressure field from density perturbation (Equation of State)
-    pub(crate) fn update_pressure(&mut self) {
+    ///
+    /// In C++ k-wave, this is the final step: p = c² * (rhox + rhoy + rhoz)
+    /// Absorption (if enabled) is also applied here, matching C++ computePressure().
+    pub(crate) fn update_pressure(&mut self, dt: f64) -> KwaversResult<()> {
+        // Apply absorption first (modifies density, matching C++ where absorption
+        // is part of computePressure, not computeDensity)
+        self.apply_absorption(dt)?;
+
         // Combine split density components
         Zip::from(&mut self.div_u)
             .and(&self.rhox)
@@ -44,45 +51,56 @@ impl PSTDSolver {
                     *p = c * c * rho_sum;
                 });
         }
+
+        Ok(())
     }
 
     /// Update density field based on velocity divergence (Mass Conservation)
+    ///
+    /// Uses staggered grid shift operators matching the C++ k-wave binary:
+    ///   dux/dx = IFFT( ddx_k_shift_neg[x] * kappa[i,j,k] * FFT(ux)[i,j,k] )
     pub(crate) fn update_density(&mut self, dt: f64) -> KwaversResult<()> {
-        let i_img = Complex64::new(0.0, 1.0);
+        let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
 
-        // Compute dux/dx, duy/dy, duz/dz in k-space
-        let (ref kx, ref ky, ref kz) = self.k_vec;
-
+        // dux/dx with negative shift
         self.fft.forward_into(&self.fields.ux, &mut self.ux_k);
-        Zip::from(&mut self.grad_x_k)
-            .and(&self.ux_k)
-            .and(kx)
-            .and(&self.kappa)
-            .for_each(|grad, &ux, &kx_val, &kap| {
-                *grad = i_img * kap * Complex64::new(kx_val, 0.0) * ux;
-            });
+        for i in 0..nx {
+            let shift = self.ddx_k_shift_neg[i];
+            for j in 0..ny {
+                for k in 0..nz {
+                    let kap = Complex64::new(self.kappa[[i, j, k]], 0.0);
+                    self.grad_x_k[[i, j, k]] = shift * kap * self.ux_k[[i, j, k]];
+                }
+            }
+        }
         self.fft
             .inverse_into(&self.grad_x_k, &mut self.dpx, &mut self.ux_k);
 
+        // duy/dy with negative shift
         self.fft.forward_into(&self.fields.uy, &mut self.uy_k);
-        Zip::from(&mut self.grad_y_k)
-            .and(&self.uy_k)
-            .and(ky)
-            .and(&self.kappa)
-            .for_each(|grad, &uy, &ky_val, &kap| {
-                *grad = i_img * kap * Complex64::new(ky_val, 0.0) * uy;
-            });
+        for i in 0..nx {
+            for j in 0..ny {
+                let shift = self.ddy_k_shift_neg[j];
+                for k in 0..nz {
+                    let kap = Complex64::new(self.kappa[[i, j, k]], 0.0);
+                    self.grad_y_k[[i, j, k]] = shift * kap * self.uy_k[[i, j, k]];
+                }
+            }
+        }
         self.fft
             .inverse_into(&self.grad_y_k, &mut self.dpy, &mut self.uy_k);
 
+        // duz/dz with negative shift
         self.fft.forward_into(&self.fields.uz, &mut self.uz_k);
-        Zip::from(&mut self.grad_z_k)
-            .and(&self.uz_k)
-            .and(kz)
-            .and(&self.kappa)
-            .for_each(|grad, &uz, &kz_val, &kap| {
-                *grad = i_img * kap * Complex64::new(kz_val, 0.0) * uz;
-            });
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let shift = self.ddz_k_shift_neg[k];
+                    let kap = Complex64::new(self.kappa[[i, j, k]], 0.0);
+                    self.grad_z_k[[i, j, k]] = shift * kap * self.uz_k[[i, j, k]];
+                }
+            }
+        }
         self.fft
             .inverse_into(&self.grad_z_k, &mut self.dpz, &mut self.uz_k);
 
@@ -114,29 +132,12 @@ impl PSTDSolver {
                 *rho -= dt * (rho0 * du + uz * grz);
             });
 
-        // Update total density rho = rhox + rhoy + rhoz
-        // Also update pressure field p = c^2 * rho for consistency
-        Zip::from(&mut self.div_u)
-            .and(&self.rhox)
-            .and(&self.rhoy)
-            .and(&self.rhoz)
-            .for_each(|rho, &rx, &ry, &rz| {
-                *rho = rx + ry + rz;
-            });
-        Zip::from(&self.div_u)
-            .and(&self.materials.c0)
-            .and(&mut self.fields.p)
-            .for_each(|&rho, &c0, p| {
-                *p = c0 * c0 * rho;
-            });
-
-        // NOTE: Mass sources are injected at the start of step_forward() (step 1)
-        // We do NOT inject them again here to avoid double-counting and amplification.
-        // This was the root cause of the 6.23× PSTD amplification bug.
-
-        // Apply absorption and PML
-        self.apply_absorption(dt)?;
+        // Apply PML to density (matches C++ which integrates PML into density update)
         self.apply_pml_to_density()?;
+
+        // NOTE: Pressure computation and absorption are handled separately in
+        // update_pressure(). Source injection happens between density and pressure
+        // updates (matching C++ k-wave binary time loop order).
 
         Ok(())
     }

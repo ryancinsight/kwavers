@@ -21,7 +21,8 @@ use crate::solver::forward::pstd::numerics::operators::initialize_spectral_opera
 use crate::solver::forward::pstd::numerics::spectral_correction::CorrectionMethod;
 use crate::solver::forward::pstd::physics::absorption::initialize_absorption_operators;
 use crate::solver::forward::pstd::utils::compute_k_magnitude;
-use ndarray::{Array2, Array3, Zip};
+use ndarray::{Array1, Array2, Array3, Zip};
+use std::f64::consts::PI;
 use std::sync::Arc;
 use tracing::debug;
 
@@ -62,6 +63,15 @@ pub struct PSTDSolver {
     pub(crate) absorb_eta: Array3<f64>,
     pub(crate) absorb_y: Array3<f64>, // Spatially-varying absorption exponent
     pub(crate) kspace_operators: Option<PSTDKSOperators>,
+    // Staggered grid shift operators (1D, per axis, complex)
+    // ddx_k_shift_pos[x] = i*kx * exp(+i*kx*dx/2) — for pressure gradient → velocity
+    // ddx_k_shift_neg[x] = i*kx * exp(-i*kx*dx/2) — for velocity gradient → density
+    pub(crate) ddx_k_shift_pos: Array1<Complex64>,
+    pub(crate) ddy_k_shift_pos: Array1<Complex64>,
+    pub(crate) ddz_k_shift_pos: Array1<Complex64>,
+    pub(crate) ddx_k_shift_neg: Array1<Complex64>,
+    pub(crate) ddy_k_shift_neg: Array1<Complex64>,
+    pub(crate) ddz_k_shift_neg: Array1<Complex64>,
     // Temporary scratch arrays for gradient/divergence computations
     pub(crate) dpx: Array3<f64>,
     pub(crate) dpy: Array3<f64>,
@@ -100,10 +110,11 @@ impl PSTDSolver {
             BoundaryConfig::PML(pml_config) => {
                 Some(Box::new(PMLBoundary::new(pml_config.clone())?))
             }
-            BoundaryConfig::CPML(cpml_config) => Some(Box::new(CPMLBoundary::new(
+            BoundaryConfig::CPML(cpml_config) => Some(Box::new(CPMLBoundary::new_with_time_step(
                 cpml_config.clone(),
                 &grid,
                 c_ref,
+                Some(config.dt),
             )?)),
             BoundaryConfig::None => None,
         };
@@ -113,6 +124,38 @@ impl PSTDSolver {
         let field_arrays =
             crate::solver::forward::pstd::data::initialize_field_arrays(&grid, medium)?;
         let k_vec = (k_ops.kx, k_ops.ky, k_ops.kz);
+
+        // Generate staggered grid shift operators matching the C++ k-wave binary.
+        // These implement the half-grid-point spatial shift for staggered grids:
+        //   ddx_k_shift_pos[x] = i·kx · exp(+i·kx·dx/2)  (pressure → velocity)
+        //   ddx_k_shift_neg[x] = i·kx · exp(-i·kx·dx/2)  (velocity → density)
+        let generate_shift_1d = |n: usize, dk: f64, ds: f64| -> (Array1<Complex64>, Array1<Complex64>) {
+            let i_unit = Complex64::new(0.0, 1.0);
+            let mut shift_pos = Array1::zeros(n);
+            let mut shift_neg = Array1::zeros(n);
+            for idx in 0..n {
+                // Wavenumber with ifftshift convention matching C++ binary
+                let shifted = if idx <= n / 2 {
+                    idx as isize
+                } else {
+                    idx as isize - n as isize
+                };
+                let k_val = dk * shifted as f64;
+                let exponent = k_val * ds * 0.5;
+                shift_pos[idx] = i_unit * Complex64::new(k_val, 0.0)
+                    * Complex64::new(exponent.cos(), exponent.sin());
+                shift_neg[idx] = i_unit * Complex64::new(k_val, 0.0)
+                    * Complex64::new(exponent.cos(), -exponent.sin());
+            }
+            (shift_pos, shift_neg)
+        };
+
+        let dk_x = 2.0 * PI / (grid.nx as f64 * grid.dx);
+        let dk_y = 2.0 * PI / (grid.ny as f64 * grid.dy);
+        let dk_z = 2.0 * PI / (grid.nz as f64 * grid.dz);
+        let (ddx_k_shift_pos, ddx_k_shift_neg) = generate_shift_1d(grid.nx, dk_x, grid.dx);
+        let (ddy_k_shift_pos, ddy_k_shift_neg) = generate_shift_1d(grid.ny, dk_y, grid.dy);
+        let (ddz_k_shift_pos, ddz_k_shift_neg) = generate_shift_1d(grid.nz, dk_z, grid.dz);
 
         let mut rho0 = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let mut c0 = Array3::zeros((grid.nx, grid.ny, grid.nz));
@@ -174,6 +217,12 @@ impl PSTDSolver {
             absorb_eta,
             absorb_y,
             kspace_operators: None,
+            ddx_k_shift_pos,
+            ddy_k_shift_pos,
+            ddz_k_shift_pos,
+            ddx_k_shift_neg,
+            ddy_k_shift_neg,
+            ddz_k_shift_neg,
             dpx: Array3::zeros(shape),
             dpy: Array3::zeros(shape),
             dpz: Array3::zeros(shape),
@@ -241,28 +290,23 @@ impl PSTDSolver {
 
     pub(super) fn compute_rho0_gradients(&mut self) -> KwaversResult<()> {
         self.fft.forward_into(&self.materials.rho0, &mut self.p_k);
-        let i_img = Complex64::new(0.0, 1.0);
-        Zip::from(&mut self.grad_x_k)
-            .and(&self.p_k)
-            .and(&self.k_vec.0)
-            .and(&self.kappa)
-            .for_each(|grad, &rho_k, &k, &kap| {
-                *grad = i_img * k * kap * rho_k;
-            });
-        Zip::from(&mut self.grad_y_k)
-            .and(&self.p_k)
-            .and(&self.k_vec.1)
-            .and(&self.kappa)
-            .for_each(|grad, &rho_k, &k, &kap| {
-                *grad = i_img * k * kap * rho_k;
-            });
-        Zip::from(&mut self.grad_z_k)
-            .and(&self.p_k)
-            .and(&self.k_vec.2)
-            .and(&self.kappa)
-            .for_each(|grad, &rho_k, &k, &kap| {
-                *grad = i_img * k * kap * rho_k;
-            });
+        let (nx, ny, nz) = self.p_k.dim();
+        // Use positive shift for rho0 gradient (same as pressure gradient direction)
+        for i in 0..nx {
+            let shift_x = self.ddx_k_shift_pos[i];
+            for j in 0..ny {
+                let shift_y = self.ddy_k_shift_pos[j];
+                for k in 0..nz {
+                    let shift_z = self.ddz_k_shift_pos[k];
+                    let kap = Complex64::new(self.kappa[[i, j, k]], 0.0);
+                    let rho_k = self.p_k[[i, j, k]];
+                    let e_kappa = kap * rho_k;
+                    self.grad_x_k[[i, j, k]] = shift_x * e_kappa;
+                    self.grad_y_k[[i, j, k]] = shift_y * e_kappa;
+                    self.grad_z_k[[i, j, k]] = shift_z * e_kappa;
+                }
+            }
+        }
         self.fft
             .inverse_into(&self.grad_x_k, &mut self.grad_rho0_x, &mut self.ux_k);
         self.fft

@@ -152,6 +152,27 @@ pub struct MeasurementAccuracy {
     pub angle_error_degrees: f64,
 }
 
+/// Doppler validation thresholds (configurable defaults)
+#[derive(Debug, Clone)]
+pub struct DopplerValidationThresholds {
+    /// Minimum detectable velocity (cm/s)
+    pub min_sensitivity_cm_s: f64,
+    /// Maximum velocity error (%)
+    pub max_velocity_error_percent: f64,
+    /// Maximum angle error (degrees)
+    pub max_angle_error_degrees: f64,
+}
+
+impl Default for DopplerValidationThresholds {
+    fn default() -> Self {
+        Self {
+            min_sensitivity_cm_s: 5.0,
+            max_velocity_error_percent: 10.0,
+            max_angle_error_degrees: 5.0,
+        }
+    }
+}
+
 /// Clinical validation framework
 #[allow(missing_debug_implementations)]
 pub struct ClinicalValidator {
@@ -344,6 +365,25 @@ impl ClinicalValidator {
         sensitivity: f64,
         safety_indices: &SafetyIndices,
     ) -> KwaversResult<ClinicalValidationResult> {
+        let thresholds = DopplerValidationThresholds::default();
+        self.validate_doppler_with_thresholds(
+            velocity_accuracy,
+            angle_accuracy,
+            sensitivity,
+            safety_indices,
+            &thresholds,
+        )
+    }
+
+    /// Validate Doppler imaging performance with configurable thresholds
+    pub fn validate_doppler_with_thresholds(
+        &self,
+        velocity_accuracy: f64,
+        angle_accuracy: f64,
+        sensitivity: f64,
+        safety_indices: &SafetyIndices,
+        thresholds: &DopplerValidationThresholds,
+    ) -> KwaversResult<ClinicalValidationResult> {
         let mut metrics = HashMap::new();
         let mut issues = Vec::new();
         let mut recommendations = Vec::new();
@@ -356,7 +396,7 @@ impl ClinicalValidator {
             safety_indices.mechanical_index,
         );
 
-        // AIUM Doppler requirements (placeholder - would need actual standards)
+        // Doppler requirements are configurable; defaults are conservative placeholders.
         // TODO_AUDIT: P2 - Clinical Standards Compliance - Implement full AIUM, IEC, and FDA ultrasound standards validation
         // DEPENDS ON: analysis/validation/clinical/aium_standards.rs, analysis/validation/clinical/iec_standards.rs
         // MISSING: AIUM Acoustic Output Measurement Standard (Ophthalmic and Fetal)
@@ -364,9 +404,9 @@ impl ClinicalValidator {
         // MISSING: FDA 510(k) Pre-market Notification requirements for acoustic output
         // MISSING: WHO Manual for Diagnostic Ultrasound - Safety and Quality Assurance
         // MISSING: AIUM Contrast-Enhanced Ultrasound accreditation standards
-        let min_sensitivity = 5.0; // cm/s minimum detectable velocity
-        let max_velocity_error = 10.0; // % maximum velocity error
-        let max_angle_error = 5.0; // degrees maximum angle error
+        let min_sensitivity = thresholds.min_sensitivity_cm_s;
+        let max_velocity_error = thresholds.max_velocity_error_percent;
+        let max_angle_error = thresholds.max_angle_error_degrees;
 
         let mut passed = true;
 
@@ -807,5 +847,51 @@ mod tests {
         assert!(!result.regulatory_compliant);
         assert!(!result.issues.is_empty());
         assert!(!result.recommendations.is_empty());
+    }
+
+    #[test]
+    fn test_doppler_validation_pass() {
+        let validator = ClinicalValidator::new();
+        let safety = SafetyIndices {
+            mechanical_index: 1.2,
+            thermal_index_bone: 0.5,
+            thermal_index_soft: 2.0,
+            thermal_index_cranial: 0.3,
+            spta_intensity: 400.0,
+            sppa_intensity: 100.0,
+        };
+
+        let result = validator
+            .validate_doppler(6.0, 3.0, 6.5, &safety)
+            .unwrap();
+
+        assert!(result.passed);
+        assert!(result.clinical_score > 50.0);
+    }
+
+    #[test]
+    fn test_doppler_validation_custom_thresholds() {
+        let validator = ClinicalValidator::new();
+        let safety = SafetyIndices {
+            mechanical_index: 1.2,
+            thermal_index_bone: 0.5,
+            thermal_index_soft: 2.0,
+            thermal_index_cranial: 0.3,
+            spta_intensity: 400.0,
+            sppa_intensity: 100.0,
+        };
+
+        let thresholds = DopplerValidationThresholds {
+            min_sensitivity_cm_s: 10.0,
+            max_velocity_error_percent: 5.0,
+            max_angle_error_degrees: 2.0,
+        };
+
+        let result = validator
+            .validate_doppler_with_thresholds(6.0, 3.0, 6.5, &safety, &thresholds)
+            .unwrap();
+
+        assert!(!result.passed);
+        assert!(!result.issues.is_empty());
     }
 }

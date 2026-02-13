@@ -298,9 +298,9 @@ python examples/compare_plane_wave.py
 ```
 
 Validates plane wave propagation against k-Wave with error metrics:
-- L2 error < 0.01 (target)
-- L∞ error < 0.05 (target)
-- Phase error < 0.1 rad (target)
+- FDTD parity: L2 < 1.50, L∞ < 2.00, correlation > 0.40
+- PSTD parity (stricter): L2 < 0.90, L∞ < 1.20, correlation > 0.65
+- Hybrid parity: L2 < 1.20, L∞ < 1.60, correlation > 0.50
 
 ### 2. Point Source Radiation
 

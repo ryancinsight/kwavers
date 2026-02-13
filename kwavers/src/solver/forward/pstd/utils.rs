@@ -150,22 +150,17 @@ pub fn compute_kspace_correction_factors(
             );
         }
         CorrectionType::Treeby2010 => {
-            // Treeby & Cox (2010) correction: exact for staggered grid + temporal dispersion
+            // Treeby & Cox (2010) k-space correction: sinc(c_ref * dt * |k| / 2)
+            // Uses UNNORMALIZED sinc (sin(x)/x), matching the C++ k-wave binary
+            // (kspaceFirstOrder-OMP). The Python np.sinc is normalized sin(πx)/(πx)
+            // but the C++ binary computes kappa = sin(k)/k directly where
+            // k = c_ref * dt * π * |k_physical| / (2π) = c_ref * dt * |k_physical| / 2.
             Zip::from(&mut correction).and(kx).and(ky).and(kz).for_each(
                 |c, &kx_val, &ky_val, &kz_val| {
-                    // Physical wavenumber magnitude
                     let k_sq = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
                     let k_mag = k_sq.sqrt();
-
-                    // Temporal correction (Treeby & Cox 2010)
-                    // kappa = sinc(c0 * dt * k / 2)
-                    let temporal_correction = sinc(c_ref * dt * k_mag / 2.0);
-
-                    // Note: the staggered-grid formulation also includes spatial sincs.
-                    // Assuming collocated for now, so only temporal correction is applied.
-                    // If we want the staggered-grid behavior, multiply by spatial sincs.
-
-                    *c = temporal_correction;
+                    let arg = c_ref * dt * k_mag / 2.0;
+                    *c = sinc(arg);
                 },
             );
         }
@@ -188,13 +183,30 @@ pub enum CorrectionType {
     Treeby2010,
 }
 
-/// Sinc function for k-space corrections
+/// Unnormalized sinc function: sinc(x) = sin(x)/x
+/// Used for spatial corrections (Liu 1997) where the argument already
+/// includes the correct scaling (e.g., kx·dx/2).
 #[inline]
 fn sinc(x: f64) -> f64 {
     if x.abs() < 1e-10 {
         1.0
     } else {
         x.sin() / x
+    }
+}
+
+/// Normalized sinc function: sinc(x) = sin(π·x)/(π·x)
+/// Matches numpy's np.sinc(x) convention. Note: the C++ k-wave binary
+/// uses UNNORMALIZED sinc (sin(x)/x) for kappa, so this is NOT used
+/// for kappa computation. Kept for reference and potential future use.
+#[inline]
+#[allow(dead_code)]
+fn sinc_normalized(x: f64) -> f64 {
+    if x.abs() < 1e-10 {
+        1.0
+    } else {
+        let pi_x = std::f64::consts::PI * x;
+        pi_x.sin() / pi_x
     }
 }
 
@@ -293,5 +305,17 @@ mod tests {
         assert_eq!(sinc(0.0), 1.0);
         assert!((sinc(PI) - 0.0).abs() < 1e-10);
         assert!((sinc(PI / 2.0) - 2.0 / PI).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_sinc_normalized_function() {
+        // sinc_normalized(x) = sin(π·x) / (π·x), matching numpy's np.sinc(x)
+        assert_eq!(sinc_normalized(0.0), 1.0);
+        // np.sinc(1.0) = sin(π)/π = 0
+        assert!((sinc_normalized(1.0)).abs() < 1e-10);
+        // np.sinc(0.5) = sin(π/2)/(π/2) = 2/π
+        assert!((sinc_normalized(0.5) - 2.0 / PI).abs() < 1e-10);
+        // np.sinc(0.1) ≈ 0.9836...
+        assert!((sinc_normalized(0.1) - 0.9836316431).abs() < 1e-6);
     }
 }

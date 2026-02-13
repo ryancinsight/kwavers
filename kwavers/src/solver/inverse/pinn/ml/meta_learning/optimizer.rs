@@ -22,8 +22,10 @@
 //! # Optimization Algorithms
 //!
 //! Current implementation supports:
-//! - **SGD**: Simple gradient descent with optional momentum
-//! - **Adam** (planned): Adaptive learning rates with moment estimation
+//! - **SGD**: Simple gradient descent
+//! - **Momentum**: SGD with first-moment accumulation
+//! - **Adam**: Adaptive learning rates with moment estimation
+//! - **RMSProp**: Adaptive learning rates with running second moment
 //!
 //! # Literature References
 //!
@@ -61,8 +63,8 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 ///
 /// # Optimization Strategy
 ///
-/// The meta-optimizer uses a simplified SGD update rule:
-/// TODO_AUDIT: P2 - Advanced Meta-Optimizers - Implement Adam, RMSProp, and second-order methods for meta-training
+/// The meta-optimizer uses configurable SGD, momentum, Adam, or RMSProp updates:
+/// TODO_AUDIT: P2 - Advanced Meta-Optimizers - Implement second-order methods for meta-training
 /// DEPENDS ON: solver/inverse/pinn/ml/optimizer/adam_meta.rs, math/optimization/quasi_newton.rs
 /// MISSING: Adaptive moment estimation for meta-parameters
 /// MISSING: BFGS quasi-Newton method for meta-optimization
@@ -78,7 +80,7 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 /// θ ← θ - α*v
 /// ```
 ///
-/// # Adam Support (Planned)
+/// # Adam Support
 ///
 /// Adam optimizer with adaptive learning rates:
 /// ```text
@@ -92,6 +94,9 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 pub struct MetaOptimizer<B: AutodiffBackend> {
     /// Outer-loop learning rate
     lr: f64,
+
+    /// Optimizer mode
+    mode: MetaOptimizerMode,
 
     /// Momentum parameter (0.0 = no momentum, 0.9 = typical)
     _momentum: Option<f64>,
@@ -109,10 +114,18 @@ pub struct MetaOptimizer<B: AutodiffBackend> {
     _iteration_count: usize,
 
     /// First moment estimates (for Adam/momentum)
-    _m: Vec<Option<Tensor<B, 1>>>,
+    _m: Vec<Option<Tensor<B, 2>>>,
 
-    /// Second moment estimates (for Adam)
-    _v: Vec<Option<Tensor<B, 1>>>,
+    /// Second moment estimates (for Adam/RMSProp)
+    _v: Vec<Option<Tensor<B, 2>>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MetaOptimizerMode {
+    Sgd,
+    Momentum,
+    Adam,
+    RmsProp,
 }
 
 impl<B: AutodiffBackend> MetaOptimizer<B> {
@@ -133,7 +146,8 @@ impl<B: AutodiffBackend> MetaOptimizer<B> {
 
         Self {
             lr,
-            _momentum: Some(0.9),
+            mode: MetaOptimizerMode::Sgd,
+            _momentum: None,
             _beta1: 0.9,
             _beta2: 0.999,
             _epsilon: 1e-8,
@@ -153,6 +167,7 @@ impl<B: AutodiffBackend> MetaOptimizer<B> {
 
         let mut optimizer = Self::new(lr, num_params);
         optimizer._momentum = Some(momentum);
+        optimizer.mode = MetaOptimizerMode::Momentum;
         optimizer
     }
 
@@ -174,6 +189,23 @@ impl<B: AutodiffBackend> MetaOptimizer<B> {
         optimizer._beta1 = beta1;
         optimizer._beta2 = beta2;
         optimizer._epsilon = epsilon;
+        optimizer.mode = MetaOptimizerMode::Adam;
+        optimizer
+    }
+
+    /// Create meta-optimizer with RMSProp hyperparameters
+    pub fn with_rmsprop(lr: f64, num_params: usize, decay: f64, epsilon: f64) -> Self {
+        assert!(
+            decay > 0.0 && decay < 1.0,
+            "Decay must be in (0, 1), got {}",
+            decay
+        );
+        assert!(epsilon > 0.0, "Epsilon must be positive, got {}", epsilon);
+
+        let mut optimizer = Self::new(lr, num_params);
+        optimizer._beta2 = decay;
+        optimizer._epsilon = epsilon;
+        optimizer.mode = MetaOptimizerMode::RmsProp;
         optimizer
     }
 
@@ -195,11 +227,81 @@ impl<B: AutodiffBackend> MetaOptimizer<B> {
     pub fn step(&mut self, params: &mut [Tensor<B, 2>], gradients: &[Option<Tensor<B, 2>>]) {
         self._iteration_count += 1;
 
-        for (param, grad) in params.iter_mut().zip(gradients.iter()) {
+        if self._m.len() != params.len() {
+            self._m = vec![None; params.len()];
+        }
+        if self._v.len() != params.len() {
+            self._v = vec![None; params.len()];
+        }
+
+        let beta1 = self._beta1 as f32;
+        let beta2 = self._beta2 as f32;
+        let eps = self._epsilon as f32;
+        let beta1_pow = (1.0 - self._beta1.powi(self._iteration_count as i32)) as f32;
+        let beta2_pow = (1.0 - self._beta2.powi(self._iteration_count as i32)) as f32;
+
+        for (idx, (param, grad)) in params.iter_mut().zip(gradients.iter()).enumerate() {
             if let Some(g) = grad {
-                // Simplified SGD update for now
-                // Future: implement momentum and Adam
-                *param = param.clone().sub(g.clone().mul_scalar(self.lr as f32));
+                match self.mode {
+                    MetaOptimizerMode::Sgd => {
+                        *param = param.clone().sub(g.clone().mul_scalar(self.lr as f32));
+                    }
+                    MetaOptimizerMode::Momentum => {
+                        let momentum = self._momentum.unwrap_or(0.0) as f32;
+                        let prev = self._m[idx].take();
+                        let m = if let Some(m_prev) = prev {
+                            m_prev.mul_scalar(momentum).add(g.clone())
+                        } else {
+                            g.clone()
+                        };
+                        *param = param.clone().sub(m.clone().mul_scalar(self.lr as f32));
+                        self._m[idx] = Some(m);
+                    }
+                    MetaOptimizerMode::Adam => {
+                        let prev_m = self._m[idx].take();
+                        let prev_v = self._v[idx].take();
+
+                        let m = if let Some(m_prev) = prev_m {
+                            m_prev.mul_scalar(beta1).add(g.clone().mul_scalar(1.0 - beta1))
+                        } else {
+                            g.clone().mul_scalar(1.0 - beta1)
+                        };
+
+                        let g2 = g.clone().powf_scalar(2.0);
+                        let v = if let Some(v_prev) = prev_v {
+                            v_prev.mul_scalar(beta2).add(g2.mul_scalar(1.0 - beta2))
+                        } else {
+                            g2.mul_scalar(1.0 - beta2)
+                        };
+
+                        let m_hat = m.clone().div_scalar(beta1_pow);
+                        let v_hat = v.clone().div_scalar(beta2_pow);
+                        let denom = v_hat.sqrt().add_scalar(eps);
+
+                        *param = param
+                            .clone()
+                            .sub((m_hat / denom).mul_scalar(self.lr as f32));
+
+                        self._m[idx] = Some(m);
+                        self._v[idx] = Some(v);
+                    }
+                    MetaOptimizerMode::RmsProp => {
+                        let prev_v = self._v[idx].take();
+                        let g2 = g.clone().powf_scalar(2.0);
+                        let v = if let Some(v_prev) = prev_v {
+                            v_prev.mul_scalar(beta2).add(g2.mul_scalar(1.0 - beta2))
+                        } else {
+                            g2.mul_scalar(1.0 - beta2)
+                        };
+
+                        let denom = v.sqrt().add_scalar(eps);
+                        *param = param
+                            .clone()
+                            .sub((g.clone() / denom).mul_scalar(self.lr as f32));
+
+                        self._v[idx] = Some(v);
+                    }
+                }
             }
         }
     }
@@ -299,6 +401,12 @@ mod tests {
 
     type TestBackend = burn::backend::Autodiff<NdArray<f32>>;
 
+    fn scalar_f32(tensor: &Tensor<TestBackend, 2>) -> f32 {
+        let data = tensor.clone().into_data();
+        let slice = data.as_slice::<f32>().expect("tensor data must be f32");
+        slice[0]
+    }
+
     #[test]
     fn test_meta_optimizer_creation() {
         let optimizer = MetaOptimizer::<TestBackend>::new(0.001, 10);
@@ -390,5 +498,29 @@ mod tests {
         assert!((lr0 - 0.001).abs() < 1e-10);
         assert!(lr_mid > 0.0001 && lr_mid < 0.001);
         assert!((lr_end - 0.0001).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_adam_step_updates_parameters() {
+        let device = Default::default();
+        let mut optimizer = MetaOptimizer::<TestBackend>::with_adam(0.01, 1, 0.9, 0.999, 1e-8);
+
+        let mut params = vec![Tensor::<TestBackend, 2>::zeros([1, 1], &device)];
+        let grads = vec![Some(Tensor::<TestBackend, 2>::ones([1, 1], &device))];
+
+        optimizer.step(&mut params, &grads);
+        assert!(scalar_f32(&params[0]) < 0.0);
+    }
+
+    #[test]
+    fn test_rmsprop_step_updates_parameters() {
+        let device = Default::default();
+        let mut optimizer = MetaOptimizer::<TestBackend>::with_rmsprop(0.01, 1, 0.9, 1e-8);
+
+        let mut params = vec![Tensor::<TestBackend, 2>::zeros([1, 1], &device)];
+        let grads = vec![Some(Tensor::<TestBackend, 2>::ones([1, 1], &device))];
+
+        optimizer.step(&mut params, &grads);
+        assert!(scalar_f32(&params[0]) < 0.0);
     }
 }

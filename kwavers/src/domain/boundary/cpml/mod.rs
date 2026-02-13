@@ -40,11 +40,23 @@ pub struct CPMLBoundary {
     profiles: CPMLProfiles,
     memory: CPMLMemory,
     updater: CPMLUpdater,
+    reference_sound_speed: f64,
+    reference_time_step: Option<f64>,
 }
 
 impl CPMLBoundary {
     /// Create a new CPML boundary
     pub fn new(config: CPMLConfig, grid: &Grid, sound_speed: f64) -> KwaversResult<Self> {
+        Self::new_with_time_step(config, grid, sound_speed, None)
+    }
+
+    /// Create a new CPML boundary with optional explicit solver time step.
+    pub fn new_with_time_step(
+        config: CPMLConfig,
+        grid: &Grid,
+        sound_speed: f64,
+        dt: Option<f64>,
+    ) -> KwaversResult<Self> {
         config.validate()?;
         let profiles = CPMLProfiles::new(&config, grid, sound_speed)?;
         let memory = CPMLMemory::new(&config, grid);
@@ -55,6 +67,8 @@ impl CPMLBoundary {
             profiles,
             memory,
             updater,
+            reference_sound_speed: sound_speed,
+            reference_time_step: dt.filter(|value| value.is_finite() && *value > 0.0),
         })
     }
 
@@ -104,6 +118,24 @@ impl CPMLBoundary {
         self.config
             .theoretical_reflection(angle.cos(), dx, sound_speed)
     }
+
+    fn estimate_dt_from_grid(&self, grid: &Grid) -> f64 {
+        if let Some(dt) = self.reference_time_step {
+            return dt;
+        }
+        let dx_min = grid.dx.min(grid.dy).min(grid.dz);
+        let c_ref = self.reference_sound_speed.max(f64::EPSILON);
+        0.3 * dx_min / c_ref
+    }
+
+    fn estimate_dt_from_spacing(&self, spacing: &[f64]) -> f64 {
+        if let Some(dt) = self.reference_time_step {
+            return dt;
+        }
+        let dx_min = spacing.iter().copied().fold(f64::INFINITY, f64::min);
+        let c_ref = self.reference_sound_speed.max(f64::EPSILON);
+        0.3 * dx_min / c_ref
+    }
 }
 
 // Note: Efficient Clone implementation provided to share profile data
@@ -131,11 +163,17 @@ impl Clone for CPMLBoundary {
             profiles,
             memory,
             updater,
+            reference_sound_speed: self.reference_sound_speed,
+            reference_time_step: self.reference_time_step,
         }
     }
 }
 
 impl Boundary for CPMLBoundary {
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn apply_acoustic(
         &mut self,
         mut field: ArrayViewMut3<f64>,
@@ -145,7 +183,7 @@ impl Boundary for CPMLBoundary {
         // For solvers that don't support full convolutional PML (like k-space),
         // we apply CPML as a damping layer using its sigma profiles.
         // This provides compatibility with the Boundary trait.
-        let dx = grid.dx;
+        let dt = self.estimate_dt_from_grid(grid);
 
         Zip::indexed(&mut field).for_each(|(i, j, k), val| {
             let s_x = self.profiles.sigma_x[i];
@@ -154,7 +192,7 @@ impl Boundary for CPMLBoundary {
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {
-                *val *= (-sigma_total * dx).exp();
+                *val *= (-sigma_total * dt).exp();
             }
         });
 
@@ -167,7 +205,7 @@ impl Boundary for CPMLBoundary {
         grid: &Grid,
         _time_step: usize,
     ) -> KwaversResult<()> {
-        let dx = grid.dx;
+        let dt = self.estimate_dt_from_grid(grid);
 
         Zip::indexed(field).for_each(|(i, j, k), val| {
             let s_x = self.profiles.sigma_x[i];
@@ -176,7 +214,7 @@ impl Boundary for CPMLBoundary {
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {
-                let decay = (-sigma_total * dx).exp();
+                let decay = (-sigma_total * dt).exp();
                 val.re *= decay;
                 val.im *= decay;
             }
@@ -205,11 +243,14 @@ impl BoundaryCondition for CPMLBoundary {
         field: ArrayViewMut3<f64>,
         grid: &dyn GridTopology,
         _time_step: usize,
-        _dt: f64,
+        dt: f64,
     ) -> KwaversResult<()> {
-        // For topology-based interface, we need to get spacing
         let spacing = grid.spacing();
-        let dx = spacing[0];
+        let dt = if dt > 0.0 {
+            dt
+        } else {
+            self.estimate_dt_from_spacing(&spacing)
+        };
 
         // Apply damping using sigma profiles
         Zip::indexed(field).for_each(|(i, j, k), val| {
@@ -219,7 +260,7 @@ impl BoundaryCondition for CPMLBoundary {
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {
-                *val *= (-sigma_total * dx).exp();
+                *val *= (-sigma_total * dt).exp();
             }
         });
 
@@ -231,10 +272,14 @@ impl BoundaryCondition for CPMLBoundary {
         field: &mut Array3<Complex<f64>>,
         grid: &dyn GridTopology,
         _time_step: usize,
-        _dt: f64,
+        dt: f64,
     ) -> KwaversResult<()> {
         let spacing = grid.spacing();
-        let dx = spacing[0];
+        let dt = if dt > 0.0 {
+            dt
+        } else {
+            self.estimate_dt_from_spacing(&spacing)
+        };
 
         Zip::indexed(field).for_each(|(i, j, k), val| {
             let s_x = self.profiles.sigma_x[i];
@@ -243,7 +288,7 @@ impl BoundaryCondition for CPMLBoundary {
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {
-                let decay = (-sigma_total * dx).exp();
+                let decay = (-sigma_total * dt).exp();
                 val.re *= decay;
                 val.im *= decay;
             }

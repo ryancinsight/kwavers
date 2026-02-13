@@ -8,7 +8,23 @@ use crate::math::fft::Complex64;
 use crate::solver::forward::pstd::config::KSpaceMethod;
 use crate::solver::forward::pstd::implementation::k_space::PSTDKSOperators;
 use ndarray::{Array3, Zip};
+use std::env;
 use tracing::trace;
+
+fn pstd_source_time_shift_samples() -> isize {
+    match env::var("KWAVERS_PSTD_SOURCE_TIME_SHIFT") {
+        Ok(value) => value.trim().parse::<isize>().unwrap_or(0),
+        Err(_) => 0,
+    }
+}
+
+fn pstd_source_gain() -> f64 {
+    match env::var("KWAVERS_PSTD_SOURCE_GAIN") {
+        Ok(value) => value.trim().parse::<f64>().unwrap_or(1.0),
+        Err(_) => 1.0,
+    }
+}
+
 
 impl PSTDSolver {
     /// Perform a single time step using k-space pseudospectral method
@@ -20,11 +36,17 @@ impl PSTDSolver {
             return self.step_forward_kspace(dt, time_index);
         }
 
-        // Standard PSTD method (k-Wave style ordering)
-        // 1. Update velocity
+        // Time loop order matching C++ k-wave binary (KSpaceFirstOrderSolver.cpp):
+        //   1. computePressureGradient + computeVelocity  (update_velocity)
+        //   2. addVelocitySource
+        //   3. computeVelocityGradient + computeDensity   (update_density)
+        //   4. addPressureSource
+        //   5. computePressure (including absorption)      (update_pressure)
+
+        // Step 1: Velocity update from pressure gradient
         self.update_velocity(dt)?;
 
-        // 2. Apply velocity sources (both source_handler and dynamic)
+        // Step 2: Velocity source injection
         self.apply_dynamic_velocity_sources(dt);
         if self.source_handler.has_velocity_source() {
             self.source_handler.inject_force_source(
@@ -35,14 +57,15 @@ impl PSTDSolver {
             );
         }
 
-        // 3. Update density
+        // Step 3: Density update from velocity divergence
         self.update_density(dt)?;
 
-        // 4. Apply pressure sources as mass sources (grid + dynamic), with k-space correction
+        // Step 4: Pressure source injection (into split density)
         self.apply_pressure_sources(time_index, dt)?;
 
-        // 5. Update pressure from density
-        self.update_pressure();
+        // Step 5: Pressure computation from density (with absorption)
+        self.update_pressure(dt)?;
+
 
         if self.time_step_index < 5 || self.time_step_index.is_multiple_of(10) {
             let max_p = self.fields.p.iter().fold(0.0f64, |m, &v| m.max(v.abs()));
@@ -72,20 +95,32 @@ impl PSTDSolver {
     fn apply_pressure_sources(&mut self, time_index: usize, dt: f64) -> KwaversResult<()> {
         let p_mode = self.source_handler.pressure_mode();
         let mut has_sources = false;
+        let source_gain = pstd_source_gain();
+        let shifted_time_index = {
+            let shift = pstd_source_time_shift_samples();
+            if shift >= 0 {
+                time_index.saturating_add(shift as usize)
+            } else {
+                time_index.saturating_sub((-shift) as usize)
+            }
+        };
 
         // Reset source term buffer
         self.dpx.fill(0.0);
 
         if self.source_handler.has_pressure_source() {
             self.source_handler
-                .add_pressure_source_into_density(time_index, &mut self.dpx);
+                .add_pressure_source_into_density(shifted_time_index, &mut self.dpx);
+            if source_gain != 1.0 {
+                self.dpx.iter_mut().for_each(|v| *v *= source_gain);
+            }
             has_sources = true;
         }
 
         // Dynamic sources (always additive in PSTD)
         // mass_source_scale = 2·dt / (N·c₀·dx_min) converts Pa → density source rate.
         // N, c₀, dx_min are all constant throughout the simulation.
-        let t = time_index as f64 * dt;
+        let t = shifted_time_index as f64 * dt;
         let mass_source_scale = {
             let dx_min = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
             let n_dim = [self.grid.nx > 1, self.grid.ny > 1, self.grid.nz > 1]
@@ -111,7 +146,7 @@ impl PSTDSolver {
 
                 Zip::from(&mut self.dpx).and(mask).for_each(|p, &m| {
                     if m.abs() > 1e-12 {
-                        *p += m * amp * scale * mass_source_scale;
+                        *p += m * amp * scale * mass_source_scale * source_gain;
                     }
                 });
                 has_sources = true;
@@ -179,17 +214,10 @@ impl PSTDSolver {
         // Reuse dpx as source_term scratch buffer (avoids per-step allocation)
         self.dpx.fill(0.0);
 
-        // Apply source_handler sources
+        // Apply source_handler sources (density-scaled values)
         if self.source_handler.has_pressure_source() {
-            // Reuse dpy as temp_rho scratch buffer
-            self.dpy.fill(0.0);
             self.source_handler
-                .inject_mass_source(time_index, &mut self.dpy, &self.materials.c0);
-
-            Zip::from(&mut self.dpx)
-                .and(&self.dpy)
-                .and(&self.materials.c0)
-                .for_each(|s, &rho, &c| *s = rho * c * c);
+                .add_pressure_source_into_density(time_index, &mut self.dpx);
         }
 
         // Apply dynamic sources (from add_source_arc)

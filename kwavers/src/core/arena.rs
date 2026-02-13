@@ -27,12 +27,12 @@
 //! let mut arena = FieldArena::new();
 //!
 //! // Allocate pressure field
-//! let pressure = arena.alloc_field(nx, ny, nz);
+//! let pressure = unsafe { arena.alloc_field(nx, ny, nz) };
 //!
 //! // Allocate velocity components
-//! let velocity_x = arena.alloc_field(nx, ny, nz);
-//! let velocity_y = arena.alloc_field(nx, ny, nz);
-//! let velocity_z = arena.alloc_field(nx, ny, nz);
+//! let velocity_x = unsafe { arena.alloc_field(nx, ny, nz) };
+//! let velocity_y = unsafe { arena.alloc_field(nx, ny, nz) };
+//! let velocity_z = unsafe { arena.alloc_field(nx, ny, nz) };
 //!
 //! // All fields are contiguous in memory
 //! ```
@@ -58,7 +58,7 @@
 //! // All simulation data is co-located in memory
 //! ```
 
-use ndarray::Array3;
+use ndarray::{Array3, ArrayViewMut3};
 use std::alloc::Layout;
 use std::cell::UnsafeCell;
 
@@ -97,7 +97,7 @@ impl FieldArena {
         }
     }
 
-    /// Allocate a 3D field array
+    /// Allocate a 3D field view backed by the arena buffer
     ///
     /// # Safety
     ///
@@ -142,10 +142,8 @@ impl FieldArena {
     ///
     /// ⚠️ **CRITICAL UNSOUNDNESS**: This implementation is NOT memory-safe. Issues:
     ///
-    /// 1. **Use-after-invalidation**: Returned Array3 does NOT borrow from arena buffer
-    ///    - Array3::from_elem() creates NEW heap allocation
-    ///    - Arena buffer is NEVER used for field storage
-    ///    - Offset tracking is meaningless (no actual arena allocation occurs)
+    /// 1. **Use-after-invalidation**: Returned view is only valid until next alloc/reset
+    ///    - Reset invalidates all existing views
     ///
     /// 2. **Thread safety violation**: Marked "thread-safe" but uses UnsafeCell without synchronization
     ///    - UnsafeCell allows concurrent mutation
@@ -153,8 +151,7 @@ impl FieldArena {
     ///    - Data race on offset if called from multiple threads
     ///
     /// 3. **Lifetime contract unenforceable**: Rust cannot verify lifetime guarantees
-    ///    - Returned Array3 has 'static lifetime (heap-allocated)
-    ///    - Arena reset invalidates nothing (Array3 owns its data)
+    ///    - Returned view must not outlive the arena or be used after reset
     ///
     /// ## CORRECT IMPLEMENTATION WOULD REQUIRE
     ///
@@ -176,8 +173,8 @@ impl FieldArena {
     ///   - Performance: ✅ Excellent bump allocator
     ///   - Features: Reset, scoped allocations
     ///
-    /// Alt 3: **Standard heap allocation** (CURRENT BEHAVIOR)
-    ///   - Safety: ✅ Sound (what's actually happening)
+    /// Alt 3: **Standard heap allocation**
+    ///   - Safety: ✅ Sound
     ///   - Performance: ❌ No arena benefits
     ///   - Simplicity: ✅ Just use `Array3::from_elem()` directly
     ///
@@ -201,14 +198,15 @@ impl FieldArena {
     ///
     /// ## RECOMMENDATION
     ///
-    /// **DO NOT USE THIS FUNCTION** until fixed. Use `Array3::from_elem()` directly.
-    ///
-    /// **TODO**: File issue to either:
-    ///   1. Fix implementation to be a real arena, or
-    ///   2. Remove this and use typed-arena/bumpalo, or
-    ///   3. Remove arena abstraction entirely
+    /// **WARNING**: This API is unsafe and requires strict lifetime discipline.
+    /// Prefer typed arena crates for production use.
     #[allow(unsafe_code)]
-    pub unsafe fn alloc_field<T>(&self, nx: usize, ny: usize, nz: usize) -> Option<Array3<T>>
+    pub unsafe fn alloc_field<T>(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+    ) -> Option<ArrayViewMut3<'_, T>>
     where
         T: Clone + Default,
     {
@@ -221,20 +219,34 @@ impl FieldArena {
         let element_size = std::mem::size_of::<T>();
         let total_elements = nx * ny * nz;
         let total_bytes = total_elements * element_size;
+        let alignment = std::mem::align_of::<T>();
+
+        let align_padding = if alignment == 0 {
+            0
+        } else {
+            (alignment - (current_offset % alignment)) % alignment
+        };
+        let aligned_offset = current_offset + align_padding;
 
         // Check if we have enough space
-        if current_offset + total_bytes > self.capacity {
+        if aligned_offset + total_bytes > self.capacity {
             return None; // Out of memory
         }
 
         // SAFETY: UnsafeCell mutable dereference
         //
         // Update offset (NOTE: This is meaningless since buffer is never used)
-        *self.offset.get() = current_offset + total_bytes;
+        *self.offset.get() = aligned_offset + total_bytes;
 
-        // BUG: This allocates on the heap, NOT from the arena buffer!
-        // The entire arena mechanism is defeated here.
-        Some(Array3::from_elem((nx, ny, nz), T::default()))
+        let base_ptr = (*self.buffer.get()).as_mut_ptr();
+        let typed_ptr = base_ptr.add(aligned_offset) as *mut T;
+        let slice = std::slice::from_raw_parts_mut(typed_ptr, total_elements);
+
+        for item in slice.iter_mut() {
+            *item = T::default();
+        }
+
+        ArrayViewMut3::from_shape((nx, ny, nz), slice).ok()
     }
 
     /// Reset the arena for reuse

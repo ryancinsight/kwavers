@@ -249,13 +249,8 @@ impl PSTDSolver {
                 *rz += delta;
             });
 
-        // Update pressure field p = c^2 * rho for consistency
-        Zip::from(&self.div_u)
-            .and(&self.materials.c0)
-            .and(&mut self.fields.p)
-            .for_each(|&rho, &c0, p| {
-                *p = c0 * c0 * rho;
-            });
+        // Note: Pressure field p = c^2 * rho is computed by update_pressure()
+        // after absorption is applied, matching C++ k-wave binary ordering.
 
         Ok(())
     }

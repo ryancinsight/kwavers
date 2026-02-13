@@ -61,6 +61,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayViewMut3};
+use std::any::Any;
 use std::fmt::Debug;
 
 pub mod bem;
@@ -101,6 +102,9 @@ pub use types::BoundaryType as CanonicalBoundaryType;
 /// Kwavers supports optics in addition to acoustics. The runtime boundary trait
 /// therefore includes `apply_light(...)` for fluence/fluence-rate boundary handling.
 pub trait Boundary: Debug + Send + Sync {
+    /// Downcast support for boundary-specific logic in solver internals.
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+
     /// Applies boundary conditions to the acoustic field in spatial domain.
     fn apply_acoustic(
         &mut self,

@@ -49,6 +49,29 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 from numpy.typing import NDArray
 
+
+def _array_fingerprint(array: NDArray) -> Dict[str, Union[str, List[int]]]:
+    """Create a deterministic fingerprint for numpy arrays used in cache keys."""
+    contiguous = np.ascontiguousarray(array)
+    return {
+        "sha256": hashlib.sha256(contiguous.tobytes()).hexdigest(),
+        "shape": list(contiguous.shape),
+        "dtype": str(contiguous.dtype),
+    }
+
+
+def _normalize_for_cache(value):
+    """Convert objects into deterministic JSON-serializable primitives."""
+    if isinstance(value, np.ndarray):
+        return _array_fingerprint(value)
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, (list, tuple)):
+        return [_normalize_for_cache(v) for v in value]
+    if isinstance(value, dict):
+        return {str(k): _normalize_for_cache(v) for k, v in sorted(value.items(), key=lambda i: str(i[0]))}
+    return value
+
 # k-wave-python imports (graceful degradation if not installed)
 try:
     from kwave.kgrid import kWaveGrid
@@ -541,8 +564,11 @@ class KWavePythonBridge:
             dt = grid.dt
 
         # Check cache
+        cache_key: Optional[str] = None
         if self.enable_cache and use_cache:
-            cache_key = self._compute_cache_key(grid, medium, source, sensor, nt)
+            cache_key = self._compute_cache_key(
+                grid, medium, source, sensor, nt, simulation_options
+            )
             cached_result = self._load_from_cache(cache_key)
             if cached_result is not None:
                 print(f"Loaded k-Wave result from cache: {cache_key}")
@@ -598,7 +624,7 @@ class KWavePythonBridge:
             )
 
             # Cache results
-            if self.enable_cache:
+            if self.enable_cache and use_cache and cache_key is not None:
                 self._save_to_cache(cache_key, result)
 
             print(f"k-Wave simulation complete in {execution_time:.3f}s")
@@ -780,6 +806,7 @@ class KWavePythonBridge:
         source: SourceParams,
         sensor: SensorParams,
         nt: int,
+        simulation_options: Optional[Dict] = None,
     ) -> str:
         """
         Compute unique cache key from simulation configuration.
@@ -806,32 +833,32 @@ class KWavePythonBridge:
                 "dt": grid.dt,
                 "pml_size": grid.pml_size,
                 "pml_alpha": grid.pml_alpha,
+                "pml_inside": grid.pml_inside,
             },
             "medium": {
-                "sound_speed": float(medium.sound_speed)
-                if isinstance(medium.sound_speed, (int, float))
-                else hashlib.sha256(medium.sound_speed.tobytes()).hexdigest(),
-                "density": float(medium.density)
-                if isinstance(medium.density, (int, float))
-                else hashlib.sha256(medium.density.tobytes()).hexdigest(),
+                "sound_speed": _normalize_for_cache(medium.sound_speed),
+                "density": _normalize_for_cache(medium.density),
                 "alpha_coeff": medium.alpha_coeff,
                 "alpha_power": medium.alpha_power,
                 "BonA": medium.BonA,
             },
             "source": {
-                "p_mask_hash": hashlib.sha256(source.p_mask.tobytes()).hexdigest()
-                if source.p_mask is not None
-                else None,
-                "p_hash": hashlib.sha256(source.p.tobytes()).hexdigest()
-                if source.p is not None
-                else None,
+                "p_mask": _normalize_for_cache(source.p_mask),
+                "p": _normalize_for_cache(source.p),
+                "u_mask": _normalize_for_cache(source.u_mask),
+                "u": _normalize_for_cache(source.u),
+                "p0": _normalize_for_cache(source.p0),
                 "frequency": source.frequency,
+                "amplitude": source.amplitude,
             },
             "sensor": {
-                "mask_hash": hashlib.sha256(sensor.mask.tobytes()).hexdigest(),
+                "mask": _normalize_for_cache(sensor.mask),
                 "num_sensors": sensor.num_sensors,
+                "record": sorted(sensor.record),
+                "record_start_index": sensor.record_start_index,
             },
             "nt": nt,
+            "simulation_options": _normalize_for_cache(simulation_options or {}),
         }
 
         config_str = json.dumps(config, sort_keys=True)

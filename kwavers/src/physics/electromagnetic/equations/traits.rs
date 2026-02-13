@@ -123,14 +123,56 @@ pub trait PlasmonicEnhancement: ElectromagneticWaveEquation {
         _position: &[f64],
         nanoparticle_geometry: &NanoparticleGeometry,
     ) -> f64 {
-        // This would implement the full Mie theory or quasistatic approximation
-        // For now, return a placeholder enhancement factor
-        match nanoparticle_geometry {
-            NanoparticleGeometry::Sphere { radius } => {
-                // Simplified quasistatic enhancement for sphere
-                3.0 * (2.0 * radius / (2.0 * radius + 1.0)) // Rough approximation
+        // Quasistatic enhancement with simple dielectric contrast and shape factors.
+        // NOTE: This is a geometry-only approximation without wavelength dependence.
+        let eps_medium = 1.77; // Water at optical frequencies (approximate)
+        let eps_particle = -2.0; // Gold dielectric constant (approximate in visible)
+
+        let enhancement_for_l = |l: f64| -> f64 {
+            let denom = eps_particle + l * (eps_medium - eps_particle) + (1.0 - l) * eps_medium;
+            if denom.abs() > 0.0 {
+                (eps_medium / denom).abs()
+            } else {
+                1.0
             }
-            _ => 1.0, // No enhancement
+        };
+
+        let enhancement_sphere = || {
+            let denom = eps_particle + 2.0 * eps_medium;
+            if denom.abs() > 0.0 {
+                (3.0 * eps_medium / denom).abs()
+            } else {
+                1.0
+            }
+        };
+
+        match nanoparticle_geometry {
+            NanoparticleGeometry::Sphere { .. } => enhancement_sphere(),
+            NanoparticleGeometry::Ellipsoid { a, b, c } => {
+                let (lx, ly, lz) = ellipsoid_depolarization_factors(*a, *b, *c);
+                enhancement_for_l(lx)
+                    .max(enhancement_for_l(ly))
+                    .max(enhancement_for_l(lz))
+            }
+            NanoparticleGeometry::Nanorod { radius, length } => {
+                let a = *radius;
+                let c = 0.5 * length.max(2.0 * *radius);
+                let (lx, ly, lz) = ellipsoid_depolarization_factors(a, a, c);
+                enhancement_for_l(lx)
+                    .max(enhancement_for_l(ly))
+                    .max(enhancement_for_l(lz))
+            }
+            NanoparticleGeometry::Nanoshell {
+                core_radius,
+                shell_thickness,
+            } => {
+                let shell_ratio = if *core_radius > 0.0 {
+                    shell_thickness / core_radius
+                } else {
+                    0.0
+                };
+                enhancement_sphere() * (1.0 + shell_ratio)
+            }
         }
     }
 
@@ -204,6 +246,42 @@ pub trait EMSource: Send + Sync {
 
     /// Get source directivity pattern (radiation pattern)
     fn directivity(&self, direction: &[f64]) -> f64;
+}
+
+fn ellipsoid_depolarization_factors(a: f64, b: f64, c: f64) -> (f64, f64, f64) {
+    let r = 0.5 * (a + b);
+    if r <= 0.0 || c <= 0.0 {
+        return (1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0);
+    }
+
+    if (c - r).abs() <= f64::EPSILON {
+        return (1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0);
+    }
+
+    if c > r {
+        // Prolate spheroid
+        let e = (1.0 - (r * r) / (c * c)).sqrt();
+        let denom = 2.0 * e * e * e;
+        let lz = if denom > 0.0 {
+            let term = ((1.0 + e) / (1.0 - e)).ln() - 2.0 * e;
+            (1.0 - e * e) / denom * term
+        } else {
+            1.0 / 3.0
+        };
+        let lx = 0.5 * (1.0 - lz);
+        (lx, lx, lz)
+    } else {
+        // Oblate spheroid
+        let e = (1.0 - (c * c) / (r * r)).sqrt();
+        let denom = e * e * e;
+        let lz = if denom > 0.0 {
+            (1.0 + e * e) / denom * (e - e.atan())
+        } else {
+            1.0 / 3.0
+        };
+        let lx = 0.5 * (1.0 - lz);
+        (lx, lx, lz)
+    }
 }
 
 #[cfg(test)]

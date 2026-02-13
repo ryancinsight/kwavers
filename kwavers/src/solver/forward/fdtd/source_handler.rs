@@ -10,7 +10,11 @@ pub struct SourceHandler {
     u_indices: Vec<(usize, usize, usize, f64)>,
     p_scale_rho: Vec<f64>,
     p_scale_p: Vec<f64>,
-    pressure_is_boundary_plane: bool,
+    /// Effective propagation dimensionality for the FDTD pressure source.
+    /// A plane wave (filling 2D, propagating in 1D) has source_propagation_dim = 1.
+    /// A line source (filling 1D, propagating in 2D) has source_propagation_dim = 2.
+    /// A point source (0D, propagating in 3D) has source_propagation_dim = 3.
+    source_propagation_dim: f64,
 }
 
 impl SourceHandler {
@@ -36,7 +40,7 @@ impl SourceHandler {
         }
 
         let mut p_indices = Vec::new();
-        let mut pressure_is_boundary_plane = false;
+        let mut source_propagation_dim = 0.0;
         if let Some(mask) = &source.p_mask {
             if mask.dim() != shape {
                 return Err(KwaversError::Validation(
@@ -56,45 +60,61 @@ impl SourceHandler {
             }
 
             if !p_indices.is_empty() {
+                // Compute effective propagation dimensionality.
+                //
+                // For k-Wave compatibility in FDTD direct-pressure schemes:
+                // k-Wave's split-density adds source to N density components and
+                // the wave equation propagates each dimension independently. In
+                // FDTD with a single pressure field, the divergence operator handles
+                // all dimensions at once. The correct source scaling depends on the
+                // source geometry:
+                //
+                // - Plane source (fills 2D, e.g. all x,y at one z): propagates in
+                //   1D -> source_propagation_dim = 1
+                // - Line source (fills 1D): propagates in 2D -> source_propagation_dim = 2
+                // - Point source (0D): propagates in 3D -> source_propagation_dim = 3
+                //
+                // We detect the source dimensionality by checking how many unique
+                // coordinate indices the source occupies in each axis.
                 let (nx, ny, nz) = shape;
-                let x0_count = mask
-                    .slice(ndarray::s![0, .., ..])
-                    .iter()
-                    .filter(|&&v| v != 0.0)
-                    .count();
-                let xn_count = mask
-                    .slice(ndarray::s![nx - 1, .., ..])
-                    .iter()
-                    .filter(|&&v| v != 0.0)
-                    .count();
-                let y0_count = mask
-                    .slice(ndarray::s![.., 0, ..])
-                    .iter()
-                    .filter(|&&v| v != 0.0)
-                    .count();
-                let yn_count = mask
-                    .slice(ndarray::s![.., ny - 1, ..])
-                    .iter()
-                    .filter(|&&v| v != 0.0)
-                    .count();
-                let z0_count = mask
-                    .slice(ndarray::s![.., .., 0])
-                    .iter()
-                    .filter(|&&v| v != 0.0)
-                    .count();
-                let zn_count = mask
-                    .slice(ndarray::s![.., .., nz - 1])
-                    .iter()
-                    .filter(|&&v| v != 0.0)
-                    .count();
 
-                let num_sources = p_indices.len();
-                pressure_is_boundary_plane = x0_count == num_sources
-                    || xn_count == num_sources
-                    || y0_count == num_sources
-                    || yn_count == num_sources
-                    || z0_count == num_sources
-                    || zn_count == num_sources;
+                // Count unique indices per axis
+                let mut x_set = std::collections::HashSet::new();
+                let mut y_set = std::collections::HashSet::new();
+                let mut z_set = std::collections::HashSet::new();
+                for &(i, j, k, _) in &p_indices {
+                    x_set.insert(i);
+                    y_set.insert(j);
+                    z_set.insert(k);
+                }
+
+                // A "filled" dimension means the source spans (nearly) all grid points
+                // in that dimension. An "unfilled" dimension contributes to propagation.
+                let mut dim_count = 0usize;
+                if nx > 1 {
+                    dim_count += 1;
+                }
+                if ny > 1 {
+                    dim_count += 1;
+                }
+                if nz > 1 {
+                    dim_count += 1;
+                }
+
+                // Count filled dimensions (source spans > 50% of grid in that axis)
+                let mut source_fill_dims = 0;
+                if nx > 1 && x_set.len() > nx / 2 {
+                    source_fill_dims += 1;
+                }
+                if ny > 1 && y_set.len() > ny / 2 {
+                    source_fill_dims += 1;
+                }
+                if nz > 1 && z_set.len() > nz / 2 {
+                    source_fill_dims += 1;
+                }
+
+                // Propagation dimensions = total active dimensions - source fill dimensions
+                source_propagation_dim = (dim_count - source_fill_dims).max(1) as f64;
             }
         }
 
@@ -197,7 +217,7 @@ impl SourceHandler {
             u_indices,
             p_scale_rho: Vec::new(),
             p_scale_p: Vec::new(),
-            pressure_is_boundary_plane,
+            source_propagation_dim,
         })
     }
 
@@ -242,10 +262,25 @@ impl SourceHandler {
                     (rho_scale, 1.0)
                 }
                 SourceMode::Additive | SourceMode::AdditiveNoCorrection => {
-                    // k-Wave additive mass source scaling
+                    // k-Wave additive mass source scaling.
+                    //
+                    // k-Wave adds source.p (pre-scaled by 2·dt/(N·c₀·dx)) to EACH of
+                    // the N split-density components (rhox, rhoy, rhoz).
+                    //
+                    // rho_scale: Per-component density scaling (with 1/N split).
+                    //   Used by PSTD which adds to all N density components.
+                    //
+                    // p_scale: Propagation-dimension-adjusted pressure scaling.
+                    //   Used by FDTD which adds to a single pressure field.
+                    //   k-Wave's split-density naturally distributes the source
+                    //   energy across N propagation dimensions. In FDTD's single
+                    //   pressure equation, we scale by 1/N_prop where N_prop is
+                    //   the number of propagation dimensions (determined by source
+                    //   geometry: plane→1, line→2, point→3).
+                    //   p_scale = 2·dt·c₀ / (N_prop · dx).
                     let rho_scale = (2.0 * dt) / (n_dim * c0_val * dx);
-                    // Equivalent pressure increment
-                    let p_scale = (2.0 * dt * c0_val) / (n_dim * dx);
+                    let n_prop = self.source_propagation_dim.max(1.0);
+                    let p_scale = (2.0 * dt * c0_val) / (n_prop * dx);
                     (rho_scale, p_scale)
                 }
             };
@@ -427,20 +462,16 @@ impl SourceHandler {
         }
     }
 
-    /// Inject pressure source directly into pressure field (for FDTD)
+    /// Inject pressure source directly into pressure field (for FDTD).
+    ///
+    /// Uses the explicitly-set source mode (`p_mode`). k-Wave's additive mode
+    /// applies mass-source scaling `2·dt/(N·c₀·dx)` to the source values before
+    /// adding them to the density field. This scaling is pre-computed in
+    /// `prepare_pressure_source_scaling()` and stored in `p_scale_p`.
     pub fn inject_pressure_source(&self, time_index: usize, p: &mut Array3<f64>) {
         if let Some(signal) = &self.source.p_signal {
             if time_index < signal.shape()[1] {
-                // For boundary plane sources, use Dirichlet mode (p = signal)
-                // unless the user explicitly requested additive mode.
-                // This matches k-Wave's default behaviour for boundary sources.
-                let mode = if self.pressure_is_boundary_plane
-                    && self.source.p_mode != SourceMode::AdditiveNoCorrection
-                {
-                    SourceMode::Dirichlet
-                } else {
-                    self.source.p_mode
-                };
+                let mode = self.source.p_mode;
                 let is_scalar_signal = signal.shape()[0] == 1 && self.p_indices.len() > 1;
 
                 for (idx, &(i, j, k, weight)) in self.p_indices.iter().enumerate() {

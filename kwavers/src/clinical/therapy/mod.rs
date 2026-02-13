@@ -5,6 +5,7 @@
 
 pub mod domain_types;
 pub mod hifu_planning;
+pub mod lithotripsy;
 pub mod metrics;
 pub mod modalities;
 pub mod parameters;

@@ -24,7 +24,19 @@
       "WebFetch(domain:www.k-wave.org)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:www.academia.edu)",
-      "WebFetch(domain:www.scribd.com)"
+      "WebFetch(domain:www.scribd.com)",
+      "Bash(maturin develop:*)",
+      "Bash(if exist \"D:\\\\kwavers\\\\pykwavers\\\\kwave_cache\" rd /s /q \"D:\\\\kwavers\\\\pykwavers\\\\kwave_cache\")",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(KWAVERS_RUN_SLOW=1 python -m pytest:*)",
+      "Bash(KWAVERS_RUN_SLOW=1 python:*)",
+      "Bash(KWAVERS_PSTD_DIAGNOSTICS=1 python:*)",
+      "Bash(KWAVERS_PSTD_DISABLE_BOUNDARY=1 python:*)",
+      "Bash(dir:*)",
+      "Bash(KWAVERS_PSTD_SOURCE_ORDER=post_density python:*)",
+      "Bash(KWAVERS_PSTD_DISABLE_VELOCITY_PML=1 KWAVERS_PSTD_DISABLE_DENSITY_PML=1 python:*)",
+      "mcp__desktop-commander__start_process"
     ]
   }
 }

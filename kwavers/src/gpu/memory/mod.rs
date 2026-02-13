@@ -58,7 +58,7 @@ impl UnifiedMemoryManager {
             .entry(pool_type)
             .or_insert_with(|| MemoryPool::new(pool_type));
 
-        pool.allocate(size)
+        pool.allocate(gpu_id, size)
     }
 
     /// Deallocate memory
@@ -156,13 +156,14 @@ impl MemoryPool {
         }
     }
 
-    pub fn allocate(&mut self, size: usize) -> KwaversResult<MemoryHandle> {
+    pub fn allocate(&mut self, gpu_id: usize, size: usize) -> KwaversResult<MemoryHandle> {
         // Simple first-fit allocation (could be enhanced with buddy system)
-        self.total_allocated += size;
+        let offset = self.total_allocated;
+        self.total_allocated = self.total_allocated.saturating_add(size);
         self.peak_allocated = self.peak_allocated.max(self.total_allocated);
 
         let block = MemoryBlock {
-            offset: 0, // Simplified
+            offset,
             size,
             compressed: false,
         };
@@ -170,7 +171,7 @@ impl MemoryPool {
         self.allocations.push(block.clone());
 
         Ok(MemoryHandle {
-            gpu_id: 0, // Would be set properly in multi-GPU context
+            gpu_id,
             pool_type: self.pool_type,
             block,
         })
@@ -369,7 +370,7 @@ mod tests {
     #[test]
     fn test_memory_pool_allocation() {
         let mut pool = MemoryPool::new(MemoryPoolType::Temporary);
-        let handle = pool.allocate(1024).unwrap();
+        let handle = pool.allocate(0, 1024).unwrap();
 
         assert_eq!(handle.block.size, 1024);
         assert_eq!(pool.total_allocated, 1024);

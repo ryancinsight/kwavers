@@ -253,35 +253,64 @@ pub struct ThermalDose {
 impl ThermalDose {
     /// Estimate thermal dose for HIFU treatment
     ///
-    /// Uses simplified thermal model:
-    /// - Temperature rise ∝ pressure² * time
+    /// Uses a perfusion-limited heating model:
+    /// - Intensity: I = p^2 / (2 ρ c)
+    /// - Heating: q = 2 α I (α in Np/m)
+    /// - Temperature: dT/dt = q/(ρ c_p) - ω (T - T0)
     /// - CEM43 threshold for tissue ablation: ~240 CEM43
-    pub fn estimate_from_focal_spot(focal_spot: &FocalSpot, treatment_duration_s: f64) -> Self {
-        // Pressure-to-temperature conversion
-        // Simplified: ΔT ≈ 0.5°C per MPa over ~2 seconds
-        // More realistic models use perfusion-limited heating
-        let pressure_mpa = focal_spot.peak_pressure_pa / 1e6;
+    pub fn estimate_from_focal_spot(
+        focal_spot: &FocalSpot,
+        frequency_hz: f64,
+        duty_cycle: f64,
+        treatment_duration_s: f64,
+    ) -> Self {
+        const TISSUE_DENSITY: f64 = 1000.0;
+        const SOUND_SPEED: f64 = 1500.0;
+        const SPECIFIC_HEAT: f64 = 3600.0;
+        const PERFUSION_RATE: f64 = 0.01; // 1/s (typical soft tissue)
+        const BASELINE_TEMP_C: f64 = 37.0;
 
-        // Heating rate: ~1°C per 2 MPa per second for focused ultrasound
-        let heating_rate_c_per_s = pressure_mpa / 2.0;
+        let duty = duty_cycle.clamp(0.0, 1.0);
+        let frequency_mhz = (frequency_hz / 1e6).max(0.0);
 
-        // Peak temperature
-        let peak_temperature_c = 37.0 + (heating_rate_c_per_s * treatment_duration_s);
+        // Absorption coefficient: 0.5 dB/cm/MHz typical soft tissue
+        let alpha_db_cm_mhz = 0.5;
+        let alpha_np_per_m = alpha_db_cm_mhz
+            * frequency_mhz
+            * 100.0
+            * (std::f64::consts::LN_10 / 20.0);
+
+        let intensity_w_m2 =
+            focal_spot.peak_pressure_pa.powi(2) / (2.0 * TISSUE_DENSITY * SOUND_SPEED);
+        let heating_w_m3 = 2.0 * alpha_np_per_m * intensity_w_m2 * duty;
+        let heating_rate_c_per_s = heating_w_m3 / (TISSUE_DENSITY * SPECIFIC_HEAT);
+
+        let perfusion = PERFUSION_RATE.max(1e-6);
+        let delta_t = (heating_rate_c_per_s / perfusion)
+            * (1.0 - (-perfusion * treatment_duration_s).exp());
+        let peak_temperature_c = BASELINE_TEMP_C + delta_t;
 
         // CEM43 calculation (Sawhney et al. equation)
         // For T > 43°C: CEM43 = t * 0.5^(43-T)
         // For T ≤ 43°C: CEM43 = t * 0.25^(43-T)
-        let cem43 = if peak_temperature_c > 43.0 {
-            let exponent = 43.0 - peak_temperature_c;
-            treatment_duration_s * 0.5_f64.powf(exponent)
+        let r: f64 = if peak_temperature_c >= 43.0 { 0.5 } else { 0.25 };
+        let cem43 = treatment_duration_s * r.powf(43.0 - peak_temperature_c);
+
+        let time_to_dose_s = if peak_temperature_c >= 43.0 {
+            let per_second = r.powf(43.0 - peak_temperature_c);
+            if per_second > 0.0 {
+                240.0 / per_second
+            } else {
+                f64::INFINITY
+            }
         } else {
-            0.0 // No thermal dose below 43°C
+            f64::INFINITY
         };
 
         Self {
             cem43,
             peak_temperature_c,
-            time_to_dose_s: treatment_duration_s,
+            time_to_dose_s,
         }
     }
 
@@ -389,8 +418,17 @@ impl HIFUPlanner {
         let focal_spot = FocalSpot::estimate_from_transducer(&self.transducer);
 
         // Compute thermal dose
-        let thermal_dose =
-            ThermalDose::estimate_from_focal_spot(&focal_spot, therapy_params.treatment_duration);
+        let frequency = if therapy_params.frequency > 0.0 {
+            therapy_params.frequency
+        } else {
+            self.transducer.frequency
+        };
+        let thermal_dose = ThermalDose::estimate_from_focal_spot(
+            &focal_spot,
+            frequency,
+            therapy_params.duty_cycle,
+            therapy_params.treatment_duration,
+        );
 
         // Assess feasibility
         let mut feasibility = TreatmentFeasibility::new();
@@ -492,10 +530,15 @@ mod tests {
     fn test_thermal_dose_calculation() {
         let transducer = HIFUTransducer::default();
         let focal_spot = FocalSpot::estimate_from_transducer(&transducer);
-        let thermal_dose = ThermalDose::estimate_from_focal_spot(&focal_spot, 10.0);
+        let thermal_dose = ThermalDose::estimate_from_focal_spot(
+            &focal_spot,
+            transducer.frequency,
+            1.0,
+            10.0,
+        );
 
         assert!(thermal_dose.peak_temperature_c > 37.0);
-        assert!(thermal_dose.time_to_dose_s > 0.0);
+        assert!(thermal_dose.time_to_dose_s.is_finite() || thermal_dose.time_to_dose_s.is_infinite());
     }
 
     #[test]

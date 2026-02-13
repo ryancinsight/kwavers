@@ -60,11 +60,12 @@ impl ShockWaveGenerator {
 
     /// Generate initial shock field.
     pub fn generate_shock_field(&self, grid: &Grid, _frequency: f64) -> Array3<f64> {
-        // Simplified generation: Gaussian focal spot
+        // Bipolar shock: positive core with broader negative phase ring.
         let mut field = Array3::zeros(grid.dimensions());
         let (lx, ly, lz) = grid.physical_size();
         let (cx, cy, cz) = (lx / 2.0, ly / 2.0, lz / 2.0);
-        let sigma = self.parameters.focal_spot_diameter / 2.355; // FWHM to sigma
+        let sigma_pos = self.parameters.focal_spot_diameter / 2.355; // FWHM to sigma
+        let sigma_neg = sigma_pos * 2.0;
 
         for ((i, j, k), val) in field.indexed_iter_mut() {
             let x = i as f64 * grid.dx;
@@ -72,9 +73,34 @@ impl ShockWaveGenerator {
             let z = k as f64 * grid.dz;
 
             let r2 = (x - cx).powi(2) + (y - cy).powi(2) + (z - cz).powi(2);
-            *val = self.parameters.peak_positive_pressure * (-r2 / (2.0 * sigma * sigma)).exp();
+            let pos = self.parameters.peak_positive_pressure
+                * (-r2 / (2.0 * sigma_pos * sigma_pos)).exp();
+            let neg = self.parameters.peak_negative_pressure
+                * (-r2 / (2.0 * sigma_neg * sigma_neg)).exp();
+            *val = pos + neg;
         }
         field
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::grid::Grid;
+
+    #[test]
+    fn test_bipolar_shock_field_contains_negative_phase() {
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
+        let params = ShockWaveParameters::default();
+        let frequency = params.center_frequency;
+        let generator = ShockWaveGenerator::new(params, &grid).unwrap();
+
+        let field = generator.generate_shock_field(&grid, frequency);
+        let min_val = field.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let max_val = field.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+
+        assert!(max_val > 0.0);
+        assert!(min_val < 0.0);
     }
 }
 

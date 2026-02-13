@@ -11,7 +11,7 @@ use crate::infrastructure::api::{
 };
 use axum::{
     extract::{Json, Path, Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::Json as JsonResponse,
 };
 
@@ -100,6 +100,7 @@ pub async fn get_job_info(
     State(state): State<AppState>,
     Path(job_id): Path<String>,
     auth: AuthenticatedUser,
+    headers: HeaderMap,
 ) -> Result<JsonResponse<JobInfoResponse>, (StatusCode, JsonResponse<APIError>)> {
     // Get job from job manager
     if let Some(job) = state.job_manager.get_job(&job_id) {
@@ -115,6 +116,16 @@ pub async fn get_job_info(
             ));
         }
 
+        let scheme = headers
+            .get("x-forwarded-proto")
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("http");
+        let host = headers
+            .get("x-forwarded-host")
+            .or_else(|| headers.get("host"))
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("localhost");
+
         let response = JobInfoResponse {
             job_id: job.id,
             status: job.status,
@@ -125,7 +136,7 @@ pub async fn get_job_info(
             result_url: job
                 .result
                 .as_ref()
-                .map(|_| format!("/api/jobs/{}/result", job_id)), // Placeholder URL
+                .map(|_| format!("{}://{}/api/jobs/{}/result", scheme, host, job_id)),
             error_message: job.error_message,
         };
 

@@ -39,7 +39,7 @@
 //! - Medium: Acoustic properties (c, ρ, α, nonlinearity)
 //! - Source: Pressure/velocity boundary conditions
 //! - Sensor: Point/grid sampling with interpolation
-//! - Simulation: FDTD/PSTD time-stepping with PML boundaries
+//! - Simulation: FDTD/PSTD time-stepping with CPML boundaries
 //!
 //! ## References
 //!
@@ -675,7 +675,7 @@ impl Sensor {
 /// - Acoustic wave equation: ∂²p/∂t² = c²∇²p + source terms
 /// - FDTD discretization: 2nd/4th/6th/8th order accurate
 /// - Time stepping: explicit Euler with CFL stability
-/// - Boundary conditions: PML (perfectly matched layers)
+/// - Boundary conditions: CPML (convolutional perfectly matched layers)
 ///
 /// Equivalent to k-Wave's kspaceFirstOrder3D function.
 #[pyclass]
@@ -826,7 +826,15 @@ impl Simulation {
                     p_signal[[0, t]] = signal[t];
                 }
 
-                let p_mode = kwavers::domain::source::grid_source::SourceMode::Additive;
+                let p_mode = match std::env::var("KWAVERS_PSTD_SOURCE_MODE") {
+                    Ok(value) if value.eq_ignore_ascii_case("additive_no_correction") => {
+                        kwavers::domain::source::grid_source::SourceMode::AdditiveNoCorrection
+                    }
+                    Ok(value) if value.eq_ignore_ascii_case("dirichlet") => {
+                        kwavers::domain::source::grid_source::SourceMode::Dirichlet
+                    }
+                    _ => kwavers::domain::source::grid_source::SourceMode::Additive,
+                };
 
                 grid_source = GridSource {
                     p_mask: Some(mask.clone()),
@@ -928,7 +936,7 @@ impl Simulation {
             sensor_data: PyArray1::from_owned_array(py, sensor_data).into(),
             time: PyArray1::from_owned_array(
                 py,
-                Array1::linspace(0.0, dt_actual * time_steps as f64, time_steps),
+                Array1::from_iter((0..time_steps).map(|i| i as f64 * dt_actual)),
             )
             .into(),
             shape,
@@ -1016,10 +1024,7 @@ impl Simulation {
         let min_dim = grid.nx.min(grid.ny).min(grid.nz);
         let max_allowed = (min_dim.saturating_sub(2)) / 2;
         let default_thickness = (min_dim / 6).max(2);
-        let mut thickness = pml_size.unwrap_or(default_thickness).min(max_allowed);
-        if thickness == 0 {
-            thickness = 1;
-        }
+        let thickness = pml_size.unwrap_or(default_thickness).min(max_allowed);
 
         if thickness > 0 && max_allowed > 0 {
             let cpml_config = CPMLConfig::with_thickness(thickness);
@@ -1066,18 +1071,21 @@ impl Simulation {
         let min_dim = grid.nx.min(grid.ny).min(grid.nz);
         let max_allowed = (min_dim.saturating_sub(2)) / 2;
         let default_thickness = (min_dim / 6).max(2);
-        let mut thickness = pml_size.unwrap_or(default_thickness).min(max_allowed);
-        if thickness == 0 {
-            thickness = 1;
-        }
+        let thickness = pml_size.unwrap_or(default_thickness).min(max_allowed);
+
+        let boundary = if thickness > 0 && max_allowed > 0 {
+            kwavers::solver::forward::pstd::config::BoundaryConfig::CPML(
+                CPMLConfig::with_thickness(thickness),
+            )
+        } else {
+            kwavers::solver::forward::pstd::config::BoundaryConfig::None
+        };
 
         let config = PSTDConfig {
             dt,
             nt: time_steps,
             sensor_mask: Some(sensor_mask),
-            boundary: kwavers::solver::forward::pstd::config::BoundaryConfig::PML(
-                kwavers::domain::boundary::PMLConfig::default().with_thickness(thickness),
-            ),
+            boundary,
             ..Default::default()
         };
 

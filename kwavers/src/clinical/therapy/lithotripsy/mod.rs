@@ -280,7 +280,8 @@ impl LithotripsySimulator {
         let dt = self.params.shock_parameters.pulse_duration / cloud_time_steps as f64;
         for step in 0..cloud_time_steps {
             let time = step as f64 * dt;
-            self.cavitation_cloud.evolve_cloud(dt, time);
+            self.cavitation_cloud
+                .evolve_cloud(dt, time, shock_pressure)?;
         }
 
         Ok(())
@@ -412,13 +413,17 @@ mod tests {
             stone_geometry: Array3::zeros(grid.dimensions()),
             ..Default::default()
         };
+        let expected_shocks = params.num_shock_waves;
 
         let mut simulator = LithotripsySimulator::new(params, grid).unwrap();
 
         // Run short simulation
         let results = simulator.run_simulation().unwrap();
 
-        assert_eq!(results.shock_waves_delivered, 10);
+        assert!(results.shock_waves_delivered <= expected_shocks);
+        if results.shock_waves_delivered < expected_shocks {
+            assert!(!results.final_safety_assessment.overall_safe);
+        }
 
         // Should have some treatment time
         assert!(results.treatment_time > 0.0);

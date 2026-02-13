@@ -26,6 +26,7 @@
 
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
+use rustfft::{num_complex::Complex, FftPlanner};
 use serde::{Deserialize, Serialize};
 
 /// Configuration for delay-and-sum PAM
@@ -254,6 +255,82 @@ impl DelayAndSumPAM {
         Ok(events)
     }
 
+    /// Detect cavitation events and estimate peak frequency from raw sensor data.
+    pub fn detect_events_with_data(
+        &self,
+        passive_data: &Array2<f64>,
+        intensity_map: &Array1<f64>,
+        grid_points: &Array2<f64>,
+        time: f64,
+    ) -> KwaversResult<Vec<CavitationEvent>> {
+        let (num_sensors_data, _num_samples) = passive_data.dim();
+        if num_sensors_data != self.num_sensors {
+            return Err(KwaversError::InvalidInput(format!(
+                "Data has {} sensors but PAM configured for {}",
+                num_sensors_data, self.num_sensors
+            )));
+        }
+
+        if intensity_map.len() != grid_points.nrows() {
+            return Err(KwaversError::InvalidInput(
+                "Intensity map and grid points size mismatch".to_string(),
+            ));
+        }
+
+        // Compute noise floor (median of lower 50% intensities)
+        let mut sorted_intensities = intensity_map.to_vec();
+        sorted_intensities.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let median_idx = sorted_intensities.len() / 2;
+        let noise_floor = sorted_intensities[median_idx / 2];
+
+        let threshold = noise_floor * self.config.detection_threshold;
+        let apodization_weights = self.compute_apodization_weights();
+
+        // Find local maxima above threshold
+        let mut events = Vec::new();
+
+        for (idx, &intensity) in intensity_map.iter().enumerate() {
+            if intensity > threshold {
+                let grid_point = grid_points.row(idx);
+                let position = [grid_point[0], grid_point[1], grid_point[2]];
+
+                // Compute coherence factor (simplified)
+                let coherence = if self.config.coherence_weighting {
+                    (intensity / (intensity + noise_floor)).min(1.0)
+                } else {
+                    1.0
+                };
+
+                let delays_samples = self.compute_delays(&position)?;
+                let peak_frequency = self
+                    .beamformed_signal_at_point(
+                        passive_data,
+                        &delays_samples,
+                        &apodization_weights,
+                    )
+                    .ok()
+                    .and_then(|signal| self.estimate_peak_frequency(&signal));
+
+                events.push(CavitationEvent {
+                    position,
+                    intensity,
+                    time,
+                    coherence,
+                    peak_frequency,
+                });
+            }
+        }
+
+        // Sort by intensity (descending)
+        events.sort_by(|a, b| {
+            b.intensity
+                .partial_cmp(&a.intensity)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        Ok(events)
+    }
+
     /// Compute propagation delays from candidate source to sensors
     fn compute_delays(&self, source_pos: &[f64; 3]) -> KwaversResult<Vec<f64>> {
         let mut delays = Vec::with_capacity(self.num_sensors);
@@ -280,8 +357,24 @@ impl DelayAndSumPAM {
         delays_samples: &[f64],
         apodization: &[f64],
     ) -> KwaversResult<f64> {
+        let summed_signal =
+            self.beamformed_signal_at_point(passive_data, delays_samples, apodization)?;
+
+        // Compute intensity (energy over window)
+        let intensity: f64 = summed_signal.iter().map(|&x| x * x).sum();
+        let normalized_intensity = intensity / summed_signal.len().max(1) as f64;
+
+        Ok(normalized_intensity)
+    }
+
+    fn beamformed_signal_at_point(
+        &self,
+        passive_data: &Array2<f64>,
+        delays_samples: &[f64],
+        apodization: &[f64],
+    ) -> KwaversResult<Vec<f64>> {
         let num_samples = passive_data.ncols();
-        let window_size = self.config.window_size.min(num_samples);
+        let window_size = self.config.window_size.min(num_samples).max(1);
 
         let mut summed_signal = vec![0.0; window_size];
 
@@ -291,19 +384,46 @@ impl DelayAndSumPAM {
             let weight = apodization[sensor_idx];
 
             for (t, value) in summed_signal.iter_mut().enumerate().take(window_size) {
-                let sample_idx = (t as isize + delay_idx) as usize;
+                let sample_idx = t as isize + delay_idx;
 
-                if sample_idx < num_samples {
-                    *value += weight * passive_data[[sensor_idx, sample_idx]];
+                if sample_idx >= 0 && (sample_idx as usize) < num_samples {
+                    *value += weight * passive_data[[sensor_idx, sample_idx as usize]];
                 }
             }
         }
 
-        // Compute intensity (energy over window)
-        let intensity: f64 = summed_signal.iter().map(|&x| x * x).sum();
-        let normalized_intensity = intensity / window_size as f64;
+        Ok(summed_signal)
+    }
 
-        Ok(normalized_intensity)
+    fn estimate_peak_frequency(&self, signal: &[f64]) -> Option<f64> {
+        let n = signal.len();
+        if n < 2 {
+            return None;
+        }
+
+        if !self.config.sampling_frequency.is_finite() || self.config.sampling_frequency <= 0.0 {
+            return None;
+        }
+
+        let mut planner = FftPlanner::new();
+        let fft = planner.plan_fft_forward(n);
+        let mut complex_data: Vec<Complex<f64>> =
+            signal.iter().map(|&x| Complex::new(x, 0.0)).collect();
+        fft.process(&mut complex_data);
+
+        let half = n / 2;
+        let mut max_mag = 0.0f64;
+        let mut max_idx: Option<usize> = None;
+
+        for (idx, value) in complex_data.iter().take(half).enumerate().skip(1) {
+            let mag = value.re * value.re + value.im * value.im;
+            if mag > max_mag {
+                max_mag = mag;
+                max_idx = Some(idx);
+            }
+        }
+
+        max_idx.map(|idx| (idx as f64 * self.config.sampling_frequency) / n as f64)
     }
 
     /// Compute apodization weights for sidelobe suppression
@@ -443,5 +563,40 @@ mod tests {
         // Should detect at least the point with intensity 5.0
         assert!(!events.is_empty());
         assert!(events[0].intensity > 2.0);
+    }
+
+    #[test]
+    fn test_event_detection_with_peak_frequency() {
+        let sensors = vec![[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]];
+        let config = DelayAndSumConfig {
+            sampling_frequency: 10e6,
+            window_size: 256,
+            detection_threshold: 0.5,
+            ..Default::default()
+        };
+        let pam = DelayAndSumPAM::new(sensors, config).unwrap();
+
+        let freq = 1e6;
+        let num_samples = 256;
+        let mut passive_data = Array2::zeros((3, num_samples));
+        for t in 0..num_samples {
+            let time = t as f64 / pam.config.sampling_frequency;
+            let sample = (2.0 * std::f64::consts::PI * freq * time).sin();
+            for sensor in 0..3 {
+                passive_data[[sensor, t]] = sample;
+            }
+        }
+
+        let intensity_map = Array1::from_vec(vec![2.0]);
+        let grid_points = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.0]).unwrap();
+
+        let events = pam
+            .detect_events_with_data(&passive_data, &intensity_map, &grid_points, 0.0)
+            .unwrap();
+
+        assert!(!events.is_empty());
+        let peak = events[0].peak_frequency.expect("peak frequency should be available");
+        let resolution = pam.config.sampling_frequency / num_samples as f64;
+        assert!((peak - freq).abs() <= resolution);
     }
 }

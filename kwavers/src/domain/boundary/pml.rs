@@ -236,6 +236,10 @@ impl PMLBoundary {
 }
 
 impl Boundary for PMLBoundary {
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn apply_acoustic(
         &mut self,
         mut field: ArrayViewMut3<f64>,

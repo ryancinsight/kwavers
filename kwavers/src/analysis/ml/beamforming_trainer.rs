@@ -125,15 +125,9 @@ impl BeamformingTrainer {
                     self.config.learning_rate.max(self.config.min_learning_rate);
             }
 
-            // Approximate gradient norm from loss change / learning_rate.
-            // This is a finite-difference estimate: ||∇L|| ≈ |ΔL| / lr.
-            // With a real model, this would be the L2 norm of parameter gradients.
-            let gradient_norm = if epoch > 0 {
-                let prev = self.history.epochs.last().map(|m| m.train_loss).unwrap_or(train_loss);
-                (prev - train_loss).abs() / self.config.learning_rate.max(1e-30)
-            } else {
-                train_loss / self.config.learning_rate.max(1e-30)
-            };
+            // Proxy gradient norm based on loss magnitude.
+            // Without a concrete model, we report a stable RMSE-like proxy.
+            let gradient_norm = train_loss.sqrt();
 
             let metrics = TrainingMetrics {
                 epoch,

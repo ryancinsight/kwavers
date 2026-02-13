@@ -875,9 +875,21 @@ fn iso8601_now() -> String {
 }
 
 /// Get ISO 8601 date string for a future date
-fn iso8601_future_days(_days: i64) -> String {
+fn iso8601_future_days(days: i64) -> String {
     // Simplified version - production should use chrono
-    iso8601_now()
+    let now = SystemTime::now();
+    let duration = now.duration_since(UNIX_EPOCH).unwrap_or_default();
+
+    let seconds = duration.as_secs() as i64;
+    let target_seconds = seconds.saturating_add(days.saturating_mul(86_400));
+    let clamped_seconds = target_seconds.max(0) as u64;
+
+    let days_since_epoch = clamped_seconds / 86_400;
+    let year = 1970 + days_since_epoch / 365;
+    let month = (days_since_epoch % 365) / 30 + 1;
+    let day = (days_since_epoch % 365) % 30 + 1;
+
+    format!("{:04}-{:02}-{:02}T00:00:00Z", year, month, day)
 }
 
 #[cfg(test)]
