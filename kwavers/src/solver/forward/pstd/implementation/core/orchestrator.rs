@@ -30,7 +30,7 @@ use tracing::debug;
 pub struct PSTDSolver {
     pub(crate) config: PSTDConfig,
     pub(crate) grid: Arc<Grid>,
-    pub(crate) sensor_recorder: SensorRecorder,
+    pub sensor_recorder: SensorRecorder,
     pub(crate) source_handler: SourceHandler,
     pub(crate) dynamic_sources: Vec<(Arc<dyn Source>, Array3<f64>)>,
     pub(crate) source_injection_modes: Vec<SourceInjectionMode>,
@@ -104,8 +104,9 @@ impl PSTDSolver {
 
         let (k_ops, kappa, k_max, c_ref) = initialize_spectral_operators(&config, &grid, medium)?;
         let k_mag = compute_k_magnitude(&k_ops.kx, &k_ops.ky, &k_ops.kz);
+        
+        let _x_max: f64 = 0.0;
         let source_kappa = k_mag.mapv(|k| (0.5 * c_ref * config.dt * k).cos());
-
         let boundary: Option<Box<dyn Boundary>> = match &config.boundary {
             BoundaryConfig::PML(pml_config) => {
                 Some(Box::new(PMLBoundary::new(pml_config.clone())?))
@@ -129,26 +130,37 @@ impl PSTDSolver {
         // These implement the half-grid-point spatial shift for staggered grids:
         //   ddx_k_shift_pos[x] = i·kx · exp(+i·kx·dx/2)  (pressure → velocity)
         //   ddx_k_shift_neg[x] = i·kx · exp(-i·kx·dx/2)  (velocity → density)
-        let generate_shift_1d = |n: usize, dk: f64, ds: f64| -> (Array1<Complex64>, Array1<Complex64>) {
-            let i_unit = Complex64::new(0.0, 1.0);
-            let mut shift_pos = Array1::zeros(n);
-            let mut shift_neg = Array1::zeros(n);
-            for idx in 0..n {
-                // Wavenumber with ifftshift convention matching C++ binary
-                let shifted = if idx <= n / 2 {
-                    idx as isize
-                } else {
-                    idx as isize - n as isize
-                };
-                let k_val = dk * shifted as f64;
-                let exponent = k_val * ds * 0.5;
-                shift_pos[idx] = i_unit * Complex64::new(k_val, 0.0)
-                    * Complex64::new(exponent.cos(), exponent.sin());
-                shift_neg[idx] = i_unit * Complex64::new(k_val, 0.0)
-                    * Complex64::new(exponent.cos(), -exponent.sin());
-            }
-            (shift_pos, shift_neg)
-        };
+        let generate_shift_1d =
+            |n: usize, dk: f64, ds: f64| -> (Array1<Complex64>, Array1<Complex64>) {
+                let i_unit = Complex64::new(0.0, 1.0);
+                let mut shift_pos = Array1::zeros(n);
+                let mut shift_neg = Array1::zeros(n);
+                for idx in 0..n {
+                    // Wavenumber with ifftshift convention matching C++ binary
+                    let shifted = if idx <= n / 2 {
+                        idx as isize
+                    } else {
+                        idx as isize - n as isize
+                    };
+                    
+                    // Zero the Nyquist frequency bin to maintain conjugate symmetry
+                    // and prevent spatial ringing / aliasing artifacts.
+                    if n.is_multiple_of(2) && idx == n / 2 {
+                        shift_pos[idx] = Complex64::new(0.0, 0.0);
+                        shift_neg[idx] = Complex64::new(0.0, 0.0);
+                    } else {
+                        let k_val = dk * shifted as f64;
+                        let exponent = k_val * ds * 0.5;
+                        shift_pos[idx] = i_unit
+                            * Complex64::new(k_val, 0.0)
+                            * Complex64::new(exponent.cos(), exponent.sin());
+                        shift_neg[idx] = i_unit
+                            * Complex64::new(k_val, 0.0)
+                            * Complex64::new(exponent.cos(), -exponent.sin());
+                    }
+                }
+                (shift_pos, shift_neg)
+            };
 
         let dk_x = 2.0 * PI / (grid.nx as f64 * grid.dx);
         let dk_y = 2.0 * PI / (grid.ny as f64 * grid.dy);
@@ -173,7 +185,8 @@ impl PSTDSolver {
         }
 
         let shape = (grid.nx, grid.ny, grid.nz);
-        let sensor_recorder = SensorRecorder::new(config.sensor_mask.as_ref(), shape, config.nt)?;
+        // Allocate space for Nt+1 steps to include the t=0 initial state, matching k-Wave
+        let sensor_recorder = SensorRecorder::new(config.sensor_mask.as_ref(), shape, config.nt + 1)?;
         let source_handler = SourceHandler::new(source, &grid)?;
 
         let mut solver = Self {
@@ -280,10 +293,9 @@ impl PSTDSolver {
         let Some(boundary) = &mut self.boundary else {
             return Ok(());
         };
-        // Only apply PML to pressure here; velocity (ux, uy, uz) and split-density
-        // (rhox, rhoy, rhoz) are already PML-damped inside update_velocity() and
-        // update_density() respectively. Applying PML again would double the decay
-        // rate, causing excessive absorption near boundaries.
+        // Apply PML to pressure field.
+        // Note: velocity and split-density are already PML-damped inside
+        // update_velocity() and update_density() respectively.
         boundary.apply_acoustic(self.fields.p.view_mut(), &self.grid, time_index)?;
         Ok(())
     }
@@ -324,6 +336,10 @@ impl PSTDSolver {
     }
 
     pub fn run_orchestrated(&mut self, steps: usize) -> KwaversResult<Option<Array2<f64>>> {
+        // Record initial state t=0 to match k-Wave's convention (returning Nt+1 points)
+        if self.time_step_index == 0 {
+            self.sensor_recorder.record_step(&self.fields.p)?;
+        }
         for _ in 0..steps {
             self.step_forward()?;
         }

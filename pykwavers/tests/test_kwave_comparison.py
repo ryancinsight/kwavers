@@ -137,10 +137,4 @@ def test_plane_wave_pstd_vs_kwave_python():
     result_py = run_pykwavers(config, solver_type="pstd")
 
     metrics = compute_error_metrics(result_kw.pressure, result_py.pressure)
-    if metrics["l2_error"] >= get_solver_tolerance_profile("pstd").l2_max or metrics[
-        "correlation"
-    ] <= get_solver_tolerance_profile("pstd").corr_min:
-        pytest.xfail(
-            "PSTD parity remains below strict target thresholds; tracking until PSTD phase/timing parity improves"
-        )
     _assert_metrics(metrics, solver_type="pstd")

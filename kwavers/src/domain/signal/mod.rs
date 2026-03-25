@@ -129,13 +129,19 @@ pub fn tone_burst_series(
         )));
     }
 
+    // k-wave time vectors include t=0 and t_end, resulting in N+1 samples
     let burst_samples = ((num_cycles * sample_rate_hz) / signal_freq_hz).round();
-    if !burst_samples.is_finite() || burst_samples <= 0.0 {
-        return Err(KwaversError::InvalidInput(format!(
-            "tone burst has non-positive sample count ({burst_samples})"
-        )));
-    }
+    let burst_samples = if burst_samples > 0.0 {
+        burst_samples + 1.0
+    } else {
+        burst_samples
+    };
     let burst_samples = burst_samples as usize;
+    if burst_samples == 0 {
+        return Err(KwaversError::InvalidInput(
+            "tone burst has zero sample count".to_string(),
+        ));
+    }
 
     let required_len = signal_offset + burst_samples;
     let out_len = signal_length.unwrap_or(required_len);

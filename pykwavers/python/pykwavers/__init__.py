@@ -71,6 +71,7 @@ Repository: https://github.com/ryancinsight/kwavers
 # Import Python submodules for comparison and validation
 from . import comparison, kwave_bridge, kwave_python_bridge
 from ._pykwavers import (
+    # Core classes
     Grid,
     Medium,
     Sensor,
@@ -78,6 +79,35 @@ from ._pykwavers import (
     SimulationResult,
     SolverType,
     Source,
+    TransducerArray2D,
+    # Phase 22: PID, Registration, Bubble Field
+    PIDController,
+    BubbleField,
+    resample_to_target_grid,
+    # Signal generation
+    tone_burst,
+    create_cw_signals,
+    get_win,
+    # Geometry
+    make_disc,
+    make_ball,
+    make_sphere,
+    make_circle,
+    make_line,
+    # Unit conversion
+    db2neper,
+    neper2db,
+    freq2wavenumber,
+    hounsfield2density,
+    hounsfield2soundspeed,
+    # Water properties (temperature-dependent)
+    water_sound_speed,
+    water_density,
+    water_absorption,
+    water_nonlinearity,
+    # Signal processing
+    add_noise,
+    # Metadata
     __author__,
     __version__,
 )
@@ -88,14 +118,42 @@ __all__ = [
     "Grid",
     "Medium",
     "Source",
+    "TransducerArray2D",
     "Sensor",
     "Simulation",
     "SimulationResult",
     "SolverType",
+    # Phase 22: PID, Registration, Bubble Field
+    "PIDController",
+    "BubbleField",
+    "resample_to_target_grid",
     # Submodules
     "comparison",
     "kwave_python_bridge",
     "kwave_bridge",
+    # Signal generation
+    "tone_burst",
+    "create_cw_signals",
+    "get_win",
+    # Geometry (matching k-Wave toolbox)
+    "make_disc",
+    "make_ball",
+    "make_sphere",
+    "make_circle",
+    "make_line",
+    # Unit conversion
+    "db2neper",
+    "neper2db",
+    "freq2wavenumber",
+    "hounsfield2density",
+    "hounsfield2soundspeed",
+    # Water properties (temperature-dependent, matching k-wave-python)
+    "water_sound_speed",
+    "water_density",
+    "water_absorption",
+    "water_nonlinearity",
+    # Signal processing
+    "add_noise",
     # Metadata
     "__version__",
     "__author__",

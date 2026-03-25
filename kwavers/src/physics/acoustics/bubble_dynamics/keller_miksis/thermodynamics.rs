@@ -9,27 +9,22 @@ use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 pub(crate) fn calculate_vdw_pressure(state: &BubbleState) -> KwaversResult<f64> {
     use crate::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
 
+    use crate::core::constants::thermodynamic::{
+        VAN_DER_WAALS_AIR, VAN_DER_WAALS_ARGON, VAN_DER_WAALS_NITROGEN,
+        VAN_DER_WAALS_OXYGEN, VAN_DER_WAALS_XENON,
+    };
+
     let volume = (4.0 / 3.0) * std::f64::consts::PI * state.radius.powi(3);
     let n_total = state.n_gas + state.n_vapor;
 
     // Get Van der Waals constants based on gas species
-    let (a, b, _mol_weight) = match state.gas_species {
-        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Air => {
-            (1.37, 0.0387, 0.029)
-        }
-        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Argon => {
-            (1.355, 0.0320, 0.040)
-        }
-        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Xenon => {
-            (4.250, 0.0510, 0.131)
-        }
-        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Nitrogen => {
-            (1.370, 0.0387, 0.028)
-        }
-        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Oxygen => {
-            (1.382, 0.0319, 0.032)
-        }
-        _ => (1.37, 0.0387, 0.029), // Default to air
+    let (a, b) = match state.gas_species {
+        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Air => VAN_DER_WAALS_AIR,
+        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Argon => VAN_DER_WAALS_ARGON,
+        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Xenon => VAN_DER_WAALS_XENON,
+        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Nitrogen => VAN_DER_WAALS_NITROGEN,
+        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Oxygen => VAN_DER_WAALS_OXYGEN,
+        _ => VAN_DER_WAALS_AIR, // Default to air
     };
 
     // Convert to SI units: a in Pa·m⁶/mol², b in m³/mol
@@ -126,10 +121,12 @@ pub(crate) fn update_temperature(
 ) -> KwaversResult<()> {
     // use crate::physics::constants::H_VAP_WATER_100C; // Unused in original too
 
+    use crate::core::constants::thermodynamic::{ROOM_TEMPERATURE_K, THERMAL_CONDUCTIVITY_AIR};
+
     let r = state.radius;
     let v = state.wall_velocity;
     let t_bubble = state.temperature;
-    let t_liquid = 293.15; // Liquid temperature [K] - typical room temperature
+    let t_liquid = ROOM_TEMPERATURE_K; // Liquid temperature [K]
 
     // Adiabatic compression/expansion term
     // dT/dt = -(γ-1)T/R × dR/dt
@@ -138,8 +135,7 @@ pub(crate) fn update_temperature(
 
     // Heat transfer to liquid (Fourier's law)
     // Q̇ = 4πR²k(T_bubble - T_liquid)
-    // where k is the thermal conductivity
-    let thermal_conductivity = 0.026; // W/(m·K) for typical gases
+    let thermal_conductivity = THERMAL_CONDUCTIVITY_AIR; // W/(m·K)
     let surface_area = 4.0 * std::f64::consts::PI * r * r;
     let heat_flux = surface_area * thermal_conductivity * (t_bubble - t_liquid);
 

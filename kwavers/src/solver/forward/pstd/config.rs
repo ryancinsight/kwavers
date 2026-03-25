@@ -111,7 +111,7 @@ pub struct AntiAliasingConfig {
 impl Default for AntiAliasingConfig {
     fn default() -> Self {
         Self {
-            enabled: false,
+            enabled: true,
             cutoff: 0.95,
             order: 8,
         }

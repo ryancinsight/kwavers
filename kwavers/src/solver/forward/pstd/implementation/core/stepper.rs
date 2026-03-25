@@ -81,10 +81,13 @@ impl PSTDSolver {
             self.apply_anti_aliasing_filter()?;
         }
 
-        // 7. Apply boundary conditions
-        self.apply_boundary(time_index)?;
+        // NOTE: PML is already applied inside update_velocity() and
+        // update_density() to the split velocity/density fields,
+        // matching K-Wave's convention. Pressure (p = c²·Σρ) is computed
+        // from the already-damped density, so no additional boundary
+        // application is needed here.
 
-        // 8. Record sensor data
+        // 7. Record sensor data
         self.sensor_recorder.record_step(&self.fields.p)?;
 
         self.time_step_index += 1;

@@ -231,8 +231,10 @@ fn test_sinewave_frequency() {
 
     let mut zero_crossings = 0;
     let mut last_sign = 0;
+    let mut first_crossing_time: Option<f64> = None;
+    let mut last_crossing_time: Option<f64> = None;
 
-    for i in 0..num_samples {
+    for i in 0..=num_samples {
         let t = i as f64 * dt;
         let amp = signal.amplitude(t);
         let sign = if amp > 0.0 {
@@ -245,14 +247,21 @@ fn test_sinewave_frequency() {
 
         if sign != 0 && last_sign != 0 && sign != last_sign {
             zero_crossings += 1;
+            if first_crossing_time.is_none() {
+                first_crossing_time = Some(t);
+            }
+            last_crossing_time = Some(t);
         }
         if sign != 0 {
             last_sign = sign;
         }
     }
 
-    let measured_periods = zero_crossings as f64 / 2.0;
-    let measured_frequency = measured_periods / total_time;
+    let first_t = first_crossing_time.expect("Should have at least one crossing");
+    let last_t = last_crossing_time.expect("Should have multiple crossings");
+    let measured_duration = last_t - first_t;
+    let measured_periods = (zero_crossings - 1) as f64 / 2.0;
+    let measured_frequency = measured_periods / measured_duration;
 
     println!("\nMeasured over {:.1} periods:", total_time / period);
     println!("  Zero crossings: {}", zero_crossings);

@@ -51,19 +51,31 @@
 //! Date: 2026-02-04
 //! Sprint: 217 Session 9 - Python Integration via PyO3
 
-use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray3};
+use numpy::{PyArray1, PyArray2, PyArray3, PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
+use kwavers::domain::sensor::recorder::pressure_statistics::SampledStatistics;
+use kwavers::domain::sensor::recorder::config::RecordingMode;
+use kwavers::domain::sensor::recorder::simple::SensorRecorder;
 
 // Re-exports from kwavers core
 use kwavers::core::error::{KwaversError, KwaversResult};
 use kwavers::domain::boundary::cpml::CPMLConfig;
 use kwavers::domain::grid::Grid as KwaversGrid;
 use kwavers::domain::medium::core::CoreMedium;
+use kwavers::domain::medium::heterogeneous::HeterogeneousMedium;
+use kwavers::domain::medium::traits::Medium as MediumTrait;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::signal::Signal;
+use kwavers::domain::source::array_2d::{
+    ApodizationType as KwaversApodizationType, TransducerArray2D as KwaversTransducerArray2D,
+    TransducerArray2DConfig,
+};
 use kwavers::domain::source::custom::FunctionSource;
+use kwavers::domain::source::wavefront::plane_wave::{
+    InjectionMode, PlaneWaveConfig, PlaneWaveSource,
+};
 use kwavers::domain::source::{GridSource, Source as KwaversSource, SourceField};
 use kwavers::solver::forward::fdtd::config::FdtdConfig;
 use kwavers::solver::forward::fdtd::solver::FdtdSolver;
@@ -72,6 +84,11 @@ use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolv
 use kwavers::solver::interface::solver::Solver as SolverTrait;
 use ndarray::{Array1, Array3};
 use std::sync::Arc;
+// ============================================================================
+// Utility Function Bindings
+// ============================================================================
+
+mod utils_bindings;
 
 // ============================================================================
 // Error Handling
@@ -304,19 +321,132 @@ impl Grid {
 /// - Absorption: α(x, y, z) [dB/(MHz^y·cm)] where y ∈ [0, 3]
 /// - Nonlinearity: B/A parameter (optional)
 ///
+/// Supports both homogeneous (uniform) and heterogeneous (spatially varying)
+/// acoustic media.
+///
 /// Equivalent to k-Wave medium struct:
 /// ```python
+/// # Homogeneous
 /// medium = Medium.homogeneous(sound_speed=1500.0, density=1000.0)
+///
+/// # Heterogeneous
+/// c = np.ones((32, 32, 32)) * 1500.0
+/// c[16:, :, :] = 2000.0
+/// rho = np.ones((32, 32, 32)) * 1000.0
+/// medium = Medium(sound_speed=c, density=rho)
 /// ```
+///
+/// Internal enum holding either homogeneous or heterogeneous medium.
+#[derive(Clone, Debug)]
+enum MediumInner {
+    Homogeneous(Box<HomogeneousMedium>),
+    Heterogeneous(Box<HeterogeneousMedium>),
+}
+
+impl MediumInner {
+    /// Get a reference to the inner medium as a trait object.
+    fn as_medium(&self) -> &dyn MediumTrait {
+        match self {
+            MediumInner::Homogeneous(h) => h.as_ref(),
+            MediumInner::Heterogeneous(h) => h.as_ref(),
+        }
+    }
+}
+
 #[pyclass]
 #[derive(Clone)]
 pub struct Medium {
-    /// Internal medium (homogeneous for now)
-    inner: HomogeneousMedium,
+    /// Internal medium (homogeneous or heterogeneous)
+    inner: MediumInner,
 }
 
 #[pymethods]
 impl Medium {
+    /// Create a heterogeneous (spatially varying) medium from 3D arrays.
+    ///
+    /// Parameters
+    /// ----------
+    /// sound_speed : ndarray (3D float64)
+    ///     Spatially varying sound speed [m/s].  Shape must match the grid.
+    /// density : ndarray (3D float64)
+    ///     Spatially varying density [kg/m³].  Shape must match the grid.
+    /// absorption : ndarray (3D float64), optional
+    ///     Spatially varying absorption [dB/(MHz·cm)] (default: zeros).
+    /// nonlinearity : ndarray (3D float64), optional
+    ///     Spatially varying B/A parameter (default: zeros).
+    ///
+    /// Returns
+    /// -------
+    /// Medium
+    ///     Heterogeneous acoustic medium
+    ///
+    /// Examples
+    /// --------
+    /// >>> c = np.ones((32, 32, 32)) * 1500.0
+    /// >>> c[16:, :, :] = 2000.0
+    /// >>> rho = np.ones((32, 32, 32)) * 1000.0
+    /// >>> medium = Medium(sound_speed=c, density=rho)
+    #[new]
+    #[pyo3(signature = (sound_speed, density, absorption=None, nonlinearity=None))]
+    fn new(
+        sound_speed: PyReadonlyArray3<f64>,
+        density: PyReadonlyArray3<f64>,
+        absorption: Option<PyReadonlyArray3<f64>>,
+        nonlinearity: Option<PyReadonlyArray3<f64>>,
+    ) -> PyResult<Self> {
+        let c_arr = sound_speed.as_array().to_owned();
+        let rho_arr = density.as_array().to_owned();
+
+        let shape = c_arr.shape().to_vec();
+        if shape.len() != 3 {
+            return Err(PyValueError::new_err("sound_speed must be a 3D array"));
+        }
+        if rho_arr.shape() != shape.as_slice() {
+            return Err(PyValueError::new_err(
+                "density shape must match sound_speed shape",
+            ));
+        }
+
+        // Validate physical ranges
+        if c_arr.iter().any(|&v| v <= 0.0) {
+            return Err(PyValueError::new_err(
+                "All sound_speed values must be positive",
+            ));
+        }
+        if rho_arr.iter().any(|&v| v <= 0.0) {
+            return Err(PyValueError::new_err("All density values must be positive"));
+        }
+
+        let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
+        let mut het = HeterogeneousMedium::new(nx, ny, nz, true);
+        het.sound_speed = c_arr;
+        het.density = rho_arr;
+
+        if let Some(abs) = absorption {
+            let abs_arr = abs.as_array().to_owned();
+            if abs_arr.shape() != [nx, ny, nz] {
+                return Err(PyValueError::new_err(
+                    "absorption shape must match sound_speed shape",
+                ));
+            }
+            het.absorption = abs_arr;
+        }
+
+        if let Some(nl) = nonlinearity {
+            let nl_arr = nl.as_array().to_owned();
+            if nl_arr.shape() != [nx, ny, nz] {
+                return Err(PyValueError::new_err(
+                    "nonlinearity shape must match sound_speed shape",
+                ));
+            }
+            het.nonlinearity = nl_arr;
+        }
+
+        Ok(Medium {
+            inner: MediumInner::Heterogeneous(Box::new(het)),
+        })
+    }
+
     /// Create a homogeneous medium with uniform properties.
     ///
     /// Parameters
@@ -329,6 +459,10 @@ impl Medium {
     ///     Absorption coefficient [dB/(MHz·cm)] (default: 0.0)
     /// nonlinearity : float, optional
     ///     B/A nonlinearity parameter (default: 0.0, tissue≈6, water≈5)
+    /// alpha_power : float, optional
+    ///     Power law exponent for absorption (default: 1.0)
+    /// grid : Grid, optional
+    ///     Grid for material field pre-computation
     ///
     /// Returns
     /// -------
@@ -342,12 +476,13 @@ impl Medium {
     /// >>> # Soft tissue
     /// >>> medium = Medium.homogeneous(1540.0, 1060.0, absorption=0.5, nonlinearity=6.0)
     #[staticmethod]
-    #[pyo3(signature = (sound_speed, density, absorption=0.0, _nonlinearity=0.0, grid=None))]
+    #[pyo3(signature = (sound_speed, density, absorption=0.0, nonlinearity=0.0, alpha_power=1.0, grid=None))]
     fn homogeneous(
         sound_speed: f64,
         density: f64,
         absorption: f64,
-        _nonlinearity: f64,
+        nonlinearity: f64,
+        alpha_power: f64,
         grid: Option<&Grid>,
     ) -> PyResult<Self> {
         // Validate inputs
@@ -365,21 +500,79 @@ impl Medium {
         let default_grid = KwaversGrid::default();
         let grid_ref = grid.map(|g| &g.inner).unwrap_or(&default_grid);
 
-        // HomogeneousMedium::new(density, sound_speed, mu_a, mu_s_prime, grid)
-        // For now, use default optical properties (mu_a=0, mu_s_prime=0)
-        let medium = HomogeneousMedium::new(density, sound_speed, 0.0, 0.0, grid_ref);
+        let mut medium = HomogeneousMedium::new(density, sound_speed, 0.0, 0.0, grid_ref);
 
-        Ok(Medium { inner: medium })
+        // Wire absorption and nonlinearity if provided
+        if absorption > 0.0 || nonlinearity > 0.0 {
+            medium
+                .set_acoustic_properties(absorption, alpha_power, nonlinearity)
+                .map_err(|e| {
+                    PyValueError::new_err(format!("Invalid acoustic properties: {}", e))
+                })?;
+        }
+
+        Ok(Medium {
+            inner: MediumInner::Homogeneous(Box::new(medium)),
+        })
+    }
+
+    /// Sound speed [m/s].
+    /// For homogeneous media returns the uniform value.
+    /// For heterogeneous media returns the maximum sound speed.
+    #[getter]
+    fn sound_speed(&self) -> f64 {
+        self.inner.as_medium().max_sound_speed()
+    }
+
+    /// Density [kg/m³].
+    /// For homogeneous media returns the uniform value.
+    /// For heterogeneous media returns the density at the origin.
+    #[getter]
+    fn density(&self) -> f64 {
+        self.inner.as_medium().density(0, 0, 0)
+    }
+
+    /// Whether the medium is homogeneous.
+    #[getter]
+    fn is_homogeneous(&self) -> bool {
+        matches!(self.inner, MediumInner::Homogeneous(_))
     }
 
     /// String representation.
     fn __repr__(&self) -> String {
-        "Medium.homogeneous(...)".to_string()
+        match &self.inner {
+            MediumInner::Homogeneous(h) => {
+                format!(
+                    "Medium.homogeneous(sound_speed={:.1}, density={:.1})",
+                    h.max_sound_speed(),
+                    h.density(0, 0, 0)
+                )
+            }
+            MediumInner::Heterogeneous(h) => {
+                let shape = h.sound_speed.shape();
+                format!(
+                    "Medium(heterogeneous, shape=({}, {}, {}), c_max={:.1})",
+                    shape[0],
+                    shape[1],
+                    shape[2],
+                    h.max_sound_speed()
+                )
+            }
+        }
     }
 
     /// Human-readable string.
     fn __str__(&self) -> String {
-        "Homogeneous Medium".to_string()
+        match &self.inner {
+            MediumInner::Homogeneous(_) => "Homogeneous Medium".to_string(),
+            MediumInner::Heterogeneous(h) => {
+                let shape = h.sound_speed.shape();
+                format!(
+                    "Heterogeneous Medium ({}x{}x{})",
+                    shape[0], shape[1], shape[2]
+                )
+            }
+        }
     }
 }
 
@@ -408,8 +601,18 @@ pub struct Source {
     position: Option<[f64; 3]>,
     /// Spatial mask for grid sources
     mask: Option<Array3<f64>>,
-    /// Time signal for grid sources
+    /// Time signal for grid sources (pressure)
     signal: Option<Array1<f64>>,
+    /// Source injection mode ("additive", "additive_no_correction", or "dirichlet")
+    source_mode: String,
+    /// Initial pressure distribution (for p0 / IVP sources)
+    initial_pressure: Option<Array3<f64>>,
+    /// Velocity signal [3, num_sources, time_steps] for velocity sources
+    velocity_signal: Option<ndarray::Array3<f64>>,
+    /// Propagation direction for plane wave sources
+    direction: Option<(f64, f64, f64)>,
+    /// KWaveArray for custom transducer geometry sources
+    kwave_array: Option<kwavers::domain::source::kwave_array::KWaveArray>,
 }
 
 #[pymethods]
@@ -436,19 +639,28 @@ impl Source {
     /// --------
     /// >>> source = Source.plane_wave(grid, frequency=1e6, amplitude=1e5)
     #[staticmethod]
-    #[pyo3(signature = (_grid, frequency, amplitude, _direction=None))]
+    #[pyo3(signature = (grid, frequency, amplitude, direction=None))]
     fn plane_wave(
-        _grid: &Grid,
+        grid: &Grid,
         frequency: f64,
         amplitude: f64,
-        _direction: Option<(f64, f64, f64)>,
+        direction: Option<(f64, f64, f64)>,
     ) -> PyResult<Self> {
         if frequency <= 0.0 {
             return Err(PyValueError::new_err("Frequency must be positive"));
         }
-        if amplitude <= 0.0 {
-            return Err(PyValueError::new_err("Amplitude must be positive"));
+        if amplitude < 0.0 {
+            return Err(PyValueError::new_err("Amplitude must be non-negative"));
         }
+
+        // Validate and normalize direction
+        let dir = direction.unwrap_or((0.0, 0.0, 1.0));
+        let mag = (dir.0 * dir.0 + dir.1 * dir.1 + dir.2 * dir.2).sqrt();
+        if mag < 1e-12 {
+            return Err(PyValueError::new_err("Direction vector must be non-zero"));
+        }
+        let norm_dir = (dir.0 / mag, dir.1 / mag, dir.2 / mag);
+        let _ = &grid.inner; // retained for wavelength computation in future
 
         Ok(Source {
             source_type: "plane_wave".to_string(),
@@ -457,6 +669,11 @@ impl Source {
             position: None,
             mask: None,
             signal: None,
+            source_mode: "additive".to_string(),
+            initial_pressure: None,
+            velocity_signal: None,
+            direction: Some(norm_dir),
+            kwave_array: None,
         })
     }
 
@@ -485,8 +702,8 @@ impl Source {
         if frequency <= 0.0 {
             return Err(PyValueError::new_err("Frequency must be positive"));
         }
-        if amplitude <= 0.0 {
-            return Err(PyValueError::new_err("Amplitude must be positive"));
+        if amplitude < 0.0 {
+            return Err(PyValueError::new_err("Amplitude must be non-negative"));
         }
 
         Ok(Source {
@@ -496,6 +713,11 @@ impl Source {
             position: Some([position.0, position.1, position.2]),
             mask: None,
             signal: None,
+            source_mode: "additive".to_string(),
+            initial_pressure: None,
+            velocity_signal: None,
+            direction: None,
+            kwave_array: None,
         })
     }
 
@@ -509,12 +731,25 @@ impl Source {
     ///     1D time signal [Pa]
     /// frequency : float
     ///     Source frequency [Hz]
+    /// Create a grid source from a spatial mask and time signal.
+    ///
+    /// Parameters
+    /// ----------
+    /// mask : ndarray
+    ///     3D spatial mask (same shape as grid)
+    /// signal : ndarray
+    ///     1D time signal [Pa]
+    /// frequency : float
+    ///     Source frequency [Hz]
+    /// mode : str, optional
+    ///     Source injection mode: "additive" (default), "additive_no_correction", or "dirichlet"
     #[staticmethod]
-    #[pyo3(signature = (mask, signal, frequency))]
+    #[pyo3(signature = (mask, signal, frequency, mode=None))]
     fn from_mask(
         mask: PyReadonlyArray3<f64>,
         signal: PyReadonlyArray1<f64>,
         frequency: f64,
+        mode: Option<&str>,
     ) -> PyResult<Self> {
         if frequency <= 0.0 {
             return Err(PyValueError::new_err("Frequency must be positive"));
@@ -534,6 +769,16 @@ impl Source {
             return Err(PyValueError::new_err("Signal must not be empty"));
         }
 
+        let source_mode = match mode {
+            Some("additive_no_correction") => "additive_no_correction".to_string(),
+            Some("dirichlet") => "dirichlet".to_string(),
+            Some("additive") | None => "additive".to_string(),
+            Some(other) => return Err(PyValueError::new_err(format!(
+                "Invalid source mode '{}'. Use 'additive', 'additive_no_correction', or 'dirichlet'",
+                other
+            ))),
+        };
+
         let amplitude = signal_arr.iter().fold(0.0_f64, |acc, v| acc.max(v.abs()));
 
         Ok(Source {
@@ -543,6 +788,281 @@ impl Source {
             position: None,
             mask: Some(mask_arr),
             signal: Some(signal_arr),
+            source_mode,
+            initial_pressure: None,
+            velocity_signal: None,
+            direction: None,
+            kwave_array: None,
+        })
+    }
+
+    /// Create an initial pressure (initial value problem) source.
+    ///
+    /// Equivalent to k-Wave's `source.p0`.
+    ///
+    /// Parameters
+    /// ----------
+    /// p0 : ndarray
+    ///     3D initial pressure distribution [Pa]
+    #[staticmethod]
+    fn from_initial_pressure(p0: PyReadonlyArray3<f64>) -> PyResult<Self> {
+        let p0_arr = p0.as_array().to_owned();
+        if p0_arr.iter().all(|&v| v == 0.0) {
+            return Err(PyValueError::new_err("Initial pressure is all zeros"));
+        }
+        let amplitude = p0_arr.iter().fold(0.0_f64, |acc, v| acc.max(v.abs()));
+        Ok(Source {
+            source_type: "p0".to_string(),
+            frequency: 0.0,
+            amplitude,
+            position: None,
+            mask: None,
+            signal: None,
+            source_mode: "additive".to_string(),
+            initial_pressure: Some(p0_arr),
+            velocity_signal: None,
+            direction: None,
+            kwave_array: None,
+        })
+    }
+
+    /// Create a velocity source from a spatial mask and directional signals.
+    ///
+    /// Equivalent to k-Wave's `source.u_mask` / `source.ux` / `source.uy` / `source.uz`.
+    ///
+    /// Parameters
+    /// ----------
+    /// mask : ndarray (3D float64)
+    ///     Spatial mask marking velocity source locations (nonzero = active)
+    /// ux : ndarray (1D or 2D), optional
+    ///     Velocity signal in x-direction [m/s]
+    /// uy : ndarray (1D or 2D), optional
+    ///     Velocity signal in y-direction [m/s]
+    /// uz : ndarray (1D or 2D), optional
+    ///     Velocity signal in z-direction [m/s]
+    /// mode : str, optional
+    ///     Source injection mode: "additive" (default), "additive_no_correction",
+    ///     or "dirichlet"
+    #[staticmethod]
+    #[pyo3(signature = (mask, ux=None, uy=None, uz=None, mode=None))]
+    fn from_velocity_mask(
+        mask: PyReadonlyArray3<f64>,
+        ux: Option<PyReadonlyArray1<f64>>,
+        uy: Option<PyReadonlyArray1<f64>>,
+        uz: Option<PyReadonlyArray1<f64>>,
+        mode: Option<&str>,
+    ) -> PyResult<Self> {
+        let mask_arr = mask.as_array().to_owned();
+        let num_sources = mask_arr.iter().filter(|v| **v != 0.0).count();
+        if num_sources == 0 {
+            return Err(PyValueError::new_err(
+                "Velocity mask contains no active points",
+            ));
+        }
+
+        // At least one velocity component must be provided
+        if ux.is_none() && uy.is_none() && uz.is_none() {
+            return Err(PyValueError::new_err(
+                "At least one velocity component (ux, uy, uz) must be provided",
+            ));
+        }
+
+        // Determine time steps from first available signal
+        let nt = if let Some(ref s) = ux {
+            s.as_array().len()
+        } else if let Some(ref s) = uy {
+            s.as_array().len()
+        } else if let Some(ref s) = uz {
+            s.as_array().len()
+        } else {
+            unreachable!()
+        };
+
+        // Build [3, 1, nt] velocity signal array (broadcast to all sources)
+        let mut u_signal = ndarray::Array3::<f64>::zeros((3, 1, nt));
+        if let Some(ref sx) = ux {
+            let arr = sx.as_array();
+            for t in 0..nt {
+                u_signal[[0, 0, t]] = arr[t];
+            }
+        }
+        if let Some(ref sy) = uy {
+            let arr = sy.as_array();
+            if arr.len() != nt {
+                return Err(PyValueError::new_err(format!(
+                    "uy length {} differs from first signal length {}",
+                    arr.len(),
+                    nt
+                )));
+            }
+            for t in 0..nt {
+                u_signal[[1, 0, t]] = arr[t];
+            }
+        }
+        if let Some(ref sz) = uz {
+            let arr = sz.as_array();
+            if arr.len() != nt {
+                return Err(PyValueError::new_err(format!(
+                    "uz length {} differs from first signal length {}",
+                    arr.len(),
+                    nt
+                )));
+            }
+            for t in 0..nt {
+                u_signal[[2, 0, t]] = arr[t];
+            }
+        }
+
+        let source_mode = match mode {
+            Some("dirichlet") => "dirichlet".to_string(),
+            Some("additive_no_correction") => "additive_no_correction".to_string(),
+            _ => "additive".to_string(),
+        };
+
+        let max_amp = u_signal.iter().fold(0.0_f64, |acc, v| acc.max(v.abs()));
+
+        Ok(Source {
+            source_type: "velocity".to_string(),
+            frequency: 0.0,
+            amplitude: max_amp,
+            position: None,
+            mask: Some(mask_arr),
+            signal: None,
+            source_mode,
+            initial_pressure: None,
+            velocity_signal: Some(u_signal),
+            direction: None,
+            kwave_array: None,
+        })
+    }
+
+    /// Create a velocity source from a 3D mask with per-source-point 2D signal arrays.
+    ///
+    /// This method supports beamforming delays where each source point gets a
+    /// uniquely time-shifted velocity signal, matching k-wave's NotATransducer
+    /// focused transducer behavior.
+    ///
+    /// Parameters
+    /// ----------
+    /// mask : ndarray (3D)
+    ///     3D binary mask of source locations (non-zero = source point).
+    ///     Source points are iterated in row-major (C-order): x varies slowest.
+    /// ux : ndarray (2D), optional
+    ///     Velocity signal in x-direction, shape (n_sources, n_timesteps) [m/s]
+    /// uy : ndarray (2D), optional
+    ///     Velocity signal in y-direction, shape (n_sources, n_timesteps) [m/s]
+    /// uz : ndarray (2D), optional
+    ///     Velocity signal in z-direction, shape (n_sources, n_timesteps) [m/s]
+    /// mode : str, optional
+    ///     Source injection mode: "additive" (default), "additive_no_correction",
+    ///     or "dirichlet"
+    #[staticmethod]
+    #[pyo3(signature = (mask, ux=None, uy=None, uz=None, mode=None))]
+    fn from_velocity_mask_2d(
+        mask: PyReadonlyArray3<f64>,
+        ux: Option<PyReadonlyArray2<f64>>,
+        uy: Option<PyReadonlyArray2<f64>>,
+        uz: Option<PyReadonlyArray2<f64>>,
+        mode: Option<&str>,
+    ) -> PyResult<Self> {
+        let mask_arr = mask.as_array().to_owned();
+        let num_sources = mask_arr.iter().filter(|v| **v != 0.0).count();
+        if num_sources == 0 {
+            return Err(PyValueError::new_err(
+                "Velocity mask contains no active points",
+            ));
+        }
+
+        if ux.is_none() && uy.is_none() && uz.is_none() {
+            return Err(PyValueError::new_err(
+                "At least one velocity component (ux, uy, uz) must be provided",
+            ));
+        }
+
+        // Determine (n_sources, nt) from first available 2D signal
+        let (n_sig, nt) = if let Some(ref s) = ux {
+            let shape = s.as_array().shape().to_vec();
+            (shape[0], shape[1])
+        } else if let Some(ref s) = uy {
+            let shape = s.as_array().shape().to_vec();
+            (shape[0], shape[1])
+        } else if let Some(ref s) = uz {
+            let shape = s.as_array().shape().to_vec();
+            (shape[0], shape[1])
+        } else {
+            unreachable!()
+        };
+
+        if n_sig != num_sources {
+            return Err(PyValueError::new_err(format!(
+                "Signal rows ({}) must match number of active mask points ({})",
+                n_sig, num_sources
+            )));
+        }
+
+        // Build [3, n_sources, nt] velocity signal array
+        let mut u_signal = ndarray::Array3::<f64>::zeros((3, num_sources, nt));
+        if let Some(ref sx) = ux {
+            let arr = sx.as_array();
+            for s in 0..num_sources {
+                for t in 0..nt {
+                    u_signal[[0, s, t]] = arr[[s, t]];
+                }
+            }
+        }
+        if let Some(ref sy) = uy {
+            let arr = sy.as_array();
+            if arr.shape()[0] != num_sources || arr.shape()[1] != nt {
+                return Err(PyValueError::new_err(format!(
+                    "uy shape {:?} must be ({}, {})",
+                    arr.shape(),
+                    num_sources,
+                    nt
+                )));
+            }
+            for s in 0..num_sources {
+                for t in 0..nt {
+                    u_signal[[1, s, t]] = arr[[s, t]];
+                }
+            }
+        }
+        if let Some(ref sz) = uz {
+            let arr = sz.as_array();
+            if arr.shape()[0] != num_sources || arr.shape()[1] != nt {
+                return Err(PyValueError::new_err(format!(
+                    "uz shape {:?} must be ({}, {})",
+                    arr.shape(),
+                    num_sources,
+                    nt
+                )));
+            }
+            for s in 0..num_sources {
+                for t in 0..nt {
+                    u_signal[[2, s, t]] = arr[[s, t]];
+                }
+            }
+        }
+
+        let source_mode = match mode {
+            Some("dirichlet") => "dirichlet".to_string(),
+            Some("additive_no_correction") => "additive_no_correction".to_string(),
+            _ => "additive".to_string(),
+        };
+
+        let max_amp = u_signal.iter().fold(0.0_f64, |acc, v| acc.max(v.abs()));
+
+        Ok(Source {
+            source_type: "velocity".to_string(),
+            frequency: 0.0,
+            amplitude: max_amp,
+            position: None,
+            mask: Some(mask_arr),
+            signal: None,
+            source_mode,
+            initial_pressure: None,
+            velocity_signal: Some(u_signal),
+            direction: None,
+            kwave_array: None,
         })
     }
 
@@ -564,6 +1084,68 @@ impl Source {
         &self.source_type
     }
 
+    /// Source injection mode ("additive", "additive_no_correction", or "dirichlet").
+    #[getter]
+    fn source_mode(&self) -> &str {
+        &self.source_mode
+    }
+
+    /// Create a source from a KWaveArray with a driving signal.
+    ///
+    /// The array geometry is rasterized onto the simulation grid at run time.
+    ///
+    /// Parameters
+    /// ----------
+    /// array : KWaveArray
+    ///     Custom transducer array
+    /// signal : ndarray
+    ///     1D driving signal [Pa]
+    /// frequency : float
+    ///     Source frequency [Hz]
+    /// mode : str, optional
+    ///     Source injection mode: "additive" (default), "additive_no_correction", "dirichlet"
+    ///
+    /// Examples
+    /// --------
+    /// >>> arr = KWaveArray()
+    /// >>> arr.add_disc_element((0.015, 0.015, 0.0), 0.01)
+    /// >>> source = Source.from_kwave_array(arr, signal, frequency=1e6)
+    #[staticmethod]
+    #[pyo3(signature = (array, signal, frequency, mode=None))]
+    fn from_kwave_array(
+        array: &KWaveArray,
+        signal: PyReadonlyArray1<f64>,
+        frequency: f64,
+        mode: Option<&str>,
+    ) -> PyResult<Self> {
+        if frequency <= 0.0 {
+            return Err(PyValueError::new_err("Frequency must be positive"));
+        }
+        let signal_arr = signal.as_array().to_owned();
+        if signal_arr.is_empty() {
+            return Err(PyValueError::new_err("Signal must not be empty"));
+        }
+        let source_mode = match mode {
+            Some("additive_no_correction") => "additive_no_correction".to_string(),
+            Some("dirichlet") => "dirichlet".to_string(),
+            _ => "additive".to_string(),
+        };
+        let amplitude = signal_arr.iter().fold(0.0_f64, |acc, v| acc.max(v.abs()));
+        Ok(Source {
+            source_type: "kwave_array".to_string(),
+            frequency,
+            amplitude,
+            position: None,
+            mask: None,
+            signal: Some(signal_arr),
+            source_mode,
+            initial_pressure: None,
+            velocity_signal: None,
+            direction: None,
+            kwave_array: Some(array.inner.clone()),
+        })
+    }
+
     /// String representation.
     fn __repr__(&self) -> String {
         match &self.position {
@@ -575,11 +1157,461 @@ impl Source {
                 "Source.from_mask(frequency={:.2e}, amplitude={:.2e})",
                 self.frequency, self.amplitude
             ),
+            None if self.source_type == "kwave_array" => format!(
+                "Source.from_kwave_array(frequency={:.2e}, amplitude={:.2e})",
+                self.frequency, self.amplitude
+            ),
             None => format!(
                 "Source.plane_wave(frequency={:.2e}, amplitude={:.2e})",
                 self.frequency, self.amplitude
             ),
         }
+    }
+}
+
+// ============================================================================
+// KWaveArray: Custom Transducer Geometry
+// ============================================================================
+
+/// Custom transducer array with mixed element geometries.
+///
+/// Matches k-wave-python's `KWaveArray` API for building arbitrary transducer
+/// arrays from arc, disc, rectangular, and bowl elements.
+///
+/// Examples
+/// --------
+/// >>> arr = KWaveArray()
+/// >>> arr.add_disc_element(position=(0.015, 0.015, 0.0), diameter=0.01)
+/// >>> source = Source.from_kwave_array(arr, signal)
+#[pyclass]
+#[derive(Clone)]
+pub struct KWaveArray {
+    inner: kwavers::domain::source::kwave_array::KWaveArray,
+}
+
+#[pymethods]
+impl KWaveArray {
+    #[new]
+    fn new() -> Self {
+        KWaveArray {
+            inner: kwavers::domain::source::kwave_array::KWaveArray::new(),
+        }
+    }
+
+    /// Set the operating frequency [Hz].
+    fn set_frequency(&mut self, frequency: f64) {
+        self.inner = kwavers::domain::source::kwave_array::KWaveArray::with_params(
+            frequency,
+            self.inner.frequency(),
+        );
+    }
+
+    /// Set the sound speed [m/s].
+    fn set_sound_speed(&mut self, sound_speed: f64) {
+        self.inner = kwavers::domain::source::kwave_array::KWaveArray::with_params(
+            self.inner.frequency(),
+            sound_speed,
+        );
+    }
+
+    /// Add a disc-shaped element.
+    ///
+    /// Parameters
+    /// ----------
+    /// position : tuple[float, float, float]
+    ///     Element center [x, y, z] in meters
+    /// diameter : float
+    ///     Disc diameter [m]
+    fn add_disc_element(&mut self, position: (f64, f64, f64), diameter: f64) {
+        self.inner.add_disc_element(position, diameter);
+    }
+
+    /// Add an arc-shaped element.
+    ///
+    /// Parameters
+    /// ----------
+    /// position : tuple[float, float, float]
+    ///     Arc center [x, y, z] in meters
+    /// radius : float
+    ///     Arc radius [m]
+    /// diameter : float
+    ///     Arc aperture diameter [m]
+    /// start_angle : float, optional
+    ///     Start angle in degrees (default: -45)
+    /// end_angle : float, optional
+    ///     End angle in degrees (default: 45)
+    #[pyo3(signature = (position, radius, diameter, start_angle=-45.0, end_angle=45.0))]
+    fn add_arc_element(
+        &mut self,
+        position: (f64, f64, f64),
+        radius: f64,
+        diameter: f64,
+        start_angle: f64,
+        end_angle: f64,
+    ) {
+        self.inner.add_arc_element_with_angles(position, radius, diameter, start_angle, end_angle);
+    }
+
+    /// Add a rectangular element.
+    ///
+    /// Parameters
+    /// ----------
+    /// position : tuple[float, float, float]
+    ///     Center position [x, y, z] in meters
+    /// dims : tuple[float, float, float]
+    ///     Dimensions [width, height, length] in meters
+    fn add_rect_element(&mut self, position: (f64, f64, f64), dims: (f64, f64, f64)) {
+        self.inner.add_rect_element(position, dims.0, dims.1, dims.2);
+    }
+
+    /// Add a bowl-shaped element (focused transducer).
+    ///
+    /// Parameters
+    /// ----------
+    /// position : tuple[float, float, float]
+    ///     Bowl center position [x, y, z] in meters
+    /// radius : float
+    ///     Radius of curvature [m]
+    /// diameter : float
+    ///     Bowl aperture diameter [m]
+    fn add_bowl_element(&mut self, position: (f64, f64, f64), radius: f64, diameter: f64) {
+        self.inner.add_bowl_element(position, radius, diameter);
+    }
+
+    /// Number of elements in the array.
+    #[getter]
+    fn num_elements(&self) -> usize {
+        self.inner.num_elements()
+    }
+
+    /// Get element centroid positions as list of (x, y, z) tuples.
+    fn get_element_positions(&self) -> Vec<(f64, f64, f64)> {
+        self.inner.get_element_positions()
+    }
+
+    /// Compute focus delays [s] for each element to focus at a point.
+    fn get_focus_delays(&self, focus_point: (f64, f64, f64)) -> Vec<f64> {
+        self.inner.get_focus_delays(focus_point)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("KWaveArray(num_elements={})", self.inner.num_elements())
+    }
+}
+
+// ============================================================================
+// TransducerArray2D: 2D Transducer Array Source
+// ============================================================================
+
+/// Convert Python apodization string to kwavers type
+fn parse_apodization_type(apodization: &str) -> PyResult<KwaversApodizationType> {
+    match apodization {
+        "Rectangular" => Ok(KwaversApodizationType::Rectangular),
+        "Hanning" => Ok(KwaversApodizationType::Hanning),
+        "Hamming" => Ok(KwaversApodizationType::Hamming),
+        "Blackman" => Ok(KwaversApodizationType::Blackman),
+        _ => Err(PyValueError::new_err(
+            "Apodization must be one of: Rectangular, Hanning, Hamming, Blackman",
+        )),
+    }
+}
+
+/// Convert kwavers apodization type to Python string
+fn apodization_to_string(apodization: &KwaversApodizationType) -> String {
+    match apodization {
+        KwaversApodizationType::Rectangular => "Rectangular".to_string(),
+        KwaversApodizationType::Hanning => "Hanning".to_string(),
+        KwaversApodizationType::Hamming => "Hamming".to_string(),
+        KwaversApodizationType::Blackman => "Blackman".to_string(),
+        KwaversApodizationType::Gaussian { sigma } => format!("Gaussian(sigma={})", sigma),
+    }
+}
+
+/// 2D transducer array with electronic beam control.
+///
+/// Mathematical Specification:
+/// - Linear array geometry with configurable elements
+/// - Electronic steering: time-delay beam steering in azimuthal direction
+/// - Electronic focusing: focus at arbitrary depths
+/// - Apodization: amplitude weighting (transmit and receive)
+///
+/// Equivalent to k-Wave's kWaveTransducerSimple and NotATransducer.
+///
+/// References:
+/// - Treeby & Cox (2010) k-Wave toolbox
+/// - Szabo (2014) Diagnostic Ultrasound Imaging
+#[pyclass]
+#[derive(Clone)]
+pub struct TransducerArray2D {
+    /// Internal kwavers transducer array
+    inner: KwaversTransducerArray2D,
+    /// Amplitude [Pa] (not in kwavers, added for Python API)
+    amplitude: f64,
+    /// Input signal (optional, overrides sinusoidal)
+    input_signal: Option<Array1<f64>>,
+}
+
+#[pymethods]
+impl TransducerArray2D {
+    /// Create a new 2D transducer array.
+    ///
+    /// Parameters
+    /// ----------
+    /// number_elements : int
+    ///     Number of elements in the array
+    /// element_width : float
+    ///     Width of each element [m]
+    /// element_length : float
+    ///     Length of each element in elevation direction [m]
+    /// element_spacing : float
+    ///     Spacing between element centers [m]
+    /// sound_speed : float
+    ///     Speed of sound in medium [m/s]
+    /// frequency : float
+    ///     Operating frequency [Hz]
+    ///
+    /// Returns
+    /// -------
+    /// TransducerArray2D
+    ///     Configured transducer array
+    ///
+    /// Examples
+    /// --------
+    /// >>> array = TransducerArray2D(
+    /// ...     number_elements=32,
+    /// ...     element_width=0.3e-3,
+    /// ...     element_length=10e-3,
+    /// ...     element_spacing=0.5e-3,
+    /// ...     sound_speed=1540.0,
+    /// ...     frequency=1e6
+    /// ... )
+    #[new]
+    #[pyo3(signature = (number_elements, element_width, element_length, element_spacing, sound_speed, frequency))]
+    fn new(
+        number_elements: usize,
+        element_width: f64,
+        element_length: f64,
+        element_spacing: f64,
+        sound_speed: f64,
+        frequency: f64,
+    ) -> PyResult<Self> {
+        if number_elements == 0 {
+            return Err(PyValueError::new_err("Number of elements must be positive"));
+        }
+        if element_width <= 0.0 {
+            return Err(PyValueError::new_err("Element width must be positive"));
+        }
+        if element_length <= 0.0 {
+            return Err(PyValueError::new_err("Element length must be positive"));
+        }
+        if element_spacing < element_width {
+            return Err(PyValueError::new_err(
+                "Element spacing must be >= element width",
+            ));
+        }
+        if sound_speed <= 0.0 {
+            return Err(PyValueError::new_err("Sound speed must be positive"));
+        }
+        if frequency <= 0.0 {
+            return Err(PyValueError::new_err("Frequency must be positive"));
+        }
+
+        let config = TransducerArray2DConfig {
+            number_elements,
+            element_width,
+            element_length,
+            element_spacing,
+            radius: f64::INFINITY,
+            center_position: (0.0, 0.0, 0.0),
+        };
+
+        let inner = KwaversTransducerArray2D::new(config, sound_speed, frequency).map_err(|e| {
+            PyValueError::new_err(format!("Failed to create transducer array: {}", e))
+        })?;
+
+        Ok(TransducerArray2D {
+            inner,
+            amplitude: 1.0,
+            input_signal: None,
+        })
+    }
+
+    /// Set focus distance [m].
+    ///
+    /// Parameters
+    /// ----------
+    /// distance : float
+    ///     Focus distance from array (INF for no focusing)
+    #[pyo3(signature = (distance))]
+    fn set_focus_distance(&mut self, distance: f64) -> PyResult<()> {
+        if distance <= 0.0 && !distance.is_infinite() {
+            return Err(PyValueError::new_err("Focus distance must be positive"));
+        }
+        self.inner.set_focus_distance(distance);
+        Ok(())
+    }
+
+    /// Set elevation focus distance [m].
+    #[pyo3(signature = (distance))]
+    fn set_elevation_focus_distance(&mut self, distance: f64) -> PyResult<()> {
+        if distance <= 0.0 && !distance.is_infinite() {
+            return Err(PyValueError::new_err(
+                "Elevation focus distance must be positive",
+            ));
+        }
+        self.inner.set_elevation_focus_distance(distance);
+        Ok(())
+    }
+
+    /// Set steering angle [degrees].
+    ///
+    /// Parameters
+    /// ----------
+    /// angle : float
+    ///     Steering angle in degrees (0 = straight ahead)
+    #[pyo3(signature = (angle))]
+    fn set_steering_angle(&mut self, angle: f64) {
+        self.inner.set_steering_angle(angle);
+    }
+
+    /// Set transmit apodization type.
+    ///
+    /// Parameters
+    /// ----------
+    /// apodization : str
+    ///     One of: "Rectangular", "Hanning", "Hamming", "Blackman"
+    #[pyo3(signature = (apodization))]
+    fn set_transmit_apodization(&mut self, apodization: &str) -> PyResult<()> {
+        let apod_type = parse_apodization_type(apodization)?;
+        self.inner.set_transmit_apodization(apod_type);
+        Ok(())
+    }
+
+    /// Set receive apodization type.
+    #[pyo3(signature = (apodization))]
+    fn set_receive_apodization(&mut self, apodization: &str) -> PyResult<()> {
+        let apod_type = parse_apodization_type(apodization)?;
+        self.inner.set_receive_apodization(apod_type);
+        Ok(())
+    }
+
+    /// Set active element mask.
+    ///
+    /// Parameters
+    /// ----------
+    /// mask : list[bool]
+    ///     Boolean mask of length number_elements
+    #[pyo3(signature = (mask))]
+    fn set_active_elements(&mut self, mask: Vec<bool>) -> PyResult<()> {
+        if mask.len() != self.inner.number_elements() {
+            return Err(PyValueError::new_err(format!(
+                "Mask length {} does not match number of elements {}",
+                mask.len(),
+                self.inner.number_elements()
+            )));
+        }
+        self.inner
+            .set_active_elements(&mask)
+            .map_err(PyValueError::new_err)?;
+        Ok(())
+    }
+
+    /// Set center position.
+    #[pyo3(signature = (x, y, z))]
+    fn set_position(&mut self, x: f64, y: f64, z: f64) {
+        self.inner.set_center_position((x, y, z));
+    }
+
+    /// Set input signal (overrides sinusoidal).
+    #[pyo3(signature = (signal))]
+    fn set_input_signal(&mut self, signal: PyReadonlyArray1<f64>) -> PyResult<()> {
+        let signal_arr = signal.as_array().to_owned();
+        if signal_arr.is_empty() {
+            return Err(PyValueError::new_err("Signal must not be empty"));
+        }
+        self.input_signal = Some(signal_arr);
+        Ok(())
+    }
+
+    /// Get number of elements.
+    #[getter]
+    fn number_elements(&self) -> usize {
+        self.inner.number_elements()
+    }
+
+    /// Get element spacing.
+    #[getter]
+    fn element_spacing(&self) -> f64 {
+        self.inner.element_spacing()
+    }
+
+    /// Get total aperture width.
+    #[getter]
+    fn aperture_width(&self) -> f64 {
+        self.inner.aperture_width()
+    }
+
+    /// Element width [m].
+    #[getter]
+    fn element_width(&self) -> f64 {
+        self.inner.element_width()
+    }
+
+    /// Element length (elevation) [m].
+    #[getter]
+    fn element_length(&self) -> f64 {
+        self.inner.element_length()
+    }
+
+    /// Radius of curvature [m].
+    #[getter]
+    fn radius(&self) -> f64 {
+        self.inner.radius()
+    }
+
+    /// Operating frequency [Hz].
+    #[getter]
+    fn frequency(&self) -> f64 {
+        self.inner.frequency()
+    }
+
+    /// Focus distance [m].
+    #[getter]
+    fn focus_distance(&self) -> f64 {
+        self.inner.focus_distance()
+    }
+
+    /// Steering angle [degrees].
+    #[getter]
+    fn steering_angle(&self) -> f64 {
+        self.inner.steering_angle()
+    }
+
+    /// Transmit apodization type.
+    #[getter]
+    fn transmit_apodization(&self) -> String {
+        apodization_to_string(self.inner.transmit_apodization())
+    }
+
+    /// Amplitude [Pa].
+    #[getter]
+    fn amplitude(&self) -> f64 {
+        self.amplitude
+    }
+
+    /// String representation.
+    fn __repr__(&self) -> String {
+        format!(
+            "TransducerArray2D(elements={}, width={:.2e}m, focus={:.2e}m, steering={:.1} deg)",
+            self.inner.number_elements(),
+            self.inner.aperture_width(),
+            if self.inner.focus_distance().is_infinite() {
+                0.0
+            } else {
+                self.inner.focus_distance()
+            },
+            self.inner.steering_angle()
+        )
     }
 }
 
@@ -591,6 +1623,7 @@ impl Source {
 ///
 /// Mathematical Specification:
 /// - Point sensor: p(t) at fixed location (x₀, y₀, z₀)
+/// - Mask sensor: p(t) at multiple positions defined by binary mask
 /// - Grid sensor: p(x, y, z, t) on entire grid
 /// - Interpolation: trilinear for arbitrary positions
 ///
@@ -602,6 +1635,10 @@ pub struct Sensor {
     sensor_type: String,
     /// Position for point sensor
     position: Option<[f64; 3]>,
+    /// Binary mask for mask-based sensors
+    mask: Option<Array3<bool>>,
+    /// k-Wave-style recording mode strings (e.g. ["p", "p_max", "p_rms"])
+    record_modes: Vec<String>,
 }
 
 #[pymethods]
@@ -626,7 +1663,49 @@ impl Sensor {
         Sensor {
             sensor_type: "point".to_string(),
             position: Some([position.0, position.1, position.2]),
+            mask: None,
+            record_modes: Vec::new(),
         }
+    }
+
+    /// Create a mask-based sensor from a binary 3D mask.
+    ///
+    /// Records pressure at all True positions in the mask.
+    /// Equivalent to k-Wave's kSensor(mask).
+    ///
+    /// Parameters
+    /// ----------
+    /// mask : ndarray
+    ///     3D boolean mask (same shape as grid)
+    ///
+    /// Returns
+    /// -------
+    /// Sensor
+    ///     Mask-based sensor recording at multiple points
+    ///
+    /// Examples
+    /// --------
+    /// >>> mask = np.zeros((32, 32, 32), dtype=bool)
+    /// >>> mask[16, 16, 16] = True
+    /// >>> sensor = Sensor.from_mask(mask)
+    #[staticmethod]
+    fn from_mask(mask: PyReadonlyArray3<bool>) -> PyResult<Self> {
+        let mask_arr = mask.as_array().to_owned();
+        if mask_arr.ndim() != 3 {
+            return Err(PyValueError::new_err("Mask must be a 3D array"));
+        }
+        let num_sensors = mask_arr.iter().filter(|&&v| v).count();
+        if num_sensors == 0 {
+            return Err(PyValueError::new_err(
+                "Sensor mask must have at least one active sensor",
+            ));
+        }
+        Ok(Sensor {
+            sensor_type: "mask".to_string(),
+            position: None,
+            mask: Some(mask_arr),
+            record_modes: Vec::new(),
+        })
     }
 
     /// Create a grid sensor recording entire field.
@@ -644,6 +1723,39 @@ impl Sensor {
         Sensor {
             sensor_type: "grid".to_string(),
             position: None,
+            mask: None,
+            record_modes: Vec::new(),
+        }
+    }
+
+    /// Set k-Wave-style recording modes.
+    ///
+    /// Parameters
+    /// ----------
+    /// modes : list[str]
+    ///     Recording mode strings. Supported: "p", "p_max", "p_min", "p_rms", "p_final", "all"
+    ///
+    /// Examples
+    /// --------
+    /// >>> sensor = Sensor.from_mask(mask)
+    /// >>> sensor.set_record(["p", "p_max", "p_rms"])
+    fn set_record(&mut self, modes: Vec<String>) {
+        self.record_modes = modes;
+    }
+
+    /// Get current recording modes.
+    #[getter]
+    fn record(&self) -> Vec<String> {
+        self.record_modes.clone()
+    }
+
+    /// Number of active sensor points.
+    #[getter]
+    fn num_sensors(&self) -> usize {
+        match &self.mask {
+            Some(m) => m.iter().filter(|&&v| v).count(),
+            None if self.sensor_type == "point" => 1,
+            _ => 0,
         }
     }
 
@@ -655,12 +1767,22 @@ impl Sensor {
 
     /// String representation.
     fn __repr__(&self) -> String {
-        match &self.position {
-            Some(pos) => format!(
-                "Sensor.point(position=[{:.3e}, {:.3e}, {:.3e}])",
-                pos[0], pos[1], pos[2]
-            ),
-            None => "Sensor.grid()".to_string(),
+        match &self.sensor_type {
+            t if t == "point" => {
+                let pos = self.position.unwrap_or([0.0, 0.0, 0.0]);
+                format!(
+                    "Sensor.point(position=[{:.3e}, {:.3e}, {:.3e}])",
+                    pos[0], pos[1], pos[2]
+                )
+            }
+            t if t == "mask" => {
+                let n = self
+                    .mask
+                    .as_ref()
+                    .map_or(0, |m| m.iter().filter(|&&v| v).count());
+                format!("Sensor.from_mask(num_sensors={})", n)
+            }
+            _ => "Sensor.grid()".to_string(),
         }
     }
 }
@@ -684,9 +1806,15 @@ pub struct Simulation {
     grid: Grid,
     medium: Medium,
     sources: Vec<Source>,
-    sensor: Sensor,
+    transducers: Vec<TransducerArray2D>,
+    sensor: Option<Sensor>,
+    transducer_sensor: Option<TransducerArray2D>,
     solver_type: SolverType,
     pml_size: Option<usize>,
+    pml_size_xyz: Option<(usize, usize, usize)>,
+    pml_inside: bool,
+    /// Per-dimension PML absorption factor (k-Wave `pml_alpha`): [x, y, z]
+    pml_alpha_xyz: Option<(f64, f64, f64)>,
 }
 
 #[pymethods]
@@ -720,31 +1848,159 @@ impl Simulation {
         grid: Grid,
         medium: Medium,
         source: &Bound<'_, PyAny>,
-        sensor: Sensor,
+        sensor: &Bound<'_, PyAny>,
         solver: Option<SolverType>,
         pml_size: Option<usize>,
     ) -> PyResult<Self> {
-        let sources: Vec<Source> = if let Ok(src) = source.extract::<Source>() {
-            vec![src]
-        } else if let Ok(list) = source.extract::<Vec<Source>>() {
-            if list.is_empty() {
-                return Err(PyValueError::new_err("At least one source is required"));
+        let mut sources = Vec::new();
+        let mut transducers = Vec::new();
+
+        if let Ok(src) = source.extract::<Source>() {
+            sources.push(src);
+        } else if let Ok(trans) = source.extract::<TransducerArray2D>() {
+            transducers.push(trans);
+        } else if let Ok(list) = source.extract::<Vec<Bound<'_, PyAny>>>() {
+            for item in list {
+                if let Ok(src) = item.extract::<Source>() {
+                    sources.push(src);
+                } else if let Ok(trans) = item.extract::<TransducerArray2D>() {
+                    transducers.push(trans);
+                } else {
+                    return Err(PyValueError::new_err(
+                        "sources list must contain only Source or TransducerArray2D objects",
+                    ));
+                }
             }
-            list
         } else {
             return Err(PyValueError::new_err(
-                "sources must be a Source or list of Sources",
+                "sources must be a Source, TransducerArray2D, or a list of these",
             ));
-        };
+        }
+
+        if sources.is_empty() && transducers.is_empty() {
+            return Err(PyValueError::new_err("At least one source is required"));
+        }
+
+        let mut sensor_opt = None;
+        let mut transducer_sensor = None;
+
+        if let Ok(s) = sensor.extract::<Sensor>() {
+            sensor_opt = Some(s);
+        } else if let Ok(ts) = sensor.extract::<TransducerArray2D>() {
+            transducer_sensor = Some(ts);
+        } else {
+            return Err(PyValueError::new_err(
+                "sensor must be a Sensor or TransducerArray2D object",
+            ));
+        }
 
         Ok(Simulation {
             grid,
             medium,
             sources,
-            sensor,
+            transducers,
+            sensor: sensor_opt,
+            transducer_sensor,
             solver_type: solver.unwrap_or(SolverType::FDTD),
             pml_size,
+            pml_size_xyz: None,
+            pml_inside: true,
+            pml_alpha_xyz: None,
         })
+    }
+
+    /// Set PML (perfectly matched layer) absorbing boundary thickness.
+    ///
+    /// Parameters
+    /// ----------
+    /// size : int
+    ///     Number of grid points for PML absorbing boundary on each face.
+    ///     Typical values: 10-20 for small grids, 20-40 for large grids.
+    ///
+    /// Examples
+    /// --------
+    /// >>> sim.set_pml_size(20)
+    fn set_pml_size(&mut self, size: usize) {
+        self.pml_size = Some(size);
+    }
+
+    /// Get the current PML size, or None if using automatic sizing.
+    #[getter]
+    fn pml_size(&self) -> Option<usize> {
+        self.pml_size
+    }
+
+    /// Set per-axis PML absorbing boundary thickness for k-Wave parity.
+    ///
+    /// Parameters
+    /// ----------
+    /// x : int
+    ///     PML thickness in x-direction [grid points]
+    /// y : int
+    ///     PML thickness in y-direction [grid points]
+    /// z : int
+    ///     PML thickness in z-direction [grid points]
+    ///
+    /// Examples
+    /// --------
+    /// >>> sim.set_pml_size_xyz(20, 10, 10)  # k-Wave default per-axis
+    fn set_pml_size_xyz(&mut self, x: usize, y: usize, z: usize) {
+        self.pml_size_xyz = Some((x, y, z));
+        self.pml_size = Some(x.max(y).max(z));
+    }
+
+    /// Set uniform PML absorption factor (equivalent to k-Wave scalar `pml_alpha`, default 2.0).
+    ///
+    /// Parameters
+    /// ----------
+    /// alpha : float
+    ///     PML absorption coefficient (k-Wave default: 2.0 Np/m)
+    ///
+    /// Examples
+    /// --------
+    /// >>> sim.set_pml_alpha(2.0)  # k-Wave default
+    fn set_pml_alpha(&mut self, alpha: f64) {
+        self.pml_alpha_xyz = Some((alpha, alpha, alpha));
+    }
+
+    /// Set per-axis PML absorption factors (equivalent to k-Wave vector `pml_alpha`).
+    ///
+    /// Parameters
+    /// ----------
+    /// ax : float
+    ///     PML absorption coefficient in x-direction
+    /// ay : float
+    ///     PML absorption coefficient in y-direction
+    /// az : float
+    ///     PML absorption coefficient in z-direction
+    ///
+    /// Examples
+    /// --------
+    /// >>> sim.set_pml_alpha_xyz(2.0, 1.5, 1.5)  # reduce absorption on y/z faces
+    fn set_pml_alpha_xyz(&mut self, ax: f64, ay: f64, az: f64) {
+        self.pml_alpha_xyz = Some((ax, ay, az));
+    }
+
+    /// Set whether PML is inside the computational domain.
+    ///
+    /// Parameters
+    /// ----------
+    /// inside : bool
+    ///     If True (default), PML absorbing layers are placed inside the grid,
+    ///     reducing the effective domain size. If False, PML layers are placed
+    ///     outside the grid, preserving the full domain size (k-Wave default).
+    ///
+    /// Examples
+    /// --------
+    /// >>> sim.set_pml_inside(False)  # k-Wave default: PML outside domain
+    fn set_pml_inside(&mut self, inside: bool) {
+        self.pml_inside = inside;
+    }
+
+    /// Get the current PML inside setting.
+    #[getter]
+    fn pml_inside(&self) -> bool {
+        self.pml_inside
     }
 
     /// Run the simulation.
@@ -773,21 +2029,73 @@ impl Simulation {
         dt: Option<f64>,
     ) -> PyResult<SimulationResult> {
         // Calculate time step from CFL condition if not provided
-        let c_max = 1500.0; // Conservative estimate from medium
+        let c_max = self.medium.inner.as_medium().max_sound_speed();
         let dx_min = self
             .grid
             .inner
             .dx
             .min(self.grid.inner.dy)
             .min(self.grid.inner.dz);
-        let cfl = 0.3; // Conservative CFL number
-        let dt_actual = dt.unwrap_or_else(|| cfl * dx_min / c_max);
+        let cfl = 0.3; // Conservative CFL number for 3D
+        let dt_actual = dt.unwrap_or_else(|| cfl * dx_min / (c_max * 3.0_f64.sqrt()));
 
         let mut grid_source = GridSource::new_empty();
         let mut dynamic_sources: Vec<Box<dyn KwaversSource>> = Vec::new();
         let mut has_mask_source = false;
 
         for src in &self.sources {
+            // Handle KWaveArray source: rasterize geometry onto grid
+            if src.source_type == "kwave_array" {
+                if has_mask_source {
+                    return Err(PyValueError::new_err(
+                        "Only one mask/kwave_array source is supported per simulation",
+                    ));
+                }
+                has_mask_source = true;
+                let arr = src
+                    .kwave_array
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("KWaveArray missing from source"))?;
+                let signal = src
+                    .signal
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("Source signal missing"))?;
+                if signal.len() != time_steps {
+                    return Err(PyValueError::new_err(format!(
+                        "Signal length {} does not match time_steps {}",
+                        signal.len(),
+                        time_steps
+                    )));
+                }
+                // Rasterize the array geometry onto the simulation grid
+                let bool_mask = arr.get_array_binary_mask(&self.grid.inner);
+                let float_mask = bool_mask.mapv(|v| if v { 1.0_f64 } else { 0.0_f64 });
+                let num_active = float_mask.iter().filter(|&&v| v > 0.0).count();
+                if num_active == 0 {
+                    return Err(PyValueError::new_err(
+                        "KWaveArray mask has no active grid points",
+                    ));
+                }
+                let mut p_signal = ndarray::Array2::<f64>::zeros((1, time_steps));
+                for t in 0..time_steps {
+                    p_signal[[0, t]] = signal[t];
+                }
+                let p_mode = match src.source_mode.as_str() {
+                    "additive_no_correction" => {
+                        kwavers::domain::source::grid_source::SourceMode::AdditiveNoCorrection
+                    }
+                    "dirichlet" => kwavers::domain::source::grid_source::SourceMode::Dirichlet,
+                    _ => kwavers::domain::source::grid_source::SourceMode::Additive,
+                };
+                grid_source = GridSource {
+                    p_mask: Some(float_mask),
+                    p_signal: Some(p_signal),
+                    p_mode,
+                    ..GridSource::new_empty()
+                };
+                continue;
+            }
+
             if src.source_type == "mask" {
                 if has_mask_source {
                     return Err(PyValueError::new_err(
@@ -826,13 +2134,11 @@ impl Simulation {
                     p_signal[[0, t]] = signal[t];
                 }
 
-                let p_mode = match std::env::var("KWAVERS_PSTD_SOURCE_MODE") {
-                    Ok(value) if value.eq_ignore_ascii_case("additive_no_correction") => {
+                let p_mode = match src.source_mode.as_str() {
+                    "additive_no_correction" => {
                         kwavers::domain::source::grid_source::SourceMode::AdditiveNoCorrection
                     }
-                    Ok(value) if value.eq_ignore_ascii_case("dirichlet") => {
-                        kwavers::domain::source::grid_source::SourceMode::Dirichlet
-                    }
+                    "dirichlet" => kwavers::domain::source::grid_source::SourceMode::Dirichlet,
                     _ => kwavers::domain::source::grid_source::SourceMode::Additive,
                 };
 
@@ -845,25 +2151,57 @@ impl Simulation {
                 continue;
             }
 
+            // Handle initial pressure (p0) source
+            if src.source_type == "p0" {
+                if let Some(ref p0) = src.initial_pressure {
+                    grid_source.p0 = Some(p0.clone());
+                }
+                continue;
+            }
+
+            // Handle velocity source
+            if src.source_type == "velocity" {
+                let mask = src
+                    .mask
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("Velocity source mask missing"))?;
+                let u_sig = src
+                    .velocity_signal
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("Velocity signal missing"))?;
+
+                let u_mode = match src.source_mode.as_str() {
+                    "additive_no_correction" => {
+                        kwavers::domain::source::grid_source::SourceMode::AdditiveNoCorrection
+                    }
+                    "dirichlet" => kwavers::domain::source::grid_source::SourceMode::Dirichlet,
+                    _ => kwavers::domain::source::grid_source::SourceMode::Additive,
+                };
+
+                grid_source.u_mask = Some(mask.clone());
+                grid_source.u_signal = Some(u_sig.clone());
+                grid_source.u_mode = u_mode;
+                continue;
+            }
+
             // Create sine wave signal
             let freq = src.frequency;
             let amp = src.amplitude;
             let signal = SineSignal::new(freq, amp);
 
-            // Create FunctionSource for plane wave at z=0
+            // Create source from type
             let function_source: Box<dyn KwaversSource> = if src.source_type == "plane_wave" {
-                let dz = self.grid.inner.dz;
-                Box::new(FunctionSource::new(
-                    move |_x, _y, z, _t| {
-                        if z.abs() < dz * 0.5 {
-                            1.0
-                        } else {
-                            0.0
-                        }
-                    },
-                    Arc::new(signal),
-                    SourceField::Pressure,
-                ))
+                let dir = src.direction.unwrap_or((0.0, 0.0, 1.0));
+                let wavelength = c_max / freq;
+
+                let config = PlaneWaveConfig {
+                    direction: dir,
+                    wavelength,
+                    phase: 0.0,
+                    source_type: SourceField::Pressure,
+                    injection_mode: InjectionMode::BoundaryOnly,
+                };
+                Box::new(PlaneWaveSource::new(config, Arc::new(signal)))
             } else {
                 // Point source
                 let pos_arr = src.position.unwrap_or([0.0, 0.0, 0.0]);
@@ -892,22 +2230,35 @@ impl Simulation {
             dynamic_sources.push(function_source);
         }
 
+        for trans in &self.transducers {
+            let mut inner_trans = trans.inner.clone();
+            if let Some(ref sig_arr) = trans.input_signal {
+                let sampled_sig = SampledSignal::new(sig_arr.clone(), dt_actual);
+                inner_trans.set_signal(Arc::new(sampled_sig));
+            }
+            dynamic_sources.push(Box::new(inner_trans));
+        }
+
         // Run simulation based on solver type
         // Release GIL during the CPU-intensive simulation to allow other Python threads
         let shape = (self.grid.inner.nx, self.grid.inner.ny, self.grid.inner.nz);
         let grid_clone = self.grid.inner.clone();
         let medium_clone = self.medium.inner.clone();
-        let sensor_type = self.sensor.sensor_type.clone();
-        let sensor_position = self.sensor.position;
+        let sensor_opt = self.sensor.clone();
+        let transducer_sensor_opt = self.transducer_sensor.clone();
         let pml_size = self.pml_size;
+        let pml_size_xyz = self.pml_size_xyz;
+        let pml_inside = self.pml_inside;
+        let pml_alpha_xyz = self.pml_alpha_xyz;
         let solver_type = self.solver_type;
 
-        let sensor_ref = Sensor {
-            sensor_type,
-            position: sensor_position,
-        };
+        // Collect recording modes from sensor (empty vec if no sensor or no modes set)
+        let sensor_record_modes: Vec<String> = sensor_opt
+            .as_ref()
+            .map(|s| s.record_modes.clone())
+            .unwrap_or_default();
 
-        let sensor_data = py
+        let (sensor_data_2d, stats_opt) = py
             .detach(move || match solver_type {
                 SolverType::FDTD => Self::run_fdtd_impl(
                     &grid_clone,
@@ -916,8 +2267,13 @@ impl Simulation {
                     dt_actual,
                     grid_source,
                     dynamic_sources,
-                    &sensor_ref,
+                    sensor_opt.as_ref(),
+                    transducer_sensor_opt.as_ref(),
                     pml_size,
+                    pml_size_xyz,
+                    pml_inside,
+                    pml_alpha_xyz,
+                    &sensor_record_modes,
                 ),
                 SolverType::PSTD | SolverType::Hybrid => Self::run_pstd_impl(
                     &grid_clone,
@@ -926,44 +2282,141 @@ impl Simulation {
                     dt_actual,
                     grid_source,
                     dynamic_sources,
-                    &sensor_ref,
+                    sensor_opt.as_ref(),
+                    transducer_sensor_opt.as_ref(),
                     pml_size,
+                    pml_size_xyz,
+                    pml_inside,
+                    pml_alpha_xyz,
+                    &sensor_record_modes,
                 ),
             })
             .map_err(kwavers_error_to_py)?;
 
-        Ok(SimulationResult {
-            sensor_data: PyArray1::from_owned_array(py, sensor_data).into(),
-            time: PyArray1::from_owned_array(
-                py,
-                Array1::from_iter((0..time_steps).map(|i| i as f64 * dt_actual)),
-            )
-            .into(),
-            shape,
-            time_steps,
-            dt: dt_actual,
-            final_time: dt_actual * time_steps as f64,
-        })
+        // Convert optional stats to numpy arrays
+        let p_max = stats_opt.as_ref().map(|s| {
+            PyArray1::from_owned_array(py, s.p_max.clone()).into()
+        });
+        let p_min = stats_opt.as_ref().map(|s| {
+            PyArray1::from_owned_array(py, s.p_min.clone()).into()
+        });
+        let p_rms = stats_opt.as_ref().map(|s| {
+            PyArray1::from_owned_array(py, s.p_rms.clone()).into()
+        });
+        let p_final = stats_opt.as_ref().map(|s| {
+            PyArray1::from_owned_array(py, s.p_final.clone()).into()
+        });
+
+        // Return 1D array for single sensor, 2D for multi-sensor
+        let n_sensors = sensor_data_2d.nrows();
+        let time_arr = PyArray1::from_owned_array(
+            py,
+            Array1::from_iter((0..time_steps).map(|i| i as f64 * dt_actual)),
+        )
+        .into();
+
+        if n_sensors <= 1 {
+            // Single sensor: return 1D for backward compatibility
+            let sensor_1d = sensor_data_2d.row(0).to_owned();
+            Ok(SimulationResult {
+                sensor_data_1d: Some(PyArray1::from_owned_array(py, sensor_1d).into()),
+                sensor_data_2d: None,
+                time: time_arr,
+                shape,
+                time_steps,
+                dt: dt_actual,
+                final_time: dt_actual * time_steps as f64,
+                p_max,
+                p_min,
+                p_rms,
+                p_final,
+            })
+        } else {
+            // Multi-sensor: return 2D array (n_sensors, n_timesteps)
+            Ok(SimulationResult {
+                sensor_data_1d: None,
+                sensor_data_2d: Some(PyArray2::from_owned_array(py, sensor_data_2d).into()),
+                time: time_arr,
+                shape,
+                time_steps,
+                dt: dt_actual,
+                final_time: dt_actual * time_steps as f64,
+                p_max,
+                p_min,
+                p_rms,
+                p_final,
+            })
+        }
     }
 
     /// String representation.
     fn __repr__(&self) -> String {
         format!(
-            "Simulation(grid={}, sources={}, solver={}, sensor={})",
+            "Simulation(grid={}, sources={}, transducers={}, solver={}, sensor={})",
             self.grid.__repr__(),
             self.sources.len(),
+            self.transducers.len(),
             self.solver_type.__repr__(),
-            self.sensor.__repr__()
+            if let Some(ref s) = self.sensor {
+                s.__repr__()
+            } else {
+                "Transducer".to_string()
+            }
         )
     }
 }
 
 // Non-PyO3 implementation block for internal simulation logic
 impl Simulation {
-    fn create_sensor_mask(grid: &KwaversGrid, sensor: &Sensor) -> Array3<bool> {
+    fn create_sensor_mask(
+        grid: &KwaversGrid,
+        sensor: Option<&Sensor>,
+        transducer: Option<&TransducerArray2D>,
+    ) -> Array3<bool> {
         let nx = grid.nx;
         let ny = grid.ny;
         let nz = grid.nz;
+
+        if let Some(trans) = transducer {
+            let mut mask = Array3::<bool>::from_elem((nx, ny, nz), false);
+            let width_pts = (trans.inner.element_width() / grid.dx).round() as isize;
+            let length_pts = (trans.inner.element_length() / grid.dz).round() as isize;
+
+            for pos in trans.inner.element_positions() {
+                // Find grid center index for this element
+                let cx = ((pos.0 - grid.origin[0]) / grid.dx).round() as isize;
+                let cy = ((pos.1 - grid.origin[1]) / grid.dy).round() as isize;
+                let cz = ((pos.2 - grid.origin[2]) / grid.dz).round() as isize;
+
+                let ix_start = cx - (width_pts / 2);
+                let ix_end = ix_start + width_pts - 1;
+                let iz_start = cz - (length_pts / 2);
+                let iz_end = iz_start + length_pts - 1;
+
+                for i in ix_start..=ix_end {
+                    for k in iz_start..=iz_end {
+                        if i >= 0
+                            && i < nx as isize
+                            && cy >= 0
+                            && cy < ny as isize
+                            && k >= 0
+                            && k < nz as isize
+                        {
+                            mask[[i as usize, cy as usize, k as usize]] = true;
+                        }
+                    }
+                }
+            }
+            return mask;
+        }
+
+        let sensor =
+            sensor.expect("Simulation must have either a Sensor or TransducerArray2D sensor");
+
+        // Use mask directly if provided
+        if let Some(ref mask) = sensor.mask {
+            return mask.clone();
+        }
 
         let mut mask = Array3::<bool>::from_elem((nx, ny, nz), false);
 
@@ -990,19 +2443,89 @@ impl Simulation {
         mask
     }
 
+    /// Build an ordered list of sensor grid indices for a transducer, element by element.
+    ///
+    /// Each element's nodes are enumerated in the same X→Z inner order as k-Wave's
+    /// transducer sensor mask, so the resulting recording is grouped as:
+    ///   [elem0_node0, elem0_node1, …, elem1_node0, …]
+    /// enabling direct per-element averaging without reordering.
+    fn create_transducer_ordered_indices(
+        grid: &KwaversGrid,
+        trans: &kwavers::domain::source::array_2d::TransducerArray2D,
+    ) -> Vec<(usize, usize, usize)> {
+        let nx = grid.nx;
+        let ny = grid.ny;
+        let nz = grid.nz;
+        let width_pts = (trans.element_width() / grid.dx).round() as isize;
+        let length_pts = (trans.element_length() / grid.dz).round() as isize;
+
+        let mut indices = Vec::new();
+        for pos in trans.element_positions() {
+            let cx = ((pos.0 - grid.origin[0]) / grid.dx).round() as isize;
+            let cy = ((pos.1 - grid.origin[1]) / grid.dy).round() as isize;
+            let cz = ((pos.2 - grid.origin[2]) / grid.dz).round() as isize;
+
+            let ix_start = cx - (width_pts / 2);
+            let iz_start = cz - (length_pts / 2);
+
+            // k-Wave iterates X fastest within each element's footprint
+            for ii in 0..width_pts {
+                for kk in 0..length_pts {
+                    let i = ix_start + ii;
+                    let k = iz_start + kk;
+                    if i >= 0
+                        && i < nx as isize
+                        && cy >= 0
+                        && cy < ny as isize
+                        && k >= 0
+                        && k < nz as isize
+                    {
+                        indices.push((i as usize, cy as usize, k as usize));
+                    }
+                }
+            }
+        }
+        indices
+    }
+
+    /// Convert k-Wave-style record strings to RecordingMode variants.
+    fn recording_modes_from_strings(modes: &[String]) -> Vec<RecordingMode> {
+        modes
+            .iter()
+            .filter_map(|s| match s.as_str() {
+                "p_max" => Some(RecordingMode::MaxPressure),
+                "p_min" => Some(RecordingMode::MinPressure),
+                "p_rms" => Some(RecordingMode::RmsPressure),
+                "p_final" => Some(RecordingMode::FinalPressure),
+                "all" => Some(RecordingMode::AllStatistics),
+                _ => None, // "p" (time series) is always recorded
+            })
+            .collect()
+    }
+
     /// Run FDTD simulation (internal).
     #[allow(clippy::too_many_arguments)]
     fn run_fdtd_impl(
         grid: &KwaversGrid,
-        medium: &HomogeneousMedium,
+        medium: &MediumInner,
         time_steps: usize,
         dt: f64,
         grid_source: GridSource,
         sources: Vec<Box<dyn KwaversSource>>,
-        sensor: &Sensor,
+        sensor: Option<&Sensor>,
+        transducer_sensor: Option<&TransducerArray2D>,
         pml_size: Option<usize>,
-    ) -> KwaversResult<Array1<f64>> {
-        let sensor_mask = Self::create_sensor_mask(grid, sensor);
+        pml_size_xyz: Option<(usize, usize, usize)>,
+        pml_inside: bool,
+        pml_alpha_xyz: Option<(f64, f64, f64)>,
+        record_modes: &[String],
+    ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
+        let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
+
+        // For transducer sensors, override the recorder with element-ordered indices
+        // so node recordings are grouped [elem0_nodes…, elem1_nodes…] matching k-Wave.
+        let transducer_ordered_indices = transducer_sensor
+            .map(|trans| Self::create_transducer_ordered_indices(grid, &trans.inner));
 
         // Create FDTD configuration with sensor mask
         let config = FdtdConfig {
@@ -1014,11 +2537,27 @@ impl Simulation {
             subgridding: false,
             subgrid_factor: 2,
             enable_gpu_acceleration: false,
-            sensor_mask: Some(sensor_mask),
+            sensor_mask: Some(sensor_mask.clone()),
         };
 
         // Create solver
-        let mut solver = FdtdSolver::new(config, grid, medium, grid_source)?;
+        let mut solver = FdtdSolver::new(config, grid, medium.as_medium(), grid_source)?;
+
+        // Build recorder with statistical modes if requested, replacing the default one.
+        let modes = Self::recording_modes_from_strings(record_modes);
+        if !modes.is_empty() {
+            let shape = (grid.nx, grid.ny, grid.nz);
+            solver.sensor_recorder = SensorRecorder::with_modes(
+                Some(&sensor_mask),
+                shape,
+                time_steps + 1,
+                &modes,
+            )?;
+        } else if let Some(ordered) = transducer_ordered_indices {
+            // Transducer override (no stats)
+            solver.sensor_recorder =
+                SensorRecorder::from_ordered_indices(ordered, time_steps + 1)?;
+        }
 
         // Enable CPML boundary if requested
         let min_dim = grid.nx.min(grid.ny).min(grid.nz);
@@ -1027,8 +2566,15 @@ impl Simulation {
         let thickness = pml_size.unwrap_or(default_thickness).min(max_allowed);
 
         if thickness > 0 && max_allowed > 0 {
-            let cpml_config = CPMLConfig::with_thickness(thickness);
-            let max_c = medium.max_sound_speed();
+            let mut cpml_config = if let Some((px, py, pz)) = pml_size_xyz {
+                CPMLConfig::with_per_dimension_thickness(px, py, pz)
+            } else {
+                CPMLConfig::with_thickness(thickness)
+            };
+            if let Some((ax, ay, az)) = pml_alpha_xyz {
+                cpml_config = cpml_config.with_alpha_xyz(ax, ay, az);
+            }
+            let max_c = medium.as_medium().max_sound_speed();
             solver.enable_cpml(cpml_config, dt, max_c)?;
         }
 
@@ -1037,35 +2583,47 @@ impl Simulation {
         }
 
         // Run simulation - SensorRecorder records pressure at each step
-        for _ in 0..time_steps {
-            solver.step_forward()?;
-        }
+        solver.run_orchestrated(time_steps)?;
 
-        // Extract recorded time series from SensorRecorder via public API
-        // Shape: (n_sensors, n_timesteps) = (1, time_steps)
-        let recorded_data = solver.extract_recorded_sensor_data().ok_or_else(|| {
+        // Extract statistics before consuming recorder
+        let stats = solver.sensor_recorder.extract_all_stats();
+
+        // Extract recorded time series: shape (n_sensors, nt+1) due to t=0 initial recording.
+        // Slice to (n_sensors, nt) to match k-Wave's convention of exactly Nt output samples.
+        let full_data = solver.extract_recorded_sensor_data().ok_or_else(|| {
             kwavers::core::error::KwaversError::Io(std::io::Error::other("No sensor data recorded"))
         })?;
+        let recorded_data = if full_data.ncols() > time_steps {
+            full_data.slice(ndarray::s![.., 1..]).to_owned()
+        } else {
+            full_data
+        };
 
-        // Convert from 2D (1, time_steps) to 1D (time_steps)
-        let sensor_data = recorded_data.row(0).to_owned();
-
-        Ok(sensor_data)
+        Ok((recorded_data, stats))
     }
 
     /// Run PSTD simulation (internal).
     #[allow(clippy::too_many_arguments)]
     fn run_pstd_impl(
         grid: &KwaversGrid,
-        medium: &HomogeneousMedium,
+        medium: &MediumInner,
         time_steps: usize,
         dt: f64,
         grid_source: GridSource,
         sources: Vec<Box<dyn KwaversSource>>,
-        sensor: &Sensor,
+        sensor: Option<&Sensor>,
+        transducer_sensor: Option<&TransducerArray2D>,
         pml_size: Option<usize>,
-    ) -> KwaversResult<Array1<f64>> {
-        let sensor_mask = Self::create_sensor_mask(grid, sensor);
+        pml_size_xyz: Option<(usize, usize, usize)>,
+        pml_inside: bool,
+        pml_alpha_xyz: Option<(f64, f64, f64)>,
+        record_modes: &[String],
+    ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
+        let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
+
+        // For transducer sensors, build element-ordered index list to match k-Wave.
+        let transducer_ordered_indices = transducer_sensor
+            .map(|trans| Self::create_transducer_ordered_indices(grid, &trans.inner));
 
         // Create PSTD configuration with sensor mask
         let min_dim = grid.nx.min(grid.ny).min(grid.nz);
@@ -1074,9 +2632,15 @@ impl Simulation {
         let thickness = pml_size.unwrap_or(default_thickness).min(max_allowed);
 
         let boundary = if thickness > 0 && max_allowed > 0 {
-            kwavers::solver::forward::pstd::config::BoundaryConfig::CPML(
-                CPMLConfig::with_thickness(thickness),
-            )
+            let mut cpml_config = if let Some((px, py, pz)) = pml_size_xyz {
+                CPMLConfig::with_per_dimension_thickness(px, py, pz)
+            } else {
+                CPMLConfig::with_thickness(thickness)
+            };
+            if let Some((ax, ay, az)) = pml_alpha_xyz {
+                cpml_config = cpml_config.with_alpha_xyz(ax, ay, az);
+            }
+            kwavers::solver::forward::pstd::config::BoundaryConfig::CPML(cpml_config)
         } else {
             kwavers::solver::forward::pstd::config::BoundaryConfig::None
         };
@@ -1084,13 +2648,30 @@ impl Simulation {
         let config = PSTDConfig {
             dt,
             nt: time_steps,
-            sensor_mask: Some(sensor_mask),
+            sensor_mask: Some(sensor_mask.clone()),
             boundary,
+            pml_inside,
             ..Default::default()
         };
 
         // Create solver
-        let mut solver = PSTDSolver::new(config, grid.clone(), medium, grid_source)?;
+        let mut solver = PSTDSolver::new(config, grid.clone(), medium.as_medium(), grid_source)?;
+
+        // Build recorder with statistical modes if requested, replacing the default one.
+        let modes = Self::recording_modes_from_strings(record_modes);
+        if !modes.is_empty() {
+            let shape = (grid.nx, grid.ny, grid.nz);
+            solver.sensor_recorder = SensorRecorder::with_modes(
+                Some(&sensor_mask),
+                shape,
+                time_steps + 1,
+                &modes,
+            )?;
+        } else if let Some(ordered) = transducer_ordered_indices {
+            // Transducer override (no stats)
+            solver.sensor_recorder =
+                SensorRecorder::from_ordered_indices(ordered, time_steps + 1)?;
+        }
 
         for source in sources {
             SolverTrait::add_source(&mut solver, source)?;
@@ -1099,16 +2680,15 @@ impl Simulation {
         // Run simulation - SensorRecorder records pressure at each step
         solver.run_orchestrated(time_steps)?;
 
-        // Extract recorded time series from SensorRecorder via public API
-        // Shape: (n_sensors, n_timesteps) = (1, time_steps)
+        // Extract statistics before consuming recorder
+        let stats = solver.sensor_recorder.extract_all_stats();
+
+        // Extract recorded time series: shape (n_sensors, n_timesteps)
         let recorded_data = solver.extract_pressure_data().ok_or_else(|| {
             kwavers::core::error::KwaversError::Io(std::io::Error::other("No sensor data recorded"))
         })?;
 
-        // Convert from 2D (1, time_steps) to 1D (time_steps)
-        let sensor_data = recorded_data.row(0).to_owned();
-
-        Ok(sensor_data)
+        Ok((recorded_data, stats))
     }
 }
 
@@ -1121,13 +2701,14 @@ impl Simulation {
 /// Contains sensor recordings and metadata.
 #[pyclass]
 pub struct SimulationResult {
-    /// Sensor data time series [Pa]
-    #[pyo3(get)]
-    sensor_data: Py<PyArray1<f64>>,
+    /// 1D sensor data (single sensor) [Pa]
+    sensor_data_1d: Option<Py<PyArray1<f64>>>,
+    /// 2D sensor data (multi-sensor, shape: n_sensors x n_timesteps) [Pa]
+    sensor_data_2d: Option<Py<PyArray2<f64>>>,
     /// Time vector [s]
     #[pyo3(get)]
     time: Py<PyArray1<f64>>,
-    /// Sensor data shape (nx, ny, nz)
+    /// Grid shape (nx, ny, nz)
     #[pyo3(get)]
     shape: (usize, usize, usize),
     /// Number of time steps
@@ -1139,20 +2720,62 @@ pub struct SimulationResult {
     /// Final simulation time [s]
     #[pyo3(get)]
     final_time: f64,
+    /// Maximum pressure at each sensor position over all time steps [Pa] (None if not recorded)
+    #[pyo3(get)]
+    p_max: Option<Py<PyArray1<f64>>>,
+    /// Minimum pressure at each sensor position over all time steps [Pa] (None if not recorded)
+    #[pyo3(get)]
+    p_min: Option<Py<PyArray1<f64>>>,
+    /// RMS pressure at each sensor position over all time steps [Pa] (None if not recorded)
+    #[pyo3(get)]
+    p_rms: Option<Py<PyArray1<f64>>>,
+    /// Final pressure at each sensor position [Pa] (None if not recorded)
+    #[pyo3(get)]
+    p_final: Option<Py<PyArray1<f64>>>,
 }
 
 #[pymethods]
 impl SimulationResult {
+    /// Get the sensor data as a numpy array.
+    /// Returns a 1D array for single-sensor simulations, 2D (n_sensors, n_timesteps) for multi-sensor.
+    #[getter]
+    fn sensor_data<'py>(&self, py: Python<'py>) -> Py<PyAny> {
+        if let Some(ref data_2d) = self.sensor_data_2d {
+            data_2d.clone_ref(py).into_any()
+        } else if let Some(ref data_1d) = self.sensor_data_1d {
+            data_1d.clone_ref(py).into_any()
+        } else {
+            py.None()
+        }
+    }
+
     /// Get sensor data shape.
     fn sensor_data_shape(&self) -> (usize, usize, usize) {
         self.shape
     }
 
+    /// Number of sensor points.
+    #[getter]
+    fn num_sensors(&self) -> usize {
+        if self.sensor_data_2d.is_some() {
+            // We can't easily query the array shape without the GIL, so store it
+            // For now return > 1 to indicate multi-sensor
+            2 // placeholder; users should check sensor_data.shape directly
+        } else {
+            1
+        }
+    }
+
     /// String representation.
     fn __repr__(&self) -> String {
+        let data_desc = if self.sensor_data_2d.is_some() {
+            "multi-sensor 2D"
+        } else {
+            "single-sensor 1D"
+        };
         format!(
-            "SimulationResult(shape={:?}, time_steps={}, dt={:.2e}, final_time={:.2e})",
-            self.shape, self.time_steps, self.dt, self.final_time
+            "SimulationResult(data={}, shape={:?}, time_steps={}, dt={:.2e}, final_time={:.2e})",
+            data_desc, self.shape, self.time_steps, self.dt, self.final_time
         )
     }
 }
@@ -1169,10 +2792,20 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Grid>()?;
     m.add_class::<Medium>()?;
     m.add_class::<Source>()?;
+    m.add_class::<KWaveArray>()?;
+    m.add_class::<TransducerArray2D>()?;
     m.add_class::<Sensor>()?;
     m.add_class::<Simulation>()?;
     m.add_class::<SimulationResult>()?;
     m.add_class::<SolverType>()?;
+    
+    // Phase 22 bindings
+    m.add_class::<PyPIDController>()?;
+    m.add_class::<PyBubbleField>()?;
+    m.add_function(wrap_pyfunction!(resample_to_target_grid, m)?)?;
+
+    // Register utility functions
+    utils_bindings::register_utils(m)?;
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
@@ -1229,5 +2862,136 @@ impl std::fmt::Debug for SineSignal {
             .field("frequency", &self.frequency)
             .field("amplitude", &self.amplitude)
             .finish()
+    }
+}
+
+/// Sampled signal from Python array
+#[derive(Clone)]
+struct SampledSignal {
+    values: Array1<f64>,
+    dt: f64,
+}
+
+impl SampledSignal {
+    fn new(values: Array1<f64>, dt: f64) -> Self {
+        Self { values, dt }
+    }
+}
+
+impl Signal for SampledSignal {
+    fn amplitude(&self, t: f64) -> f64 {
+        if self.dt <= 0.0 || self.values.is_empty() {
+            return 0.0;
+        }
+        let index = (t / self.dt).round() as isize;
+        if index >= 0 && (index as usize) < self.values.len() {
+            self.values[index as usize]
+        } else {
+            0.0
+        }
+    }
+
+    fn duration(&self) -> Option<f64> {
+        Some(self.values.len() as f64 * self.dt)
+    }
+
+    fn frequency(&self, _t: f64) -> f64 {
+        0.0
+    }
+
+    fn phase(&self, _t: f64) -> f64 {
+        0.0
+    }
+
+    fn clone_box(&self) -> Box<dyn Signal> {
+        Box::new(self.clone())
+    }
+}
+
+impl std::fmt::Debug for SampledSignal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SampledSignal")
+            .field("len", &self.values.len())
+            .field("dt", &self.dt)
+            .finish()
+    }
+}
+
+// ============================================================================
+// Phase 22 Wrappers: PID Controller, Registration, and Bubble Field
+// ============================================================================
+
+#[pyclass(name = "PIDController")]
+pub struct PyPIDController {
+    inner: kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDController,
+}
+
+#[pymethods]
+impl PyPIDController {
+    #[new]
+    #[pyo3(signature = (kp, ki, kd, setpoint, sample_time=0.001, output_min=0.0, output_max=1.0, integral_limit=100.0))]
+    fn new(
+        kp: f64, ki: f64, kd: f64, setpoint: f64, sample_time: f64,
+        output_min: f64, output_max: f64, integral_limit: f64
+    ) -> Self {
+        let gains = kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDGains { kp, ki, kd };
+        let mut config = kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDConfig::default();
+        config.gains = gains;
+        config.sample_time = sample_time;
+        config.output_min = output_min;
+        config.output_max = output_max;
+        config.integral_limit = integral_limit;
+        let mut controller = kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDController::new(config);
+        controller.set_setpoint(setpoint);
+        Self { inner: controller }
+    }
+
+    fn update(&mut self, measurement: f64) -> (f64, f64, f64, f64) {
+        let out = self.inner.update(measurement);
+        (out.control_signal, out.proportional_term, out.integral_term, out.derivative_term)
+    }
+
+    fn reset(&mut self) {
+        self.inner.reset();
+    }
+}
+
+#[pyfunction]
+fn resample_to_target_grid<'py>(
+    py: Python<'py>,
+    source_image: PyReadonlyArray3<f64>,
+    transform: [f64; 16],
+    target_dims: (usize, usize, usize),
+) -> Py<PyArray3<f64>> {
+    use kwavers::physics::acoustics::imaging::fusion::registration::resample_to_target_grid as kwavers_resample;
+    let arr = source_image.as_array().to_owned();
+    let resampled = py.detach(|| {
+        kwavers_resample(&arr, &transform, target_dims)
+    });
+    PyArray3::from_owned_array(py, resampled).into()
+}
+
+#[pyclass(name = "BubbleField")]
+pub struct PyBubbleField {
+    inner: kwavers::physics::acoustics::bubble_dynamics::bubble_field::BubbleField,
+}
+
+#[pymethods]
+impl PyBubbleField {
+    #[new]
+    fn new(nx: usize, ny: usize, nz: usize) -> Self {
+        let params = kwavers::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters::default();
+        Self { 
+            inner: kwavers::physics::acoustics::bubble_dynamics::bubble_field::BubbleField::new((nx, ny, nz), params) 
+        }
+    }
+    
+    fn add_center_bubble(&mut self) {
+         let params = kwavers::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters::default();
+         self.inner.add_center_bubble(&params);
+    }
+    
+    fn num_bubbles(&self) -> usize {
+         self.inner.bubbles.len()
     }
 }

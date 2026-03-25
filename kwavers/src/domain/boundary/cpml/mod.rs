@@ -20,7 +20,7 @@ mod memory;
 mod profiles;
 mod update;
 
-pub use config::CPMLConfig;
+pub use config::{CPMLConfig, PerDimensionAlpha, PerDimensionPML};
 pub use dispersive::DispersiveParameters;
 pub use memory::CPMLMemory;
 pub use profiles::CPMLProfiles;
@@ -47,7 +47,9 @@ pub struct CPMLBoundary {
 impl CPMLBoundary {
     /// Create a new CPML boundary
     pub fn new(config: CPMLConfig, grid: &Grid, sound_speed: f64) -> KwaversResult<Self> {
-        Self::new_with_time_step(config, grid, sound_speed, None)
+        let dx_min = grid.dx.min(grid.dy).min(grid.dz);
+        let dt = 0.3 * dx_min / sound_speed;
+        Self::new_with_time_step(config, grid, sound_speed, Some(dt))
     }
 
     /// Create a new CPML boundary with optional explicit solver time step.
@@ -55,10 +57,14 @@ impl CPMLBoundary {
         config: CPMLConfig,
         grid: &Grid,
         sound_speed: f64,
-        dt: Option<f64>,
+        dt_opt: Option<f64>,
     ) -> KwaversResult<Self> {
         config.validate()?;
-        let profiles = CPMLProfiles::new(&config, grid, sound_speed)?;
+        let dt = dt_opt.unwrap_or_else(|| {
+            let dx_min = grid.dx.min(grid.dy).min(grid.dz);
+            0.3 * dx_min / sound_speed
+        });
+        let profiles = CPMLProfiles::new(&config, grid, sound_speed, dt)?;
         let memory = CPMLMemory::new(&config, grid);
         let updater = CPMLUpdater::new();
 
@@ -68,7 +74,7 @@ impl CPMLBoundary {
             memory,
             updater,
             reference_sound_speed: sound_speed,
-            reference_time_step: dt.filter(|value| value.is_finite() && *value > 0.0),
+            reference_time_step: Some(dt),
         })
     }
 
@@ -83,24 +89,28 @@ impl CPMLBoundary {
         self.memory.reset();
     }
 
-    /// Updates CPML memory and applies the correction to a gradient field.
-    /// This is the primary method for applying the CPML correction in split-field FDTD solvers.
-    ///
-    /// # Arguments
-    /// * `gradient`: The gradient field (e.g., ∂p/∂x) to be corrected. Modified in-place.
-    /// * `component`: The vector component (0 for x, 1 for y, 2 for z) this gradient represents.
-    pub fn update_and_apply_gradient_correction(
+    /// Updates CPML memory and applies the correction to a pressure gradient field (for velocity update).
+    pub fn update_and_apply_p_gradient_correction(
         &mut self,
         gradient: &mut ndarray::Array3<f64>,
         component: usize,
     ) {
-        // Step 1: Update memory from the original gradient
         self.updater
-            .update_memory_component(&mut self.memory, gradient, component, &self.profiles);
+            .update_p_memory(&mut self.memory, gradient, component, &self.profiles);
+        self.updater
+            .apply_p_correction(gradient, &self.memory, component, &self.profiles);
+    }
 
-        // Step 2: Apply the correction to the gradient
+    /// Updates CPML memory and applies the correction to a velocity gradient field (for pressure update).
+    pub fn update_and_apply_v_gradient_correction(
+        &mut self,
+        v_gradient: &mut ndarray::Array3<f64>,
+        component: usize,
+    ) {
         self.updater
-            .apply_gradient_correction(gradient, &self.memory, component, &self.profiles);
+            .update_v_memory(&mut self.memory, v_gradient, component, &self.profiles);
+        self.updater
+            .apply_v_correction(v_gradient, &self.memory, component, &self.profiles);
     }
 
     /// Get configuration
@@ -180,9 +190,8 @@ impl Boundary for CPMLBoundary {
         grid: &Grid,
         _time_step: usize,
     ) -> KwaversResult<()> {
-        // For solvers that don't support full convolutional PML (like k-space),
-        // we apply CPML as a damping layer using its sigma profiles.
-        // This provides compatibility with the Boundary trait.
+        // K-Wave applies PML as exp(-sigma * dt/2) to velocity AND density fields
+        // (split-field PML, applied twice per step = net exp(-sigma*dt)).
         let dt = self.estimate_dt_from_grid(grid);
 
         Zip::indexed(&mut field).for_each(|(i, j, k), val| {
@@ -192,7 +201,7 @@ impl Boundary for CPMLBoundary {
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {
-                *val *= (-sigma_total * dt).exp();
+                *val *= (-sigma_total * dt * 0.5).exp();
             }
         });
 
@@ -214,12 +223,73 @@ impl Boundary for CPMLBoundary {
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {
-                let decay = (-sigma_total * dt).exp();
+                let decay = (-sigma_total * dt * 0.5).exp();
                 val.re *= decay;
                 val.im *= decay;
             }
         });
 
+        Ok(())
+    }
+
+    /// Apply directional (split-field) PML to a single field component.
+    ///
+    /// Applies `exp(-sigma_d * dt/2)` where `sigma_d` is the PML profile for
+    /// dimension `axis` (0=x, 1=y, 2=z). This matches k-Wave's split-field PML:
+    ///   rho_x *= pml_x,  rho_y *= pml_y,  rho_z *= pml_z
+    ///   ux    *= pml_x,  uy    *= pml_y,  uz    *= pml_z
+    ///
+    /// Ref: Treeby & Cox (2010), J. Biomed. Opt. 15(2), Eq. (3)-(5)
+    fn apply_acoustic_directional(
+        &mut self,
+        mut field: ArrayViewMut3<f64>,
+        grid: &Grid,
+        _time_step: usize,
+        axis: usize,
+    ) -> KwaversResult<()> {
+        let dt = self.estimate_dt_from_grid(grid);
+        Zip::indexed(&mut field).for_each(|(i, j, k), val| {
+            let sigma = match axis {
+                0 => self.profiles.sigma_x[i],
+                1 => self.profiles.sigma_y[j],
+                _ => self.profiles.sigma_z[k],
+            };
+            if sigma > 0.0 {
+                *val *= (-sigma * dt * 0.5).exp();
+            }
+        });
+        Ok(())
+    }
+
+    /// Apply staggered-grid PML to a velocity component.
+    ///
+    /// Uses `sigma_x_sgx`, `sigma_y_sgy`, or `sigma_z_sgz` (half-cell-shifted sigma)
+    /// matching k-Wave's `pml_x_sgx`, `pml_y_sgy`, `pml_z_sgz` arrays.
+    ///
+    /// At the deepest left PML cell (index 0), the staggered sigma is:
+    ///   σ_sg = σ_max · ((pml_size − 0.5) / pml_size)⁴ ≈ 0.706 · σ_max
+    /// vs the non-staggered σ_max, giving a less-absorbing PML for velocity.
+    ///
+    /// This matches k-Wave's behavior and corrects the ≈ 20% amplitude under-prediction
+    /// that occurs when non-staggered sigma is applied to staggered velocity fields.
+    fn apply_velocity_pml_directional(
+        &mut self,
+        mut field: ArrayViewMut3<f64>,
+        grid: &Grid,
+        _time_step: usize,
+        axis: usize,
+    ) -> KwaversResult<()> {
+        let dt = self.estimate_dt_from_grid(grid);
+        Zip::indexed(&mut field).for_each(|(i, j, k), val| {
+            let sigma = match axis {
+                0 => self.profiles.sigma_x_sgx[i],
+                1 => self.profiles.sigma_y_sgy[j],
+                _ => self.profiles.sigma_z_sgz[k],
+            };
+            if sigma > 0.0 {
+                *val *= (-sigma * dt * 0.5).exp();
+            }
+        });
         Ok(())
     }
 
@@ -260,7 +330,7 @@ impl BoundaryCondition for CPMLBoundary {
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {
-                *val *= (-sigma_total * dt).exp();
+                *val *= (-sigma_total * dt * 0.5).exp();
             }
         });
 
@@ -288,7 +358,7 @@ impl BoundaryCondition for CPMLBoundary {
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {
-                let decay = (-sigma_total * dt).exp();
+                let decay = (-sigma_total * dt * 0.5).exp();
                 val.re *= decay;
                 val.im *= decay;
             }
@@ -314,9 +384,9 @@ impl BoundaryCondition for CPMLBoundary {
     fn memory_usage(&self) -> usize {
         // Estimate memory usage from all components
         std::mem::size_of_val(self)
-            + self.memory.psi_vx_x.len() * std::mem::size_of::<f64>()
-            + self.memory.psi_vy_y.len() * std::mem::size_of::<f64>()
-            + self.memory.psi_vz_z.len() * std::mem::size_of::<f64>()
+            + self.memory.psi_v_x.len() * std::mem::size_of::<f64>()
+            + self.memory.psi_v_y.len() * std::mem::size_of::<f64>()
+            + self.memory.psi_v_z.len() * std::mem::size_of::<f64>()
             + self.memory.psi_p_x.len() * std::mem::size_of::<f64>()
             + self.memory.psi_p_y.len() * std::mem::size_of::<f64>()
             + self.memory.psi_p_z.len() * std::mem::size_of::<f64>()

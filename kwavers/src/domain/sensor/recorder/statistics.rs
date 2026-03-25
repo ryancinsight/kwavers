@@ -59,6 +59,9 @@ impl RecorderStatistics {
             self.min_pressure, self.max_pressure
         );
         info!("Max temperature: {:.2} K", self.max_temperature);
-        info!("Max light intensity: {:.2e} W/m\u{00b2}", self.max_light_intensity);
+        info!(
+            "Max light intensity: {:.2e} W/m\u{00b2}",
+            self.max_light_intensity
+        );
     }
 }

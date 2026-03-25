@@ -1,8 +1,9 @@
 //! Water properties and attenuation models
 //!
 //! Implements water property calculations based on:
-//! - Bilaniuk & Wong (1993): Sound speed model
-//! - Kell (1975): Density model
+//! - Marczak (1997): Sound speed model (k-wave compatible)
+//! - Jones & Harris (1992): Density model (k-wave compatible)
+//! - Beyer (1960): Nonlinear parameter B/A (k-wave compatible)
 //! - Francois & Garrison (1982): Absorption model
 //! - Pinkerton (1949): Simplified absorption model
 
@@ -11,64 +12,141 @@
 pub struct WaterProperties;
 
 impl WaterProperties {
-    // Sound speed polynomial coefficients (Bilaniuk & Wong, 1993)
-    const SOUND_SPEED_C0: f64 = 1402.385;
-    const SOUND_SPEED_C1: f64 = 5.03830;
-    const SOUND_SPEED_C2: f64 = -5.81090e-2;
-    const SOUND_SPEED_C3: f64 = 3.34320e-4;
-    const SOUND_SPEED_C4: f64 = -1.48259e-6;
-    const SOUND_SPEED_C5: f64 = 3.16090e-9;
+    // Sound speed polynomial coefficients — Marczak (1997)
+    // Reference: R. Marczak (1997). "The sound velocity in water as a function of
+    // temperature". Journal of Research of NIST, 102(6), 561-567.
+    // Valid range: 0–95 °C.  Matches k-wave-python `water_sound_speed`.
+    const SOUND_SPEED_C0: f64 = 1.402385e3;
+    const SOUND_SPEED_C1: f64 = 5.038813;
+    const SOUND_SPEED_C2: f64 = -5.779136e-2;
+    const SOUND_SPEED_C3: f64 = 3.287156e-4;
+    const SOUND_SPEED_C4: f64 = -1.398845e-6;
+    const SOUND_SPEED_C5: f64 = 2.787860e-9;
 
-    // Water density polynomial coefficients (Kell, 1975)
-    // Reference: Kell, G. S. (1975). "Density, thermal expansivity, and compressibility of liquid water from 0° to 150°C"
-    // Units: All coefficients in kg/m³, temperature in °C
-    /// Constant term [kg/m³]
-    const KELL_A: f64 = 999.83952;
-    /// Linear coefficient [kg/m³·°C⁻¹]
-    const KELL_B: f64 = 16.945176;
-    /// Quadratic coefficient [kg/m³·°C⁻²]
-    const KELL_C: f64 = -7.9870401e-3;
-    /// Cubic coefficient [kg/m³·°C⁻³]
-    const KELL_D: f64 = -46.170461e-6;
-    /// Quartic coefficient [kg/m³·°C⁻⁴]
-    const KELL_E: f64 = 105.56302e-9;
-    /// Quintic coefficient [kg/m³·°C⁻⁵]
-    const KELL_F: f64 = -280.54253e-12;
-    /// Denominator linear coefficient [dimensionless]
-    const KELL_G: f64 = 16.879850e-3;
+    // Water density polynomial coefficients — Jones & Harris (1992)
+    // Reference: F. E. Jones and G. L. Harris (1992) "ITS-90 Density of Water
+    // Formulation for Volumetric Standards Calibration," Journal of Research of
+    // NIST, 97(3), 335-340.
+    // Valid range: 5–40 °C.  Matches k-wave-python `water_density`.
+    const JONES_A: f64 = 999.84847;
+    const JONES_B: f64 = 6.337563e-2;
+    const JONES_C: f64 = -8.523829e-3;
+    const JONES_D: f64 = 6.943248e-5;
+    const JONES_E: f64 = -3.821216e-7;
 
-    /// Calculate water density as function of temperature
-    /// Based on Kell (1975) formula
+    // Nonlinear parameter B/A polynomial coefficients — Beyer (1960)
+    // Reference: R. T. Beyer (1960) "Parameter of nonlinearity in fluids,"
+    // J. Acoust. Soc. Am., 32(6), 719-721.
+    // Valid range: 0–100 °C.  Matches k-wave-python `water_non_linearity`.
+    const BEYER_BA_C0: f64 = 4.186533937275504;
+    const BEYER_BA_C1: f64 = 5.380874771364909e-2;
+    const BEYER_BA_C2: f64 = -9.355518377254833e-4;
+    const BEYER_BA_C3: f64 = 1.047843302423604e-5;
+    const BEYER_BA_C4: f64 = -4.587913769504693e-8;
+
+    /// Calculate water density as function of temperature.
+    ///
+    /// Uses Jones & Harris (1992) 4th-order polynomial for air-saturated water.
+    /// Valid range: 5–40 °C.
+    ///
+    /// # Arguments
+    /// * `temperature` — Temperature in degrees Celsius
+    ///
+    /// # Returns
+    /// Density in kg/m³
     #[must_use]
     pub fn density(temperature: f64) -> f64 {
-        // Temperature in Celsius
         let t = temperature;
-
-        // Kell's formula for water density (kg/m³)
-        let numerator = Self::KELL_A
-            + Self::KELL_B * t
-            + Self::KELL_C * t.powi(2)
-            + Self::KELL_D * t.powi(3)
-            + Self::KELL_E * t.powi(4)
-            + Self::KELL_F * t.powi(5);
-        let denominator = 1.0 + Self::KELL_G * t;
-        numerator / denominator
+        Self::JONES_A
+            + Self::JONES_B * t
+            + Self::JONES_C * t.powi(2)
+            + Self::JONES_D * t.powi(3)
+            + Self::JONES_E * t.powi(4)
     }
 
-    /// Calculate water sound speed as function of temperature
-    /// Based on Bilaniuk & Wong (1993)
+    /// Calculate water sound speed as function of temperature.
+    ///
+    /// Uses Marczak (1997) 5th-order polynomial.
+    /// Valid range: 0–95 °C.
+    ///
+    /// # Arguments
+    /// * `temperature` — Temperature in degrees Celsius
+    ///
+    /// # Returns
+    /// Sound speed in m/s
     #[must_use]
     pub fn sound_speed(temperature: f64) -> f64 {
-        // Temperature in Celsius
         let t = temperature;
-
-        // 5th order polynomial fit (Bilaniuk & Wong, 1993)
         Self::SOUND_SPEED_C0
             + Self::SOUND_SPEED_C1 * t
             + Self::SOUND_SPEED_C2 * t.powi(2)
             + Self::SOUND_SPEED_C3 * t.powi(3)
             + Self::SOUND_SPEED_C4 * t.powi(4)
             + Self::SOUND_SPEED_C5 * t.powi(5)
+    }
+
+    /// Calculate water nonlinear parameter B/A as function of temperature.
+    ///
+    /// Uses Beyer (1960) 4th-order polynomial fit.
+    /// Valid range: 0–100 °C.
+    ///
+    /// # Arguments
+    /// * `temperature` — Temperature in degrees Celsius
+    ///
+    /// # Returns
+    /// Dimensionless B/A parameter
+    #[must_use]
+    pub fn nonlinear_parameter(temperature: f64) -> f64 {
+        let t = temperature;
+        Self::BEYER_BA_C0
+            + Self::BEYER_BA_C1 * t
+            + Self::BEYER_BA_C2 * t.powi(2)
+            + Self::BEYER_BA_C3 * t.powi(3)
+            + Self::BEYER_BA_C4 * t.powi(4)
+    }
+
+    /// Calculate ultrasonic absorption in distilled water.
+    ///
+    /// Uses Pinkerton (1949) model: 7th-order polynomial in temperature,
+    /// quadratic in frequency.  Matches k-wave-python `water_absorption`.
+    ///
+    /// # Arguments
+    /// * `frequency_mhz` — Frequency in MHz
+    /// * `temperature`   — Temperature in degrees Celsius (0–60 °C)
+    ///
+    /// # Returns
+    /// Absorption in dB/cm
+    ///
+    /// # References
+    /// J. M. M. Pinkerton (1949) "The Absorption of Ultrasonic Waves in
+    /// Liquids and its Relation to Molecular Constitution," Proceedings of
+    /// the Physical Society. Section B, 2, 129-141.
+    #[must_use]
+    pub fn absorption_pinkerton(frequency_mhz: f64, temperature: f64) -> f64 {
+        const NEPER2DB: f64 = 8.686;
+        const A: [f64; 8] = [
+            56.723_531_840_522_71,
+            -2.899633796917384,
+            0.099253401567561,
+            -0.002067402501557,
+            2.189417428917596e-05,
+            -6.210860973978427e-08,
+            -6.402634551821596e-10,
+            3.869387679459408e-12,
+        ];
+
+        let t = temperature;
+        let a_on_fsqr = (A[0]
+            + A[1] * t
+            + A[2] * t.powi(2)
+            + A[3] * t.powi(3)
+            + A[4] * t.powi(4)
+            + A[5] * t.powi(5)
+            + A[6] * t.powi(6)
+            + A[7] * t.powi(7))
+            * 1e-17;
+
+        NEPER2DB * 1e12 * frequency_mhz * frequency_mhz * a_on_fsqr
     }
 
     /// Calculate water absorption coefficient
@@ -110,16 +188,5 @@ impl WaterProperties {
         // Total absorption in dB/km, convert to Np/m
         let alpha_db_per_km = boric + magnesium + water;
         alpha_db_per_km * 0.1151 / 1e3 // Convert to Np/m
-    }
-
-    /// Pinkerton model for absorption calculations
-    #[must_use]
-    pub fn pinkerton_absorption(frequency: f64, temperature: f64) -> f64 {
-        // Pinkerton (1949) model: α = A * f²
-        // where A depends on temperature
-        let f_mhz = frequency / 1e6;
-        let a = 25.3 * ((-17.0 / (temperature + 273.15)).exp());
-
-        a * f_mhz * f_mhz * 1e-3 // Convert to Np/m
     }
 }

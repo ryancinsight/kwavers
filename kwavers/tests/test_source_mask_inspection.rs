@@ -88,7 +88,11 @@ fn test_plane_wave_mask_boundary_only() {
 
     // Verify expectations for BoundaryOnly mode
     assert_eq!(num_nonzero, nx * ny, "Should have nx×ny boundary points");
-    assert_eq!(z_indices_with_nonzero.len(), 1, "Should only be at one z index");
+    assert_eq!(
+        z_indices_with_nonzero.len(),
+        1,
+        "Should only be at one z index"
+    );
     assert!(z_indices_with_nonzero.contains(&0), "Should be at z=0");
     assert!((min_val - 1.0).abs() < 1e-6, "Mask values should be 1.0");
     assert!((max_val - 1.0).abs() < 1e-6, "Mask values should be 1.0");
@@ -156,8 +160,15 @@ fn test_plane_wave_mask_full_grid() {
     }
 
     // FullGrid mode should create a spatial pattern (cos(k*z)) across the domain
-    assert_eq!(num_nonzero, nx * ny * nz, "Should have all grid points active");
-    assert!(min_val < 1.0, "Should have varying values (spatial pattern)");
+    assert_eq!(
+        num_nonzero,
+        nx * ny * nz,
+        "Should have all grid points active"
+    );
+    assert!(
+        min_val < 1.0,
+        "Should have varying values (spatial pattern)"
+    );
     assert!(
         (max_val - 1.0).abs() < 0.1,
         "Max should be near 1.0 (cos at peak)"
@@ -190,8 +201,12 @@ fn test_point_source_mask() {
 
     println!("\n=== Point Source Mask ===");
     println!("Grid: {}×{}×{}", nx, ny, nz);
-    println!("Position: ({:.4}, {:.4}, {:.4}) mm",
-        position.0 * 1e3, position.1 * 1e3, position.2 * 1e3);
+    println!(
+        "Position: ({:.4}, {:.4}, {:.4}) mm",
+        position.0 * 1e3,
+        position.1 * 1e3,
+        position.2 * 1e3
+    );
 
     // Analyze mask
     let mut num_nonzero = 0;

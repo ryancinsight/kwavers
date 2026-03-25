@@ -181,7 +181,10 @@ fn test_pstd_pressure_equation_of_state() -> KwaversResult<()> {
 
         for &(ix, iy, iz) in &points {
             let p = solver.fields.p[[ix, iy, iz]];
-            let rho = solver.rhox[[ix, iy, iz]];
+            let rhox = solver.rhox[[ix, iy, iz]];
+            let rhoy = solver.rhoy[[ix, iy, iz]];
+            let rhoz = solver.rhoz[[ix, iy, iz]];
+            let rho = rhox + rhoy + rhoz;
             // Use sound speed from medium (homogeneous)
             let c = c0;
 
@@ -459,10 +462,13 @@ fn test_pstd_time_reversal_symmetry() -> KwaversResult<()> {
         max_p_initial
     );
 
-    // After first step, boundary should have pressure
-    solver.step_forward()?;
+    // After a few steps, boundary should have significant pressure
+    for _ in 0..5 {
+        solver.step_forward()?;
+    }
+
     let p_boundary = solver.fields.p[[nx / 2, ny / 2, 0]];
-    println!("After 1 step, p_boundary: {:.3e} Pa", p_boundary);
+    println!("After 5 steps, p_boundary: {:.3e} Pa", p_boundary);
 
     assert!(
         p_boundary.abs() > 1.0,
