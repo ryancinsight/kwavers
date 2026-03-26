@@ -152,18 +152,36 @@ impl PSTDSolver {
             return Ok(());
         }
 
+        // Theorem (PSTD Split-Density Source Injection, Treeby & Cox 2010 Eq. 16–18):
+        // k-Wave scales rho_scale = 2·Δt/(n_dim·c₀·Δx) and injects into n_dim density
+        // components so total density change = n_dim × s.
+        // kwavers always has 3 density components (ρₓ,ρᵧ,ρ_z) in the EOS p=c²·(ρₓ+ρᵧ+ρ_z).
+        // For n_dim < 3, the source handler already divided by n_dim (not 3), so each component
+        // must receive s·(n_dim/3) to keep the total density injection = n_dim × s_kwave.
+        let n_dim_active = {
+            let g = &*self.grid;
+            [g.nx > 1, g.ny > 1, g.nz > 1]
+                .iter()
+                .filter(|&&d| d)
+                .count()
+                .max(1) as f64
+        };
+        let density_scale = n_dim_active / 3.0;
+
         match p_mode {
             crate::domain::source::SourceMode::Dirichlet => {
-                // Dirichlet: enforce source values directly into density
+                // Dirichlet: enforce source values directly into all density components.
+                // Each component = s·(n_dim/3) so total = n_dim·s = k-Wave's n_dim-component sum.
                 Zip::from(&mut self.rhox)
                     .and(&mut self.rhoy)
                     .and(&mut self.rhoz)
                     .and(&self.dpx)
                     .for_each(|rx, ry, rz, &s| {
                         if s.abs() > 0.0 {
-                            *rx = s;
-                            *ry = s;
-                            *rz = s;
+                            let v = s * density_scale;
+                            *rx = v;
+                            *ry = v;
+                            *rz = v;
                         }
                     });
             }
@@ -183,9 +201,10 @@ impl PSTDSolver {
                     .and(&mut self.rhoz)
                     .and(&self.dpx)
                     .for_each(|rx, ry, rz, &s| {
-                        *rx += s;
-                        *ry += s;
-                        *rz += s;
+                        let v = s * density_scale;
+                        *rx += v;
+                        *ry += v;
+                        *rz += v;
                     });
             }
             crate::domain::source::SourceMode::AdditiveNoCorrection => {
@@ -194,9 +213,10 @@ impl PSTDSolver {
                     .and(&mut self.rhoz)
                     .and(&self.dpx)
                     .for_each(|rx, ry, rz, &s| {
-                        *rx += s;
-                        *ry += s;
-                        *rz += s;
+                        let v = s * density_scale;
+                        *rx += v;
+                        *ry += v;
+                        *rz += v;
                     });
             }
         }

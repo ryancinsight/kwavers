@@ -500,7 +500,14 @@ impl WesterveltFdtd {
                             crate::domain::medium::AcousticProperties::absorption_coefficient(
                                 medium, x, y, z, grid, 1e6,
                             ); // 1 MHz reference
-                        let delta = 2.0 * alpha * c.powi(3) / (2.0 * std::f64::consts::PI).powi(2);
+                        // Theorem (Diffusivity of Sound, Hamilton & Blackstock 1998, Ch. 3 Eq. 3.64):
+                        // δ = 2·α·c³ / ω²  where ω = 2π·f_ref (α evaluated at f_ref = 1 MHz).
+                        // Leapfrog absorption contribution to p^{n+1}:
+                        //   −dt²·(δ/c²)·∂³p/∂t³ ≈ −(δ/c²)·(p−2p''+p'')/ dt
+                        // Ref: Hamilton & Blackstock (1998), Nonlinear Acoustics, Academic Press.
+                        let f_ref = 1.0e6_f64; // 1 MHz reference frequency (matches alpha query above)
+                        let omega_ref = 2.0 * std::f64::consts::PI * f_ref; // ω = 2π·f_ref
+                        let delta = 2.0 * alpha * c.powi(3) / omega_ref.powi(2);
                         delta * dt / c.powi(2) * (p - 2.0 * p_prev + p_prev2[[i, j, k]]) / (dt * dt)
                     } else {
                         0.0

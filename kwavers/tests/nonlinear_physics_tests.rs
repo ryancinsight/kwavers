@@ -109,12 +109,8 @@ fn test_westervelt_solver_is_stable() -> KwaversResult<()> {
 /// at a rate proportional to ω². After N steps from the same initial conditions,
 /// the absorbed (lossy) simulation should have strictly less energy than the lossless one.
 ///
-/// KNOWN ISSUE: The Westervelt absorption formula uses `δ/c²` instead of `δ/c⁴`
-/// (and second time derivative instead of third), causing the absorption term to be
-/// ~c² ≈ 2.25e6 times too large, which immediately destabilizes the lossy solver
-/// with water-like parameters. This test is ignored until the formula is corrected.
-/// See `solver/forward/nonlinear/westervelt.rs` lines ~497–510.
-#[ignore = "Westervelt absorption formula bug: δ/c² instead of δ/c⁴ → NaN with water params"]
+/// Fix applied: `westervelt.rs` line ~503 uses `ω_ref = 2π·f_ref` (f_ref = 1 MHz) so that
+/// `δ = 2αc³/ω_ref²` is physically correct (~3.76×10⁻⁷ m²/s for water at 1 MHz).
 #[test]
 fn test_westervelt_absorption_reduces_energy() -> KwaversResult<()> {
     let nx = 10;
