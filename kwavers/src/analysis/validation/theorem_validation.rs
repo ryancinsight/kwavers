@@ -3,6 +3,7 @@
 //! This module provides systematic validation of mathematical theorems
 //! implemented in Kwavers with quantitative error bounds and convergence proofs.
 
+use crate::core::constants::fundamental::{AVOGADRO, BOLTZMANN};
 use ndarray::Array1;
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -385,10 +386,8 @@ impl TheoremValidator {
         measured_speed: f64,
     ) -> TheoremValidation {
         // Ideal gas law: c = sqrt(γ kT / m) where k is Boltzmann constant
-        let k_boltzmann = 1.380649e-23; // J/K
-        let n_avogadro = 6.02214076e23; // mol^-1
         let theoretical_speed =
-            (gamma * k_boltzmann * temperature_k / (molecular_mass / n_avogadro)).sqrt();
+            (gamma * BOLTZMANN * temperature_k / (molecular_mass / AVOGADRO)).sqrt();
 
         let error = (measured_speed - theoretical_speed).abs() / theoretical_speed;
         let passed = error < 0.01; // 1% tolerance for gas properties

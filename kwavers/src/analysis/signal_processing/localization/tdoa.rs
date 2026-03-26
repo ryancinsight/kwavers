@@ -7,8 +7,8 @@
 //! - Cafforio, C., & Rocca, F. (1976). "Direction determination in seismic signal processing"
 
 use super::config::LocalizationConfig;
+use crate::analysis::signal_processing::localization::{LocalizationProcessor, SourceLocation};
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::signal_processing::localization::{LocalizationProcessor, SourceLocation};
 
 /// TDOA configuration
 #[derive(Debug, Clone)]
@@ -126,8 +126,7 @@ impl TDOAProcessor {
                     TimeDelayMethod::CrossCorrelation => {
                         cross_correlation_delay(&sensor_signals[i], &sensor_signals[j], dt)
                     }
-                    TimeDelayMethod::GeneralizedCrossCorrelation
-                    | TimeDelayMethod::GCCWithPHAT => {
+                    TimeDelayMethod::GeneralizedCrossCorrelation | TimeDelayMethod::GCCWithPHAT => {
                         // GCC-PHAT: use the same cross-correlation approach
                         // but normalise by amplitude.  A full FFT-based PHAT
                         // would use rustfft; this is the time-domain equivalent.

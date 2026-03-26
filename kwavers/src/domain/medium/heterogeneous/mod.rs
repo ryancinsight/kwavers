@@ -20,4 +20,4 @@ pub mod constants;
 pub mod tissue;
 
 pub use core::HeterogeneousMedium;
-pub use factory::TissueFactory;
+pub use factory::{HeterogeneousFactory, TissueFactory};

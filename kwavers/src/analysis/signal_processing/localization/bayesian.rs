@@ -9,8 +9,8 @@
 //! - Gordon, N. J., Salmond, D. J., & Smith, A. F. (1993). "Novel approach to nonlinear/non-Gaussian Bayesian state estimation"
 
 use super::config::LocalizationConfig;
+use crate::analysis::signal_processing::localization::{LocalizationProcessor, SourceLocation};
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::signal_processing::localization::{LocalizationProcessor, SourceLocation};
 
 /// Kalman filter configuration
 #[derive(Debug, Clone)]

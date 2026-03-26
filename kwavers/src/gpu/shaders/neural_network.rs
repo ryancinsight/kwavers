@@ -434,11 +434,26 @@ impl NeuralNetworkShader {
             label: Some("NN Act Bind Group"),
             layout: &self.bind_group_layouts[0],
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: dummy.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: dummy.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: dummy.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: output_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 4, resource: params_buf.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: dummy.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: dummy.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: dummy.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: output_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: params_buf.as_entire_binding(),
+                },
             ],
         });
 

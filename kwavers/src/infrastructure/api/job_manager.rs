@@ -66,13 +66,13 @@ pub struct TrainingResult {
     pub model_metadata: crate::api::ModelMetadata,
 }
 
-/// Stub training result for when PINN is not available
+/// Stub training result for when PINN is not available.
+///
+/// This is a unit struct since PINN training always returns an error
+/// when the `pinn` feature is disabled.
 #[cfg(not(feature = "pinn"))]
 #[derive(Debug, Clone)]
-pub struct TrainingResult {
-    /// Placeholder for non-PINN builds
-    pub placeholder: (),
-}
+pub struct TrainingResult;
 
 /// Job manager for coordinating PINN training tasks
 #[derive(Clone, Debug)]

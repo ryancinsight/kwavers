@@ -439,8 +439,18 @@ impl FusionEngine {
     /// Current 3D output format cannot represent color information.
     fn fusion_false_color(&self, reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
         // Approximate: intensity-weighted blend (true color requires 4D output)
-        let ref_norm = reference / (reference.iter().copied().fold(f64::NEG_INFINITY, f64::max).max(1e-10));
-        let flt_norm = floating / (floating.iter().copied().fold(f64::NEG_INFINITY, f64::max).max(1e-10));
+        let ref_norm = reference
+            / (reference
+                .iter()
+                .copied()
+                .fold(f64::NEG_INFINITY, f64::max)
+                .max(1e-10));
+        let flt_norm = floating
+            / (floating
+                .iter()
+                .copied()
+                .fold(f64::NEG_INFINITY, f64::max)
+                .max(1e-10));
         &ref_norm * (1.0 - self.params.blend_weight) + &flt_norm * self.params.blend_weight
     }
 

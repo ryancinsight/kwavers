@@ -1,0 +1,87 @@
+C:\Users\RyanClanton\AppData\Roaming\Python\Python313\site-packages\kwave\options\simulation_execution_options.py:111: UserWarning: Custom binary name set. Ignoring `is_gpu_simulation` state.
+  warnings.warn("Custom binary name set. Ignoring `is_gpu_simulation` state.")
+Running k-wave-python 3D...
++---------------------------------------------------------------+
+|                   kspaceFirstOrder-OMP v1.3                   |
++---------------------------------------------------------------+
+| Reading simulation configuration:                        Done |
+| Number of CPU threads:                                     24 |
+| Processor name:                Intel(R) Core(TM) Ultra 9 285K |
++---------------------------------------------------------------+
+|                      Simulation details                       |
++---------------------------------------------------------------+
+| Domain dimensions:                               64 x 64 x 64 |
+| Medium type:                                               3D |
+| Simulation time steps:                                    150 |
++---------------------------------------------------------------+
+|                        Initialization                         |
++---------------------------------------------------------------+
+| Memory allocation:                                       Done |
+| Data loading:                                            Done |
+| Elapsed time:                                           0.01s |
++---------------------------------------------------------------+
+| FFT plans creation:                                      Done |
+| Pre-processing phase:                                    Done |
+| Elapsed time:                                           0.09s |
++---------------------------------------------------------------+
+|                    Computational resources                    |
++---------------------------------------------------------------+
+| Current host memory in use:                              30MB |
+| Expected output file size:                                0MB |
++---------------------------------------------------------------+
+|                          Simulation                           |
++----------+----------------+--------------+--------------------+
+| Progress |  Elapsed time  |  Time to go  |  Est. finish time  |
++----------+----------------+--------------+--------------------+
+|     0%   |        0.387s  |     28.671s  |  22/02/26 14:42:58 |
+|     5%   |        2.588s  |     40.539s  |  22/02/26 14:43:12 |
+|    10%   |        2.730s  |     21.360s  |  22/02/26 14:42:53 |
+|    15%   |        2.763s  |     14.507s  |  22/02/26 14:42:46 |
+|    20%   |        2.771s  |     10.219s  |  22/02/26 14:42:42 |
+|    25%   |        2.775s  |      7.897s  |  22/02/26 14:42:39 |
+|    30%   |        2.779s  |      6.089s  |  22/02/26 14:42:38 |
+|    35%   |        2.788s  |      4.956s  |  22/02/26 14:42:36 |
+|    40%   |        2.792s  |      3.963s  |  22/02/26 14:42:35 |
+|    45%   |        2.796s  |      3.283s  |  22/02/26 14:42:35 |
+|    50%   |        2.804s  |      2.658s  |  22/02/26 14:42:34 |
+|    55%   |        2.807s  |      2.206s  |  22/02/26 14:42:34 |
+|    60%   |        2.811s  |      1.772s  |  22/02/26 14:42:33 |
+|    65%   |        2.820s  |      1.453s  |  22/02/26 14:42:33 |
+|    70%   |        2.824s  |      1.135s  |  22/02/26 14:42:33 |
+|    75%   |        2.830s  |      0.894s  |  22/02/26 14:42:32 |
+|    80%   |        2.836s  |      0.651s  |  22/02/26 14:42:32 |
+|    85%   |        2.840s  |      0.462s  |  22/02/26 14:42:32 |
+|    90%   |        2.845s  |      0.270s  |  22/02/26 14:42:32 |
+|    95%   |        2.850s  |      0.119s  |  22/02/26 14:42:32 |
++----------+----------------+--------------+--------------------+
+| Elapsed time:                                           2.85s |
++---------------------------------------------------------------+
+| Sampled data post-processing:                            Done |
+| Elapsed time:                                           0.00s |
++---------------------------------------------------------------+
+|                            Summary                            |
++---------------------------------------------------------------+
+| Peak memory in use:                                      35MB |
++---------------------------------------------------------------+
+| Total execution time:                                   7.43s |
++---------------------------------------------------------------+
+|                       End of computation                      |
++---------------------------------------------------------------+
+k-wave data shape: (1, 150)
+Running pykwavers 3D...
+kwavers data shape: (150,)
+Post-reshape kw_data shape: (1, 150)
+Post-reshape kwa_data shape: (1, 150)
+========================================
+Maximum absolute difference: 5.230190e-02
+k-wave  max value: 6.851109e-02, min value: -6.954692e-02
+pykwavers max value: 3.114371e-02, min value: -5.233580e-02
+========================================
+Traceback (most recent call last):
+  File "d:\kwavers\pykwavers\tests\validate_ivp_photoacoustic.py", line 125, in <module>
+    test_ivp_photoacoustic_waveforms()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "d:\kwavers\pykwavers\tests\validate_ivp_photoacoustic.py", line 121, in test_ivp_photoacoustic_waveforms
+    assert max_diff < 1e-4, f"Parity mismatch! Max diff: {max_diff}"
+           ^^^^^^^^^^^^^^^
+AssertionError: Parity mismatch! Max diff: 0.052301899090864384

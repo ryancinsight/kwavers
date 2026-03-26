@@ -270,7 +270,7 @@ pub use delay_and_sum::{CavitationEvent, DelayAndSumConfig, DelayAndSumPAM};
 // - detection: Advanced event detection with spectral signature analysis
 // - spectral: Frequency-domain analysis for cavitation characterization
 
-use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
+use crate::domain::sensor::beamforming::processor::BeamformingProcessor;
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::sensor::beamforming::BeamformingCoreConfig;

@@ -76,7 +76,8 @@ impl DGOperations for DGSolver {
         // Full DG reconstruction: u(x) = Σ û_i φ_i(x) evaluated at quadrature points.
         // Deferred to Sprint 122+ for full discontinuous Galerkin solver expansion.
         Err(KwaversError::NotImplemented(
-            "DG reconstruct_from_basis: polynomial expansion evaluation not yet implemented".to_string(),
+            "DG reconstruct_from_basis: polynomial expansion evaluation not yet implemented"
+                .to_string(),
         ))
     }
 }

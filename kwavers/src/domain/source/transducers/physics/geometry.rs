@@ -154,8 +154,8 @@ impl ElementGeometry {
     /// * `dielectric_constant` - Relative dielectric constant
     #[must_use]
     pub fn capacitance(&self, dielectric_constant: f64) -> f64 {
-        const EPSILON_0: f64 = 8.854e-12; // F/m
-        EPSILON_0 * dielectric_constant * self.area() / self.thickness
+        use crate::core::constants::fundamental::VACUUM_PERMITTIVITY;
+        VACUUM_PERMITTIVITY * dielectric_constant * self.area() / self.thickness
     }
 
     /// Calculate mechanical compliance

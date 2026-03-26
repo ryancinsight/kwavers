@@ -25,7 +25,7 @@ mod tests {
         // Verify modality weights map is empty initially
         assert!(config.modality_weights.is_empty());
         // Verify default uncertainty quantification setting
-        assert_eq!(config.uncertainty_quantification, false);
+        assert!(!config.uncertainty_quantification);
         // Verify default quality threshold
         assert_eq!(config.min_quality_threshold, 0.3);
     }

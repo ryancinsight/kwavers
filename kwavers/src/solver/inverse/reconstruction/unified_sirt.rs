@@ -29,8 +29,8 @@
 //! - Hudson, H. M., & Larkin, R. S. (1994). "Accelerated image reconstruction using ordered subsets"
 
 use crate::core::error::KwaversResult;
-use log::debug;
 use crate::math::inverse_problems::{ModelRegularizer3D, RegularizationConfig};
+use log::debug;
 use ndarray::{Array1, Array2, Array3};
 use std::fmt;
 

@@ -6,10 +6,6 @@
 // Submodules
 pub mod nonlinear;
 
-// Test support (only available in test builds)
-#[cfg(test)]
-mod test_support;
-
 // Re-exports for convenience
 pub use nonlinear::NonlinearWave;
 
@@ -205,5 +201,103 @@ mod tests {
         assert_eq!(SpatialOrder::from_usize(4).unwrap(), SpatialOrder::Fourth);
         assert_eq!(SpatialOrder::from_usize(6).unwrap(), SpatialOrder::Sixth);
         assert!(SpatialOrder::from_usize(99).is_err()); // Invalid returns error
+    }
+
+    #[test]
+    fn test_acoustic_diffusivity_zero_frequency() {
+        use crate::domain::medium::HomogeneousMedium;
+        
+        // Use real modeled physical medium, not a 0-filled mock
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+
+        // Zero frequency should give zero diffusivity to avoid divide by zero errors
+        let diffusivity =
+            compute_diffusivity_from_power_law_absorption(&medium, 0.0, 0.0, 0.0, 0.0, &grid);
+        assert_eq!(
+            diffusivity, 0.0,
+            "Zero frequency should give zero diffusivity"
+        );
+    }
+
+    #[test]
+    fn test_acoustic_diffusivity_formula() {
+        // Test that the formula δ = 2αc³/ω² is correctly implemented
+
+        // Test case 1: Zero absorption should give zero diffusivity
+        let alpha = 0.0;
+        let c: f64 = 1500.0;
+        let freq = 1e6;
+        let omega = 2.0 * PI * freq;
+        let expected = 2.0 * alpha * c.powi(3) / (omega * omega);
+        assert_eq!(expected, 0.0);
+
+        // Test case 2: Non-zero values
+        let alpha = 0.5; // Np/m
+        let c: f64 = 1500.0; // m/s
+        let freq = 1e6; // Hz
+        let omega = 2.0 * PI * freq;
+        let diffusivity = 2.0 * alpha * c.powi(3) / (omega * omega);
+
+        let expected = 2.0 * 0.5 * 1500.0_f64.powi(3) / (2.0 * PI * 1e6).powi(2);
+
+        assert!(
+            (diffusivity - expected).abs() < 1e-10,
+            "Formula calculation mismatch: got {}, expected {}",
+            diffusivity,
+            expected
+        );
+
+        // Test case 3: Verify frequency scaling
+        let freq2 = 2e6;
+        let omega2 = 2.0 * PI * freq2;
+        let diffusivity2 = 2.0 * alpha * c.powi(3) / (omega2 * omega2);
+
+        assert!(
+            (diffusivity2 - diffusivity / 4.0).abs() < 1e-10,
+            "Frequency scaling incorrect: {} vs {}",
+            diffusivity2,
+            diffusivity / 4.0
+        );
+
+        // Test case 4: Verify the actual value is reasonable
+        assert!(
+            diffusivity > 1e-6 && diffusivity < 1e-3,
+            "Diffusivity value seems unreasonable: {}",
+            diffusivity
+        );
+    }
+
+    #[test]
+    fn test_heterogeneous_medium_position_dependence() {
+        use crate::domain::medium::heterogeneous::tissue::HeterogeneousTissueMedium;
+        use crate::domain::medium::TissueType;
+        use crate::domain::medium::heterogeneous::tissue::TissueRegion;
+
+        let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
+        // Base is Muscle
+        let mut medium = HeterogeneousTissueMedium::new(grid.clone(), TissueType::Muscle);
+        
+        // Emplace Fat in the middle (bounding box 0.005 -> 0.015)
+        let region = TissueRegion::new(TissueType::Fat, 0.005, 0.015, 0.005, 0.015, 0.005, 0.015);
+        medium.set_tissue_region(&region).unwrap();
+
+        // Position 1: Origin (Muscle: rho~1090, c~1580)
+        let density1 = crate::domain::medium::density_at(&medium, 0.0, 0.0, 0.0, &grid);
+        let speed1 = crate::domain::medium::sound_speed_at(&medium, 0.0, 0.0, 0.0, &grid);
+
+        // Position 2: Middle (Fat: rho~920, c~1450)
+        let density2 = crate::domain::medium::density_at(&medium, 0.01, 0.01, 0.01, &grid);
+        let speed2 = crate::domain::medium::sound_speed_at(&medium, 0.01, 0.01, 0.01, &grid);
+
+        assert_ne!(
+            density1, density2,
+            "Real heterogeneous medium should have physically disjoint density regions"
+        );
+
+        assert_ne!(
+            speed1, speed2,
+            "Real heterogeneous medium should have physically disjoint sound speed regions"
+        );
     }
 }

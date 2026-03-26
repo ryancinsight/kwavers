@@ -20,8 +20,8 @@
 //! Marquet et al. (2009) "Non-invasive transcranial ultrasound therapy based on a 3D CT scan"
 
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
-use log::warn;
 use crate::domain::imaging::medical::{MedicalImageLoader, MedicalImageMetadata};
+use log::warn;
 use ndarray::Array3;
 
 #[cfg(feature = "nifti")]

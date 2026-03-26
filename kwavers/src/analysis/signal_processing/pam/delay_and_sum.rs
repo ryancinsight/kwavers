@@ -303,11 +303,7 @@ impl DelayAndSumPAM {
 
                 let delays_samples = self.compute_delays(&position)?;
                 let peak_frequency = self
-                    .beamformed_signal_at_point(
-                        passive_data,
-                        &delays_samples,
-                        &apodization_weights,
-                    )
+                    .beamformed_signal_at_point(passive_data, &delays_samples, &apodization_weights)
                     .ok()
                     .and_then(|signal| self.estimate_peak_frequency(&signal));
 
@@ -595,7 +591,9 @@ mod tests {
             .unwrap();
 
         assert!(!events.is_empty());
-        let peak = events[0].peak_frequency.expect("peak frequency should be available");
+        let peak = events[0]
+            .peak_frequency
+            .expect("peak frequency should be available");
         let resolution = pam.config.sampling_frequency / num_samples as f64;
         assert!((peak - freq).abs() <= resolution);
     }

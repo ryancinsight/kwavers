@@ -1,9 +1,11 @@
 // source/mod.rs
 
+pub mod array_2d;
 pub mod basic;
 pub mod custom;
 pub mod electromagnetic;
 pub mod injection;
+pub mod kwave_array;
 pub mod optical;
 pub mod transducers;
 pub mod wavefront;
@@ -25,6 +27,10 @@ pub use structs::{CompositeSource, NullSource, PointSource, TimeVaryingSource};
 pub use types::{EMWaveType, Polarization, Source, SourceField, SourceType};
 
 // Re-export submodules
+pub use array_2d::{
+    ApodizationType as Array2DApodizationType, TransducerArray2D, TransducerArray2DBuilder,
+    TransducerArray2DConfig,
+};
 pub use basic::{
     linear_array::LinearArray,
     matrix_array::MatrixArray,
@@ -34,6 +40,15 @@ pub use custom::{
     CustomSourceBuilder, FunctionSource, SimpleCustomSource, SimpleCustomSourceBuilder,
 };
 pub use electromagnetic::{EMSource, PlaneWaveEMSource, PointEMSource};
+pub use flexible::{
+    CalibrationData, CalibrationManager, FlexibleTransducerArray, FlexibleTransducerConfig,
+    GeometrySnapshot,
+};
+pub use hemispherical::{
+    ArrayValidator, ElementConfiguration, ElementState, FocalPoint, HemisphereGeometry,
+    HemisphericalArray, SparseArrayOptimizer, SteeringController,
+};
+pub use kwave_array::{ElementShape, KWaveArray};
 pub use optical::laser::{GaussianLaser, LaserConfig, LaserSource};
 pub use transducers::{
     apodization::{
@@ -49,14 +64,6 @@ pub use transducers::{
         TransducerElement,
     },
     rectangular::RectangularTransducer,
-};
-pub use flexible::{
-    CalibrationData, CalibrationManager, FlexibleTransducerArray, FlexibleTransducerConfig,
-    GeometrySnapshot,
-};
-pub use hemispherical::{
-    ArrayValidator, ElementConfiguration, ElementState, FocalPoint, HemisphereGeometry,
-    HemisphericalArray, SparseArrayOptimizer, SteeringController,
 };
 pub use wavefront::{
     bessel::{BesselBuilder, BesselConfig, BesselSource},

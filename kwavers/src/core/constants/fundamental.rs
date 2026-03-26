@@ -71,6 +71,16 @@ pub const STEFAN_BOLTZMANN: f64 = 5.670374419e-8;
 /// Elementary charge (C)
 pub const ELEMENTARY_CHARGE: f64 = 1.602176634e-19;
 
+/// Vacuum permittivity (F/m)
+/// Value: 8.8541878128e-12 F/m
+/// Reference: 2018 CODATA recommended values
+pub const VACUUM_PERMITTIVITY: f64 = 8.8541878128e-12;
+
+/// Electron invariant mass (kg)
+/// Value: 9.1093837015e-31 kg
+/// Reference: 2018 CODATA recommended values
+pub const ELECTRON_MASS: f64 = 9.1093837015e-31;
+
 // Pi is already available through std::f64::consts::PI
 
 // ============================================================================

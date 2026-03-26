@@ -27,8 +27,8 @@
 //!   *Proceedings of 2nd Workshop on General Purpose Processing on Graphics Processing Units*
 
 use crate::core::error::{KwaversError, KwaversResult};
-use log::info;
 use crate::domain::grid::Grid;
+use log::info;
 use ndarray::Array3;
 use std::collections::HashMap;
 
@@ -150,11 +150,7 @@ impl GPUMemoryPool {
     /// Get memory usage statistics
     pub fn memory_stats(&self) -> MemoryStats {
         let total_blocks = self.available_blocks.len();
-        let average_block_size = if total_blocks > 0 {
-            self.total_allocated / total_blocks
-        } else {
-            0
-        };
+        let average_block_size = self.total_allocated.checked_div(total_blocks).unwrap_or(0);
 
         MemoryStats {
             total_allocated: self.total_allocated,

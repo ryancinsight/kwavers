@@ -40,8 +40,8 @@ pub struct StateDependentConstants {
 impl Default for StateDependentConstants {
     fn default() -> Self {
         Self {
-            reference_temperature: 20.0,                    // 20°C (room temperature)
-            reference_pressure: 101325.0,                   // 1 atm
+            reference_temperature: 20.0,  // 20°C (room temperature)
+            reference_pressure: 101325.0, // 1 atm
         }
     }
 }
@@ -98,7 +98,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Dynamic viscosity [Pa·s]
-    pub fn dynamic_viscosity_water( &self, temperature: f64) -> f64 {
+    pub fn dynamic_viscosity_water(&self, temperature: f64) -> f64 {
         // Piecewise lookup table from NIST (key temperatures in °C)
         // More accurate than empirical formulas for production use
         const TEMPS: [f64; 9] = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 80.0, 100.0];
@@ -172,10 +172,10 @@ impl StateDependentConstants {
     /// # Returns
     /// Surface tension [N/m]
     pub fn surface_tension_water(&self, temperature: f64) -> f64 {
-        const T_CRITICAL: f64 = 647.096;  // K (IAPWS critical temperature)
-        const B: f64 = 0.2358;            // N/m (amplitude)
-        const MU: f64 = 1.256;            // Exponent
-        const BETA: f64 = -0.625;         // Correction coefficient
+        const T_CRITICAL: f64 = 647.096; // K (IAPWS critical temperature)
+        const B: f64 = 0.2358; // N/m (amplitude)
+        const MU: f64 = 1.256; // Exponent
+        const BETA: f64 = -0.625; // Correction coefficient
 
         // Convert temperature to Kelvin
         let t_kelvin = temperature + 273.15;
@@ -199,12 +199,8 @@ impl StateDependentConstants {
     /// The nonlinear parameter B/A characterizes acoustic nonlinearity and
     /// governs harmonic generation in finite-amplitude wave propagation.
     ///
-    /// Uses empirical model from Beyer (1960) and Law et al. (1985):
-    /// B/A(T) = B/A(T₀) + k·(T - T₀)
-    ///
-    /// Where:
-    /// - B/A(20°C) = 5.0 (reference value)
-    /// - k = 0.025 K⁻¹ (temperature coefficient)
+    /// Delegates to [`WaterProperties::nonlinear_parameter`] which uses the
+    /// Beyer (1960) 4th-order polynomial fit.
     ///
     /// Valid range: 0-100°C
     ///
@@ -214,11 +210,7 @@ impl StateDependentConstants {
     /// # Returns
     /// Nonlinear parameter B/A [dimensionless]
     pub fn nonlinear_parameter_water(&self, temperature: f64) -> f64 {
-        const B_A_REF: f64 = 5.0;          // At 20°C (dimensionless)
-        const T_REF: f64 = 20.0;           // °C
-        const K_TEMP: f64 = 0.025;         // K⁻¹ (temperature coefficient)
-
-        B_A_REF + K_TEMP * (temperature - T_REF)
+        super::water::WaterProperties::nonlinear_parameter(temperature)
     }
 
     /// Calculate frequency-dependent attenuation coefficient for water
@@ -245,9 +237,9 @@ impl StateDependentConstants {
         super::water::WaterProperties::absorption_coefficient(
             frequency,
             temperature,
-            0.0,  // depth
-            0.0,  // salinity (fresh water)
-            7.0,  // pH (neutral)
+            0.0, // depth
+            0.0, // salinity (fresh water)
+            7.0, // pH (neutral)
         )
     }
 
@@ -269,10 +261,10 @@ impl StateDependentConstants {
     /// # Returns
     /// Attenuation coefficient [Np/m]
     pub fn attenuation_coefficient_tissue(&self, frequency: f64, temperature: f64) -> f64 {
-        const ALPHA_0: f64 = 0.5;          // dB/(cm·MHz^b)
-        const B: f64 = 1.5;                // Frequency exponent
-        const T_REF: f64 = 37.0;           // Body temperature reference
-        const Q10: f64 = 1.3;              // Temperature sensitivity
+        const ALPHA_0: f64 = 0.5; // dB/(cm·MHz^b)
+        const B: f64 = 1.5; // Frequency exponent
+        const T_REF: f64 = 37.0; // Body temperature reference
+        const Q10: f64 = 1.3; // Temperature sensitivity
 
         // Convert frequency to MHz
         let f_mhz = frequency / 1e6;
@@ -331,8 +323,8 @@ impl StateDependentConstants {
     /// Thermal diffusivity [m²/s]
     pub fn thermal_diffusivity_water(&self, temperature: f64) -> f64 {
         // Use constants from thermodynamic.rs
-        const K_THERM: f64 = 0.598;        // W/(m·K) at 20°C
-        const CP: f64 = 4182.0;            // J/(kg·K)
+        const K_THERM: f64 = 0.598; // W/(m·K) at 20°C
+        const CP: f64 = 4182.0; // J/(kg·K)
 
         let rho = super::water::WaterProperties::density(temperature);
 
@@ -387,7 +379,12 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Cavitation threshold pressure amplitude (negative = tension) [Pa]
-    pub fn cavitation_threshold(&self, temperature: f64, nuclei_radius: f64, ambient_pressure: f64) -> f64 {
+    pub fn cavitation_threshold(
+        &self,
+        temperature: f64,
+        nuclei_radius: f64,
+        ambient_pressure: f64,
+    ) -> f64 {
         // Vapor pressure of water (temperature-dependent)
         let p_v = self.vapor_pressure_water(temperature);
 
@@ -447,11 +444,19 @@ mod tests {
         let c_21 = constants.sound_speed_water(21.0, 101325.0);
 
         let dc_dt = c_21 - c_20;
-        assert!((dc_dt - 3.0).abs() < 1.0, "dc/dT should be ~3.0 m/s/K, got {}", dc_dt);
+        assert!(
+            (dc_dt - 3.0).abs() < 1.0,
+            "dc/dT should be ~3.0 m/s/K, got {}",
+            dc_dt
+        );
 
         // Verify body temperature value
         let c_37 = constants.sound_speed_water(37.0, 101325.0);
-        assert!((c_37 - 1525.0).abs() < 10.0, "Sound speed at 37°C should be ~1525 m/s, got {}", c_37);
+        assert!(
+            (c_37 - 1525.0).abs() < 10.0,
+            "Sound speed at 37°C should be ~1525 m/s, got {}",
+            c_37
+        );
     }
 
     #[test]
@@ -460,14 +465,25 @@ mod tests {
 
         // Test viscosity at 20°C (should be ~1.002e-3 Pa·s)
         let eta_20 = constants.dynamic_viscosity_water(20.0);
-        assert!((eta_20 - 1.002e-3).abs() < 1e-5, "Viscosity at 20°C should be ~1.002e-3 Pa·s, got {}", eta_20);
+        assert!(
+            (eta_20 - 1.002e-3).abs() < 1e-5,
+            "Viscosity at 20°C should be ~1.002e-3 Pa·s, got {}",
+            eta_20
+        );
 
         // Test viscosity at 37°C (should be ~0.692e-3 Pa·s, interpolated between 30°C and 40°C)
         let eta_37 = constants.dynamic_viscosity_water(37.0);
-        assert!((eta_37 - 0.692e-3).abs() < 5e-5, "Viscosity at 37°C should be ~0.692e-3 Pa·s, got {}", eta_37);
+        assert!(
+            (eta_37 - 0.692e-3).abs() < 5e-5,
+            "Viscosity at 37°C should be ~0.692e-3 Pa·s, got {}",
+            eta_37
+        );
 
         // Viscosity should decrease with temperature
-        assert!(eta_20 > eta_37, "Viscosity should decrease with temperature");
+        assert!(
+            eta_20 > eta_37,
+            "Viscosity should decrease with temperature"
+        );
     }
 
     #[test]
@@ -476,14 +492,25 @@ mod tests {
 
         // Test surface tension at 20°C (should be ~0.0728 N/m)
         let sigma_20 = constants.surface_tension_water(20.0);
-        assert!((sigma_20 - 0.0728).abs() < 0.005, "Surface tension at 20°C should be ~0.0728 N/m, got {}", sigma_20);
+        assert!(
+            (sigma_20 - 0.0728).abs() < 0.005,
+            "Surface tension at 20°C should be ~0.0728 N/m, got {}",
+            sigma_20
+        );
 
         // Test surface tension at 100°C (should be ~0.0589 N/m)
         let sigma_100 = constants.surface_tension_water(100.0);
-        assert!((sigma_100 - 0.0589).abs() < 0.01, "Surface tension at 100°C should be ~0.0589 N/m, got {}", sigma_100);
+        assert!(
+            (sigma_100 - 0.0589).abs() < 0.01,
+            "Surface tension at 100°C should be ~0.0589 N/m, got {}",
+            sigma_100
+        );
 
         // Surface tension should decrease with temperature
-        assert!(sigma_20 > sigma_100, "Surface tension should decrease with temperature");
+        assert!(
+            sigma_20 > sigma_100,
+            "Surface tension should decrease with temperature"
+        );
     }
 
     #[test]
@@ -492,7 +519,11 @@ mod tests {
 
         // Test B/A at reference temperature (should be 5.0)
         let ba_20 = constants.nonlinear_parameter_water(20.0);
-        assert!((ba_20 - 5.0).abs() < 0.1, "B/A at 20°C should be ~5.0, got {}", ba_20);
+        assert!(
+            (ba_20 - 5.0).abs() < 0.1,
+            "B/A at 20°C should be ~5.0, got {}",
+            ba_20
+        );
 
         // B/A should increase with temperature
         let ba_37 = constants.nonlinear_parameter_water(37.0);
@@ -505,7 +536,11 @@ mod tests {
 
         // Test acoustic impedance at 20°C (should be ~1.48 MRayl)
         let z_20 = constants.acoustic_impedance_water(20.0, 101325.0);
-        assert!((z_20 - 1.48e6).abs() < 0.05e6, "Acoustic impedance at 20°C should be ~1.48 MRayl, got {}", z_20);
+        assert!(
+            (z_20 - 1.48e6).abs() < 0.05e6,
+            "Acoustic impedance at 20°C should be ~1.48 MRayl, got {}",
+            z_20
+        );
     }
 
     #[test]
@@ -516,8 +551,14 @@ mod tests {
         let p_thresh = constants.cavitation_threshold(20.0, 1e-6, 101325.0);
 
         // Should be negative (tension) and on the order of -1 to -5 bar
-        assert!(p_thresh < 0.0, "Cavitation threshold should be negative (tension)");
-        assert!(p_thresh.abs() < 1e6, "Cavitation threshold should be reasonable magnitude");
+        assert!(
+            p_thresh < 0.0,
+            "Cavitation threshold should be negative (tension)"
+        );
+        assert!(
+            p_thresh.abs() < 1e6,
+            "Cavitation threshold should be reasonable magnitude"
+        );
     }
 
     #[test]
@@ -526,7 +567,11 @@ mod tests {
 
         // Test Prandtl number at 20°C (should be ~7 for water)
         let pr = constants.prandtl_number_water(20.0);
-        assert!((pr - 7.0).abs() < 2.0, "Prandtl number at 20°C should be ~7, got {}", pr);
+        assert!(
+            (pr - 7.0).abs() < 2.0,
+            "Prandtl number at 20°C should be ~7, got {}",
+            pr
+        );
     }
 
     #[test]
@@ -538,6 +583,10 @@ mod tests {
         let re = constants.reynolds_number_water(0.1, 0.01, 20.0);
 
         // Should be ~1000 (laminar-turbulent transition region)
-        assert!(re > 500.0 && re < 2000.0, "Reynolds number should be in laminar regime, got {}", re);
+        assert!(
+            re > 500.0 && re < 2000.0,
+            "Reynolds number should be in laminar regime, got {}",
+            re
+        );
     }
 }

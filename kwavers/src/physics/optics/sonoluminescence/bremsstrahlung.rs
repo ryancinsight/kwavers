@@ -2,16 +2,13 @@
 //!
 //! Implements free-free emission from ionized gas in hot bubble
 
-use ndarray::{Array1, Array3};
+use ndarray::{Array1, Array3, Zip};
 use std::f64::consts::PI;
 
-/// Physical constants
-pub const ELECTRON_CHARGE: f64 = 1.602176634e-19; // C
-pub const ELECTRON_MASS: f64 = 9.1093837015e-31; // kg
-pub const EPSILON_0: f64 = 8.8541878128e-12; // F/m
-pub const PLANCK_CONSTANT: f64 = 6.62607015e-34; // J·s
-pub const SPEED_OF_LIGHT: f64 = 2.99792458e8; // m/s
-pub const BOLTZMANN_CONSTANT: f64 = 1.380649e-23; // J/K
+use crate::core::constants::fundamental::{
+    BOLTZMANN as BOLTZMANN_CONSTANT, ELEMENTARY_CHARGE as ELECTRON_CHARGE,
+    PLANCK as PLANCK_CONSTANT, SPEED_OF_LIGHT, ELECTRON_MASS, VACUUM_PERMITTIVITY
+};
 
 /// Bremsstrahlung radiation model
 /// TODO_AUDIT: P1 - Plasma Kinetics - Add complete Saha-Boltzmann ionization kinetics with partial LTE for accurate plasma modeling, replacing simplified ionization fraction calculation
@@ -60,7 +57,7 @@ impl BremsstrahlungModel {
 
         // Classical emission coefficient
         let prefactor = 32.0 * PI * ELECTRON_CHARGE.powi(6)
-            / (3.0 * ELECTRON_MASS * SPEED_OF_LIGHT.powi(3) * (4.0 * PI * EPSILON_0).powi(3));
+            / (3.0 * ELECTRON_MASS * SPEED_OF_LIGHT.powi(3) * (4.0 * PI * VACUUM_PERMITTIVITY).powi(3));
 
         // Thermal velocity factor
         let thermal_factor =
@@ -129,7 +126,7 @@ impl BremsstrahlungModel {
                 * ELECTRON_MASS
                 * SPEED_OF_LIGHT.powi(3)
                 * PLANCK_CONSTANT
-                * (4.0 * PI * EPSILON_0).powi(3));
+                * (4.0 * PI * VACUUM_PERMITTIVITY).powi(3));
 
         let thermal_factor =
             (2.0 * PI * BOLTZMANN_CONSTANT * temperature / (3.0 * ELECTRON_MASS)).sqrt();
@@ -230,17 +227,17 @@ pub fn calculate_bremsstrahlung_emission(
 ) -> Array3<f64> {
     let mut emission_field = Array3::zeros(temperature_field.dim());
 
-    for ((i, j, k), &temp) in temperature_field.indexed_iter() {
-        let n_electron = electron_density_field[[i, j, k]];
-        let n_ion = ion_density_field[[i, j, k]];
-
-        if n_electron > 0.0 && n_ion > 0.0 && temp > 0.0 {
-            // Calculate total power density (W/m³)
-            // Pass volume = 1.0 to get power per unit volume
-            let power_density = model.total_power(temp, n_electron, n_ion, 1.0);
-            emission_field[[i, j, k]] = power_density;
-        }
-    }
+    Zip::from(&mut emission_field)
+        .and(temperature_field)
+        .and(electron_density_field)
+        .and(ion_density_field)
+        .for_each(|out, &temp, &n_electron, &n_ion| {
+            if n_electron > 0.0 && n_ion > 0.0 && temp > 0.0 {
+                // Calculate total power density (W/m³)
+                // Pass volume = 1.0 to get power per unit volume
+                *out = model.total_power(temp, n_electron, n_ion, 1.0);
+            }
+        });
 
     emission_field
 }

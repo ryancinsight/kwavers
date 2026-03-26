@@ -204,7 +204,10 @@ impl NonlinearElasticWaveField {
     /// Fallible version of [`get_harmonic_mut`](Self::get_harmonic_mut).
     ///
     /// Returns `Err(InvalidInput)` instead of panicking when the index is out of range.
-    pub fn try_get_harmonic_mut(&mut self, harmonic_index: usize) -> KwaversResult<&mut Array3<f64>> {
+    pub fn try_get_harmonic_mut(
+        &mut self,
+        harmonic_index: usize,
+    ) -> KwaversResult<&mut Array3<f64>> {
         let n_harmonics = self.num_harmonics();
         match harmonic_index {
             1 => Ok(&mut self.u_fundamental),
@@ -212,8 +215,7 @@ impl NonlinearElasticWaveField {
             n if n <= n_harmonics => Ok(&mut self.u_harmonics[n - 3]),
             _ => Err(KwaversError::InvalidInput(format!(
                 "Harmonic index {} out of range [1, {}]",
-                harmonic_index,
-                n_harmonics
+                harmonic_index, n_harmonics
             ))),
         }
     }

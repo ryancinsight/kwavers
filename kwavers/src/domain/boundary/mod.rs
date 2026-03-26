@@ -134,10 +134,57 @@ pub trait Boundary: Debug + Send + Sync {
         self.apply_acoustic(field, grid, time_step)
     }
 
+    /// Applies directional (split-field) PML damping to a single field component.
+    ///
+    /// `axis` selects which PML profile is applied:
+    /// - 0 → x-direction sigma only (for ux, rhox)
+    /// - 1 → y-direction sigma only (for uy, rhoy)
+    /// - 2 → z-direction sigma only (for uz, rhoz)
+    ///
+    /// This is required for the PSTD split-density formulation to match k-Wave's
+    /// per-direction PML: `rho_x *= pml_x`, `rho_y *= pml_y`, `rho_z *= pml_z`.
+    ///
+    /// Default implementation falls back to the full (all-direction) apply_acoustic.
+    fn apply_acoustic_directional(
+        &mut self,
+        field: ArrayViewMut3<f64>,
+        grid: &Grid,
+        time_step: usize,
+        _axis: usize,
+    ) -> KwaversResult<()> {
+        self.apply_acoustic(field, grid, time_step)
+    }
+
+    /// Applies directional PML damping to a velocity component using the staggered-grid
+    /// sigma profile.
+    ///
+    /// Velocity fields in k-Wave are staggered by half a grid cell relative to pressure/density.
+    /// K-Wave therefore uses a separate `pml_x_sgx` / `pml_y_sgy` / `pml_z_sgz` array computed
+    /// at the half-cell-shifted positions. This produces a slightly different (generally smaller)
+    /// sigma at PML boundary cells, particularly at the deepest left-PML cell where the
+    /// staggered sigma is `(pml_size − 0.5)⁴ / pml_size⁴` rather than `1`.
+    ///
+    /// Using the same non-staggered sigma for velocity as for density causes systematic
+    /// over-damping of velocity by ≈ 20% at the deepest cell, which propagates to a
+    /// ≈ 20% amplitude error at the sensor.
+    ///
+    /// Default: falls back to `apply_acoustic_directional` (non-staggered), which is exact
+    /// for boundaries that do not distinguish collocated from staggered fields.
+    fn apply_velocity_pml_directional(
+        &mut self,
+        field: ArrayViewMut3<f64>,
+        grid: &Grid,
+        time_step: usize,
+        axis: usize,
+    ) -> KwaversResult<()> {
+        self.apply_acoustic_directional(field, grid, time_step, axis)
+    }
+
     /// Applies boundary conditions to the light fluence rate field (spatial domain).
     fn apply_light(&mut self, field: ArrayViewMut3<f64>, grid: &Grid, time_step: usize);
 }
 
 // Time-domain boundary conditions (FDTD, PSTD)
-pub use cpml::{CPMLBoundary, CPMLConfig};
+pub use cpml::{CPMLBoundary, CPMLConfig, PerDimensionAlpha, PerDimensionPML};
 pub use pml::{PMLBoundary, PMLConfig};
+pub use smoothing::{BoundarySmoothing, BoundarySmoothingConfig, SmoothingMethod};

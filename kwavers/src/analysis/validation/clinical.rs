@@ -861,9 +861,7 @@ mod tests {
             sppa_intensity: 100.0,
         };
 
-        let result = validator
-            .validate_doppler(6.0, 3.0, 6.5, &safety)
-            .unwrap();
+        let result = validator.validate_doppler(6.0, 3.0, 6.5, &safety).unwrap();
 
         assert!(result.passed);
         assert!(result.clinical_score > 50.0);

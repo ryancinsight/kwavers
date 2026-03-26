@@ -275,10 +275,8 @@ impl ThermalDose {
 
         // Absorption coefficient: 0.5 dB/cm/MHz typical soft tissue
         let alpha_db_cm_mhz = 0.5;
-        let alpha_np_per_m = alpha_db_cm_mhz
-            * frequency_mhz
-            * 100.0
-            * (std::f64::consts::LN_10 / 20.0);
+        let alpha_np_per_m =
+            alpha_db_cm_mhz * frequency_mhz * 100.0 * (std::f64::consts::LN_10 / 20.0);
 
         let intensity_w_m2 =
             focal_spot.peak_pressure_pa.powi(2) / (2.0 * TISSUE_DENSITY * SOUND_SPEED);
@@ -286,14 +284,18 @@ impl ThermalDose {
         let heating_rate_c_per_s = heating_w_m3 / (TISSUE_DENSITY * SPECIFIC_HEAT);
 
         let perfusion = PERFUSION_RATE.max(1e-6);
-        let delta_t = (heating_rate_c_per_s / perfusion)
-            * (1.0 - (-perfusion * treatment_duration_s).exp());
+        let delta_t =
+            (heating_rate_c_per_s / perfusion) * (1.0 - (-perfusion * treatment_duration_s).exp());
         let peak_temperature_c = BASELINE_TEMP_C + delta_t;
 
         // CEM43 calculation (Sawhney et al. equation)
         // For T > 43°C: CEM43 = t * 0.5^(43-T)
         // For T ≤ 43°C: CEM43 = t * 0.25^(43-T)
-        let r: f64 = if peak_temperature_c >= 43.0 { 0.5 } else { 0.25 };
+        let r: f64 = if peak_temperature_c >= 43.0 {
+            0.5
+        } else {
+            0.25
+        };
         let cem43 = treatment_duration_s * r.powf(43.0 - peak_temperature_c);
 
         let time_to_dose_s = if peak_temperature_c >= 43.0 {
@@ -530,15 +532,13 @@ mod tests {
     fn test_thermal_dose_calculation() {
         let transducer = HIFUTransducer::default();
         let focal_spot = FocalSpot::estimate_from_transducer(&transducer);
-        let thermal_dose = ThermalDose::estimate_from_focal_spot(
-            &focal_spot,
-            transducer.frequency,
-            1.0,
-            10.0,
-        );
+        let thermal_dose =
+            ThermalDose::estimate_from_focal_spot(&focal_spot, transducer.frequency, 1.0, 10.0);
 
         assert!(thermal_dose.peak_temperature_c > 37.0);
-        assert!(thermal_dose.time_to_dose_s.is_finite() || thermal_dose.time_to_dose_s.is_infinite());
+        assert!(
+            thermal_dose.time_to_dose_s.is_finite() || thermal_dose.time_to_dose_s.is_infinite()
+        );
     }
 
     #[test]

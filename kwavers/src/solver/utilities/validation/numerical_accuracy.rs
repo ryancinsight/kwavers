@@ -340,7 +340,10 @@ impl NumericalValidator {
     ) -> Result<f64, Box<dyn std::error::Error>> {
         // Kuznetsov nonlinear phase error requires propagating a finite-amplitude wave
         // and comparing harmonic growth vs Fubini solution.
-        Err("compute_phase_error_kuznetsov: nonlinear dispersion analysis not yet implemented".into())
+        Err(
+            "compute_phase_error_kuznetsov: nonlinear dispersion analysis not yet implemented"
+                .into(),
+        )
     }
 
     fn test_stability_pstd(&self, dt: f64) -> Result<f64, Box<dyn std::error::Error>> {

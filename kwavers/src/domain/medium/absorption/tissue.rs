@@ -101,7 +101,7 @@ impl TissueProperties {
             gas_diffusion_coefficient: 2e-9, // Oxygen in tissue [m²/s]
             // Default optical properties for generic soft tissue at ~800nm (NIR)
             // Reference: Jacques (2013) "Optical properties of biological tissues: a review"
-            optical_absorption_coeff: 10.0,   // 0.1 cm⁻¹ = 10 m⁻¹
+            optical_absorption_coeff: 10.0,    // 0.1 cm⁻¹ = 10 m⁻¹
             optical_scattering_coeff: 10000.0, // 100 cm⁻¹ = 10000 m⁻¹
         }
     }

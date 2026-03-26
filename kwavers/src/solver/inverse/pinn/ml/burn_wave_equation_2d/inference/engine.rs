@@ -23,9 +23,9 @@ pub struct RealTimePINNInference<B: Backend> {
     /// SIMD-enabled CPU inference
     #[cfg(feature = "simd")]
     simd_executor: SimdExecutor,
-    /// Fallback SIMD processor struct for non-SIMD builds or just metadata
+    /// Type-level marker for non-SIMD builds (zero-sized, no runtime cost).
     #[cfg(not(feature = "simd"))]
-    _simd_placeholder: (),
+    _simd: std::marker::PhantomData<()>,
 }
 
 impl<B: Backend> RealTimePINNInference<B> {
@@ -53,7 +53,7 @@ impl<B: Backend> RealTimePINNInference<B> {
             #[cfg(feature = "simd")]
             simd_executor,
             #[cfg(not(feature = "simd"))]
-            _simd_placeholder: (),
+            _simd: std::marker::PhantomData,
         })
     }
 

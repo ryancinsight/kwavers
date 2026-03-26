@@ -118,6 +118,7 @@
 //! - Szabo, T. L. (2004). *Diagnostic Ultrasound Imaging: Inside Out*. Academic Press.
 
 // Domain-specific sensor interface (core functionality)
+pub mod processor;
 pub mod sensor_beamformer;
 
 // Configuration types (shared with analysis layer)

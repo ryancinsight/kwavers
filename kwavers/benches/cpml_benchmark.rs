@@ -29,7 +29,7 @@ fn cpml_gradient_correction_benchmark(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             b.iter(|| {
-                boundary.update_and_apply_gradient_correction(&mut gradient, 0);
+                boundary.update_and_apply_p_gradient_correction(&mut gradient, 0);
                 black_box(&gradient);
             });
         });
@@ -135,7 +135,7 @@ fn cpml_vs_pml_thickness_comparison(c: &mut Criterion) {
                 &(*size, *thickness),
                 |b, _| {
                     b.iter(|| {
-                        boundary.update_and_apply_gradient_correction(&mut gradient, 0);
+                        boundary.update_and_apply_p_gradient_correction(&mut gradient, 0);
                         black_box(&gradient);
                     });
                 },

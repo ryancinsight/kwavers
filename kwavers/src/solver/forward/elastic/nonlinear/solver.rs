@@ -25,9 +25,9 @@
 //!   IEEE Trans. Medical Imaging, 32(5), 863-874.
 
 use crate::core::error::KwaversResult;
-use log::info;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
+use log::info;
 use ndarray::Array3;
 
 use super::config::NonlinearSWEConfig;

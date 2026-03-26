@@ -14,10 +14,12 @@ pub mod bubble_field;
 pub mod bubble_state;
 pub mod cavitation_control;
 pub mod encapsulated; // NEW: Encapsulated bubbles with shell dynamics (Church, Marmottant)
-pub mod energy_balance;
+pub mod energy;
 pub mod epstein_plesset; // NEW: Epstein-Plesset stability theorem implementation
 pub mod gilmore; // Gilmore equation for violent collapse // NEW: Comprehensive energy balance model
 pub mod imex_integration;
+
+pub use energy::{update_temperature_energy_balance, EnergyBalanceCalculator};
 pub mod integration; // NEW: Stable integration utilities extracted from monolithic file
 pub mod interactions;
 pub mod keller_miksis; // NEW: Extracted Keller-Miksis solver for modularity

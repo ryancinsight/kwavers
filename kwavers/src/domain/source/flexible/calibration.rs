@@ -257,12 +257,12 @@ impl CalibrationManager {
         measurements: &Array2<f64>,
         dt: f64,
     ) -> KwaversResult<Array2<f64>> {
-        let kalman = self
-            .kalman_state
-            .as_mut()
-            .ok_or(crate::core::error::KwaversError::InvalidInput(
-                "Kalman filter not initialized".to_string(),
-            ))?;
+        let kalman =
+            self.kalman_state
+                .as_mut()
+                .ok_or(crate::core::error::KwaversError::InvalidInput(
+                    "Kalman filter not initialized".to_string(),
+                ))?;
 
         let num_elements = measurements.nrows();
         let state_dim = kalman.state.len();

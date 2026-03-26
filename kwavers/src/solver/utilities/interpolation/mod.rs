@@ -1,4 +1,3 @@
-
 //! Interpolation utilities for multi-grid and multi-physics coupling
 //!
 //! Provides conservative and non-conservative interpolation methods for

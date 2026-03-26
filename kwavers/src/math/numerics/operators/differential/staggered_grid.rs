@@ -189,6 +189,56 @@ impl StaggeredGridOperator {
         Ok(result)
     }
 
+    pub fn apply_forward_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = field.dim();
+
+        if ny < 2 {
+            return Err(NumericalError::InsufficientGridPoints {
+                required: 2,
+                actual: ny,
+                direction: "Y".to_string(),
+            }
+            .into());
+        }
+
+        let mut result = Array3::zeros((nx, ny - 1, nz));
+
+        for i in 0..nx {
+            for j in 0..ny - 1 {
+                for k in 0..nz {
+                    result[[i, j, k]] = (field[[i, j + 1, k]] - field[[i, j, k]]) / self.dy;
+                }
+            }
+        }
+
+        Ok(result)
+    }
+
+    pub fn apply_forward_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = field.dim();
+
+        if nz < 2 {
+            return Err(NumericalError::InsufficientGridPoints {
+                required: 2,
+                actual: nz,
+                direction: "Z".to_string(),
+            }
+            .into());
+        }
+
+        let mut result = Array3::zeros((nx, ny, nz - 1));
+
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz - 1 {
+                    result[[i, j, k]] = (field[[i, j, k + 1]] - field[[i, j, k]]) / self.dz;
+                }
+            }
+        }
+
+        Ok(result)
+    }
+
     /// Apply backward difference in X direction
     ///
     /// Computes derivative at cell centers (i) from cell edges (i-1, i).

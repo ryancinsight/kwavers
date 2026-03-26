@@ -33,7 +33,7 @@ impl Default for CloudParameters {
             ambient_pressure: 101325.0,  // 1 atm
             surface_tension: 0.0728,     // Water at 20°C
             viscosity: 1e-3,             // Water at 20°C
-            erosion_efficiency: 1e-12,    // kg/J (empirical)
+            erosion_efficiency: 1e-12,   // kg/J (empirical)
         }
     }
 }
@@ -139,10 +139,8 @@ impl CavitationCloudDynamics {
             let collapse_pressure = (p - ambient).max(0.0);
             let bubble_volume = (4.0 / 3.0) * PI * r0.powi(3);
             let energy_per_bubble = bubble_volume * collapse_pressure;
-            let erosion_increment = current_density
-                * energy_per_bubble
-                * self.parameters.erosion_efficiency
-                * dt;
+            let erosion_increment =
+                current_density * energy_per_bubble * self.parameters.erosion_efficiency * dt;
 
             self.accumulated_eroded_mass += erosion_increment.max(0.0);
             *density = updated;

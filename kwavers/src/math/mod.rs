@@ -45,6 +45,7 @@ pub use fft::{Fft1d, Fft2d, Fft3d, KSpaceCalculator};
 /// These functions match MATLAB k-Wave toolbox ergonomics.
 pub use geometry::{
     make_ball,   // 3D spherical mask (MATLAB: makeBall)
+    make_circle, // 2D circle outline (MATLAB: makeCircle)
     make_disc,   // 2D circular mask (MATLAB: makeDisc)
     make_line,   // Linear mask between two points (MATLAB: makeLine)
     make_sphere, // Alias for make_ball (MATLAB: makeSphere)

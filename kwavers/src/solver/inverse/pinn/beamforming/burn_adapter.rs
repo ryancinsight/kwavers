@@ -15,11 +15,11 @@
 //! Burn PINN Implementations (Solver Layer 2)
 //! ```
 
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::interface::pinn_beamforming::{
     ModelInfo, PinnBeamformingConfig, PinnBeamformingProvider, PinnBeamformingResult,
     TrainingMetrics, UncertaintyConfig,
 };
-use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::sync::{Arc, Mutex};
 

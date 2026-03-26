@@ -4,7 +4,6 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
-
 /// GPU-accelerated k-space solver
 #[derive(Debug)]
 pub struct KSpaceGpu {

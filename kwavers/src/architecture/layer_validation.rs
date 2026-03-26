@@ -231,10 +231,7 @@ impl ArchitectureValidator {
         let from_str = from.into();
         let to_str = to.into();
 
-        self.dependencies
-            .entry(from_str)
-            .or_default()
-            .push(to_str);
+        self.dependencies.entry(from_str).or_default().push(to_str);
     }
 
     /// Validate the architecture

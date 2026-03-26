@@ -485,10 +485,10 @@ impl<B: AutodiffBackend> TransferLearner<B> {
                         let x = x_min + (x_max - x_min) * frac;
                         let y = y_min + (y_max - y_min) * frac;
                         vec![
-                            (x, y_min),         // bottom
-                            (x, y_max),         // top
-                            (x_min, y),          // left
-                            (x_max, y),          // right
+                            (x, y_min), // bottom
+                            (x, y_max), // top
+                            (x_min, y), // left
+                            (x_max, y), // right
                         ]
                     })
                     .collect();

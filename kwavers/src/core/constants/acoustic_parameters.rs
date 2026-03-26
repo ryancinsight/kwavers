@@ -13,9 +13,9 @@ pub const WATER_ABSORPTION_ALPHA_0: f64 = 0.0022;
 pub const WATER_ABSORPTION_POWER: f64 = 1.05;
 
 /// Nonlinearity parameter B/A for water at 20°C
-/// Value: 3.5
+/// Value: 5.0 (Beyer 1960 polynomial evaluated at 20°C ≈ 4.965)
 /// Reference: Beyer, R. T. (1960). "Parameter of nonlinearity in fluids"
-pub const WATER_NONLINEARITY_B_A: f64 = 3.5;
+pub const WATER_NONLINEARITY_B_A: f64 = 5.0;
 
 /// Nonlinearity parameter B/A for blood at 37°C
 /// Value: 6.1

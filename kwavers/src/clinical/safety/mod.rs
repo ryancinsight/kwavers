@@ -752,9 +752,7 @@ impl SafetyAuditLogger {
         use std::io::Write;
 
         let entries = self.log_entries.lock().unwrap();
-        let mut file = std::fs::File::create(filename).map_err(|e| {
-            KwaversError::Io(e)
-        })?;
+        let mut file = std::fs::File::create(filename).map_err(KwaversError::Io)?;
 
         // Reference instant for relative timestamps
         let reference = entries.first().map(|e| e.timestamp);

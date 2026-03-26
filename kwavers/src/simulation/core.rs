@@ -100,10 +100,16 @@ impl<'a, M: Medium> CoreSimulation<'a, M> {
         }
 
         // Enable configured features
-        if self.feature_manager.is_enabled(SolverFeature::Reconstruction) {
+        if self
+            .feature_manager
+            .is_enabled(SolverFeature::Reconstruction)
+        {
             let _ = solver.enable_feature(SolverFeature::Reconstruction, true);
         }
-        if self.feature_manager.is_enabled(SolverFeature::GpuAcceleration) {
+        if self
+            .feature_manager
+            .is_enabled(SolverFeature::GpuAcceleration)
+        {
             let _ = solver.enable_feature(SolverFeature::GpuAcceleration, true);
         }
 
@@ -122,9 +128,7 @@ impl<'a, M: Medium> CoreSimulation<'a, M> {
         }
 
         let solver = self.solver.as_mut().ok_or_else(|| {
-            crate::core::error::KwaversError::InternalError(
-                "Solver not initialized".to_string(),
-            )
+            crate::core::error::KwaversError::InternalError("Solver not initialized".to_string())
         })?;
 
         self.progress_reporter.on_start(num_steps, dt);

@@ -102,11 +102,11 @@ impl PistonSource {
 
         // Project onto the piston plane (perpendicular to normal)
         let radial_distance = match self.config.normal {
-            (nx, ny, nz) if nx.abs() > 0.5 => {
+            (nx, _ny, _nz) if nx.abs() > 0.5 => {
                 // Piston is mainly in y-z plane
                 (dy.powi(2) + dz.powi(2)).sqrt()
             }
-            (nx, ny, nz) if ny.abs() > 0.5 => {
+            (_nx, ny, _nz) if ny.abs() > 0.5 => {
                 // Piston is mainly in x-z plane
                 (dx.powi(2) + dz.powi(2)).sqrt()
             }

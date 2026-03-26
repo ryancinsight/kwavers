@@ -200,7 +200,7 @@ impl LaplacianOperator {
                             * self.dx2_inv;
                     }
                 }
-                for i in (nx - radius).max(0)..nx {
+                for i in (nx - radius)..nx {
                     if i >= 2 {
                         output[[i, j, k]] = (input[[i, j, k]] - 2.0 * input[[i - 1, j, k]]
                             + input[[i - 2, j, k]])

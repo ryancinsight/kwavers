@@ -4,9 +4,9 @@
 //! checkpoint management, and fault tolerance for multi-GPU PINN training.
 
 use crate::core::error::{KwaversError, KwaversResult};
-use log::{info, warn};
 use crate::solver::inverse::pinn::ml::{BurnPINN2DWave, BurnTrainingMetrics2D, Geometry2D};
 use burn::tensor::backend::AutodiffBackend;
+use log::{info, warn};
 // Removed unused imports
 
 /// Gradient aggregation strategy

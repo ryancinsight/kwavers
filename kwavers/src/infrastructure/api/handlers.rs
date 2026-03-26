@@ -17,7 +17,7 @@ use axum::{
 
 // Explicit re-exports of clinical handlers for router setup
 #[cfg(feature = "pinn")]
-pub use crate::infrastructure::api::clinical_handlers::{
+pub use crate::infrastructure::api::clinical::{
     analyze_clinical, dicom_integrate, get_device_status, get_session_status, list_devices,
     optimize_mobile, register_device,
 };

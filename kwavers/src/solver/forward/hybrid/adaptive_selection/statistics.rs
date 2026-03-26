@@ -1,7 +1,7 @@
 // adaptive_selection/statistics.rs - Selection statistics tracking
 
-use log::info;
 use super::selector::SelectedMethod;
+use log::info;
 use ndarray::Array3;
 
 /// Statistics for method selection

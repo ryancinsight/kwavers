@@ -1,0 +1,90 @@
+D:\kwavers\external\k-wave-python\kwave\options\simulation_execution_options.py:126: UserWarning: Custom binary name set. Ignoring `is_gpu_simulation` state.
+  warnings.warn("Custom binary name set. Ignoring `is_gpu_simulation` state.")
+Phase 14: US Transducer PyKwavers vs k-wave-python Comparison
+
+================================================================================
+Running k-wave-python reference simulation
+================================================================================
++---------------------------------------------------------------+
+|                   kspaceFirstOrder-OMP v1.3                   |
++---------------------------------------------------------------+
+| Reading simulation configuration:                        Done |
+| Number of CPU threads:                                     24 |
+| Processor name:                Intel(R) Core(TM) Ultra 9 285K |
++---------------------------------------------------------------+
+|                      Simulation details                       |
++---------------------------------------------------------------+
+| Domain dimensions:                             128 x 128 x 64 |
+| Medium type:                                               3D |
+| Simulation time steps:                                    658 |
++---------------------------------------------------------------+
+|                        Initialization                         |
++---------------------------------------------------------------+
+| Memory allocation:                                       Done |
+| Data loading:                                            Done |
+| Elapsed time:                                           0.01s |
++---------------------------------------------------------------+
+| FFT plans creation:                                      Done |
+| Pre-processing phase:                                    Done |
+| Elapsed time:                                           0.01s |
++---------------------------------------------------------------+
+|                    Computational resources                    |
++---------------------------------------------------------------+
+| Current host memory in use:                              83MB |
+| Expected output file size:                                0MB |
++---------------------------------------------------------------+
+|                          Simulation                           |
++----------+----------------+--------------+--------------------+
+| Progress |  Elapsed time  |  Time to go  |  Est. finish time  |
++----------+----------------+--------------+--------------------+
+|     0%   |        0.116s  |     37.969s  |  24/03/26 14:52:55 |
+|     5%   |        9.691s  |    177.860s  |  24/03/26 14:55:25 |
+|    10%   |       10.234s  |     90.276s  |  24/03/26 14:53:58 |
+|    15%   |       10.436s  |     58.230s  |  24/03/26 14:53:27 |
+|    20%   |       10.990s  |     43.382s  |  24/03/26 14:53:12 |
+|    25%   |       11.133s  |     32.998s  |  24/03/26 14:53:01 |
+|    30%   |       11.636s  |     26.839s  |  24/03/26 14:52:56 |
+|    35%   |       12.225s  |     22.448s  |  24/03/26 14:52:52 |
+|    40%   |       12.817s  |     19.008s  |  24/03/26 14:52:50 |
+|    45%   |       13.005s  |     15.711s  |  24/03/26 14:52:46 |
+|    50%   |       13.591s  |     13.427s  |  24/03/26 14:52:45 |
+|    55%   |       14.096s  |     11.455s  |  24/03/26 14:52:43 |
+|    60%   |       14.929s  |      9.877s  |  24/03/26 14:52:42 |
+|    65%   |       20.614s  |     11.004s  |  24/03/26 14:52:50 |
+|    70%   |       20.777s  |      8.815s  |  24/03/26 14:52:47 |
+|    75%   |       22.004s  |      7.246s  |  24/03/26 14:52:47 |
+|    80%   |       23.300s  |      5.737s  |  24/03/26 14:52:47 |
+|    85%   |       23.981s  |      4.146s  |  24/03/26 14:52:46 |
+|    90%   |       24.629s  |      2.654s  |  24/03/26 14:52:45 |
+|    95%   |       26.883s  |      1.329s  |  24/03/26 14:52:46 |
++----------+----------------+--------------+--------------------+
+| Elapsed time:                                          28.22s |
++---------------------------------------------------------------+
+| Sampled data post-processing:                            Done |
+| Elapsed time:                                           0.00s |
++---------------------------------------------------------------+
+|                            Summary                            |
++---------------------------------------------------------------+
+| Peak memory in use:                                      88MB |
++---------------------------------------------------------------+
+| Total execution time:                                  28.57s |
++---------------------------------------------------------------+
+|                       End of computation                      |
++---------------------------------------------------------------+
+k-wave completed in 29.02s
+================================================================================
+Running pykwavers native simulation
+================================================================================
+1. Initializing PyKwavers Grid...
+2. Initializing Medium Properties...
+3. Defining TransducerArray2D Layout...
+   --> Source mask generated. Source object applied.
+Traceback (most recent call last):
+  File "D:\kwavers\pykwavers\examples\compare_us_transducer.py", line 298, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "D:\kwavers\pykwavers\examples\compare_us_transducer.py", line 252, in main
+    py_results = run_pykwavers(dt, input_signal)
+  File "D:\kwavers\pykwavers\examples\compare_us_transducer.py", line 215, in run_pykwavers
+    source = kw.Source.from_mask(source_mask, input_signal.flatten())
+TypeError: Source.from_mask() missing 1 required positional argument: 'frequency'

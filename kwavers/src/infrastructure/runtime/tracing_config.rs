@@ -104,7 +104,6 @@ mod tracing_impl {
     ///
     /// Re-export of tracing::instrument for convenience
 
-
     #[cfg(test)]
     mod tests {
         use super::*;

@@ -8,8 +8,6 @@ use ndarray::Array3;
 
 // Note: Field indices imported from physics::field_indices for SSOT
 
-
-
 #[cfg(feature = "plotting")]
 mod plotting_impl {
 

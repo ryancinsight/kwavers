@@ -225,7 +225,11 @@ impl PMLBoundary {
     /// Precompute full-dimension exp factor array for a given axis.
     /// Interior points get factor 1.0 (no damping), boundary points get precomputed decay.
     #[inline]
-    fn precompute_full_exp_factors(exp_profile: &[f64], dim_size: usize, thickness: usize) -> Vec<f64> {
+    fn precompute_full_exp_factors(
+        exp_profile: &[f64],
+        dim_size: usize,
+        thickness: usize,
+    ) -> Vec<f64> {
         let mut factors = vec![1.0; dim_size];
         for i in 0..thickness {
             factors[i] = exp_profile[i];

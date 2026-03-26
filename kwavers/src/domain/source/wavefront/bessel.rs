@@ -133,11 +133,11 @@ impl BesselSource {
 
         // Project onto the propagation plane (perpendicular to direction)
         let radial_distance = match self.config.direction {
-            (nx, ny, nz) if nz.abs() > 0.5 => {
+            (_nx, _ny, nz) if nz.abs() > 0.5 => {
                 // Mainly z-propagation: use x-y plane
                 (dx.powi(2) + dy.powi(2)).sqrt()
             }
-            (nx, ny, nz) if ny.abs() > 0.5 => {
+            (_nx, ny, _nz) if ny.abs() > 0.5 => {
                 // Mainly y-propagation: use x-z plane
                 (dx.powi(2) + dz.powi(2)).sqrt()
             }
@@ -149,8 +149,8 @@ impl BesselSource {
 
         // Distance along propagation direction
         let z_dist = match self.config.direction {
-            (nx, ny, nz) if nz.abs() > 0.5 => dz,
-            (nx, ny, nz) if ny.abs() > 0.5 => dy,
+            (_nx, _ny, nz) if nz.abs() > 0.5 => dz,
+            (_nx, ny, _nz) if ny.abs() > 0.5 => dy,
             _ => dx,
         };
 

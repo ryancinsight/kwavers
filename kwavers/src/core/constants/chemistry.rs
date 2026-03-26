@@ -20,3 +20,8 @@ pub const PEROXYNITRITE_WEIGHT: f64 = 62.00;
 
 /// Base photochemical reaction rate (1/s)
 pub const BASE_PHOTOCHEMICAL_RATE: f64 = 1e-4;
+
+/// Ionization energy of Argon (eV)
+/// Value: 15.759 eV
+/// Reference: NIST Atomic Spectra Database
+pub const ARGON_IONIZATION_ENERGY: f64 = 15.7596;

@@ -14,13 +14,13 @@
 //! - Validation against analytical and literature benchmarks
 
 use crate::core::error::{KwaversError, KwaversResult};
-use log::info;
 use crate::solver::inverse::pinn::ml::physics::{
     BoundaryConditionSpec, InitialConditionSpec, PhysicsDomain, PhysicsDomainRegistry,
     PhysicsLossWeights, PhysicsParameters, PhysicsValidationMetric,
 };
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
+use log::info;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::collections::HashMap;

@@ -1,7 +1,5 @@
 //! GPU compute operations
 
-
-
 /// GPU compute manager
 #[derive(Debug)]
 pub struct GpuCompute {

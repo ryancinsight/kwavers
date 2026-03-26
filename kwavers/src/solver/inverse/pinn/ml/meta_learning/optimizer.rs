@@ -262,7 +262,9 @@ impl<B: AutodiffBackend> MetaOptimizer<B> {
                         let prev_v = self._v[idx].take();
 
                         let m = if let Some(m_prev) = prev_m {
-                            m_prev.mul_scalar(beta1).add(g.clone().mul_scalar(1.0 - beta1))
+                            m_prev
+                                .mul_scalar(beta1)
+                                .add(g.clone().mul_scalar(1.0 - beta1))
                         } else {
                             g.clone().mul_scalar(1.0 - beta1)
                         };

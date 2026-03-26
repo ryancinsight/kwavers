@@ -59,14 +59,10 @@ impl SineWave {
 
 impl Signal for SineWave {
     fn amplitude(&self, t: f64) -> f64 {
-        if t < 0.0 {
-            0.0
-        } else {
-            let amp = self.amplitude.amplitude(t);
-            let freq = self.frequency_hz_checked(t);
-            let phase = self.phase.phase(t);
-            amp * (2.0 * std::f64::consts::PI * freq * t + phase).sin()
-        }
+        let amp = self.amplitude.amplitude(t);
+        let freq = self.frequency_hz_checked(t);
+        let phase = self.phase.phase(t);
+        amp * (2.0 * std::f64::consts::PI * freq * t + phase).sin()
     }
 
     fn frequency(&self, t: f64) -> f64 {

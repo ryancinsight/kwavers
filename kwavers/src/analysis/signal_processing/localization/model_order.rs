@@ -540,7 +540,7 @@ mod tests {
         let result = estimator.estimate(&eigenvalues).unwrap();
 
         // Should have criterion values for k = 0, 1, 2, 3 (max_sources = 3)
-        assert!(result.criterion_values.len() > 0);
+        assert!(!result.criterion_values.is_empty());
         assert!(result.criterion_values.len() <= 4);
     }
 

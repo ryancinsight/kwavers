@@ -38,6 +38,8 @@
 #![allow(
     clippy::too_many_arguments,
     clippy::type_complexity,
+    clippy::assertions_on_constants,
+    clippy::field_reassign_with_default
 )]
 #![allow(unexpected_cfgs)]
 
@@ -149,10 +151,10 @@ pub use solver::plugin::{PluginExecutor, PluginManager};
 
 // --- Solver re-exports ---
 pub use solver::fdtd::{FdtdConfig, FdtdPlugin, FdtdSolver};
-pub use solver::pstd::{PSTDConfig, PSTDPlugin, PSTDSolver};
+pub use solver::forward::nonlinear::kuznetsov::{KuznetsovConfig, KuznetsovWave};
 pub use solver::pstd::dg::shock_capturing::{ArtificialViscosity, ShockDetector, WENOLimiter};
 pub use solver::pstd::dg::{HybridSpectralDGConfig, HybridSpectralDGSolver};
-pub use solver::forward::nonlinear::kuznetsov::{KuznetsovConfig, KuznetsovWave};
+pub use solver::pstd::{PSTDConfig, PSTDPlugin, PSTDSolver};
 
 // --- Physics model re-exports ---
 pub use physics::acoustics::mechanics::acoustic_wave::nonlinear::NonlinearWave;
@@ -170,7 +172,9 @@ pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalMo
 pub use simulation::factory::PhysicsFactory;
 
 // --- I/O functions ---
-pub use infrastructure::io::{generate_summary, save_data_csv, save_light_data, save_pressure_data};
+pub use infrastructure::io::{
+    generate_summary, save_data_csv, save_light_data, save_pressure_data,
+};
 
 // --- Source types ---
 pub use domain::source::{HanningApodization, LinearArray};

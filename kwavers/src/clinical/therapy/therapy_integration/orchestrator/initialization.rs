@@ -26,7 +26,7 @@ use crate::domain::medium::Medium;
 use crate::physics::cavitation_control::{ControlStrategy, FeedbackConfig, FeedbackController};
 use crate::physics::chemistry::ChemicalModel;
 #[cfg(feature = "nifti")]
-use crate::physics::skull::CTBasedSkullModel;
+use crate::domain::imaging::medical::{CTImageLoader, MedicalImageLoader};
 use crate::physics::transcranial::TranscranialAberrationCorrection;
 use crate::simulation::imaging::ceus::ContrastEnhancedUltrasound;
 use ndarray::Array3;
@@ -326,9 +326,10 @@ fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f
         if ct_path.ends_with(".nii") || ct_path.ends_with(".nii.gz") {
             #[cfg(feature = "nifti")]
             {
-                match CTBasedSkullModel::from_file(ct_path) {
-                    Ok(ct_model) => {
-                        let metadata = ct_model.metadata();
+                let mut loader = CTImageLoader::new();
+                match loader.load(ct_path) {
+                    Ok(ct_data) => {
+                        let metadata = loader.ct_metadata().unwrap();
                         info!(
                             "Loaded CT scan: {} voxels, {:.2}mm spacing, HU range [{:.0}, {:.0}]",
                             format_args!(
@@ -339,7 +340,7 @@ fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f
                             metadata.hu_range.0,
                             metadata.hu_range.1
                         );
-                        return Ok(ct_model.ct_data().clone());
+                        return Ok(ct_data);
                     }
                     Err(e) => {
                         warn!(

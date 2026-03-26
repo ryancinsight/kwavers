@@ -4,9 +4,9 @@
 //! uncertainty estimation in physics-informed neural networks.
 
 use crate::core::error::KwaversResult;
-use log::info;
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
+use log::info;
 #[cfg(not(feature = "pinn"))]
 use ndarray::Array2;
 #[cfg(feature = "pinn")]

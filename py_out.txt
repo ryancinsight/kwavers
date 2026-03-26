@@ -1,0 +1,80 @@
+OK k-wave-python found, will compare outputs
+
+======================================================================
+Kwavers vs k-wave-python Validation Suite
+======================================================================
+Tolerance: 1.00e-10
+Verbose: False
+
+======================================================================
+Validating: tone_burst
+======================================================================
+
+Test case 1: {'sample_freq': 10000000.0, 'center_freq': 1000000.0, 'cycles': 3}
+  OK PASS (max diff: 3.55e-15)
+
+Test case 2: {'sample_freq': 20000000.0, 'center_freq': 2500000.0, 'cycles': 5}
+  OK PASS (max diff: 0.00e+00)
+
+Test case 3: {'sample_freq': 5000000.0, 'center_freq': 500000.0, 'cycles': 10}
+  OK PASS (max diff: 1.42e-14)
+
+======================================================================
+Validating: get_win
+======================================================================
+
+Test case 1: n=64, window=Hanning
+  OK PASS (max diff: 4.44e-16)
+
+Test case 2: n=128, window=Hamming
+  OK PASS (max diff: 4.44e-16)
+
+Test case 3: n=100, window=Blackman
+  OK PASS (max diff: 3.89e-16)
+
+======================================================================
+Validating: make_disc
+======================================================================
+
+Test case 1: 64x64 grid, radius=5.0mm
+  OK PASS (max diff: 0.00e+00)
+
+Test case 2: 128x128 grid, radius=3.0mm
+  OK PASS (max diff: 0.00e+00)
+
+======================================================================
+Validating: make_ball
+======================================================================
+
+Test case 1: 32x32x32 grid, radius=3.0mm
+  OK PASS (max diff: 0.00e+00)
+
+======================================================================
+Validating: db2neper / neper2db
+======================================================================
+  db2neper(0): k-wave=0.0000000000, kwavers=0.0000000000, diff=0.00e+00 OK PASS
+    Roundtrip: neper2db(0.0000000000) = 0.0000000000, diff=0.00e+00 OK PASS
+  db2neper(10): k-wave=0.0000183234, kwavers=0.0000183234, diff=6.78e-21 OK PASS
+    Roundtrip: neper2db(0.0000183234) = 10.0000000000, diff=1.78e-15 OK PASS
+  db2neper(20): k-wave=0.0000366468, kwavers=0.0000366468, diff=1.36e-20 OK PASS
+    Roundtrip: neper2db(0.0000366468) = 20.0000000000, diff=3.55e-15 OK PASS
+  db2neper(-10): k-wave=-0.0000183234, kwavers=-0.0000183234, diff=6.78e-21 OK PASS
+    Roundtrip: neper2db(-0.0000183234) = -10.0000000000, diff=1.78e-15 OK PASS
+  db2neper(3.01): k-wave=0.0000055153, kwavers=0.0000055153, diff=8.47e-22 OK PASS
+    Roundtrip: neper2db(0.0000055153) = 3.0100000000, diff=4.44e-16 OK PASS
+  db2neper(6.02): k-wave=0.0000110307, kwavers=0.0000110307, diff=1.69e-21 OK PASS
+    Roundtrip: neper2db(0.0000110307) = 6.0200000000, diff=8.88e-16 OK PASS
+  db2neper(40): k-wave=0.0000732936, kwavers=0.0000732936, diff=2.71e-20 OK PASS
+    Roundtrip: neper2db(0.0000732936) = 40.0000000000, diff=7.11e-15 OK PASS
+
+======================================================================
+VALIDATION SUMMARY
+======================================================================
+tone_burst          : OK PASS
+get_win             : OK PASS
+make_disc           : OK PASS
+make_ball           : OK PASS
+db2neper            : OK PASS
+======================================================================
+OK ALL TESTS PASSED
+kwavers implementations match k-wave-python outputs

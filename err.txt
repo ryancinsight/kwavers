@@ -1,0 +1,222 @@
+    Checking kwavers v3.0.0 (D:\kwavers\kwavers)
+warning: unused import: `super::config::BubbleIMEXConfig`
+  --> kwavers\src\physics\acoustics\bubble_dynamics\imex_integration\stiffness.rs:3:5
+   |
+ 3 | use super::config::BubbleIMEXConfig;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+note: the lint level is defined here
+  --> kwavers\src\lib.rs:25:5
+   |
+25 |     unused_imports,
+   |     ^^^^^^^^^^^^^^
+
+warning: unused import: `super::incident_field::IncidentField`
+  --> kwavers\src\physics\acoustics\imaging\modalities\ceus\cloud_dynamics\interactions.rs:20:5
+   |
+20 | use super::incident_field::IncidentField;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `KwaversError` and `KwaversResult`
+ --> kwavers\src\physics\acoustics\imaging\registration\metrics.rs:1:26
+  |
+1 | use crate::core::error::{KwaversError, KwaversResult};
+  |                          ^^^^^^^^^^^^  ^^^^^^^^^^^^^
+
+warning: unused import: `KwaversError`
+ --> kwavers\src\physics\acoustics\imaging\registration\spatial.rs:1:26
+  |
+1 | use crate::core::error::{KwaversError, KwaversResult};
+  |                          ^^^^^^^^^^^^
+
+warning: unused import: `field_indices`
+ --> kwavers\src\physics\acoustics\state\traits.rs:3:24
+  |
+3 | use super::container::{field_indices, PhysicsState};
+  |                        ^^^^^^^^^^^^^
+
+warning: unused import: `ndarray::Array3`
+ --> kwavers\src\physics\chemistry\model.rs:6:5
+  |
+6 | use ndarray::Array3;
+  |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `ndarray::ArrayD`
+  --> kwavers\src\physics\foundations\coupling\mod.rs:36:5
+   |
+36 | use ndarray::ArrayD;
+   |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `thermodynamics::update_thermodynamics`
+  --> kwavers\src\physics\optics\sonoluminescence\emission\orchestrator\dynamics\mod.rs:39:16
+   |
+39 | pub(crate) use thermodynamics::update_thermodynamics;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::physics::optics::sonoluminescence::emission::statistics::SpectralStatistics`
+  --> kwavers\src\physics\optics\sonoluminescence\emission\orchestrator\emission_calculator.rs:26:5
+   |
+26 | use crate::physics::optics::sonoluminescence::emission::statistics::SpectralStatistics;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Axis`
+ --> kwavers\src\physics\optics\sonoluminescence\emission\spectrum.rs:1:47
+  |
+1 | use ndarray::{s, Array1, Array3, Array4, Zip, Axis};
+  |                                               ^^^^
+
+warning: unused import: `crate::physics::optics::sonoluminescence::spectral::SpectralAnalyzer`
+ --> kwavers\src\physics\optics\sonoluminescence\emission\spectrum.rs:2:5
+  |
+2 | use crate::physics::optics::sonoluminescence::spectral::SpectralAnalyzer;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0599]: no method named `indexed` found for struct `Zip<(ArrayBase<ViewRepr<&mut f64>, Dim<[usize; 3]>>, ..., ...), ...>` in the current scope
+  --> kwavers\src\physics\optics\sonoluminescence\emission\spectrum.rs:82:14
+   |
+79 | /         Zip::from(&mut self.total_intensity)
+80 | |             .and(&mut self.peak_wavelength)
+81 | |             .and(&mut self.color_temperature)
+82 | |             .indexed()
+   | |             -^^^^^^^ this is an associated function, not a method
+   | |_____________|
+   |
+   |
+   = note: found the following associated functions; to be used as methods, functions must have a `self` parameter
+   = note: the candidate is defined in an impl for the type `ndarray::Zip<(Indices<D>, P), D>`
+   = note: the full name for the type has been written to 'D:\kwavers\target\debug\deps\kwavers-bac77a7d612a1d2a.long-type-15229417639385488198.txt'
+   = note: consider using `--verbose` to print the full type name to the console
+help: use associated function syntax instead
+   |
+79 -         Zip::from(&mut self.total_intensity)
+80 -             .and(&mut self.peak_wavelength)
+81 -             .and(&mut self.color_temperature)
+82 -             .indexed()
+79 +         ndarray::Zip::<(Indices<D>, P), D>::indexed()
+   |
+
+warning: unused variable: `ny`
+   --> kwavers\src\domain\source\basic\piston.rs:105:18
+    |
+105 |             (nx, ny, nz) if nx.abs() > 0.5 => {
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_ny`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `nz`
+   --> kwavers\src\domain\source\basic\piston.rs:105:22
+    |
+105 |             (nx, ny, nz) if nx.abs() > 0.5 => {
+    |                      ^^ help: if this is intentional, prefix it with an underscore: `_nz`
+
+warning: unused variable: `nx`
+   --> kwavers\src\domain\source\basic\piston.rs:109:14
+    |
+109 |             (nx, ny, nz) if ny.abs() > 0.5 => {
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `nz`
+   --> kwavers\src\domain\source\basic\piston.rs:109:22
+    |
+109 |             (nx, ny, nz) if ny.abs() > 0.5 => {
+    |                      ^^ help: if this is intentional, prefix it with an underscore: `_nz`
+
+warning: unused variable: `nx`
+   --> kwavers\src\domain\source\wavefront\bessel.rs:136:14
+    |
+136 |             (nx, ny, nz) if nz.abs() > 0.5 => {
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `ny`
+   --> kwavers\src\domain\source\wavefront\bessel.rs:136:18
+    |
+136 |             (nx, ny, nz) if nz.abs() > 0.5 => {
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_ny`
+
+warning: unused variable: `nx`
+   --> kwavers\src\domain\source\wavefront\bessel.rs:140:14
+    |
+140 |             (nx, ny, nz) if ny.abs() > 0.5 => {
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `nz`
+   --> kwavers\src\domain\source\wavefront\bessel.rs:140:22
+    |
+140 |             (nx, ny, nz) if ny.abs() > 0.5 => {
+    |                      ^^ help: if this is intentional, prefix it with an underscore: `_nz`
+
+warning: unused variable: `nx`
+   --> kwavers\src\domain\source\wavefront\bessel.rs:152:14
+    |
+152 |             (nx, ny, nz) if nz.abs() > 0.5 => dz,
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `ny`
+   --> kwavers\src\domain\source\wavefront\bessel.rs:152:18
+    |
+152 |             (nx, ny, nz) if nz.abs() > 0.5 => dz,
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_ny`
+
+warning: unused variable: `nx`
+   --> kwavers\src\domain\source\wavefront\bessel.rs:153:14
+    |
+153 |             (nx, ny, nz) if ny.abs() > 0.5 => dy,
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `nz`
+   --> kwavers\src\domain\source\wavefront\bessel.rs:153:22
+    |
+153 |             (nx, ny, nz) if ny.abs() > 0.5 => dy,
+    |                      ^^ help: if this is intentional, prefix it with an underscore: `_nz`
+
+warning: unused variable: `nx`
+   --> kwavers\src\domain\source\wavefront\gaussian.rs:101:14
+    |
+101 |             (nx, ny, nz) if nz.abs() > 0.5 => {
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `ny`
+   --> kwavers\src\domain\source\wavefront\gaussian.rs:101:18
+    |
+101 |             (nx, ny, nz) if nz.abs() > 0.5 => {
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_ny`
+
+warning: unused variable: `nx`
+   --> kwavers\src\domain\source\wavefront\gaussian.rs:105:14
+    |
+105 |             (nx, ny, nz) if ny.abs() > 0.5 => {
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `nz`
+   --> kwavers\src\domain\source\wavefront\gaussian.rs:105:22
+    |
+105 |             (nx, ny, nz) if ny.abs() > 0.5 => {
+    |                      ^^ help: if this is intentional, prefix it with an underscore: `_nz`
+
+warning: unused variable: `nx`
+   --> kwavers\src\domain\source\wavefront\gaussian.rs:117:14
+    |
+117 |             (nx, ny, nz) if nz.abs() > 0.5 => dz,
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `ny`
+   --> kwavers\src\domain\source\wavefront\gaussian.rs:117:18
+    |
+117 |             (nx, ny, nz) if nz.abs() > 0.5 => dz,
+    |                  ^^ help: if this is intentional, prefix it with an underscore: `_ny`
+
+warning: unused variable: `nx`
+   --> kwavers\src\domain\source\wavefront\gaussian.rs:118:14
+    |
+118 |             (nx, ny, nz) if ny.abs() > 0.5 => dy,
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_nx`
+
+warning: unused variable: `nz`
+   --> kwavers\src\domain\source\wavefront\gaussian.rs:118:22
+    |
+118 |             (nx, ny, nz) if ny.abs() > 0.5 => dy,
+    |                      ^^ help: if this is intentional, prefix it with an underscore: `_nz`
+
+For more information about this error, try `rustc --explain E0599`.
+warning: `kwavers` (lib) generated 31 warnings
+error: could not compile `kwavers` (lib) due to 1 previous error; 31 warnings emitted

@@ -1,0 +1,690 @@
+   Compiling kwavers v3.0.0 (D:\kwavers\kwavers)
+    Checking xtask v0.1.0 (D:\kwavers\xtask)
+warning: unused import: `crate::domain::signal::SineWave`
+   --> kwavers\src\domain\source\array_2d\mod.rs:715:9
+    |
+715 |     use crate::domain::signal::SineWave;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: the lint level is defined here
+   --> kwavers\src\lib.rs:25:5
+    |
+ 25 |     unused_imports,
+    |     ^^^^^^^^^^^^^^
+
+warning: trivial numeric cast: `f64` as `f64`
+   --> kwavers\src\domain\signal\mod.rs:133:25
+    |
+133 |     let burst_samples = ((num_cycles * sample_rate_hz) / signal_freq_hz).round() as f64;
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: cast can be replaced by coercion; this might require a temporary variable
+note: the lint level is defined here
+   --> kwavers\src\lib.rs:36:24
+    |
+ 36 | #![warn(trivial_casts, trivial_numeric_casts)]
+    |                        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: float has excessive precision
+   --> kwavers\src\core\constants\water.rs:128:13
+    |
+128 |             56.723531840522710,
+    |             ^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#excessive_precision
+    = note: `#[warn(clippy::excessive_precision)]` on by default
+help: consider changing the type or truncating it to
+    |
+128 -             56.723531840522710,
+128 +             56.723_531_840_522_71,
+    |
+
+warning: this function has a `#[must_use]` attribute with no message, but returns a type already marked as `#[must_use]`
+  --> kwavers\src\domain\medium\heterogeneous\factory\general.rs:38:5
+   |
+38 | /     pub fn from_arrays(
+39 | |         sound_speed: Array3<f64>,
+40 | |         density: Array3<f64>,
+41 | |         absorption: Option<Array3<f64>>,
+42 | |         nonlinearity: Option<Array3<f64>>,
+43 | |         reference_frequency: f64,
+44 | |     ) -> Result<HeterogeneousMedium, String> {
+   | |____________________________________________^
+   |
+   = help: either add some descriptive message or remove the attribute
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#double_must_use
+   = note: `#[warn(clippy::double_must_use)]` on by default
+
+warning: this `impl` can be derived
+  --> kwavers\src\domain\sensor\recorder\config.rs:28:1
+   |
+28 | / impl Default for RecordingMode {
+29 | |     fn default() -> Self {
+30 | |         RecordingMode::TimeSeries
+31 | |     }
+32 | | }
+   | |_^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#derivable_impls
+   = note: `#[warn(clippy::derivable_impls)]` on by default
+help: replace the manual implementation with a derive attribute and mark the default variant
+   |
+ 7 + #[derive(Default)]
+ 8 | pub enum RecordingMode {
+ 9 |     /// Record pressure at each time step (default)
+10 ~     #[default]
+11 ~     TimeSeries,
+   |
+
+warning: casting to the same type is unnecessary (`f64` -> `f64`)
+   --> kwavers\src\domain\signal\mod.rs:133:25
+    |
+133 |     let burst_samples = ((num_cycles * sample_rate_hz) / signal_freq_hz).round() as f64;
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `((num_cycles * sample_rate_hz) / signal_freq_hz).round()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unnecessary_cast
+    = note: `#[warn(clippy::unnecessary_cast)]` on by default
+
+warning: useless use of `format!`
+   --> kwavers\src\domain\signal\mod.rs:137:47
+    |
+137 |           return Err(KwaversError::InvalidInput(format!(
+    |  _______________________________________________^
+138 | |             "tone burst has zero sample count"
+139 | |         )));
+    | |_________^ help: consider using `.to_string()`: `"tone burst has zero sample count".to_string()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#useless_format
+    = note: `#[warn(clippy::useless_format)]` on by default
+
+warning: you seem to use `.enumerate()` and immediately discard the index
+   --> kwavers\src\domain\source\array_2d\mod.rs:566:54
+    |
+566 |         for (_i, element) in self.elements.iter_mut().enumerate() {
+    |                                                      ^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#unused_enumerate_index
+    = note: `#[warn(clippy::unused_enumerate_index)]` on by default
+help: remove the `.enumerate()` call
+    |
+566 -         for (_i, element) in self.elements.iter_mut().enumerate() {
+566 +         for element in self.elements.iter_mut() {
+    |
+
+warning: `kwavers` (lib) generated 7 warnings (run `cargo clippy --fix --lib -p kwavers` to apply 5 suggestions)
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\fluids.rs:265:9
+    |
+265 |         assert!(WHOLE_BLOOD.sound_speed > 1500.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+    = note: `#[warn(clippy::assertions_on_constants)]` on by default
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\fluids.rs:266:9
+    |
+266 |         assert!(WHOLE_BLOOD.sound_speed < 1600.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\fluids.rs:292:9
+    |
+292 |         assert!(WATER_37C.sound_speed > 1490.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\fluids.rs:293:9
+    |
+293 |         assert!(WATER_37C.sound_speed < 1510.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\fluids.rs:299:9
+    |
+299 |         assert!(MICROBUBBLE_SUSPENSION.absorption_coefficient > WATER_37C.absorption_coefficient);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\fluids.rs:302:9
+    |
+302 |         assert!(NANOPARTICLE_SUSPENSION.optical_absorption > WATER_37C.optical_absorption);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:322:9
+    |
+322 |         assert!(TITANIUM_GRADE5.impedance > 20_000_000.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:323:9
+    |
+323 |         assert!(STAINLESS_STEEL_316L.impedance > 40_000_000.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:324:9
+    |
+324 |         assert!(PLATINUM.impedance > 80_000_000.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:341:9
+    |
+341 |         assert!(TITANIUM_GRADE5.thermal_conductivity > 5.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:342:9
+    |
+342 |         assert!(STAINLESS_STEEL_316L.thermal_conductivity > 10.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:343:9
+    |
+343 |         assert!(PLATINUM.thermal_conductivity > 50.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:349:9
+    |
+349 |         assert!(ALUMINA.sound_speed > 10_000.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:350:9
+    |
+350 |         assert!(ZIRCONIA.sound_speed > 5_000.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:356:9
+    |
+356 |         assert!(SILICONE_RUBBER.impedance < 1_200_000.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:397:9
+    |
+397 |         assert!(CFRP.sound_speed > 2000.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:398:9
+    |
+398 |         assert!(CFRP.sound_speed < 5000.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:405:9
+    |
+405 |         assert!(HYDROXYAPATITE.impedance > 5_000_000.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:406:9
+    |
+406 |         assert!(HYDROXYAPATITE.impedance < 15_000_000.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:442:9
+    |
+442 |         assert!(PMMA.optical_absorption < 1.0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\implants.rs:443:9
+    |
+443 |         assert!(PMMA.refractive_index > 1.4);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: this assertion has a constant value
+   --> kwavers\src\domain\medium\properties\tissue.rs:328:9
+    |
+328 |         assert!(BRAIN_GRAY_MATTER.perfusion_rate > BRAIN_WHITE_MATTER.perfusion_rate);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: consider moving this into a const block: `const { assert!(..) }`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+    --> kwavers\src\physics\acoustics\imaging\fusion\algorithms.rs:1105:9
+     |
+1105 |         config.fusion_method = FusionMethod::FeatureBased;
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+note: consider initializing the variable with `domain::imaging::fusion::FusionConfig { fusion_method: FusionMethod::FeatureBased, uncertainty_quantification: false, ..Default::default() }` and removing relevant reassignments
+    --> kwavers\src\physics\acoustics\imaging\fusion\algorithms.rs:1104:9
+     |
+1104 |         let mut config = FusionConfig::default();
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+     = note: `#[warn(clippy::field_reassign_with_default)]` on by default
+
+warning: used `assert_eq!` with a literal bool
+  --> kwavers\src\physics\acoustics\imaging\fusion\config.rs:28:9
+   |
+28 |         assert_eq!(config.uncertainty_quantification, false);
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#bool_assert_comparison
+   = note: `#[warn(clippy::bool_assert_comparison)]` on by default
+help: replace it with `assert!(..)`
+   |
+28 -         assert_eq!(config.uncertainty_quantification, false);
+28 +         assert!(!config.uncertainty_quantification);
+   |
+
+    Checking pykwavers v0.1.0 (D:\kwavers\pykwavers)
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\solver\forward\coupled\thermal_acoustic.rs:600:9
+    |
+600 |         config.dt = -0.001;
+    |         ^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `solver::forward::coupled::thermal_acoustic::ThermalAcousticConfig { dt: -0.001, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\solver\forward\coupled\thermal_acoustic.rs:599:9
+    |
+599 |         let mut config = ThermalAcousticConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\solver\forward\coupled\thermal_acoustic.rs:608:9
+    |
+608 |         config.dt = 0.01; // Way too large
+    |         ^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `solver::forward::coupled::thermal_acoustic::ThermalAcousticConfig { dt: 0.01, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\solver\forward\coupled\thermal_acoustic.rs:607:9
+    |
+607 |         let mut config = ThermalAcousticConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: this assertion is always `true`
+  --> kwavers\src\solver\forward\coupled\mod.rs:37:9
+   |
+37 |         assert!(true);
+   |         ^^^^^^^^^^^^^
+   |
+   = help: remove the assertion
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: empty line after doc comment
+   --> pykwavers\src\lib.rs:334:1
+    |
+334 | / /// ```
+335 | |
+    | |_^
+...
+338 |   enum MediumInner {
+    |   ---------------- the comment documents this enum
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#empty_line_after_doc_comments
+    = note: `#[warn(clippy::empty_line_after_doc_comments)]` on by default
+    = help: if the empty line is unintentional, remove it
+help: if the documentation should include the empty line include it in the comment
+    |
+335 | ///
+    |
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\solver\forward\fdtd\avx512_stencil.rs:940:9
+    |
+940 |         config.tile_size = 7; // Not power of 2
+    |         ^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `solver::forward::fdtd::avx512_stencil::Avx512Config { tile_size: 7, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\solver\forward\fdtd\avx512_stencil.rs:939:9
+    |
+939 |         let mut config = Avx512Config::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: this function has too many arguments (9/7)
+  --> pykwavers\src\utils_bindings.rs:15:1
+   |
+15 | / fn tone_burst(
+16 | |     py: Python<'_>,
+17 | |     sample_rate_hz: f64,
+18 | |     signal_freq_hz: f64,
+...  |
+24 | |     phase: f64,
+25 | | ) -> PyResult<Py<PyArray1<f64>>> {
+   | |________________________________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#too_many_arguments
+   = note: `#[warn(clippy::too_many_arguments)]` on by default
+
+warning: large size difference between variants
+   --> pykwavers\src\lib.rs:338:1
+    |
+338 | / enum MediumInner {
+339 | |     Homogeneous(HomogeneousMedium),
+    | |     ------------------------------ the largest variant contains at least 752 bytes
+340 | |     Heterogeneous(Box<HeterogeneousMedium>),
+    | |     --------------------------------------- the second-largest variant contains at least 8 bytes
+341 | | }
+    | |_^ the entire enum is at least 752 bytes
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#large_enum_variant
+    = note: `#[warn(clippy::large_enum_variant)]` on by default
+help: consider boxing the large fields or introducing indirection in some other way to reduce the total size of the enum
+    |
+339 -     Homogeneous(HomogeneousMedium),
+339 +     Homogeneous(Box<HomogeneousMedium>),
+    |
+
+warning: redundant closure
+    --> pykwavers\src\lib.rs:1185:22
+     |
+1185 |             .map_err(|e| PyValueError::new_err(e))?;
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the associated function itself: `PyValueError::new_err`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#redundant_closure
+     = note: `#[warn(clippy::redundant_closure)]` on by default
+
+warning: this expression creates a reference which is immediately dereferenced by the compiler
+    --> pykwavers\src\lib.rs:1263:31
+     |
+1263 |         apodization_to_string(&self.inner.transmit_apodization())
+     |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: change this to: `self.inner.transmit_apodization()`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#needless_borrow
+     = note: `#[warn(clippy::needless_borrow)]` on by default
+
+warning: `pykwavers` (lib) generated 5 warnings (4 duplicates)
+warning: `pykwavers` (lib test) generated 5 warnings (1 duplicate) (run `cargo clippy --fix --lib -p pykwavers --tests` to apply 2 suggestions)
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\solver\validation\numerical_accuracy.rs:513:9
+    |
+513 |         config.dt = CFL_NUMBER * dx / c0;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `solver::forward::pstd::config::PSTDConfig { dt: CFL_NUMBER * dx / c0, nt: 500, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\solver\validation\numerical_accuracy.rs:512:9
+    |
+512 |         let mut config = PstdConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\solver\validation\numerical_accuracy.rs:522:9
+    |
+522 |         source_data.p_mask = Some(Array3::zeros((n, n, 1)));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `domain::source::grid_source::GridSource { p_mask: Some(Array3::zeros((n, n, 1))), ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\solver\validation\numerical_accuracy.rs:521:9
+    |
+521 |         let mut source_data = crate::domain::source::GridSource::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\solver\validation\numerical_accuracy.rs:609:9
+    |
+609 |         config.dt = CFL_NUMBER * dx / c0;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `solver::forward::pstd::config::PSTDConfig { dt: CFL_NUMBER * dx / c0, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\solver\validation\numerical_accuracy.rs:608:9
+    |
+608 |         let mut config = PstdConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\solver\validation\numerical_accuracy.rs:702:9
+    |
+702 |         config.dt = CFL_NUMBER * dx / c0;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `solver::forward::pstd::config::PSTDConfig { dt: CFL_NUMBER * dx / c0, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\solver\validation\numerical_accuracy.rs:701:9
+    |
+701 |         let mut config = PstdConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\solver\validation\numerical_accuracy.rs:711:9
+    |
+711 |         source_data.p_mask = Some(Array3::zeros((n, n, 1)));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `domain::source::grid_source::GridSource { p_mask: Some(Array3::zeros((n, n, 1))), ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\solver\validation\numerical_accuracy.rs:710:9
+    |
+710 |         let mut source_data = crate::domain::source::GridSource::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\solver\validation\numerical_accuracy.rs:785:9
+    |
+785 |         config.dt = 0.2 * dx / c0; // Conservative CFL
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `solver::forward::pstd::config::PSTDConfig { dt: 0.2 * dx / c0, nt: 1000, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\solver\validation\numerical_accuracy.rs:784:9
+    |
+784 |         let mut config = PstdConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\analysis\ml\beamforming_trainer.rs:387:9
+    |
+387 |         config.num_epochs = 5;
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `analysis::ml::training::TrainingConfig { num_epochs: 5, batch_size: 10, verbose: false, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\analysis\ml\beamforming_trainer.rs:386:9
+    |
+386 |         let mut config = TrainingConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\analysis\ml\beamforming_trainer.rs:409:9
+    |
+409 |         config.num_epochs = 3;
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `analysis::ml::training::TrainingConfig { num_epochs: 3, verbose: false, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\analysis\ml\beamforming_trainer.rs:408:9
+    |
+408 |         let mut config = TrainingConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\analysis\ml\physics_informed_loss.rs:496:9
+    |
+496 |         config.sound_speed = 0.0;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `analysis::ml::physics_informed_loss::PhysicsLossConfig { sound_speed: 0.0, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\analysis\ml\physics_informed_loss.rs:495:9
+    |
+495 |         let mut config = PhysicsLossConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\analysis\ml\training.rs:438:9
+    |
+438 |         config.num_epochs = 0;
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `analysis::ml::training::TrainingConfig { num_epochs: 0, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\analysis\ml\training.rs:437:9
+    |
+437 |         let mut config = TrainingConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: this assertion is always `true`
+   --> kwavers\src\analysis\signal_processing\beamforming\gpu\mod.rs:181:9
+    |
+181 |         assert!(true);
+    |         ^^^^^^^^^^^^^
+    |
+    = help: remove the assertion
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#assertions_on_constants
+
+warning: length comparison to zero
+   --> kwavers\src\analysis\signal_processing\localization\model_order.rs:543:17
+    |
+543 |         assert!(result.criterion_values.len() > 0);
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: using `!is_empty` is clearer and more explicit: `!result.criterion_values.is_empty()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#len_zero
+    = note: `#[warn(clippy::len_zero)]` on by default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\analysis\signal_processing\localization\music.rs:650:9
+    |
+650 |         config.num_sources = Some(0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `analysis::signal_processing::localization::music::MUSICConfig { num_sources: Some(0), ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\analysis\signal_processing\localization\music.rs:649:9
+    |
+649 |         let mut config = MUSICConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\analysis\signal_processing\localization\music.rs:658:9
+    |
+658 |         config.num_sources = Some(10); // More than sensors
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `analysis::signal_processing::localization::music::MUSICConfig { num_sources: Some(10), ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\analysis\signal_processing\localization\music.rs:657:9
+    |
+657 |         let mut config = MUSICConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\analysis\signal_processing\localization\music.rs:721:9
+    |
+721 |         config.num_sources = Some(1);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `analysis::signal_processing::localization::music::MUSICConfig { num_sources: Some(1), grid_resolution: 10, num_snapshots: 50, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\analysis\signal_processing\localization\music.rs:720:9
+    |
+720 |         let mut config = MUSICConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\analysis\signal_processing\localization\music.rs:745:9
+    |
+745 |         config.num_sources = None; // Automatic detection
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `analysis::signal_processing::localization::music::MUSICConfig { num_sources: None, num_snapshots: 100, model_order_criterion: ModelOrderCriterion::MDL, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\analysis\signal_processing\localization\music.rs:744:9
+    |
+744 |         let mut config = MUSICConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\clinical\patient_management.rs:999:9
+    |
+999 |         vitals.heart_rate_bpm = Some(72);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `clinical::patient_management::VitalSigns { heart_rate_bpm: Some(72), ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\clinical\patient_management.rs:997:9
+    |
+997 |         let mut vitals = VitalSigns::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: field assignment outside of initializer for an instance created with Default::default()
+   --> kwavers\src\clinical\safety\compliance.rs:602:9
+    |
+602 |         config.max_power = -1.0;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider initializing the variable with `clinical::safety::compliance::ComplianceConfig { max_power: -1.0, ..Default::default() }` and removing relevant reassignments
+   --> kwavers\src\clinical\safety\compliance.rs:601:9
+    |
+601 |         let mut config = ComplianceConfig::default();
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.93.0/index.html#field_reassign_with_default
+
+warning: `kwavers` (lib test) generated 54 warnings (7 duplicates) (run `cargo clippy --fix --lib -p kwavers --tests` to apply 3 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 59.75s

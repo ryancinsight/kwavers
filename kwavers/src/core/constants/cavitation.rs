@@ -24,6 +24,21 @@ pub const VAN_DER_WAALS_RADIUS: f64 = 8.86e-10;
 /// Mechanical index threshold for bioeffects
 pub const MECHANICAL_INDEX_THRESHOLD: f64 = 0.7;
 
+/// Flynn collapse coefficient for transient cavitation threshold.
+///
+/// The threshold acoustic pressure for violent inertial collapse is:
+/// $$ P_{\text{Flynn}} = \alpha \left( P_0 + \frac{2\sigma}{R_n} \right) - P_v $$
+///
+/// where $\alpha = 0.83$ is the empirical collapse fraction derived from
+/// numerical integration of the Rayleigh–Plesset equation showing that
+/// $R_{\max}/R_0 \ge 2$ (violent collapse) occurs at approximately 83%
+/// of the combined hydrostatic and Laplace pressure.
+///
+/// # References
+/// - Flynn, H. G. (1964). "Physics of Acoustic Cavitation in Liquids".
+///   In *Methods of Experimental Physics*, Vol. 1, Academic Press, pp. 57–172.
+pub const FLYNN_COLLAPSE_COEFFICIENT: f64 = 0.83;
+
 /// Thermal index threshold for bioeffects
 pub const THERMAL_INDEX_THRESHOLD: f64 = 6.0;
 

@@ -29,12 +29,12 @@
 //! For MVDR/Capon scoring, the covariance/snapshot domain is an explicit policy choice via
 //! `MvdrCovarianceDomain` (e.g., complex baseband snapshots vs. real time-sample covariance).
 
-use crate::analysis::signal_processing::beamforming::domain_processor::BeamformingProcessor;
 use crate::analysis::signal_processing::beamforming::time_domain::DelayReference;
 use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
 use crate::analysis::signal_processing::localization::LocalizationResult; // Analysis layer result type
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::sensor::array::{Position, SensorArray}; // Domain: sensor array geometry
+use crate::domain::sensor::beamforming::processor::BeamformingProcessor;
 use crate::domain::sensor::beamforming::BeamformingCoreConfig;
 use ndarray::Array3;
 

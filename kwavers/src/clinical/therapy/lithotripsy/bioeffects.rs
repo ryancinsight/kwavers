@@ -183,10 +183,7 @@ impl BioeffectsModel {
         //  I_SPTA = max(intensity)
         //  ΔT ≈ 2 · α · I_SPTA · d / k   (simplified for soft tissue)
         //  where α=0.3 dB/cm/MHz, d=1cm, k=0.6 W/(m·K)
-        let i_spta = intensity
-            .iter()
-            .copied()
-            .fold(0.0_f64, f64::max);
+        let i_spta = intensity.iter().copied().fold(0.0_f64, f64::max);
         let alpha_np_per_m = 0.3 * f_mhz * 100.0 / 8.686; // dB/cm/MHz → Np/m
         let depth_m = 0.01; // reference depth 1 cm
         let thermal_conductivity = 0.6; // W/(m·K)
@@ -195,10 +192,7 @@ impl BioeffectsModel {
 
         // ── Cavitation dose ────────────────────────────────────────────
         // Normalised peak cavitation amplitude
-        let cav_peak = cavitation
-            .iter()
-            .copied()
-            .fold(0.0_f64, f64::max);
+        let cav_peak = cavitation.iter().copied().fold(0.0_f64, f64::max);
         // Normalise by threshold (critical bubble radius ~ 1e-6 m)
         let cav_threshold = 1e-6;
         let cav_dose = cav_peak / cav_threshold;

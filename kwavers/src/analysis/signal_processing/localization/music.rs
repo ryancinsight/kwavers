@@ -35,8 +35,8 @@
 
 use super::config::LocalizationConfig;
 use super::model_order::{ModelOrderConfig, ModelOrderCriterion, ModelOrderEstimator};
+use crate::analysis::signal_processing::localization::{LocalizationProcessor, SourceLocation};
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
-use crate::domain::signal_processing::localization::{LocalizationProcessor, SourceLocation};
 use crate::math::linear_algebra::EigenDecomposition;
 use ndarray::{Array1, Array2};
 use num_complex::Complex;

@@ -2,14 +2,14 @@
 //!
 //! Implements Planck's law for thermal radiation from hot bubble interior
 
-use ndarray::{Array1, Array3};
+use ndarray::{Array1, Array3, Zip};
 use std::f64::consts::PI;
 
-/// Physical constants
-pub const PLANCK_CONSTANT: f64 = 6.62607015e-34; // J·s
-pub const SPEED_OF_LIGHT: f64 = 2.99792458e8; // m/s
-pub const BOLTZMANN_CONSTANT: f64 = 1.380649e-23; // J/K
-pub const STEFAN_BOLTZMANN: f64 = 5.670374419e-8; // W/(m²·K⁴)
+use crate::core::constants::fundamental::{
+    BOLTZMANN as BOLTZMANN_CONSTANT, PLANCK as PLANCK_CONSTANT, SPEED_OF_LIGHT,
+    STEFAN_BOLTZMANN,
+};
+use crate::core::constants::optical::WIEN_CONSTANT;
 
 /// Blackbody radiation model
 #[derive(Debug, Clone)]
@@ -104,7 +104,7 @@ impl BlackbodyModel {
         if temperature <= 0.0 {
             return 0.0;
         }
-        2.897771955e-3 / temperature // Wien's displacement constant
+        WIEN_CONSTANT / temperature // Wien's displacement law
     }
 
     /// Calculate color temperature from spectrum
@@ -128,7 +128,7 @@ impl BlackbodyModel {
 
         // Use Wien's law to estimate temperature
         if peak_wavelength > 0.0 {
-            2.897771955e-3 / peak_wavelength
+            WIEN_CONSTANT / peak_wavelength
         } else {
             0.0
         }
@@ -142,25 +142,27 @@ pub fn calculate_blackbody_emission(
     bubble_radius_field: &Array3<f64>,
     model: &BlackbodyModel,
 ) -> Array3<f64> {
+    let mut emission_field = Array3::zeros(temperature_field.dim());
+
     // Use zip and map for zero-copy iteration
-    Array3::from_shape_fn(temperature_field.dim(), |(i, j, k)| {
-        let temp = temperature_field[[i, j, k]];
-        let radius = bubble_radius_field[[i, j, k]];
+    Zip::from(&mut emission_field)
+        .and(temperature_field)
+        .and(bubble_radius_field)
+        .for_each(|out, &temp, &radius| {
+            if radius > 0.0 && temp > 0.0 {
+                // Surface area of bubble
+                let surface_area = 4.0 * PI * radius * radius;
 
-        if radius > 0.0 && temp > 0.0 {
-            // Surface area of bubble
-            let surface_area = 4.0 * PI * radius * radius;
+                // Total power emitted
+                let power = model.total_power(temp, surface_area);
 
-            // Total power emitted
-            let power = model.total_power(temp, surface_area);
+                // Convert to power density (W/m³)
+                let volume = 4.0 / 3.0 * PI * radius.powi(3);
+                *out = power / volume.max(1e-20);
+            }
+        });
 
-            // Convert to power density (W/m³)
-            let volume = 4.0 / 3.0 * PI * radius.powi(3);
-            power / volume.max(1e-20)
-        } else {
-            0.0
-        }
-    })
+    emission_field
 }
 
 #[cfg(test)]

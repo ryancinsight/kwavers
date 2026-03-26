@@ -3,6 +3,7 @@
 //! Reactions of ROS in the liquid surrounding the bubble
 
 use super::ros_species::ROSSpecies;
+use crate::core::constants::fundamental::AVOGADRO;
 use std::collections::HashMap;
 
 /// Radical reaction in aqueous phase
@@ -212,9 +213,8 @@ pub fn calculate_oh_yield(energy_density: f64, ph: f64) -> f64 {
 
     // Convert energy density (J/m³) to OH concentration (mol/m³)
     let ev_per_joule = 6.242e18;
-    let molecules_per_mole = 6.022e23;
 
-    g_oh_neutral * ph_factor * energy_density * ev_per_joule / (100.0 * molecules_per_mole)
+    g_oh_neutral * ph_factor * energy_density * ev_per_joule / (100.0 * AVOGADRO)
 }
 
 /// Estimate radical diffusion length before recombination

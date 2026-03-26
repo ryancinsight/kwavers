@@ -218,4 +218,3 @@ mod tests {
         assert!((dist - 5.0).abs() < 0.01); // 3-4-5 triangle
     }
 }
-

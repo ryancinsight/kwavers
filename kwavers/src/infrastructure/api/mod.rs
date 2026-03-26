@@ -19,7 +19,7 @@ use std::collections::HashMap;
 
 pub mod auth;
 #[cfg(feature = "pinn")]
-pub mod clinical_handlers;
+pub mod clinical;
 pub mod handlers;
 pub mod job_manager;
 pub mod middleware;

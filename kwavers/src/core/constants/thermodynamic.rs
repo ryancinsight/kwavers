@@ -42,6 +42,26 @@ pub const THERMAL_DIFFUSIVITY_WATER: f64 = 1.43e-7;
 /// Thermal diffusivity of tissue (m²/s)
 pub const THERMAL_DIFFUSIVITY_TISSUE: f64 = 1.36e-7;
 
+/// Thermal conductivity of air (W/(m·K))
+pub const THERMAL_CONDUCTIVITY_AIR: f64 = 0.026;
+
+// ============================================================================
+// Van der Waals Constants
+// ============================================================================
+// Format: (a in bar·L²/mol², b in L/mol)
+// References: CRC Handbook of Chemistry and Physics
+
+/// Van der Waals arbitrary constants for Air (a, b)
+pub const VAN_DER_WAALS_AIR: (f64, f64) = (1.37, 0.0387);
+/// Van der Waals constants for Argon (a, b)
+pub const VAN_DER_WAALS_ARGON: (f64, f64) = (1.355, 0.0320);
+/// Van der Waals constants for Xenon (a, b)
+pub const VAN_DER_WAALS_XENON: (f64, f64) = (4.250, 0.0510);
+/// Van der Waals constants for Nitrogen (a, b)
+pub const VAN_DER_WAALS_NITROGEN: (f64, f64) = (1.370, 0.0387);
+/// Van der Waals constants for Oxygen (a, b)
+pub const VAN_DER_WAALS_OXYGEN: (f64, f64) = (1.382, 0.0319);
+
 /// Molar mass of water (kg/mol)
 pub const M_WATER: f64 = 0.018015;
 

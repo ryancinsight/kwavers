@@ -184,16 +184,13 @@ impl VesselSegmentation {
         let hxx = image[[i + 1, j, k]] - 2.0 * c + image[[i - 1, j, k]];
         let hyy = image[[i, j + 1, k]] - 2.0 * c + image[[i, j - 1, k]];
         let hzz = image[[i, j, k + 1]] - 2.0 * c + image[[i, j, k - 1]];
-        let hxy = (image[[i + 1, j + 1, k]] - image[[i - 1, j + 1, k]]
-            - image[[i + 1, j - 1, k]]
+        let hxy = (image[[i + 1, j + 1, k]] - image[[i - 1, j + 1, k]] - image[[i + 1, j - 1, k]]
             + image[[i - 1, j - 1, k]])
             / 4.0;
-        let hxz = (image[[i + 1, j, k + 1]] - image[[i - 1, j, k + 1]]
-            - image[[i + 1, j, k - 1]]
+        let hxz = (image[[i + 1, j, k + 1]] - image[[i - 1, j, k + 1]] - image[[i + 1, j, k - 1]]
             + image[[i - 1, j, k - 1]])
             / 4.0;
-        let hyz = (image[[i, j + 1, k + 1]] - image[[i, j - 1, k + 1]]
-            - image[[i, j + 1, k - 1]]
+        let hyz = (image[[i, j + 1, k + 1]] - image[[i, j - 1, k + 1]] - image[[i, j + 1, k - 1]]
             + image[[i, j - 1, k - 1]])
             / 4.0;
         [hxx, hyy, hzz, hxy, hxz, hyz]

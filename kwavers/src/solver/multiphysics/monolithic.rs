@@ -68,12 +68,12 @@
 //!   Uses monolithic thermal-acoustic coupling for safety verification
 
 use crate::core::error::KwaversResult;
-use log::{debug, warn};
 use crate::domain::field::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::plugin::Plugin;
 use crate::solver::integration::nonlinear::{GMRESConfig, GMRESSolver};
-use ndarray::{Array3, s};
+use log::{debug, warn};
+use ndarray::{s, Array3};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -128,9 +128,9 @@ impl Default for PhysicsCoefficients {
             density: 1000.0,
             specific_heat: 4186.0,
             thermal_conductivity: 0.6,
-            optical_absorption: 10.0,      // 10 m⁻¹
-            reduced_scattering: 1000.0,    // 10 cm⁻¹ = 1000 m⁻¹
-            acoustic_absorption: 0.5,      // 0.5 Np/m
+            optical_absorption: 10.0,   // 10 m⁻¹
+            reduced_scattering: 1000.0, // 10 cm⁻¹ = 1000 m⁻¹
+            acoustic_absorption: 0.5,   // 0.5 Np/m
         }
     }
 }
@@ -339,7 +339,9 @@ impl MonolithicCoupler {
 
             // Solve J·du = -f
             match gmres.solve(
-                |v: &Array3<f64>| self.jacobian_vector_product(v, &u_current, &u_prev, dt, dims, &field_order),
+                |v: &Array3<f64>| {
+                    self.jacobian_vector_product(v, &u_current, &u_prev, dt, dims, &field_order)
+                },
                 &b,
                 &mut du,
             ) {
@@ -380,11 +382,7 @@ impl MonolithicCoupler {
 
         let elapsed = start_time.elapsed().as_secs_f64();
         let final_residual = self.convergence_history.last().copied().unwrap_or(f_norm_0);
-        let avg_gmres = if newton_iter > 0 {
-            total_gmres_iters / newton_iter
-        } else {
-            0
-        };
+        let avg_gmres = total_gmres_iters.checked_div(newton_iter).unwrap_or(0);
 
         Ok(CouplingConvergenceInfo {
             converged,
@@ -439,13 +437,12 @@ impl MonolithicCoupler {
         };
 
         // Index map: field_type -> block index   (None if field not present)
-        let idx_of = |ft: UnifiedFieldType| -> Option<usize> {
-            field_order.iter().position(|&k| k == ft)
-        };
+        let idx_of =
+            |ft: UnifiedFieldType| -> Option<usize> { field_order.iter().position(|&k| k == ft) };
 
         // Pre-extract fields needed for cross-coupling (clones are O(nx·ny·nz))
         let pressure = idx_of(UnifiedFieldType::Pressure).map(|i| field_slice(u, i));
-        let light    = idx_of(UnifiedFieldType::LightFluence).map(|i| field_slice(u, i));
+        let light = idx_of(UnifiedFieldType::LightFluence).map(|i| field_slice(u, i));
 
         let coeff = &self.physics_coefficients;
 
@@ -656,10 +653,7 @@ impl MonolithicCoupler {
 /// ```
 ///
 /// Boundary nodes use one-sided (zero-gradient Neumann) conditions.
-fn laplacian_3d(
-    field: &Array3<f64>,
-    grid_dims: (usize, usize, usize),
-) -> Array3<f64> {
+fn laplacian_3d(field: &Array3<f64>, grid_dims: (usize, usize, usize)) -> Array3<f64> {
     let (nx, ny, nz) = field.dim();
 
     // Grid spacing — infer from total dimensions.  If grid_dims matches
@@ -777,19 +771,21 @@ mod tests {
     #[test]
     fn test_compute_residual_zero_fields() {
         // With all-zero fields, residual should be all-zero
-        let coupler = MonolithicCoupler::new(
-            NewtonKrylovConfig::default(),
-            GMRESConfig::default(),
-        );
+        let coupler = MonolithicCoupler::new(NewtonKrylovConfig::default(), GMRESConfig::default());
         let field_order = vec![UnifiedFieldType::Pressure, UnifiedFieldType::Temperature];
         let dims = (4, 3, 2);
         let n = field_order.len() * dims.0;
         let u = Array3::zeros((n, dims.1, dims.2));
         let u_prev = u.clone();
 
-        let res = coupler.compute_residual(&u, &u_prev, 1e-6, dims, &field_order).unwrap();
+        let res = coupler
+            .compute_residual(&u, &u_prev, 1e-6, dims, &field_order)
+            .unwrap();
         let norm = MonolithicCoupler::norm(&res);
-        assert!(norm < 1e-15, "Residual of zero state should be zero, got {norm}");
+        assert!(
+            norm < 1e-15,
+            "Residual of zero state should be zero, got {norm}"
+        );
     }
 
     #[test]

@@ -1,0 +1,140 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.65s
+     Running unittests src\lib.rs (target\debug\deps\kwavers-3a673440a3c1d176.exe)
+
+running 103 tests
+test domain::imaging::fusion::tests::test_affine_transform_scaling ... ok
+test domain::imaging::multimodality_fusion::tests::test_fusion_method_display ... ok
+test analysis::signal_processing::beamforming::neural::physics::tests::test_coherence_diffusion ... ok
+test domain::imaging::multimodality_fusion::tests::test_registration_params_default ... ok
+test domain::imaging::multimodality_fusion::tests::test_fusion_engine_creation ... ok
+test domain::imaging::multimodality_fusion::tests::test_fusion_parameters_default ... ok
+test domain::imaging::fusion::tests::test_affine_transform_translation ... ok
+test domain::imaging::multimodality_fusion::tests::test_registration_engine_creation ... ok
+test domain::imaging::fusion::tests::test_fusion_config_default ... ok
+test domain::imaging::multimodality_fusion::tests::test_multimodality_fusion_manager ... ok
+test physics::acoustics::imaging::fusion::algorithms::tests::test_fuse_insufficient_modalities ... ok
+test domain::imaging::multimodality_fusion::tests::test_registration_transform_identity ... ok
+test domain::imaging::fusion::tests::test_affine_transform_identity ... ok
+test domain::imaging::multimodality_fusion::tests::test_image_modality_display ... ok
+test physics::acoustics::imaging::fusion::algorithms::tests::test_multimodal_fusion_creation ... ok
+test physics::acoustics::imaging::fusion::properties::tests::test_classify_tissue_types_high_abnormal ... ok
+test physics::acoustics::imaging::fusion::algorithms::tests::test_register_optical_validation ... ok
+test physics::acoustics::imaging::fusion::config::tests::test_fusion_config_default ... ok
+test physics::acoustics::imaging::fusion::config::tests::test_fusion_method_variants ... ok
+test physics::acoustics::imaging::fusion::properties::tests::test_compute_composite_stiffness_high_intensity ... ok
+test physics::acoustics::imaging::fusion::properties::tests::test_compute_composite_stiffness_low_intensity ... ok
+test physics::acoustics::imaging::fusion::properties::tests::test_classify_tissue_types_abnormal ... ok
+test physics::acoustics::imaging::fusion::properties::tests::test_classify_tissue_types_borderline ... ok
+test physics::acoustics::imaging::fusion::properties::tests::test_classify_tissue_types_normal ... ok
+test physics::acoustics::imaging::fusion::config::tests::test_registration_method_variants ... ok
+test physics::acoustics::imaging::fusion::algorithms::tests::test_register_ultrasound ... ok
+test physics::acoustics::imaging::fusion::properties::tests::test_compute_composite_stiffness_range ... ok
+test physics::acoustics::imaging::fusion::algorithms::tests::test_extract_tissue_properties_generates_composite ... ok
+test physics::acoustics::imaging::fusion::properties::tests::test_compute_oxygenation_index_clamped ... ok
+test physics::acoustics::imaging::fusion::properties::tests::test_compute_oxygenation_index_high ... ok
+test physics::acoustics::imaging::fusion::properties::tests::test_compute_oxygenation_index_normal ... ok
+test physics::acoustics::imaging::fusion::properties::tests::test_compute_tissue_density ... ok
+test physics::acoustics::imaging::fusion::properties::tests::test_detect_regions_of_interest ... ok
+test physics::acoustics::imaging::fusion::properties::tests::test_extract_tissue_properties_keys ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_bayesian_fusion_single_voxel_empty ... ok
+test physics::acoustics::imaging::fusion::algorithms::tests::test_fuse_feature_based_tissue_classification_invariants ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_bayesian_fusion_single_voxel_multiple_values ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_bayesian_fusion_single_voxel_single_value ... ok
+test physics::acoustics::imaging::fusion::algorithms::tests::test_maximum_likelihood_fusion_monotonicity ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_bayesian_fusion_weighted_average ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_compute_confidence_map ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_calculate_image_metrics ... ok
+test physics::acoustics::imaging::fusion::algorithms::tests::test_weighted_average_fusion_is_bounded ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_compute_elastography_quality ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_compute_fusion_uncertainty_empty ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_compute_fusion_uncertainty ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_compute_confidence_map_no_quality_scores ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_compute_optical_quality_infrared ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_compute_optical_quality_visible_light ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_compute_optical_quality_zero_variance ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_compute_pa_quality ... ok
+test physics::acoustics::imaging::fusion::quality::tests::test_estimate_modality_noise ... ok
+test physics::acoustics::imaging::fusion::registration::tests::test_apply_inverse_transform_identity ... ok
+test physics::acoustics::imaging::fusion::registration::tests::test_apply_inverse_transform_translation ... ok
+test physics::acoustics::imaging::fusion::registration::tests::test_generate_coordinate_arrays ... ok
+test physics::acoustics::imaging::fusion::registration::tests::test_resample_identity_transform ... ok
+test physics::acoustics::imaging::fusion::registration::tests::test_trilinear_interpolation_at_grid_point ... ok
+test physics::acoustics::imaging::fusion::registration::tests::test_trilinear_interpolation_clamping ... ok
+test physics::acoustics::imaging::fusion::registration::tests::test_trilinear_interpolation_midpoint ... ok
+test physics::acoustics::imaging::fusion::registration::tests::test_validate_registration_compatibility_invalid ... ok
+test physics::acoustics::imaging::fusion::registration::tests::test_validate_registration_compatibility_valid ... ok
+test physics::acoustics::imaging::fusion::tests::test_affine_transform_composition ... ok
+test physics::acoustics::imaging::fusion::tests::test_bayesian_fusion_single_voxel ... ok
+test physics::acoustics::imaging::fusion::tests::test_composite_stiffness_range ... ok
+test physics::acoustics::imaging::fusion::tests::test_coordinate_array_generation ... ok
+test physics::acoustics::imaging::fusion::tests::test_fusion_config_creation_and_defaults ... ok
+test physics::acoustics::imaging::fusion::tests::test_fusion_insufficient_modalities ... ok
+test physics::acoustics::imaging::fusion::tests::test_multimodal_fusion_registration ... ok
+test physics::acoustics::imaging::fusion::tests::test_optical_quality_visible_vs_infrared ... ok
+test physics::acoustics::imaging::fusion::tests::test_oxygenation_index_range ... ok
+test physics::acoustics::imaging::fusion::tests::test_registration_compatibility_validation ... ok
+test physics::acoustics::imaging::fusion::tests::test_tissue_property_extraction ... ok
+test physics::acoustics::imaging::fusion::tests::test_tissue_classification_thresholds ... ok
+test physics::acoustics::imaging::fusion::types::tests::test_affine_transform_scaling ... ok
+test physics::acoustics::imaging::fusion::tests::test_confidence_map_generation ... ok
+test physics::acoustics::imaging::fusion::types::tests::test_affine_transform_from_homogeneous ... ok
+test physics::acoustics::imaging::fusion::types::tests::test_affine_transform_translation ... ok
+test physics::acoustics::imaging::fusion::types::tests::test_registered_modality_creation ... ok
+test physics::chemistry::ros_plasma::radical_kinetics::tests::test_diffusion_length ... ok
+test physics::acoustics::imaging::fusion::types::tests::test_affine_transform_identity ... ok
+test physics::optics::diffusion::tests::test_diffusion_approximation_validity ... ok
+test physics::acoustics::imaging::fusion::tests::test_fusion_with_custom_weights ... ok
+test physics::optics::diffusion::tests::test_optical_properties_diffusion_coefficient ... ok
+test physics::acoustics::imaging::fusion::tests::test_probabilistic_fusion_uncertainty ... ok
+test physics::optics::diffusion::tests::test_light_diffusion_creation ... ok
+test physics::optics::diffusion::tests::test_optical_properties_from_domain ... ok
+test physics::acoustics::imaging::fusion::tests::test_registration_transforms_stored ... ok
+test physics::optics::diffusion::tests::test_optical_properties_transport_coefficient ... ok
+test physics::optics::nonlinear::tests::test_thermal_diffusion_length ... ok
+test physics::thermal::perfusion::tests::test_perfusion_temperature_dependence ... ok
+test physics::thermal::perfusion::tests::test_vessel_cooling ... ok
+test physics::acoustics::imaging::fusion::tests::test_uncertainty_quantification_enabled ... ok
+test physics::thermal::properties::tests::test_perfusion_shutdown ... ok
+test physics::acoustics::imaging::fusion::tests::test_uncertainty_quantification_disabled ... ok
+test solver::forward::optical::diffusion::solver::tests::test_analytical_infinite_medium ... ok
+test solver::forward::thermal_diffusion::plugin::tests::test_thermal_diffusion_creation ... ok
+test physics::acoustics::imaging::fusion::tests::test_weighted_average_fusion_three_modalities ... ok
+test physics::acoustics::imaging::fusion::tests::test_weighted_average_fusion_two_modalities ... ok
+test solver::forward::thermal_diffusion::plugin::tests::test_heat_diffusion ... ok
+test physics::acoustics::imaging::fusion::algorithms::tests::test_robust_bounds_degenerate ... FAILED
+test solver::forward::optical::diffusion::solver::tests::test_heterogeneous_medium ... ok
+test solver::forward::optical::diffusion::solver::tests::test_solver_uniform_medium ... ok
+test solver::forward::optical::diffusion::solver::tests::test_solver_symmetry ... ok
+
+failures:
+
+---- physics::acoustics::imaging::fusion::algorithms::tests::test_robust_bounds_degenerate stdout ----
+
+thread 'physics::acoustics::imaging::fusion::algorithms::tests::test_robust_bounds_degenerate' (38100) panicked at kwavers\src\physics\acoustics\imaging\fusion\algorithms\tests.rs:65:5:
+assertion `left == right` failed
+  left: 0.0
+ right: 1.0
+stack backtrace:
+   0: __rustc::rust_begin_unwind
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library\std\src/panicking.rs:689:5
+   1: core::panicking::panic_fmt
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library\core\src/panicking.rs:80:14
+   2: core::panicking::assert_failed_inner
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library\core\src/panicking.rs:439:17
+   3: core::panicking::assert_failed
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf\library\core\src/panicking.rs:394:5
+   4: kwavers::physics::acoustics::imaging::fusion::algorithms::tests::test_robust_bounds_degenerate
+             at .\src\physics\acoustics\imaging\fusion\algorithms\tests.rs:65:5
+   5: kwavers::physics::acoustics::imaging::fusion::algorithms::tests::test_robust_bounds_degenerate::{{closure}}
+             at .\src\physics\acoustics\imaging\fusion\algorithms\tests.rs:61:35
+   6: core::ops::function::FnOnce::call_once
+             at /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf\library\core\src\ops/function.rs:250:5
+note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
+
+
+failures:
+    physics::acoustics::imaging::fusion::algorithms::tests::test_robust_bounds_degenerate
+
+test result: FAILED. 102 passed; 1 failed; 0 ignored; 0 measured; 1995 filtered out; finished in 3.30s
+
+error: test failed, to rerun pass `-p kwavers --lib`

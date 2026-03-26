@@ -4,9 +4,9 @@
 //! bounds with guaranteed coverage probabilities.
 
 use crate::core::error::KwaversResult;
-use log::info;
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
+use log::info;
 use ndarray::{Array1, Array2};
 use std::collections::HashMap;
 

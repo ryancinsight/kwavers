@@ -264,8 +264,8 @@ impl BeamformingTrainer {
 
         // Sparsity: L1 on targets (encourage sparse reconstructions)
         if self.physics_loss.sparsity_weight > 0.0 && !batch.targets.is_empty() {
-            loss += self.physics_loss.sparsity_weight
-                * PhysicsLoss::sparsity_violation(&batch.targets);
+            loss +=
+                self.physics_loss.sparsity_weight * PhysicsLoss::sparsity_violation(&batch.targets);
         }
 
         // Reciprocity: compare first half vs. second half of features

@@ -98,7 +98,8 @@ pub fn make_disc(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<Ar
             // Check if point is inside disc (2D distance)
             let dist_sq = dx_sq + dy_sq;
 
-            if dist_sq <= radius_sq {
+            // Use epsilon tolerance for robust floating-point boundaries
+            if dist_sq <= radius_sq + 1e-10 {
                 // Set all z layers (2D disc extends through depth)
                 for k in 0..nz {
                     mask[[i, j, k]] = true;
@@ -192,7 +193,8 @@ pub fn make_ball(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<Ar
                 // Check if point is inside sphere (3D distance)
                 let dist_sq = dx_sq + dy_sq + dz_sq;
 
-                if dist_sq <= radius_sq {
+                // Use epsilon tolerance for robust floating-point boundaries
+                if dist_sq <= radius_sq + 1e-10 {
                     mask[[i, j, k]] = true;
                 }
             }
@@ -338,6 +340,85 @@ pub fn make_line(grid: &Grid, start: [f64; 3], end: [f64; 3]) -> KwaversResult<A
         if ek < 0 {
             k += sk;
             ek += dm;
+        }
+    }
+
+    Ok(mask)
+}
+
+/// Create a 2D circle outline (shell) mask
+///
+/// Generates a binary mask with `true` on the circle perimeter, `false` elsewhere.
+/// This matches k-Wave's `makeCircle` function which creates circle outlines,
+/// as opposed to `makeDisc` which creates filled circles.
+///
+/// # Arguments
+///
+/// * `grid` - Grid defining spatial discretization
+/// * `center` - Center point \[x, y, z\] in meters
+/// * `radius` - Circle radius in meters
+/// * `thickness` - Shell thickness in grid points (default: 1)
+///
+/// # Mathematical Definition
+///
+/// For each grid point $(x_i, y_j)$:
+///
+/// $$
+/// \text{mask}(i,j,k) = \begin{cases}
+/// \text{true} & \text{if } |r - R| \leq \frac{t \cdot \Delta x}{2} \\\\
+/// \text{false} & \text{otherwise}
+/// \end{cases}
+/// $$
+///
+/// where $r = \sqrt{(x_i - x_c)^2 + (y_j - y_c)^2}$, $R$ is the radius,
+/// and $t$ is the thickness in grid points.
+pub fn make_circle(
+    grid: &Grid,
+    center: [f64; 3],
+    radius: f64,
+    thickness: usize,
+) -> KwaversResult<Array3<bool>> {
+    if radius <= 0.0 {
+        return Err(crate::core::error::KwaversError::Config(
+            crate::core::error::ConfigError::InvalidValue {
+                parameter: "radius".to_string(),
+                value: radius.to_string(),
+                constraint: "Radius must be positive".to_string(),
+            },
+        ));
+    }
+    if thickness == 0 {
+        return Err(crate::core::error::KwaversError::Config(
+            crate::core::error::ConfigError::InvalidValue {
+                parameter: "thickness".to_string(),
+                value: thickness.to_string(),
+                constraint: "Thickness must be at least 1".to_string(),
+            },
+        ));
+    }
+
+    let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+    let (dx, dy, _dz) = (grid.dx, grid.dy, grid.dz);
+
+    let mut mask = Array3::from_elem((nx, ny, nz), false);
+
+    // Half-thickness in physical units
+    let half_thickness = thickness as f64 * dx * 0.5;
+
+    for i in 0..nx {
+        let x = i as f64 * dx;
+        let dx_sq = (x - center[0]).powi(2);
+
+        for j in 0..ny {
+            let y = j as f64 * dy;
+            let dist = (dx_sq + (y - center[1]).powi(2)).sqrt();
+
+            // Check if point is on circle shell
+            if (dist - radius).abs() <= half_thickness {
+                for k in 0..nz {
+                    mask[[i, j, k]] = true;
+                }
+            }
         }
     }
 

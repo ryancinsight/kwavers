@@ -45,6 +45,7 @@
 //! - Domain-Driven Design (Evans 2003)
 //! - CQRS Pattern (Fowler et al.)
 
+use crate::core::constants::fundamental::AVOGADRO;
 use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
 use crate::domain::therapy::microbubble::{
     calculate_primary_bjerknes_force, DrugPayload, MarmottantShellProperties, MicrobubbleState,
@@ -268,7 +269,7 @@ impl MicrobubbleDynamicsService {
         km_state.temperature = bubble.temperature;
         km_state.pressure_internal = bubble.pressure_internal;
         km_state.pressure_liquid = bubble.pressure_liquid;
-        km_state.n_gas = bubble.gas_moles * 6.022e23; // Convert moles to molecules
+        km_state.n_gas = bubble.gas_moles * AVOGADRO; // Convert moles to molecules
 
         Ok(km_state)
     }

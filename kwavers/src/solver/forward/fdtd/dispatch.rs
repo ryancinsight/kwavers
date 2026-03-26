@@ -44,8 +44,7 @@ use std::sync::OnceLock;
 static SIMD_CONFIG: OnceLock<SimdConfig> = OnceLock::new();
 
 /// FDTD stencil optimization strategy
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum StencilStrategy {
     /// Scalar implementation (always available)
     Scalar,
@@ -60,7 +59,6 @@ pub enum StencilStrategy {
     #[default]
     Auto,
 }
-
 
 impl StencilStrategy {
     /// Get string representation

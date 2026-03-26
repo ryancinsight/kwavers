@@ -60,7 +60,32 @@ pub use trilateration::{LocalizationResult, Trilateration};
 pub use wavefront::WavefrontAnalyzer;
 
 use crate::core::error::KwaversResult;
-use crate::domain::signal_processing::localization::LocalizationProcessor;
+
+/// Source location result
+#[derive(Debug, Clone)]
+pub struct SourceLocation {
+    /// Position [x, y, z] in meters
+    pub position: [f64; 3],
+
+    /// Confidence (0.0-1.0)
+    pub confidence: f64,
+
+    /// Uncertainty radius [m]
+    pub uncertainty: f64,
+}
+
+/// Localization algorithm trait
+pub trait LocalizationProcessor: Send + Sync {
+    /// Localize source from time-delay measurements
+    fn localize(
+        &self,
+        time_delays: &[f64],
+        sensor_positions: &[[f64; 3]],
+    ) -> KwaversResult<SourceLocation>;
+
+    /// Get processor name
+    fn name(&self) -> &str;
+}
 
 /// Create a MUSIC-based localization processor
 pub fn create_music_processor(
