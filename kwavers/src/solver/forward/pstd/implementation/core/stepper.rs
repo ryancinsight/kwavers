@@ -121,18 +121,10 @@ impl PSTDSolver {
         }
 
         // Dynamic sources (always additive in PSTD)
-        // mass_source_scale = 2·dt / (N·c₀·dx_min) converts Pa → density source rate.
-        // N, c₀, dx_min are all constant throughout the simulation.
+        // mass_source_scale = 2·Δt / (N·c₀·Δx_min) converts Pa → density source rate.
+        // Precomputed at construction (grid constants never change during simulation).
         let t = shifted_time_index as f64 * dt;
-        let mass_source_scale = {
-            let dx_min = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
-            let n_dim = [self.grid.nx > 1, self.grid.ny > 1, self.grid.nz > 1]
-                .iter()
-                .filter(|&&d| d)
-                .count()
-                .max(1) as f64;
-            2.0 * dt / (n_dim * self.c_ref * dx_min)
-        };
+        let mass_source_scale = self.mass_source_scale;
 
         for (idx, (source, mask)) in self.dynamic_sources.iter().enumerate() {
             let amp = source.amplitude(t);

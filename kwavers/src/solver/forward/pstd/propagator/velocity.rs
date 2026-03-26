@@ -72,23 +72,25 @@ impl PSTDSolver {
         // Transform pressure to k-space
         self.fft.forward_into(&self.fields.p, &mut self.p_k);
 
-        // Compute pressure gradients in k-space with staggered grid shifts
-        // k-wave uses ddx_k_shift_pos for pressure→velocity (positive shift)
-        let (nx, ny, nz) = self.p_k.dim();
-        for i in 0..nx {
-            let shift_x = self.ddx_k_shift_pos[i];
-            for j in 0..ny {
-                let shift_y = self.ddy_k_shift_pos[j];
-                for k in 0..nz {
-                    let shift_z = self.ddz_k_shift_pos[k];
-                    let kap = Complex64::new(self.kappa[[i, j, k]], 0.0);
-                    let p_val = self.p_k[[i, j, k]];
-                    let e_kappa = kap * p_val;
-                    self.grad_x_k[[i, j, k]] = shift_x * e_kappa;
-                    self.grad_y_k[[i, j, k]] = shift_y * e_kappa;
-                    self.grad_z_k[[i, j, k]] = shift_z * e_kappa;
-                }
-            }
+        // Compute pressure gradients in k-space with staggered grid shifts.
+        // k-wave uses ddx_k_shift_pos for pressure→velocity (positive shift).
+        // Zip::indexed eliminates bounds checks; all 3 gradient components are
+        // written in a single pass over the k-space array (better cache utilisation).
+        {
+            let ddx = self.ddx_k_shift_pos.view();
+            let ddy = self.ddy_k_shift_pos.view();
+            let ddz = self.ddz_k_shift_pos.view();
+            Zip::indexed(self.grad_x_k.view_mut())
+                .and(self.grad_y_k.view_mut())
+                .and(self.grad_z_k.view_mut())
+                .and(self.p_k.view())
+                .and(self.kappa.view())
+                .for_each(|(i, j, k), gx, gy, gz, &p_val, &kap| {
+                    let e_kappa = Complex64::new(kap, 0.0) * p_val;
+                    *gx = ddx[i] * e_kappa;
+                    *gy = ddy[j] * e_kappa;
+                    *gz = ddz[k] * e_kappa;
+                });
         }
 
         // Transform gradients back to physical space and update velocity

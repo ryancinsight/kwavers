@@ -1,7 +1,46 @@
 //! Optimized gradient operations with caching and parallelization
 //!
-//! This module provides high-performance gradient calculations using
-//! caching, parallelization, and optimized memory access patterns.
+//! # Theorem: Accuracy of Centered Finite-Difference Gradient Stencils
+//!
+//! For a smooth function f(x) sampled at spacing Δx, the centered difference
+//! approximations achieve the following accuracy orders:
+//!
+//! ## 2nd-Order Stencil (standard)
+//! ```text
+//!   ∂f/∂x |_i = (f_{i+1} − f_{i−1}) / (2Δx) + O(Δx²)
+//! ```
+//! Truncation error: `Δx²/6 · f'''(x)`. Sufficient for most simulations.
+//!
+//! ## 4th-Order Stencil (high accuracy)
+//! ```text
+//!   ∂f/∂x |_i = (−f_{i+2} + 8f_{i+1} − 8f_{i−1} + f_{i+2}) / (12Δx) + O(Δx⁴)
+//! ```
+//! Truncation error: `Δx⁴/30 · f^(5)(x)`. Use when resolving steep gradients near
+//! boundaries or when the wavelength-to-grid-spacing ratio λ/Δx < 10.
+//!
+//! ## Nyquist Limit
+//! Centered differences become increasingly inaccurate for wavenumbers approaching
+//! the Nyquist limit `k_max = π/Δx`. The 2nd-order stencil has phase velocity
+//! error `≈ −k²Δx²/6` per unit distance; spectral methods (see kspace propagator)
+//! reduce this to machine precision.
+//!
+//! # Caching Strategy
+//!
+//! Finite-difference coefficients depend only on the spatial order (not the grid size
+//! or field values). They are computed once per `SpatialOrder` variant and stored
+//! in `coefficients_cache` (a `RwLock<Vec>` keyed by order index).
+//!
+//! Grid-spacing inverses `(1/Δx, 1/Δy, 1/Δz)` are precomputed at construction and
+//! stored in `spacing_inverses`, eliminating per-cell division in hot paths.
+//! Cache performance is tracked via atomic `cache_hits` / `cache_misses` counters.
+//!
+//! # References
+//! - Fornberg, B. (1988). Generation of finite difference formulas on arbitrarily
+//!   spaced grids. Math. Comput. 51(184), 699–706.
+//! - Liu, Y. & Sen, M.K. (2009). An implicit staggered-grid finite-difference method
+//!   for seismic modelling. Geophys. J. Int. 179(1), 459–474.
+//! - Tam, C.K.W. & Webb, J.C. (1993). Dispersion-relation-preserving finite difference
+//!   schemes for computational acoustics. J. Comput. Phys. 107(2), 262–281.
 
 use super::coefficients::{FDCoefficients, SpatialOrder};
 use crate::core::error::KwaversResult;
@@ -46,7 +85,10 @@ where
 
     /// Get or create coefficients for a given spatial order
     pub fn get_coefficients(&self, order: SpatialOrder) -> Vec<T> {
-        let mut cache = self.coefficients_cache.write().unwrap_or_else(|e| e.into_inner());
+        let mut cache = self
+            .coefficients_cache
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
 
         // Check if coefficients are already cached
         if let Some(coeffs) = cache.get(order as usize) {

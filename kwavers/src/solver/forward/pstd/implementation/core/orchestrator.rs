@@ -41,6 +41,11 @@ pub struct PSTDSolver {
     pub(crate) k_vec: (Array3<f64>, Array3<f64>, Array3<f64>),
     pub(crate) filter: Option<Array3<f64>>,
     pub(crate) c_ref: f64,
+    /// Precomputed additive mass-source scale: 2·Δt / (N·c₀·Δx_min).
+    /// Converts a pressure source amplitude [Pa] to a per-component density
+    /// injection rate [kg/m³/step] for the dynamic-source additive path.
+    /// Constant throughout the simulation; computed once at construction.
+    pub(crate) mass_source_scale: f64,
     pub(crate) k_max: f64,
     pub(crate) boundary: Option<Box<dyn Boundary>>,
     pub fields: WaveFields,
@@ -189,6 +194,9 @@ impl PSTDSolver {
         let sensor_recorder = SensorRecorder::new(config.sensor_mask.as_ref(), shape, config.nt + 1)?;
         let source_handler = SourceHandler::new(source, &grid)?;
 
+        // Capture config.dt before the struct literal moves `config`.
+        let config_dt = config.dt;
+
         let mut solver = Self {
             config,
             grid: grid.clone(),
@@ -204,6 +212,15 @@ impl PSTDSolver {
             filter: k_ops.filter,
             k_max,
             c_ref,
+            mass_source_scale: {
+                let dx_min = grid.dx.min(grid.dy).min(grid.dz);
+                let n_dim = [grid.nx > 1, grid.ny > 1, grid.nz > 1]
+                    .iter()
+                    .filter(|&&d| d)
+                    .count()
+                    .max(1) as f64;
+                2.0 * config_dt / (n_dim * c_ref * dx_min)
+            },
             boundary,
             fields: WaveFields {
                 p: field_arrays.p,

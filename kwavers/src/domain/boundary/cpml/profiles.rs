@@ -1,4 +1,69 @@
-//! CPML profile computation and management
+//! CPML profile computation and management.
+//!
+//! # Physics: Convolutional Perfectly Matched Layer
+//!
+//! ## Background
+//! The CPML (Convolutional PML) extends Berenger's original split-field PML with a
+//! recursive convolution scheme that maintains accuracy for evanescent and oblique waves.
+//! For acoustic simulations, CPML modifies the gradient operator in PML regions by
+//! introducing a frequency-dependent complex stretching function in the Laplace domain.
+//!
+//! ## Theorem (CPML Profile Grading, Roden & Gedney 2000)
+//! For a PML of thickness d [m] with polynomial grading order m and target reflection
+//! coefficient R₀ at normal incidence:
+//!
+//! ```text
+//! σ_max = −(m + 1) · c₀ · ln(R₀) / (2 · d)          [optimal conductivity]
+//! σ(ξ)  = σ_max · (ξ / d)^m                           [polynomial grading]
+//! κ(ξ)  = 1 + (κ_max − 1) · (ξ / d)^m               [real stretch, κ_max ≥ 1]
+//! α(ξ)  = α_max · (1 − ξ / d)                         [CFS parameter]
+//! ```
+//!
+//! where ξ ∈ [0, d] is the depth into the PML (0 at the domain/PML interface, d at the wall).
+//!
+//! ## Theorem (Recursive Convolution Coefficients)
+//! For the Roden & Gedney (2000) formulation with complex-frequency shift (CFS) parameters
+//! σ, κ, α, the time-discrete recursive convolution coefficients are:
+//!
+//! ```text
+//! b = exp(−(σ/κ + α) · Δt)
+//! a = (σ/κ) · (b − 1) / (σ/κ + α)   [general CFS form]
+//!
+//! Special case α = 0, κ = 1 (used here):
+//!   b = exp(−σ · Δt)
+//!   a = b − 1 = exp(−σ · Δt) − 1    [note: a < 0 since 0 < b < 1]
+//! ```
+//!
+//! The CPML memory variable update at each step is:
+//! ```text
+//! ψ^{n+1}_k = b_k · ψ^n_k + a_k · (∂f/∂x)^n_k
+//! ```
+//!
+//! The effective gradient in PML cells is then:
+//! ```text
+//! (∂f/∂x)_eff = (∂f/∂x) / κ + ψ
+//! ```
+//!
+//! At the first step (ψ⁰ = 0):
+//! ```text
+//! ψ¹ = b·ψ⁰ + a·∂f/∂x = (b − 1)·∂f/∂x
+//! (∂f/∂x)_eff = ∂f/∂x + (b − 1)·∂f/∂x = b·∂f/∂x   [attenuated by b = exp(−σΔt) ✓]
+//! ```
+//!
+//! ## Implementation Notes
+//! - k-Wave uses polynomial order m = 4 (hardcoded here for compatibility)
+//! - σ_max matches k-Wave's `pml_alpha * (c/dx) * 1.0^4` at the wall (ξ = d)
+//! - The `alpha=0, kappa=1` specialization matches k-Wave's default CPML configuration
+//! - `a_coeff = b_coeff − 1.0`; setting a_coeff=0 would disable convolutional memory,
+//!   reducing CPML to a simple split-field PML (worse oblique-incidence absorption)
+//!
+//! ## References
+//! - Roden & Gedney (2000). Microwave Opt. Tech. Lett. 27(5), 334–339.
+//!   DOI: 10.1002/1098-2760(20001205)27:5<334::AID-MOP14>3.0.CO;2-A
+//! - Collino & Tsogka (2001). Geophysics 66(1), 294–307.
+//!   DOI: 10.1190/1.1444908
+//! - Berenger (1994). J. Comput. Phys. 114(2), 185–200 (original PML).
+//!   DOI: 10.1006/jcph.1994.1159
 
 use super::config::CPMLConfig;
 use crate::core::error::KwaversResult;
@@ -248,10 +313,15 @@ impl CPMLProfiles {
             // but we keep them for potential CPML convolutional use
             kappa[idx] = 1.0;
             alpha[idx] = 0.0;
-            // Roden & Gedney coefficients (for convolutional mode)
+            // Roden & Gedney (2000) recursive convolution coefficients.
+            // With κ=1, α=0:  b = exp(−σ·Δt),  a = b − 1.
+            // Memory update: ψ^{n+1} = b·ψ^n + a·∇f^n
+            // Effective gradient: ∇f_eff = ∇f/κ + ψ^{n+1}
+            // At step 0 (ψ=0): ∇f_eff = ∇f + (b−1)·∇f = b·∇f  [correctly attenuated].
+            // Setting a=0 would make ψ stay 0, reducing CPML to simple split-field PML.
             let b = (-(sigma_val) * dt).exp();
             b_coeff[idx] = b;
-            a_coeff[idx] = 0.0;
+            a_coeff[idx] = b - 1.0; // Roden & Gedney 2000, Eq. (9): a = b − 1 (α=0, κ=1)
         };
 
         // Left boundary: x runs from 1 to thickness

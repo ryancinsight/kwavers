@@ -10,59 +10,41 @@
 //! - Rayon parallelization for large arrays
 
 use ndarray::Array3;
-use rayon::prelude::*;
 
 /// Safe vectorization operations using iterator combinators
 #[derive(Debug, Clone, Copy)]
 pub struct SafeVectorOps;
 
 impl SafeVectorOps {
-    /// Add two arrays element-wise using safe iterator patterns
+    /// Add two arrays element-wise.
     ///
-    /// LLVM will autovectorize this to use AVX2/NEON instructions when available.
-    /// No unsafe code required - the compiler handles vectorization optimization.
+    /// Uses ndarray's native `+` operator which LLVM autovectorizes to AVX2/NEON
+    /// when available. No intermediate Vec allocation.
     #[inline]
     #[must_use]
     pub fn add_arrays(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         debug_assert_eq!(a.dim(), b.dim(), "Array dimensions must match");
-
-        // Use zip iterator for element-wise operations
-        // LLVM will vectorize this pattern automatically
-        let result: Vec<f64> = a
-            .iter()
-            .zip(b.iter())
-            .map(|(a_val, b_val)| a_val + b_val)
-            .collect();
-
-        Array3::from_shape_vec(a.dim(), result).expect("Shape and data length must match")
+        a + b
     }
 
-    /// Parallel add for large arrays using Rayon
+    /// Parallel add for large arrays using Rayon + ndarray Zip (no intermediate Vec)
     #[inline]
     #[must_use]
     pub fn add_arrays_parallel(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         debug_assert_eq!(a.dim(), b.dim(), "Array dimensions must match");
-
-        // Convert to vectors first, then process in parallel
-        let a_vec: Vec<f64> = a.iter().cloned().collect();
-        let b_vec: Vec<f64> = b.iter().cloned().collect();
-
-        let result: Vec<f64> = a_vec
-            .par_iter()
-            .zip(b_vec.par_iter())
-            .map(|(a_val, b_val)| a_val + b_val)
-            .collect();
-
-        Array3::from_shape_vec(a.dim(), result).expect("Shape and data length must match")
+        let mut result = Array3::<f64>::zeros(a.dim());
+        ndarray::Zip::from(&mut result)
+            .and(a)
+            .and(b)
+            .par_for_each(|r, &av, &bv| *r = av + bv);
+        result
     }
 
-    /// Scalar multiplication using iterator patterns
+    /// Scalar multiplication using ndarray mapv (no intermediate Vec allocation).
     #[inline]
     #[must_use]
     pub fn scalar_multiply(array: &Array3<f64>, scalar: f64) -> Array3<f64> {
-        let result: Vec<f64> = array.iter().map(|val| val * scalar).collect();
-
-        Array3::from_shape_vec(array.dim(), result).expect("Shape and data length must match")
+        array.mapv(|v| v * scalar)
     }
 
     /// In-place scalar multiplication for zero-copy operations
@@ -71,13 +53,11 @@ impl SafeVectorOps {
         array.iter_mut().for_each(|val| *val *= scalar);
     }
 
-    /// Element-wise exponential with safe iterator pattern
+    /// Element-wise exponential using ndarray mapv (no intermediate Vec allocation).
     #[inline]
     #[must_use]
     pub fn exp_array(array: &Array3<f64>) -> Array3<f64> {
-        let result: Vec<f64> = array.iter().map(|val| val.exp()).collect();
-
-        Array3::from_shape_vec(array.dim(), result).expect("Shape and data length must match")
+        array.mapv(f64::exp)
     }
 
     /// Dot product using fold for LLVM reduction optimization
@@ -102,38 +82,41 @@ impl SafeVectorOps {
             .sqrt()
     }
 
-    /// Chunked operations for cache optimization
+    /// Chunked operations for cache optimization.
+    ///
+    /// Processes contiguous input in `chunk_size`-element cache-friendly strips.
+    /// Falls back to element-wise ndarray Zip for non-contiguous arrays.
+    /// The `chunk_size` parameter is advisory; the contiguous fast-path still uses
+    /// it for L1-cache tiling; the fallback ignores it (ndarray handles tiling).
     #[inline]
     #[must_use]
     pub fn add_arrays_chunked(a: &Array3<f64>, b: &Array3<f64>, chunk_size: usize) -> Array3<f64> {
         debug_assert_eq!(a.dim(), b.dim(), "Array dimensions must match");
 
-        // Use safe iteration for non-contiguous arrays
-        if let (Some(a_slice), Some(b_slice)) = (a.as_slice(), b.as_slice()) {
-            let result: Vec<f64> = a_slice
-                .chunks(chunk_size)
-                .zip(b_slice.chunks(chunk_size))
-                .flat_map(|(a_chunk, b_chunk)| {
-                    a_chunk
-                        .iter()
-                        .zip(b_chunk.iter())
-                        .map(|(a_val, b_val)| a_val + b_val)
-                })
-                .collect();
+        let mut result = Array3::<f64>::zeros(a.dim());
 
-            Array3::from_shape_vec(a.dim(), result).expect("Shape and data length must match")
+        if let (Some(a_slice), Some(b_slice), Some(r_slice)) =
+            (a.as_slice(), b.as_slice(), result.as_slice_mut())
+        {
+            // Contiguous fast-path: iterate chunks for cache-line tiling
+            for ((r_chunk, a_chunk), b_chunk) in r_slice
+                .chunks_mut(chunk_size)
+                .zip(a_slice.chunks(chunk_size))
+                .zip(b_slice.chunks(chunk_size))
+            {
+                for ((r, &av), &bv) in r_chunk.iter_mut().zip(a_chunk).zip(b_chunk) {
+                    *r = av + bv;
+                }
+            }
         } else {
-            // Fallback for non-contiguous arrays
-            let mut result = Array3::zeros(a.dim());
-            result
-                .iter_mut()
-                .zip(a.iter())
-                .zip(b.iter())
-                .for_each(|((out, &a_val), &b_val)| {
-                    *out = a_val + b_val;
-                });
-            result
+            // Non-contiguous fallback — ndarray Zip handles arbitrary strides
+            ndarray::Zip::from(&mut result)
+                .and(a)
+                .and(b)
+                .for_each(|r, &av, &bv| *r = av + bv);
         }
+
+        result
     }
 }
 

@@ -1,7 +1,61 @@
 //! Core FDTD solver implementation
 //!
-//! This module contains the main `FdtdSolver` struct and its implementation
-//! for acoustic wave propagation using the finite-difference time-domain method.
+//! # Theorem: Yee (1966) Staggered-Grid FDTD for Acoustic Waves
+//!
+//! The linearized Euler equations for acoustic wave propagation are:
+//! ```text
+//!   ρ₀ ∂u/∂t = −∇p                       (momentum conservation)
+//!   ∂p/∂t    = −ρ₀c₀² ∇·u                (mass conservation + EOS)
+//! ```
+//!
+//! Yee's staggered-grid FDTD discretizes these in a leapfrog (velocity–pressure)
+//! update order. Pressure lives at integer time steps `t^n = nΔt`; velocity
+//! at half-integer steps `t^{n+½} = (n+½)Δt`:
+//!
+//! ```text
+//!   u^{n+½} = u^{n−½} − (Δt/ρ₀) · ∇p^n             [velocity update]
+//!   p^{n+1} = p^n     − ρ₀c₀²Δt · ∇·u^{n+½}        [pressure update]
+//! ```
+//!
+//! Spatial derivatives use centered finite differences on a staggered Cartesian grid:
+//! pressure at cell centers `(i, j, k)`, velocity components at half-shifted faces
+//! `(i+½, j, k)`, `(i, j+½, k)`, `(i, j, k+½)`.
+//!
+//! ## Stability: CFL Condition
+//!
+//! The FDTD scheme is stable only when the Courant-Friedrichs-Lewy (CFL) condition is met:
+//! ```text
+//!   c₀ · Δt · √(1/Δx² + 1/Δy² + 1/Δz²) ≤ 1
+//! ```
+//! In 3D with uniform spacing Δx = Δy = Δz:
+//! ```text
+//!   Δt_max = Δx / (c₀ · √3) ≈ 0.577 · Δx / c₀
+//! ```
+//! CFL safety factor 0.95 is applied by default.
+//!
+//! ## Spatial Accuracy
+//!
+//! | Stencil order | Accuracy | PPW required |
+//! |---------------|----------|--------------|
+//! | 2nd (default) | O(Δx²)   | ~10          |
+//! | 4th           | O(Δx⁴)   | ~5           |
+//! | 6th           | O(Δx⁶)   | ~4           |
+//!
+//! PPW = points per wavelength at the maximum frequency of interest.
+//!
+//! ## Boundary Conditions
+//!
+//! Absorbing boundaries use CPML (Convolutional PML, Roden & Gedney 2000).
+//! See `domain/boundary/cpml/` for the recursive-convolution memory update.
+//!
+//! ## References
+//! - Yee, K.S. (1966). Numerical solution of initial boundary value problems
+//!   involving Maxwell's equations in isotropic media.
+//!   IEEE Trans. Antennas Propag. 14(3), 302–307.
+//! - Taflove, A. & Hagness, S.C. (2005). Computational Electrodynamics:
+//!   The Finite-Difference Time-Domain Method, 3rd ed. Artech House.
+//! - Virieux, J. (1986). P-SV wave propagation in heterogeneous media:
+//!   Velocity-stress finite-difference method. Geophysics 51(4), 889–901.
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::boundary::cpml::CPMLBoundary;
@@ -12,7 +66,6 @@ use crate::math::numerics::operators::{
     CentralDifference2, CentralDifference4, CentralDifference6, DifferentialOperator,
     StaggeredGridOperator,
 };
-use crate::math::simd_safe::SimdOps;
 use crate::physics::acoustics::mechanics::acoustic_wave::SpatialOrder;
 use log::info;
 use ndarray::{s, Array3, ArrayView3, Zip};
@@ -46,39 +99,51 @@ impl CentralDifferenceOperator {
         }
     }
 
+    fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        match self {
+            Self::Order2(op) => op.apply_x(field),
+            Self::Order4(op) => op.apply_x(field),
+            Self::Order6(op) => op.apply_x(field),
+        }
+    }
+
+    fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        match self {
+            Self::Order2(op) => op.apply_y(field),
+            Self::Order4(op) => op.apply_y(field),
+            Self::Order6(op) => op.apply_y(field),
+        }
+    }
+
+    fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        match self {
+            Self::Order2(op) => op.apply_z(field),
+            Self::Order4(op) => op.apply_z(field),
+            Self::Order6(op) => op.apply_z(field),
+        }
+    }
+
     fn gradient(
         &self,
         field: ArrayView3<f64>,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
-        match self {
-            Self::Order2(op) => Ok((op.apply_x(field)?, op.apply_y(field)?, op.apply_z(field)?)),
-            Self::Order4(op) => Ok((op.apply_x(field)?, op.apply_y(field)?, op.apply_z(field)?)),
-            Self::Order6(op) => Ok((op.apply_x(field)?, op.apply_y(field)?, op.apply_z(field)?)),
-        }
+        Ok((
+            self.apply_x(field)?,
+            self.apply_y(field)?,
+            self.apply_z(field)?,
+        ))
     }
 
+    #[allow(dead_code)]
     fn divergence(
         &self,
         vx: ArrayView3<f64>,
         vy: ArrayView3<f64>,
         vz: ArrayView3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let dvx_dx = match self {
-            Self::Order2(op) => op.apply_x(vx)?,
-            Self::Order4(op) => op.apply_x(vx)?,
-            Self::Order6(op) => op.apply_x(vx)?,
-        };
-        let dvy_dy = match self {
-            Self::Order2(op) => op.apply_y(vy)?,
-            Self::Order4(op) => op.apply_y(vy)?,
-            Self::Order6(op) => op.apply_y(vy)?,
-        };
-        let dvz_dz = match self {
-            Self::Order2(op) => op.apply_z(vz)?,
-            Self::Order4(op) => op.apply_z(vz)?,
-            Self::Order6(op) => op.apply_z(vz)?,
-        };
-
+        let dvx_dx = self.apply_x(vx)?;
+        let dvy_dy = self.apply_y(vy)?;
+        let dvz_dz = self.apply_z(vz)?;
         Ok(&dvx_dx + &dvy_dy + &dvz_dz)
     }
 }
@@ -109,7 +174,7 @@ pub struct FdtdSolver {
     pub(crate) source_handler: SourceHandler,
     dynamic_sources: Vec<(Arc<dyn Source>, Array3<f64>)>,
     source_injection_modes: Vec<SourceInjectionMode>,
-    pub(crate) sensor_recorder: SensorRecorder,
+    pub sensor_recorder: SensorRecorder,
 
     // State
     pub(crate) time_step_index: usize,
@@ -145,12 +210,12 @@ impl FdtdSolver {
         let sensor_recorder = SensorRecorder::new(
             config.sensor_mask.as_ref(),
             (grid.nx, grid.ny, grid.nz),
-            config.nt,
+            config.nt + 1,
         )?;
 
         // Initialize fields
         let shape = (grid.nx, grid.ny, grid.nz);
-        let fields = WaveFields::new(shape);
+        let mut fields = WaveFields::new(shape);
         let mut materials = MaterialFields::new(shape);
 
         // Pre-compute material properties
@@ -178,6 +243,18 @@ impl FdtdSolver {
         // Precompute k-Wave compatible pressure source scaling
         let mut source_handler = source_handler;
         source_handler.prepare_pressure_source_scaling(grid, &materials.c0, config.dt);
+
+        // Apply initial conditions (p0, u0) — mirrors PSTD solver behaviour
+        let mut rho_init = Array3::zeros(shape);
+        source_handler.apply_initial_conditions(
+            &mut fields.p,
+            &mut rho_init,
+            &materials.c0,
+            &mut fields.ux,
+            &mut fields.uy,
+            &mut fields.uz,
+        );
+        // Note: FDTD uses a single rho field so no split needed (cf. PSTD rhox/rhoy/rhoz)
 
         Ok(Self {
             config,
@@ -207,11 +284,16 @@ impl FdtdSolver {
     pub fn enable_cpml(
         &mut self,
         config: crate::domain::boundary::cpml::CPMLConfig,
-        _dt: f64,
+        dt: f64,
         max_sound_speed: f64,
     ) -> KwaversResult<()> {
         info!("Enabling C-PML boundary conditions");
-        self.cpml_boundary = Some(CPMLBoundary::new(config, &self.grid, max_sound_speed)?);
+        self.cpml_boundary = Some(CPMLBoundary::new_with_time_step(
+            config,
+            &self.grid,
+            max_sound_speed,
+            Some(dt),
+        )?);
         Ok(())
     }
 
@@ -222,6 +304,9 @@ impl FdtdSolver {
 
         // 1. Update Velocity (from current pressure field)
         self.update_velocity(dt)?;
+        if self.fields.ux.iter().any(|&x| x.is_nan()) {
+            panic!("NaN in ux after update_velocity at step {}", time_index);
+        }
 
         // 2. Inject Force Sources
         if self.source_handler.has_velocity_source() {
@@ -234,9 +319,18 @@ impl FdtdSolver {
         }
 
         self.apply_dynamic_velocity_sources(dt);
+        if self.fields.ux.iter().any(|&x| x.is_nan()) {
+            panic!(
+                "NaN in ux after dynamic velocity sources at step {}",
+                time_index
+            );
+        }
 
         // 3. Update Pressure
         self.update_pressure(dt)?;
+        if self.fields.p.iter().any(|&x| x.is_nan()) {
+            panic!("NaN in p after update_pressure at step {}", time_index);
+        }
 
         // 4. Apply pressure sources after update (additive + Dirichlet enforcement)
         if self.source_handler.has_pressure_source() {
@@ -247,6 +341,10 @@ impl FdtdSolver {
         self.source_handler
             .enforce_pressure_dirichlet(time_index, &mut self.fields.p);
         self.apply_dynamic_pressure_dirichlet(dt);
+
+        if self.fields.p.iter().any(|&x| x.is_nan()) {
+            panic!("NaN in p after pressure sources at step {}", time_index);
+        }
 
         // 5. Apply Boundary (CPML is applied within updates via self.cpml_boundary)
 
@@ -260,7 +358,22 @@ impl FdtdSolver {
 
     fn apply_dynamic_pressure_sources(&mut self, dt: f64) {
         let t = self.time_step_index as f64 * dt;
-        for (idx, (source, mask)) in self.dynamic_sources.iter().enumerate() {
+        let FdtdSolver {
+            ref dynamic_sources,
+            ref mut fields,
+            ref grid,
+            ref materials,
+            source_injection_modes: _,
+            ..
+        } = self;
+
+        let nx = grid.nx;
+        let ny = grid.ny;
+        let nz = grid.nz;
+        let _c0_ref = materials.c0[[nx / 2, ny / 2, nz / 2]];
+        let _dx = grid.dx;
+
+        for (idx, (source, mask)) in dynamic_sources.iter().enumerate() {
             let amp = source.amplitude(t);
             if amp.abs() < 1e-12 {
                 continue;
@@ -272,17 +385,19 @@ impl FdtdSolver {
                     match mode {
                         SourceInjectionMode::Boundary => {
                             // Dirichlet: enforce p = amplitude at boundary
-                            Zip::from(&mut self.fields.p).and(mask).for_each(|p, &m| {
+                            Zip::from(&mut fields.p).and(mask).for_each(|p, &m| {
                                 if m > 0.0 {
                                     *p = amp;
                                 }
                             });
                         }
-                        SourceInjectionMode::Additive { scale } => {
-                            // Additive: p += scale * mask * amplitude
-                            Zip::from(&mut self.fields.p)
+                        SourceInjectionMode::Additive { .. } => {
+                            // Additive: p += mask * amplitude
+                            // For parity with k-Wave's additive mass sources, we do not normalize by mask sum
+                            // and we expect the physical scaling to be handled by the caller or precomputed.
+                            Zip::from(&mut fields.p)
                                 .and(mask)
-                                .for_each(|p, &m| *p += scale * m * amp);
+                                .for_each(|p, &m| *p += m * amp);
                         }
                     }
                 }
@@ -293,7 +408,13 @@ impl FdtdSolver {
 
     fn apply_dynamic_pressure_dirichlet(&mut self, dt: f64) {
         let t = self.time_step_index as f64 * dt;
-        for (idx, (source, mask)) in self.dynamic_sources.iter().enumerate() {
+        let FdtdSolver {
+            ref dynamic_sources,
+            ref mut fields,
+            ..
+        } = self;
+
+        for (idx, (source, mask)) in dynamic_sources.iter().enumerate() {
             if source.source_type() != SourceField::Pressure {
                 continue;
             }
@@ -304,7 +425,7 @@ impl FdtdSolver {
             if amp.abs() < 1e-12 {
                 continue;
             }
-            Zip::from(&mut self.fields.p).and(mask).for_each(|p, &m| {
+            Zip::from(&mut fields.p).and(mask).for_each(|p, &m| {
                 if m > 0.0 {
                     *p = amp;
                 }
@@ -314,7 +435,13 @@ impl FdtdSolver {
 
     fn apply_dynamic_velocity_sources(&mut self, dt: f64) {
         let t = self.time_step_index as f64 * dt;
-        for (source, mask) in &self.dynamic_sources {
+        let FdtdSolver {
+            ref dynamic_sources,
+            ref mut fields,
+            ..
+        } = self;
+
+        for (source, mask) in dynamic_sources {
             let amp = source.amplitude(t);
             if amp.abs() < 1e-12 {
                 continue;
@@ -323,17 +450,17 @@ impl FdtdSolver {
             match source.source_type() {
                 SourceField::Pressure => {}
                 SourceField::VelocityX => {
-                    Zip::from(&mut self.fields.ux)
+                    Zip::from(&mut fields.ux)
                         .and(mask)
                         .for_each(|u, &m| *u += m * amp);
                 }
                 SourceField::VelocityY => {
-                    Zip::from(&mut self.fields.uy)
+                    Zip::from(&mut fields.uy)
                         .and(mask)
                         .for_each(|u, &m| *u += m * amp);
                 }
                 SourceField::VelocityZ => {
-                    Zip::from(&mut self.fields.uz)
+                    Zip::from(&mut fields.uz)
                         .and(mask)
                         .for_each(|u, &m| *u += m * amp);
                 }
@@ -365,11 +492,16 @@ impl FdtdSolver {
         let divergence = if self.config.staggered_grid {
             self.compute_divergence_staggered()?
         } else {
-            self.central_operator.divergence(
-                self.fields.ux.view(),
-                self.fields.uy.view(),
-                self.fields.uz.view(),
-            )?
+            let mut dvx = self.central_operator.apply_x(self.fields.ux.view())?;
+            let mut dvy = self.central_operator.apply_y(self.fields.uy.view())?;
+            let mut dvz = self.central_operator.apply_z(self.fields.uz.view())?;
+
+            if let Some(ref mut cpml) = self.cpml_boundary {
+                cpml.update_and_apply_v_gradient_correction(&mut dvx, 0);
+                cpml.update_and_apply_v_gradient_correction(&mut dvy, 1);
+                cpml.update_and_apply_v_gradient_correction(&mut dvz, 2);
+            }
+            &dvx + &dvy + &dvz
         };
 
         // Update pressure: p^{n+1} = p^n - dt * rho * c^2 * div(v)
@@ -396,15 +528,14 @@ impl FdtdSolver {
         rho_c_squared: &Array3<f64>,
         dt: f64,
     ) {
-        // Pre-compute the dt factor to avoid repeated multiplication
-        let dt_factor = dt;
-
-        // Compute dt * rho * c^2 * div(v) using SIMD
-        let update_term = SimdOps::scale_field(rho_c_squared, dt_factor);
-        let update_term = SimdOps::multiply_fields(&update_term, divergence);
-
-        // Update pressure: p -= update_term using SIMD
-        *pressure = SimdOps::subtract_fields(pressure, &update_term);
+        // Plain ndarray implementation to isolate SIMD issues
+        for ((p, &div), &rc2) in pressure
+            .iter_mut()
+            .zip(divergence.iter())
+            .zip(rho_c_squared.iter())
+        {
+            *p -= dt * rc2 * div;
+        }
     }
 
     fn update_pressure_gpu(
@@ -436,12 +567,10 @@ impl FdtdSolver {
         let (mut grad_x, mut grad_y, mut grad_z) =
             self.central_operator.gradient(self.fields.p.view())?;
 
-        // Apply C-PML if enabled
         if let Some(ref mut cpml) = self.cpml_boundary {
-            // Update C-PML memory and apply corrections
-            cpml.update_and_apply_gradient_correction(&mut grad_x, 0);
-            cpml.update_and_apply_gradient_correction(&mut grad_y, 1);
-            cpml.update_and_apply_gradient_correction(&mut grad_z, 2);
+            cpml.update_and_apply_p_gradient_correction(&mut grad_x, 0);
+            cpml.update_and_apply_p_gradient_correction(&mut grad_y, 1);
+            cpml.update_and_apply_p_gradient_correction(&mut grad_z, 2);
         }
 
         // Update velocity: v^{n+1/2} = v^{n-1/2} - dt/rho * grad(p)
@@ -467,69 +596,124 @@ impl FdtdSolver {
         Ok(())
     }
 
-    fn compute_divergence_staggered(&self) -> KwaversResult<Array3<f64>> {
-        let dvx_dx = self
+    fn compute_divergence_staggered(&mut self) -> KwaversResult<Array3<f64>> {
+        let mut dvx = self
             .staggered_operator
             .apply_backward_x(self.fields.ux.view())?;
-        let dvy_dy = self
+        let mut dvy = self
             .staggered_operator
             .apply_backward_y(self.fields.uy.view())?;
-        let dvz_dz = self
+        let mut dvz = self
             .staggered_operator
             .apply_backward_z(self.fields.uz.view())?;
 
-        Ok(&dvx_dx + &dvy_dy + &dvz_dz)
+        if let Some(ref mut cpml) = self.cpml_boundary {
+            cpml.update_and_apply_v_gradient_correction(&mut dvx, 0);
+            cpml.update_and_apply_v_gradient_correction(&mut dvy, 1);
+            cpml.update_and_apply_v_gradient_correction(&mut dvz, 2);
+        }
+
+        Ok(&dvx + &dvy + &dvz)
     }
 
     fn update_velocity_staggered(&mut self, dt: f64) -> KwaversResult<()> {
         let (nx, ny, nz) = self.fields.p.dim();
 
-        if nx > 1 {
-            let dp_dx = self
-                .staggered_operator
-                .apply_forward_x(self.fields.p.view())?;
-            for i in 0..nx - 1 {
-                for j in 0..ny {
-                    for k in 0..nz {
-                        let rho = 0.5
-                            * (self.materials.rho0[[i, j, k]] + self.materials.rho0[[i + 1, j, k]]);
+        // 1. Compute gradients
+        let mut dp_dx = if nx > 1 {
+            Some(
+                self.staggered_operator
+                    .apply_forward_x(self.fields.p.view())?,
+            )
+        } else {
+            None
+        };
+
+        let mut dp_dy = if ny > 1 {
+            Some(
+                self.staggered_operator
+                    .apply_forward_y(self.fields.p.view())?,
+            )
+        } else {
+            None
+        };
+
+        let mut dp_dz = if nz > 1 {
+            Some(
+                self.staggered_operator
+                    .apply_forward_z(self.fields.p.view())?,
+            )
+        } else {
+            None
+        };
+
+        // 2. Apply CPML corrections
+        if let Some(ref mut cpml) = self.cpml_boundary {
+            if let Some(ref mut grad) = dp_dx {
+                cpml.update_and_apply_p_gradient_correction(grad, 0);
+            }
+            if let Some(ref mut grad) = dp_dy {
+                cpml.update_and_apply_p_gradient_correction(grad, 1);
+            }
+            if let Some(ref mut grad) = dp_dz {
+                cpml.update_and_apply_p_gradient_correction(grad, 2);
+            }
+        }
+
+        // 3. Update velocity components
+        // Uses ndarray slice views to eliminate inner bounds checks and enable LLVM vectorization.
+        // rho is averaged at the staggered half-cell: ρ_avg = (ρ[i] + ρ[i+1]) / 2.
+        // Boundary row/col/layer is zeroed to enforce Dirichlet velocity at domain edge.
+        if let Some(ref grad) = dp_dx {
+            {
+                let rho_left = self.materials.rho0.slice(s![..nx - 1, .., ..]);
+                let rho_right = self.materials.rho0.slice(s![1..nx, .., ..]);
+                Zip::from(self.fields.ux.slice_mut(s![..nx - 1, .., ..]))
+                    .and(rho_left)
+                    .and(rho_right)
+                    .and(grad.view())
+                    .for_each(|u, &rl, &rr, &dp| {
+                        let rho = 0.5 * (rl + rr);
                         if rho > 1e-9 {
-                            self.fields.ux[[i, j, k]] -= dt / rho * dp_dx[[i, j, k]];
+                            *u -= dt / rho * dp;
                         }
-                    }
-                }
+                    });
             }
             self.fields.ux.slice_mut(s![nx - 1, .., ..]).fill(0.0);
         }
 
-        if ny > 1 {
-            let dp_dy = self.staggered_operator.apply_y(self.fields.p.view())?;
-            for i in 0..nx {
-                for j in 0..ny - 1 {
-                    for k in 0..nz {
-                        let rho = 0.5
-                            * (self.materials.rho0[[i, j, k]] + self.materials.rho0[[i, j + 1, k]]);
+        if let Some(ref grad) = dp_dy {
+            {
+                let rho_front = self.materials.rho0.slice(s![.., ..ny - 1, ..]);
+                let rho_back = self.materials.rho0.slice(s![.., 1..ny, ..]);
+                Zip::from(self.fields.uy.slice_mut(s![.., ..ny - 1, ..]))
+                    .and(rho_front)
+                    .and(rho_back)
+                    .and(grad.view())
+                    .for_each(|u, &rf, &rb, &dp| {
+                        let rho = 0.5 * (rf + rb);
                         if rho > 1e-9 {
-                            self.fields.uy[[i, j, k]] -= dt / rho * dp_dy[[i, j, k]];
+                            *u -= dt / rho * dp;
                         }
-                    }
-                }
+                    });
             }
             self.fields.uy.slice_mut(s![.., ny - 1, ..]).fill(0.0);
         }
 
-        if nz > 1 {
-            let dp_dz = self.staggered_operator.apply_z(self.fields.p.view())?;
-            for i in 0..nx {
-                for j in 0..ny {
-                    for k in 0..nz - 1 {
-                        let rho = 0.5
-                            * (self.materials.rho0[[i, j, k]] + self.materials.rho0[[i, j, k + 1]]);
+        if let Some(ref grad) = dp_dz {
+            {
+                let rho_near = self.materials.rho0.slice(s![.., .., ..nz - 1]);
+                let rho_far = self.materials.rho0.slice(s![.., .., 1..nz]);
+                Zip::from(self.fields.uz.slice_mut(s![.., .., ..nz - 1]))
+                    .and(rho_near)
+                    .and(rho_far)
+                    .and(grad.view())
+                    .for_each(|u, &rn, &rf, &dp| {
+                        let rho = 0.5 * (rn + rf);
                         if rho > 1e-9 {
-                            self.fields.uz[[i, j, k]] -= dt / rho * dp_dz[[i, j, k]];
+                            *u -= dt / rho * dp;
                         }
-                    }
-                }
+                    });
             }
             self.fields.uz.slice_mut(s![.., .., nz - 1]).fill(0.0);
         }
@@ -564,6 +748,17 @@ impl FdtdSolver {
     /// Returns None if no sensors are configured or no data has been recorded
     pub fn extract_recorded_sensor_data(&self) -> Option<ndarray::Array2<f64>> {
         self.sensor_recorder.extract_pressure_data()
+    }
+
+    pub fn run_orchestrated(&mut self, steps: usize) -> KwaversResult<Option<ndarray::Array2<f64>>> {
+        // Record initial state t=0 to match k-Wave's convention (returning Nt+1 points)
+        if self.time_step_index == 0 {
+            self.sensor_recorder.record_step(&self.fields.p)?;
+        }
+        for _ in 0..steps {
+            self.step_forward()?;
+        }
+        Ok(self.sensor_recorder.extract_pressure_data())
     }
 
     pub fn add_source_arc(&mut self, source: Arc<dyn Source>) -> KwaversResult<()> {

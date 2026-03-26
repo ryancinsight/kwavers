@@ -1,4 +1,46 @@
 //! CPML field update implementation
+//!
+//! # Theorem: CPML Recursive Convolution (Roden & Gedney 2000)
+//!
+//! The Convolutional PML (CPML) replaces the standard PML gradient `∂f/∂x` with
+//! an effective gradient that includes a memory (auxiliary field) ψ:
+//!
+//! ```text
+//!   ∂f/∂x_eff = (1/κ) · ∂f/∂x + ψ
+//! ```
+//!
+//! The memory field ψ satisfies the recursive convolution update:
+//! ```text
+//!   ψ^{n+1} = b · ψ^n + a · (∂f/∂x)^n
+//! ```
+//!
+//! where:
+//! - `b = exp(−σ·Δt)` (decay factor, `b ∈ (0,1)` for σ > 0)
+//! - `a = b − 1 = exp(−σ·Δt) − 1` (amplitude coefficient, always ≤ 0)
+//! - `κ` = stretch factor (κ = 1 in the basic CPML formulation used here)
+//!
+//! *Interpretation:* At first step (ψ⁰ = 0):
+//! ```text
+//!   ψ¹ = a · ∂f/∂x = (b−1) · ∂f/∂x
+//!   ∂f/∂x_eff = ∂f/∂x + ψ¹ = b · ∂f/∂x
+//! ```
+//! The effective gradient is attenuated by `b = exp(−σΔt)` immediately — correct absorption.
+//!
+//! ## Index Mapping (Split PML Memory)
+//!
+//! Each `psi_p_x` / `psi_v_x` array has shape `(2·thickness, ny, nz)`:
+//! - Indices `[0..thickness]` → left boundary cells (i = 0..thickness)
+//! - Indices `[thickness..2·thickness]` → right boundary cells (i = nx−thickness..nx)
+//!
+//! This layout avoids allocating full-grid memory for ψ fields (only PML cells need memory).
+//!
+//! ## References
+//! - Roden, J.A. & Gedney, S.D. (2000). Convolution PML (CPML): An efficient FDTD
+//!   implementation of the CFS-PML for arbitrary media. Microwave Opt. Tech. Lett. 27(5), 334–339.
+//! - Collino, F. & Tsogka, C. (2001). Application of the PML absorbing layer model to the linear
+//!   elastodynamic problem in anisotropic hetereogeneous media. Geophysics 66(1), 294–307.
+//! - Komatitsch, D. & Martin, R. (2007). An unsplit convolutional perfectly matched layer improved
+//!   at grazing incidence for the seismic wave equation. Geophysics 72(5), SM155–SM167.
 
 use super::memory::CPMLMemory;
 use super::profiles::CPMLProfiles;
