@@ -108,3 +108,11 @@ CRITICAL_FIXES*.md
 CLEANUP*.md
 BUG_FIXES*.md
 ANALYTICAL_TEST*.md
+
+# Python bytecode and caches (should never be committed)
+*.pyc
+__pycache__/
+
+# NumPy/binary data outputs
+*.npy
+*.npz
