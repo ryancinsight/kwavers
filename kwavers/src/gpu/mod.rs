@@ -33,11 +33,11 @@ pub use buffer::{BufferUsage, GpuBuffer as GpuBufferV2};
 pub use buffers::{BufferManager, GpuBuffer};
 #[cfg(feature = "pinn")]
 pub use burn_accelerator::BurnGpuAccelerator;
-pub use compute::GpuCompute;
+pub use compute::{FdtdGpuDispatcher, GpuCompute};
 pub use compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
 pub use device::{DeviceInfo, GpuDevice};
 pub use fdtd::FdtdGpu;
-pub use kspace::KSpaceGpu;
+pub use kspace::{KSpaceGpu, KspaceShiftGpu};
 pub use memory::{MemoryPoolType, UnifiedMemoryManager};
 pub use multi_gpu::{GpuAffinity, MultiGpuContext};
 pub use pipeline::{ComputePipeline, PipelineLayout};

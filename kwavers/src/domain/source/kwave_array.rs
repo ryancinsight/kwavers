@@ -3,7 +3,30 @@
 //! This module provides a builder-pattern API for creating custom transducer arrays
 //! with mixed geometries (arcs, discs, rectangles), matching k-wave-python's KWaveArray.
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use ndarray::{Array2, Array3};
+
+/// Apodization window for per-element amplitude weighting
+///
+/// # Theorem — Window Functions (Harris 1978)
+///
+/// Window functions reduce sidelobes in the array beam pattern at the cost of broadening
+/// the main lobe. For an N-element array with uniform spacing:
+/// - Rectangular: unity weights → minimum main-lobe width, maximum sidelobes (-13 dB)
+/// - Hann: `wᵢ = 0.5(1 - cos(2πi/(N-1)))` → -31 dB sidelobes, 1.5× wider main lobe
+/// - Hamming: `wᵢ = 0.54 - 0.46·cos(2πi/(N-1)))` → -43 dB sidelobes
+///
+/// Reference: Harris, F.J. (1978). "On the use of windows for harmonic analysis with
+/// the discrete Fourier transform." Proc. IEEE 66(1):51–83.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ApodizationWindow {
+    /// All weights = 1.0 (no apodization)
+    Rectangular,
+    /// Hann window — -31 dB sidelobes
+    Hann,
+    /// Hamming window — -43 dB sidelobes
+    Hamming,
+}
 
 /// Element shape types for custom transducer arrays
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -73,7 +96,7 @@ impl KWaveArray {
         Self {
             elements: Vec::new(),
             frequency: 1e6,
-            sound_speed: 1540.0,
+            sound_speed: SOUND_SPEED_TISSUE,
             element_width: 0.5e-3,
         }
     }
@@ -322,6 +345,103 @@ impl KWaveArray {
             .collect()
     }
 
+    /// Calculate per-element time delays [s] for electronic focusing at a point.
+    ///
+    /// # Algorithm — Time-Delay Focusing (Selfridge et al. 1980)
+    ///
+    /// For element `i` at position `pᵢ` and focus point `f`, the delay that causes
+    /// all wavefronts to arrive at the focus simultaneously is:
+    /// ```text
+    /// τᵢ = (d_max - dᵢ) / c
+    /// ```
+    /// where `dᵢ = |pᵢ - f|` (element-to-focus distance) and `d_max = max(dᵢ)`.
+    ///
+    /// This ensures the element farthest from the focus fires first (zero delay) and
+    /// elements closer to the focus are delayed so all signals add coherently at `f`.
+    ///
+    /// # Arguments
+    /// * `focus_point` - Focus position `(x, y, z)` in metres
+    ///
+    /// # Returns
+    /// `Vec<f64>` of delays in seconds, one per element. All values ≥ 0.
+    ///
+    /// # Reference
+    /// Selfridge, A.R., Kino, G.S. & Khuri-Yakub, B.T. (1980). "A theory for the
+    /// radiation pattern of a narrow-strip acoustic transducer." Appl. Phys. Lett.
+    /// 37(1):35–36.
+    #[must_use]
+    pub fn get_element_delays(&self, focus_point: (f64, f64, f64)) -> Vec<f64> {
+        let positions = self.get_element_positions();
+        let c = self.sound_speed;
+
+        // Compute distance from each element to the focus point
+        let distances: Vec<f64> = positions
+            .iter()
+            .map(|(ex, ey, ez)| {
+                ((ex - focus_point.0).powi(2)
+                    + (ey - focus_point.1).powi(2)
+                    + (ez - focus_point.2).powi(2))
+                .sqrt()
+            })
+            .collect();
+
+        // Maximum distance — the element at d_max fires first (zero delay)
+        let d_max = distances.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+
+        distances.iter().map(|&d| (d_max - d) / c).collect()
+    }
+
+    /// Compute per-element amplitude weights for beam apodization.
+    ///
+    /// # Algorithm — Discrete Window Functions (Harris 1978)
+    ///
+    /// For N elements indexed `i = 0, …, N-1`:
+    /// - `Rectangular`: `wᵢ = 1.0`  (uniform, maximum sidelobes)
+    /// - `Hann`:        `wᵢ = 0.5 · (1 − cos(2π·i/(N−1)))` if N > 1, else 1.0
+    /// - `Hamming`:     `wᵢ = 0.54 − 0.46·cos(2π·i/(N−1))` if N > 1, else 1.0
+    ///
+    /// # Arguments
+    /// * `window` - Window type selecting the apodization profile
+    ///
+    /// # Returns
+    /// `Vec<f64>` of weights in `[0, 1]`, length = number of elements.
+    ///
+    /// # Reference
+    /// Harris, F.J. (1978). "On the use of windows for harmonic analysis with the
+    /// discrete Fourier transform." Proc. IEEE 66(1):51–83.
+    #[must_use]
+    pub fn get_apodization(&self, window: ApodizationWindow) -> Vec<f64> {
+        let n = self.elements.len();
+        if n == 0 {
+            return Vec::new();
+        }
+        match window {
+            ApodizationWindow::Rectangular => vec![1.0; n],
+            ApodizationWindow::Hann => {
+                if n == 1 {
+                    return vec![1.0];
+                }
+                (0..n)
+                    .map(|i| {
+                        0.5 * (1.0
+                            - (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos())
+                    })
+                    .collect()
+            }
+            ApodizationWindow::Hamming => {
+                if n == 1 {
+                    return vec![1.0];
+                }
+                (0..n)
+                    .map(|i| {
+                        0.54 - 0.46
+                            * (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos()
+                    })
+                    .collect()
+            }
+        }
+    }
+
     /// Rasterize an arc element onto the grid
     fn rasterize_arc(
         &self,
@@ -555,5 +675,142 @@ mod tests {
         assert_eq!(delays.len(), 2);
         assert!(delays[0] > 0.0);
         assert!(delays[1] > 0.0);
+    }
+
+    /// `get_element_delays` and `get_focus_delays` agree for a symmetric two-element array.
+    ///
+    /// For two elements equidistant from the focus, `get_focus_delays` returns (d/c, d/c) and
+    /// `get_element_delays` returns (0, 0) — both elements fire simultaneously.
+    #[test]
+    fn test_get_element_delays_symmetric_array() {
+        let mut array = KWaveArray::with_params(1e6, 1500.0);
+        // Two elements at ±5 mm on x-axis, focus on z-axis
+        array.add_disc_element((-0.005, 0.0, 0.0), 0.002);
+        array.add_disc_element((0.005, 0.0, 0.0), 0.002);
+
+        let focus = (0.0, 0.0, 0.02);
+        let delays = array.get_element_delays(focus);
+        assert_eq!(delays.len(), 2);
+        // Symmetric array → both elements at equal distance → both delays = 0
+        assert!(
+            delays[0].abs() < 1e-12 && delays[1].abs() < 1e-12,
+            "symmetric elements should have equal (zero) delays: {:?}",
+            delays
+        );
+    }
+
+    /// `get_element_delays` returns non-negative delays and the minimum delay is 0.
+    #[test]
+    fn test_get_element_delays_non_negative_min_zero() {
+        let mut array = KWaveArray::with_params(1e6, 1500.0);
+        array.add_disc_element((0.0, 0.0, 0.0), 0.005);
+        array.add_disc_element((0.01, 0.0, 0.0), 0.005);
+        array.add_disc_element((0.02, 0.0, 0.0), 0.005);
+
+        let focus = (0.01, 0.0, 0.03);
+        let delays = array.get_element_delays(focus);
+        assert_eq!(delays.len(), 3);
+        for &d in &delays {
+            assert!(d >= 0.0, "all delays must be non-negative");
+        }
+        let min_delay = delays.iter().cloned().fold(f64::INFINITY, f64::min);
+        assert!(min_delay.abs() < 1e-15, "minimum delay must be 0");
+    }
+
+    /// Rectangular apodization returns all-ones vector.
+    #[test]
+    fn test_apodization_rectangular_all_ones() {
+        let mut array = KWaveArray::new();
+        for i in 0..8 {
+            array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001);
+        }
+        let weights = array.get_apodization(ApodizationWindow::Rectangular);
+        assert_eq!(weights.len(), 8);
+        for w in &weights {
+            assert!((w - 1.0).abs() < 1e-15, "rectangular weight must be 1.0");
+        }
+    }
+
+    /// Hann window: first and last weights ≈ 0, central weight ≈ 1.
+    #[test]
+    fn test_apodization_hann_endpoints_near_zero() {
+        let mut array = KWaveArray::new();
+        for i in 0..9 {
+            array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001);
+        }
+        let weights = array.get_apodization(ApodizationWindow::Hann);
+        assert_eq!(weights.len(), 9);
+        // Endpoints must be 0 (Hann formula gives exactly 0 at i=0 and i=N-1)
+        assert!(
+            weights[0].abs() < 1e-12,
+            "Hann first weight must be ~0, got {}",
+            weights[0]
+        );
+        assert!(
+            weights[8].abs() < 1e-12,
+            "Hann last weight must be ~0, got {}",
+            weights[8]
+        );
+        // Central weight at i=4 of 9: w = 0.5*(1 - cos(π)) = 1.0
+        assert!(
+            (weights[4] - 1.0).abs() < 1e-12,
+            "Hann center weight must be 1.0, got {}",
+            weights[4]
+        );
+    }
+
+    /// Hamming window: all weights in [0.08, 1.0] and symmetric.
+    #[test]
+    fn test_apodization_hamming_range_and_symmetry() {
+        let mut array = KWaveArray::new();
+        for i in 0..7 {
+            array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001);
+        }
+        let weights = array.get_apodization(ApodizationWindow::Hamming);
+        assert_eq!(weights.len(), 7);
+        for &w in &weights {
+            // Hamming minimum = 0.54 - 0.46 = 0.08
+            assert!(w >= 0.07 && w <= 1.01, "Hamming weight out of range: {}", w);
+        }
+        // Symmetric: w[i] ≈ w[N-1-i]
+        for i in 0..7 {
+            assert!(
+                (weights[i] - weights[6 - i]).abs() < 1e-12,
+                "Hamming not symmetric at i={}: w[{}]={} w[{}]={}",
+                i, i, weights[i], 6-i, weights[6-i]
+            );
+        }
+    }
+
+    /// Single-element array: all windows return [1.0].
+    #[test]
+    fn test_apodization_single_element() {
+        let mut array = KWaveArray::new();
+        array.add_disc_element((0.0, 0.0, 0.0), 0.005);
+        for window in [
+            ApodizationWindow::Rectangular,
+            ApodizationWindow::Hann,
+            ApodizationWindow::Hamming,
+        ] {
+            let weights = array.get_apodization(window);
+            assert_eq!(weights.len(), 1);
+            assert!((weights[0] - 1.0).abs() < 1e-12, "{:?}: single element weight must be 1.0", window);
+        }
+    }
+
+    /// SSOT: `KWaveArray::new()` uses the `SOUND_SPEED_TISSUE` constant.
+    #[test]
+    fn test_default_sound_speed_is_ssot_constant() {
+        use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+        let array = KWaveArray::new();
+        // Focus delays use the stored sound speed; create a trivial case to verify
+        let mut arr = KWaveArray::new();
+        arr.add_disc_element((0.0, 0.0, 0.0), 0.001);
+        let delays = arr.get_focus_delays((0.0, 0.0, 1.0));
+        // d = 1 m → delay = 1 / sound_speed
+        assert!(
+            (delays[0] - 1.0 / SOUND_SPEED_TISSUE).abs() < 1e-10,
+            "default sound speed must equal SOUND_SPEED_TISSUE"
+        );
     }
 }

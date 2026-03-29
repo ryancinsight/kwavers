@@ -179,11 +179,17 @@ def main():
     # k-wave: (time, sensors) -> (sensors, time)
     if kw_p.ndim == 2 and kw_p.shape[1] < kw_p.shape[0]:
         kw_p = kw_p.T
-        
+
     # Flatten if 1 sensor
     if py_p.ndim == 1:
         py_p = py_p.reshape(1, -1)
-        
+
+    # Canonical timing alignment:
+    # k-Wave records at t=0 (before step 1); kwavers records after each step.
+    # kw_p[:, 1:] aligns with py_p[:, :-1].
+    kw_p = kw_p[:, 1:]
+    py_p = py_p[:, :-1]
+
     n_sensors = min(kw_p.shape[0], py_p.shape[0])
     n_common_ts = min(kw_p.shape[1], py_p.shape[1])
     

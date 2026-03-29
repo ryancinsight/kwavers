@@ -34,6 +34,12 @@
 //!
 //! This layout avoids allocating full-grid memory for ψ fields (only PML cells need memory).
 //!
+//! ## Parallelism
+//!
+//! All update and correction loops are parallelized via `ndarray::Zip::par_for_each`.
+//! Each boundary region (left / right) is processed as a contiguous slice, enabling
+//! rayon to distribute work across threads with no data races.
+//!
 //! ## References
 //! - Roden, J.A. & Gedney, S.D. (2000). Convolution PML (CPML): An efficient FDTD
 //!   implementation of the CFS-PML for arbitrary media. Microwave Opt. Tech. Lett. 27(5), 334–339.
@@ -44,7 +50,8 @@
 
 use super::memory::CPMLMemory;
 use super::profiles::CPMLProfiles;
-use ndarray::Array3;
+
+use ndarray::{s, Array3, Zip};
 
 /// CPML field updater
 #[derive(Debug, Clone)]
@@ -129,32 +136,26 @@ impl CPMLUpdater {
         gradient: &Array3<f64>,
         profiles: &CPMLProfiles,
     ) {
-        let (nx, ny, nz) = gradient.dim();
+        let (nx, _ny, _nz) = gradient.dim();
         let thickness = memory.psi_p_x.dim().0 / 2;
+        let left_count = thickness.min(nx);
 
-        for i in 0..thickness.min(nx) {
-            let a = profiles.a_x[i];
-            let b = profiles.b_x[i];
-            for j in 0..ny {
-                for k in 0..nz {
-                    memory.psi_p_x[[i, j, k]] =
-                        b * memory.psi_p_x[[i, j, k]] + a * gradient[[i, j, k]];
-                }
-            }
-        }
+        // Left boundary
+        Zip::indexed(memory.psi_p_x.slice_mut(s![..left_count, .., ..]))
+            .and(gradient.slice(s![..left_count, .., ..]))
+            .par_for_each(|(i, _j, _k), psi, &g| {
+                *psi = profiles.b_x[i] * *psi + profiles.a_x[i] * g;
+            });
 
+        // Right boundary
         if nx > thickness {
-            for i in (nx - thickness)..nx {
-                let a = profiles.a_x[i];
-                let b = profiles.b_x[i];
-                let mem_idx = i - (nx - thickness) + thickness;
-                for j in 0..ny {
-                    for k in 0..nz {
-                        memory.psi_p_x[[mem_idx, j, k]] =
-                            b * memory.psi_p_x[[mem_idx, j, k]] + a * gradient[[i, j, k]];
-                    }
-                }
-            }
+            let right_start = nx - thickness;
+            Zip::indexed(memory.psi_p_x.slice_mut(s![thickness.., .., ..]))
+                .and(gradient.slice(s![right_start.., .., ..]))
+                .par_for_each(|(i, _j, _k), psi, &g| {
+                    let grid_i = right_start + i;
+                    *psi = profiles.b_x[grid_i] * *psi + profiles.a_x[grid_i] * g;
+                });
         }
     }
 
@@ -164,29 +165,25 @@ impl CPMLUpdater {
         memory: &CPMLMemory,
         profiles: &CPMLProfiles,
     ) {
-        let (nx, ny, nz) = gradient.dim();
+        let (nx, _ny, _nz) = gradient.dim();
         let thickness = memory.psi_p_x.dim().0 / 2;
+        let left_count = thickness.min(nx);
 
-        for i in 0..thickness.min(nx) {
-            let inv_k = 1.0 / profiles.kappa_x[i];
-            for j in 0..ny {
-                for k in 0..nz {
-                    gradient[[i, j, k]] = gradient[[i, j, k]] * inv_k + memory.psi_p_x[[i, j, k]];
-                }
-            }
-        }
+        // Left boundary
+        Zip::indexed(gradient.slice_mut(s![..left_count, .., ..]))
+            .and(memory.psi_p_x.slice(s![..left_count, .., ..]))
+            .par_for_each(|(i, _j, _k), g, &psi| {
+                *g = *g / profiles.kappa_x[i] + psi;
+            });
 
+        // Right boundary
         if nx > thickness {
-            for i in (nx - thickness)..nx {
-                let inv_k = 1.0 / profiles.kappa_x[i];
-                let mem_idx = i - (nx - thickness) + thickness;
-                for j in 0..ny {
-                    for k in 0..nz {
-                        gradient[[i, j, k]] =
-                            gradient[[i, j, k]] * inv_k + memory.psi_p_x[[mem_idx, j, k]];
-                    }
-                }
-            }
+            let right_start = nx - thickness;
+            Zip::indexed(gradient.slice_mut(s![right_start.., .., ..]))
+                .and(memory.psi_p_x.slice(s![thickness.., .., ..]))
+                .par_for_each(|(i, _j, _k), g, &psi| {
+                    *g = *g / profiles.kappa_x[right_start + i] + psi;
+                });
         }
     }
 
@@ -198,32 +195,26 @@ impl CPMLUpdater {
         v_gradient: &Array3<f64>,
         profiles: &CPMLProfiles,
     ) {
-        let (nx, ny, nz) = v_gradient.dim();
+        let (nx, _ny, _nz) = v_gradient.dim();
         let thickness = memory.psi_v_x.dim().0 / 2;
+        let left_count = thickness.min(nx);
 
-        for i in 0..thickness.min(nx) {
-            let a = profiles.a_x[i];
-            let b = profiles.b_x[i];
-            for j in 0..ny {
-                for k in 0..nz {
-                    memory.psi_v_x[[i, j, k]] =
-                        b * memory.psi_v_x[[i, j, k]] + a * v_gradient[[i, j, k]];
-                }
-            }
-        }
+        // Left boundary
+        Zip::indexed(memory.psi_v_x.slice_mut(s![..left_count, .., ..]))
+            .and(v_gradient.slice(s![..left_count, .., ..]))
+            .par_for_each(|(i, _j, _k), psi, &g| {
+                *psi = profiles.b_x[i] * *psi + profiles.a_x[i] * g;
+            });
 
+        // Right boundary
         if nx > thickness {
-            for i in (nx - thickness)..nx {
-                let a = profiles.a_x[i];
-                let b = profiles.b_x[i];
-                let mem_idx = i - (nx - thickness) + thickness;
-                for j in 0..ny {
-                    for k in 0..nz {
-                        memory.psi_v_x[[mem_idx, j, k]] =
-                            b * memory.psi_v_x[[mem_idx, j, k]] + a * v_gradient[[i, j, k]];
-                    }
-                }
-            }
+            let right_start = nx - thickness;
+            Zip::indexed(memory.psi_v_x.slice_mut(s![thickness.., .., ..]))
+                .and(v_gradient.slice(s![right_start.., .., ..]))
+                .par_for_each(|(i, _j, _k), psi, &g| {
+                    let grid_i = right_start + i;
+                    *psi = profiles.b_x[grid_i] * *psi + profiles.a_x[grid_i] * g;
+                });
         }
     }
 
@@ -233,35 +224,29 @@ impl CPMLUpdater {
         memory: &CPMLMemory,
         profiles: &CPMLProfiles,
     ) {
-        let (nx, ny, nz) = v_gradient.dim();
+        let (nx, _ny, _nz) = v_gradient.dim();
         let thickness = memory.psi_v_x.dim().0 / 2;
+        let left_count = thickness.min(nx);
 
-        for i in 0..thickness.min(nx) {
-            let inv_k = 1.0 / profiles.kappa_x[i];
-            for j in 0..ny {
-                for k in 0..nz {
-                    v_gradient[[i, j, k]] =
-                        v_gradient[[i, j, k]] * inv_k + memory.psi_v_x[[i, j, k]];
-                }
-            }
-        }
+        // Left boundary
+        Zip::indexed(v_gradient.slice_mut(s![..left_count, .., ..]))
+            .and(memory.psi_v_x.slice(s![..left_count, .., ..]))
+            .par_for_each(|(i, _j, _k), g, &psi| {
+                *g = *g / profiles.kappa_x[i] + psi;
+            });
 
+        // Right boundary
         if nx > thickness {
-            for i in (nx - thickness)..nx {
-                let inv_k = 1.0 / profiles.kappa_x[i];
-                let mem_idx = i - (nx - thickness) + thickness;
-                for j in 0..ny {
-                    for k in 0..nz {
-                        v_gradient[[i, j, k]] =
-                            v_gradient[[i, j, k]] * inv_k + memory.psi_v_x[[mem_idx, j, k]];
-                    }
-                }
-            }
+            let right_start = nx - thickness;
+            Zip::indexed(v_gradient.slice_mut(s![right_start.., .., ..]))
+                .and(memory.psi_v_x.slice(s![thickness.., .., ..]))
+                .par_for_each(|(i, _j, _k), g, &psi| {
+                    *g = *g / profiles.kappa_x[right_start + i] + psi;
+                });
         }
     }
 
     // --- Y and Z Components (P and V) ---
-    // Similar blocks for Y and Z...
 
     fn update_p_y_memory(
         &self,
@@ -269,28 +254,26 @@ impl CPMLUpdater {
         gradient: &Array3<f64>,
         profiles: &CPMLProfiles,
     ) {
-        let (nx, ny, nz) = gradient.dim();
+        let (_nx, ny, _nz) = gradient.dim();
         let thickness = memory.psi_p_y.dim().1 / 2;
-        for i in 0..nx {
-            for j in 0..thickness.min(ny) {
-                let a = profiles.a_y[j];
-                let b = profiles.b_y[j];
-                for k in 0..nz {
-                    memory.psi_p_y[[i, j, k]] =
-                        b * memory.psi_p_y[[i, j, k]] + a * gradient[[i, j, k]];
-                }
-            }
-            if ny > thickness {
-                for j in (ny - thickness)..ny {
-                    let a = profiles.a_y[j];
-                    let b = profiles.b_y[j];
-                    let mem_idx = j - (ny - thickness) + thickness;
-                    for k in 0..nz {
-                        memory.psi_p_y[[i, mem_idx, k]] =
-                            b * memory.psi_p_y[[i, mem_idx, k]] + a * gradient[[i, j, k]];
-                    }
-                }
-            }
+        let left_count = thickness.min(ny);
+
+        // Left boundary
+        Zip::indexed(memory.psi_p_y.slice_mut(s![.., ..left_count, ..]))
+            .and(gradient.slice(s![.., ..left_count, ..]))
+            .par_for_each(|(_i, j, _k), psi, &g| {
+                *psi = profiles.b_y[j] * *psi + profiles.a_y[j] * g;
+            });
+
+        // Right boundary
+        if ny > thickness {
+            let right_start = ny - thickness;
+            Zip::indexed(memory.psi_p_y.slice_mut(s![.., thickness.., ..]))
+                .and(gradient.slice(s![.., right_start.., ..]))
+                .par_for_each(|(_i, j, _k), psi, &g| {
+                    let grid_j = right_start + j;
+                    *psi = profiles.b_y[grid_j] * *psi + profiles.a_y[grid_j] * g;
+                });
         }
     }
 
@@ -300,25 +283,25 @@ impl CPMLUpdater {
         memory: &CPMLMemory,
         profiles: &CPMLProfiles,
     ) {
-        let (nx, ny, nz) = gradient.dim();
+        let (_nx, ny, _nz) = gradient.dim();
         let thickness = memory.psi_p_y.dim().1 / 2;
-        for i in 0..nx {
-            for j in 0..thickness.min(ny) {
-                let inv_k = 1.0 / profiles.kappa_y[j];
-                for k in 0..nz {
-                    gradient[[i, j, k]] = gradient[[i, j, k]] * inv_k + memory.psi_p_y[[i, j, k]];
-                }
-            }
-            if ny > thickness {
-                for j in (ny - thickness)..ny {
-                    let inv_k = 1.0 / profiles.kappa_y[j];
-                    let mem_idx = j - (ny - thickness) + thickness;
-                    for k in 0..nz {
-                        gradient[[i, j, k]] =
-                            gradient[[i, j, k]] * inv_k + memory.psi_p_y[[i, mem_idx, k]];
-                    }
-                }
-            }
+        let left_count = thickness.min(ny);
+
+        // Left boundary
+        Zip::indexed(gradient.slice_mut(s![.., ..left_count, ..]))
+            .and(memory.psi_p_y.slice(s![.., ..left_count, ..]))
+            .par_for_each(|(_i, j, _k), g, &psi| {
+                *g = *g / profiles.kappa_y[j] + psi;
+            });
+
+        // Right boundary
+        if ny > thickness {
+            let right_start = ny - thickness;
+            Zip::indexed(gradient.slice_mut(s![.., right_start.., ..]))
+                .and(memory.psi_p_y.slice(s![.., thickness.., ..]))
+                .par_for_each(|(_i, j, _k), g, &psi| {
+                    *g = *g / profiles.kappa_y[right_start + j] + psi;
+                });
         }
     }
 
@@ -328,28 +311,26 @@ impl CPMLUpdater {
         gradient: &Array3<f64>,
         profiles: &CPMLProfiles,
     ) {
-        let (nx, ny, nz) = gradient.dim();
+        let (_nx, ny, _nz) = gradient.dim();
         let thickness = memory.psi_v_y.dim().1 / 2;
-        for i in 0..nx {
-            for j in 0..thickness.min(ny) {
-                let a = profiles.a_y[j];
-                let b = profiles.b_y[j];
-                for k in 0..nz {
-                    memory.psi_v_y[[i, j, k]] =
-                        b * memory.psi_v_y[[i, j, k]] + a * gradient[[i, j, k]];
-                }
-            }
-            if ny > thickness {
-                for j in (ny - thickness)..ny {
-                    let a = profiles.a_y[j];
-                    let b = profiles.b_y[j];
-                    let mem_idx = j - (ny - thickness) + thickness;
-                    for k in 0..nz {
-                        memory.psi_v_y[[i, mem_idx, k]] =
-                            b * memory.psi_v_y[[i, mem_idx, k]] + a * gradient[[i, j, k]];
-                    }
-                }
-            }
+        let left_count = thickness.min(ny);
+
+        // Left boundary
+        Zip::indexed(memory.psi_v_y.slice_mut(s![.., ..left_count, ..]))
+            .and(gradient.slice(s![.., ..left_count, ..]))
+            .par_for_each(|(_i, j, _k), psi, &g| {
+                *psi = profiles.b_y[j] * *psi + profiles.a_y[j] * g;
+            });
+
+        // Right boundary
+        if ny > thickness {
+            let right_start = ny - thickness;
+            Zip::indexed(memory.psi_v_y.slice_mut(s![.., thickness.., ..]))
+                .and(gradient.slice(s![.., right_start.., ..]))
+                .par_for_each(|(_i, j, _k), psi, &g| {
+                    let grid_j = right_start + j;
+                    *psi = profiles.b_y[grid_j] * *psi + profiles.a_y[grid_j] * g;
+                });
         }
     }
 
@@ -359,25 +340,25 @@ impl CPMLUpdater {
         memory: &CPMLMemory,
         profiles: &CPMLProfiles,
     ) {
-        let (nx, ny, nz) = gradient.dim();
+        let (_nx, ny, _nz) = gradient.dim();
         let thickness = memory.psi_v_y.dim().1 / 2;
-        for i in 0..nx {
-            for j in 0..thickness.min(ny) {
-                let inv_k = 1.0 / profiles.kappa_y[j];
-                for k in 0..nz {
-                    gradient[[i, j, k]] = gradient[[i, j, k]] * inv_k + memory.psi_v_y[[i, j, k]];
-                }
-            }
-            if ny > thickness {
-                for j in (ny - thickness)..ny {
-                    let inv_k = 1.0 / profiles.kappa_y[j];
-                    let mem_idx = j - (ny - thickness) + thickness;
-                    for k in 0..nz {
-                        gradient[[i, j, k]] =
-                            gradient[[i, j, k]] * inv_k + memory.psi_v_y[[i, mem_idx, k]];
-                    }
-                }
-            }
+        let left_count = thickness.min(ny);
+
+        // Left boundary
+        Zip::indexed(gradient.slice_mut(s![.., ..left_count, ..]))
+            .and(memory.psi_v_y.slice(s![.., ..left_count, ..]))
+            .par_for_each(|(_i, j, _k), g, &psi| {
+                *g = *g / profiles.kappa_y[j] + psi;
+            });
+
+        // Right boundary
+        if ny > thickness {
+            let right_start = ny - thickness;
+            Zip::indexed(gradient.slice_mut(s![.., right_start.., ..]))
+                .and(memory.psi_v_y.slice(s![.., thickness.., ..]))
+                .par_for_each(|(_i, j, _k), g, &psi| {
+                    *g = *g / profiles.kappa_y[right_start + j] + psi;
+                });
         }
     }
 
@@ -387,26 +368,26 @@ impl CPMLUpdater {
         gradient: &Array3<f64>,
         profiles: &CPMLProfiles,
     ) {
-        let (nx, ny, nz) = gradient.dim();
+        let (_nx, _ny, nz) = gradient.dim();
         let thickness = memory.psi_p_z.dim().2 / 2;
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..thickness.min(nz) {
-                    let a = profiles.a_z[k];
-                    let b = profiles.b_z[k];
-                    memory.psi_p_z[[i, j, k]] =
-                        b * memory.psi_p_z[[i, j, k]] + a * gradient[[i, j, k]];
-                }
-                if nz > thickness {
-                    for k in (nz - thickness)..nz {
-                        let a = profiles.a_z[k];
-                        let b = profiles.b_z[k];
-                        let mem_idx = k - (nz - thickness) + thickness;
-                        memory.psi_p_z[[i, j, mem_idx]] =
-                            b * memory.psi_p_z[[i, j, mem_idx]] + a * gradient[[i, j, k]];
-                    }
-                }
-            }
+        let left_count = thickness.min(nz);
+
+        // Left boundary
+        Zip::indexed(memory.psi_p_z.slice_mut(s![.., .., ..left_count]))
+            .and(gradient.slice(s![.., .., ..left_count]))
+            .par_for_each(|(_i, _j, k), psi, &g| {
+                *psi = profiles.b_z[k] * *psi + profiles.a_z[k] * g;
+            });
+
+        // Right boundary
+        if nz > thickness {
+            let right_start = nz - thickness;
+            Zip::indexed(memory.psi_p_z.slice_mut(s![.., .., thickness..]))
+                .and(gradient.slice(s![.., .., right_start..]))
+                .par_for_each(|(_i, _j, k), psi, &g| {
+                    let grid_k = right_start + k;
+                    *psi = profiles.b_z[grid_k] * *psi + profiles.a_z[grid_k] * g;
+                });
         }
     }
 
@@ -416,23 +397,25 @@ impl CPMLUpdater {
         memory: &CPMLMemory,
         profiles: &CPMLProfiles,
     ) {
-        let (nx, ny, nz) = gradient.dim();
+        let (_nx, _ny, nz) = gradient.dim();
         let thickness = memory.psi_p_z.dim().2 / 2;
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..thickness.min(nz) {
-                    let inv_k = 1.0 / profiles.kappa_z[k];
-                    gradient[[i, j, k]] = gradient[[i, j, k]] * inv_k + memory.psi_p_z[[i, j, k]];
-                }
-                if nz > thickness {
-                    for k in (nz - thickness)..nz {
-                        let inv_k = 1.0 / profiles.kappa_z[k];
-                        let mem_idx = k - (nz - thickness) + thickness;
-                        gradient[[i, j, k]] =
-                            gradient[[i, j, k]] * inv_k + memory.psi_p_z[[i, j, mem_idx]];
-                    }
-                }
-            }
+        let left_count = thickness.min(nz);
+
+        // Left boundary
+        Zip::indexed(gradient.slice_mut(s![.., .., ..left_count]))
+            .and(memory.psi_p_z.slice(s![.., .., ..left_count]))
+            .par_for_each(|(_i, _j, k), g, &psi| {
+                *g = *g / profiles.kappa_z[k] + psi;
+            });
+
+        // Right boundary
+        if nz > thickness {
+            let right_start = nz - thickness;
+            Zip::indexed(gradient.slice_mut(s![.., .., right_start..]))
+                .and(memory.psi_p_z.slice(s![.., .., thickness..]))
+                .par_for_each(|(_i, _j, k), g, &psi| {
+                    *g = *g / profiles.kappa_z[right_start + k] + psi;
+                });
         }
     }
 
@@ -442,26 +425,26 @@ impl CPMLUpdater {
         gradient: &Array3<f64>,
         profiles: &CPMLProfiles,
     ) {
-        let (nx, ny, nz) = gradient.dim();
+        let (_nx, _ny, nz) = gradient.dim();
         let thickness = memory.psi_v_z.dim().2 / 2;
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..thickness.min(nz) {
-                    let a = profiles.a_z[k];
-                    let b = profiles.b_z[k];
-                    memory.psi_v_z[[i, j, k]] =
-                        b * memory.psi_v_z[[i, j, k]] + a * gradient[[i, j, k]];
-                }
-                if nz > thickness {
-                    for k in (nz - thickness)..nz {
-                        let a = profiles.a_z[k];
-                        let b = profiles.b_z[k];
-                        let mem_idx = k - (nz - thickness) + thickness;
-                        memory.psi_v_z[[i, j, mem_idx]] =
-                            b * memory.psi_v_z[[i, j, mem_idx]] + a * gradient[[i, j, k]];
-                    }
-                }
-            }
+        let left_count = thickness.min(nz);
+
+        // Left boundary
+        Zip::indexed(memory.psi_v_z.slice_mut(s![.., .., ..left_count]))
+            .and(gradient.slice(s![.., .., ..left_count]))
+            .par_for_each(|(_i, _j, k), psi, &g| {
+                *psi = profiles.b_z[k] * *psi + profiles.a_z[k] * g;
+            });
+
+        // Right boundary
+        if nz > thickness {
+            let right_start = nz - thickness;
+            Zip::indexed(memory.psi_v_z.slice_mut(s![.., .., thickness..]))
+                .and(gradient.slice(s![.., .., right_start..]))
+                .par_for_each(|(_i, _j, k), psi, &g| {
+                    let grid_k = right_start + k;
+                    *psi = profiles.b_z[grid_k] * *psi + profiles.a_z[grid_k] * g;
+                });
         }
     }
 
@@ -471,23 +454,25 @@ impl CPMLUpdater {
         memory: &CPMLMemory,
         profiles: &CPMLProfiles,
     ) {
-        let (nx, ny, nz) = gradient.dim();
+        let (_nx, _ny, nz) = gradient.dim();
         let thickness = memory.psi_v_z.dim().2 / 2;
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..thickness.min(nz) {
-                    let inv_k = 1.0 / profiles.kappa_z[k];
-                    gradient[[i, j, k]] = gradient[[i, j, k]] * inv_k + memory.psi_v_z[[i, j, k]];
-                }
-                if nz > thickness {
-                    for k in (nz - thickness)..nz {
-                        let inv_k = 1.0 / profiles.kappa_z[k];
-                        let mem_idx = k - (nz - thickness) + thickness;
-                        gradient[[i, j, k]] =
-                            gradient[[i, j, k]] * inv_k + memory.psi_v_z[[i, j, mem_idx]];
-                    }
-                }
-            }
+        let left_count = thickness.min(nz);
+
+        // Left boundary
+        Zip::indexed(gradient.slice_mut(s![.., .., ..left_count]))
+            .and(memory.psi_v_z.slice(s![.., .., ..left_count]))
+            .par_for_each(|(_i, _j, k), g, &psi| {
+                *g = *g / profiles.kappa_z[k] + psi;
+            });
+
+        // Right boundary
+        if nz > thickness {
+            let right_start = nz - thickness;
+            Zip::indexed(gradient.slice_mut(s![.., .., right_start..]))
+                .and(memory.psi_v_z.slice(s![.., .., thickness..]))
+                .par_for_each(|(_i, _j, k), g, &psi| {
+                    *g = *g / profiles.kappa_z[right_start + k] + psi;
+                });
         }
     }
 }

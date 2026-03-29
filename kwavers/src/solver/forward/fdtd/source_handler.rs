@@ -264,21 +264,18 @@ impl SourceHandler {
                 SourceMode::Additive | SourceMode::AdditiveNoCorrection => {
                     // k-Wave additive mass source scaling.
                     //
-                    // k-Wave adds source.p (pre-scaled by 2·dt/(N·c₀·dx)) to EACH of
-                    // the N split-density components (rhox, rhoy, rhoz).
+                    // K-Wave Python pre-scales source.p (Pa) → density (kg/m³) via:
+                    //   source_p *= 2*dt / (N * c0 * dx)
+                    // (see scale_source_terms_func.py: scale_pressure_source_uniform_grid)
                     //
-                    // rho_scale: Per-component density scaling (with 1/N split).
-                    //   Used by PSTD which adds to all N density components.
+                    // kwavers injects as density perturbation; C++ adds raw scaled value
+                    // to each density component. To match k-Wave:
+                    //   rho_scale = 2*dt / (n_dim * c0 * dx)
                     //
                     // p_scale: Propagation-dimension-adjusted pressure scaling.
                     //   Used by FDTD which adds to a single pressure field.
-                    //   k-Wave's split-density naturally distributes the source
-                    //   energy across N propagation dimensions. In FDTD's single
-                    //   pressure equation, we scale by 1/N_prop where N_prop is
-                    //   the number of propagation dimensions (determined by source
-                    //   geometry: plane→1, line→2, point→3).
                     //   p_scale = 2·dt·c₀ / (N_prop · dx).
-                    let rho_scale = (2.0 * dt) / (n_dim * c0_val * dx);
+                    let rho_scale = 2.0 * dt / (n_dim * c0_val * dx);
                     let n_prop = self.source_propagation_dim.max(1.0);
                     let p_scale = (2.0 * dt * c0_val) / (n_prop * dx);
                     (rho_scale, p_scale)
@@ -397,6 +394,16 @@ impl SourceHandler {
                 Ok(())
             }
         }
+    }
+
+    /// Returns true if an initial pressure p0 was provided (IVP case).
+    pub fn has_initial_pressure(&self) -> bool {
+        self.source.p0.is_some()
+    }
+
+    /// Returns true if initial velocity u0 was provided (overrides spectral init).
+    pub fn has_initial_velocity(&self) -> bool {
+        self.source.u0.is_some()
     }
 
     /// Apply initial conditions to fields

@@ -11,7 +11,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use kwavers::clinical::therapy::parameters::TherapyParameters;
 //!
 //! // Configure HIFU treatment

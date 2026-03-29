@@ -28,13 +28,13 @@
 //! ## Physics Model
 //!
 //! **3D FDTD Pressure Update**:
-//! ```
+//! ```text
 //! p[i,j,k]^(n+1) = (2p[i,j,k]^n - p[i,j,k]^(n-1))
 //!                   - c² Δt² ( ∂u/∂x + ∂v/∂y + ∂w/∂z )
 //! ```
 //!
 //! **3D FDTD Velocity Updates**:
-//! ```
+//! ```text
 //! u[i,j,k]^(n+1) = u[i,j,k]^n - (Δt/ρ) ∂p/∂x
 //! v[i,j,k]^(n+1) = v[i,j,k]^n - (Δt/ρ) ∂p/∂y
 //! w[i,j,k]^(n+1) = w[i,j,k]^n - (Δt/ρ) ∂p/∂z

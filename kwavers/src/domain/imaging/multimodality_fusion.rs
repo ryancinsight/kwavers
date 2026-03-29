@@ -5,7 +5,7 @@
 //!
 //! ## Image Fusion Workflow
 //!
-//! ```
+//! ```text
 //! Reference Image (CT/MR)
 //!        ↓
 //! Feature Extraction → Registration → Transform → Fusion → Output

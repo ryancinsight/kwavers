@@ -83,6 +83,9 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --benchmark-disable --timeout=60"
 timeout_method = "thread"
+markers = [
+    "slow: marks tests as slow k-wave CPU simulations (deselect with '-m \"not slow\"')",
+]
 
 [tool.black]
 line-length = 100

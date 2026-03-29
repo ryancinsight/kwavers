@@ -1479,7 +1479,7 @@ dependencies = [
  "libm",
  "macerator",
  "matrixmultiply",
- "ndarray",
+ "ndarray 0.16.1",
  "num-traits",
  "paste",
  "portable-atomic-util",
@@ -3001,15 +3001,32 @@ version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3d6cec19c540ab79e4397ea698a57cd3b44c7cc1cb0babd634db4b2e9b8777a"
 dependencies = [
- "dicom-core",
- "dicom-dictionary-std",
- "dicom-dump",
- "dicom-encoding",
- "dicom-object",
- "dicom-parser",
- "dicom-pixeldata",
- "dicom-transfer-syntax-registry",
- "dicom-ul",
+ "dicom-core 0.7.1",
+ "dicom-dictionary-std 0.7.0",
+ "dicom-dump 0.7.1",
+ "dicom-encoding 0.7.1",
+ "dicom-object 0.7.1",
+ "dicom-parser 0.7.1",
+ "dicom-pixeldata 0.7.1",
+ "dicom-transfer-syntax-registry 0.7.1",
+ "dicom-ul 0.7.1",
+]
+
+[[package]]
+name = "dicom"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e795e4f803dead53a9828b03270dae700301e3b259b5356ea3a2ca26350180b5"
+dependencies = [
+ "dicom-core 0.8.2",
+ "dicom-dictionary-std 0.8.1",
+ "dicom-dump 0.8.1",
+ "dicom-encoding 0.8.2",
+ "dicom-object 0.8.2",
+ "dicom-parser 0.8.2",
+ "dicom-pixeldata 0.8.2",
+ "dicom-transfer-syntax-registry 0.8.2",
+ "dicom-ul 0.8.2",
 ]
 
 [[package]]
@@ -3027,12 +3044,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "dicom-core"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31a670b9d4c5f43ff38fa09255827df8feab04f6d074d0e3b8700c5deeda0c5e"
+dependencies = [
+ "chrono",
+ "itertools 0.14.0",
+ "num-traits",
+ "safe-transmute",
+ "smallvec",
+ "snafu",
+]
+
+[[package]]
 name = "dicom-dictionary-std"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16cfa9b4cf8ee2da9bfd333ac8331a0317979a9a412c4cccdaae4a232e3657a2"
 dependencies = [
- "dicom-core",
+ "dicom-core 0.7.1",
+ "once_cell",
+]
+
+[[package]]
+name = "dicom-dictionary-std"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb8bff24f681377e7b8595e17ed82828decfbcec9c69d09f9dbb8f1c3e8081eb"
+dependencies = [
+ "dicom-core 0.8.2",
  "once_cell",
 ]
 
@@ -3042,16 +3083,34 @@ version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79b98a367df98145f88a7c20609ee832ff349fc77fd49210e888433499cb8721"
 dependencies = [
- "dicom-core",
- "dicom-dictionary-std",
- "dicom-encoding",
- "dicom-json",
- "dicom-object",
- "dicom-transfer-syntax-registry",
+ "dicom-core 0.7.1",
+ "dicom-dictionary-std 0.7.0",
+ "dicom-encoding 0.7.1",
+ "dicom-json 0.7.1",
+ "dicom-object 0.7.1",
+ "dicom-transfer-syntax-registry 0.7.1",
  "owo-colors",
  "serde_json",
  "snafu",
- "terminal_size",
+ "terminal_size 0.3.0",
+]
+
+[[package]]
+name = "dicom-dump"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38f328d7e77c716518208a5bc674308f26b6a087943f8af17ecceb909bc5b00f"
+dependencies = [
+ "dicom-core 0.8.2",
+ "dicom-dictionary-std 0.8.1",
+ "dicom-encoding 0.8.2",
+ "dicom-json 0.8.2",
+ "dicom-object 0.8.2",
+ "dicom-transfer-syntax-registry 0.8.2",
+ "owo-colors",
+ "serde_json",
+ "snafu",
+ "terminal_size 0.4.4",
 ]
 
 [[package]]
@@ -3061,8 +3120,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a8e32b29019487bcd1fced6a66c7ced056470aa1af3c523f13f3263972880b9"
 dependencies = [
  "byteordered",
- "dicom-core",
- "dicom-dictionary-std",
+ "dicom-core 0.7.1",
+ "dicom-dictionary-std 0.7.0",
+ "encoding",
+ "inventory",
+ "snafu",
+]
+
+[[package]]
+name = "dicom-encoding"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9664d8c8de377e29b1e5b8fe8efa7c3cc3ea848ee6a70247f906fa5e00fdc97"
+dependencies = [
+ "byteordered",
+ "dicom-core 0.8.2",
+ "dicom-dictionary-std 0.8.1",
  "encoding",
  "inventory",
  "snafu",
@@ -3075,9 +3148,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33f9e37c472e15178efcbbd17413bb36414c9734b4663731b1b3955474780e81"
 dependencies = [
  "base64 0.22.1",
- "dicom-core",
- "dicom-dictionary-std",
- "dicom-object",
+ "dicom-core 0.7.1",
+ "dicom-dictionary-std 0.7.0",
+ "dicom-object 0.7.1",
+ "num-traits",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "dicom-json"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17116b462a6f0dee5d5f54b13f7d0c0bd7668f39ed0b63bc1a9b9251c12bfbc2"
+dependencies = [
+ "base64 0.22.1",
+ "dicom-core 0.8.2",
+ "dicom-dictionary-std 0.8.1",
+ "dicom-object 0.8.2",
  "num-traits",
  "serde",
  "serde_json",
@@ -3091,12 +3180,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34257e682886305269e15eca257ddb38b3d059f3a7be40603d20d86c8afff507"
 dependencies = [
  "byteordered",
- "dicom-core",
- "dicom-dictionary-std",
- "dicom-encoding",
- "dicom-parser",
- "dicom-transfer-syntax-registry",
+ "dicom-core 0.7.1",
+ "dicom-dictionary-std 0.7.0",
+ "dicom-encoding 0.7.1",
+ "dicom-parser 0.7.1",
+ "dicom-transfer-syntax-registry 0.7.1",
  "itertools 0.13.0",
+ "smallvec",
+ "snafu",
+ "tracing",
+]
+
+[[package]]
+name = "dicom-object"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f460ce81c9a0c2d958888cce45243846845b5447a0023f144d8164e822989fe6"
+dependencies = [
+ "byteordered",
+ "dicom-core 0.8.2",
+ "dicom-dictionary-std 0.8.1",
+ "dicom-encoding 0.8.2",
+ "dicom-parser 0.8.2",
+ "dicom-transfer-syntax-registry 0.8.2",
+ "itertools 0.14.0",
  "smallvec",
  "snafu",
  "tracing",
@@ -3109,9 +3216,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ba2c04664fd806b65e77007ee056712ef39f3c2ec996cad92a0d33a671bc710"
 dependencies = [
  "chrono",
- "dicom-core",
- "dicom-dictionary-std",
- "dicom-encoding",
+ "dicom-core 0.7.1",
+ "dicom-dictionary-std 0.7.0",
+ "dicom-encoding 0.7.1",
+ "smallvec",
+ "snafu",
+ "tracing",
+]
+
+[[package]]
+name = "dicom-parser"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7986f989ccdf19c71a742690e20c66b02f5751964876076ce69d2fc43f6eaff"
+dependencies = [
+ "dicom-core 0.8.2",
+ "dicom-dictionary-std 0.8.1",
+ "dicom-encoding 0.8.2",
  "smallvec",
  "snafu",
  "tracing",
@@ -3124,11 +3245,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28d85d2bb4695a4231f401ed6c567bca1aef6e1cf1355c919ab6d1f59cd8b60e"
 dependencies = [
  "byteorder",
- "dicom-core",
- "dicom-dictionary-std",
- "dicom-encoding",
- "dicom-object",
- "dicom-transfer-syntax-registry",
+ "dicom-core 0.7.1",
+ "dicom-dictionary-std 0.7.0",
+ "dicom-encoding 0.7.1",
+ "dicom-object 0.7.1",
+ "dicom-transfer-syntax-registry 0.7.1",
+ "image",
+ "num-traits",
+ "rayon",
+ "snafu",
+ "tracing",
+]
+
+[[package]]
+name = "dicom-pixeldata"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3155f33cc72a0621458a92d46e5e11f59f4c46e96c05234bda1fdc1b05c17b18"
+dependencies = [
+ "byteorder",
+ "dicom-core 0.8.2",
+ "dicom-dictionary-std 0.8.1",
+ "dicom-encoding 0.8.2",
+ "dicom-object 0.8.2",
+ "dicom-transfer-syntax-registry 0.8.2",
  "image",
  "num-traits",
  "rayon",
@@ -3143,10 +3283,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3611d21f7ee5cb7faf2945b4223589bcfd3b7dd58d40b755b507c602c0ac4a9"
 dependencies = [
  "byteordered",
- "dicom-core",
- "dicom-encoding",
+ "dicom-core 0.7.1",
+ "dicom-encoding 0.7.1",
  "jpeg-decoder",
  "jpeg-encoder",
+ "lazy_static",
+ "tracing",
+]
+
+[[package]]
+name = "dicom-transfer-syntax-registry"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62672d33f29f7c049a92a662c4bd7ef34e85b5eaea379627d335d93b5d25edf6"
+dependencies = [
+ "byteordered",
+ "dicom-core 0.8.2",
+ "dicom-encoding 0.8.2",
+ "jpeg-decoder",
+ "jpeg-encoder",
+ "jxl-oxide",
  "lazy_static",
  "tracing",
 ]
@@ -3158,8 +3314,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95fbdecc082dc74972b556d06df60ac31184ad6acd88684fb2a63581019087a0"
 dependencies = [
  "byteordered",
- "dicom-encoding",
- "dicom-transfer-syntax-registry",
+ "dicom-encoding 0.7.1",
+ "dicom-transfer-syntax-registry 0.7.1",
+ "snafu",
+ "tracing",
+]
+
+[[package]]
+name = "dicom-ul"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96af12961f5e98687dba1b452f6facd3d5322d2440f5b6f6954859ff940b9ba0"
+dependencies = [
+ "byteordered",
+ "bytes",
+ "dicom-encoding 0.8.2",
+ "dicom-transfer-syntax-registry 0.8.2",
  "snafu",
  "tracing",
 ]
@@ -5135,6 +5305,163 @@ dependencies = [
 ]
 
 [[package]]
+name = "jxl-bitstream"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "116184a8c915e99b08c7a4abca038b05863980bbf9e433dc2883363853c99afe"
+dependencies = [
+ "tracing",
+]
+
+[[package]]
+name = "jxl-coding"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0dd7ffdab0c48e989f23a8bd6113d88bd243ae45c7871e90cfdcb6997eacbfb2"
+dependencies = [
+ "jxl-bitstream",
+ "tracing",
+]
+
+[[package]]
+name = "jxl-color"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4806c94be9e37c82e571684ad673af0a2e4049a74942c407034da6a087c4de7b"
+dependencies = [
+ "jxl-bitstream",
+ "jxl-coding",
+ "jxl-grid",
+ "jxl-oxide-common",
+ "jxl-threadpool",
+ "tracing",
+]
+
+[[package]]
+name = "jxl-frame"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1649956cb002031108e1fa44e0e483a770e2e95f4544137788c32265db0b8c71"
+dependencies = [
+ "jxl-bitstream",
+ "jxl-coding",
+ "jxl-grid",
+ "jxl-image",
+ "jxl-modular",
+ "jxl-oxide-common",
+ "jxl-threadpool",
+ "jxl-vardct",
+ "tracing",
+]
+
+[[package]]
+name = "jxl-grid"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5739f02add3d5c00320140bec6f5a80fac4baa630f88fe4c6a55a0d719718ce3"
+dependencies = [
+ "tracing",
+]
+
+[[package]]
+name = "jxl-image"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1de3283303bb66b1742538f1a6947313596242598d6ddf325f301c2fbf01abd3"
+dependencies = [
+ "jxl-bitstream",
+ "jxl-color",
+ "jxl-grid",
+ "jxl-oxide-common",
+ "tracing",
+]
+
+[[package]]
+name = "jxl-modular"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3f2fd5a3346deda8169f6b26aa6c955c32bd275377b527415ef2e5f362e00ad"
+dependencies = [
+ "jxl-bitstream",
+ "jxl-coding",
+ "jxl-grid",
+ "jxl-oxide-common",
+ "jxl-threadpool",
+ "tracing",
+]
+
+[[package]]
+name = "jxl-oxide"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67a42a404a09f4704e60ad102eb995ac074cad467df48631c1a1269b97eef3c5"
+dependencies = [
+ "jxl-bitstream",
+ "jxl-color",
+ "jxl-frame",
+ "jxl-grid",
+ "jxl-image",
+ "jxl-oxide-common",
+ "jxl-render",
+ "jxl-threadpool",
+ "tracing",
+]
+
+[[package]]
+name = "jxl-oxide-common"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4efb65a6ef812eae1083e5d2d1a4358bd74cf7e08d112f6e939a40003a6a9920"
+dependencies = [
+ "jxl-bitstream",
+]
+
+[[package]]
+name = "jxl-render"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9b7162076893570cdeaced01086893df132ff8b2eaf22d63ed3b066d9b88739"
+dependencies = [
+ "jxl-bitstream",
+ "jxl-coding",
+ "jxl-color",
+ "jxl-frame",
+ "jxl-grid",
+ "jxl-image",
+ "jxl-modular",
+ "jxl-oxide-common",
+ "jxl-threadpool",
+ "jxl-vardct",
+ "tracing",
+]
+
+[[package]]
+name = "jxl-threadpool"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad9c78eaf899cce165e266300f9963d8d376d4ed95cf4d12dd7066f05542cd88"
+dependencies = [
+ "rayon",
+ "rayon-core",
+ "tracing",
+]
+
+[[package]]
+name = "jxl-vardct"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "737b4a65897907c644329c8a54e042cefdec2989e482698eea150d463e475fe5"
+dependencies = [
+ "jxl-bitstream",
+ "jxl-coding",
+ "jxl-grid",
+ "jxl-modular",
+ "jxl-oxide-common",
+ "jxl-threadpool",
+ "tracing",
+]
+
+[[package]]
 name = "khronos-egl"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5173,7 +5500,7 @@ dependencies = [
  "chrono",
  "criterion",
  "deadpool-redis",
- "dicom",
+ "dicom 0.7.1",
  "egui",
  "env_logger",
  "flume",
@@ -5181,9 +5508,9 @@ dependencies = [
  "jsonwebtoken",
  "log",
  "loom",
- "nalgebra",
- "ndarray",
- "nifti",
+ "nalgebra 0.32.6",
+ "ndarray 0.16.1",
+ "nifti 0.17.0",
  "num-complex",
  "num-traits",
  "once_cell",
@@ -5201,6 +5528,8 @@ dependencies = [
  "redis 0.25.4",
  "regex",
  "reqwest 0.11.27",
+ "ritk-core",
+ "ritk-registration",
  "rkyv",
  "rustfft",
  "serde",
@@ -5642,7 +5971,24 @@ dependencies = [
  "num-complex",
  "num-rational",
  "num-traits",
- "simba",
+ "simba 0.8.1",
+ "typenum",
+]
+
+[[package]]
+name = "nalgebra"
+version = "0.33.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d43ddcacf343185dfd6de2ee786d9e8b1c2301622afab66b6c73baf9882abfd"
+dependencies = [
+ "approx",
+ "matrixmultiply",
+ "nalgebra-macros",
+ "num-complex",
+ "num-rational",
+ "num-traits",
+ "serde",
+ "simba 0.9.1",
  "typenum",
 ]
 
@@ -5700,6 +6046,20 @@ checksum = "8d5439c4ad607c3c23abf66de8c8bf57ba8adcd1f129e699851a6e43935d339d"
 
 [[package]]
 name = "ndarray"
+version = "0.15.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adb12d4e967ec485a5f71c6311fe28158e9d6f4bc4a447b474184d0f91a8fa32"
+dependencies = [
+ "approx",
+ "matrixmultiply",
+ "num-complex",
+ "num-integer",
+ "num-traits",
+ "rawpointer",
+]
+
+[[package]]
+name = "ndarray"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "882ed72dce9365842bf196bdeedf5055305f11fc8c03dee7bb0194a6cad34841"
@@ -5742,6 +6102,25 @@ checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 
 [[package]]
 name = "nifti"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f58f00fdaae1ed2032400243c60a7c98a75a2320a4fc79a588e832aafcf64045"
+dependencies = [
+ "approx",
+ "bytemuck",
+ "byteordered",
+ "either",
+ "flate2",
+ "ndarray 0.15.6",
+ "num-complex",
+ "num-derive 0.3.3",
+ "num-traits",
+ "quick-error 2.0.1",
+ "rgb",
+]
+
+[[package]]
+name = "nifti"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1bac57e0b2eeed409bce85d9e4294fb82fae6cd37d14e04349586b2a6ebe7153"
@@ -5751,9 +6130,9 @@ dependencies = [
  "byteordered",
  "either",
  "flate2",
- "ndarray",
+ "ndarray 0.16.1",
  "num-complex",
- "num-derive",
+ "num-derive 0.4.2",
  "num-traits",
  "quick-error 2.0.1",
  "rgb",
@@ -5846,6 +6225,7 @@ checksum = "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495"
 dependencies = [
  "bytemuck",
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -5853,6 +6233,17 @@ name = "num-conv"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9"
+
+[[package]]
+name = "num-derive"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "876a53fff98e03a936a674b29568b0e605f06b29372c2489ff4de23f1949743d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
 
 [[package]]
 name = "num-derive"
@@ -5954,7 +6345,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7aac2e6a6e4468ffa092ad43c39b81c79196c2bb773b8db4085f695efe3bba17"
 dependencies = [
  "libc",
- "ndarray",
+ "ndarray 0.16.1",
  "num-complex",
  "num-integer",
  "num-traits",
@@ -6599,7 +6990,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "kwavers",
- "ndarray",
+ "ndarray 0.16.1",
  "num-complex",
  "numpy",
  "pyo3",
@@ -6925,7 +7316,7 @@ dependencies = [
  "maybe-rayon",
  "new_debug_unreachable",
  "noop_proc_macro",
- "num-derive",
+ "num-derive 0.4.2",
  "num-traits",
  "once_cell",
  "paste",
@@ -7222,6 +7613,68 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "ritk-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "burn",
+ "burn-ndarray",
+ "bytemuck",
+ "nalgebra 0.33.3",
+ "proptest",
+ "serde",
+ "tempfile",
+ "thiserror 2.0.17",
+ "tracing",
+]
+
+[[package]]
+name = "ritk-io"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "burn",
+ "burn-ndarray",
+ "dicom 0.8.2",
+ "nalgebra 0.33.3",
+ "ndarray 0.15.6",
+ "nifti 0.16.0",
+ "rayon",
+ "ritk-core",
+ "tempfile",
+ "thiserror 2.0.17",
+ "tracing",
+]
+
+[[package]]
+name = "ritk-model"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "burn",
+ "burn-ndarray",
+ "ritk-core",
+ "tracing",
+]
+
+[[package]]
+name = "ritk-registration"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "burn",
+ "burn-ndarray",
+ "nalgebra 0.33.3",
+ "ritk-core",
+ "ritk-io",
+ "ritk-model",
+ "thiserror 2.0.17",
+ "tracing",
+ "tracing-subscriber",
+ "walkdir",
 ]
 
 [[package]]
@@ -7884,6 +8337,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "simba"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c99284beb21666094ba2b75bbceda012e610f5479dfcc2d6e2426f53197ffd95"
+dependencies = [
+ "approx",
+ "num-complex",
+ "num-traits",
+ "paste",
+ "wide",
+]
+
+[[package]]
 name = "simd-adler32"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8324,7 +8790,7 @@ dependencies = [
  "half",
  "lazy_static",
  "libc",
- "ndarray",
+ "ndarray 0.16.1",
  "rand 0.8.5",
  "safetensors 0.3.3",
  "thiserror 1.0.69",
@@ -8362,6 +8828,16 @@ checksum = "21bebf2b7c9e0a515f6e0f8c51dc0f8e4696391e6f1ff30379559f8365fb0df7"
 dependencies = [
  "rustix 0.38.44",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "terminal_size"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
+dependencies = [
+ "rustix 1.1.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

@@ -427,8 +427,147 @@ mod tests {
     use super::*;
     use crate::domain::grid::Grid;
     use crate::domain::medium::HomogeneousMedium;
-    use crate::domain::source::GridSource;
-    use crate::solver::forward::pstd::config::{AntiAliasingConfig, PSTDConfig};
+    use crate::domain::source::{GridSource, SourceMode};
+    use crate::solver::forward::pstd::config::{AntiAliasingConfig, BoundaryConfig, PSTDConfig};
+
+    /// Verify that additive pressure source injection produces correct sign pattern.
+    ///
+    /// Reference: k-Wave Python numpy diagnostic (`diag_source_injection_numpy.py`) confirms
+    /// that for a point source at [N/2, N/2, N/2] with N=16:
+    /// - p[N/2, N/2, N/2] (source point) > 0
+    /// - p[0, N/2, N/2] (off-source) < 0
+    ///
+    /// If this test fails with p[0,8,8] > 0, the 3D FFT axis ordering does not match
+    /// numpy.fftn, causing the spectral source injection to produce incorrect spatial patterns.
+    #[test]
+    fn test_source_injection_sign_matches_kwave() {
+        let n = 16usize;
+        let dx = 1e-3_f64;
+        let c0 = 1500.0_f64;
+        let rho0 = 1000.0_f64;
+        let dt = 0.3 * dx / c0; // CFL=0.3 → dt ≈ 2e-7 s
+        let src = n / 2; // 8
+
+        let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
+        let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+
+        // Source at [8,8,8] with signal=[0, 1]: step1 → 0, step2 → 1 Pa injection
+        let mut p_mask = ndarray::Array3::<f64>::zeros((n, n, n));
+        p_mask[[src, src, src]] = 1.0;
+
+        let mut p_signal = ndarray::Array2::<f64>::zeros((1, 2));
+        p_signal[[0, 1]] = 1.0; // signal[0]=0, signal[1]=1
+
+        let source = GridSource {
+            p_mask: Some(p_mask),
+            p_signal: Some(p_signal),
+            p_mode: SourceMode::Additive,
+            ..GridSource::new_empty()
+        };
+
+        let config = PSTDConfig {
+            dt,
+            nt: 2,
+            boundary: BoundaryConfig::None, // No PML for clean 2-step test
+            smooth_sources: false,
+            ..Default::default()
+        };
+
+        let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
+
+        // Step 1: time_index=0, signal[0]=0 → no injection, field stays zero
+        solver.step_forward().unwrap();
+
+        // Step 2: time_index=1, signal[1]=1 Pa → injection
+        solver.step_forward().unwrap();
+
+        let p_src = solver.fields.p[[src, src, src]];
+        let p_off = solver.fields.p[[0, src, src]];
+
+        // Source point should be strongly positive (~0.53 Pa from k-Wave reference)
+        assert!(
+            p_src > 0.1,
+            "p at source [{src},{src},{src}] = {p_src:.6e}, expected ~0.53 Pa (positive)"
+        );
+
+        // Off-source point [0,8,8] must be NEGATIVE (k-Wave numpy confirms -4.89e-4 Pa)
+        assert!(
+            p_off < 0.0,
+            "p at [0,{src},{src}] = {p_off:.6e}, expected NEGATIVE (k-Wave: -4.89e-4 Pa). \
+             Positive result indicates 3D FFT axis ordering mismatch vs numpy.fftn."
+        );
+    }
+
+    /// Verify that free wave propagation does not amplify the injected field.
+    ///
+    /// Root cause of the 2026-03-27 amplitude bug: Nyquist frequency bin was zeroed in
+    /// ddx_k_shift_pos/neg operators, which removed ~18% of k-space energy from the
+    /// velocity/density gradient computation. This caused a 1.64x amplitude amplification
+    /// per free propagation step. This test guards against that regression.
+    ///
+    /// Reference values from k-Wave binary (N=16, no PML, signal=[0,1,0]):
+    ///   step 2 (injection): p[8,8,8] = 0.5344 Pa
+    ///   step 3 (free prop): p[8,8,8] = 0.1128 Pa   (ratio 0.211 = decay, not growth)
+    ///   step 4 (free prop): p[8,8,8] = -0.3160 Pa  (sign flip, continued propagation)
+    #[test]
+    fn test_nyquist_not_zeroed_propagation_amplitude() {
+        let n = 16usize;
+        let dx = 1e-3_f64;
+        let c0 = 1500.0_f64;
+        let rho0 = 1000.0_f64;
+        let dt = 0.3 * dx / c0;
+        let src = n / 2;
+
+        let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
+        let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+
+        // signal=[0,1,0,0]: inject once at step 2, then free propagation
+        let mut p_mask = ndarray::Array3::<f64>::zeros((n, n, n));
+        p_mask[[src, src, src]] = 1.0;
+        let mut p_signal = ndarray::Array2::<f64>::zeros((1, 4));
+        p_signal[[0, 1]] = 1.0;
+
+        let source = GridSource {
+            p_mask: Some(p_mask),
+            p_signal: Some(p_signal),
+            p_mode: SourceMode::Additive,
+            ..GridSource::new_empty()
+        };
+        let config = PSTDConfig {
+            dt,
+            nt: 4,
+            boundary: BoundaryConfig::None,
+            smooth_sources: false,
+            ..Default::default()
+        };
+
+        let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
+        solver.step_forward().unwrap(); // step 1: signal=0, p stays zero
+        solver.step_forward().unwrap(); // step 2: inject 1 Pa
+        let p_step2 = solver.fields.p[[src, src, src]];
+        solver.step_forward().unwrap(); // step 3: free propagation
+        let p_step3 = solver.fields.p[[src, src, src]];
+
+        // Injection must be substantial (k-Wave reference: ~0.534 Pa)
+        assert!(
+            p_step2 > 0.4,
+            "step2 p[src] = {p_step2:.4e}, expected ~0.534 Pa"
+        );
+
+        // After one free propagation step, amplitude at source must DECREASE
+        // (k-Wave: 0.1128 Pa, ratio ~0.211). If Nyquist is zeroed it gives 0.1853 Pa (1.64x)
+        // which still passes < p_step2 but let's bound it tightly.
+        let ratio = p_step3 / p_step2;
+        assert!(
+            ratio < 0.3,
+            "step3 / step2 ratio = {ratio:.4} at source [{src},{src},{src}], expected ~0.211. \
+             Ratio > 0.3 indicates Nyquist zeroing regression (step3 = {p_step3:.4e}, step2 = {p_step2:.4e})."
+        );
+        assert!(
+            p_step3 > 0.0,
+            "step3 p[src] = {p_step3:.4e}, expected positive after first free step"
+        );
+    }
 
     #[test]
     fn test_anti_aliasing_runs() {

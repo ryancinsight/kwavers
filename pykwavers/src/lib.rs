@@ -1294,6 +1294,62 @@ impl KWaveArray {
         self.inner.get_focus_delays(focus_point)
     }
 
+    /// Compute time delays [s] for electronic focusing at a point.
+    ///
+    /// Returns per-element delays such that `τᵢ = (d_max − dᵢ) / c`, where
+    /// `dᵢ` is the distance from element `i` to `focus_point` and `d_max = max(dᵢ)`.
+    /// The farthest element has delay 0; closer elements are delayed so all wavefronts
+    /// arrive at the focus simultaneously.
+    ///
+    /// Parameters
+    /// ----------
+    /// focus_point : tuple[float, float, float]
+    ///     Focus position (x, y, z) in metres
+    ///
+    /// Returns
+    /// -------
+    /// list[float]
+    ///     Per-element delays in seconds. All values ≥ 0.
+    ///
+    /// Reference: Selfridge et al. (1980) Appl. Phys. Lett. 37(1):35–36.
+    fn get_element_delays(&self, focus_point: (f64, f64, f64)) -> Vec<f64> {
+        self.inner.get_element_delays(focus_point)
+    }
+
+    /// Compute per-element amplitude weights for array apodization.
+    ///
+    /// Parameters
+    /// ----------
+    /// window : str
+    ///     Window type: ``"Rectangular"`` (uniform), ``"Hann"``, or ``"Hamming"``
+    ///
+    /// Returns
+    /// -------
+    /// list[float]
+    ///     Apodization weights in ``[0, 1]``, one per element.
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If `window` is not one of the recognised strings.
+    ///
+    /// Reference: Harris (1978) Proc. IEEE 66(1):51–83.
+    fn get_apodization(&self, window: &str) -> PyResult<Vec<f64>> {
+        use kwavers::domain::source::kwave_array::ApodizationWindow;
+        let w = match window {
+            "Rectangular" => ApodizationWindow::Rectangular,
+            "Hann" => ApodizationWindow::Hann,
+            "Hamming" => ApodizationWindow::Hamming,
+            other => {
+                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                    "Unknown apodization window '{}'. Choose from: Rectangular, Hann, Hamming",
+                    other
+                )));
+            }
+        };
+        Ok(self.inner.get_apodization(w))
+    }
+
     fn __repr__(&self) -> String {
         format!("KWaveArray(num_elements={})", self.inner.num_elements())
     }
@@ -1815,6 +1871,8 @@ pub struct Simulation {
     pml_inside: bool,
     /// Per-dimension PML absorption factor (k-Wave `pml_alpha`): [x, y, z]
     pml_alpha_xyz: Option<(f64, f64, f64)>,
+    /// Enable Westervelt nonlinear source term in FDTD solver
+    enable_nonlinear: bool,
 }
 
 #[pymethods]
@@ -1906,6 +1964,7 @@ impl Simulation {
             pml_size_xyz: None,
             pml_inside: true,
             pml_alpha_xyz: None,
+            enable_nonlinear: false,
         })
     }
 
@@ -2001,6 +2060,30 @@ impl Simulation {
     #[getter]
     fn pml_inside(&self) -> bool {
         self.pml_inside
+    }
+
+    /// Enable or disable the Westervelt nonlinear acoustic source term.
+    ///
+    /// When enabled, the FDTD solver adds the nonlinear pressure correction
+    /// ``(β/ρ₀c₀⁴) ∂²p²/∂t²`` at each time step, enabling harmonic generation
+    /// and shock wave simulation.  Currently supported for FDTD solver only.
+    ///
+    /// Parameters
+    /// ----------
+    /// enable : bool
+    ///     True to enable Westervelt nonlinear term (default: False).
+    ///
+    /// Examples
+    /// --------
+    /// >>> sim.set_nonlinear(True)   # enable second-harmonic generation
+    fn set_nonlinear(&mut self, enable: bool) {
+        self.enable_nonlinear = enable;
+    }
+
+    /// Return whether the Westervelt nonlinear term is enabled.
+    #[getter]
+    fn nonlinear(&self) -> bool {
+        self.enable_nonlinear
     }
 
     /// Run the simulation.
@@ -2537,6 +2620,7 @@ impl Simulation {
             subgridding: false,
             subgrid_factor: 2,
             enable_gpu_acceleration: false,
+            enable_nonlinear: self.enable_nonlinear,
             sensor_mask: Some(sensor_mask.clone()),
         };
 

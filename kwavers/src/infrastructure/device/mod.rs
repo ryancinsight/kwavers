@@ -29,7 +29,7 @@
 //! ## Usage Example
 //!
 //! ```rust,no_run
-//! use kwavers::infrastructure::device::{DeviceManager, MockTransducer};
+//! use kwavers::infrastructure::device::{DeviceManager, HardwareCommand, MockTransducer};
 //!
 //! // Create device manager
 //! let mut manager = DeviceManager::new();

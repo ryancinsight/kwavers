@@ -1,3 +1,4 @@
+use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::domain::medium::properties::OpticalPropertyData;
 use ndarray::Array3;
 
@@ -33,7 +34,7 @@ impl Default for PhotoacousticParameters {
             gruneisen_parameters: vec![0.12, 0.12, 0.12, 0.12],
             pulse_duration: 10e-9,
             laser_fluence: 10.0,
-            speed_of_sound: 1500.0,
+            speed_of_sound: SOUND_SPEED_WATER_SIM,
             center_frequency: 5e6,
             dt: 1e-9,
         }

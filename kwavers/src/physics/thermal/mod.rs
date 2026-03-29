@@ -29,6 +29,7 @@ pub use crate::domain::medium::properties::ThermalPropertyData;
 /// For Pennes solver simulations, also specify arterial temperature and metabolic heat
 /// as separate simulation parameters.
 pub mod tissues {
+    use crate::core::constants::fundamental::DENSITY_BLOOD;
     use crate::domain::medium::properties::ThermalPropertyData;
 
     /// Liver tissue properties
@@ -44,7 +45,7 @@ pub mod tissues {
         ThermalPropertyData::new(
             0.52,         // conductivity (W/m/K)
             3540.0,       // specific_heat (J/kg/K)
-            1060.0,       // density (kg/m³)
+            DENSITY_BLOOD, // density (kg/m³)
             Some(16.7),   // blood_perfusion (kg/m³/s) - high perfusion
             Some(3617.0), // blood_specific_heat (J/kg/K)
         )

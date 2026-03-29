@@ -150,6 +150,7 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
         subgridding: false,
         subgrid_factor: 2,
         enable_gpu_acceleration: false,
+        enable_nonlinear: false,
         sensor_mask: Some(sensor_mask),
     };
 
@@ -344,6 +345,7 @@ fn test_fdtd_point_source_injection() -> KwaversResult<()> {
         subgridding: false,
         subgrid_factor: 2,
         enable_gpu_acceleration: false,
+        enable_nonlinear: false,
         sensor_mask: Some(sensor_mask),
     };
 

@@ -143,11 +143,23 @@ impl Fft3d {
         self.transform_3d_complex(&data, forward)
     }
 
-    /// Core 3D transform for complex data
+    /// Core 3D transform for complex data — allocating convenience wrapper.
     fn transform_3d_complex(&self, data: &Array3<Complex64>, forward: bool) -> Array3<Complex64> {
         let mut result = data.clone();
         self.transform_3d_complex_inplace(&mut result, forward);
         result
+    }
+
+    /// Zero-allocation variant: transform `data` into caller-provided `output`.
+    /// Prefer this in hot loops where `output` can be reused across calls.
+    pub fn transform_3d_complex_into(
+        &self,
+        data: &Array3<Complex64>,
+        output: &mut Array3<Complex64>,
+        forward: bool,
+    ) {
+        output.assign(data);
+        self.transform_3d_complex_inplace(output, forward);
     }
 
     fn transform_3d_complex_inplace(&self, data: &mut Array3<Complex64>, forward: bool) {
@@ -476,7 +488,7 @@ impl Fft2d {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
-    use ndarray::Array1;
+    use ndarray::{Array1, Array3};
 
     #[test]
     fn test_fft_1d_forward_inverse() {
@@ -488,5 +500,142 @@ mod tests {
         for i in 0..n {
             assert_relative_eq!(data[i], reconstructed[i], epsilon = 1e-10);
         }
+    }
+
+    /// Verify 3D FFT of a delta function at [i0,j0,k0] against the analytic formula:
+    ///   FFT(delta[i0,j0,k0])[p,q,r] = exp(-2πi*(i0*p/N + j0*q/N + k0*r/N))
+    ///
+    /// For delta at [2,2,2] with N=4: exp(-2πi*(p+q+r)/2) = (-1)^(p+q+r) (real, ±1).
+    /// This test definitively confirms the 3D FFT axis ordering and output layout.
+    #[test]
+    fn test_3d_fft_delta_analytic() {
+        let n = 4usize;
+        let i0 = 2usize;
+        let j0 = 2usize;
+        let k0 = 2usize;
+
+        let mut input = Array3::<f64>::zeros((n, n, n));
+        input[[i0, j0, k0]] = 1.0;
+
+        let fft = Fft3d::new(n, n, n);
+        let forward = fft.forward(&input);
+
+        // Check analytic result: FFT[p,q,r] = (-1)^(p+q+r) for this delta
+        for p in 0..n {
+            for q in 0..n {
+                for r in 0..n {
+                    let exponent_real = (-(2.0 * std::f64::consts::PI)
+                        * (i0 * p + j0 * q + k0 * r) as f64
+                        / n as f64)
+                        .cos();
+                    let exponent_imag = (-(2.0 * std::f64::consts::PI)
+                        * (i0 * p + j0 * q + k0 * r) as f64
+                        / n as f64)
+                        .sin();
+                    let actual_re = forward[[p, q, r]].re;
+                    let actual_im = forward[[p, q, r]].im;
+                    assert!(
+                        (actual_re - exponent_real).abs() < 1e-12,
+                        "FFT[{p},{q},{r}].re = {actual_re:.6}, expected {exponent_real:.6}"
+                    );
+                    assert!(
+                        (actual_im - exponent_imag).abs() < 1e-12,
+                        "FFT[{p},{q},{r}].im = {actual_im:.6}, expected {exponent_imag:.6}"
+                    );
+                }
+            }
+        }
+
+        // Also verify IFFT roundtrip recovers the delta
+        let reconstructed = fft.inverse(&forward);
+        for i in 0..n {
+            for j in 0..n {
+                for k in 0..n {
+                    let expected = if i == i0 && j == j0 && k == k0 { 1.0 } else { 0.0 };
+                    assert!(
+                        (reconstructed[[i, j, k]] - expected).abs() < 1e-12,
+                        "IFFT[{i},{j},{k}] = {:.6e}, expected {expected}",
+                        reconstructed[[i, j, k]]
+                    );
+                }
+            }
+        }
+    }
+
+    /// Verify that source_kappa * FFT(delta) → IFFT gives the expected spatial pattern.
+    /// For source at [i0,j0,k0], the filtered output at position [a,b,c] is:
+    ///   out[a,b,c] = (1/N³) * Σ_{p,q,r} source_kappa[p,q,r] * exp(2πi*((a-i0)*p + (b-j0)*q + (c-k0)*r)/N)
+    ///
+    /// At the source: out[i0,j0,k0] = mean(source_kappa) > 0.
+    /// At [0,j0,k0]: sign determined by Σ_p (-1)^p * (Σ_{q,r} source_kappa[p,q,r]).
+    /// Numpy/k-Wave verify this should be NEGATIVE for N=16, c0=1500, dt≈2e-7.
+    #[test]
+    fn test_source_kappa_filter_sign() {
+        let n = 16usize;
+        let dx = 1e-3_f64;
+        let c0 = 1500.0_f64;
+        let dt = 0.3 * dx / c0; // CFL=0.3
+        let src = n / 2; // 8
+
+        // Build source_kappa using standard FFT order (matches kwavers)
+        let dk = 2.0 * std::f64::consts::PI / (n as f64 * dx);
+        let k_vec: Vec<f64> = (0..n)
+            .map(|i| {
+                if i <= n / 2 {
+                    i as f64 * dk
+                } else {
+                    (i as i64 - n as i64) as f64 * dk
+                }
+            })
+            .collect();
+
+        let mut source_kappa = Array3::<f64>::zeros((n, n, n));
+        for i in 0..n {
+            for j in 0..n {
+                for k in 0..n {
+                    let k_mag = (k_vec[i].powi(2) + k_vec[j].powi(2) + k_vec[k].powi(2)).sqrt();
+                    source_kappa[[i, j, k]] = (0.5 * c0 * dt * k_mag).cos();
+                }
+            }
+        }
+
+        // Delta at [src, src, src]
+        let mut delta = Array3::<f64>::zeros((n, n, n));
+        delta[[src, src, src]] = 1.0;
+
+        let fft = Fft3d::new(n, n, n);
+
+        // Forward FFT
+        let mut spectrum = fft.forward(&delta);
+
+        // Multiply by source_kappa
+        Zip::from(&mut spectrum)
+            .and(&source_kappa)
+            .for_each(|s, &sk| *s *= Complex64::new(sk, 0.0));
+
+        // Inverse FFT
+        let filtered = fft.inverse(&spectrum);
+
+        let p_src = filtered[[src, src, src]];
+        let p_off_x = filtered[[0, src, src]]; // along x-axis
+
+        // Source point should be positive (mean of source_kappa > 0)
+        assert!(
+            p_src > 0.0,
+            "filtered at source [{src},{src},{src}] should be positive, got {p_src:.6e}"
+        );
+
+        // Off-source point at [0, src, src] should be NEGATIVE (verified by k-Wave numpy)
+        assert!(
+            p_off_x < 0.0,
+            "filtered at [0,{src},{src}] should be negative (k-Wave verified), got {p_off_x:.6e}. \
+             This indicates the 3D FFT output ordering does not match numpy.fftn expectations."
+        );
+
+        // Magnitude at source should vastly exceed off-source
+        assert!(
+            p_src.abs() > p_off_x.abs() * 10.0,
+            "Source dominates: p_src={p_src:.4e}, p_off={p_off_x:.4e}"
+        );
     }
 }

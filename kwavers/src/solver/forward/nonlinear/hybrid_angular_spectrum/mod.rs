@@ -36,6 +36,7 @@ pub mod diffraction;
 pub mod nonlinearity;
 pub mod solver;
 
+use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -68,7 +69,7 @@ pub struct HASConfig {
 impl Default for HASConfig {
     fn default() -> Self {
         Self {
-            sound_speed: 1500.0,
+            sound_speed: SOUND_SPEED_WATER_SIM,
             density: 1000.0,
             nonlinearity: 6.0,        // Typical for water
             attenuation_coeff: 0.5,   // 0.5 dB/cm/MHz

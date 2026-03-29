@@ -901,6 +901,181 @@ class TestHeterogeneousMediumParity:
         print(f"\nTwo-layer medium parity:")
         print(f"  L2 error:    {metrics['l2_error']:.3f}")
         print(f"  Correlation: {metrics['correlation']:.3f}")
-        
+
         tolerance = SOLVER_TOLERANCES["fdtd"]
         assert metrics["l2_error"] < tolerance["l2_max"]
+
+
+# ============================================================================
+# P0 Initial Pressure (IVP) Parity Tests
+# ============================================================================
+
+
+class TestP0InitialPressureParity:
+    """
+    Validate p0 initial-value-problem (IVP) source behaviour.
+
+    Physics reference:
+    For a Gaussian initial pressure pulse p₀(r) = A·exp(-r²/(2σ²)) in a 3D homogeneous
+    medium with sound speed c, the wavefront radius grows as R(t) = c·t.  The peak
+    pressure at the sensor (distance d from the source centre) arrives at t_peak ≈ d/c
+    (Huygens principle).
+
+    Standalone tests (no k-wave required):
+    - Non-zero, finite sensor data is produced
+    - Peak arrives within 20% of the expected travel time d/c
+    - Waveform is bipolar (diverging spherical shell → positive then negative lobe)
+
+    Reference: Kak & Slaney (1988) "Principles of Computerised Tomographic Imaging",
+    Ch. 3; Treeby & Cox (2010) k-Wave toolbox documentation (IVP examples).
+    """
+
+    def _gaussian_p0(self, grid_shape, center, sigma, amplitude=1e5):
+        """3D Gaussian pressure distribution."""
+        nx, ny, nz = grid_shape
+        cx, cy, cz = center
+        p0 = np.zeros((nx, ny, nz))
+        for i in range(nx):
+            for j in range(ny):
+                for k in range(nz):
+                    r2 = (i - cx)**2 + (j - cy)**2 + (k - cz)**2
+                    p0[i, j, k] = amplitude * np.exp(-r2 / (2.0 * sigma**2))
+        return p0
+
+    def test_p0_ivp_produces_nonzero_finite_data(self):
+        """Gaussian p0 IVP: sensor data is non-zero and finite."""
+        N = 32
+        dx = 0.1e-3       # 0.1 mm
+        c = 1500.0
+        rho = 1000.0
+
+        grid = kw.Grid(nx=N, ny=N, nz=N, dx=dx, dy=dx, dz=dx)
+        medium = kw.Medium.homogeneous(sound_speed=c, density=rho)
+
+        # Gaussian pulse centred at (8, 16, 16) with σ = 3 voxels
+        center = (8, N // 2, N // 2)
+        p0 = self._gaussian_p0((N, N, N), center, sigma=3.0, amplitude=1e5)
+        source = kw.Source.from_initial_pressure(p0)
+
+        # Sensor at (24, 16, 16) — 16 voxels = 1.6 mm from source centre
+        sensor_pos = (24 * dx, (N // 2) * dx, (N // 2) * dx)
+        sensor = kw.Sensor.point(position=sensor_pos)
+
+        dt = compute_cfl_dt(dx, c)
+        nt = 200
+        sim = kw.Simulation(grid, medium, source, sensor, solver=kw.SolverType.FDTD)
+        result = sim.run(time_steps=nt, dt=dt)
+
+        assert result.sensor_data is not None
+        assert len(result.sensor_data) == nt
+        assert np.all(np.isfinite(result.sensor_data)), "sensor data contains non-finite values"
+        assert np.max(np.abs(result.sensor_data)) > 0, "sensor data is all zeros"
+
+    def test_p0_ivp_peak_arrives_at_expected_time(self):
+        """
+        Peak of p0 wavefront arrives within 20% of expected travel time d/c.
+
+        Theorem (Huygens' principle, spherical wave propagation):
+        For an impulsive point source at distance d from a sensor in a homogeneous medium,
+        the peak pressure arrives at t_peak = d/c.
+        """
+        N = 48
+        dx = 0.1e-3       # 0.1 mm
+        c = 1500.0
+        rho = 1000.0
+
+        grid = kw.Grid(nx=N, ny=N, nz=N, dx=dx, dy=dx, dz=dx)
+        medium = kw.Medium.homogeneous(sound_speed=c, density=rho)
+
+        # Narrow Gaussian at (10, 24, 24) — approximates point source
+        cx, cy, cz = 10, N // 2, N // 2
+        p0 = self._gaussian_p0((N, N, N), (cx, cy, cz), sigma=1.5, amplitude=1e5)
+        source = kw.Source.from_initial_pressure(p0)
+
+        # Sensor at (34, 24, 24) — 24 voxels = 2.4 mm from source
+        sx = 34
+        sensor_pos = (sx * dx, cy * dx, cz * dx)
+        sensor = kw.Sensor.point(position=sensor_pos)
+
+        d = (sx - cx) * dx               # 2.4 mm
+        t_expected = d / c               # ~1.6 µs
+        dt = compute_cfl_dt(dx, c)
+        nt = int(3 * t_expected / dt) + 50   # simulate well past expected arrival
+
+        sim = kw.Simulation(grid, medium, source, sensor, solver=kw.SolverType.FDTD)
+        result = sim.run(time_steps=nt, dt=dt)
+
+        t_axis = np.arange(nt) * dt
+        t_peak = t_axis[np.argmax(np.abs(result.sensor_data))]
+
+        print(f"\nP0 IVP arrival: expected={t_expected*1e6:.2f} µs, measured={t_peak*1e6:.2f} µs")
+        assert abs(t_peak - t_expected) / t_expected < 0.20, (
+            f"Peak arrival time {t_peak*1e6:.2f} µs deviates > 20% from expected "
+            f"{t_expected*1e6:.2f} µs"
+        )
+
+    @requires_kwave
+    @pytest.mark.skipif(not run_slow, reason=slow_reason)
+    def test_p0_ivp_parity_vs_kwave(self):
+        """
+        p0 IVP: pykwavers sensor waveform vs k-wave-python.
+
+        Tier 1 (hard): both produce finite, non-zero data.
+        Tier 2 (soft): L2 error < 1.5 (FDTD vs k-space expected to differ in amplitude).
+        """
+        N = 32
+        dx = 0.2e-3
+        c = 1500.0
+        rho = 1000.0
+        pml_size = 6
+
+        # Gaussian p0 at centre
+        cx, cy, cz = N // 4, N // 2, N // 2
+        p0 = self._gaussian_p0((N, N, N), (cx, cy, cz), sigma=3.0, amplitude=1e5)
+        dt = compute_cfl_dt(dx, c)
+        nt = 100
+
+        # --- k-wave-python ---
+        kgrid = kWaveGrid(Vector([N, N, N]), Vector([dx, dx, dx]))
+        kgrid.setTime(nt, dt)
+        medium_kw = kWaveMedium(sound_speed=c, density=rho)
+        source_kw = kSource()
+        source_kw.p0 = p0
+        ix, iy, iz = 3 * N // 4, N // 2, N // 2
+        sensor_mask = np.zeros((N, N, N))
+        sensor_mask[ix, iy, iz] = 1.0
+        sensor_kw = kSensor(sensor_mask.astype(bool))
+        sensor_kw.record = ["p"]
+        sim_options = SimulationOptions(
+            pml_inside=True, pml_size=pml_size, data_cast="single", save_to_disk=True
+        )
+        exec_options = SimulationExecutionOptions(
+            is_gpu_simulation=False, verbose_level=0, show_sim_log=False
+        )
+        result_kw = kspaceFirstOrder3D(
+            kgrid=kgrid, medium=medium_kw, source=source_kw, sensor=sensor_kw,
+            simulation_options=sim_options, execution_options=exec_options,
+        )
+        p_kw = result_kw["p"].flatten() if isinstance(result_kw, dict) else result_kw.flatten()
+
+        # --- pykwavers ---
+        grid = kw.Grid(nx=N, ny=N, nz=N, dx=dx, dy=dx, dz=dx)
+        medium_pk = kw.Medium.homogeneous(sound_speed=c, density=rho)
+        source_pk = kw.Source.from_initial_pressure(p0)
+        sensor_pk = kw.Sensor.point(position=(ix * dx, iy * dx, iz * dx))
+        sim_pk = kw.Simulation(grid, medium_pk, source_pk, sensor_pk,
+                               solver=kw.SolverType.FDTD, pml_size=pml_size)
+        result_pk = sim_pk.run(time_steps=nt, dt=dt)
+        p_pk = result_pk.sensor_data
+
+        assert np.all(np.isfinite(p_kw)), "k-wave produced non-finite data"
+        assert np.all(np.isfinite(p_pk)), "pykwavers produced non-finite data"
+        assert np.max(np.abs(p_kw)) > 0, "k-wave produced all-zero data"
+        assert np.max(np.abs(p_pk)) > 0, "pykwavers produced all-zero data"
+
+        metrics = compute_error_metrics(p_kw, p_pk)
+        print(f"\nP0 IVP parity: L2={metrics['l2_error']:.3f}, "
+              f"corr={metrics['correlation']:.3f}")
+        assert metrics["l2_error"] < SOLVER_TOLERANCES["fdtd"]["l2_max"], (
+            f"L2 error {metrics['l2_error']:.3f} exceeds {SOLVER_TOLERANCES['fdtd']['l2_max']}"
+        )

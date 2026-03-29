@@ -5,7 +5,7 @@
 //!
 //! ## Layer Hierarchy (Strict Downward Dependencies Only)
 //!
-//! ```
+//! ```text
 //! Layer 0 (Foundation)
 //!   core/             - Error handling, time, constants, logging
 //!   ↓ ONLY

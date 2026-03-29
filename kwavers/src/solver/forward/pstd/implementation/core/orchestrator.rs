@@ -24,7 +24,6 @@ use crate::solver::forward::pstd::utils::compute_k_magnitude;
 use ndarray::{Array1, Array2, Array3, Zip};
 use std::f64::consts::PI;
 use std::sync::Arc;
-use tracing::debug;
 
 /// Core PSTD solver implementing the pseudospectral method
 pub struct PSTDSolver {
@@ -67,6 +66,14 @@ pub struct PSTDSolver {
     pub(crate) absorb_tau: Array3<f64>,
     pub(crate) absorb_eta: Array3<f64>,
     pub(crate) absorb_y: Array3<f64>, // Spatially-varying absorption exponent
+    /// Spectral absorption operator ∇^(y−2): precomputed |k|^(y−2) in FFT order.
+    /// Applied to per-axis velocity divergence in the density update step.
+    /// Treeby & Cox (2010) Eq. 10; k-Wave: nabla1 = kgrid.k .^ (y - 2).
+    pub(crate) absorb_nabla1: Array3<f64>,
+    /// Spectral dispersion operator ∇^(y−1): precomputed |k|^(y−1) in FFT order.
+    /// Applied to per-axis velocity divergence in the density update step.
+    /// Treeby & Cox (2010) Eq. 10; k-Wave: nabla2 = kgrid.k .^ (y - 1).
+    pub(crate) absorb_nabla2: Array3<f64>,
     pub(crate) kspace_operators: Option<PSTDKSOperators>,
     // Staggered grid shift operators (1D, per axis, complex)
     // ddx_k_shift_pos[x] = i*kx * exp(+i*kx*dx/2) — for pressure gradient → velocity
@@ -125,8 +132,8 @@ impl PSTDSolver {
             BoundaryConfig::None => None,
         };
 
-        let (absorb_tau, absorb_eta, absorb_y) =
-            initialize_absorption_operators(&config, &grid, medium, k_max, c_ref)?;
+        let (absorb_tau, absorb_eta, absorb_y, absorb_nabla1, absorb_nabla2) =
+            initialize_absorption_operators(&config, &grid, medium, &k_mag, k_max, c_ref)?;
         let field_arrays =
             crate::solver::forward::pstd::data::initialize_field_arrays(&grid, medium)?;
         let k_vec = (k_ops.kx, k_ops.ky, k_ops.kz);
@@ -141,28 +148,26 @@ impl PSTDSolver {
                 let mut shift_pos = Array1::zeros(n);
                 let mut shift_neg = Array1::zeros(n);
                 for idx in 0..n {
-                    // Wavenumber with ifftshift convention matching C++ binary
+                    // Wavenumber in FFT order: [0, 1, ..., n/2, -(n/2-1), ..., -1]*dk
+                    // For even n, the Nyquist bin (idx=n/2) uses k = n/2 * dk = +pi/ds.
+                    // k-Wave uses the negative Nyquist (-pi/ds) which gives the SAME
+                    // shift operator value since i*k*exp(+i*k*ds/2) evaluates to the
+                    // same real number at both +pi/ds and -pi/ds. Do NOT zero this bin:
+                    // k-Wave C++ includes the Nyquist in propagation, and zeroing it
+                    // removes ~18% of k-space energy, causing a 1.64x amplitude error.
                     let shifted = if idx <= n / 2 {
                         idx as isize
                     } else {
                         idx as isize - n as isize
                     };
-                    
-                    // Zero the Nyquist frequency bin to maintain conjugate symmetry
-                    // and prevent spatial ringing / aliasing artifacts.
-                    if n.is_multiple_of(2) && idx == n / 2 {
-                        shift_pos[idx] = Complex64::new(0.0, 0.0);
-                        shift_neg[idx] = Complex64::new(0.0, 0.0);
-                    } else {
-                        let k_val = dk * shifted as f64;
-                        let exponent = k_val * ds * 0.5;
-                        shift_pos[idx] = i_unit
-                            * Complex64::new(k_val, 0.0)
-                            * Complex64::new(exponent.cos(), exponent.sin());
-                        shift_neg[idx] = i_unit
-                            * Complex64::new(k_val, 0.0)
-                            * Complex64::new(exponent.cos(), -exponent.sin());
-                    }
+                    let k_val = dk * shifted as f64;
+                    let exponent = k_val * ds * 0.5;
+                    shift_pos[idx] = i_unit
+                        * Complex64::new(k_val, 0.0)
+                        * Complex64::new(exponent.cos(), exponent.sin());
+                    shift_neg[idx] = i_unit
+                        * Complex64::new(k_val, 0.0)
+                        * Complex64::new(exponent.cos(), -exponent.sin());
                 }
                 (shift_pos, shift_neg)
             };
@@ -213,12 +218,14 @@ impl PSTDSolver {
             k_max,
             c_ref,
             mass_source_scale: {
-                let dx_min = grid.dx.min(grid.dy).min(grid.dz);
                 let n_dim = [grid.nx > 1, grid.ny > 1, grid.nz > 1]
                     .iter()
                     .filter(|&&d| d)
                     .count()
                     .max(1) as f64;
+                let dx_min = grid.dx.min(grid.dy).min(grid.dz);
+                // Match k-Wave's scale_pressure_source_uniform_grid:
+                //   source_p *= 2*dt / (N * c0 * dx)
                 2.0 * config_dt / (n_dim * c_ref * dx_min)
             },
             boundary,
@@ -246,6 +253,8 @@ impl PSTDSolver {
             absorb_tau,
             absorb_eta,
             absorb_y,
+            absorb_nabla1,
+            absorb_nabla2,
             kspace_operators: None,
             ddx_k_shift_pos,
             ddy_k_shift_pos,
@@ -292,6 +301,15 @@ impl PSTDSolver {
                 *ry = split;
                 *rz = split;
             });
+        // Exact IVP velocity initialization: if p0 was provided and no explicit u0,
+        // compute ux/uy/uz at t=−dt/2 using the traveling-wave relation.
+        // This matches k-Wave's C++ initialization and eliminates the ~1-step phase lag.
+        if solver.source_handler.has_initial_pressure()
+            && !solver.source_handler.has_initial_velocity()
+        {
+            solver.initialize_ivp_velocity()?;
+        }
+
         solver.compute_rho0_gradients()?;
         Ok(solver)
     }
@@ -314,6 +332,82 @@ impl PSTDSolver {
         // Note: velocity and split-density are already PML-damped inside
         // update_velocity() and update_density() respectively.
         boundary.apply_acoustic(self.fields.p.view_mut(), &self.grid, time_index)?;
+        Ok(())
+    }
+
+    /// Initialize velocity fields at t = −dt/2 for exact IVP staggered leapfrog start.
+    ///
+    /// The exact traveling-wave solution gives, for each Fourier mode:
+    ///   ux_sgx_k[i,j,k] = ddx_k_shift_pos[i] / |k| · sin(c_ref·dt·|k|/2) / (ρ₀·c_ref) · p0_k[i,j,k]
+    ///
+    /// This is derived from u(x,t) = IFFT(−i · k̂ · sin(c₀|k|t)/(ρ₀c₀) · FFT(p0)) at t = −dt/2.
+    /// Without this init, velocity starts from zero and the wave arrives ≈1 step later than k-Wave.
+    fn initialize_ivp_velocity(&mut self) -> KwaversResult<()> {
+        let c_ref = self.c_ref;
+        let dt = self.config.dt;
+        let rho0_ref = self.materials.rho0.mean().unwrap_or(1000.0);
+
+        // k-magnitude array — computed from k_vec without borrowing conflicts
+        let k_mag: Array3<f64> = compute_k_magnitude(&self.k_vec.0, &self.k_vec.1, &self.k_vec.2);
+
+        // sin(c_ref·dt·|k|/2) / (|k|·ρ₀·c_ref) — the spectral IVP scaling factor per mode
+        // DC component (k=0) → 0 (no net velocity from uniform pressure)
+        let sin_scale: Array3<f64> = k_mag.mapv(|km| {
+            if km < 1e-30 {
+                0.0
+            } else {
+                (c_ref * dt * km / 2.0).sin() / (km * rho0_ref * c_ref)
+            }
+        });
+
+        // FFT the initial pressure p0 into the p_k scratch buffer
+        self.fft.forward_into(&self.fields.p, &mut self.p_k);
+
+        // --- X component: ux_sgx_k = ddx_k_shift_pos[i] * sin_scale[i,j,k] * p0_k[i,j,k] ---
+        {
+            let ddx = self.ddx_k_shift_pos.view();
+            let sin_s = sin_scale.view();
+            let p_k = self.p_k.view();
+            Zip::indexed(self.grad_x_k.view_mut())
+                .and(sin_s)
+                .and(p_k)
+                .for_each(|(i, _j, _k), gx, &ss, &p| {
+                    *gx = ddx[i] * ss * p;
+                });
+        }
+        self.fft
+            .inverse_into(&self.grad_x_k, &mut self.fields.ux, &mut self.ux_k);
+
+        // --- Y component ---
+        {
+            let ddy = self.ddy_k_shift_pos.view();
+            let sin_s = sin_scale.view();
+            let p_k = self.p_k.view();
+            Zip::indexed(self.grad_y_k.view_mut())
+                .and(sin_s)
+                .and(p_k)
+                .for_each(|(_i, j, _k), gy, &ss, &p| {
+                    *gy = ddy[j] * ss * p;
+                });
+        }
+        self.fft
+            .inverse_into(&self.grad_y_k, &mut self.fields.uy, &mut self.uy_k);
+
+        // --- Z component ---
+        {
+            let ddz = self.ddz_k_shift_pos.view();
+            let sin_s = sin_scale.view();
+            let p_k = self.p_k.view();
+            Zip::indexed(self.grad_z_k.view_mut())
+                .and(sin_s)
+                .and(p_k)
+                .for_each(|(_i, _j, k_idx), gz, &ss, &p| {
+                    *gz = ddz[k_idx] * ss * p;
+                });
+        }
+        self.fft
+            .inverse_into(&self.grad_z_k, &mut self.fields.uz, &mut self.uz_k);
+
         Ok(())
     }
 
@@ -365,93 +459,10 @@ impl PSTDSolver {
 
     pub(crate) fn add_source_arc(&mut self, source: Arc<dyn Source>) -> KwaversResult<()> {
         let mask = source.create_mask(&self.grid);
-        let mode = Self::determine_injection_mode(&mask);
+        let mode = super::source_injection::determine_injection_mode(&mask);
         self.dynamic_sources.push((source, mask));
         self.source_injection_modes.push(mode);
         Ok(())
-    }
-
-    /// Determine source injection mode based on mask characteristics
-    ///
-    /// For PSTD, we always use additive mode due to the periodic nature of FFT-based methods.
-    /// Dirichlet boundary conditions cannot be properly enforced with spectral methods.
-    fn determine_injection_mode(mask: &Array3<f64>) -> SourceInjectionMode {
-        let shape = mask.dim();
-        let mut num_active = 0;
-        let mut first_i = None;
-        let mut first_j = None;
-        let mut first_k = None;
-        let mut all_same_i = true;
-        let mut all_same_j = true;
-        let mut all_same_k = true;
-        let mut mask_sum = 0.0;
-        let mut mask_min = f64::MAX;
-        let mut mask_max = f64::MIN;
-
-        for ((i, j, k), &m) in mask.indexed_iter() {
-            if m.abs() > 1e-12 {
-                num_active += 1;
-                mask_sum += m;
-                mask_min = mask_min.min(m);
-                mask_max = mask_max.max(m);
-
-                if let Some(fi) = first_i {
-                    if fi != i {
-                        all_same_i = false;
-                    }
-                } else {
-                    first_i = Some(i);
-                }
-
-                if let Some(fj) = first_j {
-                    if fj != j {
-                        all_same_j = false;
-                    }
-                } else {
-                    first_j = Some(j);
-                }
-
-                if let Some(fk) = first_k {
-                    if fk != k {
-                        all_same_k = false;
-                    }
-                } else {
-                    first_k = Some(k);
-                }
-            }
-        }
-
-        // Check if it's a boundary plane
-        let is_boundary_plane = (all_same_i
-            && (first_i == Some(0) || first_i == Some(shape.0 - 1)))
-            || (all_same_j && (first_j == Some(0) || first_j == Some(shape.1 - 1)))
-            || (all_same_k && (first_k == Some(0) || first_k == Some(shape.2 - 1)));
-
-        // For boundary planes (plane waves), use scale=1.0 (no normalization)
-        // For point/volume sources, normalize by number of active points
-        let scale = if is_boundary_plane {
-            1.0 // Plane wave: each boundary point gets full amplitude
-        } else if num_active > 0 {
-            1.0 / (num_active as f64) // Point/volume source: normalize
-        } else {
-            1.0
-        };
-
-        debug!(
-            num_active,
-            mask_sum,
-            mask_min,
-            mask_max,
-            is_boundary_plane,
-            scale,
-            "PSTD source injection mode determined"
-        );
-        debug!(
-            "  Mask geometry: all_same_i={}, all_same_j={}, all_same_k={}, first_i={:?}, first_j={:?}, first_k={:?}",
-            all_same_i, all_same_j, all_same_k, first_i, first_j, first_k
-        );
-
-        SourceInjectionMode::Additive { scale }
     }
 }
 

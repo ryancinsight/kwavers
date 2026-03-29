@@ -61,9 +61,9 @@
 //!
 //! // Create solver
 //! let grid = Grid3D::new(50, 50, 50, 0.001, 0.001, 0.001)?;
-//! let optical_map = OpticalPropertyMapBuilder::new(GridDimensions::from_grid(&grid))
-//!     .set_background(OpticalPropertyData::soft_tissue())
-//!     .build();
+//! let mut map_builder = OpticalPropertyMapBuilder::new(GridDimensions::from_grid(&grid));
+//! map_builder.set_background(OpticalPropertyData::soft_tissue());
+//! let optical_map = map_builder.build();
 //! let solver = MonteCarloSolver::new(grid, optical_map);
 //!
 //! // Configure simulation
@@ -81,6 +81,7 @@
 //! ```
 
 pub mod config;
+pub mod interfaces;
 pub mod photon;
 pub mod result;
 pub mod solver;
@@ -91,6 +92,7 @@ pub mod utils;
 mod tests;
 
 pub use config::SimulationConfig;
+pub use interfaces::{fresnel_reflectance, InterfaceOutcome};
 pub use result::MCResult;
 pub use solver::MonteCarloSolver;
 pub use source::PhotonSource;

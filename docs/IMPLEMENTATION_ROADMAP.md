@@ -517,3 +517,90 @@ This roadmap provides a structured approach to achieving k-wave-python parity. F
 2. Daily standup to track progress
 3. Weekly parity validation tests
 4. Document architectural decisions
+
+---
+
+## Layer Boundaries — SOC / SRP Architecture Debt
+
+*Added: Phase 3 Audit (2026-03-26)*
+
+This section documents known Separation of Concerns (SOC) and Single Responsibility
+Principle (SRP) violations in the codebase, together with the concrete migration path
+for each. The violations do **not** block functionality but should be resolved in a
+future refactor to improve testability and maintainability.
+
+### Violation 1: ODE Integration Logic in Physics Layer
+
+**Violating modules:**
+- `kwavers/src/physics/acoustics/bubble_dynamics/adaptive_integration/` — Adaptive
+  Runge-Kutta time-stepping for bubble ODEs
+- `kwavers/src/physics/acoustics/bubble_dynamics/imex_integration/` — IMEX
+  (Implicit-Explicit) schemes for stiff bubble dynamics
+
+**Rule violated:** Physics layer should define *equations*; the solver layer should
+define *integration algorithms*.
+
+**Migration plan:**
+1. Define `trait BubbleOde` in `physics/acoustics/bubble_dynamics/` (equations only)
+2. Create `solver/forward/ode/` module with generic `AdaptiveRkSolver<E: BubbleOde>`
+   and `ImexSolver<E: BubbleOde>`
+3. Move `adaptive_integration` and `imex_integration` to `solver/forward/ode/`
+4. Callers in `clinical/therapy/` and `analysis/` import from new solver-layer path
+5. Remove `pub use` re-exports from physics layer
+
+**Effort estimate:** ~2 days; no user-visible API changes
+
+---
+
+### Violation 2: Thermal-Acoustic Coupling in Physics Layer
+
+**Violating modules:**
+- `kwavers/src/physics/foundations/coupling/acoustic_thermal.rs` — computes
+  bio-heat (Pennes) equation coupling coefficients
+
+**Rule violated:** Cross-physics coupling belongs in `solver/forward/coupled/`,
+which already has `thermal_acoustic.rs` for the leapfrog coupled integrator.
+
+**Migration plan:**
+1. Move `acoustic_thermal.rs` coupling helpers into `solver/forward/coupled/`
+2. Have the physics layer expose `PennesBioHeatParameters` struct only
+3. Coupling calculation performed by solver during time-step
+
+**Effort estimate:** ~0.5 days; internal change only
+
+---
+
+### Violation 3: Monolithic Solver Impls (SRP)
+
+**Violating modules:**
+- `kwavers/src/solver/forward/pstd/implementation/core/stepper.rs` — 370 lines,
+  handles velocity, density, pressure, source injection, and recording in one impl block
+- `kwavers/src/solver/forward/fdtd/solver.rs` — 668 lines, similar scope
+
+**Rule violated:** SRP — a struct should have one reason to change.
+
+**Migration plan for PSTDSolver (stepper.rs):**
+1. Extract `PSTDVelocityUpdater`, `PSTDDensityUpdater`, `PSTDPressureUpdater` structs
+2. Each takes a `&mut PSTDFields` and implements a single-method trait
+3. `PSTDSolver::step_forward` orchestrates the updaters
+4. Source injection logic stays in `SourceHandler` (already partially extracted)
+
+**Effort estimate:** ~3 days; refactor only, no physics changes
+
+---
+
+### Verification of Layer Compliance
+
+To check for new SOC violations:
+
+```bash
+# Physics layer must not import from solver layer
+grep -r "use crate::solver" kwavers/src/physics/ --include="*.rs"
+
+# Solver layer may import from physics (one-way dependency)
+# This is correct: solver uses physics equations
+
+# Physics layer must not contain time-stepping loops
+grep -rn "for.*step\|while.*time\|integrate.*dt" kwavers/src/physics/ \
+    --include="*.rs" | grep -v "test\|#\["
+```

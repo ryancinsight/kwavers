@@ -11,7 +11,7 @@
 //! generating harmonic components (2f, 3f, ...). Energy cascades from
 //! fundamental (1f) to higher harmonics as:
 //!
-//! ```
+//! ```text
 //! E_1f → E_2f + E_3f + ... (energy conservation)
 //! E_total = E_1f + E_2f + E_3f + ...
 //! ```

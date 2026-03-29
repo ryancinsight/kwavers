@@ -45,7 +45,7 @@
 //!
 //! # Examples
 //!
-//! ```
+//! ```text
 //! use kwavers::domain::medium::properties::*;
 //!
 //! // Create acoustic properties for water

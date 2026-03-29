@@ -6,13 +6,13 @@
 //! ## Physical Model
 //!
 //! **Acoustic System**:
-//! ```
+//! ```text
 //! ρ(T) ∂u/∂t = -∇p + f_ext
 //! ∂p/∂t = -ρ(T) c²(T) ∇·u + Q_ac
 //! ```
 //!
 //! **Thermal System** (Pennes bioheat):
-//! ```
+//! ```text
 //! ρc ∂T/∂t = ∇·(k∇T) + w_b c_b (T_a - T) + Q_m + Q_ac
 //! ```
 //!

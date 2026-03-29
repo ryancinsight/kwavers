@@ -54,9 +54,10 @@ def calculate_correlation(array1, array2):
     return correlation if not np.isnan(correlation) else 0.0
 
 
+@pytest.mark.slow
 class TestHeterogeneousMediumParity:
     """Test heterogeneous medium parity between kwavers and k-wave-python."""
-    
+
     def test_simple_layered_medium(self):
         """
         Test a simple layered medium: water (z<5mm) and tissue (z>=5mm).
@@ -90,17 +91,18 @@ class TestHeterogeneousMediumParity:
         kwavers_medium = kw.Medium(c_kwavers, rho_kwavers, alpha_kwavers)
         
         # k-wave medium
+        # alpha_power=1.0 is invalid in k-wave (power-law singularity); use 1.5 (soft tissue standard)
         kmedium = kWaveMedium(
             sound_speed=c_kwavers,
             density=rho_kwavers,
             alpha_coeff=alpha_kwavers,
-            alpha_power=1.0
+            alpha_power=1.5
         )
         
         # Create point source in water layer
-        source_pos = [0.002, 0.002, 0.002]  # 2mm depth in water
+        source_pos = (0.002, 0.002, 0.002)  # 2mm depth in water (tuple required by PyO3 binding)
         frequency = 1e6  # 1 MHz
-        
+
         # kwavers source
         kwavers_source = kw.Source.point(source_pos, frequency, amplitude=1e5)
         
@@ -112,11 +114,14 @@ class TestHeterogeneousMediumParity:
             int(source_pos[1]/dy), 
             int(source_pos[2]/dz)
         ] = True
+        # Set kgrid time stepping to match kwavers: dt=1e-8 s, Nt=500 steps
+        kgrid.dt = 1e-8
+        kgrid.Nt = 500
         ksource.p = tone_burst(1/kgrid.dt, frequency, 5).reshape(1, -1)
-        
-        # Create sensors
-        sensor_pos = [0.006, 0.006, 0.008]  # In tissue layer
-        
+
+        # Create sensors — z=0.006m = index 60 (in tissue layer z>=5mm, within nz=64)
+        sensor_pos = (0.006, 0.006, 0.006)  # In tissue layer (tuple required by PyO3 binding)
+
         # kwavers sensor
         kwavers_sensor = kw.Sensor.point(sensor_pos)
         
@@ -138,7 +143,7 @@ class TestHeterogeneousMediumParity:
         sim_options = SimulationOptions(
             pml_size=10,
             pml_alpha=2.0,
-            save_to_disk=False
+            save_to_disk=True
         )
         execution_options = SimulationExecutionOptions(
             is_gpu_simulation=False
@@ -207,6 +212,9 @@ class TestHeterogeneousMediumParity:
         # Create plane wave at z=0
         ksource.p_mask = np.zeros((nx, ny, nz), dtype=bool)
         ksource.p_mask[:, :, 0] = True
+        # Set kgrid time stepping to match kwavers: dt=2e-8 s, Nt=400 steps
+        kgrid.dt = 2e-8
+        kgrid.Nt = 400
         ksource.p = tone_burst(1/kgrid.dt, frequency, 3).reshape(1, -1)
         
         # Line sensor through center
@@ -222,7 +230,7 @@ class TestHeterogeneousMediumParity:
         sim_options = SimulationOptions(
             pml_size=10,
             pml_alpha=2.0,
-            save_to_disk=False
+            save_to_disk=True
         )
         execution_options = SimulationExecutionOptions(
             is_gpu_simulation=False
@@ -279,9 +287,9 @@ class TestHeterogeneousMediumParity:
                         rho_array[i, j, k] = 1100.0
                         alpha_array[i, j, k] = 1.0
         
-        # Smooth the interfaces
-        c_array = smooth(c_array, 2)
-        rho_array = smooth(rho_array, 2)
+        # Smooth the interfaces (restore_max=True preserves peak amplitude)
+        c_array = smooth(c_array, restore_max=True)
+        rho_array = smooth(rho_array, restore_max=True)
         
         # kwavers medium
         kwavers_medium = kw.Medium(c_array, rho_array, alpha_array)
@@ -295,11 +303,11 @@ class TestHeterogeneousMediumParity:
         )
         
         # Point source outside inclusion
-        source_pos = [0.002, 0.002, 0.002]
+        source_pos = (0.002, 0.002, 0.002)  # tuple required by PyO3 binding
         frequency = 2e6  # 2 MHz
-        
+
         kwavers_source = kw.Source.point(source_pos, frequency, amplitude=1e5)
-        
+
         ksource = kSource()
         ksource.p_mask = np.zeros((nx, ny, nz), dtype=bool)
         ksource.p_mask[
@@ -307,6 +315,9 @@ class TestHeterogeneousMediumParity:
             int(source_pos[1]/dy),
             int(source_pos[2]/dz)
         ] = True
+        # Set kgrid time stepping to match kwavers: dt=1e-8 s, Nt=600 steps
+        kgrid.dt = 1e-8
+        kgrid.Nt = 600
         ksource.p = tone_burst(1/kgrid.dt, frequency, 4).reshape(1, -1)
         
         # Sensors at multiple positions
@@ -335,7 +346,7 @@ class TestHeterogeneousMediumParity:
         sim_options = SimulationOptions(
             pml_size=10,
             pml_alpha=2.0,
-            save_to_disk=False
+            save_to_disk=True
         )
         execution_options = SimulationExecutionOptions(
             is_gpu_simulation=False

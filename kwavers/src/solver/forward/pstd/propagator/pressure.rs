@@ -10,15 +10,16 @@
 //! Using a split-density formulation ρ = ρx + ρy + ρz, each component is updated
 //! by the corresponding velocity divergence term and pressure is recovered via EOS.
 //!
-//! ## Theorem: Spectral Divergence with Negative Staggered Shift
+//! ## Theorem: Spectral Divergence with Negative Staggered Shift and Kappa
 //! The x-component of velocity divergence on the staggered grid is:
 //! ```text
 //!   ∂ux/∂x |ₓ = IFFT( iκₓ · exp(−iκₓ Δx/2) · κ(k) · FFT(ux) )
 //! ```
 //! The negative shift compensates for ux being evaluated at i+½; differencing back
 //! to the cell center uses exp(−iκₓ Δx/2). The operator `iκₓ · exp(−iκₓ Δx/2)`
-//! is stored in `ddx_k_shift_neg`. Full derivation mirrors the velocity gradient
-//! in velocity.rs (shift theorem + spectral derivative).
+//! is stored in `ddx_k_shift_neg`, and `κ(k) = sinc(c_ref·dt·|k|/2)` is the
+//! kappa k-space correction stored in `self.kappa`. Both factors are applied,
+//! matching Treeby & Cox (2010) Eq. 17 and the k-Wave C++ implementation.
 //!
 //! ## Theorem: Split-Density Equation of State
 //! The acoustic equation of state for linear propagation is:
@@ -67,12 +68,9 @@ impl PSTDSolver {
     /// Update pressure field from density perturbation (Equation of State)
     ///
     /// In C++ k-wave, this is the final step: p = c² * (rhox + rhoy + rhoz)
-    /// Absorption (if enabled) is also applied here, matching C++ computePressure().
-    pub(crate) fn update_pressure(&mut self, dt: f64) -> KwaversResult<()> {
-        // Apply absorption first (modifies density, matching C++ where absorption
-        // is part of computePressure, not computeDensity)
-        self.apply_absorption(dt)?;
-
+    /// Absorption is applied in `update_density()`, not here, matching the ordering
+    /// in k-Wave's `computeDensity()` function (Treeby & Cox 2010, Eq. 21).
+    pub(crate) fn update_pressure(&mut self, _dt: f64) -> KwaversResult<()> {
         // Combine split density components
         Zip::from(&mut self.div_u)
             .and(&self.rhox)
@@ -109,8 +107,11 @@ impl PSTDSolver {
 
     /// Update density field based on velocity divergence (Mass Conservation)
     ///
-    /// Uses staggered grid shift operators matching the C++ k-wave binary:
+    /// Uses staggered grid shift operators with kappa correction matching the C++ k-wave binary:
     ///   dux/dx = IFFT( ddx_k_shift_neg[x] * kappa[i,j,k] * FFT(ux)[i,j,k] )
+    ///
+    /// kappa IS applied here — Treeby & Cox (2010) Eq. 17 explicitly includes the k-space
+    /// correction factor κ in the density update, same as in the velocity update (Eq. 16).
     pub(crate) fn update_density(&mut self, dt: f64) -> KwaversResult<()> {
 
         // k-Wave split-field PML for density (Treeby & Cox 2010, Eq. 16):
@@ -121,10 +122,10 @@ impl PSTDSolver {
         // Post: attenuate the complete result again.
         self.apply_pml_to_density()?; // pre: pml * rho_old
 
-        // dux/dx with negative shift
-        // Uses ndarray Zip::indexed to eliminate bounds checks and enable LLVM vectorization.
-        // Shift operators are 1D (index i only) and are read via an immutable borrow that
-        // is disjoint from the mutable borrow of grad_x_k (different struct fields).
+        // dux/dx with negative shift + kappa correction (Treeby & Cox 2010, Eq. 17).
+        // Full operator: iκₓ · exp(−iκₓ Δx/2) · κ(k) where κ(k)=sinc(c_ref·dt·|k|/2).
+        // Both the staggered shift (ddx_k_shift_neg) AND the kappa correction must be
+        // applied — this matches k-Wave's C++ implementation of the density update.
         self.fft.forward_into(&self.fields.ux, &mut self.ux_k);
         {
             let ddx = self.ddx_k_shift_neg.view();
@@ -138,7 +139,7 @@ impl PSTDSolver {
         self.fft
             .inverse_into(&self.grad_x_k, &mut self.dpx, &mut self.ux_k);
 
-        // duy/dy with negative shift
+        // duy/dy with negative shift + kappa (matches k-Wave Eq. 17)
         self.fft.forward_into(&self.fields.uy, &mut self.uy_k);
         {
             let ddy = self.ddy_k_shift_neg.view();
@@ -152,7 +153,7 @@ impl PSTDSolver {
         self.fft
             .inverse_into(&self.grad_y_k, &mut self.dpy, &mut self.uy_k);
 
-        // duz/dz with negative shift
+        // duz/dz with negative shift + kappa (matches k-Wave Eq. 17)
         self.fft.forward_into(&self.fields.uz, &mut self.uz_k);
         {
             let ddz = self.ddz_k_shift_neg.view();
@@ -194,7 +195,12 @@ impl PSTDSolver {
                 *rho -= dt * (rho0 * du + uz * grz);
             });
 
-        self.apply_pml_to_density()?; // post: pml * (pml*rho_old - dt*rho0*div_u)
+        // Apply power-law absorption correction per axis (Treeby & Cox 2010, Eq. 21).
+        // Must be called AFTER the continuity-equation update (so dpx/dpy/dpz hold
+        // ∂u_α/∂α) and BEFORE the post-PML multiply, matching k-Wave's computeDensity().
+        self.apply_absorption(dt)?;
+
+        self.apply_pml_to_density()?; // post: pml * (pml*rho_old - dt*rho0*div_u + absorption)
 
         // NOTE: Pressure computation and absorption are handled separately in
         // update_pressure(). Source injection happens between density and pressure

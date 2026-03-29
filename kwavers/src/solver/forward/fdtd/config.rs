@@ -21,6 +21,15 @@ pub struct FdtdConfig {
     /// Enable GPU acceleration (requires "gpu" feature)
     pub enable_gpu_acceleration: bool,
 
+    /// Enable Westervelt nonlinear acoustic propagation.
+    ///
+    /// When `true`, the nonlinear source term `(β/ρ₀c₀⁴) ∂²p²/∂t²` is added to
+    /// the pressure update at each time step. Two historical pressure fields
+    /// (`p^{n-1}`, `p^{n-2}`) are maintained in solver state.
+    ///
+    /// **Reference**: Westervelt (1963), J. Acoust. Soc. Am. 35(4), 535–537.
+    pub enable_nonlinear: bool,
+
     // Parity fields
     /// Number of time steps
     pub nt: usize,
@@ -39,6 +48,7 @@ impl Default for FdtdConfig {
             subgridding: false,
             subgrid_factor: 2,
             enable_gpu_acceleration: false,
+            enable_nonlinear: false,
             nt: 1000,
             dt: 1e-7,
             sensor_mask: None,

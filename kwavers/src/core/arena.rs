@@ -124,19 +124,19 @@ impl FieldArena {
     ///
     /// I1: **Non-overlapping allocations**: All allocated regions are disjoint
     ///
-    ///     Proof by induction:
-    ///       Base case: offset = 0, first allocation at [0, size₁)
-    ///       Inductive step: If allocation k at [offset_k, offset_k + size_k),
-    ///                      then allocation k+1 at [offset_k + size_k, offset_k + size_k + size_{k+1})
-    ///       Therefore: ∀i ≠ j: [offset_i, offset_i + size_i) ∩ [offset_j, offset_j + size_j) = ∅
+    ///   Proof by induction:
+    ///     Base case: offset = 0, first allocation at [0, size₁)
+    ///     Inductive step: If allocation k at [offset_k, offset_k + size_k),
+    ///                    then allocation k+1 at [offset_k + size_k, offset_k + size_k + size_{k+1})
+    ///     Therefore: ∀i ≠ j: [offset_i, offset_i + size_i) ∩ [offset_j, offset_j + size_j) = ∅
     ///
     /// I2: **Offset monotonicity**: offset is monotonically increasing
     ///
-    ///     offset_{n+1} = offset_n + size_n ≥ offset_n (since size_n ≥ 0)
+    ///   offset_{n+1} = offset_n + size_n ≥ offset_n (since size_n ≥ 0)
     ///
     /// I3: **Bounds safety**: ∀allocations: offset + size ≤ capacity
     ///
-    ///     Enforced by explicit check before each allocation
+    ///   Enforced by explicit check before each allocation
     ///
     /// ## MEMORY SAFETY VIOLATIONS (CURRENT IMPLEMENTATION)
     ///
@@ -318,7 +318,7 @@ impl FieldArena {
     /// ## FIX
     ///
     /// Use `AtomicUsize` instead of `UnsafeCell<usize>`:
-    ///   ```rust
+    ///   ```text
     ///   offset: AtomicUsize,
     ///   // ...
     ///   self.offset.load(Ordering::Relaxed)
@@ -414,18 +414,18 @@ impl BumpArena {
     ///
     /// I1: **Alignment**: Returned pointer is aligned to `layout.align()`
     ///
-    ///     Proof: aligned_offset = ⌈offset / align⌉ × align
-    ///            = (offset + align - 1) & !(align - 1)
-    ///            This is standard alignment formula, always produces aligned address
+    ///   Proof: aligned_offset = ⌈offset / align⌉ × align
+    ///          = (offset + align - 1) & !(align - 1)
+    ///          This is standard alignment formula, always produces aligned address
     ///
     /// I2: **Bounds**: Pointer + size does not exceed chunk boundary
     ///
-    ///     Enforced by: if aligned_offset + size > chunk.len() { allocate_new_chunk() }
+    ///   Enforced by: if aligned_offset + size > chunk.len() { allocate_new_chunk() }
     ///
     /// I3: **Non-overlapping**: Each allocation returns distinct memory region
     ///
-    ///     Proof: offset is monotonically increasing within each chunk
-    ///            New chunks are disjoint (different Vec allocations)
+    ///   Proof: offset is monotonically increasing within each chunk
+    ///          New chunks are disjoint (different Vec allocations)
     ///
     /// ## MEMORY SAFETY
     ///
@@ -534,13 +534,13 @@ impl BumpArena {
     /// ## INVARIANTS
     ///
     /// I1: **Alignment**: ptr is aligned to align_of::<T>()
-    ///     Guaranteed by Layout::new::<T>() and alloc() alignment logic
+    ///   Guaranteed by Layout::new::<T>() and alloc() alignment logic
     ///
     /// I2: **Initialization**: Value is properly initialized via ptr.write()
-    ///     Write constructs T at location, no drop of uninitialized memory
+    ///   Write constructs T at location, no drop of uninitialized memory
     ///
     /// I3: **Unique reference**: &mut T guarantees exclusivity
-    ///     Bump allocator never returns same address twice (until reset)
+    ///   Bump allocator never returns same address twice (until reset)
     ///
     /// ## MEMORY SAFETY
     ///
@@ -608,13 +608,13 @@ impl BumpArena {
     /// ## INVARIANTS
     ///
     /// I1: **Bounds**: Allocated memory is `len × size_of::<T>()` bytes
-    ///     Layout::array::<T>(len) computes this correctly (or returns Err)
+    ///   Layout::array::<T>(len) computes this correctly (or returns Err)
     ///
     /// I2: **Initialization**: All elements are initialized via T::default()
-    ///     Loop initializes indices 0..len exactly once
+    ///   Loop initializes indices 0..len exactly once
     ///
     /// I3: **Alignment**: Slice is aligned to align_of::<T>()
-    ///     Guaranteed by Layout::array and alloc()
+    ///   Guaranteed by Layout::array and alloc()
     ///
     /// ## MEMORY SAFETY
     ///
@@ -630,7 +630,7 @@ impl BumpArena {
     ///
     /// ## PROOF OF INITIALIZATION
     ///
-    /// ```
+    /// ```text
     /// Claim: ∀i ∈ [0, len): element at ptr.add(i) is initialized
     ///
     /// Proof by loop invariant:
@@ -771,11 +771,11 @@ impl SimulationArena {
     ///
     /// ## TYPICAL USAGE
     ///
-    /// ```rust
+    /// ```text
     /// for timestep in 0..num_steps {
-    ///     let temp = unsafe { arena.alloc_temp_buffer(grid_size) };
-    ///     // Use temp for calculations
-    ///     arena.reset_temp(); // Invalidates temp
+    ///   let temp = unsafe { arena.alloc_temp_buffer(grid_size) };
+    ///   // Use temp for calculations
+    ///   arena.reset_temp(); // Invalidates temp
     /// }
     /// ```
     #[allow(unsafe_code)]

@@ -1,8 +1,7 @@
 //! State-Dependent Physical Constants
 //!
 //! This module provides thermodynamic state-dependent physical properties
-//! that vary with temperature, pressure, and frequency. This addresses
-//! TODO_AUDIT P1 from fundamental.rs.
+//! that vary with temperature, pressure, and frequency.
 //!
 //! ## Literature References
 //!
@@ -84,60 +83,123 @@ impl StateDependentConstants {
         c0 * (1.0 + beta * delta_p)
     }
 
-    /// Calculate dynamic viscosity of water with temperature dependence
+    /// Calculate dynamic viscosity of water with temperature dependence.
     ///
-    /// Uses empirical fit to NIST data with proper temperature scaling.
-    /// Valid range: 0-100°C
+    /// ## Algorithm — Dortmund Data Bank VFT Equation (Vogel-Fulcher-Tammann)
     ///
-    /// Reference values:
-    /// - 20°C: 1.002e-3 Pa·s
-    /// - 37°C: 0.692e-3 Pa·s  
+    /// ### Theorem
+    ///
+    /// The dynamic viscosity of liquid water follows the three-parameter
+    /// Vogel-Fulcher-Tammann (VFT) equation, which generalises the Arrhenius
+    /// law η = A·exp(B/T) by introducing a finite singular temperature T₀:
+    ///
+    /// ```text
+    /// η(T) = A · 10^{ B / (T + C) }
+    /// ```
+    ///
+    /// where T is in °C and parameters are fit to NIST experimental data:
+    ///
+    /// | Parameter | Value | Note |
+    /// |-----------|-------|------|
+    /// | A | 2.414 × 10⁻⁵ Pa·s | Pre-exponential |
+    /// | B | 247.8 °C | Activation term |
+    /// | C | 133.15 °C | Vogel shift (T₀ = 140 K) |
+    ///
+    /// This is equivalent to log₁₀ η = log₁₀(A) + B/(T+C), which is linear in
+    /// 1/(T+C), confirming the Arrhenius-type thermally activated mechanism with
+    /// a non-zero ideal glass-transition temperature T₀ = −C = 140 K.
+    ///
+    /// ### Accuracy vs NIST (0–100 °C)
+    ///
+    /// | T (°C) | Model (mPa·s) | NIST (mPa·s) | Error |
+    /// |--------|---------------|--------------|-------|
+    /// | 0      | 1.753 | 1.787 | 1.9 % |
+    /// | 20     | 1.001 | 1.002 | 0.1 % |
+    /// | 37     | 0.690 | 0.692 | 0.3 % |
+    /// | 100    | 0.279 | 0.282 | 1.1 % |
+    ///
+    /// ### References
+    ///
+    /// 1. Vogel, H. (1921). Das Temperaturabhängigkeitsgesetz der Viskosität von
+    ///    Flüssigkeiten. *Physikalische Zeitschrift*, **22**, 645–646.
+    ///
+    /// 2. Dortmund Data Bank formula: η(T) = 2.414 × 10⁻⁵ × 10^{247.8/(T+133.15)},
+    ///    T in °C, η in Pa·s.
+    ///    <https://www.ddbst.com/en/EED/PCP/VIS_C174.EN.ddb>
+    ///
+    /// ### Valid range
+    ///
+    /// 0–100 °C at atmospheric pressure. For other fluids use [`viscosity_arrhenius`].
     ///
     /// # Arguments
-    /// * `temperature` - Temperature [°C]
+    /// * `temperature` — Temperature [°C]
     ///
     /// # Returns
     /// Dynamic viscosity [Pa·s]
     pub fn dynamic_viscosity_water(&self, temperature: f64) -> f64 {
-        // Piecewise lookup table from NIST (key temperatures in °C)
-        // More accurate than empirical formulas for production use
-        const TEMPS: [f64; 9] = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 80.0, 100.0];
-        const VISCOSITIES: [f64; 9] = [
-            1.787e-3, // 0°C
-            1.307e-3, // 10°C
-            1.002e-3, // 20°C
-            0.798e-3, // 30°C
-            0.653e-3, // 40°C
-            0.547e-3, // 50°C
-            0.467e-3, // 60°C
-            0.355e-3, // 80°C
-            0.282e-3, // 100°C
-        ];
+        // Dortmund Data Bank VFT formula for water viscosity:
+        //   η(T) = A × 10^{ B / (T + C) }   (T in °C)
+        const A: f64 = 2.414e-5; // Pa·s  — pre-exponential factor
+        const B: f64 = 247.8;    // °C    — activation parameter
+        const C: f64 = 133.15;   // °C    — Vogel shift (T₀ = 140 K)
 
-        // Linear interpolation between table values
-        if temperature <= TEMPS[0] {
-            return VISCOSITIES[0];
-        }
-        if temperature >= TEMPS[TEMPS.len() - 1] {
-            return VISCOSITIES[VISCOSITIES.len() - 1];
-        }
+        A * 10.0_f64.powf(B / (temperature + C))
+    }
 
-        // Find bracketing indices
-        for i in 0..TEMPS.len() - 1 {
-            if temperature >= TEMPS[i] && temperature <= TEMPS[i + 1] {
-                let t0 = TEMPS[i];
-                let t1 = TEMPS[i + 1];
-                let eta0 = VISCOSITIES[i];
-                let eta1 = VISCOSITIES[i + 1];
-
-                // Linear interpolation
-                let alpha = (temperature - t0) / (t1 - t0);
-                return eta0 + alpha * (eta1 - eta0);
-            }
-        }
-
-        // Should not reach here
-        VISCOSITIES[4] // Fallback to 40°C value
+    /// Dynamic viscosity using the Arrhenius equation for general fluids.
+    ///
+    /// ## Theorem — Arrhenius Viscosity Model
+    ///
+    /// For fluids exhibiting thermally activated flow, the dynamic viscosity
+    /// follows:
+    ///
+    /// ```text
+    /// η(T) = A · exp( E_a / (R · T) )
+    /// ```
+    ///
+    /// where:
+    ///
+    /// | Symbol | Meaning | SI unit |
+    /// |--------|---------|---------|
+    /// | A | Pre-exponential (∞-T extrapolation) | Pa·s |
+    /// | E_a | Molar activation energy for viscous flow | J mol⁻¹ |
+    /// | R | Universal gas constant 8.314 J mol⁻¹ K⁻¹ | J mol⁻¹ K⁻¹ |
+    /// | T | Absolute temperature | K |
+    ///
+    /// This is equivalent to η = A · exp(B/T) with B ≡ E_a/R [K].
+    ///
+    /// ## Derivation (Eyring transition-state theory)
+    ///
+    /// From Eyring (1935), the rate of molecular rearrangement is
+    /// k = (k_B T / h) exp(−ΔG‡/RT). Since viscosity η ∝ 1/k (fluidity is
+    /// the inverse rate of shear-induced jumps), one obtains
+    /// η ≈ A exp(ΔG‡/RT) = A exp(E_a/RT), where E_a ≡ ΔG‡ is the activation
+    /// free energy of the dominant shear-jump process.
+    ///
+    /// ## Reference
+    ///
+    /// Arrhenius, S. (1889). Über die Reaktionsgeschwindigkeit bei der
+    /// Inversion von Rohrzucker durch Säuren. *Zeitschrift für physikalische
+    /// Chemie*, **4**(1), 226–248.
+    ///
+    /// Eyring, H. (1935). The activated complex in chemical reactions.
+    /// *Journal of Chemical Physics*, **3**(2), 107–115.
+    ///
+    /// # Arguments
+    /// * `pre_exponential`    — A [Pa·s]
+    /// * `activation_energy`  — E_a [J mol⁻¹]
+    /// * `temperature_kelvin` — T [K]
+    ///
+    /// # Returns
+    /// Dynamic viscosity [Pa·s]
+    #[must_use]
+    pub fn viscosity_arrhenius(
+        pre_exponential: f64,
+        activation_energy: f64,
+        temperature_kelvin: f64,
+    ) -> f64 {
+        const GAS_CONSTANT: f64 = 8.314_462_618; // J mol⁻¹ K⁻¹ (CODATA 2018)
+        pre_exponential * (activation_energy / (GAS_CONSTANT * temperature_kelvin)).exp()
     }
 
     /// Calculate kinematic viscosity of water
@@ -588,5 +650,57 @@ mod tests {
             "Reynolds number should be in laminar regime, got {}",
             re
         );
+    }
+
+    #[test]
+    fn test_vft_viscosity_known_values() {
+        // Verify the Dortmund Data Bank VFT formula against NIST benchmarks.
+        // Tolerance 3%: VFT max deviation from NIST over 0-100°C is < 2%.
+        let constants = StateDependentConstants::default();
+
+        // 0°C — NIST: 1.787e-3 Pa·s; VFT: 1.753e-3 Pa·s (1.9% low)
+        let eta_0 = constants.dynamic_viscosity_water(0.0);
+        assert!(
+            (eta_0 - 1.787e-3).abs() / 1.787e-3 < 0.03,
+            "VFT viscosity at 0°C: expected ~1.787e-3, got {eta_0:.4e}"
+        );
+
+        // 20°C — NIST: 1.002e-3 Pa·s; VFT: 1.001e-3 Pa·s (0.1% error)
+        let eta_20 = constants.dynamic_viscosity_water(20.0);
+        assert!(
+            (eta_20 - 1.002e-3).abs() / 1.002e-3 < 0.03,
+            "VFT viscosity at 20°C: expected ~1.002e-3, got {eta_20:.4e}"
+        );
+
+        // 100°C — NIST: 2.82e-4 Pa·s; VFT: 2.79e-4 Pa·s (1.1% error)
+        let eta_100 = constants.dynamic_viscosity_water(100.0);
+        assert!(
+            (eta_100 - 2.82e-4).abs() / 2.82e-4 < 0.03,
+            "VFT viscosity at 100°C: expected ~2.82e-4, got {eta_100:.4e}"
+        );
+
+        // Monotonically decreasing with temperature
+        let eta_50 = constants.dynamic_viscosity_water(50.0);
+        assert!(eta_0 > eta_20, "η must decrease 0°C → 20°C");
+        assert!(eta_20 > eta_50, "η must decrease 20°C → 50°C");
+        assert!(eta_50 > eta_100, "η must decrease 50°C → 100°C");
+    }
+
+    #[test]
+    fn test_viscosity_arrhenius() {
+        // Arrhenius model for a generic oil:
+        //   A = 5e-5 Pa·s, E_a = 30_000 J/mol.
+        // At T = 300 K: η = 5e-5 × exp(30000/(8.314×300))
+        //                  = 5e-5 × exp(12.025) = 5e-5 × 165_844 ≈ 8.29 Pa·s
+        let eta = StateDependentConstants::viscosity_arrhenius(5e-5, 30_000.0, 300.0);
+        let expected = 5e-5 * (30_000.0_f64 / (8.314_462_618 * 300.0)).exp();
+        assert!(
+            (eta - expected).abs() < 1e-10,
+            "Arrhenius model must reproduce exact exponential, got {eta:.6e}"
+        );
+
+        // Verify temperature dependence: lower T → higher viscosity
+        let eta_hot = StateDependentConstants::viscosity_arrhenius(5e-5, 30_000.0, 500.0);
+        assert!(eta > eta_hot, "Viscosity should decrease with temperature (Arrhenius)");
     }
 }

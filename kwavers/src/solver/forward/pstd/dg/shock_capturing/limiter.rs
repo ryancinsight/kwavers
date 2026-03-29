@@ -42,18 +42,28 @@ impl WENOLimiter {
         })
     }
 
-    /// Apply WENO limiting to a field
-    pub fn limit_field(
+    /// Apply WENO limiting, writing the result into a caller-provided output buffer.
+    ///
+    /// ## Performance
+    /// Zero allocations per call: `output` is pre-allocated by the caller (typically
+    /// a time-stepper scratch field). Reads always come from the immutable `field`
+    /// argument; shocked cells are overwritten in `output` while unshocked cells
+    /// are set to `field` values via an initial `output.assign(field)`.
+    ///
+    /// ## Precondition
+    /// `output` must have the same shape as `field`.
+    pub fn limit_field_into(
         &self,
         field: &Array3<f64>,
         shock_indicator: &Array3<f64>,
-    ) -> KwaversResult<Array3<f64>> {
-        let mut limited = field.clone();
-
+        output: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        debug_assert_eq!(field.dim(), output.dim(), "output shape must match field");
+        output.assign(field); // initialize: unshocked cells keep original values
         match self.order {
-            3 => self.weno3_limit(&mut limited, shock_indicator)?,
-            5 => self.weno5_limit(&mut limited, shock_indicator)?,
-            7 => self.weno7_limit(&mut limited, shock_indicator)?,
+            3 => self.weno3_limit_into(field, shock_indicator, output)?,
+            5 => self.weno5_limit(output, shock_indicator)?, // already reads stencil in-place
+            7 => self.weno7_limit_into(field, shock_indicator, output)?,
             _ => {
                 return Err(KwaversError::Validation(ValidationError::FieldValidation {
                     field: "weno_order".to_string(),
@@ -62,54 +72,109 @@ impl WENOLimiter {
                 }));
             }
         }
-
-        Ok(limited)
+        Ok(())
     }
 
-    /// WENO3 limiting (third-order WENO)
+    /// Convenience wrapper — allocates and returns the limited field.
+    /// Prefer [`limit_field_into`] in time-step loops to avoid per-step allocation.
+    pub fn limit_field(
+        &self,
+        field: &Array3<f64>,
+        shock_indicator: &Array3<f64>,
+    ) -> KwaversResult<Array3<f64>> {
+        let mut output = field.clone();
+        self.limit_field_into(field, shock_indicator, &mut output)?;
+        Ok(output)
+    }
+
+    /// WENO3 limiting — zero-allocation version.
+    ///
+    /// Reads stencil values from the immutable `src` (the pre-limited field) and
+    /// writes limited values into `output`. `output` must be pre-initialized to
+    /// `src` so that unshocked cells keep their original values.
+    fn weno3_limit_into(
+        &self,
+        src: &Array3<f64>,
+        shock_indicator: &Array3<f64>,
+        output: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        let (nx, ny, nz) = src.dim();
+        for i in 2..nx - 2 {
+            for j in 2..ny - 2 {
+                for k in 2..nz - 2 {
+                    if shock_indicator[[i, j, k]] > 0.5 {
+                        // Read stencil from immutable src — no write-read conflict.
+                        let weno_x = self.weno3_stencil(&[
+                            src[[i - 2, j, k]],
+                            src[[i - 1, j, k]],
+                            src[[i, j, k]],
+                            src[[i + 1, j, k]],
+                            src[[i + 2, j, k]],
+                        ]);
+                        let weno_y = self.weno3_stencil(&[
+                            src[[i, j - 2, k]],
+                            src[[i, j - 1, k]],
+                            src[[i, j, k]],
+                            src[[i, j + 1, k]],
+                            src[[i, j + 2, k]],
+                        ]);
+                        let weno_z = self.weno3_stencil(&[
+                            src[[i, j, k - 2]],
+                            src[[i, j, k - 1]],
+                            src[[i, j, k]],
+                            src[[i, j, k + 1]],
+                            src[[i, j, k + 2]],
+                        ]);
+                        output[[i, j, k]] = (weno_x + weno_y + weno_z) / 3.0;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// WENO3 limiting (third-order WENO) — kept for internal use by weno5_limit.
     fn weno3_limit(
         &self,
         field: &mut Array3<f64>,
         shock_indicator: &Array3<f64>,
     ) -> KwaversResult<()> {
+        // Delegate to the zero-allocation version by using a read view.
+        // SAFETY: `src` is a shared view of `field`; we copy stencil values
+        // to scalars before writing to `field`, so there is no aliasing hazard.
         let (nx, ny, nz) = field.dim();
-        let mut limited_field = field.clone();
-
-        for i in 2..nx - 2 {
-            for j in 2..ny - 2 {
-                for k in 2..nz - 2 {
-                    if shock_indicator[[i, j, k]] > 0.5 {
-                        // Apply WENO3 in each direction
-                        let weno_x = self.weno3_stencil(&[
-                            field[[i - 2, j, k]],
-                            field[[i - 1, j, k]],
-                            field[[i, j, k]],
-                            field[[i + 1, j, k]],
-                            field[[i + 2, j, k]],
-                        ]);
-                        let weno_y = self.weno3_stencil(&[
-                            field[[i, j - 2, k]],
-                            field[[i, j - 1, k]],
-                            field[[i, j, k]],
-                            field[[i, j + 1, k]],
-                            field[[i, j + 2, k]],
-                        ]);
-                        let weno_z = self.weno3_stencil(&[
-                            field[[i, j, k - 2]],
-                            field[[i, j, k - 1]],
-                            field[[i, j, k]],
-                            field[[i, j, k + 1]],
-                            field[[i, j, k + 2]],
-                        ]);
-
-                        // Average the limited values
-                        limited_field[[i, j, k]] = (weno_x + weno_y + weno_z) / 3.0;
-                    }
-                }
-            }
+        // Collect all updates first (avoid read-write overlap on `field`)
+        let updates: Vec<(usize, usize, usize, f64)> = (2..nx - 2)
+            .flat_map(|i| (2..ny - 2).flat_map(move |j| (2..nz - 2).map(move |k| (i, j, k))))
+            .filter(|&(i, j, k)| shock_indicator[[i, j, k]] > 0.5)
+            .map(|(i, j, k)| {
+                let weno_x = self.weno3_stencil(&[
+                    field[[i - 2, j, k]],
+                    field[[i - 1, j, k]],
+                    field[[i, j, k]],
+                    field[[i + 1, j, k]],
+                    field[[i + 2, j, k]],
+                ]);
+                let weno_y = self.weno3_stencil(&[
+                    field[[i, j - 2, k]],
+                    field[[i, j - 1, k]],
+                    field[[i, j, k]],
+                    field[[i, j + 1, k]],
+                    field[[i, j + 2, k]],
+                ]);
+                let weno_z = self.weno3_stencil(&[
+                    field[[i, j, k - 2]],
+                    field[[i, j, k - 1]],
+                    field[[i, j, k]],
+                    field[[i, j, k + 1]],
+                    field[[i, j, k + 2]],
+                ]);
+                (i, j, k, (weno_x + weno_y + weno_z) / 3.0)
+            })
+            .collect();
+        for (i, j, k, val) in updates {
+            field[[i, j, k]] = val;
         }
-
-        field.assign(&limited_field);
         Ok(())
     }
 
@@ -304,40 +369,68 @@ impl WENOLimiter {
         w0 * p0 + w1 * p1 + w2 * p2
     }
 
-    /// WENO7 limiting (seventh-order WENO)
+    /// WENO7 limiting — zero-allocation version.
+    ///
+    /// Reads from immutable `src`, writes limited values into `output`.
+    fn weno7_limit_into(
+        &self,
+        src: &Array3<f64>,
+        shock_indicator: &Array3<f64>,
+        output: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        let (nx, ny, nz) = src.dim();
+        for i in 4..nx - 4 {
+            for j in 4..ny - 4 {
+                for k in 4..nz - 4 {
+                    if shock_indicator[[i, j, k]] > 0.5 {
+                        let weno_x = self.weno7_stencil(&[
+                            src[[i - 4, j, k]],
+                            src[[i - 3, j, k]],
+                            src[[i - 2, j, k]],
+                            src[[i - 1, j, k]],
+                            src[[i, j, k]],
+                            src[[i + 1, j, k]],
+                            src[[i + 2, j, k]],
+                            src[[i + 3, j, k]],
+                            src[[i + 4, j, k]],
+                        ]);
+                        output[[i, j, k]] = weno_x;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// WENO7 limiting (seventh-order WENO) — thin wrapper used internally.
     fn weno7_limit(
         &self,
         field: &mut Array3<f64>,
         shock_indicator: &Array3<f64>,
     ) -> KwaversResult<()> {
+        // Collect updates to avoid read-write aliasing on `field`.
         let (nx, ny, nz) = field.dim();
-        let mut limited_field = field.clone();
-
-        // WENO7 requires wider stencil (9 points)
-        for i in 4..nx - 4 {
-            for j in 4..ny - 4 {
-                for k in 4..nz - 4 {
-                    if shock_indicator[[i, j, k]] > 0.5 {
-                        // Apply WENO7 in each direction
-                        let weno_x = self.weno7_stencil(&[
-                            field[[i - 4, j, k]],
-                            field[[i - 3, j, k]],
-                            field[[i - 2, j, k]],
-                            field[[i - 1, j, k]],
-                            field[[i, j, k]],
-                            field[[i + 1, j, k]],
-                            field[[i + 2, j, k]],
-                            field[[i + 3, j, k]],
-                            field[[i + 4, j, k]],
-                        ]);
-
-                        limited_field[[i, j, k]] = weno_x;
-                    }
-                }
-            }
+        let updates: Vec<(usize, usize, usize, f64)> = (4..nx - 4)
+            .flat_map(|i| (4..ny - 4).flat_map(move |j| (4..nz - 4).map(move |k| (i, j, k))))
+            .filter(|&(i, j, k)| shock_indicator[[i, j, k]] > 0.5)
+            .map(|(i, j, k)| {
+                let weno_x = self.weno7_stencil(&[
+                    field[[i - 4, j, k]],
+                    field[[i - 3, j, k]],
+                    field[[i - 2, j, k]],
+                    field[[i - 1, j, k]],
+                    field[[i, j, k]],
+                    field[[i + 1, j, k]],
+                    field[[i + 2, j, k]],
+                    field[[i + 3, j, k]],
+                    field[[i + 4, j, k]],
+                ]);
+                (i, j, k, weno_x)
+            })
+            .collect();
+        for (i, j, k, val) in updates {
+            field[[i, j, k]] = val;
         }
-
-        field.assign(&limited_field);
         Ok(())
     }
 

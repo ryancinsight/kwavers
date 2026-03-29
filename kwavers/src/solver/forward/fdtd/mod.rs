@@ -92,8 +92,10 @@ pub mod dispatch; // Phase 9.1: Runtime SIMD strategy dispatch
 pub mod electromagnetic;
 pub mod metrics;
 pub mod plugin;
+pub mod pressure_updater; // SRP: pressure field update methods
 pub mod simd_stencil;
 pub mod solver;
+pub mod velocity_updater; // SRP: velocity field update methods
 
 // Re-exports for convenience
 pub use avx512_stencil::{Avx512Config, Avx512Metrics, Avx512StencilProcessor};

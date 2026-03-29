@@ -10,7 +10,7 @@
 //! **Mathematical Foundation**:
 //!
 //! Standard Combined Integral Equation (CBIE):
-//! ```
+//! ```text
 //! c(r)u(r) + ∫_Γ [∂G(r,r')/∂n(r')] u(r') dΓ = ∫_Γ G(r,r') t(r') dΓ
 //! ```
 //!
@@ -20,7 +20,7 @@
 //! - t = ∂u/∂n (normal derivative)
 //!
 //! Hypersingular Integral Equation (HBIE):
-//! ```
+//! ```text
 //! d(r)t(r) - ∫_Γ [∂²G(r,r')/∂n(r)∂n(r')] u(r') dΓ = ∫_Γ [∂G(r,r')/∂n(r)] t(r') dΓ
 //! ```
 //!
@@ -29,7 +29,7 @@
 //! - Second term requires careful regularization (strongly singular integral)
 //!
 //! **Burton-Miller Formulation** (Burton & Miller 1971):
-//! ```
+//! ```text
 //! [CBIE] + α·[HBIE] = combined equation
 //! ```
 //!

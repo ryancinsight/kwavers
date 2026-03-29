@@ -1,6 +1,7 @@
 use super::gas_dynamics::GasSpecies;
 use super::parameters::BubbleParameters;
 use crate::core::constants::fundamental::{AVOGADRO, GAS_CONSTANT};
+use crate::core::constants::thermodynamic::T_AMBIENT;
 use std::f64::consts::PI;
 
 /// Complete state of a single bubble
@@ -37,13 +38,13 @@ impl BubbleState {
     #[must_use]
     pub fn new(params: &BubbleParameters) -> Self {
         let gas_pressure = params.initial_gas_pressure + 2.0 * params.sigma / params.r0;
-        let n_gas = estimate_molecule_count(gas_pressure, params.r0, 293.15);
+        let n_gas = estimate_molecule_count(gas_pressure, params.r0, T_AMBIENT);
 
         Self {
             radius: params.r0,
             wall_velocity: 0.0,
             wall_acceleration: 0.0,
-            temperature: 293.15,
+            temperature: T_AMBIENT,
             pressure_internal: gas_pressure,
             pressure_liquid: params.p0,
             n_gas,
@@ -52,7 +53,7 @@ impl BubbleState {
             is_collapsing: false,
             mach_number: 0.0,
             compression_ratio: 1.0,
-            max_temperature: 293.15,
+            max_temperature: T_AMBIENT,
             max_compression: 1.0,
             collapse_count: 0,
         }
@@ -74,8 +75,8 @@ impl BubbleState {
         let p_gas_pure_eq = p_internal_theoretical - params.pv;
 
         // Calculate molecule counts using ideal gas law at equilibrium conditions
-        let n_gas = estimate_molecule_count(p_gas_pure_eq, params.r0, 293.15);
-        let n_vapor = estimate_molecule_count(params.pv, params.r0, 293.15);
+        let n_gas = estimate_molecule_count(p_gas_pure_eq, params.r0, T_AMBIENT);
+        let n_vapor = estimate_molecule_count(params.pv, params.r0, T_AMBIENT);
 
         // Create initial state with theoretical equilibrium pressure
         // Note: The actual pressure during solving will be recalculated based on
@@ -85,7 +86,7 @@ impl BubbleState {
             radius: params.r0,
             wall_velocity: 0.0,
             wall_acceleration: 0.0,
-            temperature: 293.15,
+            temperature: T_AMBIENT,
             pressure_internal: p_internal_theoretical, // Store theoretical value
             pressure_liquid: params.p0,
             n_gas,
@@ -94,7 +95,7 @@ impl BubbleState {
             is_collapsing: false,
             mach_number: 0.0,
             compression_ratio: 1.0,
-            max_temperature: 293.15,
+            max_temperature: T_AMBIENT,
             max_compression: 1.0,
             collapse_count: 0,
         }

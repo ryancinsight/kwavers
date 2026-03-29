@@ -11,6 +11,7 @@
 //!
 //! - Montaldo et al. (2009), "Coherent plane-wave compounding"
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -38,7 +39,7 @@ impl Default for PlaneWaveConfig {
             tx_angle: 0.0,
             num_elements: 64,
             element_spacing: 0.3e-3,
-            sound_speed: 1540.0,
+            sound_speed: SOUND_SPEED_TISSUE,
             frequency: 5e6,
             sampling_frequency: 40e6,
         }

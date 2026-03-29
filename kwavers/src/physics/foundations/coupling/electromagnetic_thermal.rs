@@ -14,6 +14,7 @@
 //! - Pennes (1948) J Appl Physiol 1(2):93-122
 //! - Welch & van Gemert (2011) "Optical-Thermal Response of Laser-Irradiated Tissue"
 
+use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_WATER_NOMINAL};
 use ndarray::ArrayD;
 use super::MultiPhysicsCoupling;
 
@@ -35,7 +36,7 @@ pub trait ElectromagneticThermalCoupling: MultiPhysicsCoupling {
 
     /// Thermal relaxation time τ = ρ C_p / k (s)
     fn thermal_relaxation_time(&self, _position: &[f64]) -> f64 {
-        let rho = 1000.0;
+        let rho = DENSITY_WATER_NOMINAL;
         let cp = 4186.0;
         let k = 0.6;
         rho * cp / k
@@ -44,7 +45,7 @@ pub trait ElectromagneticThermalCoupling: MultiPhysicsCoupling {
     /// Perfusion cooling rate (W/m³/K)
     fn perfusion_cooling(&self, temperature: f64, _position: &[f64]) -> f64 {
         let w = 0.01;
-        let rho_b = 1060.0;
+        let rho_b = DENSITY_BLOOD;
         let cp_b = 3860.0;
         let tb = 37.0;
         w * rho_b * cp_b * (temperature - tb)

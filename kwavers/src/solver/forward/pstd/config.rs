@@ -111,7 +111,10 @@ pub struct AntiAliasingConfig {
 impl Default for AntiAliasingConfig {
     fn default() -> Self {
         Self {
-            enabled: true,
+            // Disabled by default: k-Wave does not apply a per-step spatial
+            // anti-aliasing filter for linear simulations. Enable only for
+            // nonlinear simulations where high-k aliasing causes instability.
+            enabled: false,
             cutoff: 0.95,
             order: 8,
         }

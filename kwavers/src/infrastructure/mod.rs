@@ -13,7 +13,7 @@
 //!
 //! ## Layer Position
 //!
-//! ```
+//! ```text
 //! Layer 8: Infrastructure (Top layer)
 //!         ↓
 //! Layer 7: Analysis (Post-processing)

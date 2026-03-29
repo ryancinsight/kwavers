@@ -26,6 +26,8 @@
 //!    *IEEE Transactions on Biomedical Engineering*, 46(9), 1037-1043.
 //!    - Modern perfusion estimation methods
 
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+
 pub mod bioheat;
 pub mod dose;
 pub mod hyperbolic;
@@ -66,7 +68,7 @@ impl Default for ThermalDiffusionConfig {
             perfusion_rate: 0.5e-3,
             blood_density: 1050.0,
             blood_specific_heat: 3840.0,
-            arterial_temperature: 310.15,
+            arterial_temperature: BODY_TEMPERATURE_K,
             enable_hyperbolic: false,
             relaxation_time: 20.0,
             track_thermal_dose: true,

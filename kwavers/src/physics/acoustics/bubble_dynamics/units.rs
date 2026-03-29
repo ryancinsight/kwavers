@@ -3,6 +3,7 @@
 //! This module provides type-safe wrappers for bubble dynamics parameters
 //! using the uom crate to prevent unit conversion errors at compile time.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use std::collections::HashMap;
 use uom::si::dynamic_viscosity::pascal_second;
 use uom::si::f64::{DynamicViscosity, Length, MassDensity, Pressure};
@@ -91,7 +92,7 @@ impl Default for BubbleParameters {
             r0: Length::new::<meter>(DEFAULT_BUBBLE_RADIUS),
             p0: Pressure::new::<pascal>(ATMOSPHERIC_PRESSURE),
             rho_liquid: MassDensity::new::<kilogram_per_cubic_meter>(WATER_DENSITY),
-            c_liquid: 1500.0, // m/s
+            c_liquid: SOUND_SPEED_WATER_SIM, // m/s
             mu_liquid: DynamicViscosity::new::<pascal_second>(WATER_VISCOSITY),
             sigma: WATER_SURFACE_TENSION, // N/m
             pv: Pressure::new::<pascal>(WATER_VAPOR_PRESSURE),

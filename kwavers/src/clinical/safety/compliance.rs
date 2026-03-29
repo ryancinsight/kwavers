@@ -40,6 +40,7 @@
 
 use super::mechanical_index::TissueType;
 use crate::clinical::therapy::parameters::TherapyParameters;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::VecDeque;
 use std::time::Instant;
@@ -384,11 +385,10 @@ impl EnhancedComplianceValidator {
         // Tissue properties (approximate):
         // ρ ≈ 1000 kg/m³, c ≈ 3500 J/(kg·K)
 
-        const TISSUE_DENSITY: f64 = 1000.0; // kg/m³
         const TISSUE_HEAT_CAPACITY: f64 = 3500.0; // J/(kg·K)
         const FOCAL_VOLUME_M3: f64 = 65e-9; // 65 mm³
 
-        let tissue_mass = TISSUE_DENSITY * FOCAL_VOLUME_M3;
+        let tissue_mass = DENSITY_WATER_NOMINAL * FOCAL_VOLUME_M3;
         let energy_delivered = params.pressure * params.duration * params.duty_cycle;
 
         // Simplified: assumes all acoustic energy converts to heat

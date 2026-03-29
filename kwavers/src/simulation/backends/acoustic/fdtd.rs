@@ -154,6 +154,7 @@ impl FdtdBackend {
             subgridding: false,
             subgrid_factor: 2,
             enable_gpu_acceleration: false,
+            enable_nonlinear: false,
             nt: 1, // Single step mode (controlled externally)
             dt,
             sensor_mask: None, // No sensors (fields accessed directly)

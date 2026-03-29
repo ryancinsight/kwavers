@@ -1,3 +1,5 @@
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+
 /// Parameters defining the nonlinear propagation properties of a medium
 #[derive(Debug, Clone, Copy)]
 pub struct NonlinearParameters {
@@ -24,7 +26,7 @@ impl NonlinearParameters {
         let b_over_a = 7.0;
         Self {
             density: 1050.0,
-            sound_speed: 1540.0,
+            sound_speed: SOUND_SPEED_TISSUE,
             b_over_a,
             beta: 1.0 + b_over_a / 2.0,
             attenuation_coeff: 0.5 * 100.0 / 8.686, // ~0.5 dB/cm/MHz converted to Np/m/MHz

@@ -74,8 +74,10 @@ def main():
     print("Running k-wave-python reference simulation")
     print("=" * 80)
     
+    # CANONICAL: same total grid as kwavers (do NOT subtract 2*PML_SIZE)
+    # pml_inside=True means PML is counted within this Nx, same as kwavers
     kgrid = kWaveGrid(
-        [Nx - 2*PML_SIZE, Ny - 2*PML_SIZE, Nz - 2*PML_SIZE], 
+        [Nx, Ny, Nz],
         [dx, dy, dz]
     )
     
@@ -179,11 +181,17 @@ def main():
     # k-wave: (time, sensors) -> (sensors, time)
     if kw_p.ndim == 2 and kw_p.shape[1] < kw_p.shape[0]:
         kw_p = kw_p.T
-        
+
     # Flatten if 1 sensor
     if py_p.ndim == 1:
         py_p = py_p.reshape(1, -1)
-        
+
+    # Canonical timing alignment:
+    # k-Wave records at t=0 (before step 1); kwavers records after each step.
+    # kw_p[:, 1:] aligns with py_p[:, :-1].
+    kw_p = kw_p[:, 1:]
+    py_p = py_p[:, :-1]
+
     n_sensors = min(kw_p.shape[0], py_p.shape[0])
     n_common_ts = min(kw_p.shape[1], py_p.shape[1])
     

@@ -3,10 +3,25 @@
 //! This module provides the core bubble dynamics calculations that are used by:
 //! - Mechanics: for cavitation damage and erosion
 //! - Optics: for sonoluminescence light emission
-
 //! - Chemistry: for ROS generation and sonochemistry
 //!
-//! Based on the Keller-Miksis equation and extended models from literature
+//! Based on the Keller-Miksis equation and extended models from literature.
+//!
+//! # ARCHITECTURE NOTE (SOC / SRP debt)
+//!
+//! The `adaptive_integration` and `imex_integration` sub-modules implement ODE
+//! **time-stepping** logic (adaptive Runge-Kutta, IMEX schemes), which
+//! architecturally belongs in the **solver layer** (e.g., `solver/forward/ode/`),
+//! not the physics layer.  The physics layer should only define equations of
+//! motion (Keller-Miksis, Rayleigh-Plesset, etc.).
+//!
+//! Tracked for future refactor — see `docs/IMPLEMENTATION_ROADMAP.md` §Layer Boundaries.
+//!
+//! ## Migration Path
+//! 1. Create `solver/forward/ode/` with `AdaptiveRkSolver<E: BubbleOde>` trait
+//! 2. Move `adaptive_integration` and `imex_integration` to `solver/forward/ode/`
+//! 3. Physics layer keeps only the equation structs implementing `BubbleOde`
+//! 4. Update all callers to the new solver-layer path
 
 pub mod adaptive_integration; // NEW: Adaptive time-stepping for stiff ODEs
 pub mod bjerknes_forces; // NEW: Bjerknes forces for bubble-bubble interactions

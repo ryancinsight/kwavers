@@ -254,11 +254,21 @@
 //! - `super_resolution`: 2D histogram accumulation, Gaussian rendering, density visualization
 //! - `velocity_mapping`: Optical flow from trajectories, wall shear stress estimation
 
+pub mod microbubble_detection;
+pub mod tracking;
+
+pub use microbubble_detection::{
+    BubbleDetection, GaussianLocalizer, LocalizationConfig, SvdClutterConfig, SvdClutterFilter,
+    UlmDetector,
+};
+pub use tracking::{BubbleTrack, HungarianTracker, TrackingConfig};
+
 #[cfg(test)]
 mod tests {
     #[test]
     fn test_ulm_module() {
-        // Placeholder test
-        assert!(true);
+        let _ = super::SvdClutterConfig::default();
+        let _ = super::LocalizationConfig::default();
+        let _ = super::TrackingConfig::default();
     }
 }

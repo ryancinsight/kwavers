@@ -5,14 +5,19 @@
 //! without committing to a particular numerical method (finite difference,
 //! finite element, spectral, or neural network approximation).
 //!
-//! TODO_AUDIT: P1 - Generalized Wave Physics - Implement complete wave equation hierarchy with nonlinear, dispersive, and multi-physics coupling
-//! DEPENDS ON: physics/foundations/wave_equations/nonlinear.rs, physics/foundations/wave_equations/dispersive.rs, physics/foundations/wave_equations/coupled.rs
-//! MISSING: Nonlinear wave equations (KZK, Westervelt) with exact dispersion relations
-//! MISSING: Dispersive media modeling with Kramers-Kronig relations
-//! MISSING: Multi-physics coupling (thermoacoustic, acousto-optic, piezoelectric)
-//! MISSING: Fractional wave equations for anomalous dispersion
-//! MISSING: Time-reversal acoustics for focusing and imaging
-//! MISSING: Quantum acoustic effects for extreme conditions
+//! Implemented concrete wave equations:
+//!
+//! * **Westervelt equation** (nonlinear FDTD):
+//!   [`crate::solver::forward::nonlinear::westervelt::WesterveltSolver`]
+//! * **PSTD pseudospectral solver** with power-law absorption (Treeby & Cox 2010):
+//!   [`crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver`]
+//! * **Keller-Miksis bubble dynamics** (compressible, Keller & Miksis 1980):
+//!   [`crate::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel`]
+//! * **Multi-bubble secondary Bjerknes coupling** (Crum 1975):
+//!   [`crate::physics::acoustics::bubble_dynamics::bubble_field::BubbleField`]
+//!
+//! Remaining extensions (dispersive Kramers-Kronig media, fractional-order
+//! equations, time-reversal acoustics, quantum acoustic effects) are future work.
 
 pub mod acoustic;
 pub mod core;

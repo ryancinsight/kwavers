@@ -14,7 +14,7 @@
 //!
 //! **Rankine-Hugoniot Jump Conditions**:
 //! At a shock (discontinuity), conservation laws give:
-//! ```
+//! ```text
 //! ρ₀(ż - u₊) = -ρ₀(ż - u₋)           (mass conservation)
 //! p₊ - ρ₀(ż - u₊)u₊ = p₋ - ρ₀(ż - u₋)u₋  (momentum)
 //! ```
@@ -28,7 +28,7 @@
 //!
 //! **2. Artificial Viscosity**:
 //! Adds diffusive term proportional to |∇p| to handle discontinuities
-//! ```
+//! ```text
 //! Q_av = c₀μ|∇p|/ρ₀ · ∇²p
 //! ```
 //!

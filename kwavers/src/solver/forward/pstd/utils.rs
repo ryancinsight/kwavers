@@ -153,8 +153,9 @@ pub fn compute_kspace_correction_factors(
             // Treeby & Cox (2010) k-space correction: sinc(c_ref * dt * |k| / 2)
             // Uses UNNORMALIZED sinc (sin(x)/x), matching the C++ k-wave binary
             // (kspaceFirstOrder-OMP). The Python np.sinc is normalized sin(πx)/(πx)
-            // but the C++ binary computes kappa = sin(k)/k directly where
-            // k = c_ref * dt * π * |k_physical| / (2π) = c_ref * dt * |k_physical| / 2.
+            // but the Python-precomputed kappa is NOT passed to the C++ binary (it is
+            // absent from the save_to_disk dotdict). The binary computes kappa internally
+            // using sin(x)/x with x = c_ref * dt * |k| / 2.
             Zip::from(&mut correction).and(kx).and(ky).and(kz).for_each(
                 |c, &kx_val, &ky_val, &kz_val| {
                     let k_sq = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
@@ -196,9 +197,8 @@ fn sinc(x: f64) -> f64 {
 }
 
 /// Normalized sinc function: sinc(x) = sin(π·x)/(π·x)
-/// Matches numpy's np.sinc(x) convention. Note: the C++ k-wave binary
-/// uses UNNORMALIZED sinc (sin(x)/x) for kappa, so this is NOT used
-/// for kappa computation. Kept for reference and potential future use.
+/// Matches numpy's np.sinc(x) convention. NOT used for kappa (C++ binary uses unnormalized).
+/// Kept for reference and testing.
 #[inline]
 #[allow(dead_code)]
 fn sinc_normalized(x: f64) -> f64 {

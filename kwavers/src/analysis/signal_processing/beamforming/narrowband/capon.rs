@@ -49,6 +49,7 @@ use crate::analysis::signal_processing::beamforming::narrowband::snapshots::{
     SnapshotSelection,
 };
 use crate::analysis::signal_processing::beamforming::narrowband::steering::NarrowbandSteering;
+use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 // Import from analysis layer (canonical location)
 use crate::analysis::signal_processing::beamforming::covariance::CovarianceEstimator;
@@ -145,7 +146,7 @@ impl Default for CaponSpectrumConfig {
         Self {
             // Common ultrasound center frequency default (caller should override).
             frequency_hz: 1e6,
-            sound_speed: 1500.0,
+            sound_speed: SOUND_SPEED_WATER_SIM,
             diagonal_loading: 1e-6,
             covariance: CovarianceEstimator::default(),
             steering: SteeringVectorMethod::PlaneWave,

@@ -15,14 +15,32 @@ pub trait DiscontinuityDetection: Send + Sync {
 
 /// Trait for solution coupling between different methods
 pub trait SolutionCoupling: Send + Sync {
-    /// Couple two solutions from different methods
+    /// Couple two solutions, writing the blended result into `output`.
+    ///
+    /// `output` does NOT need to be pre-initialized; every element is written.
+    /// This is the zero-allocation hot-path variant.
+    fn couple_into(
+        &self,
+        solution1: &Array3<f64>,
+        solution2: &Array3<f64>,
+        mask: &Array3<bool>,
+        original: &Array3<f64>,
+        output: &mut Array3<f64>,
+    ) -> KwaversResult<()>;
+
+    /// Convenience wrapper — allocates and returns the coupled field.
+    /// Prefer [`couple_into`] in time-step loops.
     fn couple(
         &self,
         solution1: &Array3<f64>,
         solution2: &Array3<f64>,
         mask: &Array3<bool>,
         original: &Array3<f64>,
-    ) -> KwaversResult<Array3<f64>>;
+    ) -> KwaversResult<Array3<f64>> {
+        let mut out = original.clone();
+        self.couple_into(solution1, solution2, mask, original, &mut out)?;
+        Ok(out)
+    }
 }
 
 /// Trait for DG-specific operations

@@ -1,6 +1,7 @@
 //! Beam steering and focusing control
 
 use super::element::ElementConfiguration;
+use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::signal::Signal;
@@ -47,7 +48,7 @@ impl SteeringController {
     pub fn new(frequency: f64) -> Self {
         Self {
             frequency,
-            sound_speed: 1500.0, // Water/tissue
+            sound_speed: SOUND_SPEED_WATER_SIM, // Water/tissue nominal
             focal_point: None,
         }
     }

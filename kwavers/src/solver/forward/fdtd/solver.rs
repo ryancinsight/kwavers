@@ -99,7 +99,7 @@ impl CentralDifferenceOperator {
         }
     }
 
-    fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    pub(crate) fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         match self {
             Self::Order2(op) => op.apply_x(field),
             Self::Order4(op) => op.apply_x(field),
@@ -107,7 +107,7 @@ impl CentralDifferenceOperator {
         }
     }
 
-    fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    pub(crate) fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         match self {
             Self::Order2(op) => op.apply_y(field),
             Self::Order4(op) => op.apply_y(field),
@@ -115,7 +115,7 @@ impl CentralDifferenceOperator {
         }
     }
 
-    fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    pub(crate) fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         match self {
             Self::Order2(op) => op.apply_z(field),
             Self::Order4(op) => op.apply_z(field),
@@ -123,7 +123,7 @@ impl CentralDifferenceOperator {
         }
     }
 
-    fn gradient(
+    pub(crate) fn gradient(
         &self,
         field: ArrayView3<f64>,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
@@ -149,12 +149,17 @@ impl CentralDifferenceOperator {
 }
 
 /// FDTD solver for acoustic wave propagation
-/// TODO_AUDIT: P1 - Advanced Wave Propagation - Implement full 3D nonlinear wave propagation with exact dispersion correction for high-frequency ultrasound (>10 MHz), adding frequency-dependent attenuation and nonlinear effects
-/// DEPENDS ON: physics/acoustics/nonlinear/westervelt.rs, physics/acoustics/attenuation/frequency_power_law.rs
-/// MISSING: Westervelt equation: ∂²p/∂t² - c₀²∇²p = (β/c₀²)(∂²p²/∂t²) for finite amplitude waves
-/// MISSING: Power-law attenuation: α = α₀ fᵇ with b=1.1 for soft tissues, b=2 for relaxation
-/// MISSING: Khokhlov-Zabolotskaya-Kuznetsov (KZK) equation for parabolic approximation in focused beams
-/// MISSING: Phase velocity dispersion correction for broadband pulses
+///
+/// Supports both linear and nonlinear (Westervelt) wave propagation, CPML absorbing
+/// boundaries, staggered-grid spatial operators (2nd / 4th / 6th order), and optional
+/// AVX-512 SIMD pressure update kernels.
+///
+/// Westervelt nonlinear term `(β/ρ₀c₀⁴) ∂²p²/∂t²` is enabled via
+/// [`FdtdConfig::enable_nonlinear`]. When enabled the solver allocates
+/// `p_prev`, `p_prev2`, `nl_scratch`, `beta_arr`, and `c0_fourth` arrays and
+/// calls [`FdtdSolver::apply_westervelt_nonlinear_correction`] each step.
+///
+/// Reference: Westervelt (1963), Hamilton & Blackstock (1998) Ch. 4.
 pub struct FdtdSolver {
     /// Configuration
     pub(crate) config: FdtdConfig,
@@ -168,7 +173,7 @@ pub struct FdtdSolver {
     pub(crate) cpml_boundary: Option<CPMLBoundary>,
     /// Spatial order enum (validated at construction)
     spatial_order: SpatialOrder,
-    gpu_accelerator: Option<Arc<dyn FdtdGpuAccelerator>>,
+    pub(crate) gpu_accelerator: Option<Arc<dyn FdtdGpuAccelerator>>,
 
     // Shared components for source handling and sensor recording
     pub(crate) source_handler: SourceHandler,
@@ -186,7 +191,33 @@ pub struct FdtdSolver {
     pub(crate) materials: MaterialFields,
 
     // Precomputed fields
-    rho_c_squared: Array3<f64>,
+    pub(crate) rho_c_squared: Array3<f64>,
+
+    // Nonlinear Westervelt fields (populated only when config.enable_nonlinear = true)
+    // ---------------------------------------------------------------------------------
+    // Algorithm: Westervelt (1963) explicit FDTD — Eq. A.5 of Hamilton & Blackstock (1998).
+    //
+    // Nonlinear source term added to the pressure update:
+    //   Δp_nl = dt * (β_arr / (ρ₀ · c₀⁴)) · ∂²(p²)/∂t²
+    //   ∂²(p²)/∂t² = 2p * (p - 2p' + p'') / dt² + 2 * ((p - p') / dt)²
+    //
+    // where p' = p^{n-1} and p'' = p^{n-2}. For the first two steps,
+    // the incomplete history terms are zero-initialized (Aanonsen et al. 1984).
+    //
+    // References:
+    //   Westervelt, P. J. (1963). J. Acoust. Soc. Am. 35(4), 535–537.
+    //   Hamilton, M. F. & Blackstock, D. T. (1998). Nonlinear Acoustics. Academic Press.
+    //   Aanonsen, S. I. et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768.
+    /// Previous pressure field p^{n-1} for Westervelt nonlinear term
+    pub(crate) p_prev: Option<Array3<f64>>,
+    /// Two steps back p^{n-2} for Westervelt nonlinear term
+    pub(crate) p_prev2: Option<Array3<f64>>,
+    /// Pre-allocated scratch for nonlinear term to avoid per-step allocation
+    pub(crate) nl_scratch: Option<Array3<f64>>,
+    /// Nonlinearity coefficient β = 1 + B/(2A) at each grid point
+    pub(crate) beta_arr: Option<Array3<f64>>,
+    /// c₀⁴ at each grid point (precomputed to avoid recomputing in hot path)
+    pub(crate) c0_fourth: Option<Array3<f64>>,
 }
 
 impl FdtdSolver {
@@ -256,6 +287,34 @@ impl FdtdSolver {
         );
         // Note: FDTD uses a single rho field so no split needed (cf. PSTD rhox/rhoy/rhoz)
 
+        // Precompute nonlinear medium property arrays (only when nonlinear mode is on)
+        let (p_prev, p_prev2, nl_scratch, beta_arr, c0_fourth) =
+            if config.enable_nonlinear {
+                let mut beta = Array3::<f64>::zeros(shape);
+                let mut c4 = Array3::<f64>::zeros(shape);
+                for k in 0..grid.nz {
+                    for j in 0..grid.ny {
+                        for i in 0..grid.nx {
+                            let (x, y, z) = grid.indices_to_coordinates(i, j, k);
+                            let bn = crate::domain::medium::nonlinearity_at(medium, x, y, z, grid);
+                            let c = crate::domain::medium::sound_speed_at(medium, x, y, z, grid);
+                            // β = 1 + B/(2A) where B/A is returned by nonlinearity_at
+                            beta[[i, j, k]] = 1.0 + bn * 0.5;
+                            c4[[i, j, k]] = c.powi(4);
+                        }
+                    }
+                }
+                (
+                    Some(Array3::<f64>::zeros(shape)),
+                    Some(Array3::<f64>::zeros(shape)),
+                    Some(Array3::<f64>::zeros(shape)),
+                    Some(beta),
+                    Some(c4),
+                )
+            } else {
+                (None, None, None, None, None)
+            };
+
         Ok(Self {
             config,
             grid: grid.clone(),
@@ -273,6 +332,11 @@ impl FdtdSolver {
             fields,
             materials,
             rho_c_squared,
+            p_prev,
+            p_prev2,
+            nl_scratch,
+            beta_arr,
+            c0_fourth,
         })
     }
 
@@ -466,259 +530,6 @@ impl FdtdSolver {
                 }
             }
         }
-    }
-
-    /// Update pressure field using velocity divergence
-    pub fn update_pressure(&mut self, dt: f64) -> KwaversResult<()> {
-        if self.config.enable_gpu_acceleration {
-            let accelerator = self.gpu_accelerator.as_ref().ok_or_else(|| {
-                KwaversError::Config(crate::core::error::ConfigError::InvalidValue {
-                    parameter: "enable_gpu_acceleration".to_string(),
-                    value: "true".to_string(),
-                    constraint: "GPU accelerator must be configured".to_string(),
-                })
-            })?;
-            let new_pressure = self.update_pressure_gpu(accelerator.as_ref(), dt)?;
-            self.fields.p = new_pressure;
-            return Ok(());
-        }
-
-        // Fall back to CPU implementation
-        self.update_pressure_cpu(dt)
-    }
-
-    /// CPU implementation of pressure update
-    fn update_pressure_cpu(&mut self, dt: f64) -> KwaversResult<()> {
-        let divergence = if self.config.staggered_grid {
-            self.compute_divergence_staggered()?
-        } else {
-            let mut dvx = self.central_operator.apply_x(self.fields.ux.view())?;
-            let mut dvy = self.central_operator.apply_y(self.fields.uy.view())?;
-            let mut dvz = self.central_operator.apply_z(self.fields.uz.view())?;
-
-            if let Some(ref mut cpml) = self.cpml_boundary {
-                cpml.update_and_apply_v_gradient_correction(&mut dvx, 0);
-                cpml.update_and_apply_v_gradient_correction(&mut dvy, 1);
-                cpml.update_and_apply_v_gradient_correction(&mut dvz, 2);
-            }
-            &dvx + &dvy + &dvz
-        };
-
-        // Update pressure: p^{n+1} = p^n - dt * rho * c^2 * div(v)
-        // Use SIMD-optimized operations for better performance
-        // update_pressure_simd takes &self? It access SimdOps (static?).
-        // It takes pressure, divergence, density, c0.
-
-        Self::update_pressure_simd(&mut self.fields.p, &divergence, &self.rho_c_squared, dt);
-
-        // Apply C-PML if enabled
-        // Note: C-PML boundary conditions are applied to the gradient terms
-        // in the velocity update, not directly to pressure
-
-        Ok(())
-    }
-
-    /// SIMD-optimized pressure update: p^{n+1} = p^n - dt * rho * c^2 * div(v)
-    ///
-    /// Uses explicit SIMD intrinsics for maximum performance with safety proofs.
-    /// Performance improvement: 2-4x speedup on modern CPUs with AVX2/AVX-512.
-    fn update_pressure_simd(
-        pressure: &mut Array3<f64>,
-        divergence: &Array3<f64>,
-        rho_c_squared: &Array3<f64>,
-        dt: f64,
-    ) {
-        // Plain ndarray implementation to isolate SIMD issues
-        for ((p, &div), &rc2) in pressure
-            .iter_mut()
-            .zip(divergence.iter())
-            .zip(rho_c_squared.iter())
-        {
-            *p -= dt * rc2 * div;
-        }
-    }
-
-    fn update_pressure_gpu(
-        &self,
-        accelerator: &dyn FdtdGpuAccelerator,
-        dt: f64,
-    ) -> KwaversResult<Array3<f64>> {
-        accelerator.propagate_acoustic_wave(
-            &self.fields.p,
-            &self.fields.ux,
-            &self.fields.uy,
-            &self.fields.uz,
-            &self.materials.rho0,
-            &self.materials.c0,
-            dt,
-            self.grid.dx,
-            self.grid.dy,
-            self.grid.dz,
-        )
-    }
-
-    /// Update velocity field using pressure gradient
-    pub fn update_velocity(&mut self, dt: f64) -> KwaversResult<()> {
-        if self.config.staggered_grid {
-            return self.update_velocity_staggered(dt);
-        }
-
-        // Compute pressure gradient
-        let (mut grad_x, mut grad_y, mut grad_z) =
-            self.central_operator.gradient(self.fields.p.view())?;
-
-        if let Some(ref mut cpml) = self.cpml_boundary {
-            cpml.update_and_apply_p_gradient_correction(&mut grad_x, 0);
-            cpml.update_and_apply_p_gradient_correction(&mut grad_y, 1);
-            cpml.update_and_apply_p_gradient_correction(&mut grad_z, 2);
-        }
-
-        // Update velocity: v^{n+1/2} = v^{n-1/2} - dt/rho * grad(p)
-        let velocity_components = [
-            &mut self.fields.ux,
-            &mut self.fields.uy,
-            &mut self.fields.uz,
-        ];
-        let gradients = [&grad_x, &grad_y, &grad_z];
-
-        for (vel_component, grad_component) in velocity_components.into_iter().zip(gradients) {
-            Zip::from(vel_component)
-                .and(grad_component)
-                .and(&self.materials.rho0)
-                .for_each(|v, &grad, &rho| {
-                    // Ensure rho is not zero to prevent division by zero
-                    if rho > 1e-9 {
-                        *v -= dt / rho * grad;
-                    }
-                });
-        }
-
-        Ok(())
-    }
-
-    fn compute_divergence_staggered(&mut self) -> KwaversResult<Array3<f64>> {
-        let mut dvx = self
-            .staggered_operator
-            .apply_backward_x(self.fields.ux.view())?;
-        let mut dvy = self
-            .staggered_operator
-            .apply_backward_y(self.fields.uy.view())?;
-        let mut dvz = self
-            .staggered_operator
-            .apply_backward_z(self.fields.uz.view())?;
-
-        if let Some(ref mut cpml) = self.cpml_boundary {
-            cpml.update_and_apply_v_gradient_correction(&mut dvx, 0);
-            cpml.update_and_apply_v_gradient_correction(&mut dvy, 1);
-            cpml.update_and_apply_v_gradient_correction(&mut dvz, 2);
-        }
-
-        Ok(&dvx + &dvy + &dvz)
-    }
-
-    fn update_velocity_staggered(&mut self, dt: f64) -> KwaversResult<()> {
-        let (nx, ny, nz) = self.fields.p.dim();
-
-        // 1. Compute gradients
-        let mut dp_dx = if nx > 1 {
-            Some(
-                self.staggered_operator
-                    .apply_forward_x(self.fields.p.view())?,
-            )
-        } else {
-            None
-        };
-
-        let mut dp_dy = if ny > 1 {
-            Some(
-                self.staggered_operator
-                    .apply_forward_y(self.fields.p.view())?,
-            )
-        } else {
-            None
-        };
-
-        let mut dp_dz = if nz > 1 {
-            Some(
-                self.staggered_operator
-                    .apply_forward_z(self.fields.p.view())?,
-            )
-        } else {
-            None
-        };
-
-        // 2. Apply CPML corrections
-        if let Some(ref mut cpml) = self.cpml_boundary {
-            if let Some(ref mut grad) = dp_dx {
-                cpml.update_and_apply_p_gradient_correction(grad, 0);
-            }
-            if let Some(ref mut grad) = dp_dy {
-                cpml.update_and_apply_p_gradient_correction(grad, 1);
-            }
-            if let Some(ref mut grad) = dp_dz {
-                cpml.update_and_apply_p_gradient_correction(grad, 2);
-            }
-        }
-
-        // 3. Update velocity components
-        // Uses ndarray slice views to eliminate inner bounds checks and enable LLVM vectorization.
-        // rho is averaged at the staggered half-cell: ρ_avg = (ρ[i] + ρ[i+1]) / 2.
-        // Boundary row/col/layer is zeroed to enforce Dirichlet velocity at domain edge.
-        if let Some(ref grad) = dp_dx {
-            {
-                let rho_left = self.materials.rho0.slice(s![..nx - 1, .., ..]);
-                let rho_right = self.materials.rho0.slice(s![1..nx, .., ..]);
-                Zip::from(self.fields.ux.slice_mut(s![..nx - 1, .., ..]))
-                    .and(rho_left)
-                    .and(rho_right)
-                    .and(grad.view())
-                    .for_each(|u, &rl, &rr, &dp| {
-                        let rho = 0.5 * (rl + rr);
-                        if rho > 1e-9 {
-                            *u -= dt / rho * dp;
-                        }
-                    });
-            }
-            self.fields.ux.slice_mut(s![nx - 1, .., ..]).fill(0.0);
-        }
-
-        if let Some(ref grad) = dp_dy {
-            {
-                let rho_front = self.materials.rho0.slice(s![.., ..ny - 1, ..]);
-                let rho_back = self.materials.rho0.slice(s![.., 1..ny, ..]);
-                Zip::from(self.fields.uy.slice_mut(s![.., ..ny - 1, ..]))
-                    .and(rho_front)
-                    .and(rho_back)
-                    .and(grad.view())
-                    .for_each(|u, &rf, &rb, &dp| {
-                        let rho = 0.5 * (rf + rb);
-                        if rho > 1e-9 {
-                            *u -= dt / rho * dp;
-                        }
-                    });
-            }
-            self.fields.uy.slice_mut(s![.., ny - 1, ..]).fill(0.0);
-        }
-
-        if let Some(ref grad) = dp_dz {
-            {
-                let rho_near = self.materials.rho0.slice(s![.., .., ..nz - 1]);
-                let rho_far = self.materials.rho0.slice(s![.., .., 1..nz]);
-                Zip::from(self.fields.uz.slice_mut(s![.., .., ..nz - 1]))
-                    .and(rho_near)
-                    .and(rho_far)
-                    .and(grad.view())
-                    .for_each(|u, &rn, &rf, &dp| {
-                        let rho = 0.5 * (rn + rf);
-                        if rho > 1e-9 {
-                            *u -= dt / rho * dp;
-                        }
-                    });
-            }
-            self.fields.uz.slice_mut(s![.., .., nz - 1]).fill(0.0);
-        }
-
-        Ok(())
     }
 
     /// Calculate maximum stable time step based on CFL condition

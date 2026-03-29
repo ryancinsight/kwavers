@@ -3,8 +3,10 @@
 //! Follows Builder pattern for complex medium instantiation
 
 use super::{LayerParameters, MediumParameters, MediumType};
+use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
+use crate::domain::medium::heterogeneous::HeterogeneousFactory;
 use crate::domain::medium::{homogeneous::HomogeneousMedium, Medium};
 
 /// Specialized medium builder following Builder pattern from GRASP
@@ -17,7 +19,7 @@ impl MediumBuilder {
         match config.medium_type {
             MediumType::Homogeneous => Self::build_homogeneous(
                 config.density,
-                config.sound_speed.unwrap_or(1500.0),
+                config.sound_speed.unwrap_or(SOUND_SPEED_WATER_SIM),
                 // MediumParameters doesn't have mu_a top-level?
                 // Let's check config.rs (Step 130).
                 // It has: density, sound_speed, absorption, absorption_power, nonlinearity...
@@ -34,7 +36,7 @@ impl MediumBuilder {
                 // For custom/random etc. fallback to homogeneous/water for now or implement
                 Self::build_homogeneous(
                     config.density,
-                    config.sound_speed.unwrap_or(1500.0),
+                    config.sound_speed.unwrap_or(SOUND_SPEED_WATER_SIM),
                     config,
                     grid,
                 )
@@ -70,30 +72,42 @@ impl MediumBuilder {
         config: &MediumParameters,
         grid: &Grid,
     ) -> KwaversResult<Box<dyn Medium>> {
-        // Note: Using homogeneous as fallback since HeterogeneousMedium
-        // may not have factory constructor available.
-        // In production, this would use TissueFactory::from_file or from_arrays
-
         let (nx, ny, nz) = grid.dimensions();
 
         if let Some(file) = &config.tissue_file {
-            log::info!(
-                "Tissue file loading would use TissueFactory::from_file: {}",
-                file
+            log::warn!(
+                "tissue_file '{}' loading not yet implemented; using scalar fallback for {}x{}x{} grid",
+                file, nx, ny, nz
             );
         }
 
         if !config.property_maps.is_empty() {
-            log::info!("Property maps: {:?}", config.property_maps.keys());
+            log::warn!(
+                "property_maps file loading not yet implemented (keys: {:?}); using scalar fallback",
+                config.property_maps.keys().collect::<Vec<_>>()
+            );
         }
 
-        log::debug!(
-            "Building heterogeneous medium for grid {}x{}x{}",
-            nx,
-            ny,
-            nz
+        let c0 = config.sound_speed.unwrap_or(SOUND_SPEED_WATER_SIM);
+        let rho0 = config.density;
+        let absorption = config.absorption;
+        let nonlinearity = config.nonlinearity;
+        let reference_frequency = 1.0e6; // 1 MHz default
+
+        let medium = HeterogeneousFactory::from_functions(
+            grid,
+            move |_x, _y, _z| c0,
+            move |_x, _y, _z| rho0,
+            Some(Box::new(move |_x, _y, _z| absorption)),
+            Some(Box::new(move |_x, _y, _z| nonlinearity)),
+            reference_frequency,
         );
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 10.0, grid);
+
+        log::debug!(
+            "Built HeterogeneousMedium (uniform c0={:.1} m/s, rho0={:.1} kg/m³) for {}x{}x{} grid",
+            c0, rho0, nx, ny, nz
+        );
+
         Ok(Box::new(medium))
     }
 
@@ -104,7 +118,7 @@ impl MediumBuilder {
 
         if total_thickness <= 0.0 {
             // No valid layers, return default
-            let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 10.0, grid);
+            let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 10.0, grid);
             return Ok(Box::new(medium));
         }
 

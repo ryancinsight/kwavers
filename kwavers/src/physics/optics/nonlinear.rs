@@ -8,6 +8,8 @@
 //! - Diels & Rudolph (2006) "Ultrashort Laser Pulse Phenomena"
 //! - Agrawal (2007) "Nonlinear Fiber Optics"
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+
 /// Kerr effect parameters
 ///
 /// The Kerr effect describes intensity-dependent refractive index change:
@@ -190,7 +192,7 @@ impl PhotoacousticConversion {
     pub fn tissue() -> Self {
         Self::new(
             0.25,   // Grüneisen parameter
-            1540.0, // Speed of sound [m/s]
+            SOUND_SPEED_TISSUE, // Speed of sound [m/s]
             0.5,    // Thermal conductivity [W/(m·K)]
             3.5e6,  // Volumetric heat capacity [J/(m³·K)]
         )

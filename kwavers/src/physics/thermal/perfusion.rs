@@ -4,6 +4,7 @@
 //! - Kolios et al. (2003) "Blood flow cooling and ultrasonic lesion formation"
 //! - Curra et al. (2000) "Numerical simulations of heating patterns"
 
+use crate::core::constants::fundamental::DENSITY_BLOOD;
 use ndarray::Array3;
 
 /// Temperature-dependent perfusion model
@@ -131,10 +132,9 @@ impl VesselCooling {
 
     /// Calculate Reynolds number for blood flow
     fn calculate_reynolds_number(&self, diameter: f64) -> f64 {
-        const BLOOD_DENSITY: f64 = 1060.0; // kg/m³
         const BLOOD_VISCOSITY: f64 = 0.004; // Pa·s
 
-        (BLOOD_DENSITY * self.velocity * diameter) / BLOOD_VISCOSITY
+        (DENSITY_BLOOD * self.velocity * diameter) / BLOOD_VISCOSITY
     }
 }
 

@@ -105,10 +105,13 @@
 //! * `ThermodynamicsCalculator`, `MassTransferModel`, and
 //!   `EnergyBalanceCalculator` are held as reserved fields; full coupling
 //!   (heat conduction into the liquid shell, non-condensable gas diffusion)
-//!   is planned under TODO_AUDIT P1.
-//! * Bjerknes forces (secondary radiation coupling between neighbouring
-//!   bubbles in a cloud) are not yet implemented; the model is strictly
-//!   single-bubble.
+//!   are reserved for future full thermodynamic coupling.
+//! * Secondary Bjerknes coupling between neighbouring bubbles in a cloud
+//!   is implemented in
+//!   [`crate::physics::acoustics::bubble_dynamics::bubble_field::BubbleField`]:
+//!   each bubble receives an additional pressure `p_ij = −ρ_L[R²R̈ + 2RṘ²]/d`
+//!   from its neighbours (monopole radiation, Crum 1975). Coupling is skipped
+//!   for pairs with R/d < threshold (default 0.01) for performance.
 //!
 //! ---
 //!
@@ -142,9 +145,12 @@ use crate::physics::acoustics::bubble_dynamics::thermodynamics::{
 
 /// Keller-Miksis equation solver (compressible)
 ///
+/// Integrates the compressible KM ODE for a single bubble. Multi-bubble
+/// secondary Bjerknes coupling is handled at a higher level by
+/// [`crate::physics::acoustics::bubble_dynamics::bubble_field::BubbleField`].
+///
 /// **Literature**: Keller & Miksis (1980), Hamilton & Blackstock Ch.11
-/// **Note**: Thermodynamic calculators reserved for future implementation
-/// TODO_AUDIT: P1 - Multi-Bubble Interactions - Implement Bjerknes forces, coalescence, and fragmentation for dense bubble clouds, replacing single-bubble approximation
+/// **Note**: Thermodynamic calculators reserved for full conduction coupling.
 #[derive(Debug, Clone)]
 pub struct KellerMiksisModel {
     pub(crate) params: BubbleParameters,

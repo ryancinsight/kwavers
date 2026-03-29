@@ -6,7 +6,7 @@
 //!
 //! ## Hardware Abstraction Architecture
 //!
-//! ```
+//! ```text
 //! Application Layer
 //!     ↓
 //! Device Manager (enumerates, configures, manages lifetime)

@@ -13,16 +13,26 @@ impl HybridCoupler {
 }
 
 impl super::traits::SolutionCoupling for HybridCoupler {
-    fn couple(
+    /// Zero-allocation coupling — writes directly into `output` without cloning.
+    ///
+    /// ## Algorithm
+    /// For each cell (i, j, k):
+    /// - If `mask[i,j,k]` is `true` (DG region): blend s1 and s2 with weight
+    ///   `w = clamp(|s1-s2| / tol, 0, 1)` so that closely-matching solutions
+    ///   favour the spectral value and strongly-differing ones favour DG.
+    /// - Otherwise (smooth spectral region): use s1 directly.
+    ///
+    /// `output` is fully overwritten; it does not need to be pre-initialized.
+    fn couple_into(
         &self,
         solution1: &Array3<f64>,
         solution2: &Array3<f64>,
         mask: &Array3<bool>,
-        original: &Array3<f64>,
-    ) -> KwaversResult<Array3<f64>> {
+        _original: &Array3<f64>,
+        output: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
         let tol = self.tolerance.max(f64::EPSILON);
-        let mut result = original.clone();
-        for ((out, &use_solution2), (&s1, &s2)) in result
+        for ((out, &use_solution2), (&s1, &s2)) in output
             .iter_mut()
             .zip(mask.iter())
             .zip(solution1.iter().zip(solution2.iter()))
@@ -35,6 +45,6 @@ impl super::traits::SolutionCoupling for HybridCoupler {
                 *out = s1;
             }
         }
-        Ok(result)
+        Ok(())
     }
 }

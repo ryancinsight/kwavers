@@ -128,6 +128,19 @@ pub const T_TRIPLE_WATER: f64 = 273.16;
 /// Latent heat of vaporization of water (J/kg)
 pub const WATER_LATENT_HEAT_VAPORIZATION: f64 = 2.45e6;
 
+/// Emissivity of water vapor in collapsing acoustic cavitation bubbles (dimensionless)
+///
+/// Value: 0.1 — lower bound for hot-water-vapor emissivity used in acoustic cavitation modelling.
+///
+/// At extreme bubble collapse temperatures (T > 10,000 K) the vapor approximates a grey-body
+/// radiator. Measured emissivity for steam at high temperatures spans 0.1–0.3; 0.1 is a
+/// conservative estimate consistent with single-bubble sonoluminescence observations where
+/// radiative losses are secondary to conductive cooling.
+///
+/// Reference: Suslick, K.S. & Flannigan, D.J. (2008). "Inside a collapsing bubble:
+/// sonoluminescence and the conditions during cavitation." Annu. Rev. Phys. Chem. 59:659–683.
+pub const EMISSIVITY_VAPOR: f64 = 0.1;
+
 /// Convert temperature from Kelvin to Celsius
 #[inline]
 pub fn kelvin_to_celsius(kelvin: f64) -> f64 {

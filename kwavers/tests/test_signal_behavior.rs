@@ -14,7 +14,13 @@
 //! Author: Ryan Clanton (@ryancinsight)
 //! Date: 2025-01-20
 
+use kwavers::domain::boundary::cpml::CPMLConfig;
+use kwavers::domain::grid::Grid;
+use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::signal::{Signal, SineWave};
+use kwavers::solver::forward::pstd::config::BoundaryConfig;
+use kwavers::solver::forward::pstd::config::{KSpaceMethod, PSTDConfig};
+use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use std::f64::consts::PI;
 
 #[test]
@@ -282,4 +288,189 @@ fn test_sinewave_frequency() {
     println!("  ✓ Frequency correct");
 
     println!("\n✓ Frequency test PASSED");
+}
+
+/// Theorem (CPML Absorption Effectiveness Diagnostic):
+///
+/// A Gaussian pressure pulse in a CPML-bounded domain should lose energy faster
+/// than in a periodic (no-boundary) domain.  After `nt` steps the energy ratio
+/// E_cpml / E_none measures how much the PML has absorbed.
+///
+/// Expected results:
+/// - `E_cpml / E_none < 1.0` always (CPML absorbs ≥ no-boundary).
+/// - If CPML is fully broken (σ = 0 everywhere), ratio ≈ 1.0.
+/// - For a 20-cell PML with pml_alpha = 2.0, ratio should be << 0.1
+///   once the pulse has had time to reach and be absorbed by the boundary.
+///
+/// This test does NOT fail on the exact ratio; it prints the absorption
+/// fraction so the value can be compared against k-Wave to diagnose the
+/// "3x amplitude too high" parity gap (project memory 2026-03-26).
+#[test]
+fn test_cpml_absorption_effectiveness() -> kwavers::core::error::KwaversResult<()> {
+    println!("\n=== CPML Absorption Effectiveness Diagnostic ===");
+
+    // 1-D like grid: 128 cells along x, 1 cell in y and z.
+    let nx = 128;
+    let ny = 1;
+    let nz = 1;
+    let dx = 0.5e-3; // 0.5 mm
+    let c0 = 1500.0;
+    let rho0 = 1000.0;
+    let pml_layers = 20;
+
+    let grid = Grid::new(nx, ny, nz, dx, dx, dx)?;
+    let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+
+    // dt from CFL (0.3 factor, 1-D grid so no sqrt(3))
+    let dt = 0.3 * dx / c0; // ≈ 1e-7 s
+
+    // One-way travel time across interior (128 - 2*pml = 88 cells × dx = 44 mm)
+    let interior_cells = nx - 2 * pml_layers;
+    let one_way_steps = ((interior_cells as f64 * dx) / (c0 * dt)).ceil() as usize;
+    println!(
+        "Grid: {}×{}×{}, dx={:.2e} m, dt={:.2e} s",
+        nx, ny, nz, dx, dt
+    );
+    println!(
+        "Interior: {} cells = {:.1} mm, one-way travel ≈ {} steps",
+        interior_cells,
+        interior_cells as f64 * dx * 1e3,
+        one_way_steps
+    );
+
+    // Run for slightly more than one round-trip so the pulse has reached the boundary
+    let nt = (one_way_steps * 2 + 50).min(600);
+
+    // Helper: compute total acoustic energy ∝ Σ p²
+    let total_energy = |p: &ndarray::Array3<f64>| -> f64 {
+        p.iter().map(|&v| v * v).sum::<f64>() * dx * dx * dx
+    };
+
+    // --- Run 1: No boundary (periodic PSTD) ---
+    let config_none = PSTDConfig {
+        dt,
+        nt,
+        kspace_method: KSpaceMethod::StandardPSTD,
+        boundary: BoundaryConfig::None,
+        ..Default::default()
+    };
+    let mut solver_none =
+        PSTDSolver::new(config_none, grid.clone(), &medium, Default::default())?;
+
+    // Inject Gaussian initial pressure pulse at centre of interior
+    let cx = nx / 2;
+    let sigma_cells = 5usize; // pulse width in cells
+    {
+        let s2 = (sigma_cells as f64 * dx).powi(2);
+        let amplitude = 1e5_f64; // 100 kPa
+        for i in 0..nx {
+            let dist = (i as f64 - cx as f64) * dx;
+            let val = amplitude * (-(dist * dist) / (2.0 * s2)).exp();
+            // Use the public `rhox/rhoy/rhoz` fields to set initial density
+            // so that p = c² * (ρx + ρy + ρz) = amplitude at the peak.
+            // Each split component = val / (3 * c²) so sum = val / c².
+            let rho_per_component = val / (3.0 * c0 * c0);
+            solver_none.rhox[[i, 0, 0]] = rho_per_component;
+            solver_none.rhoy[[i, 0, 0]] = rho_per_component;
+            solver_none.rhoz[[i, 0, 0]] = rho_per_component;
+        }
+        // fields.p is updated from density on the first step_forward()
+    }
+    // Initial energy: p_initial = c² × (ρx+ρy+ρz) = amplitude, so E ∝ Σ val²
+    let e0_none = {
+        let s2 = (sigma_cells as f64 * dx).powi(2);
+        let amplitude = 1e5_f64;
+        (0..nx)
+            .map(|i| {
+                let dist = (i as f64 - cx as f64) * dx;
+                let val = amplitude * (-(dist * dist) / (2.0 * s2)).exp();
+                val * val
+            })
+            .sum::<f64>()
+            * dx
+    };
+
+    for _ in 0..nt {
+        solver_none.step_forward()?;
+    }
+    let e_none = total_energy(&solver_none.fields.p);
+
+    // --- Run 2: CPML boundary ---
+    let cpml_config = CPMLConfig::with_thickness(pml_layers);
+    let config_cpml = PSTDConfig {
+        dt,
+        nt,
+        kspace_method: KSpaceMethod::StandardPSTD,
+        boundary: BoundaryConfig::CPML(cpml_config),
+        ..Default::default()
+    };
+    let mut solver_cpml =
+        PSTDSolver::new(config_cpml, grid.clone(), &medium, Default::default())?;
+
+    // Same initial conditions
+    {
+        let s2 = (sigma_cells as f64 * dx).powi(2);
+        let amplitude = 1e5_f64;
+        for i in 0..nx {
+            let dist = (i as f64 - cx as f64) * dx;
+            let val = amplitude * (-(dist * dist) / (2.0 * s2)).exp();
+            let rho_per_component = val / (3.0 * c0 * c0);
+            solver_cpml.rhox[[i, 0, 0]] = rho_per_component;
+            solver_cpml.rhoy[[i, 0, 0]] = rho_per_component;
+            solver_cpml.rhoz[[i, 0, 0]] = rho_per_component;
+        }
+        // fields.p is updated from density on the first step_forward()
+    }
+    let e0_cpml = e0_none; // same initial conditions
+
+    for _ in 0..nt {
+        solver_cpml.step_forward()?;
+    }
+    let e_cpml = total_energy(&solver_cpml.fields.p);
+
+    // Normalise by initial energy (both should start with the same energy)
+    let retained_none = e_none / e0_none.max(1e-30);
+    let retained_cpml = e_cpml / e0_cpml.max(1e-30);
+    let absorption_ratio = retained_cpml / retained_none.max(1e-30);
+
+    println!("\nAfter {} steps:", nt);
+    println!(
+        "  No-boundary retained energy: {:.4} ({:.2e} → {:.2e})",
+        retained_none, e0_none, e_none
+    );
+    println!(
+        "  CPML retained energy:         {:.4} ({:.2e} → {:.2e})",
+        retained_cpml, e0_cpml, e_cpml
+    );
+    println!(
+        "  Absorption ratio (CPML/none): {:.4}  (< 1 = absorbing, ≈ 1 = broken CPML)",
+        absorption_ratio
+    );
+
+    // CPML must absorb more than no-boundary
+    assert!(
+        retained_cpml < retained_none,
+        "CPML should absorb more energy than no-boundary (periodic). \
+         CPML retained {:.4} vs no-boundary {:.4}. \
+         Check sigma profiles and PML application in update_velocity / update_density.",
+        retained_cpml,
+        retained_none
+    );
+
+    // CPML should absorb at least 50 % of initial energy after one round-trip
+    assert!(
+        retained_cpml < 0.5,
+        "CPML retained {:.1}% of energy after {} steps — expected < 50%. \
+         Likely cause: PML sigma is too small or not being applied.",
+        retained_cpml * 100.0,
+        nt
+    );
+
+    println!("\n✓ CPML absorption effectiveness test PASSED");
+    println!(
+        "  DIAGNOSIS: CPML absorbs {:.1}% of energy relative to no-boundary",
+        (1.0 - absorption_ratio) * 100.0
+    );
+
+    Ok(())
 }

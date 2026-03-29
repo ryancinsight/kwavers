@@ -28,6 +28,7 @@ pub mod atlas;
 pub mod registration;
 pub mod targeting;
 pub mod tracking;
+pub mod ulm;
 pub mod vasculature;
 
 pub use atlas::BrainAtlas;

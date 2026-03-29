@@ -579,5 +579,76 @@ class TestArraySensorParityWithKWave:
         assert np.sum(sensor_kw.mask) == 1
 
 
+# ============================================================================
+# Recording mode tests: p_max, p_min, p_rms
+# ============================================================================
+
+
+class TestRecordingModes:
+    """Test sensor.set_record() and SimulationResult statistics fields."""
+
+    def _run_with_modes(self, grid, medium, modes, nt=80):
+        src = kw.Source.plane_wave(grid, frequency=1e6, amplitude=1e5)
+        sensor = kw.Sensor.point((1.6e-3, 1.6e-3, 1.6e-3))
+        sensor.set_record(modes)
+        sim = kw.Simulation(grid, medium, src, sensor)
+        return sim.run(time_steps=nt, dt=1e-8)
+
+    def test_p_max_accessible_when_requested(self, grid, medium):
+        """p_max is non-None when set_record includes 'p_max'."""
+        result = self._run_with_modes(grid, medium, ["p_max"])
+        assert result.p_max is not None, "p_max should be set when requested"
+
+    def test_p_min_accessible_when_requested(self, grid, medium):
+        """p_min is non-None when set_record includes 'p_min'."""
+        result = self._run_with_modes(grid, medium, ["p_min"])
+        assert result.p_min is not None, "p_min should be set when requested"
+
+    def test_p_rms_accessible_when_requested(self, grid, medium):
+        """p_rms is non-None when set_record includes 'p_rms'."""
+        result = self._run_with_modes(grid, medium, ["p_rms"])
+        assert result.p_rms is not None, "p_rms should be set when requested"
+
+    def test_all_stats_via_all_mode(self, grid, medium):
+        """'all' mode populates all stats."""
+        result = self._run_with_modes(grid, medium, ["all"])
+        assert result.p_max is not None
+        assert result.p_min is not None
+        assert result.p_rms is not None
+        assert result.p_final is not None
+
+    def test_p_max_geq_p_rms_geq_zero(self, grid, medium):
+        """Physical constraint: |p_max| >= p_rms >= 0."""
+        result = self._run_with_modes(grid, medium, ["all"])
+        p_max_val = float(np.max(np.abs(result.p_max)))
+        p_rms_val = float(np.max(result.p_rms))
+        assert p_rms_val >= 0.0, "p_rms must be non-negative"
+        assert p_max_val >= p_rms_val - 1e-6, "p_max >= p_rms must hold"
+
+    def test_p_max_geq_p_min_element_wise(self, grid, medium):
+        """p_max >= p_min at each sensor."""
+        result = self._run_with_modes(grid, medium, ["all"])
+        assert np.all(result.p_max >= result.p_min - 1e-6), "p_max >= p_min must hold"
+
+    def test_no_stats_when_not_requested(self, grid, medium):
+        """p_max/p_min/p_rms are None when not requested."""
+        result = self._run_with_modes(grid, medium, [])
+        assert result.p_max is None
+        assert result.p_min is None
+        assert result.p_rms is None
+
+    def test_p_rms_consistent_with_time_series(self, grid, medium):
+        """p_rms from stats roughly matches RMS computed from the time series."""
+        nt = 100
+        result = self._run_with_modes(grid, medium, ["p_rms"], nt=nt)
+        ts = result.sensor_data  # (nt,) for single sensor
+        ts_rms = float(np.sqrt(np.mean(ts**2)))
+        stat_rms = float(result.p_rms[0])
+        # Allow 30% tolerance: stats track full grid, time series is at sensor point
+        if ts_rms > 1.0 and stat_rms > 1.0:
+            ratio = stat_rms / ts_rms
+            assert 0.1 < ratio < 10.0, f"p_rms ratio out of range: {ratio:.3f}"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

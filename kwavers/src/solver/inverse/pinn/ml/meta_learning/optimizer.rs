@@ -296,7 +296,7 @@ impl<B: AutodiffBackend> MetaOptimizer<B> {
                             g2.mul_scalar(1.0 - beta2)
                         };
 
-                        let denom = v.sqrt().add_scalar(eps);
+                        let denom = v.clone().sqrt().add_scalar(eps);
                         *param = param
                             .clone()
                             .sub((g.clone() / denom).mul_scalar(self.lr as f32));

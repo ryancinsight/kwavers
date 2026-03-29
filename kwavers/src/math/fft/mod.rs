@@ -44,60 +44,110 @@ pub fn ifft_3d_array(field_hat: &Array3<Complex64>) -> Array3<f64> {
     FFT_CACHE_3D.get_or_create(nx, ny, nz).inverse(field_hat)
 }
 
-pub fn fft_1d_complex(field: &Array1<Complex64>) -> Array1<Complex64> {
-    let n = field.len();
-    let mut data = field.clone();
-    FFT_CACHE_1D
-        .get_or_create(n)
-        .forward_complex_inplace(&mut data);
-    data
+/// Forward 1D FFT of complex input, operating on a mutable reference.
+///
+/// This is the zero-copy path. The array is transformed in place and the
+/// modified reference is returned for chaining. Prefer this over
+/// [`fft_1d_complex`] whenever the caller does not need to retain the original.
+pub fn fft_1d_complex_inplace(data: &mut Array1<Complex64>) {
+    let n = data.len();
+    FFT_CACHE_1D.get_or_create(n).forward_complex_inplace(data);
 }
 
-pub fn ifft_1d_complex(field_hat: &Array1<Complex64>) -> Array1<Complex64> {
-    let n = field_hat.len();
-    let mut data = field_hat.clone();
+/// Inverse 1D FFT of complex input in place, including 1/N normalisation.
+pub fn ifft_1d_complex_inplace(data: &mut Array1<Complex64>) {
+    let n = data.len();
     FFT_CACHE_1D
         .get_or_create(n)
-        .inverse_complex_inplace(&mut data);
+        .inverse_complex_inplace(data);
     let norm = 1.0 / n as f64;
     data.mapv_inplace(|c| c * norm);
+}
+
+/// Forward 1D FFT of complex input, returning a new array.
+///
+/// Allocates one copy of `field`. Prefer [`fft_1d_complex_inplace`] when the
+/// original array is no longer needed after the call.
+pub fn fft_1d_complex(field: &Array1<Complex64>) -> Array1<Complex64> {
+    let mut data = field.to_owned();
+    fft_1d_complex_inplace(&mut data);
     data
 }
 
-pub fn fft_2d_complex(field: &Array2<Complex64>) -> Array2<Complex64> {
-    let (nx, ny) = field.dim();
-    let mut data = field.clone();
-    FFT_CACHE_2D
-        .get_or_create(nx, ny)
-        .forward_complex_inplace(&mut data);
+/// Inverse 1D FFT of complex input, returning a new array with 1/N normalisation.
+pub fn ifft_1d_complex(field_hat: &Array1<Complex64>) -> Array1<Complex64> {
+    let mut data = field_hat.to_owned();
+    ifft_1d_complex_inplace(&mut data);
     data
 }
 
-pub fn ifft_2d_complex(field_hat: &Array2<Complex64>) -> Array2<Complex64> {
-    let (nx, ny) = field_hat.dim();
-    let mut data = field_hat.clone();
+/// Forward 2D FFT of complex input in place.
+pub fn fft_2d_complex_inplace(data: &mut Array2<Complex64>) {
+    let (nx, ny) = data.dim();
     FFT_CACHE_2D
         .get_or_create(nx, ny)
-        .inverse_complex_inplace(&mut data);
+        .forward_complex_inplace(data);
+}
+
+/// Inverse 2D FFT of complex input in place, including 1/(NxNy) normalisation.
+pub fn ifft_2d_complex_inplace(data: &mut Array2<Complex64>) {
+    let (nx, ny) = data.dim();
+    FFT_CACHE_2D
+        .get_or_create(nx, ny)
+        .inverse_complex_inplace(data);
     let norm = 1.0 / (nx * ny) as f64;
     data.mapv_inplace(|c| c * norm);
+}
+
+/// Forward 2D FFT of complex input, returning a new array.
+pub fn fft_2d_complex(field: &Array2<Complex64>) -> Array2<Complex64> {
+    let mut data = field.to_owned();
+    fft_2d_complex_inplace(&mut data);
     data
 }
 
-pub fn fft_3d_complex(field: &Array3<Complex64>) -> Array3<Complex64> {
-    let (nx, ny, nz) = field.dim();
-    FFT_CACHE_3D
-        .get_or_create(nx, ny, nz)
-        .forward_complex(field)
+/// Inverse 2D FFT of complex input, returning a new array with 1/(NxNy) normalisation.
+pub fn ifft_2d_complex(field_hat: &Array2<Complex64>) -> Array2<Complex64> {
+    let mut data = field_hat.to_owned();
+    ifft_2d_complex_inplace(&mut data);
+    data
 }
 
-pub fn ifft_3d_complex(field_hat: &Array3<Complex64>) -> Array3<Complex64> {
-    let (nx, ny, nz) = field_hat.dim();
-    let mut data = FFT_CACHE_3D
+/// Forward 3D FFT of complex input in place.
+///
+/// Zero allocation — the cached [`Fft3d`] plan is used directly on the
+/// provided buffer.
+pub fn fft_3d_complex_inplace(data: &mut Array3<Complex64>) {
+    let (nx, ny, nz) = data.dim();
+    FFT_CACHE_3D
         .get_or_create(nx, ny, nz)
-        .inverse_complex(field_hat);
+        .forward_complex_inplace(data);
+}
+
+/// Inverse 3D FFT of complex input in place, including 1/(NxNyNz) normalisation.
+pub fn ifft_3d_complex_inplace(data: &mut Array3<Complex64>) {
+    let (nx, ny, nz) = data.dim();
+    FFT_CACHE_3D
+        .get_or_create(nx, ny, nz)
+        .inverse_complex_inplace(data);
     let norm = 1.0 / (nx * ny * nz) as f64;
     data.mapv_inplace(|c| c * norm);
+}
+
+/// Forward 3D FFT of complex input, returning a new array.
+///
+/// Allocates exactly one copy of `field`. Prefer [`fft_3d_complex_inplace`]
+/// when the original is not needed after the call.
+pub fn fft_3d_complex(field: &Array3<Complex64>) -> Array3<Complex64> {
+    let mut data = field.to_owned();
+    fft_3d_complex_inplace(&mut data);
+    data
+}
+
+/// Inverse 3D FFT of complex input, returning a new array with 1/(NxNyNz) normalisation.
+pub fn ifft_3d_complex(field_hat: &Array3<Complex64>) -> Array3<Complex64> {
+    let mut data = field_hat.to_owned();
+    ifft_3d_complex_inplace(&mut data);
     data
 }
 

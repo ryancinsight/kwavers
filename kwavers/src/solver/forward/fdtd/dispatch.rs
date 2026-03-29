@@ -6,7 +6,7 @@
 //! ## Architecture
 //!
 //! Deep vertical hierarchy for SIMD selection:
-//! ```
+//! ```text
 //! math/simd.rs (SIMD capability detection)
 //!    ↓
 //! solver/forward/fdtd/dispatch.rs (THIS MODULE - Runtime dispatch)
@@ -114,6 +114,7 @@ pub fn init_simd() {
 /// Dispatcher for FDTD stencil operations
 ///
 /// Routes pressure and velocity updates to optimal implementation.
+/// Pre-allocates a scratch buffer for the scalar path to avoid per-step heap allocation.
 #[derive(Debug)]
 pub struct FdtdStencilDispatcher {
     /// Selected strategy
@@ -129,6 +130,9 @@ pub struct FdtdStencilDispatcher {
 
     /// Coefficient for velocity update
     _velocity_coeff: f64,
+
+    /// Pre-allocated scratch buffer for scalar pressure update (avoids per-step allocation)
+    p_scratch: Array3<f64>,
 }
 
 impl FdtdStencilDispatcher {
@@ -180,14 +184,16 @@ impl FdtdStencilDispatcher {
             nz,
             pressure_coeff,
             _velocity_coeff: velocity_coeff,
+            p_scratch: Array3::zeros((nx, ny, nz)),
         })
     }
 
     /// Update pressure field using selected strategy
     ///
     /// Routes to appropriate implementation based on strategy selection.
+    /// Takes `&mut self` to reuse the pre-allocated scratch buffer on the scalar path.
     pub fn update_pressure(
-        &self,
+        &mut self,
         p_curr: &Array3<f64>,
         p_prev: &Array3<f64>,
         u_div: &Array3<f64>,
@@ -245,7 +251,7 @@ impl FdtdStencilDispatcher {
                 processor.update_pressure(p_curr, p_prev, u_div)
             }
             StencilStrategy::Scalar => {
-                // Scalar fallback: simple 3D stencil
+                // Scalar fallback: simple 3D stencil (reuses p_scratch, no heap alloc)
                 self.update_pressure_scalar(p_curr, p_prev, u_div)
             }
             StencilStrategy::Auto => {
@@ -258,13 +264,16 @@ impl FdtdStencilDispatcher {
     }
 
     /// Scalar implementation (reference/fallback)
+    ///
+    /// Reuses `self.p_scratch` to avoid heap allocation on every call.
     fn update_pressure_scalar(
-        &self,
+        &mut self,
         p_curr: &Array3<f64>,
         p_prev: &Array3<f64>,
         _u_div: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let mut p_new = Array3::zeros((self.nx, self.ny, self.nz));
+        // Zero the pre-allocated scratch buffer instead of allocating a new array
+        self.p_scratch.fill(0.0);
 
         // Interior points
         for k in 1..self.nz - 1 {
@@ -280,13 +289,13 @@ impl FdtdStencilDispatcher {
                         - 6.0 * p_curr[[i, j, k]];
 
                     // Pressure update: p_new = 2*p_curr - p_prev + coeff*laplacian
-                    p_new[[i, j, k]] = 2.0 * p_curr[[i, j, k]] - p_prev[[i, j, k]]
+                    self.p_scratch[[i, j, k]] = 2.0 * p_curr[[i, j, k]] - p_prev[[i, j, k]]
                         + self.pressure_coeff * laplacian;
                 }
             }
         }
 
-        Ok(p_new)
+        Ok(self.p_scratch.clone())
     }
 
     /// Get current strategy
@@ -363,7 +372,7 @@ mod tests {
 
     #[test]
     fn test_pressure_update_scalar() {
-        let dispatcher =
+        let mut dispatcher =
             FdtdStencilDispatcher::with_strategy(16, 16, 16, -1.0, -1.0, StencilStrategy::Scalar)
                 .unwrap();
 

@@ -2,6 +2,7 @@
 //!
 //! Implements B-mode, Doppler, elastography, synthetic aperture, plane wave, and coded excitation imaging
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use ndarray::Array2;
 use num_complex::Complex;
 
@@ -59,7 +60,7 @@ fn compute_envelope(signal: &ndarray::Array1<f64>) -> ndarray::Array1<f64> {
 }
 
 const TISSUE_ATTENUATION_COEFFICIENT: f64 = 0.5; // dB/cm/MHz
-const SOUND_SPEED_TISSUE: f64 = 1540.0; // m/s
+// SOUND_SPEED_TISSUE = 1540.0 m/s imported from crate::core::constants::fundamental
 const DB_TO_NEPER: f64 = 8.686; // Conversion factor
 const CM_TO_M: f64 = 0.01;
 const MHZ_TO_HZ: f64 = 1e6;

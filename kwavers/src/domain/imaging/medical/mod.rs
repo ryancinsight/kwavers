@@ -75,7 +75,7 @@ pub struct MedicalImageMetadata {
 /// ```no_run
 /// # use kwavers::domain::imaging::medical::{MedicalImageLoader, CTImageLoader};
 /// # use kwavers::core::error::KwaversResult;
-/// let loader = CTImageLoader::new();
+/// let mut loader = CTImageLoader::new();
 /// let image = loader.load("patient_ct.nii.gz")?;
 /// let metadata = loader.metadata();
 /// # Ok::<(), kwavers::core::error::KwaversError>(())

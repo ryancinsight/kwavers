@@ -124,6 +124,7 @@ impl PhotoacousticSimulator {
             subgridding: false,
             subgrid_factor: 2,
             enable_gpu_acceleration: false,
+            enable_nonlinear: false,
             nt,
             dt,
             sensor_mask: None,

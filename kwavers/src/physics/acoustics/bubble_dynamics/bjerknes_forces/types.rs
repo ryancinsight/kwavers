@@ -1,5 +1,7 @@
 //! Types for Bjerknes forces calculation
 
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
+
 /// Configuration for Bjerknes force calculations
 #[derive(Debug, Clone, Copy)]
 pub struct BjerknesConfig {
@@ -22,8 +24,8 @@ pub struct BjerknesConfig {
 impl Default for BjerknesConfig {
     fn default() -> Self {
         Self {
-            c0: 1540.0,
-            rho: 1000.0,
+            c0: SOUND_SPEED_TISSUE,
+            rho: DENSITY_WATER_NOMINAL,
             frequency: 1e6,
             include_primary: true,
             include_secondary: true,

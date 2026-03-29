@@ -482,9 +482,14 @@ def run_pykwavers(config: SimulationConfig, solver_type: str = "fdtd") -> Simula
         "hybrid": SimulatorType.PYKWAVERS_HYBRID,
     }
 
+    # kwavers records Nt+1 samples (includes t=0); k-Wave records Nt samples (starts at t=dt).
+    # Drop the first sample so both time series start at t=dt for aligned comparison.
+    raw = result.sensor_data.flatten()
+    pressure = raw[1:] if len(raw) > 1 else raw
+
     return SimulationResult(
         simulator=simulator_map[solver_type],
-        pressure=result.sensor_data.flatten(),
+        pressure=pressure,
         time=result.time,
         execution_time=execution_time,
         metadata={"solver": solver_type, "dt": result.dt, "nt": result.time_steps},

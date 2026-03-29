@@ -1,5 +1,6 @@
 //! Core Energy Balance Calculator definition
 
+use crate::core::constants::thermodynamic::T_AMBIENT;
 use uom::si::f64::{HeatCapacity, ThermalConductivity, ThermodynamicTemperature};
 use uom::si::heat_capacity::joule_per_kelvin;
 use uom::si::thermal_conductivity::watt_per_meter_kelvin;
@@ -67,7 +68,7 @@ impl EnergyBalanceCalculator {
             specific_heat_liquid: HeatCapacity::new::<joule_per_kelvin>(
                 params.specific_heat_liquid * params.rho_liquid,
             ),
-            ambient_temperature: ThermodynamicTemperature::new::<kelvin>(293.15),
+            ambient_temperature: ThermodynamicTemperature::new::<kelvin>(T_AMBIENT),
             enable_chemical_reactions: true,
             enable_plasma_effects: true,
             enable_radiation: true,
@@ -89,7 +90,7 @@ impl EnergyBalanceCalculator {
             specific_heat_liquid: HeatCapacity::new::<joule_per_kelvin>(
                 params.specific_heat_liquid * params.rho_liquid,
             ),
-            ambient_temperature: ThermodynamicTemperature::new::<kelvin>(293.15),
+            ambient_temperature: ThermodynamicTemperature::new::<kelvin>(T_AMBIENT),
             enable_chemical_reactions: enable_chemical,
             enable_plasma_effects: enable_plasma,
             enable_radiation,

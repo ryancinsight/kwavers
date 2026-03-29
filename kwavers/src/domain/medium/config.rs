@@ -1,5 +1,6 @@
 //! Medium properties configuration
 
+use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -253,7 +254,7 @@ impl Default for MediumParameters {
         Self {
             medium_type: MediumType::Homogeneous,
             density: 1000.0, // Water
-            sound_speed: Some(1500.0),
+            sound_speed: Some(SOUND_SPEED_WATER_SIM),
             sound_speed_min: None,
             sound_speed_max: None,
             absorption: 0.0022, // Water at 1 MHz

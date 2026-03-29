@@ -6,7 +6,7 @@
 //! ## Architecture
 //!
 //! This module is part of the deep vertical hierarchy:
-//! ```
+//! ```text
 //! math/simd.rs (SIMD capability detection)
 //!    ↓
 //! solver/forward/fdtd/
@@ -47,7 +47,7 @@
 //! ## Mathematical Model
 //!
 //! ### Pressure Update (3D Acoustic Wave Equation)
-//! ```
+//! ```text
 //! p^(n+1)[i,j,k] = (2 - c²Δt²/Δx² * 6) * p^n[i,j,k]
 //!                  - p^(n-1)[i,j,k]
 //!                  + c²Δt²/Δx² * (p^n[i-1,j,k] + p^n[i+1,j,k]
@@ -57,7 +57,7 @@
 //!
 //! ### Vectorized Form
 //! Process 8 pressure points simultaneously using 512-bit vectors:
-//! ```
+//! ```text
 //! v_p_new = v_2*v_p - v_p_prev + v_coeff*(v_p_x0 + v_p_x1 + v_p_y0 + ...)
 //! ```
 

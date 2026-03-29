@@ -2,6 +2,7 @@
 //!
 //! Provides configuration structures for time-reversal reconstruction algorithms.
 
+use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 
 /// Configuration for time-reversal reconstruction
@@ -58,7 +59,7 @@ impl Default for TimeReversalConfig {
             tolerance: 1e-6,
             phase_conjugation: true,
             dispersion_correction: false,
-            reference_sound_speed: 1500.0,
+            reference_sound_speed: SOUND_SPEED_WATER_SIM,
         }
     }
 }

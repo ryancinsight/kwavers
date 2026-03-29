@@ -478,3 +478,111 @@ fn test_pstd_time_reversal_symmetry() -> KwaversResult<()> {
 
     Ok(())
 }
+
+/// Theorem (PSTD Source Timing Diagnostic):
+///
+/// For a 1D CW sine source with frequency f, the analytically expected pressure
+/// at the source boundary is p(n) = A · sin(2πf · n·dt) for step n ≥ 1.
+///
+/// This test records the first 40 steps and locates the first positive peak.
+/// The peak should occur within ±2 samples of the analytically predicted peak
+/// time (T/4 = 1/(4f)). A systematic lag > 2 samples indicates a timing offset
+/// in source injection or step ordering.
+///
+/// ## Interpretation
+/// - lag = 0: source injection is phase-aligned with k-Wave convention
+/// - lag = -3: kwavers steps 3 samples behind k-Wave (observed in Python parity)
+///
+/// References: Treeby & Cox (2010), k-Wave stepping order.
+#[test]
+fn test_pstd_source_timing_phase_alignment() -> KwaversResult<()> {
+    let nx = 64;
+    let ny = 1;
+    let nz = 1;
+    let dx = 0.25e-3; // 0.25 mm
+    let c0 = 1500.0;
+    let rho0 = 1000.0;
+    let frequency = 1e6;
+    let amplitude = 1e5;
+    let dt = 0.3 * dx / c0;
+    let nt = 40; // ~1.5 periods
+
+    let grid = Grid::new(nx, ny, nz, dx, dx, dx)?;
+    let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+
+    let signal = Arc::new(SineWave::new(frequency, amplitude, 0.0));
+    let config = PlaneWaveConfig {
+        direction: (1.0, 0.0, 0.0),
+        wavelength: c0 / frequency,
+        phase: 0.0,
+        source_type: SourceField::Pressure,
+        injection_mode: InjectionMode::BoundaryOnly,
+    };
+    let source = PlaneWaveSource::new(config, signal);
+
+    let pstd_config = PSTDConfig {
+        dt,
+        nt,
+        kspace_method: KSpaceMethod::StandardPSTD,
+        boundary: kwavers::solver::forward::pstd::config::BoundaryConfig::None,
+        ..Default::default()
+    };
+
+    let mut solver = PSTDSolver::new(pstd_config, grid, &medium, Default::default())?;
+    solver.add_source(Box::new(source))?;
+
+    // Record pressure at the source boundary (x=0) over time
+    let mut p_recorded = Vec::with_capacity(nt);
+    let mut p_expected_analytical = Vec::with_capacity(nt);
+
+    for n in 0..nt {
+        solver.step_forward()?;
+        let p = solver.fields.p[[0, 0, 0]];
+        p_recorded.push(p);
+        let t_n = (n + 1) as f64 * dt;
+        p_expected_analytical
+            .push(amplitude * (2.0 * std::f64::consts::PI * frequency * t_n).sin());
+    }
+
+    // Find first positive peak of the recorded signal
+    let peak_recorded = p_recorded
+        .windows(3)
+        .enumerate()
+        .filter(|(_, w)| w[1] > w[0] && w[1] > w[2] && w[1] > 0.0)
+        .map(|(i, w)| (i + 1, w[1]))
+        .next();
+
+    // Find first positive peak of the analytical signal
+    let peak_expected = p_expected_analytical
+        .windows(3)
+        .enumerate()
+        .filter(|(_, w)| w[1] > w[0] && w[1] > w[2] && w[1] > 0.0)
+        .map(|(i, _)| i + 1)
+        .next();
+
+    if let (Some((idx_rec, amp_rec)), Some(idx_exp)) = (peak_recorded, peak_expected) {
+        let lag = idx_rec as i32 - idx_exp as i32;
+        println!(
+            "PSTD timing diagnostic: recorded peak at step {idx_rec} (amp={amp_rec:.3e} Pa), \
+             expected peak at step {idx_exp}, lag={lag:+} samples"
+        );
+        // Assert lag is within ±2 samples
+        assert!(
+            lag.abs() <= 2,
+            "PSTD source timing lag is {lag} samples (>±2); \
+             this indicates a systematic phase offset vs k-Wave convention. \
+             Check source injection step ordering in stepper.rs."
+        );
+    } else {
+        let max_p = p_recorded
+            .iter()
+            .cloned()
+            .fold(0.0f64, |a, b| a.max(b.abs()));
+        assert!(
+            max_p > 1.0,
+            "No oscillating signal detected in PSTD timing test (max |p|={max_p:.3e})"
+        );
+    }
+
+    Ok(())
+}

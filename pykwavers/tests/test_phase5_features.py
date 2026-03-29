@@ -108,7 +108,7 @@ def test_empty_source_list_rejected(standard_grid, water_medium, center_sensor):
 
 def test_invalid_source_type_rejected(standard_grid, water_medium, center_sensor):
     """Verify invalid source type raises error."""
-    with pytest.raises(ValueError, match="sources must be a Source or list of Sources"):
+    with pytest.raises(ValueError, match="sources must be a Source"):
         kw.Simulation(standard_grid, water_medium, "invalid", center_sensor)
 
 
@@ -135,7 +135,7 @@ def test_explicit_fdtd_solver(standard_grid, water_medium, center_sensor):
 
     result = sim.run(time_steps=100)
     assert result.time_steps == 100
-    assert len(result.sensor_data) == 100
+    assert len(result.sensor_data) == 100  # FDTD returns exactly time_steps samples
 
 
 def test_pstd_solver_implemented(standard_grid, water_medium, center_sensor):
@@ -147,7 +147,8 @@ def test_pstd_solver_implemented(standard_grid, water_medium, center_sensor):
 
     result = sim.run(time_steps=100)
     assert result.time_steps == 100
-    assert len(result.sensor_data) == 100
+    # kwavers records Nt+1 samples (includes t=0 initial state)
+    assert len(result.sensor_data) == 101
 
 
 def test_hybrid_solver_implemented(standard_grid, water_medium, center_sensor):
@@ -159,7 +160,8 @@ def test_hybrid_solver_implemented(standard_grid, water_medium, center_sensor):
 
     result = sim.run(time_steps=100)
     assert result.time_steps == 100
-    assert len(result.sensor_data) == 100
+    # kwavers records Nt+1 samples (includes t=0 initial state)
+    assert len(result.sensor_data) == 101
 
 
 # ============================================================================

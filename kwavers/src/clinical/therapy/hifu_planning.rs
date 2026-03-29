@@ -26,7 +26,7 @@
 //!
 //! ## Treatment Planning Workflow
 //!
-//! ```
+//! ```text
 //! Target Definition → Acoustic Field Simulation → Dose Calculation
 //!        ↓                       ↓                        ↓
 //!   Patient anatomy       Burton-Miller BEM      Thermal dose (CEM43)
@@ -42,6 +42,7 @@
 
 use crate::clinical::safety::mechanical_index::TissueType;
 use crate::clinical::therapy::parameters::TherapyParameters;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::error::KwaversResult;
 use std::f64::consts::PI;
 
@@ -104,11 +105,8 @@ impl FocalSpot {
     /// Formula: Focal width (lateral) ≈ 0.6 * λ * f_number / 2
     /// where λ = wavelength, f_number = focal_length / aperture_diameter
     pub fn estimate_from_transducer(transducer: &HIFUTransducer) -> Self {
-        // Sound speed in tissue (typical ~1500 m/s)
-        const SOUND_SPEED: f64 = 1500.0;
-
         // Wavelength
-        let wavelength = SOUND_SPEED / transducer.frequency;
+        let wavelength = SOUND_SPEED_WATER_SIM / transducer.frequency;
 
         // F-number (focal_length / aperture)
         let f_number = transducer.focal_length_mm / transducer.aperture_diameter_mm;
@@ -127,12 +125,10 @@ impl FocalSpot {
         let intensity_w_mm2 = transducer.power / focal_area_mm2;
 
         // Pressure amplitude: p = √(2 * ρ * c * I)
-        // where ρ ≈ 1000 kg/m³, c ≈ 1500 m/s
-        const TISSUE_DENSITY: f64 = 1000.0;
-        const SOUND_SPEED_PA: f64 = 1500.0;
+        // where ρ ≈ 1000 kg/m³ (nominal), c ≈ 1500 m/s
         let intensity_w_m2 = intensity_w_mm2 * 1e6; // Convert to W/m²
         let peak_pressure_pa =
-            ((2.0 * TISSUE_DENSITY * SOUND_SPEED_PA * intensity_w_m2).sqrt()).min(50.0e6); // Cap at 50 MPa
+            ((2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM * intensity_w_m2).sqrt()).min(50.0e6); // Cap at 50 MPa
 
         // Mechanical Index (FDA definition)
         let frequency_mhz = transducer.frequency / 1e6;
@@ -264,8 +260,6 @@ impl ThermalDose {
         duty_cycle: f64,
         treatment_duration_s: f64,
     ) -> Self {
-        const TISSUE_DENSITY: f64 = 1000.0;
-        const SOUND_SPEED: f64 = 1500.0;
         const SPECIFIC_HEAT: f64 = 3600.0;
         const PERFUSION_RATE: f64 = 0.01; // 1/s (typical soft tissue)
         const BASELINE_TEMP_C: f64 = 37.0;
@@ -279,9 +273,9 @@ impl ThermalDose {
             alpha_db_cm_mhz * frequency_mhz * 100.0 * (std::f64::consts::LN_10 / 20.0);
 
         let intensity_w_m2 =
-            focal_spot.peak_pressure_pa.powi(2) / (2.0 * TISSUE_DENSITY * SOUND_SPEED);
+            focal_spot.peak_pressure_pa.powi(2) / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM);
         let heating_w_m3 = 2.0 * alpha_np_per_m * intensity_w_m2 * duty;
-        let heating_rate_c_per_s = heating_w_m3 / (TISSUE_DENSITY * SPECIFIC_HEAT);
+        let heating_rate_c_per_s = heating_w_m3 / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT);
 
         let perfusion = PERFUSION_RATE.max(1e-6);
         let delta_t =

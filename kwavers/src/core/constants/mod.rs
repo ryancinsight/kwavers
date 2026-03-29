@@ -25,7 +25,7 @@ pub mod water;
 pub use fundamental::{
     ATMOSPHERIC_PRESSURE, AVOGADRO, BOLTZMANN, BOND_TRANSFORM_FACTOR, DENSITY_AIR, DENSITY_TISSUE,
     GAS_CONSTANT, GRAVITY, LAME_TO_STIFFNESS_FACTOR, PLANCK, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE,
-    SOUND_SPEED_WATER, SPEED_OF_LIGHT, SYMMETRY_TOLERANCE,
+    SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM, SPEED_OF_LIGHT, SYMMETRY_TOLERANCE,
 };
 
 // Water properties (most common medium)
@@ -59,7 +59,7 @@ pub use numerical::{CFL_DEFAULT, CFL_SAFETY_FACTOR, EPSILON, SMALL_VALUE, SOLVER
 // Backward compatibility aliases
 pub use fundamental::GAS_CONSTANT as R_GAS;
 
-// State-dependent constants (NEW: addresses TODO_AUDIT P1)
+// State-dependent constants (temperature/pressure-dependent physical properties)
 pub use state_dependent::StateDependentConstants;
 
 // For comprehensive access to all constants, use the submodule namespaces:
@@ -68,4 +68,4 @@ pub use state_dependent::StateDependentConstants;
 // - `chemistry::*` - Chemical kinetics and ROS parameters
 // - `hounsfield::*` - Hounsfield unit mappings for CT data
 // - `optical::*` - Optical wavelengths and refractive indices
-// - `state_dependent::*` - Temperature/pressure-dependent constants (TODO_AUDIT P1)
+// - `state_dependent::*` - Temperature/pressure-dependent constants

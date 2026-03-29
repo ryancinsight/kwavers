@@ -234,3 +234,34 @@
 // pub mod bspline_deform;      // B-spline deformable registration
 // pub mod atlas;               // Anatomical atlas integration
 // pub mod inverse_kinematics;  // Probe positioning solver
+
+/// Re-exports from the ritk medical image registration toolkit.
+///
+/// Enabled by the `ritk` Cargo feature. Provides:
+/// - **Metrics**: Mattes mutual information (B-spline Parzen windows, Mattes et al. 2003),
+///   normalized cross-correlation, standard mutual information
+/// - **Optimizers**: CMA-ES evolutionary strategy (Hansen & Ostermeier 2001), Adam
+/// - **Transforms**: Affine (12 DOF) and B-spline free-form deformation
+/// - **Registration**: Full registration framework with multi-resolution support
+///
+/// # Feature Gate
+///
+/// Add `features = ["ritk"]` to the kwavers dependency to enable these re-exports.
+///
+/// # References
+///
+/// - Mattes, D., et al. (2003). *IEEE Trans. Med. Imaging* 22(1):120-128.
+///   DOI: 10.1109/TMI.2003.809072
+/// - Hansen, N., & Ostermeier, A. (2001). *Evol. Comput.* 9(2):159-195.
+///   DOI: 10.1162/106365601750190398
+#[cfg(feature = "ritk")]
+pub mod ritk {
+    pub use ritk_registration::metric::{
+        MutualInformation, NormalizedCrossCorrelation, MattesMutualInformation,
+    };
+    pub use ritk_registration::optimizer::{
+        AdamOptimizer, CmaEsConfig, CmaEsOptimizer, CmaEsResult, StopReason,
+    };
+    pub use ritk_registration::registration::Registration;
+    pub use ritk_core::transform::{AffineTransform, BSplineTransform};
+}

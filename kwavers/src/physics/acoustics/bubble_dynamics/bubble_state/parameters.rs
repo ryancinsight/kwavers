@@ -1,4 +1,5 @@
 use super::gas_dynamics::{GasSpecies, GasType};
+use crate::core::constants::thermodynamic::T_AMBIENT;
 use std::collections::HashMap;
 
 /// Physical parameters for bubble dynamics
@@ -53,7 +54,7 @@ impl Default for BubbleParameters {
             rho_liquid: 998.0,
             c_liquid: 1482.0,
             gamma: 1.4, // Air adiabatic index
-            t0: 293.15, // 20°C in Kelvin
+            t0: T_AMBIENT, // 20°C in Kelvin (293.15 K)
             mu_liquid: 1.002e-3,
             sigma: 0.0728,
             pv: 2.33e3,

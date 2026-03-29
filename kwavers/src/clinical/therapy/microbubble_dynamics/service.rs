@@ -45,7 +45,9 @@
 //! - Domain-Driven Design (Evans 2003)
 //! - CQRS Pattern (Fowler et al.)
 
-use crate::core::constants::fundamental::AVOGADRO;
+use crate::core::constants::fundamental::{
+    ATMOSPHERIC_PRESSURE, AVOGADRO, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE,
+};
 use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
 use crate::domain::therapy::microbubble::{
     calculate_primary_bjerknes_force, DrugPayload, MarmottantShellProperties, MicrobubbleState,
@@ -209,9 +211,6 @@ impl MicrobubbleDynamicsService {
     /// Extract Keller-Miksis parameters from microbubble state
     fn extract_bubble_parameters(state: &MicrobubbleState) -> KwaversResult<BubbleParameters> {
         // Standard physiological conditions
-        const AMBIENT_PRESSURE: f64 = 101325.0; // 1 atm [Pa]
-        const WATER_DENSITY: f64 = 1000.0; // [kg/m³]
-        const SOUND_SPEED: f64 = 1540.0; // Soft tissue [m/s]
         const DYNAMIC_VISCOSITY: f64 = 0.001; // Water at 37°C [Pa·s]
         const SURFACE_TENSION: f64 = 0.072; // [N/m]
         const VAPOR_PRESSURE: f64 = 3169.0; // Water at 37°C [Pa]
@@ -232,9 +231,9 @@ impl MicrobubbleDynamicsService {
 
         Ok(BubbleParameters {
             r0: state.radius_equilibrium,
-            p0: AMBIENT_PRESSURE,
-            rho_liquid: WATER_DENSITY,
-            c_liquid: SOUND_SPEED,
+            p0: ATMOSPHERIC_PRESSURE,
+            rho_liquid: DENSITY_WATER_NOMINAL,
+            c_liquid: SOUND_SPEED_TISSUE,
             mu_liquid: DYNAMIC_VISCOSITY,
             sigma: SURFACE_TENSION,
             pv: VAPOR_PRESSURE,
@@ -242,7 +241,7 @@ impl MicrobubbleDynamicsService {
             specific_heat_liquid: SPECIFIC_HEAT,
             accommodation_coeff: 0.4,
             gas_species: GasSpecies::Air,
-            initial_gas_pressure: AMBIENT_PRESSURE,
+            initial_gas_pressure: ATMOSPHERIC_PRESSURE,
             gas_composition,
             gamma: POLYTROPIC_INDEX,
             t0: BODY_TEMP,
@@ -296,8 +295,7 @@ impl MicrobubbleDynamicsService {
     ///
     /// For a sphere in incompressible fluid: m_eff = (4π/3)ρR³ + (2π/3)ρR³
     fn effective_bubble_mass(radius: f64) -> f64 {
-        const WATER_DENSITY: f64 = 1000.0; // kg/m³
-        (2.0 / 3.0) * std::f64::consts::PI * WATER_DENSITY * radius.powi(3)
+        (2.0 / 3.0) * std::f64::consts::PI * DENSITY_WATER_NOMINAL * radius.powi(3)
     }
 }
 
