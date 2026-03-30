@@ -21,6 +21,7 @@ use crate::solver::forward::pstd::numerics::operators::initialize_spectral_opera
 use crate::solver::forward::pstd::numerics::spectral_correction::CorrectionMethod;
 use crate::solver::forward::pstd::physics::absorption::initialize_absorption_operators;
 use crate::solver::forward::pstd::utils::compute_k_magnitude;
+use crate::math::fft::shift_operators::generate_shift_1d;
 use ndarray::{Array1, Array2, Array3, Zip};
 use std::f64::consts::PI;
 use std::sync::Arc;
@@ -138,40 +139,10 @@ impl PSTDSolver {
             crate::solver::forward::pstd::data::initialize_field_arrays(&grid, medium)?;
         let k_vec = (k_ops.kx, k_ops.ky, k_ops.kz);
 
-        // Generate staggered grid shift operators matching the C++ k-wave binary.
-        // These implement the half-grid-point spatial shift for staggered grids:
-        //   ddx_k_shift_pos[x] = i·kx · exp(+i·kx·dx/2)  (pressure → velocity)
-        //   ddx_k_shift_neg[x] = i·kx · exp(-i·kx·dx/2)  (velocity → density)
-        let generate_shift_1d =
-            |n: usize, dk: f64, ds: f64| -> (Array1<Complex64>, Array1<Complex64>) {
-                let i_unit = Complex64::new(0.0, 1.0);
-                let mut shift_pos = Array1::zeros(n);
-                let mut shift_neg = Array1::zeros(n);
-                for idx in 0..n {
-                    // Wavenumber in FFT order: [0, 1, ..., n/2, -(n/2-1), ..., -1]*dk
-                    // For even n, the Nyquist bin (idx=n/2) uses k = n/2 * dk = +pi/ds.
-                    // k-Wave uses the negative Nyquist (-pi/ds) which gives the SAME
-                    // shift operator value since i*k*exp(+i*k*ds/2) evaluates to the
-                    // same real number at both +pi/ds and -pi/ds. Do NOT zero this bin:
-                    // k-Wave C++ includes the Nyquist in propagation, and zeroing it
-                    // removes ~18% of k-space energy, causing a 1.64x amplitude error.
-                    let shifted = if idx <= n / 2 {
-                        idx as isize
-                    } else {
-                        idx as isize - n as isize
-                    };
-                    let k_val = dk * shifted as f64;
-                    let exponent = k_val * ds * 0.5;
-                    shift_pos[idx] = i_unit
-                        * Complex64::new(k_val, 0.0)
-                        * Complex64::new(exponent.cos(), exponent.sin());
-                    shift_neg[idx] = i_unit
-                        * Complex64::new(k_val, 0.0)
-                        * Complex64::new(exponent.cos(), -exponent.sin());
-                }
-                (shift_pos, shift_neg)
-            };
-
+        // Generate staggered grid shift operators using the shared canonical utility.
+        // See `math::fft::shift_operators::generate_shift_1d` for the full derivation.
+        // Both PSTD and k-space FDTD call the same function, ensuring bit-identical
+        // operators and a single point of truth (SSOT, DRY).
         let dk_x = 2.0 * PI / (grid.nx as f64 * grid.dx);
         let dk_y = 2.0 * PI / (grid.ny as f64 * grid.dy);
         let dk_z = 2.0 * PI / (grid.nz as f64 * grid.dz);

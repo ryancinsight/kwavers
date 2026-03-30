@@ -3,6 +3,8 @@
 //! This module implements photoacoustic coupling physics, including
 //! optical absorption, thermal expansion, and pressure wave generation.
 
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, GRUNEISEN_WATER_37C, P_ATM};
+
 /// Grüneisen parameter for thermoelastic coupling
 /// TODO_AUDIT: P2 - Advanced Photoacoustic Physics - Implement complete photoacoustic wave generation with nonlinear thermoelasticity and acoustic saturation
 /// DEPENDS ON: physics/electromagnetic/photoacoustic/nonlinear_thermoelastic.rs, physics/electromagnetic/photoacoustic/saturation.rs, physics/electromagnetic/photoacoustic/broadband.rs
@@ -47,11 +49,38 @@ impl GruneisenParameter {
         self
     }
 
-    /// Get Grüneisen parameter value (could depend on conditions)
-    pub fn get_value(&self, _temperature: f64, _pressure: f64) -> f64 {
-        // For now, return constant value
-        // Full implementation would include temperature/pressure dependence
+    /// Evaluate the Grüneisen parameter at the given temperature and pressure.
+    ///
+    /// ## Theorem (Sigrist & Kneubühl 1978, Eq. 4; Wang & Wu 2012, §2.3)
+    ///
+    /// Near a reference state (T₀, p₀) the Grüneisen parameter varies linearly:
+    ///
+    /// ```text
+    /// Γ(T, p) = Γ₀ · [1 + α·(T − T₀) + β·(p − p₀)]
+    /// ```
+    ///
+    /// where:
+    /// - `T₀ = BODY_TEMPERATURE_C` (37 °C) — reference temperature
+    /// - `p₀ = P_ATM` (101 325 Pa) — reference pressure
+    /// - `α` = temperature coefficient \[K⁻¹\], `None` → 0 (constant Γ)
+    /// - `β` = pressure coefficient \[Pa⁻¹\], `None` → 0 (constant Γ)
+    ///
+    /// When both coefficients are `None` the function degenerates to the
+    /// constant model `Γ(T, p) = Γ₀`, which is the correct result for a
+    /// temperature- and pressure-independent medium (e.g. homogeneous phantom).
+    ///
+    /// ## References
+    /// - Sigrist, M.W. & Kneubühl, F.K. (1978). "Laser-generated stress waves in
+    ///   solids." J. Acoust. Soc. Am. 64(6), 1652–1663. DOI: 10.1121/1.382132
+    /// - Wang, L.V. & Wu, H.-I. (2012). *Biomedical Optics: Principles and Imaging*,
+    ///   §2.3. Wiley-Interscience. ISBN 978-0-471-74304-0.
+    pub fn get_value(&self, temperature: f64, pressure: f64) -> f64 {
+        let dt = temperature - BODY_TEMPERATURE_C; // deviation from 37 °C
+        let dp = pressure - P_ATM; // deviation from 101 325 Pa
         self.value
+            * (1.0
+                + self.temperature_coefficient.unwrap_or(0.0) * dt
+                + self.pressure_coefficient.unwrap_or(0.0) * dp)
     }
 }
 
@@ -206,10 +235,56 @@ impl PulsedLaser {
 mod tests {
     use super::*;
 
+    /// Without coefficients the model reduces to the constant Γ₀ regardless of T, p.
     #[test]
-    fn test_gruneisen_parameter() {
-        let gamma = GruneisenParameter::new(0.5);
-        assert_eq!(gamma.get_value(310.0, 1e5), 0.5);
+    fn test_gruneisen_constant_no_coefficients() {
+        let gamma = GruneisenParameter::new(0.12);
+        // Any T and p should return Γ₀ when coefficients are None
+        let v1 = gamma.get_value(BODY_TEMPERATURE_C, P_ATM);
+        let v2 = gamma.get_value(20.0, 0.5e5);
+        let v3 = gamma.get_value(80.0, 5e5);
+        assert!((v1 - 0.12).abs() < 1e-15);
+        assert!((v2 - 0.12).abs() < 1e-15);
+        assert!((v3 - 0.12).abs() < 1e-15);
+    }
+
+    /// Γ(T_ref, p_ref) == Γ₀ even when coefficients are set.
+    #[test]
+    fn test_gruneisen_reference_conditions_unchanged() {
+        let gamma = GruneisenParameter::new(0.12)
+            .with_temperature_dependence(0.005)
+            .with_pressure_dependence(1e-6);
+        let v = gamma.get_value(BODY_TEMPERATURE_C, P_ATM);
+        assert!(
+            (v - 0.12).abs() < 1e-15,
+            "At reference conditions Γ must equal Γ₀, got {v}"
+        );
+    }
+
+    /// α > 0 → Γ increases with temperature.
+    #[test]
+    fn test_gruneisen_temperature_linear() {
+        // Γ₀ = 0.12, α = 0.01 K⁻¹, T = T_ref + 10 K → Γ = 0.12 * 1.1 = 0.132
+        let gamma = GruneisenParameter::new(0.12).with_temperature_dependence(0.01);
+        let v = gamma.get_value(BODY_TEMPERATURE_C + 10.0, P_ATM);
+        let expected = 0.12 * 1.1;
+        assert!(
+            (v - expected).abs() < 1e-12,
+            "Expected {expected}, got {v}"
+        );
+    }
+
+    /// β > 0 → Γ increases with pressure.
+    #[test]
+    fn test_gruneisen_pressure_linear() {
+        // Γ₀ = 0.12, β = 1e-6 Pa⁻¹, p = p_ref + 1e5 Pa → Γ = 0.12 * 1.1 = 0.132
+        let gamma = GruneisenParameter::new(0.12).with_pressure_dependence(1e-6);
+        let v = gamma.get_value(BODY_TEMPERATURE_C, P_ATM + 1e5);
+        let expected = 0.12 * 1.1;
+        assert!(
+            (v - expected).abs() < 1e-12,
+            "Expected {expected}, got {v}"
+        );
     }
 
     #[test]

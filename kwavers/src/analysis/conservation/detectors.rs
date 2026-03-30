@@ -46,9 +46,6 @@ pub struct ConservationViolationDetector {
     /// Current timestep
     timestep: u64,
 
-    /// Maximum allowed violations before warning (for future use)
-    #[allow(dead_code)]
-    max_violations_before_warning: usize,
 }
 
 impl ConservationViolationDetector {
@@ -63,7 +60,6 @@ impl ConservationViolationDetector {
             error_threshold,
             law_violations: HashMap::new(),
             timestep: 0,
-            max_violations_before_warning: 10,
         }
     }
 

@@ -43,8 +43,10 @@
 //! - Zemp et al. (2004) "Modeling nonlinear ultrasound propagation"
 //! - Tavakkoli et al. (1998) "Ultrasonic heating of soft tissues"
 
+use crate::core::constants::SOUND_SPEED_TISSUE;
 use crate::core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array2};
+use crate::math::fft::fft_1d_array;
+use ndarray::{s, Array1, Array2};
 use std::f64;
 
 /// Configuration for shock capturing
@@ -86,7 +88,7 @@ impl Default for ShockCapturingConfig {
             harmonic_threshold: 0.1, // 10% threshold
             num_harmonics: 3,
             gradient_window: 3,
-            shock_velocity_estimate: 1540.0, // m/s
+            shock_velocity_estimate: SOUND_SPEED_TISSUE, // m/s (soft tissue)
         }
     }
 }
@@ -231,8 +233,8 @@ impl ShockCapture {
             }
         }
 
-        // 5. Harmonic analysis (simple power spectrum approach)
-        result.harmonic_ratios = self.compute_harmonic_ratios(pressure, frequency)?;
+        // 5. Harmonic analysis via FFT-based spectral decomposition
+        result.harmonic_ratios = self.compute_harmonic_ratios(pressure, frequency, dz)?;
 
         // 6. Compute Total Harmonic Distortion
         if !result.harmonic_ratios.is_empty() {
@@ -336,36 +338,80 @@ impl ShockCapture {
         Ok(())
     }
 
-    /// Compute harmonic ratios from pressure field
+    /// Compute harmonic distortion ratios from the FFT spectrum of the axial pressure.
+    ///
+    /// ## Algorithm — IEEE Std 519-2014, §3.1 (THD via DFT)
+    ///
+    /// For a pressure waveform p(z) sampled with spacing `dz` over N points:
+    ///
+    /// 1. Compute the N-point DFT: `P[k] = Σ p[n] exp(−i·2π·k·n/N)`
+    /// 2. The bin index of the fundamental: `k₀ = round(f₀ · N · dz)`
+    ///    (since the sampling frequency is `fs = 1/dz` Hz and `f₀ = frequency`).
+    /// 3. The amplitude of the n-th harmonic: `A_n = |P[n·k₀]| / N`
+    /// 4. The n-th harmonic ratio: `r_n = A_n / A₁`
+    ///
+    /// Physical grounding: nonlinear acoustic propagation transfers energy from
+    /// the fundamental to harmonics at rates governed by the Fay/Fubini solution
+    /// (Blackstock 1966). FFT-based THD directly measures this energy transfer.
+    ///
+    /// ## Guard conditions
+    /// - Frequency ≤ 0 or empty field → return `[]`
+    /// - Fundamental bin = 0 (DC) → return `[]` (unphysical)
+    /// - Fundamental amplitude < 1e-10 → return `[]` (no signal)
+    /// - n·k₀ ≥ N/2 (Nyquist) → skip that harmonic (aliased)
+    ///
+    /// ## Reference
+    /// - Blackstock, D.T. (1966). J. Acoust. Soc. Am. 39(6), 1019–1026.
+    /// - IEEE Std 519-2014, §3.1: Total Harmonic Distortion.
     fn compute_harmonic_ratios(
         &self,
         pressure: &Array2<f64>,
         frequency: f64,
+        dz: f64,
     ) -> KwaversResult<Vec<f64>> {
-        let mut ratios = Vec::new();
-
-        if frequency <= 0.0 || pressure.is_empty() {
-            return Ok(ratios);
+        if frequency <= 0.0 || dz <= 0.0 || pressure.is_empty() {
+            return Ok(Vec::new());
         }
 
-        // Get center line (x = nx/2) for frequency analysis
-        let (nx, _nz) = pressure.dim();
-        let center_line = pressure.slice(s![nx / 2, ..]);
-
-        // Compute power spectral density (simplified: using amplitude ratios)
-        let max_amp = center_line.iter().map(|x| x.abs()).fold(0.0, f64::max);
-
-        if max_amp < 1e-10 {
-            return Ok(ratios);
+        let (nx, nz) = pressure.dim();
+        if nz < 4 {
+            return Ok(Vec::new());
         }
 
-        // Simple harmonic detection: look for harmonic frequency content
-        // This is a simplified approach - full FFT would be better
+        // Extract axial centre line: p[z] for x = nx/2
+        let centre_line: Array1<f64> = pressure.slice(s![nx / 2, ..]).to_owned();
+
+        // Fundamental bin: k₀ = round(f₀ · N · dz)
+        // Derivation: fs = 1/dz → bin for frequency f = f·N/fs = f·N·dz
+        let k0_f = frequency * (nz as f64) * dz;
+        if k0_f < 0.5 {
+            // Fundamental falls at or below DC bin — unphysical
+            return Ok(Vec::new());
+        }
+        let k0 = k0_f.round() as usize;
+        if k0 == 0 || k0 >= nz / 2 {
+            return Ok(Vec::new());
+        }
+
+        // Forward DFT of the centre-line pressure
+        let spectrum = fft_1d_array(&centre_line);
+        let n_inv = 1.0 / nz as f64;
+
+        // Fundamental amplitude: A₁ = |P[k₀]| / N
+        let a1 = spectrum[k0].norm() * n_inv;
+        if a1 < 1e-10 {
+            return Ok(Vec::new()); // No signal at fundamental
+        }
+
+        // Extract harmonic ratios: r_n = A_n / A₁ for n = 2..=num_harmonics
+        let mut ratios = Vec::with_capacity(self.config.num_harmonics.saturating_sub(1));
         for harmonic in 2..=self.config.num_harmonics {
-            // Estimate harmonic amplitude (simplified)
-            // In practice, would use FFT to properly extract harmonics
-            let harmonic_amplitude = max_amp / (harmonic as f64).sqrt();
-            ratios.push(harmonic_amplitude / max_amp);
+            let k_n = k0 * harmonic;
+            if k_n >= nz / 2 {
+                break; // Beyond Nyquist — no valid data
+            }
+            let a_n = spectrum[k_n].norm() * n_inv;
+            ratios.push(a_n / a1);
         }
 
         Ok(ratios)
@@ -524,5 +570,112 @@ mod tests {
         assert!(config.gradient_threshold > 0.0);
         assert!(config.viscosity_coefficient >= 0.0);
         assert!(config.viscosity_coefficient <= 1.0);
+    }
+
+    // -----------------------------------------------------------------------
+    // Tests for FFT-based compute_harmonic_ratios
+    // -----------------------------------------------------------------------
+
+    /// A pure sine at the fundamental has zero energy at all harmonics.
+    ///
+    /// Proof: sin(2π·f₀·n·dz) has DFT energy only at bin k₀ = round(f₀·N·dz).
+    /// All harmonic bins k = 2k₀, 3k₀, … have |P[k]| = 0 (up to floating-point
+    /// noise) → all harmonic ratios ≈ 0.
+    #[test]
+    fn test_harmonic_ratios_pure_sine_is_zero() {
+        let config = ShockCapturingConfig {
+            num_harmonics: 3,
+            ..Default::default()
+        };
+        let capture = ShockCapture::new(config);
+
+        // Build a 2D pressure field with a pure 100 Hz sine on centre row
+        let nz = 256;
+        let nx = 5;
+        let dz = 1.0 / 1000.0; // 1 mm spacing → fs = 1000 Hz
+        let f0 = 100.0_f64;    // fundamental frequency
+        let mut pressure = Array2::zeros((nx, nz));
+        for z in 0..nz {
+            let val = (2.0 * std::f64::consts::PI * f0 * z as f64 * dz).sin() * 1000.0;
+            for x in 0..nx {
+                pressure[[x, z]] = val;
+            }
+        }
+
+        let ratios = capture.compute_harmonic_ratios(&pressure, f0, dz).unwrap();
+
+        // All harmonic ratios should be near zero for a pure sine
+        for (n, &r) in ratios.iter().enumerate() {
+            assert!(
+                r < 0.01,
+                "harmonic {} ratio should be ~0 for pure sine, got {:.4e}",
+                n + 2, r
+            );
+        }
+    }
+
+    /// Synthesised signal with known second harmonic amplitude yields correct ratio.
+    ///
+    /// Signal: p(z) = A₁·sin(2π·f₀·z) + A₂·sin(2π·2f₀·z)
+    /// Expected ratio: r₂ = A₂ / A₁
+    #[test]
+    fn test_harmonic_ratios_known_second_harmonic() {
+        let config = ShockCapturingConfig {
+            num_harmonics: 3,
+            ..Default::default()
+        };
+        let capture = ShockCapture::new(config);
+
+        let nz = 512;
+        let nx = 5;
+        let dz = 1.0 / 5120.0; // fs = 5120 Hz
+        let f0 = 200.0_f64;    // fundamental: bin = 200/5120*512 = 20
+        let a1 = 1000.0_f64;
+        let a2 = 200.0_f64;    // second harmonic: 20% of fundamental
+
+        let mut pressure = Array2::zeros((nx, nz));
+        for z in 0..nz {
+            let t = z as f64 * dz;
+            let val = a1 * (2.0 * std::f64::consts::PI * f0 * t).sin()
+                + a2 * (2.0 * std::f64::consts::PI * 2.0 * f0 * t).sin();
+            for x in 0..nx {
+                pressure[[x, z]] = val;
+            }
+        }
+
+        let ratios = capture.compute_harmonic_ratios(&pressure, f0, dz).unwrap();
+
+        assert!(!ratios.is_empty(), "should produce at least one ratio");
+        let expected_r2 = a2 / a1;
+        let measured_r2 = ratios[0];
+        let err = (measured_r2 - expected_r2).abs();
+        assert!(
+            err < 0.02,
+            "second harmonic ratio: expected {:.3}, got {:.3} (err={:.2e})",
+            expected_r2, measured_r2, err
+        );
+    }
+
+    /// Empty / zero pressure field returns empty ratios (no division by zero).
+    #[test]
+    fn test_harmonic_ratios_zero_field_returns_empty() {
+        let config = ShockCapturingConfig::default();
+        let capture = ShockCapture::new(config);
+
+        let pressure = Array2::zeros((8, 128));
+        let ratios = capture.compute_harmonic_ratios(&pressure, 100.0, 1e-4).unwrap();
+        assert!(ratios.is_empty(), "zero field should yield empty ratios");
+    }
+
+    /// Invalid frequency (zero) returns empty ratios without error.
+    #[test]
+    fn test_harmonic_ratios_invalid_frequency_returns_empty() {
+        let config = ShockCapturingConfig::default();
+        let capture = ShockCapture::new(config);
+
+        let mut pressure = Array2::zeros((8, 64));
+        pressure[[4, 10]] = 1.0;
+        let ratios = capture.compute_harmonic_ratios(&pressure, 0.0, 1e-4).unwrap();
+        assert!(ratios.is_empty());
     }
 }

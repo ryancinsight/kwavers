@@ -240,6 +240,48 @@ impl KZKSolver {
         self.check_conservation_laws();
     }
 
+    /// Propagate the acoustic field forward by `n_steps` axial z-steps.
+    ///
+    /// ## Algorithm (Aanonsen et al. 1984, §3; Lee & Pierce 1995, §II)
+    ///
+    /// Each step applies Strang-split operators in the order:
+    ///
+    /// ```text
+    /// D(Δz/2) · A(Δz/2) · N(Δz) · A(Δz/2) · D(Δz/2)
+    /// ```
+    ///
+    /// where D = parabolic diffraction, A = absorption, N = Burgers nonlinearity.
+    /// Strang splitting achieves 2nd-order accuracy in Δz (Strang 1968).
+    ///
+    /// ## Errors
+    ///
+    /// Returns `Err(String)` when `n_steps > self.config.nz`, because the axial
+    /// grid has exactly `nz` planes and propagating beyond it is undefined.
+    ///
+    /// ## References
+    ///
+    /// - Aanonsen SI et al. (1984). "Distortion and harmonic generation in the
+    ///   nearfield of a finite amplitude sound beam."
+    ///   J. Acoust. Soc. Am. 75(3), 749–768. DOI: 10.1121/1.390585
+    /// - Lee Y-S, Pierce AD (1995). "Parabolic equation development in recent
+    ///   decade." J. Comput. Acoust. 3(2), 95–111.
+    ///   DOI: 10.1142/S0218396X95000100
+    /// - Strang G (1968). "On the construction and comparison of difference
+    ///   schemes." SIAM J. Numer. Anal. 5(3), 506–517. DOI: 10.1137/0705041
+    pub fn solve(&mut self, n_steps: usize) -> Result<(), String> {
+        if n_steps > self.config.nz {
+            return Err(format!(
+                "KZKSolver::solve: n_steps={n_steps} exceeds config.nz={}; \
+                 the axial grid has only {} planes",
+                self.config.nz, self.config.nz
+            ));
+        }
+        for _ in 0..n_steps {
+            self.step();
+        }
+        Ok(())
+    }
+
     /// Check conservation laws and log diagnostics
     ///
     /// Performs conservation checks at configured intervals and logs violations.
@@ -718,5 +760,155 @@ mod tests {
                 "Conservation check should have been performed at step 5"
             );
         }
+    }
+
+    /// `solve(0)` must succeed and leave the field unchanged.
+    ///
+    /// ## Theorem
+    /// Zero propagation steps applies no operators; the identity is preserved.
+    #[test]
+    fn test_kzk_solve_zero_steps() {
+        let config = KZKConfig {
+            nx: 8,
+            ny: 8,
+            nz: 16,
+            nt: 10,
+            dx: 1e-3,
+            dz: 1e-3,
+            dt: 1e-8,
+            include_diffraction: false,
+            include_absorption: false,
+            include_nonlinearity: false,
+            ..Default::default()
+        };
+        let mut solver = KZKSolver::new(config).unwrap();
+        let source = Array2::from_elem((8, 8), 500.0_f64);
+        solver.set_source(source, 1e6);
+        let p_before = solver.pressure.clone();
+
+        solver.solve(0).expect("solve(0) must succeed");
+        assert_eq!(solver.pressure, p_before, "solve(0) must not change the field");
+    }
+
+    /// `solve(10)` advances the internal step counter by 10.
+    ///
+    /// ## Theorem
+    /// Each call to `step()` increments `current_z_step` by 1; `solve(n)` calls
+    /// `step()` exactly n times, so the counter increases by n.
+    #[test]
+    fn test_kzk_solve_basic_propagation() {
+        let config = KZKConfig {
+            nx: 8,
+            ny: 8,
+            nz: 16,
+            nt: 10,
+            dx: 1e-3,
+            dz: 1e-3,
+            dt: 1e-8,
+            include_nonlinearity: false,
+            ..Default::default()
+        };
+        let mut solver = KZKSolver::new(config).unwrap();
+        let source = Array2::from_elem((8, 8), 1000.0_f64);
+        solver.set_source(source, 1e6);
+
+        solver.solve(10).expect("solve(10) must succeed");
+        assert_eq!(solver.current_z_step, 10, "current_z_step should be 10");
+    }
+
+    /// `solve(nz + 1)` must return an error.
+    ///
+    /// ## Rationale
+    /// The axial grid has exactly `nz` planes; propagating beyond it is undefined.
+    #[test]
+    fn test_kzk_solve_exceeds_nz_returns_error() {
+        let config = KZKConfig {
+            nx: 8,
+            ny: 8,
+            nz: 16,
+            nt: 10,
+            dx: 1e-3,
+            dz: 1e-3,
+            dt: 1e-8,
+            ..Default::default()
+        };
+        let mut solver = KZKSolver::new(config.clone()).unwrap();
+        let result = solver.solve(config.nz + 1);
+        assert!(
+            result.is_err(),
+            "solve(nz+1) must return Err, got Ok"
+        );
+        let msg = result.unwrap_err();
+        assert!(
+            msg.contains("n_steps") && msg.contains("nz"),
+            "error message should mention n_steps and nz, got: {msg}"
+        );
+    }
+
+    /// `solve(nz)` (full grid) must complete without error.
+    ///
+    /// ## Theorem
+    /// `solve(n)` for n ≤ nz must not return an error; boundary case n == nz is valid.
+    #[test]
+    fn test_kzk_solve_full_propagation() {
+        let config = KZKConfig {
+            nx: 4,
+            ny: 4,
+            nz: 8,
+            nt: 5,
+            dx: 1e-3,
+            dz: 1e-3,
+            dt: 1e-8,
+            include_nonlinearity: false,
+            ..Default::default()
+        };
+        let nz = config.nz;
+        let mut solver = KZKSolver::new(config).unwrap();
+        let source = Array2::from_elem((4, 4), 100.0_f64);
+        solver.set_source(source, 1e6);
+
+        let result = solver.solve(nz);
+        assert!(result.is_ok(), "solve(nz) must succeed, got: {:?}", result);
+        assert_eq!(solver.current_z_step, nz, "step counter must equal nz after full propagation");
+    }
+
+    /// `solve(5)` produces the same result as 5 sequential `step()` calls.
+    ///
+    /// ## Theorem
+    /// `solve(n)` is exactly equivalent to calling `step()` n times on an
+    /// identical initial state; both paths must yield bitwise-equal fields.
+    #[test]
+    fn test_kzk_solve_matches_manual_step_loop() {
+        let config = KZKConfig {
+            nx: 8,
+            ny: 8,
+            nz: 16,
+            nt: 10,
+            dx: 1e-3,
+            dz: 1e-3,
+            dt: 1e-8,
+            include_nonlinearity: false,
+            ..Default::default()
+        };
+        let source = Array2::from_elem((8, 8), 800.0_f64);
+
+        // Path A: use solve()
+        let mut solver_a = KZKSolver::new(config.clone()).unwrap();
+        solver_a.set_source(source.clone(), 1e6);
+        solver_a.solve(5).unwrap();
+
+        // Path B: manual loop
+        let mut solver_b = KZKSolver::new(config).unwrap();
+        solver_b.set_source(source, 1e6);
+        for _ in 0..5 {
+            solver_b.step();
+        }
+
+        assert_eq!(
+            solver_a.pressure,
+            solver_b.pressure,
+            "solve(5) must match 5×step()"
+        );
+        assert_eq!(solver_a.current_z_step, solver_b.current_z_step);
     }
 }

@@ -330,27 +330,48 @@ class TestUnitConversions:
             db_back = kw.neper2db(neper)
             np.testing.assert_allclose(db, db_back, rtol=1e-10)
 
-    @pytest.mark.xfail(
-        reason="Rust db2neper uses the physical k-Wave acoustic-absorption formula "
-               "(Np per m per (rad/s)^y from dB/(MHz^y·cm)) rather than the simple "
-               "dimensionless amplitude conversion (ln(10)/20). Roundtrip is consistent."
-    )
-    def test_db2neper_known_values(self):
-        """Test dB to neper with known values."""
-        # 20 dB = ln(10) ≈ 2.303 Np  [dimensionless amplitude convention]
-        np.testing.assert_allclose(kw.db2neper(20), np.log(10), rtol=1e-10)
+    def test_db2neper_known_physical_values(self):
+        """Test dB to neper conversion using the physical k-Wave acoustic-absorption formula.
 
-        # 0 dB = 0 Np
-        assert kw.db2neper(0) == 0.0
+        The k-Wave convention converts dB/(MHz^y·cm) → Np/(m·(rad/s)^y):
+            α_Np = 100 · α_dB · ln(10)/20 / (2π·1e6)^y
 
-    @pytest.mark.xfail(
-        reason="Rust neper2db uses the physical k-Wave acoustic-absorption formula. "
-               "Roundtrip is consistent but absolute value differs from simple ln(10)/20."
-    )
-    def test_neper2db_known_values(self):
-        """Test neper to dB with known values."""
-        # 1 Np ≈ 8.686 dB  [dimensionless amplitude convention]
-        np.testing.assert_allclose(kw.neper2db(1), 20 * np.log10(np.e), rtol=1e-10)
+        ## References
+        - k-Wave toolbox, db2neper.m (Treeby & Cox 2010)
+        - Treeby BE, Cox BT (2010). J. Biomed. Opt. 15(2):021314.
+          DOI: 10.1117/1.3360308
+        """
+        import math
+        # Physical acoustic unit conversion for y=1
+        y = 1.0
+        expected = 1.0 * 100.0 * math.log(10) / 20.0 / (2.0 * math.pi * 1e6) ** y
+        np.testing.assert_allclose(kw.db2neper(1.0, 1.0), expected, rtol=1e-12)
+
+        # db2neper(0, y) must be zero for any y
+        assert kw.db2neper(0.0, 1.0) == 0.0
+
+        # Verify y=2 case scales correctly: (2π·1e6)^2 denominator
+        y2 = 2.0
+        expected_y2 = 1.0 * 100.0 * math.log(10) / 20.0 / (2.0 * math.pi * 1e6) ** y2
+        np.testing.assert_allclose(kw.db2neper(1.0, 2.0), expected_y2, rtol=1e-12)
+
+    def test_neper2db_physical_roundtrip(self):
+        """neper2db must be the exact inverse of db2neper for any (alpha, y).
+
+        ## Theorem
+        If f = db2neper(α_dB, y) and g = neper2db(α_Np, y), then
+        g(f(α_dB, y), y) = α_dB for all α_dB ≥ 0 and y > 0.
+
+        ## References
+        - k-Wave toolbox, neper2db.m (Treeby & Cox 2010)
+        """
+        for alpha_db, y in [(3.5, 1.2), (10.0, 1.0), (0.5, 1.5), (100.0, 2.0)]:
+            np.testing.assert_allclose(
+                kw.neper2db(kw.db2neper(alpha_db, y), y),
+                alpha_db,
+                rtol=1e-12,
+                err_msg=f"roundtrip failed for alpha_db={alpha_db}, y={y}",
+            )
 
 
 class TestExamplesParity:

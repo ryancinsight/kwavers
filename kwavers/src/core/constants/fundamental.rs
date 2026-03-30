@@ -128,3 +128,33 @@ pub const LAME_TO_STIFFNESS_FACTOR: f64 = 1.0;
 
 /// Symmetry tolerance for elastic tensors
 pub const SYMMETRY_TOLERANCE: f64 = 1e-6;
+
+// ============================================================================
+// Optical Tissue Constants (near-infrared, 750–900 nm)
+// ============================================================================
+
+/// Optical absorption coefficient of soft tissue in the near-infrared (750–900 nm) [m⁻¹]
+///
+/// Representative value at ~785 nm in bulk breast tissue.
+/// Typical range: 0.5–15 m⁻¹ depending on chromophore content and wavelength.
+///
+/// Reference: Jacques, S.L. (2013). "Optical properties of biological tissues: a review."
+/// Phys. Med. Biol. 58(11), R37–R61. DOI: 10.1088/0031-9155/58/11/R37
+pub const OPTICAL_ABSORPTION_TISSUE_NIR: f64 = 10.0; // m⁻¹
+
+/// Reduced scattering coefficient of soft tissue in the near-infrared (750–900 nm) [m⁻¹]
+///
+/// Corresponds to anisotropy factor g ≈ 0.9 with μs ≈ 10 000 m⁻¹.
+/// Typical range: 500–1500 m⁻¹.
+///
+/// Reference: Jacques, S.L. (2013). Phys. Med. Biol. 58(11), R37–R61.
+/// DOI: 10.1088/0031-9155/58/11/R37
+pub const REDUCED_SCATTERING_TISSUE_NIR: f64 = 1000.0; // m⁻¹
+
+/// Default acoustic absorption of soft tissue at 1 MHz [Np/m]
+///
+/// Typical range: 0.3–0.6 Np/m (approximately 3–5 dB/cm) at 1 MHz.
+///
+/// Reference: Duck, F.A. (1990). Physical Properties of Tissue.
+/// Academic Press, London, Chapter 4, Table 4.1.
+pub const ACOUSTIC_ABSORPTION_TISSUE: f64 = 0.5; // Np/m

@@ -2,17 +2,20 @@
 
 use ndarray::Array3;
 
-/// SIMD lane width for f64 operations
+/// SIMD lane width for f64 (architectural documentation constant).
+///
+/// Documents expected vector widths per ISA. Not used in control flow — runtime
+/// dispatch is handled by `is_x86_feature_detected!` / `is_aarch64_feature_detected!`.
 #[cfg(target_arch = "x86_64")]
-#[allow(dead_code)]
+#[allow(dead_code)] // Architectural doc; runtime dispatch via feature-detection macros
 const SIMD_WIDTH: usize = 4; // AVX2: 256 bits / 64 bits = 4
 
 #[cfg(target_arch = "aarch64")]
-#[allow(dead_code)]
+#[allow(dead_code)] // Architectural doc; runtime dispatch via feature-detection macros
 const SIMD_WIDTH: usize = 2; // NEON: 128 bits / 64 bits = 2
 
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
-#[allow(dead_code)]
+#[allow(dead_code)] // Architectural doc for scalar fallback builds
 const SIMD_WIDTH: usize = 1; // Scalar fallback
 
 /// Portable SIMD operations

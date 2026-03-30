@@ -58,7 +58,7 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::{GridSource, Source};
 use crate::physics::acoustics::mechanics::acoustic_wave::SpatialOrder;
-use crate::solver::forward::fdtd::{FdtdConfig, FdtdSolver};
+use crate::solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use ndarray::Array3;
 use std::sync::Arc;
 
@@ -155,6 +155,7 @@ impl FdtdBackend {
             subgrid_factor: 2,
             enable_gpu_acceleration: false,
             enable_nonlinear: false,
+            kspace_correction: KSpaceCorrectionMode::None,
             nt: 1, // Single step mode (controlled externally)
             dt,
             sensor_mask: None, // No sensors (fields accessed directly)

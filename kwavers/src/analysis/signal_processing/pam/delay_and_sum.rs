@@ -24,6 +24,7 @@
 //! - Jensen et al. (2012). "Spatiotemporal Monitoring of High-Intensity Focused Ultrasound"
 //!   *Ultrasound in Medicine & Biology*, 38(11), 1938-1950
 
+use crate::core::constants::SOUND_SPEED_TISSUE;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 use rustfft::{num_complex::Complex, FftPlanner};
@@ -70,7 +71,7 @@ pub enum ApodizationType {
 impl Default for DelayAndSumConfig {
     fn default() -> Self {
         Self {
-            sound_speed: 1540.0,      // Soft tissue
+            sound_speed: SOUND_SPEED_TISSUE, // Soft tissue
             sampling_frequency: 5e6,  // 5 MHz
             detection_threshold: 3.0, // 3x noise floor
             window_size: 512,

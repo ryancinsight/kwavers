@@ -3,6 +3,7 @@
 //! This module implements the Fast Nearfield Method for computing acoustic pressure
 //! fields from transducer elements with O(n) complexity.
 
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::source::transducers::rectangular::RectangularTransducer;
 use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use ndarray::{s, Array2, Array3, Axis};
@@ -101,8 +102,8 @@ impl FastNearfieldSolver {
             config,
             cached_factors: HashMap::new(),
             transducer: None,
-            c0: 1500.0,   // Default water speed
-            rho0: 1000.0, // Default water density
+            c0: SOUND_SPEED_WATER_SIM,
+            rho0: DENSITY_WATER_NOMINAL,
             kx,
             ky,
         })
@@ -374,7 +375,7 @@ mod tests {
         };
 
         solver.set_transducer(transducer);
-        solver.set_medium(1500.0, 1000.0);
+        solver.set_medium(SOUND_SPEED_WATER_SIM, DENSITY_WATER_NOMINAL);
 
         let result = solver.precompute_factors(25e-3); // 25 mm
         assert!(result.is_ok());
@@ -443,5 +444,25 @@ mod tests {
         let (n_kx, n_ky) = config.angular_spectrum_size;
         let expected_base_usage = (n_kx + n_ky) * std::mem::size_of::<f64>();
         assert_eq!(usage_after_clear, expected_base_usage);
+    }
+
+    /// Solver defaults must equal the canonical water constants so that any code
+    /// reading `solver.c0` / `solver.rho0` via `set_medium` round-trips correctly.
+    #[test]
+    fn test_fast_nearfield_defaults_match_water_constants() {
+        let config = FNMConfig::default();
+        let solver = FastNearfieldSolver::new(config).unwrap();
+        assert!(
+            (solver.c0 - SOUND_SPEED_WATER_SIM).abs() < f64::EPSILON,
+            "Default c0 ({}) must equal SOUND_SPEED_WATER_SIM ({})",
+            solver.c0,
+            SOUND_SPEED_WATER_SIM
+        );
+        assert!(
+            (solver.rho0 - DENSITY_WATER_NOMINAL).abs() < f64::EPSILON,
+            "Default rho0 ({}) must equal DENSITY_WATER_NOMINAL ({})",
+            solver.rho0,
+            DENSITY_WATER_NOMINAL
+        );
     }
 }

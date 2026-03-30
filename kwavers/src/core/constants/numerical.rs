@@ -217,6 +217,41 @@ pub const MIN_PPW: f64 = 6.0;
 /// CFL safety factor alias
 pub const CFL_SAFETY: f64 = CFL_SAFETY_FACTOR;
 
+// ============================================================================
+// Solver-Specific CFL Factors
+// ============================================================================
+
+/// CFL stability factor for 3D FDTD acoustic solvers (dimensionless)
+///
+/// For a 3D uniform-grid FDTD scheme the maximum stable CFL number is
+/// 1/√3 ≈ 0.577 (Courant, Friedrichs & Lewy 1928). Using 0.3 provides a
+/// ~1.9× safety margin consistent with the k-Wave toolbox default.
+///
+/// Distinct from `CFL_SAFETY_FACTOR` (0.5) which is the generic solver margin.
+///
+/// References:
+/// - Treeby, B.E. & Cox, B.T. (2010). J. Biomed. Opt. 15(2), 021314.
+///   DOI: 10.1117/1.3360308
+/// - Courant, R., Friedrichs, K., & Lewy, H. (1928). Math. Ann. 100, 32–74.
+///   DOI: 10.1007/BF01448839
+pub const CFL_FACTOR_3D_FDTD: f64 = 0.3;
+
+// ============================================================================
+// Spectral Absorption Thresholds
+// ============================================================================
+
+/// Wavenumber magnitude threshold below which power-law absorption spectral
+/// operators are set to zero to prevent singularity at the DC bin (rad/m).
+///
+/// The fractional Laplacian operators |k|^(y−2) and |k|^(y−1) diverge as
+/// |k| → 0. This threshold (1e-14 rad/m) lies safely above double-precision
+/// roundoff (ε_f64 ≈ 2.2e-16) while remaining negligible for any physically
+/// relevant acoustic wavenumber (k_min > 1e-4 rad/m for domains > 60 μm).
+///
+/// Reference: Treeby, B.E. & Cox, B.T. (2010). J. Biomed. Opt. 15(2), 021314,
+/// Eq. 10; k-Wave absorption_filter implementation.
+pub const ABSORPTION_SINGULARITY_THRESHOLD: f64 = 1e-14;
+
 /// Mechanical index threshold for safety
 pub const MI_THRESHOLD: f64 = 1.9;
 
@@ -280,3 +315,40 @@ pub const MIN_NUMERICAL_TIME_STEP: f64 = 1e-15;
 
 /// Safety factor for adaptive stepping
 pub const SAFETY_FACTOR: f64 = 0.9;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cfl_3d_below_theoretical_limit() {
+        // Theoretical maximum stable CFL for 3D FDTD: 1/√3 ≈ 0.5774
+        let cfl_max_3d = 1.0_f64 / 3.0_f64.sqrt();
+        assert!(
+            CFL_FACTOR_3D_FDTD < cfl_max_3d,
+            "CFL_FACTOR_3D_FDTD ({}) must be below theoretical stability limit 1/√3 ({})",
+            CFL_FACTOR_3D_FDTD, cfl_max_3d
+        );
+    }
+
+    #[test]
+    fn test_absorption_threshold_above_roundoff() {
+        // Must be well above f64 machine epsilon (≈ 2.2e-16) to prevent
+        // division-by-zero masking in |k|^(y-2) spectral operators.
+        // 1e-14 >> 2.22e-16 (f64::EPSILON). Using 10× margin is sufficient to confirm
+        // the threshold is safely above double-precision roundoff.
+        assert!(
+            ABSORPTION_SINGULARITY_THRESHOLD > f64::EPSILON * 10.0,
+            "ABSORPTION_SINGULARITY_THRESHOLD ({:.2e}) must exceed 10×ε_f64 ({:.2e})",
+            ABSORPTION_SINGULARITY_THRESHOLD, f64::EPSILON * 10.0
+        );
+    }
+
+    #[test]
+    fn test_cfl_factors_are_distinct_and_ordered() {
+        // CFL_FACTOR_3D_FDTD (0.3) < CFL_SAFETY_FACTOR (0.5) < CFL_MAX (0.5)
+        assert!(CFL_FACTOR_3D_FDTD < CFL_SAFETY_FACTOR);
+        assert!(CFL_DEFAULT == CFL_FACTOR_3D_FDTD,
+            "CFL_DEFAULT and CFL_FACTOR_3D_FDTD should both be 0.3");
+    }
+}

@@ -44,6 +44,7 @@
 //! - Caputo (1967). Geophys. J. Int. 13(5), 529–539. (fractional calculus)
 //! - k-Wave C++ binary: `kspaceFirstOrder3D-OMP`, function `computeDensity()`.
 
+use crate::core::constants::ABSORPTION_SINGULARITY_THRESHOLD;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -67,8 +68,8 @@ use ndarray::{Array3, Zip};
 ///
 /// **Spectral operators** (global, using config alpha_power for k-space precomputation):
 /// ```text
-///   nabla1[i,j,k] = |k|^(y_config − 2),  set 0 when |k| < 1e-14
-///   nabla2[i,j,k] = |k|^(y_config − 1),  set 0 when |k| < 1e-14
+///   nabla1[i,j,k] = |k|^(y_config − 2),  set 0 when |k| < ABSORPTION_SINGULARITY_THRESHOLD
+///   nabla2[i,j,k] = |k|^(y_config − 1),  set 0 when |k| < ABSORPTION_SINGULARITY_THRESHOLD
 /// ```
 ///
 /// ## Returns
@@ -155,14 +156,14 @@ pub fn initialize_absorption_operators(
             // Treeby & Cox (2010) Eq. 10; k-Wave: create_absorption_variables.py lines 69–82.
             // DC bin (|k| = 0) → 0 to avoid singularity.
             nabla1 = k_mag.mapv(|k| {
-                if k > 1e-14 {
+                if k > ABSORPTION_SINGULARITY_THRESHOLD {
                     k.powf(y_config - 2.0)
                 } else {
                     0.0
                 }
             });
             nabla2 = k_mag.mapv(|k| {
-                if k > 1e-14 {
+                if k > ABSORPTION_SINGULARITY_THRESHOLD {
                     k.powf(y_config - 1.0)
                 } else {
                     0.0

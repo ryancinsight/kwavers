@@ -71,7 +71,8 @@ use log::info;
 use ndarray::{s, Array3, ArrayView3, Zip};
 use std::sync::Arc;
 
-use super::config::FdtdConfig;
+use super::config::{FdtdConfig, KSpaceCorrectionMode};
+use super::kspace_correction::KSpaceFdtdOperators;
 use super::metrics::FdtdMetrics;
 use super::source_handler::SourceHandler;
 use crate::domain::sensor::recorder::simple::SensorRecorder;
@@ -134,18 +135,6 @@ impl CentralDifferenceOperator {
         ))
     }
 
-    #[allow(dead_code)]
-    fn divergence(
-        &self,
-        vx: ArrayView3<f64>,
-        vy: ArrayView3<f64>,
-        vz: ArrayView3<f64>,
-    ) -> KwaversResult<Array3<f64>> {
-        let dvx_dx = self.apply_x(vx)?;
-        let dvy_dy = self.apply_y(vy)?;
-        let dvz_dz = self.apply_z(vz)?;
-        Ok(&dvx_dx + &dvy_dy + &dvz_dz)
-    }
 }
 
 /// FDTD solver for acoustic wave propagation
@@ -218,6 +207,18 @@ pub struct FdtdSolver {
     pub(crate) beta_arr: Option<Array3<f64>>,
     /// c₀⁴ at each grid point (precomputed to avoid recomputing in hot path)
     pub(crate) c0_fourth: Option<Array3<f64>>,
+    /// Precomputed Westervelt coefficient β/(ρ₀·c₀⁴) at each grid point (1/(Pa·s))
+    ///
+    /// Computed once at solver construction from `beta_arr`, `materials.rho0`, and
+    /// `c0_fourth`. Reduces the hot-path inner loop from 5 array reads per element
+    /// (β, ρ₀, c₀⁴, p, p_prev) to 3 (nl_coeff, p, p_prev), cutting memory traffic
+    /// by ~40% in the nonlinear correction kernel.
+    pub(crate) nl_coeff: Option<Array3<f64>>,
+    /// K-space correction operators (Some when `KSpaceCorrectionMode::Spectral`).
+    ///
+    /// Pre-computed shift operators and kappa correction for spectral FDTD updates.
+    /// Constructed once in `FdtdSolver::new`; `None` when using finite-difference mode.
+    pub(crate) kspace_ops: Option<KSpaceFdtdOperators>,
 }
 
 impl FdtdSolver {
@@ -288,7 +289,7 @@ impl FdtdSolver {
         // Note: FDTD uses a single rho field so no split needed (cf. PSTD rhox/rhoy/rhoz)
 
         // Precompute nonlinear medium property arrays (only when nonlinear mode is on)
-        let (p_prev, p_prev2, nl_scratch, beta_arr, c0_fourth) =
+        let (p_prev, p_prev2, nl_scratch, beta_arr, c0_fourth, nl_coeff) =
             if config.enable_nonlinear {
                 let mut beta = Array3::<f64>::zeros(shape);
                 let mut c4 = Array3::<f64>::zeros(shape);
@@ -304,16 +305,37 @@ impl FdtdSolver {
                         }
                     }
                 }
+                // Precompute β/(ρ₀·c₀⁴) once; used every step in the hot nonlinear kernel.
+                // Reduces per-element inner-loop reads from 5 to 3, cutting memory traffic ~40%.
+                let nl = ndarray::Zip::from(&beta)
+                    .and(&materials.rho0)
+                    .and(&c4)
+                    .map_collect(|&b, &rho, &c| b / (rho * c));
                 (
                     Some(Array3::<f64>::zeros(shape)),
                     Some(Array3::<f64>::zeros(shape)),
                     Some(Array3::<f64>::zeros(shape)),
                     Some(beta),
                     Some(c4),
+                    Some(nl),
                 )
             } else {
-                (None, None, None, None, None)
+                (None, None, None, None, None, None)
             };
+
+        // Initialize k-space correction operators when requested.
+        // c_ref = mean sound speed over all grid cells (same convention as PSTD).
+        let kspace_ops = if config.kspace_correction == KSpaceCorrectionMode::Spectral {
+            let c_sum: f64 = materials.c0.iter().sum();
+            let c_ref = c_sum / materials.c0.len() as f64;
+            Some(KSpaceFdtdOperators::new(
+                grid.nx, grid.ny, grid.nz,
+                grid.dx, grid.dy, grid.dz,
+                c_ref, config.dt,
+            ))
+        } else {
+            None
+        };
 
         Ok(Self {
             config,
@@ -337,6 +359,8 @@ impl FdtdSolver {
             nl_scratch,
             beta_arr,
             c0_fourth,
+            nl_coeff,
+            kspace_ops,
         })
     }
 

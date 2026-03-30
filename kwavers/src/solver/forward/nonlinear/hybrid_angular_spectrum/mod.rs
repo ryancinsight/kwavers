@@ -36,6 +36,7 @@ pub mod diffraction;
 pub mod nonlinearity;
 pub mod solver;
 
+use crate::core::constants::acoustic_parameters::NP_TO_DB;
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
@@ -133,7 +134,7 @@ impl HASConfig {
         let freq_mhz = frequency / 1e6;
         // Convert dB/cm/MHz to Np/m
         let db_per_cm = self.attenuation_coeff * freq_mhz.powf(self.power_law_exponent);
-        db_per_cm * 100.0 / 8.686 // dB/cm to Np/m
+        db_per_cm * 100.0 / NP_TO_DB // dB/cm to Np/m; NP_TO_DB = 20/ln(10)
     }
 }
 

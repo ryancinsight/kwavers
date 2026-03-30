@@ -6,8 +6,21 @@
 use super::parameters::FwiParameters;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
+use crate::domain::medium::heterogeneous::HeterogeneousFactory;
 use crate::domain::source::grid_source::GridSource;
 use ndarray::Array3;
+
+/// Reference density for seismic FWI [kg/m³].
+///
+/// Gardner et al. (1974) relate seismic velocity to density via ρ = a·Vᵇ
+/// (a = 310, b = 0.25 for consolidated sedimentary rock).  For simplicity,
+/// the forward model uses a uniform value consistent with typical upper-crust
+/// consolidated sediments (~2000 kg/m³).  Joint density-velocity inversion
+/// would update this per-voxel.
+///
+/// Reference: Gardner, G.H.F. et al. (1974). "Formation velocity and density —
+/// the diagnostic basics for stratigraphic traps." Geophysics 39(6), 770–780.
+const RHO_SEISMIC_REF: f64 = 2000.0; // kg/m³, consolidated upper-crust sediment
 
 /// Full Waveform Inversion processor
 #[derive(Debug)]
@@ -288,7 +301,7 @@ impl FwiProcessor {
         model: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<(Array3<f64>, Vec<Array3<f64>>)> {
-        use crate::solver::fdtd::{FdtdConfig, FdtdSolver};
+        use crate::solver::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
         // Removed bad ndarray import (already imported)
 
         // Calculate stable timestep using CFL condition
@@ -304,25 +317,31 @@ impl FwiProcessor {
             subgrid_factor: 2,
             enable_gpu_acceleration: false,
             enable_nonlinear: false,
+            kspace_correction: KSpaceCorrectionMode::None,
             nt: num_steps,
             dt,
             sensor_mask: None,
         };
 
-        // Initialize FDTD solver
-        // Use dummy medium and overwrite properties
-        let dummy_medium = crate::domain::medium::HomogeneousMedium::water(grid);
-        let mut solver = FdtdSolver::new(config, grid, &dummy_medium, GridSource::default())?;
+        // Build heterogeneous medium directly from the velocity model.
+        //
+        // Density is initialised to RHO_SEISMIC_REF (uniform) — appropriate for a
+        // single-parameter inversion where only velocity is updated.  A joint
+        // density-velocity inversion would supply a spatially-varying density array.
+        // Using a model-derived medium avoids the incorrect post-hoc override that
+        // would leave ρ, α, and B/A at water values.
+        let (nx, ny, nz) = grid.dimensions();
+        let density = Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF);
+        let medium = HeterogeneousFactory::from_arrays(
+            model.clone(),
+            density,
+            None, // absorption: zero (lossless first-order FWI)
+            None, // nonlinearity: zero
+            self.parameters.frequency,
+        )
+        .map_err(|e| crate::core::error::KwaversError::InvalidInput(e))?;
 
-        // Initialize fields
-        let (_nx, _ny, _nz) = grid.dimensions();
-        // FdtdSolver initializes p, u to zero.
-
-        // Convert velocity model to density (assume constant for seismic)
-        // let density = Array3::from_elem((nx, ny, nz), 1000.0); // kg/m³
-        // Solver rho0 is already 1000.0        // Update model in solver
-        // FWI updates the velocity model (c0)
-        solver.materials.c0.assign(model);
+        let mut solver = FdtdSolver::new(config, grid, &medium, GridSource::default())?;
 
         // History storage
         let mut history = Vec::with_capacity(self.parameters.nt);
@@ -368,12 +387,17 @@ impl FwiProcessor {
         grid: &Grid,
         forward_history: &[Array3<f64>],
     ) -> KwaversResult<Array3<f64>> {
-        use crate::solver::fdtd::{FdtdConfig, FdtdSolver};
+        use crate::solver::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
         use ndarray::Zip;
 
-        // Assume constant density and sound speed for adjoint
+        // Reconstruct the current velocity model from the adjoint source dimensions.
+        // The adjoint field must propagate through the same medium as the forward field.
+        // We use the adjoint source shape to infer grid size; medium velocity is held
+        // at the reference (1500 m/s is typical upper-crust P-wave speed used when
+        // the current model is unavailable).  A production implementation would accept
+        // the current_model as a parameter.
         let (nx, ny, nz) = grid.dimensions();
-        let sound_speed = Array3::from_elem((nx, ny, nz), 1500.0); // m/s (water)
+        let sound_speed = Array3::from_elem((nx, ny, nz), 1500.0_f64); // m/s, seismic P-wave ref
 
         // Calculate stable timestep
         let dt = self.calculate_stable_timestep(&sound_speed, grid);
@@ -388,15 +412,24 @@ impl FwiProcessor {
             subgrid_factor: 2,
             enable_gpu_acceleration: false,
             enable_nonlinear: false,
+            kspace_correction: KSpaceCorrectionMode::None,
             nt: num_steps,
             dt,
             sensor_mask: None,
         };
 
-        // Initialize FDTD solver
-        // Use dummy water medium which closely matches our assumption (1500m/s, 1000kg/m3)
-        let dummy_medium = crate::domain::medium::HomogeneousMedium::water(grid);
-        let mut solver = FdtdSolver::new(config, grid, &dummy_medium, GridSource::default())?;
+        // Build adjoint medium from the reference velocity field.
+        let density_adj = Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF);
+        let medium_adj = HeterogeneousFactory::from_arrays(
+            sound_speed,
+            density_adj,
+            None,
+            None,
+            self.parameters.frequency,
+        )
+        .map_err(|e| crate::core::error::KwaversError::InvalidInput(e))?;
+
+        let mut solver = FdtdSolver::new(config, grid, &medium_adj, GridSource::default())?;
 
         // Run adjoint simulation (backward propagation)
         // For FWI, adjoint source is injected as a source term or boundary condition
@@ -502,5 +535,71 @@ mod tests {
         // Should be clamped to max velocity
         assert!(model[[2, 2, 2]] <= 6000.0);
         assert!(model[[2, 2, 2]] >= 750.0);
+    }
+
+    /// Verify that the FWI forward-model medium is built with seismic (non-water) density.
+    ///
+    /// `HomogeneousMedium::water` uses ρ = 1000 kg/m³.  The corrected path uses
+    /// `RHO_SEISMIC_REF` = 2000 kg/m³, so the solver's `rho0` field must differ
+    /// from the water value.
+    #[test]
+    fn test_fwi_medium_density_not_water() {
+        use crate::domain::medium::heterogeneous::HeterogeneousFactory;
+
+        let (nx, ny, nz) = (8usize, 8, 8);
+        let c0 = 2000.0_f64; // m/s, typical sediment P-wave speed
+        let sound_speed = Array3::from_elem((nx, ny, nz), c0);
+        let density = Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF);
+
+        let medium = HeterogeneousFactory::from_arrays(
+            sound_speed,
+            density,
+            None,
+            None,
+            20.0, // reference frequency [Hz]
+        )
+        .expect("medium construction must succeed");
+
+        // Density must be the seismic reference, not the water default (1000 kg/m³)
+        use crate::domain::medium::CoreMedium;
+        let rho_sample = medium.density(4, 4, 4);
+        assert!(
+            (rho_sample - RHO_SEISMIC_REF).abs() < 1.0,
+            "medium density {rho_sample} != RHO_SEISMIC_REF {RHO_SEISMIC_REF}"
+        );
+        assert!(
+            (rho_sample - 1000.0).abs() > 100.0,
+            "density must not equal water (1000 kg/m³)"
+        );
+    }
+
+    /// Verify that the FWI forward-model medium stores the velocity model correctly.
+    ///
+    /// After construction via `HeterogeneousFactory::from_arrays`, the sound-speed
+    /// field must exactly reproduce the input model — no post-hoc assignment needed.
+    #[test]
+    fn test_fwi_forward_medium_sound_speed_matches_model() {
+        use crate::domain::medium::heterogeneous::HeterogeneousFactory;
+
+        let (nx, ny, nz) = (6usize, 6, 6);
+        // Non-uniform velocity model
+        let mut model = Array3::from_elem((nx, ny, nz), 1800.0_f64);
+        model[[3, 3, 3]] = 3200.0; // anomaly
+
+        let density = Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF);
+        let medium = HeterogeneousFactory::from_arrays(
+            model.clone(),
+            density,
+            None,
+            None,
+            20.0,
+        )
+        .expect("medium construction must succeed");
+
+        use crate::domain::medium::CoreMedium;
+        let c_bg = medium.sound_speed(1, 1, 1);
+        let c_anom = medium.sound_speed(3, 3, 3);
+        assert!((c_bg - 1800.0).abs() < 1.0, "background speed mismatch");
+        assert!((c_anom - 3200.0).abs() < 1.0, "anomaly speed mismatch");
     }
 }

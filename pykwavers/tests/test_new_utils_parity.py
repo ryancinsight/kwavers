@@ -362,24 +362,33 @@ class TestAddNoise:
 class TestKWavePythonParity:
     """Validate against k-wave-python equivalents."""
 
-    @pytest.mark.xfail(
-        reason="Rust db2neper uses the physical k-Wave acoustic-absorption unit conversion "
-               "(dB/(MHz^y·cm) → Np/(m·(rad/s)^y)), not the simple dimensionless "
-               "amplitude formula (Np = dB*ln(10)/20). Roundtrip is self-consistent."
-    )
     def test_db2neper_standard_conversion(self):
-        """db2neper uses standard mathematical conversion (amplitude dB).
+        """db2neper uses the physical k-Wave acoustic-absorption unit conversion.
 
-        Note: k-wave-python's db2neper/neper2db use a different convention
-        that includes absorption unit-system conversion (dB/MHz^y/cm ↔ Np/m),
-        so a direct scalar comparison is not appropriate. Our implementation
-        follows the standard: Np = dB * ln(10) / 20.
+        The k-Wave convention converts dB/(MHz^y·cm) → Np/(m·(rad/s)^y):
+            α_Np = 100 · α_dB · ln(10)/20 / (2π·1e6)^y
+
+        ## Proof of identity with k-Wave Python (conversion.py)
+        k-Wave:  100 · α · (1e-6 / (2π))^y / (20·log₁₀(e))
+               = 100 · α · (1/(2π·1e6))^y · (ln(10)/20)    [1/log₁₀(e) = ln(10)]
+        Rust:    100 · α · (ln(10)/20) / (2π·1e6)^y        → identical
+
+        ## References
+        - k-Wave toolbox, db2neper.m (Treeby & Cox 2010)
+        - Treeby BE, Cox BT (2010). J. Biomed. Opt. 15(2):021314.
+          DOI: 10.1117/1.3360308
         """
-        # Standard mathematical identity
-        for db in [0, 1, 10, 20]:
-            neper = kw.db2neper(db)
-            expected = db * np.log(10) / 20.0
-            np.testing.assert_allclose(neper, expected, rtol=1e-12)
+        import math
+        # Physical acoustic unit conversion at y=1
+        for alpha_db in [0.0, 1.0, 10.0, 20.0]:
+            y = 1.0
+            expected = alpha_db * 100.0 * math.log(10) / 20.0 / (2.0 * math.pi * 1e6) ** y
+            np.testing.assert_allclose(
+                kw.db2neper(alpha_db, y),
+                expected,
+                rtol=1e-12,
+                err_msg=f"db2neper({alpha_db}, {y}) mismatch",
+            )
 
     def test_make_sphere_matches_kwave_make_ball(self):
         """make_sphere output matches k-wave-python make_ball dimensions and shape."""

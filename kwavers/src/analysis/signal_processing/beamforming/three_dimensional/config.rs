@@ -3,6 +3,7 @@
 //! This module defines the configuration structures and enums for 3D beamforming,
 //! including algorithm selection, apodization windows, and performance metrics.
 
+use crate::core::constants::SOUND_SPEED_TISSUE;
 use crate::domain::sensor::beamforming::BeamformingConfig;
 
 /// 3D beamforming algorithm types optimized for volumetric imaging
@@ -100,7 +101,7 @@ impl Default for BeamformingConfig3D {
             element_spacing_3d: (0.3e-3, 0.3e-3, 0.5e-3), // λ/2 spacing at ~2.5MHz
             center_frequency: 2.5e6,
             sampling_frequency: 50e6,
-            sound_speed: 1540.0,
+            sound_speed: SOUND_SPEED_TISSUE,
             gpu_device: None,
             enable_streaming: true,
             streaming_buffer_size: 16,

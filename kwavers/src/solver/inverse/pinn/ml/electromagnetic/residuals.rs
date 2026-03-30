@@ -3,6 +3,33 @@ use crate::solver::inverse::pinn::ml::BurnPINN2DWave;
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Tensor;
 
+/// Optimal central-difference step for f32 computation (dimensionless).
+///
+/// ## Theorem — Optimal FD Step (Gill, Murray & Wright 1981, §8.2)
+///
+/// For a central-difference approximation of the first derivative,
+///   f'(x) ≈ [f(x+h) − f(x−h)] / (2h)
+/// the error has two competing terms:
+/// - **Truncation error**: O(h²) — decreases with smaller h
+/// - **Cancellation error**: O(ε_mach / h) — increases with smaller h
+///
+/// The step that minimises total error satisfies d/dh [h² + ε/h] = 0, giving:
+///   h_opt = ε^(1/3)
+///
+/// For f32 (24-bit mantissa, ε ≈ 1.19e-7):
+///   h_opt = (1.19e-7)^(1/3) ≈ 4.9e-3
+///
+/// The previously used step `(f32::EPSILON).sqrt() * 1e-2 ≈ 3.45e-6` is ~1400× too small,
+/// causing catastrophic cancellation in the numerator `f(x+h) − f(x−h)`.
+///
+/// For second derivatives `f''(x) ≈ [f(x+h) − 2f(x) + f(x−h)] / h²` the optimal
+/// step is h = ε^(1/4) ≈ 1.85e-2, but EPS_FD_F32 = 4.9e-3 is a safe conservative
+/// choice that works for both first and second derivatives in f32.
+///
+/// Reference: Gill, P.E., Murray, W. & Wright, M.H. (1981).
+/// *Practical Optimization*. Academic Press. §8.2, Eq. 8.6.
+const EPS_FD_F32: f32 = 4.9e-3;
+
 /// Compute electrostatic residual: ∇·(ε∇φ) = -ρ
 pub fn electrostatic_residual<B: AutodiffBackend>(
     model: &BurnPINN2DWave<B>,
@@ -18,7 +45,7 @@ pub fn electrostatic_residual<B: AutodiffBackend>(
     let _phi = model.forward(x.clone(), y.clone(), Tensor::zeros_like(x));
 
     // Use finite differences within autodiff framework
-    let eps_fd = (f32::EPSILON).sqrt() * 1e-2_f32;
+    let eps_fd = EPS_FD_F32;
 
     // Compute ∂φ/∂x using central difference
     let x_plus = x.clone().add_scalar(eps_fd);
@@ -114,7 +141,7 @@ pub fn magnetostatic_residual<B: AutodiffBackend>(
     mu: f64,
     physics_params: &PhysicsParameters,
 ) -> Tensor<B, 2> {
-    let eps_fd = (f32::EPSILON).sqrt() * 1e-2_f32;
+    let eps_fd = EPS_FD_F32;
 
     // Bx = -∂Az/∂y
     let y_plus = y.clone().add_scalar(eps_fd);
@@ -218,7 +245,7 @@ pub fn quasi_static_residual<B: AutodiffBackend>(
     // Assumes model output u represents a scalar field component (e.g. Ez or Az)
     // Equation: ∇²u - μσ(∂u/∂t) - με(∂²u/∂t²) = -μJ
 
-    let eps_fd = (f32::EPSILON).sqrt() * 1e-2_f32;
+    let eps_fd = EPS_FD_F32;
     let two = 2.0;
 
     // Center point
@@ -382,7 +409,7 @@ pub fn wave_propagation_residual<B: AutodiffBackend>(
     let _ = physics_params; // not required for the wave equation residual
 
     // Step size for finite differences (same pattern as other residuals in this file)
-    let h = (f32::EPSILON).sqrt() * 1e-2_f32;
+    let h = EPS_FD_F32;
 
     // --- ∂²Ez/∂x² = (Ez(x+h) − 2·Ez(x) + Ez(x−h)) / h² ---
     let ez_xp = model.forward(x.clone().add_scalar(h), y.clone(), t.clone());
@@ -440,7 +467,7 @@ mod pinn_em_residuals_tests {
         //   dez_dt   = (C − C) / (2h) = 0
         //   R = eps_mu * 0 + mu_sigma * 0 − 0 − 0 = 0  ✓
 
-        let h = (f32::EPSILON.sqrt()) * 1e-2_f32;
+        let h = EPS_FD_F32;
         let c_val = 1.5_f32;
         let batch = 4_usize;
 
@@ -473,7 +500,7 @@ mod pinn_em_residuals_tests {
     /// detects a field that does NOT satisfy the free-space (σ=0) wave equation.
     #[test]
     fn test_wave_propagation_residual_temporal_cosine_nonzero() {
-        let h = (f32::EPSILON.sqrt()) * 1e-2_f32;
+        let h = EPS_FD_F32;
         let omega = 2.0_f32 * std::f32::consts::PI * 1e9_f32; // 1 GHz
         let t0 = 1e-10_f32; // arbitrary time sample
         let eps_mu = 8.854e-12_f32 * 1.257e-6_f32; // free space ε₀μ₀
@@ -495,196 +522,379 @@ mod pinn_em_residuals_tests {
         );
     }
 
-    /// EMISSIVITY_VAPOR-style sanity: finite-difference step h is in a reasonable range.
+    /// Finite-difference step must lie well above the f32 cancellation floor.
+    ///
+    /// The cancellation floor for f32 central differences is ε_mach^(2/3) ≈ 2.4e-5.
+    /// EPS_FD_F32 = 4.9e-3 must be at least 100× above this floor.
+    #[test]
+    fn test_eps_fd_above_cancellation_floor() {
+        // Cancellation floor for f32 FD = ε_mach^(2/3)
+        let cancellation_floor = (f32::EPSILON as f64).powf(2.0 / 3.0) as f32;
+        assert!(
+            EPS_FD_F32 > cancellation_floor * 100.0,
+            "EPS_FD_F32 ({:.2e}) must be >100× above f32 cancellation floor ({:.2e})",
+            EPS_FD_F32, cancellation_floor
+        );
+    }
+
+    /// The optimal step h_opt = ε^(1/3) must be larger than the old (broken) value
+    /// `(f32::EPSILON).sqrt() * 1e-2`.
+    #[test]
+    fn test_eps_fd_larger_than_old_broken_step() {
+        let old_broken_step = f32::EPSILON.sqrt() * 1e-2_f32;
+        assert!(
+            EPS_FD_F32 > old_broken_step * 10.0,
+            "EPS_FD_F32 ({:.2e}) should be >> old step ({:.2e})",
+            EPS_FD_F32, old_broken_step
+        );
+    }
+
+    /// Finite-difference step size must be in a physically reasonable range.
     #[test]
     fn test_fd_step_is_in_safe_range() {
-        let h = (f32::EPSILON.sqrt()) * 1e-2_f32;
-        // h should be large enough for meaningful FD but small enough not to dominate
-        assert!(h > 1e-7, "h too small: {}", h);
-        assert!(h < 1e-1, "h too large: {}", h);
+        assert!(EPS_FD_F32 > 1e-4, "EPS_FD_F32 too small: {}", EPS_FD_F32);
+        assert!(EPS_FD_F32 < 1e-1, "EPS_FD_F32 too large: {}", EPS_FD_F32);
+    }
+
+    // -----------------------------------------------------------------------
+    // Tests for compute_charge_density
+    // -----------------------------------------------------------------------
+
+    /// Source-free dielectric bulk: ρ_free = 0.
+    ///
+    /// Proof: charge_density not set in domain_params → rho_0 = 0 → return zeros.
+    #[cfg(feature = "pinn")]
+    #[test]
+    fn test_charge_density_zero_for_source_free_medium() {
+        type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
+        use burn::tensor::Tensor;
+        use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+        use std::collections::HashMap;
+
+        let params = PhysicsParameters {
+            material_properties: HashMap::new(),
+            boundary_values: HashMap::new(),
+            initial_values: HashMap::new(),
+            domain_params: HashMap::new(),
+        };
+        let x: Tensor<B, 2> = Tensor::zeros([4, 1]);
+        let y: Tensor<B, 2> = Tensor::zeros([4, 1]);
+
+        let rho = super::compute_charge_density::<B>(&x, &y, &params);
+        let rho_data: Vec<f32> = rho.into_data().to_vec().unwrap();
+        for v in &rho_data {
+            assert!(v.abs() < 1e-10, "expected ρ=0 for source-free medium, got {}", v);
+        }
+    }
+
+    /// Uniform impressed charge density: all output elements = rho_0.
+    ///
+    /// Proof: domain_params["charge_density"] = ρ₀ → return tensor filled with ρ₀.
+    #[cfg(feature = "pinn")]
+    #[test]
+    fn test_charge_density_uniform_matches_param() {
+        type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
+        use burn::tensor::Tensor;
+        use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+        use std::collections::HashMap;
+
+        let rho_expected = 1.5e-3_f64;
+        let mut domain = HashMap::new();
+        domain.insert("charge_density".to_string(), rho_expected);
+        let params = PhysicsParameters {
+            material_properties: HashMap::new(),
+            boundary_values: HashMap::new(),
+            initial_values: HashMap::new(),
+            domain_params: domain,
+        };
+        let x: Tensor<B, 2> = Tensor::zeros([3, 1]);
+        let y: Tensor<B, 2> = Tensor::zeros([3, 1]);
+
+        let rho = super::compute_charge_density::<B>(&x, &y, &params);
+        let rho_data: Vec<f32> = rho.into_data().to_vec().unwrap();
+        for v in &rho_data {
+            let diff = (v - rho_expected as f32).abs();
+            assert!(diff < 1e-5, "expected ρ={:.3e}, got {:.3e}", rho_expected, v);
+        }
+    }
+
+    /// Gaussian charge density: peak at (x0,y0), decays with σ.
+    ///
+    /// At (x0,y0) the Gaussian equals 1, so ρ = ρ₀.
+    #[cfg(feature = "pinn")]
+    #[test]
+    fn test_charge_density_gaussian_peak_at_centre() {
+        type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
+        use burn::tensor::Tensor;
+        use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+        use std::collections::HashMap;
+
+        let rho_0 = 2.0_f64;
+        let mut domain = HashMap::new();
+        domain.insert("charge_density".to_string(), rho_0);
+        domain.insert("charge_x0".to_string(), 0.5_f64);
+        domain.insert("charge_y0".to_string(), 0.5_f64);
+        domain.insert("charge_sigma".to_string(), 0.1_f64);
+        let params = PhysicsParameters {
+            material_properties: HashMap::new(),
+            boundary_values: HashMap::new(),
+            initial_values: HashMap::new(),
+            domain_params: domain,
+        };
+        // Single point exactly at the Gaussian centre → exp(0) = 1 → ρ = ρ₀
+        let x: Tensor<B, 2> = Tensor::from_data([[0.5_f32]]);
+        let y: Tensor<B, 2> = Tensor::from_data([[0.5_f32]]);
+
+        let rho = super::compute_charge_density::<B>(&x, &y, &params);
+        let rho_data: Vec<f32> = rho.into_data().to_vec().unwrap();
+        let diff = (rho_data[0] - rho_0 as f32).abs();
+        assert!(diff < 1e-4, "Gaussian peak should equal ρ₀={:.2}, got {:.6}", rho_0, rho_data[0]);
+    }
+
+    // -----------------------------------------------------------------------
+    // Tests for compute_current_density_z
+    // -----------------------------------------------------------------------
+
+    /// No sources or conductivity: J_z = 0 (source-free dielectric).
+    #[cfg(feature = "pinn")]
+    #[test]
+    fn test_current_density_zero_for_dielectric() {
+        type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
+        use burn::tensor::Tensor;
+        use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+        use std::collections::HashMap;
+
+        let params = PhysicsParameters {
+            material_properties: HashMap::new(),
+            boundary_values: HashMap::new(),
+            initial_values: HashMap::new(),
+            domain_params: HashMap::new(),
+        };
+        let x: Tensor<B, 2> = Tensor::zeros([5, 1]);
+        let y: Tensor<B, 2> = Tensor::zeros([5, 1]);
+
+        let jz = super::compute_current_density_z::<B>(&x, &y, &params);
+        let jz_data: Vec<f32> = jz.into_data().to_vec().unwrap();
+        for v in &jz_data {
+            assert!(v.abs() < 1e-10, "expected J_z=0 for dielectric, got {}", v);
+        }
+    }
+
+    /// Conduction current: J = σ·E_z,background.
+    ///
+    /// Proof: J_cond = σ·E_bg = 2.0·3.0 = 6.0 A/m².
+    #[cfg(feature = "pinn")]
+    #[test]
+    fn test_current_density_conduction_proportional_to_sigma_and_ez() {
+        type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
+        use burn::tensor::Tensor;
+        use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+        use std::collections::HashMap;
+
+        let sigma = 2.0_f64;
+        let e_z_bg = 3.0_f64;
+        let expected = (sigma * e_z_bg) as f32;
+
+        let mut domain = HashMap::new();
+        domain.insert("conductivity".to_string(), sigma);
+        domain.insert("e_z_background".to_string(), e_z_bg);
+        let params = PhysicsParameters {
+            material_properties: HashMap::new(),
+            boundary_values: HashMap::new(),
+            initial_values: HashMap::new(),
+            domain_params: domain,
+        };
+        let x: Tensor<B, 2> = Tensor::zeros([3, 1]);
+        let y: Tensor<B, 2> = Tensor::zeros([3, 1]);
+
+        let jz = super::compute_current_density_z::<B>(&x, &y, &params);
+        let jz_data: Vec<f32> = jz.into_data().to_vec().unwrap();
+        for v in &jz_data {
+            let diff = (v - expected).abs();
+            assert!(diff < 1e-4, "expected J_z=σ·E_z={}, got {}", expected, v);
+        }
+    }
+
+    /// Uniform impressed current: all output elements equal current_density_z.
+    #[cfg(feature = "pinn")]
+    #[test]
+    fn test_current_density_uniform_impressed() {
+        type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
+        use burn::tensor::Tensor;
+        use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+        use std::collections::HashMap;
+
+        let j0 = 5.0_f64;
+        let mut domain = HashMap::new();
+        domain.insert("current_density_z".to_string(), j0);
+        let params = PhysicsParameters {
+            material_properties: HashMap::new(),
+            boundary_values: HashMap::new(),
+            initial_values: HashMap::new(),
+            domain_params: domain,
+        };
+        let x: Tensor<B, 2> = Tensor::zeros([4, 1]);
+        let y: Tensor<B, 2> = Tensor::zeros([4, 1]);
+
+        let jz = super::compute_current_density_z::<B>(&x, &y, &params);
+        let jz_data: Vec<f32> = jz.into_data().to_vec().unwrap();
+        for v in &jz_data {
+            let diff = (v - j0 as f32).abs();
+            assert!(diff < 1e-4, "expected J_z={}, got {}", j0, v);
+        }
     }
 }
 
-/// Compute charge density from electric field (Gauss's law)
+/// Compute the prescribed free charge density source term ρ (C/m³).
 ///
-/// Implements charge density computation from the divergence of the electric displacement field:
+/// ## Physics — Gauss's Law (Maxwell I, differential form)
+///
+/// The electrostatic residual enforced by the PINN is:
 /// ```text
-/// ρ = ∇·D = ε·∇·E
+/// ∇·(ε∇φ) + ρ_free = 0
 /// ```
+/// where ρ_free is the **impressed** (externally prescribed) free charge density.
+/// For source-free dielectric bulk media (water, tissue), ρ_free = 0 — physically
+/// correct and the most common case in acoustic-electromagnetic coupling.
 ///
-/// # Mathematical Formulation
+/// For problems with finite charge distributions (space-charge layers, plasma
+/// regions, membrane potentials), ρ_free is specified via `domain_params`:
+/// - `"charge_density"` (C/m³): spatially-uniform source charge density
+/// - `"charge_x0"`, `"charge_y0"`, `"charge_sigma"` (m): Gaussian distribution centre
+///   and width, combined with `"charge_density"` as peak amplitude
 ///
-/// From Gauss's law in differential form:
+/// ## Gaussian source (Plonus 1988, §3.2)
+///
+/// A volume charge distribution of total charge Q₀ in a sphere of radius σ:
 /// ```text
-/// ∇·D = ρ_free
-/// D = ε·E  (for linear dielectrics)
+/// ρ(r) = ρ₀ · exp(−((x−x₀)² + (y−y₀)²) / (2σ²))
 /// ```
+/// with `ρ₀ = domain_params["charge_density"]`, `x₀ = domain_params["charge_x0"]`,
+/// `y₀ = domain_params["charge_y0"]`, `σ = domain_params["charge_sigma"]`.
 ///
-/// Therefore:
-/// ```text
-/// ρ = ε(∂Ex/∂x + ∂Ey/∂y + ∂Ez/∂z)
-/// ```
+/// If none of the Gaussian parameters are present, a spatially-uniform density is used.
 ///
-/// For 2D problems (Ez field in xy-plane):
-/// ```text
-/// ρ = ε(∂Ex/∂x + ∂Ey/∂y)
-/// ```
+/// ## Reference
 ///
-/// # Implementation
-///
-/// Uses central finite-difference approximation for derivatives:
-/// ```text
-/// ∂Ex/∂x ≈ (Ex(x+h) - Ex(x-h)) / (2h)
-/// ∂Ey/∂y ≈ (Ey(y+h) - Ey(y-h)) / (2h)
-/// ```
-///
-/// # Parameters
-///
-/// - `x, y`: Position coordinates (m)
-/// - `physics_params`: Physical parameters including permittivity
-///
-/// # Returns
-///
-/// Charge density tensor (C/m³)
-///
-/// # Notes
-///
-/// - Returns near-zero values in regions without charge sources
-/// - In dielectrics without free charges, ρ_free ≈ 0
-/// - For accurate charge computation from PINN fields, consider using
-///   automatic differentiation instead of finite differences
-///
-/// # References
-///
-/// - Jackson, "Classical Electrodynamics" (3rd ed.), Section 6.3
-/// - Griffiths, "Introduction to Electrodynamics" (4th ed.), Chapter 2
+/// - Jackson, J.D. (1999). *Classical Electrodynamics* (3rd ed.). Wiley. §1.5.
+/// - Griffiths, D.J. (2017). *Introduction to Electrodynamics* (4th ed.). §2.3.
 pub fn compute_charge_density<B: AutodiffBackend>(
     x: &Tensor<B, 2>,
     y: &Tensor<B, 2>,
     physics_params: &PhysicsParameters,
 ) -> Tensor<B, 2> {
-    // For typical ultrasound/optics problems, free charge density is often negligible
-    // in the bulk medium (water, tissue, etc.). Charges typically exist only at:
-    // 1. Boundaries/interfaces
-    // 2. Space charge regions (high-intensity fields, plasma formation)
-    // 3. Explicitly defined source regions
+    let rho_0 = physics_params
+        .domain_params
+        .get("charge_density")
+        .copied()
+        .unwrap_or(0.0) as f32;
 
-    // Check if charge sources are defined in physics parameters
-    if let Some(charge_sources) = physics_params.domain_params.get("charge_sources") {
-        // If charge sources are explicitly provided, use them
-        // This would typically be parsed from a configuration
-        let _charge_info = charge_sources;
-        // For now, return zeros - in production this would parse and evaluate sources
-        Tensor::zeros_like(x)
-    } else {
-        // No charge sources defined - return zero charge density
-        // This is physically correct for most ultrasound propagation scenarios
-        Tensor::zeros_like(x)
+    if rho_0 == 0.0 {
+        // Source-free bulk: ρ_free = 0 (physically correct for dielectrics)
+        return Tensor::zeros_like(x);
     }
 
-    // TODO: Future enhancement for plasma physics or space charge effects:
-    // - Implement ionization kinetics (Saha equation)
-    // - Add charge carrier mobility models
-    // - Include recombination dynamics
-    // - Couple with electron density from sonoluminescence plasma
+    // Check for Gaussian distribution parameters
+    let x0 = physics_params.domain_params.get("charge_x0").copied();
+    let y0 = physics_params.domain_params.get("charge_y0").copied();
+    let sigma = physics_params.domain_params.get("charge_sigma").copied();
+
+    match (x0, y0, sigma) {
+        (Some(x0), Some(y0), Some(sigma)) if sigma > 0.0 => {
+            // Gaussian charge distribution: ρ(r) = ρ₀ · exp(−r²/(2σ²))
+            // where r² = (x−x₀)² + (y−y₀)²
+            let dx = x.clone().sub_scalar(x0 as f32);
+            let dy = y.clone().sub_scalar(y0 as f32);
+            let r_sq = dx.clone().mul(dx).add(dy.clone().mul(dy));
+            let two_sigma_sq = (2.0 * sigma * sigma) as f32;
+            r_sq.div_scalar(two_sigma_sq).neg().exp().mul_scalar(rho_0)
+        }
+        _ => {
+            // Spatially-uniform charge density
+            Tensor::zeros_like(x).add_scalar(rho_0)
+        }
+    }
 }
 
-/// Compute current density z-component
+/// Compute the z-component of impressed current density J_z (A/m²).
 ///
-/// Implements current density computation for electromagnetic simulations.
+/// ## Physics — Ampère's Law (Maxwell IV, 2D TM-mode)
 ///
-/// # Mathematical Formulation
-///
-/// Current density has three main contributions:
-///
-/// 1. **Conduction current** (Ohm's law):
-///    ```text
-///    J_cond = σ·E
-///    ```
-///
-/// 2. **Convection current** (moving charges):
-///    ```text
-///    J_conv = ρ·v
-///    ```
-///
-/// 3. **External sources** (antennas, current sheets):
-///    ```text
-///    J_ext = J_source(x,y,t)
-///    ```
-///
-/// Total current:
+/// In the magnetostatic / quasi-static 2D TM formulation (Hz, Ex, Ey fields),
+/// the z-direction Ampère equation is:
 /// ```text
-/// J = σ·E + ρ·v + J_ext
+/// ∇×H|_z = ε·∂Ez/∂t + σ·Ez + J_ext,z
+/// ```
+/// This function evaluates the **impressed** source current J_ext,z at the
+/// query collocation points. Conduction current (σ·Ez) is handled separately
+/// by the PINN residual via the model's predicted Ez field; this function
+/// supplies only the externally prescribed contribution.
+///
+/// ## Source parameterisation
+///
+/// `physics_params.domain_params` keys:
+/// - `"current_density_z"` (A/m²): spatially-uniform impressed current
+/// - `"current_x0"`, `"current_y0"`, `"current_sigma"` (m): Gaussian source
+///   centre and half-width, combined with `"current_density_z"` as peak amplitude
+/// - `"conductivity"` (S/m) + `"e_z_background"` (V/m): conduction background
+///   J_cond = σ·E_z,background (constant background field approximation)
+///
+/// ## Gaussian line-source (Balanis 2012, §3.4)
+///
+/// A filamentary current of linear density K₀ spread over radius σ:
+/// ```text
+/// J_z(r) = K₀ · exp(−r²/(2σ²)) / (2πσ²)
 /// ```
 ///
-/// # For 2D TM mode (Hz, Ex, Ey):
+/// ## Reference
 ///
-/// The z-component of current density appears in Ampère's law:
-/// ```text
-/// ∇×H = ε·∂E/∂t + σ·E + J_z
-/// ```
-///
-/// For quasi-static or time-harmonic problems:
-/// ```text
-/// J_z = σ·Ez + J_ext,z
-/// ```
-///
-/// # Parameters
-///
-/// - `x, y`: Position coordinates (m)
-/// - `physics_params`: Physical parameters including conductivity
-///
-/// # Returns
-///
-/// Current density z-component tensor (A/m²)
-///
-/// # Notes
-///
-/// - For most dielectrics (water, tissue), σ ≈ 0, so conduction current is negligible
-/// - Convection currents typically neglected in RF/microwave (quasi-static charge assumption)
-/// - External current sources would be specified as boundary conditions or source terms
-/// - In ultrasound imaging, electromagnetic currents are generally not relevant
-///
-/// # Applications
-///
-/// Would be non-zero for:
-/// - Antenna excitation (external current source)
-/// - Conducting materials (metals, semiconductors)
-/// - Plasma regions (high conductivity)
-/// - Waveguide feeds
-///
-/// # References
-///
-/// - Jackson, "Classical Electrodynamics" (3rd ed.), Section 6.7
-/// - Pozar, "Microwave Engineering" (4th ed.), Chapter 1
+/// - Jackson, J.D. (1999). *Classical Electrodynamics* (3rd ed.). Wiley. §6.7.
+/// - Pozar, D.M. (2011). *Microwave Engineering* (4th ed.). Wiley. §1.3.
+/// - Balanis, C.A. (2012). *Advanced Engineering Electromagnetics* (2nd ed.). §3.4.
 pub fn compute_current_density_z<B: AutodiffBackend>(
     x: &Tensor<B, 2>,
     y: &Tensor<B, 2>,
     physics_params: &PhysicsParameters,
 ) -> Tensor<B, 2> {
-    // Check for external current sources in physics parameters
-    if let Some(current_sources) = physics_params.domain_params.get("current_sources_z") {
-        // External current sources defined (e.g., antenna feeds, current sheets)
-        let _source_info = current_sources;
-        // For now, return zeros - in production this would parse and evaluate sources
-        // Example: Gaussian current distribution, line source, etc.
-        Tensor::zeros_like(x)
-    } else if let Some(conductivity_field) = physics_params.domain_params.get("conductivity") {
-        // If conductivity field is provided, compute conduction current: J = σ·E
-        // This requires electric field E, which would come from the PINN model
-        let _sigma = conductivity_field;
-        // Would need to evaluate E_z from model and multiply by σ
-        // Not implemented here since model coupling is complex
-        Tensor::zeros_like(x)
-    } else {
-        // No current sources or conduction - typical for dielectric (ultrasound) problems
-        // This is physically correct for most acoustics/optics scenarios
-        Tensor::zeros_like(x)
-    }
+    // Conduction background: J_cond = σ·E_z,background (if both are specified)
+    let sigma = physics_params
+        .domain_params
+        .get("conductivity")
+        .copied()
+        .unwrap_or(0.0);
+    let e_z_bg = physics_params
+        .domain_params
+        .get("e_z_background")
+        .copied()
+        .unwrap_or(0.0);
+    let j_cond = (sigma * e_z_bg) as f32;
 
-    // TODO: Future enhancements:
-    // - Implement J = σ·E for conducting regions
-    // - Add external source terms (antenna, current sheet)
-    // - Include displacement current ∂D/∂t for time-dependent problems
-    // - Couple with charge density via continuity equation: ∂ρ/∂t + ∇·J = 0
+    // Impressed source: uniform or Gaussian distribution
+    let j0 = physics_params
+        .domain_params
+        .get("current_density_z")
+        .copied()
+        .unwrap_or(0.0) as f32;
+
+    let j_impressed = if j0 != 0.0 {
+        let x0 = physics_params.domain_params.get("current_x0").copied();
+        let y0 = physics_params.domain_params.get("current_y0").copied();
+        let sig = physics_params.domain_params.get("current_sigma").copied();
+        match (x0, y0, sig) {
+            (Some(cx), Some(cy), Some(s)) if s > 0.0 => {
+                // Gaussian impressed current: J_z(r) = J₀·exp(−r²/(2σ²))
+                let dx = x.clone().sub_scalar(cx as f32);
+                let dy = y.clone().sub_scalar(cy as f32);
+                let r_sq = dx.clone().mul(dx).add(dy.clone().mul(dy));
+                let two_s2 = (2.0 * s * s) as f32;
+                r_sq.div_scalar(two_s2).neg().exp().mul_scalar(j0)
+            }
+            _ => Tensor::zeros_like(x).add_scalar(j0),
+        }
+    } else {
+        Tensor::zeros_like(x)
+    };
+
+    // Total impressed current (conduction background + external source)
+    j_impressed.add_scalar(j_cond)
 }

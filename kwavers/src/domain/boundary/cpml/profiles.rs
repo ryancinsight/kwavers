@@ -350,3 +350,96 @@ impl CPMLProfiles {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::boundary::cpml::config::CPMLConfig;
+    use crate::domain::grid::Grid;
+
+    /// The k-Wave σ_max formula at the PML wall (d_normalized = 1.0) is:
+    ///   σ_max = pml_alpha × (c₀ / dx)
+    ///
+    /// For default pml_alpha = 2.0, c₀ = 1500 m/s, dx = 1e-3 m:
+    ///   σ_max = 2.0 × (1500 / 1e-3) = 3 000 000 s⁻¹
+    ///
+    /// Verify the last cell in the PML (highest sigma) matches this formula.
+    ///
+    /// ## Reference
+    /// Treeby & Cox (2010), J. Biomed. Opt. 15(2) 021314, Eq. (10); k-Wave pml.py `get_pml`.
+    #[test]
+    fn test_cpml_sigma_max_formula() {
+        let c0 = 1500.0_f64;
+        let dx = 1e-3_f64;
+        let pml_size = 10_usize;
+        let dt = 1e-7_f64;
+        let pml_alpha = 2.0_f64;
+
+        let nx = 32;
+        let grid = Grid::new(nx, nx, nx, dx, dx, dx).expect("grid");
+        let config = CPMLConfig::with_thickness(pml_size).with_alpha(pml_alpha);
+
+        let profiles = CPMLProfiles::new(&config, &grid, c0, dt)
+            .expect("CPMLProfiles::new should succeed");
+
+        // Left PML: d = (thickness - i) / thickness.
+        // At i=0 (the outer wall): d = thickness/thickness = 1.0 → σ = σ_max
+        // At i=pml_size-1 (domain interface): d = 1/thickness → σ ≈ 0
+        // k-Wave σ_max = pml_alpha × (c₀/dx)
+        let expected_sigma_max = pml_alpha * (c0 / dx);
+        let actual = profiles.sigma_x[0]; // wall: maximum σ
+        assert!(
+            (actual - expected_sigma_max).abs() / expected_sigma_max < 0.01,
+            "σ_max = {actual:.1} should match k-Wave formula {expected_sigma_max:.1}"
+        );
+    }
+
+    /// b-coefficient at the PML wall must equal exp(−σ_max · dt).
+    ///
+    /// ## Reference
+    /// Roden & Gedney (2000), Eq. (9): b = exp(−σ·Δt), a = b − 1.
+    #[test]
+    fn test_cpml_recursive_convolution_coefficients() {
+        let c0 = 1500.0_f64;
+        let dx = 1e-3_f64;
+        let pml_size = 10_usize;
+        let dt = 1e-7_f64;
+        let pml_alpha = 2.0_f64;
+
+        let nx = 32;
+        let grid = Grid::new(nx, nx, nx, dx, dx, dx).expect("grid");
+        let config = CPMLConfig::with_thickness(pml_size).with_alpha(pml_alpha);
+
+        let profiles = CPMLProfiles::new(&config, &grid, c0, dt)
+            .expect("CPMLProfiles::new should succeed");
+
+        // At the PML wall (index 0: outer wall, maximum σ)
+        let sigma_max = profiles.sigma_x[0];
+        let expected_b = (-sigma_max * dt).exp();
+        let expected_a = expected_b - 1.0;
+
+        let actual_b = profiles.b_x[0];
+        let actual_a = profiles.a_x[0];
+
+        assert!(
+            (actual_b - expected_b).abs() < 1e-12,
+            "b_x at PML wall: expected {expected_b:.10}, got {actual_b:.10}"
+        );
+        assert!(
+            (actual_a - expected_a).abs() < 1e-12,
+            "a_x at PML wall: expected {expected_a:.10}, got {actual_a:.10}"
+        );
+        // Interior cells must have b=1, a=0 (no damping outside PML)
+        let mid = nx / 2;
+        assert!(
+            (profiles.b_x[mid] - 1.0).abs() < 1e-14,
+            "b_x at interior must be 1.0 (no PML), got {}",
+            profiles.b_x[mid]
+        );
+        assert!(
+            profiles.a_x[mid].abs() < 1e-14,
+            "a_x at interior must be 0.0, got {}",
+            profiles.a_x[mid]
+        );
+    }
+}

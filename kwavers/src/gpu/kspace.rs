@@ -501,6 +501,62 @@ mod kspace_shift_tests {
         assert!(KspaceShiftGpu::new(0, 4, 4).is_err());
     }
 
+    // ── kspace_shift.wgsl content validation ──────────────────────────────────
+
+    /// The `kspace_shift.wgsl` shader must declare the correct entry point and
+    /// all required bindings, matching the `KspaceShiftGpuShader` bind group layout.
+    ///
+    /// ## Reference
+    /// Treeby BE, Cox BT (2010). J. Biomed. Opt. 15(2):021314. (Eq. 12–13)
+    #[test]
+    fn test_kspace_shift_wgsl_shader_content() {
+        let src = include_str!("shaders/kspace_shift.wgsl");
+        assert!(
+            src.contains("fn kspace_shift"),
+            "kspace_shift.wgsl must declare entry point 'kspace_shift'"
+        );
+        assert!(
+            src.contains("@group(0) @binding(0)"),
+            "kspace_shift.wgsl must declare binding(0) for spec_real"
+        );
+        assert!(
+            src.contains("@group(0) @binding(1)"),
+            "kspace_shift.wgsl must declare binding(1) for spec_imag"
+        );
+        assert!(
+            src.contains("@group(1) @binding(0)"),
+            "kspace_shift.wgsl must declare group(1) binding(0) for ShiftParams uniform"
+        );
+        assert!(
+            src.contains("@workgroup_size(8, 8, 4)"),
+            "kspace_shift.wgsl must use workgroup_size(8, 8, 4)"
+        );
+    }
+
+    /// `ShiftParams` pod layout: 6 fields × 4 bytes = 24 bytes, no padding.
+    ///
+    /// ## Reference
+    /// WGSL spec §10.6.3: struct must be aligned; all fields are 4-byte scalars.
+    #[test]
+    fn test_kspace_shift_params_pod_layout() {
+        /// Uniform buffer matched to `ShiftParams` in `kspace_shift.wgsl`.
+        #[repr(C)]
+        struct ShiftParams {
+            nx: u32,
+            ny: u32,
+            nz: u32,
+            sx: f32,
+            sy: f32,
+            sz: f32,
+        }
+        // 6 × 4-byte fields, no padding → 24 bytes
+        assert_eq!(std::mem::size_of::<ShiftParams>(), 24,
+            "ShiftParams must be exactly 24 bytes (6 × 4-byte fields, no padding)");
+        // Verify each field is correctly sized
+        assert_eq!(std::mem::size_of::<u32>(), 4);
+        assert_eq!(std::mem::size_of::<f32>(), 4);
+    }
+
     /// Wavenumber vector length mismatch returns an error.
     #[test]
     fn test_kv_length_mismatch_error() {

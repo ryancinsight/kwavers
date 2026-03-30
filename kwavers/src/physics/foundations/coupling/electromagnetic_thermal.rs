@@ -15,6 +15,7 @@
 //! - Welch & van Gemert (2011) "Optical-Thermal Response of Laser-Irradiated Tissue"
 
 use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_WATER_NOMINAL};
+use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use ndarray::ArrayD;
 use super::MultiPhysicsCoupling;
 
@@ -37,7 +38,7 @@ pub trait ElectromagneticThermalCoupling: MultiPhysicsCoupling {
     /// Thermal relaxation time τ = ρ C_p / k (s)
     fn thermal_relaxation_time(&self, _position: &[f64]) -> f64 {
         let rho = DENSITY_WATER_NOMINAL;
-        let cp = 4186.0;
+        let cp = SPECIFIC_HEAT_WATER;
         let k = 0.6;
         rho * cp / k
     }

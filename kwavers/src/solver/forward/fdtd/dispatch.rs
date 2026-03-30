@@ -217,15 +217,7 @@ impl FdtdStencilDispatcher {
                 {
                     use crate::solver::forward::fdtd::Avx512Config;
 
-                    let config = Avx512Config {
-                        tile_size: 8,
-                        use_fma: true,
-                        prefetch_boundaries: true,
-                        sound_speed: 1540.0,
-                        density: 1000.0,
-                        dx: 0.001,
-                        dt: 1.62e-7,
-                    };
+                    let config = Avx512Config::default();
 
                     let processor = crate::solver::forward::fdtd::Avx512StencilProcessor::new(
                         self.nx, self.ny, self.nz, config,
@@ -242,7 +234,7 @@ impl FdtdStencilDispatcher {
             }
             StencilStrategy::GenericSimd => {
                 // Use default SimdStencilConfig
-                let processor = crate::solver::forward::fdtd::SimdStencilProcessor::new(
+                let mut processor = crate::solver::forward::fdtd::SimdStencilProcessor::new(
                     self.nx,
                     self.ny,
                     self.nz,
@@ -263,23 +255,35 @@ impl FdtdStencilDispatcher {
         }
     }
 
-    /// Scalar implementation (reference/fallback)
+    /// Scalar implementation (reference/fallback).
     ///
-    /// Reuses `self.p_scratch` to avoid heap allocation on every call.
+    /// ## Allocation strategy
+    ///
+    /// Fills `self.p_scratch` in-place, then returns it to the caller via
+    /// `std::mem::replace`, leaving a fresh zeros buffer in `p_scratch` for the
+    /// next invocation. This eliminates the O(N³) data copy of the previous
+    /// `.clone()` call:
+    ///
+    /// | Previous (`clone`) | New (`replace`)     |
+    /// |--------------------|---------------------|
+    /// | alloc N³ words     | alloc N³ words      |
+    /// | copy N³ values     | zero-fill N³ words  |
+    /// Total work: 2×N³ writes → 1×N³ writes (zero-fill, OS-accelerated).
+    ///
+    /// For a 64³ grid this saves ~2 MB of memcpy per time step.
     fn update_pressure_scalar(
         &mut self,
         p_curr: &Array3<f64>,
         p_prev: &Array3<f64>,
         _u_div: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        // Zero the pre-allocated scratch buffer instead of allocating a new array
+        // Zero boundary faces (interior loop leaves edges at 0 from initialisation)
         self.p_scratch.fill(0.0);
 
-        // Interior points
+        // Interior points — 6-point stencil Laplacian + leapfrog time step
         for k in 1..self.nz - 1 {
             for j in 1..self.ny - 1 {
                 for i in 1..self.nx - 1 {
-                    // 6-point stencil laplacian
                     let laplacian = p_curr[[i - 1, j, k]]
                         + p_curr[[i + 1, j, k]]
                         + p_curr[[i, j - 1, k]]
@@ -288,14 +292,19 @@ impl FdtdStencilDispatcher {
                         + p_curr[[i, j, k + 1]]
                         - 6.0 * p_curr[[i, j, k]];
 
-                    // Pressure update: p_new = 2*p_curr - p_prev + coeff*laplacian
+                    // Leapfrog: p^{n+1} = 2·p^n − p^{n−1} + c²·Δt²·∇²p^n
                     self.p_scratch[[i, j, k]] = 2.0 * p_curr[[i, j, k]] - p_prev[[i, j, k]]
                         + self.pressure_coeff * laplacian;
                 }
             }
         }
 
-        Ok(self.p_scratch.clone())
+        // Return the filled scratch buffer without copying data.
+        // `replace` puts a fresh zeros array into `self.p_scratch` and gives
+        // us ownership of the filled array — zero-copy transfer of results.
+        let dim = self.p_scratch.dim();
+        let result = std::mem::replace(&mut self.p_scratch, Array3::zeros(dim));
+        Ok(result)
     }
 
     /// Get current strategy

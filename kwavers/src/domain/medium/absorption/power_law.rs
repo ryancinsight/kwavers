@@ -1,5 +1,6 @@
 //! Power-law absorption model
 
+use crate::core::constants::DB_TO_NP;
 use serde::{Deserialize, Serialize};
 
 /// Power-law absorption model configuration
@@ -52,8 +53,7 @@ impl PowerLawAbsorption {
     /// Calculate absorption coefficient at given frequency
     #[must_use]
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
-        // Convert to Np/m from dB/(MHz^y cm)
-        const DB_TO_NP: f64 = 1.0 / 8.686; // 1 Np = 8.686 dB
+        // Convert to Np/m from dB/(MHz^y cm):  α [Np/m] = α [dB/cm] × DB_TO_NP × 100
         const CM_TO_M: f64 = 100.0;
         const MHZ_TO_HZ: f64 = 1e6;
 

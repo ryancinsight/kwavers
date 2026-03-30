@@ -111,6 +111,7 @@
 //!   Hyperbolic Location" *IEEE Trans. Signal Processing*, 42(8), 1905-1915
 
 use crate::analysis::signal_processing::localization::LocalizationResult;
+use crate::core::constants::SOUND_SPEED_TISSUE;
 use crate::core::error::{KwaversError, KwaversResult};
 use serde::{Deserialize, Serialize};
 
@@ -142,7 +143,7 @@ pub struct MultilaterationConfig {
 impl Default for MultilaterationConfig {
     fn default() -> Self {
         Self {
-            sound_speed: 1540.0,
+            sound_speed: SOUND_SPEED_TISSUE,
             max_iterations: 50,
             convergence_tolerance: 1e-6,
             initial_damping: 1e-3,

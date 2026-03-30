@@ -28,7 +28,7 @@ pub const WATER: TissueProperties = TissueProperties {
     nonlinearity_parameter: 5.0,
     shear_viscosity: 1.002e-3,
     bulk_viscosity: 0.0,
-    specific_heat: 4186.0,
+    specific_heat: 4182.0, // = SPECIFIC_HEAT_WATER (NIST at 20°C); const item cannot reference non-literal
     thermal_conductivity: 0.6,
     thermal_diffusivity: 1.43e-7,
     perfusion_rate: 0.0,

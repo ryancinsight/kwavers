@@ -10,7 +10,7 @@
 //! - `compute_divergence_staggered` (div(v) used by pressure update)
 
 use crate::core::error::{KwaversError, KwaversResult};
-use ndarray::{Array3, Zip};
+use ndarray::{Array3, ArrayView3, Zip};
 
 use super::solver::{FdtdGpuAccelerator, FdtdSolver};
 
@@ -46,7 +46,28 @@ impl FdtdSolver {
     }
 
     /// CPU implementation of pressure update: p^{n+1} = p^n - dt * ρc² * div(v)
+    ///
+    /// Dispatch order:
+    /// 1. **K-space spectral divergence** when `kspace_ops` is Some (dispersion-free).
+    /// 2. **Staggered backward-difference** when `staggered_grid = true` + CPML.
+    /// 3. **Central-difference** otherwise.
     pub(crate) fn update_pressure_cpu(&mut self, dt: f64) -> KwaversResult<()> {
+        // K-space path: spectral divergence using negative shift operators
+        if self.kspace_ops.is_some() {
+            {
+                let kops = self.kspace_ops.as_mut().unwrap();
+                kops.compute_divergence_neg(
+                    &self.fields.ux,
+                    &self.fields.uy,
+                    &self.fields.uz,
+                );
+            }
+            // Use the spectral divergence view directly — no .to_owned() allocation needed
+            let divergence = self.kspace_ops.as_ref().unwrap().divergence.view();
+            Self::update_pressure_simd(&mut self.fields.p, divergence, &self.rho_c_squared, dt);
+            return Ok(());
+        }
+
         let divergence = if self.config.staggered_grid {
             self.compute_divergence_staggered()?
         } else {
@@ -62,16 +83,21 @@ impl FdtdSolver {
             &dvx + &dvy + &dvz
         };
 
-        Self::update_pressure_simd(&mut self.fields.p, &divergence, &self.rho_c_squared, dt);
+        Self::update_pressure_simd(&mut self.fields.p, divergence.view(), &self.rho_c_squared, dt);
         Ok(())
     }
 
     /// Element-wise pressure update: p -= dt * ρc² * div(v).
     ///
+    /// Accepts `ArrayView3<f64>` for `divergence` so that callers holding a view
+    /// (e.g., the k-space spectral path) do not need `.to_owned()`, eliminating an
+    /// O(N³) heap allocation per time step.  Owned arrays coerce to views via
+    /// `arr.view()` at the call site.
+    ///
     /// Uses plain iterator loop; LLVM will auto-vectorize on AVX2/AVX-512 targets.
     pub(crate) fn update_pressure_simd(
         pressure: &mut Array3<f64>,
-        divergence: &Array3<f64>,
+        divergence: ArrayView3<f64>,
         rho_c_squared: &Array3<f64>,
         dt: f64,
     ) {
@@ -106,9 +132,8 @@ impl FdtdSolver {
     ///   Academic Press, Ch. 3. ISBN 978-0-12-321860-6.
     /// - Aanonsen, S. I. et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768.
     pub(crate) fn apply_westervelt_nonlinear_correction(&mut self, dt: f64) {
-        let (Some(ref beta_arr), Some(ref c0_fourth), Some(ref mut nl_scratch)) = (
-            self.beta_arr.as_ref(),
-            self.c0_fourth.as_ref(),
+        let (Some(ref nl_coeff), Some(ref mut nl_scratch)) = (
+            self.nl_coeff.as_ref(),
             self.nl_scratch.as_mut(),
         ) else {
             return;
@@ -118,43 +143,38 @@ impl FdtdSolver {
         let dt_inv = 1.0 / dt;
 
         // Compute the nonlinear source term into nl_scratch using flat iterators.
-        // ndarray Zip is limited to 6 arrays; use manual zip chains to avoid the limit.
+        // Uses precomputed nl_coeff = β/(ρ₀·c₀⁴); reduces per-element reads 5 → 3.
         match (&self.p_prev, &self.p_prev2) {
             (Some(p_prev), Some(p_prev2)) => {
                 // Full second-order stencil: both p^{n-1} and p^{n-2} available.
-                // S_nl = dt · (β / (ρ₀ · c₀⁴)) · [2p (p−2p'+p'')/Δt² + 2((p−p')/Δt)²]
-                for (((((&p, &pp), &pp2), &beta), &rho0), (&c4, nl)) in self
+                // S_nl = dt · nl_coeff · [2p (p−2p'+p'')/Δt² + 2((p−p')/Δt)²]
+                for (((&p, &pp), &pp2), (&nlc, nl)) in self
                     .fields
                     .p
                     .iter()
                     .zip(p_prev.iter())
                     .zip(p_prev2.iter())
-                    .zip(beta_arr.iter())
-                    .zip(self.materials.rho0.iter())
-                    .zip(c0_fourth.iter().zip(nl_scratch.iter_mut()))
+                    .zip(nl_coeff.iter().zip(nl_scratch.iter_mut()))
                 {
                     let d2p_dt2 = (p - 2.0 * pp + pp2) * dt2_inv;
                     let dp_dt = (p - pp) * dt_inv;
                     let d2p2_dt2 = 2.0 * p * d2p_dt2 + 2.0 * dp_dt * dp_dt;
-                    *nl = dt * (beta / (rho0 * c4)) * d2p2_dt2;
+                    *nl = dt * nlc * d2p2_dt2;
                 }
             }
             (Some(p_prev), None) => {
                 // Only p^{n-1} available (step 1): first-order approximation.
-                // S_nl ≈ dt · (β / (ρ₀ · c₀⁴)) · 2 · ((p − p') / Δt)²
-                for (((((&p, &pp), &beta), &rho0), &c4), nl) in self
+                // S_nl ≈ dt · nl_coeff · 2 · ((p − p') / Δt)²
+                for ((&p, &pp), (&nlc, nl)) in self
                     .fields
                     .p
                     .iter()
                     .zip(p_prev.iter())
-                    .zip(beta_arr.iter())
-                    .zip(self.materials.rho0.iter())
-                    .zip(c0_fourth.iter())
-                    .zip(nl_scratch.iter_mut())
+                    .zip(nl_coeff.iter().zip(nl_scratch.iter_mut()))
                 {
                     let dp_dt = (p - pp) * dt_inv;
                     let d2p2_dt2 = 2.0 * dp_dt * dp_dt;
-                    *nl = dt * (beta / (rho0 * c4)) * d2p2_dt2;
+                    *nl = dt * nlc * d2p2_dt2;
                 }
             }
             _ => {

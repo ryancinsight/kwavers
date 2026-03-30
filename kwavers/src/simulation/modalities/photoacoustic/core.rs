@@ -29,7 +29,7 @@ use crate::domain::imaging::photoacoustic::{
 use crate::domain::medium::properties::OpticalPropertyData;
 use crate::domain::medium::Medium;
 use crate::domain::source::GridSource;
-use crate::solver::forward::fdtd::{FdtdConfig, FdtdSolver};
+use crate::solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use crate::solver::inverse::reconstruction::photoacoustic::{
     PhotoacousticAlgorithm, PhotoacousticConfig, PhotoacousticReconstructor,
 };
@@ -125,6 +125,7 @@ impl PhotoacousticSimulator {
             subgrid_factor: 2,
             enable_gpu_acceleration: false,
             enable_nonlinear: false,
+            kspace_correction: KSpaceCorrectionMode::None,
             nt,
             dt,
             sensor_mask: None,

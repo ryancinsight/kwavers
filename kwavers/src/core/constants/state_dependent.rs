@@ -338,9 +338,8 @@ impl StateDependentConstants {
         let temp_factor = Q10.powf((temperature - T_REF) / 10.0);
         let alpha_db_cm_corrected = alpha_db_cm * temp_factor;
 
-        // Convert dB/cm to Np/m
-        // 1 dB/cm = 0.1151 Np/m
-        alpha_db_cm_corrected * 0.1151 * 100.0
+        // Convert dB/cm to Np/m:  α [Np/m] = α [dB/cm] × DB_TO_NP × 100 m/cm
+        alpha_db_cm_corrected * crate::core::constants::DB_TO_NP * 100.0
     }
 
     /// Calculate acoustic impedance Z = ρ·c

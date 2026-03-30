@@ -35,6 +35,7 @@
 //! - Smith & Abel (1987). "Closed-Form Least-Squares Source Location from Range Differences"
 //!   *IEEE Trans. ASSP*, 35(12), 1661-1669
 
+use crate::core::constants::SOUND_SPEED_TISSUE;
 use crate::core::error::{KwaversError, KwaversResult};
 use serde::{Deserialize, Serialize};
 
@@ -57,7 +58,7 @@ pub struct TrilaterationConfig {
 impl Default for TrilaterationConfig {
     fn default() -> Self {
         Self {
-            sound_speed: 1540.0,
+            sound_speed: SOUND_SPEED_TISSUE,
             max_iterations: 100,
             convergence_tolerance: 1e-6,
             initial_guess: None,

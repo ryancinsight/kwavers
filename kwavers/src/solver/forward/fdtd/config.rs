@@ -5,6 +5,43 @@ use crate::core::error::{KwaversResult, MultiError, ValidationError};
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};
 
+/// Spatial derivative mode for the FDTD solver.
+///
+/// Controls whether pressure/velocity gradients are computed via finite
+/// differences (the classical FDTD method) or via spectral FFT operators
+/// with temporal κ correction (the k-space corrected FDTD method).
+///
+/// ## Comparison
+///
+/// | Mode       | Phase-velocity error       | Cost per step     |
+/// |------------|---------------------------|-------------------|
+/// | `None`     | O(kΔx)² — grows to Nyquist | low (stencil ops) |
+/// | `Spectral` | 0 (machine precision)      | +2 FFT pairs/step |
+///
+/// ## When to use `Spectral`
+///
+/// - Simulations where numerical dispersion affects results (e.g. long
+///   propagation distances, high frequencies, parity comparisons with k-Wave)
+/// - Reducing SOLVER_TOLERANCES for parity tests
+///
+/// ## Limitation
+///
+/// `Spectral` mode is incompatible with CPML boundary corrections because
+/// CPML operates on finite-difference gradients. When `Spectral` is active,
+/// CPML gradient corrections are silently bypassed. Use this mode without
+/// CPML, or with a simpler multiplicative PML.
+///
+/// **Reference**: Treeby, B.E. & Cox, B.T. (2010). J. Biomed. Opt. 15(2),
+/// 021314. doi:10.1117/1.3360308 (§II.A, k-space corrected FDTD)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub enum KSpaceCorrectionMode {
+    /// Classical finite-difference stencils (2nd/4th/6th order). Default.
+    #[default]
+    None,
+    /// Spectral FFT-based gradients + temporal κ correction (k-Wave equivalent).
+    Spectral,
+}
+
 /// FDTD solver configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FdtdConfig {
@@ -20,6 +57,9 @@ pub struct FdtdConfig {
     pub subgrid_factor: usize,
     /// Enable GPU acceleration (requires "gpu" feature)
     pub enable_gpu_acceleration: bool,
+    /// Spatial derivative mode: finite-difference stencil (default) or
+    /// spectral k-space corrected operators.
+    pub kspace_correction: KSpaceCorrectionMode,
 
     /// Enable Westervelt nonlinear acoustic propagation.
     ///
@@ -48,6 +88,7 @@ impl Default for FdtdConfig {
             subgridding: false,
             subgrid_factor: 2,
             enable_gpu_acceleration: false,
+            kspace_correction: KSpaceCorrectionMode::None,
             enable_nonlinear: false,
             nt: 1000,
             dt: 1e-7,

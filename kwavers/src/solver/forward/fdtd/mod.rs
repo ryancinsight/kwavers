@@ -88,6 +88,7 @@
 // Public modules
 pub mod avx512_stencil; // Phase 9.1: AVX-512 optimized FDTD stencil
 pub mod config;
+pub mod kspace_correction;
 pub mod dispatch; // Phase 9.1: Runtime SIMD strategy dispatch
 pub mod electromagnetic;
 pub mod metrics;
@@ -99,7 +100,7 @@ pub mod velocity_updater; // SRP: velocity field update methods
 
 // Re-exports for convenience
 pub use avx512_stencil::{Avx512Config, Avx512Metrics, Avx512StencilProcessor};
-pub use config::FdtdConfig;
+pub use config::{FdtdConfig, KSpaceCorrectionMode};
 pub use dispatch::{
     get_simd_config, init_simd, DispatchMetrics, FdtdStencilDispatcher, StencilStrategy,
 };

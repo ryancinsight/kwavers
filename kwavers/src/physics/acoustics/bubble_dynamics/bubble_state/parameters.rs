@@ -1,5 +1,5 @@
 use super::gas_dynamics::{GasSpecies, GasType};
-use crate::core::constants::thermodynamic::T_AMBIENT;
+use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, T_AMBIENT};
 use std::collections::HashMap;
 
 /// Physical parameters for bubble dynamics
@@ -59,7 +59,7 @@ impl Default for BubbleParameters {
             sigma: 0.0728,
             pv: 2.33e3,
             thermal_conductivity: 0.6,
-            specific_heat_liquid: 4182.0,
+            specific_heat_liquid: SPECIFIC_HEAT_WATER,
             accommodation_coeff: 0.04,
             gas_species: GasSpecies::Air,
             initial_gas_pressure: 101325.0,

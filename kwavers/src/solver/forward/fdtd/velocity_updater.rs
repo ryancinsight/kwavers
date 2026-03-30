@@ -10,11 +10,84 @@ use ndarray::{s, Zip};
 use super::solver::FdtdSolver;
 
 impl FdtdSolver {
+    /// K-space corrected velocity update (spectral gradient, dispersion-free).
+    ///
+    /// Replaces finite-difference staggered gradient with:
+    ///   `u -= (dt/rho) * IFFT( ddx_k_shift_pos * kappa * FFT(p) )`
+    ///
+    /// CPML gradient corrections are NOT applied in this path; spectral gradients
+    /// are incompatible with CPML's finite-difference convolutional memory update.
+    ///
+    /// # Reference
+    /// Treeby & Cox (2010), §II.A (k-space corrected FDTD velocity update).
+    fn update_velocity_kspace(&mut self, dt: f64) -> KwaversResult<()> {
+        // Compute spectral gradients of pressure (fills kops.grad_x/y/z)
+        {
+            let kops = self.kspace_ops.as_mut().unwrap();
+            kops.compute_grad_pos(&self.fields.p);
+        }
+
+        // v -= (dt / rho0) * grad_p
+        // Borrows: kspace_ops (kops.grad_*) and fields.u*/materials.rho0 are disjoint fields.
+        {
+            let (nx, _ny, _nz) = self.fields.p.dim();
+            let kops = self.kspace_ops.as_ref().unwrap();
+
+            // ux
+            Zip::from(&mut self.fields.ux)
+                .and(&kops.grad_x)
+                .and(&self.materials.rho0)
+                .for_each(|u, &dp, &rho| {
+                    if rho > 1e-9 {
+                        *u -= dt / rho * dp;
+                    }
+                });
+            // Zero edge layer (Dirichlet at domain boundary, matching staggered path)
+            self.fields.ux.slice_mut(ndarray::s![nx - 1, .., ..]).fill(0.0);
+
+            // uy
+            let (_nx, ny, _nz) = self.fields.p.dim();
+            Zip::from(&mut self.fields.uy)
+                .and(&kops.grad_y)
+                .and(&self.materials.rho0)
+                .for_each(|u, &dp, &rho| {
+                    if rho > 1e-9 {
+                        *u -= dt / rho * dp;
+                    }
+                });
+            self.fields.uy.slice_mut(ndarray::s![.., ny - 1, ..]).fill(0.0);
+
+            // uz
+            let (_nx, _ny, nz) = self.fields.p.dim();
+            Zip::from(&mut self.fields.uz)
+                .and(&kops.grad_z)
+                .and(&self.materials.rho0)
+                .for_each(|u, &dp, &rho| {
+                    if rho > 1e-9 {
+                        *u -= dt / rho * dp;
+                    }
+                });
+            self.fields.uz.slice_mut(ndarray::s![.., .., nz - 1]).fill(0.0);
+        }
+
+        Ok(())
+    }
+}
+
+impl FdtdSolver {
     /// Update velocity field using pressure gradient.
     ///
-    /// Dispatches to staggered or collocated (non-staggered) implementation
-    /// based on `config.staggered_grid`.
+    /// Dispatch order:
+    /// 1. **K-space** (`kspace_correction = Spectral`): spectral FFT gradient,
+    ///    dispersion-free, CPML not applied.
+    /// 2. **Staggered FD** (`staggered_grid = true`): Yee-cell forward-difference
+    ///    gradient, CPML applied if present.
+    /// 3. **Collocated FD** (`staggered_grid = false`): central-difference gradient,
+    ///    CPML applied if present.
     pub fn update_velocity(&mut self, dt: f64) -> KwaversResult<()> {
+        if self.kspace_ops.is_some() {
+            return self.update_velocity_kspace(dt);
+        }
         if self.config.staggered_grid {
             return self.update_velocity_staggered(dt);
         }

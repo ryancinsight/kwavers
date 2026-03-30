@@ -34,6 +34,8 @@
 //! let beamformer = NeuralBeamformer::new(config)?;
 //! ```
 
+use crate::core::constants::SOUND_SPEED_TISSUE;
+
 /// Neural beamforming processing modes.
 ///
 /// Different modes trade off between computational cost, image quality,
@@ -316,8 +318,8 @@ impl Default for SensorGeometry {
         Self::linear_array(
             64,     // 64 elements
             0.0003, // 300 μm pitch
-            40e6,   // 40 MHz
-            1540.0, // soft tissue
+            40e6,              // 40 MHz
+            SOUND_SPEED_TISSUE, // soft tissue
         )
     }
 }

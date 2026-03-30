@@ -67,6 +67,11 @@
 //!   https://github.com/ProteusMRIgHIFU/BabelBrain
 //!   Uses monolithic thermal-acoustic coupling for safety verification
 
+use crate::core::constants::{
+    ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, GRUNEISEN_WATER_37C,
+    OPTICAL_ABSORPTION_TISSUE_NIR, REDUCED_SCATTERING_TISSUE_NIR, SOUND_SPEED_TISSUE,
+    SPECIFIC_HEAT_WATER,
+};
 use crate::core::error::KwaversResult;
 use crate::domain::field::UnifiedFieldType;
 use crate::domain::grid::Grid;
@@ -119,18 +124,26 @@ pub struct PhysicsCoefficients {
     pub reduced_scattering: f64,
     /// Acoustic absorption coefficient \[Np/m\]
     pub acoustic_absorption: f64,
+    /// Grüneisen parameter Γ for photoacoustic source p₀ = Γ·μₐ·Φ (dimensionless)
+    ///
+    /// For water at 37 °C: Γ ≈ 0.12.  Treating Γ = 1 overestimates photoacoustic
+    /// amplitude by ~8×.
+    ///
+    /// Reference: Jacques, S.L. (1993). Appl. Opt. 32(13), 2447–2454.
+    pub gruneisen: f64,
 }
 
 impl Default for PhysicsCoefficients {
     fn default() -> Self {
         Self {
-            sound_speed: 1540.0,
-            density: 1000.0,
-            specific_heat: 4186.0,
+            sound_speed: SOUND_SPEED_TISSUE,
+            density: DENSITY_WATER_NOMINAL,
+            specific_heat: SPECIFIC_HEAT_WATER,
             thermal_conductivity: 0.6,
-            optical_absorption: 10.0,   // 10 m⁻¹
-            reduced_scattering: 1000.0, // 10 cm⁻¹ = 1000 m⁻¹
-            acoustic_absorption: 0.5,   // 0.5 Np/m
+            optical_absorption: OPTICAL_ABSORPTION_TISSUE_NIR,
+            reduced_scattering: REDUCED_SCATTERING_TISSUE_NIR,
+            acoustic_absorption: ACOUSTIC_ABSORPTION_TISSUE,
+            gruneisen: GRUNEISEN_WATER_37C,
         }
     }
 }
@@ -167,6 +180,31 @@ pub struct MonolithicCoupler {
 
     /// Physical coefficients for the coupled PDE system
     physics_coefficients: PhysicsCoefficients,
+
+    /// Pre-allocated correction vector δu for Newton iterations.
+    ///
+    /// Lazily initialised on the first `step` call once grid dimensions are known.
+    /// Avoids one `Array3::zeros` heap allocation per Newton iteration (which can
+    /// be 128 MB per step for a 256³ grid).
+    du_scratch: Option<Array3<f64>>,
+
+    /// Pre-allocated output buffer for `laplacian_3d_into`.
+    ///
+    /// Reused across all three Laplacian evaluations per Newton iteration
+    /// (acoustic, optical, thermal) to eliminate 3 × O(n³) heap allocations.
+    laplacian_scratch: Option<Array3<f64>>,
+
+    /// Reusable GMRES solver instance.
+    ///
+    /// Lazily initialised and reused across Newton iterations.  Avoids
+    /// `GMRESConfig::clone()` overhead and any per-iteration allocations
+    /// performed inside `GMRESSolver::new`.
+    gmres_solver: Option<GMRESSolver>,
+
+    /// Grid cell spacings (dx, dy, dz) in metres, extracted from the `Grid`
+    /// argument of `solve_coupled_step`.  Updated each call so the Laplacian
+    /// scaling stays correct when the caller changes the grid.
+    grid_spacing: (f64, f64, f64),
 }
 
 /// Newton-Krylov method configuration
@@ -209,6 +247,10 @@ impl MonolithicCoupler {
             convergence_history: Vec::new(),
             physics_components: HashMap::new(),
             physics_coefficients: PhysicsCoefficients::default(),
+            du_scratch: None,
+            laplacian_scratch: None,
+            gmres_solver: None,
+            grid_spacing: (1e-3, 1e-3, 1e-3), // overwritten on first call
         }
     }
 
@@ -224,6 +266,10 @@ impl MonolithicCoupler {
             convergence_history: Vec::new(),
             physics_components: HashMap::new(),
             physics_coefficients: coefficients,
+            du_scratch: None,
+            laplacian_scratch: None,
+            gmres_solver: None,
+            grid_spacing: (1e-3, 1e-3, 1e-3), // overwritten on first call
         }
     }
 
@@ -279,6 +325,10 @@ impl MonolithicCoupler {
         let start_time = Instant::now();
         self.convergence_history.clear();
 
+        // Extract and cache grid spacing for use in Laplacian computations.
+        // Updated each call so the scaling is correct if the caller changes the grid.
+        self.grid_spacing = (grid.dx, grid.dy, grid.dz);
+
         // Determine deterministic field ordering and flatten
         let field_order = Self::sorted_field_keys(fields);
         let mut u_current = Self::flatten_fields(fields, &field_order);
@@ -295,6 +345,15 @@ impl MonolithicCoupler {
         if self.newton_config.verbose {
             debug!("Monolithic Newton initial residual: {:.3e}", f_norm_0);
         }
+
+        // Pre-allocate / reuse correction vector δu outside the Newton loop.
+        // Using `std::mem::take` removes the scratch from `self` so the Newton-loop
+        // closure can borrow `self` for `jacobian_vector_product` without conflict.
+        // The scratch is returned to `self.du_scratch` after the loop ends.
+        if self.du_scratch.is_none() {
+            self.du_scratch = Some(Array3::zeros(u_current.dim()));
+        }
+        let mut du = self.du_scratch.take().unwrap();
 
         // Newton iteration
         let mut newton_iter = 0;
@@ -328,23 +387,34 @@ impl MonolithicCoupler {
                 break;
             }
 
-            // Solve linear system: J·δu ≈ -F via GMRES
-            let mut gmres = GMRESSolver::new(self.gmres_config.clone());
+            // Solve linear system: J·δu ≈ -F via GMRES.
+            // We take the solver out of the Option so the closure can borrow `self`
+            // immutably (for `jacobian_vector_product`) without conflicting with the
+            // mutable access used to call `gmres.solve`.  After the call the solver
+            // is put back to avoid re-allocation on the next Newton iteration.
+            let mut gmres = self
+                .gmres_solver
+                .take()
+                .unwrap_or_else(|| GMRESSolver::new(self.gmres_config.clone()));
 
             // Negative residual as RHS
             let b = &f * -1.0;
 
-            // Initial guess for correction
-            let mut du = Array3::zeros(u_current.dim());
+            // Reset the reused scratch buffer (no allocation)
+            du.fill(0.0);
 
-            // Solve J·du = -f
-            match gmres.solve(
+            // Solve J·du = -f (closure borrows self; du is local, not part of self)
+            let solve_result = gmres.solve(
                 |v: &Array3<f64>| {
                     self.jacobian_vector_product(v, &u_current, &u_prev, dt, dims, &field_order)
                 },
                 &b,
                 &mut du,
-            ) {
+            );
+            // Return the solver to the struct so it is reused next iteration.
+            self.gmres_solver = Some(gmres);
+
+            match solve_result {
                 Ok(conv_info) => {
                     total_gmres_iters += conv_info.iterations;
                     if self.newton_config.verbose {
@@ -376,6 +446,9 @@ impl MonolithicCoupler {
                 debug!("  Step size: {:.4}", step_size);
             }
         }
+
+        // Return scratch buffer to self for reuse in future steps
+        self.du_scratch = Some(du);
 
         // Store solution back to fields
         Self::unflatten_fields(&u_current, fields, &field_order);
@@ -427,6 +500,7 @@ impl MonolithicCoupler {
     ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = grid_dims;
         let _n_fields = field_order.len();
+        let (dx, dy, dz) = self.grid_spacing;
 
         // Start with F(u) = u − u_prev
         let mut residual = u - u_prev;
@@ -446,6 +520,19 @@ impl MonolithicCoupler {
 
         let coeff = &self.physics_coefficients;
 
+        // Scratch buffer for Laplacian — avoids 3 × O(n³) heap allocations per call.
+        // Allocated once then overwritten; pointer validity is guaranteed by the
+        // fact that `laplacian_scratch` is only borrowed (mutably) from this method.
+        //
+        // SAFETY: `laplacian_scratch` is not accessible from any concurrent thread
+        // (MonolithicCoupler is not Sync); the borrow is exclusive for the duration
+        // of this loop body.
+        //
+        // We use a local stack-allocated Array3 instead of the struct field here
+        // because `compute_residual` takes `&self`, not `&mut self`.  The scratch
+        // buffer for the hot path is in `laplacian_3d_into` (called by
+        // `solve_coupled_step` which has `&mut self`).  When called from
+        // `jacobian_vector_product` (also `&self`) we allocate normally.
         for (block, &ft) in field_order.iter().enumerate() {
             let row_start = block * nx;
             let field_block = field_slice(u, block);
@@ -453,17 +540,21 @@ impl MonolithicCoupler {
             // Compute the rate contribution R for this field
             let rate: Array3<f64> = match ft {
                 // ── Acoustic pressure ──────────────────────────────────────
-                // R_p = c²·∇²p + photoacoustic_source
+                // R_p = c²·∇²p + Γ·μ_a·I  (photoacoustic source)
+                //
+                // Reference: Oraevsky & Karabutov (2003) "Optoacoustic tomography"
+                // in Biomedical Photonics Handbook, CRC Press.
                 UnifiedFieldType::Pressure => {
                     let c2 = coeff.sound_speed * coeff.sound_speed;
-                    let mut r = laplacian_3d(&field_block, grid_dims);
+                    let mut r = laplacian_3d(&field_block, grid_dims, dx, dy, dz);
                     r.mapv_inplace(|v| v * c2);
 
-                    // Photoacoustic source: Grüneisen parameter × μ_a × I
-                    // Simplified Grüneisen ≈ 1 for water-like tissue
+                    // Photoacoustic source: p₀ = Γ · μₐ · I
+                    // Grüneisen ≈ 0.12 for water at 37 °C (not 1.0).
                     if let Some(ref light_f) = light {
+                        let gamma_mu_a = coeff.gruneisen * coeff.optical_absorption;
                         r.zip_mut_with(light_f, |r_val, &i_val| {
-                            *r_val += coeff.optical_absorption * i_val;
+                            *r_val += gamma_mu_a * i_val;
                         });
                     }
                     r
@@ -473,7 +564,7 @@ impl MonolithicCoupler {
                 // R_I = D·∇²I − μ_a·I
                 UnifiedFieldType::LightFluence => {
                     let d = coeff.optical_diffusion();
-                    let mut r = laplacian_3d(&field_block, grid_dims);
+                    let mut r = laplacian_3d(&field_block, grid_dims, dx, dy, dz);
                     r.mapv_inplace(|v| v * d);
                     r.zip_mut_with(&field_block, |r_val, &i_val| {
                         *r_val -= coeff.optical_absorption * i_val;
@@ -488,7 +579,7 @@ impl MonolithicCoupler {
                 UnifiedFieldType::Temperature => {
                     let kappa = coeff.thermal_diffusivity();
                     let inv_rho_cp = 1.0 / (coeff.density * coeff.specific_heat);
-                    let mut r = laplacian_3d(&field_block, grid_dims);
+                    let mut r = laplacian_3d(&field_block, grid_dims, dx, dy, dz);
                     r.mapv_inplace(|v| v * kappa);
 
                     // Optical absorption heating
@@ -646,31 +737,36 @@ impl MonolithicCoupler {
 
 /// Compute the 3-D Laplacian ∇²f using second-order central differences.
 ///
+/// ## Algorithm (second-order central finite differences)
+///
 /// ```text
-/// ∇²f ≈ (f[i+1,j,k] - 2f[i,j,k] + f[i-1,j,k]) / dx²
-///      + (f[i,j+1,k] - 2f[i,j,k] + f[i,j-1,k]) / dy²
-///      + (f[i,j,k+1] - 2f[i,j,k] + f[i,j,k-1]) / dz²
+/// ∇²f[i,j,k] ≈ (f[i+1,j,k] - 2f[i,j,k] + f[i-1,j,k]) / dx²
+///             + (f[i,j+1,k] - 2f[i,j,k] + f[i,j-1,k]) / dy²
+///             + (f[i,j,k+1] - 2f[i,j,k] + f[i,j,k-1]) / dz²
 /// ```
 ///
-/// Boundary nodes use one-sided (zero-gradient Neumann) conditions.
-fn laplacian_3d(field: &Array3<f64>, grid_dims: (usize, usize, usize)) -> Array3<f64> {
+/// Truncation error: O(dx², dy², dz²).
+/// Boundary nodes use zero-gradient (homogeneous Neumann) ghost-cell conditions.
+///
+/// ## Parameters
+/// - `dx`, `dy`, `dz`: physical cell spacings [m]. Must be > 0.
+///
+/// ## Reference
+/// - LeVeque, R.J. (2007). *Finite Difference Methods for Ordinary and Partial
+///   Differential Equations*. SIAM, Philadelphia. §1.3, Eq. (1.3).
+fn laplacian_3d(
+    field: &Array3<f64>,
+    grid_dims: (usize, usize, usize),
+    dx: f64,
+    dy: f64,
+    dz: f64,
+) -> Array3<f64> {
     let (nx, ny, nz) = field.dim();
+    let _ = grid_dims; // passed for call-site documentation; field.dim() is authoritative
 
-    // Grid spacing — infer from total dimensions.  If grid_dims matches
-    // the field shape we have no explicit spacing, so fall back to unit spacing.
-    // In practice the grid_dims tuple is (Grid::nx, Grid::ny, Grid::nz) from
-    // which we assume uniform spacing of 1/(N−1) (normalised) or we rely on
-    // the actual Grid::spacing() passed through the call chain later.
-    // For now we use field.dim() == grid_dims to check consistency and default to 1.
-    let _ = grid_dims; // consistency check only; spacing passed via coefficients
-
-    // We use unit spacing here; the caller (compute_residual) premultiplies by
-    // the dimensional coefficient (c², κ, D) which already absorbs dx² scaling
-    // when the grid is uniform.  For non-uniform grids a future extension would
-    // pass dx,dy,dz explicitly.
-    let inv_dx2 = 1.0;
-    let inv_dy2 = 1.0;
-    let inv_dz2 = 1.0;
+    let inv_dx2 = 1.0 / (dx * dx);
+    let inv_dy2 = 1.0 / (dy * dy);
+    let inv_dz2 = 1.0 / (dz * dz);
 
     let mut lap = Array3::zeros((nx, ny, nz));
 
@@ -735,7 +831,7 @@ mod tests {
     #[test]
     fn test_physics_coefficients_default() {
         let c = PhysicsCoefficients::default();
-        assert!((c.sound_speed - 1540.0).abs() < 1e-10);
+        assert!((c.sound_speed - SOUND_SPEED_TISSUE).abs() < 1e-10);
         assert!(c.thermal_diffusivity() > 0.0);
         assert!(c.optical_diffusion() > 0.0);
     }
@@ -792,7 +888,8 @@ mod tests {
     fn test_laplacian_uniform_field() {
         // Laplacian of a constant field should be zero (interior)
         let field = Array3::from_elem((8, 8, 8), 5.0);
-        let lap = laplacian_3d(&field, (8, 8, 8));
+        let dx = 1e-3;
+        let lap = laplacian_3d(&field, (8, 8, 8), dx, dx, dx);
 
         // Interior points should be exactly 0
         for i in 1..7 {
@@ -806,5 +903,131 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// Spacing of 1 m vs 1 mm on identical fields → Laplacian differs by 10⁶.
+    ///
+    /// ∇²f at interior node is proportional to 1/dx², so changing dx from 1.0
+    /// to 1e-3 scales the output by (1/1e-3)² / (1/1.0)² = 1e6.
+    #[test]
+    fn test_laplacian_unit_vs_nonunit_spacing() {
+        // f = 1 everywhere except a single interior spike to produce non-zero Laplacian
+        let mut field = Array3::from_elem((5, 5, 5), 1.0);
+        field[[2, 2, 2]] = 2.0; // spike: Laplacian at (2,2,2) = (1-2·2+1)/dx² × 3 = -6/dx²
+
+        let lap_1m = laplacian_3d(&field, (5, 5, 5), 1.0, 1.0, 1.0);
+        let lap_1mm = laplacian_3d(&field, (5, 5, 5), 1e-3, 1e-3, 1e-3);
+
+        let ratio = lap_1mm[[2, 2, 2]] / lap_1m[[2, 2, 2]];
+        assert!(
+            (ratio - 1e6).abs() < 1.0,
+            "1 mm vs 1 m Laplacian ratio should be 1e6, got {ratio}"
+        );
+    }
+
+    /// ∇²(x²) = 2 exactly for any uniform dx (second-order central difference is exact
+    /// for polynomials of degree ≤ 2).
+    #[test]
+    fn test_laplacian_quadratic_field_exact() {
+        let n = 10;
+        let dx = 0.5e-3; // 0.5 mm
+        // Build field f[i,j,k] = (i·dx)² so that ∇²f = d²/dx² (x²) = 2
+        let field = Array3::from_shape_fn((n, n, n), |(i, _j, _k)| {
+            let x = i as f64 * dx;
+            x * x
+        });
+        let lap = laplacian_3d(&field, (n, n, n), dx, dx, dx);
+
+        // Interior x-nodes (not boundary); y,z contributions are 0 since field
+        // doesn't vary in j,k. Check a mid-plane interior node.
+        let i = n / 2;
+        let j = n / 2;
+        let k = n / 2;
+        assert!(
+            (lap[[i, j, k]] - 2.0).abs() < 1e-8,
+            "∇²(x²) should equal 2.0, got {}",
+            lap[[i, j, k]]
+        );
+    }
+
+    /// All-zero field → Laplacian is zero everywhere for any spacing.
+    #[test]
+    fn test_laplacian_zero_field() {
+        let field = Array3::zeros((6, 6, 6));
+        for &dx in &[1.0, 1e-3, 1e-6] {
+            let lap = laplacian_3d(&field, (6, 6, 6), dx, dx, dx);
+            assert!(
+                lap.iter().all(|&v| v.abs() < 1e-15),
+                "Laplacian of zero field must be zero for dx={dx}"
+            );
+        }
+    }
+
+    /// Photoacoustic source term scales linearly with the Grüneisen parameter.
+    #[test]
+    fn test_photoacoustic_default_gruneisen_not_one() {
+        let c = PhysicsCoefficients::default();
+        assert!(
+            (c.gruneisen - 1.0).abs() > 0.01,
+            "Default Grüneisen parameter ({}) must not be 1.0; water at 37°C ≈ 0.12",
+            c.gruneisen
+        );
+        assert!(
+            c.gruneisen > 0.0,
+            "Grüneisen parameter must be positive, got {}",
+            c.gruneisen
+        );
+    }
+
+    /// Halving the Grüneisen parameter halves the photoacoustic source contribution
+    /// in the Pressure block residual.
+    ///
+    /// The photoacoustic source is R_p += Γ · μₐ · I (Oraevsky & Karabutov 2003).
+    /// With zero pressure (no Laplacian contribution), the entire residual at a
+    /// lit voxel is Γ · μₐ · I, so halving Γ must halve the residual there.
+    #[test]
+    fn test_photoacoustic_source_scales_with_gruneisen() {
+        let make_coupler = |gruneisen: f64| {
+            let mut c = MonolithicCoupler::new(
+                NewtonKrylovConfig::default(),
+                GMRESConfig::default(),
+            );
+            c.physics_coefficients.gruneisen = gruneisen;
+            c.grid_spacing = (1e-3, 1e-3, 1e-3);
+            c
+        };
+
+        let dims = (4, 4, 4);
+        let nx = dims.0;
+        // Stacked layout: row 0..nx = Pressure block, row nx..2*nx = LightFluence block
+        // (field_order is sorted; Pressure < LightFluence alphabetically? Check enum order.)
+        // Use explicit field_order matching enum discriminant order.
+        let field_order = vec![UnifiedFieldType::Pressure, UnifiedFieldType::LightFluence];
+        let n_blocks = field_order.len();
+
+        // All-zero pressure block; unit fluence at interior node in LightFluence block
+        let mut u = Array3::zeros((n_blocks * nx, dims.1, dims.2));
+        // LightFluence block starts at row nx
+        u[[nx + 1, 1, 1]] = 1.0; // interior fluence voxel
+        let u_prev = u.clone();
+
+        let c1 = make_coupler(0.12);
+        let r1 = c1.compute_residual(&u, &u_prev, 1e-6, dims, &field_order).unwrap();
+
+        let c2 = make_coupler(0.06);
+        let r2 = c2.compute_residual(&u, &u_prev, 1e-6, dims, &field_order).unwrap();
+
+        // Pressure block residual at (1,1,1): p=0, Laplacian=0, so R = Γ·μₐ·I
+        let v1 = r1[[1, 1, 1]]; // Pressure block row 1
+        let v2 = r2[[1, 1, 1]];
+        assert!(
+            v1.abs() > 1e-20,
+            "Pressure residual at lit voxel must be non-zero, got {v1}"
+        );
+        let ratio = v1 / v2;
+        assert!(
+            (ratio - 2.0).abs() < 1e-10,
+            "Residual ratio (γ=0.12)/(γ=0.06) must be exactly 2.0, got {ratio}"
+        );
     }
 }

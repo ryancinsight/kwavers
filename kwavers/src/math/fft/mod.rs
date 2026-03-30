@@ -1,6 +1,7 @@
 // fft/mod.rs
 pub mod fft_processor;
 pub mod kspace;
+pub mod shift_operators;
 pub mod utils;
 
 pub use fft_processor::{Fft1d, Fft2d, Fft3d};

@@ -3,6 +3,8 @@
 //! This module implements different strategies for coupling fields between
 //! different physics domains (acoustic, optical, thermal).
 
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
+use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use crate::core::error::KwaversResult;
 use crate::domain::field::indices::*;
 use ndarray::Array3;
@@ -141,10 +143,8 @@ impl FieldCoupler {
         for ((i, j, k), &i_val) in intensity.indexed_iter() {
             // Heat generated per unit volume (W/m³)
             let heat_source = absorption_coefficient * i_val;
-            // Temperature change: ΔT = Q * dt / (ρ * c), where ρ is density, c is specific heat
-            let rho = 1000.0; // kg/m³ (water density)
-            let c = 4186.0; // J/(kg·K) (water specific heat)
-            let delta_t = heat_source * dt / (rho * c);
+            // Temperature change: ΔT = Q * dt / (ρ * c_p)
+            let delta_t = heat_source * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
             temperature[[i, j, k]] += delta_t;
         }
 
@@ -158,35 +158,52 @@ impl FieldCoupler {
         let pressure = fields[PRESSURE_IDX].clone();
         let temperature = &mut fields[TEMPERATURE_IDX];
 
-        // Heat generation: Q = α * |p|² / (ρ * c), where α is absorption coefficient
+        // Heat generation: Q = α * |p|² / (ρ * c), where α is absorption coefficient.
+        //
+        // SSOT: uses DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, and SPECIFIC_HEAT_WATER
+        // from the core constants module — no magic literals.
         let absorption_coefficient = 0.5; // 0.5 Np/m (typical for tissue)
-        let rho = 1000.0; // kg/m³
-        let c = 1540.0; // m/s (sound speed)
 
         for ((i, j, k), &p) in pressure.indexed_iter() {
-            // Intensity: I = p² / (ρ * c)
-            let intensity = p * p / (rho * c);
-            // Heat generated per unit volume
+            // Intensity: I = p² / (ρ₀ · c₀)
+            let intensity = p * p / (DENSITY_WATER_NOMINAL * SOUND_SPEED_TISSUE);
+            // Heat generated per unit volume (W/m³): Q = α · I
             let heat_source = absorption_coefficient * intensity;
-            // Temperature change
-            let specific_heat = 4186.0; // J/(kg·K)
-            let delta_t = heat_source * dt / (rho * specific_heat);
+            // Temperature change: ΔT = Q · dt / (ρ₀ · c_p)
+            let delta_t = heat_source * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
             temperature[[i, j, k]] += delta_t;
         }
 
         Ok(())
     }
 
-    /// Check for convergence
+    /// Check for convergence using relative tolerance.
+    ///
+    /// Computes the maximum relative change between iterations for each field:
+    ///   ε_rel = max |current − previous| / (‖current‖_∞ + 1e-15)
+    ///
+    /// Relative (rather than absolute) tolerance ensures consistent convergence
+    /// behaviour regardless of field magnitude — pressure fields in Pa and
+    /// temperature fields in °C would otherwise require different absolute thresholds.
+    ///
+    /// The 1e-15 guard prevents division-by-zero for all-zero fields; in that case
+    /// the absolute change is used as-is, which is appropriate because both fields
+    /// are near zero and any difference is already negligible.
     fn check_convergence(&self, previous: &[Array3<f64>], current: &[Array3<f64>]) -> bool {
         for (prev_field, curr_field) in previous.iter().zip(current.iter()) {
-            let max_diff = prev_field
+            // ‖current‖_∞ (max absolute value) used as normalizer
+            let field_norm = curr_field
+                .iter()
+                .map(|v| v.abs())
+                .fold(0.0_f64, f64::max);
+
+            let max_rel_diff = prev_field
                 .iter()
                 .zip(curr_field.iter())
-                .map(|(p, c)| (p - c).abs())
-                .fold(0.0, f64::max);
+                .map(|(p, c)| (p - c).abs() / (field_norm + 1e-15))
+                .fold(0.0_f64, f64::max);
 
-            if max_diff > self.tolerance {
+            if max_rel_diff > self.tolerance {
                 return false;
             }
         }
@@ -264,5 +281,97 @@ impl FieldCoupler {
             tolerance: self.tolerance,
         };
         temp_coupler.apply_weak_coupling(fields, dt)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::constants::{fundamental::DENSITY_WATER_NOMINAL, thermodynamic::SPECIFIC_HEAT_WATER};
+
+    // -------------------------------------------------------------------------
+    // Convergence tests
+    // -------------------------------------------------------------------------
+
+    /// A large-magnitude field with a small *relative* change must be reported
+    /// as converged, even though the absolute difference is large.
+    ///
+    /// Absolute tolerance would fail to converge here (diff >> tolerance), but
+    /// relative tolerance correctly identifies convergence (rel_diff << tolerance).
+    #[test]
+    fn test_convergence_relative_not_absolute() {
+        let coupler = FieldCoupler {
+            strategy: CouplingStrategy::Strong,
+            coupling_strength: 1.0,
+            max_iterations: 10,
+            tolerance: 1e-6,
+        };
+
+        // Field magnitude: 1e6 Pa (typical ultrasound pressure)
+        // Absolute change: 1 Pa → absolute tolerance would flag as NOT converged (1 > 1e-6)
+        // Relative change: 1 / 1e6 = 1e-6 → relative tolerance should mark as converged
+        let prev = vec![Array3::from_elem((4, 4, 4), 1_000_000.0_f64)];
+        let curr = vec![Array3::from_elem((4, 4, 4), 1_000_001.0_f64)]; // +1 Pa
+
+        assert!(
+            coupler.check_convergence(&prev, &curr),
+            "relative change of 1e-6 at 1 MPa must be reported as converged"
+        );
+    }
+
+    /// Two identical fields must always be converged regardless of magnitude.
+    #[test]
+    fn test_convergence_identical_fields() {
+        let coupler = FieldCoupler::new(CouplingStrategy::Strong);
+        let field = vec![Array3::from_elem((4, 4, 4), 42.0_f64)];
+        assert!(coupler.check_convergence(&field, &field));
+    }
+
+    /// A field where the change exceeds the relative tolerance must NOT converge.
+    #[test]
+    fn test_convergence_large_relative_change_not_converged() {
+        let coupler = FieldCoupler {
+            strategy: CouplingStrategy::Strong,
+            coupling_strength: 1.0,
+            max_iterations: 10,
+            tolerance: 1e-6,
+        };
+
+        // 10 % relative change — far above tolerance
+        let prev = vec![Array3::from_elem((4, 4, 4), 1.0_f64)];
+        let curr = vec![Array3::from_elem((4, 4, 4), 1.1_f64)];
+
+        assert!(
+            !coupler.check_convergence(&prev, &curr),
+            "10 % relative change must NOT be reported as converged"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // SSOT constant tests
+    // -------------------------------------------------------------------------
+
+    /// Verify that DENSITY_WATER_NOMINAL matches the expected water density.
+    ///
+    /// Ensures the constant used for acoustic–thermal coupling is within ±1 kg/m³
+    /// of 1000 kg/m³ (standard nominal density of water).
+    #[test]
+    fn test_density_water_nominal_is_1000() {
+        assert!(
+            (DENSITY_WATER_NOMINAL - 1000.0).abs() < 1.0,
+            "DENSITY_WATER_NOMINAL ({DENSITY_WATER_NOMINAL}) must be ≈ 1000 kg/m³"
+        );
+    }
+
+    /// Verify SPECIFIC_HEAT_WATER is within the published range for water at 20°C.
+    ///
+    /// NIST data: c_p(water, 20°C) = 4181.8 J/(kg·K).  Range [4180, 4220] is
+    /// tight enough to exclude common errors (e.g. using air specific heat ≈ 1005).
+    #[test]
+    fn test_specific_heat_water_within_literature_range() {
+        assert!(
+            SPECIFIC_HEAT_WATER > 4150.0 && SPECIFIC_HEAT_WATER < 4220.0,
+            "SPECIFIC_HEAT_WATER ({SPECIFIC_HEAT_WATER}) outside NIST range [4150, 4220] J/(kg·K)"
+        );
     }
 }

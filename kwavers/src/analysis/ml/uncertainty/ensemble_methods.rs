@@ -48,8 +48,6 @@ pub struct EnsembleResult {
 /// Ensemble quantifier for uncertainty estimation
 #[derive(Debug)]
 pub struct EnsembleQuantifier {
-    #[allow(dead_code)]
-    config: EnsembleConfig,
     ensemble_models: Vec<EnsembleModel>,
 }
 
@@ -62,10 +60,7 @@ impl EnsembleQuantifier {
             ensemble_models.push(EnsembleModel::new(i as u64));
         }
 
-        Ok(Self {
-            config,
-            ensemble_models,
-        })
+        Ok(Self { ensemble_models })
     }
 
     /// Quantify uncertainty using ensemble methods

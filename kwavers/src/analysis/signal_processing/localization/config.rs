@@ -1,5 +1,6 @@
 //! Localization Configuration
 
+use crate::core::constants::SOUND_SPEED_TISSUE;
 use crate::core::error::KwaversResult;
 
 /// Localization configuration
@@ -128,8 +129,8 @@ impl Default for LocalizationConfig {
     fn default() -> Self {
         Self::new(
             vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0]],
-            40.0e6, // 40 MHz
-            1540.0, // Tissue sound speed
+            40.0e6,             // 40 MHz
+            SOUND_SPEED_TISSUE, // Tissue sound speed
         )
     }
 }

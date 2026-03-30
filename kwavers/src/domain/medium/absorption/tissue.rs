@@ -1,5 +1,7 @@
 //! Tissue-specific absorption models
 
+use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
+use crate::core::constants::DB_TO_NP;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -125,7 +127,7 @@ pub fn tissue_properties() -> HashMap<TissueType, TissueProperties> {
     // Values from literature (Szabo 2004, Duck 1990, HIFU physics literature)
     map.insert(
         TissueType::Water,
-        TissueProperties::new(0.0022, 2.0, 1000.0, 1480.0, 5.2, 0.598, 4182.0)
+        TissueProperties::new(0.0022, 2.0, 1000.0, 1480.0, 5.2, 0.598, SPECIFIC_HEAT_WATER)
             .with_optical(4.0, 1.0), // Water: μ_a≈0.04 cm⁻¹, μ_s≈0.01 cm⁻¹
     );
 
@@ -244,8 +246,7 @@ impl TissueAbsorption {
     /// Calculate absorption coefficient at given frequency
     #[must_use]
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
-        // Convert to Np/m from dB/(MHz^y cm)
-        const DB_TO_NP: f64 = 1.0 / 8.686;
+        // Convert to Np/m from dB/(MHz^y cm):  α [Np/m] = α [dB/cm] × DB_TO_NP × 100
         const CM_TO_M: f64 = 100.0;
         const MHZ_TO_HZ: f64 = 1e6;
 

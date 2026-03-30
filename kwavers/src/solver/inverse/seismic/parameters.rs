@@ -22,6 +22,12 @@ pub struct FwiParameters {
     pub n_depth: usize,
     /// Regularization weight
     pub regularization: RegularizationParameters,
+    /// Central source frequency [Hz]
+    ///
+    /// Used as the reference frequency for medium construction (absorption law
+    /// frequency exponent) and for the Ricker wavelet.  Typical exploration
+    /// seismic surveys use 10–100 Hz.
+    pub frequency: f64,
 }
 
 /// Regularization parameters for inversion
@@ -121,6 +127,7 @@ impl Default for FwiParameters {
             n_trace: 100,
             n_depth: 100,
             regularization: RegularizationParameters::default(),
+            frequency: 20.0, // Hz — typical shallow-seismic exploration bandwidth
         }
     }
 }

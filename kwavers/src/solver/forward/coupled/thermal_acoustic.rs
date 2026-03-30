@@ -43,6 +43,10 @@
 //! - Santos & Douglas (2008): "Monolithic formulation for coupled multiphase flow"
 //! - Kolski-Andreaco et al. (2015): "Nonlinear acoustic heating in therapeutic ultrasound"
 
+use crate::core::constants::{
+    DC_DT_SOFT_TISSUE, DENSITY_WATER_NOMINAL, DRHO_DT_SOFT_TISSUE, RHO_C_SOFT_TISSUE,
+    SOUND_SPEED_TISSUE, THERMAL_DIFFUSIVITY_TISSUE,
+};
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
@@ -106,12 +110,12 @@ impl Default for ThermalAcousticConfig {
             dy: 0.001,
             dz: 0.001,
             dt: 0.001e-6,
-            c_ref: 1540.0,
-            dc_d_t: 2.0,
-            rho_ref: 1000.0,
-            drho_d_t: -0.2,
+            c_ref: SOUND_SPEED_TISSUE,
+            dc_d_t: DC_DT_SOFT_TISSUE,
+            rho_ref: DENSITY_WATER_NOMINAL,
+            drho_d_t: DRHO_DT_SOFT_TISSUE,
             t_ref: 37.0,
-            alpha_thermal: 1.5e-7,
+            alpha_thermal: THERMAL_DIFFUSIVITY_TISSUE,
             alpha_ac: 0.5,
             t_arterial: 37.0,
             w_b: 5.0,
@@ -415,7 +419,9 @@ impl ThermalAcousticCoupler {
 
         // Thermal parameters (assuming constant for simplicity)
         let k_thermal = self.config.alpha_thermal; // m²/s (approximation)
-        let rho_c = 3600.0; // Approximate ρc for tissue (J/m³/°C)
+        // Volumetric heat capacity: ρ·c_p = 1050 kg/m³ × 3600 J/(kg·°C) = 3 780 000 J/(m³·°C).
+        // Using SPECIFIC_HEAT_TISSUE alone (3600) would be a 1050× dimensional error.
+        let rho_c = RHO_C_SOFT_TISSUE;
 
         for k in 1..self.config.nz - 1 {
             for j in 1..self.config.ny - 1 {

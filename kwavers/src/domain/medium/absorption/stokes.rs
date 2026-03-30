@@ -1,5 +1,6 @@
 //! Stokes absorption model for viscous fluids
 
+use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use serde::{Deserialize, Serialize};
 
 /// Stokes absorption parameters for viscous fluids
@@ -28,8 +29,8 @@ impl Default for StokesParameters {
             viscosity: 1.002e-3,
             bulk_viscosity: 2.81e-3,
             thermal_conductivity: 0.598,
-            specific_heat_p: 4182.0,
-            specific_heat_v: 4182.0, // Approximately same for water
+            specific_heat_p: SPECIFIC_HEAT_WATER,
+            specific_heat_v: SPECIFIC_HEAT_WATER, // Approximately same for water
             density: 998.2,
             sound_speed: 1482.0,
         }
@@ -82,8 +83,8 @@ impl StokesAbsorption {
             viscosity,
             bulk_viscosity: viscosity * 2.8, // Approximate ratio for water
             thermal_conductivity: 0.598 * (1.0 + 0.003 * (t - 20.0)),
-            specific_heat_p: 4182.0,
-            specific_heat_v: 4182.0,
+            specific_heat_p: SPECIFIC_HEAT_WATER,
+            specific_heat_v: SPECIFIC_HEAT_WATER,
             density,
             sound_speed,
         };

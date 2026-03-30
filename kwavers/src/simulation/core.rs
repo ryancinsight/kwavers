@@ -341,11 +341,6 @@ impl<'a, M: Medium> SimulationBuilder<'a, M> {
         }
     }
 
-    /// Helper to parse feature names back to enum (simplified)
-    #[allow(dead_code)]
-    fn parse_feature_name(&self, name: &str) -> Result<SolverFeature, String> {
-        Self::parse_feature_name_static(name)
-    }
 }
 
 impl<'a, M: Medium> Default for SimulationBuilder<'a, M> {

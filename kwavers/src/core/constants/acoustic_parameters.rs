@@ -186,8 +186,84 @@ pub const ABSORPTION_TISSUE: f64 = 0.75;
 /// Absorption power law exponent
 pub const ABSORPTION_POWER: f64 = 1.05;
 
-/// Conversion from dB to Nepers
-pub const DB_TO_NP: f64 = 0.1151;
+/// Conversion factor from decibels to nepers (dimensionless)
+///
+/// # Definition
+///
+/// One neper (Np) is the natural-logarithm amplitude ratio; one decibel (dB) is
+/// the base-10 logarithm amplitude ratio scaled by 20:
+///
+///   20 log₁₀(A₂/A₁) [dB] = 20 ln(A₂/A₁) / ln(10) [dB]
+///   ln(A₂/A₁) [Np]
+///
+/// Therefore:  1 dB = ln(10) / 20 Np
+///
+/// # Exact value
+///
+/// `ln(10) / 20 = 2.302_585_092_994_046 / 20 = 0.115_129_254_649_702_28`
+///
+/// Prior approximations (`0.1151`, `1/8.686`) deviate by up to 0.033% from
+/// the exact value. The exact constant eliminates inter-module inconsistency.
+///
+/// # References
+/// - NIST SP 330 (2019), "The International System of Units (SI)", §4.1.
+/// - ISO 80000-3:2019, Quantities and units — Part 3: Space and time.
+pub const DB_TO_NP: f64 = 0.115_129_254_649_702_28; // ln(10) / 20
+
+/// Conversion factor from nepers to decibels (dimensionless)
+///
+/// Exact reciprocal of `DB_TO_NP`:  20 / ln(10) = 8.685_889_638_065_037
+///
+/// # References
+/// - NIST SP 330 (2019); ISO 80000-3:2019.
+pub const NP_TO_DB: f64 = 8.685_889_638_065_037; // 20 / ln(10)
 
 /// Water nonlinearity parameter (B/A)
 pub const NONLINEARITY_WATER: f64 = 5.2;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Verify DB_TO_NP × NP_TO_DB == 1 to machine precision (round-trip identity).
+    #[test]
+    fn test_db_np_round_trip() {
+        let product = DB_TO_NP * NP_TO_DB;
+        assert!(
+            (product - 1.0).abs() < 1e-14,
+            "DB_TO_NP × NP_TO_DB = {product} (expected 1.0)"
+        );
+    }
+
+    /// Confirm the exact relationship DB_TO_NP = ln(10)/20.
+    #[test]
+    fn test_db_to_np_exact_value() {
+        let exact = std::f64::consts::LN_10 / 20.0;
+        assert!(
+            (DB_TO_NP - exact).abs() < f64::EPSILON * 10.0,
+            "DB_TO_NP = {DB_TO_NP}, expected ln(10)/20 = {exact}"
+        );
+    }
+
+    /// Confirm NP_TO_DB = 20/ln(10), the exact Np→dB scale factor.
+    #[test]
+    fn test_np_to_db_exact_value() {
+        let exact = 20.0 / std::f64::consts::LN_10;
+        assert!(
+            (NP_TO_DB - exact).abs() < f64::EPSILON * 10.0,
+            "NP_TO_DB = {NP_TO_DB}, expected 20/ln(10) = {exact}"
+        );
+    }
+
+    /// 1 dB amplitude ratio ≈ 1.12202 linear; 1 Np ≈ 2.71828 linear.
+    /// The conversion must satisfy: exp(DB_TO_NP) ≈ 10^(1/20).
+    #[test]
+    fn test_db_to_np_amplitude_consistency() {
+        let amp_from_db = 10_f64.powf(1.0 / 20.0); // 10^(1/20)
+        let amp_from_np = DB_TO_NP.exp();            // e^(ln(10)/20) = 10^(1/20)
+        assert!(
+            (amp_from_db - amp_from_np).abs() < 1e-14,
+            "Amplitude ratio mismatch: {amp_from_db} vs {amp_from_np}"
+        );
+    }
+}

@@ -80,15 +80,20 @@ fn test_fdtd_long_time_stability() -> KwaversResult<()> {
     Ok(())
 }
 
-/// Theorem (FDTD Energy Conservation, Yee 1966):
-/// In a lossless, homogeneous medium with no source and hard-wall boundaries, the total
-/// acoustic energy E = Σ_ijk [p²_{ijk}/(ρ₀c₀²) + ρ₀(ux²+uy²+uz²)] · ΔV
-/// is conserved by the leapfrog FDTD to within O(Δt²) per step.
-/// Over 200 steps with CFL=0.3 and Δx=1mm: relative drift ≪ 1%.
+/// Theorem (FDTD Discrete Energy Conservation, Yee 1966):
+/// In a lossless homogeneous medium with no source and hard-wall BCs, the FDTD leapfrog
+/// scheme conserves a discrete energy:
+///   E_h = Σ [p²/(ρ₀c₀²) + ρ₀(ux²+uy²+uz²)] · ΔV · (1 + O((kΔx)²))
+/// exactly (to machine precision). The CONTINUOUS acoustic energy E_c (same formula
+/// without the O((kΔx)²) correction) differs from E_h by O((kΔx)²).
 ///
-/// This test verifies the vectorized velocity update in fdtd/solver.rs is correct:
-/// if the staggered density averaging (ρ_avg = (ρ[i]+ρ[i+1])/2) is wrong, the
-/// scheme is no longer conservative and energy will drift significantly.
+/// For a 4-cell Gaussian pulse (width=4Δx), energy at k ≈ π/(4Δx) has kΔx ≈ 0.8,
+/// giving a discrete–continuous energy mismatch of O(kΔx)² ≈ 6–10%. This is not a
+/// solver bug; it reflects the well-known FDTD numerical dispersion for narrow pulses.
+/// A well-resolved pulse (kΔx ≪ 1) would show < 1% drift (Taflove §3.4).
+///
+/// This test verifies no CATASTROPHIC energy violation (> 10%), which would indicate
+/// a broken velocity update or density averaging bug.
 #[test]
 fn test_fdtd_energy_conservation_no_source() -> KwaversResult<()> {
     let nx = 24;
@@ -173,13 +178,14 @@ fn test_fdtd_energy_conservation_no_source() -> KwaversResult<()> {
         * dv;
     let energy_final = e_potential + e_kinetic;
 
-    // Energy should be approximately conserved: with hard-wall BCs, waves bounce.
-    // The FDTD leapfrog scheme is symplectic but O(Δt²) dispersive. With CFL=0.3
-    // over 200 steps, some numerical dispersion is expected; we allow up to 15% drift.
+    // The 4-cell-width Gaussian has significant energy near k ≈ π/(4Δx), where kΔx ≈ 0.8.
+    // The discrete–continuous energy mismatch is O((kΔx)²) ≈ 6–8% for this pulse width.
+    // A threshold of 10% catches catastrophic violations (broken update/averaging)
+    // while tolerating the expected ~7% mismatch for this deliberately narrow pulse.
     let relative_drift = (energy_final - energy_0).abs() / energy_0;
     assert!(
-        relative_drift < 0.15,
-        "FDTD energy not conserved: E0={:.4e}, E_final={:.4e}, drift={:.2}%",
+        relative_drift < 0.10,
+        "FDTD energy violates bound: E0={:.4e}, E_final={:.4e}, drift={:.2}% (must be < 10%)",
         energy_0,
         energy_final,
         relative_drift * 100.0
@@ -189,52 +195,65 @@ fn test_fdtd_energy_conservation_no_source() -> KwaversResult<()> {
 }
 
 /// Theorem (FDTD 2nd-order spatial convergence, Yee 1966):
-/// For a fixed physical problem (same domain, same CFL, same final time T),
-/// halving the grid spacing Δx → Δx/2 reduces the global error by a factor of ~4.
 ///
-/// Method: Initialize both grids with a consistent Gaussian pulse, run to the
-/// same physical time T, and compare the two results via Richardson extrapolation.
-/// The convergence ratio E_coarse/E_fine ≈ 4 confirms 2nd-order accuracy.
+/// ## Problem setup — 1D standing wave on a 3D slab domain
 ///
-/// Note: Exact analytical solutions for 3D Gaussian pulses in bounded domains are
-/// complex, so we use grid-doubling (Richardson extrapolation) as the reference.
+/// Consider the acoustic wave equation on a thin 3D domain [0, L] × [0, Ly] × [0, Lz]
+/// with L=30 mm, Ly=Lz=8·Δx (slab, thin in y/z). Initial conditions:
+///
+///   p(x, y, z, 0) = A · cos(π x / L),   u = 0 everywhere.
+///
+/// With rigid-wall boundaries (ux = 0 at x=0 and x=L, uy=uz=0 at all walls),
+/// this is the n=1 standing-wave mode. The exact solution (Morse & Ingard 1968, §9.1):
+///
+///   p(x, t) = A · cos(π x / L) · cos(ω₁ t),   ω₁ = π c / L.
+///
+/// After T_half = L / c (half-period),
+///   p_exact(x, T_half) = A · cos(π x / L) · cos(π) = −A · cos(π x / L).
+///
+/// ## Convergence claim (Yee 1966, Taflove & Hagness 2005 §2.3)
+///
+/// The relative L2 error between the FDTD numerical solution and p_exact after T_half
+/// scales as O(Δx²) since:
+/// - spatial differences: O(Δx²) (central differences, order 2)
+/// - temporal differences: O(Δt²) = O((CFL·Δx)²)
+/// So halving Δx → Δx/2 reduces the error by a factor ≈ 4.
+///
+/// ## Grid selection
+///
+/// For CFL = 0.3 and L = 30 mm, T_half = L/c = 20 μs:
+///   n_steps = T_half / dt = T_half · c / (CFL · Δx) = L / (CFL · Δx)
+///
+/// For nx = 30k (k = 1, 2, 4): Δx = L/nx, n_steps = nx/CFL = nx/0.3 (integer for nx divisible by 3).
+///
+/// ## References
+/// - Yee (1966). IEEE Trans. Antennas Propag. 14(3), 302–307.
+/// - Morse, P.M. & Ingard, K.U. (1968). Theoretical Acoustics. McGraw-Hill. §9.1.
+/// - Taflove & Hagness (2005). Computational Electrodynamics, 3rd ed. §2.3.
 #[test]
 fn test_fdtd_2nd_order_spatial_convergence() -> KwaversResult<()> {
-    let c0 = 1500.0;
-    let rho0 = 1000.0;
+    let c0 = 1500.0_f64;
+    let rho0 = 1000.0_f64;
+    let cfl = 0.3_f64;
+    let amplitude = 1e4_f64; // 10 kPa amplitude
+    let domain_len = 30e-3_f64; // L = 30 mm
+    let t_half = domain_len / c0; // T_half = L/c = 20 μs
+    let ny = 8usize; // slab domain — thin in y,z to isolate 1D x-mode
+    let nz = 8usize;
 
-    // Coarse grid: nx=16, dx=2mm
-    let nx_coarse = 16usize;
-    let dx_coarse = 2e-3;
-    let dt_coarse = 0.3 * dx_coarse / c0; // CFL = 0.3
+    // Run standing wave for T_half; return ||p_num − p_exact||₂ / ||p_exact||₂
+    // over interior y,z points (excluding the two boundary layers on each side).
+    let run_and_measure_error = |nx: usize| -> KwaversResult<f64> {
+        let dx = domain_len / nx as f64; // Δx
+        let dt = cfl * dx / c0; // CFL-limited time step
+        let n_steps = (t_half / dt).round() as usize; // = nx/CFL (integer for CFL=0.3)
 
-    // Fine grid: nx=32, dx=1mm (2× resolution)
-    let nx_fine = 32usize;
-    let dx_fine = 1e-3;
-    let dt_fine = 0.3 * dx_fine / c0;
-
-    // Same physical time T (run to same final time using different nt for each grid)
-    // T = 20 coarse steps; dt_coarse = 0.3*2e-3/1500 = 4e-7 s; T = 8e-6 s
-    let n_coarse = 20usize;
-    let physical_time = n_coarse as f64 * dt_coarse;
-    let n_fine = (physical_time / dt_fine).round() as usize;
-
-    // Both grids have same physical domain size: L = nx * dx
-    // Coarse: L = 16 * 2e-3 = 32 mm; Fine: L = 32 * 1e-3 = 32 mm ✓
-    let l = nx_coarse as f64 * dx_coarse;
-    assert!(
-        (nx_fine as f64 * dx_fine - l).abs() < 1e-9,
-        "Grid sizes must cover same physical domain"
-    );
-
-    // Helper to run FDTD and return center pressure at final time
-    let run_fdtd = |nx: usize, dx: f64, dt: f64, n_steps: usize| -> KwaversResult<f64> {
-        let grid = Grid::new(nx, nx, nx, dx, dx, dx)?;
+        let grid = Grid::new(nx, ny, nz, dx, dx, dx)?;
         let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
         let config = FdtdConfig {
             spatial_order: 2,
             staggered_grid: true,
-            cfl_factor: 0.3,
+            cfl_factor: cfl,
             nt: n_steps,
             dt,
             ..Default::default()
@@ -242,56 +261,76 @@ fn test_fdtd_2nd_order_spatial_convergence() -> KwaversResult<()> {
         let source = GridSource::new_empty();
         let mut solver = FdtdSolver::new(config, &grid, &medium, source)?;
 
-        // Gaussian pulse centered on grid (width = 1/8 of domain in each direction)
-        let cx = (nx / 2) as f64;
-        let w2 = (nx as f64 / 8.0).powi(2); // width in cells
+        // Initialize n=1 standing wave in x: p[i,j,k] = A·cos(π·i·Δx/L)
         for i in 0..nx {
-            for j in 0..nx {
-                for k in 0..nx {
-                    let r2 = (i as f64 - cx).powi(2)
-                        + (j as f64 - cx).powi(2)
-                        + (k as f64 - cx).powi(2);
-                    solver.fields.p[[i, j, k]] = 1e4 * (-r2 / w2).exp();
+            let x = i as f64 * dx;
+            let p_init = amplitude * (std::f64::consts::PI * x / domain_len).cos();
+            for j in 0..ny {
+                for k in 0..nz {
+                    solver.fields.p[[i, j, k]] = p_init;
                 }
             }
         }
+        // All velocity components default to zero — correct for t=0 standing wave.
 
         for _ in 0..n_steps {
             solver.step_forward()?;
         }
 
-        // Return RMS pressure (L2 norm normalized by sqrt(N) to allow fair
-        // comparison across grids of different sizes).
-        let n = (nx * nx * nx) as f64;
-        let rms: f64 = (solver.fields.p.iter().map(|&v| v * v).sum::<f64>() / n).sqrt();
-        Ok(rms)
+        // At T_half: p_exact = -A·cos(πx/L).
+        // Accumulate squared errors over interior y,z points (skip boundary layers).
+        let mut error_sq = 0.0_f64;
+        let mut ref_sq = 0.0_f64;
+        for i in 0..nx {
+            let x = i as f64 * dx;
+            let p_exact = -amplitude * (std::f64::consts::PI * x / domain_len).cos();
+            let p_exact_sq = p_exact * p_exact;
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
+                    let p_num = solver.fields.p[[i, j, k]];
+                    let diff = p_num - p_exact;
+                    error_sq += diff * diff;
+                    ref_sq += p_exact_sq;
+                }
+            }
+        }
+        // Relative L2 error: ||p_num − p_exact||₂ / ||p_exact||₂
+        Ok((error_sq / ref_sq.max(1e-30)).sqrt())
     };
 
-    // Run both grids
-    // Since we don't have an analytical reference, we use a coarser reference:
-    // Run at 3 resolutions and check that error halves (approximately) each refinement.
-    // Here we check that the coarse-grid field magnitude is in a physically plausible range
-    // and that the fine grid produces a similar (but not identical) result.
-    let result_coarse = run_fdtd(nx_coarse, dx_coarse, dt_coarse, n_coarse)?;
-    let result_fine = run_fdtd(nx_fine, dx_fine, dt_fine, n_fine)?;
+    // Three resolutions:  nx=30, 60, 120  (Δx = 1, 0.5, 0.25 mm)
+    // n_steps =           100, 200, 400   (exact integers: 30/0.3=100, etc.)
+    let e_coarse = run_and_measure_error(30)?;
+    let e_fine = run_and_measure_error(60)?;
+    let e_vfine = run_and_measure_error(120)?;
 
-    // Both results should be finite and positive
     assert!(
-        result_coarse.is_finite() && result_coarse > 0.0,
-        "Coarse grid L2 norm is not positive finite: {result_coarse}"
+        e_coarse.is_finite() && e_coarse > 0.0,
+        "Coarse-grid relative error is not positive finite: {e_coarse:.4e}"
     );
     assert!(
-        result_fine.is_finite() && result_fine > 0.0,
-        "Fine grid L2 norm is not positive finite: {result_fine}"
+        e_fine.is_finite() && e_fine > 0.0,
+        "Fine-grid relative error is not positive finite: {e_fine:.4e}"
+    );
+    assert!(
+        e_vfine.is_finite() && e_vfine > 0.0,
+        "Very-fine-grid relative error is not positive finite: {e_vfine:.4e}"
     );
 
-    // The two grids represent the same physics. After normalizing by sqrt(N), the RMS
-    // values should agree within ~50% (O(Δx²) error, boundary reflections, dispersive drift).
-    let ratio = result_coarse / result_fine;
+    // Convergence ratios: halving Δx → error ÷ 4 (2nd order).
+    // Accept ratio in [2.0, 6.0]: > 2.0 rules out 1st-order; < 6.0 rules out > 3rd-order.
+    let ratio_cf = e_coarse / e_fine;
+    let ratio_fv = e_fine / e_vfine;
+
     assert!(
-        ratio > 0.3 && ratio < 3.0,
-        "Coarse/fine RMS ratio = {:.3} is outside [0.3, 3.0] — solver may be unstable or wrong",
-        ratio
+        ratio_cf > 2.0 && ratio_cf < 6.0,
+        "Coarse/fine convergence ratio = {ratio_cf:.2} (expected ≈ 4.0 for 2nd-order FDTD). \
+         e_coarse={e_coarse:.4e}, e_fine={e_fine:.4e}"
+    );
+    assert!(
+        ratio_fv > 2.0 && ratio_fv < 6.0,
+        "Fine/vfine convergence ratio = {ratio_fv:.2} (expected ≈ 4.0 for 2nd-order FDTD). \
+         e_fine={e_fine:.4e}, e_vfine={e_vfine:.4e}"
     );
 
     Ok(())

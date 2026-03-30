@@ -61,6 +61,7 @@
 //! v_p_new = v_2*v_p - v_p_prev + v_coeff*(v_p_x0 + v_p_x1 + v_p_y0 + ...)
 //! ```
 
+use crate::core::constants::{CFL_FACTOR_3D_FDTD, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::simd::{SimdConfig, SimdLevel};
 use ndarray::Array3;
@@ -97,10 +98,10 @@ impl Default for Avx512Config {
             tile_size: 8,
             use_fma: true,
             prefetch_boundaries: true,
-            sound_speed: 1540.0,
-            density: 1000.0,
+            sound_speed: SOUND_SPEED_TISSUE,
+            density: DENSITY_WATER_NOMINAL,
             dx: 0.001,
-            dt: 1.62e-7,
+            dt: CFL_FACTOR_3D_FDTD * 0.001 / SOUND_SPEED_TISSUE,
         }
     }
 }

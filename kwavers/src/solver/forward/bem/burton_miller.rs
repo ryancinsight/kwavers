@@ -118,6 +118,53 @@ impl BurtonMillerAssembler {
         Self { config }
     }
 
+    /// Compute area-weighted vertex normals for a triangular mesh.
+    ///
+    /// ## Algorithm (Gouraud shading / FEM normal averaging)
+    ///
+    /// For each vertex v, the vertex normal is the area-weighted sum of the outward
+    /// normals of all triangles incident on v, normalized to unit length:
+    /// ```text
+    /// n_v = (Σ_{T: v ∈ T} A_T · n_T) / |Σ_{T: v ∈ T} A_T · n_T|
+    /// ```
+    /// where A_T is the area of triangle T and n_T is its outward unit normal.
+    ///
+    /// ## Reference
+    /// - Gouraud, H. (1971). Continuous shading of curved surfaces. IEEE Trans. Comput. C-20(6).
+    fn compute_vertex_normals(
+        &self,
+        nodes: &[[f64; 3]],
+        elements: &[[usize; 3]],
+    ) -> Vec<[f64; 3]> {
+        let mut normals: Vec<[f64; 3]> = vec![[0.0, 0.0, 0.0]; nodes.len()];
+
+        for &elem in elements {
+            let (n1, n2, n3) = (elem[0], elem[1], elem[2]);
+            let tri_normal = self.triangle_normal(nodes[n1], nodes[n2], nodes[n3]);
+            let area = self.triangle_area(nodes[n1], nodes[n2], nodes[n3]);
+            // Accumulate area-weighted normal for each vertex
+            for &v in &[n1, n2, n3] {
+                normals[v][0] += area * tri_normal[0];
+                normals[v][1] += area * tri_normal[1];
+                normals[v][2] += area * tri_normal[2];
+            }
+        }
+
+        // Normalise each vertex normal
+        for n in &mut normals {
+            let len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
+            if len > 1e-14 {
+                n[0] /= len;
+                n[1] /= len;
+                n[2] /= len;
+            } else {
+                *n = [0.0, 0.0, 1.0]; // Fallback: z-pointing normal
+            }
+        }
+
+        normals
+    }
+
     /// Assemble Burton-Miller system matrix
     ///
     /// Returns matrix H_combined = [CBIE contribution] + α·[HBIE contribution]
@@ -138,9 +185,14 @@ impl BurtonMillerAssembler {
         let _k = self.config.wavenumber;
         let alpha = self.config.coupling_alpha;
 
+        // Precompute area-weighted vertex normals for the hypersingular (HBIE) kernel
+        let vertex_normals = self.compute_vertex_normals(boundary_nodes, elements);
+
         // Assemble H matrix row by row (collocation points)
         for i in 0..n {
             let collocation_point = boundary_nodes[i];
+            // Outward normal at the collocation node (area-weighted vertex normal)
+            let collocation_normal = vertex_normals.get(i).copied().unwrap_or([0.0, 0.0, 1.0]);
 
             // Loop over boundary elements
             for (elem_idx, &elem) in elements.iter().enumerate() {
@@ -149,9 +201,13 @@ impl BurtonMillerAssembler {
                 let node3 = boundary_nodes[elem[2]];
 
                 // Integrate over element
-                // For each collocation point i, compute contributions from element j
-                let (h_cbie, h_hbie) =
-                    self.element_contribution(&collocation_point, node1, node2, node3)?;
+                let (h_cbie, h_hbie) = self.element_contribution(
+                    &collocation_point,
+                    &collocation_normal,
+                    node1,
+                    node2,
+                    node3,
+                )?;
 
                 // Add contributions to matrix
                 for &global_node_idx in &elements[elem_idx] {
@@ -212,6 +268,7 @@ impl BurtonMillerAssembler {
     fn element_contribution(
         &self,
         collocation: &[f64; 3],
+        collocation_normal: &[f64; 3],
         node1: [f64; 3],
         node2: [f64; 3],
         node3: [f64; 3],
@@ -227,6 +284,9 @@ impl BurtonMillerAssembler {
         let gauss_points = [(1.0 / 3.0, 1.0 / 3.0), (0.6, 0.2), (0.2, 0.6)];
         let gauss_weights = [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0];
 
+        // Source-element outward normal (n_y): constant over flat triangle
+        let normal_y = self.triangle_normal(node1, node2, node3);
+
         for (gp_idx, &(xi, eta)) in gauss_points.iter().enumerate() {
             // Map barycentric to Cartesian
             let zeta = 1.0 - xi - eta;
@@ -236,29 +296,26 @@ impl BurtonMillerAssembler {
                 zeta * node1[2] + xi * node2[2] + eta * node3[2],
             ];
 
-            // Distance and Green's function
+            // Distance
             let r = self.distance(collocation, &point_on_element);
             if r < self.config.singular_regularization {
                 continue; // Skip singular points
             }
 
-            let _g = self.greens_function_helmholtz(k, r);
-            let dg_dn =
-                self.greens_function_normal_derivative(k, r, collocation, &point_on_element);
+            // CBIE kernel: ∂G/∂n_y (normal derivative of G at source point)
+            let dg_dn = self.greens_function_normal_derivative_full(
+                k, r, collocation, &point_on_element, &normal_y,
+            );
+            h_cbie += gauss_weights[gp_idx] * dg_dn;
 
-            // Element normal (computed from cross product of two edges)
-            let normal = self.triangle_normal(node1, node2, node3);
-
-            // CBIE kernel: ∂G/∂n(r')
-            h_cbie += gauss_weights[gp_idx] * dg_dn * normal[0];
-
-            // HBIE kernel: ∂²G/(∂n·∂n') - requires second derivatives
+            // HBIE kernel: ∂²G/(∂n_x ∂n_y) (hypersingular kernel)
             let d2g_dndn = self.greens_function_double_normal_derivative(
                 k,
                 r,
                 collocation,
                 &point_on_element,
-                &normal,
+                &normal_y,
+                collocation_normal,
             );
             h_hbie += gauss_weights[gp_idx] * d2g_dndn;
         }
@@ -333,8 +390,50 @@ impl BurtonMillerAssembler {
         phase.exp() / (4.0 * PI * r)
     }
 
-    /// Normal derivative of Green's function
-    /// ∂G/∂n = ∂G/∂r · (normal · grad_r)
+    /// Normal derivative of Green's function: ∂G/∂n_y (at field/source point y).
+    ///
+    /// ## Formula
+    ///
+    /// For G = exp(ikr)/(4πr) with r = |y−x|, r̂ = (y−x)/r:
+    /// ```text
+    /// ∂G/∂n_y = G · (ik − 1/r) · (r̂ · n_y)
+    /// ```
+    ///
+    /// The 1-component approximation in the legacy `greens_function_normal_derivative` used
+    /// only `r̂_x`, which is only correct when n_y is aligned with the x-axis.
+    /// This function computes the full 3D dot product.
+    ///
+    /// ## Reference
+    /// - Colton, D. & Kress, R. (2013). *Inverse Acoustic and Electromagnetic Scattering
+    ///   Theory* (3rd ed.). Springer. §3.1, Eq. 3.41.
+    fn greens_function_normal_derivative_full(
+        &self,
+        k: f64,
+        r: f64,
+        collocation: &[f64; 3],
+        point: &[f64; 3],
+        normal_y: &[f64; 3],
+    ) -> Complex64 {
+        if r < 1e-12 {
+            return Complex64::new(0.0, 0.0);
+        }
+        // r̂ = (y − x)/r = (point − collocation)/r
+        let rhat = [
+            (point[0] - collocation[0]) / r,
+            (point[1] - collocation[1]) / r,
+            (point[2] - collocation[2]) / r,
+        ];
+        let cos_ny = rhat[0] * normal_y[0] + rhat[1] * normal_y[1] + rhat[2] * normal_y[2];
+        let g = self.greens_function_helmholtz(k, r);
+        let alpha = Complex64::new(0.0, k) - Complex64::new(1.0 / r, 0.0);
+        g * alpha * cos_ny
+    }
+
+    /// Legacy 1-D approximation of ∂G/∂n (preserved for callers that used it directly).
+    ///
+    /// **Warning**: Only correct when the outward normal at `point` is aligned with the
+    /// x-axis (i.e. `n_y = [1, 0, 0]`). For general meshes use
+    /// `greens_function_normal_derivative_full`.
     fn greens_function_normal_derivative(
         &self,
         k: f64,
@@ -345,36 +444,83 @@ impl BurtonMillerAssembler {
         if r < 1e-12 {
             return Complex64::new(0.0, 0.0);
         }
-
-        let dr_dn = (collocation[0] - point[0]) / r; // Unit vector dot normal
-
+        let dr_dn = (collocation[0] - point[0]) / r;
         let phase = Complex64::new(0.0, k * r);
         let exp_ikr = phase.exp();
-
-        // ∂G/∂r = (ik - 1/r) * G / r
-        let dg_dr =
-            (Complex64::new(0.0, k) - Complex64::new(1.0 / r, 0.0)) * exp_ikr / (4.0 * PI * r * r);
-
+        let dg_dr = (Complex64::new(0.0, k) - Complex64::new(1.0 / r, 0.0)) * exp_ikr
+            / (4.0 * PI * r * r);
         dg_dr * dr_dn
     }
 
-    /// Double normal derivative (strongly singular) - simplified approximation
+    /// Full hypersingular kernel ∂²G/(∂n_x ∂n_y) (Colton & Kress 2013, §3.3).
+    ///
+    /// ## Derivation (Colton & Kress 2013, Theorem 3.3)
+    ///
+    /// For G = exp(ikr)/(4πr), r = |y−x|, r̂ = (y−x)/r,
+    /// outward normals n_x (at receiver x) and n_y (at source y):
+    ///
+    /// ```text
+    /// ∂G/∂n_y = G · α(r) · (r̂·n_y)    where α(r) = ik − 1/r
+    ///
+    /// ∂²G/(∂n_x ∂n_y) = G · [
+    ///   (k² + 3ik/r − 3/r²) · (r̂·n_x) · (r̂·n_y)
+    ///   + (1/r² − ik/r) · (n_x · n_y)
+    /// ]
+    /// ```
+    ///
+    /// **Derivation sketch** (chain rule applied to ∂/∂n_x[G·α·cos_ny]):
+    /// - ∂G/∂x_i = −G·α·r̂_i  (since ∂r/∂x_i = −r̂_i)
+    /// - ∂α/∂x_i = −r̂_i/r²   (since α = ik−1/r, ∂(1/r)/∂r·(−r̂_i) = r̂_i/r²)
+    /// - ∂cos_ny/∂x_i = r̂_i·cos_ny/r − n_y_i/r
+    /// Assembling and contracting with n_x gives the formula above.
+    ///
+    /// **Static limit** (k→0): reduces to standard 1/r³ dipole kernel as expected:
+    /// `(−3/r²)·cos_nx·cos_ny·G + (1/r²)·nxny·G = G(nxny − 3coscos)/r² = (nxny−3coscos)/(4πr³)`.
+    ///
+    /// **Near-singularity**: for r < 1e-10 return 0 (caller skips by regularisation threshold).
+    /// Note: the hypersingular r → 0 limit requires dedicated regularisation (Guiggiani 1992);
+    /// this function is only called for non-singular Gauss points.
+    ///
+    /// ## References
+    /// - Burton, A.J. & Miller, G.F. (1971). Proc. Roy. Soc. A 323(1553), 201–210.
+    /// - Colton, D. & Kress, R. (2013). *Inverse Acoustic and Electromagnetic Scattering
+    ///   Theory* (3rd ed.). Springer. §3.3, Theorem 3.3.
+    /// - Guiggiani, M. (1992). Formulation and numerical treatment of boundary integral
+    ///   equations with hypersingular kernels. Comp. Meth. Appl. Mech. Engng. 93(2), 283–301.
     fn greens_function_double_normal_derivative(
         &self,
         k: f64,
         r: f64,
-        _collocation: &[f64; 3],
-        _point: &[f64; 3],
-        _normal: &[f64; 3],
+        collocation: &[f64; 3],
+        point: &[f64; 3],
+        normal_y: &[f64; 3],
+        normal_x: &[f64; 3],
     ) -> Complex64 {
         if r < 1e-10 {
+            // Near-singular limit — caller uses regularisation to skip these points
             return Complex64::new(0.0, 0.0);
         }
 
-        // Simplified: ∂²G/(∂n·∂n') ≈ -k² * G / r
-        // Full computation requires careful handling of singular behavior
+        // r̂ = (y − x)/r (from receiver x to source y)
+        let rhat = [
+            (point[0] - collocation[0]) / r,
+            (point[1] - collocation[1]) / r,
+            (point[2] - collocation[2]) / r,
+        ];
+
+        // Geometry scalars
+        let cos_nx = rhat[0] * normal_x[0] + rhat[1] * normal_x[1] + rhat[2] * normal_x[2];
+        let cos_ny = rhat[0] * normal_y[0] + rhat[1] * normal_y[1] + rhat[2] * normal_y[2];
+        let nxny = normal_x[0] * normal_y[0] + normal_x[1] * normal_y[1] + normal_x[2] * normal_y[2];
+
         let g = self.greens_function_helmholtz(k, r);
-        -Complex64::new(k * k, 0.0) * g / r
+
+        // Coefficient for the (r̂·n_x)(r̂·n_y) term: k² + 3ik/r − 3/r²
+        let coeff_cos = Complex64::new(k * k - 3.0 / (r * r), 3.0 * k / r);
+        // Coefficient for the (n_x·n_y) term: 1/r² − ik/r
+        let coeff_nx = Complex64::new(1.0 / (r * r), -k / r);
+
+        g * (coeff_cos * (cos_nx * cos_ny) + coeff_nx * nxny)
     }
 
     /// Triangle normal vector (outward)
@@ -484,5 +630,122 @@ mod tests {
 
         let dist = assembler.distance(&p1, &p2);
         assert!((dist - 5.0).abs() < 1e-10);
+    }
+
+    // -----------------------------------------------------------------------
+    // Tests for greens_function_double_normal_derivative (hypersingular kernel)
+    // -----------------------------------------------------------------------
+
+    /// Parallel normals n_x = n_y = ẑ, field point y above collocation x.
+    ///
+    /// ## Analytical value
+    ///
+    /// With r̂ = ẑ, n_x = ẑ, n_y = ẑ:
+    ///   cos_nx = 1, cos_ny = 1, nxny = 1
+    ///
+    /// ∂²G/(∂n_x ∂n_y) = G * [(k² + 3ik/r − 3/r²)·1 + (1/r² − ik/r)·1]
+    ///                  = G * [k² + 3ik/r − 3/r² + 1/r² − ik/r]
+    ///                  = G * [k² + 2ik/r − 2/r²]
+    #[test]
+    fn test_hypersingular_parallel_normals_matches_formula() {
+        let k = 2.0_f64;
+        let r = 1.0_f64;
+        let cfg = BurtonMillerConfig::new(1000.0, 1500.0);
+        let assembler = BurtonMillerAssembler::new(cfg);
+
+        let collocation = [0.0_f64, 0.0, 0.0];
+        let point = [0.0_f64, 0.0, r]; // y = x + r·ẑ
+        let nx = [0.0_f64, 0.0, 1.0]; // ẑ
+        let ny = [0.0_f64, 0.0, 1.0]; // ẑ
+
+        let result = assembler.greens_function_double_normal_derivative(
+            k, r, &collocation, &point, &ny, &nx,
+        );
+
+        let g = assembler.greens_function_helmholtz(k, r);
+        let expected = g * Complex64::new(k * k - 2.0 / (r * r), 2.0 * k / r);
+
+        let diff = (result - expected).norm();
+        assert!(
+            diff < 1e-12,
+            "parallel normals: |result − expected| = {:.3e}",
+            diff
+        );
+    }
+
+    /// Static limit k=0: ∂²G/(∂n_x ∂n_y) = (nxny − 3coscos)/(4πr³).
+    ///
+    /// Proof: for k=0, G = 1/(4πr) and the formula reduces to
+    ///   G * (−3/r²)*cos_nx*cos_ny + G*(1/r²)*nxny = (nxny − 3coscos)/(4πr³).
+    #[test]
+    fn test_hypersingular_static_limit_matches_dipole_kernel() {
+        let k = 0.0_f64; // Static (Laplace) case
+        let r = 2.0_f64;
+        let cfg = BurtonMillerConfig::new(1.0, 1.0); // dummy
+        let assembler = BurtonMillerAssembler::new(cfg);
+
+        let collocation = [0.0_f64, 0.0, 0.0];
+        let point = [r, 0.0, 0.0]; // r̂ = x̂
+        let nx = [0.0_f64, 0.0, 1.0]; // ẑ (perpendicular to r̂)
+        let ny = [0.0_f64, 0.0, 1.0]; // ẑ
+
+        // cos_nx = r̂·n_x = 0 (ẑ⊥x̂), cos_ny = 0, nxny = 1
+        // ∂²G/(∂n_x ∂n_y) = G * (1/r² - 0) * 1 = G/r²
+        let result = assembler.greens_function_double_normal_derivative(
+            k, r, &collocation, &point, &ny, &nx,
+        );
+
+        let g_static = 1.0 / (4.0 * std::f64::consts::PI * r); // G for k=0
+        let expected = Complex64::new(g_static / (r * r), 0.0);
+        let diff = (result - expected).norm();
+        assert!(
+            diff < 1e-14,
+            "static limit nxny=1, cos=0: |result − expected| = {:.3e}",
+            diff
+        );
+    }
+
+    /// Perpendicular normals n_x ⊥ n_y ⊥ r̂: nxny = 0, both cos terms = 0 → result ≈ 0.
+    ///
+    /// Specifically: r̂ = x̂, n_x = ŷ, n_y = ẑ.
+    ///   cos_nx = r̂·ŷ = 0, cos_ny = r̂·ẑ = 0, nxny = ŷ·ẑ = 0 → 0.
+    #[test]
+    fn test_hypersingular_all_perpendicular_is_zero() {
+        let k = 5.0_f64;
+        let r = 1.5_f64;
+        let cfg = BurtonMillerConfig::new(1000.0, 1500.0);
+        let assembler = BurtonMillerAssembler::new(cfg);
+
+        let collocation = [0.0_f64, 0.0, 0.0];
+        let point = [r, 0.0, 0.0]; // r̂ = x̂
+        let nx = [0.0_f64, 1.0, 0.0]; // ŷ
+        let ny = [0.0_f64, 0.0, 1.0]; // ẑ
+
+        let result = assembler.greens_function_double_normal_derivative(
+            k, r, &collocation, &point, &ny, &nx,
+        );
+
+        assert!(
+            result.norm() < 1e-14,
+            "all-perpendicular: expected 0, got {:.3e}",
+            result.norm()
+        );
+    }
+
+    /// Near-singularity guard: r < 1e-10 returns exactly zero.
+    #[test]
+    fn test_hypersingular_near_singular_returns_zero() {
+        let cfg = BurtonMillerConfig::new(1000.0, 1500.0);
+        let assembler = BurtonMillerAssembler::new(cfg);
+
+        let collocation = [0.0_f64, 0.0, 0.0];
+        let point = [1e-11_f64, 0.0, 0.0];
+        let r = 1e-11_f64;
+        let n = [0.0_f64, 0.0, 1.0];
+
+        let result = assembler.greens_function_double_normal_derivative(
+            2.0, r, &collocation, &point, &n, &n,
+        );
+        assert_eq!(result, Complex64::new(0.0, 0.0));
     }
 }
