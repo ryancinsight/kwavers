@@ -77,8 +77,9 @@ use kwavers::domain::source::wavefront::plane_wave::{
     InjectionMode, PlaneWaveConfig, PlaneWaveSource,
 };
 use kwavers::domain::source::{GridSource, Source as KwaversSource, SourceField};
-use kwavers::solver::forward::fdtd::config::FdtdConfig;
+use kwavers::solver::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
 use kwavers::solver::forward::fdtd::solver::FdtdSolver;
+use kwavers::physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers::solver::forward::pstd::config::PSTDConfig;
 use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers::solver::interface::solver::Solver as SolverTrait;
@@ -122,6 +123,9 @@ pub enum SolverType {
     PSTD,
     /// Hybrid FDTD/PSTD solver
     Hybrid,
+    /// GPU-resident Pseudospectral Time Domain solver (requires `gpu` feature).
+    /// Falls back to CPU PSTD if no GPU adapter is available.
+    PstdGpu,
 }
 
 #[pymethods]
@@ -129,18 +133,20 @@ impl SolverType {
     /// String representation.
     fn __repr__(&self) -> String {
         match self {
-            SolverType::FDTD => "SolverType.FDTD".to_string(),
-            SolverType::PSTD => "SolverType.PSTD".to_string(),
-            SolverType::Hybrid => "SolverType.Hybrid".to_string(),
+            SolverType::FDTD    => "SolverType.FDTD".to_string(),
+            SolverType::PSTD    => "SolverType.PSTD".to_string(),
+            SolverType::Hybrid  => "SolverType.Hybrid".to_string(),
+            SolverType::PstdGpu => "SolverType.PstdGpu".to_string(),
         }
     }
 
     /// Human-readable string.
     fn __str__(&self) -> String {
         match self {
-            SolverType::FDTD => "FDTD".to_string(),
-            SolverType::PSTD => "PSTD".to_string(),
-            SolverType::Hybrid => "Hybrid".to_string(),
+            SolverType::FDTD    => "FDTD".to_string(),
+            SolverType::PSTD    => "PSTD".to_string(),
+            SolverType::Hybrid  => "Hybrid".to_string(),
+            SolverType::PstdGpu => "PstdGpu".to_string(),
         }
     }
 
@@ -418,7 +424,8 @@ impl Medium {
         }
 
         let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-        let mut het = HeterogeneousMedium::new(nx, ny, nz, true);
+        // Use acoustic-only constructor: skips 22 non-acoustic zero arrays (~740 MB saved)
+        let mut het = HeterogeneousMedium::new_acoustic_only(nx, ny, nz, true);
         het.sound_speed = c_arr;
         het.density = rho_arr;
 
@@ -1873,6 +1880,10 @@ pub struct Simulation {
     pml_alpha_xyz: Option<(f64, f64, f64)>,
     /// Enable Westervelt nonlinear source term in FDTD solver
     enable_nonlinear: bool,
+    /// Medium absorption coefficient [dB/(MHz^y·cm)] — k-Wave convention (0 = lossless)
+    alpha_coeff: f64,
+    /// Medium absorption power law exponent (k-Wave default: 1.5 for tissue)
+    alpha_power: f64,
 }
 
 #[pymethods]
@@ -1965,6 +1976,8 @@ impl Simulation {
             pml_inside: true,
             pml_alpha_xyz: None,
             enable_nonlinear: false,
+            alpha_coeff: 0.0,
+            alpha_power: 1.5,
         })
     }
 
@@ -2084,6 +2097,46 @@ impl Simulation {
     #[getter]
     fn nonlinear(&self) -> bool {
         self.enable_nonlinear
+    }
+
+    /// Set medium absorption coefficient (k-Wave `medium.alpha_coeff`).
+    ///
+    /// Parameters
+    /// ----------
+    /// alpha : float
+    ///     Absorption coefficient [dB/(MHz^y·cm)].  Set to 0 (default) for lossless.
+    ///
+    /// Examples
+    /// --------
+    /// >>> sim.set_alpha_coeff(0.75)   # tissue-like absorption
+    fn set_alpha_coeff(&mut self, alpha: f64) {
+        self.alpha_coeff = alpha;
+    }
+
+    /// Set medium absorption power law exponent (k-Wave `medium.alpha_power`).
+    ///
+    /// Parameters
+    /// ----------
+    /// power : float
+    ///     Power law exponent (default 1.5 for soft tissue; must not equal 1.0).
+    ///
+    /// Examples
+    /// --------
+    /// >>> sim.set_alpha_power(1.5)
+    fn set_alpha_power(&mut self, power: f64) {
+        self.alpha_power = power;
+    }
+
+    /// Get medium absorption coefficient [dB/(MHz^y·cm)].
+    #[getter]
+    fn alpha_coeff(&self) -> f64 {
+        self.alpha_coeff
+    }
+
+    /// Get medium absorption power law exponent.
+    #[getter]
+    fn alpha_power(&self) -> f64 {
+        self.alpha_power
     }
 
     /// Run the simulation.
@@ -2334,6 +2387,9 @@ impl Simulation {
         let pml_inside = self.pml_inside;
         let pml_alpha_xyz = self.pml_alpha_xyz;
         let solver_type = self.solver_type;
+        let enable_nonlinear = self.enable_nonlinear;
+        let alpha_coeff = self.alpha_coeff;
+        let alpha_power = self.alpha_power;
 
         // Collect recording modes from sensor (empty vec if no sensor or no modes set)
         let sensor_record_modes: Vec<String> = sensor_opt
@@ -2356,23 +2412,49 @@ impl Simulation {
                     pml_size_xyz,
                     pml_inside,
                     pml_alpha_xyz,
+                    enable_nonlinear,
                     &sensor_record_modes,
                 ),
-                SolverType::PSTD | SolverType::Hybrid => Self::run_pstd_impl(
-                    &grid_clone,
-                    &medium_clone,
-                    time_steps,
-                    dt_actual,
-                    grid_source,
-                    dynamic_sources,
-                    sensor_opt.as_ref(),
-                    transducer_sensor_opt.as_ref(),
-                    pml_size,
-                    pml_size_xyz,
-                    pml_inside,
-                    pml_alpha_xyz,
-                    &sensor_record_modes,
-                ),
+                SolverType::PSTD | SolverType::Hybrid => {
+                    Self::run_pstd_impl(
+                        &grid_clone,
+                        &medium_clone,
+                        time_steps,
+                        dt_actual,
+                        enable_nonlinear,
+                        alpha_coeff,
+                        alpha_power,
+                        grid_source,
+                        dynamic_sources,
+                        sensor_opt.as_ref(),
+                        transducer_sensor_opt.as_ref(),
+                        pml_size,
+                        pml_size_xyz,
+                        pml_inside,
+                        pml_alpha_xyz,
+                        &sensor_record_modes,
+                    )
+                }
+                SolverType::PstdGpu => {
+                    Self::run_gpu_pstd_or_cpu_fallback(
+                        &grid_clone,
+                        &medium_clone,
+                        time_steps,
+                        dt_actual,
+                        alpha_coeff,
+                        alpha_power,
+                        grid_source,
+                        dynamic_sources,
+                        sensor_opt.as_ref(),
+                        transducer_sensor_opt.as_ref(),
+                        pml_size,
+                        pml_size_xyz,
+                        pml_inside,
+                        pml_alpha_xyz,
+                        enable_nonlinear,
+                        &sensor_record_modes,
+                    )
+                }
             })
             .map_err(kwavers_error_to_py)?;
 
@@ -2599,8 +2681,9 @@ impl Simulation {
         transducer_sensor: Option<&TransducerArray2D>,
         pml_size: Option<usize>,
         pml_size_xyz: Option<(usize, usize, usize)>,
-        pml_inside: bool,
+        _pml_inside: bool,
         pml_alpha_xyz: Option<(f64, f64, f64)>,
+        enable_nonlinear: bool,
         record_modes: &[String],
     ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
         let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
@@ -2620,7 +2703,8 @@ impl Simulation {
             subgridding: false,
             subgrid_factor: 2,
             enable_gpu_acceleration: false,
-            enable_nonlinear: self.enable_nonlinear,
+            enable_nonlinear,
+            kspace_correction: KSpaceCorrectionMode::None,
             sensor_mask: Some(sensor_mask.clone()),
         };
 
@@ -2693,6 +2777,9 @@ impl Simulation {
         medium: &MediumInner,
         time_steps: usize,
         dt: f64,
+        enable_nonlinear: bool,
+        alpha_coeff_db: f64,
+        alpha_power: f64,
         grid_source: GridSource,
         sources: Vec<Box<dyn KwaversSource>>,
         sensor: Option<&Sensor>,
@@ -2729,12 +2816,59 @@ impl Simulation {
             kwavers::solver::forward::pstd::config::BoundaryConfig::None
         };
 
+        // If caller did not set alpha_coeff explicitly (0.0), fall back to medium's
+        // stored absorption coefficient (set via Medium.homogeneous(absorption=...) or
+        // Medium.heterogeneous(absorption=...)).  Returns 0.0 for heterogeneous media
+        // that don't override alpha_coefficient().
+        let effective_alpha_db = if alpha_coeff_db > 0.0 {
+            alpha_coeff_db
+        } else {
+            medium.as_medium().alpha_coefficient(0.0, 0.0, 0.0, grid)
+        };
+
+        // Also fall back to medium's alpha_power if caller used default 1.5 and medium has a value.
+        let effective_alpha_power = {
+            let y_medium = medium.as_medium().alpha_power(0.0, 0.0, 0.0, grid);
+            // Use medium's power if it was explicitly set (not the default 1.0 value
+            // from HomogeneousMedium constructor).
+            if alpha_coeff_db <= 0.0 && y_medium > 0.0 && (y_medium - 1.0).abs() > 1e-12 {
+                y_medium
+            } else {
+                alpha_power
+            }
+        };
+
+        // Convert absorption from dB/(MHz^y·cm) → Np/(m·(rad/s)^y) using k-Wave db2neper formula.
+        // k-Wave Python kwave/utils/conversion.py, db2neper():
+        //   alpha = 100.0 * alpha * (1e-6 / (2.0 * pi)) ** y / (20.0 * log10(exp(1)))
+        // Note: (1e-6/(2π))^y is the INVERSE of frequency scaling: converts from (rad/s)^y units
+        // back to dB/(MHz^y·cm) units for the spectral operator which uses rad/m wavenumbers.
+        // For y=1.5: (1e-6/(2π))^1.5 ≈ 6.35e-11, giving alpha_0 ≈ 3.65e-10 Np/((rad/s)^1.5·m).
+        // Verification: alpha_0 * (2π*1e6)^1.5 * 0.01m = 0.5 dB/cm ✓ for alpha=0.5, f=1 MHz.
+        let absorption_mode = if effective_alpha_db > 0.0
+            && (effective_alpha_power - 1.0).abs() > 1e-12
+        {
+            // 20 * log10(e) = 20 / ln(10) ≈ 8.6859
+            let twenty_log10_e = 20.0 / std::f64::consts::LN_10;
+            let dbn = 100.0 * effective_alpha_db
+                * (1e-6 / (2.0 * std::f64::consts::PI)).powf(effective_alpha_power)
+                / twenty_log10_e;
+            AbsorptionMode::PowerLaw {
+                alpha_coeff: dbn,
+                alpha_power: effective_alpha_power,
+            }
+        } else {
+            AbsorptionMode::Lossless
+        };
+
         let config = PSTDConfig {
             dt,
             nt: time_steps,
             sensor_mask: Some(sensor_mask.clone()),
             boundary,
             pml_inside,
+            absorption_mode,
+            nonlinearity: enable_nonlinear,
             ..Default::default()
         };
 
@@ -2773,6 +2907,229 @@ impl Simulation {
         })?;
 
         Ok((recorded_data, stats))
+    }
+
+    /// Dispatch GPU-resident PSTD if the `gpu` feature is enabled and GPU is
+    /// available; otherwise fall back to the CPU PSTD implementation.
+    #[allow(clippy::too_many_arguments)]
+    fn run_gpu_pstd_or_cpu_fallback(
+        grid: &KwaversGrid,
+        medium: &MediumInner,
+        time_steps: usize,
+        dt: f64,
+        alpha_coeff_db: f64,
+        alpha_power: f64,
+        grid_source: GridSource,
+        sources: Vec<Box<dyn KwaversSource>>,
+        sensor: Option<&Sensor>,
+        transducer_sensor: Option<&TransducerArray2D>,
+        pml_size: Option<usize>,
+        pml_size_xyz: Option<(usize, usize, usize)>,
+        pml_inside: bool,
+        pml_alpha_xyz: Option<(f64, f64, f64)>,
+        enable_nonlinear: bool,
+        record_modes: &[String],
+    ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
+        #[cfg(feature = "gpu")]
+        {
+            // Attempt GPU path — fall back to CPU on any error.
+            match Self::run_gpu_pstd_impl(
+                grid, medium, time_steps, dt,
+                alpha_coeff_db, alpha_power,
+                &grid_source, sensor, transducer_sensor,
+                pml_size, pml_size_xyz, pml_inside, pml_alpha_xyz,
+            ) {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    eprintln!("[PstdGpu] GPU path failed ({e}), falling back to CPU PSTD");
+                }
+            }
+        }
+        // CPU fallback (always compiled)
+        Self::run_pstd_impl(
+            grid, medium, time_steps, dt,
+            enable_nonlinear, alpha_coeff_db, alpha_power,
+            grid_source, sources, sensor, transducer_sensor,
+            pml_size, pml_size_xyz, pml_inside, pml_alpha_xyz,
+            record_modes,
+        )
+    }
+
+    /// GPU-resident PSTD implementation (requires `gpu` feature).
+    ///
+    /// Builds GPU buffers, runs the PSTD time loop entirely on-GPU, and
+    /// returns sensor pressure data as `(Array2<f64>, None)`.
+    ///
+    /// Limitations (current implementation):
+    /// - Grid dimensions must be power-of-2 and ≤ 256.
+    /// - Absorption (fractional Laplacian) is not yet implemented on GPU.
+    /// - Only the static p_mask / p_signal source is supported.
+    #[cfg(feature = "gpu")]
+    #[allow(clippy::too_many_arguments, unused_variables)]
+    fn run_gpu_pstd_impl(
+        grid: &KwaversGrid,
+        medium: &MediumInner,
+        time_steps: usize,
+        dt: f64,
+        _alpha_coeff_db: f64,
+        _alpha_power: f64,
+        grid_source: &GridSource,
+        sensor: Option<&Sensor>,
+        transducer_sensor: Option<&TransducerArray2D>,
+        pml_size: Option<usize>,
+        pml_size_xyz: Option<(usize, usize, usize)>,
+        pml_inside: bool,
+        pml_alpha_xyz: Option<(f64, f64, f64)>,
+    ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
+        use kwavers::domain::boundary::cpml::profiles::CPMLProfiles;
+        use kwavers::solver::forward::pstd::gpu_pstd::GpuPstdSolver;
+        use ndarray::Array2;
+
+        let nx = grid.nx;
+        let ny = grid.ny;
+        let nz = grid.nz;
+        let total = nx * ny * nz;
+
+        // Power-of-2 and ≤256 check
+        if !nx.is_power_of_two() || !ny.is_power_of_two() || !nz.is_power_of_two() {
+            return Err(KwaversError::Io(std::io::Error::other(format!(
+                "GPU PSTD requires power-of-2 grid dimensions, got {nx}×{ny}×{nz}"
+            ))));
+        }
+        if nx > 256 || ny > 256 || nz > 256 {
+            return Err(KwaversError::Io(std::io::Error::other(format!(
+                "GPU PSTD supports N≤256 per axis, got {nx}×{ny}×{nz}"
+            ))));
+        }
+
+        // ── Build CPML profiles ──────────────────────────────────────────────
+        let min_dim = nx.min(ny).min(nz);
+        let max_allowed = (min_dim.saturating_sub(2)) / 2;
+        let default_thickness = (min_dim / 6).max(2);
+        let thickness = pml_size.unwrap_or(default_thickness).min(max_allowed);
+
+        let cpml_config = if let Some((px, py, pz)) = pml_size_xyz {
+            let mut cfg = CPMLConfig::with_per_dimension_thickness(px, py, pz);
+            if let Some((ax, ay, az)) = pml_alpha_xyz {
+                cfg = cfg.with_alpha_xyz(ax, ay, az);
+            }
+            cfg
+        } else {
+            let mut cfg = CPMLConfig::with_thickness(thickness);
+            if let Some((ax, ay, az)) = pml_alpha_xyz {
+                cfg = cfg.with_alpha_xyz(ax, ay, az);
+            }
+            cfg
+        };
+
+        let c_ref = medium.as_medium().max_sound_speed();
+        let profiles = CPMLProfiles::new(&cpml_config, grid, c_ref, dt)?;
+
+        // ── Broadcast 1D PML arrays to 3D flat (row-major ix*ny*nz + iy*nz + iz) ──
+        let mut pml_sgx_3d = vec![1.0f32; total];
+        let mut pml_sgy_3d = vec![1.0f32; total];
+        let mut pml_sgz_3d = vec![1.0f32; total];
+        let mut pml_x_3d   = vec![1.0f32; total];
+        let mut pml_y_3d   = vec![1.0f32; total];
+        let mut pml_z_3d   = vec![1.0f32; total];
+
+        if pml_inside {
+            for ix in 0..nx {
+                for iy in 0..ny {
+                    for iz in 0..nz {
+                        let flat = ix * ny * nz + iy * nz + iz;
+                        pml_sgx_3d[flat] = profiles.pml_x_sgx[ix] as f32;
+                        pml_sgy_3d[flat] = profiles.pml_y_sgy[iy] as f32;
+                        pml_sgz_3d[flat] = profiles.pml_z_sgz[iz] as f32;
+                        pml_x_3d[flat]   = profiles.pml_x[ix] as f32;
+                        pml_y_3d[flat]   = profiles.pml_y[iy] as f32;
+                        pml_z_3d[flat]   = profiles.pml_z[iz] as f32;
+                    }
+                }
+            }
+        }
+        // If pml_inside=false, PML is outside the domain — all coefficients stay 1.0
+        // (no absorption). TODO: handle exterior PML.
+
+        // ── Medium arrays (f32 flat, row-major ix*ny*nz + iy*nz + iz) ──────────
+        let mut c0_flat   = vec![c_ref as f32; total];
+        let mut rho0_flat = vec![1000.0f32; total];
+        for ix in 0..nx {
+            for iy in 0..ny {
+                for iz in 0..nz {
+                    let flat = ix * ny * nz + iy * nz + iz;
+                    c0_flat[flat]   = medium.as_medium().sound_speed(ix, iy, iz) as f32;
+                    rho0_flat[flat] = medium.as_medium().density(ix, iy, iz) as f32;
+                }
+            }
+        }
+
+        // ── Sensor indices ────────────────────────────────────────────────────
+        let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
+        let mut sensor_indices: Vec<u32> = Vec::new();
+        {
+            let flat = sensor_mask.as_slice().expect("sensor_mask must be C-contiguous");
+            for (i, &v) in flat.iter().enumerate() {
+                if v {
+                    sensor_indices.push(i as u32);
+                }
+            }
+        }
+
+        // ── Source indices and signals ────────────────────────────────────────
+        let n_dim_active = [nx > 1, ny > 1, nz > 1].iter().filter(|&&d| d).count().max(1);
+        let dx_min = grid.dx.min(grid.dy).min(grid.dz);
+        let mass_source_scale = 2.0 * dt / (n_dim_active as f64 * c_ref * dx_min);
+        let density_scale     = n_dim_active as f64 / 3.0;
+        let combined_scale    = (mass_source_scale * density_scale) as f32;
+
+        let mut source_indices: Vec<u32> = Vec::new();
+        let mut source_signals: Vec<f32> = Vec::new();
+
+        if let (Some(p_mask), Some(p_signal)) = (&grid_source.p_mask, &grid_source.p_signal) {
+            // Collect non-zero mask positions
+            let mask_flat = p_mask.as_slice().expect("p_mask must be C-contiguous");
+            for (i, &v) in mask_flat.iter().enumerate() {
+                if v != 0.0 {
+                    source_indices.push(i as u32);
+                }
+            }
+            let n_src = source_indices.len();
+            let n_sig_rows = p_signal.shape()[0];
+            let n_sig_cols = p_signal.shape()[1].min(time_steps);
+
+            // signals layout: [n_src * time_steps] row-major
+            source_signals = vec![0.0f32; n_src * time_steps];
+            for (src_idx, _) in source_indices.iter().enumerate() {
+                let sig_row = if n_sig_rows == 1 { 0 } else { src_idx.min(n_sig_rows - 1) };
+                for step in 0..n_sig_cols {
+                    source_signals[src_idx * time_steps + step] =
+                        (p_signal[[sig_row, step]] * combined_scale as f64) as f32;
+                }
+            }
+        }
+
+        // ── Construct GPU solver (device created internally via with_auto_device) ──
+        let mut solver = GpuPstdSolver::with_auto_device(
+            grid,
+            &c0_flat, &rho0_flat,
+            dt, time_steps, c_ref,
+            &pml_x_3d, &pml_y_3d, &pml_z_3d,
+            &pml_sgx_3d, &pml_sgy_3d, &pml_sgz_3d,
+        ).map_err(|e| KwaversError::Io(std::io::Error::other(e)))?;
+
+        let sensor_data_f32 = solver.run(&sensor_indices, &source_indices, &source_signals);
+
+        // ── Convert Vec<f32> → Array2<f64> shape (n_sensors, time_steps) ─────
+        let n_sensors = sensor_indices.len();
+        let mut out = Array2::<f64>::zeros((n_sensors, time_steps));
+        for s in 0..n_sensors {
+            for t in 0..time_steps {
+                out[[s, t]] = sensor_data_f32[s * time_steps + t] as f64;
+            }
+        }
+
+        Ok((out, None))
     }
 }
 

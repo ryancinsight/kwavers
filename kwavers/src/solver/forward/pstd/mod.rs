@@ -7,6 +7,8 @@ pub mod config;
 pub mod data;
 pub mod derivatives; // Spectral derivatives (NEW)
 pub mod dg;
+#[cfg(feature = "gpu")]
+pub mod gpu_pstd;
 pub mod implementation;
 pub mod numerics;
 pub mod physics;
