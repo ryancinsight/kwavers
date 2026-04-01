@@ -684,9 +684,11 @@ impl GpuPstdSolver {
         // ── Encode time steps: one command buffer per step ────────────────────
         // Each step resets the slot counter to 0, ensuring write_buffer calls
         // for different dispatches go to different param slots (no coalescing).
+        let mut cpu_encode_ns: u64 = 0;
         for step in 0..nt {
             let step_u32 = step as u32;
             let mut slot = 0usize;
+            let cpu_t0 = std::time::Instant::now();
             let mut encoder = self.device.create_command_encoder(
                 &wgpu::CommandEncoderDescriptor { label: Some("pstd_step") }
             );
@@ -750,10 +752,21 @@ impl GpuPstdSolver {
 
             // Submit per-step encoder
             self.queue.submit(std::iter::once(encoder.finish()));
+            cpu_encode_ns += cpu_t0.elapsed().as_nanos() as u64;
         } // end time loop
 
         // Wait for all GPU work to complete before reading sensor data
+        let gpu_t0 = std::time::Instant::now();
         self.device.poll(wgpu::Maintain::Wait);
+        let gpu_wait_ns = gpu_t0.elapsed().as_nanos() as u64;
+        let _ = (cpu_encode_ns, gpu_wait_ns); // suppress unused warning in non-test builds
+        #[cfg(test)]
+        eprintln!(
+            "  CPU encode: {:.1}ms total ({:.2}ms/step), GPU poll-wait: {:.1}ms",
+            cpu_encode_ns as f64 / 1e6,
+            cpu_encode_ns as f64 / 1e6 / nt as f64,
+            gpu_wait_ns as f64 / 1e6,
+        );
 
         // ── Download sensor data ──────────────────────────────────────────────
         if n_sensors == 0 {
@@ -1021,5 +1034,68 @@ mod tests {
             max_val.is_finite(),
             "sensor data contains non-finite values"
         );
+    }
+
+    /// Benchmark: measure GPU PSTD steps/second for a 256×128×128 grid.
+    /// This matches the B-mode example grid. Run with:
+    ///   cargo test --lib --features gpu -p kwavers bench_gpu_pstd -- --nocapture
+    #[test]
+    fn bench_gpu_pstd_bmode_grid() {
+        let nx = 256usize;
+        let ny = 128usize;
+        let nz = 128usize;
+        let dx = 1.48e-4_f64;  // ~0.148mm, typical B-mode
+        let c0 = 1500.0_f64;
+        let dt = 0.3 * dx / c0;
+        let nt = 50;  // measure 50 steps
+        let total = nx * ny * nz;
+
+        let solver = GpuPstdSolver::with_auto_device(
+            &crate::domain::grid::Grid::new(nx, ny, nz, dx, dx, dx).unwrap(),
+            &vec![c0 as f32; total],
+            &vec![1000.0f32; total],
+            dt, nt, c0,
+            &vec![1.0f32; total],
+            &vec![1.0f32; total],
+            &vec![1.0f32; total],
+            &vec![1.0f32; total],
+            &vec![1.0f32; total],
+            &vec![1.0f32; total],
+        );
+
+        let Some(mut solver) = solver.ok() else {
+            eprintln!("No GPU adapter — skipping benchmark");
+            return;
+        };
+
+        // Sensor at grid center
+        let sns = (nx/2) * ny * nz + (ny/2) * nz + (nz/2);
+        let src = (nx/4) * ny * nz + (ny/2) * nz + (nz/2);
+        let sigs: Vec<f32> = (0..nt).map(|i| (i as f32 / nt as f32).sin()).collect();
+
+        let t0 = std::time::Instant::now();
+        let data = solver.run(&[sns as u32], &[src as u32], &sigs);
+        let elapsed = t0.elapsed();
+
+        let ms_per_step = elapsed.as_secs_f64() * 1000.0 / nt as f64;
+        let steps_per_sec = nt as f64 / elapsed.as_secs_f64();
+        eprintln!(
+            "GPU PSTD 256×128×128: {nt} steps in {:.1}ms total = {:.2}ms/step = {:.1} steps/sec",
+            elapsed.as_millis(), ms_per_step, steps_per_sec
+        );
+        // Accurate B-mode estimate: sensor download (~45ms) is a one-time cost per
+        // run() call, not per step. Subtract it before extrapolating, then add back once.
+        let sensor_dl_ms = 45.0_f64;  // empirical one-time download per run() call
+        let compute_ms_per_step = (elapsed.as_secs_f64() * 1000.0 - sensor_dl_ms) / nt as f64;
+        let scan_line_ms = 1586.0 * compute_ms_per_step + sensor_dl_ms;
+        eprintln!(
+            "Estimated B-mode scan line (1586 steps): {:.1}s  (compute {:.2}ms/step + {:.0}ms download)",
+            scan_line_ms / 1000.0, compute_ms_per_step, sensor_dl_ms
+        );
+        eprintln!(
+            "Estimated 16 scan lines: {:.2}min  (vs 5.00min target)",
+            16.0 * scan_line_ms / 60000.0
+        );
+        assert!(!data.is_empty());
     }
 }

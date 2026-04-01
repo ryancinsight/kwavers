@@ -211,14 +211,19 @@ fn shift_im(ax_code: u32, idx: u32, nx: u32, ny: u32) -> f32 {
 //
 // Shared-memory batched 1D Cooley-Tukey FFT.
 // One workgroup per batch (params.n_batches total workgroups).
-// Workgroup size: 128 threads.
-// Operates on kspace_re / kspace_im in-place.
+// Workgroup size: 64 threads.
+//   - For n=128 (Y/Z axes, half_n=64): each thread handles exactly 1 butterfly
+//     per stage → 100% active thread utilization.
+//   - For n=256 (X axis, half_n=128): each thread handles 2 butterflies per
+//     stage via the stride-64 inner loop → 2× warps in flight per stage.
+// The 64-thread workgroup also doubles SM occupancy vs 128 threads for n=128
+// cases, improving latency hiding on shared-memory bank conflicts.
 //
 // axis selects the transform dimension:
 //   axis=0 (X): stride=ny*nz, batch_id indexes (iy, iz) pairs
 //   axis=1 (Y): stride=nz,    batch_id indexes (ix, iz) pairs
 //   axis=2 (Z): stride=1,     batch_id indexes (ix, iy) pairs
-@compute @workgroup_size(128, 1, 1)
+@compute @workgroup_size(64, 1, 1)
 fn fft_1d_smem(
     @builtin(local_invocation_id) lid: vec3<u32>,
     @builtin(workgroup_id)        wid: vec3<u32>,
@@ -265,7 +270,7 @@ fn fft_1d_smem(
         let flat = batch_base + rev_idx * stride;
         sm_re[load_idx] = kspace_re[flat];
         sm_im[load_idx] = kspace_im[flat];
-        load_idx += 128u;
+        load_idx += 64u;
     }
 
     workgroupBarrier();
@@ -304,7 +309,7 @@ fn fft_1d_smem(
             sm_re[odd]  = e_re - wo_re;
             sm_im[odd]  = e_im - wo_im;
 
-            tid += 128u;
+            tid += 64u;
         }
         s += 1u;
         workgroupBarrier();
@@ -318,7 +323,7 @@ fn fft_1d_smem(
             if tid2 >= n { break; }
             sm_re[tid2] *= inv_n;
             sm_im[tid2] *= inv_n;
-            tid2 += 128u;
+            tid2 += 64u;
         }
         workgroupBarrier();
     }
@@ -330,7 +335,7 @@ fn fft_1d_smem(
         let flat = batch_base + write_idx * stride;
         kspace_re[flat] = sm_re[write_idx];
         kspace_im[flat] = sm_im[write_idx];
-        write_idx += 128u;
+        write_idx += 64u;
     }
 }
 
