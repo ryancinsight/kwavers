@@ -57,26 +57,11 @@ test_octree
 *.csv
 *.html
 *.log
+!requirements.txt
 
-# Build logs and error files (Sprint Audit 2025-01-10)
-errors.txt
-baseline_*.log
-baseline_*.txt
-build_log*.txt
-build_errors.txt
-check_tests.log
-test_errors.txt
-check_errors*.txt
-check_output*.txt
-build_phase*.log
-migration_*.log
-phase_*.log
-
-# Root build/test logs
-build_log*.txt
-build_errors.txt
-check_tests.log
-test_errors.txt
+# All txt files except requirements
+*.txt
+!requirements.txt
 
 # k-Wave example replication output directories
 kwave_replication_outputs_*/
