@@ -4,3 +4,6 @@
 [submodule "gaia"]
 	path = gaia
 	url = https://github.com/ryancinsight/gaia
+[submodule "apollo"]
+	path = apollo
+	url = https://github.com/ryancinsight/apollofft.git
