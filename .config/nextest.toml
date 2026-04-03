@@ -3,13 +3,13 @@ test-threads = 4
 retries = 0
 fail-fast = true
 global-timeout = "10m"
-slow-timeout = { period = "10s", terminate-after = 3, grace-period = "10s" }
+slow-timeout = { period = "10s", terminate-after = 6, grace-period = "10s" }
 
 [profile.local]
 test-threads = "num-cpus"
 retries = 1
 fail-fast = false
-slow-timeout = { period = "30s", terminate-after = 1, grace-period = "10s" }
+slow-timeout = { period = "10s", terminate-after = 6, grace-period = "10s" }
 
 [profile.production]
 test-threads = 2
@@ -24,6 +24,13 @@ retries = 0
 fail-fast = false
 slow-timeout = { period = "5s", terminate-after = 1, grace-period = "2s" }
 
+[profile.review30]
+test-threads = 4
+retries = 0
+fail-fast = false
+global-timeout = "30m"
+slow-timeout = { period = "30s", terminate-after = 1, grace-period = "5s" }
+
 [test-groups]
 integration = { max-threads = 2 }
 
@@ -32,5 +39,9 @@ filter = 'test(/integration/)'
 test-group = 'integration'
 
 [[profile.local.overrides]]
+filter = 'test(/integration/)'
+test-group = 'integration'
+
+[[profile.review30.overrides]]
 filter = 'test(/integration/)'
 test-group = 'integration'

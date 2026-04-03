@@ -67,12 +67,38 @@ License: MIT
 Repository: https://github.com/ryancinsight/kwavers
 """
 
+import importlib.machinery
+import importlib.util
+import os
+import sys
+from pathlib import Path
+
 # Import Rust extension module
+_extension_override = os.getenv("PYKWAVERS_EXTENSION_PATH")
+if _extension_override:
+    _extension_path = Path(_extension_override).expanduser().resolve()
+    _loader = importlib.machinery.ExtensionFileLoader(
+        f"{__name__}._pykwavers",
+        str(_extension_path),
+    )
+    _spec = importlib.util.spec_from_loader(
+        f"{__name__}._pykwavers",
+        _loader,
+        origin=str(_extension_path),
+    )
+    if _spec is None:
+        raise ImportError(f"Failed to create module spec for {_extension_path}")
+    _module = importlib.util.module_from_spec(_spec)
+    sys.modules[f"{__name__}._pykwavers"] = _module
+    _loader.exec_module(_module)
+
 # Import Python submodules for comparison and validation
 from . import comparison, kwave_bridge, kwave_python_bridge
+from .parity_targets import PARITY_THRESHOLDS, evaluate_parity
 from ._pykwavers import (
     # Core classes
     Grid,
+    GpuPstdSession,
     Medium,
     Sensor,
     Simulation,
@@ -339,6 +365,7 @@ def grid2cart(
 __all__ = [
     # Core classes
     "Grid",
+    "GpuPstdSession",
     "Medium",
     "Source",
     "TransducerArray2D",

@@ -51,13 +51,13 @@
 //! Date: 2026-02-04
 //! Sprint: 217 Session 9 - Python Integration via PyO3
 
+use kwavers::domain::sensor::recorder::config::RecordingMode;
+use kwavers::domain::sensor::recorder::pressure_statistics::SampledStatistics;
+use kwavers::domain::sensor::recorder::simple::SensorRecorder;
 use numpy::{PyArray1, PyArray2, PyArray3, PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::PyAny;
-use kwavers::domain::sensor::recorder::pressure_statistics::SampledStatistics;
-use kwavers::domain::sensor::recorder::config::RecordingMode;
-use kwavers::domain::sensor::recorder::simple::SensorRecorder;
+use pyo3::types::{PyAny, PyDict};
 
 // Re-exports from kwavers core
 use kwavers::core::error::{KwaversError, KwaversResult};
@@ -77,9 +77,9 @@ use kwavers::domain::source::wavefront::plane_wave::{
     InjectionMode, PlaneWaveConfig, PlaneWaveSource,
 };
 use kwavers::domain::source::{GridSource, Source as KwaversSource, SourceField};
+use kwavers::physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers::solver::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
 use kwavers::solver::forward::fdtd::solver::FdtdSolver;
-use kwavers::physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers::solver::forward::pstd::config::PSTDConfig;
 use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers::solver::interface::solver::Solver as SolverTrait;
@@ -98,6 +98,47 @@ mod utils_bindings;
 /// Convert kwavers errors to Python exceptions
 fn kwavers_error_to_py(err: KwaversError) -> PyErr {
     PyRuntimeError::new_err(format!("kwavers error: {}", err))
+}
+
+/// Convert k-Wave absorption units dB/(MHz^y·cm) to Np/m at the given frequency.
+///
+/// This follows the standard scalar conversion
+/// `alpha_np_m = alpha_db_cm * f_mhz^y * 100 / (20 / ln(10))`.
+/// It is used by the GPU PSTD paths, which currently apply absorption using a
+/// centre-frequency attenuation model rather than the full spectral Treeby/Cox
+/// formulation used by the CPU PSTD solver.
+fn alpha_db_cm_to_np_m(alpha_db_cm: f64, frequency_mhz: f64, alpha_power: f64) -> f64 {
+    let db_to_np = 20.0 / std::f64::consts::LN_10;
+    alpha_db_cm * frequency_mhz.powf(alpha_power) * 100.0 / db_to_np
+}
+
+#[cfg(test)]
+mod physics_unit_tests {
+    use super::alpha_db_cm_to_np_m;
+
+    #[test]
+    fn test_alpha_db_cm_to_np_m_matches_scalar_reference_at_1mhz() {
+        let alpha_db_cm = 0.75;
+        let got = alpha_db_cm_to_np_m(alpha_db_cm, 1.0, 1.5);
+        let expected = alpha_db_cm * 100.0 / (20.0 / std::f64::consts::LN_10);
+        assert!(
+            (got - expected).abs() < 1e-12,
+            "conversion mismatch: got {got}, expected {expected}"
+        );
+    }
+
+    #[test]
+    fn test_alpha_db_cm_to_np_m_respects_power_law_frequency_scaling() {
+        let alpha_db_cm = 0.5;
+        let at_1mhz = alpha_db_cm_to_np_m(alpha_db_cm, 1.0, 1.5);
+        let at_2mhz = alpha_db_cm_to_np_m(alpha_db_cm, 2.0, 1.5);
+        let expected_ratio = 2.0_f64.powf(1.5);
+        let got_ratio = at_2mhz / at_1mhz;
+        assert!(
+            (got_ratio - expected_ratio).abs() < 1e-12,
+            "power-law scaling mismatch: got {got_ratio}, expected {expected_ratio}"
+        );
+    }
 }
 
 // ============================================================================
@@ -133,9 +174,9 @@ impl SolverType {
     /// String representation.
     fn __repr__(&self) -> String {
         match self {
-            SolverType::FDTD    => "SolverType.FDTD".to_string(),
-            SolverType::PSTD    => "SolverType.PSTD".to_string(),
-            SolverType::Hybrid  => "SolverType.Hybrid".to_string(),
+            SolverType::FDTD => "SolverType.FDTD".to_string(),
+            SolverType::PSTD => "SolverType.PSTD".to_string(),
+            SolverType::Hybrid => "SolverType.Hybrid".to_string(),
             SolverType::PstdGpu => "SolverType.PstdGpu".to_string(),
         }
     }
@@ -143,9 +184,9 @@ impl SolverType {
     /// Human-readable string.
     fn __str__(&self) -> String {
         match self {
-            SolverType::FDTD    => "FDTD".to_string(),
-            SolverType::PSTD    => "PSTD".to_string(),
-            SolverType::Hybrid  => "Hybrid".to_string(),
+            SolverType::FDTD => "FDTD".to_string(),
+            SolverType::PSTD => "PSTD".to_string(),
+            SolverType::Hybrid => "Hybrid".to_string(),
             SolverType::PstdGpu => "PstdGpu".to_string(),
         }
     }
@@ -1256,7 +1297,8 @@ impl KWaveArray {
         start_angle: f64,
         end_angle: f64,
     ) {
-        self.inner.add_arc_element_with_angles(position, radius, diameter, start_angle, end_angle);
+        self.inner
+            .add_arc_element_with_angles(position, radius, diameter, start_angle, end_angle);
     }
 
     /// Add a rectangular element.
@@ -1268,7 +1310,8 @@ impl KWaveArray {
     /// dims : tuple[float, float, float]
     ///     Dimensions [width, height, length] in meters
     fn add_rect_element(&mut self, position: (f64, f64, f64), dims: (f64, f64, f64)) {
-        self.inner.add_rect_element(position, dims.0, dims.1, dims.2);
+        self.inner
+            .add_rect_element(position, dims.0, dims.1, dims.2);
     }
 
     /// Add a bowl-shaped element (focused transducer).
@@ -2415,62 +2458,58 @@ impl Simulation {
                     enable_nonlinear,
                     &sensor_record_modes,
                 ),
-                SolverType::PSTD | SolverType::Hybrid => {
-                    Self::run_pstd_impl(
-                        &grid_clone,
-                        &medium_clone,
-                        time_steps,
-                        dt_actual,
-                        enable_nonlinear,
-                        alpha_coeff,
-                        alpha_power,
-                        grid_source,
-                        dynamic_sources,
-                        sensor_opt.as_ref(),
-                        transducer_sensor_opt.as_ref(),
-                        pml_size,
-                        pml_size_xyz,
-                        pml_inside,
-                        pml_alpha_xyz,
-                        &sensor_record_modes,
-                    )
-                }
-                SolverType::PstdGpu => {
-                    Self::run_gpu_pstd_or_cpu_fallback(
-                        &grid_clone,
-                        &medium_clone,
-                        time_steps,
-                        dt_actual,
-                        alpha_coeff,
-                        alpha_power,
-                        grid_source,
-                        dynamic_sources,
-                        sensor_opt.as_ref(),
-                        transducer_sensor_opt.as_ref(),
-                        pml_size,
-                        pml_size_xyz,
-                        pml_inside,
-                        pml_alpha_xyz,
-                        enable_nonlinear,
-                        &sensor_record_modes,
-                    )
-                }
+                SolverType::PSTD | SolverType::Hybrid => Self::run_pstd_impl(
+                    &grid_clone,
+                    &medium_clone,
+                    time_steps,
+                    dt_actual,
+                    enable_nonlinear,
+                    alpha_coeff,
+                    alpha_power,
+                    grid_source,
+                    dynamic_sources,
+                    sensor_opt.as_ref(),
+                    transducer_sensor_opt.as_ref(),
+                    pml_size,
+                    pml_size_xyz,
+                    pml_inside,
+                    pml_alpha_xyz,
+                    &sensor_record_modes,
+                ),
+                SolverType::PstdGpu => Self::run_gpu_pstd_or_cpu_fallback(
+                    &grid_clone,
+                    &medium_clone,
+                    time_steps,
+                    dt_actual,
+                    alpha_coeff,
+                    alpha_power,
+                    grid_source,
+                    dynamic_sources,
+                    sensor_opt.as_ref(),
+                    transducer_sensor_opt.as_ref(),
+                    pml_size,
+                    pml_size_xyz,
+                    pml_inside,
+                    pml_alpha_xyz,
+                    enable_nonlinear,
+                    &sensor_record_modes,
+                ),
             })
             .map_err(kwavers_error_to_py)?;
 
         // Convert optional stats to numpy arrays
-        let p_max = stats_opt.as_ref().map(|s| {
-            PyArray1::from_owned_array(py, s.p_max.clone()).into()
-        });
-        let p_min = stats_opt.as_ref().map(|s| {
-            PyArray1::from_owned_array(py, s.p_min.clone()).into()
-        });
-        let p_rms = stats_opt.as_ref().map(|s| {
-            PyArray1::from_owned_array(py, s.p_rms.clone()).into()
-        });
-        let p_final = stats_opt.as_ref().map(|s| {
-            PyArray1::from_owned_array(py, s.p_final.clone()).into()
-        });
+        let p_max = stats_opt
+            .as_ref()
+            .map(|s| PyArray1::from_owned_array(py, s.p_max.clone()).into());
+        let p_min = stats_opt
+            .as_ref()
+            .map(|s| PyArray1::from_owned_array(py, s.p_min.clone()).into());
+        let p_rms = stats_opt
+            .as_ref()
+            .map(|s| PyArray1::from_owned_array(py, s.p_rms.clone()).into());
+        let p_final = stats_opt
+            .as_ref()
+            .map(|s| PyArray1::from_owned_array(py, s.p_final.clone()).into());
 
         // Return 1D array for single sensor, 2D for multi-sensor
         let n_sensors = sensor_data_2d.nrows();
@@ -2488,6 +2527,7 @@ impl Simulation {
                 sensor_data_2d: None,
                 time: time_arr,
                 shape,
+                sensor_data_shape: (1, time_steps),
                 time_steps,
                 dt: dt_actual,
                 final_time: dt_actual * time_steps as f64,
@@ -2503,6 +2543,7 @@ impl Simulation {
                 sensor_data_2d: Some(PyArray2::from_owned_array(py, sensor_data_2d).into()),
                 time: time_arr,
                 shape,
+                sensor_data_shape: (n_sensors, time_steps),
                 time_steps,
                 dt: dt_actual,
                 final_time: dt_actual * time_steps as f64,
@@ -2668,6 +2709,19 @@ impl Simulation {
             .collect()
     }
 
+    /// Trim the initial `t=0` recorder column when a backend stores `Nt+1`
+    /// samples but the Python-facing API contract is exactly `time_steps`.
+    fn trim_initial_recorder_sample(
+        recorded_data: ndarray::Array2<f64>,
+        time_steps: usize,
+    ) -> ndarray::Array2<f64> {
+        if recorded_data.ncols() > time_steps {
+            recorded_data.slice(ndarray::s![.., 1..]).to_owned()
+        } else {
+            recorded_data
+        }
+    }
+
     /// Run FDTD simulation (internal).
     #[allow(clippy::too_many_arguments)]
     fn run_fdtd_impl(
@@ -2715,16 +2769,11 @@ impl Simulation {
         let modes = Self::recording_modes_from_strings(record_modes);
         if !modes.is_empty() {
             let shape = (grid.nx, grid.ny, grid.nz);
-            solver.sensor_recorder = SensorRecorder::with_modes(
-                Some(&sensor_mask),
-                shape,
-                time_steps + 1,
-                &modes,
-            )?;
+            solver.sensor_recorder =
+                SensorRecorder::with_modes(Some(&sensor_mask), shape, time_steps + 1, &modes)?;
         } else if let Some(ordered) = transducer_ordered_indices {
             // Transducer override (no stats)
-            solver.sensor_recorder =
-                SensorRecorder::from_ordered_indices(ordered, time_steps + 1)?;
+            solver.sensor_recorder = SensorRecorder::from_ordered_indices(ordered, time_steps + 1)?;
         }
 
         // Enable CPML boundary if requested
@@ -2761,11 +2810,7 @@ impl Simulation {
         let full_data = solver.extract_recorded_sensor_data().ok_or_else(|| {
             kwavers::core::error::KwaversError::Io(std::io::Error::other("No sensor data recorded"))
         })?;
-        let recorded_data = if full_data.ncols() > time_steps {
-            full_data.slice(ndarray::s![.., 1..]).to_owned()
-        } else {
-            full_data
-        };
+        let recorded_data = Self::trim_initial_recorder_sample(full_data, time_steps);
 
         Ok((recorded_data, stats))
     }
@@ -2845,21 +2890,21 @@ impl Simulation {
         // back to dB/(MHz^y·cm) units for the spectral operator which uses rad/m wavenumbers.
         // For y=1.5: (1e-6/(2π))^1.5 ≈ 6.35e-11, giving alpha_0 ≈ 3.65e-10 Np/((rad/s)^1.5·m).
         // Verification: alpha_0 * (2π*1e6)^1.5 * 0.01m = 0.5 dB/cm ✓ for alpha=0.5, f=1 MHz.
-        let absorption_mode = if effective_alpha_db > 0.0
-            && (effective_alpha_power - 1.0).abs() > 1e-12
-        {
-            // 20 * log10(e) = 20 / ln(10) ≈ 8.6859
-            let twenty_log10_e = 20.0 / std::f64::consts::LN_10;
-            let dbn = 100.0 * effective_alpha_db
-                * (1e-6 / (2.0 * std::f64::consts::PI)).powf(effective_alpha_power)
-                / twenty_log10_e;
-            AbsorptionMode::PowerLaw {
-                alpha_coeff: dbn,
-                alpha_power: effective_alpha_power,
-            }
-        } else {
-            AbsorptionMode::Lossless
-        };
+        let absorption_mode =
+            if effective_alpha_db > 0.0 && (effective_alpha_power - 1.0).abs() > 1e-12 {
+                // 20 * log10(e) = 20 / ln(10) ≈ 8.6859
+                let twenty_log10_e = 20.0 / std::f64::consts::LN_10;
+                let dbn = 100.0
+                    * effective_alpha_db
+                    * (1e-6 / (2.0 * std::f64::consts::PI)).powf(effective_alpha_power)
+                    / twenty_log10_e;
+                AbsorptionMode::PowerLaw {
+                    alpha_coeff: dbn,
+                    alpha_power: effective_alpha_power,
+                }
+            } else {
+                AbsorptionMode::Lossless
+            };
 
         let config = PSTDConfig {
             dt,
@@ -2879,16 +2924,11 @@ impl Simulation {
         let modes = Self::recording_modes_from_strings(record_modes);
         if !modes.is_empty() {
             let shape = (grid.nx, grid.ny, grid.nz);
-            solver.sensor_recorder = SensorRecorder::with_modes(
-                Some(&sensor_mask),
-                shape,
-                time_steps + 1,
-                &modes,
-            )?;
+            solver.sensor_recorder =
+                SensorRecorder::with_modes(Some(&sensor_mask), shape, time_steps + 1, &modes)?;
         } else if let Some(ordered) = transducer_ordered_indices {
             // Transducer override (no stats)
-            solver.sensor_recorder =
-                SensorRecorder::from_ordered_indices(ordered, time_steps + 1)?;
+            solver.sensor_recorder = SensorRecorder::from_ordered_indices(ordered, time_steps + 1)?;
         }
 
         for source in sources {
@@ -2901,10 +2941,12 @@ impl Simulation {
         // Extract statistics before consuming recorder
         let stats = solver.sensor_recorder.extract_all_stats();
 
-        // Extract recorded time series: shape (n_sensors, n_timesteps)
-        let recorded_data = solver.extract_pressure_data().ok_or_else(|| {
+        // Extract recorded time series: solver stores Nt+1 columns when the
+        // initial state is recorded, but the Python API returns exactly Nt.
+        let full_data = solver.extract_pressure_data().ok_or_else(|| {
             kwavers::core::error::KwaversError::Io(std::io::Error::other("No sensor data recorded"))
         })?;
+        let recorded_data = Self::trim_initial_recorder_sample(full_data, time_steps);
 
         Ok((recorded_data, stats))
     }
@@ -2934,10 +2976,19 @@ impl Simulation {
         {
             // Attempt GPU path — fall back to CPU on any error.
             match Self::run_gpu_pstd_impl(
-                grid, medium, time_steps, dt,
-                alpha_coeff_db, alpha_power,
-                &grid_source, sensor, transducer_sensor,
-                pml_size, pml_size_xyz, pml_inside, pml_alpha_xyz,
+                grid,
+                medium,
+                time_steps,
+                dt,
+                alpha_coeff_db,
+                alpha_power,
+                &grid_source,
+                sensor,
+                transducer_sensor,
+                pml_size,
+                pml_size_xyz,
+                pml_inside,
+                pml_alpha_xyz,
             ) {
                 Ok(result) => return Ok(result),
                 Err(e) => {
@@ -2947,10 +2998,21 @@ impl Simulation {
         }
         // CPU fallback (always compiled)
         Self::run_pstd_impl(
-            grid, medium, time_steps, dt,
-            enable_nonlinear, alpha_coeff_db, alpha_power,
-            grid_source, sources, sensor, transducer_sensor,
-            pml_size, pml_size_xyz, pml_inside, pml_alpha_xyz,
+            grid,
+            medium,
+            time_steps,
+            dt,
+            enable_nonlinear,
+            alpha_coeff_db,
+            alpha_power,
+            grid_source,
+            sources,
+            sensor,
+            transducer_sensor,
+            pml_size,
+            pml_size_xyz,
+            pml_inside,
+            pml_alpha_xyz,
             record_modes,
         )
     }
@@ -2971,8 +3033,8 @@ impl Simulation {
         medium: &MediumInner,
         time_steps: usize,
         dt: f64,
-        _alpha_coeff_db: f64,
-        _alpha_power: f64,
+        alpha_coeff_db: f64,
+        alpha_power: f64,
         grid_source: &GridSource,
         sensor: Option<&Sensor>,
         transducer_sensor: Option<&TransducerArray2D>,
@@ -2981,7 +3043,7 @@ impl Simulation {
         pml_inside: bool,
         pml_alpha_xyz: Option<(f64, f64, f64)>,
     ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
-        use kwavers::domain::boundary::cpml::profiles::CPMLProfiles;
+        use kwavers::domain::boundary::cpml::CPMLProfiles;
         use kwavers::solver::forward::pstd::gpu_pstd::GpuPstdSolver;
         use ndarray::Array2;
 
@@ -3029,9 +3091,9 @@ impl Simulation {
         let mut pml_sgx_3d = vec![1.0f32; total];
         let mut pml_sgy_3d = vec![1.0f32; total];
         let mut pml_sgz_3d = vec![1.0f32; total];
-        let mut pml_x_3d   = vec![1.0f32; total];
-        let mut pml_y_3d   = vec![1.0f32; total];
-        let mut pml_z_3d   = vec![1.0f32; total];
+        let mut pml_x_3d = vec![1.0f32; total];
+        let mut pml_y_3d = vec![1.0f32; total];
+        let mut pml_z_3d = vec![1.0f32; total];
 
         if pml_inside {
             for ix in 0..nx {
@@ -3041,9 +3103,9 @@ impl Simulation {
                         pml_sgx_3d[flat] = profiles.pml_x_sgx[ix] as f32;
                         pml_sgy_3d[flat] = profiles.pml_y_sgy[iy] as f32;
                         pml_sgz_3d[flat] = profiles.pml_z_sgz[iz] as f32;
-                        pml_x_3d[flat]   = profiles.pml_x[ix] as f32;
-                        pml_y_3d[flat]   = profiles.pml_y[iy] as f32;
-                        pml_z_3d[flat]   = profiles.pml_z[iz] as f32;
+                        pml_x_3d[flat] = profiles.pml_x[ix] as f32;
+                        pml_y_3d[flat] = profiles.pml_y[iy] as f32;
+                        pml_z_3d[flat] = profiles.pml_z[iz] as f32;
                     }
                 }
             }
@@ -3052,13 +3114,13 @@ impl Simulation {
         // (no absorption). TODO: handle exterior PML.
 
         // ── Medium arrays (f32 flat, row-major ix*ny*nz + iy*nz + iz) ──────────
-        let mut c0_flat   = vec![c_ref as f32; total];
+        let mut c0_flat = vec![c_ref as f32; total];
         let mut rho0_flat = vec![1000.0f32; total];
         for ix in 0..nx {
             for iy in 0..ny {
                 for iz in 0..nz {
                     let flat = ix * ny * nz + iy * nz + iz;
-                    c0_flat[flat]   = medium.as_medium().sound_speed(ix, iy, iz) as f32;
+                    c0_flat[flat] = medium.as_medium().sound_speed(ix, iy, iz) as f32;
                     rho0_flat[flat] = medium.as_medium().density(ix, iy, iz) as f32;
                 }
             }
@@ -3068,7 +3130,9 @@ impl Simulation {
         let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
         let mut sensor_indices: Vec<u32> = Vec::new();
         {
-            let flat = sensor_mask.as_slice().expect("sensor_mask must be C-contiguous");
+            let flat = sensor_mask
+                .as_slice()
+                .expect("sensor_mask must be C-contiguous");
             for (i, &v) in flat.iter().enumerate() {
                 if v {
                     sensor_indices.push(i as u32);
@@ -3077,11 +3141,15 @@ impl Simulation {
         }
 
         // ── Source indices and signals ────────────────────────────────────────
-        let n_dim_active = [nx > 1, ny > 1, nz > 1].iter().filter(|&&d| d).count().max(1);
+        let n_dim_active = [nx > 1, ny > 1, nz > 1]
+            .iter()
+            .filter(|&&d| d)
+            .count()
+            .max(1);
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
         let mass_source_scale = 2.0 * dt / (n_dim_active as f64 * c_ref * dx_min);
-        let density_scale     = n_dim_active as f64 / 3.0;
-        let combined_scale    = (mass_source_scale * density_scale) as f32;
+        let density_scale = n_dim_active as f64 / 3.0;
+        let combined_scale = (mass_source_scale * density_scale) as f32;
 
         let mut source_indices: Vec<u32> = Vec::new();
         let mut source_signals: Vec<f32> = Vec::new();
@@ -3101,7 +3169,11 @@ impl Simulation {
             // signals layout: [n_src * time_steps] row-major
             source_signals = vec![0.0f32; n_src * time_steps];
             for (src_idx, _) in source_indices.iter().enumerate() {
-                let sig_row = if n_sig_rows == 1 { 0 } else { src_idx.min(n_sig_rows - 1) };
+                let sig_row = if n_sig_rows == 1 {
+                    0
+                } else {
+                    src_idx.min(n_sig_rows - 1)
+                };
                 for step in 0..n_sig_cols {
                     source_signals[src_idx * time_steps + step] =
                         (p_signal[[sig_row, step]] * combined_scale as f64) as f32;
@@ -3109,16 +3181,101 @@ impl Simulation {
             }
         }
 
+        // ── Velocity-x source indices and signals ─────────────────────────────
+        let mut vel_x_indices: Vec<u32> = Vec::new();
+        let mut vel_x_signals: Vec<f32> = Vec::new();
+
+        if let (Some(u_mask), Some(u_signal)) = (&grid_source.u_mask, &grid_source.u_signal) {
+            // u_signal shape: [3, num_sources, time_steps]; axis 0 = ux
+            let mask_flat = u_mask.as_slice().expect("u_mask must be C-contiguous");
+            for (i, &v) in mask_flat.iter().enumerate() {
+                if v != 0.0 {
+                    vel_x_indices.push(i as u32);
+                }
+            }
+            let n_vel = vel_x_indices.len();
+            let n_sig_srcs = u_signal.shape()[1];
+            let n_sig_cols = u_signal.shape()[2].min(time_steps);
+
+            // signals layout: [n_vel * time_steps] row-major; read ux component (axis 0)
+            vel_x_signals = vec![0.0f32; n_vel * time_steps];
+            for src_idx in 0..n_vel {
+                let sig_row = src_idx.min(n_sig_srcs.saturating_sub(1));
+                for step in 0..n_sig_cols {
+                    vel_x_signals[src_idx * time_steps + step] =
+                        u_signal[[0, sig_row, step]] as f32;
+                }
+            }
+        }
+
+        // ── Physics flags ─────────────────────────────────────────────────────
+        // Check first voxel; works correctly for homogeneous media.
+        // Heterogeneous media with spatially-varying properties handled per-voxel below.
+        let has_nonlinear = medium.as_medium().nonlinearity(0, 0, 0) > 0.0;
+        let has_absorption = alpha_coeff_db > 0.0;
+
+        // ── BonA: B/(2A) per voxel ────────────────────────────────────────────
+        let bon_a_flat: Vec<f32> = if has_nonlinear {
+            (0..total)
+                .map(|flat| {
+                    let ix = flat / (ny * nz);
+                    let iy = (flat % (ny * nz)) / nz;
+                    let iz = flat % nz;
+                    // k-Wave stores BonA as B/A; pressure EOS needs B/(2A)
+                    (medium.as_medium().nonlinearity(ix, iy, iz) / 2.0) as f32
+                })
+                .collect()
+        } else {
+            vec![0.0f32; total]
+        };
+
+        // ── Alpha decay: exp(-alpha_Np_m * c0 * dt) per voxel ────────────────
+        // Frequency-centred approximation at 1 MHz (centre frequency).
+        let alpha_decay_flat: Vec<f32> = if has_absorption {
+            let f0_mhz = 1.0_f64; // 1 MHz centre frequency approximation
+            (0..total)
+                .map(|flat| {
+                    let ix = flat / (ny * nz);
+                    let iy = (flat % (ny * nz)) / nz;
+                    let iz = flat % nz;
+                    let alpha_db_cm = medium.as_medium().absorption(ix, iy, iz);
+                    let alpha_np_m = alpha_db_cm_to_np_m(alpha_db_cm, f0_mhz, alpha_power);
+                    let c0_local = medium.as_medium().sound_speed(ix, iy, iz);
+                    ((-alpha_np_m * c0_local * dt).exp()) as f32
+                })
+                .collect()
+        } else {
+            vec![1.0f32; total]
+        };
+
         // ── Construct GPU solver (device created internally via with_auto_device) ──
         let mut solver = GpuPstdSolver::with_auto_device(
             grid,
-            &c0_flat, &rho0_flat,
-            dt, time_steps, c_ref,
-            &pml_x_3d, &pml_y_3d, &pml_z_3d,
-            &pml_sgx_3d, &pml_sgy_3d, &pml_sgz_3d,
-        ).map_err(|e| KwaversError::Io(std::io::Error::other(e)))?;
+            &c0_flat,
+            &rho0_flat,
+            dt,
+            time_steps,
+            c_ref,
+            &pml_x_3d,
+            &pml_y_3d,
+            &pml_z_3d,
+            &pml_sgx_3d,
+            &pml_sgy_3d,
+            &pml_sgz_3d,
+            &bon_a_flat,
+            &alpha_decay_flat,
+            has_nonlinear,
+            has_absorption,
+        )
+        .map_err(|e| KwaversError::Io(std::io::Error::other(e)))?;
 
-        let sensor_data_f32 = solver.run(&sensor_indices, &source_indices, &source_signals);
+        let sensor_data_f32 = solver.run(
+            &sensor_indices,
+            &source_indices,
+            &source_signals,
+            &vel_x_indices,
+            &vel_x_signals,
+        );
 
         // ── Convert Vec<f32> → Array2<f64> shape (n_sensors, time_steps) ─────
         let n_sensors = sensor_indices.len();
@@ -3130,6 +3287,517 @@ impl Simulation {
         }
 
         Ok((out, None))
+    }
+}
+
+// ============================================================================
+// GPU PSTD Session (persistent solver — reuses compiled pipelines across scan
+// lines, eliminating ~500 ms shader-recompilation overhead per scan line)
+// ============================================================================
+
+/// Persistent GPU PSTD session for efficient B-mode scan-line loops.
+///
+/// Creating a new `GpuPstdSolver` per scan line is expensive (~500 ms) because
+/// wgpu must compile ~13 WGSL compute pipelines from scratch.  `GpuPstdSession`
+/// creates the solver **once** and re-uses compiled pipelines.  Between scan
+/// lines you only re-upload the medium arrays via `run_scan_line()`.
+///
+/// Parameters (constructor)
+/// ------------------------
+/// grid : Grid
+///     Simulation grid.
+/// sound_speed : ndarray (nx, ny, nz)
+///     Initial sound speed [m/s].
+/// density : ndarray (nx, ny, nz)
+///     Initial density [kg/m³].
+/// absorption : ndarray (nx, ny, nz) or None
+///     Absorption coefficient [dB/(MHz^y·cm)].  None → lossless.
+/// nonlinearity : ndarray (nx, ny, nz) or None
+///     B/A nonlinearity parameter.  None → linear.
+/// dt : float
+///     Time step [s].
+/// time_steps : int
+///     Number of time steps per scan line.
+/// pml_size_xyz : (int, int, int), optional
+///     PML thickness in grid points along each axis.  Default (10, 10, 10).
+/// alpha_power : float, optional
+///     Power-law exponent for absorption (default 1.5).
+///
+/// Examples
+/// --------
+/// >>> import pykwavers as pkw, numpy as np
+/// >>> grid = pkw.Grid(64, 64, 64, 1e-4, 1e-4, 1e-4)
+/// >>> ss   = np.full((64,64,64), 1540.0)
+/// >>> rho  = np.full((64,64,64), 1060.0)
+/// >>> session = pkw.GpuPstdSession(grid, ss, rho, dt=1e-8, time_steps=200)
+/// >>> mask = np.zeros((64,64,64), dtype=bool); mask[32,32,32] = True
+/// >>> ux_sig = np.zeros((1, 200))
+/// >>> sd = session.run_scan_line(ss, rho, mask, ux_sig)  # shape (1, 200)
+#[cfg_attr(not(feature = "gpu"), allow(dead_code))]
+#[pyclass(unsendable)]
+pub struct GpuPstdSession {
+    // GPU solver — Some(_) when the gpu feature is enabled and construction succeeded.
+    #[cfg(feature = "gpu")]
+    solver: kwavers::solver::forward::pstd::gpu_pstd::GpuPstdSolver,
+
+    // Grid dimensions (needed for flat-index computation)
+    nx: usize,
+    ny: usize,
+    nz: usize,
+
+    // Cached bon_a array (nonlinearity rarely changes between scan lines)
+    bon_a_flat: Vec<f32>,
+    // Cached alpha decay factor numerator: alpha_Np_m * dt  (c0 from new medium
+    // is multiplied in at run time; precomputed to avoid redundant pow() calls)
+    alpha_np_dt_flat: Vec<f32>,
+    has_absorption: bool,
+
+    // Time loop parameters
+    time_steps: usize,
+
+    // Source/sensor indices pre-computed from the initial mask (constant per session)
+    // Source rows follow ndarray C-order to match velocity-mask source expansion.
+    // Sensor rows follow MATLAB/Fortran order to match k-Wave transducer beamforming.
+    sensor_indices: Vec<u32>,
+    vel_x_indices: Vec<u32>,
+    vel_x_signals: Vec<f32>,
+    last_medium_upload_ns: u64,
+    last_solver_run_ns: u64,
+    last_materialize_ns: u64,
+    last_total_ns: u64,
+
+}
+
+impl GpuPstdSession {
+    fn rebuild_source_sensor_indices(
+        &mut self,
+        mask_arr: ndarray::ArrayView3<'_, f64>,
+    ) -> PyResult<()> {
+        if mask_arr.shape() != [self.nx, self.ny, self.nz] {
+            return Err(PyValueError::new_err(format!(
+                "mask shape {:?} must match session grid ({}, {}, {})",
+                mask_arr.shape(),
+                self.nx,
+                self.ny,
+                self.nz
+            )));
+        }
+
+        // Source indices follow ndarray C-order to match Source.from_velocity_mask_2d
+        // and the kwavers SourceHandler iteration order.
+        self.vel_x_indices.clear();
+        for ix in 0..self.nx {
+            for iy in 0..self.ny {
+                for iz in 0..self.nz {
+                    if mask_arr[[ix, iy, iz]] != 0.0 {
+                        let flat = ix * self.ny * self.nz + iy * self.nz + iz;
+                        self.vel_x_indices.push(flat as u32);
+                    }
+                }
+            }
+        }
+
+        // Sensor indices follow MATLAB/Fortran order (x-fastest) so the returned
+        // pressure matrix is directly compatible with k-Wave transducer beamforming.
+        self.sensor_indices.clear();
+        for iz in 0..self.nz {
+            for iy in 0..self.ny {
+                for ix in 0..self.nx {
+                    if mask_arr[[ix, iy, iz]] != 0.0 {
+                        let flat = ix * self.ny * self.nz + iy * self.nz + iz;
+                        self.sensor_indices.push(flat as u32);
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn update_velocity_signal_rows(
+        &mut self,
+        sig_arr: ndarray::ArrayView2<'_, f64>,
+    ) -> PyResult<()> {
+        let time_steps = self.time_steps;
+        let signal_shape = sig_arr.shape();
+        if signal_shape.len() != 2 {
+            return Err(PyValueError::new_err(format!(
+                "ux_signals must be 2D, got shape {:?}",
+                signal_shape
+            )));
+        }
+
+        let n_vel = self.vel_x_indices.len();
+        let n_sig_srcs = signal_shape[0];
+        let n_sig_cols = signal_shape[1].min(time_steps);
+
+        if n_vel > 0 && n_sig_srcs == 0 {
+            return Err(PyValueError::new_err(
+                "ux_signals must contain at least one source row for a non-empty mask",
+            ));
+        }
+
+        self.vel_x_signals.clear();
+        self.vel_x_signals.resize(n_vel * time_steps, 0.0f32);
+        for src_idx in 0..n_vel {
+            let sig_row = src_idx.min(n_sig_srcs.saturating_sub(1));
+            for step in 0..n_sig_cols {
+                self.vel_x_signals[src_idx * time_steps + step] = sig_arr[[sig_row, step]] as f32;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[pymethods]
+impl GpuPstdSession {
+    /// Create a persistent GPU PSTD session.
+    ///
+    /// `sound_speed`, `density`, `absorption`, `nonlinearity` are the *initial*
+    /// medium arrays (shape nx×ny×nz).  You can provide updated `sound_speed`
+    /// and `density` arrays per scan line via `run_scan_line()`.
+    #[new]
+    #[pyo3(signature = (
+        grid, sound_speed, density,
+        dt, time_steps,
+        absorption=None, nonlinearity=None,
+        pml_size_xyz=None, alpha_power=1.5
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        _py: Python<'_>,
+        grid: &Grid,
+        sound_speed: PyReadonlyArray3<f64>,
+        density: PyReadonlyArray3<f64>,
+        dt: f64,
+        time_steps: usize,
+        absorption: Option<PyReadonlyArray3<f64>>,
+        nonlinearity: Option<PyReadonlyArray3<f64>>,
+        pml_size_xyz: Option<(usize, usize, usize)>,
+        alpha_power: f64,
+    ) -> PyResult<Self> {
+        #[cfg(not(feature = "gpu"))]
+        {
+            let _ = (
+                _py,
+                grid,
+                sound_speed,
+                density,
+                dt,
+                time_steps,
+                absorption,
+                nonlinearity,
+                pml_size_xyz,
+                alpha_power,
+            );
+            return Err(PyRuntimeError::new_err(
+                "GpuPstdSession requires the 'gpu' feature.  \
+                 Rebuild pykwavers with --features gpu.",
+            ));
+        }
+
+        #[cfg(feature = "gpu")]
+        {
+            use kwavers::domain::boundary::cpml::CPMLConfig;
+            use kwavers::domain::boundary::cpml::CPMLProfiles;
+            use kwavers::solver::forward::pstd::gpu_pstd::GpuPstdSolver;
+
+            let kgrid = &grid.inner;
+            let nx = kgrid.nx;
+            let ny = kgrid.ny;
+            let nz = kgrid.nz;
+            let total = nx * ny * nz;
+
+            // ── Validate grid is power-of-2 and small enough for GPU ──────────
+            if !nx.is_power_of_two() || !ny.is_power_of_two() || !nz.is_power_of_two() {
+                return Err(PyValueError::new_err(format!(
+                    "GpuPstdSession requires power-of-2 grid; got {}x{}x{}",
+                    nx, ny, nz
+                )));
+            }
+            if nx > 256 || ny > 256 || nz > 256 {
+                return Err(PyValueError::new_err(format!(
+                    "GpuPstdSession: grid axis max 256 pts; got {}x{}x{}",
+                    nx, ny, nz
+                )));
+            }
+
+            // ── Medium arrays ─────────────────────────────────────────────────
+            let ss_arr = sound_speed.as_array();
+            let rho_arr = density.as_array();
+
+            // C-contiguous ndarray: flat index = ix*ny*nz + iy*nz + iz, matching GPU layout.
+            let c0_flat: Vec<f32> = ss_arr.iter().map(|&v| v as f32).collect();
+            let rho0_flat: Vec<f32> = rho_arr.iter().map(|&v| v as f32).collect();
+
+            // Detect c_ref as max sound speed for stability
+            let c_ref = c0_flat.iter().cloned().fold(0.0f32, f32::max) as f64;
+
+            // ── Nonlinearity (bon_a) ──────────────────────────────────────────
+            let bon_a_flat: Vec<f32> = if let Some(ref nl) = nonlinearity {
+                let nl_arr = nl.as_array();
+                nl_arr.iter().map(|&v| (v / 2.0) as f32).collect() // B/(2A)
+            } else {
+                vec![0.0f32; total]
+            };
+
+            // ── Absorption (alpha_decay) ──────────────────────────────────────
+            let has_absorption = absorption.is_some();
+            // alpha_np_dt_flat[i] = alpha_Np_m[i] * dt  (c0 multiplied in at run time)
+            // The GPU session currently uses a centre-frequency attenuation model
+            // at f0 = 1 MHz, matching the phased-array parity examples.
+            let alpha_np_dt_flat: Vec<f32> = if let Some(ref ab) = absorption {
+                let ab_arr = ab.as_array();
+                let f0_mhz = 1.0_f64;
+                ab_arr.iter()
+                    .map(|&v| (alpha_db_cm_to_np_m(v, f0_mhz, alpha_power) * dt) as f32)
+                    .collect()
+            } else {
+                vec![0.0f32; total]
+            };
+
+            // ── Alpha decay from initial c0 ───────────────────────────────────
+            let alpha_decay_flat: Vec<f32> = if has_absorption {
+                (0..total)
+                    .map(|i| (-alpha_np_dt_flat[i] * c0_flat[i]).exp())
+                    .collect()
+            } else {
+                vec![1.0f32; total]
+            };
+
+            // ── PML profiles ──────────────────────────────────────────────────
+            let (pml_x_sz, pml_y_sz, pml_z_sz) = pml_size_xyz.unwrap_or((10, 10, 10));
+            let pml_config = CPMLConfig::with_per_dimension_thickness(pml_x_sz, pml_y_sz, pml_z_sz);
+            let profiles = CPMLProfiles::new(&pml_config, kgrid, c_ref, dt)
+                .map_err(|e| PyRuntimeError::new_err(format!("PML init failed: {e}")))?;
+
+            let mut pml_x_3d = vec![1.0f32; total];
+            let mut pml_y_3d = vec![1.0f32; total];
+            let mut pml_z_3d = vec![1.0f32; total];
+            let mut pml_sgx_3d = vec![1.0f32; total];
+            let mut pml_sgy_3d = vec![1.0f32; total];
+            let mut pml_sgz_3d = vec![1.0f32; total];
+            for ix in 0..nx {
+                for iy in 0..ny {
+                    for iz in 0..nz {
+                        let flat = ix * ny * nz + iy * nz + iz;
+                        pml_sgx_3d[flat] = profiles.pml_x_sgx[ix] as f32;
+                        pml_sgy_3d[flat] = profiles.pml_y_sgy[iy] as f32;
+                        pml_sgz_3d[flat] = profiles.pml_z_sgz[iz] as f32;
+                        pml_x_3d[flat] = profiles.pml_x[ix] as f32;
+                        pml_y_3d[flat] = profiles.pml_y[iy] as f32;
+                        pml_z_3d[flat] = profiles.pml_z[iz] as f32;
+                    }
+                }
+            }
+
+            // ── Construct GPU solver (compiles pipelines once here) ───────────
+            let solver = GpuPstdSolver::with_auto_device(
+                kgrid,
+                &c0_flat,
+                &rho0_flat,
+                dt,
+                time_steps,
+                c_ref,
+                &pml_x_3d,
+                &pml_y_3d,
+                &pml_z_3d,
+                &pml_sgx_3d,
+                &pml_sgy_3d,
+                &pml_sgz_3d,
+                &bon_a_flat,
+                &alpha_decay_flat,
+                nonlinearity.is_some(),
+                has_absorption,
+            )
+            .map_err(|e| PyRuntimeError::new_err(format!("GPU solver init failed: {e}")))?;
+
+            Ok(Self {
+                solver,
+                nx,
+                ny,
+                nz,
+                bon_a_flat,
+                alpha_np_dt_flat,
+                has_absorption,
+                time_steps,
+                sensor_indices: Vec::new(),
+                vel_x_indices: Vec::new(),
+                vel_x_signals: Vec::new(),
+                last_medium_upload_ns: 0,
+                last_solver_run_ns: 0,
+                last_materialize_ns: 0,
+                last_total_ns: 0,
+            })
+        }
+    }
+
+    /// Set the source and sensor mask for all scan lines (constant per session).
+    ///
+    /// Parameters
+    /// ----------
+    /// mask : ndarray bool (nx, ny, nz)
+    ///     True at source+sensor grid positions.
+    /// ux_signals : ndarray f64 (n_sources, time_steps)
+    ///     Per-source x-velocity signal [m/s].  Pass shape (0, Nt) for no source.
+    fn set_source_sensor(
+        &mut self,
+        _py: Python<'_>,
+        mask: PyReadonlyArray3<f64>,
+        ux_signals: PyReadonlyArray2<f64>,
+    ) -> PyResult<()> {
+        let mask_arr = mask.as_array();
+        let sig_arr = ux_signals.as_array();
+        self.rebuild_source_sensor_indices(mask_arr)?;
+        self.update_velocity_signal_rows(sig_arr)
+    }
+
+    /// Cache the source/sensor mask when the geometry is invariant across runs.
+    ///
+    /// This is the preferred setup for phased-array steering loops where only
+    /// the source delays change between scan lines.
+    fn set_source_sensor_mask(
+        &mut self,
+        _py: Python<'_>,
+        mask: PyReadonlyArray3<f64>,
+    ) -> PyResult<()> {
+        self.rebuild_source_sensor_indices(mask.as_array())
+    }
+
+    /// Update only the x-velocity source signals for a previously cached mask.
+    ///
+    /// This avoids rebuilding source/sensor indices when the aperture geometry is
+    /// fixed and only steering delays or apodization weights change per scan line.
+    fn set_velocity_signals(
+        &mut self,
+        _py: Python<'_>,
+        ux_signals: PyReadonlyArray2<f64>,
+    ) -> PyResult<()> {
+        self.update_velocity_signal_rows(ux_signals.as_array())
+    }
+
+    /// Return the timing profile from the most recent scan-line execution.
+    ///
+    /// Durations are host-side wall-clock measurements in nanoseconds.
+    #[getter]
+    fn last_run_profile<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let profile = PyDict::new(py);
+        profile.set_item("medium_upload_ns", self.last_medium_upload_ns)?;
+        profile.set_item("solver_run_ns", self.last_solver_run_ns)?;
+        profile.set_item("materialize_ns", self.last_materialize_ns)?;
+        profile.set_item("total_ns", self.last_total_ns)?;
+        profile.set_item("n_sensors", self.sensor_indices.len())?;
+        profile.set_item("n_velocity_sources", self.vel_x_indices.len())?;
+        Ok(profile)
+    }
+
+    /// Run one scan line with updated medium (sound_speed, density).
+    ///
+    /// Uploads the new medium to the GPU (5 buffer writes, ~ms), then runs the
+    /// full time loop.  Returns sensor pressure as an ndarray (n_sensors, Nt).
+    ///
+    /// Parameters
+    /// ----------
+    /// sound_speed : ndarray f64 (nx, ny, nz)
+    ///     Updated sound speed for this scan line.
+    /// density : ndarray f64 (nx, ny, nz)
+    ///     Updated density for this scan line.
+    ///
+    /// Use `run_scan_line_cached()` when the medium is unchanged between scan lines.
+    fn run_scan_line<'py>(
+        &mut self,
+        _py: Python<'py>,
+        _sound_speed: PyReadonlyArray3<f64>,
+        _density: PyReadonlyArray3<f64>,
+    ) -> PyResult<Bound<'py, PyArray2<f64>>> {
+        #[cfg(not(feature = "gpu"))]
+        {
+            return Err(PyRuntimeError::new_err("GPU feature not enabled"));
+        }
+
+        #[cfg(feature = "gpu")]
+        {
+            let total_t0 = std::time::Instant::now();
+            let nx = self.nx;
+            let ny = self.ny;
+            let nz = self.nz;
+            let total = nx * ny * nz;
+
+            let ss_arr = _sound_speed.as_array();
+            let rho_arr = _density.as_array();
+
+            // Build updated flat medium arrays.
+            // numpy arrays passed from Python are C-contiguous; ss_arr.iter() visits
+            // elements in flat C-order (ix*ny*nz + iy*nz + iz), matching the GPU layout.
+            let c0_flat: Vec<f32> = ss_arr.iter().map(|&v| v as f32).collect();
+            let rho0_flat: Vec<f32> = rho_arr.iter().map(|&v| v as f32).collect();
+
+            // Recompute alpha_decay with new c0 (alpha_np_dt_flat already has dt baked in)
+            let alpha_decay_flat: Vec<f32> = if self.has_absorption {
+                (0..total)
+                    .map(|i| (-self.alpha_np_dt_flat[i] * c0_flat[i]).exp())
+                    .collect()
+            } else {
+                vec![1.0f32; total]
+            };
+
+            let upload_t0 = std::time::Instant::now();
+            // Re-upload medium buffers to GPU
+            self.solver
+                .update_medium(&c0_flat, &rho0_flat, &self.bon_a_flat, &alpha_decay_flat);
+            self.last_medium_upload_ns = upload_t0.elapsed().as_nanos() as u64;
+
+            let result = self.run_scan_line_cached(_py);
+            self.last_total_ns = total_t0.elapsed().as_nanos() as u64;
+            result
+        }
+    }
+
+    /// Run one scan line using the currently resident medium buffers.
+    ///
+    /// This is intended for repeated steering/focusing runs in a fixed medium.
+    fn run_scan_line_cached<'py>(&mut self, _py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
+        #[cfg(not(feature = "gpu"))]
+        {
+            return Err(PyRuntimeError::new_err("GPU feature not enabled"));
+        }
+
+        #[cfg(feature = "gpu")]
+        {
+            let total_t0 = std::time::Instant::now();
+            self.last_medium_upload_ns = 0;
+            let time_steps = self.time_steps;
+
+            // No pressure sources (velocity-only B-mode)
+            let source_indices: Vec<u32> = Vec::new();
+            let source_signals: Vec<f32> = Vec::new();
+
+            // Run time loop
+            let solver_t0 = std::time::Instant::now();
+            let sensor_data_f32 = self.solver.run(
+                &self.sensor_indices,
+                &source_indices,
+                &source_signals,
+                &self.vel_x_indices,
+                &self.vel_x_signals,
+            );
+            self.last_solver_run_ns = solver_t0.elapsed().as_nanos() as u64;
+
+            // Shape → (n_sensors, time_steps) f64 numpy array
+            // Use flat iterator for SIMD-vectorisable f32→f64 cast (no index arithmetic).
+            let materialize_t0 = std::time::Instant::now();
+            let n_sensors = self.sensor_indices.len();
+            let out_flat: Vec<f64> = sensor_data_f32.iter().map(|&v| v as f64).collect();
+            let out = ndarray::Array2::from_shape_vec((n_sensors, time_steps), out_flat)
+                .expect("sensor_data shape mismatch");
+            self.last_materialize_ns = materialize_t0.elapsed().as_nanos() as u64;
+            if self.last_medium_upload_ns == 0 {
+                self.last_total_ns = total_t0.elapsed().as_nanos() as u64;
+            }
+
+            Ok(PyArray2::from_owned_array(_py, out))
+        }
     }
 }
 
@@ -3152,6 +3820,9 @@ pub struct SimulationResult {
     /// Grid shape (nx, ny, nz)
     #[pyo3(get)]
     shape: (usize, usize, usize),
+    /// Sensor data shape as `(num_sensors, time_steps)`.
+    #[pyo3(get)]
+    sensor_data_shape: (usize, usize),
     /// Number of time steps
     #[pyo3(get)]
     time_steps: usize,
@@ -3190,21 +3861,10 @@ impl SimulationResult {
         }
     }
 
-    /// Get sensor data shape.
-    fn sensor_data_shape(&self) -> (usize, usize, usize) {
-        self.shape
-    }
-
     /// Number of sensor points.
     #[getter]
     fn num_sensors(&self) -> usize {
-        if self.sensor_data_2d.is_some() {
-            // We can't easily query the array shape without the GIL, so store it
-            // For now return > 1 to indicate multi-sensor
-            2 // placeholder; users should check sensor_data.shape directly
-        } else {
-            1
-        }
+        self.sensor_data_shape.0
     }
 
     /// String representation.
@@ -3239,7 +3899,8 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Simulation>()?;
     m.add_class::<SimulationResult>()?;
     m.add_class::<SolverType>()?;
-    
+    m.add_class::<GpuPstdSession>()?;
+
     // Phase 22 bindings
     m.add_class::<PyPIDController>()?;
     m.add_class::<PyBubbleField>()?;
@@ -3358,6 +4019,25 @@ impl std::fmt::Debug for SampledSignal {
     }
 }
 
+#[cfg(test)]
+mod simulation_contract_tests {
+    use super::Simulation;
+    use ndarray::array;
+
+    #[test]
+    fn trim_initial_recorder_sample_discards_t0_column_only_when_present() {
+        let nt_plus_one = array![[0.0, 1.0, 2.0, 3.0], [10.0, 11.0, 12.0, 13.0]];
+        let trimmed = Simulation::trim_initial_recorder_sample(nt_plus_one, 3);
+        assert_eq!(trimmed.shape(), &[2, 3]);
+        assert_eq!(trimmed[[0, 0]], 1.0);
+        assert_eq!(trimmed[[1, 2]], 13.0);
+
+        let exact_nt = array![[1.0, 2.0, 3.0], [11.0, 12.0, 13.0]];
+        let untouched = Simulation::trim_initial_recorder_sample(exact_nt.clone(), 3);
+        assert_eq!(untouched, exact_nt);
+    }
+}
+
 // ============================================================================
 // Phase 22 Wrappers: PID Controller, Registration, and Bubble Field
 // ============================================================================
@@ -3372,8 +4052,14 @@ impl PyPIDController {
     #[new]
     #[pyo3(signature = (kp, ki, kd, setpoint, sample_time=0.001, output_min=0.0, output_max=1.0, integral_limit=100.0))]
     fn new(
-        kp: f64, ki: f64, kd: f64, setpoint: f64, sample_time: f64,
-        output_min: f64, output_max: f64, integral_limit: f64
+        kp: f64,
+        ki: f64,
+        kd: f64,
+        setpoint: f64,
+        sample_time: f64,
+        output_min: f64,
+        output_max: f64,
+        integral_limit: f64,
     ) -> Self {
         let gains = kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDGains { kp, ki, kd };
         let mut config = kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDConfig::default();
@@ -3389,7 +4075,12 @@ impl PyPIDController {
 
     fn update(&mut self, measurement: f64) -> (f64, f64, f64, f64) {
         let out = self.inner.update(measurement);
-        (out.control_signal, out.proportional_term, out.integral_term, out.derivative_term)
+        (
+            out.control_signal,
+            out.proportional_term,
+            out.integral_term,
+            out.derivative_term,
+        )
     }
 
     fn reset(&mut self) {
@@ -3406,9 +4097,7 @@ fn resample_to_target_grid<'py>(
 ) -> Py<PyArray3<f64>> {
     use kwavers::physics::acoustics::imaging::fusion::registration::resample_to_target_grid as kwavers_resample;
     let arr = source_image.as_array().to_owned();
-    let resampled = py.detach(|| {
-        kwavers_resample(&arr, &transform, target_dims)
-    });
+    let resampled = py.detach(|| kwavers_resample(&arr, &transform, target_dims));
     PyArray3::from_owned_array(py, resampled).into()
 }
 
@@ -3421,18 +4110,23 @@ pub struct PyBubbleField {
 impl PyBubbleField {
     #[new]
     fn new(nx: usize, ny: usize, nz: usize) -> Self {
-        let params = kwavers::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters::default();
-        Self { 
-            inner: kwavers::physics::acoustics::bubble_dynamics::bubble_field::BubbleField::new((nx, ny, nz), params) 
+        let params =
+            kwavers::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters::default();
+        Self {
+            inner: kwavers::physics::acoustics::bubble_dynamics::bubble_field::BubbleField::new(
+                (nx, ny, nz),
+                params,
+            ),
         }
     }
-    
+
     fn add_center_bubble(&mut self) {
-         let params = kwavers::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters::default();
-         self.inner.add_center_bubble(&params);
+        let params =
+            kwavers::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters::default();
+        self.inner.add_center_bubble(&params);
     }
-    
+
     fn num_bubbles(&self) -> usize {
-         self.inner.bubbles.len()
+        self.inner.bubbles.len()
     }
 }

@@ -4,11 +4,10 @@
 //
 // Bind group layout (≤8 storage buffers per group, ≤4 groups):
 //
-//   group(0): field buffers (8 storage: p, ux, uy, uz, rhox, rhoy, rhoz, scratch)
-//   group(1): uniform params
-//   group(2): k-space + medium scalars (8 storage: kspace_re, kspace_im,
-//             kspace2_re, kspace2_im, kappa, rho0_inv, c0_sq, rho0)
-//   group(3): PML + shift + sensor (8 storage: pml_sgx, pml_sgy, pml_sgz,
+//   group(0): field buffers (7 storage: p, ux, uy, uz, rhox, rhoy, rhoz)
+//   group(1): k-space + medium scalars (8 storage: kspace_re, kspace_im,
+//             kappa, rho0_inv, c0_sq, rho0, bon_a, alpha_decay)
+//   group(2): PML + shift + sensor (8 storage: pml_sgx, pml_sgy, pml_sgz,
 //             pml_xyz (packed), shifts_all (packed), sensor_indices,
 //             sensor_data, source_data (packed))
 //
@@ -38,7 +37,8 @@
 
 const TWO_PI: f32 = 6.28318530717958647692;
 
-// ─── Bind Group 0: Field buffers (8 storage) ─────────────────────────────────
+// ─── Bind Group 0: Field buffers (7 storage) ─────────────────────────────────
+// field_scratch removed: velocity/density updates now read kspace_re directly.
 
 @group(0) @binding(0)
 var<storage, read_write> field_p: array<f32>;
@@ -61,10 +61,13 @@ var<storage, read_write> field_rhoy: array<f32>;
 @group(0) @binding(6)
 var<storage, read_write> field_rhoz: array<f32>;
 
+// Spectral source correction used by the validated phased-array velocity-source path.
 @group(0) @binding(7)
-var<storage, read_write> field_scratch: array<f32>;
+var<storage, read> precomp_source_kappa: array<f32>;
 
-// ─── Bind Group 1: Uniform params ────────────────────────────────────────────
+// ─── Push constants: per-dispatch params ─────────────────────────────────────
+// Replaces the group(1) uniform buffer. Push constants are embedded directly
+// in the command buffer — no PCIe transfer, no write_buffer() overhead.
 
 struct PstdParams {
     nx:        u32,
@@ -79,51 +82,56 @@ struct PstdParams {
     dt:        f32,
     n_sensors: u32,
     nt:        u32,
+    nonlinear: u32,  // 1 = apply BonA EOS correction in pressure step
+    absorbing:  u32, // 1 = apply frequency-centred absorption decay to density
 }
 
+var<push_constant> params: PstdParams;
+
+// ─── Bind Group 1: K-space + medium scalars (8 storage) ──────────────────────
+// kspace2_re/im removed: kspace_shift_apply now writes in-place to kspace_re/im.
+
 @group(1) @binding(0)
-var<uniform> params: PstdParams;
-
-// ─── Bind Group 2: K-space + medium scalars (8 storage) ──────────────────────
-
-@group(2) @binding(0)
 var<storage, read_write> kspace_re: array<f32>;
 
-@group(2) @binding(1)
+@group(1) @binding(1)
 var<storage, read_write> kspace_im: array<f32>;
 
-@group(2) @binding(2)
-var<storage, read_write> kspace2_re: array<f32>;
-
-@group(2) @binding(3)
-var<storage, read_write> kspace2_im: array<f32>;
-
-@group(2) @binding(4)
+@group(1) @binding(2)
 var<storage, read> precomp_kappa: array<f32>;
 
-@group(2) @binding(5)
+@group(1) @binding(3)
 var<storage, read> precomp_rho0_inv: array<f32>;
 
-@group(2) @binding(6)
+@group(1) @binding(4)
 var<storage, read> precomp_c0_sq: array<f32>;
 
-@group(2) @binding(7)
+@group(1) @binding(5)
 var<storage, read> precomp_rho0: array<f32>;
+
+// binding(6): B/(2A) nonlinearity parameter per voxel (0.0 when linear)
+@group(1) @binding(6)
+var<storage, read> precomp_bon_a: array<f32>;
+
+// binding(7): per-voxel absorption decay factor = exp(-alpha_Np_m * c0 * dt)
+// Precomputed at the transmit centre frequency. 1.0 everywhere when absorbing=0.
+@group(1) @binding(7)
+var<storage, read> precomp_alpha_decay: array<f32>;
 
 // ─── Bind Group 3: PML + shift operators + sensor/source (8 storage) ─────────
 
 // pml_sgx/sgy/sgz: staggered PML for velocity (3 separate 3D arrays)
-@group(3) @binding(0)
+@group(2) @binding(0)
 var<storage, read> pml_sgx: array<f32>;
 
-@group(3) @binding(1)
+@group(2) @binding(1)
 var<storage, read> pml_sgy: array<f32>;
 
-@group(3) @binding(2)
+@group(2) @binding(2)
 var<storage, read> pml_sgz: array<f32>;
 
 // pml_xyz: packed collocated PML for density: [pml_x(N) | pml_y(N) | pml_z(N)]
-@group(3) @binding(3)
+@group(2) @binding(3)
 var<storage, read> pml_xyz: array<f32>;
 
 // shifts_all: packed shift operators for all 6 cases
@@ -140,15 +148,15 @@ var<storage, read> pml_xyz: array<f32>;
 //   [4(nx+ny)+nz..+2nz) z_pos_im
 //   [4(nx+ny)+2nz..+3nz) z_neg_re
 //   [4(nx+ny)+3nz..+4nz) z_neg_im
-@group(3) @binding(4)
+@group(2) @binding(4)
 var<storage, read> shifts_all: array<f32>;
 
 // sensor_flat_indices[s] = flat index of sensor s in 3D grid
-@group(3) @binding(5)
+@group(2) @binding(5)
 var<storage, read> sensor_flat_indices: array<u32>;
 
 // sensor_data[s * Nt + step]
-@group(3) @binding(6)
+@group(2) @binding(6)
 var<storage, read_write> sensor_data: array<f32>;
 
 // source_data: packed [source_mask_indices(u32_as_f32, n_src) | source_signals(f32, n_src*Nt)]
@@ -159,7 +167,7 @@ var<storage, read_write> sensor_data: array<f32>;
 // n_src is encoded in params.n_sensors as upper 16 bits (n_sensors | (n_src << 16))
 // BUT for simplicity we pack n_src separately: use a source_count uniform is simpler.
 // Instead: store all source data in a plain source_data array; n_src is params.n_sensors >> 16.
-@group(3) @binding(7)
+@group(2) @binding(7)
 var<storage, read> source_data: array<f32>;
 
 // ─── Shared memory for FFT ───────────────────────────────────────────────────
@@ -228,7 +236,7 @@ fn fft_1d_smem(
     @builtin(local_invocation_id) lid: vec3<u32>,
     @builtin(workgroup_id)        wid: vec3<u32>,
 ) {
-    let batch_id  = wid.x;
+    let batch_id  = wid.x + wid.y * 65535u;
     let local_tid = lid.x;
     let n         = params.n_fft;
     let log2n     = params.log2n;
@@ -341,8 +349,9 @@ fn fft_1d_smem(
 
 // ─── Entry point: kspace_shift_apply ─────────────────────────────────────────
 //
-// Apply 1D staggered shift operator × kappa to k-space field.
-// Reads kspace_re/kspace_im, writes to kspace2_re/kspace2_im.
+// Apply 1D staggered shift operator × kappa to k-space field in-place.
+// Reads kspace_re/kspace_im, writes result back to kspace_re/kspace_im.
+// (Each thread reads/writes its own index — no cross-thread hazard.)
 //
 // params.axis encoding (same as shift operator table):
 //   0 = x-positive (dp/dx for velocity)
@@ -382,8 +391,9 @@ fn kspace_shift_apply(@builtin(global_invocation_id) gid: vec3<u32>) {
     let kap_re = kap * in_re;
     let kap_im = kap * in_im;
 
-    kspace2_re[idx] = kap_re * s_re - kap_im * s_im;
-    kspace2_im[idx] = kap_re * s_im + kap_im * s_re;
+    // Write in-place — eliminates copy_kspace2_to_kspace dispatch
+    kspace_re[idx] = kap_re * s_re - kap_im * s_im;
+    kspace_im[idx] = kap_re * s_im + kap_im * s_re;
 }
 
 // ─── Entry point: velocity_update ────────────────────────────────────────────
@@ -391,7 +401,8 @@ fn kspace_shift_apply(@builtin(global_invocation_id) gid: vec3<u32>) {
 // Split-field PML velocity update:
 //   u_new = pml_sg^2 * u_old - dt * rho0_inv * pml_sg * grad_p
 //
-// grad_p is in field_scratch (IFFT result of kspace_shift → kspace → scratch).
+// grad_p is in kspace_re (IFFT result of in-place kspace_shift).
+// Eliminates copy_kspace_to_scratch dispatch.
 // params.axis: 0=update ux, 1=uy, 2=uz
 @compute @workgroup_size(256, 1, 1)
 fn velocity_update(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -402,7 +413,7 @@ fn velocity_update(@builtin(global_invocation_id) gid: vec3<u32>) {
     let ax      = params.axis;
     let dt      = params.dt;
     let rho_inv = precomp_rho0_inv[idx];
-    let grad    = field_scratch[idx];
+    let grad    = kspace_re[idx];
 
     if ax == 0u {
         let pml   = pml_sgx[idx];
@@ -421,7 +432,8 @@ fn velocity_update(@builtin(global_invocation_id) gid: vec3<u32>) {
 // Split-field PML density update:
 //   rho_new = pml^2 * rho_old - dt * rho0 * pml * div_u
 //
-// div_u is in field_scratch.
+// div_u is in kspace_re (IFFT result of in-place kspace_shift).
+// Eliminates copy_kspace_to_scratch dispatch.
 // params.axis: 0=update rhox, 1=rhoy, 2=rhoz
 // pml_xyz packs [pml_x | pml_y | pml_z], each of length nx*ny*nz.
 @compute @workgroup_size(256, 1, 1)
@@ -433,7 +445,7 @@ fn density_update(@builtin(global_invocation_id) gid: vec3<u32>) {
     let ax    = params.axis;
     let dt    = params.dt;
     let rho0  = precomp_rho0[idx];
-    let div_u = field_scratch[idx];
+    let div_u = kspace_re[idx];
     let pml   = pml_xyz[ax * total + idx];  // axis selects which pml array
 
     if ax == 0u {
@@ -447,16 +459,27 @@ fn density_update(@builtin(global_invocation_id) gid: vec3<u32>) {
 
 // ─── Entry point: pressure_from_density ──────────────────────────────────────
 //
-// p = c0_sq * (rhox + rhoy + rhoz)
+// Linear:    p = c0² · (rhox + rhoy + rhoz)
+// Nonlinear: p = c0² · (rho_total + B/(2A) · rho_total² / rho0)   [Westervelt EOS]
+//
+// Reference: Treeby & Cox (2010), Eq. (2.14).
 @compute @workgroup_size(256, 1, 1)
 fn pressure_from_density(@builtin(global_invocation_id) gid: vec3<u32>) {
     let idx   = gid.x;
     let total = params.nx * params.ny * params.nz;
     if idx >= total { return; }
 
+    let rho_total = field_rhox[idx] + field_rhoy[idx] + field_rhoz[idx];
     let c2 = precomp_c0_sq[idx];
-    field_p[idx] = c2 * (field_rhox[idx] + field_rhoy[idx] + field_rhoz[idx]);
+    var corrected = rho_total;
+    if params.nonlinear != 0u {
+        let bon_a = precomp_bon_a[idx];
+        let rho0  = precomp_rho0[idx];
+        corrected = rho_total + bon_a * rho_total * rho_total / rho0;
+    }
+    field_p[idx] = c2 * corrected;
 }
+
 
 // ─── Entry point: record_sensors ─────────────────────────────────────────────
 //
@@ -467,6 +490,47 @@ fn record_sensors(@builtin(global_invocation_id) gid: vec3<u32>) {
     if s >= params.n_sensors { return; }
     let flat = sensor_flat_indices[s];
     sensor_data[s * params.nt + params.step] = field_p[flat];
+}
+
+// ─── Entry point: apply_absorption ───────────────────────────────────────────
+//
+// Multiplicative decay applied to all three split density components per step.
+// decay[i] = exp(-alpha_Np_m * c0[i] * dt) precomputed at the transmit centre
+// frequency f0 using the power-law: alpha_Np_m = alpha_dB_cm * f0_MHz^y / 868.6.
+//
+// Applied once per time step after all three density_update dispatches,
+// before pressure_from_density. First-order time-domain absorption approximation.
+//
+// Reference: Treeby & Cox (2010), Eq. (A.12); O'Brien et al. (2010) JASA.
+@compute @workgroup_size(256, 1, 1)
+fn apply_absorption(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx   = gid.x;
+    let total = params.nx * params.ny * params.nz;
+    if idx >= total { return; }
+    let decay = precomp_alpha_decay[idx];
+    field_rhox[idx] *= decay;
+    field_rhoy[idx] *= decay;
+    field_rhoz[idx] *= decay;
+}
+
+// ─── Entry point: zero_acoustic_fields ───────────────────────────────────────
+//
+// Zeros all 7 acoustic field buffers (p, ux, uy, uz, rhox, rhoy, rhoz) in one
+// GPU pass. Replaces 7 CPU write_buffer() calls (~112 MB PCIe upload) with
+// a sub-millisecond GPU memory-fill (GPU VRAM bandwidth ~500 GB/s).
+//
+@compute @workgroup_size(256, 1, 1)
+fn zero_acoustic_fields(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx   = gid.x;
+    let total = params.nx * params.ny * params.nz;
+    if idx >= total { return; }
+    field_p[idx]    = 0.0;
+    field_ux[idx]   = 0.0;
+    field_uy[idx]   = 0.0;
+    field_uz[idx]   = 0.0;
+    field_rhox[idx] = 0.0;
+    field_rhoy[idx] = 0.0;
+    field_rhoz[idx] = 0.0;
 }
 
 // ─── Entry point: inject_pressure_source ─────────────────────────────────────
@@ -493,14 +557,48 @@ fn inject_pressure_source(@builtin(global_invocation_id) gid: vec3<u32>) {
     field_rhoz[flat] += amp;
 }
 
-// ─── Helper: copy kspace2 -> kspace ──────────────────────────────────────────
+// ─── Entry point: inject_velocity_x_source ───────────────────────────────────
+//
+// Additive velocity-x source injection (for transducer ux-driven simulations).
+// Injects directly into field_ux at each source grid point.
+//
+// source_data layout (identical to inject_pressure_source):
+//   [0 .. n_src)           : bitcast<f32>(source_mask_index[i]) — flat grid indices
+//   [n_src .. n_src*(1+Nt)): source_signals[src_pt * Nt + step]
+//
+// n_src is encoded in params.axis (same convention as inject_pressure_source).
 @compute @workgroup_size(256, 1, 1)
-fn copy_kspace2_to_kspace(@builtin(global_invocation_id) gid: vec3<u32>) {
+fn inject_velocity_x_source(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let src_pt = gid.x;
+    let n_src  = params.axis;
+    if src_pt >= n_src { return; }
+
+    let flat = bitcast<u32>(source_data[src_pt]);
+    let amp  = source_data[n_src + src_pt * params.nt + params.step];
+
+    kspace_re[flat] += amp;
+}
+
+// ─── Entry point: apply_source_kappa ─────────────────────────────────────────
+@compute @workgroup_size(256, 1, 1)
+fn apply_source_kappa(@builtin(global_invocation_id) gid: vec3<u32>) {
     let idx   = gid.x;
     let total = params.nx * params.ny * params.nz;
     if idx >= total { return; }
-    kspace_re[idx] = kspace2_re[idx];
-    kspace_im[idx] = kspace2_im[idx];
+
+    let kap = precomp_source_kappa[idx];
+    kspace_re[idx] *= kap;
+    kspace_im[idx] *= kap;
+}
+
+// ─── Entry point: add_kspace_to_field_ux ─────────────────────────────────────
+@compute @workgroup_size(256, 1, 1)
+fn add_kspace_to_field_ux(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx   = gid.x;
+    let total = params.nx * params.ny * params.nz;
+    if idx >= total { return; }
+
+    field_ux[idx] += kspace_re[idx];
 }
 
 // ─── Helper: copy real field to kspace (real part), zero imaginary ────────────
@@ -525,13 +623,4 @@ fn copy_field_to_kspace(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
     kspace_re[idx] = val;
     kspace_im[idx] = 0.0;
-}
-
-// ─── Helper: copy kspace_re to scratch ────────────────────────────────────────
-@compute @workgroup_size(256, 1, 1)
-fn copy_kspace_to_scratch(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let idx   = gid.x;
-    let total = params.nx * params.ny * params.nz;
-    if idx >= total { return; }
-    field_scratch[idx] = kspace_re[idx];
 }
