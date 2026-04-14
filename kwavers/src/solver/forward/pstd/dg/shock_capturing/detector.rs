@@ -1,6 +1,41 @@
-//! Shock detection algorithms for spectral DG methods
+//! Shock detection algorithms for spectral DG methods.
 //!
-//! Provides various indicators to detect discontinuities and shocks in the solution.
+//! ## Algorithm: Gradient magnitude detection (modal decay indicator)
+//!
+//! For each interior cell `(i,j,k)`, compute the normalised gradient magnitude:
+//! ```text
+//!   η = |∇u| / (|u| + ε)
+//! ```
+//! where `|∇u| = sqrt(|∂u/∂x|² + |∂u/∂y|² + |∂u/∂z|²)` uses a central difference.
+//! A cell is flagged as shocked if `η > threshold`.
+//!
+//! This approximates the modal decay indicator from Persson & Peraire (2006): in
+//! smooth regions, high-order modes decay rapidly; near discontinuities, high-order
+//! modal coefficients remain O(1), yielding large normalised gradients.
+//!
+//! ## Algorithm: Jump-based detection (interface discontinuity indicator)
+//!
+//! For each interior cell `(i,j,k)`, compute the maximum interface jump:
+//! ```text
+//!   J = max(|u_{i+1,j,k} − u_{i,j,k}|, |u_{i,j+1,k} − u_{i,j,k}|,
+//!            |u_{i,j,k+1} − u_{i,j,k}|) / (|u_{i,j,k}| + ε)
+//! ```
+//! A cell is flagged if `J > 10 × threshold` (coarser criterion to catch strong shocks).
+//!
+//! ## Algorithm: Ducros pressure sensor
+//!
+//! Combines `∇²p` (Laplacian, sensitive to shocks) with `|∇p|` (gradient, sensitive
+//! to contact discontinuities):
+//! ```text
+//!   sensor = |∇²p| / (|∇p| + ε |p|)
+//! ```
+//! This ratio is O(1/h) near shocks and O(1) in smooth regions.
+//!
+//! ## References
+//!
+//! - Persson & Peraire (2006). "Sub-Cell Shock Capturing for DG Methods".
+//!   AIAA Paper 2006-112.
+//! - Ducros et al. (1999). J. Comput. Phys. 152(2):517-549.  (Pressure sensor)
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;

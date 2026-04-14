@@ -61,19 +61,25 @@ mod tests {
     use approx::assert_relative_eq;
 
     // Standard air-in-water parameters (Eller & Flynn 1965 regime)
-    const R0: f64 = 5e-6;                // 5 µm bubble radius
-    const P0: f64 = 101_325.0;           // atmospheric pressure [Pa]
-    const P_AC: f64 = 120_000.0;         // ~1.18 atm acoustic amplitude
-    const FREQ: f64 = 1.0e6;             // 1 MHz ultrasound
-    const D_AIR: f64 = 2.0e-9;           // O₂ diffusivity in water [m²/s]
-    const C_SAT: f64 = 0.26;             // dissolved O₂ at saturation [mol/m³]
+    const R0: f64 = 5e-6; // 5 µm bubble radius
+    const P0: f64 = 101_325.0; // atmospheric pressure [Pa]
+    const P_AC: f64 = 120_000.0; // ~1.18 atm acoustic amplitude
+    const FREQ: f64 = 1.0e6; // 1 MHz ultrasound
+    const D_AIR: f64 = 2.0e-9; // O₂ diffusivity in water [m²/s]
+    const C_SAT: f64 = 0.26; // dissolved O₂ at saturation [mol/m³]
 
     #[test]
     fn test_rectified_diffusion_positive_flux() {
         let flux = rectified_diffusion_rate(R0, P0, P_AC, FREQ, D_AIR, C_SAT);
-        assert!(flux > 0.0, "Positive acoustic pressure must yield positive molar flux");
+        assert!(
+            flux > 0.0,
+            "Positive acoustic pressure must yield positive molar flux"
+        );
         // Physical reasonableness: flux should be very small (pico- to nano-moles/s)
-        assert!(flux < 1.0, "Molar flux should be << 1 mol/s for microbubbles");
+        assert!(
+            flux < 1.0,
+            "Molar flux should be << 1 mol/s for microbubbles"
+        );
     }
 
     #[test]
@@ -114,7 +120,9 @@ mod tests {
         // The function returns NaN which is correct: zero diffusivity
         // is a degenerate physical limit (no mass transport possible).
         // Verify the result is either 0 or NaN (both valid for D=0).
-        assert!(flux == 0.0 || flux.is_nan(),
-            "Zero diffusivity must yield zero or NaN flux, got {flux}");
+        assert!(
+            flux == 0.0 || flux.is_nan(),
+            "Zero diffusivity must yield zero or NaN flux, got {flux}"
+        );
     }
 }

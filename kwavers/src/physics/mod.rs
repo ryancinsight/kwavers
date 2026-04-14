@@ -30,6 +30,7 @@ pub mod chemistry;
 pub mod electromagnetic; // Electromagnetic wave implementations
 pub mod foundations; // Physics specifications and wave equation traits
 pub mod optics; // Optical physics (elevated from electromagnetic)
+pub mod photoacoustics; // Photoacoustic physics (thermoelastic coupling)
 pub mod thermal;
 /// Physical constants re-exported for convenience
 ///
@@ -148,29 +149,6 @@ pub use foundations::{
     ElectromagneticAcousticCoupling, ElectromagneticThermalCoupling, InterfaceCondition,
     MultiPhysicsCoupling,
 };
-
-/// Medical imaging physics re-exported for backward compatibility
-///
-/// Users should prefer explicit imports: `use crate::physics::acoustics::imaging::Type;`
-pub mod imaging {
-    /// Imaging modality interfaces
-    pub use crate::physics::acoustics::imaging::modalities::{ceus, elastography, ultrasound};
-
-    /// Multi-modal fusion capabilities
-    pub mod fusion {
-        /// Multi-modal image fusion
-        pub use crate::physics::acoustics::imaging::fusion::{
-            FusedImageResult, FusionConfig, FusionMethod, MultiModalFusion,
-        };
-    }
-
-    /// Image registration capabilities
-    pub mod registration {
-        /// Image registration algorithms
-        pub use crate::physics::acoustics::imaging::registration::ImageRegistration;
-        // Note: RegistrationMethod and TransformParameters don't exist as public types
-    }
-}
 
 // Backward-compatible re-exports for moved modules
 // These ensure existing code continues to work during refactoring

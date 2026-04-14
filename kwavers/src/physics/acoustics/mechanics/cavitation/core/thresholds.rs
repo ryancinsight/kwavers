@@ -3,8 +3,8 @@
 //! # Mathematical Specifications
 //!
 //! ## Theorem 1: Blake Threshold (Static Stability)
-//! A gas bubble of undeformed radius $R_0$ in a liquid subjected to decreasing 
-//! ambient pressure becomes mechanically unstable and grows explosively when 
+//! A gas bubble of undeformed radius $R_0$ in a liquid subjected to decreasing
+//! ambient pressure becomes mechanically unstable and grows explosively when
 //! the local static pressure drops below the Blake threshold $P_B$.
 //!
 //! **Proof / Equation:**
@@ -15,8 +15,8 @@
 //! $$ P_{Blake} = P_0 + P_v - \frac{2\sigma}{R_0} $$
 //!
 //! ## Theorem 2: Transient Cavitation (Flynn/Neppiras)
-//! For acoustic fields, transient (inertial) cavitation occurs when the mechanical 
-//! energy imparted to the bubble overcomes both hydrostatic and surface tension 
+//! For acoustic fields, transient (inertial) cavitation occurs when the mechanical
+//! energy imparted to the bubble overcomes both hydrostatic and surface tension
 //! forces, leading to a violent subsequent collapse ($R_{max}/R_0 \ge 2$).
 //!
 //! ## Theorem 3: Mechanical Index (MI)
@@ -82,7 +82,6 @@ pub fn flynn_threshold(
     FLYNN_COLLAPSE_COEFFICIENT * (ambient_pressure + 2.0 * surface_tension / nucleus_radius)
         - vapor_pressure
 }
-
 
 /// Calculate mechanical index (MI)
 /// MI = P_neg / sqrt(f_c) where P_neg in MPa and f_c in MHz

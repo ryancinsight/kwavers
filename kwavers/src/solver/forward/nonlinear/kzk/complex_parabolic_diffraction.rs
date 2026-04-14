@@ -81,17 +81,21 @@ impl ParabolicDiffractionOperator {
         // 2D FFT
         let mut complex_field = fft_2d_complex(&complex_field_owned);
 
-        // Apply parabolic propagator in k-space
-        // H(kx,ky) = exp(i(kx² + ky²)Δz/(2k₀))
+        // Parabolic diffraction propagator (see parabolic_diffraction module theorem):
+        //
+        //   H(k_T) = exp(−i k_T² Δz / (2k₀))
+        //
+        // Derived from ∂P̂/∂z = −i k_T²/(2k₀) P̂ where k₀ = ω₀/c₀.
+        // The sign is NEGATIVE; the previous (wrong) sign exp(+i·phase) applied
+        // the conjugate propagator and reversed the phase curvature of all modes.
+        //
+        // Refs: Lee & Hamilton (1995) eq. (4); Aanonsen et al. (1984) §3.
         for i in 0..nx {
             for j in 0..ny {
                 let kt2 = self.kx2[[i, j]] + self.ky2[[i, j]];
-
-                // Parabolic approximation phase
                 let phase = kt2 * step_size / (2.0 * k0);
-
-                // Apply propagator H = exp(i*phase)
-                complex_field[[i, j]] *= Complex64::from_polar(1.0, phase);
+                // exp(−i·phase): negative sign is physically correct
+                complex_field[[i, j]] *= Complex64::from_polar(1.0, -phase);
             }
         }
 

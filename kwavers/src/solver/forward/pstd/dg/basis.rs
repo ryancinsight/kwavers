@@ -1,3 +1,42 @@
+//! DG basis functions: Legendre and Chebyshev polynomial families.
+//!
+//! ## Theorem: Completeness of Legendre polynomials (Hesthaven & Warburton 2008, §3.2)
+//!
+//! The normalised Legendre polynomials `{P̃_n}_{n=0}^∞` form a complete orthonormal
+//! basis for `L²([-1,1])`:
+//! ```text
+//!   ∫₋₁¹ P̃_i(x) P̃_j(x) dx = δᵢⱼ
+//! ```
+//! where `P̃_n(x) = sqrt((2n+1)/2) · P_n(x)` and `P_n` is the standard Legendre
+//! polynomial.
+//!
+//! ## Algorithm: Bonnet three-term recurrence (Legendre)
+//!
+//! ```text
+//!   P_0(x) = 1,  P_1(x) = x
+//!   P_{n+1}(x) = ((2n+1) x P_n(x) − n P_{n-1}(x)) / (n+1)
+//! ```
+//!
+//! Derivative via Rodrigues' formula (avoiding the singular endpoint form for n ≥ 2):
+//! ```text
+//!   P'_n(x) = n (P_{n-1}(x) − x P_n(x)) / (1 − x²)   for x ≠ ±1
+//!   P'_n(±1) = ±n(n+1)/2                                 (limiting value)
+//! ```
+//!
+//! ## Algorithm: Vandermonde matrix
+//!
+//! Given collocation nodes `{xᵢ}` and basis functions `{φⱼ}`:
+//! ```text
+//!   V_{ij} = φⱼ(xᵢ)
+//! ```
+//! For Legendre DG, `φⱼ = P̃_j` (normalised), so `V_{ij} = P̃_j(xᵢ)`.
+//! The inverse `V⁻¹` maps nodal values to modal (expansion) coefficients.
+//!
+//! ## References
+//!
+//! - Hesthaven & Warburton (2008). *Nodal Discontinuous Galerkin Methods*. Springer. §3.
+//! - Kopriva (2009). *Implementing Spectral Methods*. Springer. §4.
+
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 

@@ -546,14 +546,12 @@ impl DicomStudy {
         if let Some(pixel_data) = &first_instance.pixel_data {
             // Create grid based on DICOM image dimensions
             // Note: This is a simplified conversion - real implementation would need
-            // TODO_AUDIT: P2 - Full DICOM Support - Implement complete DICOM standard compliance for clinical ultrasound workflows
-            // DEPENDS ON: infra/io/dicom/dicom3.rs, infra/io/dicom/private_tags.rs
-            // MISSING: DICOM Ultrasound Region Calibration Module (0018,6011-6018)
-            // MISSING: Multi-frame ultrasound data with temporal calibration
-            // MISSING: Color Doppler and Power Doppler data encoding
-            // MISSING: 3D/4D ultrasound volume data structures
-            // MISSING: DICOM SR (Structured Reporting) for measurement annotations
             // to handle spatial calibration, multiple frames, etc.
+            //
+            // Not yet implemented: full DICOM ultrasound compliance. Absent: Ultrasound
+            // Region Calibration Module tags (0018,6011–6018); multi-frame temporal
+            // calibration; Color and Power Doppler data encoding; 3D/4D volume data
+            // structures; and DICOM SR (Structured Reporting) measurement annotations.
             Ok(Grid::new(
                 pixel_data.rows,
                 pixel_data.columns,

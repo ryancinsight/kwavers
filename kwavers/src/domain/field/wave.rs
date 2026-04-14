@@ -2,16 +2,18 @@ use ndarray::Array3;
 
 /// Container for the primary acoustic wave fields
 #[derive(Debug, Clone)]
-pub struct WaveFields {
+pub struct GenericWaveFields<T> {
     /// Acoustic pressure
-    pub p: Array3<f64>,
+    pub p: T,
     /// Particle velocity x-component
-    pub ux: Array3<f64>,
+    pub ux: T,
     /// Particle velocity y-component
-    pub uy: Array3<f64>,
+    pub uy: T,
     /// Particle velocity z-component
-    pub uz: Array3<f64>,
+    pub uz: T,
 }
+
+pub type WaveFields = GenericWaveFields<Array3<f64>>;
 
 impl WaveFields {
     /// Create new zero-initialized wave fields with given shape

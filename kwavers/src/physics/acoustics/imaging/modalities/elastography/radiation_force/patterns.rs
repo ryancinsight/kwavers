@@ -1,5 +1,5 @@
-use std::f64::consts::PI;
 use super::impulse::PushPulseParameters;
+use std::f64::consts::PI;
 
 /// Multi-directional push pulse configuration for 3D SWE
 #[derive(Debug, Clone)]

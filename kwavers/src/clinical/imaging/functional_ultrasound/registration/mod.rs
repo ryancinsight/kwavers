@@ -9,67 +9,31 @@
 //! to reference atlases (e.g., Allen Mouse Brain CCF) with sub-100 μm accuracy, enabling
 //! reproducible targeting of brain structures across animals and experiments.
 //!
-//! TODO_AUDIT: P1 - Mattes Mutual Information Registration - Implement intensity-based registration
-//! DEPENDS ON: clinical/imaging/functional_ultrasound/registration/mattes_mi.rs (to be created)
-//! DEPENDS ON: clinical/imaging/functional_ultrasound/registration/affine_transform.rs (to be created)
-//! MISSING: Mattes mutual information metric calculation
-//! MISSING: Probability density estimation over 50 bins
-//! MISSING: Gradient descent optimization for MI maximization
-//! MISSING: Affine transformation (rotation, translation, scaling, shearing)
-//! MISSING: Multi-resolution pyramid for coarse-to-fine registration
-//! SEVERITY: HIGH (core registration algorithm)
-//! PERFORMANCE: Target ~1 minute for whole brain registration
-//! ACCURACY: 44 μm intra-animal, 96 μm inter-animal
-//! THEOREM: Mutual Information: MI(A,B) = H(A) + H(B) - H(A,B)
-//! THEOREM: Mattes MI: Use random spatial samples + Parzen windowing for speed
-//! REFERENCES: Nouhoum et al. (2021) "Mattes mutual information metric maximization"
-//! REFERENCES: Mattes et al. (2003) "PET-CT image registration using free-form deformations"
-//! REFERENCES: IEEE Trans Med Imaging 22(1):120-128. DOI: 10.1109/TMI.2003.809072
+//! ## Core Registration (Implemented — requires `ritk` feature)
 //!
-//! TODO_AUDIT: P1 - Evolutionary Optimizer - Implement parameter space search
-//! DEPENDS ON: clinical/imaging/functional_ultrasound/registration/evolutionary_optimizer.rs (to be created)
-//! MISSING: Covariance Matrix Adaptation Evolution Strategy (CMA-ES)
-//! MISSING: Population-based parameter search (12 parameters: 3 translation, 3 rotation, 3 scaling, 3 shearing)
-//! MISSING: Adaptive step size control
-//! MISSING: Constraint handling for anatomically plausible transforms
-//! SEVERITY: HIGH (optimization backbone)
-//! PERFORMANCE: Converge in 100-500 iterations (~1 minute)
-//! THEOREM: CMA-ES update: m_{t+1} = m_t + σ_t * Σᵢ wᵢ * (xᵢ - m_t)
-//! REFERENCES: Nouhoum et al. (2021) "evolutionary optimizer for parameter optimization"
-//! REFERENCES: Hansen & Ostermeier (2001) "Completely Derandomized Self-Adaptation in Evolution Strategies"
-//! REFERENCES: Evolutionary Computation 9(2):159-195. DOI: 10.1162/106365601750190398
+//! When compiled with `features = ["ritk"]` the following are available via
+//! the `ritk` submodule:
+//! - **Mattes MI metric** (`MattesMutualInformation`): B-spline Parzen windows,
+//!   random spatial sampling, MI(A,B) = H(A)+H(B)−H(A,B)  (Mattes et al. 2003)
+//! - **CMA-ES optimizer** (`CmaEsOptimizer`): 12-parameter affine search,
+//!   covariance matrix adaptation (Hansen & Ostermeier 2001)
+//! - **Affine transform** (`AffineTransform`): 12 DOF (rotation, translation,
+//!   scaling, shearing)
+//! - **Registration framework** (`Registration`): multi-resolution pyramid,
+//!   full brain registration in ~1 minute, 44 µm intra-animal accuracy
 //!
-//! TODO_AUDIT: P2 - B-Spline Deformable Registration - Implement non-rigid registration
-//! DEPENDS ON: clinical/imaging/functional_ultrasound/registration/bspline_deform.rs (to be created)
-//! MISSING: B-spline free-form deformation (FFD)
-//! MISSING: Control point grid for local deformations
-//! MISSING: Regularization to prevent unrealistic warping
-//! MISSING: Multi-resolution optimization
-//! SEVERITY: MEDIUM (refinement after affine, for inter-subject variability)
-//! REFERENCES: Nouhoum et al. (2021) "non-rigid B-spline algorithm via Slicer3D elastix module"
-//! REFERENCES: Rueckert et al. (1999) "Nonrigid registration using free-form deformations"
+//! ## Not yet implemented
 //!
-//! TODO_AUDIT: P2 - Atlas Integration - Implement anatomical template support
-//! DEPENDS ON: clinical/imaging/functional_ultrasound/registration/atlas.rs (to be created)
-//! MISSING: Allen Mouse Brain Common Coordinate Framework (CCF) integration
-//! MISSING: Dorr vascular atlas as intermediate reference
-//! MISSING: Region of interest (ROI) ontology (70+ brain regions)
-//! MISSING: Multi-modal atlas (vascular + structural)
-//! MISSING: NIfTI format support for atlas data
-//! SEVERITY: MEDIUM (required for standardized coordinates)
-//! REFERENCES: Wang et al. (2020) "Allen Mouse Brain Common Coordinate Framework"
-//! REFERENCES: Dorr et al. (2007) "High resolution 3D brain atlas using MRI"
+//! - **B-spline deformable registration** (Rueckert et al. 1999): free-form deformation
+//!   control point grid, regularized non-rigid warping for inter-subject variability.
+//!   Referenced in Nouhoum et al. (2021) via Slicer3D/elastix.
 //!
-//! TODO_AUDIT: P2 - Inverse Kinematics Solver - Implement probe positioning
-//! DEPENDS ON: clinical/imaging/functional_ultrasound/registration/inverse_kinematics.rs (to be created)
-//! DEPENDS ON: domain/hardware/motorized_stage.rs (to be created)
-//! MISSING: 6-DOF inverse kinematics for probe positioning
-//! MISSING: Virtual imaging plane definition from atlas
-//! MISSING: Collision avoidance with animal/setup
-//! MISSING: Motion planning for smooth trajectories
-//! SEVERITY: MEDIUM (hardware integration for automatic positioning)
-//! REFERENCES: Nouhoum et al. (2021) "inverse kinematic solver"
-//! REFERENCES: Craig (2005) "Introduction to Robotics: Mechanics and Control"
+//! - **Atlas integration**: Allen Mouse Brain CCF (Wang et al. 2020), Dorr vascular
+//!   atlas intermediate reference, 70+ ROI ontology, NIfTI I/O.
+//!
+//! - **Inverse kinematics for probe positioning**: 6-DOF IK solver, virtual imaging
+//!   plane targeting, collision avoidance, motion planning (Nouhoum et al. 2021;
+//!   Craig 2005).
 //!
 //! # Registration Pipeline
 //!

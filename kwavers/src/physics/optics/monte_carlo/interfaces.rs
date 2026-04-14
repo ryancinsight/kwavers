@@ -110,7 +110,11 @@ pub fn fresnel_reflectance(n1: f64, n2: f64, cos_theta_i: f64) -> f64 {
     let r_s = {
         let num = n1_ci - n2_ct;
         let den = n1_ci + n2_ct;
-        if den.abs() < 1e-30 { 1.0 } else { (num / den).powi(2) }
+        if den.abs() < 1e-30 {
+            1.0
+        } else {
+            (num / den).powi(2)
+        }
     };
 
     // TM (p-polarised): R_p = [(n₁ cosθₜ − n₂ cosθᵢ) / (n₁ cosθₜ + n₂ cosθᵢ)]²
@@ -119,7 +123,11 @@ pub fn fresnel_reflectance(n1: f64, n2: f64, cos_theta_i: f64) -> f64 {
     let r_p = {
         let num = n1_ct - n2_ci;
         let den = n1_ct + n2_ci;
-        if den.abs() < 1e-30 { 1.0 } else { (num / den).powi(2) }
+        if den.abs() < 1e-30 {
+            1.0
+        } else {
+            (num / den).powi(2)
+        }
     };
 
     // Unpolarised average
@@ -249,14 +257,20 @@ mod tests {
         // Water–glass: n₁=1.33, n₂=1.5 → R₀ = ((1.33-1.5)/(1.33+1.5))² ≈ 0.00359
         let r = fresnel_reflectance(1.33, 1.5, 1.0);
         let expected = ((1.33_f64 - 1.5_f64) / (1.33_f64 + 1.5_f64)).powi(2);
-        assert!((r - expected).abs() < 1e-10, "R₀ = {r:.6}, expected {expected:.6}");
+        assert!(
+            (r - expected).abs() < 1e-10,
+            "R₀ = {r:.6}, expected {expected:.6}"
+        );
     }
 
     /// At grazing incidence (cos θᵢ → 0) reflectance → 1 for any interface.
     #[test]
     fn test_fresnel_grazing_incidence() {
         let r = fresnel_reflectance(1.0, 1.5, 0.0);
-        assert!((r - 1.0).abs() < 1e-6, "Grazing reflectance must be 1, got {r}");
+        assert!(
+            (r - 1.0).abs() < 1e-6,
+            "Grazing reflectance must be 1, got {r}"
+        );
     }
 
     /// Total internal reflection: n₁ > n₂, sin θᵢ > n₂/n₁.
@@ -265,7 +279,7 @@ mod tests {
         let n1 = 1.5;
         let n2 = 1.0;
         let critical_angle = f64::asin(n2 / n1); // ≈ 41.8°
-        // Incident angle = critical + 10° → TIR
+                                                 // Incident angle = critical + 10° → TIR
         let theta_i = critical_angle + 0.174; // +10°
         let cos_i = theta_i.cos();
         let r = fresnel_reflectance(n1, n2, cos_i);

@@ -153,9 +153,10 @@ impl CPMLProfiles {
         // Compute collocated (density) profiles for each direction.
         // Pass per-dimension sigma factor so that different absorption strengths
         // per axis are honoured (k-Wave pml_alpha vector support).
-        let alpha_x = config.sigma_factor_for_dimension(0);
-        let alpha_y = config.sigma_factor_for_dimension(1);
-        let alpha_z = config.sigma_factor_for_dimension(2);
+        // These use hardcoded dims 0/1/2 which are always in-range; ? is safe here.
+        let alpha_x = config.sigma_factor_for_dimension(0)?;
+        let alpha_y = config.sigma_factor_for_dimension(1)?;
+        let alpha_z = config.sigma_factor_for_dimension(2)?;
 
         Self::compute_profile_1d(
             &mut self.sigma_x,

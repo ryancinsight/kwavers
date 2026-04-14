@@ -31,7 +31,7 @@ fn test_fuse_insufficient_modalities() {
     let config = FusionConfig::default();
     let fusion = MultiModalFusion::new(config);
     let result = fusion.fuse();
-    
+
     assert!(result.is_err());
     if let Err(KwaversError::Validation(e)) = result {
         assert!(e.to_string().contains("At least two modalities"));
@@ -50,7 +50,10 @@ fn test_register_optical_validation() {
     invalid_data[[0, 0, 0]] = -1.0;
 
     let result = fusion.register_optical(&invalid_data, 550e-9);
-    assert!(result.is_err(), "Must enforce physical constraint: Intensity >= 0");
+    assert!(
+        result.is_err(),
+        "Must enforce physical constraint: Intensity >= 0"
+    );
 
     let valid_data = Array3::<f64>::ones((4, 4, 2));
     let result = fusion.register_optical(&valid_data, 550e-9);
@@ -67,7 +70,7 @@ fn test_robust_bounds_degenerate() {
     let uniform_data = Array3::<f64>::ones((2, 2, 2));
     let (min, max) = utils::compute_robust_bounds(uniform_data.view());
     assert_eq!(min, 1.0);
-    assert_eq!(max, 2.0); 
+    assert_eq!(max, 2.0);
 }
 
 // --- Algorithmic & Property Tests ---
@@ -78,12 +81,14 @@ fn test_weighted_average_fusion_is_bounded() {
     let mut fusion = MultiModalFusion::new(config);
 
     let shape = (4, 4, 4);
-    
+
     // Bounds check property test: Output must strictly be within [min(A_i), max(B_i)]
     let v_us = 1.0;
     let v_pa = 5.0;
 
-    fusion.register_ultrasound(&Array3::from_elem(shape, v_us)).unwrap();
+    fusion
+        .register_ultrasound(&Array3::from_elem(shape, v_us))
+        .unwrap();
     fusion.registered_data.insert(
         "photoacoustic".to_string(),
         RegisteredModality {
@@ -135,12 +140,15 @@ fn test_maximum_likelihood_fusion_monotonicity() {
     );
 
     let fused = fusion.fuse().unwrap();
-    
+
     // Fused result should heavily favor the 'clean' signal
     for &v in fused.intensity_image.iter() {
-        assert!(v < 3.0, "MLE should weight higher quality measurement higher");
+        assert!(
+            v < 3.0,
+            "MLE should weight higher quality measurement higher"
+        );
     }
-    
+
     // Uncertainty map must be generated
     assert!(fused.uncertainty_map.is_some());
     for &u in fused.uncertainty_map.as_ref().unwrap().iter() {
@@ -152,7 +160,7 @@ fn test_maximum_likelihood_fusion_monotonicity() {
 fn test_fuse_feature_based_tissue_classification_invariants() {
     let mut config = FusionConfig::default();
     config.fusion_method = FusionMethod::FeatureBased;
-    config.uncertainty_quantification = false; 
+    config.uncertainty_quantification = false;
 
     let mut fusion = MultiModalFusion::new(config);
     let shape = (2, 2, 1);
@@ -188,8 +196,15 @@ fn test_fuse_feature_based_tissue_classification_invariants() {
 
     // Tissue classifier must identify combinations with specific properties.
     // Combinations of High Absorption + Low Stiffness => indicative of Blood Vessels (Type 2)
-    let classification = result.tissue_properties.get("tissue_classification").unwrap();
-    assert_eq!(classification[[0, 0, 0]], 2.0, "Feature-classifier failed specific logic");
+    let classification = result
+        .tissue_properties
+        .get("tissue_classification")
+        .unwrap();
+    assert_eq!(
+        classification[[0, 0, 0]],
+        2.0,
+        "Feature-classifier failed specific logic"
+    );
 }
 
 #[test]
@@ -198,20 +213,25 @@ fn test_extract_tissue_properties_generates_composite() {
     let mut fusion = MultiModalFusion::new(config);
     let shape = (2, 2, 1);
 
-    fusion.register_ultrasound(&Array3::from_elem(shape, 1.0)).unwrap();
+    fusion
+        .register_ultrasound(&Array3::from_elem(shape, 1.0))
+        .unwrap();
     fusion.registered_data.insert(
         "photoacoustic".to_string(),
-        RegisteredModality { data: Array3::from_elem(shape, 2.0), quality_score: 0.8 },
+        RegisteredModality {
+            data: Array3::from_elem(shape, 2.0),
+            quality_score: 0.8,
+        },
     );
 
     let fused = fusion.fuse().unwrap();
     let properties = fusion.extract_tissue_properties(&fused);
-    
+
     // Validate output dictionary
     assert!(properties.contains_key("tissue_classification"));
     assert!(properties.contains_key("oxygenation_index"));
     assert!(properties.contains_key("composite_stiffness"));
-    
+
     // Bounds verify composite stiffness extraction logic
     let stiff = properties.get("composite_stiffness").unwrap();
     for &v in stiff.iter() {

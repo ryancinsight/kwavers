@@ -113,13 +113,22 @@ impl FdtdConfig {
             );
         }
 
-        // Validate CFL factor (max stable for 3D is 1/sqrt(3) ≈ 0.577)
-        if self.cfl_factor <= 0.0 || self.cfl_factor > 0.577 {
+        // Validate CFL factor.
+        //
+        // The von Neumann stability limit for 3D second-order FDTD is
+        //   CFL_max = 1/√3  (Courant, Friedrichs & Lewy 1928)
+        // Using the exact floating-point constant avoids off-by-ε rejection of
+        // values at the boundary (e.g. property-based tests that generate values
+        // in (0, 1/√3]).
+        const CFL_MAX_3D: f64 = 0.577_350_269_189_625_8; // 1/√3, 16 significant digits
+        if self.cfl_factor <= 0.0 || self.cfl_factor > CFL_MAX_3D {
             multi_error.add(
                 ValidationError::FieldValidation {
                     field: "cfl_factor".to_string(),
                     value: self.cfl_factor.to_string(),
-                    constraint: "Must be in (0, 0.577] for 3D stability".to_string(),
+                    constraint: format!(
+                        "Must be in (0, {CFL_MAX_3D}] for 3D stability (1/√3)"
+                    ),
                 }
                 .into(),
             );

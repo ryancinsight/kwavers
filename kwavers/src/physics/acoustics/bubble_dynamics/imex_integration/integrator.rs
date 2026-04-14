@@ -1,11 +1,45 @@
-//! Core IMEX integrator: step function, Jacobian, state vector conversion
+//! Core IMEX integrator: step function, Jacobian, state vector conversion.
 //!
-//! ## Algorithm (IMEX Euler)
+//! ## Algorithm: First-order IMEX splitting (Ascher, Ruuth & Wetton 1995)
 //!
-//! 1. **Explicit step**: Update R, v using mechanical acceleration (non-stiff)
-//! 2. **Implicit step**: Newton iteration for T, n_vapor (stiff thermal/mass transfer)
+//! The bubble ODE is split into non-stiff (explicit) and stiff (implicit) parts:
+//! ```text
+//!   dY/dt = f_E(Y,t) + f_I(Y,t)
+//! ```
+//! where:
+//! - `f_E` = mechanical terms: wall acceleration `Ṙ → R̈` via Keller-Miksis (non-stiff)
+//! - `f_I` = thermodynamic terms: temperature and vapour diffusion (stiff, time scale ~ ns)
 //!
-//! Residual: y_final − y_explicit − dt · f_implicit(y_final) = 0
+//! **Step (first-order IMEX Euler):**
+//! ```text
+//!   State vector: y = [R, Ṙ, T, n_v]ᵀ
+//!
+//!   Explicit predictor  (Euler on f_E):
+//!     y_pred = y^n + dt · f_E(y^n, tⁿ)
+//!
+//!   Implicit corrector  (Newton iteration on f_I):
+//!     y^{n+1} = y_pred + dt · f_I(y^{n+1}, tⁿ⁺¹)
+//!     Residual F(y) = y − y_pred − dt · f_I(y) = 0
+//!     Newton:  y ← y − J_diag⁻¹ F(y)   (diagonal Jacobian approximation)
+//! ```
+//!
+//! **Diagonal Jacobian approximation:**
+//! The full Jacobian of `f_I` is approximated by its diagonal terms only.  This is
+//! valid when thermal relaxation dominates (adiabatic approximation), giving diagonal
+//! entries proportional to `−1/τ_thermal` and `−D_vap / R²`.
+//!
+//! **Stability:** First-order IMEX Euler is A-stable for the implicit part (any dt)
+//! and conditionally stable for the explicit part: `|1 + dt λ_E| ≤ 1`.  The Keller-
+//! Miksis mechanical eigenvalue `λ_E ~ c/R` bounds the required `dt ≤ R/(c·CFL)`.
+//!
+//! ## References
+//!
+//! - Ascher, Ruuth & Wetton (1995). SIAM J. Numer. Anal. 32(3):797-823.
+//!   (IMEX methods for time-dependent PDEs)
+//! - Pareschi & Russo (2005). J. Sci. Comput. 25(1-2):129-155.
+//!   (Higher-order SSP-IMEX(2,2,2) for future upgrade)
+//! - Brennen (1995). *Cavitation and Bubble Dynamics*. Oxford. §2.
+//!   (Keller-Miksis equation and thermodynamic coupling)
 
 use super::config::BubbleIMEXConfig;
 use crate::core::error::{KwaversResult, PhysicsError};

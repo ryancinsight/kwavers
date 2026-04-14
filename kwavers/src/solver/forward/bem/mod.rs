@@ -51,4 +51,6 @@ pub mod burton_miller;
 pub mod solver;
 
 pub use burton_miller::{BurtonMillerAssembler, BurtonMillerConfig};
-pub use solver::{BemConfig, BemSolver};
+pub use solver::{
+    compute_vertex_normals, plane_wave_incident, BemConfig, BemSolver,
+};

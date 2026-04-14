@@ -6,13 +6,15 @@
 //! - **Optical/Infrared**: Light diffusion, scattering, polarization (optics submodule)
 //! - **Photoacoustic**: EM-acoustic coupling for imaging
 //! - **Plasmonics**: Surface plasmon effects and nanophotonics
-//!   TODO_AUDIT: P2 - Electromagnetic Propagation - Implement full Maxwell's equations solver for electromagnetic propagation of sonoluminescence light, adding time-domain FDTD for light waves
-//!   DEPENDS ON: solver/fdtd/electromagnetic.rs, physics/electromagnetic/boundary/pml.rs
-//!   MISSING: Time-domain Maxwell's equations: ∂E/∂t = (∇×H - J)/ε, ∂H/∂t = -∇×E/μ
-//!   MISSING: Perfectly Matched Layer (PML) absorbing boundaries for open domain problems
-//!   MISSING: Dispersive material models: ε(ω), μ(ω) for broadband sonoluminescence spectra
-//!   MISSING: Nonlinear optics effects for intense sonoluminescence pulses
-//!   MISSING: Photon transport equation coupling with radiative transfer
+//!
+//! ## Not yet implemented
+//!
+//! - **Time-domain Maxwell solver**: FDTD for ∂E/∂t = (∇×H − J)/ε, ∂H/∂t = −∇×E/μ
+//!   to propagate sonoluminescence light.
+//! - **PML absorbing boundaries**: Perfectly Matched Layer for open-domain optical problems.
+//! - **Dispersive material models**: Frequency-dependent ε(ω), μ(ω) for broadband spectra.
+//! - **Nonlinear optics**: Second- and third-order effects for intense pulses.
+//! - **Photon transport coupling**: Radiative transfer equation linked to EM field.
 //!
 //! ## Hierarchical Organization
 //!
@@ -46,7 +48,8 @@ pub mod plasmonics;
 
 // Re-export physics implementations
 // Optics exports moved to physics::optics
-pub use photoacoustic::{GruneisenParameter, OpticalAbsorption};
+#[allow(deprecated)]
+pub use photoacoustic::{GruneisenParameter, GrueneisenModel, OpticalAbsorption};
 pub use plasmonics::{MieTheory, NanoparticleArray, PlasmonicEnhancement};
 
 // Re-export electromagnetic equation specifications for convenience

@@ -19,7 +19,7 @@ pub mod traits;
 
 // Re-exports for convenience
 pub use basis::BasisType;
-pub use config::DGConfig;
+pub use config::{DGConfig, DgTimeIntegrator, ShockCaptureConfig, WenoDegree};
 pub use coupling::HybridCoupler;
 pub use dg_solver::core::DGSolver;
 pub use discontinuity_detector::DiscontinuityDetector;
@@ -92,6 +92,7 @@ impl HybridSpectralDGSolver {
             use_limiter: true,
             limiter_type: LimiterType::Minmod,
             shock_threshold: config.discontinuity_threshold,
+            ..DGConfig::default()
         };
         let dg_solver = DGSolver::new(dg_config, grid.clone()).expect("Failed to create DG solver");
         let coupler = HybridCoupler::new(config.conservation_tolerance);

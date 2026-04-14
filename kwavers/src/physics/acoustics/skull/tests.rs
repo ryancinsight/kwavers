@@ -1,6 +1,6 @@
-use crate::domain::grid::Grid;
 use super::properties::SkullProperties;
 use super::simulation::TranscranialSimulation;
+use crate::domain::grid::Grid;
 
 #[test]
 fn test_skull_properties_default() {

@@ -45,8 +45,8 @@ pub fn difference_frequency_amplitude(
     let beta = params.beta;
 
     // Amplitude in the far field (Westervelt model variant)
-    let p_diff = (p1 * p2 * beta * omega_diff.powi(2))
-        / (2.0 * rho_0 * c_0.powi(4) * distance * alpha_t);
+    let p_diff =
+        (p1 * p2 * beta * omega_diff.powi(2)) / (2.0 * rho_0 * c_0.powi(4) * distance * alpha_t);
 
     // Self-demodulation limits actual performance
     let self_demod = self_demodulation(p1.max(p2), f_avg, distance, params);
@@ -99,7 +99,6 @@ pub fn self_demodulation(
     params: &NonlinearParameters,
 ) -> f64 {
     // Westervelt / Berktay far-field formula (simplified bounding)
-    
 
     (params.beta * pulse_pressure.powi(2))
         / (16.0 * params.density * params.sound_speed.powi(2) * distance)

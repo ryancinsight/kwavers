@@ -7,6 +7,7 @@ use super::super::basis::build_vandermonde;
 use super::super::config::DGConfig;
 use super::super::matrices::{
     compute_diff_matrix, compute_lift_matrix, compute_mass_matrix, compute_stiffness_matrix,
+    matrix_inverse,
 };
 use super::super::quadrature::gauss_lobatto_quadrature;
 use crate::core::error::KwaversResult;
@@ -27,8 +28,13 @@ pub struct DGSolver {
     pub(super) xi_nodes: Arc<Array1<f64>>,
     /// Quadrature weights
     pub(super) weights: Arc<Array1<f64>>,
-    /// Vandermonde matrix for basis evaluation
+    /// Vandermonde matrix V[i,j] = P̃_j(ξ_i) for basis evaluation
     pub(super) vandermonde: Arc<Array2<f64>>,
+    /// Inverse Vandermonde matrix V⁻¹ for modal projection (c = V⁻¹·f).
+    ///
+    /// Precomputed at construction; well-conditioned for GLL nodes
+    /// (Kopriva 2009 §3.4).
+    pub(super) vandermonde_inv: Arc<Array2<f64>>,
     /// Mass matrix `M_ij` = `integral(phi_i` * `phi_j`)
     pub(super) mass_matrix: Arc<Array2<f64>>,
     /// Stiffness matrix `S_ij` = `integral(phi_i` * `dphi_j/dxi`)
@@ -49,8 +55,13 @@ impl DGSolver {
         // Generate quadrature nodes and weights
         let (xi_nodes, weights) = gauss_lobatto_quadrature(n_nodes)?;
 
-        // Build Vandermonde matrix
+        // Build Vandermonde matrix V[i,j] = P̃_j(ξ_i)
         let vandermonde = build_vandermonde(&xi_nodes, config.polynomial_order, config.basis_type)?;
+
+        // Precompute V⁻¹ for modal projection (c = V⁻¹·f).
+        // GLL nodes make V well-conditioned; Gauss-Jordan inversion exact to
+        // machine precision for the polynomial orders used in acoustic DG.
+        let vandermonde_inv = matrix_inverse(&vandermonde)?;
 
         // Compute mass matrix
         let mass_matrix = compute_mass_matrix(&vandermonde, &weights)?;
@@ -72,6 +83,7 @@ impl DGSolver {
             xi_nodes: Arc::new(xi_nodes),
             weights: Arc::new(weights),
             vandermonde: Arc::new(vandermonde),
+            vandermonde_inv: Arc::new(vandermonde_inv),
             mass_matrix: Arc::new(mass_matrix),
             stiffness_matrix: Arc::new(stiffness_matrix),
             diff_matrix: Arc::new(diff_matrix),
@@ -95,6 +107,7 @@ impl Clone for DGSolver {
             xi_nodes: Arc::clone(&self.xi_nodes),
             weights: Arc::clone(&self.weights),
             vandermonde: Arc::clone(&self.vandermonde),
+            vandermonde_inv: Arc::clone(&self.vandermonde_inv),
             mass_matrix: Arc::clone(&self.mass_matrix),
             stiffness_matrix: Arc::clone(&self.stiffness_matrix),
             diff_matrix: Arc::clone(&self.diff_matrix),

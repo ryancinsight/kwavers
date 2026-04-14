@@ -3,7 +3,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::imaging::fusion::quality;
 use crate::physics::acoustics::imaging::fusion::registration;
 use crate::physics::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};
-use crate::physics::imaging::registration::ImageRegistration;
+use ritk_registration::ImageRegistration;
 use ndarray::{Array3, CowArray};
 use std::collections::HashMap;
 
@@ -68,25 +68,25 @@ pub(crate) fn fuse_probabilistic(fusion: &MultiModalFusion) -> KwaversResult<Fus
             1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
         ];
 
-        let registration_result = registration.intensity_registration_mutual_info(
+        let registration_result = registration.rigid_registration_mutual_info(
             &reference_modality.data,
             &modality.data,
             &identity_transform,
         )?;
 
         let affine_transform =
-            AffineTransform::from_homogeneous(&registration_result.transform_matrix);
+            AffineTransform::from_homogeneous(&registration_result.transform);
         registration_transforms.insert(modality_name.clone(), affine_transform);
 
         // Resample to common grid
         let resampled_data = if modality.data.dim() == target_dims
-            && registration_result.transform_matrix == identity_transform
+            && registration_result.transform == identity_transform
         {
             CowArray::from(modality.data.view())
         } else {
             CowArray::from(registration::resample_to_target_grid(
                 &modality.data,
-                &registration_result.transform_matrix,
+                &registration_result.transform,
                 target_dims,
             ))
         };
@@ -95,7 +95,7 @@ pub(crate) fn fuse_probabilistic(fusion: &MultiModalFusion) -> KwaversResult<Fus
             resampled_data,
             weight,
             modality.quality_score,
-            registration_result.confidence,
+            registration_result.quality.normalized_cross_correlation,
         ));
     }
 

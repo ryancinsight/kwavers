@@ -90,14 +90,16 @@ use super::super::state::AcousticField;
 /// # Implementation Notes
 ///
 /// This is a simplified implementation that:
-/// TODO_AUDIT: P2 - Population Microbubble Modeling - Implement full bubble population dynamics with spatial distribution and interactions
-/// DEPENDS ON: clinical/therapy/orchestrator/population_dynamics.rs, clinical/therapy/orchestrator/bjerknes_forces.rs, clinical/therapy/orchestrator/microstreaming.rs
-/// MISSING: Individual bubble tracking with Lagrangian particle methods
-/// MISSING: Spatial concentration gradients and diffusion modeling
-/// MISSING: Secondary Bjerknes forces between bubbles of different sizes
-/// MISSING: Acoustic microstreaming and boundary layer effects
-/// MISSING: Bubble coalescence and fragmentation under high pressure
-/// MISSING: Multi-scale coupling between individual bubbles and bulk concentration fields
+///
+/// ## Not yet implemented
+///
+/// - **Lagrangian bubble tracking**: Individual bubble trajectories with spatial distribution.
+/// - **Concentration diffusion**: Spatial gradients and transport of bubble populations.
+/// - **Secondary Bjerknes forces**: Inter-bubble coupling between bubbles of different sizes.
+/// - **Acoustic microstreaming**: Boundary layer effects and streaming-driven transport.
+/// - **Coalescence and fragmentation**: Bubble size evolution under high-pressure fields.
+/// - **Multi-scale coupling**: Linking individual bubble physics to bulk concentration fields.
+///
 /// 1. Creates a representative microbubble at domain center
 /// 2. Simulates its dynamics using full physics models
 /// 3. Returns uniform concentration field (future: track bubble population)
@@ -167,13 +169,17 @@ pub fn update_microbubble_dynamics(
         grid_spacing,
     )?;
 
-    // Update bubble dynamics for this timestep
+    // Update bubble dynamics for this timestep.
+    // pressure_time_derivative = 0.0: the caller does not track the waveform
+    // phase here; the slowly-varying approximation is acceptable for the
+    // treatment-orchestration timestep (dt >> 1/f_acoustic).
     service.update_bubble_dynamics(
         &mut bubble,
         &mut shell,
         &mut drug,
         acoustic_pressure,
         pressure_gradient,
+        0.0, // dP_ac/dt [Pa/s] — slowly-varying approximation
         0.0, // time (could track cumulative time)
         dt,
     )?;

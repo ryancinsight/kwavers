@@ -33,6 +33,7 @@ pub mod energy;
 pub mod epstein_plesset; // NEW: Epstein-Plesset stability theorem implementation
 pub mod gilmore; // Gilmore equation for violent collapse // NEW: Comprehensive energy balance model
 pub mod imex_integration;
+pub mod heterogeneous_nucleation;
 
 pub use energy::{update_temperature_energy_balance, EnergyBalanceCalculator};
 pub mod integration; // NEW: Stable integration utilities extracted from monolithic file
@@ -63,3 +64,4 @@ pub use interactions::{
 };
 pub use keller_miksis::KellerMiksisModel; // NEW: Modular Keller-Miksis solver
 pub use rayleigh_plesset::RayleighPlessetSolver;
+pub use heterogeneous_nucleation::{HeterogeneousNucleationModel, ClassicalHeterogeneousNucleation};

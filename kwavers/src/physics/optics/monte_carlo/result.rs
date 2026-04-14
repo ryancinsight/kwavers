@@ -8,6 +8,12 @@ pub struct MCResult {
     pub(crate) absorbed_energy: Vec<f64>,
     pub(crate) fluence: Vec<f64>,
     pub(crate) num_photons: usize,
+    /// Diffuse reflectance Rd = reflected photon weight / num_photons.
+    ///
+    /// A photon contributes to Rd when it exits the domain through the
+    /// source surface (z < 0).  This matches the MCML convention
+    /// (Wang et al. 1995 §2.7).
+    pub(crate) diffuse_reflectance: f64,
 }
 
 impl MCResult {
@@ -35,6 +41,14 @@ impl MCResult {
     /// Get dimensions
     pub fn dimensions(&self) -> GridDimensions {
         self.dimensions
+    }
+
+    /// Diffuse reflectance Rd (dimensionless, in [0, 1]).
+    ///
+    /// Fraction of incident photon weight that exits the domain from the
+    /// source surface.  Matches MCML definition (Wang et al. 1995 §2.7).
+    pub fn diffuse_reflectance(&self) -> f64 {
+        self.diffuse_reflectance
     }
 }
 

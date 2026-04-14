@@ -397,13 +397,12 @@ impl ClinicalValidator {
         );
 
         // Doppler requirements are configurable; defaults are conservative placeholders.
-        // TODO_AUDIT: P2 - Clinical Standards Compliance - Implement full AIUM, IEC, and FDA ultrasound standards validation
-        // DEPENDS ON: analysis/validation/clinical/aium_standards.rs, analysis/validation/clinical/iec_standards.rs
-        // MISSING: AIUM Acoustic Output Measurement Standard (Ophthalmic and Fetal)
-        // MISSING: IEC 60601-2-37 Medical Electrical Equipment - Ultrasound Physiotherapy Equipment
-        // MISSING: FDA 510(k) Pre-market Notification requirements for acoustic output
-        // MISSING: WHO Manual for Diagnostic Ultrasound - Safety and Quality Assurance
-        // MISSING: AIUM Contrast-Enhanced Ultrasound accreditation standards
+        //
+        // Not yet implemented: full AIUM, IEC, and FDA Doppler validation. Absent:
+        // AIUM Acoustic Output Measurement Standard (Ophthalmic and Fetal); IEC 60601-2-37
+        // Physiotherapy Equipment section; FDA 510(k) acoustic output notification
+        // requirements; WHO Manual Safety and Quality Assurance criteria; and AIUM
+        // Contrast-Enhanced Ultrasound accreditation standards.
         let min_sensitivity = thresholds.min_sensitivity_cm_s;
         let max_velocity_error = thresholds.max_velocity_error_percent;
         let max_angle_error = thresholds.max_angle_error_degrees;

@@ -48,7 +48,6 @@ impl EnergyBalanceCalculator {
         latent_heat_rate: Power,
     ) -> Power {
         // Calculate volume rate of change
-        let _radius = Length::new::<uom::si::length::meter>(state.radius);
         let wall_velocity =
             Velocity::new::<uom::si::velocity::meter_per_second>(state.wall_velocity);
 

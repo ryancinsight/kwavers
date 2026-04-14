@@ -52,7 +52,7 @@ impl BBBOpening {
     /// Validate treatment safety
     pub fn validate_safety(&self) -> SafetyValidation {
         let models = PermeabilityModels::new(&self.parameters);
-        
+
         let max_mi = self
             .acoustic_pressure
             .iter()

@@ -35,15 +35,16 @@ pub fn compute_bmode_image(rf_data: &Array2<f64>, config: &UltrasoundConfig) -> 
     image
 }
 
-/// Compute envelope using Hilbert transform approximation
-/// TODO_AUDIT: P2 - Advanced Ultrasound Signal Processing - Implement full Hilbert transform, wall filtering, and speckle reduction algorithms
-/// DEPENDS ON: physics/acoustics/imaging/signal_processing/hilbert.rs, physics/acoustics/imaging/signal_processing/wall_filter.rs, physics/acoustics/imaging/signal_processing/speckle.rs
-/// MISSING: Analytical Hilbert transform using FFT for perfect quadrature detection
-/// MISSING: Advanced wall filter design (regression, polynomial, eigenvector-based)
-/// MISSING: Speckle reduction using anisotropic diffusion and wavelet transforms
-/// MISSING: Motion compensation and tissue Doppler signal processing
-/// MISSING: Harmonic imaging and tissue harmonic compound imaging
-/// MISSING: Spatial compounding for artifact reduction and SNR improvement
+/// Compute envelope using Hilbert transform approximation.
+///
+/// ## Not yet implemented
+///
+/// - **Analytical Hilbert transform**: FFT-based quadrature for exact envelope detection.
+/// - **Advanced wall filtering**: Regression, polynomial, and eigenvector-based clutter
+///   suppression for Doppler processing.
+/// - **Speckle reduction**: Anisotropic diffusion and wavelet-domain denoising.
+/// - **Harmonic imaging**: Tissue harmonic and compound harmonic B-mode reconstruction.
+/// - **Spatial compounding**: Multi-angle coherent compounding for artifact reduction.
 fn compute_envelope(signal: &ndarray::Array1<f64>) -> ndarray::Array1<f64> {
     let n = signal.len();
     let mut envelope = ndarray::Array1::zeros(n);
@@ -60,7 +61,7 @@ fn compute_envelope(signal: &ndarray::Array1<f64>) -> ndarray::Array1<f64> {
 }
 
 const TISSUE_ATTENUATION_COEFFICIENT: f64 = 0.5; // dB/cm/MHz
-// SOUND_SPEED_TISSUE = 1540.0 m/s imported from crate::core::constants::fundamental
+                                                 // SOUND_SPEED_TISSUE = 1540.0 m/s imported from crate::core::constants::fundamental
 const DB_TO_NEPER: f64 = 8.686; // Conversion factor
 const CM_TO_M: f64 = 0.01;
 const MHZ_TO_HZ: f64 = 1e6;

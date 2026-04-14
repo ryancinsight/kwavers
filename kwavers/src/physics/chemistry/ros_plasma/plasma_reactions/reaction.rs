@@ -69,12 +69,10 @@ pub fn zeldovich_no_rate(temperature: f64, o2_conc: f64, n2_conc: f64) -> f64 {
     }
 
     // Equilibrium O atom concentration
-    let k_o2_diss =
-        3.6e18 * temperature.powf(-1.0) * (-495e3 / (GAS_CONSTANT * temperature)).exp();
+    let k_o2_diss = 3.6e18 * temperature.powf(-1.0) * (-495e3 / (GAS_CONSTANT * temperature)).exp();
     let o_eq = (k_o2_diss * o2_conc).sqrt();
 
     // NO formation rate
     let k_no = 1.8e14 * (-315e3 / (GAS_CONSTANT * temperature)).exp();
     k_no * o_eq * n2_conc
 }
-

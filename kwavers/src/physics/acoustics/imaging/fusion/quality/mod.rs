@@ -13,9 +13,7 @@ pub mod uncertainty;
 mod tests;
 
 pub use metrics::{calculate_image_metrics, estimate_modality_noise, ImageMetrics};
-pub use modalities::{
-    compute_elastography_quality, compute_optical_quality, compute_pa_quality,
-};
+pub use modalities::{compute_elastography_quality, compute_optical_quality, compute_pa_quality};
 pub use uncertainty::{
     bayesian_fusion_single_voxel, compute_confidence_map, compute_fusion_uncertainty,
 };

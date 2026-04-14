@@ -14,10 +14,10 @@
 //! - Pennes (1948) J Appl Physiol 1(2):93-122
 //! - Welch & van Gemert (2011) "Optical-Thermal Response of Laser-Irradiated Tissue"
 
+use super::MultiPhysicsCoupling;
 use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_WATER_NOMINAL};
 use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use ndarray::ArrayD;
-use super::MultiPhysicsCoupling;
 
 /// Electromagnetic-thermal coupling for photothermal effects
 pub trait ElectromagneticThermalCoupling: MultiPhysicsCoupling {

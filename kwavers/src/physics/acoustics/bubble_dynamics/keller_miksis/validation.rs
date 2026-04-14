@@ -165,22 +165,36 @@ fn test_mass_transfer_evaporation() {
 
 #[test]
 fn test_temperature_adiabatic_heating() {
-    // Test adiabatic heating during compression
-    let params = BubbleParameters::default();
+    // Test adiabatic heating during compression, isolating the adiabatic term from
+    // latent heat by setting accommodation_coeff = 0.
+    //
+    // With α = 0 the Hertz-Knudsen mass flux is zero, so dT/dt reduces to:
+    //   (dT/dt) = -(γ-1)·T·(dR/dt)/R    [adiabatic]
+    //           + heat conduction term     [≈ 0 when T ≈ T_liquid]
+    //
+    // For R₀ = 5 µm, Ṙ = -100 m/s, T = 293.15 K, γ = 1.4:
+    //   dT/dt ≈ 0.4 × 293.15 × 100 / 5×10⁻⁶ ≈ 2.35×10⁹ K/s
+    //
+    // With dt = 1 ns: ΔT ≈ 2.35 K > 0  ✓
+    //
+    // Reference: Keller & Miksis (1980) J. Acoust. Soc. Am. 68(2):628–633.
+    let params = BubbleParameters {
+        accommodation_coeff: 0.0, // zero mass transfer → isolate adiabatic term
+        ..Default::default()
+    };
     let model = KellerMiksisModel::new(params.clone());
     let mut state = BubbleState::new(&params);
 
-    // Set inward velocity for compression
-    state.wall_velocity = -100.0; // Rapid compression
+    state.wall_velocity = -100.0; // Rapid compression: Ṙ < 0 → adiabatic heating
     let t_initial = state.temperature;
 
-    let result = model.update_temperature(&mut state, 1e-7);
+    // dt = 1 ns: small enough for forward-Euler stability (dT ≈ 2.35 K << T₀)
+    let result = model.update_temperature(&mut state, 1e-9);
 
     assert!(result.is_ok(), "Temperature update should succeed");
-    // Temperature should increase during compression
     assert!(
         state.temperature > t_initial,
-        "Compression should heat the gas: T_init={}, T_final={}",
+        "Compression must heat the gas (adiabatic term): T_init={:.4} K, T_final={:.4} K",
         t_initial,
         state.temperature
     );
@@ -285,5 +299,117 @@ fn test_mach_number_tracking() {
         "Mach number should be tracked: expected={}, got={}",
         expected_mach,
         state.mach_number
+    );
+}
+
+// ── Shape stability integration tests ────────────────────────────────────────
+
+/// A freshly constructed model must have shape modes seeded and the bubble
+/// must not be immediately flagged as unstable at equilibrium radius.
+///
+/// Rationale: seed amplitude = 1 Å ≪ 0.3 × R₀ ≈ 1.5 µm for a 5 µm bubble.
+#[test]
+fn test_shape_modes_seeded_but_stable_at_equilibrium() {
+    let params = BubbleParameters::default();
+    let model = KellerMiksisModel::new(params.clone());
+    let state = BubbleState::new(&params);
+
+    // Seed amplitude is 1e-10 m; R₀ = 5e-6 m → a/R = 2e-5 ≪ 0.3
+    assert!(
+        !model.is_shape_unstable(state.radius),
+        "Freshly seeded shape modes must not trigger instability at equilibrium"
+    );
+    assert!(
+        !state.is_shape_unstable,
+        "BubbleState::is_shape_unstable must default to false"
+    );
+}
+
+/// `update_shape_stability` must set `state.is_shape_unstable = true` when
+/// the shape modes are forcibly grown beyond the breakup threshold.
+///
+/// Method: Directly set mode n=2 amplitude to 35% of the bubble radius
+/// (> 30% Plesset threshold), then call `update_shape_stability` with a
+/// zero timestep so no further integration occurs.
+#[test]
+fn test_update_shape_stability_detects_breakup() {
+    let params = BubbleParameters::default();
+    let mut model = KellerMiksisModel::new(params.clone());
+    let mut state = BubbleState::new(&params);
+
+    // Force mode n=2 beyond the breakup threshold
+    model.shape_modes.amplitude[0] = 0.35 * state.radius; // 35% of R
+
+    // dt = 0 → no evolution, just flag update
+    model.update_shape_stability(&mut state, 0.0);
+
+    assert!(
+        state.is_shape_unstable,
+        "Amplitude 35%·R must set is_shape_unstable = true (threshold = 30%·R)"
+    );
+}
+
+/// Under large inertial acceleration (model of violent bubble collapse),
+/// 100 timesteps must grow the n=2 mode from 1 Å seed, confirming coupling
+/// of R̈ → shape mode growth via the Plesset-Prosperetti driving term G_n.
+///
+/// Reference: Brennen (1995) §3.2 — G₂ = (n-1)[R̈/R − …] > 0 during collapse.
+#[test]
+fn test_shape_modes_grow_during_violent_collapse() {
+    let params = BubbleParameters::default();
+    let mut model = KellerMiksisModel::new(params.clone());
+    let mut state = BubbleState::new(&params);
+
+    // Impose collapse conditions: very small radius, large inward acceleration
+    state.radius = 1.0e-7;           // 100 nm (strong compression)
+    state.wall_velocity = -100.0;    // collapsing
+    state.wall_acceleration = 1.0e12; // extreme inward acceleration
+
+    let dt = 1.0e-12; // 1 ps
+    let a0 = model.shape_modes.amplitude[0].abs();
+
+    for _ in 0..100 {
+        model.update_shape_stability(&mut state, dt);
+    }
+
+    let a_final = model.shape_modes.amplitude[0].abs();
+    assert!(
+        a_final > a0,
+        "Mode n=2 must grow during violent collapse: a_final={:.3e} m, a0={:.3e} m",
+        a_final, a0
+    );
+}
+
+/// At rest (Ṙ=0, R̈=0), shape modes must remain bounded (capillary oscillation
+/// only) over 1000 steps; this validates the inviscid stability of the
+/// symplectic Euler integrator used in `advance_shape_modes`.
+///
+/// Tolerance: 5% growth (symplectic Euler has O(h²) energy drift).
+///
+/// Reference: Leimkuhler & Reich (2004) §VIII.2.
+#[test]
+fn test_shape_modes_bounded_at_rest() {
+    let params = BubbleParameters::default();
+    let mut model = KellerMiksisModel::new(params.clone());
+    let mut state = BubbleState::new(&params);
+
+    // Larger seed for visibility
+    model.shape_modes.amplitude[0] = 1.0e-8 * state.radius; // 0.001% of R
+    let a0 = model.shape_modes.amplitude[0].abs();
+
+    // Capillary period for n=2: T = 2π/ω₂, ω₂ = √(8σ/(ρ R³))
+    let omega2 = (8.0 * params.sigma / (params.rho_liquid * state.radius.powi(3))).sqrt();
+    let period = 2.0 * std::f64::consts::PI / omega2;
+    let dt = period / 100.0; // 100 steps per period
+
+    for _ in 0..1000 {
+        model.update_shape_stability(&mut state, dt);
+    }
+
+    let a_final = model.shape_modes.amplitude[0].abs();
+    assert!(
+        a_final <= 1.05 * a0,
+        "Mode n=2 must remain bounded at rest: a_final/a0={:.4}",
+        a_final / a0
     );
 }

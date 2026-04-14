@@ -23,17 +23,16 @@
 //!
 //! ### Hyperelastic Constitutive Models
 //!
-//! TODO_AUDIT: P2 - Advanced Nonlinear Elasticity - Implement complete finite strain hyperelasticity with higher-order elastic constants and viscoelastic coupling
-//! DEPENDS ON: solver/forward/elastic/nonlinear/hyperelastic.rs, solver/forward/elastic/nonlinear/acoustoelastic.rs, solver/forward/elastic/nonlinear/viscoelastic.rs
-//! MISSING: Ogden hyperelastic model: W = Σ (μᵢ/αᵢ) (λ₁^αⁱ + λ₂^αⁱ + λ₃^αⁱ - 3) for compressible materials
-//! MISSING: Acoustoelastic tensor: cᵢⱼₖₗ + cᵢⱼₖₗ^(AE) with prestress dependence
-//! MISSING: Fractional viscoelasticity: σ(t) = ∫ G(t-τ) dε(τ)/dτ dτ with fractional derivatives
-//! MISSING: Higher-order elastic constants M, N for third-order nonlinearity
-//! MISSING: Wave mixing and harmonic generation in prestressed media
-//! SEVERITY: HIGH (enables advanced tissue characterization)
-//! THEOREM: Piola-Kirchhoff stress: P = J σ F^{-T} for finite deformation
-//! THEOREM: Acoustoelastic effect: Δc/c = (1/2μ) σ (l² + m² - 2λ/μ) for isotropic solids
-//! REFERENCES: Brugger (1964) Phys Rev; Thurston & Brugger (1964) Phys Rev; Man & Ogilvy (1997) J Phys D
+//! ## Not yet implemented
+//!
+//! - **Ogden model**: W = Σ (μᵢ/αᵢ)(λ₁^αᵢ + λ₂^αᵢ + λ₃^αᵢ − 3) for compressible
+//!   finite-strain hyperelasticity (Brugger 1964, Phys Rev).
+//! - **Acoustoelastic tensor**: Prestress-dependent stiffness cᵢⱼₖₗ + cᵢⱼₖₗ^(AE)
+//!   (Thurston & Brugger 1964; Man & Ogilvy 1997, J Phys D).
+//! - **Fractional viscoelasticity**: σ(t) = ∫ G(t−τ) dε(τ)/dτ dτ with fractional
+//!   derivative kernel for tissue creep/relaxation.
+//! - **Third-order elastic constants**: M and N for harmonic generation modeling.
+//! - **Wave mixing**: Sum/difference frequency generation in prestressed media.
 //!
 //! **Neo-Hookean Model:**
 //! W = C₁(I₁ - 3) + D₁(J - 1)²

@@ -2,7 +2,9 @@
 mod tests {
     use crate::domain::grid::Grid;
     use crate::domain::medium::HomogeneousMedium;
-    use crate::physics::acoustics::imaging::modalities::elastography::radiation_force::impulse::{AcousticRadiationForce, PushPulseParameters};
+    use crate::physics::acoustics::imaging::modalities::elastography::radiation_force::impulse::{
+        AcousticRadiationForce, PushPulseParameters,
+    };
     use crate::physics::acoustics::imaging::modalities::elastography::radiation_force::patterns::MultiDirectionalPush;
     use crate::physics::acoustics::imaging::modalities::elastography::radiation_force::tracking::DirectionalWaveTracker;
     use crate::physics::acoustics::mechanics::elastic_wave::ElasticBodyForceConfig;

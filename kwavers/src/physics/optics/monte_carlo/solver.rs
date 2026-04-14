@@ -8,11 +8,13 @@ use crate::domain::grid::{Grid3D, GridDimensions};
 use crate::physics::optics::map_builder::OpticalPropertyMap;
 
 use crate::physics::optics::monte_carlo::config::SimulationConfig;
-use crate::physics::optics::monte_carlo::interfaces::apply_fresnel;
+use crate::physics::optics::monte_carlo::interfaces::{apply_fresnel, fresnel_reflectance};
 use crate::physics::optics::monte_carlo::photon::Photon;
 use crate::physics::optics::monte_carlo::result::MCResult;
 use crate::physics::optics::monte_carlo::source::PhotonSource;
-use crate::physics::optics::monte_carlo::utils::{atomic_add_f64, normalize, scatter_photon};
+use crate::physics::optics::monte_carlo::utils::{
+    atomic_add_f64, normalize, photon_step_to_boundary, scatter_photon,
+};
 
 /// Monte Carlo photon transport solver
 #[derive(Debug)]
@@ -49,6 +51,8 @@ impl MonteCarloSolver {
                 .map(|_| AtomicU64::new(0))
                 .collect::<Vec<_>>(),
         );
+        // Diffuse reflectance: accumulated reflected photon weight (z < 0 exits)
+        let reflected_weight = Arc::new(AtomicU64::new(0));
 
         // Launch photons in parallel
         (0..num_photons)
@@ -58,8 +62,26 @@ impl MonteCarloSolver {
                 let mut rng = rand::thread_rng();
 
                 for _ in chunk {
-                    let photon = source.launch_photon(&mut rng);
-                    self.trace_photon(photon, config, &absorbed_energy, &fluence, &mut rng);
+                    let mut photon = source.launch_photon(&mut rng);
+                    // Specular entry weight reduction at air→tissue z=0 surface.
+                    // **Theorem (Wang et al. 1995 §2.2):** A fraction R_spec of the
+                    // incident power is specularly reflected at normal incidence:
+                    //   R_spec = ((1 − n) / (1 + n))²
+                    // so the initial photon weight is reduced to W₀ = 1 − R_spec.
+                    if let Some(sp) = self.optical_map.get(0, 0, 0) {
+                        let n = sp.refractive_index;
+                        if n > 1.0 + 1e-9 {
+                            photon.weight *= 1.0 - fresnel_reflectance(1.0, n, 1.0);
+                        }
+                    }
+                    self.trace_photon(
+                        photon,
+                        config,
+                        &absorbed_energy,
+                        &fluence,
+                        &reflected_weight,
+                        &mut rng,
+                    );
                 }
             });
 
@@ -74,11 +96,15 @@ impl MonteCarloSolver {
             .map(|a| f64::from_bits(a.load(Ordering::Relaxed)))
             .collect();
 
+        let reflected = f64::from_bits(reflected_weight.load(Ordering::Relaxed));
+        let diffuse_reflectance = reflected / num_photons as f64;
+
         Ok(MCResult {
             dimensions: GridDimensions::from_grid(&self.grid),
             absorbed_energy,
             fluence,
             num_photons,
+            diffuse_reflectance,
         })
     }
 
@@ -86,131 +112,195 @@ impl MonteCarloSolver {
     ///
     /// ## Algorithm (Wang et al. 1995, §2)
     ///
-    /// At each step:
-    /// 1. Sample pathlength `s = −ln(ξ)/μ_t` in the current voxel.
-    /// 2. Walk voxel-by-voxel along `s`; at each voxel interface:
-    ///    a. If the refractive index changes, apply Fresnel R/T (Snell's law).
-    ///    b. If the photon reflects, terminate the geometric step — the
-    ///       remaining path length is kept for the next iteration.
-    /// 3. Accumulate path-length fluence `Φ += W × s_voxel`.
-    /// 4. Deposit absorbed energy `ΔW = W × (1 − albedo)`.
-    /// 5. Russian roulette if `W < W_threshold`.
-    /// 6. Scatter using Henyey-Greenstein phase function.
+    /// For each scatter event:
+    /// 1. Sample total step `s = -ln(xi)/mu_t` for the current voxel's medium.
+    /// 2. Sub-step voxel-by-voxel along `s` using `photon_step_to_boundary`:
+    ///    a. Advance to the nearest voxel boundary or scatter point.
+    ///    b. Accumulate fluence `Phi += W * ds` for each partial segment.
+    ///    c. At each boundary with a refractive-index change, apply Fresnel R/T.
+    ///    d. Rescale remaining step to the new medium's mu_t (Wang 1995 §2.3).
+    /// 3. At the scatter point, deposit absorbed energy `dW = W * (1 - albedo)`
+    ///    and scatter with Henyey-Greenstein.
+    /// 4. Apply Russian roulette when `W < W_threshold` (Wang 1995 §2.6).
+    /// 5. Track photons exiting source surface (z < 0) as diffuse reflectance.
     fn trace_photon<R: Rng>(
         &self,
         mut photon: Photon,
         config: &SimulationConfig,
         absorbed_energy: &[AtomicU64],
         fluence: &[AtomicU64],
+        reflected_weight: &AtomicU64,
         rng: &mut R,
     ) {
-        let bounds = [
-            self.grid.dx * self.grid.nx as f64,
-            self.grid.dy * self.grid.ny as f64,
-            self.grid.dz * self.grid.nz as f64,
-        ];
-
         let mut step_count = 0;
         let max_steps = config.max_steps;
 
         while step_count < max_steps {
             // ── Get current voxel ─────────────────────────────────────────────
-            let (i, j, k) = match self.position_to_voxel(photon.position) {
+            let (mut ci, mut cj, mut ck) = match self.position_to_voxel(photon.position) {
                 Some(idx) => idx,
-                None => break, // Photon exited domain
+                None => {
+                    // Photon exited domain. Track reflectance from source surface (z < 0).
+                    if photon.position[2] < 0.0 {
+                        atomic_add_f64(reflected_weight, photon.weight);
+                    }
+                    break;
+                }
             };
 
-            let props = match self.optical_map.get(i, j, k) {
+            let props = match self.optical_map.get(ci, cj, ck) {
                 Some(p) => p,
                 None => break,
             };
 
-            // ── Sample step length in current homogeneous voxel ───────────────
-            let mu_t = props.total_attenuation();
-            if mu_t < 1e-12 {
-                break; // Transparent voxel — photon exits
+            // ── Sample total step length for this scatter event ───────────────
+            let mu_t_init = props.total_attenuation();
+            if mu_t_init < 1e-12 {
+                // Transparent voxel — skip forward by one voxel width
+                photon.position[2] += self.grid.dz;
+                step_count += 1;
+                continue;
             }
 
-            let step_length = -rng.gen::<f64>().ln() / mu_t;
+            let mut s_remaining = -rng.gen::<f64>().ln() / mu_t_init;
+            // Track the mu_t of the medium where the step was sampled for rescaling
+            let mut mu_t_ref = mu_t_init;
 
-            // ── Check domain boundary ─────────────────────────────────────────
-            let (hit_domain_boundary, actual_step) = self.check_boundary_intersection(
-                photon.position,
-                photon.direction,
-                step_length,
-                bounds,
-            );
+            // ── Sub-step voxel-by-voxel ───────────────────────────────────────
+            let scatter_occurred = loop {
+                let (s_to_boundary, next_voxel) = photon_step_to_boundary(
+                    photon.position,
+                    photon.direction,
+                    ci, cj, ck,
+                    self.grid.dx,
+                    self.grid.dy,
+                    self.grid.dz,
+                    self.grid.nx,
+                    self.grid.ny,
+                    self.grid.nz,
+                );
 
-            // ── Check voxel interface (for Fresnel handling) ──────────────────
-            // Compute next voxel position to detect refractive-index crossing.
-            let mid_pos = [
-                photon.position[0] + actual_step * photon.direction[0],
-                photon.position[1] + actual_step * photon.direction[1],
-                photon.position[2] + actual_step * photon.direction[2],
-            ];
+                let voxel_idx = ck * (self.grid.nx * self.grid.ny) + cj * self.grid.nx + ci;
 
-            let crossed_interface = if !hit_domain_boundary {
-                // Check if end position is in a different voxel
-                match self.position_to_voxel(mid_pos) {
-                    Some((ni, nj, nk)) if ni != i || nj != j || nk != k => {
-                        // Crossed a voxel boundary — check refractive index
-                        self.optical_map
-                            .get(ni, nj, nk)
-                            .filter(|next_props| {
-                                (next_props.refractive_index - props.refractive_index).abs() > 1e-6
-                            })
-                            .map(|next_props| {
-                                let n_hat = self.voxel_boundary_normal(
-                                    photon.position,
-                                    photon.direction,
-                                    i,
-                                    j,
-                                    k,
-                                );
-                                (next_props.refractive_index, n_hat)
-                            })
+                if s_remaining <= s_to_boundary {
+                    // Scatter point is inside the current voxel
+                    photon.position[0] += s_remaining * photon.direction[0];
+                    photon.position[1] += s_remaining * photon.direction[1];
+                    photon.position[2] += s_remaining * photon.direction[2];
+
+                    if voxel_idx < fluence.len() {
+                        atomic_add_f64(&fluence[voxel_idx], photon.weight * s_remaining);
                     }
-                    _ => None,
+
+                    // Deposit absorbed energy (albedo splitting, Wang 1995 §2.5)
+                    let albedo = if let Some(p) = self.optical_map.get(ci, cj, ck) {
+                        p.albedo()
+                    } else {
+                        props.albedo()
+                    };
+                    let absorbed = photon.weight * (1.0 - albedo);
+                    photon.weight -= absorbed;
+                    if voxel_idx < absorbed_energy.len() {
+                        atomic_add_f64(&absorbed_energy[voxel_idx], absorbed);
+                    }
+
+                    break true; // Scatter event occurred
                 }
-            } else {
-                None
+
+                // ── Boundary crossing ─────────────────────────────────────────
+                photon.position[0] += s_to_boundary * photon.direction[0];
+                photon.position[1] += s_to_boundary * photon.direction[1];
+                photon.position[2] += s_to_boundary * photon.direction[2];
+
+                if voxel_idx < fluence.len() {
+                    atomic_add_f64(&fluence[voxel_idx], photon.weight * s_to_boundary);
+                }
+
+                s_remaining -= s_to_boundary;
+
+                match next_voxel {
+                    None => {
+                        // ── z=0 tissue–air exit: Fresnel gate (Wang 1995 §2.7) ──────
+                        //
+                        // **Theorem:** At the tissue–air boundary (n₁ → 1.0) photons
+                        // with angle θ_i > θ_c = arcsin(1/n₁) are totally internally
+                        // reflected.  For θ_i < θ_c, the probability of transmission is
+                        // T = 1 − R(θ_i), where R = (R_s + R_p)/2 (Fresnel, unpolarised).
+                        // Only transmitted photons escape and are counted as Rd.
+                        // Internally reflected photons re-enter the first voxel (k=0)
+                        // and continue propagating, preserving weight exactly.
+                        //
+                        // **Reference:** Wang L, Jacques SL, Zheng L (1995) §2.7.
+                        if photon.position[2] <= 0.0 && photon.direction[2] < 0.0 {
+                            let n_tissue = self.optical_map.get(ci, cj, 0)
+                                .map(|p| p.refractive_index)
+                                .unwrap_or(1.4);
+                            let cos_i = (-photon.direction[2]).clamp(0.0, 1.0);
+                            let r = fresnel_reflectance(n_tissue, 1.0, cos_i);
+                            if rng.gen::<f64>() < r {
+                                // Internal reflection — push back just inside z=0 and flip
+                                photon.position[2] = 1e-15;
+                                photon.direction[2] = photon.direction[2].abs();
+                                photon.direction = normalize(photon.direction);
+                                if let Some((ni, nj, nk)) = self.position_to_voxel(photon.position) {
+                                    ci = ni; cj = nj; ck = nk;
+                                }
+                                continue; // resume voxel sub-step loop
+                            } else {
+                                // Transmitted through surface — diffuse reflectance
+                                atomic_add_f64(reflected_weight, photon.weight);
+                            }
+                        }
+                        if config.boundary_reflection && !(photon.position[2] <= 0.0 && photon.direction[2] < 0.0) {
+                            self.handle_boundary(&mut photon, rng);
+                            if let Some((ni, nj, nk)) = self.position_to_voxel(photon.position) {
+                                ci = ni; cj = nj; ck = nk;
+                                if let Some(np) = self.optical_map.get(ci, cj, ck) {
+                                    let new_mu_t = np.total_attenuation();
+                                    if new_mu_t > 1e-12 && mu_t_ref > 1e-12 {
+                                        s_remaining *= mu_t_ref / new_mu_t;
+                                        mu_t_ref = new_mu_t;
+                                    }
+                                }
+                                continue;
+                            }
+                        }
+                        break false; // Photon escaped — no scatter
+                    }
+                    Some((ni, nj, nk)) => {
+                        // Check Fresnel at refractive-index boundary
+                        if let Some(np) = self.optical_map.get(ni, nj, nk) {
+                            if (np.refractive_index - props.refractive_index).abs() > 1e-6 {
+                                let n_hat = self.voxel_boundary_normal(
+                                    photon.position, photon.direction, ci, cj, ck,
+                                );
+                                apply_fresnel(
+                                    &mut photon.direction,
+                                    n_hat,
+                                    props.refractive_index,
+                                    np.refractive_index,
+                                    rng,
+                                );
+                                photon.direction = normalize(photon.direction);
+                            }
+                            // Rescale remaining step to new medium's mu_t (Wang 1995 §2.3)
+                            let new_mu_t = np.total_attenuation();
+                            if new_mu_t > 1e-12 && mu_t_ref > 1e-12 {
+                                s_remaining *= mu_t_ref / new_mu_t;
+                                mu_t_ref = new_mu_t;
+                            }
+                        }
+                        ci = ni; cj = nj; ck = nk;
+                    }
+                }
             };
 
-            // ── Accumulate fluence (W × path_length in this voxel) ───────────
-            let voxel_idx = k * (self.grid.nx * self.grid.ny) + j * self.grid.nx + i;
-            if voxel_idx < fluence.len() {
-                atomic_add_f64(&fluence[voxel_idx], photon.weight * actual_step);
+            if !scatter_occurred || photon.weight < 1e-30 {
+                break;
             }
 
-            // ── Move photon ───────────────────────────────────────────────────
-            photon.position = mid_pos;
-
-            // ── Absorption (albedo splitting) ─────────────────────────────────
-            let albedo = props.albedo();
-            let absorbed = photon.weight * (1.0 - albedo);
-            photon.weight *= albedo;
-            if voxel_idx < absorbed_energy.len() {
-                atomic_add_f64(&absorbed_energy[voxel_idx], absorbed);
-            }
-
-            // ── Apply Fresnel at optical interface (if any) ───────────────────
-            if let Some((n2, n_hat)) = crossed_interface {
-                let n1 = props.refractive_index;
-                apply_fresnel(&mut photon.direction, n_hat, n1, n2, rng);
-                // Normalise to guard against floating-point drift
-                photon.direction = normalize(photon.direction);
-            }
-
-            // ── Domain boundary handling ──────────────────────────────────────
-            if hit_domain_boundary {
-                if config.boundary_reflection {
-                    self.handle_boundary(&mut photon, rng);
-                } else {
-                    break; // Photon escapes domain
-                }
-            }
-
-            // ── Russian roulette ──────────────────────────────────────────────
+            // ── Russian roulette (Wang 1995 §2.6) ────────────────────────────
+            // Variance-preserving: survive with prob m, boost weight by 1/m.
             if photon.weight < config.russian_roulette_threshold {
                 if rng.gen::<f64>() < config.russian_roulette_survival {
                     photon.weight /= config.russian_roulette_survival;
@@ -219,19 +309,17 @@ impl MonteCarloSolver {
                 }
             }
 
-            // ── Scattering (Henyey-Greenstein) ────────────────────────────────
-            scatter_photon(&mut photon, props.anisotropy, rng);
+            // ── Scattering (Henyey-Greenstein phase function) ─────────────────
+            if let Some(p) = self.optical_map.get(ci, cj, ck) {
+                scatter_photon(&mut photon, p.anisotropy, rng);
+            }
 
             step_count += 1;
         }
     }
 
-    /// Compute the outward normal at the voxel boundary that the photon is
-    /// about to cross, given the current voxel (i,j,k) and the photon's
-    /// direction of travel.
-    ///
-    /// The normal is aligned with whichever axis has the smallest time-to-exit
-    /// (slab method), pointing *into* the current voxel (incident medium).
+    /// Compute the inward surface normal at the voxel face the photon is
+    /// about to cross (slab method, pointing into the incident medium).
     fn voxel_boundary_normal(
         &self,
         pos: [f64; 3],
@@ -240,7 +328,6 @@ impl MonteCarloSolver {
         j: usize,
         k: usize,
     ) -> [f64; 3] {
-        // Voxel extents
         let x0 = i as f64 * self.grid.dx;
         let y0 = j as f64 * self.grid.dy;
         let z0 = k as f64 * self.grid.dz;
@@ -248,7 +335,6 @@ impl MonteCarloSolver {
         let y1 = y0 + self.grid.dy;
         let z1 = z0 + self.grid.dz;
 
-        // Time to each face along each axis (slab method)
         let tx = if dir[0] > 1e-12 {
             (x1 - pos[0]) / dir[0]
         } else if dir[0] < -1e-12 {
@@ -271,9 +357,7 @@ impl MonteCarloSolver {
             f64::INFINITY
         };
 
-        // Closest face determines the normal axis
         if tx <= ty && tx <= tz {
-            // x-face: normal points in -x if going +x, else +x
             if dir[0] > 0.0 { [-1.0, 0.0, 0.0] } else { [1.0, 0.0, 0.0] }
         } else if ty <= tz {
             if dir[1] > 0.0 { [0.0, -1.0, 0.0] } else { [0.0, 1.0, 0.0] }
@@ -305,43 +389,8 @@ impl MonteCarloSolver {
         }
     }
 
-    /// Check for boundary intersection
-    fn check_boundary_intersection(
-        &self,
-        pos: [f64; 3],
-        dir: [f64; 3],
-        step_length: f64,
-        bounds: [f64; 3],
-    ) -> (bool, f64) {
-        let new_pos = [
-            pos[0] + step_length * dir[0],
-            pos[1] + step_length * dir[1],
-            pos[2] + step_length * dir[2],
-        ];
-
-        // Check each axis
-        for (axis, bound) in bounds.iter().enumerate() {
-            if new_pos[axis] < 0.0 || new_pos[axis] >= *bound {
-                // Compute distance to boundary
-                let t = if dir[axis] > 0.0 {
-                    (*bound - pos[axis]) / dir[axis]
-                } else if dir[axis] < 0.0 {
-                    -pos[axis] / dir[axis]
-                } else {
-                    f64::INFINITY
-                };
-
-                return (true, t.min(step_length));
-            }
-        }
-
-        (false, step_length)
-    }
-
-    /// Handle boundary reflection/transmission
+    /// Handle boundary reflection/transmission (specular reflection)
     fn handle_boundary<R: Rng>(&self, photon: &mut Photon, _rng: &mut R) {
-        // Simple specular reflection at boundaries
-        // Find which boundary was hit and reverse corresponding direction component
         let bounds = [
             self.grid.dx * self.grid.nx as f64,
             self.grid.dy * self.grid.ny as f64,

@@ -27,7 +27,8 @@ pub fn cavitation_intensity(bubble_states: &BubbleStateFields, liquid_density: f
         .and(&bubble_states.velocity)
         .and(&bubble_states.compression_ratio)
         .for_each(|out, &r, &v, &compression| {
-            let collapse_energy = IMPACT_ENERGY_COEFFICIENT * liquid_density * v.powi(2) * r.powi(3);
+            let collapse_energy =
+                IMPACT_ENERGY_COEFFICIENT * liquid_density * v.powi(2) * r.powi(3);
             let compression_factor = compression.powf(COMPRESSION_FACTOR_EXPONENT);
             *out = collapse_energy * compression_factor;
         });
@@ -69,4 +70,3 @@ impl ErosionPattern {
         damage_field.mapv(|d| d > threshold)
     }
 }
-

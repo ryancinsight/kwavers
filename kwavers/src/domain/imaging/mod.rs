@@ -35,7 +35,7 @@ pub use medical::{
 };
 pub use multimodality_fusion::{
     FusionEngine, FusionMethod, FusionParameters, ImageData, ImageModality,
-    MultimodalityFusionManager, RegistrationEngine, RegistrationParams, RegistrationTransform,
+    MultimodalityFusionManager, RegistrationTransform,
     TransformationType,
 };
 pub use unified_loader::{MedicalImageBatchLoader, UnifiedMedicalImageLoader};

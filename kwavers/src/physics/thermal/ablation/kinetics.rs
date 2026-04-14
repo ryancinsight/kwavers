@@ -12,7 +12,7 @@
 //!
 //! $$ \Omega(t) = \int_0^t A \exp\left(-\frac{E_a}{R T(\tau)}\right) d\tau $$
 //!
-//! **Proof / Invariants:** 
+//! **Proof / Invariants:**
 //! The survival fraction of cells $S(t) / S(0)$ is modeled exponentially:
 //! $S(t) = S(0) \exp(-\Omega(t))$. Ergo, $\Omega = 1$ mathematically guarantees
 //! $1 - e^{-1} \approx 63.2\%$ cell death, establishing the threshold for irreversible
@@ -23,7 +23,7 @@
 //!
 //! $$ \text{CEM}_{43} = \int_{0}^{t} R^{43 - T(\tau)} d\tau $$
 //!
-//! Where $R$ represents the empirical compensation constant. For $T > 43^\circ\text{C}$, 
+//! Where $R$ represents the empirical compensation constant. For $T > 43^\circ\text{C}$,
 //! $R \approx 0.5$, indicating damage rate doubles for every 1°C increase.
 //!
 //! # References

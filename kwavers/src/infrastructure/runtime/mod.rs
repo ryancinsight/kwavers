@@ -16,14 +16,11 @@
 //! 2. **tracing**: Structured logging with spans (P0)
 //! 3. **rkyv**: Zero-copy serialization (P1)
 //! 4. **loom**: Concurrency testing (P1)
-//!    TODO_AUDIT: P1 - Production Runtime Infrastructure - Implement complete async runtime with distributed computing and observability
-//!    DEPENDS ON: infra/runtime/distributed.rs, infra/runtime/observability.rs, infra/runtime/resource_management.rs
-//!    MISSING: Distributed computing with MPI/OpenMPI for cluster-scale simulations
-//!    MISSING: Comprehensive observability with OpenTelemetry tracing and metrics
-//!    MISSING: Resource management with cgroups and NUMA-aware memory allocation
-//!    MISSING: Service mesh integration for microservice architecture
-//!    MISSING: Circuit breakers and graceful degradation for fault tolerance
-//!    MISSING: Configuration management with hot-reloading capabilities
+//!
+//! **Not yet implemented (cluster-scale extension points):**
+//! - Distributed MPI/OpenMPI for multi-node simulations
+//! - OpenTelemetry metrics and distributed tracing
+//! - NUMA-aware memory allocation and cgroup resource management
 //!
 //! ## Feature Flags
 //!

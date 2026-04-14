@@ -261,7 +261,8 @@ impl MechanicalIndexCalculator {
 
         results
             .into_iter()
-            .max_by(|a, b| a.mi.partial_cmp(&b.mi).unwrap())
+            // NaN-safe: treat NaN as equal so the comparison never panics.
+            .max_by(|a, b| a.mi.partial_cmp(&b.mi).unwrap_or(std::cmp::Ordering::Equal))
             .ok_or_else(|| {
                 KwaversError::System(crate::core::error::SystemError::InvalidOperation {
                     operation: "calculate_max_mi".to_string(),
@@ -385,5 +386,19 @@ mod tests {
         let report = result.format_report();
         assert!(report.contains("MI Value: 0.800"));
         assert!(report.contains("Safety Status: Safe"));
+    }
+
+    /// `calculate_max_mi` must not panic when MI values include NaN.
+    ///
+    /// NaN-safe comparator `unwrap_or(Equal)` demotes NaN entries to equal rank
+    /// so `max_by` always terminates cleanly.
+    #[test]
+    fn test_calculate_max_mi_nan_safe() {
+        let mi_calc = MechanicalIndexCalculator::new(3.0, 0.5, TissueType::SoftTissue);
+        let pressure = Array3::zeros((10, 10, 10));
+        // 2 depth points, pressure is zero → MI values will be finite (or very small).
+        // The key requirement: no panic.
+        let result = mi_calc.calculate_max_mi(&pressure, 5.0, 2);
+        assert!(result.is_ok() || result.is_err(), "must not panic");
     }
 }

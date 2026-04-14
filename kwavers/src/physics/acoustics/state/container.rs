@@ -27,10 +27,7 @@ impl PhysicsState {
         let (nx, ny, nz) = grid.dimensions();
         let fields = Array4::<f64>::zeros((field_indices::TOTAL_FIELDS, nx, ny, nz));
 
-        Self {
-            fields,
-            grid,
-        }
+        Self { fields, grid }
     }
 
     /// Get a read-only view of a specific field (zero-copy)

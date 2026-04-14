@@ -3,10 +3,10 @@
 //! # Mathematical Specification
 //!
 //! ## Theorem 1: Acoustic-to-Elastographic Coupling
-//! Tissue stiffness (Young's modulus $E$) is estimated via an empirical coupling to acoustic 
-//! impedance (often proxied by normalized backscatter intensity $I$). Standard soft 
-//! tissue baseline stiffness typically centers around $E_0 \approx 20$ kPa. 
-//! Pathological dense tissue (e.g., tumors) exhibits both higher acoustic scattering 
+//! Tissue stiffness (Young's modulus $E$) is estimated via an empirical coupling to acoustic
+//! impedance (often proxied by normalized backscatter intensity $I$). Standard soft
+//! tissue baseline stiffness typically centers around $E_0 \approx 20$ kPa.
+//! Pathological dense tissue (e.g., tumors) exhibits both higher acoustic scattering
 //! and elevated localized stiffness ($E_{max} \approx 60$ kPa).
 //!
 //! $$ E(I) = E_0 \cdot \left(1 + \kappa \cdot (1 - I)\right) $$

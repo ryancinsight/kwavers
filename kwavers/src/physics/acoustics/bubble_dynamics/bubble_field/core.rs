@@ -203,8 +203,7 @@ impl BubbleField {
                 let delta_x = (pos_i.0 as f64 - pos_j.0 as f64) * dx;
                 let delta_y = (pos_i.1 as f64 - pos_j.1 as f64) * dy;
                 let delta_z = (pos_i.2 as f64 - pos_j.2 as f64) * dz;
-                let d_ij =
-                    (delta_x * delta_x + delta_y * delta_y + delta_z * delta_z).sqrt();
+                let d_ij = (delta_x * delta_x + delta_y * delta_y + delta_z * delta_z).sqrt();
 
                 if d_ij == 0.0 {
                     continue; // overlapping cells — skip singularity
@@ -220,8 +219,7 @@ impl BubbleField {
                 let rdot = state_i.wall_velocity;
                 let rddot = state_i.wall_acceleration;
 
-                let p_ij =
-                    -self.rho_liquid * (r * r * rddot + 2.0 * r * rdot * rdot) / d_ij;
+                let p_ij = -self.rho_liquid * (r * r * rddot + 2.0 * r * rdot * rdot) / d_ij;
 
                 *corrections.get_mut(&pos_j).unwrap() += p_ij;
             }
@@ -254,12 +252,11 @@ impl BubbleField {
         t: f64,
     ) {
         // Compute secondary Bjerknes corrections (O(N²)) only when > 1 bubble
-        let secondary_pressures: HashMap<(usize, usize, usize), f64> =
-            if self.bubbles.len() > 1 {
-                self.compute_secondary_pressures()
-            } else {
-                HashMap::new()
-            };
+        let secondary_pressures: HashMap<(usize, usize, usize), f64> = if self.bubbles.len() > 1 {
+            self.compute_secondary_pressures()
+        } else {
+            HashMap::new()
+        };
 
         // Integrate each bubble with coupled driving pressure
         for (&pos, state) in &mut self.bubbles {
@@ -377,8 +374,7 @@ mod tests {
     fn test_two_bubble_coupling_at_equilibrium() {
         // Two bubbles at equilibrium: R̈=0, Ṙ=0 → secondary correction = 0.
         let params = BubbleParameters::default();
-        let mut field =
-            BubbleField::with_spacing((20, 10, 10), params.clone(), (1e-6, 1e-6, 1e-6));
+        let mut field = BubbleField::with_spacing((20, 10, 10), params.clone(), (1e-6, 1e-6, 1e-6));
 
         field.add_bubble(5, 5, 5, BubbleState::new(&params));
         field.add_bubble(15, 5, 5, BubbleState::new(&params));
@@ -395,8 +391,7 @@ mod tests {
         let mut params = BubbleParameters::default();
         params.r0 = 1e-6;
 
-        let mut field =
-            BubbleField::with_spacing((20, 10, 10), params.clone(), (1e-3, 1e-3, 1e-3));
+        let mut field = BubbleField::with_spacing((20, 10, 10), params.clone(), (1e-3, 1e-3, 1e-3));
         field.coupling_threshold = 0.01;
 
         let mut s1 = BubbleState::new(&params);
@@ -418,13 +413,12 @@ mod tests {
         let mut params = BubbleParameters::default();
         params.r0 = 1e-6;
 
-        let mut field =
-            BubbleField::with_spacing((10, 10, 10), params.clone(), (1e-6, 1e-6, 1e-6));
+        let mut field = BubbleField::with_spacing((10, 10, 10), params.clone(), (1e-6, 1e-6, 1e-6));
         field.coupling_threshold = 0.01;
 
         let mut s1 = BubbleState::new(&params);
         s1.radius = 1e-6;
-        s1.wall_velocity = 5.0;     // Ṙ = 5 m/s
+        s1.wall_velocity = 5.0; // Ṙ = 5 m/s
         s1.wall_acceleration = 1e8; // R̈ = 1e8 m/s²
 
         field.add_bubble(0, 5, 5, s1);

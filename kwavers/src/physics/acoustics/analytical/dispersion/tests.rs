@@ -22,7 +22,10 @@ fn test_fdtd_dispersion_3d_axis_aligned_low_dispersion() {
         "Dispersion should be < 1% at 20 PPW: got {}",
         dispersion_3d
     );
-    assert!(dispersion_3d < 0.0, "FDTD typically has negative dispersion");
+    assert!(
+        dispersion_3d < 0.0,
+        "FDTD typically has negative dispersion"
+    );
 }
 
 #[test]
@@ -102,10 +105,8 @@ fn test_pstd_dispersion_3d_fourth_order() {
     let dx = wavelength / 8.0;
     let dt = 0.2 * dx / c;
 
-    let dispersion_2nd =
-        DispersionAnalysis::pstd_dispersion_3d(k, 0.0, 0.0, dx, dx, dx, dt, c, 2);
-    let dispersion_4th =
-        DispersionAnalysis::pstd_dispersion_3d(k, 0.0, 0.0, dx, dx, dx, dt, c, 4);
+    let dispersion_2nd = DispersionAnalysis::pstd_dispersion_3d(k, 0.0, 0.0, dx, dx, dx, dt, c, 2);
+    let dispersion_4th = DispersionAnalysis::pstd_dispersion_3d(k, 0.0, 0.0, dx, dx, dx, dt, c, 4);
 
     assert!(dispersion_4th.abs() < dispersion_2nd.abs());
 }
@@ -134,9 +135,8 @@ fn test_dispersion_zero_wavenumber() {
         DispersionAnalysis::fdtd_dispersion_3d(0.0, 0.0, 0.0, 1e-4, 1e-4, 1e-4, 1e-7, 1500.0);
     assert_eq!(dispersion, 0.0);
 
-    let dispersion_pstd = DispersionAnalysis::pstd_dispersion_3d(
-        0.0, 0.0, 0.0, 1e-4, 1e-4, 1e-4, 1e-7, 1500.0, 2,
-    );
+    let dispersion_pstd =
+        DispersionAnalysis::pstd_dispersion_3d(0.0, 0.0, 0.0, 1e-4, 1e-4, 1e-4, 1e-7, 1500.0, 2);
     assert_eq!(dispersion_pstd, 0.0);
 }
 

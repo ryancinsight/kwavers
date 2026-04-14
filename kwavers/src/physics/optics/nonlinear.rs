@@ -191,10 +191,10 @@ impl PhotoacousticConversion {
     /// Tissue (generic)
     pub fn tissue() -> Self {
         Self::new(
-            0.25,   // Grüneisen parameter
+            0.25,               // Grüneisen parameter
             SOUND_SPEED_TISSUE, // Speed of sound [m/s]
-            0.5,    // Thermal conductivity [W/(m·K)]
-            3.5e6,  // Volumetric heat capacity [J/(m³·K)]
+            0.5,                // Thermal conductivity [W/(m·K)]
+            3.5e6,              // Volumetric heat capacity [J/(m³·K)]
         )
     }
 

@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::{BOLTZMANN, ELEMENTARY_CHARGE, ELECTRON_MASS};
+use crate::core::constants::fundamental::{BOLTZMANN, ELECTRON_MASS, ELEMENTARY_CHARGE};
 use crate::core::error::KwaversResult;
 use crate::physics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel;
@@ -124,7 +124,10 @@ impl IntegratedSonoluminescence {
                     state_k2.wall_velocity += 0.5 * dt * k1_v;
                     update_thermodynamics(&mut state_k2, bubble_params);
                     let k2_v = bubble_model.calculate_acceleration(
-                        &mut state_k2, p_amp, dp_dt_k2, t_k2,
+                        &mut state_k2,
+                        p_amp,
+                        dp_dt_k2,
+                        t_k2,
                     )?;
                     let k2_r = state_k2.wall_velocity;
 
@@ -135,7 +138,10 @@ impl IntegratedSonoluminescence {
                     state_k3.wall_velocity += 0.5 * dt * k2_v;
                     update_thermodynamics(&mut state_k3, bubble_params);
                     let k3_v = bubble_model.calculate_acceleration(
-                        &mut state_k3, p_amp, dp_dt_k3, t_k2,
+                        &mut state_k3,
+                        p_amp,
+                        dp_dt_k3,
+                        t_k2,
                     )?;
                     let k3_r = state_k3.wall_velocity;
 
@@ -147,15 +153,18 @@ impl IntegratedSonoluminescence {
                     state_k4.wall_velocity += dt * k3_v;
                     update_thermodynamics(&mut state_k4, bubble_params);
                     let k4_v = bubble_model.calculate_acceleration(
-                        &mut state_k4, p_amp, dp_dt_k4, t_k4,
+                        &mut state_k4,
+                        p_amp,
+                        dp_dt_k4,
+                        t_k4,
                     )?;
                     let k4_r = state_k4.wall_velocity;
 
                     // Final RK4 update
                     let new_radius =
                         state.radius + (dt / 6.0) * (k1_r + 2.0 * k2_r + 2.0 * k3_r + k4_r);
-                    let new_velocity = state.wall_velocity
-                        + (dt / 6.0) * (k1_v + 2.0 * k2_v + 2.0 * k3_v + k4_v);
+                    let new_velocity =
+                        state.wall_velocity + (dt / 6.0) * (k1_v + 2.0 * k2_v + 2.0 * k3_v + k4_v);
 
                     state.radius = new_radius;
                     state.wall_velocity = new_velocity;
@@ -165,8 +174,7 @@ impl IntegratedSonoluminescence {
                     let compression_ratio = (bubble_params.r0 / new_radius).powi(3);
 
                     // Particle velocity (thermal electrons + wall motion)
-                    let thermal_velocity_sq =
-                        3.0 * BOLTZMANN * state.temperature / ELECTRON_MASS;
+                    let thermal_velocity_sq = 3.0 * BOLTZMANN * state.temperature / ELECTRON_MASS;
                     let collapse_velocity = new_velocity.abs();
                     let particle_velocity =
                         (thermal_velocity_sq + collapse_velocity * collapse_velocity).sqrt();
@@ -177,8 +185,7 @@ impl IntegratedSonoluminescence {
                         state.pressure_internal,
                         self.emission.params.ionization_energy,
                     );
-                    let number_density =
-                        state.pressure_internal / (BOLTZMANN * state.temperature);
+                    let number_density = state.pressure_internal / (BOLTZMANN * state.temperature);
                     let electron_density = ionization_fraction * number_density;
                     let charge_density = electron_density * ELEMENTARY_CHARGE;
 

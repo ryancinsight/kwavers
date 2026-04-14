@@ -8,7 +8,7 @@ use crate::domain::field::EMFields;
 use crate::physics::electromagnetic::equations::{
     EMMaterialDistribution, ElectromagneticWaveEquation, PhotoacousticCoupling,
 };
-use crate::physics::electromagnetic::photoacoustic::{GruneisenParameter, OpticalAbsorption};
+use crate::physics::electromagnetic::photoacoustic::{GrueneisenModel, OpticalAbsorption};
 use ndarray::ArrayD;
 
 /// Photoacoustic solver implementation
@@ -16,7 +16,7 @@ pub struct PhotoacousticSolver<T: ElectromagneticWaveEquation> {
     /// Electromagnetic wave solver
     pub em_solver: T,
     /// Grüneisen parameter for thermoelastic coupling
-    pub gruneisen: GruneisenParameter,
+    pub gruneisen: GrueneisenModel,
     /// Optical absorption properties
     pub optical_properties: OpticalAbsorption,
     /// Initial acoustic pressure field
@@ -37,7 +37,7 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
     /// Create a new photoacoustic solver
     pub fn new(
         em_solver: T,
-        gruneisen: GruneisenParameter,
+        gruneisen: GrueneisenModel,
         optical_properties: OpticalAbsorption,
     ) -> Self {
         Self {
@@ -53,7 +53,7 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
         &mut self,
         fluence: &ArrayD<f64>,
     ) -> KwaversResult<ArrayD<f64>> {
-        let gamma = self.gruneisen.get_value(310.0, 1e5); // Body temperature, atmospheric pressure
+        let gamma = self.gruneisen.evaluate(37.0); // Body temperature (37 °C)
         let mu_a = self.optical_properties.absorption_coefficient;
 
         // p₀ = Γ μ_a Φ
@@ -212,7 +212,7 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticCoupling for PhotoacousticSolv
     }
 
     fn gruneisen_parameter(&self, _position: &[f64]) -> f64 {
-        self.gruneisen.get_value(310.0, 1e5)
+        self.gruneisen.evaluate(37.0)
     }
 
     fn reduced_scattering(&self, _position: &[f64]) -> f64 {
@@ -238,7 +238,7 @@ mod tests {
         let em_solver = ElectromagneticFdtdSolver::new(grid, materials, 1e-12, 4).unwrap();
 
         // Create photoacoustic solver
-        let gruneisen = GruneisenParameter::new(0.5);
+        let gruneisen = GrueneisenModel::constant(0.5);
         let optical_props = OpticalAbsorption::new(10.0, 50.0, 0.9, 800e-9);
 
         let mut pa_solver = PhotoacousticSolver::new(em_solver, gruneisen, optical_props);

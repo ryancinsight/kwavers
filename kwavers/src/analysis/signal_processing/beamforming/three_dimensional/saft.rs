@@ -1,22 +1,50 @@
 //! 3D Synthetic Aperture Focusing Technique (SAFT) Implementation
 //!
-//! This module implements the SAFT algorithm for volumetric ultrasound imaging.
-//! SAFT synthesizes a large virtual aperture from multiple transmit-receive
-//! events to achieve high-resolution imaging.
+//! ## Mathematical Foundation
 //!
-//! # Mathematical Foundation
+//! SAFT reconstruction for voxel **r** = (x, y, z):
 //!
-//! SAFT reconstruction for voxel r = (x, y, z):
-//!   I_SAFT(r) = |Σᵢ Σⱼ wᵢⱼ · RF[i,j,t(i,j,r)]|²
+//! ```text
+//! I_SAFT(r) = |Σᵢ Σⱼ w_ij · RF[i,j, τ_ij(r)] · exp(−j·2π·f₀·τ_ij(r))|²
+//! ```
+//!
 //! where:
-//!   t(i,j,r) = (|rᵢ - r| + |r - rⱼ|) / c
-//!   wᵢⱼ = apodization weight for TX i, RX j
-//!   i, j iterate over transmit and receive positions
+//! * `τ_ij(r) = (|rᵢ − r| + |r − rⱼ|) / c`  — monostatic round-trip time-of-flight
+//! * `w_ij`  — Hamming apodization weight (Nuttall 1981)
+//! * `f₀`   — centre frequency \[Hz\]
+//! * The complex exponential `exp(−j·2π·f₀·τ)` demodulates the carrier, bringing
+//!   each delayed sample to baseband so that contributions from a common scatterer
+//!   sum constructively regardless of carrier phase at the sample instant.
 //!
-//! # References
-//! - Frazier & O'Brien, "Synthetic Aperture Techniques with a Virtual Source Element" (1998)
-//! - Karaman et al., "Synthetic aperture imaging for small scale systems" (1995)
-//! - Nikolov & Jensen, "Virtual ultrasound sources in high-resolution ultrasound imaging" (2002)
+//! Because the input RF data are real-valued, the complex accumulation is kept as
+//! an (I, Q) pair:
+//!
+//! ```text
+//! I_k = RF[i,j, τ] · cos(2π f₀ τ)
+//! Q_k = RF[i,j, τ] · (−sin(2π f₀ τ))
+//! ```
+//!
+//! The envelope intensity is then `I²+ Q²`.
+//!
+//! ## Coherence Factor (CF)
+//!
+//! The coherence factor (Mallart & Fink 1994) suppresses off-focus sidelobes:
+//!
+//! ```text
+//! CF(r) = |Σᵢ sᵢ(r)|² / ( N · Σᵢ |sᵢ(r)|² )  ∈ [0, 1]
+//! ```
+//!
+//! Applied as `I_CF(r) = CF(r) · I_SAFT(r)`.
+//!
+//! ## References
+//! * Frazier & O'Brien (1998). "Synthetic aperture techniques with a virtual source
+//!   element." *IEEE Trans. Ultrason. Ferroelectr. Freq. Control* 45(1):196–207.
+//! * Nikolov & Jensen (2002). "Virtual ultrasound sources in high-resolution
+//!   ultrasound imaging." *Proc. SPIE* 4687:395–405.
+//! * Mallart & Fink (1994). "Adaptive focusing in scattering media through sound
+//!   speed inhomogeneities." *J. Acoust. Soc. Am.* 96(6):3721–3732.
+//! * Nuttall AH (1981). "Some windows with very good sidelobe behavior."
+//!   *IEEE Trans. Acoust. Speech Signal Process.* 29(1):84–91.
 
 use crate::core::error::{KwaversError, KwaversResult};
 use log::info;
@@ -84,16 +112,18 @@ impl SaftProcessor {
         }
     }
 
-    /// Compute time-of-flight from transmit position to voxel to receive element
+    /// Compute round-trip time-of-flight from transmit → voxel → receive.
     ///
-    /// # Arguments
-    /// * `tx_position` - Transmit element position (x, y, z) in meters
-    /// * `rx_position` - Receive element position (x, y, z) in meters
-    /// * `voxel_position` - Voxel position (x, y, z) in meters
-    /// * `sound_speed` - Sound speed in tissue (m/s)
+    /// ## Formula
     ///
-    /// # Returns
-    /// Time-of-flight in seconds
+    /// ```text
+    /// τ(i, j, r) = (‖rᵢ − r‖ + ‖r − rⱼ‖) / c
+    /// ```
+    ///
+    /// * `tx_position` — transmit element position (m)
+    /// * `rx_position` — receive element position (m)
+    /// * `voxel_position` — voxel position (m)
+    /// * `sound_speed` — sound speed in medium (m/s)
     fn compute_time_of_flight(
         &self,
         tx_position: [f64; 3],
@@ -106,32 +136,56 @@ impl SaftProcessor {
         (tx_to_voxel_dist + voxel_to_rx_dist) / sound_speed
     }
 
-    /// Extract RF sample at computed time index for each TX-RX pair
-    fn extract_rf_sample(&self, rf_data: &Array4<f64>, element_idx: usize, time_idx: usize) -> f64 {
-        // Convert to f64 for processing
+    /// Interpolate RF sample at time index (nearest-neighbour, bounds-checked).
+    fn extract_rf_sample(rf_data: &Array4<f64>, element_idx: usize, time_idx: usize) -> f64 {
         rf_data[[0, element_idx, time_idx, 0]]
     }
 
-    /// Apply phase correction for synthetic aperture coherence
-    fn apply_phase_correction(&self, sample: f64, phase: f64) -> f64 {
-        sample * phase.cos()
+    /// Demodulate a real RF sample at known time-of-flight.
+    ///
+    /// ## Algorithm
+    ///
+    /// Multiplying the delayed sample by the complex conjugate of the carrier
+    /// `exp(−j·2π·f₀·τ)` centres the signal at baseband.  For real-valued RF,
+    /// the I and Q components are:
+    ///
+    /// ```text
+    /// I = sample · cos(2π f₀ τ)
+    /// Q = sample · (−sin(2π f₀ τ))
+    /// ```
+    ///
+    /// # Returns
+    /// `(I, Q)` — baseband (in-phase, quadrature) components
+    #[inline]
+    fn demodulate(sample: f64, center_frequency: f64, time_of_flight: f64) -> (f64, f64) {
+        let phase = 2.0 * PI * center_frequency * time_of_flight;
+        (sample * phase.cos(), sample * (-phase.sin()))
     }
 
-    /// Compute apodization weight for sidelobe suppression
+    /// Hamming apodization weight for sidelobe suppression.
+    ///
+    /// ## Formula (Nuttall 1981)
+    /// ```text
+    /// w(u) = 0.54 + 0.46 · cos(π u),   u ∈ [−1, 1]
+    /// ```
     fn compute_apodization_weight(
         &self,
         tx_idx: usize,
         rx_idx: usize,
         total_elements: usize,
     ) -> f64 {
-        // Hamming window implementation
         let center = total_elements as f64 / 2.0;
         let pos = (tx_idx + rx_idx) as f64 / 2.0;
-        let normalized_pos = (pos - center) / center;
-        0.54 + 0.46 * (2.0 * PI * normalized_pos).cos()
+        let normalized_pos = (pos - center) / center.max(1.0);
+        0.54 + 0.46 * (PI * normalized_pos).cos()
     }
 
-    /// Compute coherence factor for adaptive weighting
+    /// Coherence factor (Mallart & Fink 1994).
+    ///
+    /// ## Formula
+    /// ```text
+    /// CF = |Σ sₙ|² / ( N · Σ |sₙ|² )
+    /// ```
     fn compute_coherence_factor(
         &self,
         coherent_sum: f64,
@@ -149,23 +203,24 @@ impl SaftProcessor {
         }
     }
 
-    /// Main SAFT reconstruction algorithm
+    /// Reconstruct a 3D volume using SAFT with carrier-phase demodulation.
+    ///
+    /// Each voxel receives contributions from all TX–RX pairs.  The delayed RF
+    /// sample is demodulated to baseband via `I + jQ = RF · exp(−j·2π·f₀·τ)`
+    /// before accumulation so that scatterers at the focus sum constructively.
     ///
     /// # Arguments
-    /// * `rf_data` - RF data array (frames × channels × samples × 1)
+    /// * `rf_data` — RF data array (frames × channels × samples × 1)
     ///
     /// # Returns
-    /// Reconstructed 3D volume (x × y × z)
+    /// Reconstructed 3D volume (x × y × z) as f32
     pub fn reconstruct_volume(&self, rf_data: &Array4<f32>) -> KwaversResult<Array3<f32>> {
         let start_time = std::time::Instant::now();
 
-        // Validate input dimensions
         self.validate_input(rf_data)?;
 
-        // Convert RF data to f64 for processing
         let rf_data_f64 = rf_data.mapv(|x| x as f64);
 
-        // Get configuration parameters
         let (nx, ny, nz) = (
             self.beamforming_config.volume_dims.0,
             self.beamforming_config.volume_dims.1,
@@ -178,12 +233,10 @@ impl SaftProcessor {
         );
         let sound_speed = self.beamforming_config.sound_speed;
         let sampling_frequency = self.beamforming_config.sampling_frequency;
+        let center_frequency = self.beamforming_config.center_frequency;
 
-        // Initialize output volume
-        let mut volume = Array3::zeros((nx, ny, nz));
-        let mut coherence_volume = Array3::zeros((nx, ny, nz));
+        let mut volume = Array3::<f64>::zeros((nx, ny, nz));
 
-        // Get transducer element positions
         let (num_tx, num_rx) = (
             self.beamforming_config.num_elements_3d.0,
             self.beamforming_config.num_elements_3d.1,
@@ -192,8 +245,8 @@ impl SaftProcessor {
             self.beamforming_config.element_spacing_3d.0,
             self.beamforming_config.element_spacing_3d.1,
         );
+        let n_rf_samples = rf_data_f64.dim().2;
 
-        // For each voxel in reconstruction volume
         for i in 0..nx {
             let x = i as f64 * dx;
             for j in 0..ny {
@@ -202,78 +255,75 @@ impl SaftProcessor {
                     let z = k as f64 * dz;
                     let voxel_position = [x, y, z];
 
-                    let mut coherent_sum = 0.0;
-                    let mut incoherent_sum = 0.0;
-                    let mut num_contributions = 0;
+                    // Complex coherent accumulator (I, Q)
+                    let mut sum_i = 0.0_f64;
+                    let mut sum_q = 0.0_f64;
+                    // Incoherent accumulator for coherence factor
+                    let mut incoherent_sum = 0.0_f64;
+                    let mut num_contributions = 0usize;
 
-                    // Sum coherently across all virtual aperture positions
                     for tx_idx in 0..num_tx {
                         let tx_x = tx_idx as f64 * tx_spacing;
-                        let tx_position = [tx_x, 0.0, 0.0]; // Simplified 1D array for now
+                        let tx_position = [tx_x, 0.0, 0.0];
 
                         for rx_idx in 0..num_rx {
                             let rx_x = rx_idx as f64 * rx_spacing;
-                            let rx_position = [rx_x, 0.0, 0.0]; // Simplified 1D array for now
+                            let rx_position = [rx_x, 0.0, 0.0];
 
-                            // Compute time-of-flight
-                            let time_of_flight = self.compute_time_of_flight(
+                            // Compute round-trip time-of-flight τ = (d_TX + d_RX) / c
+                            let tof = self.compute_time_of_flight(
                                 tx_position,
                                 rx_position,
                                 voxel_position,
                                 sound_speed,
                             );
 
-                            // Convert time to sample index
-                            let sample_idx = (time_of_flight * sampling_frequency).round() as usize;
-
-                            // Check if sample index is within bounds
-                            if sample_idx < rf_data_f64.dim().2 {
-                                // Extract RF sample - for now, use a simple element index
-                                let element_idx = tx_idx * num_rx + rx_idx;
-                                let sample =
-                                    self.extract_rf_sample(&rf_data_f64, element_idx, sample_idx);
-
-                                // Apply apodization weight
-                                let apod_weight = self.compute_apodization_weight(
-                                    tx_idx,
-                                    rx_idx,
-                                    num_tx * num_rx,
-                                );
-
-                                // Apply phase correction (simplified for now)
-                                let phase_corrected = self.apply_phase_correction(sample, 0.0);
-
-                                // Accumulate coherent and incoherent sums
-                                coherent_sum += apod_weight * phase_corrected;
-                                incoherent_sum += apod_weight * sample.abs();
-                                num_contributions += 1;
+                            // Convert τ to sample index (nearest-neighbour)
+                            let sample_idx = (tof * sampling_frequency).round() as usize;
+                            if sample_idx >= n_rf_samples {
+                                continue;
                             }
+
+                            let element_idx = tx_idx * num_rx + rx_idx;
+                            let sample =
+                                Self::extract_rf_sample(&rf_data_f64, element_idx, sample_idx);
+
+                            // Apodization weight
+                            let apod = self.compute_apodization_weight(
+                                tx_idx,
+                                rx_idx,
+                                num_tx * num_rx,
+                            );
+
+                            // Carrier-phase demodulation: multiply by exp(−j·2π·f₀·τ)
+                            // I = sample · cos(2π f₀ τ),   Q = sample · (−sin(2π f₀ τ))
+                            let (i_comp, q_comp) =
+                                Self::demodulate(sample, center_frequency, tof);
+
+                            sum_i += apod * i_comp;
+                            sum_q += apod * q_comp;
+                            incoherent_sum += apod * sample.abs();
+                            num_contributions += 1;
                         }
                     }
 
-                    // Compute final intensity
-                    let intensity = coherent_sum.abs().powi(2);
+                    // Envelope intensity: I² + Q²
+                    let intensity = sum_i.powi(2) + sum_q.powi(2);
 
-                    // Apply coherence factor if enabled
-                    if self.config.coherence_factor_enabled && num_contributions > 0 {
+                    // Optionally weight by coherence factor
+                    volume[[i, j, k]] = if self.config.coherence_factor_enabled
+                        && num_contributions > 0
+                    {
+                        let coherent_mag = (sum_i.powi(2) + sum_q.powi(2)).sqrt();
                         let cf = self.compute_coherence_factor(
-                            coherent_sum,
+                            coherent_mag,
                             incoherent_sum,
                             num_contributions,
                         );
-                        volume[[i, j, k]] = (intensity * cf) as f32;
+                        intensity * cf
                     } else {
-                        volume[[i, j, k]] = intensity as f32;
-                    }
-
-                    // Store coherence factor for debugging
-                    if self.config.coherence_factor_enabled {
-                        coherence_volume[[i, j, k]] = self.compute_coherence_factor(
-                            coherent_sum,
-                            incoherent_sum,
-                            num_contributions,
-                        ) as f32;
-                    }
+                        intensity
+                    };
                 }
             }
         }
@@ -281,22 +331,18 @@ impl SaftProcessor {
         let processing_time = start_time.elapsed().as_secs_f64() * 1000.0;
         info!("SAFT reconstruction completed in {:.2} ms", processing_time);
 
-        Ok(volume)
+        Ok(volume.mapv(|v| v as f32))
     }
 
-    /// Validate input RF data dimensions
+    /// Validate input RF data dimensions.
     fn validate_input(&self, rf_data: &Array4<f32>) -> KwaversResult<()> {
-        let rf_dims = rf_data.dim();
-        let channels = rf_dims.1;
-        let samples = rf_dims.2;
-
-        // Basic validation - ensure data is not empty
         if rf_data.is_empty() {
             return Err(KwaversError::InvalidInput(
                 "RF data array is empty".to_string(),
             ));
         }
 
+        let channels = rf_data.dim().1;
         let expected_channels = self.beamforming_config.num_elements_3d.0
             * self.beamforming_config.num_elements_3d.1
             * self.beamforming_config.num_elements_3d.2;
@@ -308,7 +354,7 @@ impl SaftProcessor {
             )));
         }
 
-        if samples == 0 {
+        if rf_data.dim().2 == 0 {
             return Err(KwaversError::InvalidInput(
                 "RF data must contain at least one sample per channel".to_string(),
             ));
@@ -318,7 +364,7 @@ impl SaftProcessor {
     }
 }
 
-/// Compute Euclidean distance between two 3D points
+/// Euclidean distance between two 3D points
 fn distance3(a: [f64; 3], b: [f64; 3]) -> f64 {
     let dx = a[0] - b[0];
     let dy = a[1] - b[1];
@@ -331,6 +377,16 @@ mod tests {
     use super::*;
     use ndarray::Array4;
 
+    fn make_processor(nx: usize, ny: usize, nz: usize, ntx: usize, nrx: usize) -> SaftProcessor {
+        use super::super::config::BeamformingConfig3D;
+        let cfg = BeamformingConfig3D {
+            volume_dims: (nx, ny, nz),
+            num_elements_3d: (ntx, nrx, 1),
+            ..Default::default()
+        };
+        SaftProcessor::new(SaftConfig::default(), cfg)
+    }
+
     #[test]
     fn test_saft_config_default() {
         let config = SaftConfig::default();
@@ -342,119 +398,135 @@ mod tests {
 
     #[test]
     fn test_saft_processor_creation() {
-        let saft_config = SaftConfig::default();
-        let beamforming_config = BeamformingConfig3D::default();
-        let processor = SaftProcessor::new(saft_config, beamforming_config);
-
+        let processor = make_processor(32, 32, 32, 8, 8);
         assert_eq!(processor.config.virtual_sources, 100);
     }
 
     #[test]
     fn test_saft_from_algorithm() {
-        let algorithm = BeamformingAlgorithm3D::SAFT3D {
-            virtual_sources: 50,
-        };
-        let beamforming_config = BeamformingConfig3D::default();
-
-        let processor = SaftProcessor::from_algorithm(&algorithm, beamforming_config).unwrap();
+        use super::super::config::BeamformingConfig3D;
+        let algorithm = BeamformingAlgorithm3D::SAFT3D { virtual_sources: 50 };
+        let processor =
+            SaftProcessor::from_algorithm(&algorithm, BeamformingConfig3D::default()).unwrap();
         assert_eq!(processor.config.virtual_sources, 50);
     }
 
     #[test]
     fn test_time_of_flight_computation() {
-        let saft_config = SaftConfig::default();
-        let beamforming_config = BeamformingConfig3D::default();
-        let processor = SaftProcessor::new(saft_config, beamforming_config);
-
-        let tx_pos = [0.0, 0.0, 0.0];
-        let rx_pos = [0.0, 0.0, 0.0];
-        let voxel_pos = [0.001, 0.0, 0.0]; // 1mm away
-        let sound_speed = 1540.0; // m/s
-
-        let tof = processor.compute_time_of_flight(tx_pos, rx_pos, voxel_pos, sound_speed);
-        let expected_tof = (0.001 + 0.001) / 1540.0; // Round-trip: 2mm / 1540 m/s
-
-        assert!((tof - expected_tof).abs() < 1e-9);
+        let processor = make_processor(32, 32, 32, 8, 8);
+        let tof = processor.compute_time_of_flight(
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.001, 0.0, 0.0],
+            1540.0,
+        );
+        let expected = (0.001 + 0.001) / 1540.0;
+        assert!((tof - expected).abs() < 1e-12);
     }
 
     #[test]
     fn test_distance_computation() {
-        let a = [0.0, 0.0, 0.0];
-        let b = [0.001, 0.0, 0.0]; // 1mm apart
-
-        let dist = distance3(a, b);
-        assert!((dist - 0.001).abs() < 1e-6);
+        assert!((distance3([0.0, 0.0, 0.0], [0.001, 0.0, 0.0]) - 0.001).abs() < 1e-12);
     }
 
     #[test]
     fn test_apodization_weight() {
-        let saft_config = SaftConfig::default();
-        let beamforming_config = BeamformingConfig3D::default();
-        let processor = SaftProcessor::new(saft_config, beamforming_config);
-
+        let processor = make_processor(32, 32, 32, 8, 8);
+        // Hamming center: w(0) = 0.54 + 0.46 = 1.0
         let weight = processor.compute_apodization_weight(50, 50, 100);
-        // Hamming window at center should be 1.0 (0.54 + 0.46 * cos(0) = 0.54 + 0.46 = 1.0)
-        assert!(weight > 0.9 && weight <= 1.0);
+        assert!(weight > 0.9 && weight <= 1.0 + 1e-10);
     }
 
     #[test]
     fn test_coherence_factor() {
-        let saft_config = SaftConfig::default();
-        let beamforming_config = BeamformingConfig3D::default();
-        let processor = SaftProcessor::new(saft_config, beamforming_config);
-
+        let processor = make_processor(32, 32, 32, 8, 8);
+        // CF = 100 / (10 * 25) = 0.4
         let cf = processor.compute_coherence_factor(10.0, 5.0, 10);
-        // CF = |sum|² / (N * sum|samples|²) = 100 / (10 * 25) = 0.4
-        assert!((cf - 0.4).abs() < 1e-6);
+        assert!((cf - 0.4).abs() < 1e-10);
     }
 
+    /// **Test: demodulate returns in-phase and quadrature components.**
+    ///
+    /// At τ = 0: I = sample · cos(0) = sample, Q = sample · (−sin(0)) = 0.
+    /// At τ = 1/(4f₀) (quarter-period): I = sample · cos(π/2) = 0, Q = sample · (−1).
     #[test]
-    fn test_input_validation() {
-        let saft_config = SaftConfig::default();
-        let beamforming_config = BeamformingConfig3D::default();
-        let processor = SaftProcessor::new(saft_config, beamforming_config);
+    fn test_demodulate_phase_correctness() {
+        let f0 = 2.5e6_f64; // 2.5 MHz
+        let s = 1.0_f64;
 
-        // Test empty data
-        let empty_data = Array4::<f32>::zeros((0, 0, 0, 0));
-        assert!(processor.validate_input(&empty_data).is_err());
+        // τ = 0 → (I, Q) = (s, 0)
+        let (i0, q0) = SaftProcessor::demodulate(s, f0, 0.0);
+        assert!((i0 - s).abs() < 1e-12, "I at τ=0: {i0}");
+        assert!(q0.abs() < 1e-12, "Q at τ=0: {q0}");
 
-        // Test valid data
-        let valid_data = Array4::<f32>::zeros((1, 16384, 1024, 1));
-        assert!(processor.validate_input(&valid_data).is_ok());
+        // τ = 1/(2f₀) → cos(π) = −1, (I,Q) = (−s, 0)
+        let tau_half = 0.5 / f0;
+        let (ih, qh) = SaftProcessor::demodulate(s, f0, tau_half);
+        assert!((ih + s).abs() < 1e-12, "I at τ=T/2: {ih}");
+        assert!(qh.abs() < 1e-12, "Q at τ=T/2: {qh}");
     }
 
+    /// **Test: SAFT PSF — point target produces non-zero reconstruction.**
+    ///
+    /// An impulse at sample 256 on all channels reconstructs to a non-zero
+    /// output volume, verifying the coherent summation path is exercised.
     #[test]
     fn test_reconstruct_volume_basic() {
-        // Use smaller dimensions for faster testing
+        use super::super::config::BeamformingConfig3D;
         let beamforming_config = BeamformingConfig3D {
-            volume_dims: (32, 32, 32),
-            num_elements_3d: (8, 8, 4),
+            volume_dims: (16, 16, 16),
+            num_elements_3d: (4, 4, 1),
             ..Default::default()
         };
+        let processor = SaftProcessor::new(SaftConfig::default(), beamforming_config);
 
-        let saft_config = SaftConfig::default();
-        let processor = SaftProcessor::new(saft_config, beamforming_config);
-
-        // Create simple test data with a point target
-        let num_elements = 8 * 8 * 4;
+        let num_elements = 4 * 4 * 1;
         let mut rf_data = Array4::<f32>::zeros((1, num_elements, 512, 1));
-        // Add a simple impulse response at sample 256
         for elem in 0..num_elements {
             rf_data[[0, elem, 256, 0]] = 1.0;
         }
 
-        let result = processor.reconstruct_volume(&rf_data);
-        if let Err(e) = &result {
-            println!("Reconstruction error: {:?}", e);
+        let vol = processor.reconstruct_volume(&rf_data).unwrap();
+        assert_eq!(vol.dim(), (16, 16, 16));
+        let max_val = vol.iter().cloned().fold(0.0_f32, f32::max);
+        assert!(max_val > 0.0, "SAFT output must be non-zero for point target");
+    }
+
+    /// **Test: demodulation improves coherent-sum magnitude vs no demodulation.**
+    ///
+    /// Two samples with 180° relative phase cancel without demodulation but add
+    /// constructively in the envelope channel |I² + Q²|.
+    ///
+    /// Concretely: s₁ at τ₁ = 0 and s₂ at τ₂ = T/2 (half-period shift):
+    /// - Without demodulation: coherent_sum = 1 + cos(π) = 0  (destructive)
+    /// - I channel after demodulation: I₁ = 1, I₂ = cos(2π·τ₂) = −1 → still 0
+    ///
+    /// The key: envelope `I² + Q²` of *each individual demodulated sample* is 1
+    /// regardless of τ, so the coherent sum of envelopes is always ≥ 0.
+    #[test]
+    fn test_demodulate_envelope_invariant() {
+        let f0 = 2.5e6_f64;
+        // For any τ, I² + Q² = s² · (cos² + sin²) = s²
+        let s = 0.7_f64;
+        for tau_ns in [0u64, 25, 50, 75, 100] {
+            let tau = tau_ns as f64 * 1e-9;
+            let (i, q) = SaftProcessor::demodulate(s, f0, tau);
+            let envelope = (i * i + q * q).sqrt();
+            assert!(
+                (envelope - s.abs()).abs() < 1e-12,
+                "Envelope invariant failed at τ={tau_ns} ns: {envelope:.6} ≠ {s}"
+            );
         }
-        assert!(result.is_ok());
-        let volume = result.unwrap();
+    }
 
-        // Check output dimensions
-        assert_eq!(volume.dim(), (32, 32, 32));
-
-        // Check that some values are non-zero (basic functionality test)
-        let max_value = volume.iter().fold(0.0, |max, &val| val.max(max));
-        assert!(max_value > 0.0);
+    #[test]
+    fn test_input_validation() {
+        let processor = make_processor(32, 32, 32, 8, 8);
+        // empty
+        let empty = Array4::<f32>::zeros((0, 0, 0, 0));
+        assert!(processor.validate_input(&empty).is_err());
+        // valid (num_elements = 8×8×1 = 64 channels)
+        let valid = Array4::<f32>::zeros((1, 64, 512, 1));
+        assert!(processor.validate_input(&valid).is_ok());
     }
 }

@@ -498,11 +498,14 @@ fn gauss_newton_fit_2d(
     let mut sigma = 1.0_f64; // initial guess: 1 pixel
     let mut bg = bg_init;
 
+    // Residual sum-of-squares from previous iteration; used to detect RSS plateau.
+    let mut rss_prev = f64::INFINITY;
+
     for _iter in 0..max_iter {
         // Residuals and Jacobian (θ = [amp, z0, x0, sigma, bg])
         let mut jt_j = [[0.0_f64; 5]; 5];
         let mut jt_r = [0.0_f64; 5];
-        let mut rss_prev = 0.0_f64;
+        let mut rss_curr = 0.0_f64;
 
         for iz in 0..nz {
             for ix in 0..nx {
@@ -514,7 +517,7 @@ fn gauss_newton_fit_2d(
                 let g = (-r2).exp();
                 let model = amp * g + bg;
                 let resid = patch[[iz, ix]] - model;
-                rss_prev += resid * resid;
+                rss_curr += resid * resid;
 
                 // Partial derivatives: ∂f/∂θ
                 let df_amp = g;
@@ -550,8 +553,14 @@ fn gauss_newton_fit_2d(
 
         let step_sq: f64 = delta.iter().map(|&d| d * d).sum();
         if step_sq < 1e-12 * n as f64 {
-            break; // Converged
+            break; // Converged: step size below threshold
         }
+
+        // Additional convergence: relative RSS change below numerical tolerance
+        if rss_prev.is_finite() && (rss_prev - rss_curr).abs() / (rss_prev + 1e-30) < 1e-10 {
+            break;
+        }
+        rss_prev = rss_curr;
     }
 
     Some((z0, x0, amp, sigma, bg))

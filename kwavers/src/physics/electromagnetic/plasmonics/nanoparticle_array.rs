@@ -88,7 +88,7 @@ impl NanoparticleArray {
                 }
             }
             _ => {
-                // TODO_AUDIT: P2 - Implement rigorous 3D spatial field sampling or optimization
+                // Not yet implemented: rigorous 3D spatial field sampling or optimization
                 // routine to systematically locate maximum field amplitude coordinates
                 // for generalized nanoparticle distribution matrices.
             }

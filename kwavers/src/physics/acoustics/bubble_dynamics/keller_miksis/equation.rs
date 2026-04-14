@@ -2,8 +2,12 @@ use super::KellerMiksisModel;
 use crate::core::error::KwaversResult;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 
-/// Calculate bubble wall acceleration using Keller-Miksis equation
-/// TODO_AUDIT: P1 - Bubble Shape Instability - Add non-spherical deformation models (shape instabilities, jet formation) for realistic cavitation dynamics, replacing spherical approximation
+/// Calculate bubble wall acceleration using Keller-Miksis equation.
+///
+/// Computes the spherical K-M ODE RHS only.  Non-spherical shape mode
+/// evolution is coupled externally via
+/// [`KellerMiksisModel::update_shape_stability`], which must be called
+/// once per integration timestep after this function.
 pub(crate) fn calculate_acceleration(
     model: &KellerMiksisModel,
     state: &mut BubbleState,
@@ -86,7 +90,31 @@ pub(crate) fn calculate_acceleration(
     Ok(acceleration)
 }
 
-/// Estimate time derivative of wall pressure
+/// Estimate the net pressure time derivative for the KM radiation-damping term.
+///
+/// # Derivation
+///
+/// The Keller-Miksis radiation-damping term is:
+/// ```text
+/// R/(ρ_L·c) · d/dt[p_B − p_∞]
+/// ```
+/// where p_B = p_gas − 2σ/R − 4μṘ/R is the bubble-wall pressure and
+/// p_∞ = p0 + p_acoustic(t) is the far-field pressure.
+///
+/// Differentiating:
+/// ```text
+/// d/dt[p_B − p_∞] = dp_gas/dt − d/dt[2σ/R] − d/dt[4μṘ/R] − dp_acoustic/dt
+///
+/// dp_gas/dt   = −3γ · p_gas · Ṙ / R   (polytropic)
+/// d/dt[2σ/R]  = −2σ · Ṙ / R²
+/// d/dt[4μṘ/R] ≈ −4μ · Ṙ² / R²         (neglect R̈ term; first-order)
+/// dp_acoustic/dt supplied externally as `dp_acoustic_dt`
+/// ```
+///
+/// # Reference
+///
+/// Keller JB, Miksis M (1980). "Bubble oscillations of large amplitude."
+/// *J Acoust Soc Am* 68(2):628–633. Eq. (2.3).
 fn estimate_wall_pressure_derivative(
     model: &KellerMiksisModel,
     _state: &BubbleState,
@@ -94,24 +122,22 @@ fn estimate_wall_pressure_derivative(
     r: f64,
     v: f64,
     gamma: f64,
-    _dp_acoustic_dt: f64,
+    dp_acoustic_dt: f64,
     _omega: f64,
     _t: f64,
 ) -> KwaversResult<f64> {
-    // Rate of change of internal gas pressure
-    // From polytropic relation: p ∝ R^(-3γ)
-    // dp_gas/dt = -3γ p_gas (dR/dt)/R
+    // Rate of change of internal gas pressure: dp_gas/dt = −3γ p_gas Ṙ/R
     let dp_gas_dt = -3.0 * gamma * p_gas * v / r;
 
-    // Rate of change of surface tension: d/dt(2σ/R) = -2σ Ṙ/R²
+    // Rate of change of surface tension: d/dt(2σ/R) = −2σ Ṙ/R²
     let d_surface_dt = -2.0 * model.params.sigma * v / (r * r);
 
-    // Rate of change of viscous stress: d/dt(4μṘ/R) = 4μ(R̈/R - Ṙ²/R²)
-    // Approximation: neglect R̈ term initially (iterative refinement possible)
+    // Rate of change of viscous stress: d/dt(4μṘ/R) ≈ −4μ Ṙ²/R² (first-order)
     let d_viscous_dt = -4.0 * model.params.mu_liquid * v * v / (r * r);
 
-    // Total wall pressure derivative
-    let dp_wall_dt = dp_gas_dt - d_surface_dt - d_viscous_dt;
+    // Net pressure derivative for radiation-damping term: d/dt[p_B − p_∞]
+    // Subtracting dp_acoustic_dt accounts for the time-varying far-field pressure.
+    let dp_net_dt = dp_gas_dt - d_surface_dt - d_viscous_dt - dp_acoustic_dt;
 
-    Ok(dp_wall_dt)
+    Ok(dp_net_dt)
 }

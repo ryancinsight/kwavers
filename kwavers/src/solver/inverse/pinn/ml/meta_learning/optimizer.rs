@@ -63,13 +63,15 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 ///
 /// # Optimization Strategy
 ///
-/// The meta-optimizer uses configurable SGD, momentum, Adam, or RMSProp updates:
-/// TODO_AUDIT: P2 - Advanced Meta-Optimizers - Implement second-order methods for meta-training
-/// DEPENDS ON: solver/inverse/pinn/ml/optimizer/adam_meta.rs, math/optimization/quasi_newton.rs
-/// MISSING: Adaptive moment estimation for meta-parameters
-/// MISSING: BFGS quasi-Newton method for meta-optimization
-/// MISSING: Trust-region methods for meta-learning stability
-/// MISSING: Line search algorithms for optimal step sizes
+/// The meta-optimizer uses configurable SGD, momentum, Adam, or RMSProp updates.
+///
+/// ## Not yet implemented
+///
+/// - **BFGS quasi-Newton**: Second-order meta-optimization for faster convergence.
+/// - **Trust-region methods**: Constrained step sizes for meta-learning stability
+///   (Finn et al. 2017, MAML; Antoniou et al. 2018, How to Train Your MAML).
+/// - **Line search**: Optimal step-size selection for outer-loop updates.
+///
 /// ```text
 /// θ ← θ - α∇L_meta
 /// ```

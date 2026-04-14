@@ -206,7 +206,7 @@ mod tests {
             include_nonlinearity: true,
             include_absorption: false,
             include_diffraction: false,
-            beta: 3.5,
+            b_over_a: 3.5,
             ..Default::default()
         };
 
@@ -254,52 +254,315 @@ mod tests {
         }
     }
 
-    /// Test absorption decay
+    /// Test power-law absorption: spectral field amplitude decay.
+    ///
+    /// ## Setup
+    ///
+    /// Source: uniform plane wave p₀ = 1 Pa at f₀ = 1 MHz.
+    /// Medium: water-like, α₀ = 0.5 dB/(cm·MHz), y = 1.0.
+    /// Propagation: 10 cm (100 steps × 1 mm).
+    ///
+    /// ## Expected result
+    ///
+    /// After propagating distance d = 0.1 m at frequency f₀:
+    ///   α(f₀) = 0.5 dB/cm = 5 dB/m = 5/8.686 Np/m ≈ 0.5756 Np/m
+    ///   Amplitude decay: exp(-α·d) = exp(-0.05756) ≈ 0.944
+    ///   Intensity ratio = [exp(-α·d)]² = exp(-2α·d) ≈ 0.891
+    ///
+    /// Wait — at 10 cm: α·d = 0.5756 × 0.1 = 0.05756 Np.
+    /// In dB: 0.05756 × 8.686 = 0.5 dB.  Total: 5 dB over 10 cm.
+    /// Intensity ratio = 10^(-5/10) = 10^(-0.5) ≈ 0.316.  ✓
+    ///
+    /// ## Grid requirements for spectral accuracy
+    ///
+    /// The time grid must resolve the fundamental frequency as an exact FFT bin:
+    ///   N·Δτ = M · T₀  (M complete periods; T₀ = 1/f₀)
+    ///
+    /// With f₀ = 1 MHz and Δτ = 1/(8f₀) = 125 ns: each period contains 8
+    /// samples.  N = 256 gives 32 complete periods.  Fundamental is at bin
+    ///   k₀ = f₀·N·Δτ = 1e6 × 256 × 125e-9 = 32   (exact integer ✓)
+    ///
+    /// ## Theorem (spectral absorption exactness for pure tones)
+    ///
+    /// A single-frequency signal p(τ) = p₀·sin(ω₀τ) has all energy in bins
+    /// k₀ and N−k₀.  The spectral absorption operator multiplies bin k₀ by
+    ///   H[k₀] = exp(−α(f₀)·Δz)
+    /// exactly.  After d/Δz steps the amplitude at f₀ decays by exp(−α(f₀)·d).
+    /// Therefore the spectral and single-frequency absorption operators give
+    /// identical results for pure-tone signals.
+    ///
+    /// ## Reference
+    ///
+    /// Szabo TL (1994). J. Acoust. Soc. Am. 96(1), 491–500.
     #[test]
     fn test_absorption() {
+        use rustfft::{num_complex::Complex as RfftComplex, FftPlanner};
+
+        let frequency = 1.0e6_f64; // 1 MHz
+        // dt chosen so fundamental falls on exact FFT bin: dt = 1/(8·f₀)
+        let dt = 1.0 / (8.0 * frequency); // 125 ns
+        let nt = 256_usize;             // 32 complete periods
+        let dz = 1.0e-3_f64;           // 1 mm steps
+
         let config = KZKConfig {
-            nx: 16,
-            ny: 16,
+            nx: 4,
+            ny: 4,
             nz: 100,
-            nt: 32,
+            nt,
             dx: 1e-3,
-            dz: 1e-3,
-            dt: 1e-8,
+            dz,
+            dt,
             include_nonlinearity: false,
             include_absorption: true,
             include_diffraction: false,
-            alpha0: 0.5, // dB/cm/MHz
+            alpha0: 0.5,       // dB/(cm·MHz)
             alpha_power: 1.0,
+            frequency,
             ..Default::default()
         };
 
         let mut solver = KZKSolver::new(config.clone()).unwrap();
 
-        // Uniform source
-        let source = Array2::from_elem((config.nx, config.ny), 1.0);
-        solver.set_source(source, 1e6);
+        // Uniform plane-wave source at f₀
+        let source = Array2::from_elem((config.nx, config.ny), 1.0_f64);
+        solver.set_source(source, frequency);
 
-        // Get initial intensity
-        let initial_intensity = solver.get_intensity()[[config.nx / 2, config.ny / 2]];
+        // Record initial fundamental amplitude at centre
+        let initial_signal = solver.get_time_signal(config.nx / 2, config.ny / 2);
+        let mut planner = FftPlanner::new();
+        let fft_fwd = planner.plan_fft_forward(nt);
+        let mut initial_spectrum: Vec<RfftComplex<f64>> = initial_signal
+            .iter()
+            .map(|&v| RfftComplex::new(v, 0.0))
+            .collect();
+        fft_fwd.process(&mut initial_spectrum);
+        let fundamental_bin = (frequency * nt as f64 * dt).round() as usize; // = 32
+        let initial_amp = initial_spectrum[fundamental_bin].norm() * 2.0 / nt as f64;
 
         // Propagate 10 cm
-        let steps = (0.1 / config.dz) as usize;
+        let steps = (0.1 / dz) as usize;
         for _ in 0..steps {
             solver.step();
         }
 
-        // Check decay
-        let final_intensity = solver.get_intensity()[[config.nx / 2, config.ny / 2]];
+        // Extract final fundamental amplitude
+        let final_signal = solver.get_time_signal(config.nx / 2, config.ny / 2);
+        let fft_fwd2 = planner.plan_fft_forward(nt);
+        let mut final_spectrum: Vec<RfftComplex<f64>> = final_signal
+            .iter()
+            .map(|&v| RfftComplex::new(v, 0.0))
+            .collect();
+        fft_fwd2.process(&mut final_spectrum);
+        let final_amp = final_spectrum[fundamental_bin].norm() * 2.0 / nt as f64;
 
-        // Expected decay: -0.5 dB/cm at 1 MHz over 10 cm = -5 dB = factor of 0.316
-        let expected_ratio = 10.0_f64.powf(-0.5); // ~0.316
-        let actual_ratio = final_intensity / initial_intensity;
+        // Expected amplitude decay: exp(−α·d)
+        // α(f₀) in Np/m = α₀_dB_cm_MHz × 100 / 8.686 = 0.5×100/8.686 ≈ 5.756 Np/m
+        let alpha_np_per_m = config.alpha0 * 100.0 / 8.686;
+        let expected_amp_ratio = (-alpha_np_per_m * 0.1).exp(); // field amplitude ratio
+
+        let actual_amp_ratio = if initial_amp > 1e-12 {
+            final_amp / initial_amp
+        } else {
+            1.0
+        };
 
         assert!(
-            (actual_ratio - expected_ratio).abs() / expected_ratio < 0.2,
-            "Absorption error: expected {:.3}, got {:.3}",
-            expected_ratio,
-            actual_ratio
+            (actual_amp_ratio - expected_amp_ratio).abs() / expected_amp_ratio < 0.02,
+            "Spectral absorption amplitude error: expected {:.5}, got {:.5} \
+             (α = {:.4} Np/m, distance = 10 cm)",
+            expected_amp_ratio,
+            actual_amp_ratio,
+            alpha_np_per_m
         );
+    }
+
+    /// Validate harmonic amplitudes against Aanonsen et al. (1984) Table 1.
+    ///
+    /// ## Physical setup
+    ///
+    /// Plane wave (no diffraction, no absorption) propagating in water.
+    /// The normalised harmonic amplitudes at Gol'dberg numbers Γ = 0.25, 0.5, 1.0
+    /// follow the Fubini solution:
+    ///
+    /// ```text
+    /// |Pₙ| / |P₁| = (2/n) Jₙ(nΓ) / [Γ·J₁(Γ)]
+    /// ```
+    ///
+    /// (Aanonsen 1984, eq. 6–7; Hamilton & Blackstock 1998 §4.3.2).
+    ///
+    /// The exact Fubini harmonic ratios are:
+    /// ```text
+    /// |P₂|/|P₁| = J₂(2Γ) / (2 J₁(Γ))
+    /// |P₃|/|P₁| = J₃(3Γ) / (3 J₁(Γ))     [not (Γ/2)²/2! which is wrong by 3×]
+    /// ```
+    ///
+    /// For small Γ, the leading-order approximations are:
+    /// ```text
+    /// |P₂|/|P₁| ≈ Γ/2          (valid to ~1% for Γ < 0.3)
+    /// |P₃|/|P₁| ≈ 3Γ²/8        (valid to ~5% for Γ < 0.3)
+    /// ```
+    ///
+    /// Note: the "(Γ/2)^{n−1}/(n−1)!" formula is correct only for n=2.
+    /// For n=3 it gives Γ²/8, which underestimates by 3× compared to the
+    /// exact Fubini coefficient 3Γ²/8 = J₃(3Γ)/(3J₁(Γ)) at leading order.
+    ///
+    /// ## Reference data — exact Fubini solution (pre-computed Bessel values)
+    ///
+    /// Values from the Fubini series Bₙ = 2Jₙ(nΓ)/(nΓ); ratio Bₙ/B₁:
+    ///
+    /// | Γ    | |P₂|/|P₁| | |P₃|/|P₁| | Source               |
+    /// |------|------------|------------|----------------------|
+    /// | 0.25 | 0.1234     | 0.02279    | exact Fubini (Bessel) |
+    /// | 0.50 | 0.2371     | 0.08274    | exact Fubini (Bessel) |
+    /// | 1.00 | 0.4009     | 0.23411    | exact Fubini (Bessel) |
+    ///
+    /// ## Tolerance
+    ///
+    /// 5% relative error on each harmonic ratio.  The Fubini solution is exact
+    /// for the inviscid, plane-wave case.  Deviations above 5% indicate errors
+    /// in the nonlinear operator, incorrect β, or FFT spectral leakage.
+    ///
+    /// ## References
+    ///
+    /// - Aanonsen SI et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768, Table 1.
+    ///   DOI: 10.1121/1.390585
+    /// - Hamilton MF, Blackstock DT (1998). Nonlinear Acoustics §4.3.2.
+    #[test]
+    #[ignore = "Tier 2: Literature validation (~10-30s depending on grid)"]
+    fn test_aanonsen_1984_harmonic_amplitudes() {
+        use rustfft::{num_complex::Complex as RfftComplex, FftPlanner};
+
+        // Medium: water at 25°C
+        let rho0 = 998.0_f64;   // kg/m³ (Kaye & Laby)
+        let c0 = 1481.0_f64;    // m/s   (Del Grosso & Mader 1972)
+        let b_over_a = 5.0_f64; // B/A for water (Beyer 1960)
+        let beta = 1.0 + b_over_a / 2.0; // β = 3.5
+
+        let frequency = 1.0e6_f64; // 1 MHz
+        let omega = 2.0 * std::f64::consts::PI * frequency;
+
+        // Source amplitude: chosen small enough to stay in Fubini regime (Γ < 1)
+        let p0 = 5.0e4_f64; // 50 kPa
+
+        // Shock formation distance for plane wave
+        // z_shock = ρ₀c₀³ / (β·ω·p₀)
+        // Ref: Hamilton & Blackstock (1998) §4.3, eq. (4.3.5)
+        let z_shock = rho0 * c0.powi(3) / (beta * omega * p0);
+
+        // Time grid: 16 samples per period, 256 total (16 complete periods).
+        // 16 samples/period gives Nyquist = 8 MHz, so harmonics up to the 7th
+        // (7 MHz) are representable without aliasing.  With only 8 samples/period
+        // (Nyquist = 4 MHz), the 5th harmonic (5 MHz) aliases into the 3rd
+        // harmonic bin (bin = |5 - 8| = 3 in relative units), inflating P₃ at
+        // Γ=1 by ~7% regardless of axial step count.
+        //
+        // f₀·N·dt = 1e6 × 256 × 62.5e-9 = 16 → exact bin at k₁=16, k₂=32, k₃=48.
+        let nt = 256_usize;
+        let dt = 1.0 / (16.0 * frequency); // 62.5 ns
+
+        // Gol'dberg numbers and exact Fubini reference values.
+        //
+        // Computed from |P₂|/|P₁| = J₂(2Γ)/(2J₁(Γ)) and
+        //               |P₃|/|P₁| = J₃(3Γ)/(3J₁(Γ))
+        // using the Bessel function power series to 6 significant figures.
+        //
+        // NOTE: |P₃|/|P₁| ≈ 3Γ²/8 at leading order — NOT Γ²/8.
+        // The (Γ/2)^{n-1}/(n-1)! formula is only correct for n=2.
+        let goldberg_targets = [0.25_f64, 0.50_f64, 1.00_f64];
+        // |P₂|/|P₁| exact Fubini: [0.12337, 0.23714, 0.40090]
+        let expected_p2_p1 = [0.12337_f64, 0.23714_f64, 0.40090_f64];
+        // |P₃|/|P₁| exact Fubini: [0.02279, 0.08274, 0.23411]
+        let expected_p3_p1 = [0.02279_f64, 0.08274_f64, 0.23411_f64];
+
+        for (idx, &gamma) in goldberg_targets.iter().enumerate() {
+            let z_target = gamma * z_shock;
+            // 200 axial steps: error ≈ O(Δz) with explicit Euler.
+            // At Γ=1 (200 steps, Δz = z_shock/200) this gives ~2% axial error.
+            let n_steps = 200_usize;
+            let dz = z_target / n_steps as f64;
+
+            let config = KZKConfig {
+                nx: 4,
+                ny: 4,
+                nz: n_steps,
+                nt,
+                dx: 1e-3,
+                dz,
+                dt,
+                c0,
+                rho0,
+                b_over_a,
+                alpha0: 0.0,              // No absorption (inviscid)
+                include_diffraction: false, // Pure plane wave
+                include_absorption: false,
+                include_nonlinearity: true,
+                frequency,
+                ..Default::default()
+            };
+
+            let mut solver = KZKSolver::new(config.clone()).unwrap();
+
+            // Uniform plane-wave source at f₀
+            let source = Array2::from_elem((config.nx, config.ny), p0);
+            solver.set_source(source, frequency);
+
+            solver.solve(n_steps).expect("KZK solve failed");
+
+            // Extract time signal at centre point
+            let signal = solver.get_time_signal(config.nx / 2, config.ny / 2);
+
+            // FFT for spectral analysis
+            let mut planner = FftPlanner::new();
+            let fft_fwd = planner.plan_fft_forward(nt);
+            let mut spectrum: Vec<RfftComplex<f64>> = signal
+                .iter()
+                .map(|&v| RfftComplex::new(v, 0.0))
+                .collect();
+            fft_fwd.process(&mut spectrum);
+
+            // Fundamental at bin 32 (exact: f₀·N·dt = 32)
+            let df = 1.0 / (nt as f64 * dt);
+            let k1 = (frequency / df).round() as usize;
+            let k2 = 2 * k1;
+            let k3 = 3 * k1;
+
+            // Peak amplitude (two-sided spectrum → multiply by 2/N)
+            let amp1 = spectrum[k1].norm() * 2.0 / nt as f64;
+            let amp2 = spectrum[k2].norm() * 2.0 / nt as f64;
+            let amp3 = if k3 < nt / 2 {
+                spectrum[k3].norm() * 2.0 / nt as f64
+            } else {
+                0.0
+            };
+
+            let ratio2 = amp2 / amp1;
+            let ratio3 = amp3 / amp1;
+
+            let tol = 0.05; // 5% relative
+
+            assert!(
+                (ratio2 - expected_p2_p1[idx]).abs() / expected_p2_p1[idx] < tol,
+                "Γ={:.2}: |P₂|/|P₁| — expected {:.5}, got {:.5} \
+                 (error = {:.1}% > 5%)\n\
+                 Check: NonlinearOperator β, buffered-update correctness.",
+                gamma,
+                expected_p2_p1[idx],
+                ratio2,
+                (ratio2 - expected_p2_p1[idx]).abs() / expected_p2_p1[idx] * 100.0
+            );
+
+            if k3 < nt / 2 {
+                assert!(
+                    (ratio3 - expected_p3_p1[idx]).abs() / expected_p3_p1[idx] < tol,
+                    "Γ={:.2}: |P₃|/|P₁| — expected {:.5}, got {:.5} \
+                     (error = {:.1}% > 5%)\n\
+                     Check: Strang splitting accumulation, harmonic leakage.",
+                    gamma,
+                    expected_p3_p1[idx],
+                    ratio3,
+                    (ratio3 - expected_p3_p1[idx]).abs() / expected_p3_p1[idx] * 100.0
+                );
+            }
+        }
     }
 }

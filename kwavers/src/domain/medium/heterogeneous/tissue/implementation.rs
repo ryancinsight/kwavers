@@ -1,6 +1,7 @@
 //! `HeterogeneousTissueMedium` implementation
 
 use super::{TissueMap, TissueRegion};
+use crate::core::constants::DB_TO_NP;
 use crate::core::error::{KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::absorption::TissueType;
@@ -16,13 +17,24 @@ use crate::domain::medium::{
 };
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 
-/// Heterogeneous tissue medium with spatial tissue type variations
-/// TODO_AUDIT: P2 - Tissue Attenuation - Add realistic tissue attenuation models (frequency-dependent, temperature-dependent) for accurate ultrasound propagation, replacing simplified constant absorption
-/// DEPENDS ON: physics/acoustics/attenuation/biot.rs, physics/temperature/thermoelastic.rs
-/// MISSING: Frequency power law: α(f) = α₀ fᵇ where b ∈ [1.0, 2.0] for different tissues
-/// MISSING: Temperature dependence: α(T) = α₀ (1 + γ(T-T₀)) for thermal expansion effects
-/// MISSING: Multiple relaxation mechanisms: α(f) = ∑ αᵢ / (1 + (f/fᵢ)²) for viscoelastic tissues
-/// MISSING: Nonlinear parameter B/A with temperature dependence for high-intensity applications
+/// Heterogeneous tissue medium with spatial tissue type variations.
+///
+/// ## Implemented
+/// - Per-voxel tissue type mapping with spatial region assignment
+/// - Frequency-dependent absorption: `absorption_coefficient(f)` returns α(f) in Np/m
+///   via the power law α(f) = α₀·(f/1 MHz)^y (Szabo 1994 eq. 2)
+/// - `alpha_coefficient()` returns the raw α₀ prefactor [dB/(MHz^y·cm)] for use by
+///   the PSTD fractional Laplacian operator (which handles unit conversion internally)
+///
+/// ## Not yet implemented
+/// - Temperature-dependent attenuation: α(T) = α₀·(1 + γ(T−T₀))
+/// - Multiple relaxation mechanisms: α(f) = Σ αᵢ/(1 + (f/fᵢ)²) for viscoelastic tissue
+/// - Temperature-dependent nonlinearity parameter B/A for high-intensity applications
+///
+/// ## References
+/// - Szabo TL (1994). J. Acoust. Soc. Am. 96(1), 491–500. DOI:10.1121/1.410434
+/// - Duck FA (1990). Physical Properties of Tissue. Academic Press.
+/// - Bamber JC (1998). In: Ultrasound in Medicine (ed. Duck et al.), pp. 57–88.
 #[derive(Debug, Clone)]
 pub struct HeterogeneousTissueMedium {
     /// 3D map of tissue types
@@ -201,8 +213,11 @@ impl AcousticProperties for HeterogeneousTissueMedium {
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
         let (i, j, k) = crate::domain::medium::continuous_to_discrete(x, y, z, grid);
         let props = self.get_tissue_properties(i, j, k);
-        // alpha = alpha_0 * (f / 1MHz)^y
-        props.alpha_0 * (frequency / 1e6).powf(props.y)
+        // Power law: α(f) [dB/cm] = α₀ · (f/1 MHz)^y
+        // Unit conversion to Np/m: × DB_TO_NP [Np/dB] × 100 [cm/m]
+        // Reference: Szabo (1994) J.Acoust.Soc.Am. 96(1), eq. (2), (4)
+        let alpha_db_per_cm = props.alpha_0 * (frequency / 1e6).powf(props.y);
+        alpha_db_per_cm * DB_TO_NP * 100.0
     }
 
     fn alpha_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {

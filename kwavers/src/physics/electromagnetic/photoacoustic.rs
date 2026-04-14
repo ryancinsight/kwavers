@@ -3,20 +3,38 @@
 //! This module implements photoacoustic coupling physics, including
 //! optical absorption, thermal expansion, and pressure wave generation.
 
-use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, GRUNEISEN_WATER_37C, P_ATM};
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, P_ATM};
 
-/// Grüneisen parameter for thermoelastic coupling
-/// TODO_AUDIT: P2 - Advanced Photoacoustic Physics - Implement complete photoacoustic wave generation with nonlinear thermoelasticity and acoustic saturation
-/// DEPENDS ON: physics/electromagnetic/photoacoustic/nonlinear_thermoelastic.rs, physics/electromagnetic/photoacoustic/saturation.rs, physics/electromagnetic/photoacoustic/broadband.rs
-/// MISSING: Nonlinear Grüneisen parameter: Γ(T,p) = Γ₀ (1 + α ΔT + β Δp) with temperature/pressure dependence
-/// MISSING: Acoustic saturation effects at high laser fluences (>100 mJ/cm²)
-/// MISSING: Broadband photoacoustic signals with frequency-dependent absorption
-/// MISSING: Stress confinement vs thermal confinement regime analysis
-/// MISSING: Multi-wavelength photoacoustic spectroscopy with chemical specificity
-/// SEVERITY: HIGH (enables quantitative photoacoustic imaging)
-/// THEOREM: Photoacoustic pressure: p₀ = Γ μₐ Φ / C_p where Γ = β c² / (C_p ρ) is Grüneisen parameter
-/// THEOREM: Thermal confinement: μₐ δ_th << 1 where δ_th = √(κ t_p) is thermal diffusion length
-/// REFERENCES: Oraevsky & Karabutov (2003) Biomedical Photonics; Wang & Wu (2007) Biomedical Optics
+/// Canonical Grüneisen model — temperature-dependent, literature-validated.
+///
+/// This is the single source of truth for Grüneisen parameter evaluation in kwavers
+/// (Sprint 226 SSOT consolidation). Use this type everywhere a Grüneisen value is
+/// needed; `GruneisenParameter` is deprecated and will be removed in a future sprint.
+pub use crate::physics::photoacoustics::thermoelasticity::GrueneisenModel;
+
+/// Grüneisen parameter for thermoelastic coupling.
+///
+/// # Deprecated
+///
+/// Use [`GrueneisenModel`] instead. `GrueneisenModel` is the canonical, SSOT type with
+/// correct temperature dependence and literature-validated constants (Sigrist 1986;
+/// Xu & Wang 2006). This struct adds a pressure-dependence term (β ≈ 10⁻⁶ Pa⁻¹)
+/// that is negligible over physiological pressures (Wang & Wu 2012, §2.3) and
+/// diverges from the canonical water reference temperature (20 °C vs 37 °C here).
+#[deprecated(
+    since = "0.4.0",
+    note = "Use `GrueneisenModel` from `physics::photoacoustics::thermoelasticity` instead"
+)]
+///
+/// ## Not yet implemented
+///
+/// - **Nonlinear Grüneisen parameter**: Γ(T,p) = Γ₀(1 + αΔT + βΔp) with full
+///   temperature and pressure dependence (Wang & Wu 2007, Biomedical Optics).
+/// - **Acoustic saturation**: Pressure limiting at high laser fluences above 100 mJ/cm².
+/// - **Broadband signals**: Frequency-dependent optical absorption for wideband transducers.
+/// - **Confinement regime analysis**: Stress vs. thermal confinement transition logic.
+/// - **Multi-wavelength spectroscopy**: Wavelength-selective imaging for chemical specificity
+///   (Oraevsky & Karabutov 2003, Biomedical Photonics).
 #[derive(Debug, Clone)]
 pub struct GruneisenParameter {
     /// Grüneisen parameter Γ (dimensionless)
@@ -27,6 +45,7 @@ pub struct GruneisenParameter {
     pub pressure_coefficient: Option<f64>,
 }
 
+#[allow(deprecated)]
 impl GruneisenParameter {
     /// Create a new Grüneisen parameter
     pub fn new(value: f64) -> Self {
@@ -232,6 +251,7 @@ impl PulsedLaser {
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::*;
 
@@ -268,10 +288,7 @@ mod tests {
         let gamma = GruneisenParameter::new(0.12).with_temperature_dependence(0.01);
         let v = gamma.get_value(BODY_TEMPERATURE_C + 10.0, P_ATM);
         let expected = 0.12 * 1.1;
-        assert!(
-            (v - expected).abs() < 1e-12,
-            "Expected {expected}, got {v}"
-        );
+        assert!((v - expected).abs() < 1e-12, "Expected {expected}, got {v}");
     }
 
     /// β > 0 → Γ increases with pressure.
@@ -281,10 +298,7 @@ mod tests {
         let gamma = GruneisenParameter::new(0.12).with_pressure_dependence(1e-6);
         let v = gamma.get_value(BODY_TEMPERATURE_C, P_ATM + 1e5);
         let expected = 0.12 * 1.1;
-        assert!(
-            (v - expected).abs() < 1e-12,
-            "Expected {expected}, got {v}"
-        );
+        assert!((v - expected).abs() < 1e-12, "Expected {expected}, got {v}");
     }
 
     #[test]

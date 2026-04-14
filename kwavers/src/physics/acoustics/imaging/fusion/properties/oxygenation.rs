@@ -49,4 +49,3 @@ pub fn compute_oxygenation_index(intensity_image: &Array3<f64>) -> Array3<f64> {
         (BASELINE_OXYGENATION + vascular_component * SATURATION_SCALE).min(1.0)
     })
 }
-

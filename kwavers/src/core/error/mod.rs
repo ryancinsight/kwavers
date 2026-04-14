@@ -2,18 +2,15 @@
 //!
 //! This module provides a structured error handling system organized by domain:
 //!
-//! TODO_AUDIT: P2 - Advanced Error Handling - Implement complete error handling with recovery strategies, error propagation, and diagnostic capabilities
-//! DEPENDS ON: core/error/recovery.rs, core/error/diagnostics.rs, core/error/propagation.rs, core/error/telemetry.rs
-//! MISSING: Error recovery strategies with automatic fallback and graceful degradation
-//! MISSING: Error propagation with context accumulation and causal chains
-//! MISSING: Diagnostic capabilities with error classification and root cause analysis
-//! MISSING: Telemetry integration for error monitoring and alerting
-//! MISSING: Error simulation and injection for resilience testing
-//! MISSING: Internationalization support for error messages
-//! SEVERITY: HIGH (critical for production reliability)
-//! THEOREM: Error propagation: P(error_recovery) = ∏ (1 - P(component_failure)) for independent components
-//! THEOREM: Mean time between failures: MTBF = ∫ R(t) dt where R(t) is reliability function
-//! REFERENCES: Nygard (2007) Release It!; Gunther (2013) Guerrilla Capacity Planning
+//! ## Not yet implemented
+//!
+//! - **Recovery strategies**: Automatic fallback and graceful degradation on component failure.
+//! - **Error propagation context**: Causal chain accumulation for root-cause diagnosis.
+//! - **Diagnostic classification**: Automated error classification and root-cause analysis.
+//! - **Telemetry integration**: Error monitoring and alerting hooks (Nygard 2007, Release It!).
+//! - **Fault injection**: Error simulation for resilience and chaos testing.
+//! - **Internationalization**: Locale-aware error message formatting.
+//!
 //! - `physics`: Physics simulation errors
 //! - `gpu`: GPU and acceleration errors
 //! - `io`: Data I/O and format errors
@@ -25,6 +22,7 @@ pub mod composite;
 pub mod config;
 pub mod context;
 pub mod field;
+pub mod gpu;
 pub mod io;
 pub mod numerical;
 pub mod physics;
@@ -249,5 +247,17 @@ impl From<wgpu::BufferAsyncError> for KwaversError {
 impl From<flume::RecvError> for KwaversError {
     fn from(err: flume::RecvError) -> Self {
         Self::GpuError(format!("Channel receive error: {}", err))
+    }
+}
+
+impl From<ritk_registration::RegistrationError> for KwaversError {
+    fn from(err: ritk_registration::RegistrationError) -> Self {
+        Self::InvalidInput(err.to_string())
+    }
+}
+
+impl From<ritk_registration::classical::RegistrationError> for KwaversError {
+    fn from(err: ritk_registration::classical::RegistrationError) -> Self {
+        Self::InvalidInput(err.to_string())
     }
 }

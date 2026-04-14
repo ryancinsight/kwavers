@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn test_acoustic_diffusivity_zero_frequency() {
         use crate::domain::medium::HomogeneousMedium;
-        
+
         // Use real modeled physical medium, not a 0-filled mock
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         let medium = HomogeneousMedium::water(&grid);
@@ -271,13 +271,13 @@ mod tests {
     #[test]
     fn test_heterogeneous_medium_position_dependence() {
         use crate::domain::medium::heterogeneous::tissue::HeterogeneousTissueMedium;
-        use crate::domain::medium::TissueType;
         use crate::domain::medium::heterogeneous::tissue::TissueRegion;
+        use crate::domain::medium::TissueType;
 
         let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
         // Base is Muscle
         let mut medium = HeterogeneousTissueMedium::new(grid.clone(), TissueType::Muscle);
-        
+
         // Emplace Fat in the middle (bounding box 0.005 -> 0.015)
         let region = TissueRegion::new(TissueType::Fat, 0.005, 0.015, 0.005, 0.015, 0.005, 0.015);
         medium.set_tissue_region(&region).unwrap();

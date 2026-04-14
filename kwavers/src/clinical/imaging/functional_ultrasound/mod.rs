@@ -25,7 +25,6 @@
 //! - Allen Brain Atlas: http://mouse.brain-map.org
 
 pub mod atlas;
-pub mod registration;
 pub mod targeting;
 pub mod tracking;
 pub mod ulm;
@@ -39,6 +38,7 @@ pub use vasculature::{VesselClassification, VesselSegmentation};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
+use ritk_registration::ImageRegistration;
 
 /// Affine transformation matrix (3×4) for image registration
 /// Row-major: [R11 R12 R13 Tx; R21 R22 R23 Ty; R31 R32 R33 Tz]
@@ -79,70 +79,13 @@ impl AffineTransform3D {
     }
 }
 
-/// Registration configuration parameters
-#[derive(Debug, Clone)]
-pub struct RegistrationConfig {
-    /// Number of spatial samples for MI computation
-    pub num_samples: usize,
-    /// Number of histogram bins for MI metric
-    pub num_bins: usize,
-    /// Maximum optimization iterations
-    pub max_iterations: usize,
-    /// Tolerance for convergence
-    pub tolerance: f64,
-}
-
-impl Default for RegistrationConfig {
-    fn default() -> Self {
-        Self {
-            num_samples: 5000,
-            num_bins: 50,
-            max_iterations: 200,
-            tolerance: 1e-6,
-        }
-    }
-}
-
-/// Registration engine for affine alignment to atlas
-#[derive(Debug)]
-pub struct RegistrationEngine {
-    #[allow(dead_code)]
-    config: RegistrationConfig,
-}
-
-impl RegistrationEngine {
-    /// Create new registration engine
-    pub fn new() -> KwaversResult<Self> {
-        Ok(Self {
-            config: RegistrationConfig::default(),
-        })
-    }
-
-    /// Register moving image to fixed reference image
-    ///
-    /// # Errors
-    /// Returns `KwaversError::NotImplemented` — Mattes MI registration pending.
-    pub fn register(
-        &self,
-        _moving: &Array3<f64>,
-        _fixed: &Array3<f64>,
-        _config: &RegistrationConfig,
-    ) -> KwaversResult<AffineTransform3D> {
-        Err(KwaversError::NotImplemented(
-            "Affine registration via Mattes mutual information metric \
-             and CMA-ES optimization not yet implemented."
-                .into(),
-        ))
-    }
-}
-
 /// Functional ultrasound brain GPS orchestrator
 ///
 /// Combines registration, localization, and targeting into unified workflow
 #[derive(Debug)]
 pub struct FunctionalUltrasoundGPS {
-    /// Registration engine for atlas alignment
-    registration: RegistrationEngine,
+    /// Registration engine for atlas alignment managed directly via ritk
+    registration: ImageRegistration,
 
     /// Vessel segmentation and classification
     vasculature: Option<VesselSegmentation>,
@@ -164,7 +107,7 @@ pub struct FunctionalUltrasoundGPS {
 impl FunctionalUltrasoundGPS {
     /// Create new brain GPS system
     pub fn new(grid: &Grid) -> KwaversResult<Self> {
-        let registration = RegistrationEngine::new()?;
+        let registration = ImageRegistration::default();
         let atlas = BrainAtlas::load_default()?;
         let targeting = TargetingSystem::new(&atlas)?;
         let tracking = TrackingFilter::new()?;
@@ -181,9 +124,19 @@ impl FunctionalUltrasoundGPS {
 
     /// Register ultrasound image to brain atlas
     pub fn register_to_atlas(&mut self, image: &Array3<f64>) -> KwaversResult<AffineTransform3D> {
-        let config = RegistrationConfig::default();
-        self.registration
-            .register(image, &self.atlas.reference_image(), &config)
+        let initial_transform = [1f64, 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.];
+        let result = self.registration
+            .affine_registration_mutual_info(image, &self.atlas.reference_image(), &initial_transform)
+            .map_err(|e| KwaversError::InvalidInput(format!("RITK Atlas registration failed: {:?}", e)))?;
+        
+        let m = result.transform;
+        Ok(AffineTransform3D {
+            matrix: [
+                [m[0], m[1], m[2], m[3]],
+                [m[4], m[5], m[6], m[7]],
+                [m[8], m[9], m[10], m[11]],
+            ]
+        })
     }
 
     /// Segment vasculature from registered image

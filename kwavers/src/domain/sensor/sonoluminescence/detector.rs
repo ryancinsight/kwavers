@@ -253,17 +253,14 @@ impl SonoluminescenceDetector {
         radius: f64,
         dt: f64,
     ) -> (f64, f64, f64) {
-        // Stefan-Boltzmann approximation for thermal emission
-        // TODO_AUDIT: P2 - Advanced Sonoluminescence Detection - Implement full quantum optical detection with photon counting and spectral analysis
-        // DEPENDS ON: domain/sensor/sonoluminescence/photon_counting.rs, domain/sensor/sonoluminescence/spectrometer.rs
-        // MISSING: Single-photon avalanche diode (SPAD) arrays for photon counting
-        // MISSING: High-resolution spectroscopy with Fabry-Perot interferometers
-        // MISSING: Time-correlated single photon counting (TCSPC) for lifetime measurements
-        // MISSING: Polarization-sensitive detection for plasma anisotropy
-        // MISSING: Multi-wavelength simultaneous detection for spectral kinetics
-        // THEOREM: Planck's law: B(λ,T) = (2hc²/λ⁵)/(exp(hc/λkT) - 1) for blackbody radiation
-        // THEOREM: Wien's displacement law: λ_max T = 2.897 × 10^-3 m·K for peak emission wavelength
-        // REFERENCES: Hiller et al. (1992) Science 255, 441; Putterman (1995) Scientific American
+        // Stefan-Boltzmann approximation for thermal emission.
+        //
+        // Not yet implemented: quantum optical detection. Absent: single-photon avalanche
+        // diode (SPAD) array photon counting; high-resolution Fabry-Perot spectroscopy;
+        // time-correlated single photon counting (TCSPC) for emission lifetime measurement
+        // (Hiller et al. 1992, Science 255; Putterman 1995); polarization-sensitive
+        // detection for plasma anisotropy; and multi-wavelength simultaneous detection.
+        //
         // Using emission calculator parameters for consistency with spectral model
         // Reference: Planck (1901) for blackbody radiation, modified by emission efficiency
         let emission_params = &self.emission_calculator.params;

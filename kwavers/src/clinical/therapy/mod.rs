@@ -7,6 +7,7 @@ pub mod domain_types;
 pub mod hifu_planning;
 pub mod lithotripsy;
 pub mod metrics;
+pub mod microbubble_dynamics;
 pub mod modalities;
 pub mod parameters;
 pub mod swe_3d_workflows;

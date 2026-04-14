@@ -465,28 +465,11 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
                 let scattering_contribution =
                     (f_bs.re * phase.cos() - f_bs.im * phase.sin()) / dist_val.max(1e-6_f32);
 
-                // TODO_AUDIT: P2 - Cavitation Scattering Field Accumulation - Simplified Linear Model
-                //
-                // PROBLEM:
-                // Scattering contribution is computed as simple product: acoustic_field × scattering_coefficient,
-                // assuming linear superposition. This ignores:
-                // - Nonlinear bubble oscillations (amplitude-dependent response)
-                // - Time delay from scattering (instantaneous assumption)
-                // - Directionality of scattering pattern (assumes isotropic)
-                //
-                // IMPACT:
-                // - Incorrect scattering field amplitude at high driving pressures
-                // - Missing constructive/destructive interference effects
-                // - Cannot model focused cavitation clouds or standing wave patterns
-                //
-                // REQUIRED IMPLEMENTATION:
-                // 1. Add time-retarded contribution: field(r,t) = scatter(r,t-|r-r_bubble|/c)
-                // 2. Include scattering directionality: multiply by phase function P(θ,φ)
-                // 3. For nonlinear regime: add harmonic generation terms (2ω, 3ω components)
-                //
-                // EFFORT: ~6-8 hours (directional patterns, time delay, harmonics)
-                // SPRINT: Sprint 212 (with main scattering TODO above)
-                //
+                // Not yet implemented: physically rigorous scattering accumulation. The
+                // current model uses linear superposition (acoustic_field × coefficient),
+                // ignoring nonlinear bubble response, time-retarded propagation
+                // field(r,t) = scatter(r, t−|r−r_bubble|/c), directional phase function
+                // P(θ,φ), and harmonic generation terms (2ω, 3ω) at high driving pressures.
                 // Add to scattering field (accumulate contributions)
                 // Assuming scattering driven by field at receiver (simplified model from original code)
                 let contribution =

@@ -44,9 +44,7 @@ impl DispersionAnalysis {
 
         let correction_factor = match method {
             DispersionMethod::FDTD(dt) => 1.0 / (1.0 + Self::fdtd_dispersion(k, grid.dx, dt, c)),
-            DispersionMethod::PSTD(order) => {
-                1.0 / (1.0 + Self::pstd_dispersion(k, grid.dx, order))
-            }
+            DispersionMethod::PSTD(order) => 1.0 / (1.0 + Self::pstd_dispersion(k, grid.dx, order)),
             DispersionMethod::FDTD3D { .. } | DispersionMethod::PSTD3D { .. } => {
                 eprintln!(
                     "Warning: Using 1D apply_correction with 3D method. \
@@ -72,14 +70,11 @@ impl DispersionAnalysis {
     ) {
         let correction_factor = match method {
             DispersionMethod::FDTD3D { dt } => {
-                1.0 / (1.0
-                    + Self::fdtd_dispersion_3d(kx, ky, kz, grid.dx, grid.dy, grid.dz, dt, c))
+                1.0 / (1.0 + Self::fdtd_dispersion_3d(kx, ky, kz, grid.dx, grid.dy, grid.dz, dt, c))
             }
             DispersionMethod::PSTD3D { dt, order } => {
                 1.0 / (1.0
-                    + Self::pstd_dispersion_3d(
-                        kx, ky, kz, grid.dx, grid.dy, grid.dz, dt, c, order,
-                    ))
+                    + Self::pstd_dispersion_3d(kx, ky, kz, grid.dx, grid.dy, grid.dz, dt, c, order))
             }
             DispersionMethod::FDTD(dt) => {
                 let k_magnitude = (kx * kx + ky * ky + kz * kz).sqrt();

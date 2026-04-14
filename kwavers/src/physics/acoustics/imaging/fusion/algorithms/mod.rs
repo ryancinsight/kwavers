@@ -33,7 +33,7 @@ mod feature_based;
 mod maximum_likelihood;
 mod probabilistic;
 pub(crate) mod utils;
-mod weighted_average;
+pub(crate) mod weighted_average;
 
 use super::config::{FusionConfig, FusionMethod};
 use super::quality;

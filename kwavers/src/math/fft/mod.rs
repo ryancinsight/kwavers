@@ -1,10 +1,12 @@
 // fft/mod.rs
 pub mod fft_processor;
+pub mod gpu_fft;
 pub mod kspace;
 pub mod shift_operators;
 pub mod utils;
 
 pub use fft_processor::{Fft1d, Fft2d, Fft3d};
+pub use gpu_fft::gpu_fft_available;
 pub use kspace::KSpaceCalculator;
 pub type ProcessorFft3d = Fft3d;
 

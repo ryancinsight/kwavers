@@ -3,20 +3,37 @@
 //! The KZK equation is a parabolic approximation for directional sound beams,
 //! widely used in medical ultrasound for modeling focused transducers.
 //!
-//! References:
-//! - Lee & Hamilton (1995) "Parametric array in air"
-//! - Aanonsen et al. (1984) "Distortion and harmonic generation in the nearfield"
-//! - Jing et al. (2007) "Evaluation of a wave-vector-frequency-domain method"
+//! # KZK Equation
 //!
-//! The KZK equation in the time domain:
-//! ∂²p/∂z∂τ = (c₀/2)∇⊥²p + (δ/2c₀³)∂³p/∂τ³ + (β/2ρ₀c₀³)∂²p²/∂τ²
+//! ```text
+//! ∂²p/∂z∂τ = (c₀/2)∇⊥²p + (δ/2c₀³)∂³p/∂τ³ + (β/2ρ₀c₀³)∂²(p²)/∂τ²
+//! ```
 //!
-//! Where:
 //! - z: axial coordinate (beam propagation direction)
-//! - τ = t - z/c₀: retarded time
+//! - τ = t − z/c₀: retarded time
 //! - ∇⊥²: transverse Laplacian (∂²/∂x² + ∂²/∂y²)
-//! - δ: diffusivity of sound
-//! - β: coefficient of nonlinearity
+//! - δ: diffusivity of sound [m²/s]
+//! - β = 1 + B/(2A): nonlinearity coefficient [dimensionless]
+//! - ρ₀, c₀: ambient density [kg/m³] and speed [m/s]
+//!
+//! # Operator Splitting
+//!
+//! Strang splitting (Strang 1968) achieves second-order accuracy in Δz:
+//!
+//! ```text
+//! U(Δz) ≈ D(Δz/2) · A(Δz/2) · N(Δz) · A(Δz/2) · D(Δz/2)
+//! ```
+//!
+//! where D = diffraction, A = absorption, N = nonlinearity.
+//!
+//! # References
+//!
+//! - Zabolotskaya EA, Khokhlov RV (1969). Sov. Phys. Acoust. 15, 35–40.
+//! - Kuznetsov VP (1971). Sov. Phys. Acoust. 16, 467–470.
+//! - Aanonsen SI et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768. DOI:10.1121/1.390585
+//! - Lee Y-S, Hamilton MF (1995). J. Acoust. Soc. Am. 97(2), 906–917. DOI:10.1121/1.412000
+//! - Strang G (1968). SIAM J. Numer. Anal. 5(3), 506–517. DOI:10.1137/0705041
+//! - Hamilton MF, Blackstock DT (1998). Nonlinear Acoustics. Academic Press.
 
 pub mod absorption;
 pub mod angular_spectrum_2d;
@@ -35,6 +52,13 @@ pub mod validation;
 pub use harmonic_tracking::{HarmonicAnalysis, HarmonicConfig, HarmonicTracker, PredictionModel};
 pub use shock_capturing::{ShockCapture, ShockCapturingConfig, ShockDetectionResult};
 pub use solver::KZKSolver;
+
+/// Re-export the physics-layer trait under an ergonomic alias.
+///
+/// Consumers can use either:
+/// - `use kwavers::solver::forward::nonlinear::kzk::KZKSolverTrait;`
+/// - `use kwavers::physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolver;`
+pub use crate::physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolver as KZKSolverTrait;
 
 /// KZK configuration parameters
 #[derive(Debug, Clone)]
@@ -57,8 +81,24 @@ pub struct KZKConfig {
     pub c0: f64,
     /// Density (kg/m³)
     pub rho0: f64,
-    /// Nonlinearity coefficient B/A
-    pub beta: f64,
+    /// Medium nonlinearity ratio B/A (dimensionless).
+    ///
+    /// # Theorem (B/A vs β)
+    ///
+    /// The equation of state is expanded as a Taylor series in density:
+    ///   p = ρ₀c₀²(ρ'/ρ₀) + (B/A)/2 · ρ₀c₀²(ρ'/ρ₀)² + O(ρ'³)
+    ///
+    /// The nonlinearity coefficient used in the KZK equation is
+    ///   β = 1 + B/(2A)
+    ///
+    /// `b_over_a` stores the raw ratio B/A; β is computed internally by
+    /// `NonlinearOperator::new` as `1.0 + b_over_a / 2.0`.
+    ///
+    /// Typical values: water ≈ 5.0, soft tissue ≈ 6.0–7.5.
+    ///
+    /// Reference: Hamilton MF, Blackstock DT (1998). Nonlinear Acoustics.
+    ///   Academic Press. §2.3.2, eq. (2.3.10).
+    pub b_over_a: f64,
     /// Attenuation coefficient (Np/m/MHz^y)
     pub alpha0: f64,
     /// Attenuation power law exponent
@@ -85,7 +125,7 @@ impl Default for KZKConfig {
             nt: 1000,
             c0: 1540.0, // water/tissue
             rho0: 1000.0,
-            beta: 3.5,   // B/A for water
+            b_over_a: 5.0, // B/A for water at 25°C (Beyer 1960)
             alpha0: 0.5, // dB/cm/MHz
             alpha_power: 1.1,
             include_diffraction: true,

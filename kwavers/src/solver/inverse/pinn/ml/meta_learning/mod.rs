@@ -175,21 +175,15 @@
 //!
 //! # Current Limitations
 //!
-//! - Simplified gradient computation using finite differences
-//! - Limited to 2D wave equations in current PINN implementation
-//! - Manual gradient manipulation (Burn limitation)
-//! - Memory inefficient for large models (copies model M times)
-//!
-//! TODO_AUDIT: P1 - MAML Gradient Computation - Replace finite difference approximation with automatic differentiation
-//! DEPENDS ON: burn/autodiff.rs, solver/pinn/ml/autodiff_meta.rs
-//! MISSING: Full second-order MAML with Hessian-vector products
-//! MISSING: Reverse-mode AD for meta-gradients (d²L/dθdθ')
-//! MISSING: Gradient checkpointing to reduce memory overhead
-//! MISSING: Mixed precision training for large meta-batches
+//! - First-order MAML only: inner-loop uses `total_loss.backward()` (reverse-mode AD
+//!   via Burn), but second-order meta-gradients (∂²L/∂θ∂θ') require Hessian-vector
+//!   products which Burn does not yet expose.
+//! - Limited to 2D wave equations in current PINN implementation.
+//! - Memory scales with M (number of tasks) due to independent model copies.
 //!
 //! # Future Improvements
 //!
-//! - [ ] Full automatic differentiation for meta-gradients
+//! - [ ] Second-order MAML with Hessian-vector products once Burn supports them
 //! - [ ] Support for arbitrary neural network architectures
 //! - [ ] Multi-physics coupling scenarios
 //! - [ ] Adaptive learning rate scheduling

@@ -23,9 +23,12 @@ pub struct BubbleState {
     pub gas_species: GasSpecies, // Type of gas
 
     // Dynamic indicators
-    pub is_collapsing: bool,    // True during collapse phase
-    pub mach_number: f64,       // Wall Mach number
-    pub compression_ratio: f64, // R₀/R
+    pub is_collapsing: bool,     // True during collapse phase
+    pub mach_number: f64,        // Wall Mach number
+    pub compression_ratio: f64,  // R₀/R
+    /// True when any surface shape mode amplitude |a_n|/R > 0.3 (Plesset 1954
+    /// breakup criterion).  Set by `KellerMiksisModel::update_shape_stability`.
+    pub is_shape_unstable: bool,
 
     // History tracking
     pub max_temperature: f64, // Maximum T reached
@@ -53,6 +56,7 @@ impl BubbleState {
             is_collapsing: false,
             mach_number: 0.0,
             compression_ratio: 1.0,
+            is_shape_unstable: false,
             max_temperature: T_AMBIENT,
             max_compression: 1.0,
             collapse_count: 0,
@@ -95,6 +99,7 @@ impl BubbleState {
             is_collapsing: false,
             mach_number: 0.0,
             compression_ratio: 1.0,
+            is_shape_unstable: false,
             max_temperature: T_AMBIENT,
             max_compression: 1.0,
             collapse_count: 0,

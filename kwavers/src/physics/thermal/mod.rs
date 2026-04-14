@@ -43,11 +43,11 @@ pub mod tissues {
     #[must_use]
     pub fn liver() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.52,         // conductivity (W/m/K)
-            3540.0,       // specific_heat (J/kg/K)
+            0.52,          // conductivity (W/m/K)
+            3540.0,        // specific_heat (J/kg/K)
             DENSITY_BLOOD, // density (kg/m³)
-            Some(16.7),   // blood_perfusion (kg/m³/s) - high perfusion
-            Some(3617.0), // blood_specific_heat (J/kg/K)
+            Some(16.7),    // blood_perfusion (kg/m³/s) - high perfusion
+            Some(3617.0),  // blood_specific_heat (J/kg/K)
         )
         .expect("Liver tissue properties are valid")
     }

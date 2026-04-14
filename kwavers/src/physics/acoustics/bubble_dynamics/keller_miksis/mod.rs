@@ -132,6 +132,7 @@
 //!    University Press.
 
 pub mod equation;
+pub mod shape_instability;
 pub mod thermodynamics;
 #[cfg(test)]
 pub mod validation;
@@ -142,6 +143,7 @@ use crate::physics::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 use crate::physics::acoustics::bubble_dynamics::thermodynamics::{
     MassTransferModel, ThermodynamicsCalculator, VaporPressureModel,
 };
+use shape_instability::{advance_shape_modes, ShapeModeState};
 
 /// Keller-Miksis equation solver (compressible)
 ///
@@ -149,11 +151,20 @@ use crate::physics::acoustics::bubble_dynamics::thermodynamics::{
 /// secondary Bjerknes coupling is handled at a higher level by
 /// [`crate::physics::acoustics::bubble_dynamics::bubble_field::BubbleField`].
 ///
+/// Shape stability is tracked concurrently via the Plesset-Prosperetti
+/// surface-mode ODE (modes n=2…6).  Call
+/// [`KellerMiksisModel::update_shape_stability`] once per integration
+/// timestep *after* the main K-M step.
+///
 /// **Literature**: Keller & Miksis (1980), Hamilton & Blackstock Ch.11
 /// **Note**: Thermodynamic calculators reserved for full conduction coupling.
 #[derive(Debug, Clone)]
 pub struct KellerMiksisModel {
     pub(crate) params: BubbleParameters,
+    /// Surface shape mode amplitudes and rates, modes n = 2 … 6.
+    /// Seeded with sub-nanometre noise at construction; evolved by
+    /// [`KellerMiksisModel::update_shape_stability`].
+    pub shape_modes: ShapeModeState,
     #[allow(dead_code)] // Reserved for future thermodynamic coupling
     pub(crate) thermo_calc: ThermodynamicsCalculator,
     #[allow(dead_code)] // Reserved for future mass transfer modeling
@@ -170,8 +181,18 @@ impl KellerMiksisModel {
         let mass_transfer = MassTransferModel::new(params.accommodation_coeff);
         let energy_calculator = EnergyBalanceCalculator::new(&params);
 
+        // Seed mode n=2 with 1 Å perturbation — below measurable noise but
+        // sufficient to track Rayleigh-Taylor instability onset.
+        // Seeding n=3…6 at the same amplitude covers higher-order breakup paths.
+        let mut shape_modes = ShapeModeState::default();
+        let seed = 1.0e-10; // 1 Å
+        for n in 2..=6 {
+            shape_modes.seed(n, seed);
+        }
+
         Self {
             params: params.clone(),
+            shape_modes,
             thermo_calc,
             mass_transfer,
             energy_calculator,
@@ -182,6 +203,48 @@ impl KellerMiksisModel {
     #[must_use]
     pub fn params(&self) -> &BubbleParameters {
         &self.params
+    }
+
+    /// Advance surface shape modes and update `state.is_shape_unstable`.
+    ///
+    /// ## Algorithm
+    ///
+    /// Calls [`advance_shape_modes`] (Plesset-Prosperetti symplectic Euler) for
+    /// modes n = 2 … 6 using the current bubble kinematic state, then writes
+    /// the Plesset (1954) breakup flag to `state.is_shape_unstable`.
+    ///
+    /// **Call once per integration timestep**, *after* the main K-M solve, so
+    /// that `state.wall_acceleration` is already updated.
+    ///
+    /// ## References
+    ///
+    /// - Plesset MS (1954). J. Appl. Phys. 25(1), 96–98.
+    /// - Prosperetti A (1977). Phys. Fluids 20(10), 1591–1599.
+    /// - Brennen CE (1995). Cavitation and Bubble Dynamics. §3.2 Eq. (3.15).
+    pub fn update_shape_stability(&mut self, state: &mut BubbleState, dt: f64) {
+        let nu = if self.params.rho_liquid > 0.0 {
+            self.params.mu_liquid / self.params.rho_liquid
+        } else {
+            0.0
+        };
+        advance_shape_modes(
+            &mut self.shape_modes,
+            state.radius,
+            state.wall_velocity,
+            state.wall_acceleration,
+            self.params.sigma,
+            self.params.rho_liquid,
+            nu,
+            dt,
+        );
+        state.is_shape_unstable = self.shape_modes.is_unstable(state.radius);
+    }
+
+    /// Return `true` if any surface shape mode amplitude currently exceeds the
+    /// Plesset (1954) 30%-radius breakup criterion.
+    #[must_use]
+    pub fn is_shape_unstable(&self, r: f64) -> bool {
+        self.shape_modes.is_unstable(r)
     }
 
     /// Calculate bubble wall acceleration using Keller-Miksis equation

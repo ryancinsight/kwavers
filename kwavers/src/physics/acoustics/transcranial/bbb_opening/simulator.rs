@@ -57,7 +57,8 @@ impl BBBOpening {
                     let bubble_conc = self.microbubble_concentration[[i, j, k]];
 
                     // Calculate local permeability enhancement
-                    let enhancement = models.calculate_permeability_enhancement(pressure, bubble_conc);
+                    let enhancement =
+                        models.calculate_permeability_enhancement(pressure, bubble_conc);
                     self.permeability.permeability_factor[[i, j, k]] = enhancement;
 
                     // Calculate opening duration

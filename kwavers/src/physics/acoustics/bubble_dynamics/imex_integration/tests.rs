@@ -1,7 +1,9 @@
 //! Tests for IMEX bubble integration
 
 use super::*;
-use crate::physics::acoustics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
+use crate::physics::acoustics::bubble_dynamics::{
+    BubbleParameters, BubbleState, KellerMiksisModel,
+};
 use std::sync::Arc;
 
 #[test]
@@ -14,9 +16,7 @@ fn test_imex_integration() {
     let config = BubbleIMEXConfig::default();
     let mut integrator = BubbleIMEXIntegrator::new(solver, config);
 
-    let result = integrator.step(
-        &mut state, 1e5, 0.0, 1e-9, 0.0,
-    );
+    let result = integrator.step(&mut state, 1e5, 0.0, 1e-9, 0.0);
 
     assert!(result.is_ok());
     assert!(state.radius > 0.0);

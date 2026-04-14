@@ -4,10 +4,15 @@
 //! for all solver implementations in Kwavers.
 
 // pub mod config; // Consolidated into crate::solver::config
+pub mod factory;
 pub mod pinn_beamforming;
 pub mod progress;
 pub mod solver;
 
+pub use self::factory::{
+    ApolloFourierBackend, FactoryConfiguration, FactoryError, FourierBackend, GridParameters,
+    MediumParameters, MeshProvider, RegistrationEngine, SourceParameters,
+};
 pub use self::pinn_beamforming::{
     ActivationFunction, DecompositionStrategy, DeviceConfig, DistributedConfig,
     DistributedPinnProvider, GpuMetrics, InferenceConfig, LoadBalancingStrategy, ModelArchitecture,

@@ -1,15 +1,15 @@
-//! Physics validation module
+//! Physics validation — analytical solutions and experimental benchmarks
 //!
-//! Provides analytical solutions and validation tools for verifying
-//! numerical implementations against known physics
-//! TODO_AUDIT: P1 - Experimental Validation - Implement experimental validation against Brenner, Yasui, and Putterman sonoluminescence datasets, adding benchmark tests against real-world measurements
-//! DEPENDS ON: validation/experimental/sonoluminescence.rs, validation/datasets/brenner_2002.rs
-//! MISSING: Brenner et al. (2002) benchmark: T_max ≈ 10,000-15,000 K, R_min/R_0 ≈ 0.01-0.05
-//! MISSING: Yasui (1997) multi-bubble model validation with experimental light intensity correlation
-//! MISSING: Putterman single-bubble sonoluminescence spectra comparison (UV peak at 310 nm)
-//! MISSING: Light emission pulse width validation: τ_pulse ≈ 100-200 ps
-//! MISSING: Statistical analysis of experimental variability and parameter sensitivity
+//! ## Contents
+//!
+//! - `gaussian_beam`: Gaussian beam radius measurement and parameters.
+//! - `sonoluminescence_benchmarks`: Validates Minnaert resonance radius,
+//!   Blake threshold, Rayleigh collapse time, Wien's law, and Planck spectrum
+//!   against Brenner, Hilgenfeldt & Lohse (2002), Yasui (1997), and Putterman
+//!   & Weninger (2000).
 
 pub mod gaussian_beam;
+pub mod sonoluminescence_benchmarks;
 
 pub use gaussian_beam::{measure_beam_radius, GaussianBeamParameters};
+pub use sonoluminescence_benchmarks::BrennerSBSLConditions;

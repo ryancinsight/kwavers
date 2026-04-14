@@ -2,13 +2,15 @@
 //!
 //! This module provides GPU-accelerated implementations of core algorithms
 //! using wgpu-rs for cross-platform GPU compute.
-//! TODO_AUDIT: P2 - GPU Multiphysics - Add GPU acceleration for real-time multiphysics coupling using CUDA/OpenCL kernels, implementing full GPU pipeline for bubble dynamics and emission calculations
-//! DEPENDS ON: gpu/kernels/bubble_dynamics.wgsl, gpu/kernels/maxwell_equations.wgsl, gpu/memory/unified.rs
-//! MISSING: CUDA/OpenCL kernel implementations for Keller-Miksis equation integration
-//! MISSING: GPU-accelerated PINN training with automatic differentiation
-//! MISSING: Unified memory management for multi-GPU cavitation simulations
-//! MISSING: SIMD vectorization for complex wave equations on GPU
-//! MISSING: Memory coalescing optimizations for 3D grid operations
+//! ## Not yet implemented
+//!
+//! - **Bubble dynamics kernels**: CUDA/OpenCL/wgsl compute shaders for Keller-Miksis
+//!   equation integration on-device.
+//! - **GPU-accelerated PINN training**: Automatic differentiation for physics-informed
+//!   networks without CPU round-trips.
+//! - **Unified multi-GPU memory**: Shared memory management for large-scale cavitation
+//!   simulations across multiple devices.
+//! - **Memory coalescing**: Layout optimizations for 3D grid accesses on GPU.
 
 pub mod backend;
 pub mod buffer;

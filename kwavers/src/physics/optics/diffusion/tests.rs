@@ -4,17 +4,22 @@ use crate::domain::medium::properties::OpticalPropertyData;
 #[test]
 fn test_optical_properties_from_domain() {
     let domain_props = OpticalPropertyData::new(
-        10.0, // absorption_coefficient
+        10.0,  // absorption_coefficient
         100.0, // scattering_coefficient
-        0.9, // anisotropy
-        1.4 // refractive_index
-    ).unwrap();
+        0.9,   // anisotropy
+        1.4,   // refractive_index
+    )
+    .unwrap();
 
     let props = OpticalProperties::from_domain(domain_props);
 
     assert_eq!(props.absorption_coefficient, 10.0);
     // μₛ' = μₛ(1-g) = 100 * (1 - 0.9) = 10
-    assert!((props.reduced_scattering_coefficient - 10.0).abs() < 1e-10, "Expected: 10.0, Got: {}", props.reduced_scattering_coefficient);
+    assert!(
+        (props.reduced_scattering_coefficient - 10.0).abs() < 1e-10,
+        "Expected: 10.0, Got: {}",
+        props.reduced_scattering_coefficient
+    );
     assert_eq!(props.refractive_index, 1.4);
 }
 
@@ -50,10 +55,7 @@ fn test_diffusion_approximation_validity() {
 
 #[test]
 fn test_light_diffusion_solver_initialization() {
-    let grid = crate::domain::grid::Grid::new(
-        10, 10, 10, 
-        0.001, 0.001, 0.001
-    ).unwrap();
+    let grid = crate::domain::grid::Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
 
     let props = OpticalProperties::biological_tissue();
 

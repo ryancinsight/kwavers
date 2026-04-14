@@ -94,7 +94,21 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         Ok(())
     }
 
-    /// Try a single time step with error estimation
+    /// Try a single time step with error estimation.
+    ///
+    /// # Soft vs Hard Errors
+    ///
+    /// Physics errors during an RK4 sub-step (temperature out of range, Mach number
+    /// approaching 1) are *soft*: they indicate the step size `dt` is too large and
+    /// the adaptive stepper should reject the step and retry with a smaller `dt`.
+    ///
+    /// Only errors from the half-step pair (which yield the accepted state) are
+    /// classified as soft rejections.  The full-step computation is auxiliary (used
+    /// only for Richardson error estimation) and its errors are also soft.
+    ///
+    /// Errors from the acceleration calculation itself (singular pressure, etc.) are
+    /// propagated as hard failures via `?` because they indicate a structurally
+    /// invalid state that no time-step reduction can fix.
     fn try_step(
         &self,
         state: &mut BubbleState,
@@ -106,15 +120,28 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         // Store original state
         let state_orig = state.clone();
 
-        // Take one full step
+        // ── Full step (auxiliary; used only for Richardson error estimation) ──
+        // Errors here are soft: reject the step and reduce dt.
         let mut state_full = state_orig.clone();
-        self.step_rk4(&mut state_full, p_acoustic, dp_dt, dt, t)?;
+        let full_ok = self
+            .step_rk4(&mut state_full, p_acoustic, dp_dt, dt, t)
+            .is_ok();
 
-        // Take two half steps for error estimation
+        // ── Two half steps (accepted state if step passes) ──
+        // Errors here are also soft: reject the step.
         let mut state_half = state_orig.clone();
         let dt_half = dt * HALF_STEP_FACTOR;
-        self.step_rk4(&mut state_half, p_acoustic, dp_dt, dt_half, t)?;
-        self.step_rk4(&mut state_half, p_acoustic, dp_dt, dt_half, t + dt_half)?;
+        let half_ok = self
+            .step_rk4(&mut state_half, p_acoustic, dp_dt, dt_half, t)
+            .is_ok()
+            && self
+                .step_rk4(&mut state_half, p_acoustic, dp_dt, dt_half, t + dt_half)
+                .is_ok();
+
+        // If either sub-step failed, reject with maximally reduced dt.
+        if !full_ok || !half_ok {
+            return Ok((false, dt * self.config.dt_decrease_max));
+        }
 
         // Estimate error (Richardson extrapolation)
         let error_r = (state_full.radius - state_half.radius).abs();
@@ -204,9 +231,12 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         state.update_compression(r0);
         state.update_collapse_state();
 
-        // Update temperature and mass transfer with smaller time step
-        // Update temperature (architectural stub for Sprint 111+)
-        let _ = self.solver.update_temperature(state, dt);
+        // Update temperature and mass transfer after each RK4 sub-step.
+        // Operator splitting: mechanical step (RK4) then thermal/chemical step (Euler).
+        // update_temperature is fully implemented (Hertz-Knudsen latent heat, Fourier
+        // conduction, Stefan-Boltzmann radiation); errors are propagated so the
+        // adaptive stepper can reject the step on thermodynamic instability.
+        self.solver.update_temperature(state, dt)?;
         self.solver.update_mass_transfer(state, dt)?;
 
         Ok(())

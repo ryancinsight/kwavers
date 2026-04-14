@@ -1,6 +1,8 @@
 use super::config::AdaptiveBubbleConfig;
 use super::integrator::AdaptiveBubbleIntegrator;
-use crate::physics::acoustics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
+use crate::physics::acoustics::bubble_dynamics::{
+    BubbleParameters, BubbleState, KellerMiksisModel,
+};
 
 /// Test adaptive time integration for bubble dynamics
 ///

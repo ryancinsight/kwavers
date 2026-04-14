@@ -11,8 +11,7 @@ struct MockEMSolver {
 
 impl MockEMSolver {
     fn new() -> Self {
-        let vacuum_props =
-            crate::domain::medium::properties::ElectromagneticPropertyData::vacuum();
+        let vacuum_props = crate::domain::medium::properties::ElectromagneticPropertyData::vacuum();
         let materials = crate::physics::electromagnetic::equations::materials::EMMaterialUtils::create_uniform_distribution(&[10, 10], vacuum_props);
         let electric = ndarray::ArrayD::zeros(ndarray::IxDyn(&[10, 10, 2]));
         let magnetic = ndarray::ArrayD::zeros(ndarray::IxDyn(&[10, 10, 2]));

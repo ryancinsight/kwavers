@@ -44,7 +44,7 @@ impl ClinicalWorkflowOrchestrator {
                     ("elastography".to_string(), 0.3),
                 ]
                 .into(),
-                fusion_method: crate::physics::imaging::fusion::FusionMethod::Probabilistic,
+                fusion_method: crate::domain::imaging::fusion::FusionMethod::Probabilistic,
                 uncertainty_quantification: true,
                 ..Default::default()
             },

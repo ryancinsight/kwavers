@@ -2,7 +2,11 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
-pub fn generate_spherical_skull(grid: &Grid, thickness: f64, radius: f64) -> KwaversResult<Array3<f64>> {
+pub fn generate_spherical_skull(
+    grid: &Grid,
+    thickness: f64,
+    radius: f64,
+) -> KwaversResult<Array3<f64>> {
     let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
     let cx = grid.nx as f64 / 2.0;
@@ -15,10 +19,9 @@ pub fn generate_spherical_skull(grid: &Grid, thickness: f64, radius: f64) -> Kwa
     for i in 0..grid.nx {
         for j in 0..grid.ny {
             for k in 0..grid.nz {
-                let r = ((i as f64 - cx).powi(2)
-                    + (j as f64 - cy).powi(2)
-                    + (k as f64 - cz).powi(2))
-                .sqrt();
+                let r =
+                    ((i as f64 - cx).powi(2) + (j as f64 - cy).powi(2) + (k as f64 - cz).powi(2))
+                        .sqrt();
 
                 if r >= inner_radius && r <= outer_radius {
                     mask[[i, j, k]] = 1.0;
@@ -30,7 +33,11 @@ pub fn generate_spherical_skull(grid: &Grid, thickness: f64, radius: f64) -> Kwa
     Ok(mask)
 }
 
-pub fn generate_ellipsoidal_skull(grid: &Grid, thickness: f64, params: &[f64]) -> KwaversResult<Array3<f64>> {
+pub fn generate_ellipsoidal_skull(
+    grid: &Grid,
+    thickness: f64,
+    params: &[f64],
+) -> KwaversResult<Array3<f64>> {
     if params.len() < 3 {
         return Err(KwaversError::InvalidInput(
             "Ellipsoid requires 3 radii".to_string(),

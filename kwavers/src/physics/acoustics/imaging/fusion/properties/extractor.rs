@@ -18,10 +18,10 @@
 //!
 //! where $\rho$ is the spatial tissue density map.
 
+use super::super::types::FusedImageResult;
 use super::classification::classify_tissue_types;
 use super::mechanical::compute_composite_stiffness;
 use super::oxygenation::compute_oxygenation_index;
-use super::super::types::FusedImageResult;
 use ndarray::Array3;
 use std::collections::HashMap;
 

@@ -16,9 +16,9 @@
 //!
 //! - Swift (1988) "Thermoacoustic engines" JASA 84(4):1145-1180
 
+use super::MultiPhysicsCoupling;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use ndarray::ArrayD;
-use super::MultiPhysicsCoupling;
 
 /// Acoustic-thermal coupling for thermoacoustic effects
 pub trait AcousticThermalCoupling: MultiPhysicsCoupling {
@@ -44,9 +44,9 @@ pub trait AcousticThermalCoupling: MultiPhysicsCoupling {
 
     /// Thermal conductivity damping coefficient
     fn thermal_conductivity_damping(&self, frequency: f64, _position: &[f64]) -> f64 {
-        let k = 0.6;       // W/m·K
+        let k = 0.6; // W/m·K
         let rho = DENSITY_WATER_NOMINAL;
-        let cp = 4186.0;   // J/kg·K
+        let cp = 4186.0; // J/kg·K
         let alpha = k / (rho * cp);
         let omega = 2.0 * std::f64::consts::PI * frequency;
         (2.0 * alpha / (omega * rho * cp)).sqrt()

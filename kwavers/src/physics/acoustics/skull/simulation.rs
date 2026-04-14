@@ -3,9 +3,9 @@ use crate::domain::grid::Grid;
 use ndarray::Array3;
 
 use super::aberration::AberrationCorrection;
+use super::analytical::{generate_ellipsoidal_skull, generate_spherical_skull};
 use super::heterogeneous::HeterogeneousSkull;
 use super::properties::SkullProperties;
-use super::analytical::{generate_spherical_skull, generate_ellipsoidal_skull};
 
 /// Transcranial focused ultrasound simulation workflow
 ///
@@ -65,7 +65,7 @@ impl TranscranialSimulation {
         use crate::domain::imaging::medical::{CTImageLoader, MedicalImageLoader};
         let mut loader = CTImageLoader::new();
         let ct_data = loader.load(ct_path)?;
-        
+
         self.skull_mask = Some(HeterogeneousSkull::generate_mask_from_ct(&ct_data));
         self.heterogeneous = Some(HeterogeneousSkull::from_ct(&ct_data, &self.skull_props)?);
         Ok(())
@@ -83,8 +83,12 @@ impl TranscranialSimulation {
         parameters: &[f64],
     ) -> KwaversResult<()> {
         let mask = match model_type {
-            "sphere" => generate_spherical_skull(&self.grid, self.skull_props.thickness, parameters[0])?,
-            "ellipsoid" => generate_ellipsoidal_skull(&self.grid, self.skull_props.thickness, parameters)?,
+            "sphere" => {
+                generate_spherical_skull(&self.grid, self.skull_props.thickness, parameters[0])?
+            }
+            "ellipsoid" => {
+                generate_ellipsoidal_skull(&self.grid, self.skull_props.thickness, parameters)?
+            }
             _ => {
                 return Err(KwaversError::InvalidInput(format!(
                     "Unknown model type: {}",

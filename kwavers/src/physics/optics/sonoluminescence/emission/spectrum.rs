@@ -1,4 +1,4 @@
-use ndarray::{s, Array1, Array3, Array4, Zip, Axis};
+use ndarray::{s, Array1, Array3, Array4, Axis, Zip};
 
 /// Parameters for sonoluminescence emission
 #[derive(Debug, Clone)]
@@ -31,8 +31,8 @@ impl Default for EmissionParameters {
             use_cherenkov: false,       // Experimental feature
             use_molecular_lines: false, // Not implemented yet
             ionization_energy: crate::core::constants::chemistry::ARGON_IONIZATION_ENERGY, // eV for argon
-            min_temperature: 2000.0,    // K
-            opacity_factor: 1.0,        // Optically thin
+            min_temperature: 2000.0,                                                       // K
+            opacity_factor: 1.0, // Optically thin
             cherenkov_refractive_index: 1.4,
             cherenkov_coherence_factor: 100.0,
         }
@@ -103,8 +103,17 @@ impl SpectralField {
 
     /// Get spectrum at a specific point
     #[must_use]
-    pub fn get_spectrum_at(&self, i: usize, j: usize, k: usize) -> crate::physics::optics::sonoluminescence::spectral::EmissionSpectrum {
+    pub fn get_spectrum_at(
+        &self,
+        i: usize,
+        j: usize,
+        k: usize,
+    ) -> crate::physics::optics::sonoluminescence::spectral::EmissionSpectrum {
         let intensities = self.intensities.slice(s![i, j, k, ..]).to_owned();
-        crate::physics::optics::sonoluminescence::spectral::EmissionSpectrum::new(self.wavelengths.clone(), intensities, 0.0)
+        crate::physics::optics::sonoluminescence::spectral::EmissionSpectrum::new(
+            self.wavelengths.clone(),
+            intensities,
+            0.0,
+        )
     }
 }

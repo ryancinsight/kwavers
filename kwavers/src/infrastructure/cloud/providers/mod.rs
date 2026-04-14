@@ -8,27 +8,16 @@
 //! **Implemented:**
 //! - AWS SageMaker (complete, production-ready)
 //!
-//! **Not Implemented (Removed for Code Quality):**
-//! - Azure ML (incomplete, removed - see TODO_AUDIT below)
-//! - GCP Vertex AI (incomplete, removed - see TODO_AUDIT below)
+//! **Not yet implemented (removed incomplete stubs):**
+//! - Azure ML (incomplete implementation removed)
+//! - GCP Vertex AI (incomplete implementation removed)
 //!
-//! TODO_AUDIT: P1 - Azure ML Provider - Implement complete Azure Machine Learning deployment
-//! DEPENDS ON: infra/cloud/providers/azure.rs (removed), Azure SDK integration
-//! MISSING: Azure ML workspace integration, Azure Blob Storage for model artifacts
-//! MISSING: Azure Functions serverless deployment, auto-scaling policies
-//! MISSING: Azure Load Balancer configuration, monitoring and logging
-//! SEVERITY: HIGH (blocks multi-cloud deployment strategy)
-//! REFERENCES: Azure ML Documentation (https://docs.microsoft.com/en-us/azure/machine-learning/)
-//! REFERENCES: Lakshmanan et al. (2020) Machine Learning Design Patterns, O'Reilly
+//! **Not yet implemented (multi-cloud extension points):**
 //!
-//! TODO_AUDIT: P1 - GCP Vertex AI Provider - Implement complete Google Cloud Platform deployment
-//! DEPENDS ON: infra/cloud/providers/gcp.rs (removed), GCP SDK integration
-//! MISSING: Vertex AI model deployment, Google Cloud Storage integration
-//! MISSING: Cloud Functions deployment, auto-scaling based on load metrics
-//! MISSING: Cloud Load Balancing, Kubernetes deployment support
-//! SEVERITY: HIGH (blocks multi-cloud deployment strategy)
-//! REFERENCES: GCP Vertex AI Documentation (https://cloud.google.com/vertex-ai/docs)
-//! REFERENCES: Sato, D. (2019) Machine Learning Operations, O'Reilly
+//! - Azure ML: workspace integration, Blob Storage, Functions deployment,
+//!   auto-scaling, monitoring.
+//! - GCP Vertex AI: model endpoint deployment, Cloud Storage, Cloud Functions,
+//!   GKE-based Kubernetes deployment.
 //!
 //! # Architecture
 //!

@@ -7,6 +7,7 @@ pub mod chromophores;
 pub mod doppler;
 pub mod phantoms;
 pub mod photoacoustic;
+pub mod reconstruction;
 pub mod spectroscopy;
 pub mod workflows;
 

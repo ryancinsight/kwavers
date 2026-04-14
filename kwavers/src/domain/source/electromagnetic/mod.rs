@@ -86,15 +86,11 @@ impl EMSource for PointEMSource {
 
         // Simplified spherical wave: E ∝ (1/r) sin(kr - ωt + φ)
         let k = 2.0 * std::f64::consts::PI * self.frequency / 3e8; // Wave number (c = 3e8 m/s approximation)
-                                                                   // TODO_AUDIT: P2 - Full Electromagnetic Source Modeling - Implement complete electromagnetic source radiation patterns with material dispersion
-                                                                   // DEPENDS ON: domain/source/electromagnetic/dipole.rs, domain/source/electromagnetic/antenna.rs, physics/materials/dielectric_dispersion.rs
-                                                                   // MISSING: Hertzian dipole radiation patterns with near-field corrections
-                                                                   // MISSING: Antenna array beamforming for phased electromagnetic sources
-                                                                   // MISSING: Dielectric material dispersion effects on source radiation
-                                                                   // MISSING: Surface plasmon polariton coupling at metal-dielectric interfaces
-                                                                   // MISSING: Quantum optical effects for intense electromagnetic sources
-                                                                   // THEOREM: Poynting vector: S = (1/2) Re[E × H*] for time-averaged power flow
-                                                                   // THEOREM: Antenna radiation efficiency: η = P_rad / P_input with ohmic losses
+        //
+        // Not yet implemented: full radiation pattern modeling. Absent: Hertzian dipole
+        // near-field corrections; phased antenna array beamforming; dielectric material
+        // dispersion effects; surface plasmon polariton coupling at metal-dielectric
+        // interfaces; and quantum optical effects for high-intensity sources.
         let omega = 2.0 * std::f64::consts::PI * self.frequency;
         let phase = k * distance - omega * time + self.phase;
 

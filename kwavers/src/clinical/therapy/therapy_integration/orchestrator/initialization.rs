@@ -20,15 +20,15 @@
 use crate::clinical::therapy::lithotripsy::stone_fracture::StoneMaterial;
 use crate::clinical::therapy::lithotripsy::{LithotripsyParameters, LithotripsySimulator};
 use crate::core::error::KwaversResult;
-use log::{info, warn};
 use crate::domain::grid::Grid;
+#[cfg(feature = "nifti")]
+use crate::domain::imaging::medical::{CTImageLoader, MedicalImageLoader};
 use crate::domain::medium::Medium;
 use crate::physics::cavitation_control::{ControlStrategy, FeedbackConfig, FeedbackController};
 use crate::physics::chemistry::ChemicalModel;
-#[cfg(feature = "nifti")]
-use crate::domain::imaging::medical::{CTImageLoader, MedicalImageLoader};
 use crate::physics::transcranial::TranscranialAberrationCorrection;
 use crate::simulation::imaging::ceus::ContrastEnhancedUltrasound;
+use log::{info, warn};
 use ndarray::Array3;
 
 use super::super::config::{TherapyModality, TherapySessionConfig};
@@ -262,7 +262,7 @@ pub fn init_lithotripsy_simulator(
 /// - Williams et al. (2010): "Characterization of kidney stone composition using CT"
 /// - Zarse et al. (2007): "CT visible internal stone structure"
 fn create_stone_geometry(config: &TherapySessionConfig, grid: &Grid) -> Array3<f64> {
-    use crate::physics::imaging::registration::ImageRegistration;
+    use crate::physics::acoustics::imaging::registration::ImageRegistration;
 
     let mut geometry = Array3::zeros(grid.dimensions());
 
@@ -365,49 +365,12 @@ fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f
     }
 
     // Fallback: Generate synthetic CT data
-    // TODO_AUDIT: P2 - DICOM CT Data Loading - Partial Implementation
-    //
-    // STATUS: NIFTI loading complete, DICOM loading pending
-    //
-    // REMAINING WORK:
-    // 1. DICOM file reading:
-    //    - Use dicom crate for file parsing
-    //    - Extract CT image slices (pixel data, spacing, position)
-    //    - Reconstruct 3D volume from DICOM series
-    // 2. PACS integration (optional):
-    //    - Query PACS server (C-FIND, C-MOVE) for patient studies
-    //    - Retrieve CT series matching therapy session
-    // 3. Enhanced HU conversion:
-    //    - Apply DICOM rescale slope and intercept
-    //    - Validate modality tag (should be "CT")
-    //
-    // VALIDATION CRITERIA:
-    // - Test: Load synthetic DICOM series, verify volume dimensions match expected
-    // - Test: Load multi-slice CT, verify correct spatial ordering and orientation
-    // - Test: Verify HU values in known regions (air ≈ -1000, water ≈ 0, bone ≈ +1000)
-    // - Test: Missing DICOM files → should trigger fallback to synthetic data
-    // - Integration: PACS connection with authentication and query/retrieve
-    //
-    // REFERENCES:
-    // - DICOM Standard PS3.3-2023 - Information Object Definitions (CT Image IOD)
-    // - Schneider et al., "Correlation between CT numbers and tissue parameters" (1996)
-    // - IEC 62220-1 - Medical electrical equipment (digital radiography)
-    //
-    // ESTIMATED EFFORT: 12-16 hours
-    // - DICOM parsing: 4-6 hours (integrate dicom crate, extract metadata)
-    // - Volume reconstruction: 3-4 hours (slice ordering, interpolation)
-    // - HU conversion: 2-3 hours (acoustic property mapping)
-    // - PACS integration: 3-5 hours (optional, query/retrieve)
-    // - Testing: 2-3 hours (synthetic DICOM, real CT validation)
-    // - Documentation: 1 hour
-    //
-    // DEPENDENCIES:
-    // - dicom crate (add to Cargo.toml)
-    // - Optional: dicom-ul crate for PACS networking
-    // - Optional: Hospital PACS credentials and test environment
-    //
-    // ASSIGNED: Sprint 211 (Clinical Integration)
-    // PRIORITY: P1 (Clinical feature - synthetic fallback available)
+    // Not yet implemented: DICOM CT data loading. NIFTI loading is complete; remaining work
+    // covers DICOM series parsing (pixel data, spacing, position via the dicom crate),
+    // 3D volume reconstruction with correct slice ordering, DICOM rescale slope/intercept
+    // HU conversion, and optional PACS query/retrieve integration (DICOM C-FIND/C-MOVE).
+    // References: DICOM Standard PS3.3-2023 CT Image IOD; Schneider et al. (1996)
+    // "Correlation between CT numbers and tissue parameters"; IEC 62220-1.
 
     // In practice, this would load DICOM CT data from PACS or file system
     // Current implementation triggers fallback to synthetic data

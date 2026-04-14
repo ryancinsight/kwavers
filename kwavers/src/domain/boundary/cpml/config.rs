@@ -1,6 +1,6 @@
 //! CPML configuration and validation
 
-use crate::core::error::{ConfigError, KwaversResult};
+use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 use serde::{Deserialize, Serialize};
 
 /// Minimum cosine theta value to prevent division by zero in reflection estimation
@@ -34,14 +34,18 @@ impl PerDimensionPML {
         Self { x, y, z }
     }
 
-    /// Get thickness for specific dimension (0=x, 1=y, 2=z)
-    #[must_use]
-    pub fn get(&self, dim: usize) -> usize {
+    /// Get thickness for specific dimension (0=x, 1=y, 2=z).
+    ///
+    /// Returns `Err(KwaversError::InvalidInput)` when `dim > 2`.
+    pub fn get(&self, dim: usize) -> KwaversResult<usize> {
         match dim {
-            0 => self.x,
-            1 => self.y,
-            2 => self.z,
-            _ => panic!("Invalid dimension {} (must be 0, 1, or 2)", dim),
+            0 => Ok(self.x),
+            1 => Ok(self.y),
+            2 => Ok(self.z),
+            _ => Err(KwaversError::InvalidInput(format!(
+                "CPML dimension {} out of range [0, 2]",
+                dim
+            ))),
         }
     }
 
@@ -101,14 +105,18 @@ impl PerDimensionAlpha {
         Self { x, y, z }
     }
 
-    /// Get alpha for a specific dimension (0=x, 1=y, 2=z)
-    #[must_use]
-    pub fn get(&self, dim: usize) -> f64 {
+    /// Get alpha for a specific dimension (0=x, 1=y, 2=z).
+    ///
+    /// Returns `Err(KwaversError::InvalidInput)` when `dim > 2`.
+    pub fn get(&self, dim: usize) -> KwaversResult<f64> {
         match dim {
-            0 => self.x,
-            1 => self.y,
-            2 => self.z,
-            _ => panic!("Invalid dimension {} (must be 0, 1, or 2)", dim),
+            0 => Ok(self.x),
+            1 => Ok(self.y),
+            2 => Ok(self.z),
+            _ => Err(KwaversError::InvalidInput(format!(
+                "CPML dimension {} out of range [0, 2]",
+                dim
+            ))),
         }
     }
 }
@@ -224,14 +232,16 @@ impl CPMLConfig {
     }
 
     /// Get sigma factor for a specific dimension (respects per_dimension_alpha).
-    #[must_use]
-    pub fn sigma_factor_for_dimension(&self, dim: usize) -> f64 {
+    ///
+    /// Returns `Err` when `dim > 2`.
+    pub fn sigma_factor_for_dimension(&self, dim: usize) -> KwaversResult<f64> {
         self.per_dimension_alpha.get(dim)
     }
 
-    /// Get PML thickness for a specific dimension (0=x, 1=y, 2=z)
-    #[must_use]
-    pub fn thickness_for_dimension(&self, dim: usize) -> usize {
+    /// Get PML thickness for a specific dimension (0=x, 1=y, 2=z).
+    ///
+    /// Returns `Err` when `dim > 2`.
+    pub fn thickness_for_dimension(&self, dim: usize) -> KwaversResult<usize> {
         self.per_dimension.get(dim)
     }
 
@@ -321,21 +331,58 @@ impl CPMLConfig {
         self.target_reflection * (-(m + 1.0) * sigma_max * thickness * cos_theta).exp()
     }
 
-    /// Calculate theoretical reflection for a specific dimension
-    #[must_use]
+    /// Calculate theoretical reflection for a specific dimension.
+    ///
+    /// Returns `Err` when `dim > 2`.
     pub fn theoretical_reflection_for_dimension(
         &self,
         dim: usize,
         cos_theta: f64,
         dx: f64,
         sound_speed: f64,
-    ) -> f64 {
+    ) -> KwaversResult<f64> {
         let cos_theta = cos_theta.max(MIN_COS_THETA_FOR_REFLECTION);
         let m = self.polynomial_order;
-        let thickness = self.per_dimension.get(dim) as f64;
+        let thickness = self.per_dimension.get(dim)? as f64;
 
         let sigma_max =
             self.sigma_factor * (m + 1.0) * sound_speed / (150.0 * std::f64::consts::PI * dx);
-        self.target_reflection * (-(m + 1.0) * sigma_max * thickness * cos_theta).exp()
+        Ok(self.target_reflection * (-(m + 1.0) * sigma_max * thickness * cos_theta).exp())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `PerDimensionPML::get` must return `Err` for dimension > 2, not panic.
+    #[test]
+    fn test_per_dimension_pml_invalid_dim_returns_err() {
+        let pml = PerDimensionPML::uniform(20);
+        assert!(pml.get(0).is_ok(), "dim=0 must succeed");
+        assert!(pml.get(1).is_ok(), "dim=1 must succeed");
+        assert!(pml.get(2).is_ok(), "dim=2 must succeed");
+        assert!(pml.get(3).is_err(), "dim=3 must return Err");
+        assert!(pml.get(99).is_err(), "dim=99 must return Err");
+    }
+
+    /// `PerDimensionAlpha::get` must return `Err` for dimension > 2, not panic.
+    #[test]
+    fn test_per_dimension_alpha_invalid_dim_returns_err() {
+        let alpha = PerDimensionAlpha::uniform(2.0);
+        assert!(alpha.get(0).is_ok(), "dim=0 must succeed");
+        assert!(alpha.get(1).is_ok(), "dim=1 must succeed");
+        assert!(alpha.get(2).is_ok(), "dim=2 must succeed");
+        assert!(alpha.get(3).is_err(), "dim=3 must return Err");
+    }
+
+    /// `CPMLConfig::sigma_factor_for_dimension` and `thickness_for_dimension`
+    /// must propagate the error from `PerDimensionAlpha::get` / `PerDimensionPML::get`.
+    #[test]
+    fn test_cpml_config_dimension_methods_invalid_dim_returns_err() {
+        let cfg = CPMLConfig::default();
+        assert!(cfg.sigma_factor_for_dimension(3).is_err());
+        assert!(cfg.thickness_for_dimension(3).is_err());
+        assert!(cfg.theoretical_reflection_for_dimension(3, 1.0, 1e-3, 1500.0).is_err());
     }
 }

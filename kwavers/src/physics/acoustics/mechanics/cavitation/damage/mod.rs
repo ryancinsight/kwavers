@@ -6,6 +6,7 @@
 pub mod erosion;
 pub mod material;
 pub mod model;
+pub mod bio_damage;
 
 pub use erosion::{cavitation_intensity, ErosionPattern};
 pub use material::{DamageParameters, MaterialProperties};

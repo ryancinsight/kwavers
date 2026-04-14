@@ -40,18 +40,20 @@ use super::super::state::AcousticField;
 ///
 /// # Field Model
 ///
-/// Uses Gaussian beam approximation:
-/// TODO_AUDIT: P2 - Nonlinear Ultrasound Therapy - Implement full nonlinear ultrasound propagation for high-intensity therapy applications, replacing Gaussian beam approximation
-/// DEPENDS ON: physics/acoustics/nonlinear/kzk.rs, physics/acoustics/shock_formation.rs
-/// MISSING: Khokhlov-Zabolotskaya-Kuznetsov equation for focused beam nonlinear propagation
-/// MISSING: Shock wave formation criteria and evolution tracking
-/// MISSING: Cavitation threshold modeling with Bjerknes forces
-/// MISSING: Thermal dose accumulation with nonlinear heating effects
-/// MISSING: Standing wave pattern formation in therapy chambers
-/// - Pressure amplitude: P(r) = P₀ * exp(-r²/w²)
-/// - where r is distance from focal point, w is beam width
-/// - Focal point at specified depth along x-axis
-/// - Beam width: 5 mm (typical for therapeutic ultrasound)
+/// Uses Gaussian beam approximation: P(r) = P₀·exp(−r²/w²), where r is the
+/// distance from the focal point and w = 5 mm is the beam width.
+///
+/// ## Limitation
+///
+/// The Gaussian approximation is valid for low-intensity diagnostic levels.
+/// For HIFU (>1 kW/cm²), it does not capture:
+/// - Shock formation and nonlinear harmonic generation (KZK equation,
+///   Zabolotskaya & Khokhlov 1969; Lee & Hamilton 1995)
+/// - Cavitation inception and Bjerknes force on bubbles
+/// - Thermal dose accumulation with nonlinear heating (Sapareto & Dewey 1984)
+///
+/// Full nonlinear HIFU propagation via the KZK solver is not yet integrated
+/// into this therapy orchestration path.
 ///
 /// # References
 ///

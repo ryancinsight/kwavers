@@ -22,8 +22,8 @@
 //! - Wang & Wu (2007) "Biomedical Optics: Principles and Imaging"
 //! - Cox et al. (2012) "Quantitative spectroscopic photoacoustic imaging"
 
-use ndarray::ArrayD;
 use super::MultiPhysicsCoupling;
+use ndarray::ArrayD;
 
 /// Electromagnetic-acoustic coupling for photoacoustic effects
 pub trait ElectromagneticAcousticCoupling: MultiPhysicsCoupling {

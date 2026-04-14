@@ -1,6 +1,40 @@
-//! WENO-based shock limiting for spectral DG methods
+//! WENO-based shock limiting for spectral DG methods.
 //!
-//! Implements Weighted Essentially Non-Oscillatory (WENO) limiters for handling shocks.
+//! ## Algorithm: WENO3 (third-order Weighted Essentially Non-Oscillatory)
+//!
+//! Given a 5-point stencil `{v_{i-2}, v_{i-1}, v_i, v_{i+1}, v_{i+2}}`, three
+//! candidate reconstructions are formed from sub-stencils:
+//! ```text
+//!   q₀ = v_{i-2}/3  − 7v_{i-1}/6 + 11v_i/6
+//!   q₁ = −v_{i-1}/6 + 5v_i/6     +  v_{i+1}/3
+//!   q₂ =  v_i/3     + 5v_{i+1}/6 −  v_{i+2}/6
+//! ```
+//! Jiang-Shu smoothness indicators (J. Comput. Phys. 126:202-228, 1996):
+//! ```text
+//!   β₀ = 13/12 (v_{i-2} − 2v_{i-1} + v_i)²  + 1/4 (v_{i-2} − 4v_{i-1} + 3v_i)²
+//!   β₁ = 13/12 (v_{i-1} − 2v_i     + v_{i+1})² + 1/4 (v_{i-1} − v_{i+1})²
+//!   β₂ = 13/12 (v_i     − 2v_{i+1} + v_{i+2})² + 1/4 (3v_i − 4v_{i+1} + v_{i+2})²
+//! ```
+//! Optimal weights `d = [d₀, d₁, d₂] = [1/10, 6/10, 3/10]` satisfy:
+//! `d₀ q₀ + d₁ q₁ + d₂ q₂ = 5th-order upwind` in smooth regions.
+//!
+//! Non-linear WENO weights with regularisation parameter ε (typically 1e-6):
+//! ```text
+//!   αₖ = dₖ / (ε + βₖ)²,    ωₖ = αₖ / (α₀ + α₁ + α₂)
+//! ```
+//! Final reconstruction: `ũᵢ = ω₀ q₀ + ω₁ q₁ + ω₂ q₂`.
+//!
+//! ## Algorithm: WENO7 (seventh-order WENO)
+//!
+//! Four candidate stencils from a 9-point window; optimal weights
+//! `d = [0.05, 0.45, 0.45, 0.05]` recover the 7th-order central scheme in smooth
+//! regions (Balsara & Shu 2000, J. Comput. Phys. 160(2):405-452).
+//!
+//! ## References
+//!
+//! - Liu, Osher & Chan (1994). J. Comput. Phys. 115(1):200-212.  (Original WENO)
+//! - Jiang & Shu (1996). J. Comput. Phys. 126(1):202-228.         (Smoothness indicators)
+//! - Balsara & Shu (2000). J. Comput. Phys. 160(2):405-452.       (WENO7)
 
 use crate::core::error::{ConfigError, KwaversError, KwaversResult, ValidationError};
 use ndarray::Array3;
@@ -129,51 +163,6 @@ impl WENOLimiter {
                     }
                 }
             }
-        }
-        Ok(())
-    }
-
-    /// WENO3 limiting (third-order WENO) — kept for internal use by weno5_limit.
-    fn weno3_limit(
-        &self,
-        field: &mut Array3<f64>,
-        shock_indicator: &Array3<f64>,
-    ) -> KwaversResult<()> {
-        // Delegate to the zero-allocation version by using a read view.
-        // SAFETY: `src` is a shared view of `field`; we copy stencil values
-        // to scalars before writing to `field`, so there is no aliasing hazard.
-        let (nx, ny, nz) = field.dim();
-        // Collect all updates first (avoid read-write overlap on `field`)
-        let updates: Vec<(usize, usize, usize, f64)> = (2..nx - 2)
-            .flat_map(|i| (2..ny - 2).flat_map(move |j| (2..nz - 2).map(move |k| (i, j, k))))
-            .filter(|&(i, j, k)| shock_indicator[[i, j, k]] > 0.5)
-            .map(|(i, j, k)| {
-                let weno_x = self.weno3_stencil(&[
-                    field[[i - 2, j, k]],
-                    field[[i - 1, j, k]],
-                    field[[i, j, k]],
-                    field[[i + 1, j, k]],
-                    field[[i + 2, j, k]],
-                ]);
-                let weno_y = self.weno3_stencil(&[
-                    field[[i, j - 2, k]],
-                    field[[i, j - 1, k]],
-                    field[[i, j, k]],
-                    field[[i, j + 1, k]],
-                    field[[i, j + 2, k]],
-                ]);
-                let weno_z = self.weno3_stencil(&[
-                    field[[i, j, k - 2]],
-                    field[[i, j, k - 1]],
-                    field[[i, j, k]],
-                    field[[i, j, k + 1]],
-                    field[[i, j, k + 2]],
-                ]);
-                (i, j, k, (weno_x + weno_y + weno_z) / 3.0)
-            })
-            .collect();
-        for (i, j, k, val) in updates {
-            field[[i, j, k]] = val;
         }
         Ok(())
     }
@@ -398,38 +387,6 @@ impl WENOLimiter {
                     }
                 }
             }
-        }
-        Ok(())
-    }
-
-    /// WENO7 limiting (seventh-order WENO) — thin wrapper used internally.
-    fn weno7_limit(
-        &self,
-        field: &mut Array3<f64>,
-        shock_indicator: &Array3<f64>,
-    ) -> KwaversResult<()> {
-        // Collect updates to avoid read-write aliasing on `field`.
-        let (nx, ny, nz) = field.dim();
-        let updates: Vec<(usize, usize, usize, f64)> = (4..nx - 4)
-            .flat_map(|i| (4..ny - 4).flat_map(move |j| (4..nz - 4).map(move |k| (i, j, k))))
-            .filter(|&(i, j, k)| shock_indicator[[i, j, k]] > 0.5)
-            .map(|(i, j, k)| {
-                let weno_x = self.weno7_stencil(&[
-                    field[[i - 4, j, k]],
-                    field[[i - 3, j, k]],
-                    field[[i - 2, j, k]],
-                    field[[i - 1, j, k]],
-                    field[[i, j, k]],
-                    field[[i + 1, j, k]],
-                    field[[i + 2, j, k]],
-                    field[[i + 3, j, k]],
-                    field[[i + 4, j, k]],
-                ]);
-                (i, j, k, weno_x)
-            })
-            .collect();
-        for (i, j, k, val) in updates {
-            field[[i, j, k]] = val;
         }
         Ok(())
     }

@@ -56,4 +56,3 @@ impl ArrheniusValidator {
         (1.5..=5.0).contains(&q10)
     }
 }
-

@@ -21,12 +21,12 @@ use ndarray::{Array3, Zip};
 
 /// Mechanical Index (MI) threshold for the onset of inertial cavitation in water
 /// at 1 MHz, based on the Apfel-Holland theoretical framework.
-/// 
+///
 /// Note: This is a physical onset threshold, distinct from the FDA regulatory
 /// limit of MI ≤ 1.9 for diagnostic ultrasound.
 ///
 /// # References
-/// - Apfel, R. E., & Holland, C. K. (1991). "Gauging the likelihood of cavitation 
+/// - Apfel, R. E., & Holland, C. K. (1991). "Gauging the likelihood of cavitation
 ///   from short-pulse, low-duty cycle diagnostic ultrasound." Ultrasound in Med. & Biol., 17(2), 179-185.
 pub const APFEL_HOLLAND_CAVITATION_THRESHOLD_1MHZ_PA: f64 = 0.7e6;
 
@@ -196,10 +196,8 @@ impl CavitationCore for CavitationModel {
                     state.duration += dt;
                     state.peak_negative_pressure = state.peak_negative_pressure.min(pressure);
                     // SSOT: delegate to the single authoritative intensity formula
-                    state.intensity = Self::compute_intensity(
-                        state.peak_negative_pressure,
-                        ambient_pressure,
-                    );
+                    state.intensity =
+                        Self::compute_intensity(state.peak_negative_pressure, ambient_pressure);
 
                     dose_intensity_sum += state.intensity;
                     dose_count += 1;
@@ -218,4 +216,3 @@ impl CavitationCore for CavitationModel {
         Ok(())
     }
 }
-

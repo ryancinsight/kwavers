@@ -200,9 +200,10 @@ pub struct PerformanceMetrics {
 impl ClinicalMonitor {
     /// Create new clinical monitor
     pub fn new(config: MonitoringConfig) -> Self {
+        let history_cap = config.history_window;
         Self {
             config,
-            frame_history: VecDeque::with_capacity(config.history_window),
+            frame_history: VecDeque::with_capacity(history_cap),
             safety_log: VecDeque::with_capacity(1000),
             performance_metrics: PerformanceMetrics::default(),
             start_time: Instant::now(),

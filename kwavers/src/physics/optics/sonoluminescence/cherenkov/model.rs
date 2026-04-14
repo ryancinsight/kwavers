@@ -59,8 +59,8 @@ impl CherenkovModel {
         let temp = temperature.max(0.0);
 
         // Empirical model: n(comp, T) = n0 * (1 + coef*(ρ/ρ0 - 1)) - coef*(T - T_ref)
-        let increased_n = self.refractive_index_base
-            * (1.0 + COMPRESSION_REFRACTIVE_COEFFICIENT * (comp - 1.0));
+        let increased_n =
+            self.refractive_index_base * (1.0 + COMPRESSION_REFRACTIVE_COEFFICIENT * (comp - 1.0));
         let decreased_n =
             increased_n - THERMAL_REFRACTIVE_COEFFICIENT * (temp - REFERENCE_TEMPERATURE);
 
@@ -140,13 +140,6 @@ impl CherenkovModel {
             return Array1::zeros(wavelengths.len());
         }
         let scale = self.coherence_factor * charge.abs() * ft;
-        wavelengths.mapv(|lambda| {
-            if lambda > 0.0 {
-                scale / lambda
-            } else {
-                0.0
-            }
-        })
+        wavelengths.mapv(|lambda| if lambda > 0.0 { scale / lambda } else { 0.0 })
     }
 }
-

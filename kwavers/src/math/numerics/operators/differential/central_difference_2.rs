@@ -114,10 +114,12 @@ impl CentralDifference2 {
     }
 }
 
-impl DifferentialOperator for CentralDifference2 {
-    fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+impl CentralDifference2 {
+    /// Apply ∂/∂x into a pre-allocated destination — zero heap allocation.
+    ///
+    /// The caller is responsible for ensuring `dst` has the same shape as `field`.
+    pub fn apply_x_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
-
         if nx < 3 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 3,
@@ -126,39 +128,27 @@ impl DifferentialOperator for CentralDifference2 {
             }
             .into());
         }
-
-        let mut result = Array3::zeros((nx, ny, nz));
-
-        // Interior points: second-order central difference
-        // ∂u/∂x ≈ (u[i+1] - u[i-1]) / (2Δx)
         for i in 1..nx - 1 {
             for j in 0..ny {
                 for k in 0..nz {
-                    result[[i, j, k]] =
+                    dst[[i, j, k]] =
                         (field[[i + 1, j, k]] - field[[i - 1, j, k]]) / (2.0 * self.dx);
                 }
             }
         }
-
-        // Boundary points: first-order forward/backward difference
         for j in 0..ny {
             for k in 0..nz {
-                // Left boundary: forward difference
-                // ∂u/∂x ≈ (u[1] - u[0]) / Δx
-                result[[0, j, k]] = (field[[1, j, k]] - field[[0, j, k]]) / self.dx;
-
-                // Right boundary: backward difference
-                // ∂u/∂x ≈ (u[n-1] - u[n-2]) / Δx
-                result[[nx - 1, j, k]] = (field[[nx - 1, j, k]] - field[[nx - 2, j, k]]) / self.dx;
+                dst[[0, j, k]] = (field[[1, j, k]] - field[[0, j, k]]) / self.dx;
+                dst[[nx - 1, j, k]] =
+                    (field[[nx - 1, j, k]] - field[[nx - 2, j, k]]) / self.dx;
             }
         }
-
-        Ok(result)
+        Ok(())
     }
 
-    fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    /// Apply ∂/∂y into a pre-allocated destination — zero heap allocation.
+    pub fn apply_y_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
-
         if ny < 3 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 3,
@@ -167,33 +157,27 @@ impl DifferentialOperator for CentralDifference2 {
             }
             .into());
         }
-
-        let mut result = Array3::zeros((nx, ny, nz));
-
-        // Interior points: second-order central difference
         for i in 0..nx {
             for j in 1..ny - 1 {
                 for k in 0..nz {
-                    result[[i, j, k]] =
+                    dst[[i, j, k]] =
                         (field[[i, j + 1, k]] - field[[i, j - 1, k]]) / (2.0 * self.dy);
                 }
             }
         }
-
-        // Boundary points: first-order forward/backward difference
         for i in 0..nx {
             for k in 0..nz {
-                result[[i, 0, k]] = (field[[i, 1, k]] - field[[i, 0, k]]) / self.dy;
-                result[[i, ny - 1, k]] = (field[[i, ny - 1, k]] - field[[i, ny - 2, k]]) / self.dy;
+                dst[[i, 0, k]] = (field[[i, 1, k]] - field[[i, 0, k]]) / self.dy;
+                dst[[i, ny - 1, k]] =
+                    (field[[i, ny - 1, k]] - field[[i, ny - 2, k]]) / self.dy;
             }
         }
-
-        Ok(result)
+        Ok(())
     }
 
-    fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    /// Apply ∂/∂z into a pre-allocated destination — zero heap allocation.
+    pub fn apply_z_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
-
         if nz < 3 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 3,
@@ -202,27 +186,41 @@ impl DifferentialOperator for CentralDifference2 {
             }
             .into());
         }
-
-        let mut result = Array3::zeros((nx, ny, nz));
-
-        // Interior points: second-order central difference
         for i in 0..nx {
             for j in 0..ny {
                 for k in 1..nz - 1 {
-                    result[[i, j, k]] =
+                    dst[[i, j, k]] =
                         (field[[i, j, k + 1]] - field[[i, j, k - 1]]) / (2.0 * self.dz);
                 }
             }
         }
-
-        // Boundary points: first-order forward/backward difference
         for i in 0..nx {
             for j in 0..ny {
-                result[[i, j, 0]] = (field[[i, j, 1]] - field[[i, j, 0]]) / self.dz;
-                result[[i, j, nz - 1]] = (field[[i, j, nz - 1]] - field[[i, j, nz - 2]]) / self.dz;
+                dst[[i, j, 0]] = (field[[i, j, 1]] - field[[i, j, 0]]) / self.dz;
+                dst[[i, j, nz - 1]] =
+                    (field[[i, j, nz - 1]] - field[[i, j, nz - 2]]) / self.dz;
             }
         }
+        Ok(())
+    }
+}
 
+impl DifferentialOperator for CentralDifference2 {
+    fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let mut result = Array3::zeros(field.dim());
+        self.apply_x_into(field, &mut result)?;
+        Ok(result)
+    }
+
+    fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let mut result = Array3::zeros(field.dim());
+        self.apply_y_into(field, &mut result)?;
+        Ok(result)
+    }
+
+    fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let mut result = Array3::zeros(field.dim());
+        self.apply_z_into(field, &mut result)?;
         Ok(result)
     }
 

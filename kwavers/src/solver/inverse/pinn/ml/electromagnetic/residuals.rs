@@ -303,7 +303,7 @@ pub fn quasi_static_residual<B: AutodiffBackend>(
 }
 
 pub fn wave_propagation_residual<B: AutodiffBackend>(
-    model: &BurnPINN2DWave<B>, // Changed from outputs to model
+    model: &BurnPINN2DWave<B>,
     x: &Tensor<B, 2>,
     y: &Tensor<B, 2>,
     t: &Tensor<B, 2>,
@@ -312,68 +312,6 @@ pub fn wave_propagation_residual<B: AutodiffBackend>(
     sigma: f64,
     physics_params: &PhysicsParameters,
 ) -> Tensor<B, 2> {
-    // TODO_AUDIT: P1 - PINN Electromagnetic Wave Propagation Residual - Stub Implementation
-    //
-    // PROBLEM:
-    // This function returns zero residuals, completely bypassing electromagnetic wave equation
-    // enforcement in PINN training for time-dependent Maxwell problems.
-    //
-    // IMPACT:
-    // - PINN cannot learn electromagnetic wave propagation dynamics
-    // - Training loss for wave physics is always zero (no learning signal)
-    // - No enforcement of full Maxwell equations: ∇×E = -∂B/∂t, ∇×H = J + ∂D/∂t, ∇·D = ρ, ∇·B = 0
-    // - Blocks applications: waveguide simulation, antenna radiation, RF propagation, photonics
-    // - Severity: P1 (research/advanced feature, not production-critical)
-    //
-    // REQUIRED IMPLEMENTATION:
-    // 1. Compute E(x,y,t) and H(x,y,t) fields from model outputs or coupled models
-    // 2. Compute spatial curl operators using autodiff:
-    //    - ∇×E = (∂Ez/∂y - ∂Ey/∂z, ∂Ex/∂z - ∂Ez/∂x, ∂Ey/∂x - ∂Ex/∂y)
-    //    - ∇×H = (∂Hz/∂y - ∂Hy/∂z, ∂Hx/∂z - ∂Hz/∂x, ∂Hy/∂x - ∂Hx/∂y)
-    // 3. Compute time derivatives ∂E/∂t and ∂H/∂t using autodiff
-    // 4. Form Maxwell equation residuals:
-    //    R_Faraday = ∇×E + μ ∂H/∂t
-    //    R_Ampere = ∇×H - σE - ε ∂E/∂t - J_ext
-    // 5. Optionally enforce Gauss's laws: ∇·D = ρ, ∇·B = 0
-    // 6. Return combined residual (e.g., L2 norm or concatenated components)
-    //
-    // MATHEMATICAL SPECIFICATION:
-    // Full time-dependent Maxwell equations in 2D (TE/TM modes):
-    //   TE mode (Ez, Hx, Hy):
-    //     ∂Hz/∂y - ∂Hy/∂x = σEz + ε ∂Ez/∂t + Jz
-    //     ∂Ez/∂x = -μ ∂Hy/∂t
-    //     ∂Ez/∂y =  μ ∂Hx/∂t
-    //   TM mode (Hz, Ex, Ey):
-    //     ∂Ey/∂x - ∂Ex/∂y = σ_m Hz + μ ∂Hz/∂t + Mz
-    //     ∂Hz/∂x = ε ∂Ey/∂t
-    //     ∂Hz/∂y = -ε ∂Ex/∂t
-    //
-    // VALIDATION CRITERIA:
-    // - Property test: Residual → 0 for analytical plane wave solutions
-    // - Test case: TE₁₀ mode in rectangular waveguide (analytical dispersion relation)
-    // - Test case: Gaussian pulse propagation in free space (verify c = 1/√(με))
-    // - Test case: Reflection/transmission at dielectric interface (verify Fresnel coefficients)
-    // - Convergence: Residual L2 norm < 1e-3 for analytical solutions after training
-    // - Energy conservation: ∂/∂t ∫(εE²/2 + μH²/2)dV + ∫σE²dV + ∫S·n̂dA = 0 (Poynting theorem)
-    //
-    // REFERENCES:
-    // - Jackson, J.D., "Classical Electrodynamics" (3rd ed.), Chapter 7: Plane Electromagnetic Waves
-    // - Pozar, D.M., "Microwave Engineering" (4th ed.), Chapter 1: Electromagnetic Theory
-    // - Taflove & Hagness, "Computational Electrodynamics: The Finite-Difference Time-Domain Method" (3rd ed.)
-    // - Raissi et al., "Physics-informed neural networks"
-    //
-    // ESTIMATED EFFORT: 16-20 hours
-    // - Implementation: 10-12 hours (curl operators, time derivatives, mode handling, residual assembly)
-    // - Testing: 4-6 hours (waveguide modes, plane waves, interface validation)
-    // - Documentation: 2 hours
-    //
-    // DEPENDENCIES:
-    // - Requires proper vector field autodiff (curl, divergence operators)
-    // - May need separate models for E and H fields, or coupled multi-output model
-    // - Coordinate system handling for 2D mode decomposition (TE/TM)
-    //
-    // ASSIGNED: Sprint 212-213 (Research Features)
-    // PRIORITY: P1 (Advanced electromagnetic wave simulation capability)
 
     // -------------------------------------------------------------------------
     // Theorem — Scalar Wave Equation for Ez (TM-mode Maxwell)

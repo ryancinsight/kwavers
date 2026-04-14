@@ -16,6 +16,7 @@ pub mod setup; // New setup module
                // pub mod factory; // Removed
 pub mod imaging;
 pub mod modalities;
+pub mod photoacoustics;
 pub mod therapy; // Keep this as it's re-exported below
 
 // Re-exports
@@ -25,6 +26,7 @@ pub use configuration::Configuration;
 pub use core::{CoreSimulation, SimulationBuilder, SimulationResult, SimulationStatistics};
 pub use manager::PhysicsManager;
 pub use modalities::{PhotoacousticParameters, PhotoacousticResult, PhotoacousticSimulator};
+pub use photoacoustics::PhotoacousticRunner;
 pub use multi_physics::{
     CoupledPhysicsSolver, CouplingStrategy, FieldCoupler, MultiPhysicsConfig, MultiPhysicsSolver,
     PhysicsDomain,

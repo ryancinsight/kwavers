@@ -6,15 +6,19 @@
 //! - Interface Segregation: Traits for specific chemical behaviors
 //! - Dependency Inversion: Depends on abstractions (traits) not concrete types
 //! - Single Responsibility: Each component has one clear purpose
-//!   TODO_AUDIT: P2 - Sonochemistry Coupling - Add comprehensive sonochemistry module with complete reaction kinetics and free radical production tracking, expanding beyond current simplified models
-//!   DEPENDS ON: physics/chemistry/kinetics/master_equation.rs, physics/chemistry/radicals/diffusion.rs
-//!   MISSING: Master equation for radical kinetics: d[N]/dt = ∑ kᵢⱼ [N]ⱼ with full reaction network
-//!   MISSING: Smoluchowski diffusion equation for radical recombination: ∂[R]/∂t = D∇²[R] - 2k[R]²
-//!   MISSING: Multiple radical species: OH•, H•, HO₂•, O₂⁻•, eₐq⁻ with cross-reactions
-//!   MISSING: Temperature-dependent reaction rates: k(T) = A exp(-Eₐ/RT) with Arrhenius kinetics
-//!   MISSING: pH-dependent speciation and acid-base equilibria affecting radical yields
+//!
+//! ## Not yet implemented
+//!
+//! - **Master equation kinetics**: Full radical reaction network d[N]/dt = Σ kᵢⱼ[N]ⱼ.
+//! - **Radical diffusion**: Smoluchowski equation ∂[R]/∂t = D∇²[R] − 2k[R]² for
+//!   recombination in inhomogeneous fields.
+//! - **Multi-species radicals**: OH•, H•, HO₂•, O₂⁻•, eₐq⁻ with cross-reaction network.
+//! - **Arrhenius temperature dependence**: k(T) = A exp(−Eₐ/RT) for all rate constants.
+//! - **pH-dependent speciation**: Acid-base equilibria coupling to radical yields.
 
 // Sub-modules
+pub mod diffusion;
+pub mod integrator;
 pub mod model;
 pub mod model_query;
 pub mod model_update;

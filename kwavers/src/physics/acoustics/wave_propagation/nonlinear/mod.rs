@@ -50,8 +50,8 @@
 pub mod burgers;
 pub mod harmonics;
 pub mod kzk;
-pub mod parametric;
 pub mod parameters;
+pub mod parametric;
 pub mod saturation;
 pub mod shock;
 

@@ -37,10 +37,7 @@ pub fn shock_formation_distance(
 ///
 /// Returns thickness [m]
 #[must_use]
-pub fn shock_thickness(
-    shock_pressure: f64,
-    params: &NonlinearParameters,
-) -> f64 {
+pub fn shock_thickness(shock_pressure: f64, params: &NonlinearParameters) -> f64 {
     // Basic theoretical shock thickness (weak shock theory)
     // l_shock = (ρ₀ c₀³ δ) / (β P_shock)
     // Here we use attenuation coefficient at 1 MHz as a proxy for diffusivity (δ)

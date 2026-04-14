@@ -111,20 +111,43 @@ impl MicrobubbleDynamicsService {
     ///
     /// 1. Update shell state based on current radius
     /// 2. Convert domain state → Keller-Miksis state
-    /// 3. Solve ODE: R, Ṙ, R̈ for next timestep
+    /// 3. Solve Keller-Miksis ODE with radiation-damping term R/c · dP_ac/dt
     /// 4. Calculate radiation force from ∇P
-    /// 5. Update bubble position (F = ma, simplified)
-    ///    TODO_AUDIT: P2 - Advanced Microbubble Dynamics - Implement full Marmottant shell model with viscoelastic effects and drug release kinetics
-    ///    DEPENDS ON: clinical/therapy/microbubble/marmottant_shell.rs, clinical/therapy/microbubble/viscoelastic.rs, clinical/therapy/microbubble/drug_release.rs
-    ///    MISSING: Marmottant shell viscosity and elasticity with strain-dependent properties
-    ///    MISSING: Nonlinear shell compression and buckling instability modeling
-    ///    MISSING: Drug encapsulation and triggered release mechanisms (pH, temperature, ultrasound)
-    ///    MISSING: Multi-bubble interactions and acoustic streaming effects
-    ///    MISSING: Size distribution evolution and coalescence/fragmentation
-    ///    MISSING: Acoustic contrast enhancement quantification and optimization
+    /// 5. Update bubble position (Euler step: v += F·dt/m, x += v·dt)
     /// 6. Update drug release kinetics
     /// 7. Convert back to domain state
     /// 8. Check for cavitation events
+    ///
+    /// ## Radiation-Damping Term
+    ///
+    /// The Keller-Miksis equation includes a radiation-damping term proportional
+    /// to the time derivative of the applied acoustic pressure:
+    ///
+    /// ```text
+    /// (1 − Ṙ/c) R·R̈ + (3/2)(1 − Ṙ/3c)Ṙ² = (1/ρ_L)·(1 + Ṙ/c)·(p_B − p_0 − p_ac)
+    ///                                         + R/(ρ_L·c) · dp_ac/dt
+    /// ```
+    ///
+    /// Passing `pressure_time_derivative = 0.0` is valid when the applied pressure
+    /// varies slowly compared to the bubble dynamics timescale (i.e.,
+    /// dP_ac/dt ≪ ω · P_A for sinusoidal driving at angular frequency ω).
+    /// For MHz-frequency ultrasound at 100 kPa amplitude the omitted term is
+    /// ≈ R/(c) · 2πf · P_A ≈ 5×10⁻⁶ × 4×10¹² ≈ 2×10⁷ Pa/s, which at R/c ≈ 3 ns
+    /// contributes ≈ 60 Pa — small but non-negligible for precision simulations.
+    ///
+    /// ## Not yet implemented
+    ///
+    /// - **Marmottant shell viscoelasticity**: Strain-dependent shell viscosity and elasticity.
+    /// - **Nonlinear shell buckling**: Compression instability and post-buckling response.
+    /// - **Triggered drug release**: pH-, temperature-, and ultrasound-triggered encapsulation
+    ///   release mechanisms (Stride & Coussios 2010).
+    /// - **Multi-bubble interactions**: Acoustic streaming effects and secondary Bjerknes forces.
+    /// - **Size distribution evolution**: Coalescence and fragmentation under high pressure.
+    ///
+    /// # Reference
+    ///
+    /// Keller JB, Miksis M (1980). "Bubble oscillations of large amplitude."
+    /// *J Acoust Soc Am* 68(2):628–633.
     pub fn update_bubble_dynamics(
         &self,
         bubble: &mut MicrobubbleState,
@@ -132,6 +155,9 @@ impl MicrobubbleDynamicsService {
         drug: &mut DrugPayload,
         acoustic_pressure: f64,
         pressure_gradient: (f64, f64, f64),
+        // dP_ac/dt [Pa/s]. For P_A·sin(2πft) this is P_A·2πf·cos(2πft).
+        // Pass 0.0 when the waveform is slowly varying or unknown.
+        pressure_time_derivative: f64,
         time: f64,
         dt: f64,
     ) -> KwaversResult<()> {
@@ -151,14 +177,12 @@ impl MicrobubbleDynamicsService {
         let mut km_state = Self::domain_to_km_state(bubble, shell)?;
 
         // 3. Solve Keller-Miksis ODE for bubble oscillation using adaptive integration
-        let dp_dt = 0.0; // Simplified: assume slowly varying pressure
-
         // Use adaptive integrator for stability
         integrate_bubble_dynamics_adaptive(
             &self.keller_miksis,
             &mut km_state,
             acoustic_pressure,
-            dp_dt,
+            pressure_time_derivative,
             dt,
             time,
         )?;
@@ -395,7 +419,8 @@ mod tests {
             &mut drug,
             acoustic_pressure,
             pressure_gradient,
-            0.0,
+            0.0, // dP_ac/dt
+            0.0, // time
             dt,
         );
 
@@ -437,6 +462,7 @@ mod tests {
                     &mut drug,
                     1e5,
                     pressure_gradient,
+                    0.0, // dP_ac/dt
                     t,
                     1e-5, // 10 μs timesteps instead of 1 μs
                 )
@@ -471,6 +497,7 @@ mod tests {
                     &mut drug,
                     0.0,
                     (0.0, 0.0, 0.0),
+                    0.0, // dP_ac/dt
                     t,
                     1e-5, // 10 μs timesteps
                 )
@@ -502,13 +529,80 @@ mod tests {
                 &mut drug,
                 0.0,
                 (0.0, 0.0, 0.0),
-                0.0,
+                0.0, // dP_ac/dt
+                0.0, // time
                 1e-6,
             )
             .unwrap();
 
         assert!(shell.is_ruptured());
         assert!(bubble.shell_is_ruptured);
+    }
+
+    /// Test that a non-zero pressure time derivative changes the Keller-Miksis
+    /// dynamics compared to the zero-derivative approximation.
+    ///
+    /// # Physical Basis
+    ///
+    /// The KM radiation-damping term `R/(ρ_L·c) · dP/dt` adds a correction
+    /// proportional to the driving frequency.  At f = 1 MHz, P_A = 100 kPa,
+    /// R = 2 µm:  R/(ρ_L·c) · 2πf·P_A ≈ 2e-6 / (1000·1500) · 2π·10⁶·10⁵ ≈ 840 Pa.
+    /// This is < 1% of p₀ = 101 kPa but non-zero; the final bubble radius after
+    /// one timestep must differ between dp_dt=0 and dp_dt=P_A·2πf (at t=0,
+    /// cos(0)=1).
+    #[test]
+    fn test_pressure_time_derivative_changes_dynamics() {
+        let position = Position3D::zero();
+        let acoustic_pressure = 1e5_f64;
+        let frequency = 1e6_f64;
+        let dp_dt_nonzero = acoustic_pressure * 2.0 * std::f64::consts::PI * frequency; // at t=0
+
+        // Run 1: dp_dt = 0 (old default)
+        let mut bubble_zero = MicrobubbleState::sono_vue(position).unwrap();
+        let mut shell_zero =
+            MarmottantShellProperties::sono_vue(bubble_zero.radius_equilibrium).unwrap();
+        let volume = bubble_zero.volume();
+        let mut drug_zero =
+            DrugPayload::new(0.0, volume, DrugLoadingMode::ShellEmbedded, 0.0).unwrap();
+        let service = MicrobubbleDynamicsService::from_microbubble_state(&bubble_zero).unwrap();
+        service
+            .update_bubble_dynamics(
+                &mut bubble_zero,
+                &mut shell_zero,
+                &mut drug_zero,
+                acoustic_pressure,
+                (0.0, 0.0, 0.0),
+                0.0, // dP_ac/dt = 0
+                0.0,
+                1e-7,
+            )
+            .unwrap();
+
+        // Run 2: dp_dt = P_A · 2πf (correct at t=0 for sine driving)
+        let mut bubble_nonzero = MicrobubbleState::sono_vue(position).unwrap();
+        let mut shell_nonzero =
+            MarmottantShellProperties::sono_vue(bubble_nonzero.radius_equilibrium).unwrap();
+        let mut drug_nonzero =
+            DrugPayload::new(0.0, volume, DrugLoadingMode::ShellEmbedded, 0.0).unwrap();
+        service
+            .update_bubble_dynamics(
+                &mut bubble_nonzero,
+                &mut shell_nonzero,
+                &mut drug_nonzero,
+                acoustic_pressure,
+                (0.0, 0.0, 0.0),
+                dp_dt_nonzero,
+                0.0,
+                1e-7,
+            )
+            .unwrap();
+
+        // Radii must differ — the dp_dt term has a non-zero physical effect
+        assert_ne!(
+            bubble_zero.radius,
+            bubble_nonzero.radius,
+            "Non-zero dP/dt must change bubble dynamics (radiation-damping term)"
+        );
     }
 
     #[test]

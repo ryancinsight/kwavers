@@ -1,5 +1,5 @@
-use super::spectrum::EmissionParameters;
 use super::orchestrator::{IntegratedSonoluminescence, SonoluminescenceEmission};
+use super::spectrum::EmissionParameters;
 use crate::physics::bubble_dynamics::bubble_state::BubbleParameters;
 use crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use ndarray::Array3;

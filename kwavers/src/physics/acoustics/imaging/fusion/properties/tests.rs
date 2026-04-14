@@ -1,3 +1,4 @@
+use super::super::types::FusedImageResult;
 use super::classification::{classify_tissue_types, detect_regions_of_interest};
 use super::extractor::extract_tissue_properties;
 use super::mechanical::{
@@ -5,7 +6,6 @@ use super::mechanical::{
     DENSITY_NONLINEARITY_EXPONENT, STIFFNESS_INTENSITY_COUPLING,
 };
 use super::oxygenation::compute_oxygenation_index;
-use super::super::types::FusedImageResult;
 use ndarray::Array3;
 use std::collections::HashMap;
 
@@ -86,7 +86,8 @@ fn test_compute_composite_stiffness_low_intensity() {
     let stiffness = compute_composite_stiffness(&intensity);
 
     for value in stiffness.iter() {
-        let expected = BASELINE_SOFT_TISSUE_STIFFNESS_KPA * (1.0 + 1.0 * STIFFNESS_INTENSITY_COUPLING); // 60 kPa
+        let expected =
+            BASELINE_SOFT_TISSUE_STIFFNESS_KPA * (1.0 + 1.0 * STIFFNESS_INTENSITY_COUPLING); // 60 kPa
         assert!((value - expected).abs() < 1e-10);
     }
 }
@@ -97,7 +98,8 @@ fn test_compute_composite_stiffness_high_intensity() {
     let stiffness = compute_composite_stiffness(&intensity);
 
     for value in stiffness.iter() {
-        let expected = BASELINE_SOFT_TISSUE_STIFFNESS_KPA * (1.0 + 0.0 * STIFFNESS_INTENSITY_COUPLING); // 20 kPa
+        let expected =
+            BASELINE_SOFT_TISSUE_STIFFNESS_KPA * (1.0 + 0.0 * STIFFNESS_INTENSITY_COUPLING); // 20 kPa
         assert!((value - expected).abs() < 1e-10);
     }
 }
@@ -114,7 +116,9 @@ fn test_compute_composite_stiffness_range() {
     let max_stiffness = stiffness.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
 
     assert!(min_stiffness >= BASELINE_SOFT_TISSUE_STIFFNESS_KPA);
-    assert!(max_stiffness <= BASELINE_SOFT_TISSUE_STIFFNESS_KPA * (1.0 + STIFFNESS_INTENSITY_COUPLING));
+    assert!(
+        max_stiffness <= BASELINE_SOFT_TISSUE_STIFFNESS_KPA * (1.0 + STIFFNESS_INTENSITY_COUPLING)
+    );
 }
 
 #[test]

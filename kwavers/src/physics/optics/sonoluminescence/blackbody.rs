@@ -6,8 +6,7 @@ use ndarray::{Array1, Array3, Zip};
 use std::f64::consts::PI;
 
 use crate::core::constants::fundamental::{
-    BOLTZMANN as BOLTZMANN_CONSTANT, PLANCK as PLANCK_CONSTANT, SPEED_OF_LIGHT,
-    STEFAN_BOLTZMANN,
+    BOLTZMANN as BOLTZMANN_CONSTANT, PLANCK as PLANCK_CONSTANT, SPEED_OF_LIGHT, STEFAN_BOLTZMANN,
 };
 use crate::core::constants::optical::WIEN_CONSTANT;
 

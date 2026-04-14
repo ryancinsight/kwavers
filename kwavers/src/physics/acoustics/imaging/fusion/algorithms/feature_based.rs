@@ -3,7 +3,7 @@ use super::MultiModalFusion;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::imaging::fusion::registration;
 use crate::physics::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};
-use crate::physics::imaging::registration::ImageRegistration;
+use ritk_registration::ImageRegistration;
 use ndarray::{Array3, CowArray};
 use std::collections::HashMap;
 
@@ -43,9 +43,10 @@ pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<Fus
         })
     })?;
 
-    let reference_modality = fusion.registered_data.get(*reference_name).ok_or_else(|| {
-        KwaversError::InvalidInput("Reference modality missing".to_string())
-    })?;
+    let reference_modality = fusion
+        .registered_data
+        .get(*reference_name)
+        .ok_or_else(|| KwaversError::InvalidInput("Reference modality missing".to_string()))?;
 
     let ref_shape = reference_modality.data.dim();
     let target_dims = (ref_shape.0, ref_shape.1, ref_shape.2);
@@ -75,7 +76,7 @@ pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<Fus
             .unwrap_or(1.0);
         modality_quality.insert(name.clone(), modality.quality_score);
 
-        let reg_result = registration.intensity_registration_mutual_info(
+        let reg_result = registration.rigid_registration_mutual_info(
             &reference_modality.data,
             &modality.data,
             &identity,
@@ -83,17 +84,17 @@ pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<Fus
 
         registration_transforms.insert(
             name.clone(),
-            AffineTransform::from_homogeneous(&reg_result.transform_matrix),
+            AffineTransform::from_homogeneous(&reg_result.transform),
         );
 
         // Optimization: Skip resampling if transform is identity and dimensions match
         let resampled =
-            if modality.data.dim() == target_dims && reg_result.transform_matrix == identity {
+            if modality.data.dim() == target_dims && reg_result.transform == identity {
                 CowArray::from(modality.data.view())
             } else {
                 CowArray::from(registration::resample_to_target_grid(
                     &modality.data,
-                    &reg_result.transform_matrix,
+                    &reg_result.transform,
                     target_dims,
                 ))
             };

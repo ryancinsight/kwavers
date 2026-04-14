@@ -1,6 +1,6 @@
-use crate::domain::grid::Grid;
 use super::material::PoroelasticMaterial;
 use super::simulation::PoroelasticSimulation;
+use crate::domain::grid::Grid;
 
 #[test]
 fn test_poroelastic_material_default() {
@@ -15,8 +15,7 @@ fn test_material_validation() {
         PoroelasticMaterial::new(1.5, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5);
     assert!(result.is_err()); // Porosity > 1
 
-    let result =
-        PoroelasticMaterial::new(0.3, -1.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5);
+    let result = PoroelasticMaterial::new(0.3, -1.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5);
     assert!(result.is_err()); // Negative density
 }
 

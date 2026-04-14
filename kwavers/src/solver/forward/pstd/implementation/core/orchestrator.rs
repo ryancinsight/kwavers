@@ -66,7 +66,10 @@ pub struct PSTDSolver {
     pub(crate) grad_rho0_z: Array3<f64>,
     pub(crate) absorb_tau: Array3<f64>,
     pub(crate) absorb_eta: Array3<f64>,
-    pub(crate) absorb_y: Array3<f64>, // Spatially-varying absorption exponent
+    /// Spatially-varying power-law absorption exponent y; stored for future
+    /// spatially-heterogeneous absorption extensions (Treeby & Cox 2010).
+    #[allow(dead_code)]
+    pub(crate) absorb_y: Array3<f64>,
     /// Spectral absorption operator ∇^(y−2): precomputed |k|^(y−2) in FFT order.
     /// Applied to per-axis velocity divergence in the density update step.
     /// Treeby & Cox (2010) Eq. 10; k-Wave: nabla1 = kgrid.k .^ (y - 2).

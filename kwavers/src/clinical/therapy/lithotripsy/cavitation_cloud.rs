@@ -99,16 +99,11 @@ impl CavitationCloudDynamics {
             ));
         }
 
-        // TODO_AUDIT: P2 - Advanced Cavitation Cloud Dynamics - Implement full cavitation cloud modeling with shock wave interactions and cloud stability
-        // DEPENDS ON: clinical/therapy/lithotripsy/cloud_dynamics.rs, clinical/therapy/lithotripsy/shock_interactions.rs, clinical/therapy/lithotripsy/cloud_stability.rs
-        // MISSING: Gilmore equation for compressible bubble dynamics with Mach number effects
-        // MISSING: Shock-bubble interactions with Richtmyer-Meshkov instability
-        // MISSING: Cavitation cloud stability analysis with Rayleigh-Taylor instability
-        // MISSING: Multi-bubble coupling through pressure fields and acoustic emissions
-        // MISSING: Cloud expansion and collapse dynamics with mass transfer
-        // THEOREM: Rayleigh-Plesset equation with compressibility: R̈ = (1/R)(p_gas - p∞ - viscous terms) - (Mach corrections)
-        // THEOREM: Richtmyer-Meshkov: Interface acceleration creates vorticity and mixing
-        // REFERENCES: Gilmore (1952) Hydrodynamics; Brenner et al. (2002) Rev Mod Phys
+        // Not yet implemented: full compressible cloud dynamics. Absent: Gilmore equation
+        // with Mach-number corrections (Gilmore 1952); shock-bubble interactions with
+        // Richtmyer-Meshkov instability; Rayleigh-Taylor cloud stability analysis;
+        // multi-bubble acoustic coupling and emission back-reaction; and cloud
+        // expansion/collapse with inter-phase mass transfer (Brenner et al. 2002, Rev Mod Phys).
 
         let ambient = self.parameters.ambient_pressure.max(1.0);
         let r0 = self.parameters.initial_bubble_radius.max(1e-12);

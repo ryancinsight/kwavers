@@ -146,7 +146,10 @@ fn test_shell_elastic_restoring_force() {
     // with inward velocity (v < 0) has a massive inward dynamic term (-1.5 * v^2 / R)
     // and internal gas pressure pushes outward. Since R = 0.8 R0, P_gas rises significantly,
     // leading to an outward restoring force (positive acceleration).
-    assert!(accel_compressed > 0.0, "Compressed bubble must experience outward restoring force");
+    assert!(
+        accel_compressed > 0.0,
+        "Compressed bubble must experience outward restoring force"
+    );
 }
 
 #[test]

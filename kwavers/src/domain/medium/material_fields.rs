@@ -2,12 +2,14 @@ use ndarray::Array3;
 
 /// Container for common initialization material properties
 #[derive(Debug, Clone)]
-pub struct MaterialFields {
+pub struct GenericMaterialFields<T> {
     /// Ambient density map (rho0)
-    pub rho0: Array3<f64>,
+    pub rho0: T,
     /// Ambient sound speed map (c0)
-    pub c0: Array3<f64>,
+    pub c0: T,
 }
+
+pub type MaterialFields = GenericMaterialFields<Array3<f64>>;
 
 impl MaterialFields {
     /// Create new zero-initialized material fields with given shape

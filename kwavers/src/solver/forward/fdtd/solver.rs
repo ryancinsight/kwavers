@@ -124,6 +124,49 @@ impl CentralDifferenceOperator {
         }
     }
 
+    /// Apply X-derivative in-place into a pre-allocated destination buffer.
+    ///
+    /// For `Order2`, this is truly zero-allocation (writes directly into `dst`).
+    /// For `Order4`/`Order6`, one intermediate `Array3` is allocated internally
+    /// (the `into` variants for higher-order operators are future work).
+    pub(crate) fn apply_x_into(
+        &self,
+        field: ArrayView3<f64>,
+        dst: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        match self {
+            Self::Order2(op) => op.apply_x_into(field, dst),
+            Self::Order4(op) => { dst.assign(&op.apply_x(field)?); Ok(()) }
+            Self::Order6(op) => { dst.assign(&op.apply_x(field)?); Ok(()) }
+        }
+    }
+
+    /// Apply Y-derivative in-place into a pre-allocated destination buffer.
+    pub(crate) fn apply_y_into(
+        &self,
+        field: ArrayView3<f64>,
+        dst: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        match self {
+            Self::Order2(op) => op.apply_y_into(field, dst),
+            Self::Order4(op) => { dst.assign(&op.apply_y(field)?); Ok(()) }
+            Self::Order6(op) => { dst.assign(&op.apply_y(field)?); Ok(()) }
+        }
+    }
+
+    /// Apply Z-derivative in-place into a pre-allocated destination buffer.
+    pub(crate) fn apply_z_into(
+        &self,
+        field: ArrayView3<f64>,
+        dst: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        match self {
+            Self::Order2(op) => op.apply_z_into(field, dst),
+            Self::Order4(op) => { dst.assign(&op.apply_z(field)?); Ok(()) }
+            Self::Order6(op) => { dst.assign(&op.apply_z(field)?); Ok(()) }
+        }
+    }
+
     pub(crate) fn gradient(
         &self,
         field: ArrayView3<f64>,
@@ -145,11 +188,11 @@ impl CentralDifferenceOperator {
 ///
 /// Westervelt nonlinear term `(β/ρ₀c₀⁴) ∂²p²/∂t²` is enabled via
 /// [`FdtdConfig::enable_nonlinear`]. When enabled the solver allocates
-/// `p_prev`, `p_prev2`, `nl_scratch`, `beta_arr`, and `c0_fourth` arrays and
+/// `p_prev`, `p_prev2`, `nl_scratch`, and `nl_coeff` arrays and
 /// calls [`FdtdSolver::apply_westervelt_nonlinear_correction`] each step.
 ///
 /// Reference: Westervelt (1963), Hamilton & Blackstock (1998) Ch. 4.
-pub struct FdtdSolver {
+pub struct GenericFdtdSolver<T> {
     /// Configuration
     pub(crate) config: FdtdConfig,
     /// Grid reference
@@ -166,7 +209,7 @@ pub struct FdtdSolver {
 
     // Shared components for source handling and sensor recording
     pub(crate) source_handler: SourceHandler,
-    dynamic_sources: Vec<(Arc<dyn Source>, Array3<f64>)>,
+    dynamic_sources: Vec<(Arc<dyn Source>, Array3<f64>)>, // Array3 used for mask, can be genericified later
     source_injection_modes: Vec<SourceInjectionMode>,
     pub sensor_recorder: SensorRecorder,
 
@@ -174,54 +217,32 @@ pub struct FdtdSolver {
     pub(crate) time_step_index: usize,
 
     // Wave Fields (p, ux, uy, uz)
-    pub fields: WaveFields,
+    // Instantiated as T, natively mapped by alias
+    pub fields: crate::domain::field::wave::GenericWaveFields<T>,
 
     // Material Properties (rho0, c0)
-    pub(crate) materials: MaterialFields,
+    pub(crate) materials: crate::domain::medium::material_fields::GenericMaterialFields<T>,
 
     // Precomputed fields
-    pub(crate) rho_c_squared: Array3<f64>,
+    pub(crate) rho_c_squared: T,
 
-    // Nonlinear Westervelt fields (populated only when config.enable_nonlinear = true)
-    // ---------------------------------------------------------------------------------
-    // Algorithm: Westervelt (1963) explicit FDTD — Eq. A.5 of Hamilton & Blackstock (1998).
-    //
-    // Nonlinear source term added to the pressure update:
-    //   Δp_nl = dt * (β_arr / (ρ₀ · c₀⁴)) · ∂²(p²)/∂t²
-    //   ∂²(p²)/∂t² = 2p * (p - 2p' + p'') / dt² + 2 * ((p - p') / dt)²
-    //
-    // where p' = p^{n-1} and p'' = p^{n-2}. For the first two steps,
-    // the incomplete history terms are zero-initialized (Aanonsen et al. 1984).
-    //
-    // References:
-    //   Westervelt, P. J. (1963). J. Acoust. Soc. Am. 35(4), 535–537.
-    //   Hamilton, M. F. & Blackstock, D. T. (1998). Nonlinear Acoustics. Academic Press.
-    //   Aanonsen, S. I. et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768.
-    /// Previous pressure field p^{n-1} for Westervelt nonlinear term
-    pub(crate) p_prev: Option<Array3<f64>>,
-    /// Two steps back p^{n-2} for Westervelt nonlinear term
-    pub(crate) p_prev2: Option<Array3<f64>>,
-    /// Pre-allocated scratch for nonlinear term to avoid per-step allocation
-    pub(crate) nl_scratch: Option<Array3<f64>>,
-    /// Nonlinearity coefficient β = 1 + B/(2A) at each grid point
-    pub(crate) beta_arr: Option<Array3<f64>>,
-    /// c₀⁴ at each grid point (precomputed to avoid recomputing in hot path)
-    pub(crate) c0_fourth: Option<Array3<f64>>,
-    /// Precomputed Westervelt coefficient β/(ρ₀·c₀⁴) at each grid point (1/(Pa·s))
-    ///
-    /// Computed once at solver construction from `beta_arr`, `materials.rho0`, and
-    /// `c0_fourth`. Reduces the hot-path inner loop from 5 array reads per element
-    /// (β, ρ₀, c₀⁴, p, p_prev) to 3 (nl_coeff, p, p_prev), cutting memory traffic
-    /// by ~40% in the nonlinear correction kernel.
-    pub(crate) nl_coeff: Option<Array3<f64>>,
-    /// K-space correction operators (Some when `KSpaceCorrectionMode::Spectral`).
-    ///
-    /// Pre-computed shift operators and kappa correction for spectral FDTD updates.
-    /// Constructed once in `FdtdSolver::new`; `None` when using finite-difference mode.
+    // Nonlinear Westervelt fields
+    pub(crate) p_prev: Option<T>,
+    pub(crate) p_prev2: Option<T>,
+    pub(crate) nl_scratch: Option<T>,
+    pub(crate) nl_coeff: Option<T>,
+    
     pub(crate) kspace_ops: Option<KSpaceFdtdOperators>,
+
+    // Extracted Divergence terms
+    pub(crate) dvx_scratch: T,
+    pub(crate) dvy_scratch: T,
+    pub(crate) divergence_scratch: T,
 }
 
-impl FdtdSolver {
+pub type FdtdSolver = GenericFdtdSolver<Array3<f64>>;
+
+impl GenericFdtdSolver<Array3<f64>> {
     /// Create a new FDTD solver
     pub fn new(
         config: FdtdConfig,
@@ -289,7 +310,7 @@ impl FdtdSolver {
         // Note: FDTD uses a single rho field so no split needed (cf. PSTD rhox/rhoy/rhoz)
 
         // Precompute nonlinear medium property arrays (only when nonlinear mode is on)
-        let (p_prev, p_prev2, nl_scratch, beta_arr, c0_fourth, nl_coeff) =
+        let (p_prev, p_prev2, nl_scratch, nl_coeff) =
             if config.enable_nonlinear {
                 let mut beta = Array3::<f64>::zeros(shape);
                 let mut c4 = Array3::<f64>::zeros(shape);
@@ -307,6 +328,7 @@ impl FdtdSolver {
                 }
                 // Precompute β/(ρ₀·c₀⁴) once; used every step in the hot nonlinear kernel.
                 // Reduces per-element inner-loop reads from 5 to 3, cutting memory traffic ~40%.
+                // beta and c4 are intermediate; only nl_coeff is retained in the struct.
                 let nl = ndarray::Zip::from(&beta)
                     .and(&materials.rho0)
                     .and(&c4)
@@ -315,12 +337,10 @@ impl FdtdSolver {
                     Some(Array3::<f64>::zeros(shape)),
                     Some(Array3::<f64>::zeros(shape)),
                     Some(Array3::<f64>::zeros(shape)),
-                    Some(beta),
-                    Some(c4),
                     Some(nl),
                 )
             } else {
-                (None, None, None, None, None, None)
+                (None, None, None, None)
             };
 
         // Initialize k-space correction operators when requested.
@@ -357,10 +377,12 @@ impl FdtdSolver {
             p_prev,
             p_prev2,
             nl_scratch,
-            beta_arr,
-            c0_fourth,
             nl_coeff,
             kspace_ops,
+            // Pre-allocate divergence scratch buffers — one-time cost; zero per-step alloc
+            dvx_scratch: Array3::<f64>::zeros(shape),
+            dvy_scratch: Array3::<f64>::zeros(shape),
+            divergence_scratch: Array3::<f64>::zeros(shape),
         })
     }
 
@@ -446,7 +468,7 @@ impl FdtdSolver {
 
     fn apply_dynamic_pressure_sources(&mut self, dt: f64) {
         let t = self.time_step_index as f64 * dt;
-        let FdtdSolver {
+        let GenericFdtdSolver {
             ref dynamic_sources,
             ref mut fields,
             ref grid,
@@ -496,7 +518,7 @@ impl FdtdSolver {
 
     fn apply_dynamic_pressure_dirichlet(&mut self, dt: f64) {
         let t = self.time_step_index as f64 * dt;
-        let FdtdSolver {
+        let GenericFdtdSolver {
             ref dynamic_sources,
             ref mut fields,
             ..
@@ -523,7 +545,7 @@ impl FdtdSolver {
 
     fn apply_dynamic_velocity_sources(&mut self, dt: f64) {
         let t = self.time_step_index as f64 * dt;
-        let FdtdSolver {
+        let GenericFdtdSolver {
             ref dynamic_sources,
             ref mut fields,
             ..
@@ -693,9 +715,9 @@ impl FdtdSolver {
     }
 }
 
-impl std::fmt::Debug for FdtdSolver {
+impl<T: std::fmt::Debug> std::fmt::Debug for GenericFdtdSolver<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FdtdSolver")
+        f.debug_struct("GenericFdtdSolver")
             .field("config", &self.config)
             .field("grid", &self.grid)
             .field("central_operator", &self.central_operator)
@@ -720,7 +742,7 @@ impl std::fmt::Debug for FdtdSolver {
     }
 }
 
-impl crate::solver::interface::Solver for FdtdSolver {
+impl crate::solver::interface::Solver for GenericFdtdSolver<Array3<f64>> {
     fn name(&self) -> &str {
         "FDTD"
     }

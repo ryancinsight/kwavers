@@ -1,7 +1,7 @@
 //! Wavelength range for spectral analysis
 
-use ndarray::Array1;
 use crate::core::constants::fundamental::SPEED_OF_LIGHT;
+use ndarray::Array1;
 
 /// Wavelength range for spectral analysis
 #[derive(Debug, Clone)]

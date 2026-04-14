@@ -1,6 +1,6 @@
-use approx::assert_relative_eq;
 use super::chemistry::PlasmaChemistry;
 use super::reaction::{zeldovich_no_rate, PlasmaReaction};
+use approx::assert_relative_eq;
 
 #[test]
 fn test_plasma_reaction_rate() {
@@ -9,7 +9,7 @@ fn test_plasma_reaction_rate() {
     // Given A = 1e10, E_a = 100,000 J/mol, R = 8.314462618 J/mol/K (CODATA)
     // At T = 300K: k ≈ 1e10 * exp(-100000 / (8.314462618 * 300)) ≈ 3.87966e-8
     // At T = 1000K: k ≈ 1e10 * exp(-100000 / (8.314462618 * 1000)) ≈ 59791.3
-    
+
     let reaction = PlasmaReaction {
         name: "Test".to_string(),
         reactants: vec![("A".to_string(), 1.0)],

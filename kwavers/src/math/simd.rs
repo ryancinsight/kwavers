@@ -285,23 +285,16 @@ impl FdtdSimdOps {
         }
     }
 
-    /// AVX-512 optimized pressure update (placeholder)
-    /// TODO_AUDIT: P2 - Advanced SIMD Vectorization - Implement full SIMD ecosystem with auto-vectorization and architecture-specific optimizations
-    /// DEPENDS ON: math/simd/avx512.rs, math/simd/neon.rs, math/simd/wasm_simd.rs, math/simd/auto_vectorize.rs
-    /// MISSING: Auto-vectorization compiler hints and loop transformations
-    /// MISSING: Architecture-specific instruction selection (AVX-512, AVX2, SSE4.2, NEON)
-    /// MISSING: Memory alignment optimizations and cache-aware algorithms
-    /// MISSING: SIMD transcendental functions (sin, cos, exp, log) implementations
-    /// MISSING: Gather/scatter operations for sparse matrix operations
-    /// THEOREM: Roofline model: Performance = min(Memory bandwidth × Operational intensity, Peak FLOPS)
-    /// THEOREM: SIMD efficiency: Speedup ≤ (SIMD width) / (1 + overhead_factor) for vector operations
-    /// REFERENCES: Intel AVX-512 Architecture Manual; ARM NEON Programming Reference
-    /// TODO_AUDIT: P2 - SIMD Vectorization - Implement full AVX-512/AVX2 vectorization for FDTD wave propagation
-    /// DEPENDS ON: math/simd/avx512.rs, math/simd/autovec.rs
-    /// MISSING: AVX-512 gather/scatter operations for irregular grid access
-    /// MISSING: FMA (fused multiply-add) instructions for nonlinear terms
-    /// MISSING: SIMD transcendental functions (sin, cos, exp) for source terms
-    /// MISSING: Memory prefetching and cache blocking for optimal performance
+    /// AVX-512 optimized pressure update (placeholder).
+    ///
+    /// ## Not yet implemented
+    ///
+    /// - **AVX-512 native path**: Dedicated 512-bit intrinsics with gather/scatter for
+    ///   irregular grid access and 16-wide FMA; currently falls back to AVX2.
+    /// - **Auto-vectorization hints**: Loop transformations and compiler intrinsic wrappers
+    ///   for SSE4.2, NEON, and WASM SIMD targets (Intel AVX-512 Manual; ARM NEON Reference).
+    /// - **SIMD transcendentals**: Vectorized sin, cos, exp, log for source term evaluation.
+    /// - **Cache-blocking**: Memory prefetching and tiling for 3D grid operations.
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx512f")]
     #[allow(unsafe_code)]

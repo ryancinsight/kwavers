@@ -1,4 +1,42 @@
-//! Matrix computation utilities for DG methods
+//! DG matrix computations: Vandermonde, mass, stiffness, differentiation, and LIFT.
+//!
+//! ## Algorithm: Mass matrix via GLL quadrature
+//!
+//! With Gauss-Lobatto-Legendre (GLL) quadrature, the mass matrix is diagonal:
+//! ```text
+//!   M_{ij} = ∫₋₁¹ φᵢ(x) φⱼ(x) dx ≈ Σ_k w_k φᵢ(x_k) φⱼ(x_k) = w_i δᵢⱼ
+//! ```
+//! where `w_k` are GLL weights.  Diagonality holds because GLL nodes are the
+//! interpolation points, making `φᵢ(x_k) = δᵢₖ` (Lagrange basis property).
+//!
+//! ## Algorithm: Differentiation matrix `D = Vr · V⁻¹`
+//!
+//! `Vr_{ij} = φ'_j(xᵢ)` (derivative Vandermonde).  Then:
+//! ```text
+//!   D_{ij} = (Vr · V⁻¹)_{ij}
+//! ```
+//! For normalised Legendre: `φ'_j(x) = P̃'_j(x)` computed via the Legendre
+//! derivative recurrence.
+//!
+//! ## Algorithm: Stiffness matrix `S = M · D`
+//!
+//! ```text
+//!   S_{ij} = M_{ii} · D_{ij} = w_i · D_{ij}
+//! ```
+//!
+//! ## Algorithm: LIFT matrix for boundary flux lifting
+//!
+//! The LIFT matrix maps face residuals `(f* − f)_{face}` to volume DOFs:
+//! ```text
+//!   LIFT = M⁻¹ · E    where E_{ij} = φᵢ(face node j)
+//! ```
+//! For 1D: face nodes are `x=−1` (left) and `x=1` (right);
+//! `E` is the `n_nodes × 2` face extraction matrix.
+//!
+//! ## References
+//!
+//! - Hesthaven & Warburton (2008). *Nodal Discontinuous Galerkin Methods*. Springer. §3.3.
+//! - Kopriva (2009). *Implementing Spectral Methods*. Springer. §4.5.
 
 use super::basis::BasisType;
 use crate::core::error::KwaversResult;

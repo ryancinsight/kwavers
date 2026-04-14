@@ -31,18 +31,12 @@ pub fn create_router(training_executor: std::sync::Arc<dyn TrainingExecutor>) ->
     // Correctness + security invariant:
     // Router construction MUST NOT rely on `AuthMiddleware::default()`, because that allows
     // accidental deployments with an implicit/placeholder secret. We require an explicit secret
-    // TODO_AUDIT: P2 - Production API Architecture - Implement complete REST/GraphQL API with security, monitoring, and scalability
-    // DEPENDS ON: infra/api/graphql.rs, infra/api/security.rs, infra/api/rate_limiting.rs, infra/api/caching.rs
-    // MISSING: GraphQL federation for microservice architecture
-    // MISSING: OAuth 2.0 / OpenID Connect authentication
-    // MISSING: Rate limiting with token bucket algorithms
-    // MISSING: API versioning and backward compatibility
-    // MISSING: Response caching with Redis/CDN integration
-    // MISSING: API documentation generation (OpenAPI/Swagger)
-    // MISSING: Request validation with JSON Schema
-    // THEOREM: Little's law: L = λW for queueing systems (concurrency = arrival_rate × service_time)
-    // THEOREM: Brewer CAP theorem: Choose 2 of Consistency, Availability, Partition tolerance
-    // REFERENCES: Fielding (2000) Architectural Styles; Richardson (2013) Microservices Architecture
+    //
+    // Not yet implemented: production API hardening. Absent: GraphQL federation for
+    // microservices (Fielding 2000); OAuth 2.0 / OpenID Connect authentication; token-bucket
+    // rate limiting; API versioning with backward compatibility; Redis/CDN response caching;
+    // OpenAPI/Swagger documentation generation; and JSON Schema request validation.
+    //
     // sourced from the process environment (or secret manager wiring upstream).
     //
     // For tests, construct `AppState` directly in test modules with an explicit test-secret.

@@ -228,12 +228,24 @@ impl TranscranialAberrationCorrection {
             for j in 0..ny {
                 for i in 0..nx {
                     if field[[i, j, k]] >= threshold_6db {
-                        if i < i_min { i_min = i; }
-                        if i > i_max { i_max = i; }
-                        if j < j_min { j_min = j; }
-                        if j > j_max { j_max = j; }
-                        if k < k_min { k_min = k; }
-                        if k > k_max { k_max = k; }
+                        if i < i_min {
+                            i_min = i;
+                        }
+                        if i > i_max {
+                            i_max = i;
+                        }
+                        if j < j_min {
+                            j_min = j;
+                        }
+                        if j > j_max {
+                            j_max = j;
+                        }
+                        if k < k_min {
+                            k_min = k;
+                        }
+                        if k > k_max {
+                            k_max = k;
+                        }
                     }
                 }
             }
@@ -245,7 +257,9 @@ impl TranscranialAberrationCorrection {
                 for i in 0..nx {
                     if i < i_min || i > i_max || j < j_min || j > j_max || k < k_min || k > k_max {
                         let v = field[[i, j, k]];
-                        if v > max_sidelobe { max_sidelobe = v; }
+                        if v > max_sidelobe {
+                            max_sidelobe = v;
+                        }
                     }
                 }
             }
@@ -353,9 +367,8 @@ mod tests {
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
-                    let r2 = (i as f64 - cx).powi(2)
-                        + (j as f64 - cy).powi(2)
-                        + (k as f64 - cz).powi(2);
+                    let r2 =
+                        (i as f64 - cx).powi(2) + (j as f64 - cy).powi(2) + (k as f64 - cz).powi(2);
                     f[[i, j, k]] = (-r2 / (2.0 * sigma * sigma)).exp();
                 }
             }
@@ -367,8 +380,7 @@ mod tests {
     fn test_trilinear_at_grid_node() {
         // At an exact integer grid node trilinear equals the grid value.
         let field = gaussian_field(8, 8, 8, 4.0, 4.0, 4.0, 1.5);
-        let result =
-            TranscranialAberrationCorrection::trilinear_interpolate(&field, 3.0, 3.0, 3.0);
+        let result = TranscranialAberrationCorrection::trilinear_interpolate(&field, 3.0, 3.0, 3.0);
         assert!((result - field[[3, 3, 3]]).abs() < 1e-12);
     }
 
@@ -378,9 +390,11 @@ mod tests {
         let mut field = Array3::zeros((4, 4, 4));
         field[[0, 0, 0]] = 2.0;
         field[[1, 0, 0]] = 4.0;
-        let result =
-            TranscranialAberrationCorrection::trilinear_interpolate(&field, 0.5, 0.0, 0.0);
-        assert!((result - 3.0).abs() < 1e-12, "midpoint should be 3.0, got {result}");
+        let result = TranscranialAberrationCorrection::trilinear_interpolate(&field, 0.5, 0.0, 0.0);
+        assert!(
+            (result - 3.0).abs() < 1e-12,
+            "midpoint should be 3.0, got {result}"
+        );
     }
 
     #[test]
@@ -389,7 +403,10 @@ mod tests {
         let field = gaussian_field(32, 32, 32, 16.0, 16.0, 16.0, 3.0);
         let target = [16e-3_f64, 16e-3, 16e-3];
         let intensity = correction.calculate_focal_intensity(&field, &target);
-        assert!(intensity > 0.0, "focal intensity must be positive for non-zero field");
+        assert!(
+            intensity > 0.0,
+            "focal intensity must be positive for non-zero field"
+        );
     }
 
     #[test]
@@ -407,7 +424,10 @@ mod tests {
         let field = Array3::from_elem((32, 32, 32), 1.0);
         let target = [16e-3_f64, 16e-3, 16e-3];
         let ratio = correction.calculate_sidelobe_level(&field, &target);
-        assert_eq!(ratio, 0.0, "uniform field has no sidelobe outside bounding box");
+        assert_eq!(
+            ratio, 0.0,
+            "uniform field has no sidelobe outside bounding box"
+        );
     }
 
     #[test]
@@ -416,7 +436,10 @@ mod tests {
         let field = gaussian_field(32, 32, 32, 16.0, 16.0, 16.0, 2.0);
         let target = [16e-3_f64, 16e-3, 16e-3];
         let ratio = correction.calculate_sidelobe_level(&field, &target);
-        assert!(ratio < 1.0, "sidelobe ratio must be < 1 for Gaussian field; got {ratio}");
+        assert!(
+            ratio < 1.0,
+            "sidelobe ratio must be < 1 for Gaussian field; got {ratio}"
+        );
     }
 
     #[test]

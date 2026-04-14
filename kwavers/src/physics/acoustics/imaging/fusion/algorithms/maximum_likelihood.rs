@@ -2,7 +2,7 @@ use super::MultiModalFusion;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::imaging::fusion::registration;
 use crate::physics::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};
-use crate::physics::imaging::registration::ImageRegistration;
+use ritk_registration::ImageRegistration;
 use ndarray::{Array3, CowArray, Zip};
 use std::collections::HashMap;
 
@@ -79,25 +79,25 @@ pub(crate) fn fuse_maximum_likelihood(
         modality_quality.insert(modality_name.to_string(), modality.quality_score);
 
         // Register
-        let registration_result = image_reg.intensity_registration_mutual_info(
+        let registration_result = image_reg.rigid_registration_mutual_info(
             &reference_modality.data,
             &modality.data,
             &identity_transform,
         )?;
 
         let affine_transform =
-            AffineTransform::from_homogeneous(&registration_result.transform_matrix);
+            AffineTransform::from_homogeneous(&registration_result.transform);
         registration_transforms.insert(modality_name.to_string(), affine_transform);
 
         // Resample
         let resampled_data = if modality.data.dim() == target_dims
-            && registration_result.transform_matrix == identity_transform
+            && registration_result.transform == identity_transform
         {
             CowArray::from(modality.data.view())
         } else {
             CowArray::from(registration::resample_to_target_grid(
                 &modality.data,
-                &registration_result.transform_matrix,
+                &registration_result.transform,
                 target_dims,
             ))
         };
@@ -155,12 +155,13 @@ pub(crate) fn fuse_maximum_likelihood(
         // M-Step: Update variances
         // var_i = mean((data_i - fused)^2)
         for ctx in &mut contexts {
-            let sum_sq_error: f64 = Zip::from(&ctx.data)
-                .and(&fused_intensity)
-                .fold(0.0, |acc, &val, &mean| {
-                    let diff = val - mean;
-                    acc + diff * diff
-                });
+            let sum_sq_error: f64 =
+                Zip::from(&ctx.data)
+                    .and(&fused_intensity)
+                    .fold(0.0, |acc, &val, &mean| {
+                        let diff = val - mean;
+                        acc + diff * diff
+                    });
             ctx.variance = (sum_sq_error / num_voxels).max(MIN_VARIANCE);
         }
     }

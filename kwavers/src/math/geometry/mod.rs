@@ -22,7 +22,7 @@
 
 pub mod delays;
 
-use crate::{core::error::KwaversResult, domain::grid::Grid};
+use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Create a 2D circular disc mask
@@ -51,13 +51,14 @@ use ndarray::Array3;
 /// # Examples
 ///
 /// ```rust
-/// use kwavers::{math::geometry::make_disc, Grid};
+/// use kwavers::math::geometry::make_disc;
 ///
-/// let grid = Grid::new(64, 64, 1, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+/// let dim = (64, 64, 1);
+/// let spacing = (0.1e-3, 0.1e-3, 0.1e-3);
 /// let center = [3.2e-3, 3.2e-3, 0.0]; // Center in meters
 /// let radius = 1.0e-3; // 1mm radius
 ///
-/// let mask = make_disc(&grid, center, radius).unwrap();
+/// let mask = make_disc(dim, spacing, center, radius).unwrap();
 /// assert_eq!(mask.dim(), (64, 64, 1));
 /// ```
 ///
@@ -67,7 +68,7 @@ use ndarray::Array3;
 /// ```matlab
 /// disc = makeDisc(Nx, Ny, cx, cy, radius);
 /// ```
-pub fn make_disc(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<Array3<bool>> {
+pub fn make_disc(dim: (usize, usize, usize), spacing: (f64, f64, f64), center: [f64; 3], radius: f64) -> KwaversResult<Array3<bool>> {
     // Validate inputs
     if radius <= 0.0 {
         return Err(crate::core::error::KwaversError::Config(
@@ -79,8 +80,8 @@ pub fn make_disc(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<Ar
         ));
     }
 
-    let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-    let (dx, dy, _dz) = (grid.dx, grid.dy, grid.dz);
+    let (nx, ny, nz) = dim;
+    let (dx, dy, _dz) = spacing;
 
     let mut mask = Array3::from_elem((nx, ny, nz), false);
 
@@ -142,13 +143,14 @@ pub fn make_disc(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<Ar
 /// # Examples
 ///
 /// ```rust
-/// use kwavers::{math::geometry::make_ball, Grid};
+/// use kwavers::math::geometry::make_ball;
 ///
-/// let grid = Grid::new(64, 64, 64, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+/// let dim = (64, 64, 64);
+/// let spacing = (0.1e-3, 0.1e-3, 0.1e-3);
 /// let center = [3.2e-3, 3.2e-3, 3.2e-3]; // Center in meters
 /// let radius = 1.0e-3; // 1mm radius
 ///
-/// let mask = make_ball(&grid, center, radius).unwrap();
+/// let mask = make_ball(dim, spacing, center, radius).unwrap();
 /// assert_eq!(mask.dim(), (64, 64, 64));
 /// ```
 ///
@@ -158,7 +160,7 @@ pub fn make_disc(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<Ar
 /// ```matlab
 /// ball = makeBall(Nx, Ny, Nz, cx, cy, cz, radius);
 /// ```
-pub fn make_ball(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<Array3<bool>> {
+pub fn make_ball(dim: (usize, usize, usize), spacing: (f64, f64, f64), center: [f64; 3], radius: f64) -> KwaversResult<Array3<bool>> {
     // Validate inputs
     if radius <= 0.0 {
         return Err(crate::core::error::KwaversError::Config(
@@ -170,8 +172,8 @@ pub fn make_ball(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<Ar
         ));
     }
 
-    let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-    let (dx, dy, dz) = (grid.dx, grid.dy, grid.dz);
+    let (nx, ny, nz) = dim;
+    let (dx, dy, dz) = spacing;
 
     let mut mask = Array3::from_elem((nx, ny, nz), false);
 
@@ -221,13 +223,14 @@ pub fn make_ball(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<Ar
 /// # Examples
 ///
 /// ```rust
-/// use kwavers::{math::geometry::make_sphere, Grid};
+/// use kwavers::math::geometry::make_sphere;
 ///
-/// let grid = Grid::new(64, 64, 64, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+/// let dim = (64, 64, 64);
+/// let spacing = (0.1e-3, 0.1e-3, 0.1e-3);
 /// let center = [3.2e-3, 3.2e-3, 3.2e-3];
 /// let radius = 1.0e-3;
 ///
-/// let mask = make_sphere(&grid, center, radius).unwrap();
+/// let mask = make_sphere(dim, spacing, center, radius).unwrap();
 /// ```
 ///
 /// # MATLAB Compatibility
@@ -237,8 +240,8 @@ pub fn make_ball(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<Ar
 /// sphere = makeSphere(Nx, Ny, Nz, cx, cy, cz, radius);
 /// ```
 #[inline]
-pub fn make_sphere(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<Array3<bool>> {
-    make_ball(grid, center, radius)
+pub fn make_sphere(dim: (usize, usize, usize), spacing: (f64, f64, f64), center: [f64; 3], radius: f64) -> KwaversResult<Array3<bool>> {
+    make_ball(dim, spacing, center, radius)
 }
 
 /// Create a line mask connecting two points
@@ -269,13 +272,14 @@ pub fn make_sphere(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<
 /// # Examples
 ///
 /// ```rust
-/// use kwavers::{math::geometry::make_line, Grid};
+/// use kwavers::math::geometry::make_line;
 ///
-/// let grid = Grid::new(64, 64, 64, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+/// let dim = (64, 64, 64);
+/// let spacing = (0.1e-3, 0.1e-3, 0.1e-3);
 /// let start = [1.0e-3, 1.0e-3, 1.0e-3];
 /// let end = [5.0e-3, 5.0e-3, 5.0e-3];
 ///
-/// let mask = make_line(&grid, start, end).unwrap();
+/// let mask = make_line(dim, spacing, start, end).unwrap();
 /// ```
 ///
 /// # MATLAB Compatibility
@@ -284,9 +288,9 @@ pub fn make_sphere(grid: &Grid, center: [f64; 3], radius: f64) -> KwaversResult<
 /// ```matlab
 /// line = makeLine(Nx, Ny, Nz, start_x, start_y, start_z, end_x, end_y, end_z);
 /// ```
-pub fn make_line(grid: &Grid, start: [f64; 3], end: [f64; 3]) -> KwaversResult<Array3<bool>> {
-    let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-    let (dx, dy, dz) = (grid.dx, grid.dy, grid.dz);
+pub fn make_line(dim: (usize, usize, usize), spacing: (f64, f64, f64), start: [f64; 3], end: [f64; 3]) -> KwaversResult<Array3<bool>> {
+    let (nx, ny, nz) = dim;
+    let (dx, dy, dz) = spacing;
 
     let mut mask = Array3::from_elem((nx, ny, nz), false);
 
@@ -373,7 +377,8 @@ pub fn make_line(grid: &Grid, start: [f64; 3], end: [f64; 3]) -> KwaversResult<A
 /// where $r = \sqrt{(x_i - x_c)^2 + (y_j - y_c)^2}$, $R$ is the radius,
 /// and $t$ is the thickness in grid points.
 pub fn make_circle(
-    grid: &Grid,
+    dim: (usize, usize, usize),
+    spacing: (f64, f64, f64),
     center: [f64; 3],
     radius: f64,
     thickness: usize,
@@ -397,8 +402,8 @@ pub fn make_circle(
         ));
     }
 
-    let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-    let (dx, dy, _dz) = (grid.dx, grid.dy, grid.dz);
+    let (nx, ny, nz) = dim;
+    let (dx, dy, _dz) = spacing;
 
     let mut mask = Array3::from_elem((nx, ny, nz), false);
 
@@ -472,11 +477,12 @@ mod tests {
 
     #[test]
     fn test_make_disc_basic() {
-        let grid = Grid::new(32, 32, 1, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+        let grid = (32, 32, 1);
+        let spacing = (0.1e-3, 0.1e-3, 0.1e-3);
         let center = [1.6e-3, 1.6e-3, 0.0]; // Center of 32x32 grid
         let radius = 0.5e-3;
 
-        let mask = make_disc(&grid, center, radius).unwrap();
+        let mask = make_disc(grid, spacing, center, radius).unwrap();
 
         // Check dimensions
         assert_eq!(mask.dim(), (32, 32, 1));
@@ -488,7 +494,7 @@ mod tests {
         // Count true values (should be roughly πr²/dx²)
         let count = mask.iter().filter(|&&x| x).count();
         let expected_area = std::f64::consts::PI * radius * radius;
-        let cell_area = grid.dx * grid.dy;
+        let cell_area = spacing.0 * spacing.1;
         let expected_count = (expected_area / cell_area).round() as usize;
 
         // Allow 20% tolerance due to discretization
@@ -497,23 +503,25 @@ mod tests {
 
     #[test]
     fn test_make_disc_invalid_radius() {
-        let grid = Grid::new(32, 32, 1, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+        let grid = (32, 32, 1);
+        let spacing = (0.1e-3, 0.1e-3, 0.1e-3);
         let center = [1.6e-3, 1.6e-3, 0.0];
 
-        let result = make_disc(&grid, center, -1.0);
+        let result = make_disc(grid, spacing, center, -1.0);
         assert!(result.is_err());
 
-        let result = make_disc(&grid, center, 0.0);
+        let result = make_disc(grid, spacing, center, 0.0);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_make_ball_basic() {
-        let grid = Grid::new(32, 32, 32, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+        let grid = (32, 32, 32);
+        let spacing = (0.1e-3, 0.1e-3, 0.1e-3);
         let center = [1.6e-3, 1.6e-3, 1.6e-3]; // Center of 32x32x32 grid
         let radius = 0.5e-3;
 
-        let mask = make_ball(&grid, center, radius).unwrap();
+        let mask = make_ball(grid, spacing, center, radius).unwrap();
 
         // Check dimensions
         assert_eq!(mask.dim(), (32, 32, 32));
@@ -524,7 +532,7 @@ mod tests {
         // Count true values (should be roughly (4/3)πr³/dx³)
         let count = mask.iter().filter(|&&x| x).count();
         let expected_volume = (4.0 / 3.0) * std::f64::consts::PI * radius.powi(3);
-        let cell_volume = grid.dx * grid.dy * grid.dz;
+        let cell_volume = spacing.0 * spacing.1 * spacing.2;
         let expected_count = (expected_volume / cell_volume).round() as usize;
 
         // Allow 25% tolerance due to discretization
@@ -533,21 +541,23 @@ mod tests {
 
     #[test]
     fn test_make_ball_invalid_radius() {
-        let grid = Grid::new(32, 32, 32, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+        let grid = (32, 32, 32);
+        let spacing = (0.1e-3, 0.1e-3, 0.1e-3);
         let center = [1.6e-3, 1.6e-3, 1.6e-3];
 
-        let result = make_ball(&grid, center, -1.0);
+        let result = make_ball(grid, spacing, center, -1.0);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_make_sphere_alias() {
-        let grid = Grid::new(32, 32, 32, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+        let grid = (32, 32, 32);
+        let spacing = (0.1e-3, 0.1e-3, 0.1e-3);
         let center = [1.6e-3, 1.6e-3, 1.6e-3];
         let radius = 0.5e-3;
 
-        let ball = make_ball(&grid, center, radius).unwrap();
-        let sphere = make_sphere(&grid, center, radius).unwrap();
+        let ball = make_ball(grid, spacing, center, radius).unwrap();
+        let sphere = make_sphere(grid, spacing, center, radius).unwrap();
 
         // Should be identical
         assert_eq!(ball, sphere);
@@ -555,11 +565,12 @@ mod tests {
 
     #[test]
     fn test_make_line_diagonal() {
-        let grid = Grid::new(32, 32, 32, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+        let grid = (32, 32, 32);
+        let spacing = (0.1e-3, 0.1e-3, 0.1e-3);
         let start = [0.0, 0.0, 0.0];
         let end = [3.1e-3, 3.1e-3, 3.1e-3]; // Diagonal line
 
-        let mask = make_line(&grid, start, end).unwrap();
+        let mask = make_line(grid, spacing, start, end).unwrap();
 
         // Check dimensions
         assert_eq!(mask.dim(), (32, 32, 32));
@@ -575,11 +586,12 @@ mod tests {
 
     #[test]
     fn test_make_line_axis_aligned() {
-        let grid = Grid::new(32, 32, 1, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+        let grid = (32, 32, 1);
+        let spacing = (0.1e-3, 0.1e-3, 0.1e-3);
         let start = [0.0, 1.5e-3, 0.0];
         let end = [3.1e-3, 1.5e-3, 0.0]; // Horizontal line
 
-        let mask = make_line(&grid, start, end).unwrap();
+        let mask = make_line(grid, spacing, start, end).unwrap();
 
         // All points along y=15 should be true
         for i in 0..32 {
@@ -589,11 +601,12 @@ mod tests {
 
     #[test]
     fn test_disc_symmetry() {
-        let grid = Grid::new(64, 64, 1, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+        let grid = (64, 64, 1);
+        let spacing = (0.1e-3, 0.1e-3, 0.1e-3);
         let center = [3.2e-3, 3.2e-3, 0.0]; // Center of grid
         let radius = 1.0e-3;
 
-        let mask = make_disc(&grid, center, radius).unwrap();
+        let mask = make_disc(grid, spacing, center, radius).unwrap();
 
         // Check symmetry: mask[32+r, 32] == mask[32-r, 32] for small r
         for r in 1..5 {
@@ -604,11 +617,12 @@ mod tests {
 
     #[test]
     fn test_ball_symmetry() {
-        let grid = Grid::new(64, 64, 64, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+        let grid = (64, 64, 64);
+        let spacing = (0.1e-3, 0.1e-3, 0.1e-3);
         let center = [3.2e-3, 3.2e-3, 3.2e-3]; // Center of grid
         let radius = 1.0e-3;
 
-        let mask = make_ball(&grid, center, radius).unwrap();
+        let mask = make_ball(grid, spacing, center, radius).unwrap();
 
         // Check symmetry in all three dimensions
         for r in 1..5 {

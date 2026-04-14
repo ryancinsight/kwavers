@@ -4,6 +4,7 @@
 //! workflow across multiple modules and subsystems.
 
 use super::*;
+use crate::core::error::KwaversError;
 use ndarray::Array3;
 use std::collections::HashMap;
 
@@ -490,4 +491,29 @@ fn test_registration_transforms_stored() {
     assert_eq!(result.registration_transforms.len(), 2);
     assert!(result.registration_transforms.contains_key("ultrasound"));
     assert!(result.registration_transforms.contains_key("photoacoustic"));
+}
+
+#[test]
+fn test_nonrigid_fusion_succeeds() {
+    // NonRigid is implemented via Symmetric Gaussian Demons (Vercauteren 2009).
+    let config = FusionConfig {
+        registration_method: RegistrationMethod::NonRigid,
+        ..Default::default()
+    };
+    let mut fusion = MultiModalFusion::new(config);
+    let shape = (4, 4, 2);
+
+    fusion
+        .register_ultrasound(&Array3::from_elem(shape, 1.0))
+        .unwrap();
+    fusion.registered_data.insert(
+        "photoacoustic".to_string(),
+        types::RegisteredModality {
+            data: Array3::from_elem(shape, 2.0),
+            quality_score: 0.8,
+        },
+    );
+
+    let result = fusion.fuse();
+    assert!(result.is_ok(), "NonRigid fusion should succeed: {result:?}");
 }

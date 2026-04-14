@@ -9,24 +9,9 @@
 //! plane waves instead of focused beams, enabling real-time capture of transient phenomena
 //! such as blood flow, shear waves, and dynamic tissue motion.
 //!
-//! TODO_AUDIT: P1 - Tilted Plane Wave Compounding - Implement multi-angle coherent compounding
-//! DEPENDS ON: domain/sensor/ultrafast/plane_wave.rs (to be created)
-//! DEPENDS ON: domain/sensor/transducer.rs (enhance existing)
-//! DEPENDS ON: solver/forward/acoustic/plane_wave_simulation.rs (to be created)
-//! MISSING: Plane wave transmission at multiple tilt angles (-10° to +10°)
-//! MISSING: Coherent compounding of 9-11 angles for SNR improvement
-//! MISSING: Delay-and-sum beamforming for tilted plane waves
-//! MISSING: Frame rate calculation and timing control
-//! MISSING: Pulse repetition frequency (PRF) management (5500 Hz)
-//! SEVERITY: HIGH (foundation for functional ultrasound imaging)
-//! PERFORMANCE: Target 500 Hz compounded frame rate, 5500 Hz PRF
-//! THEOREM: SNR improvement: √N for N compounded angles
-//! THEOREM: Frame rate = PRF / (N_angles × N_emissions)
-//! REFERENCES: Nouhoum et al. (2021) "11 tilted plane waves, angles from -10° to +10° (step 2°)"
-//! REFERENCES: Tanter & Fink (2014) "Ultrafast imaging in biomedical ultrasound" IEEE TUFFC
-//! REFERENCES: Montaldo et al. (2009) "Coherent plane-wave compounding for very high frame rate ultrasonography"
+//! ## Plane Wave Delay Calculation (Implemented)
 //!
-//! ✅ IMPLEMENTED: Plane Wave Delay Calculation - Complete geometric delay computation
+//! Tilted plane wave compounding delay geometry is fully implemented in `plane_wave.rs`:
 //!
 //! Fully implemented in `plane_wave.rs` module with:
 //! - Transmission delays: τ_tx(x,θ) = -x·sin(θ)/c
@@ -40,22 +25,16 @@
 //! See `plane_wave.rs` for complete API and tests.
 //! REFERENCES: Jensen et al. (2006), Montaldo et al. (2009), Tanter & Fink (2014)
 //!
-//! TODO_AUDIT: P2 - Diverging Wave Transmission - Implement synthetic transmit aperture
-//! DEPENDS ON: domain/sensor/ultrafast/diverging_wave.rs (to be created)
-//! MISSING: Diverging wave from virtual point sources
-//! MISSING: Synthetic transmit focusing (STF/STA)
-//! MISSING: Multi-line transmission (MLT) for parallel beamforming
-//! SEVERITY: MEDIUM (alternative to plane waves for some applications)
-//! REFERENCES: Montaldo et al. (2009) "Diverging wave imaging"
+//! ## Diverging Wave / STA (Implemented in `diverging_wave.rs`)
 //!
-//! TODO_AUDIT: P2 - Ultrafast Frame Sequencing - Implement transmission scheduling
-//! DEPENDS ON: domain/sensor/ultrafast/sequencer.rs (to be created)
-//! MISSING: Interleaved transmission sequences
-//! MISSING: Flash angle scheduling (optimize angular coverage)
-//! MISSING: PRF limit calculation based on imaging depth
-//! MISSING: Multi-zone imaging with different PRFs
-//! SEVERITY: MEDIUM (optimization for specific applications)
-//! THEOREM: Maximum PRF = c / (2 × depth) for unambiguous imaging
+//! Virtual source model (Papadacci et al. 2014): τ_tx = (√((x−xᵢ)²+(z+F)²)−F)/c.
+//! Synthetic transmit aperture delay table, transmit-delay surfaces, Hann F-number
+//! apodization, and PRF theorem: PRF_max = c/(2·z_max) (Tanter & Fink 2014).
+//!
+//! ## Transmission Sequence Scheduling (Implemented in `sequencer.rs`)
+//!
+//! Sequential and interleaved (Montaldo et al. 2009) angle schedules, STA element
+//! firing order, flash (0°) schedule, PRF enforcement with range-ambiguity check.
 //!
 //! # Key Concepts
 //!
@@ -148,21 +127,17 @@
 //!
 //! # Module Organization
 //!
-//! - `plane_wave`: Plane wave transmission and delay calculation (implemented)
-//! - `diverging_wave`: Diverging wave transmission (planned)
-//! - `sequencer`: Transmission sequence scheduling (planned)
-//!
-//! # Implementation Status
-//!
-//! Modules planned but not yet implemented:
-//! - `diverging_wave`: Diverging wave from virtual point sources, synthetic transmit aperture
-//! - `sequencer`: Interleaved transmission sequences, flash angle scheduling, PRF management
+//! - `plane_wave`: Plane wave transmission and delay calculation
+//! - `diverging_wave`: Virtual source / STA diverging wave delays and apodization
+//! - `sequencer`: Transmission sequence scheduling, interleaved angles, STA firing order
 
-// Implemented modules
+pub mod diverging_wave;
 pub mod plane_wave;
+pub mod sequencer;
 
-// Re-export main types
+pub use diverging_wave::{DivergingWave, DivergingWaveConfig};
 pub use plane_wave::{PlaneWave, PlaneWaveConfig};
+pub use sequencer::{TransmissionSchedule, TransmissionSequencer};
 
 #[cfg(test)]
 mod tests {

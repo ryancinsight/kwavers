@@ -179,7 +179,7 @@ impl HungarianTracker {
         // Build squared-distance cost matrix (m × n)
         let dmax2 = self.config.max_displacement * self.config.max_displacement;
         let big_m = 1e12_f64;
-        let mut cost: Vec<Vec<f64>> = (0..m)
+        let cost: Vec<Vec<f64>> = (0..m)
             .map(|i| {
                 let last = self.active_tracks[i].detections.last().unwrap();
                 (0..n)

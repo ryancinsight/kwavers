@@ -1,7 +1,7 @@
 //! Tests for multi-physics coupling types
 
-use super::*;
 use super::domain_decomposition::{DomainDecomposition, TransmissionCondition};
+use super::*;
 
 #[test]
 fn test_interface_conditions() {

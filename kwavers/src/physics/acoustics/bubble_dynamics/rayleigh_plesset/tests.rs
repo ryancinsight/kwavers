@@ -9,7 +9,7 @@ fn test_rayleigh_plesset_equilibrium() {
     // at equilibrium (R_ddot = 0, R_dot = 0):
     // P_internal(R_0) = P_0 + 2σ/R_0 - P_v
     // (Assuming negligible vapor pressure for this test parameters)
-    
+
     // Create parameters with a larger bubble to avoid numerical issues
     let params = BubbleParameters {
         r0: 50e-6, // 50 μm bubble instead of 5 μm

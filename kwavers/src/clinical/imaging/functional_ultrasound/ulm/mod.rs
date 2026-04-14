@@ -11,65 +11,29 @@
 //! vascular networks. Achieves 5-10 μm resolution compared to 100-150 μm for conventional
 //! ultrasound.
 //!
-//! TODO_AUDIT: P1 - Microbubble Detection and Localization - Implement single-particle localization
-//! DEPENDS ON: clinical/imaging/functional_ultrasound/ulm/microbubble_detection.rs (to be created)
-//! DEPENDS ON: clinical/imaging/functional_ultrasound/ulm/localization.rs (to be created)
-//! MISSING: Spatiotemporal SVD for microbubble/tissue separation
-//! MISSING: Gaussian fitting for sub-pixel localization
-//! MISSING: Radial symmetry method for center detection
-//! MISSING: PSF modeling for localization precision estimation
-//! SEVERITY: HIGH (core ULM capability)
-//! PERFORMANCE: Detect ~310,000 bubbles from 600 blocks × 400 frames
-//! ACCURACY: 5 μm localization precision (vs 100 μm Doppler resolution)
-//! THEOREM: Localization precision: σ_loc ≈ PSF_width / √N_photons (Thompson formula adapted)
-//! THEOREM: For ultrasound: σ_loc ≈ λ / (2NA × √SNR) where λ=wavelength, NA=numerical aperture
-//! REFERENCES: Nouhoum et al. (2021) "microbubble detection and Gaussian fitting"
-//! REFERENCES: Errico et al. (2015) "Ultrafast ultrasound localization microscopy"
-//! REFERENCES: Nature 527:499-502. DOI: 10.1038/nature16066
+//! ## Implemented Capabilities
 //!
-//! TODO_AUDIT: P1 - Microbubble Tracking - Implement trajectory reconstruction
-//! DEPENDS ON: clinical/imaging/functional_ultrasound/ulm/tracking.rs (to be created)
-//! MISSING: Hungarian algorithm for optimal assignment problem
-//! MISSING: Multi-frame linking with maximum displacement constraint
-//! MISSING: Track smoothing and interpolation
-//! MISSING: Velocity estimation from trajectories
-//! SEVERITY: HIGH (required for motion-corrected ULM)
-//! PERFORMANCE: Track bubbles across 400 frames at 1000 Hz (400 ms blocks)
-//! THEOREM: Hungarian algorithm: O(n³) optimal bipartite matching
-//! THEOREM: Maximum displacement: d_max = v_max × Δt (e.g., 10 mm/s × 1 ms = 10 μm)
-//! REFERENCES: Nouhoum et al. (2021) "Hungarian method for microbubble tracking"
-//! REFERENCES: Kuhn (1955) "The Hungarian method for the assignment problem"
-//! REFERENCES: Munkres (1957) "Algorithms for the assignment and transportation problems"
+//! - **Microbubble Detection** (`microbubble_detection.rs`): Spatiotemporal SVD clutter
+//!   filtering (Demené et al. 2015), 2D Gaussian fitting for sub-pixel localisation
+//!   (`σ_loc ≈ λ/(2NA·√SNR)`), local-maximum detection, and PSF-width estimation.
 //!
-//! TODO_AUDIT: P2 - Super-Resolution Reconstruction - Implement accumulated localization imaging
-//! DEPENDS ON: clinical/imaging/functional_ultrasound/ulm/super_resolution.rs (to be created)
-//! MISSING: Sliding average smoothing of trajectories
-//! MISSING: 2D histogram accumulation with sub-pixel binning (5 μm pixels)
-//! MISSING: Gaussian rendering of localizations
-//! MISSING: Density-weighted visualization
-//! SEVERITY: MEDIUM (visualization and quantification)
-//! PERFORMANCE: Reconstruct from ~310,000 localizations
-//! REFERENCES: Nouhoum et al. (2021) "sliding average smoothing and interpolation, 5 μm pixel reconstruction"
-//! REFERENCES: Christensen-Jeffries et al. (2020) "Super-resolution ultrasound imaging"
+//! - **Microbubble Tracking** (`tracking.rs`): Hungarian algorithm O(n³) optimal
+//!   bipartite matching (Kuhn 1955), multi-frame trajectory linking with maximum
+//!   displacement constraint, sliding-window track smoothing.
 //!
-//! TODO_AUDIT: P2 - Velocity Mapping - Implement flow quantification from tracks
-//! DEPENDS ON: clinical/imaging/functional_ultrasound/ulm/velocity_mapping.rs (to be created)
-//! MISSING: Optical flow from trajectories
-//! MISSING: Velocity vector field reconstruction
-//! MISSING: Wall shear stress estimation
-//! MISSING: Flow direction and magnitude maps
-//! SEVERITY: MEDIUM (quantitative hemodynamics)
-//! REFERENCES: Heiles et al. (2022) "Performance benchmarking of microbubble-localization algorithms"
+//! - **Super-Resolution Reconstruction** (`super_resolution.rs`): 2D histogram
+//!   accumulation with 5 μm pixels, Gaussian kernel splatting (Errico et al. 2015),
+//!   sliding average trajectory smoothing (Nouhoum et al. 2021), density normalization.
 //!
-//! TODO_AUDIT: P2 - Contrast Agent Simulation - Implement microbubble physics
-//! DEPENDS ON: domain/contrast/microbubble.rs (to be created)
-//! DEPENDS ON: physics/acoustics/bubble_dynamics/ (enhance existing)
-//! MISSING: SonoVue microbubble model (2.5 mg powder in 5 mL NaCl)
-//! MISSING: Rayleigh-Plesset equation for bubble oscillation
-//! MISSING: Backscatter cross-section calculation
-//! MISSING: Destruction and replenishment dynamics
-//! SEVERITY: LOW (simulation for validation)
-//! REFERENCES: De Jong et al. (2002) "Ultrasound scattering properties of Albunex microspheres"
+//! - **Velocity Mapping** (`velocity_mapping.rs`): Instantaneous velocity estimation
+//!   from consecutive detections, grid-averaged velocity fields (vx, vz, speed,
+//!   direction), wall shear stress proxy via ‖∇speed‖ (Heiles et al. 2022;
+//!   Womersley 1955).
+//!
+//! ## Not yet implemented
+//!
+//! - Contrast agent simulation: SonoVue backscatter cross-section and
+//!   destruction/replenishment dynamics (De Jong et al. 2002).
 //!
 //! # ULM Imaging Pipeline
 //!
@@ -248,20 +212,24 @@
 //!
 //! # Implementation Status
 //!
-//! Modules planned but not yet implemented:
-//! - `microbubble_detection`: Spatiotemporal SVD, Gaussian fitting, radial symmetry localization
-//! - `tracking`: Hungarian algorithm for optimal assignment, multi-frame linking
-//! - `super_resolution`: 2D histogram accumulation, Gaussian rendering, density visualization
-//! - `velocity_mapping`: Optical flow from trajectories, wall shear stress estimation
+//! ## Implemented modules
+//! - `microbubble_detection`: SVD clutter filter, Gaussian localiser, ULM detector
+//! - `tracking`: Hungarian tracker, trajectory reconstruction
+//! - `super_resolution`: 2D histogram + Gaussian splat accumulation, sliding smoothing, density normalization
+//! - `velocity_mapping`: velocity field reconstruction, wall shear stress estimation
 
 pub mod microbubble_detection;
+pub mod super_resolution;
 pub mod tracking;
+pub mod velocity_mapping;
 
 pub use microbubble_detection::{
     BubbleDetection, GaussianLocalizer, LocalizationConfig, SvdClutterConfig, SvdClutterFilter,
     UlmDetector,
 };
+pub use super_resolution::{RenderMode, SuperResConfig, SuperResReconstructor};
 pub use tracking::{BubbleTrack, HungarianTracker, TrackingConfig};
+pub use velocity_mapping::{VelocityMapConfig, VelocityMapper};
 
 #[cfg(test)]
 mod tests {

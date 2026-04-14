@@ -10,8 +10,8 @@
 //!
 //! - Montaldo et al. (2009), "Coherent plane-wave compounding"
 
-use ndarray::{Array2, Array3};
 use super::plane_wave::PlaneWaveConfig;
+use ndarray::{Array2, Array3};
 
 /// Multi-angle plane wave compounding
 #[derive(Debug)]

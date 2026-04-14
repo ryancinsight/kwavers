@@ -1,25 +1,52 @@
-//! FEM Helmholtz Solver Implementation
+//! FEM Helmholtz Solver — P1 Linear Tetrahedral Elements
 //!
-//! **STATUS: STUB / INCOMPLETE**
+//! ## Mathematical Foundation
 //!
-//! This is a simplified demonstration FEM implementation.
-//! Full mesh integration and proper assembly are not yet implemented.
-//! TODO_AUDIT: P1 - Complete FEM Helmholtz Solver - Implement full finite element discretization with proper mesh integration, element assembly, and boundary conditions
-//! DEPENDS ON: domain/mesh/tetrahedral.rs, domain/boundary/fem_boundary.rs, math/linear_algebra/sparse_solvers.rs
-//! MISSING: Element matrix assembly for tetrahedral elements with basis functions
-//! MISSING: Proper mesh integration with quadrature rules
-//! MISSING: Boundary condition enforcement (Dirichlet/Neumann/Robin)
-//! MISSING: Sparse matrix storage and efficient solvers
-//! MISSING: Higher-order polynomial basis functions
-//! MISSING: Radiation boundary conditions for unbounded domains
-//! SEVERITY: HIGH (critical for complex geometry acoustic simulations)
-//! THEOREM: Galerkin method: Find u ∈ V such that a(u,v) = f(v) ∀v ∈ V for variational form
-//! THEOREM: Helmholtz weak form: ∫ (∇u·∇v - k²uv) dΩ = ∫ ∂u/∂n v dΓ for boundary value problems
-//! REFERENCES: Wu (1995) Pre-asymptotic error analysis of FEM; Ihlenburg (1998) FEM for Helmholtz equation
+//! The Helmholtz equation `∇²u + k²u = −f` is discretised by the Galerkin
+//! method on a tetrahedral mesh with P1 (linear) basis functions.
 //!
-//! Core solver for the Helmholtz equation using finite element discretization.
-//! Provides high-fidelity solutions for complex geometries where Born series
-//! approximations fail.
+//! **Theorem (Galerkin)**: Find u ∈ V_h ⊂ H¹(Ω) such that for all v ∈ V_h:
+//! ```text
+//!   a(u,v) = ∫_Ω (∇u·∇v − k²uv) dΩ = ∫_Ω fv dΩ + ∫_Γ (∂u/∂n)v dΓ
+//! ```
+//! (Ihlenburg 1998, §2.1.)
+//!
+//! **P1 element matrices** for a tetrahedron with nodes {p₀,p₁,p₂,p₃}:
+//! - Jacobian J = [p₁−p₀ | p₂−p₀ | p₃−p₀], Volume = |det J|/6
+//! - ∇φᵢ = J^{−T} ∇ξᵢ where ∇ξ₀=(-1,-1,-1), ∇ξ₁=(1,0,0), ∇ξ₂=(0,1,0), ∇ξ₃=(0,0,1)
+//! - K_ij = Vol · (∇φᵢ · ∇φⱼ) (stiffness)
+//! - M_ij = Vol/(10+10·δᵢⱼ) (consistent mass, analytical formula)
+//! - System matrix A = K − k²M → BiCGSTAB solve
+//!
+//! ## Implementation Status
+//!
+//! **Implemented:**
+//! - P1 tetrahedral element matrix assembly (stiffness + consistent mass)
+//! - Global CSR matrix assembly via `FemAssembly::assemble_global_matrices_parallel`
+//! - Dirichlet boundary condition enforcement
+//! - BiCGSTAB iterative solver with Jacobi preconditioning
+//! - Barycentric shape-function interpolation at arbitrary query points
+//!
+//! **Not yet implemented:**
+//! - Heterogeneous media: `assemble_system` ignores the `medium` parameter;
+//!   wavenumber is taken uniformly from `config.wavenumber`.  Per-element k(x)
+//!   requires integrating `c(x)` over each element.
+//! - Source term assembly: element RHS is always zero; point/volume sources
+//!   require `f_elem` to be filled from `medium`.
+//! - Radiation / absorbing boundary conditions (ABC / PML) despite
+//!   `config.radiation_boundary` flag.
+//! - Higher-order (P2+) basis functions; `polynomial_degree > 1` is accepted
+//!   but P1 is always used.
+//! - ILU / AMG preconditioners; both delegate to `Preconditioner::None`.
+//!
+//! ## References
+//!
+//! - Ihlenburg F (1998). *Finite Element Analysis of Acoustic Scattering*.
+//!   Springer. §2 (variational formulation), §5 (stability, pollution effect).
+//! - Wu TW (1995). *Pre-asymptotic error analysis of CIP-FEM and FEM for
+//!   Helmholtz equation with high wave number*. SIAM J. Numer. Anal.
+//! - Krenk S (2009). *Non-reflecting boundary conditions for elastic waves*.
+//!   Comput. Methods Appl. Mech. Eng. (radiation BC reference).
 
 use super::assembly::FemAssembly;
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
