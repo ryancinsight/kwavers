@@ -237,7 +237,7 @@ impl BemFemCoupler {
         bem_boundary_values: &mut [Complex64],
         wavenumber: f64,
     ) -> KwaversResult<()> {
-        use crate::solver::forward::bem::solver::{compute_vertex_normals, plane_wave_incident};
+        use crate::solver::forward::bem::field::{compute_vertex_normals, plane_wave_incident};
 
         let nv = self.bem_solver.vertices.len();
         if nv == 0 {

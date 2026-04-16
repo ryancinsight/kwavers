@@ -480,7 +480,8 @@ mod tests {
         };
         let processor = SaftProcessor::new(SaftConfig::default(), beamforming_config);
 
-        let num_elements = 4 * 4 * 1;
+        // num_elements_3d = (4, 4, 1) → 4·4·1 = 16 total elements
+        let num_elements = 4 * 4;
         let mut rf_data = Array4::<f32>::zeros((1, num_elements, 512, 1));
         for elem in 0..num_elements {
             rf_data[[0, elem, 256, 0]] = 1.0;

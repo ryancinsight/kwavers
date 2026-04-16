@@ -44,6 +44,14 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
     ///
     /// This method takes multiple smaller time steps internally to resolve
     /// the stiff dynamics while advancing by the main simulation dt.
+    ///
+    /// # Convergence Guard
+    ///
+    /// `max_substeps` limits the number of *accepted* steps. A second limit
+    /// `max_substeps × 100` (total attempts including rejected steps) prevents
+    /// an infinite loop when every attempt is rejected: without this guard,
+    /// `t` never advances, `substeps` never increments, and the while condition
+    /// `substeps < max_substeps` is never false.
     pub fn integrate_adaptive(
         &mut self,
         state: &mut BubbleState,
@@ -55,9 +63,23 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         let mut t = t_start;
         let t_end = t_start + dt_main;
         let mut substeps = 0;
+        // Count ALL attempts (accepted + rejected) to bound the loop when
+        // every sub-step is rejected (e.g. minimum dt still fails stability).
+        let mut total_attempts: usize = 0;
+        let max_total_attempts = self.config.max_substeps.saturating_mul(100);
 
         // Sub-cycle until we reach the target time
         while t < t_end && substeps < self.config.max_substeps {
+            total_attempts += 1;
+            if total_attempts > max_total_attempts {
+                return Err(PhysicsError::ConvergenceFailure {
+                    solver: "AdaptiveBubbleIntegrator".to_string(),
+                    iterations: total_attempts,
+                    residual: (t_end - t).abs(),
+                }
+                .into());
+            }
+
             // Limit time step to not exceed target
             let dt = self.dt_adaptive.min(t_end - t);
 

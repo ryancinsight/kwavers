@@ -99,24 +99,60 @@ pub struct FocalSpot {
 }
 
 impl FocalSpot {
-    /// Estimate focal spot characteristics from transducer parameters
+    /// Estimate focal spot characteristics from transducer parameters.
     ///
-    /// Uses simplified Gaussian approximation with frequency-dependent beam width
-    /// Formula: Focal width (lateral) ≈ 0.6 * λ * f_number / 2
-    /// where λ = wavelength, f_number = focal_length / aperture_diameter
+    /// # Theory — Focused Piston Transducer Focal Dimensions
+    ///
+    /// For a focused circular piston transducer with aperture radius `a`, focal
+    /// length `F`, and acoustic wavelength `λ = c/f`, the F-number is `F# = F/(2a)`.
+    ///
+    /// ## Lateral FWHM (–6 dB pressure width)
+    ///
+    /// From the paraxial diffraction integral (O'Neil 1949; Zemanek 1971):
+    ///
+    /// ```text
+    /// FWHM_lateral ≈ 1.02 · λ · F#
+    /// ```
+    ///
+    /// This is the –6 dB intensity half-width of the first-order Bessel diffraction
+    /// pattern at the geometric focus. The factor 1.02 comes from J₁(x)/x = 0.5
+    /// at x ≈ 3.2 → r = 3.2 F λ / (2π a) = 1.02 λ F# (approximating paraxially).
+    ///
+    /// ## Axial FWHM (–6 dB depth of focus)
+    ///
+    /// For a spherically focused piston the axial pressure on-axis varies as
+    /// (Zemanek 1971, Eq. 4):
+    ///
+    /// ```text
+    /// FWHM_axial ≈ 2.55 · λ · F#²
+    /// ```
+    ///
+    /// This is derived from the Gaussian beam analogy with waist radius
+    /// w₀ = 2 F# λ / π, giving Rayleigh length z_R = π w₀² / λ = 4 F#² λ / π,
+    /// and FWHM = 2 z_R = 8 F#² λ / π ≈ 2.55 λ F#².
+    ///
+    /// Note: the piston exact result is ≈ 7.08 λ F#² (first zeros of the axial
+    /// pattern); the –6 dB depth for diagnostic/therapy use is 2.55 λ F#².
+    ///
+    /// ## References
+    ///
+    /// - O'Neil HT (1949). "Theory of focusing radiators." *J Acoust Soc Am* 21(5):516–526.
+    /// - Zemanek J (1971). "Beam behavior within the nearfield of a vibrating piston."
+    ///   *J Acoust Soc Am* 49(1B):181–191.
     pub fn estimate_from_transducer(transducer: &HIFUTransducer) -> Self {
-        // Wavelength
+        // Wavelength [m]
         let wavelength = SOUND_SPEED_WATER_SIM / transducer.frequency;
 
-        // F-number (focal_length / aperture)
+        // F-number = focal_length / aperture_diameter (dimensionless, consistent units)
         let f_number = transducer.focal_length_mm / transducer.aperture_diameter_mm;
 
-        // Lateral focal width (FWHM) - Gaussian approximation
-        // Beam width ≈ 0.6 * λ * f_number for Gaussian beam
-        let lateral_width_mm = 0.6 * wavelength * 1e3 * f_number;
+        // Lateral FWHM (−6 dB pressure width) from O'Neil (1949):
+        //   FWHM_lat = 1.02 · λ · F#
+        let lateral_width_mm = 1.02 * wavelength * 1e3 * f_number;
 
-        // Axial focal width - typically ~4x lateral width for focused transducers
-        let axial_width_mm = 4.0 * lateral_width_mm;
+        // Axial FWHM (−6 dB depth of focus) from Gaussian beam approximation:
+        //   FWHM_ax = (8/π) · F#² · λ ≈ 2.546 · F#² · λ
+        let axial_width_mm = (8.0 / PI) * f_number * f_number * wavelength * 1e3;
 
         // Peak pressure from acoustic power
         // I = P/A, where A = π*(w/2)²
@@ -575,5 +611,61 @@ mod tests {
 
         assert!(feasibility.is_feasible);
         assert_eq!(feasibility.confidence_percent, 100.0);
+    }
+
+    /// Validate lateral FWHM against O'Neil (1949) analytical formula.
+    ///
+    /// Reference configuration (Hynynen & Clement 2007, *Phys. Med. Biol.* 52:R1):
+    /// - f = 1.5 MHz, c = 1500 m/s → λ = 1.0 mm
+    /// - aperture = 40 mm, focal length = 80 mm → F# = 2.0
+    /// - Expected lateral FWHM = 1.02 × λ × F# = 1.02 × 1.0 × 2.0 = 2.04 mm
+    /// - Expected axial FWHM = (8/π) × F#² × λ = 2.546 × 4 × 1.0 = 10.18 mm
+    #[test]
+    fn test_focal_spot_dimensions_match_oneil_formula() {
+        let transducer = HIFUTransducer {
+            frequency: 1.5e6,           // 1.5 MHz
+            focal_length_mm: 80.0,      // 80 mm
+            aperture_diameter_mm: 40.0, // 40 mm → F# = 2.0
+            power: 50.0,
+            efficiency: 0.8,
+            transducer_type: "focused".to_string(),
+            transducer_diameter_mm: 40.0,
+        };
+
+        let focal_spot = FocalSpot::estimate_from_transducer(&transducer);
+
+        // λ = c/f = 1500/1.5e6 = 1.0 mm (using SOUND_SPEED_WATER_SIM ≈ 1500 m/s)
+        let c = SOUND_SPEED_WATER_SIM;
+        let lambda_mm = c / transducer.frequency * 1e3;
+        let f_number = transducer.focal_length_mm / transducer.aperture_diameter_mm; // 2.0
+
+        let expected_lateral = 1.02 * lambda_mm * f_number; // 2.04 mm
+        let expected_axial = (8.0 / PI) * f_number * f_number * lambda_mm; // 10.186 mm
+
+        let rel_err_lat = (focal_spot.lateral_width_mm - expected_lateral).abs() / expected_lateral;
+        assert!(
+            rel_err_lat < 1e-10,
+            "Lateral FWHM = {:.4} mm, expected {:.4} mm (O'Neil 1949)",
+            focal_spot.lateral_width_mm,
+            expected_lateral
+        );
+
+        let rel_err_ax = (focal_spot.axial_width_mm - expected_axial).abs() / expected_axial;
+        assert!(
+            rel_err_ax < 1e-10,
+            "Axial FWHM = {:.4} mm, expected {:.4} mm (Gaussian focal zone)",
+            focal_spot.axial_width_mm,
+            expected_axial
+        );
+
+        // Aspect ratio: axial/lateral ≈ (8/π) × F# / 1.02 ≈ 2.50 × F# for F# = 2 → ≈ 4.99
+        let aspect = focal_spot.axial_width_mm / focal_spot.lateral_width_mm;
+        let expected_aspect = (8.0 / PI) * f_number / 1.02;
+        assert!(
+            (aspect - expected_aspect).abs() / expected_aspect < 1e-10,
+            "Aspect ratio = {:.4}, expected {:.4}",
+            aspect,
+            expected_aspect
+        );
     }
 }

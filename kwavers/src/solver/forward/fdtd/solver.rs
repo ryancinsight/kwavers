@@ -407,16 +407,19 @@ impl GenericFdtdSolver<Array3<f64>> {
         Ok(())
     }
 
-    /// Perform a single time step
+    /// Perform a single time step.
+    ///
+    /// In debug builds, full-field NaN scans are performed after each sub-step
+    /// to catch numerical instabilities early. In release builds, these scans
+    /// are elided for performance (O(N) per scan × 4 scans per step).
     pub fn step_forward(&mut self) -> KwaversResult<()> {
         let time_index = self.time_step_index;
         let dt = self.config.dt;
 
         // 1. Update Velocity (from current pressure field)
         self.update_velocity(dt)?;
-        if self.fields.ux.iter().any(|&x| x.is_nan()) {
-            panic!("NaN in ux after update_velocity at step {}", time_index);
-        }
+        #[cfg(debug_assertions)]
+        self.check_nan_velocity(time_index, "update_velocity")?;
 
         // 2. Inject Force Sources
         if self.source_handler.has_velocity_source() {
@@ -429,18 +432,13 @@ impl GenericFdtdSolver<Array3<f64>> {
         }
 
         self.apply_dynamic_velocity_sources(dt);
-        if self.fields.ux.iter().any(|&x| x.is_nan()) {
-            panic!(
-                "NaN in ux after dynamic velocity sources at step {}",
-                time_index
-            );
-        }
+        #[cfg(debug_assertions)]
+        self.check_nan_velocity(time_index, "dynamic_velocity_sources")?;
 
         // 3. Update Pressure
         self.update_pressure(dt)?;
-        if self.fields.p.iter().any(|&x| x.is_nan()) {
-            panic!("NaN in p after update_pressure at step {}", time_index);
-        }
+        #[cfg(debug_assertions)]
+        self.check_nan_pressure(time_index, "update_pressure")?;
 
         // 4. Apply pressure sources after update (additive + Dirichlet enforcement)
         if self.source_handler.has_pressure_source() {
@@ -452,9 +450,8 @@ impl GenericFdtdSolver<Array3<f64>> {
             .enforce_pressure_dirichlet(time_index, &mut self.fields.p);
         self.apply_dynamic_pressure_dirichlet(dt);
 
-        if self.fields.p.iter().any(|&x| x.is_nan()) {
-            panic!("NaN in p after pressure sources at step {}", time_index);
-        }
+        #[cfg(debug_assertions)]
+        self.check_nan_pressure(time_index, "pressure_sources")?;
 
         // 5. Apply Boundary (CPML is applied within updates via self.cpml_boundary)
 
@@ -463,6 +460,42 @@ impl GenericFdtdSolver<Array3<f64>> {
 
         self.time_step_index += 1;
 
+        Ok(())
+    }
+
+    /// Check velocity fields for NaN values (debug-only).
+    ///
+    /// Returns `KwaversError::Numerical(NaN)` instead of panicking, enabling
+    /// upstream callers to handle instabilities gracefully (e.g., reduce dt,
+    /// log diagnostics, or return partial results).
+    #[cfg(debug_assertions)]
+    fn check_nan_velocity(&self, step: usize, phase: &str) -> KwaversResult<()> {
+        use crate::core::error::NumericalError;
+        for (name, field) in [
+            ("ux", &self.fields.ux),
+            ("uy", &self.fields.uy),
+            ("uz", &self.fields.uz),
+        ] {
+            if field.iter().any(|&x| x.is_nan()) {
+                return Err(KwaversError::Numerical(NumericalError::NaN {
+                    operation: format!("FDTD {phase} at step {step}"),
+                    inputs: format!("field {name} contains NaN"),
+                }));
+            }
+        }
+        Ok(())
+    }
+
+    /// Check pressure field for NaN values (debug-only).
+    #[cfg(debug_assertions)]
+    fn check_nan_pressure(&self, step: usize, phase: &str) -> KwaversResult<()> {
+        use crate::core::error::NumericalError;
+        if self.fields.p.iter().any(|&x| x.is_nan()) {
+            return Err(KwaversError::Numerical(NumericalError::NaN {
+                operation: format!("FDTD {phase} at step {step}"),
+                inputs: "pressure field contains NaN".to_string(),
+            }));
+        }
         Ok(())
     }
 

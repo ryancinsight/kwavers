@@ -149,7 +149,6 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationMode
 #[cfg(test)]
 mod tests {
     use super::*;
-    use num_traits::Float;
 
     fn test_model() -> ClassicalHeterogeneousNucleation<f64> {
         ClassicalHeterogeneousNucleation {

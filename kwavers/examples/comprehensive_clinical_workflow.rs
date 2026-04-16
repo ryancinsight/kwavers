@@ -37,11 +37,11 @@ use kwavers::domain::medium::Medium;
 use kwavers::domain::medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium};
 #[cfg(feature = "gpu")]
 use kwavers::gpu::memory::UnifiedMemoryManager;
+use kwavers::physics::acoustics::imaging::modalities::ceus::PerfusionModel;
 use kwavers::physics::acoustics::imaging::modalities::elastography::radiation_force::PushPulseParameters;
 use kwavers::physics::acoustics::imaging::modalities::elastography::{
     AcousticRadiationForce, DisplacementField, HarmonicDetectionConfig, HarmonicDetector,
 };
-use kwavers::physics::imaging::ceus::PerfusionModel;
 use kwavers::physics::transcranial::safety_monitoring::SafetyMonitor;
 use kwavers::simulation::imaging::ceus::ContrastEnhancedUltrasound;
 use kwavers::solver::forward::elastic::{ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver};

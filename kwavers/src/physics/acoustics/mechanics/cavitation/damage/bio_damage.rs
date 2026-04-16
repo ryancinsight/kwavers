@@ -122,7 +122,6 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> BioDamageModel for Empirica
 #[cfg(test)]
 mod tests {
     use super::*;
-    use num_traits::Float;
 
     fn test_model() -> EmpiricalBioDamageModel<f64> {
         EmpiricalBioDamageModel {

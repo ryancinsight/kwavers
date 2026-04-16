@@ -32,11 +32,9 @@
 //! - IEC 60601-2-37: Therapeutic ultrasound safety and quality
 //! - AIUM (2014): "Quality Standards for Real-Time Ultrasound Equipment"
 
-use crate::clinical::safety::{ComplianceStatus, EnhancedComplianceCheck};
-use crate::core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use crate::core::error::KwaversResult;
 use std::collections::VecDeque;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Instant, SystemTime};
 
 /// Real-time clinical monitoring system
 #[derive(Debug)]
@@ -351,13 +349,13 @@ impl ClinicalMonitor {
     fn compute_quality_score(&self, snr_db: f64, contrast: f64, artifact_level: f64) -> f64 {
         // Weighted quality score
         // SNR: 0 dB → 0%, 30 dB → 100%
-        let snr_score = (snr_db / 30.0 * 100.0).min(100.0).max(0.0);
+        let snr_score = (snr_db / 30.0 * 100.0).clamp(0.0, 100.0);
 
         // Contrast: 0 → 0%, 1.0 → 100%
-        let contrast_score = (contrast * 100.0).min(100.0).max(0.0);
+        let contrast_score = (contrast * 100.0).clamp(0.0, 100.0);
 
         // Artifact level: 0 → 100%, 1.0 → 0%
-        let artifact_score = ((1.0 - artifact_level) * 100.0).min(100.0).max(0.0);
+        let artifact_score = ((1.0 - artifact_level) * 100.0).clamp(0.0, 100.0);
 
         // Weighted average: SNR=40%, Contrast=40%, Artifacts=20%
         (snr_score * 0.4 + contrast_score * 0.4 + artifact_score * 0.2).round()

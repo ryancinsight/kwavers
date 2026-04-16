@@ -5,45 +5,85 @@ use super::types::{TargetVolume, TransducerSetup, TransducerSpecification};
 use crate::core::error::KwaversResult;
 
 impl TreatmentPlanner {
-    /// Optimize transducer setup for targets
+    /// Optimize transducer setup for target focusing using phase conjugation.
+    ///
+    /// # Algorithm — Fibonacci Hemisphere Sampling + Phase Conjugation
+    ///
+    /// ## Element Placement (Fibonacci hemisphere)
+    ///
+    /// Uniform coverage of the upper hemisphere is achieved via the Fibonacci
+    /// (golden angle) method (Roberts 2018; Álvarez & Güemes 2019):
+    ///
+    /// ```text
+    /// zᵢ = (i + 0.5) / N        (cos θ uniformly spaced ∈ (0, 1) → upper hemisphere)
+    /// φᵢ = 2π i / Φ             (golden angle spiral, Φ = (1+√5)/2 ≈ 1.618)
+    /// xᵢ = R √(1−zᵢ²) cos φᵢ
+    /// yᵢ = R √(1−zᵢ²) sin φᵢ
+    /// ```
+    ///
+    /// This yields the minimum discrepancy point distribution on S²∩{z>0}
+    /// (quasi-uniform, no clustering at poles or equator).
+    ///
+    /// ## Phase Delays (Phase Conjugation / Time Reversal)
+    ///
+    /// For focusing at target position `r_t`, the phase delay on element `i`
+    /// at position `rᵢ` is (Daum & Hynynen 1999, Eq. 3):
+    ///
+    /// ```text
+    /// φᵢ = −k · |rᵢ − r_t|     (k = 2π f / c)
+    /// ```
+    ///
+    /// All elements then arrive in phase at the geometric focus (constructive
+    /// interference), maximising focal intensity. Skull aberration correction
+    /// would replace this with the measured one-way phase from each element.
+    ///
+    /// # References
+    ///
+    /// - Roberts M (2018). "Evenly distributing points on a sphere." *Extreme Learning* (blog).
+    /// - Daum DR & Hynynen K (1999). "A 256-element ultrasonic phased array system for
+    ///   the treatment of large volumes of deep seated tissue." *IEEE Trans Biomed Eng*
+    ///   46(9):1070–1082.
     pub(crate) fn optimize_transducer_setup(
         &self,
         targets: &[TargetVolume],
         spec: &TransducerSpecification,
     ) -> KwaversResult<TransducerSetup> {
-        // Simplified optimization - place transducer elements in hemisphere
         let num_elements = spec.num_elements;
         let mut element_positions = Vec::with_capacity(num_elements);
-        let mut element_phases = vec![0.0; num_elements];
         let element_amplitudes = vec![1.0; num_elements];
 
-        // Arrange elements in hemispherical array
+        // Fibonacci hemisphere: uniform angular spacing via golden angle
+        const GOLDEN_RATIO: f64 = 1.618_033_988_749_895; // (1+√5)/2
         let radius = spec.radius;
-        let center = [0.0, 0.0, radius]; // Above skull
 
         for i in 0..num_elements {
-            let theta = 2.0 * std::f64::consts::PI * i as f64 / num_elements as f64;
-            let phi = std::f64::consts::PI / 4.0; // 45 degrees from vertical
+            // cos(θ) uniformly sampled ∈ (0, 1) — upper hemisphere only
+            let z_norm = (i as f64 + 0.5) / num_elements as f64; // ∈ (0, 1)
+            let r_xy = (1.0 - z_norm * z_norm).sqrt();
+            let az = 2.0 * std::f64::consts::PI * i as f64 / GOLDEN_RATIO;
 
-            let x = center[0] + radius * phi.sin() * theta.cos();
-            let y = center[1] + radius * phi.sin() * theta.sin();
-            let z = center[2] + radius * phi.cos();
-
-            element_positions.push([x, y, z]);
+            element_positions.push([
+                radius * r_xy * az.cos(),
+                radius * r_xy * az.sin(),
+                radius * z_norm,
+            ]);
         }
 
-        // Calculate aberration correction phases
-        for (i, &pos) in element_positions.iter().enumerate() {
-            // Simplified phase calculation - would need full wave propagation
-            let target_center = targets[0].center; // Focus on first target
-            let distance = ((pos[0] - target_center[0]).powi(2)
-                + (pos[1] - target_center[1]).powi(2)
-                + (pos[2] - target_center[2]).powi(2))
-            .sqrt();
+        // Phase conjugation: φᵢ = −k · |rᵢ − r_target|
+        // Focuses all elements at the first target (can be extended to multi-focus).
+        let k = 2.0 * std::f64::consts::PI * spec.frequency / spec.sound_speed;
+        let target_center = targets[0].center;
 
-            let k = 2.0 * std::f64::consts::PI * spec.frequency / spec.sound_speed;
-            element_phases[i] = -k * distance; // Phase conjugation
-        }
+        let element_phases: Vec<f64> = element_positions
+            .iter()
+            .map(|&pos| {
+                let dist = ((pos[0] - target_center[0]).powi(2)
+                    + (pos[1] - target_center[1]).powi(2)
+                    + (pos[2] - target_center[2]).powi(2))
+                .sqrt();
+                -k * dist
+            })
+            .collect();
 
         Ok(TransducerSetup {
             num_elements,

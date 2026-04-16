@@ -339,7 +339,7 @@ impl FwiProcessor {
             None, // nonlinearity: zero
             self.parameters.frequency,
         )
-        .map_err(|e| crate::core::error::KwaversError::InvalidInput(e))?;
+        .map_err(crate::core::error::KwaversError::InvalidInput)?;
 
         let mut solver = FdtdSolver::new(config, grid, &medium, GridSource::default())?;
 
@@ -427,7 +427,7 @@ impl FwiProcessor {
             None,
             self.parameters.frequency,
         )
-        .map_err(|e| crate::core::error::KwaversError::InvalidInput(e))?;
+        .map_err(crate::core::error::KwaversError::InvalidInput)?;
 
         let mut solver = FdtdSolver::new(config, grid, &medium_adj, GridSource::default())?;
 

@@ -77,6 +77,7 @@ fn main() -> KwaversResult<()> {
         max_iterations: 10,
         tolerance: 1e-6,
         step_size: 0.01,
+        frequency: 10.0,
         nt: 10,
         dt,
         n_trace: nx,

@@ -238,7 +238,7 @@ mod tests {
         let dt = 0.3 * dx / c_ref; // CFL ≈ 0.3
         let kappa = generate_kappa(8, 8, 8, dx, dx, dx, c_ref, dt);
         for &v in kappa.iter() {
-            assert!(v >= 0.0 && v <= 1.0, "kappa out of [0,1]: {v}");
+            assert!((0.0..=1.0).contains(&v), "kappa out of [0,1]: {v}");
         }
     }
 
@@ -270,13 +270,20 @@ mod tests {
             let expected_neg = i_unit
                 * Complex64::new(k_val, 0.0)
                 * Complex64::new(exponent.cos(), -exponent.sin());
+            // Tolerance is relative to the value magnitude: k_val grows with idx,
+            // so machine-epsilon error in the complex product scales with |k_val|.
+            // At idx=2, k_val ≈ 1571 → 1 ULP ≈ 3.5e-13. Use 1e-12 (relative ~6e-16).
+            let tol = 1e-12_f64.max(expected_pos.norm() * 1e-14);
             assert!(
-                (pos_fn[idx] - expected_pos).norm() < 1e-14,
-                "pos mismatch at idx={idx}"
+                (pos_fn[idx] - expected_pos).norm() < tol,
+                "pos mismatch at idx={idx}: got {:?}, expected {:?}, diff_norm={:.2e}",
+                pos_fn[idx], expected_pos, (pos_fn[idx] - expected_pos).norm()
             );
+            let tol = 1e-12_f64.max(expected_neg.norm() * 1e-14);
             assert!(
-                (neg_fn[idx] - expected_neg).norm() < 1e-14,
-                "neg mismatch at idx={idx}"
+                (neg_fn[idx] - expected_neg).norm() < tol,
+                "neg mismatch at idx={idx}: got {:?}, expected {:?}, diff_norm={:.2e}",
+                neg_fn[idx], expected_neg, (neg_fn[idx] - expected_neg).norm()
             );
         }
     }

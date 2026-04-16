@@ -238,7 +238,6 @@ impl DGSolver {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::super::basis::BasisType;
     use super::super::super::config::DGConfig;
     use super::super::super::traits::DGOperations;

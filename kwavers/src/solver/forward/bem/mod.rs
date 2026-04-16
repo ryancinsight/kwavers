@@ -4,19 +4,17 @@
 //! BEM only discretizes the boundary of the domain, making it efficient
 //! for problems with infinite or large domains.
 //!
-//! ## Features
+//! ## Module Structure
 //!
-//! - **Boundary-only discretization**: No volume meshing required
-//! - **Exact radiation conditions**: Natural treatment of unbounded domains
-//! - **High accuracy**: Spectral accuracy for smooth boundaries
-//! - **Memory efficient**: O(N²) complexity where N is boundary nodes
-//!
-//! ## Applications
-//!
-//! - Acoustic scattering from complex objects
-//! - Radiation and diffraction problems
-//! - Underwater acoustics
-//! - Medical ultrasound transducer modeling
+//! - [`solver`] — Core `BemSolver` struct, system assembly, and solve logic
+//! - [`field`] — Post-processing: vertex normals, incident wave fields, `BemSolution`
+//! - [`geometry`] — Triangle geometry utilities (distance, barycentric coords)
+//! - [`integrals`] — Numerical quadrature for boundary integrals (singular, near-field, far-field)
+//! - [`gmres`] — Preconditioned GMRES iterative solver (Saad & Schultz 1986)
+//! - [`green`] — Helmholtz Green's function and derivatives (SSOT)
+//! - [`burton_miller`] — Burton-Miller CFIE formulation
+//! - [`quadrature`] — Gaussian quadrature rules for triangles
+//! - [`singular`] — Duffy transformation for singular integrals
 //!
 //! ## Mathematical Foundation
 //!
@@ -48,9 +46,16 @@
 //! ```
 
 pub mod burton_miller;
+pub mod field;
+pub mod geometry;
+pub mod gmres;
+pub mod green;
+pub mod integrals;
+pub mod quadrature;
+pub mod singular;
 pub mod solver;
 
 pub use burton_miller::{BurtonMillerAssembler, BurtonMillerConfig};
-pub use solver::{
-    compute_vertex_normals, plane_wave_incident, BemConfig, BemSolver,
-};
+pub use field::{compute_vertex_normals, plane_wave_incident, BemSolution};
+pub use gmres::solve_gmres;
+pub use solver::{BemConfig, BemSolver};

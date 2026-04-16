@@ -100,7 +100,6 @@ impl HybridAngularSpectrumSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_abs_diff_eq;
     use ndarray::Array3;
     use std::f64::consts::PI;
 
@@ -251,7 +250,7 @@ mod tests {
             ..HASConfig::default()
         };
         let solver_ref = HybridAngularSpectrumSolver::new(&grid, &config_ref).unwrap();
-        let initial = Array3::from_shape_fn((8, 8, 4), |(i, j, k)| {
+        let initial = Array3::from_shape_fn((8, 8, 4), |(i, _j, k)| {
             ((i + 1) as f64 * 100.0) * (1.0 + 0.1 * (k as f64))
         });
         let u_ref = solver_ref

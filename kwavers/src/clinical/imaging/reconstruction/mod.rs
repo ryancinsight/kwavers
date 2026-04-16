@@ -4,9 +4,11 @@
 //! ultrasound imaging applications, including real-time SIRT reconstruction
 //! with streaming data support and quality monitoring.
 
+pub mod acoustic_projection;
 pub mod clinical_monitoring;
 pub mod real_time_sirt;
 
+pub use acoustic_projection::AcousticProjectionGeometry;
 pub use clinical_monitoring::{
     ClinicalMonitor, MonitoringConfig, MonitoringReport, SafetyEvent, SafetyEventType,
     SafetySeverity,

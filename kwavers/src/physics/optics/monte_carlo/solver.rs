@@ -367,7 +367,7 @@ impl MonteCarloSolver {
     }
 
     /// Convert position to voxel indices
-    fn position_to_voxel(&self, pos: [f64; 3]) -> Option<(usize, usize, usize)> {
+    pub(crate) fn position_to_voxel(&self, pos: [f64; 3]) -> Option<(usize, usize, usize)> {
         if pos[0] < 0.0
             || pos[1] < 0.0
             || pos[2] < 0.0

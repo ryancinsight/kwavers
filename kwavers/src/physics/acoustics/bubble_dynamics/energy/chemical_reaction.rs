@@ -8,48 +8,71 @@ use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::physics::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 
 impl EnergyBalanceCalculator {
-    /// Calculate chemical reaction energy rate
+    /// Calculate thermal dissociation energy rate for water vapor.
     ///
-    /// Simplified model for sonochemistry reactions (H2O dissociation, OH radical formation)
+    /// # Reaction
     ///
-    /// # Theory
+    /// During extreme compression (T > 2000 K), water vapor dissociates endothermically:
     ///
-    /// During extreme compression (T > 2000 K), water vapor dissociates:
     /// ```text
-    /// H2O → H + OH      ΔH = +498 kJ/mol (endothermic)
-    /// 2OH → H2O + O     ΔH = -70 kJ/mol (exothermic)
+    /// H₂O + M → H• + OH•  + M     ΔH°₂₉₈ = +498.4 kJ/mol
     /// ```
     ///
-    /// Net energy absorption depends on temperature and pressure.
+    /// (Net reaction with recombination channels accounts for reduced effective ΔH.)
+    ///
+    /// # Arrhenius Rate Law
+    ///
+    /// The first-order thermal dissociation rate constant (Yasui 1997, Eq. 16;
+    /// Baulch et al. 2005, Reaction R5):
+    ///
+    /// ```text
+    /// k(T) = A · exp(−Eₐ / (R T))   [s⁻¹]
+    ///
+    /// A   = 1.912 × 10¹⁶  s⁻¹   (high-pressure limit, third-body enhanced)
+    /// Eₐ  = 495.4 kJ/mol          (O–H bond energy; NIST WebBook)
+    /// ```
+    ///
+    /// Molar dissociation rate: `ṅ = k(T) · n_vapor`  [mol/s]
+    ///
+    /// Volumetric heat absorption rate [W]:
+    /// ```text
+    /// Q̇_chem = −ΔH_diss · ṅ
+    /// ```
+    ///
+    /// Negative sign: endothermic reaction absorbs energy from the bubble.
     ///
     /// # References
     ///
-    /// - Storey & Szeri (2000) J Fluid Mech 396:203-229
-    /// - Yasui (1997) Phys Rev E 56(6):6750-6760
+    /// - Yasui K (1997). "Alternative model of single-bubble sonoluminescence."
+    ///   *Phys Rev E* 56(6):6750–6760.
+    /// - Baulch DL et al. (2005). "Evaluated kinetic data for combustion modelling."
+    ///   *J Phys Chem Ref Data* 34(3):757–1397. Reaction R5.
+    /// - Storey BD & Szeri AJ (2000). "Water vapour, sonoluminescence and sonochemistry."
+    ///   *J Fluid Mech* 396:203–229.
     #[must_use]
     pub fn calculate_chemical_reaction_rate(&self, state: &BubbleState) -> Power {
         if !self.enable_chemical_reactions || state.temperature < 2000.0 {
             return Power::new::<watt>(0.0);
         }
 
-        // Water dissociation enthalpy: ΔH_diss = 498 kJ/mol
-        const H_DISSOCIATION: f64 = 498_000.0; // J/mol
+        // Water dissociation enthalpy (Baulch et al. 2005): ΔH = 498.4 kJ/mol
+        const H_DISSOCIATION: f64 = 498_400.0; // J/mol
 
-        // Estimate reaction rate based on Arrhenius equation
-        // k = A exp(-E_a / RT) where E_a ≈ 500 kJ/mol for H2O dissociation
-        const ACTIVATION_ENERGY: f64 = 500_000.0; // J/mol
-        const PRE_EXPONENTIAL: f64 = 1e13; // 1/s
+        // Arrhenius parameters (Yasui 1997, Table I; Baulch 2005 Reaction R5)
+        const ACTIVATION_ENERGY: f64 = 495_400.0; // J/mol (O−H bond dissociation energy)
+        const PRE_EXPONENTIAL: f64 = 1.912e16;    // s⁻¹ (high-pressure limit)
 
+        // k(T) = A · exp(−Eₐ / RT)  [s⁻¹]
         let rate_constant =
             PRE_EXPONENTIAL * (-ACTIVATION_ENERGY / (R_GAS * state.temperature)).exp();
 
-        // Number of vapor molecules that can react
+        // Number of moles of water vapor that can dissociate
         let n_vapor_moles = state.n_vapor / crate::core::constants::AVOGADRO;
 
-        // Reaction rate (mol/s) - limited by vapor content and kinetics
-        let reaction_rate = rate_constant * n_vapor_moles * 0.01; // 1% per time constant
+        // Molar dissociation rate: ṅ = k × n_vapor  [mol/s]
+        let dissociation_rate_mol_per_s = rate_constant * n_vapor_moles;
 
-        // Energy rate (positive = endothermic, absorbs energy from bubble)
-        Power::new::<watt>(-reaction_rate * H_DISSOCIATION)
+        // Energy absorption rate: Q̇ = −ΔH · ṅ  [W] (negative = endothermic)
+        Power::new::<watt>(-dissociation_rate_mol_per_s * H_DISSOCIATION)
     }
 }

@@ -3365,7 +3365,6 @@ pub struct GpuPstdSession {
     last_solver_run_ns: u64,
     last_materialize_ns: u64,
     last_total_ns: u64,
-
 }
 
 impl GpuPstdSession {
@@ -3550,7 +3549,8 @@ impl GpuPstdSession {
             let alpha_np_dt_flat: Vec<f32> = if let Some(ref ab) = absorption {
                 let ab_arr = ab.as_array();
                 let f0_mhz = 1.0_f64;
-                ab_arr.iter()
+                ab_arr
+                    .iter()
                     .map(|&v| (alpha_db_cm_to_np_m(v, f0_mhz, alpha_power) * dt) as f32)
                     .collect()
             } else {
@@ -3757,7 +3757,10 @@ impl GpuPstdSession {
     /// Run one scan line using the currently resident medium buffers.
     ///
     /// This is intended for repeated steering/focusing runs in a fixed medium.
-    fn run_scan_line_cached<'py>(&mut self, _py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f64>>> {
+    fn run_scan_line_cached<'py>(
+        &mut self,
+        _py: Python<'py>,
+    ) -> PyResult<Bound<'py, PyArray2<f64>>> {
         #[cfg(not(feature = "gpu"))]
         {
             return Err(PyRuntimeError::new_err("GPU feature not enabled"));

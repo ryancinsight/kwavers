@@ -240,7 +240,8 @@ fn test_keller_miksis_collapse_time_vs_rayleigh() {
     // Verify: at t = T/4 with strong compression, K-M gives finite inward (negative) acceleration.
     // At T/4: p_acoustic_inst = p_acoustic_amplitude * sin(pi/2) = p_acoustic_amplitude.
     // So p_inf = p0 + p_acoustic_amplitude >> p_gas = p0 → inward acceleration.
-    let accel_quarter = model.calculate_acceleration(&mut state, p_acoustic_amplitude, 0.0, t_quarter);
+    let accel_quarter =
+        model.calculate_acceleration(&mut state, p_acoustic_amplitude, 0.0, t_quarter);
     assert!(
         accel_quarter.is_ok(),
         "K-M calculate_acceleration failed at t=T/4: {:?}",
@@ -275,44 +276,65 @@ fn test_keller_miksis_collapse_time_vs_rayleigh() {
         let mut s1 = state.clone();
         let rddot1 = match model.calculate_acceleration(&mut s1, p_acoustic_amplitude, 0.0, t) {
             Ok(a) => a,
-            Err(_) => { break 'integration; }
+            Err(_) => {
+                break 'integration;
+            }
         };
 
         let mut s2 = state.clone();
         s2.radius = r + 0.5 * dt * rdot;
         s2.wall_velocity = rdot + 0.5 * dt * rddot1;
-        if s2.radius <= 0.0 { break 'integration; }
-        let rddot2 = match model.calculate_acceleration(&mut s2, p_acoustic_amplitude, 0.0, t + 0.5 * dt) {
-            Ok(a) => a,
-            Err(_) => { break 'integration; }
-        };
+        if s2.radius <= 0.0 {
+            break 'integration;
+        }
+        let rddot2 =
+            match model.calculate_acceleration(&mut s2, p_acoustic_amplitude, 0.0, t + 0.5 * dt) {
+                Ok(a) => a,
+                Err(_) => {
+                    break 'integration;
+                }
+            };
 
         let mut s3 = state.clone();
         s3.radius = r + 0.5 * dt * s2.wall_velocity;
         s3.wall_velocity = rdot + 0.5 * dt * rddot2;
-        if s3.radius <= 0.0 { break 'integration; }
-        let rddot3 = match model.calculate_acceleration(&mut s3, p_acoustic_amplitude, 0.0, t + 0.5 * dt) {
-            Ok(a) => a,
-            Err(_) => { break 'integration; }
-        };
+        if s3.radius <= 0.0 {
+            break 'integration;
+        }
+        let rddot3 =
+            match model.calculate_acceleration(&mut s3, p_acoustic_amplitude, 0.0, t + 0.5 * dt) {
+                Ok(a) => a,
+                Err(_) => {
+                    break 'integration;
+                }
+            };
 
         let mut s4 = state.clone();
         s4.radius = r + dt * s3.wall_velocity;
         s4.wall_velocity = rdot + dt * rddot3;
-        if s4.radius <= 0.0 { break 'integration; }
-        let rddot4 = match model.calculate_acceleration(&mut s4, p_acoustic_amplitude, 0.0, t + dt) {
+        if s4.radius <= 0.0 {
+            break 'integration;
+        }
+        let rddot4 = match model.calculate_acceleration(&mut s4, p_acoustic_amplitude, 0.0, t + dt)
+        {
             Ok(a) => a,
-            Err(_) => { break 'integration; }
+            Err(_) => {
+                break 'integration;
+            }
         };
 
-        state.radius = r + (dt / 6.0) * (rdot + 2.0 * s2.wall_velocity + 2.0 * s3.wall_velocity + s4.wall_velocity);
+        state.radius = r
+            + (dt / 6.0)
+                * (rdot + 2.0 * s2.wall_velocity + 2.0 * s3.wall_velocity + s4.wall_velocity);
         state.wall_velocity = rdot + (dt / 6.0) * (rddot1 + 2.0 * rddot2 + 2.0 * rddot3 + rddot4);
 
         if !state.radius.is_finite() || !state.wall_velocity.is_finite() {
             all_finite = false;
             break 'integration;
         }
-        if state.radius <= 0.0 { break 'integration; }
+        if state.radius <= 0.0 {
+            break 'integration;
+        }
         t += dt;
     }
 

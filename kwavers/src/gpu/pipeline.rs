@@ -134,11 +134,11 @@ impl RealtimeImagingPipeline {
 
         // Clear buffers
         {
-            let mut input = self.input_buffer.lock().unwrap();
+            let mut input = self.input_buffer.lock().unwrap_or_else(|e| e.into_inner());
             input.clear();
         }
         {
-            let mut output = self.output_buffer.lock().unwrap();
+            let mut output = self.output_buffer.lock().unwrap_or_else(|e| e.into_inner());
             output.clear();
         }
 
@@ -155,7 +155,7 @@ impl RealtimeImagingPipeline {
             ));
         }
 
-        let mut buffer = self.input_buffer.lock().unwrap();
+        let mut buffer = self.input_buffer.lock().unwrap_or_else(|e| e.into_inner());
 
         // Check buffer capacity
         if buffer.len() >= self.config.buffer_size {
@@ -170,7 +170,7 @@ impl RealtimeImagingPipeline {
 
     /// Retrieve processed image frame
     pub fn get_processed_frame(&mut self) -> Option<Array3<f32>> {
-        let mut buffer = self.output_buffer.lock().unwrap();
+        let mut buffer = self.output_buffer.lock().unwrap_or_else(|e| e.into_inner());
         buffer.pop_front()
     }
 
@@ -184,7 +184,7 @@ impl RealtimeImagingPipeline {
 
         // Get input data
         let rf_data = {
-            let mut buffer = self.input_buffer.lock().unwrap();
+            let mut buffer = self.input_buffer.lock().unwrap_or_else(|e| e.into_inner());
             buffer.pop_front()
         };
 
@@ -194,7 +194,7 @@ impl RealtimeImagingPipeline {
 
             // Store result
             {
-                let mut output = self.output_buffer.lock().unwrap();
+                let mut output = self.output_buffer.lock().unwrap_or_else(|e| e.into_inner());
                 if output.len() < self.config.buffer_size {
                     output.push_back(processed_frame);
                 } else {
@@ -353,14 +353,14 @@ impl RealtimeImagingPipeline {
 
     /// Check if pipeline is ready for new data
     pub fn is_ready(&self) -> bool {
-        let buffer = self.input_buffer.lock().unwrap();
+        let buffer = self.input_buffer.lock().unwrap_or_else(|e| e.into_inner());
         buffer.len() < self.config.buffer_size
     }
 
     /// Get current buffer utilization
     pub fn buffer_utilization(&self) -> (f64, f64) {
-        let input_len = self.input_buffer.lock().unwrap().len();
-        let output_len = self.output_buffer.lock().unwrap().len();
+        let input_len = self.input_buffer.lock().unwrap_or_else(|e| e.into_inner()).len();
+        let output_len = self.output_buffer.lock().unwrap_or_else(|e| e.into_inner()).len();
 
         (
             input_len as f64 / self.config.buffer_size as f64,
@@ -427,7 +427,7 @@ impl StreamingDataSource {
 
                 // Check stop signal
                 {
-                    let stop = stop_signal.lock().unwrap();
+                    let stop = stop_signal.lock().unwrap_or_else(|e| e.into_inner());
                     if *stop {
                         break;
                     }
@@ -438,7 +438,7 @@ impl StreamingDataSource {
 
                 // Submit to pipeline
                 {
-                    let mut pipeline_lock = pipeline.lock().unwrap();
+                    let mut pipeline_lock = pipeline.lock().unwrap_or_else(|e| e.into_inner());
                     let _ = pipeline_lock.submit_rf_data(rf_data);
                 }
 
@@ -457,7 +457,7 @@ impl StreamingDataSource {
     /// Stop streaming data
     pub fn stop_streaming(&mut self) -> KwaversResult<()> {
         {
-            let mut stop = self.stop_signal.lock().unwrap();
+            let mut stop = self.stop_signal.lock().unwrap_or_else(|e| e.into_inner());
             *stop = true;
         }
 
@@ -635,7 +635,7 @@ mod tests {
 
         // Stop streaming and inspect buffer utilization
         data_source.stop_streaming().unwrap();
-        let mut pipeline_lock = pipeline_arc.lock().unwrap();
+        let mut pipeline_lock = pipeline_arc.lock().unwrap_or_else(|e| e.into_inner());
         let (input_util, _output_util) = pipeline_lock.buffer_utilization();
         assert!(input_util > 0.0);
 

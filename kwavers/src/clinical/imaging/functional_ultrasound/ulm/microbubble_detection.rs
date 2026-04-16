@@ -85,21 +85,12 @@ pub struct BubbleDetection {
 }
 
 /// Configuration for SVD clutter filtering.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SvdClutterConfig {
     /// Override automatic SVHT threshold with fixed k (0 = automatic).
     pub fixed_clutter_rank: usize,
     /// Safety margin added to SVHT k (default 0).
     pub rank_margin: usize,
-}
-
-impl Default for SvdClutterConfig {
-    fn default() -> Self {
-        Self {
-            fixed_clutter_rank: 0,
-            rank_margin: 0,
-        }
-    }
 }
 
 /// Configuration for Gaussian localization.
@@ -248,7 +239,7 @@ fn svht_threshold(sigma: &Array1<f64>, n_rows: usize, n_cols: usize) -> usize {
     s_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let s_med = if s_sorted.is_empty() {
         return 0;
-    } else if s_sorted.len() % 2 == 0 {
+    } else if s_sorted.len().is_multiple_of(2) {
         (s_sorted[s_sorted.len() / 2 - 1] + s_sorted[s_sorted.len() / 2]) / 2.0
     } else {
         s_sorted[s_sorted.len() / 2]
@@ -425,14 +416,14 @@ impl GaussianLocalizer {
 fn noise_std_estimate(a: &Array2<f64>) -> f64 {
     let mut vals: Vec<f64> = a.iter().copied().collect();
     vals.sort_by(|x, y| x.partial_cmp(y).unwrap());
-    let med = if vals.len() % 2 == 0 {
+    let med = if vals.len().is_multiple_of(2) {
         (vals[vals.len() / 2 - 1] + vals[vals.len() / 2]) / 2.0
     } else {
         vals[vals.len() / 2]
     };
     let mut devs: Vec<f64> = vals.iter().map(|&x| (x - med).abs()).collect();
     devs.sort_by(|x, y| x.partial_cmp(y).unwrap());
-    let mad = if devs.len() % 2 == 0 {
+    let mad = if devs.len().is_multiple_of(2) {
         (devs[devs.len() / 2 - 1] + devs[devs.len() / 2]) / 2.0
     } else {
         devs[devs.len() / 2]

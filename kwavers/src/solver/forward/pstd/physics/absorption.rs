@@ -403,7 +403,7 @@ mod tests {
 
     #[test]
     fn test_nabla_operators_correct_power() {
-        /// Verify nabla1 = k^(y-2), nabla2 = k^(y-1) at a known non-zero wavenumber.
+        // Verify nabla1 = k^(y-2), nabla2 = k^(y-1) at a known non-zero wavenumber.
         let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
         let y = 1.5_f64;

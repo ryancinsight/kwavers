@@ -214,7 +214,9 @@ impl ConservationChecker {
                 results.insert(name.clone(), result);
 
                 if self.verbose && !passed {
-                    warn!("{}", error_message.as_ref().unwrap());
+                    if let Some(msg) = error_message.as_ref() {
+                        warn!("{}", msg);
+                    }
                 }
             }
         }

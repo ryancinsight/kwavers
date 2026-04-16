@@ -202,9 +202,24 @@ impl SemBasis {
         matrix
     }
 
-    /// Compute derivatives of Lagrange functions at GLL points
+    /// Compute the spectral derivative matrix D[i,j] = dℓ_i/dξ|_{ξ_j}.
     ///
-    /// Returns matrix D where D[i,j] = dℓ_i/dξ|_(ξ_j)
+    /// ## Off-diagonal formula (Canuto et al. 2006, §2.3)
+    ///
+    /// Differentiating the Lagrange polynomial
+    /// ℓ_i(ξ) = (ξ−ξ_j)/(ξ_i−ξ_j) × ∏_{k≠i,k≠j} (ξ−ξ_k)/(ξ_i−ξ_k)
+    /// at ξ=ξ_j gives (all terms with (ξ−ξ_j) vanish):
+    ///
+    /// ```text
+    /// D[i,j] = ∏_{k≠i,k≠j} (ξ_j−ξ_k)/(ξ_i−ξ_k)  /  (ξ_i−ξ_j)    (i ≠ j)
+    /// ```
+    ///
+    /// ## Diagonal formula
+    ///
+    /// From the partition-of-unity identity Σ_i ℓ_i(ξ) ≡ 1:
+    /// ```text
+    /// D[i,i] = Σ_{k≠i} 1/(ξ_i−ξ_k)
+    /// ```
     fn compute_lagrange_derivatives(points: &Array1<f64>) -> ndarray::Array2<f64> {
         let n = points.len();
         let mut derivatives = ndarray::Array2::<f64>::zeros((n, n));
@@ -212,29 +227,16 @@ impl SemBasis {
         for i in 0..n {
             for j in 0..n {
                 if i != j {
+                    // prod = ∏_{k≠i,k≠j} (ξ_j−ξ_k)/(ξ_i−ξ_k)
                     let mut prod = 1.0;
                     for k in 0..n {
                         if k != i && k != j {
                             prod *= (points[j] - points[k]) / (points[i] - points[k]);
                         }
                     }
-
-                    let mut sum = 0.0;
-                    for k in 0..n {
-                        if k != i && k != j {
-                            let mut term = 1.0;
-                            for m in 0..n {
-                                if m != i && m != k && m != j {
-                                    term *= (points[j] - points[m]) / (points[i] - points[m]);
-                                }
-                            }
-                            sum += term;
-                        }
-                    }
-
-                    derivatives[[i, j]] = prod * sum;
+                    derivatives[[i, j]] = prod / (points[i] - points[j]);
                 } else {
-                    // Diagonal terms: dℓ_i/dξ|_(ξ_i) = sum_{j≠i} 1/(ξ_i - ξ_j)
+                    // Diagonal: Σ_{k≠i} 1/(ξ_i−ξ_k)
                     let mut sum = 0.0;
                     for k in 0..n {
                         if k != i {
@@ -304,5 +306,40 @@ mod tests {
     fn test_gll_weights_sum_to_two() {
         let basis = SemBasis::new(6);
         assert_relative_eq!(basis.gll_weights.sum(), 2.0, epsilon = 1e-12);
+    }
+
+    /// D matrix must agree with the `lagrange_derivative` method at every (i,j) pair.
+    /// This guards against a regression of the off-diagonal formula bug
+    /// (the old code computed prod × sum instead of prod / (ξ_i − ξ_j)).
+    #[test]
+    fn test_derivative_matrix_matches_method() {
+        let basis = SemBasis::new(4);
+        let n = basis.n_points();
+
+        for i in 0..n {
+            for j in 0..n {
+                let from_matrix = basis.lagrange_derivatives[[i, j]];
+                let from_method = basis.lagrange_derivative(i, basis.gll_points[j]);
+                assert!(
+                    (from_matrix - from_method).abs() < 1e-12,
+                    "D[{i},{j}]: matrix={from_matrix:.6e} method={from_method:.6e}"
+                );
+            }
+        }
+    }
+
+    /// Column sums of D must be zero: ∑_i D[i,j] = d/dξ(∑_i ℓ_i)|_{ξ_j} = 0.
+    #[test]
+    fn test_derivative_matrix_column_sums_zero() {
+        let basis = SemBasis::new(5);
+        let n = basis.n_points();
+
+        for j in 0..n {
+            let col_sum: f64 = (0..n).map(|i| basis.lagrange_derivatives[[i, j]]).sum();
+            assert!(
+                col_sum.abs() < 1e-12,
+                "Column {j} sum = {col_sum:.3e} (should be 0)"
+            );
+        }
     }
 }

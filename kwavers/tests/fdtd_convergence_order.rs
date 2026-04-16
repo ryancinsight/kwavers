@@ -63,11 +63,7 @@ fn test_fdtd_long_time_stability() -> KwaversResult<()> {
 
         // Check every 100 steps that the field hasn't drifted
         if step % 100 == 99 {
-            let max_p = solver
-                .fields
-                .p
-                .iter()
-                .fold(0.0f64, |m, &v| m.max(v.abs()));
+            let max_p = solver.fields.p.iter().fold(0.0f64, |m, &v| m.max(v.abs()));
             assert!(
                 max_p < 1e-10,
                 "Pressure grew from zero at step {}: max|p| = {:.3e} (should be < 1e-10)",
@@ -127,9 +123,8 @@ fn test_fdtd_energy_conservation_no_source() -> KwaversResult<()> {
     for i in 0..nx {
         for j in 0..nx {
             for k in 0..nx {
-                let r2 = (i as f64 - cx).powi(2)
-                    + (j as f64 - cy).powi(2)
-                    + (k as f64 - cz).powi(2);
+                let r2 =
+                    (i as f64 - cx).powi(2) + (j as f64 - cy).powi(2) + (k as f64 - cz).powi(2);
                 solver.fields.p[[i, j, k]] = 1e4 * (-r2 / w2).exp();
             }
         }

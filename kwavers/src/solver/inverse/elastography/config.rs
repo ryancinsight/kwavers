@@ -94,8 +94,16 @@ pub struct NonlinearInversionConfig {
     pub method: NonlinearInversionMethod,
     /// Tissue density (kg/m³)
     pub density: f64,
-    /// Acoustic speed in tissue (m/s)
+    /// Compressional (acoustic) wave speed in tissue [m/s]
     pub acoustic_speed: f64,
+    /// Shear wave speed [m/s].  Used to compute shear modulus μ = ρ c_s².
+    /// Typical values: liver 1–3 m/s, muscle 3–12 m/s (Nightingale 2011).
+    pub shear_wave_speed: f64,
+    /// Shear wave excitation frequency [Hz] used for k_s = ω/c_s and second-harmonic accumulation.
+    pub excitation_frequency: f64,
+    /// Effective propagation distance over which second harmonics accumulate [m].
+    /// For focused ARFI/SWE this is typically the focal depth (0.02–0.10 m).
+    pub propagation_distance: f64,
     /// Maximum iterations for iterative methods
     pub max_iterations: usize,
     /// Convergence tolerance
@@ -112,7 +120,10 @@ impl NonlinearInversionConfig {
         Self {
             method,
             density: 1000.0,        // kg/m³
-            acoustic_speed: 1540.0, // m/s (typical for soft tissue)
+            acoustic_speed: 1540.0, // m/s (typical soft tissue)
+            shear_wave_speed: 3.0,  // m/s (liver-like tissue; Nightingale 2011)
+            excitation_frequency: 100.0, // Hz (typical push-pulse SWE)
+            propagation_distance: 0.05,  // m (5 cm focal depth)
             max_iterations: 100,
             tolerance: 1e-6,
         }
@@ -122,11 +133,30 @@ impl NonlinearInversionConfig {
     ///
     /// # Arguments
     ///
-    /// * `density` - Tissue density in kg/m³
-    /// * `acoustic_speed` - Sound speed in m/s
+    /// * `density`        - Tissue density [kg/m³]
+    /// * `acoustic_speed` - Compressional wave speed [m/s]
     pub fn with_tissue_properties(mut self, density: f64, acoustic_speed: f64) -> Self {
         self.density = density;
         self.acoustic_speed = acoustic_speed;
+        self
+    }
+
+    /// Set shear-wave properties used for nonlinear parameter estimation
+    ///
+    /// # Arguments
+    ///
+    /// * `shear_wave_speed`    - Shear wave speed [m/s]
+    /// * `excitation_frequency` - SWE push-pulse frequency [Hz]
+    /// * `propagation_distance` - Effective harmonic-accumulation depth [m]
+    pub fn with_shear_properties(
+        mut self,
+        shear_wave_speed: f64,
+        excitation_frequency: f64,
+        propagation_distance: f64,
+    ) -> Self {
+        self.shear_wave_speed = shear_wave_speed;
+        self.excitation_frequency = excitation_frequency;
+        self.propagation_distance = propagation_distance;
         self
     }
 
@@ -280,6 +310,9 @@ mod tests {
             method: NonlinearInversionMethod::HarmonicRatio,
             density: 1000.0,
             acoustic_speed: 1540.0,
+            shear_wave_speed: 3.0,
+            excitation_frequency: 100.0,
+            propagation_distance: 0.05,
             max_iterations: 0,
             tolerance: 1e-6,
         };

@@ -64,7 +64,7 @@ impl RealTimeScheduler {
         let task_id = self.submitted.fetch_add(1, Ordering::SeqCst);
         let item = WorkItem::new(task_id, priority, work, current_timestamp());
 
-        let mut queue = self.queue.lock().unwrap();
+        let mut queue = self.queue.lock().unwrap_or_else(|e| e.into_inner());
         queue.push(item);
 
         // Sort by priority (highest first)
@@ -83,7 +83,7 @@ impl RealTimeScheduler {
 
     /// Add a pre-configured work item
     pub fn add_item(&self, item: WorkItem) {
-        let mut queue = self.queue.lock().unwrap();
+        let mut queue = self.queue.lock().unwrap_or_else(|e| e.into_inner());
         queue.push(item);
         queue.sort_by_key(|item| std::cmp::Reverse(item.priority));
 
@@ -98,7 +98,7 @@ impl RealTimeScheduler {
 
     /// Get next pending task
     pub fn next_task(&self) -> Option<WorkItem> {
-        let mut queue = self.queue.lock().unwrap();
+        let mut queue = self.queue.lock().unwrap_or_else(|e| e.into_inner());
         if queue.is_empty() {
             None
         } else {
@@ -143,7 +143,7 @@ impl RealTimeScheduler {
         let total_wait = self.total_wait_time.load(Ordering::Relaxed);
         let peak_queue = self.peak_queue_depth.load(Ordering::Relaxed);
 
-        let queue = self.queue.lock().unwrap();
+        let queue = self.queue.lock().unwrap_or_else(|e| e.into_inner());
         let current_queue = queue.len() as u64;
 
         let total_done = completed + failed;
@@ -182,13 +182,13 @@ impl RealTimeScheduler {
 
     /// Clear all pending tasks
     pub fn clear(&self) {
-        let mut queue = self.queue.lock().unwrap();
+        let mut queue = self.queue.lock().unwrap_or_else(|e| e.into_inner());
         queue.clear();
     }
 
     /// Get queue depth
     pub fn queue_depth(&self) -> usize {
-        let queue = self.queue.lock().unwrap();
+        let queue = self.queue.lock().unwrap_or_else(|e| e.into_inner());
         queue.len()
     }
 }

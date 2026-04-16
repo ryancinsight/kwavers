@@ -30,9 +30,9 @@
 use kwavers::domain::grid::Grid;
 use kwavers::domain::imaging::ultrasound::elastography::{ElasticityMap, InversionMethod};
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
-use kwavers::physics::imaging::elastography::displacement::DisplacementEstimator;
-use kwavers::physics::imaging::elastography::radiation_force::PushPulseParameters;
-use kwavers::physics::imaging::elastography::AcousticRadiationForce;
+use kwavers::physics::acoustics::imaging::modalities::elastography::displacement::DisplacementEstimator;
+use kwavers::physics::acoustics::imaging::modalities::elastography::radiation_force::PushPulseParameters;
+use kwavers::physics::acoustics::imaging::modalities::elastography::AcousticRadiationForce;
 use kwavers::solver::forward::elastic::swe::{ElasticWaveConfig, ElasticWaveSolver};
 use kwavers::solver::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig};
 use kwavers::KwaversError;
@@ -234,7 +234,8 @@ fn track_shear_wave_propagation(
     _medium: &HomogeneousMedium,
     _n_frames: usize,
     _frame_rate: f64,
-) -> KwaversResult<kwavers::physics::imaging::elastography::DisplacementField> {
+) -> KwaversResult<kwavers::physics::acoustics::imaging::modalities::elastography::DisplacementField>
+{
     let estimator = DisplacementEstimator::new(_grid);
     let tracked = estimator.estimate(displacement_field)?;
     Ok(tracked)

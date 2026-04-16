@@ -780,7 +780,7 @@ mod tests {
         let model = BremsstrahlungModel::default();
         for (t, p) in [(5_000.0, 1e5), (20_000.0, 1e5), (100_000.0, 1e6)] {
             let x = model.saha_ionization(t, p, 13.6);
-            assert!(x >= 0.0 && x <= 1.0, "x({t}K, {p}Pa) = {x} out of [0,1]");
+            assert!((0.0..=1.0).contains(&x), "x({t}K, {p}Pa) = {x} out of [0,1]");
         }
     }
 

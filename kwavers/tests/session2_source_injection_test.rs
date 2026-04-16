@@ -26,7 +26,7 @@ use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::signal::Signal;
 use kwavers::domain::source::custom::FunctionSource;
 use kwavers::domain::source::{GridSource, SourceField};
-use kwavers::solver::forward::fdtd::config::FdtdConfig;
+use kwavers::solver::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
 use kwavers::solver::forward::fdtd::solver::FdtdSolver;
 use ndarray::Array3;
 use std::sync::Arc;
@@ -151,6 +151,7 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
         subgrid_factor: 2,
         enable_gpu_acceleration: false,
         enable_nonlinear: false,
+        kspace_correction: KSpaceCorrectionMode::Spectral,
         sensor_mask: Some(sensor_mask),
     };
 
@@ -346,6 +347,7 @@ fn test_fdtd_point_source_injection() -> KwaversResult<()> {
         subgrid_factor: 2,
         enable_gpu_acceleration: false,
         enable_nonlinear: false,
+        kspace_correction: KSpaceCorrectionMode::Spectral,
         sensor_mask: Some(sensor_mask),
     };
 

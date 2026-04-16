@@ -770,7 +770,7 @@ mod tests {
         assert_eq!(weights.len(), 7);
         for &w in &weights {
             // Hamming minimum = 0.54 - 0.46 = 0.08
-            assert!(w >= 0.07 && w <= 1.01, "Hamming weight out of range: {}", w);
+            assert!((0.07..=1.01).contains(&w), "Hamming weight out of range: {}", w);
         }
         // Symmetric: w[i] ≈ w[N-1-i]
         for i in 0..7 {
@@ -802,8 +802,8 @@ mod tests {
     #[test]
     fn test_default_sound_speed_is_ssot_constant() {
         use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
-        let array = KWaveArray::new();
-        // Focus delays use the stored sound speed; create a trivial case to verify
+        // Focus delays use the stored sound speed; a unit-distance element yields
+        // delay = d/c = 1 m / c, giving direct access to the default sound speed.
         let mut arr = KWaveArray::new();
         arr.add_disc_element((0.0, 0.0, 0.0), 0.001);
         let delays = arr.get_focus_delays((0.0, 0.0, 1.0));

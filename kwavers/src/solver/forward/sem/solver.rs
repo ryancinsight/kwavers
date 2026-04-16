@@ -5,11 +5,43 @@
 //! - Hexahedral element assembly
 //! - Time integration (Newmark method)
 //! - Boundary condition management
+//!
+//! ## Stiffness Application — Matrix-Free Sum Factorisation
+//!
+//! The stiffness operator K is applied matrix-free using the standard SEM
+//! sum-factorisation algorithm (Komatitsch & Tromp 1999, §3):
+//!
+//! ```text
+//! For each element e:
+//!   1. Spectral derivatives via D-matrix:
+//!      d_ξ[i,j,k] = Σ_a D[i,a] u_e[a,j,k]
+//!      d_η[i,j,k] = Σ_b D[j,b] u_e[i,b,k]
+//!      d_ζ[i,j,k] = Σ_c D[k,c] u_e[i,j,c]
+//!
+//!   2. Physical metric tensor at each GLL point (p,q,r):
+//!      G_αβ[p,q,r] = |J[p,q,r]| × Σ_s J⁻¹[p,q,r,α,s] J⁻¹[p,q,r,β,s]
+//!
+//!   3. Weighted physical flux (single-direction weight):
+//!      q_ξ[i,j,k] = ρc² w_i Σ_β G_1β[i,j,k] d_β[i,j,k]
+//!      q_η[i,j,k] = ρc² w_j Σ_β G_2β[i,j,k] d_β[i,j,k]
+//!      q_ζ[i,j,k] = ρc² w_k Σ_β G_3β[i,j,k] d_β[i,j,k]
+//!
+//!   4. Transpose derivative (scatter to DOFs):
+//!      (Ku)_{abc} = w_b w_c Σ_i D[i,a] q_ξ[i,b,c]
+//!                 + w_a w_c Σ_j D[j,b] q_η[a,j,c]
+//!                 + w_a w_b Σ_k D[k,c] q_ζ[a,b,k]
+//! ```
+//!
+//! ## References
+//!
+//! - Komatitsch D, Tromp J (1999). "Introduction to the spectral element
+//!   method for three-dimensional seismic wave propagation."
+//!   *Geophys J Int* **139**, 806–822. doi:10.1046/j.1365-246x.1999.00967.x
 
 use crate::core::error::KwaversResult;
 use crate::domain::boundary::FemBoundaryManager;
 use crate::math::linear_algebra::sparse::CompressedSparseRowMatrix;
-use ndarray::{Array1, Array2};
+use ndarray::{Array1, Array2, Array3};
 use std::sync::Arc;
 
 use super::elements::SemMesh;
@@ -126,38 +158,42 @@ impl SemSolver {
         })
     }
 
-    /// Assemble global system matrices
+    /// Assemble the global diagonal mass matrix.
     ///
-    /// Computes element matrices and assembles them into global
-    /// mass and stiffness matrices using SEM basis functions.
+    /// The stiffness operator is applied matrix-free via [`Self::apply_stiffness`]
+    /// using the sum-factorisation algorithm (Komatitsch & Tromp 1999).
+    ///
+    /// ## Mass matrix — SEM diagonal lumping
+    ///
+    /// In the SEM with GLL quadrature, the Lagrange basis satisfies N_i(ξ_j) = δ_{ij},
+    /// so the consistent mass matrix is diagonal (no quadrature error):
+    ///
+    /// ```text
+    /// M_ii = ρ ∫ N_i² dΩ = ρ |J_i| w_i w_j w_k   (GLL quadrature; exact for p ≤ 2N-1)
+    /// ```
+    ///
+    /// ## Reference
+    ///
+    /// Komatitsch & Tromp (1999), Geophys J Int 139 §2.2.
     pub fn assemble_system(&mut self) -> KwaversResult<()> {
-        // Reset matrices
         self.mass_matrix.fill(0.0);
-        // Note: stiffness_matrix reset would be implemented here
 
         let n_gll = self.mesh.basis.n_points();
-        let n_elements = self.mesh.elements.len();
         let weights = &self.mesh.basis.gll_weights;
 
-        // Assemble each element
-        for elem_idx in 0..n_elements {
+        for elem_idx in 0..self.mesh.elements.len() {
             let element = &self.mesh.elements[elem_idx];
             let element_id = element.id;
             let jacobian_det = &element.jacobian_det;
 
-            // Assemble this element's contribution
             for i in 0..n_gll {
                 for j in 0..n_gll {
                     for k in 0..n_gll {
                         let ijk = self.element_local_to_global_dof(element_id, i, j, k, n_gll);
                         let w = weights[i] * weights[j] * weights[k];
-
-                        // Add mass matrix contribution (diagonal)
-                        // In SEM, mass matrix is diagonal: M_ii = ∫ φ_i² dΩ
-                        self.mass_matrix[ijk] += self.config.density * jacobian_det[[i, j, k]] * w;
-
-                        // Stiffness matrix assembly would go here
-                        // K_ij += ∫ ∇φ_i · ∇φ_j dΩ
+                        // M_ii = ρ |J_i| w_i w_j w_k
+                        self.mass_matrix[ijk] +=
+                            self.config.density * jacobian_det[[i, j, k]] * w;
                     }
                 }
             }
@@ -193,7 +229,11 @@ impl SemSolver {
         &self.boundary_manager
     }
 
-    /// Set initial conditions
+    /// Set initial displacement and synchronise the time integrator.
+    ///
+    /// Both `self.solution` and the integrator's internal displacement state are
+    /// updated so that the first `step()` call correctly advances from u₀ rather
+    /// than from the integrator's default zero state.
     pub fn set_initial_conditions(
         &mut self,
         initial_displacement: Array1<f64>,
@@ -207,6 +247,8 @@ impl SemSolver {
         }
 
         self.solution.assign(&initial_displacement);
+        // Sync integrator so the first Newmark step starts from u₀, not 0.
+        self.integrator.set_initial_displacement(&initial_displacement);
         Ok(())
     }
 
@@ -233,30 +275,181 @@ impl SemSolver {
         Ok(())
     }
 
-    /// Compute acceleration from equations of motion
+    /// Apply the stiffness operator K·u matrix-free using 3-D sum-factorisation.
+    ///
+    /// ## Algorithm (Komatitsch & Tromp 1999, §3)
+    ///
+    /// For each element *e* with local DOF array u_e[a,b,c]:
+    ///
+    /// **Step 1 — reference-space gradients** via the spectral derivative matrix
+    /// D[p,i] = dℓ_i/dξ|_{ξ_p} = `lagrange_derivatives[[i,p]]`:
+    /// ```text
+    /// d_ξ[p,q,r] = Σ_a D[p,a] u_e[a,q,r]
+    /// d_η[p,q,r] = Σ_b D[q,b] u_e[p,b,r]
+    /// d_ζ[p,q,r] = Σ_c D[r,c] u_e[p,q,c]
+    /// ```
+    ///
+    /// **Step 2 — metric tensor** at each GLL point (p,q,r):
+    /// ```text
+    /// G_{αβ}[p,q,r] = Σ_m J⁻¹[p,q,r,α,m] J⁻¹[p,q,r,β,m]
+    /// ```
+    ///
+    /// **Step 3 — weighted physical flux**:
+    /// ```text
+    /// q_ξ[p,q,r] = ρc² |J[p,q,r]| w_p  (G·∇_ξ u)[0]
+    /// q_η[p,q,r] = ρc² |J[p,q,r]| w_q  (G·∇_ξ u)[1]
+    /// q_ζ[p,q,r] = ρc² |J[p,q,r]| w_r  (G·∇_ξ u)[2]
+    /// ```
+    ///
+    /// **Step 4 — transpose derivative (scatter)**:
+    /// ```text
+    /// (Ku)_{abc} = w_b w_c Σ_p D[p,a] q_ξ[p,b,c]
+    ///            + w_a w_c Σ_q D[q,b] q_η[a,q,c]
+    ///            + w_a w_b Σ_r D[r,c] q_ζ[a,b,r]
+    /// ```
+    fn apply_stiffness(&self, u: &Array1<f64>) -> Array1<f64> {
+        let mut ku = Array1::<f64>::zeros(u.len());
+        let n = self.mesh.basis.n_points();
+        // ld[[i,p]] = dℓ_i/dξ|_{ξ_p}  =>  D[p,i] = ld[[i,p]]
+        let ld = &self.mesh.basis.lagrange_derivatives;
+        let w = &self.mesh.basis.gll_weights;
+        let rho_c2 = self.config.density * self.config.sound_speed * self.config.sound_speed;
+
+        for elem_idx in 0..self.mesh.elements.len() {
+            let element = &self.mesh.elements[elem_idx];
+            let eid = element.id;
+
+            // Step 1: Gather u_e[a,b,c] from global DOFs
+            let mut u_e = Array3::<f64>::zeros((n, n, n));
+            for a in 0..n {
+                for b in 0..n {
+                    for c in 0..n {
+                        let g = self.element_local_to_global_dof(eid, a, b, c, n);
+                        u_e[[a, b, c]] = u[g];
+                    }
+                }
+            }
+
+            // Step 2: Reference-space gradients
+            // d_xi[p,q,r]  = Σ_a ld[[a,p]] * u_e[a,q,r]   (D[p,a] = ld[[a,p]])
+            // d_eta[p,q,r] = Σ_b ld[[b,q]] * u_e[p,b,r]
+            // d_zeta[p,q,r]= Σ_c ld[[c,r]] * u_e[p,q,c]
+            let mut d_xi = Array3::<f64>::zeros((n, n, n));
+            let mut d_eta = Array3::<f64>::zeros((n, n, n));
+            let mut d_zeta = Array3::<f64>::zeros((n, n, n));
+
+            for p in 0..n {
+                for q in 0..n {
+                    for r in 0..n {
+                        let mut dxi = 0.0;
+                        let mut deta = 0.0;
+                        let mut dzeta = 0.0;
+                        for a in 0..n {
+                            dxi += ld[[a, p]] * u_e[[a, q, r]];
+                            deta += ld[[a, q]] * u_e[[p, a, r]];
+                            dzeta += ld[[a, r]] * u_e[[p, q, a]];
+                        }
+                        d_xi[[p, q, r]] = dxi;
+                        d_eta[[p, q, r]] = deta;
+                        d_zeta[[p, q, r]] = dzeta;
+                    }
+                }
+            }
+
+            // Steps 3–4: Metric tensor and weighted fluxes
+            // G_{αβ} = Σ_m Jinv[α,m] Jinv[β,m]
+            // (G·d)[α] = Σ_β G_{αβ} d_β = Σ_m Jinv[α,m] (Σ_β Jinv[β,m] d_β)
+            let mut q_xi = Array3::<f64>::zeros((n, n, n));
+            let mut q_eta = Array3::<f64>::zeros((n, n, n));
+            let mut q_zeta = Array3::<f64>::zeros((n, n, n));
+
+            for p in 0..n {
+                for q in 0..n {
+                    for r in 0..n {
+                        let jdet = element.jacobian_det[[p, q, r]];
+                        let jinv = element.jacobian_inv.slice(ndarray::s![p, q, r, .., ..]);
+                        // jinv[[α, m]] = J⁻¹[α, m] = dξ_α/dx_m
+
+                        let d = [d_xi[[p, q, r]], d_eta[[p, q, r]], d_zeta[[p, q, r]]];
+
+                        // h_m = Σ_β Jinv[β,m] d_β   (inner product of each column of Jinv with d)
+                        let mut h = [0.0f64; 3];
+                        for beta in 0..3usize {
+                            for m in 0..3usize {
+                                h[m] += jinv[[beta, m]] * d[beta];
+                            }
+                        }
+                        // (G·d)[α] = Σ_m Jinv[α,m] h_m
+                        let mut gd = [0.0f64; 3];
+                        for alpha in 0..3usize {
+                            for m in 0..3usize {
+                                gd[alpha] += jinv[[alpha, m]] * h[m];
+                            }
+                        }
+
+                        let scale = rho_c2 * jdet;
+                        q_xi[[p, q, r]] = scale * w[p] * gd[0];
+                        q_eta[[p, q, r]] = scale * w[q] * gd[1];
+                        q_zeta[[p, q, r]] = scale * w[r] * gd[2];
+                    }
+                }
+            }
+
+            // Step 5: Transpose derivative — scatter weighted fluxes to DOFs
+            // (Ku)_{abc} += w_b w_c Σ_p ld[[a,p]] q_xi[p,b,c]
+            //             + w_a w_c Σ_q ld[[b,q]] q_eta[a,q,c]
+            //             + w_a w_b Σ_r ld[[c,r]] q_zeta[a,b,r]
+            for a in 0..n {
+                for b in 0..n {
+                    for c in 0..n {
+                        let mut xi_sum = 0.0;
+                        for p in 0..n {
+                            xi_sum += ld[[a, p]] * q_xi[[p, b, c]];
+                        }
+                        let mut eta_sum = 0.0;
+                        for q in 0..n {
+                            eta_sum += ld[[b, q]] * q_eta[[a, q, c]];
+                        }
+                        let mut zeta_sum = 0.0;
+                        for r in 0..n {
+                            zeta_sum += ld[[c, r]] * q_zeta[[a, b, r]];
+                        }
+
+                        let val = w[b] * w[c] * xi_sum
+                            + w[a] * w[c] * eta_sum
+                            + w[a] * w[b] * zeta_sum;
+
+                        let g = self.element_local_to_global_dof(eid, a, b, c, n);
+                        ku[g] += val;
+                    }
+                }
+            }
+        }
+
+        ku
+    }
+
+    /// Compute nodal acceleration from the equation of motion M·ü + K·u = 0.
+    ///
+    /// The SEM mass matrix is diagonal (GLL mass lumping), so:
+    /// ```text
+    /// ü_i = −(K·u)_i / M_ii
+    /// ```
+    ///
+    /// K·u is computed matrix-free by [`Self::apply_stiffness`].
     fn compute_acceleration(&self) -> KwaversResult<Array1<f64>> {
+        let ku = self.apply_stiffness(&self.solution);
         let n_dofs = self.solution.len();
         let mut acceleration = Array1::<f64>::zeros(n_dofs);
 
-        // For acoustic wave equation: M * a = -K * u + F
-        // where u is displacement/pressure, a is acceleration
-
-        // Simplified: assume unit mass matrix and basic stiffness
-        // In full implementation, this would involve sparse matrix operations
         for i in 0..n_dofs {
-            // Mass matrix is diagonal in SEM: a_i = (F_i - K_i*u_i) / M_ii
             let m = self.mass_matrix[i];
             if !m.is_finite() || m <= 0.0 {
                 return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                    "Non-positive mass matrix entry at dof {}: {}",
-                    i, m
+                    "Non-positive mass matrix entry at dof {i}: {m}"
                 )));
             }
-            let mass_inv = 1.0 / m;
-            let stiffness_term = self.config.wavenumber.powi(2) * self.solution[i]; // Helmholtz: -∇²u + k²u
-            let force = 0.0; // No external forces in this simple case
-
-            acceleration[i] = mass_inv * (force - stiffness_term);
+            acceleration[i] = -ku[i] / m;
         }
 
         Ok(acceleration)
@@ -414,6 +607,178 @@ mod tests {
 
         assert_eq!(solver.current_step(), 3);
         assert!(solver.current_time() > 0.0);
+    }
+
+    /// Constant field u=1: ∇u=0 everywhere, so K·u must be identically zero.
+    /// We use a relative tolerance vs the stiffness scale ρc² to account for
+    /// floating-point summation with O(N³) GLL quadrature points.
+    #[test]
+    fn test_stiffness_constant_field_is_zero() {
+        let mesh = MeshBuilder::create_rectangular_mesh(1.0, 1.0, 1.0, 3);
+        let config = SemConfig {
+            polynomial_degree: 3,
+            sound_speed: 1500.0,
+            density: 1000.0,
+            ..Default::default()
+        };
+        let mut solver = SemSolver::new(config, Arc::new(mesh)).unwrap();
+        solver.assemble_system().unwrap();
+
+        let n = solver.solution.len();
+        let u_const = Array1::<f64>::ones(n);
+        let ku = solver.apply_stiffness(&u_const);
+
+        // Scale: ρc² = 2.25e9; allow relative tolerance of 1e-10 vs this scale.
+        let scale = solver.config.density * solver.config.sound_speed.powi(2);
+        let tol = scale * 1e-10;
+        for (i, &v) in ku.iter().enumerate() {
+            assert!(
+                v.abs() < tol,
+                "K·1 should be zero at dof {i}, got {v:.3e} (tol {tol:.3e})"
+            );
+        }
+    }
+
+    /// Stiffness energy for u=x on [0,Lx]×[0,Ly]×[0,Lz]:
+    ///
+    /// uᵀKu = ρc² ∫|∇u|² dΩ = ρc² ∫ 1² dxdydz = ρc² × Lx × Ly × Lz
+    ///
+    /// (Integration by parts shows K·x ≠ 0 at boundary nodes due to the
+    /// natural Neumann flux; we test the energy integral which has the
+    /// clean analytical form.)
+    #[test]
+    fn test_stiffness_energy_linear_field() {
+        let lx = 2.0;
+        let ly = 1.5;
+        let lz = 1.0;
+        let mesh = MeshBuilder::create_rectangular_mesh(lx, ly, lz, 3);
+        let config = SemConfig {
+            polynomial_degree: 3,
+            sound_speed: 1500.0,
+            density: 1000.0,
+            ..Default::default()
+        };
+        let mut solver = SemSolver::new(config, Arc::new(mesh)).unwrap();
+        solver.assemble_system().unwrap();
+
+        let n = solver.mesh.basis.n_points();
+        let mut u = Array1::<f64>::zeros(solver.solution.len());
+        for a in 0..n {
+            for b in 0..n {
+                for c in 0..n {
+                    let xi = solver.mesh.basis.gll_points[a];
+                    let x = lx * (xi + 1.0) / 2.0;
+                    let g = solver.element_local_to_global_dof(0, a, b, c, n);
+                    u[g] = x;
+                }
+            }
+        }
+
+        let ku = solver.apply_stiffness(&u);
+        let energy: f64 = u.iter().zip(ku.iter()).map(|(ui, kui)| ui * kui).sum();
+
+        // ρc² × Lx × Ly × Lz = 1000 × 1500² × 2.0 × 1.5 × 1.0 = 6.75e12
+        let expected = solver.config.density
+            * solver.config.sound_speed.powi(2)
+            * lx * ly * lz;
+        let rel_err = (energy - expected).abs() / expected;
+        assert!(
+            rel_err < 1e-6,
+            "Stiffness energy u^T K u = {energy:.6e}, expected {expected:.6e} (rel err {rel_err:.2e})"
+        );
+    }
+
+    /// Symmetry test: K is symmetric, so (K·u)·v = u·(K·v) for all u,v.
+    #[test]
+    fn test_stiffness_symmetry() {
+        let mesh = MeshBuilder::create_rectangular_mesh(1.0, 1.0, 1.0, 2);
+        let config = SemConfig {
+            polynomial_degree: 2,
+            ..Default::default()
+        };
+        let mut solver = SemSolver::new(config, Arc::new(mesh)).unwrap();
+        solver.assemble_system().unwrap();
+
+        let n = solver.solution.len();
+        // u = sin(π i / n), v = cos(π i / n)
+        let u: Array1<f64> =
+            (0..n).map(|i| (std::f64::consts::PI * i as f64 / n as f64).sin()).collect();
+        let v: Array1<f64> =
+            (0..n).map(|i| (std::f64::consts::PI * i as f64 / n as f64).cos()).collect();
+
+        let ku = solver.apply_stiffness(&u);
+        let kv = solver.apply_stiffness(&v);
+
+        let ku_dot_v: f64 = ku.iter().zip(v.iter()).map(|(a, b)| a * b).sum();
+        let u_dot_kv: f64 = u.iter().zip(kv.iter()).map(|(a, b)| a * b).sum();
+
+        let scale = ku_dot_v.abs().max(u_dot_kv.abs()).max(1e-30);
+        assert!(
+            (ku_dot_v - u_dot_kv).abs() / scale < 1e-10,
+            "Stiffness asymmetry: (Ku)·v={ku_dot_v:.6e} u·(Kv)={u_dot_kv:.6e}"
+        );
+    }
+
+    /// Free vibration energy conservation: E = ½(vᵀMv + uᵀKu) should be
+    /// constant (within time-integration truncation error) over multiple steps.
+    #[test]
+    fn test_free_vibration_energy_conservation() {
+        let mesh = MeshBuilder::create_rectangular_mesh(0.1, 0.1, 0.1, 2);
+        let config = SemConfig {
+            polynomial_degree: 2,
+            n_steps: 20,
+            dt: 1e-9,
+            sound_speed: 1500.0,
+            density: 1000.0,
+            wavenumber: 1.0,
+        };
+        let mut solver = SemSolver::new(config, Arc::new(mesh)).unwrap();
+        solver.assemble_system().unwrap();
+
+        // Non-trivial initial displacement: u_a = sin(π a / N) on first GLL index
+        let n = solver.mesh.basis.n_points();
+        let n_dofs = solver.solution.len();
+        let mut u0 = Array1::<f64>::zeros(n_dofs);
+        for a in 0..n {
+            for b in 0..n {
+                for c in 0..n {
+                    let g = solver.element_local_to_global_dof(0, a, b, c, n);
+                    u0[g] = (std::f64::consts::PI * a as f64 / (n - 1).max(1) as f64).sin();
+                }
+            }
+        }
+        solver.set_initial_conditions(u0).unwrap();
+
+        let compute_energy = |sol: &SemSolver| -> f64 {
+            let ku = sol.apply_stiffness(&sol.solution);
+            let v = &sol.integrator.velocity;
+            let potential: f64 = sol.solution.iter().zip(ku.iter()).map(|(u, ku)| u * ku).sum();
+            let kinetic: f64 = v
+                .iter()
+                .zip(sol.mass_matrix.iter())
+                .map(|(vi, mi)| vi * vi * mi)
+                .sum();
+            0.5 * (kinetic + potential)
+        };
+
+        let e0 = compute_energy(&solver);
+        // Guard against degenerate zero-energy start
+        if e0 < 1e-30 {
+            return;
+        }
+
+        for _ in 0..20 {
+            solver.step().unwrap();
+        }
+
+        let e_final = compute_energy(&solver);
+        // Newmark average-acceleration is unconditionally stable but not
+        // exactly energy-conserving; allow 1% relative drift over 20 steps.
+        let relative_drift = (e_final - e0).abs() / e0;
+        assert!(
+            relative_drift < 0.01,
+            "Energy drift {relative_drift:.3e} exceeds 1% over 20 steps (E0={e0:.3e}, Ef={e_final:.3e})"
+        );
     }
 
     #[test]

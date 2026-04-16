@@ -75,23 +75,46 @@ impl CEUSReconstruction {
         })
     }
 
-    /// Nonlinear beamforming for contrast signals
+    /// Nonlinear beamforming for contrast signals.
+    ///
+    /// ## Coherence Weighting
+    ///
+    /// Applies amplitude-coherence weighting (ACW) to enhance microbubble
+    /// nonlinear echoes relative to tissue clutter:
+    ///
+    /// ```text
+    /// w(r) = |p(r)| / max_r(|p|)     [dimensionless, ∈ [0, 1]]
+    /// p_beamformed(r) = p(r) · w(r)
+    /// ```
+    ///
+    /// Normalisation is dynamic — relative to the field maximum — so the
+    /// weighting is independent of absolute pressure scale (no hardcoded
+    /// reference pressure). Voxels with the strongest signal receive unit
+    /// weight; weak clutter is attenuated proportionally.
+    ///
+    /// Reference: Lediju MA et al. (2011). "Short-lag spatial coherence of
+    /// backscattered echoes." *IEEE Trans Ultrason Ferroelectr Freq Control*
+    /// 58(7), 1377–1388.
     fn nonlinear_beamforming(&self, signals: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        // Simplified beamforming - in practice this would be much more complex
-        // involving delay-and-sum with apodization, etc.
-
         let mut beamformed = signals.clone();
 
-        // Apply coherence weighting for microbubble signal enhancement
+        // Dynamic maximum for normalisation (avoids hardcoded reference pressure)
+        let max_abs = signals
+            .iter()
+            .fold(0.0_f64, |acc, &v| acc.max(v.abs()));
+
+        if max_abs == 0.0 {
+            // All-zero input — nothing to weight
+            return Ok(beamformed);
+        }
+
+        // Apply amplitude-coherence weighting: w(r) = |p(r)| / max|p|
         let (nx, ny, nz) = beamformed.dim();
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    // Simple amplitude weighting based on signal strength
-                    let signal_strength = signals[[i, j, k]].abs();
-                    if signal_strength > 0.0 {
-                        beamformed[[i, j, k]] *= (signal_strength / 1e6).min(1.0);
-                    }
+                    let w = signals[[i, j, k]].abs() / max_abs; // ∈ [0, 1]
+                    beamformed[[i, j, k]] *= w;
                 }
             }
         }

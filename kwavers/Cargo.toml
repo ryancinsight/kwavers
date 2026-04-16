@@ -21,6 +21,7 @@ rayon = "1.10"
 rustfft = "6.2"
 num-complex = "0.4"
 num-traits = "0.2"
+apollofft = { path = "../apollo/crates/apollofft" }
 
 # Error handling (production critical)
 thiserror = "1.0"
@@ -113,8 +114,8 @@ aws-sdk-autoscaling = { version = "1.0", optional = true }
 aws-sdk-applicationautoscaling = { version = "1.0", optional = true }
 aws-config = { version = "1.0", optional = true }
 
-# Medical image registration toolkit (optional)
-ritk-registration = { path = "../ritk/crates/ritk-registration", optional = true }
+# Medical image registration toolkit
+ritk-registration = { path = "../ritk/crates/ritk-registration" }
 ritk-core = { path = "../ritk/crates/ritk-core", optional = true }
 
 [dev-dependencies]
@@ -165,7 +166,7 @@ cloud-aws = ["cloud", "dep:aws-sdk-sagemaker", "dep:aws-sdk-lambda", "dep:aws-sd
 # Feature flags for conditional compilation (used in tests/examples)
 em_pinn_module_exists = []          # Conditional feature for electromagnetic PINN tests
 ai_integration_module_exists = []   # Conditional feature for AI integration tests
-ritk = ["dep:ritk-registration", "dep:ritk-core"]  # Medical image registration via ritk toolkit
+ritk = ["dep:ritk-core"]  # Medical image registration via ritk toolkit
 full = ["gpu", "plotting", "parallel", "dicom", "nifti", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn", "api", "cloud", "cloud-aws", "ritk"]
 
 # SRS NFR-002 Compliant Test Configuration Strategy
@@ -265,6 +266,11 @@ name = "physics_validation"
 harness = true
 required-features = ["full"]
 
+[[test]]
+name = "dg_convergence"
+harness = true
+required-features = []
+
 [lib]
 test = true
 
@@ -350,5 +356,4 @@ required-features = ["pinn"]
 [[bench]]
 name = "gpu_beamforming_benchmark"
 harness = false
-
 

@@ -2,6 +2,13 @@
 members = ["kwavers", "xtask", "pykwavers"]
 resolver = "2"
 
+[workspace.dependencies]
+# Required so Cargo can parse ritk-io/Cargo.toml (which inherits from its own workspace).
+burn = { version = "0.19", features = ["wgpu", "autodiff"] }
+nalgebra = { version = "0.33", features = ["serde-serialize"] }
+dicom = "0.8.0"
+nifti = "0.17.0"
+
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 

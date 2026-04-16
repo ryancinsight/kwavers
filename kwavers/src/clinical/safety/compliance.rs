@@ -40,7 +40,6 @@
 
 use super::mechanical_index::TissueType;
 use crate::clinical::therapy::parameters::TherapyParameters;
-use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::VecDeque;
 use std::time::Instant;
@@ -374,28 +373,55 @@ impl EnhancedComplianceValidator {
         Ok(audit)
     }
 
-    /// Estimate temperature rise from therapy parameters
+    /// Estimate tissue temperature rise from acoustic therapy parameters.
+    ///
+    /// # Physics
+    ///
+    /// The temperature rise at the focus is derived from the Pennes bioheat
+    /// equation in steady-state with no perfusion (worst-case estimate):
+    ///
+    /// ```text
+    /// ΔT = Q · t_eff / (ρ · c_p)
+    /// ```
+    ///
+    /// where:
+    /// - `Q` = volumetric heat source rate = `2α · I_SPTA`  [W/m³]
+    /// - `t_eff = t_treatment × duty_cycle`               [s]
+    /// - `I_SPTA = p_rms² / (ρ_water · c_water)`          [W/m²] (plane-wave SPTA)
+    /// - `p_rms = pressure / √2`                           [Pa] (sinusoidal assumption)
+    /// - `α` = tissue amplitude absorption at `f`          [Np/m]
+    ///   = 0.3 dB/cm/MHz × f_MHz × (100 cm/m) / 8.686 Np/dB
+    ///
+    /// Reference: Nyborg WL (1988), "Solutions of the bio-heat transfer equation",
+    /// *Phys. Med. Biol.* 33(7):785–792. Duck FA (1990), *Physical Properties of Tissue*, §8.
     fn estimate_temperature_rise(&self, params: &TherapyParameters) -> f64 {
-        // Simplified model: T_rise ≈ (I * t) / (ρ * c) / 1000
-        // where I is intensity, t is time, ρ is density, c is specific heat
-        //
-        // More realistic: T_rise = (P * t) / (V * ρ * c)
-        // Assuming ~5mm focus region: V ≈ π * (2.5mm)³ ≈ 65 mm³
-        //
-        // Tissue properties (approximate):
-        // ρ ≈ 1000 kg/m³, c ≈ 3500 J/(kg·K)
+        use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL as RHO_W, SOUND_SPEED_WATER};
 
-        const TISSUE_HEAT_CAPACITY: f64 = 3500.0; // J/(kg·K)
-        const FOCAL_VOLUME_M3: f64 = 65e-9; // 65 mm³
+        // Tissue bioheat constants (Duck 1990, Table 8.1 — soft tissue average)
+        const TISSUE_DENSITY: f64 = 1060.0; // kg/m³
+        const TISSUE_HEAT_CAPACITY: f64 = 3500.0; // J/(kg·K) — soft tissue c_p
 
-        let tissue_mass = DENSITY_WATER_NOMINAL * FOCAL_VOLUME_M3;
-        let energy_delivered = params.pressure * params.duration * params.duty_cycle;
+        // Acoustic absorption coefficient for soft tissue (IEC 62127 model)
+        // α [dB/cm/MHz] × f_MHz × (100 cm/m) / 8.686 [Np per dB] → Np/m
+        let f_mhz = (params.frequency / 1e6).max(1e-3);
+        let alpha_np_per_m = 0.3 * f_mhz * 100.0 / 8.686;
 
-        // Simplified: assumes all acoustic energy converts to heat
-        // Real systems: some energy is reflected, scattered, transmitted
-        let temp_rise = energy_delivered / (tissue_mass * TISSUE_HEAT_CAPACITY);
+        // Plane-wave SPTA intensity from peak pressure amplitude:
+        //   I_SPTA = (p_peak / √2)² / (ρ_water · c_water)  [W/m²]
+        let p_rms = params.pressure / std::f64::consts::SQRT_2;
+        let i_spta = (p_rms * p_rms) / (RHO_W * SOUND_SPEED_WATER);
 
-        temp_rise.min(self.config.max_temp_rise * 2.0) // Cap at 2x limit for safety
+        // Volumetric heat source rate: Q = 2α · I_SPTA  [W/m³]
+        let q_vol = 2.0 * alpha_np_per_m * i_spta;
+
+        // Effective sonication time accounting for duty cycle
+        let t_eff = params.treatment_duration * params.duty_cycle;
+
+        // Adiabatic temperature rise (no thermal diffusion — worst case):
+        //   ΔT = Q · t_eff / (ρ_tissue · c_p)
+        let delta_t = q_vol * t_eff / (TISSUE_DENSITY * TISSUE_HEAT_CAPACITY);
+
+        delta_t.min(self.config.max_temp_rise * 2.0) // cap at 2× safety limit
     }
 
     /// Start a new treatment session

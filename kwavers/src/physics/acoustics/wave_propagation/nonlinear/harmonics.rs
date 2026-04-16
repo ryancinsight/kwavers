@@ -444,7 +444,7 @@ mod tests {
         let params = soft_tissue();
         let f_opt = optimal_harmonic_frequency(0.05, &params);
         assert!(
-            f_opt >= 1.0e6 && f_opt <= 15.0e6,
+            (1.0e6..=15.0e6).contains(&f_opt),
             "f_opt = {f_opt:.2e} Hz must be in [1, 15] MHz"
         );
     }

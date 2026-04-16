@@ -358,10 +358,12 @@ impl BayesianFilter {
         // Since H = [I₃|0₃], H·P·Hᵀ = upper-left 3×3 block of P.
         let sig_m2 = self.config.measurement_noise;
         let p = &self.covariance;
+        // Row-major 6×6 indexing helper: P(i, j) = p[i*6 + j].
+        let p_ij = |i: usize, j: usize| p[i * 6 + j];
         let s: [f64; 9] = [
-            p[0 * 6 + 0] + sig_m2, p[0 * 6 + 1],         p[0 * 6 + 2],
-            p[1 * 6 + 0],          p[1 * 6 + 1] + sig_m2, p[1 * 6 + 2],
-            p[2 * 6 + 0],          p[2 * 6 + 1],          p[2 * 6 + 2] + sig_m2,
+            p_ij(0, 0) + sig_m2, p_ij(0, 1),          p_ij(0, 2),
+            p_ij(1, 0),          p_ij(1, 1) + sig_m2, p_ij(1, 2),
+            p_ij(2, 0),          p_ij(2, 1),          p_ij(2, 2) + sig_m2,
         ];
 
         // ── 3. Kalman gain K = P·Hᵀ·S⁻¹ ∈ ℝ^(6×3) ─────────────────────────────

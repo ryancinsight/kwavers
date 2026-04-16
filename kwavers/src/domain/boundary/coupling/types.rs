@@ -24,15 +24,48 @@ pub enum PhysicsDomain {
 /// Type of coupling between physics domains
 #[derive(Debug, Clone, PartialEq)]
 pub enum CouplingType {
-    /// Acoustic-elastic coupling (fluid-structure interaction)
-    AcousticElastic,
+    /// Acoustic-elastic coupling (fluid-structure interaction).
+    ///
+    /// Carries the specific acoustic impedances Z = ρc [Pa·s/m = Rayl] of the
+    /// two media on either side of the interface. These are required to compute
+    /// the plane-wave power transmission coefficient
+    ///
+    /// ```text
+    /// τ = 4 Z₁ Z₂ / (Z₁ + Z₂)²    (Brekhovskikh & Godin 1998, §1.5)
+    /// ```
+    ///
+    /// Typical values:
+    /// - Water:       Z ≈ 1.479×10⁶ Rayl  (ρ = 998 kg/m³, c = 1482 m/s)
+    /// - Soft tissue: Z ≈ 1.632×10⁶ Rayl  (ρ = 1060 kg/m³, c = 1540 m/s)
+    /// - Cortical bone: Z ≈ 6.26×10⁶ Rayl (ρ = 1900 kg/m³, c = 3294 m/s)
+    AcousticElastic {
+        /// Specific acoustic impedance of medium 1 [Pa·s/m = Rayl]
+        z1_rayl: f64,
+        /// Specific acoustic impedance of medium 2 [Pa·s/m = Rayl]
+        z2_rayl: f64,
+    },
     /// Electromagnetic-acoustic coupling (optoacoustic, photoacoustic)
     ElectromagneticAcoustic {
         /// Optical absorption coefficient (m⁻¹)
         optical_absorption: f64,
+        /// Grüneisen parameter Γ = β c² / c_p (dimensionless).
+        /// Water: Γ ≈ 0.12 (20°C); soft tissue: Γ ≈ 0.15 (37°C).
+        /// Reference: Xu & Wang (2006), Rev. Sci. Instrum. 77, 041101.
+        gruneisen: f64,
     },
-    /// Acoustic-thermal coupling (heat generation from absorption)
-    AcousticThermal,
+    /// Acoustic-thermal coupling (heat generation from absorption).
+    ///
+    /// Carries the acoustic absorption coefficient α [Np/m] and the
+    /// medium density ρ [kg/m³] and specific heat c_p [J/(kg·K)] needed
+    /// to compute the volumetric heat source Q = 2αI/(ρc_p).
+    AcousticThermal {
+        /// Acoustic amplitude absorption coefficient [Np/m]
+        alpha_np_per_m: f64,
+        /// Density [kg/m³]
+        rho_kg_per_m3: f64,
+        /// Specific heat at constant pressure [J/(kg·K)]
+        c_p_j_per_kg_k: f64,
+    },
     /// Electromagnetic-thermal coupling (Joule heating)
     ElectromagneticThermal,
     /// Custom coupling type (user-defined)

@@ -128,7 +128,7 @@ impl RadicalDiffusionSolver {
     /// Returns [`DiffusionError`] if geometry or numerics are invalid.
     pub fn step(
         &self,
-        concentrations: &mut Vec<Vec<f64>>,
+        concentrations: &mut [Vec<f64>],
         bubble_concs: &[f64],
         dt: f64,
         diffusion_coefficients: &[f64],
@@ -238,7 +238,7 @@ impl RadicalDiffusionSolver {
             }
         }
 
-        Ok(DiffusionStepResult { concentrations: concentrations.clone(), max_delta })
+        Ok(DiffusionStepResult { concentrations: concentrations.to_vec(), max_delta })
     }
 
     /// Build the logarithmic radial grid `r[j] = R_bubble · exp(j · Δξ)`.

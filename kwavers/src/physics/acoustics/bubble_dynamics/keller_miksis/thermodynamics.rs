@@ -474,7 +474,7 @@ mod tests {
             // Simple forward-Euler temperature update using the full update_temperature
             if super::update_temperature(&model, &mut state, dt).is_ok() {
                 // artificially drive collapse via compression (wall velocity inward)
-                state.wall_velocity = -1.0 * (step as f64 + 1.0); // increasing collapse speed
+                state.wall_velocity = -(step as f64 + 1.0); // increasing collapse speed
             }
             peak_temp_with_latent = peak_temp_with_latent.max(state.temperature);
         }

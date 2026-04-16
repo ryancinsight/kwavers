@@ -1,6 +1,5 @@
 use super::super::ros_species::ROSSpecies;
-use super::model::{BubbleState, SonochemistryModel};
-use ndarray::Array3;
+use super::model::SonochemistryModel;
 
 #[test]
 fn test_zeldovich_ros_generation_rates() {
@@ -47,6 +46,10 @@ fn test_ph_update() {
     }
 
     let initial_ph = model.ph_field[[1, 1, 1]];
+    assert!(
+        (initial_ph - 7.0).abs() < 1e-12,
+        "pH must initialize to neutral 7.0 per SonochemistryModel::new"
+    );
     model.update_ph(1.0);
     let final_ph = model.ph_field[[1, 1, 1]];
 

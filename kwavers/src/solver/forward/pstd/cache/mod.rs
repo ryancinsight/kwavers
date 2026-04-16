@@ -218,7 +218,7 @@ impl KSpaceCache {
 
         // Step 2: Check global cache
         {
-            let global = GLOBAL_CACHE.read().unwrap();
+            let global = GLOBAL_CACHE.read().unwrap_or_else(|e| e.into_inner());
             if let Some(ops) = global.get(&key) {
                 self.stats.global_hits += 1;
                 let ops = ops.clone();
@@ -250,7 +250,7 @@ impl KSpaceCache {
 
         // Store in global cache
         {
-            let mut global = GLOBAL_CACHE.write().unwrap();
+            let mut global = GLOBAL_CACHE.write().unwrap_or_else(|e| e.into_inner());
             global.insert(key, ops.clone());
         }
 
@@ -271,7 +271,7 @@ impl KSpaceCache {
 
     /// Clear global cache (all threads)
     pub fn clear_global_cache(&self) {
-        let mut global = GLOBAL_CACHE.write().unwrap();
+        let mut global = GLOBAL_CACHE.write().unwrap_or_else(|e| e.into_inner());
         global.clear();
     }
 }

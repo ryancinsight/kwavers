@@ -76,11 +76,7 @@ fn run_pstd_and_measure_peak(
         solver.step_forward()?;
     }
 
-    let peak = solver
-        .fields
-        .p
-        .iter()
-        .fold(0.0f64, |m, &v| m.max(v.abs()));
+    let peak = solver.fields.p.iter().fold(0.0f64, |m, &v| m.max(v.abs()));
     Ok(peak)
 }
 
@@ -118,9 +114,13 @@ fn test_pstd_1d_vs_3d_source_amplitude_parity() -> KwaversResult<()> {
 
     // After fix: ratio should be within [0.5, 2.0]
     // Before fix: ratio would be ≈3 (1D was 3× too high)
-    let ratio = if peak_3d > 0.0 { peak_1d / peak_3d } else { f64::INFINITY };
+    let ratio = if peak_3d > 0.0 {
+        peak_1d / peak_3d
+    } else {
+        f64::INFINITY
+    };
     assert!(
-        ratio >= 0.4 && ratio <= 2.5,
+        (0.4..=2.5).contains(&ratio),
         "1D/3D peak pressure ratio should be near 1 after n_dim/3 fix; \
          got ratio={ratio:.3} (1D peak={peak_1d:.3e} Pa, 3D peak={peak_3d:.3e} Pa). \
          Ratio ≈3 would indicate the fix is not applied."
@@ -157,9 +157,13 @@ fn test_pstd_2d_vs_3d_source_amplitude_parity() -> KwaversResult<()> {
         "3D PSTD peak should be non-zero, got {peak_3d:.3e}"
     );
 
-    let ratio = if peak_3d > 0.0 { peak_2d / peak_3d } else { f64::INFINITY };
+    let ratio = if peak_3d > 0.0 {
+        peak_2d / peak_3d
+    } else {
+        f64::INFINITY
+    };
     assert!(
-        ratio >= 0.4 && ratio <= 2.5,
+        (0.4..=2.5).contains(&ratio),
         "2D/3D peak pressure ratio should be near 1 after n_dim/3 fix; \
          got ratio={ratio:.3} (2D={peak_2d:.3e} Pa, 3D={peak_3d:.3e} Pa). \
          Ratio ≈1.5 would indicate the fix is not applied."

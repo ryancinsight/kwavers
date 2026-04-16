@@ -173,7 +173,7 @@ impl NonlinearOperator {
                     w[k] = Complex64::new(-w[k].im * omega_k, w[k].re * omega_k);
                 }
                 // Zero Nyquist to guarantee real-valued derivative
-                if nt % 2 == 0 {
+                if nt.is_multiple_of(2) {
                     w[nt / 2] = Complex64::new(0.0, 0.0);
                 }
 

@@ -1,6 +1,5 @@
 use super::field_ops::FieldOps;
 use super::kernel::{apply_kernel, windowed_operation};
-use super::reduction::FieldReduction;
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
 

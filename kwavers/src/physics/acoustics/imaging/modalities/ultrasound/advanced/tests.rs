@@ -1,7 +1,7 @@
 //! Tests for advanced ultrasound imaging techniques
 
 use super::*;
-use ndarray::{Array1, Array2, Array3};
+use ndarray::Array3;
 
 #[test]
 fn test_synthetic_aperture_config() {

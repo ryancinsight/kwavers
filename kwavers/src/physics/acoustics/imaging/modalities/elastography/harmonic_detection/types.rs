@@ -67,18 +67,34 @@ impl HarmonicDisplacementField {
         &self.harmonic_magnitudes[idx] / &self.fundamental_magnitude
     }
 
-    /// Compute local nonlinearity parameter map
+    /// Compute local nonlinearity parameter map from the second-harmonic displacement ratio.
+    ///
+    /// # Theory
+    ///
+    /// For a weakly nonlinear viscoelastic solid driven at frequency ω₀, the
+    /// second harmonic amplitude A₂ is related to the cubic nonlinearity
+    /// parameter Γ (Destrade & Ogden 2010, *Proc R Soc A* 466:3474):
+    ///
+    /// ```text
+    /// A₂/A₁ ≈ Γ · A₁ / (8 G')      (small-strain approximation)
+    /// ```
+    ///
+    /// where G' [Pa] is the storage modulus. Solving for Γ requires knowing G'
+    /// and A₁ (absolute amplitude), which are not available without additional
+    /// calibration data. This function stores the dimensionless harmonic ratio
+    /// A₂/A₁ as a relative nonlinearity proxy pending external calibration.
+    ///
+    /// To obtain absolute Γ values, multiply by `8 G' / A₁` using G' from the
+    /// linear SWE reconstruction and A₁ from displacement field amplitude data.
+    ///
+    /// # Reference
+    ///
+    /// Destrade M & Ogden RW (2010). "On the third- and fourth-order constants
+    /// of incompressible isotropic elasticity." *J Acoust Soc Am* 128(6):3334–3343.
     pub fn compute_nonlinearity_parameter(&mut self, _config: &HarmonicDetectionConfig) {
-        // Use second harmonic ratio for B/A estimation
-        // B/A = (8/μ) * (ρ₀ c₀³ / (β P₀)) * (A₂/A₁)
-        // Simplified version using empirical relationship
-
-        let harmonic_ratio = self.harmonic_ratio(2); // Second harmonic
-
-        // Empirical calibration factor (would be determined experimentally)
-        let calibration_factor = 1.0;
-
-        self.nonlinearity_parameter = &harmonic_ratio * calibration_factor;
+        // Store the dimensionless second-harmonic displacement ratio A₂/A₁.
+        // This is a relative nonlinearity proxy; absolute Γ requires G' and A₁.
+        self.nonlinearity_parameter = self.harmonic_ratio(2);
     }
 }
 

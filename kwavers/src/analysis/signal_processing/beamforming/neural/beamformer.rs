@@ -369,20 +369,45 @@ impl NeuralBeamformer {
                     .map(|pos| pos[0] * angle.sin() / c)
                     .collect();
 
-                // Apply delays and sum (simplified version)
+                // Apply delays and sum with linear interpolation.
+                //
+                // For plane-wave DAS the steering delay for element at position x_ch
+                // and steer angle θ is: τ = x_ch · sin(θ) / c  [s].
+                // The delayed sample index is s + τ · f_s, which is generally
+                // fractional. Without interpolation (nearest-sample), the truncation
+                // error aliases at high spatial frequencies. Linear interpolation
+                // reduces this from O(1/f_s) to O(1/f_s²) per channel.
+                //
+                // Reference: Thomenius KE (1996). "Evolution of ultrasound
+                // beamformers." *IEEE UFFC Symp*. Eq. (7).
                 for s in 0..samples {
-                    let mut sum = 0.0;
-                    let mut count = 0;
+                    let mut sum = 0.0_f32;
+                    let mut count = 0usize;
 
                     for ch in 0..channels.min(positions.len()) {
-                        // Simplified delay application (no interpolation)
-                        let delay_samples =
-                            (delays[ch] * self.config.sensor_geometry.sampling_frequency) as isize;
-                        let sample_idx = (s as isize + delay_samples) as usize;
+                        // Fractional delay in samples
+                        let delay_f64 =
+                            delays[ch] * self.config.sensor_geometry.sampling_frequency;
+                        let delay_floor = delay_f64.floor() as isize;
+                        let frac = (delay_f64 - delay_floor as f64) as f32; // ∈ [0, 1)
 
-                        if sample_idx < samples {
-                            sum += rf_data[[f, ch, sample_idx, 0]];
-                            count += 1;
+                        let idx0 = s as isize + delay_floor;
+                        let idx1 = idx0 + 1;
+
+                        match (usize::try_from(idx0), usize::try_from(idx1)) {
+                            (Ok(i0), Ok(i1)) if i1 < samples => {
+                                // Full linear interpolation: s0*(1-α) + s1*α
+                                let s0 = rf_data[[f, ch, i0, 0]];
+                                let s1 = rf_data[[f, ch, i1, 0]];
+                                sum += s0 + frac * (s1 - s0);
+                                count += 1;
+                            }
+                            (Ok(i0), _) if i0 < samples => {
+                                // Last sample: no forward neighbour, use nearest
+                                sum += rf_data[[f, ch, i0, 0]];
+                                count += 1;
+                            }
+                            _ => {} // Out of bounds — skip
                         }
                     }
 

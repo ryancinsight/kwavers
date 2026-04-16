@@ -57,6 +57,8 @@ fn test_simulation_config_builder() {
 
 #[test]
 fn test_position_to_voxel() {
+    // Validates: (1) origin maps to (0,0,0); (2) interior position maps via floor(pos/dx);
+    // (3) negative positions reject; (4) positions at/beyond domain extent reject.
     let dims = GridDimensions::new(10, 10, 10, 0.001, 0.001, 0.001);
     let grid = Grid3D::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
     let mut builder = crate::physics::optics::map_builder::OpticalPropertyMapBuilder::new(dims);
@@ -65,13 +67,22 @@ fn test_position_to_voxel() {
 
     let solver = MonteCarloSolver::new(grid, optical_map);
 
-    // method is private to solver, but solver is in parent module.
-    // wait, tests is a child module of `monte_carlo`, and `MonteCarloSolver` is a struct, its
-    // method `position_to_voxel` is private. So we need `solver.position_to_voxel`
-    // actually, let's just make sure tests compile. `test_position_to_voxel` might not work if
-    // `position_to_voxel` isn't accessible, wait, it's accessed via `solver.position_to_voxel` inside tests, Which means
-    // solver methods must be public or `#[cfg(test)] pub fn` etc. Or tests can just not test private methods
-    // directly if they're in a separate file ... Wait, I can make `position_to_voxel` `pub(crate)`.
+    // Origin maps to (0,0,0)
+    assert_eq!(solver.position_to_voxel([0.0, 0.0, 0.0]), Some((0, 0, 0)));
+
+    // Interior: pos = (2.5, 3.5, 4.5) * dx → floor → (2, 3, 4)
+    assert_eq!(
+        solver.position_to_voxel([2.5e-3, 3.5e-3, 4.5e-3]),
+        Some((2, 3, 4))
+    );
+
+    // Negative position rejected
+    assert_eq!(solver.position_to_voxel([-1e-6, 0.0, 0.0]), None);
+
+    // Position at domain extent (exclusive upper bound) rejected
+    assert_eq!(solver.position_to_voxel([0.010, 0.0, 0.0]), None);
+    assert_eq!(solver.position_to_voxel([0.0, 0.010, 0.0]), None);
+    assert_eq!(solver.position_to_voxel([0.0, 0.0, 0.010]), None);
 }
 
 #[test]

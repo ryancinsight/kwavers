@@ -342,9 +342,8 @@ fn test_cpml_absorption_effectiveness() -> kwavers::core::error::KwaversResult<(
     let nt = (one_way_steps * 2 + 50).min(600);
 
     // Helper: compute total acoustic energy ∝ Σ p²
-    let total_energy = |p: &ndarray::Array3<f64>| -> f64 {
-        p.iter().map(|&v| v * v).sum::<f64>() * dx * dx * dx
-    };
+    let total_energy =
+        |p: &ndarray::Array3<f64>| -> f64 { p.iter().map(|&v| v * v).sum::<f64>() * dx * dx * dx };
 
     // --- Run 1: No boundary (periodic PSTD) ---
     let config_none = PSTDConfig {
@@ -354,8 +353,7 @@ fn test_cpml_absorption_effectiveness() -> kwavers::core::error::KwaversResult<(
         boundary: BoundaryConfig::None,
         ..Default::default()
     };
-    let mut solver_none =
-        PSTDSolver::new(config_none, grid.clone(), &medium, Default::default())?;
+    let mut solver_none = PSTDSolver::new(config_none, grid.clone(), &medium, Default::default())?;
 
     // Inject Gaussian initial pressure pulse at centre of interior
     let cx = nx / 2;
@@ -404,8 +402,7 @@ fn test_cpml_absorption_effectiveness() -> kwavers::core::error::KwaversResult<(
         boundary: BoundaryConfig::CPML(cpml_config),
         ..Default::default()
     };
-    let mut solver_cpml =
-        PSTDSolver::new(config_cpml, grid.clone(), &medium, Default::default())?;
+    let mut solver_cpml = PSTDSolver::new(config_cpml, grid.clone(), &medium, Default::default())?;
 
     // Same initial conditions
     {

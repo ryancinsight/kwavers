@@ -104,6 +104,16 @@ impl NewmarkIntegrator {
         self.acceleration_prev.assign(&self.acceleration);
     }
 
+    /// Set initial displacement and sync the internal `_prev` state.
+    ///
+    /// Must be called before the first `step()` whenever a non-zero initial
+    /// displacement is required, so that the Newmark update formula
+    /// `u_{n+1} = u_prev + …` starts from u₀ rather than from zero.
+    pub fn set_initial_displacement(&mut self, u: &Array1<f64>) {
+        self.displacement.assign(u);
+        self.displacement_prev.assign(u);
+    }
+
     /// Predict displacement and velocity for next time step (for nonlinear problems)
     ///
     /// Returns predicted values that can be used in iterative solution procedures.

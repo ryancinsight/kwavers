@@ -55,12 +55,17 @@ fn test_cpml_a_coeff_equals_b_minus_1() -> KwaversResult<()> {
             assert!(
                 a < 0.0,
                 "a_x[{}] = {} should be negative in PML region (sigma={})",
-                i, a, sigma
+                i,
+                a,
+                sigma
             );
             assert!(
                 (a - (b - 1.0)).abs() < 1e-12,
                 "a_x[{}] = {:.6e} != b_x[{}] - 1 = {:.6e} (Roden & Gedney violation)",
-                i, a, i, b - 1.0
+                i,
+                a,
+                i,
+                b - 1.0
             );
             // b must be strictly between 0 and 1 (exponential decay)
             assert!(b > 0.0 && b < 1.0, "b_x[{}] = {} must be in (0,1)", i, b);
@@ -69,12 +74,14 @@ fn test_cpml_a_coeff_equals_b_minus_1() -> KwaversResult<()> {
             assert!(
                 (b - 1.0).abs() < 1e-12,
                 "b_x[{}] = {} should be 1 at interior (sigma=0)",
-                i, b
+                i,
+                b
             );
             assert!(
                 a.abs() < 1e-12,
                 "a_x[{}] = {} should be 0 at interior (sigma=0)",
-                i, a
+                i,
+                a
             );
         }
     }
@@ -92,7 +99,10 @@ fn test_cpml_a_coeff_equals_b_minus_1() -> KwaversResult<()> {
             assert!(
                 (a - (b - 1.0)).abs() < 1e-12,
                 "a_y[{}] = {:.6e} != b_y[{}] - 1 = {:.6e}",
-                i, a, i, b - 1.0
+                i,
+                a,
+                i,
+                b - 1.0
             );
         }
         let a = profiles.a_z[i];
@@ -101,7 +111,10 @@ fn test_cpml_a_coeff_equals_b_minus_1() -> KwaversResult<()> {
             assert!(
                 (a - (b - 1.0)).abs() < 1e-12,
                 "a_z[{}] = {:.6e} != b_z[{}] - 1 = {:.6e}",
-                i, a, i, b - 1.0
+                i,
+                a,
+                i,
+                b - 1.0
             );
         }
     }
@@ -154,9 +167,8 @@ fn test_cpml_absorbs_outgoing_waves() -> KwaversResult<()> {
     for i in 0..nx {
         for j in 0..nx {
             for k in 0..nx {
-                let r2 = (i as f64 - cx).powi(2)
-                    + (j as f64 - cy).powi(2)
-                    + (k as f64 - cz).powi(2);
+                let r2 =
+                    (i as f64 - cx).powi(2) + (j as f64 - cy).powi(2) + (k as f64 - cz).powi(2);
                 solver.fields.p[[i, j, k]] = 1e5 * (-r2 / width_sq).exp();
             }
         }
@@ -224,22 +236,21 @@ fn test_cpml_sigma_max_matches_theory() -> KwaversResult<()> {
     assert!(
         sigma_at_boundary > sigma_at_interface,
         "Sigma should be maximum at PML wall: sigma[0]={:.3e} > sigma[{}]={:.3e}",
-        sigma_at_boundary, thickness, sigma_at_interface
+        sigma_at_boundary,
+        thickness,
+        sigma_at_interface
     );
 
     // Interior should be zero
-    assert_eq!(
-        profiles.sigma_x[nx / 2],
-        0.0,
-        "Interior sigma must be zero"
-    );
+    assert_eq!(profiles.sigma_x[nx / 2], 0.0, "Interior sigma must be zero");
 
     // The theoretical σ_max should be within a factor of 3 of the computed value
     // (actual max is scaled by sigma_factor ≈ 2.0 and polynomial grading)
     assert!(
         sigma_at_boundary > sigma_max_theory * 0.1,
         "sigma[0]={:.3e} too small vs theoretical σ_max={:.3e}",
-        sigma_at_boundary, sigma_max_theory
+        sigma_at_boundary,
+        sigma_max_theory
     );
 
     Ok(())

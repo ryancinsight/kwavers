@@ -37,9 +37,6 @@ pub mod benchmarks;
 pub mod optimization;
 pub mod profiling;
 pub mod safe_vectorization;
-pub mod simd;
-pub mod simd_operations;
-pub mod simd_portable;
 
 pub use optimization::{
     AccessPattern, BandwidthOptimizer, CacheOptimizer, OptimizationConfig, PerformanceOptimizer,

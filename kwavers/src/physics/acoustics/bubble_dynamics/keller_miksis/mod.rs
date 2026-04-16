@@ -262,15 +262,23 @@ impl KellerMiksisModel {
 
     /// Update bubble temperature through thermodynamic processes
     ///
-    /// Delegates to thermodynamics module.
+    /// No-op when `BubbleParameters::use_thermal_effects` is `false`.
+    /// Delegates to thermodynamics module otherwise.
     pub fn update_temperature(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
+        if !self.params.use_thermal_effects {
+            return Ok(());
+        }
         thermodynamics::update_temperature(self, state, dt)
     }
 
     /// Update vapor content through evaporation/condensation
     ///
-    /// Delegates to thermodynamics module.
+    /// No-op when `BubbleParameters::use_mass_transfer` is `false`.
+    /// Delegates to thermodynamics module otherwise.
     pub fn update_mass_transfer(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
+        if !self.params.use_mass_transfer {
+            return Ok(());
+        }
         thermodynamics::update_mass_transfer(self, state, dt)
     }
 

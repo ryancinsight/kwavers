@@ -32,18 +32,22 @@
 //! - **ComplianceValidator**: IEC standard compliance checking
 //! - **AuditLogger**: Comprehensive safety event logging
 
+pub mod audit;
 pub mod compliance;
+pub mod interlocks;
 pub mod mechanical_index;
 
+pub use audit::{AuditEntry, SafetyAuditLogger, SafetyEventType};
 pub use compliance::{
     ComplianceAudit, ComplianceCheck as EnhancedComplianceCheck, ComplianceConfig,
     ComplianceStatus, EnhancedComplianceValidator, SessionMetrics,
 };
+pub use interlocks::{Interlock, InterlockSystem};
 
 use crate::clinical::therapy::parameters::TherapyParameters;
 use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 /// Safety levels for clinical ultrasound systems
@@ -232,119 +236,6 @@ pub struct SafetyViolation {
     pub timestamp: Instant,
     /// Human-readable violation message
     pub message: String,
-}
-
-/// Hardware/software interlock system
-#[derive(Debug)]
-pub struct InterlockSystem {
-    interlocks: HashMap<String, Interlock>,
-    system_enabled: bool,
-    emergency_stop_active: bool,
-}
-
-impl InterlockSystem {
-    /// Create new interlock system
-    pub fn new() -> Self {
-        Self {
-            interlocks: HashMap::new(),
-            system_enabled: false,
-            emergency_stop_active: false,
-        }
-    }
-
-    /// Add an interlock condition
-    pub fn add_interlock(&mut self, name: String, interlock: Interlock) {
-        self.interlocks.insert(name, interlock);
-    }
-
-    /// Check all interlock conditions
-    pub fn check_interlocks(&mut self) -> KwaversResult<bool> {
-        if self.emergency_stop_active {
-            return Ok(false);
-        }
-
-        for (name, interlock) in &self.interlocks {
-            if !interlock.check_condition()? {
-                log::warn!("Interlock '{}' failed: {}", name, interlock.description);
-                return Ok(false);
-            }
-        }
-
-        Ok(true)
-    }
-
-    /// Enable system operation
-    pub fn enable_system(&mut self) -> KwaversResult<()> {
-        if !self.check_interlocks()? {
-            return Err(KwaversError::InvalidInput(
-                "Cannot enable system: interlock conditions not satisfied".to_string(),
-            ));
-        }
-
-        self.system_enabled = true;
-        log::info!("Therapy system enabled - all safety interlocks satisfied");
-        Ok(())
-    }
-
-    /// Emergency stop - immediate shutdown
-    pub fn emergency_stop(&mut self) {
-        self.emergency_stop_active = true;
-        self.system_enabled = false;
-        log::error!("EMERGENCY STOP ACTIVATED - System shutdown");
-    }
-
-    /// Reset emergency stop (requires manual intervention)
-    pub fn reset_emergency_stop(&mut self) {
-        self.emergency_stop_active = false;
-        log::warn!("Emergency stop reset - manual verification required");
-    }
-
-    /// Check if system is enabled for operation
-    pub fn is_system_enabled(&self) -> bool {
-        self.system_enabled && !self.emergency_stop_active
-    }
-}
-
-impl Default for InterlockSystem {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Individual interlock condition
-#[derive(Clone)]
-pub struct Interlock {
-    /// Human-readable description
-    pub description: String,
-    /// Check function that returns true if condition is satisfied
-    pub check_function: Arc<dyn Fn() -> KwaversResult<bool> + Send + Sync>,
-}
-
-impl std::fmt::Debug for Interlock {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Interlock")
-            .field("description", &self.description)
-            .field("check_function", &"<function>")
-            .finish()
-    }
-}
-
-impl Interlock {
-    /// Create new interlock
-    pub fn new<F>(description: String, check_function: F) -> Self
-    where
-        F: Fn() -> KwaversResult<bool> + Send + Sync + 'static,
-    {
-        Self {
-            description,
-            check_function: Arc::new(check_function),
-        }
-    }
-
-    /// Check if interlock condition is satisfied
-    pub fn check_condition(&self) -> KwaversResult<bool> {
-        (self.check_function)()
-    }
 }
 
 /// Treatment dose controller with IEC compliance
@@ -667,158 +558,6 @@ pub struct SystemConfiguration {
     pub monitoring_enabled: bool,
     pub interlocks_enabled: bool,
     pub emergency_stop_tested: bool,
-}
-
-/// Comprehensive audit logger for safety events
-#[derive(Debug)]
-pub struct SafetyAuditLogger {
-    log_entries: Arc<Mutex<Vec<AuditEntry>>>,
-    max_entries: usize,
-}
-
-impl SafetyAuditLogger {
-    /// Create new audit logger
-    pub fn new(max_entries: usize) -> Self {
-        Self {
-            log_entries: Arc::new(Mutex::new(Vec::new())),
-            max_entries,
-        }
-    }
-
-    /// Log a safety event
-    pub fn log_event(
-        &self,
-        event_type: SafetyEventType,
-        message: String,
-        metadata: HashMap<String, String>,
-    ) {
-        let entry = AuditEntry {
-            timestamp: Instant::now(),
-            event_type,
-            message,
-            metadata,
-        };
-
-        let mut entries = self.log_entries.lock().unwrap();
-        entries.push(entry);
-
-        // Maintain maximum log size
-        if entries.len() > self.max_entries {
-            entries.remove(0);
-        }
-    }
-
-    /// Log safety violation
-    pub fn log_violation(&self, violation: &SafetyViolation) {
-        let mut metadata = HashMap::new();
-        metadata.insert("parameter".to_string(), violation.parameter.clone());
-        metadata.insert(
-            "measured_value".to_string(),
-            violation.measured_value.to_string(),
-        );
-        metadata.insert("limit_value".to_string(), violation.limit_value.to_string());
-        metadata.insert("severity".to_string(), format!("{:?}", violation.severity));
-
-        self.log_event(
-            SafetyEventType::Violation,
-            violation.message.clone(),
-            metadata,
-        );
-    }
-
-    /// Log system state change
-    pub fn log_system_state(&self, old_state: SafetyLevel, new_state: SafetyLevel) {
-        let mut metadata = HashMap::new();
-        metadata.insert("old_state".to_string(), format!("{:?}", old_state));
-        metadata.insert("new_state".to_string(), format!("{:?}", new_state));
-
-        let message = format!(
-            "System safety state changed from {:?} to {:?}",
-            old_state, new_state
-        );
-        self.log_event(SafetyEventType::StateChange, message, metadata);
-    }
-
-    /// Get audit log entries
-    pub fn get_entries(&self) -> Vec<AuditEntry> {
-        self.log_entries.lock().unwrap().clone()
-    }
-
-    /// Export audit log to a JSON file.
-    ///
-    /// Each entry is written as one JSON object per line (JSONL format) with
-    /// fields: `timestamp_ms`, `event_type`, `message`, and `metadata`.
-    pub fn export_log(&self, filename: &str) -> KwaversResult<()> {
-        use std::io::Write;
-
-        let entries = self.log_entries.lock().unwrap();
-        let mut file = std::fs::File::create(filename).map_err(KwaversError::Io)?;
-
-        // Reference instant for relative timestamps
-        let reference = entries.first().map(|e| e.timestamp);
-
-        for entry in entries.iter() {
-            let elapsed_ms = reference
-                .map(|r| entry.timestamp.duration_since(r).as_millis())
-                .unwrap_or(0);
-
-            // Build metadata JSON fragment
-            let meta_pairs: Vec<String> = entry
-                .metadata
-                .iter()
-                .map(|(k, v)| {
-                    format!(
-                        "\"{}\":\"{}\"",
-                        k.replace('"', "\\\""),
-                        v.replace('"', "\\\"")
-                    )
-                })
-                .collect();
-            let meta_json = format!("{{{}}}", meta_pairs.join(","));
-
-            writeln!(
-                file,
-                r#"{{"timestamp_ms":{},"event_type":"{:?}","message":"{}","metadata":{}}}"#,
-                elapsed_ms,
-                entry.event_type,
-                entry.message.replace('"', "\\\""),
-                meta_json,
-            )
-            .map_err(KwaversError::Io)?;
-        }
-
-        Ok(())
-    }
-}
-
-/// Audit log entry
-#[derive(Clone, Debug)]
-pub struct AuditEntry {
-    /// Event timestamp
-    pub timestamp: Instant,
-    /// Type of safety event
-    pub event_type: SafetyEventType,
-    /// Event message
-    pub message: String,
-    /// Additional metadata
-    pub metadata: HashMap<String, String>,
-}
-
-/// Types of safety events
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum SafetyEventType {
-    /// Safety violation detected
-    Violation,
-    /// System state change
-    StateChange,
-    /// Emergency stop activated
-    EmergencyStop,
-    /// Treatment session started
-    TreatmentStart,
-    /// Treatment session ended
-    TreatmentEnd,
-    /// System startup/shutdown
-    SystemEvent,
 }
 
 #[cfg(test)]

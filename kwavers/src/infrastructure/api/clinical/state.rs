@@ -107,7 +107,7 @@ impl ClinicalAppState {
 
     /// Initialize basic clinical devices for fallback operation
     fn initialize_basic_devices(state: &mut ClinicalAppState) -> KwaversResult<()> {
-        let mut registry = state.device_registry.write().unwrap();
+        let mut registry = state.device_registry.write().unwrap_or_else(|e| e.into_inner());
 
         // Register basic ultrasound devices
         registry.insert(
@@ -148,7 +148,7 @@ impl ClinicalAppState {
 
     /// Initialize basic clinical workflows
     fn initialize_clinical_workflows(state: &mut ClinicalAppState) -> KwaversResult<()> {
-        let mut sessions = state.active_sessions.write().unwrap();
+        let mut sessions = state.active_sessions.write().unwrap_or_else(|e| e.into_inner());
 
         // Create a default clinical workflow template
         let default_workflow = ClinicalWorkflow {

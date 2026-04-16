@@ -4,7 +4,6 @@
 //! workflow across multiple modules and subsystems.
 
 use super::*;
-use crate::core::error::KwaversError;
 use ndarray::Array3;
 use std::collections::HashMap;
 

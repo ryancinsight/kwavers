@@ -8,7 +8,7 @@
 //! Showcases the implementation of modern ultrasound imaging methods
 //! for improved resolution, frame rate, and penetration.
 
-use kwavers::physics::imaging::ultrasound::advanced::{
+use kwavers::physics::acoustics::imaging::modalities::ultrasound::advanced::{
     CodedExcitationConfig, CodedExcitationProcessor, ExcitationCode, PlaneWaveCompounding,
     PlaneWaveConfig, PlaneWaveReconstruction, SyntheticApertureConfig,
     SyntheticApertureReconstruction,

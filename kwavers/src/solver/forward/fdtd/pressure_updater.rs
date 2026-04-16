@@ -53,17 +53,14 @@ impl FdtdSolver {
     /// 3. **Central-difference** otherwise.
     pub(crate) fn update_pressure_cpu(&mut self, dt: f64) -> KwaversResult<()> {
         // K-space path: spectral divergence using negative shift operators
-        if self.kspace_ops.is_some() {
-            {
-                let kops = self.kspace_ops.as_mut().unwrap();
-                kops.compute_divergence_neg(
-                    &self.fields.ux,
-                    &self.fields.uy,
-                    &self.fields.uz,
-                );
-            }
+        if let Some(kops) = self.kspace_ops.as_mut() {
+            kops.compute_divergence_neg(
+                &self.fields.ux,
+                &self.fields.uy,
+                &self.fields.uz,
+            );
             // Use the spectral divergence view directly — no .to_owned() allocation needed
-            let divergence = self.kspace_ops.as_ref().unwrap().divergence.view();
+            let divergence = kops.divergence.view();
             Self::update_pressure_simd(&mut self.fields.p, divergence, &self.rho_c_squared, dt);
             return Ok(());
         }
@@ -150,7 +147,7 @@ impl FdtdSolver {
     ///   Academic Press, Ch. 3. ISBN 978-0-12-321860-6.
     /// - Aanonsen, S. I. et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768.
     pub(crate) fn apply_westervelt_nonlinear_correction(&mut self, dt: f64) {
-        let (Some(ref nl_coeff), Some(ref mut nl_scratch)) = (
+        let (Some(nl_coeff), Some(ref mut nl_scratch)) = (
             self.nl_coeff.as_ref(),
             self.nl_scratch.as_mut(),
         ) else {

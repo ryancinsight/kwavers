@@ -119,7 +119,7 @@ pub(crate) fn bessel_j(n: u32, x: f64) -> f64 {
     }
     // Jₙ(−x) = (−1)^n Jₙ(x)
     if x < 0.0 {
-        return if n % 2 == 0 {
+        return if n.is_multiple_of(2) {
             bessel_j(n, -x)
         } else {
             -bessel_j(n, -x)

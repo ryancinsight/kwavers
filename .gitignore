@@ -101,3 +101,9 @@ __pycache__/
 # NumPy/binary data outputs
 *.npy
 *.npz
+
+# Errors
+*.err
+
+# Root Python files
+/*.py

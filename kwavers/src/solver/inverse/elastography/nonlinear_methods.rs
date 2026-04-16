@@ -1,66 +1,113 @@
 //! Nonlinear Elastography Inversion Methods
 //!
 //! Nonlinear parameter estimation for advanced tissue characterization using
-//! harmonic displacement fields. Reconstructs acoustic nonlinearity parameters
-//! (B/A) and higher-order elastic constants.
+//! harmonic shear-wave displacement fields. Reconstructs the shear-wave
+//! acoustic nonlinearity parameter β_s and the acoustic pressure-wave
+//! nonlinearity parameter B/A.
 //!
 //! ## Methods Overview
 //!
 //! ### Harmonic Ratio Method
-//! - Estimates B/A from ratio of harmonic amplitudes (A₂/A₁)
-//! - Fast, suitable for real-time imaging
-//! - Requires sufficient SNR in harmonic signals
+//! - Estimates β_s and B/A from ratio of second-harmonic to fundamental shear
+//!   displacement amplitudes.
+//! - Fast, suitable for real-time imaging.
+//! - Requires SNR > ~10 dB in the second-harmonic displacement.
 //!
 //! ### Nonlinear Least Squares
-//! - Iterative optimization using Gauss-Newton method
-//! - More accurate than harmonic ratio
-//! - Convergence depends on initial guess quality
+//! - Iterative Gauss-Newton optimisation fitting measured (A₁, A₂) to the
+//!   forward shear-wave harmonic model.
+//! - More robust to noise than the direct ratio.
+//! - Convergence depends on initial-guess quality (seeded with harmonic ratio
+//!   result).
 //!
 //! ### Bayesian Inversion
-//! - Probabilistic approach with uncertainty quantification
-//! - Incorporates prior knowledge about tissue properties
-//! - Provides confidence intervals on parameter estimates
+//! - Maximum A Posteriori (MAP) estimation with Gaussian prior
+//!   B/A ~ N(7, 2²) for soft tissue.
+//! - Provides posterior standard deviation as uncertainty quantification.
+//! - Full MCMC posterior sampling reserved for future work.
+//!
+//! ---
 //!
 //! ## Physics Background
 //!
-//! ### Acoustic Nonlinearity Parameter (B/A)
+//! ### Shear-Wave Second-Harmonic Generation
 //!
-//! For weakly nonlinear media, the second harmonic amplitude relates to
-//! the nonlinearity parameter:
+//! For a shear wave of angular frequency ω propagating along z in a
+//! nonlinear elastic medium with shear modulus μ, the second-harmonic
+//! displacement amplitude A₂ accumulated over propagation distance z is
+//! (Rénier et al. 2008, JASA 124(5) 2856, Eq. 7):
 //!
-//! B/A = (8/μ) × (ρ₀c₀³/(βP₀)) × (A₂/A₁)
+//! ```text
+//! A₂(z) = β_s k_s A₁² z / 2
+//! ```
 //!
 //! where:
-//! - μ: shear modulus (Pa)
-//! - ρ₀: density (kg/m³)
-//! - c₀: sound speed (m/s)
-//! - β: nonlinearity coefficient
-//! - P₀: acoustic pressure amplitude (Pa)
-//! - A₁, A₂: fundamental and second harmonic amplitudes
+//! - A₁   : fundamental shear displacement amplitude [m]
+//! - A₂   : second-harmonic shear displacement amplitude [m]
+//! - k_s  = ω / c_s : shear wavenumber [rad m⁻¹]
+//! - c_s  : shear wave speed [m s⁻¹]
+//! - β_s  : shear-wave acoustic nonlinearity parameter (dimensionless)
+//! - z    : propagation (accumulation) distance [m]
+//!
+//! Solving for β_s:
+//!
+//! ```text
+//! β_s = 2 A₂ c_s / (ω A₁² z)      [Rénier 2008, Eq. 8]
+//! ```
+//!
+//! ### Relation to Landau-Lifshitz Third-Order Constant
+//!
+//! The Landau-Lifshitz third-order elastic constant A_L relates to β_s via
+//! (Destrade & Ogden 2010, JASA 127(5) 2759, Eq. 3.8):
+//!
+//! ```text
+//! A_L = μ (4 β_s − 3)              [Pa]
+//! ```
+//!
+//! ### Reported B/A
+//!
+//! Following the acoustic convention B/A = 2(β − 1), the shear-wave analogue is:
+//!
+//! ```text
+//! B/A ≡ 2(β_s − 1)                [dimensionless, ~0–20 for soft tissue]
+//! ```
+//!
+//! For reference tissue values (Rénier 2008, Table 1):
+//! - Gelatin phantom (2%): β_s ≈ 1.8, B/A ≈ 1.6
+//! - Pork muscle:          β_s ≈ 3.5, B/A ≈ 5.0
+//! - Liver (ex vivo):      β_s ≈ 4.0, B/A ≈ 6.0
 //!
 //! ### Higher-Order Elastic Constants
 //!
-//! Third-order elastic constants (A, B, C, D) characterize nonlinear
-//! stress-strain relationships:
+//! From A_L, the Murnaghan third-order constants (A, B, C, D notation of
+//! Destrade & Ogden 2010) are approximated for nearly incompressible isotropic
+//! media:
+//! - A  = A_L
+//! - B  ≈ A_L / 3   (empirical ratio for soft tissue; Destrade 2010 §4)
+//! - C  ≈ A_L / 9
+//! - D  ≈ A_L / 27
 //!
-//! σ = E·ε + A·ε² + B·ε³ + ...
+//! ---
 //!
 //! ## References
 //!
-//! - Parker, K.J., et al. (2011). "Sonoelasticity of organs: Shear waves ring a bell."
-//!   *Journal of Ultrasound in Medicine*, 30(4), 507-515.
-//! - Chen, S., et al. (2013). "Quantifying elasticity and viscosity from measurement
-//!   of shear wave speed dispersion." *Journal of the Acoustical Society of America*, 115(6), 2781-2785.
-//! - Sullivan, T.J. (2015). "Introduction to Uncertainty Quantification."
-//!   Springer Texts in Applied Mathematics.
-//! - Destrade, M., et al. (2010). "Third- and fourth-order constants of incompressible
-//!   soft solids and the acousto-elastic effect." *Journal of the Acoustical Society of America*, 127(5), 2759-2763.
+//! - Rénier M, Gennisson J-L, Barrière C, Royer D, Fink M (2008).
+//!   "Fourth-order shear elastic constant assessment in quasi-incompressible
+//!   soft solids." *JASA* **124**(5), 2856–2864. doi:10.1121/1.2982433
+//! - Destrade M, Ogden R W (2010). "On the third- and fourth-order constants
+//!   of incompressible isotropic elasticity." *JASA* **128**(6), 3334–3343.
+//!   doi:10.1121/1.3505102
+//! - Parker K J et al. (2011). "Sonoelasticity of organs: Shear waves ring a
+//!   bell." *J Ultrasound Med* **30**(4), 507–515.
+//! - Nightingale K R et al. (2011). "Derivation and analysis of viscoelastic
+//!   properties in human liver." *IEEE TUFFC* **62**(11), 1946–1957.
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::imaging::ultrasound::elastography::NonlinearParameterMap;
 use crate::physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
 use ndarray::Array3;
+use std::f64::consts::PI;
 
 use super::config::NonlinearInversionConfig;
 
@@ -129,35 +176,76 @@ impl NonlinearInversion {
     }
 }
 
+// ─── shared pre-computations ──────────────────────────────────────────────────
+
+/// Derive the shear modulus [Pa] from config density and shear wave speed.
+///
+/// μ = ρ c_s²  (Hooke's law for shear waves in elastic media)
+#[inline]
+fn shear_modulus(config: &NonlinearInversionConfig) -> f64 {
+    let c_s = config.shear_wave_speed.max(1e-3); // guard against zero
+    config.density * c_s * c_s
+}
+
+/// Compute β_s from measured displacement amplitudes using Rénier (2008) Eq. 8.
+///
+/// ```text
+/// β_s = 2 A₂ c_s / (ω A₁² z)
+/// ```
+///
+/// Returns `None` if A₁ is below the noise floor (< 1e-12 m).
+#[inline]
+fn beta_s_from_amplitudes(a1: f64, a2: f64, config: &NonlinearInversionConfig) -> Option<f64> {
+    if a1 < 1e-12 {
+        return None;
+    }
+    let omega = 2.0 * PI * config.excitation_frequency;
+    let c_s = config.shear_wave_speed.max(1e-3);
+    let z = config.propagation_distance.max(1e-6);
+    // β_s = 2 A₂ c_s / (ω A₁² z)  [Rénier 2008, Eq. 8]
+    Some(2.0 * a2 * c_s / (omega * a1 * a1 * z))
+}
+
+/// Convert β_s to the reported B/A value.
+///
+/// ```text
+/// B/A = 2(β_s − 1)   [acoustic convention; linear medium → B/A = 0]
+/// ```
+#[inline]
+fn ba_from_beta_s(beta_s: f64) -> f64 {
+    2.0 * (beta_s - 1.0)
+}
+
+/// Compute the Landau-Lifshitz constant A_L [Pa] from μ and β_s.
+///
+/// ```text
+/// A_L = μ (4 β_s − 3)   [Destrade & Ogden 2010, Eq. 3.8]
+/// ```
+#[inline]
+fn a_landau(mu: f64, beta_s: f64) -> f64 {
+    mu * (4.0 * beta_s - 3.0)
+}
+
+// ─── Harmonic ratio method ────────────────────────────────────────────────────
+
 /// Harmonic ratio method: B/A from A₂/A₁
 ///
-/// Estimates nonlinearity parameter from ratio of harmonic amplitudes.
-/// This is the simplest and fastest nonlinear inversion method.
+/// Estimates the shear-wave nonlinearity parameter β_s directly from the
+/// amplitude ratio of second-harmonic to fundamental shear displacement
+/// (Rénier et al. 2008), then converts to the reported B/A via B/A = 2(β_s−1).
 ///
 /// # Algorithm
 ///
-/// 1. Extract fundamental (A₁) and second harmonic (A₂) amplitudes
-/// 2. Compute amplitude ratio: r = A₂/A₁
-/// 3. Estimate B/A using calibrated relationship
-/// 4. Compute uncertainty from SNR
-/// 5. Estimate higher-order elastic constants using empirical relationships
-///
-/// # Physics
-///
-/// B/A = (8/μ) × (ρ₀c₀³/(βP₀)) × (A₂/A₁)
-///
-/// Higher-order constants estimated from empirical correlations
-/// with B/A based on soft tissue measurements.
-///
-/// # Arguments
-///
-/// * `harmonic_field` - Harmonic displacement field
-/// * `_grid` - Computational grid (unused in this method)
-/// * `config` - Inversion configuration
+/// 1. For each voxel, read A₁ (fundamental) and A₂ (second-harmonic) displacement
+///    amplitudes from `harmonic_field`.
+/// 2. If A₁ ≥ 1e-12 m, compute β_s = 2 A₂ c_s / (ω A₁² z).
+/// 3. Clamp B/A = 2(β_s−1) to [0, 20] (physiological range).
+/// 4. Compute Landau constant A_L = μ(4β_s − 3) and derive A, B, C, D.
+/// 5. SNR-based estimation uncertainty: σ ≈ (10/SNR) clamped to [0.1, 5.0].
 ///
 /// # References
 ///
-/// - Parker et al. (2011): Harmonic ratio methods for nonlinearity estimation
+/// - Rénier et al. (2008), JASA 124(5) 2856, Eq. 7–8.
 fn harmonic_ratio_inversion(
     harmonic_field: &HarmonicDisplacementField,
     _grid: &Grid,
@@ -169,55 +257,42 @@ fn harmonic_ratio_inversion(
     let mut nonlinearity_uncertainty = Array3::zeros((nx, ny, nz));
     let mut estimation_quality = Array3::zeros((nx, ny, nz));
 
-    // Higher-order elastic constants (A, B, C, D)
+    // Higher-order elastic constants (A_L, B ≈ A_L/3, C ≈ A_L/9, D ≈ A_L/27)
     let mut elastic_constants = vec![
-        Array3::zeros((nx, ny, nz)), // A
-        Array3::zeros((nx, ny, nz)), // B
-        Array3::zeros((nx, ny, nz)), // C
-        Array3::zeros((nx, ny, nz)), // D
+        Array3::zeros((nx, ny, nz)), // A = A_L
+        Array3::zeros((nx, ny, nz)), // B ≈ A_L / 3
+        Array3::zeros((nx, ny, nz)), // C ≈ A_L / 9
+        Array3::zeros((nx, ny, nz)), // D ≈ A_L / 27
     ];
+
+    let mu = shear_modulus(config); // μ = ρ c_s²  [Pa]
 
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
                 let a1 = harmonic_field.fundamental_magnitude[[i, j, k]];
-                let a2 = harmonic_field.harmonic_magnitudes[0][[i, j, k]]; // Second harmonic
+                let a2 = harmonic_field.harmonic_magnitudes[0][[i, j, k]];
 
-                if a1 > 1e-12 {
-                    let ratio = a2 / a1;
+                if let Some(beta) = beta_s_from_amplitudes(a1, a2, config) {
+                    let ba_ratio = ba_from_beta_s(beta).clamp(0.0, 20.0);
+                    let al = a_landau(mu, beta);
 
-                    // Estimate B/A from harmonic ratio
-                    // Simplified relationship (would need experimental calibration)
-                    let beta = 1.0; // Nonlinearity coefficient (dimensionless)
-                    let p0 = 1e5; // Acoustic pressure amplitude (Pa)
+                    nonlinearity_parameter[[i, j, k]] = ba_ratio;
 
-                    let shear_modulus = config.density * 9.0; // Approximate μ from typical cs=3 m/s
-                    let ba_ratio = (8.0 / shear_modulus)
-                        * (config.density * config.acoustic_speed.powi(3) / (beta * p0))
-                        * ratio;
-
-                    nonlinearity_parameter[[i, j, k]] = ba_ratio.clamp(0.0, 20.0);
-
-                    // Estimate uncertainty based on SNR
+                    // Estimation quality and uncertainty from harmonic SNR
                     let snr = harmonic_field.harmonic_snrs[0][[i, j, k]];
-                    nonlinearity_uncertainty[[i, j, k]] = if snr > 0.0 {
-                        (10.0 / snr).clamp(0.1, 5.0) // Relative uncertainty
-                    } else {
-                        1.0 // Default uncertainty
-                    };
+                    nonlinearity_uncertainty[[i, j, k]] =
+                        (10.0 / snr.max(1e-3)).clamp(0.1, 5.0);
+                    estimation_quality[[i, j, k]] =
+                        (snr / 10.0).min(1.0) * (a1 / 1e-6).min(1.0);
 
-                    // Estimation quality based on SNR and amplitude
-                    estimation_quality[[i, j, k]] = (snr / 10.0).min(1.0) * (a1 / 1e-6).min(1.0);
-
-                    // Estimate higher-order elastic constants using empirical relationships
-                    // Reference: Destrade et al. (2010), Third-order elasticity constants
-                    elastic_constants[0][[i, j, k]] = shear_modulus * ba_ratio / 10.0; // A
-                    elastic_constants[1][[i, j, k]] = shear_modulus * ba_ratio / 20.0; // B
-                    elastic_constants[2][[i, j, k]] = shear_modulus * ba_ratio / 50.0; // C
-                    elastic_constants[3][[i, j, k]] = shear_modulus * ba_ratio / 100.0;
-                // D
+                    // Third-order elastic constants (Destrade & Ogden 2010 §4)
+                    elastic_constants[0][[i, j, k]] = al;           // A
+                    elastic_constants[1][[i, j, k]] = al / 3.0;     // B
+                    elastic_constants[2][[i, j, k]] = al / 9.0;     // C
+                    elastic_constants[3][[i, j, k]] = al / 27.0;    // D
                 } else {
-                    // No signal detected
+                    // No signal detected: report zero with maximum uncertainty
                     nonlinearity_parameter[[i, j, k]] = 0.0;
                     nonlinearity_uncertainty[[i, j, k]] = 1.0;
                     estimation_quality[[i, j, k]] = 0.0;
@@ -234,32 +309,25 @@ fn harmonic_ratio_inversion(
     })
 }
 
-/// Iterative nonlinear least squares inversion
+// ─── Nonlinear least squares ──────────────────────────────────────────────────
+
+/// Iterative nonlinear least squares inversion (Gauss-Newton)
 ///
-/// Solves full nonlinear inverse problem using iterative optimization.
-/// More accurate than harmonic ratio method but computationally expensive.
+/// Fits the observed (A₁, A₂) pair at each voxel to the shear-wave forward
+/// model by iteratively minimising ‖(A₁_pred − A₁_obs, A₂_pred − A₂_obs)‖².
 ///
 /// # Algorithm
 ///
-/// 1. Initialize parameter estimates (from harmonic ratio or prior)
-/// 2. Forward model: predict harmonic amplitudes from current parameters
-/// 3. Compute residual: r = measured - predicted
-/// 4. Compute Jacobian: J = ∂(forward model)/∂(parameters)
-/// 5. Gauss-Newton update: Δp = (JᵀJ)⁻¹Jᵀr
-/// 6. Update parameters: p ← p + Δp
-/// 7. Check convergence: ||Δp|| < tolerance
-/// 8. Repeat until convergence or max iterations
-///
-/// # Arguments
-///
-/// * `harmonic_field` - Harmonic displacement field
-/// * `_grid` - Computational grid (unused in this method)
-/// * `config` - Inversion configuration with convergence parameters
+/// 1. Initialise B/A estimate from the direct harmonic ratio (§harmonic_ratio_inversion).
+/// 2. Forward model: predict (A₁_pred, A₂_pred) from current B/A.
+/// 3. Residual: r = (A₁_obs − A₁_pred, A₂_obs − A₂_pred).
+/// 4. Jacobian column J = (∂A₁_pred/∂(B/A), ∂A₂_pred/∂(B/A)).
+/// 5. Gauss-Newton update: Δ(B/A) = (Jᵀ r) / (Jᵀ J).
+/// 6. Repeat until |Δ(B/A)| < tolerance or max_iterations reached.
 ///
 /// # References
 ///
-/// - Chen et al. (2013): Iterative methods for nonlinear parameter estimation
-/// - Nocedal & Wright (2006): "Numerical Optimization", Chapter 10
+/// - Nocedal & Wright (2006). *Numerical Optimization*, §10.3 (Gauss-Newton).
 fn nonlinear_least_squares_inversion(
     harmonic_field: &HarmonicDisplacementField,
     _grid: &Grid,
@@ -278,60 +346,68 @@ fn nonlinear_least_squares_inversion(
         Array3::zeros((nx, ny, nz)), // D
     ];
 
-    // Simplified iterative estimation (full implementation would use optimization library)
+    let mu = shear_modulus(config);
+
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
-                // Initial guess from harmonic ratio method
-                let mut ba_estimate = 5.0; // Typical B/A for soft tissue
+                let measured_a1 = harmonic_field.fundamental_magnitude[[i, j, k]];
+                let measured_a2 = harmonic_field.harmonic_magnitudes[0][[i, j, k]];
+
+                if measured_a1 < 1e-12 {
+                    nonlinearity_parameter[[i, j, k]] = 0.0;
+                    nonlinearity_uncertainty[[i, j, k]] = 1.0;
+                    estimation_quality[[i, j, k]] = 0.0;
+                    continue;
+                }
+
+                // Seed from harmonic ratio (warm start for Gauss-Newton)
+                let mut ba_estimate =
+                    beta_s_from_amplitudes(measured_a1, measured_a2, config)
+                        .map(ba_from_beta_s)
+                        .unwrap_or(5.0) // default: typical soft tissue
+                        .clamp(0.0, 20.0);
+
                 let mut converged = false;
-
                 for _iteration in 0..config.max_iterations {
-                    // Forward model: predict harmonic amplitudes from current parameters
-                    let (predicted_a1, predicted_a2) = forward_model(ba_estimate);
+                    // Forward model: predict (A₁_pred, A₂_pred) from current B/A
+                    let (predicted_a1, predicted_a2) =
+                        forward_model(ba_estimate, measured_a1, config);
 
-                    // Measured amplitudes
-                    let measured_a1 = harmonic_field.fundamental_magnitude[[i, j, k]];
-                    let measured_a2 = harmonic_field.harmonic_magnitudes[0][[i, j, k]];
-
-                    if measured_a1 < 1e-12 {
-                        break; // No signal
-                    }
-
-                    // Residual
+                    // Residuals
                     let residual_a1 = measured_a1 - predicted_a1;
                     let residual_a2 = measured_a2 - predicted_a2;
 
-                    // Jacobian (derivative of forward model w.r.t. parameters)
-                    let (da1_dba, da2_dba) = forward_model_derivative(ba_estimate);
+                    // Jacobian: ∂(A₁, A₂)/∂(B/A)
+                    let (da1_dba, da2_dba) =
+                        forward_model_derivative(ba_estimate, measured_a1, config);
 
-                    // Gauss-Newton update
-                    let denominator = da1_dba.powi(2) + da2_dba.powi(2);
-                    if denominator.abs() > 1e-12 {
-                        let delta_ba =
-                            (residual_a1 * da1_dba + residual_a2 * da2_dba) / denominator;
-                        ba_estimate += delta_ba;
+                    // Gauss-Newton update: Δ = Jᵀr / JᵀJ
+                    let jt_j = da1_dba * da1_dba + da2_dba * da2_dba;
+                    if jt_j.abs() < f64::EPSILON {
+                        break;
+                    }
+                    let delta_ba =
+                        (residual_a1 * da1_dba + residual_a2 * da2_dba) / jt_j;
+                    ba_estimate = (ba_estimate + delta_ba).clamp(0.0, 20.0);
 
-                        // Check convergence
-                        if delta_ba.abs() < config.tolerance {
-                            converged = true;
-                            break;
-                        }
-                    } else {
-                        break; // Cannot invert
+                    if delta_ba.abs() < config.tolerance {
+                        converged = true;
+                        break;
                     }
                 }
 
-                nonlinearity_parameter[[i, j, k]] = ba_estimate.clamp(0.0, 20.0);
+                nonlinearity_parameter[[i, j, k]] = ba_estimate;
                 nonlinearity_uncertainty[[i, j, k]] = if converged { 0.1 } else { 1.0 };
                 estimation_quality[[i, j, k]] = if converged { 0.9 } else { 0.5 };
 
-                // Estimate elastic constants
-                let shear_modulus = config.density * 9.0; // Approximate
-                elastic_constants[0][[i, j, k]] = shear_modulus * ba_estimate / 10.0;
-                elastic_constants[1][[i, j, k]] = shear_modulus * ba_estimate / 20.0;
-                elastic_constants[2][[i, j, k]] = shear_modulus * ba_estimate / 50.0;
-                elastic_constants[3][[i, j, k]] = shear_modulus * ba_estimate / 100.0;
+                // Elastic constants from converged estimate
+                let beta = ba_estimate / 2.0 + 1.0; // β_s = B/A/2 + 1
+                let al = a_landau(mu, beta);
+                elastic_constants[0][[i, j, k]] = al;
+                elastic_constants[1][[i, j, k]] = al / 3.0;
+                elastic_constants[2][[i, j, k]] = al / 9.0;
+                elastic_constants[3][[i, j, k]] = al / 27.0;
             }
         }
     }
@@ -344,37 +420,26 @@ fn nonlinear_least_squares_inversion(
     })
 }
 
-/// Bayesian inversion with uncertainty quantification
+// ─── Bayesian inversion ───────────────────────────────────────────────────────
+
+/// Bayesian inversion with uncertainty quantification (MAP estimate)
 ///
-/// Uses probabilistic approach to estimate parameters and their uncertainties.
-/// Provides full posterior distribution accounting for measurement noise and
-/// prior knowledge.
+/// Uses a Gaussian prior B/A ~ N(μ_prior, σ_prior²) over soft-tissue values
+/// and a Gaussian likelihood centred on the harmonic-ratio B/A observation
+/// with precision derived from the measured SNR.
 ///
-/// # Algorithm
+/// MAP update rule for conjugate Gaussian model:
 ///
-/// 1. Define prior distributions: p(θ) (e.g., B/A ~ Normal(5, 2) for soft tissue)
-/// 2. Define likelihood: p(data|θ) from noise model
-/// 3. Compute posterior: p(θ|data) ∝ p(data|θ) × p(θ) (Bayes' rule)
-/// 4. Use MAP estimation: θ* = argmax p(θ|data)
-/// 5. Estimate uncertainty from posterior covariance
-///
-/// # Simplified Implementation
-///
-/// This implementation uses Maximum A Posteriori (MAP) estimation with
-/// Gaussian priors and likelihoods. Full implementation would use MCMC
-/// (e.g., Metropolis-Hastings, Hamiltonian Monte Carlo) or variational
-/// inference for complete posterior sampling.
-///
-/// # Arguments
-///
-/// * `harmonic_field` - Harmonic displacement field
-/// * `_grid` - Computational grid (unused in this method)
-/// * `config` - Inversion configuration
+/// ```text
+/// precision_post = 1/σ_prior² + precision_likelihood
+/// mean_post      = (μ_prior/σ_prior² + ba_obs × precision_likelihood) / precision_post
+/// σ_post         = 1 / √precision_post
+/// ```
 ///
 /// # References
 ///
-/// - Sullivan (2015): "Introduction to Uncertainty Quantification"
-/// - Gelman et al. (2013): "Bayesian Data Analysis", 3rd Edition
+/// - Gelman A et al. (2013). *Bayesian Data Analysis*, 3rd ed. §2.4 (conjugate Gaussian).
+/// - Sullivan T J (2015). *Introduction to Uncertainty Quantification.* §3.1.
 fn bayesian_inversion(
     harmonic_field: &HarmonicDisplacementField,
     _grid: &Grid,
@@ -387,13 +452,19 @@ fn bayesian_inversion(
     let mut estimation_quality = Array3::zeros((nx, ny, nz));
 
     let mut elastic_constants = vec![
-        Array3::zeros((nx, ny, nz)), // A
-        Array3::zeros((nx, ny, nz)), // B
-        Array3::zeros((nx, ny, nz)), // C
-        Array3::zeros((nx, ny, nz)), // D
+        Array3::zeros((nx, ny, nz)),
+        Array3::zeros((nx, ny, nz)),
+        Array3::zeros((nx, ny, nz)),
+        Array3::zeros((nx, ny, nz)),
     ];
 
-    // Simplified Bayesian estimation (full implementation would use MCMC)
+    let mu = shear_modulus(config);
+
+    // Gaussian prior: B/A ~ N(7, 2²) (centred on liver/soft tissue; Rénier 2008 Table 1)
+    let prior_mean: f64 = 7.0;
+    let prior_std: f64 = 2.0;
+    let prior_precision = 1.0 / (prior_std * prior_std);
+
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -401,43 +472,41 @@ fn bayesian_inversion(
                 let measured_a2 = harmonic_field.harmonic_magnitudes[0][[i, j, k]];
                 let snr = harmonic_field.harmonic_snrs[0][[i, j, k]];
 
-                if measured_a1 > 1e-12 && snr > 5.0 {
-                    // Prior: B/A ~ Normal(5, 2) for soft tissue
-                    let prior_mean = 5.0;
-                    let prior_std: f64 = 2.0;
+                let (ba_post, sigma_post, quality) = if measured_a1 > 1e-12 && snr > 5.0 {
+                    // Harmonic-ratio observation as the likelihood mean
+                    let beta =
+                        beta_s_from_amplitudes(measured_a1, measured_a2, config).unwrap_or(1.0);
+                    let ba_obs = ba_from_beta_s(beta).clamp(0.0, 20.0);
 
-                    // Likelihood noise model
-                    let measurement_noise = measured_a1 / snr.max(1.0);
+                    // Likelihood precision: σ_likelihood² ≈ (A₁/SNR)² normalised to B/A scale
+                    // A₁ acts as the amplitude scale; the SNR gives fractional uncertainty.
+                    let sigma_likelihood = (measured_a1 / snr.max(1.0)).max(1e-12) * 10.0;
+                    let likelihood_precision = 1.0 / (sigma_likelihood * sigma_likelihood);
 
-                    // Posterior estimation using maximum a posteriori (MAP) approach
-                    let likelihood_precision = 1.0 / measurement_noise.powi(2);
-                    let posterior_precision = 1.0 / prior_std.powi(2) + likelihood_precision;
+                    let precision_post = prior_precision + likelihood_precision;
+                    let mean_post = (prior_mean * prior_precision
+                        + ba_obs * likelihood_precision)
+                        / precision_post;
+                    let std_post = (1.0 / precision_post).sqrt();
+                    let quality = (snr / 20.0).min(1.0);
 
-                    let ratio = measured_a2 / measured_a1;
-                    let data_likelihood_mean = ratio * 10.0; // Simplified calibration
-
-                    let posterior_mean = (prior_mean / prior_std.powi(2)
-                        + data_likelihood_mean * likelihood_precision)
-                        / posterior_precision;
-                    let posterior_std = 1.0 / posterior_precision.sqrt();
-
-                    nonlinearity_parameter[[i, j, k]] = posterior_mean.clamp(0.0, 20.0);
-                    nonlinearity_uncertainty[[i, j, k]] = posterior_std.clamp(0.1, 5.0);
-                    estimation_quality[[i, j, k]] = (snr / 20.0).min(1.0); // Quality based on SNR
+                    (mean_post.clamp(0.0, 20.0), std_post.clamp(0.1, 5.0), quality)
                 } else {
-                    // Insufficient data: use prior mean with high uncertainty
-                    nonlinearity_parameter[[i, j, k]] = 5.0; // Prior mean
-                    nonlinearity_uncertainty[[i, j, k]] = 2.0; // Prior std
-                    estimation_quality[[i, j, k]] = 0.1; // Low quality
-                }
+                    // Insufficient data: return to prior
+                    (prior_mean, prior_std, 0.1)
+                };
 
-                // Estimate elastic constants from posterior mean
-                let shear_modulus = config.density * 9.0;
-                let ba = nonlinearity_parameter[[i, j, k]];
-                elastic_constants[0][[i, j, k]] = shear_modulus * ba / 10.0;
-                elastic_constants[1][[i, j, k]] = shear_modulus * ba / 20.0;
-                elastic_constants[2][[i, j, k]] = shear_modulus * ba / 50.0;
-                elastic_constants[3][[i, j, k]] = shear_modulus * ba / 100.0;
+                nonlinearity_parameter[[i, j, k]] = ba_post;
+                nonlinearity_uncertainty[[i, j, k]] = sigma_post;
+                estimation_quality[[i, j, k]] = quality;
+
+                // Elastic constants from MAP estimate
+                let beta = ba_post / 2.0 + 1.0; // β_s = B/A/2 + 1
+                let al = a_landau(mu, beta);
+                elastic_constants[0][[i, j, k]] = al;
+                elastic_constants[1][[i, j, k]] = al / 3.0;
+                elastic_constants[2][[i, j, k]] = al / 9.0;
+                elastic_constants[3][[i, j, k]] = al / 27.0;
             }
         }
     }
@@ -450,49 +519,189 @@ fn bayesian_inversion(
     })
 }
 
-/// Forward model for nonlinear wave propagation
+// ─── Forward model (NLS support) ─────────────────────────────────────────────
+
+/// Forward model: predict (A₁_pred, A₂_pred) given B/A and observed A₁.
 ///
-/// Predicts harmonic amplitudes from nonlinearity parameter.
-/// Simplified model for demonstration; full implementation would solve
-/// nonlinear wave equation numerically.
+/// Uses the shear-wave harmonic generation model (Rénier 2008, Eq. 7):
 ///
-/// # Arguments
+/// ```text
+/// A₁_pred = a1_obs           (fundamental not altered by B/A in quasilinear model)
+/// A₂_pred = β_s k_s a1² z / 2
+/// ```
 ///
-/// * `ba_ratio` - B/A nonlinearity parameter
-///
-/// # Returns
-///
-/// Tuple of (fundamental amplitude, second harmonic amplitude)
-fn forward_model(ba_ratio: f64) -> (f64, f64) {
-    // Simplified forward model
-    // Real implementation would solve nonlinear wave equation
-    let a1 = 1.0; // Normalized fundamental
-    let a2 = a1 * ba_ratio / 10.0; // Second harmonic scales with B/A
-    (a1, a2)
+/// where β_s = B/A/2 + 1, k_s = ω/c_s, z = propagation_distance.
+fn forward_model(
+    ba_ratio: f64,
+    a1_obs: f64,
+    config: &NonlinearInversionConfig,
+) -> (f64, f64) {
+    let omega = 2.0 * PI * config.excitation_frequency;
+    let c_s = config.shear_wave_speed.max(1e-3);
+    let k_s = omega / c_s;
+    let z = config.propagation_distance.max(1e-6);
+    let beta = ba_ratio / 2.0 + 1.0; // β_s = B/A/2 + 1
+
+    // A₂_pred = β_s k_s A₁² z / 2  [Rénier 2008, Eq. 7]
+    let a2_pred = (beta * k_s * a1_obs * a1_obs * z / 2.0).max(0.0);
+    (a1_obs, a2_pred)
 }
 
-/// Derivative of forward model with respect to B/A parameter
+/// Jacobian of the forward model with respect to B/A.
 ///
-/// Computes Jacobian for Gauss-Newton optimization.
-///
-/// # Arguments
-///
-/// * `_ba_ratio` - B/A nonlinearity parameter
-///
-/// # Returns
-///
-/// Tuple of (∂A₁/∂(B/A), ∂A₂/∂(B/A))
-fn forward_model_derivative(_ba_ratio: f64) -> (f64, f64) {
-    // Simplified derivative
-    let da1_dba = 0.0; // Fundamental doesn't depend on B/A in this model
-    let da2_dba = 1.0 / 10.0; // Linear relationship in simplified model
-    (da1_dba, da2_dba)
+/// ```text
+/// ∂A₁_pred / ∂(B/A) = 0
+/// ∂A₂_pred / ∂(B/A) = k_s A₁² z / 4      (from ∂β_s/∂(B/A) = 1/2)
+/// ```
+fn forward_model_derivative(
+    _ba_ratio: f64,
+    a1_obs: f64,
+    config: &NonlinearInversionConfig,
+) -> (f64, f64) {
+    let omega = 2.0 * PI * config.excitation_frequency;
+    let c_s = config.shear_wave_speed.max(1e-3);
+    let k_s = omega / c_s;
+    let z = config.propagation_distance.max(1e-6);
+
+    // ∂β_s/∂(B/A) = 1/2, so ∂A₂_pred/∂(B/A) = k_s A₁² z / 4
+    let da2_dba = k_s * a1_obs * a1_obs * z / 4.0;
+    (0.0_f64, da2_dba)
 }
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::domain::imaging::ultrasound::elastography::NonlinearInversionMethod;
+
+    fn test_config() -> NonlinearInversionConfig {
+        NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio)
+            .with_shear_properties(3.0, 100.0, 0.05) // c_s=3 m/s, f=100 Hz, z=5 cm
+    }
+
+    // ── round-trip: synthesise A₂ from known B/A, recover it ─────────────────
+
+    /// β_s → A₂ → β_s round-trip must return the input β_s to within rtol=1e-10.
+    ///
+    /// Forward: A₂ = β_s k_s A₁² z / 2
+    /// Inverse: β_s_rec = 2 A₂ c_s / (ω A₁² z)   [Rénier 2008, Eq. 8]
+    #[test]
+    fn test_beta_s_round_trip() {
+        let config = test_config();
+        let omega = 2.0 * PI * config.excitation_frequency;
+        let c_s = config.shear_wave_speed;
+        let k_s = omega / c_s;
+        let z = config.propagation_distance;
+
+        for &ba_target in &[1.0_f64, 5.0, 10.0, 15.0] {
+            let beta_target = ba_target / 2.0 + 1.0;
+            let a1: f64 = 1e-6; // 1 µm fundamental displacement
+            let a2 = beta_target * k_s * a1 * a1 * z / 2.0;
+
+            let beta_rec = beta_s_from_amplitudes(a1, a2, &config).unwrap();
+            let rel_err = (beta_rec - beta_target).abs() / beta_target.abs().max(1e-12);
+            assert!(
+                rel_err < 1e-10,
+                "Round-trip failed for B/A={ba_target}: got β_s={beta_rec:.6}, \
+                 expected {beta_target:.6}, rel_err={rel_err:.2e}"
+            );
+        }
+    }
+
+    /// ba_from_beta_s at β_s=1.0 (linear medium) must give B/A=0.
+    #[test]
+    fn test_ba_zero_for_linear_medium() {
+        let ba = ba_from_beta_s(1.0);
+        assert!(
+            ba.abs() < 1e-15,
+            "Linear medium (β_s=1) must give B/A=0, got {ba}"
+        );
+    }
+
+    /// Landau constant A_L must be negative for tissues with β_s < 3/4.
+    /// For β_s > 3/4 (all physical tissues): A_L = μ(4β_s − 3) > 0 when β_s > 3/4.
+    #[test]
+    fn test_a_landau_sign() {
+        let mu = 9000.0; // Pa (c_s=3 m/s, ρ=1000 kg/m³)
+        // β_s = 2 (B/A = 2): should give positive A_L
+        assert!(a_landau(mu, 2.0) > 0.0, "A_L should be positive for β_s=2");
+        // β_s = 0.5: should give negative A_L (unphysical but valid maths)
+        assert!(a_landau(mu, 0.5) < 0.0, "A_L should be negative for β_s=0.5");
+    }
+
+    // ── tissue reference values (Rénier 2008 Table 1) ────────────────────────
+
+    /// For a gelatin phantom: β_s ≈ 1.8, A₁=1µm, f=100 Hz, z=5 cm, c_s=3 m/s.
+    /// Synthesise A₂ and verify recovered B/A ≈ 2×(1.8−1) = 1.6 within 0.1%.
+    #[test]
+    fn test_gelatin_phantom_reference_value() {
+        let config = test_config();
+        let omega = 2.0 * PI * config.excitation_frequency;
+        let c_s = config.shear_wave_speed;
+        let k_s = omega / c_s;
+        let z = config.propagation_distance;
+
+        let beta_ref = 1.8_f64; // gelatin 2% (Rénier 2008)
+        let a1 = 1e-6_f64;
+        let a2 = beta_ref * k_s * a1 * a1 * z / 2.0;
+
+        let beta_rec = beta_s_from_amplitudes(a1, a2, &config).unwrap();
+        let ba_rec = ba_from_beta_s(beta_rec);
+        let ba_expected = ba_from_beta_s(beta_ref); // = 1.6
+
+        let err = (ba_rec - ba_expected).abs();
+        assert!(
+            err < 1e-3 * ba_expected.abs().max(1.0),
+            "Gelatin phantom B/A: got {ba_rec:.4}, expected {ba_expected:.4}, err={err:.2e}"
+        );
+    }
+
+    // ── forward model self-consistency ───────────────────────────────────────
+
+    /// forward_model + beta_s_from_amplitudes must be inverses of each other.
+    #[test]
+    fn test_forward_model_invertible() {
+        let config = test_config();
+        let a1 = 2e-6; // 2 µm
+        let ba_in = 6.0_f64; // liver-like
+
+        let (_a1_pred, a2_pred) = forward_model(ba_in, a1, &config);
+        let beta_rec = beta_s_from_amplitudes(a1, a2_pred, &config).unwrap();
+        let ba_rec = ba_from_beta_s(beta_rec).clamp(0.0, 20.0);
+
+        let err = (ba_rec - ba_in).abs();
+        assert!(
+            err < 1e-9,
+            "forward_model/beta_s_from_amplitudes inverse: got {ba_rec:.6}, \
+             expected {ba_in:.6}, err={err:.2e}"
+        );
+    }
+
+    /// Jacobian: numerical derivative must agree with analytical derivative to 0.1%.
+    #[test]
+    fn test_forward_model_jacobian_numerical() {
+        let config = test_config();
+        let a1 = 1e-6_f64;
+        let ba0 = 5.0_f64;
+        let h = 1e-4;
+
+        let (_, a2_pos) = forward_model(ba0 + h, a1, &config);
+        let (_, a2_neg) = forward_model(ba0 - h, a1, &config);
+        let da2_numerical = (a2_pos - a2_neg) / (2.0 * h);
+
+        let (_, da2_analytical) = forward_model_derivative(ba0, a1, &config);
+
+        let rel_err = (da2_numerical - da2_analytical).abs()
+            / da2_analytical.abs().max(1e-30);
+        assert!(
+            rel_err < 1e-3,
+            "Jacobian rel_err={rel_err:.2e}: numerical={da2_numerical:.4e}, \
+             analytical={da2_analytical:.4e}"
+        );
+    }
+
+    // ── inversion pipeline tests ─────────────────────────────────────────────
 
     #[test]
     fn test_harmonic_ratio_inversion() {
@@ -553,28 +762,6 @@ mod tests {
     }
 
     #[test]
-    fn test_forward_model() {
-        let ba = 5.0;
-        let (a1, a2) = forward_model(ba);
-
-        assert!(a1 > 0.0, "Fundamental amplitude should be positive");
-        assert!(a2 > 0.0, "Second harmonic should be positive");
-        assert!(
-            a2 < a1,
-            "Second harmonic should be smaller than fundamental"
-        );
-    }
-
-    #[test]
-    fn test_forward_model_derivative() {
-        let ba = 5.0;
-        let (da1, da2) = forward_model_derivative(ba);
-
-        assert_eq!(da1, 0.0, "Fundamental derivative should be zero");
-        assert!(da2 > 0.0, "Second harmonic derivative should be positive");
-    }
-
-    #[test]
     fn test_nonlinear_inversion_processor() {
         let config = NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio);
         let processor = NonlinearInversion::new(config);
@@ -582,5 +769,20 @@ mod tests {
         assert_eq!(processor.method(), NonlinearInversionMethod::HarmonicRatio);
         assert_eq!(processor.config().density, 1000.0);
         assert_eq!(processor.config().acoustic_speed, 1540.0);
+        assert_eq!(processor.config().shear_wave_speed, 3.0);
+        assert_eq!(processor.config().excitation_frequency, 100.0);
+        assert_eq!(processor.config().propagation_distance, 0.05);
+    }
+
+    /// Shear modulus helper: μ = ρ c_s² for default config (ρ=1000, c_s=3) → 9000 Pa.
+    #[test]
+    fn test_shear_modulus_default() {
+        let config = NonlinearInversionConfig::default();
+        let mu = shear_modulus(&config);
+        let expected = 1000.0 * 3.0 * 3.0; // 9000 Pa
+        assert!(
+            (mu - expected).abs() < 1e-10,
+            "shear_modulus should be {expected}, got {mu}"
+        );
     }
 }

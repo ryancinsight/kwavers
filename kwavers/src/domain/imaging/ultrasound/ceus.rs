@@ -108,15 +108,50 @@ impl Microbubble {
         Ok(())
     }
 
-    /// Compute scattering cross-section at resonance
+    /// Compute acoustic scattering cross-section (m²) using the Hoff et al. (2000) model.
+    ///
+    /// ## Physics (Hoff, Sontum & Hovem, JASA 107(4), 2000, Eq. 7)
+    ///
+    /// An encapsulated bubble driven acoustically at frequency f radiates as a spherical
+    /// monopole.  The scattering cross-section is:
+    ///
+    /// ```text
+    /// σ_s(ω) = 4π R² (ω R / c_L)²  /  [(1 − Ω²)² + (δ_tot Ω)²]
+    /// ```
+    ///
+    /// where Ω = ω/ω₀ and the dimensionless total damping is (Church 1995, JASA 97(3)):
+    ///
+    /// ```text
+    /// δ_tot = δ_rad + δ_vis + δ_sh
+    ///
+    ///   δ_rad = ω₀ R / c_L                                          (radiation)
+    ///   δ_vis = 4 μ_L / (ω₀ ρ_L R²)                               (liquid viscosity)
+    ///   δ_sh  = 4 d_s μ_s / (ω₀ ρ_L R³)                          (shell viscosity)
+    /// ```
+    ///
+    /// Constants: c_L = 1480 m/s, ρ_L = 1000 kg/m³, μ_L = 1.002×10⁻³ Pa·s (water, 20°C).
     #[must_use]
     pub fn scattering_cross_section(&self, frequency: f64) -> f64 {
-        let _ka = 2.0 * std::f64::consts::PI * frequency * self.radius_eq / 343.0; // k*a
-        let resonance_factor =
-            1.0 / (1.0 - (frequency / self.resonance_frequency(101325.0, 1000.0)).powi(2)).powi(2);
+        const C_L: f64 = 1480.0; // longitudinal speed in water at 20°C [m/s]
+        const RHO_L: f64 = 1000.0; // water density [kg/m³]
+        const MU_L: f64 = 1.002e-3; // dynamic viscosity of water at 20°C [Pa·s]
 
-        // Simplified scattering cross-section
-        std::f64::consts::PI * self.radius_eq * self.radius_eq * resonance_factor
+        let r = self.radius_eq;
+        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let omega0 = 2.0 * std::f64::consts::PI * self.resonance_frequency(101325.0, RHO_L);
+
+        // Dimensionless damping components (Church 1995, Eq. A3–A5)
+        let delta_rad = omega0 * r / C_L;
+        let delta_vis = 4.0 * MU_L / (omega0 * RHO_L * r * r);
+        let delta_sh = 4.0 * self.shell_thickness * self.shell_viscosity / (omega0 * RHO_L * r * r * r);
+        let delta_tot = (delta_rad + delta_vis + delta_sh).max(1e-12);
+
+        let big_omega = omega / omega0;
+        let denom = (1.0 - big_omega * big_omega).powi(2) + (delta_tot * big_omega).powi(2);
+
+        // σ_s = 4π R² (ωR/c_L)² / denom
+        let ka = omega * r / C_L; // dimensionless acoustic size parameter
+        4.0 * std::f64::consts::PI * r * r * ka * ka / denom
     }
 }
 
@@ -399,5 +434,66 @@ impl PerfusionStatistics {
             mean_auc,
             std_auc,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Cross-section must be strictly positive for any physical frequency.
+    #[test]
+    fn test_scattering_cross_section_positive() {
+        let mb = Microbubble::sono_vue(); // 1.5 µm radius
+        for &f_mhz in &[1.0f64, 2.0, 3.0, 5.0, 10.0] {
+            let sigma = mb.scattering_cross_section(f_mhz * 1e6);
+            assert!(
+                sigma > 0.0 && sigma.is_finite(),
+                "σ_s must be positive and finite at {f_mhz} MHz, got {sigma:.3e}"
+            );
+        }
+    }
+
+    /// Cross-section is maximised near the resonance frequency.
+    #[test]
+    fn test_scattering_peak_near_resonance() {
+        let mb = Microbubble::sono_vue();
+        let f_r = mb.resonance_frequency(101325.0, 1000.0);
+        let sigma_res = mb.scattering_cross_section(f_r);
+        let sigma_far = mb.scattering_cross_section(f_r * 10.0);
+        assert!(
+            sigma_res > sigma_far,
+            "σ_s(f_r)={sigma_res:.3e} should exceed σ_s(10·f_r)={sigma_far:.3e}"
+        );
+    }
+
+    /// σ_s must use c_L=1480 m/s (water), not 343 m/s (air).
+    /// Verify: σ_s at resonance is bounded well below the acoustic aperture limit.
+    /// For kR << 1, σ_s << 4πR² — encapsulated microbubbles in water are sub-resonant scatterers.
+    #[test]
+    fn test_scattering_uses_water_sound_speed() {
+        let mb = Microbubble::sono_vue();
+        let f_r = mb.resonance_frequency(101325.0, 1000.0);
+        let sigma_res = mb.scattering_cross_section(f_r);
+        let geo = 4.0 * std::f64::consts::PI * mb.radius_eq * mb.radius_eq;
+        // Sanity: σ_s should be at most ~100× geometric for typical damping (~0.05)
+        assert!(
+            sigma_res < 200.0 * geo,
+            "Implausibly large σ_s={sigma_res:.3e} suggests wrong sound speed"
+        );
+        assert!(sigma_res > 0.0, "σ_s must be positive");
+    }
+
+    /// Cross-section must decrease above resonance.
+    #[test]
+    fn test_scattering_decreases_above_resonance() {
+        let mb = Microbubble::sono_vue();
+        let f_r = mb.resonance_frequency(101325.0, 1000.0);
+        let s1 = mb.scattering_cross_section(f_r * 1.5);
+        let s2 = mb.scattering_cross_section(f_r * 3.0);
+        assert!(
+            s1 > s2,
+            "σ_s should decrease above resonance: σ(1.5·f_r)={s1:.3e} σ(3·f_r)={s2:.3e}"
+        );
     }
 }

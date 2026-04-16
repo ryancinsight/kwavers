@@ -154,6 +154,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
+name = "apollofft"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "half",
+ "ndarray",
+ "num-complex",
+ "once_cell",
+ "parking_lot",
+ "proptest",
+ "rayon",
+ "realfft",
+ "rustfft",
+ "serde",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1405,7 +1423,7 @@ dependencies = [
  "derive-new",
  "dirs",
  "gix-tempfile",
- "image",
+ "image 0.25.8",
  "r2d2",
  "r2d2_sqlite",
  "rand 0.9.2",
@@ -1479,7 +1497,7 @@ dependencies = [
  "libm",
  "macerator",
  "matrixmultiply",
- "ndarray 0.16.1",
+ "ndarray",
  "num-traits",
  "paste",
  "portable-atomic-util",
@@ -3250,7 +3268,7 @@ dependencies = [
  "dicom-encoding 0.7.1",
  "dicom-object 0.7.1",
  "dicom-transfer-syntax-registry 0.7.1",
- "image",
+ "image 0.25.8",
  "num-traits",
  "rayon",
  "snafu",
@@ -3269,7 +3287,7 @@ dependencies = [
  "dicom-encoding 0.8.2",
  "dicom-object 0.8.2",
  "dicom-transfer-syntax-registry 0.8.2",
- "image",
+ "image 0.25.8",
  "num-traits",
  "rayon",
  "snafu",
@@ -5033,6 +5051,24 @@ dependencies = [
 
 [[package]]
 name = "image"
+version = "0.24.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5690139d2f55868e080017335e4b94cb7414274c74f1669c84fb5feba2c9f69d"
+dependencies = [
+ "bytemuck",
+ "byteorder",
+ "color_quant",
+ "exr",
+ "gif",
+ "jpeg-decoder",
+ "num-traits",
+ "png 0.17.16",
+ "qoi",
+ "tiff 0.9.1",
+]
+
+[[package]]
+name = "image"
 version = "0.25.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "529feb3e6769d234375c4cf1ee2ce713682b8e76538cb13f9fc23e1400a591e7"
@@ -5045,12 +5081,12 @@ dependencies = [
  "image-webp",
  "moxcms",
  "num-traits",
- "png",
+ "png 0.18.0",
  "qoi",
  "ravif",
  "rayon",
  "rgb",
- "tiff",
+ "tiff 0.10.3",
  "zune-core",
  "zune-jpeg",
 ]
@@ -5483,6 +5519,7 @@ name = "kwavers"
 version = "3.0.0"
 dependencies = [
  "anyhow",
+ "apollofft",
  "approx",
  "aws-config",
  "aws-sdk-applicationautoscaling",
@@ -5509,8 +5546,8 @@ dependencies = [
  "log",
  "loom",
  "nalgebra 0.32.6",
- "ndarray 0.16.1",
- "nifti 0.17.0",
+ "ndarray",
+ "nifti",
  "num-complex",
  "num-traits",
  "once_cell",
@@ -6046,20 +6083,6 @@ checksum = "8d5439c4ad607c3c23abf66de8c8bf57ba8adcd1f129e699851a6e43935d339d"
 
 [[package]]
 name = "ndarray"
-version = "0.15.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adb12d4e967ec485a5f71c6311fe28158e9d6f4bc4a447b474184d0f91a8fa32"
-dependencies = [
- "approx",
- "matrixmultiply",
- "num-complex",
- "num-integer",
- "num-traits",
- "rawpointer",
-]
-
-[[package]]
-name = "ndarray"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "882ed72dce9365842bf196bdeedf5055305f11fc8c03dee7bb0194a6cad34841"
@@ -6102,25 +6125,6 @@ checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 
 [[package]]
 name = "nifti"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f58f00fdaae1ed2032400243c60a7c98a75a2320a4fc79a588e832aafcf64045"
-dependencies = [
- "approx",
- "bytemuck",
- "byteordered",
- "either",
- "flate2",
- "ndarray 0.15.6",
- "num-complex",
- "num-derive 0.3.3",
- "num-traits",
- "quick-error 2.0.1",
- "rgb",
-]
-
-[[package]]
-name = "nifti"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1bac57e0b2eeed409bce85d9e4294fb82fae6cd37d14e04349586b2a6ebe7153"
@@ -6130,9 +6134,9 @@ dependencies = [
  "byteordered",
  "either",
  "flate2",
- "ndarray 0.16.1",
+ "ndarray",
  "num-complex",
- "num-derive 0.4.2",
+ "num-derive",
  "num-traits",
  "quick-error 2.0.1",
  "rgb",
@@ -6236,17 +6240,6 @@ checksum = "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9"
 
 [[package]]
 name = "num-derive"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "876a53fff98e03a936a674b29568b0e605f06b29372c2489ff4de23f1949743d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "num-derive"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed3955f1a9c7c0c15e092f9c887db08b1fc683305fdf6eb6684f22555355e202"
@@ -6345,7 +6338,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7aac2e6a6e4468ffa092ad43c39b81c79196c2bb773b8db4085f695efe3bba17"
 dependencies = [
  "libc",
- "ndarray 0.16.1",
+ "ndarray",
  "num-complex",
  "num-integer",
  "num-traits",
@@ -6744,6 +6737,19 @@ dependencies = [
 
 [[package]]
 name = "png"
+version = "0.17.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82151a2fc869e011c153adc57cf2789ccb8d9906ce52c0b39a6b5697749d7526"
+dependencies = [
+ "bitflags 1.3.2",
+ "crc32fast",
+ "fdeflate",
+ "flate2",
+ "miniz_oxide",
+]
+
+[[package]]
+name = "png"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97baced388464909d42d89643fe4361939af9b7ce7a31ee32a168f832a70f2a0"
@@ -6990,7 +6996,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "kwavers",
- "ndarray 0.16.1",
+ "ndarray",
  "num-complex",
  "numpy",
  "pyo3",
@@ -7316,7 +7322,7 @@ dependencies = [
  "maybe-rayon",
  "new_debug_unreachable",
  "noop_proc_macro",
- "num-derive 0.4.2",
+ "num-derive",
  "num-traits",
  "once_cell",
  "paste",
@@ -7393,6 +7399,15 @@ checksum = "22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91"
 dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
+]
+
+[[package]]
+name = "realfft"
+version = "3.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f821338fddb99d089116342c46e9f1fbf3828dba077674613e734e01d6ea8677"
+dependencies = [
+ "rustfft",
 ]
 
 [[package]]
@@ -7639,9 +7654,11 @@ dependencies = [
  "burn",
  "burn-ndarray",
  "dicom 0.8.2",
+ "dicom-core 0.8.2",
+ "image 0.24.9",
  "nalgebra 0.33.3",
- "ndarray 0.15.6",
- "nifti 0.16.0",
+ "ndarray",
+ "nifti",
  "rayon",
  "ritk-core",
  "tempfile",
@@ -7668,6 +7685,7 @@ dependencies = [
  "burn",
  "burn-ndarray",
  "nalgebra 0.33.3",
+ "ndarray",
  "ritk-core",
  "ritk-io",
  "ritk-model",
@@ -8790,7 +8808,7 @@ dependencies = [
  "half",
  "lazy_static",
  "libc",
- "ndarray 0.16.1",
+ "ndarray",
  "rand 0.8.5",
  "safetensors 0.3.3",
  "thiserror 1.0.69",
@@ -8913,6 +8931,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f60246a4944f24f6e018aa17cdeffb7818b76356965d03b07d6a9886e8962185"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "tiff"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba1310fcea54c6a9a4fd1aad794ecc02c31682f6bfbecdf460bf19533eed1e3e"
+dependencies = [
+ "flate2",
+ "jpeg-decoder",
+ "weezl",
 ]
 
 [[package]]

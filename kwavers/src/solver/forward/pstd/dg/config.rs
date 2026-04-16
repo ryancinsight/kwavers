@@ -34,23 +34,18 @@
 /// `‖u⁽¹⁾‖_TV ≤ ‖u^n‖_TV`.
 ///
 /// **CFL condition for DG(p):** `CFL ≤ 1/(2p+1)` (Cockburn & Shu 2001 §4).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DgTimeIntegrator {
     /// Strong Stability Preserving Runge–Kutta, 3rd-order (Shu & Osher 1988).
     ///
     /// Recommended for all production simulations with p ≥ 1.
+    #[default]
     SspRk3,
     /// Forward Euler — first-order only.
     ///
     /// Conditionally stable for p = 0; **unconditionally unstable for p ≥ 1** under DG
     /// (Cockburn & Shu 2001 §4).  Provided only for baseline regression comparisons.
     ForwardEuler,
-}
-
-impl Default for DgTimeIntegrator {
-    fn default() -> Self {
-        Self::SspRk3
-    }
 }
 
 /// Degree selector for the WENO shock-capturing limiter.
@@ -62,18 +57,13 @@ impl Default for DgTimeIntegrator {
 /// ## Reference
 /// Jiang & Shu (1996). *J. Comput. Phys.* 126(1):202–228.
 /// Liu, Osher & Chan (1994). *J. Comput. Phys.* 115(1):200–212.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum WenoDegree {
     /// WENO3 — two stencils, 3rd-order in smooth regions.
+    #[default]
     Weno3,
     /// WENO7 — four stencils, 7th-order in smooth regions.
     Weno7,
-}
-
-impl Default for WenoDegree {
-    fn default() -> Self {
-        Self::Weno3
-    }
 }
 
 /// Shock-capture configuration applied after each SSP-RK sub-stage.

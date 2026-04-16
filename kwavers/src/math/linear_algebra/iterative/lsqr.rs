@@ -232,7 +232,7 @@ impl LsqrSolver {
 
             // Residual propagation (step 5)
             let phi = c * phi_bar; // φ_k = c_k · φ̄_k
-            phi_bar = s * phi_bar; // φ̄_{k+1} = s_k · φ̄_k
+            phi_bar *= s; // φ̄_{k+1} = s_k · φ̄_k
 
             // ── Solution and search-direction update (step 6–7) ──────────────
             x = x + (phi / rho) * &w; // x_k = x_{k−1} + (φ_k/ρ_k)·w_k

@@ -107,25 +107,18 @@ pub async fn rate_limit_middleware(
             ));
             *response.status_mut() = StatusCode::TOO_MANY_REQUESTS;
 
-            // Add rate limit headers
+            // Add rate limit headers (to_string() on integers always produces
+            // valid ASCII, so HeaderValue::from_str cannot fail here).
             let limit_info = rate_limiter.get_limit_info(&user_id, &endpoint);
-            response.headers_mut().insert(
-                "X-RateLimit-Limit",
-                limit_info.limit.to_string().parse().unwrap(),
-            );
-            response.headers_mut().insert(
-                "X-RateLimit-Remaining",
-                limit_info.remaining.to_string().parse().unwrap(),
-            );
-            response.headers_mut().insert(
-                "X-RateLimit-Reset",
-                limit_info
-                    .reset_time
-                    .timestamp()
-                    .to_string()
-                    .parse()
-                    .unwrap(),
-            );
+            if let Ok(v) = limit_info.limit.to_string().parse() {
+                response.headers_mut().insert("X-RateLimit-Limit", v);
+            }
+            if let Ok(v) = limit_info.remaining.to_string().parse() {
+                response.headers_mut().insert("X-RateLimit-Remaining", v);
+            }
+            if let Ok(v) = limit_info.reset_time.timestamp().to_string().parse() {
+                response.headers_mut().insert("X-RateLimit-Reset", v);
+            }
 
             response
         }

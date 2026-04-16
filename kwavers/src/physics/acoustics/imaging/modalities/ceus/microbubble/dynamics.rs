@@ -194,17 +194,51 @@ impl BubbleDynamics {
         })
     }
 
-    /// Compute nonlinear scattering efficiency
+    /// Compute nonlinear scattering efficiency via Lorentzian resonance response.
+    ///
+    /// ## Theory — Second-Harmonic Nonlinear Scattering (de Jong 1994; Church 1988)
+    ///
+    /// For an encapsulated microbubble driven at normalized frequency Ω = f/f_res,
+    /// the dimensionless second-harmonic scattering efficiency is (de Jong et al. 1994, Eq. 9):
+    ///
+    /// ```text
+    /// η_NL = (3κ(3κ+1)/2) · ε · χ(Ω)
+    /// ```
+    ///
+    /// where:
+    ///
+    /// | Symbol | Meaning | Unit |
+    /// |--------|---------|------|
+    /// | κ      | polytropic index of the enclosed gas | dimensionless |
+    /// | ε      | dimensionless drive amplitude `= P_A / (ρ_L R₀² ω_res²)` | dimensionless |
+    /// | χ(Ω)  | Lorentzian response `= 1/√[(1−Ω²)² + (δΩ)²]` | dimensionless |
+    /// | δ      | total damping coefficient (viscous + thermal + radiation; ≈0.1) | dimensionless |
+    ///
+    /// The Lorentzian χ(Ω) peaks at Ω=1 with value 1/δ and is continuous across
+    /// resonance — unlike the prior discontinuous `|1−Ω²|` formulation.
+    ///
+    /// **Physical interpretation**: `ε` is the acoustic Mach number in the
+    /// bubble-wall co-moving frame; it characterises the nonlinear drive strength.
+    /// For typical CEUS: P_A = 50 kPa, R₀ = 2 µm, f_res = 3 MHz →
+    /// ε ≈ 0.005 (weakly nonlinear regime where perturbation theory is valid).
+    ///
+    /// ## References
+    ///
+    /// - de Jong N, Cornet R, Lancée CT (1994). "Higher harmonics of vibrating
+    ///   gas-filled microspheres. Part one: simulations." *Ultrasonics* 32(6), 447–453.
+    /// - Church CC (1988). "Prediction of rectified diffusion during nonlinear
+    ///   bubble oscillations at biomedical frequencies." *JASA* 83(6), 2210–2217.
+    /// - Minnaert M (1933). "On musical air-bubbles." *Phil Mag* 16, 235–248.
     ///
     /// # Arguments
     ///
-    /// * `bubble` - Microbubble properties
-    /// * `pressure_amplitude` - Acoustic pressure amplitude (Pa)
-    /// * `frequency` - Acoustic frequency (Hz)
+    /// * `bubble`             — Microbubble properties (R₀, κ, etc.)
+    /// * `pressure_amplitude` — Acoustic pressure amplitude P_A [Pa]
+    /// * `frequency`          — Drive frequency f [Hz]
     ///
     /// # Returns
     ///
-    /// Nonlinear scattering coefficient (dimensionless)
+    /// Dimensionless nonlinear scattering efficiency η_NL ≥ 0.
     #[must_use]
     pub fn nonlinear_scattering_efficiency(
         &self,
@@ -212,25 +246,38 @@ impl BubbleDynamics {
         pressure_amplitude: f64,
         frequency: f64,
     ) -> f64 {
-        // Simplified model based on compression-only behavior
-        let resonance_freq = bubble.resonance_frequency(self.ambient_pressure, self.liquid_density);
-        let freq_ratio = frequency / resonance_freq;
+        let r0 = bubble.radius_eq.max(1e-12);
+        let resonance_freq = bubble
+            .resonance_frequency(self.ambient_pressure, self.liquid_density)
+            .max(1.0); // guard against zero (bare bubble with no ambient pressure)
 
-        // Nonlinearity parameter β
-        let beta = if freq_ratio < 1.0 {
-            // Subharmonic regime
-            1.0 - freq_ratio.powi(2)
-        } else {
-            // Ultraharmonic regime
-            freq_ratio.powi(2) - 1.0
-        };
+        // Normalized drive frequency Ω = f / f_res  [dimensionless]
+        let omega_ratio = frequency / resonance_freq;
 
-        // Pressure-dependent nonlinearity
-        let acoustic_parameter = pressure_amplitude * bubble.radius_eq
-            / (self.ambient_pressure * bubble.shell_elasticity);
+        // Angular resonance frequency ω_res = 2π·f_res  [rad/s]
+        let omega_res = 2.0 * std::f64::consts::PI * resonance_freq;
 
-        // Empirical nonlinear scattering efficiency
-        beta * acoustic_parameter.min(1.0)
+        // Dimensionless drive amplitude ε = P_A / (ρ_L R₀² ω_res²)
+        // Derivation: linearise RP equation → dimensionless forcing amplitude.
+        // Units: Pa / (kg/m³ · m² · rad²/s²) = Pa/Pa = 1  ✓
+        let epsilon = pressure_amplitude
+            / (self.liquid_density * r0 * r0 * omega_res * omega_res);
+
+        // Lorentzian resonance response χ(Ω) = 1 / √[(1-Ω²)² + (δ·Ω)²]
+        // Continuous at Ω=1; peaks at χ_max = 1/δ (de Jong 1994 Eq. 2).
+        let delta = self.damping_coefficient;
+        let omega_sq = omega_ratio * omega_ratio;
+        let denom_sq = (1.0 - omega_sq).powi(2) + (delta * omega_ratio).powi(2);
+        let chi = 1.0 / denom_sq.sqrt().max(f64::EPSILON);
+
+        // Second-harmonic nonlinear prefactor: (3κ(3κ+1)/2)  [dimensionless]
+        // Derivation: second-order perturbation of polytropic pressure P ∝ (R₀/R)^{3κ}
+        // gives this coefficient at the second harmonic (de Jong 1994 Eq. 9).
+        let kappa = bubble.polytropic_index;
+        let nonlinearity_prefactor = 1.5 * kappa * (3.0 * kappa + 1.0);
+
+        // η_NL = (3κ(3κ+1)/2) · ε · χ(Ω)  [dimensionless]
+        (nonlinearity_prefactor * epsilon * chi).max(0.0)
     }
 }
 
