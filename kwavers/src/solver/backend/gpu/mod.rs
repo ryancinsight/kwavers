@@ -176,7 +176,7 @@ impl Backend for GPUBackend {
     fn synchronize(&self) -> KwaversResult<()> {
         // Wait for all GPU operations to complete
         self.context.queue().submit(std::iter::empty());
-        self.context.device().poll(wgpu::Maintain::Wait);
+        self.context.device().poll(wgpu::PollType::Wait);
         Ok(())
     }
 

@@ -151,6 +151,25 @@ pub fn generate_kappa(
     kappa
 }
 
+/// Returns the k-space source-injection κ filter (identical shape to
+/// [`generate_kappa`]; kept separate so the GPU pipeline can upload it as
+/// a distinct buffer with a self-documenting name).
+///
+/// # References
+/// - Treeby & Cox (2010), §II.A, Eq. 13 (source term correction factor).
+pub fn generate_source_kappa(
+    nx: usize,
+    ny: usize,
+    nz: usize,
+    dx: f64,
+    dy: f64,
+    dz: f64,
+    c_ref: f64,
+    dt: f64,
+) -> Array3<f64> {
+    generate_kappa(nx, ny, nz, dx, dy, dz, c_ref, dt)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

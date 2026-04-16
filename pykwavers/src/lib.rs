@@ -466,7 +466,7 @@ impl Medium {
 
         let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
         // Use acoustic-only constructor: skips 22 non-acoustic zero arrays (~740 MB saved)
-        let mut het = HeterogeneousMedium::new_acoustic_only(nx, ny, nz, true);
+        let mut het = HeterogeneousMedium::new(nx, ny, nz, true);
         het.sound_speed = c_arr;
         het.density = rho_arr;
 
@@ -3096,16 +3096,50 @@ impl Simulation {
         let mut pml_z_3d = vec![1.0f32; total];
 
         if pml_inside {
+            // Convert sigma (s⁻¹) → exp(-sigma·dt/2) ∈ (0,1].
+            // The WGSL velocity/density updates expect: pml = exp(-σ·dt/2).
+            // Using raw sigma causes f32 overflow (σ_max ≈ 3×10⁷) → NaN after ~4 steps.
+            let pml_sgx_1d: Vec<f32> = profiles
+                .sigma_x_sgx
+                .iter()
+                .map(|&s| (-s * dt * 0.5).exp() as f32)
+                .collect();
+            let pml_sgy_1d: Vec<f32> = profiles
+                .sigma_y_sgy
+                .iter()
+                .map(|&s| (-s * dt * 0.5).exp() as f32)
+                .collect();
+            let pml_sgz_1d: Vec<f32> = profiles
+                .sigma_z_sgz
+                .iter()
+                .map(|&s| (-s * dt * 0.5).exp() as f32)
+                .collect();
+            let pml_x_1d: Vec<f32> = profiles
+                .sigma_x
+                .iter()
+                .map(|&s| (-s * dt * 0.5).exp() as f32)
+                .collect();
+            let pml_y_1d: Vec<f32> = profiles
+                .sigma_y
+                .iter()
+                .map(|&s| (-s * dt * 0.5).exp() as f32)
+                .collect();
+            let pml_z_1d: Vec<f32> = profiles
+                .sigma_z
+                .iter()
+                .map(|&s| (-s * dt * 0.5).exp() as f32)
+                .collect();
+
             for ix in 0..nx {
                 for iy in 0..ny {
                     for iz in 0..nz {
                         let flat = ix * ny * nz + iy * nz + iz;
-                        pml_sgx_3d[flat] = profiles.pml_x_sgx[ix] as f32;
-                        pml_sgy_3d[flat] = profiles.pml_y_sgy[iy] as f32;
-                        pml_sgz_3d[flat] = profiles.pml_z_sgz[iz] as f32;
-                        pml_x_3d[flat] = profiles.pml_x[ix] as f32;
-                        pml_y_3d[flat] = profiles.pml_y[iy] as f32;
-                        pml_z_3d[flat] = profiles.pml_z[iz] as f32;
+                        pml_sgx_3d[flat] = pml_sgx_1d[ix];
+                        pml_sgy_3d[flat] = pml_sgy_1d[iy];
+                        pml_sgz_3d[flat] = pml_sgz_1d[iz];
+                        pml_x_3d[flat] = pml_x_1d[ix];
+                        pml_y_3d[flat] = pml_y_1d[iy];
+                        pml_z_3d[flat] = pml_z_1d[iz];
                     }
                 }
             }
@@ -3572,6 +3606,41 @@ impl GpuPstdSession {
             let profiles = CPMLProfiles::new(&pml_config, kgrid, c_ref, dt)
                 .map_err(|e| PyRuntimeError::new_err(format!("PML init failed: {e}")))?;
 
+            // Convert sigma (s⁻¹) → exp(-sigma·dt/2) ∈ (0,1].
+            // The WGSL velocity update is: ux = pml² * ux - dt/ρ₀ * pml * ∇p
+            // which matches k-Wave's split-field PML with pml = exp(-σ·dt/2).
+            // Passing raw sigma (up to ~3×10⁷) instead causes f32 overflow → NaN.
+            let pml_sgx_1d: Vec<f32> = profiles
+                .sigma_x_sgx
+                .iter()
+                .map(|&s| (-s * dt * 0.5).exp() as f32)
+                .collect();
+            let pml_sgy_1d: Vec<f32> = profiles
+                .sigma_y_sgy
+                .iter()
+                .map(|&s| (-s * dt * 0.5).exp() as f32)
+                .collect();
+            let pml_sgz_1d: Vec<f32> = profiles
+                .sigma_z_sgz
+                .iter()
+                .map(|&s| (-s * dt * 0.5).exp() as f32)
+                .collect();
+            let pml_x_1d: Vec<f32> = profiles
+                .sigma_x
+                .iter()
+                .map(|&s| (-s * dt * 0.5).exp() as f32)
+                .collect();
+            let pml_y_1d: Vec<f32> = profiles
+                .sigma_y
+                .iter()
+                .map(|&s| (-s * dt * 0.5).exp() as f32)
+                .collect();
+            let pml_z_1d: Vec<f32> = profiles
+                .sigma_z
+                .iter()
+                .map(|&s| (-s * dt * 0.5).exp() as f32)
+                .collect();
+
             let mut pml_x_3d = vec![1.0f32; total];
             let mut pml_y_3d = vec![1.0f32; total];
             let mut pml_z_3d = vec![1.0f32; total];
@@ -3582,12 +3651,12 @@ impl GpuPstdSession {
                 for iy in 0..ny {
                     for iz in 0..nz {
                         let flat = ix * ny * nz + iy * nz + iz;
-                        pml_sgx_3d[flat] = profiles.pml_x_sgx[ix] as f32;
-                        pml_sgy_3d[flat] = profiles.pml_y_sgy[iy] as f32;
-                        pml_sgz_3d[flat] = profiles.pml_z_sgz[iz] as f32;
-                        pml_x_3d[flat] = profiles.pml_x[ix] as f32;
-                        pml_y_3d[flat] = profiles.pml_y[iy] as f32;
-                        pml_z_3d[flat] = profiles.pml_z[iz] as f32;
+                        pml_sgx_3d[flat] = pml_sgx_1d[ix];
+                        pml_sgy_3d[flat] = pml_sgy_1d[iy];
+                        pml_sgz_3d[flat] = pml_sgz_1d[iz];
+                        pml_x_3d[flat] = pml_x_1d[ix];
+                        pml_y_3d[flat] = pml_y_1d[iy];
+                        pml_z_3d[flat] = pml_z_1d[iz];
                     }
                 }
             }

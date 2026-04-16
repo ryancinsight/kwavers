@@ -129,7 +129,7 @@ impl GpuDevice {
                 compatible_surface: None,
             })
             .await
-            .ok_or_else(|| {
+            .map_err(|_| {
                 KwaversError::Config(ConfigError::InvalidValue {
                     parameter: "gpu".to_string(),
                     value: "none".to_string(),
@@ -147,8 +147,8 @@ impl GpuDevice {
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
                     memory_hints: Default::default(),
+                    trace: wgpu::Trace::Off,
                 },
-                None,
             )
             .await
             .map_err(|e| {

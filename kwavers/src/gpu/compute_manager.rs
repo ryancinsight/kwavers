@@ -107,7 +107,7 @@ impl ComputeManager {
 
     /// Initialize GPU if available
     async fn init_gpu() -> KwaversResult<(wgpu::Device, wgpu::Queue)> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
@@ -119,7 +119,7 @@ impl ComputeManager {
                 force_fallback_adapter: false,
             })
             .await
-            .ok_or_else(|| KwaversError::GpuError("No GPU adapter found".into()))?;
+            .map_err(|_| KwaversError::GpuError("No GPU adapter found".into()))?;
 
         let (device, queue) = adapter
             .request_device(
@@ -128,8 +128,8 @@ impl ComputeManager {
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
                     memory_hints: Default::default(),
+                    trace: wgpu::Trace::Off,
                 },
-                None,
             )
             .await
             .map_err(|e| KwaversError::GpuError(format!("Failed to create device: {}", e)))?;
@@ -178,7 +178,7 @@ impl ComputeManager {
             label: Some(entry_point),
             layout: None, // Auto layout
             module: &shader,
-            entry_point,
+            entry_point: Some(entry_point),
             compilation_options: Default::default(),
             cache: None,
         });

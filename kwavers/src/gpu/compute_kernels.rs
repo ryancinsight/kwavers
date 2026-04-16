@@ -20,7 +20,7 @@ pub struct AcousticFieldKernel {
 impl AcousticFieldKernel {
     /// Create new acoustic field kernel
     pub async fn new() -> KwaversResult<Self> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
@@ -32,7 +32,7 @@ impl AcousticFieldKernel {
                 force_fallback_adapter: false,
             })
             .await
-            .ok_or_else(|| {
+            .map_err(|_| {
                 KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
                     resource: "GPU adapter".to_string(),
                 })
@@ -45,8 +45,8 @@ impl AcousticFieldKernel {
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
                     memory_hints: wgpu::MemoryHints::default(),
+                    trace: wgpu::Trace::Off,
                 },
-                None,
             )
             .await
             .map_err(|e| {
@@ -109,7 +109,7 @@ impl AcousticFieldKernel {
             label: Some("Acoustic Field Pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: "main",
+            entry_point: Some("main"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -270,7 +270,7 @@ impl AcousticFieldKernel {
             let _ = sender.send(result);
         });
 
-        self.device.poll(wgpu::Maintain::Wait);
+        self.device.poll(wgpu::PollType::Wait);
 
         receiver
             .recv()

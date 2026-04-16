@@ -126,7 +126,7 @@ impl NeuralNetworkShader {
                     label: Some("Matrix Multiplication Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "matmul_kernel",
+                    entry_point: Some("matmul_kernel"),
                     compilation_options: Default::default(),
                     cache: None,
                 });
@@ -138,7 +138,7 @@ impl NeuralNetworkShader {
                     label: Some("Activation Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
-                    entry_point: "activation_kernel",
+                    entry_point: Some("activation_kernel"),
                     compilation_options: Default::default(),
                     cache: None,
                 });
@@ -315,7 +315,7 @@ impl NeuralNetworkShader {
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
             let _ = sender.send(result);
         });
-        device.poll(wgpu::Maintain::Wait);
+        device.poll(wgpu::PollType::Wait);
 
         receiver
             .recv()
@@ -478,7 +478,7 @@ impl NeuralNetworkShader {
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
             let _ = sender.send(result);
         });
-        device.poll(wgpu::Maintain::Wait);
+        device.poll(wgpu::PollType::Wait);
 
         receiver
             .recv()

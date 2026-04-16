@@ -709,7 +709,7 @@ impl GPUEMSolver {
                     let _ = magnetic_tx.send(res);
                 });
 
-                device.poll(wgpu::Maintain::Wait);
+                device.poll(wgpu::PollType::Wait);
 
                 electric_rx
                     .recv()

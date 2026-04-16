@@ -111,7 +111,7 @@ impl KSpaceGpu {
             label: Some("FFT Pipeline"),
             layout: Some(&pipeline_layout),
             module: &fft_module,
-            entry_point: "fft_forward",
+            entry_point: Some("fft_forward"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -121,7 +121,7 @@ impl KSpaceGpu {
             label: Some("K-Space Propagate Pipeline"),
             layout: Some(&pipeline_layout),
             module: &propagate_module,
-            entry_point: "propagate",
+            entry_point: Some("propagate"),
             compilation_options: Default::default(),
             cache: None,
         });

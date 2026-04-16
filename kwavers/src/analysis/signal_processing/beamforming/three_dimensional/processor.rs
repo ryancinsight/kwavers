@@ -81,7 +81,7 @@ impl BeamformingProcessor3D {
         #[cfg(feature = "gpu")]
         {
             // Initialize GPU instance
-            let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
                 backends: wgpu::Backends::all(),
                 ..Default::default()
             });
@@ -94,7 +94,7 @@ impl BeamformingProcessor3D {
                     force_fallback_adapter: false,
                 })
                 .await
-                .ok_or_else(|| {
+                .map_err(|_| {
                     KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
                         resource: "GPU adapter for 3D beamforming".to_string(),
                     })
@@ -108,8 +108,8 @@ impl BeamformingProcessor3D {
                         required_features: wgpu::Features::empty(),
                         required_limits: wgpu::Limits::default(),
                         memory_hints: wgpu::MemoryHints::default(),
+                    trace: wgpu::Trace::Off,
                     },
-                    None,
                 )
                 .await
                 .map_err(|e| {
@@ -204,7 +204,7 @@ impl BeamformingProcessor3D {
                     label: Some("3D Delay-and-Sum Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &delay_sum_shader,
-                    entry_point: "delay_and_sum_main",
+                    entry_point: Some("delay_and_sum_main"),
                     compilation_options: Default::default(),
                     cache: None,
                 });
@@ -214,7 +214,7 @@ impl BeamformingProcessor3D {
                     label: Some("3D Dynamic Focus Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &dynamic_focus_shader,
-                    entry_point: "dynamic_focus_main",
+                    entry_point: Some("dynamic_focus_main"),
                     compilation_options: Default::default(),
                     cache: None,
                 });

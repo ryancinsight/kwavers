@@ -73,11 +73,9 @@ pub enum TransferStatus {
 impl MultiGpuContext {
     /// Create a new multi-GPU context
     pub async fn new() -> KwaversResult<Self> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
-            flags: wgpu::InstanceFlags::default(),
-            dx12_shader_compiler: Default::default(),
-            gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
+            ..Default::default()
         });
 
         let mut contexts = Vec::new();
@@ -167,8 +165,9 @@ impl MultiGpuContext {
                         ..Default::default()
                     },
                     memory_hints: wgpu::MemoryHints::default(),
+                    trace: wgpu::Trace::Off,
                 },
-                None,
+
             )
             .await
             .map_err(|e| {

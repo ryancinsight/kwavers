@@ -81,11 +81,9 @@ impl GpuContext {
     /// Create a new GPU context
     pub async fn new() -> KwaversResult<Self> {
         // Create instance with all backends
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
-            flags: wgpu::InstanceFlags::default(),
-            dx12_shader_compiler: Default::default(),
-            gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
+            ..Default::default()
         });
 
         // Request adapter
@@ -96,7 +94,7 @@ impl GpuContext {
                 force_fallback_adapter: false,
             })
             .await
-            .ok_or_else(|| {
+            .map_err(|_| {
                 KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
                     resource: "GPU adapter".to_string(),
                 })
@@ -132,8 +130,8 @@ impl GpuContext {
                         ..Default::default()
                     },
                     memory_hints: wgpu::MemoryHints::default(),
+                    trace: wgpu::Trace::Off,
                 },
-                None,
             )
             .await
             .map_err(|e| {

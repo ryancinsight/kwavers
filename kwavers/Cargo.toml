@@ -76,9 +76,10 @@ approx = "0.5"
 
 # CONDITIONAL FEATURES (disabled by default)
 # GPU acceleration (optional)
-wgpu = { version = "22.0", features = ["wgsl"], optional = true }
+wgpu = { version = "26.0", features = ["wgsl"], optional = true }
 bytemuck = { version = "1.19", features = ["derive"], optional = true }
 pollster = { version = "0.4", optional = true }
+apollofft-wgpu = { path = "../apollo/crates/apollofft-wgpu", optional = true }
 
 # Machine Learning (Sprint 143 - PINNs with burn integration)
 # Updated to burn 0.18.0 (bincode compatibility resolved)
@@ -133,7 +134,7 @@ loom = "0.7"
 default = ["minimal"]  # PRODUCTION DEFAULT
 minimal = []           # Core functionality only
 parallel = ["ndarray/rayon"] # Add back parallel feature
-gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster"]
+gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu"]
 plotting = ["dep:plotly"]
 # Additional features referenced in code
 dicom = []             # Medical imaging support

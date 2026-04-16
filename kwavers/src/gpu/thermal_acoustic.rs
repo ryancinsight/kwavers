@@ -334,7 +334,7 @@ impl GpuThermalAcousticBuffers {
             let _ = tx.send(result);
         });
 
-        device.poll(wgpu::Maintain::Wait);
+        device.poll(wgpu::PollType::Wait);
         let result = rx
             .recv_async()
             .await
@@ -588,7 +588,7 @@ impl GpuThermalAcousticSolver {
             label: Some("Thermal-Acoustic Pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: "main",
+            entry_point: Some("main"),
             compilation_options: Default::default(),
             cache: None,
         });

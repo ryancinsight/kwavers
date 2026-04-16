@@ -285,7 +285,7 @@ impl<'a> DelaySumGPU<'a> {
         let buffer_slice = staging_buffer.slice(..);
         buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
 
-        self.device.poll(wgpu::Maintain::Wait);
+        self.device.poll(wgpu::PollType::Wait);
 
         // Get data from buffer
         let data = buffer_slice.get_mapped_range();

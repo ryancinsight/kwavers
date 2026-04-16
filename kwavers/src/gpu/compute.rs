@@ -375,7 +375,7 @@ impl FdtdGpuShaderDispatcher {
             label: Some("fdtd_pressure_pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader_module,
-            entry_point: "fdtd_pressure_update",
+            entry_point: Some("fdtd_pressure_update"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -519,7 +519,7 @@ impl FdtdGpuShaderDispatcher {
         slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = sender.send(r);
         });
-        self.device.poll(wgpu::Maintain::Wait);
+        self.device.poll(wgpu::PollType::Wait);
         receiver.recv().map_err(|e| {
             KwaversError::GpuError(format!("GPU map_async failed: {e}"))
         })??;

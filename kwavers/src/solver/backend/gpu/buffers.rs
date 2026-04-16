@@ -162,7 +162,7 @@ impl BufferManager {
             tx.send(result).unwrap();
         });
 
-        device.poll(wgpu::Maintain::Wait);
+        device.poll(wgpu::PollType::Wait);
 
         rx.recv()
             .map_err(|e| {

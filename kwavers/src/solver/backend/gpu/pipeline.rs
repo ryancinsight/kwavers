@@ -88,7 +88,7 @@ impl PipelineManager {
             label: Some("fft-pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: "fft_main",
+            entry_point: Some("fft_main"),
             compilation_options: Default::default(),
             cache: None,
         });
@@ -160,7 +160,7 @@ impl PipelineManager {
             label: Some("elementwise-pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: "elementwise_multiply",
+            entry_point: Some("elementwise_multiply"),
             compilation_options: Default::default(),
             cache: None,
         });

@@ -289,7 +289,7 @@ impl GpuBuffer {
             let _ = sender.send(result);
         });
 
-        device.poll(wgpu::Maintain::Wait);
+        device.poll(wgpu::PollType::Wait);
 
         receiver.recv().map_err(|e| {
             KwaversError::Io(std::io::Error::other(format!("Failed to map buffer: {e}")))
