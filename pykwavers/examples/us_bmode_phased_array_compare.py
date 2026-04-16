@@ -19,6 +19,7 @@ from example_parity_utils import (
     DEFAULT_OUTPUT_DIR,
     bootstrap_example_paths,
     compute_image_metrics,
+    compute_trace_metrics,
     normalize_sensor_matrix,
     save_text_report,
 )
@@ -500,12 +501,174 @@ def build_report_lines(kwave: dict, pykwavers: dict, steering_angles) -> list[st
     return lines
 
 
+def run_debug_probe(kgrid, medium, transducer, not_transducer, input_signal, args) -> None:
+    """Single-angle diagnostic: save raw per-voxel sensor traces + face-trace overlay PNG.
+
+    Runs one k-wave-python and one pykwavers simulation at ``args.debug_angle`` and dumps:
+      * ``us_bmode_phased_array_drive_trace.npz``  — ux_signals post-scale, raw sensor matrices,
+        combined per-element traces, grid constants.
+      * ``us_bmode_phased_array_transducer_face_trace.png`` — center-element pressure overlay
+        with pearson_r / rms_ratio / peak_ratio in the title.
+    Exits before the full parity sweep; used purely for isolating amplitude mismatch.
+    """
+    angle = float(args.debug_angle)
+    not_transducer.steering_angle = angle
+    print(f"[debug_probe] angle = {angle}°")
+
+    # ── k-wave-python reference ──────────────────────────────────────────
+    print("[debug_probe] running k-wave-python...")
+    kw_sensor = kspaceFirstOrder3D(
+        medium=deepcopy(medium),
+        kgrid=kgrid,
+        source=not_transducer,
+        sensor=not_transducer,
+        simulation_options=SimulationOptions(
+            pml_inside=False,
+            pml_size=PML_SIZE,
+            data_cast="single",
+            data_recast=True,
+            save_to_disk=True,
+            save_to_disk_exit=False,
+        ),
+        execution_options=SimulationExecutionOptions(is_gpu_simulation=args.kwave_gpu),
+    )
+    kw_raw = np.asarray(kw_sensor["p"]).T  # [n_sensors, nt] (matlab/fortran order)
+    kw_combined = not_transducer.combine_sensor_data(kw_raw)
+
+    # ── pykwavers leg ────────────────────────────────────────────────────
+    fnx = int(GRID_SIZE_POINTS.x) + 2 * int(PML_SIZE.x)
+    fny = int(GRID_SIZE_POINTS.y) + 2 * int(PML_SIZE.y)
+    fnz = int(GRID_SIZE_POINTS.z) + 2 * int(PML_SIZE.z)
+    grid = pkw.Grid(fnx, fny, fnz, GRID_SPACING_METERS.x, GRID_SPACING_METERS.y, GRID_SPACING_METERS.z)
+    ss_full, rho_full = build_full_medium_arrays(medium.sound_speed, medium.density)
+    absorption_full = np.full((fnx, fny, fnz), ALPHA_COEFF, dtype=np.float64)
+    nonlinearity_full = np.full((fnx, fny, fnz), BON_A, dtype=np.float64)
+
+    active_coords = c_order_active_voxel_coords(not_transducer)
+    mask = build_phased_source_mask(active_coords)
+    ux_signals = build_phased_velocity_signals(kgrid, not_transducer, input_signal, active_coords)
+    expected_sensor_points = int(not_transducer.number_active_elements * transducer.element_width * transducer.element_length)
+    transducer_scale = 2.0 * float(not_transducer.sound_speed) * float(kgrid.dt) / float(kgrid.dx)
+
+    print(
+        f"[debug_probe] drive stats: n_voxels={ux_signals.shape[0]}, nt={ux_signals.shape[1]}, "
+        f"max_abs={np.max(np.abs(ux_signals)):.4g}, rms={np.sqrt(np.mean(ux_signals**2)):.4g}, "
+        f"transducer_scale=2·c·dt/dx={transducer_scale:.4g}"
+    )
+
+    if args.pykwavers_gpu:
+        print("[debug_probe] running pykwavers (GPU)...")
+        pkw_medium = pkw.Medium(
+            sound_speed=ss_full, density=rho_full,
+            absorption=absorption_full, nonlinearity=nonlinearity_full,
+        )
+        _ = pkw_medium  # ensure medium is constructible in GPU mode as well
+        gpu_session = pkw.GpuPstdSession(
+            grid, ss_full, rho_full,
+            dt=kgrid.dt, time_steps=kgrid.Nt,
+            absorption=absorption_full, nonlinearity=nonlinearity_full,
+            pml_size_xyz=(int(PML_SIZE.x), int(PML_SIZE.y), int(PML_SIZE.z)),
+            alpha_power=ALPHA_POWER,
+        )
+        gpu_session.set_source_sensor_mask(mask.astype(np.float64))
+        gpu_session.set_velocity_signals(ux_signals)
+        pkw_raw = normalize_sensor_matrix(
+            np.asarray(gpu_session.run_scan_line_cached()),
+            expected_sensors=expected_sensor_points,
+        )
+    else:
+        print("[debug_probe] running pykwavers (CPU)...")
+        pkw_medium = pkw.Medium(
+            sound_speed=ss_full, density=rho_full,
+            absorption=absorption_full, nonlinearity=nonlinearity_full,
+        )
+        source = pkw.Source.from_velocity_mask_2d(mask, ux=ux_signals, mode=args.source_mode)
+        sensor = pkw.Sensor.from_mask(mask.astype(bool))
+        sim = pkw.Simulation(grid, pkw_medium, source, sensor, solver=pkw.SolverType.PSTD)
+        sim.set_pml_size_xyz(int(PML_SIZE.x), int(PML_SIZE.y), int(PML_SIZE.z))
+        sim.set_nonlinear(True)
+        sim.set_alpha_coeff(ALPHA_COEFF)
+        sim.set_alpha_power(ALPHA_POWER)
+        result = sim.run(kgrid.Nt, dt=kgrid.dt)
+        pkw_raw = normalize_sensor_matrix(
+            np.asarray(result.sensor_data),
+            expected_sensors=expected_sensor_points,
+        )
+    pkw_combined = not_transducer.combine_sensor_data(pkw_raw)
+
+    # ── NPZ dump ─────────────────────────────────────────────────────────
+    t_axis = np.arange(kgrid.Nt) * float(kgrid.dt)
+    npz_path = DEFAULT_OUTPUT_DIR / "us_bmode_phased_array_drive_trace.npz"
+    np.savez(
+        npz_path,
+        t_axis=t_axis,
+        ux_signals=ux_signals,
+        kw_raw=kw_raw,
+        pkw_raw=pkw_raw,
+        kw_combined=kw_combined,
+        pkw_combined=pkw_combined,
+        angle=angle,
+        dt=float(kgrid.dt),
+        dx=float(kgrid.dx),
+        c0=float(C0),
+        transducer_scale=transducer_scale,
+        source_mode=args.source_mode,
+        pykwavers_gpu=bool(args.pykwavers_gpu),
+    )
+    print(f"[debug_probe] saved: {npz_path}")
+
+    # ── Face-trace overlay at center element ─────────────────────────────
+    n_elements = int(kw_combined.shape[0])
+    elem_center = min(n_elements // 2, n_elements - 1)
+    kw_trace = np.asarray(kw_combined[elem_center, :], dtype=float)
+    pkw_trace = np.asarray(pkw_combined[elem_center, :], dtype=float)
+    m = compute_trace_metrics(kw_trace, pkw_trace)
+    print(
+        f"[debug_probe] element {elem_center} trace: "
+        f"pearson_r={m['pearson_r']:.4f}, rms_ratio={m['rms_ratio']:.4f}, peak_ratio={m['peak_ratio']:.4f}, "
+        f"kw_peak={m['reference_peak']:.3g}, pkw_peak={m['candidate_peak']:.3g}"
+    )
+
+    fig, ax = plt.subplots(figsize=(12, 5))
+    t_us = t_axis[: kw_trace.size] * 1e6
+    ax.plot(t_us, kw_trace, label=f"k-wave-python (peak={m['reference_peak']:.3g} Pa)", color="C0", lw=1.5)
+    ax.plot(
+        t_us[: pkw_trace.size],
+        pkw_trace[: t_us.size],
+        label=f"pykwavers (peak={m['candidate_peak']:.3g} Pa)",
+        color="C3",
+        lw=1.1,
+        ls="--",
+    )
+    ax.set_xlabel("Time [µs]")
+    ax.set_ylabel("Pressure [Pa]")
+    ax.set_title(
+        f"us_bmode_phased_array face trace — element {elem_center} @ {angle}° "
+        f"(r={m['pearson_r']:.3f}, rms_ratio={m['rms_ratio']:.3f}, peak_ratio={m['peak_ratio']:.3f}, "
+        f"mode={args.source_mode}, {'GPU' if args.pykwavers_gpu else 'CPU'})"
+    )
+    ax.legend(loc="best")
+    ax.grid(True, ls=":")
+    fig.tight_layout()
+    png_path = DEFAULT_OUTPUT_DIR / "us_bmode_phased_array_transducer_face_trace.png"
+    fig.savefig(png_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"[debug_probe] saved: {png_path}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compare pykwavers with k-wave-python for us_bmode_phased_array.")
     parser.add_argument("--quick", action="store_true", help="Use a reduced steering-angle set for faster diagnostics.")
     parser.add_argument("--seed", type=int, default=20260401, help="Deterministic phantom RNG seed.")
     parser.add_argument("--kwave-gpu", action="store_true", help="Run k-wave-python with the CUDA binary.")
     parser.add_argument("--pykwavers-gpu", action="store_true", help="Run pykwavers with GpuPstdSession.")
+    parser.add_argument("--debug-probe", action="store_true",
+        help="Single-angle probe: save raw per-voxel sensor traces and face-trace overlay PNG, then exit.")
+    parser.add_argument("--debug-angle", type=float, default=0.0,
+        help="Steering angle (degrees) for --debug-probe. Default 0°.")
+    parser.add_argument("--source-mode", type=str, default="additive",
+        choices=("additive", "additive_no_correction", "dirichlet"),
+        help="pykwavers velocity source mode (CPU path only). Use to test Dirichlet vs additive hypothesis.")
     args = parser.parse_args()
 
     steering_angles = STEERING_ANGLES_QUICK if args.quick else STEERING_ANGLES_FULL
@@ -513,6 +676,10 @@ def main() -> None:
         f"{'quick' if args.quick else 'full'}_seed{args.seed}_kw{'gpu' if args.kwave_gpu else 'cpu'}_pkw{'gpu' if args.pykwavers_gpu else 'cpu'}"
     )
     kgrid, medium, transducer, not_transducer, input_signal = build_reference_objects(args.seed)
+
+    if args.debug_probe:
+        run_debug_probe(kgrid, medium, transducer, not_transducer, input_signal, args)
+        return
 
     kwave_scan_lines, kwave_runtime = run_kwave_phased_array(
         medium, kgrid, not_transducer, steering_angles, args.kwave_gpu, cache_tag
