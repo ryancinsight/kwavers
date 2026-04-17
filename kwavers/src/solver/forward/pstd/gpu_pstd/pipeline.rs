@@ -482,6 +482,7 @@ impl GpuPstdSolver {
         let pipeline_kspace_shift = mk_pl("kspace_shift_apply");
         let pipeline_vel_update = mk_pl("velocity_update");
         let pipeline_dens_update = mk_pl("density_update");
+        let pipeline_snapshot_rho0_plus_rho = mk_pl("snapshot_rho0_plus_rho");
         let pipeline_absorption = mk_pl("apply_absorption");
         let pipeline_pres_density = mk_pl("pressure_from_density");
         let pipeline_record = mk_pl("record_sensors");
@@ -557,6 +558,7 @@ impl GpuPstdSolver {
             pipeline_kspace_shift,
             pipeline_vel_update,
             pipeline_dens_update,
+            pipeline_snapshot_rho0_plus_rho,
             pipeline_absorption,
             pipeline_pres_density,
             pipeline_record,

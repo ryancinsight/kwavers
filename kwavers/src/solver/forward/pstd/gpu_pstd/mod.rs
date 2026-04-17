@@ -142,6 +142,7 @@ pub struct GpuPstdSolver {
     pub(super) pipeline_kspace_shift: wgpu::ComputePipeline,
     pub(super) pipeline_vel_update: wgpu::ComputePipeline,
     pub(super) pipeline_dens_update: wgpu::ComputePipeline,
+    pub(super) pipeline_snapshot_rho0_plus_rho: wgpu::ComputePipeline,
     pub(super) pipeline_absorption: wgpu::ComputePipeline,
     pub(super) pipeline_pres_density: wgpu::ComputePipeline,
     pub(super) pipeline_record: wgpu::ComputePipeline,

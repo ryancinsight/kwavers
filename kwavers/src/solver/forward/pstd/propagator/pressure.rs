@@ -167,32 +167,61 @@ impl PSTDSolver {
         self.fft
             .inverse_into(&self.grad_z_k, &mut self.dpz, &mut self.uz_k);
 
-        // Update split density components
+        // ── Mass-conservation coefficient snapshot ──────────────────────────
+        // Linear:    coef = rho0
+        // Nonlinear: coef = rho0 + 2·(rhox + rhoy + rhoz)   [Westervelt]
+        //
+        // Matches k-Wave MATLAB kspaceFirstOrder3D.m lines 919–924:
+        //   rho0_plus_rho = 2*(rhox+rhoy+rhoz) + rho0
+        //   rhox = pml_x * (pml_x*rhox - dt * rho0_plus_rho * pml_x * duxdx)
+        //
+        // The snapshot is taken BEFORE any rhox/rhoy/rhoz modification so
+        // all three axis updates see the same coefficient (matches k-Wave's
+        // fully-coupled formulation). `self.div_u` is reused as scratch: it
+        // is rewritten unconditionally at the top of `update_pressure` that
+        // follows, so overwriting it here is safe and allocation-free.
+        if self.config.nonlinearity {
+            Zip::from(&mut self.div_u)
+                .and(&self.materials.rho0)
+                .and(&self.rhox)
+                .and(&self.rhoy)
+                .and(&self.rhoz)
+                .for_each(|coef, &rho0, &rx, &ry, &rz| {
+                    *coef = rho0 + 2.0 * (rx + ry + rz);
+                });
+        } else {
+            // Copy rho0 verbatim so the three update loops can read a single
+            // coefficient array regardless of mode. One extra O(N) copy per
+            // step; trivial next to the FFTs and bounded-cache friendly.
+            self.div_u.assign(&self.materials.rho0);
+        }
+
+        // Update split density components using the mass coefficient snapshot.
         Zip::from(&mut self.rhox)
             .and(&self.dpx)
-            .and(&self.materials.rho0)
+            .and(&self.div_u)
             .and(&self.fields.ux)
             .and(&self.grad_rho0_x)
-            .for_each(|rho, &du, &rho0, &ux, &grx| {
-                *rho -= dt * (rho0 * du + ux * grx);
+            .for_each(|rho, &du, &coef, &ux, &grx| {
+                *rho -= dt * (coef * du + ux * grx);
             });
 
         Zip::from(&mut self.rhoy)
             .and(&self.dpy)
-            .and(&self.materials.rho0)
+            .and(&self.div_u)
             .and(&self.fields.uy)
             .and(&self.grad_rho0_y)
-            .for_each(|rho, &du, &rho0, &uy, &gry| {
-                *rho -= dt * (rho0 * du + uy * gry);
+            .for_each(|rho, &du, &coef, &uy, &gry| {
+                *rho -= dt * (coef * du + uy * gry);
             });
 
         Zip::from(&mut self.rhoz)
             .and(&self.dpz)
-            .and(&self.materials.rho0)
+            .and(&self.div_u)
             .and(&self.fields.uz)
             .and(&self.grad_rho0_z)
-            .for_each(|rho, &du, &rho0, &uz, &grz| {
-                *rho -= dt * (rho0 * du + uz * grz);
+            .for_each(|rho, &du, &coef, &uz, &grz| {
+                *rho -= dt * (coef * du + uz * grz);
             });
 
         // Apply power-law absorption correction per axis (Treeby & Cox 2010, Eq. 21).

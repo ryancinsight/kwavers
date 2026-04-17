@@ -427,13 +427,43 @@ fn velocity_update(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 }
 
+// ─── Entry point: snapshot_rho0_plus_rho ─────────────────────────────────────
+//
+// Precomputes the nonlinear mass-conservation coefficient
+//   rho0_plus_rho = 2 * (rhox + rhoy + rhoz) + rho0
+// into field_p, to be consumed by the three density_update dispatches that
+// follow. field_p is free at this point in the step (it still holds the
+// previous step's pressure, already recorded by sensors; pressure_from_density
+// overwrites it after the density updates complete).
+//
+// Matches k-Wave MATLAB kspaceFirstOrder3D.m nonlinear mass conservation
+// (lines 919–924). Must be dispatched only when params.nonlinear != 0 and
+// must run BEFORE the three density_update dispatches so all three axes see
+// the same pre-update rho_total.
+//
+// Reference: Treeby & Cox (2010), Eq. (A.6); k-Wave MATLAB commit b0ee57c.
+@compute @workgroup_size(256, 1, 1)
+fn snapshot_rho0_plus_rho(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx   = gid.x;
+    let total = params.nx * params.ny * params.nz;
+    if idx >= total { return; }
+    let rho_total = field_rhox[idx] + field_rhoy[idx] + field_rhoz[idx];
+    field_p[idx] = 2.0 * rho_total + precomp_rho0[idx];
+}
+
 // ─── Entry point: density_update ─────────────────────────────────────────────
 //
 // Split-field PML density update:
-//   rho_new = pml^2 * rho_old - dt * rho0 * pml * div_u
+//   Linear:    rho_new = pml^2 * rho_old - dt * rho0         * pml * div_u
+//   Nonlinear: rho_new = pml^2 * rho_old - dt * (2*rho+rho0) * pml * div_u
+//
+// In the nonlinear branch the coefficient `(2*rho_total + rho0)` is the
+// pre-snapshot produced by snapshot_rho0_plus_rho and stored in field_p.
+// Using a snapshot (rather than reading live rhox/rhoy/rhoz) keeps all three
+// axis dispatches coherent with the MATLAB reference, which computes the
+// coefficient once before any rhox/rhoy/rhoz update.
 //
 // div_u is in kspace_re (IFFT result of in-place kspace_shift).
-// Eliminates copy_kspace_to_scratch dispatch.
 // params.axis: 0=update rhox, 1=rhoy, 2=rhoz
 // pml_xyz packs [pml_x | pml_y | pml_z], each of length nx*ny*nz.
 @compute @workgroup_size(256, 1, 1)
@@ -444,16 +474,25 @@ fn density_update(@builtin(global_invocation_id) gid: vec3<u32>) {
 
     let ax    = params.axis;
     let dt    = params.dt;
-    let rho0  = precomp_rho0[idx];
     let div_u = kspace_re[idx];
     let pml   = pml_xyz[ax * total + idx];  // axis selects which pml array
 
-    if ax == 0u {
-        field_rhox[idx] = pml * pml * field_rhox[idx] - dt * rho0 * pml * div_u;
-    } else if ax == 1u {
-        field_rhoy[idx] = pml * pml * field_rhoy[idx] - dt * rho0 * pml * div_u;
+    // Nonlinear mass conservation: coefficient is the pre-step snapshot in
+    // field_p. Linear path uses unperturbed rho0. Single branch keeps the
+    // hot loop small.
+    var mass_coef: f32;
+    if params.nonlinear != 0u {
+        mass_coef = field_p[idx];
     } else {
-        field_rhoz[idx] = pml * pml * field_rhoz[idx] - dt * rho0 * pml * div_u;
+        mass_coef = precomp_rho0[idx];
+    }
+
+    if ax == 0u {
+        field_rhox[idx] = pml * pml * field_rhox[idx] - dt * mass_coef * pml * div_u;
+    } else if ax == 1u {
+        field_rhoy[idx] = pml * pml * field_rhoy[idx] - dt * mass_coef * pml * div_u;
+    } else {
+        field_rhoz[idx] = pml * pml * field_rhoz[idx] - dt * mass_coef * pml * div_u;
     }
 }
 

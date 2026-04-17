@@ -348,6 +348,26 @@ impl GpuPstdSolver {
                     );
                 }
 
+                // ─── NONLINEAR MASS-CONSERVATION SNAPSHOT ─────────────────────────
+                // Nonlinear PSTD uses rho0_plus_rho = 2*(rhox+rhoy+rhoz) + rho0 as
+                // the mass-conservation coefficient in ALL three axis dispatches
+                // that follow (matching k-Wave MATLAB kspaceFirstOrder3D.m
+                // lines 919–924). We snapshot it into field_p here before any
+                // density update runs, so every axis sees the same pre-update
+                // rho_total. field_p is free at this point; it still holds the
+                // previous step's pressure (already sensor-recorded) and is
+                // overwritten below by pressure_from_density.
+                if nl_u != 0u32 {
+                    self.dispatch(
+                        &mut encoder,
+                        &p!(step_u32, 0),
+                        &self.pipeline_snapshot_rho0_plus_rho,
+                        &bg_sensor,
+                        elem_wg,
+                        "rho0_plus_rho",
+                    );
+                }
+
                 // ─── DENSITY UPDATE ───────────────────────────────────────────────
                 for ax in 0u32..3u32 {
                     let field_sel = ax + 1;
