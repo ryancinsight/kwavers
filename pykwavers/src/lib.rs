@@ -3242,11 +3242,26 @@ impl Simulation {
             }
         }
 
+        // ── Effective absorption (fall back to medium's stored coefficient) ────
+        let effective_alpha_db = if alpha_coeff_db > 0.0 {
+            alpha_coeff_db
+        } else {
+            medium.as_medium().alpha_coefficient(0.0, 0.0, 0.0, grid)
+        };
+        let alpha_power = {
+            let y_medium = medium.as_medium().alpha_power(0.0, 0.0, 0.0, grid);
+            if alpha_coeff_db <= 0.0 && y_medium > 0.0 && (y_medium - 1.0).abs() > 1e-12 {
+                y_medium
+            } else {
+                alpha_power
+            }
+        };
+
         // ── Physics flags ─────────────────────────────────────────────────────
         // Check first voxel; works correctly for homogeneous media.
         // Heterogeneous media with spatially-varying properties handled per-voxel below.
         let has_nonlinear = medium.as_medium().nonlinearity(0, 0, 0) > 0.0;
-        let has_absorption = alpha_coeff_db > 0.0;
+        let has_absorption = effective_alpha_db > 0.0;
 
         // ── BonA: B/(2A) per voxel ────────────────────────────────────────────
         let bon_a_flat: Vec<f32> = if has_nonlinear {
@@ -3263,23 +3278,49 @@ impl Simulation {
             vec![0.0f32; total]
         };
 
-        // ── Alpha decay: exp(-alpha_Np_m * c0 * dt) per voxel ────────────────
-        // Frequency-centred approximation at 1 MHz (centre frequency).
-        let alpha_decay_flat: Vec<f32> = if has_absorption {
-            let f0_mhz = 1.0_f64; // 1 MHz centre frequency approximation
-            (0..total)
-                .map(|flat| {
-                    let ix = flat / (ny * nz);
-                    let iy = (flat % (ny * nz)) / nz;
-                    let iz = flat % nz;
-                    let alpha_db_cm = medium.as_medium().absorption(ix, iy, iz);
-                    let alpha_np_m = alpha_db_cm_to_np_m(alpha_db_cm, f0_mhz, alpha_power);
-                    let c0_local = medium.as_medium().sound_speed(ix, iy, iz);
-                    ((-alpha_np_m * c0_local * dt).exp()) as f32
-                })
-                .collect()
+        // ── Fractional-Laplacian absorption operators (Treeby & Cox 2010 Eqs. 9-10) ──
+        // nabla1 = |k|^(y-2), nabla2 = |k|^(y-1) in FFT order.
+        // tau = -2*alpha0*c0^(y-1), eta = 2*alpha0*c0^y*tan(pi*y/2) per voxel.
+        let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) = if has_absorption {
+            use std::f64::consts::PI;
+            let dk_x = 2.0 * PI / (nx as f64 * grid.dx);
+            let dk_y = 2.0 * PI / (ny as f64 * grid.dy);
+            let dk_z = 2.0 * PI / (nz as f64 * grid.dz);
+            let singularity_thresh: f64 = 1e-8;
+            let y = alpha_power;
+
+            let mut n1 = vec![0.0f32; total];
+            let mut n2 = vec![0.0f32; total];
+            let mut tau_v = vec![0.0f32; total];
+            let mut eta_v = vec![0.0f32; total];
+
+            for flat in 0..total {
+                let ix = flat / (ny * nz);
+                let iy = (flat % (ny * nz)) / nz;
+                let iz = flat % nz;
+
+                // k-magnitude in FFT order
+                let kix = if ix <= nx / 2 { ix as f64 } else { (nx - ix) as f64 } * dk_x;
+                let kiy = if iy <= ny / 2 { iy as f64 } else { (ny - iy) as f64 } * dk_y;
+                let kiz = if iz <= nz / 2 { iz as f64 } else { (nz - iz) as f64 } * dk_z;
+                let k_mag = (kix * kix + kiy * kiy + kiz * kiz).sqrt();
+
+                if k_mag > singularity_thresh {
+                    n1[flat] = k_mag.powf(y - 2.0) as f32;
+                    n2[flat] = k_mag.powf(y - 1.0) as f32;
+                }
+
+                // alpha_0: Np/((rad/s)^y·m) — SI units matching k-Wave Python db2neper output
+                let alpha_db_cm = medium.as_medium().absorption(ix, iy, iz);
+                let alpha_0_si = alpha_db_cm_to_np_m(alpha_db_cm, 1.0, alpha_power)
+                    / (2.0 * PI * 1e6_f64).powf(y);
+                let c0_local = medium.as_medium().sound_speed(ix, iy, iz);
+                tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
+                eta_v[flat] = (2.0 * alpha_0_si * c0_local.powf(y) * (PI * y / 2.0).tan()) as f32;
+            }
+            (n1, n2, tau_v, eta_v)
         } else {
-            vec![1.0f32; total]
+            (vec![0.0f32; total], vec![0.0f32; total], vec![0.0f32; total], vec![0.0f32; total])
         };
 
         // ── Construct GPU solver (device created internally via with_auto_device) ──
@@ -3297,7 +3338,10 @@ impl Simulation {
             &pml_sgy_3d,
             &pml_sgz_3d,
             &bon_a_flat,
-            &alpha_decay_flat,
+            &absorb_nabla1_flat,
+            &absorb_nabla2_flat,
+            &absorb_tau_flat,
+            &absorb_eta_flat,
             has_nonlinear,
             has_absorption,
         )
@@ -3381,9 +3425,11 @@ pub struct GpuPstdSession {
 
     // Cached bon_a array (nonlinearity rarely changes between scan lines)
     bon_a_flat: Vec<f32>,
-    // Cached alpha decay factor numerator: alpha_Np_m * dt  (c0 from new medium
-    // is multiplied in at run time; precomputed to avoid redundant pow() calls)
-    alpha_np_dt_flat: Vec<f32>,
+    // Fractional-Laplacian absorption coefficients (Treeby & Cox 2010 Eqs. 9-10).
+    // tau = -2*alpha_0*c0^(y-1) and eta = 2*alpha_0*c0^y*tan(pi*y/2) per voxel.
+    // These are precomputed at session creation and re-uploaded on each scan line.
+    absorb_tau_flat: Vec<f32>,
+    absorb_eta_flat: Vec<f32>,
     has_absorption: bool,
 
     // Time loop parameters
@@ -3575,30 +3621,69 @@ impl GpuPstdSession {
                 vec![0.0f32; total]
             };
 
-            // ── Absorption (alpha_decay) ──────────────────────────────────────
+            // ── Fractional-Laplacian absorption operators (Treeby & Cox 2010 Eqs. 9-10) ──
             let has_absorption = absorption.is_some();
-            // alpha_np_dt_flat[i] = alpha_Np_m[i] * dt  (c0 multiplied in at run time)
-            // The GPU session currently uses a centre-frequency attenuation model
-            // at f0 = 1 MHz, matching the phased-array parity examples.
-            let alpha_np_dt_flat: Vec<f32> = if let Some(ref ab) = absorption {
-                let ab_arr = ab.as_array();
-                let f0_mhz = 1.0_f64;
-                ab_arr
-                    .iter()
-                    .map(|&v| (alpha_db_cm_to_np_m(v, f0_mhz, alpha_power) * dt) as f32)
-                    .collect()
+            // nabla1 = |k|^(y-2), nabla2 = |k|^(y-1) in FFT order (k-space operators).
+            // tau = -2*alpha0*c0^(y-1), eta = 2*alpha0*c0^y*tan(pi*y/2) per voxel.
+            let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) = if has_absorption {
+                use std::f64::consts::PI;
+                let dk_x = 2.0 * PI / (nx as f64 * kgrid.dx);
+                let dk_y = 2.0 * PI / (ny as f64 * kgrid.dy);
+                let dk_z = 2.0 * PI / (nz as f64 * kgrid.dz);
+                let singularity_thresh: f64 = 1e-8;
+                let y = alpha_power;
+
+                let mut n1 = vec![0.0f32; total];
+                let mut n2 = vec![0.0f32; total];
+                let mut tau_v = vec![0.0f32; total];
+                let mut eta_v = vec![0.0f32; total];
+
+                let ab_arr = absorption.as_ref().unwrap().as_array();
+
+                for flat in 0..total {
+                    let ix = flat / (ny * nz);
+                    let iy = (flat % (ny * nz)) / nz;
+                    let iz = flat % nz;
+
+                    // k-magnitude in FFT order
+                    let kix = if ix <= nx / 2 { ix as f64 } else { (nx - ix) as f64 } * dk_x;
+                    let kiy = if iy <= ny / 2 { iy as f64 } else { (ny - iy) as f64 } * dk_y;
+                    let kiz = if iz <= nz / 2 { iz as f64 } else { (nz - iz) as f64 } * dk_z;
+                    let k_mag = (kix * kix + kiy * kiy + kiz * kiz).sqrt();
+
+                    if k_mag > singularity_thresh {
+                        n1[flat] = k_mag.powf(y - 2.0) as f32;
+                        n2[flat] = k_mag.powf(y - 1.0) as f32;
+                    }
+
+                    // Spatially-varying absorption coefficients
+                    let alpha_db_cm = ab_arr[[ix, iy, iz]];
+                    // alpha_0: Np/((rad/s)^y·m) — SI units matching k-Wave Python db2neper output
+                    let alpha_0_si = alpha_db_cm_to_np_m(alpha_db_cm, 1.0, alpha_power)
+                        / (2.0 * PI * 1e6_f64).powf(y);
+                    let c0_local = c0_flat[flat] as f64;
+                    tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
+                    eta_v[flat] = (2.0 * alpha_0_si * c0_local.powf(y) * (PI * y / 2.0).tan()) as f32;
+                }
+                (n1, n2, tau_v, eta_v)
             } else {
-                vec![0.0f32; total]
+                (
+                    vec![0.0f32; total],
+                    vec![0.0f32; total],
+                    vec![0.0f32; total],
+                    vec![0.0f32; total],
+                )
             };
 
-            // ── Alpha decay from initial c0 ───────────────────────────────────
-            let alpha_decay_flat: Vec<f32> = if has_absorption {
-                (0..total)
-                    .map(|i| (-alpha_np_dt_flat[i] * c0_flat[i]).exp())
-                    .collect()
+            // ── Absorption diagnostic ─────────────────────────────────────────
+            if has_absorption {
+                let tau_max = absorb_tau_flat.iter().cloned().fold(0.0f32, |a, b| a.abs().max(b.abs()));
+                let eta_max = absorb_eta_flat.iter().cloned().fold(0.0f32, |a, b| a.abs().max(b.abs()));
+                let nabla2_max = absorb_nabla2_flat.iter().cloned().fold(0.0f32, |a, b| a.max(b));
+                eprintln!("[pykwavers-diag] GpuPstdSession absorbing=true: tau_max={tau_max:.3e}, eta_max={eta_max:.3e}, nabla2_max={nabla2_max:.3e}");
             } else {
-                vec![1.0f32; total]
-            };
+                eprintln!("[pykwavers-diag] GpuPstdSession absorbing=false (lossless)");
+            }
 
             // ── PML profiles ──────────────────────────────────────────────────
             let (pml_x_sz, pml_y_sz, pml_z_sz) = pml_size_xyz.unwrap_or((10, 10, 10));
@@ -3676,7 +3761,10 @@ impl GpuPstdSession {
                 &pml_sgy_3d,
                 &pml_sgz_3d,
                 &bon_a_flat,
-                &alpha_decay_flat,
+                &absorb_nabla1_flat,
+                &absorb_nabla2_flat,
+                &absorb_tau_flat,
+                &absorb_eta_flat,
                 nonlinearity.is_some(),
                 has_absorption,
             )
@@ -3688,7 +3776,8 @@ impl GpuPstdSession {
                 ny,
                 nz,
                 bon_a_flat,
-                alpha_np_dt_flat,
+                absorb_tau_flat,
+                absorb_eta_flat,
                 has_absorption,
                 time_steps,
                 sensor_indices: Vec::new(),
@@ -3802,19 +3891,17 @@ impl GpuPstdSession {
             let c0_flat: Vec<f32> = ss_arr.iter().map(|&v| v as f32).collect();
             let rho0_flat: Vec<f32> = rho_arr.iter().map(|&v| v as f32).collect();
 
-            // Recompute alpha_decay with new c0 (alpha_np_dt_flat already has dt baked in)
-            let alpha_decay_flat: Vec<f32> = if self.has_absorption {
-                (0..total)
-                    .map(|i| (-self.alpha_np_dt_flat[i] * c0_flat[i]).exp())
-                    .collect()
-            } else {
-                vec![1.0f32; total]
-            };
-
             let upload_t0 = std::time::Instant::now();
-            // Re-upload medium buffers to GPU
-            self.solver
-                .update_medium(&c0_flat, &rho0_flat, &self.bon_a_flat, &alpha_decay_flat);
+            // Re-upload medium buffers to GPU.
+            // tau/eta are precomputed at session creation and reflect the initial medium.
+            // For fixed-phantom b-mode (most use cases), they remain valid across scan lines.
+            self.solver.update_medium(
+                &c0_flat,
+                &rho0_flat,
+                &self.bon_a_flat,
+                &self.absorb_tau_flat,
+                &self.absorb_eta_flat,
+            );
             self.last_medium_upload_ns = upload_t0.elapsed().as_nanos() as u64;
 
             let result = self.run_scan_line_cached(_py);

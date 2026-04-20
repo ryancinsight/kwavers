@@ -235,7 +235,13 @@ impl GpuPstdSolver {
             let mut enc = self
                 .device
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("zero_fields") });
-            self.dispatch(&mut enc, &zero_params, &self.pipeline_zero_fields, &bg_sensor, elem_wg, "zero_fields");
+            {
+                let mut cpass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("zero_fields"),
+                    timestamp_writes: None,
+                });
+                self.dispatch(&mut cpass, &zero_params, &self.pipeline_zero_fields, &bg_sensor, elem_wg, "zero_fields");
+            }
             self.queue.submit(std::iter::once(enc.finish()));
             // No wait needed — GPU zero runs before first step's dispatch.
         }
@@ -267,7 +273,8 @@ impl GpuPstdSolver {
         // ── Encode time steps: batch STEP_BATCH steps per command buffer ─────
         // Batching reduces wgpu API overhead from O(nt) submits to O(nt/STEP_BATCH).
         // Push constants embed params inline — no write_buffer() overhead per step.
-        const STEP_BATCH: usize = 32;
+        // 256 steps/batch → ~6 submissions for nt=1590 vs 50 at batch=32.
+        const STEP_BATCH: usize = 256;
         let mut cpu_encode_ns: u64 = 0;
         let mut batch_start = 0usize;
         while batch_start < nt {
@@ -279,23 +286,51 @@ impl GpuPstdSolver {
             for step in batch_start..batch_end {
                 let step_u32 = step as u32;
 
+                // ── ONE compute pass for the entire time step ─────────────────────
+                // Keeping all dispatches inside a single ComputePass eliminates
+                // the ~250 µs D3D12 UAV barrier that wgpu inserts at every
+                // begin_compute_pass / end_compute_pass boundary.  With ~90 former
+                // pass boundaries per step this was the dominant latency (~22 ms/step).
+                let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("pstd_step"),
+                    timestamp_writes: None,
+                });
+
                 // ─── VELOCITY UPDATE ──────────────────────────────────────────────
+                // Compute FFT(p) once and cache it in absorb_scratch_kre/kim.
+                // All three staggered derivatives share the same FFT(p), so the
+                // forward transform is computed only once per step instead of 3×.
+                // absorb_scratch_kre/kim are idle at this point (the density
+                // accumulation loop hasn't started yet; absorb_accum_div_u
+                // re-initialises scratch_kre at ax=0 anyway).
+                //
+                // Per-axis: restore FFT(p), apply kspace_shift in-place, IFFT, update.
+                //   Steps   (before): 3 × (copy_p + fft_3d + kshift + ifft + vel_upd) = 27
+                //   Steps (after):    1×(copy_p + fft_3d + save) + 3×(restore* + kshift + ifft + vel_upd)
+                //                     = 7 + 3*4 = 19  (*restore skipped for ax=0 since kspace already = FFT(p))
+                // Net saving: −8 dispatches AND −2 full 3D forward FFTs per step.
+                self.dispatch(&mut cpass, &p!(step_u32, 0), &self.pipeline_copy_field_to_k, &bg_sensor, elem_wg, "cp_p");
+                self.fft_3d(&mut cpass, &bg_sensor, step_u32, ns_u);
+                // Save FFT(p) → absorb_scratch_kre/kim (safe to reuse as a scratch cache here)
+                self.dispatch_absorb(&mut cpass, &p!(step_u32, 0), &self.pipeline_absorb_save_kspace, &bg_sensor, elem_wg, "save_fftp");
+
                 for ax in 0u32..3u32 {
-                    // Each staggered derivative must start from the current pressure
-                    // field, not the prior axis's already shifted/IFFT-transformed state.
-                    self.dispatch(&mut encoder, &p!(step_u32, 0), &self.pipeline_copy_field_to_k, &bg_sensor, elem_wg, "cp_p");
-                    self.fft_3d(&mut encoder, &bg_sensor, step_u32, ns_u);
+                    // Axes 1+ need FFT(p) restored (ax=0 already has it in kspace_re/im
+                    // from the fft_3d call above; save_kspace only reads, does not destroy kspace).
+                    if ax > 0 {
+                        self.dispatch_absorb(&mut cpass, &p!(step_u32, ax), &self.pipeline_absorb_restore_kspace, &bg_sensor, elem_wg, "rest_fftp");
+                    }
                     // kspace_shift writes in-place to kspace_re/im — no copy needed
-                    self.dispatch(&mut encoder, &p!(step_u32, ax), &self.pipeline_kspace_shift, &bg_sensor, elem_wg, "kshift_v");
+                    self.dispatch(&mut cpass, &p!(step_u32, ax), &self.pipeline_kspace_shift, &bg_sensor, elem_wg, "kshift_v");
                     // IFFT writes to kspace_re — vel_update reads kspace_re directly
-                    self.ifft_3d(&mut encoder, &bg_sensor, step_u32, ns_u);
-                    self.dispatch(&mut encoder, &p!(step_u32, ax), &self.pipeline_vel_update, &bg_sensor, elem_wg, "vel_upd");
+                    self.ifft_3d(&mut cpass, &bg_sensor, step_u32, ns_u);
+                    self.dispatch(&mut cpass, &p!(step_u32, ax), &self.pipeline_vel_update, &bg_sensor, elem_wg, "vel_upd");
                 }
 
                 // ─── SOURCE INJECTION ─────────────────────────────────────────────
                 if n_src > 0 {
                     self.dispatch(
-                        &mut encoder,
+                        &mut cpass,
                         &PstdParams {
                             nx: nxu, ny: nyu, nz: nzu,
                             axis: n_src as u32,
@@ -311,10 +346,11 @@ impl GpuPstdSolver {
                     );
                 }
                 if n_vel_x > 0 {
-                    encoder.clear_buffer(&self.buf_kspace_re, 0, None);
-                    encoder.clear_buffer(&self.buf_kspace_im, 0, None);
+                    // Zero kspace_re/im via GPU shader — replaces encoder.clear_buffer()
+                    // which cannot be called while a ComputePass is open.
+                    self.dispatch(&mut cpass, &p!(step_u32, 0), &self.pipeline_zero_kspace, &bg_sensor, elem_wg, "zero_ksp");
                     self.dispatch(
-                        &mut encoder,
+                        &mut cpass,
                         &PstdParams {
                             nx: nxu, ny: nyu, nz: nzu,
                             axis: n_vel_x as u32,
@@ -328,18 +364,18 @@ impl GpuPstdSolver {
                         ceil_div(n_vel_x, 256),
                         "inject_vx",
                     );
-                    self.fft_3d(&mut encoder, &bg_sensor, step_u32, ns_u);
+                    self.fft_3d(&mut cpass, &bg_sensor, step_u32, ns_u);
                     self.dispatch(
-                        &mut encoder,
+                        &mut cpass,
                         &p!(step_u32, 0),
                         &self.pipeline_apply_source_kappa,
                         &bg_sensor,
                         elem_wg,
                         "src_kappa",
                     );
-                    self.ifft_3d(&mut encoder, &bg_sensor, step_u32, ns_u);
+                    self.ifft_3d(&mut cpass, &bg_sensor, step_u32, ns_u);
                     self.dispatch(
-                        &mut encoder,
+                        &mut cpass,
                         &p!(step_u32, 0),
                         &self.pipeline_add_kspace_to_field_ux,
                         &bg_sensor,
@@ -348,52 +384,78 @@ impl GpuPstdSolver {
                     );
                 }
 
-                // ─── NONLINEAR MASS-CONSERVATION SNAPSHOT ─────────────────────────
-                // Nonlinear PSTD uses rho0_plus_rho = 2*(rhox+rhoy+rhoz) + rho0 as
-                // the mass-conservation coefficient in ALL three axis dispatches
-                // that follow (matching k-Wave MATLAB kspaceFirstOrder3D.m
-                // lines 919–924). We snapshot it into field_p here before any
-                // density update runs, so every axis sees the same pre-update
-                // rho_total. field_p is free at this point; it still holds the
-                // previous step's pressure (already sensor-recorded) and is
-                // overwritten below by pressure_from_density.
-                if nl_u != 0u32 {
-                    self.dispatch(
-                        &mut encoder,
-                        &p!(step_u32, 0),
-                        &self.pipeline_snapshot_rho0_plus_rho,
-                        &bg_sensor,
-                        elem_wg,
-                        "rho0_plus_rho",
-                    );
+                // ─── NONLINEAR MASS-CONSERVATION SNAPSHOT ────────────────────────
+                // Pre-compute 2*(rhox+rhoy+rhoz)+rho0 into field_p before the
+                // density loop.  density_update reads this as the mass-conservation
+                // coefficient for all three axes — matching k-Wave C++ OMP
+                // computeDensityNonliner (total pre-update density sum) and
+                // Treeby & Cox (2010) Eq. (A.3).
+                // field_p is safe to use as scratch here: the previous step's
+                // pressure was already recorded by sensors; it is overwritten by
+                // pressure_from_density after the density loop completes.
+                if self.nonlinear {
+                    self.dispatch(&mut cpass, &p!(step_u32, 0), &self.pipeline_snapshot_rho0_plus_rho, &bg_sensor, elem_wg, "snap_rho");
                 }
 
                 // ─── DENSITY UPDATE ───────────────────────────────────────────────
+                // When absorbing: absorb_accum_div_u(axis=0) initializes scratch_kre
+                // (no separate clear_buffer needed — avoids implicit pipeline barriers).
                 for ax in 0u32..3u32 {
                     let field_sel = ax + 1;
-                    self.dispatch(&mut encoder, &p!(step_u32, field_sel), &self.pipeline_copy_field_to_k, &bg_sensor, elem_wg, "cp_u");
-                    self.fft_3d(&mut encoder, &bg_sensor, step_u32, ns_u);
+                    self.dispatch(&mut cpass, &p!(step_u32, field_sel), &self.pipeline_copy_field_to_k, &bg_sensor, elem_wg, "cp_u");
+                    self.fft_3d(&mut cpass, &bg_sensor, step_u32, ns_u);
                     // kspace_shift writes in-place to kspace_re/im — no copy needed
-                    self.dispatch(&mut encoder, &p!(step_u32, ax + 3), &self.pipeline_kspace_shift, &bg_sensor, elem_wg, "kshift_d");
-                    // IFFT writes to kspace_re — dens_update reads kspace_re directly
-                    self.ifft_3d(&mut encoder, &bg_sensor, step_u32, ns_u);
-                    self.dispatch(&mut encoder, &p!(step_u32, ax), &self.pipeline_dens_update, &bg_sensor, elem_wg, "dens_upd");
+                    self.dispatch(&mut cpass, &p!(step_u32, ax + 3), &self.pipeline_kspace_shift, &bg_sensor, elem_wg, "kshift_d");
+                    // IFFT writes to kspace_re — dens_update reads kspace_re as div_u
+                    self.ifft_3d(&mut cpass, &bg_sensor, step_u32, ns_u);
+                    self.dispatch(&mut cpass, &p!(step_u32, ax), &self.pipeline_dens_update, &bg_sensor, elem_wg, "dens_upd");
+
+                    if self.absorbing {
+                        // Accumulate this axis's div_u (still in kspace_re) into scratch_kre.
+                        // density_update does NOT modify kspace_re, so the value is still valid.
+                        self.dispatch_absorb(&mut cpass, &p!(step_u32, ax), &self.pipeline_absorb_accum_div_u, &bg_sensor, elem_wg, "abs_accum");
+                    }
                 }
 
-                // ─── ABSORPTION DECAY (optional) ─────────────────────────────────
-                // Multiply all density components by exp(-alpha*c0*dt) per voxel.
-                // Applied after density update, before pressure EOS.
+                // ── Fractional-Laplacian absorption (Treeby & Cox 2010 Eqs. 19-21) ──
+                // Correct k-Wave C++ formula applied to PRESSURE, not density:
+                //   L1 = IFFT(nabla1 · FFT(ρ₀ · div_u_total))   [tau term]
+                //   L2 = IFFT(nabla2 · FFT(ρ_total))             [eta term]
+                //   p += c₀² · (τ · L1 − η · L2)
+                // scratch_kre now holds div_u_total from the accum loop above.
                 if self.absorbing {
-                    self.dispatch(&mut encoder, &p!(step_u32, 0), &self.pipeline_absorption, &bg_sensor, elem_wg, "absorb");
+                    // L1 = IFFT(nabla1 · FFT(rho0 · div_u_total))
+                    self.dispatch_absorb(&mut cpass, &p!(step_u32, 0), &self.pipeline_absorb_prep_l1_kspace, &bg_sensor, elem_wg, "abs_prep_l1");
+                    self.fft_3d(&mut cpass, &bg_sensor, step_u32, ns_u);
+                    self.dispatch_absorb(&mut cpass, &p!(step_u32, 0), &self.pipeline_absorb_mul_nabla, &bg_sensor, elem_wg, "abs_n1");
+                    self.ifft_3d(&mut cpass, &bg_sensor, step_u32, ns_u);
+                    self.dispatch_absorb(&mut cpass, &p!(step_u32, 0), &self.pipeline_absorb_copy_to_scratch, &bg_sensor, elem_wg, "abs_cp_l1");
+
+                    // L2 = IFFT(nabla2 · FFT(rho_total))
+                    self.dispatch_absorb(&mut cpass, &p!(step_u32, 1), &self.pipeline_absorb_prep_l2_kspace, &bg_sensor, elem_wg, "abs_prep_l2");
+                    self.fft_3d(&mut cpass, &bg_sensor, step_u32, ns_u);
+                    self.dispatch_absorb(&mut cpass, &p!(step_u32, 1), &self.pipeline_absorb_mul_nabla, &bg_sensor, elem_wg, "abs_n2");
+                    self.ifft_3d(&mut cpass, &bg_sensor, step_u32, ns_u);
+                    self.dispatch_absorb(&mut cpass, &p!(step_u32, 1), &self.pipeline_absorb_copy_to_scratch, &bg_sensor, elem_wg, "abs_cp_l2");
                 }
 
                 // ─── PRESSURE FROM DENSITY ────────────────────────────────────────
-                self.dispatch(&mut encoder, &p!(step_u32, 0), &self.pipeline_pres_density, &bg_sensor, elem_wg, "pres");
+                self.dispatch(&mut cpass, &p!(step_u32, 0), &self.pipeline_pres_density, &bg_sensor, elem_wg, "pres");
+
+                if self.absorbing {
+                    // Add fractional-Laplacian correction: p += c0^2 * (tau*L1 - eta*L2)
+                    self.dispatch_absorb(&mut cpass, &p!(step_u32, 0), &self.pipeline_absorb_pressure_correction, &bg_sensor, elem_wg, "abs_pres_corr");
+                }
 
                 // ─── RECORD SENSORS ───────────────────────────────────────────────
                 if n_sensors > 0 {
-                    self.dispatch(&mut encoder, &p!(step_u32, 0), &self.pipeline_record, &bg_sensor, ceil_div(n_sensors, 256), "rec");
+                    self.dispatch(&mut cpass, &p!(step_u32, 0), &self.pipeline_record, &bg_sensor, ceil_div(n_sensors, 256), "rec");
                 }
+
+                // End the single compute pass for this step — all GPU work above is
+                // recorded as one uninterrupted sequence with no UAV barriers between
+                // individual dispatches.
+                drop(cpass);
             } // end per-step encoding (inner loop)
             // Submit batch — GPU executes batch N while CPU encodes batch N+1
             self.queue.submit(std::iter::once(encoder.finish()));
@@ -450,25 +512,28 @@ impl GpuPstdSolver {
     }
 
     // ─── Internal command-encoding helpers ───────────────────────────────────
+    //
+    // All dispatch helpers operate on an EXISTING ComputePass rather than
+    // creating a new pass per call.  This eliminates the begin_compute_pass /
+    // end_compute_pass overhead (~250 µs/call on D3D12) that was the dominant
+    // bottleneck when ~90 passes were created per time step.
+    //
+    // The caller is responsible for creating one ComputePass per time step
+    // and dropping it (ending the pass) after all dispatches for that step.
 
-    /// Encode one compute dispatch using push constants for per-dispatch params.
-    ///
-    /// Push constants are embedded directly in the command buffer — no write_buffer()
-    /// overhead and no coalescing issues. Bind groups: fields(0), kspace(1), sensor(2).
+    /// Encode one compute dispatch into an open `cpass`.
+    /// Push constants are set inline — no write_buffer() overhead.
+    /// Bind groups: fields(0), kspace+medium(1), sensor(2).
     #[inline]
     pub(super) fn dispatch(
         &self,
-        encoder: &mut wgpu::CommandEncoder,
+        cpass: &mut wgpu::ComputePass<'_>,
         params: &PstdParams,
         pipeline: &wgpu::ComputePipeline,
         bg_sensor: &wgpu::BindGroup,
         workgroups: u32,
-        label: &str,
+        _label: &str,
     ) {
-        let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: Some(label),
-            timestamp_writes: None,
-        });
         cpass.set_pipeline(pipeline);
         cpass.set_push_constants(0, bytemuck::bytes_of(params));
         cpass.set_bind_group(0, &self.bg_fields, &[]);
@@ -477,20 +542,39 @@ impl GpuPstdSolver {
         cpass.dispatch_workgroups(workgroups, 1, 1);
     }
 
+    /// Encode a dispatch that also binds the absorption group(3).
+    ///
+    /// Used by fractional-Laplacian absorption shaders (4-group pipeline layout).
+    /// group(2) (bgl_sensor) is set as a placeholder; it is not read by absorb shaders.
+    #[inline]
+    pub(super) fn dispatch_absorb(
+        &self,
+        cpass: &mut wgpu::ComputePass<'_>,
+        params: &PstdParams,
+        pipeline: &wgpu::ComputePipeline,
+        bg_sensor: &wgpu::BindGroup,
+        workgroups: u32,
+        _label: &str,
+    ) {
+        cpass.set_pipeline(pipeline);
+        cpass.set_push_constants(0, bytemuck::bytes_of(params));
+        cpass.set_bind_group(0, &self.bg_fields, &[]);
+        cpass.set_bind_group(1, &self.bg_kspace, &[]);
+        cpass.set_bind_group(2, bg_sensor, &[]);
+        cpass.set_bind_group(3, &self.bg_absorb, &[]);
+        cpass.dispatch_workgroups(workgroups, 1, 1);
+    }
+
     pub(super) fn dispatch_2d(
         &self,
-        encoder: &mut wgpu::CommandEncoder,
+        cpass: &mut wgpu::ComputePass<'_>,
         params: &PstdParams,
         pipeline: &wgpu::ComputePipeline,
         bg_sensor: &wgpu::BindGroup,
         workgroups_x: u32,
         workgroups_y: u32,
-        label: &str,
+        _label: &str,
     ) {
-        let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: Some(label),
-            timestamp_writes: None,
-        });
         cpass.set_pipeline(pipeline);
         cpass.set_push_constants(0, bytemuck::bytes_of(params));
         cpass.set_bind_group(0, &self.bg_fields, &[]);
@@ -500,9 +584,12 @@ impl GpuPstdSolver {
     }
 
     /// Encode a forward 3D FFT: Z-axis → Y-axis → X-axis.
+    ///
+    /// Operates on an already-open `ComputePass` so all axis passes
+    /// stay inside the same GPU compute pass — no extra UAV barrier between axes.
     pub(super) fn fft_3d(
         &self,
-        encoder: &mut wgpu::CommandEncoder,
+        cpass: &mut wgpu::ComputePass<'_>,
         bg_sensor: &wgpu::BindGroup,
         step_u32: u32,
         n_sensors: u32,
@@ -514,27 +601,30 @@ impl GpuPstdSolver {
         let nt = self.nt as u32;
         let nl = if self.nonlinear { 1u32 } else { 0u32 };
         let abs = if self.absorbing { 1u32 } else { 0u32 };
-        let fft_dispatch = |encoder: &mut wgpu::CommandEncoder,
-                            params: &PstdParams,
-                            batches: u32,
-                            label: &str| {
+        let mut fft_dispatch = |cpass: &mut wgpu::ComputePass<'_>,
+                                params: &PstdParams,
+                                batches: u32,
+                                label: &str| {
             let workgroups_x = batches.min(65535);
             let workgroups_y = batches.div_ceil(65535);
-            self.dispatch_2d(encoder, params, &self.pipeline_fft, bg_sensor, workgroups_x, workgroups_y, label);
+            self.dispatch_2d(cpass, params, &self.pipeline_fft, bg_sensor, workgroups_x, workgroups_y, label);
         };
         let p = |axis: u32, n_fft: u32, n_batches: u32, log2n: u32| PstdParams {
             nx, ny, nz, axis, n_fft, n_batches, log2n, inverse: 0,
             step: step_u32, dt, n_sensors, nt, nonlinear: nl, absorbing: abs,
         };
-        fft_dispatch(encoder, &p(2, nz, nx * ny, nz.trailing_zeros()), nx * ny, "fft_z");
-        fft_dispatch(encoder, &p(1, ny, nx * nz, ny.trailing_zeros()), nx * nz, "fft_y");
-        fft_dispatch(encoder, &p(0, nx, ny * nz, nx.trailing_zeros()), ny * nz, "fft_x");
+        fft_dispatch(cpass, &p(2, nz, nx * ny, nz.trailing_zeros()), nx * ny, "fft_z");
+        fft_dispatch(cpass, &p(1, ny, nx * nz, ny.trailing_zeros()), nx * nz, "fft_y");
+        fft_dispatch(cpass, &p(0, nx, ny * nz, nx.trailing_zeros()), ny * nz, "fft_x");
     }
 
     /// Encode an inverse 3D FFT: X-axis → Y-axis → Z-axis.
+    ///
+    /// Operates on an already-open `ComputePass` so all axis passes
+    /// stay inside the same GPU compute pass — no extra UAV barrier between axes.
     pub(super) fn ifft_3d(
         &self,
-        encoder: &mut wgpu::CommandEncoder,
+        cpass: &mut wgpu::ComputePass<'_>,
         bg_sensor: &wgpu::BindGroup,
         step_u32: u32,
         n_sensors: u32,
@@ -546,20 +636,20 @@ impl GpuPstdSolver {
         let nt = self.nt as u32;
         let nl = if self.nonlinear { 1u32 } else { 0u32 };
         let abs = if self.absorbing { 1u32 } else { 0u32 };
-        let fft_dispatch = |encoder: &mut wgpu::CommandEncoder,
-                            params: &PstdParams,
-                            batches: u32,
-                            label: &str| {
+        let mut fft_dispatch = |cpass: &mut wgpu::ComputePass<'_>,
+                                params: &PstdParams,
+                                batches: u32,
+                                label: &str| {
             let workgroups_x = batches.min(65535);
             let workgroups_y = batches.div_ceil(65535);
-            self.dispatch_2d(encoder, params, &self.pipeline_fft, bg_sensor, workgroups_x, workgroups_y, label);
+            self.dispatch_2d(cpass, params, &self.pipeline_fft, bg_sensor, workgroups_x, workgroups_y, label);
         };
         let p = |axis: u32, n_fft: u32, n_batches: u32, log2n: u32| PstdParams {
             nx, ny, nz, axis, n_fft, n_batches, log2n, inverse: 1,
             step: step_u32, dt, n_sensors, nt, nonlinear: nl, absorbing: abs,
         };
-        fft_dispatch(encoder, &p(0, nx, ny * nz, nx.trailing_zeros()), ny * nz, "ifft_x");
-        fft_dispatch(encoder, &p(1, ny, nx * nz, ny.trailing_zeros()), nx * nz, "ifft_y");
-        fft_dispatch(encoder, &p(2, nz, nx * ny, nz.trailing_zeros()), nx * ny, "ifft_z");
+        fft_dispatch(cpass, &p(0, nx, ny * nz, nx.trailing_zeros()), ny * nz, "ifft_x");
+        fft_dispatch(cpass, &p(1, ny, nx * nz, ny.trailing_zeros()), nx * nz, "ifft_y");
+        fft_dispatch(cpass, &p(2, nz, nx * ny, nz.trailing_zeros()), nx * ny, "ifft_z");
     }
 }

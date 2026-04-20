@@ -174,6 +174,20 @@ var<storage, read> source_data: array<f32>;
 
 var<workgroup> sm_re: array<f32, 256>;
 var<workgroup> sm_im: array<f32, 256>;
+// Precomputed twiddle factors for radix-2 butterfly — eliminates cos/sin per butterfly.
+// Loaded from precomp_alpha_decay (repurposed: apply_absorption never dispatched) at
+// workgroup startup.  Layout in the buffer:
+//   [0..128)    cos(-2πk/256)  k=0..127  (n=256 re)
+//   [128..256)  sin(-2πk/256)  k=0..127  (n=256 im)
+//   [256..320)  cos(-2πk/128)  k=0..63   (n=128 re)
+//   [320..384)  sin(-2πk/128)  k=0..63   (n=128 im)
+//   [384..416)  cos(-2πk/64)   k=0..31   (n=64  re)
+//   [416..448)  sin(-2πk/64)   k=0..31   (n=64  im)
+//   [448..464)  cos(-2πk/32)   k=0..15   (n=32  re)
+//   [464..480)  sin(-2πk/32)   k=0..15   (n=32  im)
+// For IFFT, conjugate: negate w_im before applying.
+var<workgroup> sm_tw_re: array<f32, 128>;
+var<workgroup> sm_tw_im: array<f32, 128>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -217,15 +231,18 @@ fn shift_im(ax_code: u32, idx: u32, nx: u32, ny: u32) -> f32 {
 
 // ─── Entry point: fft_1d_smem ─────────────────────────────────────────────────
 //
-// Shared-memory batched 1D Cooley-Tukey FFT.
+// Shared-memory batched 1D Cooley-Tukey FFT with precomputed twiddle factors.
 // One workgroup per batch (params.n_batches total workgroups).
 // Workgroup size: 64 threads.
 //   - For n=128 (Y/Z axes, half_n=64): each thread handles exactly 1 butterfly
 //     per stage → 100% active thread utilization.
 //   - For n=256 (X axis, half_n=128): each thread handles 2 butterflies per
 //     stage via the stride-64 inner loop → 2× warps in flight per stage.
-// The 64-thread workgroup also doubles SM occupancy vs 128 threads for n=128
-// cases, improving latency hiding on shared-memory bank conflicts.
+//
+// Twiddle factors are loaded from precomp_alpha_decay into sm_tw_re/im at
+// workgroup startup (one load per workgroup, amortized over log2n stages).
+// This eliminates costly cos/sin from the butterfly hot path.
+// For IFFT, twiddles are conjugated (negate im) in-register — no separate table.
 //
 // axis selects the transform dimension:
 //   axis=0 (X): stride=ny*nz, batch_id indexes (iy, iz) pairs
@@ -248,6 +265,34 @@ fn fft_1d_smem(
 
     if batch_id >= params.n_batches { return; }
 
+    // ── Load twiddle factors into shared memory ───────────────────────────────
+    // Buffer layout (precomp_alpha_decay): repurposed for FFT twiddle factors.
+    //   [0..128)   re for n=256,  [128..256)  im for n=256
+    //   [256..320) re for n=128,  [320..384)  im for n=128
+    //   [384..416) re for n=64,   [416..448)  im for n=64
+    //   [448..464) re for n=32,   [464..480)  im for n=32
+    var tw_re_base: u32;
+    var tw_im_base: u32;
+    if n == 128u {
+        tw_re_base = 256u; tw_im_base = 320u;
+    } else if n == 64u {
+        tw_re_base = 384u; tw_im_base = 416u;
+    } else if n == 32u {
+        tw_re_base = 448u; tw_im_base = 464u;
+    } else {
+        // n == 256 (default)
+        tw_re_base = 0u; tw_im_base = 128u;
+    }
+    let n_half = n >> 1u;
+    var tw_tid = local_tid;
+    loop {
+        if tw_tid >= n_half { break; }
+        sm_tw_re[tw_tid] = precomp_alpha_decay[tw_re_base + tw_tid];
+        sm_tw_im[tw_tid] = precomp_alpha_decay[tw_im_base + tw_tid];
+        tw_tid += 64u;
+    }
+
+    // ── Compute stride and batch base ─────────────────────────────────────────
     var stride: u32;
     var batch_base: u32;
 
@@ -268,9 +313,7 @@ fn fft_1d_smem(
         batch_base = ix * ny * nz + iy * nz;
     }
 
-    let half_n = n >> 1u;
-
-    // Load into shared memory with bit-reversal permutation
+    // ── Load data into shared memory with bit-reversal permutation ────────────
     var load_idx = local_tid;
     loop {
         if load_idx >= n { break; }
@@ -281,28 +324,32 @@ fn fft_1d_smem(
         load_idx += 64u;
     }
 
+    // Single barrier synchronizes both twiddle and data loads before butterflies.
     workgroupBarrier();
 
-    // Iterative Cooley-Tukey butterfly stages
+    // ── Iterative Cooley-Tukey butterfly stages ───────────────────────────────
+    // Twiddle for stage s at butterfly position local_pos:
+    //   tw_idx = local_pos * (n >> (s+1))   [stride within n-point twiddle table]
+    //   w = (sm_tw_re[tw_idx], ±sm_tw_im[tw_idx])  (+im for IFFT, −im for forward)
     var s = 0u;
     loop {
         if s >= log2n { break; }
         let h = 1u << s;
         let group_sz = h << 1u;
+        let tw_stride = n >> (s + 1u);  // = n / group_sz
 
         var tid = local_tid;
         loop {
-            if tid >= half_n { break; }
+            if tid >= n_half { break; }
             let group_idx = tid / h;
             let local_pos = tid % h;
             let even = group_idx * group_sz + local_pos;
             let odd  = even + h;
 
-            var angle = -TWO_PI * f32(local_pos) / f32(group_sz);
-            if inv != 0u { angle = -angle; }
-
-            let w_re = cos(angle);
-            let w_im = sin(angle);
+            let tw_idx = local_pos * tw_stride;
+            let w_re = sm_tw_re[tw_idx];
+            var w_im = sm_tw_im[tw_idx];
+            if inv != 0u { w_im = -w_im; }   // IFFT: conjugate twiddle
 
             let e_re = sm_re[even];
             let e_im = sm_im[even];
@@ -323,7 +370,7 @@ fn fft_1d_smem(
         workgroupBarrier();
     }
 
-    // IFFT normalization
+    // ── IFFT normalization ────────────────────────────────────────────────────
     if inv != 0u {
         let inv_n = 1.0 / f32(n);
         var tid2 = local_tid;
@@ -336,7 +383,7 @@ fn fft_1d_smem(
         workgroupBarrier();
     }
 
-    // Write back
+    // ── Write back ────────────────────────────────────────────────────────────
     var write_idx = local_tid;
     loop {
         if write_idx >= n { break; }
@@ -454,14 +501,25 @@ fn snapshot_rho0_plus_rho(@builtin(global_invocation_id) gid: vec3<u32>) {
 // ─── Entry point: density_update ─────────────────────────────────────────────
 //
 // Split-field PML density update:
-//   Linear:    rho_new = pml^2 * rho_old - dt * rho0         * pml * div_u
-//   Nonlinear: rho_new = pml^2 * rho_old - dt * (2*rho+rho0) * pml * div_u
+//   Linear:    rho_new = pml^2 * rho_old - dt * rho0                   * pml * div_u
+//   Nonlinear: rho_new = pml^2 * rho_old - dt * (2*(rhox+rhoy+rhoz)+rho0) * pml * div_u
 //
-// In the nonlinear branch the coefficient `(2*rho_total + rho0)` is the
-// pre-snapshot produced by snapshot_rho0_plus_rho and stored in field_p.
-// Using a snapshot (rather than reading live rhox/rhoy/rhoz) keeps all three
-// axis dispatches coherent with the MATLAB reference, which computes the
-// coefficient once before any rhox/rhoy/rhoz update.
+// In the nonlinear branch the mass-conservation coefficient uses the
+// TOTAL pre-update density sum (rhox+rhoy+rhoz) snapshotted into field_p by
+// snapshot_rho0_plus_rho before the three density_update dispatches.  This
+// matches k-Wave C++ OMP computeDensityNonliner exactly:
+//
+//   sumRhos = rhoX + rhoY + rhoZ   (pre-update, same for all axes)
+//   rhoX -= dt * (2*sumRhos + rho0) * duxdx
+//   rhoY -= dt * (2*sumRhos + rho0) * duydy
+//   rhoZ -= dt * (2*sumRhos + rho0) * duzdz
+//
+// This is the physically correct nonlinear continuity formulation from
+// Treeby & Cox (2010) Eq. (A.3):
+//   d(rho_i)/dt = -(rho0 + sum_j rho_j) * du_i/dx_i
+//
+// field_p holds snapshot_rho0_plus_rho = 2*(rhox+rhoy+rhoz)+rho0 at this
+// point in the step (overwritten by pressure_from_density later).
 //
 // div_u is in kspace_re (IFFT result of in-place kspace_shift).
 // params.axis: 0=update rhox, 1=rhoy, 2=rhoz
@@ -477,11 +535,13 @@ fn density_update(@builtin(global_invocation_id) gid: vec3<u32>) {
     let div_u = kspace_re[idx];
     let pml   = pml_xyz[ax * total + idx];  // axis selects which pml array
 
-    // Nonlinear mass conservation: coefficient is the pre-step snapshot in
-    // field_p. Linear path uses unperturbed rho0. Single branch keeps the
-    // hot loop small.
+    // Nonlinear mass conservation: use total pre-update density sum from
+    // snapshot_rho0_plus_rho (stored in field_p before density loop begins).
+    // This matches k-Wave C++ OMP and Treeby & Cox (2010) Eq. (A.3).
+    // Linear path uses unperturbed rho0 only.
     var mass_coef: f32;
     if params.nonlinear != 0u {
+        // field_p holds 2*(rhox+rhoy+rhoz)+rho0 (snapshotted before density loop)
         mass_coef = field_p[idx];
     } else {
         mass_coef = precomp_rho0[idx];
@@ -550,6 +610,21 @@ fn apply_absorption(@builtin(global_invocation_id) gid: vec3<u32>) {
     field_rhox[idx] *= decay;
     field_rhoy[idx] *= decay;
     field_rhoz[idx] *= decay;
+}
+
+// ─── Entry point: zero_kspace ────────────────────────────────────────────────
+//
+// Zeroes kspace_re and kspace_im in one GPU pass.
+// Used before velocity-x source injection so that inject_velocity_x_source
+// can accumulate into a clean kspace buffer, without requiring a CPU-side
+// encoder.clear_buffer() call that would break single-pass-per-step dispatch.
+@compute @workgroup_size(256, 1, 1)
+fn zero_kspace(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx   = gid.x;
+    let total = params.nx * params.ny * params.nz;
+    if idx >= total { return; }
+    kspace_re[idx] = 0.0;
+    kspace_im[idx] = 0.0;
 }
 
 // ─── Entry point: zero_acoustic_fields ───────────────────────────────────────
@@ -638,6 +713,190 @@ fn add_kspace_to_field_ux(@builtin(global_invocation_id) gid: vec3<u32>) {
     if idx >= total { return; }
 
     field_ux[idx] += kspace_re[idx];
+}
+
+// ─── Bind Group 3: Fractional-Laplacian absorption operators ─────────────────
+//
+// Used when `params.absorbing != 0`. The pipeline layout for absorption
+// shaders declares this group at index 3. Non-absorption pipelines use the
+// 3-group layout and never access these bindings.
+//
+// Layout:
+//   binding 0: absorb_nabla1    — |k|^(y−2) in FFT order (read-only)
+//   binding 1: absorb_nabla2    — |k|^(y−1) in FFT order (read-only)
+//   binding 2: absorb_tau       — −2α₀c₀^(y−1) per voxel (read-only)
+//   binding 3: absorb_eta       — 2α₀c₀^y·tan(πy/2) per voxel (read-only)
+//   binding 4: absorb_scratch_kre — temp complex re save (read_write)
+//   binding 5: absorb_scratch_kim — temp complex im save (read_write)
+//   binding 6: absorb_scratch_l1  — L1 = IFFT(nabla1·FFT(div_u)) (read_write)
+//   binding 7: absorb_scratch_l2  — L2 = IFFT(nabla2·FFT(div_u)) (read_write)
+//
+// References: Treeby & Cox (2010) Eqs. 9–10, 19–21.
+
+@group(3) @binding(0)
+var<storage, read> absorb_nabla1: array<f32>;
+
+@group(3) @binding(1)
+var<storage, read> absorb_nabla2: array<f32>;
+
+@group(3) @binding(2)
+var<storage, read> absorb_tau: array<f32>;
+
+@group(3) @binding(3)
+var<storage, read> absorb_eta: array<f32>;
+
+@group(3) @binding(4)
+var<storage, read_write> absorb_scratch_kre: array<f32>;
+
+@group(3) @binding(5)
+var<storage, read_write> absorb_scratch_kim: array<f32>;
+
+@group(3) @binding(6)
+var<storage, read_write> absorb_scratch_l1: array<f32>;
+
+@group(3) @binding(7)
+var<storage, read_write> absorb_scratch_l2: array<f32>;
+
+// ─── Entry point: absorb_save_kspace ─────────────────────────────────────────
+//
+// Save kspace_re/im → absorb_scratch_kre/kim.
+// Called after kspace_shift_apply to preserve FFT(div_u) before nabla
+// multiplication overwrites kspace_re/im.
+@compute @workgroup_size(256, 1, 1)
+fn absorb_save_kspace(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if idx >= params.nx * params.ny * params.nz { return; }
+    absorb_scratch_kre[idx] = kspace_re[idx];
+    absorb_scratch_kim[idx] = kspace_im[idx];
+}
+
+// ─── Entry point: absorb_mul_nabla ───────────────────────────────────────────
+//
+// Multiply kspace_re/im by a real-valued nabla operator in-place.
+// params.axis: 0 → multiply by nabla1 = |k|^(y−2)
+//              1 → multiply by nabla2 = |k|^(y−1)
+@compute @workgroup_size(256, 1, 1)
+fn absorb_mul_nabla(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if idx >= params.nx * params.ny * params.nz { return; }
+    var n: f32;
+    if params.axis == 0u {
+        n = absorb_nabla1[idx];
+    } else {
+        n = absorb_nabla2[idx];
+    }
+    kspace_re[idx] *= n;
+    kspace_im[idx] *= n;
+}
+
+// ─── Entry point: absorb_copy_to_scratch ─────────────────────────────────────
+//
+// Copy kspace_re (= IFFT result = Lα) to a scratch buffer.
+// params.axis: 0 → copy to absorb_scratch_l1 (L1 = IFFT(nabla1·FFT(div_u)))
+//              1 → copy to absorb_scratch_l2 (L2 = IFFT(nabla2·FFT(div_u)))
+@compute @workgroup_size(256, 1, 1)
+fn absorb_copy_to_scratch(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if idx >= params.nx * params.ny * params.nz { return; }
+    if params.axis == 0u {
+        absorb_scratch_l1[idx] = kspace_re[idx];
+    } else {
+        absorb_scratch_l2[idx] = kspace_re[idx];
+    }
+}
+
+// ─── Entry point: absorb_restore_kspace ──────────────────────────────────────
+//
+// Restore kspace_re/im from absorb_scratch_kre/kim.
+// Called after each IFFT to reset kspace to FFT(div_u) for the next nabla pass.
+@compute @workgroup_size(256, 1, 1)
+fn absorb_restore_kspace(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if idx >= params.nx * params.ny * params.nz { return; }
+    kspace_re[idx] = absorb_scratch_kre[idx];
+    kspace_im[idx] = absorb_scratch_kim[idx];
+}
+
+// ─── Entry point: absorb_accum_div_u ─────────────────────────────────────────
+//
+// Accumulate per-axis velocity divergence into absorb_scratch_kre.
+//
+// After each density-loop IFFT, kspace_re holds the kappa-corrected velocity
+// divergence ∂u_α/∂α for axis α. This shader accumulates it so that after all
+// 3 axes, absorb_scratch_kre = div_u_total = ∂ux/∂x + ∂uy/∂y + ∂uz/∂z.
+//
+// params.axis encodes the current density-loop axis (0, 1, or 2):
+//   axis=0: WRITE  scratch_kre = kspace_re       (initialize, avoids a GPU buffer-clear call)
+//   axis=1: ADD    scratch_kre += kspace_re
+//   axis=2: ADD    scratch_kre += kspace_re
+//
+// Using axis=0 to initialize eliminates the need for a CommandEncoder::clear_buffer()
+// call before the density loop, which can cause implicit pipeline barriers in some
+// wgpu backends (D3D12) and significantly degrade GPU throughput.
+@compute @workgroup_size(256, 1, 1)
+fn absorb_accum_div_u(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if idx >= params.nx * params.ny * params.nz { return; }
+    if params.axis == 0u {
+        absorb_scratch_kre[idx] = kspace_re[idx];   // initialize on first axis
+    } else {
+        absorb_scratch_kre[idx] += kspace_re[idx];  // accumulate for axes 1 and 2
+    }
+}
+
+// ─── Entry point: absorb_prep_l1_kspace ──────────────────────────────────────
+//
+// Prepare kspace for the L1 = IFFT(nabla1 · FFT(ρ₀ · div_u_total)) computation.
+//
+// Sets kspace_re = ρ₀ × div_u_total  (from absorb_scratch_kre),  kspace_im = 0.
+// This is the first operand needed by k-Wave's power-law pressure formula
+// (computePressureTermsLinearPowerLaw: pVelocityGradientSum = rho0 * div_u).
+@compute @workgroup_size(256, 1, 1)
+fn absorb_prep_l1_kspace(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if idx >= params.nx * params.ny * params.nz { return; }
+    kspace_re[idx] = precomp_rho0[idx] * absorb_scratch_kre[idx];
+    kspace_im[idx] = 0.0;
+}
+
+// ─── Entry point: absorb_prep_l2_kspace ──────────────────────────────────────
+//
+// Prepare kspace for the L2 = IFFT(nabla2 · FFT(ρ_total)) computation.
+//
+// Sets kspace_re = ρx + ρy + ρz (density total, post-update),  kspace_im = 0.
+// This is the second operand needed by k-Wave's power-law pressure formula
+// (computePressureTermsLinearPowerLaw: pDensitySum = rhoX + rhoY + rhoZ).
+@compute @workgroup_size(256, 1, 1)
+fn absorb_prep_l2_kspace(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if idx >= params.nx * params.ny * params.nz { return; }
+    kspace_re[idx] = field_rhox[idx] + field_rhoy[idx] + field_rhoz[idx];
+    kspace_im[idx] = 0.0;
+}
+
+// ─── Entry point: absorb_pressure_correction ─────────────────────────────────
+//
+// Add fractional-Laplacian absorption correction to pressure.
+//
+// Implements k-Wave C++ sumPressureTermsLinear:
+//   p += c₀² · (τ · L1  −  η · L2)
+//
+// where L1 = absorb_scratch_l1 = IFFT(nabla1 · FFT(ρ₀ · div_u_total))
+//       L2 = absorb_scratch_l2 = IFFT(nabla2 · FFT(ρ_total))
+//
+// This formulation applies absorption instantaneously to pressure (not density),
+// exactly matching k-Wave C++ OMP `computePressureLinearPowerLaw`.
+// No Δt factor — unlike the per-density approach, this is not a running integral.
+//
+// Reference: Treeby & Cox (2010) Eq. 19–21; k-Wave C++ OMP KSpaceFirstOrderSolver.cpp
+//   computePressureTermsLinearPowerLaw + computePowerLawAbsorbtionTerm + sumPressureTermsLinear.
+@compute @workgroup_size(256, 1, 1)
+fn absorb_pressure_correction(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if idx >= params.nx * params.ny * params.nz { return; }
+    let c2 = precomp_c0_sq[idx];
+    field_p[idx] += c2 * (absorb_tau[idx] * absorb_scratch_l1[idx]
+                        - absorb_eta[idx] * absorb_scratch_l2[idx]);
 }
 
 // ─── Helper: copy real field to kspace (real part), zero imaginary ────────────

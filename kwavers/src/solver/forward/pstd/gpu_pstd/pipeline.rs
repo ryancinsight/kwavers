@@ -26,11 +26,13 @@ impl GpuPstdSolver {
     /// * `c_ref`    — reference sound speed for kappa correction [m/s]
     /// * `pml_x/y/z`       — collocated PML damping (for density), f32 [nx×ny×nz]
     /// * `pml_sgx/y/z`     — staggered PML damping (for velocity), f32 [nx×ny×nz]
-    /// * `bon_a_flat`       — B/(2A) per voxel; pass all-zeros for linear simulation
-    /// * `alpha_decay_flat` — `exp(-alpha_Np_m * c0 * dt)` per voxel at centre freq;
-    ///                        pass all-ones for lossless simulation
-    /// * `nonlinear`        — enable Westervelt BonA pressure correction
-    /// * `absorbing`        — enable per-step absorption decay
+    /// * `bon_a_flat`    — B/(2A) per voxel; pass all-zeros for linear simulation
+    /// * `absorb_nabla1` — |k|^(y−2) in FFT order; pass all-zeros for lossless
+    /// * `absorb_nabla2` — |k|^(y−1) in FFT order; pass all-zeros for lossless
+    /// * `absorb_tau`    — −2α₀c₀^(y−1) per voxel; pass all-zeros for lossless
+    /// * `absorb_eta`    — 2α₀c₀^y·tan(πy/2) per voxel; pass all-zeros for lossless
+    /// * `nonlinear`     — enable Westervelt BonA pressure correction
+    /// * `absorbing`     — enable fractional-Laplacian absorption (Treeby & Cox 2010)
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         device: Arc<wgpu::Device>,
@@ -48,7 +50,10 @@ impl GpuPstdSolver {
         pml_sgy: &[f32],
         pml_sgz: &[f32],
         bon_a_flat: &[f32],
-        alpha_decay_flat: &[f32],
+        absorb_nabla1: &[f32],
+        absorb_nabla2: &[f32],
+        absorb_tau: &[f32],
+        absorb_eta: &[f32],
         nonlinear: bool,
         absorbing: bool,
     ) -> Result<Self, String> {
@@ -150,7 +155,55 @@ impl GpuPstdSolver {
         let buf_c0_sq = mk_ro(&c0_sq, "c0_sq");
         let buf_rho0 = mk_ro(rho0_flat, "rho0");
         let buf_bon_a = mk_ro(bon_a_flat, "bon_a");
-        let buf_alpha_decay = mk_ro(alpha_decay_flat, "alpha_decay");
+        // Repurpose buf_alpha_decay as the FFT twiddle-factor buffer.
+        // apply_absorption (broadband multiplicative decay) is never dispatched;
+        // the fractional-Laplacian path is used instead.  The first 480 elements
+        // store precomputed cos/sin tables for the FFT kernel (eliminating runtime
+        // trig from every butterfly stage):
+        //   [0..128)   cos(-2πk/256) k=0..127  (n=256 re)
+        //   [128..256) sin(-2πk/256) k=0..127  (n=256 im)
+        //   [256..320) cos(-2πk/128) k=0..63   (n=128 re)
+        //   [320..384) sin(-2πk/128) k=0..63   (n=128 im)
+        //   [384..416) cos(-2πk/64)  k=0..31   (n=64  re)
+        //   [416..448) sin(-2πk/64)  k=0..31   (n=64  im)
+        //   [448..464) cos(-2πk/32)  k=0..15   (n=32  re)
+        //   [464..480) sin(-2πk/32)  k=0..15   (n=32  im)
+        // Remaining elements are unused padding (zero-filled).
+        let mut twiddle_data: Vec<f32> = vec![0.0f32; total];
+        // n=256
+        for k in 0usize..128 {
+            let angle = -2.0 * std::f64::consts::PI * k as f64 / 256.0;
+            twiddle_data[k]       = angle.cos() as f32;
+            twiddle_data[128 + k] = angle.sin() as f32;
+        }
+        // n=128
+        for k in 0usize..64 {
+            let angle = -2.0 * std::f64::consts::PI * k as f64 / 128.0;
+            twiddle_data[256 + k] = angle.cos() as f32;
+            twiddle_data[320 + k] = angle.sin() as f32;
+        }
+        // n=64
+        for k in 0usize..32 {
+            let angle = -2.0 * std::f64::consts::PI * k as f64 / 64.0;
+            twiddle_data[384 + k] = angle.cos() as f32;
+            twiddle_data[416 + k] = angle.sin() as f32;
+        }
+        // n=32
+        for k in 0usize..16 {
+            let angle = -2.0 * std::f64::consts::PI * k as f64 / 32.0;
+            twiddle_data[448 + k] = angle.cos() as f32;
+            twiddle_data[464 + k] = angle.sin() as f32;
+        }
+        let buf_alpha_decay = mk_ro(&twiddle_data, "twiddle_fft");
+        // Fractional-Laplacian absorption buffers (group 3)
+        let buf_absorb_nabla1 = mk_ro(absorb_nabla1, "absorb_nabla1");
+        let buf_absorb_nabla2 = mk_ro(absorb_nabla2, "absorb_nabla2");
+        let buf_absorb_tau    = mk_ro(absorb_tau,    "absorb_tau");
+        let buf_absorb_eta    = mk_ro(absorb_eta,    "absorb_eta");
+        let buf_absorb_scratch_kre = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_kre");
+        let buf_absorb_scratch_kim = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_kim");
+        let buf_absorb_scratch_l1  = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_l1");
+        let buf_absorb_scratch_l2  = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_l2");
 
         // group(3) PML + shifts
         let buf_pml_sgx = mk_ro(pml_sgx, "pml_sgx");
@@ -453,12 +506,54 @@ impl GpuPstdSolver {
             ],
         });
 
-        // ── Pipeline layout ───────────────────────────────────────────────────
-        // Push constants replace the former group(1) uniform params buffer.
-        // 3 bind groups: fields(0), kspace(1), sensor(2).
+        // group(3): 4 read-only + 4 read_write storage buffers for fractional-Laplacian absorption
+        let bgl_absorb = {
+            let ro_entry = |b: u32| wgpu::BindGroupLayoutEntry {
+                binding: b,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            };
+            let rw_entry = |b: u32| wgpu::BindGroupLayoutEntry {
+                binding: b,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            };
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("bgl_absorb"),
+                entries: &[
+                    ro_entry(0), ro_entry(1), ro_entry(2), ro_entry(3), // nabla1, nabla2, tau, eta
+                    rw_entry(4), rw_entry(5), rw_entry(6), rw_entry(7), // scratch_kre/kim, l1, l2
+                ],
+            })
+        };
+
+        // ── Pipeline layouts ──────────────────────────────────────────────────
+        // Standard layout: groups 0–2 (fields, kspace, sensor)
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("pstd_pipeline_layout"),
             bind_group_layouts: &[&bgl_fields, &bgl_kspace, &bgl_sensor],
+            push_constant_ranges: &[wgpu::PushConstantRange {
+                stages: wgpu::ShaderStages::COMPUTE,
+                range: 0..std::mem::size_of::<PstdParams>() as u32,
+            }],
+        });
+
+        // Absorption layout: groups 0–3 (fields, kspace, sensor[placeholder], absorb)
+        // Absorption shaders access group(0) (rho fields), group(1) (kspace), group(3) (absorption).
+        // group(2) (bgl_sensor) is present in the layout for API compatibility but unused by these shaders.
+        let pipeline_layout_absorb = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("pstd_pipeline_layout_absorb"),
+            bind_group_layouts: &[&bgl_fields, &bgl_kspace, &bgl_sensor, &bgl_absorb],
             push_constant_ranges: &[wgpu::PushConstantRange {
                 stages: wgpu::ShaderStages::COMPUTE,
                 range: 0..std::mem::size_of::<PstdParams>() as u32,
@@ -478,6 +573,7 @@ impl GpuPstdSolver {
         };
 
         let pipeline_zero_fields = mk_pl("zero_acoustic_fields");
+        let pipeline_zero_kspace = mk_pl("zero_kspace");
         let pipeline_fft = mk_pl("fft_1d_smem");
         let pipeline_kspace_shift = mk_pl("kspace_shift_apply");
         let pipeline_vel_update = mk_pl("velocity_update");
@@ -491,6 +587,30 @@ impl GpuPstdSolver {
         let pipeline_apply_source_kappa = mk_pl("apply_source_kappa");
         let pipeline_add_kspace_to_field_ux = mk_pl("add_kspace_to_field_ux");
         let pipeline_copy_field_to_k = mk_pl("copy_field_to_kspace");
+
+        // Fractional-Laplacian absorption pipelines (use 4-group layout)
+        let mk_pl_absorb = |entry: &'static str| -> wgpu::ComputePipeline {
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some(entry),
+                layout: Some(&pipeline_layout_absorb),
+                module: &shader,
+                entry_point: Some(entry),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                cache: None,
+            })
+        };
+        // Correct k-Wave pressure-based absorption pipelines
+        let pipeline_absorb_mul_nabla = mk_pl_absorb("absorb_mul_nabla");
+        let pipeline_absorb_copy_to_scratch = mk_pl_absorb("absorb_copy_to_scratch");
+        let pipeline_absorb_accum_div_u = mk_pl_absorb("absorb_accum_div_u");
+        let pipeline_absorb_prep_l1_kspace = mk_pl_absorb("absorb_prep_l1_kspace");
+        let pipeline_absorb_prep_l2_kspace = mk_pl_absorb("absorb_prep_l2_kspace");
+        let pipeline_absorb_pressure_correction = mk_pl_absorb("absorb_pressure_correction");
+        // kspace save/restore — used to cache FFT(p) during the velocity loop so
+        // the forward FFT of pressure is only computed once per time step (not 3×).
+        // absorb_scratch_kre/kim are idle during the velocity section and safe to reuse.
+        let pipeline_absorb_save_kspace = mk_pl_absorb("absorb_save_kspace");
+        let pipeline_absorb_restore_kspace = mk_pl_absorb("absorb_restore_kspace");
 
         // ── Bind groups (sensor rebuilt per run) ──────────────────────────────
         let bg_fields = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -520,6 +640,21 @@ impl GpuPstdSolver {
                 wgpu::BindGroupEntry { binding: 5, resource: buf_rho0.as_entire_binding() },
                 wgpu::BindGroupEntry { binding: 6, resource: buf_bon_a.as_entire_binding() },
                 wgpu::BindGroupEntry { binding: 7, resource: buf_alpha_decay.as_entire_binding() },
+            ],
+        });
+
+        let bg_absorb = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("bg_absorb"),
+            layout: &bgl_absorb,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: buf_absorb_nabla1.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: buf_absorb_nabla2.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: buf_absorb_tau.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 3, resource: buf_absorb_eta.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 4, resource: buf_absorb_scratch_kre.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 5, resource: buf_absorb_scratch_kim.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 6, resource: buf_absorb_scratch_l1.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 7, resource: buf_absorb_scratch_l2.as_entire_binding() },
             ],
         });
 
@@ -554,6 +689,7 @@ impl GpuPstdSolver {
             buf_pml_xyz,
             buf_shifts_all,
             pipeline_zero_fields,
+            pipeline_zero_kspace,
             pipeline_fft,
             pipeline_kspace_shift,
             pipeline_vel_update,
@@ -567,8 +703,25 @@ impl GpuPstdSolver {
             pipeline_apply_source_kappa,
             pipeline_add_kspace_to_field_ux,
             pipeline_copy_field_to_k,
+            pipeline_absorb_mul_nabla,
+            pipeline_absorb_copy_to_scratch,
+            pipeline_absorb_accum_div_u,
+            pipeline_absorb_prep_l1_kspace,
+            pipeline_absorb_prep_l2_kspace,
+            pipeline_absorb_pressure_correction,
+            pipeline_absorb_save_kspace,
+            pipeline_absorb_restore_kspace,
+            buf_absorb_nabla1,
+            buf_absorb_nabla2,
+            buf_absorb_tau,
+            buf_absorb_eta,
+            buf_absorb_scratch_kre,
+            buf_absorb_scratch_kim,
+            buf_absorb_scratch_l1,
+            buf_absorb_scratch_l2,
             bg_fields,
             bg_kspace,
+            bg_absorb,
             bgl_sensor,
             pipeline_layout,
             // CPU scratch for update_medium() — preallocated to avoid per-scan-line alloc.
@@ -611,7 +764,10 @@ impl GpuPstdSolver {
         pml_sgy: &[f32],
         pml_sgz: &[f32],
         bon_a_flat: &[f32],
-        alpha_decay_flat: &[f32],
+        absorb_nabla1: &[f32],
+        absorb_nabla2: &[f32],
+        absorb_tau: &[f32],
+        absorb_eta: &[f32],
         nonlinear: bool,
         absorbing: bool,
     ) -> Result<Self, String> {
@@ -666,7 +822,10 @@ impl GpuPstdSolver {
             pml_sgy,
             pml_sgz,
             bon_a_flat,
-            alpha_decay_flat,
+            absorb_nabla1,
+            absorb_nabla2,
+            absorb_tau,
+            absorb_eta,
             nonlinear,
             absorbing,
         )

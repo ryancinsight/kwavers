@@ -125,6 +125,17 @@ pub struct GpuPstdSolver {
     pub(super) buf_bon_a: wgpu::Buffer,       // B/(2A) per voxel; 0.0 for linear sims
     pub(super) buf_alpha_decay: wgpu::Buffer, // exp(-alpha_Np*c0*dt) per voxel; 1.0 for lossless
 
+    // Fractional-Laplacian absorption operators (group 3)
+    // Precomputed constants for Treeby & Cox (2010) Eqs. 9–10, 19–21.
+    pub(super) buf_absorb_nabla1: wgpu::Buffer,    // |k|^(y-2) in FFT order
+    pub(super) buf_absorb_nabla2: wgpu::Buffer,    // |k|^(y-1) in FFT order
+    pub(super) buf_absorb_tau: wgpu::Buffer,       // -2*alpha0*c0^(y-1) per voxel
+    pub(super) buf_absorb_eta: wgpu::Buffer,       // 2*alpha0*c0^y*tan(pi*y/2) per voxel
+    pub(super) buf_absorb_scratch_kre: wgpu::Buffer, // temp kspace re save
+    pub(super) buf_absorb_scratch_kim: wgpu::Buffer, // temp kspace im save
+    pub(super) buf_absorb_scratch_l1: wgpu::Buffer,  // L1 = IFFT(nabla1*FFT(div_u))
+    pub(super) buf_absorb_scratch_l2: wgpu::Buffer,  // L2 = IFFT(nabla2*FFT(div_u))
+
     // Physics flags (drive shader branches via push-constant nonlinear/absorbing)
     pub(super) nonlinear: bool,
     pub(super) absorbing: bool,
@@ -138,6 +149,10 @@ pub struct GpuPstdSolver {
 
     // Pipelines
     pub(super) pipeline_zero_fields: wgpu::ComputePipeline,
+    /// Zeros kspace_re and kspace_im in a single compute pass (no CPU-side clear_buffer).
+    /// Enables keeping a single ComputePassEncoder open for the whole time step,
+    /// replacing the two encoder.clear_buffer() calls that would end the pass.
+    pub(super) pipeline_zero_kspace: wgpu::ComputePipeline,
     pub(super) pipeline_fft: wgpu::ComputePipeline,
     pub(super) pipeline_kspace_shift: wgpu::ComputePipeline,
     pub(super) pipeline_vel_update: wgpu::ComputePipeline,
@@ -153,9 +168,27 @@ pub struct GpuPstdSolver {
     pub(super) buf_source_kappa: wgpu::Buffer,
     pub(super) pipeline_copy_field_to_k: wgpu::ComputePipeline,
 
+    // Fractional-Laplacian absorption pipelines (use 4-group layout)
+    // Correct k-Wave C++ pressure-based formula (computePressureLinearPowerLaw):
+    //   L1 = IFFT(nabla1 · FFT(ρ₀ · div_u_total)),  L2 = IFFT(nabla2 · FFT(ρ_total))
+    //   p += c₀² · (τ · L1 − η · L2)
+    pub(super) pipeline_absorb_mul_nabla: wgpu::ComputePipeline,
+    pub(super) pipeline_absorb_copy_to_scratch: wgpu::ComputePipeline,
+    pub(super) pipeline_absorb_accum_div_u: wgpu::ComputePipeline,
+    pub(super) pipeline_absorb_prep_l1_kspace: wgpu::ComputePipeline,
+    pub(super) pipeline_absorb_prep_l2_kspace: wgpu::ComputePipeline,
+    pub(super) pipeline_absorb_pressure_correction: wgpu::ComputePipeline,
+    /// Save kspace_re/im → absorb_scratch_kre/kim.
+    /// Used during velocity loop to cache FFT(p) for reuse across all 3 axes,
+    /// saving 2 full 3D FFTs per time step.
+    pub(super) pipeline_absorb_save_kspace: wgpu::ComputePipeline,
+    /// Restore kspace_re/im ← absorb_scratch_kre/kim.
+    pub(super) pipeline_absorb_restore_kspace: wgpu::ComputePipeline,
+
     // Bind groups (sensor group rebuilt per run)
     pub(super) bg_fields: wgpu::BindGroup,
     pub(super) bg_kspace: wgpu::BindGroup,
+    pub(super) bg_absorb: wgpu::BindGroup,  // group(3): absorption operators
 
     // Bind group layouts and pipeline layout (kept for rebuilding)
     pub(super) bgl_sensor: wgpu::BindGroupLayout,
@@ -260,7 +293,8 @@ mod tests {
         let zeros: Vec<f32> = vec![0.0f32; n * n * n];
         let solver = GpuPstdSolver::new(
             device, queue, &grid, &c0v, &rho0v, dt, nt, c0, &ones, &ones, &ones, &ones, &ones,
-            &ones, &zeros, &ones, // bon_a=0 (linear), alpha_decay=1 (lossless)
+            &ones, &zeros, // bon_a=0 (linear)
+            &zeros, &zeros, &zeros, &zeros, // absorption ops=0 (lossless, absorbing=false)
             false, false,
         );
 
@@ -291,7 +325,10 @@ mod tests {
             &vec![1.0f32; n3],
             &vec![1.0f32; n3],
             &vec![0.0f32; n3], // bon_a = 0 (linear)
-            &vec![1.0f32; n3], // alpha_decay = 1 (lossless)
+            &vec![0.0f32; n3], // nabla1 = 0 (lossless, absorbing=false)
+            &vec![0.0f32; n3], // nabla2 = 0
+            &vec![0.0f32; n3], // tau = 0
+            &vec![0.0f32; n3], // eta = 0
             false,
             false,
         );
@@ -346,8 +383,8 @@ mod tests {
             &vec![1.0f32; n3],
             &vec![1.0f32; n3],
             &vec![1.0f32; n3],
-            &vec![0.0f32; n3],
-            &vec![1.0f32; n3],
+            &vec![0.0f32; n3],  // bon_a = 0 (linear)
+            &vec![0.0f32; n3], &vec![0.0f32; n3], &vec![0.0f32; n3], &vec![0.0f32; n3], // absorb=lossless
             false,
             false,
         );
@@ -399,8 +436,8 @@ mod tests {
             &vec![1.0f32; total],
             &vec![1.0f32; total],
             &vec![1.0f32; total],
-            &vec![0.0f32; total],
-            &vec![1.0f32; total],
+            &vec![0.0f32; total], // bon_a = 0 (linear)
+            &vec![0.0f32; total], &vec![0.0f32; total], &vec![0.0f32; total], &vec![0.0f32; total], // lossless
             false,
             false,
         );
@@ -462,7 +499,7 @@ mod tests {
             &vec![1.0f32; total],
             &vec![1.0f32; total],
             &vec![0.0f32; total], // bon_a = 0 (linear benchmark)
-            &vec![1.0f32; total], // alpha_decay = 1 (lossless)
+            &vec![0.0f32; total], &vec![0.0f32; total], &vec![0.0f32; total], &vec![0.0f32; total], // lossless
             false,
             false,
         );

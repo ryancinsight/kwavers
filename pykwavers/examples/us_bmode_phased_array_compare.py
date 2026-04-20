@@ -182,6 +182,8 @@ def build_phased_velocity_signals(kgrid, not_transducer, input_signal, active_co
     delay_mask = np.asarray(not_transducer.delay_mask(), dtype=int)
     transmit_apod_mask = np.asarray(not_transducer.transmit_apodization_mask, dtype=np.float64)
     transducer_signal = np.asarray(not_transducer.input_signal, dtype=np.float64).reshape(-1)
+    # Factor of 2 matches k-Wave MATLAB NotATransducer drive convention for staggered-grid PSTD:
+    # transducer_scale = 2 * c0 * dt / dx (confirmed by face-trace debug probe, 2026-04-20).
     transducer_scale = 2.0 * float(not_transducer.sound_speed) * float(kgrid.dt) / float(kgrid.dx)
 
     nt = int(kgrid.Nt)
