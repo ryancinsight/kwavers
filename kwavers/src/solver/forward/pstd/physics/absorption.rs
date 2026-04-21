@@ -49,7 +49,9 @@ use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::math::fft::Complex64;
-use crate::physics::acoustics::mechanics::absorption::AbsorptionMode;
+use crate::physics::acoustics::mechanics::absorption::{
+    power_law_db_cm_to_np_omega_m, AbsorptionMode,
+};
 use crate::solver::forward::pstd::config::PSTDConfig;
 use crate::solver::pstd::PSTDSolver;
 use ndarray::{Array3, Zip};
@@ -58,12 +60,13 @@ use ndarray::{Array3, Zip};
 /// spectral nabla operators ∇^(y−2) and ∇^(y−1) in FFT-order k-space.
 ///
 /// ## Algorithm
-/// For `AbsorptionMode::PowerLaw { alpha_coeff: α₀, alpha_power: y }`:
+/// For `AbsorptionMode::PowerLaw { alpha_coeff: α_dB, alpha_power: y }`:
 ///
 /// **Spatial coefficients** (vary per cell for heterogeneous media):
 /// ```text
-///   τ(r) = −2 α₀(r) · c₀(r)^(y(r)−1)
-///   η(r) =  2 α₀(r) · c₀(r)^y(r) · tan(π y(r) / 2)
+///   α_SI(r) = power_law_db_cm_to_np_omega_m(α_dB(r), y(r))
+///   τ(r)    = −2 α_SI(r) · c₀(r)^(y(r)−1)
+///   η(r)    =  2 α_SI(r) · c₀(r)^y(r) · tan(π y(r) / 2)
 /// ```
 ///
 /// **Spectral operators** (global, using config alpha_power for k-space precomputation):
@@ -84,7 +87,13 @@ pub fn initialize_absorption_operators(
     k_mag: &Array3<f64>,
     _k_max: f64,
     _c_ref: f64,
-) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>)> {
+) -> KwaversResult<(
+    Array3<f64>,
+    Array3<f64>,
+    Array3<f64>,
+    Array3<f64>,
+    Array3<f64>,
+)> {
     let shape = (grid.nx, grid.ny, grid.nz);
     let mut tau = Array3::zeros(shape);
     let mut eta = Array3::zeros(shape);
@@ -126,9 +135,9 @@ pub fn initialize_absorption_operators(
                     for i in 0..grid.nx {
                         let (x, y_coord, z) = grid.indices_to_coordinates(i, j, k);
 
-                        let alpha_0_medium = medium.alpha_coefficient(x, y_coord, z, grid);
-                        let alpha_0 = if alpha_0_medium.abs() > 0.0 {
-                            alpha_0_medium
+                        let alpha_db_cm_medium = medium.alpha_coefficient(x, y_coord, z, grid);
+                        let alpha_db_cm = if alpha_db_cm_medium.abs() > 0.0 {
+                            alpha_db_cm_medium
                         } else {
                             *alpha_coeff
                         };
@@ -141,11 +150,14 @@ pub fn initialize_absorption_operators(
                         };
 
                         let c0_val = medium.sound_speed(i, j, k);
+                        let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, y);
 
                         // Treeby & Cox (2010) Eqs. 19–20
-                        tau[[i, j, k]] = -2.0 * alpha_0 * c0_val.powf(y - 1.0);
-                        eta[[i, j, k]] =
-                            2.0 * alpha_0 * c0_val.powf(y) * (std::f64::consts::PI * y / 2.0).tan();
+                        tau[[i, j, k]] = -2.0 * alpha_0_si * c0_val.powf(y - 1.0);
+                        eta[[i, j, k]] = 2.0
+                            * alpha_0_si
+                            * c0_val.powf(y)
+                            * (std::f64::consts::PI * y / 2.0).tan();
                         y_field[[i, j, k]] = y;
                     }
                 }
@@ -375,11 +387,10 @@ mod tests {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let mut medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
         medium.set_acoustic_properties(0.75, 1.5, 5.0).unwrap();
-
         let config = PSTDConfig {
             dt: 1e-7,
             absorption_mode: AbsorptionMode::PowerLaw {
-                alpha_coeff: 0.75,
+                alpha_coeff: 0.0,
                 alpha_power: 1.5,
             },
             ..PSTDConfig::default()
@@ -389,9 +400,20 @@ mod tests {
         let (tau, eta, y_field, nabla1, nabla2) =
             initialize_absorption_operators(&config, &grid, &medium, &k_mag, 1e6, 1500.0).unwrap();
 
-        assert!(tau[[0, 0, 0]] < 0.0, "tau should be negative");
-        // For y = 1.5, tan(0.75π) < 0 → eta < 0
-        assert!(eta[[0, 0, 0]] < 0.0, "eta should be negative for y=1.5");
+        let expected_tau = -4.246_711_703_873_091e-8;
+        let expected_eta = -6.370_067_555_809_639e-5;
+        assert!(
+            (tau[[0, 0, 0]] - expected_tau).abs() < 1e-20,
+            "tau mismatch: got {}, expected {}",
+            tau[[0, 0, 0]],
+            expected_tau
+        );
+        assert!(
+            (eta[[0, 0, 0]] - expected_eta).abs() < 1e-18,
+            "eta mismatch: got {}, expected {}",
+            eta[[0, 0, 0]],
+            expected_eta
+        );
         assert!(
             (y_field[[0, 0, 0]] - 1.5).abs() < 1e-6,
             "y should be 1.5 for homogeneous medium"
@@ -449,19 +471,21 @@ mod tests {
             },
             ..Default::default()
         };
-        let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, &grid);
+        let mut medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, &grid);
+        medium.set_acoustic_properties(0.0, 1.5, 0.0).unwrap();
         let k_mag = zeros_k_mag(16, 16, 16);
         let (tau, eta, _, _, _) =
             initialize_absorption_operators(&config, &grid, &medium, &k_mag, 1e6, 1500.0).unwrap();
 
         assert!(
-            tau[[0, 0, 0]] <= 0.0,
-            "tau should be non-positive for absorption"
+            (tau[[0, 0, 0]] - (-3.467_425_586_398_137e-8)).abs() < 1e-20,
+            "tau mismatch: got {}",
+            tau[[0, 0, 0]]
         );
-        // For 1 < y < 2, tan(π*y/2) < 0 → eta ≤ 0
         assert!(
-            eta[[0, 0, 0]] <= 0.0,
-            "eta should be non-positive for y=1.5"
+            (eta[[0, 0, 0]] - (-3.467_425_586_398_1376e-5)).abs() < 1e-18,
+            "eta mismatch: got {}",
+            eta[[0, 0, 0]]
         );
     }
 
@@ -558,7 +582,10 @@ mod tests {
             .chain(solver.rhoz.iter())
             .map(|x| x.abs())
             .fold(0.0_f64, f64::max);
-        assert!(max_abs > 0.0, "Absorption should produce a non-zero density correction");
+        assert!(
+            max_abs > 0.0,
+            "Absorption should produce a non-zero density correction"
+        );
     }
 
     #[test]

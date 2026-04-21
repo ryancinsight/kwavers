@@ -77,6 +77,8 @@ use kwavers::domain::source::wavefront::plane_wave::{
     InjectionMode, PlaneWaveConfig, PlaneWaveSource,
 };
 use kwavers::domain::source::{GridSource, Source as KwaversSource, SourceField};
+#[cfg(feature = "gpu")]
+use kwavers::physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
 use kwavers::physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers::solver::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
 use kwavers::solver::forward::fdtd::solver::FdtdSolver;
@@ -104,9 +106,8 @@ fn kwavers_error_to_py(err: KwaversError) -> PyErr {
 ///
 /// This follows the standard scalar conversion
 /// `alpha_np_m = alpha_db_cm * f_mhz^y * 100 / (20 / ln(10))`.
-/// It is used by the GPU PSTD paths, which currently apply absorption using a
-/// centre-frequency attenuation model rather than the full spectral Treeby/Cox
-/// formulation used by the CPU PSTD solver.
+/// The helper remains local for the frequency-domain utility tests; the GPU
+/// PSTD path uses the shared kwavers spectral conversion helper.
 #[allow(dead_code)]
 fn alpha_db_cm_to_np_m(alpha_db_cm: f64, frequency_mhz: f64, alpha_power: f64) -> f64 {
     let db_to_np = 20.0 / std::f64::consts::LN_10;
@@ -2247,9 +2248,10 @@ impl Simulation {
                         time_steps
                     )));
                 }
-                // Rasterize the array geometry onto the simulation grid
-                let bool_mask = arr.get_array_binary_mask(&self.grid.inner);
-                let float_mask = bool_mask.mapv(|v| if v { 1.0_f64 } else { 0.0_f64 });
+                // Rasterize the array geometry onto the simulation grid.
+                // Use weighted mask normalised so sum(weights) = m_grid = surface_area/dx²,
+                // matching k-wave-python's BLI distributed-source convention.
+                let float_mask = arr.get_array_weighted_mask(&self.grid.inner);
                 let num_active = float_mask.iter().filter(|&&v| v > 0.0).count();
                 if num_active == 0 {
                     return Err(PyValueError::new_err(
@@ -2884,28 +2886,16 @@ impl Simulation {
             }
         };
 
-        // Convert absorption from dB/(MHz^y·cm) → Np/(m·(rad/s)^y) using k-Wave db2neper formula.
-        // k-Wave Python kwave/utils/conversion.py, db2neper():
-        //   alpha = 100.0 * alpha * (1e-6 / (2.0 * pi)) ** y / (20.0 * log10(exp(1)))
-        // Note: (1e-6/(2π))^y is the INVERSE of frequency scaling: converts from (rad/s)^y units
-        // back to dB/(MHz^y·cm) units for the spectral operator which uses rad/m wavenumbers.
-        // For y=1.5: (1e-6/(2π))^1.5 ≈ 6.35e-11, giving alpha_0 ≈ 3.65e-10 Np/((rad/s)^1.5·m).
-        // Verification: alpha_0 * (2π*1e6)^1.5 * 0.01m = 0.5 dB/cm ✓ for alpha=0.5, f=1 MHz.
-        let absorption_mode =
-            if effective_alpha_db > 0.0 && (effective_alpha_power - 1.0).abs() > 1e-12 {
-                // 20 * log10(e) = 20 / ln(10) ≈ 8.6859
-                let twenty_log10_e = 20.0 / std::f64::consts::LN_10;
-                let dbn = 100.0
-                    * effective_alpha_db
-                    * (1e-6 / (2.0 * std::f64::consts::PI)).powf(effective_alpha_power)
-                    / twenty_log10_e;
-                AbsorptionMode::PowerLaw {
-                    alpha_coeff: dbn,
-                    alpha_power: effective_alpha_power,
-                }
-            } else {
-                AbsorptionMode::Lossless
-            };
+        // Pass the raw k-Wave coefficient to kwavers. The PSTD solver
+        // converts dB/(MHz^y·cm) to the spectral coefficient internally.
+        let absorption_mode = if effective_alpha_db > 0.0 {
+            AbsorptionMode::PowerLaw {
+                alpha_coeff: effective_alpha_db,
+                alpha_power: effective_alpha_power,
+            }
+        } else {
+            AbsorptionMode::Lossless
+        };
 
         let config = PSTDConfig {
             dt,
@@ -3324,10 +3314,8 @@ impl Simulation {
                         n2[flat] = k_mag.powf(y - 1.0) as f32;
                     }
 
-                    // alpha_0: Np/((rad/s)^y·m) — SI units matching k-Wave Python db2neper output
                     let alpha_db_cm = medium.as_medium().absorption(ix, iy, iz);
-                    let alpha_0_si = alpha_db_cm_to_np_m(alpha_db_cm, 1.0, alpha_power)
-                        / (2.0 * PI * 1e6_f64).powf(y);
+                    let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, alpha_power);
                     let c0_local = medium.as_medium().sound_speed(ix, iy, iz);
                     tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
                     eta_v[flat] =
@@ -3661,6 +3649,12 @@ impl GpuPstdSession {
 
                     let ab_arr = absorption.as_ref().unwrap().as_array();
 
+                    if (y - 1.0).abs() < 1e-12 && ab_arr.iter().any(|&v| v > 0.0) {
+                        return Err(PyValueError::new_err(
+                            "alpha_power must not be 1.0 for fractional Laplacian absorption",
+                        ));
+                    }
+
                     for flat in 0..total {
                         let ix = flat / (ny * nz);
                         let iy = (flat % (ny * nz)) / nz;
@@ -3689,11 +3683,9 @@ impl GpuPstdSession {
                             n2[flat] = k_mag.powf(y - 1.0) as f32;
                         }
 
-                        // Spatially-varying absorption coefficients
+                        // Spatially-varying absorption coefficients.
                         let alpha_db_cm = ab_arr[[ix, iy, iz]];
-                        // alpha_0: Np/((rad/s)^y·m) — SI units matching k-Wave Python db2neper output
-                        let alpha_0_si = alpha_db_cm_to_np_m(alpha_db_cm, 1.0, alpha_power)
-                            / (2.0 * PI * 1e6_f64).powf(y);
+                        let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, alpha_power);
                         let c0_local = c0_flat[flat] as f64;
                         tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
                         eta_v[flat] =

@@ -583,6 +583,209 @@ impl KWaveArray {
         }
     }
 
+    /// Compute the total surface area (m²) of all elements in the array.
+    ///
+    /// # Bowl formula (Treeby & Cox 2010)
+    /// Spherical cap area = 2π·R·h  where  h = R − √(R²−(D/2)²)
+    /// is the sagittal depth and D is the aperture diameter.
+    ///
+    /// Used for BLI-equivalent normalisation: m_grid = area / dx²
+    #[must_use]
+    pub fn compute_total_surface_area(&self) -> f64 {
+        let mut total = 0.0_f64;
+        for element in &self.elements {
+            total += match element {
+                ElementShape::Bowl { radius: r, diameter: d, .. } => {
+                    let half_d = d / 2.0;
+                    let h = if *r > half_d {
+                        r - (r * r - half_d * half_d).sqrt()
+                    } else {
+                        *r
+                    };
+                    2.0 * std::f64::consts::PI * r * h
+                }
+                ElementShape::Disc { diameter: d, .. } => {
+                    std::f64::consts::PI * (d / 2.0).powi(2)
+                }
+                ElementShape::Rect { width: w, height: h, .. } => w * h,
+                ElementShape::Arc { radius: r, start_angle: s, end_angle: e, diameter: d, .. } => {
+                    r * (e - s).abs().to_radians() * d
+                }
+            };
+        }
+        total
+    }
+
+    /// Generate a float-weighted mask on the computational grid.
+    ///
+    /// Uses dense surface sampling (equivalent to k-wave BLI with NGP mapping)
+    /// to produce per-cell weights that sum to `m_grid = surface_area / dx²`.
+    ///
+    /// # Algorithm (NGP-BLI equivalence)
+    ///
+    /// k-Wave's `get_distributed_source_signal` generates `m_integration` =
+    /// `ceil(m_grid × upsampling_rate)` sample points on the transducer surface
+    /// and maps each via BLI with `scale = m_grid / m_integration`.
+    ///
+    /// This function replicates the same logic but uses nearest-grid-point (NGP)
+    /// mapping instead of BLI:
+    ///   1. Parametrise the bowl surface uniformly in area
+    ///      (u = (r_lat/R_aperture)², φ ∈ [0, 2π))
+    ///   2. Generate `N_samples ≈ upsampling_rate² × m_grid` sample points
+    ///   3. Each sample contributes `scale = m_grid / N_samples` to the
+    ///      nearest grid cell (floor-based NGP)
+    ///   4. Total weight across all cells = m_grid ✓
+    ///
+    /// For other element shapes (disc, rect, arc) the binary mask is used
+    /// with uniform weight = m_grid / N_active for area-preserving injection.
+    ///
+    /// # Arguments
+    /// * `grid` – Computational grid defining the domain.
+    ///
+    /// # Returns
+    /// `Array3<f64>` where all non-zero entries sum to `m_grid = surface_area / dx²`.
+    pub fn get_array_weighted_mask(&self, grid: &crate::domain::grid::Grid) -> Array3<f64> {
+        let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+
+        for element in &self.elements {
+            match element {
+                ElementShape::Bowl { position, radius, diameter } => {
+                    self.rasterize_bowl_weighted(
+                        &mut mask, grid, *position, *radius, *diameter,
+                    );
+                }
+                ElementShape::Disc { position, diameter } => {
+                    let mut bool_layer =
+                        Array3::from_elem((grid.nx, grid.ny, grid.nz), false);
+                    self.rasterize_disc(&mut bool_layer, grid, *position, *diameter);
+                    let n_active = bool_layer.iter().filter(|&&v| v).count();
+                    if n_active > 0 {
+                        let area = std::f64::consts::PI * (diameter / 2.0).powi(2);
+                        let m_grid = area / (grid.dx * grid.dx);
+                        let weight = m_grid / n_active as f64;
+                        ndarray::Zip::from(&mut mask)
+                            .and(&bool_layer)
+                            .for_each(|m, &b| {
+                                if b {
+                                    *m += weight;
+                                }
+                            });
+                    }
+                }
+                ElementShape::Arc {
+                    position,
+                    radius,
+                    diameter,
+                    start_angle,
+                    end_angle,
+                } => {
+                    let mut bool_layer =
+                        Array3::from_elem((grid.nx, grid.ny, grid.nz), false);
+                    self.rasterize_arc(
+                        &mut bool_layer, grid, *position, *radius, *diameter,
+                        *start_angle, *end_angle,
+                    );
+                    ndarray::Zip::from(&mut mask)
+                        .and(&bool_layer)
+                        .for_each(|m, &b| {
+                            if b {
+                                *m += 1.0;
+                            }
+                        });
+                }
+                ElementShape::Rect { position, width, height, length } => {
+                    let mut bool_layer =
+                        Array3::from_elem((grid.nx, grid.ny, grid.nz), false);
+                    self.rasterize_rect(
+                        &mut bool_layer, grid, *position, *width, *height, *length,
+                    );
+                    ndarray::Zip::from(&mut mask)
+                        .and(&bool_layer)
+                        .for_each(|m, &b| {
+                            if b {
+                                *m += 1.0;
+                            }
+                        });
+                }
+            }
+        }
+
+        mask
+    }
+
+    /// Dense surface-sampling rasterization for a bowl element (float weights).
+    ///
+    /// # Sampling strategy
+    ///
+    /// The spherical cap surface is parametrised by:
+    ///   - u = (r_lat / half_aperture)² ∈ (0, 1)  (area-uniform radial parameter)
+    ///   - φ ∈ [0, 2π)  (azimuthal angle)
+    ///
+    /// For each sample (u, φ):
+    ///   - r_lat = half_aperture · √u
+    ///   - surface point: (cx − √(R²−r_lat²), cy + r_lat·cos φ, cz + r_lat·sin φ)
+    ///
+    /// Each sample contributes `scale = m_grid / N_samples` to its nearest grid cell.
+    /// Total weight = m_grid = bowl_area / dx².
+    fn rasterize_bowl_weighted(
+        &self,
+        mask: &mut Array3<f64>,
+        grid: &crate::domain::grid::Grid,
+        center: (f64, f64, f64),
+        radius: f64,
+        diameter: f64,
+    ) {
+        let half_aperture = diameter / 2.0;
+
+        // Spherical cap sagittal depth and area
+        let h = if radius > half_aperture {
+            radius - (radius * radius - half_aperture * half_aperture).sqrt()
+        } else {
+            radius
+        };
+        let area = 2.0 * std::f64::consts::PI * radius * h;
+        let m_grid = area / (grid.dx * grid.dx);
+
+        // Upsampling rate matching k-wave default (10×)
+        // N_samples ≈ upsampling_rate² × m_grid for uniform area coverage
+        let upsampling: f64 = 10.0;
+        let n_total = (m_grid * upsampling * upsampling).max(100.0) as usize;
+        let n_r = ((n_total as f64).sqrt().ceil() as usize).max(2);
+        let n_phi = n_r;
+
+        // Weight per sample (sum over all samples = m_grid)
+        let scale = m_grid / (n_r * n_phi) as f64;
+
+        let nx = grid.nx as isize;
+        let ny = grid.ny as isize;
+        let nz = grid.nz as isize;
+
+        for ir in 0..n_r {
+            // Area-uniform radial sampling: u = (r_lat / half_aperture)²
+            let u = (ir as f64 + 0.5) / n_r as f64;
+            let r_lat = half_aperture * u.sqrt();
+            // x-coordinate of surface point (bowl axis along -x from center)
+            let sx = center.0 - (radius * radius - r_lat * r_lat).max(0.0).sqrt();
+
+            for iphi in 0..n_phi {
+                let phi = 2.0 * std::f64::consts::PI
+                    * (iphi as f64 + 0.5)
+                    / n_phi as f64;
+                let sy = center.1 + r_lat * phi.cos();
+                let sz = center.2 + r_lat * phi.sin();
+
+                // NGP: floor maps to the cell containing the surface point
+                let ix = ((sx - grid.origin[0]) / grid.dx).floor() as isize;
+                let iy = ((sy - grid.origin[1]) / grid.dy).floor() as isize;
+                let iz = ((sz - grid.origin[2]) / grid.dz).floor() as isize;
+
+                if ix >= 0 && ix < nx && iy >= 0 && iy < ny && iz >= 0 && iz < nz {
+                    mask[[ix as usize, iy as usize, iz as usize]] += scale;
+                }
+            }
+        }
+    }
+
     /// Rasterize a bowl element onto the grid
     ///
     /// Uses the radius of curvature to determine which grid points lie on

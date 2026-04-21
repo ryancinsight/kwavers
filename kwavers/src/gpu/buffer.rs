@@ -27,6 +27,7 @@
 //! ```
 
 use crate::core::error::{KwaversError, KwaversResult};
+use once_cell::sync::OnceCell;
 use wgpu::util::DeviceExt;
 
 /// Buffer usage flags for GPU buffers
@@ -95,6 +96,9 @@ pub struct GpuBuffer {
     size: usize,
     #[allow(dead_code)]
     usage: wgpu::BufferUsages,
+    /// Lazily initialized readback staging buffer reused across `read_to_vec`
+    /// calls. This avoids reallocating a fresh staging buffer for every read.
+    readback_staging: OnceCell<wgpu::Buffer>,
 }
 
 impl GpuBuffer {
@@ -142,6 +146,7 @@ impl GpuBuffer {
             buffer,
             size,
             usage,
+            readback_staging: OnceCell::new(),
         })
     }
 
@@ -195,6 +200,7 @@ impl GpuBuffer {
             buffer,
             size: bytes.len(),
             usage,
+            readback_staging: OnceCell::new(),
         })
     }
 
@@ -233,7 +239,8 @@ impl GpuBuffer {
     /// Read buffer data from GPU to CPU
     ///
     /// Asynchronously reads buffer contents using a staging buffer pattern.
-    /// The buffer must have `COPY_SRC` usage flag. This operation:
+    /// The buffer must have `COPY_SRC` usage flag. The staging buffer is
+    /// allocated lazily and cached for reuse after the first read. This operation:
     ///
     /// 1. Creates a staging buffer with `MAP_READ` + `COPY_DST` usage
     /// 2. Copies GPU buffer to staging buffer
@@ -268,11 +275,43 @@ impl GpuBuffer {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) -> KwaversResult<Vec<T>> {
-        let staging = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("staging_buffer"),
-            size: self.size as u64,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
+        if self.size == 0 {
+            return Ok(Vec::new());
+        }
+
+        if !self.usage.contains(wgpu::BufferUsages::COPY_SRC) {
+            return Err(KwaversError::System(crate::core::error::SystemError::InvalidOperation {
+                operation: "GPU buffer readback".to_string(),
+                reason: "Buffer not created with COPY_SRC usage".to_string(),
+            }));
+        }
+
+        let elem_size = std::mem::size_of::<T>();
+        if elem_size == 0 {
+            return Err(KwaversError::System(crate::core::error::SystemError::InvalidOperation {
+                operation: "GPU buffer readback".to_string(),
+                reason: "Zero-sized element types are not supported".to_string(),
+            }));
+        }
+
+        if self.size % elem_size != 0 {
+            return Err(KwaversError::System(crate::core::error::SystemError::InvalidOperation {
+                operation: "GPU buffer readback".to_string(),
+                reason: format!(
+                    "Buffer byte size {} is not a multiple of element size {}",
+                    self.size,
+                    elem_size
+                ),
+            }));
+        }
+
+        let staging = self.readback_staging.get_or_init(|| {
+            device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("staging_buffer"),
+                size: self.size as u64,
+                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            })
         });
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -289,9 +328,9 @@ impl GpuBuffer {
             let _ = sender.send(result);
         });
 
-        device.poll(wgpu::PollType::Wait);
+        let _ = device.poll(wgpu::PollType::Wait);
 
-        receiver.recv().map_err(|e| {
+        receiver.recv_async().await.map_err(|e| {
             KwaversError::Io(std::io::Error::other(format!("Failed to map buffer: {e}")))
         })??;
 

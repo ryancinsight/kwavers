@@ -29,15 +29,20 @@ pub trait AcousticProperties: CoreMedium {
         1.0 + self.nonlinearity_parameter(x, y, z, grid) / 2.0
     }
 
-    /// Get absorption coefficient alpha_0 (dB/(MHz^y cm) or Np/(MHz^y m))
-    /// This is the prefactor for power law absorption: alpha(f) = alpha_0 * f^y
-    /// Default implementation assumes it's embedded in the attenuation function, returning 0 if not explicit.
+    /// Get the raw power-law absorption prefactor α₀ at 1 MHz [dB/(MHz^y·cm)].
+    ///
+    /// The spectral solvers convert this coefficient to
+    /// `Np/((rad/s)^y·m)` at the solver boundary before forming `τ` and `η`.
+    /// Default implementation returns 0 if the medium does not expose an
+    /// explicit power-law coefficient.
     fn alpha_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         0.0
     }
 
-    /// Get absorption power exponent y
-    /// Default is 1.05 (typical for soft tissue)
+    /// Get the power-law absorption exponent `y`.
+    ///
+    /// Default is 1.05, which matches the water reference medium used by the
+    /// homogeneous implementation.
     fn alpha_power(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         1.05
     }

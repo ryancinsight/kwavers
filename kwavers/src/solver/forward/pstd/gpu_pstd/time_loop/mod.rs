@@ -463,19 +463,6 @@ impl GpuPstdSolver {
             batch_start = batch_end;
         } // end batch loop
 
-        // Wait for all GPU work to complete before reading sensor data
-        let gpu_t0 = std::time::Instant::now();
-        let _ = self.device.poll(wgpu::PollType::Wait);
-        let gpu_wait_ns = gpu_t0.elapsed().as_nanos() as u64;
-        let _ = (cpu_encode_ns, gpu_wait_ns); // suppress unused warning in non-test builds
-        #[cfg(test)]
-        eprintln!(
-            "  CPU encode: {:.1}ms total ({:.2}ms/step), GPU poll-wait: {:.1}ms",
-            cpu_encode_ns as f64 / 1e6,
-            cpu_encode_ns as f64 / 1e6 / nt as f64,
-            gpu_wait_ns as f64 / 1e6,
-        );
-
         // ── Download sensor data ──────────────────────────────────────────────
         if n_sensors == 0 {
             return Vec::new();
@@ -493,15 +480,23 @@ impl GpuPstdSolver {
         copy_enc.copy_buffer_to_buffer(buf_sensor_data, 0, staging, 0, sensor_bytes);
         self.queue.submit(std::iter::once(copy_enc.finish()));
 
-        let _ = self.device.poll(wgpu::PollType::Wait);
-
         let slice = staging.slice(..sensor_bytes);
         let (tx, rx) = std::sync::mpsc::channel();
         slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
+        let gpu_t0 = std::time::Instant::now();
         let _ = self.device.poll(wgpu::PollType::Wait);
         let _ = rx.recv();
+        let gpu_wait_ns = gpu_t0.elapsed().as_nanos() as u64;
+        let _ = (cpu_encode_ns, gpu_wait_ns); // suppress unused warning in non-test builds
+        #[cfg(test)]
+        eprintln!(
+            "  CPU encode: {:.1}ms total ({:.2}ms/step), GPU poll-wait: {:.1}ms",
+            cpu_encode_ns as f64 / 1e6,
+            cpu_encode_ns as f64 / 1e6 / nt as f64,
+            gpu_wait_ns as f64 / 1e6,
+        );
 
         let mapped = slice.get_mapped_range();
         let result: Vec<f32> = bytemuck::cast_slice(&mapped).to_vec();
@@ -601,10 +596,10 @@ impl GpuPstdSolver {
         let nt = self.nt as u32;
         let nl = if self.nonlinear { 1u32 } else { 0u32 };
         let abs = if self.absorbing { 1u32 } else { 0u32 };
-        let mut fft_dispatch = |cpass: &mut wgpu::ComputePass<'_>,
-                                params: &PstdParams,
-                                batches: u32,
-                                label: &str| {
+        let fft_dispatch = |cpass: &mut wgpu::ComputePass<'_>,
+                             params: &PstdParams,
+                             batches: u32,
+                             label: &str| {
             let workgroups_x = batches.min(65535);
             let workgroups_y = batches.div_ceil(65535);
             self.dispatch_2d(cpass, params, &self.pipeline_fft, bg_sensor, workgroups_x, workgroups_y, label);
@@ -636,10 +631,10 @@ impl GpuPstdSolver {
         let nt = self.nt as u32;
         let nl = if self.nonlinear { 1u32 } else { 0u32 };
         let abs = if self.absorbing { 1u32 } else { 0u32 };
-        let mut fft_dispatch = |cpass: &mut wgpu::ComputePass<'_>,
-                                params: &PstdParams,
-                                batches: u32,
-                                label: &str| {
+        let fft_dispatch = |cpass: &mut wgpu::ComputePass<'_>,
+                             params: &PstdParams,
+                             batches: u32,
+                             label: &str| {
             let workgroups_x = batches.min(65535);
             let workgroups_y = batches.div_ceil(65535);
             self.dispatch_2d(cpass, params, &self.pipeline_fft, bg_sensor, workgroups_x, workgroups_y, label);

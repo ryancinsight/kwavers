@@ -126,15 +126,18 @@ impl GpuPstdSolver {
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             })
         };
+        // These storage buffers are cleared or overwritten by the first GPU
+        // dispatch before any readback occurs. Allocating a zero-filled host
+        // buffer here would double initialization bandwidth and spike peak RSS.
         let mk_rw = |n: usize, extra: wgpu::BufferUsages, label: &str| -> wgpu::Buffer {
-            let data: Vec<f32> = vec![0.0f32; n];
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some(label),
-                contents: bytemuck::cast_slice(&data),
+                size: (n * std::mem::size_of::<f32>()) as u64,
                 usage: wgpu::BufferUsages::STORAGE
                     | wgpu::BufferUsages::COPY_SRC
                     | wgpu::BufferUsages::COPY_DST
                     | extra,
+                mapped_at_creation: false,
             })
         };
 

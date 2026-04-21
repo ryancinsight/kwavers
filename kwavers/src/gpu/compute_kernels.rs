@@ -289,21 +289,11 @@ impl AcousticFieldKernel {
         let result_f32: &[f32] = bytemuck::cast_slice(&data);
 
         // Convert back to f64
-        let mut result = Array3::zeros((nx, ny, nz));
-        if let Some(result_slice) = result.as_slice_mut() {
-            for (i, &val) in result_f32.iter().enumerate() {
-                if i < result_slice.len() {
-                    result_slice[i] = val as f64;
-                }
-            }
-        } else {
-            // Fallback for non-contiguous arrays
-            for (i, &val) in result_f32.iter().enumerate() {
-                if let Some(elem) = result.get_mut([i % nx, (i / nx) % ny, i / (nx * ny)]) {
-                    *elem = val as f64;
-                }
-            }
-        }
+        let result = Array3::from_shape_vec(
+            (nx, ny, nz),
+            result_f32.iter().map(|&val| val as f64).collect(),
+        )
+        .map_err(|e| KwaversError::GpuError(format!("Array creation error: {}", e)))?;
 
         drop(data);
         staging_buffer.unmap();

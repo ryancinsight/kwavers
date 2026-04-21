@@ -196,13 +196,11 @@ impl FdtdGpu {
         let data = buffer_slice.get_mapped_range();
         let float_data: &[f32] = bytemuck::cast_slice(&data);
 
-        let mut result = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        for (i, &val) in float_data.iter().enumerate() {
-            let iz = i / (grid.nx * grid.ny);
-            let iy = (i % (grid.nx * grid.ny)) / grid.nx;
-            let ix = i % grid.nx;
-            result[[ix, iy, iz]] = val as f64;
-        }
+        let result = Array3::from_shape_vec(
+            (grid.nx, grid.ny, grid.nz),
+            float_data.iter().map(|&val| val as f64).collect(),
+        )
+        .map_err(|e| KwaversError::GpuError(format!("Array creation error: {}", e)))?;
 
         drop(data);
         staging_buffer.unmap();

@@ -105,6 +105,7 @@ from ._pykwavers import (
     SimulationResult,
     SolverType,
     Source,
+    KWaveArray,
     TransducerArray2D,
     # Phase 22: PID, Registration, Bubble Field
     PIDController,

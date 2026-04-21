@@ -277,15 +277,28 @@ impl GpuThermalAcousticBuffers {
         velocity_z: &Array3<f32>,
         temperature: &Array3<f32>,
     ) -> KwaversResult<()> {
-        let p_data: Vec<f32> = pressure.iter().copied().collect();
-        let vx_data: Vec<f32> = velocity_x.iter().copied().collect();
-        let vy_data: Vec<f32> = velocity_y.iter().copied().collect();
-        let vz_data: Vec<f32> = velocity_z.iter().copied().collect();
-        let t_data: Vec<f32> = temperature.iter().copied().collect();
+        let p_data = pressure.as_slice().ok_or_else(|| {
+            KwaversError::InvalidInput("Pressure field must be contiguous".to_string())
+        })?;
+        let vx_data = velocity_x.as_slice().ok_or_else(|| {
+            KwaversError::InvalidInput("Velocity X field must be contiguous".to_string())
+        })?;
+        let vy_data = velocity_y.as_slice().ok_or_else(|| {
+            KwaversError::InvalidInput("Velocity Y field must be contiguous".to_string())
+        })?;
+        let vz_data = velocity_z.as_slice().ok_or_else(|| {
+            KwaversError::InvalidInput("Velocity Z field must be contiguous".to_string())
+        })?;
+        let t_data = temperature.as_slice().ok_or_else(|| {
+            KwaversError::InvalidInput("Temperature field must be contiguous".to_string())
+        })?;
 
         let buffer_size = (self.grid_size * mem::size_of::<f32>() as u64) as usize;
 
         if p_data.len() * mem::size_of::<f32>() != buffer_size
+            || vx_data.len() * mem::size_of::<f32>() != buffer_size
+            || vy_data.len() * mem::size_of::<f32>() != buffer_size
+            || vz_data.len() * mem::size_of::<f32>() != buffer_size
             || t_data.len() * mem::size_of::<f32>() != buffer_size
         {
             return Err(KwaversError::InvalidInput(
@@ -293,11 +306,11 @@ impl GpuThermalAcousticBuffers {
             ));
         }
 
-        queue.write_buffer(&self.pressure_curr, 0, bytemuck::cast_slice(&p_data));
-        queue.write_buffer(&self.velocity_x_curr, 0, bytemuck::cast_slice(&vx_data));
-        queue.write_buffer(&self.velocity_y_curr, 0, bytemuck::cast_slice(&vy_data));
-        queue.write_buffer(&self.velocity_z_curr, 0, bytemuck::cast_slice(&vz_data));
-        queue.write_buffer(&self.temperature_curr, 0, bytemuck::cast_slice(&t_data));
+        queue.write_buffer(&self.pressure_curr, 0, bytemuck::cast_slice(p_data));
+        queue.write_buffer(&self.velocity_x_curr, 0, bytemuck::cast_slice(vx_data));
+        queue.write_buffer(&self.velocity_y_curr, 0, bytemuck::cast_slice(vy_data));
+        queue.write_buffer(&self.velocity_z_curr, 0, bytemuck::cast_slice(vz_data));
+        queue.write_buffer(&self.temperature_curr, 0, bytemuck::cast_slice(t_data));
 
         Ok(())
     }
@@ -817,14 +830,16 @@ mod tests {
     fn test_config_cfl_acoustic_violation() {
         let mut config = GpuThermalAcousticConfig::default();
         config.dt = 1.0; // Way too large
-        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(format!("{err:?}").contains("acoustic"));
     }
 
     #[test]
     fn test_config_cfl_thermal_violation() {
         let mut config = GpuThermalAcousticConfig::default();
-        config.alpha_thermal = 1.0; // Way too large
-        assert!(config.validate().is_err());
+        config.alpha_thermal = 30.0; // Exceeds the 0.25 stability limit for dt=1e-8, dx=1e-3.
+        let err = config.validate().unwrap_err();
+        assert!(format!("{err:?}").contains("thermal"));
     }
 
     #[test]
