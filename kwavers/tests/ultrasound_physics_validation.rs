@@ -410,7 +410,7 @@ fn validate_bremsstrahlung_kramers_law() {
     let electron_density_field = Array3::from_elem((2, 2, 2), 1e25); // High electron density
     let ion_density_field = Array3::from_elem((2, 2, 2), 1e24); // Ion density
     let model = BremsstrahlungModel {
-        z_ion: 6.0,              // Carbon ion charge
+        z_ion: 6.0, // Carbon ion charge
         use_thermal_gaunt_factor: false,
         fixed_gaunt_factor: 1.0, // Gaunt factor
     };
@@ -1121,8 +1121,8 @@ fn validate_multi_modal_spatial_registration() {
     // Test spatial registration for multi-modal imaging alignment
     // Theorem: Accurate spatial registration enables meaningful multi-modal fusion
 
-    use ritk_registration::{ImageRegistration, SpatialTransform};
     use ndarray::Array2;
+    use ritk_registration::{ImageRegistration, SpatialTransform};
 
     let registration = ImageRegistration::default();
 
@@ -1196,8 +1196,8 @@ fn validate_multi_modal_spatial_registration() {
 fn validate_temporal_synchronization_multi_modal() {
     // Test temporal synchronization for real-time multi-modal acquisition
 
-    use ritk_registration::ImageRegistration;
     use ndarray::Array1;
+    use ritk_registration::ImageRegistration;
 
     let registration = ImageRegistration::default();
 

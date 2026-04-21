@@ -11,7 +11,7 @@ use pyo3::prelude::*;
 ///
 /// Returns a numpy array containing the tone burst waveform.
 #[pyfunction]
-#[pyo3(signature = (sample_rate_hz, signal_freq_hz, num_cycles, signal_offset=0, signal_length=None, window="Hanning", amplitude=1.0, phase=0.0))]
+#[pyo3(signature = (sample_rate_hz, signal_freq_hz, num_cycles, signal_offset=0, signal_length=None, window="Gaussian", amplitude=1.0, phase=0.0))]
 #[allow(clippy::too_many_arguments)]
 fn tone_burst(
     py: Python<'_>,
@@ -29,6 +29,7 @@ fn tone_burst(
         "hann" | "hanning" => kwavers::domain::signal::WindowType::Hann,
         "hamming" => kwavers::domain::signal::WindowType::Hamming,
         "blackman" => kwavers::domain::signal::WindowType::Blackman,
+        "gaussian" => kwavers::domain::signal::WindowType::Gaussian,
         _ => {
             return Err(PyValueError::new_err(format!(
                 "Unknown window type: {}",
@@ -96,6 +97,7 @@ fn get_win(
         "hann" | "hanning" => kwavers::domain::signal::WindowType::Hann,
         "hamming" => kwavers::domain::signal::WindowType::Hamming,
         "blackman" => kwavers::domain::signal::WindowType::Blackman,
+        "gaussian" => kwavers::domain::signal::WindowType::Gaussian,
         _ => {
             return Err(PyValueError::new_err(format!(
                 "Unknown window type: {}",
@@ -125,8 +127,10 @@ fn make_disc(
     let mask = kwavers::math::geometry::make_disc(
         (grid.inner.nx, grid.inner.ny, grid.inner.nz),
         (grid.inner.dx, grid.inner.dy, grid.inner.dz),
-        center_arr, radius,
-    ).map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
+        center_arr,
+        radius,
+    )
+    .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
 
     let array = PyArray3::from_owned_array(py, mask);
     Ok(array.into())
@@ -144,8 +148,10 @@ fn make_ball(
     let mask = kwavers::math::geometry::make_ball(
         (grid.inner.nx, grid.inner.ny, grid.inner.nz),
         (grid.inner.dx, grid.inner.dy, grid.inner.dz),
-        center_arr, radius,
-    ).map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
+        center_arr,
+        radius,
+    )
+    .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
 
     let array = PyArray3::from_owned_array(py, mask);
     Ok(array.into())
@@ -185,8 +191,11 @@ fn make_circle(
     let mask = kwavers::math::geometry::make_circle(
         (grid.inner.nx, grid.inner.ny, grid.inner.nz),
         (grid.inner.dx, grid.inner.dy, grid.inner.dz),
-        center_arr, radius, thickness,
-    ).map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
+        center_arr,
+        radius,
+        thickness,
+    )
+    .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
 
     let array = PyArray3::from_owned_array(py, mask);
     Ok(array.into())
@@ -205,8 +214,10 @@ fn make_line(
     let mask = kwavers::math::geometry::make_line(
         (grid.inner.nx, grid.inner.ny, grid.inner.nz),
         (grid.inner.dx, grid.inner.dy, grid.inner.dz),
-        start_arr, end_arr,
-    ).map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
+        start_arr,
+        end_arr,
+    )
+    .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
 
     let array = PyArray3::from_owned_array(py, mask);
     Ok(array.into())

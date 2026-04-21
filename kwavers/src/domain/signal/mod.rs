@@ -93,6 +93,79 @@ pub fn pad_zeros(signal: &[f64], target_len: usize) -> Vec<f64> {
     padded
 }
 
+#[must_use]
+fn tone_burst_sample_count(sample_rate_hz: f64, signal_freq_hz: f64, num_cycles: f64) -> usize {
+    // k-Wave includes the starting sample and the final endpoint when the burst
+    // duration lands exactly on a sample boundary. For all positive ratios this
+    // reduces to floor(T / dt) + 1, where T = num_cycles / signal_freq_hz.
+    (num_cycles * sample_rate_hz / signal_freq_hz)
+        .floor()
+        .max(0.0) as usize
+        + 1
+}
+
+#[must_use]
+fn k_wave_tukey_window(n: usize, alpha: f64) -> Vec<f64> {
+    if n <= 1 {
+        return vec![1.0; n];
+    }
+    if alpha <= 0.0 {
+        return vec![1.0; n];
+    }
+    if alpha >= 1.0 {
+        return get_win(WindowType::Hann, n, true);
+    }
+
+    let mut window = vec![1.0; n];
+    let taper_len = (((n - 1) as f64 * alpha / 2.0) + 1e-8).floor() as usize + 1;
+    let taper_len = taper_len.min(n);
+    let alpha_n = alpha * n as f64;
+
+    for i in 0..taper_len {
+        let idx = i as f64;
+        let value = 0.5 * (1.0 + (2.0 * PI / alpha_n * (idx - alpha_n / 2.0)).cos());
+        window[i] = value;
+        window[n - 1 - i] = value;
+    }
+
+    window
+}
+
+#[must_use]
+fn k_wave_gaussian_burst_window(n: usize) -> Vec<f64> {
+    if n <= 1 {
+        return vec![1.0; n];
+    }
+
+    // k-wave-python tone_burst applies a Gaussian pulse over [-3, 3] and then
+    // multiplies by a narrow Tukey taper to force exact zeros at the endpoints.
+    // This is distinct from the generic normalized Gaussian window used by
+    // `get_win(WindowType::Gaussian, ...)`.
+    let step = 6.0 / (n - 1) as f64;
+    let taper = k_wave_tukey_window(n, 0.05);
+
+    (0..n)
+        .map(|i| {
+            let x = -3.0 + i as f64 * step;
+            (-0.5 * x * x).exp() * taper[i]
+        })
+        .collect()
+}
+
+/// Generate a tone-burst signal with an envelope aligned to k-wave-python.
+///
+/// ## Theorem: Sample Count
+/// For positive `sample_rate_hz`, `signal_freq_hz`, and `num_cycles`, the
+/// discrete burst length is `floor(num_cycles * sample_rate_hz / signal_freq_hz) + 1`.
+///
+/// ## Proof sketch
+/// k-Wave constructs the time axis with `np.arange(0, tone_length, dt)` unless
+/// `tone_length` lands exactly on a sample boundary, in which case it includes
+/// the terminal sample via `np.linspace`. Both branches evaluate to the same
+/// closed form above for positive ratios.
+///
+/// ## Reference
+/// `external/k-wave-python/kwave/utils/signals.py::tone_burst`
 pub fn tone_burst_series(
     sample_rate_hz: f64,
     signal_freq_hz: f64,
@@ -129,14 +202,7 @@ pub fn tone_burst_series(
         )));
     }
 
-    // k-wave time vectors include t=0 and t_end, resulting in N+1 samples
-    let burst_samples = ((num_cycles * sample_rate_hz) / signal_freq_hz).round();
-    let burst_samples = if burst_samples > 0.0 {
-        burst_samples + 1.0
-    } else {
-        burst_samples
-    };
-    let burst_samples = burst_samples as usize;
+    let burst_samples = tone_burst_sample_count(sample_rate_hz, signal_freq_hz, num_cycles);
     if burst_samples == 0 {
         return Err(KwaversError::InvalidInput(
             "tone burst has zero sample count".to_string(),
@@ -152,7 +218,10 @@ pub fn tone_burst_series(
     }
 
     let dt = 1.0 / sample_rate_hz;
-    let win = get_win(window, burst_samples, true);
+    let win = match window {
+        WindowType::Gaussian => k_wave_gaussian_burst_window(burst_samples),
+        _ => get_win(window, burst_samples, true),
+    };
 
     let mut out = vec![0.0; out_len];
     for i in 0..burst_samples {
@@ -306,6 +375,80 @@ mod tests {
         assert_eq!(y.len(), 40);
         assert!(y[..10].iter().all(|&v| v == 0.0));
         assert!(y[10..].iter().any(|&v| v != 0.0));
+    }
+
+    #[test]
+    fn tone_burst_series_matches_kwave_gaussian_reference() {
+        let y = tone_burst_series(
+            10_000_000.0,
+            1_000_000.0,
+            3.0,
+            0,
+            None,
+            WindowType::Gaussian,
+            1.0,
+            0.0,
+        )
+        .unwrap();
+
+        let expected = [
+            0.0,
+            0.011662302880078558,
+            0.03238105368860502,
+            0.053387331984085955,
+            0.05226681535262026,
+            -4.3527146854640016e-17,
+            -0.11632193676921493,
+            -0.26442918636912427,
+            -0.3569420662005188,
+            -0.286105797573363,
+            3.9015027664288013e-16,
+            0.42681969495829636,
+            0.794389177429922,
+            0.877935816529585,
+            0.5761463244863592,
+            3.6739403974420594e-16,
+            -0.5761463244863579,
+            -0.8779358165295834,
+            -0.7943891774299194,
+            -0.42681969495829386,
+            7.80300553285756e-16,
+            0.2861057975733616,
+            0.3569420662005161,
+            0.2644291863691221,
+            0.11632193676921358,
+            8.286896071370835e-17,
+            -0.0522668153526196,
+            -0.053387331984085316,
+            -0.032381053688604576,
+            -0.011662302880078391,
+            0.0,
+        ];
+
+        assert_eq!(y.len(), expected.len());
+        for (index, (got, exp)) in y.iter().zip(expected.iter()).enumerate() {
+            assert!(
+                (got - exp).abs() < 1e-12,
+                "mismatch at index {index}: got {got}, expected {exp}"
+            );
+        }
+    }
+
+    #[test]
+    fn tone_burst_series_uses_floor_plus_one_sample_count() {
+        let y = tone_burst_series(
+            11_293_333.333_333_33,
+            500_000.0,
+            5.0,
+            0,
+            None,
+            WindowType::Rectangular,
+            1.0,
+            0.0,
+        )
+        .unwrap();
+
+        assert_eq!(y.len(), 113);
     }
 
     #[test]

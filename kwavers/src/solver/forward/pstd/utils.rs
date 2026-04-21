@@ -151,11 +151,18 @@ pub fn compute_kspace_correction_factors(
         }
         CorrectionType::Treeby2010 => {
             // Treeby & Cox (2010) k-space correction: sinc(c_ref * dt * |k| / 2)
-            // Uses UNNORMALIZED sinc (sin(x)/x), matching the C++ k-wave binary
-            // (kspaceFirstOrder-OMP). The Python np.sinc is normalized sin(πx)/(πx)
-            // but the Python-precomputed kappa is NOT passed to the C++ binary (it is
-            // absent from the save_to_disk dotdict). The binary computes kappa internally
-            // using sin(x)/x with x = c_ref * dt * |k| / 2.
+            // Uses UNNORMALIZED sinc sin(x)/x with x = c_ref·dt·|k|/2.
+            //
+            // Empirically verified against the k-Wave C++ binary (kspaceFirstOrder-OMP):
+            // for N=16, dx=1mm, c=1500 m/s, dt=2e-7s, single-pulse injection:
+            //   step2 p[8,8,8] = 0.5344 Pa (injection)
+            //   step3 p[8,8,8] = 0.1128 Pa (free propagation, ratio ~0.211)
+            // This ratio ~0.211 matches unnormalized sinc, NOT normalized sinc
+            // (normalized sinc gives ratio ~0.66, mismatching k-Wave).
+            //
+            // Although np.sinc (Python kspaceFirstOrder3D.py line 298) uses normalised
+            // sinc, the Python-precomputed kappa is NOT saved to disk — the C++ binary
+            // recomputes kappa internally using sin(x)/x.
             Zip::from(&mut correction).and(kx).and(ky).and(kz).for_each(
                 |c, &kx_val, &ky_val, &kz_val| {
                     let k_sq = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
@@ -324,7 +331,7 @@ mod tests {
     /// ## Theorem (Treeby & Cox 2010, Eq. 17)
     ///
     /// The k-space correction κ compensates for the staggered time integration:
-    ///   κ(k) = sinc(c_ref · |k| · dt / 2) = sin(x)/x,  x = c_ref·|k|·dt/2
+    ///   κ(k) = sinc(x) = sin(x)/x,  x = c_ref·|k|·dt/2   (UNNORMALIZED sinc)
     ///
     /// At k = 0: x = 0 → κ = 1 (no correction needed for DC component).
     /// At the Nyquist wavenumber k_N = π/dx, for a Courant-stable step dt = CFL·dx/c:
@@ -358,7 +365,7 @@ mod tests {
         // Compute expected κ at k = π/dx.
         let k_nyquist = PI / dx;
         let arg = c0 * k_nyquist * dt / 2.0;
-        let expected_kappa_nyquist = sinc(arg); // sin(arg)/arg
+        let expected_kappa_nyquist = sinc(arg); // sin(arg)/arg — unnormalized, matching k-Wave C++
 
         // Find the kappa value closest to Nyquist (max |k| in the grid)
         let k_max = kx

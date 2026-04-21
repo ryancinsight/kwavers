@@ -25,7 +25,6 @@ fn pstd_source_gain() -> f64 {
     }
 }
 
-
 impl PSTDSolver {
     /// Perform a single time step using k-space pseudospectral method
     pub fn step_forward(&mut self) -> KwaversResult<()> {
@@ -65,7 +64,6 @@ impl PSTDSolver {
 
         // Step 5: Pressure computation from density (with absorption)
         self.update_pressure(dt)?;
-
 
         if self.time_step_index < 5 || self.time_step_index.is_multiple_of(10) {
             let max_p = self.fields.p.iter().fold(0.0f64, |m, &v| m.max(v.abs()));
@@ -271,17 +269,14 @@ impl PSTDSolver {
         }
 
         // Temporarily take kspace_operators to break the borrow (avoids .clone() of arrays)
-        let ops = self
-            .kspace_operators
-            .take()
-            .ok_or_else(|| {
-                KwaversError::Config(crate::core::error::ConfigError::InvalidValue {
-                    parameter: "kspace_operators".to_string(),
-                    value: "None".to_string(),
-                    constraint: "k-space operators must be initialized for FullKSpace method"
-                        .to_string(),
-                })
-            })?;
+        let ops = self.kspace_operators.take().ok_or_else(|| {
+            KwaversError::Config(crate::core::error::ConfigError::InvalidValue {
+                parameter: "kspace_operators".to_string(),
+                value: "None".to_string(),
+                constraint: "k-space operators must be initialized for FullKSpace method"
+                    .to_string(),
+            })
+        })?;
 
         // Swap source_term out of dpx to pass as separate argument
         let source_term = std::mem::replace(&mut self.dpx, Array3::zeros((0, 0, 0)));
@@ -430,6 +425,10 @@ mod tests {
     use crate::domain::source::{GridSource, SourceMode};
     use crate::solver::forward::pstd::config::{AntiAliasingConfig, BoundaryConfig, PSTDConfig};
 
+    const CPML_REFERENCE_STEP2: f64 = 5.344_360e-1;
+    const CPML_REFERENCE_STEP3: f64 = 1.127_856e-1;
+    const CPML_REFERENCE_TOL: f64 = 1e-4;
+
     /// Verify that additive pressure source injection produces correct sign pattern.
     ///
     /// Reference: k-Wave Python numpy diagnostic (`diag_source_injection_numpy.py`) confirms
@@ -507,8 +506,7 @@ mod tests {
     ///
     /// Reference values from k-Wave binary (N=16, no PML, signal=[0,1,0]):
     ///   step 2 (injection): p[8,8,8] = 0.5344 Pa
-    ///   step 3 (free prop): p[8,8,8] = 0.1128 Pa   (ratio 0.211 = decay, not growth)
-    ///   step 4 (free prop): p[8,8,8] = -0.3160 Pa  (sign flip, continued propagation)
+    ///   step 3 (free prop): p[8,8,8] = 0.1128 Pa
     #[test]
     fn test_nyquist_not_zeroed_propagation_amplitude() {
         let n = 16usize;
@@ -548,24 +546,14 @@ mod tests {
         solver.step_forward().unwrap(); // step 3: free propagation
         let p_step3 = solver.fields.p[[src, src, src]];
 
-        // Injection must be substantial (k-Wave reference: ~0.534 Pa)
         assert!(
-            p_step2 > 0.4,
-            "step2 p[src] = {p_step2:.4e}, expected ~0.534 Pa"
+            (p_step2 - CPML_REFERENCE_STEP2).abs() < CPML_REFERENCE_TOL,
+            "step2 p[src] = {p_step2:.6e}, expected {CPML_REFERENCE_STEP2:.6e}"
         );
 
-        // After one free propagation step, amplitude at source must DECREASE
-        // (k-Wave: 0.1128 Pa, ratio ~0.211). If Nyquist is zeroed it gives 0.1853 Pa (1.64x)
-        // which still passes < p_step2 but let's bound it tightly.
-        let ratio = p_step3 / p_step2;
         assert!(
-            ratio < 0.3,
-            "step3 / step2 ratio = {ratio:.4} at source [{src},{src},{src}], expected ~0.211. \
-             Ratio > 0.3 indicates Nyquist zeroing regression (step3 = {p_step3:.4e}, step2 = {p_step2:.4e})."
-        );
-        assert!(
-            p_step3 > 0.0,
-            "step3 p[src] = {p_step3:.4e}, expected positive after first free step"
+            (p_step3 - CPML_REFERENCE_STEP3).abs() < CPML_REFERENCE_TOL,
+            "step3 p[src] = {p_step3:.6e}, expected {CPML_REFERENCE_STEP3:.6e}"
         );
     }
 
@@ -601,6 +589,63 @@ mod tests {
             result.is_ok(),
             "Step forward failed with anti-aliasing enabled: {:?}",
             result.err()
+        );
+    }
+
+    /// Verify propagation amplitude is correct even when CPML boundary is configured.
+    ///
+    /// This test isolates whether the CPML boundary (used by the Python API path)
+    /// affects interior points at [N/2, N/2, N/2] in a 16³ grid with thickness=2.
+    /// The CPML should have σ=0 at interior points, leaving propagation unchanged.
+    #[test]
+    fn test_propagation_amplitude_with_cpml_boundary() {
+        use crate::domain::boundary::cpml::CPMLConfig;
+        let n = 16usize;
+        let dx = 1e-3_f64;
+        let c0 = 1500.0_f64;
+        let rho0 = 1000.0_f64;
+        let dt = 0.3 * dx / c0;
+        let src = n / 2;
+
+        let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
+        let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+
+        let mut p_mask = ndarray::Array3::<f64>::zeros((n, n, n));
+        p_mask[[src, src, src]] = 1.0;
+        let mut p_signal = ndarray::Array2::<f64>::zeros((1, 4));
+        p_signal[[0, 1]] = 1.0;
+
+        let source = GridSource {
+            p_mask: Some(p_mask),
+            p_signal: Some(p_signal),
+            p_mode: SourceMode::Additive,
+            ..GridSource::new_empty()
+        };
+
+        // Match Python API path: CPML thickness=2
+        let cpml_config = CPMLConfig::with_thickness(2);
+        let config = PSTDConfig {
+            dt,
+            nt: 4,
+            boundary: BoundaryConfig::CPML(cpml_config),
+            smooth_sources: false,
+            ..Default::default()
+        };
+
+        let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
+        solver.step_forward().unwrap(); // step 1: signal=0
+        solver.step_forward().unwrap(); // step 2: inject
+        let p_step2 = solver.fields.p[[src, src, src]];
+        solver.step_forward().unwrap(); // step 3: free prop
+        let p_step3 = solver.fields.p[[src, src, src]];
+
+        assert!(
+            (p_step2 - CPML_REFERENCE_STEP2).abs() < CPML_REFERENCE_TOL,
+            "With CPML: step2 p[src] = {p_step2:.6e}, expected {CPML_REFERENCE_STEP2:.6e}"
+        );
+        assert!(
+            (p_step3 - CPML_REFERENCE_STEP3).abs() < CPML_REFERENCE_TOL,
+            "With CPML: step3 p[src] = {p_step3:.6e}, expected {CPML_REFERENCE_STEP3:.6e}"
         );
     }
 }

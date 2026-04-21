@@ -145,7 +145,10 @@ fn test_ssprk3_temporal_convergence_p1() {
             order
         );
     }
-    assert!(l2_grid(&f0).is_finite(), "SSP-RK3 produced non-finite field");
+    assert!(
+        l2_grid(&f0).is_finite(),
+        "SSP-RK3 produced non-finite field"
+    );
 }
 
 // ── Test 2: L2 norm stays bounded over 100 steps (p=1, SSP-RK3) ──────────

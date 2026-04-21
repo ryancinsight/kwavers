@@ -10,6 +10,7 @@
 ## Validation Goals
 - Implement automated test scenarios comparing `pykwavers` outputs natively against `k-wave-python` identical scenarios.
 - Quantitatively verify sources, signals, grids, sensors, and solvers.
+- Keep exact tone-burst regression coverage for the Gaussian default envelope and non-integer sample-count cases.
 
 ## Technical Debt Prevention
 - Proactively locate and discard deprecated or duplicate methods, replacing them strictly with unified accessors.

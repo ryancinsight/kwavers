@@ -14,6 +14,8 @@ fn make_grid(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> Grid
     Grid::new(nx, ny, nz, dx, dy, dz).expect("grid parameters valid")
 }
 
+use proptest::proptest;
+
 proptest! {
     #![proptest_config(ProptestConfig { cases: 10, .. ProptestConfig::default() })]
     #[test]

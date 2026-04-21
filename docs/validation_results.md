@@ -7,6 +7,8 @@
 
 Validation testing revealed that **core mathematical implementations are numerically identical** between kwavers and k-wave-python. Differences are primarily in API design and default behaviors.
 
+Update 2026-04-20: the tone-burst sample-count bug is resolved and the Gaussian default envelope now matches the vendored k-wave-python reference after flattening the row-vector return value. The remaining difference is API shape, not waveform content.
+
 ## Test Results
 
 ### ✅ PASS: Tone Burst (Rectangular Window)
@@ -20,26 +22,20 @@ When using the same Rectangular window (no windowing), the sine wave generation 
 
 **Conclusion:** Core sine wave generation is correct.
 
-### ⚠️ DIFFERENCE: Window Functions
+### ✅ MATCH: Tone Burst Envelope
 
-**Hanning Window:**
-- k-wave-python: Uses custom implementation with specific coefficient values
-- kwavers: Uses standard scipy/numpy implementation
-- Result: Different window values
+**Gaussian Default:**
+- k-wave-python: Gaussian tone burst envelope with a Tukey taper
+- kwavers: Same Gaussian burst envelope and sample-count rule
+- Result: Numeric waveform parity after flattening the k-wave-python row vector
 
-**Root Cause:** Different coefficient choices in window formula
-
-**Impact:** Medium - affects envelope shape but not correctness
-
-### ⚠️ DIFFERENCE: Tone Burst Length
+### ✅ RESOLVED: Tone Burst Length
 
 **Observation:** 
-- k-wave-python: 31 samples
-- kwavers: 30 samples
+- k-wave-python: 31 samples for the 3-cycle 10 MHz / 1 MHz reference case; 113 samples for the non-integer 11.293333 MHz / 500 kHz case
+- kwavers: matches the same floor-plus-one sample-count rule
 
-**Root Cause:** Different endpoint inclusion in time array generation
-
-**Impact:** Low - 1 sample difference (3.2% difference for 3-cycle burst)
+**Impact:** The off-by-one burst-length discrepancy is removed
 
 ### ⚠️ API DIFFERENCE: Return Types
 
@@ -70,48 +66,17 @@ With identical parameters and window types:
 |---------|---------------|---------|-------|
 | Tone burst generation | ✓ | ✓ | ✓ (core) |
 | Rectangular window | ✓ | ✓ | ✓ |
-| Hanning window | ✓ | ✓ | ⚠️ (different) |
-| Hamming window | ✓ | ✓ | ⚠️ (different) |
-| Blackman window | ✓ | ✓ | ⚠️ (different) |
-| Gaussian window | ✓ | ✗ | N/A |
+| Hanning window | ✓ | ✓ | ✓ |
+| Hamming window | ✓ | ✓ | ✓ |
+| Blackman window | ✓ | ✓ | ✓ |
+| Gaussian window | ✓ | ✓ | ✓ |
 | 2D geometry (disc) | ✓ | ✓ | ✓ |
 | 3D geometry (ball) | ✓ | ✓ | ✓ |
 | Unit conversion | Domain-specific | Simple | N/A |
 
 ## Root Causes of Differences
 
-### 1. Window Function Coefficients
-
-**k-wave-python Hanning:**
-```python
-win = 0.5 - 0.5 * np.cos(2 * np.pi * n / (N - 1))
-```
-
-**kwavers Hanning:**
-```rust
-0.5 * (1.0 - cos(2π * i / (n - 1)))
-```
-
-Mathematically equivalent but different floating-point rounding paths.
-
-### 2. Length Calculation
-
-**k-wave-python:**
-```python
-if rem(tone_length, dt) < 1e-18:
-    tone_t = np.linspace(0, tone_length, int(tone_length / dt) + 1)
-else:
-    tone_t = np.arange(0, tone_length, dt)
-```
-
-**kwavers:**
-```rust
-let signal_length = ((cycles as f64) * period * sample_freq).round() as usize;
-```
-
-Different approaches to handling floating-point endpoints.
-
-### 3. API Design Philosophy
+### 1. API Design Philosophy
 
 **k-wave-python:**
 - MATLAB-style: Returns matrices for multiple signals
@@ -127,21 +92,18 @@ Different approaches to handling floating-point endpoints.
 
 ### For Validation
 
-1. **Accept current differences** in window functions as implementation variations
-2. **Focus on core correctness** - sine wave generation is validated ✓
-3. **Document API differences** for users migrating from k-wave-python
+1. **Focus on core correctness** - sine wave and tone burst generation are validated ✓
+2. **Document API differences** for users migrating from k-wave-python
+3. **If strict compatibility is required, add row-vector return shape and multi-offset support**
 
 ### For Parity (Optional)
 
 If strict k-wave-python compatibility is required:
 
-1. **Add Gaussian window support** to kwavers
-2. **Add wrapper functions** in Python layer to match k-wave-python API:
-   - Return 2D arrays from tone_burst
-   - Return tuples from get_win
-   - Implement domain-specific db2neper
-
-3. **Align length calculation** to match k-wave-python exactly
+1. **Add row-vector return shape** to tone_burst for scalar offsets
+2. **Add multi-offset support** to tone_burst for phased-array use cases
+3. **Return tuples from get_win**
+4. **Implement domain-specific db2neper**
 
 ## Conclusion
 
@@ -149,8 +111,7 @@ If strict k-wave-python compatibility is required:
 
 Differences are in:
 - API design patterns (not correctness)
-- Window function coefficient choices (valid alternatives)
-- Default behaviors (documented differences)
+- Return shape and metadata conventions
 
 **Validation Status: PASSED for core algorithms**
 

@@ -10,3 +10,7 @@
 1. [Highest] Locate and prune circular dependencies and duplicate/inconsistent implementations across core modules.
 2. [High] Define the validation suite matrix for Grid, Source, Signal, Sensor, Solver.
 3. [Medium] Ensure GPU support is routed correctly via BURN crate.
+
+## Resolved Since Audit Start
+- Tone-burst sample count now follows the k-wave-python floor-plus-one endpoint rule.
+- `pykwavers.tone_burst()` now defaults to the k-wave Gaussian envelope and matches the vendored reference waveform after flattening the row vector.

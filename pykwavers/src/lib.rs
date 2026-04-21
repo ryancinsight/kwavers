@@ -107,6 +107,7 @@ fn kwavers_error_to_py(err: KwaversError) -> PyErr {
 /// It is used by the GPU PSTD paths, which currently apply absorption using a
 /// centre-frequency attenuation model rather than the full spectral Treeby/Cox
 /// formulation used by the CPU PSTD solver.
+#[allow(dead_code)]
 fn alpha_db_cm_to_np_m(alpha_db_cm: f64, frequency_mhz: f64, alpha_power: f64) -> f64 {
     let db_to_np = 20.0 / std::f64::consts::LN_10;
     alpha_db_cm * frequency_mhz.powf(alpha_power) * 100.0 / db_to_np
@@ -3281,47 +3282,66 @@ impl Simulation {
         // ── Fractional-Laplacian absorption operators (Treeby & Cox 2010 Eqs. 9-10) ──
         // nabla1 = |k|^(y-2), nabla2 = |k|^(y-1) in FFT order.
         // tau = -2*alpha0*c0^(y-1), eta = 2*alpha0*c0^y*tan(pi*y/2) per voxel.
-        let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) = if has_absorption {
-            use std::f64::consts::PI;
-            let dk_x = 2.0 * PI / (nx as f64 * grid.dx);
-            let dk_y = 2.0 * PI / (ny as f64 * grid.dy);
-            let dk_z = 2.0 * PI / (nz as f64 * grid.dz);
-            let singularity_thresh: f64 = 1e-8;
-            let y = alpha_power;
+        let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) =
+            if has_absorption {
+                use std::f64::consts::PI;
+                let dk_x = 2.0 * PI / (nx as f64 * grid.dx);
+                let dk_y = 2.0 * PI / (ny as f64 * grid.dy);
+                let dk_z = 2.0 * PI / (nz as f64 * grid.dz);
+                let singularity_thresh: f64 = 1e-8;
+                let y = alpha_power;
 
-            let mut n1 = vec![0.0f32; total];
-            let mut n2 = vec![0.0f32; total];
-            let mut tau_v = vec![0.0f32; total];
-            let mut eta_v = vec![0.0f32; total];
+                let mut n1 = vec![0.0f32; total];
+                let mut n2 = vec![0.0f32; total];
+                let mut tau_v = vec![0.0f32; total];
+                let mut eta_v = vec![0.0f32; total];
 
-            for flat in 0..total {
-                let ix = flat / (ny * nz);
-                let iy = (flat % (ny * nz)) / nz;
-                let iz = flat % nz;
+                for flat in 0..total {
+                    let ix = flat / (ny * nz);
+                    let iy = (flat % (ny * nz)) / nz;
+                    let iz = flat % nz;
 
-                // k-magnitude in FFT order
-                let kix = if ix <= nx / 2 { ix as f64 } else { (nx - ix) as f64 } * dk_x;
-                let kiy = if iy <= ny / 2 { iy as f64 } else { (ny - iy) as f64 } * dk_y;
-                let kiz = if iz <= nz / 2 { iz as f64 } else { (nz - iz) as f64 } * dk_z;
-                let k_mag = (kix * kix + kiy * kiy + kiz * kiz).sqrt();
+                    // k-magnitude in FFT order
+                    let kix = if ix <= nx / 2 {
+                        ix as f64
+                    } else {
+                        (nx - ix) as f64
+                    } * dk_x;
+                    let kiy = if iy <= ny / 2 {
+                        iy as f64
+                    } else {
+                        (ny - iy) as f64
+                    } * dk_y;
+                    let kiz = if iz <= nz / 2 {
+                        iz as f64
+                    } else {
+                        (nz - iz) as f64
+                    } * dk_z;
+                    let k_mag = (kix * kix + kiy * kiy + kiz * kiz).sqrt();
 
-                if k_mag > singularity_thresh {
-                    n1[flat] = k_mag.powf(y - 2.0) as f32;
-                    n2[flat] = k_mag.powf(y - 1.0) as f32;
+                    if k_mag > singularity_thresh {
+                        n1[flat] = k_mag.powf(y - 2.0) as f32;
+                        n2[flat] = k_mag.powf(y - 1.0) as f32;
+                    }
+
+                    // alpha_0: Np/((rad/s)^y·m) — SI units matching k-Wave Python db2neper output
+                    let alpha_db_cm = medium.as_medium().absorption(ix, iy, iz);
+                    let alpha_0_si = alpha_db_cm_to_np_m(alpha_db_cm, 1.0, alpha_power)
+                        / (2.0 * PI * 1e6_f64).powf(y);
+                    let c0_local = medium.as_medium().sound_speed(ix, iy, iz);
+                    tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
+                    eta_v[flat] =
+                        (2.0 * alpha_0_si * c0_local.powf(y) * (PI * y / 2.0).tan()) as f32;
                 }
-
-                // alpha_0: Np/((rad/s)^y·m) — SI units matching k-Wave Python db2neper output
-                let alpha_db_cm = medium.as_medium().absorption(ix, iy, iz);
-                let alpha_0_si = alpha_db_cm_to_np_m(alpha_db_cm, 1.0, alpha_power)
-                    / (2.0 * PI * 1e6_f64).powf(y);
-                let c0_local = medium.as_medium().sound_speed(ix, iy, iz);
-                tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
-                eta_v[flat] = (2.0 * alpha_0_si * c0_local.powf(y) * (PI * y / 2.0).tan()) as f32;
-            }
-            (n1, n2, tau_v, eta_v)
-        } else {
-            (vec![0.0f32; total], vec![0.0f32; total], vec![0.0f32; total], vec![0.0f32; total])
-        };
+                (n1, n2, tau_v, eta_v)
+            } else {
+                (
+                    vec![0.0f32; total],
+                    vec![0.0f32; total],
+                    vec![0.0f32; total],
+                    vec![0.0f32; total],
+                )
+            };
 
         // ── Construct GPU solver (device created internally via with_auto_device) ──
         let mut solver = GpuPstdSolver::with_auto_device(
@@ -3625,61 +3645,84 @@ impl GpuPstdSession {
             let has_absorption = absorption.is_some();
             // nabla1 = |k|^(y-2), nabla2 = |k|^(y-1) in FFT order (k-space operators).
             // tau = -2*alpha0*c0^(y-1), eta = 2*alpha0*c0^y*tan(pi*y/2) per voxel.
-            let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) = if has_absorption {
-                use std::f64::consts::PI;
-                let dk_x = 2.0 * PI / (nx as f64 * kgrid.dx);
-                let dk_y = 2.0 * PI / (ny as f64 * kgrid.dy);
-                let dk_z = 2.0 * PI / (nz as f64 * kgrid.dz);
-                let singularity_thresh: f64 = 1e-8;
-                let y = alpha_power;
+            let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) =
+                if has_absorption {
+                    use std::f64::consts::PI;
+                    let dk_x = 2.0 * PI / (nx as f64 * kgrid.dx);
+                    let dk_y = 2.0 * PI / (ny as f64 * kgrid.dy);
+                    let dk_z = 2.0 * PI / (nz as f64 * kgrid.dz);
+                    let singularity_thresh: f64 = 1e-8;
+                    let y = alpha_power;
 
-                let mut n1 = vec![0.0f32; total];
-                let mut n2 = vec![0.0f32; total];
-                let mut tau_v = vec![0.0f32; total];
-                let mut eta_v = vec![0.0f32; total];
+                    let mut n1 = vec![0.0f32; total];
+                    let mut n2 = vec![0.0f32; total];
+                    let mut tau_v = vec![0.0f32; total];
+                    let mut eta_v = vec![0.0f32; total];
 
-                let ab_arr = absorption.as_ref().unwrap().as_array();
+                    let ab_arr = absorption.as_ref().unwrap().as_array();
 
-                for flat in 0..total {
-                    let ix = flat / (ny * nz);
-                    let iy = (flat % (ny * nz)) / nz;
-                    let iz = flat % nz;
+                    for flat in 0..total {
+                        let ix = flat / (ny * nz);
+                        let iy = (flat % (ny * nz)) / nz;
+                        let iz = flat % nz;
 
-                    // k-magnitude in FFT order
-                    let kix = if ix <= nx / 2 { ix as f64 } else { (nx - ix) as f64 } * dk_x;
-                    let kiy = if iy <= ny / 2 { iy as f64 } else { (ny - iy) as f64 } * dk_y;
-                    let kiz = if iz <= nz / 2 { iz as f64 } else { (nz - iz) as f64 } * dk_z;
-                    let k_mag = (kix * kix + kiy * kiy + kiz * kiz).sqrt();
+                        // k-magnitude in FFT order
+                        let kix = if ix <= nx / 2 {
+                            ix as f64
+                        } else {
+                            (nx - ix) as f64
+                        } * dk_x;
+                        let kiy = if iy <= ny / 2 {
+                            iy as f64
+                        } else {
+                            (ny - iy) as f64
+                        } * dk_y;
+                        let kiz = if iz <= nz / 2 {
+                            iz as f64
+                        } else {
+                            (nz - iz) as f64
+                        } * dk_z;
+                        let k_mag = (kix * kix + kiy * kiy + kiz * kiz).sqrt();
 
-                    if k_mag > singularity_thresh {
-                        n1[flat] = k_mag.powf(y - 2.0) as f32;
-                        n2[flat] = k_mag.powf(y - 1.0) as f32;
+                        if k_mag > singularity_thresh {
+                            n1[flat] = k_mag.powf(y - 2.0) as f32;
+                            n2[flat] = k_mag.powf(y - 1.0) as f32;
+                        }
+
+                        // Spatially-varying absorption coefficients
+                        let alpha_db_cm = ab_arr[[ix, iy, iz]];
+                        // alpha_0: Np/((rad/s)^y·m) — SI units matching k-Wave Python db2neper output
+                        let alpha_0_si = alpha_db_cm_to_np_m(alpha_db_cm, 1.0, alpha_power)
+                            / (2.0 * PI * 1e6_f64).powf(y);
+                        let c0_local = c0_flat[flat] as f64;
+                        tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
+                        eta_v[flat] =
+                            (2.0 * alpha_0_si * c0_local.powf(y) * (PI * y / 2.0).tan()) as f32;
                     }
-
-                    // Spatially-varying absorption coefficients
-                    let alpha_db_cm = ab_arr[[ix, iy, iz]];
-                    // alpha_0: Np/((rad/s)^y·m) — SI units matching k-Wave Python db2neper output
-                    let alpha_0_si = alpha_db_cm_to_np_m(alpha_db_cm, 1.0, alpha_power)
-                        / (2.0 * PI * 1e6_f64).powf(y);
-                    let c0_local = c0_flat[flat] as f64;
-                    tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
-                    eta_v[flat] = (2.0 * alpha_0_si * c0_local.powf(y) * (PI * y / 2.0).tan()) as f32;
-                }
-                (n1, n2, tau_v, eta_v)
-            } else {
-                (
-                    vec![0.0f32; total],
-                    vec![0.0f32; total],
-                    vec![0.0f32; total],
-                    vec![0.0f32; total],
-                )
-            };
+                    (n1, n2, tau_v, eta_v)
+                } else {
+                    (
+                        vec![0.0f32; total],
+                        vec![0.0f32; total],
+                        vec![0.0f32; total],
+                        vec![0.0f32; total],
+                    )
+                };
 
             // ── Absorption diagnostic ─────────────────────────────────────────
             if has_absorption {
-                let tau_max = absorb_tau_flat.iter().cloned().fold(0.0f32, |a, b| a.abs().max(b.abs()));
-                let eta_max = absorb_eta_flat.iter().cloned().fold(0.0f32, |a, b| a.abs().max(b.abs()));
-                let nabla2_max = absorb_nabla2_flat.iter().cloned().fold(0.0f32, |a, b| a.max(b));
+                let tau_max = absorb_tau_flat
+                    .iter()
+                    .cloned()
+                    .fold(0.0f32, |a, b| a.abs().max(b.abs()));
+                let eta_max = absorb_eta_flat
+                    .iter()
+                    .cloned()
+                    .fold(0.0f32, |a, b| a.abs().max(b.abs()));
+                let nabla2_max = absorb_nabla2_flat
+                    .iter()
+                    .cloned()
+                    .fold(0.0f32, |a, b| a.max(b));
                 eprintln!("[pykwavers-diag] GpuPstdSession absorbing=true: tau_max={tau_max:.3e}, eta_max={eta_max:.3e}, nabla2_max={nabla2_max:.3e}");
             } else {
                 eprintln!("[pykwavers-diag] GpuPstdSession absorbing=false (lossless)");

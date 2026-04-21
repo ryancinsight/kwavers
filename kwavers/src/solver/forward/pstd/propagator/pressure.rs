@@ -113,7 +113,6 @@ impl PSTDSolver {
     /// kappa IS applied here — Treeby & Cox (2010) Eq. 17 explicitly includes the k-space
     /// correction factor κ in the density update, same as in the velocity update (Eq. 16).
     pub(crate) fn update_density(&mut self, dt: f64) -> KwaversResult<()> {
-
         // k-Wave split-field PML for density (Treeby & Cox 2010, Eq. 16):
         //   rho_x_new = pml_x * (pml_x * rho_x_old - dt * rho0 * dux/dx)
         //

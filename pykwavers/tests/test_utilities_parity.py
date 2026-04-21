@@ -37,24 +37,14 @@ class TestSignalUtilities:
         center_freq = 1e6   # 1 MHz
         cycles = 5
 
-        # Generate with pykwavers (k-wave-python tone_burst takes dt=1/sample_rate
-        # and uses Gaussian envelope by default, which differs from our Hanning default)
+        # Generate with pykwavers. k-wave-python tone_burst uses a Gaussian
+        # default envelope and returns a row vector; pykwavers keeps the scalar
+        # wrapper 1D, so we compare against the flattened reference.
         kwa_signal = kw.tone_burst(sample_rate, center_freq, cycles)
+        kw_signal = kw_tone_burst(sample_rate, center_freq, cycles).flatten()
 
-        # Basic checks: signal has correct length and is well-formed
-        # tone_burst may return cycles*sample_rate/center_freq or +1 (inclusive endpoint)
-        expected_samples = int(cycles * sample_rate / center_freq)
-        assert abs(len(kwa_signal) - expected_samples) <= 1, (
-            f"Expected ~{expected_samples} samples (+/-1), got {len(kwa_signal)}"
-        )
-        assert np.all(np.isfinite(kwa_signal))
-        assert np.max(np.abs(kwa_signal)) > 0
-
-        # Verify energy is concentrated in the center (window tapering)
-        mid = len(kwa_signal) // 2
-        center_energy = np.sum(kwa_signal[mid-5:mid+5]**2)
-        edge_energy = np.sum(kwa_signal[:5]**2) + np.sum(kwa_signal[-5:]**2)
-        assert center_energy > edge_energy, "Hanning window should concentrate energy in center"
+        assert len(kwa_signal) == len(kw_signal)
+        np.testing.assert_allclose(kwa_signal, kw_signal, rtol=1e-12, atol=1e-12)
 
     def test_tone_burst_different_windows(self):
         """Test tone burst with different window types."""
@@ -62,7 +52,7 @@ class TestSignalUtilities:
         center_freq = 1e6
         cycles = 5
 
-        windows = ["Hanning", "Hamming", "Blackman", "Rectangular"]
+        windows = ["Gaussian", "Hanning", "Hamming", "Blackman", "Rectangular"]
 
         for window in windows:
             kwa_signal = kw.tone_burst(
@@ -84,11 +74,7 @@ class TestSignalUtilities:
                 )
 
     def test_tone_burst_kwave_frequency_parity(self):
-        """Verify pykwavers and k-wave tone_burst have same dominant frequency.
-
-        k-wave-python defaults to Gaussian envelope; pykwavers defaults to Hanning.
-        Envelope shape differs, but peak frequency content should match.
-        """
+        """Verify pykwavers and k-wave tone_burst match the reference waveform."""
         sample_rate = 10e6
         center_freq = 1e6
         cycles = 5
@@ -96,23 +82,13 @@ class TestSignalUtilities:
         kwa_signal = kw.tone_burst(sample_rate, center_freq, cycles)
         kw_signal = kw_tone_burst(sample_rate, center_freq, cycles).flatten()
 
-        # Compare frequency of peak spectral energy
-        kwa_spec = np.abs(np.fft.rfft(kwa_signal))
-        kw_spec = np.abs(np.fft.rfft(kw_signal))
-        freqs_kwa = np.fft.rfftfreq(len(kwa_signal), 1.0 / sample_rate)
-        freqs_kw = np.fft.rfftfreq(len(kw_signal), 1.0 / sample_rate)
-
-        kwa_peak = freqs_kwa[np.argmax(kwa_spec)]
-        kw_peak = freqs_kw[np.argmax(kw_spec)]
-
-        # Both should peak at center_freq (within 10%)
-        assert abs(kwa_peak - center_freq) / center_freq < 0.10
-        assert abs(kw_peak - center_freq) / center_freq < 0.10
+        assert len(kwa_signal) == len(kw_signal)
+        np.testing.assert_allclose(kwa_signal, kw_signal, rtol=1e-12, atol=1e-12)
 
     def test_get_win_matches_kwave(self):
         """Window functions match k-wave-python get_win for shared types."""
         for n in [64, 128]:
-            for win_type in ["Hanning", "Hamming", "Blackman"]:
+            for win_type in ["Gaussian", "Hanning", "Hamming", "Blackman"]:
                 kwa_win = np.asarray(kw.get_win(n, win_type))
                 kw_result = kw_get_win(n, win_type)
                 kw_win = (kw_result[0] if isinstance(kw_result, tuple) else kw_result).flatten()
@@ -132,7 +108,7 @@ class TestSignalUtilities:
         """Test window function generation."""
         n = 100
 
-        windows = ["Hanning", "Hamming", "Blackman", "Rectangular"]
+        windows = ["Gaussian", "Hanning", "Hamming", "Blackman", "Rectangular"]
 
         for window in windows:
             # Get window from pykwavers (returns numpy array)
