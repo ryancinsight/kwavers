@@ -135,8 +135,6 @@ pub struct FdtdGpuDispatcher {
     nx: usize,
     ny: usize,
     nz: usize,
-    /// Pre-allocated scratch buffer (CPU fallback; avoids per-step heap alloc)
-    scratch: Array3<f64>,
 }
 
 impl FdtdGpuDispatcher {
@@ -156,7 +154,6 @@ impl FdtdGpuDispatcher {
             nx,
             ny,
             nz,
-            scratch: Array3::zeros((nx, ny, nz)),
         })
     }
 
@@ -189,8 +186,9 @@ impl FdtdGpuDispatcher {
             )));
         }
 
-        // Zero boundary cells (Dirichlet)
-        output.fill(0.0);
+        // Zero only the boundary faces. The interior is overwritten below, so
+        // the in-place path does not need an O(N^3) full-volume fill.
+        Self::zero_boundary_faces(output);
 
         // Interior 6-point stencil
         for k in 1..self.nz - 1 {
@@ -224,11 +222,7 @@ impl FdtdGpuDispatcher {
         p_prev: &Array3<f64>,
         coeff: f64,
     ) -> KwaversResult<Array3<f64>> {
-        // Reuse scratch to avoid allocation
-        let nx = self.nx;
-        let ny = self.ny;
-        let nz = self.nz;
-        let mut result = Array3::zeros((nx, ny, nz));
+        let mut result = Array3::zeros((self.nx, self.ny, self.nz));
         self.update_pressure_into(p_curr, p_prev, coeff, &mut result)?;
         Ok(result)
     }
@@ -236,6 +230,35 @@ impl FdtdGpuDispatcher {
     /// Grid dimensions `(nx, ny, nz)`
     pub fn grid_dims(&self) -> (usize, usize, usize) {
         (self.nx, self.ny, self.nz)
+    }
+
+    /// Zero the six boundary faces of a 3D volume.
+    ///
+    /// Interior cells are intentionally left untouched because the stencil
+    /// write pass overwrites them.
+    fn zero_boundary_faces(output: &mut Array3<f64>) {
+        let (nx, ny, nz) = output.dim();
+
+        for j in 0..ny {
+            for k in 0..nz {
+                output[[0, j, k]] = 0.0;
+                output[[nx - 1, j, k]] = 0.0;
+            }
+        }
+
+        for i in 0..nx {
+            for k in 0..nz {
+                output[[i, 0, k]] = 0.0;
+                output[[i, ny - 1, k]] = 0.0;
+            }
+        }
+
+        for i in 0..nx {
+            for j in 0..ny {
+                output[[i, j, 0]] = 0.0;
+                output[[i, j, nz - 1]] = 0.0;
+            }
+        }
     }
 }
 
@@ -290,6 +313,7 @@ pub struct PressureParams {
 /// - Yee KS (1966). IEEE Trans Antennas Propag 14(3):302–307.
 /// - Moczo P et al. (2014). The Finite-Difference Modelling of Earthquake
 ///   Motions. Cambridge Univ. Press. (6-point Laplacian, §3.1)
+#[derive(Debug)]
 pub struct FdtdGpuShaderDispatcher {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
@@ -519,7 +543,7 @@ impl FdtdGpuShaderDispatcher {
         slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = sender.send(r);
         });
-        self.device.poll(wgpu::PollType::Wait);
+        let _ = self.device.poll(wgpu::PollType::Wait);
         receiver.recv().map_err(|e| {
             KwaversError::GpuError(format!("GPU map_async failed: {e}"))
         })??;
@@ -669,7 +693,7 @@ mod tests {
         let coeff = 0.3;
 
         let p_alloc = disp.update_pressure(&p_curr, &p_prev, coeff).unwrap();
-        let mut p_into = Array3::zeros((nx, ny, nz));
+        let mut p_into = Array3::from_elem((nx, ny, nz), 123.456_f64);
         disp.update_pressure_into(&p_curr, &p_prev, coeff, &mut p_into)
             .unwrap();
 

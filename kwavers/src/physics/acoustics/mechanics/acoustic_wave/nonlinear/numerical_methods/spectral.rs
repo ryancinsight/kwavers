@@ -4,7 +4,7 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::math::fft::{fft_3d_array, ifft_3d_array};
 use ndarray::{Array3, Zip};
-use rustfft::num_complex::Complex;
+use crate::math::fft::Complex64 as Complex;
 
 use super::super::wave_model::NonlinearWave;
 
@@ -40,7 +40,7 @@ impl NonlinearWave {
         // Get spatially-varying sound speed
         let c_array = medium.sound_speed_array();
         let c = c_array.mean().unwrap_or(self.max_sound_speed);
-        let mut result_k = Array3::<Complex<f64>>::zeros(pressure_k.raw_dim());
+        let mut result_k = Array3::<Complex>::zeros(pressure_k.raw_dim());
 
         // Use pre-computed k_squared if available
         if let Some(ref k_squared) = self.k_squared {
@@ -103,9 +103,9 @@ impl NonlinearWave {
         let kz = grid.compute_kz();
 
         // Compute gradients in k-space
-        let mut grad_x_k = Array3::<Complex<f64>>::zeros(field_k.raw_dim());
-        let mut grad_y_k = Array3::<Complex<f64>>::zeros(field_k.raw_dim());
-        let mut grad_z_k = Array3::<Complex<f64>>::zeros(field_k.raw_dim());
+        let mut grad_x_k = Array3::<Complex>::zeros(field_k.raw_dim());
+        let mut grad_y_k = Array3::<Complex>::zeros(field_k.raw_dim());
+        let mut grad_z_k = Array3::<Complex>::zeros(field_k.raw_dim());
 
         grad_x_k.indexed_iter_mut().for_each(|((i, j, k), val)| {
             *val = field_k[(i, j, k)] * Complex::new(0.0, kx[i]);
@@ -146,7 +146,7 @@ impl NonlinearWave {
         let field_k = fft_3d_array(field);
 
         // Apply Laplacian operator in k-space
-        let mut laplacian_k = Array3::<Complex<f64>>::zeros(field_k.raw_dim());
+        let mut laplacian_k = Array3::<Complex>::zeros(field_k.raw_dim());
 
         if let Some(ref k_squared) = self.k_squared {
             // Use pre-computed k-squared

@@ -1,0 +1,119 @@
+kwavers/validation_reports/templates/validation_metrics.json
+```json
+{
+  "schema_version": "1.0.0",
+  "report_metadata": {
+    "generated_at": "2024-01-15T10:30:00Z",
+    "kwavers_version": "0.1.0",
+    "pykwavers_version": "0.1.0",
+    "k_wave_python_version": "1.3.0",
+    "python_version": "3.11.0",
+    "rust_version": "1.75.0",
+    "platform": "x86_64-unknown-linux-gnu",
+    "ci_run_id": "gha-123456789"
+  },
+  "summary": {
+    "total_tests": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate_percent": 0.0,
+    "execution_duration_ms": 0
+  },
+  "component_metrics": {
+    "grid": {
+      "total_tests": 0,
+      "passed": 0,
+      "failed": 0,
+      "tests": []
+    },
+    "source": {
+      "total_tests": 0,
+      "passed": 0,
+      "failed": 0,
+      "tests": []
+    },
+    "signal": {
+      "total_tests": 0,
+      "passed": 0,
+      "failed": 0,
+      "tests": []
+    },
+    "sensor": {
+      "total_tests": 0,
+      "passed": 0,
+      "failed": 0,
+      "tests": []
+    },
+    "solver": {
+      "total_tests": 0,
+      "passed": 0,
+      "failed": 0,
+      "tests": []
+    }
+  },
+  "test_results_template": {
+    "test_id": "uuid-v4-string",
+    "component": "grid|source|signal|sensor|solver",
+    "test_name": "descriptive_test_name",
+    "description": "Human-readable description of what this test validates",
+    "timestamp": "2024-01-15T10:30:00Z",
+    "status": "pass|fail|skip|error",
+    "duration_ms": 0,
+    "reference": {
+      "k_wave_python_version": "1.3.0",
+      "k_wave_python_commit": "abc123",
+      "reference_values": {
+        "description": "Analytically derived or k-wave-python computed values",
+        "grid_spacing": 0.0,
+        "time_step": 0.0,
+        "wave_speed": 0.0
+      }
+    },
+    "metrics": {
+      "l2_error": {
+        "value": 0.0,
+        "threshold": 0.02,
+        "unit": "relative",
+        "comparison": "k_wave_python"
+      },
+      "linf_error": {
+        "value": 0.0,
+        "threshold": 0.05,
+        "unit": "relative",
+        "comparison": "k_wave_python"
+      },
+      "relative_error": {
+        "value": 0.0,
+        "threshold": 0.02,
+        "unit": "percent",
+        "comparison": "k_wave_python"
+      },
+      "rms_error": {
+        "value": 0.0,
+        "threshold": 0.01,
+        "unit": "relative",
+        "comparison": "k_wave_python"
+      },
+      "peak_ratio": {
+        "value": 0.0,
+        "threshold": 0.05,
+        "unit": "relative",
+        "comparison": "k_wave_python"
+      }
+    },
+    "tolerance_analysis": {
+      "within_tolerance": true,
+      "tolerance_type": "absolute|relative|percentage",
+      "tolerance_value": 0.02,
+      "computed_difference": 0.0
+    },
+    "test_artifacts": {
+      "log_path": "path/to/test/log",
+      "output_data_path": "path/to/output.npz",
+      "comparison_plot_path": "path/to/comparison.png",
+      "error_heatmap_path": "path/to/error_heatmap.png"
+    },
+    "validation_notes": "Additional context about test conditions or edge cases"
+  }
+}

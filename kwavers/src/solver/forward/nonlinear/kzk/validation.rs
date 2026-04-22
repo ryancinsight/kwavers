@@ -228,14 +228,10 @@ mod tests {
         let signal = solver.get_time_signal(config.nx / 2, config.ny / 2);
 
         // Compute FFT
-        use rustfft::{num_complex::Complex, FftPlanner};
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(config.nt);
+        use crate::math::fft::fft_1d_array;
+        use ndarray::Array1;
 
-        let mut spectrum: Vec<Complex<f64>> =
-            signal.iter().map(|&s| Complex::new(s, 0.0)).collect();
-
-        fft.process(&mut spectrum);
+        let spectrum = fft_1d_array(&Array1::from_vec(signal));
 
         // Find fundamental and second harmonic
         let df = 1.0 / (config.nt as f64 * config.dt);
@@ -296,7 +292,8 @@ mod tests {
     /// Szabo TL (1994). J. Acoust. Soc. Am. 96(1), 491–500.
     #[test]
     fn test_absorption() {
-        use rustfft::{num_complex::Complex as RfftComplex, FftPlanner};
+        use crate::math::fft::fft_1d_array;
+        use ndarray::Array1;
 
         let frequency = 1.0e6_f64; // 1 MHz
         // dt chosen so fundamental falls on exact FFT bin: dt = 1/(8·f₀)
@@ -329,13 +326,8 @@ mod tests {
 
         // Record initial fundamental amplitude at centre
         let initial_signal = solver.get_time_signal(config.nx / 2, config.ny / 2);
-        let mut planner = FftPlanner::new();
-        let fft_fwd = planner.plan_fft_forward(nt);
-        let mut initial_spectrum: Vec<RfftComplex<f64>> = initial_signal
-            .iter()
-            .map(|&v| RfftComplex::new(v, 0.0))
-            .collect();
-        fft_fwd.process(&mut initial_spectrum);
+        let initial_signal = Array1::from_vec(initial_signal);
+        let initial_spectrum = fft_1d_array(&initial_signal);
         let fundamental_bin = (frequency * nt as f64 * dt).round() as usize; // = 32
         let initial_amp = initial_spectrum[fundamental_bin].norm() * 2.0 / nt as f64;
 
@@ -347,12 +339,8 @@ mod tests {
 
         // Extract final fundamental amplitude
         let final_signal = solver.get_time_signal(config.nx / 2, config.ny / 2);
-        let fft_fwd2 = planner.plan_fft_forward(nt);
-        let mut final_spectrum: Vec<RfftComplex<f64>> = final_signal
-            .iter()
-            .map(|&v| RfftComplex::new(v, 0.0))
-            .collect();
-        fft_fwd2.process(&mut final_spectrum);
+        let final_signal = Array1::from_vec(final_signal);
+        let final_spectrum = fft_1d_array(&final_signal);
         let final_amp = final_spectrum[fundamental_bin].norm() * 2.0 / nt as f64;
 
         // Expected amplitude decay: exp(−α·d)
@@ -430,7 +418,8 @@ mod tests {
     #[test]
     #[ignore = "Tier 2: Literature validation (~10-30s depending on grid)"]
     fn test_aanonsen_1984_harmonic_amplitudes() {
-        use rustfft::{num_complex::Complex as RfftComplex, FftPlanner};
+        use crate::math::fft::fft_1d_array;
+        use ndarray::Array1;
 
         // Medium: water at 25°C
         let rho0 = 998.0_f64;   // kg/m³ (Kaye & Laby)
@@ -512,13 +501,8 @@ mod tests {
             let signal = solver.get_time_signal(config.nx / 2, config.ny / 2);
 
             // FFT for spectral analysis
-            let mut planner = FftPlanner::new();
-            let fft_fwd = planner.plan_fft_forward(nt);
-            let mut spectrum: Vec<RfftComplex<f64>> = signal
-                .iter()
-                .map(|&v| RfftComplex::new(v, 0.0))
-                .collect();
-            fft_fwd.process(&mut spectrum);
+            let signal = Array1::from_vec(signal);
+            let spectrum = fft_1d_array(&signal);
 
             // Fundamental at bin 32 (exact: f₀·N·dt = 32)
             let df = 1.0 / (nt as f64 * dt);

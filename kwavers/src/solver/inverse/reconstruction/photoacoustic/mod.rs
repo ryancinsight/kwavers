@@ -20,6 +20,7 @@ mod config;
 mod filters;
 mod fourier;
 mod iterative;
+mod line_reconstruction;
 mod linear_algebra;
 mod time_reversal;
 mod utils;
@@ -28,6 +29,7 @@ pub use algorithms::{PhotoacousticAlgorithm, PhotoacousticReconstructor};
 pub use config::PhotoacousticConfig;
 pub use filters::Filters;
 pub use iterative::IterativeAlgorithm;
+pub use line_reconstruction::{kspace_line_recon, LineReconDataOrder, LineReconInterpolation};
 
 use crate::core::error::KwaversResult;
 use crate::solver::reconstruction::Reconstructor;

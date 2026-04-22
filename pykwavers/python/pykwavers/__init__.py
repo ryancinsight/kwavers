@@ -111,6 +111,8 @@ from ._pykwavers import (
     PIDController,
     BubbleField,
     resample_to_target_grid,
+    kspace_line_recon,
+    time_reversal_reconstruction,
     # Signal generation
     tone_burst,
     create_cw_signals,
@@ -378,6 +380,8 @@ __all__ = [
     "PIDController",
     "BubbleField",
     "resample_to_target_grid",
+    "kspace_line_recon",
+    "time_reversal_reconstruction",
     # Submodules
     "comparison",
     "kwave_python_bridge",

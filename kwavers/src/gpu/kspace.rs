@@ -296,10 +296,10 @@ impl KspaceShiftGpu {
     ) -> KwaversResult<()> {
         let expected = (self.nx, self.ny, self.nz);
         for (name, arr) in [
-            ("real_in", real_in as &Array3<f64>),
+            ("real_in", real_in),
             ("imag_in", imag_in),
-            ("real_out", real_out as &Array3<f64>),
-            ("imag_out", imag_out as &Array3<f64>),
+            ("real_out", &*real_out),
+            ("imag_out", &*imag_out),
         ] {
             if arr.dim() != expected {
                 return Err(KwaversError::InvalidInput(format!(

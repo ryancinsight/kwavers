@@ -21,7 +21,8 @@
 
 pub mod gpu_allocator;
 
-pub use gpu_allocator::{GpuAllocationStats, GpuAllocationTracker, GpuError};
+pub use crate::core::error::gpu::GpuError;
+pub use gpu_allocator::{GpuAllocationConfig, GpuAllocationStats, GpuAllocationTracker};
 
 /// Version constant for this module
 pub const PROFILING_VERSION: &str = "4.0.0-sprint220";

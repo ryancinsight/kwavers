@@ -326,7 +326,7 @@ impl BoundaryCondition for MaterialInterface {
 
     fn apply_scalar_frequency(
         &mut self,
-        _field: &mut ndarray::Array3<rustfft::num_complex::Complex<f64>>,
+        _field: &mut ndarray::Array3<crate::math::fft::Complex64>,
         _grid: &dyn GridTopology,
         _time_step: usize,
         _dt: f64,

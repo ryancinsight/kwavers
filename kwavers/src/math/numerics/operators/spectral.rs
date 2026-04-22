@@ -48,8 +48,9 @@
 //!   DOI: 10.1007/978-3-540-30726-6
 
 use crate::core::error::{KwaversResult, NumericalError};
+use crate::math::fft::{Complex64, FFT_CACHE_1D};
 use ndarray::{Array1, Array3, ArrayView3, Axis};
-use rustfft::{num_complex::Complex64, FftPlanner};
+use std::sync::Arc;
 use std::f64::consts::PI;
 
 /// Trait for spectral operators
@@ -261,24 +262,21 @@ impl PseudospectralDerivative {
         // Allocate output array
         let mut derivative = Array3::zeros((nx, ny, nz));
 
-        // Create FFT planner
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(nx);
-        let ifft = planner.plan_fft_inverse(nx);
+        let fft = FFT_CACHE_1D.get_or_create(nx);
+        let ifft = Arc::clone(&fft);
 
         // Process each (y,z) slice independently
         for j in 0..ny {
             for k in 0..nz {
                 // Extract 1D slice along x-axis
-                let mut buffer: Vec<Complex64> = field
+                let mut buffer = Array1::<Complex64>::from_iter(field
                     .index_axis(Axis(1), j)
                     .index_axis(Axis(1), k)
                     .iter()
-                    .map(|&x| Complex64::new(x, 0.0))
-                    .collect();
+                    .map(|&x| Complex64::new(x, 0.0)));
 
                 // Forward FFT
-                fft.process(&mut buffer);
+                fft.forward_complex_inplace(&mut buffer);
 
                 // Multiply by ik_x (spectral differentiation)
                 for (idx, kx_val) in self.kx.iter().enumerate() {
@@ -286,7 +284,7 @@ impl PseudospectralDerivative {
                 }
 
                 // Inverse FFT
-                ifft.process(&mut buffer);
+                ifft.inverse_complex_inplace(&mut buffer);
 
                 // Normalize by 1/N and extract real part
                 let scale = 1.0 / nx as f64;
@@ -326,23 +324,21 @@ impl PseudospectralDerivative {
 
         let mut derivative = Array3::zeros((nx, ny, nz));
 
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(ny);
-        let ifft = planner.plan_fft_inverse(ny);
+        let fft = FFT_CACHE_1D.get_or_create(ny);
+        let ifft = Arc::clone(&fft);
 
         // Process each (x,z) slice independently
         for i in 0..nx {
             for k in 0..nz {
                 // Extract 1D slice along y-axis
-                let mut buffer: Vec<Complex64> = field
+                let mut buffer = Array1::<Complex64>::from_iter(field
                     .index_axis(Axis(0), i)
                     .index_axis(Axis(1), k)
                     .iter()
-                    .map(|&x| Complex64::new(x, 0.0))
-                    .collect();
+                    .map(|&x| Complex64::new(x, 0.0)));
 
                 // Forward FFT
-                fft.process(&mut buffer);
+                fft.forward_complex_inplace(&mut buffer);
 
                 // Multiply by ik_y
                 for (idx, ky_val) in self.ky.iter().enumerate() {
@@ -350,7 +346,7 @@ impl PseudospectralDerivative {
                 }
 
                 // Inverse FFT
-                ifft.process(&mut buffer);
+                ifft.inverse_complex_inplace(&mut buffer);
 
                 // Normalize and extract real part
                 let scale = 1.0 / ny as f64;
@@ -390,23 +386,21 @@ impl PseudospectralDerivative {
 
         let mut derivative = Array3::zeros((nx, ny, nz));
 
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(nz);
-        let ifft = planner.plan_fft_inverse(nz);
+        let fft = FFT_CACHE_1D.get_or_create(nz);
+        let ifft = Arc::clone(&fft);
 
         // Process each (x,y) slice independently
         for i in 0..nx {
             for j in 0..ny {
                 // Extract 1D slice along z-axis
-                let mut buffer: Vec<Complex64> = field
+                let mut buffer = Array1::<Complex64>::from_iter(field
                     .index_axis(Axis(0), i)
                     .index_axis(Axis(0), j)
                     .iter()
-                    .map(|&x| Complex64::new(x, 0.0))
-                    .collect();
+                    .map(|&x| Complex64::new(x, 0.0)));
 
                 // Forward FFT
-                fft.process(&mut buffer);
+                fft.forward_complex_inplace(&mut buffer);
 
                 // Multiply by ik_z
                 for (idx, kz_val) in self.kz.iter().enumerate() {
@@ -414,7 +408,7 @@ impl PseudospectralDerivative {
                 }
 
                 // Inverse FFT
-                ifft.process(&mut buffer);
+                ifft.inverse_complex_inplace(&mut buffer);
 
                 // Normalize and extract real part
                 let scale = 1.0 / nz as f64;

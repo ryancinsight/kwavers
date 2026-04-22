@@ -172,6 +172,53 @@ async fn test_wave_equation_step() {
 }
 
 #[tokio::test]
+async fn test_wave_equation_step_rejects_small_grid() {
+    let solver: WaveEquationGpu = match WaveEquationGpu::new().await {
+        Ok(s) => s,
+        Err(_) => {
+            eprintln!("GPU not available, skipping test");
+            return;
+        }
+    };
+
+    let grid = Grid::new(2, 2, 2, 0.001, 0.001, 0.001).expect("Failed to create grid");
+    let dim = (2, 2, 2);
+    let pressure = Array3::zeros(dim);
+    let velocity = Array3::zeros(dim);
+    let density = Array3::from_elem(dim, 1000.0);
+    let sound_speed = Array3::from_elem(dim, 1500.0);
+
+    let err = solver
+        .step(&pressure, &velocity, &density, &sound_speed, &grid, 1e-7)
+        .expect_err("small grids must be rejected");
+
+    assert!(format!("{err:?}").contains("grid dimensions >= 3"));
+}
+
+#[tokio::test]
+async fn test_wave_equation_step_rejects_shape_mismatch() {
+    let solver: WaveEquationGpu = match WaveEquationGpu::new().await {
+        Ok(s) => s,
+        Err(_) => {
+            eprintln!("GPU not available, skipping test");
+            return;
+        }
+    };
+
+    let grid = create_test_grid();
+    let pressure = Array3::zeros((32, 32, 32));
+    let velocity = Array3::zeros((31, 32, 32));
+    let density = Array3::from_elem((32, 32, 32), 1000.0);
+    let sound_speed = Array3::from_elem((32, 32, 32), 1500.0);
+
+    let err = solver
+        .step(&pressure, &velocity, &density, &sound_speed, &grid, 1e-7)
+        .expect_err("shape mismatch must be rejected");
+
+    assert!(format!("{err:?}").contains("matching field dimensions"));
+}
+
+#[tokio::test]
 async fn test_compute_propagation_different_sizes() {
     let kernel: AcousticFieldKernel = match AcousticFieldKernel::new().await {
         Ok(k) => k,

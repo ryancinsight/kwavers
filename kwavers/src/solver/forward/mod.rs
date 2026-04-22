@@ -4,6 +4,7 @@
 //! heat diffusion, etc.) that simulate physical phenomena from causes to effects.
 
 pub mod acoustic;
+pub mod acoustic_ivp;
 pub mod bem;
 pub mod coupled;
 pub mod elastic;

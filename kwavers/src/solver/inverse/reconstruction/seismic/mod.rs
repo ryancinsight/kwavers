@@ -17,10 +17,7 @@
 //!   (Tarantola 1984; Virieux & Operto 2009, Geophysics).
 //! - **Multi-scale frequency continuation**: Sequential low-to-high frequency inversion
 //!   to avoid local minima (Fichtner 2011, Full Seismic Waveform Modelling).
-//! - **Hessian preconditioning**: Gauss-Newton approximation ∇²L ≈ JᵀJ for
-//!   acceleration and regularization.
 //! - **Uncertainty quantification**: Ensemble or Monte Carlo sampling of the posterior.
-//! - **Simultaneous source inversion**: Source encoding for computational efficiency.
 //!
 //! 3. **Plessix (2006)**: "A review of the adjoint-state method for computing the
 //!    gradient of a functional with geophysical applications", Geophys. J. Int.

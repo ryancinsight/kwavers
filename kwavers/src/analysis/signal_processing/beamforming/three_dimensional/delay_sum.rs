@@ -285,22 +285,17 @@ impl<'a> DelaySumGPU<'a> {
         let buffer_slice = staging_buffer.slice(..);
         buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
 
-        self.device.poll(wgpu::PollType::Wait);
+        let _ = self.device.poll(wgpu::PollType::Wait);
 
         // Get data from buffer
         let data = buffer_slice.get_mapped_range();
         let result_f32: &[f32] = bytemuck::cast_slice(&data);
 
-        // Convert back to Array3
-        let mut result_volume = Array3::<f32>::zeros((vol_x, vol_y, vol_z));
-        for x in 0..vol_x {
-            for y in 0..vol_y {
-                for z in 0..vol_z {
-                    let idx = x + y * vol_x + z * vol_x * vol_y;
-                    result_volume[[x, y, z]] = result_f32[idx];
-                }
-            }
-        }
+        // Reconstruct the 3D volume directly without a zero-fill pass.
+        let result_volume = Array3::from_shape_fn((vol_x, vol_y, vol_z), |(x, y, z)| {
+            let idx = x + y * vol_x + z * vol_x * vol_y;
+            result_f32[idx]
+        });
 
         // Clean up
         staging_buffer.unmap();

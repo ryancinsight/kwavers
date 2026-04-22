@@ -26,8 +26,8 @@
 
 use crate::core::constants::SOUND_SPEED_TISSUE;
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::math::fft::fft_1d_array;
 use ndarray::{Array1, Array2};
-use rustfft::{num_complex::Complex, FftPlanner};
 use serde::{Deserialize, Serialize};
 
 /// Configuration for delay-and-sum PAM
@@ -402,11 +402,7 @@ impl DelayAndSumPAM {
             return None;
         }
 
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(n);
-        let mut complex_data: Vec<Complex<f64>> =
-            signal.iter().map(|&x| Complex::new(x, 0.0)).collect();
-        fft.process(&mut complex_data);
+        let complex_data = fft_1d_array(&Array1::from_vec(signal.to_vec()));
 
         let half = n / 2;
         let mut max_mag = 0.0f64;

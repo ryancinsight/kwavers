@@ -66,8 +66,13 @@ impl FdtdSolver {
         }
 
         if self.config.staggered_grid {
-            let div = self.compute_divergence_staggered()?;
-            Self::update_pressure_simd(&mut self.fields.p, div.view(), &self.rho_c_squared, dt);
+            self.compute_divergence_staggered()?;
+            Self::update_pressure_simd(
+                &mut self.fields.p,
+                self.divergence_scratch.view(),
+                &self.rho_c_squared,
+                dt,
+            );
         } else {
             // Central-difference path: fill pre-allocated scratch buffers in-place,
             // eliminating the O(N³) per-step `&dvx + &dvy + &dvz` sum allocation.
@@ -255,7 +260,15 @@ impl FdtdSolver {
     /// `div(v) = ∂ux/∂x + ∂uy/∂y + ∂uz/∂z`
     ///
     /// CPML gradient corrections are applied per-direction when enabled.
-    pub(crate) fn compute_divergence_staggered(&mut self) -> KwaversResult<Array3<f64>> {
+    /// Compute staggered-grid divergence into the reusable scratch buffer.
+    ///
+    /// Theorem: for a fixed grid and velocity field, writing the staggered
+    /// backward-difference stencil into `divergence_scratch` is equivalent to
+    /// materializing a temporary divergence array and summing it into the
+    /// pressure update. Proof sketch: the function performs the same linear
+    /// finite-difference operators in the same evaluation order, then stores
+    /// the result in the solver-owned scratch buffer instead of cloning it.
+    pub(crate) fn compute_divergence_staggered(&mut self) -> KwaversResult<()> {
         let mut dvx = self
             .staggered_operator
             .apply_backward_x(self.fields.ux.view())?;
@@ -279,7 +292,7 @@ impl FdtdSolver {
             .and(&dvx)
             .and(&dvy)
             .for_each(|d, &dx, &dy| *d += dx + dy);
-        Ok(self.divergence_scratch.clone())
+        Ok(())
     }
 }
 
@@ -421,5 +434,64 @@ mod tests {
         // p_scratch must be non-trivially non-zero (solver actually ran)
         let p_max = p_scratch.iter().cloned().fold(f64::NEG_INFINITY, f64::max).abs();
         assert!(p_max > 0.0, "Pressure must be non-zero after 10 steps");
+    }
+
+    /// The staggered-grid divergence path must match the explicit linear sum
+    /// while writing into the solver-owned scratch buffer.
+    #[test]
+    fn test_staggered_divergence_uses_scratch_buffer() {
+        let n = 12usize;
+        let dx = 1e-3_f64;
+        let c0 = 1500.0_f64;
+        let rho0 = 1000.0_f64;
+        let dt = 0.3 * dx / c0;
+
+        let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
+        let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+
+        let config = FdtdConfig {
+            enable_nonlinear: false,
+            staggered_grid: true,
+            spatial_order: 2,
+            dt,
+            nt: 4,
+            cfl_factor: 0.3,
+            ..Default::default()
+        };
+
+        let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
+
+        for i in 0..n {
+            for j in 0..n {
+                for k in 0..n {
+                    solver.fields.ux[[i, j, k]] = (i as f64) * 1e-3;
+                    solver.fields.uy[[i, j, k]] = (j as f64) * 2e-3;
+                    solver.fields.uz[[i, j, k]] = (k as f64) * 3e-3;
+                }
+            }
+        }
+
+        solver.compute_divergence_staggered().unwrap();
+
+        let dvx = solver
+            .staggered_operator
+            .apply_backward_x(solver.fields.ux.view())
+            .unwrap();
+        let dvy = solver
+            .staggered_operator
+            .apply_backward_y(solver.fields.uy.view())
+            .unwrap();
+        let dvz = solver
+            .staggered_operator
+            .apply_backward_z(solver.fields.uz.view())
+            .unwrap();
+
+        let mut expected = dvz.clone();
+        Zip::from(&mut expected)
+            .and(&dvx)
+            .and(&dvy)
+            .for_each(|d, &dx_v, &dy_v| *d += dx_v + dy_v);
+
+        assert_eq!(solver.divergence_scratch, expected);
     }
 }

@@ -19,6 +19,7 @@
 //! - PINN methods: Neural network approximation with physics-informed loss
 
 pub mod elastography;
+pub mod acoustic_fwi;
 pub mod pinn;
 pub mod reconstruction;
 pub mod seismic;

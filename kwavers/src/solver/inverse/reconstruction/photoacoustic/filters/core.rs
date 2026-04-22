@@ -6,9 +6,9 @@
 use super::spatial;
 use crate::core::error::KwaversResult;
 use crate::domain::signal::{analytic, window_value, WindowType};
+use crate::math::fft::{fft_1d_array, ifft_1d_array};
 use crate::solver::reconstruction::FilterType;
 use ndarray::{Array1, Array2, Array3};
-use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
 use crate::solver::reconstruction::photoacoustic::config::PhotoacousticConfig;
@@ -280,31 +280,14 @@ impl Filters {
         signal: Array1<f64>,
         filter: &Array1<f64>,
     ) -> KwaversResult<Array1<f64>> {
-        let n = signal.len();
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(n);
-        let ifft = planner.plan_fft_inverse(n);
-
-        // Convert to complex
-        let mut complex_signal: Vec<Complex<f64>> =
-            signal.iter().map(|&x| Complex::new(x, 0.0)).collect();
-
-        // Forward FFT
-        fft.process(&mut complex_signal);
+        let mut complex_signal = fft_1d_array(&signal);
 
         // Apply filter
         for (i, val) in complex_signal.iter_mut().enumerate() {
             *val *= filter[i];
         }
 
-        // Inverse FFT
-        ifft.process(&mut complex_signal);
-
-        // Extract real part and normalize
-        let norm_factor = 1.0 / n as f64;
-        Ok(Array1::from_vec(
-            complex_signal.iter().map(|c| c.re * norm_factor).collect(),
-        ))
+        Ok(ifft_1d_array(&complex_signal))
     }
 
     /// Apply reconstruction filter for regularization and denoising

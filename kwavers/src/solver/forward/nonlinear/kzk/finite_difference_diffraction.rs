@@ -30,7 +30,7 @@ impl std::fmt::Debug for DiffractionOperator {
                 "ky2",
                 &format!("Array2<f64> {}x{}", self.ky2.nrows(), self.ky2.ncols()),
             )
-            .field("fft_planner", &"<FftPlanner>")
+            .field("fft_plan", &"<Apollo FFT plan>")
             .field("config", &self.config)
             .finish()
     }

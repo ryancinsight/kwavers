@@ -73,6 +73,9 @@ pub mod simulation;
 /// Analysis tools: signal processing, beamforming, validation, ML, performance
 pub mod analysis;
 
+/// GPU profiling and allocation tracking
+pub mod profiling;
+
 /// Clinical workflows: imaging, therapy planning, safety, regulatory
 pub mod clinical;
 

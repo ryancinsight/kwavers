@@ -5,8 +5,21 @@ Provides common grid, medium, source, and sensor configurations
 used across all parity and validation tests.
 """
 
+from pathlib import Path
+import sys
+
 import numpy as np
 import pytest
+
+ROOT = Path(__file__).resolve().parent
+for path in (
+    ROOT / "python",
+    ROOT / "examples",
+    ROOT.parent / "external" / "k-wave-python",
+):
+    path_str = str(path)
+    if path_str not in sys.path:
+        sys.path.insert(0, path_str)
 
 import pykwavers as kw
 

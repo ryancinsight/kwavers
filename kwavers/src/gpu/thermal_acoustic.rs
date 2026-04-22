@@ -169,6 +169,9 @@ impl GpuThermalAcousticConfig {
 /// GPU buffers for thermal-acoustic coupling
 #[derive(Debug)]
 pub struct GpuThermalAcousticBuffers {
+    /// Grid dimensions used for ndarray reconstruction.
+    pub dims: (usize, usize, usize),
+
     /// Pressure current and previous (storage buffers)
     pub pressure_curr: wgpu::Buffer,
     pub pressure_prev: wgpu::Buffer,
@@ -207,6 +210,7 @@ impl GpuThermalAcousticBuffers {
 
         let grid_size = (config.nx as u64) * (config.ny as u64) * (config.nz as u64);
         let buffer_size = grid_size * mem::size_of::<f32>() as u64;
+        let dims = (config.nx as usize, config.ny as usize, config.nz as usize);
 
         // Create storage buffers (f32 for GPU compatibility)
         let create_storage_buffer = |label: &str| {
@@ -251,6 +255,7 @@ impl GpuThermalAcousticBuffers {
         queue.write_buffer(&config_buffer, 0, bytemuck::bytes_of(config));
 
         Ok(Self {
+            dims,
             pressure_curr,
             pressure_prev,
             velocity_x_curr,
@@ -293,13 +298,12 @@ impl GpuThermalAcousticBuffers {
             KwaversError::InvalidInput("Temperature field must be contiguous".to_string())
         })?;
 
-        let buffer_size = (self.grid_size * mem::size_of::<f32>() as u64) as usize;
-
-        if p_data.len() * mem::size_of::<f32>() != buffer_size
-            || vx_data.len() * mem::size_of::<f32>() != buffer_size
-            || vy_data.len() * mem::size_of::<f32>() != buffer_size
-            || vz_data.len() * mem::size_of::<f32>() != buffer_size
-            || t_data.len() * mem::size_of::<f32>() != buffer_size
+        let expected = self.dims;
+        if pressure.dim() != expected
+            || velocity_x.dim() != expected
+            || velocity_y.dim() != expected
+            || velocity_z.dim() != expected
+            || temperature.dim() != expected
         {
             return Err(KwaversError::InvalidInput(
                 "Field dimensions mismatch".to_string(),
@@ -315,15 +319,57 @@ impl GpuThermalAcousticBuffers {
         Ok(())
     }
 
-    /// Download fields from GPU
+    /// Download the current pressure, `velocity_x`, and temperature fields from GPU.
+    ///
+    /// The readback path reuses one staging buffer sequentially to avoid
+    /// allocating three independent GPU-to-CPU transfer buffers.
     pub async fn download_fields(
         &self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) -> KwaversResult<(Array3<f32>, Array3<f32>, Array3<f32>)> {
+        async fn read_buffer_to_array3(
+            device: &wgpu::Device,
+            queue: &wgpu::Queue,
+            source: &wgpu::Buffer,
+            staging: &wgpu::Buffer,
+            dims: (usize, usize, usize),
+            buffer_size: u64,
+        ) -> KwaversResult<Array3<f32>> {
+            let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Download Encoder"),
+            });
+
+            encoder.copy_buffer_to_buffer(source, 0, staging, 0, buffer_size);
+            queue.submit(std::iter::once(encoder.finish()));
+
+            let slice = staging.slice(..buffer_size);
+            let (tx, rx) = flume::bounded(1);
+
+            slice.map_async(wgpu::MapMode::Read, move |result| {
+                let _ = tx.send(result);
+            });
+
+            let _ = device.poll(wgpu::PollType::Wait);
+            let result = rx
+                .recv_async()
+                .await
+                .map_err(|e| KwaversError::GpuError(format!("Channel error: {}", e)))?;
+            result?;
+
+            let data = slice.get_mapped_range();
+            let float_data: &[f32] = bytemuck::cast_slice(&data);
+            let output = Array3::from_shape_vec(dims, float_data.to_vec())
+                .map_err(|e| KwaversError::GpuError(format!("Array creation error: {}", e)))?;
+
+            drop(data);
+            staging.unmap();
+
+            Ok(output)
+        }
+
         let buffer_size = self.grid_size * mem::size_of::<f32>() as u64;
 
-        // Create staging buffer
         let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Staging Buffer"),
             size: buffer_size,
@@ -331,41 +377,33 @@ impl GpuThermalAcousticBuffers {
             mapped_at_creation: false,
         });
 
-        // Copy pressure to staging
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Download Encoder"),
-        });
-
-        encoder.copy_buffer_to_buffer(&self.pressure_curr, 0, &staging_buffer, 0, buffer_size);
-        queue.submit(std::iter::once(encoder.finish()));
-
-        // Map and read
-        let buffer_slice = staging_buffer.slice(..);
-        let (tx, rx) = flume::bounded(1);
-
-        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
-            let _ = tx.send(result);
-        });
-
-        device.poll(wgpu::PollType::Wait);
-        let result = rx
-            .recv_async()
-            .await
-            .map_err(|e| KwaversError::GpuError(format!("Channel error: {}", e)))?;
-        result?;
-
-        let data = buffer_slice.get_mapped_range();
-        let float_data: &[f32] = bytemuck::cast_slice(&data);
-
-        // Convert to ndarray (simplified - returns pressure, zeros for velocity and temperature)
-        // KNOWN_LIMITATION: The current GPU shader only writes pressure output.
-        // Velocity and temperature fields require additional GPU output buffers
-        // and are returned as empty placeholders until multi-buffer readback is implemented.
-        let pressure = ndarray::Array3::from_shape_vec((64, 64, 64), float_data.to_vec())
-            .map_err(|e| KwaversError::GpuError(format!("Array creation error: {}", e)))?;
-
-        let velocity_x = ndarray::Array3::from_elem((64, 64, 64), f32::NAN);
-        let temperature = ndarray::Array3::from_elem((64, 64, 64), f32::NAN);
+        let pressure = read_buffer_to_array3(
+            device,
+            queue,
+            &self.pressure_curr,
+            &staging_buffer,
+            self.dims,
+            buffer_size,
+        )
+        .await?;
+        let velocity_x = read_buffer_to_array3(
+            device,
+            queue,
+            &self.velocity_x_curr,
+            &staging_buffer,
+            self.dims,
+            buffer_size,
+        )
+        .await?;
+        let temperature = read_buffer_to_array3(
+            device,
+            queue,
+            &self.temperature_curr,
+            &staging_buffer,
+            self.dims,
+            buffer_size,
+        )
+        .await?;
 
         Ok((pressure, velocity_x, temperature))
     }

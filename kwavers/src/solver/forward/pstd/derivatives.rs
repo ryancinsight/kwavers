@@ -60,9 +60,8 @@
 //! - Oran & Boris (2001). Numerical Simulation of Reactive Flow
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::math::fft::{Complex64, Fft1d, FFT_CACHE_1D};
 use ndarray::{Array1, Array3, ArrayView3};
-use num_complex::Complex64;
-use rustfft::{Fft, FftPlanner};
 use std::sync::Arc;
 
 /// Spectral derivative operator for 3D fields
@@ -76,7 +75,7 @@ use std::sync::Arc;
 /// # Performance
 ///
 /// FFT plans and i*k*dealiasing multipliers are pre-computed at construction,
-/// eliminating per-call FftPlanner overhead and per-element Complex64 construction.
+/// eliminating per-call plan creation overhead and per-element Complex64 construction.
 pub struct SpectralDerivativeOperator {
     /// Grid dimensions
     nx: usize,
@@ -84,12 +83,12 @@ pub struct SpectralDerivativeOperator {
     nz: usize,
 
     /// Cached FFT plans (Arc allows sharing across threads)
-    fft_x: Arc<dyn Fft<f64>>,
-    ifft_x: Arc<dyn Fft<f64>>,
-    fft_y: Arc<dyn Fft<f64>>,
-    ifft_y: Arc<dyn Fft<f64>>,
-    fft_z: Arc<dyn Fft<f64>>,
-    ifft_z: Arc<dyn Fft<f64>>,
+    fft_x: Arc<Fft1d>,
+    ifft_x: Arc<Fft1d>,
+    fft_y: Arc<Fft1d>,
+    ifft_y: Arc<Fft1d>,
+    fft_z: Arc<Fft1d>,
+    ifft_z: Arc<Fft1d>,
 
     /// Pre-computed i*k*dealiasing multipliers (avoids per-element construction)
     ikd_x: Vec<Complex64>,
@@ -114,18 +113,16 @@ impl std::fmt::Debug for SpectralDerivativeOperator {
 
 impl Clone for SpectralDerivativeOperator {
     fn clone(&self) -> Self {
-        // Re-create FFT plans via planner (Arc<dyn Fft> isn't Clone)
-        let mut planner = FftPlanner::new();
         Self {
             nx: self.nx,
             ny: self.ny,
             nz: self.nz,
-            fft_x: planner.plan_fft_forward(self.nx),
-            ifft_x: planner.plan_fft_inverse(self.nx),
-            fft_y: planner.plan_fft_forward(self.ny),
-            ifft_y: planner.plan_fft_inverse(self.ny),
-            fft_z: planner.plan_fft_forward(self.nz),
-            ifft_z: planner.plan_fft_inverse(self.nz),
+            fft_x: Arc::clone(&self.fft_x),
+            ifft_x: Arc::clone(&self.ifft_x),
+            fft_y: Arc::clone(&self.fft_y),
+            ifft_y: Arc::clone(&self.ifft_y),
+            fft_z: Arc::clone(&self.fft_z),
+            ifft_z: Arc::clone(&self.ifft_z),
             ikd_x: self.ikd_x.clone(),
             ikd_y: self.ikd_y.clone(),
             ikd_z: self.ikd_z.clone(),
@@ -179,13 +176,12 @@ impl SpectralDerivativeOperator {
             .collect();
 
         // Cache FFT plans (most expensive to create, reused on every call)
-        let mut planner = FftPlanner::new();
-        let fft_x = planner.plan_fft_forward(nx);
-        let ifft_x = planner.plan_fft_inverse(nx);
-        let fft_y = planner.plan_fft_forward(ny);
-        let ifft_y = planner.plan_fft_inverse(ny);
-        let fft_z = planner.plan_fft_forward(nz);
-        let ifft_z = planner.plan_fft_inverse(nz);
+        let fft_x = FFT_CACHE_1D.get_or_create(nx);
+        let ifft_x = Arc::clone(&fft_x);
+        let fft_y = FFT_CACHE_1D.get_or_create(ny);
+        let ifft_y = Arc::clone(&fft_y);
+        let fft_z = FFT_CACHE_1D.get_or_create(nz);
+        let ifft_z = Arc::clone(&fft_z);
 
         Self {
             nx,
@@ -330,7 +326,7 @@ impl SpectralDerivativeOperator {
         field: &ArrayView3<f64>,
         derivative: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let mut line = vec![Complex64::default(); self.nx];
+        let mut line = Array1::<Complex64>::from_elem(self.nx, Complex64::default());
         let inv_n = self.inv_nx;
 
         for j in 0..self.ny {
@@ -341,7 +337,7 @@ impl SpectralDerivativeOperator {
                 }
 
                 // Forward FFT (uses cached plan)
-                self.fft_x.process(&mut line);
+                self.fft_x.forward_complex_inplace(&mut line);
 
                 // Multiply by pre-computed i*k*dealiasing
                 for (i, &ikd) in self.ikd_x.iter().enumerate() {
@@ -349,7 +345,7 @@ impl SpectralDerivativeOperator {
                 }
 
                 // Inverse FFT (uses cached plan)
-                self.ifft_x.process(&mut line);
+                self.ifft_x.inverse_complex_inplace(&mut line);
 
                 // Store result with cached normalization
                 for i in 0..self.nx {
@@ -367,7 +363,7 @@ impl SpectralDerivativeOperator {
         field: &ArrayView3<f64>,
         derivative: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let mut line = vec![Complex64::default(); self.ny];
+        let mut line = Array1::<Complex64>::from_elem(self.ny, Complex64::default());
         let inv_n = self.inv_ny;
 
         for i in 0..self.nx {
@@ -376,13 +372,13 @@ impl SpectralDerivativeOperator {
                     line[j] = Complex64::new(field[[i, j, l]], 0.0);
                 }
 
-                self.fft_y.process(&mut line);
+                self.fft_y.forward_complex_inplace(&mut line);
 
                 for (j, &ikd) in self.ikd_y.iter().enumerate() {
                     line[j] *= ikd;
                 }
 
-                self.ifft_y.process(&mut line);
+                self.ifft_y.inverse_complex_inplace(&mut line);
 
                 for j in 0..self.ny {
                     derivative[[i, j, l]] = line[j].re * inv_n;
@@ -399,7 +395,7 @@ impl SpectralDerivativeOperator {
         field: &ArrayView3<f64>,
         derivative: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let mut line = vec![Complex64::default(); self.nz];
+        let mut line = Array1::<Complex64>::from_elem(self.nz, Complex64::default());
         let inv_n = self.inv_nz;
 
         for i in 0..self.nx {
@@ -408,13 +404,13 @@ impl SpectralDerivativeOperator {
                     line[l] = Complex64::new(field[[i, j, l]], 0.0);
                 }
 
-                self.fft_z.process(&mut line);
+                self.fft_z.forward_complex_inplace(&mut line);
 
                 for (l, &ikd) in self.ikd_z.iter().enumerate() {
                     line[l] *= ikd;
                 }
 
-                self.ifft_z.process(&mut line);
+                self.ifft_z.inverse_complex_inplace(&mut line);
 
                 for l in 0..self.nz {
                     derivative[[i, j, l]] = line[l].re * inv_n;

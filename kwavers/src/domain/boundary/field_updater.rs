@@ -142,7 +142,7 @@ impl<B: BoundaryCondition> FieldUpdater<B> {
     /// For k-space and spectral solvers.
     pub fn apply_to_frequency_field(
         &mut self,
-        field: &mut Array3<rustfft::num_complex::Complex<f64>>,
+        field: &mut Array3<crate::math::fft::Complex64>,
         grid: &dyn GridTopology,
         time_step: usize,
         dt: f64,

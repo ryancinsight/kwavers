@@ -46,8 +46,10 @@
 //!   doi:10.1117/1.3360308
 //! - Liu, Q.-H. (1998). Microwave Opt. Technol. Lett. 15(3), 158–165.
 
+use crate::core::error::KwaversResult;
 use crate::math::fft::{get_fft_for_grid, Complex64, ProcessorFft3d};
 use crate::math::fft::shift_operators::{generate_kappa, generate_shift_1d};
+use crate::solver::forward::acoustic_ivp::spectral_velocity_scale_from_kappa;
 use ndarray::{Array1, Array3, Zip};
 use std::f64::consts::PI;
 use std::sync::Arc;
@@ -163,6 +165,74 @@ impl KSpaceFdtdOperators {
             grad_z: Array3::zeros(shape),
             divergence: Array3::zeros(shape),
         }
+    }
+
+    /// Initialize the exact staggered-grid velocity state for a given initial pressure.
+    ///
+    /// # Theorem
+    ///
+    /// When the medium is homogeneous and no explicit initial velocity is
+    /// supplied, the compatible leapfrog start is obtained by applying the
+    /// k-space pressure→velocity operator at `t = -Δt/2`.
+    ///
+    /// This method reuses the existing FFT plan and spectral shift operators so
+    /// the IVP startup does not allocate temporary grids.
+    pub fn initialize_ivp_velocity(
+        &mut self,
+        p0: &Array3<f64>,
+        dt: f64,
+        rho0_ref: f64,
+        ux: &mut Array3<f64>,
+        uy: &mut Array3<f64>,
+        uz: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        let sin_scale = spectral_velocity_scale_from_kappa(&self.kappa, dt, rho0_ref)?;
+
+        self.fft.forward_into(p0, &mut self.field_k);
+
+        {
+            let ddx = self.ddx_k_shift_pos.view();
+            let sin_s = sin_scale.view();
+            let p_k = self.field_k.view();
+            Zip::indexed(self.grad_x_k.view_mut())
+                .and(sin_s)
+                .and(p_k)
+                .for_each(|(i, _j, _k), gx, &ss, &p| {
+                    *gx = ddx[i] * ss * p;
+                });
+        }
+        self.fft
+            .inverse_into(&self.grad_x_k, ux, &mut self.scratch_k);
+
+        {
+            let ddy = self.ddy_k_shift_pos.view();
+            let sin_s = sin_scale.view();
+            let p_k = self.field_k.view();
+            Zip::indexed(self.grad_y_k.view_mut())
+                .and(sin_s)
+                .and(p_k)
+                .for_each(|(_i, j, _k), gy, &ss, &p| {
+                    *gy = ddy[j] * ss * p;
+                });
+        }
+        self.fft
+            .inverse_into(&self.grad_y_k, uy, &mut self.scratch_k);
+
+        {
+            let ddz = self.ddz_k_shift_pos.view();
+            let sin_s = sin_scale.view();
+            let p_k = self.field_k.view();
+            Zip::indexed(self.grad_z_k.view_mut())
+                .and(sin_s)
+                .and(p_k)
+                .for_each(|(_i, _j, k_idx), gz, &ss, &p| {
+                    *gz = ddz[k_idx] * ss * p;
+                });
+        }
+        self.fft
+            .inverse_into(&self.grad_z_k, uz, &mut self.scratch_k);
+
+        Ok(())
     }
 
     /// Compute spectral gradients of `field` in all three directions.

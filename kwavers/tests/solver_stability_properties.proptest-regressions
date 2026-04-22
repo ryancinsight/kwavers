@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc bae70b53fe332d7a58035d5afab03b8b02191ed42c68e1f89e7a93368c17fe28 # shrinks to valid_cfl = 0.577150025418744

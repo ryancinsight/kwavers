@@ -1,7 +1,7 @@
 //! Tests for harmonic detection in elastography
 
 use super::*;
-use rustfft::num_complex::Complex;
+use num_complex::Complex64;
 
 #[test]
 fn test_harmonic_detection_config() {
@@ -58,8 +58,8 @@ fn test_snr_computation() {
     let detector = HarmonicDetector::new(HarmonicDetectionConfig::default());
 
     // Create test spectrum with signal peak
-    let mut spectrum = vec![Complex::new(0.1, 0.0); 100];
-    spectrum[50] = Complex::new(1.0, 0.0); // Strong signal
+    let mut spectrum = vec![Complex64::new(0.1, 0.0); 100];
+    spectrum[50] = Complex64::new(1.0, 0.0); // Strong signal
 
     let snr = detector.compute_snr(&spectrum, 50);
     assert!(snr > 0.0); // Should have positive SNR

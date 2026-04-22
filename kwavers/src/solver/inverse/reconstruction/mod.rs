@@ -235,45 +235,20 @@ fn apply_reconstruction_filter(
 
 /// Ram-Lak (ramp) filter
 fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
-    use rustfft::{num_complex::Complex, FftPlanner};
-
-    let mut planner = FftPlanner::new();
     let n = data.dim().1;
-    let fft = planner.plan_fft_forward(n);
-    let ifft = planner.plan_fft_inverse(n);
-
     let mut filtered = Array2::zeros(data.dim());
 
     for sensor_idx in 0..data.dim().0 {
-        // Convert to complex
-        let mut complex_data: Vec<Complex<f64>> = data
-            .row(sensor_idx)
-            .iter()
-            .map(|&x| Complex::new(x, 0.0))
-            .collect();
-
-        // Forward FFT
-        fft.process(&mut complex_data);
-
-        // Apply Ram-Lak filter in frequency domain
-        let df = sampling_freq / n as f64;
-        for (i, val) in complex_data.iter_mut().enumerate() {
-            let freq = i as f64 * df;
-            let filter_value = if i <= n / 2 {
-                freq / (sampling_freq / 2.0)
-            } else {
-                (n - i) as f64 * df / (sampling_freq / 2.0)
-            };
-            *val *= filter_value;
-        }
-
-        // Inverse FFT
-        ifft.process(&mut complex_data);
-
-        // Store real part
-        for (i, val) in complex_data.iter().enumerate() {
-            filtered[[sensor_idx, i]] = val.re / n as f64;
-        }
+        let trace = data.row(sensor_idx).to_owned();
+        let filtered_trace =
+            crate::math::fft::apply_spectral_response_1d(&trace, sampling_freq, move |i, freq, nyquist| {
+                if i <= n / 2 {
+                    freq / nyquist
+                } else {
+                    (n - i) as f64 * (sampling_freq / n as f64) / nyquist
+                }
+            });
+        filtered.row_mut(sensor_idx).assign(&filtered_trace);
     }
 
     Ok(filtered)
@@ -291,48 +266,21 @@ fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult
 /// - Kak & Slaney (1988): "Principles of Computerized Tomographic Imaging", Chapter 3
 /// - Shepp & Logan (1974): "The Fourier reconstruction of a head section"
 fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
-    use num_complex::Complex;
-    use rustfft::FftPlanner;
     use std::f64::consts::PI;
-
-    let mut planner = FftPlanner::new();
-    let n = data.dim().1;
-    let fft = planner.plan_fft_forward(n);
-    let ifft = planner.plan_fft_inverse(n);
-    let f_max = sampling_freq / 2.0;
 
     let mut filtered = Array2::zeros(data.dim());
 
     for sensor_idx in 0..data.dim().0 {
-        // Convert to complex
-        let mut complex_data: Vec<Complex<f64>> = data
-            .row(sensor_idx)
-            .iter()
-            .map(|&x| Complex::new(x, 0.0))
-            .collect();
-
-        // Forward FFT
-        fft.process(&mut complex_data);
-
-        // Apply Shepp-Logan filter: H(f) = |f| * (2/π) * sin(πf/(2*f_max))
-        let df = sampling_freq / n as f64;
-        for (i, val) in complex_data.iter_mut().enumerate() {
-            let freq = if i <= n / 2 {
-                i as f64 * df
-            } else {
-                (n - i) as f64 * df
-            };
-            let filter_value = freq.abs() * (2.0 / PI) * (PI * freq / (2.0 * f_max)).sin();
-            *val *= filter_value;
-        }
-
-        // Inverse FFT
-        ifft.process(&mut complex_data);
-
-        // Store real part (normalized)
-        for (i, val) in complex_data.iter().enumerate() {
-            filtered[[sensor_idx, i]] = val.re / n as f64;
-        }
+        let trace = data.row(sensor_idx).to_owned();
+        let filtered_trace = crate::math::fft::apply_spectral_response_1d(
+            &trace,
+            sampling_freq,
+            move |_, freq, nyquist| {
+                let f_max = nyquist;
+                freq.abs() * (2.0 / PI) * (PI * freq / (2.0 * f_max)).sin()
+            },
+        );
+        filtered.row_mut(sensor_idx).assign(&filtered_trace);
     }
 
     Ok(filtered)
@@ -349,48 +297,21 @@ fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversRe
 /// # References
 /// - Kak & Slaney (1988): "Principles of Computerized Tomographic Imaging", Chapter 3
 fn apply_cosine_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
-    use num_complex::Complex;
-    use rustfft::FftPlanner;
     use std::f64::consts::PI;
-
-    let mut planner = FftPlanner::new();
-    let n = data.dim().1;
-    let fft = planner.plan_fft_forward(n);
-    let ifft = planner.plan_fft_inverse(n);
-    let f_max = sampling_freq / 2.0;
 
     let mut filtered = Array2::zeros(data.dim());
 
     for sensor_idx in 0..data.dim().0 {
-        // Convert to complex
-        let mut complex_data: Vec<Complex<f64>> = data
-            .row(sensor_idx)
-            .iter()
-            .map(|&x| Complex::new(x, 0.0))
-            .collect();
-
-        // Forward FFT
-        fft.process(&mut complex_data);
-
-        // Apply cosine filter: H(f) = |f| * cos(πf/(2*f_max))
-        let df = sampling_freq / n as f64;
-        for (i, val) in complex_data.iter_mut().enumerate() {
-            let freq = if i <= n / 2 {
-                i as f64 * df
-            } else {
-                (n - i) as f64 * df
-            };
-            let filter_value = freq.abs() * (PI * freq / (2.0 * f_max)).cos();
-            *val *= filter_value;
-        }
-
-        // Inverse FFT
-        ifft.process(&mut complex_data);
-
-        // Store real part (normalized)
-        for (i, val) in complex_data.iter().enumerate() {
-            filtered[[sensor_idx, i]] = val.re / n as f64;
-        }
+        let trace = data.row(sensor_idx).to_owned();
+        let filtered_trace = crate::math::fft::apply_spectral_response_1d(
+            &trace,
+            sampling_freq,
+            move |_, freq, nyquist| {
+                let f_max = nyquist;
+                freq.abs() * (PI * freq / (2.0 * f_max)).cos()
+            },
+        );
+        filtered.row_mut(sensor_idx).assign(&filtered_trace);
     }
 
     Ok(filtered)

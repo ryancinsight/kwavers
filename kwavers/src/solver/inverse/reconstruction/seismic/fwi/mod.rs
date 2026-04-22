@@ -9,14 +9,13 @@ pub mod optimization;
 pub mod regularization;
 pub mod wavefield;
 
-use self::gradient::GradientComputer;
 use self::optimization::{ConjugateGradient, LineSearch};
 use self::regularization::Regularizer;
 use self::wavefield::WavefieldModeler;
 
 use super::config::SeismicImagingConfig;
-use super::misfit::{MisfitFunction, MisfitType};
 use crate::core::error::KwaversResult;
+use crate::solver::inverse::acoustic_fwi::{l2_objective, l2_residual};
 use ndarray::{Array2, Array3};
 
 /// Full Waveform Inversion (FWI) reconstructor
@@ -25,8 +24,6 @@ pub struct FullWaveformInversion {
     config: SeismicImagingConfig,
     /// Current velocity model
     velocity_model: Array3<f64>,
-    /// Gradient computer
-    gradient_computer: GradientComputer,
     /// Optimizer
     optimizer: ConjugateGradient,
     /// Line search
@@ -36,8 +33,6 @@ pub struct FullWaveformInversion {
     regularizer: Regularizer,
     /// Wavefield modeler
     wavefield_modeler: WavefieldModeler,
-    /// Misfit function
-    misfit_function: MisfitFunction,
 }
 
 impl FullWaveformInversion {
@@ -47,12 +42,10 @@ impl FullWaveformInversion {
         Self {
             config,
             velocity_model: Array3::zeros(shape),
-            gradient_computer: GradientComputer::new(),
             optimizer: ConjugateGradient::new(),
             line_search: LineSearch::new(),
             regularizer: Regularizer::new(),
             wavefield_modeler: WavefieldModeler::new(),
-            misfit_function: MisfitFunction::new(MisfitType::L2Norm),
         }
     }
 
@@ -61,19 +54,14 @@ impl FullWaveformInversion {
         // 1. Forward modeling
         let synthetic_data = self.wavefield_modeler.forward_model(&self.velocity_model)?;
 
-        // 2. Compute residual
-        let residual = observed_data - &synthetic_data;
+        // 2. Compute residual and objective from the same data pair
+        let residual = self.compute_adjoint_source(observed_data, &synthetic_data)?;
+        let current_objective = self.compute_data_objective(observed_data, &synthetic_data)?;
 
-        // 3. Compute gradient via adjoint method
-        let adjoint_source = self.misfit_function.adjoint_source(&residual);
-        let adjoint_wavefield = self.wavefield_modeler.adjoint_model(&adjoint_source)?;
-        let forward_wavefield = self.wavefield_modeler.get_forward_wavefield()?;
-
-        let mut gradient = self.gradient_computer.compute_adjoint_gradient(
-            &forward_wavefield,
-            &adjoint_wavefield,
-            self.config.dt,
-        );
+        // 3. Compute the exact discrete gradient via the adjoint method.
+        let mut gradient = self
+            .wavefield_modeler
+            .adjoint_model(&self.velocity_model, &residual)?;
 
         // 4. Apply regularization
         self.regularizer
@@ -85,9 +73,6 @@ impl FullWaveformInversion {
         // 6. Line search for step size using Armijo-Wolfe conditions
         // Wolfe conditions ensure sufficient decrease and curvature conditions
         // Reference: Nocedal & Wright (2006) "Numerical Optimization", Chapter 3
-        let velocity_model_copy = self.velocity_model.clone();
-        let current_objective = self.compute_objective(&velocity_model_copy, observed_data)?;
-
         // Implement backtracking line search with Armijo condition
         let mut step_size = 1.0;
         let c1 = 1e-4; // Armijo constant
@@ -142,6 +127,31 @@ impl FullWaveformInversion {
 }
 
 impl FullWaveformInversion {
+    /// Compute the discrete L2 objective for a pair of data matrices.
+    ///
+    /// ## Theorem
+    /// For `J = (dt / 2) ||d_syn - d_obs||²`, the objective is non-negative
+    /// and vanishes if and only if the traces match pointwise.
+    fn compute_data_objective(
+        &self,
+        observed_data: &Array2<f64>,
+        synthetic_data: &Array2<f64>,
+    ) -> KwaversResult<f64> {
+        l2_objective(self.config.dt, observed_data, synthetic_data)
+    }
+
+    /// Compute the discrete L2 adjoint source.
+    ///
+    /// This delegates to the shared acoustic adjoint-state core so the
+    /// reconstruction and seismic FWI paths use the same residual convention.
+    fn compute_adjoint_source(
+        &self,
+        observed_data: &Array2<f64>,
+        synthetic_data: &Array2<f64>,
+    ) -> KwaversResult<Array2<f64>> {
+        l2_residual(observed_data, synthetic_data)
+    }
+
     /// Compute objective function value (L2 misfit)
     fn compute_objective(
         &mut self,
@@ -152,8 +162,7 @@ impl FullWaveformInversion {
         let modeled_data = self.wavefield_modeler.forward_model(model)?;
 
         // Compute L2 norm of data misfit
-        let misfit = &modeled_data - observed_data;
-        Ok(misfit.mapv(|x| x * x).sum() * 0.5)
+        self.compute_data_objective(observed_data, &modeled_data)
     }
 
     /// Apply Butterworth bandpass filter to data
@@ -172,69 +181,55 @@ impl FullWaveformInversion {
         f_min: f64,
         f_max: f64,
     ) -> KwaversResult<Array2<f64>> {
-        use rustfft::{num_complex::Complex, FftPlanner};
+        if !(f_min.is_finite() && f_max.is_finite()) || f_min < 0.0 || f_max <= f_min {
+            return Err(crate::core::error::KwaversError::Validation(
+                crate::core::error::ValidationError::ConstraintViolation {
+                    message: format!("Invalid frequency band: [{f_min}, {f_max}]"),
+                },
+            ));
+        }
 
         let shape = data.shape();
         let n_traces = shape[0];
-        let n_samples = shape[1];
 
-        // Assume sampling parameters (could be made configurable)
-        let dt = 0.004; // 4ms sampling interval (250 Hz)
-        let nyquist = 0.5 / dt; // Nyquist frequency
+        let sampling_frequency = self.config.base_config.sampling_frequency;
+        if sampling_frequency <= 0.0 || !sampling_frequency.is_finite() {
+            return Err(crate::core::error::KwaversError::Validation(
+                crate::core::error::ValidationError::ConstraintViolation {
+                    message: "Sampling frequency must be positive and finite".to_string(),
+                },
+            ));
+        }
 
         let mut result = data.clone();
 
-        // Process each trace independently
-        let mut planner = FftPlanner::new();
-
         for trace_idx in 0..n_traces {
-            // Extract trace
-            let trace: Vec<f64> = (0..n_samples).map(|i| data[[trace_idx, i]]).collect();
+            let trace = data.row(trace_idx).to_owned();
+            let filtered_trace = crate::math::fft::apply_spectral_response_1d(
+                &trace,
+                sampling_frequency,
+                move |_, freq, helper_nyquist| {
+                    let hp_response = if f_min > 0.0 {
+                        let ratio = freq / f_min;
+                        let ratio4 = ratio.powi(4);
+                        (ratio4 / (1.0 + ratio4)).sqrt()
+                    } else {
+                        1.0
+                    };
 
-            // Convert to complex for FFT
-            let mut buffer: Vec<Complex<f64>> =
-                trace.iter().map(|&x| Complex::new(x, 0.0)).collect();
+                    let lp_response = if f_max < helper_nyquist {
+                        let ratio = freq / f_max;
+                        let ratio4 = ratio.powi(4);
+                        (1.0 / (1.0 + ratio4)).sqrt()
+                    } else {
+                        1.0
+                    };
 
-            // Forward FFT
-            let fft = planner.plan_fft_forward(n_samples);
-            fft.process(&mut buffer);
+                    hp_response * lp_response
+                },
+            );
 
-            // Apply 4th order Butterworth bandpass filter
-            for (i, coeff) in buffer.iter_mut().enumerate() {
-                let freq = (i as f64) * nyquist / (n_samples as f64);
-
-                // 4th order Butterworth highpass at f_min
-                let hp_response = if f_min > 0.0 {
-                    let ratio = freq / f_min;
-                    let ratio4 = ratio.powi(4);
-                    (ratio4 / (1.0 + ratio4)).sqrt()
-                } else {
-                    1.0
-                };
-
-                // 4th order Butterworth lowpass at f_max
-                let lp_response = if f_max < nyquist {
-                    let ratio = freq / f_max;
-                    let ratio4 = ratio.powi(4);
-                    (1.0 / (1.0 + ratio4)).sqrt()
-                } else {
-                    1.0
-                };
-
-                // Combined bandpass response
-                let filter_response = hp_response * lp_response;
-                *coeff *= filter_response;
-            }
-
-            // Inverse FFT
-            let ifft = planner.plan_fft_inverse(n_samples);
-            ifft.process(&mut buffer);
-
-            // Extract real part and normalize
-            let norm_factor = 1.0 / (n_samples as f64);
-            for (i, coeff) in buffer.iter().enumerate() {
-                result[[trace_idx, i]] = coeff.re * norm_factor;
-            }
+            result.row_mut(trace_idx).assign(&filtered_trace);
         }
 
         log::debug!(
@@ -254,5 +249,43 @@ impl FullWaveformInversion {
     /// Set configuration
     pub fn set_config(&mut self, config: SeismicImagingConfig) {
         self.config = config;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::Array2;
+
+    #[test]
+    fn test_l2_adjoint_source_sign_matches_misfit() {
+        let fwi = FullWaveformInversion::new(SeismicImagingConfig::default());
+        let observed = Array2::from_shape_vec((1, 3), vec![0.0, 1.0, 2.0]).expect("shape");
+        let synthetic = Array2::from_shape_vec((1, 3), vec![3.0, 2.0, 1.0]).expect("shape");
+
+        let residual = fwi
+            .compute_adjoint_source(&observed, &synthetic)
+            .expect("adjoint source must succeed");
+
+        assert_eq!(
+            residual,
+            Array2::from_shape_vec((1, 3), vec![3.0, 1.0, -1.0]).expect("shape")
+        );
+    }
+
+    #[test]
+    fn test_objective_scales_with_dt() {
+        let mut fwi = FullWaveformInversion::new(SeismicImagingConfig::default());
+        fwi.config.dt = 0.5;
+
+        let observed = Array2::from_shape_vec((1, 2), vec![1.0, 1.0]).expect("shape");
+        let synthetic = Array2::from_shape_vec((1, 2), vec![3.0, 5.0]).expect("shape");
+
+        let objective = fwi
+            .compute_data_objective(&observed, &synthetic)
+            .expect("objective must succeed");
+
+        // residual = [2, 4], 0.5 * dt * sum(residual^2) = 0.25 * 20 = 5
+        assert!((objective - 5.0).abs() < f64::EPSILON);
     }
 }

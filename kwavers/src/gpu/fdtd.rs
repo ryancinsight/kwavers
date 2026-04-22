@@ -133,7 +133,7 @@ impl FdtdGpu {
             cache: None,
         });
 
-        let workgroup_size = [8, 8, 8];
+        let workgroup_size = [8, 8, 4];
 
         Ok(Self {
             pipeline,
@@ -186,7 +186,7 @@ impl FdtdGpu {
             let _ = tx.send(result);
         });
 
-        device.poll(wgpu::PollType::Wait);
+        let _ = device.poll(wgpu::PollType::Wait);
         let result = rx
             .recv_async()
             .await
@@ -196,11 +196,11 @@ impl FdtdGpu {
         let data = buffer_slice.get_mapped_range();
         let float_data: &[f32] = bytemuck::cast_slice(&data);
 
-        let result = Array3::from_shape_vec(
-            (grid.nx, grid.ny, grid.nz),
-            float_data.iter().map(|&val| val as f64).collect(),
-        )
-        .map_err(|e| KwaversError::GpuError(format!("Array creation error: {}", e)))?;
+        let plane = grid.ny * grid.nz;
+        let result = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, j, k)| {
+            let idx = i * plane + j * grid.nz + k;
+            float_data[idx] as f64
+        });
 
         drop(data);
         staging_buffer.unmap();

@@ -172,7 +172,8 @@ impl AcousticFieldKernel {
             dy: f32,
             dz: f32,
             c: f32,
-            _padding2: [f32; 3],
+            // WGSL layout rounds the trailing vec3<f32> member up to 16 bytes.
+            _padding2: [f32; 7],
         }
 
         let params = Params {
@@ -185,7 +186,7 @@ impl AcousticFieldKernel {
             dy: grid.dy as f32,
             dz: grid.dz as f32,
             c: sound_speed as f32,
-            _padding2: [0.0; 3],
+            _padding2: [0.0; 7],
         };
 
         let params_buffer = self
@@ -232,11 +233,13 @@ impl AcousticFieldKernel {
             compute_pass.set_pipeline(&self.pipeline);
             compute_pass.set_bind_group(0, &bind_group, &[]);
 
-            // Dispatch with 8x8x8 workgroups
-            let workgroup_size = 8;
-            let dispatch_x = nx.div_ceil(workgroup_size);
-            let dispatch_y = ny.div_ceil(workgroup_size);
-            let dispatch_z = nz.div_ceil(workgroup_size);
+            // Dispatch with 8x8x4 workgroups to fit the 256-invocation limit.
+            const WORKGROUP_X: usize = 8;
+            const WORKGROUP_Y: usize = 8;
+            const WORKGROUP_Z: usize = 4;
+            let dispatch_x = nx.div_ceil(WORKGROUP_X);
+            let dispatch_y = ny.div_ceil(WORKGROUP_Y);
+            let dispatch_z = nz.div_ceil(WORKGROUP_Z);
 
             compute_pass.dispatch_workgroups(
                 dispatch_x as u32,
@@ -270,7 +273,7 @@ impl AcousticFieldKernel {
             let _ = sender.send(result);
         });
 
-        self.device.poll(wgpu::PollType::Wait);
+        let _ = self.device.poll(wgpu::PollType::Wait);
 
         receiver
             .recv()
@@ -289,11 +292,11 @@ impl AcousticFieldKernel {
         let result_f32: &[f32] = bytemuck::cast_slice(&data);
 
         // Convert back to f64
-        let result = Array3::from_shape_vec(
-            (nx, ny, nz),
-            result_f32.iter().map(|&val| val as f64).collect(),
-        )
-        .map_err(|e| KwaversError::GpuError(format!("Array creation error: {}", e)))?;
+        let plane = ny * nz;
+        let result = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+            let idx = i * plane + j * nz + k;
+            result_f32[idx] as f64
+        });
 
         drop(data);
         staging_buffer.unmap();
@@ -316,7 +319,20 @@ impl WaveEquationGpu {
         })
     }
 
-    /// Solve wave equation for one time step
+    /// Solve one coupled pressure/velocity step.
+    ///
+    /// ## Theorem
+    /// Fusing the central-difference pressure-gradient computation with the
+    /// velocity update is algebraically identical to materializing the three
+    /// gradient component fields and then applying the scalar magnitude update
+    /// cell by cell, because each output cell depends only on the local stencil
+    /// values from the same input pressure field.
+    ///
+    /// ## Proof sketch
+    /// The update at `(i,j,k)` reads only the six neighboring pressure samples
+    /// and the current velocity sample at the same coordinates. Therefore the
+    /// gradient components do not alias across cells, and the fused loop
+    /// performs the same arithmetic in the same order for each interior cell.
     pub fn step(
         &self,
         pressure: &Array3<f64>,
@@ -326,6 +342,21 @@ impl WaveEquationGpu {
         grid: &grid::Grid,
         dt: f64,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
+        let (nx, ny, nz) = pressure.dim();
+        if velocity.dim() != (nx, ny, nz)
+            || density.dim() != (nx, ny, nz)
+            || sound_speed.dim() != (nx, ny, nz)
+        {
+            return Err(KwaversError::InvalidInput(
+                "WaveEquationGpu::step requires matching field dimensions".to_string(),
+            ));
+        }
+        if nx < 3 || ny < 3 || nz < 3 {
+            return Err(KwaversError::InvalidInput(
+                "WaveEquationGpu::step requires grid dimensions >= 3".to_string(),
+            ));
+        }
+
         // Compute average properties for efficient GPU computation
         // For heterogeneous media, these would be spatially-varying on GPU
         let c_avg = sound_speed.mean().unwrap_or(1500.0);
@@ -334,39 +365,25 @@ impl WaveEquationGpu {
         // Update pressure: p_new = p + dt * (-ρc² ∇·v)
         let new_pressure = self.kernel.compute_propagation(pressure, grid, dt, c_avg)?;
 
-        // Update velocity: v_new = v + dt * (-1/ρ ∇p)
-        // Compute pressure gradient using central differences
-        let mut grad_p_x = Array3::zeros(pressure.dim());
-        let mut grad_p_y = Array3::zeros(pressure.dim());
-        let mut grad_p_z = Array3::zeros(pressure.dim());
-
-        let (nx, ny, nz) = pressure.dim();
+        // Update velocity using the local pressure-gradient magnitude.
+        // The scalar update contract is preserved while avoiding three full
+        // temporary gradient volumes.
+        let mut new_velocity = velocity.clone();
+        let grad_scale = dt / rho_avg;
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    grad_p_x[[i, j, k]] =
+                    let dpx =
                         (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]]) / (2.0 * grid.dx);
-                    grad_p_y[[i, j, k]] =
+                    let dpy =
                         (pressure[[i, j + 1, k]] - pressure[[i, j - 1, k]]) / (2.0 * grid.dy);
-                    grad_p_z[[i, j, k]] =
+                    let dpz =
                         (pressure[[i, j, k + 1]] - pressure[[i, j, k - 1]]) / (2.0 * grid.dz);
+                    let grad_magnitude = (dpx * dpx + dpy * dpy + dpz * dpz).sqrt();
+                    new_velocity[[i, j, k]] -= grad_scale * grad_magnitude;
                 }
             }
         }
-
-        // Update velocity components: v_new = v - dt/ρ * ∇p
-        let mut new_velocity = velocity.clone();
-        use ndarray::Zip;
-        Zip::from(&mut new_velocity)
-            .and(&grad_p_x)
-            .and(&grad_p_y)
-            .and(&grad_p_z)
-            .for_each(|v, &dpx, &dpy, &dpz| {
-                // Velocity update using gradient magnitude
-                // In full 3D vector implementation, each component would be updated separately
-                let grad_magnitude = (dpx * dpx + dpy * dpy + dpz * dpz).sqrt();
-                *v -= dt / rho_avg * grad_magnitude;
-            });
 
         Ok((new_pressure, new_velocity))
     }

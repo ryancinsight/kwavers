@@ -1,0 +1,236 @@
+# Validation Report: k-Wave Python Parity Validation
+**k-Wave Python (k-wave-python) vs kwavers/pykwavers Parity Validation**
+
+---
+
+## Executive Summary
+
+- **Report ID**: val-20260406-030145
+- **Generation Date**: 2026-04-06T03:01:45.149448+00:00
+- **k-wave-python Version**: 1.3.0
+- **pykwavers Version**: 0.1.0
+- **kwavers Version**: 0.1.0
+- **Git Commit**: 9b78529e
+
+### Test Statistics
+- Total Tests: 1
+- Passed: 0
+- Failed: 1
+- Skipped: 0
+- Pass Rate: 0.0%
+- Overall Status: ❌ FAIL
+
+### Error Summary
+- Mean L2 Error: 0.8500%
+- Max L∞ Error: 2.3000%
+- Mean Relative Error: 0.8500%
+
+---
+
+## Component Validation
+
+### Solver Validation
+
+
+#### test_pstd_vs_dalembert_1d_homogeneous
+
+**Test ID**: `sample-001`
+
+**Description**: PSTD 1D homogeneous medium validation against d'Alembert solution
+
+**Configuration**:
+- Grid Size: N/A
+- Medium: N/A
+- Solver: N/A
+- Time Steps: N/A
+
+**Error Metrics**:
+| Metric | Value | Tolerance | Status |
+|--------|-------|-----------|--------|
+| L2 (RMS) | 0.8500% | 2.0% | ✅ |
+| L∞ (Max) | 2.3000% | 5.0% | ✅ |
+| Relative | 0.8500% | 2.0% | ✅ |
+
+**Status**: ✅ PASS
+
+---
+
+
+## Detailed Results
+
+### Complete Test Log
+
+| Component | Test Name | L2 Error | L∞ Error | Relative | Peak | Status |
+|-----------|-----------|----------|----------|----------|------|--------|
+| solver | test_pstd_vs_dalembert_1d_homogeneous | 0.8500% | 2.3000% | 0.8500% | 0.9870 | ❌ |
+
+### Error Distribution
+
+#### L2 Error Distribution
+- Mean: 0.8500%
+- Std Dev: N/A
+- Min: N/A
+- Max: N/A
+- Median: N/A
+
+#### L∞ Error Distribution
+- Mean: N/A%
+- Std Dev: N/A
+- Min: N/A
+- Max: N/A
+- Median: N/A
+
+### Failure Analysis
+
+
+#### ⚠️ Failed: solver - test_pstd_vs_dalembert_1d_homogeneous
+
+**Test ID**: sample-001
+
+**Failure Reason**: L2 error 0.8500% exceeds tolerance 2.0%
+
+**Expected vs Actual**:
+- Expected: < 0.02
+- Actual: 0.0085
+
+**Diagnostic Data**:
+```json
+{
+  "test_id": "sample-001",
+  "component": "solver",
+  "test_name": "test_pstd_vs_dalembert_1d_homogeneous",
+  "description": "PSTD 1D homogeneous medium validation against d'Alembert solution",
+  "status": "pass",
+  "duration_ms": 1250.0,
+  "metrics": {
+    "l2_error": 0.0085,
+    "linf_error": 0.023,
+    "relative_error": 0.0085,
+    "rms_error": 0.0062,
+    "peak_ratio": 0.987
+  },
+  "tolerance": {
+    "l2": 0.02,
+    "linf": 0.05,
+    "relative": 0.02,
+    "rms": 0.01,
+    "peak": 0.05
+  },
+  "reference": {
+    "k_wave_python_version": "1.3.0",
+    "k_wave_python_commit": "unknown",
+    "reference_values": {}
+  },
+  "artifacts": {},
+  "notes": ""
+}
+```
+
+---
+
+## Solver-Specific Validation
+
+### PSTD (Pseudo-Spectral Time Domain)
+
+| Test Case | Spatial Order | Temporal Order | Grid Points | CFL | Pass |
+|-----------|---------------|----------------|-------------|-----|------|
+| PSTD vs d'Alembert | Spectral | 2nd order | 128 | 0.3 | ❌ |
+
+### k-Space Corrections
+
+| Correction Type | Energy Conservation | Phase Accuracy | Pass |
+|-----------------|---------------------|----------------|------|
+| Standard | High | Exact | ❌ |
+
+## Comparison with Reference Data
+
+### Against k-wave-python
+
+| Metric | kwavers Result | k-wave-python Result | Difference | Within Tolerance |
+|--------|----------------|---------------------|------------|------------------|
+| Wave Speed | 1500.0 m/s | 1500.0 m/s | 0.0 | ✅ |
+
+## System Information
+
+- **Platform**: win32
+- **Architecture**: AMD64
+- **Rust Version**: 1.96.0-nightly
+- **Python Version**: 3.14.3
+- **NumPy Version**: N/A
+- **SciPy Version**: N/A
+- **GPU Available**: No
+- **GPU Model**: N/A
+
+## Execution Details
+
+- **Start Time**: 2026-04-06T03:01:45.149448+00:00
+- **End Time**: 2026-04-06T03:01:45.149448+00:00
+- **Duration**: 1.25 seconds
+- **Parallel Workers**: 1
+- **Test Harness**: cargo test
+
+## Conclusion
+
+## ❌ Overall Assessment: PARITY NOT ACHIEVED
+
+The validation suite identified 1 test(s) failing to meet the required tolerance thresholds. Remediation is required before declaring parity with k-wave-python.
+
+### Priority Fixes Required
+1. **solver**: test_pstd_vs_dalembert_1d_homogeneous - L2 error 0.8500% exceeds tolerance 2.0%
+
+
+### Recommendations
+
+- All systems operating within expected parameters. No immediate action required.
+
+---
+
+## Appendix
+
+### A. Raw Error Data
+
+<details>
+<summary>Click to expand raw JSON metrics</summary>
+
+```json
+{
+  "sample-001": {
+    "l2_error": 0.0085,
+    "linf_error": 0.023,
+    "relative_error": 0.0085,
+    "rms_error": 0.0062,
+    "peak_ratio": 0.987
+  }
+}
+```
+
+</details>
+
+### B. Configuration File
+
+<details>
+<summary>Click to expand validation configuration</summary>
+
+```yaml
+tolerance:
+  l2: 0.02
+  linf: 0.05
+  relative: 0.02
+```
+
+</details>
+
+### C. Test Commands Used
+
+```bash
+# Cargo test execution
+cargo test --test validation_suite -- --nocapture --report-time
+
+# Python reference execution
+python -m pytest tests/test_validation_suite.py -v --tb=short
+```
+
+---
+
+*Generated by kwavers Validation Report Generator v1.0.0*
+*Report Template Version: 1.0.0*

@@ -106,7 +106,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::signal::Filter;
-use rustfft::{num_complex::Complex, FftPlanner};
+use crate::math::fft::{fft_1d_array, ifft_1d_array, Complex64};
 
 /// Frequency-domain filter implementation using FFT
 ///
@@ -323,17 +323,7 @@ impl FrequencyFilter {
             return Ok(Vec::new());
         }
 
-        // Create FFT planners
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(n);
-        let ifft = planner.plan_fft_inverse(n);
-
-        // Convert real signal to complex
-        let mut complex_signal: Vec<Complex<f64>> =
-            signal.iter().map(|&x| Complex::new(x, 0.0)).collect();
-
-        // Forward FFT: time domain -> frequency domain
-        fft.process(&mut complex_signal);
+        let mut complex_signal = fft_1d_array(&ndarray::Array1::from_vec(signal.to_vec()));
 
         // Apply frequency response
         let df = 1.0 / (n as f64 * dt); // Frequency resolution (Hz)
@@ -349,16 +339,10 @@ impl FrequencyFilter {
 
             // Zero out frequencies outside passband
             if !resp(freq) {
-                *val = Complex::new(0.0, 0.0);
+                *val = Complex64::new(0.0, 0.0);
             }
         }
-
-        // Inverse FFT: frequency domain -> time domain
-        ifft.process(&mut complex_signal);
-
-        // Extract real part and normalize (rustfft requires manual normalization)
-        let norm_factor = 1.0 / n as f64;
-        Ok(complex_signal.iter().map(|c| c.re * norm_factor).collect())
+        Ok(ifft_1d_array(&complex_signal).to_vec())
     }
 }
 

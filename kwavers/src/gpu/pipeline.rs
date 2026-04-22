@@ -6,14 +6,18 @@
 use crate::core::error::KwaversResult;
 use crate::gpu::memory::{MemoryPoolType, UnifiedMemoryManager};
 use log::{debug, info, warn};
-use ndarray::{Array3, Array4};
+use ndarray::{Array1, Array3, Array4};
 use rand::Rng;
 use rayon::prelude::*;
-use rustfft::{num_complex::Complex, FftPlanner};
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use crate::math::fft::{Complex64, FFT_CACHE_1D};
+
+thread_local! {
+    static HILBERT_SPECTRUM: RefCell<Array1<Complex64>> = RefCell::new(Array1::zeros(0));
+}
 
 /// Configuration for real-time imaging pipeline
 #[derive(Debug, Clone)]
@@ -264,50 +268,49 @@ impl RealtimeImagingPipeline {
             .zip(beamformed.axis_iter(Axis(0)))
             .par_bridge()
             .for_each(|(mut envelope_rx, beamformed_rx)| {
-                // Thread-local buffers to avoid allocation and planner re-creation
-                thread_local! {
-                    static BUFFERS: RefCell<(Vec<f64>, Vec<f64>, Vec<Complex<f64>>, FftPlanner<f64>)> =
-                        RefCell::new((Vec::new(), Vec::new(), Vec::new(), FftPlanner::new()));
+                let len = beamformed_rx.dim().0;
+                if len == 0 {
+                    return;
                 }
 
-                BUFFERS.with(|buffers_cell| {
-                    let mut borrow = buffers_cell.borrow_mut();
-                    let (analytic, hilbert_output, spectrum_scratch, planner) = &mut *borrow;
+                let plan = FFT_CACHE_1D.get_or_create(len);
 
-                    // Iterate over Frames (k) - dim 1 of 2D slice
+                HILBERT_SPECTRUM.with(|spectrum_cell| {
+                    let mut spectrum = spectrum_cell.borrow_mut();
+                    if spectrum.len() != len {
+                        *spectrum = Array1::zeros(len);
+                    }
+
                     for k in 0..beamformed_rx.dim().1 {
-                        // Iterate over Samples (j) - dim 0 of 2D slice
-                        analytic.clear();
-                        for j in 0..beamformed_rx.dim().0 {
-                            analytic.push(beamformed_rx[[j, k]] as f64);
+                        for j in 0..len {
+                            spectrum[j] = Complex64::new(beamformed_rx[[j, k]] as f64, 0.0);
                         }
 
-                        // Inline Hilbert Transform logic using local planner
-                        let len = analytic.len();
-                        let fft = planner.plan_fft_forward(len);
-                        let ifft = planner.plan_fft_inverse(len);
+                        plan.forward_complex_inplace(&mut spectrum);
 
-                        spectrum_scratch.clear();
-                        spectrum_scratch.extend(analytic.iter().map(|&x| Complex::new(x, 0.0)));
-
-                        fft.process(spectrum_scratch);
-
-                        let n = spectrum_scratch.len();
-                        for v in spectrum_scratch.iter_mut().take(n / 2).skip(1) {
-                            *v *= 2.0;
+                        if len > 1 {
+                            if len % 2 == 0 {
+                                for coeff in spectrum.iter_mut().take(len / 2).skip(1) {
+                                    *coeff *= 2.0;
+                                }
+                                for coeff in spectrum.iter_mut().skip(len / 2 + 1) {
+                                    *coeff = Complex64::default();
+                                }
+                            } else {
+                                for coeff in spectrum.iter_mut().take(len / 2 + 1).skip(1) {
+                                    *coeff *= 2.0;
+                                }
+                                for coeff in spectrum.iter_mut().skip(len / 2 + 1) {
+                                    *coeff = Complex64::default();
+                                }
+                            }
                         }
-                        // DC and Nyquist remain unchanged
 
-                        ifft.process(spectrum_scratch);
+                        plan.inverse_complex_inplace(&mut spectrum);
 
-                        hilbert_output.clear();
-                        hilbert_output.extend(spectrum_scratch.iter().map(|c| c.im / n as f64));
-
-                        // Write back result
-                        for j in 0..hilbert_output.len() {
-                            envelope_rx[[j, k]] = ((beamformed_rx[[j, k]] as f64).powi(2)
-                                + hilbert_output[j].powi(2))
-                            .sqrt() as f32;
+                        let norm = 1.0 / len as f64;
+                        for j in 0..len {
+                            envelope_rx[[j, k]] = (spectrum[j] * norm).norm() as f32;
                         }
                     }
                 });

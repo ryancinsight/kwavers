@@ -260,26 +260,17 @@ impl FdtdStencilDispatcher {
     /// ## Allocation strategy
     ///
     /// Fills `self.p_scratch` in-place, then returns it to the caller via
-    /// `std::mem::replace`, leaving a fresh zeros buffer in `p_scratch` for the
-    /// next invocation. This eliminates the O(N³) data copy of the previous
-    /// `.clone()` call:
-    ///
-    /// | Previous (`clone`) | New (`replace`)     |
-    /// |--------------------|---------------------|
-    /// | alloc N³ words     | alloc N³ words      |
-    /// | copy N³ values     | zero-fill N³ words  |
-    /// Total work: 2×N³ writes → 1×N³ writes (zero-fill, OS-accelerated).
-    ///
-    /// For a 64³ grid this saves ~2 MB of memcpy per time step.
+    /// `std::mem::replace`. The returned value is transferred without copying
+    /// the computed interior field, but a fresh zero-initialized scratch buffer
+    /// is still allocated for the next invocation because this API returns
+    /// ownership. The write-pass itself remains the only per-cell work in the
+    /// steady state.
     fn update_pressure_scalar(
         &mut self,
         p_curr: &Array3<f64>,
         p_prev: &Array3<f64>,
         _u_div: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        // Zero boundary faces (interior loop leaves edges at 0 from initialisation)
-        self.p_scratch.fill(0.0);
-
         // Interior points — 6-point stencil Laplacian + leapfrog time step
         for k in 1..self.nz - 1 {
             for j in 1..self.ny - 1 {
@@ -385,12 +376,23 @@ mod tests {
             FdtdStencilDispatcher::with_strategy(16, 16, 16, -1.0, -1.0, StencilStrategy::Scalar)
                 .unwrap();
 
-        let p_curr = Array3::zeros((16, 16, 16));
-        let p_prev = Array3::zeros((16, 16, 16));
+        let p_curr = Array3::from_elem((16, 16, 16), 1.0_f64);
+        let p_prev = Array3::from_elem((16, 16, 16), 0.5_f64);
         let u_div = Array3::zeros((16, 16, 16));
 
         let result = dispatcher.update_pressure(&p_curr, &p_prev, &u_div);
-        assert!(result.is_ok());
+        let result = result.unwrap();
+
+        for k in 1..15 {
+            for j in 1..15 {
+                for i in 1..15 {
+                    assert_eq!(result[[i, j, k]], 1.5);
+                }
+            }
+        }
+
+        assert_eq!(result[[0, 0, 0]], 0.0);
+        assert_eq!(result[[15, 15, 15]], 0.0);
     }
 
     #[test]

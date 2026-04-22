@@ -4,21 +4,17 @@ use super::config::HarmonicDetectionConfig;
 use super::types::HarmonicDisplacementField;
 use crate::core::error::KwaversResult;
 use ndarray::{s, Array4};
-use rustfft::FftPlanner;
 
 /// Harmonic detection and analysis processor
 pub struct HarmonicDetector {
     /// Configuration
     pub(crate) config: HarmonicDetectionConfig,
-    /// FFT planner for spectral analysis
-    pub(crate) _fft_planner: FftPlanner<f64>,
 }
 
 impl std::fmt::Debug for HarmonicDetector {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("HarmonicDetector")
             .field("config", &self.config)
-            .field("_fft_planner", &"FftPlanner")
             .finish()
     }
 }
@@ -27,10 +23,7 @@ impl HarmonicDetector {
     /// Create new harmonic detector
     #[must_use]
     pub fn new(config: HarmonicDetectionConfig) -> Self {
-        Self {
-            config,
-            _fft_planner: FftPlanner::new(),
-        }
+        Self { config }
     }
 
     /// Analyze displacement time series for harmonic content

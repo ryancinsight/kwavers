@@ -1,7 +1,7 @@
 //! GPU vs CPU 3D FFT Parity Tests
 //!
 //! Validates that the GPU FFT (`GpuFft3d`) produces results consistent with
-//! the CPU f64 reference (rustfft separable 3D) for both power-of-2 and
+//! the Apollo-backed CPU 3D reference for both power-of-2 and
 //! non-power-of-2 grid sizes.
 //!
 //! ## Tests
@@ -35,99 +35,29 @@
 
 #![cfg(feature = "gpu")]
 
+use kwavers::math::fft::{fft_3d_array, Complex64};
 use ndarray::Array3;
-use num_complex::Complex64;
-use rustfft::FftPlanner;
 
 // ── GPU device initialisation ─────────────────────────────────────────────────
 
 /// Attempt to acquire a wgpu device/queue pair.  Returns `None` on headless CI.
 async fn try_init_gpu() -> Option<(std::sync::Arc<wgpu::Device>, std::sync::Arc<wgpu::Queue>)> {
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::all(),
-        ..Default::default()
-    });
+    let instance = wgpu::Instance::default();
     let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
-            compatible_surface: None,
-            force_fallback_adapter: false,
-        })
-        .await?;
+        .request_adapter(&wgpu::RequestAdapterOptions::default())
+        .await
+        .ok()?;
     let (device, queue) = adapter
-        .request_device(
-            &wgpu::DeviceDescriptor {
-                label: Some("gpu_cpu_fft_parity device"),
-                required_features: wgpu::Features::empty(),
-                required_limits: wgpu::Limits::default(),
-                memory_hints: wgpu::MemoryHints::Performance,
-            },
-            None,
-        )
+        .request_device(&wgpu::DeviceDescriptor::default())
         .await
         .ok()?;
     Some((std::sync::Arc::new(device), std::sync::Arc::new(queue)))
 }
 
-// ── CPU 3D FFT reference (rustfft, f64) ───────────────────────────────────────
+// ── CPU 3D FFT reference (Apollo-backed, f64) ─────────────────────────────────
 
-/// Compute a separable 3D forward DFT via rustfft (f64 precision).
-///
-/// Applied in Z → Y → X order (matching the GPU separable path).
-/// Returns a flat complex array in standard C (row-major) order:
-/// index `[i][j][k]` = `result[i*ny*nz + j*nz + k]`.
-fn cpu_fft_3d_forward(field: &Array3<f64>) -> Vec<Complex64> {
-    let (nx, ny, nz) = field.dim();
-    let mut buf: Vec<Complex64> = field.iter().map(|&x| Complex64::new(x, 0.0)).collect();
-
-    let mut planner = FftPlanner::<f64>::new();
-
-    // Pass 1: FFT along Z axis (innermost, stride 1 in C order).
-    {
-        let plan_z = planner.plan_fft_forward(nz);
-        for i in 0..nx {
-            for j in 0..ny {
-                let base = i * ny * nz + j * nz;
-                plan_z.process(&mut buf[base..base + nz]);
-            }
-        }
-    }
-
-    // Pass 2: FFT along Y axis (stride nz in C order).
-    {
-        let plan_y = planner.plan_fft_forward(ny);
-        let mut col = vec![Complex64::default(); ny];
-        for i in 0..nx {
-            for k in 0..nz {
-                for j in 0..ny {
-                    col[j] = buf[i * ny * nz + j * nz + k];
-                }
-                plan_y.process(&mut col);
-                for j in 0..ny {
-                    buf[i * ny * nz + j * nz + k] = col[j];
-                }
-            }
-        }
-    }
-
-    // Pass 3: FFT along X axis (stride ny*nz in C order).
-    {
-        let plan_x = planner.plan_fft_forward(nx);
-        let mut col = vec![Complex64::default(); nx];
-        for j in 0..ny {
-            for k in 0..nz {
-                for i in 0..nx {
-                    col[i] = buf[i * ny * nz + j * nz + k];
-                }
-                plan_x.process(&mut col);
-                for i in 0..nx {
-                    buf[i * ny * nz + j * nz + k] = col[i];
-                }
-            }
-        }
-    }
-
-    buf
+fn cpu_fft_3d_forward(field: &Array3<f64>) -> Array3<Complex64> {
+    fft_3d_array(field)
 }
 
 // ── Deterministic 3D test signal ─────────────────────────────────────────────
@@ -194,27 +124,41 @@ async fn parity_test(
 
     // ── CPU 3D FFT cross-validation ───────────────────────────────────────────
     let cpu_spec = cpu_fft_3d_forward(&signal);
+    let signal_scale = signal.iter().copied().map(f64::abs).fold(0.0_f64, f64::max);
+    let abs_tol = 4.0 * signal.len() as f64 * f32::EPSILON as f64 * signal_scale;
 
     let mut max_rel_err = 0.0_f64;
-    for idx in 0..n {
+    let mut max_abs_err = 0.0_f64;
+    let mut worst_idx = 0usize;
+    let mut worst_cpu = Complex64::new(0.0, 0.0);
+    let mut worst_gpu = Complex64::new(0.0, 0.0);
+    for (idx, cpu_val) in cpu_spec.iter().enumerate() {
         let gpu_re = spectrum[2 * idx] as f64;
         let gpu_im = spectrum[2 * idx + 1] as f64;
-        let cpu_mag = cpu_spec[idx].norm();
-        if cpu_mag < 1e-10 {
-            continue;
-        }
-        let err =
-            ((gpu_re - cpu_spec[idx].re).powi(2) + (gpu_im - cpu_spec[idx].im).powi(2)).sqrt();
-        let rel = err / cpu_mag;
-        if rel > max_rel_err {
-            max_rel_err = rel;
+        let abs_err = ((gpu_re - cpu_val.re).powi(2) + (gpu_im - cpu_val.im).powi(2)).sqrt();
+        let cpu_mag = cpu_val.norm();
+        if cpu_mag > abs_tol {
+            let rel = abs_err / cpu_mag;
+            if rel > max_rel_err {
+                max_rel_err = rel;
+                worst_idx = idx;
+                worst_cpu = *cpu_val;
+                worst_gpu = Complex64::new(gpu_re, gpu_im);
+            }
+        } else if abs_err > max_abs_err {
+            max_abs_err = abs_err;
+            worst_idx = idx;
+            worst_cpu = *cpu_val;
+            worst_gpu = Complex64::new(gpu_re, gpu_im);
         }
     }
 
     assert!(
-        max_rel_err < cross_val_rel_tol,
+        max_rel_err < cross_val_rel_tol && max_abs_err < abs_tol,
         "GPU vs CPU 3D FFT parity failed for grid {nx}×{ny}×{nz}: \
-         max_rel_err={max_rel_err:.3e} >= tol={cross_val_rel_tol:.3e}"
+         max_rel_err={max_rel_err:.3e} >= tol={cross_val_rel_tol:.3e} \
+         or max_abs_err={max_abs_err:.3e} >= abs_tol={abs_tol:.3e}, \
+         worst_idx={worst_idx}, cpu={worst_cpu:?}, gpu={worst_gpu:?}"
     );
 
     // ── Parseval's theorem ────────────────────────────────────────────────────

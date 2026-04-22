@@ -30,9 +30,8 @@
 //! the best available method based on scenario metadata.
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::math::fft::{fft_1d_array, ifft_1d_complex, Complex64};
 use ndarray::{Array2, Array3};
-use num_complex::Complex64;
-use rustfft::FftPlanner;
 
 pub mod windowed;
 
@@ -122,7 +121,7 @@ impl Default for BasebandSnapshotConfig {
 ///   - Nyquist (even N): keep (×1)
 ///   - positive frequencies: ×2
 ///   - negative frequencies: ×0
-/// - Inverse FFT and scale by 1/N (rustfft is un-normalized)
+/// - Inverse FFT and scale by 1/N (Apollo's transforms are unnormalized)
 fn analytic_signal_hilbert(signal: &[f64]) -> KwaversResult<Vec<Complex64>> {
     let n = signal.len();
     if n == 0 {
@@ -131,12 +130,7 @@ fn analytic_signal_hilbert(signal: &[f64]) -> KwaversResult<Vec<Complex64>> {
         ));
     }
 
-    let mut planner = FftPlanner::<f64>::new();
-    let fft = planner.plan_fft_forward(n);
-    let ifft = planner.plan_fft_inverse(n);
-
-    let mut spectrum: Vec<Complex64> = signal.iter().map(|&x| Complex64::new(x, 0.0)).collect();
-    fft.process(&mut spectrum);
+    let mut spectrum = fft_1d_array(&ndarray::Array1::from_vec(signal.to_vec()));
 
     // Apply analytic-signal (Hilbert/one-sided) multiplier.
     //
@@ -165,15 +159,7 @@ fn analytic_signal_hilbert(signal: &[f64]) -> KwaversResult<Vec<Complex64>> {
         }
     }
 
-    ifft.process(&mut spectrum);
-
-    // Normalize inverse FFT
-    let scale = 1.0 / (n as f64);
-    for v in spectrum.iter_mut() {
-        *v *= scale;
-    }
-
-    Ok(spectrum)
+    Ok(ifft_1d_complex(&spectrum).to_vec())
 }
 
 /// Downconvert an analytic (complex) signal to complex baseband with center frequency `f0`.

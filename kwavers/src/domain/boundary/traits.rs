@@ -34,7 +34,6 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::GridTopology;
 use ndarray::{Array3, ArrayViewMut3};
-use rustfft::num_complex::Complex;
 use std::fmt::Debug;
 
 /// Field type enumeration for multi-physics support
@@ -185,7 +184,7 @@ pub trait BoundaryCondition: Debug + Send + Sync {
     /// For spectral methods, k-space pseudospectral solvers.
     fn apply_scalar_frequency(
         &mut self,
-        field: &mut Array3<Complex<f64>>,
+        field: &mut Array3<num_complex::Complex<f64>>,
         grid: &dyn GridTopology,
         time_step: usize,
         dt: f64,
@@ -312,7 +311,7 @@ pub trait ReflectiveBoundary: BoundaryCondition {
     /// For rigid boundary: r = +1.0
     /// For soft boundary: r = -1.0
     /// For impedance-matched: r = (Z - Z₀) / (Z + Z₀)
-    fn reflection_coefficient_complex(&self, frequency: f64) -> Complex<f64>;
+    fn reflection_coefficient_complex(&self, frequency: f64) -> num_complex::Complex<f64>;
 
     /// Check if the boundary is perfectly rigid (no normal velocity)
     fn is_rigid(&self) -> bool {

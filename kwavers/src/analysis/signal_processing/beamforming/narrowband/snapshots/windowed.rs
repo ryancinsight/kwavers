@@ -29,9 +29,9 @@
 //!   but relative scaling across snapshots matters. Windowing is applied consistently across sensors.
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::math::fft::fft_1d_array;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
-use rustfft::FftPlanner;
 
 /// Window function for windowed snapshot extraction.
 ///
@@ -369,14 +369,10 @@ pub fn extract_stft_bin_snapshots(
 
     let window = cfg.window.build(n);
 
-    // Prepare FFT plan once (reused per sensor per frame).
-    let mut planner = FftPlanner::<f64>::new();
-    let fft = planner.plan_fft_forward(n);
-
     let mut out = Array2::<Complex64>::zeros((n_sensors, n_frames));
 
-    // Temporary buffers to minimize allocations inside loops.
-    let mut frame: Vec<Complex64> = vec![Complex64::new(0.0, 0.0); n];
+    // Temporary buffer to minimize allocations inside loops.
+    let mut frame = ndarray::Array1::<f64>::zeros(n);
 
     for s in 0..n_sensors {
         for frame_idx in 0..n_frames {
@@ -400,14 +396,13 @@ pub fn extract_stft_bin_snapshots(
             // Window + pack into complex buffer
             for i in 0..n {
                 let x = sensor_data[(s, 0, start + i)] - mean;
-                frame[i] = Complex64::new(x * window[i], 0.0);
+                frame[i] = x * window[i];
             }
 
-            // FFT in-place
-            fft.process(&mut frame);
+            let spectrum = fft_1d_array(&frame);
 
             // Take bin value as snapshot component
-            out[(s, frame_idx)] = frame[bin];
+            out[(s, frame_idx)] = spectrum[bin];
         }
     }
 

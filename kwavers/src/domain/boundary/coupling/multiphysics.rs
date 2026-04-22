@@ -7,7 +7,6 @@ use crate::core::error::KwaversResult;
 use crate::domain::boundary::traits::BoundaryCondition;
 use crate::domain::grid::GridTopology;
 use ndarray::ArrayViewMut3;
-use rustfft::num_complex::Complex;
 
 use super::types::{BoundaryDirections, CouplingType, PhysicsDomain};
 
@@ -266,7 +265,7 @@ impl BoundaryCondition for MultiPhysicsInterface {
 
     fn apply_scalar_frequency(
         &mut self,
-        _field: &mut ndarray::Array3<Complex<f64>>,
+        _field: &mut ndarray::Array3<num_complex::Complex<f64>>,
         _grid: &dyn GridTopology,
         _time_step: usize,
         _dt: f64,

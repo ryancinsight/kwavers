@@ -1,14 +1,58 @@
-//! Full Waveform Inversion Implementation
+//! Full Waveform Inversion implementation.
 //!
-//! FWI algorithm implementation following GRASP principles
-//! Reference: Tarantola (1984): "Inversion of seismic reflection data in the acoustic approximation"
+//! # Specification
+//!
+//! For the acoustic least-squares objective
+//!
+//! ```text
+//! J(c) = (dt / 2) Σ_{r,t} (d_syn(r,t;c) - d_obs(r,t))²
+//! ```
+//!
+//! the reduced gradient is obtained by the adjoint-state identity
+//!
+//! ```text
+//! ∂J/∂m(x) = -∫_0^T λ(x,T-t) ∂²p(x,t)/∂t² dt,     m = c⁻²
+//! ∂J/∂c(x) = -2 c(x)⁻³ ∂J/∂m(x)
+//! ```
+//!
+//! The discrete implementation follows the k-Wave time-reversal convention:
+//! the residual is reversed in time and injected through the same receiver mask
+//! used for data acquisition.
+//!
+//! # Theorems
+//!
+//! 1. **L2 residual theorem.** The Fréchet derivative of `J` with respect to
+//!    the data is `d_syn - d_obs`. This fixes the sign of the adjoint source.
+//! 2. **Time-reversal theorem.** Injecting the reversed residual on the receiver
+//!    mask produces the discrete adjoint wavefield for the acoustic linearized
+//!    operator, provided the forward and adjoint solvers share the same stencil
+//!    and boundary treatment.
+//! 3. **Chain-rule theorem.** The sound-speed gradient follows from
+//!    `m = c⁻²` by `dm/dc = -2 c⁻³`.
+//!
+//! # Proof sketches
+//!
+//! 1. Differentiate `1/2 ||d_syn - d_obs||²` with respect to `d_syn`.
+//! 2. Apply discrete Green's identity to the acoustic forward and adjoint
+//!    operators with matching boundary conditions.
+//! 3. Substitute the parameterization `m = c⁻²` and apply the chain rule.
+//!
+//! # References
+//! - Tarantola (1984): *Inversion of seismic reflection data in the acoustic approximation*
+//! - Plessix (2006): *A review of the adjoint-state method for computing the gradient of a functional*
+//! - Virieux & Operto (2009): *An overview of full-waveform inversion in exploration geophysics*
+//! - k-Wave time reversal convention: residual is flipped in time and injected through the receiver mask
 
 use super::parameters::FwiParameters;
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::HeterogeneousFactory;
-use crate::domain::source::grid_source::GridSource;
-use ndarray::Array3;
+use crate::domain::source::{GridSource, SourceMode};
+use crate::solver::inverse::acoustic_fwi::{
+    accumulate_signed_correlation, l2_objective, l2_residual, reverse_time_axis,
+};
+use ndarray::{s, Array2, Array3, Array4, Axis, Zip};
+use std::collections::HashMap;
 
 /// Reference density for seismic FWI [kg/m³].
 ///
@@ -22,7 +66,144 @@ use ndarray::Array3;
 /// the diagnostic basics for stratigraphic traps." Geophysics 39(6), 770–780.
 const RHO_SEISMIC_REF: f64 = 2000.0; // kg/m³, consolidated upper-crust sediment
 
-/// Full Waveform Inversion processor
+/// Source and receiver geometry used by acoustic FWI.
+///
+/// `source` describes the forward source term. `sensor_mask` describes the
+/// receiver layout used to record synthetic data and to back-inject the adjoint
+/// residual. The `receiver_row_to_sensor_row` mapping converts residual data
+/// from the recorder's Fortran-order convention into the row order required by
+/// the pressure-source injector.
+#[derive(Debug, Clone)]
+pub struct FwiGeometry {
+    pub source: GridSource,
+    pub sensor_mask: Array3<bool>,
+    receiver_row_to_sensor_row: Vec<usize>,
+}
+
+impl FwiGeometry {
+    #[must_use]
+    pub fn new(source: GridSource, sensor_mask: Array3<bool>) -> Self {
+        let sensor_indices = Self::collect_fortran_indices(&sensor_mask);
+        let receiver_indices = Self::collect_row_major_indices(&sensor_mask);
+
+        let sensor_lookup: HashMap<(usize, usize, usize), usize> = sensor_indices
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(row, coord)| (coord, row))
+            .collect();
+
+        let receiver_row_to_sensor_row = receiver_indices
+            .iter()
+            .map(|coord| {
+                *sensor_lookup
+                    .get(coord)
+                    .expect("receiver mask ordering mismatch")
+            })
+            .collect();
+
+        Self {
+            source,
+            sensor_mask,
+            receiver_row_to_sensor_row,
+        }
+    }
+
+    #[must_use]
+    fn receiver_count(&self) -> usize {
+        self.receiver_row_to_sensor_row.len()
+    }
+
+    fn collect_fortran_indices(mask: &Array3<bool>) -> Vec<(usize, usize, usize)> {
+        let (nx, ny, nz) = mask.dim();
+        let mut indices = Vec::new();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    if mask[[i, j, k]] {
+                        indices.push((i, j, k));
+                    }
+                }
+            }
+        }
+        indices
+    }
+
+    fn collect_row_major_indices(mask: &Array3<bool>) -> Vec<(usize, usize, usize)> {
+        let mut indices = Vec::new();
+        for ((i, j, k), &active) in mask.indexed_iter() {
+            if active {
+                indices.push((i, j, k));
+            }
+        }
+        indices
+    }
+
+    fn validate(&self, grid: &Grid, nt: usize) -> KwaversResult<()> {
+        let expected_shape = grid.dimensions();
+        if self.sensor_mask.dim() != expected_shape {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!(
+                        "Receiver mask shape mismatch: expected {:?}, got {:?}",
+                        expected_shape,
+                        self.sensor_mask.dim()
+                    ),
+                },
+            ));
+        }
+
+        let Some(source_mask) = self.source.p_mask.as_ref() else {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: "FWI requires a time-varying pressure source mask".to_string(),
+                },
+            ));
+        };
+        if source_mask.dim() != expected_shape {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!(
+                        "Source mask shape mismatch: expected {:?}, got {:?}",
+                        expected_shape,
+                        source_mask.dim()
+                    ),
+                },
+            ));
+        }
+
+        if self.source.p_signal.as_ref().is_none() {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: "FWI requires a time-varying pressure source signal".to_string(),
+                },
+            ));
+        }
+        let source_signal = self.source.p_signal.as_ref().expect("validated above");
+        if source_signal.shape()[1] < nt {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!(
+                        "Source signal must contain at least {nt} samples, got {}",
+                        source_signal.shape()[1]
+                    ),
+                },
+            ));
+        }
+
+        if self.receiver_count() == 0 {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: "Receiver mask contains no active points".to_string(),
+                },
+            ));
+        }
+
+        Ok(())
+    }
+}
+
+/// Full Waveform Inversion processor.
 #[derive(Debug)]
 pub struct FwiProcessor {
     parameters: FwiParameters,
@@ -36,65 +217,85 @@ impl FwiProcessor {
     }
 
     /// Perform Full Waveform Inversion
-    /// Based on Tarantola (1984): "Inversion of seismic reflection data in the acoustic approximation"
-    /// Reference: Geophysics, 49(8), 1259-1266
+    ///
+    /// The objective is the acoustic L2 misfit
+    ///
+    /// ```text
+    /// J(c) = 1/2 ∑_r ∫_0^T (d_syn(r,t;c) - d_obs(r,t))² dt
+    /// ```
+    ///
+    /// with the reduced gradient given by the adjoint-state identity
+    ///
+    /// ```text
+    /// ∂J/∂m(x) = -∫_0^T λ(x,T-t) ∂²p(x,t)/∂t² dt,   m = c⁻²
+    /// ∂J/∂c(x) = -2 c(x)⁻³ ∂J/∂m(x)
+    /// ```
+    ///
+    /// The adjoint source is the time-reversed residual injected at the
+    /// receiver mask in `Dirichlet` mode, matching the k-Wave time-reversal
+    /// convention.
     pub fn invert(
         &self,
-        observed_data: &Array3<f64>,
+        observed_data: &Array2<f64>,
         initial_model: &Array3<f64>,
+        geometry: &FwiGeometry,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        use crate::math::linear_algebra::norm_l2;
+        geometry.validate(grid, self.parameters.nt)?;
+        if self.parameters.nt < 3 {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: "FWI requires at least 3 time samples to form a second derivative"
+                        .to_string(),
+                },
+            ));
+        }
 
         let mut current_model = initial_model.clone();
-        let mut prev_misfit = f64::INFINITY;
+        self.apply_model_constraints(&mut current_model);
+        let mut prev_objective: Option<f64> = None;
+        let max_iterations = self.parameters.max_iterations;
 
-        for iteration in 0..self.parameters.max_iterations {
-            // 1. Forward modeling
-            let (synthetic_data, forward_history) = self.forward_model(&current_model, grid)?;
+        for iteration in 0..max_iterations {
+            let (synthetic_data, forward_history) =
+                self.forward_model(&current_model, geometry, grid)?;
+            let objective = self.compute_l2_objective(observed_data, &synthetic_data)?;
 
-            // 2. Calculate data misfit
-            let residual = observed_data - &synthetic_data;
-            let current_misfit = norm_l2(&residual);
-
-            // 3. Check convergence
-            let relative_change = (prev_misfit - current_misfit).abs() / prev_misfit;
-            if relative_change < self.parameters.tolerance {
-                log::info!(
-                    "FWI converged after {} iterations with misfit: {:.6e}",
-                    iteration,
-                    current_misfit
-                );
-                break;
+            if let Some(previous) = prev_objective {
+                let relative_change = (previous - objective).abs() / previous.max(f64::EPSILON);
+                if relative_change < self.parameters.tolerance {
+                    log::info!(
+                        "FWI converged after {} iterations with objective: {:.6e}",
+                        iteration,
+                        objective
+                    );
+                    break;
+                }
             }
 
-            // 4. Adjoint computation
-            let adjoint_source = self.compute_adjoint_source(&residual);
-            let gradient = self.adjoint_model(&adjoint_source, grid, &forward_history)?;
-
-            // 5. Gradient processing (smoothing)
+            let residual = self.compute_adjoint_source(observed_data, &synthetic_data)?;
+            let adjoint_source = self.build_adjoint_source(&residual, geometry)?;
+            let gradient =
+                self.adjoint_model(&adjoint_source, &current_model, grid, &forward_history)?;
             let smoothed_gradient = self.smooth_gradient(gradient);
-
-            // 6. Apply regularization
             let regularized_gradient =
                 self.apply_regularization(&smoothed_gradient, &current_model)?;
+            let step_size = self.line_search(
+                &current_model,
+                &regularized_gradient,
+                &observed_data,
+                geometry,
+                grid,
+            )?;
 
-            // 7. Line search for optimal step size
-            let step_size =
-                self.line_search(&current_model, &regularized_gradient, observed_data, grid)?;
-
-            // 8. Model update
             current_model = &current_model - &(&regularized_gradient * step_size);
-
-            // Apply physical constraints
             self.apply_model_constraints(&mut current_model);
-
-            prev_misfit = current_misfit;
+            prev_objective = Some(objective);
 
             log::debug!(
-                "FWI iteration {}: misfit = {:.6e}, step_size = {:.6e}",
+                "FWI iteration {}: objective = {:.6e}, step_size = {:.6e}",
                 iteration,
-                current_misfit,
+                objective,
                 step_size
             );
         }
@@ -235,36 +436,27 @@ impl FwiProcessor {
         &self,
         model: &Array3<f64>,
         gradient: &Array3<f64>,
-        observed_data: &Array3<f64>,
+        observed_data: &Array2<f64>,
+        geometry: &FwiGeometry,
         grid: &Grid,
     ) -> KwaversResult<f64> {
-        use crate::math::linear_algebra::norm_l2;
-
         let mut step_size = self.parameters.step_size;
         let c1 = 1e-4; // Armijo condition constant
         let max_iterations = 10;
 
-        // Current function value
-        let (synthetic_current, _) = self.forward_model(model, grid)?;
-        let residual_current = observed_data - &synthetic_current;
-        let current_misfit = norm_l2(&residual_current);
+        let current_objective = self.compute_objective(model, observed_data, geometry, grid)?;
 
-        // Gradient dot product for Armijo condition
         let gradient_norm_sq = gradient.map(|&x| x * x).sum();
 
         for _ in 0..max_iterations {
-            // Test model with current step size
             let test_model = model - &(gradient * step_size);
-            let (synthetic_test, _) = self.forward_model(&test_model, grid)?;
-            let residual_test = observed_data - &synthetic_test;
-            let test_misfit = norm_l2(&residual_test);
+            let test_objective =
+                self.compute_objective(&test_model, observed_data, geometry, grid)?;
 
-            // Armijo condition check
-            if test_misfit <= current_misfit - c1 * step_size * gradient_norm_sq {
+            if test_objective <= current_objective - c1 * step_size * gradient_norm_sq {
                 return Ok(step_size);
             }
 
-            // Reduce step size
             step_size *= 0.5;
         }
 
@@ -299,16 +491,15 @@ impl FwiProcessor {
     fn forward_model(
         &self,
         model: &Array3<f64>,
+        geometry: &FwiGeometry,
         grid: &Grid,
-    ) -> KwaversResult<(Array3<f64>, Vec<Array3<f64>>)> {
+    ) -> KwaversResult<(Array2<f64>, Array4<f64>)> {
         use crate::solver::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
-        // Removed bad ndarray import (already imported)
 
-        // Calculate stable timestep using CFL condition
-        let dt = self.calculate_stable_timestep(model, grid);
-        let num_steps = self.parameters.max_iterations.min(100); // Reasonable default
+        geometry.validate(grid, self.parameters.nt)?;
+        let dt = self.validate_time_step(model, grid)?;
+        let num_steps = self.parameters.nt;
 
-        // Create FDTD configuration for forward modeling
         let config = FdtdConfig {
             spatial_order: 2,
             staggered_grid: true,
@@ -320,51 +511,42 @@ impl FwiProcessor {
             kspace_correction: KSpaceCorrectionMode::None,
             nt: num_steps,
             dt,
-            sensor_mask: None,
+            sensor_mask: Some(geometry.sensor_mask.clone()),
         };
 
-        // Build heterogeneous medium directly from the velocity model.
-        //
-        // Density is initialised to RHO_SEISMIC_REF (uniform) — appropriate for a
-        // single-parameter inversion where only velocity is updated.  A joint
-        // density-velocity inversion would supply a spatially-varying density array.
-        // Using a model-derived medium avoids the incorrect post-hoc override that
-        // would leave ρ, α, and B/A at water values.
         let (nx, ny, nz) = grid.dimensions();
         let density = Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF);
         let medium = HeterogeneousFactory::from_arrays(
             model.clone(),
             density,
-            None, // absorption: zero (lossless first-order FWI)
-            None, // nonlinearity: zero
+            None,
+            None,
             self.parameters.frequency,
         )
         .map_err(crate::core::error::KwaversError::InvalidInput)?;
 
-        let mut solver = FdtdSolver::new(config, grid, &medium, GridSource::default())?;
+        let mut solver = FdtdSolver::new(config, grid, &medium, geometry.source.clone())?;
 
-        // History storage
-        let mut history = Vec::with_capacity(self.parameters.nt);
+        let mut history = Array4::zeros((self.parameters.nt, nx, ny, nz));
 
-        // Time stepping for forward propagation
-        // Inject source (Ricker wavelet)
         for t in 0..self.parameters.nt {
-            let src_val = self.ricker_wavelet(t as f64 * self.parameters.dt);
-            // Inject at source location
-            let (cx, cy, cz) = (
-                self.parameters.n_trace / 2,
-                self.parameters.n_depth / 2,
-                self.parameters.n_trace / 2,
-            );
-            if let Some(p) = solver.fields.p.get_mut((cx, cy, cz)) {
-                *p += src_val;
-            }
             solver.step_forward()?;
-            history.push(solver.fields.p.clone());
+            history
+                .slice_mut(s![t, .., .., ..])
+                .assign(&solver.fields.p);
         }
 
-        // Return synthetic data (recorded wavefield) and history
-        Ok((solver.fields.p.clone(), history))
+        let recorded = solver
+            .sensor_recorder
+            .extract_pressure_data()
+            .ok_or_else(|| {
+                KwaversError::Validation(ValidationError::ConstraintViolation {
+                    message: "FWI forward model requires at least one receiver".to_string(),
+                })
+            })?;
+        let synthetic = recorded.slice(s![.., 0..self.parameters.nt]).to_owned();
+
+        Ok((synthetic, history))
     }
 
     /// Adjoint modeling using time-reversed FDTD
@@ -383,27 +565,29 @@ impl FwiProcessor {
     /// * Tromp et al. (2005): "Seismic tomography, adjoint methods"
     fn adjoint_model(
         &self,
-        adjoint_source: &Array3<f64>,
+        adjoint_source: &GridSource,
+        model: &Array3<f64>,
         grid: &Grid,
-        forward_history: &[Array3<f64>],
+        forward_history: &Array4<f64>,
     ) -> KwaversResult<Array3<f64>> {
         use crate::solver::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
-        use ndarray::Zip;
 
-        // Reconstruct the current velocity model from the adjoint source dimensions.
-        // The adjoint field must propagate through the same medium as the forward field.
-        // We use the adjoint source shape to infer grid size; medium velocity is held
-        // at the reference (1500 m/s is typical upper-crust P-wave speed used when
-        // the current model is unavailable).  A production implementation would accept
-        // the current_model as a parameter.
+        if forward_history.len_of(Axis(0)) != self.parameters.nt {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!(
+                        "Forward history length mismatch: expected {}, got {}",
+                        self.parameters.nt,
+                        forward_history.len_of(Axis(0))
+                    ),
+                },
+            ));
+        }
+
         let (nx, ny, nz) = grid.dimensions();
-        let sound_speed = Array3::from_elem((nx, ny, nz), 1500.0_f64); // m/s, seismic P-wave ref
+        let dt = self.validate_time_step(model, grid)?;
+        let num_steps = self.parameters.nt;
 
-        // Calculate stable timestep
-        let dt = self.calculate_stable_timestep(&sound_speed, grid);
-        let num_steps = self.parameters.max_iterations.min(100);
-
-        // Create FDTD configuration for adjoint modeling
         let config = FdtdConfig {
             spatial_order: 2,
             staggered_grid: true,
@@ -418,10 +602,9 @@ impl FwiProcessor {
             sensor_mask: None,
         };
 
-        // Build adjoint medium from the reference velocity field.
         let density_adj = Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF);
         let medium_adj = HeterogeneousFactory::from_arrays(
-            sound_speed,
+            model.clone(),
             density_adj,
             None,
             None,
@@ -429,35 +612,29 @@ impl FwiProcessor {
         )
         .map_err(crate::core::error::KwaversError::InvalidInput)?;
 
-        let mut solver = FdtdSolver::new(config, grid, &medium_adj, GridSource::default())?;
+        let mut solver = FdtdSolver::new(config, grid, &medium_adj, adjoint_source.clone())?;
 
-        // Run adjoint simulation (backward propagation)
-        // For FWI, adjoint source is injected as a source term or boundary condition
-        // Here we simply overwrite the pressure field as a simplified adjoint injection
-        // In real FWI this would be a time-reversed source injection
-        solver.fields.p.assign(adjoint_source);
-
-        let mut gradient = Array3::zeros((nx, ny, nz));
+        let mut gradient_m = Array3::zeros((nx, ny, nz));
+        let mut p_tt = Array3::zeros((nx, ny, nz));
 
         for t in 0..self.parameters.nt {
             solver.step_forward()?;
+            let fwd_idx = self.parameters.nt - 1 - t;
+            self.pressure_second_derivative_into(forward_history, fwd_idx, dt, &mut p_tt)?;
 
-            if t < forward_history.len() {
-                let fwd_idx = forward_history.len() - 1 - t;
-                let fwd = &forward_history[fwd_idx];
-
-                // Gradient accumulation: g += -u * lambda
-                Zip::from(&mut gradient)
-                    .and(fwd)
-                    .and(&solver.fields.p)
-                    .for_each(|g, &u, &adj| {
-                        *g -= u * adj;
-                    });
-            }
+            accumulate_signed_correlation(
+                &mut gradient_m,
+                p_tt.view(),
+                solver.fields.p.view(),
+                -dt,
+            )?;
         }
 
-        // Return gradients
-        Ok(gradient)
+        Zip::from(&mut gradient_m).and(model).for_each(|g, &c| {
+            *g *= -2.0 / c.powi(3);
+        });
+
+        Ok(gradient_m)
     }
 
     /// Calculate stable timestep for FDTD solver
@@ -466,28 +643,261 @@ impl FwiProcessor {
     ///
     /// # References
     /// * Courant et al. (1928): "On the partial difference equations of mathematical physics"
-    fn calculate_stable_timestep(&self, model: &Array3<f64>, grid: &Grid) -> f64 {
-        let c_max = model.iter().cloned().fold(0.0, f64::max);
+    fn calculate_stable_timestep(&self, model: &Array3<f64>, grid: &Grid) -> KwaversResult<f64> {
+        let c_max = model.iter().copied().fold(0.0, f64::max);
+        if !c_max.is_finite() || c_max <= 0.0 {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: "FWI requires a strictly positive finite sound speed model"
+                        .to_string(),
+                },
+            ));
+        }
+
         let min_spacing = grid.dx.min(grid.dy).min(grid.dz);
-
-        // CFL condition with safety factor
-        let cfl_number = 0.3; // Safety factor (matches config)
-        cfl_number * min_spacing / (c_max * 3.0_f64.sqrt())
+        let cfl_number = 0.3;
+        Ok(cfl_number * min_spacing / (c_max * 3.0_f64.sqrt()))
     }
 
-    /// Compute adjoint source from data residual
-    #[must_use]
-    fn compute_adjoint_source(&self, residual: &Array3<f64>) -> Array3<f64> {
-        // For L2 norm, adjoint source is simply the negative residual
-        residual.map(|&x| -x)
+    /// Compute the acoustic L2 objective between observed and synthetic data.
+    ///
+    /// ## Theorem
+    /// For the discrete least-squares objective
+    ///
+    /// ```text
+    /// J = (dt / 2) Σ_{r,t} (d_syn - d_obs)²
+    /// ```
+    ///
+    /// the objective value is non-negative and vanishes if and only if the
+    /// synthetic and observed traces match pointwise.
+    ///
+    /// ## Proof sketch
+    /// The integrand is a sum of squares. Multiplication by the positive factor
+    /// `dt / 2` preserves non-negativity and the zero set.
+    fn compute_l2_objective(
+        &self,
+        observed: &Array2<f64>,
+        synthetic: &Array2<f64>,
+    ) -> KwaversResult<f64> {
+        l2_objective(self.parameters.dt, observed, synthetic)
     }
 
-    /// Calculate Ricker wavelet value
-    fn ricker_wavelet(&self, t: f64) -> f64 {
-        let f0 = 20.0; // Central frequency
-        let t0 = 1.0 / f0;
-        let terms = std::f64::consts::PI * f0 * (t - t0);
-        (1.0 - 2.0 * terms * terms) * (-terms * terms).exp()
+    /// Compute the discrete adjoint source for L2 misfit.
+    ///
+    /// The residual is `d_syn - d_obs`, matching the in-repo misfit convention.
+    /// The returned source is the residual itself; time reversal is applied only
+    /// when constructing the pressure source signal.
+    fn compute_adjoint_source(
+        &self,
+        observed: &Array2<f64>,
+        synthetic: &Array2<f64>,
+    ) -> KwaversResult<Array2<f64>> {
+        l2_residual(observed, synthetic)
+    }
+
+    /// Build the time-reversed pressure source used in the adjoint run.
+    ///
+    /// ## Theorem
+    /// Reversing the residual in time and injecting it through the receiver mask
+    /// produces the discrete time-reversal adjoint for the linear acoustic
+    /// operator when the forward and adjoint solvers share the same stencil and
+    /// boundary model.
+    ///
+    /// ## Proof sketch
+    /// The discrete adjoint of the wave operator is its time reverse under the
+    /// same inner product. The receiver residual is therefore injected in
+    /// reverse temporal order at the same spatial support.
+    fn build_adjoint_source(
+        &self,
+        residual: &Array2<f64>,
+        geometry: &FwiGeometry,
+    ) -> KwaversResult<GridSource> {
+        let expected_rows = geometry.receiver_count();
+        if residual.nrows() != expected_rows {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!(
+                        "Residual receiver count mismatch: expected {}, got {}",
+                        expected_rows,
+                        residual.nrows()
+                    ),
+                },
+            ));
+        }
+        if residual.ncols() != self.parameters.nt {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!(
+                        "Residual time length mismatch: expected {}, got {}",
+                        self.parameters.nt,
+                        residual.ncols()
+                    ),
+                },
+            ));
+        }
+
+        let reversed_residual = reverse_time_axis(residual);
+        let mut p_signal = Array2::zeros((expected_rows, self.parameters.nt));
+        for source_row in 0..expected_rows {
+            let sensor_row = geometry.receiver_row_to_sensor_row[source_row];
+            for t in 0..self.parameters.nt {
+                p_signal[[source_row, t]] = reversed_residual[[sensor_row, t]];
+            }
+        }
+
+        let p_mask = geometry
+            .sensor_mask
+            .mapv(|active| if active { 1.0 } else { 0.0 });
+
+        Ok(GridSource {
+            p0: None,
+            u0: None,
+            p_mask: Some(p_mask),
+            p_signal: Some(p_signal),
+            p_mode: SourceMode::Dirichlet,
+            u_mask: None,
+            u_signal: None,
+            u_mode: SourceMode::default(),
+        })
+    }
+
+    /// Compute the model objective by running a forward simulation.
+    fn compute_objective(
+        &self,
+        model: &Array3<f64>,
+        observed_data: &Array2<f64>,
+        geometry: &FwiGeometry,
+        grid: &Grid,
+    ) -> KwaversResult<f64> {
+        let (synthetic_data, _) = self.forward_model(model, geometry, grid)?;
+        self.compute_l2_objective(observed_data, &synthetic_data)
+    }
+
+    /// Validate timestep and model compatibility with the grid.
+    fn validate_time_step(&self, model: &Array3<f64>, grid: &Grid) -> KwaversResult<f64> {
+        if model.dim() != grid.dimensions() {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!(
+                        "Model shape mismatch: expected {:?}, got {:?}",
+                        grid.dimensions(),
+                        model.dim()
+                    ),
+                },
+            ));
+        }
+
+        if self.parameters.nt < 3 {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: "FWI requires at least 3 time samples to form a second derivative"
+                        .to_string(),
+                },
+            ));
+        }
+
+        if self.parameters.dt <= 0.0 {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: "FWI requires a positive time step".to_string(),
+                },
+            ));
+        }
+
+        if model.iter().any(|&v| !v.is_finite() || v <= 0.0) {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: "FWI requires a finite, strictly positive sound speed model"
+                        .to_string(),
+                },
+            ));
+        }
+
+        let stable_dt = self.calculate_stable_timestep(model, grid)?;
+        if self.parameters.dt > stable_dt {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!(
+                        "Time step {:.6e} exceeds CFL bound {:.6e}",
+                        self.parameters.dt, stable_dt
+                    ),
+                },
+            ));
+        }
+
+        Ok(self.parameters.dt)
+    }
+
+    /// Compute the discrete second derivative of the forward pressure history.
+    ///
+    /// ## Theorem
+    /// The centered second difference is a second-order accurate approximation
+    /// of `∂²p/∂t²` on a uniform time grid.
+    ///
+    /// ## Proof sketch
+    /// Taylor expansion about `t_i` gives
+    /// `p_{i±1} = p_i ± dt p'_i + dt² p''_i / 2 + O(dt³)`.
+    /// Adding the two expansions and subtracting `2p_i` yields
+    /// `(p_{i-1} - 2p_i + p_{i+1}) / dt² = p''_i + O(dt²)`.
+    fn pressure_second_derivative_into(
+        &self,
+        forward_history: &Array4<f64>,
+        idx: usize,
+        dt: f64,
+        dst: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        if idx >= forward_history.len_of(Axis(0)) {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!(
+                        "Forward history index out of bounds: idx {} >= {}",
+                        idx,
+                        forward_history.len_of(Axis(0))
+                    ),
+                },
+            ));
+        }
+
+        let nt = forward_history.len_of(Axis(0));
+        let inv_dt_sq = 1.0 / (dt * dt);
+        let current = forward_history.index_axis(Axis(0), idx);
+
+        if idx == 0 {
+            let next = forward_history.index_axis(Axis(0), 1);
+            let next2 = forward_history.index_axis(Axis(0), 2);
+            Zip::from(dst)
+                .and(&current)
+                .and(&next)
+                .and(&next2)
+                .for_each(|d, &p0, &p1, &p2| {
+                    *d = (p0 - 2.0 * p1 + p2) * inv_dt_sq;
+                });
+            return Ok(());
+        }
+
+        if idx + 1 == nt {
+            let prev = forward_history.index_axis(Axis(0), nt - 2);
+            let prev2 = forward_history.index_axis(Axis(0), nt - 3);
+            Zip::from(dst)
+                .and(&prev2)
+                .and(&prev)
+                .and(&current)
+                .for_each(|d, &p0, &p1, &p2| {
+                    *d = (p0 - 2.0 * p1 + p2) * inv_dt_sq;
+                });
+            return Ok(());
+        }
+
+        let prev = forward_history.index_axis(Axis(0), idx - 1);
+        let next = forward_history.index_axis(Axis(0), idx + 1);
+        Zip::from(dst)
+            .and(&prev)
+            .and(&current)
+            .and(&next)
+            .for_each(|d, &p0, &p1, &p2| {
+                *d = (p0 - 2.0 * p1 + p2) * inv_dt_sq;
+            });
+        Ok(())
     }
 }
 
@@ -515,14 +925,156 @@ mod tests {
     }
 
     #[test]
-    fn test_adjoint_source_computation() {
+    fn test_l2_adjoint_source_computation() {
         let processor = FwiProcessor::default();
-        let residual = Array3::from_elem((5, 5, 5), 3.0);
+        let observed = Array2::from_shape_vec((2, 3), vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
+            .expect("shape must be valid");
+        let synthetic = Array2::from_shape_vec((2, 3), vec![1.0, 0.5, 3.0, 1.0, 7.0, 9.0])
+            .expect("shape must be valid");
 
-        let adjoint_source = processor.compute_adjoint_source(&residual);
+        let adjoint_source = processor
+            .compute_adjoint_source(&observed, &synthetic)
+            .expect("adjoint source computation must succeed");
 
-        // Expected: -3.0
-        assert!((adjoint_source[[2, 2, 2]] + 3.0).abs() < f64::EPSILON);
+        let expected = Array2::from_shape_vec((2, 3), vec![1.0, -0.5, 1.0, -2.0, 3.0, 4.0])
+            .expect("shape must be valid");
+        assert_eq!(adjoint_source, expected);
+    }
+
+    #[test]
+    fn test_l2_objective_matches_definition() {
+        let processor = FwiProcessor::new(FwiParameters {
+            nt: 3,
+            dt: 0.5,
+            max_iterations: 1,
+            step_size: 1.0,
+            ..FwiParameters::default()
+        });
+
+        let observed =
+            Array2::from_shape_vec((2, 2), vec![1.0, 1.0, 1.0, 1.0]).expect("shape must be valid");
+        let synthetic =
+            Array2::from_shape_vec((2, 2), vec![2.0, 4.0, 6.0, 8.0]).expect("shape must be valid");
+
+        let objective = processor
+            .compute_l2_objective(&observed, &synthetic)
+            .expect("objective computation must succeed");
+
+        // residual = [1,3,5,7], sum(residual^2) = 84, objective = 0.5 * dt * 84 = 21
+        assert!((objective - 21.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_adjoint_source_reorders_and_time_reverses() {
+        let processor = FwiProcessor::new(FwiParameters {
+            nt: 3,
+            dt: 1.0,
+            max_iterations: 1,
+            step_size: 1.0,
+            ..FwiParameters::default()
+        });
+
+        let sensor_mask = Array3::from_shape_vec((2, 2, 1), vec![true, true, true, true])
+            .expect("shape must be valid");
+        let geometry = FwiGeometry::new(GridSource::default(), sensor_mask);
+
+        let residual = Array2::from_shape_vec(
+            (4, 3),
+            vec![
+                1.0, 2.0, 3.0, 10.0, 20.0, 30.0, 100.0, 200.0, 300.0, 1000.0, 2000.0, 3000.0,
+            ],
+        )
+        .expect("shape must be valid");
+
+        let source = processor
+            .build_adjoint_source(&residual, &geometry)
+            .expect("adjoint source construction must succeed");
+
+        let GridSource {
+            p_mask,
+            p_signal,
+            p_mode,
+            ..
+        } = source;
+        let p_signal = p_signal.expect("pressure signal must be present");
+        let expected = Array2::from_shape_vec(
+            (4, 3),
+            vec![
+                3.0, 2.0, 1.0, 300.0, 200.0, 100.0, 30.0, 20.0, 10.0, 3000.0, 2000.0, 1000.0,
+            ],
+        )
+        .expect("shape must be valid");
+
+        assert_eq!(p_signal, expected);
+
+        let p_mask = p_mask.expect("pressure mask must be present");
+        assert_eq!(
+            p_mask,
+            geometry
+                .sensor_mask
+                .clone()
+                .mapv(|active| if active { 1.0 } else { 0.0 })
+        );
+        assert!(matches!(p_mode, SourceMode::Dirichlet));
+    }
+
+    #[test]
+    fn test_pressure_second_derivative_exact_for_quadratic_trace() {
+        let processor = FwiProcessor::new(FwiParameters {
+            nt: 5,
+            dt: 1.0,
+            max_iterations: 1,
+            step_size: 1.0,
+            ..FwiParameters::default()
+        });
+
+        let mut forward_history = Array4::zeros((5, 1, 1, 1));
+        for t in 0..5 {
+            forward_history[[t, 0, 0, 0]] = (t as f64).powi(2);
+        }
+
+        let mut dst = Array3::zeros((1, 1, 1));
+        for idx in 0..5 {
+            processor
+                .pressure_second_derivative_into(&forward_history, idx, 1.0, &mut dst)
+                .expect("second derivative computation must succeed");
+            assert!((dst[[0, 0, 0]] - 2.0).abs() < f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_forward_model_objective_vanishes_for_self_data() {
+        let processor = FwiProcessor::new(FwiParameters {
+            nt: 3,
+            dt: 1e-4,
+            max_iterations: 1,
+            step_size: 1.0,
+            ..FwiParameters::default()
+        });
+
+        let grid = Grid::new(3, 3, 3, 1.0, 1.0, 1.0).expect("grid must be valid");
+        let model = Array3::from_elem((3, 3, 3), 1500.0);
+
+        let mut p_mask = Array3::zeros((3, 3, 3));
+        p_mask[[1, 1, 1]] = 1.0;
+        let mut source = GridSource::default();
+        source.p_mask = Some(p_mask);
+        source.p_signal =
+            Some(Array2::from_shape_vec((1, 3), vec![1.0, 0.0, 0.0]).expect("shape must be valid"));
+        source.p_mode = SourceMode::Dirichlet;
+
+        let mut sensor_mask = Array3::from_elem((3, 3, 3), false);
+        sensor_mask[[2, 2, 2]] = true;
+        let geometry = FwiGeometry::new(source, sensor_mask);
+
+        let (synthetic, _history) = processor
+            .forward_model(&model, &geometry, &grid)
+            .expect("forward model must succeed");
+        let objective = processor
+            .compute_l2_objective(&synthetic, &synthetic)
+            .expect("objective computation must succeed");
+
+        assert!((objective - 0.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -587,14 +1139,8 @@ mod tests {
         model[[3, 3, 3]] = 3200.0; // anomaly
 
         let density = Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF);
-        let medium = HeterogeneousFactory::from_arrays(
-            model.clone(),
-            density,
-            None,
-            None,
-            20.0,
-        )
-        .expect("medium construction must succeed");
+        let medium = HeterogeneousFactory::from_arrays(model.clone(), density, None, None, 20.0)
+            .expect("medium construction must succeed");
 
         use crate::domain::medium::CoreMedium;
         let c_bg = medium.sound_speed(1, 1, 1);

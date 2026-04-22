@@ -271,17 +271,35 @@ pub fn gradient_x(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>
 
     // Use the central FFT processor for spectral derivative
     let fft = crate::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz);
-    fft.spectral_derivative(field, 0)
+    fft.spectral_derivative(field, 0).map_err(|err| {
+        crate::core::error::KwaversError::Validation(
+            crate::core::error::ValidationError::ConstraintViolation {
+                message: err.to_string(),
+            },
+        )
+    })
 }
 
 pub fn gradient_y(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
     let fft = crate::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz);
-    fft.spectral_derivative(field, 1)
+    fft.spectral_derivative(field, 1).map_err(|err| {
+        crate::core::error::KwaversError::Validation(
+            crate::core::error::ValidationError::ConstraintViolation {
+                message: err.to_string(),
+            },
+        )
+    })
 }
 
 pub fn gradient_z(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
     let fft = crate::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz);
-    fft.spectral_derivative(field, 2)
+    fft.spectral_derivative(field, 2).map_err(|err| {
+        crate::core::error::KwaversError::Validation(
+            crate::core::error::ValidationError::ConstraintViolation {
+                message: err.to_string(),
+            },
+        )
+    })
 }
 
 #[cfg(test)]

@@ -116,7 +116,7 @@ pub trait Boundary: Debug + Send + Sync {
     /// Applies boundary conditions to the acoustic field in frequency domain (k-space).
     fn apply_acoustic_freq(
         &mut self,
-        field: &mut Array3<rustfft::num_complex::Complex<f64>>,
+        field: &mut Array3<crate::math::fft::Complex64>,
         grid: &Grid,
         time_step: usize,
     ) -> KwaversResult<()>;

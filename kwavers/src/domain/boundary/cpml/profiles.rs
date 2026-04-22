@@ -256,6 +256,13 @@ impl CPMLProfiles {
         _config: &CPMLConfig,
         sound_speed: f64,
     ) {
+        // Singleton axes correspond to lower-dimensional embeddings and must
+        // remain neutral to preserve 2-D/1-D parity.
+        if n <= 1 || thickness == 0 {
+            sigma_sg.fill(0.0);
+            return;
+        }
+
         let pml_order: f64 = 4.0;
         let t = thickness as f64;
 
@@ -273,7 +280,7 @@ impl CPMLProfiles {
         let right_start = n.saturating_sub(thickness);
         for i in right_start..n {
             let j = (i - right_start) as f64; // 0-based offset within right PML
-            // k-Wave formula: ((x+0.5) / pml_size)^4, x=j+1 → (j+1.5)/pml_size
+                                              // k-Wave formula: ((x+0.5) / pml_size)^4, x=j+1 → (j+1.5)/pml_size
             let d = (j + 1.5) / t;
             sigma_sg[i] = pml_alpha * (sound_speed / dx) * d.powf(pml_order);
         }
@@ -305,6 +312,17 @@ impl CPMLProfiles {
         sound_speed: f64,
         dt: f64,
     ) {
+        // Singleton axes correspond to lower-dimensional embeddings and must
+        // remain neutral to preserve 2-D/1-D parity.
+        if n <= 1 || thickness == 0 {
+            sigma.fill(0.0);
+            kappa.fill(1.0);
+            alpha.fill(0.0);
+            a_coeff.fill(0.0);
+            b_coeff.fill(1.0);
+            return;
+        }
+
         // K-Wave hard-codes polynomial order 4 for PML profiles
         let pml_order: f64 = 4.0;
 
@@ -380,8 +398,8 @@ mod tests {
         let grid = Grid::new(nx, nx, nx, dx, dx, dx).expect("grid");
         let config = CPMLConfig::with_thickness(pml_size).with_alpha(pml_alpha);
 
-        let profiles = CPMLProfiles::new(&config, &grid, c0, dt)
-            .expect("CPMLProfiles::new should succeed");
+        let profiles =
+            CPMLProfiles::new(&config, &grid, c0, dt).expect("CPMLProfiles::new should succeed");
 
         // Left PML: d = (thickness - i) / thickness.
         // At i=0 (the outer wall): d = thickness/thickness = 1.0 → σ = σ_max
@@ -393,6 +411,30 @@ mod tests {
             (actual - expected_sigma_max).abs() / expected_sigma_max < 0.01,
             "σ_max = {actual:.1} should match k-Wave formula {expected_sigma_max:.1}"
         );
+    }
+
+    /// Singleton axes must remain CPML-neutral so lower-dimensional embeddings
+    /// do not absorb energy in the dummy axis.
+    #[test]
+    fn test_singleton_axis_profiles_are_neutral() {
+        let c0 = 1500.0_f64;
+        let dx = 1e-3_f64;
+        let dt = 1e-7_f64;
+
+        let grid = Grid::new(32, 32, 1, dx, dx, dx).expect("grid");
+        let config = CPMLConfig::with_thickness(10).with_alpha(2.0);
+
+        let profiles =
+            CPMLProfiles::new(&config, &grid, c0, dt).expect("CPMLProfiles::new should succeed");
+
+        assert!(profiles.sigma_x.iter().any(|&v| v > 0.0));
+        assert!(profiles.sigma_y.iter().any(|&v| v > 0.0));
+        assert!(profiles.sigma_z.iter().all(|&v| v == 0.0));
+        assert!(profiles.sigma_z_sgz.iter().all(|&v| v == 0.0));
+        assert!(profiles.kappa_z.iter().all(|&v| v == 1.0));
+        assert!(profiles.alpha_z.iter().all(|&v| v == 0.0));
+        assert!(profiles.a_z.iter().all(|&v| v == 0.0));
+        assert!(profiles.b_z.iter().all(|&v| v == 1.0));
     }
 
     /// b-coefficient at the PML wall must equal exp(−σ_max · dt).
@@ -411,8 +453,8 @@ mod tests {
         let grid = Grid::new(nx, nx, nx, dx, dx, dx).expect("grid");
         let config = CPMLConfig::with_thickness(pml_size).with_alpha(pml_alpha);
 
-        let profiles = CPMLProfiles::new(&config, &grid, c0, dt)
-            .expect("CPMLProfiles::new should succeed");
+        let profiles =
+            CPMLProfiles::new(&config, &grid, c0, dt).expect("CPMLProfiles::new should succeed");
 
         // At the PML wall (index 0: outer wall, maximum σ)
         let sigma_max = profiles.sigma_x[0];

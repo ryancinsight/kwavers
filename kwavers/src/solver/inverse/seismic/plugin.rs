@@ -13,9 +13,9 @@ use crate::domain::plugin::{PluginMetadata, PluginState};
 // Yes, Plugin implementation in Solver is fine.
 
 use crate::domain::grid::Grid;
-use ndarray::Array3;
+use ndarray::{Array2, Array3};
 
-use super::fwi::FwiProcessor;
+use super::fwi::{FwiGeometry, FwiProcessor};
 use super::parameters::{FwiParameters, MigrationAperture, RtmSettings};
 use super::rtm::RtmProcessor;
 
@@ -101,8 +101,9 @@ impl SeismicImagingPlugin {
     /// Reference: Geophysics, 49(8), 1259-1266
     pub fn full_waveform_inversion(
         &mut self,
-        observed_data: &Array3<f64>,
+        observed_data: &Array2<f64>,
         initial_model: &Array3<f64>,
+        geometry: &FwiGeometry,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         let processor = self.fwi_processor.as_ref().ok_or_else(|| {
@@ -115,7 +116,7 @@ impl SeismicImagingPlugin {
         })?;
 
         self.state = PluginState::Running;
-        let result = processor.invert(observed_data, initial_model, grid);
+        let result = processor.invert(observed_data, initial_model, geometry, grid);
         self.state = PluginState::Initialized;
         result
     }

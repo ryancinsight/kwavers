@@ -12,11 +12,10 @@ async fn create_test_device() -> Result<(wgpu::Device, wgpu::Queue), Box<dyn std
     let instance = wgpu::Instance::default();
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions::default())
-        .await
-        .ok_or("No GPU adapter found")?;
+        .await?;
 
     let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor::default(), None)
+        .request_device(&wgpu::DeviceDescriptor::default())
         .await?;
 
     Ok((device, queue))
@@ -117,6 +116,29 @@ async fn test_buffer_read_write_roundtrip() {
             read
         );
     }
+}
+
+#[tokio::test]
+async fn test_buffer_direct_map_read() {
+    let (device, queue) = match create_test_device().await {
+        Ok(d) => d,
+        Err(_) => {
+            eprintln!("GPU not available, skipping test");
+            return;
+        }
+    };
+
+    let original_data: Vec<f32> = vec![3.0, 1.0, 4.0, 1.5, 9.0, 2.6];
+    let buffer = GpuBuffer::create(
+        &device,
+        original_data.len() * std::mem::size_of::<f32>(),
+        wgpu::BufferUsages::MAP_READ | BufferUsage::COPY_DST,
+    )
+    .unwrap();
+
+    buffer.write(&queue, &original_data);
+    let read_data: Vec<f32> = buffer.read_to_vec::<f32>(&device, &queue).await.unwrap();
+    assert_eq!(read_data, original_data);
 }
 
 #[tokio::test]
@@ -242,7 +264,7 @@ async fn test_buffer_sequential_writes() {
     // First write
     let data1: Vec<f32> = vec![1.0; 16];
     buffer.write(&queue, &data1);
-    device.poll(wgpu::Maintain::Wait);
+    let _ = device.poll(wgpu::PollType::Wait);
 
     let read1: Vec<f32> = buffer.read_to_vec::<f32>(&device, &queue).await.unwrap();
     assert!(read1.iter().all(|&x| (x - 1.0).abs() < 1e-6));
@@ -250,7 +272,7 @@ async fn test_buffer_sequential_writes() {
     // Second write
     let data2: Vec<f32> = vec![2.0; 16];
     buffer.write(&queue, &data2);
-    device.poll(wgpu::Maintain::Wait);
+    let _ = device.poll(wgpu::PollType::Wait);
 
     let read2: Vec<f32> = buffer.read_to_vec::<f32>(&device, &queue).await.unwrap();
     assert!(read2.iter().all(|&x| (x - 2.0).abs() < 1e-6));

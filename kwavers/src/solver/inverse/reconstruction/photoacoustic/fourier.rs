@@ -10,9 +10,8 @@
 use crate::core::error::KwaversResult;
 use crate::domain::signal::window_value;
 use crate::domain::signal::WindowType;
-use crate::math::fft::FFT_CACHE;
+use crate::math::fft::{fft_1d_array, ifft_1d_array, Complex64, FFT_CACHE};
 use ndarray::{Array1, Array2, Array3, ArrayView2};
-use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
 /// Fourier domain reconstruction algorithm
@@ -75,16 +74,7 @@ impl FourierReconstructor {
     /// Apply ramp filter (derivative in time domain)
     fn apply_ramp_filter(&self, signal: Array1<f64>) -> KwaversResult<Array1<f64>> {
         let n = signal.len();
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(n);
-        let ifft = planner.plan_fft_inverse(n);
-
-        // Convert to complex
-        let mut complex_signal: Vec<Complex<f64>> =
-            signal.iter().map(|&x| Complex::new(x, 0.0)).collect();
-
-        // Forward FFT
-        fft.process(&mut complex_signal);
+        let mut complex_signal = fft_1d_array(&signal);
 
         // Apply ramp filter: H(ω) = iω
         let df = self.sampling_frequency / n as f64;
@@ -97,17 +87,10 @@ impl FourierReconstructor {
 
             // Multiply by iω (derivative in frequency domain)
             let omega = 2.0 * PI * freq;
-            *val *= Complex::new(0.0, omega);
+            *val *= Complex64::new(0.0, omega);
         }
 
-        // Inverse FFT
-        ifft.process(&mut complex_signal);
-
-        // Extract real part and normalize
-        let norm = 1.0 / n as f64;
-        Ok(Array1::from_vec(
-            complex_signal.iter().map(|c| c.re * norm).collect(),
-        ))
+        Ok(ifft_1d_array(&complex_signal))
     }
 
     /// Compute angular spectrum from filtered sensor data
@@ -115,20 +98,11 @@ impl FourierReconstructor {
         &self,
         filtered_signal: &Array1<f64>,
         sensor_pos: &[f64; 3],
-    ) -> KwaversResult<Array2<Complex<f64>>> {
+    ) -> KwaversResult<Array2<Complex64>> {
         let n_time = filtered_signal.len();
         let n_freq = n_time / 2 + 1;
 
-        // FFT of filtered signal
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(n_time);
-
-        let mut complex_signal: Vec<Complex<f64>> = filtered_signal
-            .iter()
-            .map(|&x| Complex::new(x, 0.0))
-            .collect();
-
-        fft.process(&mut complex_signal);
+        let complex_signal = fft_1d_array(filtered_signal);
 
         // Create angular spectrum (frequency vs angle)
         let n_angles = 180; // Angular resolution
@@ -143,7 +117,7 @@ impl FourierReconstructor {
                 let theta = angle_idx as f64 * PI / n_angles as f64;
 
                 // Project onto this angle
-                let projection_factor = Complex::new(
+                let projection_factor = Complex64::new(
                     (k * sensor_pos[0] * theta.cos()).cos(),
                     (k * sensor_pos[0] * theta.cos()).sin(),
                 );
@@ -158,8 +132,8 @@ impl FourierReconstructor {
     /// Add angular spectrum to k-space representation
     fn add_to_k_space(
         &self,
-        k_space: &mut Array3<Complex<f64>>,
-        angular_spectrum: &Array2<Complex<f64>>,
+        k_space: &mut Array3<Complex64>,
+        angular_spectrum: &Array2<Complex64>,
         sensor_pos: &[f64; 3],
     ) -> KwaversResult<()> {
         let [nx, ny, nz] = self.grid_size;
@@ -194,7 +168,7 @@ impl FourierReconstructor {
     }
 
     /// Apply k-space filter for noise suppression and regularization
-    fn apply_k_space_filter(&self, k_space: &mut Array3<Complex<f64>>) {
+    fn apply_k_space_filter(&self, k_space: &mut Array3<Complex64>) {
         let [nx, ny, nz] = self.grid_size;
 
         for ix in 0..nx {
@@ -221,12 +195,12 @@ impl FourierReconstructor {
     /// Inverse Fourier transform to get spatial image
     fn inverse_fourier_transform(
         &self,
-        k_space: &Array3<Complex<f64>>,
+        k_space: &Array3<Complex64>,
     ) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = self.grid_size;
         let fft = FFT_CACHE.get_or_create(nx, ny, nz);
         let mut result = Array3::<f64>::zeros((nx, ny, nz));
-        let mut scratch = Array3::<Complex<f64>>::zeros((nx, ny, nz));
+        let mut scratch = Array3::<Complex64>::zeros((nx, ny, nz));
         fft.inverse_into(k_space, &mut result, &mut scratch);
 
         // Apply positivity constraint (pressure should be non-negative)

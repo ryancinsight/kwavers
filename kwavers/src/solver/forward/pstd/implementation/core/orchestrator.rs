@@ -21,6 +21,7 @@ use crate::solver::forward::pstd::numerics::operators::initialize_spectral_opera
 use crate::solver::forward::pstd::numerics::spectral_correction::CorrectionMethod;
 use crate::solver::forward::pstd::physics::absorption::initialize_absorption_operators;
 use crate::solver::forward::pstd::utils::compute_k_magnitude;
+use crate::solver::forward::acoustic_ivp::spectral_velocity_scale_from_kappa;
 use crate::math::fft::shift_operators::generate_shift_1d;
 use ndarray::{Array1, Array2, Array3, Zip};
 use std::f64::consts::PI;
@@ -317,22 +318,14 @@ impl PSTDSolver {
     /// This is derived from u(x,t) = IFFT(−i · k̂ · sin(c₀|k|t)/(ρ₀c₀) · FFT(p0)) at t = −dt/2.
     /// Without this init, velocity starts from zero and the wave arrives ≈1 step later than k-Wave.
     fn initialize_ivp_velocity(&mut self) -> KwaversResult<()> {
-        let c_ref = self.c_ref;
         let dt = self.config.dt;
         let rho0_ref = self.materials.rho0.mean().unwrap_or(1000.0);
 
-        // k-magnitude array — computed from k_vec without borrowing conflicts
-        let k_mag: Array3<f64> = compute_k_magnitude(&self.k_vec.0, &self.k_vec.1, &self.k_vec.2);
-
-        // sin(c_ref·dt·|k|/2) / (|k|·ρ₀·c_ref) — the spectral IVP scaling factor per mode
-        // DC component (k=0) → 0 (no net velocity from uniform pressure)
-        let sin_scale: Array3<f64> = k_mag.mapv(|km| {
-            if km < 1e-30 {
-                0.0
-            } else {
-                (c_ref * dt * km / 2.0).sin() / (km * rho0_ref * c_ref)
-            }
-        });
+        // The spectral IVP scale is expressed through the existing kappa field:
+        //   sin(c0|k|dt/2)/(ρ0 c0 |k|) = (dt / (2ρ0)) * sinc(arccos(κ))
+        // This avoids materializing a separate |k| array.
+        let sin_scale: Array3<f64> =
+            spectral_velocity_scale_from_kappa(&self.kappa, dt, rho0_ref)?;
 
         // FFT the initial pressure p0 into the p_k scratch buffer
         self.fft.forward_into(&self.fields.p, &mut self.p_k);

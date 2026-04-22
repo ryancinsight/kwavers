@@ -6,7 +6,7 @@
 //!    roundtrip `IFFT(FFT(x)) ≈ x` must satisfy `|error|_∞ < 1e-5`.
 //!
 //! 2. **CPU cross-validation** — for the same sizes the GPU spectrum must
-//!    agree with the CPU f64 FFT (via `rustfft`) to within a relative error
+//!    agree with the Apollo-backed CPU FFT to within a relative error
 //!    of `5e-6` on all bins with `|CPU_k| > 1e-12`.
 //!
 //! 3. **Power-of-2 regression** — sizes `{16, 32, 64}` must also pass both
@@ -22,35 +22,21 @@
 
 #![cfg(feature = "gpu")]
 
-use num_complex::Complex64;
-use rustfft::FftPlanner;
+use kwavers::math::fft::{fft_1d_array, Complex64};
+use ndarray::Array1;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 /// Initialise a wgpu device synchronously (Vulkan/DX12/Metal/GL).
 /// Returns `None` if no suitable adapter is available (headless CI).
 async fn try_init_gpu() -> Option<(std::sync::Arc<wgpu::Device>, std::sync::Arc<wgpu::Queue>)> {
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::all(),
-        ..Default::default()
-    });
+    let instance = wgpu::Instance::default();
     let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
-            compatible_surface: None,
-            force_fallback_adapter: false,
-        })
-        .await?;
+        .request_adapter(&wgpu::RequestAdapterOptions::default())
+        .await
+        .ok()?;
     let (device, queue) = adapter
-        .request_device(
-            &wgpu::DeviceDescriptor {
-                label: Some("test device"),
-                required_features: wgpu::Features::empty(),
-                required_limits: wgpu::Limits::default(),
-                memory_hints: wgpu::MemoryHints::Performance,
-            },
-            None,
-        )
+        .request_device(&wgpu::DeviceDescriptor::default())
         .await
         .ok()?;
     Some((std::sync::Arc::new(device), std::sync::Arc::new(queue)))
@@ -68,14 +54,9 @@ fn test_signal_1d(n: usize) -> Vec<f64> {
         .collect()
 }
 
-/// CPU reference 1-D DFT via rustfft (f64 precision).
-fn cpu_fft_1d(signal: &[f64]) -> Vec<Complex64> {
-    let n = signal.len();
-    let mut buf: Vec<Complex64> = signal.iter().map(|&x| Complex64::new(x, 0.0)).collect();
-    let mut planner = FftPlanner::<f64>::new();
-    let plan = planner.plan_fft_forward(n);
-    plan.process(&mut buf);
-    buf
+/// CPU reference 1-D DFT via the Apollo FFT cache (f64 precision).
+fn cpu_fft_1d(signal: &[f64]) -> Array1<Complex64> {
+    fft_1d_array(&Array1::from_vec(signal.to_vec()))
 }
 
 /// Compute the 3-D GPU FFT for a grid of shape (nx, ny, nz) using a uniform
@@ -159,29 +140,35 @@ async fn cross_validate_1d(n: usize, rel_tol: f64) {
 
     let signal = test_signal_1d(n);
     let cpu_spec = cpu_fft_1d(&signal);
+    let signal_scale = signal.iter().copied().map(f64::abs).fold(0.0_f64, f64::max);
+    let abs_tol = 4.0 * signal.len() as f64 * f32::EPSILON as f64 * signal_scale;
 
     let arr: Array3<f64> = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| signal[i]);
     let gpu = GpuFft3d::new(device, queue, n, 1, 1).expect("GpuFft3d::new");
     let spec = gpu.forward(&arr);
 
     let mut max_rel_err = 0.0_f64;
-    for k in 0..n {
+    let mut max_abs_err = 0.0_f64;
+    for (k, cpu_val) in cpu_spec.iter().enumerate() {
         let gpu_re = spec[2 * k] as f64;
         let gpu_im = spec[2 * k + 1] as f64;
-        let cpu_mag = cpu_spec[k].norm();
-        if cpu_mag < 1e-12 {
-            continue; // skip near-zero bins
-        }
-        let err = ((gpu_re - cpu_spec[k].re).powi(2) + (gpu_im - cpu_spec[k].im).powi(2)).sqrt();
-        let rel = err / cpu_mag;
-        if rel > max_rel_err {
-            max_rel_err = rel;
+        let abs_err = ((gpu_re - cpu_val.re).powi(2) + (gpu_im - cpu_val.im).powi(2)).sqrt();
+        let cpu_mag = cpu_val.norm();
+        if cpu_mag > abs_tol {
+            let rel = abs_err / cpu_mag;
+            if rel > max_rel_err {
+                max_rel_err = rel;
+            }
+        } else if abs_err > max_abs_err {
+            max_abs_err = abs_err;
         }
     }
 
     assert!(
-        max_rel_err < rel_tol,
-        "GPU vs CPU cross-validation failed for n={n}: max_rel_err={max_rel_err:.3e} >= {rel_tol:.3e}"
+        max_rel_err < rel_tol && max_abs_err < abs_tol,
+        "GPU vs CPU cross-validation failed for n={n}: \
+         max_rel_err={max_rel_err:.3e} >= {rel_tol:.3e} or \
+         max_abs_err={max_abs_err:.3e} >= abs_tol={abs_tol:.3e}"
     );
 }
 

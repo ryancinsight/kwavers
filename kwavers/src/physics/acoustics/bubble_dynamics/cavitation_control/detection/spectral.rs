@@ -3,14 +3,13 @@
 use super::constants::{BROADBAND_THRESHOLD_DB, MIN_SPECTRAL_POWER, SPECTRAL_WINDOW_SIZE};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationMetrics, CavitationState, DetectionMethod, HistoryBuffer};
+use crate::math::fft::fft_1d_array;
 use ndarray::{s, Array1, ArrayView1};
-use rustfft::{num_complex::Complex, FftPlanner};
 
 /// Spectral detector for cavitation using FFT analysis
 pub struct SpectralDetector {
     fundamental_freq: f64,
     sample_rate: f64,
-    fft_planner: FftPlanner<f64>,
     window: Array1<f64>,
     history: HistoryBuffer<CavitationMetrics>,
     baseline_spectrum: Option<Array1<f64>>,
@@ -22,7 +21,6 @@ impl std::fmt::Debug for SpectralDetector {
         f.debug_struct("SpectralDetector")
             .field("fundamental_freq", &self.fundamental_freq)
             .field("sample_rate", &self.sample_rate)
-            .field("fft_planner", &"<FftPlanner>")
             .field("window_len", &self.window.len())
             .field("history_len", &self.history.len())
             .field("has_baseline", &self.baseline_spectrum.is_some())
@@ -34,13 +32,11 @@ impl std::fmt::Debug for SpectralDetector {
 impl SpectralDetector {
     #[must_use]
     pub fn new(fundamental_freq: f64, sample_rate: f64) -> Self {
-        let fft_planner = FftPlanner::new();
         let window = Self::create_hann_window(SPECTRAL_WINDOW_SIZE);
 
         Self {
             fundamental_freq,
             sample_rate,
-            fft_planner,
             window,
             history: HistoryBuffer::new(10),
             baseline_spectrum: None,
@@ -60,22 +56,28 @@ impl SpectralDetector {
         let n = signal.len().min(SPECTRAL_WINDOW_SIZE);
 
         // Apply window
-        let mut windowed: Vec<Complex<f64>> = signal
+        let mut windowed = ndarray::Array1::from_vec(
+            signal
             .iter()
             .take(n)
             .zip(self.window.iter().take(n))
-            .map(|(&s, &w)| Complex::new(s * w, 0.0))
-            .collect();
+            .map(|(&s, &w)| s * w)
+            .collect(),
+        );
 
         // Pad if necessary
-        windowed.resize(SPECTRAL_WINDOW_SIZE, Complex::new(0.0, 0.0));
+        if windowed.len() < SPECTRAL_WINDOW_SIZE {
+            let mut padded = ndarray::Array1::<f64>::zeros(SPECTRAL_WINDOW_SIZE);
+            padded
+                .slice_mut(s![..windowed.len()])
+                .assign(&windowed);
+            windowed = padded;
+        }
 
-        // Perform FFT
-        let fft = self.fft_planner.plan_fft_forward(SPECTRAL_WINDOW_SIZE);
-        fft.process(&mut windowed);
+        let spectrum = fft_1d_array(&windowed);
 
         // Convert to power spectral density
-        let psd: Array1<f64> = windowed
+        let psd: Array1<f64> = spectrum
             .iter()
             .take(SPECTRAL_WINDOW_SIZE / 2)
             .map(|c| c.norm_sqr() / (SPECTRAL_WINDOW_SIZE as f64 * self.sample_rate))

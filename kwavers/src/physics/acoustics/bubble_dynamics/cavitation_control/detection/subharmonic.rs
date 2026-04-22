@@ -4,13 +4,12 @@ use super::constants::{MIN_SPECTRAL_POWER, SUBHARMONIC_THRESHOLD};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationMetrics, CavitationState, DetectionMethod};
 use ndarray::{Array1, ArrayView1};
-use rustfft::{num_complex::Complex, FftPlanner};
+use crate::math::fft::fft_1d_array;
 
 /// Subharmonic detector for stable cavitation
 pub struct SubharmonicDetector {
     fundamental_freq: f64,
     sample_rate: f64,
-    fft_planner: FftPlanner<f64>,
     sensitivity: f64,
 }
 
@@ -19,7 +18,6 @@ impl std::fmt::Debug for SubharmonicDetector {
         f.debug_struct("SubharmonicDetector")
             .field("fundamental_freq", &self.fundamental_freq)
             .field("sample_rate", &self.sample_rate)
-            .field("fft_planner", &"<FftPlanner>")
             .field("sensitivity", &self.sensitivity)
             .finish()
     }
@@ -31,7 +29,6 @@ impl SubharmonicDetector {
         Self {
             fundamental_freq,
             sample_rate,
-            fft_planner: FftPlanner::new(),
             sensitivity: 1.0,
         }
     }
@@ -39,12 +36,7 @@ impl SubharmonicDetector {
     /// Compute FFT and return magnitude spectrum
     fn compute_spectrum(&mut self, signal: &ArrayView1<f64>) -> Array1<f64> {
         let n = signal.len();
-        let mut complex_signal: Vec<Complex<f64>> =
-            signal.iter().map(|&x| Complex::new(x, 0.0)).collect();
-
-        // Perform FFT
-        let fft = self.fft_planner.plan_fft_forward(n);
-        fft.process(&mut complex_signal);
+        let complex_signal = fft_1d_array(&signal.to_owned());
 
         // Convert to magnitude spectrum
         Array1::from_vec(

@@ -18,8 +18,8 @@ use crate::core::error::KwaversResult;
 use crate::domain::signal::analytic::{
     hilbert_transform, instantaneous_envelope_2d, instantaneous_phase_2d,
 };
+use crate::math::fft::{fft_1d_array, ifft_1d_complex, Complex64};
 use ndarray::Array2;
-use num_complex::Complex;
 
 /// Type of misfit function for FWI
 #[derive(Debug, Clone, Copy)]
@@ -349,7 +349,7 @@ impl MisfitFunction {
             let analytic = hilbert_transform(&syn_trace);
 
             // Compute time derivative of analytic signal using central differences
-            let mut dz_dt = vec![Complex::new(0.0, 0.0); nsamples];
+            let mut dz_dt = vec![Complex64::new(0.0, 0.0); nsamples];
             if nsamples >= 3 {
                 // Forward difference for first point
                 dz_dt[0] = analytic[1] - analytic[0];
@@ -509,8 +509,6 @@ impl MisfitFunction {
     /// - Marple (1999): "Computing the discrete-time analytic signal via FFT"
     /// - Oppenheim & Schafer (2009): "Discrete-Time Signal Processing", Ch. 12
     fn compute_envelope(&self, signal: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        use rustfft::{num_complex::Complex, FftPlanner};
-
         let (ntraces, nsamples) = signal.dim();
         let mut envelope = Array2::zeros((ntraces, nsamples));
 
@@ -518,14 +516,7 @@ impl MisfitFunction {
         for i in 0..ntraces {
             let trace = signal.row(i);
 
-            // Step 1: FFT of real signal
-            let mut fft_planner = FftPlanner::new();
-            let fft = fft_planner.plan_fft_forward(nsamples);
-
-            let mut buffer: Vec<Complex<f64>> =
-                trace.iter().map(|&x| Complex::new(x, 0.0)).collect();
-
-            fft.process(&mut buffer);
+            let mut buffer = fft_1d_array(&trace.to_owned());
 
             // Step 2: Apply Hilbert transform in frequency domain
             // H[X(f)] = -i*sgn(f)*X(f)
@@ -535,24 +526,16 @@ impl MisfitFunction {
 
             // Zero out negative frequencies, double positive frequencies
             for sample in buffer.iter_mut().take(nsamples / 2).skip(1) {
-                *sample *= Complex::new(2.0, 0.0);
+                *sample *= Complex64::new(2.0, 0.0);
             }
             for sample in buffer.iter_mut().skip(nsamples / 2 + 1) {
-                *sample = Complex::new(0.0, 0.0);
+                *sample = Complex64::new(0.0, 0.0);
             }
 
-            // Step 3: IFFT to get analytic signal
-            let ifft = fft_planner.plan_fft_inverse(nsamples);
-            ifft.process(&mut buffer);
-
-            // Normalize IFFT
-            let norm = 1.0 / nsamples as f64;
-            for sample in &mut buffer {
-                *sample *= norm;
-            }
+            let analytic_signal = ifft_1d_complex(&buffer);
 
             // Step 4: Compute envelope as magnitude of analytic signal
-            for (j, sample) in buffer.iter().enumerate() {
+            for (j, sample) in analytic_signal.iter().enumerate() {
                 envelope[[i, j]] = sample.norm();
             }
         }
@@ -569,8 +552,6 @@ impl MisfitFunction {
     /// - Taner et al. (1979): "Complex seismic trace analysis"
     /// - Barnes (2007): "A tutorial on complex seismic trace analysis"
     fn compute_instantaneous_phase(&self, signal: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        use rustfft::{num_complex::Complex, FftPlanner};
-
         let (ntraces, nsamples) = signal.dim();
         let mut phase = Array2::zeros((ntraces, nsamples));
 
@@ -578,32 +559,22 @@ impl MisfitFunction {
         for i in 0..ntraces {
             let trace = signal.row(i);
 
-            // Compute analytic signal via Hilbert transform
-            let mut fft_planner = FftPlanner::new();
-            let fft = fft_planner.plan_fft_forward(nsamples);
-
-            let mut buffer: Vec<Complex<f64>> =
-                trace.iter().map(|&x| Complex::new(x, 0.0)).collect();
-
-            fft.process(&mut buffer);
+            let mut buffer = fft_1d_array(&trace.to_owned());
 
             // Apply Hilbert transform in frequency domain
             for sample in buffer.iter_mut().take(nsamples / 2).skip(1) {
-                *sample *= Complex::new(2.0, 0.0);
+                *sample *= Complex64::new(2.0, 0.0);
             }
             for sample in buffer.iter_mut().skip(nsamples / 2 + 1) {
-                *sample = Complex::new(0.0, 0.0);
+                *sample = Complex64::new(0.0, 0.0);
             }
 
-            let ifft = fft_planner.plan_fft_inverse(nsamples);
-            ifft.process(&mut buffer);
-
-            let norm = 1.0 / nsamples as f64;
+            let analytic_signal = ifft_1d_complex(&buffer);
 
             // Compute instantaneous phase
-            for (j, sample) in buffer.iter().enumerate() {
+            for (j, sample) in analytic_signal.iter().enumerate() {
                 let real = trace[j];
-                let imag = sample.im * norm;
+                let imag = sample.im;
 
                 // Phase = atan2(imaginary, real)
                 phase[[i, j]] = imag.atan2(real);

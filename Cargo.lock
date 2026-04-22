@@ -5457,7 +5457,6 @@ dependencies = [
  "ritk-core",
  "ritk-registration",
  "rkyv",
- "rustfft",
  "serde",
  "serde_json",
  "sha2",

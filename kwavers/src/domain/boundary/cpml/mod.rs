@@ -31,7 +31,6 @@ use crate::domain::boundary::traits::{AbsorbingBoundary, BoundaryCondition, Boun
 use crate::domain::boundary::Boundary;
 use crate::domain::grid::{Grid, GridTopology};
 use ndarray::{Array3, ArrayViewMut3, Zip};
-use rustfft::num_complex::Complex;
 
 /// Main CPML boundary struct that coordinates all components
 #[derive(Debug)]
@@ -210,7 +209,7 @@ impl Boundary for CPMLBoundary {
 
     fn apply_acoustic_freq(
         &mut self,
-        field: &mut Array3<Complex<f64>>,
+        field: &mut Array3<num_complex::Complex<f64>>,
         grid: &Grid,
         _time_step: usize,
     ) -> KwaversResult<()> {
@@ -339,7 +338,7 @@ impl BoundaryCondition for CPMLBoundary {
 
     fn apply_scalar_frequency(
         &mut self,
-        field: &mut Array3<Complex<f64>>,
+        field: &mut Array3<num_complex::Complex<f64>>,
         grid: &dyn GridTopology,
         _time_step: usize,
         dt: f64,

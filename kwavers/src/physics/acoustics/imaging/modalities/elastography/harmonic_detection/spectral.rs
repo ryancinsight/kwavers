@@ -3,7 +3,7 @@
 use super::detector::HarmonicDetector;
 use super::types::PointHarmonics;
 use crate::core::error::KwaversResult;
-use rustfft::{num_complex::Complex, FftPlanner};
+use crate::math::fft::{fft_1d_array, Complex64};
 use std::f64::consts::PI;
 
 impl HarmonicDetector {
@@ -80,14 +80,8 @@ impl HarmonicDetector {
     }
 
     /// Compute FFT of time series
-    pub(crate) fn compute_fft(&self, time_series: &[f64]) -> KwaversResult<Vec<Complex<f64>>> {
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(time_series.len());
-
-        let mut buffer: Vec<Complex<f64>> =
-            time_series.iter().map(|&x| Complex::new(x, 0.0)).collect();
-
-        fft.process(&mut buffer);
+    pub(crate) fn compute_fft(&self, time_series: &[f64]) -> KwaversResult<Vec<Complex64>> {
+        let mut buffer = fft_1d_array(&ndarray::Array1::from_vec(time_series.to_vec()));
 
         // Normalize
         let norm_factor = (time_series.len() as f64).sqrt();
@@ -95,13 +89,13 @@ impl HarmonicDetector {
             *val /= norm_factor;
         }
 
-        Ok(buffer)
+        Ok(buffer.to_vec())
     }
 
     /// Find fundamental frequency peak in spectrum
     pub(crate) fn find_fundamental_peak(
         &self,
-        spectrum: &[Complex<f64>],
+        spectrum: &[Complex64],
         sampling_frequency: f64,
     ) -> KwaversResult<usize> {
         let df = sampling_frequency / spectrum.len() as f64;
@@ -132,7 +126,7 @@ impl HarmonicDetector {
     }
 
     /// Compute signal-to-noise ratio at given frequency bin
-    pub(crate) fn compute_snr(&self, spectrum: &[Complex<f64>], signal_idx: usize) -> f64 {
+    pub(crate) fn compute_snr(&self, spectrum: &[Complex64], signal_idx: usize) -> f64 {
         let signal_power = spectrum[signal_idx].norm().powi(2);
 
         // Compute noise power (average of neighboring bins, excluding signal)

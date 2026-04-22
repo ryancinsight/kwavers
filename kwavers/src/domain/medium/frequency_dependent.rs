@@ -11,6 +11,7 @@
 //!   Society of America, 88(3), 1584-1591.
 
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::math::fft::Complex64;
 use ndarray::Array3;
 
 /// Frequency-dependent tissue properties
@@ -199,7 +200,7 @@ impl DispersionCorrection {
     /// Apply dispersion correction in frequency domain
     pub fn apply_dispersion_correction(
         &self,
-        spectrum: &mut Array3<rustfft::num_complex::Complex<f64>>,
+        spectrum: &mut Array3<Complex64>,
         k_vec: &Array3<f64>,
         dt: f64,
     ) -> KwaversResult<()> {
@@ -221,10 +222,7 @@ impl DispersionCorrection {
                         let phase_shift = (k_dispersive - k_mag) * c_phase * dt;
 
                         // Apply phase correction
-                        let correction = rustfft::num_complex::Complex::new(
-                            phase_shift.cos(),
-                            phase_shift.sin(),
-                        );
+                        let correction = Complex64::new(phase_shift.cos(), phase_shift.sin());
                         spectrum[[i, j, k]] *= correction;
                     }
                 });

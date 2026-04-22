@@ -976,7 +976,7 @@ impl PerformanceBenchmarkSuite {
 
     /// DISABLED - Awaiting Real Implementation (Sprint 211 - 15-20h)
     ///
-    /// Required: rustfft integration, k-space operators
+    /// Required: Apollo FFT integration, k-space operators
     /// Related: TODO_AUDIT_PHASE6_SUMMARY.md Section 1.1 item #4
     #[allow(dead_code)]
     fn simulate_fft_operations_disabled(&self, _field: &mut Array3<f32>) {

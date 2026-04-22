@@ -129,7 +129,7 @@ impl TDOAProcessor {
                     TimeDelayMethod::GeneralizedCrossCorrelation | TimeDelayMethod::GCCWithPHAT => {
                         // GCC-PHAT: use the same cross-correlation approach
                         // but normalise by amplitude.  A full FFT-based PHAT
-                        // would use rustfft; this is the time-domain equivalent.
+                        // This is the time-domain equivalent of the spectral path.
                         gcc_phat_delay(&sensor_signals[i], &sensor_signals[j], dt)
                     }
                 };

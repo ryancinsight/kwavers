@@ -4,7 +4,6 @@ use crate::domain::grid::Grid;
 use log::trace;
 use ndarray::{Array3, ArrayViewMut3};
 
-use rustfft::num_complex::Complex;
 
 use serde::{Deserialize, Serialize};
 
@@ -384,7 +383,7 @@ impl Boundary for PMLBoundary {
 
     fn apply_acoustic_freq(
         &mut self,
-        field: &mut Array3<Complex<f64>>,
+        field: &mut Array3<num_complex::Complex<f64>>,
         grid: &Grid,
         time_step: usize,
     ) -> crate::core::error::KwaversResult<()> {

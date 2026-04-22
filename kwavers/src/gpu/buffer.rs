@@ -69,7 +69,8 @@ impl BufferUsage {
 ///
 /// - **Storage Buffer**: Use `BufferUsage::STORAGE` for compute shader read/write
 /// - **Uniform Buffer**: Use `BufferUsage::UNIFORM` for shader constants
-/// - **GPU-to-CPU**: Requires `COPY_SRC` on main buffer, staging buffer internally managed
+/// - **GPU-to-CPU**: Uses direct `MAP_READ` when available, otherwise `COPY_SRC`
+///   on the main buffer with a cached staging buffer
 /// - **CPU-to-GPU**: Requires `COPY_DST` on main buffer
 ///
 /// # Examples
@@ -238,14 +239,16 @@ impl GpuBuffer {
 
     /// Read buffer data from GPU to CPU
     ///
-    /// Asynchronously reads buffer contents using a staging buffer pattern.
-    /// The buffer must have `COPY_SRC` usage flag. The staging buffer is
+    /// Asynchronously reads buffer contents.
+    /// If the buffer was created with `MAP_READ`, the buffer is mapped directly.
+    /// Otherwise the buffer must have `COPY_SRC` usage and a staging buffer is
     /// allocated lazily and cached for reuse after the first read. This operation:
     ///
-    /// 1. Creates a staging buffer with `MAP_READ` + `COPY_DST` usage
-    /// 2. Copies GPU buffer to staging buffer
-    /// 3. Maps staging buffer to CPU memory
-    /// 4. Returns data as Vec<T>
+    /// 1. Maps the buffer directly when `MAP_READ` is available, or
+    /// 2. Creates a staging buffer with `MAP_READ` + `COPY_DST` usage
+    /// 3. Copies GPU buffer to staging buffer
+    /// 4. Maps the staging buffer to CPU memory
+    /// 5. Returns data as `Vec<T>`
     ///
     /// # Type Parameters
     ///
@@ -279,13 +282,6 @@ impl GpuBuffer {
             return Ok(Vec::new());
         }
 
-        if !self.usage.contains(wgpu::BufferUsages::COPY_SRC) {
-            return Err(KwaversError::System(crate::core::error::SystemError::InvalidOperation {
-                operation: "GPU buffer readback".to_string(),
-                reason: "Buffer not created with COPY_SRC usage".to_string(),
-            }));
-        }
-
         let elem_size = std::mem::size_of::<T>();
         if elem_size == 0 {
             return Err(KwaversError::System(crate::core::error::SystemError::InvalidOperation {
@@ -302,6 +298,35 @@ impl GpuBuffer {
                     self.size,
                     elem_size
                 ),
+            }));
+        }
+
+        if self.usage.contains(wgpu::BufferUsages::MAP_READ) {
+            let buffer_slice = self.buffer.slice(..);
+            let (sender, receiver) = flume::bounded(1);
+            // Flush any queued `write_buffer` staging copy before mapping.
+            queue.submit([]);
+            buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+                let _ = sender.send(result);
+            });
+
+            let _ = device.poll(wgpu::PollType::Wait);
+
+            receiver.recv_async().await.map_err(|e| {
+                KwaversError::Io(std::io::Error::other(format!("Failed to map buffer: {e}")))
+            })??;
+
+            let data = buffer_slice.get_mapped_range();
+            let result = bytemuck::cast_slice(&data).to_vec();
+            drop(data);
+            self.buffer.unmap();
+            return Ok(result);
+        }
+
+        if !self.usage.contains(wgpu::BufferUsages::COPY_SRC) {
+            return Err(KwaversError::System(crate::core::error::SystemError::InvalidOperation {
+                operation: "GPU buffer readback".to_string(),
+                reason: "Buffer not created with COPY_SRC usage".to_string(),
             }));
         }
 

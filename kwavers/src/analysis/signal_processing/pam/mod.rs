@@ -275,8 +275,8 @@ use crate::domain::sensor::beamforming::processor::BeamformingProcessor;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::sensor::beamforming::BeamformingCoreConfig;
 use crate::domain::sensor::passive_acoustic_mapping::geometry::ArrayGeometry;
+use crate::math::fft::fft_1d_array;
 use ndarray::{Array3, Axis};
-use rustfft::{num_complex::Complex, FftPlanner};
 
 pub use crate::domain::sensor::passive_acoustic_mapping::geometry::{
     ArrayElement as PamArrayElement, ArrayGeometry as PamArrayGeometry,
@@ -407,24 +407,19 @@ pub struct PAMConfig {
 
 pub struct PAMProcessor {
     config: PAMConfig,
-    fft_planner: FftPlanner<f64>,
 }
 
 impl std::fmt::Debug for PAMProcessor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PAMProcessor")
             .field("config", &self.config)
-            .field("fft_planner", &"<FftPlanner>")
             .finish()
     }
 }
 
 impl PAMProcessor {
     pub fn new(config: PAMConfig) -> KwaversResult<Self> {
-        Ok(Self {
-            config,
-            fft_planner: FftPlanner::new(),
-        })
+        Ok(Self { config })
     }
 
     pub fn process(&mut self, beamformed_data: &Array3<f64>) -> KwaversResult<Array3<f64>> {
@@ -458,18 +453,10 @@ impl PAMProcessor {
     }
 
     fn compute_spectrum(&mut self, time_series: &[f64]) -> KwaversResult<Vec<f64>> {
-        let n = time_series.len();
-        let mut complex_data: Vec<Complex<f64>> =
-            time_series.iter().map(|&x| Complex::new(x, 0.0)).collect();
-
-        let fft = self.fft_planner.plan_fft_forward(n);
-        fft.process(&mut complex_data);
-
-        let spectrum: Vec<f64> = complex_data
+        let spectrum = fft_1d_array(&ndarray::Array1::from_vec(time_series.to_vec()))
             .iter()
             .map(|c| (c.re * c.re + c.im * c.im).sqrt())
             .collect();
-
         Ok(spectrum)
     }
 

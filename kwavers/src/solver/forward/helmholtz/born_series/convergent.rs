@@ -66,7 +66,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::math::fft::fft_processor::Fft3d;
+use crate::math::fft::Fft3d;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
 use num_complex::Complex64;
 use std::f64::consts::PI;

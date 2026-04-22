@@ -1,0 +1,82 @@
+[
+  {
+    "lines": 984,
+    "path": "d:\\kwavers\\kwavers\\src\\clinical\\therapy\\swe_3d_workflows.rs"
+  },
+  {
+    "lines": 984,
+    "path": "d:\\kwavers\\kwavers\\src\\solver\\multiphysics\\fluid_structure.rs"
+  },
+  {
+    "lines": 973,
+    "path": "d:\\kwavers\\kwavers\\src\\solver\\forward\\elastic\\nonlinear\\material.rs"
+  },
+  {
+    "lines": 966,
+    "path": "d:\\kwavers\\kwavers\\src\\solver\\inverse\\pinn\\ml\\electromagnetic_gpu.rs"
+  },
+  {
+    "lines": 957,
+    "path": "d:\\kwavers\\kwavers\\src\\solver\\forward\\elastic\\swe\\gpu.rs"
+  },
+  {
+    "lines": 953,
+    "path": "d:\\kwavers\\kwavers\\src\\analysis\\validation\\clinical.rs"
+  },
+  {
+    "lines": 948,
+    "path": "d:\\kwavers\\kwavers\\src\\domain\\sensor\\ultrafast\\plane_wave.rs"
+  },
+  {
+    "lines": 944,
+    "path": "d:\\kwavers\\kwavers\\src\\math\\numerics\\operators\\spectral.rs"
+  },
+  {
+    "lines": 942,
+    "path": "d:\\kwavers\\kwavers\\src\\math\\simd.rs"
+  },
+  {
+    "lines": 929,
+    "path": "d:\\kwavers\\kwavers\\src\\clinical\\safety\\mod.rs"
+  },
+  {
+    "lines": 915,
+    "path": "d:\\kwavers\\kwavers\\src\\solver\\forward\\bem\\solver.rs"
+  },
+  {
+    "lines": 914,
+    "path": "d:\\kwavers\\kwavers\\src\\solver\\forward\\nonlinear\\kzk\\solver.rs"
+  },
+  {
+    "lines": 914,
+    "path": "d:\\kwavers\\kwavers\\src\\solver\\inverse\\pinn\\ml\\universal_solver.rs"
+  },
+  {
+    "lines": 888,
+    "path": "d:\\kwavers\\kwavers\\src\\solver\\forward\\nonlinear\\westervelt.rs"
+  },
+  {
+    "lines": 880,
+    "path": "d:\\kwavers\\kwavers\\src\\analysis\\signal_processing\\localization\\music.rs"
+  },
+  {
+    "lines": 877,
+    "path": "d:\\kwavers\\kwavers\\src\\analysis\\signal_processing\\beamforming\\adaptive\\subspace.rs"
+  },
+  {
+    "lines": 865,
+    "path": "d:\\kwavers\\kwavers\\src\\domain\\source\\array_2d\\mod.rs"
+  },
+  {
+    "lines": 865,
+    "path": "d:\\kwavers\\kwavers\\src\\solver\\inverse\\pinn\\ml\\meta_learning\\optimizer.rs"
+  },
+  {
+    "lines": 852,
+    "path": "d:\\kwavers\\kwavers\\src\\solver\\inverse\\pinn\\ml\\jit_compiler.rs"
+  },
+  {
+    "lines": 851,
+    "path": "d:\\kwavers\\kwavers\\src\\analysis\\signal_processing\\beamforming\\traits.rs"
+  }
+]

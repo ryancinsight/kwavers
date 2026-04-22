@@ -349,17 +349,9 @@ mod tests {
         }
 
         // Perform FFT to check for harmonics
-        use rustfft::{num_complex::Complex, FftPlanner};
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(nx);
+        use crate::math::fft::fft_1d_array;
 
-        let mut spectrum: Vec<Complex<f64>> = pressure
-            .slice(ndarray::s![.., 0, 0])
-            .iter()
-            .map(|&p| Complex::new(p, 0.0))
-            .collect();
-
-        fft.process(&mut spectrum);
+        let spectrum = fft_1d_array(&pressure.slice(ndarray::s![.., 0, 0]).to_owned());
 
         // Find fundamental and second harmonic peaks
         // For spatial FFT: wavenumber k = 2π/λ = 2πf/c

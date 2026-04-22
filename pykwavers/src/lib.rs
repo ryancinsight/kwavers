@@ -73,6 +73,7 @@ use kwavers::domain::source::array_2d::{
     TransducerArray2DConfig,
 };
 use kwavers::domain::source::custom::FunctionSource;
+use kwavers::domain::source::grid_source::SourceMode;
 use kwavers::domain::source::wavefront::plane_wave::{
     InjectionMode, PlaneWaveConfig, PlaneWaveSource,
 };
@@ -82,10 +83,13 @@ use kwavers::physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_om
 use kwavers::physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers::solver::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
 use kwavers::solver::forward::fdtd::solver::FdtdSolver;
-use kwavers::solver::forward::pstd::config::PSTDConfig;
+use kwavers::solver::forward::pstd::config::{BoundaryConfig, CompatibilityMode, PSTDConfig};
 use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers::solver::interface::solver::Solver as SolverTrait;
-use ndarray::{Array1, Array3};
+use kwavers::solver::inverse::reconstruction::photoacoustic::{
+    kspace_line_recon as kwavers_kspace_line_recon, LineReconDataOrder, LineReconInterpolation,
+};
+use ndarray::{Array1, Array2, Array3, Axis};
 use std::sync::Arc;
 // ============================================================================
 // Utility Function Bindings
@@ -853,10 +857,19 @@ impl Source {
     /// Parameters
     /// ----------
     /// p0 : ndarray
-    ///     3D initial pressure distribution [Pa]
+    ///     2D or 3D initial pressure distribution [Pa]. A 2D field is lifted
+    ///     to a single-slice 3D volume with `nz=1` to match the solver layout.
     #[staticmethod]
-    fn from_initial_pressure(p0: PyReadonlyArray3<f64>) -> PyResult<Self> {
-        let p0_arr = p0.as_array().to_owned();
+    fn from_initial_pressure(p0: &Bound<'_, PyAny>) -> PyResult<Self> {
+        let p0_arr: Array3<f64> = if let Ok(p0_3d) = p0.extract::<PyReadonlyArray3<f64>>() {
+            p0_3d.as_array().to_owned()
+        } else if let Ok(p0_2d) = p0.extract::<PyReadonlyArray2<f64>>() {
+            p0_2d.as_array().insert_axis(Axis(2)).to_owned()
+        } else {
+            return Err(PyValueError::new_err(
+                "Initial pressure must be a 2D or 3D ndarray of float64 values",
+            ));
+        };
         if p0_arr.iter().all(|&v| v == 0.0) {
             return Err(PyValueError::new_err("Initial pressure is all zeros"));
         }
@@ -1138,6 +1151,14 @@ impl Source {
     #[getter]
     fn source_mode(&self) -> &str {
         &self.source_mode
+    }
+
+    /// Initial pressure field, if this source was constructed from `p0`.
+    #[getter]
+    fn initial_pressure<'py>(&self, py: Python<'py>) -> Option<Py<PyArray3<f64>>> {
+        self.initial_pressure
+            .as_ref()
+            .map(|arr| PyArray3::from_owned_array(py, arr.clone()).into())
     }
 
     /// Create a source from a KWaveArray with a driving signal.
@@ -1918,6 +1939,7 @@ pub struct Simulation {
     sensor: Option<Sensor>,
     transducer_sensor: Option<TransducerArray2D>,
     solver_type: SolverType,
+    kspace_correction: KSpaceCorrectionMode,
     pml_size: Option<usize>,
     pml_size_xyz: Option<(usize, usize, usize)>,
     pml_inside: bool,
@@ -2016,6 +2038,7 @@ impl Simulation {
             sensor: sensor_opt,
             transducer_sensor,
             solver_type: solver.unwrap_or(SolverType::FDTD),
+            kspace_correction: KSpaceCorrectionMode::None,
             pml_size,
             pml_size_xyz: None,
             pml_inside: true,
@@ -2039,6 +2062,38 @@ impl Simulation {
     /// >>> sim.set_pml_size(20)
     fn set_pml_size(&mut self, size: usize) {
         self.pml_size = Some(size);
+    }
+
+    /// Set the FDTD k-space correction mode.
+    ///
+    /// Parameters
+    /// ----------
+    /// mode : str
+    ///     Either `"none"` or `"spectral"`.
+    ///
+    /// Examples
+    /// --------
+    /// >>> sim.set_kspace_correction("spectral")
+    fn set_kspace_correction(&mut self, mode: &str) -> PyResult<()> {
+        self.kspace_correction = match mode.to_ascii_lowercase().as_str() {
+            "none" => KSpaceCorrectionMode::None,
+            "spectral" => KSpaceCorrectionMode::Spectral,
+            other => {
+                return Err(PyValueError::new_err(format!(
+                    "Unsupported k-space correction mode: {other}"
+                )))
+            }
+        };
+        Ok(())
+    }
+
+    /// Get the current FDTD k-space correction mode.
+    #[getter]
+    fn kspace_correction(&self) -> String {
+        match self.kspace_correction {
+            KSpaceCorrectionMode::None => "none".to_string(),
+            KSpaceCorrectionMode::Spectral => "spectral".to_string(),
+        }
     }
 
     /// Get the current PML size, or None if using automatic sizing.
@@ -2433,6 +2488,7 @@ impl Simulation {
         let pml_inside = self.pml_inside;
         let pml_alpha_xyz = self.pml_alpha_xyz;
         let solver_type = self.solver_type;
+        let kspace_correction = self.kspace_correction.clone();
         let enable_nonlinear = self.enable_nonlinear;
         let alpha_coeff = self.alpha_coeff;
         let alpha_power = self.alpha_power;
@@ -2458,6 +2514,7 @@ impl Simulation {
                     pml_size_xyz,
                     pml_inside,
                     pml_alpha_xyz,
+                    kspace_correction,
                     enable_nonlinear,
                     &sensor_record_modes,
                 ),
@@ -2725,6 +2782,31 @@ impl Simulation {
         }
     }
 
+    /// Return the minimum active axis length and admissible CPML thickness.
+    ///
+    /// # Theorem (Singleton-axis neutrality)
+    /// A dimension with length `1` is a dummy embedding axis for lower-dimensional
+    /// examples and must not constrain the absorbing boundary. The admissible
+    /// CPML thickness depends only on axes with length `> 1`.
+    ///
+    /// # Proof sketch
+    /// A singleton axis has no physical extent, so damping on that axis would
+    /// introduce absorption not present in the reference lower-dimensional
+    /// problem. Excluding singleton axes preserves the discrete operator on the
+    /// active axes while keeping the same 3-D storage layout.
+    fn cpml_thickness_limits(nx: usize, ny: usize, nz: usize) -> (usize, usize) {
+        let mut min_dim = usize::MAX;
+        for dim in [nx, ny, nz] {
+            if dim > 1 {
+                min_dim = min_dim.min(dim);
+            }
+        }
+        let min_dim = if min_dim == usize::MAX { 1 } else { min_dim };
+        let max_allowed = (min_dim.saturating_sub(2)) / 2;
+        let default_thickness = (min_dim / 6).max(2);
+        (default_thickness, max_allowed)
+    }
+
     /// Run FDTD simulation (internal).
     #[allow(clippy::too_many_arguments)]
     fn run_fdtd_impl(
@@ -2740,6 +2822,7 @@ impl Simulation {
         pml_size_xyz: Option<(usize, usize, usize)>,
         _pml_inside: bool,
         pml_alpha_xyz: Option<(f64, f64, f64)>,
+        kspace_correction: KSpaceCorrectionMode,
         enable_nonlinear: bool,
         record_modes: &[String],
     ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
@@ -2761,7 +2844,7 @@ impl Simulation {
             subgrid_factor: 2,
             enable_gpu_acceleration: false,
             enable_nonlinear,
-            kspace_correction: KSpaceCorrectionMode::None,
+            kspace_correction,
             sensor_mask: Some(sensor_mask.clone()),
         };
 
@@ -2780,9 +2863,8 @@ impl Simulation {
         }
 
         // Enable CPML boundary if requested
-        let min_dim = grid.nx.min(grid.ny).min(grid.nz);
-        let max_allowed = (min_dim.saturating_sub(2)) / 2;
-        let default_thickness = (min_dim / 6).max(2);
+        let (default_thickness, max_allowed) =
+            Self::cpml_thickness_limits(grid.nx, grid.ny, grid.nz);
         let thickness = pml_size.unwrap_or(default_thickness).min(max_allowed);
 
         if thickness > 0 && max_allowed > 0 {
@@ -2845,9 +2927,8 @@ impl Simulation {
             .map(|trans| Self::create_transducer_ordered_indices(grid, &trans.inner));
 
         // Create PSTD configuration with sensor mask
-        let min_dim = grid.nx.min(grid.ny).min(grid.nz);
-        let max_allowed = (min_dim.saturating_sub(2)) / 2;
-        let default_thickness = (min_dim / 6).max(2);
+        let (default_thickness, max_allowed) =
+            Self::cpml_thickness_limits(grid.nx, grid.ny, grid.nz);
         let thickness = pml_size.unwrap_or(default_thickness).min(max_allowed);
 
         let boundary = if thickness > 0 && max_allowed > 0 {
@@ -3056,9 +3137,7 @@ impl Simulation {
         }
 
         // ── Build CPML profiles ──────────────────────────────────────────────
-        let min_dim = nx.min(ny).min(nz);
-        let max_allowed = (min_dim.saturating_sub(2)) / 2;
-        let default_thickness = (min_dim / 6).max(2);
+        let (default_thickness, max_allowed) = Self::cpml_thickness_limits(nx, ny, nz);
         let thickness = pml_size.unwrap_or(default_thickness).min(max_allowed);
 
         let cpml_config = if let Some((px, py, pz)) = pml_size_xyz {
@@ -4099,6 +4178,8 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPIDController>()?;
     m.add_class::<PyBubbleField>()?;
     m.add_function(wrap_pyfunction!(resample_to_target_grid, m)?)?;
+    m.add_function(wrap_pyfunction!(kspace_line_recon, m)?)?;
+    m.add_function(wrap_pyfunction!(time_reversal_reconstruction, m)?)?;
 
     // Register utility functions
     utils_bindings::register_utils(m)?;
@@ -4215,8 +4296,8 @@ impl std::fmt::Debug for SampledSignal {
 
 #[cfg(test)]
 mod simulation_contract_tests {
-    use super::Simulation;
-    use ndarray::array;
+    use super::{time_reversal_reconstruction_impl, Grid, Simulation};
+    use ndarray::{array, Array2};
 
     #[test]
     fn trim_initial_recorder_sample_discards_t0_column_only_when_present() {
@@ -4229,6 +4310,30 @@ mod simulation_contract_tests {
         let exact_nt = array![[1.0, 2.0, 3.0], [11.0, 12.0, 13.0]];
         let untouched = Simulation::trim_initial_recorder_sample(exact_nt.clone(), 3);
         assert_eq!(untouched, exact_nt);
+    }
+
+    #[test]
+    fn time_reversal_reconstruction_impl_preserves_zero_field_with_pml_crop() {
+        let grid = Grid::new(6, 6, 1, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
+        let sensor_data = Array2::zeros((3, 8));
+        let sensor_positions = array![
+            [0.0, 0.0, 0.0],
+            [0.0, 0.1e-3, 0.0],
+            [0.0, 0.2e-3, 0.0],
+        ];
+
+        let reconstruction = time_reversal_reconstruction_impl(
+            sensor_data,
+            sensor_positions,
+            &grid.inner,
+            1500.0,
+            1.0e8,
+            Some(2),
+        )
+        .unwrap();
+
+        assert_eq!(reconstruction.dim(), (6, 6, 1));
+        assert!(reconstruction.iter().all(|&value| value == 0.0));
     }
 }
 
@@ -4293,6 +4398,260 @@ fn resample_to_target_grid<'py>(
     let arr = source_image.as_array().to_owned();
     let resampled = py.detach(|| kwavers_resample(&arr, &transform, target_dims));
     PyArray3::from_owned_array(py, resampled).into()
+}
+
+#[pyfunction]
+#[pyo3(signature = (sensor_data, dy, dt, c, *, data_order = "ty", interp = "linear", pos_cond = false))]
+fn kspace_line_recon<'py>(
+    py: Python<'py>,
+    sensor_data: PyReadonlyArray2<f64>,
+    dy: f64,
+    dt: f64,
+    c: f64,
+    data_order: &str,
+    interp: &str,
+    pos_cond: bool,
+) -> PyResult<Py<PyArray2<f64>>> {
+    let data_order = match data_order.to_ascii_lowercase().as_str() {
+        "ty" => LineReconDataOrder::Ty,
+        "yt" => LineReconDataOrder::Yt,
+        other => {
+            return Err(PyValueError::new_err(format!(
+                "data_order must be 'ty' or 'yt', got {other}"
+            )))
+        }
+    };
+    let interp = match interp.to_ascii_lowercase().as_str() {
+        "linear" => LineReconInterpolation::Linear,
+        "nearest" => LineReconInterpolation::Nearest,
+        other => {
+            return Err(PyValueError::new_err(format!(
+                "interp must be 'linear' or 'nearest', got {other}"
+            )))
+        }
+    };
+
+    let input = sensor_data.as_array().to_owned();
+    let recon = py
+        .detach(|| kwavers_kspace_line_recon(input.view(), dy, dt, c, data_order, interp, pos_cond))
+        .map_err(|err| PyRuntimeError::new_err(format!("kwavers error: {}", err)))?;
+
+    Ok(PyArray2::from_owned_array(py, recon).into())
+}
+
+#[pyfunction]
+#[pyo3(signature = (sensor_data, sensor_positions, grid, sound_speed, sampling_frequency, pml_size=None))]
+fn time_reversal_reconstruction<'py>(
+    py: Python<'py>,
+    sensor_data: PyReadonlyArray2<f64>,
+    sensor_positions: PyReadonlyArray2<f64>,
+    grid: &Grid,
+    sound_speed: f64,
+    sampling_frequency: f64,
+    pml_size: Option<usize>,
+) -> PyResult<Py<PyArray3<f64>>> {
+    let sensor_data = sensor_data.as_array().to_owned();
+    let sensor_positions = sensor_positions.as_array().to_owned();
+    let grid_inner = grid.inner.clone();
+    let reconstruction = py
+        .detach(move || {
+            time_reversal_reconstruction_impl(
+                sensor_data,
+                sensor_positions,
+                &grid_inner,
+                sound_speed,
+                sampling_frequency,
+                pml_size,
+            )
+        })
+        .map_err(|err| PyRuntimeError::new_err(format!("kwavers error: {}", err)))?;
+
+    Ok(PyArray3::from_owned_array(py, reconstruction).into())
+}
+
+/// Reconstruct an initial pressure field by replaying time-reversed boundary data.
+///
+/// # Theorem
+/// Let `u_n` denote the discrete pressure field after `n` forward FDTD steps,
+/// and let `g[t, s]` be the recorded pressure at sensor `s` and time index `t`.
+/// If the same grid, medium, timestep, boundary treatment, and source mask are
+/// used for replay, then a Dirichlet source driven by `g` reversed in time
+/// produces the same discrete time-reversal experiment as the vendored
+/// k-Wave `TimeReversal` example. The returned field is the solver's final
+/// pressure state cropped back to the physical domain when outer PML layers
+/// are requested.
+///
+/// # Proof sketch
+/// The helper constructs the same sensor mask, reverses the same discrete
+/// trace matrix, applies the same Dirichlet boundary condition, and advances
+/// the same FDTD update operator. Outer PML is represented by embedding the
+/// physical domain in a larger computational grid and cropping the final field
+/// back to the interior. This preserves the interior discrete operator on the
+/// physical domain while matching the source replay used by k-Wave.
+fn time_reversal_reconstruction_impl(
+    sensor_data: Array2<f64>,
+    sensor_positions: Array2<f64>,
+    grid: &KwaversGrid,
+    sound_speed: f64,
+    sampling_frequency: f64,
+    pml_size: Option<usize>,
+) -> KwaversResult<Array3<f64>> {
+    if sound_speed <= 0.0 || !sound_speed.is_finite() {
+        return Err(KwaversError::Validation(
+            kwavers::core::error::ValidationError::FieldValidation {
+                field: "sound_speed".to_string(),
+                value: sound_speed.to_string(),
+                constraint: "must be a positive finite scalar".to_string(),
+            },
+        ));
+    }
+    if sampling_frequency <= 0.0 || !sampling_frequency.is_finite() {
+        return Err(KwaversError::Validation(
+            kwavers::core::error::ValidationError::FieldValidation {
+                field: "sampling_frequency".to_string(),
+                value: sampling_frequency.to_string(),
+                constraint: "must be a positive finite scalar".to_string(),
+            },
+        ));
+    }
+    if sensor_positions.ncols() != 3 || sensor_positions.nrows() == 0 {
+        return Err(KwaversError::Validation(
+            kwavers::core::error::ValidationError::FieldValidation {
+                field: "sensor_positions".to_string(),
+                value: format!("{:?}", sensor_positions.dim()),
+                constraint: "must have shape (n_sensors, 3) and contain at least one sensor"
+                    .to_string(),
+            },
+        ));
+    }
+
+    let n_sensors = sensor_positions.nrows();
+    let sensor_data = match sensor_data.dim() {
+        (rows, _cols) if rows == n_sensors => sensor_data,
+        (_rows, cols) if cols == n_sensors => sensor_data.reversed_axes().to_owned(),
+        (rows, cols) => {
+            return Err(KwaversError::Validation(
+                kwavers::core::error::ValidationError::FieldValidation {
+                    field: "sensor_data".to_string(),
+                    value: format!("shape=({rows}, {cols})"),
+                    constraint: format!(
+                        "must align with sensor_positions rows {} along one axis",
+                        n_sensors
+                    ),
+                },
+            ))
+        }
+    };
+
+    if sensor_data.ncols() == 0 {
+        return Err(KwaversError::Validation(
+            kwavers::core::error::ValidationError::FieldValidation {
+                field: "sensor_data".to_string(),
+                value: "0 time samples".to_string(),
+                constraint: "must contain at least one time sample".to_string(),
+            },
+        ));
+    }
+    let nt = sensor_data.ncols();
+
+    let (default_thickness, max_allowed) =
+        Simulation::cpml_thickness_limits(grid.nx, grid.ny, grid.nz);
+    let pml = pml_size.unwrap_or(default_thickness).min(max_allowed);
+
+    let expand_x = if grid.nx > 1 { pml } else { 0 };
+    let expand_y = if grid.ny > 1 { pml } else { 0 };
+    let expand_z = if grid.nz > 1 { pml } else { 0 };
+    let expanded_grid = KwaversGrid::new(
+        grid.nx + 2 * expand_x,
+        grid.ny + 2 * expand_y,
+        grid.nz + 2 * expand_z,
+        grid.dx,
+        grid.dy,
+        grid.dz,
+    )?;
+
+    let mut p_mask = Array3::<f64>::zeros((expanded_grid.nx, expanded_grid.ny, expanded_grid.nz));
+    for row in sensor_positions.outer_iter() {
+        let x = row[0] + expand_x as f64 * grid.dx;
+        let y = row[1] + expand_y as f64 * grid.dy;
+        let z = row[2] + expand_z as f64 * grid.dz;
+        let i = (x / grid.dx).round() as isize;
+        let j = (y / grid.dy).round() as isize;
+        let k = (z / grid.dz).round() as isize;
+        if i < 0
+            || j < 0
+            || k < 0
+            || i >= expanded_grid.nx as isize
+            || j >= expanded_grid.ny as isize
+            || k >= expanded_grid.nz as isize
+        {
+            return Err(KwaversError::Validation(
+                kwavers::core::error::ValidationError::FieldValidation {
+                    field: "sensor_positions".to_string(),
+                    value: format!("[{x}, {y}, {z}]"),
+                    constraint: "must map to a grid node inside the expanded domain"
+                        .to_string(),
+                },
+            ));
+        }
+        let (i, j, k) = (i as usize, j as usize, k as usize);
+        if p_mask[[i, j, k]] != 0.0 {
+            return Err(KwaversError::Validation(
+                kwavers::core::error::ValidationError::FieldValidation {
+                    field: "sensor_positions".to_string(),
+                    value: format!("duplicate grid node ({i}, {j}, {k})"),
+                    constraint: "sensor positions must map to unique grid nodes".to_string(),
+                },
+            ));
+        }
+        p_mask[[i, j, k]] = 1.0;
+    }
+
+    let mut reversed_signal = sensor_data;
+    reversed_signal.invert_axis(Axis(1));
+
+    let grid_source = GridSource {
+        p_mask: Some(p_mask),
+        p_signal: Some(reversed_signal),
+        p_mode: SourceMode::Dirichlet,
+        ..GridSource::new_empty()
+    };
+
+    let medium = HomogeneousMedium::from_minimal(1000.0, sound_speed, &expanded_grid);
+    let dt = 1.0 / sampling_frequency;
+    let boundary = if pml > 0 {
+        BoundaryConfig::CPML(CPMLConfig::with_thickness(pml))
+    } else {
+        BoundaryConfig::None
+    };
+
+    let config = PSTDConfig {
+        nt,
+        dt,
+        compatibility_mode: CompatibilityMode::Reference,
+        boundary,
+        sensor_mask: None,
+        pml_inside: true,
+        ..PSTDConfig::default()
+    };
+
+    let mut solver = PSTDSolver::new(config, expanded_grid, &medium, grid_source)?;
+
+    SolverTrait::run(&mut solver, nt)?;
+    let pressure = SolverTrait::pressure_field(&solver);
+    let mut cropped = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, j, k)| {
+        pressure[[i + expand_x, j + expand_y, k + expand_z]]
+    });
+    cropped.mapv_inplace(|value| {
+        let compensated = 2.0 * value;
+        if compensated < 0.0 {
+            0.0
+        } else {
+            compensated
+        }
+    });
+
+    Ok(cropped)
 }
 
 #[pyclass(name = "BubbleField")]

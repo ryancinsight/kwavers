@@ -297,6 +297,25 @@ impl GenericFdtdSolver<Array3<f64>> {
         let mut source_handler = source_handler;
         source_handler.prepare_pressure_source_scaling(grid, &materials.c0, config.dt);
 
+        // Initialize k-space correction operators when requested.
+        // c_ref = mean sound speed over all grid cells (same convention as PSTD).
+        let mut kspace_ops = if config.kspace_correction == KSpaceCorrectionMode::Spectral {
+            let c_sum: f64 = materials.c0.iter().sum();
+            let c_ref = c_sum / materials.c0.len() as f64;
+            Some(KSpaceFdtdOperators::new(
+                grid.nx,
+                grid.ny,
+                grid.nz,
+                grid.dx,
+                grid.dy,
+                grid.dz,
+                c_ref,
+                config.dt,
+            ))
+        } else {
+            None
+        };
+
         // Apply initial conditions (p0, u0) — mirrors PSTD solver behaviour
         let mut rho_init = Array3::zeros(shape);
         source_handler.apply_initial_conditions(
@@ -308,6 +327,27 @@ impl GenericFdtdSolver<Array3<f64>> {
             &mut fields.uz,
         );
         // Note: FDTD uses a single rho field so no split needed (cf. PSTD rhox/rhoy/rhoz)
+
+        if source_handler.has_initial_pressure() && !source_handler.has_initial_velocity() {
+            if matches!(config.kspace_correction, KSpaceCorrectionMode::Spectral) {
+                let rho0_ref = materials.rho0.mean().unwrap_or(1000.0);
+                let Some(kspace_ops) = kspace_ops.as_mut() else {
+                    return Err(KwaversError::Config(crate::core::error::ConfigError::InvalidValue {
+                        parameter: "kspace_correction".to_string(),
+                        value: "spectral".to_string(),
+                        constraint: "spectral k-space correction requires precomputed k-space operators".to_string(),
+                    }));
+                };
+                kspace_ops.initialize_ivp_velocity(
+                    &fields.p,
+                    config.dt,
+                    rho0_ref,
+                    &mut fields.ux,
+                    &mut fields.uy,
+                    &mut fields.uz,
+                )?;
+            }
+        }
 
         // Precompute nonlinear medium property arrays (only when nonlinear mode is on)
         let (p_prev, p_prev2, nl_scratch, nl_coeff) =
@@ -342,20 +382,6 @@ impl GenericFdtdSolver<Array3<f64>> {
             } else {
                 (None, None, None, None)
             };
-
-        // Initialize k-space correction operators when requested.
-        // c_ref = mean sound speed over all grid cells (same convention as PSTD).
-        let kspace_ops = if config.kspace_correction == KSpaceCorrectionMode::Spectral {
-            let c_sum: f64 = materials.c0.iter().sum();
-            let c_ref = c_sum / materials.c0.len() as f64;
-            Some(KSpaceFdtdOperators::new(
-                grid.nx, grid.ny, grid.nz,
-                grid.dx, grid.dy, grid.dz,
-                c_ref, config.dt,
-            ))
-        } else {
-            None
-        };
 
         Ok(Self {
             config,

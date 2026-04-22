@@ -27,6 +27,47 @@ def bootstrap_example_paths() -> Path:
     return ROOT
 
 
+def _normalize_pml_size(pml_size: tuple[int, ...], is_2d: bool) -> tuple[int, int, int]:
+    if len(pml_size) == 2:
+        if not is_2d:
+            raise ValueError(
+                f"Expected a 3-D PML tuple for a 3-D volume, got 2 values: {pml_size}"
+            )
+        px, py = pml_size
+        return (int(px), int(py), 0)
+    if len(pml_size) == 3:
+        px, py, pz = pml_size
+        return (int(px), int(py), 0 if is_2d else int(pz))
+    raise ValueError(f"Expected a 2-D or 3-D PML tuple, got {pml_size}")
+
+
+def expand_pml_outside_shape(shape: tuple[int, ...], pml_size: tuple[int, ...]) -> tuple[int, int, int]:
+    """Return the total grid shape after embedding the physical domain inside outer PML layers."""
+    if len(shape) == 2:
+        nx, ny = shape
+        nz = 1
+        px, py, pz = _normalize_pml_size(pml_size, is_2d=True)
+    elif len(shape) == 3:
+        nx, ny, nz = shape
+        px, py, pz = _normalize_pml_size(pml_size, is_2d=False)
+    else:
+        raise ValueError(f"Expected a 2-D or 3-D shape, got {shape}")
+    return (nx + 2 * px, ny + 2 * py, nz + 2 * pz)
+
+
+def pad_volume_for_pml_outside(volume: np.ndarray, pml_size: tuple[int, ...]) -> np.ndarray:
+    """Zero-pad a 2-D or 3-D volume so the active region sits inside outer PML layers."""
+    arr = np.asarray(volume)
+    if arr.ndim == 2:
+        arr = arr[:, :, None]
+    if arr.ndim != 3:
+        raise ValueError(f"Expected a 2-D or 3-D volume, got shape {arr.shape}")
+
+    px, py, pz = _normalize_pml_size(pml_size, is_2d=arr.shape[2] == 1)
+    pad_width = ((px, px), (py, py), (pz, pz))
+    return np.pad(arr, pad_width, mode="constant", constant_values=0)
+
+
 def normalize_sensor_matrix(data: np.ndarray, expected_sensors: int | None = None) -> np.ndarray:
     """Normalize sensor data to shape `(n_sensors, n_time_samples)`."""
     arr = np.asarray(data)
@@ -79,6 +120,45 @@ def compute_trace_metrics(reference: np.ndarray, candidate: np.ndarray) -> dict[
         "reference_peak": ref_peak,
         "candidate_peak": cand_peak,
         "peak_ratio": peak_ratio,
+    }
+
+
+def summarize_sensor_matrix_metrics(
+    reference: np.ndarray,
+    candidate: np.ndarray,
+    *,
+    expected_sensors: int | None = None,
+) -> dict[str, float]:
+    """Summarize parity metrics for a sensor matrix pair.
+
+    The matrices are normalized to ``(n_sensors, n_time_samples)`` and then
+    compared row-wise. This matches the k-Wave ordering contract used by the
+    current sensor recorder implementation.
+    """
+    ref = normalize_sensor_matrix(reference, expected_sensors=expected_sensors)
+    cand = normalize_sensor_matrix(candidate, expected_sensors=ref.shape[0])
+    if ref.shape != cand.shape:
+        raise ValueError(f"sensor matrix shape mismatch: {ref.shape} != {cand.shape}")
+
+    row_metrics = [compute_trace_metrics(ref[i], cand[i]) for i in range(ref.shape[0])]
+    pearson_r = np.asarray([m["pearson_r"] for m in row_metrics], dtype=float)
+    rms_ratio = np.asarray([m["rms_ratio"] for m in row_metrics], dtype=float)
+    rmse = np.asarray([m["rmse"] for m in row_metrics], dtype=float)
+    max_abs_diff = np.asarray([m["max_abs_diff"] for m in row_metrics], dtype=float)
+    peak_ratio = np.asarray([m["peak_ratio"] for m in row_metrics], dtype=float)
+
+    return {
+        "n_sensors": float(ref.shape[0]),
+        "n_time_samples": float(ref.shape[1]),
+        "pearson_r_mean": float(np.mean(pearson_r)),
+        "pearson_r_median": float(np.median(pearson_r)),
+        "rms_ratio_mean": float(np.mean(rms_ratio)),
+        "rms_ratio_median": float(np.median(rms_ratio)),
+        "rmse_mean": float(np.mean(rmse)),
+        "rmse_median": float(np.median(rmse)),
+        "max_abs_diff_max": float(np.max(max_abs_diff)),
+        "peak_ratio_mean": float(np.mean(peak_ratio)),
+        "peak_ratio_median": float(np.median(peak_ratio)),
     }
 
 

@@ -98,7 +98,7 @@ fn pml_freq_domain_benchmark(c: &mut Criterion) {
         let mut boundary = PMLBoundary::new(config).expect("PML boundary creation should succeed");
         let mut field_freq = Array3::from_elem(
             (grid.nx, grid.ny, grid.nz),
-            rustfft::num_complex::Complex::new(0.0, 0.0),
+            kwavers::math::fft::Complex64::new(0.0, 0.0),
         );
 
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
