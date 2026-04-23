@@ -66,11 +66,7 @@ use std::f64::consts::PI;
 ///
 /// # Panics
 /// Never panics; all arithmetic is well-defined for all `n ≥ 1`.
-pub fn generate_shift_1d(
-    n: usize,
-    dk: f64,
-    ds: f64,
-) -> (Array1<Complex64>, Array1<Complex64>) {
+pub fn generate_shift_1d(n: usize, dk: f64, ds: f64) -> (Array1<Complex64>, Array1<Complex64>) {
     let i_unit = Complex64::new(0.0, 1.0);
     let mut shift_pos = Array1::zeros(n);
     let mut shift_neg = Array1::zeros(n);
@@ -163,13 +159,25 @@ pub fn generate_kappa(
     let mut kappa = Array3::zeros((nx, ny, nz));
 
     for i in 0..nx {
-        let si = if i <= nx / 2 { i as isize } else { i as isize - nx as isize };
+        let si = if i <= nx / 2 {
+            i as isize
+        } else {
+            i as isize - nx as isize
+        };
         let kx = dk_x * si as f64;
         for j in 0..ny {
-            let sj = if j <= ny / 2 { j as isize } else { j as isize - ny as isize };
+            let sj = if j <= ny / 2 {
+                j as isize
+            } else {
+                j as isize - ny as isize
+            };
             let ky = dk_y * sj as f64;
             for k in 0..nz {
-                let sk = if k <= nz / 2 { k as isize } else { k as isize - nz as isize };
+                let sk = if k <= nz / 2 {
+                    k as isize
+                } else {
+                    k as isize - nz as isize
+                };
                 let kz = dk_z * sk as f64;
                 let k_mag = (kx * kx + ky * ky + kz * kz).sqrt();
                 // Unnormalized sinc: sin(x)/x, with limit 1 as x→0
@@ -218,13 +226,25 @@ pub fn generate_source_kappa(
     let mut kappa = Array3::zeros((nx, ny, nz));
 
     for i in 0..nx {
-        let si = if i <= nx / 2 { i as isize } else { i as isize - nx as isize };
+        let si = if i <= nx / 2 {
+            i as isize
+        } else {
+            i as isize - nx as isize
+        };
         let kx = dk_x * si as f64;
         for j in 0..ny {
-            let sj = if j <= ny / 2 { j as isize } else { j as isize - ny as isize };
+            let sj = if j <= ny / 2 {
+                j as isize
+            } else {
+                j as isize - ny as isize
+            };
             let ky = dk_y * sj as f64;
             for k in 0..nz {
-                let sk = if k <= nz / 2 { k as isize } else { k as isize - nz as isize };
+                let sk = if k <= nz / 2 {
+                    k as isize
+                } else {
+                    k as isize - nz as isize
+                };
                 let kz = dk_z * sk as f64;
                 let k_mag = (kx * kx + ky * ky + kz * kz).sqrt();
                 kappa[[i, j, k]] = (0.5 * c_ref * dt * k_mag).cos();
@@ -249,8 +269,16 @@ mod tests {
         let dk = 2.0 * PI / (n as f64 * 1e-3);
         let (pos, neg) = generate_shift_1d(n, dk, 1e-3);
         let eps = 1e-15;
-        assert!(pos[0].norm() < eps, "shift_pos[0] should be zero, got {:?}", pos[0]);
-        assert!(neg[0].norm() < eps, "shift_neg[0] should be zero, got {:?}", neg[0]);
+        assert!(
+            pos[0].norm() < eps,
+            "shift_pos[0] should be zero, got {:?}",
+            pos[0]
+        );
+        assert!(
+            neg[0].norm() < eps,
+            "shift_neg[0] should be zero, got {:?}",
+            neg[0]
+        );
     }
 
     /// shift_neg equals the negated complex conjugate of shift_pos.
@@ -414,13 +442,17 @@ mod tests {
             assert!(
                 (pos_fn[idx] - expected_pos).norm() < tol,
                 "pos mismatch at idx={idx}: got {:?}, expected {:?}, diff_norm={:.2e}",
-                pos_fn[idx], expected_pos, (pos_fn[idx] - expected_pos).norm()
+                pos_fn[idx],
+                expected_pos,
+                (pos_fn[idx] - expected_pos).norm()
             );
             let tol = 1e-12_f64.max(expected_neg.norm() * 1e-14);
             assert!(
                 (neg_fn[idx] - expected_neg).norm() < tol,
                 "neg mismatch at idx={idx}: got {:?}, expected {:?}, diff_norm={:.2e}",
-                neg_fn[idx], expected_neg, (neg_fn[idx] - expected_neg).norm()
+                neg_fn[idx],
+                expected_neg,
+                (neg_fn[idx] - expected_neg).norm()
             );
         }
     }

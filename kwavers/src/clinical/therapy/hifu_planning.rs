@@ -164,7 +164,8 @@ impl FocalSpot {
         // where ρ ≈ 1000 kg/m³ (nominal), c ≈ 1500 m/s
         let intensity_w_m2 = intensity_w_mm2 * 1e6; // Convert to W/m²
         let peak_pressure_pa =
-            ((2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM * intensity_w_m2).sqrt()).min(50.0e6); // Cap at 50 MPa
+            ((2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM * intensity_w_m2).sqrt())
+                .min(50.0e6); // Cap at 50 MPa
 
         // Mechanical Index (FDA definition)
         let frequency_mhz = transducer.frequency / 1e6;
@@ -308,8 +309,8 @@ impl ThermalDose {
         let alpha_np_per_m =
             alpha_db_cm_mhz * frequency_mhz * 100.0 * (std::f64::consts::LN_10 / 20.0);
 
-        let intensity_w_m2 =
-            focal_spot.peak_pressure_pa.powi(2) / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM);
+        let intensity_w_m2 = focal_spot.peak_pressure_pa.powi(2)
+            / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM);
         let heating_w_m3 = 2.0 * alpha_np_per_m * intensity_w_m2 * duty;
         let heating_rate_c_per_s = heating_w_m3 / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT);
 

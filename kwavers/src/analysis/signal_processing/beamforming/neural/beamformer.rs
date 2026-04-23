@@ -386,8 +386,7 @@ impl NeuralBeamformer {
 
                     for ch in 0..channels.min(positions.len()) {
                         // Fractional delay in samples
-                        let delay_f64 =
-                            delays[ch] * self.config.sensor_geometry.sampling_frequency;
+                        let delay_f64 = delays[ch] * self.config.sensor_geometry.sampling_frequency;
                         let delay_floor = delay_f64.floor() as isize;
                         let frac = (delay_f64 - delay_floor as f64) as f32; // ∈ [0, 1)
 

@@ -2,9 +2,9 @@ use crate::core::constants::numerical;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
+use crate::math::fft::Complex64 as Complex;
 use crate::math::fft::{fft_3d_array, ifft_3d_array};
 use ndarray::{Array3, Zip};
-use crate::math::fft::Complex64 as Complex;
 
 use super::super::wave_model::NonlinearWave;
 

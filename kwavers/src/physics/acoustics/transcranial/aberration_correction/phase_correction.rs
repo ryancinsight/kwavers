@@ -165,10 +165,8 @@ impl TranscranialAberrationCorrection {
                 target_point[1] - transducer_pos[1],
                 target_point[2] - transducer_pos[2],
             ];
-            let path_length = (path_vector[0].powi(2)
-                + path_vector[1].powi(2)
-                + path_vector[2].powi(2))
-            .sqrt();
+            let path_length =
+                (path_vector[0].powi(2) + path_vector[1].powi(2) + path_vector[2].powi(2)).sqrt();
 
             let num_samples: usize = 100;
             let ds = path_length / num_samples as f64;
@@ -245,10 +243,9 @@ impl TranscranialAberrationCorrection {
         if n == 0 {
             return 0.0;
         }
-        let (sum_cos, sum_sin) =
-            phases
-                .iter()
-                .fold((0.0_f64, 0.0_f64), |(sc, ss), &p| (sc + p.cos(), ss + p.sin()));
+        let (sum_cos, sum_sin) = phases.iter().fold((0.0_f64, 0.0_f64), |(sc, ss), &p| {
+            (sc + p.cos(), ss + p.sin())
+        });
         (sum_cos * sum_cos + sum_sin * sum_sin).sqrt() / n as f64
     }
 }

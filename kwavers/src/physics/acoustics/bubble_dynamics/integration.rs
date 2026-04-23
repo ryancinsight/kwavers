@@ -46,7 +46,9 @@ use std::sync::Arc;
 use super::bubble_state::{BubbleParameters, BubbleState};
 use super::keller_miksis::KellerMiksisModel;
 use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
-use crate::solver::forward::ode::bubble_symplectic::{BubbleSymplecticIntegrator, SymplecticConfig};
+use crate::solver::forward::ode::bubble_symplectic::{
+    BubbleSymplecticIntegrator, SymplecticConfig,
+};
 
 /// Integrate bubble dynamics using the Störmer-Verlet symplectic integrator.
 ///

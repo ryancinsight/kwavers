@@ -168,7 +168,11 @@ impl TherapyCavitationDetector {
         let dissipation = f_over_f0 / Q;
         let denominator = (detuning * detuning + dissipation * dissipation).sqrt();
         // E ≥ 1: resonance can only lower the threshold, never raise it
-        let enhancement = if denominator < 1.0 { 1.0 / denominator } else { 1.0 };
+        let enhancement = if denominator < 1.0 {
+            1.0 / denominator
+        } else {
+            1.0
+        };
         let effective_threshold = self.blake_threshold / enhancement;
 
         cavitation
@@ -437,6 +441,9 @@ mod tests {
         let p1 = det.cavitation_probability(0.5 * det.blake_threshold);
         let p2 = det.cavitation_probability(1.0 * det.blake_threshold);
         let p3 = det.cavitation_probability(2.0 * det.blake_threshold);
-        assert!(p1 < p2 && p2 < p3, "probability must increase with pressure");
+        assert!(
+            p1 < p2 && p2 < p3,
+            "probability must increase with pressure"
+        );
     }
 }

@@ -126,7 +126,7 @@ impl Default for KZKConfig {
             c0: 1540.0, // water/tissue
             rho0: 1000.0,
             b_over_a: 5.0, // B/A for water at 25°C (Beyer 1960)
-            alpha0: 0.5, // dB/cm/MHz
+            alpha0: 0.5,   // dB/cm/MHz
             alpha_power: 1.1,
             include_diffraction: true,
             include_absorption: true,

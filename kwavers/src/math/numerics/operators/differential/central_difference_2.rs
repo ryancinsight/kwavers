@@ -139,8 +139,7 @@ impl CentralDifference2 {
         for j in 0..ny {
             for k in 0..nz {
                 dst[[0, j, k]] = (field[[1, j, k]] - field[[0, j, k]]) / self.dx;
-                dst[[nx - 1, j, k]] =
-                    (field[[nx - 1, j, k]] - field[[nx - 2, j, k]]) / self.dx;
+                dst[[nx - 1, j, k]] = (field[[nx - 1, j, k]] - field[[nx - 2, j, k]]) / self.dx;
             }
         }
         Ok(())
@@ -168,8 +167,7 @@ impl CentralDifference2 {
         for i in 0..nx {
             for k in 0..nz {
                 dst[[i, 0, k]] = (field[[i, 1, k]] - field[[i, 0, k]]) / self.dy;
-                dst[[i, ny - 1, k]] =
-                    (field[[i, ny - 1, k]] - field[[i, ny - 2, k]]) / self.dy;
+                dst[[i, ny - 1, k]] = (field[[i, ny - 1, k]] - field[[i, ny - 2, k]]) / self.dy;
             }
         }
         Ok(())
@@ -197,8 +195,7 @@ impl CentralDifference2 {
         for i in 0..nx {
             for j in 0..ny {
                 dst[[i, j, 0]] = (field[[i, j, 1]] - field[[i, j, 0]]) / self.dz;
-                dst[[i, j, nz - 1]] =
-                    (field[[i, j, nz - 1]] - field[[i, j, nz - 2]]) / self.dz;
+                dst[[i, j, nz - 1]] = (field[[i, j, nz - 1]] - field[[i, j, nz - 2]]) / self.dz;
             }
         }
         Ok(())

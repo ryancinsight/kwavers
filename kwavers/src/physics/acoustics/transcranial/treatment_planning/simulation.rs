@@ -115,12 +115,12 @@ impl TreatmentPlanner {
         let mut temperature_field = Array3::zeros((nx, ny, nz));
 
         // Brain tissue parameters (Fry & Barger 1978; Duck 1990, §4)
-        const F_MHZ: f64 = 1.0;           // reference frequency [MHz] — adjust per setup
+        const F_MHZ: f64 = 1.0; // reference frequency [MHz] — adjust per setup
         const ALPHA_NP_PER_M: f64 = 0.5 * F_MHZ * 100.0 / 8.686; // 0.5 dB/MHz/cm → Np/m
-        const W_B: f64 = 0.0064;          // blood perfusion: 6.4 mL/(100g·s) = 6.4e-4 m³/(kg·s)
-        const RHO_B: f64 = 1060.0;        // blood density [kg/m³]
-        const C_B: f64 = 3617.0;          // blood specific heat [J/(kg·K)] (ICRU 1992)
-        const T_BODY: f64 = 37.0;         // arterial blood temperature [°C]
+        const W_B: f64 = 0.0064; // blood perfusion: 6.4 mL/(100g·s) = 6.4e-4 m³/(kg·s)
+        const RHO_B: f64 = 1060.0; // blood density [kg/m³]
+        const C_B: f64 = 3617.0; // blood specific heat [J/(kg·K)] (ICRU 1992)
+        const T_BODY: f64 = 37.0; // arterial blood temperature [°C]
 
         // Product W_b · ρ_b · c_b [W/(m³·K)]
         let perfusion_sink = W_B * RHO_B * C_B;

@@ -57,20 +57,20 @@ impl EnergyBalanceCalculator {
         }
 
         // Fundamental constants
-        const K_BOLTZMANN: f64 = 1.380_649e-23;     // J/K
-        const PLANCK: f64 = 6.626_070_15e-34;        // J·s
+        const K_BOLTZMANN: f64 = 1.380_649e-23; // J/K
+        const PLANCK: f64 = 6.626_070_15e-34; // J·s
         const M_ELECTRON: f64 = 9.109_383_701_5e-31; // kg
         const E_V_TO_JOULES: f64 = 1.602_176_634e-19; // J/eV
-        const AVOGADRO: f64 = 6.022_140_76e23;        // mol⁻¹
+        const AVOGADRO: f64 = 6.022_140_76e23; // mol⁻¹
 
         // Ionization energy [J] for each species (NIST Atomic Spectra Database)
         let e_ion_j = match state.gas_species {
-            GasSpecies::Argon    => 15.759_610 * E_V_TO_JOULES,
-            GasSpecies::Xenon    => 12.129_843 * E_V_TO_JOULES,
+            GasSpecies::Argon => 15.759_610 * E_V_TO_JOULES,
+            GasSpecies::Xenon => 12.129_843 * E_V_TO_JOULES,
             GasSpecies::Nitrogen => 14.534_135 * E_V_TO_JOULES,
-            GasSpecies::Oxygen   => 13.618_055 * E_V_TO_JOULES,
-            GasSpecies::Air      => 14.53 * E_V_TO_JOULES, // N₂-weighted average
-            _                    => 15.0 * E_V_TO_JOULES,
+            GasSpecies::Oxygen => 13.618_055 * E_V_TO_JOULES,
+            GasSpecies::Air => 14.53 * E_V_TO_JOULES, // N₂-weighted average
+            _ => 15.0 * E_V_TO_JOULES,
         };
 
         let t = state.temperature;
@@ -79,8 +79,8 @@ impl EnergyBalanceCalculator {
         // Saha factor Φ(T) = 2 · (2π m_e k_B T / h²)^(3/2) · exp(−E_ion/kT)
         // Factor 2 accounts for the g_i/g_0 = 1 degeneracy ratio times the
         // electron spin degeneracy (2 spin states).
-        let saha_prefactor = 2.0
-            * (2.0 * std::f64::consts::PI * M_ELECTRON * kt / (PLANCK * PLANCK)).powf(1.5);
+        let saha_prefactor =
+            2.0 * (2.0 * std::f64::consts::PI * M_ELECTRON * kt / (PLANCK * PLANCK)).powf(1.5);
         let boltzmann_factor = (-e_ion_j / kt).exp();
         let phi = saha_prefactor * boltzmann_factor;
 
@@ -183,8 +183,16 @@ mod tests {
         use uom::si::power::watt;
         let watts = p.get::<watt>();
         // Must be endothermic (negative) and non-zero
-        assert!(watts < 0.0, "plasma ionization must absorb energy; got {:.3e} W", watts);
-        assert!(watts.is_finite(), "power must be finite; got {:.3e} W", watts);
+        assert!(
+            watts < 0.0,
+            "plasma ionization must absorb energy; got {:.3e} W",
+            watts
+        );
+        assert!(
+            watts.is_finite(),
+            "power must be finite; got {:.3e} W",
+            watts
+        );
     }
 
     /// Saha ionization fraction α grows monotonically with temperature.
@@ -192,9 +200,18 @@ mod tests {
     fn test_plasma_ionization_monotone_in_temperature() {
         use uom::si::power::watt;
         let calc = make_calc(true);
-        let p1 = calc.calculate_plasma_ionization_rate(&make_state(15_000.0)).get::<watt>();
-        let p2 = calc.calculate_plasma_ionization_rate(&make_state(20_000.0)).get::<watt>();
+        let p1 = calc
+            .calculate_plasma_ionization_rate(&make_state(15_000.0))
+            .get::<watt>();
+        let p2 = calc
+            .calculate_plasma_ionization_rate(&make_state(20_000.0))
+            .get::<watt>();
         // Both are negative (endothermic); higher T → more ionization → larger |p|
-        assert!(p2 < p1, "ionization power must grow in magnitude with T: p1={:.3e}, p2={:.3e}", p1, p2);
+        assert!(
+            p2 < p1,
+            "ionization power must grow in magnitude with T: p1={:.3e}, p2={:.3e}",
+            p1,
+            p2
+        );
     }
 }

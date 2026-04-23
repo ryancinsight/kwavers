@@ -98,7 +98,8 @@ pub fn field_unit(idx: usize) -> &'static str {
         TEMPERATURE_IDX => "°C",
         LIGHT_IDX => "W/m²",
         VX_IDX | VY_IDX | VZ_IDX => "m/s",
-        STRESS_XX_IDX | STRESS_YY_IDX | STRESS_ZZ_IDX | STRESS_XY_IDX | STRESS_XZ_IDX | STRESS_YZ_IDX => "Pa",
+        STRESS_XX_IDX | STRESS_YY_IDX | STRESS_ZZ_IDX | STRESS_XY_IDX | STRESS_XZ_IDX
+        | STRESS_YZ_IDX => "Pa",
         BUBBLE_RADIUS_IDX => "m",
         BUBBLE_VELOCITY_IDX => "m/s",
         CHEMICAL_IDX => "mol/L",

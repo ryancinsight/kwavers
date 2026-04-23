@@ -322,8 +322,7 @@ pub fn entropy_production_rate(
                     let vy = velocity_y[[i, j, k]];
                     let vz = velocity_z[[i, j, k]];
                     let c2 = c * c;
-                    let e =
-                        0.5 * rho * (vx * vx + vy * vy + vz * vz) + p * p / (2.0 * rho * c2);
+                    let e = 0.5 * rho * (vx * vx + vy * vy + vz * vz) + p * p / (2.0 * rho * c2);
                     // σ_s = 2α c e / T₀   [W m⁻³ K⁻¹]
                     // Negative α (unphysical) produces negative total, flagging a Second Law violation.
                     total += 2.0 * alpha * c * e * t0_inv * dv;
@@ -423,8 +422,7 @@ pub fn acoustic_heat_source(
                     let vz = velocity_z[[i, j, k]];
                     let alpha = absorption[[i, j, k]];
                     let c2 = c * c;
-                    let e =
-                        0.5 * rho * (vx * vx + vy * vy + vz * vz) + p * p / (2.0 * rho * c2);
+                    let e = 0.5 * rho * (vx * vx + vy * vy + vz * vz) + p * p / (2.0 * rho * c2);
                     q[[i, j, k]] = 2.0 * alpha * c * e;
                 }
             }
@@ -552,7 +550,10 @@ mod tests {
 
         // Initial energy = 0 → function uses max(0, 1e-10) = 1e-10 guard
         let err = validate_energy_conservation(&p, &v, &v, &v, &rho, &c, 0.0, &grid);
-        assert!(err < 1e-8, "Zero field must give near-zero energy error: {err:.3e}");
+        assert!(
+            err < 1e-8,
+            "Zero field must give near-zero energy error: {err:.3e}"
+        );
     }
 
     /// A uniform pressure field with known analytical energy must match within 1e-10.
@@ -578,9 +579,8 @@ mod tests {
         let rho = uniform_array(shape, rho0);
         let c = uniform_array(shape, c0);
 
-        let volume = (grid.nx as f64 * grid.dx)
-            * (grid.ny as f64 * grid.dy)
-            * (grid.nz as f64 * grid.dz);
+        let volume =
+            (grid.nx as f64 * grid.dx) * (grid.ny as f64 * grid.dy) * (grid.nz as f64 * grid.dz);
         let e_analytical = p0 * p0 / (2.0 * rho0 * c0 * c0) * volume;
 
         // Pass analytical energy as initial → relative error must be zero
@@ -681,9 +681,8 @@ mod tests {
         let c = uniform_array(shape, c0);
         let alpha = uniform_array(shape, alpha0);
 
-        let volume = (grid.nx as f64 * grid.dx)
-            * (grid.ny as f64 * grid.dy)
-            * (grid.nz as f64 * grid.dz);
+        let volume =
+            (grid.nx as f64 * grid.dx) * (grid.ny as f64 * grid.dy) * (grid.nz as f64 * grid.dz);
         let expected = alpha0 * p0 * p0 / (rho0 * c0 * t0) * volume;
 
         let ds = entropy_production_rate(&p, &v, &v, &v, &rho, &c, &alpha, t0, &grid);
@@ -736,7 +735,10 @@ mod tests {
 
         let q = acoustic_heat_source(&p, &v, &v, &v, &rho, &c, &alpha);
         for val in q.iter() {
-            assert!(val.abs() < 1e-20, "Heat source with α=0 must be zero: {val:.3e}");
+            assert!(
+                val.abs() < 1e-20,
+                "Heat source with α=0 must be zero: {val:.3e}"
+            );
         }
     }
 
@@ -758,9 +760,8 @@ mod tests {
         // Negative absorption — unphysical but useful for testing the check
         let alpha = uniform_array(shape, -1.0);
 
-        let volume = (grid.nx as f64 * grid.dx)
-            * (grid.ny as f64 * grid.dy)
-            * (grid.nz as f64 * grid.dz);
+        let volume =
+            (grid.nx as f64 * grid.dx) * (grid.ny as f64 * grid.dy) * (grid.nz as f64 * grid.dz);
         let e_init = 1000.0 * 1000.0 / (2.0 * 1000.0 * 1500.0 * 1500.0) * volume;
 
         let metrics = validate_conservation(

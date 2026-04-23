@@ -36,8 +36,6 @@ from kwave.options.simulation_execution_options import SimulationExecutionOption
 from kwave.utils.dotdictionary import dotdict
 from kwave.utils.filters import spect
 from kwave.utils.signals import tone_burst
-
-
 PML_X_SIZE = 20
 PML_Y_SIZE = 10
 PML_Z_SIZE = 10
@@ -61,13 +59,12 @@ TONE_BURST_CYCLES = 5
 
 FIGURE_PATH = DEFAULT_OUTPUT_DIR / "us_defining_transducer_compare.png"
 METRICS_PATH = DEFAULT_OUTPUT_DIR / "us_defining_transducer_metrics.txt"
-
+CACHE_VERSION = 2
 TRACE_THRESHOLDS = {
     "pearson_r": 0.90,
     "rms_ratio_min": 0.80,
     "rms_ratio_max": 1.25,
 }
-
 
 def build_kwave_configuration():
     """Build the canonical k-wave-python transducer configuration."""
@@ -113,8 +110,6 @@ def build_kwave_configuration():
     sensor.record = ["p"]
 
     return kgrid, medium, not_transducer, sensor, np.asarray(input_signal)
-
-
 def run_kwave_reference(use_gpu: bool) -> dict:
     """Run the k-wave-python reference simulation."""
     kwave_cache_path = DEFAULT_OUTPUT_DIR / (
@@ -122,14 +117,17 @@ def run_kwave_reference(use_gpu: bool) -> dict:
     )
     if kwave_cache_path.exists():
         cached = np.load(kwave_cache_path)
-        return {
-            "pressure": cached["pressure"],
-            "time": cached["time"],
-            "dt": float(cached["dt"]),
-            "runtime_s": float(cached["runtime_s"]),
-            "input_signal": cached["input_signal"],
-            "active_mask": cached["active_mask"],
-        }
+        cache_version = int(np.asarray(cached["cache_version"]).reshape(())) if "cache_version" in cached.files else 0
+        if cache_version == CACHE_VERSION:
+            return {
+                "pressure": cached["pressure"],
+                "time": cached["time"],
+                "dt": float(cached["dt"]),
+                "runtime_s": float(cached["runtime_s"]),
+                "input_signal": cached["input_signal"],
+                "active_mask": cached["active_mask"],
+                "time_steps": int(cached["time_steps"]),
+            }
 
     kgrid, medium, not_transducer, sensor, input_signal = build_kwave_configuration()
     start = time.perf_counter()
@@ -155,20 +153,21 @@ def run_kwave_reference(use_gpu: bool) -> dict:
         "runtime_s": elapsed,
         "input_signal": input_signal.ravel(),
         "active_mask": np.asarray(not_transducer.all_elements_mask),
+        "time_steps": int(pressure.shape[1]),
     }
     np.savez(
         kwave_cache_path,
+        cache_version=CACHE_VERSION,
         pressure=result["pressure"],
         time=result["time"],
         dt=result["dt"],
         runtime_s=result["runtime_s"],
         input_signal=result["input_signal"],
         active_mask=result["active_mask"],
+        time_steps=result["time_steps"],
     )
     return result
-
-
-def build_pykwavers_inputs(dt: float, input_signal: np.ndarray):
+def build_pykwavers_inputs(dt: float, input_signal: np.ndarray, n_steps: int):
     """Construct pykwavers source/sensor inputs matching the k-wave transducer example."""
     grid = pkw.Grid(TOTAL_NX, TOTAL_NY, TOTAL_NZ, DX, DY, DZ)
     medium = pkw.Medium.homogeneous(sound_speed=SOUND_SPEED, density=DENSITY)
@@ -214,8 +213,6 @@ def build_pykwavers_inputs(dt: float, input_signal: np.ndarray):
     offset_y = int(NY / 2 - NX // 2) - 1 + PML_Y_SIZE
     offset_z = int(NZ / 2 - element_length // 2) - 1 + PML_Z_SIZE
 
-    n_steps = max(1, int(round(T_END / dt)))
-
     # k-Wave's NotATransducer internally prepends stored_appended_zeros = max_delay zeros
     # to the input_signal (input_signal property in ktransducer.py).  This shifts the
     # entire injection by max_delay steps so that every element has "room" to read ahead.
@@ -251,22 +248,21 @@ def build_pykwavers_inputs(dt: float, input_signal: np.ndarray):
     source = pkw.Source.from_velocity_mask_2d(source_mask, ux=ux, mode="additive")
     sensor = pkw.Sensor.from_mask(sensor_mask)
     return grid, medium, source, sensor
-
-
-def run_pykwavers(dt: float, input_signal: np.ndarray) -> dict:
+def run_pykwavers(dt: float, input_signal: np.ndarray, n_steps: int) -> dict:
     """Run the pykwavers counterpart simulation."""
     pykwavers_cache_path = DEFAULT_OUTPUT_DIR / "us_defining_transducer_pykwavers_cache.npz"
     if pykwavers_cache_path.exists():
         cached = np.load(pykwavers_cache_path)
-        if abs(float(cached["dt"]) - dt) < 1e-15:
+        cache_version = int(np.asarray(cached["cache_version"]).reshape(())) if "cache_version" in cached.files else 0
+        if cache_version == CACHE_VERSION and abs(float(cached["dt"]) - dt) < 1e-15:
             return {
                 "pressure": cached["pressure"],
                 "time": cached["time"],
                 "runtime_s": float(cached["runtime_s"]),
+                "time_steps": int(cached["time_steps"]),
             }
 
-    grid, medium, source, sensor = build_pykwavers_inputs(dt, input_signal)
-    n_steps = max(1, int(round(T_END / dt)))
+    grid, medium, source, sensor = build_pykwavers_inputs(dt, input_signal, n_steps)
     start = time.perf_counter()
     sim = pkw.Simulation(grid, medium, source, sensor, solver=pkw.SolverType.PSTD)
     sim.set_pml_size_xyz(PML_X_SIZE, PML_Y_SIZE, PML_Z_SIZE)
@@ -279,23 +275,22 @@ def run_pykwavers(dt: float, input_signal: np.ndarray) -> dict:
         "pressure": pressure,
         "time": time_axis,
         "runtime_s": elapsed,
+        "time_steps": int(n_steps),
     }
     np.savez(
         pykwavers_cache_path,
+        cache_version=CACHE_VERSION,
         pressure=output["pressure"],
         time=output["time"],
         runtime_s=output["runtime_s"],
         dt=dt,
+        time_steps=output["time_steps"],
     )
     return output
-
-
 def trace_spectrum(trace: np.ndarray, dt: float):
     """Return single-sided spectrum for plotting."""
     f, amp, _phase = spect(np.asarray(trace).ravel(), 1.0 / dt)
     return np.asarray(f).ravel(), np.asarray(amp).ravel()
-
-
 def plot_comparison(kwave: dict, pykwavers: dict, dt: float) -> None:
     """Save comparison figure for aperture geometry, traces, and spectra."""
     fig, axes = plt.subplots(1, 3, figsize=(15, 4.5))
@@ -333,8 +328,6 @@ def plot_comparison(kwave: dict, pykwavers: dict, dt: float) -> None:
     fig.tight_layout()
     fig.savefig(FIGURE_PATH, dpi=300, bbox_inches="tight")
     plt.close(fig)
-
-
 def build_report_lines(kwave: dict, pykwavers: dict) -> list[str]:
     """Build plain-text metrics report."""
     lines = [
@@ -371,20 +364,22 @@ def build_report_lines(kwave: dict, pykwavers: dict) -> list[str]:
         )
     lines.insert(0, f"parity_status: {'PASS' if all(statuses) else 'FAIL'}")
     return lines
-
-
+def run_comparison(use_gpu: bool = False) -> dict[str, dict[str, np.ndarray | float]]:
+    """Run both reference simulations and return their cached-or-fresh outputs."""
+    kwave = run_kwave_reference(use_gpu=use_gpu)
+    pykwavers = run_pykwavers(kwave["dt"], kwave["input_signal"], int(kwave["time_steps"]))
+    return {"kwave": kwave, "pykwavers": pykwavers}
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compare pykwavers with k-wave-python for us_defining_transducer.")
     parser.add_argument("--gpu", action="store_true", help="Run k-wave-python with GPU execution if available.")
     args = parser.parse_args()
 
-    kwave = run_kwave_reference(use_gpu=args.gpu)
-    pykwavers = run_pykwavers(kwave["dt"], kwave["input_signal"])
+    comparison = run_comparison(use_gpu=args.gpu)
+    kwave = comparison["kwave"]
+    pykwavers = comparison["pykwavers"]
     plot_comparison(kwave, pykwavers, kwave["dt"])
     save_text_report(METRICS_PATH, "us_defining_transducer parity metrics", build_report_lines(kwave, pykwavers))
     print(f"Saved: {FIGURE_PATH}")
     print(f"Saved: {METRICS_PATH}")
-
-
 if __name__ == "__main__":
     main()

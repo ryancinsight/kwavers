@@ -68,7 +68,12 @@ use ndarray::Array3;
 /// ```matlab
 /// disc = makeDisc(Nx, Ny, cx, cy, radius);
 /// ```
-pub fn make_disc(dim: (usize, usize, usize), spacing: (f64, f64, f64), center: [f64; 3], radius: f64) -> KwaversResult<Array3<bool>> {
+pub fn make_disc(
+    dim: (usize, usize, usize),
+    spacing: (f64, f64, f64),
+    center: [f64; 3],
+    radius: f64,
+) -> KwaversResult<Array3<bool>> {
     // Validate inputs
     if radius <= 0.0 {
         return Err(crate::core::error::KwaversError::Config(
@@ -160,7 +165,12 @@ pub fn make_disc(dim: (usize, usize, usize), spacing: (f64, f64, f64), center: [
 /// ```matlab
 /// ball = makeBall(Nx, Ny, Nz, cx, cy, cz, radius);
 /// ```
-pub fn make_ball(dim: (usize, usize, usize), spacing: (f64, f64, f64), center: [f64; 3], radius: f64) -> KwaversResult<Array3<bool>> {
+pub fn make_ball(
+    dim: (usize, usize, usize),
+    spacing: (f64, f64, f64),
+    center: [f64; 3],
+    radius: f64,
+) -> KwaversResult<Array3<bool>> {
     // Validate inputs
     if radius <= 0.0 {
         return Err(crate::core::error::KwaversError::Config(
@@ -240,7 +250,12 @@ pub fn make_ball(dim: (usize, usize, usize), spacing: (f64, f64, f64), center: [
 /// sphere = makeSphere(Nx, Ny, Nz, cx, cy, cz, radius);
 /// ```
 #[inline]
-pub fn make_sphere(dim: (usize, usize, usize), spacing: (f64, f64, f64), center: [f64; 3], radius: f64) -> KwaversResult<Array3<bool>> {
+pub fn make_sphere(
+    dim: (usize, usize, usize),
+    spacing: (f64, f64, f64),
+    center: [f64; 3],
+    radius: f64,
+) -> KwaversResult<Array3<bool>> {
     make_ball(dim, spacing, center, radius)
 }
 
@@ -288,7 +303,12 @@ pub fn make_sphere(dim: (usize, usize, usize), spacing: (f64, f64, f64), center:
 /// ```matlab
 /// line = makeLine(Nx, Ny, Nz, start_x, start_y, start_z, end_x, end_y, end_z);
 /// ```
-pub fn make_line(dim: (usize, usize, usize), spacing: (f64, f64, f64), start: [f64; 3], end: [f64; 3]) -> KwaversResult<Array3<bool>> {
+pub fn make_line(
+    dim: (usize, usize, usize),
+    spacing: (f64, f64, f64),
+    start: [f64; 3],
+    end: [f64; 3],
+) -> KwaversResult<Array3<bool>> {
     let (nx, ny, nz) = dim;
     let (dx, dy, dz) = spacing;
 

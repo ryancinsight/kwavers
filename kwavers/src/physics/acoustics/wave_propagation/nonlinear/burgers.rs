@@ -362,10 +362,7 @@ mod tests {
     fn fubini_harmonics_zero_at_source() {
         for n in 2..=5u32 {
             let bn = fubini_harmonic_amplitude(n, 1e-9);
-            assert!(
-                bn.abs() < 1e-6,
-                "B_{n}(σ→0) must be ≈ 0, got {bn}"
-            );
+            assert!(bn.abs() < 1e-6, "B_{n}(σ→0) must be ≈ 0, got {bn}");
         }
     }
 
@@ -391,10 +388,10 @@ mod tests {
     fn fubini_b2_at_half_shock() {
         let b2 = fubini_harmonic_amplitude(2, 0.5);
         let expected = bessel_j(2, 1.0); // = (1/0.5) × J₂(1.0) = 2 × J₂(1.0) / 2 = J₂(1.0)
-        // (2/(2×0.5)) × J₂(2×0.5) = (2/1.0) × J₂(1.0) / (2×0.5) ... let me recompute:
-        // = (2/(2σ)) × J₂(2σ) with σ=0.5: (2/(2×0.5)) × J₂(2×0.5) = (2/1) × J₂(1) = 2 × 0.11490
-        // Wait: fubini_harmonic_amplitude(2, 0.5) = 2 × J₂(2×0.5) / (2×0.5) = 2 × J₂(1.0) / 1.0
-        // = 2 × J₂(1.0) = 0.2298
+                                         // (2/(2×0.5)) × J₂(2×0.5) = (2/1.0) × J₂(1.0) / (2×0.5) ... let me recompute:
+                                         // = (2/(2σ)) × J₂(2σ) with σ=0.5: (2/(2×0.5)) × J₂(2×0.5) = (2/1) × J₂(1) = 2 × 0.11490
+                                         // Wait: fubini_harmonic_amplitude(2, 0.5) = 2 × J₂(2×0.5) / (2×0.5) = 2 × J₂(1.0) / 1.0
+                                         // = 2 × J₂(1.0) = 0.2298
         let expected_recalc = 2.0 * bessel_j(2, 1.0);
         assert!(
             (b2 - expected_recalc).abs() < 1e-12,

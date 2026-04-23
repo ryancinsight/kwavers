@@ -72,7 +72,11 @@ pub struct RadicalDiffusionSolver {
 
 impl Default for RadicalDiffusionSolver {
     fn default() -> Self {
-        Self { n_points: 64, r_bubble_m: 10e-6, r_max_factor: 1000.0 }
+        Self {
+            n_points: 64,
+            r_bubble_m: 10e-6,
+            r_max_factor: 1000.0,
+        }
     }
 }
 
@@ -110,7 +114,11 @@ impl RadicalDiffusionSolver {
     /// Create a solver with a specific bubble radius.
     #[must_use]
     pub fn new(r_bubble_m: f64) -> Self {
-        Self { n_points: 64, r_bubble_m, r_max_factor: 1000.0 }
+        Self {
+            n_points: 64,
+            r_bubble_m,
+            r_max_factor: 1000.0,
+        }
     }
 
     /// Advance all radical species by one diffusion step `dt` [s].
@@ -157,7 +165,11 @@ impl RadicalDiffusionSolver {
             }
 
             let c = &mut concentrations[s];
-            let c_bc = if s < bubble_concs.len() { bubble_concs[s] } else { 0.0 };
+            let c_bc = if s < bubble_concs.len() {
+                bubble_concs[s]
+            } else {
+                0.0
+            };
 
             // Crank-Nicolson: solve (I − alpha·L)·c_new = (I + alpha·L)·c + 2·alpha·bc_rhs
             // where alpha = D·dt/(2·dxi²) and L is the log-radial Laplacian.
@@ -238,7 +250,10 @@ impl RadicalDiffusionSolver {
             }
         }
 
-        Ok(DiffusionStepResult { concentrations: concentrations.to_vec(), max_delta })
+        Ok(DiffusionStepResult {
+            concentrations: concentrations.to_vec(),
+            max_delta,
+        })
     }
 
     /// Build the logarithmic radial grid `r[j] = R_bubble · exp(j · Δξ)`.
@@ -247,7 +262,9 @@ impl RadicalDiffusionSolver {
         let n = self.n_points;
         let r_max = self.r_bubble_m * self.r_max_factor;
         let dxi = (r_max / self.r_bubble_m).ln() / (n - 1) as f64;
-        (0..n).map(|j| self.r_bubble_m * (j as f64 * dxi).exp()).collect()
+        (0..n)
+            .map(|j| self.r_bubble_m * (j as f64 * dxi).exp())
+            .collect()
     }
 
     /// Initialise species concentrations to zero on the full grid.
@@ -340,7 +357,9 @@ mod tests {
         let bubble_bc = vec![1e-6_f64]; // 1 µM at wall
         let d_coeffs = vec![2e-9_f64]; // OH• diffusion coefficient
 
-        solver.step(&mut concs, &bubble_bc, 1e-9, &d_coeffs).unwrap();
+        solver
+            .step(&mut concs, &bubble_bc, 1e-9, &d_coeffs)
+            .unwrap();
 
         assert!(
             (concs[0][0] - bubble_bc[0]).abs() < 1e-20,
@@ -366,7 +385,9 @@ mod tests {
         let d_coeffs = vec![2e-9_f64];
 
         for _ in 0..100 {
-            solver.step(&mut concs, &bubble_bc, 1e-9, &d_coeffs).unwrap();
+            solver
+                .step(&mut concs, &bubble_bc, 1e-9, &d_coeffs)
+                .unwrap();
         }
 
         assert!(
@@ -395,7 +416,9 @@ mod tests {
         let d_coeffs = vec![2e-9_f64];
 
         for _ in 0..50 {
-            solver.step(&mut concs, &bubble_bc, 1e-9, &d_coeffs).unwrap();
+            solver
+                .step(&mut concs, &bubble_bc, 1e-9, &d_coeffs)
+                .unwrap();
         }
 
         for &c in &concs[0] {
@@ -409,7 +432,12 @@ mod tests {
         let solver = RadicalDiffusionSolver::new(5e-6);
         let grid = solver.radial_grid();
         for w in grid.windows(2) {
-            assert!(w[1] > w[0], "Grid not strictly increasing: {} ≤ {}", w[1], w[0]);
+            assert!(
+                w[1] > w[0],
+                "Grid not strictly increasing: {} ≤ {}",
+                w[1],
+                w[0]
+            );
         }
         assert!(
             (grid[0] - solver.r_bubble_m).abs() < 1e-18,

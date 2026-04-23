@@ -105,7 +105,11 @@ impl MediumBuilder {
 
         log::debug!(
             "Built HeterogeneousMedium (uniform c0={:.1} m/s, rho0={:.1} kg/m³) for {}x{}x{} grid",
-            c0, rho0, nx, ny, nz
+            c0,
+            rho0,
+            nx,
+            ny,
+            nz
         );
 
         Ok(Box::new(medium))

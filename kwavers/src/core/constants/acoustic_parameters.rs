@@ -260,7 +260,7 @@ mod tests {
     #[test]
     fn test_db_to_np_amplitude_consistency() {
         let amp_from_db = 10_f64.powf(1.0 / 20.0); // 10^(1/20)
-        let amp_from_np = DB_TO_NP.exp();            // e^(ln(10)/20) = 10^(1/20)
+        let amp_from_np = DB_TO_NP.exp(); // e^(ln(10)/20) = 10^(1/20)
         assert!(
             (amp_from_db - amp_from_np).abs() < 1e-14,
             "Amplitude ratio mismatch: {amp_from_db} vs {amp_from_np}"

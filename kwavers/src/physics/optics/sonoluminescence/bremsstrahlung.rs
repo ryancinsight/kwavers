@@ -123,8 +123,8 @@ fn c_ff_per_sr() -> f64 {
     let e6 = ELECTRON_CHARGE.powi(6);
     let four_pi_eps0 = 4.0 * PI * VACUUM_PERMITTIVITY;
     // Prefactor: 32π e⁶ / (3 m_e c³ (4πε₀)³)
-    let prefactor = 32.0 * PI * e6
-        / (3.0 * ELECTRON_MASS * SPEED_OF_LIGHT.powi(3) * four_pi_eps0.powi(3));
+    let prefactor =
+        32.0 * PI * e6 / (3.0 * ELECTRON_MASS * SPEED_OF_LIGHT.powi(3) * four_pi_eps0.powi(3));
     // Thermal velocity factor: (2π / (3k m_e))^{1/2}  [units: (J·kg)^{−1/2}]
     let thermal_coeff = (2.0 * PI / (3.0 * BOLTZMANN_CONSTANT * ELECTRON_MASS)).sqrt();
     prefactor * thermal_coeff
@@ -247,7 +247,8 @@ impl PlasmaState {
         // Saha equilibrium constant K(T):
         //   K = 2 × (U₁/U₀) × K₀ × T^{3/2} × exp(−χ/kT)
         // Factor of 2: electron spin degeneracy (Saha 1920; Rybicki & Lightman eq. 9.48)
-        let k_saha = 2.0 * partition_ratio * saha_k0() * temperature.powf(1.5) * (-e_ion / k_t).exp();
+        let k_saha =
+            2.0 * partition_ratio * saha_k0() * temperature.powf(1.5) * (-e_ion / k_t).exp();
 
         // Dimensionless Saha factor s = K / n_total
         let s = k_saha / n_total;
@@ -268,7 +269,7 @@ impl PlasmaState {
         Self {
             temperature,
             electron_density: n_e,
-            ion_density_z2: n_i,  // Z² = 1² = 1 for singly ionized
+            ion_density_z2: n_i, // Z² = 1² = 1 for singly ionized
             neutral_density: (1.0 - ionization_fraction) * n_total,
             mean_charge: 1.0,
             ionization_fraction,
@@ -462,9 +463,9 @@ impl NobleGas {
     #[must_use]
     pub fn ionization_energies_ev(self) -> (f64, f64) {
         match self {
-            Self::Helium => (24.587, 54.418), // He → He⁺ → He²⁺
-            Self::Argon => (15.760, 27.630),  // Ar → Ar⁺ → Ar²⁺
-            Self::Xenon => (12.130, 20.975),  // Xe → Xe⁺ → Xe²⁺
+            Self::Helium => (24.587, 54.418),  // He → He⁺ → He²⁺
+            Self::Argon => (15.760, 27.630),   // Ar → Ar⁺ → Ar²⁺
+            Self::Xenon => (12.130, 20.975),   // Xe → Xe⁺ → Xe²⁺
             Self::Krypton => (13.999, 24.360), // Kr → Kr⁺ → Kr²⁺
         }
     }
@@ -547,8 +548,7 @@ impl BremsstrahlungModel {
         let h_nu = PLANCK_CONSTANT * frequency;
         let exp_factor = (-h_nu / (BOLTZMANN_CONSTANT * temperature)).exp();
 
-        c_ff_per_sr() * self.z_ion.powi(2) * g_ff * n_electron * n_ion
-            / temperature.sqrt()
+        c_ff_per_sr() * self.z_ion.powi(2) * g_ff * n_electron * n_ion / temperature.sqrt()
             * exp_factor
     }
 
@@ -737,7 +737,10 @@ mod tests {
         let freq = 1e14; // optical
         let g1 = gaunt_factor_thermal(freq, 10_000.0);
         let g2 = gaunt_factor_thermal(freq, 50_000.0);
-        assert!(g2 > g1, "g_ff should increase with T at fixed ν (Coulomb log)");
+        assert!(
+            g2 > g1,
+            "g_ff should increase with T at fixed ν (Coulomb log)"
+        );
     }
 
     // ── Saha equation tests ───────────────────────────────────────────────
@@ -780,7 +783,10 @@ mod tests {
         let model = BremsstrahlungModel::default();
         for (t, p) in [(5_000.0, 1e5), (20_000.0, 1e5), (100_000.0, 1e6)] {
             let x = model.saha_ionization(t, p, 13.6);
-            assert!((0.0..=1.0).contains(&x), "x({t}K, {p}Pa) = {x} out of [0,1]");
+            assert!(
+                (0.0..=1.0).contains(&x),
+                "x({t}K, {p}Pa) = {x} out of [0,1]"
+            );
         }
     }
 
@@ -813,9 +819,12 @@ mod tests {
     fn plasma_state_charge_neutrality() {
         let state = PlasmaState::from_single_stage(20_000.0, 1e5, 13.6, 1.0);
         // For singly ionized: n_e = n_i (Z²=1)
-        let rel_err = (state.electron_density - state.ion_density_z2).abs()
-            / state.electron_density.max(1.0);
-        assert!(rel_err < 1e-10, "Charge neutrality violated: rel_err = {rel_err}");
+        let rel_err =
+            (state.electron_density - state.ion_density_z2).abs() / state.electron_density.max(1.0);
+        assert!(
+            rel_err < 1e-10,
+            "Charge neutrality violated: rel_err = {rel_err}"
+        );
     }
 
     /// Noble gas argon at 20,000 K: first ionization should dominate.
@@ -823,7 +832,10 @@ mod tests {
     fn argon_plasma_first_ionization_dominant_at_20kk() {
         let state = PlasmaState::from_noble_gas(20_000.0, 1e5, NobleGas::Argon);
         // At 20,000 K, argon is partially ionized (χ₁ = 15.76 eV)
-        assert!(state.ionization_fraction > 0.0, "Argon must have nonzero ionization");
+        assert!(
+            state.ionization_fraction > 0.0,
+            "Argon must have nonzero ionization"
+        );
         assert!(
             state.ionization_fraction < 1.0,
             "Argon should not be fully ionized at 20,000 K"
@@ -848,7 +860,10 @@ mod tests {
     fn emission_coefficient_positive_finite() {
         let model = BremsstrahlungModel::default();
         let j = model.emission_coefficient(1e15, 20_000.0, 1e24, 1e24);
-        assert!(j > 0.0 && j.is_finite(), "emission_coefficient must be positive finite, got {j}");
+        assert!(
+            j > 0.0 && j.is_finite(),
+            "emission_coefficient must be positive finite, got {j}"
+        );
     }
 
     /// Emission coefficient must decrease with frequency (exponential cutoff).
@@ -863,7 +878,10 @@ mod tests {
     /// Emission coefficient must be proportional to n_e × n_i.
     #[test]
     fn emission_coefficient_quadratic_in_density() {
-        let model = BremsstrahlungModel { use_thermal_gaunt_factor: false, ..Default::default() };
+        let model = BremsstrahlungModel {
+            use_thermal_gaunt_factor: false,
+            ..Default::default()
+        };
         let j1 = model.emission_coefficient(1e15, 20_000.0, 1e24, 1e24);
         let j2 = model.emission_coefficient(1e15, 20_000.0, 2e24, 2e24);
         let ratio = j2 / j1;
@@ -920,6 +938,9 @@ mod tests {
         let j1 = model.emission_from_temperature_pressure(freq, 20_000.0, pressure, e_ion);
         let j2 = model.emission_from_temperature_pressure(freq, 50_000.0, pressure, e_ion);
 
-        assert!(j2 > j1, "Emission must increase with temperature (more ionization + hotter)");
+        assert!(
+            j2 > j1,
+            "Emission must increase with temperature (more ionization + hotter)"
+        );
     }
 }

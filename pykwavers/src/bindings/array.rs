@@ -81,6 +81,16 @@ impl KWaveArray {
             .add_rect_element(position, dims.0, dims.1, dims.2);
     }
 
+    fn add_rect_rot_element(
+        &mut self,
+        position: (f64, f64, f64),
+        dims: (f64, f64, f64),
+        euler_xyz_deg: (f64, f64, f64),
+    ) {
+        self.inner
+            .add_rect_rot_element(position, dims.0, dims.1, dims.2, euler_xyz_deg);
+    }
+
     fn add_bowl_element(&mut self, position: (f64, f64, f64), radius: f64, diameter: f64) {
         self.inner.add_bowl_element(position, radius, diameter);
     }

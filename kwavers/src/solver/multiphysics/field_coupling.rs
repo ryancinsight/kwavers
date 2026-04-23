@@ -192,10 +192,7 @@ impl FieldCoupler {
     fn check_convergence(&self, previous: &[Array3<f64>], current: &[Array3<f64>]) -> bool {
         for (prev_field, curr_field) in previous.iter().zip(current.iter()) {
             // ‖current‖_∞ (max absolute value) used as normalizer
-            let field_norm = curr_field
-                .iter()
-                .map(|v| v.abs())
-                .fold(0.0_f64, f64::max);
+            let field_norm = curr_field.iter().map(|v| v.abs()).fold(0.0_f64, f64::max);
 
             let max_rel_diff = prev_field
                 .iter()
@@ -287,7 +284,9 @@ impl FieldCoupler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::{fundamental::DENSITY_WATER_NOMINAL, thermodynamic::SPECIFIC_HEAT_WATER};
+    use crate::core::constants::{
+        fundamental::DENSITY_WATER_NOMINAL, thermodynamic::SPECIFIC_HEAT_WATER,
+    };
 
     // -------------------------------------------------------------------------
     // Convergence tests

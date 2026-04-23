@@ -171,7 +171,9 @@ impl MonteCarloSolver {
                 let (s_to_boundary, next_voxel) = photon_step_to_boundary(
                     photon.position,
                     photon.direction,
-                    ci, cj, ck,
+                    ci,
+                    cj,
+                    ck,
                     self.grid.dx,
                     self.grid.dy,
                     self.grid.dz,
@@ -232,7 +234,9 @@ impl MonteCarloSolver {
                         //
                         // **Reference:** Wang L, Jacques SL, Zheng L (1995) §2.7.
                         if photon.position[2] <= 0.0 && photon.direction[2] < 0.0 {
-                            let n_tissue = self.optical_map.get(ci, cj, 0)
+                            let n_tissue = self
+                                .optical_map
+                                .get(ci, cj, 0)
                                 .map(|p| p.refractive_index)
                                 .unwrap_or(1.4);
                             let cos_i = (-photon.direction[2]).clamp(0.0, 1.0);
@@ -242,8 +246,11 @@ impl MonteCarloSolver {
                                 photon.position[2] = 1e-15;
                                 photon.direction[2] = photon.direction[2].abs();
                                 photon.direction = normalize(photon.direction);
-                                if let Some((ni, nj, nk)) = self.position_to_voxel(photon.position) {
-                                    ci = ni; cj = nj; ck = nk;
+                                if let Some((ni, nj, nk)) = self.position_to_voxel(photon.position)
+                                {
+                                    ci = ni;
+                                    cj = nj;
+                                    ck = nk;
                                 }
                                 continue; // resume voxel sub-step loop
                             } else {
@@ -251,10 +258,14 @@ impl MonteCarloSolver {
                                 atomic_add_f64(reflected_weight, photon.weight);
                             }
                         }
-                        if config.boundary_reflection && !(photon.position[2] <= 0.0 && photon.direction[2] < 0.0) {
+                        if config.boundary_reflection
+                            && !(photon.position[2] <= 0.0 && photon.direction[2] < 0.0)
+                        {
                             self.handle_boundary(&mut photon, rng);
                             if let Some((ni, nj, nk)) = self.position_to_voxel(photon.position) {
-                                ci = ni; cj = nj; ck = nk;
+                                ci = ni;
+                                cj = nj;
+                                ck = nk;
                                 if let Some(np) = self.optical_map.get(ci, cj, ck) {
                                     let new_mu_t = np.total_attenuation();
                                     if new_mu_t > 1e-12 && mu_t_ref > 1e-12 {
@@ -272,7 +283,11 @@ impl MonteCarloSolver {
                         if let Some(np) = self.optical_map.get(ni, nj, nk) {
                             if (np.refractive_index - props.refractive_index).abs() > 1e-6 {
                                 let n_hat = self.voxel_boundary_normal(
-                                    photon.position, photon.direction, ci, cj, ck,
+                                    photon.position,
+                                    photon.direction,
+                                    ci,
+                                    cj,
+                                    ck,
                                 );
                                 apply_fresnel(
                                     &mut photon.direction,
@@ -290,7 +305,9 @@ impl MonteCarloSolver {
                                 mu_t_ref = new_mu_t;
                             }
                         }
-                        ci = ni; cj = nj; ck = nk;
+                        ci = ni;
+                        cj = nj;
+                        ck = nk;
                     }
                 }
             };
@@ -358,11 +375,23 @@ impl MonteCarloSolver {
         };
 
         if tx <= ty && tx <= tz {
-            if dir[0] > 0.0 { [-1.0, 0.0, 0.0] } else { [1.0, 0.0, 0.0] }
+            if dir[0] > 0.0 {
+                [-1.0, 0.0, 0.0]
+            } else {
+                [1.0, 0.0, 0.0]
+            }
         } else if ty <= tz {
-            if dir[1] > 0.0 { [0.0, -1.0, 0.0] } else { [0.0, 1.0, 0.0] }
+            if dir[1] > 0.0 {
+                [0.0, -1.0, 0.0]
+            } else {
+                [0.0, 1.0, 0.0]
+            }
         } else {
-            if dir[2] > 0.0 { [0.0, 0.0, -1.0] } else { [0.0, 0.0, 1.0] }
+            if dir[2] > 0.0 {
+                [0.0, 0.0, -1.0]
+            } else {
+                [0.0, 0.0, 1.0]
+            }
         }
     }
 

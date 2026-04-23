@@ -1,6 +1,8 @@
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::sensor::recorder::config::RecordingMode;
-use crate::domain::sensor::recorder::pressure_statistics::{PressureFieldStatistics, SampledStatistics};
+use crate::domain::sensor::recorder::pressure_statistics::{
+    PressureFieldStatistics, SampledStatistics,
+};
 use ndarray::{Array1, Array2, Array3};
 
 #[derive(Debug, Clone)]

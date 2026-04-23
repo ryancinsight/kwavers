@@ -15,14 +15,14 @@
 //! is defined by modifying the critical free energy barrier $\Delta G_c$
 //! with an elasticity-dependent activation factor $f(E)$, where $E$ is the
 //! local Young's modulus of the tissue:
-//! 
+//!
 //! $$ J = J_0 \exp\left( - \frac{\Delta G_c f(E)}{k_B T} \right) $$
 //!
 //! where the uncoupled barrier is:
 //! $$ \Delta G_c = \frac{16 \pi \gamma^3}{3 (P_v - P_l)^2} $$
 //!
 //! for local fluid pressure $P_l$ and vapor pressure $P_v$.
-//! 
+//!
 //! ### Invariants
 //! 1. Nucleation rate $J \ge 0.0$.
 //! 2. Nucleation only occurs under tension ($P_l < P_v$).
@@ -40,7 +40,7 @@ pub trait HeterogeneousNucleationModel {
     ///
     /// # Parameters
     /// - `youngs_modulus`: Elastic modulus $E$ of the specific tissue cell limit ($Pa$).
-    /// 
+    ///
     /// # Returns
     /// Scaling parameter $f \in [0.0, 1.0]$.
     fn calculate_stiffness_factor(&self, youngs_modulus: Self::Scalar) -> Self::Scalar;
@@ -75,11 +75,13 @@ pub struct ClassicalHeterogeneousNucleation<T: std::fmt::Debug + Clone> {
     pub pre_exponential_factor: T,
     /// Boltzmann constant $k_B$ ($J \cdot K^{-1}$).
     pub k_b: T,
-    /// Reference stiffness $E_{ref}$ where factor reaches 1.0. 
+    /// Reference stiffness $E_{ref}$ where factor reaches 1.0.
     pub reference_stiffness: T,
 }
 
-impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationModel for ClassicalHeterogeneousNucleation<T> {
+impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationModel
+    for ClassicalHeterogeneousNucleation<T>
+{
     type Scalar = T;
 
     #[inline(always)]
@@ -89,13 +91,13 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationMode
         if youngs_modulus <= zero {
             return one;
         }
-        
-        // As local cell stiffness increases, the reduction factor scales quadratically 
+
+        // As local cell stiffness increases, the reduction factor scales quadratically
         // bounded to 1.0 (approaching homogeneous limit). Tumor cells (lower stiffness)
         // yield lower factors, reducing the threshold and increasing nucleation.
         let ratio = self.reference_stiffness / youngs_modulus;
-        let factor = ratio * ratio; 
-        
+        let factor = ratio * ratio;
+
         // Clamp to [0, 1] without trait missing issues
         if factor > one {
             one
@@ -107,14 +109,9 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationMode
     }
 
     #[inline(always)]
-    fn calculate_nucleation_rate(
-        &self,
-        pressure: T,
-        temperature: T,
-        stiffness_factor: T,
-    ) -> T {
+    fn calculate_nucleation_rate(&self, pressure: T, temperature: T, stiffness_factor: T) -> T {
         let zero = T::zero();
-        
+
         // Nucleation only occurs under negative acoustic pressure (tension)
         // pulling the fluid apart relative to vapor pressure.
         if pressure >= self.vapor_pressure {
@@ -122,26 +119,27 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationMode
         }
 
         // 16*pi/3 = 16.75516081914556
-        let sixteen_pi_over_three = T::from(16.75516081914556).unwrap(); 
+        let sixteen_pi_over_three = T::from(16.75516081914556).unwrap();
         let p_diff = self.vapor_pressure - pressure;
-        
-        let surface_tension_cubed = self.surface_tension * self.surface_tension * self.surface_tension;
+
+        let surface_tension_cubed =
+            self.surface_tension * self.surface_tension * self.surface_tension;
         let p_diff_squared = p_diff * p_diff;
-        
+
         // Prevent div by zero inherently covered by if check above but explicit
         if p_diff_squared <= zero {
             return zero;
         }
 
         let delta_g_c = (sixteen_pi_over_three * surface_tension_cubed) / p_diff_squared;
-        
+
         let k_t = self.k_b * temperature;
         if k_t <= zero {
             return zero;
         }
 
         let exponent = -(delta_g_c * stiffness_factor) / k_t;
-        
+
         self.pre_exponential_factor * exponent.exp()
     }
 }
@@ -192,19 +190,19 @@ mod tests {
             "CNT rate at −100 MPa tension must be positive (got {rate:.3e})"
         );
     }
-    
+
     #[test]
     fn test_stiffness_factor_logic() {
         let model = test_model();
-        
+
         // Higher stiffness than reference => small reduction factor -> harder to cavitate
         let hard = model.calculate_stiffness_factor(1e6);
         assert!(hard < 1.0 && hard > 0.0);
-        
+
         // Soft tissue (CTCs) => high reduction factor -> easier to cavitate
         let soft = model.calculate_stiffness_factor(1e4);
         assert_eq!(soft, 1.0); // Clamped at 1.0 maximum
-        
+
         assert!(soft > hard);
     }
 }

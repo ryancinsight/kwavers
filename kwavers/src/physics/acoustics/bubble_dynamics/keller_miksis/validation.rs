@@ -361,8 +361,8 @@ fn test_shape_modes_grow_during_violent_collapse() {
     let mut state = BubbleState::new(&params);
 
     // Impose collapse conditions: very small radius, large inward acceleration
-    state.radius = 1.0e-7;           // 100 nm (strong compression)
-    state.wall_velocity = -100.0;    // collapsing
+    state.radius = 1.0e-7; // 100 nm (strong compression)
+    state.wall_velocity = -100.0; // collapsing
     state.wall_acceleration = 1.0e12; // extreme inward acceleration
 
     let dt = 1.0e-12; // 1 ps
@@ -376,7 +376,8 @@ fn test_shape_modes_grow_during_violent_collapse() {
     assert!(
         a_final > a0,
         "Mode n=2 must grow during violent collapse: a_final={:.3e} m, a0={:.3e} m",
-        a_final, a0
+        a_final,
+        a0
     );
 }
 

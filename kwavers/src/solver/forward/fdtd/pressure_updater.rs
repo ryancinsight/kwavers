@@ -54,11 +54,7 @@ impl FdtdSolver {
     pub(crate) fn update_pressure_cpu(&mut self, dt: f64) -> KwaversResult<()> {
         // K-space path: spectral divergence using negative shift operators
         if let Some(kops) = self.kspace_ops.as_mut() {
-            kops.compute_divergence_neg(
-                &self.fields.ux,
-                &self.fields.uy,
-                &self.fields.uz,
-            );
+            kops.compute_divergence_neg(&self.fields.ux, &self.fields.uy, &self.fields.uz);
             // Use the spectral divergence view directly — no .to_owned() allocation needed
             let divergence = kops.divergence.view();
             Self::update_pressure_simd(&mut self.fields.p, divergence, &self.rho_c_squared, dt);
@@ -152,10 +148,9 @@ impl FdtdSolver {
     ///   Academic Press, Ch. 3. ISBN 978-0-12-321860-6.
     /// - Aanonsen, S. I. et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768.
     pub(crate) fn apply_westervelt_nonlinear_correction(&mut self, dt: f64) {
-        let (Some(nl_coeff), Some(ref mut nl_scratch)) = (
-            self.nl_coeff.as_ref(),
-            self.nl_scratch.as_mut(),
-        ) else {
+        let (Some(nl_coeff), Some(ref mut nl_scratch)) =
+            (self.nl_coeff.as_ref(), self.nl_scratch.as_mut())
+        else {
             return;
         };
 
@@ -398,18 +393,36 @@ mod tests {
 
         // Compare explicit-allocation divergence with scratch-buffer divergence.
         // Both use the same 2nd-order central difference stencil; results must be bitwise identical.
-        let dvx = solver.central_operator.apply_x(solver.fields.ux.view()).unwrap();
-        let dvy = solver.central_operator.apply_y(solver.fields.uy.view()).unwrap();
-        let dvz = solver.central_operator.apply_z(solver.fields.uz.view()).unwrap();
+        let dvx = solver
+            .central_operator
+            .apply_x(solver.fields.ux.view())
+            .unwrap();
+        let dvy = solver
+            .central_operator
+            .apply_y(solver.fields.uy.view())
+            .unwrap();
+        let dvz = solver
+            .central_operator
+            .apply_z(solver.fields.uz.view())
+            .unwrap();
         let divergence_alloc = &dvx + &dvy + &dvz;
 
         // Compute via scratch buffers (in-place path)
         let mut dvx_s = Array3::<f64>::zeros((n, n, n));
         let mut dvy_s = Array3::<f64>::zeros((n, n, n));
         let mut dvz_s = Array3::<f64>::zeros((n, n, n));
-        solver.central_operator.apply_x_into(solver.fields.ux.view(), &mut dvx_s).unwrap();
-        solver.central_operator.apply_y_into(solver.fields.uy.view(), &mut dvy_s).unwrap();
-        solver.central_operator.apply_z_into(solver.fields.uz.view(), &mut dvz_s).unwrap();
+        solver
+            .central_operator
+            .apply_x_into(solver.fields.ux.view(), &mut dvx_s)
+            .unwrap();
+        solver
+            .central_operator
+            .apply_y_into(solver.fields.uy.view(), &mut dvy_s)
+            .unwrap();
+        solver
+            .central_operator
+            .apply_z_into(solver.fields.uz.view(), &mut dvz_s)
+            .unwrap();
         let mut divergence_scratch = dvz_s;
         Zip::from(&mut divergence_scratch)
             .and(&dvx_s)
@@ -432,7 +445,11 @@ mod tests {
         }
 
         // p_scratch must be non-trivially non-zero (solver actually ran)
-        let p_max = p_scratch.iter().cloned().fold(f64::NEG_INFINITY, f64::max).abs();
+        let p_max = p_scratch
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max)
+            .abs();
         assert!(p_max > 0.0, "Pressure must be non-zero after 10 steps");
     }
 

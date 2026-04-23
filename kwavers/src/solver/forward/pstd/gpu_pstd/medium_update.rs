@@ -67,4 +67,20 @@ impl GpuPstdSolver {
         // the subsequent run() will flush all staged writes to the GPU before
         // any compute dispatch executes, ensuring correct ordering.
     }
+
+    /// Overwrite the source_kappa buffer with `1.0` everywhere, effectively
+    /// disabling the k-space source correction `sinc(c·dt·|k|/2)` that
+    /// `apply_source_kappa` multiplies onto the injected velocity source.
+    ///
+    /// This matches k-wave-python's `u_mode = "additive-no-correction"`, which
+    /// is the default set by `NotATransducer` (see kwave/ksource.py:186 and
+    /// kwave/ktransducer.py:244). Call before `run()` on any scan line where
+    /// the caller wants raw additive injection; effects persist across runs
+    /// until `enable_source_correction()` is called.
+    pub fn disable_source_correction(&self) {
+        let nx = self.scratch_c0_sq.len();  // total voxels = nx*ny*nz
+        let ones: Vec<f32> = vec![1.0f32; nx];
+        self.queue
+            .write_buffer(&self.buf_source_kappa, 0, bytemuck::cast_slice(&ones));
+    }
 }

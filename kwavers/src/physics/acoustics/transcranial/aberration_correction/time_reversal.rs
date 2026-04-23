@@ -124,8 +124,7 @@ impl TranscranialAberrationCorrection {
             .zip(correction_phases.iter())
             .map(|(phi, corr)| phi + corr)
             .collect();
-        let quality_metric =
-            TranscranialAberrationCorrection::circular_coherence(&residual_phases);
+        let quality_metric = TranscranialAberrationCorrection::circular_coherence(&residual_phases);
 
         Ok(PhaseCorrection {
             phases: correction_phases,

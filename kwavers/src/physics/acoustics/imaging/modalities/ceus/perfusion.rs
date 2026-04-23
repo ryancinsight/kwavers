@@ -146,8 +146,7 @@ impl PerfusionModel {
                     };
 
                     // dC/dt = −u·∇C − k_perf·C  [bubbles m⁻³ s⁻¹]
-                    let dc_dt = -(vx * dc_dx + vy * dc_dy + vz * dc_dz)
-                        - k_perf * c_old[[i, j, k]];
+                    let dc_dt = -(vx * dc_dx + vy * dc_dy + vz * dc_dz) - k_perf * c_old[[i, j, k]];
 
                     self.concentration[[i, j, k]] = (c_old[[i, j, k]] + dc_dt * dt).max(0.0);
                 }

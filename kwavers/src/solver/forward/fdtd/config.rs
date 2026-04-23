@@ -126,9 +126,7 @@ impl FdtdConfig {
                 ValidationError::FieldValidation {
                     field: "cfl_factor".to_string(),
                     value: self.cfl_factor.to_string(),
-                    constraint: format!(
-                        "Must be in (0, {CFL_MAX_3D}] for 3D stability (1/√3)"
-                    ),
+                    constraint: format!("Must be in (0, {CFL_MAX_3D}] for 3D stability (1/√3)"),
                 }
                 .into(),
             );

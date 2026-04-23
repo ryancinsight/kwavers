@@ -47,13 +47,21 @@ impl GrueneisenModel {
     /// Constant Grüneisen parameter (temperature-independent).
     #[must_use]
     pub fn constant(gamma_0: f64) -> Self {
-        Self { gamma_0, d_gamma_d_t: None, t_ref_celsius: 0.0 }
+        Self {
+            gamma_0,
+            d_gamma_d_t: None,
+            t_ref_celsius: 0.0,
+        }
     }
 
     /// Grüneisen model with linear temperature dependence Γ(T) = Γ₀ + c_T·(T − T_ref).
     #[must_use]
     pub fn with_temperature_coefficient(gamma_0: f64, c_t: f64, t_ref: f64) -> Self {
-        Self { gamma_0, d_gamma_d_t: Some(c_t), t_ref_celsius: t_ref }
+        Self {
+            gamma_0,
+            d_gamma_d_t: Some(c_t),
+            t_ref_celsius: t_ref,
+        }
     }
 
     /// Water model: Γ₀ = 0.12, c_T = 0.004 K⁻¹, T_ref = 20 °C (Sigrist 1986).
@@ -216,8 +224,22 @@ mod tests {
         let mu_a = 100.0_f64;
         let tau = 5e-9_f64;
 
-        let report_37 = ThermoelasticReport::from_absorbed_energy(energy, mu_a, tau, thermoelastic, &model, 37.0);
-        let report_20 = ThermoelasticReport::from_absorbed_energy(energy, mu_a, tau, thermoelastic, &model, 20.0);
+        let report_37 = ThermoelasticReport::from_absorbed_energy(
+            energy,
+            mu_a,
+            tau,
+            thermoelastic,
+            &model,
+            37.0,
+        );
+        let report_20 = ThermoelasticReport::from_absorbed_energy(
+            energy,
+            mu_a,
+            tau,
+            thermoelastic,
+            &model,
+            20.0,
+        );
 
         let gamma_37 = model.evaluate(37.0);
         let gamma_20 = model.evaluate(20.0);

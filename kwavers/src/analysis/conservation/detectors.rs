@@ -45,7 +45,6 @@ pub struct ConservationViolationDetector {
 
     /// Current timestep
     timestep: u64,
-
 }
 
 impl ConservationViolationDetector {

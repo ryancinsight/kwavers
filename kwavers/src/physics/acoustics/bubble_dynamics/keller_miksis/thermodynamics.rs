@@ -240,8 +240,8 @@ pub(crate) fn update_temperature(
     // cooling it. This reduces the ~500 K peak-temperature overestimate during collapse
     // (Storey & Szeri 2000, Fig. 5).
     let latent_term = {
-        use crate::core::constants::thermodynamic::{M_WATER, ROOM_TEMPERATURE_K};
         use crate::core::constants::fundamental::GAS_CONSTANT as R_GAS;
+        use crate::core::constants::thermodynamic::{M_WATER, ROOM_TEMPERATURE_K};
         use std::f64::consts::PI;
 
         let t_liquid_k = ROOM_TEMPERATURE_K; // liquid temperature at bubble wall [K]
@@ -432,8 +432,10 @@ mod tests {
     /// Reduction of 200–800 K expected per Storey & Szeri (2000) Figure 5.
     #[test]
     fn test_bubble_collapse_temperature_reduced_by_latent_heat() {
+        use crate::physics::acoustics::bubble_dynamics::bubble_state::{
+            BubbleParameters, BubbleState,
+        };
         use crate::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
-        use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 
         // Create two identical KM models; one will have latent heat, one won't.
         let params = BubbleParameters {
@@ -451,8 +453,14 @@ mod tests {
             initial_gas_pressure: 101_325.0,
             gas_composition: {
                 let mut m = std::collections::HashMap::new();
-                m.insert(crate::physics::acoustics::bubble_dynamics::bubble_state::GasType::N2, 0.79);
-                m.insert(crate::physics::acoustics::bubble_dynamics::bubble_state::GasType::O2, 0.21);
+                m.insert(
+                    crate::physics::acoustics::bubble_dynamics::bubble_state::GasType::N2,
+                    0.79,
+                );
+                m.insert(
+                    crate::physics::acoustics::bubble_dynamics::bubble_state::GasType::O2,
+                    0.21,
+                );
                 m
             },
             gamma: 1.4,

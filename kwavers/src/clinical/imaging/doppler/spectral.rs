@@ -130,8 +130,8 @@ impl SpectralAnalysis {
         let psd_scale = sample_rate * m as f64 * u_norm;
 
         // ── Segment and average ────────────────────────────────────────────────
-        let hop = ((m as f64 * (1.0 - self.config.overlap.clamp(0.0, 0.99))).round() as usize)
-            .max(1);
+        let hop =
+            ((m as f64 * (1.0 - self.config.overlap.clamp(0.0, 0.99))).round() as usize).max(1);
 
         let mut psd_sum = Array1::<f64>::zeros(out_len);
         let mut n_segments = 0usize;
@@ -155,7 +155,7 @@ impl SpectralAnalysis {
             let spectrum: Array1<Complex64> = fft_1d_array(&windowed);
             for k in 0..out_len {
                 let power = spectrum[k].norm_sqr(); // |X[k]|²
-                // Double-count non-DC, non-Nyquist bins for one-sided spectrum
+                                                    // Double-count non-DC, non-Nyquist bins for one-sided spectrum
                 let scale = if k == 0 || k == m / 2 { 1.0 } else { 2.0 };
                 psd_sum[k] += scale * power / psd_scale;
             }
@@ -181,7 +181,9 @@ impl SpectralAnalysis {
     /// Returns `fft_size/2 + 1` frequencies from 0 to `sample_rate/2`.
     pub fn frequency_axis(&self, sample_rate: f64) -> Array1<f64> {
         let out_len = self.config.fft_size / 2 + 1;
-        Array1::from_shape_fn(out_len, |k| k as f64 * sample_rate / self.config.fft_size as f64)
+        Array1::from_shape_fn(out_len, |k| {
+            k as f64 * sample_rate / self.config.fft_size as f64
+        })
     }
 }
 
@@ -206,8 +208,9 @@ mod tests {
         let f0 = 1_000.0_f64; // 1 kHz tone — exactly at bin k=25 for fft_size=256, fs=10kHz
         let n_samples = 1024usize;
 
-        let signal: Array1<f64> =
-            Array1::from_shape_fn(n_samples, |n| (2.0 * PI * f0 * n as f64 / sample_rate).sin());
+        let signal: Array1<f64> = Array1::from_shape_fn(n_samples, |n| {
+            (2.0 * PI * f0 * n as f64 / sample_rate).sin()
+        });
 
         let psd = spectral.compute_psd(signal.view(), sample_rate).unwrap();
 
@@ -269,7 +272,11 @@ mod tests {
 
         assert_eq!(freq.len(), 129); // fft_size/2 + 1 = 129
         assert!((freq[0]).abs() < 1e-10); // DC = 0
-        assert!((freq[128] - fs / 2.0).abs() < 1e-6, "Nyquist = {}", freq[128]); // Nyquist = 5000 Hz
+        assert!(
+            (freq[128] - fs / 2.0).abs() < 1e-6,
+            "Nyquist = {}",
+            freq[128]
+        ); // Nyquist = 5000 Hz
     }
 
     /// **Test: PSD integral approximates signal power (Parseval's theorem)**

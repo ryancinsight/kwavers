@@ -95,18 +95,42 @@ impl GpuPstdSolver {
         //  y_pos_re, y_pos_im, y_neg_re, y_neg_im (each ny),
         //  z_pos_re, z_pos_im, z_neg_re, z_neg_im (each nz)]
         let mut shifts_all: Vec<f32> = Vec::with_capacity(4 * (nx + ny + nz));
-        for c in sx_pos.iter() { shifts_all.push(c.re as f32); }
-        for c in sx_pos.iter() { shifts_all.push(c.im as f32); }
-        for c in sx_neg.iter() { shifts_all.push(c.re as f32); }
-        for c in sx_neg.iter() { shifts_all.push(c.im as f32); }
-        for c in sy_pos.iter() { shifts_all.push(c.re as f32); }
-        for c in sy_pos.iter() { shifts_all.push(c.im as f32); }
-        for c in sy_neg.iter() { shifts_all.push(c.re as f32); }
-        for c in sy_neg.iter() { shifts_all.push(c.im as f32); }
-        for c in sz_pos.iter() { shifts_all.push(c.re as f32); }
-        for c in sz_pos.iter() { shifts_all.push(c.im as f32); }
-        for c in sz_neg.iter() { shifts_all.push(c.re as f32); }
-        for c in sz_neg.iter() { shifts_all.push(c.im as f32); }
+        for c in sx_pos.iter() {
+            shifts_all.push(c.re as f32);
+        }
+        for c in sx_pos.iter() {
+            shifts_all.push(c.im as f32);
+        }
+        for c in sx_neg.iter() {
+            shifts_all.push(c.re as f32);
+        }
+        for c in sx_neg.iter() {
+            shifts_all.push(c.im as f32);
+        }
+        for c in sy_pos.iter() {
+            shifts_all.push(c.re as f32);
+        }
+        for c in sy_pos.iter() {
+            shifts_all.push(c.im as f32);
+        }
+        for c in sy_neg.iter() {
+            shifts_all.push(c.re as f32);
+        }
+        for c in sy_neg.iter() {
+            shifts_all.push(c.im as f32);
+        }
+        for c in sz_pos.iter() {
+            shifts_all.push(c.re as f32);
+        }
+        for c in sz_pos.iter() {
+            shifts_all.push(c.im as f32);
+        }
+        for c in sz_neg.iter() {
+            shifts_all.push(c.re as f32);
+        }
+        for c in sz_neg.iter() {
+            shifts_all.push(c.im as f32);
+        }
 
         // Pack pml_xyz = [pml_x | pml_y | pml_z]
         let mut pml_xyz: Vec<f32> = Vec::with_capacity(3 * total);
@@ -176,7 +200,7 @@ impl GpuPstdSolver {
         // n=256
         for k in 0usize..128 {
             let angle = -2.0 * std::f64::consts::PI * k as f64 / 256.0;
-            twiddle_data[k]       = angle.cos() as f32;
+            twiddle_data[k] = angle.cos() as f32;
             twiddle_data[128 + k] = angle.sin() as f32;
         }
         // n=128
@@ -201,12 +225,12 @@ impl GpuPstdSolver {
         // Fractional-Laplacian absorption buffers (group 3)
         let buf_absorb_nabla1 = mk_ro(absorb_nabla1, "absorb_nabla1");
         let buf_absorb_nabla2 = mk_ro(absorb_nabla2, "absorb_nabla2");
-        let buf_absorb_tau    = mk_ro(absorb_tau,    "absorb_tau");
-        let buf_absorb_eta    = mk_ro(absorb_eta,    "absorb_eta");
+        let buf_absorb_tau = mk_ro(absorb_tau, "absorb_tau");
+        let buf_absorb_eta = mk_ro(absorb_eta, "absorb_eta");
         let buf_absorb_scratch_kre = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_kre");
         let buf_absorb_scratch_kim = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_kim");
-        let buf_absorb_scratch_l1  = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_l1");
-        let buf_absorb_scratch_l2  = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_l2");
+        let buf_absorb_scratch_l1 = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_l1");
+        let buf_absorb_scratch_l2 = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_l2");
 
         // group(3) PML + shifts
         let buf_pml_sgx = mk_ro(pml_sgx, "pml_sgx");
@@ -534,8 +558,14 @@ impl GpuPstdSolver {
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("bgl_absorb"),
                 entries: &[
-                    ro_entry(0), ro_entry(1), ro_entry(2), ro_entry(3), // nabla1, nabla2, tau, eta
-                    rw_entry(4), rw_entry(5), rw_entry(6), rw_entry(7), // scratch_kre/kim, l1, l2
+                    ro_entry(0),
+                    ro_entry(1),
+                    ro_entry(2),
+                    ro_entry(3), // nabla1, nabla2, tau, eta
+                    rw_entry(4),
+                    rw_entry(5),
+                    rw_entry(6),
+                    rw_entry(7), // scratch_kre/kim, l1, l2
                 ],
             })
         };
@@ -554,14 +584,15 @@ impl GpuPstdSolver {
         // Absorption layout: groups 0–3 (fields, kspace, sensor[placeholder], absorb)
         // Absorption shaders access group(0) (rho fields), group(1) (kspace), group(3) (absorption).
         // group(2) (bgl_sensor) is present in the layout for API compatibility but unused by these shaders.
-        let pipeline_layout_absorb = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("pstd_pipeline_layout_absorb"),
-            bind_group_layouts: &[&bgl_fields, &bgl_kspace, &bgl_sensor, &bgl_absorb],
-            push_constant_ranges: &[wgpu::PushConstantRange {
-                stages: wgpu::ShaderStages::COMPUTE,
-                range: 0..std::mem::size_of::<PstdParams>() as u32,
-            }],
-        });
+        let pipeline_layout_absorb =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("pstd_pipeline_layout_absorb"),
+                bind_group_layouts: &[&bgl_fields, &bgl_kspace, &bgl_sensor, &bgl_absorb],
+                push_constant_ranges: &[wgpu::PushConstantRange {
+                    stages: wgpu::ShaderStages::COMPUTE,
+                    range: 0..std::mem::size_of::<PstdParams>() as u32,
+                }],
+            });
 
         // ── Compile pipelines ─────────────────────────────────────────────────
         let mk_pl = |entry: &'static str| -> wgpu::ComputePipeline {
@@ -620,14 +651,38 @@ impl GpuPstdSolver {
             label: Some("bg_fields"),
             layout: &bgl_fields,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: buf_p.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: buf_ux.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: buf_uy.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: buf_uz.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 4, resource: buf_rhox.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 5, resource: buf_rhoy.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 6, resource: buf_rhoz.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 7, resource: buf_source_kappa.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buf_p.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: buf_ux.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: buf_uy.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: buf_uz.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: buf_rhox.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: buf_rhoy.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 6,
+                    resource: buf_rhoz.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 7,
+                    resource: buf_source_kappa.as_entire_binding(),
+                },
             ],
         });
 
@@ -635,14 +690,38 @@ impl GpuPstdSolver {
             label: Some("bg_kspace"),
             layout: &bgl_kspace,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: buf_kspace_re.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: buf_kspace_im.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: buf_kappa.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: buf_rho0_inv.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 4, resource: buf_c0_sq.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 5, resource: buf_rho0.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 6, resource: buf_bon_a.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 7, resource: buf_alpha_decay.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buf_kspace_re.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: buf_kspace_im.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: buf_kappa.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: buf_rho0_inv.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: buf_c0_sq.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: buf_rho0.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 6,
+                    resource: buf_bon_a.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 7,
+                    resource: buf_alpha_decay.as_entire_binding(),
+                },
             ],
         });
 
@@ -650,14 +729,38 @@ impl GpuPstdSolver {
             label: Some("bg_absorb"),
             layout: &bgl_absorb,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: buf_absorb_nabla1.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: buf_absorb_nabla2.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: buf_absorb_tau.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: buf_absorb_eta.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 4, resource: buf_absorb_scratch_kre.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 5, resource: buf_absorb_scratch_kim.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 6, resource: buf_absorb_scratch_l1.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 7, resource: buf_absorb_scratch_l2.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buf_absorb_nabla1.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: buf_absorb_nabla2.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: buf_absorb_tau.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: buf_absorb_eta.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: buf_absorb_scratch_kre.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: buf_absorb_scratch_kim.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 6,
+                    resource: buf_absorb_scratch_l1.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 7,
+                    resource: buf_absorb_scratch_l2.as_entire_binding(),
+                },
             ],
         });
 
@@ -791,22 +894,20 @@ impl GpuPstdSolver {
         // (e.g. max_storage_buffers_per_shader_stage is 8 by default but the
         // PSTD kspace bind group uses 10 storage buffers).
         let native_limits = adapter.limits();
-        let (device, queue) = pollster::block_on(adapter.request_device(
-            &wgpu::DeviceDescriptor {
-                label: Some("pstd_auto"),
-                required_features: wgpu::Features::PUSH_CONSTANTS,
-                required_limits: wgpu::Limits {
-                    max_push_constant_size: 128,
-                    // Allow up to the adapter maximum so we don't hit the
-                    // WebGPU default limit of 8 storage buffers / stage.
-                    max_storage_buffers_per_shader_stage:
-                        native_limits.max_storage_buffers_per_shader_stage,
-                    ..wgpu::Limits::default()
-                },
-                memory_hints: wgpu::MemoryHints::default(),
-                trace: wgpu::Trace::Off,
+        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+            label: Some("pstd_auto"),
+            required_features: wgpu::Features::PUSH_CONSTANTS,
+            required_limits: wgpu::Limits {
+                max_push_constant_size: 128,
+                // Allow up to the adapter maximum so we don't hit the
+                // WebGPU default limit of 8 storage buffers / stage.
+                max_storage_buffers_per_shader_stage:
+                    native_limits.max_storage_buffers_per_shader_stage,
+                ..wgpu::Limits::default()
             },
-        ))
+            memory_hints: wgpu::MemoryHints::default(),
+            trace: wgpu::Trace::Off,
+        }))
         .map_err(|e| format!("GPU device creation failed: {e}"))?;
 
         Self::new(

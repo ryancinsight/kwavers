@@ -359,7 +359,8 @@ impl KZKSolver {
     fn apply_diffraction(&mut self, step_size: f64) {
         for t in 0..self.config.nt {
             let mut slice = self.pressure.index_axis_mut(Axis(2), t);
-            self.complex_diffraction.apply_complex(&mut slice, step_size);
+            self.complex_diffraction
+                .apply_complex(&mut slice, step_size);
         }
     }
 
@@ -850,7 +851,10 @@ mod tests {
         let p_before = solver.pressure.clone();
 
         solver.solve(0).expect("solve(0) must succeed");
-        assert_eq!(solver.pressure, p_before, "solve(0) must not change the field");
+        assert_eq!(
+            solver.pressure, p_before,
+            "solve(0) must not change the field"
+        );
     }
 
     /// `solve(10)` advances the internal step counter by 10.
@@ -897,10 +901,7 @@ mod tests {
         };
         let mut solver = KZKSolver::new(config.clone()).unwrap();
         let result = solver.solve(config.nz + 1);
-        assert!(
-            result.is_err(),
-            "solve(nz+1) must return Err, got Ok"
-        );
+        assert!(result.is_err(), "solve(nz+1) must return Err, got Ok");
         let msg = result.unwrap_err();
         assert!(
             msg.contains("n_steps") && msg.contains("nz"),
@@ -932,7 +933,10 @@ mod tests {
 
         let result = solver.solve(nz);
         assert!(result.is_ok(), "solve(nz) must succeed, got: {:?}", result);
-        assert_eq!(solver.current_z_step, nz, "step counter must equal nz after full propagation");
+        assert_eq!(
+            solver.current_z_step, nz,
+            "step counter must equal nz after full propagation"
+        );
     }
 
     /// `solve(5)` produces the same result as 5 sequential `step()` calls.
@@ -968,8 +972,7 @@ mod tests {
         }
 
         assert_eq!(
-            solver_a.pressure,
-            solver_b.pressure,
+            solver_a.pressure, solver_b.pressure,
             "solve(5) must match 5×step()"
         );
         assert_eq!(solver_a.current_z_step, solver_b.current_z_step);

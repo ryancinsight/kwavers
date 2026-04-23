@@ -395,7 +395,9 @@ impl EnhancedComplianceValidator {
     /// Reference: Nyborg WL (1988), "Solutions of the bio-heat transfer equation",
     /// *Phys. Med. Biol.* 33(7):785–792. Duck FA (1990), *Physical Properties of Tissue*, §8.
     fn estimate_temperature_rise(&self, params: &TherapyParameters) -> f64 {
-        use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL as RHO_W, SOUND_SPEED_WATER};
+        use crate::core::constants::fundamental::{
+            DENSITY_WATER_NOMINAL as RHO_W, SOUND_SPEED_WATER,
+        };
 
         // Tissue bioheat constants (Duck 1990, Table 8.1 — soft tissue average)
         const TISSUE_DENSITY: f64 = 1060.0; // kg/m³

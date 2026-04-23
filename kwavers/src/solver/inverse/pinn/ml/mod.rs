@@ -160,6 +160,7 @@ pub mod physics;
 pub mod acoustic_wave;
 
 #[cfg(feature = "pinn")]
+#[path = "cavitation_coupled/mod.rs"]
 pub mod cavitation_coupled;
 
 #[cfg(feature = "pinn")]
@@ -169,6 +170,7 @@ pub mod electromagnetic;
 pub mod sonoluminescence_coupled;
 
 #[cfg(all(feature = "pinn", feature = "gpu"))]
+#[path = "electromagnetic_gpu/mod.rs"]
 pub mod electromagnetic_gpu;
 
 #[cfg(feature = "pinn")]

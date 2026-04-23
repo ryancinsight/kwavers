@@ -136,8 +136,14 @@ impl CentralDifferenceOperator {
     ) -> KwaversResult<()> {
         match self {
             Self::Order2(op) => op.apply_x_into(field, dst),
-            Self::Order4(op) => { dst.assign(&op.apply_x(field)?); Ok(()) }
-            Self::Order6(op) => { dst.assign(&op.apply_x(field)?); Ok(()) }
+            Self::Order4(op) => {
+                dst.assign(&op.apply_x(field)?);
+                Ok(())
+            }
+            Self::Order6(op) => {
+                dst.assign(&op.apply_x(field)?);
+                Ok(())
+            }
         }
     }
 
@@ -149,8 +155,14 @@ impl CentralDifferenceOperator {
     ) -> KwaversResult<()> {
         match self {
             Self::Order2(op) => op.apply_y_into(field, dst),
-            Self::Order4(op) => { dst.assign(&op.apply_y(field)?); Ok(()) }
-            Self::Order6(op) => { dst.assign(&op.apply_y(field)?); Ok(()) }
+            Self::Order4(op) => {
+                dst.assign(&op.apply_y(field)?);
+                Ok(())
+            }
+            Self::Order6(op) => {
+                dst.assign(&op.apply_y(field)?);
+                Ok(())
+            }
         }
     }
 
@@ -162,8 +174,14 @@ impl CentralDifferenceOperator {
     ) -> KwaversResult<()> {
         match self {
             Self::Order2(op) => op.apply_z_into(field, dst),
-            Self::Order4(op) => { dst.assign(&op.apply_z(field)?); Ok(()) }
-            Self::Order6(op) => { dst.assign(&op.apply_z(field)?); Ok(()) }
+            Self::Order4(op) => {
+                dst.assign(&op.apply_z(field)?);
+                Ok(())
+            }
+            Self::Order6(op) => {
+                dst.assign(&op.apply_z(field)?);
+                Ok(())
+            }
         }
     }
 
@@ -177,7 +195,6 @@ impl CentralDifferenceOperator {
             self.apply_z(field)?,
         ))
     }
-
 }
 
 /// FDTD solver for acoustic wave propagation
@@ -231,7 +248,7 @@ pub struct GenericFdtdSolver<T> {
     pub(crate) p_prev2: Option<T>,
     pub(crate) nl_scratch: Option<T>,
     pub(crate) nl_coeff: Option<T>,
-    
+
     pub(crate) kspace_ops: Option<KSpaceFdtdOperators>,
 
     // Extracted Divergence terms
@@ -303,14 +320,7 @@ impl GenericFdtdSolver<Array3<f64>> {
             let c_sum: f64 = materials.c0.iter().sum();
             let c_ref = c_sum / materials.c0.len() as f64;
             Some(KSpaceFdtdOperators::new(
-                grid.nx,
-                grid.ny,
-                grid.nz,
-                grid.dx,
-                grid.dy,
-                grid.dz,
-                c_ref,
-                config.dt,
+                grid.nx, grid.ny, grid.nz, grid.dx, grid.dy, grid.dz, c_ref, config.dt,
             ))
         } else {
             None
@@ -332,11 +342,15 @@ impl GenericFdtdSolver<Array3<f64>> {
             if matches!(config.kspace_correction, KSpaceCorrectionMode::Spectral) {
                 let rho0_ref = materials.rho0.mean().unwrap_or(1000.0);
                 let Some(kspace_ops) = kspace_ops.as_mut() else {
-                    return Err(KwaversError::Config(crate::core::error::ConfigError::InvalidValue {
-                        parameter: "kspace_correction".to_string(),
-                        value: "spectral".to_string(),
-                        constraint: "spectral k-space correction requires precomputed k-space operators".to_string(),
-                    }));
+                    return Err(KwaversError::Config(
+                        crate::core::error::ConfigError::InvalidValue {
+                            parameter: "kspace_correction".to_string(),
+                            value: "spectral".to_string(),
+                            constraint:
+                                "spectral k-space correction requires precomputed k-space operators"
+                                    .to_string(),
+                        },
+                    ));
                 };
                 kspace_ops.initialize_ivp_velocity(
                     &fields.p,
@@ -350,38 +364,37 @@ impl GenericFdtdSolver<Array3<f64>> {
         }
 
         // Precompute nonlinear medium property arrays (only when nonlinear mode is on)
-        let (p_prev, p_prev2, nl_scratch, nl_coeff) =
-            if config.enable_nonlinear {
-                let mut beta = Array3::<f64>::zeros(shape);
-                let mut c4 = Array3::<f64>::zeros(shape);
-                for k in 0..grid.nz {
-                    for j in 0..grid.ny {
-                        for i in 0..grid.nx {
-                            let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                            let bn = crate::domain::medium::nonlinearity_at(medium, x, y, z, grid);
-                            let c = crate::domain::medium::sound_speed_at(medium, x, y, z, grid);
-                            // β = 1 + B/(2A) where B/A is returned by nonlinearity_at
-                            beta[[i, j, k]] = 1.0 + bn * 0.5;
-                            c4[[i, j, k]] = c.powi(4);
-                        }
+        let (p_prev, p_prev2, nl_scratch, nl_coeff) = if config.enable_nonlinear {
+            let mut beta = Array3::<f64>::zeros(shape);
+            let mut c4 = Array3::<f64>::zeros(shape);
+            for k in 0..grid.nz {
+                for j in 0..grid.ny {
+                    for i in 0..grid.nx {
+                        let (x, y, z) = grid.indices_to_coordinates(i, j, k);
+                        let bn = crate::domain::medium::nonlinearity_at(medium, x, y, z, grid);
+                        let c = crate::domain::medium::sound_speed_at(medium, x, y, z, grid);
+                        // β = 1 + B/(2A) where B/A is returned by nonlinearity_at
+                        beta[[i, j, k]] = 1.0 + bn * 0.5;
+                        c4[[i, j, k]] = c.powi(4);
                     }
                 }
-                // Precompute β/(ρ₀·c₀⁴) once; used every step in the hot nonlinear kernel.
-                // Reduces per-element inner-loop reads from 5 to 3, cutting memory traffic ~40%.
-                // beta and c4 are intermediate; only nl_coeff is retained in the struct.
-                let nl = ndarray::Zip::from(&beta)
-                    .and(&materials.rho0)
-                    .and(&c4)
-                    .map_collect(|&b, &rho, &c| b / (rho * c));
-                (
-                    Some(Array3::<f64>::zeros(shape)),
-                    Some(Array3::<f64>::zeros(shape)),
-                    Some(Array3::<f64>::zeros(shape)),
-                    Some(nl),
-                )
-            } else {
-                (None, None, None, None)
-            };
+            }
+            // Precompute β/(ρ₀·c₀⁴) once; used every step in the hot nonlinear kernel.
+            // Reduces per-element inner-loop reads from 5 to 3, cutting memory traffic ~40%.
+            // beta and c4 are intermediate; only nl_coeff is retained in the struct.
+            let nl = ndarray::Zip::from(&beta)
+                .and(&materials.rho0)
+                .and(&c4)
+                .map_collect(|&b, &rho, &c| b / (rho * c));
+            (
+                Some(Array3::<f64>::zeros(shape)),
+                Some(Array3::<f64>::zeros(shape)),
+                Some(Array3::<f64>::zeros(shape)),
+                Some(nl),
+            )
+        } else {
+            (None, None, None, None)
+        };
 
         Ok(Self {
             config,
@@ -666,7 +679,10 @@ impl GenericFdtdSolver<Array3<f64>> {
         self.sensor_recorder.extract_pressure_data()
     }
 
-    pub fn run_orchestrated(&mut self, steps: usize) -> KwaversResult<Option<ndarray::Array2<f64>>> {
+    pub fn run_orchestrated(
+        &mut self,
+        steps: usize,
+    ) -> KwaversResult<Option<ndarray::Array2<f64>>> {
         // Record initial state t=0 to match k-Wave's convention (returning Nt+1 points)
         if self.time_step_index == 0 {
             self.sensor_recorder.record_step(&self.fields.p)?;

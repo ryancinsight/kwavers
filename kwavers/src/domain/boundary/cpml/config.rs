@@ -383,6 +383,8 @@ mod tests {
         let cfg = CPMLConfig::default();
         assert!(cfg.sigma_factor_for_dimension(3).is_err());
         assert!(cfg.thickness_for_dimension(3).is_err());
-        assert!(cfg.theoretical_reflection_for_dimension(3, 1.0, 1e-3, 1500.0).is_err());
+        assert!(cfg
+            .theoretical_reflection_for_dimension(3, 1.0, 1e-3, 1500.0)
+            .is_err());
     }
 }

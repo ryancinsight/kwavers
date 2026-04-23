@@ -63,10 +63,9 @@ impl RitkRegistrationEngine {
                 let (nz, ny, nx) = fixed.dim();
                 let fixed_flat: Vec<f32> = fixed.iter().map(|&v| v as f32).collect();
                 let moving_flat: Vec<f32> = moving.iter().map(|&v| v as f32).collect();
-                let demons_result =
-                    SymmetricDemonsRegistration::new(DemonsConfig::default())
-                        .register(&fixed_flat, &moving_flat, [nz, ny, nx], [1.0, 1.0, 1.0])
-                        .map_err(|e| KwaversError::InvalidInput(e.to_string()))?;
+                let demons_result = SymmetricDemonsRegistration::new(DemonsConfig::default())
+                    .register(&fixed_flat, &moving_flat, [nz, ny, nx], [1.0, 1.0, 1.0])
+                    .map_err(|e| KwaversError::InvalidInput(e.to_string()))?;
                 let id = identity_transform();
                 return Ok(FusionRegistrationResult {
                     transform_matrix: id,
@@ -185,4 +184,3 @@ fn array2_to_homogeneous(matrix: &Array2<f64>) -> Result<[f64; 16], FactoryError
     }
     Ok(homogeneous)
 }
-

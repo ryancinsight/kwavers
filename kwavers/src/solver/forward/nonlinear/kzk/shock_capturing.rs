@@ -593,7 +593,7 @@ mod tests {
         let nz = 256;
         let nx = 5;
         let dz = 1.0 / 1000.0; // 1 mm spacing → fs = 1000 Hz
-        let f0 = 100.0_f64;    // fundamental frequency
+        let f0 = 100.0_f64; // fundamental frequency
         let mut pressure = Array2::zeros((nx, nz));
         for z in 0..nz {
             let val = (2.0 * std::f64::consts::PI * f0 * z as f64 * dz).sin() * 1000.0;
@@ -609,7 +609,8 @@ mod tests {
             assert!(
                 r < 0.01,
                 "harmonic {} ratio should be ~0 for pure sine, got {:.4e}",
-                n + 2, r
+                n + 2,
+                r
             );
         }
     }
@@ -629,9 +630,9 @@ mod tests {
         let nz = 512;
         let nx = 5;
         let dz = 1.0 / 5120.0; // fs = 5120 Hz
-        let f0 = 200.0_f64;    // fundamental: bin = 200/5120*512 = 20
+        let f0 = 200.0_f64; // fundamental: bin = 200/5120*512 = 20
         let a1 = 1000.0_f64;
-        let a2 = 200.0_f64;    // second harmonic: 20% of fundamental
+        let a2 = 200.0_f64; // second harmonic: 20% of fundamental
 
         let mut pressure = Array2::zeros((nx, nz));
         for z in 0..nz {
@@ -652,7 +653,9 @@ mod tests {
         assert!(
             err < 0.02,
             "second harmonic ratio: expected {:.3}, got {:.3} (err={:.2e})",
-            expected_r2, measured_r2, err
+            expected_r2,
+            measured_r2,
+            err
         );
     }
 
@@ -663,7 +666,9 @@ mod tests {
         let capture = ShockCapture::new(config);
 
         let pressure = Array2::zeros((8, 128));
-        let ratios = capture.compute_harmonic_ratios(&pressure, 100.0, 1e-4).unwrap();
+        let ratios = capture
+            .compute_harmonic_ratios(&pressure, 100.0, 1e-4)
+            .unwrap();
         assert!(ratios.is_empty(), "zero field should yield empty ratios");
     }
 
@@ -675,7 +680,9 @@ mod tests {
 
         let mut pressure = Array2::zeros((8, 64));
         pressure[[4, 10]] = 1.0;
-        let ratios = capture.compute_harmonic_ratios(&pressure, 0.0, 1e-4).unwrap();
+        let ratios = capture
+            .compute_harmonic_ratios(&pressure, 0.0, 1e-4)
+            .unwrap();
         assert!(ratios.is_empty());
     }
 }

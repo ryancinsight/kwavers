@@ -148,8 +148,7 @@ impl Default for KalmanFilterConfig {
 /// Compute `det(A)` for a 3×3 row-major matrix.
 #[inline]
 fn det3(a: &[f64; 9]) -> f64 {
-    a[0] * (a[4] * a[8] - a[5] * a[7])
-        - a[1] * (a[3] * a[8] - a[5] * a[6])
+    a[0] * (a[4] * a[8] - a[5] * a[7]) - a[1] * (a[3] * a[8] - a[5] * a[6])
         + a[2] * (a[3] * a[7] - a[4] * a[6])
 }
 
@@ -361,9 +360,15 @@ impl BayesianFilter {
         // Row-major 6×6 indexing helper: P(i, j) = p[i*6 + j].
         let p_ij = |i: usize, j: usize| p[i * 6 + j];
         let s: [f64; 9] = [
-            p_ij(0, 0) + sig_m2, p_ij(0, 1),          p_ij(0, 2),
-            p_ij(1, 0),          p_ij(1, 1) + sig_m2, p_ij(1, 2),
-            p_ij(2, 0),          p_ij(2, 1),          p_ij(2, 2) + sig_m2,
+            p_ij(0, 0) + sig_m2,
+            p_ij(0, 1),
+            p_ij(0, 2),
+            p_ij(1, 0),
+            p_ij(1, 1) + sig_m2,
+            p_ij(1, 2),
+            p_ij(2, 0),
+            p_ij(2, 1),
+            p_ij(2, 2) + sig_m2,
         ];
 
         // ── 3. Kalman gain K = P·Hᵀ·S⁻¹ ∈ ℝ^(6×3) ─────────────────────────────
@@ -379,8 +384,9 @@ impl BayesianFilter {
 
         // ── 4. State update x̂ += K·ỹ ────────────────────────────────────────────
         for i in 0..6 {
-            self.state[i] +=
-                k[i * 3] * innovation[0] + k[i * 3 + 1] * innovation[1] + k[i * 3 + 2] * innovation[2];
+            self.state[i] += k[i * 3] * innovation[0]
+                + k[i * 3 + 1] * innovation[1]
+                + k[i * 3 + 2] * innovation[2];
         }
 
         // ── 5. Joseph-form covariance update ─────────────────────────────────────
@@ -486,7 +492,11 @@ mod tests {
         filter.state[0] = 1.0; // x = 1 m
         filter.state[3] = 1.0; // vx = 1 m/s
         filter.predict(1.0).unwrap();
-        assert!((filter.state[0] - 2.0).abs() < 1e-12, "x after predict: {}", filter.state[0]);
+        assert!(
+            (filter.state[0] - 2.0).abs() < 1e-12,
+            "x after predict: {}",
+            filter.state[0]
+        );
     }
 
     /// **Test: update moves estimate toward measurement.**
@@ -497,7 +507,10 @@ mod tests {
     fn test_bayesian_filter_update() {
         let mut filter = default_filter();
         filter.update(&[1.0, 0.0, 0.0]).unwrap();
-        assert!(filter.get_state()[0] > 0.0, "EKF must move toward measurement");
+        assert!(
+            filter.get_state()[0] > 0.0,
+            "EKF must move toward measurement"
+        );
     }
 
     /// **Test: covariance decreases with repeated identical measurements.**
@@ -574,7 +587,8 @@ mod tests {
         for i in 0..6 {
             assert!(
                 filter.covariance[i * 6 + i] >= 0.0,
-                "P[{i},{i}] = {:.3e} must be non-negative (Joseph form)", filter.covariance[i * 6 + i]
+                "P[{i},{i}] = {:.3e} must be non-negative (Joseph form)",
+                filter.covariance[i * 6 + i]
             );
         }
     }
@@ -589,7 +603,10 @@ mod tests {
         let p0 = filter.covariance[0];
         filter.predict(0.1).unwrap();
         let p1 = filter.covariance[0];
-        assert!(p1 > p0, "P[0,0] must increase after predict: before={p0:.6}, after={p1:.6}");
+        assert!(
+            p1 > p0,
+            "P[0,0] must increase after predict: before={p0:.6}, after={p1:.6}"
+        );
     }
 
     #[test]

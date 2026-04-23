@@ -425,9 +425,11 @@ def run_pykwavers(dt: float, Nt: int, input_signal: np.ndarray, not_transducer) 
     p_rms_flat = np.sqrt(np.mean(sd ** 2, axis=1))   # (NX*NY,)
     p_max_flat = np.max(np.abs(sd), axis=1)           # (NX*NY,)
 
-    # Reshape to (NX, NY): C-order means y varies fastest → reshape is correct
-    p_rms = p_rms_flat.reshape(NX, NY)
-    p_max = p_max_flat.reshape(NX, NY)
+    # SensorRecorder iterates sensor voxels in Fortran (MATLAB-compatible) order
+    # — x fastest, then y, then z. For a slab at fixed iz the flat index is
+    # k = iy*NX + ix, so reshape(NY, NX).T yields image[ix, iy].
+    p_rms = p_rms_flat.reshape(NY, NX).T
+    p_max = p_max_flat.reshape(NY, NX).T
 
     output = {
         "p_rms":     p_rms,

@@ -47,8 +47,8 @@
 //! - Liu, Q.-H. (1998). Microwave Opt. Technol. Lett. 15(3), 158–165.
 
 use crate::core::error::KwaversResult;
-use crate::math::fft::{get_fft_for_grid, Complex64, ProcessorFft3d};
 use crate::math::fft::shift_operators::{generate_kappa, generate_shift_1d};
+use crate::math::fft::{get_fft_for_grid, Complex64, ProcessorFft3d};
 use crate::solver::forward::acoustic_ivp::spectral_velocity_scale_from_kappa;
 use ndarray::{Array1, Array3, Zip};
 use std::f64::consts::PI;
@@ -293,12 +293,7 @@ impl KSpaceFdtdOperators {
     /// (3 forward + 3 inverse = 6 FFTs total per call).
     ///
     /// **Complexity**: O(N log N) per call.
-    pub fn compute_divergence_neg(
-        &mut self,
-        ux: &Array3<f64>,
-        uy: &Array3<f64>,
-        uz: &Array3<f64>,
-    ) {
+    pub fn compute_divergence_neg(&mut self, ux: &Array3<f64>, uy: &Array3<f64>, uz: &Array3<f64>) {
         // Accumulate divergence from each velocity component
         self.divergence.fill(0.0);
 
@@ -377,9 +372,7 @@ mod tests {
         let dt = 0.3 * grid.dx / c_ref;
 
         let kops = KSpaceFdtdOperators::new(
-            grid.nx, grid.ny, grid.nz,
-            grid.dx, grid.dy, grid.dz,
-            c_ref, dt,
+            grid.nx, grid.ny, grid.nz, grid.dx, grid.dy, grid.dz, c_ref, dt,
         );
 
         // Build PSTD solver to extract its shift operators
@@ -417,7 +410,8 @@ mod tests {
         };
 
         // Build solver and run 3 steps
-        let mut solver_fd = FdtdSolver::new(config_fd, &grid, &medium, GridSource::default()).unwrap();
+        let mut solver_fd =
+            FdtdSolver::new(config_fd, &grid, &medium, GridSource::default()).unwrap();
         let mut p_ref = Array3::zeros((grid.nx, grid.ny, grid.nz));
         p_ref[[8, 8, 8]] = 1.0;
         solver_fd.fields.p.assign(&p_ref);
@@ -427,8 +421,10 @@ mod tests {
         solver_fd.step_forward().unwrap();
 
         // Fields must be finite (basic sanity)
-        assert!(solver_fd.fields.p.iter().all(|&v| v.is_finite()),
-            "FD fallback produced non-finite pressure");
+        assert!(
+            solver_fd.fields.p.iter().all(|&v| v.is_finite()),
+            "FD fallback produced non-finite pressure"
+        );
     }
 
     /// K-space FDTD must run without NaN/Inf for a simple IVP.
@@ -447,7 +443,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut solver_ks = FdtdSolver::new(config_ks, &grid, &medium, GridSource::default()).unwrap();
+        let mut solver_ks =
+            FdtdSolver::new(config_ks, &grid, &medium, GridSource::default()).unwrap();
 
         // Gaussian initial pressure
         for i in 0..grid.nx {
@@ -467,8 +464,10 @@ mod tests {
             solver_ks.step_forward().unwrap();
         }
 
-        assert!(solver_ks.fields.p.iter().all(|&v| v.is_finite()),
-            "K-space FDTD produced non-finite pressure");
+        assert!(
+            solver_ks.fields.p.iter().all(|&v| v.is_finite()),
+            "K-space FDTD produced non-finite pressure"
+        );
     }
 
     /// The spectral gradient of a constant field must be zero everywhere.
@@ -487,7 +486,10 @@ mod tests {
         kops.compute_grad_pos(&constant_field);
 
         let max_grad = kops.grad_x.iter().map(|v| v.abs()).fold(0.0_f64, f64::max);
-        assert!(max_grad < 1e-10, "Gradient of constant should be ~0, got max={max_grad}");
+        assert!(
+            max_grad < 1e-10,
+            "Gradient of constant should be ~0, got max={max_grad}"
+        );
     }
 
     /// The spectral divergence of zero velocity must be zero everywhere.
@@ -502,8 +504,15 @@ mod tests {
         let zero = Array3::zeros((nx, nx, nx));
         kops.compute_divergence_neg(&zero, &zero, &zero);
 
-        let max_div = kops.divergence.iter().map(|v| v.abs()).fold(0.0_f64, f64::max);
-        assert!(max_div < 1e-10, "Divergence of zero should be ~0, got max={max_div}");
+        let max_div = kops
+            .divergence
+            .iter()
+            .map(|v| v.abs())
+            .fold(0.0_f64, f64::max);
+        assert!(
+            max_div < 1e-10,
+            "Divergence of zero should be ~0, got max={max_div}"
+        );
     }
 
     /// Spectral x-derivative of sin(kx·x) must equal kx·cos(kx·x) (fundamental mode).

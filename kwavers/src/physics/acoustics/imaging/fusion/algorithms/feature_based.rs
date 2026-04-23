@@ -3,8 +3,8 @@ use super::MultiModalFusion;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::imaging::fusion::registration;
 use crate::physics::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};
-use ritk_registration::ImageRegistration;
 use ndarray::{Array3, CowArray};
+use ritk_registration::ImageRegistration;
 use std::collections::HashMap;
 
 /// Feature-based fusion using complementary tissue properties
@@ -88,16 +88,15 @@ pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<Fus
         );
 
         // Optimization: Skip resampling if transform is identity and dimensions match
-        let resampled =
-            if modality.data.dim() == target_dims && reg_result.transform == identity {
-                CowArray::from(modality.data.view())
-            } else {
-                CowArray::from(registration::resample_to_target_grid(
-                    &modality.data,
-                    &reg_result.transform,
-                    target_dims,
-                ))
-            };
+        let resampled = if modality.data.dim() == target_dims && reg_result.transform == identity {
+            CowArray::from(modality.data.view())
+        } else {
+            CowArray::from(registration::resample_to_target_grid(
+                &modality.data,
+                &reg_result.transform,
+                target_dims,
+            ))
+        };
 
         channels.push(Channel {
             name: name.clone(),

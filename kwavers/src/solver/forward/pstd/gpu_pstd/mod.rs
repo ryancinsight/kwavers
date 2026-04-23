@@ -122,19 +122,19 @@ pub struct GpuPstdSolver {
     pub(super) buf_rho0_inv: wgpu::Buffer,
     pub(super) buf_c0_sq: wgpu::Buffer,
     pub(super) buf_rho0: wgpu::Buffer,
-    pub(super) buf_bon_a: wgpu::Buffer,       // B/(2A) per voxel; 0.0 for linear sims
+    pub(super) buf_bon_a: wgpu::Buffer, // B/(2A) per voxel; 0.0 for linear sims
     pub(super) buf_alpha_decay: wgpu::Buffer, // exp(-alpha_Np*c0*dt) per voxel; 1.0 for lossless
 
     // Fractional-Laplacian absorption operators (group 3)
     // Precomputed constants for Treeby & Cox (2010) Eqs. 9–10, 19–21.
-    pub(super) buf_absorb_nabla1: wgpu::Buffer,    // |k|^(y-2) in FFT order
-    pub(super) buf_absorb_nabla2: wgpu::Buffer,    // |k|^(y-1) in FFT order
-    pub(super) buf_absorb_tau: wgpu::Buffer,       // -2*alpha0*c0^(y-1) per voxel
-    pub(super) buf_absorb_eta: wgpu::Buffer,       // 2*alpha0*c0^y*tan(pi*y/2) per voxel
+    pub(super) buf_absorb_nabla1: wgpu::Buffer, // |k|^(y-2) in FFT order
+    pub(super) buf_absorb_nabla2: wgpu::Buffer, // |k|^(y-1) in FFT order
+    pub(super) buf_absorb_tau: wgpu::Buffer,    // -2*alpha0*c0^(y-1) per voxel
+    pub(super) buf_absorb_eta: wgpu::Buffer,    // 2*alpha0*c0^y*tan(pi*y/2) per voxel
     pub(super) buf_absorb_scratch_kre: wgpu::Buffer, // temp kspace re save
     pub(super) buf_absorb_scratch_kim: wgpu::Buffer, // temp kspace im save
-    pub(super) buf_absorb_scratch_l1: wgpu::Buffer,  // L1 = IFFT(nabla1*FFT(div_u))
-    pub(super) buf_absorb_scratch_l2: wgpu::Buffer,  // L2 = IFFT(nabla2*FFT(div_u))
+    pub(super) buf_absorb_scratch_l1: wgpu::Buffer, // L1 = IFFT(nabla1*FFT(div_u))
+    pub(super) buf_absorb_scratch_l2: wgpu::Buffer, // L2 = IFFT(nabla2*FFT(div_u))
 
     // Physics flags (drive shader branches via push-constant nonlinear/absorbing)
     pub(super) nonlinear: bool,
@@ -144,7 +144,7 @@ pub struct GpuPstdSolver {
     pub(super) buf_pml_sgx: wgpu::Buffer,
     pub(super) buf_pml_sgy: wgpu::Buffer,
     pub(super) buf_pml_sgz: wgpu::Buffer,
-    pub(super) buf_pml_xyz: wgpu::Buffer,    // packed [pml_x | pml_y | pml_z]
+    pub(super) buf_pml_xyz: wgpu::Buffer, // packed [pml_x | pml_y | pml_z]
     pub(super) buf_shifts_all: wgpu::Buffer, // packed 12 × 1D shift arrays
 
     // Pipelines
@@ -188,7 +188,7 @@ pub struct GpuPstdSolver {
     // Bind groups (sensor group rebuilt per run)
     pub(super) bg_fields: wgpu::BindGroup,
     pub(super) bg_kspace: wgpu::BindGroup,
-    pub(super) bg_absorb: wgpu::BindGroup,  // group(3): absorption operators
+    pub(super) bg_absorb: wgpu::BindGroup, // group(3): absorption operators
 
     // Bind group layouts and pipeline layout (kept for rebuilding)
     pub(super) bgl_sensor: wgpu::BindGroupLayout,
@@ -259,20 +259,18 @@ mod tests {
         };
 
         let native_limits = adapter.limits();
-        let (device, queue) = pollster::block_on(adapter.request_device(
-            &wgpu::DeviceDescriptor {
-                label: Some("test_pstd"),
-                required_features: wgpu::Features::PUSH_CONSTANTS,
-                required_limits: wgpu::Limits {
-                    max_push_constant_size: 128,
-                    max_storage_buffers_per_shader_stage:
-                        native_limits.max_storage_buffers_per_shader_stage,
-                    ..wgpu::Limits::default()
-                },
-                memory_hints: wgpu::MemoryHints::default(),
-                trace: wgpu::Trace::Off,
+        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+            label: Some("test_pstd"),
+            required_features: wgpu::Features::PUSH_CONSTANTS,
+            required_limits: wgpu::Limits {
+                max_push_constant_size: 128,
+                max_storage_buffers_per_shader_stage:
+                    native_limits.max_storage_buffers_per_shader_stage,
+                ..wgpu::Limits::default()
             },
-        ))
+            memory_hints: wgpu::MemoryHints::default(),
+            trace: wgpu::Trace::Off,
+        }))
         .expect("device creation");
 
         let device = Arc::new(device);
@@ -383,8 +381,11 @@ mod tests {
             &vec![1.0f32; n3],
             &vec![1.0f32; n3],
             &vec![1.0f32; n3],
-            &vec![0.0f32; n3],  // bon_a = 0 (linear)
-            &vec![0.0f32; n3], &vec![0.0f32; n3], &vec![0.0f32; n3], &vec![0.0f32; n3], // absorb=lossless
+            &vec![0.0f32; n3], // bon_a = 0 (linear)
+            &vec![0.0f32; n3],
+            &vec![0.0f32; n3],
+            &vec![0.0f32; n3],
+            &vec![0.0f32; n3], // absorb=lossless
             false,
             false,
         );
@@ -399,17 +400,25 @@ mod tests {
         let sns_flat = 20 * n * n + 16 * n + 16;
         let vel_signals: Vec<f32> = (0..20).map(|i| i as f32 / 20.0).collect();
 
-        let data = solver.run(&[sns_flat as u32], &[], &[], &[src_flat as u32], &vel_signals);
+        let data = solver.run(
+            &[sns_flat as u32],
+            &[],
+            &[],
+            &[src_flat as u32],
+            &vel_signals,
+        );
 
         assert_eq!(data.len(), 20, "sensor data length");
-        let max_abs = data
-            .iter()
-            .copied()
-            .map(f32::abs)
-            .fold(0.0f32, f32::max);
+        let max_abs = data.iter().copied().map(f32::abs).fold(0.0f32, f32::max);
         eprintln!("GPU PSTD velocity-source sensor peak: {max_abs:.6}");
-        assert!(max_abs.is_finite(), "sensor data contains non-finite values");
-        assert!(max_abs > 0.0, "velocity-source path produced an all-zero sensor trace");
+        assert!(
+            max_abs.is_finite(),
+            "sensor data contains non-finite values"
+        );
+        assert!(
+            max_abs > 0.0,
+            "velocity-source path produced an all-zero sensor trace"
+        );
     }
 
     /// Mirror the session-style usage pattern with multiple velocity sources
@@ -437,7 +446,10 @@ mod tests {
             &vec![1.0f32; total],
             &vec![1.0f32; total],
             &vec![0.0f32; total], // bon_a = 0 (linear)
-            &vec![0.0f32; total], &vec![0.0f32; total], &vec![0.0f32; total], &vec![0.0f32; total], // lossless
+            &vec![0.0f32; total],
+            &vec![0.0f32; total],
+            &vec![0.0f32; total],
+            &vec![0.0f32; total], // lossless
             false,
             false,
         );
@@ -462,13 +474,12 @@ mod tests {
         }
 
         let data = solver.run(&indices, &[], &[], &indices, &vel_signals);
-        let max_abs = data
-            .iter()
-            .copied()
-            .map(f32::abs)
-            .fold(0.0f32, f32::max);
+        let max_abs = data.iter().copied().map(f32::abs).fold(0.0f32, f32::max);
         eprintln!("GPU PSTD multi velocity-source sensor peak: {max_abs:.6}");
-        assert!(max_abs > 0.0, "multi-source velocity path produced an all-zero sensor trace");
+        assert!(
+            max_abs > 0.0,
+            "multi-source velocity path produced an all-zero sensor trace"
+        );
     }
 
     /// Benchmark: measure GPU PSTD steps/second for a 256×128×128 grid.
@@ -499,7 +510,10 @@ mod tests {
             &vec![1.0f32; total],
             &vec![1.0f32; total],
             &vec![0.0f32; total], // bon_a = 0 (linear benchmark)
-            &vec![0.0f32; total], &vec![0.0f32; total], &vec![0.0f32; total], &vec![0.0f32; total], // lossless
+            &vec![0.0f32; total],
+            &vec![0.0f32; total],
+            &vec![0.0f32; total],
+            &vec![0.0f32; total], // lossless
             false,
             false,
         );

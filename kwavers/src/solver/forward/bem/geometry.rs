@@ -85,11 +85,7 @@ pub(crate) fn triangle_characteristic_length(p1: [f64; 3], p2: [f64; 3], p3: [f6
 /// `area = ‖n‖ / 2` and `n̂ = n / ‖n‖`.
 ///
 /// For degenerate triangles (area < ε), returns `(0, [0, 0, 1])`.
-pub(crate) fn triangle_area_normal(
-    p1: [f64; 3],
-    p2: [f64; 3],
-    p3: [f64; 3],
-) -> (f64, [f64; 3]) {
+pub(crate) fn triangle_area_normal(p1: [f64; 3], p2: [f64; 3], p3: [f64; 3]) -> (f64, [f64; 3]) {
     let n = cross(sub(p2, p1), sub(p3, p1));
     let norm = norm_sq(n).sqrt();
     if norm < 1e-30 {
@@ -356,7 +352,10 @@ mod tests {
         let p = [0.3, 0.5, 0.7];
         let b = barycentric_coords(p, p1, p2, p3);
         let sum: f64 = b.iter().sum();
-        assert!((sum - 1.0).abs() < 1e-10, "barycentric coords must sum to 1");
+        assert!(
+            (sum - 1.0).abs() < 1e-10,
+            "barycentric coords must sum to 1"
+        );
     }
 
     // ── Point-to-triangle distance ───────────────────────────────────────

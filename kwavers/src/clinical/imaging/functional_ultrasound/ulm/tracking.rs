@@ -295,13 +295,7 @@ fn hungarian(cost: &[Vec<f64>], m: usize, n: usize, big_m: f64) -> Vec<Option<us
     let mut c: Vec<Vec<f64>> = (0..sz)
         .map(|i| {
             let row: Vec<f64> = (0..sz)
-                .map(|j| {
-                    if i < m && j < n {
-                        cost[i][j]
-                    } else {
-                        big_m
-                    }
-                })
+                .map(|j| if i < m && j < n { cost[i][j] } else { big_m })
                 .collect();
             row
         })
@@ -380,8 +374,8 @@ fn hungarian(cost: &[Vec<f64>], m: usize, n: usize, big_m: f64) -> Vec<Option<us
             row_cover[i] = !marked_rows[i];
         }
 
-        let n_lines: usize = row_cover.iter().filter(|&&r| r).count()
-            + col_cover.iter().filter(|&&c| c).count();
+        let n_lines: usize =
+            row_cover.iter().filter(|&&r| r).count() + col_cover.iter().filter(|&&c| c).count();
 
         if n_lines >= sz {
             break;
@@ -559,7 +553,10 @@ mod tests {
             .enumerate()
             .map(|(i, &a)| cost[i][a.unwrap()])
             .sum();
-        assert!((total - 5.0).abs() < 1e-9, "Optimal cost should be 5, got {total}");
+        assert!(
+            (total - 5.0).abs() < 1e-9,
+            "Optimal cost should be 5, got {total}"
+        );
         // Verify specific assignment
         assert_eq!(assignment[0], Some(1));
         assert_eq!(assignment[1], Some(0));

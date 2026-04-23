@@ -296,10 +296,10 @@ mod tests {
         use ndarray::Array1;
 
         let frequency = 1.0e6_f64; // 1 MHz
-        // dt chosen so fundamental falls on exact FFT bin: dt = 1/(8·f₀)
+                                   // dt chosen so fundamental falls on exact FFT bin: dt = 1/(8·f₀)
         let dt = 1.0 / (8.0 * frequency); // 125 ns
-        let nt = 256_usize;             // 32 complete periods
-        let dz = 1.0e-3_f64;           // 1 mm steps
+        let nt = 256_usize; // 32 complete periods
+        let dz = 1.0e-3_f64; // 1 mm steps
 
         let config = KZKConfig {
             nx: 4,
@@ -312,7 +312,7 @@ mod tests {
             include_nonlinearity: false,
             include_absorption: true,
             include_diffraction: false,
-            alpha0: 0.5,       // dB/(cm·MHz)
+            alpha0: 0.5, // dB/(cm·MHz)
             alpha_power: 1.0,
             frequency,
             ..Default::default()
@@ -422,8 +422,8 @@ mod tests {
         use ndarray::Array1;
 
         // Medium: water at 25°C
-        let rho0 = 998.0_f64;   // kg/m³ (Kaye & Laby)
-        let c0 = 1481.0_f64;    // m/s   (Del Grosso & Mader 1972)
+        let rho0 = 998.0_f64; // kg/m³ (Kaye & Laby)
+        let c0 = 1481.0_f64; // m/s   (Del Grosso & Mader 1972)
         let b_over_a = 5.0_f64; // B/A for water (Beyer 1960)
         let beta = 1.0 + b_over_a / 2.0; // β = 3.5
 
@@ -481,7 +481,7 @@ mod tests {
                 c0,
                 rho0,
                 b_over_a,
-                alpha0: 0.0,              // No absorption (inviscid)
+                alpha0: 0.0,                // No absorption (inviscid)
                 include_diffraction: false, // Pure plane wave
                 include_absorption: false,
                 include_nonlinearity: true,

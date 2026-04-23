@@ -284,21 +284,24 @@ impl GpuBuffer {
 
         let elem_size = std::mem::size_of::<T>();
         if elem_size == 0 {
-            return Err(KwaversError::System(crate::core::error::SystemError::InvalidOperation {
-                operation: "GPU buffer readback".to_string(),
-                reason: "Zero-sized element types are not supported".to_string(),
-            }));
+            return Err(KwaversError::System(
+                crate::core::error::SystemError::InvalidOperation {
+                    operation: "GPU buffer readback".to_string(),
+                    reason: "Zero-sized element types are not supported".to_string(),
+                },
+            ));
         }
 
         if self.size % elem_size != 0 {
-            return Err(KwaversError::System(crate::core::error::SystemError::InvalidOperation {
-                operation: "GPU buffer readback".to_string(),
-                reason: format!(
-                    "Buffer byte size {} is not a multiple of element size {}",
-                    self.size,
-                    elem_size
-                ),
-            }));
+            return Err(KwaversError::System(
+                crate::core::error::SystemError::InvalidOperation {
+                    operation: "GPU buffer readback".to_string(),
+                    reason: format!(
+                        "Buffer byte size {} is not a multiple of element size {}",
+                        self.size, elem_size
+                    ),
+                },
+            ));
         }
 
         if self.usage.contains(wgpu::BufferUsages::MAP_READ) {
@@ -324,10 +327,12 @@ impl GpuBuffer {
         }
 
         if !self.usage.contains(wgpu::BufferUsages::COPY_SRC) {
-            return Err(KwaversError::System(crate::core::error::SystemError::InvalidOperation {
-                operation: "GPU buffer readback".to_string(),
-                reason: "Buffer not created with COPY_SRC usage".to_string(),
-            }));
+            return Err(KwaversError::System(
+                crate::core::error::SystemError::InvalidOperation {
+                    operation: "GPU buffer readback".to_string(),
+                    reason: "Buffer not created with COPY_SRC usage".to_string(),
+                },
+            ));
         }
 
         let staging = self.readback_staging.get_or_init(|| {

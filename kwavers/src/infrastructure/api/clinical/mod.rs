@@ -26,9 +26,9 @@ pub use state::{ClinicalAppState, ClinicalSession};
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::infrastructure::api::UltrasoundDevice;
     use chrono::Utc;
     use std::sync::Arc;
-    use crate::infrastructure::api::UltrasoundDevice;
 
     #[tokio::test]
     async fn test_device_registration() {

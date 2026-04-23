@@ -599,8 +599,7 @@ mod tests {
 
         // Radii must differ — the dp_dt term has a non-zero physical effect
         assert_ne!(
-            bubble_zero.radius,
-            bubble_nonzero.radius,
+            bubble_zero.radius, bubble_nonzero.radius,
             "Non-zero dP/dt must change bubble dynamics (radiation-damping term)"
         );
     }

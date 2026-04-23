@@ -281,16 +281,14 @@ fn harmonic_ratio_inversion(
 
                     // Estimation quality and uncertainty from harmonic SNR
                     let snr = harmonic_field.harmonic_snrs[0][[i, j, k]];
-                    nonlinearity_uncertainty[[i, j, k]] =
-                        (10.0 / snr.max(1e-3)).clamp(0.1, 5.0);
-                    estimation_quality[[i, j, k]] =
-                        (snr / 10.0).min(1.0) * (a1 / 1e-6).min(1.0);
+                    nonlinearity_uncertainty[[i, j, k]] = (10.0 / snr.max(1e-3)).clamp(0.1, 5.0);
+                    estimation_quality[[i, j, k]] = (snr / 10.0).min(1.0) * (a1 / 1e-6).min(1.0);
 
                     // Third-order elastic constants (Destrade & Ogden 2010 §4)
-                    elastic_constants[0][[i, j, k]] = al;           // A
-                    elastic_constants[1][[i, j, k]] = al / 3.0;     // B
-                    elastic_constants[2][[i, j, k]] = al / 9.0;     // C
-                    elastic_constants[3][[i, j, k]] = al / 27.0;    // D
+                    elastic_constants[0][[i, j, k]] = al; // A
+                    elastic_constants[1][[i, j, k]] = al / 3.0; // B
+                    elastic_constants[2][[i, j, k]] = al / 9.0; // C
+                    elastic_constants[3][[i, j, k]] = al / 27.0; // D
                 } else {
                     // No signal detected: report zero with maximum uncertainty
                     nonlinearity_parameter[[i, j, k]] = 0.0;
@@ -362,11 +360,10 @@ fn nonlinear_least_squares_inversion(
                 }
 
                 // Seed from harmonic ratio (warm start for Gauss-Newton)
-                let mut ba_estimate =
-                    beta_s_from_amplitudes(measured_a1, measured_a2, config)
-                        .map(ba_from_beta_s)
-                        .unwrap_or(5.0) // default: typical soft tissue
-                        .clamp(0.0, 20.0);
+                let mut ba_estimate = beta_s_from_amplitudes(measured_a1, measured_a2, config)
+                    .map(ba_from_beta_s)
+                    .unwrap_or(5.0) // default: typical soft tissue
+                    .clamp(0.0, 20.0);
 
                 let mut converged = false;
                 for _iteration in 0..config.max_iterations {
@@ -387,8 +384,7 @@ fn nonlinear_least_squares_inversion(
                     if jt_j.abs() < f64::EPSILON {
                         break;
                     }
-                    let delta_ba =
-                        (residual_a1 * da1_dba + residual_a2 * da2_dba) / jt_j;
+                    let delta_ba = (residual_a1 * da1_dba + residual_a2 * da2_dba) / jt_j;
                     ba_estimate = (ba_estimate + delta_ba).clamp(0.0, 20.0);
 
                     if delta_ba.abs() < config.tolerance {
@@ -484,13 +480,16 @@ fn bayesian_inversion(
                     let likelihood_precision = 1.0 / (sigma_likelihood * sigma_likelihood);
 
                     let precision_post = prior_precision + likelihood_precision;
-                    let mean_post = (prior_mean * prior_precision
-                        + ba_obs * likelihood_precision)
+                    let mean_post = (prior_mean * prior_precision + ba_obs * likelihood_precision)
                         / precision_post;
                     let std_post = (1.0 / precision_post).sqrt();
                     let quality = (snr / 20.0).min(1.0);
 
-                    (mean_post.clamp(0.0, 20.0), std_post.clamp(0.1, 5.0), quality)
+                    (
+                        mean_post.clamp(0.0, 20.0),
+                        std_post.clamp(0.1, 5.0),
+                        quality,
+                    )
                 } else {
                     // Insufficient data: return to prior
                     (prior_mean, prior_std, 0.1)
@@ -531,11 +530,7 @@ fn bayesian_inversion(
 /// ```
 ///
 /// where β_s = B/A/2 + 1, k_s = ω/c_s, z = propagation_distance.
-fn forward_model(
-    ba_ratio: f64,
-    a1_obs: f64,
-    config: &NonlinearInversionConfig,
-) -> (f64, f64) {
+fn forward_model(ba_ratio: f64, a1_obs: f64, config: &NonlinearInversionConfig) -> (f64, f64) {
     let omega = 2.0 * PI * config.excitation_frequency;
     let c_s = config.shear_wave_speed.max(1e-3);
     let k_s = omega / c_s;
@@ -624,10 +619,13 @@ mod tests {
     #[test]
     fn test_a_landau_sign() {
         let mu = 9000.0; // Pa (c_s=3 m/s, ρ=1000 kg/m³)
-        // β_s = 2 (B/A = 2): should give positive A_L
+                         // β_s = 2 (B/A = 2): should give positive A_L
         assert!(a_landau(mu, 2.0) > 0.0, "A_L should be positive for β_s=2");
         // β_s = 0.5: should give negative A_L (unphysical but valid maths)
-        assert!(a_landau(mu, 0.5) < 0.0, "A_L should be negative for β_s=0.5");
+        assert!(
+            a_landau(mu, 0.5) < 0.0,
+            "A_L should be negative for β_s=0.5"
+        );
     }
 
     // ── tissue reference values (Rénier 2008 Table 1) ────────────────────────
@@ -692,8 +690,7 @@ mod tests {
 
         let (_, da2_analytical) = forward_model_derivative(ba0, a1, &config);
 
-        let rel_err = (da2_numerical - da2_analytical).abs()
-            / da2_analytical.abs().max(1e-30);
+        let rel_err = (da2_numerical - da2_analytical).abs() / da2_analytical.abs().max(1e-30);
         assert!(
             rel_err < 1e-3,
             "Jacobian rel_err={rel_err:.2e}: numerical={da2_numerical:.4e}, \

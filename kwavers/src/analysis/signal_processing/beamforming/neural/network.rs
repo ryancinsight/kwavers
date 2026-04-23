@@ -158,29 +158,14 @@ impl NeuralBeamformingNetwork {
 
     /// Adapt network weights based on performance feedback.
     ///
-    /// Simple gradient descent update (placeholder for full backpropagation).
-    ///
-    /// ## Not yet implemented
-    ///
-    /// - **Transformer-based beamforming**: Self-attention on channel correlations for adaptive
-    ///   weight computation (Vaswani et al. 2017; Glorot & Bengio 2010).
-    /// - **Contrastive learning**: Improved generalization across transducer geometries.
-    /// - **Meta-learning**: Fast adaptation to new imaging scenarios.
-    /// - **Physics-informed constraints**: Wave equation penalties during training.
-    /// - **Uncertainty quantification**: Monte Carlo dropout for confidence estimation.
-    /// - **Multi-task learning**: Simultaneous beamforming and aberration correction.
+    /// The public feedback contract exposes a scalar error gradient, so the
+    /// network forwards that scalar to each layer and applies the exact
+    /// calibration step implemented by [`NeuralLayer::adapt`].
     ///
     /// # Arguments
     ///
-    /// * `feedback` - Performance metrics and error gradients
-    /// * `learning_rate` - Step size for weight updates
-    ///
-    /// # Update Rule
-    ///
-    /// ```text
-    /// W_new = W_old - η · ∇L
-    /// ```
-    /// where η is the learning_rate and ∇L is approximated by error_gradient.
+    /// * `feedback` - Performance metrics and scalar error gradient
+    /// * `learning_rate` - Global step size for the feedback update
     pub fn adapt(
         &mut self,
         feedback: &BeamformingFeedback,

@@ -98,11 +98,10 @@ pub fn plane_wave_incident(
     wavenumber: f64,
     amplitude: Complex64,
 ) -> (Vec<Complex64>, Vec<Complex64>) {
-    let dlen = (direction[0] * direction[0]
-        + direction[1] * direction[1]
-        + direction[2] * direction[2])
-        .sqrt()
-        .max(1e-15);
+    let dlen =
+        (direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2])
+            .sqrt()
+            .max(1e-15);
     let d = [
         direction[0] / dlen,
         direction[1] / dlen,

@@ -186,7 +186,7 @@ impl SvdClutterFilter {
             let sigma_k = sigma.slice(s![0..k]).to_owned(); // (k,)
             let v_k = vt.slice(s![.., 0..k]).to_owned(); // (n_t, k) — first k cols of V
             let vt_k = v_k.t().to_owned(); // (k, n_t) — V_k^T
-            // U_k · diag(Σ_k): scale columns of U_k
+                                           // U_k · diag(Σ_k): scale columns of U_k
             let mut us = u_k.clone();
             for (j, &s_j) in sigma_k.iter().enumerate() {
                 for i in 0..n_px {
@@ -297,8 +297,7 @@ fn mp_median(beta: f64) -> f64 {
             // = range² · 4·sin²(φ)·cos²(φ) / (2π·β·xv) · dphi
             // Simplified: range² · sin²(2φ) / (2π·β·xv) · dphi
             let sin2 = 2.0 * sin_phi * cos_phi; // sin(2φ)
-            let integrand =
-                range * range * sin2 * sin2 / (2.0 * std::f64::consts::PI * beta * xv);
+            let integrand = range * range * sin2 * sin2 / (2.0 * std::f64::consts::PI * beta * xv);
             sum += integrand * dphi;
         }
         sum
@@ -657,16 +656,14 @@ impl UlmDetector {
                     ),
                 }));
             }
-            let envelope = Array2::from_shape_vec(
-                (n_z, n_x),
-                frame_col.iter().map(|v| v.abs()).collect(),
-            )
-            .map_err(|e| {
-                KwaversError::Numerical(NumericalError::SolverFailed {
-                    method: "ULM reshape".to_string(),
-                    reason: e.to_string(),
-                })
-            })?;
+            let envelope =
+                Array2::from_shape_vec((n_z, n_x), frame_col.iter().map(|v| v.abs()).collect())
+                    .map_err(|e| {
+                        KwaversError::Numerical(NumericalError::SolverFailed {
+                            method: "ULM reshape".to_string(),
+                            reason: e.to_string(),
+                        })
+                    })?;
 
             let frame_dets = self.localizer.localize_frame(&envelope, t)?;
             all_detections.extend(frame_dets);
@@ -686,10 +683,14 @@ mod tests {
         let mut state = seed;
         Array2::from_shape_fn((rows, cols), |_| {
             // LCG: xₙ₊₁ = (a·xₙ + c) mod m
-            state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             // Map [0, 2^64) to approximately N(0,1) via Box-Muller
             let u1 = (state >> 11) as f64 / (1u64 << 53) as f64 + 1e-30;
-            state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let u2 = (state >> 11) as f64 / (1u64 << 53) as f64;
             (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()
         })
@@ -706,10 +707,7 @@ mod tests {
 
         let k = svht_threshold(&sigma, n_px, n_t);
         // For Gaussian noise, the SVHT should retain very few components
-        assert!(
-            k <= 5,
-            "SVHT on noise should give k≈0, got k={k}"
-        );
+        assert!(k <= 5, "SVHT on noise should give k≈0, got k={k}");
     }
 
     #[test]
@@ -764,7 +762,8 @@ mod tests {
             for ix in 0..nx {
                 let dz = iz as f64 - true_z;
                 let dx = ix as f64 - true_x;
-                envelope[[iz, ix]] = amp * (-(dz * dz + dx * dx) / (2.0 * sigma * sigma)).exp() + bg;
+                envelope[[iz, ix]] =
+                    amp * (-(dz * dz + dx * dx) / (2.0 * sigma * sigma)).exp() + bg;
             }
         }
 

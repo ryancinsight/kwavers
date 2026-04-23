@@ -11,8 +11,10 @@ use crate::domain::sensor::recorder::simple::SensorRecorder;
 use crate::domain::source::GridSource;
 use crate::domain::source::Source;
 use crate::domain::source::SourceInjectionMode;
+use crate::math::fft::shift_operators::generate_shift_1d;
 use crate::math::fft::{Complex64, ProcessorFft3d};
 use crate::solver::fdtd::SourceHandler;
+use crate::solver::forward::acoustic_ivp::spectral_velocity_scale_from_kappa;
 use crate::solver::forward::pstd::config::{
     BoundaryConfig, CompatibilityMode, KSpaceMethod, PSTDConfig,
 };
@@ -21,8 +23,6 @@ use crate::solver::forward::pstd::numerics::operators::initialize_spectral_opera
 use crate::solver::forward::pstd::numerics::spectral_correction::CorrectionMethod;
 use crate::solver::forward::pstd::physics::absorption::initialize_absorption_operators;
 use crate::solver::forward::pstd::utils::compute_k_magnitude;
-use crate::solver::forward::acoustic_ivp::spectral_velocity_scale_from_kappa;
-use crate::math::fft::shift_operators::generate_shift_1d;
 use ndarray::{Array1, Array2, Array3, Zip};
 use std::f64::consts::PI;
 use std::sync::Arc;
@@ -121,7 +121,7 @@ impl PSTDSolver {
 
         let (k_ops, kappa, k_max, c_ref) = initialize_spectral_operators(&config, &grid, medium)?;
         let k_mag = compute_k_magnitude(&k_ops.kx, &k_ops.ky, &k_ops.kz);
-        
+
         let _x_max: f64 = 0.0;
         let source_kappa = k_mag.mapv(|k| (0.5 * c_ref * config.dt * k).cos());
         let boundary: Option<Box<dyn Boundary>> = match &config.boundary {
@@ -171,7 +171,8 @@ impl PSTDSolver {
 
         let shape = (grid.nx, grid.ny, grid.nz);
         // Allocate space for Nt+1 steps to include the t=0 initial state, matching k-Wave
-        let sensor_recorder = SensorRecorder::new(config.sensor_mask.as_ref(), shape, config.nt + 1)?;
+        let sensor_recorder =
+            SensorRecorder::new(config.sensor_mask.as_ref(), shape, config.nt + 1)?;
         let source_handler = SourceHandler::new(source, &grid)?;
 
         // Capture config.dt before the struct literal moves `config`.
@@ -324,8 +325,7 @@ impl PSTDSolver {
         // The spectral IVP scale is expressed through the existing kappa field:
         //   sin(c0|k|dt/2)/(ρ0 c0 |k|) = (dt / (2ρ0)) * sinc(arccos(κ))
         // This avoids materializing a separate |k| array.
-        let sin_scale: Array3<f64> =
-            spectral_velocity_scale_from_kappa(&self.kappa, dt, rho0_ref)?;
+        let sin_scale: Array3<f64> = spectral_velocity_scale_from_kappa(&self.kappa, dt, rho0_ref)?;
 
         // FFT the initial pressure p0 into the p_k scratch buffer
         self.fft.forward_into(&self.fields.p, &mut self.p_k);

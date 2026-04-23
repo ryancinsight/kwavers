@@ -3,8 +3,8 @@
 use super::constants::{MIN_SPECTRAL_POWER, SUBHARMONIC_THRESHOLD};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationMetrics, CavitationState, DetectionMethod};
-use ndarray::{Array1, ArrayView1};
 use crate::math::fft::fft_1d_array;
+use ndarray::{Array1, ArrayView1};
 
 /// Subharmonic detector for stable cavitation
 pub struct SubharmonicDetector {

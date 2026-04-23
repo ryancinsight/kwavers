@@ -32,8 +32,8 @@ pub mod encapsulated; // NEW: Encapsulated bubbles with shell dynamics (Church, 
 pub mod energy;
 pub mod epstein_plesset; // NEW: Epstein-Plesset stability theorem implementation
 pub mod gilmore; // Gilmore equation for violent collapse // NEW: Comprehensive energy balance model
-pub mod imex_integration;
 pub mod heterogeneous_nucleation;
+pub mod imex_integration;
 
 pub use energy::{update_temperature_energy_balance, EnergyBalanceCalculator};
 pub mod integration; // NEW: Stable integration utilities extracted from monolithic file
@@ -55,6 +55,9 @@ pub use cavitation_control::{
 };
 pub use encapsulated::{ChurchModel, MarmottantModel, ShellProperties}; // NEW: Encapsulated bubble models
 pub use epstein_plesset::EpsteinPlessetStabilitySolver; // NEW: Epstein-Plesset stability analysis
+pub use heterogeneous_nucleation::{
+    ClassicalHeterogeneousNucleation, HeterogeneousNucleationModel,
+};
 pub use imex_integration::{
     integrate_bubble_dynamics_imex, BubbleIMEXConfig, BubbleIMEXIntegrator,
 };
@@ -64,4 +67,3 @@ pub use interactions::{
 };
 pub use keller_miksis::KellerMiksisModel; // NEW: Modular Keller-Miksis solver
 pub use rayleigh_plesset::RayleighPlessetSolver;
-pub use heterogeneous_nucleation::{HeterogeneousNucleationModel, ClassicalHeterogeneousNucleation};

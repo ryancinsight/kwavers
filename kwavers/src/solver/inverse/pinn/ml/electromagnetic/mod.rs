@@ -6,6 +6,7 @@
 
 pub mod domain;
 pub mod physics;
+#[path = "residuals/mod.rs"]
 pub mod residuals;
 pub mod types;
 

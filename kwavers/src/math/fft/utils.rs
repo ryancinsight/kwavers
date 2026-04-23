@@ -224,7 +224,10 @@ mod tests {
 
         for (value, &source) in analytic.iter().zip(signal.iter()) {
             let envelope = value.norm();
-            assert!((envelope - 1.0).abs() < 1e-10, "envelope mismatch for {source}");
+            assert!(
+                (envelope - 1.0).abs() < 1e-10,
+                "envelope mismatch for {source}"
+            );
         }
     }
 }

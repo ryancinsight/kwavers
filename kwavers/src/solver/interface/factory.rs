@@ -278,8 +278,6 @@ pub trait MeshProvider: std::fmt::Debug + Send + Sync {
     ) -> Vec<usize>;
 }
 
-
-
 /// Factory configuration with performance targets
 ///
 /// Optional configuration for factory behavior tuning.

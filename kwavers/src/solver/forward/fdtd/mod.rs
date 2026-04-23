@@ -88,9 +88,9 @@
 // Public modules
 pub mod avx512_stencil; // Phase 9.1: AVX-512 optimized FDTD stencil
 pub mod config;
-pub mod kspace_correction;
 pub mod dispatch; // Phase 9.1: Runtime SIMD strategy dispatch
 pub mod electromagnetic;
+pub mod kspace_correction;
 pub mod metrics;
 pub mod plugin;
 pub mod pressure_updater; // SRP: pressure field update methods

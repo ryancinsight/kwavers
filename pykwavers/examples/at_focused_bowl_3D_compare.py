@@ -15,11 +15,11 @@ Key API differences vs k-wave-python:
     * k-wave kWaveArray supports band-limited interpolation (BLI) with
       `bli_tolerance` / `upsampling_rate` — it distributes each off-grid
       element across nearby grid cells with fractional weights.
-    * pykwavers' current KWaveArray uses nearest-grid-point (NGP) rasterisation
-      (see `kwavers/src/domain/source/kwave_array.rs::rasterize_bowl`).
-    * Parity targets are therefore looser than the CW sinusoid / velocity
-      source examples — we expect Pearson r >= 0.90 and rms_ratio in [0.75, 1.30]
-      for the steady-state on-axis amplitude profile.
+    * pykwavers uses the same canonical spiral sampling and local BLI stencil
+      for the bowl source weights, and the example reports the physical-interior
+      source-mass parity separately from the on-axis waveform parity.
+    * The waveform parity targets remain conservative because the sensor line is
+      still compared against the full steady-state reconstruction path.
 
 Physical setup (matches k-wave-python `at_focused_bowl_3D.py`, except the
 sensor is reduced to an on-axis line to keep the run tractable on CPU):
@@ -58,9 +58,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from example_parity_utils import (
+    clip_volume_to_physical_interior,
     DEFAULT_OUTPUT_DIR,
     bootstrap_example_paths,
     compute_image_metrics,
+    compute_trace_metrics,
     save_text_report,
 )
 
@@ -140,7 +142,7 @@ SENSOR_IZ = NZ // 2
 N_SENSOR_PTS = SENSOR_IX_HI - SENSOR_IX_LO + 1
 
 # ---------------------------------------------------------------------------
-# Parity targets (looser — KWaveArray BLI vs NGP rasterisation differs)
+# Parity targets for the on-axis waveform comparison.
 # ---------------------------------------------------------------------------
 PARITY_THRESHOLDS = {
     "pearson_r":    0.90,
@@ -176,7 +178,16 @@ def run_kwave(signal_1d: np.ndarray) -> dict:
     if _KWAVE_CACHE.exists():
         print("  [k-wave] Loading from cache...")
         d = np.load(_KWAVE_CACHE)
-        return {"amp_axial": d["amp_axial"], "runtime_s": float(d["runtime_s"])}
+        kgrid = kWaveGrid(GRID_SIZE, DX_VEC)
+        karray = KWaveArray_Kwave(
+            bli_tolerance=0.01, upsampling_rate=10, single_precision=True
+        )
+        karray.add_bowl_element(KWAVE_APEX, SOURCE_ROC, SOURCE_DIAMETER, KWAVE_FOCUS_POS)
+        return {
+            "amp_axial": d["amp_axial"],
+            "runtime_s": float(d["runtime_s"]),
+            "source_weights": np.asarray(karray.get_array_grid_weights(kgrid), dtype=np.float64),
+        }
 
     kgrid = kWaveGrid(GRID_SIZE, DX_VEC)
     kgrid.setTime(NT, DT)
@@ -186,6 +197,7 @@ def run_kwave(signal_1d: np.ndarray) -> dict:
         bli_tolerance=0.01, upsampling_rate=10, single_precision=True
     )
     karray.add_bowl_element(KWAVE_APEX, SOURCE_ROC, SOURCE_DIAMETER, KWAVE_FOCUS_POS)
+    source_weights = np.asarray(karray.get_array_grid_weights(kgrid), dtype=np.float64)
 
     source = kSource()
     source.p_mask = karray.get_array_binary_mask(kgrid)
@@ -225,7 +237,7 @@ def run_kwave(signal_1d: np.ndarray) -> dict:
             f"k-wave amp shape {amp_axial.shape} != expected ({N_SENSOR_PTS},)"
         )
 
-    result = {"amp_axial": amp_axial, "runtime_s": elapsed}
+    result = {"amp_axial": amp_axial, "runtime_s": elapsed, "source_weights": source_weights}
     np.savez(_KWAVE_CACHE, **result)
     return result
 
@@ -237,7 +249,16 @@ def run_pykwavers(signal_1d: np.ndarray) -> dict:
     if _PKWAV_CACHE.exists():
         print("  [pykwavers] Loading from cache...")
         d = np.load(_PKWAV_CACHE)
-        return {"amp_axial": d["amp_axial"], "runtime_s": float(d["runtime_s"])}
+        grid = pkw.Grid(NX, NY, NZ, DX, DX, DX)
+        arr = pkw.KWaveArray()
+        arr.set_sound_speed(C0)
+        arr.set_frequency(SOURCE_F0)
+        arr.add_bowl_element((PKW_COC_X, PKW_CENTER_Y, PKW_CENTER_Z), SOURCE_ROC, SOURCE_DIAMETER)
+        return {
+            "amp_axial": d["amp_axial"],
+            "runtime_s": float(d["runtime_s"]),
+            "source_weights": np.asarray(arr.get_array_weighted_mask(grid), dtype=np.float64),
+        }
 
     grid   = pkw.Grid(NX, NY, NZ, DX, DX, DX)
     medium = pkw.Medium.homogeneous(sound_speed=C0, density=RHO0)
@@ -248,6 +269,7 @@ def run_pykwavers(signal_1d: np.ndarray) -> dict:
     # pykwavers add_bowl_element: `position` = centre of curvature.
     arr.add_bowl_element((PKW_COC_X, PKW_CENTER_Y, PKW_CENTER_Z),
                          SOURCE_ROC, SOURCE_DIAMETER)
+    source_weights = np.asarray(arr.get_array_weighted_mask(grid), dtype=np.float64)
 
     source = pkw.Source.from_kwave_array(arr, signal_1d, SOURCE_F0, mode="additive")
 
@@ -272,9 +294,47 @@ def run_pykwavers(signal_1d: np.ndarray) -> dict:
     )
     amp_axial = np.asarray(amp, dtype=np.float64).flatten()
 
-    output = {"amp_axial": amp_axial, "runtime_s": elapsed}
+    output = {"amp_axial": amp_axial, "runtime_s": elapsed, "source_weights": source_weights}
     np.savez(_PKWAV_CACHE, **output)
     return output
+
+
+# ---------------------------------------------------------------------------
+# Comparison
+# ---------------------------------------------------------------------------
+def run_comparison() -> dict:
+    """Run the bowl comparison and return the raw results plus metrics."""
+    signal_1d = build_signal()
+    kw = run_kwave(signal_1d)
+    pkw_res = run_pykwavers(signal_1d)
+
+    kw_amp = np.asarray(kw["amp_axial"], dtype=np.float64)
+    py_amp = np.asarray(pkw_res["amp_axial"], dtype=np.float64)
+    if kw_amp.shape != py_amp.shape:
+        raise AssertionError(f"on-axis amplitude shape mismatch: {kw_amp.shape} != {py_amp.shape}")
+
+    kw_source_weights = clip_volume_to_physical_interior(
+        np.asarray(kw["source_weights"], dtype=np.float64),
+        (PML_SIZE, PML_SIZE, PML_SIZE),
+    )
+    py_source_weights = clip_volume_to_physical_interior(
+        np.asarray(pkw_res["source_weights"], dtype=np.float64),
+        (PML_SIZE, PML_SIZE, PML_SIZE),
+    )
+    if kw_source_weights.shape != py_source_weights.shape:
+        raise AssertionError(
+            f"source weight shape mismatch: {kw_source_weights.shape} != {py_source_weights.shape}"
+        )
+
+    metrics = compute_image_metrics(kw_amp, py_amp)
+    source_metrics = compute_trace_metrics(kw_source_weights, py_source_weights)
+
+    return {
+        "kwave": kw,
+        "pykwavers": pkw_res,
+        "summary": metrics,
+        "source_metrics": source_metrics,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -289,7 +349,7 @@ def plot_comparison(kw: dict, pkw_res: dict) -> None:
     ax.plot(x_axial_mm, kw["amp_axial"] * 1e-6,  "k-",
             linewidth=1.8, alpha=0.85, label="k-wave-python (BLI)")
     ax.plot(x_axial_mm, pkw_res["amp_axial"] * 1e-6, "r--",
-            linewidth=1.4, alpha=0.85, label="pykwavers (NGP)")
+            linewidth=1.4, alpha=0.85, label="pykwavers (native KWaveArray)")
     ax.axvline(SOURCE_ROC * 1e3, color="gray", linestyle=":",
                linewidth=1.0, alpha=0.6,
                label=f"geometric focus ({SOURCE_ROC*1e3:.0f} mm from apex)")
@@ -344,26 +404,17 @@ def main() -> None:
     print(f"  PML      : {PML_SIZE} pts (inside)")
     print("=" * 60)
 
-    # --- Shared drive signal ---
-    print("\n[1/3] Building shared CW drive signal...")
-    signal_1d = build_signal()
-    print(f"  signal shape = {signal_1d.shape}  peak = {np.abs(signal_1d).max():.3e} Pa")
+    print("\n[1/2] Running comparison...")
+    result = run_comparison()
+    kw = result["kwave"]
+    pkw_res = result["pykwavers"]
+    metrics = result["summary"]
+    source_metrics = result["source_metrics"]
 
-    # --- k-wave ---
-    print("\n[2/3] k-wave-python...")
-    kw = run_kwave(signal_1d)
-    print(f"  peak amp on axis = {kw['amp_axial'].max()*1e-6:.3f} MPa  "
-          f"(at {(SENSOR_IX_LO + int(np.argmax(kw['amp_axial'])))*DX*1e3 - PKW_APEX_X*1e3:.2f} mm from apex)")
+    print(f"  k-wave peak amp on axis     = {kw['amp_axial'].max()*1e-6:.3f} MPa")
+    print(f"  pykwavers peak amp on axis = {pkw_res['amp_axial'].max()*1e-6:.3f} MPa")
 
-    # --- pykwavers ---
-    print("\n[3/3] pykwavers (CPU PSTD, KWaveArray bowl)...")
-    pkw_res = run_pykwavers(signal_1d)
-    print(f"  peak amp on axis = {pkw_res['amp_axial'].max()*1e-6:.3f} MPa  "
-          f"(at {(SENSOR_IX_LO + int(np.argmax(pkw_res['amp_axial'])))*DX*1e3 - PKW_APEX_X*1e3:.2f} mm from apex)")
-
-    # --- Parity ---
     print("\n--- Parity evaluation ---")
-    metrics = compute_image_metrics(kw["amp_axial"], pkw_res["amp_axial"])
     thr = PARITY_THRESHOLDS
     checks = {
         "pearson_r":  metrics["pearson_r"]  >= thr["pearson_r"],
@@ -380,6 +431,10 @@ def main() -> None:
           f"{'OK' if checks['rms_ratio'] else 'FAIL'}")
     print(f"  PSNR      = {metrics['psnr_db']:.2f} dB  "
           f"(target >= {thr['psnr_db']} dB)  {'OK' if checks['psnr_db'] else 'FAIL'}")
+    print(f"  Source Pearson r = {source_metrics['pearson_r']:.6f}")
+    print(f"  Source RMS ratio = {source_metrics['rms_ratio']:.6f}")
+    print(f"  Source RMSE      = {source_metrics['rmse']:.6e}")
+    print(f"  Source peak ratio= {source_metrics['peak_ratio']:.6f}")
 
     plot_comparison(kw, pkw_res)
 
@@ -393,7 +448,7 @@ def main() -> None:
         f"dt={DT:.6e} s   Nt={NT}",
         f"kwave_runtime_s: {kw['runtime_s']:.3f}",
         f"pykwavers_runtime_s: {pkw_res['runtime_s']:.3f}",
-        "note: pykwavers uses NGP rasterisation; k-wave uses BLI (bli_tolerance=0.01)",
+        "note: source weights are compared on the physical interior after clipping the PML halo",
         "",
     ])
     report_lines = [
@@ -401,6 +456,12 @@ def main() -> None:
         f"rms_ratio  = {metrics['rms_ratio']:.6f}  "
         f"(target [{thr['rms_ratio_min']}, {thr['rms_ratio_max']}])",
         f"psnr_db    = {metrics['psnr_db']:.2f}  (target >= {thr['psnr_db']} dB)",
+        "",
+        "source weights (physical interior): k-wave-python vs pykwavers",
+        f"  pearson_r = {source_metrics['pearson_r']:.6f}",
+        f"  rms_ratio = {source_metrics['rms_ratio']:.6f}",
+        f"  rmse      = {source_metrics['rmse']:.6e}",
+        f"  peak_ratio= {source_metrics['peak_ratio']:.6f}",
         f"peak_amp_kwave_Pa      = {float(kw['amp_axial'].max()):.6e}",
         f"peak_amp_pykwavers_Pa  = {float(pkw_res['amp_axial'].max()):.6e}",
         f"peak_ratio             = "
