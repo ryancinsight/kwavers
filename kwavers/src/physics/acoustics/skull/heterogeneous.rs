@@ -291,7 +291,10 @@ mod tests {
     #[test]
     fn test_bvf_diploe_midpoint() {
         let phi = HeterogeneousSkull::bone_volume_fraction(500.0);
-        assert!((phi - 0.5).abs() < 1e-12, "BVF at HU=500 should be 0.5; got {phi:.6}");
+        assert!(
+            (phi - 0.5).abs() < 1e-12,
+            "BVF at HU=500 should be 0.5; got {phi:.6}"
+        );
     }
 
     #[test]
@@ -308,17 +311,26 @@ mod tests {
 
     #[test]
     fn test_classify_water_is_soft_tissue() {
-        assert_eq!(HeterogeneousSkull::classify_layer(0.0), SkullLayer::SoftTissue);
+        assert_eq!(
+            HeterogeneousSkull::classify_layer(0.0),
+            SkullLayer::SoftTissue
+        );
     }
 
     #[test]
     fn test_classify_diploe() {
-        assert_eq!(HeterogeneousSkull::classify_layer(400.0), SkullLayer::Diploe);
+        assert_eq!(
+            HeterogeneousSkull::classify_layer(400.0),
+            SkullLayer::Diploe
+        );
     }
 
     #[test]
     fn test_classify_cortical() {
-        assert_eq!(HeterogeneousSkull::classify_layer(900.0), SkullLayer::Cortical);
+        assert_eq!(
+            HeterogeneousSkull::classify_layer(900.0),
+            SkullLayer::Cortical
+        );
     }
 
     // ── Hill mixing model tests ────────────────────────────────────────────────
@@ -418,8 +430,7 @@ mod tests {
             let k_voigt = phi * k_bone + (1.0 - phi) * k_water;
             let voigt_modulus_speed = (k_voigt / rho_eff).sqrt();
             let ct = Array3::from_elem((1, 1, 1), hu);
-            let skull =
-                HeterogeneousSkull::from_ct_hill(&ct, c_bone, rho_bone, 20.0).unwrap();
+            let skull = HeterogeneousSkull::from_ct_hill(&ct, c_bone, rho_bone, 20.0).unwrap();
             let hill_speed = skull.sound_speed[[0, 0, 0]];
             assert!(
                 hill_speed <= voigt_modulus_speed + 1e-6,

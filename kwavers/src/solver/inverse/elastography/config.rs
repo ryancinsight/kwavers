@@ -119,9 +119,9 @@ impl NonlinearInversionConfig {
     pub fn new(method: NonlinearInversionMethod) -> Self {
         Self {
             method,
-            density: 1000.0,        // kg/m³
-            acoustic_speed: 1540.0, // m/s (typical soft tissue)
-            shear_wave_speed: 3.0,  // m/s (liver-like tissue; Nightingale 2011)
+            density: 1000.0,             // kg/m³
+            acoustic_speed: 1540.0,      // m/s (typical soft tissue)
+            shear_wave_speed: 3.0,       // m/s (liver-like tissue; Nightingale 2011)
             excitation_frequency: 100.0, // Hz (typical push-pulse SWE)
             propagation_distance: 0.05,  // m (5 cm focal depth)
             max_iterations: 100,

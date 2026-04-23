@@ -165,7 +165,11 @@ pub(crate) fn photon_step_to_boundary(
         0 => {
             if going_positive {
                 let ni = i + 1;
-                if ni < nx { Some((ni, j, k)) } else { None }
+                if ni < nx {
+                    Some((ni, j, k))
+                } else {
+                    None
+                }
             } else {
                 i.checked_sub(1).map(|ni| (ni, j, k))
             }
@@ -173,7 +177,11 @@ pub(crate) fn photon_step_to_boundary(
         1 => {
             if going_positive {
                 let nj = j + 1;
-                if nj < ny { Some((i, nj, k)) } else { None }
+                if nj < ny {
+                    Some((i, nj, k))
+                } else {
+                    None
+                }
             } else {
                 j.checked_sub(1).map(|nj| (i, nj, k))
             }
@@ -181,7 +189,11 @@ pub(crate) fn photon_step_to_boundary(
         _ => {
             if going_positive {
                 let nk = k + 1;
-                if nk < nz { Some((i, j, nk)) } else { None }
+                if nk < nz {
+                    Some((i, j, nk))
+                } else {
+                    None
+                }
             } else {
                 k.checked_sub(1).map(|nk| (i, j, nk))
             }

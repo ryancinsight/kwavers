@@ -123,9 +123,7 @@ impl DGOperations for DGSolver {
         for e in 0..n_elements {
             for v in 0..n_vars {
                 // Extract nodal column as a 1-D vector
-                let f_col: Array1<f64> = (0..self.n_nodes)
-                    .map(|i| field[[e, i, v]])
-                    .collect();
+                let f_col: Array1<f64> = (0..self.n_nodes).map(|i| field[[e, i, v]]).collect();
 
                 // Modal transform: c = V⁻¹ · f
                 let c_col = v_inv.dot(&f_col);
@@ -254,8 +252,15 @@ mod tests {
             ..DGConfig::default()
         };
         let grid = Arc::new(
-            Grid::new(poly_order + 1, poly_order + 1, poly_order + 1, 1.0, 1.0, 1.0)
-                .expect("Grid::new failed in test"),
+            Grid::new(
+                poly_order + 1,
+                poly_order + 1,
+                poly_order + 1,
+                1.0,
+                1.0,
+                1.0,
+            )
+            .expect("Grid::new failed in test"),
         );
         DGSolver::new(config, grid).expect("DGSolver::new failed in test")
     }
@@ -288,8 +293,12 @@ mod tests {
             }
         }
 
-        let coefficients = solver.project_to_basis(&field).expect("project_to_basis failed");
-        let recovered = solver.reconstruct_from_basis(&coefficients).expect("reconstruct failed");
+        let coefficients = solver
+            .project_to_basis(&field)
+            .expect("project_to_basis failed");
+        let recovered = solver
+            .reconstruct_from_basis(&coefficients)
+            .expect("reconstruct failed");
 
         for e in 0..n_elements {
             for i in 0..n_nodes {
@@ -298,7 +307,10 @@ mod tests {
                     assert!(
                         err < 1e-11,
                         "Round-trip error at [e={},i={},v={}]: {:.2e} (must be < 1e-11)",
-                        e, i, v, err
+                        e,
+                        i,
+                        v,
+                        err
                     );
                 }
             }
@@ -327,7 +339,9 @@ mod tests {
                 field[[0, i, 0]] = v[[i, k]];
             }
 
-            let coefficients = solver.project_to_basis(&field).expect("project_to_basis failed");
+            let coefficients = solver
+                .project_to_basis(&field)
+                .expect("project_to_basis failed");
 
             for j in 0..n_nodes {
                 let expected = if j == k { 1.0 } else { 0.0 };
@@ -358,8 +372,12 @@ mod tests {
             field[[0, i, 0]] = xi[i].powi(poly_order as i32);
         }
 
-        let coefficients = solver.project_to_basis(&field).expect("project_to_basis failed");
-        let recovered = solver.reconstruct_from_basis(&coefficients).expect("reconstruct failed");
+        let coefficients = solver
+            .project_to_basis(&field)
+            .expect("project_to_basis failed");
+        let recovered = solver
+            .reconstruct_from_basis(&coefficients)
+            .expect("reconstruct failed");
 
         for i in 0..n_nodes {
             let err = (recovered[[0, i, 0]] - field[[0, i, 0]]).abs();

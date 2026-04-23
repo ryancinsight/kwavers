@@ -192,8 +192,7 @@ impl SemSolver {
                         let ijk = self.element_local_to_global_dof(element_id, i, j, k, n_gll);
                         let w = weights[i] * weights[j] * weights[k];
                         // M_ii = ρ |J_i| w_i w_j w_k
-                        self.mass_matrix[ijk] +=
-                            self.config.density * jacobian_det[[i, j, k]] * w;
+                        self.mass_matrix[ijk] += self.config.density * jacobian_det[[i, j, k]] * w;
                     }
                 }
             }
@@ -248,7 +247,8 @@ impl SemSolver {
 
         self.solution.assign(&initial_displacement);
         // Sync integrator so the first Newmark step starts from u₀, not 0.
-        self.integrator.set_initial_displacement(&initial_displacement);
+        self.integrator
+            .set_initial_displacement(&initial_displacement);
         Ok(())
     }
 
@@ -415,9 +415,8 @@ impl SemSolver {
                             zeta_sum += ld[[c, r]] * q_zeta[[a, b, r]];
                         }
 
-                        let val = w[b] * w[c] * xi_sum
-                            + w[a] * w[c] * eta_sum
-                            + w[a] * w[b] * zeta_sum;
+                        let val =
+                            w[b] * w[c] * xi_sum + w[a] * w[c] * eta_sum + w[a] * w[b] * zeta_sum;
 
                         let g = self.element_local_to_global_dof(eid, a, b, c, n);
                         ku[g] += val;
@@ -678,9 +677,7 @@ mod tests {
         let energy: f64 = u.iter().zip(ku.iter()).map(|(ui, kui)| ui * kui).sum();
 
         // ρc² × Lx × Ly × Lz = 1000 × 1500² × 2.0 × 1.5 × 1.0 = 6.75e12
-        let expected = solver.config.density
-            * solver.config.sound_speed.powi(2)
-            * lx * ly * lz;
+        let expected = solver.config.density * solver.config.sound_speed.powi(2) * lx * ly * lz;
         let rel_err = (energy - expected).abs() / expected;
         assert!(
             rel_err < 1e-6,
@@ -701,10 +698,12 @@ mod tests {
 
         let n = solver.solution.len();
         // u = sin(π i / n), v = cos(π i / n)
-        let u: Array1<f64> =
-            (0..n).map(|i| (std::f64::consts::PI * i as f64 / n as f64).sin()).collect();
-        let v: Array1<f64> =
-            (0..n).map(|i| (std::f64::consts::PI * i as f64 / n as f64).cos()).collect();
+        let u: Array1<f64> = (0..n)
+            .map(|i| (std::f64::consts::PI * i as f64 / n as f64).sin())
+            .collect();
+        let v: Array1<f64> = (0..n)
+            .map(|i| (std::f64::consts::PI * i as f64 / n as f64).cos())
+            .collect();
 
         let ku = solver.apply_stiffness(&u);
         let kv = solver.apply_stiffness(&v);
@@ -752,7 +751,12 @@ mod tests {
         let compute_energy = |sol: &SemSolver| -> f64 {
             let ku = sol.apply_stiffness(&sol.solution);
             let v = &sol.integrator.velocity;
-            let potential: f64 = sol.solution.iter().zip(ku.iter()).map(|(u, ku)| u * ku).sum();
+            let potential: f64 = sol
+                .solution
+                .iter()
+                .zip(ku.iter())
+                .map(|(u, ku)| u * ku)
+                .sum();
             let kinetic: f64 = v
                 .iter()
                 .zip(sol.mass_matrix.iter())

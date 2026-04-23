@@ -655,8 +655,8 @@ pub struct Source {
     position: Option<[f64; 3]>,
     /// Spatial mask for grid sources
     mask: Option<Array3<f64>>,
-    /// Time signal for grid sources (pressure)
-    signal: Option<Array1<f64>>,
+    /// Time signal matrix for grid sources (pressure), shape `[num_sources, time_steps]`
+    signal: Option<Array2<f64>>,
     /// Source injection mode ("additive", "additive_no_correction", or "dirichlet")
     source_mode: String,
     /// Initial pressure distribution (for p0 / IVP sources)
@@ -667,6 +667,28 @@ pub struct Source {
     direction: Option<(f64, f64, f64)>,
     /// KWaveArray for custom transducer geometry sources
     kwave_array: Option<kwavers::domain::source::kwave_array::KWaveArray>,
+}
+
+fn pressure_signal_to_matrix(signal: &Bound<'_, PyAny>) -> PyResult<Array2<f64>> {
+    if let Ok(signal_1d) = signal.extract::<PyReadonlyArray1<f64>>() {
+        let signal_arr = signal_1d.as_array();
+        if signal_arr.is_empty() {
+            return Err(PyValueError::new_err("Signal must not be empty"));
+        }
+        return Ok(signal_arr.insert_axis(Axis(0)).to_owned());
+    }
+
+    if let Ok(signal_2d) = signal.extract::<PyReadonlyArray2<f64>>() {
+        let signal_arr = signal_2d.as_array().to_owned();
+        if signal_arr.is_empty() {
+            return Err(PyValueError::new_err("Signal must not be empty"));
+        }
+        return Ok(signal_arr);
+    }
+
+    Err(PyValueError::new_err(
+        "Signal must be a 1D or 2D ndarray of float64 values",
+    ))
 }
 
 #[pymethods]
@@ -782,7 +804,7 @@ impl Source {
     /// mask : ndarray
     ///     3D spatial mask (same shape as grid)
     /// signal : ndarray
-    ///     1D time signal [Pa]
+    ///     1D time signal [Pa] or 2D matrix `[num_sources, time_steps]`
     /// frequency : float
     ///     Source frequency [Hz]
     /// Create a grid source from a spatial mask and time signal.
@@ -792,7 +814,7 @@ impl Source {
     /// mask : ndarray
     ///     3D spatial mask (same shape as grid)
     /// signal : ndarray
-    ///     1D time signal [Pa]
+    ///     1D time signal [Pa] or 2D matrix `[num_sources, time_steps]`
     /// frequency : float
     ///     Source frequency [Hz]
     /// mode : str, optional
@@ -801,7 +823,7 @@ impl Source {
     #[pyo3(signature = (mask, signal, frequency, mode=None))]
     fn from_mask(
         mask: PyReadonlyArray3<f64>,
-        signal: PyReadonlyArray1<f64>,
+        signal: &Bound<'_, PyAny>,
         frequency: f64,
         mode: Option<&str>,
     ) -> PyResult<Self> {
@@ -814,14 +836,7 @@ impl Source {
             return Err(PyValueError::new_err("Mask must be a 3D array"));
         }
 
-        let signal_arr = signal.as_array().to_owned();
-        if signal_arr.ndim() != 1 {
-            return Err(PyValueError::new_err("Signal must be a 1D array"));
-        }
-
-        if signal_arr.is_empty() {
-            return Err(PyValueError::new_err("Signal must not be empty"));
-        }
+        let signal_arr = pressure_signal_to_matrix(signal)?;
 
         let source_mode = match mode {
             Some("additive_no_correction") => "additive_no_correction".to_string(),
@@ -832,6 +847,19 @@ impl Source {
                 other
             ))),
         };
+
+        let num_sources = mask_arr.iter().filter(|&&v| v != 0.0).count();
+        if num_sources == 0 {
+            return Err(PyValueError::new_err("Source mask contains no active points"));
+        }
+
+        let n_signal_rows = signal_arr.shape()[0];
+        if n_signal_rows != 1 && n_signal_rows != num_sources {
+            return Err(PyValueError::new_err(format!(
+                "Signal rows must be 1 or match active source points: got {}, expected 1 or {}",
+                n_signal_rows, num_sources
+            )));
+        }
 
         let amplitude = signal_arr.iter().fold(0.0_f64, |acc, v| acc.max(v.abs()));
 
@@ -1196,6 +1224,7 @@ impl Source {
         if signal_arr.is_empty() {
             return Err(PyValueError::new_err("Signal must not be empty"));
         }
+        let signal_matrix = signal_arr.clone().insert_axis(Axis(0)).to_owned();
         let source_mode = match mode {
             Some("additive_no_correction") => "additive_no_correction".to_string(),
             Some("dirichlet") => "dirichlet".to_string(),
@@ -1208,7 +1237,7 @@ impl Source {
             amplitude,
             position: None,
             mask: None,
-            signal: Some(signal_arr),
+            signal: Some(signal_matrix),
             source_mode,
             initial_pressure: None,
             velocity_signal: None,
@@ -1247,7 +1276,9 @@ impl Source {
 /// Custom transducer array with mixed element geometries.
 ///
 /// Matches k-wave-python's `KWaveArray` API for building arbitrary transducer
-/// arrays from arc, disc, rectangular, and bowl elements.
+/// arrays from arc, disc, rectangular, and bowl elements. For 3-D disc
+/// elements, `focus_position` selects the beam-axis normal; `None` keeps the
+/// canonical x-y plane.
 ///
 /// Examples
 /// --------
@@ -1271,18 +1302,12 @@ impl KWaveArray {
 
     /// Set the operating frequency [Hz].
     fn set_frequency(&mut self, frequency: f64) {
-        self.inner = kwavers::domain::source::kwave_array::KWaveArray::with_params(
-            frequency,
-            self.inner.frequency(),
-        );
+        self.inner.set_frequency(frequency);
     }
 
     /// Set the sound speed [m/s].
     fn set_sound_speed(&mut self, sound_speed: f64) {
-        self.inner = kwavers::domain::source::kwave_array::KWaveArray::with_params(
-            self.inner.frequency(),
-            sound_speed,
-        );
+        self.inner.set_sound_speed(sound_speed);
     }
 
     /// Add a disc-shaped element.
@@ -1293,8 +1318,41 @@ impl KWaveArray {
     ///     Element center [x, y, z] in meters
     /// diameter : float
     ///     Disc diameter [m]
-    fn add_disc_element(&mut self, position: (f64, f64, f64), diameter: f64) {
-        self.inner.add_disc_element(position, diameter);
+    /// focus_position : tuple[float, float, float], optional
+    ///     Optional point on the beam axis defining the disc normal
+    #[pyo3(signature = (position, diameter, focus_position=None))]
+    fn add_disc_element(
+        &mut self,
+        position: (f64, f64, f64),
+        diameter: f64,
+        focus_position: Option<(f64, f64, f64)>,
+    ) -> PyResult<()> {
+        if matches!(focus_position, Some(focus) if focus == position) {
+            return Err(PyValueError::new_err(
+                "focus_position must differ from position for a 3D disc",
+            ));
+        }
+        self.inner
+            .add_disc_element(position, diameter, focus_position);
+        Ok(())
+    }
+
+    /// Generate a binary mask on a computational grid.
+    fn get_array_binary_mask<'py>(
+        &self,
+        py: Python<'py>,
+        grid: &Grid,
+    ) -> PyResult<Py<PyArray3<bool>>> {
+        Ok(PyArray3::from_owned_array(py, self.inner.get_array_binary_mask(&grid.inner)).into())
+    }
+
+    /// Generate a weighted mask on a computational grid.
+    fn get_array_weighted_mask<'py>(
+        &self,
+        py: Python<'py>,
+        grid: &Grid,
+    ) -> PyResult<Py<PyArray3<f64>>> {
+        Ok(PyArray3::from_owned_array(py, self.inner.get_array_weighted_mask(&grid.inner)).into())
     }
 
     /// Add an arc-shaped element.
@@ -1335,6 +1393,29 @@ impl KWaveArray {
     fn add_rect_element(&mut self, position: (f64, f64, f64), dims: (f64, f64, f64)) {
         self.inner
             .add_rect_element(position, dims.0, dims.1, dims.2);
+    }
+
+    /// Add a rectangular element rotated about its center by intrinsic X-Y-Z
+    /// Euler angles (degrees). Matches the upstream k-wave-python
+    /// ``KWaveArray.add_rect_element`` rotation used by the
+    /// ``at_linear_array_transducer`` example.
+    ///
+    /// Parameters
+    /// ----------
+    /// position : tuple[float, float, float]
+    ///     Center position [x, y, z] in meters.
+    /// dims : tuple[float, float, float]
+    ///     Dimensions [width, height, length] in meters.
+    /// euler_xyz_deg : tuple[float, float, float]
+    ///     Intrinsic X-Y-Z Euler angles in degrees.
+    fn add_rect_rot_element(
+        &mut self,
+        position: (f64, f64, f64),
+        dims: (f64, f64, f64),
+        euler_xyz_deg: (f64, f64, f64),
+    ) {
+        self.inner
+            .add_rect_rot_element(position, dims.0, dims.1, dims.2, euler_xyz_deg);
     }
 
     /// Add a bowl-shaped element (focused transducer).
@@ -2296,12 +2377,17 @@ impl Simulation {
                     .signal
                     .as_ref()
                     .ok_or_else(|| PyValueError::new_err("Source signal missing"))?;
-                if signal.len() != time_steps {
+                if signal.shape()[1] != time_steps {
                     return Err(PyValueError::new_err(format!(
                         "Signal length {} does not match time_steps {}",
-                        signal.len(),
+                        signal.shape()[1],
                         time_steps
                     )));
+                }
+                if signal.shape()[0] != 1 {
+                    return Err(PyValueError::new_err(
+                        "Source.from_kwave_array expects a single waveform row",
+                    ));
                 }
                 // Rasterize the array geometry onto the simulation grid.
                 // Use weighted mask normalised so sum(weights) = m_grid = surface_area/dx²,
@@ -2313,10 +2399,6 @@ impl Simulation {
                         "KWaveArray mask has no active grid points",
                     ));
                 }
-                let mut p_signal = ndarray::Array2::<f64>::zeros((1, time_steps));
-                for t in 0..time_steps {
-                    p_signal[[0, t]] = signal[t];
-                }
                 let p_mode = match src.source_mode.as_str() {
                     "additive_no_correction" => {
                         kwavers::domain::source::grid_source::SourceMode::AdditiveNoCorrection
@@ -2326,7 +2408,7 @@ impl Simulation {
                 };
                 grid_source = GridSource {
                     p_mask: Some(float_mask),
-                    p_signal: Some(p_signal),
+                    p_signal: Some(signal.clone()),
                     p_mode,
                     ..GridSource::new_empty()
                 };
@@ -2350,10 +2432,10 @@ impl Simulation {
                     .as_ref()
                     .ok_or_else(|| PyValueError::new_err("Source signal missing"))?;
 
-                if signal.len() != time_steps {
+                if signal.shape()[1] != time_steps {
                     return Err(PyValueError::new_err(format!(
                         "Signal length {} does not match time_steps {}",
-                        signal.len(),
+                        signal.shape()[1],
                         time_steps
                     )));
                 }
@@ -2365,10 +2447,12 @@ impl Simulation {
                     ));
                 }
 
-                // Use a single signal row and let the source handler broadcast if needed
-                let mut p_signal = ndarray::Array2::<f64>::zeros((1, time_steps));
-                for t in 0..time_steps {
-                    p_signal[[0, t]] = signal[t];
+                let n_signal_rows = signal.shape()[0];
+                if n_signal_rows != 1 && n_signal_rows != num_sources {
+                    return Err(PyValueError::new_err(format!(
+                        "Signal rows must be 1 or match active source points: got {}, expected 1 or {}",
+                        n_signal_rows, num_sources
+                    )));
                 }
 
                 let p_mode = match src.source_mode.as_str() {
@@ -2381,7 +2465,7 @@ impl Simulation {
 
                 grid_source = GridSource {
                     p_mask: Some(mask.clone()),
-                    p_signal: Some(p_signal),
+                    p_signal: Some(signal.clone()),
                     p_mode,
                     ..GridSource::new_empty()
                 };
@@ -3949,6 +4033,27 @@ impl GpuPstdSession {
         self.update_velocity_signal_rows(ux_signals.as_array())
     }
 
+    /// Disable the k-space source correction (sets source_kappa = 1 everywhere).
+    ///
+    /// Matches k-wave-python's `u_mode = "additive-no-correction"`, which is the
+    /// default for NotATransducer (see kwave/ksource.py:186, ktransducer.py:244).
+    /// Without this call, GpuPstdSession applies `sinc(c·dt·|k|/2)` correction
+    /// on injected velocity sources (the "additive" mode). Call once after
+    /// session construction; effect persists across subsequent `run_scan_line`.
+    fn disable_source_correction(&self, _py: Python<'_>) -> PyResult<()> {
+        #[cfg(feature = "gpu")]
+        {
+            self.solver.disable_source_correction();
+            Ok(())
+        }
+        #[cfg(not(feature = "gpu"))]
+        {
+            Err(PyRuntimeError::new_err(
+                "GpuPstdSession requires the 'gpu' feature.",
+            ))
+        }
+    }
+
     /// Return the timing profile from the most recent scan-line execution.
     ///
     /// Durations are host-side wall-clock measurements in nanoseconds.
@@ -4316,11 +4421,7 @@ mod simulation_contract_tests {
     fn time_reversal_reconstruction_impl_preserves_zero_field_with_pml_crop() {
         let grid = Grid::new(6, 6, 1, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
         let sensor_data = Array2::zeros((3, 8));
-        let sensor_positions = array![
-            [0.0, 0.0, 0.0],
-            [0.0, 0.1e-3, 0.0],
-            [0.0, 0.2e-3, 0.0],
-        ];
+        let sensor_positions = array![[0.0, 0.0, 0.0], [0.0, 0.1e-3, 0.0], [0.0, 0.2e-3, 0.0],];
 
         let reconstruction = time_reversal_reconstruction_impl(
             sensor_data,
@@ -4589,8 +4690,7 @@ fn time_reversal_reconstruction_impl(
                 kwavers::core::error::ValidationError::FieldValidation {
                     field: "sensor_positions".to_string(),
                     value: format!("[{x}, {y}, {z}]"),
-                    constraint: "must map to a grid node inside the expanded domain"
-                        .to_string(),
+                    constraint: "must map to a grid node inside the expanded domain".to_string(),
                 },
             ));
         }

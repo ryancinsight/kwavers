@@ -340,7 +340,6 @@ impl<'a, M: Medium> SimulationBuilder<'a, M> {
             _ => Err(format!("Unknown feature: {}", name)),
         }
     }
-
 }
 
 impl<'a, M: Medium> Default for SimulationBuilder<'a, M> {

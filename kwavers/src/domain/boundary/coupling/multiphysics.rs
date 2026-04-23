@@ -338,7 +338,11 @@ mod tests {
             expected
         );
         // Water/tissue: τ > 0.99 (well-matched impedances)
-        assert!(tau > 0.99, "water/tissue should be nearly impedance-matched; got τ = {:.6}", tau);
+        assert!(
+            tau > 0.99,
+            "water/tissue should be nearly impedance-matched; got τ = {:.6}",
+            tau
+        );
         // Power conservation: τ + R = 1
         let r = (Z_SOFT_TISSUE - Z_WATER).powi(2) / (Z_SOFT_TISSUE + Z_WATER).powi(2);
         assert!((tau + r - 1.0).abs() < 1e-12, "τ + R = {:.15}", tau + r);
@@ -366,7 +370,12 @@ mod tests {
         );
         let tau = interface.transmission_coefficient(1e6);
         let expected = 4.0 * Z_WATER * Z_BONE / (Z_WATER + Z_BONE).powi(2);
-        assert!((tau - expected).abs() < 1e-10, "τ = {:.6}, expected {:.6}", tau, expected);
+        assert!(
+            (tau - expected).abs() < 1e-10,
+            "τ = {:.6}, expected {:.6}",
+            tau,
+            expected
+        );
         // Water/bone: 30%–75% transmitted (large but not total impedance mismatch)
         assert!(
             tau > 0.3 && tau < 0.75,
@@ -377,7 +386,11 @@ mod tests {
         let r = (Z_BONE - Z_WATER).powi(2) / (Z_BONE + Z_WATER).powi(2);
         assert!((tau + r - 1.0).abs() < 1e-12, "τ + R = {:.15}", tau + r);
         // Bone reflects significantly more than soft tissue
-        assert!(r > 0.2, "bone interface should have >20% reflection; R = {:.4}", r);
+        assert!(
+            r > 0.2,
+            "bone interface should have >20% reflection; R = {:.4}",
+            r
+        );
     }
 
     /// Photoacoustic: higher absorption → higher coupling (monotone property).
@@ -397,11 +410,18 @@ mod tests {
             )
             .transmission_coefficient(1e6)
         };
-        let tau_lo = make(1.0);   // Γ·μ_a = 0.12 < 1 → not clamped
-        let tau_hi = make(10.0);  // Γ·μ_a = 1.2 > 1 → clamped to 1.0
+        let tau_lo = make(1.0); // Γ·μ_a = 0.12 < 1 → not clamped
+        let tau_hi = make(10.0); // Γ·μ_a = 1.2 > 1 → clamped to 1.0
         assert!(tau_hi >= tau_lo, "coupling must be monotone in μ_a");
-        assert!((tau_lo - 0.12).abs() < 1e-12, "τ(μ_a=1) = Γ·μ_a = {:.4}", tau_lo);
-        assert!((tau_hi - 1.0).abs() < 1e-12, "τ must saturate at 1 for Γ·μ_a > 1");
+        assert!(
+            (tau_lo - 0.12).abs() < 1e-12,
+            "τ(μ_a=1) = Γ·μ_a = {:.4}",
+            tau_lo
+        );
+        assert!(
+            (tau_hi - 1.0).abs() < 1e-12,
+            "τ must saturate at 1 for Γ·μ_a > 1"
+        );
     }
 
     /// Acoustic-thermal: coupling is physically positive and ≤ 1.
@@ -467,6 +487,10 @@ mod tests {
             },
         );
         let tau = interface.transmission_coefficient(1e6);
-        assert!((tau - 1.0).abs() < 1e-14, "Z₁=Z₂ must give τ=1; got {}", tau);
+        assert!(
+            (tau - 1.0).abs() < 1e-14,
+            "Z₁=Z₂ must give τ=1; got {}",
+            tau
+        );
     }
 }

@@ -99,9 +99,7 @@ impl CEUSReconstruction {
         let mut beamformed = signals.clone();
 
         // Dynamic maximum for normalisation (avoids hardcoded reference pressure)
-        let max_abs = signals
-            .iter()
-            .fold(0.0_f64, |acc, &v| acc.max(v.abs()));
+        let max_abs = signals.iter().fold(0.0_f64, |acc, &v| acc.max(v.abs()));
 
         if max_abs == 0.0 {
             // All-zero input — nothing to weight

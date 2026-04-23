@@ -231,6 +231,7 @@
 //!   OSDI 2018.
 
 pub mod core;
+mod frame_partitioning;
 
 // Re-export primary types
 #[cfg(feature = "pinn")]

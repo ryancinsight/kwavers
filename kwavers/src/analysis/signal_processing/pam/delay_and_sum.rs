@@ -72,8 +72,8 @@ impl Default for DelayAndSumConfig {
     fn default() -> Self {
         Self {
             sound_speed: SOUND_SPEED_TISSUE, // Soft tissue
-            sampling_frequency: 5e6,  // 5 MHz
-            detection_threshold: 3.0, // 3x noise floor
+            sampling_frequency: 5e6,         // 5 MHz
+            detection_threshold: 3.0,        // 3x noise floor
             window_size: 512,
             apodization: ApodizationType::Hamming,
             coherence_weighting: true,

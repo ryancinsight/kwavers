@@ -160,13 +160,25 @@ impl RadicalIntegrator {
     /// Create a new integrator with default tolerances.
     #[must_use]
     pub fn new(kinetics: RadicalKinetics) -> Self {
-        Self { kinetics, rtol: 1e-6, atol: 1e-12, h_min: 1e-15, h_max: 1e-6 }
+        Self {
+            kinetics,
+            rtol: 1e-6,
+            atol: 1e-12,
+            h_min: 1e-15,
+            h_max: 1e-6,
+        }
     }
 
     /// Create with explicit tolerances.
     #[must_use]
     pub fn with_tolerances(kinetics: RadicalKinetics, rtol: f64, atol: f64) -> Self {
-        Self { kinetics, rtol, atol, h_min: 1e-15, h_max: 1e-6 }
+        Self {
+            kinetics,
+            rtol,
+            atol,
+            h_min: 1e-15,
+            h_max: 1e-6,
+        }
     }
 
     /// Integrate the radical ODE system from `t_start` to `t_end`.
@@ -247,20 +259,15 @@ impl RadicalIntegrator {
 
             // === Stage 5 ===
             for i in 0..n {
-                ytmp[i] = (y[i]
-                    + h * (A51 * k1[i] + A52 * k2[i] + A53 * k3[i] + A54 * k4[i]))
-                    .max(0.0);
+                ytmp[i] =
+                    (y[i] + h * (A51 * k1[i] + A52 * k2[i] + A53 * k3[i] + A54 * k4[i])).max(0.0);
             }
             eval_rhs_at(&kinetics, &species_list, &ytmp, t + C5 * h, &mut k5);
 
             // === Stage 6 (5th-order solution) ===
             for i in 0..n {
                 ytmp[i] = (y[i]
-                    + h * (A61 * k1[i]
-                        + A62 * k2[i]
-                        + A63 * k3[i]
-                        + A64 * k4[i]
-                        + A65 * k5[i]))
+                    + h * (A61 * k1[i] + A62 * k2[i] + A63 * k3[i] + A64 * k4[i] + A65 * k5[i]))
                     .max(0.0);
             }
             eval_rhs_at(&kinetics, &species_list, &ytmp, t + h, &mut k6);
@@ -280,8 +287,8 @@ impl RadicalIntegrator {
             let mut err_max = 0.0_f64;
             for i in 0..n {
                 let sc = self.atol + self.rtol * y5[i].abs();
-                let e = h * (E1 * k1[i] + E3 * k3[i] + E4 * k4[i] + E5 * k5[i] + E6 * k6[i]
-                    + E7 * k7[i]);
+                let e = h
+                    * (E1 * k1[i] + E3 * k3[i] + E4 * k4[i] + E5 * k5[i] + E6 * k6[i] + E7 * k7[i]);
                 err_max = err_max.max((e / sc).abs());
             }
 
@@ -319,7 +326,14 @@ impl RadicalIntegrator {
             .map(|(&s, &v)| (s, v.max(0.0)))
             .collect();
 
-        Ok((result, IntegrationStats { steps_accepted, steps_rejected, final_time: t }))
+        Ok((
+            result,
+            IntegrationStats {
+                steps_accepted,
+                steps_rejected,
+                final_time: t,
+            },
+        ))
     }
 }
 
@@ -328,14 +342,12 @@ impl RadicalIntegrator {
 // ============================================================================
 
 /// Evaluate the ODE right-hand side using `RadicalKinetics::calculate_rates`.
-fn eval_rhs(
-    kinetics: &RadicalKinetics,
-    species: &[ROSSpecies],
-    y: &[f64],
-    out: &mut [f64],
-) {
-    let concs: HashMap<ROSSpecies, f64> =
-        species.iter().zip(y.iter()).map(|(&s, &v)| (s, v.max(0.0))).collect();
+fn eval_rhs(kinetics: &RadicalKinetics, species: &[ROSSpecies], y: &[f64], out: &mut [f64]) {
+    let concs: HashMap<ROSSpecies, f64> = species
+        .iter()
+        .zip(y.iter())
+        .map(|(&s, &v)| (s, v.max(0.0)))
+        .collect();
     let rates = kinetics.calculate_rates(&concs);
     for (i, s) in species.iter().enumerate() {
         out[i] = rates.get(s).copied().unwrap_or(0.0);
@@ -426,7 +438,9 @@ mod tests {
         let mut concs = HashMap::new();
         concs.insert(ROSSpecies::HydroxylRadical, 1.0); // Normalised initial [OH•] = 1
 
-        let (result, stats) = integrator.integrate(&concs, 0.0, 100.0, 298.15, 7.0).unwrap();
+        let (result, stats) = integrator
+            .integrate(&concs, 0.0, 100.0, 298.15, 7.0)
+            .unwrap();
         let oh_final = result[&ROSSpecies::HydroxylRadical];
         let analytical = (-1.0_f64).exp(); // exp(−k·t) = exp(−0.01·100)
 
@@ -454,7 +468,9 @@ mod tests {
     fn test_oh_recombination_half_life() {
         let mut kinetics = RadicalKinetics::new(7.0, 298.15);
         // Keep only the self-recombination reaction (index 0 in standard set)
-        kinetics.reactions.retain(|r| r.name.contains("self-recombination"));
+        kinetics
+            .reactions
+            .retain(|r| r.name.contains("self-recombination"));
         assert_eq!(kinetics.reactions.len(), 1, "expected exactly one reaction");
 
         // rtol=1e-4, atol=1e-14: gives sc ≈ atol + rtol*[OH] ≈ 1e-14 + 1e-4*1e-6 = 1.1e-10,
@@ -473,8 +489,9 @@ mod tests {
         let t_half_analytical = 1.0 / (2.0 * k * oh0); // ≈ 90.9 µs
 
         // Integrate to one half-life
-        let (result, _) =
-            integrator.integrate(&concs, 0.0, t_half_analytical, 298.15, 7.0).unwrap();
+        let (result, _) = integrator
+            .integrate(&concs, 0.0, t_half_analytical, 298.15, 7.0)
+            .unwrap();
         let oh_half = result[&ROSSpecies::HydroxylRadical];
 
         // Should be approximately oh0/2 within 1% (analytical = oh0/2 exactly at t₁/₂)
@@ -498,7 +515,9 @@ mod tests {
         let mut concs = HashMap::new();
         concs.insert(ROSSpecies::HydroxylRadical, 1e-5); // 10 µM
 
-        let (result, _) = integrator.integrate(&concs, 0.0, 1e-6, 298.15, 7.0).unwrap();
+        let (result, _) = integrator
+            .integrate(&concs, 0.0, 1e-6, 298.15, 7.0)
+            .unwrap();
 
         for (&_species, &conc) in &result {
             assert!(conc >= 0.0, "negative concentration detected: {conc}");
@@ -514,7 +533,9 @@ mod tests {
     #[test]
     fn test_oxygen_mass_conservation_oh_recombination() {
         let mut kinetics = RadicalKinetics::new(7.0, 298.15);
-        kinetics.reactions.retain(|r| r.name.contains("self-recombination"));
+        kinetics
+            .reactions
+            .retain(|r| r.name.contains("self-recombination"));
 
         let integrator = RadicalIntegrator::with_tolerances(kinetics, 1e-8, 1e-20);
 
@@ -525,10 +546,18 @@ mod tests {
 
         // t₁/₂ = 1/(2·k·[OH₀]) for d[OH]/dt = −2k[OH]²
         let t_half = 1.0 / (2.0 * 5.5e9 * oh0); // ≈ 90.9 µs
-        let (result, _) = integrator.integrate(&concs, 0.0, t_half, 298.15, 7.0).unwrap();
+        let (result, _) = integrator
+            .integrate(&concs, 0.0, t_half, 298.15, 7.0)
+            .unwrap();
 
-        let oh_f = result.get(&ROSSpecies::HydroxylRadical).copied().unwrap_or(0.0);
-        let h2o2_f = result.get(&ROSSpecies::HydrogenPeroxide).copied().unwrap_or(0.0);
+        let oh_f = result
+            .get(&ROSSpecies::HydroxylRadical)
+            .copied()
+            .unwrap_or(0.0);
+        let h2o2_f = result
+            .get(&ROSSpecies::HydrogenPeroxide)
+            .copied()
+            .unwrap_or(0.0);
 
         // Oxygen balance: [OH•] + 2·[H₂O₂] ≈ oh0 (1 O atom per OH, 2 per H₂O₂)
         let o_initial = oh0;

@@ -124,18 +124,27 @@ impl FunctionalUltrasoundGPS {
 
     /// Register ultrasound image to brain atlas
     pub fn register_to_atlas(&mut self, image: &Array3<f64>) -> KwaversResult<AffineTransform3D> {
-        let initial_transform = [1f64, 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.];
-        let result = self.registration
-            .affine_registration_mutual_info(image, &self.atlas.reference_image(), &initial_transform)
-            .map_err(|e| KwaversError::InvalidInput(format!("RITK Atlas registration failed: {:?}", e)))?;
-        
+        let initial_transform = [
+            1f64, 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,
+        ];
+        let result = self
+            .registration
+            .affine_registration_mutual_info(
+                image,
+                &self.atlas.reference_image(),
+                &initial_transform,
+            )
+            .map_err(|e| {
+                KwaversError::InvalidInput(format!("RITK Atlas registration failed: {:?}", e))
+            })?;
+
         let m = result.transform;
         Ok(AffineTransform3D {
             matrix: [
                 [m[0], m[1], m[2], m[3]],
                 [m[4], m[5], m[6], m[7]],
                 [m[8], m[9], m[10], m[11]],
-            ]
+            ],
         })
     }
 

@@ -113,26 +113,24 @@ impl GpuContext {
 
         // Request device with required features
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("Kwavers GPU Device"),
-                    required_features: wgpu::Features::MAPPABLE_PRIMARY_BUFFERS
-                        | wgpu::Features::PUSH_CONSTANTS,
-                    required_limits: wgpu::Limits {
-                        max_buffer_size: limits.max_buffer_size,
-                        max_storage_buffer_binding_size: limits.max_storage_buffer_binding_size,
-                        max_compute_workgroup_storage_size: 16384,
-                        max_compute_invocations_per_workgroup: 256,
-                        max_compute_workgroup_size_x: 256,
-                        max_compute_workgroup_size_y: 256,
-                        max_compute_workgroup_size_z: 64,
-                        max_push_constant_size: 128,
-                        ..Default::default()
-                    },
-                    memory_hints: wgpu::MemoryHints::default(),
-                    trace: wgpu::Trace::Off,
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("Kwavers GPU Device"),
+                required_features: wgpu::Features::MAPPABLE_PRIMARY_BUFFERS
+                    | wgpu::Features::PUSH_CONSTANTS,
+                required_limits: wgpu::Limits {
+                    max_buffer_size: limits.max_buffer_size,
+                    max_storage_buffer_binding_size: limits.max_storage_buffer_binding_size,
+                    max_compute_workgroup_storage_size: 16384,
+                    max_compute_invocations_per_workgroup: 256,
+                    max_compute_workgroup_size_x: 256,
+                    max_compute_workgroup_size_y: 256,
+                    max_compute_workgroup_size_z: 64,
+                    max_push_constant_size: 128,
+                    ..Default::default()
                 },
-            )
+                memory_hints: wgpu::MemoryHints::default(),
+                trace: wgpu::Trace::Off,
+            })
             .await
             .map_err(|e| {
                 KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {

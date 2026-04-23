@@ -128,19 +128,15 @@ impl BubbleDynamics {
 
             // Shell stiffness (linearised Marmottant): resists deformation → SUBTRACTIVE
             // At R = R0: p_shell = 0 (no initial shell stress).
-            let p_shell = 4.0
-                * bubble.shell_elasticity
-                * bubble.shell_thickness
-                * (r - r0)
-                / (r0 * r0);
+            let p_shell =
+                4.0 * bubble.shell_elasticity * bubble.shell_thickness * (r - r0) / (r0 * r0);
 
             // Viscous damping (PROSPERETTI_TOTAL_DAMPING_COEFFICIENT approximation)
             let damping_force = -self.damping_coefficient * radius_dot / r;
 
             // Rayleigh-Plesset driving term: p_B − 2σ/R − p_shell/R − p0 − p_ac
             // Sign convention: surface tension and shell oppose driving (subtracted).
-            let total_pressure =
-                p_gas - p_surface - p_shell - self.ambient_pressure - p_acoustic;
+            let total_pressure = p_gas - p_surface - p_shell - self.ambient_pressure - p_acoustic;
             let acceleration = total_pressure / (self.liquid_density * r) + damping_force
                 - 1.5 * radius_dot * radius_dot / r;
 
@@ -159,17 +155,12 @@ impl BubbleDynamics {
                 acoustic_pressure * (2.0 * std::f64::consts::PI * frequency * time_new).sin();
             let p_gas_new = p_gas0 * (r0 / r_new).powf(3.0 * bubble.polytropic_index);
             let p_surface_new = 2.0 * bubble.surface_tension / r_new;
-            let p_shell_new = 4.0
-                * bubble.shell_elasticity
-                * bubble.shell_thickness
-                * (radius_new - r0)
-                / (r0 * r0);
+            let p_shell_new =
+                4.0 * bubble.shell_elasticity * bubble.shell_thickness * (radius_new - r0)
+                    / (r0 * r0);
             let damping_force_new = -self.damping_coefficient * radius_dot_pred / r_new;
-            let total_pressure_new = p_gas_new
-                - p_surface_new
-                - p_shell_new
-                - self.ambient_pressure
-                - p_acoustic_new;
+            let total_pressure_new =
+                p_gas_new - p_surface_new - p_shell_new - self.ambient_pressure - p_acoustic_new;
             let acceleration_new = total_pressure_new / (self.liquid_density * r_new)
                 + damping_force_new
                 - 1.5 * radius_dot_pred * radius_dot_pred / r_new;
@@ -260,8 +251,7 @@ impl BubbleDynamics {
         // Dimensionless drive amplitude ε = P_A / (ρ_L R₀² ω_res²)
         // Derivation: linearise RP equation → dimensionless forcing amplitude.
         // Units: Pa / (kg/m³ · m² · rad²/s²) = Pa/Pa = 1  ✓
-        let epsilon = pressure_amplitude
-            / (self.liquid_density * r0 * r0 * omega_res * omega_res);
+        let epsilon = pressure_amplitude / (self.liquid_density * r0 * r0 * omega_res * omega_res);
 
         // Lorentzian resonance response χ(Ω) = 1 / √[(1-Ω²)² + (δ·Ω)²]
         // Continuous at Ω=1; peaks at χ_max = 1/δ (de Jong 1994 Eq. 2).
@@ -335,10 +325,10 @@ mod tests {
         let bubble = test_bubble();
 
         // 4× step-size ratio: amplifies error differences more than 2×
-        let dt_fine = 5e-11;   // 50 ps
+        let dt_fine = 5e-11; // 50 ps
         let dt_coarse = 2e-10; // 200 ps (4× coarser)
-        let dt_ref = 5e-12;    // 5 ps (10× finer than dt_fine → essentially exact)
-        let duration = 50e-9;  // 50 ns
+        let dt_ref = 5e-12; // 5 ps (10× finer than dt_fine → essentially exact)
+        let duration = 50e-9; // 50 ns
 
         let sim_base = BubbleDynamics {
             dt: dt_fine,
@@ -350,15 +340,24 @@ mod tests {
         let p_ac = 1e3; // 1 kPa (linear regime: amplitude ≪ p0 = 101 kPa)
         let freq = 1e6;
 
-        let r_ref = BubbleDynamics { dt: dt_ref, ..sim_base }
-            .simulate_oscillation(&bubble, p_ac, freq, duration)
-            .unwrap();
-        let r_fine = BubbleDynamics { dt: dt_fine, ..sim_base }
-            .simulate_oscillation(&bubble, p_ac, freq, duration)
-            .unwrap();
-        let r_coarse = BubbleDynamics { dt: dt_coarse, ..sim_base }
-            .simulate_oscillation(&bubble, p_ac, freq, duration)
-            .unwrap();
+        let r_ref = BubbleDynamics {
+            dt: dt_ref,
+            ..sim_base
+        }
+        .simulate_oscillation(&bubble, p_ac, freq, duration)
+        .unwrap();
+        let r_fine = BubbleDynamics {
+            dt: dt_fine,
+            ..sim_base
+        }
+        .simulate_oscillation(&bubble, p_ac, freq, duration)
+        .unwrap();
+        let r_coarse = BubbleDynamics {
+            dt: dt_coarse,
+            ..sim_base
+        }
+        .simulate_oscillation(&bubble, p_ac, freq, duration)
+        .unwrap();
 
         let r_ref_end = *r_ref.radius.last().unwrap();
         let r_fine_end = *r_fine.radius.last().unwrap();
@@ -414,7 +413,11 @@ mod tests {
             .unwrap();
 
         let r0 = bubble.radius_eq;
-        let max_r = result.radius.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let max_r = result
+            .radius
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
         let min_r = result.radius.iter().cloned().fold(f64::INFINITY, f64::min);
 
         assert!(

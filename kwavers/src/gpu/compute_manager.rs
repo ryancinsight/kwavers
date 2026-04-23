@@ -122,15 +122,13 @@ impl ComputeManager {
             .map_err(|_| KwaversError::GpuError("No GPU adapter found".into()))?;
 
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("Kwavers Compute Device"),
-                    required_features: wgpu::Features::empty(),
-                    required_limits: wgpu::Limits::default(),
-                    memory_hints: Default::default(),
-                    trace: wgpu::Trace::Off,
-                },
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("Kwavers Compute Device"),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::default(),
+                memory_hints: Default::default(),
+                trace: wgpu::Trace::Off,
+            })
             .await
             .map_err(|e| KwaversError::GpuError(format!("Failed to create device: {}", e)))?;
 

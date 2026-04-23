@@ -281,8 +281,7 @@ pub fn contrast_harmonic_response(pressure: f64, frequency: f64, bubble_resonanc
     // Damping constant δ = 0.1 → Q ≈ 10 (typical lipid-shelled microbubble)
     const DAMPING: f64 = 0.1;
     let resonance_enhancement =
-        1.0 / ((1.0 - omega_ratio.powi(2)).powi(2) + DAMPING.powi(2) * omega_ratio.powi(2))
-            .sqrt();
+        1.0 / ((1.0 - omega_ratio.powi(2)).powi(2) + DAMPING.powi(2) * omega_ratio.powi(2)).sqrt();
     // K [Pa⁻¹]: consistent with Mie scattering cross section for ~2 µm bubble
     const BUBBLE_NONLINEARITY_SCALE: f64 = 1e-6;
     BUBBLE_NONLINEARITY_SCALE * pressure.powi(2) * resonance_enhancement
@@ -380,8 +379,10 @@ mod tests {
             );
 
             // The ratio should be strictly between 0 and 1 for pre-shock
-            assert!(expected_ratio > 0.0 && expected_ratio < 1.0,
-                "σ={sigma}: B₂/B₁ = {expected_ratio} must be in (0,1)");
+            assert!(
+                expected_ratio > 0.0 && expected_ratio < 1.0,
+                "σ={sigma}: B₂/B₁ = {expected_ratio} must be in (0,1)"
+            );
         }
     }
 
@@ -406,10 +407,7 @@ mod tests {
         };
 
         let eta = tissue_harmonic_efficiency(&props, &params);
-        assert!(
-            (eta - 1.0).abs() < 1e-10,
-            "η(F_opt) must be 1.0, got {eta}"
-        );
+        assert!((eta - 1.0).abs() < 1e-10, "η(F_opt) must be 1.0, got {eta}");
     }
 
     /// Efficiency must be strictly less than 1 for F ≠ F_opt.

@@ -369,7 +369,15 @@ mod tests {
         let grid = Grid::new(32, 32, 32, dx, dx, dx).expect("grid creation");
         let (kx, ky, kz) = compute_wavenumbers(&grid);
 
-        let kappa = compute_kspace_correction_factors(&kx, &ky, &kz, &grid, CorrectionType::Treeby2010, dt, c0);
+        let kappa = compute_kspace_correction_factors(
+            &kx,
+            &ky,
+            &kz,
+            &grid,
+            CorrectionType::Treeby2010,
+            dt,
+            c0,
+        );
 
         // DC component: κ = 1.0 exactly
         assert!(

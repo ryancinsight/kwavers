@@ -102,15 +102,13 @@ impl BeamformingProcessor3D {
 
             // Create logical device and queue
             let (device, queue) = adapter
-                .request_device(
-                    &wgpu::DeviceDescriptor {
-                        label: Some("3D Beamforming Device"),
-                        required_features: wgpu::Features::empty(),
-                        required_limits: wgpu::Limits::default(),
-                        memory_hints: wgpu::MemoryHints::default(),
+                .request_device(&wgpu::DeviceDescriptor {
+                    label: Some("3D Beamforming Device"),
+                    required_features: wgpu::Features::empty(),
+                    required_limits: wgpu::Limits::default(),
+                    memory_hints: wgpu::MemoryHints::default(),
                     trace: wgpu::Trace::Off,
-                    },
-                )
+                })
                 .await
                 .map_err(|e| {
                     KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {

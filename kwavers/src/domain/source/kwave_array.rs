@@ -6,6 +6,12 @@
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use ndarray::{Array2, Array3};
 
+const DISC_SAMPLE_UPSAMPLING_RATE: f64 = 10.0;
+const DISC_PACKING_NUMBER: f64 = 7.0;
+const DISC_BLI_TOLERANCE: f64 = 0.05;
+const DISC_AXIS_EPSILON: f64 = 1.0e-12;
+const GOLDEN_ANGLE: f64 = 2.399_963_229_728_653_5_f64;
+
 /// Apodization window for per-element amplitude weighting
 ///
 /// # Theorem — Window Functions (Harris 1978)
@@ -54,6 +60,10 @@ pub enum ElementShape {
         height: f64,
         /// Length in z [m]
         length: f64,
+        /// Intrinsic X-Y-Z Euler rotation in degrees applied about the element
+        /// center. `(0.0, 0.0, 0.0)` keeps the rectangle axis-aligned and
+        /// dispatches the fast AABB rasterizer.
+        euler_xyz_deg: (f64, f64, f64),
     },
     /// Disc/circular element
     Disc {
@@ -61,6 +71,8 @@ pub enum ElementShape {
         position: (f64, f64, f64),
         /// Disc diameter [m]
         diameter: f64,
+        /// Optional focus point defining the disc normal [x, y, z]
+        focus_position: Option<(f64, f64, f64)>,
     },
     /// Bowl/spherical cap element
     Bowl {
@@ -86,7 +98,7 @@ pub struct KWaveArray {
     /// Sound speed [m/s]
     sound_speed: f64,
     /// Element width for arc elements [m]
-    element_width: f64,
+    _element_width: f64,
 }
 
 impl KWaveArray {
@@ -97,7 +109,7 @@ impl KWaveArray {
             elements: Vec::new(),
             frequency: 1e6,
             sound_speed: SOUND_SPEED_TISSUE,
-            element_width: 0.5e-3,
+            _element_width: 0.5e-3,
         }
     }
 
@@ -114,14 +126,24 @@ impl KWaveArray {
             elements: Vec::new(),
             frequency,
             sound_speed,
-            element_width: 0.5e-3,
+            _element_width: 0.5e-3,
         }
+    }
+
+    /// Update the operating frequency while preserving existing elements.
+    pub fn set_frequency(&mut self, frequency: f64) {
+        self.frequency = frequency;
+    }
+
+    /// Update the sound speed while preserving existing elements.
+    pub fn set_sound_speed(&mut self, sound_speed: f64) {
+        self.sound_speed = sound_speed;
     }
 
     /// Set the element width (for arc discretization)
     #[must_use]
     pub fn with_element_width(mut self, width: f64) -> Self {
-        self.element_width = width;
+        self._element_width = width;
         self
     }
 
@@ -192,6 +214,29 @@ impl KWaveArray {
             width,
             height,
             length,
+            euler_xyz_deg: (0.0, 0.0, 0.0),
+        });
+        self
+    }
+
+    /// Add a rectangular element rotated about its center by intrinsic X-Y-Z
+    /// Euler angles (degrees). Matches the upstream k-wave-python
+    /// `KWaveArray.add_rect_element` rotation contract used by the linear
+    /// array transducer example.
+    pub fn add_rect_rot_element(
+        &mut self,
+        position: (f64, f64, f64),
+        width: f64,
+        height: f64,
+        length: f64,
+        euler_xyz_deg: (f64, f64, f64),
+    ) -> &mut Self {
+        self.elements.push(ElementShape::Rect {
+            position,
+            width,
+            height,
+            length,
+            euler_xyz_deg,
         });
         self
     }
@@ -201,9 +246,17 @@ impl KWaveArray {
     /// # Arguments
     /// * `position` - Center position [x, y, z] in meters
     /// * `diameter` - Disc diameter in meters
-    pub fn add_disc_element(&mut self, position: (f64, f64, f64), diameter: f64) -> &mut Self {
-        self.elements
-            .push(ElementShape::Disc { position, diameter });
+    pub fn add_disc_element(
+        &mut self,
+        position: (f64, f64, f64),
+        diameter: f64,
+        focus_position: Option<(f64, f64, f64)>,
+    ) -> &mut Self {
+        self.elements.push(ElementShape::Disc {
+            position,
+            diameter,
+            focus_position,
+        });
         self
     }
 
@@ -281,11 +334,24 @@ impl KWaveArray {
                     width,
                     height,
                     length,
+                    euler_xyz_deg,
                 } => {
-                    self.rasterize_rect(&mut mask, grid, *position, *width, *height, *length);
+                    self.rasterize_rect(
+                        &mut mask,
+                        grid,
+                        *position,
+                        *width,
+                        *height,
+                        *length,
+                        *euler_xyz_deg,
+                    );
                 }
-                ElementShape::Disc { position, diameter } => {
-                    self.rasterize_disc(&mut mask, grid, *position, *diameter);
+                ElementShape::Disc {
+                    position,
+                    diameter,
+                    focus_position,
+                } => {
+                    self.rasterize_disc(&mut mask, grid, *position, *diameter, *focus_position);
                 }
                 ElementShape::Bowl {
                     position,
@@ -423,8 +489,7 @@ impl KWaveArray {
                 }
                 (0..n)
                     .map(|i| {
-                        0.5 * (1.0
-                            - (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos())
+                        0.5 * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos())
                     })
                     .collect()
             }
@@ -434,78 +499,104 @@ impl KWaveArray {
                 }
                 (0..n)
                     .map(|i| {
-                        0.54 - 0.46
-                            * (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos()
+                        0.54 - 0.46 * (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos()
                     })
                     .collect()
             }
         }
     }
 
-    /// Rasterize an arc element onto the grid
+    /// Rasterize an arc element onto the grid.
+    ///
+    /// # Algorithm - Line-Sampled Arc with BLI Stencil
+    ///
+    /// The arc is treated as a 1D curved line segment with geometric measure
+    /// `L = r · |Δθ|`.  The segment is sampled at half-step offsets along the
+    /// angular span and each sample is mapped through the same local BLI
+    /// stencil as the disc and bowl elements.
     fn rasterize_arc(
         &self,
         mask: &mut Array3<bool>,
         grid: &crate::domain::grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
-        diameter: f64,
+        _diameter: f64,
         start_angle: f64,
         end_angle: f64,
     ) {
-        let nx = grid.nx as isize;
-        let ny = grid.ny as isize;
-        let nz = grid.nz as isize;
-        let dx = grid.dx;
-        let dy = grid.dy;
-        let dz = grid.dz;
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
 
-        // Discretize arc into points
-        let num_points =
-            ((end_angle - start_angle).abs() * radius / self.element_width).ceil() as usize;
-        let num_points = num_points.max(10);
-
-        for i in 0..=num_points {
-            let angle_deg =
-                start_angle + (end_angle - start_angle) * (i as f64 / num_points as f64);
-            let angle_rad = angle_deg.to_radians();
-
-            // Calculate arc point
-            let ax = center.0 + radius * angle_rad.cos();
-            let ay = center.1 + radius * angle_rad.sin();
-            let az = center.2;
-
-            // Mark grid cells within element diameter
-            let radius_cells = (diameter / 2.0 / dx).ceil() as isize;
-
-            let ix = ((ax - grid.origin[0]) / dx).round() as isize;
-            let iy = ((ay - grid.origin[1]) / dy).round() as isize;
-            let iz = ((az - grid.origin[2]) / dz).round() as isize;
-
-            for di in -radius_cells..=radius_cells {
-                for dj in -radius_cells..=radius_cells {
-                    for dk in -radius_cells..=radius_cells {
-                        let xi = ix + di;
-                        let yi = iy + dj;
-                        let zi = iz + dk;
-
-                        if xi >= 0 && xi < nx && yi >= 0 && yi < ny && zi >= 0 && zi < nz {
-                            // Check if within circular element area
-                            let dist = ((di as f64 * dx).powi(2)
-                                + (dj as f64 * dy).powi(2)
-                                + (dk as f64 * dz).powi(2))
-                            .sqrt();
-                            if dist <= diameter / 2.0 {
-                                mask[[xi as usize, yi as usize, zi as usize]] = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        self.rasterize_arc_points(
+            grid,
+            center,
+            radius,
+            start_angle,
+            end_angle,
+            |point, scale| {
+                self.map_surface_sample(
+                    grid,
+                    &x_vec,
+                    &y_vec,
+                    &z_vec,
+                    point,
+                    scale,
+                    true,
+                    |ix, iy, iz, _| {
+                        mask[[ix, iy, iz]] = true;
+                    },
+                );
+            },
+        );
     }
 
-    /// Rasterize a rectangular element onto the grid
+    /// Rasterize an arc element onto the grid with area-conserving weights.
+    fn rasterize_arc_weighted(
+        &self,
+        mask: &mut Array3<f64>,
+        grid: &crate::domain::grid::Grid,
+        center: (f64, f64, f64),
+        radius: f64,
+        _diameter: f64,
+        start_angle: f64,
+        end_angle: f64,
+    ) {
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
+
+        self.rasterize_arc_points(
+            grid,
+            center,
+            radius,
+            start_angle,
+            end_angle,
+            |point, scale| {
+                self.map_surface_sample(
+                    grid,
+                    &x_vec,
+                    &y_vec,
+                    &z_vec,
+                    point,
+                    scale,
+                    false,
+                    |ix, iy, iz, weight| {
+                        mask[[ix, iy, iz]] += weight;
+                    },
+                );
+            },
+        );
+    }
+
+    /// Rasterize a rectangular element onto the grid.
+    ///
+    /// When `euler_xyz_deg == (0, 0, 0)` the rectangle is axis-aligned and we
+    /// use the fast AABB marker. Otherwise we sample the rectangle surface on
+    /// a sub-grid lattice (upsampled by `DISC_SAMPLE_UPSAMPLING_RATE`) and
+    /// apply the intrinsic X-Y-Z rotation before marking the containing cell
+    /// of each sample — matching the upstream k-wave-python rotated-rect
+    /// contract used by `at_linear_array_transducer`.
     fn rasterize_rect(
         &self,
         mask: &mut Array3<bool>,
@@ -514,88 +605,411 @@ impl KWaveArray {
         width: f64,
         height: f64,
         length: f64,
+        euler_xyz_deg: (f64, f64, f64),
     ) {
         let nx = grid.nx;
         let ny = grid.ny;
         let nz = grid.nz;
 
-        // Calculate grid bounds for rectangle
-        let x_min = ((center.0 - width / 2.0 - grid.origin[0]) / grid.dx).floor() as usize;
-        let x_max = ((center.0 + width / 2.0 - grid.origin[0]) / grid.dx).ceil() as usize;
-        let y_min = ((center.1 - height / 2.0 - grid.origin[1]) / grid.dy).floor() as usize;
-        let y_max = ((center.1 + height / 2.0 - grid.origin[1]) / grid.dy).ceil() as usize;
-        let z_min = ((center.2 - length / 2.0 - grid.origin[2]) / grid.dz).floor() as usize;
-        let z_max = ((center.2 + length / 2.0 - grid.origin[2]) / grid.dz).ceil() as usize;
+        if euler_xyz_deg.0 == 0.0 && euler_xyz_deg.1 == 0.0 && euler_xyz_deg.2 == 0.0 {
+            let x_min = ((center.0 - width / 2.0 - grid.origin[0]) / grid.dx).floor() as usize;
+            let x_max = ((center.0 + width / 2.0 - grid.origin[0]) / grid.dx).ceil() as usize;
+            let y_min = ((center.1 - height / 2.0 - grid.origin[1]) / grid.dy).floor() as usize;
+            let y_max = ((center.1 + height / 2.0 - grid.origin[1]) / grid.dy).ceil() as usize;
+            let z_min = ((center.2 - length / 2.0 - grid.origin[2]) / grid.dz).floor() as usize;
+            let z_max = ((center.2 + length / 2.0 - grid.origin[2]) / grid.dz).ceil() as usize;
 
-        // Clamp to grid bounds
-        let x_min = x_min.min(nx);
-        let x_max = x_max.min(nx);
-        let y_min = y_min.min(ny);
-        let y_max = y_max.min(ny);
-        let z_min = z_min.min(nz);
-        let z_max = z_max.min(nz);
+            let x_min = x_min.min(nx);
+            let x_max = x_max.min(nx);
+            let y_min = y_min.min(ny);
+            let y_max = y_max.min(ny);
+            let z_min = z_min.min(nz);
+            let z_max = z_max.min(nz);
 
-        for i in x_min..x_max {
-            for j in y_min..y_max {
-                for k in z_min..z_max {
-                    mask[[i, j, k]] = true;
+            for i in x_min..x_max {
+                for j in y_min..y_max {
+                    for k in z_min..z_max {
+                        mask[[i, j, k]] = true;
+                    }
                 }
             }
+            return;
         }
-    }
 
-    /// Rasterize a disc element onto the grid
-    fn rasterize_disc(
-        &self,
-        mask: &mut Array3<bool>,
-        grid: &crate::domain::grid::Grid,
-        center: (f64, f64, f64),
-        diameter: f64,
-    ) {
-        let nx = grid.nx as isize;
-        let ny = grid.ny as isize;
-        let nz = grid.nz as isize;
+        let rot = euler_xyz_rotation_matrix(euler_xyz_deg);
+        let dmin = grid.dx.min(grid.dy).min(grid.dz);
+        let sample = |extent: f64| {
+            ((extent / dmin).ceil() * DISC_SAMPLE_UPSAMPLING_RATE)
+                .max(1.0) as usize
+                + 1
+        };
+        let nu = sample(width);
+        let nv = sample(height);
+        let nw = sample(length.max(dmin));
 
-        let ix = ((center.0 - grid.origin[0]) / grid.dx).round() as isize;
-        let iy = ((center.1 - grid.origin[1]) / grid.dy).round() as isize;
-        let iz = ((center.2 - grid.origin[2]) / grid.dz).round() as isize;
+        let step = |n: usize, extent: f64| -> f64 {
+            if n <= 1 {
+                0.0
+            } else {
+                extent / (n - 1) as f64
+            }
+        };
+        let du = step(nu, width);
+        let dv = step(nv, height);
+        let dw = step(nw, length);
 
-        let radius_cells = (diameter / 2.0 / grid.dx).ceil() as isize;
-
-        for di in -radius_cells..=radius_cells {
-            for dj in -radius_cells..=radius_cells {
-                for dk in -radius_cells..=radius_cells {
-                    let xi = ix + di;
-                    let yi = iy + dj;
-                    let zi = iz + dk;
-
-                    if xi >= 0 && xi < nx && yi >= 0 && yi < ny && zi >= 0 && zi < nz {
-                        let dist = ((di as f64 * grid.dx).powi(2)
-                            + (dj as f64 * grid.dy).powi(2)
-                            + (dk as f64 * grid.dz).powi(2))
-                        .sqrt();
-                        if dist <= diameter / 2.0 {
-                            mask[[xi as usize, yi as usize, zi as usize]] = true;
-                        }
+        for iu in 0..nu {
+            let lu = -width / 2.0 + du * iu as f64;
+            for iv in 0..nv {
+                let lv = -height / 2.0 + dv * iv as f64;
+                for iw in 0..nw {
+                    let lw = if nw <= 1 {
+                        0.0
+                    } else {
+                        -length / 2.0 + dw * iw as f64
+                    };
+                    let (rx, ry, rz) = apply_matrix(&rot, (lu, lv, lw));
+                    let gx = ((center.0 + rx - grid.origin[0]) / grid.dx).round();
+                    let gy = ((center.1 + ry - grid.origin[1]) / grid.dy).round();
+                    let gz = ((center.2 + rz - grid.origin[2]) / grid.dz).round();
+                    if gx < 0.0 || gy < 0.0 || gz < 0.0 {
+                        continue;
+                    }
+                    let ix = gx as usize;
+                    let iy = gy as usize;
+                    let iz = gz as usize;
+                    if ix < nx && iy < ny && iz < nz {
+                        mask[[ix, iy, iz]] = true;
                     }
                 }
             }
         }
     }
 
-    /// Compute the total surface area (m²) of all elements in the array.
+    /// Rasterize a disc element onto the grid.
+    ///
+    /// # Algorithm - Oriented Disc Sampling
+    ///
+    /// Let `c` be the disc center and `f` an optional focus point. When `f`
+    /// is provided, the unit normal is `n = (f - c) / ||f - c||`; otherwise
+    /// the canonical disc normal is `e_z`. The disc is sampled on an
+    /// orthonormal basis `(u, v)` spanning the plane orthogonal to `n`.
+    ///
+    /// Each sample point is
+    ///
+    /// `p(r, θ) = c + r cos(θ) u + r sin(θ) v`
+    ///
+    /// and contributes one unit of occupancy to the containing grid cell.
+    /// The weighted variant uses the same sample set with a constant scale so
+    /// the total discrete mass remains `A / dx²` up to roundoff.
+    fn rasterize_disc(
+        &self,
+        mask: &mut Array3<bool>,
+        grid: &crate::domain::grid::Grid,
+        center: (f64, f64, f64),
+        diameter: f64,
+        focus_position: Option<(f64, f64, f64)>,
+    ) {
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
+
+        self.rasterize_disc_points(grid, center, diameter, focus_position, |point, scale| {
+            self.map_surface_sample(
+                grid,
+                &x_vec,
+                &y_vec,
+                &z_vec,
+                point,
+                scale,
+                true,
+                |ix, iy, iz, _| {
+                    mask[[ix, iy, iz]] = true;
+                },
+            );
+        });
+    }
+
+    /// Rasterize a disc element onto the grid with area-conserving weights.
+    fn rasterize_disc_weighted(
+        &self,
+        mask: &mut Array3<f64>,
+        grid: &crate::domain::grid::Grid,
+        center: (f64, f64, f64),
+        diameter: f64,
+        focus_position: Option<(f64, f64, f64)>,
+    ) {
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
+
+        self.rasterize_disc_points(grid, center, diameter, focus_position, |point, scale| {
+            self.map_surface_sample(
+                grid,
+                &x_vec,
+                &y_vec,
+                &z_vec,
+                point,
+                scale,
+                false,
+                |ix, iy, iz, weight| {
+                    mask[[ix, iy, iz]] += weight;
+                },
+            );
+        });
+    }
+
+    fn rasterize_disc_points<F>(
+        &self,
+        grid: &crate::domain::grid::Grid,
+        center: (f64, f64, f64),
+        diameter: f64,
+        focus_position: Option<(f64, f64, f64)>,
+        mut visit: F,
+    ) where
+        F: FnMut([f64; 3], f64),
+    {
+        let radius = diameter / 2.0;
+        let area = std::f64::consts::PI * radius * radius;
+        let m_grid = area / (grid.dx * grid.dx);
+        let target_points = (m_grid * DISC_SAMPLE_UPSAMPLING_RATE).ceil().max(1.0) as usize;
+        let num_radial =
+            ((target_points as f64 / std::f64::consts::PI).sqrt().ceil() as usize).max(1);
+        let num_points = self.disc_sample_count(num_radial);
+        let scale = m_grid / num_points as f64;
+        let (u, v, _) = self.disc_basis(center, focus_position);
+
+        let mut emit = |x_local: f64, y_local: f64| {
+            let point = [
+                center.0 + x_local * u[0] + y_local * v[0],
+                center.1 + x_local * u[1] + y_local * v[1],
+                center.2 + x_local * u[2] + y_local * v[2],
+            ];
+            visit(point, scale);
+        };
+
+        emit(0.0, 0.0);
+        if num_radial == 1 {
+            return;
+        }
+
+        let radial_denom = (num_radial - 1) as f64;
+        let radial_step = (radius - radius / (2.0 * radial_denom)) / radial_denom;
+
+        for ring_idx in 1..num_radial {
+            let ring_radius = ring_idx as f64 * radial_step;
+            let num_theta = ((ring_idx as f64) * DISC_PACKING_NUMBER).round().max(1.0) as usize;
+            for theta_idx in 0..num_theta {
+                let theta = 2.0 * std::f64::consts::PI * theta_idx as f64 / num_theta as f64;
+                emit(ring_radius * theta.cos(), ring_radius * theta.sin());
+            }
+        }
+    }
+
+    fn map_surface_sample<F>(
+        &self,
+        grid: &crate::domain::grid::Grid,
+        x_vec: &ndarray::Array1<f64>,
+        y_vec: &ndarray::Array1<f64>,
+        z_vec: &ndarray::Array1<f64>,
+        point: [f64; 3],
+        scale: f64,
+        mask_only: bool,
+        mut visit: F,
+    ) where
+        F: FnMut(usize, usize, usize, f64),
+    {
+        let decay_subs = (1.0 / (std::f64::consts::PI * DISC_BLI_TOLERANCE)).ceil() as isize;
+        let ongrid_threshold = grid.dx * 1.0e-3;
+
+        let (ix0, x_closest) = Self::nearest_coordinate_index(x_vec, point[0]);
+        let (iy0, y_closest) = Self::nearest_coordinate_index(y_vec, point[1]);
+        let (iz0, z_closest) = Self::nearest_coordinate_index(z_vec, point[2]);
+
+        let x_on_grid = (x_closest - point[0]).abs() < ongrid_threshold;
+        let y_on_grid = (y_closest - point[1]).abs() < ongrid_threshold;
+        let z_on_grid = (z_closest - point[2]).abs() < ongrid_threshold;
+
+        if grid.nz == 1 {
+            let iz = iz0;
+            for di in -decay_subs..=decay_subs {
+                for dj in -decay_subs..=decay_subs {
+                    if (di * dj).abs() > decay_subs {
+                        continue;
+                    }
+                    if x_on_grid && di != 0 {
+                        continue;
+                    }
+                    if y_on_grid && dj != 0 {
+                        continue;
+                    }
+
+                    let ix = ix0 as isize + di;
+                    let iy = iy0 as isize + dj;
+                    if ix < 0 || iy < 0 || ix >= grid.nx as isize || iy >= grid.ny as isize {
+                        continue;
+                    }
+
+                    let ix = ix as usize;
+                    let iy = iy as usize;
+                    let wx = Self::sinc(std::f64::consts::PI * (x_vec[ix] - point[0]) / grid.dx);
+                    let wy = Self::sinc(std::f64::consts::PI * (y_vec[iy] - point[1]) / grid.dy);
+                    let weight = scale * wx * wy;
+                    if mask_only || weight != 0.0 {
+                        visit(ix, iy, iz, if mask_only { 1.0 } else { weight });
+                    }
+                }
+            }
+            return;
+        }
+
+        for di in -decay_subs..=decay_subs {
+            for dj in -decay_subs..=decay_subs {
+                for dk in -decay_subs..=decay_subs {
+                    if (di * dj * dk).abs() > decay_subs {
+                        continue;
+                    }
+                    if x_on_grid && di != 0 {
+                        continue;
+                    }
+                    if y_on_grid && dj != 0 {
+                        continue;
+                    }
+                    if z_on_grid && dk != 0 {
+                        continue;
+                    }
+
+                    let ix = ix0 as isize + di;
+                    let iy = iy0 as isize + dj;
+                    let iz = iz0 as isize + dk;
+                    if ix < 0
+                        || iy < 0
+                        || iz < 0
+                        || ix >= grid.nx as isize
+                        || iy >= grid.ny as isize
+                        || iz >= grid.nz as isize
+                    {
+                        continue;
+                    }
+
+                    let ix = ix as usize;
+                    let iy = iy as usize;
+                    let iz = iz as usize;
+                    let wx = Self::sinc(std::f64::consts::PI * (x_vec[ix] - point[0]) / grid.dx);
+                    let wy = Self::sinc(std::f64::consts::PI * (y_vec[iy] - point[1]) / grid.dy);
+                    let wz = Self::sinc(std::f64::consts::PI * (z_vec[iz] - point[2]) / grid.dz);
+                    let weight = scale * wx * wy * wz;
+                    if mask_only || weight != 0.0 {
+                        visit(ix, iy, iz, if mask_only { 1.0 } else { weight });
+                    }
+                }
+            }
+        }
+    }
+
+    fn nearest_coordinate_index(coords: &ndarray::Array1<f64>, value: f64) -> (usize, f64) {
+        let mut best_index = 0usize;
+        let mut best_value = coords[0];
+        let mut best_distance = (best_value - value).abs();
+
+        for (index, coordinate) in coords.iter().enumerate().skip(1) {
+            let distance = (*coordinate - value).abs();
+            if distance < best_distance {
+                best_index = index;
+                best_value = *coordinate;
+                best_distance = distance;
+            }
+        }
+
+        (best_index, best_value)
+    }
+
+    #[inline]
+    fn sinc(x: f64) -> f64 {
+        if x.abs() <= f64::EPSILON {
+            1.0
+        } else {
+            x.sin() / x
+        }
+    }
+
+    fn disc_sample_count(&self, num_radial: usize) -> usize {
+        if num_radial == 1 {
+            return 1;
+        }
+
+        let mut num_points = 1usize;
+        for ring_idx in 1..num_radial {
+            let num_theta = ((ring_idx as f64) * DISC_PACKING_NUMBER).round().max(1.0) as usize;
+            num_points += num_theta;
+        }
+        num_points
+    }
+
+    fn disc_basis(
+        &self,
+        center: (f64, f64, f64),
+        focus_position: Option<(f64, f64, f64)>,
+    ) -> ([f64; 3], [f64; 3], [f64; 3]) {
+        let normal = if let Some((fx, fy, fz)) = focus_position {
+            let nx = fx - center.0;
+            let ny = fy - center.1;
+            let nz = fz - center.2;
+            let norm = (nx * nx + ny * ny + nz * nz).sqrt();
+            assert!(
+                norm > DISC_AXIS_EPSILON,
+                "focus position must differ from disc position"
+            );
+            [nx / norm, ny / norm, nz / norm]
+        } else {
+            [0.0, 0.0, 1.0]
+        };
+
+        let reference = if normal[2].abs() < 0.9 {
+            [0.0, 0.0, 1.0]
+        } else {
+            [0.0, 1.0, 0.0]
+        };
+        let mut u = [
+            reference[1] * normal[2] - reference[2] * normal[1],
+            reference[2] * normal[0] - reference[0] * normal[2],
+            reference[0] * normal[1] - reference[1] * normal[0],
+        ];
+        let u_norm = (u[0] * u[0] + u[1] * u[1] + u[2] * u[2]).sqrt();
+        if u_norm <= DISC_AXIS_EPSILON {
+            u = [1.0, 0.0, 0.0];
+        } else {
+            u[0] /= u_norm;
+            u[1] /= u_norm;
+            u[2] /= u_norm;
+        }
+        let v = [
+            normal[1] * u[2] - normal[2] * u[1],
+            normal[2] * u[0] - normal[0] * u[2],
+            normal[0] * u[1] - normal[1] * u[0],
+        ];
+
+        (u, v, normal)
+    }
+
+    /// Compute the total geometric measure of all elements in the array.
     ///
     /// # Bowl formula (Treeby & Cox 2010)
     /// Spherical cap area = 2π·R·h  where  h = R − √(R²−(D/2)²)
     /// is the sagittal depth and D is the aperture diameter.
     ///
-    /// Used for BLI-equivalent normalisation: m_grid = area / dx²
+    /// Disc and bowl elements contribute an area, rectangles contribute an
+    /// area, and arc elements contribute a line length.
     #[must_use]
     pub fn compute_total_surface_area(&self) -> f64 {
         let mut total = 0.0_f64;
         for element in &self.elements {
             total += match element {
-                ElementShape::Bowl { radius: r, diameter: d, .. } => {
+                ElementShape::Bowl {
+                    radius: r,
+                    diameter: d,
+                    ..
+                } => {
                     let half_d = d / 2.0;
                     let h = if *r > half_d {
                         r - (r * r - half_d * half_d).sqrt()
@@ -604,13 +1018,18 @@ impl KWaveArray {
                     };
                     2.0 * std::f64::consts::PI * r * h
                 }
-                ElementShape::Disc { diameter: d, .. } => {
-                    std::f64::consts::PI * (d / 2.0).powi(2)
-                }
-                ElementShape::Rect { width: w, height: h, .. } => w * h,
-                ElementShape::Arc { radius: r, start_angle: s, end_angle: e, diameter: d, .. } => {
-                    r * (e - s).abs().to_radians() * d
-                }
+                ElementShape::Disc { diameter: d, .. } => std::f64::consts::PI * (d / 2.0).powi(2),
+                ElementShape::Rect {
+                    width: w,
+                    height: h,
+                    ..
+                } => w * h,
+                ElementShape::Arc {
+                    radius: r,
+                    start_angle: s,
+                    end_angle: e,
+                    ..
+                } => Self::arc_line_length(*r, *s, *e),
             };
         }
         total
@@ -618,59 +1037,53 @@ impl KWaveArray {
 
     /// Generate a float-weighted mask on the computational grid.
     ///
-    /// Uses dense surface sampling (equivalent to k-wave BLI with NGP mapping)
-    /// to produce per-cell weights that sum to `m_grid = surface_area / dx²`.
+    /// Uses k-wave-compatible surface sampling and local BLI stencils to
+    /// produce per-cell weights that sum to each element's geometric measure
+    /// expressed in grid cells.
     ///
     /// # Algorithm (NGP-BLI equivalence)
     ///
     /// k-Wave's `get_distributed_source_signal` generates `m_integration` =
-    /// `ceil(m_grid × upsampling_rate)` sample points on the transducer surface
+    /// `ceil(m_grid × upsampling_rate)` sample points on the transducer measure
     /// and maps each via BLI with `scale = m_grid / m_integration`.
     ///
-    /// This function replicates the same logic but uses nearest-grid-point (NGP)
-    /// mapping instead of BLI:
-    ///   1. Parametrise the bowl surface uniformly in area
-    ///      (u = (r_lat/R_aperture)², φ ∈ [0, 2π))
-    ///   2. Generate `N_samples ≈ upsampling_rate² × m_grid` sample points
-    ///   3. Each sample contributes `scale = m_grid / N_samples` to the
-    ///      nearest grid cell (floor-based NGP)
-    ///   4. Total weight across all cells = m_grid ✓
-    ///
-    /// For other element shapes (disc, rect, arc) the binary mask is used
-    /// with uniform weight = m_grid / N_active for area-preserving injection.
+    /// Disc and bowl elements both use deterministic surface samplers and the
+    /// same local BLI stencil as k-wave-python (`bli_tolerance = 0.05`,
+    /// `bli_type = "sinc"`). Rect elements remain binary masks with uniform
+    /// unit weights per active cell. Arc elements use weighted line sampling
+    /// with the same BLI stencil and arc-length normalization as the upstream
+    /// k-wave-python `make_cart_arc` path.
     ///
     /// # Arguments
     /// * `grid` – Computational grid defining the domain.
     ///
     /// # Returns
-    /// `Array3<f64>` where all non-zero entries sum to `m_grid = surface_area / dx²`.
+    /// `Array3<f64>` where each element contributes its geometric measure in
+    /// grid-cell units.
     pub fn get_array_weighted_mask(&self, grid: &crate::domain::grid::Grid) -> Array3<f64> {
         let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
         for element in &self.elements {
             match element {
-                ElementShape::Bowl { position, radius, diameter } => {
-                    self.rasterize_bowl_weighted(
-                        &mut mask, grid, *position, *radius, *diameter,
-                    );
+                ElementShape::Bowl {
+                    position,
+                    radius,
+                    diameter,
+                } => {
+                    self.rasterize_bowl_weighted(&mut mask, grid, *position, *radius, *diameter);
                 }
-                ElementShape::Disc { position, diameter } => {
-                    let mut bool_layer =
-                        Array3::from_elem((grid.nx, grid.ny, grid.nz), false);
-                    self.rasterize_disc(&mut bool_layer, grid, *position, *diameter);
-                    let n_active = bool_layer.iter().filter(|&&v| v).count();
-                    if n_active > 0 {
-                        let area = std::f64::consts::PI * (diameter / 2.0).powi(2);
-                        let m_grid = area / (grid.dx * grid.dx);
-                        let weight = m_grid / n_active as f64;
-                        ndarray::Zip::from(&mut mask)
-                            .and(&bool_layer)
-                            .for_each(|m, &b| {
-                                if b {
-                                    *m += weight;
-                                }
-                            });
-                    }
+                ElementShape::Disc {
+                    position,
+                    diameter,
+                    focus_position,
+                } => {
+                    self.rasterize_disc_weighted(
+                        &mut mask,
+                        grid,
+                        *position,
+                        *diameter,
+                        *focus_position,
+                    );
                 }
                 ElementShape::Arc {
                     position,
@@ -679,25 +1092,32 @@ impl KWaveArray {
                     start_angle,
                     end_angle,
                 } => {
-                    let mut bool_layer =
-                        Array3::from_elem((grid.nx, grid.ny, grid.nz), false);
-                    self.rasterize_arc(
-                        &mut bool_layer, grid, *position, *radius, *diameter,
-                        *start_angle, *end_angle,
+                    self.rasterize_arc_weighted(
+                        &mut mask,
+                        grid,
+                        *position,
+                        *radius,
+                        *diameter,
+                        *start_angle,
+                        *end_angle,
                     );
-                    ndarray::Zip::from(&mut mask)
-                        .and(&bool_layer)
-                        .for_each(|m, &b| {
-                            if b {
-                                *m += 1.0;
-                            }
-                        });
                 }
-                ElementShape::Rect { position, width, height, length } => {
-                    let mut bool_layer =
-                        Array3::from_elem((grid.nx, grid.ny, grid.nz), false);
+                ElementShape::Rect {
+                    position,
+                    width,
+                    height,
+                    length,
+                    euler_xyz_deg,
+                } => {
+                    let mut bool_layer = Array3::from_elem((grid.nx, grid.ny, grid.nz), false);
                     self.rasterize_rect(
-                        &mut bool_layer, grid, *position, *width, *height, *length,
+                        &mut bool_layer,
+                        grid,
+                        *position,
+                        *width,
+                        *height,
+                        *length,
+                        *euler_xyz_deg,
                     );
                     ndarray::Zip::from(&mut mask)
                         .and(&bool_layer)
@@ -715,18 +1135,11 @@ impl KWaveArray {
 
     /// Dense surface-sampling rasterization for a bowl element (float weights).
     ///
-    /// # Sampling strategy
+    /// # Algorithm - Canonical Spiral Bowl Sampling
     ///
-    /// The spherical cap surface is parametrised by:
-    ///   - u = (r_lat / half_aperture)² ∈ (0, 1)  (area-uniform radial parameter)
-    ///   - φ ∈ [0, 2π)  (azimuthal angle)
-    ///
-    /// For each sample (u, φ):
-    ///   - r_lat = half_aperture · √u
-    ///   - surface point: (cx − √(R²−r_lat²), cy + r_lat·cos φ, cz + r_lat·sin φ)
-    ///
-    /// Each sample contributes `scale = m_grid / N_samples` to its nearest grid cell.
-    /// Total weight = m_grid = bowl_area / dx².
+    /// The spherical cap is sampled with the same golden-angle spiral used by
+    /// k-wave-python's `make_cart_bowl`. The surface points are then mapped
+    /// through the same local BLI stencil used for the disc element.
     fn rasterize_bowl_weighted(
         &self,
         mask: &mut Array3<f64>,
@@ -735,55 +1148,59 @@ impl KWaveArray {
         radius: f64,
         diameter: f64,
     ) {
-        let half_aperture = diameter / 2.0;
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
 
-        // Spherical cap sagittal depth and area
-        let h = if radius > half_aperture {
-            radius - (radius * radius - half_aperture * half_aperture).sqrt()
-        } else {
-            radius
-        };
-        let area = 2.0 * std::f64::consts::PI * radius * h;
-        let m_grid = area / (grid.dx * grid.dx);
+        self.rasterize_bowl_points(grid, center, radius, diameter, |point, scale| {
+            self.map_surface_sample(
+                grid,
+                &x_vec,
+                &y_vec,
+                &z_vec,
+                point,
+                scale,
+                false,
+                |ix, iy, iz, weight| {
+                    mask[[ix, iy, iz]] += weight;
+                },
+            );
+        });
+    }
 
-        // Upsampling rate matching k-wave default (10×)
-        // N_samples ≈ upsampling_rate² × m_grid for uniform area coverage
-        let upsampling: f64 = 10.0;
-        let n_total = (m_grid * upsampling * upsampling).max(100.0) as usize;
-        let n_r = ((n_total as f64).sqrt().ceil() as usize).max(2);
-        let n_phi = n_r;
+    /// Rasterize arc centerline points with half-step angular offsets.
+    fn rasterize_arc_points<F>(
+        &self,
+        grid: &crate::domain::grid::Grid,
+        center: (f64, f64, f64),
+        radius: f64,
+        start_angle: f64,
+        end_angle: f64,
+        mut visit: F,
+    ) where
+        F: FnMut([f64; 3], f64),
+    {
+        let arc_length = Self::arc_line_length(radius, start_angle, end_angle);
+        let m_grid = arc_length / grid.dx;
+        let num_points = (m_grid * DISC_SAMPLE_UPSAMPLING_RATE).ceil().max(1.0) as usize;
+        let scale = m_grid / num_points as f64;
+        let angle_span = end_angle - start_angle;
 
-        // Weight per sample (sum over all samples = m_grid)
-        let scale = m_grid / (n_r * n_phi) as f64;
-
-        let nx = grid.nx as isize;
-        let ny = grid.ny as isize;
-        let nz = grid.nz as isize;
-
-        for ir in 0..n_r {
-            // Area-uniform radial sampling: u = (r_lat / half_aperture)²
-            let u = (ir as f64 + 0.5) / n_r as f64;
-            let r_lat = half_aperture * u.sqrt();
-            // x-coordinate of surface point (bowl axis along -x from center)
-            let sx = center.0 - (radius * radius - r_lat * r_lat).max(0.0).sqrt();
-
-            for iphi in 0..n_phi {
-                let phi = 2.0 * std::f64::consts::PI
-                    * (iphi as f64 + 0.5)
-                    / n_phi as f64;
-                let sy = center.1 + r_lat * phi.cos();
-                let sz = center.2 + r_lat * phi.sin();
-
-                // NGP: floor maps to the cell containing the surface point
-                let ix = ((sx - grid.origin[0]) / grid.dx).floor() as isize;
-                let iy = ((sy - grid.origin[1]) / grid.dy).floor() as isize;
-                let iz = ((sz - grid.origin[2]) / grid.dz).floor() as isize;
-
-                if ix >= 0 && ix < nx && iy >= 0 && iy < ny && iz >= 0 && iz < nz {
-                    mask[[ix as usize, iy as usize, iz as usize]] += scale;
-                }
-            }
+        for idx in 0..num_points {
+            let angle_deg = start_angle + angle_span * ((idx as f64 + 0.5) / num_points as f64);
+            let angle_rad = angle_deg.to_radians();
+            let point = [
+                center.0 + radius * angle_rad.cos(),
+                center.1 + radius * angle_rad.sin(),
+                center.2,
+            ];
+            visit(point, scale);
         }
+    }
+
+    #[inline]
+    fn arc_line_length(radius: f64, start_angle: f64, end_angle: f64) -> f64 {
+        radius * (end_angle - start_angle).abs().to_radians()
     }
 
     /// Rasterize a bowl element onto the grid
@@ -798,43 +1215,75 @@ impl KWaveArray {
         radius: f64,
         diameter: f64,
     ) {
-        let half_aperture = diameter / 2.0;
-        let nx = grid.nx as isize;
-        let ny = grid.ny as isize;
-        let nz = grid.nz as isize;
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
 
-        // Bowl is a spherical cap: points at distance `radius` from the
-        // geometric focus, within the aperture diameter
-        for ix in 0..nx {
-            for iy in 0..ny {
-                for iz in 0..nz {
-                    let x = grid.origin[0] + (ix as f64 + 0.5) * grid.dx;
-                    let y = grid.origin[1] + (iy as f64 + 0.5) * grid.dy;
-                    let z = grid.origin[2] + (iz as f64 + 0.5) * grid.dz;
+        self.rasterize_bowl_points(grid, center, radius, diameter, |point, scale| {
+            self.map_surface_sample(
+                grid,
+                &x_vec,
+                &y_vec,
+                &z_vec,
+                point,
+                scale,
+                true,
+                |ix, iy, iz, _| {
+                    mask[[ix, iy, iz]] = true;
+                },
+            );
+        });
+    }
 
-                    let dx_c = x - center.0;
-                    let dy_c = y - center.1;
-                    let dz_c = z - center.2;
-                    let lateral = (dy_c * dy_c + dz_c * dz_c).sqrt();
+    fn rasterize_bowl_points<F>(
+        &self,
+        grid: &crate::domain::grid::Grid,
+        center: (f64, f64, f64),
+        radius: f64,
+        diameter: f64,
+        mut visit: F,
+    ) where
+        F: FnMut([f64; 3], f64),
+    {
+        let area = Self::bowl_surface_area(radius, diameter);
+        let m_grid = area / (grid.dx * grid.dx);
+        let num_points = (m_grid * DISC_SAMPLE_UPSAMPLING_RATE).ceil().max(1.0) as usize;
+        let scale = m_grid / num_points as f64;
 
-                    // Check if within aperture
-                    if lateral > half_aperture {
-                        continue;
-                    }
-
-                    // Distance from this grid point to the bowl center
-                    let dist = (dx_c * dx_c + dy_c * dy_c + dz_c * dz_c).sqrt();
-
-                    // Point is on the bowl if its distance from the center
-                    // equals the radius (within half a voxel diagonal)
-                    let voxel_diag =
-                        (grid.dx * grid.dx + grid.dy * grid.dy + grid.dz * grid.dz).sqrt();
-                    if (dist - radius).abs() < voxel_diag {
-                        mask[[ix as usize, iy as usize, iz as usize]] = true;
-                    }
-                }
-            }
+        if num_points == 1 {
+            visit([center.0 - radius, center.1, center.2], scale);
+            return;
         }
+
+        let half_aperture = diameter / 2.0;
+        let varphi_max = (half_aperture / radius).clamp(-1.0, 1.0).asin();
+        let denom = (num_points - 1) as f64;
+        let spiral_scale = 2.0 * std::f64::consts::PI * (1.0 - varphi_max.cos());
+
+        for t in 0..num_points {
+            let theta = GOLDEN_ANGLE * t as f64;
+            let varphi = (1.0 - spiral_scale * (t as f64) / (denom * 2.0 * std::f64::consts::PI))
+                .clamp(-1.0, 1.0)
+                .acos();
+            let radial = radius * varphi.sin();
+            let point = [
+                center.0 - radius * varphi.cos(),
+                center.1 + radial * theta.cos(),
+                center.2 + radial * theta.sin(),
+            ];
+            visit(point, scale);
+        }
+    }
+
+    #[inline]
+    fn bowl_surface_area(radius: f64, diameter: f64) -> f64 {
+        let half_aperture = diameter / 2.0;
+        let h = if radius > half_aperture {
+            radius - (radius * radius - half_aperture * half_aperture).sqrt()
+        } else {
+            radius
+        };
+        2.0 * std::f64::consts::PI * radius * h
     }
 }
 
@@ -844,6 +1293,45 @@ impl Default for KWaveArray {
     }
 }
 
+/// Build an intrinsic X-Y-Z Euler rotation matrix (Rz · Ry · Rx) from angles
+/// given in degrees. Matches the upstream k-wave-python
+/// `rotation.rotate_rotation_matrix` contract used by `KWaveArray`.
+fn euler_xyz_rotation_matrix(euler_deg: (f64, f64, f64)) -> [[f64; 3]; 3] {
+    let rx = euler_deg.0.to_radians();
+    let ry = euler_deg.1.to_radians();
+    let rz = euler_deg.2.to_radians();
+    let (cx, sx) = (rx.cos(), rx.sin());
+    let (cy, sy) = (ry.cos(), ry.sin());
+    let (cz, sz) = (rz.cos(), rz.sin());
+
+    let mx = [[1.0, 0.0, 0.0], [0.0, cx, -sx], [0.0, sx, cx]];
+    let my = [[cy, 0.0, sy], [0.0, 1.0, 0.0], [-sy, 0.0, cy]];
+    let mz = [[cz, -sz, 0.0], [sz, cz, 0.0], [0.0, 0.0, 1.0]];
+    matmul(&matmul(&mz, &my), &mx)
+}
+
+fn matmul(a: &[[f64; 3]; 3], b: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
+    let mut out = [[0.0_f64; 3]; 3];
+    for i in 0..3 {
+        for j in 0..3 {
+            let mut s = 0.0_f64;
+            for k in 0..3 {
+                s += a[i][k] * b[k][j];
+            }
+            out[i][j] = s;
+        }
+    }
+    out
+}
+
+fn apply_matrix(m: &[[f64; 3]; 3], v: (f64, f64, f64)) -> (f64, f64, f64) {
+    (
+        m[0][0] * v.0 + m[0][1] * v.1 + m[0][2] * v.2,
+        m[1][0] * v.0 + m[1][1] * v.1 + m[1][2] * v.2,
+        m[2][0] * v.0 + m[2][1] * v.1 + m[2][2] * v.2,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -851,7 +1339,7 @@ mod tests {
     #[test]
     fn test_kwave_array_creation() {
         let mut array = KWaveArray::new();
-        array.add_disc_element((0.0, 0.0, 0.0), 0.01);
+        array.add_disc_element((0.0, 0.0, 0.0), 0.01, None);
         array.add_rect_element((0.01, 0.0, 0.0), 0.005, 0.005, 0.001);
 
         assert_eq!(array.num_elements(), 2);
@@ -861,7 +1349,7 @@ mod tests {
     fn test_kwave_array_binary_mask() {
         let grid = crate::domain::grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
         let mut array = KWaveArray::new();
-        array.add_disc_element((0.016, 0.016, 0.016), 0.005);
+        array.add_disc_element((0.016, 0.016, 0.016), 0.005, None);
 
         let mask = array.get_array_binary_mask(&grid);
         let active_count = mask.iter().filter(|&&v| v).count();
@@ -869,10 +1357,102 @@ mod tests {
     }
 
     #[test]
+    fn test_kwave_array_disc_focus_mask_is_planar_and_matches_kwave_python_reference_mass() {
+        let grid = crate::domain::grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
+        let mut array = KWaveArray::new();
+        array.add_disc_element((0.016, 0.016, 0.016), 0.006, Some((0.016, 0.016, 0.024)));
+
+        let weights = array.get_array_weighted_mask(&grid);
+        let expected = 28.302_387_208_098_168_f64;
+        assert!((weights.sum() - expected).abs() < 5.0e-6);
+
+        let mut active_plane: Option<usize> = None;
+        for ((_, _, k), &value) in weights.indexed_iter() {
+            if value > 0.0 {
+                match active_plane {
+                    Some(plane) => assert_eq!(plane, k, "disc weights must remain planar"),
+                    None => active_plane = Some(k),
+                }
+            }
+        }
+        assert!(
+            active_plane.is_some(),
+            "disc weights must activate at least one cell"
+        );
+    }
+
+    #[test]
+    fn test_rect_rotation_90_swaps_width_and_height() {
+        use crate::domain::grid::Grid;
+
+        let grid = Grid::new(41, 41, 5, 1.0e-4, 1.0e-4, 1.0e-4)
+            .expect("grid");
+        let mut unrot = KWaveArray::new();
+        unrot.add_rect_element(
+            (20.0 * 1.0e-4, 20.0 * 1.0e-4, 2.0 * 1.0e-4),
+            8.0e-4,
+            2.0e-4,
+            1.0e-4,
+        );
+        let unrot_mask = unrot.get_array_binary_mask(&grid);
+
+        let mut rot = KWaveArray::new();
+        rot.add_rect_rot_element(
+            (20.0 * 1.0e-4, 20.0 * 1.0e-4, 2.0 * 1.0e-4),
+            8.0e-4,
+            2.0e-4,
+            1.0e-4,
+            (0.0, 0.0, 90.0),
+        );
+        let rot_mask = rot.get_array_binary_mask(&grid);
+
+        let unrot_count: usize = unrot_mask.iter().filter(|&&b| b).count();
+        let rot_count: usize = rot_mask.iter().filter(|&&b| b).count();
+        assert!(
+            unrot_count > 0 && rot_count > 0,
+            "both masks must be non-empty: unrot={unrot_count}, rot={rot_count}",
+        );
+
+        let (nx, ny, _nz) = (grid.nx, grid.ny, grid.nz);
+        let mut swapped_hits = 0usize;
+        for i in 0..nx {
+            for j in 0..ny {
+                if unrot_mask[[i, j, 2]] {
+                    let mirror_i = j;
+                    let mirror_j = nx - 1 - i;
+                    if mirror_i < nx && mirror_j < ny && rot_mask[[mirror_i, mirror_j, 2]] {
+                        swapped_hits += 1;
+                    }
+                }
+            }
+        }
+        assert!(
+            swapped_hits >= unrot_count / 2,
+            "90-deg Z rotation must overlap after axis swap ({swapped_hits}/{unrot_count})",
+        );
+    }
+
+    #[test]
+    fn test_kwave_array_setters_preserve_elements() {
+        let mut array = KWaveArray::new();
+        array.add_disc_element((0.0, 0.0, 0.0), 0.005, None);
+
+        array.set_frequency(2.0e6);
+        array.set_sound_speed(1600.0);
+
+        assert_eq!(array.num_elements(), 1);
+        assert!((array.frequency() - 2.0e6).abs() < 1.0e-12);
+
+        let delays = array.get_focus_delays((0.0, 0.0, 1.0));
+        assert_eq!(delays.len(), 1);
+        assert!((delays[0] - 1.0 / 1600.0).abs() < 1.0e-12);
+    }
+
+    #[test]
     fn test_focus_delays() {
         let mut array = KWaveArray::with_params(1e6, 1500.0);
-        array.add_disc_element((0.0, 0.0, 0.0), 0.005);
-        array.add_disc_element((0.01, 0.0, 0.0), 0.005);
+        array.add_disc_element((0.0, 0.0, 0.0), 0.005, None);
+        array.add_disc_element((0.01, 0.0, 0.0), 0.005, None);
 
         let delays = array.get_focus_delays((0.005, 0.0, 0.02));
         assert_eq!(delays.len(), 2);
@@ -888,8 +1468,8 @@ mod tests {
     fn test_get_element_delays_symmetric_array() {
         let mut array = KWaveArray::with_params(1e6, 1500.0);
         // Two elements at ±5 mm on x-axis, focus on z-axis
-        array.add_disc_element((-0.005, 0.0, 0.0), 0.002);
-        array.add_disc_element((0.005, 0.0, 0.0), 0.002);
+        array.add_disc_element((-0.005, 0.0, 0.0), 0.002, None);
+        array.add_disc_element((0.005, 0.0, 0.0), 0.002, None);
 
         let focus = (0.0, 0.0, 0.02);
         let delays = array.get_element_delays(focus);
@@ -906,9 +1486,9 @@ mod tests {
     #[test]
     fn test_get_element_delays_non_negative_min_zero() {
         let mut array = KWaveArray::with_params(1e6, 1500.0);
-        array.add_disc_element((0.0, 0.0, 0.0), 0.005);
-        array.add_disc_element((0.01, 0.0, 0.0), 0.005);
-        array.add_disc_element((0.02, 0.0, 0.0), 0.005);
+        array.add_disc_element((0.0, 0.0, 0.0), 0.005, None);
+        array.add_disc_element((0.01, 0.0, 0.0), 0.005, None);
+        array.add_disc_element((0.02, 0.0, 0.0), 0.005, None);
 
         let focus = (0.01, 0.0, 0.03);
         let delays = array.get_element_delays(focus);
@@ -925,7 +1505,7 @@ mod tests {
     fn test_apodization_rectangular_all_ones() {
         let mut array = KWaveArray::new();
         for i in 0..8 {
-            array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001);
+            array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None);
         }
         let weights = array.get_apodization(ApodizationWindow::Rectangular);
         assert_eq!(weights.len(), 8);
@@ -939,7 +1519,7 @@ mod tests {
     fn test_apodization_hann_endpoints_near_zero() {
         let mut array = KWaveArray::new();
         for i in 0..9 {
-            array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001);
+            array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None);
         }
         let weights = array.get_apodization(ApodizationWindow::Hann);
         assert_eq!(weights.len(), 9);
@@ -967,20 +1547,28 @@ mod tests {
     fn test_apodization_hamming_range_and_symmetry() {
         let mut array = KWaveArray::new();
         for i in 0..7 {
-            array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001);
+            array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None);
         }
         let weights = array.get_apodization(ApodizationWindow::Hamming);
         assert_eq!(weights.len(), 7);
         for &w in &weights {
             // Hamming minimum = 0.54 - 0.46 = 0.08
-            assert!((0.07..=1.01).contains(&w), "Hamming weight out of range: {}", w);
+            assert!(
+                (0.07..=1.01).contains(&w),
+                "Hamming weight out of range: {}",
+                w
+            );
         }
         // Symmetric: w[i] ≈ w[N-1-i]
         for i in 0..7 {
             assert!(
                 (weights[i] - weights[6 - i]).abs() < 1e-12,
                 "Hamming not symmetric at i={}: w[{}]={} w[{}]={}",
-                i, i, weights[i], 6-i, weights[6-i]
+                i,
+                i,
+                weights[i],
+                6 - i,
+                weights[6 - i]
             );
         }
     }
@@ -989,7 +1577,7 @@ mod tests {
     #[test]
     fn test_apodization_single_element() {
         let mut array = KWaveArray::new();
-        array.add_disc_element((0.0, 0.0, 0.0), 0.005);
+        array.add_disc_element((0.0, 0.0, 0.0), 0.005, None);
         for window in [
             ApodizationWindow::Rectangular,
             ApodizationWindow::Hann,
@@ -997,7 +1585,11 @@ mod tests {
         ] {
             let weights = array.get_apodization(window);
             assert_eq!(weights.len(), 1);
-            assert!((weights[0] - 1.0).abs() < 1e-12, "{:?}: single element weight must be 1.0", window);
+            assert!(
+                (weights[0] - 1.0).abs() < 1e-12,
+                "{:?}: single element weight must be 1.0",
+                window
+            );
         }
     }
 
@@ -1008,7 +1600,7 @@ mod tests {
         // Focus delays use the stored sound speed; a unit-distance element yields
         // delay = d/c = 1 m / c, giving direct access to the default sound speed.
         let mut arr = KWaveArray::new();
-        arr.add_disc_element((0.0, 0.0, 0.0), 0.001);
+        arr.add_disc_element((0.0, 0.0, 0.0), 0.001, None);
         let delays = arr.get_focus_delays((0.0, 0.0, 1.0));
         // d = 1 m → delay = 1 / sound_speed
         assert!(

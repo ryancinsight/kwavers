@@ -143,7 +143,8 @@ impl Microbubble {
         // Dimensionless damping components (Church 1995, Eq. A3–A5)
         let delta_rad = omega0 * r / C_L;
         let delta_vis = 4.0 * MU_L / (omega0 * RHO_L * r * r);
-        let delta_sh = 4.0 * self.shell_thickness * self.shell_viscosity / (omega0 * RHO_L * r * r * r);
+        let delta_sh =
+            4.0 * self.shell_thickness * self.shell_viscosity / (omega0 * RHO_L * r * r * r);
         let delta_tot = (delta_rad + delta_vis + delta_sh).max(1e-12);
 
         let big_omega = omega / omega0;

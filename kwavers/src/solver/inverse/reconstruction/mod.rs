@@ -240,14 +240,17 @@ fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult
 
     for sensor_idx in 0..data.dim().0 {
         let trace = data.row(sensor_idx).to_owned();
-        let filtered_trace =
-            crate::math::fft::apply_spectral_response_1d(&trace, sampling_freq, move |i, freq, nyquist| {
+        let filtered_trace = crate::math::fft::apply_spectral_response_1d(
+            &trace,
+            sampling_freq,
+            move |i, freq, nyquist| {
                 if i <= n / 2 {
                     freq / nyquist
                 } else {
                     (n - i) as f64 * (sampling_freq / n as f64) / nyquist
                 }
-            });
+            },
+        );
         filtered.row_mut(sensor_idx).assign(&filtered_trace);
     }
 

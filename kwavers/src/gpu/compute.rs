@@ -150,11 +150,7 @@ impl FdtdGpuDispatcher {
                 "FdtdGpuDispatcher: grid dimensions must be >= 3".to_string(),
             ));
         }
-        Ok(Self {
-            nx,
-            ny,
-            nz,
-        })
+        Ok(Self { nx, ny, nz })
     }
 
     /// Compute `p^{n+1}` and write into `output`.
@@ -202,9 +198,8 @@ impl FdtdGpuDispatcher {
                         + p_curr[[i, j, k + 1]]
                         - 6.0 * p_curr[[i, j, k]];
 
-                    output[[i, j, k]] = 2.0 * p_curr[[i, j, k]]
-                        - p_prev[[i, j, k]]
-                        + coeff * laplacian;
+                    output[[i, j, k]] =
+                        2.0 * p_curr[[i, j, k]] - p_prev[[i, j, k]] + coeff * laplacian;
                 }
             }
         }
@@ -445,8 +440,7 @@ impl FdtdGpuShaderDispatcher {
         }
         let buf_size = (n * std::mem::size_of::<f32>()) as u64;
         let usage_src = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
-        let usage_dst =
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC;
+        let usage_dst = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC;
 
         let buf_curr = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fdtd_p_curr"),
@@ -507,11 +501,11 @@ impl FdtdGpuShaderDispatcher {
             }],
         });
 
-        let mut encoder =
-            self.device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("fdtd_encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("fdtd_encoder"),
+            });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("fdtd_pass"),
@@ -544,9 +538,9 @@ impl FdtdGpuShaderDispatcher {
             let _ = sender.send(r);
         });
         let _ = self.device.poll(wgpu::PollType::Wait);
-        receiver.recv().map_err(|e| {
-            KwaversError::GpuError(format!("GPU map_async failed: {e}"))
-        })??;
+        receiver
+            .recv()
+            .map_err(|e| KwaversError::GpuError(format!("GPU map_async failed: {e}")))??;
 
         let data = slice.get_mapped_range();
         let result: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
@@ -572,7 +566,12 @@ mod tests {
     #[test]
     fn test_pressure_params_pod_layout() {
         use std::mem;
-        let p = PressureParams { nx: 16, ny: 8, nz: 4, coeff: 0.25 };
+        let p = PressureParams {
+            nx: 16,
+            ny: 8,
+            nz: 4,
+            coeff: 0.25,
+        };
         let bytes = bytemuck::bytes_of(&p);
         // Must be 4 fields × 4 bytes = 16 bytes with no padding
         assert_eq!(bytes.len(), 16);
@@ -647,11 +646,7 @@ mod tests {
         for k in 1..nz - 1 {
             for j in 1..ny - 1 {
                 for i in 1..nx - 1 {
-                    assert_abs_diff_eq!(
-                        p_new[[i, j, k]],
-                        p_curr[[i, j, k]],
-                        epsilon = 1e-12
-                    );
+                    assert_abs_diff_eq!(p_new[[i, j, k]], p_curr[[i, j, k]], epsilon = 1e-12);
                 }
             }
         }
@@ -664,10 +659,9 @@ mod tests {
         let p_wrong = Array3::zeros((4, 4, 4));
         let p_curr = Array3::zeros((8, 8, 8));
         let mut output = Array3::zeros((8, 8, 8));
-        assert!(
-            disp.update_pressure_into(&p_wrong, &p_curr, 0.25, &mut output)
-                .is_err()
-        );
+        assert!(disp
+            .update_pressure_into(&p_wrong, &p_curr, 0.25, &mut output)
+            .is_err());
     }
 
     /// Grid too small (< 3 in any axis) returns an error.

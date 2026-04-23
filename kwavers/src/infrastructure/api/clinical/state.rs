@@ -10,13 +10,15 @@ use crate::clinical::imaging::workflows::neural::{
 };
 
 #[cfg(not(feature = "pinn"))]
-use crate::api::{DeviceInfo, DeviceType, DeviceCapability, DeviceStatus};
+use crate::api::{DeviceCapability, DeviceInfo, DeviceStatus, DeviceType};
 #[cfg(not(feature = "pinn"))]
-use crate::clinical::{ClinicalWorkflow, WorkflowType, WorkflowStatus, WorkflowStep, StepType, StepStatus};
+use crate::clinical::{
+    ClinicalWorkflow, StepStatus, StepType, WorkflowStatus, WorkflowStep, WorkflowType,
+};
 
-use crate::infrastructure::api::UltrasoundDevice;
 use super::dicom::DICOMService;
 use super::mobile::MobileOptimizer;
+use crate::infrastructure::api::UltrasoundDevice;
 
 /// Active clinical session tracking
 #[derive(Debug, Clone)]
@@ -107,7 +109,10 @@ impl ClinicalAppState {
 
     /// Initialize basic clinical devices for fallback operation
     fn initialize_basic_devices(state: &mut ClinicalAppState) -> KwaversResult<()> {
-        let mut registry = state.device_registry.write().unwrap_or_else(|e| e.into_inner());
+        let mut registry = state
+            .device_registry
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
 
         // Register basic ultrasound devices
         registry.insert(
@@ -148,7 +153,10 @@ impl ClinicalAppState {
 
     /// Initialize basic clinical workflows
     fn initialize_clinical_workflows(state: &mut ClinicalAppState) -> KwaversResult<()> {
-        let mut sessions = state.active_sessions.write().unwrap_or_else(|e| e.into_inner());
+        let mut sessions = state
+            .active_sessions
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
 
         // Create a default clinical workflow template
         let default_workflow = ClinicalWorkflow {

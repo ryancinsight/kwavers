@@ -345,8 +345,7 @@ impl RealTimeSirtPipeline {
                             let dxy2 = dx2 + yv * yv;
                             for k in 0..nz {
                                 let zv = k as f64 * dz;
-                                let r =
-                                    (dxy2 + (zv - zs_elem) * (zv - zs_elem)).sqrt().max(1e-6);
+                                let r = (dxy2 + (zv - zs_elem) * (zv - zs_elem)).sqrt().max(1e-6);
                                 let w = (-2.0 * alpha * f_c * r).exp() / r;
                                 sq += w * w;
                             }
@@ -741,7 +740,9 @@ mod tests {
     #[test]
     fn test_sirt_zero_measurement_converges_immediately() {
         let config = RealTimeSirtConfig {
-            sirt_config: SirtConfig::default().with_iterations(5).with_relaxation(0.5),
+            sirt_config: SirtConfig::default()
+                .with_iterations(5)
+                .with_relaxation(0.5),
             enable_preprocessing: false,
             enable_quality_monitoring: false,
             output_smoothing_sigma: None,
@@ -875,11 +876,7 @@ mod tests {
 
         // Compute ⟨x, Aᵀy⟩
         let aty = backproject_acoustic(&y, shape, &geom);
-        let x_dot_aty: f64 = x
-            .iter()
-            .zip(aty.iter())
-            .map(|(a, b)| a * b)
-            .sum();
+        let x_dot_aty: f64 = x.iter().zip(aty.iter()).map(|(a, b)| a * b).sum();
 
         let rel_err = (ax_dot_y - x_dot_aty).abs() / ax_dot_y.abs().max(1e-30);
         assert!(
@@ -926,7 +923,9 @@ mod tests {
         let rf_data = Array1::from_vec(b.to_vec());
 
         let config = RealTimeSirtConfig {
-            sirt_config: SirtConfig::default().with_iterations(10).with_relaxation(0.3),
+            sirt_config: SirtConfig::default()
+                .with_iterations(10)
+                .with_relaxation(0.3),
             enable_preprocessing: false,
             enable_quality_monitoring: false,
             output_smoothing_sigma: None,

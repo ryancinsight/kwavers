@@ -107,7 +107,7 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> BioDamageModel for Empirica
         let one = T::one();
         let delta = self.necrosis_rate * (one - current_necrosis) * cavitation_dose * dt;
         let next_val = current_necrosis + delta;
-        
+
         // Manual clamp to avoid missing primitive bounds depending on trait presence
         if next_val > one {
             one
@@ -135,20 +135,20 @@ mod tests {
     fn test_lysis_probability_bounds() {
         let model = test_model();
         let props = MaterialProperties::new(1500.0, 1000.0, 0.0, 4184.0, 0.6);
-        
+
         // Below threshold is zero
         assert_eq!(model.calculate_lysis_probability(50.0, &props), 0.0);
-        
+
         // Exactly threshold is zero
         assert_eq!(model.calculate_lysis_probability(100.0, &props), 0.0);
-        
+
         // Above threshold increases monotonically asymptotically to 1.0
         let p1 = model.calculate_lysis_probability(110.0, &props);
         let p2 = model.calculate_lysis_probability(150.0, &props);
-        
+
         assert!(p1 > 0.0 && p1 < 1.0);
         assert!(p2 > p1 && p2 < 1.0);
-        
+
         // Very high energy gives practically 1.0
         let p_max = model.calculate_lysis_probability(1000.0, &props);
         assert!((p_max - 1.0).abs() < 1e-6);
@@ -157,14 +157,14 @@ mod tests {
     #[test]
     fn test_necrosis_monotonic_accumulation() {
         let model = test_model();
-        
+
         // Zero dose -> zero delta
         assert_eq!(model.update_necrosis_fraction(0.1, 0.0, 1.0), 0.1);
-        
+
         // Active dose -> positive accumulation
         let next = model.update_necrosis_fraction(0.1, 10.0, 0.5);
         assert!(next > 0.1);
-        
+
         // Cannot exceed 1.0
         let saturated = model.update_necrosis_fraction(0.99, 1000.0, 10.0);
         assert_eq!(saturated, 1.0);

@@ -5,6 +5,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::gpu::memory::{MemoryPoolType, UnifiedMemoryManager};
+use crate::math::fft::{Complex64, FFT_CACHE_1D};
 use log::{debug, info, warn};
 use ndarray::{Array1, Array3, Array4};
 use rand::Rng;
@@ -13,7 +14,6 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use crate::math::fft::{Complex64, FFT_CACHE_1D};
 
 thread_local! {
     static HILBERT_SPECTRUM: RefCell<Array1<Complex64>> = RefCell::new(Array1::zeros(0));
@@ -362,8 +362,16 @@ impl RealtimeImagingPipeline {
 
     /// Get current buffer utilization
     pub fn buffer_utilization(&self) -> (f64, f64) {
-        let input_len = self.input_buffer.lock().unwrap_or_else(|e| e.into_inner()).len();
-        let output_len = self.output_buffer.lock().unwrap_or_else(|e| e.into_inner()).len();
+        let input_len = self
+            .input_buffer
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .len();
+        let output_len = self
+            .output_buffer
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .len();
 
         (
             input_len as f64 / self.config.buffer_size as f64,

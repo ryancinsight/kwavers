@@ -289,16 +289,12 @@ impl SaftProcessor {
                                 Self::extract_rf_sample(&rf_data_f64, element_idx, sample_idx);
 
                             // Apodization weight
-                            let apod = self.compute_apodization_weight(
-                                tx_idx,
-                                rx_idx,
-                                num_tx * num_rx,
-                            );
+                            let apod =
+                                self.compute_apodization_weight(tx_idx, rx_idx, num_tx * num_rx);
 
                             // Carrier-phase demodulation: multiply by exp(−j·2π·f₀·τ)
                             // I = sample · cos(2π f₀ τ),   Q = sample · (−sin(2π f₀ τ))
-                            let (i_comp, q_comp) =
-                                Self::demodulate(sample, center_frequency, tof);
+                            let (i_comp, q_comp) = Self::demodulate(sample, center_frequency, tof);
 
                             sum_i += apod * i_comp;
                             sum_q += apod * q_comp;
@@ -311,19 +307,18 @@ impl SaftProcessor {
                     let intensity = sum_i.powi(2) + sum_q.powi(2);
 
                     // Optionally weight by coherence factor
-                    volume[[i, j, k]] = if self.config.coherence_factor_enabled
-                        && num_contributions > 0
-                    {
-                        let coherent_mag = (sum_i.powi(2) + sum_q.powi(2)).sqrt();
-                        let cf = self.compute_coherence_factor(
-                            coherent_mag,
-                            incoherent_sum,
-                            num_contributions,
-                        );
-                        intensity * cf
-                    } else {
-                        intensity
-                    };
+                    volume[[i, j, k]] =
+                        if self.config.coherence_factor_enabled && num_contributions > 0 {
+                            let coherent_mag = (sum_i.powi(2) + sum_q.powi(2)).sqrt();
+                            let cf = self.compute_coherence_factor(
+                                coherent_mag,
+                                incoherent_sum,
+                                num_contributions,
+                            );
+                            intensity * cf
+                        } else {
+                            intensity
+                        };
                 }
             }
         }
@@ -405,7 +400,9 @@ mod tests {
     #[test]
     fn test_saft_from_algorithm() {
         use super::super::config::BeamformingConfig3D;
-        let algorithm = BeamformingAlgorithm3D::SAFT3D { virtual_sources: 50 };
+        let algorithm = BeamformingAlgorithm3D::SAFT3D {
+            virtual_sources: 50,
+        };
         let processor =
             SaftProcessor::from_algorithm(&algorithm, BeamformingConfig3D::default()).unwrap();
         assert_eq!(processor.config.virtual_sources, 50);
@@ -490,7 +487,10 @@ mod tests {
         let vol = processor.reconstruct_volume(&rf_data).unwrap();
         assert_eq!(vol.dim(), (16, 16, 16));
         let max_val = vol.iter().cloned().fold(0.0_f32, f32::max);
-        assert!(max_val > 0.0, "SAFT output must be non-zero for point target");
+        assert!(
+            max_val > 0.0,
+            "SAFT output must be non-zero for point target"
+        );
     }
 
     /// **Test: demodulation improves coherent-sum magnitude vs no demodulation.**

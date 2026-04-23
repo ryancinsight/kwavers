@@ -4,6 +4,7 @@ Shared utilities for pykwavers vs k-wave-python example parity scripts.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Iterable
@@ -19,6 +20,15 @@ DEFAULT_OUTPUT_DIR = Path(__file__).parent / "output"
 
 def bootstrap_example_paths() -> Path:
     """Ensure local k-wave-python and pykwavers Python packages are importable."""
+    extension_candidates = (
+        ROOT / "target" / "maturin" / "pykwavers.dll",
+        ROOT / "target" / "release" / "pykwavers.dll",
+        PYKWAVERS_PYTHON_ROOT / "pykwavers" / "_pykwavers.pyd",
+    )
+    for extension_path in extension_candidates:
+        if extension_path.exists():
+            os.environ.setdefault("PYKWAVERS_EXTENSION_PATH", str(extension_path))
+            break
     for path in (KWAVE_PYTHON_ROOT, PYKWAVERS_PYTHON_ROOT):
         path_str = str(path)
         if path_str not in sys.path:
@@ -66,6 +76,27 @@ def pad_volume_for_pml_outside(volume: np.ndarray, pml_size: tuple[int, ...]) ->
     px, py, pz = _normalize_pml_size(pml_size, is_2d=arr.shape[2] == 1)
     pad_width = ((px, px), (py, py), (pz, pz))
     return np.pad(arr, pad_width, mode="constant", constant_values=0)
+
+
+def clip_volume_to_physical_interior(volume: np.ndarray, pml_size: tuple[int, ...]) -> np.ndarray:
+    """Zero the outer PML halo of a padded 3-D volume while preserving shape."""
+    arr = np.asarray(volume).copy()
+    if arr.ndim == 2:
+        arr = arr[:, :, None]
+    if arr.ndim != 3:
+        raise ValueError(f"Expected a 2-D or 3-D volume, got shape {arr.shape}")
+
+    px, py, pz = _normalize_pml_size(pml_size, is_2d=arr.shape[2] == 1)
+    if px:
+        arr[:px, :, :] = 0
+        arr[-px:, :, :] = 0
+    if py:
+        arr[:, :py, :] = 0
+        arr[:, -py:, :] = 0
+    if pz:
+        arr[:, :, :pz] = 0
+        arr[:, :, -pz:] = 0
+    return arr
 
 
 def normalize_sensor_matrix(data: np.ndarray, expected_sensors: int | None = None) -> np.ndarray:
@@ -163,7 +194,7 @@ def summarize_sensor_matrix_metrics(
 
 
 def compute_image_metrics(reference: np.ndarray, candidate: np.ndarray) -> dict[str, float]:
-    """Compute Pearson-r, RMS ratio, and PSNR for two images/2-D arrays."""
+    """Compute parity metrics for two images/2-D arrays."""
     ref = np.asarray(reference, dtype=float).ravel()
     cand = np.asarray(candidate, dtype=float).ravel()
     n = min(ref.size, cand.size)
@@ -174,13 +205,23 @@ def compute_image_metrics(reference: np.ndarray, candidate: np.ndarray) -> dict[
     ref_rms = float(np.sqrt(np.mean(ref**2)))
     cand_rms = float(np.sqrt(np.mean(cand**2)))
     rms_ratio = cand_rms / (ref_rms + 1e-30)
-    mse = float(np.mean((ref - cand) ** 2))
-    peak = float(max(np.max(np.abs(ref)), np.max(np.abs(cand))))
-    psnr_db = 20.0 * np.log10(peak / (np.sqrt(mse) + 1e-30))
+    diff = cand - ref
+    mse = float(np.mean(diff**2))
+    rmse = float(np.sqrt(mse))
+    ref_peak = float(np.max(np.abs(ref)))
+    cand_peak = float(np.max(np.abs(cand)))
+    peak_ratio = cand_peak / (ref_peak + 1e-30)
+    peak = float(max(ref_peak, cand_peak))
+    psnr_db = float(20.0 * np.log10(peak / (rmse + 1e-30)))
 
     return {
         "pearson_r": corr,
         "rms_ratio": rms_ratio,
+        "rmse": rmse,
+        "max_abs_diff": float(np.max(np.abs(diff))),
+        "reference_peak": ref_peak,
+        "candidate_peak": cand_peak,
+        "peak_ratio": peak_ratio,
         "psnr_db": psnr_db,
     }
 

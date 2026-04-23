@@ -121,8 +121,7 @@ pub(crate) fn compute_nearfield_integrals(
             );
             let shape_fn = barycentric_coords(r, p1, p2, p3);
             let (g_val, grad_g) = green_helmholtz(k, r_i, r);
-            let d_g_dn =
-                grad_g[0] * normal[0] + grad_g[1] * normal[1] + grad_g[2] * normal[2];
+            let d_g_dn = grad_g[0] * normal[0] + grad_g[1] * normal[1] + grad_g[2] * normal[2];
             let w = weight * area;
             for m in 0..3 {
                 h_res[m] += d_g_dn * shape_fn[m] * w;

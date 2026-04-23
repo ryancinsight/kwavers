@@ -140,8 +140,8 @@ impl StateDependentConstants {
         // Dortmund Data Bank VFT formula for water viscosity:
         //   η(T) = A × 10^{ B / (T + C) }   (T in °C)
         const A: f64 = 2.414e-5; // Pa·s  — pre-exponential factor
-        const B: f64 = 247.8;    // °C    — activation parameter
-        const C: f64 = 133.15;   // °C    — Vogel shift (T₀ = 140 K)
+        const B: f64 = 247.8; // °C    — activation parameter
+        const C: f64 = 133.15; // °C    — Vogel shift (T₀ = 140 K)
 
         A * 10.0_f64.powf(B / (temperature + C))
     }
@@ -700,6 +700,9 @@ mod tests {
 
         // Verify temperature dependence: lower T → higher viscosity
         let eta_hot = StateDependentConstants::viscosity_arrhenius(5e-5, 30_000.0, 500.0);
-        assert!(eta > eta_hot, "Viscosity should decrease with temperature (Arrhenius)");
+        assert!(
+            eta > eta_hot,
+            "Viscosity should decrease with temperature (Arrhenius)"
+        );
     }
 }

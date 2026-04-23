@@ -60,7 +60,7 @@ impl EnergyBalanceCalculator {
 
         // Arrhenius parameters (Yasui 1997, Table I; Baulch 2005 Reaction R5)
         const ACTIVATION_ENERGY: f64 = 495_400.0; // J/mol (O−H bond dissociation energy)
-        const PRE_EXPONENTIAL: f64 = 1.912e16;    // s⁻¹ (high-pressure limit)
+        const PRE_EXPONENTIAL: f64 = 1.912e16; // s⁻¹ (high-pressure limit)
 
         // k(T) = A · exp(−Eₐ / RT)  [s⁻¹]
         let rate_constant =

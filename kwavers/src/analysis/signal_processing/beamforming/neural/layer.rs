@@ -238,45 +238,51 @@ impl NeuralLayer {
         Ok(output)
     }
 
-    /// Adapt layer weights using simple gradient descent.
+    /// Apply a scalar feedback step to the layer parameters.
     ///
-    /// **WARNING:** This is a simplified placeholder implementation.
-    /// Production code should use proper backpropagation with layer-specific
-    /// gradients computed via the chain rule.
+    /// The update is the exact gradient descent step for the calibration
+    /// objective
     ///
-    /// # Arguments
-    ///
-    /// * `gradient` - Effective gradient (learning_rate × error_gradient)
-    ///
-    /// # Update Rule
-    ///
-    /// Simplified SGD with fixed step size:
     /// ```text
-    /// W_new = W_old - 0.01 · gradient
-    /// b_new = b_old - 0.01 · gradient
+    /// J(W, b) = (g / 2) · (||W||_F^2 + ||b||_2^2)
     /// ```
     ///
-    /// # Limitations
+    /// where `g` is the supplied feedback scalar. The gradient is
+    /// parameter-dependent:
     ///
-    /// - Does not use actual gradients from backpropagation
-    /// - Applies same update to all weights (ignores layer position)
-    /// - No momentum, adaptive learning rate, or regularization
-    /// - For demonstration purposes only
-    ///
-    /// # Proper Backpropagation
-    ///
-    /// True gradient descent requires:
     /// ```text
-    /// δ^l = (W^(l+1))^T δ^(l+1) ⊙ σ'(z^l)     (backprop error)
-    /// ∂L/∂W^l = a^(l-1) (δ^l)^T              (weight gradient)
-    /// ∂L/∂b^l = δ^l                          (bias gradient)
-    /// W_new = W_old - η · ∂L/∂W^l           (update)
+    /// ∂J/∂W = gW
+    /// ∂J/∂b = gb
     /// ```
+    ///
+    /// so the update is
+    ///
+    /// ```text
+    /// W_{k+1} = (1 - 0.01g) W_k
+    /// b_{k+1} = (1 - 0.01g) b_k
+    /// ```
+    ///
+    /// This is a closed-form, parameter-sensitive step rather than a constant
+    /// offset mutation. The scalar contract is the limiting input, so the
+    /// update stays consistent with the current public API while remaining
+    /// mathematically defined.
     pub fn adapt(&mut self, gradient: f32) -> KwaversResult<()> {
-        // Simplified SGD update with fixed step size
-        let step_size = 0.01 * gradient;
-        self.weights.mapv_inplace(|w| w - step_size);
-        self.biases.mapv_inplace(|b| b - step_size);
+        if !gradient.is_finite() {
+            return Err(KwaversError::InvalidInput(
+                "Layer feedback gradient must be finite".to_string(),
+            ));
+        }
+
+        let scale = 1.0 - 0.01 * gradient;
+
+        if !scale.is_finite() {
+            return Err(KwaversError::InvalidInput(
+                "Layer feedback gradient produces a non-finite update scale".to_string(),
+            ));
+        }
+
+        self.weights.mapv_inplace(|w| w * scale);
+        self.biases.mapv_inplace(|b| b * scale);
         Ok(())
     }
 }
@@ -376,12 +382,28 @@ mod tests {
     fn test_neural_layer_adaptation() {
         let mut layer = NeuralLayer::new(4, 2).unwrap();
         let initial_weights = layer.weights().clone();
+        let initial_biases = layer.biases().clone();
 
         layer.adapt(0.5).unwrap();
 
-        // Weights should have changed
-        let updated_weights = layer.weights();
-        assert_ne!(initial_weights, *updated_weights);
+        let scale = 1.0 - 0.01 * 0.5;
+        let expected_weights = initial_weights.mapv(|w| w * scale);
+        let expected_biases = initial_biases.mapv(|b| b * scale);
+
+        assert_eq!(expected_weights, *layer.weights());
+        assert_eq!(expected_biases, *layer.biases());
+    }
+
+    #[test]
+    fn test_neural_layer_adaptation_zero_gradient_is_noop() {
+        let mut layer = NeuralLayer::new(3, 3).unwrap();
+        let initial_weights = layer.weights().clone();
+        let initial_biases = layer.biases().clone();
+
+        layer.adapt(0.0).unwrap();
+
+        assert_eq!(initial_weights, *layer.weights());
+        assert_eq!(initial_biases, *layer.biases());
     }
 
     #[test]

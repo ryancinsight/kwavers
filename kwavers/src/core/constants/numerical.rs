@@ -327,7 +327,8 @@ mod tests {
         assert!(
             CFL_FACTOR_3D_FDTD < cfl_max_3d,
             "CFL_FACTOR_3D_FDTD ({}) must be below theoretical stability limit 1/√3 ({})",
-            CFL_FACTOR_3D_FDTD, cfl_max_3d
+            CFL_FACTOR_3D_FDTD,
+            cfl_max_3d
         );
     }
 
@@ -340,7 +341,8 @@ mod tests {
         assert!(
             ABSORPTION_SINGULARITY_THRESHOLD > f64::EPSILON * 10.0,
             "ABSORPTION_SINGULARITY_THRESHOLD ({:.2e}) must exceed 10×ε_f64 ({:.2e})",
-            ABSORPTION_SINGULARITY_THRESHOLD, f64::EPSILON * 10.0
+            ABSORPTION_SINGULARITY_THRESHOLD,
+            f64::EPSILON * 10.0
         );
     }
 
@@ -348,7 +350,9 @@ mod tests {
     fn test_cfl_factors_are_distinct_and_ordered() {
         // CFL_FACTOR_3D_FDTD (0.3) < CFL_SAFETY_FACTOR (0.5) < CFL_MAX (0.5)
         assert!(CFL_FACTOR_3D_FDTD < CFL_SAFETY_FACTOR);
-        assert!(CFL_DEFAULT == CFL_FACTOR_3D_FDTD,
-            "CFL_DEFAULT and CFL_FACTOR_3D_FDTD should both be 0.3");
+        assert!(
+            CFL_DEFAULT == CFL_FACTOR_3D_FDTD,
+            "CFL_DEFAULT and CFL_FACTOR_3D_FDTD should both be 0.3"
+        );
     }
 }

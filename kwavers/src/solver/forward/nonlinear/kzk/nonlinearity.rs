@@ -182,8 +182,8 @@ impl NonlinearOperator {
 
                 // Step 5: form δp[t] = coeff · p[t] · (∂p/∂τ)[t]
                 for t in 0..nt {
-                    let p_t    = pressure[[i, j, t]].re;
-                    let dp_dt  = w[t].re; // exact spectral derivative
+                    let p_t = pressure[[i, j, t]].re;
+                    let dp_dt = w[t].re; // exact spectral derivative
                     delta[[i, j, t]] = coeff * p_t * dp_dt;
                 }
             }

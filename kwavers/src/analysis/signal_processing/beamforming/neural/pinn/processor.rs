@@ -40,7 +40,7 @@
 //! - Szabo (2004): "Diagnostic Ultrasound Imaging: Inside Out"
 
 use crate::core::error::KwaversResult;
-use ndarray::{s, Array3, Array4, ArrayView3};
+use ndarray::{s, Array3, Array4, ArrayView3, ArrayView4};
 use std::collections::HashMap;
 
 // Use solver-agnostic interface instead of direct solver imports
@@ -144,6 +144,18 @@ impl NeuralBeamformingProcessor {
         &mut self,
         rf_data: &Array4<f32>,
     ) -> KwaversResult<PinnBeamformingResult> {
+        self.process_volume_view(rf_data.view())
+    }
+
+    /// Process a frame-major RF volume without copying the input buffer.
+    ///
+    /// The processor is frame-local, so the output for each frame depends only
+    /// on the corresponding frame slice. This property makes the mapping safe
+    /// to partition across disjoint frame ranges.
+    pub(crate) fn process_volume_view(
+        &mut self,
+        rf_data: ArrayView4<'_, f32>,
+    ) -> KwaversResult<PinnBeamformingResult> {
         let start_time = std::time::Instant::now();
 
         let (frames, channels, samples, _) = rf_data.dim();
@@ -164,7 +176,7 @@ impl NeuralBeamformingProcessor {
         let uncertainty = self.compute_uncertainty(&volume)?;
         let confidence = self.compute_confidence(&uncertainty)?;
 
-        let processing_time = start_time.elapsed().as_millis() as f64;
+        let processing_time = start_time.elapsed().as_secs_f64() * 1000.0;
         self.metrics.total_processing_time = processing_time;
 
         Ok(PinnBeamformingResult {
@@ -330,17 +342,20 @@ impl NeuralBeamformingProcessor {
                     });
 
                 self.metrics.uncertainty_computation_time =
-                    uncertainty_start.elapsed().as_millis() as f64;
+                    uncertainty_start.elapsed().as_secs_f64() * 1000.0;
 
                 return Ok(uncertainty);
             }
         }
 
         // Fallback: signal-based uncertainty
+        let uncertainty_start = std::time::Instant::now();
         let mut uncertainty = Array3::<f32>::zeros(volume.dim());
         for ((i, j, k), value) in volume.indexed_iter() {
             uncertainty[[i, j, k]] = 1.0 / (value.abs() + 1.0);
         }
+        self.metrics.uncertainty_computation_time =
+            uncertainty_start.elapsed().as_secs_f64() * 1000.0;
         Ok(uncertainty)
     }
 

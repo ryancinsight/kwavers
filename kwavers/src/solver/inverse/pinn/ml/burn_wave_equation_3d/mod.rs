@@ -188,6 +188,7 @@ pub mod optimizer;
 pub mod wavespeed;
 
 // Application layer
+#[path = "solver/mod.rs"]
 pub mod solver;
 
 // Integration tests

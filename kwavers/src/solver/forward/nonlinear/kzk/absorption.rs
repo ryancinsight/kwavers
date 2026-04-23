@@ -150,7 +150,7 @@ impl AbsorptionOperator {
             // the physical frequency f = (nt − k) / (nt · Δτ).
             let pos_k = if k <= nt / 2 { k } else { nt - k };
             let freq_hz = pos_k as f64 * df; // Hz
-            // α(f) = α₀ · f^y  in Np/m
+                                             // α(f) = α₀ · f^y  in Np/m
             let alpha = self.alpha0_np_per_m_per_hz_y * freq_hz.powf(self.power);
             h_mask[k] = (-alpha * step_size).exp();
         }
@@ -209,6 +209,10 @@ impl AbsorptionOperator {
     #[must_use]
     pub fn penetration_depth(&self, frequency_hz: f64) -> f64 {
         let alpha = self.get_absorption(frequency_hz);
-        if alpha > 0.0 { 1.0 / alpha } else { f64::INFINITY }
+        if alpha > 0.0 {
+            1.0 / alpha
+        } else {
+            f64::INFINITY
+        }
     }
 }

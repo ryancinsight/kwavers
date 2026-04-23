@@ -56,19 +56,18 @@ impl FlexibleTransducerArray {
             CalibrationMethod::SelfCalibration {
                 reference_reflectors: _,
                 calibration_interval,
+            } if timestamp - self.last_update_time > *calibration_interval => {
+                // For 2D measurement data, we use external tracking instead of self-calibration
+                // Self-calibration requires 3D pressure field data
+                // Measurement noise level based on typical ultrasound tracking accuracy
+                // Reference: Mercier et al. (2012) IEEE Trans. Ultrason. Ferroelectr. Freq. Control
+                const TRACKING_NOISE_LEVEL: f64 = 1e-3; // 1mm position uncertainty
+                self.calibration_processor.process_external_tracking(
+                    &measurement_data.to_owned(),
+                    TRACKING_NOISE_LEVEL,
+                    timestamp,
+                )?
             }
-                if timestamp - self.last_update_time > *calibration_interval => {
-                    // For 2D measurement data, we use external tracking instead of self-calibration
-                    // Self-calibration requires 3D pressure field data
-                    // Measurement noise level based on typical ultrasound tracking accuracy
-                    // Reference: Mercier et al. (2012) IEEE Trans. Ultrason. Ferroelectr. Freq. Control
-                    const TRACKING_NOISE_LEVEL: f64 = 1e-3; // 1mm position uncertainty
-                    self.calibration_processor.process_external_tracking(
-                        &measurement_data.to_owned(),
-                        TRACKING_NOISE_LEVEL,
-                        timestamp,
-                    )?
-                }
             CalibrationMethod::ExternalTracking {
                 tracking_system: _,
                 measurement_noise,

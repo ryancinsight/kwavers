@@ -4,7 +4,6 @@ use crate::domain::grid::Grid;
 use log::trace;
 use ndarray::{Array3, ArrayViewMut3};
 
-
 use serde::{Deserialize, Serialize};
 
 // Physical constants for PML boundary parameters

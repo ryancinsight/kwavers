@@ -23,9 +23,9 @@ pub struct BubbleState {
     pub gas_species: GasSpecies, // Type of gas
 
     // Dynamic indicators
-    pub is_collapsing: bool,     // True during collapse phase
-    pub mach_number: f64,        // Wall Mach number
-    pub compression_ratio: f64,  // R₀/R
+    pub is_collapsing: bool,    // True during collapse phase
+    pub mach_number: f64,       // Wall Mach number
+    pub compression_ratio: f64, // R₀/R
     /// True when any surface shape mode amplitude |a_n|/R > 0.3 (Plesset 1954
     /// breakup criterion).  Set by `KellerMiksisModel::update_shape_stability`.
     pub is_shape_unstable: bool,

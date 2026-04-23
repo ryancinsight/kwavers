@@ -27,7 +27,9 @@ fn test_phase_correction_lengths() {
     let ct_data = Array3::from_elem((16, 16, 16), 400.0);
     let positions = vec![[0.0, 0.0, 0.07], [0.02, 0.0, 0.07], [0.0, 0.02, 0.07]];
     let target = [0.04, 0.04, 0.04];
-    let corr = corrector.calculate_correction(&ct_data, &positions, &target).unwrap();
+    let corr = corrector
+        .calculate_correction(&ct_data, &positions, &target)
+        .unwrap();
     assert_eq!(corr.phases.len(), positions.len());
     assert_eq!(corr.amplitudes.len(), positions.len());
 }
@@ -140,7 +142,7 @@ fn test_time_reversal_phase_conjugation_exact() {
     let corrector = make_corrector();
 
     let target_phase = PI / 3.0; // 60°
-    // Build a uniform complex field with phase = target_phase
+                                 // Build a uniform complex field with phase = target_phase
     let field: Array3<Complex<f64>> =
         Array3::from_elem((32, 32, 32), Complex::from_polar(1.0, target_phase));
 

@@ -43,7 +43,10 @@ impl FdtdSolver {
                     }
                 });
             // Zero edge layer (Dirichlet at domain boundary, matching staggered path)
-            self.fields.ux.slice_mut(ndarray::s![nx - 1, .., ..]).fill(0.0);
+            self.fields
+                .ux
+                .slice_mut(ndarray::s![nx - 1, .., ..])
+                .fill(0.0);
 
             // uy
             let (_nx, ny, _nz) = self.fields.p.dim();
@@ -55,7 +58,10 @@ impl FdtdSolver {
                         *u -= dt / rho * dp;
                     }
                 });
-            self.fields.uy.slice_mut(ndarray::s![.., ny - 1, ..]).fill(0.0);
+            self.fields
+                .uy
+                .slice_mut(ndarray::s![.., ny - 1, ..])
+                .fill(0.0);
 
             // uz
             let (_nx, _ny, nz) = self.fields.p.dim();
@@ -67,7 +73,10 @@ impl FdtdSolver {
                         *u -= dt / rho * dp;
                     }
                 });
-            self.fields.uz.slice_mut(ndarray::s![.., .., nz - 1]).fill(0.0);
+            self.fields
+                .uz
+                .slice_mut(ndarray::s![.., .., nz - 1])
+                .fill(0.0);
         }
 
         Ok(())

@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use chrono::{DateTime, Utc};
-use base64::{engine::general_purpose, Engine as _};
 use axum::{
     extract::{Json, Path, State},
     http::StatusCode,
     response::Json as JsonResponse,
 };
+use base64::{engine::general_purpose, Engine as _};
+use chrono::{DateTime, Utc};
+use std::collections::HashMap;
 
 use crate::infrastructure::api::auth::AuthenticatedUser;
 use crate::infrastructure::api::{APIError, ClinicalAnalysisRequest, ClinicalAnalysisResponse};

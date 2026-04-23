@@ -341,7 +341,10 @@ mod tests {
         // Exact solution x = [1, 1, 1]
         assert!(result.residual_norm < 1e-5);
         for &xi in result.solution.iter() {
-            assert!((xi - 1.0).abs() < 1e-5, "Solution element should be 1.0, got {xi}");
+            assert!(
+                (xi - 1.0).abs() < 1e-5,
+                "Solution element should be 1.0, got {xi}"
+            );
         }
     }
 

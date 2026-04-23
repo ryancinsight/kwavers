@@ -58,19 +58,17 @@ impl SpectralDetector {
         // Apply window
         let mut windowed = ndarray::Array1::from_vec(
             signal
-            .iter()
-            .take(n)
-            .zip(self.window.iter().take(n))
-            .map(|(&s, &w)| s * w)
-            .collect(),
+                .iter()
+                .take(n)
+                .zip(self.window.iter().take(n))
+                .map(|(&s, &w)| s * w)
+                .collect(),
         );
 
         // Pad if necessary
         if windowed.len() < SPECTRAL_WINDOW_SIZE {
             let mut padded = ndarray::Array1::<f64>::zeros(SPECTRAL_WINDOW_SIZE);
-            padded
-                .slice_mut(s![..windowed.len()])
-                .assign(&windowed);
+            padded.slice_mut(s![..windowed.len()]).assign(&windowed);
             windowed = padded;
         }
 

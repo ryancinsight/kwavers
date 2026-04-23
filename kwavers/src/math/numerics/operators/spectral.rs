@@ -50,8 +50,8 @@
 use crate::core::error::{KwaversResult, NumericalError};
 use crate::math::fft::{Complex64, FFT_CACHE_1D};
 use ndarray::{Array1, Array3, ArrayView3, Axis};
-use std::sync::Arc;
 use std::f64::consts::PI;
+use std::sync::Arc;
 
 /// Trait for spectral operators
 ///
@@ -269,11 +269,13 @@ impl PseudospectralDerivative {
         for j in 0..ny {
             for k in 0..nz {
                 // Extract 1D slice along x-axis
-                let mut buffer = Array1::<Complex64>::from_iter(field
-                    .index_axis(Axis(1), j)
-                    .index_axis(Axis(1), k)
-                    .iter()
-                    .map(|&x| Complex64::new(x, 0.0)));
+                let mut buffer = Array1::<Complex64>::from_iter(
+                    field
+                        .index_axis(Axis(1), j)
+                        .index_axis(Axis(1), k)
+                        .iter()
+                        .map(|&x| Complex64::new(x, 0.0)),
+                );
 
                 // Forward FFT
                 fft.forward_complex_inplace(&mut buffer);
@@ -331,11 +333,13 @@ impl PseudospectralDerivative {
         for i in 0..nx {
             for k in 0..nz {
                 // Extract 1D slice along y-axis
-                let mut buffer = Array1::<Complex64>::from_iter(field
-                    .index_axis(Axis(0), i)
-                    .index_axis(Axis(1), k)
-                    .iter()
-                    .map(|&x| Complex64::new(x, 0.0)));
+                let mut buffer = Array1::<Complex64>::from_iter(
+                    field
+                        .index_axis(Axis(0), i)
+                        .index_axis(Axis(1), k)
+                        .iter()
+                        .map(|&x| Complex64::new(x, 0.0)),
+                );
 
                 // Forward FFT
                 fft.forward_complex_inplace(&mut buffer);
@@ -393,11 +397,13 @@ impl PseudospectralDerivative {
         for i in 0..nx {
             for j in 0..ny {
                 // Extract 1D slice along z-axis
-                let mut buffer = Array1::<Complex64>::from_iter(field
-                    .index_axis(Axis(0), i)
-                    .index_axis(Axis(0), j)
-                    .iter()
-                    .map(|&x| Complex64::new(x, 0.0)));
+                let mut buffer = Array1::<Complex64>::from_iter(
+                    field
+                        .index_axis(Axis(0), i)
+                        .index_axis(Axis(0), j)
+                        .iter()
+                        .map(|&x| Complex64::new(x, 0.0)),
+                );
 
                 // Forward FFT
                 fft.forward_complex_inplace(&mut buffer);

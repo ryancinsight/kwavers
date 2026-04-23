@@ -2,8 +2,8 @@ use super::MultiModalFusion;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::imaging::fusion::registration;
 use crate::physics::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};
-use ritk_registration::ImageRegistration;
 use ndarray::{Array3, CowArray, Zip};
+use ritk_registration::ImageRegistration;
 use std::collections::HashMap;
 
 /// Maximum likelihood estimation fusion
@@ -85,8 +85,7 @@ pub(crate) fn fuse_maximum_likelihood(
             &identity_transform,
         )?;
 
-        let affine_transform =
-            AffineTransform::from_homogeneous(&registration_result.transform);
+        let affine_transform = AffineTransform::from_homogeneous(&registration_result.transform);
         registration_transforms.insert(modality_name.to_string(), affine_transform);
 
         // Resample

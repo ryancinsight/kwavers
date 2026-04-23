@@ -76,7 +76,10 @@ fn test_nonlinear_scattering() {
         &bubble, 100_000.0, // 100 kPa
         3e6,       // 3 MHz
     );
-    assert!(eff_nominal >= 0.0, "η_NL must be non-negative, got {eff_nominal}");
+    assert!(
+        eff_nominal >= 0.0,
+        "η_NL must be non-negative, got {eff_nominal}"
+    );
 
     // 2. Linear scaling with pressure amplitude (perturbation regime)
     let eff_double = dynamics.nonlinear_scattering_efficiency(
@@ -93,12 +96,12 @@ fn test_nonlinear_scattering() {
     // Off-resonance: f = 10 × f_res — Lorentzian ≈ 1/Ω² → much smaller
     let f_res = bubble.resonance_frequency(101325.0, 1000.0);
     let eff_off = dynamics.nonlinear_scattering_efficiency(
-        &bubble, 100_000.0,
+        &bubble,
+        100_000.0,
         f_res * 10.0, // Ω = 10 >> 1
     );
     let eff_res = dynamics.nonlinear_scattering_efficiency(
-        &bubble, 100_000.0,
-        f_res, // Ω = 1 (resonance)
+        &bubble, 100_000.0, f_res, // Ω = 1 (resonance)
     );
     assert!(
         eff_res > eff_off,

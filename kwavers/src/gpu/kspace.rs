@@ -318,8 +318,7 @@ impl KspaceShiftGpu {
         for kz in 0..self.nz {
             for jy in 0..self.ny {
                 for ix in 0..self.nx {
-                    let phase =
-                        -(kx_vec[ix] * sx + ky_vec[jy] * sy + kz_vec[kz] * sz);
+                    let phase = -(kx_vec[ix] * sx + ky_vec[jy] * sy + kz_vec[kz] * sz);
                     let c = phase.cos();
                     let s = phase.sin();
                     let re = real_in[[ix, jy, kz]];
@@ -349,8 +348,14 @@ impl KspaceShiftGpu {
         let mut real_out = Array3::zeros((self.nx, self.ny, self.nz));
         let mut imag_out = Array3::zeros((self.nx, self.ny, self.nz));
         self.apply_shift_into(
-            real_in, imag_in, kx_vec, ky_vec, kz_vec, shift,
-            &mut real_out, &mut imag_out,
+            real_in,
+            imag_in,
+            kx_vec,
+            ky_vec,
+            kz_vec,
+            shift,
+            &mut real_out,
+            &mut imag_out,
         )?;
         Ok((real_out, imag_out))
     }
@@ -425,12 +430,12 @@ mod kspace_shift_tests {
     fn test_quarter_cycle_shift() {
         let (nx, ny, nz) = (1, 1, 1);
         let gpu = KspaceShiftGpu::new(nx, ny, nz).unwrap();
-        let kx = vec![1.0_f64];   // k = 1 rad/m
+        let kx = vec![1.0_f64]; // k = 1 rad/m
         let ky = vec![0.0];
         let kz = vec![0.0];
         let real_in = Array3::from_elem((1, 1, 1), 2.0_f64);
         let imag_in = Array3::zeros((1, 1, 1));
-        let shift = [PI / 2.0, 0.0, 0.0];   // phase = -(1 * π/2) = -π/2
+        let shift = [PI / 2.0, 0.0, 0.0]; // phase = -(1 * π/2) = -π/2
 
         let (re_out, im_out) = gpu
             .apply_shift(&real_in, &imag_in, &kx, &ky, &kz, shift)
@@ -458,8 +463,10 @@ mod kspace_shift_tests {
             .unwrap();
         let mut re_b = Array3::zeros((nx, ny, nz));
         let mut im_b = Array3::zeros((nx, ny, nz));
-        gpu.apply_shift_into(&real_in, &imag_in, &kx, &ky, &kz, shift, &mut re_b, &mut im_b)
-            .unwrap();
+        gpu.apply_shift_into(
+            &real_in, &imag_in, &kx, &ky, &kz, shift, &mut re_b, &mut im_b,
+        )
+        .unwrap();
 
         for idx in re_a.indexed_iter() {
             let (i, &v) = idx;
@@ -550,8 +557,11 @@ mod kspace_shift_tests {
             sz: f32,
         }
         // 6 × 4-byte fields, no padding → 24 bytes
-        assert_eq!(std::mem::size_of::<ShiftParams>(), 24,
-            "ShiftParams must be exactly 24 bytes (6 × 4-byte fields, no padding)");
+        assert_eq!(
+            std::mem::size_of::<ShiftParams>(),
+            24,
+            "ShiftParams must be exactly 24 bytes (6 × 4-byte fields, no padding)"
+        );
         // Verify each field is correctly sized
         assert_eq!(std::mem::size_of::<u32>(), 4);
         assert_eq!(std::mem::size_of::<f32>(), 4);

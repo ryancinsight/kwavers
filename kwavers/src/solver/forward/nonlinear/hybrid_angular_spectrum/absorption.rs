@@ -113,12 +113,11 @@ impl AbsorptionOperator {
     pub fn apply_broadband(&self, harmonics: &mut [Array2<f64>], dz: f64, f0: f64) {
         let freq_mhz = f0 / 1e6;
         // α₀ at f₀ in Np/m
-        let alpha_np_f0 = self.attenuation_coeff * freq_mhz.powf(self.power_law_exp)
-            * 100.0
-            / NP_TO_DB;
+        let alpha_np_f0 =
+            self.attenuation_coeff * freq_mhz.powf(self.power_law_exp) * 100.0 / NP_TO_DB;
         for (n, plane) in harmonics.iter_mut().enumerate() {
             let harmonic_order = (n + 1) as f64; // n=0 → 1st harmonic
-            // α_n = α₀ · n^y  (power-law frequency scaling)
+                                                 // α_n = α₀ · n^y  (power-law frequency scaling)
             let alpha_n = alpha_np_f0 * harmonic_order.powf(self.power_law_exp);
             let decay = (-alpha_n * dz).exp();
             plane.mapv_inplace(|v| v * decay);
@@ -164,7 +163,7 @@ mod tests {
         let mut config = default_config();
         config.power_law_exponent = 1.0;
         config.reference_frequency = 1e6; // 1 MHz
-        // Set so that α_np_m = 10.0 Np/m
+                                          // Set so that α_np_m = 10.0 Np/m
         config.attenuation_coeff = 10.0 * NP_TO_DB / 100.0; // dB/cm/MHz
 
         let op = AbsorptionOperator::new(&config);

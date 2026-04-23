@@ -419,8 +419,8 @@ impl ThermalAcousticCoupler {
 
         // Thermal parameters (assuming constant for simplicity)
         let k_thermal = self.config.alpha_thermal; // m²/s (approximation)
-        // Volumetric heat capacity: ρ·c_p = 1050 kg/m³ × 3600 J/(kg·°C) = 3 780 000 J/(m³·°C).
-        // Using SPECIFIC_HEAT_TISSUE alone (3600) would be a 1050× dimensional error.
+                                                   // Volumetric heat capacity: ρ·c_p = 1050 kg/m³ × 3600 J/(kg·°C) = 3 780 000 J/(m³·°C).
+                                                   // Using SPECIFIC_HEAT_TISSUE alone (3600) would be a 1050× dimensional error.
         let rho_c = RHO_C_SOFT_TISSUE;
 
         for k in 1..self.config.nz - 1 {

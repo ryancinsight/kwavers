@@ -7,6 +7,7 @@ execution path on the CPU-only default feature set.
 """
 
 import numpy as np
+import pytest
 
 import pykwavers as kw
 
@@ -62,6 +63,37 @@ def test_kwave_array_and_transducer_surface():
     assert transducer.number_elements == 8
     assert transducer.focus_distance == 15.0e-3
     assert transducer.transmit_apodization == "Hanning"
+
+
+def test_kwave_array_disc_focus_generates_planar_weighted_mask():
+    grid = kw.Grid(nx=32, ny=32, nz=32, dx=1.0e-3, dy=1.0e-3, dz=1.0e-3)
+    arr = kw.KWaveArray()
+    arr.add_disc_element(
+        position=(16.0e-3, 16.0e-3, 16.0e-3),
+        diameter=6.0e-3,
+        focus_position=(16.0e-3, 16.0e-3, 24.0e-3),
+    )
+
+    weights = np.asarray(arr.get_array_weighted_mask(grid), dtype=np.float64)
+    assert weights.shape == (32, 32, 32)
+    assert np.count_nonzero(weights) > 0
+
+    expected_reference_mass = 28.302387208098168
+    assert np.isclose(weights.sum(), expected_reference_mass, rtol=1e-7, atol=5e-6)
+
+    active_indices = np.argwhere(weights > 0.0)
+    assert active_indices.size > 0
+    assert len(np.unique(active_indices[:, 2])) == 1
+
+
+def test_kwave_array_disc_focus_rejects_coincident_axis():
+    arr = kw.KWaveArray()
+    with pytest.raises(ValueError, match="focus_position must differ from position"):
+        arr.add_disc_element(
+            position=(1.0e-3, 1.0e-3, 1.0e-3),
+            diameter=0.5e-3,
+            focus_position=(1.0e-3, 1.0e-3, 1.0e-3),
+        )
 
 
 def test_simulation_cpu_surface_runs_end_to_end():

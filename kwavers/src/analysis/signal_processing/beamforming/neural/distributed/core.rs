@@ -45,7 +45,8 @@
 //! - Dean et al. (2012): "Large scale distributed deep networks"
 
 use crate::core::error::{KwaversError, KwaversResult};
-use ndarray::Array4;
+use ndarray::{s, Array3, Array4};
+use rayon::prelude::*;
 
 // Use solver-agnostic interface instead of direct solver imports
 #[cfg(feature = "pinn")]
@@ -53,6 +54,9 @@ use crate::analysis::signal_processing::beamforming::neural::pinn_interface::{
     DecompositionStrategy, DistributedConfig, LoadBalancingStrategy,
 };
 
+use super::frame_partitioning::{
+    active_processor_indices, build_ranges, partition_round_sizes, DistributedChunkResult,
+};
 use crate::analysis::signal_processing::beamforming::neural::pinn::NeuralBeamformingProcessor;
 use crate::analysis::signal_processing::beamforming::neural::types::{
     DistributedNeuralBeamformingMetrics, DistributedNeuralBeamformingResult, PINNBeamformingConfig,
@@ -71,10 +75,9 @@ use crate::analysis::signal_processing::beamforming::neural::types::{
 ///
 /// ## Implementation Status
 ///
-/// **TODO**: This module is being refactored to use the solver-agnostic interface.
-/// The current implementation is a placeholder that maintains the API surface
-/// while the underlying distributed GPU support is being implemented through
-/// the `PinnBeamformingProvider` trait.
+/// The processor partitions frame-major RF volumes into contiguous chunks,
+/// schedules them across healthy processors, and recomposes the per-chunk
+/// outputs without copying the source input buffer.
 #[cfg(feature = "pinn")]
 pub struct DistributedNeuralBeamformingProcessor {
     /// Distributed configuration (solver-agnostic)
@@ -207,8 +210,8 @@ impl DistributedNeuralBeamformingProcessor {
         self.processors.len()
     }
 
-    // KNOWN_LIMITATION: Communication channel initialization requires distributed PINN provider support.
-    // Will be implemented once the concrete PINN provider supports distributed operations.
+    // The current distributed path is frame-local; communication channels are
+    // not required for deterministic recomposition of chunked inference.
 
     /// Get number of active GPUs.
     pub fn num_gpus(&self) -> usize {
@@ -244,17 +247,193 @@ impl DistributedNeuralBeamformingProcessor {
     /// 3. Execute parallel processing
     /// 4. Aggregate results
     /// 5. Compute final metrics
+    ///
+    /// # Theorem
+    ///
+    /// Let `F` be the frame-local mapping implemented by
+    /// [`NeuralBeamformingProcessor::process_volume_view`]. For any partition
+    /// of the frame axis into disjoint contiguous ranges `R_i`, the distributed
+    /// result equals `concat(F(R_i))` because each output frame depends only on
+    /// the matching input frame slice and there is no cross-frame coupling.
+    ///
+    /// # Proof Sketch
+    ///
+    /// The worker output for a frame range never reads or writes outside that
+    /// range. Therefore partitioning and concatenation commute with the
+    /// processor mapping, so the recomposed tensor is identical to the
+    /// sequential result.
     pub async fn process_volume_distributed(
         &mut self,
-        _rf_data: &Array4<f32>,
+        rf_data: &Array4<f32>,
     ) -> KwaversResult<DistributedNeuralBeamformingResult> {
-        // Placeholder implementation
-        Err(KwaversError::System(
-            crate::core::error::SystemError::FeatureNotAvailable {
-                feature: "distributed_processing".to_string(),
-                reason: "Full distributed implementation in progress".to_string(),
-            },
-        ))
+        let start_time = std::time::Instant::now();
+        let (frames, channels, samples, trailing) = rf_data.dim();
+
+        if trailing != 1 {
+            return Err(KwaversError::InvalidInput(format!(
+                "Distributed beamforming expects a singleton trailing axis, got {}",
+                trailing
+            )));
+        }
+
+        if frames == 0 || channels == 0 || samples == 0 {
+            return Err(KwaversError::InvalidInput(
+                "Distributed beamforming requires non-empty frame, channel, and sample dimensions"
+                    .to_string(),
+            ));
+        }
+
+        let active_indices =
+            active_processor_indices(self.processors.len(), &self.fault_tolerance.gpu_health);
+        if active_indices.is_empty() {
+            return Err(KwaversError::InvalidInput(
+                "Distributed beamforming requires at least one healthy processor".to_string(),
+            ));
+        }
+
+        let batch_size = self.config.batch_size_per_gpu.max(1);
+        let round_capacity = active_indices.len().saturating_mul(batch_size).max(1);
+        let active_lookup: Vec<Option<usize>> = {
+            let mut lookup = vec![None; self.processors.len()];
+            for (slot, &processor_idx) in active_indices.iter().enumerate() {
+                lookup[processor_idx] = Some(slot);
+            }
+            lookup
+        };
+
+        let mut final_volume = Array3::<f32>::zeros((frames, channels, samples));
+        let mut final_uncertainty = Array3::<f32>::zeros((frames, channels, samples));
+        let mut final_confidence = Array3::<f32>::zeros((frames, channels, samples));
+        let mut processor_times = vec![0.0_f64; self.processors.len()];
+        let mut peak_round_chunk_bytes = 0usize;
+        let mut used_processors = vec![false; self.processors.len()];
+
+        for round_start in (0..frames).step_by(round_capacity) {
+            let round_end = (round_start + round_capacity).min(frames);
+            let round_frames = round_end - round_start;
+            let partition_sizes = partition_round_sizes(
+                &self.config,
+                round_frames,
+                &active_indices,
+                batch_size,
+                &self.fault_tolerance.gpu_load,
+            );
+            let ranges = build_ranges(round_start, &partition_sizes);
+
+            debug_assert_eq!(
+                ranges.last().map(|range| range.end).unwrap_or(round_start),
+                round_end
+            );
+
+            let round_chunk_bytes =
+                round_frames * channels * samples * std::mem::size_of::<f32>() * 3;
+            peak_round_chunk_bytes = peak_round_chunk_bytes.max(round_chunk_bytes);
+
+            let round_results: KwaversResult<Vec<Option<DistributedChunkResult>>> = self
+                .processors
+                .par_iter_mut()
+                .enumerate()
+                .map(|(processor_index, processor)| {
+                    let Some(slot) = active_lookup[processor_index] else {
+                        return Ok::<Option<DistributedChunkResult>, KwaversError>(None);
+                    };
+
+                    let Some(range) = ranges.get(slot).cloned() else {
+                        return Ok::<Option<DistributedChunkResult>, KwaversError>(None);
+                    };
+
+                    if range.is_empty() {
+                        return Ok::<Option<DistributedChunkResult>, KwaversError>(None);
+                    }
+
+                    let chunk_view = rf_data.slice(s![range.start..range.end, .., .., ..]);
+                    let result = processor.process_volume_view(chunk_view)?;
+
+                    Ok(Some(DistributedChunkResult {
+                        start: range.start,
+                        processor_index,
+                        processing_time_ms: result.processing_time_ms,
+                        volume: result.volume,
+                        uncertainty: result.uncertainty,
+                        confidence: result.confidence,
+                    }))
+                })
+                .collect();
+
+            for chunk in round_results?.into_iter().flatten() {
+                let chunk_frames = chunk.volume.dim().0;
+                let end = chunk.start + chunk_frames;
+
+                final_volume
+                    .slice_mut(s![chunk.start..end, .., ..])
+                    .assign(&chunk.volume);
+                final_uncertainty
+                    .slice_mut(s![chunk.start..end, .., ..])
+                    .assign(&chunk.uncertainty);
+                final_confidence
+                    .slice_mut(s![chunk.start..end, .., ..])
+                    .assign(&chunk.confidence);
+
+                processor_times[chunk.processor_index] += chunk.processing_time_ms;
+                used_processors[chunk.processor_index] = true;
+            }
+        }
+
+        let total_processing_time_ms = start_time.elapsed().as_secs_f64() * 1000.0;
+        let max_processor_time = processor_times.iter().copied().fold(0.0_f64, f64::max);
+        let min_processor_time = processor_times
+            .iter()
+            .copied()
+            .filter(|time| *time > 0.0)
+            .fold(f64::INFINITY, f64::min);
+        let used_processor_count = used_processors.iter().filter(|&&used| used).count();
+
+        let load_balance_efficiency = if max_processor_time > 0.0 && min_processor_time.is_finite()
+        {
+            (min_processor_time / max_processor_time).clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
+
+        let communication_overhead = (total_processing_time_ms - max_processor_time).max(0.0);
+        let load_imbalance_ratio = if max_processor_time > 0.0 && min_processor_time.is_finite() {
+            ((max_processor_time - min_processor_time).max(0.0)) / max_processor_time
+        } else {
+            0.0
+        };
+
+        let useful_bytes = frames * channels * samples * std::mem::size_of::<f32>() * 3;
+        let memory_efficiency = if useful_bytes > 0 {
+            useful_bytes as f64 / (useful_bytes + peak_round_chunk_bytes) as f64
+        } else {
+            1.0
+        };
+
+        for (processor_index, total_time) in processor_times.iter().copied().enumerate() {
+            if let Some(load) = self.fault_tolerance.gpu_load.get_mut(processor_index) {
+                *load = if max_processor_time > 0.0 {
+                    (total_time / max_processor_time).clamp(0.0, 1.0) as f32
+                } else {
+                    0.0
+                };
+            }
+        }
+
+        self.metrics.total_processing_time = total_processing_time_ms;
+        self.metrics.communication_overhead = communication_overhead;
+        self.metrics.load_imbalance_ratio = load_imbalance_ratio;
+        self.metrics.memory_efficiency = memory_efficiency;
+        self.metrics.fault_tolerance_events = self.fault_tolerance.retry_count;
+        self.metrics.active_gpus = used_processor_count;
+
+        Ok(DistributedNeuralBeamformingResult {
+            volume: final_volume,
+            uncertainty: final_uncertainty,
+            confidence: final_confidence,
+            processing_time_ms: total_processing_time_ms,
+            num_gpus_used: used_processor_count,
+            load_balance_efficiency,
+        })
     }
 }
 
@@ -301,5 +480,55 @@ mod tests {
 
         let max_load = fault_state.gpu_load.iter().copied().fold(0.0, f32::max);
         assert!(max_load <= 1.0);
+    }
+
+    #[cfg(feature = "pinn")]
+    #[test]
+    fn test_distributed_processing_matches_sequential_result() {
+        use crate::analysis::signal_processing::beamforming::neural::pinn::NeuralBeamformingProcessor;
+        use ndarray::Array4;
+
+        let beamforming_config = PINNBeamformingConfig {
+            rf_data_channels: 2,
+            samples_per_channel: 3,
+            volume_size: (4, 2, 3),
+            enable_pinn: false,
+            enable_uncertainty_quantification: false,
+            ..Default::default()
+        };
+
+        let sequential_config = beamforming_config.clone();
+        let mut sequential = NeuralBeamformingProcessor::new(sequential_config).unwrap();
+
+        let distributed_config = DistributedConfig {
+            num_gpus: 2,
+            gpu_devices: vec![0, 1],
+            batch_size_per_gpu: 1,
+            decomposition: DecompositionStrategy::Spatial,
+            load_balancing: LoadBalancingStrategy::Static,
+        };
+        let mut distributed =
+            DistributedNeuralBeamformingProcessor::new(beamforming_config, distributed_config)
+                .unwrap();
+
+        let rf_data = Array4::from_shape_fn((4, 2, 3, 1), |(frame, channel, sample, _)| {
+            frame as f32 + 0.1 * channel as f32 + 0.01 * sample as f32
+        });
+
+        let expected = sequential.process_volume(&rf_data).unwrap();
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+
+        let actual = runtime
+            .block_on(distributed.process_volume_distributed(&rf_data))
+            .unwrap();
+
+        assert_eq!(actual.volume, expected.volume);
+        assert_eq!(actual.uncertainty, expected.uncertainty);
+        assert_eq!(actual.confidence, expected.confidence);
+        assert_eq!(actual.num_gpus_used, 2);
+        assert_eq!(distributed.metrics().active_gpus, 2);
+        assert!(actual.load_balance_efficiency > 0.0);
+        assert!(distributed.metrics().memory_efficiency > 0.0);
     }
 }

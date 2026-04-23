@@ -316,9 +316,9 @@ impl SensorGeometry {
 impl Default for SensorGeometry {
     fn default() -> Self {
         Self::linear_array(
-            64,     // 64 elements
-            0.0003, // 300 μm pitch
-            40e6,              // 40 MHz
+            64,                 // 64 elements
+            0.0003,             // 300 μm pitch
+            40e6,               // 40 MHz
             SOUND_SPEED_TISSUE, // soft tissue
         )
     }

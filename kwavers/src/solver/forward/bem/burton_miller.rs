@@ -131,11 +131,7 @@ impl BurtonMillerAssembler {
     ///
     /// ## Reference
     /// - Gouraud, H. (1971). Continuous shading of curved surfaces. IEEE Trans. Comput. C-20(6).
-    fn compute_vertex_normals(
-        &self,
-        nodes: &[[f64; 3]],
-        elements: &[[usize; 3]],
-    ) -> Vec<[f64; 3]> {
+    fn compute_vertex_normals(&self, nodes: &[[f64; 3]], elements: &[[usize; 3]]) -> Vec<[f64; 3]> {
         let mut normals: Vec<[f64; 3]> = vec![[0.0, 0.0, 0.0]; nodes.len()];
 
         for &elem in elements {
@@ -304,7 +300,11 @@ impl BurtonMillerAssembler {
 
             // CBIE kernel: ∂G/∂n_y (normal derivative of G at source point)
             let dg_dn = self.greens_function_normal_derivative_full(
-                k, r, collocation, &point_on_element, &normal_y,
+                k,
+                r,
+                collocation,
+                &point_on_element,
+                &normal_y,
             );
             h_cbie += gauss_weights[gp_idx] * dg_dn;
 
@@ -447,8 +447,8 @@ impl BurtonMillerAssembler {
         let dr_dn = (collocation[0] - point[0]) / r;
         let phase = Complex64::new(0.0, k * r);
         let exp_ikr = phase.exp();
-        let dg_dr = (Complex64::new(0.0, k) - Complex64::new(1.0 / r, 0.0)) * exp_ikr
-            / (4.0 * PI * r * r);
+        let dg_dr =
+            (Complex64::new(0.0, k) - Complex64::new(1.0 / r, 0.0)) * exp_ikr / (4.0 * PI * r * r);
         dg_dr * dr_dn
     }
 
@@ -511,7 +511,8 @@ impl BurtonMillerAssembler {
         // Geometry scalars
         let cos_nx = rhat[0] * normal_x[0] + rhat[1] * normal_x[1] + rhat[2] * normal_x[2];
         let cos_ny = rhat[0] * normal_y[0] + rhat[1] * normal_y[1] + rhat[2] * normal_y[2];
-        let nxny = normal_x[0] * normal_y[0] + normal_x[1] * normal_y[1] + normal_x[2] * normal_y[2];
+        let nxny =
+            normal_x[0] * normal_y[0] + normal_x[1] * normal_y[1] + normal_x[2] * normal_y[2];
 
         let g = self.greens_function_helmholtz(k, r);
 
@@ -659,7 +660,12 @@ mod tests {
         let ny = [0.0_f64, 0.0, 1.0]; // ẑ
 
         let result = assembler.greens_function_double_normal_derivative(
-            k, r, &collocation, &point, &ny, &nx,
+            k,
+            r,
+            &collocation,
+            &point,
+            &ny,
+            &nx,
         );
 
         let g = assembler.greens_function_helmholtz(k, r);
@@ -692,7 +698,12 @@ mod tests {
         // cos_nx = r̂·n_x = 0 (ẑ⊥x̂), cos_ny = 0, nxny = 1
         // ∂²G/(∂n_x ∂n_y) = G * (1/r² - 0) * 1 = G/r²
         let result = assembler.greens_function_double_normal_derivative(
-            k, r, &collocation, &point, &ny, &nx,
+            k,
+            r,
+            &collocation,
+            &point,
+            &ny,
+            &nx,
         );
 
         let g_static = 1.0 / (4.0 * std::f64::consts::PI * r); // G for k=0
@@ -722,7 +733,12 @@ mod tests {
         let ny = [0.0_f64, 0.0, 1.0]; // ẑ
 
         let result = assembler.greens_function_double_normal_derivative(
-            k, r, &collocation, &point, &ny, &nx,
+            k,
+            r,
+            &collocation,
+            &point,
+            &ny,
+            &nx,
         );
 
         assert!(
@@ -744,7 +760,12 @@ mod tests {
         let n = [0.0_f64, 0.0, 1.0];
 
         let result = assembler.greens_function_double_normal_derivative(
-            2.0, r, &collocation, &point, &n, &n,
+            2.0,
+            r,
+            &collocation,
+            &point,
+            &n,
+            &n,
         );
         assert_eq!(result, Complex64::new(0.0, 0.0));
     }

@@ -84,8 +84,7 @@ pub fn determine_injection_mode(mask: &Array3<f64>) -> SourceInjectionMode {
 
     // A boundary plane has all active voxels at the same index on one axis,
     // and that index is exactly 0 or N−1 for that axis.
-    let is_boundary_plane = (all_same_i
-        && (first_i == Some(0) || first_i == Some(shape.0 - 1)))
+    let is_boundary_plane = (all_same_i && (first_i == Some(0) || first_i == Some(shape.0 - 1)))
         || (all_same_j && (first_j == Some(0) || first_j == Some(shape.1 - 1)))
         || (all_same_k && (first_k == Some(0) || first_k == Some(shape.2 - 1)));
 

@@ -75,13 +75,13 @@ pub struct PWDConfig {
 impl Default for PWDConfig {
     fn default() -> Self {
         Self {
-            center_frequency: 5.0e6,      // 5 MHz
-            prf: 4e3,                      // 4 kHz PRF
-            sample_volume_depth: 0.05,    // 5 cm
-            sample_volume_length: 0.005,  // 5 mm gate
+            center_frequency: 5.0e6,     // 5 MHz
+            prf: 4e3,                    // 4 kHz PRF
+            sample_volume_depth: 0.05,   // 5 cm
+            sample_volume_length: 0.005, // 5 mm gate
             fft_size: 128,
-            c_sound: 1540.0,              // m/s
-            beam_angle: 0.0,              // 0° (parallel to flow)
+            c_sound: 1540.0, // m/s
+            beam_angle: 0.0, // 0° (parallel to flow)
         }
     }
 }
@@ -163,8 +163,7 @@ impl PulsedWaveDoppler {
         // ── Step 4: One-sided magnitude spectrum ──────────────────────────────
         // Length = fft_size/2 + 1; bin k → f_d = k·f_prf/fft_size.
         let out_len = fft_size / 2 + 1;
-        let waveform: SpectralWaveform =
-            Array1::from_shape_fn(out_len, |k| spectrum[k].norm());
+        let waveform: SpectralWaveform = Array1::from_shape_fn(out_len, |k| spectrum[k].norm());
 
         Ok(waveform)
     }
@@ -192,8 +191,7 @@ impl PulsedWaveDoppler {
     /// Above this velocity, Doppler aliasing occurs (Evans & McDicken 2000, §3.5).
     pub fn max_velocity(&self) -> f64 {
         let cos_theta = self.config.beam_angle.cos().max(1e-6);
-        self.config.prf * self.config.c_sound
-            / (4.0 * self.config.center_frequency * cos_theta)
+        self.config.prf * self.config.c_sound / (4.0 * self.config.center_frequency * cos_theta)
     }
 }
 

@@ -193,10 +193,7 @@ impl FourierReconstructor {
     }
 
     /// Inverse Fourier transform to get spatial image
-    fn inverse_fourier_transform(
-        &self,
-        k_space: &Array3<Complex64>,
-    ) -> KwaversResult<Array3<f64>> {
+    fn inverse_fourier_transform(&self, k_space: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = self.grid_size;
         let fft = FFT_CACHE.get_or_create(nx, ny, nz);
         let mut result = Array3::<f64>::zeros((nx, ny, nz));

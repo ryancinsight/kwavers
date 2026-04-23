@@ -130,8 +130,7 @@ fn test_scatter_photon_forward() {
 fn test_photon_step_to_boundary_center_to_face() {
     let pos = [0.0005, 0.0005, 0.0005]; // centre of voxel (0,0,0), d=0.001 m
     let dir = [0.0, 0.0, 1.0];
-    let (dist, next) =
-        photon_step_to_boundary(pos, dir, 0, 0, 0, 0.001, 0.001, 0.001, 10, 10, 10);
+    let (dist, next) = photon_step_to_boundary(pos, dir, 0, 0, 0, 0.001, 0.001, 0.001, 10, 10, 10);
     assert!((dist - 0.0005).abs() < 1e-12, "dist = {dist}");
     assert_eq!(next, Some((0, 0, 1)));
 }
@@ -143,8 +142,7 @@ fn test_photon_step_to_boundary_center_to_face() {
 fn test_photon_step_to_boundary_exit() {
     let pos = [0.0005, 0.0005, 0.0095]; // centre of voxel (0,0,9)
     let dir = [0.0, 0.0, 1.0];
-    let (dist, next) =
-        photon_step_to_boundary(pos, dir, 0, 0, 9, 0.001, 0.001, 0.001, 10, 10, 10);
+    let (dist, next) = photon_step_to_boundary(pos, dir, 0, 0, 9, 0.001, 0.001, 0.001, 10, 10, 10);
     assert!((dist - 0.0005).abs() < 1e-12, "dist = {dist}");
     assert_eq!(next, None);
 }
@@ -157,8 +155,7 @@ fn test_photon_step_to_boundary_exit() {
 fn test_photon_step_to_boundary_negative_dir() {
     let pos = [0.0005, 0.0005, 0.0005]; // centre of voxel (0,0,0)
     let dir = [0.0, 0.0, -1.0];
-    let (dist, next) =
-        photon_step_to_boundary(pos, dir, 0, 0, 0, 0.001, 0.001, 0.001, 10, 10, 10);
+    let (dist, next) = photon_step_to_boundary(pos, dir, 0, 0, 0, 0.001, 0.001, 0.001, 10, 10, 10);
     assert!((dist - 0.0005).abs() < 1e-12, "dist = {dist}");
     assert_eq!(next, None);
 }

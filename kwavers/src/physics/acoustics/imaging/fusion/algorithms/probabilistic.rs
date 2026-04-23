@@ -3,8 +3,8 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::imaging::fusion::quality;
 use crate::physics::acoustics::imaging::fusion::registration;
 use crate::physics::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};
-use ritk_registration::ImageRegistration;
 use ndarray::{Array3, CowArray};
+use ritk_registration::ImageRegistration;
 use std::collections::HashMap;
 
 /// Probabilistic fusion with uncertainty modeling
@@ -74,8 +74,7 @@ pub(crate) fn fuse_probabilistic(fusion: &MultiModalFusion) -> KwaversResult<Fus
             &identity_transform,
         )?;
 
-        let affine_transform =
-            AffineTransform::from_homogeneous(&registration_result.transform);
+        let affine_transform = AffineTransform::from_homogeneous(&registration_result.transform);
         registration_transforms.insert(modality_name.clone(), affine_transform);
 
         // Resample to common grid

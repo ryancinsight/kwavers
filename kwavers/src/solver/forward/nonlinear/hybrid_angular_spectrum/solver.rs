@@ -146,8 +146,7 @@ mod tests {
             dz,
             ..HASConfig::default()
         };
-        let solver_absorbing =
-            HybridAngularSpectrumSolver::new(&grid, &config_absorbing).unwrap();
+        let solver_absorbing = HybridAngularSpectrumSolver::new(&grid, &config_absorbing).unwrap();
 
         let initial = Array3::from_elem((8, 8, 4), 1000.0_f64);
         let n_steps = 20;
@@ -253,9 +252,7 @@ mod tests {
         let initial = Array3::from_shape_fn((8, 8, 4), |(i, _j, k)| {
             ((i + 1) as f64 * 100.0) * (1.0 + 0.1 * (k as f64))
         });
-        let u_ref = solver_ref
-            .propagate_steps(&initial, 200, dz_ref)
-            .unwrap();
+        let u_ref = solver_ref.propagate_steps(&initial, 200, dz_ref).unwrap();
 
         // Coarse: h
         let dz_h = total_z / 20.0;
@@ -360,21 +357,33 @@ mod tests {
         // Compute FFT manually (DFT) for the z-profile
         let n = nz as f64;
         let fundamental_power: f64 = {
-            let re: f64 = z_profile.iter().enumerate()
+            let re: f64 = z_profile
+                .iter()
+                .enumerate()
                 .map(|(k, &p)| p * (2.0 * PI * k as f64 / n).cos())
-                .sum::<f64>() / n;
-            let im: f64 = z_profile.iter().enumerate()
+                .sum::<f64>()
+                / n;
+            let im: f64 = z_profile
+                .iter()
+                .enumerate()
                 .map(|(k, &p)| p * (2.0 * PI * k as f64 / n).sin())
-                .sum::<f64>() / n;
+                .sum::<f64>()
+                / n;
             re * re + im * im
         };
         let harmonic2_power: f64 = {
-            let re: f64 = z_profile.iter().enumerate()
+            let re: f64 = z_profile
+                .iter()
+                .enumerate()
                 .map(|(k, &p)| p * (4.0 * PI * k as f64 / n).cos())
-                .sum::<f64>() / n;
-            let im: f64 = z_profile.iter().enumerate()
+                .sum::<f64>()
+                / n;
+            let im: f64 = z_profile
+                .iter()
+                .enumerate()
                 .map(|(k, &p)| p * (4.0 * PI * k as f64 / n).sin())
-                .sum::<f64>() / n;
+                .sum::<f64>()
+                / n;
             re * re + im * im
         };
 

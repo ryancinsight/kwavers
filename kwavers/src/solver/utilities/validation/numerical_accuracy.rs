@@ -336,9 +336,7 @@ impl NumericalValidator {
         dt: f64,
     ) -> Result<f64, Box<dyn std::error::Error>> {
         use std::f64::consts::PI;
-        let c0 = crate::domain::medium::sound_speed_at(
-            &self.medium, 0.0, 0.0, 0.0, &self.grid,
-        );
+        let c0 = crate::domain::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
         let dx = self.grid.dx;
         let k_nyq = PI / dx; // Nyquist wavenumber
         let k_max = if k > 0.0 { k.min(k_nyq) } else { k_nyq };
@@ -395,9 +393,7 @@ impl NumericalValidator {
         dt: f64,
     ) -> Result<f64, Box<dyn std::error::Error>> {
         use std::f64::consts::PI;
-        let c0 = crate::domain::medium::sound_speed_at(
-            &self.medium, 0.0, 0.0, 0.0, &self.grid,
-        );
+        let c0 = crate::domain::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
         let dx = self.grid.dx;
         let cfl = c0 * dt / dx;
         let k_nyq = PI / dx;
@@ -552,9 +548,9 @@ impl NumericalValidator {
         // Analytical upper-bound reflection coefficients from literature.
         // R = 10^(dB/20); CPML: R < 10^(-60/20) ≈ 0.001; PML: < 10^(-40/20) = 0.01
         let r = match boundary_type {
-            "CPML" => 1e-3_f64,  // < −60 dB (Roden & Gedney 2000)
-            "PML"  => 1e-2_f64,  // < −40 dB (Berenger 1994)
-            "ABC"  => 1e-1_f64,  // < −20 dB (Engquist & Majda 1977)
+            "CPML" => 1e-3_f64, // < −60 dB (Roden & Gedney 2000)
+            "PML" => 1e-2_f64,  // < −40 dB (Berenger 1994)
+            "ABC" => 1e-1_f64,  // < −20 dB (Engquist & Majda 1977)
             other => {
                 return Err(format!(
                     "test_boundary_reflection: unknown boundary type '{}';                      supported: CPML, PML, ABC",
@@ -655,8 +651,14 @@ mod tests {
         let k = std::f64::consts::PI / (10.0 * dx); // λ/dx = 10 (well-resolved)
         let omega = c0 * k;
         let err = v.compute_phase_error_fdtd(&(), k, omega, dt).unwrap();
-        assert!(err > 0.0, "FDTD phase error must be > 0 (finite-difference is never exact)");
-        assert!(err < 0.05, "FDTD phase error should be < 5% at CFL=0.3, got {err:.4}");
+        assert!(
+            err > 0.0,
+            "FDTD phase error must be > 0 (finite-difference is never exact)"
+        );
+        assert!(
+            err < 0.05,
+            "FDTD phase error should be < 5% at CFL=0.3, got {err:.4}"
+        );
     }
 
     /// PSTD phase error must be strictly less than the FDTD phase error at same dt.
@@ -706,8 +708,12 @@ mod tests {
         let k_test = std::f64::consts::PI / (10.0 * dx_coarse); // same physical wavenumber
         let omega = c0 * k_test;
 
-        let err_coarse = v_coarse.compute_phase_error_fdtd(&(), k_test, omega, dt).unwrap();
-        let err_fine   = v_fine.compute_phase_error_fdtd(&(), k_test, omega, dt / 2.0).unwrap();
+        let err_coarse = v_coarse
+            .compute_phase_error_fdtd(&(), k_test, omega, dt)
+            .unwrap();
+        let err_fine = v_fine
+            .compute_phase_error_fdtd(&(), k_test, omega, dt / 2.0)
+            .unwrap();
 
         // Expect ~4× reduction (O(h²) convergence) with ≥ 2× tolerance
         if err_coarse > 1e-12 {
@@ -726,11 +732,17 @@ mod tests {
     fn test_boundary_reflection_within_bounds() {
         let v = default_validator();
         let r_cpml = v.test_boundary_reflection("CPML").unwrap();
-        let r_pml  = v.test_boundary_reflection("PML").unwrap();
+        let r_pml = v.test_boundary_reflection("PML").unwrap();
         assert!(r_cpml > 0.0, "CPML reflection must be positive");
-        assert!(r_cpml <= 0.001, "CPML reflection must be ≤ 0.001 (−60 dB), got {r_cpml}");
+        assert!(
+            r_cpml <= 0.001,
+            "CPML reflection must be ≤ 0.001 (−60 dB), got {r_cpml}"
+        );
         assert!(r_pml > 0.0, "PML reflection must be positive");
-        assert!(r_pml <= 0.01, "PML reflection must be ≤ 0.01 (−40 dB), got {r_pml}");
+        assert!(
+            r_pml <= 0.01,
+            "PML reflection must be ≤ 0.01 (−40 dB), got {r_pml}"
+        );
     }
 
     /// Unknown boundary type must return an error.

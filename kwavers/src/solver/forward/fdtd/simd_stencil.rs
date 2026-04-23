@@ -237,12 +237,10 @@ impl SimdStencilProcessor {
                                     - 2.0 * pressure[[i, j, k]]
                                     + pressure[[i - 1, j, k]])
                                     / dx2
-                                    + (pressure[[i, j + 1, k]]
-                                        - 2.0 * pressure[[i, j, k]]
+                                    + (pressure[[i, j + 1, k]] - 2.0 * pressure[[i, j, k]]
                                         + pressure[[i, j - 1, k]])
                                         / dx2
-                                    + (pressure[[i, j, k + 1]]
-                                        - 2.0 * pressure[[i, j, k]]
+                                    + (pressure[[i, j, k + 1]] - 2.0 * pressure[[i, j, k]]
                                         + pressure[[i, j, k - 1]])
                                         / dx2;
 
@@ -352,12 +350,10 @@ impl SimdStencilProcessor {
                                     - 2.0 * pressure[[i, j, k]]
                                     + pressure[[i - 1, j, k]])
                                     / dx2
-                                    + (pressure[[i, j + 1, k]]
-                                        - 2.0 * pressure[[i, j, k]]
+                                    + (pressure[[i, j + 1, k]] - 2.0 * pressure[[i, j, k]]
                                         + pressure[[i, j - 1, k]])
                                         / dx2
-                                    + (pressure[[i, j, k + 1]]
-                                        - 2.0 * pressure[[i, j, k]]
+                                    + (pressure[[i, j, k + 1]] - 2.0 * pressure[[i, j, k]]
                                         + pressure[[i, j, k - 1]])
                                         / dx2;
 
@@ -514,7 +510,8 @@ mod tests {
         let velocity_dim = velocity.dim();
         let velocity_div = Array3::zeros((16, 16, 16));
 
-        let result = processor.fused_update(&pressure, &pressure_prev, &mut velocity, &velocity_div);
+        let result =
+            processor.fused_update(&pressure, &pressure_prev, &mut velocity, &velocity_div);
         assert!(result.is_ok());
 
         let p_new = result.unwrap();
@@ -567,7 +564,9 @@ mod tests {
 
         let pressure = Array3::from_elem((n, n, n), 500.0_f64);
         let mut vel_inplace = Array3::from_elem((n, n, n), 0.1_f64);
-        processor.update_velocity(&mut vel_inplace, &pressure).unwrap();
+        processor
+            .update_velocity(&mut vel_inplace, &pressure)
+            .unwrap();
 
         // Regression: all interior values updated, boundaries zeroed
         for k in 1..n - 1 {
@@ -575,9 +574,11 @@ mod tests {
                 for i in 1..n - 1 {
                     // Interior points should have been touched (gradient of uniform field = 0,
                     // so value unchanged for uniform pressure)
-                    assert!((vel_inplace[[i, j, k]] - 0.1).abs() < 1e-12,
+                    assert!(
+                        (vel_inplace[[i, j, k]] - 0.1).abs() < 1e-12,
                         "Interior vel at [{i},{j},{k}] changed unexpectedly: {}",
-                        vel_inplace[[i, j, k]]);
+                        vel_inplace[[i, j, k]]
+                    );
                 }
             }
         }
