@@ -91,8 +91,40 @@ impl KWaveArray {
             .add_rect_rot_element(position, dims.0, dims.1, dims.2, euler_xyz_deg);
     }
 
+    fn set_array_position(
+        &mut self,
+        translation: (f64, f64, f64),
+        euler_xyz_deg: (f64, f64, f64),
+    ) {
+        self.inner.set_array_position(translation, euler_xyz_deg);
+    }
+
+    fn clear_array_position(&mut self) {
+        self.inner.clear_array_position();
+    }
+
     fn add_bowl_element(&mut self, position: (f64, f64, f64), radius: f64, diameter: f64) {
         self.inner.add_bowl_element(position, radius, diameter);
+    }
+
+    fn add_annular_element(
+        &mut self,
+        position: (f64, f64, f64),
+        radius: f64,
+        inner_diameter: f64,
+        outer_diameter: f64,
+    ) {
+        self.inner
+            .add_annular_element(position, radius, inner_diameter, outer_diameter);
+    }
+
+    fn add_annular_array(
+        &mut self,
+        position: (f64, f64, f64),
+        radius: f64,
+        diameters: Vec<(f64, f64)>,
+    ) {
+        self.inner.add_annular_array(position, radius, &diameters);
     }
 
     #[getter]

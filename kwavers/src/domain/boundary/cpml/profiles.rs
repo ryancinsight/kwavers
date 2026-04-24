@@ -140,6 +140,22 @@ impl CPMLProfiles {
         };
 
         profiles.compute_profiles(config, grid, sound_speed, dt)?;
+
+        // For one-sided axisymmetric radial PML: zero inner z-PML so axis cells are transparent.
+        // k-wave with pml_outside+axisymmetric uses pnz=nz+p, physical axis at k=0; there is no
+        // inner radial PML. The CPML left-profile would otherwise absorb physical axis cells k=0..p-1.
+        if config.radial_inner_z_transparent {
+            let p = config.per_dimension.z;
+            for i in 0..p.min(nz) {
+                profiles.sigma_z[i] = 0.0;
+                profiles.sigma_z_sgz[i] = 0.0;
+                profiles.kappa_z[i] = 1.0;
+                profiles.alpha_z[i] = 0.0;
+                profiles.a_z[i] = 0.0;
+                profiles.b_z[i] = 1.0;
+            }
+        }
+
         Ok(profiles)
     }
 

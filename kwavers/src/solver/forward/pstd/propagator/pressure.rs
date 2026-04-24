@@ -62,7 +62,8 @@
 use crate::core::error::KwaversResult;
 use crate::math::fft::Complex64;
 use crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
-use ndarray::Zip;
+use crate::solver::geometry::Geometry;
+use ndarray::{s, Array2, Zip};
 
 impl PSTDSolver {
     /// Update pressure field from density perturbation (Equation of State)
@@ -105,14 +106,25 @@ impl PSTDSolver {
         Ok(())
     }
 
-    /// Update density field based on velocity divergence (Mass Conservation)
+    /// Update density field based on velocity divergence (Mass Conservation).
+    ///
+    /// Dispatches to [`update_density_as`] when `config.geometry == CylindricalAS`,
+    /// otherwise uses the standard 3-D spectral path.
+    pub(crate) fn update_density(&mut self, dt: f64) -> KwaversResult<()> {
+        if self.config.geometry == Geometry::CylindricalAS {
+            return self.update_density_as(dt);
+        }
+        self.update_density_cartesian(dt)
+    }
+
+    /// Standard 3-D Cartesian density update.
     ///
     /// Uses staggered grid shift operators with kappa correction matching the C++ k-wave binary:
     ///   dux/dx = IFFT( ddx_k_shift_neg[x] * kappa[i,j,k] * FFT(ux)[i,j,k] )
     ///
     /// kappa IS applied here — Treeby & Cox (2010) Eq. 17 explicitly includes the k-space
     /// correction factor κ in the density update, same as in the velocity update (Eq. 16).
-    pub(crate) fn update_density(&mut self, dt: f64) -> KwaversResult<()> {
+    pub(crate) fn update_density_cartesian(&mut self, dt: f64) -> KwaversResult<()> {
         // k-Wave split-field PML for density (Treeby & Cox 2010, Eq. 16):
         //   rho_x_new = pml_x * (pml_x * rho_x_old - dt * rho0 * dux/dx)
         //
@@ -125,46 +137,47 @@ impl PSTDSolver {
         // Full operator: iκₓ · exp(−iκₓ Δx/2) · κ(k) where κ(k)=sinc(c_ref·dt·|k|/2).
         // Both the staggered shift (ddx_k_shift_neg) AND the kappa correction must be
         // applied — this matches k-Wave's C++ implementation of the density update.
+        // grad_k is reused for each axis sequentially (one axis at a time).
         self.fft.forward_into(&self.fields.ux, &mut self.ux_k);
         {
             let ddx = self.ddx_k_shift_neg.view();
-            Zip::indexed(self.grad_x_k.view_mut())
+            Zip::indexed(self.grad_k.view_mut())
                 .and(self.ux_k.view())
                 .and(self.kappa.view())
-                .for_each(|(i, _j, _k), gx, &u, &kap| {
-                    *gx = ddx[i] * Complex64::new(kap, 0.0) * u;
+                .for_each(|(i, _j, _k), gk, &u, &kap| {
+                    *gk = ddx[i] * Complex64::new(kap, 0.0) * u;
                 });
         }
         self.fft
-            .inverse_into(&self.grad_x_k, &mut self.dpx, &mut self.ux_k);
+            .inverse_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
 
         // duy/dy with negative shift + kappa (matches k-Wave Eq. 17)
         self.fft.forward_into(&self.fields.uy, &mut self.uy_k);
         {
             let ddy = self.ddy_k_shift_neg.view();
-            Zip::indexed(self.grad_y_k.view_mut())
+            Zip::indexed(self.grad_k.view_mut())
                 .and(self.uy_k.view())
                 .and(self.kappa.view())
-                .for_each(|(_i, j, _k), gy, &u, &kap| {
-                    *gy = ddy[j] * Complex64::new(kap, 0.0) * u;
+                .for_each(|(_i, j, _k), gk, &u, &kap| {
+                    *gk = ddy[j] * Complex64::new(kap, 0.0) * u;
                 });
         }
         self.fft
-            .inverse_into(&self.grad_y_k, &mut self.dpy, &mut self.uy_k);
+            .inverse_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
 
         // duz/dz with negative shift + kappa (matches k-Wave Eq. 17)
         self.fft.forward_into(&self.fields.uz, &mut self.uz_k);
         {
             let ddz = self.ddz_k_shift_neg.view();
-            Zip::indexed(self.grad_z_k.view_mut())
+            Zip::indexed(self.grad_k.view_mut())
                 .and(self.uz_k.view())
                 .and(self.kappa.view())
-                .for_each(|(_i, _j, k), gz, &u, &kap| {
-                    *gz = ddz[k] * Complex64::new(kap, 0.0) * u;
+                .for_each(|(_i, _j, k), gk, &u, &kap| {
+                    *gk = ddz[k] * Complex64::new(kap, 0.0) * u;
                 });
         }
         self.fft
-            .inverse_into(&self.grad_z_k, &mut self.dpz, &mut self.uz_k);
+            .inverse_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
 
         // ── Mass-conservation coefficient snapshot ──────────────────────────
         // Linear:    coef = rho0
@@ -196,31 +209,27 @@ impl PSTDSolver {
         }
 
         // Update split density components using the mass coefficient snapshot.
+        // k-Wave linearised form: rho_x -= dt * rho0 * dux/dx  (no u·∇ρ₀ advection term).
+        // Treeby & Cox (2010) Eq. 17; k-Wave MATLAB kspaceFirstOrder3D.m line ~920.
         Zip::from(&mut self.rhox)
             .and(&self.dpx)
             .and(&self.div_u)
-            .and(&self.fields.ux)
-            .and(&self.grad_rho0_x)
-            .for_each(|rho, &du, &coef, &ux, &grx| {
-                *rho -= dt * (coef * du + ux * grx);
+            .for_each(|rho, &du, &coef| {
+                *rho -= dt * coef * du;
             });
 
         Zip::from(&mut self.rhoy)
             .and(&self.dpy)
             .and(&self.div_u)
-            .and(&self.fields.uy)
-            .and(&self.grad_rho0_y)
-            .for_each(|rho, &du, &coef, &uy, &gry| {
-                *rho -= dt * (coef * du + uy * gry);
+            .for_each(|rho, &du, &coef| {
+                *rho -= dt * coef * du;
             });
 
         Zip::from(&mut self.rhoz)
             .and(&self.dpz)
             .and(&self.div_u)
-            .and(&self.fields.uz)
-            .and(&self.grad_rho0_z)
-            .for_each(|rho, &du, &coef, &uz, &grz| {
-                *rho -= dt * (coef * du + uz * grz);
+            .for_each(|rho, &du, &coef| {
+                *rho -= dt * coef * du;
             });
 
         // Apply power-law absorption correction per axis (Treeby & Cox 2010, Eq. 21).
@@ -234,6 +243,74 @@ impl PSTDSolver {
         // update_pressure(). Source injection happens between density and pressure
         // updates (matching C++ k-wave binary time loop order).
 
+        Ok(())
+    }
+
+    /// Axisymmetric WSWA-FFT density update.
+    ///
+    /// Updates `rhox` (axial split density) and `rhoz` (radial split density).
+    /// `rhoy` is not used (ny = 1 in AS mode; remains zero).
+    ///
+    /// # Equations (k-Wave AS, linearised)
+    /// ```text
+    /// rhox -= dt * rho0 * dux/dx              (axial continuity)
+    /// rhoz -= dt * rho0 * (dur/dr + ur/r)     (cylindrical radial continuity)
+    /// ```
+    pub(crate) fn update_density_as(&mut self, dt: f64) -> KwaversResult<()> {
+        let nx = self.grid.nx;
+
+        self.apply_pml_to_density()?; // pre-step PML
+
+        // Take AsContext out of the Option to enable split borrows with
+        // self.fields / self.materials / self.rhox / self.rhoz.
+        // No heap allocation: take/replace are pointer moves only.
+        let mut ctx = self
+            .as_ctx
+            .take()
+            .expect("AsContext must be Some for CylindricalAS");
+
+        ctx.compute_density_divs(
+            self.fields.ux.slice(s![.., 0, ..]),
+            self.fields.uz.slice(s![.., 0, ..]),
+        );
+
+        // Compute rho0-based coefficient (or nonlinear coefficient).
+        let nr = ctx.nr;
+        let mut coef = Array2::<f64>::zeros((nx, nr));
+        if self.config.nonlinearity {
+            Zip::from(&mut coef)
+                .and(self.materials.rho0.slice(s![.., 0, ..]))
+                .and(self.rhox.slice(s![.., 0, ..]))
+                .and(self.rhoz.slice(s![.., 0, ..]))
+                .for_each(|c, &rho0, &rx, &rz| {
+                    *c = rho0 + 2.0 * (rx + rz);
+                });
+        } else {
+            coef.assign(&self.materials.rho0.slice(s![.., 0, ..]));
+        }
+
+        Zip::from(self.rhox.slice_mut(s![.., 0, ..]))
+            .and(&ctx.duxdx)
+            .and(&coef)
+            .for_each(|rho, &du, &c| {
+                *rho -= dt * c * du;
+            });
+
+        Zip::from(self.rhoz.slice_mut(s![.., 0, ..]))
+            .and(&ctx.duzdr)
+            .and(&coef)
+            .for_each(|rho, &du, &c| {
+                *rho -= dt * c * du;
+            });
+
+        // Copy divergences into 3-D scratch buffers for absorption, then restore ctx.
+        self.dpx.slice_mut(s![.., 0, ..]).assign(&ctx.duxdx);
+        self.dpy.fill(0.0);
+        self.dpz.slice_mut(s![.., 0, ..]).assign(&ctx.duzdr);
+        self.as_ctx = Some(ctx);
+        self.apply_absorption(dt)?;
+
+        self.apply_pml_to_density()?; // post-step PML
         Ok(())
     }
 

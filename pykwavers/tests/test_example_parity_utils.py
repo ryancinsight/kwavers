@@ -84,3 +84,32 @@ def test_pml_outside_padding_rejects_2d_tuple_for_3d_volume():
         assert "3-D PML tuple" in str(exc)
     else:
         raise AssertionError("Expected pad_volume_for_pml_outside to reject a 2-D PML tuple")
+
+
+def test_running_timing_stats_accumulates_summary_without_per_line_materialization():
+    module = _load_module()
+    stats = module.RunningTimingStats(("a_ns", "b_ns", "c_ns"))
+    stats.update((1_000_000, 2_000_000, 3_000_000))
+    stats.update((2_000_000, 4_000_000, 6_000_000))
+
+    summary = stats.summary_ms()
+    lines = stats.format_lines()
+    assert stats.count == 2
+    assert len(lines) == 3
+    assert lines[0].startswith("  a_ns")
+    assert "mean=1.500" in lines[0]
+    assert summary["a_ns"]["mean"] == 1.5
+    assert summary["a_ns"]["min"] == 1.0
+    assert summary["a_ns"]["max"] == 2.0
+    assert summary["b_ns"]["mean"] == 3.0
+    assert summary["c_ns"]["max"] == 6.0
+
+
+def test_advance_lateral_window_inplace_matches_full_slice_copy():
+    module = _load_module()
+    source = np.arange(3 * 8 * 2, dtype=float).reshape(3, 8, 2)
+    current = source[:, 1:5, :].copy()
+    module.advance_lateral_window_inplace(current, source, 1, 3)
+
+    expected = source[:, 3:7, :]
+    assert np.array_equal(current, expected)

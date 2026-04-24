@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Sequence
 
 import numpy as np
 
@@ -18,16 +18,68 @@ PYKWAVERS_PYTHON_ROOT = ROOT / "pykwavers" / "python"
 DEFAULT_OUTPUT_DIR = Path(__file__).parent / "output"
 
 
+class RunningTimingStats:
+    """Accumulate per-line timing tuples without materializing per-line dicts."""
+
+    def __init__(self, labels: tuple[str, ...]) -> None:
+        self.labels = labels
+        self.count = 0
+        size = len(self.labels)
+        self.sums_ns = np.zeros(size, dtype=np.float64)
+        self.mins_ns = np.full(size, np.inf, dtype=np.float64)
+        self.maxs_ns = np.zeros(size, dtype=np.float64)
+
+    def update(self, values: Sequence[float]) -> None:
+        arr = np.asarray(values, dtype=np.float64)
+        if arr.ndim != 1 or arr.shape[0] != len(self.labels):
+            raise ValueError(
+                f"Expected {len(self.labels)} timing values, got shape {arr.shape}"
+            )
+        self.count += 1
+        self.sums_ns += arr
+        np.minimum(self.mins_ns, arr, out=self.mins_ns)
+        np.maximum(self.maxs_ns, arr, out=self.maxs_ns)
+
+    def summary_ms(self) -> dict[str, dict[str, float]]:
+        if self.count == 0:
+            raise ValueError("No timing samples recorded")
+        mean_ms = self.sums_ns / self.count / 1e6
+        min_ms = self.mins_ns / 1e6
+        max_ms = self.maxs_ns / 1e6
+        summary: dict[str, dict[str, float]] = {}
+        for idx, label in enumerate(self.labels):
+            summary[label] = {
+                "mean": float(mean_ms[idx]),
+                "min": float(min_ms[idx]),
+                "max": float(max_ms[idx]),
+            }
+        return summary
+
+    def format_lines(self, indent: str = "  ") -> list[str]:
+        summary = self.summary_ms()
+        width = max(len(label) for label in self.labels)
+        lines: list[str] = []
+        for label in self.labels:
+            stats = summary[label]
+            lines.append(
+                f"{indent}{label:<{width}}  "
+                f"mean={stats['mean']:.3f} max={stats['max']:.3f} min={stats['min']:.3f}"
+            )
+        return lines
+
+
 def bootstrap_example_paths() -> Path:
     """Ensure local k-wave-python and pykwavers Python packages are importable."""
     extension_candidates = (
         ROOT / "target" / "maturin" / "pykwavers.dll",
         ROOT / "target" / "release" / "pykwavers.dll",
+        ROOT / "target" / "debug" / "deps" / "pykwavers.dll",
+        ROOT / "target" / "debug" / "pykwavers.dll",
         PYKWAVERS_PYTHON_ROOT / "pykwavers" / "_pykwavers.pyd",
     )
     for extension_path in extension_candidates:
         if extension_path.exists():
-            os.environ.setdefault("PYKWAVERS_EXTENSION_PATH", str(extension_path))
+            os.environ["PYKWAVERS_EXTENSION_PATH"] = str(extension_path)
             break
     for path in (KWAVE_PYTHON_ROOT, PYKWAVERS_PYTHON_ROOT):
         path_str = str(path)
@@ -97,6 +149,41 @@ def clip_volume_to_physical_interior(volume: np.ndarray, pml_size: tuple[int, ..
         arr[:, :, :pz] = 0
         arr[:, :, -pz:] = 0
     return arr
+
+
+def advance_lateral_window_inplace(
+    current_volume: np.ndarray,
+    source_volume: np.ndarray,
+    previous_start: int,
+    current_start: int,
+) -> None:
+    """Advance a sliding y-axis window in place.
+
+    The current volume is the active window stored inside the padded full-grid
+    buffer. Advancing the window only copies the new columns that enter on the
+    right-hand side and shifts the overlap in place.
+    """
+    if current_volume.ndim != 3 or source_volume.ndim != 3:
+        raise ValueError(
+            "advance_lateral_window_inplace expects 3-D current and source volumes"
+        )
+    width = current_volume.shape[1]
+    delta = int(current_start) - int(previous_start)
+    if delta < 0:
+        raise ValueError(
+            f"current_start must be >= previous_start, got {current_start} < {previous_start}"
+        )
+    if delta == 0:
+        return
+    if delta >= width:
+        np.copyto(current_volume, source_volume[:, current_start : current_start + width, :])
+        return
+
+    np.copyto(current_volume[:, : width - delta, :], current_volume[:, delta:width, :])
+    np.copyto(
+        current_volume[:, width - delta :, :],
+        source_volume[:, current_start + width - delta : current_start + width, :],
+    )
 
 
 def normalize_sensor_matrix(data: np.ndarray, expected_sensors: int | None = None) -> np.ndarray:

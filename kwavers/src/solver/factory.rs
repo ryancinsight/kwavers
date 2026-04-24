@@ -1,92 +1,61 @@
-//! Solver Factory for automated solver selection
+//! Solver selection policy for automated solver selection
 //!
-//! This module provides the `SolverFactory` which creates the appropriate solver
-//! instance based on configuration and problem characteristics.
+//! This module owns solver-selection policy only. Concrete solver construction
+//! belongs to the simulation layer because construction binds domain objects to
+//! numerical implementations.
 
-use crate::core::error::KwaversResult;
-use crate::domain::grid::Grid;
-use crate::domain::medium::Medium;
-use crate::domain::source::GridSource;
-use crate::solver::config::{SolverConfiguration, SolverType};
-use crate::solver::forward::fdtd::FdtdConfig;
-use crate::solver::forward::hybrid::config::HybridConfig;
-use crate::solver::forward::pstd::{PSTDConfig, PSTDSolver};
-use crate::solver::forward::{FdtdSolver, HybridSolver};
-use crate::solver::interface::Solver;
+use crate::solver::config::SolverType;
+use crate::solver::interface::factory::{
+    FactoryConfiguration, FactoryError, GridParameters, MediumParameters,
+};
 
-use log::info;
-
-/// Factory for creating solver instances
+/// Solver selection policy evaluated over abstract problem descriptors.
 #[derive(Debug)]
 pub struct SolverFactory;
 
 impl SolverFactory {
-    /// Create a solver based on the provided configuration
-    pub fn create_solver(
+    /// Resolve `Auto` to a concrete solver type using the canonical policy.
+    pub fn resolve_solver_type(
         solver_type: SolverType,
-        _config: SolverConfiguration, // Using unified config
-        grid: &Grid,
-        medium: &dyn Medium,
-        // Optional specific configs could be passed here or embedded in a larger config struct
-        // For simplicity, we use default or generic configs for now, but in a real app this would likely take a `SolverConfigs` struct
-    ) -> KwaversResult<Box<dyn Solver>> {
-        let selected_type = if solver_type == SolverType::Auto {
+        grid: &dyn GridParameters,
+        medium: &dyn MediumParameters,
+    ) -> SolverType {
+        if solver_type == SolverType::Auto {
             Self::select_best_solver(grid, medium)
         } else {
             solver_type
-        };
-
-        info!("Creating solver of type: {:?}", selected_type);
-
-        match selected_type {
-            SolverType::FDTD => {
-                let fdtd_config = FdtdConfig::default();
-                // KNOWN_LIMITATION: Uses zero-amplitude default source.
-                // Callers must add actual sources via the Solver trait after creation.
-                let source = GridSource::default();
-                let solver = FdtdSolver::new(fdtd_config, grid, medium, source)?;
-                Ok(Box::new(solver))
-            }
-            SolverType::PSTD => {
-                let pstd_config = PSTDConfig::default();
-                // KNOWN_LIMITATION: Uses zero-amplitude default source.
-                let source = GridSource::default();
-                let solver = PSTDSolver::new(pstd_config, grid.clone(), medium, source)?;
-                Ok(Box::new(solver))
-            }
-            SolverType::Hybrid => {
-                let hybrid_config = HybridConfig::default();
-                let solver = HybridSolver::new(hybrid_config, grid, medium)?;
-                Ok(Box::new(solver))
-            }
-            SolverType::Auto => unreachable!("Auto should have been resolved"),
-            _ => Err(crate::core::error::KwaversError::NotImplemented(
-                "Solver type not yet supported in factory".to_string(),
-            )),
         }
     }
 
-    /// Analyze the problem to select the best solver
-    fn select_best_solver(grid: &Grid, _medium: &dyn Medium) -> SolverType {
-        // Heuristic 1: Check for heterogeneity
-        // If medium is highly heterogeneous, FDTD might be better or Hybrid.
-        // If smooth, PSTD is much more efficient.
+    /// Validate the solver workspace memory estimate against factory policy.
+    pub fn validate_memory_budget(
+        grid: &dyn GridParameters,
+        config: &FactoryConfiguration,
+    ) -> Result<usize, FactoryError> {
+        let estimated_bytes = grid.total_points() * 8 * 4;
+        if estimated_bytes > config.memory_budget {
+            Err(FactoryError::ResourceExceeded {
+                requested: estimated_bytes,
+                available: config.memory_budget,
+            })
+        } else {
+            Ok(estimated_bytes)
+        }
+    }
 
-        // Simulating analysis...
-        let is_heterogeneous = false; // logic would check medium properties variance
-
-        // Heuristic 2: Grid size
-        // For very large grids, PSTD's lower points-per-wavelength requirement is huge advantage.
-        let large_grid = grid.nx * grid.ny * grid.nz > 1_000_000;
+    /// Analyze the problem to select the best solver.
+    pub fn select_best_solver(
+        grid: &dyn GridParameters,
+        medium: &dyn MediumParameters,
+    ) -> SolverType {
+        let is_heterogeneous = !medium.is_homogeneous();
+        let large_grid = grid.total_points() > 1_000_000;
 
         if large_grid && !is_heterogeneous {
-            info!("Auto-selection: Choosing PSTD for large homogeneous grid");
             SolverType::PSTD
         } else if is_heterogeneous {
-            info!("Auto-selection: Choosing Hybrid for heterogeneous medium");
             SolverType::Hybrid
         } else {
-            // Default fallback
             SolverType::FDTD
         }
     }
@@ -95,37 +64,126 @@ impl SolverFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::grid::Grid;
-    use crate::domain::medium::homogeneous::HomogeneousMedium;
-    use crate::solver::config::SolverConfiguration;
+    use crate::solver::interface::factory::{GridParameters, MediumParameters};
+
+    struct TestGrid {
+        nx: usize,
+        ny: usize,
+        nz: usize,
+    }
+
+    impl GridParameters for TestGrid {
+        fn nx(&self) -> usize {
+            self.nx
+        }
+
+        fn ny(&self) -> usize {
+            self.ny
+        }
+
+        fn nz(&self) -> usize {
+            self.nz
+        }
+
+        fn dx(&self) -> f64 {
+            1.0e-3
+        }
+
+        fn dy(&self) -> f64 {
+            1.0e-3
+        }
+
+        fn dz(&self) -> f64 {
+            1.0e-3
+        }
+    }
+
+    struct TestMedium {
+        heterogeneity: f64,
+    }
+
+    impl MediumParameters for TestMedium {
+        fn sound_speed(&self, _x: f64, _y: f64, _z: f64) -> f64 {
+            1500.0
+        }
+
+        fn density(&self, _x: f64, _y: f64, _z: f64) -> f64 {
+            1000.0
+        }
+
+        fn heterogeneity(&self) -> f64 {
+            self.heterogeneity
+        }
+
+        fn absorption(&self, _frequency: f64) -> f64 {
+            0.0
+        }
+    }
 
     #[test]
-    fn test_solver_factory_creation() {
-        let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
+    fn selects_fdtd_for_small_homogeneous_grid() {
+        let grid = TestGrid {
+            nx: 32,
+            ny: 32,
+            nz: 32,
+        };
+        let medium = TestMedium { heterogeneity: 0.0 };
 
-        // Use a simple homogeneous medium
-        let medium = HomogeneousMedium::water(&grid);
+        let selected = SolverFactory::select_best_solver(&grid, &medium);
 
-        let config = SolverConfiguration {
-            max_steps: 10,
-            dt: 1e-6,
+        assert_eq!(selected, SolverType::FDTD);
+    }
+
+    #[test]
+    fn selects_pstd_for_large_homogeneous_grid() {
+        let grid = TestGrid {
+            nx: 128,
+            ny: 128,
+            nz: 128,
+        };
+        let medium = TestMedium { heterogeneity: 0.0 };
+
+        let selected = SolverFactory::select_best_solver(&grid, &medium);
+
+        assert_eq!(selected, SolverType::PSTD);
+    }
+
+    #[test]
+    fn selects_hybrid_for_heterogeneous_grid() {
+        let grid = TestGrid {
+            nx: 128,
+            ny: 128,
+            nz: 128,
+        };
+        let medium = TestMedium {
+            heterogeneity: 0.01,
+        };
+
+        let selected = SolverFactory::select_best_solver(&grid, &medium);
+
+        assert_eq!(selected, SolverType::Hybrid);
+    }
+
+    #[test]
+    fn reports_exact_memory_budget_violation() {
+        let grid = TestGrid {
+            nx: 4,
+            ny: 5,
+            nz: 6,
+        };
+        let config = FactoryConfiguration {
+            memory_budget: 1024,
             ..Default::default()
         };
 
-        // Test creation with Auto selection
-        let result = SolverFactory::create_solver(SolverType::Auto, config.clone(), &grid, &medium);
-        assert!(
-            result.is_ok(),
-            "Factory failed to create solver (Auto): {:?}",
-            result.err()
-        );
+        let result = SolverFactory::validate_memory_budget(&grid, &config);
 
-        // Test creation with explicit FDTD
-        let result_fdtd = SolverFactory::create_solver(SolverType::FDTD, config, &grid, &medium);
-        assert!(
-            result_fdtd.is_ok(),
-            "Factory failed to create solver (FDTD): {:?}",
-            result_fdtd.err()
-        );
+        assert!(matches!(
+            result,
+            Err(FactoryError::ResourceExceeded {
+                requested: 3840,
+                available: 1024
+            })
+        ));
     }
 }

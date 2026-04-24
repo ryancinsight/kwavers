@@ -8,6 +8,11 @@
 
 ## Phase 2: Execution & Restructuring (10-50%)
 - [x] Eliminate circular dependencies & cross-contaminations
+- [x] Replace the domain-owned solver factory with the `simulation::solver_factory` assembly boundary and descriptor-only `solver::factory` selection policy
+- [x] Add architecture regression coverage for domain-to-solver/simulation imports and solver-factory-to-domain/simulation imports
+- [x] Consolidate FDTD test/example struct literals onto `FdtdConfig::default()` for geometry and future defaulted fields
+- [x] Add `FwiProcessor::generate_synthetic_data` as the public synthetic-data SSOT over the canonical FWI forward model
+- [x] Remove PSTD absorption visibility and unreachable-code diagnostics without changing fractional-Laplacian formulas
 - [x] Clean codebase: Remove dead/deprecated code, resolve all warnings, avoid build logs
 - [x] Establish deep nested file structure (3-5+ levels) with parent/child hierarchies
 - [x] Enforce Single Source of Truth via shared accessors
@@ -33,16 +38,20 @@
 - [x] k-wave-python example parity: complete the 2-D sensor directivity modelling comparison with source-angle trace parity and directivity curve validation
 - [x] k-wave-python example parity: complete the `at_array_as_sensor` comparison with exact arc mask parity, raw detector-matrix comparison, and combined arc-trace validation
 - [x] k-wave-python example parity: complete the `at_array_as_source` comparison with exact source-mask parity, distributed source-signal parity, and p_max/p_rms field validation
+- [x] pressure-source ordering contract: emit Fortran-order active-cell rows for arc and linear-array pressure builders and pin exact helper-matrix parity against k-wave-python
 - [x] k-wave-python example parity: complete the `us_defining_transducer` comparison with exact time-step alignment, per-sensor trace parity, and report-backed PASS validation
 - [x] k-wave-python example parity: complete the `ivp_photoacoustic_waveforms` comparison with cached initial-pressure trace parity and PASS report validation
 - [x] k-wave-python example parity: complete the `us_bmode_phased_array` comparison with quick-sweep scan-line parity, B-mode image parity, and PASS report validation
 - [x] k-wave-python example parity: complete the `sd_focussed_detector_3D` comparison with per-source trace parity, directivity ratio validation, and PASS report validation
+- [x] k-wave-python example parity: complete the `us_bmode_linear_transducer` comparison with GPU source-mode alignment, quick raw scan-line parity, and PASS report validation
+- [x] GPU PSTD sweep optimization: split per-line medium upload timing, compact GPU profile aggregation, and advance the lateral medium window in place before the 16-line sweep
 - [x] FFT migration: remove direct `rustfft` usage from `kwavers` source, tests, and benches; route all transform calls through Apollo-backed FFT APIs
 - [x] Apollo GPU FFT parity: validate the 128³ GPU FFT case after correcting radix-stage dispatch and using a hybrid absolute/relative error metric
 - [x] Neural layer adaptation: replace constant-offset mutation with the exact scalar calibration step on the layer parameters
 - [x] Distributed neural beamforming: chunk frame-major RF volumes across healthy processors, reuse frame views, and recombine deterministically
-- [ ] k-wave-python example parity: `at_linear_array_transducer` — add per-element rotation to `KWaveArray::add_rect_element`, expose in pykwavers, validate tilted linear array field
-- [ ] k-wave-python example parity: `at_focused_annular_array_3D` — add `ElementShape::Annulus` with BLI rasterization, expose in pykwavers, validate concentric-ring focused field
-- [ ] k-wave-python example parity: `at_focused_bowl_AS` and `at_circular_piston_AS` — implement axisymmetric PSTD solver (radial-axial grid), expose in pykwavers, validate AS bowl/piston fields
-- [ ] k-wave-python example parity: `na_controlling_the_pml` — expose `pml_size`, `pml_alpha`, `pml_inside` on pykwavers solver bindings, validate PML attenuation sweep
-- [ ] k-wave-python example parity: `checkpointing` — add save/resume of PSTD session state (pressure, velocity, t-index) and validate bit-exact continuation
+- [x] k-wave-python example parity: `at_linear_array_transducer` — parity closed with additive pressure-source mode, Fortran-order source rows, rebuilt extension cache v5, and validated `p_max` field parity
+- [x] k-wave-python example parity: `at_focused_annular_array_3D` — add `ElementShape::Annulus` with BLI rasterization, expose in pykwavers, validate concentric-ring focused field (pearson=0.907 PASS; per-element drive pearson=0.907 PASS)
+- [x] k-wave-python example parity: `at_circular_piston_AS` — axisymmetric PSTD parity PASS with Fortran-order sensor reshaping, Pierce analytical validation, and cached figure/report artifacts
+- [x] k-wave-python example parity: `at_focused_bowl_AS` — axisymmetric PSTD parity PASS with Fortran-order sensor reshaping, O'Neil analytical comparison, and cached figure/report artifacts
+- [x] k-wave-python example parity: `na_controlling_the_pml` — waveform parity PASS across the PML attenuation sweep and exact k-Wave-style save-to-disk HDF5 input-file parity PASS via `na_controlling_the_pml_compare.py`
+- [x] PSTD checkpointing: exact save/resume contract with binary KWCP state, file deletion after restore, bit-exact continuation, and PASS report validation via `checkpointing_compare.py`

@@ -3,6 +3,24 @@ use crate::domain::grid::Grid;
 use crate::domain::source::{GridSource, Source, SourceField, SourceMode};
 use ndarray::{Array2, Array3, Zip};
 
+/// Collect active pressure-source voxels in MATLAB / Fortran order.
+#[inline]
+fn collect_pressure_indices_fortran(mask: &Array3<f64>) -> Vec<(usize, usize, usize, f64)> {
+    let (nx, ny, nz) = mask.dim();
+    let mut indices = Vec::new();
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                let val = mask[[i, j, k]];
+                if val != 0.0 {
+                    indices.push((i, j, k, val));
+                }
+            }
+        }
+    }
+    indices
+}
+
 #[derive(Debug)]
 pub struct SourceHandler {
     source: GridSource,
@@ -53,11 +71,7 @@ impl SourceHandler {
                     },
                 ));
             }
-            for ((i, j, k), &val) in mask.indexed_iter() {
-                if val != 0.0 {
-                    p_indices.push((i, j, k, val));
-                }
-            }
+            p_indices = collect_pressure_indices_fortran(mask);
 
             if !p_indices.is_empty() {
                 // Compute effective propagation dimensionality.
@@ -319,12 +333,7 @@ impl SourceHandler {
                     ));
                 }
 
-                let mut indices = Vec::new();
-                for ((i, j, k), &val) in mask.indexed_iter() {
-                    if val != 0.0 {
-                        indices.push((i, j, k, val));
-                    }
-                }
+                let indices = collect_pressure_indices_fortran(&mask);
                 if indices.is_empty() {
                     return Err(KwaversError::Validation(
                         ValidationError::ConstraintViolation {

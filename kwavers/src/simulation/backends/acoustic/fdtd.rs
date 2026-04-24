@@ -159,6 +159,7 @@ impl FdtdBackend {
             nt: 1, // Single step mode (controlled externally)
             dt,
             sensor_mask: None, // No sensors (fields accessed directly)
+            geometry: Default::default(),
         };
 
         // Create empty source (sources added dynamically)

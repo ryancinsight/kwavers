@@ -105,6 +105,7 @@ fn run_fdtd_simulation_with_time(
         nt: n_steps,
         dt,
         sensor_mask: None,
+        ..Default::default()
     };
 
     let mut plugin_manager = PluginManager::new();

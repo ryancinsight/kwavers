@@ -58,7 +58,7 @@ pub enum ElementShape {
         width: f64,
         /// Height in y [m]
         height: f64,
-        /// Length in z [m]
+        /// Length in z [m] retained for API compatibility.
         length: f64,
         /// Intrinsic X-Y-Z Euler rotation in degrees applied about the element
         /// center. `(0.0, 0.0, 0.0)` keeps the rectangle axis-aligned and
@@ -83,6 +83,19 @@ pub enum ElementShape {
         /// Bowl diameter [m]
         diameter: f64,
     },
+    /// Annular spherical-cap element — the region of a bowl surface bounded
+    /// by two aperture diameters. Facing convention matches `Bowl`
+    /// (center-of-curvature at `position`, cap opening along −X).
+    Annulus {
+        /// Center of curvature [x, y, z]
+        position: (f64, f64, f64),
+        /// Radius of curvature [m]
+        radius: f64,
+        /// Inner aperture diameter [m]
+        inner_diameter: f64,
+        /// Outer aperture diameter [m]
+        outer_diameter: f64,
+    },
 }
 
 /// Custom transducer array with mixed element geometries
@@ -99,6 +112,18 @@ pub struct KWaveArray {
     sound_speed: f64,
     /// Element width for arc elements [m]
     _element_width: f64,
+    /// Optional global affine transform applied on top of every element.
+    /// `None` => identity (element poses used as-is). Matches
+    /// k-wave-python's `kWaveArray.set_array_position`.
+    array_transform: Option<ArrayTransform>,
+}
+
+/// Global translation + intrinsic X-Y-Z Euler rotation (degrees) applied to
+/// every element before rasterization.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct ArrayTransform {
+    translation: (f64, f64, f64),
+    euler_xyz_deg: (f64, f64, f64),
 }
 
 impl KWaveArray {
@@ -110,6 +135,7 @@ impl KWaveArray {
             frequency: 1e6,
             sound_speed: SOUND_SPEED_TISSUE,
             _element_width: 0.5e-3,
+            array_transform: None,
         }
     }
 
@@ -127,6 +153,7 @@ impl KWaveArray {
             frequency,
             sound_speed,
             _element_width: 0.5e-3,
+            array_transform: None,
         }
     }
 
@@ -138,6 +165,26 @@ impl KWaveArray {
     /// Update the sound speed while preserving existing elements.
     pub fn set_sound_speed(&mut self, sound_speed: f64) {
         self.sound_speed = sound_speed;
+    }
+
+    /// Install a global translation + intrinsic X-Y-Z Euler rotation (degrees)
+    /// applied to every element at rasterization time. Mirrors
+    /// k-wave-python's `kWaveArray.set_array_position(translation, rotation)`.
+    /// Passing `None` for both is equivalent to the identity transform.
+    pub fn set_array_position(
+        &mut self,
+        translation: (f64, f64, f64),
+        euler_xyz_deg: (f64, f64, f64),
+    ) {
+        self.array_transform = Some(ArrayTransform {
+            translation,
+            euler_xyz_deg,
+        });
+    }
+
+    /// Remove the global array transform if one was previously installed.
+    pub fn clear_array_position(&mut self) {
+        self.array_transform = None;
     }
 
     /// Set the element width (for arc discretization)
@@ -280,24 +327,106 @@ impl KWaveArray {
         self
     }
 
+    /// Add an annular spherical-cap element — a bowl section bounded by
+    /// inner and outer aperture diameters. Mirrors k-wave-python's
+    /// `add_annular_element`. Use the same orientation convention as
+    /// `add_bowl_element`.
+    pub fn add_annular_element(
+        &mut self,
+        position: (f64, f64, f64),
+        radius: f64,
+        inner_diameter: f64,
+        outer_diameter: f64,
+    ) -> &mut Self {
+        assert!(
+            outer_diameter > inner_diameter && inner_diameter >= 0.0,
+            "annulus requires 0 <= inner_diameter < outer_diameter (got \
+             inner={inner_diameter}, outer={outer_diameter})",
+        );
+        self.elements.push(ElementShape::Annulus {
+            position,
+            radius,
+            inner_diameter,
+            outer_diameter,
+        });
+        self
+    }
+
+    /// Add a concentric annular array (sequence of annuli sharing a common
+    /// center of curvature). Each `(inner_diameter, outer_diameter)` pair
+    /// becomes one `ElementShape::Annulus`, matching k-wave-python's
+    /// `add_annular_array`.
+    pub fn add_annular_array(
+        &mut self,
+        position: (f64, f64, f64),
+        radius: f64,
+        diameters: &[(f64, f64)],
+    ) -> &mut Self {
+        for &(inner_d, outer_d) in diameters {
+            self.add_annular_element(position, radius, inner_d, outer_d);
+        }
+        self
+    }
+
     /// Get the number of elements
     #[must_use]
     pub fn num_elements(&self) -> usize {
         self.elements.len()
     }
 
-    /// Get all element positions (centroids)
+    /// Get all element positions (centroids) with the global array transform
+    /// applied when one has been set via `set_array_position`.
     #[must_use]
     pub fn get_element_positions(&self) -> Vec<(f64, f64, f64)> {
         self.elements
             .iter()
-            .map(|e| match e {
-                ElementShape::Arc { position, .. } => *position,
-                ElementShape::Rect { position, .. } => *position,
-                ElementShape::Disc { position, .. } => *position,
-                ElementShape::Bowl { position, .. } => *position,
+            .map(|e| {
+                let local = match e {
+                    ElementShape::Arc { position, .. } => *position,
+                    ElementShape::Rect { position, .. } => *position,
+                    ElementShape::Disc { position, .. } => *position,
+                    ElementShape::Bowl { position, .. } => *position,
+                    ElementShape::Annulus { position, .. } => *position,
+                };
+                self.apply_transform_point(local)
             })
             .collect()
+    }
+
+    /// Apply the installed global array transform to a point in element-local
+    /// coordinates, returning world coordinates. When no transform is set this
+    /// is the identity.
+    fn apply_transform_point(&self, p_local: (f64, f64, f64)) -> (f64, f64, f64) {
+        match self.array_transform {
+            Some(t) => {
+                let r = euler_xyz_rotation_matrix(t.euler_xyz_deg);
+                let rotated = apply_matrix(&r, p_local);
+                (
+                    rotated.0 + t.translation.0,
+                    rotated.1 + t.translation.1,
+                    rotated.2 + t.translation.2,
+                )
+            }
+            None => p_local,
+        }
+    }
+
+    /// Compose the global array transform with a per-element Rect pose,
+    /// returning the effective (position, Euler angles in degrees) to feed
+    /// into the rasterizer. k-wave-python applies the global transform to the
+    /// rectangle center only and keeps the per-element rect Euler unchanged.
+    fn apply_transform_rect(
+        &self,
+        position: (f64, f64, f64),
+        euler_xyz_deg: (f64, f64, f64),
+    ) -> ((f64, f64, f64), (f64, f64, f64)) {
+        match self.array_transform {
+            Some(_t) => {
+                let pos_eff = self.apply_transform_point(position);
+                (pos_eff, euler_xyz_deg)
+            }
+            None => (position, euler_xyz_deg),
+        }
     }
 
     /// Generate binary mask on computational grid
@@ -336,14 +465,9 @@ impl KWaveArray {
                     length,
                     euler_xyz_deg,
                 } => {
+                    let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
                     self.rasterize_rect(
-                        &mut mask,
-                        grid,
-                        *position,
-                        *width,
-                        *height,
-                        *length,
-                        *euler_xyz_deg,
+                        &mut mask, grid, pos_eff, *width, *height, *length, euler_eff,
                     );
                 }
                 ElementShape::Disc {
@@ -359,6 +483,21 @@ impl KWaveArray {
                     diameter,
                 } => {
                     self.rasterize_bowl(&mut mask, grid, *position, *radius, *diameter);
+                }
+                ElementShape::Annulus {
+                    position,
+                    radius,
+                    inner_diameter,
+                    outer_diameter,
+                } => {
+                    self.rasterize_annulus(
+                        &mut mask,
+                        grid,
+                        *position,
+                        *radius,
+                        *inner_diameter,
+                        *outer_diameter,
+                    );
                 }
             }
         }
@@ -386,6 +525,29 @@ impl KWaveArray {
         }
 
         distributed
+    }
+
+    /// Distributed source matrix from a per-element signal matrix.
+    ///
+    /// `per_element_signals` must have shape `[n_elements, n_times]`. Matches the
+    /// output shape of k-wave-python's `create_cw_signals(t, f, amps, phases)`
+    /// so callers can feed it in unchanged.
+    ///
+    /// # Errors
+    /// Returns `Err` if the row count doesn't match the array's element count.
+    pub fn get_distributed_source_signal_per_element(
+        &self,
+        per_element_signals: &Array2<f64>,
+    ) -> Result<Array2<f64>, String> {
+        let n_elements = self.elements.len();
+        let (rows, _cols) = per_element_signals.dim();
+        if rows != n_elements {
+            return Err(format!(
+                "per_element_signals has {} rows but array has {} elements",
+                rows, n_elements
+            ));
+        }
+        Ok(per_element_signals.clone())
     }
 
     /// Calculate focus delays for electronic focusing
@@ -591,12 +753,11 @@ impl KWaveArray {
 
     /// Rasterize a rectangular element onto the grid.
     ///
-    /// When `euler_xyz_deg == (0, 0, 0)` the rectangle is axis-aligned and we
-    /// use the fast AABB marker. Otherwise we sample the rectangle surface on
-    /// a sub-grid lattice (upsampled by `DISC_SAMPLE_UPSAMPLING_RATE`) and
-    /// apply the intrinsic X-Y-Z rotation before marking the containing cell
-    /// of each sample — matching the upstream k-wave-python rotated-rect
-    /// contract used by `at_linear_array_transducer`.
+    /// The rectangle is treated as a planar surface element, matching the
+    /// upstream k-wave-python `make_cart_rect` contract. We sample an evenly
+    /// spaced lattice on the canonical rectangle, apply the intrinsic X-Y-Z
+    /// rotation, and feed each sample through the same local BLI stencil used
+    /// for the disc and bowl elements.
     fn rasterize_rect(
         &self,
         mask: &mut Array3<bool>,
@@ -604,84 +765,114 @@ impl KWaveArray {
         center: (f64, f64, f64),
         width: f64,
         height: f64,
-        length: f64,
+        _length: f64,
         euler_xyz_deg: (f64, f64, f64),
     ) {
-        let nx = grid.nx;
-        let ny = grid.ny;
-        let nz = grid.nz;
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
 
-        if euler_xyz_deg.0 == 0.0 && euler_xyz_deg.1 == 0.0 && euler_xyz_deg.2 == 0.0 {
-            let x_min = ((center.0 - width / 2.0 - grid.origin[0]) / grid.dx).floor() as usize;
-            let x_max = ((center.0 + width / 2.0 - grid.origin[0]) / grid.dx).ceil() as usize;
-            let y_min = ((center.1 - height / 2.0 - grid.origin[1]) / grid.dy).floor() as usize;
-            let y_max = ((center.1 + height / 2.0 - grid.origin[1]) / grid.dy).ceil() as usize;
-            let z_min = ((center.2 - length / 2.0 - grid.origin[2]) / grid.dz).floor() as usize;
-            let z_max = ((center.2 + length / 2.0 - grid.origin[2]) / grid.dz).ceil() as usize;
-
-            let x_min = x_min.min(nx);
-            let x_max = x_max.min(nx);
-            let y_min = y_min.min(ny);
-            let y_max = y_max.min(ny);
-            let z_min = z_min.min(nz);
-            let z_max = z_max.min(nz);
-
-            for i in x_min..x_max {
-                for j in y_min..y_max {
-                    for k in z_min..z_max {
-                        mask[[i, j, k]] = true;
-                    }
-                }
-            }
-            return;
-        }
-
-        let rot = euler_xyz_rotation_matrix(euler_xyz_deg);
-        let dmin = grid.dx.min(grid.dy).min(grid.dz);
-        let sample = |extent: f64| {
-            ((extent / dmin).ceil() * DISC_SAMPLE_UPSAMPLING_RATE)
-                .max(1.0) as usize
-                + 1
-        };
-        let nu = sample(width);
-        let nv = sample(height);
-        let nw = sample(length.max(dmin));
-
-        let step = |n: usize, extent: f64| -> f64 {
-            if n <= 1 {
-                0.0
-            } else {
-                extent / (n - 1) as f64
-            }
-        };
-        let du = step(nu, width);
-        let dv = step(nv, height);
-        let dw = step(nw, length);
-
-        for iu in 0..nu {
-            let lu = -width / 2.0 + du * iu as f64;
-            for iv in 0..nv {
-                let lv = -height / 2.0 + dv * iv as f64;
-                for iw in 0..nw {
-                    let lw = if nw <= 1 {
-                        0.0
-                    } else {
-                        -length / 2.0 + dw * iw as f64
-                    };
-                    let (rx, ry, rz) = apply_matrix(&rot, (lu, lv, lw));
-                    let gx = ((center.0 + rx - grid.origin[0]) / grid.dx).round();
-                    let gy = ((center.1 + ry - grid.origin[1]) / grid.dy).round();
-                    let gz = ((center.2 + rz - grid.origin[2]) / grid.dz).round();
-                    if gx < 0.0 || gy < 0.0 || gz < 0.0 {
-                        continue;
-                    }
-                    let ix = gx as usize;
-                    let iy = gy as usize;
-                    let iz = gz as usize;
-                    if ix < nx && iy < ny && iz < nz {
+        self.rasterize_rect_points(
+            grid,
+            center,
+            width,
+            height,
+            euler_xyz_deg,
+            |point, scale| {
+                self.map_surface_sample(
+                    grid,
+                    &x_vec,
+                    &y_vec,
+                    &z_vec,
+                    point,
+                    scale,
+                    true,
+                    |ix, iy, iz, _| {
                         mask[[ix, iy, iz]] = true;
-                    }
-                }
+                    },
+                );
+            },
+        );
+    }
+
+    /// Rasterize a rectangular element onto the grid with area-conserving weights.
+    fn rasterize_rect_weighted(
+        &self,
+        mask: &mut Array3<f64>,
+        grid: &crate::domain::grid::Grid,
+        center: (f64, f64, f64),
+        width: f64,
+        height: f64,
+        _length: f64,
+        euler_xyz_deg: (f64, f64, f64),
+    ) {
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
+
+        self.rasterize_rect_points(
+            grid,
+            center,
+            width,
+            height,
+            euler_xyz_deg,
+            |point, scale| {
+                self.map_surface_sample(
+                    grid,
+                    &x_vec,
+                    &y_vec,
+                    &z_vec,
+                    point,
+                    scale,
+                    false,
+                    |ix, iy, iz, weight| {
+                        mask[[ix, iy, iz]] += weight;
+                    },
+                );
+            },
+        );
+    }
+
+    /// Emit the canonical rectangle integration points used by k-wave-python.
+    fn rasterize_rect_points<F>(
+        &self,
+        grid: &crate::domain::grid::Grid,
+        center: (f64, f64, f64),
+        width: f64,
+        height: f64,
+        euler_xyz_deg: (f64, f64, f64),
+        mut visit: F,
+    ) where
+        F: FnMut([f64; 3], f64),
+    {
+        let area = width * height;
+        let m_grid = area / (grid.dx * grid.dx);
+        let target_points = (m_grid * DISC_SAMPLE_UPSAMPLING_RATE).ceil().max(1.0) as usize;
+        let npts_x = ((target_points as f64 * width / height).sqrt().ceil() as usize).max(1);
+        let npts_y = ((target_points as f64 / npts_x as f64).ceil() as usize).max(1);
+        let num_points = npts_x * npts_y;
+        let scale = m_grid / num_points as f64;
+        let rot = euler_xyz_rotation_matrix(euler_xyz_deg);
+
+        let dx = if npts_x <= 1 {
+            0.0
+        } else {
+            2.0 / npts_x as f64
+        };
+        let dy = if npts_y <= 1 {
+            0.0
+        } else {
+            2.0 / npts_y as f64
+        };
+
+        for ix in 0..npts_x {
+            let ux = -1.0 + dx / 2.0 + dx * ix as f64;
+            let lx = ux * width / 2.0;
+            for iy in 0..npts_y {
+                let uy = -1.0 + dy / 2.0 + dy * iy as f64;
+                let ly = uy * height / 2.0;
+                let (rx, ry, rz) = apply_matrix(&rot, (lx, ly, 0.0));
+                visit([center.0 + rx, center.1 + ry, center.2 + rz], scale);
             }
         }
     }
@@ -1030,6 +1221,12 @@ impl KWaveArray {
                     end_angle: e,
                     ..
                 } => Self::arc_line_length(*r, *s, *e),
+                ElementShape::Annulus {
+                    radius: r,
+                    inner_diameter: di,
+                    outer_diameter: d_o,
+                    ..
+                } => Self::annulus_surface_area(*r, *di, *d_o),
             };
         }
         total
@@ -1049,10 +1246,10 @@ impl KWaveArray {
     ///
     /// Disc and bowl elements both use deterministic surface samplers and the
     /// same local BLI stencil as k-wave-python (`bli_tolerance = 0.05`,
-    /// `bli_type = "sinc"`). Rect elements remain binary masks with uniform
-    /// unit weights per active cell. Arc elements use weighted line sampling
-    /// with the same BLI stencil and arc-length normalization as the upstream
-    /// k-wave-python `make_cart_arc` path.
+    /// `bli_type = "sinc"`). Rect elements use the same planar surface
+    /// sampler and BLI stencil as the upstream k-wave-python `make_cart_rect`
+    /// path. Arc elements use weighted line sampling with the same BLI stencil
+    /// and arc-length normalization as the upstream `make_cart_arc` path.
     ///
     /// # Arguments
     /// * `grid` – Computational grid defining the domain.
@@ -1109,28 +1306,192 @@ impl KWaveArray {
                     length,
                     euler_xyz_deg,
                 } => {
-                    let mut bool_layer = Array3::from_elem((grid.nx, grid.ny, grid.nz), false);
-                    self.rasterize_rect(
-                        &mut bool_layer,
+                    let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
+                    self.rasterize_rect_weighted(
+                        &mut mask, grid, pos_eff, *width, *height, *length, euler_eff,
+                    );
+                }
+                ElementShape::Annulus {
+                    position,
+                    radius,
+                    inner_diameter,
+                    outer_diameter,
+                } => {
+                    self.rasterize_annulus_weighted(
+                        &mut mask,
                         grid,
                         *position,
-                        *width,
-                        *height,
-                        *length,
-                        *euler_xyz_deg,
+                        *radius,
+                        *inner_diameter,
+                        *outer_diameter,
                     );
-                    ndarray::Zip::from(&mut mask)
-                        .and(&bool_layer)
-                        .for_each(|m, &b| {
-                            if b {
-                                *m += 1.0;
-                            }
-                        });
                 }
             }
         }
 
         mask
+    }
+
+    /// Rasterize a single element onto a pre-allocated weighted mask.
+    /// Same dispatch as `get_array_weighted_mask` but for one element — used to
+    /// build per-element BLI masks when per-element driving signals are needed.
+    fn rasterize_element_weighted(
+        &self,
+        element: &ElementShape,
+        mask: &mut Array3<f64>,
+        grid: &crate::domain::grid::Grid,
+    ) {
+        match element {
+            ElementShape::Bowl {
+                position,
+                radius,
+                diameter,
+            } => {
+                self.rasterize_bowl_weighted(mask, grid, *position, *radius, *diameter);
+            }
+            ElementShape::Disc {
+                position,
+                diameter,
+                focus_position,
+            } => {
+                self.rasterize_disc_weighted(mask, grid, *position, *diameter, *focus_position);
+            }
+            ElementShape::Arc {
+                position,
+                radius,
+                diameter,
+                start_angle,
+                end_angle,
+            } => {
+                self.rasterize_arc_weighted(
+                    mask,
+                    grid,
+                    *position,
+                    *radius,
+                    *diameter,
+                    *start_angle,
+                    *end_angle,
+                );
+            }
+            ElementShape::Rect {
+                position,
+                width,
+                height,
+                length,
+                euler_xyz_deg,
+            } => {
+                let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
+                self.rasterize_rect_weighted(
+                    mask, grid, pos_eff, *width, *height, *length, euler_eff,
+                );
+            }
+            ElementShape::Annulus {
+                position,
+                radius,
+                inner_diameter,
+                outer_diameter,
+            } => {
+                self.rasterize_annulus_weighted(
+                    mask,
+                    grid,
+                    *position,
+                    *radius,
+                    *inner_diameter,
+                    *outer_diameter,
+                );
+            }
+        }
+    }
+
+    /// Build a per-cell source (mask, signal) from per-element driving signals.
+    ///
+    /// Expands a `[n_elements, n_times]` matrix of per-element waveforms into a
+    /// `[n_active_cells, n_times]` per-cell signal by accumulating
+    /// `s_cell[c, t] = Σ_i W_i[c] · s_i[t]` over each element's BLI-weighted mask.
+    ///
+    /// Returns `(mask, per_cell_signal)` where `mask[c]=1.0` at each active cell
+    /// (so `SourceHandler` applies only its `p_scale_*` without re-applying
+    /// weights — weights are already baked into `per_cell_signal`). The row
+    /// order of `per_cell_signal` matches MATLAB / Fortran-order active-cell
+    /// enumeration, i.e. `matlab_find(mask)` on the same logical mask.
+    ///
+    /// # Errors
+    /// Returns `Err` if `per_element_signals.shape()[0] != n_elements`.
+    pub fn build_per_element_source(
+        &self,
+        grid: &crate::domain::grid::Grid,
+        per_element_signals: &Array2<f64>,
+    ) -> Result<(Array3<f64>, Array2<f64>), String> {
+        let n_elements = self.elements.len();
+        let (rows, n_times) = per_element_signals.dim();
+        if rows != n_elements {
+            return Err(format!(
+                "per_element_signals has {} rows but array has {} elements",
+                rows, n_elements
+            ));
+        }
+
+        let shape = (grid.nx, grid.ny, grid.nz);
+        let mut per_element_masks: Vec<Array3<f64>> = Vec::with_capacity(n_elements);
+        for element in &self.elements {
+            let mut m = Array3::zeros(shape);
+            self.rasterize_element_weighted(element, &mut m, grid);
+            per_element_masks.push(m);
+        }
+
+        let mut combined = Array3::<f64>::zeros(shape);
+        for m in &per_element_masks {
+            combined += m;
+        }
+        let active_cells = Self::active_cells_fortran_order(&combined);
+
+        let n_active = active_cells.len();
+        let mut per_cell_signal = Array2::<f64>::zeros((n_active, n_times));
+        for (idx, &(i, j, k)) in active_cells.iter().enumerate() {
+            // Collect non-zero contributions for this cell, then walk timesteps once.
+            let contribs: Vec<(usize, f64)> = per_element_masks
+                .iter()
+                .enumerate()
+                .filter_map(|(e, m)| {
+                    let w = m[[i, j, k]];
+                    if w != 0.0 {
+                        Some((e, w))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            for t in 0..n_times {
+                let mut s = 0.0;
+                for &(e, w) in &contribs {
+                    s += w * per_element_signals[[e, t]];
+                }
+                per_cell_signal[[idx, t]] = s;
+            }
+        }
+
+        let mut mask_ones = Array3::<f64>::zeros(shape);
+        for &(i, j, k) in &active_cells {
+            mask_ones[[i, j, k]] = 1.0;
+        }
+
+        Ok((mask_ones, per_cell_signal))
+    }
+
+    #[inline]
+    fn active_cells_fortran_order(mask: &Array3<f64>) -> Vec<(usize, usize, usize)> {
+        let (nx, ny, nz) = mask.dim();
+        let mut active_cells = Vec::new();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    if mask[[i, j, k]] != 0.0 {
+                        active_cells.push((i, j, k));
+                    }
+                }
+            }
+        }
+        active_cells
     }
 
     /// Dense surface-sampling rasterization for a bowl element (float weights).
@@ -1285,6 +1646,156 @@ impl KWaveArray {
         };
         2.0 * std::f64::consts::PI * radius * h
     }
+
+    #[inline]
+    fn annulus_surface_area(radius: f64, inner_diameter: f64, outer_diameter: f64) -> f64 {
+        let outer = (outer_diameter / 2.0 / radius).clamp(0.0, 1.0).asin();
+        let inner = (inner_diameter / 2.0 / radius).clamp(0.0, 1.0).asin();
+        2.0 * std::f64::consts::PI * radius * radius * (inner.cos() - outer.cos())
+    }
+
+    /// Surface-sample the spherical ring between `inner_diameter` and
+    /// `outer_diameter` apertures on a bowl of given `radius`, using the same
+    /// golden-angle spiral topology as `rasterize_bowl_points` but restricted
+    /// to the ring varphi in [varphi_min, varphi_max].
+    fn rasterize_annulus_points<F>(
+        &self,
+        grid: &crate::domain::grid::Grid,
+        center: (f64, f64, f64),
+        radius: f64,
+        inner_diameter: f64,
+        outer_diameter: f64,
+        mut visit: F,
+    ) where
+        F: FnMut([f64; 3], f64),
+    {
+        let area = Self::annulus_surface_area(radius, inner_diameter, outer_diameter);
+        let m_grid = area / (grid.dx * grid.dx);
+        let num_points = (m_grid * DISC_SAMPLE_UPSAMPLING_RATE).ceil().max(1.0) as usize;
+        let scale = m_grid / num_points as f64;
+
+        let varphi_max = (outer_diameter / 2.0 / radius).clamp(0.0, 1.0).asin();
+        let varphi_min = (inner_diameter / 2.0 / radius).clamp(0.0, 1.0).asin();
+
+        // Match k-Wave's `make_cart_spherical_segment` canonical-spiral
+        // parameterisation exactly (k-wave-python/kwave/utils/mapgen.py
+        // lines 3070–3088): step size C is set as if sampling a full bowl
+        // from varphi=0 to varphi_max with `num_points` samples, then the
+        // ring samples start at the integer t_start where varphi first
+        // clears varphi_min. This keeps the golden-angle spiral phase
+        // consistent with k-Wave for bowl+annulus composition.
+        if num_points == 1 {
+            let varphi = (0.5 * (varphi_min + varphi_max)).clamp(0.0, std::f64::consts::PI);
+            let radial = radius * varphi.sin();
+            visit(
+                [
+                    center.0 - radius * varphi.cos(),
+                    center.1 + radial,
+                    center.2,
+                ],
+                scale,
+            );
+            return;
+        }
+        let c_step = (1.0 - varphi_max.cos()) / (num_points as f64 - 1.0);
+        let t_start = if varphi_min > 0.0 {
+            ((1.0 - varphi_min.cos()) / c_step).ceil()
+        } else {
+            0.0
+        };
+        let t_end = (num_points - 1) as f64;
+        let span = (t_end - t_start).max(0.0);
+        for k in 0..num_points {
+            let frac = if num_points == 1 {
+                0.0
+            } else {
+                k as f64 / (num_points as f64 - 1.0)
+            };
+            let t = t_start + frac * span;
+            let cos_phi = (1.0 - c_step * t).clamp(-1.0, 1.0);
+            let varphi = cos_phi.acos();
+            let theta = GOLDEN_ANGLE * t;
+            let radial = radius * varphi.sin();
+            let point = [
+                center.0 - radius * varphi.cos(),
+                center.1 + radial * theta.cos(),
+                center.2 + radial * theta.sin(),
+            ];
+            visit(point, scale);
+        }
+    }
+
+    fn rasterize_annulus(
+        &self,
+        mask: &mut Array3<bool>,
+        grid: &crate::domain::grid::Grid,
+        center: (f64, f64, f64),
+        radius: f64,
+        inner_diameter: f64,
+        outer_diameter: f64,
+    ) {
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
+
+        self.rasterize_annulus_points(
+            grid,
+            center,
+            radius,
+            inner_diameter,
+            outer_diameter,
+            |point, scale| {
+                self.map_surface_sample(
+                    grid,
+                    &x_vec,
+                    &y_vec,
+                    &z_vec,
+                    point,
+                    scale,
+                    true,
+                    |ix, iy, iz, _| {
+                        mask[[ix, iy, iz]] = true;
+                    },
+                );
+            },
+        );
+    }
+
+    fn rasterize_annulus_weighted(
+        &self,
+        mask: &mut Array3<f64>,
+        grid: &crate::domain::grid::Grid,
+        center: (f64, f64, f64),
+        radius: f64,
+        inner_diameter: f64,
+        outer_diameter: f64,
+    ) {
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
+
+        self.rasterize_annulus_points(
+            grid,
+            center,
+            radius,
+            inner_diameter,
+            outer_diameter,
+            |point, scale| {
+                self.map_surface_sample(
+                    grid,
+                    &x_vec,
+                    &y_vec,
+                    &z_vec,
+                    point,
+                    scale,
+                    false,
+                    |ix, iy, iz, weight| {
+                        mask[[ix, iy, iz]] += weight;
+                    },
+                );
+            },
+        );
+    }
 }
 
 impl Default for KWaveArray {
@@ -1382,11 +1893,72 @@ mod tests {
     }
 
     #[test]
+    fn test_set_array_position_matches_manual_position_rotation() {
+        use crate::domain::grid::Grid;
+
+        let grid = Grid::new(41, 41, 11, 5.0e-4, 5.0e-4, 5.0e-4).expect("grid");
+        let translation = (5.0e-3, 0.0, 2.0e-3);
+        let global_euler = (0.0, 20.0, 0.0);
+        let per_element_euler = (0.0, 5.0, 0.0);
+        let dims = (1.0e-3, 1.0e-3, 5.0e-4);
+
+        let grid_center = (
+            grid.nx as f64 * grid.dx / 2.0,
+            grid.ny as f64 * grid.dy / 2.0,
+            grid.nz as f64 * grid.dz / 2.0,
+        );
+        // Effective world-frame translation that brings a locally-centred
+        // element layout to the pykwavers origin-at-corner grid.
+        let world_translation = (
+            translation.0 + grid_center.0,
+            translation.1 + grid_center.1,
+            translation.2 + grid_center.2,
+        );
+
+        let mut manual = KWaveArray::new();
+        let mut native = KWaveArray::new();
+        for kx in -2..=2 {
+            let local = (1.0e-3 * kx as f64, 0.0, 0.0);
+
+            let r_global = euler_xyz_rotation_matrix(global_euler);
+            let rotated_local = apply_matrix(&r_global, local);
+            let world = (
+                rotated_local.0 + world_translation.0,
+                rotated_local.1 + world_translation.1,
+                rotated_local.2 + world_translation.2,
+            );
+            manual.add_rect_rot_element(world, dims.0, dims.1, dims.2, per_element_euler);
+
+            native.add_rect_rot_element(local, dims.0, dims.1, dims.2, per_element_euler);
+        }
+        native.set_array_position(world_translation, global_euler);
+
+        let m_manual = manual.get_array_binary_mask(&grid);
+        let m_native = native.get_array_binary_mask(&grid);
+
+        let manual_count = m_manual.iter().filter(|&&b| b).count();
+        let native_count = m_native.iter().filter(|&&b| b).count();
+        let inter = ndarray::Zip::from(&m_manual)
+            .and(&m_native)
+            .fold(0usize, |acc, &a, &b| acc + if a && b { 1 } else { 0 });
+
+        assert!(
+            manual_count > 0 && native_count > 0,
+            "both masks must be non-empty: manual={manual_count}, native={native_count}",
+        );
+        let iou = inter as f64 / (manual_count + native_count - inter).max(1) as f64;
+        assert!(
+            iou >= 0.90,
+            "set_array_position must match manual translation/rotation: IoU={iou}, \
+             manual={manual_count}, native={native_count}, inter={inter}",
+        );
+    }
+
+    #[test]
     fn test_rect_rotation_90_swaps_width_and_height() {
         use crate::domain::grid::Grid;
 
-        let grid = Grid::new(41, 41, 5, 1.0e-4, 1.0e-4, 1.0e-4)
-            .expect("grid");
+        let grid = Grid::new(41, 41, 5, 1.0e-4, 1.0e-4, 1.0e-4).expect("grid");
         let mut unrot = KWaveArray::new();
         unrot.add_rect_element(
             (20.0 * 1.0e-4, 20.0 * 1.0e-4, 2.0 * 1.0e-4),
@@ -1430,6 +2002,142 @@ mod tests {
             swapped_hits >= unrot_count / 2,
             "90-deg Z rotation must overlap after axis swap ({swapped_hits}/{unrot_count})",
         );
+    }
+
+    #[test]
+    fn test_rect_weighted_mask_matches_kwave_python_reference_mass() {
+        use crate::domain::grid::Grid;
+
+        let grid = Grid::new(41, 41, 5, 1.0e-4, 1.0e-4, 1.0e-4).expect("grid");
+        let mut array = KWaveArray::new();
+        array.add_rect_rot_element(
+            (20.0 * 1.0e-4, 20.0 * 1.0e-4, 2.0 * 1.0e-4),
+            8.0e-4,
+            2.0e-4,
+            1.0e-4,
+            (0.0, 0.0, 90.0),
+        );
+
+        let weights = array.get_array_weighted_mask(&grid);
+        // k-wave-python reference mass for the same centered-geometry rectangle.
+        let expected = 16.036_130_608_724_637_f64;
+        assert!(
+            (weights.sum() - expected).abs() < 5.0e-6,
+            "rect weighted mask must match the k-wave-python reference mass: got {}, expected {}",
+            weights.sum(),
+            expected,
+        );
+    }
+
+    /// Annulus has strictly fewer active cells than the full bowl of the same
+    /// outer diameter, and the surface-area formula scales correctly with
+    /// `inner_diameter`. (A stricter "inner-hollow" NGP test would fight the
+    /// BLI stencil that `map_surface_sample` intentionally spreads through.)
+    #[test]
+    fn test_annulus_is_subset_of_bowl_same_outer_diameter() {
+        use crate::domain::grid::Grid;
+
+        let dx = 2.0e-4;
+        let grid = Grid::new(81, 81, 81, dx, dx, dx).expect("grid");
+        let radius = 8.0e-3;
+        let cx = 10.0e-3;
+        let cy = 40.0 * dx;
+        let cz = 40.0 * dx;
+
+        let outer_d = 6.0e-3;
+        let inner_d = 3.0e-3;
+
+        let mut bowl = KWaveArray::new();
+        bowl.add_bowl_element((cx, cy, cz), radius, outer_d);
+        let bowl_mask = bowl.get_array_binary_mask(&grid);
+
+        let mut annulus = KWaveArray::new();
+        annulus.add_annular_element((cx, cy, cz), radius, inner_d, outer_d);
+        let annulus_mask = annulus.get_array_binary_mask(&grid);
+
+        let bowl_count: usize = bowl_mask.iter().filter(|&&b| b).count();
+        let annulus_count: usize = annulus_mask.iter().filter(|&&b| b).count();
+        assert!(bowl_count > 0 && annulus_count > 0);
+        assert!(
+            annulus_count < bowl_count,
+            "annulus (inner_d>0) must have fewer cells than full bowl: {annulus_count} vs {bowl_count}",
+        );
+
+        // Area formula: with inner_d = 0, annulus_surface_area must match bowl_surface_area.
+        let a_bowl = KWaveArray::bowl_surface_area(radius, outer_d);
+        let a_ann_full = KWaveArray::annulus_surface_area(radius, 0.0, outer_d);
+        assert!(
+            (a_bowl - a_ann_full).abs() / a_bowl < 1.0e-12,
+            "annulus(0, D) must equal bowl(D): {a_bowl} vs {a_ann_full}",
+        );
+
+        let a_ann = KWaveArray::annulus_surface_area(radius, inner_d, outer_d);
+        assert!(
+            a_ann > 0.0 && a_ann < a_bowl,
+            "annulus area must be positive and less than full bowl: {a_ann} vs {a_bowl}",
+        );
+    }
+
+    #[test]
+    fn test_build_per_element_source_superposition() {
+        // Theorem: for two elements with per-element signals s1, s2 and a
+        // per-cell signal built as Σ_i W_i[c] · s_i[t], setting s1=s2=s
+        // must reproduce the shared-signal result (W_sum[c] · s[t]).
+        use crate::domain::grid::Grid;
+        let dx = 5.0e-4;
+        let grid = Grid::new(61, 61, 61, dx, dx, dx).expect("grid");
+        let cx = 30.0 * dx;
+        let cy = 30.0 * dx;
+        let cz = 30.0 * dx;
+
+        let mut arr = KWaveArray::new();
+        arr.add_annular_element((cx, cy, cz), 15.0e-3, 0.0, 4.0e-3);
+        arr.add_annular_element((cx, cy, cz), 15.0e-3, 6.0e-3, 10.0e-3);
+        assert_eq!(arr.num_elements(), 2);
+
+        let n_times = 4;
+        let s: Vec<f64> = (0..n_times).map(|t| (t as f64).sin()).collect();
+        let mut shared = Array2::<f64>::zeros((2, n_times));
+        for t in 0..n_times {
+            shared[[0, t]] = s[t];
+            shared[[1, t]] = s[t];
+        }
+
+        let (mask_unit, per_cell) = arr
+            .build_per_element_source(&grid, &shared)
+            .expect("build per-element source");
+        let w_sum = arr.get_array_weighted_mask(&grid);
+
+        // Every active cell must have mask_unit = 1.0 and w_sum != 0.
+        // The active-cell enumeration follows MATLAB / Fortran order.
+        let (nx, ny, nz) = mask_unit.dim();
+        let mut active_cells = Vec::new();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    let m = mask_unit[[i, j, k]];
+                    if m != 0.0 {
+                        assert!((m - 1.0).abs() < 1.0e-12);
+                        assert!(w_sum[[i, j, k]] != 0.0);
+                        active_cells.push((i, j, k));
+                    }
+                }
+            }
+        }
+        assert!(!active_cells.is_empty());
+        assert_eq!(active_cells.len(), per_cell.shape()[0]);
+
+        // For each cell and timestep: per_cell[idx, t] == w_sum[cell] * s[t].
+        for (idx, &(i, j, k)) in active_cells.iter().enumerate() {
+            for t in 0..n_times {
+                let expected = w_sum[[i, j, k]] * s[t];
+                let got = per_cell[[idx, t]];
+                assert!(
+                    (got - expected).abs() < 1.0e-10 * expected.abs().max(1.0),
+                    "cell ({i},{j},{k}) t={t}: got {got}, expected {expected}",
+                );
+            }
+        }
     }
 
     #[test]

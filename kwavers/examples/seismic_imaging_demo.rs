@@ -5,15 +5,16 @@
 
 use kwavers::core::error::KwaversResult;
 use kwavers::domain::grid::Grid;
+use kwavers::domain::source::{GridSource, SourceMode};
 use kwavers::solver::inverse::seismic::{
-    fwi::FwiProcessor,
+    fwi::{FwiGeometry, FwiProcessor},
     parameters::{
         BoundaryType, FwiParameters, ImagingCondition, RegularizationParameters, RtmSettings,
         StorageStrategy,
     },
     rtm::RtmProcessor,
 };
-use ndarray::Array3;
+use ndarray::{Array2, Array3};
 
 fn main() -> KwaversResult<()> {
     env_logger::init();
@@ -96,22 +97,30 @@ fn main() -> KwaversResult<()> {
         10, 1e-6
     );
 
+    // Configure a single-source, single-receiver acquisition geometry.
+    let mut source_mask = Array3::zeros((nx, ny, nz));
+    source_mask[[cx, cy, 1]] = 1.0;
+    let mut source_signal = Array2::zeros((1, 10));
+    source_signal[[0, 0]] = 1.0;
+    source_signal[[0, 1]] = -0.5;
+
+    let mut source = GridSource::new_empty();
+    source.p_mask = Some(source_mask);
+    source.p_signal = Some(source_signal);
+    source.p_mode = SourceMode::Dirichlet;
+
+    let mut sensor_mask = Array3::from_elem((nx, ny, nz), false);
+    sensor_mask[[cx, cy, nz - 2]] = true;
+    let fwi_geometry = FwiGeometry::new(source, sensor_mask);
+
     // Generate synthetic observed data using forward modeling
     println!("Generating synthetic observed data...");
-    let observed_data = match fwi.invert(&true_model, &true_model, &grid) {
-        Ok(data) => {
-            println!("✓ Forward modeling completed (synthetic data generated)");
-            data
-        }
-        Err(e) => {
-            println!("Note: Forward modeling demonstration: {}", e);
-            Array3::zeros((nx, ny, nz))
-        }
-    };
+    let observed_data = fwi.generate_synthetic_data(&true_model, &fwi_geometry, &grid)?;
+    println!("✓ Forward modeling completed (synthetic data generated)");
 
     // Run FWI inversion (would normally use observed data)
     println!("\nRunning FWI inversion...");
-    match fwi.invert(&observed_data, &initial_model, &grid) {
+    match fwi.invert(&observed_data, &initial_model, &fwi_geometry, &grid) {
         Ok(inverted_model) => {
             println!("✓ FWI inversion completed successfully");
             let final_vel = inverted_model[[cx, cy, cz]];

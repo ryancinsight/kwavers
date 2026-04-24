@@ -3,6 +3,7 @@
 ## Architectural Enhancements
 - Restructure into clean Domain/Application/Infrastructure/Presentation bounded contexts.
 - Ensure dependency flows are strictly unidirectional (Domain -> App -> Infra/Presentation).
+- Keep concrete solver assembly in `simulation::solver_factory`, keep `solver::factory` limited to descriptor-based selection policy, and reject domain-layer imports of solver or simulation modules.
 - Review all modules (core, physics, math, domains, simulation, clinical, analysis, solvers).
 - BURN crate integration for optimized GPU support.
 - Autodiff/PINN implementations for neural network-based physics solving.
@@ -18,10 +19,14 @@
 - Closed the vendored `k-wave-python` 2-D sensor directivity modelling gap in `pykwavers` by comparing the full source-angle trace matrix and the derived directivity curve against the reference example.
 - Closed the vendored `k-wave-python` `at_array_as_sensor` gap in `pykwavers` by aligning the arc geometry to the upstream line-sampled BLI footprint, preferring the rebuilt `target/maturin/pykwavers.dll` extension artifact, and validating exact mask parity plus raw/combined detector-matrix comparison.
 - Closed the vendored `k-wave-python` `at_array_as_source` gap in `pykwavers` by reusing the canonical arc ordering, comparing exact source-mask and distributed source-signal parity, and validating p_max/p_rms field parity against the rebuilt extension.
+- Closed the pressure-source ordering contract in `pykwavers` by switching the arc and linear-array source builders to Fortran-order active-cell rows and pinning the exact helper-matrix parity against k-wave-python; the rebuilt `at_linear_array_transducer` example now passes the `p_max` field comparison.
 - Closed the vendored `k-wave-python` `us_defining_transducer` gap in `pykwavers` by carrying the reference time-step count through the pykwavers scan-line run, aligning the sensor-trace lengths, and validating per-sensor trace metrics with a PASS report.
 - Closed the vendored `k-wave-python` `ivp_photoacoustic_waveforms` gap in `pykwavers` by reusing the cached initial-pressure traces, comparing the single-sensor waveform directly, and validating the PASS report metrics.
 - Closed the vendored `k-wave-python` `us_bmode_phased_array` gap in `pykwavers` by validating the quick steering-angle sweep against the cached k-Wave and pykwavers scan lines, confirming the fundamental/harmonic B-mode parity, and preserving the existing GPU profile contract.
 - Closed the vendored `k-wave-python` `sd_focussed_detector_3D` gap in `pykwavers` by validating per-source trace parity, checking the on-axis/off-axis directivity ratio, and preserving the PASS report contract.
+- Closed the vendored `k-wave-python` `us_bmode_linear_transducer` gap in `pykwavers` by disabling GPU source-kappa correction to match the upstream `NotATransducer.u_mode = "additive-no-correction"` contract, reusing full medium buffers with borrowed `PyReadonlyArray3` uploads, and pinning the PASS report with a cached regression test.
+- Reduced the pre-sweep `us_bmode_linear_transducer` GPU hot path by restoring the measured medium-upload timing after cached execution, aggregating per-line GPU timings through a compact tuple summary, and advancing the lateral medium window in place to avoid rebuilding the active slab on every scan line.
+- Closed the PSTD checkpointing contract by validating bit-exact save/resume continuation, exact checkpoint file deletion after restore, and the PASS report emitted by `checkpointing_compare.py`.
 - Keep exact tone-burst regression coverage for the Gaussian default envelope and non-integer sample-count cases.
 - Validate the seismic FWI adjoint-state path with receiver-order residual reversal, discrete L2 objective scaling, CFL checks, and finite-difference gradient identities.
 - Validate the reconstruction FWI path with sign-correct residuals, `dt`-scaled objectives, checkpointed adjoint replay, timestep validation, and encoded-gradient aggregation.
@@ -35,13 +40,19 @@
 - Keep the Apollo GPU FFT backend parity-checked against kwavers examples after the radix-stage dispatch fix and hybrid absolute/relative parity metric.
 
 ## Outstanding k-wave-python Parity Gaps
-- `at_linear_array_transducer`: requires per-element Euler rotation on `ElementShape::Rect` rasterization; not yet wired in `KWaveArray` or the pykwavers `add_rect_element` binding.
+- `at_linear_array_transducer`: closed after switching the parity example to the upstream additive pressure-source mode; the source rows remain Fortran-ordered and the rebuilt extension now matches `p_max` parity.
 - `at_focused_annular_array_3D`: requires a new `ElementShape::Annulus { inner_d, outer_d, focus }` (or composite `add_annular_array`) with BLI rasterization.
-- `at_focused_bowl_AS` and `at_circular_piston_AS`: require an axisymmetric PSTD solver (radial-axial grid + Bessel-based k-space operators).
-- `na_controlling_the_pml`: requires PML configuration knobs (`pml_size`, `pml_alpha`, `pml_inside`) on the pykwavers solver binding.
-- `checkpointing`: requires a save/resume contract for PSTD session state and re-entry from a prior time step.
+- `at_focused_bowl_AS` and `at_circular_piston_AS`: closed after fixing the pykwavers sensor reshape to Fortran order, which restored PASS parity on both cached axisymmetric PSTD example comparisons.
+- `na_controlling_the_pml`: closed by validating waveform parity across the PML attenuation sweep and exact k-Wave-style save-to-disk HDF5 input-file parity via versioned artifacts in `pykwavers/examples/output/na_controlling_the_pml/hdf5_v1/`.
+- `checkpointing`: closed by validating bit-exact save/resume continuation, exact checkpoint file deletion after restore, and the PASS report emitted by `checkpointing_compare.py`.
 
 ## Technical Debt Prevention
 - Proactively locate and discard deprecated or duplicate methods, replacing them strictly with unified accessors.
+- Prefer `..Default::default()` for `FdtdConfig` test/example literals so new defaulted fields remain single-sourced by `FdtdConfig::default()`.
+- Keep FWI example and caller synthetic data generation routed through `FwiProcessor::generate_synthetic_data`, the public wrapper over the canonical forward model.
 - Remove outdated benchmarking, test data, and logs upon obsolescence.
 - Keep the neural beamforming adaptation and distributed execution paths on the canonical SSOT helpers; extend them by refining the shared partition/recomposition logic rather than cloning variant-specific processors.
+
+## AS PSTD FFT Hot-Path Optimization
+- Closed the axisymmetric PSTD parity gap: `at_circular_piston_AS` (pearson=0.9907, PASS) and `at_focused_bowl_AS` (pearson=1.0000, PASS) after five physics fixes: one-sided radial PML (`pnz = nz + p`, `pz_embed = 0`), CPML inner-z transparency (`radial_inner_z_transparent`), source injection skip for `rhoy`, `density_scale = 1.0` for AS, and correct embed offset.
+- Identified AS PSTD FFT allocation churn: `axisymmetric.rs` calls `fft_2d_array`/`ifft_2d_array` (allocating ~6–8 `Array2<Complex64>` per time step on the `(2·nx)×(4·nz)` WSWA domain) instead of the `forward_into`/`inverse_into` pre-allocated path already used by the 3D PSTD propagators. Pre-allocating expanded buffers (`a_exp`, `uz_exp`, `uz_on_r_exp`) and FFT output buffers in `AsContext`, then routing through `plan.forward_into`/`plan.inverse_into`, eliminates all per-step allocation churn on the AS hot path.

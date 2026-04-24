@@ -36,7 +36,7 @@ _ROOT = bootstrap_example_paths()
 
 import pykwavers as pkw
 from array_sensor_utils import ArcElementGeometry, build_arc_element_geometry
-from array_source_utils import build_pykwavers_distributed_arc_signal, reorder_active_rows
+from array_source_utils import build_pykwavers_distributed_arc_signal
 from kwave.data import Vector
 from kwave.kgrid import kWaveGrid
 from kwave.kmedium import kWaveMedium
@@ -80,7 +80,7 @@ FIGURE_PATH = DEFAULT_OUTPUT_DIR / "at_array_as_source_compare.png"
 METRICS_PATH = DEFAULT_OUTPUT_DIR / "at_array_as_source_metrics.txt"
 KWAVE_CACHE = DEFAULT_OUTPUT_DIR / "at_array_as_source_kwave_cache.npz"
 PYKWAVERS_CACHE = DEFAULT_OUTPUT_DIR / "at_array_as_source_pykwavers_cache.npz"
-CACHE_VERSION = 1
+CACHE_VERSION = 2
 REFRESH_CACHE = os.getenv("KWAVERS_REFRESH_CACHE", "0") == "1"
 
 
@@ -171,7 +171,6 @@ def run_kwave_reference() -> dict[str, np.ndarray | float]:
     source_binary_mask = np.squeeze(np.asarray(karray.get_array_binary_mask(kgrid), dtype=bool))
     source_weighted_mask = np.squeeze(np.asarray(karray.get_array_grid_weights(kgrid), dtype=np.float64))
     distributed_signal = np.asarray(karray.get_distributed_source_signal(kgrid, source_signal), dtype=np.float64)
-    distributed_signal = reorder_active_rows(source_binary_mask, distributed_signal, from_order="F", to_order="C")
 
     source = kSource()
     source.p_mask = source_binary_mask

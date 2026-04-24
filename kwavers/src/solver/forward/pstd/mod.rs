@@ -75,6 +75,7 @@
 //! - Roden JA, Gedney SD (2000). "Convolution PML (CPML): An efficient
 //!   FDTD implementation." Microw Opt Technol Lett 27(5):334–339.
 
+pub mod checkpoint;
 pub mod config;
 pub mod data;
 pub mod derivatives; // Spectral derivatives (NEW)

@@ -10,7 +10,8 @@
 //! - `compute_divergence_staggered` (div(v) used by pressure update)
 
 use crate::core::error::{KwaversError, KwaversResult};
-use ndarray::{Array3, ArrayView3, Zip};
+use crate::solver::geometry::Geometry;
+use ndarray::{s, Array3, ArrayView3, Zip};
 
 use super::solver::{FdtdGpuAccelerator, FdtdSolver};
 
@@ -254,15 +255,13 @@ impl FdtdSolver {
     ///
     /// `div(v) = ∂ux/∂x + ∂uy/∂y + ∂uz/∂z`
     ///
-    /// CPML gradient corrections are applied per-direction when enabled.
-    /// Compute staggered-grid divergence into the reusable scratch buffer.
+    /// For `CylindricalAS` geometry, the cylindrical correction `ur/r` is added
+    /// to `dvz` before CPML. Derivation: the exact staggered cylindrical divergence
+    /// `(1/r_c) * (r_s[k]*uz[k] - r_s[k-1]*uz[k-1]) / dz` differs from the
+    /// Cartesian backward difference by `(uz[k]+uz[k-1]) / (2*k*dz)` for `k > 0`,
+    /// and by `2*uz[0]/dz - dvz_forward[0]` at the axis (`k=0`).
     ///
-    /// Theorem: for a fixed grid and velocity field, writing the staggered
-    /// backward-difference stencil into `divergence_scratch` is equivalent to
-    /// materializing a temporary divergence array and summing it into the
-    /// pressure update. Proof sketch: the function performs the same linear
-    /// finite-difference operators in the same evaluation order, then stores
-    /// the result in the solver-owned scratch buffer instead of cloning it.
+    /// CPML gradient corrections are applied per-direction when enabled.
     pub(crate) fn compute_divergence_staggered(&mut self) -> KwaversResult<()> {
         let mut dvx = self
             .staggered_operator
@@ -273,6 +272,32 @@ impl FdtdSolver {
         let mut dvz = self
             .staggered_operator
             .apply_backward_z(self.fields.uz.view())?;
+
+        // Cylindrical `ur/r` correction for axisymmetric geometry.
+        // At k > 0: correction = (uz[k] + uz[k-1]) / (2*k*dz)
+        // At k = 0: correction = uz[0] / (0.5*dz)  (axis, staggered r_sg = 0.5*dz)
+        if self.config.geometry == Geometry::CylindricalAS {
+            let dz = self.grid.dz;
+            let (nx, _ny, nz) = dvz.dim();
+            // k = 0: axis — staggered position r_sg[0] = 0.5*dz
+            // backward-z at k=0 already used forward diff; add axis ur/r contribution
+            for i in 0..nx {
+                dvz[[i, 0, 0]] += self.fields.uz[[i, 0, 0]] / (0.5 * dz);
+            }
+            // k > 0: exact staggered cylindrical correction
+            for k in 1..nz {
+                let r_center = k as f64 * dz;
+                let uz_k = self.fields.uz.slice(s![.., 0, k]);
+                let uz_km1 = self.fields.uz.slice(s![.., 0, k - 1]);
+                let mut dvz_k = dvz.slice_mut(s![.., 0, k]);
+                Zip::from(&mut dvz_k)
+                    .and(&uz_k)
+                    .and(&uz_km1)
+                    .for_each(|d, &uk, &ukm1| {
+                        *d += (uk + ukm1) / (2.0 * r_center);
+                    });
+            }
+        }
 
         if let Some(ref mut cpml) = self.cpml_boundary {
             cpml.update_and_apply_v_gradient_correction(&mut dvx, 0);

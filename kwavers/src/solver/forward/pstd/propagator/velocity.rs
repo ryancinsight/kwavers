@@ -49,14 +49,26 @@
 use crate::core::error::KwaversResult;
 use crate::math::fft::Complex64;
 use crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
-use ndarray::Zip;
+use crate::solver::geometry::Geometry;
+use ndarray::{s, Zip};
 
 impl PSTDSolver {
-    /// Update velocity fields based on pressure gradients (Momentum Conservation)
+    /// Update velocity fields based on pressure gradients (Momentum Conservation).
+    ///
+    /// Dispatches to [`update_velocity_as`] when `config.geometry == CylindricalAS`,
+    /// otherwise uses the standard 3-D spectral path.
+    pub(crate) fn update_velocity(&mut self, dt: f64) -> KwaversResult<()> {
+        if self.config.geometry == Geometry::CylindricalAS {
+            return self.update_velocity_as(dt);
+        }
+        self.update_velocity_cartesian(dt)
+    }
+
+    /// Standard 3-D Cartesian velocity update via spectral FFT gradient operators.
     ///
     /// Uses staggered grid shift operators matching the C++ k-wave binary:
     ///   grad_x(p) = IFFT( ddx_k_shift_pos[x] * kappa[i,j,k] * FFT(p)[i,j,k] )
-    pub(crate) fn update_velocity(&mut self, dt: f64) -> KwaversResult<()> {
+    pub(crate) fn update_velocity_cartesian(&mut self, dt: f64) -> KwaversResult<()> {
         // k-Wave split-field PML for velocity (Treeby & Cox 2010, Eq. 17):
         //   u_new = pml * (pml * u_old - dt/rho * grad_p)
         //
@@ -74,30 +86,22 @@ impl PSTDSolver {
 
         // Compute pressure gradients in k-space with staggered grid shifts.
         // k-wave uses ddx_k_shift_pos for pressure→velocity (positive shift).
-        // Zip::indexed eliminates bounds checks; all 3 gradient components are
-        // written in a single pass over the k-space array (better cache utilisation).
-        {
-            let ddx = self.ddx_k_shift_pos.view();
-            let ddy = self.ddy_k_shift_pos.view();
-            let ddz = self.ddz_k_shift_pos.view();
-            Zip::indexed(self.grad_x_k.view_mut())
-                .and(self.grad_y_k.view_mut())
-                .and(self.grad_z_k.view_mut())
-                .and(self.p_k.view())
-                .and(self.kappa.view())
-                .for_each(|(i, j, k), gx, gy, gz, &p_val, &kap| {
-                    let e_kappa = Complex64::new(kap, 0.0) * p_val;
-                    *gx = ddx[i] * e_kappa;
-                    *gy = ddy[j] * e_kappa;
-                    *gz = ddz[k] * e_kappa;
-                });
-        }
-
-        // Transform gradients back to physical space and update velocity
+        // grad_k is reused sequentially for each axis; p_k is read-only throughout.
+        // Three passes over p_k/kappa trade marginal cache bandwidth for 2 × N³ × 16 B
+        // of memory saved by eliminating grad_y_k and grad_z_k.
 
         // X-direction
+        {
+            let ddx = self.ddx_k_shift_pos.view();
+            Zip::indexed(self.grad_k.view_mut())
+                .and(self.p_k.view())
+                .and(self.kappa.view())
+                .for_each(|(i, _j, _k), gk, &p_val, &kap| {
+                    *gk = ddx[i] * Complex64::new(kap, 0.0) * p_val;
+                });
+        }
         self.fft
-            .inverse_into(&self.grad_x_k, &mut self.dpx, &mut self.ux_k);
+            .inverse_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
         Zip::from(&mut self.fields.ux)
             .and(&self.dpx)
             .and(&self.materials.rho0)
@@ -106,8 +110,17 @@ impl PSTDSolver {
             });
 
         // Y-direction
+        {
+            let ddy = self.ddy_k_shift_pos.view();
+            Zip::indexed(self.grad_k.view_mut())
+                .and(self.p_k.view())
+                .and(self.kappa.view())
+                .for_each(|(_i, j, _k), gk, &p_val, &kap| {
+                    *gk = ddy[j] * Complex64::new(kap, 0.0) * p_val;
+                });
+        }
         self.fft
-            .inverse_into(&self.grad_y_k, &mut self.dpy, &mut self.uy_k);
+            .inverse_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
         Zip::from(&mut self.fields.uy)
             .and(&self.dpy)
             .and(&self.materials.rho0)
@@ -116,8 +129,17 @@ impl PSTDSolver {
             });
 
         // Z-direction
+        {
+            let ddz = self.ddz_k_shift_pos.view();
+            Zip::indexed(self.grad_k.view_mut())
+                .and(self.p_k.view())
+                .and(self.kappa.view())
+                .for_each(|(_i, _j, k), gk, &p_val, &kap| {
+                    *gk = ddz[k] * Complex64::new(kap, 0.0) * p_val;
+                });
+        }
         self.fft
-            .inverse_into(&self.grad_z_k, &mut self.dpz, &mut self.uz_k);
+            .inverse_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
         Zip::from(&mut self.fields.uz)
             .and(&self.dpz)
             .and(&self.materials.rho0)
@@ -131,6 +153,49 @@ impl PSTDSolver {
 
         self.apply_pml_to_velocity()?; // post: pml * (pml*u_old - dt/rho*grad_p)
 
+        Ok(())
+    }
+
+    /// Axisymmetric WSWA-FFT velocity update.
+    ///
+    /// Updates axial velocity `ux` and radial velocity `uz` (= `u_r` in cylindrical coordinates).
+    /// `uy` is not updated (ny = 1 in axisymmetric mode).
+    ///
+    /// # Equations
+    /// ```text
+    /// ux -= dt / rho0 * dp/dx          (axial momentum)
+    /// uz -= dt / rho0 * dp/dr          (radial momentum, staggered at r_{m+1/2})
+    /// ```
+    pub(crate) fn update_velocity_as(&mut self, dt: f64) -> KwaversResult<()> {
+        self.apply_pml_to_velocity()?; // pre-step PML
+
+        // Take AsContext out of the Option so we hold an owned value while
+        // also mutably borrowing self.fields / self.materials (disjoint fields).
+        // No heap allocation: take/replace are pointer moves only.
+        let mut ctx = self
+            .as_ctx
+            .take()
+            .expect("AsContext must be Some for CylindricalAS");
+
+        ctx.compute_vel_grads(self.fields.p.slice(s![.., 0, ..]));
+
+        Zip::from(self.fields.ux.slice_mut(s![.., 0, ..]))
+            .and(self.materials.rho0.slice(s![.., 0, ..]))
+            .and(&ctx.dpdx)
+            .for_each(|u, &rho, &dp| {
+                *u -= (dt / rho) * dp;
+            });
+
+        Zip::from(self.fields.uz.slice_mut(s![.., 0, ..]))
+            .and(self.materials.rho0.slice(s![.., 0, ..]))
+            .and(&ctx.dpdr)
+            .for_each(|u, &rho, &dp| {
+                *u -= (dt / rho) * dp;
+            });
+
+        self.as_ctx = Some(ctx);
+
+        self.apply_pml_to_velocity()?; // post-step PML
         Ok(())
     }
 

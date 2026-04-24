@@ -14,8 +14,8 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::sensor::GridSensorSet;
 use crate::domain::source::Source;
+use crate::simulation::solver_factory::SimulationSolverFactory;
 use crate::solver::config::{SolverConfiguration, SolverType};
-use crate::solver::factory::SolverFactory;
 use crate::solver::feature::{FeatureManager, SolverFeature};
 use crate::solver::interface::Solver;
 use crate::solver::progress::{FieldsSummary, ProgressReporter, ProgressUpdate};
@@ -84,7 +84,7 @@ impl<'a, M: Medium> CoreSimulation<'a, M> {
         self.progress_reporter.on_start(0, 0.0);
 
         // Create the solver via factory
-        let mut solver = SolverFactory::create_solver(
+        let mut solver = SimulationSolverFactory::create_solver(
             self.solver_config.solver_type,
             self.solver_config.clone(),
             &self.grid,

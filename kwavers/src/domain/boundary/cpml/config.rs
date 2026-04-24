@@ -157,6 +157,14 @@ pub struct CPMLConfig {
 
     /// Enable grazing angle absorption
     pub grazing_angle_absorption: bool,
+
+    /// Suppress inner (low-index) z-PML cells.
+    ///
+    /// For axisymmetric CylindricalAS with one-sided outer radial PML (`pnz = nz + p`),
+    /// the CPML left-side z profile would incorrectly absorb physical axis cells k=0..p-1.
+    /// Setting this flag zeros sigma_z/sigma_z_sgz/b_z/a_z for those cells after profile
+    /// computation, making the inner boundary transparent.
+    pub radial_inner_z_transparent: bool,
 }
 
 impl Default for CPMLConfig {
@@ -172,6 +180,7 @@ impl Default for CPMLConfig {
             alpha_max: 0.24,
             target_reflection: 1e-6,
             grazing_angle_absorption: true,
+            radial_inner_z_transparent: false,
         }
     }
 }
@@ -215,6 +224,15 @@ impl CPMLConfig {
         Self {
             sigma_factor: alpha,
             per_dimension_alpha: PerDimensionAlpha::uniform(alpha),
+            ..self
+        }
+    }
+
+    /// Suppress inner z-PML cells for one-sided axisymmetric radial PML.
+    #[must_use]
+    pub fn with_radial_inner_z_transparent(self) -> Self {
+        Self {
+            radial_inner_z_transparent: true,
             ..self
         }
     }

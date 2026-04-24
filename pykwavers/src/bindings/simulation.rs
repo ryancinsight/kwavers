@@ -123,6 +123,17 @@ impl Simulation {
         self.pml_alpha_xyz = Some((alpha, alpha, alpha));
     }
 
+    #[getter]
+    fn pml_alpha(&self) -> Option<f64> {
+        self.pml_alpha_xyz.map(|(ax, ay, az)| {
+            if (ax - ay).abs() < 1e-15 && (ay - az).abs() < 1e-15 {
+                ax
+            } else {
+                ax // return x component when non-uniform; use pml_alpha_xyz for per-axis
+            }
+        })
+    }
+
     fn set_pml_alpha_xyz(&mut self, ax: f64, ay: f64, az: f64) {
         self.pml_alpha_xyz = Some((ax, ay, az));
     }

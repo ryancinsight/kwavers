@@ -17,6 +17,7 @@ pub mod setup; // New setup module
 pub mod imaging;
 pub mod modalities;
 pub mod photoacoustics;
+pub mod solver_factory;
 pub mod therapy; // Keep this as it's re-exported below
 
 // Re-exports

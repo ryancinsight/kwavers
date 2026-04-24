@@ -56,6 +56,21 @@ use crate::solver::forward::pstd::config::PSTDConfig;
 use crate::solver::pstd::PSTDSolver;
 use ndarray::{Array3, Zip};
 
+/// Precomputed spectral absorption arrays for power-law fractional Laplacian.
+///
+/// Allocated only when `AbsorptionMode::PowerLaw` is active; `None` for lossless mode.
+/// This avoids 4 × N³ × 8-byte allocations per lossless simulation.
+pub(crate) struct AbsorptionKernel {
+    /// Absorption coefficient field τ = −2 α₀ c₀^(y−1) [Treeby & Cox 2010 Eq. 19]
+    pub tau: Array3<f64>,
+    /// Dispersion coefficient field η = 2 α₀ c₀^y tan(πy/2) [Eq. 20]
+    pub eta: Array3<f64>,
+    /// Spectral nabla1 operator |k|^(y−2) in FFT wavenumber order [Eq. 10]
+    pub nabla1: Array3<f64>,
+    /// Spectral nabla2 operator |k|^(y−1) in FFT wavenumber order [Eq. 10]
+    pub nabla2: Array3<f64>,
+}
+
 /// Initialize absorption operators τ, η, spatially-varying exponent y, and the
 /// spectral nabla operators ∇^(y−2) and ∇^(y−1) in FFT-order k-space.
 ///
@@ -76,45 +91,31 @@ use ndarray::{Array3, Zip};
 /// ```
 ///
 /// ## Returns
-/// `(tau, eta, y_field, nabla1, nabla2)` — all arrays with shape `(nx, ny, nz)`.
+/// `Some(AbsorptionKernel)` for `PowerLaw` mode; `None` for `Lossless` (saves 4 × N³ × 8 bytes).
 ///
 /// ## References
 /// Treeby & Cox (2010) Eqs. 19–21 for τ and η; Eq. 10 for nabla operators.
-pub fn initialize_absorption_operators(
+pub(crate) fn initialize_absorption_operators(
     config: &PSTDConfig,
     grid: &Grid,
     medium: &dyn Medium,
     k_mag: &Array3<f64>,
     _k_max: f64,
     _c_ref: f64,
-) -> KwaversResult<(
-    Array3<f64>,
-    Array3<f64>,
-    Array3<f64>,
-    Array3<f64>,
-    Array3<f64>,
-)> {
+) -> KwaversResult<Option<AbsorptionKernel>> {
     let shape = (grid.nx, grid.ny, grid.nz);
-    let mut tau = Array3::zeros(shape);
-    let mut eta = Array3::zeros(shape);
-    let mut y_field = Array3::zeros(shape);
-    let nabla1;
-    let nabla2;
 
     match &config.absorption_mode {
         AbsorptionMode::Lossless => {
-            // No absorption — nabla operators remain zero.
-            nabla1 = Array3::zeros(shape);
-            nabla2 = Array3::zeros(shape);
+            // No absorption arrays needed — return None to skip all allocations.
+            Ok(None)
         }
-        AbsorptionMode::Stokes => {
-            return Err(KwaversError::Validation(
-                ValidationError::ConstraintViolation {
-                    message: "AbsorptionMode::Stokes is not supported by spectral solver yet"
-                        .to_string(),
-                },
-            ));
-        }
+        AbsorptionMode::Stokes => Err(KwaversError::Validation(
+            ValidationError::ConstraintViolation {
+                message: "AbsorptionMode::Stokes is not supported by spectral solver yet"
+                    .to_string(),
+            },
+        )),
         AbsorptionMode::PowerLaw {
             alpha_coeff,
             alpha_power,
@@ -128,6 +129,9 @@ pub fn initialize_absorption_operators(
                     },
                 ));
             }
+
+            let mut tau = Array3::zeros(shape);
+            let mut eta = Array3::zeros(shape);
 
             // Spatial coefficients τ(r) and η(r) — may vary per cell.
             for k in 0..grid.nz {
@@ -158,7 +162,6 @@ pub fn initialize_absorption_operators(
                             * alpha_0_si
                             * c0_val.powf(y)
                             * (std::f64::consts::PI * y / 2.0).tan();
-                        y_field[[i, j, k]] = y;
                     }
                 }
             }
@@ -167,32 +170,35 @@ pub fn initialize_absorption_operators(
             // nabla1 = |k|^(y_config − 2),  nabla2 = |k|^(y_config − 1)
             // Treeby & Cox (2010) Eq. 10; k-Wave: create_absorption_variables.py lines 69–82.
             // DC bin (|k| = 0) → 0 to avoid singularity.
-            nabla1 = k_mag.mapv(|k| {
+            let nabla1 = k_mag.mapv(|k| {
                 if k > ABSORPTION_SINGULARITY_THRESHOLD {
                     k.powf(y_config - 2.0)
                 } else {
                     0.0
                 }
             });
-            nabla2 = k_mag.mapv(|k| {
+            let nabla2 = k_mag.mapv(|k| {
                 if k > ABSORPTION_SINGULARITY_THRESHOLD {
                     k.powf(y_config - 1.0)
                 } else {
                     0.0
                 }
             });
-        }
-        AbsorptionMode::MultiRelaxation { .. } | AbsorptionMode::Causal { .. } => {
-            return Err(KwaversError::Validation(
-                ValidationError::ConstraintViolation {
-                    message: "Relaxation absorption modes are not supported by spectral solver"
-                        .to_string(),
-                },
-            ));
-        }
-    }
 
-    Ok((tau, eta, y_field, nabla1, nabla2))
+            Ok(Some(AbsorptionKernel {
+                tau,
+                eta,
+                nabla1,
+                nabla2,
+            }))
+        }
+        AbsorptionMode::MultiRelaxation { .. } | AbsorptionMode::Causal { .. } => Err(
+            KwaversError::Validation(ValidationError::ConstraintViolation {
+                message: "Relaxation absorption modes are not supported by spectral solver"
+                    .to_string(),
+            }),
+        ),
+    }
 }
 
 impl PSTDSolver {
@@ -210,7 +216,7 @@ impl PSTDSolver {
     /// Uses scratch fields already in solver state to avoid allocations:
     /// - Per-axis velocity divergences are in `self.dpx`, `self.dpy`, `self.dpz`
     ///   (filled by `update_density()` immediately before this call)
-    /// - Complex scratch: `grad_x_k / grad_y_k / grad_z_k` (store FFT result),
+    /// - Complex scratch: `grad_k` (FFT of per-axis divergence, reused across axes),
     ///   `ux_k / uy_k / uz_k` (operator-weighted spectra), `div_u` (real IFFT output)
     /// - The L2 result overwrites `dpx/dpy/dpz` since those fields are no longer
     ///   needed after absorption completes for the current step.
@@ -223,8 +229,8 @@ impl PSTDSolver {
     /// - Treeby & Cox (2010) Eqs. 19–21.
     /// - k-Wave MATLAB: `kspaceFirstOrder3D.m`, density absorption block.
     pub(crate) fn apply_absorption(&mut self, dt: f64) -> KwaversResult<()> {
-        let is_on = match self.config.absorption_mode {
-            AbsorptionMode::Lossless => false,
+        match self.config.absorption_mode {
+            AbsorptionMode::Lossless => return Ok(()),
             AbsorptionMode::Stokes => {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
@@ -233,7 +239,7 @@ impl PSTDSolver {
                     },
                 ));
             }
-            AbsorptionMode::PowerLaw { .. } => true,
+            AbsorptionMode::PowerLaw { .. } => {}
             AbsorptionMode::MultiRelaxation { .. } | AbsorptionMode::Causal { .. } => {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
@@ -242,19 +248,20 @@ impl PSTDSolver {
                     },
                 ));
             }
-        };
-
-        if !is_on {
-            return Ok(());
         }
+
+        let Some(ref abs) = self.absorption else {
+            return Ok(());
+        };
 
         // ── X-AXIS ────────────────────────────────────────────────────────────────
         // dpx holds ∂u_x/∂x from update_density(); apply absorption to rhox.
-        self.fft.forward_into(&self.dpx, &mut self.grad_x_k);
+        // grad_k is reused as the FFT scratch for each axis sequentially.
+        self.fft.forward_into(&self.dpx, &mut self.grad_k);
         {
-            let n1 = self.absorb_nabla1.view();
+            let n1 = abs.nabla1.view();
             Zip::from(&mut self.ux_k)
-                .and(&self.grad_x_k)
+                .and(&self.grad_k)
                 .and(&n1)
                 .for_each(|out, &hat, &n| {
                     *out = hat * Complex64::new(n, 0.0);
@@ -263,9 +270,9 @@ impl PSTDSolver {
         self.fft
             .inverse_into(&self.ux_k, &mut self.div_u, &mut self.uy_k); // L1x in div_u
         {
-            let n2 = self.absorb_nabla2.view();
+            let n2 = abs.nabla2.view();
             Zip::from(&mut self.ux_k)
-                .and(&self.grad_x_k)
+                .and(&self.grad_k)
                 .and(&n2)
                 .for_each(|out, &hat, &n| {
                     *out = hat * Complex64::new(n, 0.0);
@@ -273,22 +280,25 @@ impl PSTDSolver {
         }
         self.fft
             .inverse_into(&self.ux_k, &mut self.dpx, &mut self.uy_k); // L2x in dpx
-        Zip::from(&mut self.rhox)
-            .and(&self.absorb_tau)
-            .and(&self.absorb_eta)
-            .and(&self.div_u)
-            .and(&self.dpx)
-            .for_each(|rho, &tau, &eta, &l1, &l2| {
-                *rho += dt * (tau * l1 - eta * l2);
-            });
+        {
+            let tau = abs.tau.view();
+            let eta = abs.eta.view();
+            Zip::from(&mut self.rhox)
+                .and(&tau)
+                .and(&eta)
+                .and(&self.div_u)
+                .and(&self.dpx)
+                .for_each(|rho, &t, &e, &l1, &l2| {
+                    *rho += dt * (t * l1 - e * l2);
+                });
+        }
 
         // ── Y-AXIS ────────────────────────────────────────────────────────────────
-        // dpy holds ∂u_y/∂y; apply absorption to rhoy.
-        self.fft.forward_into(&self.dpy, &mut self.grad_y_k);
+        self.fft.forward_into(&self.dpy, &mut self.grad_k);
         {
-            let n1 = self.absorb_nabla1.view();
+            let n1 = abs.nabla1.view();
             Zip::from(&mut self.uy_k)
-                .and(&self.grad_y_k)
+                .and(&self.grad_k)
                 .and(&n1)
                 .for_each(|out, &hat, &n| {
                     *out = hat * Complex64::new(n, 0.0);
@@ -297,9 +307,9 @@ impl PSTDSolver {
         self.fft
             .inverse_into(&self.uy_k, &mut self.div_u, &mut self.ux_k); // L1y in div_u
         {
-            let n2 = self.absorb_nabla2.view();
+            let n2 = abs.nabla2.view();
             Zip::from(&mut self.uy_k)
-                .and(&self.grad_y_k)
+                .and(&self.grad_k)
                 .and(&n2)
                 .for_each(|out, &hat, &n| {
                     *out = hat * Complex64::new(n, 0.0);
@@ -307,22 +317,25 @@ impl PSTDSolver {
         }
         self.fft
             .inverse_into(&self.uy_k, &mut self.dpy, &mut self.ux_k); // L2y in dpy
-        Zip::from(&mut self.rhoy)
-            .and(&self.absorb_tau)
-            .and(&self.absorb_eta)
-            .and(&self.div_u)
-            .and(&self.dpy)
-            .for_each(|rho, &tau, &eta, &l1, &l2| {
-                *rho += dt * (tau * l1 - eta * l2);
-            });
+        {
+            let tau = abs.tau.view();
+            let eta = abs.eta.view();
+            Zip::from(&mut self.rhoy)
+                .and(&tau)
+                .and(&eta)
+                .and(&self.div_u)
+                .and(&self.dpy)
+                .for_each(|rho, &t, &e, &l1, &l2| {
+                    *rho += dt * (t * l1 - e * l2);
+                });
+        }
 
         // ── Z-AXIS ────────────────────────────────────────────────────────────────
-        // dpz holds ∂u_z/∂z; apply absorption to rhoz.
-        self.fft.forward_into(&self.dpz, &mut self.grad_z_k);
+        self.fft.forward_into(&self.dpz, &mut self.grad_k);
         {
-            let n1 = self.absorb_nabla1.view();
+            let n1 = abs.nabla1.view();
             Zip::from(&mut self.uz_k)
-                .and(&self.grad_z_k)
+                .and(&self.grad_k)
                 .and(&n1)
                 .for_each(|out, &hat, &n| {
                     *out = hat * Complex64::new(n, 0.0);
@@ -331,9 +344,9 @@ impl PSTDSolver {
         self.fft
             .inverse_into(&self.uz_k, &mut self.div_u, &mut self.ux_k); // L1z in div_u
         {
-            let n2 = self.absorb_nabla2.view();
+            let n2 = abs.nabla2.view();
             Zip::from(&mut self.uz_k)
-                .and(&self.grad_z_k)
+                .and(&self.grad_k)
                 .and(&n2)
                 .for_each(|out, &hat, &n| {
                     *out = hat * Complex64::new(n, 0.0);
@@ -341,14 +354,18 @@ impl PSTDSolver {
         }
         self.fft
             .inverse_into(&self.uz_k, &mut self.dpz, &mut self.ux_k); // L2z in dpz
-        Zip::from(&mut self.rhoz)
-            .and(&self.absorb_tau)
-            .and(&self.absorb_eta)
-            .and(&self.div_u)
-            .and(&self.dpz)
-            .for_each(|rho, &tau, &eta, &l1, &l2| {
-                *rho += dt * (tau * l1 - eta * l2);
-            });
+        {
+            let tau = abs.tau.view();
+            let eta = abs.eta.view();
+            Zip::from(&mut self.rhoz)
+                .and(&tau)
+                .and(&eta)
+                .and(&self.div_u)
+                .and(&self.dpz)
+                .for_each(|rho, &t, &e, &l1, &l2| {
+                    *rho += dt * (t * l1 - e * l2);
+                });
+        }
 
         Ok(())
     }
@@ -397,30 +414,27 @@ mod tests {
         };
 
         let k_mag = zeros_k_mag(32, 32, 32);
-        let (tau, eta, y_field, nabla1, nabla2) =
-            initialize_absorption_operators(&config, &grid, &medium, &k_mag, 1e6, 1500.0).unwrap();
+        let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 1e6, 1500.0)
+            .unwrap()
+            .expect("PowerLaw mode must return Some(AbsorptionKernel)");
 
         let expected_tau = -4.246_711_703_873_091e-8;
         let expected_eta = -6.370_067_555_809_639e-5;
         assert!(
-            (tau[[0, 0, 0]] - expected_tau).abs() < 1e-20,
+            (kernel.tau[[0, 0, 0]] - expected_tau).abs() < 1e-20,
             "tau mismatch: got {}, expected {}",
-            tau[[0, 0, 0]],
+            kernel.tau[[0, 0, 0]],
             expected_tau
         );
         assert!(
-            (eta[[0, 0, 0]] - expected_eta).abs() < 1e-18,
+            (kernel.eta[[0, 0, 0]] - expected_eta).abs() < 1e-18,
             "eta mismatch: got {}, expected {}",
-            eta[[0, 0, 0]],
+            kernel.eta[[0, 0, 0]],
             expected_eta
         );
-        assert!(
-            (y_field[[0, 0, 0]] - 1.5).abs() < 1e-6,
-            "y should be 1.5 for homogeneous medium"
-        );
         // With zero k_mag, nabla operators are zero everywhere (DC singularity handling)
-        assert_eq!(nabla1[[0, 0, 0]], 0.0);
-        assert_eq!(nabla2[[0, 0, 0]], 0.0);
+        assert_eq!(kernel.nabla1[[0, 0, 0]], 0.0);
+        assert_eq!(kernel.nabla2[[0, 0, 0]], 0.0);
     }
 
     #[test]
@@ -442,21 +456,22 @@ mod tests {
         let k_mag = test_k_mag(8, 8, 8, dk);
         let k_at_1 = k_mag[[1, 0, 0]]; // should be dk
 
-        let (_, _, _, nabla1, nabla2) =
-            initialize_absorption_operators(&config, &grid, &medium, &k_mag, 0.0, 1500.0).unwrap();
+        let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 0.0, 1500.0)
+            .unwrap()
+            .expect("PowerLaw mode must return Some(AbsorptionKernel)");
 
         let expected_n1 = k_at_1.powf(y - 2.0);
         let expected_n2 = k_at_1.powf(y - 1.0);
         assert!(
-            (nabla1[[1, 0, 0]] - expected_n1).abs() < 1e-10 * expected_n1,
+            (kernel.nabla1[[1, 0, 0]] - expected_n1).abs() < 1e-10 * expected_n1,
             "nabla1 mismatch: got {}, expected {}",
-            nabla1[[1, 0, 0]],
+            kernel.nabla1[[1, 0, 0]],
             expected_n1
         );
         assert!(
-            (nabla2[[1, 0, 0]] - expected_n2).abs() < 1e-10 * expected_n2,
+            (kernel.nabla2[[1, 0, 0]] - expected_n2).abs() < 1e-10 * expected_n2,
             "nabla2 mismatch: got {}, expected {}",
-            nabla2[[1, 0, 0]],
+            kernel.nabla2[[1, 0, 0]],
             expected_n2
         );
     }
@@ -474,18 +489,19 @@ mod tests {
         let mut medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, &grid);
         medium.set_acoustic_properties(0.0, 1.5, 0.0).unwrap();
         let k_mag = zeros_k_mag(16, 16, 16);
-        let (tau, eta, _, _, _) =
-            initialize_absorption_operators(&config, &grid, &medium, &k_mag, 1e6, 1500.0).unwrap();
+        let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 1e6, 1500.0)
+            .unwrap()
+            .expect("PowerLaw mode must return Some(AbsorptionKernel)");
 
         assert!(
-            (tau[[0, 0, 0]] - (-3.467_425_586_398_137e-8)).abs() < 1e-20,
+            (kernel.tau[[0, 0, 0]] - (-3.467_425_586_398_137e-8)).abs() < 1e-20,
             "tau mismatch: got {}",
-            tau[[0, 0, 0]]
+            kernel.tau[[0, 0, 0]]
         );
         assert!(
-            (eta[[0, 0, 0]] - (-3.467_425_586_398_1376e-5)).abs() < 1e-18,
+            (kernel.eta[[0, 0, 0]] - (-3.467_425_586_398_1376e-5)).abs() < 1e-18,
             "eta mismatch: got {}",
-            eta[[0, 0, 0]]
+            kernel.eta[[0, 0, 0]]
         );
     }
 

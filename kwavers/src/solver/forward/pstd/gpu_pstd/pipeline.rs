@@ -147,7 +147,9 @@ impl GpuPstdSolver {
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some(label),
                 contents: bytemuck::cast_slice(data),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_DST
+                    | wgpu::BufferUsages::COPY_SRC,
             })
         };
         // These storage buffers are cleared or overwritten by the first GPU
@@ -830,9 +832,11 @@ impl GpuPstdSolver {
             bg_absorb,
             bgl_sensor,
             pipeline_layout,
-            // CPU scratch for update_medium() — preallocated to avoid per-scan-line alloc.
+            // CPU scratch for update_medium_variable() — preallocated to avoid per-scan-line alloc.
             scratch_c0_sq: vec![0.0f32; total],
             scratch_rho0_inv: vec![0.0f32; total],
+            scratch_rho0_flat: vec![0.0f32; total],
+            scratch_source_kappa_ones: vec![1.0f32; total],
             scratch_source_data: Vec::new(),
             scratch_vel_x_data: Vec::new(),
             // Cached run() buffers — allocated lazily on first run().

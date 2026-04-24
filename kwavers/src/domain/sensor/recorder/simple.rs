@@ -206,4 +206,56 @@ impl SensorRecorder {
         self.next_step += 1;
         Ok(())
     }
+
+    /// Return partial sensor data accumulated so far, for checkpointing.
+    ///
+    /// Returns `(data, next_step, expected_steps)` where `data` has shape
+    /// `(n_sensors, next_step)`.  Returns `None` when no sensor mask is active.
+    pub fn checkpoint_state(&self) -> Option<(Array2<f64>, usize, usize)> {
+        let pressure = self.pressure.as_ref()?;
+        let recorded = pressure.slice(ndarray::s![.., ..self.next_step]).to_owned();
+        Some((recorded, self.next_step, self.expected_steps))
+    }
+
+    /// Restore recorder state from a checkpoint.
+    ///
+    /// `data` must have shape `(n_sensors, next_step)`.  The recorder writes
+    /// subsequent steps starting at column `next_step`.
+    ///
+    /// # Invariants
+    /// - `data.dim().0 == self.sensor_indices.len()`
+    /// - `next_step <= self.expected_steps`
+    /// - `data.dim().1 == next_step`
+    pub fn restore_from_checkpoint(
+        &mut self,
+        data: Array2<f64>,
+        next_step: usize,
+    ) -> KwaversResult<()> {
+        let (n_sensors, n_recorded) = data.dim();
+        if n_sensors != self.sensor_indices.len() {
+            return Err(KwaversError::DimensionMismatch(format!(
+                "checkpoint sensor count {n_sensors} ≠ recorder sensor count {}",
+                self.sensor_indices.len()
+            )));
+        }
+        if next_step > self.expected_steps {
+            return Err(KwaversError::InvalidInput(format!(
+                "checkpoint next_step {next_step} exceeds expected_steps {}",
+                self.expected_steps
+            )));
+        }
+        if n_recorded != next_step {
+            return Err(KwaversError::InvalidInput(format!(
+                "checkpoint data has {n_recorded} columns but next_step={next_step}"
+            )));
+        }
+        let pressure = self
+            .pressure
+            .get_or_insert_with(|| Array2::zeros((n_sensors, self.expected_steps)));
+        pressure
+            .slice_mut(ndarray::s![.., ..next_step])
+            .assign(&data);
+        self.next_step = next_step;
+        Ok(())
+    }
 }

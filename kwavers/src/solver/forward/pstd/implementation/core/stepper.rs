@@ -7,6 +7,7 @@ use crate::math::fft::Complex64;
 
 use crate::solver::forward::pstd::config::KSpaceMethod;
 use crate::solver::forward::pstd::implementation::k_space::PSTDKSOperators;
+use crate::solver::geometry::Geometry;
 use ndarray::{Array3, Zip};
 use std::env;
 use tracing::trace;
@@ -154,34 +155,59 @@ impl PSTDSolver {
         // k-Wave scales rho_scale = 2·Δt/(n_dim·c₀·Δx) and injects into n_dim density
         // components so total density change = n_dim × s.
         // kwavers always has 3 density components (ρₓ,ρᵧ,ρ_z) in the EOS p=c²·(ρₓ+ρᵧ+ρ_z).
-        // For n_dim < 3, the source handler already divided by n_dim (not 3), so each component
-        // must receive s·(n_dim/3) to keep the total density injection = n_dim × s_kwave.
-        let n_dim_active = {
-            let g = &*self.grid;
-            [g.nx > 1, g.ny > 1, g.nz > 1]
-                .iter()
-                .filter(|&&d| d)
-                .count()
-                .max(1) as f64
+        //
+        // CylindricalAS: only ρₓ (axial) and ρ_z (radial) are updated by the WSWA-FFT
+        // propagator; ρᵧ has no divergence update and must NOT receive source injection
+        // (it would accumulate without decay, corrupting pressure). density_scale=1.0 because
+        // mass_source_scale already uses n_dim=2, so each of the 2 components gets the full
+        // per-component value: total Δρ = 2·dpx = k-Wave's 2-component injection. ✓
+        //
+        // Cartesian: For n_dim < 3, the source handler already divided by n_dim (not 3), so
+        // each component must receive s·(n_dim/3) to keep total = n_dim × s_kwave.
+        let is_axisymmetric = self.config.geometry == Geometry::CylindricalAS;
+        let (n_dim_active, density_scale) = if is_axisymmetric {
+            (2.0_f64, 1.0_f64)
+        } else {
+            let n = {
+                let g = &*self.grid;
+                [g.nx > 1, g.ny > 1, g.nz > 1]
+                    .iter()
+                    .filter(|&&d| d)
+                    .count()
+                    .max(1) as f64
+            };
+            (n, n / 3.0)
         };
-        let density_scale = n_dim_active / 3.0;
+        let _ = n_dim_active; // used only for documentation; density_scale encodes it
 
         match p_mode {
             crate::domain::source::SourceMode::Dirichlet => {
-                // Dirichlet: enforce source values directly into all density components.
-                // Each component = s·(n_dim/3) so total = n_dim·s = k-Wave's n_dim-component sum.
-                Zip::from(&mut self.rhox)
-                    .and(&mut self.rhoy)
-                    .and(&mut self.rhoz)
-                    .and(&self.dpx)
-                    .for_each(|rx, ry, rz, &s| {
-                        if s.abs() > 0.0 {
-                            let v = s * density_scale;
-                            *rx = v;
-                            *ry = v;
-                            *rz = v;
-                        }
-                    });
+                if is_axisymmetric {
+                    Zip::from(&mut self.rhox)
+                        .and(&mut self.rhoz)
+                        .and(&self.dpx)
+                        .for_each(|rx, rz, &s| {
+                            if s.abs() > 0.0 {
+                                *rx = s * density_scale;
+                                *rz = s * density_scale;
+                            }
+                        });
+                } else {
+                    // Dirichlet: enforce source values directly into all density components.
+                    // Each component = s·(n_dim/3) so total = n_dim·s = k-Wave's n_dim-component sum.
+                    Zip::from(&mut self.rhox)
+                        .and(&mut self.rhoy)
+                        .and(&mut self.rhoz)
+                        .and(&self.dpx)
+                        .for_each(|rx, ry, rz, &s| {
+                            if s.abs() > 0.0 {
+                                let v = s * density_scale;
+                                *rx = v;
+                                *ry = v;
+                                *rz = v;
+                            }
+                        });
+                }
             }
             crate::domain::source::SourceMode::Additive => {
                 // Apply k-space source correction (k-Wave additive source_kappa)
@@ -194,28 +220,50 @@ impl PSTDSolver {
                 self.fft
                     .inverse_into(&self.p_k, &mut self.dpx, &mut self.ux_k);
 
-                Zip::from(&mut self.rhox)
-                    .and(&mut self.rhoy)
-                    .and(&mut self.rhoz)
-                    .and(&self.dpx)
-                    .for_each(|rx, ry, rz, &s| {
-                        let v = s * density_scale;
-                        *rx += v;
-                        *ry += v;
-                        *rz += v;
-                    });
+                if is_axisymmetric {
+                    Zip::from(&mut self.rhox)
+                        .and(&mut self.rhoz)
+                        .and(&self.dpx)
+                        .for_each(|rx, rz, &s| {
+                            let v = s * density_scale;
+                            *rx += v;
+                            *rz += v;
+                        });
+                } else {
+                    Zip::from(&mut self.rhox)
+                        .and(&mut self.rhoy)
+                        .and(&mut self.rhoz)
+                        .and(&self.dpx)
+                        .for_each(|rx, ry, rz, &s| {
+                            let v = s * density_scale;
+                            *rx += v;
+                            *ry += v;
+                            *rz += v;
+                        });
+                }
             }
             crate::domain::source::SourceMode::AdditiveNoCorrection => {
-                Zip::from(&mut self.rhox)
-                    .and(&mut self.rhoy)
-                    .and(&mut self.rhoz)
-                    .and(&self.dpx)
-                    .for_each(|rx, ry, rz, &s| {
-                        let v = s * density_scale;
-                        *rx += v;
-                        *ry += v;
-                        *rz += v;
-                    });
+                if is_axisymmetric {
+                    Zip::from(&mut self.rhox)
+                        .and(&mut self.rhoz)
+                        .and(&self.dpx)
+                        .for_each(|rx, rz, &s| {
+                            let v = s * density_scale;
+                            *rx += v;
+                            *rz += v;
+                        });
+                } else {
+                    Zip::from(&mut self.rhox)
+                        .and(&mut self.rhoy)
+                        .and(&mut self.rhoz)
+                        .and(&self.dpx)
+                        .for_each(|rx, ry, rz, &s| {
+                            let v = s * density_scale;
+                            *rx += v;
+                            *ry += v;
+                            *rz += v;
+                        });
+                }
             }
         }
 
@@ -646,6 +694,61 @@ mod tests {
         assert!(
             (p_step3 - CPML_REFERENCE_STEP3).abs() < CPML_REFERENCE_TOL,
             "With CPML: step3 p[src] = {p_step3:.6e}, expected {CPML_REFERENCE_STEP3:.6e}"
+        );
+    }
+
+    /// Theorem: source_kappa = cos(c·dt·k/2) — half-step leapfrog phase factor.
+    ///
+    /// k-Wave Python kspaceFirstOrder3D.py line 302:
+    ///   source_kappa = ifftshift(cos(c_ref * k * dt / 2))
+    ///
+    /// This is the staggered-time-step correction for additive source injection.
+    /// Distinct from kappa (propagation), which uses np.sinc(c*dt*k/(2π)).
+    ///
+    /// At DC (k=0): cos(0) = 1.0.
+    /// At k_max (CFL=0.5): cos(π/4) ≈ 0.7071.
+    #[test]
+    fn test_source_kappa_equals_cosine() {
+        use crate::{domain::grid::Grid, domain::medium::HomogeneousMedium};
+        use std::f64::consts::PI;
+
+        let n = 32usize;
+        let dx = 5e-4_f64;
+        let c0 = 1500.0_f64;
+        let cfl = 0.5_f64;
+        let dt = cfl * dx / c0;
+        let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
+        let medium = HomogeneousMedium::from_minimal(1000.0, c0, &grid);
+
+        let source = crate::domain::source::grid_source::GridSource::new_empty();
+        let config = PSTDConfig {
+            dt,
+            nt: 1,
+            smooth_sources: false,
+            ..Default::default()
+        };
+        let solver = PSTDSolver::new(config, grid.clone(), &medium, source).unwrap();
+
+        let sc = &solver.source_kappa;
+
+        // DC must be 1.0
+        let dc_val = sc[[0, 0, 0]];
+        assert!(
+            (dc_val - 1.0).abs() < 1e-12,
+            "source_kappa[DC] must be 1.0, got {dc_val}"
+        );
+
+        // At k_max: expect cos(CFL·π/2)
+        let k_max = PI / dx;
+        let arg = 0.5 * c0 * dt * k_max; // = CFL * π/2
+        let expected_cos = arg.cos();
+
+        // In zero-frequency-first ordering, index n/2 is the highest-frequency bin.
+        let hi_k_idx = n / 2;
+        let hk_val = sc[[hi_k_idx, 0, 0]];
+        assert!(
+            (hk_val - expected_cos).abs() < 1e-10,
+            "source_kappa[{hi_k_idx},0,0]={hk_val} expected cos={expected_cos}"
         );
     }
 }

@@ -53,10 +53,11 @@ import scipy.signal
 # Path setup: expose k-wave-python and pykwavers
 # ---------------------------------------------------------------------------
 _ROOT = Path(__file__).parents[2]
+_SCRIPT_DIR = Path(__file__).resolve().parent
 _KWAVE_PY = _ROOT / "external" / "k-wave-python"
 _PYKWAVERS = _ROOT / "pykwavers"
 
-for p in [str(_KWAVE_PY), str(_PYKWAVERS / "python")]:
+for p in [str(_SCRIPT_DIR), str(_KWAVE_PY), str(_PYKWAVERS / "python")]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
@@ -78,6 +79,7 @@ from kwave.utils.signals import get_win, tone_burst
 # pykwavers imports (simulation engine)
 import pykwavers as pkw
 from pykwavers.parity_targets import evaluate_parity
+from example_parity_utils import RunningTimingStats, advance_lateral_window_inplace
 
 # Set to False by --cpu flag in main(); True when GPU is available (default).
 # Workers are 1 for GPU (persistent session) and args.workers for CPU.
@@ -209,7 +211,8 @@ def build_source_mask_and_signals(kgrid, not_transducer, input_signal):
     Grid layout:
         Full grid:   (256, 128, 128) = GRID_SIZE_PTS + 2*PML_SIZE
         Active region: x=[PML_x:Nx-PML_x], y=[PML_y:Ny-PML_y], z=[PML_z:Nz-PML_z]
-        Source at x=PML_x (first active cell, matching k-wave pml_inside=False)
+        Source mask is derived from not_transducer.active_elements_mask and
+        embedded into the full grid with the PML halo.
 
     Transmit delays (Thomenius 1996, IEEE UFFC 43(5) 820-831):
         element_pitch = (element_width + element_spacing) * dx
@@ -219,8 +222,8 @@ def build_source_mask_and_signals(kgrid, not_transducer, input_signal):
             d_i = (f/c) * (1 - sqrt(1 + (i*p/f)^2 - 2*(i*p/f)*sin(theta)))
             delay_samples_i = round(d_i / dt)
 
-    Note: elevation delays are NOT applied for transmit (they are receive-only in
-    the k-wave NotATransducer model, applied in combine_sensor_data).
+    The source builder uses not_transducer.delay_mask() so the transmit drive
+    includes the transducer's azimuth and elevation delay contract.
 
     Returns
     -------
@@ -235,72 +238,51 @@ def build_source_mask_and_signals(kgrid, not_transducer, input_signal):
     FNz = int(GRID_SIZE_PTS.z) + 2 * int(PML_SIZE.z)  # 108 + 20 = 128
     Nt = kgrid.Nt
 
-    # Active-domain dimensions (excluding PML)
-    ANy = int(GRID_SIZE_PTS.y)  # 108
-    ANz = int(GRID_SIZE_PTS.z)  # 108
+    active_mask = np.asarray(not_transducer.active_elements_mask, dtype=np.float64)
+    delay_mask = np.asarray(not_transducer.delay_mask(), dtype=np.int32)
+    apod_mask = np.asarray(not_transducer.transmit_apodization_mask, dtype=np.float64)
 
-    # Source x-position: first active cell (just past x-PML)
-    x_src = int(PML_SIZE.x)  # = 20 (0-indexed in full grid)
-
-    # Transducer y/z start in full-grid coordinates:
-    #   k-wave positions use active-domain indexing (0-based in active region).
-    #   In full grid: add PML_SIZE offset.
-    transducer_width_pts = N_ELEMENTS * ELEM_WIDTH + (N_ELEMENTS - 1) * ELEM_SPACING
-    # Active-domain positions (matching kWaveTransducerSimple: position[1] is 1-indexed)
-    y0_active = int(np.round(ANy / 2 - transducer_width_pts / 2))  # active-domain y-start
-    z0_active = int(np.round(ANz / 2 - ELEM_LENGTH / 2))           # active-domain z-start
-    y0 = y0_active + int(PML_SIZE.y)   # full-grid y-start
-    z0 = z0_active + int(PML_SIZE.z)   # full-grid z-start
-
-    # Build 3D source mask in full-grid coordinates
+    # Build 3D source mask in full-grid coordinates from the transducer SSOT.
     mask = np.zeros((FNx, FNy, FNz), dtype=np.float64)
-    for i in range(N_ELEMENTS):
-        y_start = y0 + i * (ELEM_WIDTH + ELEM_SPACING)
-        mask[x_src, y_start : y_start + ELEM_WIDTH, z0 : z0 + ELEM_LENGTH] = 1.0
+    px, py, pz = int(PML_SIZE.x), int(PML_SIZE.y), int(PML_SIZE.z)
+    mask[
+        px : px + int(GRID_SIZE_PTS.x),
+        py : py + int(GRID_SIZE_PTS.y),
+        pz : pz + int(GRID_SIZE_PTS.z),
+    ] = active_mask
 
-    n_source_pts = int(mask.sum())  # = N_ELEMENTS * ELEM_WIDTH * ELEM_LENGTH = 1536
-
-    # --- Azimuth (lateral) transmit delays ---
-    # NotATransducer.beamforming_delays returns integer sample delays (may be negative).
-    # We normalize to non-negative by adding the magnitude of the minimum.
-    az_delays = not_transducer.beamforming_delays  # shape (N_ELEMENTS,), int samples
-    az_offset = int(-az_delays.min())  # makes min(az_delays + az_offset) = 0
-    az_delays_abs = az_delays + az_offset   # non-negative integer sample delays
-
-    # Hanning transmit apodization
-    apod_win, _ = get_win(N_ELEMENTS, "Hanning", False)
-    apod = apod_win.ravel()  # shape (N_ELEMENTS,)
-
-    # --- Base signal padding ---
-    input_1d = np.asarray(input_signal).ravel()  # always 1D regardless of (1,L) shape
-    L = len(input_1d)
-    max_delay = int(az_delays_abs.max())
-    total_len = L + max_delay
-    # Pad base signal so we can index without bounds issues
-    base_padded = np.zeros(total_len)
-    base_padded[:L] = input_1d
+    n_source_pts = int(active_mask.sum())  # = N_ELEMENTS * ELEM_WIDTH * ELEM_LENGTH = 1536
 
     # k-Wave scales additive velocity sources by 2*c0*dt/dx internally
-    # (see scale_source_terms_func.py: scale_velocity_source).
-    # Apply the same factor here so pykwavers injects the same velocity amplitude.
+    # (see scale_source_terms_func.py: scale_velocity_source). Apply the same
+    # factor here so pykwavers injects the same velocity amplitude.
     transducer_scale = 2.0 * C0 * kgrid.dt / DX
 
-    # --- Build per-source-point signals ---
-    # Source points in MATLAB Fortran order: x fixed, y varies faster than z.
-    # NOTE: elevation delays are NOT applied for transmit (receive-only model).
+    delay_full = np.zeros((FNx, FNy, FNz), dtype=np.int32)
+    apod_full = np.zeros((FNx, FNy, FNz), dtype=np.float64)
+    delay_full[
+        px : px + int(GRID_SIZE_PTS.x),
+        py : py + int(GRID_SIZE_PTS.y),
+        pz : pz + int(GRID_SIZE_PTS.z),
+    ] = delay_mask
+    apod_full[
+        px : px + int(GRID_SIZE_PTS.x),
+        py : py + int(GRID_SIZE_PTS.y),
+        pz : pz + int(GRID_SIZE_PTS.z),
+    ] = apod_mask
+
+    # Source points follow the C-order enumeration of the full-grid mask.
+    input_1d = np.asarray(input_signal).ravel()
+    max_delay = int(delay_full.max())
+    padded_signal = np.concatenate([np.zeros(max_delay), input_1d])
     ux_signals = np.zeros((n_source_pts, Nt), dtype=np.float64)
 
-    p = 0  # source point index
-    for i in range(N_ELEMENTS):
-        az_d = int(az_delays_abs[i])
-        w_i = float(apod[i]) * transducer_scale
-        for _yw in range(ELEM_WIDTH):  # w grid points per element in y
-            for _j in range(ELEM_LENGTH):  # elevation position (no per-z delay for TX)
-                end = min(az_d + L, Nt)
-                src_end = end - az_d
-                if src_end > 0:
-                    ux_signals[p, az_d:end] = base_padded[:src_end] * w_i
-                p += 1
+    for p, (x, y, z) in enumerate(np.argwhere(mask != 0)):
+        delay = int(delay_full[x, y, z])
+        weight = float(apod_full[x, y, z]) * transducer_scale
+        n_inj = min(padded_signal.size - delay, Nt)
+        if n_inj > 0:
+            ux_signals[p, :n_inj] = padded_signal[delay : delay + n_inj] * weight
 
     return mask, ux_signals
 
@@ -442,12 +424,15 @@ def run_pykwavers_bmode(sound_speed_map, density_map, kgrid, not_transducer,
     Returns
     -------
     scan_lines : ndarray (len(scan_line_indices), Nt)  beamformed scan lines
+    gpu_profiles : RunningTimingStats | None  per-line timing summary when GPU is used
     """
     # Build source mask and signals (same for all scan lines, steering_angle=0)
     print("  Building transmit source signals...")
     mask, ux_signals = build_source_mask_and_signals(kgrid, not_transducer, input_signal)
 
     n_lines = len(scan_line_indices)
+    # Precompute lateral phantom offsets once; the loop only selects the slice.
+    medium_positions = [sl_idx * ELEM_WIDTH for sl_idx in scan_line_indices]
     scan_lines = np.zeros((n_lines, kgrid.Nt))
 
     FNx = int(GRID_SIZE_PTS.x) + 2 * int(PML_SIZE.x)   # 256
@@ -462,23 +447,41 @@ def run_pykwavers_bmode(sound_speed_map, density_map, kgrid, not_transducer,
     if _USE_GPU:
         print("  [GPU] Initialising GpuPstdSession (compiles pipelines once)...")
         t_init = time.perf_counter()
+        gpu_profiles = RunningTimingStats(
+            (
+                "medium_variable_upload_ns",
+                "medium_static_upload_ns",
+                "solver_run_ns",
+                "materialize_ns",
+                "total_ns",
+            )
+        )
 
         grid = pkw.Grid(FNx, FNy, FNz, DX, DX, DX)
+        # Reuse the full-grid medium buffers across scan lines and overwrite only
+        # the active interior slice to avoid repeated full-volume allocations.
+        active_region = (
+            slice(px, px + ANx),
+            slice(py, py + ANy),
+            slice(pz, pz + ANz),
+        )
+        ss_full = np.full((FNx, FNy, FNz), C0, dtype=np.float64)
+        rho_full = np.full((FNx, FNy, FNz), RHO0, dtype=np.float64)
+        ss_active = ss_full[active_region]
+        rho_active = rho_full[active_region]
 
         # Initial medium: use first scan-line slice
-        sl0 = scan_line_indices[0]
-        mp0 = sl0 * ELEM_WIDTH
-        ss0  = sound_speed_map[:, mp0:mp0+ANy, :].copy()
-        rho0 = density_map[:, mp0:mp0+ANy, :].copy()
-        ss_init, rho_init = _build_full_medium_arrays(
-            ss0, rho0, px, py, pz, ANx, ANy, ANz, FNx, FNy, FNz)
+        mp0 = medium_positions[0]
+        np.copyto(ss_active, sound_speed_map[:, mp0:mp0 + ANy, :])
+        np.copyto(rho_active, density_map[:, mp0:mp0 + ANy, :])
 
+        # Absorption and nonlinearity remain fixed across the scan-line sweep.
         abs_full = np.full((FNx, FNy, FNz), ALPHA_COEFF, dtype=np.float64)
         nl_full  = np.full((FNx, FNy, FNz), BON_A,       dtype=np.float64)
 
         session = pkw.GpuPstdSession(
             grid,
-            ss_init, rho_init,
+            ss_full, rho_full,
             dt=kgrid.dt, time_steps=kgrid.Nt,
             absorption=abs_full,
             nonlinearity=nl_full,
@@ -487,10 +490,10 @@ def run_pykwavers_bmode(sound_speed_map, density_map, kgrid, not_transducer,
         )
         # mask is float (nonzero = source/sensor point)
         session.set_source_sensor(mask.astype(np.float64), ux_signals)
-        # NOTE: tried session.disable_source_correction() to match k-wave's
-        # u_mode="additive-no-correction" default — empirically slightly worse
-        # (r=0.940 vs 0.946), so the GPU source_kappa correction was accidentally
-        # compensating for a different mismatch. Leaving correction enabled.
+        # k-wave-python NotATransducer defaults u_mode to "additive-no-correction".
+        # Disable the GPU source-kappa correction so the transducer contract
+        # matches the reference path before scan-line recomposition.
+        session.disable_source_correction()
         print(f"  [GPU] Session ready in {time.perf_counter()-t_init:.1f}s")
 
         try:
@@ -500,26 +503,39 @@ def run_pykwavers_bmode(sound_speed_map, density_map, kgrid, not_transducer,
         except ImportError:
             _iter = enumerate(scan_line_indices)
 
-        for out_idx, sl_idx in _iter:
-            medium_position = sl_idx * ELEM_WIDTH
-            ss_slice  = sound_speed_map[:, medium_position:medium_position+ANy, :].copy()
-            rho_slice = density_map[:,    medium_position:medium_position+ANy, :].copy()
-            ss_full, rho_full = _build_full_medium_arrays(
-                ss_slice, rho_slice, px, py, pz, ANx, ANy, ANz, FNx, FNy, FNz)
+        prev_medium_position = mp0
+        for out_idx, _sl_idx in _iter:
+            medium_position = medium_positions[out_idx]
+            if out_idx == 0:
+                np.copyto(ss_active, sound_speed_map[:, medium_position:medium_position + ANy, :])
+                np.copyto(rho_active, density_map[:, medium_position:medium_position + ANy, :])
+            else:
+                advance_lateral_window_inplace(
+                    ss_active,
+                    sound_speed_map,
+                    prev_medium_position,
+                    medium_position,
+                )
+                advance_lateral_window_inplace(
+                    rho_active,
+                    density_map,
+                    prev_medium_position,
+                    medium_position,
+                )
+            prev_medium_position = medium_position
 
-            sensor_data_raw = session.run_scan_line(
-                ss_full.astype(np.float64), rho_full.astype(np.float64))
+            sensor_data_raw = session.run_scan_line(ss_full, rho_full)
             scan_lines[out_idx, :] = not_transducer.scan_line(
                 not_transducer.combine_sensor_data(sensor_data_raw)
             )
+            gpu_profiles.update(session.last_run_profile_ns)
 
-        return scan_lines
+        return scan_lines, gpu_profiles
 
     # ── CPU path (unchanged): multiprocess workers ────────────────────────────
     # Build per-scan-line phantom slices
     slices = []
-    for sl_idx in scan_line_indices:
-        medium_position = sl_idx * ELEM_WIDTH
+    for medium_position in medium_positions:
         ss_slice = sound_speed_map[
             :, medium_position : medium_position + int(GRID_SIZE_PTS.y), :
         ].copy()
@@ -569,12 +585,11 @@ def run_pykwavers_bmode(sound_speed_map, density_map, kgrid, not_transducer,
 
     # Collect results (may arrive out of order with imap_unordered)
     for out_idx, sensor_data_raw in results:
-        # sensor_data_raw is already in k-Wave MATLAB column-major order.
         scan_lines[out_idx, :] = not_transducer.scan_line(
             not_transducer.combine_sensor_data(sensor_data_raw)
         )
 
-    return scan_lines
+    return scan_lines, None
 
 
 # ---------------------------------------------------------------------------
@@ -926,7 +941,7 @@ def main():
     # --- Run pykwavers B-mode ---
     print(f"\n[2/3] Running pykwavers B-mode ({n_lines} scan lines)...")
     t0_pkw = time.perf_counter()
-    pkw_sl = run_pykwavers_bmode(
+    pkw_sl, pkw_profiles = run_pykwavers_bmode(
         sound_speed_map, density_map, kgrid, not_transducer,
         input_signal, scan_line_indices, workers=workers,
     )
@@ -991,6 +1006,10 @@ def main():
         f.write(f"  Targets     = r>={eval_raw['target']['pearson_r']:.3f}, "
                 f"{eval_raw['target']['rms_ratio_min']:.2f}<=RMS<={eval_raw['target']['rms_ratio_max']:.2f}, "
                 f"PSNR>={eval_raw['target']['psnr_db']:.1f} dB\n")
+        if pkw_profiles is not None:
+            f.write(f"\nGPU scan-line profile (per line, ms):\n")
+            for line in pkw_profiles.format_lines():
+                f.write(line + "\n")
         f.write(f"\nFundamental (log-compressed, normalize=True — for visualization only):\n")
         f.write(f"  Pearson r  = {metrics_fund['pearson_r']:.6f}\n")
         f.write(f"  RMS ratio  = {metrics_fund['rms_ratio']:.6f}\n")

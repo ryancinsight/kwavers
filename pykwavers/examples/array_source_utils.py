@@ -2,7 +2,8 @@
 
 This module keeps the active-point row ordering and source-distribution logic in
 one place so the example scripts do not duplicate the same geometry-to-signal
-mapping.
+mapping. Pressure-source rows follow MATLAB / Fortran-order active-point
+enumeration so the example matrices match k-wave-python.
 """
 
 from __future__ import annotations
@@ -69,8 +70,9 @@ def build_pykwavers_distributed_arc_signal(
 ) -> tuple[np.ndarray, np.ndarray, list[np.ndarray]]:
     """Build the binary mask and row-wise active-point signal matrix for pykwavers.
 
-    The returned source signal rows follow C-order over the active mask so they
-    match `Source.from_mask()` and the solver's flattened source iteration order.
+    The returned source signal rows follow Fortran-order over the active mask so
+    they match k-wave-python's `matlab_find` convention and the pressure-source
+    iteration order used by pykwavers.
     """
     source_signal_arr = np.asarray(source_signal, dtype=np.float64)
     if source_signal_arr.ndim != 2:
@@ -94,7 +96,7 @@ def build_pykwavers_distributed_arc_signal(
     if binary_mask.ndim != 2:
         raise ValueError(f"Expected a 2-D binary mask, got shape {binary_mask.shape}")
 
-    active_indices = np.flatnonzero(binary_mask.flatten(order="C"))
+    active_indices = np.flatnonzero(binary_mask.flatten(order="F"))
     distributed = np.zeros((active_indices.size, source_signal_arr.shape[1]), dtype=np.float64)
     element_weight_masks: list[np.ndarray] = []
 
@@ -107,7 +109,7 @@ def build_pykwavers_distributed_arc_signal(
             )
         element_weight_masks.append(weight_mask)
 
-        weight_flat = weight_mask.flatten(order="C")
+        weight_flat = weight_mask.flatten(order="F")
         element_indices = np.flatnonzero(weight_flat)
         local_ind = np.isin(active_indices, element_indices)
         distributed[local_ind] += weight_flat[element_indices][:, None] * source_signal_arr[idx, :][None, :]

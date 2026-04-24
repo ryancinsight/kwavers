@@ -1,6 +1,6 @@
 //! PSTD Solver Orchestrator
 
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::boundary::Boundary;
 use crate::domain::boundary::{CPMLBoundary, PMLBoundary};
 use crate::domain::field::wave::WaveFields;
@@ -14,15 +14,19 @@ use crate::domain::source::SourceInjectionMode;
 use crate::math::fft::shift_operators::generate_shift_1d;
 use crate::math::fft::{Complex64, ProcessorFft3d};
 use crate::solver::fdtd::SourceHandler;
-use crate::solver::forward::acoustic_ivp::spectral_velocity_scale_from_kappa;
+use crate::solver::forward::acoustic_ivp::spectral_velocity_scale_from_source_kappa;
 use crate::solver::forward::pstd::config::{
     BoundaryConfig, CompatibilityMode, KSpaceMethod, PSTDConfig,
 };
 use crate::solver::forward::pstd::implementation::k_space::{PSTDKSGrid, PSTDKSOperators};
 use crate::solver::forward::pstd::numerics::operators::initialize_spectral_operators;
 use crate::solver::forward::pstd::numerics::spectral_correction::CorrectionMethod;
-use crate::solver::forward::pstd::physics::absorption::initialize_absorption_operators;
+use crate::solver::forward::pstd::physics::absorption::{
+    initialize_absorption_operators, AbsorptionKernel,
+};
+use crate::solver::forward::pstd::propagator::axisymmetric::AsContext;
 use crate::solver::forward::pstd::utils::compute_k_magnitude;
+use crate::solver::geometry::Geometry;
 use ndarray::{Array1, Array2, Array3, Zip};
 use std::f64::consts::PI;
 use std::sync::Arc;
@@ -39,7 +43,6 @@ pub struct PSTDSolver {
     pub(crate) fft: Arc<ProcessorFft3d>,
     pub(crate) kappa: Array3<f64>,
     pub(crate) source_kappa: Array3<f64>,
-    pub(crate) k_vec: (Array3<f64>, Array3<f64>, Array3<f64>),
     pub(crate) filter: Option<Array3<f64>>,
     pub(crate) c_ref: f64,
     /// Precomputed additive mass-source scale: 2·Δt / (N·c₀·Δx_min).
@@ -57,28 +60,13 @@ pub struct PSTDSolver {
     pub(crate) ux_k: Array3<Complex64>,
     pub(crate) uy_k: Array3<Complex64>,
     pub(crate) uz_k: Array3<Complex64>,
-    pub(crate) grad_x_k: Array3<Complex64>,
-    pub(crate) grad_y_k: Array3<Complex64>,
-    pub(crate) grad_z_k: Array3<Complex64>,
+    /// Single k-space gradient scratch, reused for all three spatial axes sequentially.
+    /// Replaces the former grad_x_k / grad_y_k / grad_z_k trio, saving 2 × N³ × 16 bytes.
+    pub(crate) grad_k: Array3<Complex64>,
     pub(crate) materials: MaterialFields,
     pub(crate) bon: Array3<f64>,
-    pub(crate) grad_rho0_x: Array3<f64>,
-    pub(crate) grad_rho0_y: Array3<f64>,
-    pub(crate) grad_rho0_z: Array3<f64>,
-    pub(crate) absorb_tau: Array3<f64>,
-    pub(crate) absorb_eta: Array3<f64>,
-    /// Spatially-varying power-law absorption exponent y; stored for future
-    /// spatially-heterogeneous absorption extensions (Treeby & Cox 2010).
-    #[allow(dead_code)]
-    pub(crate) absorb_y: Array3<f64>,
-    /// Spectral absorption operator ∇^(y−2): precomputed |k|^(y−2) in FFT order.
-    /// Applied to per-axis velocity divergence in the density update step.
-    /// Treeby & Cox (2010) Eq. 10; k-Wave: nabla1 = kgrid.k .^ (y - 2).
-    pub(crate) absorb_nabla1: Array3<f64>,
-    /// Spectral dispersion operator ∇^(y−1): precomputed |k|^(y−1) in FFT order.
-    /// Applied to per-axis velocity divergence in the density update step.
-    /// Treeby & Cox (2010) Eq. 10; k-Wave: nabla2 = kgrid.k .^ (y - 1).
-    pub(crate) absorb_nabla2: Array3<f64>,
+    /// Precomputed absorption kernel — `None` for lossless simulations (saves 4 × N³ × 8 bytes).
+    pub(crate) absorption: Option<AbsorptionKernel>,
     pub(crate) kspace_operators: Option<PSTDKSOperators>,
     // Staggered grid shift operators (1D, per axis, complex)
     // ddx_k_shift_pos[x] = i*kx * exp(+i*kx*dx/2) — for pressure gradient → velocity
@@ -94,6 +82,8 @@ pub struct PSTDSolver {
     pub(crate) dpy: Array3<f64>,
     pub(crate) dpz: Array3<f64>,
     pub(crate) div_u: Array3<f64>,
+    /// Axisymmetric WSWA-FFT context — `Some` when `config.geometry == CylindricalAS`.
+    pub(crate) as_ctx: Option<AsContext>,
 }
 
 impl PSTDSolver {
@@ -123,6 +113,11 @@ impl PSTDSolver {
         let k_mag = compute_k_magnitude(&k_ops.kx, &k_ops.ky, &k_ops.kz);
 
         let _x_max: f64 = 0.0;
+        // source_kappa = cos(c_ref·dt·k/2).
+        // Matches k-Wave Python kspaceFirstOrder3D.py line 302:
+        //   source_kappa = ifftshift(cos(c_ref * k * dt / 2))
+        // This is the half-step phase factor from the leapfrog staggered time-stepping
+        // scheme — distinct from kappa (propagation), which uses np.sinc.
         let source_kappa = k_mag.mapv(|k| (0.5 * c_ref * config.dt * k).cos());
         let boundary: Option<Box<dyn Boundary>> = match &config.boundary {
             BoundaryConfig::PML(pml_config) => {
@@ -137,12 +132,10 @@ impl PSTDSolver {
             BoundaryConfig::None => None,
         };
 
-        let (absorb_tau, absorb_eta, absorb_y, absorb_nabla1, absorb_nabla2) =
+        let absorption =
             initialize_absorption_operators(&config, &grid, medium, &k_mag, k_max, c_ref)?;
         let field_arrays =
             crate::solver::forward::pstd::data::initialize_field_arrays(&grid, medium)?;
-        let k_vec = (k_ops.kx, k_ops.ky, k_ops.kz);
-
         // Generate staggered grid shift operators using the shared canonical utility.
         // See `math::fft::shift_operators::generate_shift_1d` for the full derivation.
         // Both PSTD and k-space FDTD call the same function, ensuring bit-identical
@@ -189,7 +182,6 @@ impl PSTDSolver {
             fft: crate::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz),
             kappa,
             source_kappa,
-            k_vec,
             filter: k_ops.filter,
             k_max,
             c_ref,
@@ -218,19 +210,10 @@ impl PSTDSolver {
             ux_k: Array3::zeros(shape),
             uy_k: Array3::zeros(shape),
             uz_k: Array3::zeros(shape),
-            grad_x_k: Array3::zeros(shape),
-            grad_y_k: Array3::zeros(shape),
-            grad_z_k: Array3::zeros(shape),
+            grad_k: Array3::zeros(shape),
             materials: MaterialFields { rho0, c0 },
             bon,
-            grad_rho0_x: Array3::zeros(shape),
-            grad_rho0_y: Array3::zeros(shape),
-            grad_rho0_z: Array3::zeros(shape),
-            absorb_tau,
-            absorb_eta,
-            absorb_y,
-            absorb_nabla1,
-            absorb_nabla2,
+            absorption,
             kspace_operators: None,
             ddx_k_shift_pos,
             ddy_k_shift_pos,
@@ -242,11 +225,30 @@ impl PSTDSolver {
             dpy: Array3::zeros(shape),
             dpz: Array3::zeros(shape),
             div_u: Array3::zeros(shape),
+            as_ctx: None,
         };
 
         if solver.config.kspace_method == KSpaceMethod::FullKSpace {
             let k_grid = PSTDKSGrid::from_spatial_grid(&grid)?;
             solver.kspace_operators = Some(PSTDKSOperators::new(k_grid));
+        }
+
+        if solver.config.geometry == Geometry::CylindricalAS {
+            if grid.ny != 1 {
+                return Err(KwaversError::InvalidInput(
+                    "CylindricalAS requires ny = 1".into(),
+                ));
+            }
+            solver.as_ctx = Some(AsContext::new(
+                grid.nx,
+                grid.nz, // nr = nz (radial dimension)
+                grid.dx,
+                grid.dz, // dr = dz
+                c_ref,
+                config_dt,
+                solver.ddx_k_shift_pos.clone(),
+                solver.ddx_k_shift_neg.clone(),
+            )?);
         }
 
         solver.source_handler.prepare_pressure_source_scaling(
@@ -286,7 +288,6 @@ impl PSTDSolver {
             solver.initialize_ivp_velocity()?;
         }
 
-        solver.compute_rho0_gradients()?;
         Ok(solver)
     }
 
@@ -322,87 +323,62 @@ impl PSTDSolver {
         let dt = self.config.dt;
         let rho0_ref = self.materials.rho0.mean().unwrap_or(1000.0);
 
-        // The spectral IVP scale is expressed through the existing kappa field:
-        //   sin(c0|k|dt/2)/(ρ0 c0 |k|) = (dt / (2ρ0)) * sinc(arccos(κ))
+        // The spectral IVP scale is expressed through the source-injection phase
+        // factor:
+        //   sin(c0|k|dt/2)/(ρ0 c0 |k|) = (dt / (2ρ0)) * sinc(arccos(κ_src))
         // This avoids materializing a separate |k| array.
-        let sin_scale: Array3<f64> = spectral_velocity_scale_from_kappa(&self.kappa, dt, rho0_ref)?;
+        let sin_scale: Array3<f64> =
+            spectral_velocity_scale_from_source_kappa(&self.source_kappa, dt, rho0_ref)?;
 
         // FFT the initial pressure p0 into the p_k scratch buffer
         self.fft.forward_into(&self.fields.p, &mut self.p_k);
 
         // --- X component: ux_sgx_k = ddx_k_shift_pos[i] * sin_scale[i,j,k] * p0_k[i,j,k] ---
+        // grad_k is reused for each axis (p_k is only read, not modified).
         {
             let ddx = self.ddx_k_shift_pos.view();
             let sin_s = sin_scale.view();
             let p_k = self.p_k.view();
-            Zip::indexed(self.grad_x_k.view_mut())
+            Zip::indexed(self.grad_k.view_mut())
                 .and(sin_s)
                 .and(p_k)
-                .for_each(|(i, _j, _k), gx, &ss, &p| {
-                    *gx = ddx[i] * ss * p;
+                .for_each(|(i, _j, _k), gk, &ss, &p| {
+                    *gk = ddx[i] * ss * p;
                 });
         }
         self.fft
-            .inverse_into(&self.grad_x_k, &mut self.fields.ux, &mut self.ux_k);
+            .inverse_into(&self.grad_k, &mut self.fields.ux, &mut self.ux_k);
 
         // --- Y component ---
         {
             let ddy = self.ddy_k_shift_pos.view();
             let sin_s = sin_scale.view();
             let p_k = self.p_k.view();
-            Zip::indexed(self.grad_y_k.view_mut())
+            Zip::indexed(self.grad_k.view_mut())
                 .and(sin_s)
                 .and(p_k)
-                .for_each(|(_i, j, _k), gy, &ss, &p| {
-                    *gy = ddy[j] * ss * p;
+                .for_each(|(_i, j, _k), gk, &ss, &p| {
+                    *gk = ddy[j] * ss * p;
                 });
         }
         self.fft
-            .inverse_into(&self.grad_y_k, &mut self.fields.uy, &mut self.uy_k);
+            .inverse_into(&self.grad_k, &mut self.fields.uy, &mut self.uy_k);
 
         // --- Z component ---
         {
             let ddz = self.ddz_k_shift_pos.view();
             let sin_s = sin_scale.view();
             let p_k = self.p_k.view();
-            Zip::indexed(self.grad_z_k.view_mut())
+            Zip::indexed(self.grad_k.view_mut())
                 .and(sin_s)
                 .and(p_k)
-                .for_each(|(_i, _j, k_idx), gz, &ss, &p| {
-                    *gz = ddz[k_idx] * ss * p;
+                .for_each(|(_i, _j, k_idx), gk, &ss, &p| {
+                    *gk = ddz[k_idx] * ss * p;
                 });
         }
         self.fft
-            .inverse_into(&self.grad_z_k, &mut self.fields.uz, &mut self.uz_k);
+            .inverse_into(&self.grad_k, &mut self.fields.uz, &mut self.uz_k);
 
-        Ok(())
-    }
-
-    pub(super) fn compute_rho0_gradients(&mut self) -> KwaversResult<()> {
-        self.fft.forward_into(&self.materials.rho0, &mut self.p_k);
-        let (nx, ny, nz) = self.p_k.dim();
-        // Use positive shift for rho0 gradient (same as pressure gradient direction)
-        for i in 0..nx {
-            let shift_x = self.ddx_k_shift_pos[i];
-            for j in 0..ny {
-                let shift_y = self.ddy_k_shift_pos[j];
-                for k in 0..nz {
-                    let shift_z = self.ddz_k_shift_pos[k];
-                    let kap = Complex64::new(self.kappa[[i, j, k]], 0.0);
-                    let rho_k = self.p_k[[i, j, k]];
-                    let e_kappa = kap * rho_k;
-                    self.grad_x_k[[i, j, k]] = shift_x * e_kappa;
-                    self.grad_y_k[[i, j, k]] = shift_y * e_kappa;
-                    self.grad_z_k[[i, j, k]] = shift_z * e_kappa;
-                }
-            }
-        }
-        self.fft
-            .inverse_into(&self.grad_x_k, &mut self.grad_rho0_x, &mut self.ux_k);
-        self.fft
-            .inverse_into(&self.grad_y_k, &mut self.grad_rho0_y, &mut self.ux_k);
-        self.fft
-            .inverse_into(&self.grad_z_k, &mut self.grad_rho0_z, &mut self.ux_k);
         Ok(())
     }
 
@@ -419,6 +395,139 @@ impl PSTDSolver {
             self.sensor_recorder.record_step(&self.fields.p)?;
         }
         for _ in 0..steps {
+            self.step_forward()?;
+        }
+        Ok(self.sensor_recorder.extract_pressure_data())
+    }
+
+    /// Run `checkpoint_steps` steps then persist full solver state to `path`.
+    ///
+    /// Records the initial field (step 0) if this is the first call, runs
+    /// `checkpoint_steps` time steps, then serialises the solver state using
+    /// the binary KWCP format (see [`checkpoint`][crate::solver::forward::pstd::checkpoint]).
+    /// Call [`run_from_checkpoint`] to resume bit-exactly.
+    ///
+    /// # Invariants
+    /// - `checkpoint_steps ≤ config.nt`
+    /// - Grid dims and `dt` in the checkpoint match those of the resuming solver
+    pub fn run_to_checkpoint(
+        &mut self,
+        checkpoint_steps: usize,
+        path: &std::path::Path,
+    ) -> KwaversResult<()> {
+        use crate::solver::forward::pstd::checkpoint::PSTDCheckpoint;
+
+        if self.time_step_index == 0 {
+            self.sensor_recorder.record_step(&self.fields.p)?;
+        }
+        for _ in 0..checkpoint_steps {
+            self.step_forward()?;
+        }
+
+        let (sensor_data, sensor_next_step, sensor_expected_steps) = self
+            .sensor_recorder
+            .checkpoint_state()
+            .map(|(d, ns, es)| (Some(d), ns, es))
+            .unwrap_or((None, 0, 0));
+
+        let ckpt = PSTDCheckpoint {
+            nx: self.grid.nx,
+            ny: self.grid.ny,
+            nz: self.grid.nz,
+            time_step_index: self.time_step_index,
+            total_steps: self.config.nt,
+            dt: self.config.dt,
+            p: self.fields.p.clone(),
+            ux: self.fields.ux.clone(),
+            uy: self.fields.uy.clone(),
+            uz: self.fields.uz.clone(),
+            rhox: self.rhox.clone(),
+            rhoy: self.rhoy.clone(),
+            rhoz: self.rhoz.clone(),
+            sensor_data,
+            sensor_next_step,
+            sensor_expected_steps,
+        };
+        ckpt.save(path)
+    }
+
+    /// Restore state from `path` and run `remaining_steps` steps to completion.
+    ///
+    /// Loads the KWCP checkpoint, validates grid dims and `dt`, restores all
+    /// seven field arrays, `time_step_index`, and the sensor recorder, then
+    /// continues the time loop for exactly `remaining_steps` steps.  Deletes
+    /// the checkpoint file after a successful restore (matching k-Wave convention).
+    ///
+    /// Returns the full sensor pressure matrix (`n_sensors × expected_steps`), or
+    /// `None` if no sensor mask was configured.
+    ///
+    /// # Errors
+    /// Returns `KwaversError::InvalidInput` / `DimensionMismatch` if the checkpoint
+    /// does not match this solver's grid or `dt`.
+    pub fn run_from_checkpoint(
+        &mut self,
+        path: &std::path::Path,
+        remaining_steps: usize,
+    ) -> KwaversResult<Option<Array2<f64>>> {
+        use crate::solver::forward::pstd::checkpoint::PSTDCheckpoint;
+
+        let ckpt = PSTDCheckpoint::load(path)?;
+        self.run_from_checkpoint_loaded(ckpt, path, remaining_steps)
+    }
+
+    /// Restore state from an already loaded checkpoint and continue the run.
+    ///
+    /// This helper avoids a second file parse when the caller has already read
+    /// the checkpoint metadata to determine the number of remaining steps.
+    pub fn run_from_checkpoint_loaded(
+        &mut self,
+        ckpt: crate::solver::forward::pstd::checkpoint::PSTDCheckpoint,
+        path: &std::path::Path,
+        remaining_steps: usize,
+    ) -> KwaversResult<Option<Array2<f64>>> {
+        ckpt.validate_restore_contract(
+            self.grid.nx,
+            self.grid.ny,
+            self.grid.nz,
+            self.config.nt,
+            self.config.dt,
+        )?;
+
+        let expected_remaining = self
+            .config
+            .nt
+            .checked_sub(ckpt.time_step_index)
+            .ok_or_else(|| {
+                KwaversError::InvalidInput(format!(
+                    "checkpoint time_step_index {} exceeds solver total_steps {}",
+                    ckpt.time_step_index, self.config.nt
+                ))
+            })?;
+        if remaining_steps != expected_remaining {
+            return Err(KwaversError::InvalidInput(format!(
+                "checkpoint remaining_steps {} ≠ expected {}",
+                remaining_steps, expected_remaining
+            )));
+        }
+
+        self.fields.p.assign(&ckpt.p);
+        self.fields.ux.assign(&ckpt.ux);
+        self.fields.uy.assign(&ckpt.uy);
+        self.fields.uz.assign(&ckpt.uz);
+        self.rhox.assign(&ckpt.rhox);
+        self.rhoy.assign(&ckpt.rhoy);
+        self.rhoz.assign(&ckpt.rhoz);
+        self.time_step_index = ckpt.time_step_index;
+
+        if let Some(sensor_data) = ckpt.sensor_data {
+            self.sensor_recorder
+                .restore_from_checkpoint(sensor_data, ckpt.sensor_next_step)?;
+        }
+
+        // Delete checkpoint file after successful restore (k-Wave convention).
+        let _ = std::fs::remove_file(path);
+
+        for _ in 0..remaining_steps {
             self.step_forward()?;
         }
         Ok(self.sensor_recorder.extract_pressure_data())

@@ -41,6 +41,9 @@ pub use interface::{
     ConsoleProgressReporter, FieldsSummary, ProgressData, ProgressReporter, ProgressUpdate,
 };
 
+pub mod geometry;
+pub use geometry::Geometry;
+
 // Backward-compatible re-exports for commonly used submodules
 pub use forward::fdtd;
 pub use forward::hybrid;

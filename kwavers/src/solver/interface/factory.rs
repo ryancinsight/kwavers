@@ -36,7 +36,7 @@
 
 use crate::solver::config::{SolverConfiguration, SolverType};
 use crate::solver::interface::Solver;
-use apollofft::{self, Complex64, Normalization};
+use apollo::{self, Complex64, Normalization};
 use ndarray::{Array2, Array3};
 
 /// Abstract factory for creating solver instances
@@ -239,11 +239,11 @@ impl FourierBackend for ApolloFourierBackend {
     }
 
     fn forward_3d_real(&self, field: &Array3<f64>) -> Array3<Complex64> {
-        apollofft::fft_3d_array(field)
+        apollo::fft_3d_array(field)
     }
 
     fn inverse_3d_real(&self, spectrum: &Array3<Complex64>) -> Array3<f64> {
-        apollofft::ifft_3d_array(spectrum)
+        apollo::ifft_3d_array(spectrum)
     }
 }
 

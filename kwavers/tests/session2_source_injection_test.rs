@@ -153,6 +153,7 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
         enable_nonlinear: false,
         kspace_correction: KSpaceCorrectionMode::Spectral,
         sensor_mask: Some(sensor_mask),
+        ..Default::default()
     };
 
     // Create empty GridSource (we'll use dynamic sources)
@@ -349,6 +350,7 @@ fn test_fdtd_point_source_injection() -> KwaversResult<()> {
         enable_nonlinear: false,
         kspace_correction: KSpaceCorrectionMode::Spectral,
         sensor_mask: Some(sensor_mask),
+        ..Default::default()
     };
 
     let grid_source = GridSource::new_empty();

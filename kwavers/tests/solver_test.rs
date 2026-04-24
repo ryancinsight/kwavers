@@ -65,6 +65,7 @@ fn test_fdtd_solver() {
         nt: TEST_STEPS_SHORT + 1,
         dt,
         sensor_mask: None,
+        ..Default::default()
     };
 
     let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");
@@ -274,6 +275,7 @@ fn test_wave_propagation() {
             nt: TEST_STEPS_MEDIUM + 1,
             dt,
             sensor_mask: None,
+            ..Default::default()
         };
 
         let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");

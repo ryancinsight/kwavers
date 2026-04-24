@@ -57,7 +57,7 @@ use kwavers::domain::sensor::recorder::simple::SensorRecorder;
 use numpy::{PyArray1, PyArray2, PyArray3, PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyDict};
+use pyo3::types::{PyAny, PyDict, PyTuple};
 
 // Re-exports from kwavers core
 use kwavers::core::error::{KwaversError, KwaversResult};
@@ -85,11 +85,14 @@ use kwavers::solver::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
 use kwavers::solver::forward::fdtd::solver::FdtdSolver;
 use kwavers::solver::forward::pstd::config::{BoundaryConfig, CompatibilityMode, PSTDConfig};
 use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+use kwavers::solver::geometry::Geometry;
 use kwavers::solver::interface::solver::Solver as SolverTrait;
 use kwavers::solver::inverse::reconstruction::photoacoustic::{
     kspace_line_recon as kwavers_kspace_line_recon, LineReconDataOrder, LineReconInterpolation,
 };
 use ndarray::{Array1, Array2, Array3, Axis};
+#[cfg(feature = "gpu")]
+use std::borrow::Cow;
 use std::sync::Arc;
 // ============================================================================
 // Utility Function Bindings
@@ -805,6 +808,8 @@ impl Source {
     ///     3D spatial mask (same shape as grid)
     /// signal : ndarray
     ///     1D time signal [Pa] or 2D matrix `[num_sources, time_steps]`
+    ///     For multi-row pressure sources, rows must follow MATLAB / Fortran-
+    ///     order active-point enumeration to match k-wave-python.
     /// frequency : float
     ///     Source frequency [Hz]
     /// Create a grid source from a spatial mask and time signal.
@@ -850,7 +855,9 @@ impl Source {
 
         let num_sources = mask_arr.iter().filter(|&&v| v != 0.0).count();
         if num_sources == 0 {
-            return Err(PyValueError::new_err("Source mask contains no active points"));
+            return Err(PyValueError::new_err(
+                "Source mask contains no active points",
+            ));
         }
 
         let n_signal_rows = signal_arr.shape()[0];
@@ -1246,6 +1253,69 @@ impl Source {
         })
     }
 
+    /// Create a source from a KWaveArray with per-element driving signals.
+    ///
+    /// Parameters
+    /// ----------
+    /// array : KWaveArray
+    /// signals : ndarray, shape (n_elements, n_time)
+    ///     Per-element driving waveforms. Matches the output shape of
+    ///     `kwave.utils.signals.create_cw_signals(t, f, amps, phases)`.
+    /// frequency : float
+    /// mode : str, optional
+    ///
+    /// Notes
+    /// -----
+    /// At run time, pykwavers pre-expands these into a per-active-cell signal
+    /// matrix `s_cell[c, t] = Σ_i W_i[c] · s_i[t]` using each element's BLI
+    /// weighted mask in MATLAB / Fortran-order active-cell enumeration,
+    /// matching k-wave-python's `get_distributed_source_signal`.
+    #[staticmethod]
+    #[pyo3(signature = (array, signals, frequency, mode=None))]
+    fn from_kwave_array_per_element(
+        array: &KWaveArray,
+        signals: PyReadonlyArray2<f64>,
+        frequency: f64,
+        mode: Option<&str>,
+    ) -> PyResult<Self> {
+        if frequency <= 0.0 {
+            return Err(PyValueError::new_err("Frequency must be positive"));
+        }
+        let signal_matrix = signals.as_array().to_owned();
+        if signal_matrix.is_empty() {
+            return Err(PyValueError::new_err("Signals must not be empty"));
+        }
+        let n_elements = array.inner.num_elements();
+        if signal_matrix.shape()[0] != n_elements {
+            return Err(PyValueError::new_err(format!(
+                "signals has {} rows but array has {} elements",
+                signal_matrix.shape()[0],
+                n_elements
+            )));
+        }
+        let source_mode = match mode {
+            Some("additive_no_correction") => "additive_no_correction".to_string(),
+            Some("dirichlet") => "dirichlet".to_string(),
+            _ => "additive".to_string(),
+        };
+        let amplitude = signal_matrix
+            .iter()
+            .fold(0.0_f64, |acc, v| acc.max(v.abs()));
+        Ok(Source {
+            source_type: "kwave_array_per_element".to_string(),
+            frequency,
+            amplitude,
+            position: None,
+            mask: None,
+            signal: Some(signal_matrix),
+            source_mode,
+            initial_pressure: None,
+            velocity_signal: None,
+            direction: None,
+            kwave_array: Some(array.inner.clone()),
+        })
+    }
+
     /// String representation.
     fn __repr__(&self) -> String {
         match &self.position {
@@ -1418,6 +1488,18 @@ impl KWaveArray {
             .add_rect_rot_element(position, dims.0, dims.1, dims.2, euler_xyz_deg);
     }
 
+    /// Install a global translation + intrinsic X-Y-Z Euler rotation (degrees)
+    /// applied to every element at rasterization time. Mirrors
+    /// ``kWaveArray.set_array_position`` in k-wave-python.
+    fn set_array_position(&mut self, translation: (f64, f64, f64), euler_xyz_deg: (f64, f64, f64)) {
+        self.inner.set_array_position(translation, euler_xyz_deg);
+    }
+
+    /// Remove the global array transform if one was previously installed.
+    fn clear_array_position(&mut self) {
+        self.inner.clear_array_position();
+    }
+
     /// Add a bowl-shaped element (focused transducer).
     ///
     /// Parameters
@@ -1430,6 +1512,34 @@ impl KWaveArray {
     ///     Bowl aperture diameter [m]
     fn add_bowl_element(&mut self, position: (f64, f64, f64), radius: f64, diameter: f64) {
         self.inner.add_bowl_element(position, radius, diameter);
+    }
+
+    /// Add a single annular (spherical-ring) element.
+    ///
+    /// Mirrors k-wave-python's `kWaveArray.add_annular_element`: a spherical
+    /// cap between `inner_diameter` and `outer_diameter` apertures on a bowl
+    /// of curvature `radius`.
+    fn add_annular_element(
+        &mut self,
+        position: (f64, f64, f64),
+        radius: f64,
+        inner_diameter: f64,
+        outer_diameter: f64,
+    ) {
+        self.inner
+            .add_annular_element(position, radius, inner_diameter, outer_diameter);
+    }
+
+    /// Add a concentric annular array — one `ElementShape::Annulus` per
+    /// `(inner_diameter, outer_diameter)` pair, all sharing `position` and
+    /// `radius`. Mirrors `kWaveArray.add_annular_array`.
+    fn add_annular_array(
+        &mut self,
+        position: (f64, f64, f64),
+        radius: f64,
+        diameters: Vec<(f64, f64)>,
+    ) {
+        self.inner.add_annular_array(position, radius, &diameters);
     }
 
     /// Number of elements in the array.
@@ -2021,6 +2131,7 @@ pub struct Simulation {
     transducer_sensor: Option<TransducerArray2D>,
     solver_type: SolverType,
     kspace_correction: KSpaceCorrectionMode,
+    compatibility_mode: CompatibilityMode,
     pml_size: Option<usize>,
     pml_size_xyz: Option<(usize, usize, usize)>,
     pml_inside: bool,
@@ -2032,6 +2143,9 @@ pub struct Simulation {
     alpha_coeff: f64,
     /// Medium absorption power law exponent (k-Wave default: 1.5 for tissue)
     alpha_power: f64,
+    /// Axisymmetric (CylindricalAS) geometry: 2-D simulation in the (axial, radial) plane.
+    /// Grid convention: nx=Nz_axial, ny=1, nz=Nr_radial. Only valid for PSTD and FDTD solvers.
+    axisymmetric: bool,
 }
 
 #[pymethods]
@@ -2120,6 +2234,7 @@ impl Simulation {
             transducer_sensor,
             solver_type: solver.unwrap_or(SolverType::FDTD),
             kspace_correction: KSpaceCorrectionMode::None,
+            compatibility_mode: CompatibilityMode::Optimal,
             pml_size,
             pml_size_xyz: None,
             pml_inside: true,
@@ -2127,6 +2242,7 @@ impl Simulation {
             enable_nonlinear: false,
             alpha_coeff: 0.0,
             alpha_power: 1.5,
+            axisymmetric: false,
         })
     }
 
@@ -2174,6 +2290,38 @@ impl Simulation {
         match self.kspace_correction {
             KSpaceCorrectionMode::None => "none".to_string(),
             KSpaceCorrectionMode::Spectral => "spectral".to_string(),
+        }
+    }
+
+    /// Set the PSTD compatibility mode.
+    ///
+    /// Parameters
+    /// ----------
+    /// mode : str
+    ///     Either `"optimal"` or `"reference"`.
+    ///
+    /// Examples
+    /// --------
+    /// >>> sim.set_compatibility_mode("reference")
+    fn set_compatibility_mode(&mut self, mode: &str) -> PyResult<()> {
+        self.compatibility_mode = match mode.to_ascii_lowercase().as_str() {
+            "optimal" => CompatibilityMode::Optimal,
+            "reference" => CompatibilityMode::Reference,
+            other => {
+                return Err(PyValueError::new_err(format!(
+                    "Unsupported PSTD compatibility mode: {other}"
+                )))
+            }
+        };
+        Ok(())
+    }
+
+    /// Get the current PSTD compatibility mode.
+    #[getter]
+    fn compatibility_mode(&self) -> String {
+        match self.compatibility_mode {
+            CompatibilityMode::Optimal => "optimal".to_string(),
+            CompatibilityMode::Reference => "reference".to_string(),
         }
     }
 
@@ -2278,6 +2426,20 @@ impl Simulation {
     #[getter]
     fn nonlinear(&self) -> bool {
         self.enable_nonlinear
+    }
+
+    /// Enable axisymmetric (CylindricalAS) geometry for 2-D radial simulations.
+    ///
+    /// When enabled, the grid must have ny=1, nx=Nz_axial, nz=Nr_radial.
+    /// Uses WSWA-FFT radial operators for PSTD, staggered cylindrical divergence for FDTD.
+    fn set_axisymmetric(&mut self, enable: bool) {
+        self.axisymmetric = enable;
+    }
+
+    /// Return whether axisymmetric geometry is enabled.
+    #[getter]
+    fn axisymmetric(&self) -> bool {
+        self.axisymmetric
     }
 
     /// Set medium absorption coefficient (k-Wave `medium.alpha_coeff`).
@@ -2409,6 +2571,61 @@ impl Simulation {
                 grid_source = GridSource {
                     p_mask: Some(float_mask),
                     p_signal: Some(signal.clone()),
+                    p_mode,
+                    ..GridSource::new_empty()
+                };
+                continue;
+            }
+
+            // Per-element-signals kwave_array source
+            if src.source_type == "kwave_array_per_element" {
+                if has_mask_source {
+                    return Err(PyValueError::new_err(
+                        "Only one mask/kwave_array source is supported per simulation",
+                    ));
+                }
+                has_mask_source = true;
+                let arr = src
+                    .kwave_array
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("KWaveArray missing from source"))?;
+                let signal = src
+                    .signal
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("Source signal missing"))?;
+                if signal.shape()[1] != time_steps {
+                    return Err(PyValueError::new_err(format!(
+                        "Signal length {} does not match time_steps {}",
+                        signal.shape()[1],
+                        time_steps
+                    )));
+                }
+                if signal.shape()[0] != arr.num_elements() {
+                    return Err(PyValueError::new_err(format!(
+                        "Per-element signal rows {} != array elements {}",
+                        signal.shape()[0],
+                        arr.num_elements()
+                    )));
+                }
+                let (mask, per_cell_signal) = arr
+                    .build_per_element_source(&self.grid.inner, signal)
+                    .map_err(PyValueError::new_err)?;
+                let num_active = mask.iter().filter(|&&v| v != 0.0).count();
+                if num_active == 0 {
+                    return Err(PyValueError::new_err(
+                        "KWaveArray per-element mask has no active grid points",
+                    ));
+                }
+                let p_mode = match src.source_mode.as_str() {
+                    "additive_no_correction" => {
+                        kwavers::domain::source::grid_source::SourceMode::AdditiveNoCorrection
+                    }
+                    "dirichlet" => kwavers::domain::source::grid_source::SourceMode::Dirichlet,
+                    _ => kwavers::domain::source::grid_source::SourceMode::Additive,
+                };
+                grid_source = GridSource {
+                    p_mask: Some(mask),
+                    p_signal: Some(per_cell_signal),
                     p_mode,
                     ..GridSource::new_empty()
                 };
@@ -2573,9 +2790,11 @@ impl Simulation {
         let pml_alpha_xyz = self.pml_alpha_xyz;
         let solver_type = self.solver_type;
         let kspace_correction = self.kspace_correction.clone();
+        let compatibility_mode = self.compatibility_mode;
         let enable_nonlinear = self.enable_nonlinear;
         let alpha_coeff = self.alpha_coeff;
         let alpha_power = self.alpha_power;
+        let axisymmetric = self.axisymmetric;
 
         // Collect recording modes from sensor (empty vec if no sensor or no modes set)
         let sensor_record_modes: Vec<String> = sensor_opt
@@ -2600,6 +2819,7 @@ impl Simulation {
                     pml_alpha_xyz,
                     kspace_correction,
                     enable_nonlinear,
+                    axisymmetric,
                     &sensor_record_modes,
                 ),
                 SolverType::PSTD | SolverType::Hybrid => Self::run_pstd_impl(
@@ -2607,6 +2827,7 @@ impl Simulation {
                     &medium_clone,
                     time_steps,
                     dt_actual,
+                    compatibility_mode,
                     enable_nonlinear,
                     alpha_coeff,
                     alpha_power,
@@ -2618,6 +2839,7 @@ impl Simulation {
                     pml_size_xyz,
                     pml_inside,
                     pml_alpha_xyz,
+                    axisymmetric,
                     &sensor_record_modes,
                 ),
                 SolverType::PstdGpu => Self::run_gpu_pstd_or_cpu_fallback(
@@ -2625,6 +2847,7 @@ impl Simulation {
                     &medium_clone,
                     time_steps,
                     dt_actual,
+                    compatibility_mode,
                     alpha_coeff,
                     alpha_power,
                     grid_source,
@@ -2636,6 +2859,7 @@ impl Simulation {
                     pml_inside,
                     pml_alpha_xyz,
                     enable_nonlinear,
+                    axisymmetric,
                     &sensor_record_modes,
                 ),
             })
@@ -2699,6 +2923,238 @@ impl Simulation {
         }
     }
 
+    /// Run PSTD for `checkpoint_steps` steps and save state to `checkpoint_path`.
+    ///
+    /// Resumes the simulation by calling `run_from_checkpoint` with the same
+    /// parameters.  Only supports `SolverType.PSTD`.
+    ///
+    /// Parameters
+    /// ----------
+    /// time_steps : int
+    ///     Total simulation time steps (used to size the sensor recorder).
+    /// checkpoint_steps : int
+    ///     Number of steps to run before saving the checkpoint (`≤ time_steps`).
+    /// checkpoint_path : str
+    ///     File path for the checkpoint.  Must not already exist.
+    /// dt : float, optional
+    ///     Time step size.  Defaults to CFL-derived value.
+    #[pyo3(signature = (time_steps, checkpoint_steps, checkpoint_path, dt=None))]
+    fn run_to_checkpoint(
+        &self,
+        py: Python<'_>,
+        time_steps: usize,
+        checkpoint_steps: usize,
+        checkpoint_path: String,
+        dt: Option<f64>,
+    ) -> PyResult<()> {
+        if !matches!(self.solver_type, SolverType::PSTD) {
+            return Err(PyValueError::new_err(
+                "run_to_checkpoint only supports SolverType.PSTD",
+            ));
+        }
+        let c_max = self.medium.inner.as_medium().max_sound_speed();
+        let dx_min = self
+            .grid
+            .inner
+            .dx
+            .min(self.grid.inner.dy)
+            .min(self.grid.inner.dz);
+        let dt_actual = dt.unwrap_or_else(|| 0.3 * dx_min / (c_max * 3.0_f64.sqrt()));
+
+        let (grid_source, dynamic_sources) = self.build_sources(time_steps, dt_actual, c_max)?;
+
+        let grid_clone = self.grid.inner.clone();
+        let medium_clone = self.medium.inner.clone();
+        let sensor_opt = self.sensor.clone();
+        let transducer_sensor_opt = self.transducer_sensor.clone();
+        let pml_size = self.pml_size;
+        let pml_size_xyz = self.pml_size_xyz;
+        let pml_inside = self.pml_inside;
+        let pml_alpha_xyz = self.pml_alpha_xyz;
+        let compatibility_mode = self.compatibility_mode;
+        let enable_nonlinear = self.enable_nonlinear;
+        let alpha_coeff = self.alpha_coeff;
+        let alpha_power = self.alpha_power;
+        let path = std::path::PathBuf::from(checkpoint_path);
+
+        py.detach(move || {
+            Self::run_pstd_to_checkpoint(
+                &grid_clone,
+                &medium_clone,
+                time_steps,
+                checkpoint_steps,
+                dt_actual,
+                compatibility_mode,
+                enable_nonlinear,
+                alpha_coeff,
+                alpha_power,
+                grid_source,
+                dynamic_sources,
+                sensor_opt.as_ref(),
+                transducer_sensor_opt.as_ref(),
+                pml_size,
+                pml_size_xyz,
+                pml_inside,
+                pml_alpha_xyz,
+                &path,
+            )
+        })
+        .map_err(kwavers_error_to_py)
+    }
+
+    /// Resume a PSTD simulation from a checkpoint and return sensor data.
+    ///
+    /// Creates a fresh solver with identical configuration, restores the field
+    /// state from `checkpoint_path`, runs the remaining steps to completion, and
+    /// returns the full sensor time series.  The checkpoint file is deleted after
+    /// a successful restore.
+    ///
+    /// Parameters
+    /// ----------
+    /// time_steps : int
+    ///     Total simulation time steps (must match the value used in `run_to_checkpoint`).
+    /// checkpoint_path : str
+    ///     File path written by a prior `run_to_checkpoint` call.
+    /// dt : float, optional
+    ///     Time step size (must match the value used in `run_to_checkpoint`).
+    #[pyo3(signature = (time_steps, checkpoint_path, dt=None))]
+    fn run_from_checkpoint(
+        &self,
+        py: Python<'_>,
+        time_steps: usize,
+        checkpoint_path: String,
+        dt: Option<f64>,
+    ) -> PyResult<SimulationResult> {
+        if !matches!(self.solver_type, SolverType::PSTD) {
+            return Err(PyValueError::new_err(
+                "run_from_checkpoint only supports SolverType.PSTD",
+            ));
+        }
+        let c_max = self.medium.inner.as_medium().max_sound_speed();
+        let dx_min = self
+            .grid
+            .inner
+            .dx
+            .min(self.grid.inner.dy)
+            .min(self.grid.inner.dz);
+        let dt_actual = dt.unwrap_or_else(|| 0.3 * dx_min / (c_max * 3.0_f64.sqrt()));
+
+        let (grid_source, dynamic_sources) = self.build_sources(time_steps, dt_actual, c_max)?;
+
+        let grid_clone = self.grid.inner.clone();
+        let medium_clone = self.medium.inner.clone();
+        let sensor_opt = self.sensor.clone();
+        let transducer_sensor_opt = self.transducer_sensor.clone();
+        let pml_size = self.pml_size;
+        let pml_size_xyz = self.pml_size_xyz;
+        let pml_inside = self.pml_inside;
+        let pml_alpha_xyz = self.pml_alpha_xyz;
+        let compatibility_mode = self.compatibility_mode;
+        let enable_nonlinear = self.enable_nonlinear;
+        let alpha_coeff = self.alpha_coeff;
+        let alpha_power = self.alpha_power;
+        let path = std::path::PathBuf::from(checkpoint_path);
+        let checkpoint = kwavers::solver::forward::pstd::checkpoint::PSTDCheckpoint::load(&path)
+            .map_err(kwavers_error_to_py)?;
+        checkpoint
+            .validate_restore_contract(
+                self.grid.inner.nx,
+                self.grid.inner.ny,
+                self.grid.inner.nz,
+                time_steps,
+                dt_actual,
+            )
+            .map_err(kwavers_error_to_py)?;
+        let remaining_steps = time_steps
+            .checked_sub(checkpoint.time_step_index)
+            .ok_or_else(|| {
+                kwavers_error_to_py(KwaversError::InvalidInput(format!(
+                    "checkpoint time_step_index {} exceeds solver total_steps {}",
+                    checkpoint.time_step_index, time_steps
+                )))
+            })?;
+        let shape = (self.grid.inner.nx, self.grid.inner.ny, self.grid.inner.nz);
+
+        let (sensor_data_2d, stats_opt) = py
+            .detach(move || {
+                Self::run_pstd_from_checkpoint_loaded(
+                    &grid_clone,
+                    &medium_clone,
+                    time_steps,
+                    dt_actual,
+                    compatibility_mode,
+                    enable_nonlinear,
+                    alpha_coeff,
+                    alpha_power,
+                    grid_source,
+                    dynamic_sources,
+                    sensor_opt.as_ref(),
+                    transducer_sensor_opt.as_ref(),
+                    pml_size,
+                    pml_size_xyz,
+                    pml_inside,
+                    pml_alpha_xyz,
+                    checkpoint,
+                    remaining_steps,
+                    &path,
+                )
+            })
+            .map_err(kwavers_error_to_py)?;
+
+        let p_max = stats_opt
+            .as_ref()
+            .map(|s| PyArray1::from_owned_array(py, s.p_max.clone()).into());
+        let p_min = stats_opt
+            .as_ref()
+            .map(|s| PyArray1::from_owned_array(py, s.p_min.clone()).into());
+        let p_rms = stats_opt
+            .as_ref()
+            .map(|s| PyArray1::from_owned_array(py, s.p_rms.clone()).into());
+        let p_final = stats_opt
+            .as_ref()
+            .map(|s| PyArray1::from_owned_array(py, s.p_final.clone()).into());
+
+        let n_sensors = sensor_data_2d.nrows();
+        let time_arr = PyArray1::from_owned_array(
+            py,
+            ndarray::Array1::from_iter((0..time_steps).map(|i| i as f64 * dt_actual)),
+        )
+        .into();
+
+        if n_sensors <= 1 {
+            let sensor_1d = sensor_data_2d.row(0).to_owned();
+            Ok(SimulationResult {
+                sensor_data_1d: Some(PyArray1::from_owned_array(py, sensor_1d).into()),
+                sensor_data_2d: None,
+                time: time_arr,
+                shape,
+                sensor_data_shape: (1, time_steps),
+                time_steps,
+                dt: dt_actual,
+                final_time: dt_actual * time_steps as f64,
+                p_max,
+                p_min,
+                p_rms,
+                p_final,
+            })
+        } else {
+            Ok(SimulationResult {
+                sensor_data_1d: None,
+                sensor_data_2d: Some(PyArray2::from_owned_array(py, sensor_data_2d).into()),
+                time: time_arr,
+                shape,
+                sensor_data_shape: (n_sensors, time_steps),
+                time_steps,
+                dt: dt_actual,
+                final_time: dt_actual * time_steps as f64,
+                p_max,
+                p_min,
+                p_rms,
+                p_final,
+            })
+        }
+    }
+
     /// String representation.
     fn __repr__(&self) -> String {
         format!(
@@ -2718,6 +3174,257 @@ impl Simulation {
 
 // Non-PyO3 implementation block for internal simulation logic
 impl Simulation {
+    /// Build `GridSource` and dynamic source list from `self.sources` and `self.transducers`.
+    ///
+    /// Extracted from `run` to allow checkpoint methods to share source setup.
+    /// `c_max` is the maximum sound speed of the medium (used for plane-wave wavelength).
+    fn build_sources(
+        &self,
+        time_steps: usize,
+        dt_actual: f64,
+        c_max: f64,
+    ) -> PyResult<(GridSource, Vec<Box<dyn KwaversSource>>)> {
+        let mut grid_source = GridSource::new_empty();
+        let mut dynamic_sources: Vec<Box<dyn KwaversSource>> = Vec::new();
+        let mut has_mask_source = false;
+
+        for src in &self.sources {
+            if src.source_type == "kwave_array" {
+                if has_mask_source {
+                    return Err(PyValueError::new_err(
+                        "Only one mask/kwave_array source is supported per simulation",
+                    ));
+                }
+                has_mask_source = true;
+                let arr = src
+                    .kwave_array
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("KWaveArray missing from source"))?;
+                let signal = src
+                    .signal
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("Source signal missing"))?;
+                if signal.shape()[1] != time_steps {
+                    return Err(PyValueError::new_err(format!(
+                        "Signal length {} does not match time_steps {}",
+                        signal.shape()[1],
+                        time_steps
+                    )));
+                }
+                if signal.shape()[0] != 1 {
+                    return Err(PyValueError::new_err(
+                        "Source.from_kwave_array expects a single waveform row",
+                    ));
+                }
+                let float_mask = arr.get_array_weighted_mask(&self.grid.inner);
+                let num_active = float_mask.iter().filter(|&&v| v > 0.0).count();
+                if num_active == 0 {
+                    return Err(PyValueError::new_err(
+                        "KWaveArray mask has no active grid points",
+                    ));
+                }
+                let p_mode = match src.source_mode.as_str() {
+                    "additive_no_correction" => {
+                        kwavers::domain::source::grid_source::SourceMode::AdditiveNoCorrection
+                    }
+                    "dirichlet" => kwavers::domain::source::grid_source::SourceMode::Dirichlet,
+                    _ => kwavers::domain::source::grid_source::SourceMode::Additive,
+                };
+                grid_source = GridSource {
+                    p_mask: Some(float_mask),
+                    p_signal: Some(signal.clone()),
+                    p_mode,
+                    ..GridSource::new_empty()
+                };
+                continue;
+            }
+
+            if src.source_type == "kwave_array_per_element" {
+                if has_mask_source {
+                    return Err(PyValueError::new_err(
+                        "Only one mask/kwave_array source is supported per simulation",
+                    ));
+                }
+                has_mask_source = true;
+                let arr = src
+                    .kwave_array
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("KWaveArray missing from source"))?;
+                let signal = src
+                    .signal
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("Source signal missing"))?;
+                if signal.shape()[1] != time_steps {
+                    return Err(PyValueError::new_err(format!(
+                        "Signal length {} does not match time_steps {}",
+                        signal.shape()[1],
+                        time_steps
+                    )));
+                }
+                if signal.shape()[0] != arr.num_elements() {
+                    return Err(PyValueError::new_err(format!(
+                        "Per-element signal rows {} != array elements {}",
+                        signal.shape()[0],
+                        arr.num_elements()
+                    )));
+                }
+                let (mask, per_cell_signal) = arr
+                    .build_per_element_source(&self.grid.inner, signal)
+                    .map_err(PyValueError::new_err)?;
+                let num_active = mask.iter().filter(|&&v| v != 0.0).count();
+                if num_active == 0 {
+                    return Err(PyValueError::new_err(
+                        "KWaveArray per-element mask has no active grid points",
+                    ));
+                }
+                let p_mode = match src.source_mode.as_str() {
+                    "additive_no_correction" => {
+                        kwavers::domain::source::grid_source::SourceMode::AdditiveNoCorrection
+                    }
+                    "dirichlet" => kwavers::domain::source::grid_source::SourceMode::Dirichlet,
+                    _ => kwavers::domain::source::grid_source::SourceMode::Additive,
+                };
+                grid_source = GridSource {
+                    p_mask: Some(mask),
+                    p_signal: Some(per_cell_signal),
+                    p_mode,
+                    ..GridSource::new_empty()
+                };
+                continue;
+            }
+
+            if src.source_type == "mask" {
+                if has_mask_source {
+                    return Err(PyValueError::new_err(
+                        "Only one mask source is supported per simulation",
+                    ));
+                }
+                has_mask_source = true;
+                let mask = src
+                    .mask
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("Source mask missing"))?;
+                let signal = src
+                    .signal
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("Source signal missing"))?;
+                if signal.shape()[1] != time_steps {
+                    return Err(PyValueError::new_err(format!(
+                        "Signal length {} does not match time_steps {}",
+                        signal.shape()[1],
+                        time_steps
+                    )));
+                }
+                let num_sources = mask.iter().filter(|v| **v != 0.0).count();
+                if num_sources == 0 {
+                    return Err(PyValueError::new_err(
+                        "Source mask contains no active points",
+                    ));
+                }
+                let n_signal_rows = signal.shape()[0];
+                if n_signal_rows != 1 && n_signal_rows != num_sources {
+                    return Err(PyValueError::new_err(format!(
+                        "Signal rows must be 1 or match active source points: got {}, expected 1 or {}",
+                        n_signal_rows, num_sources
+                    )));
+                }
+                let p_mode = match src.source_mode.as_str() {
+                    "additive_no_correction" => {
+                        kwavers::domain::source::grid_source::SourceMode::AdditiveNoCorrection
+                    }
+                    "dirichlet" => kwavers::domain::source::grid_source::SourceMode::Dirichlet,
+                    _ => kwavers::domain::source::grid_source::SourceMode::Additive,
+                };
+                grid_source = GridSource {
+                    p_mask: Some(mask.clone()),
+                    p_signal: Some(signal.clone()),
+                    p_mode,
+                    ..GridSource::new_empty()
+                };
+                continue;
+            }
+
+            if src.source_type == "p0" {
+                if let Some(ref p0) = src.initial_pressure {
+                    grid_source.p0 = Some(p0.clone());
+                }
+                continue;
+            }
+
+            if src.source_type == "velocity" {
+                let mask = src
+                    .mask
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("Velocity source mask missing"))?;
+                let u_sig = src
+                    .velocity_signal
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("Velocity signal missing"))?;
+                let u_mode = match src.source_mode.as_str() {
+                    "additive_no_correction" => {
+                        kwavers::domain::source::grid_source::SourceMode::AdditiveNoCorrection
+                    }
+                    "dirichlet" => kwavers::domain::source::grid_source::SourceMode::Dirichlet,
+                    _ => kwavers::domain::source::grid_source::SourceMode::Additive,
+                };
+                grid_source.u_mask = Some(mask.clone());
+                grid_source.u_signal = Some(u_sig.clone());
+                grid_source.u_mode = u_mode;
+                continue;
+            }
+
+            let freq = src.frequency;
+            let amp = src.amplitude;
+            let signal = SineSignal::new(freq, amp);
+            let function_source: Box<dyn KwaversSource> = if src.source_type == "plane_wave" {
+                let dir = src.direction.unwrap_or((0.0, 0.0, 1.0));
+                let wavelength = c_max / freq;
+                let config = PlaneWaveConfig {
+                    direction: dir,
+                    wavelength,
+                    phase: 0.0,
+                    source_type: SourceField::Pressure,
+                    injection_mode: InjectionMode::BoundaryOnly,
+                };
+                Box::new(PlaneWaveSource::new(config, Arc::new(signal)))
+            } else {
+                let pos_arr = src.position.unwrap_or([0.0, 0.0, 0.0]);
+                let px = pos_arr[0];
+                let py_coord = pos_arr[1];
+                let pz = pos_arr[2];
+                let dx = self.grid.inner.dx;
+                let dy = self.grid.inner.dy;
+                let dz = self.grid.inner.dz;
+                Box::new(FunctionSource::new(
+                    move |x, y, z, _t| {
+                        if (x - px).abs() < dx * 0.5
+                            && (y - py_coord).abs() < dy * 0.5
+                            && (z - pz).abs() < dz * 0.5
+                        {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    },
+                    Arc::new(signal),
+                    SourceField::Pressure,
+                ))
+            };
+            dynamic_sources.push(function_source);
+        }
+
+        for trans in &self.transducers {
+            let mut inner_trans = trans.inner.clone();
+            if let Some(ref sig_arr) = trans.input_signal {
+                let sampled_sig = SampledSignal::new(sig_arr.clone(), dt_actual);
+                inner_trans.set_signal(Arc::new(sampled_sig));
+            }
+            dynamic_sources.push(Box::new(inner_trans));
+        }
+
+        Ok((grid_source, dynamic_sources))
+    }
+
     fn create_sensor_mask(
         grid: &KwaversGrid,
         sensor: Option<&Sensor>,
@@ -2908,6 +3615,7 @@ impl Simulation {
         pml_alpha_xyz: Option<(f64, f64, f64)>,
         kspace_correction: KSpaceCorrectionMode,
         enable_nonlinear: bool,
+        axisymmetric: bool,
         record_modes: &[String],
     ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
         let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
@@ -2916,6 +3624,12 @@ impl Simulation {
         // so node recordings are grouped [elem0_nodes…, elem1_nodes…] matching k-Wave.
         let transducer_ordered_indices = transducer_sensor
             .map(|trans| Self::create_transducer_ordered_indices(grid, &trans.inner));
+
+        let geometry = if axisymmetric {
+            Geometry::CylindricalAS
+        } else {
+            Geometry::Cartesian3D
+        };
 
         // Create FDTD configuration with sensor mask
         let config = FdtdConfig {
@@ -2930,6 +3644,7 @@ impl Simulation {
             enable_nonlinear,
             kspace_correction,
             sensor_mask: Some(sensor_mask.clone()),
+            geometry,
         };
 
         // Create solver
@@ -2984,13 +3699,20 @@ impl Simulation {
         Ok((recorded_data, stats))
     }
 
-    /// Run PSTD simulation (internal).
+    /// Build and configure a PSTD solver without running it.
+    ///
+    /// Handles grid padding for `pml_inside=false`, CPML configuration,
+    /// absorption mode selection, sensor recorder setup, and dynamic source
+    /// registration.  Returns the ready-to-run solver together with the
+    /// (possibly padded) simulation grid and effective sensor mask so callers
+    /// can vary only the execution strategy.
     #[allow(clippy::too_many_arguments)]
-    fn run_pstd_impl(
+    fn prepare_pstd_solver(
         grid: &KwaversGrid,
         medium: &MediumInner,
         time_steps: usize,
         dt: f64,
+        compatibility_mode: CompatibilityMode,
         enable_nonlinear: bool,
         alpha_coeff_db: f64,
         alpha_power: f64,
@@ -3002,20 +3724,89 @@ impl Simulation {
         pml_size_xyz: Option<(usize, usize, usize)>,
         pml_inside: bool,
         pml_alpha_xyz: Option<(f64, f64, f64)>,
+        axisymmetric: bool,
         record_modes: &[String],
-    ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
+    ) -> KwaversResult<(PSTDSolver, KwaversGrid, ndarray::Array3<bool>)> {
         let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
-
-        // For transducer sensors, build element-ordered index list to match k-Wave.
         let transducer_ordered_indices = transducer_sensor
             .map(|trans| Self::create_transducer_ordered_indices(grid, &trans.inner));
 
-        // Create PSTD configuration with sensor mask
         let (default_thickness, max_allowed) =
             Self::cpml_thickness_limits(grid.nx, grid.ny, grid.nz);
         let thickness = pml_size.unwrap_or(default_thickness).min(max_allowed);
 
-        let boundary = if thickness > 0 && max_allowed > 0 {
+        // pml_inside=false: extend the computational grid by `thickness` cells on each
+        // side so the CPML absorbing boundary occupies cells outside the physical domain.
+        // Source and sensor masks are embedded at [P..NX+P, P..NY+P, P..NZ+P] in the
+        // padded grid; the CPML then applies to the outer P cells of the padded domain.
+        // This matches k-Wave semantics for pml_inside=False.
+        // Transducer sensors are not supported with pml_inside=false (indices are not remapped).
+        let (sim_grid, grid_source, sensor_mask, effective_pml_inside) =
+            if !pml_inside && thickness > 0 {
+                if transducer_sensor.is_some() {
+                    return Err(KwaversError::Validation(
+                        kwavers::core::error::ValidationError::FieldValidation {
+                            field: "pml_inside".to_string(),
+                            value: "false".to_string(),
+                            constraint: "pml_inside=false is not supported with transducer sensors"
+                                .to_string(),
+                        },
+                    ));
+                }
+                let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+                let p = thickness;
+                let pnx = nx + 2 * p;
+                // CylindricalAS: ny is a trivial dimension fixed at 1; never pad it.
+                // Padding ny=1 → 1+2*p would violate the CylindricalAS ny=1 invariant.
+                let pny = if axisymmetric { ny } else { ny + 2 * p };
+                // CylindricalAS uses one-sided outer radial PML only (k-Wave pml.py semantics):
+                //   pnz = nz + p  (physical axis at k=0, PML at k=nz..nz+p-1)
+                // This places the WS-expansion axis at the left boundary of k=0, matching
+                // k-Wave's axisymmetric convention. Two-sided would push the axis to k=p,
+                // corrupting the whole-sample symmetric expansion's axis boundary condition.
+                let pnz = if axisymmetric { nz + p } else { nz + 2 * p };
+                let padded_grid = KwaversGrid::new(pnx, pny, pnz, grid.dx, grid.dy, grid.dz)?;
+
+                let py = if axisymmetric { 0 } else { p };
+                // Physical cells embed at z=0 for AS (axis at k=0); z=p for Cartesian.
+                let pz_embed = if axisymmetric { 0 } else { p };
+
+                let embed = |arr: ndarray::Array3<f64>| -> ndarray::Array3<f64> {
+                    let mut out = ndarray::Array3::<f64>::zeros((pnx, pny, pnz));
+                    out.slice_mut(ndarray::s![p..nx + p, py..ny + py, pz_embed..nz + pz_embed])
+                        .assign(&arr);
+                    out
+                };
+
+                let mut padded_mask = ndarray::Array3::<bool>::from_elem((pnx, pny, pnz), false);
+                padded_mask
+                    .slice_mut(ndarray::s![p..nx + p, py..ny + py, pz_embed..nz + pz_embed])
+                    .assign(&sensor_mask);
+
+                let padded_source = GridSource {
+                    p0: grid_source.p0.map(|a| embed(a)),
+                    u0: grid_source
+                        .u0
+                        .map(|(ux, uy, uz)| (embed(ux), embed(uy), embed(uz))),
+                    p_mask: grid_source.p_mask.map(|a| embed(a)),
+                    p_signal: grid_source.p_signal,
+                    p_mode: grid_source.p_mode,
+                    u_mask: grid_source.u_mask.map(|a| embed(a)),
+                    u_signal: grid_source.u_signal,
+                    u_mode: grid_source.u_mode,
+                };
+
+                // For CylindricalAS with axial+radial PML but no y-padding, pml_inside=true
+                // is set so the CPML covers the padded axial/radial boundaries as intended.
+                (padded_grid, padded_source, padded_mask, true)
+            } else {
+                (grid.clone(), grid_source, sensor_mask, pml_inside)
+            };
+
+        let alpha_is_zero = pml_alpha_xyz
+            .map(|(ax, ay, az)| ax == 0.0 && ay == 0.0 && az == 0.0)
+            .unwrap_or(false);
+        let boundary = if thickness > 0 && max_allowed > 0 && !alpha_is_zero {
             let mut cpml_config = if let Some((px, py, pz)) = pml_size_xyz {
                 CPMLConfig::with_per_dimension_thickness(px, py, pz)
             } else {
@@ -3024,26 +3815,24 @@ impl Simulation {
             if let Some((ax, ay, az)) = pml_alpha_xyz {
                 cpml_config = cpml_config.with_alpha_xyz(ax, ay, az);
             }
+            // For one-sided axisymmetric radial PML, the CPML left-z profile would absorb
+            // physical axis cells k=0..p-1. Suppress inner z-sigma to keep the axis transparent.
+            if axisymmetric && !pml_inside {
+                cpml_config = cpml_config.with_radial_inner_z_transparent();
+            }
             kwavers::solver::forward::pstd::config::BoundaryConfig::CPML(cpml_config)
         } else {
             kwavers::solver::forward::pstd::config::BoundaryConfig::None
         };
 
-        // If caller did not set alpha_coeff explicitly (0.0), fall back to medium's
-        // stored absorption coefficient (set via Medium.homogeneous(absorption=...) or
-        // Medium.heterogeneous(absorption=...)).  Returns 0.0 for heterogeneous media
-        // that don't override alpha_coefficient().
         let effective_alpha_db = if alpha_coeff_db > 0.0 {
             alpha_coeff_db
         } else {
             medium.as_medium().alpha_coefficient(0.0, 0.0, 0.0, grid)
         };
 
-        // Also fall back to medium's alpha_power if caller used default 1.5 and medium has a value.
         let effective_alpha_power = {
             let y_medium = medium.as_medium().alpha_power(0.0, 0.0, 0.0, grid);
-            // Use medium's power if it was explicitly set (not the default 1.0 value
-            // from HomogeneousMedium constructor).
             if alpha_coeff_db <= 0.0 && y_medium > 0.0 && (y_medium - 1.0).abs() > 1e-12 {
                 y_medium
             } else {
@@ -3051,8 +3840,6 @@ impl Simulation {
             }
         };
 
-        // Pass the raw k-Wave coefficient to kwavers. The PSTD solver
-        // converts dB/(MHz^y·cm) to the spectral coefficient internally.
         let absorption_mode = if effective_alpha_db > 0.0 {
             AbsorptionMode::PowerLaw {
                 alpha_coeff: effective_alpha_db,
@@ -3062,28 +3849,34 @@ impl Simulation {
             AbsorptionMode::Lossless
         };
 
+        let geometry = if axisymmetric {
+            Geometry::CylindricalAS
+        } else {
+            Geometry::Cartesian3D
+        };
+
         let config = PSTDConfig {
             dt,
             nt: time_steps,
+            compatibility_mode,
             sensor_mask: Some(sensor_mask.clone()),
             boundary,
-            pml_inside,
+            pml_inside: effective_pml_inside,
             absorption_mode,
             nonlinearity: enable_nonlinear,
+            geometry,
             ..Default::default()
         };
 
-        // Create solver
-        let mut solver = PSTDSolver::new(config, grid.clone(), medium.as_medium(), grid_source)?;
+        let mut solver =
+            PSTDSolver::new(config, sim_grid.clone(), medium.as_medium(), grid_source)?;
 
-        // Build recorder with statistical modes if requested, replacing the default one.
         let modes = Self::recording_modes_from_strings(record_modes);
         if !modes.is_empty() {
-            let shape = (grid.nx, grid.ny, grid.nz);
+            let shape = (sim_grid.nx, sim_grid.ny, sim_grid.nz);
             solver.sensor_recorder =
                 SensorRecorder::with_modes(Some(&sensor_mask), shape, time_steps + 1, &modes)?;
         } else if let Some(ordered) = transducer_ordered_indices {
-            // Transducer override (no stats)
             solver.sensor_recorder = SensorRecorder::from_ordered_indices(ordered, time_steps + 1)?;
         }
 
@@ -3091,19 +3884,168 @@ impl Simulation {
             SolverTrait::add_source(&mut solver, source)?;
         }
 
-        // Run simulation - SensorRecorder records pressure at each step
-        solver.run_orchestrated(time_steps)?;
+        Ok((solver, sim_grid, sensor_mask))
+    }
 
-        // Extract statistics before consuming recorder
+    /// Run PSTD simulation (internal).
+    #[allow(clippy::too_many_arguments)]
+    fn run_pstd_impl(
+        grid: &KwaversGrid,
+        medium: &MediumInner,
+        time_steps: usize,
+        dt: f64,
+        compatibility_mode: CompatibilityMode,
+        enable_nonlinear: bool,
+        alpha_coeff_db: f64,
+        alpha_power: f64,
+        grid_source: GridSource,
+        sources: Vec<Box<dyn KwaversSource>>,
+        sensor: Option<&Sensor>,
+        transducer_sensor: Option<&TransducerArray2D>,
+        pml_size: Option<usize>,
+        pml_size_xyz: Option<(usize, usize, usize)>,
+        pml_inside: bool,
+        pml_alpha_xyz: Option<(f64, f64, f64)>,
+        axisymmetric: bool,
+        record_modes: &[String],
+    ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
+        let (mut solver, _sim_grid, _sensor_mask) = Self::prepare_pstd_solver(
+            grid,
+            medium,
+            time_steps,
+            dt,
+            compatibility_mode,
+            enable_nonlinear,
+            alpha_coeff_db,
+            alpha_power,
+            grid_source,
+            sources,
+            sensor,
+            transducer_sensor,
+            pml_size,
+            pml_size_xyz,
+            pml_inside,
+            pml_alpha_xyz,
+            axisymmetric,
+            record_modes,
+        )?;
+
+        solver.run_orchestrated(time_steps)?;
         let stats = solver.sensor_recorder.extract_all_stats();
 
-        // Extract recorded time series: solver stores Nt+1 columns when the
-        // initial state is recorded, but the Python API returns exactly Nt.
         let full_data = solver.extract_pressure_data().ok_or_else(|| {
             kwavers::core::error::KwaversError::Io(std::io::Error::other("No sensor data recorded"))
         })?;
         let recorded_data = Self::trim_initial_recorder_sample(full_data, time_steps);
 
+        Ok((recorded_data, stats))
+    }
+
+    /// Run PSTD for `checkpoint_steps` steps and save state to `checkpoint_path`.
+    ///
+    /// The checkpoint file can be resumed with [`run_from_checkpoint`].
+    /// `total_steps` is the full simulation length and must match the value used
+    /// on the resume call so the sensor recorder is allocated to the correct size.
+    #[allow(clippy::too_many_arguments)]
+    fn run_pstd_to_checkpoint(
+        grid: &KwaversGrid,
+        medium: &MediumInner,
+        total_steps: usize,
+        checkpoint_steps: usize,
+        dt: f64,
+        compatibility_mode: CompatibilityMode,
+        enable_nonlinear: bool,
+        alpha_coeff_db: f64,
+        alpha_power: f64,
+        grid_source: GridSource,
+        sources: Vec<Box<dyn KwaversSource>>,
+        sensor: Option<&Sensor>,
+        transducer_sensor: Option<&TransducerArray2D>,
+        pml_size: Option<usize>,
+        pml_size_xyz: Option<(usize, usize, usize)>,
+        pml_inside: bool,
+        pml_alpha_xyz: Option<(f64, f64, f64)>,
+        checkpoint_path: &std::path::Path,
+    ) -> KwaversResult<()> {
+        let (mut solver, _sim_grid, _sensor_mask) = Self::prepare_pstd_solver(
+            grid,
+            medium,
+            total_steps,
+            dt,
+            compatibility_mode,
+            enable_nonlinear,
+            alpha_coeff_db,
+            alpha_power,
+            grid_source,
+            sources,
+            sensor,
+            transducer_sensor,
+            pml_size,
+            pml_size_xyz,
+            pml_inside,
+            pml_alpha_xyz,
+            false, // axisymmetric: checkpoint functions default to Cartesian3D
+            &[],
+        )?;
+        solver.run_to_checkpoint(checkpoint_steps, checkpoint_path)
+    }
+
+    /// Resume a checkpointed PSTD simulation from a preloaded checkpoint and return sensor data.
+    #[allow(clippy::too_many_arguments)]
+    fn run_pstd_from_checkpoint_loaded(
+        grid: &KwaversGrid,
+        medium: &MediumInner,
+        total_steps: usize,
+        dt: f64,
+        compatibility_mode: CompatibilityMode,
+        enable_nonlinear: bool,
+        alpha_coeff_db: f64,
+        alpha_power: f64,
+        grid_source: GridSource,
+        sources: Vec<Box<dyn KwaversSource>>,
+        sensor: Option<&Sensor>,
+        transducer_sensor: Option<&TransducerArray2D>,
+        pml_size: Option<usize>,
+        pml_size_xyz: Option<(usize, usize, usize)>,
+        pml_inside: bool,
+        pml_alpha_xyz: Option<(f64, f64, f64)>,
+        checkpoint: kwavers::solver::forward::pstd::checkpoint::PSTDCheckpoint,
+        remaining_steps: usize,
+        checkpoint_path: &std::path::Path,
+    ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
+        let (mut solver, _sim_grid, _sensor_mask) = Self::prepare_pstd_solver(
+            grid,
+            medium,
+            total_steps,
+            dt,
+            compatibility_mode,
+            enable_nonlinear,
+            alpha_coeff_db,
+            alpha_power,
+            grid_source,
+            sources,
+            sensor,
+            transducer_sensor,
+            pml_size,
+            pml_size_xyz,
+            pml_inside,
+            pml_alpha_xyz,
+            false, // axisymmetric: checkpoint functions default to Cartesian3D
+            &[],
+        )?;
+
+        checkpoint.validate_restore_contract(grid.nx, grid.ny, grid.nz, total_steps, dt)?;
+
+        let full_data = solver
+            .run_from_checkpoint_loaded(checkpoint, checkpoint_path, remaining_steps)?
+            .ok_or_else(|| {
+                kwavers::core::error::KwaversError::Io(std::io::Error::other(
+                    "No sensor data recorded",
+                ))
+            })?;
+
+        let stats = solver.sensor_recorder.extract_all_stats();
+        let recorded_data = Self::trim_initial_recorder_sample(full_data, total_steps);
         Ok((recorded_data, stats))
     }
 
@@ -3115,6 +4057,7 @@ impl Simulation {
         medium: &MediumInner,
         time_steps: usize,
         dt: f64,
+        compatibility_mode: CompatibilityMode,
         alpha_coeff_db: f64,
         alpha_power: f64,
         grid_source: GridSource,
@@ -3126,6 +4069,7 @@ impl Simulation {
         pml_inside: bool,
         pml_alpha_xyz: Option<(f64, f64, f64)>,
         enable_nonlinear: bool,
+        axisymmetric: bool,
         record_modes: &[String],
     ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
         #[cfg(feature = "gpu")]
@@ -3158,6 +4102,7 @@ impl Simulation {
             medium,
             time_steps,
             dt,
+            compatibility_mode,
             enable_nonlinear,
             alpha_coeff_db,
             alpha_power,
@@ -3169,6 +4114,7 @@ impl Simulation {
             pml_size_xyz,
             pml_inside,
             pml_alpha_xyz,
+            axisymmetric,
             record_modes,
         )
     }
@@ -3613,6 +4559,8 @@ pub struct GpuPstdSession {
     vel_x_indices: Vec<u32>,
     vel_x_signals: Vec<f32>,
     last_medium_upload_ns: u64,
+    last_medium_variable_upload_ns: u64,
+    last_medium_static_upload_ns: u64,
     last_solver_run_ns: u64,
     last_materialize_ns: u64,
     last_total_ns: u64,
@@ -3982,6 +4930,8 @@ impl GpuPstdSession {
                 vel_x_indices: Vec::new(),
                 vel_x_signals: Vec::new(),
                 last_medium_upload_ns: 0,
+                last_medium_variable_upload_ns: 0,
+                last_medium_static_upload_ns: 0,
                 last_solver_run_ns: 0,
                 last_materialize_ns: 0,
                 last_total_ns: 0,
@@ -4057,10 +5007,17 @@ impl GpuPstdSession {
     /// Return the timing profile from the most recent scan-line execution.
     ///
     /// Durations are host-side wall-clock measurements in nanoseconds.
+    /// `medium_variable_upload_ns` and `medium_static_upload_ns` separate the
+    /// varying scan-line medium refresh from the resident static buffers.
     #[getter]
     fn last_run_profile<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let profile = PyDict::new(py);
         profile.set_item("medium_upload_ns", self.last_medium_upload_ns)?;
+        profile.set_item(
+            "medium_variable_upload_ns",
+            self.last_medium_variable_upload_ns,
+        )?;
+        profile.set_item("medium_static_upload_ns", self.last_medium_static_upload_ns)?;
         profile.set_item("solver_run_ns", self.last_solver_run_ns)?;
         profile.set_item("materialize_ns", self.last_materialize_ns)?;
         profile.set_item("total_ns", self.last_total_ns)?;
@@ -4069,10 +5026,30 @@ impl GpuPstdSession {
         Ok(profile)
     }
 
+    /// Return the most recent scan-line timing profile as a compact tuple.
+    ///
+    /// Field order:
+    /// `medium_upload_ns`, `medium_variable_upload_ns`, `medium_static_upload_ns`,
+    /// `solver_run_ns`, `materialize_ns`, `total_ns`.
+    #[getter]
+    fn last_run_profile_ns<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        PyTuple::new(
+            py,
+            [
+                self.last_medium_upload_ns,
+                self.last_medium_variable_upload_ns,
+                self.last_medium_static_upload_ns,
+                self.last_solver_run_ns,
+                self.last_materialize_ns,
+                self.last_total_ns,
+            ],
+        )
+    }
+
     /// Run one scan line with updated medium (sound_speed, density).
     ///
-    /// Uploads the new medium to the GPU (5 buffer writes, ~ms), then runs the
-    /// full time loop.  Returns sensor pressure as an ndarray (n_sensors, Nt).
+    /// Uploads the varying medium to the GPU, then runs the full time loop.
+    /// Returns sensor pressure as an ndarray (n_sensors, Nt).
     ///
     /// Parameters
     /// ----------
@@ -4096,34 +5073,33 @@ impl GpuPstdSession {
         #[cfg(feature = "gpu")]
         {
             let total_t0 = std::time::Instant::now();
-            let nx = self.nx;
-            let ny = self.ny;
-            let nz = self.nz;
-            let total = nx * ny * nz;
 
             let ss_arr = _sound_speed.as_array();
             let rho_arr = _density.as_array();
 
-            // Build updated flat medium arrays.
-            // numpy arrays passed from Python are C-contiguous; ss_arr.iter() visits
-            // elements in flat C-order (ix*ny*nz + iy*nz + iz), matching the GPU layout.
-            let c0_flat: Vec<f32> = ss_arr.iter().map(|&v| v as f32).collect();
-            let rho0_flat: Vec<f32> = rho_arr.iter().map(|&v| v as f32).collect();
+            // Borrow contiguous NumPy memory directly when possible; fall back to
+            // a one-time host copy only for non-contiguous inputs.
+            let c0_flat: Cow<'_, [f64]> = match ss_arr.as_slice() {
+                Some(slice) => Cow::Borrowed(slice),
+                None => Cow::Owned(ss_arr.iter().copied().collect()),
+            };
+            let rho0_flat: Cow<'_, [f64]> = match rho_arr.as_slice() {
+                Some(slice) => Cow::Borrowed(slice),
+                None => Cow::Owned(rho_arr.iter().copied().collect()),
+            };
 
             let upload_t0 = std::time::Instant::now();
-            // Re-upload medium buffers to GPU.
-            // tau/eta are precomputed at session creation and reflect the initial medium.
-            // For fixed-phantom b-mode (most use cases), they remain valid across scan lines.
-            self.solver.update_medium(
-                &c0_flat,
-                &rho0_flat,
-                &self.bon_a_flat,
-                &self.absorb_tau_flat,
-                &self.absorb_eta_flat,
-            );
-            self.last_medium_upload_ns = upload_t0.elapsed().as_nanos() as u64;
+            // Only the varying medium tensors are refreshed per scan line.
+            // bon_a / tau / eta are resident from session construction and stay
+            // unchanged for the linear-transducer example and similar fixed-media scans.
+            self.solver
+                .update_medium_variable(c0_flat.as_ref(), rho0_flat.as_ref());
+            let medium_upload_ns = upload_t0.elapsed().as_nanos() as u64;
 
             let result = self.run_scan_line_cached(_py);
+            self.last_medium_variable_upload_ns = medium_upload_ns;
+            self.last_medium_static_upload_ns = 0;
+            self.last_medium_upload_ns = medium_upload_ns;
             self.last_total_ns = total_t0.elapsed().as_nanos() as u64;
             result
         }
@@ -4145,6 +5121,8 @@ impl GpuPstdSession {
         {
             let total_t0 = std::time::Instant::now();
             self.last_medium_upload_ns = 0;
+            self.last_medium_variable_upload_ns = 0;
+            self.last_medium_static_upload_ns = 0;
             let time_steps = self.time_steps;
 
             // No pressure sources (velocity-only B-mode)
