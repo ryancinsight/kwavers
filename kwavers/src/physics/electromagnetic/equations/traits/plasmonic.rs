@@ -1,42 +1,92 @@
 use super::super::types::NanoparticleGeometry;
 use super::maxwell::ElectromagneticWaveEquation;
+use num_complex::Complex;
+
+mod geometry;
+
+use geometry::ellipsoid_depolarization_factors;
+
+const GOLD_EPS_INF: f64 = 9.84;
+const GOLD_PLASMA_FREQUENCY_RAD_S: f64 = 1.369e16;
+const GOLD_DRUDE_DAMPING_RAD_S: f64 = 1.079e14;
 
 /// Plasmonic enhancement trait for surface plasmon effects
 ///
 /// Models enhanced electromagnetic fields near metallic nanostructures
 pub trait PlasmonicEnhancement: ElectromagneticWaveEquation {
     /// Surface plasmon resonance frequency ω_res (rad/s)
+    ///
+    /// # Theorem: Fröhlich resonance for a Drude nanosphere
+    ///
+    /// In the quasistatic limit, the dipole polarizability denominator of a
+    /// sphere is `eps_p(omega) + 2 eps_d`. A resonance occurs when its real part
+    /// vanishes:
+    ///
+    /// ```text
+    /// Re eps_p(omega_res) + 2 eps_d = 0.
+    /// ```
+    ///
+    /// For a damped Drude metal with
+    /// `Re eps_p = eps_inf - omega_p^2/(omega^2 + gamma^2)`, solving gives
+    ///
+    /// ```text
+    /// omega_res = sqrt(omega_p^2/(eps_inf + 2 eps_d) - gamma^2).
+    /// ```
+    ///
+    /// Proof: substitute the real Drude dielectric into the Fröhlich condition,
+    /// move terms, invert the positive denominator, and take the positive square
+    /// root because optical frequency is nonnegative.
     fn plasmon_resonance_frequency(
         &self,
-        _nanoparticle_radius: f64,
+        nanoparticle_radius: f64,
         dielectric_constant: f64,
     ) -> f64 {
-        // Drude model for spherical nanoparticles
-        // ω_res² = ω_p² / (1 + 2ε_m / ε_d) where ε_m, ε_d are dielectric constants
-        // This is a simplified approximation
-
-        let omega_p = 1.2e16; // Plasma frequency for gold (approximate)
-        let eps_m = -2.0; // Metal dielectric constant (approximate for visible)
-        let eps_d = dielectric_constant;
-
-        omega_p * (1.0 / (1.0 + 2.0 * eps_m / eps_d)).sqrt()
+        if nanoparticle_radius <= 0.0 {
+            return 0.0;
+        }
+        frohlich_drude_resonance_frequency(dielectric_constant)
     }
 
     /// Local field enhancement factor |E_local|/|E_incident|
+    ///
+    /// # Theorem: ellipsoidal quasistatic field factor
+    ///
+    /// Along a principal axis with depolarization factor `L`, the complex
+    /// internal electrostatic field of an ellipsoid in a uniform host medium is
+    ///
+    /// ```text
+    /// E_axis / E0 = eps_m / (eps_m + L (eps_p - eps_m)).
+    /// ```
+    ///
+    /// For a sphere `L=1/3`, this reduces to
+    /// `3 eps_m / (eps_p + 2 eps_m)`.
+    ///
+    /// The returned scalar is the complex magnitude. Drude damping contributes
+    /// `Im eps_p > 0`, so the resonant denominator is finite.
+    ///
+    /// Proof: the ellipsoidal inclusion solution has uniform internal field;
+    /// enforcing tangential-field continuity and normal-displacement continuity
+    /// on a confocal ellipsoidal surface yields the denominator above. Setting
+    /// all axes equal gives `L_x=L_y=L_z=1/3` and the spherical formula. A
+    /// positive imaginary dielectric component makes the denominator norm
+    /// nonzero at resonance.
     fn field_enhancement_factor(
         &self,
         _position: &[f64],
         nanoparticle_geometry: &NanoparticleGeometry,
     ) -> f64 {
-        // Quasistatic enhancement with simple dielectric contrast and shape factors.
-        // NOTE: This is a geometry-only approximation without wavelength dependence.
-        let eps_medium = 1.77; // Water at optical frequencies (approximate)
-        let eps_particle = -2.0; // Gold dielectric constant (approximate in visible)
+        let eps_medium_re = 1.77;
+        let eps_medium = Complex::new(eps_medium_re, 0.0);
+        let omega_res = frohlich_drude_resonance_frequency(eps_medium_re);
+        let eps_particle = Complex::new(
+            -2.0 * eps_medium_re,
+            drude_imaginary_permittivity(omega_res),
+        );
 
         let enhancement_for_l = |l: f64| -> f64 {
-            let denom = eps_particle + l * (eps_medium - eps_particle) + (1.0 - l) * eps_medium;
-            if denom.abs() > 0.0 {
-                (eps_medium / denom).abs()
+            let denom = eps_medium + l * (eps_particle - eps_medium);
+            if denom.norm() > 0.0 {
+                (eps_medium / denom).norm()
             } else {
                 1.0
             }
@@ -44,8 +94,8 @@ pub trait PlasmonicEnhancement: ElectromagneticWaveEquation {
 
         let enhancement_sphere = || {
             let denom = eps_particle + 2.0 * eps_medium;
-            if denom.abs() > 0.0 {
-                (3.0 * eps_medium / denom).abs()
+            if denom.norm() > 0.0 {
+                (3.0 * eps_medium / denom).norm()
             } else {
                 1.0
             }
@@ -122,38 +172,67 @@ pub trait PlasmonicEnhancement: ElectromagneticWaveEquation {
     }
 }
 
-pub(crate) fn ellipsoid_depolarization_factors(a: f64, b: f64, c: f64) -> (f64, f64, f64) {
-    let r = 0.5 * (a + b);
-    if r <= 0.0 || c <= 0.0 {
-        return (1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0);
+#[must_use]
+pub(crate) fn frohlich_drude_resonance_frequency(dielectric_constant: f64) -> f64 {
+    if dielectric_constant <= 0.0 {
+        return 0.0;
     }
 
-    if (c - r).abs() <= f64::EPSILON {
-        return (1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0);
-    }
+    let omega_squared = GOLD_PLASMA_FREQUENCY_RAD_S.powi(2)
+        / (GOLD_EPS_INF + 2.0 * dielectric_constant)
+        - GOLD_DRUDE_DAMPING_RAD_S.powi(2);
 
-    if c > r {
-        // Prolate spheroid
-        let e = (1.0 - (r * r) / (c * c)).sqrt();
-        let denom = 2.0 * e * e * e;
-        let lz = if denom > 0.0 {
-            let term = ((1.0 + e) / (1.0 - e)).ln() - 2.0 * e;
-            (1.0 - e * e) / denom * term
-        } else {
-            1.0 / 3.0
-        };
-        let lx = 0.5 * (1.0 - lz);
-        (lx, lx, lz)
+    if omega_squared > 0.0 {
+        omega_squared.sqrt()
     } else {
-        // Oblate spheroid
-        let e = (1.0 - (c * c) / (r * r)).sqrt();
-        let denom = e * e * e;
-        let lz = if denom > 0.0 {
-            (1.0 + e * e) / denom * (e - e.atan())
-        } else {
-            1.0 / 3.0
-        };
-        let lx = 0.5 * (1.0 - lz);
-        (lx, lx, lz)
+        0.0
+    }
+}
+
+#[must_use]
+fn drude_imaginary_permittivity(omega: f64) -> f64 {
+    if omega <= 0.0 {
+        return 0.0;
+    }
+
+    GOLD_PLASMA_FREQUENCY_RAD_S.powi(2) * GOLD_DRUDE_DAMPING_RAD_S
+        / (omega * (omega.powi(2) + GOLD_DRUDE_DAMPING_RAD_S.powi(2)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn frohlich_drude_resonance_is_positive_for_water() {
+        let omega = frohlich_drude_resonance_frequency(1.77);
+        assert!(
+            omega > 3.0e15 && omega < 4.5e15,
+            "gold-in-water Fröhlich resonance must be optical; omega={omega:e}"
+        );
+    }
+
+    #[test]
+    fn frohlich_drude_resonance_satisfies_real_denominator_condition() {
+        let eps_d = 1.77;
+        let omega = frohlich_drude_resonance_frequency(eps_d);
+        let eps_real = GOLD_EPS_INF
+            - GOLD_PLASMA_FREQUENCY_RAD_S.powi(2)
+                / (omega.powi(2) + GOLD_DRUDE_DAMPING_RAD_S.powi(2));
+        let residual = eps_real + 2.0 * eps_d;
+        assert!(
+            residual.abs() < 1e-12,
+            "Fröhlich condition residual must vanish; residual={residual:e}"
+        );
+    }
+
+    #[test]
+    fn drude_imaginary_permittivity_is_positive_at_resonance() {
+        let omega = frohlich_drude_resonance_frequency(1.77);
+        let eps_im = drude_imaginary_permittivity(omega);
+        assert!(
+            eps_im > 0.0 && eps_im.is_finite(),
+            "Drude damping must produce finite optical loss; eps_im={eps_im:e}"
+        );
     }
 }
