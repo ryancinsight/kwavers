@@ -1,14 +1,69 @@
-//! Temperature-dependent thermal properties
+//! Temperature-dependent thermal properties.
 //!
-//! References:
-//! - Duck (1990) "Physical Properties of Tissue"
-//! - IT'IS Foundation tissue property database
+//! # Scope
+//!
+//! This module provides local scalar update laws for thermal therapy and
+//! thermometry workflows that need stable property updates from a reference
+//! state. It does not replace tissue-specific property tables; base values
+//! remain supplied by [`ThermalPropertyData`] or acoustic media records.
+//!
+//! # Theorem: reference-state invariance
+//!
+//! Each update law has the form `x(T) = x0 * f(T - T0)` or `x(T) = x0 + g(T - T0)`,
+//! where `T0 = 37 °C`, `f(0) = 1`, and `g(0) = 0`. Therefore the update is
+//! identity-preserving at reference temperature: `x(T0) = x0`. This prevents
+//! drift when a solver rebuilds coefficients at body temperature.
+//!
+//! # Theorem: absorption positivity
+//!
+//! The acoustic absorption law is `alpha(T) = alpha0 * exp(gamma * max(T - T0, 0))`
+//! with `gamma >= 0`. If `alpha0 >= 0`, then `exp(_) > 0`, hence
+//! `alpha(T) >= 0` for all finite `T`. This removes the prior linear law's
+//! negative-absorption failure mode during ablation-range heating.
+//!
+//! # References
+//!
+//! - Duck, F.A. (1990). *Physical Properties of Tissue*. Academic Press.
+//! - Bamber, J.C. & Hill, C.R. (1979). Acoustic properties of normal and cancerous
+//!   human liver. *Ultrasound in Medicine & Biology*, 5(2), 149-157.
+//! - IT'IS Foundation Tissue Properties Database, version 4.2.
+//! - Gachouch, O. et al. (2025). A novel ultrasound thermometry method based on
+//!   thermal strain and short and constant acoustic bursts. *Sensors*, 25(2), 385.
 
 use crate::domain::medium::properties::ThermalPropertyData;
 
+/// Reference body temperature [°C].
+pub const REFERENCE_TEMPERATURE_C: f64 = 37.0;
+
+/// Soft-tissue thermal-conductivity coefficient [1/°C].
+///
+/// A small positive coefficient preserves the IT'IS/Duck reference value while
+/// allowing moderate hyperthermia updates without changing tissue identity.
+const THERMAL_CONDUCTIVITY_COEFF_PER_C: f64 = 0.002;
+
+/// Soft-tissue specific-heat coefficient [1/°C].
+const SPECIFIC_HEAT_COEFF_PER_C: f64 = 0.001;
+
+/// Soft-tissue sound-speed coefficient [1/°C].
+///
+/// Duck/Szabo tissue coefficients are commonly represented near body
+/// temperature by `dc/(c dT) ≈ 1.6e-3`. Recent ultrasound thermometry papers
+/// still treat the hyperthermia range as locally linear, while warning that
+/// ablation temperatures require tissue-specific validation.
+const SOFT_TISSUE_SOUND_SPEED_COEFF_PER_C: f64 = 0.0016;
+
+/// Pre-coagulation soft-tissue absorption coefficient [1/°C].
+const SOFT_TISSUE_ABSORPTION_COEFF_PER_C: f64 = 0.015;
+
 /// Temperature-dependent thermal conductivity
 ///
-/// Linear increase with temperature (approximately 0.2%/°C)
+/// # Formula
+///
+/// `k(T) = k0 * (1 + beta_k * (T - 37 °C))`.
+///
+/// # Proof of reference invariance
+///
+/// At `T = 37 °C`, the multiplier is `1 + beta_k * 0 = 1`, so `k(37) = k0`.
 ///
 /// # Arguments
 ///
@@ -16,13 +71,18 @@ use crate::domain::medium::properties::ThermalPropertyData;
 /// * `temperature` - Current temperature (°C)
 #[must_use]
 pub fn conductivity_vs_temperature(k0: f64, temperature: f64) -> f64 {
-    // Linear increase with temperature (approximately 0.2%/°C)
-    k0 * (1.0 + 0.002 * (temperature - 37.0))
+    k0 * (1.0 + THERMAL_CONDUCTIVITY_COEFF_PER_C * (temperature - REFERENCE_TEMPERATURE_C))
 }
 
 /// Temperature-dependent specific heat
 ///
-/// Slight increase with temperature
+/// # Formula
+///
+/// `c_p(T) = c_p0 * (1 + beta_cp * (T - 37 °C))`.
+///
+/// # Proof of reference invariance
+///
+/// At `T = 37 °C`, the multiplier is one, so `c_p(37) = c_p0`.
 ///
 /// # Arguments
 ///
@@ -30,8 +90,7 @@ pub fn conductivity_vs_temperature(k0: f64, temperature: f64) -> f64 {
 /// * `temperature` - Current temperature (°C)
 #[must_use]
 pub fn specific_heat_vs_temperature(c0: f64, temperature: f64) -> f64 {
-    // Slight increase with temperature
-    c0 * (1.0 + 0.001 * (temperature - 37.0))
+    c0 * (1.0 + SPECIFIC_HEAT_COEFF_PER_C * (temperature - REFERENCE_TEMPERATURE_C))
 }
 
 /// Temperature-dependent blood perfusion
@@ -48,12 +107,12 @@ pub fn specific_heat_vs_temperature(c0: f64, temperature: f64) -> f64 {
 /// * `temperature` - Current temperature (°C)
 #[must_use]
 pub fn perfusion_vs_temperature(w_b0: f64, temperature: f64) -> f64 {
-    if temperature < 37.0 {
+    if temperature < REFERENCE_TEMPERATURE_C {
         // Reduced perfusion when cold
-        w_b0 * (0.5 + 0.5 * temperature / 37.0)
+        w_b0 * (0.5 + 0.5 * temperature / REFERENCE_TEMPERATURE_C)
     } else if temperature < 42.0 {
         // Increased perfusion with mild heating (vasodilation)
-        w_b0 * (1.0 + 0.3 * (temperature - 37.0) / 5.0)
+        w_b0 * (1.0 + 0.3 * (temperature - REFERENCE_TEMPERATURE_C) / 5.0)
     } else if temperature < 50.0 {
         // Decreasing perfusion approaching shutdown
         w_b0 * (1.3 - 1.3 * (temperature - 42.0) / 8.0)
@@ -93,7 +152,20 @@ pub fn update_properties(
 
 /// Acoustic absorption coefficient temperature dependence
 ///
-/// Decreases with temperature (approximately -2%/°C)
+/// # Formula
+///
+/// `alpha(T) = alpha0 * exp(gamma * max(T - 37 °C, 0))`.
+///
+/// `gamma = 0.015 1/°C` matches the soft-tissue coefficient already used by the
+/// bioheat absorption model and is consistent with pre-coagulation liver
+/// ultrasound measurements. The `max` term leaves sub-body cooling neutral
+/// rather than inventing a tissue-specific low-temperature law.
+///
+/// # Proof of positivity
+///
+/// For `alpha0 >= 0`, `exp(gamma * max(T - 37, 0)) > 0`; therefore
+/// `alpha(T) >= 0` for every finite temperature. At `T = 37 °C`, the exponent is
+/// zero and `alpha(37) = alpha0`.
 ///
 /// # Arguments
 ///
@@ -101,13 +173,23 @@ pub fn update_properties(
 /// * `temperature` - Current temperature (°C)
 #[must_use]
 pub fn absorption_vs_temperature(alpha0: f64, temperature: f64) -> f64 {
-    // Decreases with temperature (approximately -2%/°C)
-    alpha0 * (1.0 - 0.02 * (temperature - 37.0).max(0.0))
+    alpha0
+        * (SOFT_TISSUE_ABSORPTION_COEFF_PER_C * (temperature - REFERENCE_TEMPERATURE_C).max(0.0))
+            .exp()
 }
 
 /// Sound speed temperature dependence
 ///
-/// Increases with temperature (approximately 1.5 m/s/°C)
+/// # Formula
+///
+/// `c(T) = c0 * (1 + beta_c * (T - 37 °C))`, with
+/// `beta_c = 1.6e-3 1/°C` for generic soft tissue near body temperature.
+///
+/// # Proof of reference invariance and monotonicity
+///
+/// At `T = 37 °C`, `c(T) = c0`. For `c0 > 0` and `beta_c > 0`,
+/// `dc/dT = c0 * beta_c > 0`, so sound speed increases monotonically within the
+/// local hyperthermia range where the linear thermal-strain model is valid.
 ///
 /// # Arguments
 ///
@@ -115,8 +197,7 @@ pub fn absorption_vs_temperature(alpha0: f64, temperature: f64) -> f64 {
 /// * `temperature` - Current temperature (°C)
 #[must_use]
 pub fn sound_speed_vs_temperature(c0: f64, temperature: f64) -> f64 {
-    // Increases with temperature (approximately 1.5 m/s/°C)
-    c0 + 1.5 * (temperature - 37.0)
+    c0 * (1.0 + SOFT_TISSUE_SOUND_SPEED_COEFF_PER_C * (temperature - REFERENCE_TEMPERATURE_C))
 }
 
 #[cfg(test)]
@@ -147,10 +228,30 @@ mod tests {
         let alpha0 = 0.5;
 
         // At body temperature
-        assert_eq!(absorption_vs_temperature(alpha0, 37.0), alpha0);
+        assert_eq!(
+            absorption_vs_temperature(alpha0, REFERENCE_TEMPERATURE_C),
+            alpha0
+        );
 
-        // At elevated temperature - should decrease
-        assert!(absorption_vs_temperature(alpha0, 50.0) < alpha0);
+        let alpha_50 = absorption_vs_temperature(alpha0, 50.0);
+        let expected = alpha0 * (SOFT_TISSUE_ABSORPTION_COEFF_PER_C * 13.0).exp();
+        assert!(
+            (alpha_50 - expected).abs() < 1e-12,
+            "alpha_50={alpha_50:.12e}, expected={expected:.12e}"
+        );
+        assert!(alpha_50 > alpha0);
+    }
+
+    #[test]
+    fn test_absorption_never_negative_in_ablation_range() {
+        let alpha0 = 0.5;
+        for temperature in [37.0, 50.0, 70.0, 90.0, 100.0] {
+            let alpha = absorption_vs_temperature(alpha0, temperature);
+            assert!(
+                alpha >= 0.0,
+                "absorption must remain non-negative at {temperature} °C, got {alpha}"
+            );
+        }
     }
 
     #[test]
@@ -161,7 +262,8 @@ mod tests {
         let k_45 = conductivity_vs_temperature(k0, 45.0);
         let k_30 = conductivity_vs_temperature(k0, 30.0);
 
-        assert_eq!(k_37, k0); // Reference temperature
+        assert_eq!(k_37, k0);
+        assert_eq!(k_45, k0 * (1.0 + THERMAL_CONDUCTIVITY_COEFF_PER_C * 8.0));
         assert!(k_45 > k_37); // Increases with heating
         assert!(k_30 < k_37); // Decreases with cooling
     }
@@ -191,7 +293,12 @@ mod tests {
         let c_45 = sound_speed_vs_temperature(c0, 45.0);
 
         assert_eq!(c_37, c0);
-        assert!((c_45 - c_37 - 1.5 * 8.0).abs() < 1e-6); // 1.5 m/s/°C
+        let expected = c0 * (1.0 + SOFT_TISSUE_SOUND_SPEED_COEFF_PER_C * 8.0);
+        assert!(
+            (c_45 - expected).abs() < 1e-10,
+            "c_45={c_45:.12e}, expected={expected:.12e}"
+        );
+        assert!(c_45 > c_37);
     }
 
     #[test]

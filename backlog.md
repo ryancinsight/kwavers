@@ -61,3 +61,8 @@
 - Closed the bacterial-channel coverage gap in `physics::acoustics::therapy::sonogenetics` by adding `MscLG22N` and `MscS` to the existing `MechanoChannel` abstraction, updating theorem/proof documentation for two-state gating, and preserving one canonical `compute_p_open` dispatch path.
 - Corrected `ion_current` to return injected depolarizing current `g·n·P_open·(E_rev − V_m)`, matching the LIF equation contract while documenting the distinction from electrophysiology outward-current sign.
 - Residual performance follow-up: `cargo test -p kwavers --lib` passes but reports `solver::forward::nonlinear::kzk::solver::tests::test_conservation_diagnostics_disable` and `solver::validation::numerical_accuracy::pstd::tests::test_pstd_phase_velocity_accuracy` as running beyond 60 seconds; optimize the real KZK/PSTD paths before treating this as closed performance debt.
+
+## Thermal Property Law Modernization
+- Closed the thermal absorption placeholder gap in `physics::thermal::properties`: the previous `1 - 0.02 ΔT` law could become negative during ablation heating. The replacement is a positive exponential soft-tissue law using the same `0.015 1/°C` coefficient as the bioheat absorption model.
+- Aligned `sound_speed_vs_temperature` with the generic soft-tissue coefficient `dc/(c dT)=1.6e-3` used in the temperature-dependent medium model and documented the local hyperthermia validity boundary from ultrasound thermometry literature.
+- Residual modeling scope: generic scalar functions still use soft-tissue coefficients. Tissue-specific thermal updates should route through table-backed material records or explicit coefficient structs before adding organ-specific behavior.

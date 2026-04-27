@@ -52,6 +52,7 @@
 - The neural beamforming layer adaptation path now uses a parameter-dependent calibration objective instead of constant-offset mutation.
 - The distributed neural beamforming processor now partitions frame-major RF volumes across healthy processors with zero-copy frame views and deterministic recomposition.
 - The sonogenetics physics slice now covers the 2026 bacterial-channel comparison by adding `MscLG22N` and `MscS` under the existing `MechanoChannel` enum, documenting two-state gating and reversal-current theorems, and validating channel-ordering plus current-sign contracts with value-semantic tests.
+- The thermal property slice no longer permits negative acoustic absorption under ablation-range heating; `absorption_vs_temperature` now uses a positive exponential law with theorem/proof documentation and value-semantic tests across 37-100 °C. Generic soft-tissue sound-speed scaling now matches the coefficient used by the temperature-dependent medium model.
 
 ## Residual Risks (2026-04-27)
-- Full `kwavers` library tests pass, but two physics tests exceed the 60-second progress threshold. The next increment should profile `solver::forward::nonlinear::kzk::solver::tests::test_conservation_diagnostics_disable` and `solver::validation::numerical_accuracy::pstd::tests::test_pstd_phase_velocity_accuracy` and optimize the production code paths without reducing test coverage.
+- Full `kwavers` library tests pass, but `solver::forward::nonlinear::kzk::solver::tests::test_conservation_diagnostics_disable` exceeds the 60-second progress threshold. The next increment should profile the production KZK path and optimize it without reducing test coverage.
