@@ -55,3 +55,6 @@
 - [x] k-wave-python example parity: `at_focused_bowl_AS` — axisymmetric PSTD parity PASS with Fortran-order sensor reshaping, O'Neil analytical comparison, and cached figure/report artifacts
 - [x] k-wave-python example parity: `na_controlling_the_pml` — waveform parity PASS across the PML attenuation sweep and exact k-Wave-style save-to-disk HDF5 input-file parity PASS via `na_controlling_the_pml_compare.py`
 - [x] PSTD checkpointing: exact save/resume contract with binary KWCP state, file deletion after restore, bit-exact continuation, and PASS report validation via `checkpointing_compare.py`
+- [x] Compare script standardization: normalize `parity_status:` key across all 22 example compare scripts; add NPZ caching to `us_bmode_phased_array_tiny_compare.py`; fix `sys.exit` → `raise SystemExit`
+- [x] Workspace clippy hygiene: eliminate all warnings across `kwavers`, `pykwavers`, `apollo-fft`, `apollo-fft-wgpu`, `ritk-core`, `ritk-model`, `ritk-registration`; replace approximate π/√2 literals with `std::f{32,64}::consts`
+- [x] k-wave-python example parity: `tvsp_homogeneous_medium_monopole` — 2-D time-varying pressure source parity PASS (pearson=0.9996, rms_ratio=1.027) via `tvsp_homogeneous_medium_monopole_compare.py`; pre-filtered signal shared across both engines; NPZ caching
