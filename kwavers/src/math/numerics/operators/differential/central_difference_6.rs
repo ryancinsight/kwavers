@@ -125,12 +125,16 @@ impl CentralDifference6 {
         }
         Ok(Self { dx, dy, dz })
     }
-}
 
-impl DifferentialOperator for CentralDifference6 {
-    fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    /// Apply ∂/∂x into a pre-allocated destination — zero heap allocation.
+    ///
+    /// Interior stencil (O(Δx⁶)):
+    /// ```text
+    /// dst[i] = (−f[i−3] + 9f[i−2] − 45f[i−1] + 45f[i+1] − 9f[i+2] + f[i+3]) / (60 Δx)
+    /// ```
+    /// Near-boundary: O(Δx⁴) at i=2/n−3, O(Δx²) at i=1/n−2, O(Δx) at i=0/n−1.
+    pub fn apply_x_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
-
         if nx < 7 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 7,
@@ -139,63 +143,44 @@ impl DifferentialOperator for CentralDifference6 {
             }
             .into());
         }
-
-        let mut result = Array3::zeros((nx, ny, nz));
-
-        // Interior points: sixth-order central difference
-        // ∂u/∂x ≈ (-u[i+3] + 9u[i+2] - 45u[i+1] + 45u[i-1] - 9u[i-2] + u[i-3]) / (60Δx)
+        let inv60dx = 1.0 / (60.0 * self.dx);
+        let inv12dx = 1.0 / (12.0 * self.dx);
+        let inv2dx = 1.0 / (2.0 * self.dx);
+        let invdx = 1.0 / self.dx;
         for i in 3..nx - 3 {
             for j in 0..ny {
                 for k in 0..nz {
-                    result[[i, j, k]] = (-field[[i - 3, j, k]] + 9.0 * field[[i - 2, j, k]]
+                    dst[[i, j, k]] = (-field[[i - 3, j, k]] + 9.0 * field[[i - 2, j, k]]
                         - 45.0 * field[[i - 1, j, k]]
                         + 45.0 * field[[i + 1, j, k]]
                         - 9.0 * field[[i + 2, j, k]]
                         + field[[i + 3, j, k]])
-                        / (60.0 * self.dx);
+                        * inv60dx;
                 }
             }
         }
-
-        // Near-boundary 1: fourth-order central difference (i = 2, nx-3)
-        // ∂u/∂x ≈ (-u[i+2] + 8u[i+1] - 8u[i-1] + u[i-2]) / (12Δx)
         for j in 0..ny {
             for k in 0..nz {
-                result[[2, j, k]] = (-field[[4, j, k]] + 8.0 * field[[3, j, k]]
+                dst[[2, j, k]] = (-field[[4, j, k]] + 8.0 * field[[3, j, k]]
                     - 8.0 * field[[1, j, k]]
                     + field[[0, j, k]])
-                    / (12.0 * self.dx);
-                result[[nx - 3, j, k]] = (-field[[nx - 1, j, k]] + 8.0 * field[[nx - 2, j, k]]
+                    * inv12dx;
+                dst[[nx - 3, j, k]] = (-field[[nx - 1, j, k]] + 8.0 * field[[nx - 2, j, k]]
                     - 8.0 * field[[nx - 4, j, k]]
                     + field[[nx - 5, j, k]])
-                    / (12.0 * self.dx);
+                    * inv12dx;
+                dst[[1, j, k]] = (field[[2, j, k]] - field[[0, j, k]]) * inv2dx;
+                dst[[nx - 2, j, k]] = (field[[nx - 1, j, k]] - field[[nx - 3, j, k]]) * inv2dx;
+                dst[[0, j, k]] = (field[[1, j, k]] - field[[0, j, k]]) * invdx;
+                dst[[nx - 1, j, k]] = (field[[nx - 1, j, k]] - field[[nx - 2, j, k]]) * invdx;
             }
         }
-
-        // Near-boundary 2: second-order central difference (i = 1, nx-2)
-        // ∂u/∂x ≈ (u[i+1] - u[i-1]) / (2Δx)
-        for j in 0..ny {
-            for k in 0..nz {
-                result[[1, j, k]] = (field[[2, j, k]] - field[[0, j, k]]) / (2.0 * self.dx);
-                result[[nx - 2, j, k]] =
-                    (field[[nx - 1, j, k]] - field[[nx - 3, j, k]]) / (2.0 * self.dx);
-            }
-        }
-
-        // Boundary points: first-order forward/backward difference
-        for j in 0..ny {
-            for k in 0..nz {
-                result[[0, j, k]] = (field[[1, j, k]] - field[[0, j, k]]) / self.dx;
-                result[[nx - 1, j, k]] = (field[[nx - 1, j, k]] - field[[nx - 2, j, k]]) / self.dx;
-            }
-        }
-
-        Ok(result)
+        Ok(())
     }
 
-    fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    /// Apply ∂/∂y into a pre-allocated destination — zero heap allocation.
+    pub fn apply_y_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
-
         if ny < 7 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 7,
@@ -204,60 +189,44 @@ impl DifferentialOperator for CentralDifference6 {
             }
             .into());
         }
-
-        let mut result = Array3::zeros((nx, ny, nz));
-
-        // Interior points: sixth-order central difference
+        let inv60dy = 1.0 / (60.0 * self.dy);
+        let inv12dy = 1.0 / (12.0 * self.dy);
+        let inv2dy = 1.0 / (2.0 * self.dy);
+        let invdy = 1.0 / self.dy;
         for i in 0..nx {
             for j in 3..ny - 3 {
                 for k in 0..nz {
-                    result[[i, j, k]] = (-field[[i, j - 3, k]] + 9.0 * field[[i, j - 2, k]]
+                    dst[[i, j, k]] = (-field[[i, j - 3, k]] + 9.0 * field[[i, j - 2, k]]
                         - 45.0 * field[[i, j - 1, k]]
                         + 45.0 * field[[i, j + 1, k]]
                         - 9.0 * field[[i, j + 2, k]]
                         + field[[i, j + 3, k]])
-                        / (60.0 * self.dy);
+                        * inv60dy;
                 }
             }
         }
-
-        // Near-boundary 1: fourth-order central difference
         for i in 0..nx {
             for k in 0..nz {
-                result[[i, 2, k]] = (-field[[i, 4, k]] + 8.0 * field[[i, 3, k]]
+                dst[[i, 2, k]] = (-field[[i, 4, k]] + 8.0 * field[[i, 3, k]]
                     - 8.0 * field[[i, 1, k]]
                     + field[[i, 0, k]])
-                    / (12.0 * self.dy);
-                result[[i, ny - 3, k]] = (-field[[i, ny - 1, k]] + 8.0 * field[[i, ny - 2, k]]
+                    * inv12dy;
+                dst[[i, ny - 3, k]] = (-field[[i, ny - 1, k]] + 8.0 * field[[i, ny - 2, k]]
                     - 8.0 * field[[i, ny - 4, k]]
                     + field[[i, ny - 5, k]])
-                    / (12.0 * self.dy);
+                    * inv12dy;
+                dst[[i, 1, k]] = (field[[i, 2, k]] - field[[i, 0, k]]) * inv2dy;
+                dst[[i, ny - 2, k]] = (field[[i, ny - 1, k]] - field[[i, ny - 3, k]]) * inv2dy;
+                dst[[i, 0, k]] = (field[[i, 1, k]] - field[[i, 0, k]]) * invdy;
+                dst[[i, ny - 1, k]] = (field[[i, ny - 1, k]] - field[[i, ny - 2, k]]) * invdy;
             }
         }
-
-        // Near-boundary 2: second-order central difference
-        for i in 0..nx {
-            for k in 0..nz {
-                result[[i, 1, k]] = (field[[i, 2, k]] - field[[i, 0, k]]) / (2.0 * self.dy);
-                result[[i, ny - 2, k]] =
-                    (field[[i, ny - 1, k]] - field[[i, ny - 3, k]]) / (2.0 * self.dy);
-            }
-        }
-
-        // Boundary points: first-order forward/backward difference
-        for i in 0..nx {
-            for k in 0..nz {
-                result[[i, 0, k]] = (field[[i, 1, k]] - field[[i, 0, k]]) / self.dy;
-                result[[i, ny - 1, k]] = (field[[i, ny - 1, k]] - field[[i, ny - 2, k]]) / self.dy;
-            }
-        }
-
-        Ok(result)
+        Ok(())
     }
 
-    fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    /// Apply ∂/∂z into a pre-allocated destination — zero heap allocation.
+    pub fn apply_z_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
-
         if nz < 7 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 7,
@@ -266,54 +235,85 @@ impl DifferentialOperator for CentralDifference6 {
             }
             .into());
         }
-
-        let mut result = Array3::zeros((nx, ny, nz));
-
-        // Interior points: sixth-order central difference
+        let inv60dz = 1.0 / (60.0 * self.dz);
+        let inv12dz = 1.0 / (12.0 * self.dz);
+        let inv2dz = 1.0 / (2.0 * self.dz);
+        let invdz = 1.0 / self.dz;
         for i in 0..nx {
             for j in 0..ny {
                 for k in 3..nz - 3 {
-                    result[[i, j, k]] = (-field[[i, j, k - 3]] + 9.0 * field[[i, j, k - 2]]
+                    dst[[i, j, k]] = (-field[[i, j, k - 3]] + 9.0 * field[[i, j, k - 2]]
                         - 45.0 * field[[i, j, k - 1]]
                         + 45.0 * field[[i, j, k + 1]]
                         - 9.0 * field[[i, j, k + 2]]
                         + field[[i, j, k + 3]])
-                        / (60.0 * self.dz);
+                        * inv60dz;
                 }
             }
         }
-
-        // Near-boundary 1: fourth-order central difference
         for i in 0..nx {
             for j in 0..ny {
-                result[[i, j, 2]] = (-field[[i, j, 4]] + 8.0 * field[[i, j, 3]]
+                dst[[i, j, 2]] = (-field[[i, j, 4]] + 8.0 * field[[i, j, 3]]
                     - 8.0 * field[[i, j, 1]]
                     + field[[i, j, 0]])
-                    / (12.0 * self.dz);
-                result[[i, j, nz - 3]] = (-field[[i, j, nz - 1]] + 8.0 * field[[i, j, nz - 2]]
+                    * inv12dz;
+                dst[[i, j, nz - 3]] = (-field[[i, j, nz - 1]] + 8.0 * field[[i, j, nz - 2]]
                     - 8.0 * field[[i, j, nz - 4]]
                     + field[[i, j, nz - 5]])
-                    / (12.0 * self.dz);
+                    * inv12dz;
+                dst[[i, j, 1]] = (field[[i, j, 2]] - field[[i, j, 0]]) * inv2dz;
+                dst[[i, j, nz - 2]] = (field[[i, j, nz - 1]] - field[[i, j, nz - 3]]) * inv2dz;
+                dst[[i, j, 0]] = (field[[i, j, 1]] - field[[i, j, 0]]) * invdz;
+                dst[[i, j, nz - 1]] = (field[[i, j, nz - 1]] - field[[i, j, nz - 2]]) * invdz;
             }
         }
+        Ok(())
+    }
+}
 
-        // Near-boundary 2: second-order central difference
-        for i in 0..nx {
-            for j in 0..ny {
-                result[[i, j, 1]] = (field[[i, j, 2]] - field[[i, j, 0]]) / (2.0 * self.dz);
-                result[[i, j, nz - 2]] =
-                    (field[[i, j, nz - 1]] - field[[i, j, nz - 3]]) / (2.0 * self.dz);
+impl DifferentialOperator for CentralDifference6 {
+    fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = field.dim();
+        if nx < 7 {
+            return Err(NumericalError::InsufficientGridPoints {
+                required: 7,
+                actual: nx,
+                direction: "X".to_string(),
             }
+            .into());
         }
+        let mut result = Array3::zeros((nx, ny, nz));
+        self.apply_x_into(field, &mut result)?;
+        Ok(result)
+    }
 
-        // Boundary points: first-order forward/backward difference
-        for i in 0..nx {
-            for j in 0..ny {
-                result[[i, j, 0]] = (field[[i, j, 1]] - field[[i, j, 0]]) / self.dz;
-                result[[i, j, nz - 1]] = (field[[i, j, nz - 1]] - field[[i, j, nz - 2]]) / self.dz;
+    fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = field.dim();
+        if ny < 7 {
+            return Err(NumericalError::InsufficientGridPoints {
+                required: 7,
+                actual: ny,
+                direction: "Y".to_string(),
             }
+            .into());
         }
+        let mut result = Array3::zeros((nx, ny, nz));
+        self.apply_y_into(field, &mut result)?;
+        Ok(result)
+    }
 
+    fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = field.dim();
+        if nz < 7 {
+            return Err(NumericalError::InsufficientGridPoints {
+                required: 7,
+                actual: nz,
+                direction: "Z".to_string(),
+            }
+            .into());
+        }
+        let mut result = Array3::zeros((nx, ny, nz));
+        self.apply_z_into(field, &mut result)?;
         Ok(result)
     }
 

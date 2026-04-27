@@ -8,6 +8,7 @@
 //! - Sonodynamic therapy
 //! - Sonoporation
 //! - Microbubble-mediated therapies
+//! - Sonogenetics (focused-ultrasound neuromodulation via mechanosensitive channels)
 //!
 //! ## Design Principles
 //! - **SOLID**: Single responsibility per module
@@ -17,6 +18,7 @@
 
 pub mod cavitation;
 pub mod lithotripsy;
+pub mod sonogenetics;
 
 // Re-exports
 pub use cavitation::{CavitationDetectionMethod, TherapyCavitationDetector};

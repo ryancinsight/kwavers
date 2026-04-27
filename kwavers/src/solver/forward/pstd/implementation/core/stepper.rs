@@ -10,7 +10,7 @@ use crate::solver::forward::pstd::implementation::k_space::PSTDKSOperators;
 use crate::solver::geometry::Geometry;
 use ndarray::{Array3, Zip};
 use std::env;
-use tracing::trace;
+use tracing::{trace, warn};
 
 fn pstd_source_time_shift_samples() -> isize {
     match env::var("KWAVERS_PSTD_SOURCE_TIME_SHIFT") {
@@ -28,6 +28,7 @@ fn pstd_source_gain() -> f64 {
 
 impl PSTDSolver {
     /// Perform a single time step using k-space pseudospectral method
+    #[inline]
     pub fn step_forward(&mut self) -> KwaversResult<()> {
         let dt = self.config.dt;
         let time_index = self.time_step_index;
@@ -310,8 +311,39 @@ impl PSTDSolver {
                         }
                     }
                 }
-                _ => {
-                    // Velocity sources not yet supported in k-space mode
+                SourceField::VelocityX | SourceField::VelocityY | SourceField::VelocityZ => {
+                    // Pressure-equivalent injection for velocity sources in the FullKSpace
+                    // pressure-only scheme.
+                    //
+                    // From the linearised acoustic equations (eliminating velocity):
+                    //   ∂²p/∂t² = c²∇²p − c²∇·f_u
+                    // For a velocity source f_u = amp(t)·mask(x)·ê_α:
+                    //   S_p = −c²·amp·∂mask/∂α
+                    // where ∂mask/∂α = IFFT(ik_α·FFT(mask)) was pre-computed in
+                    // `add_source_arc`.  This S_p is added to `dpx` and applied as
+                    // `p += dt·(c²·∇²p + dpx)` in `propagate_kspace`.
+                    //
+                    // Limitation: approximation valid only for homogeneous ρ and
+                    // consistent with the first-order forward-Euler FullKSpace scheme.
+                    let c_sq = self.c_ref * self.c_ref;
+                    match self.velocity_source_grad_masks.get(idx) {
+                        Some(Some(grad_mask)) => {
+                            Zip::from(&mut self.dpx).and(grad_mask).for_each(|s, &gm| {
+                                *s -= c_sq * amp * gm;
+                            });
+                        }
+                        Some(None) => {
+                            // Standard PSTD mode: velocity sources handled by
+                            // apply_dynamic_velocity_sources, not here.
+                        }
+                        None => {
+                            warn!(
+                                "velocity_source_grad_masks[{}] missing — source index \
+                                 out of sync with dynamic_sources; source dropped",
+                                idx
+                            );
+                        }
+                    }
                 }
             }
         }
@@ -340,24 +372,51 @@ impl PSTDSolver {
         Ok(())
     }
 
-    /// Propagate wave using k-space pseudospectral method
+    /// Propagate wave using the k-space spectral Laplacian.
+    ///
+    /// ## Theorem: spectral Laplacian identity
+    ///
+    /// For a field `p` on an `N`-point uniform grid with spacing `Δx`:
+    /// ```text
+    /// ∇²p  ↔  −|k|² p̂    (k = wavenumber vector, p̂ = FFT(p))
+    /// ```
+    /// This gives spectral (infinite-order) spatial accuracy for smooth fields.
+    ///
+    /// ## First-order time integration
+    ///
+    /// The update applied here is:
+    /// ```text
+    /// p^{n+1} = p^n + Δt · (c² · ∇²p^n + S^n)
+    /// ```
+    /// where `S^n` is the source term at time step `n`.
+    ///
+    /// This is forward-Euler — first-order in time and **unconditionally unstable** for
+    /// the second-order wave equation.  A stable second-order leapfrog scheme requires
+    /// `p^{n-1}` state:
+    /// ```text
+    /// p^{n+1} = 2p^n − p^{n-1} + Δt² · c² · ∇²p^n + Δt² · S^n
+    /// ```
+    /// That variant is tracked in the backlog (requires adding `p_prev` to `PSTDSolver`).
+    ///
+    /// ## Implementation note
+    ///
+    /// `apply_helmholtz(p, 0.0)` evaluates `IFFT[(-|k|² + 0²) · FFT(p)] = ∇²p`.
+    /// Passing `0.0` removes the spurious Helmholtz shift term; the pure Laplacian
+    /// is the physically correct operator for the acoustic wave equation.
     fn propagate_kspace(
         &mut self,
         dt: f64,
         source_term: &Array3<f64>,
         kspace_ops: &PSTDKSOperators,
     ) -> KwaversResult<()> {
-        let wavenumber = 2.0 * std::f64::consts::PI * 1e6 / self.c_ref;
-        let helmholtz_term = kspace_ops.apply_helmholtz(&self.fields.p, wavenumber)?;
-
+        // Spectral Laplacian: ∇²p = IFFT(-|k|² · FFT(p))
+        // wavenumber = 0.0 eliminates the k₀² Helmholtz shift; result is the pure Laplacian.
+        let laplacian = kspace_ops.apply_helmholtz(&self.fields.p, 0.0)?;
+        let c_sq = self.c_ref * self.c_ref;
         Zip::from(&mut self.fields.p)
-            .and(&helmholtz_term)
+            .and(&laplacian)
             .and(source_term)
-            .for_each(|p, h_term, s| {
-                let c_squared = self.c_ref * self.c_ref;
-                *p += dt * (c_squared * h_term + s);
-            });
-
+            .for_each(|p, &lap, &s| *p += dt * (c_sq * lap + s));
         Ok(())
     }
 

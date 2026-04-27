@@ -57,6 +57,7 @@ impl PSTDSolver {
     ///
     /// Dispatches to [`update_velocity_as`] when `config.geometry == CylindricalAS`,
     /// otherwise uses the standard 3-D spectral path.
+    #[inline]
     pub(crate) fn update_velocity(&mut self, dt: f64) -> KwaversResult<()> {
         if self.config.geometry == Geometry::CylindricalAS {
             return self.update_velocity_as(dt);
@@ -68,6 +69,7 @@ impl PSTDSolver {
     ///
     /// Uses staggered grid shift operators matching the C++ k-wave binary:
     ///   grad_x(p) = IFFT( ddx_k_shift_pos[x] * kappa[i,j,k] * FFT(p)[i,j,k] )
+    #[inline]
     pub(crate) fn update_velocity_cartesian(&mut self, dt: f64) -> KwaversResult<()> {
         // k-Wave split-field PML for velocity (Treeby & Cox 2010, Eq. 17):
         //   u_new = pml * (pml * u_old - dt/rho * grad_p)

@@ -48,7 +48,7 @@
 //!   DOI: 10.1007/978-3-540-30726-6
 
 use crate::core::error::{KwaversResult, NumericalError};
-use crate::math::fft::{Complex64, FFT_CACHE_1D, Shape1D};
+use crate::math::fft::{Complex64, Shape1D, FFT_CACHE_1D};
 use ndarray::{Array1, Array3, ArrayView3, Axis};
 use std::f64::consts::PI;
 use std::sync::Arc;

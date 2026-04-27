@@ -93,6 +93,7 @@ impl FdtdSolver {
     ///    gradient, CPML applied if present.
     /// 3. **Collocated FD** (`staggered_grid = false`): central-difference gradient,
     ///    CPML applied if present.
+    #[inline]
     pub fn update_velocity(&mut self, dt: f64) -> KwaversResult<()> {
         if self.kspace_ops.is_some() {
             return self.update_velocity_kspace(dt);
@@ -135,109 +136,125 @@ impl FdtdSolver {
 
     /// Staggered-grid velocity update.
     ///
-    /// Uses forward differences for pressure gradient on the staggered Yee grid:
-    ///   `u^{n+1/2}[i+½] = u^{n-1/2}[i+½] − dt/ρ_avg * (p^n[i+1] − p^n[i]) / Δx`
+    /// ## Algorithm (Yee leapfrog, Virieux 1986)
     ///
-    /// Density is averaged at the half-cell interface: `ρ_avg = (ρ[i] + ρ[i+1]) / 2`.
+    /// ```text
+    /// u^{n+½}[i+½] = u^{n-½}[i+½] − (Δt / ρ_avg) · (p^n[i+1] − p^n[i]) / Δx
+    /// ```
+    ///
+    /// Density is linearly averaged at the half-cell interface: `ρ_avg = (ρ[i] + ρ[i+1]) / 2`.
     /// The last row/column/layer of each velocity component is zeroed (Dirichlet at domain edge).
+    ///
+    /// ## Memory layout
+    ///
+    /// Phase 1 fills pre-allocated scratch buffers `dp_dx_scratch`, `dp_dy_scratch`,
+    /// `dp_dz_scratch` using a vectorizable Zip slice-pair pattern — zero heap allocation
+    /// per step. Phase 2 applies CPML corrections in-place. Phase 3 reads the scratch
+    /// gradients and updates the velocity components.
     fn update_velocity_staggered(&mut self, dt: f64) -> KwaversResult<()> {
         let (nx, ny, nz) = self.fields.p.dim();
+        // Extract grid spacings as Copy values — avoids re-borrowing self inside closures.
+        let dx = self.staggered_operator.dx;
+        let dy = self.staggered_operator.dy;
+        let dz = self.staggered_operator.dz;
 
-        // 1. Compute staggered pressure gradients (forward differences)
-        let mut dp_dx = if nx > 1 {
-            Some(
-                self.staggered_operator
-                    .apply_forward_x(self.fields.p.view())?,
-            )
-        } else {
-            None
-        };
-
-        let mut dp_dy = if ny > 1 {
-            Some(
-                self.staggered_operator
-                    .apply_forward_y(self.fields.p.view())?,
-            )
-        } else {
-            None
-        };
-
-        let mut dp_dz = if nz > 1 {
-            Some(
-                self.staggered_operator
-                    .apply_forward_z(self.fields.p.view())?,
-            )
-        } else {
-            None
-        };
-
-        // 2. Apply CPML gradient corrections (convolutional memory update)
-        if let Some(ref mut cpml) = self.cpml_boundary {
-            if let Some(ref mut grad) = dp_dx {
-                cpml.update_and_apply_p_gradient_correction(grad, 0);
+        // Phase 1: fill staggered gradient scratch buffers.
+        // Vectorizable Zip slice-pair: dst[i] = (p[i+1] - p[i]) / Δ
+        // No heap allocation — scratch was pre-allocated at solver construction.
+        if nx > 1 {
+            if let Some(ref mut dp_dx) = self.dp_dx_scratch {
+                let hi = self.fields.p.slice(s![1.., .., ..]);
+                let lo = self.fields.p.slice(s![..nx - 1, .., ..]);
+                Zip::from(&mut *dp_dx)
+                    .and(hi)
+                    .and(lo)
+                    .for_each(|r, &h, &l| *r = (h - l) / dx);
             }
-            if let Some(ref mut grad) = dp_dy {
-                cpml.update_and_apply_p_gradient_correction(grad, 1);
+        }
+        if ny > 1 {
+            if let Some(ref mut dp_dy) = self.dp_dy_scratch {
+                let hi = self.fields.p.slice(s![.., 1.., ..]);
+                let lo = self.fields.p.slice(s![.., ..ny - 1, ..]);
+                Zip::from(&mut *dp_dy)
+                    .and(hi)
+                    .and(lo)
+                    .for_each(|r, &h, &l| *r = (h - l) / dy);
             }
-            if let Some(ref mut grad) = dp_dz {
-                cpml.update_and_apply_p_gradient_correction(grad, 2);
+        }
+        if nz > 1 {
+            if let Some(ref mut dp_dz) = self.dp_dz_scratch {
+                let hi = self.fields.p.slice(s![.., .., 1..]);
+                let lo = self.fields.p.slice(s![.., .., ..nz - 1]);
+                Zip::from(&mut *dp_dz)
+                    .and(hi)
+                    .and(lo)
+                    .for_each(|r, &h, &l| *r = (h - l) / dz);
             }
         }
 
-        // 3. Update ux: u[i+½] -= dt / ρ_avg * dp/dx[i+½]
-        if let Some(ref grad) = dp_dx {
-            {
-                let rho_left = self.materials.rho0.slice(s![..nx - 1, .., ..]);
-                let rho_right = self.materials.rho0.slice(s![1..nx, .., ..]);
-                Zip::from(self.fields.ux.slice_mut(s![..nx - 1, .., ..]))
-                    .and(rho_left)
-                    .and(rho_right)
-                    .and(grad.view())
-                    .for_each(|u, &rl, &rr, &dp| {
-                        let rho = 0.5 * (rl + rr);
-                        if rho > 1e-9 {
-                            *u -= dt / rho * dp;
-                        }
-                    });
+        // Phase 2: CPML gradient corrections (convolutional memory update, Roden & Gedney 2000).
+        // Borrows: self.cpml_boundary (mutable) and self.dp_*_scratch (mutable) — disjoint fields.
+        if let Some(ref mut cpml) = self.cpml_boundary {
+            if let Some(ref mut dp_dx) = self.dp_dx_scratch {
+                cpml.update_and_apply_p_gradient_correction(dp_dx, 0);
             }
+            if let Some(ref mut dp_dy) = self.dp_dy_scratch {
+                cpml.update_and_apply_p_gradient_correction(dp_dy, 1);
+            }
+            if let Some(ref mut dp_dz) = self.dp_dz_scratch {
+                cpml.update_and_apply_p_gradient_correction(dp_dz, 2);
+            }
+        }
+
+        // Phase 3: apply gradient to velocity components.
+        // Density averaged at staggered half-cell interface: ρ_avg = (ρ[i] + ρ[i+1]) / 2.
+        // Borrows: self.dp_*_scratch (immutable), self.materials.rho0 (immutable),
+        //          self.fields.u* (mutable) — all disjoint fields.
+        if let Some(ref dp_dx) = self.dp_dx_scratch {
+            let rho_left = self.materials.rho0.slice(s![..nx - 1, .., ..]);
+            let rho_right = self.materials.rho0.slice(s![1..nx, .., ..]);
+            Zip::from(self.fields.ux.slice_mut(s![..nx - 1, .., ..]))
+                .and(rho_left)
+                .and(rho_right)
+                .and(dp_dx.view())
+                .for_each(|u, &rl, &rr, &dp| {
+                    let rho = 0.5 * (rl + rr);
+                    if rho > 1e-9 {
+                        *u -= dt / rho * dp;
+                    }
+                });
             self.fields.ux.slice_mut(s![nx - 1, .., ..]).fill(0.0);
         }
 
-        // 4. Update uy: u[j+½] -= dt / ρ_avg * dp/dy[j+½]
-        if let Some(ref grad) = dp_dy {
-            {
-                let rho_front = self.materials.rho0.slice(s![.., ..ny - 1, ..]);
-                let rho_back = self.materials.rho0.slice(s![.., 1..ny, ..]);
-                Zip::from(self.fields.uy.slice_mut(s![.., ..ny - 1, ..]))
-                    .and(rho_front)
-                    .and(rho_back)
-                    .and(grad.view())
-                    .for_each(|u, &rf, &rb, &dp| {
-                        let rho = 0.5 * (rf + rb);
-                        if rho > 1e-9 {
-                            *u -= dt / rho * dp;
-                        }
-                    });
-            }
+        if let Some(ref dp_dy) = self.dp_dy_scratch {
+            let rho_front = self.materials.rho0.slice(s![.., ..ny - 1, ..]);
+            let rho_back = self.materials.rho0.slice(s![.., 1..ny, ..]);
+            Zip::from(self.fields.uy.slice_mut(s![.., ..ny - 1, ..]))
+                .and(rho_front)
+                .and(rho_back)
+                .and(dp_dy.view())
+                .for_each(|u, &rf, &rb, &dp| {
+                    let rho = 0.5 * (rf + rb);
+                    if rho > 1e-9 {
+                        *u -= dt / rho * dp;
+                    }
+                });
             self.fields.uy.slice_mut(s![.., ny - 1, ..]).fill(0.0);
         }
 
-        // 5. Update uz: u[k+½] -= dt / ρ_avg * dp/dz[k+½]
-        if let Some(ref grad) = dp_dz {
-            {
-                let rho_near = self.materials.rho0.slice(s![.., .., ..nz - 1]);
-                let rho_far = self.materials.rho0.slice(s![.., .., 1..nz]);
-                Zip::from(self.fields.uz.slice_mut(s![.., .., ..nz - 1]))
-                    .and(rho_near)
-                    .and(rho_far)
-                    .and(grad.view())
-                    .for_each(|u, &rn, &rf, &dp| {
-                        let rho = 0.5 * (rn + rf);
-                        if rho > 1e-9 {
-                            *u -= dt / rho * dp;
-                        }
-                    });
-            }
+        if let Some(ref dp_dz) = self.dp_dz_scratch {
+            let rho_near = self.materials.rho0.slice(s![.., .., ..nz - 1]);
+            let rho_far = self.materials.rho0.slice(s![.., .., 1..nz]);
+            Zip::from(self.fields.uz.slice_mut(s![.., .., ..nz - 1]))
+                .and(rho_near)
+                .and(rho_far)
+                .and(dp_dz.view())
+                .for_each(|u, &rn, &rf, &dp| {
+                    let rho = 0.5 * (rn + rf);
+                    if rho > 1e-9 {
+                        *u -= dt / rho * dp;
+                    }
+                });
             self.fields.uz.slice_mut(s![.., .., nz - 1]).fill(0.0);
         }
 

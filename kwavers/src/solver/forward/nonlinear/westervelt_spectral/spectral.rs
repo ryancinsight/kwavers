@@ -1,8 +1,10 @@
 //! Spectral operations for Westervelt solver
 
 use crate::domain::grid::Grid;
-use crate::math::fft::{fft_3d_array, ifft_3d_array};
-use ndarray::Array3;
+use crate::math::fft::{
+    fft_3d_array, fft_3d_array_into, ifft_3d_array, ifft_3d_array_into, Complex64,
+};
+use ndarray::{Array3, Zip};
 use num_complex::Complex;
 use std::f64::consts::PI;
 
@@ -50,7 +52,18 @@ pub fn initialize_kspace_grids(
     (k_squared, kx, ky, kz)
 }
 
-/// Compute Laplacian using spectral method
+/// Compute Laplacian using spectral method (allocating convenience wrapper).
+///
+/// # Theorem: Spectral Laplacian
+/// For a periodic function `f` on a uniform grid, the spectral Laplacian is exact:
+/// ```text
+///   ∇²f = IFFT(−|k|² · FFT(f))
+/// ```
+/// where `|k|² = kx² + ky² + kz²` stored in `k_squared`.
+/// Convergence is exponential in the number of grid points for smooth `f`.
+///
+/// Allocates two `Array3<Complex64>` per call. For hot-path use, prefer
+/// [`compute_laplacian_spectral_into`] which reuses caller-supplied scratch.
 #[must_use]
 pub fn compute_laplacian_spectral(field: &Array3<f64>, k_squared: &Array3<f64>) -> Array3<f64> {
     // Transform to k-space
@@ -60,8 +73,48 @@ pub fn compute_laplacian_spectral(field: &Array3<f64>, k_squared: &Array3<f64>) 
     let laplacian_k = &field_k * &k_squared.mapv(|k2| Complex::new(-k2, 0.0));
 
     // Transform back to real space
-
     ifft_3d_array(&laplacian_k)
+}
+
+/// Zero-allocation spectral Laplacian via caller-supplied scratch buffers.
+///
+/// # Theorem: Spectral Laplacian (same as [`compute_laplacian_spectral`])
+/// ```text
+///   ∇²f = IFFT(−|k|² · FFT(f))
+/// ```
+///
+/// # Algorithm
+/// 1. `fft_3d_array_into(field, fft_scratch)` — real→complex DFT in-place into scratch
+/// 2. `fft_scratch[i] *= −k_squared[i]` — element-wise Laplacian multiply (parallel)
+/// 3. `ifft_3d_array_into(fft_scratch, out)` — complex→real IDFT, real part → `out`
+///
+/// After return, `fft_scratch` contains the complex IDFT result (overwritten); only
+/// `out` carries the valid real Laplacian. `fft_scratch` is safe to reuse.
+///
+/// # Preconditions
+/// - `fft_scratch.dim() == field.dim()`
+/// - `out.dim() == field.dim()`
+/// - `k_squared.dim() == field.dim()`
+pub fn compute_laplacian_spectral_into(
+    field: &Array3<f64>,
+    k_squared: &Array3<f64>,
+    fft_scratch: &mut Array3<Complex64>,
+    out: &mut Array3<f64>,
+) {
+    debug_assert_eq!(fft_scratch.dim(), field.dim(), "fft_scratch shape mismatch");
+    debug_assert_eq!(out.dim(), field.dim(), "laplacian output shape mismatch");
+    debug_assert_eq!(k_squared.dim(), field.dim(), "k_squared shape mismatch");
+
+    // Step 1: real→complex DFT into scratch (no allocation)
+    fft_3d_array_into(field, fft_scratch);
+
+    // Step 2: multiply by −|k|² in-place (Laplacian operator in spectral domain)
+    Zip::from(fft_scratch.view_mut())
+        .and(k_squared.view())
+        .par_for_each(|c, &k2| *c *= Complex64::new(-k2, 0.0));
+
+    // Step 3: IDFT + extract real part into `out` (no allocation)
+    ifft_3d_array_into(fft_scratch, out);
 }
 
 /// Apply k-space correction for heterogeneous media

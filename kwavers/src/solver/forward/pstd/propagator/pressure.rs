@@ -71,6 +71,7 @@ impl PSTDSolver {
     /// In C++ k-wave, this is the final step: p = c² * (rhox + rhoy + rhoz)
     /// Absorption is applied in `update_density()`, not here, matching the ordering
     /// in k-Wave's `computeDensity()` function (Treeby & Cox 2010, Eq. 21).
+    #[inline]
     pub(crate) fn update_pressure(&mut self, _dt: f64) -> KwaversResult<()> {
         // Combine split density components
         Zip::from(&mut self.div_u)
@@ -110,6 +111,7 @@ impl PSTDSolver {
     ///
     /// Dispatches to [`update_density_as`] when `config.geometry == CylindricalAS`,
     /// otherwise uses the standard 3-D spectral path.
+    #[inline]
     pub(crate) fn update_density(&mut self, dt: f64) -> KwaversResult<()> {
         if self.config.geometry == Geometry::CylindricalAS {
             return self.update_density_as(dt);
@@ -124,6 +126,7 @@ impl PSTDSolver {
     ///
     /// kappa IS applied here — Treeby & Cox (2010) Eq. 17 explicitly includes the k-space
     /// correction factor κ in the density update, same as in the velocity update (Eq. 16).
+    #[inline]
     pub(crate) fn update_density_cartesian(&mut self, dt: f64) -> KwaversResult<()> {
         // k-Wave split-field PML for density (Treeby & Cox 2010, Eq. 16):
         //   rho_x_new = pml_x * (pml_x * rho_x_old - dt * rho0 * dux/dx)

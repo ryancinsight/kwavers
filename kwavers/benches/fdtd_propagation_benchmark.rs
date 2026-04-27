@@ -132,8 +132,9 @@ fn bench_fdtd_propagation(
 ) {
     let sound_speed = 1500.0; // m/s
 
-    let (_grid, _medium, _source, dt) = setup_plane_wave_problem(grid_size, frequency_hz, sound_speed)
-        .expect("Failed to setup plane wave problem");
+    let (_grid, _medium, _source, dt) =
+        setup_plane_wave_problem(grid_size, frequency_hz, sound_speed)
+            .expect("Failed to setup plane wave problem");
 
     let _config = FdtdConfig {
         nt: time_steps,

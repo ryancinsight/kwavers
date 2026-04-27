@@ -49,4 +49,36 @@ impl PSTDKSOperators {
         let output = self.fft_processor.inverse(input);
         Ok(output)
     }
+
+    // ── Spectral gradient operators ──────────────────────────────────────────
+
+    /// Spectral x-derivative: `IFFT(i·kx · FFT(field))`.
+    ///
+    /// Used to convert a velocity-source mask into its pressure-equivalent
+    /// contribution for the FullKSpace pressure-only wave equation.
+    pub fn spectral_grad_x(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+        let mut k_field = self.forward_fft_3d(field)?;
+        let kx_s = self.k_grid.kx.as_slice().expect("kx must be contiguous");
+        Zip::indexed(k_field.view_mut())
+            .par_for_each(|(i, _, _), v| *v *= Complex64::new(0.0, kx_s[i]));
+        self.inverse_fft_3d(&k_field)
+    }
+
+    /// Spectral y-derivative: `IFFT(i·ky · FFT(field))`.
+    pub fn spectral_grad_y(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+        let mut k_field = self.forward_fft_3d(field)?;
+        let ky_s = self.k_grid.ky.as_slice().expect("ky must be contiguous");
+        Zip::indexed(k_field.view_mut())
+            .par_for_each(|(_, j, _), v| *v *= Complex64::new(0.0, ky_s[j]));
+        self.inverse_fft_3d(&k_field)
+    }
+
+    /// Spectral z-derivative: `IFFT(i·kz · FFT(field))`.
+    pub fn spectral_grad_z(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+        let mut k_field = self.forward_fft_3d(field)?;
+        let kz_s = self.k_grid.kz.as_slice().expect("kz must be contiguous");
+        Zip::indexed(k_field.view_mut())
+            .par_for_each(|(_, _, k), v| *v *= Complex64::new(0.0, kz_s[k]));
+        self.inverse_fft_3d(&k_field)
+    }
 }

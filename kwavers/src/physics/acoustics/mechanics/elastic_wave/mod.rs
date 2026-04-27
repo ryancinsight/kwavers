@@ -18,6 +18,7 @@ use crate::domain::medium::Medium;
 use metrics::ElasticWaveMetrics;
 use ndarray::{Array3, Array4};
 use properties::AnisotropicElasticProperties;
+use spectral_fields::{SpectralStressFields, SpectralVelocityFields};
 
 // Re-export key types for convenience
 pub use fields::{StressFields as ElasticStressFields, VelocityFields as ElasticVelocityFields};
@@ -52,6 +53,17 @@ pub struct ElasticWave {
     pub stiffness_tensors: Option<Array4<f64>>,
     /// Interface detection mask
     pub interface_mask: Option<Array3<bool>>,
+    // ── per-step zero-alloc scratch ─────────────────────────────────────────
+    /// Pre-allocated spectral stress output buffer (6 complex arrays, shape = grid).
+    /// Eliminates 6×n³×16 B heap alloc per time step.
+    pub(crate) stress_scratch: SpectralStressFields,
+    /// Pre-allocated spectral velocity output buffer (3 complex arrays, shape = grid).
+    /// Eliminates 3×n³×16 B heap alloc per time step.
+    pub(crate) velocity_scratch: SpectralVelocityFields,
+    /// Pre-allocated Lamé λ array (ρc²), shape = grid.
+    pub(crate) lambda_scratch: Array3<f64>,
+    /// Pre-allocated Lamé μ array (0.0 for acoustic fluid), shape = grid.
+    pub(crate) mu_scratch: Array3<f64>,
 }
 
 impl ElasticWave {
@@ -85,6 +97,7 @@ impl ElasticWave {
         let ky = Self::create_wavenumber_array(ny, dy);
         let kz = Self::create_wavenumber_array(nz, dz);
 
+        let shape = (nx, ny, nz);
         Ok(Self {
             kx,
             ky,
@@ -96,6 +109,10 @@ impl ElasticWave {
             viscoelastic: None,
             stiffness_tensors: None,
             interface_mask: None,
+            stress_scratch: SpectralStressFields::new(nx, ny, nz),
+            velocity_scratch: SpectralVelocityFields::new(nx, ny, nz),
+            lambda_scratch: Array3::<f64>::zeros(shape),
+            mu_scratch: Array3::<f64>::zeros(shape),
         })
     }
 

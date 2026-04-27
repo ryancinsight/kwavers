@@ -60,7 +60,7 @@
 //! - Oran & Boris (2001). Numerical Simulation of Reactive Flow
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::fft::{Complex64, Fft1d, FFT_CACHE_1D, Shape1D};
+use crate::math::fft::{Complex64, Fft1d, Shape1D, FFT_CACHE_1D};
 use ndarray::parallel::prelude::*;
 use ndarray::{Array1, Array3, ArrayView3, Axis};
 use std::sync::Arc;
@@ -95,7 +95,6 @@ pub struct SpectralDerivativeOperator {
     ikd_x: Vec<Complex64>,
     ikd_y: Vec<Complex64>,
     ikd_z: Vec<Complex64>,
-
 }
 
 impl std::fmt::Debug for SpectralDerivativeOperator {

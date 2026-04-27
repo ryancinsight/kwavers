@@ -5,7 +5,7 @@
 //! the Apollo plan cache and therefore preserve the single source of truth for
 //! transform execution while centralizing repeated spectral post-processing.
 
-use crate::math::fft::{FFT_CACHE_1D, Shape1D};
+use crate::math::fft::{Shape1D, FFT_CACHE_1D};
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 

@@ -13,4 +13,6 @@ pub use solver::WesterveltWave;
 
 // Re-export key functions for compatibility
 pub use nonlinear::compute_nonlinear_term;
-pub use spectral::{apply_kspace_correction, compute_laplacian_spectral};
+pub use spectral::{
+    apply_kspace_correction, compute_laplacian_spectral, compute_laplacian_spectral_into,
+};

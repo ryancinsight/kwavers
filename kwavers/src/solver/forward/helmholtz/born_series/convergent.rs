@@ -97,7 +97,11 @@ impl ConvergentBornSolver {
         let shape = (grid.nx, grid.ny, grid.nz);
         // Initialize FFT processor if FFT Green's function is requested
         let fft_processor = if config.use_fft_green {
-            Some(Fft3d::new(Shape3D { nx: grid.nx, ny: grid.ny, nz: grid.nz }))
+            Some(Fft3d::new(Shape3D {
+                nx: grid.nx,
+                ny: grid.ny,
+                nz: grid.nz,
+            }))
         } else {
             None
         };

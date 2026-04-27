@@ -252,7 +252,10 @@ impl ElasticWaveSolver {
             stride = (steps / (min_snapshots - 1)).max(1);
         }
 
-        let mut history = Vec::new();
+        // Pre-allocate history capacity: avoids repeated Vec reallocation as snapshots are appended.
+        // Each entry is an O(N³) clone of ElasticWaveField; capacity = initial + stride snapshots + 1 final.
+        let snapshot_cap = steps / stride + 2;
+        let mut history = Vec::with_capacity(snapshot_cap);
         history.push(current_field.clone());
 
         for step_idx in 0..steps {
@@ -330,8 +333,9 @@ impl ElasticWaveSolver {
             stride = (steps / (min_snapshots - 1)).max(1);
         }
 
+        let snapshot_cap = steps / stride + 2;
         let mut current_field = initial_field;
-        let mut history = Vec::new();
+        let mut history = Vec::with_capacity(snapshot_cap);
         history.push(current_field.clone());
 
         for step_idx in 0..steps {

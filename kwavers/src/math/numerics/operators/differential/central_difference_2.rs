@@ -51,7 +51,7 @@
 //!   DOI: 10.1090/S0025-5718-1988-0935077-0
 
 use crate::core::error::{KwaversResult, NumericalError};
-use ndarray::{Array3, ArrayView3};
+use ndarray::{s, Array3, ArrayView3, Zip};
 
 use super::DifferentialOperator;
 
@@ -117,7 +117,12 @@ impl CentralDifference2 {
 impl CentralDifference2 {
     /// Apply ∂/∂x into a pre-allocated destination — zero heap allocation.
     ///
-    /// The caller is responsible for ensuring `dst` has the same shape as `field`.
+    /// Interior: `dst[i] = (f[i+1] − f[i−1]) / (2Δx)` for i ∈ [1, nx−2].
+    /// Left boundary (i=0): forward difference `(f[1] − f[0]) / Δx`.
+    /// Right boundary (i=nx−1): backward difference `(f[nx−1] − f[nx−2]) / Δx`.
+    ///
+    /// Uses `Zip` slice-pair to expose element-wise independence to LLVM SIMD
+    /// autovectorisation (same pattern as `CentralDifference4/6::apply_x_into`).
     pub fn apply_x_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         if nx < 3 {
@@ -128,24 +133,35 @@ impl CentralDifference2 {
             }
             .into());
         }
-        for i in 1..nx - 1 {
-            for j in 0..ny {
-                for k in 0..nz {
-                    dst[[i, j, k]] =
-                        (field[[i + 1, j, k]] - field[[i - 1, j, k]]) / (2.0 * self.dx);
-                }
-            }
-        }
-        for j in 0..ny {
-            for k in 0..nz {
-                dst[[0, j, k]] = (field[[1, j, k]] - field[[0, j, k]]) / self.dx;
-                dst[[nx - 1, j, k]] = (field[[nx - 1, j, k]] - field[[nx - 2, j, k]]) / self.dx;
-            }
-        }
+        debug_assert_eq!(dst.dim(), (nx, ny, nz), "dst shape must match field shape");
+        let inv2dx = 0.5 / self.dx;
+        let inv_dx = 1.0 / self.dx;
+
+        // Interior: central difference via contiguous slice pairs
+        Zip::from(dst.slice_mut(s![1..nx - 1, .., ..]))
+            .and(field.slice(s![2..nx, .., ..]))
+            .and(field.slice(s![0..nx - 2, .., ..]))
+            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dx);
+
+        // Left boundary (i=0): forward difference
+        Zip::from(dst.slice_mut(s![0, .., ..]))
+            .and(field.slice(s![1, .., ..]))
+            .and(field.slice(s![0, .., ..]))
+            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dx);
+
+        // Right boundary (i=nx−1): backward difference
+        Zip::from(dst.slice_mut(s![nx - 1, .., ..]))
+            .and(field.slice(s![nx - 1, .., ..]))
+            .and(field.slice(s![nx - 2, .., ..]))
+            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dx);
+
         Ok(())
     }
 
     /// Apply ∂/∂y into a pre-allocated destination — zero heap allocation.
+    ///
+    /// Interior: `dst[j] = (f[j+1] − f[j−1]) / (2Δy)` for j ∈ [1, ny−2].
+    /// Boundaries: first/last-order forward/backward difference.
     pub fn apply_y_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         if ny < 3 {
@@ -156,24 +172,36 @@ impl CentralDifference2 {
             }
             .into());
         }
-        for i in 0..nx {
-            for j in 1..ny - 1 {
-                for k in 0..nz {
-                    dst[[i, j, k]] =
-                        (field[[i, j + 1, k]] - field[[i, j - 1, k]]) / (2.0 * self.dy);
-                }
-            }
-        }
-        for i in 0..nx {
-            for k in 0..nz {
-                dst[[i, 0, k]] = (field[[i, 1, k]] - field[[i, 0, k]]) / self.dy;
-                dst[[i, ny - 1, k]] = (field[[i, ny - 1, k]] - field[[i, ny - 2, k]]) / self.dy;
-            }
-        }
+        debug_assert_eq!(dst.dim(), (nx, ny, nz), "dst shape must match field shape");
+        let inv2dy = 0.5 / self.dy;
+        let inv_dy = 1.0 / self.dy;
+
+        // Interior
+        Zip::from(dst.slice_mut(s![.., 1..ny - 1, ..]))
+            .and(field.slice(s![.., 2..ny, ..]))
+            .and(field.slice(s![.., 0..ny - 2, ..]))
+            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dy);
+
+        // Bottom boundary (j=0)
+        Zip::from(dst.slice_mut(s![.., 0, ..]))
+            .and(field.slice(s![.., 1, ..]))
+            .and(field.slice(s![.., 0, ..]))
+            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dy);
+
+        // Top boundary (j=ny−1)
+        Zip::from(dst.slice_mut(s![.., ny - 1, ..]))
+            .and(field.slice(s![.., ny - 1, ..]))
+            .and(field.slice(s![.., ny - 2, ..]))
+            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dy);
+
         Ok(())
     }
 
     /// Apply ∂/∂z into a pre-allocated destination — zero heap allocation.
+    ///
+    /// Interior: `dst[k] = (f[k+1] − f[k−1]) / (2Δz)` for k ∈ [1, nz−2].
+    /// Boundaries: first/last-order forward/backward difference.
+    /// The innermost (contiguous) dimension gives the best autovectorisation here.
     pub fn apply_z_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         if nz < 3 {
@@ -184,20 +212,28 @@ impl CentralDifference2 {
             }
             .into());
         }
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 1..nz - 1 {
-                    dst[[i, j, k]] =
-                        (field[[i, j, k + 1]] - field[[i, j, k - 1]]) / (2.0 * self.dz);
-                }
-            }
-        }
-        for i in 0..nx {
-            for j in 0..ny {
-                dst[[i, j, 0]] = (field[[i, j, 1]] - field[[i, j, 0]]) / self.dz;
-                dst[[i, j, nz - 1]] = (field[[i, j, nz - 1]] - field[[i, j, nz - 2]]) / self.dz;
-            }
-        }
+        debug_assert_eq!(dst.dim(), (nx, ny, nz), "dst shape must match field shape");
+        let inv2dz = 0.5 / self.dz;
+        let inv_dz = 1.0 / self.dz;
+
+        // Interior (innermost dimension — highest SIMD throughput)
+        Zip::from(dst.slice_mut(s![.., .., 1..nz - 1]))
+            .and(field.slice(s![.., .., 2..nz]))
+            .and(field.slice(s![.., .., 0..nz - 2]))
+            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dz);
+
+        // Near boundary (k=0)
+        Zip::from(dst.slice_mut(s![.., .., 0]))
+            .and(field.slice(s![.., .., 1]))
+            .and(field.slice(s![.., .., 0]))
+            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dz);
+
+        // Far boundary (k=nz−1)
+        Zip::from(dst.slice_mut(s![.., .., nz - 1]))
+            .and(field.slice(s![.., .., nz - 1]))
+            .and(field.slice(s![.., .., nz - 2]))
+            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dz);
+
         Ok(())
     }
 }

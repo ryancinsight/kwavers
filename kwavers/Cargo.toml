@@ -20,7 +20,7 @@ ndarray = { version = "0.16", features = ["rayon", "serde"] }
 rayon = "1.10"
 num-complex = "0.4"
 num-traits = "0.2"
-apollo = { path = "../apollo/crates/apollo-fft", package = "apollo-fft" }
+apollo = { path = "../apollo/crates/apollo-fft" }
 
 # Error handling (production critical)
 thiserror = "1.0"

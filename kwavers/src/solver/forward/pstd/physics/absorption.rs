@@ -110,12 +110,76 @@ pub(crate) fn initialize_absorption_operators(
             // No absorption arrays needed — return None to skip all allocations.
             Ok(None)
         }
-        AbsorptionMode::Stokes => Err(KwaversError::Validation(
-            ValidationError::ConstraintViolation {
-                message: "AbsorptionMode::Stokes is not supported by spectral solver yet"
-                    .to_string(),
-            },
-        )),
+        AbsorptionMode::Stokes => {
+            // Theorem: Stokes (thermoviscous) absorption for Newtonian fluids
+            // [Stokes 1845; Lighthill 1978, Waves in Fluids, §1.9].
+            //
+            // The attenuation coefficient is:
+            //   α(ω) = (4η_s/3 + η_b) / (2ρ₀c₀³) · ω²   [Np/m]
+            //
+            // This is PowerLaw with y = 2. Substituting into Treeby & Cox (2010)
+            // Eqs. 19–20 with y = 2:
+            //   α_SI(r) = (4η_s(r)/3 + η_b(r)) / (2ρ₀(r)c₀(r)³)   [Np/(rad/s)²/m]
+            //   τ(r) = −2α_SI(r) · c₀(r)^(y−1) = −2α_SI(r) · c₀(r)
+            //   η(r) = 2α_SI(r) · c₀(r)^y · tan(πy/2)
+            //         = 2α_SI(r) · c₀(r)² · tan(π) = 0   (non-dispersive: tan(π) = 0)
+            //
+            // Nabla operators for y = 2 (Treeby & Cox Eq. 10):
+            //   nabla1[k] = |k|^(y−2) = |k|^0 = 1  for |k| > threshold, else 0
+            //   nabla2[k] = |k|^(y−1) = |k|^1 = |k| for |k| > threshold, else 0
+            //
+            // Proof: tan(π) = sin(π)/cos(π) = 0/(-1) = 0 exactly, so the dispersive
+            // term η vanishes. The absorbing term τ reduces to viscous damping:
+            //   τ = −(4η_s/3 + η_b) / (ρ₀c₀²)
+            // which is the classical viscous decay rate [Blackstock 2000, Eq. 10-13].
+
+            let mut tau = Array3::zeros(shape);
+            // eta = 0 everywhere (tan(π) = 0); allocate zeros to satisfy AbsorptionKernel.
+            let eta = Array3::zeros(shape);
+
+            for k in 0..grid.nz {
+                for j in 0..grid.ny {
+                    for i in 0..grid.nx {
+                        let (x, y_coord, z) = grid.indices_to_coordinates(i, j, k);
+                        let c0 = medium.sound_speed(i, j, k);
+                        let rho0 = medium.density(i, j, k);
+                        let eta_s = medium.shear_viscosity(x, y_coord, z, grid);
+                        let eta_b = medium.bulk_viscosity(x, y_coord, z, grid);
+
+                        if rho0 > 0.0 && c0 > 0.0 {
+                            // α_SI = (4η_s/3 + η_b) / (2ρ₀c₀³)   [Np/(rad/s)²/m]
+                            let alpha_si =
+                                (4.0 * eta_s / 3.0 + eta_b) / (2.0 * rho0 * c0 * c0 * c0);
+                            // τ = −2α_SI·c₀  (y=2 specialisation of Treeby & Cox Eq. 19)
+                            tau[[i, j, k]] = -2.0 * alpha_si * c0;
+                        }
+                    }
+                }
+            }
+
+            // nabla1 = |k|^0 = 1 at all non-DC modes; nabla2 = |k|^1 = |k|
+            let nabla1 = k_mag.mapv(|k| {
+                if k > ABSORPTION_SINGULARITY_THRESHOLD {
+                    1.0
+                } else {
+                    0.0
+                }
+            });
+            let nabla2 = k_mag.mapv(|k| {
+                if k > ABSORPTION_SINGULARITY_THRESHOLD {
+                    k
+                } else {
+                    0.0
+                }
+            });
+
+            Ok(Some(AbsorptionKernel {
+                tau,
+                eta,
+                nabla1,
+                nabla2,
+            }))
+        }
         AbsorptionMode::PowerLaw {
             alpha_coeff,
             alpha_power,
@@ -231,15 +295,11 @@ impl PSTDSolver {
     pub(crate) fn apply_absorption(&mut self, dt: f64) -> KwaversResult<()> {
         match self.config.absorption_mode {
             AbsorptionMode::Lossless => return Ok(()),
-            AbsorptionMode::Stokes => {
-                return Err(KwaversError::Validation(
-                    ValidationError::ConstraintViolation {
-                        message: "AbsorptionMode::Stokes is not supported by spectral solver yet"
-                            .to_string(),
-                    },
-                ));
-            }
-            AbsorptionMode::PowerLaw { .. } => {}
+            // Stokes uses the same fractional-Laplacian kernel as PowerLaw (y=2).
+            // Its AbsorptionKernel was initialised with tau = viscous decay, eta = 0,
+            // nabla1 = 1 (everywhere), nabla2 = |k|.  The general formula below
+            // reduces to pure viscous damping since eta = 0 eliminates the L2 term.
+            AbsorptionMode::Stokes | AbsorptionMode::PowerLaw { .. } => {}
             AbsorptionMode::MultiRelaxation { .. } | AbsorptionMode::Causal { .. } => {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
@@ -601,6 +661,77 @@ mod tests {
         assert!(
             max_abs > 0.0,
             "Absorption should produce a non-zero density correction"
+        );
+    }
+
+    /// Test Stokes absorption coefficient initialisation against the classical formula.
+    ///
+    /// # Reference derivation (Blackstock 2000, Fundamentals of Physical Acoustics, Eq. 10-13)
+    /// ```text
+    /// α_SI = (4η_s/3 + η_b) / (2ρ₀c₀³)   [Np/(rad/s)²/m]
+    /// τ    = −2 α_SI · c₀                  [Treeby & Cox (2010) Eq. 19, y=2]
+    /// η    = 0                              [tan(π) = 0, non-dispersive]
+    /// ```
+    /// HomogeneousMedium defaults: η_s = 1e−3 Pa·s, η_b = 2.5e−3 Pa·s (Stokes' hypothesis).
+    /// With ρ₀ = 1000 kg/m³, c₀ = 1500 m/s:
+    /// ```text
+    ///   α_SI = (4/3 × 1e−3 + 2.5e−3) / (2 × 1000 × 1500³)
+    ///        = 3.833̄e−3 / 6.75e12 = 5.6790123e−16
+    ///   τ    = −2 × 5.6790123e−16 × 1500 = −1.7037037e−12
+    /// ```
+    #[test]
+    fn test_stokes_absorption_tau_matches_classical_formula() {
+        let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
+        // HomogeneousMedium::new sets η_s = 1e-3, η_b = 2.5e-3 by default.
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+        let config = PSTDConfig {
+            absorption_mode: AbsorptionMode::Stokes,
+            dt: 1e-7,
+            ..PSTDConfig::default()
+        };
+
+        let dk = 2.0 * std::f64::consts::PI / (8.0 * 1e-3);
+        let k_mag = test_k_mag(8, 8, 8, dk);
+        let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 0.0, 1500.0)
+            .expect("Stokes init must succeed")
+            .expect("Stokes mode must return Some(AbsorptionKernel)");
+
+        // Analytically derived τ for water defaults
+        let eta_s = 1.0e-3_f64;
+        let eta_b = 2.5e-3_f64;
+        let rho0 = 1000.0_f64;
+        let c0 = 1500.0_f64;
+        let alpha_si = (4.0 * eta_s / 3.0 + eta_b) / (2.0 * rho0 * c0 * c0 * c0);
+        let expected_tau = -2.0 * alpha_si * c0;
+
+        // All cells are homogeneous — every tau cell equals the analytical value.
+        for val in kernel.tau.iter() {
+            assert!(
+                (val - expected_tau).abs() < 1e-24 * expected_tau.abs().max(1e-30),
+                "tau cell mismatch: got {val}, expected {expected_tau}"
+            );
+        }
+
+        // η = 0 everywhere (non-dispersive: tan(π) = 0 exactly)
+        for val in kernel.eta.iter() {
+            assert_eq!(*val, 0.0, "eta must be zero for Stokes (y=2) absorption");
+        }
+
+        // nabla1 = 1 at non-DC modes, 0 at DC (|k|=0)
+        assert_eq!(kernel.nabla1[[0, 0, 0]], 0.0, "DC nabla1 must be 0");
+        assert_eq!(
+            kernel.nabla1[[1, 0, 0]],
+            1.0,
+            "nabla1 must be 1 at non-DC modes (|k|^0 = 1)"
+        );
+
+        // nabla2 = |k| at non-DC modes
+        let expected_n2 = k_mag[[1, 0, 0]];
+        assert!(
+            (kernel.nabla2[[1, 0, 0]] - expected_n2).abs() < 1e-12 * expected_n2,
+            "nabla2 mismatch: got {}, expected {}",
+            kernel.nabla2[[1, 0, 0]],
+            expected_n2
         );
     }
 

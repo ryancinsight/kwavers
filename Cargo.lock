@@ -154,7 +154,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
-name = "apollo-fft"
+name = "apollo"
 version = "0.1.0"
 dependencies = [
  "approx",
@@ -176,8 +176,10 @@ dependencies = [
 name = "apollo-fft-wgpu"
 version = "0.1.0"
 dependencies = [
- "apollo-fft",
+ "apollo",
  "bytemuck",
+ "criterion 0.5.1",
+ "half",
  "ndarray",
  "num-complex",
  "pollster",
@@ -5434,7 +5436,7 @@ name = "kwavers"
 version = "3.0.0"
 dependencies = [
  "anyhow",
- "apollo-fft",
+ "apollo",
  "apollo-fft-wgpu",
  "approx",
  "aws-config",

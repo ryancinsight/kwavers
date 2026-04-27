@@ -50,6 +50,7 @@ use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;
+use crate::math::fft::Complex64;
 use crate::physics::traits::AcousticWaveModel;
 use crate::solver::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker, ViolationSeverity,
@@ -61,7 +62,9 @@ use std::time::Instant;
 
 use super::metrics::PerformanceMetrics;
 use super::nonlinear::{compute_nonlinear_term, compute_viscoelastic_term};
-use super::spectral::{compute_laplacian_spectral, initialize_kspace_grids};
+use super::spectral::{
+    compute_laplacian_spectral, compute_laplacian_spectral_into, initialize_kspace_grids,
+};
 
 /// Westervelt equation solver with proper second-order time derivatives
 #[derive(Debug)]
@@ -79,6 +82,13 @@ pub struct WesterveltWave {
     // Pressure history using buffer rotation for zero-allocation updates
     pressure_buffers: [Array3<f64>; 3],
     buffer_indices: [usize; 3], // [next, current, previous]
+
+    /// Pre-allocated complex scratch for spectral Laplacian FFT (shape = grid).
+    /// Reused every time step; avoids one N³×16 B heap allocation per `step_forward`.
+    fft_scratch: Option<Array3<Complex64>>,
+    /// Pre-allocated real output for spectral Laplacian IFFT (shape = grid).
+    /// Reused every time step; avoids one N³×8 B heap allocation per `step_forward`.
+    laplacian_scratch: Option<Array3<f64>>,
 
     // Performance tracking
     metrics: Arc<Mutex<PerformanceMetrics>>,
@@ -104,6 +114,11 @@ impl WesterveltWave {
         let (k_squared, _kx, _ky, _kz) = initialize_kspace_grids(grid);
         let shape = (grid.nx, grid.ny, grid.nz);
 
+        // Pre-allocate spectral Laplacian scratch buffers once.
+        // Each avoids one heap allocation (N³×16 B complex, N³×8 B real) per time step.
+        let fft_scratch = Some(Array3::<Complex64>::zeros(shape));
+        let laplacian_scratch = Some(Array3::<f64>::zeros(shape));
+
         Self {
             k_squared: Some(k_squared),
             nonlinearity_scaling: 1.0,
@@ -113,6 +128,8 @@ impl WesterveltWave {
                 Array3::zeros(shape),
             ],
             buffer_indices: [0, 1, 2], // Initially: next=0, current=1, previous=2
+            fft_scratch,
+            laplacian_scratch,
             metrics: Arc::new(Mutex::new(PerformanceMetrics::new())),
             conservation_tracker: None,
             current_step: 0,
@@ -301,12 +318,28 @@ impl AcousticWaveModel for WesterveltWave {
             }
         }
 
-        // Compute Laplacian using spectral methods
+        // Compute Laplacian using spectral methods.
+        // Zero-alloc path: write directly into pre-allocated scratch fields.
+        // Fallback (fd or missing scratch): allocates one Array3<f64>.
         let start = Instant::now();
-        let laplacian = if let Some(k_squared) = &self.k_squared {
-            compute_laplacian_spectral(&pressure_current, k_squared)
+        let has_spectral_scratch = self.k_squared.is_some()
+            && self.fft_scratch.is_some()
+            && self.laplacian_scratch.is_some();
+        if has_spectral_scratch {
+            let k_sq = self.k_squared.as_ref().unwrap();
+            let fft_s = self.fft_scratch.as_mut().unwrap();
+            let lap_s = self.laplacian_scratch.as_mut().unwrap();
+            compute_laplacian_spectral_into(&pressure_current, k_sq, fft_s, lap_s);
+            // fft_s and lap_s mutable borrows released here.
+        }
+        let laplacian_owned: Option<Array3<f64>> = if !has_spectral_scratch {
+            if let Some(k_sq) = &self.k_squared {
+                Some(compute_laplacian_spectral(&pressure_current, k_sq))
+            } else {
+                Some(compute_laplacian_fd(&pressure_current, grid))
+            }
         } else {
-            compute_laplacian_fd(&pressure_current, grid)
+            None
         };
 
         {
@@ -367,8 +400,24 @@ impl AcousticWaveModel for WesterveltWave {
             metrics.record_kspace(start.elapsed());
         }
 
-        // Update pressure field using ndarray::Zip for better performance
+        // Update pressure field using ndarray::Zip for better performance.
+        // When has_spectral_scratch, `self.laplacian_scratch` holds the Laplacian;
+        // its immutable borrow coexists with the mutable borrow of
+        // `self.pressure_buffers[next_idx]` — they are disjoint struct fields.
         let start = Instant::now();
+        let laplacian_slice: &[f64] = if has_spectral_scratch {
+            self.laplacian_scratch
+                .as_ref()
+                .unwrap()
+                .as_slice()
+                .expect("laplacian_scratch must be contiguous")
+        } else {
+            laplacian_owned
+                .as_ref()
+                .unwrap()
+                .as_slice()
+                .expect("laplacian_owned must be contiguous")
+        };
         let pressure_next = &mut self.pressure_buffers[next_idx];
 
         // Use parallel iteration for efficient computation
@@ -383,7 +432,7 @@ impl AcousticWaveModel for WesterveltWave {
                 let p_curr = pressure_current.as_slice().unwrap()[idx];
                 let p_prev = pressure_previous.as_slice().unwrap()[idx];
                 let c = c_arr.as_slice().unwrap()[idx];
-                let lap = laplacian.as_slice().unwrap()[idx];
+                let lap = laplacian_slice[idx];
                 let nl = nonlinear_term.as_slice().unwrap()[idx];
                 let damp = damping_term.as_slice().unwrap()[idx];
                 let src = src_term.as_slice().unwrap()[idx];

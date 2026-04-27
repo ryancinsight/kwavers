@@ -21,6 +21,7 @@ impl FdtdSolver {
     /// Dispatches to GPU accelerator when enabled, otherwise falls back to CPU.
     /// When `config.enable_nonlinear` is set, applies the Westervelt nonlinear
     /// correction after the linear update and rotates the pressure history.
+    #[inline]
     pub fn update_pressure(&mut self, dt: f64) -> KwaversResult<()> {
         if self.config.enable_gpu_acceleration {
             let accelerator = self.gpu_accelerator.as_ref().ok_or_else(|| {

@@ -126,9 +126,8 @@ impl CentralDifferenceOperator {
 
     /// Apply X-derivative in-place into a pre-allocated destination buffer.
     ///
-    /// For `Order2`, this is truly zero-allocation (writes directly into `dst`).
-    /// For `Order4`/`Order6`, one intermediate `Array3` is allocated internally
-    /// (the `into` variants for higher-order operators are future work).
+    /// Zero heap allocation for all orders: O2 via `CentralDifference2::apply_x_into`,
+    /// O4 via `CentralDifference4::apply_x_into`, O6 via `CentralDifference6::apply_x_into`.
     pub(crate) fn apply_x_into(
         &self,
         field: ArrayView3<f64>,
@@ -136,18 +135,14 @@ impl CentralDifferenceOperator {
     ) -> KwaversResult<()> {
         match self {
             Self::Order2(op) => op.apply_x_into(field, dst),
-            Self::Order4(op) => {
-                dst.assign(&op.apply_x(field)?);
-                Ok(())
-            }
-            Self::Order6(op) => {
-                dst.assign(&op.apply_x(field)?);
-                Ok(())
-            }
+            Self::Order4(op) => op.apply_x_into(field, dst),
+            Self::Order6(op) => op.apply_x_into(field, dst),
         }
     }
 
     /// Apply Y-derivative in-place into a pre-allocated destination buffer.
+    ///
+    /// Zero heap allocation for all orders.
     pub(crate) fn apply_y_into(
         &self,
         field: ArrayView3<f64>,
@@ -155,18 +150,14 @@ impl CentralDifferenceOperator {
     ) -> KwaversResult<()> {
         match self {
             Self::Order2(op) => op.apply_y_into(field, dst),
-            Self::Order4(op) => {
-                dst.assign(&op.apply_y(field)?);
-                Ok(())
-            }
-            Self::Order6(op) => {
-                dst.assign(&op.apply_y(field)?);
-                Ok(())
-            }
+            Self::Order4(op) => op.apply_y_into(field, dst),
+            Self::Order6(op) => op.apply_y_into(field, dst),
         }
     }
 
     /// Apply Z-derivative in-place into a pre-allocated destination buffer.
+    ///
+    /// Zero heap allocation for all orders.
     pub(crate) fn apply_z_into(
         &self,
         field: ArrayView3<f64>,
@@ -174,14 +165,8 @@ impl CentralDifferenceOperator {
     ) -> KwaversResult<()> {
         match self {
             Self::Order2(op) => op.apply_z_into(field, dst),
-            Self::Order4(op) => {
-                dst.assign(&op.apply_z(field)?);
-                Ok(())
-            }
-            Self::Order6(op) => {
-                dst.assign(&op.apply_z(field)?);
-                Ok(())
-            }
+            Self::Order4(op) => op.apply_z_into(field, dst),
+            Self::Order6(op) => op.apply_z_into(field, dst),
         }
     }
 
@@ -255,6 +240,16 @@ pub struct GenericFdtdSolver<T> {
     pub(crate) dvx_scratch: T,
     pub(crate) dvy_scratch: T,
     pub(crate) divergence_scratch: T,
+
+    // Pre-allocated staggered pressure-gradient scratch buffers.
+    //
+    // Shapes: (nx−1, ny, nz), (nx, ny−1, nz), (nx, ny, nz−1).
+    // Allocated once at construction when `config.staggered_grid = true` and the
+    // corresponding dimension has more than one point; `None` otherwise.
+    // Eliminates three `Array3::zeros` allocations per FDTD time step in the staggered path.
+    pub(crate) dp_dx_scratch: Option<T>,
+    pub(crate) dp_dy_scratch: Option<T>,
+    pub(crate) dp_dz_scratch: Option<T>,
 }
 
 pub type FdtdSolver = GenericFdtdSolver<Array3<f64>>;
@@ -338,29 +333,31 @@ impl GenericFdtdSolver<Array3<f64>> {
         );
         // Note: FDTD uses a single rho field so no split needed (cf. PSTD rhox/rhoy/rhoz)
 
-        if source_handler.has_initial_pressure() && !source_handler.has_initial_velocity()
-            && matches!(config.kspace_correction, KSpaceCorrectionMode::Spectral) {
-                let rho0_ref = materials.rho0.mean().unwrap_or(1000.0);
-                let Some(kspace_ops) = kspace_ops.as_mut() else {
-                    return Err(KwaversError::Config(
-                        crate::core::error::ConfigError::InvalidValue {
-                            parameter: "kspace_correction".to_string(),
-                            value: "spectral".to_string(),
-                            constraint:
-                                "spectral k-space correction requires precomputed k-space operators"
-                                    .to_string(),
-                        },
-                    ));
-                };
-                kspace_ops.initialize_ivp_velocity(
-                    &fields.p,
-                    config.dt,
-                    rho0_ref,
-                    &mut fields.ux,
-                    &mut fields.uy,
-                    &mut fields.uz,
-                )?;
-            }
+        if source_handler.has_initial_pressure()
+            && !source_handler.has_initial_velocity()
+            && matches!(config.kspace_correction, KSpaceCorrectionMode::Spectral)
+        {
+            let rho0_ref = materials.rho0.mean().unwrap_or(1000.0);
+            let Some(kspace_ops) = kspace_ops.as_mut() else {
+                return Err(KwaversError::Config(
+                    crate::core::error::ConfigError::InvalidValue {
+                        parameter: "kspace_correction".to_string(),
+                        value: "spectral".to_string(),
+                        constraint:
+                            "spectral k-space correction requires precomputed k-space operators"
+                                .to_string(),
+                    },
+                ));
+            };
+            kspace_ops.initialize_ivp_velocity(
+                &fields.p,
+                config.dt,
+                rho0_ref,
+                &mut fields.ux,
+                &mut fields.uy,
+                &mut fields.uz,
+            )?;
+        }
 
         // Precompute nonlinear medium property arrays (only when nonlinear mode is on)
         let (p_prev, p_prev2, nl_scratch, nl_coeff) = if config.enable_nonlinear {
@@ -395,6 +392,31 @@ impl GenericFdtdSolver<Array3<f64>> {
             (None, None, None, None)
         };
 
+        // Pre-allocate staggered pressure-gradient scratch buffers.
+        // Shape (nx−1, ny, nz) for dp_dx, etc. — allocated once, reused every step.
+        // Only created when `staggered_grid = true` and the dimension has ≥ 2 points.
+        let (dp_dx_scratch, dp_dy_scratch, dp_dz_scratch) = if config.staggered_grid {
+            (
+                if grid.nx > 1 {
+                    Some(Array3::<f64>::zeros((grid.nx - 1, grid.ny, grid.nz)))
+                } else {
+                    None
+                },
+                if grid.ny > 1 {
+                    Some(Array3::<f64>::zeros((grid.nx, grid.ny - 1, grid.nz)))
+                } else {
+                    None
+                },
+                if grid.nz > 1 {
+                    Some(Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz - 1)))
+                } else {
+                    None
+                },
+            )
+        } else {
+            (None, None, None)
+        };
+
         Ok(Self {
             config,
             grid: grid.clone(),
@@ -421,6 +443,9 @@ impl GenericFdtdSolver<Array3<f64>> {
             dvx_scratch: Array3::<f64>::zeros(shape),
             dvy_scratch: Array3::<f64>::zeros(shape),
             divergence_scratch: Array3::<f64>::zeros(shape),
+            dp_dx_scratch,
+            dp_dy_scratch,
+            dp_dz_scratch,
         })
     }
 
@@ -450,6 +475,7 @@ impl GenericFdtdSolver<Array3<f64>> {
     /// In debug builds, full-field NaN scans are performed after each sub-step
     /// to catch numerical instabilities early. In release builds, these scans
     /// are elided for performance (O(N) per scan × 4 scans per step).
+    #[inline]
     pub fn step_forward(&mut self) -> KwaversResult<()> {
         let time_index = self.time_step_index;
         let dt = self.config.dt;

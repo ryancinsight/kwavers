@@ -51,3 +51,7 @@
 - The Apollo GPU FFT backend now dispatches radix stages with explicit pass boundaries and passes the 128³ kwavers parity check under a hybrid absolute/relative spectral metric.
 - The neural beamforming layer adaptation path now uses a parameter-dependent calibration objective instead of constant-offset mutation.
 - The distributed neural beamforming processor now partitions frame-major RF volumes across healthy processors with zero-copy frame views and deterministic recomposition.
+- The sonogenetics physics slice now covers the 2026 bacterial-channel comparison by adding `MscLG22N` and `MscS` under the existing `MechanoChannel` enum, documenting two-state gating and reversal-current theorems, and validating channel-ordering plus current-sign contracts with value-semantic tests.
+
+## Residual Risks (2026-04-27)
+- Full `kwavers` library tests pass, but two physics tests exceed the 60-second progress threshold. The next increment should profile `solver::forward::nonlinear::kzk::solver::tests::test_conservation_diagnostics_disable` and `solver::validation::numerical_accuracy::pstd::tests::test_pstd_phase_velocity_accuracy` and optimize the production code paths without reducing test coverage.

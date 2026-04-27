@@ -8,9 +8,7 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::MaterialFields;
 use crate::domain::medium::Medium;
 use crate::domain::sensor::recorder::simple::SensorRecorder;
-use crate::domain::source::GridSource;
-use crate::domain::source::Source;
-use crate::domain::source::SourceInjectionMode;
+use crate::domain::source::{GridSource, Source, SourceField, SourceInjectionMode};
 use crate::math::fft::shift_operators::generate_shift_1d;
 use crate::math::fft::{Complex64, ProcessorFft3d};
 use crate::solver::fdtd::SourceHandler;
@@ -39,6 +37,12 @@ pub struct PSTDSolver {
     pub(crate) source_handler: SourceHandler,
     pub(crate) dynamic_sources: Vec<(Arc<dyn Source>, Array3<f64>)>,
     pub(crate) source_injection_modes: Vec<SourceInjectionMode>,
+    /// Spectral gradient masks for velocity sources, indexed parallel to `dynamic_sources`.
+    ///
+    /// Entry `i` is `Some(∂mask/∂α)` when `dynamic_sources[i]` is a `VelocityX/Y/Z` source
+    /// **and** `FullKSpace` operators were available at registration time; `None` otherwise.
+    /// Used in `step_forward_kspace` to inject the pressure-equivalent `−c²·amp·∂mask/∂α`.
+    pub(crate) velocity_source_grad_masks: Vec<Option<Array3<f64>>>,
     pub(crate) time_step_index: usize,
     pub(crate) fft: Arc<ProcessorFft3d>,
     pub(crate) kappa: Array3<f64>,
@@ -171,12 +175,7 @@ impl PSTDSolver {
         // k-Wave applies ifftshift(cos(c_ref·|k|·dt/2)) at each source voxel position
         // for additive velocity sources (NotATransducer / u_mode="additive").
         if source_handler.has_velocity_source() {
-            source_handler.set_velocity_source_kappa(
-                &source_kappa,
-                grid.nx,
-                grid.ny,
-                grid.nz,
-            );
+            source_handler.set_velocity_source_kappa(&source_kappa, grid.nx, grid.ny, grid.nz);
         }
 
         // Capture config.dt before the struct literal moves `config`.
@@ -189,6 +188,7 @@ impl PSTDSolver {
             source_handler,
             dynamic_sources: Vec::new(),
             source_injection_modes: Vec::new(),
+            velocity_source_grad_masks: Vec::new(),
             time_step_index: 0,
             fft: crate::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz),
             kappa,
@@ -547,8 +547,40 @@ impl PSTDSolver {
     pub(crate) fn add_source_arc(&mut self, source: Arc<dyn Source>) -> KwaversResult<()> {
         let mask = source.create_mask(&self.grid);
         let mode = super::source_injection::determine_injection_mode(&mask);
+
+        // Pre-compute ∂mask/∂α for velocity sources when FullKSpace operators are available.
+        //
+        // Mathematical basis: a velocity source f_u = amp·mask·ê_α contributes to the
+        // pressure wave equation as −c²·∇·f_u = −c²·amp·∂mask/∂α.  The spectral
+        // derivative is computed once here and reused on every time step.
+        let grad_mask: Option<Array3<f64>> = match source.source_type() {
+            SourceField::VelocityX => {
+                if let Some(ops) = &self.kspace_operators {
+                    Some(ops.spectral_grad_x(&mask)?)
+                } else {
+                    None
+                }
+            }
+            SourceField::VelocityY => {
+                if let Some(ops) = &self.kspace_operators {
+                    Some(ops.spectral_grad_y(&mask)?)
+                } else {
+                    None
+                }
+            }
+            SourceField::VelocityZ => {
+                if let Some(ops) = &self.kspace_operators {
+                    Some(ops.spectral_grad_z(&mask)?)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
         self.dynamic_sources.push((source, mask));
         self.source_injection_modes.push(mode);
+        self.velocity_source_grad_masks.push(grad_mask);
         Ok(())
     }
 }

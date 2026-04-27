@@ -9,19 +9,17 @@ use num_complex::Complex;
 /// Type alias for complex 3D arrays used in spectral methods
 pub type Complex3D = Array3<Complex<f64>>;
 
-/// Parameters for stress update operations
-/// Follows SOLID principles by reducing parameter coupling
+/// Parameters for stress update operations.
+///
+/// # Invariant
+/// Initial stress is zero at every call (stress state is not persisted between
+/// steps in this implementation), so the former `sxx_fft`…`syz_fft` fields have
+/// been removed — the update formula reduces to `dt · Cᵢⱼₖₗ · ε̃ₖₗ`.
 #[derive(Debug)]
 pub struct StressUpdateParams<'a> {
     pub vx_fft: &'a Complex3D,
     pub vy_fft: &'a Complex3D,
     pub vz_fft: &'a Complex3D,
-    pub sxx_fft: &'a Complex3D,
-    pub syy_fft: &'a Complex3D,
-    pub szz_fft: &'a Complex3D,
-    pub sxy_fft: &'a Complex3D,
-    pub sxz_fft: &'a Complex3D,
-    pub syz_fft: &'a Complex3D,
     pub kx: &'a Array3<f64>,
     pub ky: &'a Array3<f64>,
     pub kz: &'a Array3<f64>,

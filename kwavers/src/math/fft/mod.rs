@@ -15,6 +15,7 @@ pub use apollo::application::cache::{
     Fft2dCacheKey, Fft3dCache as FftCache3d, Fft3dCacheKey, FFT_CACHE, FFT_CACHE_1D, FFT_CACHE_2D,
     FFT_CACHE_3D,
 };
+pub use apollo::types::{Shape1D, Shape2D, Shape3D};
 pub use apollo::{
     fft_1d_array, fft_1d_array_typed, fft_1d_complex, fft_1d_complex_inplace, fft_2d_array,
     fft_2d_array_typed, fft_2d_complex, fft_2d_complex_inplace, fft_3d_array, fft_3d_array_into,
@@ -25,7 +26,6 @@ pub use apollo::{
     Complex64, FftPlan1D as Fft1d, FftPlan2D as Fft2d, FftPlan3D as Fft3d, Normalization,
     ProcessorFft3d,
 };
-pub use apollo::types::{Shape1D, Shape2D, Shape3D};
 
 pub use gpu_fft::gpu_fft_available;
 pub use kspace::KSpaceCalculator;
