@@ -5,6 +5,25 @@ use num_complex::Complex;
 fn test_mie_theory_gold() {
     let mie = MieTheory::gold_in_water(15e-9); // 15 nm radius
 
+    let eps_5209 = mie_theory::gold_dielectric_johnson_christy(520.9e-9);
+    let expected_5209 = Complex::new(0.62 * 0.62 - 2.081 * 2.081, 2.0 * 0.62 * 2.081);
+    assert!(
+        (eps_5209 - expected_5209).norm() < 1e-12,
+        "Johnson-Christy endpoint conversion must satisfy eps=(n+ik)^2; actual={eps_5209:?}, expected={expected_5209:?}"
+    );
+
+    let eps_midpoint = mie_theory::gold_dielectric_johnson_christy(534.75e-9);
+    let n_midpoint = 0.5 * (0.62 + 0.43);
+    let k_midpoint = 0.5 * (2.081 + 2.455);
+    let expected_midpoint = Complex::new(
+        n_midpoint * n_midpoint - k_midpoint * k_midpoint,
+        2.0 * n_midpoint * k_midpoint,
+    );
+    assert!(
+        (eps_midpoint - expected_midpoint).norm() < 1e-12,
+        "Johnson-Christy affine interpolation mismatch: actual={eps_midpoint:?}, expected={expected_midpoint:?}"
+    );
+
     // Test polarizability calculation at theoretical SPR wavelength
     let alpha = mie.polarizability(530e-9);
     assert!(alpha.re > 0.0);
