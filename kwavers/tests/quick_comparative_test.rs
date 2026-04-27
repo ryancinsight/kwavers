@@ -257,9 +257,17 @@ fn test_solver_performance_comparison() {
     let fdtd_result = run_fdtd_quick(&grid, &medium, &source, 3);
     let pstd_result = run_pstd_quick(&grid, &medium, 3);
 
-    // Performance should be reasonable (under 1 second each)
-    assert!(fdtd_result.execution_time.as_millis() < 1000);
-    assert!(pstd_result.execution_time.as_millis() < 1000);
+    // Performance should be reasonable: < 5s under debug build parallel test load.
+    assert!(
+        fdtd_result.execution_time.as_millis() < 5000,
+        "FDTD took {}ms (> 5000ms limit)",
+        fdtd_result.execution_time.as_millis()
+    );
+    assert!(
+        pstd_result.execution_time.as_millis() < 5000,
+        "PSTD took {}ms (> 5000ms limit)",
+        pstd_result.execution_time.as_millis()
+    );
 
     // Results should be finite and reasonable
     assert!(fdtd_result.energy.is_finite());

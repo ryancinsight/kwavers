@@ -172,7 +172,7 @@ def run_pykwavers_reference() -> dict[str, np.ndarray | float]:
         dy=spacing[1],
         dz=spacing[2],
     )
-    medium_pk = kw.Medium.homogeneous(sound_speed=float(medium.sound_speed), density=1000.0)
+    medium_pk = kw.Medium.homogeneous(sound_speed=float(np.asarray(medium.sound_speed).flat[0]), density=1000.0)
     source_pk = kw.Source.from_initial_pressure(expanded_source_p0)
     sensor_pk = kw.Sensor.from_mask(expanded_sensor_mask)
 
@@ -238,26 +238,65 @@ def run_comparison() -> dict[str, object]:
     }
 
 
+_R_TARGET = 0.98
+_RMS_MIN = 0.90
+_RMS_MAX = 1.10
+
+
 def main() -> int:
-    """Execute the comparison and print metric summaries."""
+    """Execute the comparison, print metric summaries, and write a metrics file."""
     result = run_comparison()
     summary = result["summary"]
+
+    r_mean = float(summary["pearson_r_mean"])
+    rms_mean = float(summary["rms_ratio_mean"])
+    checks = {
+        "pearson_r": r_mean >= _R_TARGET,
+        "rms_ratio": _RMS_MIN <= rms_mean <= _RMS_MAX,
+    }
+    overall_status = "PASS" if all(checks.values()) else "FAIL"
 
     print("=" * 80)
     print("k-wave-python pr_3D_FFT_planar_sensor vs pykwavers")
     print("=" * 80)
-    print(f"Mean Pearson r:   {summary['pearson_r_mean']:.6f}")
+    print(f"Mean Pearson r:   {r_mean:.6f}  (target >= {_R_TARGET})")
+    print(f"Mean RMS ratio:   {rms_mean:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])")
     print(f"Median Pearson r: {summary['pearson_r_median']:.6f}")
-    print(f"Mean RMS ratio:   {summary['rms_ratio_mean']:.6f}")
     print(f"Median RMS ratio: {summary['rms_ratio_median']:.6f}")
     print(f"Median RMSE:      {summary['rmse_median']:.6e}")
     print(f"Max |diff|:       {summary['max_abs_diff_max']:.6e}")
     print(f"Median peak ratio:{summary['peak_ratio_median']:.6f}")
+    print(f"Status:           {overall_status}")
 
     for row, metrics in result["trace_metrics"].items():
         print(f"Sensor row {row}: corr={metrics['pearson_r']:.6f}, rmse={metrics['rmse']:.6e}, peak_ratio={metrics['peak_ratio']:.6f}")
 
-    return 0
+    # --- Structured metrics file ---
+    kw_rt = float(result["kwave"]["runtime"])
+    py_rt = float(result["pykwavers"]["runtime"])
+    n_sensors = int(summary["n_sensors"])
+    output_path = DEFAULT_OUTPUT_DIR / "pr_3D_FFT_planar_sensor_metrics.txt"
+    with output_path.open("w") as fh:
+        fh.write("pr_3D_FFT_planar_sensor parity metrics\n")
+        fh.write(f"parity_status: {overall_status}\n\n")
+        fh.write(f"kwave_runtime_s: {kw_rt:.3f}\n")
+        fh.write(f"pykwavers_runtime_s: {py_rt:.3f}\n\n")
+        fh.write(f"Forward sensor matrix ({n_sensors} sensors):\n")
+        fh.write(f"  pearson_r_mean    = {r_mean:.6f}  (target >= {_R_TARGET})\n")
+        fh.write(f"  rms_ratio_mean    = {rms_mean:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])\n")
+        fh.write(f"  pearson_r_median  = {summary['pearson_r_median']:.6f}\n")
+        fh.write(f"  rms_ratio_median  = {summary['rms_ratio_median']:.6f}\n")
+        fh.write(f"  rmse_median       = {summary['rmse_median']:.6e}\n")
+        fh.write(f"  max_abs_diff      = {summary['max_abs_diff_max']:.6e}\n\n")
+        fh.write("Sensor row traces:\n")
+        for row, m in result["trace_metrics"].items():
+            fh.write(
+                f"  row={row}: pearson_r={m['pearson_r']:.6f}  "
+                f"rms_ratio={m['rms_ratio']:.6f}  rmse={m['rmse']:.6e}\n"
+            )
+    print(f"Metrics written to: {output_path}")
+
+    return 0 if overall_status == "PASS" else 1
 
 
 if __name__ == "__main__":

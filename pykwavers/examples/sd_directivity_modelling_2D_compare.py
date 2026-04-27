@@ -561,8 +561,6 @@ def main() -> int:
             ]
         )
 
-    save_text_report(METRICS_PATH, "sd_directivity_modelling_2D parity metrics", report_lines)
-
     trace_ok = (
         matrix_metrics["pearson_r"] > 0.99
         and matrix_metrics["psnr_db"] > 30.0
@@ -574,10 +572,12 @@ def main() -> int:
         and abs(directivity["rms_ratio"] - 1.0) < 1e-2
         and abs(directivity["peak_ratio"] - 1.0) < 1e-2
     )
-    if not (trace_ok and directivity_ok) and not args.allow_failure:
-        raise SystemExit("sd_directivity_modelling_2D parity targets not met.")
+    overall_status = "PASS" if (trace_ok and directivity_ok) else "FAIL"
+    report_lines.append(f"parity_status: {overall_status}")
+    save_text_report(METRICS_PATH, "sd_directivity_modelling_2D parity metrics", report_lines)
+    print(f"Status: {overall_status}")
 
-    return 0
+    return 0 if overall_status == "PASS" or args.allow_failure else 1
 
 
 if __name__ == "__main__":

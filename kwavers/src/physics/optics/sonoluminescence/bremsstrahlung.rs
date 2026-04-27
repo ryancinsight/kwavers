@@ -224,7 +224,7 @@ impl PlasmaState {
     /// * `pressure` — total pressure [Pa] (used via ideal gas law: n_total = P/kT)
     /// * `ionization_energy` — first ionization energy [eV]
     /// * `partition_ratio` — U₁/U₀ (statistical weight ratio of ion to neutral;
-    ///    use 1.0 as a conservative default)
+    ///   use 1.0 as a conservative default)
     ///
     /// ## References
     ///

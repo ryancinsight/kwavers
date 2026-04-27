@@ -16,7 +16,7 @@ fn main() {
         .collect();
 
     let mut direct = vec![Complex64::new(0.0, 0.0); n];
-    for k in 0..n {
+    for (k, direct_k) in direct.iter_mut().enumerate() {
         let k_signed = if k <= n / 2 {
             k as i64
         } else {
@@ -24,7 +24,7 @@ fn main() {
         };
         for (&x, &v) in positions.iter().zip(values.iter()) {
             let angle = -2.0 * PI * k_signed as f64 * x / l;
-            direct[k] += v * Complex64::new(angle.cos(), angle.sin());
+            *direct_k += v * Complex64::new(angle.cos(), angle.sin());
         }
     }
 
@@ -45,7 +45,7 @@ fn main() {
         }
 
         let mut fast = vec![Complex64::new(0.0, 0.0); n];
-        for k in 0..n {
+        for (k, fast_k) in fast.iter_mut().enumerate() {
             let k_signed = if k <= n / 2 {
                 k as i64
             } else {
@@ -54,13 +54,13 @@ fn main() {
             let ks = k_signed as f64;
             let m_f = m as f64;
             let mut sum = Complex64::new(0.0, 0.0);
-            for mm in 0..m {
+            for (mm, &g) in grid.iter().enumerate() {
                 let angle = -2.0 * PI * ks * (mm as f64) / m_f;
-                sum += grid[mm] * Complex64::new(angle.cos(), angle.sin());
+                sum += g * Complex64::new(angle.cos(), angle.sin());
             }
             let g_hat =
                 (4.0 * PI * tau).sqrt() * (-4.0 * PI * PI * tau * ks * ks / (m_f * m_f)).exp();
-            fast[k] = sum / g_hat;
+            *fast_k = sum / g_hat;
         }
 
         let mut max_rel_err = 0.0_f64;

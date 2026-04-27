@@ -6,7 +6,7 @@
 use crate::core::error::KwaversResult;
 use crate::core::error::{KwaversError, ValidationError};
 use crate::domain::grid::Grid;
-use crate::math::fft::ProcessorFft3d;
+use crate::math::fft::{ProcessorFft3d, Shape3D};
 use crate::solver::pstd::utils::{compute_anti_aliasing_filter, compute_wavenumbers};
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;
@@ -73,7 +73,7 @@ impl RegionPSTDSolver {
             filter,
             wave_speed,
             prev_field: None,
-            fft: ProcessorFft3d::new(nx, ny, nz),
+            fft: ProcessorFft3d::new(Shape3D { nx, ny, nz }),
             field_hat,
             lap_hat,
             scratch_hat,

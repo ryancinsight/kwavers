@@ -132,10 +132,10 @@ fn bench_fdtd_propagation(
 ) {
     let sound_speed = 1500.0; // m/s
 
-    let (grid, medium, source, dt) = setup_plane_wave_problem(grid_size, frequency_hz, sound_speed)
+    let (_grid, _medium, _source, dt) = setup_plane_wave_problem(grid_size, frequency_hz, sound_speed)
         .expect("Failed to setup plane wave problem");
 
-    let config = FdtdConfig {
+    let _config = FdtdConfig {
         nt: time_steps,
         dt,
         ..Default::default()
@@ -152,7 +152,7 @@ fn bench_fdtd_propagation(
         (frequency_hz / 1e6) as i32
     );
 
-    let mut group = c.benchmark_group(&format!("fdtd_propagation_{}", grid_size_label));
+    let mut group = c.benchmark_group(format!("fdtd_propagation_{}", grid_size_label));
     group.throughput(Throughput::Elements(total_updates));
     group.measurement_time(Duration::from_secs(10));
     group.sample_size(10); // Fewer samples for longer-running benchmarks

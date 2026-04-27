@@ -96,7 +96,7 @@ impl PSTDSolver {
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.p_k.view())
                 .and(self.kappa.view())
-                .for_each(|(i, _j, _k), gk, &p_val, &kap| {
+                .par_for_each(|(i, _j, _k), gk, &p_val, &kap| {
                     *gk = ddx[i] * Complex64::new(kap, 0.0) * p_val;
                 });
         }
@@ -105,7 +105,7 @@ impl PSTDSolver {
         Zip::from(&mut self.fields.ux)
             .and(&self.dpx)
             .and(&self.materials.rho0)
-            .for_each(|u, &dp, &rho| {
+            .par_for_each(|u, &dp, &rho| {
                 *u -= (dt / rho) * dp;
             });
 
@@ -115,7 +115,7 @@ impl PSTDSolver {
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.p_k.view())
                 .and(self.kappa.view())
-                .for_each(|(_i, j, _k), gk, &p_val, &kap| {
+                .par_for_each(|(_i, j, _k), gk, &p_val, &kap| {
                     *gk = ddy[j] * Complex64::new(kap, 0.0) * p_val;
                 });
         }
@@ -124,7 +124,7 @@ impl PSTDSolver {
         Zip::from(&mut self.fields.uy)
             .and(&self.dpy)
             .and(&self.materials.rho0)
-            .for_each(|u, &dp, &rho| {
+            .par_for_each(|u, &dp, &rho| {
                 *u -= (dt / rho) * dp;
             });
 
@@ -134,7 +134,7 @@ impl PSTDSolver {
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.p_k.view())
                 .and(self.kappa.view())
-                .for_each(|(_i, _j, k), gk, &p_val, &kap| {
+                .par_for_each(|(_i, _j, k), gk, &p_val, &kap| {
                     *gk = ddz[k] * Complex64::new(kap, 0.0) * p_val;
                 });
         }
@@ -143,7 +143,7 @@ impl PSTDSolver {
         Zip::from(&mut self.fields.uz)
             .and(&self.dpz)
             .and(&self.materials.rho0)
-            .for_each(|u, &dp, &rho| {
+            .par_for_each(|u, &dp, &rho| {
                 *u -= (dt / rho) * dp;
             });
 

@@ -35,6 +35,7 @@ use kwavers::solver::interface::Solver;
 use std::sync::Arc;
 
 /// Helper: run PSTD for `nt` steps and return max |p| over the pressure field.
+#[allow(clippy::too_many_arguments)]
 fn run_pstd_and_measure_peak(
     nx: usize,
     ny: usize,

@@ -80,7 +80,7 @@ pub enum InterfaceOutcome {
 /// * `n1`        — Refractive index of the incident medium (dimensionless, ≥ 1)
 /// * `n2`        — Refractive index of the transmitted medium (dimensionless, ≥ 1)
 /// * `cos_theta_i` — cos θᵢ, where θᵢ is the angle of incidence measured from
-///                   the inward surface normal; must be in [0, 1]
+///   the inward surface normal; must be in [0, 1]
 ///
 /// # Returns
 /// Power reflectance R ∈ [0, 1].  Returns 1.0 for total internal reflection.

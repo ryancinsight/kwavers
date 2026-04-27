@@ -145,14 +145,14 @@ impl AbsorptionOperator {
         // Pre-compute attenuation mask H[k] for k = 0..nt.
         // This avoids recomputing powf() inside the spatial loop.
         let mut h_mask = vec![1.0_f64; nt];
-        for k in 1..nt {
+        for (k, mask_elem) in h_mask.iter_mut().enumerate().skip(1) {
             // Fold negative-frequency bins: DFT bin k > nt/2 corresponds to
             // the physical frequency f = (nt − k) / (nt · Δτ).
             let pos_k = if k <= nt / 2 { k } else { nt - k };
             let freq_hz = pos_k as f64 * df; // Hz
                                              // α(f) = α₀ · f^y  in Np/m
             let alpha = self.alpha0_np_per_m_per_hz_y * freq_hz.powf(self.power);
-            h_mask[k] = (-alpha * step_size).exp();
+            *mask_elem = (-alpha * step_size).exp();
         }
         // k = 0 (DC) stays 1.0 — acoustic waves carry zero DC component.
 

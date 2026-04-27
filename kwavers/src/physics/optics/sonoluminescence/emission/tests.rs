@@ -5,6 +5,7 @@ use crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use ndarray::Array3;
 
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use super::*;
 

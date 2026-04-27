@@ -267,7 +267,7 @@ def run_pykwavers_reference() -> dict[str, np.ndarray | float]:
         dy=spacing[1],
         dz=spacing[2],
     )
-    medium_pk = kw.Medium.homogeneous(sound_speed=float(medium.sound_speed), density=1000.0)
+    medium_pk = kw.Medium.homogeneous(sound_speed=float(np.asarray(medium.sound_speed).flat[0]), density=1000.0)
     source_pk = kw.Source.from_initial_pressure(expanded_source_p0)
     sensor_pk = kw.Sensor.from_mask(expanded_sensor_mask)
 
@@ -377,19 +377,39 @@ def run_comparison() -> dict[str, object]:
     }
 
 
+_R_TARGET = 0.93
+_RMS_MIN = 0.80
+_RMS_MAX = 1.20
+_PSNR_TARGET = 20.0
+
+
 def main() -> int:
-    """Execute the comparison and print metric summaries."""
+    """Execute the comparison, print metric summaries, and write a metrics file."""
     result = run_comparison()
     summary = result["summary"]
+
+    r = float(summary["pearson_r"])
+    rms = float(summary["rms_ratio"])
+    psnr = float(summary["psnr_db"])
+    checks = {
+        "pearson_r": r >= _R_TARGET,
+        "rms_ratio": _RMS_MIN <= rms <= _RMS_MAX,
+        "psnr_db": psnr >= _PSNR_TARGET,
+    }
+    overall_status = "PASS" if all(checks.values()) else "FAIL"
+
+    kw_ref = result["reference_metrics"]["kwave_time_reversal"]
+    py_ref = result["reference_metrics"]["pykwavers_time_reversal"]
 
     print("=" * 80)
     print("k-wave-python pr_3D_TR_planar_sensor vs pykwavers")
     print("=" * 80)
-    print(f"Time reversal Pearson r: {summary['pearson_r']:.6f}")
-    print(f"Time reversal RMS ratio: {summary['rms_ratio']:.6f}")
-    print(f"Time reversal PSNR [dB]: {summary['psnr_db']:.6f}")
-    print(f"k-Wave TR vs p0 r:       {result['reference_metrics']['kwave_time_reversal']['pearson_r']:.6f}")
-    print(f"pykwavers TR vs p0 r:    {result['reference_metrics']['pykwavers_time_reversal']['pearson_r']:.6f}")
+    print(f"Time reversal Pearson r: {r:.6f}  (target >= {_R_TARGET})")
+    print(f"Time reversal RMS ratio: {rms:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])")
+    print(f"Time reversal PSNR [dB]: {psnr:.6f}  (target >= {_PSNR_TARGET})")
+    print(f"k-Wave TR vs p0 r:       {kw_ref['pearson_r']:.6f}")
+    print(f"pykwavers TR vs p0 r:    {py_ref['pearson_r']:.6f}")
+    print(f"Status:                  {overall_status}")
 
     for row, metrics in result["trace_metrics"].items():
         print(
@@ -397,7 +417,27 @@ def main() -> int:
             f"rmse={metrics['rmse']:.6e}, peak_ratio={metrics['peak_ratio']:.6f}"
         )
 
-    return 0
+    # --- Structured metrics file ---
+    output_path = DEFAULT_OUTPUT_DIR / "pr_3D_TR_planar_sensor_metrics.txt"
+    with output_path.open("w") as fh:
+        fh.write("pr_3D_TR_planar_sensor parity metrics\n")
+        fh.write(f"parity_status: {overall_status}\n\n")
+        fh.write("Time-reversal reconstruction (kwave vs pykwavers):\n")
+        fh.write(f"  pearson_r = {r:.6f}  (target >= {_R_TARGET})\n")
+        fh.write(f"  rms_ratio = {rms:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])\n")
+        fh.write(f"  psnr_db   = {psnr:.6f}  (target >= {_PSNR_TARGET} dB)\n\n")
+        fh.write("Reconstruction vs ground-truth p0:\n")
+        fh.write(f"  kwave     pearson_r = {kw_ref['pearson_r']:.6f}\n")
+        fh.write(f"  pykwavers pearson_r = {py_ref['pearson_r']:.6f}\n\n")
+        fh.write("Forward sensor traces (representative rows):\n")
+        for row, m in result["trace_metrics"].items():
+            fh.write(
+                f"  row={row}: pearson_r={m['pearson_r']:.6f}  "
+                f"rms_ratio={m['rms_ratio']:.6f}  rmse={m['rmse']:.6e}\n"
+            )
+    print(f"Metrics written to: {output_path}")
+
+    return 0 if overall_status == "PASS" else 1
 
 
 if __name__ == "__main__":

@@ -77,7 +77,7 @@ impl PSTDSolver {
             .and(&self.rhox)
             .and(&self.rhoy)
             .and(&self.rhoz)
-            .for_each(|rho_sum, &rx, &ry, &rz| {
+            .par_for_each(|rho_sum, &rx, &ry, &rz| {
                 *rho_sum = rx + ry + rz;
             });
 
@@ -87,7 +87,7 @@ impl PSTDSolver {
                 .and(&self.materials.c0)
                 .and(&self.bon)
                 .and(&self.materials.rho0)
-                .for_each(|p, &rho_sum, &c, &bon, &rho0| {
+                .par_for_each(|p, &rho_sum, &c, &bon, &rho0| {
                     let linear = rho_sum;
                     // Taylor expansion for nonlinearity
                     // p = c0^2 * (rho + B/2A * rho^2 / rho0)
@@ -98,7 +98,7 @@ impl PSTDSolver {
             Zip::from(&mut self.fields.p)
                 .and(&self.div_u)
                 .and(&self.materials.c0)
-                .for_each(|p, &rho_sum, &c| {
+                .par_for_each(|p, &rho_sum, &c| {
                     *p = c * c * rho_sum;
                 });
         }
@@ -144,7 +144,7 @@ impl PSTDSolver {
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.ux_k.view())
                 .and(self.kappa.view())
-                .for_each(|(i, _j, _k), gk, &u, &kap| {
+                .par_for_each(|(i, _j, _k), gk, &u, &kap| {
                     *gk = ddx[i] * Complex64::new(kap, 0.0) * u;
                 });
         }
@@ -158,7 +158,7 @@ impl PSTDSolver {
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.uy_k.view())
                 .and(self.kappa.view())
-                .for_each(|(_i, j, _k), gk, &u, &kap| {
+                .par_for_each(|(_i, j, _k), gk, &u, &kap| {
                     *gk = ddy[j] * Complex64::new(kap, 0.0) * u;
                 });
         }
@@ -172,7 +172,7 @@ impl PSTDSolver {
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.uz_k.view())
                 .and(self.kappa.view())
-                .for_each(|(_i, _j, k), gk, &u, &kap| {
+                .par_for_each(|(_i, _j, k), gk, &u, &kap| {
                     *gk = ddz[k] * Complex64::new(kap, 0.0) * u;
                 });
         }
@@ -198,7 +198,7 @@ impl PSTDSolver {
                 .and(&self.rhox)
                 .and(&self.rhoy)
                 .and(&self.rhoz)
-                .for_each(|coef, &rho0, &rx, &ry, &rz| {
+                .par_for_each(|coef, &rho0, &rx, &ry, &rz| {
                     *coef = rho0 + 2.0 * (rx + ry + rz);
                 });
         } else {
@@ -214,21 +214,21 @@ impl PSTDSolver {
         Zip::from(&mut self.rhox)
             .and(&self.dpx)
             .and(&self.div_u)
-            .for_each(|rho, &du, &coef| {
+            .par_for_each(|rho, &du, &coef| {
                 *rho -= dt * coef * du;
             });
 
         Zip::from(&mut self.rhoy)
             .and(&self.dpy)
             .and(&self.div_u)
-            .for_each(|rho, &du, &coef| {
+            .par_for_each(|rho, &du, &coef| {
                 *rho -= dt * coef * du;
             });
 
         Zip::from(&mut self.rhoz)
             .and(&self.dpz)
             .and(&self.div_u)
-            .for_each(|rho, &du, &coef| {
+            .par_for_each(|rho, &du, &coef| {
                 *rho -= dt * coef * du;
             });
 

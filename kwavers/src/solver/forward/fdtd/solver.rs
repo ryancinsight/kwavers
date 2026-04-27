@@ -338,8 +338,8 @@ impl GenericFdtdSolver<Array3<f64>> {
         );
         // Note: FDTD uses a single rho field so no split needed (cf. PSTD rhox/rhoy/rhoz)
 
-        if source_handler.has_initial_pressure() && !source_handler.has_initial_velocity() {
-            if matches!(config.kspace_correction, KSpaceCorrectionMode::Spectral) {
+        if source_handler.has_initial_pressure() && !source_handler.has_initial_velocity()
+            && matches!(config.kspace_correction, KSpaceCorrectionMode::Spectral) {
                 let rho0_ref = materials.rho0.mean().unwrap_or(1000.0);
                 let Some(kspace_ops) = kspace_ops.as_mut() else {
                     return Err(KwaversError::Config(
@@ -361,7 +361,6 @@ impl GenericFdtdSolver<Array3<f64>> {
                     &mut fields.uz,
                 )?;
             }
-        }
 
         // Precompute nonlinear medium property arrays (only when nonlinear mode is on)
         let (p_prev, p_prev2, nl_scratch, nl_coeff) = if config.enable_nonlinear {

@@ -272,6 +272,11 @@ def build_source_mask_and_signals(kgrid, not_transducer, input_signal):
     ] = apod_mask
 
     # Source points follow the C-order enumeration of the full-grid mask.
+    # NotATransducer.delay_mask() convention: delay_mask=d means inject
+    # padded_signal[d:d+Nt], where padded_signal = [zeros(max_delay), input_signal].
+    # Element with delay=max_delay fires first (signal[0] at t=0);
+    # element with delay=0 fires last (signal[0] at t=max_delay).
+    # This matches the k-wave C++ binary's padded-input-signal injection model.
     input_1d = np.asarray(input_signal).ravel()
     max_delay = int(delay_full.max())
     padded_signal = np.concatenate([np.zeros(max_delay), input_1d])
@@ -449,6 +454,7 @@ def run_pykwavers_bmode(sound_speed_map, density_map, kgrid, not_transducer,
         t_init = time.perf_counter()
         gpu_profiles = RunningTimingStats(
             (
+                "medium_upload_ns",
                 "medium_variable_upload_ns",
                 "medium_static_upload_ns",
                 "solver_run_ns",

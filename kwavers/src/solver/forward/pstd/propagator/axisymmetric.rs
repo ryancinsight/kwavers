@@ -9,7 +9,7 @@
 //!   Treeby et al. (2012). k-Wave axisymmetric documentation.
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::fft::{Complex64, Fft2d, FFT_CACHE_2D};
+use crate::math::fft::{Complex64, Fft2d, FFT_CACHE_2D, Shape2D};
 use ndarray::{s, Array1, Array2, ArrayView2, Zip};
 use std::f64::consts::PI;
 use std::sync::Arc;
@@ -129,7 +129,7 @@ impl AsContext {
             }
         });
 
-        let fft_plan = FFT_CACHE_2D.get_or_create(nx, nr_exp);
+        let fft_plan = FFT_CACHE_2D.get_or_create(Shape2D { nx, ny: nr_exp });
         let ze = || Array2::<f64>::zeros((nx, nr_exp));
         let zn = || Array2::<f64>::zeros((nx, nr));
         let zc = || Array2::<Complex64>::zeros((nx, nr_exp));

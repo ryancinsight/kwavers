@@ -260,9 +260,13 @@ mod nonlinear_inversion_tests {
 
     #[test]
     fn test_harmonic_ratio_inversion() {
-        let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(
-            NonlinearInversionMethod::HarmonicRatio,
-        ));
+        // β_s = 2 A₂ c_s / (ω A₁² z).  With A₁=1.0, A₂=0.1, c_s=3 m/s, f=100 Hz:
+        //   β_s > 1  iff  z < 2 * 0.1 * 3.0 / (2π * 100 * 1.0²) ≈ 9.55e-4 m.
+        // Use z = 5e-4 m → β_s = 0.6 / (628.3 * 5e-4) ≈ 1.91 → B/A ≈ 1.82.
+        let inversion = NonlinearInversion::new(
+            NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio)
+                .with_shear_properties(3.0, 100.0, 5e-4),
+        );
 
         // Create synthetic harmonic field
         let mut harmonic_field = HarmonicDisplacementField::new(6, 6, 6, 2, 50);
@@ -291,9 +295,12 @@ mod nonlinear_inversion_tests {
 
     #[test]
     fn test_nonlinear_least_squares_inversion() {
-        let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(
-            NonlinearInversionMethod::NonlinearLeastSquares,
-        ));
+        // β_s > 1 requires A₂ > ω A₁² z / (2 c_s).  With A₁=1, A₂=0.15, z=5e-4:
+        //   β_s = 2 * 0.15 * 3 / (628.3 * 1 * 5e-4) ≈ 2.87 → B/A ≈ 3.74.
+        let inversion = NonlinearInversion::new(
+            NonlinearInversionConfig::new(NonlinearInversionMethod::NonlinearLeastSquares)
+                .with_shear_properties(3.0, 100.0, 5e-4),
+        );
 
         // Create test harmonic field
         let mut harmonic_field = HarmonicDisplacementField::new(4, 4, 4, 1, 32);

@@ -95,17 +95,15 @@ def run_pykwavers_weights() -> np.ndarray:
     convention."""
     grid = pkw.Grid(NX, NY, NZ, DX, DX, DX)
 
-    # k-wave's x_vec[i] = (i - (NX-1)/2)*dx, so converting world coords from
-    # k-wave (origin-at-domain-centre) to pykwavers (origin-at-corner) uses
-    # the half-cell offset (NX-1)/2 * dx. Using NX*dx/2 would misplace the
-    # apex by half a cell and smear its BLI weight across two slices.
-    offset_x = (NX - 1) / 2.0 * DX
-    offset_y = (NY - 1) / 2.0 * DX
-    offset_z = (NZ - 1) / 2.0 * DX
-
-    apex_x_kwave = (SOURCE_X_OFFSET - (NX - 1) / 2.0) * DX
-    apex_x_world = apex_x_kwave + offset_x
-    bowl_pos = (apex_x_world + SOURCE_ROC, offset_y, offset_z)
+    # k-wave's x_vec[i] = (i - Nx/2)*dx (integer Nx/2, MATLAB centering).
+    # pykwavers world: x_vec[i] = i*dx, origin at 0.
+    # Offset: pykwavers_coord = kwave_coord + Nx*dx/2.
+    # apex_x_world simplifies to SOURCE_X_OFFSET * DX (offsets cancel in x).
+    # y,z: k-wave center = y_vec[NY//2] = 0 ↔ pykwavers NY*DX/2 (on grid cell NY//2).
+    apex_x_world = SOURCE_X_OFFSET * DX
+    center_y = NY * DX / 2.0
+    center_z = NZ * DX / 2.0
+    bowl_pos = (apex_x_world + SOURCE_ROC, center_y, center_z)
 
     diameters = [(float(inner), float(outer)) for inner, outer in DIAMETERS]
 
@@ -204,7 +202,7 @@ def main() -> int:
     for k, v in slc_m.items():
         lines.append(f"  {k}: {v}")
     lines.append("")
-    lines.append(f"status: {status}")
+    lines.append(f"parity_status: {status}")
     lines.append(f"image:  {PNG_PATH.name}")
     save_text_report(REPORT_PATH, "at_focused_annular_array_3D_weights_compare", lines)
 
@@ -212,4 +210,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

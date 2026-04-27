@@ -66,7 +66,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::math::fft::Fft3d;
+use crate::math::fft::{Fft3d, Shape3D};
 use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -97,7 +97,7 @@ impl ConvergentBornSolver {
         let shape = (grid.nx, grid.ny, grid.nz);
         // Initialize FFT processor if FFT Green's function is requested
         let fft_processor = if config.use_fft_green {
-            Some(Fft3d::new(grid.nx, grid.ny, grid.nz))
+            Some(Fft3d::new(Shape3D { nx: grid.nx, ny: grid.ny, nz: grid.nz }))
         } else {
             None
         };
@@ -309,7 +309,6 @@ impl ConvergentBornSolver {
         // - fft_processor (immutable)
         // - workspace.fft_temp (immutable)
         // - workspace.green_workspace (mutable)
-        let n = (self.grid.nx * self.grid.ny * self.grid.nz) as f64;
         let fft_processor = self.fft_processor.as_ref();
         let workspace = &mut self.workspace;
 
@@ -317,7 +316,6 @@ impl ConvergentBornSolver {
             fft_processor,
             &workspace.fft_temp[1].view(),
             &mut workspace.green_workspace,
-            n,
         );
 
         Ok(())
@@ -328,16 +326,13 @@ impl ConvergentBornSolver {
         fft_processor: Option<&Fft3d>,
         input: &ArrayView3<Complex64>,
         output: &mut Array3<Complex64>,
-        grid_size: f64,
     ) {
         output.assign(input);
 
         if let Some(fft) = fft_processor {
+            // apollo-fft inverse_complex_inplace uses FFTW-compatible 1/N normalisation;
+            // no additional scaling is required for a correct round-trip.
             fft.inverse_complex_inplace(output);
-
-            // Normalize by 1/N
-            let scale = 1.0 / grid_size;
-            output.mapv_inplace(|x| x * scale);
         }
     }
 
@@ -363,8 +358,7 @@ impl ConvergentBornSolver {
         input: &ArrayView3<Complex64>,
         output: &mut Array3<Complex64>,
     ) -> KwaversResult<()> {
-        let n = (self.grid.nx * self.grid.ny * self.grid.nz) as f64;
-        Self::perform_inverse_fft(self.fft_processor.as_ref(), input, output, n);
+        Self::perform_inverse_fft(self.fft_processor.as_ref(), input, output);
         Ok(())
     }
 

@@ -299,18 +299,45 @@ def run_comparison() -> dict[str, object]:
     }
 
 
-def main() -> None:
+_R_TARGET = 0.98
+_RMS_MIN = 0.90
+_RMS_MAX = 1.10
+
+
+def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--no-cache", action="store_true", help="Ignore cached results and recompute both runs")
+    parser.add_argument("--allow-failure", action="store_true")
     args = parser.parse_args()
     global REFRESH_CACHE
     if args.no_cache:
         REFRESH_CACHE = True
 
     result = run_comparison()
+    metrics = result["metrics"]
+
+    p_max_r = float(metrics["p_max"]["pearson_r"])
+    p_rms_rms = float(metrics["p_rms"]["rms_ratio"])
+    overall_status = (
+        "PASS"
+        if p_max_r >= _R_TARGET and _RMS_MIN <= p_rms_rms <= _RMS_MAX
+        else "FAIL"
+    )
+
+    report_lines = build_report_lines(result)
+    report_lines.append(f"parity_status: {overall_status}")
     save_comparison_figure(result, FIGURE_PATH)
-    save_text_report(METRICS_PATH, "at_array_as_source parity report", build_report_lines(result))
+    save_text_report(METRICS_PATH, "at_array_as_source parity report", report_lines)
+
+    print("=" * 80)
+    print("k-wave-python at_array_as_source vs pykwavers")
+    print("=" * 80)
+    print(f"p_max Pearson r:   {p_max_r:.6f}  (target >= {_R_TARGET})")
+    print(f"p_rms RMS ratio:   {p_rms_rms:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])")
+    print(f"Status:            {overall_status}")
+
+    return 0 if overall_status == "PASS" or args.allow_failure else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

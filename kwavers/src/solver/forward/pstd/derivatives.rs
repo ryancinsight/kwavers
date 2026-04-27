@@ -60,8 +60,9 @@
 //! - Oran & Boris (2001). Numerical Simulation of Reactive Flow
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::fft::{Complex64, Fft1d, FFT_CACHE_1D};
-use ndarray::{Array1, Array3, ArrayView3};
+use crate::math::fft::{Complex64, Fft1d, FFT_CACHE_1D, Shape1D};
+use ndarray::parallel::prelude::*;
+use ndarray::{Array1, Array3, ArrayView3, Axis};
 use std::sync::Arc;
 
 /// Spectral derivative operator for 3D fields
@@ -95,10 +96,6 @@ pub struct SpectralDerivativeOperator {
     ikd_y: Vec<Complex64>,
     ikd_z: Vec<Complex64>,
 
-    /// Cached normalization factors
-    inv_nx: f64,
-    inv_ny: f64,
-    inv_nz: f64,
 }
 
 impl std::fmt::Debug for SpectralDerivativeOperator {
@@ -126,9 +123,6 @@ impl Clone for SpectralDerivativeOperator {
             ikd_x: self.ikd_x.clone(),
             ikd_y: self.ikd_y.clone(),
             ikd_z: self.ikd_z.clone(),
-            inv_nx: self.inv_nx,
-            inv_ny: self.inv_ny,
-            inv_nz: self.inv_nz,
         }
     }
 }
@@ -176,11 +170,11 @@ impl SpectralDerivativeOperator {
             .collect();
 
         // Cache FFT plans (most expensive to create, reused on every call)
-        let fft_x = FFT_CACHE_1D.get_or_create(nx);
+        let fft_x = FFT_CACHE_1D.get_or_create(Shape1D { n: nx });
         let ifft_x = Arc::clone(&fft_x);
-        let fft_y = FFT_CACHE_1D.get_or_create(ny);
+        let fft_y = FFT_CACHE_1D.get_or_create(Shape1D { n: ny });
         let ifft_y = Arc::clone(&fft_y);
-        let fft_z = FFT_CACHE_1D.get_or_create(nz);
+        let fft_z = FFT_CACHE_1D.get_or_create(Shape1D { n: nz });
         let ifft_z = Arc::clone(&fft_z);
 
         Self {
@@ -196,9 +190,6 @@ impl SpectralDerivativeOperator {
             ikd_x,
             ikd_y,
             ikd_z,
-            inv_nx: 1.0 / nx as f64,
-            inv_ny: 1.0 / ny as f64,
-            inv_nz: 1.0 / nz as f64,
         }
     }
 
@@ -318,105 +309,122 @@ impl SpectralDerivativeOperator {
         Ok(())
     }
 
-    /// Derivative implementation for x-axis
+    /// Derivative along x-axis.
     ///
-    /// Uses a single reusable line buffer (no per-iteration allocation).
+    /// Parallelises over j (Axis 1): each rayon thread holds its own `line`
+    /// buffer and processes all nz pencils for one j independently.
+    /// `FftPlan1D` is `Sync` (Bluestein scratch protected by Mutex; radix-2
+    /// path has no shared mutable state), so `Arc<FftPlan1D>` is safe across
+    /// threads.
     fn derivative_along_x_impl(
         &self,
         field: &ArrayView3<f64>,
         derivative: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let mut line = Array1::<Complex64>::from_elem(self.nx, Complex64::default());
-        let inv_n = self.inv_nx;
+        let nx = self.nx;
+        let nz = self.nz;
+        let fft = &*self.fft_x;
+        let ikd = &self.ikd_x;
 
-        for j in 0..self.ny {
-            for l in 0..self.nz {
-                // Fill line buffer from field (reuse allocation)
-                for i in 0..self.nx {
-                    line[i] = Complex64::new(field[[i, j, l]], 0.0);
+        derivative
+            .axis_iter_mut(Axis(1))
+            .into_par_iter()
+            .enumerate()
+            .for_each(|(j, mut slice)| {
+                // slice shape: (nx, nz); slice[[i, l]] ≡ derivative[[i, j, l]]
+                let mut line = Array1::<Complex64>::from_elem(nx, Complex64::default());
+                for l in 0..nz {
+                    for i in 0..nx {
+                        line[i] = Complex64::new(field[[i, j, l]], 0.0);
+                    }
+                    fft.forward_complex_inplace(&mut line);
+                    for (i, &ikd_val) in ikd.iter().enumerate() {
+                        line[i] *= ikd_val;
+                    }
+                    fft.inverse_complex_inplace(&mut line);
+                    for i in 0..nx {
+                        slice[[i, l]] = line[i].re;
+                    }
                 }
-
-                // Forward FFT (uses cached plan)
-                self.fft_x.forward_complex_inplace(&mut line);
-
-                // Multiply by pre-computed i*k*dealiasing
-                for (i, &ikd) in self.ikd_x.iter().enumerate() {
-                    line[i] *= ikd;
-                }
-
-                // Inverse FFT (uses cached plan)
-                self.ifft_x.inverse_complex_inplace(&mut line);
-
-                // Store result with cached normalization
-                for i in 0..self.nx {
-                    derivative[[i, j, l]] = line[i].re * inv_n;
-                }
-            }
-        }
+            });
 
         Ok(())
     }
 
-    /// Derivative implementation for y-axis
+    /// Derivative along y-axis.
+    ///
+    /// Parallelises over i (Axis 0): each rayon thread processes all nz
+    /// pencils for one i independently.
     fn derivative_along_y_impl(
         &self,
         field: &ArrayView3<f64>,
         derivative: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let mut line = Array1::<Complex64>::from_elem(self.ny, Complex64::default());
-        let inv_n = self.inv_ny;
+        let ny = self.ny;
+        let nz = self.nz;
+        let fft = &*self.fft_y;
+        let ikd = &self.ikd_y;
 
-        for i in 0..self.nx {
-            for l in 0..self.nz {
-                for j in 0..self.ny {
-                    line[j] = Complex64::new(field[[i, j, l]], 0.0);
+        derivative
+            .axis_iter_mut(Axis(0))
+            .into_par_iter()
+            .enumerate()
+            .for_each(|(i, mut slice)| {
+                // slice shape: (ny, nz); slice[[j, l]] ≡ derivative[[i, j, l]]
+                let mut line = Array1::<Complex64>::from_elem(ny, Complex64::default());
+                for l in 0..nz {
+                    for j in 0..ny {
+                        line[j] = Complex64::new(field[[i, j, l]], 0.0);
+                    }
+                    fft.forward_complex_inplace(&mut line);
+                    for (j, &ikd_val) in ikd.iter().enumerate() {
+                        line[j] *= ikd_val;
+                    }
+                    fft.inverse_complex_inplace(&mut line);
+                    for j in 0..ny {
+                        slice[[j, l]] = line[j].re;
+                    }
                 }
-
-                self.fft_y.forward_complex_inplace(&mut line);
-
-                for (j, &ikd) in self.ikd_y.iter().enumerate() {
-                    line[j] *= ikd;
-                }
-
-                self.ifft_y.inverse_complex_inplace(&mut line);
-
-                for j in 0..self.ny {
-                    derivative[[i, j, l]] = line[j].re * inv_n;
-                }
-            }
-        }
+            });
 
         Ok(())
     }
 
-    /// Derivative implementation for z-axis
+    /// Derivative along z-axis.
+    ///
+    /// Parallelises over i (Axis 0): each rayon thread processes all ny
+    /// pencils for one i independently.
     fn derivative_along_z_impl(
         &self,
         field: &ArrayView3<f64>,
         derivative: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let mut line = Array1::<Complex64>::from_elem(self.nz, Complex64::default());
-        let inv_n = self.inv_nz;
+        let ny = self.ny;
+        let nz = self.nz;
+        let fft = &*self.fft_z;
+        let ikd = &self.ikd_z;
 
-        for i in 0..self.nx {
-            for j in 0..self.ny {
-                for l in 0..self.nz {
-                    line[l] = Complex64::new(field[[i, j, l]], 0.0);
+        derivative
+            .axis_iter_mut(Axis(0))
+            .into_par_iter()
+            .enumerate()
+            .for_each(|(i, mut slice)| {
+                // slice shape: (ny, nz); slice[[j, l]] ≡ derivative[[i, j, l]]
+                let mut line = Array1::<Complex64>::from_elem(nz, Complex64::default());
+                for j in 0..ny {
+                    for l in 0..nz {
+                        line[l] = Complex64::new(field[[i, j, l]], 0.0);
+                    }
+                    fft.forward_complex_inplace(&mut line);
+                    for (l, &ikd_val) in ikd.iter().enumerate() {
+                        line[l] *= ikd_val;
+                    }
+                    fft.inverse_complex_inplace(&mut line);
+                    for l in 0..nz {
+                        slice[[j, l]] = line[l].re;
+                    }
                 }
-
-                self.fft_z.forward_complex_inplace(&mut line);
-
-                for (l, &ikd) in self.ikd_z.iter().enumerate() {
-                    line[l] *= ikd;
-                }
-
-                self.ifft_z.inverse_complex_inplace(&mut line);
-
-                for l in 0..self.nz {
-                    derivative[[i, j, l]] = line[l].re * inv_n;
-                }
-            }
-        }
+            });
 
         Ok(())
     }

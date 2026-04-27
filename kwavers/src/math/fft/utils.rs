@@ -5,7 +5,7 @@
 //! the Apollo plan cache and therefore preserve the single source of truth for
 //! transform execution while centralizing repeated spectral post-processing.
 
-use crate::math::fft::FFT_CACHE_1D;
+use crate::math::fft::{FFT_CACHE_1D, Shape1D};
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
@@ -108,7 +108,7 @@ where
         return Array1::zeros(0);
     }
 
-    let plan = FFT_CACHE_1D.get_or_create(n);
+    let plan = FFT_CACHE_1D.get_or_create(Shape1D { n });
     let mut spectrum = signal.mapv(|value| Complex64::new(value, 0.0));
     plan.forward_complex_inplace(&mut spectrum);
 
@@ -119,9 +119,10 @@ where
         *coeff *= response(idx, freq, nyquist);
     }
 
+    // apollo-fft inverse_complex_inplace uses FFTW-compatible 1/N normalisation;
+    // no additional scaling is required.
     plan.inverse_complex_inplace(&mut spectrum);
-    let norm = 1.0 / n as f64;
-    Array1::from_shape_fn(n, |idx| spectrum[idx].re * norm)
+    Array1::from_shape_fn(n, |idx| spectrum[idx].re)
 }
 
 /// Compute the discrete analytic signal of a real trace.
@@ -144,13 +145,13 @@ pub fn analytic_signal_1d(signal: &Array1<f64>) -> Array1<Complex64> {
         return Array1::zeros(0);
     }
 
-    let plan = FFT_CACHE_1D.get_or_create(n);
+    let plan = FFT_CACHE_1D.get_or_create(Shape1D { n });
     let mut spectrum = signal.mapv(|value| Complex64::new(value, 0.0));
     plan.forward_complex_inplace(&mut spectrum);
 
     if n > 1 {
         let half = n / 2;
-        if n % 2 == 0 {
+        if n.is_multiple_of(2) {
             for coeff in spectrum.iter_mut().take(half).skip(1) {
                 *coeff *= 2.0;
             }
@@ -167,9 +168,9 @@ pub fn analytic_signal_1d(signal: &Array1<f64>) -> Array1<Complex64> {
         }
     }
 
+    // apollo-fft inverse_complex_inplace uses FFTW-compatible 1/N normalisation;
+    // no additional scaling is required.
     plan.inverse_complex_inplace(&mut spectrum);
-    let norm = 1.0 / n as f64;
-    spectrum.iter_mut().for_each(|value| *value *= norm);
     spectrum
 }
 

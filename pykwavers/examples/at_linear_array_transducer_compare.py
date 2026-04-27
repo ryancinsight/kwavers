@@ -327,8 +327,6 @@ def main() -> int:
         REFRESH_CACHE = True
 
     result = run_comparison()
-    save_comparison_figure(result, FIGURE_PATH)
-    save_text_report(METRICS_PATH, "at_linear_array_transducer parity report", build_report_lines(result))
 
     metrics = result["metrics"]
     source_mask = metrics["source_mask"]
@@ -340,6 +338,12 @@ def main() -> int:
     p_max_ok = p_max["pearson_r"] > 0.95 and abs(p_max["rms_ratio"] - 1.0) < 0.10 and p_max["psnr_db"] > 25.0
 
     status = "PASS" if (source_mask_ok and source_weighted_ok and p_max_ok) else "FAIL"
+
+    report_lines = build_report_lines(result)
+    report_lines.append(f"parity_status: {status}")
+    save_comparison_figure(result, FIGURE_PATH)
+    save_text_report(METRICS_PATH, "at_linear_array_transducer parity report", report_lines)
+
     print(f"[at_linear_array_transducer_compare] => {status}")
     print(f"  source mask: iou={source_mask['iou']:.4f} ratio={source_mask['active_cell_ratio']:.4f}")
     print(f"  source weighted mask: pearson_r={source_weighted['pearson_r']:.4f} psnr={source_weighted['psnr_db']:.2f}")

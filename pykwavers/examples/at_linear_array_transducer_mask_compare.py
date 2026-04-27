@@ -211,11 +211,11 @@ def main() -> int:
     for k, v in m.items():
         lines.append(f"  {k}: {v}")
     lines.append("")
-    lines.append(f"status: {status}")
+    lines.append(f"parity_status: {status}")
     save_text_report(REPORT_PATH, "at_linear_array_transducer_mask_compare", lines)
 
     return 0 if status == "PASS" else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

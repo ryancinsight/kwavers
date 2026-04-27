@@ -472,7 +472,7 @@ impl BurtonMillerAssembler {
     /// - ∂G/∂x_i = −G·α·r̂_i  (since ∂r/∂x_i = −r̂_i)
     /// - ∂α/∂x_i = −r̂_i/r²   (since α = ik−1/r, ∂(1/r)/∂r·(−r̂_i) = r̂_i/r²)
     /// - ∂cos_ny/∂x_i = r̂_i·cos_ny/r − n_y_i/r
-    /// Assembling and contracting with n_x gives the formula above.
+    ///   Assembling and contracting with n_x gives the formula above.
     ///
     /// **Static limit** (k→0): reduces to standard 1/r³ dipole kernel as expected:
     /// `(−3/r²)·cos_nx·cos_ny·G + (1/r²)·nxny·G = G(nxny − 3coscos)/r² = (nxny−3coscos)/(4πr³)`.

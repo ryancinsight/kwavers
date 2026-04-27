@@ -33,6 +33,20 @@ pub struct SourceHandler {
     /// A line source (filling 1D, propagating in 2D) has source_propagation_dim = 2.
     /// A point source (0D, propagating in 3D) has source_propagation_dim = 3.
     source_propagation_dim: f64,
+    /// Per-voxel k-space source correction for velocity sources in additive mode.
+    ///
+    /// ## Theorem (K-Wave Source Kappa, Treeby & Cox 2010)
+    /// For additive velocity sources, k-Wave applies the half-step leapfrog phase
+    /// correction `ifftshift(cos(c_ref·|k|·dt/2))` evaluated at each source voxel's
+    /// physical position. This compensates for the staggered-time discretisation and
+    /// ensures the injected source spectrum matches the analytic solution to spectral
+    /// accuracy.
+    ///
+    /// After ifftshift, the value at physical position (i,j,k) is:
+    ///   κ(i,j,k) = cos(c_ref·|k_fft[(i+Nx/2)%Nx, (j+Ny/2)%Ny, (k+Nz/2)%Nz]|·dt/2)
+    ///
+    /// Empty when no correction has been set (no k-space filtering applied).
+    u_kappa: Vec<f64>,
 }
 
 impl SourceHandler {
@@ -232,7 +246,38 @@ impl SourceHandler {
             p_scale_rho: Vec::new(),
             p_scale_p: Vec::new(),
             source_propagation_dim,
+            u_kappa: Vec::new(),
         })
+    }
+
+    /// Precompute per-voxel source_kappa for velocity source injection.
+    ///
+    /// ## Theorem (K-Wave ifftshift Convention)
+    /// K-Wave's source_kappa is stored as `ifftshift(cos(c_ref·|k|·dt/2))` so that
+    /// element [i,j,k] in physical space equals `cos(c_ref·|k_standard[(i+Nx/2)%Nx,
+    /// (j+Ny/2)%Ny, (k+Nz/2)%Nz]|·dt/2)`. The ifftshift maps DC (k=0) to the
+    /// grid corner [0,0,0], matching the C++ k-Wave binary's direct-indexing convention.
+    ///
+    /// `source_kappa_fft`: the (Nx,Ny,Nz) k-space correction array in **standard FFT
+    /// order** (kappa_fft[0,0,0] = 1.0 at DC). The ifftshift mapping is applied here.
+    pub fn set_velocity_source_kappa(
+        &mut self,
+        source_kappa_fft: &Array3<f64>,
+        grid_nx: usize,
+        grid_ny: usize,
+        grid_nz: usize,
+    ) {
+        self.u_kappa = self
+            .u_indices
+            .iter()
+            .map(|&(i, j, k, _)| {
+                // ifftshift index: (i + Nx/2) % Nx etc.
+                let ki = (i + grid_nx / 2) % grid_nx;
+                let kj = (j + grid_ny / 2) % grid_ny;
+                let kk = (k + grid_nz / 2) % grid_nz;
+                source_kappa_fft[[ki, kj, kk]]
+            })
+            .collect();
     }
 
     /// Precompute k-Wave compatible pressure source scaling for mass (rho) and pressure updates.
@@ -594,7 +639,13 @@ impl SourceHandler {
         }
     }
 
-    /// Inject force source (velocity source) into velocity fields
+    /// Inject force source (velocity source) into velocity fields.
+    ///
+    /// For `Additive` mode, applies the per-voxel k-space source correction
+    /// `κ(i,j,k) = ifftshift(cos(c_ref·|k|·dt/2))[i,j,k]` precomputed by
+    /// `set_velocity_source_kappa()`. This matches k-Wave's additive velocity
+    /// source injection (Treeby & Cox 2010). `AdditiveNoCorrection` bypasses the
+    /// k-space filter for direct injection.
     pub fn inject_force_source(
         &self,
         time_index: usize,
@@ -606,12 +657,20 @@ impl SourceHandler {
             if time_index < signal.shape()[2] {
                 let mode = self.source.u_mode;
                 let is_scalar_signal = signal.shape()[1] == 1 && self.u_indices.len() > 1;
+                let has_kappa = !self.u_kappa.is_empty();
 
                 for (idx, &(i, j, k, weight)) in self.u_indices.iter().enumerate() {
                     let sig_idx = if is_scalar_signal { 0 } else { idx };
-                    let val_x = weight * signal[[0, sig_idx, time_index]];
-                    let val_y = weight * signal[[1, sig_idx, time_index]];
-                    let val_z = weight * signal[[2, sig_idx, time_index]];
+                    // Apply per-voxel k-space source correction for additive mode.
+                    // AdditiveNoCorrection injects directly without the k-space filter.
+                    let kappa = if has_kappa && mode == SourceMode::Additive {
+                        self.u_kappa[idx]
+                    } else {
+                        1.0
+                    };
+                    let val_x = kappa * weight * signal[[0, sig_idx, time_index]];
+                    let val_y = kappa * weight * signal[[1, sig_idx, time_index]];
+                    let val_z = kappa * weight * signal[[2, sig_idx, time_index]];
 
                     match mode {
                         SourceMode::Additive | SourceMode::AdditiveNoCorrection => {

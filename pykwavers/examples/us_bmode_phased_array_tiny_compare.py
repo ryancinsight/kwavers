@@ -25,6 +25,7 @@ Outputs:
 from __future__ import annotations
 
 import argparse
+import os
 import time
 from copy import deepcopy
 
@@ -86,6 +87,59 @@ STEERING_ANGLES = np.arange(-16, 17, 8)  # 5 angles: -16 -8 0 8 16
 OUTPUT_DIR = DEFAULT_OUTPUT_DIR
 PNG_PATH = OUTPUT_DIR / "us_bmode_phased_array_tiny_compare.png"
 METRICS_PATH = OUTPUT_DIR / "us_bmode_phased_array_tiny_metrics.txt"
+KWAVE_CACHE = OUTPUT_DIR / "us_bmode_phased_array_tiny_kwave_cache.npz"
+PYKWAVERS_CACHE = OUTPUT_DIR / "us_bmode_phased_array_tiny_pykwavers_cache.npz"
+REFRESH_CACHE = os.getenv("KWAVERS_REFRESH_CACHE", "0") == "1"
+CACHE_VERSION = 1
+
+
+# ── Cache helpers ─────────────────────────────────────────────────────────────
+
+def _load_scan_line_cache(
+    path: os.PathLike[str],
+    steering_angles: np.ndarray,
+    nt: int,
+    seed: int,
+) -> dict | None:
+    """Load cached scan-line NPZ. Returns None if absent, stale, or REFRESH_CACHE."""
+    if REFRESH_CACHE:
+        return None
+    cache_path = os.fspath(path)
+    if not os.path.exists(cache_path):
+        return None
+    cached = np.load(cache_path, allow_pickle=False)
+    if int(np.asarray(cached.get("cache_version", np.array(0))).reshape(())) != CACHE_VERSION:
+        return None
+    if int(np.asarray(cached["nt"]).reshape(())) != nt:
+        return None
+    if int(np.asarray(cached["seed"]).reshape(())) != seed:
+        return None
+    cached_angles = np.asarray(cached["steering_angles"], dtype=np.float64)
+    if cached_angles.shape != steering_angles.shape or not np.allclose(cached_angles, steering_angles):
+        return None
+    return {
+        "scan_lines": np.asarray(cached["scan_lines"], dtype=np.float64),
+        "runtime": float(cached["runtime"]),
+    }
+
+
+def _save_scan_line_cache(
+    path: os.PathLike[str],
+    scan_lines: np.ndarray,
+    steering_angles: np.ndarray,
+    nt: int,
+    seed: int,
+    runtime: float,
+) -> None:
+    np.savez(
+        os.fspath(path),
+        cache_version=np.array(CACHE_VERSION, dtype=np.int32),
+        scan_lines=np.asarray(scan_lines, dtype=np.float64),
+        steering_angles=np.asarray(steering_angles, dtype=np.float64),
+        nt=np.array(nt, dtype=np.int64),
+        seed=np.array(seed, dtype=np.int64),
+        runtime=np.array(runtime, dtype=np.float64),
+    )
 
 
 # ── Helper: coordinate extraction (mirrors full compare script) ───────────────
@@ -269,7 +323,7 @@ def run_pykwavers(kgrid, medium_kw, transducer, not_transducer, input_signal, st
     return scan_lines
 
 
-def main():
+def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--seed", type=int, default=20260401)
     ap.add_argument("--pykwavers-gpu", action="store_true")
@@ -279,7 +333,15 @@ def main():
                     help="Enable nonlinearity in pykwavers leg (always on in kwave).")
     ap.add_argument("--angles", type=str, default=None,
                     help="Comma-separated steering angles override, e.g. '0' or '-8,0,8'.")
+    ap.add_argument("--no-cache", action="store_true",
+                    help="Force re-run both legs, ignoring cached NPZ files.")
+    ap.add_argument("--allow-failure", action="store_true",
+                    help="Exit 0 even when parity targets are not met.")
     args = ap.parse_args()
+
+    if args.no_cache:
+        global REFRESH_CACHE
+        REFRESH_CACHE = True
 
     global STEERING_ANGLES
     if args.angles is not None:
@@ -294,19 +356,33 @@ def main():
     print(f"Grid: nt={kgrid.Nt}  dt={kgrid.dt:.3e}  dx={kgrid.dx:.3e}")
 
     # ── k-wave reference ──────────────────────────────────────────────────────
-    t0 = time.perf_counter()
-    kw_lines = run_kwave(kgrid, medium, not_transducer, STEERING_ANGLES, use_gpu=args.kwave_gpu)
-    kw_time = time.perf_counter() - t0
-    print(f"k-wave finished in {kw_time:.1f}s")
+    _kw_cached = _load_scan_line_cache(KWAVE_CACHE, STEERING_ANGLES, kgrid.Nt, args.seed)
+    if _kw_cached is not None:
+        kw_lines = _kw_cached["scan_lines"]
+        kw_time = _kw_cached["runtime"]
+        print(f"k-wave loaded from cache ({kw_time:.1f}s original runtime)")
+    else:
+        t0 = time.perf_counter()
+        kw_lines = run_kwave(kgrid, medium, not_transducer, STEERING_ANGLES, use_gpu=args.kwave_gpu)
+        kw_time = time.perf_counter() - t0
+        print(f"k-wave finished in {kw_time:.1f}s")
+        _save_scan_line_cache(KWAVE_CACHE, kw_lines, STEERING_ANGLES, kgrid.Nt, args.seed, kw_time)
 
     # ── pykwavers leg ─────────────────────────────────────────────────────────
-    t0 = time.perf_counter()
-    pkw_lines = run_pykwavers(
-        kgrid, medium, transducer, not_transducer, input_signal,
-        STEERING_ANGLES, use_gpu=args.pykwavers_gpu,
-    )
-    pkw_time = time.perf_counter() - t0
-    print(f"pykwavers finished in {pkw_time:.1f}s")
+    _pkw_cached = _load_scan_line_cache(PYKWAVERS_CACHE, STEERING_ANGLES, kgrid.Nt, args.seed)
+    if _pkw_cached is not None:
+        pkw_lines = _pkw_cached["scan_lines"]
+        pkw_time = _pkw_cached["runtime"]
+        print(f"pykwavers loaded from cache ({pkw_time:.1f}s original runtime)")
+    else:
+        t0 = time.perf_counter()
+        pkw_lines = run_pykwavers(
+            kgrid, medium, transducer, not_transducer, input_signal,
+            STEERING_ANGLES, use_gpu=args.pykwavers_gpu,
+        )
+        pkw_time = time.perf_counter() - t0
+        print(f"pykwavers finished in {pkw_time:.1f}s")
+        _save_scan_line_cache(PYKWAVERS_CACHE, pkw_lines, STEERING_ANGLES, kgrid.Nt, args.seed, pkw_time)
 
     # ── Metrics per scan line ─────────────────────────────────────────────────
     rms_ratios, peak_ratios, pearson_rs = [], [], []
@@ -347,7 +423,13 @@ def main():
         f"k-wave time    : {kw_time:.1f}s",
         f"pykwavers time : {pkw_time:.1f}s",
     ]
+    _R_TARGET = 0.98
+    _RMS_MIN = 0.90
+    _RMS_MAX = 1.10
+    overall_status = "PASS" if mean_r >= _R_TARGET and _RMS_MIN <= mean_rms <= _RMS_MAX else "FAIL"
+    report.append(f"parity_status: {overall_status}")
     save_text_report(METRICS_PATH, "us_bmode_phased_array_tiny metrics", report)
+    print(f"Status: {overall_status}")
 
     # ── Plot ──────────────────────────────────────────────────────────────────
     fig, axes = plt.subplots(len(STEERING_ANGLES), 1, figsize=(12, 3*len(STEERING_ANGLES)))
@@ -369,6 +451,8 @@ def main():
     print(f"\nSaved: {PNG_PATH}")
     print(f"Saved: {METRICS_PATH}")
 
+    return 0 if overall_status == "PASS" or args.allow_failure else 1
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

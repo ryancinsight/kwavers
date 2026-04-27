@@ -102,11 +102,11 @@ impl AbsorptionOperator {
     ///
     /// ## Parameters
     /// - `harmonics` — mutable slice of 2-D pressure planes, one per harmonic.
-    ///                 `harmonics[0]` is the fundamental (n=1),
-    ///                 `harmonics[1]` is the 2nd harmonic (n=2), etc.
+    ///   `harmonics[0]` is the fundamental (n=1),
+    ///   `harmonics[1]` is the 2nd harmonic (n=2), etc.
     /// - `dz`        — propagation step [m]
     /// - `f0`        — fundamental frequency [Hz] (used for unit conversion only;
-    ///                 the power-law exponent already encodes the frequency scaling)
+    ///   the power-law exponent already encodes the frequency scaling)
     ///
     /// ## References
     /// - Hamilton MF, Blackstock DT (2008). *Nonlinear Acoustics*. ASA Press, §2.3.

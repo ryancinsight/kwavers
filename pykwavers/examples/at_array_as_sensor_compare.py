@@ -516,6 +516,11 @@ def build_report_lines(result: dict[str, object]) -> list[str]:
     ]
 
 
+_R_TARGET = 0.98
+_RMS_MIN = 0.90
+_RMS_MAX = 1.10
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="k-wave-python at_array_as_sensor parity example")
     parser.add_argument(
@@ -523,6 +528,7 @@ def main() -> int:
         action="store_true",
         help="Recompute both reference simulations and overwrite the caches.",
     )
+    parser.add_argument("--allow-failure", action="store_true")
     args = parser.parse_args()
 
     global REFRESH_CACHE
@@ -530,8 +536,16 @@ def main() -> int:
         REFRESH_CACHE = True
 
     result = run_comparison()
+
+    r_min = float(result["trace_summary"]["pearson_r_min"])
+    rms_mean = float(result["trace_summary"]["rms_ratio_mean"])
+    overall_status = "PASS" if r_min >= _R_TARGET and _RMS_MIN <= rms_mean <= _RMS_MAX else "FAIL"
+
+    report_lines = build_report_lines(result)
+    report_lines.append(f"parity_status: {overall_status}")
+    save_text_report(METRICS_PATH, "at_array_as_sensor parity metrics", report_lines)
+
     plot_comparison(result)
-    save_text_report(METRICS_PATH, "at_array_as_sensor parity metrics", build_report_lines(result))
 
     print("=" * 80)
     print("k-wave-python at_array_as_sensor vs pykwavers")
@@ -540,10 +554,13 @@ def main() -> int:
     print(f"Weighted mask pearson r:     {result['weighted_mask_metrics']['pearson_r']:.6f}")
     print(f"Raw detector matrix pearson: {result['raw_matrix_metrics']['pearson_r']:.6f}")
     print(f"Combined trace pearson:      {result['combined_matrix_metrics']['pearson_r']:.6f}")
-    print(f"Combined trace min corr:     {result['trace_summary']['pearson_r_min']:.6f}")
+    print(f"Combined trace min corr:     {r_min:.6f}  (target >= {_R_TARGET})")
+    print(f"Combined trace rms_ratio:    {rms_mean:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])")
     print(f"k-Wave runtime [s]:          {float(result['kwave']['runtime_s']):.3f}")
     print(f"pykwavers runtime [s]:       {float(result['pykwavers']['runtime_s']):.3f}")
-    return 0
+    print(f"Status:                      {overall_status}")
+
+    return 0 if overall_status == "PASS" or args.allow_failure else 1
 
 
 if __name__ == "__main__":

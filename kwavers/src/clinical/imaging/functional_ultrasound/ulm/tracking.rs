@@ -216,9 +216,9 @@ impl HungarianTracker {
         }
 
         // Unmatched tracks — increment gap or terminate
-        for i in 0..m {
-            if !matched_tracks[i] {
-                self.active_tracks[i].gap += 1;
+        for (track, &is_matched) in self.active_tracks.iter_mut().zip(&matched_tracks) {
+            if !is_matched {
+                track.gap += 1;
             }
         }
 
@@ -309,7 +309,8 @@ fn hungarian(cost: &[Vec<f64>], m: usize, n: usize, big_m: f64) -> Vec<Option<us
         }
     }
 
-    // Step 2: column reduce
+    // Step 2: column reduce — cross-axis access (c[i][j] for fixed j), index required
+    #[allow(clippy::needless_range_loop)]
     for j in 0..sz {
         let min_val = (0..sz).map(|i| c[i][j]).fold(f64::MAX, f64::min);
         for i in 0..sz {
@@ -522,8 +523,8 @@ mod tests {
         // Cost matrix = identity (cheapest is i=j); should return identity assignment.
         let n = 4;
         let mut cost = vec![vec![1e6_f64; n]; n];
-        for i in 0..n {
-            cost[i][i] = 0.0;
+        for (i, row) in cost.iter_mut().enumerate() {
+            row[i] = 0.0;
         }
         let assignment = hungarian(&cost, n, n, 1e12);
         for (i, a) in assignment.iter().enumerate() {

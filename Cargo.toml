@@ -8,6 +8,9 @@ burn = { version = "0.19", features = ["wgpu", "autodiff"] }
 nalgebra = { version = "0.33", features = ["serde-serialize"] }
 dicom = "0.8.0"
 nifti = "0.17.0"
+# Required so Cargo can parse apollo-fft/Cargo.toml (workspace-inherited deps).
+rand = "0.8"
+criterion = "0.5"
 
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }

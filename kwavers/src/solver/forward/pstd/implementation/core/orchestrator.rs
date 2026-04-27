@@ -166,7 +166,18 @@ impl PSTDSolver {
         // Allocate space for Nt+1 steps to include the t=0 initial state, matching k-Wave
         let sensor_recorder =
             SensorRecorder::new(config.sensor_mask.as_ref(), shape, config.nt + 1)?;
-        let source_handler = SourceHandler::new(source, &grid)?;
+        let mut source_handler = SourceHandler::new(source, &grid)?;
+        // Precompute per-voxel source_kappa for velocity sources in additive mode.
+        // k-Wave applies ifftshift(cos(c_ref·|k|·dt/2)) at each source voxel position
+        // for additive velocity sources (NotATransducer / u_mode="additive").
+        if source_handler.has_velocity_source() {
+            source_handler.set_velocity_source_kappa(
+                &source_kappa,
+                grid.nx,
+                grid.ny,
+                grid.nz,
+            );
+        }
 
         // Capture config.dt before the struct literal moves `config`.
         let config_dt = config.dt;

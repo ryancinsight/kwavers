@@ -20,7 +20,7 @@ ndarray = { version = "0.16", features = ["rayon", "serde"] }
 rayon = "1.10"
 num-complex = "0.4"
 num-traits = "0.2"
-apollo = { path = "../apollo/crates/apollo" }
+apollo = { path = "../apollo/crates/apollo-fft", package = "apollo-fft" }
 
 # Error handling (production critical)
 thiserror = "1.0"
@@ -78,7 +78,7 @@ approx = "0.5"
 wgpu = { version = "26.0", features = ["wgsl"], optional = true }
 bytemuck = { version = "1.19", features = ["derive"], optional = true }
 pollster = { version = "0.4", optional = true }
-apollofft-wgpu = { path = "../apollo/crates/apollofft-wgpu", optional = true }
+apollofft-wgpu = { path = "../apollo/crates/apollo-fft-wgpu", package = "apollo-fft-wgpu", optional = true }
 
 # Machine Learning (Sprint 143 - PINNs with burn integration)
 # Updated to burn 0.18.0 (bincode compatibility resolved)

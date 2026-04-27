@@ -296,13 +296,12 @@ impl BemSolver {
         // For rigid body: we solve A·p_scat = -G·dp_inc_dn
 
         let mut rhs = vec![Complex64::new(0.0, 0.0); n];
-        for i in 0..n {
-            let row_start = g_mat.row_pointers[i];
-            let row_end = g_mat.row_pointers[i + 1];
+        for (rhs_elem, window) in rhs.iter_mut().zip(g_mat.row_pointers.windows(2)) {
+            let (row_start, row_end) = (window[0], window[1]);
             for ptr in row_start..row_end {
                 let j = g_mat.col_indices[ptr];
                 if j < dp_inc_dn.len() {
-                    rhs[i] += g_mat.values[ptr] * dp_inc_dn[j];
+                    *rhs_elem += g_mat.values[ptr] * dp_inc_dn[j];
                 }
             }
         }
@@ -313,9 +312,12 @@ impl BemSolver {
         for i in 0..n {
             let diag_ptr = h_mat.row_pointers[i];
             let row_end = h_mat.row_pointers[i + 1];
-            for ptr in diag_ptr..row_end {
-                if h_mat.col_indices[ptr] == i {
-                    a_values[ptr] += alpha * Complex64::new(0.5, 0.0);
+            for (a_val, &col_idx) in a_values[diag_ptr..row_end]
+                .iter_mut()
+                .zip(&h_mat.col_indices[diag_ptr..row_end])
+            {
+                if col_idx == i {
+                    *a_val += alpha * Complex64::new(0.5, 0.0);
                     break;
                 }
             }

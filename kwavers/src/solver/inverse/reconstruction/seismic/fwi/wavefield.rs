@@ -152,7 +152,7 @@ impl WavefieldModeler {
                 .slice_mut(s![local_idx, .., .., ..])
                 .assign(&u_curr);
 
-            self.advance_forward_state(&u_curr, &u_prev, &mut u_next, &v2, dt, dx2, pml_damping);
+            self.advance_forward_state(&u_curr, &u_prev, &mut u_next, v2, dt, dx2, pml_damping);
 
             std::mem::swap(&mut u_prev, &mut u_curr);
             std::mem::swap(&mut u_curr, &mut u_next);
@@ -242,7 +242,7 @@ impl WavefieldModeler {
         let v2 = velocity_model.mapv(|v| v * v);
         let dx2 = self.config.dx * self.config.dx;
         let checkpoint_stride = Self::checkpoint_stride(nt);
-        let mut checkpoints = Vec::with_capacity((nt + checkpoint_stride - 1) / checkpoint_stride);
+        let mut checkpoints = Vec::with_capacity(nt.div_ceil(checkpoint_stride));
 
         // Storage for receiver data
         let mut seismogram = Array2::zeros((self.config.receivers.len(), nt));
@@ -368,7 +368,7 @@ impl WavefieldModeler {
             ));
         }
 
-        let expected_checkpoints = (nt + replay_cache.stride - 1) / replay_cache.stride;
+        let expected_checkpoints = nt.div_ceil(replay_cache.stride);
         if replay_cache.checkpoints.len() != expected_checkpoints {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {

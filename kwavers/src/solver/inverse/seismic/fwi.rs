@@ -316,7 +316,7 @@ impl FwiProcessor {
             let step_size = self.line_search(
                 &current_model,
                 &regularized_gradient,
-                &observed_data,
+                observed_data,
                 geometry,
                 grid,
             )?;

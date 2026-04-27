@@ -69,18 +69,30 @@ class RunningTimingStats:
 
 
 def bootstrap_example_paths() -> Path:
-    """Ensure local k-wave-python and pykwavers Python packages are importable."""
-    extension_candidates = (
+    """Ensure local k-wave-python and pykwavers Python packages are importable.
+
+    The package-adjacent ``_pykwavers.pyd`` is imported through Python's normal
+    extension mechanism (``from ._pykwavers import ...``) so Windows correctly
+    adds its parent directory to the DLL search path.  Raw build artefacts
+    (``pykwavers.dll``) are only used when the package copy is absent, in which
+    case ``PYKWAVERS_EXTENSION_PATH`` is set so ``__init__.py`` loads them via
+    ``ExtensionFileLoader``.
+    """
+    _package_pyd = PYKWAVERS_PYTHON_ROOT / "pykwavers" / "_pykwavers.pyd"
+    _raw_candidates = (
         ROOT / "target" / "maturin" / "pykwavers.dll",
         ROOT / "target" / "release" / "pykwavers.dll",
         ROOT / "target" / "debug" / "deps" / "pykwavers.dll",
         ROOT / "target" / "debug" / "pykwavers.dll",
-        PYKWAVERS_PYTHON_ROOT / "pykwavers" / "_pykwavers.pyd",
     )
-    for extension_path in extension_candidates:
-        if extension_path.exists():
-            os.environ["PYKWAVERS_EXTENSION_PATH"] = str(extension_path)
-            break
+    if _package_pyd.exists():
+        # Package .pyd present: let normal Python import handle DLL resolution.
+        os.environ.pop("PYKWAVERS_EXTENSION_PATH", None)
+    else:
+        for extension_path in _raw_candidates:
+            if extension_path.exists():
+                os.environ["PYKWAVERS_EXTENSION_PATH"] = str(extension_path)
+                break
     for path in (KWAVE_PYTHON_ROOT, PYKWAVERS_PYTHON_ROOT):
         path_str = str(path)
         if path_str not in sys.path:

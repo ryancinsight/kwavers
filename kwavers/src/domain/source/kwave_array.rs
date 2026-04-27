@@ -1629,8 +1629,10 @@ impl KWaveArray {
             let radial = radius * varphi.sin();
             let point = [
                 center.0 - radius * varphi.cos(),
-                center.1 + radial * theta.cos(),
-                center.2 + radial * theta.sin(),
+                // k-wave canonical: R @ [cos(θ)sin(φ), sin(θ)sin(φ), cos(φ)] → [-cos(φ), sin(θ)sin(φ), cos(θ)sin(φ)]
+                // (rotation maps canonical [0,0,-1] → bowl-axis [1,0,0]; see make_cart_bowl / compute_linear_transform)
+                center.1 + radial * theta.sin(),
+                center.2 + radial * theta.cos(),
             ];
             visit(point, scale);
         }
@@ -1687,11 +1689,13 @@ impl KWaveArray {
         if num_points == 1 {
             let varphi = (0.5 * (varphi_min + varphi_max)).clamp(0.0, std::f64::consts::PI);
             let radial = radius * varphi.sin();
+            // theta = GOLDEN_ANGLE * t_start ≈ t_start * 2.4; for a single point use t=0 → theta=0
+            // k-wave convention: y = sin(theta)*radial, z = cos(theta)*radial → at theta=0: y=0, z=radial
             visit(
                 [
                     center.0 - radius * varphi.cos(),
-                    center.1 + radial,
-                    center.2,
+                    center.1,
+                    center.2 + radial,
                 ],
                 scale,
             );
@@ -1718,8 +1722,10 @@ impl KWaveArray {
             let radial = radius * varphi.sin();
             let point = [
                 center.0 - radius * varphi.cos(),
-                center.1 + radial * theta.cos(),
-                center.2 + radial * theta.sin(),
+                // k-wave canonical: R @ [cos(θ)sin(φ), sin(θ)sin(φ), cos(φ)] → [-cos(φ), sin(θ)sin(φ), cos(θ)sin(φ)]
+                // (rotation maps canonical [0,0,-1] → bowl-axis [1,0,0]; see make_cart_spherical_segment)
+                center.1 + radial * theta.sin(),
+                center.2 + radial * theta.cos(),
             ];
             visit(point, scale);
         }
@@ -1874,7 +1880,9 @@ mod tests {
         array.add_disc_element((0.016, 0.016, 0.016), 0.006, Some((0.016, 0.016, 0.024)));
 
         let weights = array.get_array_weighted_mask(&grid);
-        let expected = 28.302_387_208_098_168_f64;
+        // Reference value from radial-Fibonacci BLI rasterisation (commit a24cdfcb).
+        // Old integer-based rasteriser produced 28.302387; BLI produces 28.339929.
+        let expected = 28.339_929_259_209_097_f64;
         assert!((weights.sum() - expected).abs() < 5.0e-6);
 
         let mut active_plane: Option<usize> = None;

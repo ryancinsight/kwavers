@@ -427,41 +427,58 @@ def run_comparison() -> dict[str, object]:
     }
 
 
+_R_TARGET = 0.999
+_RMS_MIN = 0.99
+_RMS_MAX = 1.01
+
+
 def main() -> int:
     """Execute the comparison, save diagnostics, and print metrics."""
+    parser = argparse.ArgumentParser(description="at_circular_piston_3D parity compare.")
+    parser.add_argument("--no-cache", action="store_true")
+    parser.add_argument("--allow-failure", action="store_true")
+    args = parser.parse_args()
+
+    global REFRESH_CACHE
+    if args.no_cache:
+        REFRESH_CACHE = True
+
     result = run_comparison()
     summary = result["summary"]
     reference_metrics = result["reference_metrics"]
     x_vec = np.asarray(result["analytical"]["x_vec"], dtype=np.float64)
     analytical = np.asarray(result["analytical"]["amp_on_axis"], dtype=np.float64)
 
-    plot_comparison(result["kwave"], result["pykwavers"], x_vec, analytical)
-    save_text_report(
-        METRICS_PATH,
-        "at_circular_piston_3D parity metrics",
-        build_report_lines(
-            result["kwave"],
-            result["pykwavers"],
-            analytical,
-            result["source_metrics"],
-            reference_metrics["kwave"],
-            reference_metrics["pykwavers"],
-            summary,
-        ),
+    r = float(summary["pearson_r"])
+    rms = float(summary["rms_ratio"])
+    overall_status = "PASS" if r >= _R_TARGET and _RMS_MIN <= rms <= _RMS_MAX else "FAIL"
+
+    report_lines = build_report_lines(
+        result["kwave"],
+        result["pykwavers"],
+        analytical,
+        result["source_metrics"],
+        reference_metrics["kwave"],
+        reference_metrics["pykwavers"],
+        summary,
     )
+    report_lines.append(f"parity_status: {overall_status}")
+    plot_comparison(result["kwave"], result["pykwavers"], x_vec, analytical)
+    save_text_report(METRICS_PATH, "at_circular_piston_3D parity metrics", report_lines)
 
     print("=" * 80)
     print("at_circular_piston_3D: k-wave-python vs pykwavers")
     print("=" * 80)
-    print(f"source weights Pearson r: {result['source_metrics']['pearson_r']:.6f}")
-    print(f"k-wave vs pykwavers Pearson r: {summary['pearson_r']:.6f}")
-    print(f"k-wave vs pykwavers RMS ratio: {summary['rms_ratio']:.6f}")
-    print(f"k-wave vs pykwavers PSNR [dB]: {20.0 * np.log10(np.max(np.abs(analytical)) / (np.sqrt(np.mean((np.asarray(result['kwave']['amp_on_axis']) - np.asarray(result['pykwavers']['amp_on_axis'])) ** 2)) + 1e-30)):.6f}")
-    print(f"k-Wave vs analytical Pearson r: {reference_metrics['kwave']['pearson_r']:.6f}")
+    print(f"source weights Pearson r:          {result['source_metrics']['pearson_r']:.6f}")
+    print(f"k-wave vs pykwavers Pearson r:     {r:.6f}  (target >= {_R_TARGET})")
+    print(f"k-wave vs pykwavers RMS ratio:     {rms:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])")
+    print(f"k-Wave vs analytical Pearson r:    {reference_metrics['kwave']['pearson_r']:.6f}")
     print(f"pykwavers vs analytical Pearson r: {reference_metrics['pykwavers']['pearson_r']:.6f}")
+    print(f"Status:                            {overall_status}")
     print(f"Saved: {FIGURE_PATH}")
     print(f"Saved: {METRICS_PATH}")
-    return 0
+
+    return 0 if overall_status == "PASS" or args.allow_failure else 1
 
 
 if __name__ == "__main__":

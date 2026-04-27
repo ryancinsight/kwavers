@@ -499,7 +499,7 @@ mod tests {
             kernel.tau[[0, 0, 0]]
         );
         assert!(
-            (kernel.eta[[0, 0, 0]] - (-3.467_425_586_398_1376e-5)).abs() < 1e-18,
+            (kernel.eta[[0, 0, 0]] - (-3.467_425_586_398_137_6e-5)).abs() < 1e-18,
             "eta mismatch: got {}",
             kernel.eta[[0, 0, 0]]
         );

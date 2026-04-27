@@ -6,6 +6,7 @@ used across all parity and validation tests.
 """
 
 from pathlib import Path
+import os
 import sys
 
 import numpy as np
@@ -20,6 +21,13 @@ for path in (
     path_str = str(path)
     if path_str not in sys.path:
         sys.path.insert(0, path_str)
+
+# On Windows, the _pykwavers extension depends on MSYS2 UCRT64 runtime DLLs.
+# Add the standard MSYS2 ucrt64 bin path so the venv CPython can resolve them.
+if sys.platform == "win32" and hasattr(os, "add_dll_directory"):
+    _msys2_ucrt64_bin = Path("D:/msys64/ucrt64/bin")
+    if _msys2_ucrt64_bin.exists():
+        os.add_dll_directory(str(_msys2_ucrt64_bin))
 
 import pykwavers as kw
 

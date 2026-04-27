@@ -408,8 +408,8 @@ mod tests {
         let n_species = 1;
         let mut concs = solver.zero_concentrations(n_species);
         // Step function: first half at 1 µM
-        for j in 0..n / 2 {
-            concs[0][j] = 1e-6;
+        for c in concs[0].iter_mut().take(n / 2) {
+            *c = 1e-6;
         }
 
         let bubble_bc = vec![1e-6_f64];

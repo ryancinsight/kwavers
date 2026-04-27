@@ -25,6 +25,7 @@ pub use apollo::{
     Complex64, FftPlan1D as Fft1d, FftPlan2D as Fft2d, FftPlan3D as Fft3d, Normalization,
     ProcessorFft3d,
 };
+pub use apollo::types::{Shape1D, Shape2D, Shape3D};
 
 pub use gpu_fft::gpu_fft_available;
 pub use kspace::KSpaceCalculator;

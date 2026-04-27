@@ -377,30 +377,27 @@ impl GaussianLocalizer {
                 let ix1 = (ix + hw + 1).min(n_x);
                 let patch = envelope.slice(s![iz0..iz1, ix0..ix1]).to_owned();
 
-                match gauss_newton_fit_2d(
+                if let Some((z_sub, x_sub, amp, sigma, bg)) = gauss_newton_fit_2d(
                     &patch,
                     iz as f64 - iz0 as f64, // initial z-center in patch coords
                     ix as f64 - ix0 as f64, // initial x-center in patch coords
                     self.config.max_gauss_newton_iter,
                 ) {
-                    Some((z_sub, x_sub, amp, sigma, bg)) => {
-                        // Quality gates
-                        if amp <= self.config.min_snr_ratio * bg.max(noise_std) {
-                            continue;
-                        }
-                        if sigma < self.config.min_sigma_px || sigma > self.config.max_sigma_px {
-                            continue;
-                        }
-                        detections.push(BubbleDetection {
-                            x: ix0 as f64 + x_sub,
-                            z: iz0 as f64 + z_sub,
-                            amplitude: amp,
-                            sigma,
-                            background: bg,
-                            frame: frame_idx,
-                        });
+                    // Quality gates
+                    if amp <= self.config.min_snr_ratio * bg.max(noise_std) {
+                        continue;
                     }
-                    None => {}
+                    if sigma < self.config.min_sigma_px || sigma > self.config.max_sigma_px {
+                        continue;
+                    }
+                    detections.push(BubbleDetection {
+                        x: ix0 as f64 + x_sub,
+                        z: iz0 as f64 + z_sub,
+                        amplitude: amp,
+                        sigma,
+                        background: bg,
+                        frame: frame_idx,
+                    });
                 }
             }
         }
@@ -559,6 +556,7 @@ fn gauss_newton_fit_2d(
 /// Gaussian elimination solver for a 5×5 system Aδ = b.
 ///
 /// Returns `None` if the matrix is singular (pivot < 1e-12).
+#[allow(clippy::needless_range_loop)]
 fn solve_5x5(a: &[[f64; 5]; 5], b: &[f64; 5]) -> Option<[f64; 5]> {
     let mut m = [[0.0_f64; 6]; 5];
     for i in 0..5 {

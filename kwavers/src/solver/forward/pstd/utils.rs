@@ -5,8 +5,9 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::math::fft::KSpaceCalculator;
-use ndarray::{s, Array3, Zip};
+use crate::math::fft::{fft_3d_array_into, ifft_3d_complex_inplace, KSpaceCalculator};
+use ndarray::{s, Array3, Axis, Zip};
+use num_complex::Complex64;
 use std::f64::consts::PI;
 
 /// Compute wavenumber arrays for spectral operations
@@ -266,40 +267,46 @@ pub enum FilterType {
     Sharp,
 }
 
-pub fn gradient_x(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
-    let (_nx, _ny, _nz) = field.dim();
+/// Spectral derivative of `field` along `axis` (0=x, 1=y, 2=z).
+///
+/// Implements ∂f/∂x_axis = IFFT(i · k_axis · FFT(f)).
+///
+/// The axis dispatch is hoisted outside the inner loop: after the 3D FFT,
+/// each 2D slice along `axis` is multiplied by the scalar `i·k_vec[slice_idx]`.
+/// This avoids a branch per element and lets LLVM vectorize the inner multiply.
+fn spectral_deriv_axis(field: &Array3<f64>, grid: &Grid, axis: usize) -> Array3<f64> {
+    let (nx, ny, nz) = field.dim();
+    let mut fhat = Array3::<Complex64>::zeros((nx, ny, nz));
+    fft_3d_array_into(field, &mut fhat);
 
-    // Use the central FFT processor for spectral derivative
-    let fft = crate::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz);
-    fft.spectral_derivative(field, 0).map_err(|err| {
-        crate::core::error::KwaversError::Validation(
-            crate::core::error::ValidationError::ConstraintViolation {
-                message: err.to_string(),
-            },
-        )
-    })
+    let k_vec = match axis {
+        0 => KSpaceCalculator::generate_k_vector(grid.nx, grid.dx),
+        1 => KSpaceCalculator::generate_k_vector(grid.ny, grid.dy),
+        _ => KSpaceCalculator::generate_k_vector(grid.nz, grid.dz),
+    };
+
+    // Multiply each axis-slice by i·k[slice_idx].  Branch on `axis` is
+    // outside the per-element loop; inner loop is branch-free and vectorisable.
+    for (idx, &ki) in k_vec.iter().enumerate() {
+        let scale = Complex64::new(0.0, ki);
+        fhat.index_axis_mut(Axis(axis), idx)
+            .mapv_inplace(|c| c * scale);
+    }
+
+    ifft_3d_complex_inplace(&mut fhat);
+    fhat.mapv(|c| c.re)
+}
+
+pub fn gradient_x(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
+    Ok(spectral_deriv_axis(field, grid, 0))
 }
 
 pub fn gradient_y(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
-    let fft = crate::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz);
-    fft.spectral_derivative(field, 1).map_err(|err| {
-        crate::core::error::KwaversError::Validation(
-            crate::core::error::ValidationError::ConstraintViolation {
-                message: err.to_string(),
-            },
-        )
-    })
+    Ok(spectral_deriv_axis(field, grid, 1))
 }
 
 pub fn gradient_z(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
-    let fft = crate::math::fft::get_fft_for_grid(grid.nx, grid.ny, grid.nz);
-    fft.spectral_derivative(field, 2).map_err(|err| {
-        crate::core::error::KwaversError::Validation(
-            crate::core::error::ValidationError::ConstraintViolation {
-                message: err.to_string(),
-            },
-        )
-    })
+    Ok(spectral_deriv_axis(field, grid, 2))
 }
 
 #[cfg(test)]

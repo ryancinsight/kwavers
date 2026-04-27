@@ -48,7 +48,7 @@
 //!   DOI: 10.1007/978-3-540-30726-6
 
 use crate::core::error::{KwaversResult, NumericalError};
-use crate::math::fft::{Complex64, FFT_CACHE_1D};
+use crate::math::fft::{Complex64, FFT_CACHE_1D, Shape1D};
 use ndarray::{Array1, Array3, ArrayView3, Axis};
 use std::f64::consts::PI;
 use std::sync::Arc;
@@ -262,7 +262,7 @@ impl PseudospectralDerivative {
         // Allocate output array
         let mut derivative = Array3::zeros((nx, ny, nz));
 
-        let fft = FFT_CACHE_1D.get_or_create(nx);
+        let fft = FFT_CACHE_1D.get_or_create(Shape1D { n: nx });
         let ifft = Arc::clone(&fft);
 
         // Process each (y,z) slice independently
@@ -285,13 +285,11 @@ impl PseudospectralDerivative {
                     buffer[idx] *= Complex64::new(0.0, *kx_val);
                 }
 
-                // Inverse FFT
+                // Inverse FFT — apollo-fft applies 1/N normalisation; no extra scale needed.
                 ifft.inverse_complex_inplace(&mut buffer);
 
-                // Normalize by 1/N and extract real part
-                let scale = 1.0 / nx as f64;
                 for (idx, val) in buffer.iter().enumerate() {
-                    derivative[[idx, j, k]] = val.re * scale;
+                    derivative[[idx, j, k]] = val.re;
                 }
             }
         }
@@ -326,7 +324,7 @@ impl PseudospectralDerivative {
 
         let mut derivative = Array3::zeros((nx, ny, nz));
 
-        let fft = FFT_CACHE_1D.get_or_create(ny);
+        let fft = FFT_CACHE_1D.get_or_create(Shape1D { n: ny });
         let ifft = Arc::clone(&fft);
 
         // Process each (x,z) slice independently
@@ -349,13 +347,11 @@ impl PseudospectralDerivative {
                     buffer[idx] *= Complex64::new(0.0, *ky_val);
                 }
 
-                // Inverse FFT
+                // Inverse FFT — apollo-fft applies 1/N normalisation; no extra scale needed.
                 ifft.inverse_complex_inplace(&mut buffer);
 
-                // Normalize and extract real part
-                let scale = 1.0 / ny as f64;
                 for (idx, val) in buffer.iter().enumerate() {
-                    derivative[[i, idx, k]] = val.re * scale;
+                    derivative[[i, idx, k]] = val.re;
                 }
             }
         }
@@ -390,7 +386,7 @@ impl PseudospectralDerivative {
 
         let mut derivative = Array3::zeros((nx, ny, nz));
 
-        let fft = FFT_CACHE_1D.get_or_create(nz);
+        let fft = FFT_CACHE_1D.get_or_create(Shape1D { n: nz });
         let ifft = Arc::clone(&fft);
 
         // Process each (x,y) slice independently
@@ -413,13 +409,11 @@ impl PseudospectralDerivative {
                     buffer[idx] *= Complex64::new(0.0, *kz_val);
                 }
 
-                // Inverse FFT
+                // Inverse FFT — apollo-fft applies 1/N normalisation; no extra scale needed.
                 ifft.inverse_complex_inplace(&mut buffer);
 
-                // Normalize and extract real part
-                let scale = 1.0 / nz as f64;
                 for (idx, val) in buffer.iter().enumerate() {
-                    derivative[[i, j, idx]] = val.re * scale;
+                    derivative[[i, j, idx]] = val.re;
                 }
             }
         }

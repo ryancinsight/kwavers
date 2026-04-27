@@ -6,6 +6,7 @@
 use crate::core::error::KwaversResult;
 use crate::gpu::memory::{MemoryPoolType, UnifiedMemoryManager};
 use crate::math::fft::{Complex64, FFT_CACHE_1D};
+use apollo::types::Shape1D;
 use log::{debug, info, warn};
 use ndarray::{Array1, Array3, Array4};
 use rand::Rng;
@@ -273,7 +274,7 @@ impl RealtimeImagingPipeline {
                     return;
                 }
 
-                let plan = FFT_CACHE_1D.get_or_create(len);
+                let plan = FFT_CACHE_1D.get_or_create(Shape1D { n: len });
 
                 HILBERT_SPECTRUM.with(|spectrum_cell| {
                     let mut spectrum = spectrum_cell.borrow_mut();

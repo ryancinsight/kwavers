@@ -3784,14 +3784,14 @@ impl Simulation {
                     .assign(&sensor_mask);
 
                 let padded_source = GridSource {
-                    p0: grid_source.p0.map(|a| embed(a)),
+                    p0: grid_source.p0.map(&embed),
                     u0: grid_source
                         .u0
                         .map(|(ux, uy, uz)| (embed(ux), embed(uy), embed(uz))),
-                    p_mask: grid_source.p_mask.map(|a| embed(a)),
+                    p_mask: grid_source.p_mask.map(&embed),
                     p_signal: grid_source.p_signal,
                     p_mode: grid_source.p_mode,
-                    u_mask: grid_source.u_mask.map(|a| embed(a)),
+                    u_mask: grid_source.u_mask.map(embed),
                     u_signal: grid_source.u_signal,
                     u_mode: grid_source.u_mode,
                 };
@@ -4689,10 +4689,10 @@ impl GpuPstdSession {
                 pml_size_xyz,
                 alpha_power,
             );
-            return Err(PyRuntimeError::new_err(
+            Err(PyRuntimeError::new_err(
                 "GpuPstdSession requires the 'gpu' feature.  \
                  Rebuild pykwavers with --features gpu.",
-            ));
+            ))
         }
 
         #[cfg(feature = "gpu")]
@@ -5067,7 +5067,7 @@ impl GpuPstdSession {
     ) -> PyResult<Bound<'py, PyArray2<f64>>> {
         #[cfg(not(feature = "gpu"))]
         {
-            return Err(PyRuntimeError::new_err("GPU feature not enabled"));
+            Err(PyRuntimeError::new_err("GPU feature not enabled"))
         }
 
         #[cfg(feature = "gpu")]
@@ -5114,7 +5114,7 @@ impl GpuPstdSession {
     ) -> PyResult<Bound<'py, PyArray2<f64>>> {
         #[cfg(not(feature = "gpu"))]
         {
-            return Err(PyRuntimeError::new_err("GPU feature not enabled"));
+            Err(PyRuntimeError::new_err("GPU feature not enabled"))
         }
 
         #[cfg(feature = "gpu")]
@@ -5429,6 +5429,7 @@ pub struct PyPIDController {
 impl PyPIDController {
     #[new]
     #[pyo3(signature = (kp, ki, kd, setpoint, sample_time=0.001, output_min=0.0, output_max=1.0, integral_limit=100.0))]
+    #[allow(clippy::too_many_arguments)]
     fn new(
         kp: f64,
         ki: f64,
@@ -5440,12 +5441,14 @@ impl PyPIDController {
         integral_limit: f64,
     ) -> Self {
         let gains = kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDGains { kp, ki, kd };
-        let mut config = kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDConfig::default();
-        config.gains = gains;
-        config.sample_time = sample_time;
-        config.output_min = output_min;
-        config.output_max = output_max;
-        config.integral_limit = integral_limit;
+        let config = kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDConfig {
+            gains,
+            sample_time,
+            output_min,
+            output_max,
+            integral_limit,
+            ..kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDConfig::default()
+        };
         let mut controller = kwavers::physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDController::new(config);
         controller.set_setpoint(setpoint);
         Self { inner: controller }
@@ -5481,6 +5484,7 @@ fn resample_to_target_grid<'py>(
 
 #[pyfunction]
 #[pyo3(signature = (sensor_data, dy, dt, c, *, data_order = "ty", interp = "linear", pos_cond = false))]
+#[allow(clippy::too_many_arguments)]
 fn kspace_line_recon<'py>(
     py: Python<'py>,
     sensor_data: PyReadonlyArray2<f64>,

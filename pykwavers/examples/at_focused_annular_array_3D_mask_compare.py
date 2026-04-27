@@ -83,21 +83,18 @@ def run_pykwavers_mask() -> np.ndarray:
     bowl centre of curvature by +offset to land on the same world coords."""
     grid = pkw.Grid(NX, NY, NZ, DX, DX, DX)
 
-    # k-wave's x_vec[i] = (i - (NX-1)/2)*dx centres cell indexing on zero,
-    # so mapping k-wave world coords → pykwavers (origin-at-corner) coords
-    # uses the half-cell offset (NX-1)/2 * dx, NOT NX*dx/2. Getting this
-    # wrong places the bowl apex half a cell off-grid and smears weight
-    # across the two neighbouring axial slices via the BLI sinc stencil.
-    offset_x = (NX - 1) / 2.0 * DX
-    offset_y = (NY - 1) / 2.0 * DX
-    offset_z = (NZ - 1) / 2.0 * DX
+    # k-wave's x_vec[i] = (i - Nx/2)*dx (integer Nx/2, MATLAB centering).
+    # pykwavers world: x_vec[i] = i*dx, origin at 0.
+    # apex_x_world = SOURCE_X_OFFSET * DX (x offsets cancel).
+    # y,z: k-wave center = y_vec[NY//2] = 0 ↔ pykwavers NY*DX/2 (on grid cell NY//2).
+    apex_x_world = SOURCE_X_OFFSET * DX
+    center_y = NY * DX / 2.0
+    center_z = NZ * DX / 2.0
 
     # k-wave's `bowl_pos` is the apex; kwavers' ElementShape::Bowl/Annulus
     # stores the centre of curvature (apex sits at centre.x - radius along
     # the bowl axis). Convert apex → centre by pushing +radius along +x.
-    apex_x_kwave = (SOURCE_X_OFFSET - (NX - 1) / 2.0) * DX
-    apex_x_world = apex_x_kwave + offset_x
-    bowl_pos = (apex_x_world + SOURCE_ROC, offset_y, offset_z)
+    bowl_pos = (apex_x_world + SOURCE_ROC, center_y, center_z)
 
     # Convert diameter list-of-lists to list of tuples
     diameters = [(float(inner), float(outer)) for inner, outer in DIAMETERS]
@@ -168,11 +165,11 @@ def main() -> int:
     for k, v in m.items():
         lines.append(f"  {k}: {v}")
     lines.append("")
-    lines.append(f"status: {status}")
+    lines.append(f"parity_status: {status}")
     save_text_report(REPORT_PATH, "at_focused_annular_array_3D_mask_compare", lines)
 
     return 0 if status == "PASS" else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

@@ -115,7 +115,6 @@ impl GradientComputer {
     /// The adjoint-state gradient is linear in the right-hand-side source term.
     /// Therefore the gradient of a linear combination of encoded sources is the
     /// corresponding linear combination of the individual gradients.
-    #[must_use]
     pub fn encoded_gradient(
         &self,
         source_gradients: &[Array3<f64>],

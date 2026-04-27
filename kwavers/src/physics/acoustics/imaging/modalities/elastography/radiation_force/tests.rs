@@ -1,4 +1,5 @@
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use crate::domain::grid::Grid;
     use crate::domain::medium::HomogeneousMedium;

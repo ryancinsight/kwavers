@@ -102,16 +102,17 @@ SENSOR_IY = NY // 2
 SENSOR_IZ = NZ // 2
 N_SENSOR_PTS = SENSOR_IX_HI - SENSOR_IX_LO + 1
 
-HALF_CELL_OFFSET_X = (NX - 1) / 2.0 * DX
-HALF_CELL_OFFSET_Y = (NY - 1) / 2.0 * DX
-HALF_CELL_OFFSET_Z = (NZ - 1) / 2.0 * DX
-
-APEX_X_KWAVE = (SOURCE_X_OFFSET - (NX - 1) / 2.0) * DX
-APEX_X_WORLD = APEX_X_KWAVE + HALF_CELL_OFFSET_X
+# k-wave grid: x_vec[i] = (i - Nx/2)*dx (integer Nx/2, MATLAB centering).
+# pykwavers world: x_vec[i] = i*dx.  apex_x_world = SOURCE_X_OFFSET * DX (x offsets cancel).
+# y,z: k-wave center = y_vec[NY//2] = 0 ↔ pykwavers NY*DX/2 (on grid cell NY//2).
+APEX_X_KWAVE = -NX * DX / 2.0 + SOURCE_X_OFFSET * DX
+APEX_X_WORLD = SOURCE_X_OFFSET * DX
 COC_X_WORLD = APEX_X_WORLD + SOURCE_ROC
+PKW_CENTER_Y = NY * DX / 2.0
+PKW_CENTER_Z = NZ * DX / 2.0
 
 KWAVE_APEX = [APEX_X_KWAVE, 0.0, 0.0]
-KWAVE_FOCUS_POS = [float(-KWAVE_APEX[0]), 0.0, 0.0]
+KWAVE_FOCUS_POS = [KWAVE_APEX[0] + SOURCE_ROC, 0.0, 0.0]
 
 PARITY_THRESHOLDS = {
     "pearson_r": 0.85,
@@ -208,7 +209,7 @@ def run_pykwavers(per_elem_signals: np.ndarray) -> dict:
     arr.set_sound_speed(C0)
     arr.set_frequency(SOURCE_F0)
     diameters = [(float(inner), float(outer)) for inner, outer in DIAMETERS]
-    bowl_pos = (COC_X_WORLD, HALF_CELL_OFFSET_Y, HALF_CELL_OFFSET_Z)
+    bowl_pos = (COC_X_WORLD, PKW_CENTER_Y, PKW_CENTER_Z)
     arr.add_annular_array(bowl_pos, SOURCE_ROC, diameters)
 
     source = pkw.Source.from_kwave_array_per_element(
@@ -326,7 +327,7 @@ def main() -> int:
     for k, v in metrics.items():
         lines.append(f"  {k}: {v}")
     lines.append("")
-    lines.append(f"status: {status}")
+    lines.append(f"parity_status: {status}")
     lines.append(f"image:  {FIGURE_PATH.name}")
     save_text_report(METRICS_PATH, "at_focused_annular_array_3D_full_compare", lines)
 
@@ -336,4 +337,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

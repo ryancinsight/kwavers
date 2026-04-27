@@ -20,6 +20,7 @@ from copy import deepcopy
 import numpy as np
 
 from example_parity_utils import (
+    DEFAULT_OUTPUT_DIR,
     bootstrap_example_paths,
     compute_image_metrics,
     compute_trace_metrics,
@@ -228,20 +229,51 @@ def run_comparison() -> dict[str, object]:
     }
 
 
+_R_TARGET = 0.93
+_RMS_MIN = 0.80
+_RMS_MAX = 1.20
+_PSNR_TARGET = 20.0
+
+
 def main() -> int:
+    """Execute the comparison, print metric summaries, and write a metrics file."""
     result = run_comparison()
+
+    tr_r = float(result["summary"]["pearson_r"])
+    tr_rms = float(result["summary"]["rms_ratio"])
+    tr_psnr = float(result["summary"]["psnr_db"])
+    fft_r = float(result["fft_summary"]["pearson_r"])
+    fft_rms = float(result["fft_summary"]["rms_ratio"])
+    fft_psnr = float(result["fft_summary"]["psnr_db"])
+
+    # PASS if both TR and FFT reconstructions meet targets
+    tr_checks = {
+        "pearson_r": tr_r >= _R_TARGET,
+        "rms_ratio": _RMS_MIN <= tr_rms <= _RMS_MAX,
+        "psnr_db": tr_psnr >= _PSNR_TARGET,
+    }
+    fft_checks = {
+        "pearson_r": fft_r >= _R_TARGET,
+        "rms_ratio": _RMS_MIN <= fft_rms <= _RMS_MAX,
+        "psnr_db": fft_psnr >= _PSNR_TARGET,
+    }
+    overall_status = "PASS" if all(tr_checks.values()) and all(fft_checks.values()) else "FAIL"
+
+    kw_ref = result["reference_metrics"]["kwave_time_reversal"]
+    py_ref = result["reference_metrics"]["pykwavers_time_reversal"]
 
     print("=" * 80)
     print("k-wave-python pr_2D_TR_line_sensor vs pykwavers")
     print("=" * 80)
-    print(f"Time reversal Pearson r: {result['summary']['pearson_r']:.6f}")
-    print(f"Time reversal RMS ratio: {result['summary']['rms_ratio']:.6f}")
-    print(f"Time reversal PSNR [dB]: {result['summary']['psnr_db']:.6f}")
-    print(f"FFT Pearson r:           {result['fft_summary']['pearson_r']:.6f}")
-    print(f"FFT RMS ratio:           {result['fft_summary']['rms_ratio']:.6f}")
-    print(f"FFT PSNR [dB]:           {result['fft_summary']['psnr_db']:.6f}")
-    print(f"k-Wave TR vs p0 r:       {result['reference_metrics']['kwave_time_reversal']['pearson_r']:.6f}")
-    print(f"pykwavers TR vs p0 r:    {result['reference_metrics']['pykwavers_time_reversal']['pearson_r']:.6f}")
+    print(f"Time reversal Pearson r: {tr_r:.6f}  (target >= {_R_TARGET})")
+    print(f"Time reversal RMS ratio: {tr_rms:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])")
+    print(f"Time reversal PSNR [dB]: {tr_psnr:.6f}  (target >= {_PSNR_TARGET})")
+    print(f"FFT Pearson r:           {fft_r:.6f}  (target >= {_R_TARGET})")
+    print(f"FFT RMS ratio:           {fft_rms:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])")
+    print(f"FFT PSNR [dB]:           {fft_psnr:.6f}  (target >= {_PSNR_TARGET})")
+    print(f"k-Wave TR vs p0 r:       {kw_ref['pearson_r']:.6f}")
+    print(f"pykwavers TR vs p0 r:    {py_ref['pearson_r']:.6f}")
+    print(f"Status:                  {overall_status}")
 
     for row, metrics in result["trace_metrics"].items():
         print(
@@ -249,7 +281,31 @@ def main() -> int:
             f"rmse={metrics['rmse']:.6e}, peak_ratio={metrics['peak_ratio']:.6f}"
         )
 
-    return 0
+    # --- Structured metrics file ---
+    output_path = DEFAULT_OUTPUT_DIR / "pr_2D_TR_line_sensor_metrics.txt"
+    with output_path.open("w") as fh:
+        fh.write("pr_2D_TR_line_sensor parity metrics\n")
+        fh.write(f"parity_status: {overall_status}\n\n")
+        fh.write("Time-reversal reconstruction (kwave vs pykwavers):\n")
+        fh.write(f"  pearson_r = {tr_r:.6f}  (target >= {_R_TARGET})\n")
+        fh.write(f"  rms_ratio = {tr_rms:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])\n")
+        fh.write(f"  psnr_db   = {tr_psnr:.6f}  (target >= {_PSNR_TARGET} dB)\n\n")
+        fh.write("FFT line reconstruction (kwave vs pykwavers):\n")
+        fh.write(f"  pearson_r = {fft_r:.6f}  (target >= {_R_TARGET})\n")
+        fh.write(f"  rms_ratio = {fft_rms:.6f}  (target [{_RMS_MIN}, {_RMS_MAX}])\n")
+        fh.write(f"  psnr_db   = {fft_psnr:.6f}  (target >= {_PSNR_TARGET} dB)\n\n")
+        fh.write("Reconstruction vs ground-truth p0:\n")
+        fh.write(f"  kwave     TR pearson_r = {kw_ref['pearson_r']:.6f}\n")
+        fh.write(f"  pykwavers TR pearson_r = {py_ref['pearson_r']:.6f}\n\n")
+        fh.write("Forward sensor traces (representative rows):\n")
+        for row, m in result["trace_metrics"].items():
+            fh.write(
+                f"  row={row}: pearson_r={m['pearson_r']:.6f}  "
+                f"rms_ratio={m['rms_ratio']:.6f}  rmse={m['rmse']:.6e}\n"
+            )
+    print(f"Metrics written to: {output_path}")
+
+    return 0 if overall_status == "PASS" else 1
 
 
 if __name__ == "__main__":

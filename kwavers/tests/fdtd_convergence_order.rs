@@ -212,7 +212,7 @@ fn test_fdtd_energy_conservation_no_source() -> KwaversResult<()> {
 /// scales as O(Δx²) since:
 /// - spatial differences: O(Δx²) (central differences, order 2)
 /// - temporal differences: O(Δt²) = O((CFL·Δx)²)
-/// So halving Δx → Δx/2 reduces the error by a factor ≈ 4.
+///   So halving Δx → Δx/2 reduces the error by a factor ≈ 4.
 ///
 /// ## Grid selection
 ///

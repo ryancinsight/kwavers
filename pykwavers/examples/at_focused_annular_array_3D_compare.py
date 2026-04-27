@@ -110,18 +110,19 @@ SENSOR_IZ = NZ // 2
 N_SENSOR_PTS = SENSOR_IX_HI - SENSOR_IX_LO + 1
 
 # Geometry — apex / centre-of-curvature conversion
-# k-wave: bowl_pos is the APEX (x_vec[0] + SOURCE_X_OFFSET*dx)
-# pykwavers: add_annular_array takes CENTRE OF CURVATURE
-HALF_CELL_OFFSET_X = (NX - 1) / 2.0 * DX
-HALF_CELL_OFFSET_Y = (NY - 1) / 2.0 * DX
-HALF_CELL_OFFSET_Z = (NZ - 1) / 2.0 * DX
-
-APEX_X_KWAVE = (SOURCE_X_OFFSET - (NX - 1) / 2.0) * DX  # k-wave-centred coords
-APEX_X_WORLD = APEX_X_KWAVE + HALF_CELL_OFFSET_X
+# k-wave grid: x_vec[i] = (i - Nx/2)*dx (integer division Nx/2, MATLAB centering).
+# pykwavers world: x_vec[i] = i*dx, origin at 0.
+# Offset: pykwavers_coord = kwave_coord + Nx*dx/2  (same convention as bowl compare).
+# k-wave bowl_pos = APEX; pykwavers add_annular_array takes CENTRE OF CURVATURE.
+APEX_X_KWAVE = -NX * DX / 2.0 + SOURCE_X_OFFSET * DX   # k-wave-centred coords
+APEX_X_WORLD = SOURCE_X_OFFSET * DX                      # pykwavers world coords
 COC_X_WORLD = APEX_X_WORLD + SOURCE_ROC
 
+PKW_CENTER_Y = NY * DX / 2.0   # pykwavers world — on grid cell NY//2, matches k-wave y=0
+PKW_CENTER_Z = NZ * DX / 2.0
+
 KWAVE_APEX = [APEX_X_KWAVE, 0.0, 0.0]
-KWAVE_FOCUS_POS = [float(-KWAVE_APEX[0]), 0.0, 0.0]  # +roc along +X in kwave frame
+KWAVE_FOCUS_POS = [KWAVE_APEX[0] + SOURCE_ROC, 0.0, 0.0]  # +roc along +X in kwave frame
 
 # Parity targets. Annular focal-zone axial profiles show sharper interference
 # structure than a uniform bowl, so small solver dt/sampling differences
@@ -213,7 +214,7 @@ def run_pykwavers(signal_1d: np.ndarray) -> dict:
     arr.set_sound_speed(C0)
     arr.set_frequency(SOURCE_F0)
     diameters = [(float(inner), float(outer)) for inner, outer in DIAMETERS]
-    bowl_pos = (COC_X_WORLD, HALF_CELL_OFFSET_Y, HALF_CELL_OFFSET_Z)
+    bowl_pos = (COC_X_WORLD, PKW_CENTER_Y, PKW_CENTER_Z)
     arr.add_annular_array(bowl_pos, SOURCE_ROC, diameters)
 
     source = pkw.Source.from_kwave_array(arr, signal_1d, SOURCE_F0, mode="additive")
@@ -333,7 +334,7 @@ def main() -> int:
     for k, v in metrics.items():
         lines.append(f"  {k}: {v}")
     lines.append("")
-    lines.append(f"status: {status}")
+    lines.append(f"parity_status: {status}")
     lines.append(f"image:  {FIGURE_PATH.name}")
     save_text_report(METRICS_PATH, "at_focused_annular_array_3D_compare", lines)
 
@@ -343,4 +344,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())
