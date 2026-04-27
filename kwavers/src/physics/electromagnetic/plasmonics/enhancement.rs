@@ -1,7 +1,57 @@
-//! Plasmonic field enhancement and effective medium theories
+//! Plasmonic field enhancement and effective medium theories.
+//!
+//! # Effective-medium theorems
+//!
+//! ## Maxwell-Garnett dilute limit
+//!
+//! For spherical inclusions with permittivity `eps_p`, host permittivity
+//! `eps_h`, and inclusion volume fraction `f`, the Maxwell-Garnett relation is
+//!
+//! ```text
+//! (eps_eff - eps_h)/(eps_eff + 2 eps_h)
+//!     = f (eps_p - eps_h)/(eps_p + 2 eps_h).
+//! ```
+//!
+//! Solving for `eps_eff` gives
+//!
+//! ```text
+//! eps_eff = eps_h (eps_p + 2 eps_h + 2 f (eps_p - eps_h))
+//!                 / (eps_p + 2 eps_h - f (eps_p - eps_h)).
+//! ```
+//!
+//! Proof: multiply both sides by the denominators and collect the single
+//! unknown `eps_eff`; the resulting linear equation has the closed form above.
+//! At `f = 0`, `eps_eff = eps_h`, and at `eps_p = eps_h`, `eps_eff = eps_h`.
+//!
+//! ## Bruggeman symmetric mixture
+//!
+//! Dense quasi-static mixtures solve
+//!
+//! ```text
+//! f (eps_p - eps_eff)/(eps_p + 2 eps_eff)
+//! + (1 - f) (eps_h - eps_eff)/(eps_h + 2 eps_eff) = 0.
+//! ```
+//!
+//! Expanding gives `2 eps_eff^2 - C eps_eff - eps_p eps_h = 0`, where
+//! `C = (2 eps_h - eps_p) + 3 f (eps_p - eps_h)`. The physical branch is
+//! `(C + sqrt(C^2 + 8 eps_p eps_h))/4`, because it returns `eps_h` at `f = 0`
+//! and `eps_p` at `f = 1` for real positive permittivities.
+//!
+//! # References
+//!
+//! - Maxwell Garnett, J.C. (1904). Colours in metal glasses and in metallic films.
+//!   *Philosophical Transactions of the Royal Society A*, 203, 385-420.
+//! - Bruggeman, D.A.G. (1935). Berechnung verschiedener physikalischer Konstanten
+//!   von heterogenen Substanzen. *Annalen der Physik*, 416, 636-664.
+//! - Khlebtsov, N.G. (2008). Optics and biophotonics of nanoparticles with a
+//!   plasmon resonance. *Quantum Electronics*, 38, 504-529.
+//! - Recent photothermal-plasmonic modeling literature continues to use Mie theory
+//!   and Johnson-Christy or Drude-Lorentz dispersive permittivity data for gold
+//!   nanoparticle optical cross-sections and heating efficiency.
 
 use super::mie_theory::MieTheory;
 use super::types::CouplingModel;
+use num_complex::Complex;
 use std::f64::consts::PI;
 
 /// Plasmonic enhancement calculator for homogeneous nanoparticle dispersions
@@ -55,15 +105,13 @@ impl PlasmonicEnhancement {
     ) -> num_complex::Complex<f64> {
         let volume_fraction =
             self.concentration * (4.0 / 3.0) * PI * self.mie_theory.radius.powi(3);
+        let host = Complex::new(host_dielectric, 0.0);
 
         match self.coupling_model {
             CouplingModel::None => {
-                // Maxwell-Garnett effective medium approximation (dilute limit coupling)
+                // Maxwell-Garnett closed form for dilute spherical inclusions.
                 let eps_particle = (self.mie_theory.particle_dielectric)(wavelength);
-                let numerator = 3.0 * host_dielectric * (eps_particle - host_dielectric);
-                let denominator = eps_particle + 2.0 * host_dielectric;
-
-                host_dielectric * (1.0 + volume_fraction * numerator / denominator)
+                maxwell_garnett_effective_dielectric(eps_particle, host, volume_fraction)
             }
             CouplingModel::DipoleDipole => {
                 // Dipole-dipole coupling.
@@ -81,12 +129,9 @@ impl PlasmonicEnhancement {
                 host_dielectric * (1.0 + volume_fraction * lorentz_factor)
             }
             CouplingModel::QuasiStatic => {
-                // Bruggeman effective medium approximation for dense/percolative media
+                // Bruggeman symmetric effective-medium solution for dense mixtures.
                 let eps_particle = (self.mie_theory.particle_dielectric)(wavelength);
-                let f = volume_fraction;
-
-                // Simple linear approximation of Bruggeman symmetric mixing formula
-                f * eps_particle + (1.0 - f) * num_complex::Complex::new(host_dielectric, 0.0)
+                bruggeman_effective_dielectric(eps_particle, host, volume_fraction)
             }
         }
     }
@@ -105,4 +150,35 @@ impl PlasmonicEnhancement {
             1.0 // Base transmission (no enhancement)
         }
     }
+}
+
+/// Maxwell-Garnett effective permittivity for spherical inclusions.
+///
+/// The input `volume_fraction` is dimensionless. Values outside `[0, 1]` are
+/// clamped to preserve the theorem's physical admissibility domain.
+#[must_use]
+pub(crate) fn maxwell_garnett_effective_dielectric(
+    eps_particle: Complex<f64>,
+    eps_host: Complex<f64>,
+    volume_fraction: f64,
+) -> Complex<f64> {
+    let f = volume_fraction.clamp(0.0, 1.0);
+    let contrast = eps_particle - eps_host;
+    eps_host * (eps_particle + 2.0 * eps_host + 2.0 * f * contrast)
+        / (eps_particle + 2.0 * eps_host - f * contrast)
+}
+
+/// Bruggeman symmetric effective permittivity for two-component mixtures.
+///
+/// Selects the quadratic branch that returns the host at `f = 0` and the
+/// particle at `f = 1` for real positive permittivities.
+#[must_use]
+pub(crate) fn bruggeman_effective_dielectric(
+    eps_particle: Complex<f64>,
+    eps_host: Complex<f64>,
+    volume_fraction: f64,
+) -> Complex<f64> {
+    let f = volume_fraction.clamp(0.0, 1.0);
+    let c = (2.0 * eps_host - eps_particle) + 3.0 * f * (eps_particle - eps_host);
+    (c + (c * c + 8.0 * eps_particle * eps_host).sqrt()) / 4.0
 }

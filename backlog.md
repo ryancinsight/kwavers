@@ -66,3 +66,8 @@
 - Closed the thermal absorption placeholder gap in `physics::thermal::properties`: the previous `1 - 0.02 ΔT` law could become negative during ablation heating. The replacement is a positive exponential soft-tissue law using the same `0.015 1/°C` coefficient as the bioheat absorption model.
 - Aligned `sound_speed_vs_temperature` with the generic soft-tissue coefficient `dc/(c dT)=1.6e-3` used in the temperature-dependent medium model and documented the local hyperthermia validity boundary from ultrasound thermometry literature.
 - Residual modeling scope: generic scalar functions still use soft-tissue coefficients. Tissue-specific thermal updates should route through table-backed material records or explicit coefficient structs before adding organ-specific behavior.
+
+## Plasmonic Effective-Medium Modernization
+- Closed the plasmonic mixture-law placeholder gap in `physics::electromagnetic::plasmonics`: `CouplingModel::None` now evaluates the Maxwell-Garnett dilute-sphere closed form instead of a linear dielectric blend.
+- Replaced the linearized `CouplingModel::QuasiStatic` branch with the physical closed-form root of the symmetric Bruggeman equation, preserving the existing coupling-model API while making endpoint and residual identities testable.
+- Residual modeling scope: `MieTheory::gold_in_water` still uses simplified Drude-Lorentz constants. The next increment should add a table-backed Johnson-Christy/Rakic dielectric strategy before changing gold resonance predictions.

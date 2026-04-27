@@ -1,4 +1,5 @@
 use super::*;
+use num_complex::Complex;
 
 #[test]
 fn test_mie_theory_gold() {
@@ -45,4 +46,55 @@ fn test_nanoparticle_array() {
     let hot_spots = array.hot_spots(530e-9);
     assert!(!hot_spots.is_empty());
     assert!(hot_spots[0].0 >= 1.0);
+}
+
+#[test]
+fn test_maxwell_garnett_endpoint_and_closed_form() {
+    let eps_particle = Complex::new(9.0, 0.6);
+    let eps_host = Complex::new(2.25, 0.0);
+
+    let at_zero = enhancement::maxwell_garnett_effective_dielectric(eps_particle, eps_host, 0.0);
+    assert!(
+        (at_zero - eps_host).norm() < 1e-14,
+        "Maxwell-Garnett must return host at f=0; got {at_zero:?}"
+    );
+
+    let f = 0.12;
+    let contrast = eps_particle - eps_host;
+    let expected = eps_host * (eps_particle + 2.0 * eps_host + 2.0 * f * contrast)
+        / (eps_particle + 2.0 * eps_host - f * contrast);
+    let actual = enhancement::maxwell_garnett_effective_dielectric(eps_particle, eps_host, f);
+
+    assert!(
+        (actual - expected).norm() < 1e-14,
+        "Maxwell-Garnett closed form mismatch: actual={actual:?}, expected={expected:?}"
+    );
+}
+
+#[test]
+fn test_bruggeman_endpoint_and_residual() {
+    let eps_particle = Complex::new(9.0, 0.6);
+    let eps_host = Complex::new(2.25, 0.0);
+
+    let at_zero = enhancement::bruggeman_effective_dielectric(eps_particle, eps_host, 0.0);
+    let at_one = enhancement::bruggeman_effective_dielectric(eps_particle, eps_host, 1.0);
+
+    assert!(
+        (at_zero - eps_host).norm() < 1e-14,
+        "Bruggeman must return host at f=0; got {at_zero:?}"
+    );
+    assert!(
+        (at_one - eps_particle).norm() < 1e-14,
+        "Bruggeman must return particle at f=1; got {at_one:?}"
+    );
+
+    let f = 0.37;
+    let eps_eff = enhancement::bruggeman_effective_dielectric(eps_particle, eps_host, f);
+    let residual = f * (eps_particle - eps_eff) / (eps_particle + 2.0 * eps_eff)
+        + (1.0 - f) * (eps_host - eps_eff) / (eps_host + 2.0 * eps_eff);
+
+    assert!(
+        residual.norm() < 1e-13,
+        "Bruggeman effective dielectric must satisfy implicit mixture equation; residual={residual:?}"
+    );
 }
