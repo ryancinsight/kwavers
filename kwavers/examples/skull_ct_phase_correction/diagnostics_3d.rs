@@ -253,12 +253,21 @@ fn sample_anterior_air_cavities(ct: &CtVolume, skull: &SkullSample) -> AirCavity
                     y: -(y as f64 - center_y) * sy,
                     z: (z as f64 - center_z) * sz,
                 };
+                let Some((posterior_surface_y, anterior_surface_y)) =
+                    ap_bone_span_display_mm(ct, x, z, center_y, sy)
+                else {
+                    continue;
+                };
+                let local_ap = anterior_surface_y - posterior_surface_y;
                 if point.x < medial_min_x
                     || point.x > medial_max_x
                     || point.y < anterior_min_y
                     || point.y > anterior_max_y
                     || point.z < inferior_z
                     || point.z > superior_z
+                    || local_ap < 0.18 * ap
+                    || point.y <= posterior_surface_y + 0.55 * local_ap
+                    || point.y >= anterior_surface_y - 2.0
                 {
                     continue;
                 }
@@ -278,6 +287,27 @@ fn sample_anterior_air_cavities(ct: &CtVolume, skull: &SkullSample) -> AirCavity
     }
 
     AirCavitySample { points, min, max }
+}
+
+fn ap_bone_span_display_mm(
+    ct: &CtVolume,
+    x: usize,
+    z: usize,
+    center_y: f64,
+    sy: f64,
+) -> Option<(f64, f64)> {
+    let (_, ny, _) = ct.hu.dim();
+    let mut posterior = f64::INFINITY;
+    let mut anterior = f64::NEG_INFINITY;
+    for y in 0..ny {
+        if ct.hu[[x, y, z]] < HU_BONE_LOWER {
+            continue;
+        }
+        let display_y = -(y as f64 - center_y) * sy;
+        posterior = posterior.min(display_y);
+        anterior = anterior.max(display_y);
+    }
+    posterior.is_finite().then_some((posterior, anterior))
 }
 
 fn is_air_adjacent_to_bone(ct: &CtVolume, x: usize, y: usize, z: usize) -> bool {
@@ -459,7 +489,6 @@ fn write_orbital_avoidance_zone<W: Write>(
     scale: f64,
     origin: Point2,
 ) -> Result<()> {
-    let center = transform(project(zone.center), scale, origin);
     if !zone.air_points.is_empty() {
         let mut bins = BTreeSet::new();
         for point in &zone.air_points {
@@ -479,7 +508,9 @@ fn write_orbital_avoidance_zone<W: Write>(
             )?;
         }
         writeln!(out, "</g>")?;
+        return Ok(());
     }
+    let center = transform(project(zone.center), scale, origin);
     writeln!(
         out,
         r##"<ellipse cx="{:.2}" cy="{:.2}" rx="{:.2}" ry="{:.2}" fill="#dc2626" fill-opacity="0.10" stroke="#dc2626" stroke-width="1.4" stroke-dasharray="5 4"/>"##,
@@ -490,7 +521,7 @@ fn write_orbital_avoidance_zone<W: Write>(
     )?;
     writeln!(
         out,
-        r##"<text x="{:.2}" y="{:.2}" font-family="Arial" font-size="14" fill="#b91c1c">CT air-cavity orbital/sinus no-pass mask</text>"##,
+        r##"<text x="{:.2}" y="{:.2}" font-family="Arial" font-size="14" fill="#b91c1c">fallback orbital/sinus no-pass mask</text>"##,
         center.x + zone.radius_y * scale + 8.0,
         center.y
     )?;
@@ -710,6 +741,8 @@ struct AvoidanceZone {
     center: Point3,
     radius_y: f64,
     radius_z: f64,
+    clearance_y: f64,
+    clearance_z: f64,
     air_points: Vec<Point3>,
 }
 
@@ -717,15 +750,19 @@ fn orbital_avoidance_zone(skull: &SkullSample, air: &AirCavitySample) -> Avoidan
     let ap = skull.max.y - skull.min.y;
     let si = skull.max.z - skull.min.z;
     if !air.points.is_empty() {
+        let (min_y, max_y) = percentile_bounds(air.points.iter().map(|point| point.y), 0.05, 0.95);
+        let (min_z, max_z) = percentile_bounds(air.points.iter().map(|point| point.z), 0.05, 0.95);
         let center = Point3 {
             x: 0.5 * (air.min.x + air.max.x),
-            y: 0.5 * (air.min.y + air.max.y),
-            z: 0.5 * (air.min.z + air.max.z),
+            y: 0.5 * (min_y + max_y),
+            z: 0.5 * (min_z + max_z),
         };
         return AvoidanceZone {
             center,
-            radius_y: (0.55 * (air.max.y - air.min.y)).max(0.07 * ap),
-            radius_z: (0.58 * (air.max.z - air.min.z)).max(0.09 * si),
+            radius_y: (0.58 * (max_y - min_y)).max(0.055 * ap),
+            radius_z: (0.62 * (max_z - min_z)).max(0.070 * si),
+            clearance_y: 0.030 * ap,
+            clearance_z: 0.035 * si,
             air_points: air.points.clone(),
         };
     }
@@ -737,11 +774,36 @@ fn orbital_avoidance_zone(skull: &SkullSample, air: &AirCavitySample) -> Avoidan
         },
         radius_y: 0.12 * ap,
         radius_z: 0.14 * si,
+        clearance_y: 0.12 * ap,
+        clearance_z: 0.14 * si,
         air_points: Vec::new(),
     }
 }
 
+fn percentile_bounds<I>(values: I, lower: f64, upper: f64) -> (f64, f64)
+where
+    I: Iterator<Item = f64>,
+{
+    let mut sorted: Vec<f64> = values.filter(|value| value.is_finite()).collect();
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    let last = sorted.len().saturating_sub(1);
+    let lower_idx = ((last as f64) * lower).round() as usize;
+    let upper_idx = ((last as f64) * upper).round() as usize;
+    (sorted[lower_idx.min(last)], sorted[upper_idx.min(last)])
+}
+
 fn segment_intersects_ellipse(source: Point3, target: Point3, zone: &AvoidanceZone) -> bool {
+    if !zone.air_points.is_empty() {
+        return zone.air_points.iter().any(|point| {
+            segment_intersects_point_neighborhood(
+                source,
+                target,
+                *point,
+                zone.clearance_y,
+                zone.clearance_z,
+            )
+        });
+    }
     let dy = target.y - source.y;
     let dz = target.z - source.z;
     let sy = source.y - zone.center.y;
@@ -760,6 +822,29 @@ fn segment_intersects_ellipse(source: Point3, target: Point3, zone: &AvoidanceZo
     let t0 = (-b - root) / (2.0 * a);
     let t1 = (-b + root) / (2.0 * a);
     (0.0..=1.0).contains(&t0) || (0.0..=1.0).contains(&t1)
+}
+
+fn segment_intersects_point_neighborhood(
+    source: Point3,
+    target: Point3,
+    point: Point3,
+    clearance_y: f64,
+    clearance_z: f64,
+) -> bool {
+    let dy = (target.y - source.y) / clearance_y;
+    let dz = (target.z - source.z) / clearance_z;
+    let py = (point.y - source.y) / clearance_y;
+    let pz = (point.z - source.z) / clearance_z;
+    let length_sq = dy * dy + dz * dz;
+    if length_sq <= f64::EPSILON {
+        let normalized_sq = py * py + pz * pz;
+        return normalized_sq <= 1.0;
+    }
+    let t = ((py * dy + pz * dz) / length_sq).clamp(0.0, 1.0);
+    let nearest_y = t * dy;
+    let nearest_z = t * dz;
+    let distance_sq = (py - nearest_y).powi(2) + (pz - nearest_z).powi(2);
+    distance_sq <= 1.0
 }
 
 fn transducer_pose(point: Point3, pivot: Point3) -> Point3 {
