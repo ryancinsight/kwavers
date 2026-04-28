@@ -83,7 +83,7 @@ use kwavers::solver::inverse::seismic::{
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
 use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::{self, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -730,6 +730,101 @@ pub fn write_velocity_csv(
     Ok(())
 }
 
+/// Encode a flat RGB byte buffer as a PNG file.
+///
+/// Converts `png::EncodingError` to `io::Error` so callers use `?` uniformly.
+fn write_png(path: &Path, rgb: &[u8], width: usize, height: usize) -> io::Result<()> {
+    let file = File::create(path)?;
+    let w = BufWriter::new(file);
+    let mut enc = png::Encoder::new(w, width as u32, height as u32);
+    enc.set_color(png::ColorType::Rgb);
+    enc.set_depth(png::BitDepth::Eight);
+    let mut writer = enc
+        .write_header()
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+    writer
+        .write_image_data(rgb)
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+    Ok(())
+}
+
+/// Write a three-plane PNG of the middle orthogonal cross-sections of `model`.
+///
+/// # Layout
+///
+/// ```text
+/// ┌──────────────┬──────────────┬──────────────┐  ← PANEL rows
+/// │  Axial       │  Coronal     │  Sagittal     │
+/// │  z = NZ/2    │  y = NY/2    │  x = NX/2    │
+/// │  (x–y plane) │  (x–z plane) │  (y–z plane) │
+/// ├──────────────┴──────────────┴──────────────┤  ← COLORBAR_H rows
+/// │  velocity colorbar (c_lo → c_hi)           │
+/// └────────────────────────────────────────────┘
+///   3 × PANEL columns
+/// ```
+///
+/// Each panel is nearest-neighbour resampled to `PANEL × PANEL` pixels.
+///
+/// # Quasi-2D note (NY = 2)
+///
+/// The axial (x–y) and sagittal (y–z) panels are degenerate because the
+/// medium is identical in both y-planes.  They remain geometrically correct
+/// and follow the same three-plane convention as `skull_ct_phase_correction`.
+///
+/// # References
+///
+/// Mirrors `write_three_plane_ppm` in `skull_ct_phase_correction.rs` but
+/// outputs PNG instead of PPM (lossless, broadly supported).
+pub fn write_three_plane_png(path: &Path, model: &Array3<f64>, c_lo: f64, c_hi: f64) -> io::Result<()> {
+    let img_w = 3 * PANEL;
+    let img_h = PANEL + COLORBAR_H;
+    let mut rgb = vec![0_u8; img_w * img_h * 3];
+
+    // ── Panel 0: Axial — z = NZ/2, x–y plane ───────────────────────────────
+    //   px → ix ∈ [0, NX)   (lateral x, left → right)
+    //   py → iy ∈ [0, NY)   (lateral y, front → back)
+    let iz_mid = NZ / 2;
+    for py in 0..PANEL {
+        for px in 0..PANEL {
+            let ix = (px * NX / PANEL).min(NX - 1);
+            let iy = (py * NY / PANEL).min(NY - 1);
+            let color = velocity_color(model[[ix, iy, iz_mid]], c_lo, c_hi);
+            put_pixel(&mut rgb, img_w, img_h, px, py, color);
+        }
+    }
+    draw_colorbar(&mut rgb, img_w, img_h, 0, c_lo, c_hi);
+
+    // ── Panel 1: Coronal — y = NY/2, x–z plane (primary seismic section) ───
+    //   px → ix ∈ [0, NX)   (lateral x, left → right)
+    //   py → iz ∈ [0, NZ)   (depth z, shallow at top)
+    let iy_mid = NY / 2;
+    for py in 0..PANEL {
+        for px in 0..PANEL {
+            let ix = (px * NX / PANEL).min(NX - 1);
+            let iz = (py * NZ / PANEL).min(NZ - 1);
+            let color = velocity_color(model[[ix, iy_mid, iz]], c_lo, c_hi);
+            put_pixel(&mut rgb, img_w, img_h, PANEL + px, py, color);
+        }
+    }
+    draw_colorbar(&mut rgb, img_w, img_h, PANEL, c_lo, c_hi);
+
+    // ── Panel 2: Sagittal — x = NX/2, y–z plane ────────────────────────────
+    //   px → iy ∈ [0, NY)   (lateral y, left → right)
+    //   py → iz ∈ [0, NZ)   (depth z, shallow at top)
+    let ix_mid = NX / 2;
+    for py in 0..PANEL {
+        for px in 0..PANEL {
+            let iy = (px * NY / PANEL).min(NY - 1);
+            let iz = (py * NZ / PANEL).min(NZ - 1);
+            let color = velocity_color(model[[ix_mid, iy, iz]], c_lo, c_hi);
+            put_pixel(&mut rgb, img_w, img_h, 2 * PANEL + px, py, color);
+        }
+    }
+    draw_colorbar(&mut rgb, img_w, img_h, 2 * PANEL, c_lo, c_hi);
+
+    write_png(path, &rgb, img_w, img_h)
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main
 // ─────────────────────────────────────────────────────────────────────────────
@@ -986,26 +1081,35 @@ fn main() -> KwaversResult<()> {
     println!("  RTM image completed — peak amplitude: {rtm_peak:.4}");
 
     // ── Image output ──────────────────────────────────────────────────────
-    // Output path: first CLI argument or default "seismic_fwi.ppm".
-    let output_path = std::env::args()
+    // Output directory: first CLI argument (directory) or current working dir.
+    //
+    // All output files are written to this directory so the caller controls
+    // where data lands.  The absolute canonical path is printed to stdout so
+    // the exact file system location is unambiguous regardless of how the
+    // binary was invoked or what the shell's working directory is.
+    let output_dir: PathBuf = std::env::args()
         .nth(1)
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("seismic_fwi.ppm"));
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
 
-    // Derive companion paths from the base stem.
-    let rtm_path = {
-        let stem = output_path
-            .file_stem()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .into_owned();
-        output_path.with_file_name(format!("{stem}_rtm.ppm"))
-    };
-    let csv_path = output_path.with_extension("csv");
+    // Canonicalize for display; tolerate non-existent path (e.g. from an arg).
+    let abs_dir = std::fs::canonicalize(&output_dir).unwrap_or(output_dir.clone());
 
-    // 4-panel velocity image: true | initial | reconstructed | Δc
+    let base = "seismic_fwi";
+    let three_plane_path = abs_dir.join(format!("{base}_three_plane.png"));
+    let velocity_ppm_path = abs_dir.join(format!("{base}.ppm"));
+    let rtm_path = abs_dir.join(format!("{base}_rtm.ppm"));
+    let csv_path = abs_dir.join(format!("{base}.csv"));
+
+    // Three-plane PNG: axial / coronal / sagittal middle slices of the
+    // reconstructed velocity model — directly mirrors write_three_plane_ppm
+    // in skull_ct_phase_correction.rs.
+    write_three_plane_png(&three_plane_path, &reconstructed, C_NEAR_SURFACE, C_ANOMALY)
+        .map_err(|e| KwaversError::InvalidInput(format!("three-plane PNG write failed: {e}")))?;
+
+    // 4-panel PPM comparison: true | initial | reconstructed | Δc
     write_velocity_panels(
-        &output_path,
+        &velocity_ppm_path,
         &true_model,
         &initial_model,
         &reconstructed,
@@ -1021,16 +1125,19 @@ fn main() -> KwaversResult<()> {
     write_velocity_csv(&csv_path, &true_model, &initial_model, &reconstructed)
         .map_err(|e| KwaversError::InvalidInput(format!("CSV write failed: {e}")))?;
 
+    println!("\n  Output directory  : {}", abs_dir.display());
     println!("\n  Wrote images and data:");
-    println!("    {}   (4-panel: true|initial|reconstructed|error)", output_path.display());
-    println!("    {}   (RTM zero-lag cross-correlation)", rtm_path.display());
-    println!("    {}   (central-column velocity profile)", csv_path.display());
+    println!("    {}  (PNG three-plane: axial|coronal|sagittal)", three_plane_path.display());
+    println!("    {}  (PPM 4-panel: true|initial|reconstructed|error)", velocity_ppm_path.display());
+    println!("    {}  (PPM RTM zero-lag cross-correlation)", rtm_path.display());
+    println!("    {}  (CSV central-column velocity profile)", csv_path.display());
     println!(
-        "  Image size: {}×{} px per panel ({} panels) + {}px colorbar",
-        PANEL, PANEL, 4, COLORBAR_H
+        "  Image size        : {}×{} px per panel, {} panels, {}px colorbar",
+        PANEL, PANEL, 3, COLORBAR_H
     );
-    println!("  Colormap: blue→cyan→green→yellow→red  [{:.0}–{:.0} m/s]", C_NEAR_SURFACE, C_ANOMALY);
-    println!("  Markers: white = shots (z=1), yellow = receivers (z=2)");
+    println!("  Colormap          : blue→cyan→green→yellow→red  [{:.0}–{:.0} m/s]", C_NEAR_SURFACE, C_ANOMALY);
+    println!("  Three-plane axes  : axial z={} (x–y) | coronal y={} (x–z) | sagittal x={} (y–z)",
+        NZ / 2, NY / 2, NX / 2);
 
     // ── Summary ───────────────────────────────────────────────────────────
     println!("\n═══════════════════════════════════════════════════════════");

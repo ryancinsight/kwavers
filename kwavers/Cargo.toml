@@ -123,6 +123,8 @@ ritk-io = { path = "../ritk/crates/ritk-io", optional = true }
 # Minimal dev dependencies for testing only
 criterion = "0.4"
 proptest = "1.2"
+# PNG encoding for example image output (seismic_imaging_demo, etc.)
+png = "0.17"
 
 # Async testing support
 tokio = { version = "1.42", features = ["rt-multi-thread", "macros"] }
