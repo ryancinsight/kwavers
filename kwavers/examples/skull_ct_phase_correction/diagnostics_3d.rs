@@ -140,6 +140,7 @@ fn write_svg(
     for point in ac_pc_plane_points(skull) {
         projected.push(project(point));
     }
+    projected.push(project(focus_point(skull)));
 
     let bounds = projection_bounds(&projected);
     let scale = 0.82
@@ -163,11 +164,13 @@ fn write_svg(
     )?;
     writeln!(
         out,
-        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Sagittal projection: vertical screen direction is anatomical superior-inferior; transducer cap is superior, opening toward inferior neck side.</text>"##
+        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Sagittal projection: blue rays mark element normals toward an inferior focus; the transducer face points down toward the skull/neck side.</text>"##
     )?;
 
     write_plane(&mut out, skull, scale, origin)?;
     write_skull_points(&mut out, skull, scale, origin)?;
+    write_bowl_outline(&mut out, &element_points, scale, origin)?;
+    write_focus_rays(&mut out, skull, &element_points, scale, origin)?;
     write_element_points(&mut out, &element_points, scale, origin)?;
     write_orientation_axes(&mut out)?;
     write_legend(&mut out, ct, skull, elements)?;
@@ -239,6 +242,76 @@ fn write_element_points<W: Write>(
             p.x, p.y
         )?;
     }
+    writeln!(out, "</g>")?;
+    Ok(())
+}
+
+fn write_bowl_outline<W: Write>(
+    out: &mut W,
+    element_points: &[(Point3, f64)],
+    scale: f64,
+    origin: Point2,
+) -> Result<()> {
+    let mut upper_profile: Vec<Point3> = element_points
+        .iter()
+        .enumerate()
+        .filter(|(idx, _)| idx % 4 == 0)
+        .map(|(_, (point, _))| *point)
+        .collect();
+    upper_profile.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
+
+    write!(
+        out,
+        r##"<polyline fill="none" stroke="#16a34a" stroke-width="3.0" stroke-opacity="0.65" points=""##
+    )?;
+    for point in upper_profile {
+        let p = transform(project(point), scale, origin);
+        write!(out, "{:.2},{:.2} ", p.x, p.y)?;
+    }
+    writeln!(out, r#""/>"#)?;
+    Ok(())
+}
+
+fn write_focus_rays<W: Write>(
+    out: &mut W,
+    skull: &SkullSample,
+    element_points: &[(Point3, f64)],
+    scale: f64,
+    origin: Point2,
+) -> Result<()> {
+    let focus = focus_point(skull);
+    let projected_focus = transform(project(focus), scale, origin);
+    writeln!(
+        out,
+        r##"<g id="downward-acoustic-rays" stroke="#2563eb" stroke-width="0.65" stroke-opacity="0.38" fill="none">"##
+    )?;
+    for (idx, (point, _)) in element_points.iter().enumerate() {
+        if idx % 24 != 0 {
+            continue;
+        }
+        let source = transform(project(*point), scale, origin);
+        writeln!(
+            out,
+            r#"<line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}"/>"#,
+            source.x, source.y, projected_focus.x, projected_focus.y
+        )?;
+    }
+    writeln!(out, "</g>")?;
+    writeln!(
+        out,
+        r##"<g font-family="Arial" font-size="14" fill="#1d4ed8">"##
+    )?;
+    writeln!(
+        out,
+        r##"<circle cx="{:.2}" cy="{:.2}" r="5.5" fill="#2563eb"/>"##,
+        projected_focus.x, projected_focus.y
+    )?;
+    writeln!(
+        out,
+        r#"<text x="{:.2}" y="{:.2}">inferior focus / down-facing normals</text>"#,
+        projected_focus.x + 10.0,
+        projected_focus.y + 4.0
+    )?;
     writeln!(out, "</g>")?;
     Ok(())
 }
@@ -373,6 +446,14 @@ fn element_points_mm(
             )
         })
         .collect()
+}
+
+fn focus_point(skull: &SkullSample) -> Point3 {
+    Point3 {
+        x: 0.0,
+        y: 0.0,
+        z: 0.58 * skull.max.z + 0.42 * skull.min.z,
+    }
 }
 
 fn ac_pc_plane_points(skull: &SkullSample) -> [Point3; 4] {
