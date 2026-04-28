@@ -88,7 +88,9 @@ fn sample_skull_boundary(ct: &CtVolume) -> SkullSample {
                 }
                 let point = Point3 {
                     x: (x as f64 - center_x) * sx,
-                    y: (y as f64 - center_y) * sy,
+                    // Display AP axis is flipped so the sagittal view places
+                    // anterior/orbital anatomy to screen-right.
+                    y: -(y as f64 - center_y) * sy,
                     // This diagnostic frame preserves the RITK slice ordering
                     // that places the cranial vault superior to the skull base
                     // for the selected CT series.
@@ -443,7 +445,7 @@ fn element_points_mm(
         .map(|element| {
             let untilted = Point3 {
                 x: element.x_m * 1e3 - center_x,
-                y: element.y_m * 1e3 - center_y,
+                y: -(element.y_m * 1e3 - center_y),
                 z: rim_z + element.bowl_z_m * 1e3,
             };
             (
