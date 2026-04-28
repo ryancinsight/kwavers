@@ -160,7 +160,7 @@ fn write_svg(
     )?;
     writeln!(
         out,
-        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Approximate AC-PC alignment: axial mid-volume plane; no AC/PC landmarks are present in this public DICOM series.</text>"##
+        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Approximate AC-PC alignment: axial mid-volume plane; array is superior to skull with concavity directed inferiorly toward the neck.</text>"##
     )?;
 
     write_plane(&mut out, skull, scale, origin)?;
@@ -293,7 +293,7 @@ fn write_obj(
     writeln!(out, "# RITK-derived skull CT and hemispherical array point geometry")?;
     writeln!(
         out,
-        "# Approximate AC-PC plane is local z=0 through volume center; no AC/PC landmarks were available."
+        "# Approximate AC-PC plane is local z=0 through volume center; array local +z is superior and concavity faces inferiorly."
     )?;
     writeln!(
         out,

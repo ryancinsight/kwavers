@@ -270,7 +270,10 @@ fn hemispherical_projected_elements(grid: &Grid) -> (Vec<f64>, Vec<f64>, Vec<f64
         let r_xy = EXABLATE_HEMISPHERE_RADIUS_M * polar.sin();
         let bowl_x = r_xy * azimuth.cos();
         let bowl_y = r_xy * azimuth.sin();
-        let bowl_z = -EXABLATE_HEMISPHERE_RADIUS_M * polar.cos();
+        // Local +z is superior in the diagnostic coordinate frame: the
+        // hemispherical cap sits above the skull with its concavity directed
+        // inferiorly toward the neck.
+        let bowl_z = EXABLATE_HEMISPHERE_RADIUS_M * polar.cos();
         x.push(center_x + projection_scale * bowl_x);
         y.push(center_y + projection_scale * bowl_y);
         z.push(bowl_z);
