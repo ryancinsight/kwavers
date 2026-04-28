@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::f64::consts::{PI, TAU};
 use std::fs::File;
 use std::io::{BufWriter, Write};
@@ -167,7 +168,10 @@ fn write_svg(
         out,
         r#"<svg xmlns="http://www.w3.org/2000/svg" width="{SVG_WIDTH}" height="{SVG_HEIGHT}" viewBox="0 0 {SVG_WIDTH} {SVG_HEIGHT}">"#
     )?;
-    writeln!(out, r##"<rect width="100%" height="100%" fill="#f8fafc"/>"##)?;
+    writeln!(
+        out,
+        r##"<rect width="100%" height="100%" fill="#f8fafc"/>"##
+    )?;
     writeln!(
         out,
         r##"<text x="40" y="44" font-family="Arial" font-size="24" fill="#0f172a">RITK skull CT inside 1024-element 650 kHz hemispherical array</text>"##
@@ -220,10 +224,33 @@ fn write_skull_points<W: Write>(
             .partial_cmp(&project(*b).depth)
             .unwrap_or(std::cmp::Ordering::Equal)
     });
-    writeln!(out, r##"<g id="skull-boundary" fill="#64748b" fill-opacity="0.22">"##)?;
+    let mut bins = BTreeSet::new();
+    for point in &points {
+        let p = transform(project(*point), scale, origin);
+        bins.insert(((p.x / 3.0).round() as i32, (p.y / 3.0).round() as i32));
+    }
+
+    writeln!(
+        out,
+        r##"<g id="skull-sagittal-density" fill="#334155" fill-opacity="0.16">"##
+    )?;
+    for (x, y) in bins {
+        writeln!(
+            out,
+            r#"<rect x="{:.2}" y="{:.2}" width="3.2" height="5.2"/>"#,
+            x as f64 * 3.0 - 1.6,
+            y as f64 * 3.0 - 2.6
+        )?;
+    }
+    writeln!(out, "</g>")?;
+
+    writeln!(
+        out,
+        r##"<g id="skull-boundary" fill="#0f172a" fill-opacity="0.40">"##
+    )?;
     for point in points {
         let p = transform(project(point), scale, origin);
-        writeln!(out, r#"<circle cx="{:.2}" cy="{:.2}" r="0.58"/>"#, p.x, p.y)?;
+        writeln!(out, r#"<circle cx="{:.2}" cy="{:.2}" r="0.72"/>"#, p.x, p.y)?;
     }
     writeln!(out, "</g>")?;
     Ok(())
@@ -242,7 +269,10 @@ fn write_element_points<W: Write>(
             .partial_cmp(&project(b.point).depth)
             .unwrap_or(std::cmp::Ordering::Equal)
     });
-    writeln!(out, r##"<g id="hemispherical-array" stroke="#0f172a" stroke-opacity="0.45" stroke-width="0.35">"##)?;
+    writeln!(
+        out,
+        r##"<g id="hemispherical-array" stroke="#0f172a" stroke-opacity="0.45" stroke-width="0.35">"##
+    )?;
     for element in points {
         let p = transform(project(element.point), scale, origin);
         if element.disabled {
@@ -351,7 +381,10 @@ fn write_orientation_axes<W: Write>(out: &mut W) -> Result<()> {
         r##"<g font-family="Arial" font-size="15" fill="#0f172a" stroke="#0f172a" stroke-width="1.5">"##
     )?;
     writeln!(out, r#"<line x1="1090" y1="730" x2="1090" y2="590"/>"#)?;
-    writeln!(out, r##"<path d="M1090 590 L1083 604 L1097 604 Z" fill="#0f172a"/>"##)?;
+    writeln!(
+        out,
+        r##"<path d="M1090 590 L1083 604 L1097 604 Z" fill="#0f172a"/>"##
+    )?;
     writeln!(out, r#"<text x="1110" y="598">superior</text>"#)?;
     writeln!(out, r#"<text x="1110" y="730">inferior / neck</text>"#)?;
     writeln!(out, r#"<line x1="1025" y1="730" x2="1155" y2="730"/>"#)?;
@@ -380,8 +413,14 @@ fn write_legend<W: Write>(
         out,
         r##"<g font-family="Arial" font-size="14" fill="#0f172a">"##
     )?;
-    writeln!(out, r#"<text x="40" y="815">gray: HU >= 300 skull boundary sampled from RITK-loaded CT</text>"#)?;
-    writeln!(out, r#"<text x="40" y="838">colored points: enabled elements; gray X: disabled by orbital/nasal avoidance ray test</text>"#)?;
+    writeln!(
+        out,
+        r#"<text x="40" y="815">dark blue-gray: HU >= 300 skull silhouette and boundary from RITK-loaded CT</text>"#
+    )?;
+    writeln!(
+        out,
+        r#"<text x="40" y="838">colored points: enabled elements; gray X: disabled by orbital/nasal avoidance ray test</text>"#
+    )?;
     writeln!(
         out,
         r#"<text x="40" y="861">disabled elements: {disabled}/{}; nonzero corrections: {nonzero}/{}; skull boundary points: {}</text>"#,
@@ -418,7 +457,10 @@ fn write_obj(
     elements: &[ElementProjection],
 ) -> Result<()> {
     let mut out = BufWriter::new(File::create(path)?);
-    writeln!(out, "# RITK-derived skull CT and hemispherical array point geometry")?;
+    writeln!(
+        out,
+        "# RITK-derived skull CT and hemispherical array point geometry"
+    )?;
     writeln!(
         out,
         "# Approximate AC-PC plane is local z=0 through volume center; array local +z is superior and concavity faces inferiorly."
@@ -548,11 +590,7 @@ fn transducer_pose(point: Point3, pivot: Point3) -> Point3 {
     let dz = point.z - pivot.z;
     let y = pivot.y + dy * pitch.cos() - dz * pitch.sin();
     let z = pivot.z + dy * pitch.sin() + dz * pitch.cos();
-    Point3 {
-        x: point.x,
-        y,
-        z,
-    }
+    Point3 { x: point.x, y, z }
 }
 
 fn ac_pc_plane_points(skull: &SkullSample) -> [Point3; 4] {
