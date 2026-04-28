@@ -10,6 +10,7 @@ use super::{CtVolume, ElementProjection, HU_BONE_LOWER};
 const MAX_SKULL_POINTS: usize = 50_000;
 const SVG_WIDTH: f64 = 1200.0;
 const SVG_HEIGHT: f64 = 900.0;
+const DISPLAY_HEAD_PITCH_DEG: f64 = -15.0;
 
 #[derive(Debug, Clone, Copy)]
 struct Point3 {
@@ -85,14 +86,14 @@ fn sample_skull_boundary(ct: &CtVolume) -> SkullSample {
                 if hash % 2 != 0 {
                     continue;
                 }
-                let point = Point3 {
+                let point = display_head_pose(Point3 {
                     x: (x as f64 - center_x) * sx,
                     y: (y as f64 - center_y) * sy,
                     // This diagnostic frame preserves the RITK slice ordering
                     // that places the cranial vault superior to the skull base
                     // for the selected CT series.
                     z: (z as f64 - center_z) * sz,
-                };
+                });
                 include_point(&mut min, &mut max, point);
                 points.push(point);
                 if points.len() >= MAX_SKULL_POINTS {
@@ -160,15 +161,16 @@ fn write_svg(
     writeln!(out, r##"<rect width="100%" height="100%" fill="#f8fafc"/>"##)?;
     writeln!(
         out,
-        r##"<text x="40" y="44" font-family="Arial" font-size="24" fill="#0f172a">RITK skull CT sagittal orientation check with 1024-element 650 kHz hemispherical array</text>"##
+        r##"<text x="40" y="44" font-family="Arial" font-size="24" fill="#0f172a">RITK skull CT inside 1024-element 650 kHz hemispherical array</text>"##
     )?;
     writeln!(
         out,
-        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Sagittal projection: cranial vault is superior; blue rays mark element normals toward an inferior focus inside the skull.</text>"##
+        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Display pose: head pitched anterior-down inside the helmet so the ray fan avoids the anterior/orbital side.</text>"##
     )?;
 
     write_plane(&mut out, skull, scale, origin)?;
     write_skull_points(&mut out, skull, scale, origin)?;
+    write_orbital_avoidance_zone(&mut out, skull, scale, origin)?;
     write_focus_rays(&mut out, skull, &element_points, scale, origin)?;
     write_element_points(&mut out, &element_points, scale, origin)?;
     write_orientation_axes(&mut out)?;
@@ -253,6 +255,7 @@ fn write_focus_rays<W: Write>(
     origin: Point2,
 ) -> Result<()> {
     let focus = focus_point(skull);
+    let avoidance = orbital_avoidance_zone(skull);
     let projected_focus = transform(project(focus), scale, origin);
     writeln!(
         out,
@@ -260,6 +263,9 @@ fn write_focus_rays<W: Write>(
     )?;
     for (idx, (point, _)) in element_points.iter().enumerate() {
         if idx % 24 != 0 {
+            continue;
+        }
+        if segment_intersects_ellipse(*point, focus, avoidance) {
             continue;
         }
         let source = transform(project(*point), scale, origin);
@@ -286,6 +292,31 @@ fn write_focus_rays<W: Write>(
         projected_focus.y + 4.0
     )?;
     writeln!(out, "</g>")?;
+    Ok(())
+}
+
+fn write_orbital_avoidance_zone<W: Write>(
+    out: &mut W,
+    skull: &SkullSample,
+    scale: f64,
+    origin: Point2,
+) -> Result<()> {
+    let zone = orbital_avoidance_zone(skull);
+    let center = transform(project(zone.center), scale, origin);
+    writeln!(
+        out,
+        r##"<ellipse cx="{:.2}" cy="{:.2}" rx="{:.2}" ry="{:.2}" fill="#dc2626" fill-opacity="0.10" stroke="#dc2626" stroke-width="1.4" stroke-dasharray="5 4"/>"##,
+        center.x,
+        center.y,
+        zone.radius_y * scale,
+        zone.radius_z * scale
+    )?;
+    writeln!(
+        out,
+        r##"<text x="{:.2}" y="{:.2}" font-family="Arial" font-size="14" fill="#b91c1c">schematic orbital avoidance zone</text>"##,
+        center.x + zone.radius_y * scale + 8.0,
+        center.y
+    )?;
     Ok(())
 }
 
@@ -405,7 +436,7 @@ fn element_points_mm(
     let (nx, ny, _) = ct.hu.dim();
     let center_x = 0.5 * (nx.saturating_sub(1) as f64) * ct.spacing_m[0] * 1e3;
     let center_y = 0.5 * (ny.saturating_sub(1) as f64) * ct.spacing_m[1] * 1e3;
-    let superior_anchor_z = skull.max.z;
+    let rim_z = skull.min.z + 0.18 * (skull.max.z - skull.min.z);
     elements
         .iter()
         .map(|element| {
@@ -413,7 +444,7 @@ fn element_points_mm(
                 Point3 {
                     x: element.x_m * 1e3 - center_x,
                     y: element.y_m * 1e3 - center_y,
-                    z: superior_anchor_z + element.bowl_z_m * 1e3,
+                    z: rim_z + element.bowl_z_m * 1e3,
                 },
                 element.correction_rad,
             )
@@ -424,8 +455,61 @@ fn element_points_mm(
 fn focus_point(skull: &SkullSample) -> Point3 {
     Point3 {
         x: 0.0,
-        y: 0.0,
-        z: 0.58 * skull.max.z + 0.42 * skull.min.z,
+        y: -0.12 * (skull.max.y - skull.min.y),
+        z: 0.70 * skull.max.z + 0.30 * skull.min.z,
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct AvoidanceZone {
+    center: Point3,
+    radius_y: f64,
+    radius_z: f64,
+}
+
+fn orbital_avoidance_zone(skull: &SkullSample) -> AvoidanceZone {
+    let ap = skull.max.y - skull.min.y;
+    let si = skull.max.z - skull.min.z;
+    AvoidanceZone {
+        center: Point3 {
+            x: 0.0,
+            y: skull.max.y - 0.18 * ap,
+            z: skull.max.z - 0.34 * si,
+        },
+        radius_y: 0.12 * ap,
+        radius_z: 0.14 * si,
+    }
+}
+
+fn segment_intersects_ellipse(source: Point3, target: Point3, zone: AvoidanceZone) -> bool {
+    let dy = target.y - source.y;
+    let dz = target.z - source.z;
+    let sy = source.y - zone.center.y;
+    let sz = source.z - zone.center.z;
+    let a = (dy / zone.radius_y).powi(2) + (dz / zone.radius_z).powi(2);
+    let b = 2.0 * (sy * dy / zone.radius_y.powi(2) + sz * dz / zone.radius_z.powi(2));
+    let c = (sy / zone.radius_y).powi(2) + (sz / zone.radius_z).powi(2) - 1.0;
+    if a <= f64::EPSILON {
+        return c <= 0.0;
+    }
+    let discriminant = b * b - 4.0 * a * c;
+    if discriminant < 0.0 {
+        return false;
+    }
+    let root = discriminant.sqrt();
+    let t0 = (-b - root) / (2.0 * a);
+    let t1 = (-b + root) / (2.0 * a);
+    (0.0..=1.0).contains(&t0) || (0.0..=1.0).contains(&t1)
+}
+
+fn display_head_pose(point: Point3) -> Point3 {
+    let pitch = DISPLAY_HEAD_PITCH_DEG.to_radians();
+    let y = point.y * pitch.cos() - point.z * pitch.sin();
+    let z = point.y * pitch.sin() + point.z * pitch.cos();
+    Point3 {
+        x: point.x,
+        y,
+        z,
     }
 }
 
