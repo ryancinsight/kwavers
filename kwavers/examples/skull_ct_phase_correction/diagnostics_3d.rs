@@ -10,7 +10,7 @@ use super::{CtVolume, ElementProjection, HU_BONE_LOWER};
 const MAX_SKULL_POINTS: usize = 50_000;
 const SVG_WIDTH: f64 = 1200.0;
 const SVG_HEIGHT: f64 = 900.0;
-const DISPLAY_HEAD_PITCH_DEG: f64 = -15.0;
+const TRANSDUCER_POSTERIOR_TILT_DEG: f64 = 18.0;
 
 #[derive(Debug, Clone, Copy)]
 struct Point3 {
@@ -86,14 +86,14 @@ fn sample_skull_boundary(ct: &CtVolume) -> SkullSample {
                 if hash % 2 != 0 {
                     continue;
                 }
-                let point = display_head_pose(Point3 {
+                let point = Point3 {
                     x: (x as f64 - center_x) * sx,
                     y: (y as f64 - center_y) * sy,
                     // This diagnostic frame preserves the RITK slice ordering
                     // that places the cranial vault superior to the skull base
                     // for the selected CT series.
                     z: (z as f64 - center_z) * sz,
-                });
+                };
                 include_point(&mut min, &mut max, point);
                 points.push(point);
                 if points.len() >= MAX_SKULL_POINTS {
@@ -165,7 +165,7 @@ fn write_svg(
     )?;
     writeln!(
         out,
-        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Display pose: head pitched anterior-down inside the helmet so the ray fan avoids the anterior/orbital side.</text>"##
+        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Display pose: skull stays in CT pose; transducer is tilted posteriorly so rays avoid anterior orbital/nasal region.</text>"##
     )?;
 
     write_plane(&mut out, skull, scale, origin)?;
@@ -437,15 +437,17 @@ fn element_points_mm(
     let center_x = 0.5 * (nx.saturating_sub(1) as f64) * ct.spacing_m[0] * 1e3;
     let center_y = 0.5 * (ny.saturating_sub(1) as f64) * ct.spacing_m[1] * 1e3;
     let rim_z = skull.min.z + 0.18 * (skull.max.z - skull.min.z);
+    let focus = focus_point(skull);
     elements
         .iter()
         .map(|element| {
+            let untilted = Point3 {
+                x: element.x_m * 1e3 - center_x,
+                y: element.y_m * 1e3 - center_y,
+                z: rim_z + element.bowl_z_m * 1e3,
+            };
             (
-                Point3 {
-                    x: element.x_m * 1e3 - center_x,
-                    y: element.y_m * 1e3 - center_y,
-                    z: rim_z + element.bowl_z_m * 1e3,
-                },
+                transducer_pose(untilted, focus),
                 element.correction_rad,
             )
         })
@@ -455,8 +457,8 @@ fn element_points_mm(
 fn focus_point(skull: &SkullSample) -> Point3 {
     Point3 {
         x: 0.0,
-        y: -0.12 * (skull.max.y - skull.min.y),
-        z: 0.70 * skull.max.z + 0.30 * skull.min.z,
+        y: skull.min.y + 0.42 * (skull.max.y - skull.min.y),
+        z: 0.66 * skull.max.z + 0.34 * skull.min.z,
     }
 }
 
@@ -502,10 +504,12 @@ fn segment_intersects_ellipse(source: Point3, target: Point3, zone: AvoidanceZon
     (0.0..=1.0).contains(&t0) || (0.0..=1.0).contains(&t1)
 }
 
-fn display_head_pose(point: Point3) -> Point3 {
-    let pitch = DISPLAY_HEAD_PITCH_DEG.to_radians();
-    let y = point.y * pitch.cos() - point.z * pitch.sin();
-    let z = point.y * pitch.sin() + point.z * pitch.cos();
+fn transducer_pose(point: Point3, pivot: Point3) -> Point3 {
+    let pitch = TRANSDUCER_POSTERIOR_TILT_DEG.to_radians();
+    let dy = point.y - pivot.y;
+    let dz = point.z - pivot.z;
+    let y = pivot.y + dy * pitch.cos() - dz * pitch.sin();
+    let z = pivot.z + dy * pitch.sin() + dz * pitch.cos();
     Point3 {
         x: point.x,
         y,
