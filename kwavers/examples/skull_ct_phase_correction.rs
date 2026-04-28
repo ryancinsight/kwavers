@@ -12,7 +12,9 @@
 //! samples corrections for a 1024-element hemispherical array, and writes:
 //!
 //! - `<output.ppm>`: axial, coronal, and sagittal phase-correction panels.
-//! - `<output>.csv`: per-element projected coordinates and correction phase.
+//! - `<output>.csv`: per-element coordinates, correction phase, skull thickness,
+//!   and cortical/trabecular density metrics.
+//! - `<output>_element_maps.ppm` and `.svg`: 2D transducer element maps.
 
 use std::env;
 use std::f64::consts::{PI, TAU};
@@ -24,6 +26,7 @@ use anyhow::{bail, Context, Result};
 use burn::backend::NdArray;
 use kwavers::domain::grid::Grid;
 use kwavers::physics::acoustics::skull::{AberrationCorrection, HeterogeneousSkull};
+use kwavers::physics::skull::heterogeneous::SkullLayer;
 use ndarray::{Array1, Array2, Array3};
 use ritk_io::{load_dicom_series, scan_dicom_directory};
 
@@ -40,8 +43,8 @@ const C_CORTICAL_BONE_M_PER_S: f64 = 2800.0;
 const RHO_WATER_KG_PER_M3: f64 = 1000.0;
 const RHO_CORTICAL_BONE_KG_PER_M3: f64 = 1900.0;
 const HU_BONE_LOWER: f64 = 300.0;
-const HU_BONE_UPPER: f64 = 2000.0;
 const PANEL: usize = 384;
+const MAP_PANEL: usize = 384;
 
 #[derive(Debug, Clone)]
 struct CtVolume {
@@ -58,6 +61,15 @@ pub(crate) struct ElementProjection {
     pub(crate) y_m: f64,
     pub(crate) bowl_z_m: f64,
     pub(crate) correction_rad: f64,
+    skull_thickness_m: f64,
+    cortical_thickness_m: f64,
+    trabecular_thickness_m: f64,
+    mean_density_kg_m3: f64,
+    mean_sound_speed_m_s: f64,
+    cortical_mean_density_kg_m3: Option<f64>,
+    trabecular_mean_density_kg_m3: Option<f64>,
+    trabecular_to_cortical_sdr: Option<f64>,
+    cortical_to_trabecular_density_ratio: Option<f64>,
 }
 
 fn main() -> Result<()> {
@@ -98,8 +110,15 @@ fn main() -> Result<()> {
     let element_corrections = correction
         .compute_element_corrections(FREQUENCY_HZ, &element_x, &element_y)
         .context("failed to sample element phase corrections")?;
-    let projections =
-        element_projection_records(&element_x, &element_y, &element_z, &element_corrections);
+    let projections = element_projection_records(
+        &element_x,
+        &element_y,
+        &element_z,
+        &element_corrections,
+        &grid,
+        &ct,
+        &skull,
+    );
 
     write_three_plane_ppm(
         &output_path,
@@ -110,6 +129,16 @@ fn main() -> Result<()> {
         &grid,
     )?;
     write_element_csv(&output_path.with_extension("csv"), &projections)?;
+    write_element_map_ppm(
+        &diagnostics_3d::companion_path(&output_path, "_element_maps", "ppm"),
+        &projections,
+        &grid,
+    )?;
+    write_element_map_svg(
+        &diagnostics_3d::companion_path(&output_path, "_element_maps", "svg"),
+        &projections,
+        &grid,
+    )?;
     diagnostics_3d::write_three_dimensional_diagnostics(&output_path, &ct, &projections)
         .context("failed to write 3D skull-array diagnostics")?;
 
@@ -123,11 +152,13 @@ fn main() -> Result<()> {
         1e3 * ct.spacing_m[2]
     );
     println!(
-        "Computed {} element corrections at {:.0} kHz; wrote {} and {}",
+        "Computed {} element corrections at {:.0} kHz; wrote {}, {}, {}, and {}",
         projections.len(),
         FREQUENCY_HZ / 1e3,
         output_path.display(),
-        output_path.with_extension("csv").display()
+        output_path.with_extension("csv").display(),
+        diagnostics_3d::companion_path(&output_path, "_element_maps", "ppm").display(),
+        diagnostics_3d::companion_path(&output_path, "_element_maps", "svg").display()
     );
     println!(
         "Wrote 3D diagnostics {} and {}",
@@ -230,26 +261,13 @@ fn load_ct_with_ritk(path: &Path, selected_uid: Option<&str>) -> Result<CtVolume
 }
 
 fn skull_from_hu(ct: &CtVolume) -> HeterogeneousSkull {
-    let dims = ct.hu.dim();
-    let mut sound_speed = Array3::<f64>::from_elem(dims, C_WATER_M_PER_S);
-    let mut density = Array3::<f64>::from_elem(dims, RHO_WATER_KG_PER_M3);
-    let mut attenuation = Array3::<f64>::zeros(dims);
-
-    for ((x, y, z), hu) in ct.hu.indexed_iter() {
-        let bone_fraction =
-            ((*hu - HU_BONE_LOWER) / (HU_BONE_UPPER - HU_BONE_LOWER)).clamp(0.0, 1.0);
-        sound_speed[[x, y, z]] =
-            C_WATER_M_PER_S + bone_fraction * (C_CORTICAL_BONE_M_PER_S - C_WATER_M_PER_S);
-        density[[x, y, z]] = RHO_WATER_KG_PER_M3
-            + bone_fraction * (RHO_CORTICAL_BONE_KG_PER_M3 - RHO_WATER_KG_PER_M3);
-        attenuation[[x, y, z]] = 20.0 * bone_fraction;
-    }
-
-    HeterogeneousSkull {
-        sound_speed,
-        density,
-        attenuation,
-    }
+    HeterogeneousSkull::from_ct_hill(
+        &ct.hu,
+        C_CORTICAL_BONE_M_PER_S,
+        RHO_CORTICAL_BONE_KG_PER_M3,
+        20.0,
+    )
+    .expect("Hill BVF skull model should accept finite RITK CT HU data")
 }
 
 fn hemispherical_projected_elements(grid: &Grid) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
@@ -287,22 +305,121 @@ fn element_projection_records(
     ys: &[f64],
     zs: &[f64],
     corrections: &Array1<f64>,
+    grid: &Grid,
+    ct: &CtVolume,
+    skull: &HeterogeneousSkull,
 ) -> Vec<ElementProjection> {
     xs.iter()
         .zip(ys)
         .zip(zs)
         .zip(corrections)
         .enumerate()
-        .map(
-            |(element, (((&x_m, &y_m), &bowl_z_m), &correction_rad))| ElementProjection {
+        .map(|(element, (((&x_m, &y_m), &bowl_z_m), &correction_rad))| {
+            let metrics = element_path_metrics(x_m, y_m, grid, ct, skull);
+            ElementProjection {
                 element,
                 x_m,
                 y_m,
                 bowl_z_m,
                 correction_rad: wrap_phase(correction_rad),
-            },
-        )
+                skull_thickness_m: metrics.skull_thickness_m,
+                cortical_thickness_m: metrics.cortical_thickness_m,
+                trabecular_thickness_m: metrics.trabecular_thickness_m,
+                mean_density_kg_m3: metrics.mean_density_kg_m3,
+                mean_sound_speed_m_s: metrics.mean_sound_speed_m_s,
+                cortical_mean_density_kg_m3: metrics.cortical_mean_density_kg_m3,
+                trabecular_mean_density_kg_m3: metrics.trabecular_mean_density_kg_m3,
+                trabecular_to_cortical_sdr: metrics.trabecular_to_cortical_sdr,
+                cortical_to_trabecular_density_ratio: metrics.cortical_to_trabecular_density_ratio,
+            }
+        })
         .collect()
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ElementPathMetrics {
+    skull_thickness_m: f64,
+    cortical_thickness_m: f64,
+    trabecular_thickness_m: f64,
+    mean_density_kg_m3: f64,
+    mean_sound_speed_m_s: f64,
+    cortical_mean_density_kg_m3: Option<f64>,
+    trabecular_mean_density_kg_m3: Option<f64>,
+    trabecular_to_cortical_sdr: Option<f64>,
+    cortical_to_trabecular_density_ratio: Option<f64>,
+}
+
+fn element_path_metrics(
+    x_m: f64,
+    y_m: f64,
+    grid: &Grid,
+    ct: &CtVolume,
+    skull: &HeterogeneousSkull,
+) -> ElementPathMetrics {
+    let i = ((x_m / grid.dx).round() as isize).clamp(0, grid.nx as isize - 1) as usize;
+    let j = ((y_m / grid.dy).round() as isize).clamp(0, grid.ny as isize - 1) as usize;
+    let dz = grid.dz;
+    let mut skull_count = 0_usize;
+    let mut cortical_count = 0_usize;
+    let mut trabecular_count = 0_usize;
+    let mut density_sum = 0.0_f64;
+    let mut sound_speed_sum = 0.0_f64;
+    let mut cortical_density_sum = 0.0_f64;
+    let mut trabecular_density_sum = 0.0_f64;
+
+    for k in 0..grid.nz {
+        let hu = ct.hu[[i, j, k]];
+        if hu < HU_BONE_LOWER {
+            continue;
+        }
+        skull_count += 1;
+        density_sum += skull.density[[i, j, k]];
+        sound_speed_sum += skull.sound_speed[[i, j, k]];
+        match HeterogeneousSkull::classify_layer(hu) {
+            SkullLayer::Cortical => {
+                cortical_count += 1;
+                cortical_density_sum += skull.density[[i, j, k]];
+            }
+            SkullLayer::Diploe => {
+                trabecular_count += 1;
+                trabecular_density_sum += skull.density[[i, j, k]];
+            }
+            SkullLayer::SoftTissue => {}
+        }
+    }
+
+    let mean_density = if skull_count > 0 {
+        density_sum / skull_count as f64
+    } else {
+        RHO_WATER_KG_PER_M3
+    };
+    let mean_sound_speed = if skull_count > 0 {
+        sound_speed_sum / skull_count as f64
+    } else {
+        C_WATER_M_PER_S
+    };
+    let cortical_mean_density =
+        (cortical_count > 0).then_some(cortical_density_sum / cortical_count as f64);
+    let trabecular_mean_density =
+        (trabecular_count > 0).then_some(trabecular_density_sum / trabecular_count as f64);
+    let trabecular_to_cortical_sdr = trabecular_mean_density
+        .zip(cortical_mean_density)
+        .map(|(trabecular, cortical)| trabecular / cortical);
+    let cortical_to_trabecular_density_ratio = cortical_mean_density
+        .zip(trabecular_mean_density)
+        .map(|(cortical, trabecular)| cortical / trabecular);
+
+    ElementPathMetrics {
+        skull_thickness_m: skull_count as f64 * dz,
+        cortical_thickness_m: cortical_count as f64 * dz,
+        trabecular_thickness_m: trabecular_count as f64 * dz,
+        mean_density_kg_m3: mean_density,
+        mean_sound_speed_m_s: mean_sound_speed,
+        cortical_mean_density_kg_m3: cortical_mean_density,
+        trabecular_mean_density_kg_m3: trabecular_mean_density,
+        trabecular_to_cortical_sdr,
+        cortical_to_trabecular_density_ratio,
+    }
 }
 
 fn write_three_plane_ppm(
@@ -422,6 +539,318 @@ fn draw_aperture_phase_strip(rgb: &mut [u8], width: usize, height: usize, apertu
     }
 }
 
+fn write_element_map_ppm(path: &Path, elements: &[ElementProjection], grid: &Grid) -> Result<()> {
+    let width = 2 * MAP_PANEL;
+    let height = 2 * MAP_PANEL;
+    let mut rgb = vec![248_u8; width * height * 3];
+    draw_element_scalar_panel(
+        &mut rgb,
+        width,
+        height,
+        (0, 0),
+        elements,
+        grid,
+        |element| Some(element.correction_rad),
+        ScalarColor::Phase { min: -PI, max: PI },
+    );
+    draw_element_scalar_panel(
+        &mut rgb,
+        width,
+        height,
+        (1, 0),
+        elements,
+        grid,
+        |element| Some(1e3 * element.skull_thickness_m),
+        ScalarColor::Sequential {
+            min: 0.0,
+            max: finite_max(
+                elements
+                    .iter()
+                    .map(|element| 1e3 * element.skull_thickness_m),
+            )
+            .max(1.0),
+        },
+    );
+    draw_element_scalar_panel(
+        &mut rgb,
+        width,
+        height,
+        (0, 1),
+        elements,
+        grid,
+        |element| element.trabecular_to_cortical_sdr,
+        ScalarColor::Sequential { min: 0.0, max: 1.0 },
+    );
+    draw_element_scalar_panel(
+        &mut rgb,
+        width,
+        height,
+        (1, 1),
+        elements,
+        grid,
+        |element| element.cortical_to_trabecular_density_ratio,
+        ScalarColor::Sequential {
+            min: 1.0,
+            max: finite_max(
+                elements
+                    .iter()
+                    .filter_map(|element| element.cortical_to_trabecular_density_ratio),
+            )
+            .max(1.0),
+        },
+    );
+
+    let mut out = BufWriter::new(File::create(path)?);
+    writeln!(out, "P6\n{} {}\n255", width, height)?;
+    out.write_all(&rgb)?;
+    Ok(())
+}
+
+fn write_element_map_svg(path: &Path, elements: &[ElementProjection], grid: &Grid) -> Result<()> {
+    let panel = 380.0_f64;
+    let gutter = 54.0_f64;
+    let margin = 56.0_f64;
+    let width = 2.0 * panel + gutter + 2.0 * margin;
+    let height = 2.0 * panel + gutter + 2.0 * margin + 46.0;
+    let thickness_max = finite_max(
+        elements
+            .iter()
+            .map(|element| 1e3 * element.skull_thickness_m),
+    )
+    .max(1.0);
+    let ratio_max = finite_max(
+        elements
+            .iter()
+            .filter_map(|element| element.cortical_to_trabecular_density_ratio),
+    )
+    .max(1.0);
+
+    let mut out = BufWriter::new(File::create(path)?);
+    writeln!(
+        out,
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">"#
+    )?;
+    writeln!(
+        out,
+        r##"<rect width="100%" height="100%" fill="#f8fafc"/>"##
+    )?;
+    writeln!(
+        out,
+        r##"<text x="40" y="32" font-family="Arial" font-size="22" fill="#0f172a">2D transducer element maps from RITK skull CT</text>"##
+    )?;
+    write_element_svg_panel(
+        &mut out,
+        (margin, margin + 28.0),
+        panel,
+        "phase correction [rad]",
+        elements,
+        grid,
+        |element| Some(element.correction_rad),
+        ScalarColor::Phase { min: -PI, max: PI },
+    )?;
+    write_element_svg_panel(
+        &mut out,
+        (margin + panel + gutter, margin + 28.0),
+        panel,
+        "skull thickness [mm]",
+        elements,
+        grid,
+        |element| Some(1e3 * element.skull_thickness_m),
+        ScalarColor::Sequential {
+            min: 0.0,
+            max: thickness_max,
+        },
+    )?;
+    write_element_svg_panel(
+        &mut out,
+        (margin, margin + panel + gutter + 28.0),
+        panel,
+        "trabecular/cortical SDR",
+        elements,
+        grid,
+        |element| element.trabecular_to_cortical_sdr,
+        ScalarColor::Sequential { min: 0.0, max: 1.0 },
+    )?;
+    write_element_svg_panel(
+        &mut out,
+        (margin + panel + gutter, margin + panel + gutter + 28.0),
+        panel,
+        "cortical/trabecular density ratio",
+        elements,
+        grid,
+        |element| element.cortical_to_trabecular_density_ratio,
+        ScalarColor::Sequential {
+            min: 1.0,
+            max: ratio_max,
+        },
+    )?;
+    writeln!(
+        out,
+        r##"<text x="40" y="{:.2}" font-family="Arial" font-size="13" fill="#475569">Gray elements have no valid cortical/trabecular pair along the CT column; metrics are exported in the CSV.</text>"##,
+        height - 18.0
+    )?;
+    writeln!(out, "</svg>")?;
+    Ok(())
+}
+
+fn write_element_svg_panel<W, F>(
+    out: &mut W,
+    origin: (f64, f64),
+    panel: f64,
+    title: &str,
+    elements: &[ElementProjection],
+    grid: &Grid,
+    value: F,
+    color: ScalarColor,
+) -> Result<()>
+where
+    W: Write,
+    F: Fn(&ElementProjection) -> Option<f64>,
+{
+    writeln!(
+        out,
+        r##"<text x="{:.2}" y="{:.2}" font-family="Arial" font-size="15" fill="#0f172a">{title}</text>"##,
+        origin.0,
+        origin.1 - 10.0
+    )?;
+    writeln!(
+        out,
+        r##"<rect x="{:.2}" y="{:.2}" width="{panel:.2}" height="{panel:.2}" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>"##,
+        origin.0, origin.1
+    )?;
+    for element in elements {
+        let x = origin.0 + (element.x_m / (grid.nx as f64 * grid.dx)) * panel;
+        let y = origin.1 + panel - (element.y_m / (grid.ny as f64 * grid.dy)) * panel;
+        let pixel = value(element)
+            .filter(|value| value.is_finite())
+            .map(|value| scalar_color(value, color))
+            .unwrap_or([148, 163, 184]);
+        let fill = rgb_hex(pixel);
+        writeln!(
+            out,
+            r#"<circle cx="{x:.2}" cy="{y:.2}" r="2.2" fill="{fill}"/>"#
+        )?;
+    }
+    Ok(())
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ScalarColor {
+    Phase { min: f64, max: f64 },
+    Sequential { min: f64, max: f64 },
+}
+
+fn draw_element_scalar_panel<F>(
+    rgb: &mut [u8],
+    width: usize,
+    height: usize,
+    panel: (usize, usize),
+    elements: &[ElementProjection],
+    grid: &Grid,
+    value: F,
+    color: ScalarColor,
+) where
+    F: Fn(&ElementProjection) -> Option<f64>,
+{
+    let x0 = panel.0 * MAP_PANEL;
+    let y0 = panel.1 * MAP_PANEL;
+    draw_panel_border(rgb, width, height, x0, y0);
+    for element in elements {
+        let px = x0 as isize
+            + ((element.x_m / (grid.nx as f64 * grid.dx)) * MAP_PANEL as f64).round() as isize;
+        let py = y0 as isize + (MAP_PANEL as isize - 1)
+            - ((element.y_m / (grid.ny as f64 * grid.dy)) * MAP_PANEL as f64).round() as isize;
+        let pixel = value(element)
+            .filter(|value| value.is_finite())
+            .map(|value| scalar_color(value, color))
+            .unwrap_or([148, 163, 184]);
+        draw_disc(rgb, width, height, px, py, 2, pixel);
+    }
+}
+
+fn draw_panel_border(rgb: &mut [u8], width: usize, height: usize, x0: usize, y0: usize) {
+    let border = [15, 23, 42];
+    for x in x0..(x0 + MAP_PANEL).min(width) {
+        put_pixel(rgb, width, height, x, y0, border);
+        put_pixel(
+            rgb,
+            width,
+            height,
+            x,
+            (y0 + MAP_PANEL - 1).min(height - 1),
+            border,
+        );
+    }
+    for y in y0..(y0 + MAP_PANEL).min(height) {
+        put_pixel(rgb, width, height, x0, y, border);
+        put_pixel(
+            rgb,
+            width,
+            height,
+            (x0 + MAP_PANEL - 1).min(width - 1),
+            y,
+            border,
+        );
+    }
+}
+
+fn draw_disc(
+    rgb: &mut [u8],
+    width: usize,
+    height: usize,
+    cx: isize,
+    cy: isize,
+    radius: isize,
+    color: [u8; 3],
+) {
+    for dy in -radius..=radius {
+        for dx in -radius..=radius {
+            if dx * dx + dy * dy > radius * radius {
+                continue;
+            }
+            let x = cx + dx;
+            let y = cy + dy;
+            if x >= 0 && y >= 0 {
+                put_pixel(rgb, width, height, x as usize, y as usize, color);
+            }
+        }
+    }
+}
+
+fn scalar_color(value: f64, color: ScalarColor) -> [u8; 3] {
+    match color {
+        ScalarColor::Phase { min, max } => {
+            let normalized = ((value - min) / (max - min).max(f64::EPSILON)).clamp(0.0, 1.0);
+            let phase = min + normalized * (max - min);
+            phase_color(phase)
+        }
+        ScalarColor::Sequential { min, max } => {
+            let t = ((value - min) / (max - min).max(f64::EPSILON)).clamp(0.0, 1.0);
+            sequential_color(t)
+        }
+    }
+}
+
+fn sequential_color(t: f64) -> [u8; 3] {
+    let r = (255.0 * t) as u8;
+    let g = (255.0 * (1.0 - (2.0 * t - 1.0).abs())) as u8;
+    let b = (255.0 * (1.0 - t)) as u8;
+    [r, g, b]
+}
+
+fn finite_max<I>(values: I) -> f64
+where
+    I: Iterator<Item = f64>,
+{
+    values
+        .filter(|value| value.is_finite())
+        .fold(0.0_f64, f64::max)
+}
+
+fn rgb_hex(rgb: [u8; 3]) -> String {
+    format!("#{:02x}{:02x}{:02x}", rgb[0], rgb[1], rgb[2])
+}
+
 fn put_pixel(rgb: &mut [u8], width: usize, height: usize, x: usize, y: usize, color: [u8; 3]) {
     if x >= width || y >= height {
         return;
@@ -459,13 +888,36 @@ fn wrap_phase(phase: f64) -> f64 {
 
 fn write_element_csv(path: &Path, elements: &[ElementProjection]) -> Result<()> {
     let mut out = BufWriter::new(File::create(path)?);
-    writeln!(out, "element,x_m,y_m,bowl_z_m,phase_correction_rad")?;
+    writeln!(
+        out,
+        "element,x_m,y_m,bowl_z_m,phase_correction_rad,skull_thickness_mm,cortical_thickness_mm,trabecular_thickness_mm,mean_density_kg_m3,mean_sound_speed_m_s,cortical_mean_density_kg_m3,trabecular_mean_density_kg_m3,trabecular_to_cortical_sdr,cortical_to_trabecular_density_ratio"
+    )?;
     for element in elements {
         writeln!(
             out,
-            "{},{:.9},{:.9},{:.9},{:.12}",
-            element.element, element.x_m, element.y_m, element.bowl_z_m, element.correction_rad
+            "{},{:.9},{:.9},{:.9},{:.12},{:.6},{:.6},{:.6},{:.6},{:.6},{},{},{},{}",
+            element.element,
+            element.x_m,
+            element.y_m,
+            element.bowl_z_m,
+            element.correction_rad,
+            1e3 * element.skull_thickness_m,
+            1e3 * element.cortical_thickness_m,
+            1e3 * element.trabecular_thickness_m,
+            element.mean_density_kg_m3,
+            element.mean_sound_speed_m_s,
+            format_optional(element.cortical_mean_density_kg_m3),
+            format_optional(element.trabecular_mean_density_kg_m3),
+            format_optional(element.trabecular_to_cortical_sdr),
+            format_optional(element.cortical_to_trabecular_density_ratio)
         )?;
     }
     Ok(())
+}
+
+fn format_optional(value: Option<f64>) -> String {
+    value
+        .filter(|value| value.is_finite())
+        .map(|value| format!("{value:.6}"))
+        .unwrap_or_default()
 }
