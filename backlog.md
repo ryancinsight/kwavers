@@ -55,6 +55,7 @@
 - Closed the sonoluminescence bremsstrahlung oversized-file gap by splitting constants, Gaunt factors, noble-gas data, plasma state, emission model, field assembly, and value-semantic tests into nested vertical modules below 200 lines each.
 - Closed the acoustic conservation oversized-file gap by splitting metrics, energy, mass-continuity, momentum, entropy, intensity, heat-source, validation, and value-semantic tests into nested vertical modules below 150 lines each.
 - Closed the sonogenetics channel oversized-file gap by splitting constants, gating parameters, channel identity, open-probability equations, ion-current computation, and value-semantic tests into a nested vertical module tree with unchanged public facade exports.
+- Closed the quantum-optics orphan/oversized-file gap by wiring `physics::optics::quantum_optics` into the optics module tree, splitting Einstein coefficients, Gaunt factors, special functions, correction assessment, constants, and tests into nested files, and replacing constant invalid-domain fallbacks with non-finite outputs plus tests.
 
 ## AS PSTD FFT Hot-Path Optimization
 - Closed the axisymmetric PSTD parity gap: `at_circular_piston_AS` (pearson=0.9907, PASS) and `at_focused_bowl_AS` (pearson=1.0000, PASS) after five physics fixes: one-sided radial PML (`pnz = nz + p`, `pz_embed = 0`), CPML inner-z transparency (`radial_inner_z_transparent`), source injection skip for `rhoy`, `density_scale = 1.0` for AS, and correct embed offset.
