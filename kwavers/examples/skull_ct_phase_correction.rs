@@ -27,6 +27,9 @@ use kwavers::physics::acoustics::skull::{AberrationCorrection, HeterogeneousSkul
 use ndarray::{Array1, Array2, Array3};
 use ritk_io::{load_dicom_series, scan_dicom_directory};
 
+#[path = "skull_ct_phase_correction/diagnostics_3d.rs"]
+mod diagnostics_3d;
+
 type Backend = NdArray<f32>;
 
 const FREQUENCY_HZ: f64 = 650_000.0;
@@ -44,15 +47,17 @@ const PANEL: usize = 384;
 struct CtVolume {
     hu: Array3<f64>,
     spacing_m: [f64; 3],
+    origin_mm: [f64; 3],
+    direction: [[f64; 3]; 3],
 }
 
 #[derive(Debug, Clone)]
-struct ElementProjection {
+pub(crate) struct ElementProjection {
     element: usize,
-    x_m: f64,
-    y_m: f64,
-    bowl_z_m: f64,
-    correction_rad: f64,
+    pub(crate) x_m: f64,
+    pub(crate) y_m: f64,
+    pub(crate) bowl_z_m: f64,
+    pub(crate) correction_rad: f64,
 }
 
 fn main() -> Result<()> {
@@ -105,6 +110,8 @@ fn main() -> Result<()> {
         &grid,
     )?;
     write_element_csv(&output_path.with_extension("csv"), &projections)?;
+    diagnostics_3d::write_three_dimensional_diagnostics(&output_path, &ct, &projections)
+        .context("failed to write 3D skull-array diagnostics")?;
 
     println!(
         "Loaded CT {}x{}x{} voxels, spacing [{:.3}, {:.3}, {:.3}] mm",
@@ -121,6 +128,11 @@ fn main() -> Result<()> {
         FREQUENCY_HZ / 1e3,
         output_path.display(),
         output_path.with_extension("csv").display()
+    );
+    println!(
+        "Wrote 3D diagnostics {} and {}",
+        diagnostics_3d::companion_path(&output_path, "_3d", "svg").display(),
+        diagnostics_3d::companion_path(&output_path, "_3d", "obj").display()
     );
     Ok(())
 }
@@ -165,6 +177,11 @@ fn load_ct_with_ritk(path: &Path, selected_uid: Option<&str>) -> Result<CtVolume
     if spacing.len() != 3 {
         bail!("RITK returned invalid spacing rank {}", spacing.len());
     }
+    let origin_vec = image.origin().to_vec();
+    if origin_vec.len() != 3 {
+        bail!("RITK returned invalid origin rank {}", origin_vec.len());
+    }
+    let direction_matrix = image.direction().0;
 
     let tensor_data = image.data().clone().into_data();
     let values = tensor_data
@@ -191,6 +208,24 @@ fn load_ct_with_ritk(path: &Path, selected_uid: Option<&str>) -> Result<CtVolume
     Ok(CtVolume {
         hu,
         spacing_m: [spacing[0] * 1e-3, spacing[1] * 1e-3, spacing[2] * 1e-3],
+        origin_mm: [origin_vec[0], origin_vec[1], origin_vec[2]],
+        direction: [
+            [
+                direction_matrix[(0, 0)],
+                direction_matrix[(0, 1)],
+                direction_matrix[(0, 2)],
+            ],
+            [
+                direction_matrix[(1, 0)],
+                direction_matrix[(1, 1)],
+                direction_matrix[(1, 2)],
+            ],
+            [
+                direction_matrix[(2, 0)],
+                direction_matrix[(2, 1)],
+                direction_matrix[(2, 2)],
+            ],
+        ],
     })
 }
 
