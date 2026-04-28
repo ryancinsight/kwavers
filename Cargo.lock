@@ -5484,6 +5484,7 @@ dependencies = [
  "regex",
  "reqwest 0.11.27",
  "ritk-core",
+ "ritk-io",
  "ritk-registration",
  "rkyv",
  "serde",

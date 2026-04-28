@@ -44,6 +44,7 @@ This directory contains comprehensive examples demonstrating the interdisciplina
 | Example | Description | Features |
 |---------|-------------|----------|
 | [`tissue_model_example.rs`](tissue_model_example.rs) | Realistic tissue modeling | Heterogeneous media, attenuation |
+| [`skull_ct_phase_correction.rs`](skull_ct_phase_correction.rs) | Skull CT phase correction | RITK DICOM loading, 1024-element hemispherical array, three-plane phase image |
 | [`swe_liver_fibrosis.rs`](swe_liver_fibrosis.rs) | Liver fibrosis assessment | SWE imaging, fibrosis staging |
 | [`electromagnetic_simulation.rs`](electromagnetic_simulation.rs) | EM wave propagation | Maxwell equations, coupling |
 
@@ -100,6 +101,7 @@ Some examples require specific feature flags:
 |---------|----------|-------------|
 | `pinn` | AI/ML examples | Physics-Informed Neural Networks |
 | `gpu` | GPU-accelerated examples | WGPU-based parallel computing |
+| `ritk` | `skull_ct_phase_correction.rs` | RITK DICOM series loading |
 | `full` | All examples | Complete feature set |
 
 ### Example: Complete Interdisciplinary Simulation
