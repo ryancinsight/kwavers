@@ -1081,18 +1081,23 @@ fn main() -> KwaversResult<()> {
     println!("  RTM image completed — peak amplitude: {rtm_peak:.4}");
 
     // ── Image output ──────────────────────────────────────────────────────
-    // Output directory: first CLI argument (directory) or current working dir.
+    // Output directory: first CLI argument, or the fixed compile-time path
+    // <crate_root>/examples/output/.
     //
-    // All output files are written to this directory so the caller controls
-    // where data lands.  The absolute canonical path is printed to stdout so
-    // the exact file system location is unambiguous regardless of how the
-    // binary was invoked or what the shell's working directory is.
+    // env!("CARGO_MANIFEST_DIR") is set by Cargo at compile time to the
+    // absolute path of the crate root (D:\kwavers\kwavers), so the default
+    // is always D:\kwavers\kwavers\examples\output\ regardless of where
+    // `cargo run` is invoked from.
     let output_dir: PathBuf = std::env::args()
         .nth(1)
         .map(PathBuf::from)
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples").join("output"));
 
-    // Canonicalize for display; tolerate non-existent path (e.g. from an arg).
+    // Create the directory if it does not yet exist.
+    std::fs::create_dir_all(&output_dir)
+        .map_err(|e| KwaversError::InvalidInput(format!("cannot create output dir: {e}")))?;
+
+    // Canonicalize after creation so the display path is always absolute.
     let abs_dir = std::fs::canonicalize(&output_dir).unwrap_or(output_dir.clone());
 
     let base = "seismic_fwi";
