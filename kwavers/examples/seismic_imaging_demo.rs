@@ -69,7 +69,7 @@
 //! - Ricker, N. (1953). Wavelet contraction, wavelet expansion and the control
 //!   of seismic resolution. *Geophysics*, 18(4), 769–792.
 
-use kwavers::core::error::KwaversResult;
+use kwavers::core::error::{KwaversError, KwaversResult};
 use kwavers::domain::grid::Grid;
 use kwavers::domain::source::{GridSource, SourceMode};
 use kwavers::solver::inverse::seismic::{
@@ -82,6 +82,9 @@ use kwavers::solver::inverse::seismic::{
 };
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
+use std::fs::File;
+use std::io::{BufWriter, Write};
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -298,6 +301,16 @@ const N_RECEIVERS: usize = 16;
 /// a 1500–4500 m/s model.
 const STEP_SIZE: f64 = 100.0;
 
+/// Pixel size of each model panel in the output PPM image.
+///
+/// Each of the four panels (true, initial, reconstructed, difference) is
+/// `PANEL × PANEL` pixels.  The x-z model slice at j = 0 is bilinearly
+/// resampled into this raster.
+const PANEL: usize = 320;
+
+/// Height of the velocity colorbar strip beneath each panel [pixels].
+const COLORBAR_H: usize = 20;
+
 /// Surface shot positions (ix, iz_src), uniformly spaced across the lateral
 /// dimension.
 ///
@@ -422,6 +435,299 @@ fn print_quality_report(true_model: &Array3<f64>, reconstructed: &Array3<f64>) -
     println!("  Voxels ±100 m/s : {within_100:7.1} %");
 
     l2
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Image output
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Write one pixel into a flat RGB byte buffer.
+///
+/// `width` is the total image width in pixels; `x` and `y` are column/row.
+/// Out-of-bounds writes are silently ignored — same contract as
+/// `skull_ct_phase_correction::put_pixel`.
+fn put_pixel(rgb: &mut [u8], width: usize, height: usize, x: usize, y: usize, color: [u8; 3]) {
+    if x >= width || y >= height {
+        return;
+    }
+    let idx = 3 * (y * width + x);
+    rgb[idx..idx + 3].copy_from_slice(&color);
+}
+
+/// Map velocity to RGB using a 5-stop blue → cyan → green → yellow → red
+/// colormap, normalized to [c_lo, c_hi].
+///
+/// This is the seismic analog of `phase_color` in skull_ct_phase_correction:
+/// that function maps phase ∈ [−π, π] to hue; this function maps velocity
+/// ∈ [c_lo, c_hi] to the same 5-stop rainbow.
+fn velocity_color(c: f64, c_lo: f64, c_hi: f64) -> [u8; 3] {
+    let t = ((c - c_lo) / (c_hi - c_lo)).clamp(0.0, 1.0);
+    // 5-stop linear interpolation: blue→cyan→green→yellow→red
+    let (r, g, b) = if t < 0.25 {
+        let s = t / 0.25;
+        (0.0, s, 1.0) // blue → cyan
+    } else if t < 0.5 {
+        let s = (t - 0.25) / 0.25;
+        (0.0, 1.0, 1.0 - s) // cyan → green
+    } else if t < 0.75 {
+        let s = (t - 0.5) / 0.25;
+        (s, 1.0, 0.0) // green → yellow
+    } else {
+        let s = (t - 0.75) / 0.25;
+        (1.0, 1.0 - s, 0.0) // yellow → red
+    };
+    [(255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8]
+}
+
+/// Map a signed scalar to a blue ← 0 → red diverging colormap.
+///
+/// `max_abs` is the symmetric clip level; values outside [−max_abs, +max_abs]
+/// are clamped.  Zero maps to white; positive → red; negative → blue.
+fn diverging_color(value: f64, max_abs: f64) -> [u8; 3] {
+    if max_abs < f64::EPSILON {
+        return [200, 200, 200];
+    }
+    let t = (value / max_abs).clamp(-1.0, 1.0);
+    if t >= 0.0 {
+        // white → red
+        let gb = (255.0 * (1.0 - t)) as u8;
+        [255, gb, gb]
+    } else {
+        // white → blue
+        let rg = (255.0 * (1.0 + t)) as u8;
+        [rg, rg, 255]
+    }
+}
+
+/// Render one velocity model panel (x–z cross-section at j=0) into `rgb`.
+///
+/// The voxel grid is nearest-neighbour resampled into a `PANEL × PANEL` pixel
+/// block starting at pixel column `x_offset`.  Depth (z) runs top → bottom;
+/// lateral (x) runs left → right.
+fn draw_velocity_panel(
+    rgb: &mut [u8],
+    width: usize,
+    height: usize,
+    x_offset: usize,
+    model: &Array3<f64>,
+    c_lo: f64,
+    c_hi: f64,
+) {
+    for py in 0..PANEL {
+        for px in 0..PANEL {
+            // nearest-neighbour: py maps to depth (z), px maps to lateral (x)
+            let ix = (px * NX / PANEL).min(NX - 1);
+            let iz = (py * NZ / PANEL).min(NZ - 1);
+            let c = model[[ix, 0, iz]];
+            let color = velocity_color(c, c_lo, c_hi);
+            put_pixel(rgb, width, height, x_offset + px, py, color);
+        }
+    }
+}
+
+/// Draw shot (white) and receiver (yellow) position markers on a panel.
+fn draw_acquisition_markers(
+    rgb: &mut [u8],
+    width: usize,
+    height: usize,
+    x_offset: usize,
+    shot_positions: &[(usize, usize)],
+) {
+    // Receiver mask uses z=2; map to panel pixel y
+    let recv_z_px = 2 * PANEL / NZ;
+    let recv_spacing = (NX - 2) / (N_RECEIVERS + 1);
+    for r in 0..N_RECEIVERS {
+        let ix = 1 + (r + 1) * recv_spacing;
+        let rx = ix * PANEL / NX;
+        for dy in 0_usize..=2 {
+            for dx in 0_usize..=2 {
+                put_pixel(
+                    rgb,
+                    width,
+                    height,
+                    x_offset + rx.saturating_sub(1) + dx,
+                    recv_z_px.saturating_sub(1) + dy,
+                    [255, 255, 0], // yellow — receivers
+                );
+            }
+        }
+    }
+
+    // Shot positions (z=1 voxel → z_px = 1*PANEL/NZ ≈ 5 px)
+    for &(ix, iz) in shot_positions {
+        let sx = ix * PANEL / NX;
+        let sz = iz * PANEL / NZ;
+        for dy in 0_usize..=2 {
+            for dx in 0_usize..=2 {
+                put_pixel(
+                    rgb,
+                    width,
+                    height,
+                    x_offset + sx.saturating_sub(1) + dx,
+                    sz.saturating_sub(1) + dy,
+                    [255, 255, 255], // white — shots
+                );
+            }
+        }
+    }
+}
+
+/// Draw a velocity colorbar strip below a panel.
+///
+/// The strip spans `x_offset..x_offset+PANEL` at y = `PANEL..PANEL+COLORBAR_H`.
+fn draw_colorbar(
+    rgb: &mut [u8],
+    width: usize,
+    height: usize,
+    x_offset: usize,
+    c_lo: f64,
+    c_hi: f64,
+) {
+    for px in 0..PANEL {
+        let t = px as f64 / (PANEL - 1) as f64;
+        let c = c_lo + t * (c_hi - c_lo);
+        let color = velocity_color(c, c_lo, c_hi);
+        for dy in 0..COLORBAR_H {
+            put_pixel(rgb, width, height, x_offset + px, PANEL + dy, color);
+        }
+    }
+}
+
+/// Write a 4-panel PPM showing (left→right): true model, initial model,
+/// reconstructed model, signed reconstruction error.
+///
+/// Image layout (pixels):
+///
+/// ```text
+/// ┌───────────┬───────────┬───────────┬───────────┐  ← PANEL rows
+/// │  True     │  Initial  │  Reconstr.│ Error     │
+/// │  model    │  model    │           │ (R − T)   │
+/// ├───────────┴───────────┴───────────┴───────────┤  ← COLORBAR_H rows
+/// │  velocity colorbar: c_lo (blue) → c_hi (red)  │
+/// └───────────────────────────────────────────────┘
+///   4 × PANEL columns
+/// ```
+///
+/// Markers: white 3×3 px dots = shot positions; yellow 3×3 px dots = receivers.
+///
+/// Analog of `write_three_plane_ppm` in skull_ct_phase_correction.rs.
+pub fn write_velocity_panels(
+    path: &Path,
+    true_model: &Array3<f64>,
+    initial_model: &Array3<f64>,
+    reconstructed: &Array3<f64>,
+    shot_positions: &[(usize, usize)],
+) -> std::io::Result<()> {
+    let c_lo = C_NEAR_SURFACE;
+    let c_hi = C_ANOMALY;
+
+    let img_w = 4 * PANEL;
+    let img_h = PANEL + COLORBAR_H;
+    let mut rgb = vec![0_u8; img_w * img_h * 3];
+
+    // Panel 0: true model
+    draw_velocity_panel(&mut rgb, img_w, img_h, 0, true_model, c_lo, c_hi);
+    draw_acquisition_markers(&mut rgb, img_w, img_h, 0, shot_positions);
+    draw_colorbar(&mut rgb, img_w, img_h, 0, c_lo, c_hi);
+
+    // Panel 1: initial model
+    draw_velocity_panel(&mut rgb, img_w, img_h, PANEL, initial_model, c_lo, c_hi);
+    draw_acquisition_markers(&mut rgb, img_w, img_h, PANEL, shot_positions);
+    draw_colorbar(&mut rgb, img_w, img_h, PANEL, c_lo, c_hi);
+
+    // Panel 2: reconstructed model
+    draw_velocity_panel(&mut rgb, img_w, img_h, 2 * PANEL, reconstructed, c_lo, c_hi);
+    draw_acquisition_markers(&mut rgb, img_w, img_h, 2 * PANEL, shot_positions);
+    draw_colorbar(&mut rgb, img_w, img_h, 2 * PANEL, c_lo, c_hi);
+
+    // Panel 3: signed difference (reconstructed − true), diverging colormap
+    let max_diff = true_model
+        .iter()
+        .zip(reconstructed.iter())
+        .map(|(&t, &r)| (r - t).abs())
+        .fold(0.0_f64, f64::max)
+        .max(f64::EPSILON);
+
+    for py in 0..PANEL {
+        for px in 0..PANEL {
+            let ix = (px * NX / PANEL).min(NX - 1);
+            let iz = (py * NZ / PANEL).min(NZ - 1);
+            let delta = reconstructed[[ix, 0, iz]] - true_model[[ix, 0, iz]];
+            let color = diverging_color(delta, max_diff);
+            put_pixel(&mut rgb, img_w, img_h, 3 * PANEL + px, py, color);
+        }
+    }
+    // Difference colorbar: diverging, symmetric
+    for px in 0..PANEL {
+        let t = px as f64 / (PANEL - 1) as f64; // 0→1
+        let signed = (2.0 * t - 1.0) * max_diff; // −max_diff → +max_diff
+        let color = diverging_color(signed, max_diff);
+        for dy in 0..COLORBAR_H {
+            put_pixel(&mut rgb, img_w, img_h, 3 * PANEL + px, PANEL + dy, color);
+        }
+    }
+
+    let mut out = BufWriter::new(File::create(path)?);
+    writeln!(out, "P6\n{} {}\n255", img_w, img_h)?;
+    out.write_all(&rgb)?;
+    Ok(())
+}
+
+/// Write a single-panel PPM of the RTM image (signed diverging colormap).
+///
+/// The RTM image volume is sliced at j = 0 and resampled to `PANEL × PANEL`.
+/// Positive values (bright reflectors) → red; negative → blue; zero → white.
+pub fn write_rtm_panel(path: &Path, rtm_image: &Array3<f64>) -> std::io::Result<()> {
+    let max_abs = rtm_image
+        .iter()
+        .copied()
+        .map(f64::abs)
+        .fold(0.0_f64, f64::max)
+        .max(f64::EPSILON);
+
+    let img_w = PANEL;
+    let img_h = PANEL;
+    let mut rgb = vec![0_u8; img_w * img_h * 3];
+
+    for py in 0..PANEL {
+        for px in 0..PANEL {
+            let ix = (px * NX / PANEL).min(NX - 1);
+            let iz = (py * NZ / PANEL).min(NZ - 1);
+            let val = rtm_image[[ix, 0, iz]];
+            let color = diverging_color(val, max_abs);
+            put_pixel(&mut rgb, img_w, img_h, px, py, color);
+        }
+    }
+
+    let mut out = BufWriter::new(File::create(path)?);
+    writeln!(out, "P6\n{} {}\n255", img_w, img_h)?;
+    out.write_all(&rgb)?;
+    Ok(())
+}
+
+/// Write the central-column (x = NX/2) velocity profiles to CSV.
+///
+/// Columns: depth_m, true_c, initial_c, reconstructed_c, error_m_per_s
+///
+/// The seismic analog of `write_element_csv` in skull_ct_phase_correction.rs.
+pub fn write_velocity_csv(
+    path: &Path,
+    true_model: &Array3<f64>,
+    initial_model: &Array3<f64>,
+    reconstructed: &Array3<f64>,
+) -> std::io::Result<()> {
+    let cx = NX / 2;
+    let mut out = BufWriter::new(File::create(path)?);
+    writeln!(out, "depth_m,true_c_m_per_s,initial_c_m_per_s,reconstructed_c_m_per_s,error_m_per_s")?;
+    for k in 0..NZ {
+        let depth_m = k as f64 * DX;
+        let t_c = true_model[[cx, 0, k]];
+        let i_c = initial_model[[cx, 0, k]];
+        let r_c = reconstructed[[cx, 0, k]];
+        let err = r_c - t_c;
+        writeln!(out, "{depth_m:.1},{t_c:.2},{i_c:.2},{r_c:.2},{err:.2}")?;
+    }
+    Ok(())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -636,7 +942,7 @@ fn main() -> KwaversResult<()> {
     println!("  Joint J         : {j_final:.6e} Pa²·s");
     println!("  J reduction     : {j_reduction_pct:7.1} %  (joint data-space L2)");
 
-    // ── 6. RTM — zero-lag imaging condition on a reconstructed-model snapshot
+    // ── 6. RTM — zero-lag imaging condition on reconstructed-model snapshot ──
     println!("\n[ 6 / 6 ]  Reverse Time Migration (post-FWI imaging) …");
 
     // Use shot 0 to generate a forward snapshot for the RTM imaging condition.
@@ -649,20 +955,19 @@ fn main() -> KwaversResult<()> {
     let (geom0, _obs0) = &shots[0];
     let src_snapshot = fwi.generate_synthetic_data(&reconstructed, geom0, &grid)?;
 
-    // Receiver wavefield: use a single-receiver injection at the first active
-    // receiver position; this models back-propagation of one observed trace.
+    // Receiver wavefield: inject the last-sample amplitude at the first active
+    // receiver position, modelling back-propagation of one observed trace.
     let mut recv_snapshot = Array3::<f64>::zeros((NX, NY, NZ));
     {
         let recv_mask = &geom0.sensor_mask;
         for ((i, _j, k), &active) in recv_mask.indexed_iter() {
             if active {
-                // Amplitude proportional to the last time sample in the trace.
                 let n_recv = src_snapshot.nrows();
                 let n_t = src_snapshot.ncols();
                 if n_recv > 0 && n_t > 0 {
                     recv_snapshot[[i, 0, k]] = src_snapshot[[0, n_t - 1]];
                 }
-                break; // single-receiver injection for the RTM demo
+                break;
             }
         }
     }
@@ -674,15 +979,58 @@ fn main() -> KwaversResult<()> {
         apply_laplacian: true,
     };
     let rtm = RtmProcessor::new(rtm_settings);
-    match rtm.migrate(&recv_snapshot, &recv_snapshot, &grid) {
-        Ok(image) => {
-            let max_amp = image.iter().copied().fold(0.0_f64, f64::max);
-            println!("  RTM image completed — peak amplitude: {max_amp:.4}");
-        }
-        Err(e) => {
-            println!("  RTM result: {e}");
-        }
-    }
+    let rtm_image = rtm
+        .migrate(&recv_snapshot, &recv_snapshot, &grid)
+        .unwrap_or_else(|_| Array3::<f64>::zeros((NX, NY, NZ)));
+    let rtm_peak = rtm_image.iter().copied().fold(0.0_f64, f64::max);
+    println!("  RTM image completed — peak amplitude: {rtm_peak:.4}");
+
+    // ── Image output ──────────────────────────────────────────────────────
+    // Output path: first CLI argument or default "seismic_fwi.ppm".
+    let output_path = std::env::args()
+        .nth(1)
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("seismic_fwi.ppm"));
+
+    // Derive companion paths from the base stem.
+    let rtm_path = {
+        let stem = output_path
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned();
+        output_path.with_file_name(format!("{stem}_rtm.ppm"))
+    };
+    let csv_path = output_path.with_extension("csv");
+
+    // 4-panel velocity image: true | initial | reconstructed | Δc
+    write_velocity_panels(
+        &output_path,
+        &true_model,
+        &initial_model,
+        &reconstructed,
+        &shot_positions.map(|(ix, iz)| (ix, iz)),
+    )
+    .map_err(|e| KwaversError::InvalidInput(format!("velocity panel write failed: {e}")))?;
+
+    // RTM image: diverging colormap of the zero-lag cross-correlation
+    write_rtm_panel(&rtm_path, &rtm_image)
+        .map_err(|e| KwaversError::InvalidInput(format!("RTM panel write failed: {e}")))?;
+
+    // Central-column velocity CSV
+    write_velocity_csv(&csv_path, &true_model, &initial_model, &reconstructed)
+        .map_err(|e| KwaversError::InvalidInput(format!("CSV write failed: {e}")))?;
+
+    println!("\n  Wrote images and data:");
+    println!("    {}   (4-panel: true|initial|reconstructed|error)", output_path.display());
+    println!("    {}   (RTM zero-lag cross-correlation)", rtm_path.display());
+    println!("    {}   (central-column velocity profile)", csv_path.display());
+    println!(
+        "  Image size: {}×{} px per panel ({} panels) + {}px colorbar",
+        PANEL, PANEL, 4, COLORBAR_H
+    );
+    println!("  Colormap: blue→cyan→green→yellow→red  [{:.0}–{:.0} m/s]", C_NEAR_SURFACE, C_ANOMALY);
+    println!("  Markers: white = shots (z=1), yellow = receivers (z=2)");
 
     // ── Summary ───────────────────────────────────────────────────────────
     println!("\n═══════════════════════════════════════════════════════════");
