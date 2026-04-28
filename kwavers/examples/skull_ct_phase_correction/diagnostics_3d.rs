@@ -198,7 +198,7 @@ fn write_svg(
     )?;
     writeln!(
         out,
-        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Display pose: skull stays in CT pose; transducer is tilted posteriorly so rays avoid anterior orbital/nasal region.</text>"##
+        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Display pose: skull stays in CT pose; transducer is translated superior/posterior so its natural focus is near an approximate VIM target.</text>"##
     )?;
 
     write_plane(&mut out, skull, scale, origin)?;
@@ -486,7 +486,7 @@ fn write_focus_rays<W: Write>(
     )?;
     writeln!(
         out,
-        r#"<text x="{:.2}" y="{:.2}">natural geometric focus</text>"#,
+        r#"<text x="{:.2}" y="{:.2}">natural focus near approximate VIM</text>"#,
         projected_focus.x + 10.0,
         projected_focus.y + 4.0
     )?;
@@ -726,34 +726,28 @@ fn array_diagnostic_mm(
             }
         })
         .collect();
-    let array_center = points.iter().fold(
-        Point3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        },
-        |sum, element| Point3 {
-            x: sum.x + element.point.x,
-            y: sum.y + element.point.y,
-            z: sum.z + element.point.z,
-        },
-    );
-    let inv_n = 1.0 / points.len().max(1) as f64;
-    let shift_x = skull_center_x - array_center.x * inv_n;
-    let shift_y = skull_center_y - array_center.y * inv_n;
-    let natural_focus = Point3 {
-        x: natural_focus_untilted.x + shift_x,
-        y: natural_focus_untilted.y + shift_y,
-        z: natural_focus_untilted.z,
-    };
+    let natural_focus = approximate_vim_target(skull);
+    let shift_x = natural_focus.x - natural_focus_untilted.x;
+    let shift_y = natural_focus.y - natural_focus_untilted.y;
+    let shift_z = natural_focus.z - natural_focus_untilted.z;
     for element in &mut points {
         element.point.x += shift_x;
         element.point.y += shift_y;
+        element.point.z += shift_z;
         element.disabled = segment_intersects_ellipse(element.point, natural_focus, avoidance);
     }
     ArrayDiagnostic {
         elements: points,
         natural_focus,
+    }
+}
+
+fn approximate_vim_target(skull: &SkullSample) -> Point3 {
+    let ap = skull.max.y - skull.min.y;
+    Point3 {
+        x: 0.5 * (skull.min.x + skull.max.x),
+        y: skull.min.y + 0.43 * ap,
+        z: 0.0,
     }
 }
 
