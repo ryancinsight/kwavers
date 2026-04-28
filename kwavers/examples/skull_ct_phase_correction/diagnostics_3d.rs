@@ -9,9 +9,11 @@ use anyhow::Result;
 use super::{CtVolume, ElementProjection, HU_BONE_LOWER};
 
 const MAX_SKULL_POINTS: usize = 50_000;
+const MAX_AIR_CAVITY_POINTS: usize = 12_000;
 const SVG_WIDTH: f64 = 1200.0;
 const SVG_HEIGHT: f64 = 900.0;
 const TRANSDUCER_POSTERIOR_TILT_DEG: f64 = 18.0;
+const AIR_CAVITY_HU_UPPER: f64 = -450.0;
 
 #[derive(Debug, Clone, Copy)]
 struct Point3 {
@@ -29,6 +31,13 @@ struct Point2 {
 
 #[derive(Debug, Clone)]
 struct SkullSample {
+    points: Vec<Point3>,
+    min: Point3,
+    max: Point3,
+}
+
+#[derive(Debug, Clone)]
+struct AirCavitySample {
     points: Vec<Point3>,
     min: Point3,
     max: Point3,
@@ -140,9 +149,14 @@ fn write_svg(
     skull: &SkullSample,
     elements: &[ElementProjection],
 ) -> Result<()> {
-    let element_points = element_points_mm(ct, skull, elements);
+    let air_cavities = sample_anterior_air_cavities(ct, skull);
+    let avoidance = orbital_avoidance_zone(skull, &air_cavities);
+    let element_points = element_points_mm(skull, &avoidance, elements);
     let mut projected = Vec::with_capacity(skull.points.len() + element_points.len() + 4);
     for point in &skull.points {
+        projected.push(project(*point));
+    }
+    for point in &air_cavities.points {
         projected.push(project(*point));
     }
     for element in &element_points {
@@ -183,13 +197,102 @@ fn write_svg(
 
     write_plane(&mut out, skull, scale, origin)?;
     write_skull_points(&mut out, skull, scale, origin)?;
-    write_orbital_avoidance_zone(&mut out, skull, scale, origin)?;
+    write_orbital_avoidance_zone(&mut out, &avoidance, scale, origin)?;
     write_focus_rays(&mut out, skull, &element_points, scale, origin)?;
     write_element_points(&mut out, &element_points, scale, origin)?;
     write_orientation_axes(&mut out)?;
-    write_legend(&mut out, ct, skull, elements, &element_points)?;
+    write_legend(
+        &mut out,
+        ct,
+        skull,
+        &air_cavities,
+        elements,
+        &element_points,
+    )?;
     writeln!(out, "</svg>")?;
     Ok(())
+}
+
+fn sample_anterior_air_cavities(ct: &CtVolume, skull: &SkullSample) -> AirCavitySample {
+    let (nx, ny, nz) = ct.hu.dim();
+    let center_x = 0.5 * (nx.saturating_sub(1) as f64);
+    let center_y = 0.5 * (ny.saturating_sub(1) as f64);
+    let center_z = 0.5 * (nz.saturating_sub(1) as f64);
+    let sx = ct.spacing_m[0] * 1e3;
+    let sy = ct.spacing_m[1] * 1e3;
+    let sz = ct.spacing_m[2] * 1e3;
+    let ap = skull.max.y - skull.min.y;
+    let si = skull.max.z - skull.min.z;
+    let lr = skull.max.x - skull.min.x;
+    let anterior_min_y = skull.min.y + 0.58 * ap;
+    let anterior_max_y = skull.max.y - 0.04 * ap;
+    let medial_min_x = skull.min.x + 0.18 * lr;
+    let medial_max_x = skull.max.x - 0.18 * lr;
+    let inferior_z = skull.min.z + 0.34 * si;
+    let superior_z = skull.max.z - 0.14 * si;
+    let mut points = Vec::with_capacity(MAX_AIR_CAVITY_POINTS);
+    let mut min = Point3 {
+        x: f64::INFINITY,
+        y: f64::INFINITY,
+        z: f64::INFINITY,
+    };
+    let mut max = Point3 {
+        x: f64::NEG_INFINITY,
+        y: f64::NEG_INFINITY,
+        z: f64::NEG_INFINITY,
+    };
+
+    for z in 3..nz.saturating_sub(3) {
+        for y in (3..ny.saturating_sub(3)).step_by(2) {
+            for x in (3..nx.saturating_sub(3)).step_by(2) {
+                if ct.hu[[x, y, z]] > AIR_CAVITY_HU_UPPER || !is_air_adjacent_to_bone(ct, x, y, z) {
+                    continue;
+                }
+                let point = Point3 {
+                    x: (x as f64 - center_x) * sx,
+                    y: -(y as f64 - center_y) * sy,
+                    z: (z as f64 - center_z) * sz,
+                };
+                if point.x < medial_min_x
+                    || point.x > medial_max_x
+                    || point.y < anterior_min_y
+                    || point.y > anterior_max_y
+                    || point.z < inferior_z
+                    || point.z > superior_z
+                {
+                    continue;
+                }
+                let hash = x.wrapping_mul(73_856_093)
+                    ^ y.wrapping_mul(19_349_663)
+                    ^ z.wrapping_mul(83_492_791);
+                if hash % 3 != 0 {
+                    continue;
+                }
+                include_point(&mut min, &mut max, point);
+                points.push(point);
+                if points.len() >= MAX_AIR_CAVITY_POINTS {
+                    return AirCavitySample { points, min, max };
+                }
+            }
+        }
+    }
+
+    AirCavitySample { points, min, max }
+}
+
+fn is_air_adjacent_to_bone(ct: &CtVolume, x: usize, y: usize, z: usize) -> bool {
+    for offset in 1..=3 {
+        if ct.hu[[x - offset, y, z]] >= HU_BONE_LOWER
+            || ct.hu[[x + offset, y, z]] >= HU_BONE_LOWER
+            || ct.hu[[x, y - offset, z]] >= HU_BONE_LOWER
+            || ct.hu[[x, y + offset, z]] >= HU_BONE_LOWER
+            || ct.hu[[x, y, z - offset]] >= HU_BONE_LOWER
+            || ct.hu[[x, y, z + offset]] >= HU_BONE_LOWER
+        {
+            return true;
+        }
+    }
+    false
 }
 
 fn write_plane<W: Write>(
@@ -352,12 +455,31 @@ fn write_focus_rays<W: Write>(
 
 fn write_orbital_avoidance_zone<W: Write>(
     out: &mut W,
-    skull: &SkullSample,
+    zone: &AvoidanceZone,
     scale: f64,
     origin: Point2,
 ) -> Result<()> {
-    let zone = orbital_avoidance_zone(skull);
     let center = transform(project(zone.center), scale, origin);
+    if !zone.air_points.is_empty() {
+        let mut bins = BTreeSet::new();
+        for point in &zone.air_points {
+            let p = transform(project(*point), scale, origin);
+            bins.insert(((p.x / 4.0).round() as i32, (p.y / 4.0).round() as i32));
+        }
+        writeln!(
+            out,
+            r##"<g id="ct-air-cavity-samples" fill="#ea580c" fill-opacity="0.34">"##
+        )?;
+        for (x, y) in bins {
+            writeln!(
+                out,
+                r#"<rect x="{:.2}" y="{:.2}" width="4.4" height="4.4"/>"#,
+                x as f64 * 4.0 - 2.2,
+                y as f64 * 4.0 - 2.2
+            )?;
+        }
+        writeln!(out, "</g>")?;
+    }
     writeln!(
         out,
         r##"<ellipse cx="{:.2}" cy="{:.2}" rx="{:.2}" ry="{:.2}" fill="#dc2626" fill-opacity="0.10" stroke="#dc2626" stroke-width="1.4" stroke-dasharray="5 4"/>"##,
@@ -368,7 +490,7 @@ fn write_orbital_avoidance_zone<W: Write>(
     )?;
     writeln!(
         out,
-        r##"<text x="{:.2}" y="{:.2}" font-family="Arial" font-size="14" fill="#b91c1c">schematic orbital avoidance zone</text>"##,
+        r##"<text x="{:.2}" y="{:.2}" font-family="Arial" font-size="14" fill="#b91c1c">CT air-cavity orbital/sinus no-pass mask</text>"##,
         center.x + zone.radius_y * scale + 8.0,
         center.y
     )?;
@@ -398,6 +520,7 @@ fn write_legend<W: Write>(
     out: &mut W,
     ct: &CtVolume,
     skull: &SkullSample,
+    air_cavities: &AirCavitySample,
     elements: &[ElementProjection],
     element_points: &[ElementPoint],
 ) -> Result<()> {
@@ -419,14 +542,15 @@ fn write_legend<W: Write>(
     )?;
     writeln!(
         out,
-        r#"<text x="40" y="838">colored points: enabled elements; gray X: disabled by orbital/nasal avoidance ray test</text>"#
+        r#"<text x="40" y="838">orange: HU &lt;= -450 anterior bone-adjacent CT air; gray X: disabled no-pass elements</text>"#
     )?;
     writeln!(
         out,
-        r#"<text x="40" y="861">disabled elements: {disabled}/{}; nonzero corrections: {nonzero}/{}; skull boundary points: {}</text>"#,
+        r#"<text x="40" y="861">disabled elements: {disabled}/{}; nonzero corrections: {nonzero}/{}; skull boundary points: {}; air-cavity points: {}</text>"#,
         element_points.len(),
         elements.len(),
-        skull.points.len()
+        skull.points.len(),
+        air_cavities.points.len()
     )?;
     writeln!(
         out,
@@ -476,9 +600,11 @@ fn write_obj(
     }
     write_point_indices(&mut out, 1, skull.points.len())?;
 
+    let air_cavities = sample_anterior_air_cavities(ct, skull);
+    let avoidance = orbital_avoidance_zone(skull, &air_cavities);
     let first_element = skull.points.len() + 1;
     writeln!(out, "g array_elements_phase_colored_by_comment_order")?;
-    for element in element_points_mm(ct, skull, elements) {
+    for element in element_points_mm(skull, &avoidance, elements) {
         writeln!(
             out,
             "# phase_correction_rad {:.12} disabled_by_orbital_nasal_avoidance {}",
@@ -506,32 +632,69 @@ fn write_point_indices<W: Write>(out: &mut W, start: usize, count: usize) -> Res
 }
 
 fn element_points_mm(
-    ct: &CtVolume,
     skull: &SkullSample,
+    avoidance: &AvoidanceZone,
     elements: &[ElementProjection],
 ) -> Vec<ElementPoint> {
-    let (nx, ny, _) = ct.hu.dim();
-    let center_x = 0.5 * (nx.saturating_sub(1) as f64) * ct.spacing_m[0] * 1e3;
-    let center_y = 0.5 * (ny.saturating_sub(1) as f64) * ct.spacing_m[1] * 1e3;
+    let (min_x, max_x, min_y, max_y) = elements.iter().fold(
+        (
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+        ),
+        |(min_x, max_x, min_y, max_y), element| {
+            (
+                min_x.min(element.x_m),
+                max_x.max(element.x_m),
+                min_y.min(element.y_m),
+                max_y.max(element.y_m),
+            )
+        },
+    );
+    let aperture_center_x = 0.5 * (min_x + max_x) * 1e3;
+    let aperture_center_y = 0.5 * (min_y + max_y) * 1e3;
+    let skull_center_x = 0.5 * (skull.min.x + skull.max.x);
+    let skull_center_y = 0.5 * (skull.min.y + skull.max.y);
     let rim_z = skull.min.z + 0.18 * (skull.max.z - skull.min.z);
     let focus = focus_point(skull);
-    let avoidance = orbital_avoidance_zone(skull);
-    elements
+    let mut points: Vec<ElementPoint> = elements
         .iter()
         .map(|element| {
             let untilted = Point3 {
-                x: element.x_m * 1e3 - center_x,
-                y: -(element.y_m * 1e3 - center_y),
+                x: skull_center_x + (element.x_m * 1e3 - aperture_center_x),
+                y: skull_center_y - (element.y_m * 1e3 - aperture_center_y),
                 z: rim_z + element.bowl_z_m * 1e3,
             };
             let point = transducer_pose(untilted, focus);
             ElementPoint {
                 point,
                 phase: element.correction_rad,
-                disabled: segment_intersects_ellipse(point, focus, avoidance),
+                disabled: false,
             }
         })
-        .collect()
+        .collect();
+    let array_center = points.iter().fold(
+        Point3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        |sum, element| Point3 {
+            x: sum.x + element.point.x,
+            y: sum.y + element.point.y,
+            z: sum.z + element.point.z,
+        },
+    );
+    let inv_n = 1.0 / points.len().max(1) as f64;
+    let shift_x = skull_center_x - array_center.x * inv_n;
+    let shift_y = skull_center_y - array_center.y * inv_n;
+    for element in &mut points {
+        element.point.x += shift_x;
+        element.point.y += shift_y;
+        element.disabled = segment_intersects_ellipse(element.point, focus, avoidance);
+    }
+    points
 }
 
 fn focus_point(skull: &SkullSample) -> Point3 {
@@ -542,16 +705,30 @@ fn focus_point(skull: &SkullSample) -> Point3 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct AvoidanceZone {
     center: Point3,
     radius_y: f64,
     radius_z: f64,
+    air_points: Vec<Point3>,
 }
 
-fn orbital_avoidance_zone(skull: &SkullSample) -> AvoidanceZone {
+fn orbital_avoidance_zone(skull: &SkullSample, air: &AirCavitySample) -> AvoidanceZone {
     let ap = skull.max.y - skull.min.y;
     let si = skull.max.z - skull.min.z;
+    if !air.points.is_empty() {
+        let center = Point3 {
+            x: 0.5 * (air.min.x + air.max.x),
+            y: 0.5 * (air.min.y + air.max.y),
+            z: 0.5 * (air.min.z + air.max.z),
+        };
+        return AvoidanceZone {
+            center,
+            radius_y: (0.55 * (air.max.y - air.min.y)).max(0.07 * ap),
+            radius_z: (0.58 * (air.max.z - air.min.z)).max(0.09 * si),
+            air_points: air.points.clone(),
+        };
+    }
     AvoidanceZone {
         center: Point3 {
             x: 0.0,
@@ -560,10 +737,11 @@ fn orbital_avoidance_zone(skull: &SkullSample) -> AvoidanceZone {
         },
         radius_y: 0.12 * ap,
         radius_z: 0.14 * si,
+        air_points: Vec::new(),
     }
 }
 
-fn segment_intersects_ellipse(source: Point3, target: Point3, zone: AvoidanceZone) -> bool {
+fn segment_intersects_ellipse(source: Point3, target: Point3, zone: &AvoidanceZone) -> bool {
     let dy = target.y - source.y;
     let dz = target.z - source.z;
     let sy = source.y - zone.center.y;
