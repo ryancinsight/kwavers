@@ -54,6 +54,7 @@
 - Keep the neural beamforming adaptation and distributed execution paths on the canonical SSOT helpers; extend them by refining the shared partition/recomposition logic rather than cloning variant-specific processors.
 - Closed the sonoluminescence bremsstrahlung oversized-file gap by splitting constants, Gaunt factors, noble-gas data, plasma state, emission model, field assembly, and value-semantic tests into nested vertical modules below 200 lines each.
 - Closed the acoustic conservation oversized-file gap by splitting metrics, energy, mass-continuity, momentum, entropy, intensity, heat-source, validation, and value-semantic tests into nested vertical modules below 150 lines each.
+- Closed the sonogenetics channel oversized-file gap by splitting constants, gating parameters, channel identity, open-probability equations, ion-current computation, and value-semantic tests into a nested vertical module tree with unchanged public facade exports.
 
 ## AS PSTD FFT Hot-Path Optimization
 - Closed the axisymmetric PSTD parity gap: `at_circular_piston_AS` (pearson=0.9907, PASS) and `at_focused_bowl_AS` (pearson=1.0000, PASS) after five physics fixes: one-sided radial PML (`pnz = nz + p`, `pz_embed = 0`), CPML inner-z transparency (`radial_inner_z_transparent`), source injection skip for `rhoy`, `density_scale = 1.0` for AS, and correct embed offset.
@@ -61,6 +62,7 @@
 
 ## Sonogenetics Research Modernization
 - Closed the bacterial-channel coverage gap in `physics::acoustics::therapy::sonogenetics` by adding `MscLG22N` and `MscS` to the existing `MechanoChannel` abstraction, updating theorem/proof documentation for two-state gating, and preserving one canonical `compute_p_open` dispatch path.
+- Closed the sonogenetics channel organization gap by moving the two-state gating theorem, pressure-threshold theorem, channel identity table, canonical parameters, and ion-current theorem into domain-scoped nested files while preserving the single canonical dispatch path.
 - Corrected `ion_current` to return injected depolarizing current `g·n·P_open·(E_rev − V_m)`, matching the LIF equation contract while documenting the distinction from electrophysiology outward-current sign.
 - Residual performance follow-up: `cargo test -p kwavers --lib` passes but reports `solver::forward::nonlinear::kzk::solver::tests::test_conservation_diagnostics_disable` and `solver::validation::numerical_accuracy::pstd::tests::test_pstd_phase_velocity_accuracy` as running beyond 60 seconds; optimize the real KZK/PSTD paths before treating this as closed performance debt.
 
