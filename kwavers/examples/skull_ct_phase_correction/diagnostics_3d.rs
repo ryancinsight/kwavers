@@ -169,7 +169,6 @@ fn write_svg(
 
     write_plane(&mut out, skull, scale, origin)?;
     write_skull_points(&mut out, skull, scale, origin)?;
-    write_bowl_outline(&mut out, &element_points, scale, origin)?;
     write_focus_rays(&mut out, skull, &element_points, scale, origin)?;
     write_element_points(&mut out, &element_points, scale, origin)?;
     write_orientation_axes(&mut out)?;
@@ -243,32 +242,6 @@ fn write_element_points<W: Write>(
         )?;
     }
     writeln!(out, "</g>")?;
-    Ok(())
-}
-
-fn write_bowl_outline<W: Write>(
-    out: &mut W,
-    element_points: &[(Point3, f64)],
-    scale: f64,
-    origin: Point2,
-) -> Result<()> {
-    let mut upper_profile: Vec<Point3> = element_points
-        .iter()
-        .enumerate()
-        .filter(|(idx, _)| idx % 4 == 0)
-        .map(|(_, (point, _))| *point)
-        .collect();
-    upper_profile.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
-
-    write!(
-        out,
-        r##"<polyline fill="none" stroke="#16a34a" stroke-width="3.0" stroke-opacity="0.65" points=""##
-    )?;
-    for point in upper_profile {
-        let p = transform(project(point), scale, origin);
-        write!(out, "{:.2},{:.2} ", p.x, p.y)?;
-    }
-    writeln!(out, r#""/>"#)?;
     Ok(())
 }
 
