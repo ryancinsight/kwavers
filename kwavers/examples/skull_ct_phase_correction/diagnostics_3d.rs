@@ -88,10 +88,10 @@ fn sample_skull_boundary(ct: &CtVolume) -> SkullSample {
                 let point = Point3 {
                     x: (x as f64 - center_x) * sx,
                     y: (y as f64 - center_y) * sy,
-                    // This public DICOM series does not include AC/PC
-                    // landmarks. For the diagnostic frame, slice-index +z is
-                    // displayed as inferior so the cranial vault is superior.
-                    z: -(z as f64 - center_z) * sz,
+                    // This diagnostic frame preserves the RITK slice ordering
+                    // that places the cranial vault superior to the skull base
+                    // for the selected CT series.
+                    z: (z as f64 - center_z) * sz,
                 };
                 include_point(&mut min, &mut max, point);
                 points.push(point);
@@ -164,7 +164,7 @@ fn write_svg(
     )?;
     writeln!(
         out,
-        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Sagittal projection: blue rays mark element normals toward an inferior focus; the transducer face points down toward the skull/neck side.</text>"##
+        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Sagittal projection: cranial vault is superior; blue rays mark element normals toward an inferior focus inside the skull.</text>"##
     )?;
 
     write_plane(&mut out, skull, scale, origin)?;
@@ -359,7 +359,7 @@ fn write_obj(
     writeln!(out, "# RITK-derived skull CT and hemispherical array point geometry")?;
     writeln!(
         out,
-        "# Approximate AC-PC plane is local z=0 through volume center; slice-index +z is displayed inferior; array local +z is superior and concavity faces inferiorly."
+        "# Approximate AC-PC plane is local z=0 through volume center; array local +z is superior and concavity faces inferiorly."
     )?;
     writeln!(
         out,
