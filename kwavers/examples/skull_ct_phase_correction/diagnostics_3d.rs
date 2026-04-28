@@ -228,8 +228,8 @@ fn sample_anterior_air_cavities(ct: &CtVolume, skull: &SkullSample) -> AirCavity
     let anterior_max_y = skull.max.y - 0.04 * ap;
     let medial_min_x = skull.min.x + 0.18 * lr;
     let medial_max_x = skull.max.x - 0.18 * lr;
-    let inferior_z = skull.min.z + 0.34 * si;
-    let superior_z = skull.max.z - 0.14 * si;
+    let inferior_z = skull.min.z + 0.32 * si;
+    let superior_z = skull.min.z + 0.66 * si;
     let mut points = Vec::with_capacity(MAX_AIR_CAVITY_POINTS);
     let mut min = Point3 {
         x: f64::INFINITY,
@@ -761,8 +761,8 @@ fn orbital_avoidance_zone(skull: &SkullSample, air: &AirCavitySample) -> Avoidan
             center,
             radius_y: (0.58 * (max_y - min_y)).max(0.055 * ap),
             radius_z: (0.62 * (max_z - min_z)).max(0.070 * si),
-            clearance_y: 0.030 * ap,
-            clearance_z: 0.035 * si,
+            clearance_y: 0.022 * ap,
+            clearance_z: 0.020 * si,
             air_points: air.points.clone(),
         };
     }
