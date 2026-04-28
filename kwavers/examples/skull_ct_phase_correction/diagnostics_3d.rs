@@ -50,6 +50,12 @@ struct ElementPoint {
     disabled: bool,
 }
 
+#[derive(Debug, Clone)]
+struct ArrayDiagnostic {
+    elements: Vec<ElementPoint>,
+    natural_focus: Point3,
+}
+
 pub(crate) fn companion_path(path: &Path, suffix: &str, extension: &str) -> PathBuf {
     let stem = path
         .file_stem()
@@ -151,21 +157,21 @@ fn write_svg(
 ) -> Result<()> {
     let air_cavities = sample_anterior_air_cavities(ct, skull);
     let avoidance = orbital_avoidance_zone(skull, &air_cavities);
-    let element_points = element_points_mm(skull, &avoidance, elements);
-    let mut projected = Vec::with_capacity(skull.points.len() + element_points.len() + 4);
+    let array = array_diagnostic_mm(skull, &avoidance, elements);
+    let mut projected = Vec::with_capacity(skull.points.len() + array.elements.len() + 4);
     for point in &skull.points {
         projected.push(project(*point));
     }
     for point in &air_cavities.points {
         projected.push(project(*point));
     }
-    for element in &element_points {
+    for element in &array.elements {
         projected.push(project(element.point));
     }
     for point in ac_pc_plane_points(skull) {
         projected.push(project(point));
     }
-    projected.push(project(focus_point(skull)));
+    projected.push(project(array.natural_focus));
 
     let bounds = projection_bounds(&projected);
     let scale = 0.82
@@ -198,8 +204,14 @@ fn write_svg(
     write_plane(&mut out, skull, scale, origin)?;
     write_skull_points(&mut out, skull, scale, origin)?;
     write_orbital_avoidance_zone(&mut out, &avoidance, scale, origin)?;
-    write_focus_rays(&mut out, skull, &element_points, scale, origin)?;
-    write_element_points(&mut out, &element_points, scale, origin)?;
+    write_focus_rays(
+        &mut out,
+        array.natural_focus,
+        &array.elements,
+        scale,
+        origin,
+    )?;
+    write_element_points(&mut out, &array.elements, scale, origin)?;
     write_orientation_axes(&mut out)?;
     write_legend(
         &mut out,
@@ -207,7 +219,7 @@ fn write_svg(
         skull,
         &air_cavities,
         elements,
-        &element_points,
+        &array.elements,
     )?;
     writeln!(out, "</svg>")?;
     Ok(())
@@ -438,12 +450,11 @@ fn write_element_points<W: Write>(
 
 fn write_focus_rays<W: Write>(
     out: &mut W,
-    skull: &SkullSample,
+    focus: Point3,
     element_points: &[ElementPoint],
     scale: f64,
     origin: Point2,
 ) -> Result<()> {
-    let focus = focus_point(skull);
     let projected_focus = transform(project(focus), scale, origin);
     writeln!(
         out,
@@ -475,7 +486,7 @@ fn write_focus_rays<W: Write>(
     )?;
     writeln!(
         out,
-        r#"<text x="{:.2}" y="{:.2}">inferior focus / down-facing normals</text>"#,
+        r#"<text x="{:.2}" y="{:.2}">natural geometric focus</text>"#,
         projected_focus.x + 10.0,
         projected_focus.y + 4.0
     )?;
@@ -633,9 +644,15 @@ fn write_obj(
 
     let air_cavities = sample_anterior_air_cavities(ct, skull);
     let avoidance = orbital_avoidance_zone(skull, &air_cavities);
+    let array = array_diagnostic_mm(skull, &avoidance, elements);
     let first_element = skull.points.len() + 1;
     writeln!(out, "g array_elements_phase_colored_by_comment_order")?;
-    for element in element_points_mm(skull, &avoidance, elements) {
+    writeln!(
+        out,
+        "# natural_focus_mm {:.9} {:.9} {:.9}",
+        array.natural_focus.x, array.natural_focus.y, array.natural_focus.z
+    )?;
+    for element in array.elements {
         writeln!(
             out,
             "# phase_correction_rad {:.12} disabled_by_orbital_nasal_avoidance {}",
@@ -662,11 +679,11 @@ fn write_point_indices<W: Write>(out: &mut W, start: usize, count: usize) -> Res
     Ok(())
 }
 
-fn element_points_mm(
+fn array_diagnostic_mm(
     skull: &SkullSample,
     avoidance: &AvoidanceZone,
     elements: &[ElementProjection],
-) -> Vec<ElementPoint> {
+) -> ArrayDiagnostic {
     let (min_x, max_x, min_y, max_y) = elements.iter().fold(
         (
             f64::INFINITY,
@@ -688,7 +705,11 @@ fn element_points_mm(
     let skull_center_x = 0.5 * (skull.min.x + skull.max.x);
     let skull_center_y = 0.5 * (skull.min.y + skull.max.y);
     let rim_z = skull.min.z + 0.18 * (skull.max.z - skull.min.z);
-    let focus = focus_point(skull);
+    let natural_focus_untilted = Point3 {
+        x: skull_center_x,
+        y: skull_center_y,
+        z: rim_z,
+    };
     let mut points: Vec<ElementPoint> = elements
         .iter()
         .map(|element| {
@@ -697,7 +718,7 @@ fn element_points_mm(
                 y: skull_center_y - (element.y_m * 1e3 - aperture_center_y),
                 z: rim_z + element.bowl_z_m * 1e3,
             };
-            let point = transducer_pose(untilted, focus);
+            let point = transducer_pose(untilted, natural_focus_untilted);
             ElementPoint {
                 point,
                 phase: element.correction_rad,
@@ -720,19 +741,19 @@ fn element_points_mm(
     let inv_n = 1.0 / points.len().max(1) as f64;
     let shift_x = skull_center_x - array_center.x * inv_n;
     let shift_y = skull_center_y - array_center.y * inv_n;
+    let natural_focus = Point3 {
+        x: natural_focus_untilted.x + shift_x,
+        y: natural_focus_untilted.y + shift_y,
+        z: natural_focus_untilted.z,
+    };
     for element in &mut points {
         element.point.x += shift_x;
         element.point.y += shift_y;
-        element.disabled = segment_intersects_ellipse(element.point, focus, avoidance);
+        element.disabled = segment_intersects_ellipse(element.point, natural_focus, avoidance);
     }
-    points
-}
-
-fn focus_point(skull: &SkullSample) -> Point3 {
-    Point3 {
-        x: 0.0,
-        y: skull.min.y + 0.42 * (skull.max.y - skull.min.y),
-        z: 0.66 * skull.max.z + 0.34 * skull.min.z,
+    ArrayDiagnostic {
+        elements: points,
+        natural_focus,
     }
 }
 
