@@ -159,16 +159,17 @@ fn write_svg(
     writeln!(out, r##"<rect width="100%" height="100%" fill="#f8fafc"/>"##)?;
     writeln!(
         out,
-        r##"<text x="40" y="44" font-family="Arial" font-size="24" fill="#0f172a">RITK skull CT with 1024-element 650 kHz hemispherical array</text>"##
+        r##"<text x="40" y="44" font-family="Arial" font-size="24" fill="#0f172a">RITK skull CT sagittal orientation check with 1024-element 650 kHz hemispherical array</text>"##
     )?;
     writeln!(
         out,
-        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Approximate AC-PC alignment: axial mid-volume plane; slice-index +z displayed inferior, array superior to skull with concavity toward neck.</text>"##
+        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Sagittal projection: vertical screen direction is anatomical superior-inferior; transducer cap is superior, opening toward inferior neck side.</text>"##
     )?;
 
     write_plane(&mut out, skull, scale, origin)?;
     write_skull_points(&mut out, skull, scale, origin)?;
     write_element_points(&mut out, &element_points, scale, origin)?;
+    write_orientation_axes(&mut out)?;
     write_legend(&mut out, ct, skull, elements)?;
     writeln!(out, "</svg>")?;
     Ok(())
@@ -238,6 +239,22 @@ fn write_element_points<W: Write>(
             p.x, p.y
         )?;
     }
+    writeln!(out, "</g>")?;
+    Ok(())
+}
+
+fn write_orientation_axes<W: Write>(out: &mut W) -> Result<()> {
+    writeln!(
+        out,
+        r##"<g font-family="Arial" font-size="15" fill="#0f172a" stroke="#0f172a" stroke-width="1.5">"##
+    )?;
+    writeln!(out, r#"<line x1="1090" y1="730" x2="1090" y2="590"/>"#)?;
+    writeln!(out, r##"<path d="M1090 590 L1083 604 L1097 604 Z" fill="#0f172a"/>"##)?;
+    writeln!(out, r#"<text x="1110" y="598">superior</text>"#)?;
+    writeln!(out, r#"<text x="1110" y="730">inferior / neck</text>"#)?;
+    writeln!(out, r#"<line x1="1025" y1="730" x2="1155" y2="730"/>"#)?;
+    writeln!(out, r#"<text x="1005" y="756">posterior</text>"#)?;
+    writeln!(out, r#"<text x="1125" y="756">anterior</text>"#)?;
     writeln!(out, "</g>")?;
     Ok(())
 }
@@ -413,15 +430,13 @@ fn transform(point: Point2, scale: f64, origin: Point2) -> Point2 {
 }
 
 fn project(point: Point3) -> Point2 {
-    let yaw = -35.0_f64.to_radians();
-    let pitch = 22.0_f64.to_radians();
-    let x1 = yaw.cos() * point.x - yaw.sin() * point.y;
-    let y1 = yaw.sin() * point.x + yaw.cos() * point.y;
-    let z1 = point.z;
+    // Sagittal diagnostic projection: screen x is AP-like local y; screen y
+    // is negative anatomical z so superior is visually up. Depth keeps left-
+    // right information only for painter's-order sorting.
     Point2 {
-        x: x1,
-        y: pitch.sin() * y1 - pitch.cos() * z1,
-        depth: pitch.cos() * y1 + pitch.sin() * z1,
+        x: point.y,
+        y: -point.z,
+        depth: point.x,
     }
 }
 
