@@ -33,6 +33,13 @@ struct SkullSample {
     max: Point3,
 }
 
+#[derive(Debug, Clone)]
+struct ElementPoint {
+    point: Point3,
+    phase: f64,
+    disabled: bool,
+}
+
 pub(crate) fn companion_path(path: &Path, suffix: &str, extension: &str) -> PathBuf {
     let stem = path
         .file_stem()
@@ -137,8 +144,8 @@ fn write_svg(
     for point in &skull.points {
         projected.push(project(*point));
     }
-    for (point, _) in &element_points {
-        projected.push(project(*point));
+    for element in &element_points {
+        projected.push(project(element.point));
     }
     for point in ac_pc_plane_points(skull) {
         projected.push(project(point));
@@ -176,7 +183,7 @@ fn write_svg(
     write_focus_rays(&mut out, skull, &element_points, scale, origin)?;
     write_element_points(&mut out, &element_points, scale, origin)?;
     write_orientation_axes(&mut out)?;
-    write_legend(&mut out, ct, skull, elements)?;
+    write_legend(&mut out, ct, skull, elements, &element_points)?;
     writeln!(out, "</svg>")?;
     Ok(())
 }
@@ -224,21 +231,38 @@ fn write_skull_points<W: Write>(
 
 fn write_element_points<W: Write>(
     out: &mut W,
-    element_points: &[(Point3, f64)],
+    element_points: &[ElementPoint],
     scale: f64,
     origin: Point2,
 ) -> Result<()> {
     let mut points = element_points.to_vec();
     points.sort_by(|a, b| {
-        project(a.0)
+        project(a.point)
             .depth
-            .partial_cmp(&project(b.0).depth)
+            .partial_cmp(&project(b.point).depth)
             .unwrap_or(std::cmp::Ordering::Equal)
     });
     writeln!(out, r##"<g id="hemispherical-array" stroke="#0f172a" stroke-opacity="0.45" stroke-width="0.35">"##)?;
-    for (point, phase) in points {
-        let p = transform(project(point), scale, origin);
-        let color = phase_color_hex(phase);
+    for element in points {
+        let p = transform(project(element.point), scale, origin);
+        if element.disabled {
+            writeln!(
+                out,
+                r##"<g stroke="#64748b" stroke-width="1.1" stroke-opacity="0.85"><circle cx="{:.2}" cy="{:.2}" r="2.9" fill="#cbd5e1"/><line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}"/><line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}"/></g>"##,
+                p.x,
+                p.y,
+                p.x - 3.1,
+                p.y - 3.1,
+                p.x + 3.1,
+                p.y + 3.1,
+                p.x - 3.1,
+                p.y + 3.1,
+                p.x + 3.1,
+                p.y - 3.1
+            )?;
+            continue;
+        }
+        let color = phase_color_hex(element.phase);
         writeln!(
             out,
             r#"<circle cx="{:.2}" cy="{:.2}" r="2.6" fill="{color}"/>"#,
@@ -252,25 +276,24 @@ fn write_element_points<W: Write>(
 fn write_focus_rays<W: Write>(
     out: &mut W,
     skull: &SkullSample,
-    element_points: &[(Point3, f64)],
+    element_points: &[ElementPoint],
     scale: f64,
     origin: Point2,
 ) -> Result<()> {
     let focus = focus_point(skull);
-    let avoidance = orbital_avoidance_zone(skull);
     let projected_focus = transform(project(focus), scale, origin);
     writeln!(
         out,
         r##"<g id="downward-acoustic-rays" stroke="#2563eb" stroke-width="0.65" stroke-opacity="0.38" fill="none">"##
     )?;
-    for (idx, (point, _)) in element_points.iter().enumerate() {
+    for (idx, element) in element_points.iter().enumerate() {
         if idx % 24 != 0 {
             continue;
         }
-        if segment_intersects_ellipse(*point, focus, avoidance) {
+        if element.disabled {
             continue;
         }
-        let source = transform(project(*point), scale, origin);
+        let source = transform(project(element.point), scale, origin);
         writeln!(
             out,
             r#"<line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}"/>"#,
@@ -343,20 +366,26 @@ fn write_legend<W: Write>(
     ct: &CtVolume,
     skull: &SkullSample,
     elements: &[ElementProjection],
+    element_points: &[ElementPoint],
 ) -> Result<()> {
     let nonzero = elements
         .iter()
         .filter(|element| element.correction_rad.abs() > 1e-12)
+        .count();
+    let disabled = element_points
+        .iter()
+        .filter(|element| element.disabled)
         .count();
     writeln!(
         out,
         r##"<g font-family="Arial" font-size="14" fill="#0f172a">"##
     )?;
     writeln!(out, r#"<text x="40" y="815">gray: HU >= 300 skull boundary sampled from RITK-loaded CT</text>"#)?;
-    writeln!(out, r#"<text x="40" y="838">colored points: 1024 array elements, color = wrapped correction phase [-pi, pi]</text>"#)?;
+    writeln!(out, r#"<text x="40" y="838">colored points: enabled elements; gray X: disabled by orbital/nasal avoidance ray test</text>"#)?;
     writeln!(
         out,
-        r#"<text x="40" y="861">nonzero corrections: {nonzero}/{}; skull boundary points: {}</text>"#,
+        r#"<text x="40" y="861">disabled elements: {disabled}/{}; nonzero corrections: {nonzero}/{}; skull boundary points: {}</text>"#,
+        element_points.len(),
         elements.len(),
         skull.points.len()
     )?;
@@ -407,13 +436,17 @@ fn write_obj(
 
     let first_element = skull.points.len() + 1;
     writeln!(out, "g array_elements_phase_colored_by_comment_order")?;
-    for (point, phase) in element_points_mm(ct, skull, elements) {
+    for element in element_points_mm(ct, skull, elements) {
         writeln!(
             out,
-            "# phase_correction_rad {:.12}",
-            phase
+            "# phase_correction_rad {:.12} disabled_by_orbital_nasal_avoidance {}",
+            element.phase, element.disabled
         )?;
-        writeln!(out, "v {:.9} {:.9} {:.9}", point.x, point.y, point.z)?;
+        writeln!(
+            out,
+            "v {:.9} {:.9} {:.9}",
+            element.point.x, element.point.y, element.point.z
+        )?;
     }
     write_point_indices(&mut out, first_element, elements.len())?;
     Ok(())
@@ -434,12 +467,13 @@ fn element_points_mm(
     ct: &CtVolume,
     skull: &SkullSample,
     elements: &[ElementProjection],
-) -> Vec<(Point3, f64)> {
+) -> Vec<ElementPoint> {
     let (nx, ny, _) = ct.hu.dim();
     let center_x = 0.5 * (nx.saturating_sub(1) as f64) * ct.spacing_m[0] * 1e3;
     let center_y = 0.5 * (ny.saturating_sub(1) as f64) * ct.spacing_m[1] * 1e3;
     let rim_z = skull.min.z + 0.18 * (skull.max.z - skull.min.z);
     let focus = focus_point(skull);
+    let avoidance = orbital_avoidance_zone(skull);
     elements
         .iter()
         .map(|element| {
@@ -448,10 +482,12 @@ fn element_points_mm(
                 y: -(element.y_m * 1e3 - center_y),
                 z: rim_z + element.bowl_z_m * 1e3,
             };
-            (
-                transducer_pose(untilted, focus),
-                element.correction_rad,
-            )
+            let point = transducer_pose(untilted, focus);
+            ElementPoint {
+                point,
+                phase: element.correction_rad,
+                disabled: segment_intersects_ellipse(point, focus, avoidance),
+            }
         })
         .collect()
 }
