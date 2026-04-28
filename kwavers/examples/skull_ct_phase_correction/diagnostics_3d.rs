@@ -7,7 +7,7 @@ use anyhow::Result;
 
 use super::{CtVolume, ElementProjection, HU_BONE_LOWER};
 
-const MAX_SKULL_POINTS: usize = 10_000;
+const MAX_SKULL_POINTS: usize = 50_000;
 const SVG_WIDTH: f64 = 1200.0;
 const SVG_HEIGHT: f64 = 900.0;
 
@@ -73,7 +73,7 @@ fn sample_skull_boundary(ct: &CtVolume) -> SkullSample {
         z: f64::NEG_INFINITY,
     };
 
-    for z in (1..nz.saturating_sub(1)).step_by(2) {
+    for z in 1..nz.saturating_sub(1) {
         for y in (1..ny.saturating_sub(1)).step_by(2) {
             for x in (1..nx.saturating_sub(1)).step_by(2) {
                 if ct.hu[[x, y, z]] < HU_BONE_LOWER || !is_boundary_bone(ct, x, y, z) {
@@ -82,13 +82,16 @@ fn sample_skull_boundary(ct: &CtVolume) -> SkullSample {
                 let hash = x.wrapping_mul(73_856_093)
                     ^ y.wrapping_mul(19_349_663)
                     ^ z.wrapping_mul(83_492_791);
-                if hash % 5 != 0 {
+                if hash % 2 != 0 {
                     continue;
                 }
                 let point = Point3 {
                     x: (x as f64 - center_x) * sx,
                     y: (y as f64 - center_y) * sy,
-                    z: (z as f64 - center_z) * sz,
+                    // This public DICOM series does not include AC/PC
+                    // landmarks. For the diagnostic frame, slice-index +z is
+                    // displayed as inferior so the cranial vault is superior.
+                    z: -(z as f64 - center_z) * sz,
                 };
                 include_point(&mut min, &mut max, point);
                 points.push(point);
@@ -126,7 +129,7 @@ fn write_svg(
     skull: &SkullSample,
     elements: &[ElementProjection],
 ) -> Result<()> {
-    let element_points = element_points_mm(ct, elements);
+    let element_points = element_points_mm(ct, skull, elements);
     let mut projected = Vec::with_capacity(skull.points.len() + element_points.len() + 4);
     for point in &skull.points {
         projected.push(project(*point));
@@ -160,7 +163,7 @@ fn write_svg(
     )?;
     writeln!(
         out,
-        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Approximate AC-PC alignment: axial mid-volume plane; array is superior to skull with concavity directed inferiorly toward the neck.</text>"##
+        r##"<text x="40" y="74" font-family="Arial" font-size="14" fill="#475569">Approximate AC-PC alignment: axial mid-volume plane; slice-index +z displayed inferior, array superior to skull with concavity toward neck.</text>"##
     )?;
 
     write_plane(&mut out, skull, scale, origin)?;
@@ -203,10 +206,10 @@ fn write_skull_points<W: Write>(
             .partial_cmp(&project(*b).depth)
             .unwrap_or(std::cmp::Ordering::Equal)
     });
-    writeln!(out, r##"<g id="skull-boundary" fill="#64748b" fill-opacity="0.30">"##)?;
+    writeln!(out, r##"<g id="skull-boundary" fill="#64748b" fill-opacity="0.22">"##)?;
     for point in points {
         let p = transform(project(point), scale, origin);
-        writeln!(out, r#"<circle cx="{:.2}" cy="{:.2}" r="1.05"/>"#, p.x, p.y)?;
+        writeln!(out, r#"<circle cx="{:.2}" cy="{:.2}" r="0.58"/>"#, p.x, p.y)?;
     }
     writeln!(out, "</g>")?;
     Ok(())
@@ -293,7 +296,7 @@ fn write_obj(
     writeln!(out, "# RITK-derived skull CT and hemispherical array point geometry")?;
     writeln!(
         out,
-        "# Approximate AC-PC plane is local z=0 through volume center; array local +z is superior and concavity faces inferiorly."
+        "# Approximate AC-PC plane is local z=0 through volume center; slice-index +z is displayed inferior; array local +z is superior and concavity faces inferiorly."
     )?;
     writeln!(
         out,
@@ -308,7 +311,7 @@ fn write_obj(
 
     let first_element = skull.points.len() + 1;
     writeln!(out, "g array_elements_phase_colored_by_comment_order")?;
-    for (point, phase) in element_points_mm(ct, elements) {
+    for (point, phase) in element_points_mm(ct, skull, elements) {
         writeln!(
             out,
             "# phase_correction_rad {:.12}",
@@ -331,11 +334,15 @@ fn write_point_indices<W: Write>(out: &mut W, start: usize, count: usize) -> Res
     Ok(())
 }
 
-fn element_points_mm(ct: &CtVolume, elements: &[ElementProjection]) -> Vec<(Point3, f64)> {
-    let (nx, ny, nz) = ct.hu.dim();
+fn element_points_mm(
+    ct: &CtVolume,
+    skull: &SkullSample,
+    elements: &[ElementProjection],
+) -> Vec<(Point3, f64)> {
+    let (nx, ny, _) = ct.hu.dim();
     let center_x = 0.5 * (nx.saturating_sub(1) as f64) * ct.spacing_m[0] * 1e3;
     let center_y = 0.5 * (ny.saturating_sub(1) as f64) * ct.spacing_m[1] * 1e3;
-    let center_z = 0.5 * (nz.saturating_sub(1) as f64) * ct.spacing_m[2] * 1e3;
+    let superior_anchor_z = skull.max.z;
     elements
         .iter()
         .map(|element| {
@@ -343,7 +350,7 @@ fn element_points_mm(ct: &CtVolume, elements: &[ElementProjection]) -> Vec<(Poin
                 Point3 {
                     x: element.x_m * 1e3 - center_x,
                     y: element.y_m * 1e3 - center_y,
-                    z: element.bowl_z_m * 1e3 + center_z,
+                    z: superior_anchor_z + element.bowl_z_m * 1e3,
                 },
                 element.correction_rad,
             )
