@@ -701,18 +701,13 @@ fn draw_pressure_transducer_overlay(
     focus: Point3Meters,
     grid: &Grid,
 ) {
-    let max_bowl_z = elements
-        .iter()
-        .map(|element| element.bowl_z_m)
-        .fold(0.0_f64, f64::max)
-        .max(f64::EPSILON);
     let focus_px = ((focus.x / (grid.nx as f64 * grid.dx)) * width as f64).round() as isize;
     let focus_py = (height as isize - 1)
         - ((focus.z / (grid.nz as f64 * grid.dz)) * height as f64).round() as isize;
 
     for (idx, element) in elements.iter().enumerate() {
-        let (px, py) = projected_transducer_pixel(element, max_bowl_z, width, height, grid);
-        if idx % 32 == 0 {
+        let (px, py) = meridional_transducer_pixel(element, width, height, grid);
+        if idx % 32 == 0 && px >= 0 && (px as usize) < width {
             draw_line_blend(
                 rgb,
                 width,
@@ -727,23 +722,63 @@ fn draw_pressure_transducer_overlay(
         }
     }
 
-    for element in elements {
-        let (px, py) = projected_transducer_pixel(element, max_bowl_z, width, height, grid);
-        draw_disc(rgb, width, height, px, py, 2, [34, 211, 238]);
-    }
+    draw_transducer_aperture_inset(rgb, width, height, elements, grid);
 }
 
-fn projected_transducer_pixel(
+fn meridional_transducer_pixel(
     element: &ElementProjection,
-    max_bowl_z: f64,
     width: usize,
     height: usize,
     grid: &Grid,
 ) -> (isize, isize) {
     let px = ((element.x_m / (grid.nx as f64 * grid.dx)) * width as f64).round() as isize;
-    let vertical = 0.03 + 0.20 * (1.0 - element.bowl_z_m / max_bowl_z).clamp(0.0, 1.0);
-    let py = (vertical * height as f64).round() as isize;
+    let py = (0.18 * height as f64).round() as isize;
     (px, py)
+}
+
+fn draw_transducer_aperture_inset(
+    rgb: &mut [u8],
+    width: usize,
+    height: usize,
+    elements: &[ElementProjection],
+    grid: &Grid,
+) {
+    let inset = (0.26 * width.min(height) as f64).round() as usize;
+    let x0 = width.saturating_sub(inset + 14);
+    let y0 = height.saturating_sub(inset + 14);
+    let cx = x0 as isize + inset as isize / 2;
+    let cy = y0 as isize + inset as isize / 2;
+    let radius = inset as isize / 2 - 4;
+
+    for y in y0..(y0 + inset).min(height) {
+        for x in x0..(x0 + inset).min(width) {
+            let dx = x as isize - cx;
+            let dy = y as isize - cy;
+            if dx * dx + dy * dy <= radius * radius {
+                let idx = 3 * (y * width + x);
+                let base = [rgb[idx], rgb[idx + 1], rgb[idx + 2]];
+                let blended = blend_rgb(base, [15, 23, 42], 0.42);
+                rgb[idx..idx + 3].copy_from_slice(&blended);
+            }
+        }
+    }
+
+    draw_circle_outline(rgb, width, height, cx, cy, radius, [226, 232, 240]);
+    for element in elements {
+        let nx = element.x_m / (grid.nx as f64 * grid.dx);
+        let ny = element.y_m / (grid.ny as f64 * grid.dy);
+        let px = x0 as isize + (nx * inset as f64).round() as isize;
+        let py = y0 as isize + ((1.0 - ny) * inset as f64).round() as isize;
+        draw_disc(
+            rgb,
+            width,
+            height,
+            px,
+            py,
+            1,
+            phase_color(element.correction_rad),
+        );
+    }
 }
 
 struct PlaneSpec<F>
@@ -1126,6 +1161,51 @@ fn draw_cross(
         let y = cy + d;
         if cx >= 0 && y >= 0 {
             put_pixel(rgb, width, height, cx as usize, y as usize, color);
+        }
+    }
+}
+
+fn draw_circle_outline(
+    rgb: &mut [u8],
+    width: usize,
+    height: usize,
+    cx: isize,
+    cy: isize,
+    radius: isize,
+    color: [u8; 3],
+) {
+    let mut x = radius;
+    let mut y = 0;
+    let mut err = 0;
+    while x >= y {
+        for (dx, dy) in [
+            (x, y),
+            (y, x),
+            (-y, x),
+            (-x, y),
+            (-x, -y),
+            (-y, -x),
+            (y, -x),
+            (x, -y),
+        ] {
+            if cx + dx >= 0 && cy + dy >= 0 {
+                put_pixel(
+                    rgb,
+                    width,
+                    height,
+                    (cx + dx) as usize,
+                    (cy + dy) as usize,
+                    color,
+                );
+            }
+        }
+        y += 1;
+        if err <= 0 {
+            err += 2 * y + 1;
+        }
+        if err > 0 {
+            x -= 1;
+            err -= 2 * x + 1;
         }
     }
 }
