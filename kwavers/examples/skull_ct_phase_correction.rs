@@ -45,6 +45,7 @@ const RHO_CORTICAL_BONE_KG_PER_M3: f64 = 1900.0;
 const HU_BONE_LOWER: f64 = 300.0;
 const PANEL: usize = 384;
 const MAP_PANEL: usize = 384;
+const RAY_STEP_FRACTION: f64 = 0.5;
 
 #[derive(Debug, Clone)]
 struct CtVolume {
@@ -52,6 +53,13 @@ struct CtVolume {
     spacing_m: [f64; 3],
     origin_mm: [f64; 3],
     direction: [[f64; 3]; 3],
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Point3Meters {
+    x: f64,
+    y: f64,
+    z: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -107,9 +115,16 @@ fn main() -> Result<()> {
         .context("failed to compute aperture phase map")?;
 
     let (element_x, element_y, element_z) = hemispherical_projected_elements(&grid);
-    let element_corrections = correction
-        .compute_element_corrections(FREQUENCY_HZ, &element_x, &element_y)
-        .context("failed to sample element phase corrections")?;
+    let focus = phase_target_point(&grid);
+    let element_corrections = compute_focused_element_corrections(
+        FREQUENCY_HZ,
+        &element_x,
+        &element_y,
+        &element_z,
+        focus,
+        &grid,
+        &skull,
+    );
     let projections = element_projection_records(
         &element_x,
         &element_y,
@@ -118,6 +133,7 @@ fn main() -> Result<()> {
         &grid,
         &ct,
         &skull,
+        focus,
     );
 
     write_three_plane_ppm(
@@ -300,6 +316,93 @@ fn hemispherical_projected_elements(grid: &Grid) -> (Vec<f64>, Vec<f64>, Vec<f64
     (x, y, z)
 }
 
+fn phase_target_point(grid: &Grid) -> Point3Meters {
+    Point3Meters {
+        x: 0.5 * (grid.nx.saturating_sub(1) as f64) * grid.dx,
+        y: 0.5 * (grid.ny.saturating_sub(1) as f64) * grid.dy,
+        z: 0.5 * (grid.nz.saturating_sub(1) as f64) * grid.dz,
+    }
+}
+
+fn element_source_point(x_m: f64, y_m: f64, bowl_z_m: f64, grid: &Grid) -> Point3Meters {
+    Point3Meters {
+        x: x_m,
+        y: y_m,
+        z: (grid.nz.saturating_sub(1) as f64) * grid.dz + bowl_z_m,
+    }
+}
+
+fn nearest_voxel(point: Point3Meters, grid: &Grid) -> Option<(usize, usize, usize)> {
+    if point.x < 0.0 || point.y < 0.0 || point.z < 0.0 {
+        return None;
+    }
+    let i = (point.x / grid.dx).round() as isize;
+    let j = (point.y / grid.dy).round() as isize;
+    let k = (point.z / grid.dz).round() as isize;
+    if i < 0
+        || j < 0
+        || k < 0
+        || i >= grid.nx as isize
+        || j >= grid.ny as isize
+        || k >= grid.nz as isize
+    {
+        return None;
+    }
+    Some((i as usize, j as usize, k as usize))
+}
+
+fn ray_step_m(grid: &Grid) -> f64 {
+    RAY_STEP_FRACTION * grid.dx.min(grid.dy).min(grid.dz)
+}
+
+fn compute_focused_element_corrections(
+    frequency: f64,
+    xs: &[f64],
+    ys: &[f64],
+    zs: &[f64],
+    focus: Point3Meters,
+    grid: &Grid,
+    skull: &HeterogeneousSkull,
+) -> Array1<f64> {
+    let k_water = 2.0 * PI * frequency / C_WATER_M_PER_S;
+    let step = ray_step_m(grid);
+    let mut corrections = Array1::zeros(xs.len().min(ys.len()).min(zs.len()));
+
+    for (idx, ((&x_m, &y_m), &bowl_z_m)) in xs.iter().zip(ys).zip(zs).enumerate() {
+        let source = element_source_point(x_m, y_m, bowl_z_m, grid);
+        let dx = focus.x - source.x;
+        let dy = focus.y - source.y;
+        let dz = focus.z - source.z;
+        let length = (dx * dx + dy * dy + dz * dz).sqrt();
+        if length <= f64::EPSILON {
+            continue;
+        }
+        let samples = (length / step).ceil().max(1.0) as usize;
+        let ds = length / samples as f64;
+        let mut phase = 0.0_f64;
+        for s in 0..=samples {
+            let u = s as f64 / samples as f64;
+            let point = Point3Meters {
+                x: source.x + u * dx,
+                y: source.y + u * dy,
+                z: source.z + u * dz,
+            };
+            let Some((i, j, k)) = nearest_voxel(point, grid) else {
+                continue;
+            };
+            let c_local = skull.sound_speed[[i, j, k]];
+            if c_local <= 0.0 {
+                continue;
+            }
+            let k_local = 2.0 * PI * frequency / c_local;
+            phase += (k_local - k_water) * ds;
+        }
+        corrections[idx] = -phase;
+    }
+
+    corrections
+}
+
 fn element_projection_records(
     xs: &[f64],
     ys: &[f64],
@@ -308,6 +411,7 @@ fn element_projection_records(
     grid: &Grid,
     ct: &CtVolume,
     skull: &HeterogeneousSkull,
+    focus: Point3Meters,
 ) -> Vec<ElementProjection> {
     xs.iter()
         .zip(ys)
@@ -315,7 +419,7 @@ fn element_projection_records(
         .zip(corrections)
         .enumerate()
         .map(|(element, (((&x_m, &y_m), &bowl_z_m), &correction_rad))| {
-            let metrics = element_path_metrics(x_m, y_m, grid, ct, skull);
+            let metrics = element_path_metrics(x_m, y_m, bowl_z_m, focus, grid, ct, skull);
             ElementProjection {
                 element,
                 x_m,
@@ -352,13 +456,20 @@ struct ElementPathMetrics {
 fn element_path_metrics(
     x_m: f64,
     y_m: f64,
+    bowl_z_m: f64,
+    focus: Point3Meters,
     grid: &Grid,
     ct: &CtVolume,
     skull: &HeterogeneousSkull,
 ) -> ElementPathMetrics {
-    let i = ((x_m / grid.dx).round() as isize).clamp(0, grid.nx as isize - 1) as usize;
-    let j = ((y_m / grid.dy).round() as isize).clamp(0, grid.ny as isize - 1) as usize;
-    let dz = grid.dz;
+    let source = element_source_point(x_m, y_m, bowl_z_m, grid);
+    let dx = focus.x - source.x;
+    let dy = focus.y - source.y;
+    let dz = focus.z - source.z;
+    let length = (dx * dx + dy * dy + dz * dz).sqrt();
+    let step = ray_step_m(grid);
+    let samples = (length / step).ceil().max(1.0) as usize;
+    let ds = length / samples as f64;
     let mut skull_count = 0_usize;
     let mut cortical_count = 0_usize;
     let mut trabecular_count = 0_usize;
@@ -367,7 +478,16 @@ fn element_path_metrics(
     let mut cortical_density_sum = 0.0_f64;
     let mut trabecular_density_sum = 0.0_f64;
 
-    for k in 0..grid.nz {
+    for s in 0..=samples {
+        let u = s as f64 / samples as f64;
+        let point = Point3Meters {
+            x: source.x + u * dx,
+            y: source.y + u * dy,
+            z: source.z + u * dz,
+        };
+        let Some((i, j, k)) = nearest_voxel(point, grid) else {
+            continue;
+        };
         let hu = ct.hu[[i, j, k]];
         if hu < HU_BONE_LOWER {
             continue;
@@ -410,9 +530,9 @@ fn element_path_metrics(
         .map(|(cortical, trabecular)| cortical / trabecular);
 
     ElementPathMetrics {
-        skull_thickness_m: skull_count as f64 * dz,
-        cortical_thickness_m: cortical_count as f64 * dz,
-        trabecular_thickness_m: trabecular_count as f64 * dz,
+        skull_thickness_m: skull_count as f64 * ds,
+        cortical_thickness_m: cortical_count as f64 * ds,
+        trabecular_thickness_m: trabecular_count as f64 * ds,
         mean_density_kg_m3: mean_density,
         mean_sound_speed_m_s: mean_sound_speed,
         cortical_mean_density_kg_m3: cortical_mean_density,
@@ -686,7 +806,7 @@ fn write_element_map_svg(path: &Path, elements: &[ElementProjection], grid: &Gri
     )?;
     writeln!(
         out,
-        r##"<text x="40" y="{:.2}" font-family="Arial" font-size="13" fill="#475569">Gray elements have no valid cortical/trabecular pair along the CT column; metrics are exported in the CSV.</text>"##,
+        r##"<text x="40" y="{:.2}" font-family="Arial" font-size="13" fill="#475569">Gray elements have no valid cortical/trabecular pair along the element-to-focus ray; metrics are exported in the CSV.</text>"##,
         height - 18.0
     )?;
     writeln!(out, "</svg>")?;
@@ -913,6 +1033,82 @@ fn write_element_csv(path: &Path, elements: &[ElementProjection]) -> Result<()> 
         )?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn small_grid() -> Grid {
+        Grid::new(11, 11, 11, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid")
+    }
+
+    fn test_ct_with_oblique_bone() -> (CtVolume, HeterogeneousSkull) {
+        let mut hu = Array3::<f64>::zeros((11, 11, 11));
+        hu[[7, 5, 8]] = 800.0;
+        let skull = HeterogeneousSkull::from_ct_hill(
+            &hu,
+            C_CORTICAL_BONE_M_PER_S,
+            RHO_CORTICAL_BONE_KG_PER_M3,
+            20.0,
+        )
+        .expect("finite test CT");
+        (
+            CtVolume {
+                hu,
+                spacing_m: [1.0e-3; 3],
+                origin_mm: [0.0; 3],
+                direction: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            },
+            skull,
+        )
+    }
+
+    #[test]
+    fn focused_ray_metrics_detect_oblique_peripheral_bone() {
+        let grid = small_grid();
+        let (ct, skull) = test_ct_with_oblique_bone();
+        let focus = Point3Meters {
+            x: 5.0e-3,
+            y: 5.0e-3,
+            z: 5.0e-3,
+        };
+
+        let metrics = element_path_metrics(10.0e-3, 5.0e-3, 2.0e-3, focus, &grid, &ct, &skull);
+
+        assert!(
+            metrics.skull_thickness_m > 0.0,
+            "oblique element-to-focus ray must count intersected skull"
+        );
+        assert!(
+            metrics.mean_sound_speed_m_s > C_WATER_M_PER_S,
+            "bone intersection must increase mean sound speed"
+        );
+    }
+
+    #[test]
+    fn focused_corrections_are_computed_for_every_element() {
+        let grid = small_grid();
+        let (_ct, skull) = test_ct_with_oblique_bone();
+        let focus = Point3Meters {
+            x: 5.0e-3,
+            y: 5.0e-3,
+            z: 5.0e-3,
+        };
+        let xs = [10.0e-3, 5.0e-3];
+        let ys = [5.0e-3, 10.0e-3];
+        let zs = [2.0e-3, 2.0e-3];
+
+        let corrections =
+            compute_focused_element_corrections(FREQUENCY_HZ, &xs, &ys, &zs, focus, &grid, &skull);
+
+        assert_eq!(corrections.len(), 2);
+        assert!(corrections.iter().all(|value| value.is_finite()));
+        assert!(
+            corrections[0].abs() > corrections[1].abs(),
+            "ray through synthetic bone must have larger aberration than water-only ray"
+        );
+    }
 }
 
 fn format_optional(value: Option<f64>) -> String {
