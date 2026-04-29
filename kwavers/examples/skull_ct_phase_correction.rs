@@ -155,6 +155,14 @@ fn main() -> Result<()> {
         &projections,
         &grid,
     )?;
+    write_pressure_field_ppm(
+        &diagnostics_3d::companion_path(&output_path, "_pressure_field", "ppm"),
+        &ct.hu,
+        &projections,
+        focus,
+        &grid,
+        FREQUENCY_HZ,
+    )?;
     diagnostics_3d::write_three_dimensional_diagnostics(&output_path, &ct, &projections)
         .context("failed to write 3D skull-array diagnostics")?;
 
@@ -168,13 +176,14 @@ fn main() -> Result<()> {
         1e3 * ct.spacing_m[2]
     );
     println!(
-        "Computed {} element corrections at {:.0} kHz; wrote {}, {}, {}, and {}",
+        "Computed {} element corrections at {:.0} kHz; wrote {}, {}, {}, {}, and {}",
         projections.len(),
         FREQUENCY_HZ / 1e3,
         output_path.display(),
         output_path.with_extension("csv").display(),
         diagnostics_3d::companion_path(&output_path, "_element_maps", "ppm").display(),
-        diagnostics_3d::companion_path(&output_path, "_element_maps", "svg").display()
+        diagnostics_3d::companion_path(&output_path, "_element_maps", "svg").display(),
+        diagnostics_3d::companion_path(&output_path, "_pressure_field", "ppm").display()
     );
     println!(
         "Wrote 3D diagnostics {} and {}",
@@ -542,6 +551,46 @@ fn element_path_metrics(
     }
 }
 
+fn compute_pressure_slice(
+    elements: &[ElementProjection],
+    grid: &Grid,
+    frequency_hz: f64,
+) -> Array2<f64> {
+    let mut pressure = Array2::<f64>::zeros((grid.nx, grid.nz));
+    let mid_y = 0.5 * (grid.ny.saturating_sub(1) as f64) * grid.dy;
+    let k_water = 2.0 * PI * frequency_hz / C_WATER_M_PER_S;
+
+    for i in 0..grid.nx {
+        for k in 0..grid.nz {
+            let target = Point3Meters {
+                x: i as f64 * grid.dx,
+                y: mid_y,
+                z: k as f64 * grid.dz,
+            };
+            let mut re = 0.0_f64;
+            let mut im = 0.0_f64;
+
+            for element in elements {
+                let source = element_source_point(element.x_m, element.y_m, element.bowl_z_m, grid);
+                let dx = target.x - source.x;
+                let dy = target.y - source.y;
+                let dz = target.z - source.z;
+                let distance = (dx * dx + dy * dy + dz * dz).sqrt().max(grid.dx);
+                let attenuation_np =
+                    20.0 * (frequency_hz * 1e-6) * element.skull_thickness_m * 100.0 / 8.686;
+                let phase = k_water * distance + element.correction_rad;
+                let amplitude = (-attenuation_np).exp() / distance;
+                re += amplitude * phase.cos();
+                im += amplitude * phase.sin();
+            }
+
+            pressure[[i, k]] = (re * re + im * im).sqrt();
+        }
+    }
+
+    pressure
+}
+
 fn write_three_plane_ppm(
     path: &Path,
     hu: &Array3<f64>,
@@ -572,6 +621,62 @@ fn write_three_plane_ppm(
     writeln!(out, "P6\n{} {}\n255", width, height)?;
     out.write_all(&rgb)?;
     Ok(())
+}
+
+fn write_pressure_field_ppm(
+    path: &Path,
+    hu: &Array3<f64>,
+    elements: &[ElementProjection],
+    focus: Point3Meters,
+    grid: &Grid,
+    frequency_hz: f64,
+) -> Result<()> {
+    let width = PANEL;
+    let height = PANEL;
+    let mut rgb = vec![8_u8; width * height * 3];
+    let pressure = compute_pressure_slice(elements, grid, frequency_hz);
+    let max_pressure = finite_max(pressure.iter().copied()).max(f64::EPSILON);
+    let mid_y = grid.ny / 2;
+
+    for py in 0..height {
+        for px in 0..width {
+            let i = (px * grid.nx / width).min(grid.nx - 1);
+            let k = (py * grid.nz / height).min(grid.nz - 1);
+            let db = 20.0 * (pressure[[i, k]] / max_pressure).max(1.0e-4).log10();
+            let pressure_rgb = pressure_color(db);
+            let gray = ct_window(hu[[i, mid_y, k]]);
+            let mut color = blend_gray_color(gray, pressure_rgb, 0.72);
+            if hu[[i, mid_y, k]] >= HU_BONE_LOWER {
+                color = blend_rgb(color, [245, 245, 220], 0.55);
+            }
+            put_pixel(&mut rgb, width, height, px, py, color);
+        }
+    }
+
+    let focus_px = ((focus.x / (grid.nx as f64 * grid.dx)) * width as f64).round() as isize;
+    let focus_py = ((focus.z / (grid.nz as f64 * grid.dz)) * height as f64).round() as isize;
+    draw_cross(
+        &mut rgb,
+        width,
+        height,
+        focus_px,
+        focus_py,
+        6,
+        [255, 255, 255],
+    );
+
+    let mut out = BufWriter::new(File::create(path)?);
+    writeln!(out, "P6\n{} {}\n255", width, height)?;
+    out.write_all(&rgb)?;
+    Ok(())
+}
+
+fn pressure_color(db: f64) -> [u8; 3] {
+    let t = ((db + 40.0) / 40.0).clamp(0.0, 1.0);
+    let r = (255.0 * t.powf(0.65)) as u8;
+    let g = (220.0 * (1.0 - (2.0 * t - 1.0).abs()).max(0.0)) as u8;
+    let b = (255.0 * (1.0 - t).powf(0.8)) as u8;
+    [r, g, b]
 }
 
 struct PlaneSpec<F>
@@ -935,6 +1040,36 @@ fn draw_disc(
             }
         }
     }
+}
+
+fn draw_cross(
+    rgb: &mut [u8],
+    width: usize,
+    height: usize,
+    cx: isize,
+    cy: isize,
+    radius: isize,
+    color: [u8; 3],
+) {
+    for d in -radius..=radius {
+        let x = cx + d;
+        if x >= 0 && cy >= 0 {
+            put_pixel(rgb, width, height, x as usize, cy as usize, color);
+        }
+        let y = cy + d;
+        if cx >= 0 && y >= 0 {
+            put_pixel(rgb, width, height, cx as usize, y as usize, color);
+        }
+    }
+}
+
+fn blend_rgb(base: [u8; 3], overlay: [u8; 3], alpha: f64) -> [u8; 3] {
+    let a = alpha.clamp(0.0, 1.0);
+    [
+        ((1.0 - a) * f64::from(base[0]) + a * f64::from(overlay[0])) as u8,
+        ((1.0 - a) * f64::from(base[1]) + a * f64::from(overlay[1])) as u8,
+        ((1.0 - a) * f64::from(base[2]) + a * f64::from(overlay[2])) as u8,
+    ]
 }
 
 fn scalar_color(value: f64, color: ScalarColor) -> [u8; 3] {
