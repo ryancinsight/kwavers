@@ -652,7 +652,7 @@ fn write_pressure_field_ppm(
     for py in 0..height {
         for px in 0..width {
             let i = (px * grid.nx / width).min(grid.nx - 1);
-            let k = (py * grid.nz / height).min(grid.nz - 1);
+            let k = ((height - 1 - py) * grid.nz / height).min(grid.nz - 1);
             let db = 20.0 * (pressure[[i, k]] / max_pressure).max(1.0e-4).log10();
             let pressure_rgb = pressure_color(db);
             let gray = ct_window(hu[[i, mid_y, k]]);
@@ -667,7 +667,8 @@ fn write_pressure_field_ppm(
     draw_pressure_transducer_overlay(&mut rgb, width, height, elements, focus, grid);
 
     let focus_px = ((focus.x / (grid.nx as f64 * grid.dx)) * width as f64).round() as isize;
-    let focus_py = ((focus.z / (grid.nz as f64 * grid.dz)) * height as f64).round() as isize;
+    let focus_py = (height as isize - 1)
+        - ((focus.z / (grid.nz as f64 * grid.dz)) * height as f64).round() as isize;
     draw_cross(
         &mut rgb,
         width,
@@ -706,7 +707,8 @@ fn draw_pressure_transducer_overlay(
         .fold(0.0_f64, f64::max)
         .max(f64::EPSILON);
     let focus_px = ((focus.x / (grid.nx as f64 * grid.dx)) * width as f64).round() as isize;
-    let focus_py = ((focus.z / (grid.nz as f64 * grid.dz)) * height as f64).round() as isize;
+    let focus_py = (height as isize - 1)
+        - ((focus.z / (grid.nz as f64 * grid.dz)) * height as f64).round() as isize;
 
     for (idx, element) in elements.iter().enumerate() {
         let (px, py) = projected_transducer_pixel(element, max_bowl_z, width, height, grid);
