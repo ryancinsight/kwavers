@@ -553,6 +553,7 @@ fn element_path_metrics(
 
 fn compute_pressure_slice(
     elements: &[ElementProjection],
+    focus: Point3Meters,
     grid: &Grid,
     frequency_hz: f64,
 ) -> Array2<f64> {
@@ -569,6 +570,7 @@ fn compute_pressure_slice(
             };
             let mut re = 0.0_f64;
             let mut im = 0.0_f64;
+            let mut incoherent = 0.0_f64;
 
             for element in elements {
                 let source = element_source_point(element.x_m, element.y_m, element.bowl_z_m, grid);
@@ -576,15 +578,24 @@ fn compute_pressure_slice(
                 let dy = target.y - source.y;
                 let dz = target.z - source.z;
                 let distance = (dx * dx + dy * dy + dz * dz).sqrt().max(grid.dx);
+                let fdx = focus.x - source.x;
+                let fdy = focus.y - source.y;
+                let fdz = focus.z - source.z;
+                let focus_distance = (fdx * fdx + fdy * fdy + fdz * fdz).sqrt().max(grid.dx);
                 let attenuation_np =
                     20.0 * (frequency_hz * 1e-6) * element.skull_thickness_m * 100.0 / 8.686;
-                let phase = k_water * distance + element.correction_rad;
+                let phase = k_water * (distance - focus_distance) + element.correction_rad;
                 let amplitude = (-attenuation_np).exp() / distance;
                 re += amplitude * phase.cos();
                 im += amplitude * phase.sin();
+                incoherent += amplitude;
             }
 
-            pressure[[i, k]] = (re * re + im * im).sqrt();
+            pressure[[i, k]] = if incoherent > f64::EPSILON {
+                (re * re + im * im).sqrt() / incoherent
+            } else {
+                0.0
+            };
         }
     }
 
@@ -634,7 +645,7 @@ fn write_pressure_field_ppm(
     let width = PANEL;
     let height = PANEL;
     let mut rgb = vec![8_u8; width * height * 3];
-    let pressure = compute_pressure_slice(elements, grid, frequency_hz);
+    let pressure = compute_pressure_slice(elements, focus, grid, frequency_hz);
     let max_pressure = finite_max(pressure.iter().copied()).max(f64::EPSILON);
     let mid_y = grid.ny / 2;
 
@@ -672,7 +683,7 @@ fn write_pressure_field_ppm(
 }
 
 fn pressure_color(db: f64) -> [u8; 3] {
-    let t = ((db + 40.0) / 40.0).clamp(0.0, 1.0);
+    let t = ((db + 24.0) / 24.0).clamp(0.0, 1.0);
     let r = (255.0 * t.powf(0.65)) as u8;
     let g = (220.0 * (1.0 - (2.0 * t - 1.0).abs()).max(0.0)) as u8;
     let b = (255.0 * (1.0 - t).powf(0.8)) as u8;
@@ -1242,6 +1253,59 @@ mod tests {
         assert!(
             corrections[0].abs() > corrections[1].abs(),
             "ray through synthetic bone must have larger aberration than water-only ray"
+        );
+    }
+
+    #[test]
+    fn pressure_slice_constructs_peak_at_focus_for_symmetric_sources() {
+        let grid = small_grid();
+        let focus = Point3Meters {
+            x: 5.0e-3,
+            y: 5.0e-3,
+            z: 5.0e-3,
+        };
+        let elements = vec![
+            ElementProjection {
+                element: 0,
+                x_m: 2.0e-3,
+                y_m: 5.0e-3,
+                bowl_z_m: 2.0e-3,
+                correction_rad: 0.0,
+                skull_thickness_m: 0.0,
+                cortical_thickness_m: 0.0,
+                trabecular_thickness_m: 0.0,
+                mean_density_kg_m3: RHO_WATER_KG_PER_M3,
+                mean_sound_speed_m_s: C_WATER_M_PER_S,
+                cortical_mean_density_kg_m3: None,
+                trabecular_mean_density_kg_m3: None,
+                trabecular_to_cortical_sdr: None,
+                cortical_to_trabecular_density_ratio: None,
+            },
+            ElementProjection {
+                element: 1,
+                x_m: 8.0e-3,
+                y_m: 5.0e-3,
+                bowl_z_m: 2.0e-3,
+                correction_rad: 0.0,
+                skull_thickness_m: 0.0,
+                cortical_thickness_m: 0.0,
+                trabecular_thickness_m: 0.0,
+                mean_density_kg_m3: RHO_WATER_KG_PER_M3,
+                mean_sound_speed_m_s: C_WATER_M_PER_S,
+                cortical_mean_density_kg_m3: None,
+                trabecular_mean_density_kg_m3: None,
+                trabecular_to_cortical_sdr: None,
+                cortical_to_trabecular_density_ratio: None,
+            },
+        ];
+
+        let pressure = compute_pressure_slice(&elements, focus, &grid, 500_000.0);
+        let focus_pressure = pressure[[5, 5]];
+        let off_focus_pressure = pressure[[5, 2]].max(pressure[[2, 5]]).max(pressure[[8, 5]]);
+
+        assert!(
+            focus_pressure > off_focus_pressure,
+            "focus-referenced phases must construct a local maximum at the target"
         );
     }
 }
