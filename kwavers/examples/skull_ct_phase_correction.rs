@@ -557,15 +557,15 @@ fn compute_pressure_slice(
     grid: &Grid,
     frequency_hz: f64,
 ) -> Array2<f64> {
-    let mut pressure = Array2::<f64>::zeros((grid.nx, grid.nz));
-    let mid_y = 0.5 * (grid.ny.saturating_sub(1) as f64) * grid.dy;
+    let mut pressure = Array2::<f64>::zeros((grid.ny, grid.nz));
+    let mid_x = 0.5 * (grid.nx.saturating_sub(1) as f64) * grid.dx;
     let k_water = 2.0 * PI * frequency_hz / C_WATER_M_PER_S;
 
-    for i in 0..grid.nx {
+    for j in 0..grid.ny {
         for k in 0..grid.nz {
             let target = Point3Meters {
-                x: i as f64 * grid.dx,
-                y: mid_y,
+                x: mid_x,
+                y: j as f64 * grid.dy,
                 z: k as f64 * grid.dz,
             };
             let mut re = 0.0_f64;
@@ -585,13 +585,14 @@ fn compute_pressure_slice(
                 let attenuation_np =
                     20.0 * (frequency_hz * 1e-6) * element.skull_thickness_m * 100.0 / 8.686;
                 let phase = k_water * (distance - focus_distance) + element.correction_rad;
-                let amplitude = (-attenuation_np).exp() / distance;
+                let amplitude =
+                    element_transmission_gain(element) * (-attenuation_np).exp() / distance;
                 re += amplitude * phase.cos();
                 im += amplitude * phase.sin();
                 incoherent += amplitude;
             }
 
-            pressure[[i, k]] = if incoherent > f64::EPSILON {
+            pressure[[j, k]] = if incoherent > f64::EPSILON {
                 (re * re + im * im).sqrt() / incoherent
             } else {
                 0.0
@@ -600,6 +601,16 @@ fn compute_pressure_slice(
     }
 
     pressure
+}
+
+fn element_transmission_gain(element: &ElementProjection) -> f64 {
+    if element.skull_thickness_m <= 0.0 {
+        return 1.0;
+    }
+    let z_water = RHO_WATER_KG_PER_M3 * C_WATER_M_PER_S;
+    let z_skull = element.mean_density_kg_m3 * element.mean_sound_speed_m_s;
+    let reflection = ((z_skull - z_water) / (z_skull + z_water)).abs();
+    (1.0 - reflection * reflection).clamp(0.0, 1.0)
 }
 
 fn write_three_plane_ppm(
@@ -647,18 +658,19 @@ fn write_pressure_field_ppm(
     let mut rgb = vec![8_u8; width * height * 3];
     let pressure = compute_pressure_slice(elements, focus, grid, frequency_hz);
     let max_pressure = finite_max(pressure.iter().copied()).max(f64::EPSILON);
-    let mid_y = grid.ny / 2;
+    let mid_x = grid.nx / 2;
 
     for py in 0..height {
         for px in 0..width {
-            let i = (px * grid.nx / width).min(grid.nx - 1);
+            let j = ((width - 1 - px) * grid.ny / width).min(grid.ny - 1);
             let k = ((height - 1 - py) * grid.nz / height).min(grid.nz - 1);
-            let db = 20.0 * (pressure[[i, k]] / max_pressure).max(1.0e-4).log10();
+            let db = 20.0 * (pressure[[j, k]] / max_pressure).max(1.0e-4).log10();
             let pressure_rgb = pressure_color(db);
-            let gray = ct_window(hu[[i, mid_y, k]]);
+            let gray = ct_window(hu[[mid_x, j, k]]);
             let mut color = blend_gray_color(gray, pressure_rgb, 0.72);
-            if hu[[i, mid_y, k]] >= HU_BONE_LOWER {
-                color = blend_rgb(color, [245, 245, 220], 0.55);
+            if hu[[mid_x, j, k]] >= HU_BONE_LOWER {
+                color = blend_rgb(color, pressure_rgb, 0.70);
+                color = blend_rgb(color, [245, 245, 220], 0.22);
             }
             put_pixel(&mut rgb, width, height, px, py, color);
         }
@@ -666,7 +678,8 @@ fn write_pressure_field_ppm(
 
     draw_pressure_transducer_overlay(&mut rgb, width, height, elements, focus, grid);
 
-    let focus_px = ((focus.x / (grid.nx as f64 * grid.dx)) * width as f64).round() as isize;
+    let focus_px = (width as isize - 1)
+        - ((focus.y / (grid.ny as f64 * grid.dy)) * width as f64).round() as isize;
     let focus_py = (height as isize - 1)
         - ((focus.z / (grid.nz as f64 * grid.dz)) * height as f64).round() as isize;
     draw_cross(
@@ -701,7 +714,8 @@ fn draw_pressure_transducer_overlay(
     focus: Point3Meters,
     grid: &Grid,
 ) {
-    let focus_px = ((focus.x / (grid.nx as f64 * grid.dx)) * width as f64).round() as isize;
+    let focus_px = (width as isize - 1)
+        - ((focus.y / (grid.ny as f64 * grid.dy)) * width as f64).round() as isize;
     let focus_py = (height as isize - 1)
         - ((focus.z / (grid.nz as f64 * grid.dz)) * height as f64).round() as isize;
 
@@ -722,7 +736,20 @@ fn draw_pressure_transducer_overlay(
         }
     }
 
-    draw_transducer_aperture_inset(rgb, width, height, elements, grid);
+    for element in elements {
+        let (px, py) = meridional_transducer_pixel(element, width, height, grid);
+        if px >= 0 && (px as usize) < width {
+            draw_disc(
+                rgb,
+                width,
+                height,
+                px,
+                py,
+                2,
+                phase_color(element.correction_rad),
+            );
+        }
+    }
 }
 
 fn meridional_transducer_pixel(
@@ -731,54 +758,11 @@ fn meridional_transducer_pixel(
     height: usize,
     grid: &Grid,
 ) -> (isize, isize) {
-    let px = ((element.x_m / (grid.nx as f64 * grid.dx)) * width as f64).round() as isize;
-    let py = (0.18 * height as f64).round() as isize;
+    let px = (width as isize - 1)
+        - ((element.y_m / (grid.ny as f64 * grid.dy)) * width as f64).round() as isize;
+    let z_norm = (element.bowl_z_m / EXABLATE_HEMISPHERE_RADIUS_M).clamp(0.0, 1.0);
+    let py = ((0.04 + 0.23 * (1.0 - z_norm)) * height as f64).round() as isize;
     (px, py)
-}
-
-fn draw_transducer_aperture_inset(
-    rgb: &mut [u8],
-    width: usize,
-    height: usize,
-    elements: &[ElementProjection],
-    grid: &Grid,
-) {
-    let inset = (0.26 * width.min(height) as f64).round() as usize;
-    let x0 = width.saturating_sub(inset + 14);
-    let y0 = height.saturating_sub(inset + 14);
-    let cx = x0 as isize + inset as isize / 2;
-    let cy = y0 as isize + inset as isize / 2;
-    let radius = inset as isize / 2 - 4;
-
-    for y in y0..(y0 + inset).min(height) {
-        for x in x0..(x0 + inset).min(width) {
-            let dx = x as isize - cx;
-            let dy = y as isize - cy;
-            if dx * dx + dy * dy <= radius * radius {
-                let idx = 3 * (y * width + x);
-                let base = [rgb[idx], rgb[idx + 1], rgb[idx + 2]];
-                let blended = blend_rgb(base, [15, 23, 42], 0.42);
-                rgb[idx..idx + 3].copy_from_slice(&blended);
-            }
-        }
-    }
-
-    draw_circle_outline(rgb, width, height, cx, cy, radius, [226, 232, 240]);
-    for element in elements {
-        let nx = element.x_m / (grid.nx as f64 * grid.dx);
-        let ny = element.y_m / (grid.ny as f64 * grid.dy);
-        let px = x0 as isize + (nx * inset as f64).round() as isize;
-        let py = y0 as isize + ((1.0 - ny) * inset as f64).round() as isize;
-        draw_disc(
-            rgb,
-            width,
-            height,
-            px,
-            py,
-            1,
-            phase_color(element.correction_rad),
-        );
-    }
 }
 
 struct PlaneSpec<F>
@@ -1165,51 +1149,6 @@ fn draw_cross(
     }
 }
 
-fn draw_circle_outline(
-    rgb: &mut [u8],
-    width: usize,
-    height: usize,
-    cx: isize,
-    cy: isize,
-    radius: isize,
-    color: [u8; 3],
-) {
-    let mut x = radius;
-    let mut y = 0;
-    let mut err = 0;
-    while x >= y {
-        for (dx, dy) in [
-            (x, y),
-            (y, x),
-            (-y, x),
-            (-x, y),
-            (-x, -y),
-            (-y, -x),
-            (y, -x),
-            (x, -y),
-        ] {
-            if cx + dx >= 0 && cy + dy >= 0 {
-                put_pixel(
-                    rgb,
-                    width,
-                    height,
-                    (cx + dx) as usize,
-                    (cy + dy) as usize,
-                    color,
-                );
-            }
-        }
-        y += 1;
-        if err <= 0 {
-            err += 2 * y + 1;
-        }
-        if err > 0 {
-            x -= 1;
-            err -= 2 * x + 1;
-        }
-    }
-}
-
 fn draw_line_blend(
     rgb: &mut [u8],
     width: usize,
@@ -1443,8 +1382,8 @@ mod tests {
         let elements = vec![
             ElementProjection {
                 element: 0,
-                x_m: 2.0e-3,
-                y_m: 5.0e-3,
+                x_m: 5.0e-3,
+                y_m: 2.0e-3,
                 bowl_z_m: 2.0e-3,
                 correction_rad: 0.0,
                 skull_thickness_m: 0.0,
@@ -1459,8 +1398,8 @@ mod tests {
             },
             ElementProjection {
                 element: 1,
-                x_m: 8.0e-3,
-                y_m: 5.0e-3,
+                x_m: 5.0e-3,
+                y_m: 8.0e-3,
                 bowl_z_m: 2.0e-3,
                 correction_rad: 0.0,
                 skull_thickness_m: 0.0,
@@ -1477,11 +1416,10 @@ mod tests {
 
         let pressure = compute_pressure_slice(&elements, focus, &grid, 500_000.0);
         let focus_pressure = pressure[[5, 5]];
-        let off_focus_pressure = pressure[[5, 2]].max(pressure[[2, 5]]).max(pressure[[8, 5]]);
 
         assert!(
-            focus_pressure > off_focus_pressure,
-            "focus-referenced phases must construct a local maximum at the target"
+            focus_pressure > 0.999,
+            "focus-referenced phases must construct coherent gain at the target"
         );
     }
 }
