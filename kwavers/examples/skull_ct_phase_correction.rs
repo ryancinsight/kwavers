@@ -745,7 +745,7 @@ fn draw_pressure_transducer_overlay(
                 height,
                 px,
                 py,
-                2,
+                1,
                 phase_color(element.correction_rad),
             );
         }
@@ -761,7 +761,7 @@ fn meridional_transducer_pixel(
     let px = (width as isize - 1)
         - ((element.y_m / (grid.ny as f64 * grid.dy)) * width as f64).round() as isize;
     let z_norm = (element.bowl_z_m / EXABLATE_HEMISPHERE_RADIUS_M).clamp(0.0, 1.0);
-    let py = ((0.04 + 0.23 * (1.0 - z_norm)) * height as f64).round() as isize;
+    let py = ((0.05 + 0.70 * (1.0 - z_norm)) * height as f64).round() as isize;
     (px, py)
 }
 
