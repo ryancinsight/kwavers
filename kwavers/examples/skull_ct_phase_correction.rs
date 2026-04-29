@@ -664,6 +664,8 @@ fn write_pressure_field_ppm(
         }
     }
 
+    draw_pressure_transducer_overlay(&mut rgb, width, height, elements, focus, grid);
+
     let focus_px = ((focus.x / (grid.nx as f64 * grid.dx)) * width as f64).round() as isize;
     let focus_py = ((focus.z / (grid.nz as f64 * grid.dz)) * height as f64).round() as isize;
     draw_cross(
@@ -688,6 +690,58 @@ fn pressure_color(db: f64) -> [u8; 3] {
     let g = (220.0 * (1.0 - (2.0 * t - 1.0).abs()).max(0.0)) as u8;
     let b = (255.0 * (1.0 - t).powf(0.8)) as u8;
     [r, g, b]
+}
+
+fn draw_pressure_transducer_overlay(
+    rgb: &mut [u8],
+    width: usize,
+    height: usize,
+    elements: &[ElementProjection],
+    focus: Point3Meters,
+    grid: &Grid,
+) {
+    let max_bowl_z = elements
+        .iter()
+        .map(|element| element.bowl_z_m)
+        .fold(0.0_f64, f64::max)
+        .max(f64::EPSILON);
+    let focus_px = ((focus.x / (grid.nx as f64 * grid.dx)) * width as f64).round() as isize;
+    let focus_py = ((focus.z / (grid.nz as f64 * grid.dz)) * height as f64).round() as isize;
+
+    for (idx, element) in elements.iter().enumerate() {
+        let (px, py) = projected_transducer_pixel(element, max_bowl_z, width, height, grid);
+        if idx % 32 == 0 {
+            draw_line_blend(
+                rgb,
+                width,
+                height,
+                px,
+                py,
+                focus_px,
+                focus_py,
+                [125, 211, 252],
+                0.20,
+            );
+        }
+    }
+
+    for element in elements {
+        let (px, py) = projected_transducer_pixel(element, max_bowl_z, width, height, grid);
+        draw_disc(rgb, width, height, px, py, 2, [34, 211, 238]);
+    }
+}
+
+fn projected_transducer_pixel(
+    element: &ElementProjection,
+    max_bowl_z: f64,
+    width: usize,
+    height: usize,
+    grid: &Grid,
+) -> (isize, isize) {
+    let px = ((element.x_m / (grid.nx as f64 * grid.dx)) * width as f64).round() as isize;
+    let vertical = 0.03 + 0.20 * (1.0 - element.bowl_z_m / max_bowl_z).clamp(0.0, 1.0);
+    let py = (vertical * height as f64).round() as isize;
+    (px, py)
 }
 
 struct PlaneSpec<F>
@@ -1070,6 +1124,46 @@ fn draw_cross(
         let y = cy + d;
         if cx >= 0 && y >= 0 {
             put_pixel(rgb, width, height, cx as usize, y as usize, color);
+        }
+    }
+}
+
+fn draw_line_blend(
+    rgb: &mut [u8],
+    width: usize,
+    height: usize,
+    x0: isize,
+    y0: isize,
+    x1: isize,
+    y1: isize,
+    color: [u8; 3],
+    alpha: f64,
+) {
+    let dx = (x1 - x0).abs();
+    let dy = -(y1 - y0).abs();
+    let sx = if x0 < x1 { 1 } else { -1 };
+    let sy = if y0 < y1 { 1 } else { -1 };
+    let mut err = dx + dy;
+    let (mut x, mut y) = (x0, y0);
+
+    loop {
+        if x >= 0 && y >= 0 && (x as usize) < width && (y as usize) < height {
+            let idx = 3 * (y as usize * width + x as usize);
+            let base = [rgb[idx], rgb[idx + 1], rgb[idx + 2]];
+            let blended = blend_rgb(base, color, alpha);
+            rgb[idx..idx + 3].copy_from_slice(&blended);
+        }
+        if x == x1 && y == y1 {
+            break;
+        }
+        let e2 = 2 * err;
+        if e2 >= dy {
+            err += dy;
+            x += sx;
+        }
+        if e2 <= dx {
+            err += dx;
+            y += sy;
         }
     }
 }
