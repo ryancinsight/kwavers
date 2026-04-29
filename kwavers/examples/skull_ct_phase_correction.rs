@@ -719,9 +719,9 @@ fn draw_pressure_transducer_overlay(
         - ((focus.y / (grid.ny as f64 * grid.dy)) * width as f64).round() as isize;
     let focus_py = (height as isize - 1)
         - ((focus.z / (grid.nz as f64 * grid.dz)) * height as f64).round() as isize;
+    let projected = projected_transducer_pixels(elements, width, height, grid);
 
-    for (idx, element) in elements.iter().enumerate() {
-        let (px, py) = meridional_transducer_pixel(element, focus, width, height, grid);
+    for (idx, &(px, py)) in projected.iter().enumerate() {
         if idx % 32 == 0 && px >= 0 && (px as usize) < width {
             draw_line_blend(
                 rgb,
@@ -737,45 +737,63 @@ fn draw_pressure_transducer_overlay(
         }
     }
 
-    for element in elements {
-        let (px, py) = meridional_transducer_pixel(element, focus, width, height, grid);
+    for (element, &(px, py)) in elements.iter().zip(projected.iter()) {
         if px >= 0 && (px as usize) < width {
-            draw_disc(
-                rgb,
-                width,
-                height,
-                px,
-                py,
-                1,
-                phase_color(element.correction_rad),
-            );
+            let color = if element.skull_thickness_m > 0.0 {
+                [34, 211, 238]
+            } else {
+                [148, 163, 184]
+            };
+            draw_disc(rgb, width, height, px, py, 1, color);
         }
     }
 }
 
-fn meridional_transducer_pixel(
-    element: &ElementProjection,
-    focus: Point3Meters,
+fn projected_transducer_pixels(
+    elements: &[ElementProjection],
     width: usize,
     height: usize,
     grid: &Grid,
-) -> (isize, isize) {
+) -> Vec<(isize, isize)> {
     let center_y = 0.5 * (grid.ny.saturating_sub(1) as f64) * grid.dy;
     let grid_radius = 0.48 * (grid.nx as f64 * grid.dx).min(grid.ny as f64 * grid.dy);
     let projection_scale = (grid_radius / EXABLATE_HEMISPHERE_RADIUS_M).min(1.0);
-    let bowl_y = -(element.y_m - center_y) / projection_scale.max(f64::EPSILON);
-    let bowl_z = element.bowl_z_m;
     let pitch = TRANSDUCER_POSTERIOR_TILT_DEG.to_radians();
-    let tilted_y = bowl_y * pitch.cos() - bowl_z * pitch.sin();
-    let tilted_z = bowl_y * pitch.sin() + bowl_z * pitch.cos();
-    let focus_px = (width as f64 - 1.0) - (focus.y / (grid.ny as f64 * grid.dy) * width as f64);
-    let focus_py = (height as f64 - 1.0) - (focus.z / (grid.nz as f64 * grid.dz) * height as f64);
-    let lateral_scale = 0.40 * width as f64 / EXABLATE_HEMISPHERE_RADIUS_M;
-    let vertical_scale = 0.26 * height as f64 / EXABLATE_HEMISPHERE_RADIUS_M;
-    let standoff_px = 0.42 * height as f64;
-    let px = (focus_px - tilted_y * lateral_scale).round() as isize;
-    let py = (focus_py - standoff_px - tilted_z * vertical_scale).round() as isize;
-    (px, py)
+    let mut points = Vec::with_capacity(elements.len());
+    let mut min_y = f64::INFINITY;
+    let mut max_y = f64::NEG_INFINITY;
+    let mut min_z = f64::INFINITY;
+    let mut max_z = f64::NEG_INFINITY;
+
+    for element in elements {
+        let bowl_y = -(element.y_m - center_y) / projection_scale.max(f64::EPSILON);
+        let bowl_z = element.bowl_z_m;
+        let tilted_y = bowl_y * pitch.cos() - bowl_z * pitch.sin();
+        let tilted_z = bowl_y * pitch.sin() + bowl_z * pitch.cos();
+        min_y = min_y.min(tilted_y);
+        max_y = max_y.max(tilted_y);
+        min_z = min_z.min(tilted_z);
+        max_z = max_z.max(tilted_z);
+        points.push((tilted_y, tilted_z));
+    }
+
+    let y_span = (max_y - min_y).max(f64::EPSILON);
+    let z_span = (max_z - min_z).max(f64::EPSILON);
+    let x_left = 0.08 * width as f64;
+    let x_right = 0.92 * width as f64;
+    let y_top = 0.02 * height as f64;
+    let y_bottom = 0.34 * height as f64;
+
+    points
+        .into_iter()
+        .map(|(tilted_y, tilted_z)| {
+            let u = (tilted_y - min_y) / y_span;
+            let v = (tilted_z - min_z) / z_span;
+            let px = x_left + u * (x_right - x_left);
+            let py = y_bottom - v * (y_bottom - y_top);
+            (px.round() as isize, py.round() as isize)
+        })
+        .collect()
 }
 
 struct PlaneSpec<F>
