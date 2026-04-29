@@ -46,6 +46,7 @@ const HU_BONE_LOWER: f64 = 300.0;
 const PANEL: usize = 384;
 const MAP_PANEL: usize = 384;
 const RAY_STEP_FRACTION: f64 = 0.5;
+const TRANSDUCER_POSTERIOR_TILT_DEG: f64 = 18.0;
 
 #[derive(Debug, Clone)]
 struct CtVolume {
@@ -720,7 +721,7 @@ fn draw_pressure_transducer_overlay(
         - ((focus.z / (grid.nz as f64 * grid.dz)) * height as f64).round() as isize;
 
     for (idx, element) in elements.iter().enumerate() {
-        let (px, py) = meridional_transducer_pixel(element, width, height, grid);
+        let (px, py) = meridional_transducer_pixel(element, focus, width, height, grid);
         if idx % 32 == 0 && px >= 0 && (px as usize) < width {
             draw_line_blend(
                 rgb,
@@ -737,7 +738,7 @@ fn draw_pressure_transducer_overlay(
     }
 
     for element in elements {
-        let (px, py) = meridional_transducer_pixel(element, width, height, grid);
+        let (px, py) = meridional_transducer_pixel(element, focus, width, height, grid);
         if px >= 0 && (px as usize) < width {
             draw_disc(
                 rgb,
@@ -754,14 +755,26 @@ fn draw_pressure_transducer_overlay(
 
 fn meridional_transducer_pixel(
     element: &ElementProjection,
+    focus: Point3Meters,
     width: usize,
     height: usize,
     grid: &Grid,
 ) -> (isize, isize) {
-    let px = (width as isize - 1)
-        - ((element.y_m / (grid.ny as f64 * grid.dy)) * width as f64).round() as isize;
-    let z_norm = (element.bowl_z_m / EXABLATE_HEMISPHERE_RADIUS_M).clamp(0.0, 1.0);
-    let py = ((0.05 + 0.70 * (1.0 - z_norm)) * height as f64).round() as isize;
+    let center_y = 0.5 * (grid.ny.saturating_sub(1) as f64) * grid.dy;
+    let grid_radius = 0.48 * (grid.nx as f64 * grid.dx).min(grid.ny as f64 * grid.dy);
+    let projection_scale = (grid_radius / EXABLATE_HEMISPHERE_RADIUS_M).min(1.0);
+    let bowl_y = -(element.y_m - center_y) / projection_scale.max(f64::EPSILON);
+    let bowl_z = element.bowl_z_m;
+    let pitch = TRANSDUCER_POSTERIOR_TILT_DEG.to_radians();
+    let tilted_y = bowl_y * pitch.cos() - bowl_z * pitch.sin();
+    let tilted_z = bowl_y * pitch.sin() + bowl_z * pitch.cos();
+    let focus_px = (width as f64 - 1.0) - (focus.y / (grid.ny as f64 * grid.dy) * width as f64);
+    let focus_py = (height as f64 - 1.0) - (focus.z / (grid.nz as f64 * grid.dz) * height as f64);
+    let lateral_scale = 0.40 * width as f64 / EXABLATE_HEMISPHERE_RADIUS_M;
+    let vertical_scale = 0.26 * height as f64 / EXABLATE_HEMISPHERE_RADIUS_M;
+    let standoff_px = 0.42 * height as f64;
+    let px = (focus_px - tilted_y * lateral_scale).round() as isize;
+    let py = (focus_py - standoff_px - tilted_z * vertical_scale).round() as isize;
     (px, py)
 }
 
