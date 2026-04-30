@@ -132,8 +132,6 @@ impl PSTDSolver {
                 .par_for_each(|u, &dp, &rho| {
                     *u -= (dt / rho) * dp;
                 });
-        } else {
-            self.dpy.fill(0.0);
         }
 
         // Z-direction. A singleton z-axis has only the zero wavenumber, hence
@@ -154,8 +152,6 @@ impl PSTDSolver {
                 .par_for_each(|u, &dp, &rho| {
                     *u -= (dt / rho) * dp;
                 });
-        } else {
-            self.dpz.fill(0.0);
         }
 
         // NOTE: Velocity source injection is NOT performed here.

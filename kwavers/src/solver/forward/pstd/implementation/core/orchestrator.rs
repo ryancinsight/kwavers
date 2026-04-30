@@ -12,7 +12,6 @@ use crate::domain::source::{GridSource, Source, SourceField, SourceInjectionMode
 use crate::math::fft::shift_operators::generate_shift_1d;
 use crate::math::fft::{Complex64, ProcessorFft3d};
 use crate::solver::fdtd::SourceHandler;
-use crate::solver::forward::acoustic_ivp::spectral_velocity_scale_from_source_kappa;
 use crate::solver::forward::pstd::config::{
     BoundaryConfig, CompatibilityMode, KSpaceMethod, PSTDConfig,
 };
@@ -340,8 +339,27 @@ impl PSTDSolver {
         // factor:
         //   sin(c0|k|dt/2)/(ρ0 c0 |k|) = (dt / (2ρ0)) * sinc(arccos(κ_src))
         // This avoids materializing a separate |k| array.
-        let sin_scale: Array3<f64> =
-            spectral_velocity_scale_from_source_kappa(&self.source_kappa, dt, rho0_ref)?;
+        if !dt.is_finite() || dt <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "dt must be finite and positive, got {dt}"
+            )));
+        }
+        if !rho0_ref.is_finite() || rho0_ref <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "rho0_ref must be finite and positive, got {rho0_ref}"
+            )));
+        }
+        let scale_prefactor = dt / (2.0 * rho0_ref);
+        Zip::from(&mut self.div_u)
+            .and(&self.source_kappa)
+            .for_each(|scale, &kap| {
+                let theta = kap.clamp(-1.0, 1.0).acos();
+                *scale = if theta < 1e-30 {
+                    scale_prefactor
+                } else {
+                    scale_prefactor * theta.sin() / theta
+                };
+            });
 
         // FFT the initial pressure p0 into the p_k scratch buffer
         self.fft.forward_into(&self.fields.p, &mut self.p_k);
@@ -350,7 +368,7 @@ impl PSTDSolver {
         // grad_k is reused for each axis (p_k is only read, not modified).
         {
             let ddx = self.ddx_k_shift_pos.view();
-            let sin_s = sin_scale.view();
+            let sin_s = self.div_u.view();
             let p_k = self.p_k.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(sin_s)
@@ -367,7 +385,7 @@ impl PSTDSolver {
         // IVP velocity component along that axis is identically zero.
         if has_y {
             let ddy = self.ddy_k_shift_pos.view();
-            let sin_s = sin_scale.view();
+            let sin_s = self.div_u.view();
             let p_k = self.p_k.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(sin_s)
@@ -385,7 +403,7 @@ impl PSTDSolver {
         // A singleton z-axis has k_z = 0, so the exact z velocity is zero.
         if has_z {
             let ddz = self.ddz_k_shift_pos.view();
-            let sin_s = sin_scale.view();
+            let sin_s = self.div_u.view();
             let p_k = self.p_k.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(sin_s)

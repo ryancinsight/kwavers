@@ -168,11 +168,9 @@ impl PSTDSolver {
                 .and(self.kappa.view())
                 .par_for_each(|(_i, j, _k), gk, &u, &kap| {
                     *gk = ddy[j] * Complex64::new(kap, 0.0) * u;
-                });
+            });
             self.fft
                 .inverse_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
-        } else {
-            self.dpy.fill(0.0);
         }
 
         // duz/dz with negative shift + kappa (matches k-Wave Eq. 17).
@@ -185,11 +183,9 @@ impl PSTDSolver {
                 .and(self.kappa.view())
                 .par_for_each(|(_i, _j, k), gk, &u, &kap| {
                     *gk = ddz[k] * Complex64::new(kap, 0.0) * u;
-                });
+            });
             self.fft
                 .inverse_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
-        } else {
-            self.dpz.fill(0.0);
         }
 
         // ── Mass-conservation coefficient snapshot ──────────────────────────
@@ -223,19 +219,23 @@ impl PSTDSolver {
                     *rho -= dt * coef * du;
                 });
 
-            Zip::from(&mut self.rhoy)
-                .and(&self.dpy)
-                .and(&self.div_u)
-                .par_for_each(|rho, &du, &coef| {
-                    *rho -= dt * coef * du;
-                });
+            if has_y {
+                Zip::from(&mut self.rhoy)
+                    .and(&self.dpy)
+                    .and(&self.div_u)
+                    .par_for_each(|rho, &du, &coef| {
+                        *rho -= dt * coef * du;
+                    });
+            }
 
-            Zip::from(&mut self.rhoz)
-                .and(&self.dpz)
-                .and(&self.div_u)
-                .par_for_each(|rho, &du, &coef| {
-                    *rho -= dt * coef * du;
-                });
+            if has_z {
+                Zip::from(&mut self.rhoz)
+                    .and(&self.dpz)
+                    .and(&self.div_u)
+                    .par_for_each(|rho, &du, &coef| {
+                        *rho -= dt * coef * du;
+                    });
+            }
         } else {
             // Linear k-Wave form: rho_axis -= dt * rho0 * du_axis/daxis.
             // Read rho0 directly to avoid copying it into div_u every step.
@@ -246,19 +246,23 @@ impl PSTDSolver {
                     *rho -= dt * rho0 * du;
                 });
 
-            Zip::from(&mut self.rhoy)
-                .and(&self.dpy)
-                .and(&self.materials.rho0)
-                .par_for_each(|rho, &du, &rho0| {
-                    *rho -= dt * rho0 * du;
-                });
+            if has_y {
+                Zip::from(&mut self.rhoy)
+                    .and(&self.dpy)
+                    .and(&self.materials.rho0)
+                    .par_for_each(|rho, &du, &rho0| {
+                        *rho -= dt * rho0 * du;
+                    });
+            }
 
-            Zip::from(&mut self.rhoz)
-                .and(&self.dpz)
-                .and(&self.materials.rho0)
-                .par_for_each(|rho, &du, &rho0| {
-                    *rho -= dt * rho0 * du;
-                });
+            if has_z {
+                Zip::from(&mut self.rhoz)
+                    .and(&self.dpz)
+                    .and(&self.materials.rho0)
+                    .par_for_each(|rho, &du, &rho0| {
+                        *rho -= dt * rho0 * du;
+                    });
+            }
         }
 
         // Apply power-law absorption correction per axis (Treeby & Cox 2010, Eq. 21).
