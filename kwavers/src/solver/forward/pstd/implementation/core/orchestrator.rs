@@ -113,15 +113,9 @@ impl PSTDSolver {
         }
 
         let (k_ops, kappa, k_max, c_ref) = initialize_spectral_operators(&config, &grid, medium)?;
-        let k_mag = compute_k_magnitude(&k_ops.kx, &k_ops.ky, &k_ops.kz);
+        let mut k_mag = compute_k_magnitude(&k_ops.kx, &k_ops.ky, &k_ops.kz);
 
         let _x_max: f64 = 0.0;
-        // source_kappa = cos(c_ref·dt·k/2).
-        // Matches k-Wave Python kspaceFirstOrder3D.py line 302:
-        //   source_kappa = ifftshift(cos(c_ref * k * dt / 2))
-        // This is the half-step phase factor from the leapfrog staggered time-stepping
-        // scheme — distinct from kappa (propagation), which uses np.sinc.
-        let source_kappa = k_mag.mapv(|k| (0.5 * c_ref * config.dt * k).cos());
         let boundary: Option<Box<dyn Boundary>> = match &config.boundary {
             BoundaryConfig::PML(pml_config) => {
                 Some(Box::new(PMLBoundary::new(pml_config.clone())?))
@@ -137,6 +131,15 @@ impl PSTDSolver {
 
         let absorption =
             initialize_absorption_operators(&config, &grid, medium, &k_mag, k_max, c_ref)?;
+        // source_kappa = cos(c_ref·dt·k/2).
+        // Matches k-Wave Python kspaceFirstOrder3D.py line 302:
+        //   source_kappa = ifftshift(cos(c_ref * k * dt / 2))
+        // This is the half-step phase factor from the leapfrog staggered time-stepping
+        // scheme — distinct from kappa (propagation), which uses np.sinc.
+        // `k_mag` has no live use after absorption initialization, so transform it
+        // in place to avoid one full-volume Array3 allocation during PSTD setup.
+        k_mag.mapv_inplace(|k| (0.5 * c_ref * config.dt * k).cos());
+        let source_kappa = k_mag;
         let field_arrays =
             crate::solver::forward::pstd::data::initialize_field_arrays(&grid, medium)?;
         // Generate staggered grid shift operators using the shared canonical utility.
