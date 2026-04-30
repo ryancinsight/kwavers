@@ -128,6 +128,9 @@ impl PSTDSolver {
     /// correction factor κ in the density update, same as in the velocity update (Eq. 16).
     #[inline]
     pub(crate) fn update_density_cartesian(&mut self, dt: f64) -> KwaversResult<()> {
+        let has_y = self.grid.ny > 1;
+        let has_z = self.grid.nz > 1;
+
         // k-Wave split-field PML for density (Treeby & Cox 2010, Eq. 16):
         //   rho_x_new = pml_x * (pml_x * rho_x_old - dt * rho0 * dux/dx)
         //
@@ -154,9 +157,11 @@ impl PSTDSolver {
         self.fft
             .inverse_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
 
-        // duy/dy with negative shift + kappa (matches k-Wave Eq. 17)
-        self.fft.forward_into(&self.fields.uy, &mut self.uy_k);
-        {
+        // duy/dy with negative shift + kappa (matches k-Wave Eq. 17).
+        // Singleton embedding axes have k_y = 0 for all modes, so the spectral
+        // divergence contribution is exactly zero and no FFT is required.
+        if has_y {
+            self.fft.forward_into(&self.fields.uy, &mut self.uy_k);
             let ddy = self.ddy_k_shift_neg.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.uy_k.view())
@@ -164,13 +169,16 @@ impl PSTDSolver {
                 .par_for_each(|(_i, j, _k), gk, &u, &kap| {
                     *gk = ddy[j] * Complex64::new(kap, 0.0) * u;
                 });
+            self.fft
+                .inverse_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
+        } else {
+            self.dpy.fill(0.0);
         }
-        self.fft
-            .inverse_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
 
-        // duz/dz with negative shift + kappa (matches k-Wave Eq. 17)
-        self.fft.forward_into(&self.fields.uz, &mut self.uz_k);
-        {
+        // duz/dz with negative shift + kappa (matches k-Wave Eq. 17).
+        // For nz = 1, k_z = 0 and the z-divergence term is identically zero.
+        if has_z {
+            self.fft.forward_into(&self.fields.uz, &mut self.uz_k);
             let ddz = self.ddz_k_shift_neg.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.uz_k.view())
@@ -178,9 +186,11 @@ impl PSTDSolver {
                 .par_for_each(|(_i, _j, k), gk, &u, &kap| {
                     *gk = ddz[k] * Complex64::new(kap, 0.0) * u;
                 });
+            self.fft
+                .inverse_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
+        } else {
+            self.dpz.fill(0.0);
         }
-        self.fft
-            .inverse_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
 
         // ── Mass-conservation coefficient snapshot ──────────────────────────
         // Linear:    coef = rho0
@@ -204,36 +214,52 @@ impl PSTDSolver {
                 .par_for_each(|coef, &rho0, &rx, &ry, &rz| {
                     *coef = rho0 + 2.0 * (rx + ry + rz);
                 });
+
+            // Update split density components using the nonlinear coefficient snapshot.
+            Zip::from(&mut self.rhox)
+                .and(&self.dpx)
+                .and(&self.div_u)
+                .par_for_each(|rho, &du, &coef| {
+                    *rho -= dt * coef * du;
+                });
+
+            Zip::from(&mut self.rhoy)
+                .and(&self.dpy)
+                .and(&self.div_u)
+                .par_for_each(|rho, &du, &coef| {
+                    *rho -= dt * coef * du;
+                });
+
+            Zip::from(&mut self.rhoz)
+                .and(&self.dpz)
+                .and(&self.div_u)
+                .par_for_each(|rho, &du, &coef| {
+                    *rho -= dt * coef * du;
+                });
         } else {
-            // Copy rho0 verbatim so the three update loops can read a single
-            // coefficient array regardless of mode. One extra O(N) copy per
-            // step; trivial next to the FFTs and bounded-cache friendly.
-            self.div_u.assign(&self.materials.rho0);
+            // Linear k-Wave form: rho_axis -= dt * rho0 * du_axis/daxis.
+            // Read rho0 directly to avoid copying it into div_u every step.
+            Zip::from(&mut self.rhox)
+                .and(&self.dpx)
+                .and(&self.materials.rho0)
+                .par_for_each(|rho, &du, &rho0| {
+                    *rho -= dt * rho0 * du;
+                });
+
+            Zip::from(&mut self.rhoy)
+                .and(&self.dpy)
+                .and(&self.materials.rho0)
+                .par_for_each(|rho, &du, &rho0| {
+                    *rho -= dt * rho0 * du;
+                });
+
+            Zip::from(&mut self.rhoz)
+                .and(&self.dpz)
+                .and(&self.materials.rho0)
+                .par_for_each(|rho, &du, &rho0| {
+                    *rho -= dt * rho0 * du;
+                });
         }
-
-        // Update split density components using the mass coefficient snapshot.
-        // k-Wave linearised form: rho_x -= dt * rho0 * dux/dx  (no u·∇ρ₀ advection term).
-        // Treeby & Cox (2010) Eq. 17; k-Wave MATLAB kspaceFirstOrder3D.m line ~920.
-        Zip::from(&mut self.rhox)
-            .and(&self.dpx)
-            .and(&self.div_u)
-            .par_for_each(|rho, &du, &coef| {
-                *rho -= dt * coef * du;
-            });
-
-        Zip::from(&mut self.rhoy)
-            .and(&self.dpy)
-            .and(&self.div_u)
-            .par_for_each(|rho, &du, &coef| {
-                *rho -= dt * coef * du;
-            });
-
-        Zip::from(&mut self.rhoz)
-            .and(&self.dpz)
-            .and(&self.div_u)
-            .par_for_each(|rho, &du, &coef| {
-                *rho -= dt * coef * du;
-            });
 
         // Apply power-law absorption correction per axis (Treeby & Cox 2010, Eq. 21).
         // Must be called AFTER the continuity-equation update (so dpx/dpy/dpz hold

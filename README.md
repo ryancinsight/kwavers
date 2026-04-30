@@ -336,6 +336,7 @@ Kwavers is being enhanced with methods from leading ultrasound simulation projec
 - **k-Wave** (MATLAB): k-space pseudospectral methods, advanced source modeling
 - **jwave** (JAX/Python): Differentiable simulations, GPU parallelization
 - **k-wave-python**: Python binding patterns, HDF5 standards
+- **KWave.jl** (Julia): MATLAB-free k-Wave implementation for 1-D/2-D/3-D reference benchmarking
 - **optimus**: Optimization frameworks, inverse problems
 - **fullwave25**: Full-wave simulation, clinical workflows
 - **dbua**: Neural beamforming, real-time inference
@@ -377,10 +378,26 @@ Kwavers is licensed under the **MIT License**. See [LICENSE](LICENSE) for detail
 - **k-Wave**: MATLAB toolbox for acoustic wave simulation ([GitHub](https://github.com/ucl-bug/k-wave))
 - **jwave**: JAX-based differentiable acoustic simulations ([GitHub](https://github.com/ucl-bug/jwave))
 - **k-wave-python**: Python interface to k-Wave ([GitHub](https://github.com/waltsims/k-wave-python))
+- **KWave.jl**: Julia implementation of k-Wave for MATLAB-free acoustic simulation benchmarks ([GitHub](https://github.com/JClingo/k-wave-julia))
 - **optimus**: Optimization framework for ultrasound ([GitHub](https://github.com/optimuslib/optimus))
 - **fullwave25**: Full-wave ultrasound simulator ([GitHub](https://github.com/pinton-lab/fullwave25))
 - **dbua**: Deep learning beamforming ([GitHub](https://github.com/waltsims/dbua))
 - **simsonic**: Advanced ultrasound simulation platform ([Website](https://www.simsonic.fr))
+
+### Reference Benchmark Coverage
+
+The MATLAB-free benchmark harness in `external/k-wave-julia/benchmarks/kwavers`
+compares the same homogeneous-water IVP Gaussian source case across KWave.jl,
+k-wave-python, and pykwavers for 1-D, 2-D, and 3-D. Native MATLAB k-Wave source
+is present in `external/k-wave`, but it is not executed unless MATLAB or Octave
+is available.
+
+| Dimension | KWave.jl | k-wave-python | pykwavers | Current result |
+|-----------|----------|---------------|-----------|----------------|
+| 1-D | Native `KWaveGrid(nx, dx)` | Native Python backend | `(nx, 1, 1)` active grid | PASS: k-wave-python r=0.999977, pykwavers r=0.999976 |
+| 2-D | Native `KWaveGrid(nx, dx, nx, dx)` | Native Python backend | `(nx, nx, 1)` active grid | PASS: k-wave-python r=0.999948, pykwavers r=0.999948 |
+| 3-D | Native `KWaveGrid(nx, dx, nx, dx, nx, dx)` | Native Python backend | `(nx, nx, nx)` active grid | PASS: k-wave-python r=0.999909, pykwavers r=0.999909 |
+| MATLAB k-Wave | Source available | Not applicable | Not applicable | Not run without MATLAB/Octave |
 
 ### Key Publications
 1. Treeby & Cox (2010) - "k-Wave: MATLAB toolbox for photoacoustic simulation" - J. Biomed. Opt. 15(2), 021314

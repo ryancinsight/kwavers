@@ -71,6 +71,9 @@ impl PSTDSolver {
     ///   grad_x(p) = IFFT( ddx_k_shift_pos[x] * kappa[i,j,k] * FFT(p)[i,j,k] )
     #[inline]
     pub(crate) fn update_velocity_cartesian(&mut self, dt: f64) -> KwaversResult<()> {
+        let has_y = self.grid.ny > 1;
+        let has_z = self.grid.nz > 1;
+
         // k-Wave split-field PML for velocity (Treeby & Cox 2010, Eq. 17):
         //   u_new = pml * (pml * u_old - dt/rho * grad_p)
         //
@@ -111,8 +114,9 @@ impl PSTDSolver {
                 *u -= (dt / rho) * dp;
             });
 
-        // Y-direction
-        {
+        // Y-direction. For singleton embedding axes, all admissible modes have
+        // k_y = 0, so the derivative is exactly zero and the FFT pass is redundant.
+        if has_y {
             let ddy = self.ddy_k_shift_pos.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.p_k.view())
@@ -120,18 +124,21 @@ impl PSTDSolver {
                 .par_for_each(|(_i, j, _k), gk, &p_val, &kap| {
                     *gk = ddy[j] * Complex64::new(kap, 0.0) * p_val;
                 });
+            self.fft
+                .inverse_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
+            Zip::from(&mut self.fields.uy)
+                .and(&self.dpy)
+                .and(&self.materials.rho0)
+                .par_for_each(|u, &dp, &rho| {
+                    *u -= (dt / rho) * dp;
+                });
+        } else {
+            self.dpy.fill(0.0);
         }
-        self.fft
-            .inverse_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
-        Zip::from(&mut self.fields.uy)
-            .and(&self.dpy)
-            .and(&self.materials.rho0)
-            .par_for_each(|u, &dp, &rho| {
-                *u -= (dt / rho) * dp;
-            });
 
-        // Z-direction
-        {
+        // Z-direction. A singleton z-axis has only the zero wavenumber, hence
+        // dp/dz is identically zero under the periodic spectral derivative.
+        if has_z {
             let ddz = self.ddz_k_shift_pos.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.p_k.view())
@@ -139,15 +146,17 @@ impl PSTDSolver {
                 .par_for_each(|(_i, _j, k), gk, &p_val, &kap| {
                     *gk = ddz[k] * Complex64::new(kap, 0.0) * p_val;
                 });
+            self.fft
+                .inverse_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
+            Zip::from(&mut self.fields.uz)
+                .and(&self.dpz)
+                .and(&self.materials.rho0)
+                .par_for_each(|u, &dp, &rho| {
+                    *u -= (dt / rho) * dp;
+                });
+        } else {
+            self.dpz.fill(0.0);
         }
-        self.fft
-            .inverse_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
-        Zip::from(&mut self.fields.uz)
-            .and(&self.dpz)
-            .and(&self.materials.rho0)
-            .par_for_each(|u, &dp, &rho| {
-                *u -= (dt / rho) * dp;
-            });
 
         // NOTE: Velocity source injection is NOT performed here.
         // It happens in step_forward() after update_velocity() returns,

@@ -16,10 +16,13 @@ criterion = "0.5"
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 
 [profile.dev]
-opt-level = 0
+# opt-level = 1: basic dead-code elimination, inlining, and loop optimisation.
+# Keeps debug symbols and unoptimised codegen units while making FFT-heavy test
+# kernels (PSTD phase-velocity, KZK conservation) ~5–10× faster than opt-level=0.
+opt-level = 1
 
 [profile.release]
 opt-level = 3
-lto = "thin"
+lto = true
 codegen-units = 1
 strip = true  # Strip symbols for smaller Python wheels

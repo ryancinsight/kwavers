@@ -333,6 +333,8 @@ impl PSTDSolver {
     fn initialize_ivp_velocity(&mut self) -> KwaversResult<()> {
         let dt = self.config.dt;
         let rho0_ref = self.materials.rho0.mean().unwrap_or(1000.0);
+        let has_y = self.grid.ny > 1;
+        let has_z = self.grid.nz > 1;
 
         // The spectral IVP scale is expressed through the source-injection phase
         // factor:
@@ -361,7 +363,9 @@ impl PSTDSolver {
             .inverse_into(&self.grad_k, &mut self.fields.ux, &mut self.ux_k);
 
         // --- Y component ---
-        {
+        // A singleton embedding axis has only k_y = 0, therefore the exact
+        // IVP velocity component along that axis is identically zero.
+        if has_y {
             let ddy = self.ddy_k_shift_pos.view();
             let sin_s = sin_scale.view();
             let p_k = self.p_k.view();
@@ -371,12 +375,15 @@ impl PSTDSolver {
                 .for_each(|(_i, j, _k), gk, &ss, &p| {
                     *gk = ddy[j] * ss * p;
                 });
+            self.fft
+                .inverse_into(&self.grad_k, &mut self.fields.uy, &mut self.uy_k);
+        } else {
+            self.fields.uy.fill(0.0);
         }
-        self.fft
-            .inverse_into(&self.grad_k, &mut self.fields.uy, &mut self.uy_k);
 
         // --- Z component ---
-        {
+        // A singleton z-axis has k_z = 0, so the exact z velocity is zero.
+        if has_z {
             let ddz = self.ddz_k_shift_pos.view();
             let sin_s = sin_scale.view();
             let p_k = self.p_k.view();
@@ -386,9 +393,11 @@ impl PSTDSolver {
                 .for_each(|(_i, _j, k_idx), gk, &ss, &p| {
                     *gk = ddz[k_idx] * ss * p;
                 });
+            self.fft
+                .inverse_into(&self.grad_k, &mut self.fields.uz, &mut self.uz_k);
+        } else {
+            self.fields.uz.fill(0.0);
         }
-        self.fft
-            .inverse_into(&self.grad_k, &mut self.fields.uz, &mut self.uz_k);
 
         Ok(())
     }
