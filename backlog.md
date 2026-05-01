@@ -46,6 +46,12 @@
 - `na_controlling_the_pml`: closed by validating waveform parity across the PML attenuation sweep and exact k-Wave-style save-to-disk HDF5 input-file parity via versioned artifacts in `pykwavers/examples/output/na_controlling_the_pml/hdf5_v1/`.
 - `checkpointing`: closed by validating bit-exact save/resume continuation, exact checkpoint file deletion after restore, and the PASS report emitted by `checkpointing_compare.py`.
 
+## DICOM SSOT consolidation
+- ritk-io owns DICOM I/O: `ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<Backend>(...)`. The pattern is exercised correctly by `kwavers/examples/skull_ct_phase_correction.rs`.
+- Three SSOT violations remain in kwavers: (1) `domain/imaging/medical/dicom_loader.rs` is a 512-line placeholder whose `load_series_internal` returns `KwaversError::NotImplemented` and never imports `dicom`; (2) `infrastructure/io/dicom.rs` is a 684-line parallel reader using `dicom::core::DataElement` directly, re-exported as `DicomReader`/`DicomStudy`/`DicomSeries`/`DicomValue`/`DicomObject` from `infrastructure::io`; (3) `kwavers/Cargo.toml:50` keeps `dicom = { version = "0.7" }` as a direct dep, double-vendoring the crate already pulled by ritk-io.
+- 2026-04-30 partial fix: redirected all "DICOM not implemented" error messages and module headers in `domain/imaging/medical/dicom_loader.rs`, `infrastructure/io/dicom.rs`, and `clinical/therapy/therapy_integration/orchestrator/initialization.rs` to point users at `ritk_io::scan_dicom_directory` / `load_dicom_series` plus the `skull_ct_phase_correction` example. Build clean, 2645/2645 lib tests pass, clippy `-D warnings` clean.
+- Remaining work to fully close the SSOT: (a) build a `ritk-io` → `Array3<f64>` adapter (likely under `infrastructure::io`, gated on the `ritk` feature) that converts `Image<B, 3>` → kwavers `MedicalImageMetadata` + `Array3<f64>`; (b) route `DicomImageLoader::load_series_internal` and the therapy-orchestrator DICOM branch through that adapter; (c) deprecate or migrate callers off `infrastructure::io::dicom::DicomReader`; (d) drop the direct `dicom` dep from `kwavers/Cargo.toml` once nothing else uses it directly.
+
 ## Technical Debt Prevention
 - Proactively locate and discard deprecated or duplicate methods, replacing them strictly with unified accessors.
 - Prefer `..Default::default()` for `FdtdConfig` test/example literals so new defaulted fields remain single-sourced by `FdtdConfig::default()`.

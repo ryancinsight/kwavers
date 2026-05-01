@@ -14,6 +14,7 @@
 ## Outstanding Gaps (Newly Identified 2026-04-22)
 - `at_linear_array_transducer` parity is closed: the parity example now uses the upstream additive pressure-source mode, source rows remain Fortran-ordered, and the rebuilt extension passes the `p_max` field comparison.
 - `at_focused_annular_array_3D` parity blocked: no `Annulus` element shape; concentric ring BLI rasterization unavailable.
+- DICOM SSOT violation (2026-04-30): kwavers carries two parallel DICOM stubs (`domain/imaging/medical/dicom_loader.rs` placeholder; `infrastructure/io/dicom.rs` parallel `dicom`-crate reader) plus a redundant direct `dicom = "0.7"` dep, while ritk-io already exposes the canonical `scan_dicom_directory`/`load_dicom_series` API and is used correctly by `examples/skull_ct_phase_correction.rs`. Partial fix applied (error messages and module headers now redirect callers to ritk-io); full consolidation requires an `Image<B,3>` → `Array3<f64>` adapter under `infrastructure::io` and dropping the duplicate `dicom` dep — tracked in `backlog.md` "DICOM SSOT consolidation".
 
 ## Resolved Since Audit Start
 - Closed the solver/domain/simulation cross-contamination gap by removing the obsolete `domain::factory` solver assembly artifact, moving concrete FDTD/PSTD/Hybrid construction to `simulation::solver_factory`, reducing `solver::factory` to descriptor-based selection and memory-budget policy, and adding architecture tests that compute forbidden import edges.
