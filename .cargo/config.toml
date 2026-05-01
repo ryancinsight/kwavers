@@ -3,6 +3,16 @@
 # Without this flag LLVM targets the x86-64 baseline (SSE2 only).
 rustflags = ["-C", "target-cpu=native"]
 
+[env]
+# Native DICOM codecs (`openjpeg-sys`, `charls-sys`) require a working C/C++
+# toolchain. Use Clang and Ninja on the Windows GNU target to avoid the broken
+# gcc/MSYS Makefiles path observed in release builds.
+CC_x86_64_pc_windows_gnu = "clang"
+CXX_x86_64_pc_windows_gnu = "clang++"
+CC = "clang"
+CXX = "clang++"
+CMAKE_GENERATOR_x86_64_pc_windows_gnu = "Ninja"
+
 [alias]
 test-fast = "nextest run --profile local --lib --release"
 test-timeout = "nextest run --profile ci --lib --release"

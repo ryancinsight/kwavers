@@ -70,6 +70,7 @@ Repository: https://github.com/ryancinsight/kwavers
 import importlib.machinery
 import importlib.util
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -77,6 +78,13 @@ from pathlib import Path
 _extension_override = os.getenv("PYKWAVERS_EXTENSION_PATH")
 if _extension_override:
     _extension_path = Path(_extension_override).expanduser().resolve()
+    if os.name == "nt":
+        _extension_dir = _extension_path.parent
+        _stable_abi_dll = _extension_dir / "libpython3.dll"
+        _python3_dll = Path(sys.base_prefix) / "python3.dll"
+        if not _stable_abi_dll.exists() and _python3_dll.exists():
+            shutil.copy2(_python3_dll, _stable_abi_dll)
+        os.add_dll_directory(str(_extension_dir))
     _loader = importlib.machinery.ExtensionFileLoader(
         f"{__name__}._pykwavers",
         str(_extension_path),

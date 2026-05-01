@@ -82,7 +82,7 @@ apollofft-wgpu = { path = "../apollo/crates/apollo-fft-wgpu", package = "apollo-
 
 # Machine Learning (Sprint 143 - PINNs with burn integration)
 # Updated to burn 0.18.0 (bincode compatibility resolved)
-burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu"], optional = true }
+burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu"] }
 
 # Visualization (optional)
 plotly = { version = "0.8", optional = true }
@@ -156,7 +156,7 @@ structured-logging = ["dep:tracing-subscriber"]  # Tracing infrastructure
 zero-copy = ["dep:rkyv"]             # Zero-copy serialization
 # Sprint 142-143 - Physics-Informed Neural Networks
 # Sprint 143: Added burn 0.18 integration (bincode compatibility resolved)
-pinn = ["dep:burn"]                  # Physics-informed neural networks with burn 0.18
+pinn = []                            # Physics-informed neural networks (burn is now mandatory via ritk-io transitive dep)
 pinn-gpu = ["pinn", "gpu"]           # PINN with GPU acceleration via WGPU
 burn-wgpu = ["pinn"]                 # Burn WGPU backend support (for cfg checks)
 burn-cuda = ["pinn"]                 # Burn CUDA backend support (for cfg checks)
