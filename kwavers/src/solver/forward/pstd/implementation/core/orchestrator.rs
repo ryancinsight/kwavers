@@ -153,22 +153,34 @@ impl PSTDSolver {
         let (ddy_k_shift_pos, ddy_k_shift_neg) = generate_shift_1d(grid.ny, dk_y, grid.dy);
         let (ddz_k_shift_pos, ddz_k_shift_neg) = generate_shift_1d(grid.nz, dk_z, grid.dz);
 
-        let mut rho0 = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let mut c0 = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let mut bon = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let shape = (grid.nx, grid.ny, grid.nz);
+        let (rho0, c0, bon) = if medium.is_homogeneous() {
+            (
+                Array3::from_elem(shape, medium.density(0, 0, 0)),
+                Array3::from_elem(shape, medium.sound_speed(0, 0, 0)),
+                Array3::from_elem(shape, medium.nonlinearity(0, 0, 0)),
+            )
+        } else {
+            let mut rho0 = Array3::zeros(shape);
+            let mut c0 = Array3::zeros(shape);
+            let mut bon = Array3::zeros(shape);
 
-        for k in 0..grid.nz {
-            for j in 0..grid.ny {
-                for i in 0..grid.nx {
-                    let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    rho0[[i, j, k]] = crate::domain::medium::density_at(medium, x, y, z, &grid);
-                    c0[[i, j, k]] = crate::domain::medium::sound_speed_at(medium, x, y, z, &grid);
-                    bon[[i, j, k]] = crate::domain::medium::nonlinearity_at(medium, x, y, z, &grid);
+            for k in 0..grid.nz {
+                for j in 0..grid.ny {
+                    for i in 0..grid.nx {
+                        let (x, y, z) = grid.indices_to_coordinates(i, j, k);
+                        rho0[[i, j, k]] =
+                            crate::domain::medium::density_at(medium, x, y, z, &grid);
+                        c0[[i, j, k]] =
+                            crate::domain::medium::sound_speed_at(medium, x, y, z, &grid);
+                        bon[[i, j, k]] =
+                            crate::domain::medium::nonlinearity_at(medium, x, y, z, &grid);
+                    }
                 }
             }
-        }
 
-        let shape = (grid.nx, grid.ny, grid.nz);
+            (rho0, c0, bon)
+        };
         // Allocate space for Nt+1 steps to include the t=0 initial state, matching k-Wave
         let sensor_recorder =
             SensorRecorder::new(config.sensor_mask.as_ref(), shape, config.nt + 1)?;
