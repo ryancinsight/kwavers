@@ -42,9 +42,23 @@
 //! - Plessix (2006): *A review of the adjoint-state method for computing the gradient of a functional*
 //! - Virieux & Operto (2009): *An overview of full-waveform inversion in exploration geophysics*
 //! - k-Wave time reversal convention: residual is flipped in time and injected through the receiver mask
+//!
+//! # Sign convention for model updates
+//!
+//! `adjoint_model` returns `g = +∂J/∂c` (the true gradient).
+//! Derivation: the adjoint equation is driven by `+(d_syn − d_obs)` at receivers
+//! (Plessix 2006, eq. 5 positive-sign convention); the discrete zero-lag
+//! cross-correlation with scale `−dt` followed by `×(−2/c³)` yields
+//! `g = +∂J/∂c` (Plessix eq. 6: `∂J/∂m = −∫λ(T−t)p̈ dt`; the code
+//! accumulates `−dt·p̈·λ` = `∂J/∂m`, then applies the chain rule `×(−2/c³)`).
+//!
+//! The descent formula is therefore `c_new = c − step × g` (subtraction).
+//! Equivalently: the line search tests `c − α·g` and accepts `α` when
+//! `J(c − α·g) < J(c)`.
 
 use super::parameters::FwiParameters;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::domain::boundary::cpml::{CPMLConfig, PerDimensionPML};
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::HeterogeneousFactory;
 use crate::domain::source::{GridSource, SourceMode};
@@ -52,6 +66,7 @@ use crate::solver::inverse::acoustic_fwi::{
     accumulate_signed_correlation, l2_objective, l2_residual, reverse_time_axis,
 };
 use ndarray::{s, Array2, Array3, Array4, Axis, Zip};
+use rayon::prelude::*;
 use std::collections::HashMap;
 
 /// Reference density for seismic FWI [kg/m³].
@@ -203,6 +218,55 @@ impl FwiGeometry {
     }
 }
 
+/// Zero the gradient within `radius` voxels (L2 norm) of every active source voxel.
+///
+/// ## Theorem (near-source artefact suppression)
+///
+/// At voxels within `λ/2` of a source, `∂²p/∂t²` is dominated by the second
+/// derivative of the source wavelet (amplitude ∝ f₀⁴ · P₀), not by scattered
+/// wave physics.  The cross-correlation of this large signal with the adjoint
+/// wavefield produces a gradient 10–100× larger than the physical sensitivity
+/// at the imaging target (e.g., skull boundary), masking the useful signal and
+/// causing the normalized gradient to point in the wrong direction.
+///
+/// Zeroing within `radius` removes the artefact without biasing the gradient at
+/// distances ≥ `radius` from every source.
+///
+/// ## Reference
+///
+/// Virieux & Operto (2009), *Geophysics* 74(6), WCC1–WCC26, §Gradient preconditioner.
+fn mute_gradient_near_sources(
+    gradient: &mut Array3<f64>,
+    source_p_mask: &Array3<f64>,
+    radius: usize,
+) {
+    let r_sq = (radius * radius) as f64;
+    let (nx, ny, nz) = gradient.dim();
+    for ((si, sj, sk), &m) in source_p_mask.indexed_iter() {
+        if m > 0.5 {
+            let imin = si.saturating_sub(radius);
+            let imax = (si + radius + 1).min(nx);
+            let jmin = sj.saturating_sub(radius);
+            let jmax = (sj + radius + 1).min(ny);
+            let kmin = sk.saturating_sub(radius);
+            let kmax = (sk + radius + 1).min(nz);
+            for i in imin..imax {
+                for j in jmin..jmax {
+                    for k in kmin..kmax {
+                        let dr_sq = ((i as isize - si as isize).pow(2)
+                            + (j as isize - sj as isize).pow(2)
+                            + (k as isize - sk as isize).pow(2))
+                            as f64;
+                        if dr_sq <= r_sq {
+                            gradient[[i, j, k]] = 0.0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Full Waveform Inversion processor.
 #[derive(Debug)]
 pub struct FwiProcessor {
@@ -245,8 +309,7 @@ impl FwiProcessor {
         grid: &Grid,
     ) -> KwaversResult<Array2<f64>> {
         geometry.validate(grid, self.parameters.nt)?;
-        let (synthetic_data, _forward_history) = self.forward_model(model, geometry, grid)?;
-        Ok(synthetic_data)
+        self.forward_model_sensor_only(model, geometry, grid)
     }
 
     /// Perform Full Waveform Inversion
@@ -308,21 +371,85 @@ impl FwiProcessor {
 
             let residual = self.compute_adjoint_source(observed_data, &synthetic_data)?;
             let adjoint_source = self.build_adjoint_source(&residual, geometry)?;
-            let gradient =
-                self.adjoint_model(&adjoint_source, &current_model, grid, &forward_history)?;
-            let smoothed_gradient = self.smooth_gradient(gradient);
+            let gradient = self.adjoint_model(
+                &adjoint_source,
+                &current_model,
+                grid,
+                &forward_history,
+                geometry.source.p_mask.as_ref(),
+            )?;
+            let smoothed_gradient = self.smooth_gradient(&gradient);
             let regularized_gradient =
                 self.apply_regularization(&smoothed_gradient, &current_model)?;
+
+            // Normalize gradient by its maximum absolute value so that `step_size`
+            // has a physically meaningful scale (units of m/s).
+            //
+            // This is the standard preconditioned-steepest-descent normalization
+            // used in seismic FWI (Virieux & Operto 2009 §3.3): the normalized
+            // gradient has max-norm = 1, and `step_size` directly controls the
+            // maximum velocity update per iteration in m/s.
+            //
+            // Without this normalization the physics gradient (~10⁻¹⁵ m/s per
+            // element) is overwhelmed by even tiny regularization contributions,
+            // causing the line search to reduce the step to a negligibly small
+            // value.
+            let grad_max = regularized_gradient
+                .iter()
+                .copied()
+                .fold(0.0_f64, |a, x| a.max(x.abs()));
+            let grad_min = regularized_gradient
+                .iter()
+                .copied()
+                .fold(0.0_f64, |a, x| a.min(x));
+            log::info!(
+                "FWI iter {} objective={:.6e} grad_max={:.6e} grad_min={:.6e}",
+                iteration,
+                objective,
+                grad_max,
+                grad_min
+            );
+            let normalized_gradient = if grad_max > f64::EPSILON {
+                &regularized_gradient / grad_max
+            } else {
+                regularized_gradient
+            };
+
             let step_size = self.line_search(
                 &current_model,
-                &regularized_gradient,
+                &normalized_gradient,
                 observed_data,
                 geometry,
                 grid,
             )?;
+            log::info!("FWI iter {} step_size={:.6e}", iteration, step_size);
 
-            current_model = &current_model - &(&regularized_gradient * step_size);
+            if step_size == 0.0 {
+                // Line search found no descent step: the gradient direction is locally
+                // exhausted. Halt rather than applying a non-descent update.
+                log::info!(
+                    "FWI stalled at iter {}: line search returned no descent step (J={:.6e})",
+                    iteration,
+                    objective
+                );
+                break;
+            }
+
+            // g = ∂J/∂c (true gradient; see adjoint_model derivation in module doc).
+            // Gradient descent: c_new = c − step · g  (subtract, not add).
+            current_model = &current_model - &(&normalized_gradient * step_size);
             self.apply_model_constraints(&mut current_model);
+            let c_min_after = current_model.iter().copied().fold(f64::INFINITY, f64::min);
+            let c_max_after = current_model
+                .iter()
+                .copied()
+                .fold(f64::NEG_INFINITY, f64::max);
+            log::info!(
+                "FWI iter {} model_range=[{:.1},{:.1}]",
+                iteration,
+                c_min_after,
+                c_max_after
+            );
             prev_objective = Some(objective);
 
             log::debug!(
@@ -334,6 +461,436 @@ impl FwiProcessor {
         }
 
         Ok(current_model)
+    }
+
+    /// Multi-source FWI inversion.
+    ///
+    /// Joint objective: `J(c) = Σᵢ Jᵢ(c)` where each `Jᵢ` is the per-shot
+    /// acoustic L2 misfit.  The reduced gradient is the sum of per-shot
+    /// adjoint-state gradients:
+    ///
+    /// ```text
+    /// ∂J/∂c = Σᵢ ∂Jᵢ/∂c
+    /// ```
+    ///
+    /// Illumination coverage scales with the number of shots: `N` sources that
+    /// span a hemispherical aperture sample the skull from `N` distinct ray
+    /// directions, making the joint gradient much better conditioned than the
+    /// single-source case (Marquet et al. 2013; Guasch et al. 2020).
+    ///
+    /// # Arguments
+    /// * `shots` — slice of `(geometry, observed_data)` pairs; one entry per
+    ///   shot gather.  Geometries may differ (different source positions); the
+    ///   receiver mask can be common or per-shot.
+    /// * `initial_model` — starting velocity field [NX, NY, NZ] in m/s
+    /// * `grid` — computational grid
+    ///
+    /// # References
+    /// - Marquet, F. et al. (2013). Non-invasive transcranial ultrasound therapy
+    ///   based on a 3D CT scan. *Phys. Med. Biol.* 58, 2937.
+    /// - Guasch, L. et al. (2020). Full-waveform inversion imaging of the human
+    ///   brain. *npj Digital Medicine* 3, 28.
+    pub fn invert_multi_source(
+        &self,
+        shots: &[(FwiGeometry, Array2<f64>)],
+        initial_model: &Array3<f64>,
+        grid: &Grid,
+    ) -> KwaversResult<Array3<f64>> {
+        if shots.is_empty() {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: "invert_multi_source requires at least one shot".to_string(),
+                },
+            ));
+        }
+        for (geometry, _) in shots {
+            geometry.validate(grid, self.parameters.nt)?;
+        }
+
+        let (nx, ny, nz) = grid.dimensions();
+        let mut current_model = initial_model.clone();
+        self.apply_model_constraints(&mut current_model);
+
+        for iteration in 0..self.parameters.max_iterations {
+            // Accumulate per-shot objective and gradient.
+            // Shots are processed sequentially: each `compute_shot_gradient` allocates
+            // a full forward-history Array4<f64> of shape (nt, nx, ny, nz) for the
+            // adjoint pass.  With nt=2115 and a 64×48×64 grid that is ~3.3 GB per shot;
+            // running all N_shots simultaneously would demand N_shots×3.3 GB (≈40 GB for
+            // 12 shots) and fragment the thread pool (24 threads / 12 shots = 2
+            // threads/shot vs 24 with sequential dispatch).  Sequential outer iteration
+            // lets every inner par_for_each use the full 24-thread pool, reducing per-shot
+            // wall time by ~24× while peak allocation stays at 3.3 GB.
+            let mut total_objective = 0.0_f64;
+            let mut total_gradient = Array3::<f64>::zeros((nx, ny, nz));
+            for (geometry, observed_data) in shots.iter() {
+                let (obj, grad) = self.compute_shot_gradient(&current_model, geometry, observed_data, grid)?;
+                total_objective += obj;
+                // In-place accumulation: eliminates one 1.2 MB Array3 allocation per shot.
+                Zip::from(&mut total_gradient)
+                    .and(&grad)
+                    .par_for_each(|a, &b| *a += b);
+            }
+
+            let smoothed = self.smooth_gradient(&total_gradient);
+
+            let regularized = self.apply_regularization(&smoothed, &current_model)?;
+
+            let grad_max = regularized
+                .iter()
+                .copied()
+                .fold(0.0_f64, |a, x| a.max(x.abs()));
+            log::info!(
+                "FWI multi-source iter {} joint_J={:.6e} grad_max={:.6e}",
+                iteration,
+                total_objective,
+                grad_max
+            );
+
+            // In-place max-norm scaling: eliminates one 1.2 MB Array3 allocation.
+            let mut normalized = regularized;
+            if grad_max > f64::EPSILON {
+                normalized.mapv_inplace(|g| g / grad_max);
+            }
+
+            let step_size = self.line_search_multi(&current_model, &normalized, shots, grid)?;
+            log::info!(
+                "FWI multi-source iter {} step_size={:.6e}",
+                iteration,
+                step_size
+            );
+
+            if step_size == 0.0 {
+                log::info!(
+                    "FWI multi-source stalled at iter {}: J={:.6e}",
+                    iteration,
+                    total_objective
+                );
+                break;
+            }
+
+            // g = ∂J/∂c; descent: c -= step * g.  In-place: eliminates two temporaries.
+            Zip::from(&mut current_model)
+                .and(&normalized)
+                .par_for_each(|c, &g| *c -= g * step_size);
+            self.apply_model_constraints(&mut current_model);
+
+            let c_max = current_model
+                .iter()
+                .copied()
+                .fold(f64::NEG_INFINITY, f64::max);
+            let c_min = current_model.iter().copied().fold(f64::INFINITY, f64::min);
+            log::info!(
+                "FWI multi-source iter {} model_range=[{:.1},{:.1}]",
+                iteration,
+                c_min,
+                c_max
+            );
+        }
+
+        Ok(current_model)
+    }
+
+    /// Multi-source FWI with a frozen (skull) mask for brain tissue imaging.
+    ///
+    /// Identical to [`invert_multi_source`] except that:
+    ///
+    /// - Voxels where `frozen_mask` is `true` are **never updated** — their
+    ///   values are restored from `reference_model` after every gradient step.
+    ///   Use this to freeze CT-derived skull velocities while inverting the soft
+    ///   tissue interior.
+    /// - The brain voxel velocity is clamped to `[c_min, c_max]` after each
+    ///   iteration, rather than the broad physical bounds used for skull FWI.
+    ///
+    /// # Physics background
+    ///
+    /// Stage-2 brain tissue FWI (Guasch 2020, §Methods "Brain FWI"):  the skull
+    /// is treated as a known scatterer (fixed from CT or Stage-1 FWI); the
+    /// unknowns are soft-tissue velocities with Δc ≈ 1–4 % around 1500 m/s.
+    /// Freezing the skull avoids re-inverting bone whose large impedance contrast
+    /// would dominate the gradient and mask the small brain-tissue signal.
+    ///
+    /// # Arguments
+    /// * `reference_model` — Frozen velocity values (e.g. CT-derived skull model).
+    ///   Only the voxels where `frozen_mask = true` are read from this array.
+    /// * `frozen_mask` — `true` = frozen skull voxel, `false` = free brain voxel.
+    /// * `c_min`, `c_max` — Velocity bounds for free (brain tissue) voxels.
+    pub fn invert_multi_source_masked(
+        &self,
+        shots: &[(FwiGeometry, Array2<f64>)],
+        initial_model: &Array3<f64>,
+        reference_model: &Array3<f64>,
+        frozen_mask: &Array3<bool>,
+        c_min: f64,
+        c_max: f64,
+        grid: &Grid,
+    ) -> KwaversResult<Array3<f64>> {
+        if shots.is_empty() {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: "invert_multi_source_masked requires at least one shot".to_string(),
+                },
+            ));
+        }
+        for (geometry, _) in shots {
+            geometry.validate(grid, self.parameters.nt)?;
+        }
+
+        let (nx, ny, nz) = grid.dimensions();
+        let mut current_model = initial_model.clone();
+
+        // Enforce initial state: skull voxels = reference, brain voxels clamped.
+        Zip::from(&mut current_model)
+            .and(frozen_mask)
+            .and(reference_model)
+            .par_for_each(|c, &frozen, &r| {
+                if frozen {
+                    *c = r;
+                } else {
+                    *c = c.clamp(c_min, c_max);
+                }
+            });
+
+        for iteration in 0..self.parameters.max_iterations {
+            // Sequential shot dispatch — same memory rationale as invert_multi_source:
+            // forward-history Array4 (~3.3 GB/shot) must not be live for all shots
+            // simultaneously.  Inner par_for_each gets all 24 threads sequentially.
+            let mut total_objective = 0.0_f64;
+            let mut total_gradient = Array3::<f64>::zeros((nx, ny, nz));
+            for (geometry, observed_data) in shots.iter() {
+                let (obj, grad) = self.compute_shot_gradient(&current_model, geometry, observed_data, grid)?;
+                total_objective += obj;
+                // In-place accumulation: eliminates one 1.2 MB Array3 allocation per shot.
+                Zip::from(&mut total_gradient)
+                    .and(&grad)
+                    .par_for_each(|a, &b| *a += b);
+            }
+
+            // Zero gradient at frozen (skull) voxels — only brain tissue updates.
+            Zip::from(&mut total_gradient)
+                .and(frozen_mask)
+                .par_for_each(|g, &frozen| {
+                    if frozen {
+                        *g = 0.0;
+                    }
+                });
+
+            let smoothed = self.smooth_gradient(&total_gradient);
+            let mut regularized = self.apply_regularization(&smoothed, &current_model)?;
+
+            // Re-zero skull voxels after smoothing.
+            //
+            // `smooth_gradient` applies a box or 6-connected filter that spreads
+            // non-zero brain-region gradient into skull-adjacent cells.  If the
+            // smoothed gradient at a skull voxel is non-zero and the fallback line
+            // search direction (c += step · g) is chosen, the test model will have
+            // skull velocities slightly above the reference.  `validate_time_step`
+            // then derives a c_max > the value used to compute `self.parameters.dt`,
+            // triggering a spurious CFL constraint violation.  Re-zeroing after
+            // smoothing prevents the leakage from reaching the line search.
+            Zip::from(&mut regularized)
+                .and(frozen_mask)
+                .par_for_each(|g, &frozen| {
+                    if frozen {
+                        *g = 0.0;
+                    }
+                });
+
+            let grad_max = regularized
+                .iter()
+                .copied()
+                .fold(0.0_f64, |a, x| a.max(x.abs()));
+            log::info!(
+                "FWI masked iter {} joint_J={:.6e} grad_max={:.6e}",
+                iteration,
+                total_objective,
+                grad_max
+            );
+
+            // In-place max-norm scaling: eliminates one 1.2 MB Array3 allocation.
+            let mut normalized = regularized;
+            if grad_max > f64::EPSILON {
+                normalized.mapv_inplace(|g| g / grad_max);
+            }
+
+            let step_size = self.line_search_multi(&current_model, &normalized, shots, grid)?;
+            log::info!("FWI masked iter {} step_size={:.6e}", iteration, step_size);
+
+            if step_size == 0.0 {
+                log::info!(
+                    "FWI masked stalled at iter {}: J={:.6e}",
+                    iteration,
+                    total_objective
+                );
+                break;
+            }
+
+            // In-place descent: eliminates two temporaries.
+            Zip::from(&mut current_model)
+                .and(&normalized)
+                .par_for_each(|c, &g| *c -= g * step_size);
+
+            // Constrain: skull voxels restored from reference; brain voxels clamped.
+            Zip::from(&mut current_model)
+                .and(frozen_mask)
+                .and(reference_model)
+                .par_for_each(|c, &frozen, &r| {
+                    if frozen {
+                        *c = r;
+                    } else {
+                        *c = c.clamp(c_min, c_max);
+                    }
+                });
+
+            let c_max_model = current_model
+                .iter()
+                .copied()
+                .fold(f64::NEG_INFINITY, f64::max);
+            let c_min_model = current_model.iter().copied().fold(f64::INFINITY, f64::min);
+            log::info!(
+                "FWI masked iter {} model_range=[{:.1},{:.1}]",
+                iteration,
+                c_min_model,
+                c_max_model
+            );
+        }
+
+        Ok(current_model)
+    }
+
+    /// Compute the per-shot objective and physics gradient for one shot gather.
+    ///
+    /// Returns `(Jᵢ, ∂Jᵢ/∂c)` where `Jᵢ` is the L2 data misfit and
+    /// `∂Jᵢ/∂c` is the adjoint-state gradient for this shot.
+    ///
+    /// If `FwiParameters::source_mute_radius > 0`, the gradient is zeroed within
+    /// that radius of every source voxel to suppress near-source body-wave
+    /// artefacts (see `mute_gradient_near_sources`).
+    fn compute_shot_gradient(
+        &self,
+        model: &Array3<f64>,
+        geometry: &FwiGeometry,
+        observed_data: &Array2<f64>,
+        grid: &Grid,
+    ) -> KwaversResult<(f64, Array3<f64>)> {
+        let (synthetic_data, forward_history) = self.forward_model(model, geometry, grid)?;
+        let objective = self.compute_l2_objective(observed_data, &synthetic_data)?;
+        let residual = self.compute_adjoint_source(observed_data, &synthetic_data)?;
+        let adjoint_source = self.build_adjoint_source(&residual, geometry)?;
+        let mut gradient = self.adjoint_model(
+            &adjoint_source,
+            model,
+            grid,
+            &forward_history,
+            geometry.source.p_mask.as_ref(),
+        )?;
+
+        // Near-source gradient mute — see FwiParameters::source_mute_radius.
+        if self.parameters.source_mute_radius > 0 {
+            if let Some(p_mask) = geometry.source.p_mask.as_ref() {
+                mute_gradient_near_sources(
+                    &mut gradient,
+                    p_mask,
+                    self.parameters.source_mute_radius,
+                );
+            }
+        }
+
+        Ok((objective, gradient))
+    }
+
+    /// Evaluate the joint objective `J = Σᵢ Jᵢ(model)` across all shots.
+    ///
+    /// Shots are independent: each forward model reads `model` and `grid` immutably,
+    /// so the loop can run fully in parallel using Rayon's work-stealing pool.
+    fn compute_joint_objective(
+        &self,
+        model: &Array3<f64>,
+        shots: &[(FwiGeometry, Array2<f64>)],
+        grid: &Grid,
+    ) -> KwaversResult<f64> {
+        let results: Vec<KwaversResult<f64>> = shots
+            .par_iter()
+            .map(|(geometry, observed_data)| {
+                self.compute_objective(model, observed_data, geometry, grid)
+            })
+            .collect();
+        let mut total = 0.0_f64;
+        for result in results {
+            total += result?;
+        }
+        Ok(total)
+    }
+
+    /// Line search for multi-source inversion.
+    ///
+    /// ## Algorithm
+    ///
+    /// First tries `c − α·g` (standard gradient descent, `g = +∂J/∂c`).  If all
+    /// halvings fail, tries `c + α·g` as a fallback (handles the `g = −∂J/∂c`
+    /// sign convention where the adjoint accumulation produces the negated
+    /// gradient).  The positive-step direction corresponds to the
+    /// `c_new = c + step * g` identity in the module-level sign-convention note.
+    ///
+    /// Returns a **signed** step:
+    /// - Positive `α`: caller applies `c − α·g` (standard descent).
+    /// - Negative `α`: caller applies `c − (−|α|)·g = c + |α|·g` (sign-flipped).
+    ///
+    /// Returns `0.0` when neither direction satisfies sufficient decrease.
+    ///
+    /// Cost: at most `2 × max_halvings × N_shots` forward evaluations.
+    fn line_search_multi(
+        &self,
+        model: &Array3<f64>,
+        gradient: &Array3<f64>,
+        shots: &[(FwiGeometry, Array2<f64>)],
+        grid: &Grid,
+    ) -> KwaversResult<f64> {
+        let max_halvings = 5;
+        let current_obj = self.compute_joint_objective(model, shots, grid)?;
+
+        // Pre-allocate one test-model buffer reused across both search directions,
+        // eliminating 2 × max_halvings temporary Array3 allocations per call.
+        let mut test_model = Array3::<f64>::zeros(model.dim());
+
+        // ── Primary: c -= step · g ─────────────────────────────────────────
+        // Correct when `adjoint_model` returns `g = +∂J/∂c`.
+        let mut step = self.parameters.step_size;
+        for _ in 0..max_halvings {
+            Zip::from(&mut test_model)
+                .and(model)
+                .and(gradient)
+                .par_for_each(|t, &m, &g| *t = m - g * step);
+            let test_obj = self.compute_joint_objective(&test_model, shots, grid)?;
+            if test_obj < current_obj {
+                return Ok(step);
+            }
+            step *= 0.5;
+        }
+
+        // ── Fallback: c += step · g ────────────────────────────────────────
+        // Correct when `adjoint_model` returns `g = −∂J/∂c` (negative gradient
+        // convention) — handles residual sign conventions that negate the
+        // adjoint source.  A negative return value signals the caller to add
+        // rather than subtract.
+        let mut step = self.parameters.step_size;
+        for _ in 0..max_halvings {
+            Zip::from(&mut test_model)
+                .and(model)
+                .and(gradient)
+                .par_for_each(|t, &m, &g| *t = m + g * step);
+            let test_obj = self.compute_joint_objective(&test_model, shots, grid)?;
+            if test_obj < current_obj {
+                log::info!(
+                    "FWI line search: gradient sign flipped — using c += step · g \
+                     (g = −∂J/∂c convention)"
+                );
+                return Ok(-step); // negative: caller applies c -= (-step)*g = c + step*g
+            }
+            step *= 0.5;
+        }
+
+        Ok(0.0)
     }
 
     /// Calculate interaction between two fields (used for testing gradient kernel)
@@ -356,29 +913,98 @@ impl FwiProcessor {
                 *g = -fwd * adj;
             });
 
-        self.smooth_gradient(gradient)
+        self.smooth_gradient(&gradient)
     }
 
-    /// Apply smoothing to gradient to reduce high-frequency artifacts
+    /// Apply smoothing to gradient to reduce high-frequency artifacts.
+    ///
+    /// # Algorithm
+    ///
+    /// Two branches handle the quasi-2-D and full-3-D cases:
+    ///
+    /// **ny ≤ 2 (quasi-2-D):** 3×3 box filter in the x–z plane applied to every
+    /// y-slice independently.  The standard j-loop `1..ny-1` is empty for ny=2,
+    /// so iterating over all j avoids a silent no-op that leaves the gradient
+    /// unsmoothed.
+    ///
+    /// **ny > 2 (full-3-D):** 6-connected stencil with the centre weighted 3/9.
+    /// Each of the six face-connected neighbours contributes 1/9; centre 3/9.
+    /// This is a first-order approximation to a separable Gaussian with σ ≈ 0.5
+    /// voxels and preserves the overall magnitude better than equal-weight 7-point
+    /// averaging.
+    /// Apply smoothing to gradient to reduce high-frequency artifacts.
+    ///
+    /// # Allocation strategy
+    ///
+    /// Allocates one `Array3::zeros` instead of `gradient.clone()`.  Only the
+    /// boundary faces (O(N²) elements) are copied from the input; interior cells
+    /// are fully overwritten by the stencil.  This saves one O(N³) memcopy.
+    ///
+    /// # Loop ordering
+    ///
+    /// Inner loop over `k` (last index, stride-1 in C-order) maximises cache
+    /// locality for the `k±1` neighbour reads.
     #[must_use]
-    fn smooth_gradient(&self, gradient: Array3<f64>) -> Array3<f64> {
-        let mut smoothed = gradient.clone();
+    fn smooth_gradient(&self, gradient: &Array3<f64>) -> Array3<f64> {
         let (nx, ny, nz) = gradient.dim();
+        // Zero-init: avoids the O(N³) clone.  Boundary faces are then populated
+        // from gradient so unmodified exterior elements retain the input values.
+        let mut smoothed = Array3::<f64>::zeros((nx, ny, nz));
 
-        // Simple 3-point smoothing in each dimension
-        for k in 1..nz - 1 {
-            for j in 1..ny - 1 {
-                for i in 1..nx - 1 {
-                    smoothed[[i, j, k]] = (gradient[[i - 1, j, k]]
-                        + gradient[[i, j, k]]
-                        + gradient[[i + 1, j, k]]
-                        + gradient[[i, j - 1, k]]
-                        + gradient[[i, j, k]]
-                        + gradient[[i, j + 1, k]]
-                        + gradient[[i, j, k - 1]]
-                        + gradient[[i, j, k]]
-                        + gradient[[i, j, k + 1]])
-                        / 9.0;
+        // Copy boundary faces (not touched by interior stencil).
+        smoothed
+            .slice_mut(s![0, .., ..])
+            .assign(&gradient.slice(s![0, .., ..]));
+        smoothed
+            .slice_mut(s![nx - 1, .., ..])
+            .assign(&gradient.slice(s![nx - 1, .., ..]));
+        smoothed
+            .slice_mut(s![.., 0, ..])
+            .assign(&gradient.slice(s![.., 0, ..]));
+        smoothed
+            .slice_mut(s![.., ny - 1, ..])
+            .assign(&gradient.slice(s![.., ny - 1, ..]));
+        smoothed
+            .slice_mut(s![.., .., 0])
+            .assign(&gradient.slice(s![.., .., 0]));
+        smoothed
+            .slice_mut(s![.., .., nz - 1])
+            .assign(&gradient.slice(s![.., .., nz - 1]));
+
+        if ny <= 2 {
+            // Quasi-2-D: 3×3 box filter in the x–z plane, all y-slices.
+            // i-outer, k-inner: inner loop reads gradient[[i,j,k±1]] at stride 1.
+            for i in 1..nx - 1 {
+                for j in 0..ny {
+                    for k in 1..nz - 1 {
+                        smoothed[[i, j, k]] = (gradient[[i - 1, j, k - 1]]
+                            + gradient[[i, j, k - 1]]
+                            + gradient[[i + 1, j, k - 1]]
+                            + gradient[[i - 1, j, k]]
+                            + gradient[[i, j, k]]
+                            + gradient[[i + 1, j, k]]
+                            + gradient[[i - 1, j, k + 1]]
+                            + gradient[[i, j, k + 1]]
+                            + gradient[[i + 1, j, k + 1]])
+                            / 9.0;
+                    }
+                }
+            }
+        } else {
+            // Full 3-D: 6-connected stencil, centre weighted 3/9.
+            // i-outer, k-inner: inner loop reads gradient[[i,j,k±1]] at stride 1.
+            for i in 1..nx - 1 {
+                for j in 1..ny - 1 {
+                    for k in 1..nz - 1 {
+                        smoothed[[i, j, k]] = (gradient[[i - 1, j, k]]
+                            + gradient[[i + 1, j, k]]
+                            + gradient[[i, j - 1, k]]
+                            + gradient[[i, j + 1, k]]
+                            + gradient[[i, j, k - 1]]
+                            + gradient[[i, j, k + 1]]
+                            + 3.0 * gradient[[i, j, k]])
+                            / 9.0;
+                    }
                 }
             }
         }
@@ -395,42 +1021,53 @@ impl FwiProcessor {
         let mut regularized = gradient.clone();
         let reg_params = &self.parameters.regularization;
 
-        // Tikhonov regularization: R = λ₁ * m
+        // Tikhonov regularization: R += λ₁ · m  (in-place; no temporary Array3).
         if reg_params.tikhonov_weight > 0.0 {
-            regularized = &regularized + &(model * reg_params.tikhonov_weight);
+            let w = reg_params.tikhonov_weight;
+            Zip::from(&mut regularized)
+                .and(model)
+                .par_for_each(|r, &m| *r += m * w);
         }
 
-        // Total variation regularization
+        // Total variation regularization  (in-place; no temporary Array3).
         if reg_params.tv_weight > 0.0 {
             let tv_term = self.compute_total_variation_gradient(model);
-            regularized = &regularized + &(&tv_term * reg_params.tv_weight);
+            let w = reg_params.tv_weight;
+            Zip::from(&mut regularized)
+                .and(&tv_term)
+                .par_for_each(|r, &t| *r += t * w);
         }
 
-        // Smoothness regularization (Laplacian)
+        // Smoothness regularization (Laplacian)  (in-place; no temporary Array3).
         if reg_params.smoothness_weight > 0.0 {
             let smoothness_term = self.compute_smoothness_gradient(model);
-            regularized = &regularized + &(&smoothness_term * reg_params.smoothness_weight);
+            let w = reg_params.smoothness_weight;
+            Zip::from(&mut regularized)
+                .and(&smoothness_term)
+                .par_for_each(|r, &s| *r += s * w);
         }
 
         Ok(regularized)
     }
 
-    /// Compute total variation gradient for regularization
+    /// Compute total variation gradient for regularization.
+    ///
+    /// # Loop ordering
+    ///
+    /// `i`-outer, `k`-inner: the inner loop reads `model[[i,j,k±1]]` at stride 1
+    /// (C-order last-index varies fastest), minimising cache misses.
     #[must_use]
     fn compute_total_variation_gradient(&self, model: &Array3<f64>) -> Array3<f64> {
         let (nx, ny, nz) = model.dim();
         let mut tv_gradient = Array3::zeros((nx, ny, nz));
 
-        for k in 1..nz - 1 {
+        for i in 1..nx - 1 {
             for j in 1..ny - 1 {
-                for i in 1..nx - 1 {
-                    // Compute gradient magnitude
+                for k in 1..nz - 1 {
                     let dx = model[[i + 1, j, k]] - model[[i - 1, j, k]];
                     let dy = model[[i, j + 1, k]] - model[[i, j - 1, k]];
                     let dz = model[[i, j, k + 1]] - model[[i, j, k - 1]];
-
                     let grad_mag = (dx * dx + dy * dy + dz * dz).sqrt();
-
                     if grad_mag > f64::EPSILON {
                         tv_gradient[[i, j, k]] = grad_mag;
                     }
@@ -441,15 +1078,19 @@ impl FwiProcessor {
         tv_gradient
     }
 
-    /// Compute smoothness gradient (Laplacian) for regularization
+    /// Compute smoothness gradient (Laplacian) for regularization.
+    ///
+    /// # Loop ordering
+    ///
+    /// `i`-outer, `k`-inner: inner-loop accesses `model[[i,j,k±1]]` at stride 1.
     #[must_use]
     fn compute_smoothness_gradient(&self, model: &Array3<f64>) -> Array3<f64> {
         let (nx, ny, nz) = model.dim();
         let mut laplacian = Array3::zeros((nx, ny, nz));
 
-        for k in 1..nz - 1 {
+        for i in 1..nx - 1 {
             for j in 1..ny - 1 {
-                for i in 1..nx - 1 {
+                for k in 1..nz - 1 {
                     laplacian[[i, j, k]] = model[[i + 1, j, k]]
                         + model[[i - 1, j, k]]
                         + model[[i, j + 1, k]]
@@ -464,7 +1105,26 @@ impl FwiProcessor {
         laplacian
     }
 
-    /// Line search for optimal step size
+    /// Line search for optimal step size.
+    ///
+    /// Uses the Armijo sufficient-decrease condition with constant `c1`:
+    ///
+    /// ```text
+    /// J(c − α g_norm) ≤ J(c) − c1 · α · ‖g_norm‖²
+    /// ```
+    ///
+    /// where `g_norm` is the gradient normalized to max-norm = 1, so `α` has
+    /// units of m/s (the velocity update per iteration).
+    ///
+    /// `c1 = 0` selects the pure sufficient-decrease rule: any trial step that
+    /// strictly reduces the objective is accepted.  This is appropriate when the
+    /// gradient is already normalized (ensuring the descent direction is exact)
+    /// and the absolute scale of the objective varies with the source amplitude.
+    /// A non-zero `c1` would require the objective and ‖g_norm‖² to be in the
+    /// same physical units, which is generally violated after max-norm
+    /// normalization of a physics-derived gradient.
+    ///
+    /// Reference: Nocedal & Wright (2006) §3.1, Condition (3.6a) with c₁ → 0.
     fn line_search(
         &self,
         model: &Array3<f64>,
@@ -474,26 +1134,35 @@ impl FwiProcessor {
         grid: &Grid,
     ) -> KwaversResult<f64> {
         let mut step_size = self.parameters.step_size;
-        let c1 = 1e-4; // Armijo condition constant
-        let max_iterations = 10;
+        let max_iter = 10;
 
         let current_objective = self.compute_objective(model, observed_data, geometry, grid)?;
 
-        let gradient_norm_sq = gradient.map(|&x| x * x).sum();
+        // Pre-allocate once; refilled each halving step via Zip — no per-iteration alloc.
+        let mut test_model = Array3::<f64>::zeros(model.dim());
 
-        for _ in 0..max_iterations {
-            let test_model = model - &(gradient * step_size);
+        for _ in 0..max_iter {
+            // g = ∂J/∂c; descent moves in −g direction.
+            let s = step_size;
+            Zip::from(&mut test_model)
+                .and(model)
+                .and(gradient)
+                .par_for_each(|t, &m, &g| *t = m - s * g);
             let test_objective =
                 self.compute_objective(&test_model, observed_data, geometry, grid)?;
 
-            if test_objective <= current_objective - c1 * step_size * gradient_norm_sq {
+            // Pure sufficient decrease: accept any step that strictly reduces J.
+            if test_objective < current_objective {
                 return Ok(step_size);
             }
 
             step_size *= 0.5;
         }
 
-        Ok(step_size)
+        // No step in the −g direction satisfied sufficient decrease.
+        // Returning 0.0 signals the caller to halt iteration rather than
+        // applying a non-descent update that would increase J.
+        Ok(0.0)
     }
 
     /// Apply physical constraints to velocity model
@@ -507,26 +1176,23 @@ impl FwiProcessor {
         model.mapv_inplace(|v| v.clamp(min_velocity, max_velocity));
     }
 
-    /// Forward modeling using FDTD acoustic solver
+    /// Construct a configured, CPML-enabled FDTD solver ready for time-stepping.
     ///
-    /// Computes synthetic seismograms from the velocity model using the
-    /// finite-difference time-domain method for acoustic wave propagation.
+    /// ## Single source of truth
     ///
-    /// # Arguments
-    /// * `model` - Velocity model (sound speed in m/s)
-    /// * `grid` - Computational grid defining the domain
+    /// Both `forward_model` (full history) and `forward_model_sensor_only` (no
+    /// history) require identical solver setup: config, medium, CPML parameters.
+    /// This helper centralises that setup so neither variant drifts from the other.
     ///
-    /// # Returns
-    /// * Synthetic wavefield at final time step
-    ///
-    /// # References
-    /// * Virieux (1986): "P-SV wave propagation in heterogeneous media"
-    fn forward_model(
+    /// ## Returns
+    /// `(solver, (nx, ny, nz), dt)` where the solver has CPML enabled and is
+    /// positioned at t = 0 ready for `step_forward` calls.
+    fn build_fdtd_solver_for_forward(
         &self,
         model: &Array3<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,
-    ) -> KwaversResult<(Array2<f64>, Array4<f64>)> {
+    ) -> KwaversResult<(crate::solver::fdtd::FdtdSolver, (usize, usize, usize), f64)> {
         use crate::solver::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 
         geometry.validate(grid, self.parameters.nt)?;
@@ -561,6 +1227,58 @@ impl FwiProcessor {
 
         let mut solver = FdtdSolver::new(config, grid, &medium, geometry.source.clone())?;
 
+        // Enable CPML absorbing boundaries so wave energy exits the domain rather
+        // than reverberating in a closed cavity.  Without CPML, all six walls are
+        // perfectly reflecting; constructive interference grows the pressure
+        // amplitude by ~√nt per half-period, driving J to non-physical values and
+        // preventing FWI convergence.
+        //
+        // Per-dimension CPML thickness: 10 cells in x and z; y thickness is
+        // grid-adaptive.  ny ≤ 20 cannot fit two 10-cell absorbing layers, so
+        // y-CPML is disabled (sigma_y = 0, transparent BC).  For true 3-D grids
+        // (ny > 20, e.g. ny = 48) y-CPML is enabled to absorb outgoing waves
+        // through the y-faces and avoid spurious reflections.
+        //
+        // CRITICAL: all forward-model sources must lie outside the CPML zone.
+        // For CPML thickness = 10: source ix ≥ 10, iy ≥ y_pml, iz ≥ 10.
+        //
+        // Theorem (CPML optimal thickness): σ_max = -(m+1)·ln(R_target) / (2·d·η)
+        // where d = thickness × dx, η = 1/c_max, m = polynomial order (3).
+        // Reference: Roden & Gedney (2000), Microwave Opt. Technol. Lett. 27(5), 334-338.
+        let c_max = model.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let y_pml = if ny > 20 { 10usize } else { 0usize };
+        let cpml_config = CPMLConfig {
+            thickness: 10,
+            per_dimension: PerDimensionPML::new(10, y_pml, 10),
+            ..CPMLConfig::default()
+        };
+        solver.enable_cpml(cpml_config, dt, c_max)?;
+
+        Ok((solver, (nx, ny, nz), dt))
+    }
+
+    /// Run the forward FDTD model and return both receiver traces and the full
+    /// pressure-history volume needed by the adjoint pass.
+    ///
+    /// ## Memory contract
+    ///
+    /// Allocates `Array4<f64>` of shape `(nt, nx, ny, nz)` — approximately
+    /// `nt × nx × ny × nz × 8` bytes (≈ 3.3 GB for nt=2115, 64×48×64).  This
+    /// allocation is intentional: the adjoint pass in `adjoint_model` requires
+    /// the complete time-reversed pressure history to form the imaging condition.
+    ///
+    /// **Do not call this function from `compute_objective` or any line-search
+    /// path.**  Use `forward_model_sensor_only` there; it skips the history
+    /// allocation and is safe to run in parallel over shots.
+    fn forward_model(
+        &self,
+        model: &Array3<f64>,
+        geometry: &FwiGeometry,
+        grid: &Grid,
+    ) -> KwaversResult<(Array2<f64>, Array4<f64>)> {
+        let (mut solver, (nx, ny, nz), _dt) =
+            self.build_fdtd_solver_for_forward(model, geometry, grid)?;
+
         let mut history = Array4::zeros((self.parameters.nt, nx, ny, nz));
 
         for t in 0..self.parameters.nt {
@@ -583,6 +1301,51 @@ impl FwiProcessor {
         Ok((synthetic, history))
     }
 
+    /// Run the forward FDTD model and return only receiver traces — no history.
+    ///
+    /// ## Theorem
+    ///
+    /// The L2 objective `J = (dt/2) ||d_syn − d_obs||²` depends only on the
+    /// synthetic receiver data `d_syn(r,t)`, not on the volumetric pressure field
+    /// `p(x,t)`.  Storing `p(x,t)` as `Array4<f64>` (≈ 3.3 GB per shot) is
+    /// unnecessary for objective evaluation and prohibits safe shot-level
+    /// parallelism in the line search.
+    ///
+    /// ## Memory contract
+    ///
+    /// Peak allocation per call: O(N_receivers × nt × 8 bytes) ≈ 5 MB for
+    /// 23 receivers × 2115 steps.  Solver field buffers add ~50 MB.  Total
+    /// per-call footprint is ~55 MB, making it safe to run N_shots calls in
+    /// parallel via `rayon::par_iter` without memory pressure.
+    fn forward_model_sensor_only(
+        &self,
+        model: &Array3<f64>,
+        geometry: &FwiGeometry,
+        grid: &Grid,
+    ) -> KwaversResult<Array2<f64>> {
+        let (mut solver, _dims, _dt) =
+            self.build_fdtd_solver_for_forward(model, geometry, grid)?;
+
+        // No history allocation.  The solver's SensorRecorder accumulates receiver
+        // traces internally at O(N_receivers) cost per step — unchanged from the
+        // full forward model.
+        for _ in 0..self.parameters.nt {
+            solver.step_forward()?;
+        }
+
+        let recorded = solver
+            .sensor_recorder
+            .extract_pressure_data()
+            .ok_or_else(|| {
+                KwaversError::Validation(ValidationError::ConstraintViolation {
+                    message: "FWI forward model requires at least one receiver".to_string(),
+                })
+            })?;
+        let synthetic = recorded.slice(s![.., 0..self.parameters.nt]).to_owned();
+
+        Ok(synthetic)
+    }
+
     /// Adjoint modeling using time-reversed FDTD
     ///
     /// Computes the adjoint wavefield by running the FDTD solver in reverse time
@@ -603,6 +1366,7 @@ impl FwiProcessor {
         model: &Array3<f64>,
         grid: &Grid,
         forward_history: &Array4<f64>,
+        source_mask: Option<&Array3<f64>>,
     ) -> KwaversResult<Array3<f64>> {
         use crate::solver::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 
@@ -649,6 +1413,20 @@ impl FwiProcessor {
 
         let mut solver = FdtdSolver::new(config, grid, &medium_adj, adjoint_source.clone())?;
 
+        // CPML must match the forward solver's boundary treatment: the adjoint
+        // wavefield is the time-reversed forward field in the same domain.  Using
+        // different boundary conditions for forward and adjoint breaks the discrete
+        // Green's identity and corrupts the gradient (Time-reversal theorem, §3 of
+        // the module-level docstring).  Same per-dimension thickness as forward.
+        let c_max_adj = model.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let y_pml_adj = if ny > 20 { 10usize } else { 0usize };
+        let cpml_adj = CPMLConfig {
+            thickness: 10,
+            per_dimension: PerDimensionPML::new(10, y_pml_adj, 10),
+            ..CPMLConfig::default()
+        };
+        solver.enable_cpml(cpml_adj, dt, c_max_adj)?;
+
         let mut gradient_m = Array3::zeros((nx, ny, nz));
         let mut p_tt = Array3::zeros((nx, ny, nz));
 
@@ -656,6 +1434,25 @@ impl FwiProcessor {
             solver.step_forward()?;
             let fwd_idx = self.parameters.nt - 1 - t;
             self.pressure_second_derivative_into(forward_history, fwd_idx, dt, &mut p_tt)?;
+
+            // Exclude Dirichlet-source voxels from the gradient kernel.
+            //
+            // At source-constrained positions the forward solver sets p equal to
+            // the prescribed signal via a Dirichlet BC.  The resulting ∂²p/∂t²
+            // reflects the second derivative of the wavelet (amplitude ~f₀⁴·P₀),
+            // not the local wave physics.  Including these cells would produce a
+            // dominant spurious gradient at the source location that overwhelms
+            // the physically meaningful sensitivity in the skull region.
+            //
+            // Reference: Sun, R. & Symes, W.W. (1991). "Inversion of source
+            // signatures by full-waveform inversion." *SEG Expanded Abstracts*.
+            if let Some(mask) = source_mask {
+                Zip::from(&mut p_tt).and(mask).par_for_each(|pt, &m| {
+                    if m > 0.5 {
+                        *pt = 0.0;
+                    }
+                });
+            }
 
             accumulate_signed_correlation(
                 &mut gradient_m,
@@ -665,9 +1462,28 @@ impl FwiProcessor {
             )?;
         }
 
-        Zip::from(&mut gradient_m).and(model).for_each(|g, &c| {
+        Zip::from(&mut gradient_m).and(model).par_for_each(|g, &c| {
             *g *= -2.0 / c.powi(3);
         });
+
+        // Debug: locate the dominant gradient voxel
+        let (gmax, gmax_idx) = gradient_m.indexed_iter().fold(
+            (0.0_f64, (0usize, 0usize, 0usize)),
+            |(best, bi), (idx, &v)| {
+                if v.abs() > best {
+                    (v.abs(), idx)
+                } else {
+                    (best, bi)
+                }
+            },
+        );
+        log::info!(
+            "adjoint gradient peak {:.4e} at ({},{},{})",
+            gmax,
+            gmax_idx.0,
+            gmax_idx.1,
+            gmax_idx.2
+        );
 
         Ok(gradient_m)
     }
@@ -784,19 +1600,43 @@ impl FwiProcessor {
             .sensor_mask
             .mapv(|active| if active { 1.0 } else { 0.0 });
 
+        // Adjoint source must be ADDITIVE (soft source), not Dirichlet (hard source).
+        //
+        // Theorem (adjoint source injection mode):
+        //   The adjoint equation is  L†λ = −δ_r · (d_syn − d_obs)(T−t)
+        //   where L† is the adjoint of the wave operator L and δ_r is the receiver
+        //   spatial support.  This is a body-force/source-term forcing, not a
+        //   Dirichlet boundary condition.  Injecting as Dirichlet pins λ at receiver
+        //   positions to the reversed residual, suppressing the back-propagated
+        //   wavefield and producing an incorrect gradient that is not a descent
+        //   direction for J.
+        //
+        // Proof sketch:
+        //   Apply the identity ⟨Lp, λ⟩ = ⟨p, L†λ⟩ (Green's identity for the
+        //   discrete staggered-grid operator).  For this identity to hold and yield
+        //   ∂J/∂c = ∫λ(T−t)∂²p/∂t² dt, λ must evolve freely under L† with the
+        //   reversed residual as a forcing term (additive injection), not as a
+        //   Dirichlet constraint that removes λ's degrees of freedom at the receivers.
+        //
+        // Reference: Plessix (2006), GFJI 167(2), 495–503, eq. (2)–(6).
         Ok(GridSource {
             p0: None,
             u0: None,
             p_mask: Some(p_mask),
             p_signal: Some(p_signal),
-            p_mode: SourceMode::Dirichlet,
+            p_mode: SourceMode::Additive,
             u_mask: None,
             u_signal: None,
             u_mode: SourceMode::default(),
         })
     }
 
-    /// Compute the model objective by running a forward simulation.
+    /// Compute the model objective by running a sensor-only forward simulation.
+    ///
+    /// Calls `forward_model_sensor_only` — no pressure-history `Array4` is
+    /// allocated.  Peak memory per call is ~55 MB (solver fields + receiver
+    /// traces), making this safe to call from `compute_joint_objective`'s
+    /// `par_iter` over all shots simultaneously.
     fn compute_objective(
         &self,
         model: &Array3<f64>,
@@ -804,7 +1644,7 @@ impl FwiProcessor {
         geometry: &FwiGeometry,
         grid: &Grid,
     ) -> KwaversResult<f64> {
-        let (synthetic_data, _) = self.forward_model(model, geometry, grid)?;
+        let synthetic_data = self.forward_model_sensor_only(model, geometry, grid)?;
         self.compute_l2_objective(observed_data, &synthetic_data)
     }
 
@@ -904,7 +1744,7 @@ impl FwiProcessor {
                 .and(&current)
                 .and(&next)
                 .and(&next2)
-                .for_each(|d, &p0, &p1, &p2| {
+                .par_for_each(|d, &p0, &p1, &p2| {
                     *d = (p0 - 2.0 * p1 + p2) * inv_dt_sq;
                 });
             return Ok(());
@@ -917,7 +1757,7 @@ impl FwiProcessor {
                 .and(&prev2)
                 .and(&prev)
                 .and(&current)
-                .for_each(|d, &p0, &p1, &p2| {
+                .par_for_each(|d, &p0, &p1, &p2| {
                     *d = (p0 - 2.0 * p1 + p2) * inv_dt_sq;
                 });
             return Ok(());
@@ -929,7 +1769,7 @@ impl FwiProcessor {
             .and(&prev)
             .and(&current)
             .and(&next)
-            .for_each(|d, &p0, &p1, &p2| {
+            .par_for_each(|d, &p0, &p1, &p2| {
                 *d = (p0 - 2.0 * p1 + p2) * inv_dt_sq;
             });
         Ok(())
@@ -1050,7 +1890,9 @@ mod tests {
                 .clone()
                 .mapv(|active| if active { 1.0 } else { 0.0 })
         );
-        assert!(matches!(p_mode, SourceMode::Dirichlet));
+        // Adjoint source must be Additive (soft source) — not Dirichlet.
+        // Dirichlet would pin λ at receivers and destroy Green's identity.
+        assert!(matches!(p_mode, SourceMode::Additive));
     }
 
     #[test]

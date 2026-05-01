@@ -28,6 +28,24 @@ pub struct FwiParameters {
     /// frequency exponent) and for the Ricker wavelet.  Typical exploration
     /// seismic surveys use 10–100 Hz.
     pub frequency: f64,
+
+    /// Radius (in voxels, L2 norm) within which the gradient is zeroed around
+    /// every source position to suppress near-source body-wave artefacts.
+    ///
+    /// ## Theorem (near-source artefact)
+    /// Close to a source voxel, `∂²p/∂t²` is dominated by the second derivative
+    /// of the source wavelet rather than by propagation physics.  The
+    /// cross-correlation of this large `p̈` with the adjoint wavefield produces a
+    /// gradient 10–100 × larger than the physical sensitivity at the target zone.
+    /// Zeroing within half a wavelength of each source removes this artefact
+    /// without biasing the gradient at distant scatterers.
+    ///
+    /// ## Recommended value
+    /// `ceil(c_min / (2 · f₀ · dx))` — half-wavelength at the minimum velocity.
+    /// For 150 kHz, c_min = 1500 m/s, dx = 3 mm: ≈ 2 voxels.  Use 4 for safety.
+    ///
+    /// Default 0 disables the mute (backward-compatible).
+    pub source_mute_radius: usize,
 }
 
 /// Regularization parameters for inversion
@@ -128,6 +146,7 @@ impl Default for FwiParameters {
             n_depth: 100,
             regularization: RegularizationParameters::default(),
             frequency: 20.0, // Hz — typical shallow-seismic exploration bandwidth
+            source_mute_radius: 0, // disabled by default (backward-compatible)
         }
     }
 }

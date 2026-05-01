@@ -364,3 +364,13 @@ harness = false
 name = "skull_ct_phase_correction"
 path = "examples/skull_ct_phase_correction.rs"
 required-features = ["ritk"]
+
+[[example]]
+name = "seismic_imaging_demo"
+path = "examples/seismic_imaging_demo.rs"
+required-features = ["ritk"]
+
+[[example]]
+name = "seismic_imaging_3d_demo"
+path = "examples/seismic_imaging_3d_demo.rs"
+required-features = ["ritk"]

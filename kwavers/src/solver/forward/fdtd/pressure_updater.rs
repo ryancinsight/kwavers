@@ -93,7 +93,7 @@ impl FdtdSolver {
             Zip::from(&mut self.divergence_scratch)
                 .and(&self.dvx_scratch)
                 .and(&self.dvy_scratch)
-                .for_each(|d, &dx, &dy| *d += dx + dy);
+                .par_for_each(|d, &dx, &dy| *d += dx + dy);
 
             Self::update_pressure_simd(
                 &mut self.fields.p,
@@ -112,20 +112,17 @@ impl FdtdSolver {
     /// O(N³) heap allocation per time step.  Owned arrays coerce to views via
     /// `arr.view()` at the call site.
     ///
-    /// Uses plain iterator loop; LLVM will auto-vectorize on AVX2/AVX-512 targets.
+    /// Uses Rayon parallel Zip; LLVM auto-vectorizes each worker's lane on AVX2/AVX-512.
     pub(crate) fn update_pressure_simd(
         pressure: &mut Array3<f64>,
         divergence: ArrayView3<f64>,
         rho_c_squared: &Array3<f64>,
         dt: f64,
     ) {
-        for ((p, &div), &rc2) in pressure
-            .iter_mut()
-            .zip(divergence.iter())
-            .zip(rho_c_squared.iter())
-        {
-            *p -= dt * rc2 * div;
-        }
+        Zip::from(pressure)
+            .and(divergence)
+            .and(rho_c_squared)
+            .par_for_each(|p, &div, &rc2| *p -= dt * rc2 * div);
     }
 
     /// Apply Westervelt nonlinear correction to the current pressure field.
@@ -264,36 +261,43 @@ impl FdtdSolver {
     ///
     /// CPML gradient corrections are applied per-direction when enabled.
     pub(crate) fn compute_divergence_staggered(&mut self) -> KwaversResult<()> {
-        let mut dvx = self
-            .staggered_operator
-            .apply_backward_x(self.fields.ux.view())?;
-        let mut dvy = self
-            .staggered_operator
-            .apply_backward_y(self.fields.uy.view())?;
-        let mut dvz = self
-            .staggered_operator
-            .apply_backward_z(self.fields.uz.view())?;
+        // Phase 1: fill pre-allocated scratch buffers — zero heap allocation.
+        // dvx_scratch ← ∂ux/∂x, dvy_scratch ← ∂uy/∂y, divergence_scratch ← ∂uz/∂z.
+        // The `_into` variants use Zip slice-pairs and are LLVM-vectorizable.
+        self.staggered_operator
+            .apply_backward_x_into(self.fields.ux.view(), &mut self.dvx_scratch)?;
+        self.staggered_operator
+            .apply_backward_y_into(self.fields.uy.view(), &mut self.dvy_scratch)?;
+        self.staggered_operator
+            .apply_backward_z_into(self.fields.uz.view(), &mut self.divergence_scratch)?;
 
         // Cylindrical `ur/r` correction for axisymmetric geometry.
+        // divergence_scratch currently holds ∂uz/∂z (≡ dvz in the Cartesian path).
         // At k > 0: correction = (uz[k] + uz[k-1]) / (2*k*dz)
         // At k = 0: correction = uz[0] / (0.5*dz)  (axis, staggered r_sg = 0.5*dz)
         if self.config.geometry == Geometry::CylindricalAS {
             let dz = self.grid.dz;
-            let (nx, _ny, nz) = dvz.dim();
-            // k = 0: axis — staggered position r_sg[0] = 0.5*dz
-            // backward-z at k=0 already used forward diff; add axis ur/r contribution
+            let (nx, _ny, nz) = self.divergence_scratch.dim();
             for i in 0..nx {
-                dvz[[i, 0, 0]] += self.fields.uz[[i, 0, 0]] / (0.5 * dz);
+                self.divergence_scratch[[i, 0, 0]] +=
+                    self.fields.uz[[i, 0, 0]] / (0.5 * dz);
             }
-            // k > 0: exact staggered cylindrical correction
             for k in 1..nz {
                 let r_center = k as f64 * dz;
-                let uz_k = self.fields.uz.slice(s![.., 0, k]);
-                let uz_km1 = self.fields.uz.slice(s![.., 0, k - 1]);
-                let mut dvz_k = dvz.slice_mut(s![.., 0, k]);
+                // Extract slices before the mutable borrow of divergence_scratch.
+                let uz_k_vals: Vec<f64> =
+                    self.fields.uz.slice(s![.., 0, k]).iter().copied().collect();
+                let uz_km1_vals: Vec<f64> = self
+                    .fields
+                    .uz
+                    .slice(s![.., 0, k - 1])
+                    .iter()
+                    .copied()
+                    .collect();
+                let mut dvz_k = self.divergence_scratch.slice_mut(s![.., 0, k]);
                 Zip::from(&mut dvz_k)
-                    .and(&uz_k)
-                    .and(&uz_km1)
+                    .and(ndarray::ArrayView1::from(&uz_k_vals))
+                    .and(ndarray::ArrayView1::from(&uz_km1_vals))
                     .for_each(|d, &uk, &ukm1| {
                         *d += (uk + ukm1) / (2.0 * r_center);
                     });
@@ -301,18 +305,16 @@ impl FdtdSolver {
         }
 
         if let Some(ref mut cpml) = self.cpml_boundary {
-            cpml.update_and_apply_v_gradient_correction(&mut dvx, 0);
-            cpml.update_and_apply_v_gradient_correction(&mut dvy, 1);
-            cpml.update_and_apply_v_gradient_correction(&mut dvz, 2);
+            cpml.update_and_apply_v_gradient_correction(&mut self.dvx_scratch, 0);
+            cpml.update_and_apply_v_gradient_correction(&mut self.dvy_scratch, 1);
+            cpml.update_and_apply_v_gradient_correction(&mut self.divergence_scratch, 2);
         }
 
-        // Use divergence_scratch to avoid the O(N³) sum allocation.
-        // dvz moves into divergence_scratch; dvx and dvy are accumulated in-place.
-        self.divergence_scratch.assign(&dvz);
+        // Accumulate: divergence_scratch already holds ∂uz/∂z; add ∂ux/∂x + ∂uy/∂y in-place.
         Zip::from(&mut self.divergence_scratch)
-            .and(&dvx)
-            .and(&dvy)
-            .for_each(|d, &dx, &dy| *d += dx + dy);
+            .and(&self.dvx_scratch)
+            .and(&self.dvy_scratch)
+            .par_for_each(|d, &dx, &dy| *d += dx + dy);
         Ok(())
     }
 }

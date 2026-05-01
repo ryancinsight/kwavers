@@ -23,6 +23,14 @@
 //! Corrections `δp` are therefore computed from `Re[p]` and applied to
 //! `Re[p]` only; `Im[p]` is left unchanged by this sub-step.
 //!
+//! # Pre-allocated scratch buffers
+//!
+//! `delta` (nx × ny × nt, f64) and `w_scratch` (nt, Complex64) are allocated
+//! once in `NonlinearOperator::new` and reused across every call to `apply`.
+//! This eliminates a 128 × 128 × nt × 8 = 131 MB heap allocation per step
+//! (`delta`) and 128 × 128 × nt × 16 = 268 MB of aggregate per-spatial-point
+//! allocations (`w_scratch`).
+//!
 //! # References
 //!
 //! - Aanonsen SI et al. (1984). "Distortion and harmonic generation in the
@@ -39,19 +47,35 @@ use ndarray::{Array1, Array3};
 ///
 /// Encapsulates the quadratic pressure self-interaction term that drives
 /// harmonic generation and shock formation.
+///
+/// All per-call scratch memory (`delta`, `w_scratch`) is pre-allocated at
+/// construction and reused on every `apply` call to eliminate hot-path
+/// heap allocation.
 #[derive(Debug)]
 pub struct NonlinearOperator {
     /// Nonlinearity coefficient β = 1 + B/(2A)  [dimensionless]
     beta: f64,
     /// Solver configuration (grid sizes, timestep, medium properties)
     config: KZKConfig,
+    /// Pre-allocated update buffer δp[i,j,t], shape (nx, ny, nt).
+    ///
+    /// Sized at construction to match the pressure array dimensions;
+    /// `fill(0.0)` is called at the start of each `apply` invocation.
+    /// Holding it here eliminates a 131 MB allocation per z-step.
+    delta: Array3<f64>,
+    /// Pre-allocated 1-D spectral work buffer, length nt.
+    ///
+    /// Reused across all (i,j) iterations in the inner spatial loop,
+    /// replacing per-iteration `collect`-based allocations totalling
+    /// nx × ny × nt × 16 bytes ≈ 268 MB per step.
+    w_scratch: Array1<Complex64>,
 }
 
 impl NonlinearOperator {
     /// Construct the nonlinear operator from solver configuration.
     ///
     /// Computes β = 1 + B/(2A) from the medium ratio `b_over_a` stored in
-    /// `config`.
+    /// `config` and pre-allocates the two scratch buffers.
     ///
     /// # Theorem (β definition)
     ///
@@ -63,8 +87,12 @@ impl NonlinearOperator {
     /// Reference: Hamilton & Blackstock (1998) §2.3.2, eq. (2.3.10).
     #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
+        let delta = Array3::<f64>::zeros((config.nx, config.ny, config.nt));
+        let w_scratch = Array1::<Complex64>::zeros(config.nt);
         Self {
             beta: 1.0 + config.b_over_a / 2.0, // β = 1 + B/(2A)
+            delta,
+            w_scratch,
             config: config.clone(),
         }
     }
@@ -95,7 +123,7 @@ impl NonlinearOperator {
     /// ## Spectral differentiation algorithm
     ///
     /// For each spatial point (i,j):
-    /// 1. Build waveform w[t] = Re[pressure[i,j,t]] as complex input.
+    /// 1. Fill `w_scratch[t] = Re[pressure[i,j,t]]` as complex input.
     /// 2. Forward FFT: W[k] = Σ_t w[t] e^{−2πikt/N}.
     /// 3. Multiply: W[k] ← W[k] · iω[k], where
     ///    ω[k] = 2πk/(NΔτ) for k ≤ N/2, and 2π(k−N)/(NΔτ) for k > N/2.
@@ -103,10 +131,11 @@ impl NonlinearOperator {
     ///    real-valued output.
     /// 4. Inverse FFT (with 1/N normalisation): ∂p/∂τ[t] = Re[IFFT(W)][t].
     ///
-    /// All increments `δp` are accumulated into a temporary buffer **before**
-    /// being added back to `pressure`.  This ensures that the entire right-hand
-    /// side is evaluated at the same z-level (the input state), satisfying the
-    /// operator-isolation requirement of Strang splitting.
+    /// All increments `δp` are accumulated into the pre-allocated buffer
+    /// `self.delta` **before** being added back to `pressure`.  This ensures
+    /// that the entire right-hand side is evaluated at the same z-level (the
+    /// input state), satisfying the operator-isolation requirement of Strang
+    /// splitting.
     ///
     /// ## Theorem (operator isolation)
     ///
@@ -144,20 +173,24 @@ impl NonlinearOperator {
         // Spectral differentiation for ∂p/∂τ — exact for bandlimited periodic
         // signals; avoids the sin(ωΔτ)/(ωΔτ) attenuation of central differences.
         let nt = self.config.nt;
+        let nx = self.config.nx;
+        let ny = self.config.ny;
         // Angular-frequency multiplier per FFT bin:  ω[k] = 2πk/(N·Δτ)
         let two_pi_over_n_dt = 2.0 * std::f64::consts::PI / (nt as f64 * dt);
 
-        let mut delta = Array3::<f64>::zeros(pressure.raw_dim());
+        // Zero the pre-allocated delta buffer (replaces a 131 MB allocation per step).
+        self.delta.fill(0.0);
 
-        for i in 0..self.config.nx {
-            for j in 0..self.config.ny {
-                // Step 1: extract real pressure waveform as complex vector
-                let mut w: Array1<Complex64> = (0..nt)
-                    .map(|t| Complex64::new(pressure[[i, j, t]].re, 0.0))
-                    .collect();
+        for i in 0..nx {
+            for j in 0..ny {
+                // Step 1: fill pre-allocated scratch with Re[p] as complex input.
+                // Replaces `Array1::collect()` allocation of nt × 16 bytes per (i,j).
+                for t in 0..nt {
+                    self.w_scratch[t] = Complex64::new(pressure[[i, j, t]].re, 0.0);
+                }
 
                 // Step 2: forward FFT (no normalisation)
-                fft_1d_complex_inplace(&mut w);
+                fft_1d_complex_inplace(&mut self.w_scratch);
 
                 // Step 3: multiply each bin by iω[k]
                 // Positive frequencies: k = 0..nt/2; negative: k = nt/2+1..nt-1
@@ -170,21 +203,23 @@ impl NonlinearOperator {
                     };
                     let omega_k = freq_k * two_pi_over_n_dt;
                     // Multiply by iω: (re + i·im) × iω = −im·ω + i·re·ω
-                    w[k] = Complex64::new(-w[k].im * omega_k, w[k].re * omega_k);
+                    let re = self.w_scratch[k].re;
+                    let im = self.w_scratch[k].im;
+                    self.w_scratch[k] = Complex64::new(-im * omega_k, re * omega_k);
                 }
                 // Zero Nyquist to guarantee real-valued derivative
                 if nt.is_multiple_of(2) {
-                    w[nt / 2] = Complex64::new(0.0, 0.0);
+                    self.w_scratch[nt / 2] = Complex64::new(0.0, 0.0);
                 }
 
                 // Step 4: inverse FFT (includes 1/N normalisation)
-                ifft_1d_complex_inplace(&mut w);
+                ifft_1d_complex_inplace(&mut self.w_scratch);
 
                 // Step 5: form δp[t] = coeff · p[t] · (∂p/∂τ)[t]
                 for t in 0..nt {
                     let p_t = pressure[[i, j, t]].re;
-                    let dp_dt = w[t].re; // exact spectral derivative
-                    delta[[i, j, t]] = coeff * p_t * dp_dt;
+                    let dp_dt = self.w_scratch[t].re; // exact spectral derivative
+                    self.delta[[i, j, t]] = coeff * p_t * dp_dt;
                 }
             }
         }
@@ -192,10 +227,10 @@ impl NonlinearOperator {
         // Apply corrections to the real (physical) component only.
         // Im[p] carries the quadrature component for diffraction phase tracking
         // and does not participate in nonlinear self-coupling.
-        for i in 0..self.config.nx {
-            for j in 0..self.config.ny {
-                for t in 0..self.config.nt {
-                    pressure[[i, j, t]].re += delta[[i, j, t]];
+        for i in 0..nx {
+            for j in 0..ny {
+                for t in 0..nt {
+                    pressure[[i, j, t]].re += self.delta[[i, j, t]];
                 }
             }
         }

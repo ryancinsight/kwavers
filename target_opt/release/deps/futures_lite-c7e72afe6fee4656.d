@@ -1,0 +1,11 @@
+D:\kwavers\target_opt\release\deps\futures_lite-c7e72afe6fee4656.d: C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\lib.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\future.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\prelude.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\stream.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\io.rs
+
+D:\kwavers\target_opt\release\deps\libfutures_lite-c7e72afe6fee4656.rlib: C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\lib.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\future.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\prelude.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\stream.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\io.rs
+
+D:\kwavers\target_opt\release\deps\libfutures_lite-c7e72afe6fee4656.rmeta: C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\lib.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\future.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\prelude.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\stream.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\io.rs
+
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\lib.rs:
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\future.rs:
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\prelude.rs:
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\stream.rs:
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-lite-2.6.1\src\io.rs:

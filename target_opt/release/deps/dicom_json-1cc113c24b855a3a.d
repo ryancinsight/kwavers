@@ -1,0 +1,11 @@
+D:\kwavers\target_opt\release\deps\dicom_json-1cc113c24b855a3a.d: C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\lib.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\de\mod.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\de\value.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\ser\mod.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\ser\value.rs
+
+D:\kwavers\target_opt\release\deps\libdicom_json-1cc113c24b855a3a.rlib: C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\lib.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\de\mod.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\de\value.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\ser\mod.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\ser\value.rs
+
+D:\kwavers\target_opt\release\deps\libdicom_json-1cc113c24b855a3a.rmeta: C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\lib.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\de\mod.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\de\value.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\ser\mod.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\ser\value.rs
+
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\lib.rs:
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\de\mod.rs:
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\de\value.rs:
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\ser\mod.rs:
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-json-0.8.2\src\ser\value.rs:

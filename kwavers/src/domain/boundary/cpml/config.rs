@@ -274,14 +274,20 @@ impl CPMLConfig {
             .into());
         }
 
-        if self.per_dimension.x == 0 || self.per_dimension.y == 0 || self.per_dimension.z == 0 {
+        // Zero per-dimension thickness is valid: sigma = 0 (transparent BC) is
+        // the correct semantic for "no PML in this dimension".  The profile builder
+        // (profiles.rs) explicitly fills sigma = 0.0 when thickness == 0, so zero
+        // is a well-defined, non-degenerate configuration.  It is required for thin
+        // dimensions (e.g. NY=2 in a quasi-2D seismic domain) that cannot fit any
+        // absorbing cells.  Only reject if ALL three dimensions are zero (no PML at all).
+        if self.per_dimension.x == 0 && self.per_dimension.y == 0 && self.per_dimension.z == 0 {
             return Err(ConfigError::InvalidValue {
                 parameter: "per_dimension".to_string(),
                 value: format!(
                     "({}, {}, {})",
                     self.per_dimension.x, self.per_dimension.y, self.per_dimension.z
                 ),
-                constraint: "All per-dimension PML thicknesses must be positive".to_string(),
+                constraint: "At least one per-dimension PML thickness must be positive".to_string(),
             }
             .into());
         }

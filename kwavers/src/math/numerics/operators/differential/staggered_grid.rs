@@ -329,6 +329,111 @@ impl StaggeredGridOperator {
         Ok(result)
     }
 
+    /// Apply backward difference in X direction into a pre-allocated destination buffer.
+    ///
+    /// Zero heap allocation. `dst` must have shape `(nx, ny, nz)`.
+    pub fn apply_backward_x_into(
+        &self,
+        field: ArrayView3<f64>,
+        dst: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        let (nx, ny, nz) = field.dim();
+        if nx < 2 {
+            return Err(NumericalError::InsufficientGridPoints {
+                required: 2,
+                actual: nx,
+                direction: "X".to_string(),
+            }
+            .into());
+        }
+        debug_assert_eq!(
+            dst.dim(),
+            (nx, ny, nz),
+            "apply_backward_x_into: dst shape {:?} must be ({nx}, {ny}, {nz})",
+            dst.dim()
+        );
+        let dx = self.dx;
+        Zip::from(dst.slice_mut(s![1.., .., ..]))
+            .and(field.slice(s![1.., .., ..]))
+            .and(field.slice(s![..nx - 1, .., ..]))
+            .par_for_each(|r, &hi, &lo| *r = (hi - lo) / dx);
+        Zip::from(dst.slice_mut(s![0, .., ..]))
+            .and(field.slice(s![1, .., ..]))
+            .and(field.slice(s![0, .., ..]))
+            .for_each(|r, &hi, &lo| *r = (hi - lo) / dx);
+        Ok(())
+    }
+
+    /// Apply backward difference in Y direction into a pre-allocated destination buffer.
+    ///
+    /// Zero heap allocation. `dst` must have shape `(nx, ny, nz)`.
+    pub fn apply_backward_y_into(
+        &self,
+        field: ArrayView3<f64>,
+        dst: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        let (nx, ny, nz) = field.dim();
+        if ny < 2 {
+            return Err(NumericalError::InsufficientGridPoints {
+                required: 2,
+                actual: ny,
+                direction: "Y".to_string(),
+            }
+            .into());
+        }
+        debug_assert_eq!(
+            dst.dim(),
+            (nx, ny, nz),
+            "apply_backward_y_into: dst shape {:?} must be ({nx}, {ny}, {nz})",
+            dst.dim()
+        );
+        let dy = self.dy;
+        Zip::from(dst.slice_mut(s![.., 1.., ..]))
+            .and(field.slice(s![.., 1.., ..]))
+            .and(field.slice(s![.., ..ny - 1, ..]))
+            .par_for_each(|r, &hi, &lo| *r = (hi - lo) / dy);
+        Zip::from(dst.slice_mut(s![.., 0, ..]))
+            .and(field.slice(s![.., 1, ..]))
+            .and(field.slice(s![.., 0, ..]))
+            .for_each(|r, &hi, &lo| *r = (hi - lo) / dy);
+        Ok(())
+    }
+
+    /// Apply backward difference in Z direction into a pre-allocated destination buffer.
+    ///
+    /// Zero heap allocation. `dst` must have shape `(nx, ny, nz)`.
+    pub fn apply_backward_z_into(
+        &self,
+        field: ArrayView3<f64>,
+        dst: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        let (nx, ny, nz) = field.dim();
+        if nz < 2 {
+            return Err(NumericalError::InsufficientGridPoints {
+                required: 2,
+                actual: nz,
+                direction: "Z".to_string(),
+            }
+            .into());
+        }
+        debug_assert_eq!(
+            dst.dim(),
+            (nx, ny, nz),
+            "apply_backward_z_into: dst shape {:?} must be ({nx}, {ny}, {nz})",
+            dst.dim()
+        );
+        let dz = self.dz;
+        Zip::from(dst.slice_mut(s![.., .., 1..]))
+            .and(field.slice(s![.., .., 1..]))
+            .and(field.slice(s![.., .., ..nz - 1]))
+            .par_for_each(|r, &hi, &lo| *r = (hi - lo) / dz);
+        Zip::from(dst.slice_mut(s![.., .., 0]))
+            .and(field.slice(s![.., .., 1]))
+            .and(field.slice(s![.., .., 0]))
+            .for_each(|r, &hi, &lo| *r = (hi - lo) / dz);
+        Ok(())
+    }
+
     /// Apply backward difference in X direction
     ///
     /// Computes derivative at cell centers (i) from cell edges (i-1, i).

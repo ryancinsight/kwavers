@@ -38,15 +38,14 @@
 //!             ↑ x (lateral, left→right)
 //! ```
 //!
-//! # Hemispherical acquisition geometry
+//! # Full-ring acquisition geometry
 //!
-//! The 2-D FWI acquisition is a sparse meridional section of the same
-//! 1024-element, 650 kHz hemispherical Insightec-style design used by
-//! `skull_ct_phase_correction.rs`.  Eight active element locations are sampled
-//! from the superior hemisphere and four of them transmit in sequence while the
-//! remaining seven act as receivers.  The full 1024-element aperture is therefore
-//! the design authority; this reduced view keeps the example computationally
-//! bounded while preserving the concave-down transducer geometry.
+//! The 2-D FWI acquisition uses sixteen active element locations uniformly
+//! distributed around the full ring at R_ARRAY = 20 voxels from the grid
+//! centre.  Eight of them transmit in sequence (every other element) while the
+//! remaining fifteen act as receivers.  Full-ring coverage provides illumination
+//! from all azimuths, eliminating the shadow zone that limits superior-hemisphere
+//! geometries and improving convergence for inferior skull structures.
 //!
 //! # Initial model — CT-derived smooth prior
 //!
@@ -98,19 +97,16 @@ use kwavers::solver::inverse::seismic::{
     },
     rtm::RtmProcessor,
 };
-use ndarray::{Array2, Array3};
+use ndarray::{Array2, Array3, Zip};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-// ── ritk-gated CT loading imports ────────────────────────────────────────────
-#[cfg(feature = "ritk")]
+// CT loading imports (ritk required-feature)
 use anyhow::Context as _;
-#[cfg(feature = "ritk")]
 use burn::backend::NdArray as NdArrayBackend;
-#[cfg(feature = "ritk")]
 use ritk_io::{
     load_dicom_series, read_nifti, read_png_series, scan_dicom_directory, DicomSeriesInfo,
 };
@@ -175,22 +171,64 @@ const RHO_WATER: f64 = 1000.0; // density of water [kg/m³]
 const RHO_CORTICAL: f64 = 1900.0; // density of cortical bone [kg/m³]
 
 /// Repository-local Medimodel skull CT used by `skull_ct_phase_correction.rs`.
-#[cfg(feature = "ritk")]
-const DEFAULT_MEDIMODEL_DICOM_DIR: &str = "data/medimodel_human_skull_2/dicom/DICOM";
+/// Absolute path derived at compile time from CARGO_MANIFEST_DIR so the binary
+/// resolves the dataset regardless of the working directory it is invoked from.
+const DEFAULT_MEDIMODEL_DICOM_DIR: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../data/medimodel_human_skull_2/dicom/DICOM"
+);
 
 /// Phase-correction example Medimodel series UID.  The directory contains
 /// additional derived CT series with inconsistent orientation; this UID is the
 /// same 67-slice skull CT series used by the companion example.
-#[cfg(feature = "ritk")]
 const DEFAULT_MEDIMODEL_SERIES_UID: &str =
     "1.3.6.1.4.1.5962.99.1.1761388472.1291962045.1616669124536.2634.0";
 
 /// Full hemispherical aperture size used by the companion phase-correction demo.
 const INSIGHTEC_ELEMENT_COUNT: usize = 1024;
 
-/// Colormap bounds [m/s] for all image panels.
+/// Colormap bounds [m/s] for skull image panels.
 const C_LO: f64 = C_WATER; // 1500 m/s → blue
 const C_HI: f64 = C_CORTICAL; // 2900 m/s → red
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stage-2 brain tissue FWI constants (Guasch 2020 §Methods)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Brain tissue sound speeds from Duck (1990) "Physical Properties of Tissue".
+const C_GRAY: f64 = 1541.0; // gray matter [m/s]
+const C_WHITE: f64 = 1520.0; // white matter [m/s]
+const C_CSF: f64 = 1505.0; // cerebrospinal fluid [m/s]
+
+/// Velocity bounds for brain tissue FWI (excludes bone which is frozen).
+const BRAIN_C_MIN: f64 = 1480.0; // m/s
+const BRAIN_C_MAX: f64 = 1560.0; // m/s
+
+/// Velocity threshold for classifying a voxel as bone (frozen in Stage 2).
+/// Corresponds to BVF > 0.143, approximately HU ≈ 143 → cortical bone onset.
+const BONE_VELOCITY_THRESHOLD: f64 = 1714.0; // m/s
+
+/// Peak frequency for brain tissue FWI.
+/// At 400 kHz: λ_brain ≈ 3.8 mm; tissue velocity errors < 3% → no cycle-skipping.
+const F0_BRAIN_HZ: f64 = 400_000.0; // Hz
+
+/// Number of FWI iterations for brain tissue Stage 2.
+const N_BRAIN_ITER: usize = 20;
+
+/// Step size for brain tissue FWI (smaller than skull FWI — brain Δc is tiny).
+const STEP_SIZE_BRAIN: f64 = 30.0; // m/s per normalised gradient step
+
+/// Repository-local MNI ICBM 2009c NIfTI directory (downloaded from BIC MNI).
+/// Contains GM / WM / CSF tissue probability maps at 1 mm isotropic resolution.
+/// Download: https://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/mni_icbm152_nlin_sym_09c_nifti.zip
+const DEFAULT_MNI_DIR: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../data/mni_icbm152_2009c/mni_icbm152_nlin_sym_09c"
+);
+
+/// MNI ICBM 2009c inner-skull radius at the coronal mid-plane [mm].
+/// The inner cortical surface is ≈ 82 mm from the brain centroid in this atlas.
+const MNI_INNER_SKULL_RADIUS_MM: f64 = 82.0;
 
 /// Bone volume fraction from Hounsfield unit.
 ///
@@ -220,6 +258,153 @@ fn hu_to_sound_speed(hu: f64) -> f64 {
 fn hu_to_density(hu: f64) -> f64 {
     let phi = bvf(hu);
     RHO_WATER * (1.0 - phi) + RHO_CORTICAL * phi
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stage-2 brain tissue helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Build a per-voxel FWI frozen mask for Stage-2 brain tissue inversion.
+///
+/// Frozen voxels are restored from the CT reference after every gradient step.
+/// Only high-velocity bone voxels (c > BONE_VELOCITY_THRESHOLD) are frozen;
+/// scalp, diploe-transition, and water coupling remain free.  This keeps the
+/// free region large enough for the FWI gradient to converge while still
+/// preventing updates to the cortical bone wall.
+///
+/// Visualization alignment is handled separately in `write_brain_tissue_png`
+/// using the geometric r < R_SKULL_IN criterion, independent of this mask.
+fn build_skull_mask(sound_speed: &Array3<f64>) -> Array3<bool> {
+    sound_speed.mapv(|c| c > BONE_VELOCITY_THRESHOLD)
+}
+
+/// Load MNI ICBM 2009c tissue probability maps and resample them onto the FWI
+/// 2-D coronal grid, returning a brain tissue velocity model.
+///
+/// # Tissue velocity mapping (Duck 1990)
+///
+/// For each free (non-bone) FWI voxel the velocity is a probability-weighted
+/// mixture of the three soft-tissue classes:
+///
+/// ```text
+/// c(x) = p_gm(x) × C_GRAY + p_wm(x) × C_WHITE + p_csf(x) × C_CSF
+///       + (1 − p_gm − p_wm − p_csf) × C_WATER
+/// ```
+///
+/// Bone voxels are left at their CT-derived velocities (they will be frozen by
+/// `build_skull_mask` during FWI and are never updated).
+///
+/// # Spatial mapping
+///
+/// The MNI ICBM 2009c atlas is sampled at the mid-coronal slice (y ≈ rows/2,
+/// near the anterior commissure).  Each FWI voxel is mapped to MNI coordinates
+/// by scaling: `mni_offset = fwi_offset_mm × (MNI_INNER_SKULL_RADIUS_MM / fwi_inner_skull_mm)`.
+fn build_brain_velocity_model(
+    skull_phantom: &SkullPhantom,
+    mni_dir: &Path,
+) -> anyhow::Result<Array3<f64>> {
+    type Backend = NdArrayBackend<f32>;
+    let device = Default::default();
+
+    // Load the three probability maps via ritk NIfTI reader.
+    // CtVolume.hu stores probability values [0,1] (HU clamping [-1024,3071] is harmless).
+    let load = |name: &str| -> anyhow::Result<Array3<f64>> {
+        let path = mni_dir.join(name);
+        anyhow::ensure!(
+            path.exists(),
+            "MNI tissue map not found: '{}' — download from {}",
+            path.display(),
+            "https://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/mni_icbm152_nlin_sym_09c_nifti.zip"
+        );
+        // Load through ritk (returns [Z,Y,X] tensor → transposed to hu[X,Y,Z]).
+        let img = ritk_io::read_nifti::<Backend, _>(&path, &device)
+            .with_context(|| format!("NIfTI load failed: '{}'", path.display()))?;
+        let [depth, rows, cols] = img.shape();
+        let td = img.data().clone().into_data();
+        let vals = td
+            .as_slice::<f32>()
+            .map_err(|e| anyhow::anyhow!("NIfTI data not f32: {e:?}"))?;
+        let mut vol = Array3::<f64>::zeros((cols, rows, depth));
+        for z in 0..depth {
+            for y in 0..rows {
+                for x in 0..cols {
+                    vol[[x, y, z]] =
+                        f64::from(vals[z * rows * cols + y * cols + x]).clamp(0.0, 1.0);
+                }
+            }
+        }
+        Ok(vol)
+    };
+
+    let gm = load("mni_icbm152_gm_tal_nlin_sym_09c.nii")?;
+    let wm = load("mni_icbm152_wm_tal_nlin_sym_09c.nii")?;
+    let csf = load("mni_icbm152_csf_tal_nlin_sym_09c.nii")?;
+
+    let (mni_nx, mni_ny, mni_nz) = gm.dim();
+    // MNI centroid voxel (brain centre-of-mass in MNI space ≈ [nx/2, ny/2, nz/2]).
+    let cx_mni = mni_nx / 2; // ~90
+    let cy_mni = mni_ny / 2; // ~108 — mid coronal slice (near AC)
+    let cz_mni = mni_nz / 2; // ~90
+
+    // Scale factor: project FWI physical offset (mm) into MNI voxel offset.
+    // At the inner skull boundary: R_SKULL_IN × DX × 1e3 mm (FWI) ↔ MNI_INNER_SKULL_RADIUS_MM.
+    let fwi_inner_mm = R_SKULL_IN * DX * 1e3; // 36 mm
+    let fwi_to_mni = MNI_INNER_SKULL_RADIUS_MM / fwi_inner_mm; // 82/36 ≈ 2.28
+
+    let cx_fwi = NX / 2; // 32
+    let cz_fwi = NZ / 2; // 32
+
+    let mut brain_model = skull_phantom.sound_speed.clone();
+
+    for iz in 0..NZ {
+        for ix in 0..NX {
+            // Only assign MNI tissue velocities inside the inner skull surface
+            // (r < R_SKULL_IN = 36 mm).  The skull wall, scalp, and water coupling
+            // bath all retain their CT-derived velocities — they are frozen during
+            // Stage-2 FWI and must not carry tissue-velocity artefacts.
+            //
+            // Using the velocity threshold c_ct > BONE_VELOCITY_THRESHOLD is
+            // insufficient because bilinear interpolation at the 15 CT-px / FWI-voxel
+            // scale blurs the thin skull wall into intermediate-HU voxels that fall
+            // below the threshold, leaking MNI velocities into the scalp ring and
+            // creating a false yellow band in the tight [1480,1560] m/s colormap.
+            let dx_fwi = ix as f64 - cx_fwi as f64;
+            let dz_fwi = iz as f64 - cz_fwi as f64;
+            let r_fwi = (dx_fwi * dx_fwi + dz_fwi * dz_fwi).sqrt();
+            if r_fwi >= R_SKULL_IN {
+                continue; // skull wall, scalp, water bath — keep CT velocity
+            }
+
+            // FWI voxel physical offset from grid centre [mm].
+            let dx_mm = dx_fwi * DX * 1e3;
+            let dz_mm = dz_fwi * DX * 1e3;
+
+            // Map to MNI voxel coordinate.
+            let mni_x = (cx_mni as f64 + dx_mm * fwi_to_mni).round() as isize;
+            let mni_z = (cz_mni as f64 + dz_mm * fwi_to_mni).round() as isize;
+
+            // Out-of-bounds → keep water velocity.
+            if mni_x < 0 || mni_x >= mni_nx as isize || mni_z < 0 || mni_z >= mni_nz as isize {
+                continue;
+            }
+            let mx = mni_x as usize;
+            let mz = mni_z as usize;
+
+            // Sample mid-coronal MNI slice.
+            let p_gm = gm[[mx, cy_mni, mz]];
+            let p_wm = wm[[mx, cy_mni, mz]];
+            let p_csf = csf[[mx, cy_mni, mz]];
+            let p_rest = (1.0 - p_gm - p_wm - p_csf).clamp(0.0, 1.0);
+
+            let c_tissue = p_gm * C_GRAY + p_wm * C_WHITE + p_csf * C_CSF + p_rest * C_WATER;
+
+            for iy in 0..NY {
+                brain_model[[ix, iy, iz]] = c_tissue;
+            }
+        }
+    }
+
+    Ok(brain_model)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -333,11 +518,11 @@ fn ricker_wavelet(f0: f64, dt: f64, nt: usize) -> Vec<f64> {
 // Acquisition geometry — hemispherical arc
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Number of active elements in the FWI meridional section.
-const FWI_ACTIVE_ELEMENTS: usize = 8;
+/// Number of active elements in the FWI full-ring section.
+const FWI_ACTIVE_ELEMENTS: usize = 16;
 
-/// Number of transmit sources on the superior hemispherical arc.
-const N_SHOTS: usize = 4;
+/// Number of transmit sources on the full-ring arc (every other element).
+const N_SHOTS: usize = 8;
 
 /// Number of receivers for each shot: all active transducer samples except the
 /// element used as the current transmitter.
@@ -355,15 +540,14 @@ const PANEL: usize = 320;
 /// Colorbar height below each panel [px].
 const COLORBAR_H: usize = 20;
 
-/// Active transducer element positions sampled from a 1024-element hemisphere.
+/// Active transducer element positions sampled from a 1024-element full-ring array.
 ///
 /// # Design rationale
 ///
-/// The 3-D clinical array is a concave-down superior hemisphere focused through
-/// the skull.  This quasi-2-D FWI example uses one meridional section of that
-/// aperture.  Element coordinates lie outside the head and outside the CPML
-/// while keeping the natural geometric focus at the grid centre, the same
-/// anatomical target proxy used for the companion CT phase-correction example.
+/// Sixteen elements are uniformly distributed around the full ring at radius
+/// R_ARRAY = 20 voxels from centre (32, 32).  Full-ring coverage provides
+/// illumination from all azimuths, eliminating the shadow zone that degrades
+/// convergence with superior-hemisphere-only apertures.
 ///
 /// # CPML safety constraint
 ///
@@ -372,35 +556,48 @@ const COLORBAR_H: usize = 20;
 ///
 /// # Geometry derivation
 ///
-/// Centre = (32, 32), R_ARRAY = 20 voxels (2 voxels outside R_HEAD = 18).
-/// Eight points approximate a uniform angular sample of the upper meridian
-/// θ ∈ [200°, 340°]:
+/// Centre = (32, 32), R_ARRAY = 20 voxels.
+/// Sixteen points at θ_k = k × 22.5°, k = 0..15:
 ///
 /// ```text
-/// ix = 32 + round(R_ARRAY · cos θ)
-/// iz = 32 + round(R_ARRAY · sin θ),  sin θ < 0 for superior elements
+/// ix = 32 + round(R_ARRAY · cos θ_k)
+/// iz = 32 + round(R_ARRAY · sin θ_k)
 /// ```
 ///
-/// z increases downward in array indexing; all active elements are therefore
-/// above the skull and face the intracranial target.
+/// k=0  (  0.0°): ix=52, iz=32   k=1  ( 22.5°): ix=50, iz=40
+/// k=2  ( 45.0°): ix=46, iz=46   k=3  ( 67.5°): ix=40, iz=50
+/// k=4  ( 90.0°): ix=32, iz=52   k=5  (112.5°): ix=24, iz=50
+/// k=6  (135.0°): ix=18, iz=46   k=7  (157.5°): ix=14, iz=40
+/// k=8  (180.0°): ix=12, iz=32   k=9  (202.5°): ix=14, iz=24
+/// k=10 (225.0°): ix=18, iz=18   k=11 (247.5°): ix=24, iz=14
+/// k=12 (270.0°): ix=32, iz=12   k=13 (292.5°): ix=40, iz=14
+/// k=14 (315.0°): ix=46, iz=18   k=15 (337.5°): ix=50, iz=24
 ///
-/// Reference: Marsac 2017 — hemispherical transcranial ultrasound geometry.
+/// Reference: Guasch 2020 — full-waveform inversion with complete angular coverage.
 const ACTIVE_TRANSDUCER_POSITIONS: [(usize, usize); FWI_ACTIVE_ELEMENTS] = [
-    (13, 25),
-    (17, 19),
-    (22, 15),
-    (29, 12),
-    (35, 12),
-    (42, 15),
-    (47, 19),
-    (51, 25),
+    (52, 32), // k=0  (  0.0°)
+    (50, 40), // k=1  ( 22.5°)
+    (46, 46), // k=2  ( 45.0°)
+    (40, 50), // k=3  ( 67.5°)
+    (32, 52), // k=4  ( 90.0°)
+    (24, 50), // k=5  (112.5°)
+    (18, 46), // k=6  (135.0°)
+    (14, 40), // k=7  (157.5°)
+    (12, 32), // k=8  (180.0°)
+    (14, 24), // k=9  (202.5°)
+    (18, 18), // k=10 (225.0°)
+    (24, 14), // k=11 (247.5°)
+    (32, 12), // k=12 (270.0°)
+    (40, 14), // k=13 (292.5°)
+    (46, 18), // k=14 (315.0°)
+    (50, 24), // k=15 (337.5°)
 ];
 
 /// Transmit subset indexes into `ACTIVE_TRANSDUCER_POSITIONS`.
 ///
-/// These four elements bracket the superior aperture and preserve angular
-/// diversity without turning every receiver into an independent shot.
-const TRANSMIT_ELEMENT_INDICES: [usize; N_SHOTS] = [1, 3, 4, 6];
+/// Every other element transmits (even indices), giving 8 shots with maximally
+/// diverse angular coverage across the full ring.
+const TRANSMIT_ELEMENT_INDICES: [usize; N_SHOTS] = [0, 2, 4, 6, 8, 10, 12, 14];
 
 /// Build the receiver mask on the same superior hemispherical transducer arc.
 ///
@@ -526,7 +723,7 @@ fn gaussian_blur_xz(model: &Array3<f64>, sigma: f64) -> Array3<f64> {
 ///
 /// `hu` has shape `(cols, rows, depth)` = `(x, y, z)` in the patient frame.
 /// `spacing_mm` is `[dx, dy, dz]` — physical mm per voxel on each axis.
-#[cfg(feature = "ritk")]
+
 struct CtVolume {
     hu: Array3<f64>,
     spacing_mm: [f64; 3],
@@ -547,7 +744,7 @@ struct CtVolume {
 /// - z = superior-inferior (slice axis / depth)
 ///
 /// This matches the convention used in `skull_ct_phase_correction.rs`.
-#[cfg(feature = "ritk")]
+
 fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
     type Backend = NdArrayBackend<f32>;
     let device = Default::default();
@@ -617,6 +814,12 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
                     }
                 }
             }
+
+            // Clamp to physically valid DICOM HU range.
+            // Values below −1024 are FOV-padding artefacts (some scanners write −3024 or
+            // −4048 outside the reconstructed circle).  Values above 3071 are outside the
+            // 12-bit DICOM signed range.  Neither appears in real tissue.
+            hu.mapv_inplace(|h| h.clamp(-1024.0, 3071.0));
 
             // Assumed spacing: 0.5 mm in-plane, 4.0 mm slice (256mm FOV / 512 px)
             return Ok(CtVolume {
@@ -689,6 +892,12 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
         }
     }
 
+    // Clamp to physically valid DICOM HU range.
+    // Values below −1024 are FOV-padding artefacts (some scanners write −3024 or
+    // −4048 outside the reconstructed circle).  Values above 3071 are outside the
+    // 12-bit DICOM signed range.  Neither appears in real tissue.
+    hu.mapv_inplace(|h| h.clamp(-1024.0, 3071.0));
+
     // spacing[0..2] = [x_spacing, y_spacing, z_spacing] in mm for both
     // DICOM (pixel_spacing + slice_thickness) and NIfTI (affine column norms).
     Ok(CtVolume {
@@ -717,7 +926,7 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
 /// `DicomSeriesInfo`.  `load_dicom_series` will sort them spatially by
 /// `ImagePositionPatient`, producing a correct 3-D volume regardless of the
 /// per-slice UID anomaly.
-#[cfg(feature = "ritk")]
+
 fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
     let max_files = series.iter().map(|s| s.file_paths.len()).max().unwrap_or(0);
 
@@ -771,7 +980,7 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
 ///
 /// The equatorial skull cross-section has the largest bone ring area and gives
 /// the most informative FWI slice for hemispherical array geometry.
-#[cfg(feature = "ritk")]
+
 fn skull_equator_z(hu: &Array3<f64>) -> usize {
     let (_, _, nz) = hu.dim();
     (0..nz)
@@ -787,7 +996,7 @@ fn skull_equator_z(hu: &Array3<f64>) -> usize {
 /// Find the centroid (x_ct, y_ct) of bone voxels on an axial slice.
 ///
 /// Falls back to the geometric centre when no bone is present.
-#[cfg(feature = "ritk")]
+
 fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
     let slice = hu.slice(ndarray::s![.., .., z]);
     let (nx, ny) = slice.dim();
@@ -810,7 +1019,7 @@ fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
 ///
 /// Clamps out-of-bound indices to the boundary (reflects water coupling at
 /// CT field-of-view edges).
-#[cfg(feature = "ritk")]
+
 fn bilinear_hu(hu: &Array3<f64>, x: f64, y: f64, z: usize) -> f64 {
     let (nx, ny, nz) = hu.dim();
     if z >= nz {
@@ -836,7 +1045,7 @@ fn bilinear_hu(hu: &Array3<f64>, x: f64, y: f64, z: usize) -> f64 {
 ///
 /// Returns `nx.min(ny) / 4` as a safe fallback when no bone is found
 /// (prevents division-by-zero in the scale computation).
-#[cfg(feature = "ritk")]
+
 fn skull_outer_radius_ct(hu: &Array3<f64>, z: usize, cx: f64, cy: f64) -> f64 {
     let (nx, ny, _) = hu.dim();
     let r = hu
@@ -882,7 +1091,7 @@ fn skull_outer_radius_ct(hu: &Array3<f64>, z: usize, cx: f64, cy: f64) -> f64 {
 /// 6. Broadcast the 2-D result to all `NY` planes.
 ///
 /// FWI ix (lateral) maps to CT x (columns); FWI iz (depth) maps to CT y (rows).
-#[cfg(feature = "ritk")]
+
 fn resample_ct_to_fwi_grid(vol: &CtVolume) -> Array3<f64> {
     let z_eq = skull_equator_z(&vol.hu);
     let (cx, cy) = skull_centroid_2d(&vol.hu, z_eq);
@@ -932,48 +1141,52 @@ fn resample_ct_to_fwi_grid(vol: &CtVolume) -> Array3<f64> {
 /// 1. `KWAVERS_SEISMIC_CT_PATH` env var (DICOM dir or NIfTI file).
 /// 2. `TRANSCRANIAL_CT_PATH` env var for compatibility with older examples.
 /// 3. Repository-local Medimodel DICOM directory used by the phase demo.
-/// 4. Synthetic circular phantom — self-contained fallback.
+/// 4. Synthetic circular phantom — last-resort fallback only if CT load fails.
 ///
-/// The ritk feature must be enabled for real CT loading.
-fn build_phantom_for_demo() -> SkullPhantom {
-    #[cfg(feature = "ritk")]
-    {
-        let ct_path = std::env::var("KWAVERS_SEISMIC_CT_PATH")
-            .or_else(|_| std::env::var("TRANSCRANIAL_CT_PATH"))
-            .map(PathBuf::from)
-            .ok()
-            .or_else(|| {
-                let default_path = PathBuf::from(DEFAULT_MEDIMODEL_DICOM_DIR);
-                default_path.exists().then_some(default_path)
-            });
+/// Priority: KWAVERS_SEISMIC_CT_PATH env var → TRANSCRANIAL_CT_PATH env var →
+/// repository-local Medimodel DICOM at DEFAULT_MEDIMODEL_DICOM_DIR.
+fn build_phantom_for_demo() -> (SkullPhantom, Option<CtVolume>) {
+    let ct_path = std::env::var("KWAVERS_SEISMIC_CT_PATH")
+        .or_else(|_| std::env::var("TRANSCRANIAL_CT_PATH"))
+        .map(PathBuf::from)
+        .ok()
+        .or_else(|| {
+            let default_path = PathBuf::from(DEFAULT_MEDIMODEL_DICOM_DIR);
+            default_path.exists().then_some(default_path)
+        });
 
-        if let Some(ct_path) = ct_path {
-            print!("  CT source       : {}  ", ct_path.display());
-            match load_ct_volume(&ct_path) {
-                Ok(vol) => {
-                    let (cx, cy, nz) = vol.hu.dim();
-                    println!(
-                        "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
-                        vol.spacing_mm[0], vol.spacing_mm[1], vol.spacing_mm[2]
-                    );
-                    let hu = resample_ct_to_fwi_grid(&vol);
-                    let sound_speed = hu.mapv(hu_to_sound_speed);
-                    let density = hu.mapv(hu_to_density);
-                    return SkullPhantom {
-                        sound_speed,
-                        density,
-                        hu,
-                    };
-                }
-                Err(e) => {
-                    eprintln!("\n  CT load failed: {e:#}");
-                    eprintln!("  Falling back to synthetic phantom.");
-                }
+    if let Some(ct_path) = ct_path {
+        print!("  CT source       : {}  ", ct_path.display());
+        match load_ct_volume(&ct_path) {
+            Ok(vol) => {
+                let (cx, cy, nz) = vol.hu.dim();
+                println!(
+                    "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
+                    vol.spacing_mm[0], vol.spacing_mm[1], vol.spacing_mm[2]
+                );
+                let hu_fwi = resample_ct_to_fwi_grid(&vol);
+                let sound_speed = hu_fwi.mapv(hu_to_sound_speed);
+                let density = hu_fwi.mapv(hu_to_density);
+                let phantom = SkullPhantom {
+                    sound_speed,
+                    density,
+                    hu: hu_fwi,
+                };
+                return (phantom, Some(vol));
+            }
+            Err(e) => {
+                eprintln!("\n  CT load failed: {e:#}");
+                eprintln!("  Falling back to synthetic phantom.");
             }
         }
+    } else {
+        eprintln!(
+            "  No CT found at default path '{}'; set KWAVERS_SEISMIC_CT_PATH to override.",
+            DEFAULT_MEDIMODEL_DICOM_DIR
+        );
     }
-    println!("  Phantom         : synthetic (set KWAVERS_SEISMIC_CT_PATH=<path> to use real CT)");
-    build_skull_phantom()
+    println!("  Phantom         : synthetic fallback");
+    (build_skull_phantom(), None)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1037,6 +1250,61 @@ fn print_quality_report(true_model: &Array3<f64>, reconstructed: &Array3<f64>) -
     l2
 }
 
+/// Print RMSE, Pearson r, max |error|, ±10 m/s fraction for brain voxels only
+/// (geometric: r < R_SKULL_IN from grid center, independent of FWI frozen mask).
+///
+/// Uses the same geometric boundary as `write_brain_tissue_png` so the quality
+/// metrics and visualization are consistent.
+fn print_quality_report_brain(true_model: &Array3<f64>, reconstructed: &Array3<f64>) {
+    let cx = (NX / 2) as f64;
+    let cz = (NZ / 2) as f64;
+    let free_pairs: Vec<(f64, f64)> = true_model
+        .indexed_iter()
+        .filter(|((ix, _iy, iz), _)| {
+            let r = (((*ix as f64) - cx).powi(2) + ((*iz as f64) - cz).powi(2)).sqrt();
+            r < R_SKULL_IN as f64
+        })
+        .map(|((ix, _iy, iz), &t)| (t, reconstructed[[ix, _iy, iz]]))
+        .collect();
+    print_quality_pairs(&free_pairs);
+}
+
+fn print_quality_pairs(free_pairs: &[(f64, f64)]) {
+    let n = free_pairs.len() as f64;
+    if n < 2.0 {
+        println!("  (no free voxels)");
+        return;
+    }
+    let l2: f64 = free_pairs.iter().map(|&(t, r)| (t - r).powi(2)).sum();
+    let rmse = (l2 / n).sqrt();
+    let mean_t = free_pairs.iter().map(|&(t, _)| t).sum::<f64>() / n;
+    let mean_r = free_pairs.iter().map(|&(_, r)| r).sum::<f64>() / n;
+    let cov: f64 = free_pairs
+        .iter()
+        .map(|&(t, r)| (t - mean_t) * (r - mean_r))
+        .sum();
+    let var_t: f64 = free_pairs.iter().map(|&(t, _)| (t - mean_t).powi(2)).sum();
+    let var_r: f64 = free_pairs.iter().map(|&(_, r)| (r - mean_r).powi(2)).sum();
+    let max_err = free_pairs
+        .iter()
+        .map(|&(t, r)| (t - r).abs())
+        .fold(0.0_f64, f64::max);
+    let within_10 = free_pairs
+        .iter()
+        .filter(|&&(t, r)| (t - r).abs() <= 10.0)
+        .count() as f64
+        / n
+        * 100.0;
+    println!("  RMSE            : {rmse:8.2} m/s");
+    let denom = (var_t * var_r).sqrt();
+    if denom > f64::EPSILON {
+        let pearson = cov / denom;
+        println!("  Pearson r       : {pearson:8.4}");
+    }
+    println!("  Max |error|     : {max_err:8.2} m/s");
+    println!("  Voxels ±10 m/s  : {within_10:7.1} %");
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Image output
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1097,6 +1365,7 @@ fn draw_velocity_panel(
     width: usize,
     height: usize,
     x_offset: usize,
+    y_offset: usize,
     model: &Array3<f64>,
     c_lo: f64,
     c_hi: f64,
@@ -1106,7 +1375,7 @@ fn draw_velocity_panel(
             let ix = (px * NX / PANEL).min(NX - 1);
             let iz = (py * NZ / PANEL).min(NZ - 1);
             let color = velocity_color(model[[ix, 0, iz]], c_lo, c_hi);
-            put_pixel(rgb, width, height, x_offset + px, py, color);
+            put_pixel(rgb, width, height, x_offset + px, y_offset + py, color);
         }
     }
 }
@@ -1117,6 +1386,7 @@ fn draw_acquisition_markers(
     width: usize,
     height: usize,
     x_offset: usize,
+    y_offset: usize,
     shot_positions: &[(usize, usize)],
     active_elements: &[(usize, usize)],
 ) {
@@ -1131,7 +1401,7 @@ fn draw_acquisition_markers(
                     width,
                     height,
                     x_offset + rx.saturating_sub(1) + dx,
-                    rz.saturating_sub(1) + dy,
+                    y_offset + rz.saturating_sub(1) + dy,
                     [255, 255, 0],
                 );
             }
@@ -1149,7 +1419,7 @@ fn draw_acquisition_markers(
                     width,
                     height,
                     x_offset + sx.saturating_sub(1) + dx,
-                    sz.saturating_sub(1) + dy,
+                    y_offset + sz.saturating_sub(1) + dy,
                     [255, 255, 255], // white — sources
                 );
             }
@@ -1157,12 +1427,13 @@ fn draw_acquisition_markers(
     }
 }
 
-/// Draw a velocity colorbar strip at y = PANEL..PANEL+COLORBAR_H.
+/// Draw a velocity colorbar strip at y = y_offset + PANEL .. y_offset + PANEL + COLORBAR_H.
 fn draw_colorbar(
     rgb: &mut [u8],
     width: usize,
     height: usize,
     x_offset: usize,
+    y_offset: usize,
     c_lo: f64,
     c_hi: f64,
 ) {
@@ -1171,27 +1442,38 @@ fn draw_colorbar(
         let c = c_lo + t * (c_hi - c_lo);
         let color = velocity_color(c, c_lo, c_hi);
         for dy in 0..COLORBAR_H {
-            put_pixel(rgb, width, height, x_offset + px, PANEL + dy, color);
+            put_pixel(
+                rgb,
+                width,
+                height,
+                x_offset + px,
+                y_offset + PANEL + dy,
+                color,
+            );
         }
     }
 }
 
-/// Write a three-panel PNG: true model | reconstructed | signed difference.
+/// Write a six-panel PNG: top row = CT anatomical triplanar, bottom row = FWI reconstruction.
 ///
 /// # Layout
 ///
 /// ```text
-/// ┌──────────────┬──────────────┬──────────────┐  ← PANEL rows
-/// │  True skull  │ Reconstructed│  Difference  │
-/// │  (CT-derived)│  (FWI output)│  (R − T)     │
-/// ├──────────────┴──────────────┴──────────────┤  ← COLORBAR_H rows
-/// │  velocity colorbar: 1500 m/s (blue) → 2900 m/s (red)           │
-/// └────────────────────────────────────────────┘
-///   3 × PANEL columns
+/// ┌──────────────┬──────────────┬──────────────┐  ← PANEL rows    (top)
+/// │  CT coronal  │   CT axial   │ CT sagittal  │  bone-window CT
+/// │  x-z @ y_c  │  x-y @ z_c   │  y-z @ x_c  │
+/// ├──────────────┴──────────────┴──────────────┤  ← COLORBAR_H rows (CT colorbar)
+/// ├──────────────┬──────────────┬──────────────┤  ← PANEL rows    (bottom)
+/// │  FWI true    │ FWI reconstr │  FWI diff    │  velocity colormap
+/// │ (CT-derived) │  (inverted)  │  (R − T)     │
+/// ├──────────────┴──────────────┴──────────────┤  ← COLORBAR_H rows (velocity colorbar)
+/// └──────────────────────────────────────────────┘
+///   3 × PANEL columns total
 /// ```
 ///
-/// Source positions overlaid as white 3×3 markers; receivers as yellow.
-pub fn write_three_plane_png(
+/// When `ct_vol` is `None` the top row is omitted and the image is the standard
+/// three-panel true | reconstructed | difference layout.
+fn write_three_plane_png(
     path: &Path,
     true_model: &Array3<f64>,
     reconstructed: &Array3<f64>,
@@ -1199,54 +1481,221 @@ pub fn write_three_plane_png(
     c_hi: f64,
     shot_positions: &[(usize, usize)],
     active_elements: &[(usize, usize)],
+    ct_vol: Option<&CtVolume>,
 ) -> io::Result<()> {
     let img_w = 3 * PANEL;
-    let img_h = PANEL + COLORBAR_H;
-    let mut rgb = vec![0_u8; img_w * img_h * 3];
 
-    // Panel 0: true skull model
-    draw_velocity_panel(&mut rgb, img_w, img_h, 0, true_model, c_lo, c_hi);
-    draw_acquisition_markers(&mut rgb, img_w, img_h, 0, shot_positions, active_elements);
-    draw_colorbar(&mut rgb, img_w, img_h, 0, c_lo, c_hi);
+    if let Some(vol) = ct_vol {
+        // ── 3×2 grid: CT triplanar (top) + FWI reconstruction (bottom) ───
+        // Row heights: PANEL + COLORBAR_H for CT, then PANEL + COLORBAR_H for FWI.
+        let img_h = 2 * (PANEL + COLORBAR_H);
+        let mut rgb = vec![0_u8; img_w * img_h * 3];
 
-    // Panel 1: reconstructed model
-    draw_velocity_panel(&mut rgb, img_w, img_h, PANEL, reconstructed, c_lo, c_hi);
-    draw_acquisition_markers(
-        &mut rgb,
-        img_w,
-        img_h,
-        PANEL,
-        shot_positions,
-        active_elements,
-    );
-    draw_colorbar(&mut rgb, img_w, img_h, PANEL, c_lo, c_hi);
+        let (nx_ct, ny_ct, nz_ct) = vol.hu.dim();
+        let cy_ct = ny_ct / 2;
+        let cz_ct = nz_ct / 2;
+        let cx_ct = nx_ct / 2;
 
-    // Panel 2: signed difference (reconstructed − true)
-    let max_diff = true_model
-        .iter()
-        .zip(reconstructed.iter())
-        .map(|(&t, &r)| (r - t).abs())
-        .fold(0.0_f64, f64::max)
-        .max(f64::EPSILON);
+        // ── Top row: CT triplanar ─────────────────────────────────────────
+        // Panel (0,0): Coronal — x-z @ y = cy_ct.
+        for py in 0..PANEL {
+            for px in 0..PANEL {
+                let ix = (px * nx_ct / PANEL).min(nx_ct - 1);
+                let iz = (py * nz_ct / PANEL).min(nz_ct - 1);
+                put_pixel(
+                    &mut rgb,
+                    img_w,
+                    img_h,
+                    px,
+                    py,
+                    ct_bone_color(vol.hu[[ix, cy_ct, iz]]),
+                );
+            }
+        }
+        // Panel (1,0): Axial — x-y @ z = cz_ct.
+        for py in 0..PANEL {
+            for px in 0..PANEL {
+                let ix = (px * nx_ct / PANEL).min(nx_ct - 1);
+                let iy = (py * ny_ct / PANEL).min(ny_ct - 1);
+                put_pixel(
+                    &mut rgb,
+                    img_w,
+                    img_h,
+                    PANEL + px,
+                    py,
+                    ct_bone_color(vol.hu[[ix, iy, cz_ct]]),
+                );
+            }
+        }
+        // Panel (2,0): Sagittal — y-z @ x = cx_ct.
+        for py in 0..PANEL {
+            for px in 0..PANEL {
+                let iy = (px * ny_ct / PANEL).min(ny_ct - 1);
+                let iz = (py * nz_ct / PANEL).min(nz_ct - 1);
+                put_pixel(
+                    &mut rgb,
+                    img_w,
+                    img_h,
+                    2 * PANEL + px,
+                    py,
+                    ct_bone_color(vol.hu[[cx_ct, iy, iz]]),
+                );
+            }
+        }
+        // CT bone-window colorbar spanning all three top panels.
+        const HU_CB_MIN: f64 = -600.0;
+        const HU_CB_MAX: f64 = 1400.0;
+        for px in 0..img_w {
+            let t = px as f64 / (img_w - 1) as f64;
+            let hu = HU_CB_MIN + t * (HU_CB_MAX - HU_CB_MIN);
+            let color = ct_bone_color(hu);
+            for dy in 0..COLORBAR_H {
+                put_pixel(&mut rgb, img_w, img_h, px, PANEL + dy, color);
+            }
+        }
 
-    for py in 0..PANEL {
+        // ── Bottom row: FWI reconstruction ────────────────────────────────
+        let fwi_y0 = PANEL + COLORBAR_H; // y-pixel where FWI row starts
+
+        // Panel (0,1): FWI true velocity — coronal x-z @ y=0.
+        draw_velocity_panel(&mut rgb, img_w, img_h, 0, fwi_y0, true_model, c_lo, c_hi);
+        draw_acquisition_markers(
+            &mut rgb,
+            img_w,
+            img_h,
+            0,
+            fwi_y0,
+            shot_positions,
+            active_elements,
+        );
+        draw_colorbar(&mut rgb, img_w, img_h, 0, fwi_y0, c_lo, c_hi);
+
+        // Panel (1,1): FWI reconstructed velocity — coronal x-z @ y=0.
+        draw_velocity_panel(
+            &mut rgb,
+            img_w,
+            img_h,
+            PANEL,
+            fwi_y0,
+            reconstructed,
+            c_lo,
+            c_hi,
+        );
+        draw_acquisition_markers(
+            &mut rgb,
+            img_w,
+            img_h,
+            PANEL,
+            fwi_y0,
+            shot_positions,
+            active_elements,
+        );
+        draw_colorbar(&mut rgb, img_w, img_h, PANEL, fwi_y0, c_lo, c_hi);
+
+        // Panel (2,1): Signed difference (reconstructed − true).
+        let max_diff = true_model
+            .iter()
+            .zip(reconstructed.iter())
+            .map(|(&t, &r)| (r - t).abs())
+            .fold(0.0_f64, f64::max)
+            .max(f64::EPSILON);
+        for py in 0..PANEL {
+            for px in 0..PANEL {
+                let ix = (px * NX / PANEL).min(NX - 1);
+                let iz = (py * NZ / PANEL).min(NZ - 1);
+                let delta = reconstructed[[ix, 0, iz]] - true_model[[ix, 0, iz]];
+                put_pixel(
+                    &mut rgb,
+                    img_w,
+                    img_h,
+                    2 * PANEL + px,
+                    fwi_y0 + py,
+                    diverging_color(delta, max_diff),
+                );
+            }
+        }
         for px in 0..PANEL {
-            let ix = (px * NX / PANEL).min(NX - 1);
-            let iz = (py * NZ / PANEL).min(NZ - 1);
-            let delta = reconstructed[[ix, 0, iz]] - true_model[[ix, 0, iz]];
-            let color = diverging_color(delta, max_diff);
-            put_pixel(&mut rgb, img_w, img_h, 2 * PANEL + px, py, color);
+            let signed = (2.0 * px as f64 / (PANEL - 1) as f64 - 1.0) * max_diff;
+            let color = diverging_color(signed, max_diff);
+            for dy in 0..COLORBAR_H {
+                put_pixel(
+                    &mut rgb,
+                    img_w,
+                    img_h,
+                    2 * PANEL + px,
+                    fwi_y0 + PANEL + dy,
+                    color,
+                );
+            }
         }
-    }
-    for px in 0..PANEL {
-        let signed = (2.0 * px as f64 / (PANEL - 1) as f64 - 1.0) * max_diff;
-        let color = diverging_color(signed, max_diff);
-        for dy in 0..COLORBAR_H {
-            put_pixel(&mut rgb, img_w, img_h, 2 * PANEL + px, PANEL + dy, color);
-        }
-    }
 
-    write_png(path, &rgb, img_w, img_h)
+        write_png(path, &rgb, img_w, img_h)
+    } else {
+        // ── Fallback: True | Reconstructed | Difference (coronal x-z) ────
+        let img_h = PANEL + COLORBAR_H;
+        let mut rgb = vec![0_u8; img_w * img_h * 3];
+
+        draw_velocity_panel(&mut rgb, img_w, img_h, 0, 0, true_model, c_lo, c_hi);
+        draw_acquisition_markers(
+            &mut rgb,
+            img_w,
+            img_h,
+            0,
+            0,
+            shot_positions,
+            active_elements,
+        );
+        draw_colorbar(&mut rgb, img_w, img_h, 0, 0, c_lo, c_hi);
+
+        draw_velocity_panel(&mut rgb, img_w, img_h, PANEL, 0, reconstructed, c_lo, c_hi);
+        draw_acquisition_markers(
+            &mut rgb,
+            img_w,
+            img_h,
+            PANEL,
+            0,
+            shot_positions,
+            active_elements,
+        );
+        draw_colorbar(&mut rgb, img_w, img_h, PANEL, 0, c_lo, c_hi);
+
+        let max_diff = true_model
+            .iter()
+            .zip(reconstructed.iter())
+            .map(|(&t, &r)| (r - t).abs())
+            .fold(0.0_f64, f64::max)
+            .max(f64::EPSILON);
+        for py in 0..PANEL {
+            for px in 0..PANEL {
+                let ix = (px * NX / PANEL).min(NX - 1);
+                let iz = (py * NZ / PANEL).min(NZ - 1);
+                let delta = reconstructed[[ix, 0, iz]] - true_model[[ix, 0, iz]];
+                let color = diverging_color(delta, max_diff);
+                put_pixel(&mut rgb, img_w, img_h, 2 * PANEL + px, py, color);
+            }
+        }
+        for px in 0..PANEL {
+            let signed = (2.0 * px as f64 / (PANEL - 1) as f64 - 1.0) * max_diff;
+            let color = diverging_color(signed, max_diff);
+            for dy in 0..COLORBAR_H {
+                put_pixel(&mut rgb, img_w, img_h, 2 * PANEL + px, PANEL + dy, color);
+            }
+        }
+        write_png(path, &rgb, img_w, img_h)
+    }
+}
+
+/// Map a Hounsfield unit to a grayscale RGB triplet using the bone window.
+///
+/// Bone window: W = 2000, C = 400 → display range [C − W/2, C + W/2] = [−600, 1400].
+/// HU ≤ −600 maps to black (0,0,0); HU ≥ 1400 maps to white (255,255,255).
+#[inline]
+fn ct_bone_color(hu: f64) -> [u8; 3] {
+    const HU_MIN: f64 = -600.0;
+    const HU_MAX: f64 = 1400.0;
+    let t = ((hu - HU_MIN) / (HU_MAX - HU_MIN)).clamp(0.0, 1.0);
+    let v = (t * 255.0).round() as u8;
+    [v, v, v]
 }
 
 /// Write a 4-panel PPM: true | initial | reconstructed | error.
@@ -1262,31 +1711,50 @@ pub fn write_velocity_panels(
     let img_h = PANEL + COLORBAR_H;
     let mut rgb = vec![0_u8; img_w * img_h * 3];
 
-    draw_velocity_panel(&mut rgb, img_w, img_h, 0, true_model, C_LO, C_HI);
-    draw_acquisition_markers(&mut rgb, img_w, img_h, 0, shot_positions, active_elements);
-    draw_colorbar(&mut rgb, img_w, img_h, 0, C_LO, C_HI);
+    draw_velocity_panel(&mut rgb, img_w, img_h, 0, 0, true_model, C_LO, C_HI);
+    draw_acquisition_markers(
+        &mut rgb,
+        img_w,
+        img_h,
+        0,
+        0,
+        shot_positions,
+        active_elements,
+    );
+    draw_colorbar(&mut rgb, img_w, img_h, 0, 0, C_LO, C_HI);
 
-    draw_velocity_panel(&mut rgb, img_w, img_h, PANEL, initial_model, C_LO, C_HI);
+    draw_velocity_panel(&mut rgb, img_w, img_h, PANEL, 0, initial_model, C_LO, C_HI);
     draw_acquisition_markers(
         &mut rgb,
         img_w,
         img_h,
         PANEL,
+        0,
         shot_positions,
         active_elements,
     );
-    draw_colorbar(&mut rgb, img_w, img_h, PANEL, C_LO, C_HI);
+    draw_colorbar(&mut rgb, img_w, img_h, PANEL, 0, C_LO, C_HI);
 
-    draw_velocity_panel(&mut rgb, img_w, img_h, 2 * PANEL, reconstructed, C_LO, C_HI);
+    draw_velocity_panel(
+        &mut rgb,
+        img_w,
+        img_h,
+        2 * PANEL,
+        0,
+        reconstructed,
+        C_LO,
+        C_HI,
+    );
     draw_acquisition_markers(
         &mut rgb,
         img_w,
         img_h,
         2 * PANEL,
+        0,
         shot_positions,
         active_elements,
     );
-    draw_colorbar(&mut rgb, img_w, img_h, 2 * PANEL, C_LO, C_HI);
+    draw_colorbar(&mut rgb, img_w, img_h, 2 * PANEL, 0, C_LO, C_HI);
 
     let max_diff = true_model
         .iter()
@@ -1377,7 +1845,15 @@ pub fn write_brain_prior_png(
         }
     }
 
-    draw_acquisition_markers(&mut rgb, img_w, img_h, 0, shot_positions, active_elements);
+    draw_acquisition_markers(
+        &mut rgb,
+        img_w,
+        img_h,
+        0,
+        0,
+        shot_positions,
+        active_elements,
+    );
     write_png(path, &rgb, img_w, img_h)
 }
 
@@ -1406,6 +1882,145 @@ pub fn write_rtm_panel(path: &Path, rtm_image: &Array3<f64>) -> std::io::Result<
     writeln!(out, "P6\n{} {}\n255", img_w, img_h)?;
     out.write_all(&rgb)?;
     Ok(())
+}
+
+/// Write a three-panel brain tissue PNG using the tight [BRAIN_C_MIN, BRAIN_C_MAX] colormap.
+///
+/// # Layout
+///
+/// ```text
+/// ┌───────────────┬───────────────┬───────────────┐  ← PANEL rows
+/// │  True brain   │ FWI reconstr  │  Difference   │
+/// │  (MNI prior)  │  (Stage 2)    │  (R − T)      │
+/// ├───────────────┴───────────────┴───────────────┤  ← COLORBAR_H rows
+/// └─────────────────────────────────────────────────┘
+/// ```
+///
+/// Skull voxels are rendered in gray tiers to distinguish them from soft tissue.
+/// The tight velocity range [1480, 1560] m/s makes the ~40 m/s gray/white
+/// matter contrast visible.  Reference: Duck (1990) — tissue acoustic properties.
+///
+/// # Geometry-driven coloring
+///
+/// Brain vs. skull/scalp distinction uses the geometric r < R_SKULL_IN criterion
+/// (distance from grid center, in voxels) rather than the FWI frozen mask.
+/// The FWI frozen mask is velocity-threshold based (~120 cortical bone voxels);
+/// using it here would color the scalp ring with `velocity_color(1556, 1480, 1560)`,
+/// mapping scalp velocity near the colormap top (yellow), creating a false yellow
+/// annulus that visually breaks alignment between the brain region and skull.
+///
+/// The CT-derived velocity at each non-brain voxel determines the gray shade:
+///   c ≥ BONE_VELOCITY_THRESHOLD  → light gray  [200, 200, 200]  (bone / diploe)
+///   1502 ≤ c < 1714              → medium gray [140, 140, 140]  (scalp / soft tissue)
+///   c < 1502                     → dark        [ 40,  40,  40]  (water coupling bath)
+fn write_brain_tissue_png(
+    path: &Path,
+    true_model: &Array3<f64>,
+    reconstructed: &Array3<f64>,
+) -> io::Result<()> {
+    let img_w = 3 * PANEL;
+    let img_h = PANEL + COLORBAR_H;
+    let mut rgb = vec![0_u8; img_w * img_h * 3];
+
+    let cx = (NX / 2) as f64;
+    let cz = (NZ / 2) as f64;
+
+    // Geometric brain test: voxel (ix, iz) is inside brain when its radial
+    // distance from grid center is strictly less than R_SKULL_IN voxels.
+    let is_brain = |ix: usize, iz: usize| -> bool {
+        let r = ((ix as f64 - cx).powi(2) + (iz as f64 - cz).powi(2)).sqrt();
+        r < R_SKULL_IN
+    };
+
+    // Non-brain voxel coloring: 3-tier based on CT-derived velocity.
+    // The true_model retains CT velocity at skull/scalp/water positions because
+    // build_brain_velocity_model only writes MNI tissue velocities for r < R_SKULL_IN.
+    let frozen_color = |c_ref: f64| -> [u8; 3] {
+        if c_ref >= BONE_VELOCITY_THRESHOLD {
+            [200, 200, 200] // bone / diploe
+        } else if c_ref >= 1502.0 {
+            [140, 140, 140] // scalp / soft tissue coupling
+        } else {
+            [40, 40, 40] // water coupling bath
+        }
+    };
+
+    // ── Panel 0: true brain tissue velocity ───────────────────────────────
+    for py in 0..PANEL {
+        for px in 0..PANEL {
+            let ix = (px * NX / PANEL).min(NX - 1);
+            let iz = (py * NZ / PANEL).min(NZ - 1);
+            let color = if is_brain(ix, iz) {
+                velocity_color(true_model[[ix, 0, iz]], BRAIN_C_MIN, BRAIN_C_MAX)
+            } else {
+                frozen_color(true_model[[ix, 0, iz]])
+            };
+            put_pixel(&mut rgb, img_w, img_h, px, py, color);
+        }
+    }
+    for px in 0..PANEL {
+        let t = px as f64 / (PANEL - 1) as f64;
+        let c = BRAIN_C_MIN + t * (BRAIN_C_MAX - BRAIN_C_MIN);
+        let color = velocity_color(c, BRAIN_C_MIN, BRAIN_C_MAX);
+        for dy in 0..COLORBAR_H {
+            put_pixel(&mut rgb, img_w, img_h, px, PANEL + dy, color);
+        }
+    }
+
+    // ── Panel 1: reconstructed brain tissue velocity ───────────────────────
+    for py in 0..PANEL {
+        for px in 0..PANEL {
+            let ix = (px * NX / PANEL).min(NX - 1);
+            let iz = (py * NZ / PANEL).min(NZ - 1);
+            let color = if is_brain(ix, iz) {
+                velocity_color(reconstructed[[ix, 0, iz]], BRAIN_C_MIN, BRAIN_C_MAX)
+            } else {
+                frozen_color(reconstructed[[ix, 0, iz]])
+            };
+            put_pixel(&mut rgb, img_w, img_h, PANEL + px, py, color);
+        }
+    }
+    for px in 0..PANEL {
+        let t = px as f64 / (PANEL - 1) as f64;
+        let c = BRAIN_C_MIN + t * (BRAIN_C_MAX - BRAIN_C_MIN);
+        let color = velocity_color(c, BRAIN_C_MIN, BRAIN_C_MAX);
+        for dy in 0..COLORBAR_H {
+            put_pixel(&mut rgb, img_w, img_h, PANEL + px, PANEL + dy, color);
+        }
+    }
+
+    // ── Panel 2: signed difference (reconstructed − true) ─────────────────
+    // Scale to max observed error among brain voxels (r < R_SKULL_IN), clamped
+    // to ≥ 20 m/s so the colorbar has a meaningful range even if errors are small.
+    let max_diff = true_model
+        .indexed_iter()
+        .filter(|((ix, _, iz), _)| is_brain(*ix, *iz))
+        .map(|((ix, _, iz), &t)| (reconstructed[[ix, 0, iz]] - t).abs())
+        .fold(0.0_f64, f64::max)
+        .max(20.0);
+
+    for py in 0..PANEL {
+        for px in 0..PANEL {
+            let ix = (px * NX / PANEL).min(NX - 1);
+            let iz = (py * NZ / PANEL).min(NZ - 1);
+            let color = if is_brain(ix, iz) {
+                let delta = reconstructed[[ix, 0, iz]] - true_model[[ix, 0, iz]];
+                diverging_color(delta, max_diff)
+            } else {
+                frozen_color(true_model[[ix, 0, iz]])
+            };
+            put_pixel(&mut rgb, img_w, img_h, 2 * PANEL + px, py, color);
+        }
+    }
+    for px in 0..PANEL {
+        let signed = (2.0 * px as f64 / (PANEL - 1) as f64 - 1.0) * max_diff;
+        let color = diverging_color(signed, max_diff);
+        for dy in 0..COLORBAR_H {
+            put_pixel(&mut rgb, img_w, img_h, 2 * PANEL + px, PANEL + dy, color);
+        }
+    }
+
+    write_png(path, &rgb, img_w, img_h)
 }
 
 /// Write the central-column (x = NX/2) velocity profiles to CSV.
@@ -1466,7 +2081,7 @@ fn main() -> KwaversResult<()> {
 
     // ── 1. Skull phantom ──────────────────────────────────────────────────
     println!("[ 1 / 6 ]  Building skull phantom …");
-    let phantom = build_phantom_for_demo();
+    let (phantom, ct_vol) = build_phantom_for_demo();
 
     let c_min = phantom
         .sound_speed
@@ -1542,31 +2157,42 @@ fn main() -> KwaversResult<()> {
     // overwhelm the recorded wavefield, producing J ≈ 10⁹ Pa²·s (catastrophic).
     // Minimum usable frequency given this CPML thickness: ≈ 50 kHz.
     //
-    // Schedule: 60 kHz → 150 kHz with 5-8 iterations per scale.
+    // Schedule: 40 kHz → 80 kHz → 150 kHz with 10-12-15 iterations per scale.
     // Each scale starts from the previous scale's result; nt is computed per scale
     // to include 3 source periods (for the low-frequency wavelet to decay fully).
     //
     //   nt(f₀) = ceil((t_transit × 1.2  +  3.0 / f₀) / dt)
     //
-    // Initial model: Gaussian-blurred CT (σ = 3 voxels).  At 60 kHz,
-    // T/2 = 8.3 μs > Δt_skull(blurred) ≈ 2.7 μs → no cycle-skipping.
+    // Three scales improve initial model recovery at the lowest frequency before
+    // refining skull boundaries at intermediate and full resolution.
+    //
+    // At 40 kHz: T/2 = 12.5 μs > Δt_skull = 5.4 μs → safe ✓ (start here)
+    // At 80 kHz: T/2 =  6.25 μs > Δt_skull = 5.4 μs → safe ✓
+    // At 150 kHz: T/2 = 3.3 μs < Δt_skull = 5.4 μs → cycle-skipping if from
+    //   uniform 1500 m/s, but safe when starting from 80 kHz result.
+    //
+    // Initial model: Gaussian-blurred CT (σ = 3 voxels).  At 40 kHz,
+    // T/2 = 12.5 μs > Δt_skull(blurred) ≈ 2.7 μs → no cycle-skipping.
     //
     // Physical constraint: all tissues have c ≥ c_water = 1500 m/s.
     // Sub-water-speed artefacts are clamped after each scale.
     //
     // Source mute radius: scaled with wavelength = floor(c_water / (2·f₀·dx)).
-    // At 60 kHz:  radius = floor(1500/(2×60000×0.003)) = 4 voxels.
+    // At 40 kHz:  radius = floor(1500/(2×40000×0.003)) = 6 voxels.
+    // At 80 kHz:  radius = floor(1500/(2×80000×0.003)) = 3 voxels.
     // At 150 kHz: radius = floor(1500/(2×150000×0.003)) = 2 voxels (clamped to 2 minimum).
     let scales: &[(f64, usize)] = &[
-        (60_000.0, 5),  // f₀ Hz, n_iter — safe from uniform 1500 m/s (T/2 > Δt_skull)
-        (150_000.0, 8), // refine skull boundaries at full ultrasound resolution
+        (40_000.0, 10),  // f₀ Hz, n_iter — safe from blurred CT prior (T/2 > Δt_skull)
+        (80_000.0, 12),  // intermediate refinement — still cycle-skip safe
+        (150_000.0, 15), // refine skull boundaries at full ultrasound resolution
     ];
 
     println!("  dt              : {:.1} ns", dt * 1e9);
     println!(
-        "  Scales          : {} → {} kHz  (5-8 iterations)",
+        "  Scales          : {} → {} → {} kHz  (10-12-15 iterations)",
         scales[0].0 * 1e-3,
-        scales[1].0 * 1e-3
+        scales[1].0 * 1e-3,
+        scales[2].0 * 1e-3
     );
     for &(f0, n) in scales {
         let nt_s = ((t_transit * 1.2 + 3.0 / f0) / dt).ceil() as usize;
@@ -1584,7 +2210,7 @@ fn main() -> KwaversResult<()> {
     // ── 4. Hemispherical acquisition geometry ─────────────────────────────
     println!("\n[ 4 / 6 ]  Building hemispherical acquisition geometry …");
     println!("  Full aperture    : {INSIGHTEC_ELEMENT_COUNT} elements, 650 kHz design authority");
-    println!("  FWI section      : {FWI_ACTIVE_ELEMENTS} active superior-hemisphere samples");
+    println!("  FWI section      : {FWI_ACTIVE_ELEMENTS} active full-ring samples");
     println!("  Transmits        : {N_SHOTS} shots; receivers/shot = {N_RECEIVERS} on same arc");
     for (s, &element_index) in TRANSMIT_ELEMENT_INDICES.iter().enumerate() {
         let (ix, iz) = ACTIVE_TRANSDUCER_POSITIONS[element_index];
@@ -1801,40 +2427,151 @@ fn main() -> KwaversResult<()> {
     println!("  Joint J (150 kHz) : {j_final:.6e} Pa²·s");
     println!("  J reduction       : {j_reduction_pct:7.1} %  (150 kHz joint L2)");
 
-    // ── 6. RTM — zero-lag cross-correlation imaging ───────────────────────
-    println!("\n[ 6 / 6 ]  Reverse Time Migration (reflectivity image) …");
+    // ── 6. Stage-2 brain tissue FWI (Guasch 2020 style) ─────────────────
+    println!("\n[ 6 / 7 ]  Stage-2 brain tissue FWI (skull frozen, MNI tissue prior) …");
 
-    // Use shot 0 (upper-left source) for the RTM zero-lag imaging condition.
-    // I(x) = ∫ p_src(x,t) · p_recv(x,T−t) dt   (Baysal 1983)
-    let (geom0, _obs0) = &shots_fine[0];
-    let fwi_rtm = FwiProcessor::new(FwiParameters {
-        max_iterations: 1,
-        frequency: F0_HZ,
-        nt: nt_fine,
-        dt,
-        n_trace: N_RECEIVERS,
-        n_depth: 1,
-        step_size: STEP_SIZE,
-        tolerance: 1e-12,
-        regularization: RegularizationParameters {
-            tikhonov_weight: 0.0,
-            tv_weight: 0.0,
-            smoothness_weight: 0.0,
-        },
-        source_mute_radius: 4,
-    });
-    let src_snapshot = fwi_rtm.generate_synthetic_data(&reconstructed, geom0, &grid)?;
+    let (brain_true_model, brain_reconstructed) =
+        match build_brain_velocity_model(&phantom, Path::new(DEFAULT_MNI_DIR)) {
+            Err(e) => {
+                eprintln!("  MNI tissue maps unavailable ({e:#}); skipping Stage 2.");
+                (None, None)
+            }
+            Ok(brain_true) => {
+                // Skull mask: bone voxels frozen at CT-derived velocity.
+                let skull_mask = build_skull_mask(&phantom.sound_speed);
+                let n_frozen = skull_mask.iter().filter(|&&b| b).count();
+                let n_free = skull_mask.len() - n_frozen;
+                println!(
+                "  Skull mask        : {n_frozen} frozen bone voxels, {n_free} free brain voxels"
+            );
 
+                // Velocity range of the true brain tissue model (brain only).
+                let (bt_min, bt_max) = skull_mask
+                    .indexed_iter()
+                    .filter(|(_, &frozen)| !frozen)
+                    .map(|((ix, iy, iz), _)| brain_true[[ix, iy, iz]])
+                    .fold((f64::INFINITY, f64::NEG_INFINITY), |(mn, mx), c| {
+                        (mn.min(c), mx.max(c))
+                    });
+                println!("  True brain c      : [{bt_min:.1}, {bt_max:.1}] m/s");
+
+                // Stage-2 FWI processor: brain tissue frequencies + tight bounds.
+                let nt_brain = {
+                    // Total sim time: 3 Ricker half-periods + full domain transit.
+                    let domain_transit_s = (NX as f64 * DX) / C_WATER;
+                    let source_dur_s = 3.0 / F0_BRAIN_HZ;
+                    ((domain_transit_s + source_dur_s) / dt).ceil() as usize
+                };
+                let fwi_brain = FwiProcessor::new(FwiParameters {
+                    max_iterations: N_BRAIN_ITER,
+                    frequency: F0_BRAIN_HZ,
+                    nt: nt_brain,
+                    dt,
+                    n_trace: N_RECEIVERS,
+                    n_depth: 1,
+                    step_size: STEP_SIZE_BRAIN,
+                    tolerance: 1e-14,
+                    regularization: RegularizationParameters {
+                        tikhonov_weight: 0.0,
+                        tv_weight: 0.0,
+                        smoothness_weight: 0.0,
+                    },
+                    source_mute_radius: 2,
+                });
+
+                // Generate observed gathers using the true brain tissue model.
+                let mut brain_shots: Vec<(FwiGeometry, Array2<f64>)> = Vec::with_capacity(N_SHOTS);
+                let t_brain_obs = Instant::now();
+                for &element_index in &TRANSMIT_ELEMENT_INDICES {
+                    let geom = build_shot(element_index, F0_BRAIN_HZ, nt_brain, dt);
+                    match fwi_brain.generate_synthetic_data(&brain_true, &geom, &grid) {
+                        Ok(obs) => brain_shots.push((geom, obs)),
+                        Err(e) => {
+                            eprintln!("  Brain gather failed for element {element_index}: {e:#}");
+                        }
+                    }
+                }
+                println!(
+                    "  {N_SHOTS} brain gathers at {:.0} kHz ({:.1} s)",
+                    F0_BRAIN_HZ * 1e-3,
+                    t_brain_obs.elapsed().as_secs_f32()
+                );
+
+                if brain_shots.is_empty() {
+                    eprintln!("  No brain shots succeeded; skipping Stage 2.");
+                    (Some(brain_true), None)
+                } else {
+                    // Initial brain model: uniform water inside skull, bone frozen.
+                    let mut brain_initial =
+                        skull_mask.mapv(|frozen| if frozen { 0.0_f64 } else { C_WATER });
+                    // Fill frozen voxels with CT skull velocity for the reference model.
+                    Zip::from(&mut brain_initial)
+                        .and(&skull_mask)
+                        .and(&phantom.sound_speed)
+                        .for_each(|c, &frozen, &ct| {
+                            if frozen {
+                                *c = ct;
+                            }
+                        });
+
+                    println!(
+                        "  Running {N_BRAIN_ITER} iterations at {:.0} kHz (nt={nt_brain}) …",
+                        F0_BRAIN_HZ * 1e-3
+                    );
+                    let t_brain_inv = Instant::now();
+                    match fwi_brain.invert_multi_source_masked(
+                        &brain_shots,
+                        &brain_initial,
+                        &phantom.sound_speed, // skull reference (frozen voxels)
+                        &skull_mask,
+                        BRAIN_C_MIN,
+                        BRAIN_C_MAX,
+                        &grid,
+                    ) {
+                        Ok(brain_recon) => {
+                            println!(
+                                "  Brain FWI done ({:.1} s)",
+                                t_brain_inv.elapsed().as_secs_f32()
+                            );
+                            println!("  Quality (brain voxels only, r < R_SKULL_IN):");
+                            print_quality_report_brain(&brain_true, &brain_recon);
+                            (Some(brain_true), Some(brain_recon))
+                        }
+                        Err(e) => {
+                            eprintln!("  Brain FWI failed: {e:#}");
+                            (Some(brain_true), None)
+                        }
+                    }
+                }
+            }
+        };
+
+    // ── 7. RTM — zero-lag cross-correlation imaging ───────────────────────
+    println!("\n[ 7 / 7 ]  Reverse Time Migration (reflectivity image) …");
+
+    // Build the receiver snapshot directly from observed shot-0 seismograms.
+    // For each active receiver r at grid position (i, k) we project the RMS
+    // of its observed trace onto the grid.  This avoids a redundant forward
+    // simulation (which caused an OOM crash on debug binaries after the long
+    // FWI run) while providing the correct spatial energy distribution for the
+    // zero-lag imaging condition I(x) = ∫ p_src(x,t)·p_recv(x,T−t) dt
+    // (Baysal et al., 1983).
+    let (geom0, obs0) = &shots_fine[0];
     let mut recv_snapshot = Array3::<f64>::zeros((NX, NY, NZ));
     {
         let recv_mask = &geom0.sensor_mask;
+        let mut recv_idx = 0usize;
         for ((i, _j, k), &active) in recv_mask.indexed_iter() {
             if active {
-                let n_t = src_snapshot.ncols();
-                if n_t > 0 {
-                    recv_snapshot[[i, 0, k]] = src_snapshot[[0, n_t - 1]];
+                if recv_idx < obs0.nrows() {
+                    let trace = obs0.row(recv_idx);
+                    let nt_obs = trace.len().max(1);
+                    // RMS amplitude of the observed trace: scalar proxy for the
+                    // receiver wavefield energy at this grid point.
+                    let rms = (trace.iter().map(|&v| v * v).sum::<f64>() / nt_obs as f64).sqrt();
+                    recv_snapshot[[i, 0, k]] = rms;
                 }
-                break;
+                recv_idx += 1;
             }
         }
     }
@@ -1873,6 +2610,7 @@ fn main() -> KwaversResult<()> {
     let rtm_path = abs_dir.join(format!("{base}_rtm.ppm"));
     let brain_prior_path = abs_dir.join(format!("{base}_ct_brain_prior.png"));
     let csv_path = abs_dir.join(format!("{base}.csv"));
+    let brain_tissue_path = abs_dir.join(format!("{base}_brain_tissue.png"));
 
     let shot_positions = transmit_positions();
     let active_elements: Vec<(usize, usize)> = ACTIVE_TRANSDUCER_POSITIONS.to_vec();
@@ -1885,6 +2623,7 @@ fn main() -> KwaversResult<()> {
         C_HI,
         &shot_positions,
         &active_elements,
+        ct_vol.as_ref(),
     )
     .map_err(|e| KwaversError::InvalidInput(format!("PNG write failed: {e}")))?;
 
@@ -1912,12 +2651,21 @@ fn main() -> KwaversResult<()> {
     write_velocity_csv(&csv_path, &true_model, &initial_model, &reconstructed)
         .map_err(|e| KwaversError::InvalidInput(format!("CSV write failed: {e}")))?;
 
+    // Brain tissue PNG — written only when Stage-2 FWI succeeded.
+    if let (Some(bt_true), Some(bt_recon)) = (&brain_true_model, &brain_reconstructed) {
+        write_brain_tissue_png(&brain_tissue_path, bt_true, bt_recon).map_err(|e| {
+            KwaversError::InvalidInput(format!("brain tissue PNG write failed: {e}"))
+        })?;
+    }
+
     println!("\n  Output directory  : {}", abs_dir.display());
     println!("\n  Wrote images and data:");
-    println!(
-        "    {}  (PNG three-panel: true | reconstructed | difference)",
-        three_plane_path.display()
-    );
+    let three_plane_desc = if ct_vol.is_some() {
+        "PNG 3×2: CT coronal|axial|sagittal (top) / FWI true|reconstructed|difference (bottom)"
+    } else {
+        "PNG: true skull (FWI grid) | FWI reconstructed | difference — coronal x-z"
+    };
+    println!("    {}  ({})", three_plane_path.display(), three_plane_desc);
     println!(
         "    {}  (PPM 4-panel: true | initial | reconstructed | error)",
         velocity_ppm_path.display()
@@ -1934,14 +2682,34 @@ fn main() -> KwaversResult<()> {
         "    {}  (CSV depth profile at x = NX/2)",
         csv_path.display()
     );
-    println!(
-        "  Image size        : {PANEL}×{PANEL} px per panel, 3 panels, {COLORBAR_H}px colorbar"
-    );
+    if brain_reconstructed.is_some() {
+        println!(
+            "    {}  (PNG brain tissue: true|reconstructed|difference, [1480,1560] m/s colormap)",
+            brain_tissue_path.display()
+        );
+    }
+    if ct_vol.is_some() {
+        println!(
+            "  Image size        : {}×{} px (3×{PANEL} wide, 2×({PANEL}+{COLORBAR_H}) tall)",
+            3 * PANEL,
+            2 * (PANEL + COLORBAR_H)
+        );
+    } else {
+        println!(
+            "  Image size        : {PANEL}×{PANEL} px per panel, 3 panels, {COLORBAR_H}px colorbar"
+        );
+    }
     println!(
         "  Colormap          : blue (1500 m/s, water/brain) → red ({:.0} m/s, cortical bone)",
         C_HI
     );
-    println!("  PNG panels        : true skull | reconstructed | difference (x–z coronal, y=0)");
+    if ct_vol.is_some() {
+        println!("  PNG layout        : 3×2 grid — top: CT coronal | axial | sagittal (bone window); bottom: FWI true | reconstructed | difference");
+    } else {
+        println!(
+            "  PNG panels        : true skull | reconstructed | difference (x-z coronal, y=0)"
+        );
+    }
     println!(
         "  Markers           : white = transmitting elements | yellow = active transducer samples"
     );

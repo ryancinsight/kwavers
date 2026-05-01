@@ -168,7 +168,7 @@ impl FdtdSolver {
                 Zip::from(&mut *dp_dx)
                     .and(hi)
                     .and(lo)
-                    .for_each(|r, &h, &l| *r = (h - l) / dx);
+                    .par_for_each(|r, &h, &l| *r = (h - l) / dx);
             }
         }
         if ny > 1 {
@@ -178,7 +178,7 @@ impl FdtdSolver {
                 Zip::from(&mut *dp_dy)
                     .and(hi)
                     .and(lo)
-                    .for_each(|r, &h, &l| *r = (h - l) / dy);
+                    .par_for_each(|r, &h, &l| *r = (h - l) / dy);
             }
         }
         if nz > 1 {
@@ -188,7 +188,7 @@ impl FdtdSolver {
                 Zip::from(&mut *dp_dz)
                     .and(hi)
                     .and(lo)
-                    .for_each(|r, &h, &l| *r = (h - l) / dz);
+                    .par_for_each(|r, &h, &l| *r = (h - l) / dz);
             }
         }
 
@@ -217,7 +217,7 @@ impl FdtdSolver {
                 .and(rho_left)
                 .and(rho_right)
                 .and(dp_dx.view())
-                .for_each(|u, &rl, &rr, &dp| {
+                .par_for_each(|u, &rl, &rr, &dp| {
                     let rho = 0.5 * (rl + rr);
                     if rho > 1e-9 {
                         *u -= dt / rho * dp;
@@ -233,7 +233,7 @@ impl FdtdSolver {
                 .and(rho_front)
                 .and(rho_back)
                 .and(dp_dy.view())
-                .for_each(|u, &rf, &rb, &dp| {
+                .par_for_each(|u, &rf, &rb, &dp| {
                     let rho = 0.5 * (rf + rb);
                     if rho > 1e-9 {
                         *u -= dt / rho * dp;
@@ -249,7 +249,7 @@ impl FdtdSolver {
                 .and(rho_near)
                 .and(rho_far)
                 .and(dp_dz.view())
-                .for_each(|u, &rn, &rf, &dp| {
+                .par_for_each(|u, &rn, &rf, &dp| {
                     let rho = 0.5 * (rn + rf);
                     if rho > 1e-9 {
                         *u -= dt / rho * dp;

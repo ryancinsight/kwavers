@@ -1,0 +1,10 @@
+D:\kwavers\target_opt\release\deps\dicom_dictionary_std-b4b0d68d9c7a07b1.d: C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\lib.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\data_element.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\tags.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\uids.rs
+
+D:\kwavers\target_opt\release\deps\libdicom_dictionary_std-b4b0d68d9c7a07b1.rlib: C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\lib.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\data_element.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\tags.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\uids.rs
+
+D:\kwavers\target_opt\release\deps\libdicom_dictionary_std-b4b0d68d9c7a07b1.rmeta: C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\lib.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\data_element.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\tags.rs C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\uids.rs
+
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\lib.rs:
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\data_element.rs:
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\tags.rs:
+C:\Users\RyanClanton\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dicom-dictionary-std-0.7.0\src\uids.rs:

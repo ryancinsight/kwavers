@@ -90,7 +90,7 @@ pub fn accumulate_signed_correlation(
     Zip::from(gradient.view_mut())
         .and(forward)
         .and(adjoint)
-        .for_each(|g, &f, &a| {
+        .par_for_each(|g, &f, &a| {
             *g += scale * f * a;
         });
 

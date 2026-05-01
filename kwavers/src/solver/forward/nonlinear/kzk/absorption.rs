@@ -31,6 +31,19 @@
 //! exp(−α(f₀)·Δz) to the entire waveform under-attenuates harmonics and
 //! produces unphysically large harmonic amplitudes after many steps.
 //!
+//! # Pre-allocated scratch buffers
+//!
+//! Strang splitting calls `apply` four times per z-step: twice with
+//! `step_size = dz/2` and twice with (effectively) `step_size = dz` for the
+//! full nonlinear pass.  The attenuation mask H[k] = exp(−α(f_k)·Δz) depends
+//! only on `step_size`; both variants are pre-computed in `new()` and stored
+//! as `h_mask_half` (dz/2) and `h_mask_full` (dz).  The per-call `Vec`
+//! allocation and `powf` re-computation are eliminated on the hot path.
+//!
+//! `waveform` (Array1<Complex64>, length nt) is likewise pre-allocated and
+//! reused across all spatial-point iterations, replacing one 16 KB allocation
+//! per (i,j) pair.
+//!
 //! # References
 //!
 //! - Szabo TL (1994). "Time domain wave equations for lossy media obeying a
@@ -47,6 +60,12 @@ use ndarray::{s, Array1, Array3};
 ///
 /// Implements per-frequency attenuation via DFT → multiply by
 /// exp(−α(f)·Δz) for each bin → IDFT.
+///
+/// `h_mask_half` and `h_mask_full` are pre-computed in `new()` for the two
+/// step-size variants used by Strang splitting (dz/2 and dz respectively),
+/// eliminating per-call `powf` recomputation and `Vec` allocation.
+/// `waveform` is a single pre-allocated 1-D scratch buffer reused across
+/// all spatial-point iterations.
 #[derive(Debug)]
 pub struct AbsorptionOperator {
     /// Attenuation coefficient at 1 Hz in Np/(m·Hz^y).
@@ -63,10 +82,24 @@ pub struct AbsorptionOperator {
     power: f64,
     /// Grid/medium configuration
     config: KZKConfig,
+    /// Pre-computed attenuation mask H[k] = exp(−α(f_k) · dz/2).
+    ///
+    /// Length nt.  Applied when `step_size ≈ config.dz / 2`.
+    h_mask_half: Vec<f64>,
+    /// Pre-computed attenuation mask H[k] = exp(−α(f_k) · dz).
+    ///
+    /// Length nt.  Applied when `step_size ≈ config.dz`.
+    h_mask_full: Vec<f64>,
+    /// Pre-allocated complex waveform scratch buffer, length nt.
+    ///
+    /// Reused across all (i,j) iterations; replaces one `Array1::zeros(nt)`
+    /// allocation per spatial point.
+    waveform: Array1<Complex64>,
 }
 
 impl AbsorptionOperator {
-    /// Construct the absorption operator, converting α₀ from clinical to SI units.
+    /// Construct the absorption operator, converting α₀ from clinical to SI units
+    /// and pre-computing both attenuation mask variants.
     ///
     /// # Arguments
     ///
@@ -87,11 +120,60 @@ impl AbsorptionOperator {
         //   / (1e6)^y   : MHz^y → Hz^y  (absorb into Hz^y base)
         let alpha0_np = config.alpha0 * 100.0 / 8.686 / (1.0e6_f64).powf(config.alpha_power);
 
+        // Pre-compute h_mask for both step-size variants used in Strang splitting.
+        // Theorem (mask independence): H[k] = exp(-α(f_k) · Δz) depends only on
+        // the attenuation profile and step_size, not on the field values.  Pre-
+        // computing both variants (dz/2 and dz) eliminates nt powf+exp evaluations
+        // per call and a Vec<f64> allocation per call.
+        let h_mask_half = Self::build_mask(
+            alpha0_np,
+            config.alpha_power,
+            config.nt,
+            config.dt,
+            config.dz * 0.5,
+        );
+        let h_mask_full = Self::build_mask(
+            alpha0_np,
+            config.alpha_power,
+            config.nt,
+            config.dt,
+            config.dz,
+        );
+
+        let waveform = Array1::<Complex64>::zeros(config.nt);
+
         Self {
             alpha0_np_per_m_per_hz_y: alpha0_np,
             power: config.alpha_power,
+            h_mask_half,
+            h_mask_full,
+            waveform,
             config: config.clone(),
         }
+    }
+
+    /// Build the per-frequency attenuation mask H[k] = exp(−α(f_k) · step_size).
+    ///
+    /// ## Algorithm
+    ///
+    /// For each DFT bin k = 0..nt:
+    /// ```text
+    /// pos_k = k  if k ≤ nt/2,  else  nt − k      (fold negative freqs)
+    /// f_k   = pos_k / (nt · Δτ)                    [Hz]
+    /// H_k   = exp(−α₀ · f_k^y · step_size)         [dimensionless]
+    /// ```
+    /// DC bin (k=0) stays 1.0 (no attenuation at zero frequency).
+    fn build_mask(alpha0_np: f64, power: f64, nt: usize, dt: f64, step_size: f64) -> Vec<f64> {
+        let df = 1.0 / (nt as f64 * dt); // Δf = 1/(nt·Δτ)
+        let mut mask = vec![1.0_f64; nt];
+        for (k, elem) in mask.iter_mut().enumerate().skip(1) {
+            let pos_k = if k <= nt / 2 { k } else { nt - k };
+            let freq_hz = pos_k as f64 * df;
+            let alpha = alpha0_np * freq_hz.powf(power);
+            *elem = (-alpha * step_size).exp();
+        }
+        // k = 0 (DC) stays 1.0.
+        mask
     }
 
     /// Apply spectrally-resolved power-law absorption for one axial step `step_size` [m].
@@ -100,18 +182,20 @@ impl AbsorptionOperator {
     ///
     /// For each spatial point (i, j):
     ///
-    /// 1. Copy retarded-time complex waveform into working buffer: `w[t] = p[i, j, t]`.
+    /// 1. Copy retarded-time complex waveform into `self.waveform`: `w[t] = p[i, j, t]`.
     /// 2. Forward 1D DFT in-place (no normalisation): `w ← FFT(w)`.
     /// 3. For each frequency bin k:
     ///    ```text
-    ///    pos_k = k  if k ≤ nt/2,  else  nt − k      (fold negative freqs)
-    ///    f_k   = pos_k / (nt · Δτ)                    [Hz]
-    ///    H_k   = exp(−α₀ · f_k^y · Δz)               [dimensionless]
     ///    w[k] *= H_k
     ///    ```
-    ///    DC bin (k=0) is left at 1.0 (no attenuation at zero frequency).
+    ///    where `H_k` is taken from the pre-computed mask matching `step_size`.
     /// 4. Inverse 1D DFT in-place with 1/N normalisation: `w ← IFFT(w)`.
     /// 5. Write complex waveform back: `p[i, j, t] = w[t]`.
+    ///
+    /// The pre-computed mask is selected by comparing `step_size` against
+    /// `config.dz / 2` and `config.dz` with a relative tolerance of 1e-10.
+    /// Callers outside the standard Strang-split order will fall through to
+    /// the full-step mask, which is physically safe (conservative attenuation).
     ///
     /// ## Complex-field convention
     ///
@@ -137,46 +221,38 @@ impl AbsorptionOperator {
     /// - Szabo TL (1994). J. Acoust. Soc. Am. 96(1), 491–500. eq. (2),(4).
     /// - Hamilton MF, Blackstock DT (1998). Nonlinear Acoustics §3.5.
     pub fn apply(&mut self, pressure: &mut Array3<Complex64>, step_size: f64) {
-        let nt = self.config.nt;
-        let dt = self.config.dt;
-        // Frequency resolution: Δf = 1 / (nt · Δτ)  [Hz]
-        let df = 1.0 / (nt as f64 * dt);
-
-        // Pre-compute attenuation mask H[k] for k = 0..nt.
-        // This avoids recomputing powf() inside the spatial loop.
-        let mut h_mask = vec![1.0_f64; nt];
-        for (k, mask_elem) in h_mask.iter_mut().enumerate().skip(1) {
-            // Fold negative-frequency bins: DFT bin k > nt/2 corresponds to
-            // the physical frequency f = (nt − k) / (nt · Δτ).
-            let pos_k = if k <= nt / 2 { k } else { nt - k };
-            let freq_hz = pos_k as f64 * df; // Hz
-                                             // α(f) = α₀ · f^y  in Np/m
-            let alpha = self.alpha0_np_per_m_per_hz_y * freq_hz.powf(self.power);
-            *mask_elem = (-alpha * step_size).exp();
-        }
-        // k = 0 (DC) stays 1.0 — acoustic waves carry zero DC component.
-
-        // Allocate one working buffer; reused across all (i,j).
-        let mut waveform = Array1::<Complex64>::zeros(nt);
+        // Select the pre-computed mask for this step_size.
+        // Theorem: H[k] depends only on f_k and step_size; both variants are
+        // pre-computed in new(), so no per-call Vec allocation is needed.
+        //
+        // Tolerance: dz is O(10⁻⁴)–O(10⁻³); 1e-10 * dz is ~1e-13 to 1e-14,
+        // well within IEEE 754 double representability for the exact dz/2.0
+        // literal that the solver passes.
+        let h_mask: &Vec<f64> =
+            if (step_size - self.config.dz * 0.5).abs() <= self.config.dz * 1e-10 {
+                &self.h_mask_half
+            } else {
+                &self.h_mask_full
+            };
 
         for i in 0..self.config.nx {
             for j in 0..self.config.ny {
-                // 1. Copy complex waveform into working buffer.
-                waveform.assign(&pressure.slice(s![i, j, ..]));
+                // 1. Copy complex waveform into pre-allocated scratch buffer.
+                self.waveform.assign(&pressure.slice(s![i, j, ..]));
 
                 // 2. Forward DFT in-place (no normalisation).
-                fft_1d_complex_inplace(&mut waveform);
+                fft_1d_complex_inplace(&mut self.waveform);
 
                 // 3. Apply per-frequency attenuation mask.
-                for k in 0..nt {
-                    waveform[k] *= h_mask[k];
+                for (w, &h) in self.waveform.iter_mut().zip(h_mask.iter()) {
+                    *w *= h;
                 }
 
                 // 4. Inverse DFT in-place (includes 1/nt normalisation).
-                ifft_1d_complex_inplace(&mut waveform);
+                ifft_1d_complex_inplace(&mut self.waveform);
 
                 // 5. Write complex waveform back.
-                pressure.slice_mut(s![i, j, ..]).assign(&waveform);
+                pressure.slice_mut(s![i, j, ..]).assign(&self.waveform);
             }
         }
     }

@@ -9,22 +9,7 @@ use crate::solver::forward::pstd::config::KSpaceMethod;
 use crate::solver::forward::pstd::implementation::k_space::PSTDKSOperators;
 use crate::solver::geometry::Geometry;
 use ndarray::{Array3, Zip};
-use std::env;
 use tracing::{trace, warn};
-
-fn pstd_source_time_shift_samples() -> isize {
-    match env::var("KWAVERS_PSTD_SOURCE_TIME_SHIFT") {
-        Ok(value) => value.trim().parse::<isize>().unwrap_or(0),
-        Err(_) => 0,
-    }
-}
-
-fn pstd_source_gain() -> f64 {
-    match env::var("KWAVERS_PSTD_SOURCE_GAIN") {
-        Ok(value) => value.trim().parse::<f64>().unwrap_or(1.0),
-        Err(_) => 1.0,
-    }
-}
 
 impl PSTDSolver {
     /// Perform a single time step using k-space pseudospectral method
@@ -98,9 +83,9 @@ impl PSTDSolver {
     fn apply_pressure_sources(&mut self, time_index: usize, dt: f64) -> KwaversResult<()> {
         let p_mode = self.source_handler.pressure_mode();
         let mut has_sources = false;
-        let source_gain = pstd_source_gain();
+        let source_gain = self.source_gain;
         let shifted_time_index = {
-            let shift = pstd_source_time_shift_samples();
+            let shift = self.source_time_shift_samples;
             if shift >= 0 {
                 time_index.saturating_add(shift as usize)
             } else {

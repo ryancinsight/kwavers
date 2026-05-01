@@ -1,16 +1,43 @@
-//! Complex-valued parabolic diffraction operator for proper energy conservation
+//! Complex-valued parabolic diffraction operator for proper energy conservation.
+//!
+//! # Pre-allocated scratch buffer
+//!
+//! `scratch` (Array2<Complex64>, shape (nx, ny)) is allocated once in
+//! `ParabolicDiffractionOperator::new` and reused on every `apply_complex` call.
+//! The 2-D FFT plan is obtained from `FFT_CACHE_2D` (cached per shape).
+//!
+//! Per `apply_complex` call this eliminates:
+//! - 1 × `field.to_owned()` clone (~262 KB for 128×128)
+//! - 1 × `fft_2d_complex()` allocating forward transform
+//! - 1 × `ifft_2d_complex()` allocating inverse transform
+//!
+//! When called for every retarded-time slice (nt = 1000), one diffraction
+//! half-step saves 3000 allocations (~786 MB total clones + FFT temporaries).
 
-use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
+use crate::math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
 use ndarray::{Array2, ArrayViewMut2};
 use std::f64::consts::PI;
+use std::sync::Arc;
 
 use super::KZKConfig;
 
-/// Parabolic diffraction operator using complex-valued computations for energy preservation
+/// Parabolic diffraction operator using complex-valued computations for energy preservation.
+///
+/// All hot-path operations are zero-allocation: the (nx, ny) complex scratch
+/// buffer and the FFT plan are pre-allocated at construction.
 pub struct ParabolicDiffractionOperator {
     config: KZKConfig,
     kx2: Array2<f64>,
     ky2: Array2<f64>,
+    /// Cached 2-D FFT plan for shape (nx, ny) — shared with other users of
+    /// `FFT_CACHE_2D` at the same shape.
+    fft_plan: Arc<Fft2d>,
+    /// Pre-allocated complex scratch buffer (nx, ny).
+    ///
+    /// Reused on every `apply_complex` call to hold the complex field during
+    /// in-place FFT → phase-multiply → in-place IFFT.  Eliminates one clone
+    /// and two allocating FFT round-trips per time slice.
+    scratch: Array2<Complex64>,
 }
 
 impl std::fmt::Debug for ParabolicDiffractionOperator {
@@ -24,7 +51,11 @@ impl std::fmt::Debug for ParabolicDiffractionOperator {
 }
 
 impl ParabolicDiffractionOperator {
-    /// Create new complex parabolic diffraction operator
+    /// Create new complex parabolic diffraction operator.
+    ///
+    /// Pre-computes the transverse wavenumber grids `kx²` and `ky²`,
+    /// acquires the (nx, ny) 2-D FFT plan from `FFT_CACHE_2D`, and
+    /// allocates the complex scratch buffer.
     #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
         let nx = config.nx;
@@ -62,28 +93,57 @@ impl ParabolicDiffractionOperator {
             }
         }
 
+        let fft_plan = FFT_CACHE_2D.get_or_create(Shape2D { nx, ny });
+        let scratch = Array2::<Complex64>::zeros((nx, ny));
+
         Self {
             config: config.clone(),
             kx2,
             ky2,
+            fft_plan,
+            scratch,
         }
     }
 
-    /// Apply diffraction step to complex field
+    /// Apply diffraction step to complex field (zero-allocation hot path).
+    ///
+    /// ## Algorithm
+    ///
+    /// 1. Copy `field` into `self.scratch` (one assign, no heap allocation).
+    /// 2. Forward complex-to-complex in-place FFT on `self.scratch`.
+    /// 3. Multiply each k-space mode by the parabolic propagator:
+    ///    ```text
+    ///    H(k_T) = exp(−i k_T² Δz / (2k₀))
+    ///    ```
+    ///    where k_T² = kx² + ky² and k₀ = ω₀/c₀.
+    /// 4. Inverse complex-to-complex in-place FFT (includes 1/N normalisation).
+    /// 5. Assign `self.scratch` back to `field`.
+    ///
+    /// Steps 2 and 4 are performed in-place on the pre-allocated scratch buffer,
+    /// eliminating all per-call heap allocation.
+    ///
+    /// ## Sign convention
+    ///
+    /// The phase factor is `exp(−i·phase)` with `phase = k_T² Δz/(2k₀) ≥ 0`.
+    /// The negative sign is physically correct (convergent phase accumulation
+    /// in the forward direction); the positive sign would apply the conjugate
+    /// propagator and reverse phase curvature.
+    ///
+    /// References: Lee & Hamilton (1995) eq. (4); Aanonsen et al. (1984) §3.
     pub fn apply_complex(&mut self, field: &mut ArrayViewMut2<Complex64>, step_size: f64) {
         let nx = self.config.nx;
         let ny = self.config.ny;
         let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
 
-        // Clone field for FFT
-        let complex_field_owned = field.to_owned();
+        // Step 1: copy field slice into scratch (no heap allocation).
+        self.scratch.assign(field);
 
-        // 2D FFT
-        let mut complex_field = fft_2d_complex(&complex_field_owned);
+        // Step 2: forward complex-to-complex in-place FFT.
+        self.fft_plan.forward_complex_inplace(&mut self.scratch);
 
-        // Parabolic diffraction propagator (see parabolic_diffraction module theorem):
+        // Step 3: apply parabolic diffraction propagator H(k_T) per mode.
         //
-        //   H(k_T) = exp(−i k_T² Δz / (2k₀))
+        // H(k_T) = exp(−i k_T² Δz / (2k₀))
         //
         // Derived from ∂P̂/∂z = −i k_T²/(2k₀) P̂ where k₀ = ω₀/c₀.
         // The sign is NEGATIVE; the previous (wrong) sign exp(+i·phase) applied
@@ -95,15 +155,15 @@ impl ParabolicDiffractionOperator {
                 let kt2 = self.kx2[[i, j]] + self.ky2[[i, j]];
                 let phase = kt2 * step_size / (2.0 * k0);
                 // exp(−i·phase): negative sign is physically correct
-                complex_field[[i, j]] *= Complex64::from_polar(1.0, -phase);
+                self.scratch[[i, j]] *= Complex64::from_polar(1.0, -phase);
             }
         }
 
-        // Inverse 2D FFT
-        let inverted = ifft_2d_complex(&complex_field);
+        // Step 4: inverse complex-to-complex in-place FFT (includes 1/N norm).
+        self.fft_plan.inverse_complex_inplace(&mut self.scratch);
 
-        // Copy back to field
-        field.assign(&inverted);
+        // Step 5: copy scratch back to the field view.
+        field.assign(&self.scratch);
     }
 }
 

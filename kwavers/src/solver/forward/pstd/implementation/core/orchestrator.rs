@@ -25,6 +25,7 @@ use crate::solver::forward::pstd::propagator::axisymmetric::AsContext;
 use crate::solver::forward::pstd::utils::compute_k_magnitude;
 use crate::solver::geometry::Geometry;
 use ndarray::{Array1, Array2, Array3, Zip};
+use std::env;
 use std::f64::consts::PI;
 use std::sync::Arc;
 
@@ -53,6 +54,13 @@ pub struct PSTDSolver {
     /// injection rate [kg/m³/step] for the dynamic-source additive path.
     /// Constant throughout the simulation; computed once at construction.
     pub(crate) mass_source_scale: f64,
+    /// Construction-time diagnostic source time shift in samples.
+    ///
+    /// Capturing this once keeps the pressure-source hot path free of environment
+    /// lookups while preserving deterministic solver configuration.
+    pub(crate) source_time_shift_samples: isize,
+    /// Construction-time diagnostic pressure-source gain.
+    pub(crate) source_gain: f64,
     pub(crate) k_max: f64,
     pub(crate) boundary: Option<Box<dyn Boundary>>,
     pub fields: WaveFields,
@@ -221,6 +229,8 @@ impl PSTDSolver {
                 //   source_p *= 2*dt / (N * c0 * dx)
                 2.0 * config_dt / (n_dim * c_ref * dx_min)
             },
+            source_time_shift_samples: pstd_source_time_shift_samples(),
+            source_gain: pstd_source_gain(),
             boundary,
             fields: WaveFields {
                 p: field_arrays.p,
@@ -623,6 +633,20 @@ impl PSTDSolver {
         self.source_injection_modes.push(mode);
         self.velocity_source_grad_masks.push(grad_mask);
         Ok(())
+    }
+}
+
+fn pstd_source_time_shift_samples() -> isize {
+    match env::var("KWAVERS_PSTD_SOURCE_TIME_SHIFT") {
+        Ok(value) => value.trim().parse::<isize>().unwrap_or(0),
+        Err(_) => 0,
+    }
+}
+
+fn pstd_source_gain() -> f64 {
+    match env::var("KWAVERS_PSTD_SOURCE_GAIN") {
+        Ok(value) => value.trim().parse::<f64>().unwrap_or(1.0),
+        Err(_) => 1.0,
     }
 }
 
