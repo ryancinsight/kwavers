@@ -270,10 +270,9 @@ impl PSTDSolver {
             solver.config.dt,
         );
 
-        let mut rho_init = Array3::zeros(shape);
         solver.source_handler.apply_initial_conditions(
             &mut solver.fields.p,
-            &mut rho_init,
+            &mut solver.div_u,
             &solver.materials.c0,
             &mut solver.fields.ux,
             &mut solver.fields.uy,
@@ -285,7 +284,7 @@ impl PSTDSolver {
         Zip::from(&mut solver.rhox)
             .and(&mut solver.rhoy)
             .and(&mut solver.rhoz)
-            .and(&rho_init)
+            .and(&solver.div_u)
             .for_each(|rx, ry, rz, &rho| {
                 let split = rho / 3.0;
                 *rx = split;
