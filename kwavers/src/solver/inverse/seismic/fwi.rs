@@ -524,7 +524,8 @@ impl FwiProcessor {
             let mut total_objective = 0.0_f64;
             let mut total_gradient = Array3::<f64>::zeros((nx, ny, nz));
             for (geometry, observed_data) in shots.iter() {
-                let (obj, grad) = self.compute_shot_gradient(&current_model, geometry, observed_data, grid)?;
+                let (obj, grad) =
+                    self.compute_shot_gradient(&current_model, geometry, observed_data, grid)?;
                 total_objective += obj;
                 // In-place accumulation: eliminates one 1.2 MB Array3 allocation per shot.
                 Zip::from(&mut total_gradient)
@@ -658,7 +659,8 @@ impl FwiProcessor {
             let mut total_objective = 0.0_f64;
             let mut total_gradient = Array3::<f64>::zeros((nx, ny, nz));
             for (geometry, observed_data) in shots.iter() {
-                let (obj, grad) = self.compute_shot_gradient(&current_model, geometry, observed_data, grid)?;
+                let (obj, grad) =
+                    self.compute_shot_gradient(&current_model, geometry, observed_data, grid)?;
                 total_objective += obj;
                 // In-place accumulation: eliminates one 1.2 MB Array3 allocation per shot.
                 Zip::from(&mut total_gradient)
@@ -1323,8 +1325,7 @@ impl FwiProcessor {
         geometry: &FwiGeometry,
         grid: &Grid,
     ) -> KwaversResult<Array2<f64>> {
-        let (mut solver, _dims, _dt) =
-            self.build_fdtd_solver_for_forward(model, geometry, grid)?;
+        let (mut solver, _dims, _dt) = self.build_fdtd_solver_for_forward(model, geometry, grid)?;
 
         // No history allocation.  The solver's SensorRecorder accumulates receiver
         // traces internally at O(N_receivers) cost per step — unchanged from the

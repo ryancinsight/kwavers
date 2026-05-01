@@ -236,5 +236,3 @@ pub struct QualityIndicators {
     /// Frame rate achieved (Hz)
     pub frame_rate_hz: f64,
 }
-
-/// DICOM integration request

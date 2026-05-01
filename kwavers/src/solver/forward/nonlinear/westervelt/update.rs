@@ -10,9 +10,7 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;
-use crate::solver::forward::nonlinear::conservation::{
-    ConservationDiagnostics, ViolationSeverity,
-};
+use crate::solver::forward::nonlinear::conservation::{ConservationDiagnostics, ViolationSeverity};
 
 impl WesterveltFdtd {
     /// Update the pressure field for one time step

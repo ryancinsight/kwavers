@@ -49,8 +49,7 @@ fn bubble_hamiltonian(r: f64, v: f64, params: &BubbleParameters, n_points: usize
     let rho_l = params.rho_liquid;
     let p0 = params.p0;
     let sigma = params.sigma;
-    let gamma =
-        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Air.gamma();
+    let gamma = crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Air.gamma();
     let p_eq = p0 + 2.0 * sigma / r0;
 
     // Kinetic energy: ½ ρ_L R³ Ṙ²
@@ -109,8 +108,7 @@ fn test_minnaert_period() {
     let rho_l = params.rho_liquid;
     let p0 = params.p0;
     let sigma = params.sigma;
-    let gamma =
-        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Air.gamma();
+    let gamma = crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Air.gamma();
     let p_eq = p0 + 2.0 * sigma / r0;
 
     // Minnaert angular frequency (linearised RP with surface tension)
@@ -210,8 +208,7 @@ fn test_hamiltonian_no_drift() {
     let rho_l = params.rho_liquid;
     let p0 = params.p0;
     let sigma = params.sigma;
-    let gamma =
-        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Air.gamma();
+    let gamma = crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Air.gamma();
     let p_eq = p0 + 2.0 * sigma / r0;
     let omega0 = ((3.0 * gamma * p_eq - 2.0 * sigma / r0) / (rho_l * r0 * r0)).sqrt();
     let t_period = 2.0 * PI / omega0;
@@ -418,8 +415,7 @@ fn test_equilibrium_preserved() {
     let rho_l = params.rho_liquid;
     let p0 = params.p0;
     let sigma = params.sigma;
-    let gamma =
-        crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Air.gamma();
+    let gamma = crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Air.gamma();
     let p_eq = p0 + 2.0 * sigma / r0;
     let omega0 = ((3.0 * gamma * p_eq - 2.0 * sigma / r0) / (rho_l * r0 * r0)).sqrt();
     let t_period = 2.0 * PI / omega0;

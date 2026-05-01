@@ -52,5 +52,3 @@ pub struct DICOMStudyInfo {
     /// Institution name
     pub institution_name: Option<String>,
 }
-
-/// Mobile device optimization request

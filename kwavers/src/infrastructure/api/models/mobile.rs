@@ -133,4 +133,3 @@ pub struct PowerEstimates {
     /// Thermal impact score (0-1)
     pub thermal_impact: f64,
 }
-

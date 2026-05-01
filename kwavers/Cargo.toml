@@ -114,10 +114,12 @@ aws-sdk-autoscaling = { version = "1.0", optional = true }
 aws-sdk-applicationautoscaling = { version = "1.0", optional = true }
 aws-config = { version = "1.0", optional = true }
 
-# Medical image registration toolkit
+# Medical image registration toolkit (mandatory — owns DICOM I/O via ritk-io
+# and registration via ritk-registration; no optional gating because the
+# kwavers domain layer relies on these as the single source of truth).
 ritk-registration = { path = "../ritk/crates/ritk-registration" }
-ritk-core = { path = "../ritk/crates/ritk-core", optional = true }
-ritk-io = { path = "../ritk/crates/ritk-io", optional = true }
+ritk-core = { path = "../ritk/crates/ritk-core" }
+ritk-io = { path = "../ritk/crates/ritk-io" }
 
 [dev-dependencies]
 # Minimal dev dependencies for testing only
@@ -169,8 +171,11 @@ cloud-aws = ["cloud", "dep:aws-sdk-sagemaker", "dep:aws-sdk-lambda", "dep:aws-sd
 # Feature flags for conditional compilation (used in tests/examples)
 em_pinn_module_exists = []          # Conditional feature for electromagnetic PINN tests
 ai_integration_module_exists = []   # Conditional feature for AI integration tests
-ritk = ["dep:ritk-core", "dep:ritk-io", "dep:burn"]  # Medical image registration and DICOM I/O via ritk toolkit
-full = ["gpu", "plotting", "parallel", "dicom", "nifti", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn", "api", "cloud", "cloud-aws", "ritk"]
+# NOTE: ritk-core and ritk-io are now mandatory dependencies (see [dependencies]),
+# so the former `ritk` feature is a no-op alias retained only for callers that
+# still pass `--features ritk` on the CLI. New code should not gate on it.
+ritk = []
+full = ["gpu", "plotting", "parallel", "dicom", "nifti", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn", "api", "cloud", "cloud-aws"]
 
 # SRS NFR-002 Compliant Test Configuration Strategy
 # ================================================
@@ -363,14 +368,11 @@ harness = false
 [[example]]
 name = "skull_ct_phase_correction"
 path = "examples/skull_ct_phase_correction.rs"
-required-features = ["ritk"]
 
 [[example]]
 name = "seismic_imaging_demo"
 path = "examples/seismic_imaging_demo.rs"
-required-features = ["ritk"]
 
 [[example]]
 name = "seismic_imaging_3d_demo"
 path = "examples/seismic_imaging_3d_demo.rs"
-required-features = ["ritk"]

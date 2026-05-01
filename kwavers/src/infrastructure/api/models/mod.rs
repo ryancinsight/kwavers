@@ -35,12 +35,10 @@ mod tests;
 pub use clinical::{
     AbnormalRegion, AnalysisPriority, ClinicalAnalysisRequest, ClinicalAnalysisResponse,
     ClinicalContext, ClinicalFinding, ClinicalRecommendation, FindingMeasurements, FindingType,
-    OperatorLevel, ProcessingMetrics, QualityIndicators, RecommendationType, TissueCharacterization,
-    TissueProperties, TissueRegion, UrgencyLevel,
+    OperatorLevel, ProcessingMetrics, QualityIndicators, RecommendationType,
+    TissueCharacterization, TissueProperties, TissueRegion, UrgencyLevel,
 };
-pub use devices::{
-    DeviceCapability, DeviceInfo, DeviceStatus, DeviceType, UltrasoundDevice,
-};
+pub use devices::{DeviceCapability, DeviceInfo, DeviceStatus, DeviceType, UltrasoundDevice};
 pub use dicom::{DICOMIntegrationRequest, DICOMIntegrationResponse, DICOMStudyInfo, DICOMValue};
 pub use imaging::{ImagingParameters, UltrasoundFrame};
 pub use jobs::{

@@ -74,8 +74,7 @@ impl Solver for GenericFdtdSolver<Array3<f64>> {
 
     fn supports_feature(&self, feature: SolverFeature) -> bool {
         matches!(feature, SolverFeature::MultiThreaded)
-            || (matches!(feature, SolverFeature::GpuAcceleration)
-                && self.gpu_accelerator.is_some())
+            || (matches!(feature, SolverFeature::GpuAcceleration) && self.gpu_accelerator.is_some())
     }
 
     fn enable_feature(&mut self, feature: SolverFeature, enable: bool) -> KwaversResult<()> {

@@ -260,6 +260,3 @@ impl Default for JobQueueEntry {
         }
     }
 }
-
-/// Device types for ultrasound systems
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

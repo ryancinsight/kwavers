@@ -279,8 +279,7 @@ impl FdtdSolver {
             let dz = self.grid.dz;
             let (nx, _ny, nz) = self.divergence_scratch.dim();
             for i in 0..nx {
-                self.divergence_scratch[[i, 0, 0]] +=
-                    self.fields.uz[[i, 0, 0]] / (0.5 * dz);
+                self.divergence_scratch[[i, 0, 0]] += self.fields.uz[[i, 0, 0]] / (0.5 * dz);
             }
             for k in 1..nz {
                 let r_center = k as f64 * dz;

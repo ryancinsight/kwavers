@@ -218,7 +218,7 @@
 ///   DOI: 10.1109/TMI.2003.809072
 /// - Hansen, N., & Ostermeier, A. (2001). *Evol. Comput.* 9(2):159-195.
 ///   DOI: 10.1162/106365601750190398
-#[cfg(feature = "ritk")]
+// ritk is now a mandatory dep (see Cargo.toml); the feature gate is dropped.
 pub mod ritk {
     pub use ritk_registration::metric::{
         MutualInformation, NormalizedCrossCorrelation, MattesMutualInformation,

@@ -39,5 +39,3 @@ pub struct ImagingParameters {
     /// Depth range [start, end] in meters
     pub depth_range: [f64; 2],
 }
-
-/// Clinical analysis request for AI-enhanced beamforming

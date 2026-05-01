@@ -168,7 +168,7 @@ impl PSTDSolver {
                 .and(self.kappa.view())
                 .par_for_each(|(_i, j, _k), gk, &u, &kap| {
                     *gk = ddy[j] * Complex64::new(kap, 0.0) * u;
-            });
+                });
             self.fft
                 .inverse_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
         }
@@ -183,7 +183,7 @@ impl PSTDSolver {
                 .and(self.kappa.view())
                 .par_for_each(|(_i, _j, k), gk, &u, &kap| {
                     *gk = ddz[k] * Complex64::new(kap, 0.0) * u;
-            });
+                });
             self.fft
                 .inverse_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
         }

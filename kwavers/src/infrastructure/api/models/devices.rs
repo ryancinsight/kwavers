@@ -87,5 +87,3 @@ pub enum DeviceStatus {
     InUse,
     Calibrating,
 }
-
-/// Real-time ultrasound frame data for AI processing

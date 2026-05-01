@@ -9,7 +9,7 @@ use crate::solver::forward::pstd::config::KSpaceMethod;
 use crate::solver::forward::pstd::implementation::k_space::PSTDKSOperators;
 use crate::solver::geometry::Geometry;
 use ndarray::{Array3, Zip};
-use tracing::{trace, warn};
+use tracing::{enabled, trace, warn, Level};
 
 impl PSTDSolver {
     /// Perform a single time step using k-space pseudospectral method
@@ -52,7 +52,9 @@ impl PSTDSolver {
         // Step 5: Pressure computation from density (with absorption)
         self.update_pressure(dt)?;
 
-        if self.time_step_index < 5 || self.time_step_index.is_multiple_of(10) {
+        if enabled!(Level::TRACE)
+            && (self.time_step_index < 5 || self.time_step_index.is_multiple_of(10))
+        {
             let max_p = self.fields.p.iter().fold(0.0f64, |m, &v| m.max(v.abs()));
             trace!(
                 time_step = self.time_step_index,

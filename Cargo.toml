@@ -5,9 +5,44 @@ resolver = "2"
 [workspace.dependencies]
 # Required so Cargo can parse ritk-io/Cargo.toml (which inherits from its own workspace).
 burn = { version = "0.19", features = ["wgpu", "autodiff"] }
+burn-ndarray = "0.19"
 nalgebra = { version = "0.33", features = ["serde-serialize"] }
 dicom = "0.8.0"
 nifti = "0.17.0"
+anyhow = "1.0"
+thiserror = "2.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+bytemuck = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rayon = "1.9"
+ndarray = { version = "0.16", features = ["rayon"] }
+tempfile = "3.10"
+proptest = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+walkdir = "2.4"
+charls = { version = "0.4", features = ["static"] }
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.11", features = ["blocking", "stream"] }
+flate2 = "1.0"
+tar = "0.4"
+zip = "0.6"
+indicatif = "0.17"
+dirs = "5.0"
+sha2 = "0.10"
+hex = "0.4"
+image = "0.24"
+tiff = "0.9"
+onnx-ir = "0.20.1"
+openjpeg-sys = "1.0"
+dicom-core = "0.8"
+dicom-pixeldata = { version = "0.8", features = ["native"] }
+dicom-transfer-syntax-registry = { version = "0.8", features = ["native", "jpegxl", "charls", "openjpeg-sys"] }
+consus-hdf5 = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
+consus-core = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
+consus-compression = { git = "https://github.com/ryancinsight/consus", features = ["std", "deflate"] }
+consus-io = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
 # Required so Cargo can parse apollo-fft/Cargo.toml (workspace-inherited deps).
 rand = "0.8"
 criterion = "0.5"

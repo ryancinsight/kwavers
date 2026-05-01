@@ -5,9 +5,7 @@ use log::warn;
 use ndarray::Axis;
 
 use super::KZKSolver;
-use crate::solver::forward::nonlinear::conservation::{
-    ConservationDiagnostics, ViolationSeverity,
-};
+use crate::solver::forward::nonlinear::conservation::{ConservationDiagnostics, ViolationSeverity};
 
 impl KZKSolver {
     /// Step forward one z-plane using operator splitting.

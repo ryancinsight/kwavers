@@ -177,8 +177,7 @@ impl PSTDSolver {
                 for j in 0..grid.ny {
                     for i in 0..grid.nx {
                         let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                        rho0[[i, j, k]] =
-                            crate::domain::medium::density_at(medium, x, y, z, &grid);
+                        rho0[[i, j, k]] = crate::domain::medium::density_at(medium, x, y, z, &grid);
                         c0[[i, j, k]] =
                             crate::domain::medium::sound_speed_at(medium, x, y, z, &grid);
                         bon[[i, j, k]] =
