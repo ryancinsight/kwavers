@@ -307,10 +307,11 @@ fn create_stone_geometry(config: &TherapySessionConfig, grid: &Grid) -> Array3<f
 ///
 /// # Future Enhancement
 ///
-/// Will integrate DICOM file parsing and PACS connectivity:
-/// - DICOM file reading using `dicom` crate
-/// - PACS query/retrieve using DICOM C-FIND/C-MOVE
-/// - Integration with hospital imaging systems
+/// Will integrate DICOM file parsing and PACS connectivity through ritk-io
+/// (`ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series`); see
+/// `kwavers/examples/skull_ct_phase_correction.rs` for the canonical pattern.
+/// PACS query/retrieve (DICOM C-FIND/C-MOVE) and hospital imaging system
+/// integration build on top of that ritk-io foundation.
 ///
 /// # Returns
 ///
@@ -356,29 +357,34 @@ fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f
                 warn!("NIFTI feature not enabled. Rebuild with --features nifti to load {}. Using synthetic fallback.", ct_path);
             }
         } else if ct_path.ends_with(".dcm") {
-            // DICOM loading - future implementation
+            // SSOT: DICOM loading is owned by ritk-io. Wiring it through the
+            // therapy orchestrator requires routing the volume back without
+            // forcing a Burn dependency on this layer; tracked in backlog
+            // under "DICOM SSOT consolidation".
             warn!(
-                "DICOM loading not yet implemented for {}. Using synthetic fallback.",
+                "DICOM loading via ritk-io not wired into therapy orchestrator yet for {}. \
+                 Use ritk_io::load_dicom_series directly (see examples/skull_ct_phase_correction.rs) \
+                 or supply a NIFTI path. Using synthetic fallback.",
                 ct_path
             );
         }
     }
 
-    // Fallback: Generate synthetic CT data
-    // Not yet implemented: DICOM CT data loading. NIFTI loading is complete; remaining work
-    // covers DICOM series parsing (pixel data, spacing, position via the dicom crate),
-    // 3D volume reconstruction with correct slice ordering, DICOM rescale slope/intercept
-    // HU conversion, and optional PACS query/retrieve integration (DICOM C-FIND/C-MOVE).
-    // References: DICOM Standard PS3.3-2023 CT Image IOD; Schneider et al. (1996)
-    // "Correlation between CT numbers and tissue parameters"; IEC 62220-1.
-
-    // In practice, this would load DICOM CT data from PACS or file system
-    // Current implementation triggers fallback to synthetic data
+    // SSOT: NIFTI loading is wired here; DICOM pixel decoding is owned by
+    // ritk-io. The therapy orchestrator does not yet depend on Burn, so the
+    // DICOM-to-Array3 bridge is tracked in the backlog ("DICOM SSOT
+    // consolidation"). Remaining work after wiring covers PACS query/retrieve
+    // (DICOM C-FIND/C-MOVE) and rescale slope/intercept HU conversion at the
+    // bridging seam. References: DICOM Standard PS3.3-2023 CT Image IOD;
+    // Schneider et al. (1996); IEC 62220-1.
     Err(crate::core::error::KwaversError::Validation(
         crate::core::error::ValidationError::InvalidValue {
             parameter: "CT imaging data".to_string(),
             value: 0.0,
-            reason: "CT data loading not yet implemented - requires DICOM integration".to_string(),
+            reason: "CT data loading from DICOM requires the ritk-io bridge \
+                     (see backlog 'DICOM SSOT consolidation'); supply a NIFTI \
+                     path or call ritk_io::load_dicom_series directly."
+                .to_string(),
         },
     ))
 }

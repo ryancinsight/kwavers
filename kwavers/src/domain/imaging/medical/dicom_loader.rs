@@ -1,8 +1,18 @@
-//! DICOM Image Loader
+//! DICOM Image Loader (domain-layer placeholder).
 //!
-//! This module provides full support for loading DICOM (Digital Imaging and Communications in Medicine)
-//! format medical images. DICOM is the standard format for medical imaging across CT, MRI,
-//! ultrasound, and other modalities.
+//! **SSOT NOTE**: real DICOM I/O lives in `ritk-io` (`ritk::crates::ritk-io`).
+//! Use `ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<Backend>(...)`
+//! (see `kwavers/examples/skull_ct_phase_correction.rs` for the canonical
+//! pattern) instead of this loader. This domain-layer type only carries the
+//! metadata schema and HU/affine helpers — its `load_series_internal` remains
+//! a stub returning `KwaversError::NotImplemented` because the domain layer
+//! cannot depend on Burn (ritk-io requires `Backend`). The infrastructure
+//! layer is the correct seam to bridge ritk-io's `Image<B, 3>` into the
+//! domain `Array3<f64>`; tracked in backlog under "DICOM SSOT consolidation".
+//!
+//! This module provides metadata structures and HU-conversion helpers for
+//! DICOM (Digital Imaging and Communications in Medicine) medical images.
+//! Pixel-data decoding is deliberately delegated to ritk-io.
 //!
 //! ## Supported Modalities
 //!
@@ -236,13 +246,15 @@ impl DicomImageLoader {
             )));
         }
 
-        // DICOM pixel data parsing requires a DICOM codec library (e.g., `dicom` crate).
-        // Found {} .dcm files but cannot decode pixel data without DICOM transfer syntax support.
+        // SSOT: DICOM pixel-data decoding lives in ritk-io. This domain-layer
+        // loader only validates the directory and surfaces metadata; consumers
+        // should call ritk_io::load_dicom_series for the actual volume.
         Err(KwaversError::NotImplemented(format!(
-            "DICOM pixel data parsing not yet implemented. \
-             Found {} .dcm files in '{}'. Requires DICOM transfer syntax \
-             codec (e.g., `dicom` crate) to decode pixel data, extract \
-             metadata, and reconstruct the 3D volume.",
+            "DICOM pixel decoding is owned by ritk-io. \
+             Found {} .dcm files in '{}'. \
+             Use `ritk_io::scan_dicom_directory` + \
+             `ritk_io::load_dicom_series::<Backend>(...)` \
+             (see kwavers/examples/skull_ct_phase_correction.rs).",
             dicom_files.len(),
             dir_path
         )))

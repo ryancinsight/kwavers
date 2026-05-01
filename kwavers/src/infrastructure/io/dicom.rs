@@ -1,4 +1,13 @@
-//! DICOM file format support for medical imaging data
+//! DICOM file format support for medical imaging data.
+//!
+//! **SSOT NOTE**: this module duplicates DICOM I/O that already lives in
+//! `ritk-io` (`ritk::crates::ritk-io`). For new code use
+//! `ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<Backend>(...)`
+//! (see `kwavers/examples/skull_ct_phase_correction.rs`); this reader is
+//! preserved only for callers that already depend on the kwavers-local
+//! `DicomReader`/`DicomStudy`/`DicomSeries`/`DicomValue`/`DicomObject`
+//! re-exports. Consolidation onto ritk-io as the single source is tracked in
+//! the backlog under "DICOM SSOT consolidation".
 //!
 //! Implementation using the `dicom` crate for comprehensive
 //! handling of medical imaging data, metadata, and clinical workflows.
