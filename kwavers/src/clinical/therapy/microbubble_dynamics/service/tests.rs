@@ -1,0 +1,208 @@
+use ndarray::Array3;
+
+use crate::domain::therapy::microbubble::{
+    DrugLoadingMode, DrugPayload, MarmottantShellProperties, MicrobubbleState, Position3D,
+};
+
+use super::*;
+
+#[test]
+fn test_create_service() {
+    let position = Position3D::zero();
+    let bubble = MicrobubbleState::sono_vue(position).unwrap();
+    let service = MicrobubbleDynamicsService::from_microbubble_state(&bubble).unwrap();
+
+    assert!(service.keller_miksis.params().r0 > 0.0);
+}
+
+#[test]
+fn test_update_bubble_dynamics_basic() {
+    let position = Position3D::zero();
+    let mut bubble = MicrobubbleState::sono_vue(position).unwrap();
+    let mut shell = MarmottantShellProperties::sono_vue(bubble.radius_equilibrium).unwrap();
+    let volume = bubble.volume();
+    let mut drug = DrugPayload::new(50.0, volume, DrugLoadingMode::ShellEmbedded, 0.01).unwrap();
+
+    let service = MicrobubbleDynamicsService::from_microbubble_state(&bubble).unwrap();
+
+    let result = service.update_bubble_dynamics(
+        &mut bubble,
+        &mut shell,
+        &mut drug,
+        1e5,
+        (1e5, 0.0, 0.0),
+        0.0,
+        0.0,
+        1e-6,
+    );
+
+    assert!(result.is_ok());
+    assert!(bubble.radius > 0.0);
+    assert!(bubble.time > 0.0);
+}
+
+#[test]
+#[ignore] // Requires longer simulation time for measurable movement
+fn test_radiation_force_moves_bubble() {
+    let position = Position3D::zero();
+    let mut bubble = MicrobubbleState::sono_vue(position).unwrap();
+    let mut shell = MarmottantShellProperties::sono_vue(bubble.radius_equilibrium).unwrap();
+    let volume = bubble.volume();
+    let mut drug = DrugPayload::new(0.0, volume, DrugLoadingMode::ShellEmbedded, 0.01).unwrap();
+
+    let service = MicrobubbleDynamicsService::from_microbubble_state(&bubble).unwrap();
+
+    let _initial_x = bubble.position.x;
+    let pressure_gradient = (1e6, 0.0, 0.0);
+
+    for i in 0..10 {
+        let t = i as f64 * 1e-5;
+        service
+            .update_bubble_dynamics(
+                &mut bubble,
+                &mut shell,
+                &mut drug,
+                1e5,
+                pressure_gradient,
+                0.0,
+                t,
+                1e-5,
+            )
+            .unwrap();
+    }
+}
+
+#[test]
+fn test_drug_release_over_time() {
+    let position = Position3D::zero();
+    let mut bubble = MicrobubbleState::sono_vue(position).unwrap();
+    let mut shell = MarmottantShellProperties::sono_vue(bubble.radius_equilibrium).unwrap();
+    let volume = bubble.volume();
+    let mut drug = DrugPayload::new(100.0, volume, DrugLoadingMode::ShellEmbedded, 0.1).unwrap();
+
+    let service = MicrobubbleDynamicsService::from_microbubble_state(&bubble).unwrap();
+
+    let initial_drug = drug.concentration;
+
+    for i in 0..10 {
+        let t = i as f64 * 1e-5;
+        service
+            .update_bubble_dynamics(
+                &mut bubble,
+                &mut shell,
+                &mut drug,
+                0.0,
+                (0.0, 0.0, 0.0),
+                0.0,
+                t,
+                1e-5,
+            )
+            .unwrap();
+    }
+
+    assert!(drug.concentration <= initial_drug);
+    assert!(bubble.drug_released_total >= 0.0);
+}
+
+#[test]
+fn test_shell_rupture_detection() {
+    let position = Position3D::zero();
+    let mut bubble = MicrobubbleState::sono_vue(position).unwrap();
+    let mut shell = MarmottantShellProperties::sono_vue(bubble.radius_equilibrium).unwrap();
+    let volume = bubble.volume();
+    let mut drug = DrugPayload::new(0.0, volume, DrugLoadingMode::ShellEmbedded, 0.01).unwrap();
+
+    let service = MicrobubbleDynamicsService::from_microbubble_state(&bubble).unwrap();
+
+    bubble.radius = bubble.radius_equilibrium * 2.0;
+
+    service
+        .update_bubble_dynamics(
+            &mut bubble,
+            &mut shell,
+            &mut drug,
+            0.0,
+            (0.0, 0.0, 0.0),
+            0.0,
+            0.0,
+            1e-6,
+        )
+        .unwrap();
+
+    assert!(shell.is_ruptured());
+    assert!(bubble.shell_is_ruptured);
+}
+
+#[test]
+fn test_pressure_time_derivative_changes_dynamics() {
+    let position = Position3D::zero();
+    let acoustic_pressure = 1e5_f64;
+    let frequency = 1e6_f64;
+    let dp_dt_nonzero = acoustic_pressure * 2.0 * std::f64::consts::PI * frequency;
+
+    let mut bubble_zero = MicrobubbleState::sono_vue(position).unwrap();
+    let mut shell_zero =
+        MarmottantShellProperties::sono_vue(bubble_zero.radius_equilibrium).unwrap();
+    let volume = bubble_zero.volume();
+    let mut drug_zero = DrugPayload::new(0.0, volume, DrugLoadingMode::ShellEmbedded, 0.0).unwrap();
+    let service = MicrobubbleDynamicsService::from_microbubble_state(&bubble_zero).unwrap();
+    service
+        .update_bubble_dynamics(
+            &mut bubble_zero,
+            &mut shell_zero,
+            &mut drug_zero,
+            acoustic_pressure,
+            (0.0, 0.0, 0.0),
+            0.0,
+            0.0,
+            1e-7,
+        )
+        .unwrap();
+
+    let mut bubble_nonzero = MicrobubbleState::sono_vue(position).unwrap();
+    let mut shell_nonzero =
+        MarmottantShellProperties::sono_vue(bubble_nonzero.radius_equilibrium).unwrap();
+    let mut drug_nonzero =
+        DrugPayload::new(0.0, volume, DrugLoadingMode::ShellEmbedded, 0.0).unwrap();
+    service
+        .update_bubble_dynamics(
+            &mut bubble_nonzero,
+            &mut shell_nonzero,
+            &mut drug_nonzero,
+            acoustic_pressure,
+            (0.0, 0.0, 0.0),
+            dp_dt_nonzero,
+            0.0,
+            1e-7,
+        )
+        .unwrap();
+
+    assert_ne!(
+        bubble_zero.radius, bubble_nonzero.radius,
+        "Non-zero dP/dt must change bubble dynamics (radiation-damping term)"
+    );
+}
+
+#[test]
+fn test_sample_acoustic_field() {
+    let mut pressure = Array3::zeros((10, 10, 10));
+    pressure[[5, 5, 5]] = 1e5;
+
+    let position = Position3D::new(0.005, 0.005, 0.005);
+    let grid_spacing = (0.001, 0.001, 0.001);
+
+    let (p, _grad) = sample_acoustic_field_at_position(&position, &pressure, grid_spacing).unwrap();
+
+    assert_eq!(p, 1e5);
+}
+
+#[test]
+fn test_effective_mass() {
+    let radius = 1e-6;
+    let mass = MicrobubbleDynamicsService::effective_bubble_mass(radius);
+
+    assert!(mass > 0.0);
+
+    let mass_2r = MicrobubbleDynamicsService::effective_bubble_mass(2.0 * radius);
+    assert!((mass_2r / mass - 8.0).abs() < 0.01);
+}

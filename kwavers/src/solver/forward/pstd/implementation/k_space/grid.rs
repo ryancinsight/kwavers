@@ -2,6 +2,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
+use crate::math::fft::KSpaceCalculator;
 use ndarray::Array1;
 
 /// Wavenumber grid for PSTD simulations
@@ -35,14 +36,7 @@ impl PSTDKSGrid {
 
     /// Compute wavenumber grid for one dimension using FFT conventions
     pub fn compute_wavenumbers(n: usize, dx: f64) -> Array1<f64> {
-        let dk = 2.0 * std::f64::consts::PI / (n as f64 * dx);
-        Array1::from_shape_fn(n, |i| {
-            if i <= n / 2 {
-                (i as f64) * dk
-            } else {
-                ((i as f64) - (n as f64)) * dk
-            }
-        })
+        KSpaceCalculator::generate_k_vector(n, dx)
     }
 
     /// Get grid dimensions (nx, ny, nz)

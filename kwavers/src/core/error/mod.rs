@@ -170,8 +170,8 @@ pub enum KwaversError {
     #[error("NIFTI format error")]
     Nifti(#[from] nifti::error::NiftiError),
 
-    /// DICOM format errors
-    #[cfg(feature = "dicom")]
+    /// DICOM format errors (always present; DICOM I/O lives in ritk-io,
+    /// which is now a mandatory dep — no feature gate required).
     #[error("DICOM format error: {0}")]
     DicomError(String),
 

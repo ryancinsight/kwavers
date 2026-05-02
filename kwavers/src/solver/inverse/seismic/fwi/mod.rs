@@ -1,0 +1,93 @@
+//! Full Waveform Inversion implementation.
+//!
+//! # Specification
+//!
+//! For the acoustic least-squares objective
+//!
+//! ```text
+//! J(c) = (dt / 2) Σ_{r,t} (d_syn(r,t;c) - d_obs(r,t))²
+//! ```
+//!
+//! the reduced gradient is obtained by the adjoint-state identity
+//!
+//! ```text
+//! ∂J/∂m(x) = -∫_0^T λ(x,T-t) ∂²p(x,t)/∂t² dt,     m = c⁻²
+//! ∂J/∂c(x) = -2 c(x)⁻³ ∂J/∂m(x)
+//! ```
+//!
+//! The discrete implementation follows the k-Wave time-reversal convention:
+//! the residual is reversed in time and injected through the same receiver mask
+//! used for data acquisition.
+//!
+//! # Theorems
+//!
+//! 1. **L2 residual theorem.** The Fréchet derivative of `J` with respect to
+//!    the data is `d_syn - d_obs`. This fixes the sign of the adjoint source.
+//! 2. **Time-reversal theorem.** Injecting the reversed residual on the receiver
+//!    mask produces the discrete adjoint wavefield for the acoustic linearized
+//!    operator, provided the forward and adjoint solvers share the same stencil
+//!    and boundary treatment.
+//! 3. **Chain-rule theorem.** The sound-speed gradient follows from
+//!    `m = c⁻²` by `dm/dc = -2 c⁻³`.
+//!
+//! # References
+//! - Tarantola (1984): *Inversion of seismic reflection data in the acoustic approximation*
+//! - Plessix (2006): *A review of the adjoint-state method for computing the gradient of a functional*
+//! - Virieux & Operto (2009): *An overview of full-waveform inversion in exploration geophysics*
+//!
+//! # Sign convention for model updates
+//!
+//! `adjoint_model` returns `g = +∂J/∂c`. Descent: `c_new = c − step × g`.
+//!
+//! # Module layout
+//!
+//! - [`geometry`]: `FwiGeometry` struct and index-mapping helpers.
+//! - [`forward`]: FDTD solver construction, forward-model runs, `generate_synthetic_data`.
+//! - [`adjoint`]: adjoint FDTD run, adjoint-source construction, L2 residual/objective.
+//! - [`gradient`]: gradient smoothing, regularization, near-source mute, TV/Laplacian helpers.
+//! - [`constraints`]: CFL validation, model clamping, pressure second-derivative.
+//! - [`inversion`]: `invert`, `invert_multi_source`, `invert_multi_source_masked`, shot-gradient dispatch.
+//! - [`search`]: line-search and joint-objective helpers.
+
+mod adjoint;
+mod constraints;
+mod forward;
+mod gradient;
+mod inversion;
+mod search;
+
+pub mod geometry;
+
+pub use geometry::FwiGeometry;
+
+#[cfg(test)]
+mod tests;
+
+/// Reference density for seismic FWI [kg/m³].
+///
+/// Gardner et al. (1974) relate seismic velocity to density via ρ = a·Vᵇ
+/// (a = 310, b = 0.25 for consolidated sedimentary rock).  Uniform value
+/// consistent with typical upper-crust consolidated sediments (~2000 kg/m³).
+///
+/// Reference: Gardner, G.H.F. et al. (1974). Geophysics 39(6), 770–780.
+pub(super) const RHO_SEISMIC_REF: f64 = 2000.0; // kg/m³
+
+/// Full Waveform Inversion processor.
+#[derive(Debug)]
+pub struct FwiProcessor {
+    pub(super) parameters: super::parameters::FwiParameters,
+}
+
+impl FwiProcessor {
+    /// Create new FWI processor with specified parameters.
+    #[must_use]
+    pub fn new(parameters: super::parameters::FwiParameters) -> Self {
+        Self { parameters }
+    }
+}
+
+impl Default for FwiProcessor {
+    fn default() -> Self {
+        Self::new(super::parameters::FwiParameters::default())
+    }
+}

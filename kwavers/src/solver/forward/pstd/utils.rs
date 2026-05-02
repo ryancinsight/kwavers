@@ -8,7 +8,6 @@ use crate::domain::grid::Grid;
 use crate::math::fft::{fft_3d_array_into, ifft_3d_complex_inplace, KSpaceCalculator};
 use ndarray::{s, Array3, Axis, Zip};
 use num_complex::Complex64;
-use std::f64::consts::PI;
 
 /// Compute wavenumber arrays for spectral operations
 /// Returns (kx, ky, kz) arrays with proper Nyquist handling
@@ -75,22 +74,7 @@ pub fn compute_anti_aliasing_filter(grid: &Grid, cutoff: f64, order: u32) -> Arr
 /// Compute 1D wavenumber array with proper Nyquist handling
 #[allow(dead_code)]
 fn compute_1d_wavenumbers(n: usize, dx: f64) -> Vec<f64> {
-    let mut k = vec![0.0; n];
-    let dk = 2.0 * PI / (n as f64 * dx);
-
-    for (i, k_val) in k.iter_mut().enumerate().take(n) {
-        if i <= n / 2 {
-            *k_val = i as f64 * dk;
-        } else {
-            *k_val = -((n - i) as f64) * dk;
-        }
-    }
-
-    // Note: Nyquist frequency should NOT be set to zero
-    // It represents the highest resolvable frequency
-    // Setting it to zero would lose information
-
-    k
+    KSpaceCalculator::generate_k_vector(n, dx).to_vec()
 }
 
 /// Compute k² magnitude array for Laplacian operations
@@ -312,6 +296,7 @@ pub fn gradient_z(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     #[test]
     fn test_wavenumber_computation() {

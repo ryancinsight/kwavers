@@ -14,10 +14,13 @@
 //!
 //! ## Usage
 
+mod accessors;
 pub mod compute;
 pub mod config;
+mod construction;
 pub mod fields;
 pub mod solver;
+mod stepping;
 #[cfg(test)]
 mod tests;
 

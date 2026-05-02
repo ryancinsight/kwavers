@@ -47,7 +47,9 @@ rand_distr = "0.4"
 rand_chacha = "0.3"
 regex = "1.8"
 nifti = "0.17.0"
-dicom = { version = "0.7", features = ["pixeldata"] }
+# NOTE: the `dicom` crate is now pulled transitively via ritk-io (mandatory).
+# kwavers no longer depends on it directly; DICOM I/O goes through
+# `infrastructure::io::dicom_ritk` (the SSOT adapter wrapping ritk-io).
 chrono = { version = "0.4", features = ["serde"] }
 base64 = "0.22"
 
@@ -141,7 +143,7 @@ parallel = ["ndarray/rayon"] # Add back parallel feature
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu"]
 plotting = ["dep:plotly"]
 # Additional features referenced in code
-dicom = []             # Medical imaging support
+dicom = []             # No-op alias retained for back-compat; DICOM I/O is unconditional via ritk-io.
 nifti = []             # Medical imaging support
 nightly = []           # Nightly Rust features
 simd = []              # SIMD acceleration support

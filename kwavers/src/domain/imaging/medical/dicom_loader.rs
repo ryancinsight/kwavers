@@ -1,18 +1,15 @@
-//! DICOM Image Loader (domain-layer placeholder).
+//! DICOM Image Loader.
 //!
-//! **SSOT NOTE**: real DICOM I/O lives in `ritk-io` (`ritk::crates::ritk-io`).
-//! Use `ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<Backend>(...)`
-//! (see `kwavers/examples/skull_ct_phase_correction.rs` for the canonical
-//! pattern) instead of this loader. This domain-layer type only carries the
-//! metadata schema and HU/affine helpers — its `load_series_internal` remains
-//! a stub returning `KwaversError::NotImplemented` because the domain layer
-//! cannot depend on Burn (ritk-io requires `Backend`). The infrastructure
-//! layer is the correct seam to bridge ritk-io's `Image<B, 3>` into the
-//! domain `Array3<f64>`; tracked in backlog under "DICOM SSOT consolidation".
+//! **SSOT**: pixel-data decoding is owned by `ritk-io`
+//! (`ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<Backend>(...)`).
+//! The kwavers `infrastructure::io::dicom_ritk` adapter converts ritk-io's
+//! `Image<B, 3>` into kwavers' `Array3<f64>` + `MedicalImageMetadata`; this
+//! domain-layer loader simply delegates to that adapter for series loading
+//! and caches the resulting metadata for the `MedicalImageLoader` trait.
 //!
-//! This module provides metadata structures and HU-conversion helpers for
-//! DICOM (Digital Imaging and Communications in Medicine) medical images.
-//! Pixel-data decoding is deliberately delegated to ritk-io.
+//! HU-conversion helpers (`to_hounsfield_units`) and the affine-from-IPP/IOP
+//! helper (`compute_affine`) remain here for callers that work with raw
+//! DICOM-derived spatial metadata directly.
 //!
 //! ## Supported Modalities
 //!
@@ -201,63 +198,62 @@ impl DicomImageLoader {
         self.metadata.as_ref()
     }
 
-    /// Load DICOM series from directory
+    /// Load DICOM series from directory.
     ///
-    /// # Implementation Notes
-    ///
-    /// Full implementation with dicom-rs crate would:
-    /// 1. Read all .dcm files in directory
-    /// 2. Parse DICOM headers using dicom crate
-    /// 3. Extract pixel data, metadata, and spatial information
-    /// 4. Sort slices by z-position (Image Position Patient)
-    /// 5. Validate consistent dimensions and spacing
-    /// 6. Stack 2D slices into 3D volume
-    /// 7. Apply HU conversion if CT modality
-    ///
-    /// For now, returns synthetic data with correct structure.
+    /// Delegates to `infrastructure::io::dicom_ritk` (the canonical SSOT
+    /// adapter wrapping `ritk_io::scan_dicom_directory` +
+    /// `ritk_io::load_dicom_series`). When the directory contains exactly one
+    /// series, that series is loaded. When multiple series are present, the
+    /// adapter returns an `InvalidInput` error listing every series UID so
+    /// the caller can disambiguate.
     fn load_series_internal(&mut self, dir_path: &str) -> KwaversResult<Array3<f64>> {
-        let path = Path::new(dir_path);
+        let volume =
+            crate::infrastructure::io::dicom_ritk::load_series_from_dir(Path::new(dir_path))?;
 
-        if !path.is_dir() {
-            return Err(KwaversError::InvalidInput(format!(
-                "DICOM series path must be directory: {}",
-                dir_path
-            )));
-        }
+        // Translate the ritk-io modality string into the domain `DicomModality` enum.
+        let modality = match volume.metadata.modality.as_str() {
+            "CT" => DicomModality::CT,
+            "MR" | "MRI" => DicomModality::MR,
+            "US" => DicomModality::US,
+            "RTDOSE" | "RD" => DicomModality::RD,
+            _ => DicomModality::Other,
+        };
 
-        // Find all DICOM files in directory
-        let mut dicom_files = Vec::new();
-        for entry in std::fs::read_dir(path)
-            .map_err(|e| KwaversError::InternalError(format!("Failed to read directory: {}", e)))?
-        {
-            let entry = entry
-                .map_err(|e| KwaversError::InternalError(format!("Failed to read entry: {}", e)))?;
-            let file_path = entry.path();
+        let dims = volume.metadata.dimensions;
+        let spacing_mm = volume.metadata.voxel_spacing_mm;
+        let spacing_m = volume.metadata.voxel_spacing_m;
+        let intensity_range = volume.metadata.intensity_range;
 
-            if file_path.extension().and_then(|s| s.to_str()) == Some("dcm") {
-                dicom_files.push(file_path);
-            }
-        }
+        self.metadata = Some(DicomMetadata {
+            dimensions: dims,
+            voxel_spacing_mm: spacing_mm,
+            voxel_spacing_m: spacing_m,
+            affine: volume.metadata.affine,
+            modality,
+            patient_id: String::new(),
+            patient_name: String::new(),
+            patient_birth_date: None,
+            patient_sex: None,
+            study_date: String::new(),
+            study_time: String::new(),
+            study_description: volume.series_info.series_description.clone(),
+            series_description: volume.series_info.series_description.clone(),
+            series_instance_uid: volume.series_info.series_instance_uid.clone(),
+            study_instance_uid: String::new(),
+            num_slices: dims.2,
+            slice_thickness_mm: spacing_mm.2,
+            image_position: None,
+            image_orientation: None,
+            intensity_range,
+            window_center: None,
+            window_width: None,
+            rescale_intercept: None,
+            rescale_slope: None,
+        });
 
-        if dicom_files.is_empty() {
-            return Err(KwaversError::InvalidInput(format!(
-                "No DICOM files (.dcm) found in directory: {}",
-                dir_path
-            )));
-        }
-
-        // SSOT: DICOM pixel-data decoding lives in ritk-io. This domain-layer
-        // loader only validates the directory and surfaces metadata; consumers
-        // should call ritk_io::load_dicom_series for the actual volume.
-        Err(KwaversError::NotImplemented(format!(
-            "DICOM pixel decoding is owned by ritk-io. \
-             Found {} .dcm files in '{}'. \
-             Use `ritk_io::scan_dicom_directory` + \
-             `ritk_io::load_dicom_series::<Backend>(...)` \
-             (see kwavers/examples/skull_ct_phase_correction.rs).",
-            dicom_files.len(),
-            dir_path
-        )))
+        let voxels = volume.voxels.clone();
+        self.data = Some(volume.voxels);
+        Ok(voxels)
     }
 
     fn identity_affine() -> [[f64; 4]; 4] {

@@ -1,0 +1,231 @@
+use super::derivative::PseudospectralDerivative;
+use super::filter::{FilterType, SpectralFilter};
+use super::trait_def::SpectralOperator;
+use approx::assert_abs_diff_eq;
+use ndarray::Array3;
+use std::f64::consts::PI;
+
+#[test]
+fn test_wavenumber_vector() {
+    let n = 8;
+    let d = 0.1;
+    let k = PseudospectralDerivative::wavenumber_vector(n, d);
+
+    assert_eq!(k.len(), n);
+    assert_abs_diff_eq!(k[0], 0.0, epsilon = 1e-15);
+    assert_abs_diff_eq!(k[1], -k[n - 1], epsilon = 1e-10);
+}
+
+#[test]
+fn test_pseudospectral_creation() {
+    let op = PseudospectralDerivative::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
+
+    let (kx, ky, kz) = op.wavenumber_grid();
+    assert_eq!(kx.len(), 64);
+    assert_eq!(ky.len(), 64);
+    assert_eq!(kz.len(), 64);
+}
+
+#[test]
+fn test_nyquist_wavenumber() {
+    let dx = 0.001;
+    let op = PseudospectralDerivative::new(100, 100, 100, dx, dx, dx).unwrap();
+
+    let (kx_nyq, ky_nyq, kz_nyq) = op.nyquist_wavenumber();
+    let expected = PI / dx;
+    assert_abs_diff_eq!(kx_nyq, expected, epsilon = 1e-10);
+    assert_abs_diff_eq!(ky_nyq, expected, epsilon = 1e-10);
+    assert_abs_diff_eq!(kz_nyq, expected, epsilon = 1e-10);
+}
+
+#[test]
+fn test_spectral_filter_sharp_cutoff() {
+    let filter = SpectralFilter::new(0.67, FilterType::SharpCutoff);
+    let k_nyquist = 1000.0;
+
+    assert_abs_diff_eq!(
+        filter.transfer_function(0.5 * k_nyquist, k_nyquist),
+        1.0,
+        epsilon = 1e-10
+    );
+    assert_abs_diff_eq!(
+        filter.transfer_function(0.8 * k_nyquist, k_nyquist),
+        0.0,
+        epsilon = 1e-10
+    );
+}
+
+#[test]
+fn test_spectral_filter_smooth() {
+    let filter = SpectralFilter::new(0.67, FilterType::Smooth);
+    let k_nyquist = 1000.0;
+
+    let h_cutoff = filter.transfer_function(0.67 * k_nyquist, k_nyquist);
+    assert_abs_diff_eq!(h_cutoff, 1.0, epsilon = 1e-10);
+
+    let h_mid = filter.transfer_function(0.8 * k_nyquist, k_nyquist);
+    assert!(h_mid > 0.0 && h_mid < 1.0);
+
+    let h_nyq = filter.transfer_function(k_nyquist, k_nyquist);
+    assert!(h_nyq < 0.1);
+}
+
+#[test]
+fn test_invalid_grid_spacing() {
+    assert!(PseudospectralDerivative::new(10, 10, 10, -0.1, 0.1, 0.1).is_err());
+}
+
+#[test]
+fn test_derivative_x_sine_wave() {
+    let nx = 64;
+    let ny = 4;
+    let nz = 4;
+    let dx = 0.1;
+    let dy = 0.1;
+    let dz = 0.1;
+
+    let op = PseudospectralDerivative::new(nx, ny, nz, dx, dy, dz).unwrap();
+    let k = 2.0 * PI / (nx as f64 * dx);
+
+    let mut field = Array3::zeros((nx, ny, nz));
+    for i in 0..nx {
+        let val = (k * i as f64 * dx).sin();
+        for j in 0..ny {
+            for l in 0..nz {
+                field[[i, j, l]] = val;
+            }
+        }
+    }
+
+    let deriv = op.derivative_x(field.view()).unwrap();
+
+    for i in 0..nx {
+        let expected = k * (k * i as f64 * dx).cos();
+        assert_abs_diff_eq!(deriv[[i, 0, 0]], expected, epsilon = 1e-10);
+    }
+}
+
+#[test]
+fn test_derivative_y_sine_wave() {
+    let nx = 4;
+    let ny = 64;
+    let nz = 4;
+    let dx = 0.1;
+    let dy = 0.1;
+    let dz = 0.1;
+
+    let op = PseudospectralDerivative::new(nx, ny, nz, dx, dy, dz).unwrap();
+    let k = 2.0 * PI / (ny as f64 * dy);
+
+    let mut field = Array3::zeros((nx, ny, nz));
+    for j in 0..ny {
+        let val = (k * j as f64 * dy).sin();
+        for i in 0..nx {
+            for l in 0..nz {
+                field[[i, j, l]] = val;
+            }
+        }
+    }
+
+    let deriv = op.derivative_y(field.view()).unwrap();
+
+    for j in 0..ny {
+        let expected = k * (k * j as f64 * dy).cos();
+        assert_abs_diff_eq!(deriv[[0, j, 0]], expected, epsilon = 1e-10);
+    }
+}
+
+#[test]
+fn test_derivative_z_sine_wave() {
+    let nx = 4;
+    let ny = 4;
+    let nz = 64;
+    let dx = 0.1;
+    let dy = 0.1;
+    let dz = 0.1;
+
+    let op = PseudospectralDerivative::new(nx, ny, nz, dx, dy, dz).unwrap();
+    let k = 2.0 * PI / (nz as f64 * dz);
+
+    let mut field = Array3::zeros((nx, ny, nz));
+    for l in 0..nz {
+        let val = (k * l as f64 * dz).sin();
+        for i in 0..nx {
+            for j in 0..ny {
+                field[[i, j, l]] = val;
+            }
+        }
+    }
+
+    let deriv = op.derivative_z(field.view()).unwrap();
+
+    for l in 0..nz {
+        let expected = k * (k * l as f64 * dz).cos();
+        assert_abs_diff_eq!(deriv[[0, 0, l]], expected, epsilon = 1e-10);
+    }
+}
+
+#[test]
+fn test_derivative_of_constant_is_zero() {
+    let nx = 32;
+    let ny = 32;
+    let nz = 32;
+
+    let op = PseudospectralDerivative::new(nx, ny, nz, 0.1, 0.1, 0.1).unwrap();
+    let field = Array3::from_elem((nx, ny, nz), 5.0);
+
+    let deriv_x = op.derivative_x(field.view()).unwrap();
+    let deriv_y = op.derivative_y(field.view()).unwrap();
+    let deriv_z = op.derivative_z(field.view()).unwrap();
+
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                assert_abs_diff_eq!(deriv_x[[i, j, k]], 0.0, epsilon = 1e-12);
+                assert_abs_diff_eq!(deriv_y[[i, j, k]], 0.0, epsilon = 1e-12);
+                assert_abs_diff_eq!(deriv_z[[i, j, k]], 0.0, epsilon = 1e-12);
+            }
+        }
+    }
+}
+
+#[test]
+fn test_spectral_accuracy_exponential() {
+    let nx = 32;
+    let ny = 4;
+    let nz = 4;
+    let dx = 0.05;
+    let dy = 0.1;
+    let dz = 0.1;
+
+    let op = PseudospectralDerivative::new(nx, ny, nz, dx, dy, dz).unwrap();
+
+    let k1 = 2.0 * PI / (nx as f64 * dx);
+    let k2 = 4.0 * PI / (nx as f64 * dx);
+
+    let mut field = Array3::zeros((nx, ny, nz));
+    for i in 0..nx {
+        let x = i as f64 * dx;
+        let val = (k1 * x).sin() + 0.5 * (k2 * x).cos();
+        for j in 0..ny {
+            for l in 0..nz {
+                field[[i, j, l]] = val;
+            }
+        }
+    }
+
+    let deriv = op.derivative_x(field.view()).unwrap();
+
+    let mut max_error: f64 = 0.0;
+    for i in 0..nx {
+        let x = i as f64 * dx;
+        let expected = k1 * (k1 * x).cos() - 0.5 * k2 * (k2 * x).sin();
+        max_error = max_error.max((deriv[[i, 0, 0]] - expected).abs());
+    }
+
+    assert!(
+        max_error < 1e-11,
+        "Max error {} exceeds spectral accuracy threshold",
+        max_error
+    );
+}

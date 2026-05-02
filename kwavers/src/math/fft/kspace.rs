@@ -12,18 +12,7 @@ pub struct KSpaceCalculator;
 impl KSpaceCalculator {
     /// Generate k-space wavenumbers for one dimension
     pub fn generate_k_vector(n: usize, dx: f64) -> Array1<f64> {
-        let mut k = Array1::zeros(n);
-        let dk = 2.0 * PI / (n as f64 * dx);
-
-        for i in 0..n {
-            if i <= n / 2 {
-                k[i] = i as f64 * dk;
-            } else {
-                k[i] = f64::from(i as i32 - n as i32) * dk;
-            }
-        }
-
-        k
+        Array1::from_vec(apollo::fftfreq(n, dx)).mapv(|cycles_per_unit| 2.0 * PI * cycles_per_unit)
     }
 
     /// Generate 3D k-squared array for Laplacian operations
