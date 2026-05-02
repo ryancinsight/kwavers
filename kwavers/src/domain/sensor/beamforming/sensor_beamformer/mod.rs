@@ -10,9 +10,9 @@
 //! | `beamformer` | `SensorBeamformer` — delay, windowing, steering       |
 
 mod beamformer;
-mod types;
 #[cfg(test)]
 mod tests;
+mod types;
 
 pub use beamformer::SensorBeamformer;
 pub use types::{SensorProcessingParams, WindowType};

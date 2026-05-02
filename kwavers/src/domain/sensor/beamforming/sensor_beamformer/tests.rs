@@ -110,8 +110,7 @@ fn test_windowing_applied_per_column() {
     for col_idx in 1..3 {
         for row_idx in 0..4 {
             let ratio = windowed[[row_idx, col_idx]] / delays[[row_idx, col_idx]];
-            let prev_ratio =
-                windowed[[row_idx, col_idx - 1]] / delays[[row_idx, col_idx - 1]];
+            let prev_ratio = windowed[[row_idx, col_idx - 1]] / delays[[row_idx, col_idx - 1]];
             assert_relative_eq!(ratio, prev_ratio, epsilon = 1e-10);
         }
     }
