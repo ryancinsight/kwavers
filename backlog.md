@@ -139,3 +139,6 @@
 - Closed the `MieTheory::gold_in_water` simplified Drude-Lorentz placeholder by routing the gold dielectric closure through Johnson-Christy measured optical constants, affine interpolation over the tabulated wavelength domain, and exact `ε=(n+ik)²` conversion.
 - Closed the electromagnetic plasmonic-trait physics/organization gap by moving spheroid depolarization formulas into the nested `traits/plasmonic/geometry.rs` kernel and replacing the prior negative-permittivity resonance expression with a Fröhlich/Drude resonance law plus finite damping.
 - Residual modeling scope: additional gold datasets such as Rakic, Olmon, or temperature-dependent Magnozzi/Yakubovsky records should be introduced through an explicit dielectric-data strategy before adding film, size-corrected, or thermal gold models.
+
+## Tree Cleanup Sprint
+- Closed the diverging-wave config SSOT gap: `domain::sensor::ultrafast::diverging_wave::config` now owns `DivergingWaveConfig`, while the processor facade retains the existing public re-export and focused tests remain co-located with the processor module.

@@ -25,7 +25,7 @@
 //! See `plane_wave.rs` for complete API and tests.
 //! REFERENCES: Jensen et al. (2006), Montaldo et al. (2009), Tanter & Fink (2014)
 //!
-//! ## Diverging Wave / STA (Implemented in `diverging_wave.rs`)
+//! ## Diverging Wave / STA (Implemented in `diverging_wave`)
 //!
 //! Virtual source model (Papadacci et al. 2014): τ_tx = (√((x−xᵢ)²+(z+F)²)−F)/c.
 //! Synthetic transmit aperture delay table, transmit-delay surfaces, Hann F-number
