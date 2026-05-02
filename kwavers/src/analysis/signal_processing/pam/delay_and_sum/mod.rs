@@ -8,9 +8,9 @@
 //! ```
 
 mod processor;
-mod types;
 #[cfg(test)]
 mod tests;
+mod types;
 
 pub use processor::DelayAndSumPAM;
 pub use types::{ApodizationType, CavitationEvent, DelayAndSumConfig};

@@ -233,7 +233,10 @@ impl DelayAndSumPAM {
 
     fn estimate_peak_frequency(&self, signal: &[f64]) -> Option<f64> {
         let n = signal.len();
-        if n < 2 || !self.config.sampling_frequency.is_finite() || self.config.sampling_frequency <= 0.0 {
+        if n < 2
+            || !self.config.sampling_frequency.is_finite()
+            || self.config.sampling_frequency <= 0.0
+        {
             return None;
         }
 
