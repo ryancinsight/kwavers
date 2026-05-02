@@ -142,3 +142,9 @@
 
 ## Tree Cleanup Sprint
 - Closed the diverging-wave config SSOT gap: `domain::sensor::ultrafast::diverging_wave::config` now owns `DivergingWaveConfig`, while the processor facade retains the existing public re-export and focused tests remain co-located with the processor module.
+- Closed the Kuznetsov solver monolith gap: `solver::forward::nonlinear::kuznetsov::solver` now separates solver state, RHS assembly, acoustic-model integration, and conservation diagnostics. The RHS hot path reuses workspace `k1` and no longer clones the pressure field before RHS evaluation.
+- Closed the seismic misfit organization gap: `solver::inverse::reconstruction::seismic::misfit` now isolates dispatch types, norm metrics, envelope/phase metrics, and Wasserstein metrics behind one unchanged facade.
+- Closed the GPU k-space organization gap: propagation and spectral-shift GPU paths now live under separate `gpu::kspace` child modules behind the unchanged parent re-exports.
+- Closed the FDTD-FEM coupling duplicate-module gap: hybrid coupling now uses `fdtd_fem_coupling/{config,interface,coupler,solver,tests}` behind one parent facade.
+- Closed the FDTD k-space correction organization gap: spectral gradient/divergence operators and value tests now live under `kspace_correction/{operators,tests}` behind one parent facade.
+- Closed the beamforming localization search organization gap: policy types, search orchestration, and tests now live under `beamforming_search/{types,search,tests}` behind one parent facade.

@@ -8,8 +8,6 @@ mod tests;
 pub use fdtd_cpu::FdtdGpuDispatcher;
 pub use fdtd_gpu::{FdtdGpuShaderDispatcher, PressureParams};
 
-use crate::core::error::KwaversResult;
-
 /// GPU compute manager
 #[derive(Debug)]
 pub struct GpuCompute {

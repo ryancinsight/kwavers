@@ -1,6 +1,6 @@
 //! Real-Time Imaging Pipelines for GPU-Accelerated Ultrasound Processing
 
-use crate::gpu::memory::{MemoryPoolType, UnifiedMemoryManager};
+use crate::gpu::memory::UnifiedMemoryManager;
 use crate::math::fft::Complex64;
 use ndarray::{Array1, Array3, Array4};
 use std::cell::RefCell;

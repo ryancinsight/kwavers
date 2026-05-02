@@ -2,7 +2,7 @@
 //!
 //! SRP: changes when the GPU buffer packing format or cache invalidation policy changes.
 
-use super::super::{GpuPstdSolver, PstdParams};
+use super::super::GpuPstdSolver;
 use wgpu::util::DeviceExt;
 
 // ─── Packed buffer layout ────────────────────────────────────────────────────

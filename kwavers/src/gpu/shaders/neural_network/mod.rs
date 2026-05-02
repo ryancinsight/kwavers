@@ -5,8 +5,6 @@
 
 use crate::core::error::KwaversResult;
 use crate::gpu::device::GpuDevice;
-use wgpu::util::DeviceExt;
-
 mod activate;
 mod matmul;
 #[cfg(all(test, feature = "gpu"))]
