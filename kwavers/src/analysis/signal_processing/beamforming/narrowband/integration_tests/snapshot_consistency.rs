@@ -1,7 +1,7 @@
 //! Cross-method snapshot consistency tests.
 
 use super::super::snapshots::{extract_narrowband_snapshots, SnapshotScenario, SnapshotSelection};
-use super::helpers::{compute_sample_covariance, generate_plane_wave_data, generate_ula_positions};
+use super::helpers::{compute_sample_covariance, generate_plane_wave_data};
 
 #[test]
 fn snapshot_methods_produce_consistent_covariance_rank() {

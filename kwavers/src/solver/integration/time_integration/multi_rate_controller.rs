@@ -79,8 +79,7 @@ impl MultiRateController {
                 1
             } else {
                 // This is a fast component - needs multiple sub-steps
-                // n = ceil(global_dt / component_dt)
-                ((global_dt / component_dt).ceil() as usize)
+                ceil_ratio_at_integer_boundary(global_dt, component_dt)
                     .max(1)
                     .min(self.config.max_subcycles)
             };
@@ -141,5 +140,16 @@ impl MultiRateController {
         let single_rate_work = self.total_steps * max_subcycles * self.subcycle_counts.len();
 
         single_rate_work as f64 / actual_work.max(1) as f64
+    }
+}
+
+fn ceil_ratio_at_integer_boundary(numerator: f64, denominator: f64) -> usize {
+    let ratio = numerator / denominator;
+    let nearest = ratio.round();
+    let roundoff_bound = 8.0 * f64::EPSILON * ratio.abs().max(1.0);
+    if (ratio - nearest).abs() <= roundoff_bound {
+        nearest as usize
+    } else {
+        ratio.ceil() as usize
     }
 }

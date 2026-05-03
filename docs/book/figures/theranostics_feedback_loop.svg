@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="360" viewBox="0 0 900 360" role="img" aria-label="Theranostic feedback loop">
+  <rect width="900" height="360" fill="#f9fafb"/>
+  <g font-family="Arial" fill="#111827">
+    <circle cx="450" cy="180" r="118" fill="#ffffff" stroke="#0f172a" stroke-width="3"/>
+    <rect x="382" y="48" width="136" height="54" rx="8" fill="#e0f2fe" stroke="#0284c7"/>
+    <text x="450" y="81" text-anchor="middle" font-size="16">Image State</text>
+    <rect x="595" y="153" width="150" height="54" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="670" y="186" text-anchor="middle" font-size="16">Register</text>
+    <rect x="382" y="258" width="136" height="54" rx="8" fill="#ffedd5" stroke="#f97316"/>
+    <text x="450" y="291" text-anchor="middle" font-size="16">Predict Dose</text>
+    <rect x="155" y="153" width="150" height="54" rx="8" fill="#fee2e2" stroke="#dc2626"/>
+    <text x="230" y="186" text-anchor="middle" font-size="16">Control</text>
+    <path d="M518 75 C616 91 670 118 670 153" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M670 207 C650 254 572 285 518 285" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M382 285 C307 278 230 235 230 207" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M230 153 C238 99 317 75 382 75" fill="none" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="450" y="176" text-anchor="middle" font-size="20">closed-loop</text>
+    <text x="450" y="204" text-anchor="middle" font-size="15">diagnose -> treat -> verify</text>
+  </g>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+  </defs>
+</svg>

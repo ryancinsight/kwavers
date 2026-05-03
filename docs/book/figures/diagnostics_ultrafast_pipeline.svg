@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="360" viewBox="0 0 900 360" role="img" aria-label="Ultrafast diagnostic pipeline">
+  <rect width="900" height="360" fill="#f8fafc"/>
+  <g font-family="Arial" fill="#111827">
+    <rect x="42" y="130" width="150" height="92" rx="8" fill="#ecfeff" stroke="#0891b2" stroke-width="2"/>
+    <text x="117" y="164" text-anchor="middle" font-size="16">Plane Waves</text>
+    <text x="117" y="194" text-anchor="middle" font-size="13">theta_i transmit</text>
+    <rect x="238" y="130" width="150" height="92" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+    <text x="313" y="164" text-anchor="middle" font-size="16">Beamform</text>
+    <text x="313" y="194" text-anchor="middle" font-size="13">phase align</text>
+    <rect x="434" y="130" width="150" height="92" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
+    <text x="509" y="164" text-anchor="middle" font-size="16">Compound</text>
+    <text x="509" y="194" text-anchor="middle" font-size="13">sum complex frames</text>
+    <rect x="630" y="130" width="210" height="92" rx="8" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+    <text x="735" y="164" text-anchor="middle" font-size="16">Quantify</text>
+    <text x="735" y="194" text-anchor="middle" font-size="13">CEUS, ULM, Doppler</text>
+    <path d="M192 176 H238" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M388 176 H434" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M584 176 H630" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="450" y="70" text-anchor="middle" font-size="22">Diagnostic Processing Contract</text>
+  </g>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+  </defs>
+</svg>

@@ -7,7 +7,7 @@
 
 **An interdisciplinary ultrasound-light physics simulation library.** Kwavers models acoustic wave propagation, cavitation dynamics, and sonoluminescence for multi-modal imaging research and physics studies.
 
-![Physics Pipeline](https://via.placeholder.com/800x200/4A90E2/FFFFFF?text=Ultrasound+→+Cavitation+→+Sonoluminescence+→+Multi-modal+Imaging)
+![Theranostic feedback loop](docs/book/figures/theranostics_feedback_loop.svg)
 
 ## 📋 Library Components
 

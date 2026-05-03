@@ -15,7 +15,9 @@ fn test_plane_wave_config_default() {
 fn test_plane_wave_creation() {
     let config = PlaneWaveConfig::default();
     let result = PlaneWaveCompound::new(config);
-    assert!(result.is_ok());
+    let compounding = result.expect("valid plane-wave config");
+    assert_eq!(compounding.num_angles(), 11);
+    assert_eq!(compounding.dimensions(), (200, 80));
 }
 
 #[test]
@@ -122,4 +124,32 @@ fn test_process_frame() {
     for &v in image.iter() {
         assert!((0.0..=1.0).contains(&v), "Display pixel {v} out of [0, 1]");
     }
+}
+
+#[test]
+fn test_thermal_acoustic_config_uses_plane_wave_geometry() {
+    let plane_wave = PlaneWaveConfig {
+        sound_speed: 1500.0,
+        aperture_size: 0.012,
+        lateral_step: 0.001,
+        element_spacing: 0.0005,
+        depth: 0.020,
+        axial_step: 0.002,
+        ..Default::default()
+    };
+    let compounding = PlaneWaveCompound::new(plane_wave.clone()).unwrap();
+
+    let thermal = compounding.config();
+
+    assert_eq!(thermal.nx, 12);
+    assert_eq!(thermal.ny, 1);
+    assert_eq!(thermal.nz, 10);
+    assert_eq!(thermal.dx, plane_wave.lateral_step);
+    assert_eq!(thermal.dy, plane_wave.element_spacing);
+    assert_eq!(thermal.dz, plane_wave.axial_step);
+    assert_eq!(thermal.c_ref, plane_wave.sound_speed);
+    assert_eq!(
+        thermal.dt,
+        0.3 * plane_wave.element_spacing / plane_wave.sound_speed
+    );
 }

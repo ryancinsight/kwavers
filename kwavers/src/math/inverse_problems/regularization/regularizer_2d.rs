@@ -1,0 +1,91 @@
+//! `ModelRegularizer2D` — regularization on 2D spatial model arrays.
+
+use super::config::RegularizationConfig;
+use ndarray::{Array2, Zip};
+
+/// 2D Model Regularizer
+///
+/// Applies regularization to 2D model arrays (e.g., velocity models in 2D inversions).
+#[derive(Debug)]
+pub struct ModelRegularizer2D {
+    config: RegularizationConfig,
+}
+
+impl ModelRegularizer2D {
+    /// Create new 2D regularizer
+    pub fn new(config: RegularizationConfig) -> Self {
+        Self { config }
+    }
+
+    /// Apply regularization to 2D gradient
+    pub fn apply_to_gradient(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
+        if !self.config.is_active() {
+            return;
+        }
+
+        if self.config.tikhonov_weight > 0.0 {
+            self.apply_tikhonov(gradient, model);
+        }
+
+        if self.config.tv_weight > 0.0 {
+            self.apply_total_variation(gradient, model);
+        }
+
+        if self.config.smoothness_weight > 0.0 {
+            self.apply_smoothness(gradient);
+        }
+
+        if self.config.l1_weight > 0.0 {
+            self.apply_l1(gradient, model);
+        }
+    }
+
+    fn apply_tikhonov(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
+        Zip::from(gradient).and(model).for_each(|g, &m| {
+            *g += self.config.tikhonov_weight * m;
+        });
+    }
+
+    fn apply_total_variation(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
+        let (nx, ny) = model.dim();
+        let eps = self.config.tv_epsilon;
+
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                let dx = model[[i + 1, j]] - model[[i, j]];
+                let dy = model[[i, j + 1]] - model[[i, j]];
+
+                let grad_norm = (dx * dx + dy * dy + eps).sqrt();
+                let tv_term =
+                    (3.0 * model[[i, j]] - model[[i + 1, j]] - model[[i, j + 1]]) / grad_norm;
+
+                gradient[[i, j]] += self.config.tv_weight * tv_term;
+            }
+        }
+    }
+
+    fn apply_smoothness(&self, gradient: &mut Array2<f64>) {
+        let (nx, ny) = gradient.dim();
+        let mut laplacian = Array2::zeros(gradient.dim());
+
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                laplacian[[i, j]] = gradient[[i + 1, j]]
+                    + gradient[[i - 1, j]]
+                    + gradient[[i, j + 1]]
+                    + gradient[[i, j - 1]]
+                    - 4.0 * gradient[[i, j]];
+            }
+        }
+
+        Zip::from(gradient).and(&laplacian).for_each(|g, &lap| {
+            *g += self.config.smoothness_weight * lap;
+        });
+    }
+
+    fn apply_l1(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
+        Zip::from(gradient).and(model).for_each(|g, &m| {
+            *g += self.config.l1_weight * m.signum();
+        });
+    }
+}

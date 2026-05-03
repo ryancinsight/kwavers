@@ -270,9 +270,24 @@ impl PlaneWaveCompound {
         Ok(self.display_image.clone())
     }
 
-    /// Returns a default `ThermalAcousticConfig` (stub accessor for workflow compatibility).
+    /// Returns a thermal-acoustic grid configuration consistent with this image geometry.
+    ///
+    /// The plane-wave image grid is two-dimensional `(lateral, axial)`. The
+    /// thermal-acoustic solver is volumetric, so this method embeds the image
+    /// as a one-cell-thick volume with `(nx, ny, nz) = (lateral, 1, axial)`.
+    /// The time step uses the same acoustic CFL factor as the coupled solver
+    /// default: `dt = 0.3 min(dx, dy, dz) / c_ref`.
     pub fn config(&self) -> crate::solver::forward::coupled::ThermalAcousticConfig {
-        crate::solver::forward::coupled::ThermalAcousticConfig::default()
+        let mut thermal = crate::solver::forward::coupled::ThermalAcousticConfig::default();
+        thermal.nx = self.num_lateral;
+        thermal.ny = 1;
+        thermal.nz = self.num_axial;
+        thermal.dx = self.config.lateral_step;
+        thermal.dy = self.config.element_spacing;
+        thermal.dz = self.config.axial_step;
+        thermal.c_ref = self.config.sound_speed;
+        thermal.dt = 0.3 * thermal.dx.min(thermal.dy).min(thermal.dz) / thermal.c_ref;
+        thermal
     }
 
     /// Number of configured plane wave angles.
