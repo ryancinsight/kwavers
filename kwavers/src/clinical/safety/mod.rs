@@ -36,6 +36,7 @@ pub mod audit;
 pub mod compliance;
 pub mod interlocks;
 pub mod mechanical_index;
+pub mod thermal_index;
 
 mod compliance_validator;
 mod dose;
@@ -54,3 +55,6 @@ pub use compliance_validator::{
 pub use dose::{DoseController, TreatmentRecord};
 pub use interlocks::{Interlock, InterlockSystem};
 pub use monitor::{SafetyLevel, SafetyLimits, SafetyMonitor, SafetyViolation};
+pub use thermal_index::{
+    ThermalIndexCalculator, ThermalIndexModel, ThermalIndexResult, ThermalIndexStatus,
+};
