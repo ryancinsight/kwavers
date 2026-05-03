@@ -1,9 +1,9 @@
 //! Calibration manager for flexible transducer arrays.
 
+use super::types::{CalibrationData, GeometrySnapshot, KalmanState, QualityMetrics};
 use crate::core::error::KwaversResult;
 use nalgebra::{DMatrix, DVector};
 use ndarray::{Array1, Array2, Array3};
-use super::types::{CalibrationData, GeometrySnapshot, KalmanState, QualityMetrics};
 
 /// Calibration manager for flexible arrays
 #[derive(Debug)]
@@ -264,9 +264,8 @@ impl CalibrationManager {
                                     if di == 1 && dj == 1 && dk == 1 {
                                         continue;
                                     }
-                                    let neighbor = pressure_field
-                                        [[i + di - 1, j + dj - 1, k + dk - 1]]
-                                        .abs();
+                                    let neighbor =
+                                        pressure_field[[i + di - 1, j + dj - 1, k + dk - 1]].abs();
                                     if neighbor > val {
                                         is_max = false;
                                         break;
