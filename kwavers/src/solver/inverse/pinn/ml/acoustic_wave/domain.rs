@@ -1,26 +1,4 @@
-//! Acoustic Wave Physics Domain for PINN
-//!
-//! This module implements acoustic wave equations for ultrasound physics using
-//! Physics-Informed Neural Networks. Supports linear and nonlinear acoustic
-//! wave propagation in homogeneous and heterogeneous media.
-//!
-//! ## Mathematical Formulation
-//!
-//! ### Linear Acoustic Wave Equation
-//! ∂²p/∂t² = c²∇²p
-//!
-//! Where:
-//! - p: acoustic pressure (Pa)
-//! - c: speed of sound (m/s)
-//! - t: time (s)
-//! - ∇²: Laplacian operator
-//!
-//! ### Nonlinear Acoustic Wave Equation (Kuznetsov)
-//! ∂²p/∂t² = c²∇²p + (β/ρ₀c⁴)∂²p²/∂t²
-//!
-//! Where:
-//! - β: nonlinearity coefficient (dimensionless)
-//! - ρ₀: equilibrium density (kg/m³)
+//! Acoustic wave physics domain implementation.
 
 use crate::solver::inverse::pinn::ml::adapters::source::PinnAcousticSource;
 use crate::solver::inverse::pinn::ml::physics::{
@@ -30,45 +8,13 @@ use crate::solver::inverse::pinn::ml::physics::{
 };
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;
-
-/// Acoustic wave problem type
-#[derive(Debug, Clone, PartialEq)]
-pub enum AcousticProblemType {
-    /// Linear acoustic wave equation
-    Linear,
-    /// Nonlinear acoustic wave equation (Kuznetsov)
-    Nonlinear,
-}
-
-/// Acoustic boundary condition specification
-#[derive(Debug, Clone)]
-pub struct AcousticBoundarySpec {
-    /// Boundary position
-    pub position: BoundaryPosition,
-    /// Boundary condition type
-    pub condition_type: AcousticBoundaryType,
-    /// Boundary parameters
-    pub parameters: HashMap<String, f64>,
-}
-
-/// Acoustic boundary condition types
-#[derive(Debug, Clone)]
-pub enum AcousticBoundaryType {
-    /// Sound-soft (pressure = 0)
-    SoundSoft,
-    /// Sound-hard (normal velocity = 0)
-    SoundHard,
-    /// Absorbing boundary
-    Absorbing,
-    /// Impedance boundary
-    Impedance,
-}
+use super::types::{AcousticBoundarySpec, AcousticBoundaryType, AcousticProblemType};
 
 /// Acoustic wave physics domain implementation
 #[derive(Debug)]
 pub struct AcousticWaveDomain {
     /// Problem type
-    problem_type: AcousticProblemType,
+    pub(super) problem_type: AcousticProblemType,
     /// Wave speed (m/s)
     wave_speed: f64,
     /// Density (kg/m³)
@@ -138,21 +84,14 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
         t: &Tensor<B, 2>,
         physics_params: &PhysicsParameters,
     ) -> Tensor<B, 2> {
-        // Get predictions from model
         let _p = model.forward(x.clone(), y.clone(), t.clone());
 
-        // Compute second derivatives using automatic differentiation
-        // Proper implementation with Burn autodiff for acoustic wave equation
-
-        // Enable gradients for input coordinates
         let x_grad = x.clone().require_grad();
         let y_grad = y.clone().require_grad();
         let t_grad = t.clone().require_grad();
 
-        // Forward pass with gradient tracking
         let p = model.forward(x_grad.clone(), y_grad.clone(), t_grad.clone());
 
-        // First derivatives
         let grad_p = p.backward();
         let _p_x = x_grad
             .grad(&grad_p)
@@ -167,12 +106,10 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
             .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
             .unwrap_or_else(|| t.zeros_like());
 
-        // Second derivatives using nested autodiff
         let x_grad_2 = x.clone().require_grad();
         let y_grad_2 = y.clone().require_grad();
         let t_grad_2 = t.clone().require_grad();
 
-        // Second derivative w.r.t. x (p_xx)
         let p_x_for_xx = model.forward(x_grad_2.clone(), y.clone(), t.clone());
         let grad_p_x = p_x_for_xx.backward();
         let p_xx = x_grad_2
@@ -180,7 +117,6 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
             .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
             .unwrap_or_else(|| x.zeros_like());
 
-        // Second derivative w.r.t. y (p_yy)
         let p_y_for_yy = model.forward(x.clone(), y_grad_2.clone(), t.clone());
         let grad_p_y = p_y_for_yy.backward();
         let p_yy = y_grad_2
@@ -188,7 +124,6 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
             .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
             .unwrap_or_else(|| y.zeros_like());
 
-        // Second derivative w.r.t. t (p_tt)
         let p_t_for_tt = model.forward(x.clone(), y.clone(), t_grad_2.clone());
         let grad_p_t = p_t_for_tt.backward();
         let p_tt = t_grad_2
@@ -196,10 +131,8 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
             .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
             .unwrap_or_else(|| t.zeros_like());
 
-        // Laplacian: ∇²p = ∂²p/∂x² + ∂²p/∂y²
         let laplacian = p_xx + p_yy;
 
-        // Base linear wave equation residual: ∂²p/∂t² - c²∇²p
         let c = physics_params
             .material_properties
             .get("wave_speed")
@@ -208,10 +141,8 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
         let c_squared = c * c;
         let mut residual = p_tt.clone() - c_squared * laplacian;
 
-        // Add nonlinear term if specified
         if let AcousticProblemType::Nonlinear = self.problem_type {
             if let Some(beta) = self.nonlinearity_coefficient {
-                // Nonlinear term: (β/ρ₀c⁴)∂²p²/∂t²
                 let rho_0 = physics_params
                     .material_properties
                     .get("density")
@@ -219,26 +150,6 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
                     .unwrap_or(self.density);
                 let coeff = beta / (rho_0 * c_squared * c_squared);
 
-                // Nonlinear term implementation: ∂²(p²)/∂t²
-                //
-                // MATHEMATICAL SPECIFICATION:
-                // Westervelt equation: ∇²p - (1/c²)∂²p/∂t² = β/(ρ₀c⁴) · ∂²(p²)/∂t²
-                //
-                // Using chain rule: ∂²(p²)/∂t² = 2(p · ∂²p/∂t² + (∂p/∂t)²)
-                // This avoids nested autodiff which is computationally expensive.
-                //
-                // Derivation:
-                //   Let f = p²
-                //   ∂f/∂t = 2p · ∂p/∂t                    (chain rule)
-                //   ∂²f/∂t² = 2(∂p/∂t · ∂p/∂t + p · ∂²p/∂t²)    (product rule)
-                //         = 2((∂p/∂t)² + p · ∂²p/∂t²)
-                //
-                // REFERENCES:
-                // - Westervelt, P.J. (1963). "Parametric Acoustic Array", JASA 35(4), 535-537
-                // - Hamilton & Blackstock (2008). "Nonlinear Acoustics", Ch. 3
-
-                // We already have p and p_tt from above calculations
-                // Compute ∂p/∂t using first derivative
                 let t_grad_for_pt = t.clone().require_grad();
                 let p_for_pt = model.forward(x.clone(), y.clone(), t_grad_for_pt.clone());
                 let grad_p_t_calc = p_for_pt.backward();
@@ -247,8 +158,8 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
                     .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
                     .unwrap_or_else(|| t.zeros_like());
 
-                // Compute ∂²(p²)/∂t² = 2((∂p/∂t)² + p · ∂²p/∂t²)
-                let p2_tt = (p_t.clone() * p_t.clone() + p.clone() * p_tt.clone()).mul_scalar(2.0);
+                let p2_tt =
+                    (p_t.clone() * p_t.clone() + p.clone() * p_tt.clone()).mul_scalar(2.0);
 
                 residual = residual + coeff * p2_tt;
             }
@@ -260,42 +171,30 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
     fn boundary_conditions(&self) -> Vec<BoundaryConditionSpec> {
         self.boundary_conditions
             .iter()
-            .map(|bc| {
-                match bc.condition_type {
-                    AcousticBoundaryType::SoundSoft => {
-                        // p = 0 (Dirichlet condition)
-                        BoundaryConditionSpec::Dirichlet {
-                            boundary: bc.position.clone(),
-                            value: vec![0.0],
-                            component: BoundaryComponent::Scalar,
-                        }
-                    }
-                    AcousticBoundaryType::SoundHard => {
-                        // ∂p/∂n = 0 (Neumann condition)
-                        BoundaryConditionSpec::Neumann {
-                            boundary: bc.position.clone(),
-                            flux: vec![0.0],
-                            component: BoundaryComponent::Scalar,
-                        }
-                    }
-                    AcousticBoundaryType::Absorbing => {
-                        // Radiation boundary condition (Robin approximation)
-                        BoundaryConditionSpec::Robin {
-                            boundary: bc.position.clone(),
-                            alpha: 1.0,
-                            beta: 0.0,
-                            component: BoundaryComponent::Scalar,
-                        }
-                    }
-                    AcousticBoundaryType::Impedance => {
-                        // Impedance boundary: Z ∂p/∂n + p = 0
-                        let z = bc.parameters.get("impedance").copied().unwrap_or(1.0);
-                        BoundaryConditionSpec::Robin {
-                            boundary: bc.position.clone(),
-                            alpha: z,
-                            beta: 1.0,
-                            component: BoundaryComponent::Scalar,
-                        }
+            .map(|bc| match bc.condition_type {
+                AcousticBoundaryType::SoundSoft => BoundaryConditionSpec::Dirichlet {
+                    boundary: bc.position.clone(),
+                    value: vec![0.0],
+                    component: BoundaryComponent::Scalar,
+                },
+                AcousticBoundaryType::SoundHard => BoundaryConditionSpec::Neumann {
+                    boundary: bc.position.clone(),
+                    flux: vec![0.0],
+                    component: BoundaryComponent::Scalar,
+                },
+                AcousticBoundaryType::Absorbing => BoundaryConditionSpec::Robin {
+                    boundary: bc.position.clone(),
+                    alpha: 1.0,
+                    beta: 0.0,
+                    component: BoundaryComponent::Scalar,
+                },
+                AcousticBoundaryType::Impedance => {
+                    let z = bc.parameters.get("impedance").copied().unwrap_or(1.0);
+                    BoundaryConditionSpec::Robin {
+                        boundary: bc.position.clone(),
+                        alpha: z,
+                        beta: 1.0,
+                        component: BoundaryComponent::Scalar,
                     }
                 }
             })
@@ -303,15 +202,11 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
     }
 
     fn initial_conditions(&self) -> Vec<InitialConditionSpec> {
-        // Initial conditions: p(x,y,0) = 0, ∂p/∂t(x,y,0) = 0
-        // (or specific initial pressure distribution based on sources)
         vec![
-            // Initial pressure: p(x,y,0) = 0
             InitialConditionSpec::DirichletConstant {
                 value: vec![0.0],
                 component: BoundaryComponent::Scalar,
             },
-            // Initial velocity: ∂p/∂t(x,y,0) = 0
             InitialConditionSpec::NeumannConstant {
                 flux: vec![0.0],
                 component: BoundaryComponent::Scalar,
@@ -333,19 +228,19 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
             PhysicsValidationMetric {
                 name: "wave_speed_accuracy".to_string(),
                 value: 0.0,
-                acceptable_range: (-0.01, 0.01), // ±1% accuracy
+                acceptable_range: (-0.01, 0.01),
                 description: "Accuracy of predicted vs expected wave speed".to_string(),
             },
             PhysicsValidationMetric {
                 name: "energy_conservation".to_string(),
                 value: 0.0,
-                acceptable_range: (-0.001, 0.001), // ±0.1% energy conservation
+                acceptable_range: (-0.001, 0.001),
                 description: "Acoustic energy conservation error".to_string(),
             },
             PhysicsValidationMetric {
                 name: "nonlinearity_error".to_string(),
                 value: 0.0,
-                acceptable_range: (-0.01, 0.01), // ±1% error
+                acceptable_range: (-0.01, 0.01),
                 description: "Error in nonlinear acoustic effects".to_string(),
             },
         ]
@@ -392,84 +287,5 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
                 },
             },
         ]
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use burn::backend::NdArray;
-
-    type B = burn::backend::Autodiff<NdArray<f32>>;
-
-    #[test]
-    fn test_acoustic_wave_domain_creation() {
-        let domain = AcousticWaveDomain::new(
-            AcousticProblemType::Linear,
-            1500.0, // m/s (typical for soft tissue)
-            1000.0, // kg/m³ (water density)
-            None,   // No nonlinearity
-        );
-
-        assert_eq!(
-            <AcousticWaveDomain as PhysicsDomain<B>>::domain_name(&domain),
-            "acoustic_wave"
-        );
-        assert_eq!(domain.wave_speed(), 1500.0);
-        assert_eq!(domain.density(), 1000.0);
-        assert!(domain.nonlinearity_coefficient().is_none());
-        assert!(<AcousticWaveDomain as PhysicsDomain<B>>::supports_coupling(
-            &domain
-        ));
-    }
-
-    #[test]
-    fn test_nonlinear_acoustic_domain() {
-        let domain = AcousticWaveDomain::new(
-            AcousticProblemType::Nonlinear,
-            1500.0,
-            1000.0,
-            Some(3.5), // Typical β for water
-        );
-
-        assert_eq!(domain.problem_type, AcousticProblemType::Nonlinear);
-        assert_eq!(domain.nonlinearity_coefficient(), Some(3.5));
-    }
-
-    #[test]
-    fn test_boundary_conditions() {
-        let mut domain = AcousticWaveDomain::new(AcousticProblemType::Linear, 1500.0, 1000.0, None);
-
-        domain.add_boundary_condition(AcousticBoundarySpec {
-            position: BoundaryPosition::Top,
-            condition_type: AcousticBoundaryType::SoundSoft,
-            parameters: HashMap::new(),
-        });
-
-        let bcs = <AcousticWaveDomain as PhysicsDomain<B>>::boundary_conditions(&domain);
-        assert_eq!(bcs.len(), 1);
-        // Check that boundary conditions are defined (exact structure depends on enum variants)
-        assert!(!bcs.is_empty());
-    }
-
-    #[test]
-    fn test_validation_metrics() {
-        let domain = AcousticWaveDomain::new(AcousticProblemType::Linear, 1500.0, 1000.0, None);
-
-        let metrics = <AcousticWaveDomain as PhysicsDomain<B>>::validation_metrics(&domain);
-        assert_eq!(metrics.len(), 3);
-        assert_eq!(metrics[0].name, "wave_speed_accuracy");
-        assert_eq!(metrics[1].name, "energy_conservation");
-        assert_eq!(metrics[2].name, "nonlinearity_error");
-    }
-
-    #[test]
-    fn test_coupling_interfaces() {
-        let domain = AcousticWaveDomain::new(AcousticProblemType::Linear, 1500.0, 1000.0, None);
-
-        let interfaces = <AcousticWaveDomain as PhysicsDomain<B>>::coupling_interfaces(&domain);
-        assert_eq!(interfaces.len(), 2);
-        assert_eq!(interfaces[0].name, "acoustic_solid");
-        assert_eq!(interfaces[1].name, "acoustic_thermal");
     }
 }
