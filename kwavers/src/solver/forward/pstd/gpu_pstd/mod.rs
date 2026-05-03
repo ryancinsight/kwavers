@@ -11,10 +11,10 @@
 //! - group(0) 8 storage: p, ux, uy, uz, rhox, rhoy, rhoz, scratch
 //! - group(1) 1 uniform: PstdParams
 //! - group(2) 8 storage: kspace_re, kspace_im, kspace2_re, kspace2_im,
-//!            kappa, rho0_inv, c0_sq, rho0
+//!   kappa, rho0_inv, c0_sq, rho0
 //! - group(3) 8 storage: pml_sgx, pml_sgy, pml_sgz, pml_xyz (packed),
-//!            shifts_all (packed), sensor_flat_indices, sensor_data,
-//!            source_data (packed)
+//!   shifts_all (packed), sensor_flat_indices, sensor_data,
+//!   source_data (packed)
 //!
 //! # Packed buffer formats
 //!

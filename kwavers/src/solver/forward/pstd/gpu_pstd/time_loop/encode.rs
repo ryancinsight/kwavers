@@ -45,7 +45,7 @@ impl StepCtx {
 
     #[inline]
     pub(super) fn ceil_div(n: usize, d: usize) -> u32 {
-        ((n + d - 1) / d) as u32
+        n.div_ceil(d) as u32
     }
 }
 

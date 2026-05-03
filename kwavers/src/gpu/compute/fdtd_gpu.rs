@@ -171,7 +171,7 @@ impl FdtdGpuShaderDispatcher {
                 "FdtdGpuShaderDispatcher::dispatch: p_curr and p_prev length mismatch".into(),
             ));
         }
-        let buf_size = (n * std::mem::size_of::<f32>()) as u64;
+        let buf_size = std::mem::size_of_val(p_curr) as u64;
         let usage_src = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
         let usage_dst = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC;
 

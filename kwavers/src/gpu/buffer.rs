@@ -292,7 +292,7 @@ impl GpuBuffer {
             ));
         }
 
-        if self.size % elem_size != 0 {
+        if !self.size.is_multiple_of(elem_size) {
             return Err(KwaversError::System(
                 crate::core::error::SystemError::InvalidOperation {
                     operation: "GPU buffer readback".to_string(),
@@ -348,7 +348,7 @@ impl GpuBuffer {
             label: Some("buffer_read"),
         });
 
-        encoder.copy_buffer_to_buffer(&self.buffer, 0, &staging, 0, self.size as u64);
+        encoder.copy_buffer_to_buffer(&self.buffer, 0, staging, 0, self.size as u64);
 
         queue.submit(Some(encoder.finish()));
 

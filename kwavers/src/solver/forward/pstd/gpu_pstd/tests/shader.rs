@@ -4,7 +4,7 @@
 /// k-space and must retain the source-kappa reconstruction chain.
 #[test]
 fn test_velocity_source_shader_uses_validated_kspace_path() {
-    let src = include_str!("../../../../gpu/shaders/pstd.wgsl");
+    let src = include_str!("../../../../../gpu/shaders/pstd.wgsl");
     let inject_start = src
         .find("fn inject_velocity_x_source")
         .expect("inject_velocity_x_source entry point must exist");
@@ -28,7 +28,7 @@ fn test_velocity_source_shader_uses_validated_kspace_path() {
 /// the Rust-side `PstdParams` struct used for dispatch.
 #[test]
 fn test_pstd_shader_push_constant_abi_matches_rust() {
-    let src = include_str!("../../../../gpu/shaders/pstd.wgsl");
+    let src = include_str!("../../../../../gpu/shaders/pstd.wgsl");
     let struct_start = src
         .find("struct PstdParams")
         .expect("PstdParams push-constant struct must exist in WGSL");

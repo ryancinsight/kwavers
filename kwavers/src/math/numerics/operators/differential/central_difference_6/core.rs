@@ -1,6 +1,6 @@
 //! # Sixth-Order Central Difference Operator
 //!
-//! This module implements the sixth-order accurate central difference scheme
+//! Implements the sixth-order accurate central difference scheme
 //! for computing spatial derivatives on uniform Cartesian grids.
 //!
 //! ## Mathematical Specification
@@ -24,33 +24,6 @@
 //! - i = 1, n-2: Second-order (3-point stencil)
 //! - i = 0, n-1: First-order (2-point stencil)
 //!
-//! ## Properties
-//!
-//! - **Order**: 6 (interior), 4/2/1 (near-boundary to boundary)
-//! - **Stencil Width**: 7 points
-//! - **Conservation**: No (standard central difference)
-//! - **Adjoint Consistency**: Yes (symmetric stencil)
-//!
-//! ## Usage
-//!
-//! ```rust,ignore
-//! use kwavers::math::numerics::operators::differential::{DifferentialOperator, CentralDifference6};
-//! use ndarray::Array3;
-//!
-//! let dx = 0.001; // 1 mm grid spacing
-//! let op = CentralDifference6::new(dx, dx, dx)?;
-//!
-//! let field = Array3::zeros((100, 100, 100));
-//! let gradient_x = op.apply_x(field.view())?;
-//! ```
-//!
-//! ## When to Use
-//!
-//! Sixth-order schemes are recommended for:
-//! - Long-time wave propagation simulations
-//! - High-frequency content requiring minimal dispersion
-//! - Applications where accuracy outweighs computational cost
-//!
 //! ## References
 //!
 //! - Fornberg, B. (1988). "Generation of finite difference formulas on arbitrarily
@@ -60,29 +33,11 @@
 use crate::core::error::{KwaversResult, NumericalError};
 use ndarray::{Array3, ArrayView3};
 
-use super::DifferentialOperator;
+use super::super::DifferentialOperator;
 
-/// Sixth-order central difference operator
+/// Sixth-order central difference operator.
 ///
-/// This operator provides the highest accuracy of the standard central difference
-/// schemes available in kwavers. It is particularly effective for wave propagation
-/// problems requiring minimal numerical dispersion over long propagation distances.
-///
-/// # Accuracy Considerations
-///
-/// The sixth-order scheme provides excellent phase accuracy:
-/// - Minimal numerical dispersion for smooth solutions
-/// - Approximately 2-3 points per wavelength for accurate propagation
-/// - Superior to lower-order methods for long-time integration
-///
-/// However, it comes with trade-offs:
-/// - Requires more memory bandwidth (7-point stencil vs 3 or 5)
-/// - More sensitive to discontinuities and sharp gradients
-/// - Larger boundary layer with reduced accuracy
-///
-/// # Boundary Treatment
-///
-/// A progressive multi-order approach:
+/// Provides highest-accuracy central difference for wave propagation:
 /// - Interior (i ∈ [3, n-4]): Sixth-order central (7-point)
 /// - Near-boundary 1 (i = 2, n-3): Fourth-order central (5-point)
 /// - Near-boundary 2 (i = 1, n-2): Second-order central (3-point)
@@ -98,27 +53,11 @@ pub struct CentralDifference6 {
 }
 
 impl CentralDifference6 {
-    /// Create a new sixth-order central difference operator
-    ///
-    /// # Arguments
-    ///
-    /// * `dx` - Grid spacing in X direction (meters)
-    /// * `dy` - Grid spacing in Y direction (meters)
-    /// * `dz` - Grid spacing in Z direction (meters)
-    ///
-    /// # Returns
-    ///
-    /// New operator instance
+    /// Create a new sixth-order central difference operator.
     ///
     /// # Errors
     ///
-    /// Returns error if any grid spacing is non-positive
-    ///
-    /// # Examples
-    ///
-    /// ```rust,ignore
-    /// let op = CentralDifference6::new(0.001, 0.001, 0.001)?; // Isotropic 1mm grid
-    /// ```
+    /// Returns error if any grid spacing is non-positive.
     pub fn new(dx: f64, dy: f64, dz: f64) -> KwaversResult<Self> {
         if dx <= 0.0 || dy <= 0.0 || dz <= 0.0 {
             return Err(NumericalError::InvalidGridSpacing { dx, dy, dz }.into());
@@ -326,151 +265,6 @@ impl DifferentialOperator for CentralDifference6 {
     }
 
     fn is_adjoint_consistent(&self) -> bool {
-        true // Symmetric stencil implies adjoint consistency
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use approx::assert_abs_diff_eq;
-
-    #[test]
-    fn test_constructor_valid() {
-        let op = CentralDifference6::new(0.1, 0.1, 0.1);
-        assert!(op.is_ok());
-    }
-
-    #[test]
-    fn test_constructor_invalid_spacing() {
-        assert!(CentralDifference6::new(0.0, 0.1, 0.1).is_err());
-        assert!(CentralDifference6::new(-0.1, 0.1, 0.1).is_err());
-    }
-
-    #[test]
-    fn test_apply_x_linear_function() {
-        // Sixth-order scheme is exact for linear functions
-        let dx = 0.1;
-        let op = CentralDifference6::new(dx, dx, dx).unwrap();
-
-        let mut field = Array3::zeros((12, 5, 5));
-        for i in 0..12 {
-            for j in 0..5 {
-                for k in 0..5 {
-                    field[[i, j, k]] = 2.0 * (i as f64) * dx;
-                }
-            }
-        }
-
-        let grad_x = op.apply_x(field.view()).unwrap();
-
-        // Check interior points (sixth-order stencil)
-        for i in 3..9 {
-            for j in 0..5 {
-                for k in 0..5 {
-                    assert_abs_diff_eq!(grad_x[[i, j, k]], 2.0, epsilon = 1e-10);
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_all_directions_linear_function() {
-        let dx = 0.1;
-        let op = CentralDifference6::new(dx, dx, dx).unwrap();
-
-        let mut field = Array3::zeros((12, 12, 12));
-        for i in 0..12 {
-            for j in 0..12 {
-                for k in 0..12 {
-                    field[[i, j, k]] =
-                        2.0 * (i as f64) * dx + 3.0 * (j as f64) * dx + 4.0 * (k as f64) * dx;
-                }
-            }
-        }
-
-        let grad_x = op.apply_x(field.view()).unwrap();
-        let grad_y = op.apply_y(field.view()).unwrap();
-        let grad_z = op.apply_z(field.view()).unwrap();
-
-        // Check interior points in all directions
-        for i in 3..9 {
-            for j in 3..9 {
-                for k in 3..9 {
-                    assert_abs_diff_eq!(grad_x[[i, j, k]], 2.0, epsilon = 1e-10);
-                    assert_abs_diff_eq!(grad_y[[i, j, k]], 3.0, epsilon = 1e-10);
-                    assert_abs_diff_eq!(grad_z[[i, j, k]], 4.0, epsilon = 1e-10);
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_constant_field_has_zero_derivative() {
-        let op = CentralDifference6::new(0.1, 0.1, 0.1).unwrap();
-        let field = Array3::from_elem((12, 12, 12), 5.0);
-
-        let grad_x = op.apply_x(field.view()).unwrap();
-        let grad_y = op.apply_y(field.view()).unwrap();
-        let grad_z = op.apply_z(field.view()).unwrap();
-
-        for i in 0..12 {
-            for j in 0..12 {
-                for k in 0..12 {
-                    assert_abs_diff_eq!(grad_x[[i, j, k]], 0.0, epsilon = 1e-15);
-                    assert_abs_diff_eq!(grad_y[[i, j, k]], 0.0, epsilon = 1e-15);
-                    assert_abs_diff_eq!(grad_z[[i, j, k]], 0.0, epsilon = 1e-15);
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_insufficient_grid_points() {
-        let op = CentralDifference6::new(0.1, 0.1, 0.1).unwrap();
-
-        let field_x = Array3::zeros((6, 10, 10));
-        let field_y = Array3::zeros((10, 6, 10));
-        let field_z = Array3::zeros((10, 10, 6));
-
-        assert!(op.apply_x(field_x.view()).is_err());
-        assert!(op.apply_y(field_y.view()).is_err());
-        assert!(op.apply_z(field_z.view()).is_err());
-    }
-
-    #[test]
-    fn test_properties() {
-        let op = CentralDifference6::new(0.1, 0.1, 0.1).unwrap();
-        assert_eq!(op.order(), 6);
-        assert_eq!(op.stencil_width(), 7);
-        assert!(op.is_adjoint_consistent());
-        assert!(!op.is_conservative());
-    }
-
-    #[test]
-    fn test_cubic_polynomial() {
-        // Test on cubic: u(x) = x³
-        // du/dx = 3x²
-        let dx = 0.1;
-        let op = CentralDifference6::new(dx, dx, dx).unwrap();
-
-        let mut field = Array3::zeros((20, 5, 5));
-        for i in 0..20 {
-            let x = (i as f64) * dx;
-            for j in 0..5 {
-                for k in 0..5 {
-                    field[[i, j, k]] = x * x * x;
-                }
-            }
-        }
-
-        let grad_x = op.apply_x(field.view()).unwrap();
-
-        // Check interior points with sixth-order accuracy
-        for i in 5..15 {
-            let x = (i as f64) * dx;
-            let expected = 3.0 * x * x;
-            assert_abs_diff_eq!(grad_x[[i, 2, 2]], expected, epsilon = 1e-8);
-        }
+        true
     }
 }

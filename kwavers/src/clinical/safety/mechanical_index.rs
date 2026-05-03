@@ -117,6 +117,42 @@ pub enum SafetyStatus {
 }
 
 impl MechanicalIndexCalculator {
+    fn invalid_value(parameter: &str, value: f64, reason: &str) -> KwaversError {
+        KwaversError::Validation(crate::core::error::ValidationError::InvalidValue {
+            parameter: parameter.to_string(),
+            value,
+            reason: reason.to_string(),
+        })
+    }
+
+    fn validate_calculation_domain(&self, focal_distance_cm: f64) -> KwaversResult<()> {
+        if !self.center_frequency_mhz.is_finite() || self.center_frequency_mhz <= 0.0 {
+            return Err(Self::invalid_value(
+                "center_frequency_mhz",
+                self.center_frequency_mhz,
+                "Mechanical index denominator sqrt(f_c) requires finite positive MHz frequency",
+            ));
+        }
+
+        if !self.attenuation_coeff.is_finite() || self.attenuation_coeff < 0.0 {
+            return Err(Self::invalid_value(
+                "attenuation_coeff",
+                self.attenuation_coeff,
+                "Attenuation coefficient must be finite and nonnegative in dB/cm/MHz",
+            ));
+        }
+
+        if !focal_distance_cm.is_finite() || focal_distance_cm < 0.0 {
+            return Err(Self::invalid_value(
+                "focal_distance_cm",
+                focal_distance_cm,
+                "Focal distance must be finite and nonnegative in centimeters",
+            ));
+        }
+
+        Ok(())
+    }
+
     /// Create a new mechanical index calculator
     ///
     /// # Arguments
@@ -168,6 +204,8 @@ impl MechanicalIndexCalculator {
         pressure_field: &Array3<f64>,
         focal_distance_cm: f64,
     ) -> KwaversResult<MechanicalIndexResult> {
+        self.validate_calculation_domain(focal_distance_cm)?;
+
         // Find peak negative (rarefactional) pressure
         let peak_rarefactional_pa = pressure_field
             .iter()
@@ -253,6 +291,22 @@ impl MechanicalIndexCalculator {
         max_depth_cm: f64,
         num_points: usize,
     ) -> KwaversResult<MechanicalIndexResult> {
+        if num_points < 2 {
+            return Err(Self::invalid_value(
+                "num_points",
+                num_points as f64,
+                "At least two depth samples are required to define a closed [0, max_depth] profile",
+            ));
+        }
+
+        if !max_depth_cm.is_finite() || max_depth_cm < 0.0 {
+            return Err(Self::invalid_value(
+                "max_depth_cm",
+                max_depth_cm,
+                "Maximum depth must be finite and nonnegative in centimeters",
+            ));
+        }
+
         let depths: Vec<f64> = (0..num_points)
             .map(|i| (i as f64) * max_depth_cm / (num_points as f64 - 1.0))
             .collect();
@@ -388,17 +442,50 @@ mod tests {
         assert!(report.contains("Safety Status: Safe"));
     }
 
-    /// `calculate_max_mi` must not panic when MI values include NaN.
-    ///
-    /// NaN-safe comparator `unwrap_or(Equal)` demotes NaN entries to equal rank
-    /// so `max_by` always terminates cleanly.
     #[test]
-    fn test_calculate_max_mi_nan_safe() {
+    fn test_calculate_max_mi_selects_shallowest_depth_under_attenuation() {
+        let mi_calc = MechanicalIndexCalculator::new(4.0, 0.5, TissueType::SoftTissue);
+        let mut pressure = Array3::zeros((10, 10, 10));
+        pressure[[5, 5, 5]] = -1.0e6;
+
+        let result = mi_calc.calculate_max_mi(&pressure, 6.0, 4).unwrap();
+
+        assert_eq!(result.focal_distance_cm, 0.0);
+        assert_eq!(result.safety_status, SafetyStatus::Safe);
+        assert!((result.peak_rarefactional_pressure_mpa - 1.0).abs() < 1e-12);
+        assert!((result.mi - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_calculate_max_mi_rejects_single_depth_sample() {
         let mi_calc = MechanicalIndexCalculator::new(3.0, 0.5, TissueType::SoftTissue);
-        let pressure = Array3::zeros((10, 10, 10));
-        // 2 depth points, pressure is zero → MI values will be finite (or very small).
-        // The key requirement: no panic.
-        let result = mi_calc.calculate_max_mi(&pressure, 5.0, 2);
-        assert!(result.is_ok() || result.is_err(), "must not panic");
+        let mut pressure = Array3::zeros((10, 10, 10));
+        pressure[[5, 5, 5]] = -1.0e6;
+
+        let error = mi_calc.calculate_max_mi(&pressure, 5.0, 1).unwrap_err();
+
+        assert!(error.to_string().contains("num_points"));
+    }
+
+    #[test]
+    fn test_mi_rejects_nonpositive_frequency() {
+        let mi_calc = MechanicalIndexCalculator::new(0.0, 0.5, TissueType::SoftTissue);
+        let mut pressure = Array3::zeros((10, 10, 10));
+        pressure[[5, 5, 5]] = -1.0e6;
+
+        let error = mi_calc.calculate(&pressure, 1.0).unwrap_err();
+
+        assert!(error.to_string().contains("center_frequency_mhz"));
+    }
+
+    #[test]
+    fn test_mi_rejects_negative_focal_distance() {
+        let mi_calc = MechanicalIndexCalculator::new(3.0, 0.5, TissueType::SoftTissue);
+        let mut pressure = Array3::zeros((10, 10, 10));
+        pressure[[5, 5, 5]] = -1.0e6;
+
+        let error = mi_calc.calculate(&pressure, -1.0).unwrap_err();
+
+        assert!(error.to_string().contains("focal_distance_cm"));
     }
 }

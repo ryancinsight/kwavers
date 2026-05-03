@@ -1,7 +1,4 @@
-//! Fast Nearfield Method (FNM) for Efficient Transducer Field Computation
-//!
-//! This module implements the Fast Nearfield Method for computing acoustic pressure
-//! fields from transducer elements with O(n) complexity.
+//! FastNearfieldSolver implementation.
 
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::source::transducers::rectangular::RectangularTransducer;
@@ -10,59 +7,20 @@ use ndarray::{s, Array2, Array3, Axis};
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
-/// Configuration for Fast Nearfield Method
-#[derive(Debug, Clone)]
-pub struct FNMConfig {
-    /// Grid spacing in x-direction (m)
-    pub dx: f64,
-    /// Grid spacing in y-direction (m)
-    pub dy: f64,
-    /// Number of angular spectrum points (Nx, Ny)
-    pub angular_spectrum_size: (usize, usize),
-    /// Maximum k-space extent (as fraction of Nyquist)
-    pub k_max_factor: f64,
-    /// Use separable approximation for faster computation
-    pub separable_approximation: bool,
-}
+use super::types::{AngularSpectrumFactors, FNMConfig};
 
-impl Default for FNMConfig {
-    fn default() -> Self {
-        Self {
-            dx: 0.1e-3, // 0.1 mm
-            dy: 0.1e-3, // 0.1 mm
-            angular_spectrum_size: (512, 512),
-            k_max_factor: 2.0,
-            separable_approximation: false,
-        }
-    }
-}
-
-/// Angular spectrum factors for a given z-plane
-#[derive(Debug, Clone)]
-pub struct AngularSpectrumFactors {
-    /// Z distance (m)
-    pub z: f64,
-    /// Angular spectrum of Green's function (complex)
-    pub green_spectrum: Array2<Complex64>,
-    /// kx coordinates
-    pub kx: Vec<f64>,
-    /// ky coordinates
-    pub ky: Vec<f64>,
-}
-
-/// Fast Nearfield Method solver
 #[derive(Debug)]
 pub struct FastNearfieldSolver {
     /// Configuration
-    config: FNMConfig,
+    pub(super) config: FNMConfig,
     /// Cached angular spectrum factors by z-distance
-    cached_factors: HashMap<u64, AngularSpectrumFactors>,
+    pub(super) cached_factors: HashMap<u64, AngularSpectrumFactors>,
     /// Current transducer geometry
-    transducer: Option<RectangularTransducer>,
+    pub(super) transducer: Option<RectangularTransducer>,
     /// Wave speed (m/s)
-    c0: f64,
+    pub(super) c0: f64,
     /// Density (kg/m³)
-    rho0: f64,
+    pub(super) rho0: f64,
     /// Precomputed kx coordinates
     kx: Vec<f64>,
     /// Precomputed ky coordinates
@@ -329,140 +287,5 @@ impl FastNearfieldSolver {
         total += self.ky.len() * std::mem::size_of::<f64>();
 
         total
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_fnm_solver_creation() {
-        let config = FNMConfig::default();
-        let solver = FastNearfieldSolver::new(config);
-        assert!(solver.is_ok());
-    }
-
-    #[test]
-    fn test_transducer_setup() {
-        let config = FNMConfig::default();
-        let mut solver = FastNearfieldSolver::new(config).unwrap();
-
-        let transducer = RectangularTransducer {
-            width: 10e-3,
-            height: 10e-3,
-            frequency: 1e6,
-            elements: (32, 32),
-        };
-
-        solver.set_transducer(transducer);
-
-        let (elem_width, elem_height) = solver.transducer.as_ref().unwrap().element_size();
-        assert!((elem_width - 10e-3 / 32.0).abs() < 1e-9);
-        assert!((elem_height - 10e-3 / 32.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn test_precompute_factors() {
-        let config = FNMConfig::default();
-        let mut solver = FastNearfieldSolver::new(config).unwrap();
-
-        let transducer = RectangularTransducer {
-            width: 5e-3,
-            height: 5e-3,
-            frequency: 2e6,
-            elements: (16, 16),
-        };
-
-        solver.set_transducer(transducer);
-        solver.set_medium(SOUND_SPEED_WATER_SIM, DENSITY_WATER_NOMINAL);
-
-        let result = solver.precompute_factors(25e-3); // 25 mm
-        assert!(result.is_ok());
-
-        // Check that factors were cached
-        assert_eq!(solver.cached_z_distances().len(), 1);
-        assert!((solver.cached_z_distances()[0] - 25e-3).abs() < 1e-9);
-    }
-
-    #[test]
-    fn test_field_computation() {
-        let config = FNMConfig {
-            angular_spectrum_size: (64, 64), // Smaller for testing
-            ..Default::default()
-        };
-        let mut solver = FastNearfieldSolver::new(config).unwrap();
-
-        let transducer = RectangularTransducer {
-            width: 5e-3,
-            height: 5e-3,
-            frequency: 2e6,
-            elements: (16, 16),
-        };
-
-        solver.set_transducer(transducer);
-        solver.precompute_factors(25e-3).unwrap();
-
-        // Uniform velocity distribution
-        let velocity = Array2::<Complex64>::from_elem((16, 16), Complex64::new(1.0, 0.0));
-
-        let pressure = solver.compute_field(&velocity, 25e-3);
-        assert!(pressure.is_ok());
-
-        let pressure_field = pressure.unwrap();
-        assert_eq!(pressure_field.dim(), (16, 16));
-
-        // Check that result is not zero (basic sanity check)
-        let sum: Complex64 = pressure_field.iter().sum();
-        assert!(sum.norm() > 0.0);
-    }
-
-    #[test]
-    fn test_memory_usage() {
-        let config = FNMConfig::default();
-        let mut solver = FastNearfieldSolver::new(config.clone()).unwrap();
-
-        let transducer = RectangularTransducer {
-            width: 10e-3,
-            height: 10e-3,
-            frequency: 1e6,
-            elements: (32, 32),
-        };
-
-        solver.set_transducer(transducer);
-        solver.precompute_factors(50e-3).unwrap();
-
-        let usage = solver.memory_usage();
-        assert!(usage > 0);
-
-        // Clear cache and check memory drops
-        solver.clear_cache();
-        let usage_after_clear = solver.memory_usage();
-
-        // Usage should not be zero anymore due to precomputed vectors
-        // Default config: 512x512 -> kx=512, ky=512 -> 1024 * 8 bytes = 8192 bytes
-        let (n_kx, n_ky) = config.angular_spectrum_size;
-        let expected_base_usage = (n_kx + n_ky) * std::mem::size_of::<f64>();
-        assert_eq!(usage_after_clear, expected_base_usage);
-    }
-
-    /// Solver defaults must equal the canonical water constants so that any code
-    /// reading `solver.c0` / `solver.rho0` via `set_medium` round-trips correctly.
-    #[test]
-    fn test_fast_nearfield_defaults_match_water_constants() {
-        let config = FNMConfig::default();
-        let solver = FastNearfieldSolver::new(config).unwrap();
-        assert!(
-            (solver.c0 - SOUND_SPEED_WATER_SIM).abs() < f64::EPSILON,
-            "Default c0 ({}) must equal SOUND_SPEED_WATER_SIM ({})",
-            solver.c0,
-            SOUND_SPEED_WATER_SIM
-        );
-        assert!(
-            (solver.rho0 - DENSITY_WATER_NOMINAL).abs() < f64::EPSILON,
-            "Default rho0 ({}) must equal DENSITY_WATER_NOMINAL ({})",
-            solver.rho0,
-            DENSITY_WATER_NOMINAL
-        );
     }
 }

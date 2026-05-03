@@ -230,7 +230,7 @@ impl MultiGpuContext {
         channel.transfer_queue.push(transfer);
         channel
             .transfer_queue
-            .sort_by(|a, b| b.priority.cmp(&a.priority));
+            .sort_by_key(|transfer| std::cmp::Reverse(transfer.priority));
 
         Ok(())
     }

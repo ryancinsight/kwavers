@@ -15,10 +15,10 @@ impl GpuPstdSolver {
     /// * `sensor_indices` — flat grid indices of sensor points (u32)
     /// * `source_indices` — flat grid indices of pressure source injection points (u32)
     /// * `source_signals` — source pressure amplitude per (source_pt, step),
-    ///    flat `[n_src * nt]` row-major
+    ///   flat `[n_src * nt]` row-major
     /// * `vel_x_indices` — flat grid indices of ux velocity source points (u32); pass `&[]` for none
     /// * `vel_x_signals` — ux velocity amplitude per (source_pt, step),
-    ///    flat `[n_vel_x * nt]` row-major; pass `&[]` for none
+    ///   flat `[n_vel_x * nt]` row-major; pass `&[]` for none
     pub fn run(
         &mut self,
         sensor_indices: &[u32],
@@ -189,7 +189,7 @@ impl GpuPstdSolver {
             // via TDR. Polling every ~16 batches (~20s GPU work at 40ms/step ×
             // STEP_BATCH=32) keeps the in-flight queue bounded without adding
             // per-batch sync overhead on short runs.
-            if (batch_start / STEP_BATCH) % 16 == 0 {
+            if (batch_start / STEP_BATCH).is_multiple_of(16) {
                 let _ = self.device.poll(wgpu::PollType::Wait);
             }
         }
