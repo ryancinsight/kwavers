@@ -43,17 +43,44 @@ fn test_performance_metrics() {
 }
 
 #[test]
-fn test_scalar_pressure_update() {
-    let mut pressure = vec![1.0; 1000];
-    let pressure_prev = vec![0.9; 1000];
-    let laplacian = vec![0.1; 1000];
-    let c_dt2 = 0.5;
+fn test_fdtd_pressure_update_matches_leapfrog_formula() {
+    let nx = 18;
+    let ny = 5;
+    let nz = 4;
+    let n = nx * ny * nz;
+    let mut pressure: Vec<f32> = (0..n).map(|idx| 1.0 + idx as f32 * 0.001).collect();
+    let pressure_initial = pressure.clone();
+    let pressure_prev: Vec<f32> = (0..n).map(|idx| 0.5 + idx as f32 * 0.0007).collect();
+    let laplacian: Vec<f32> = (0..n).map(|idx| -0.25 + idx as f32 * 0.0003).collect();
+    let c_dt2 = 0.375;
 
     let ops = FdtdSimdOps::new();
-    ops.update_pressure_3d(&mut pressure, &pressure_prev, &laplacian, c_dt2, 10, 10, 10);
+    ops.update_pressure_3d(&mut pressure, &pressure_prev, &laplacian, c_dt2, nx, ny, nz);
 
-    // Check that values changed
-    assert_ne!(pressure[5 + 5 * 10 + 5 * 10 * 10], 1.0);
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                let idx = i + j * nx + k * nx * ny;
+                if i == 0 || j == 0 || k == 0 || i == nx - 1 || j == ny - 1 || k == nz - 1 {
+                    assert_eq!(pressure[idx], pressure_initial[idx]);
+                } else {
+                    let separated =
+                        2.0 * pressure_initial[idx] - pressure_prev[idx] + c_dt2 * laplacian[idx];
+                    let fused = c_dt2.mul_add(
+                        laplacian[idx],
+                        2.0 * pressure_initial[idx] - pressure_prev[idx],
+                    );
+                    assert!(
+                        pressure[idx] == separated || pressure[idx] == fused,
+                        "pressure[{idx}] = {}, expected separated {} or fused {}",
+                        pressure[idx],
+                        separated,
+                        fused
+                    );
+                }
+            }
+        }
+    }
 }
 
 #[test]

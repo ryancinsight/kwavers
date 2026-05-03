@@ -163,35 +163,39 @@ impl FdtdSimdOps {
         }
     }
 
-    /// AVX-512 optimized pressure update (placeholder).
+    /// AVX-512 optimized pressure update.
     ///
-    /// ## Not yet implemented
+    /// The kernel evaluates the leapfrog FDTD pressure recurrence on 16
+    /// contiguous `f32` cells per vector lane:
     ///
-    /// - **AVX-512 native path**: Dedicated 512-bit intrinsics with gather/scatter for
-    ///   irregular grid access and 16-wide FMA; currently falls back to AVX2.
-    /// - **Auto-vectorization hints**: Loop transformations and compiler intrinsic wrappers
-    ///   for SSE4.2, NEON, and WASM SIMD targets (Intel AVX-512 Manual; ARM NEON Reference).
-    /// - **SIMD transcendentals**: Vectorized sin, cos, exp, log for source term evaluation.
-    /// - **Cache-blocking**: Memory prefetching and tiling for 3D grid operations.
+    /// ```text
+    /// p^{n+1}_i = 2 p^n_i - p^{n-1}_i + c^2 dt^2 Lap(p^n)_i
+    /// ```
+    ///
+    /// Interior rows are contiguous in `i`, so the kernel uses unaligned
+    /// 512-bit loads/stores and scalar cleanup for the right edge. Boundary
+    /// cells remain unchanged and are handled by the caller's boundary policy.
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx512f")]
     #[allow(unsafe_code)]
-    // SAFETY: AVX-512 foundation instructions with explicit CPU feature verification
-    //   - CPU detection ensures AVX-512F support via #[target_feature] attribute
-    //   - Fallback to AVX2 implementation maintains correctness
-    //   - No direct AVX-512 intrinsics used yet (implementation deferred)
+    // SAFETY: AVX-512 foundation instructions with explicit CPU feature verification.
+    //   - CPU detection ensures AVX-512F support before this method is called.
+    //   - Pointer arithmetic uses idx = i + j*nx + k*nx*ny with loop invariant
+    //     `i + 15 < nx - 1`, so every 16-lane load/store remains in the current row interior.
+    //   - `_mm512_loadu_ps` and `_mm512_storeu_ps` permit unaligned Rust slice addresses.
     //
     // INVARIANTS:
-    //   - Precondition: Same as update_pressure_avx2 (delegated implementation)
-    //   - Postcondition: Identical numerical results to AVX2 path
+    //   - Precondition: all slices have length at least nx*ny*nz.
+    //   - Precondition: interior dimensions satisfy nx, ny, nz >= 2; empty ranges do no work.
+    //   - Postcondition: every interior point equals the scalar recurrence above.
     //
     // ALTERNATIVES:
-    //   - Direct AVX-512 implementation with 16-wide SIMD (TODO: future optimization)
-    //   - Reason for AVX2 fallback: Incremental deployment, correctness first
+    //   - Safe alternative: `update_pressure_scalar`.
+    //   - AVX2 alternative: `update_pressure_avx2`, used when AVX-512F is unavailable.
     //
     // PERFORMANCE:
-    //   - Current: Matches AVX2 performance (no regression)
-    //   - Future potential: 2x speedup with full AVX-512 implementation
+    //   - Vector width: 16 f32 lanes, twice the AVX2 lane count.
+    //   - Memory pattern: unit-stride row-interior loads/stores.
     unsafe fn update_pressure_avx512(
         &self,
         pressure: &mut [f32],
@@ -202,17 +206,38 @@ impl FdtdSimdOps {
         ny: usize,
         nz: usize,
     ) {
-        // AVX-512 implementation would go here
-        // For now, fall back to AVX2
-        self.update_pressure_avx2(
-            pressure,
-            pressure_prev,
-            laplacian,
-            c_squared_dt_squared,
-            nx,
-            ny,
-            nz,
-        );
+        use std::arch::x86_64::*;
+
+        let two = _mm512_set1_ps(2.0);
+        let c_dt2 = _mm512_set1_ps(c_squared_dt_squared);
+
+        for k in 1..nz - 1 {
+            for j in 1..ny - 1 {
+                let mut i = 1;
+                while i + 15 < nx - 1 {
+                    let idx = i + j * nx + k * nx * ny;
+
+                    let p_curr = _mm512_loadu_ps(pressure.as_ptr().add(idx));
+                    let p_prev = _mm512_loadu_ps(pressure_prev.as_ptr().add(idx));
+                    let lap = _mm512_loadu_ps(laplacian.as_ptr().add(idx));
+
+                    let doubled = _mm512_mul_ps(two, p_curr);
+                    let inertial = _mm512_sub_ps(doubled, p_prev);
+                    let forcing = _mm512_mul_ps(c_dt2, lap);
+                    let next = _mm512_add_ps(inertial, forcing);
+
+                    _mm512_storeu_ps(pressure.as_mut_ptr().add(idx), next);
+                    i += 16;
+                }
+
+                while i < nx - 1 {
+                    let idx = i + j * nx + k * nx * ny;
+                    pressure[idx] = 2.0 * pressure[idx] - pressure_prev[idx]
+                        + c_squared_dt_squared * laplacian[idx];
+                    i += 1;
+                }
+            }
+        }
     }
 
     /// SIMD-accelerated velocity update (3D FDTD)
