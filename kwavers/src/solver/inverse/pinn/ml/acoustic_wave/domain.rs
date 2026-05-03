@@ -1,5 +1,6 @@
 //! Acoustic wave physics domain implementation.
 
+use super::types::{AcousticBoundarySpec, AcousticBoundaryType, AcousticProblemType};
 use crate::solver::inverse::pinn::ml::adapters::source::PinnAcousticSource;
 use crate::solver::inverse::pinn::ml::physics::{
     BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface, CouplingType,
@@ -8,7 +9,6 @@ use crate::solver::inverse::pinn::ml::physics::{
 };
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;
-use super::types::{AcousticBoundarySpec, AcousticBoundaryType, AcousticProblemType};
 
 /// Acoustic wave physics domain implementation
 #[derive(Debug)]
@@ -158,8 +158,7 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
                     .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
                     .unwrap_or_else(|| t.zeros_like());
 
-                let p2_tt =
-                    (p_t.clone() * p_t.clone() + p.clone() * p_tt.clone()).mul_scalar(2.0);
+                let p2_tt = (p_t.clone() * p_t.clone() + p.clone() * p_tt.clone()).mul_scalar(2.0);
 
                 residual = residual + coeff * p2_tt;
             }

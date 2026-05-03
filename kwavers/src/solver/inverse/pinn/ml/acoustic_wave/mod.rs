@@ -5,9 +5,9 @@
 //! wave propagation in homogeneous and heterogeneous media.
 
 pub mod domain;
-pub mod types;
 #[cfg(test)]
 mod tests;
+pub mod types;
 
 pub use domain::AcousticWaveDomain;
 pub use types::{AcousticBoundarySpec, AcousticBoundaryType, AcousticProblemType};

@@ -2,7 +2,6 @@ use super::calculator::MechanicalIndexCalculator;
 use super::types::{MechanicalIndexResult, SafetyStatus, TissueType};
 use ndarray::Array3;
 
-
 #[test]
 fn test_mi_calculation_soft_tissue() {
     let mi_calc = MechanicalIndexCalculator::new(5.0, 0.5, TissueType::SoftTissue);

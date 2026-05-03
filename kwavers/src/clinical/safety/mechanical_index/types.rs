@@ -74,7 +74,6 @@ pub enum SafetyStatus {
     CavitationRisk,
 }
 
-
 impl MechanicalIndexResult {
     /// Check if MI is within safety limits
     #[must_use]
