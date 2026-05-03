@@ -148,3 +148,4 @@
 - Closed the FDTD-FEM coupling duplicate-module gap: hybrid coupling now uses `fdtd_fem_coupling/{config,interface,coupler,solver,tests}` behind one parent facade.
 - Closed the FDTD k-space correction organization gap: spectral gradient/divergence operators and value tests now live under `kspace_correction/{operators,tests}` behind one parent facade.
 - Closed the beamforming localization search organization gap: policy types, search orchestration, and tests now live under `beamforming_search/{types,search,tests}` behind one parent facade.
+- Closed a broad flat-module backlog segment by making 40 additional modules directory-backed facades with child modules for configuration, types, kernels, orchestration, tests, and implementation-specific responsibilities. This removes another wave of flat-file drift while preserving public module paths.

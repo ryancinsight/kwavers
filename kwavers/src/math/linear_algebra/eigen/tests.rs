@@ -1,0 +1,177 @@
+use super::decomposition::EigenDecomposition;
+use ndarray::Array2;
+use num_complex::Complex;
+
+#[test]
+fn test_real_symmetric_eigendecomposition() {
+    let matrix = Array2::from_shape_vec((2, 2), vec![2.0, 1.0, 1.0, 2.0]).unwrap();
+    let (eigenvals, eigenvecs) = EigenDecomposition::eigendecomposition(&matrix).unwrap();
+
+    assert!((eigenvals[0] - 3.0).abs() < 1e-6);
+    assert!((eigenvals[1] - 1.0).abs() < 1e-6);
+
+    for i in 0..2 {
+        let lambda = eigenvals[i];
+        let v = eigenvecs.column(i);
+        let av = matrix.dot(&v.to_owned());
+        for j in 0..2 {
+            assert!((av[j] - lambda * v[j]).abs() < 1e-6);
+        }
+    }
+}
+
+#[test]
+fn test_hermitian_eigendecomposition_identity() {
+    let n = 3;
+    let identity = Array2::from_shape_fn((n, n), |(i, j)| {
+        if i == j {
+            Complex::new(1.0, 0.0)
+        } else {
+            Complex::new(0.0, 0.0)
+        }
+    });
+
+    let (eigenvals, _eigenvecs) =
+        EigenDecomposition::hermitian_eigendecomposition_complex(&identity).unwrap();
+
+    for i in 0..n {
+        assert!((eigenvals[i] - 1.0).abs() < 1e-10);
+    }
+}
+
+#[test]
+fn test_hermitian_eigendecomposition_diagonal() {
+    let diag_vals = vec![5.0, 3.0, 1.0];
+    let matrix = Array2::from_shape_fn((3, 3), |(i, j)| {
+        if i == j {
+            Complex::new(diag_vals[i], 0.0)
+        } else {
+            Complex::new(0.0, 0.0)
+        }
+    });
+
+    let (eigenvals, eigenvecs) =
+        EigenDecomposition::hermitian_eigendecomposition_complex(&matrix).unwrap();
+
+    let mut expected = diag_vals.clone();
+    expected.sort_by(|a, b| b.partial_cmp(a).unwrap());
+
+    for i in 0..3 {
+        assert!(
+            (eigenvals[i] - expected[i]).abs() < 1e-10,
+            "Eigenvalue mismatch at {}: expected {}, got {}",
+            i,
+            expected[i],
+            eigenvals[i]
+        );
+    }
+
+    let lambda_diag = Array2::from_diag(&eigenvals.mapv(|x| Complex::new(x, 0.0)));
+    let vdag: Array2<Complex<f64>> = eigenvecs
+        .t()
+        .mapv(|z| z.conj())
+        .into_dimensionality()
+        .unwrap();
+    let v_lambda = eigenvecs.dot(&lambda_diag);
+    let reconstructed: Array2<Complex<f64>> = v_lambda.dot(&vdag);
+
+    for i in 0..3 {
+        for j in 0..3 {
+            assert!((matrix[[i, j]] - reconstructed[[i, j]]).norm() < 1e-10);
+        }
+    }
+}
+
+#[test]
+fn test_hermitian_eigendecomposition_2x2() {
+    // Analytical eigenvalues: det(H − λI) = λ² − 5λ + 4 = 0 → λ ∈ {4, 1}
+    let matrix = Array2::from_shape_vec(
+        (2, 2),
+        vec![
+            Complex::new(2.0, 0.0),
+            Complex::new(1.0, -1.0),
+            Complex::new(1.0, 1.0),
+            Complex::new(3.0, 0.0),
+        ],
+    )
+    .unwrap();
+
+    let (eigenvals, eigenvecs) =
+        EigenDecomposition::hermitian_eigendecomposition_complex(&matrix).unwrap();
+
+    assert!(
+        (eigenvals[0] - 4.0).abs() < 1e-10,
+        "Large eigenvalue mismatch: expected 4.0, got {}",
+        eigenvals[0]
+    );
+    assert!(
+        (eigenvals[1] - 1.0).abs() < 1e-10,
+        "Small eigenvalue mismatch: expected 1.0, got {}",
+        eigenvals[1]
+    );
+
+    for i in 0..2 {
+        let lambda = eigenvals[i];
+        let v = eigenvecs.column(i).to_owned();
+        let hv = matrix.dot(&v);
+        for j in 0..2 {
+            assert!((hv[j] - lambda * v[j]).norm() < 1e-10);
+        }
+    }
+
+    let vdag: Array2<Complex<f64>> = eigenvecs
+        .t()
+        .mapv(|z| z.conj())
+        .into_dimensionality()
+        .unwrap();
+    let vdag_v: Array2<Complex<f64>> = vdag.dot(&eigenvecs);
+    for i in 0..2 {
+        for j in 0..2 {
+            let expected = if i == j { 1.0 } else { 0.0 };
+            assert!((vdag_v[[i, j]].re - expected).abs() < 1e-10);
+            assert!(vdag_v[[i, j]].im.abs() < 1e-10);
+        }
+    }
+}
+
+#[test]
+fn test_hermitian_eigendecomposition_non_hermitian_rejected() {
+    let matrix = Array2::from_shape_vec(
+        (2, 2),
+        vec![
+            Complex::new(1.0, 0.0),
+            Complex::new(1.0, 1.0),
+            Complex::new(2.0, 1.0), // Not conjugate of (1,1)
+            Complex::new(2.0, 0.0),
+        ],
+    )
+    .unwrap();
+
+    let result = EigenDecomposition::hermitian_eigendecomposition_complex(&matrix);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_hermitian_eigendecomposition_real_eigenvalues() {
+    let matrix = Array2::from_shape_vec(
+        (3, 3),
+        vec![
+            Complex::new(4.0, 0.0),
+            Complex::new(1.0, -2.0),
+            Complex::new(2.0, 1.0),
+            Complex::new(1.0, 2.0),
+            Complex::new(5.0, 0.0),
+            Complex::new(-1.0, 3.0),
+            Complex::new(2.0, -1.0),
+            Complex::new(-1.0, -3.0),
+            Complex::new(6.0, 0.0),
+        ],
+    )
+    .unwrap();
+
+    let (eigenvals, _) = EigenDecomposition::hermitian_eigendecomposition_complex(&matrix).unwrap();
+
+    for &lambda in eigenvals.iter() {
+        assert!(lambda.is_finite());
+    }
+}
