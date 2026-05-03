@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="300" viewBox="0 0 760 300" role="img" aria-label="Solver validation stack">
+  <rect width="760" height="300" fill="#ffffff"/>
+  <text x="40" y="42" font-family="Arial, sans-serif" font-size="24" fill="#111827">Validation Stack</text>
+  <g font-family="Arial, sans-serif" font-size="15" fill="#111827">
+    <rect x="96" y="70" width="568" height="40" rx="5" fill="#e0f2fe" stroke="#0284c7"/>
+    <text x="318" y="96">mathematical specification</text>
+    <rect x="130" y="124" width="500" height="40" rx="5" fill="#ecfccb" stroke="#65a30d"/>
+    <text x="327" y="150">analytical tests</text>
+    <rect x="164" y="178" width="432" height="40" rx="5" fill="#fef3c7" stroke="#d97706"/>
+    <text x="314" y="204">k-Wave / literature parity</text>
+    <rect x="198" y="232" width="364" height="40" rx="5" fill="#ede9fe" stroke="#7c3aed"/>
+    <text x="314" y="258">benchmark + memory gates</text>
+  </g>
+</svg>
