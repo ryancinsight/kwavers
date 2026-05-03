@@ -19,8 +19,9 @@ use std::collections::HashMap;
 #[cfg(feature = "pinn")]
 use std::sync::Arc;
 
+#[cfg(feature = "pinn")]
+use super::super::config::DeploymentConfig;
 use super::super::{
-    config::DeploymentConfig,
     types::{CloudProvider, DeploymentHandle, DeploymentStatus},
     utilities,
 };
@@ -34,6 +35,7 @@ pub struct CloudPINNService {
     /// Cloud provider for this service instance.
     pub(crate) provider: CloudProvider,
     /// Provider-specific configuration (credentials, regions, etc.).
+    #[cfg(feature = "pinn")]
     config: HashMap<String, String>,
     /// Active deployment handles.
     deployments: HashMap<String, DeploymentHandle>,
@@ -49,12 +51,20 @@ impl CloudPINNService {
     /// Returns error if configuration loading fails.
     pub async fn new(provider: CloudProvider) -> KwaversResult<Self> {
         let config = utilities::load_provider_config(&provider).await?;
+        #[cfg(not(feature = "pinn"))]
+        let _ = config;
 
         Ok(Self {
             provider,
+            #[cfg(feature = "pinn")]
             config,
             deployments: HashMap::new(),
         })
+    }
+
+    /// Return the cloud provider selected for this service instance.
+    pub fn provider(&self) -> CloudProvider {
+        self.provider
     }
 
     /// Deploy a PINN model to the cloud.
@@ -269,6 +279,7 @@ impl CloudPINNService {
     }
 
     /// Validate that `config.provider` matches the service provider.
+    #[cfg(feature = "pinn")]
     fn validate_provider_match(&self, config: &DeploymentConfig) -> KwaversResult<()> {
         if config.provider != self.provider {
             return Err(KwaversError::System(

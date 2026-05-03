@@ -39,3 +39,9 @@ with `phi(u, x) >= 0`, then dose is monotone non-decreasing.
 - Microbubble-enhanced focused ultrasound is being reviewed for precision glioma workflows: https://doi.org/10.3390/biomedicines12061230
 - Ultrasound-stimulated microbubbles for radiotherapeutic enhancement are under active review: https://pubmed.ncbi.nlm.nih.gov/40397648/
 - Ultrasound microbubble drug and gene delivery remains an active theranostic technology area: https://doi.org/10.1016/j.jddst.2023.105312
+
+## 2026 Implementation Synchronization
+
+- Theranostic examples must carry state-estimator uncertainty into controller decisions instead of encoding uncertainty as scalar tolerances hidden inside acceptance tests.
+- Closed-loop focused-ultrasound workflows should validate monotone dose accumulation, bounded MI/TI/cavitation metrics, and registration consistency in one executable scenario when diagnostic imaging drives therapy updates.
+- Microbubble-mediated theranostics require paired delivery and monitoring evidence: acoustic exposure, bubble activity, image-derived state, and controller action must remain separately inspectable in generated examples.

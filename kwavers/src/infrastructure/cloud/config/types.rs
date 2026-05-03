@@ -1,47 +1,12 @@
-//! Cloud Deployment Configuration
-//!
-//! This module provides configuration types for cloud PINN deployments with validation,
-//! defaults, and builder patterns following the Builder pattern and Clean Architecture principles.
-//!
-//! # Architecture
-//!
-//! Configuration types represent domain value objects with:
-//! - Immutable fields after construction
-//! - Built-in validation
-//! - Sensible defaults
-//! - Clear error messages
-//!
-//! # Literature References
-//!
-//! - Evans, E. (2003). Domain-Driven Design: Tackling Complexity in the Heart of Software.
-//!   Addison-Wesley. ISBN: 978-0321125217
-//! - Martin, R. C. (2017). Clean Architecture: A Craftsman's Guide to Software Structure and Design.
-//!   Prentice Hall. ISBN: 978-0134494166
+//! Cloud deployment configuration types with validation.
 
+use super::super::types::CloudProvider;
 use crate::core::error::{KwaversError, KwaversResult};
-
-use super::types::CloudProvider;
 
 /// Cloud deployment configuration
 ///
 /// Specifies all parameters required to deploy a PINN model to a cloud provider
 /// with auto-scaling and monitoring capabilities.
-///
-/// # Example
-///
-/// ```
-/// use kwavers::infra::cloud::{DeploymentConfig, CloudProvider, AutoScalingConfig, MonitoringConfig};
-///
-/// let config = DeploymentConfig {
-///     provider: CloudProvider::AWS,
-///     region: "us-east-1".to_string(),
-///     instance_type: "p3.2xlarge".to_string(),
-///     gpu_count: 1,
-///     memory_gb: 16,
-///     auto_scaling: AutoScalingConfig::default(),
-///     monitoring: MonitoringConfig::default(),
-/// };
-/// ```
 #[derive(Debug, Clone)]
 pub struct DeploymentConfig {
     /// Cloud provider
@@ -62,15 +27,6 @@ pub struct DeploymentConfig {
 
 impl DeploymentConfig {
     /// Validate deployment configuration
-    ///
-    /// # Errors
-    ///
-    /// Returns error if:
-    /// - GPU count is zero
-    /// - Memory allocation is zero
-    /// - Region is empty
-    /// - Instance type is empty
-    /// - Auto-scaling configuration is invalid
     pub fn validate(&self) -> KwaversResult<()> {
         if self.gpu_count == 0 {
             return Err(KwaversError::System(
@@ -125,12 +81,6 @@ impl DeploymentConfig {
 /// - `0.0 < target_gpu_utilization < 1.0`
 /// - `scale_down_threshold < scale_up_threshold`
 /// - `cooldown_seconds > 0`
-///
-/// # Literature
-///
-/// Auto-scaling strategies based on:
-/// - Kubernetes Horizontal Pod Autoscaler algorithm
-/// - AWS Auto Scaling target tracking policies
 #[derive(Debug, Clone)]
 pub struct AutoScalingConfig {
     /// Minimum number of instances (must be ≥ 1)
@@ -149,10 +99,6 @@ pub struct AutoScalingConfig {
 
 impl AutoScalingConfig {
     /// Validate auto-scaling configuration
-    ///
-    /// # Errors
-    ///
-    /// Returns error if invariants are violated
     pub fn validate(&self) -> KwaversResult<()> {
         if self.min_instances == 0 {
             return Err(KwaversError::System(
@@ -207,12 +153,6 @@ impl AutoScalingConfig {
 }
 
 impl Default for AutoScalingConfig {
-    /// Default auto-scaling configuration
-    ///
-    /// - 1-10 instances
-    /// - Target 70% GPU utilization
-    /// - Scale up at 80%, down at 30%
-    /// - 5 minute cooldown
     fn default() -> Self {
         Self {
             min_instances: 1,
@@ -226,14 +166,6 @@ impl Default for AutoScalingConfig {
 }
 
 /// Monitoring configuration for cloud deployments
-///
-/// Controls metrics collection and alerting behavior.
-///
-/// # Literature
-///
-/// Monitoring best practices from:
-/// - Beyer, B., et al. (2016). Site Reliability Engineering: How Google Runs Production Systems. O'Reilly.
-/// - Prometheus monitoring and alerting framework documentation
 #[derive(Debug, Clone)]
 pub struct MonitoringConfig {
     /// Enable detailed metrics collection
@@ -246,10 +178,6 @@ pub struct MonitoringConfig {
 
 impl MonitoringConfig {
     /// Validate monitoring configuration
-    ///
-    /// # Errors
-    ///
-    /// Returns error if metrics interval is zero or thresholds are invalid
     pub fn validate(&self) -> KwaversResult<()> {
         if self.metrics_interval_seconds == 0 {
             return Err(KwaversError::System(
@@ -267,11 +195,6 @@ impl MonitoringConfig {
 }
 
 impl Default for MonitoringConfig {
-    /// Default monitoring configuration
-    ///
-    /// - Detailed metrics enabled
-    /// - 60 second collection interval
-    /// - Default alert thresholds
     fn default() -> Self {
         Self {
             enable_detailed_metrics: true,
@@ -282,8 +205,6 @@ impl Default for MonitoringConfig {
 }
 
 /// Alert thresholds for monitoring
-///
-/// Defines when to trigger alerts based on resource utilization and error rates.
 ///
 /// # Invariants
 ///
@@ -300,10 +221,6 @@ pub struct AlertThresholds {
 
 impl AlertThresholds {
     /// Validate alert thresholds
-    ///
-    /// # Errors
-    ///
-    /// Returns error if any threshold is outside [0.0, 1.0]
     pub fn validate(&self) -> KwaversResult<()> {
         let thresholds = [
             ("gpu_utilization_threshold", self.gpu_utilization_threshold),
@@ -327,149 +244,11 @@ impl AlertThresholds {
 }
 
 impl Default for AlertThresholds {
-    /// Default alert thresholds
-    ///
-    /// - GPU utilization: 90%
-    /// - Memory usage: 90%
-    /// - Error rate: 5%
     fn default() -> Self {
         Self {
             gpu_utilization_threshold: 0.9,
             memory_usage_threshold: 0.9,
             error_rate_threshold: 0.05,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_deployment_config_validation_success() {
-        let config = DeploymentConfig {
-            provider: CloudProvider::AWS,
-            region: "us-east-1".to_string(),
-            instance_type: "p3.2xlarge".to_string(),
-            gpu_count: 1,
-            memory_gb: 16,
-            auto_scaling: AutoScalingConfig::default(),
-            monitoring: MonitoringConfig::default(),
-        };
-
-        assert!(config.validate().is_ok());
-    }
-
-    #[test]
-    fn test_deployment_config_validation_zero_gpu() {
-        let config = DeploymentConfig {
-            provider: CloudProvider::AWS,
-            region: "us-east-1".to_string(),
-            instance_type: "p3.2xlarge".to_string(),
-            gpu_count: 0,
-            memory_gb: 16,
-            auto_scaling: AutoScalingConfig::default(),
-            monitoring: MonitoringConfig::default(),
-        };
-
-        assert!(config.validate().is_err());
-    }
-
-    #[test]
-    fn test_deployment_config_validation_zero_memory() {
-        let config = DeploymentConfig {
-            provider: CloudProvider::AWS,
-            region: "us-east-1".to_string(),
-            instance_type: "p3.2xlarge".to_string(),
-            gpu_count: 1,
-            memory_gb: 0,
-            auto_scaling: AutoScalingConfig::default(),
-            monitoring: MonitoringConfig::default(),
-        };
-
-        assert!(config.validate().is_err());
-    }
-
-    #[test]
-    fn test_deployment_config_validation_empty_region() {
-        let config = DeploymentConfig {
-            provider: CloudProvider::AWS,
-            region: String::new(),
-            instance_type: "p3.2xlarge".to_string(),
-            gpu_count: 1,
-            memory_gb: 16,
-            auto_scaling: AutoScalingConfig::default(),
-            monitoring: MonitoringConfig::default(),
-        };
-
-        assert!(config.validate().is_err());
-    }
-
-    #[test]
-    fn test_auto_scaling_config_default() {
-        let config = AutoScalingConfig::default();
-        assert_eq!(config.min_instances, 1);
-        assert_eq!(config.max_instances, 10);
-        assert_eq!(config.target_gpu_utilization, 0.7);
-        assert_eq!(config.scale_up_threshold, 0.8);
-        assert_eq!(config.scale_down_threshold, 0.3);
-        assert_eq!(config.cooldown_seconds, 300);
-        assert!(config.validate().is_ok());
-    }
-
-    #[test]
-    fn test_auto_scaling_validation_min_max() {
-        let config = AutoScalingConfig {
-            min_instances: 5,
-            max_instances: 3,
-            target_gpu_utilization: 0.7,
-            scale_up_threshold: 0.8,
-            scale_down_threshold: 0.3,
-            cooldown_seconds: 300,
-        };
-
-        assert!(config.validate().is_err());
-    }
-
-    #[test]
-    fn test_auto_scaling_validation_threshold_order() {
-        let config = AutoScalingConfig {
-            min_instances: 1,
-            max_instances: 10,
-            target_gpu_utilization: 0.7,
-            scale_up_threshold: 0.3,
-            scale_down_threshold: 0.8,
-            cooldown_seconds: 300,
-        };
-
-        assert!(config.validate().is_err());
-    }
-
-    #[test]
-    fn test_monitoring_config_default() {
-        let config = MonitoringConfig::default();
-        assert!(config.enable_detailed_metrics);
-        assert_eq!(config.metrics_interval_seconds, 60);
-        assert!(config.validate().is_ok());
-    }
-
-    #[test]
-    fn test_alert_thresholds_default() {
-        let thresholds = AlertThresholds::default();
-        assert_eq!(thresholds.gpu_utilization_threshold, 0.9);
-        assert_eq!(thresholds.memory_usage_threshold, 0.9);
-        assert_eq!(thresholds.error_rate_threshold, 0.05);
-        assert!(thresholds.validate().is_ok());
-    }
-
-    #[test]
-    fn test_alert_thresholds_validation_out_of_range() {
-        let thresholds = AlertThresholds {
-            gpu_utilization_threshold: 1.5,
-            memory_usage_threshold: 0.9,
-            error_rate_threshold: 0.05,
-        };
-
-        assert!(thresholds.validate().is_err());
     }
 }

@@ -16,10 +16,10 @@
 //! - Martin, R. C. (2017). Clean Architecture: A Craftsman's Guide to Software Structure and Design.
 //!   Prentice Hall. ISBN: 978-0134494166
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::error::KwaversResult;
 use std::collections::HashMap;
 
-use super::types::{CloudProvider, ModelDeploymentData};
+use super::types::CloudProvider;
 
 /// Load provider-specific configuration from environment
 ///
@@ -177,7 +177,8 @@ pub async fn load_provider_config(
 pub async fn serialize_model_for_deployment<B: burn::tensor::backend::AutodiffBackend>(
     model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
     provider: &CloudProvider,
-) -> KwaversResult<ModelDeploymentData> {
+) -> KwaversResult<super::types::ModelDeploymentData> {
+    use crate::core::error::KwaversError;
     use burn::module::Module;
     use burn::record::{BinBytesRecorder, FullPrecisionSettings, Recorder};
 
@@ -217,7 +218,7 @@ pub async fn serialize_model_for_deployment<B: burn::tensor::backend::AutodiffBa
         }
     };
 
-    Ok(ModelDeploymentData {
+    Ok(super::types::ModelDeploymentData {
         model_url,
         model_size_bytes,
     })

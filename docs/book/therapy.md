@@ -42,3 +42,9 @@ Acoustic pressure amplitude decays as `p(x) = p0 exp(-alpha x)`, so intensity de
 - Focused ultrasound with microbubbles is actively reviewed for CNS therapeutic delivery: https://doi.org/10.1016/bs.acr.2024.06.003
 - BBB opening and focused-ultrasound drug delivery remain active translation topics: https://doi.org/10.1016/j.jconrel.2024.07.006
 - Transcranial focused ultrasound neuromodulation has recent clinical-translation review coverage: https://doi.org/10.1186/s12984-025-01753-2
+
+## 2026 Implementation Synchronization
+
+- Therapy validation must preserve the k-Wave first-order k-space reference model when comparing with MATLAB k-Wave or k-wave-python: heterogeneous sound speed, density, absorption, nonlinearity, PML boundaries, and source/sensor contracts are part of the solver contract, not optional benchmark metadata.
+- Neuromodulation and BBB-opening examples should report MI or transcranial MI, peak negative pressure, duty cycle, pulse repetition frequency, treatment duration, and skull transmission correction because recent tFUS safety guidance treats these as coupled exposure variables.
+- Focused-ultrasound microbubble delivery examples must pair acoustic fields with cavitation or passive-acoustic-monitoring observables before claiming therapy-control parity; intensity-only validation is insufficient for microbubble-mediated delivery.

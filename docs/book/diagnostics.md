@@ -39,3 +39,9 @@ Linearity gives `E[S] = N mu` for common signal mean `mu`. For independent zero-
 - ULTRA-SR benchmark work formalizes ULM algorithm comparison: https://doi.org/10.1109/TMI.2024.3388048
 - Row-column ultrafast 3-D super-resolution ultrasound has recent in vitro, animal, and human study coverage: https://doi.org/10.1016/j.ultrasmedbio.2024.03.020
 - ULM review material and clinical transition context: https://doi.org/10.1016/j.zemedi.2023.02.004
+
+## 2026 Implementation Synchronization
+
+- k-wave-python parity tests should prefer the unified `kspaceFirstOrder` entry point where available, while retaining legacy `kspaceFirstOrder1D/2D/3D` fixtures for regression coverage against published example scripts.
+- Diagnostic ULM examples must expose PSF localization error, track continuity, flow-vector direction, and vessel-density statistics; a reconstructed image alone is not a validation artifact.
+- Plane-wave, CEUS, and ULM pipelines should keep raw RF/channel data, beamformed fields, and post-processed maps as separate artifacts so numerical parity can localize discrepancies to propagation, receive reconstruction, or diagnostic post-processing.
